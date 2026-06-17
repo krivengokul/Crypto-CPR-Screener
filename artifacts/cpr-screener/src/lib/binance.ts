@@ -78,7 +78,7 @@ export async function runScreener(
     const batch = tickers.slice(i, i + batchSize);
 
     const batchResults = await Promise.all(
-      batch.map(async (t) => {
+        batch.map(async (t) => {
         const klines = await fetchKlines(t.symbol);
         if (!klines || klines.length < 2) return null;
         const prevCandle = klines[0];
@@ -89,7 +89,7 @@ export async function runScreener(
           t.symbol,
           [prevCandle, todayCandle],
           currentPrice,
-          changeFromDayOpen,  // ← % change from 5:30 AM IST (00:00 UTC daily open)
+          changeFromDayOpen,
           parseFloat(t.quoteVolume)
         );
       })
