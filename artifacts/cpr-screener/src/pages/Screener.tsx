@@ -165,7 +165,7 @@ export default function Screener() {
               CPR Screener
             </h1>
             <span className="text-xs font-mono px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
-              by Ask Dines Kumar
+              by Kriven Gokul
             </span>
           </div>
           <p className="text-muted-foreground text-sm leading-relaxed max-w-2xl">
@@ -501,7 +501,7 @@ export default function Screener() {
         <div className="mt-8 text-xs text-muted-foreground text-center">
           Data from Binance Public API · Scans top 200 USDT pairs by volume · CPR from completed daily candles
           <br />
-          Auto-scans once daily at 5:31 AM IST · Not financial advice
+          Auto-scans once daily at 5:31 AM IST · Not financial advice · by Kriven Gokul
         </div>
       </div>
     </div>
