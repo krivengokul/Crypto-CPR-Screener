@@ -67,10 +67,12 @@ function getVal(r: CPRResult, key: SortKey): number | string {
 }
 
 function getChartUrl(symbol: string, source: "binance" | "delta"): string {
-  if (source === "delta") {
-    return `https://www.delta.exchange/app/futures/trade/${symbol}`;
-  }
-  return `https://www.tradingview.com/chart/?symbol=BINANCE:${symbol}`;
+  // For Delta symbols (USD suffix), convert to USDT for TradingView
+  const tvSymbol =
+    source === "delta" && symbol.endsWith("USD") && !symbol.endsWith("USDT")
+      ? symbol.slice(0, -3) + "USDT"
+      : symbol;
+  return `https://www.tradingview.com/chart/?symbol=BINANCE:${tvSymbol}`;
 }
 
 function formatSymbol(symbol: string, source: "binance" | "delta"): { base: string; quote: string } {
