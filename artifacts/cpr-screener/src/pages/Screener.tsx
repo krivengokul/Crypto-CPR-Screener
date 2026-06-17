@@ -33,6 +33,11 @@ type SortKey =
   | "todayCPR.widthPct";
 
 type SortDir = "asc" | "desc";
+type ActiveTab = "binance" | "delta" | "combined";
+
+interface CPRResultWithSource extends CPRResult {
+  source: "binance" | "delta";
+}
 
 function fmt(n: number): string {
   if (n >= 1000) return n.toLocaleString("en-US", { maximumFractionDigits: 2 });
@@ -61,6 +66,20 @@ function getVal(r: CPRResult, key: SortKey): number | string {
   return 0;
 }
 
+function getChartUrl(symbol: string, source: "binance" | "delta"): string {
+  if (source === "delta") {
+    return `https://www.delta.exchange/app/futures/trade/${symbol}`;
+  }
+  return `https://www.tradingview.com/chart/?symbol=BINANCE:${symbol}`;
+}
+
+function formatSymbol(symbol: string, source: "binance" | "delta"): { base: string; quote: string } {
+  if (source === "delta") {
+    return { base: symbol.replace("USD", ""), quote: "USD" };
+  }
+  return { base: symbol.replace("USDT", ""), quote: "USDT" };
+}
+
 export default function Screener() {
   const [status, setStatus] = useState<"idle" | "scanning" | "done" | "error">("idle");
   const [progress, setProgress] = useState({ done: 0, total: 0, symbol: "" });
@@ -82,7 +101,7 @@ export default function Screener() {
   const [deltaAllResults, setDeltaAllResults] = useState<CPRResult[]>([]);
   const [deltaFiltered, setDeltaFiltered] = useState<CPRResult[]>([]);
   const [deltaError, setDeltaError] = useState("");
-  const [activeTab, setActiveTab] = useState<"binance" | "delta">("binance");
+  const [activeTab, setActiveTab] = useState<ActiveTab>("binance");
   const deltaScanRef = useRef(false);
 
   const doScan = useCallback(async () => {
@@ -94,7 +113,6 @@ export default function Screener() {
     setFiltered([]);
     setError("");
     setProgress({ done: 0, total: 0, symbol: "" });
-
     try {
       const results = await runScreener((done, total, symbol) => {
         setProgress({ done, total, symbol });
@@ -121,7 +139,6 @@ export default function Screener() {
     setDeltaFiltered([]);
     setDeltaError("");
     setDeltaProgress({ done: 0, total: 0, symbol: "" });
-
     try {
       const results = await runDeltaScreener((done, total, symbol) => {
         setDeltaProgress({ done, total, symbol });
@@ -165,12 +182,35 @@ export default function Screener() {
       ? Math.round((activeProgress.done / activeProgress.total) * 100)
       : 0;
 
-  const activeResults =
-    activeTab === "binance"
-      ? showAll ? allResults : filtered
-      : showAll ? deltaAllResults : deltaFiltered;
+  // Build combined results (matches only for combined view)
+  const combinedResults: CPRResultWithSource[] = [
+    ...filtered.map((r) => ({ ...r, source: "binance" as const })),
+    ...deltaFiltered.map((r) => ({ ...r, source: "delta" as const })),
+  ];
 
-  const displayed = activeResults
+  // Combined all results (for show all)
+  const combinedAllResults: CPRResultWithSource[] = [
+    ...allResults.map((r) => ({ ...r, source: "binance" as const })),
+    ...deltaAllResults.map((r) => ({ ...r, source: "delta" as const })),
+  ];
+
+  const getActivePool = (): CPRResultWithSource[] => {
+    if (activeTab === "combined") {
+      return showAll ? combinedAllResults : combinedResults;
+    }
+    if (activeTab === "delta") {
+      return (showAll ? deltaAllResults : deltaFiltered).map((r) => ({
+        ...r,
+        source: "delta" as const,
+      }));
+    }
+    return (showAll ? allResults : filtered).map((r) => ({
+      ...r,
+      source: "binance" as const,
+    }));
+  };
+
+  const displayed = getActivePool()
     .filter((r) => r.symbol.toLowerCase().includes(search.toLowerCase()))
     .slice()
     .sort((a, b) => {
@@ -184,10 +224,34 @@ export default function Screener() {
         : (bv as number) - (av as number);
     });
 
-  const currentStatus = activeTab === "binance" ? status : deltaStatus;
-  const currentAllResults = activeTab === "binance" ? allResults : deltaAllResults;
-  const currentFiltered = activeTab === "binance" ? filtered : deltaFiltered;
-  const currentError = activeTab === "binance" ? error : deltaError;
+  const currentStatus =
+    activeTab === "binance"
+      ? status
+      : activeTab === "delta"
+      ? deltaStatus
+      : status === "done" || deltaStatus === "done"
+      ? "done"
+      : status === "scanning" || deltaStatus === "scanning"
+      ? "scanning"
+      : "idle";
+
+  const currentFilteredCount =
+    activeTab === "combined"
+      ? combinedResults.length
+      : activeTab === "delta"
+      ? deltaFiltered.length
+      : filtered.length;
+
+  const currentAllCount =
+    activeTab === "combined"
+      ? combinedAllResults.length
+      : activeTab === "delta"
+      ? deltaAllResults.length
+      : allResults.length;
+
+  const currentError = activeTab === "delta" ? deltaError : error;
+
+  const canShowCombined = status === "done" || deltaStatus === "done";
 
   const SortIcon = ({ k }: { k: SortKey }) =>
     sortKey === k ? (
@@ -271,6 +335,9 @@ export default function Screener() {
             }`}
           >
             Binance
+            {status === "done" && (
+              <span className="ml-1.5 text-xs opacity-70">({filtered.length})</span>
+            )}
           </button>
           <button
             onClick={() => setActiveTab("delta")}
@@ -281,6 +348,23 @@ export default function Screener() {
             }`}
           >
             Delta Exchange
+            {deltaStatus === "done" && (
+              <span className="ml-1.5 text-xs opacity-70">({deltaFiltered.length})</span>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab("combined")}
+            disabled={!canShowCombined}
+            className={`px-4 py-1.5 rounded-lg text-sm font-semibold border transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+              activeTab === "combined"
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-card text-muted-foreground border-border hover:text-foreground"
+            }`}
+          >
+            Combined
+            {canShowCombined && (
+              <span className="ml-1.5 text-xs opacity-70">({combinedResults.length})</span>
+            )}
           </button>
         </div>
 
@@ -289,9 +373,7 @@ export default function Screener() {
           {alreadyScannedToday && status !== "scanning" ? (
             <div className="flex items-center gap-2 text-sm text-accent">
               <CalendarCheck className="w-4 h-4" />
-              <span>
-                Scanned today ({lastScanDate}) — CPR data is fresh
-              </span>
+              <span>Scanned today ({lastScanDate}) — CPR data is fresh</span>
             </div>
           ) : status === "scanning" ? (
             <div className="flex items-center gap-2 text-sm text-primary">
@@ -307,7 +389,6 @@ export default function Screener() {
               </span>
             </div>
           )}
-
           <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
             <Clock className="w-3.5 h-3.5" />
             <span>
@@ -364,13 +445,9 @@ export default function Screener() {
           {currentStatus === "done" && (
             <div className="flex items-center gap-3 ml-auto">
               <span className="text-sm text-muted-foreground">
-                <span className="text-accent font-bold">
-                  {currentFiltered.length}
-                </span>{" "}
+                <span className="text-accent font-bold">{currentFilteredCount}</span>{" "}
                 matches out of{" "}
-                <span className="text-foreground font-medium">
-                  {currentAllResults.length}
-                </span>{" "}
+                <span className="text-foreground font-medium">{currentAllCount}</span>{" "}
                 scanned
               </span>
               <button
@@ -437,6 +514,11 @@ export default function Screener() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-border bg-muted/40">
+                      {activeTab === "combined" && (
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground whitespace-nowrap">
+                          Source
+                        </th>
+                      )}
                       {[
                         { key: "symbol" as SortKey, label: "Symbol" },
                         { key: "todayCPR.pivot" as SortKey, label: "Today Pivot" },
@@ -466,115 +548,127 @@ export default function Screener() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {displayed.map((r) => (
-                      <tr
-                        key={r.symbol}
-                        className={`hover:bg-muted/30 transition-colors ${
-                          r.passes ? "" : "opacity-50"
-                        }`}
-                      >
-                        <td className="px-4 py-3 font-mono font-semibold text-foreground whitespace-nowrap">
-                          <div className="flex items-center gap-2">
-                            {r.passes && (
-                              <div className="w-1.5 h-1.5 rounded-full bg-accent" />
-                            )}
-                            {r.symbol.replace("USDT", "").replace("USD", "")}
-                            <span className="text-muted-foreground text-xs font-normal">
-                              /{activeTab === "delta" ? "USD" : "USDT"}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 font-mono text-foreground whitespace-nowrap">
-                          <div className="text-xs text-muted-foreground">
-                            TC: {fmt(r.todayCPR.tc)}
-                          </div>
-                          <div className="font-medium">{fmt(r.todayCPR.pivot)}</div>
-                          <div className="text-xs text-muted-foreground">
-                            BC: {fmt(r.todayCPR.bc)}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 font-mono whitespace-nowrap">
-                          <span className="text-chart-3">
-                            {r.todayCPR.widthPct.toFixed(4)}%
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          <div
-                            className={`font-mono font-semibold ${
-                              r.compressionRatio < 50
-                                ? "text-accent"
-                                : "text-muted-foreground"
-                            }`}
-                          >
-                            {r.compressionRatio.toFixed(1)}%
-                          </div>
-                          <div className="w-full bg-muted rounded-full h-1 mt-1 max-w-[80px]">
-                            <div
-                              className={`h-1 rounded-full transition-all ${
-                                r.compressionRatio < 50
-                                  ? "bg-accent"
-                                  : "bg-muted-foreground"
-                              }`}
-                              style={{
-                                width: `${Math.min(r.compressionRatio, 100)}%`,
-                              }}
-                            />
-                          </div>
-                        </td>
-                        <td
-                          className={`px-4 py-3 font-mono font-medium whitespace-nowrap ${
-                            r.change24h >= 0 ? "text-accent" : "text-destructive"
+                    {displayed.map((r) => {
+                      const sym = formatSymbol(r.symbol, r.source);
+                      return (
+                        <tr
+                          key={`${r.source}-${r.symbol}`}
+                          className={`hover:bg-muted/30 transition-colors ${
+                            r.passes ? "" : "opacity-50"
                           }`}
                         >
-                          {fmtPct(r.change24h)}
-                        </td>
-                        <td className="px-4 py-3 font-mono text-muted-foreground whitespace-nowrap text-xs">
-                          {fmtVol(r.quoteVolume)}
-                        </td>
-                        <td className="px-4 py-3 font-mono text-muted-foreground whitespace-nowrap text-xs">
-                          <div className="text-xs text-muted-foreground">
-                            TC: {fmt(r.prevCPR.tc)}
-                          </div>
-                          <div>{fmt(r.prevCPR.pivot)}</div>
-                          <div className="text-xs text-muted-foreground">
-                            BC: {fmt(r.prevCPR.bc)}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          <div className="flex gap-1">
-                            {r.cprRising && (
-                              <span className="text-xs px-1.5 py-0.5 rounded bg-accent/10 text-accent border border-accent/20 font-medium">
-                                Rising
+                          {activeTab === "combined" && (
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              <span
+                                className={`text-xs px-2 py-0.5 rounded border font-semibold ${
+                                  r.source === "binance"
+                                    ? "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
+                                    : "bg-blue-500/10 text-blue-400 border-blue-500/20"
+                                }`}
+                              >
+                                {r.source === "binance" ? "Binance" : "Delta"}
                               </span>
-                            )}
-                            {r.cprNarrowing && (
-                              <span className="text-xs px-1.5 py-0.5 rounded bg-chart-3/10 text-chart-3 border border-chart-3/20 font-medium">
-                                Narrow
+                            </td>
+                          )}
+                          <td className="px-4 py-3 font-mono font-semibold text-foreground whitespace-nowrap">
+                            <div className="flex items-center gap-2">
+                              {r.passes && (
+                                <div className="w-1.5 h-1.5 rounded-full bg-accent" />
+                              )}
+                              {sym.base}
+                              <span className="text-muted-foreground text-xs font-normal">
+                                /{sym.quote}
                               </span>
-                            )}
-                            {!r.cprRising && !r.cprNarrowing && (
-                              <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-                                Skip
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          <a
-                            href={
-                              activeTab === "delta"
-                                ? `https://www.delta.exchange/app/futures/trade/${r.symbol}`
-                                : `https://www.tradingview.com/chart/?symbol=BINANCE:${r.symbol}`
-                            }
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-muted-foreground hover:text-primary transition-colors"
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 font-mono text-foreground whitespace-nowrap">
+                            <div className="text-xs text-muted-foreground">
+                              TC: {fmt(r.todayCPR.tc)}
+                            </div>
+                            <div className="font-medium">{fmt(r.todayCPR.pivot)}</div>
+                            <div className="text-xs text-muted-foreground">
+                              BC: {fmt(r.todayCPR.bc)}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 font-mono whitespace-nowrap">
+                            <span className="text-chart-3">
+                              {r.todayCPR.widthPct.toFixed(4)}%
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <div
+                              className={`font-mono font-semibold ${
+                                r.compressionRatio < 50
+                                  ? "text-accent"
+                                  : "text-muted-foreground"
+                              }`}
+                            >
+                              {r.compressionRatio.toFixed(1)}%
+                            </div>
+                            <div className="w-full bg-muted rounded-full h-1 mt-1 max-w-[80px]">
+                              <div
+                                className={`h-1 rounded-full transition-all ${
+                                  r.compressionRatio < 50
+                                    ? "bg-accent"
+                                    : "bg-muted-foreground"
+                                }`}
+                                style={{
+                                  width: `${Math.min(r.compressionRatio, 100)}%`,
+                                }}
+                              />
+                            </div>
+                          </td>
+                          <td
+                            className={`px-4 py-3 font-mono font-medium whitespace-nowrap ${
+                              r.change24h >= 0 ? "text-accent" : "text-destructive"
+                            }`}
                           >
-                            <ExternalLink className="w-3.5 h-3.5" />
-                          </a>
-                        </td>
-                      </tr>
-                    ))}
+                            {fmtPct(r.change24h)}
+                          </td>
+                          <td className="px-4 py-3 font-mono text-muted-foreground whitespace-nowrap text-xs">
+                            {fmtVol(r.quoteVolume)}
+                          </td>
+                          <td className="px-4 py-3 font-mono text-muted-foreground whitespace-nowrap text-xs">
+                            <div className="text-xs text-muted-foreground">
+                              TC: {fmt(r.prevCPR.tc)}
+                            </div>
+                            <div>{fmt(r.prevCPR.pivot)}</div>
+                            <div className="text-xs text-muted-foreground">
+                              BC: {fmt(r.prevCPR.bc)}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <div className="flex gap-1">
+                              {r.cprRising && (
+                                <span className="text-xs px-1.5 py-0.5 rounded bg-accent/10 text-accent border border-accent/20 font-medium">
+                                  Rising
+                                </span>
+                              )}
+                              {r.cprNarrowing && (
+                                <span className="text-xs px-1.5 py-0.5 rounded bg-chart-3/10 text-chart-3 border border-chart-3/20 font-medium">
+                                  Narrow
+                                </span>
+                              )}
+                              {!r.cprRising && !r.cprNarrowing && (
+                                <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                                  Skip
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <a
+                              href={getChartUrl(r.symbol, r.source)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-muted-foreground hover:text-primary transition-colors"
+                            >
+                              <ExternalLink className="w-3.5 h-3.5" />
+                            </a>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
