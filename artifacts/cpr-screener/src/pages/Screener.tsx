@@ -132,9 +132,16 @@ export default function Screener() {
     }
   }, []);
 
+  // ─── CHANGE IN Screener.tsx ───────────────────────────────────────────────────
+  // Only this function changes. Replace the existing doDeltaScan with this:
+  
   const doDeltaScan = useCallback(async () => {
     if (deltaScanRef.current) return;
     deltaScanRef.current = true;
+  
+    // ── FIX: capture whether this is a rescan BEFORE resetting deltaStatus ──
+    const isRescan = deltaStatus === "done";
+  
     setDeltaStatus("scanning");
     setActiveTab("delta");
     setDeltaAllResults([]);
@@ -142,9 +149,10 @@ export default function Screener() {
     setDeltaError("");
     setDeltaProgress({ done: 0, total: 0, symbol: "" });
     try {
+      // ── FIX: pass forceRefresh=true when rescanning so cache is cleared ──
       const results = await runDeltaScreener((done, total, symbol) => {
         setDeltaProgress({ done, total, symbol });
-      });
+      }, isRescan);                          // <── only change on this line
       setDeltaAllResults(results);
       setDeltaFiltered(results.filter((r) => r.passes));
       setDeltaStatus("done");
@@ -154,7 +162,7 @@ export default function Screener() {
     } finally {
       deltaScanRef.current = false;
     }
-  }, []);
+  }, [deltaStatus]);                         // <── add deltaStatus to deps
 
   useEffect(() => {
     if (shouldAutoScan()) {
