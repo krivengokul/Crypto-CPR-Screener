@@ -2,6 +2,10 @@ import { OHLC, CPRResult, analyzeCPR } from "./cpr";
 
 const BASE = "https://api.india.delta.exchange/v2";
 
+// ─── localStorage key prefixes (mirror Binance pattern) ──────────────────────
+const DELTA_RESULTS_KEY_PREFIX     = "delta_cpr_results_";
+const DELTA_SESSION_OPEN_KEY_PREFIX = "delta_session_open_";
+
 interface DeltaTicker {
   symbol: string;
   close: number;
@@ -23,21 +27,67 @@ interface DeltaCandle {
   volume: number;
 }
 
+// sessionOpenMap: symbol → open price at 5:30 AM IST today
+type SessionOpenMap = Record<string, number>;
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
 async function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-/**
- * Returns the Unix timestamp (seconds) for today's 5:30 AM IST session open.
- * Delta Exchange India daily candles start at 5:30 AM IST = 00:00 UTC.
- * So today's session start is simply today's UTC midnight.
- */
-function getTodayISTSessionStartSec(): number {
+/** Returns today's date string in IST, e.g. "2026-06-18" */
+function getTodayISTDate(): string {
   const now = new Date();
-  return Math.floor(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) / 1000
-  );
+  const ist = new Date(now.getTime() + 5.5 * 60 * 60 * 1000);
+  return ist.toISOString().slice(0, 10);
 }
+
+/**
+ * Today's 5:30 AM IST session start in milliseconds.
+ * Delta daily candles start at 5:30 AM IST = 00:00 UTC.
+ */
+function getTodayISTSessionStartMs(): number {
+  const now = new Date();
+  return Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+}
+
+// ─── localStorage: pinned CPR results ────────────────────────────────────────
+
+function getPinnedResults(): CPRResult[] | null {
+  const key = DELTA_RESULTS_KEY_PREFIX + getTodayISTDate();
+  const stored = localStorage.getItem(key);
+  return stored ? (JSON.parse(stored) as CPRResult[]) : null;
+}
+
+function setPinnedResults(results: CPRResult[]): void {
+  const key = DELTA_RESULTS_KEY_PREFIX + getTodayISTDate();
+  localStorage.setItem(key, JSON.stringify(results));
+  // Clean up previous days
+  Object.keys(localStorage)
+    .filter((k) => k.startsWith(DELTA_RESULTS_KEY_PREFIX) && k !== key)
+    .forEach((k) => localStorage.removeItem(k));
+}
+
+// ─── localStorage: session open prices (captured at first scan) ───────────────
+// We store the 5:30 AM IST candle open for each symbol so that on rescan
+// we can compute % change from session open accurately.
+
+function getPinnedSessionOpenMap(): SessionOpenMap | null {
+  const key = DELTA_SESSION_OPEN_KEY_PREFIX + getTodayISTDate();
+  const stored = localStorage.getItem(key);
+  return stored ? (JSON.parse(stored) as SessionOpenMap) : null;
+}
+
+function setPinnedSessionOpenMap(map: SessionOpenMap): void {
+  const key = DELTA_SESSION_OPEN_KEY_PREFIX + getTodayISTDate();
+  localStorage.setItem(key, JSON.stringify(map));
+  Object.keys(localStorage)
+    .filter((k) => k.startsWith(DELTA_SESSION_OPEN_KEY_PREFIX) && k !== key)
+    .forEach((k) => localStorage.removeItem(k));
+}
+
+// ─── API fetches ──────────────────────────────────────────────────────────────
 
 export async function fetchDeltaPerps(): Promise<DeltaTicker[]> {
   const res = await fetch(`${BASE}/tickers`);
@@ -51,8 +101,7 @@ export async function fetchDeltaPerps(): Promise<DeltaTicker[]> {
 async function fetchDeltaCandles(symbol: string): Promise<OHLC[] | null> {
   try {
     const now = Math.floor(Date.now() / 1000);
-    // FIX: Request 6 days instead of 4 to guarantee we always get enough
-    // completed candles regardless of where we are in the current IST session.
+    // 6 days ensures we always have enough completed candles
     const start = now - 6 * 86400;
     const res = await fetch(
       `${BASE}/history/candles?symbol=${symbol}&resolution=1d&start=${start}&end=${now}`
@@ -61,7 +110,7 @@ async function fetchDeltaCandles(symbol: string): Promise<OHLC[] | null> {
     const data = await res.json();
     if (!data.result || data.result.length < 3) return null;
     return (data.result as DeltaCandle[]).map((k) => ({
-      openTime: k.time * 1000, // convert to ms
+      openTime: k.time * 1000,
       open: k.open,
       high: k.high,
       low: k.low,
@@ -73,16 +122,101 @@ async function fetchDeltaCandles(symbol: string): Promise<OHLC[] | null> {
   }
 }
 
+// ─── CPR computation for a single symbol ─────────────────────────────────────
+
+function computeCPRForSymbol(
+  t: DeltaTicker,
+  candles: OHLC[],
+  todaySessionStartMs: number
+): { result: CPRResult; sessionOpen: number | null } | null {
+  const todayLiveCandleIdx = candles.findIndex(
+    (c) => c.openTime === todaySessionStartMs
+  );
+
+  let todayCandle: OHLC;
+  let prevCandle: OHLC;
+  let todayLiveOpen: number | null = null;
+
+  if (todayLiveCandleIdx !== -1) {
+    if (todayLiveCandleIdx < 2) return null;
+    todayCandle   = candles[todayLiveCandleIdx - 1];
+    prevCandle    = candles[todayLiveCandleIdx - 2];
+    todayLiveOpen = candles[todayLiveCandleIdx].open;
+  } else {
+    if (candles.length < 2) return null;
+    todayCandle   = candles[candles.length - 1];
+    prevCandle    = candles[candles.length - 2];
+  }
+
+  const currentPrice = parseFloat(t.mark_price) || t.close;
+  const changeFromDayOpen =
+    todayLiveOpen !== null && todayLiveOpen > 0
+      ? ((currentPrice - todayLiveOpen) / todayLiveOpen) * 100
+      : parseFloat(t.ltp_change_24h);
+
+  const result = analyzeCPR(
+    t.symbol,
+    [prevCandle, todayCandle],
+    currentPrice,
+    changeFromDayOpen,
+    t.turnover_usd || 0
+  );
+
+  if (!result) return null;
+  return { result, sessionOpen: todayLiveOpen };
+}
+
+// ─── Main screener ────────────────────────────────────────────────────────────
+
 export async function runDeltaScreener(
   onProgress: (done: number, total: number, symbol: string) => void
 ): Promise<CPRResult[]> {
-  const tickers = await fetchDeltaPerps();
-  const results: CPRResult[] = [];
-  const batchSize = 10;
-  const delayMs = 300;
+  const todaySessionStartMs = getTodayISTSessionStartMs();
 
-  // FIX: compute today's IST session start once (in seconds, for candle.time comparison)
-  const todaySessionStartSec = getTodayISTSessionStartSec();
+  // Always fetch live tickers (needed for current price on every scan)
+  const tickers    = await fetchDeltaPerps();
+  const tickerMap: Record<string, DeltaTicker> = {};
+  for (const t of tickers) tickerMap[t.symbol] = t;
+
+  // ── CHECK: do we already have today's pinned CPR results? ──────────────────
+  const pinnedResults    = getPinnedResults();
+  const pinnedSessionMap = getPinnedSessionOpenMap();
+
+  if (pinnedResults && pinnedResults.length > 0 && pinnedSessionMap) {
+    // ── RESCAN PATH ──────────────────────────────────────────────────────────
+    // Reuse pinned CPR levels (pivot, bc, tc, cprRising, cprNarrowing, passes).
+    // Only update currentPrice and change24h from live ticker data.
+    // This guarantees the SAME coins always show on rescan — no candle API needed.
+    const total = pinnedResults.length;
+
+    const updated: CPRResult[] = pinnedResults.map((saved, i) => {
+      const live = tickerMap[saved.symbol];
+      onProgress(i + 1, total, saved.symbol);
+      if (!live) return saved; // symbol delisted mid-day, keep as-is
+
+      const currentPrice  = parseFloat(live.mark_price) || live.close;
+      const sessionOpen   = pinnedSessionMap[saved.symbol] ?? null;
+      const changeFromDayOpen =
+        sessionOpen !== null && sessionOpen > 0
+          ? ((currentPrice - sessionOpen) / sessionOpen) * 100
+          : parseFloat(live.ltp_change_24h);
+
+      return {
+        ...saved,        // ALL CPR levels, passes, cprRising, cprNarrowing FIXED ✅
+        currentPrice,    // live price updated ✅
+        change24h: changeFromDayOpen, // live % from 5:30 AM IST updated ✅
+      } as CPRResult;
+    });
+
+    return updated;
+  }
+
+  // ── FIRST SCAN PATH ────────────────────────────────────────────────────────
+  // Fetch candles for all symbols, compute CPR, pin to localStorage.
+  const results: CPRResult[]    = [];
+  const sessionOpenMap: SessionOpenMap = {};
+  const batchSize = 10;
+  const delayMs   = 300;
 
   for (let i = 0; i < tickers.length; i += batchSize) {
     const batch = tickers.slice(i, i + batchSize);
@@ -91,62 +225,18 @@ export async function runDeltaScreener(
       batch.map(async (t) => {
         const candles = await fetchDeltaCandles(t.symbol);
         if (!candles || candles.length < 3) return null;
-
-        // FIX: Identify today's live (incomplete) candle by its timestamp.
-        // Delta daily candles start at 5:30 AM IST = 00:00 UTC.
-        // candle.openTime is in ms; todaySessionStartSec is in seconds.
-        const todaySessionStartMs = todaySessionStartSec * 1000;
-
-        // Find index of today's live candle (may or may not exist in array)
-        const todayLiveCandleIdx = candles.findIndex(
-          (c) => c.openTime === todaySessionStartMs
-        );
-
-        let todayCandle: OHLC; // yesterday's completed candle → used to compute TODAY's CPR
-        let prevCandle: OHLC;  // day before yesterday → used to compute YESTERDAY's CPR
-        let todayLiveOpen: number | null = null;
-
-        if (todayLiveCandleIdx !== -1) {
-          // Today's live candle exists in the array
-          // todayCandle = the completed candle right before today's live candle
-          // prevCandle  = the one before todayCandle
-          if (todayLiveCandleIdx < 2) return null; // not enough completed candles
-          todayCandle = candles[todayLiveCandleIdx - 1];
-          prevCandle  = candles[todayLiveCandleIdx - 2];
-          todayLiveOpen = candles[todayLiveCandleIdx].open;
-        } else {
-          // Today's live candle not in array yet (scanned before 5:30 AM IST or API lag)
-          // Last candle in array = yesterday's completed candle (today's CPR source)
-          // Second-to-last = day before yesterday (prev CPR source)
-          if (candles.length < 2) return null;
-          todayCandle = candles[candles.length - 1];
-          prevCandle  = candles[candles.length - 2];
-          todayLiveOpen = null; // session hasn't started yet
-        }
-
-        const currentPrice = parseFloat(t.mark_price) || t.close;
-
-        // FIX: Use today's IST session open for changeFromDayOpen (mirrors Binance logic).
-        // If today's live candle exists, use its open price.
-        // Otherwise fall back to ltp_change_24h from ticker.
-        const changeFromDayOpen =
-          todayLiveOpen !== null && todayLiveOpen > 0
-            ? ((currentPrice - todayLiveOpen) / todayLiveOpen) * 100
-            : parseFloat(t.ltp_change_24h);
-
-        return analyzeCPR(
-          t.symbol,
-          [prevCandle, todayCandle],
-          currentPrice,
-          changeFromDayOpen,
-          t.turnover_usd || 0
-        );
+        return computeCPRForSymbol(t, candles, todaySessionStartMs);
       })
     );
 
     batchResults.forEach((r) => {
-      if (r) results.push(r);
+      if (!r) return;
+      results.push(r.result);
+      if (r.sessionOpen !== null) {
+        sessionOpenMap[r.result.symbol] = r.sessionOpen;
+      }
     });
+
     onProgress(
       Math.min(i + batchSize, tickers.length),
       tickers.length,
@@ -155,6 +245,10 @@ export async function runDeltaScreener(
 
     if (i + batchSize < tickers.length) await sleep(delayMs);
   }
+
+  // Pin both CPR results and session open prices for the rest of the day
+  setPinnedResults(results);
+  setPinnedSessionOpenMap(sessionOpenMap);
 
   return results;
 }
