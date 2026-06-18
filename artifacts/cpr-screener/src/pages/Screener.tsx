@@ -75,7 +75,7 @@ function getChartUrl(symbol: string, source: "binance" | "delta"): string {
       : symbol.endsWith("USD")
       ? symbol.slice(0, -3)
       : symbol;
-    return `https://www.tradingview.com/chart/?symbol=DELTA:${base}USDT.P`;
+    return `https://www.tradingview.com/chart/?symbol=BINANCE:${base}USDT.P`;
   }
   // Binance: BINANCE:COAIUSDT
   return `https://www.tradingview.com/chart/?symbol=BINANCE:${symbol}`;
