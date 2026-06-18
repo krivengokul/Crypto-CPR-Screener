@@ -42,8 +42,6 @@ function getTodayISTSessionStartMs(): number {
   return Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
 }
 
-// ─── Session open cache (day-open price — stable all day) ─────────────────────
-
 function getPinnedSessionOpenMap(): SessionOpenMap | null {
   const key = DELTA_SESSION_OPEN_KEY_PREFIX + getTodayISTDate();
   const stored = localStorage.getItem(key);
@@ -59,24 +57,47 @@ function setPinnedSessionOpenMap(map: SessionOpenMap): void {
 }
 
 // ─── Fetch ALL perpetual futures tickers ─────────────────────────────────────
+// FIX: add page_size=500 to get all tickers in one request instead of relying
+// solely on cursor pagination (which previously only returned ~7 results when
+// the cursor field wasn't found in the response meta).
 
 export async function fetchDeltaPerps(): Promise<DeltaTicker[]> {
   const all: DeltaTicker[] = [];
   let after: string | null = null;
+  let pageNum = 0;
 
   while (true) {
+    // Request a large page so we usually get all 195 in one shot.
+    // page_size=500 is safe — Delta caps at 500 per page.
     const url =
-      `${BASE}/tickers?contract_types=perpetual_futures` +
+      `${BASE}/tickers?contract_types=perpetual_futures&page_size=500` +
       (after ? `&after=${encodeURIComponent(after)}` : "");
 
     const res = await fetch(url, { cache: "no-store" });
     if (!res.ok) throw new Error(`Delta ticker error: ${res.status}`);
     const data = await res.json();
 
+    // Log first page so we can inspect the real meta shape in DevTools
+    if (pageNum === 0) {
+      console.log(
+        "[Delta tickers DEBUG] meta:",
+        JSON.stringify(data.meta ?? data.pagination ?? null)
+      );
+    }
+    pageNum++;
+
     const page: DeltaTicker[] = (data.result ?? []) as DeltaTicker[];
     all.push(...page);
 
-    const nextAfter: string | null = data.meta?.after ?? null;
+    // Try every known cursor field name the Delta API may use
+    const nextAfter: string | null =
+      data.meta?.after ??
+      data.meta?.cursor ??
+      data.meta?.next_cursor ??
+      data.pagination?.after ??
+      data.pagination?.cursor ??
+      null;
+
     if (!nextAfter || page.length === 0) break;
     after = nextAfter;
   }
@@ -85,10 +106,11 @@ export async function fetchDeltaPerps(): Promise<DeltaTicker[]> {
 }
 
 // ─── Fetch daily candles ──────────────────────────────────────────────────────
-// Handles two known Delta API response shapes:
+// Handles multiple known Delta API response shapes:
 //   Shape A (v2 docs):   { result: [...candles] }
-//   Shape B (some envs): { result: { candles: [...] } }  ← nested object
-// Logs the raw response for the first symbol so you can inspect in DevTools.
+//   Shape B (some envs): { result: { candles: [...] } }
+//   Shape C:             { candles: [...] }
+//   Shape D:             [...candles]
 
 let _candleDebugLogged = false;
 
@@ -103,40 +125,34 @@ async function fetchDeltaCandles(symbol: string): Promise<OHLC[] | null> {
     if (!res.ok) return null;
     const data = await res.json();
 
-    // ── Debug: log the raw response shape once so you can inspect it ────────
     if (!_candleDebugLogged) {
       _candleDebugLogged = true;
-      console.log(`[Delta candles DEBUG] symbol=${symbol} raw response:`, JSON.stringify(data).slice(0, 500));
+      console.log(
+        `[Delta candles DEBUG] symbol=${symbol} raw:`,
+        JSON.stringify(data).slice(0, 500)
+      );
     }
 
-    // ── Flexibly extract the candles array ───────────────────────────────────
-    // Try all known shapes before giving up
     let raw: DeltaCandle[] | null = null;
 
     if (Array.isArray(data.result)) {
-      // Shape A: { result: [ {time,open,...}, ... ] }
       raw = data.result as DeltaCandle[];
     } else if (data.result && Array.isArray(data.result.candles)) {
-      // Shape B: { result: { candles: [...] } }
       raw = data.result.candles as DeltaCandle[];
     } else if (Array.isArray(data.candles)) {
-      // Shape C: { candles: [...] }
       raw = data.candles as DeltaCandle[];
     } else if (Array.isArray(data)) {
-      // Shape D: raw array at top level
       raw = data as DeltaCandle[];
     }
 
     if (!raw || raw.length < 3) return null;
 
-    // ── Map to OHLC ──────────────────────────────────────────────────────────
-    // Delta candle time field may be seconds (Unix) or ms — normalise to ms
     return raw.map((k) => ({
-      openTime: k.time > 1e10 ? k.time : k.time * 1000, // seconds → ms if needed
-      open:   Number(k.open),
-      high:   Number(k.high),
-      low:    Number(k.low),
-      close:  Number(k.close),
+      openTime: k.time > 1e10 ? k.time : k.time * 1000,
+      open: Number(k.open),
+      high: Number(k.high),
+      low: Number(k.low),
+      close: Number(k.close),
       volume: Number(k.volume),
     }));
   } catch {
@@ -151,18 +167,18 @@ export async function runDeltaScreener(
 ): Promise<CPRResult[]> {
   const todaySessionStartMs = getTodayISTSessionStartMs();
 
-  // Reset debug flag so each scan logs fresh
   _candleDebugLogged = false;
 
   const tickers = await fetchDeltaPerps();
+  console.log(`[Delta] Fetched ${tickers.length} perpetual futures tickers`);
 
   const savedSessionMap = getPinnedSessionOpenMap() ?? {};
   const sessionOpenMap: SessionOpenMap = { ...savedSessionMap };
 
   const results: CPRResult[] = [];
-  let nullCount = 0; // track how many symbols fail candle fetch
+  let nullCount = 0;
   const batchSize = 10;
-  const delayMs   = 300;
+  const delayMs = 300;
 
   for (let i = 0; i < tickers.length; i += batchSize) {
     const batch = tickers.slice(i, i + batchSize);
@@ -175,7 +191,6 @@ export async function runDeltaScreener(
           return null;
         }
 
-        // ── Select the two completed candles for CPR ─────────────────────────
         const todayLiveCandleIdx = candles.findIndex(
           (c) => c.openTime === todaySessionStartMs
         );
@@ -185,14 +200,12 @@ export async function runDeltaScreener(
         let todayLiveOpen: number | null = null;
 
         if (todayLiveCandleIdx !== -1) {
-          // Live incomplete candle is in the array — pick the two before it
           if (todayLiveCandleIdx < 2) return null;
-          prevCandle    = candles[todayLiveCandleIdx - 2];
-          todayCandle   = candles[todayLiveCandleIdx - 1];
+          prevCandle = candles[todayLiveCandleIdx - 2];
+          todayCandle = candles[todayLiveCandleIdx - 1];
           todayLiveOpen = candles[todayLiveCandleIdx].open;
         } else {
-          // No live candle — last two completed candles
-          prevCandle  = candles[candles.length - 3] ?? candles[0];
+          prevCandle = candles[candles.length - 3] ?? candles[0];
           todayCandle = candles[candles.length - 2];
           todayLiveOpen = savedSessionMap[t.symbol] ?? null;
         }
@@ -207,7 +220,6 @@ export async function runDeltaScreener(
             ? ((currentPrice - todayLiveOpen) / todayLiveOpen) * 100
             : parseFloat(t.ltp_change_24h);
 
-        // Pass [prevCandle, todayCandle] — analyzeCPR uses [-2] and [-1]
         return analyzeCPR(
           t.symbol,
           [prevCandle, todayCandle],
@@ -218,7 +230,9 @@ export async function runDeltaScreener(
       })
     );
 
-    batchResults.forEach((r) => { if (r) results.push(r); });
+    batchResults.forEach((r) => {
+      if (r) results.push(r);
+    });
 
     onProgress(
       Math.min(i + batchSize, tickers.length),
@@ -229,8 +243,9 @@ export async function runDeltaScreener(
     if (i + batchSize < tickers.length) await sleep(delayMs);
   }
 
-  // Log summary to help diagnose if still broken
-  console.log(`[Delta scan] total=${tickers.length} nullCandles=${nullCount} results=${results.length} matches=${results.filter(r=>r.passes).length}`);
+  console.log(
+    `[Delta scan] total=${tickers.length} nullCandles=${nullCount} results=${results.length} matches=${results.filter((r) => r.passes).length}`
+  );
 
   setPinnedSessionOpenMap(sessionOpenMap);
   return results;
