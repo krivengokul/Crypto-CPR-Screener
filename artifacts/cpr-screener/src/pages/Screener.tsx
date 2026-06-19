@@ -141,7 +141,7 @@ export default function Screener({ activePattern = "rising" }: { activePattern?:
     } finally {
       scanRef.current = false;
     }
-  }, []);
+  }, [activePattern]);
 
   const doDeltaScan = useCallback(async () => {
     if (deltaScanRef.current) return;
@@ -165,7 +165,7 @@ export default function Screener({ activePattern = "rising" }: { activePattern?:
     } finally {
       deltaScanRef.current = false;
     }
-  }, []);
+  }, [activePattern]);
 
   useEffect(() => {
     if (shouldAutoScan()) {
@@ -180,14 +180,14 @@ export default function Screener({ activePattern = "rising" }: { activePattern?:
     return () => clearInterval(id);
   }, [nextScanUtc]);
 
-  useEffect(() => {
+   useEffect(() => {
     if (allResults.length > 0) {
       setFiltered(allResults.filter((r) => passesPattern(r, activePattern)));
     }
     if (deltaAllResults.length > 0) {
       setDeltaFiltered(deltaAllResults.filter((r) => passesPattern(r, activePattern)));
     }
-  }, [activePattern]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activePattern, allResults, deltaAllResults]);
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
