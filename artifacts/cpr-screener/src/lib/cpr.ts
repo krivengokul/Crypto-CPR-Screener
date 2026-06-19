@@ -30,9 +30,11 @@ export interface CPRResult {
 
 export function calcCPR(candle: OHLC): CPRLevels {
   const pivot = (candle.high + candle.low + candle.close) / 3;
-  const bc = (candle.high + candle.low) / 2;
-  const tc = 2 * pivot - bc;
-  const width = Math.abs(tc - bc);
+  const midpoint = (candle.high + candle.low) / 2;
+  const other = 2 * pivot - midpoint;
+  const bc = Math.min(midpoint, other);   // always the lower boundary
+  const tc = Math.max(midpoint, other);   // always the upper boundary
+  const width = tc - bc;
   const widthPct = (width / pivot) * 100;
   return { pivot, bc, tc, width, widthPct };
 }
