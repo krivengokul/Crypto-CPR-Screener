@@ -137,6 +137,15 @@ export default function Screener({ activePattern = "rising" }: { activePattern?:
   const [activeTab, setActiveTab] = useState<ActiveTab>("binance");
   const deltaScanRef = useRef(false);
 
+  // Refs so the live-refresh intervals always see the latest values without
+  // being included in effect deps (which would restart the interval every tick)
+  const allResultsRef = useRef<CPRResult[]>([]);
+  const deltaAllResultsRef = useRef<CPRResult[]>([]);
+  const activePatternRef = useRef(activePattern);
+  useEffect(() => { allResultsRef.current = allResults; }, [allResults]);
+  useEffect(() => { deltaAllResultsRef.current = deltaAllResults; }, [deltaAllResults]);
+  useEffect(() => { activePatternRef.current = activePattern; }, [activePattern]);
+
   const doScan = useCallback(async () => {
     if (scanRef.current) return;
     scanRef.current = true;
@@ -199,6 +208,110 @@ export default function Screener({ activePattern = "rising" }: { activePattern?:
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, [nextScanUtc]);
+
+  // ── Binance live price refresh (every 30 s) ───────────────────────────────
+  useEffect(() => {
+    if (status !== "done") return;
+
+    const refresh = async () => {
+      const results = allResultsRef.current;
+      if (results.length === 0) return;
+      try {
+        const symbols = results.map((r) => r.symbol);
+        // Binance allows max 100 symbols per request
+        const chunks: string[][] = [];
+        for (let i = 0; i < symbols.length; i += 100)
+          chunks.push(symbols.slice(i, i + 100));
+
+        const priceMap = new Map<string, { price: number; change: number }>();
+        await Promise.all(
+          chunks.map(async (chunk) => {
+            const res = await fetch(
+              `https://api.binance.com/api/v3/ticker/24hr?symbols=${encodeURIComponent(
+                JSON.stringify(chunk)
+              )}&type=MINI`
+            );
+            if (!res.ok) return;
+            const tickers: Array<{
+              symbol: string;
+              lastPrice: string;
+              priceChangePercent: string;
+            }> = await res.json();
+            tickers.forEach((t) =>
+              priceMap.set(t.symbol, {
+                price: parseFloat(t.lastPrice),
+                change: parseFloat(t.priceChangePercent),
+              })
+            );
+          })
+        );
+
+        const applyUpdate = (prev: CPRResult[]): CPRResult[] =>
+          prev.map((r) => {
+            const live = priceMap.get(r.symbol);
+            if (!live) return r;
+            return { ...r, currentPrice: live.price, change24h: live.change };
+          });
+
+        setAllResults((prev) => applyUpdate(prev));
+        setFiltered((prev) => applyUpdate(prev));
+      } catch {
+        // silent — don't disrupt the UI on transient failures
+      }
+    };
+
+    const id = setInterval(refresh, 30_000);
+    return () => clearInterval(id);
+  }, [status]);
+
+  // ── Delta live price refresh (every 30 s) ────────────────────────────────
+  useEffect(() => {
+    if (deltaStatus !== "done") return;
+
+    const refresh = async () => {
+      const results = deltaAllResultsRef.current;
+      if (results.length === 0) return;
+      try {
+        const res = await fetch(
+          "https://api.india.delta.exchange/v2/tickers?contract_types=perpetual_futures&page_size=500",
+          { cache: "no-store" }
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        const tickers: Array<{
+          symbol: string;
+          mark_price: string;
+          ltp_change_24h: string;
+        }> = (data.result ?? []) as Array<{
+          symbol: string;
+          mark_price: string;
+          ltp_change_24h: string;
+        }>;
+
+        const priceMap = new Map(tickers.map((t) => [t.symbol, t]));
+
+        const applyUpdate = (prev: CPRResult[]): CPRResult[] =>
+          prev.map((r) => {
+            const t = priceMap.get(r.symbol);
+            if (!t) return r;
+            const price = parseFloat(t.mark_price);
+            return {
+              ...r,
+              currentPrice: price > 0 ? price : r.currentPrice,
+              change24h: parseFloat(t.ltp_change_24h),
+            };
+          });
+
+        setDeltaAllResults((prev) => applyUpdate(prev));
+        setDeltaFiltered((prev) => applyUpdate(prev));
+      } catch {
+        // silent
+      }
+    };
+
+    const id = setInterval(refresh, 30_000);
+    return () => clearInterval(id);
+  }, [deltaStatus]);
 
    useEffect(() => {
     if (allResults.length > 0) {
@@ -602,19 +715,27 @@ export default function Screener({ activePattern = "rising" }: { activePattern?:
                           Source
                         </th>
                       )}
-                      {[
-                        { key: "symbol" as SortKey, label: "Symbol" },
-                        { key: "todayCPR.pivot" as SortKey, label: "Today Pivot" },
-                        { key: "compressionRatio" as SortKey, label: "Pivot Width" },
-                        { key: "change24h" as SortKey, label: "Change (5:30 AM IST)" },
-                        { key: "DistfromCPR" as SortKey, label: "Dist from CPR" },
-                      ].map((col) => (
+                      {(
+                        [
+                          { key: "symbol" as SortKey, label: "Symbol", live: false },
+                          { key: "todayCPR.pivot" as SortKey, label: "Today Pivot", live: false },
+                          { key: "compressionRatio" as SortKey, label: "Pivot Width", live: false },
+                          { key: "change24h" as SortKey, label: "Change (5:30 AM IST)", live: true },
+                          { key: "DistfromCPR" as SortKey, label: "Dist from CPR", live: true },
+                        ] as { key: SortKey; label: string; live: boolean }[]
+                      ).map((col) => (
                         <th
                           key={col.key}
                           onClick={() => toggleSort(col.key)}
                           className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground cursor-pointer hover:text-foreground transition-colors whitespace-nowrap select-none"
                         >
                           {col.label}
+                          {col.live && currentStatus === "done" && (
+                            <span
+                              className="inline-block w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse ml-1.5 align-middle"
+                              title="Auto-refreshes every 30 seconds"
+                            />
+                          )}
                           <SortIcon k={col.key} />
                         </th>
                       ))}
