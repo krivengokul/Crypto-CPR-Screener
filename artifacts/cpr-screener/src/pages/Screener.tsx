@@ -328,7 +328,7 @@ export default function Screener({ activePattern = "rising" }: { activePattern?:
               <>
                 Filters crypto coins where{" "}
                 <span className="text-foreground font-medium">
-                  today&apos;s CPR is above yesterday&apos;s CPR
+                  today&apos;s BCPR is above yesterday&apos;s TCPR
                 </span>{" "}
                 and{" "}
                 <span className="text-foreground font-medium">
@@ -362,7 +362,7 @@ export default function Screener({ activePattern = "rising" }: { activePattern?:
                 }
               : {
                   label: "CPR Rising",
-                  desc: "Today's Pivot > Yesterday's Pivot — bullish directional bias",
+                  desc: "Today's BPivot > Yesterday's TPivot — bullish directional bias",
                   color: "text-accent",
                 },
               activePattern === "inside-value"
