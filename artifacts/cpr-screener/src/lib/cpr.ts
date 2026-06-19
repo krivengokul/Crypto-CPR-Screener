@@ -70,10 +70,10 @@ export function analyzeCPR(
   const prevCPR = calcCPR(prevCandle);
   const todayCPR = calcCPR(todayCandle);
 
-  // Rising: today's entire CPR range is strictly above yesterday's (no overlap)
-  const cprRising = todayCPR.bc > prevCPR.tc;
-  // Falling: today's entire CPR range is strictly below yesterday's (no overlap)
-  const cprFalling = todayCPR.tc < prevCPR.bc;
+  // Require a minimum gap of 0.1% of pivot — filters out near-touching CPRs (noise)
+  const minGap     = prevCPR.pivot * 0.001;
+  const cprRising  = (todayCPR.bc  - prevCPR.tc) >= minGap;
+  const cprFalling = (prevCPR.bc   - todayCPR.tc) >= minGap;
 
   const compressionRatio = prevCPR.width > 0 ? (todayCPR.width / prevCPR.width) * 100 : 100;
   const cprNarrowing = compressionRatio < 50;
