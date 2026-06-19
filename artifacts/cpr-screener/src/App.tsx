@@ -58,7 +58,7 @@ function App() {
             onToggle={handleToggle}
           />
           <main className="flex-1 overflow-auto">
-            {activePattern === "rising" || activePattern === "falling" ? (
+            {["rising", "falling", "inside-value"].includes(activePattern) ? (
               <Screener activePattern={activePattern} />
             ) : (
               <ComingSoon label={activeLabel} />
