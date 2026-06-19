@@ -678,7 +678,6 @@ export default function Screener({ activePattern = "rising" }: { activePattern?:
                           </td>
                           <td  className="px-4 py-3 font-mono whitespace-nowrap">
                             <span className="text-chart-3">
-                              // {(r.prevCPR.width / r.prevCPR.pivot * 100).toFixed(3)}%
                                {r.prevCPR.widthPct.toFixed(4)}%
                             </span>
                           </td>
