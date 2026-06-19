@@ -52,7 +52,7 @@ export function analyzeCPR(
   const prevCPR = calcCPR(prevCandle);
   const todayCPR = calcCPR(todayCandle);
 
-  const cprRising = todayCPR.pivot > prevCPR.pivot;
+  const cprRising = todayCPR.bc > prevCPR.tc;
   const compressionRatio = prevCPR.width > 0 ? (todayCPR.width / prevCPR.width) * 100 : 100;
   const cprNarrowing = compressionRatio < 50;
 
