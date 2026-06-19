@@ -89,7 +89,7 @@ function formatSymbol(symbol: string, source: "binance" | "delta"): { base: stri
 }
 
 function passesPattern(r: CPRResult, pattern: string): boolean {
-  if (pattern === "falling") return !r.cprRising && r.cprNarrowing;
+  if (pattern === "falling") return r.cprFalling && r.cprNarrowing;
   if (pattern === "inside-value")
     return r.todayCPR.tc < r.prevCPR.tc && r.todayCPR.bc > r.prevCPR.bc;
   return r.cprRising && r.cprNarrowing;
@@ -307,7 +307,7 @@ export default function Screener({ activePattern = "rising" }: { activePattern?:
               <>
                 Filters crypto coins where{" "}
                 <span className="text-foreground font-medium">
-                  today&apos;s CPR is below yesterday&apos;s CPR
+                  today&apos;s TCPR is below yesterday&apos;s BCPR
                 </span>{" "}
                 and{" "}
                 <span className="text-foreground font-medium">
@@ -351,7 +351,7 @@ export default function Screener({ activePattern = "rising" }: { activePattern?:
               activePattern === "falling"
               ? {
                   label: "CPR Falling",
-                  desc: "Today's Pivot < Yesterday's Pivot — bearish directional bias",
+                  desc: "Today's TPivot < Yesterday's BPivot — bearish directional bias",
                   color: "text-destructive",
                 }
               : activePattern === "inside-value"
@@ -709,7 +709,7 @@ export default function Screener({ activePattern = "rising" }: { activePattern?:
                                   Rising
                                 </span>
                               )}
-                              {!r.cprRising && r.cprNarrowing && activePattern === "falling" && (
+                              {r.cprFalling && r.cprNarrowing && activePattern === "falling" && (
                                 <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">
                                   Falling
                                 </span>
