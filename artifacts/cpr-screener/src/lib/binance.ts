@@ -116,19 +116,32 @@ const allTickers = await fetchTopUSDTSymbols(500);
 
     const batchResults = await Promise.all(
         batch.map(async (t) => {
-        const klines = await fetchKlines(t.symbol);
-        if (!klines || klines.length < 2) return null;
-        // Always use the last 2 completed candles for CPR
-        const prevCandle = klines[klines.length - 3] ?? klines[0];
-        const todayCandle = klines[klines.length - 2];
-        // Today's 5:30 AM IST open = 00:00 UTC candle
-        const todayMidnightMs = getTodayUTCMidnightMs();
-        const todayLiveCandle = klines[klines.length - 1];
-        const isTodayCandle = todayLiveCandle.openTime === todayMidnightMs;
-        const currentPrice = parseFloat(t.lastPrice);
-        const changeFromDayOpen = isTodayCandle
-          ? ((currentPrice - todayLiveCandle.open) / todayLiveCandle.open) * 100
-          : parseFloat(t.priceChangePercent); // fallback to 24h if scanned before 5:30 AM IST
+       +    const klines = await fetchKlines(t.symbol);
+    if (!klines || klines.length < 2) return null;
+
+    const nowMs = Date.now();
+    const lastKline = klines[klines.length - 1];
+    const lastKlineIsLive = (nowMs - lastKline.openTime) < 24 * 60 * 60 * 1000;
+
+    let prevCandle: OHLC;
+    let todayCandle: OHLC;
+    let liveCandle: OHLC | null = null;
+
+    if (lastKlineIsLive) {
+      if (klines.length < 3) return null;
+      prevCandle  = klines[klines.length - 3];
+      todayCandle = klines[klines.length - 2];
+      liveCandle  = lastKline;
+    } else {
+      prevCandle  = klines[klines.length - 2];
+      todayCandle = klines[klines.length - 1];
+      liveCandle  = null;
+    }
+
+    const currentPrice = parseFloat(t.lastPrice);
+    const changeFromDayOpen = liveCandle
+      ? ((currentPrice - liveCandle.open) / liveCandle.open) * 100
+      : parseFloat(t.priceChangePercent);
         return analyzeCPR(
           t.symbol,
           [prevCandle, todayCandle],
