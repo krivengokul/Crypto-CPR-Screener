@@ -29,12 +29,24 @@ export interface CPRResult {
   quoteVolume: number;
 }
 
+function isValidCandle(c: OHLC): boolean {
+  return (
+    c.high > 0 &&
+    c.low > 0 &&
+    c.close > 0 &&
+    c.high >= c.low &&
+    !isNaN(c.high) &&
+    !isNaN(c.low) &&
+    !isNaN(c.close)
+  );
+}
+
 export function calcCPR(candle: OHLC): CPRLevels {
   const pivot = (candle.high + candle.low + candle.close) / 3;
   const midpoint = (candle.high + candle.low) / 2;
   const other = 2 * pivot - midpoint;
-  const bc = Math.min(midpoint, other);   // always the lower boundary
-  const tc = Math.max(midpoint, other);   // always the upper boundary
+  const bc = Math.min(midpoint, other);  // always the lower boundary
+  const tc = Math.max(midpoint, other);  // always the upper boundary
   const width = tc - bc;
   const widthPct = (width / pivot) * 100;
   return { pivot, bc, tc, width, widthPct };
@@ -51,6 +63,9 @@ export function analyzeCPR(
 
   const prevCandle = candles[candles.length - 2];
   const todayCandle = candles[candles.length - 1];
+
+  // Reject candles with missing/zero/corrupt data
+  if (!isValidCandle(prevCandle) || !isValidCandle(todayCandle)) return null;
 
   const prevCPR = calcCPR(prevCandle);
   const todayCPR = calcCPR(todayCandle);
