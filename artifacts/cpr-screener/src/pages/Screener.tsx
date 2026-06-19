@@ -89,9 +89,11 @@ function formatSymbol(symbol: string, source: "binance" | "delta"): { base: stri
 }
 
 function passesPattern(r: CPRResult, pattern: string): boolean {
+  const minGap = r.prevCPR.pivot * 0.001; // 0.1% of pivot — filters near-touching CPRs
   if (pattern === "falling") return r.cprFalling && r.cprNarrowing;
   if (pattern === "inside-value")
-    return r.todayCPR.tc < r.prevCPR.tc && r.todayCPR.bc > r.prevCPR.bc;
+    return (r.prevCPR.tc - r.todayCPR.tc) >= minGap &&
+           (r.todayCPR.bc - r.prevCPR.bc) >= minGap;
   return r.cprRising && r.cprNarrowing;
 }
 
