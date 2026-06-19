@@ -28,7 +28,7 @@ type SortKey =
   | "symbol"
   | "compressionRatio"
   | "change24h"
-  | "quoteVolume"
+  | "DistfromCPR"
   | "todayCPR.pivot"
   | "todayCPR.widthPct";
 
@@ -60,7 +60,7 @@ function getVal(r: CPRResult, key: SortKey): number | string {
   if (key === "symbol") return r.symbol;
   if (key === "compressionRatio") return r.compressionRatio;
   if (key === "change24h") return r.change24h;
-  if (key === "quoteVolume") return r.quoteVolume;
+  if (key === "DistfromCPR") return r.DistfromCPR;
   if (key === "todayCPR.pivot") return r.todayCPR.pivot;
   if (key === "todayCPR.widthPct") return r.todayCPR.widthPct;
   return 0;
@@ -86,6 +86,22 @@ function formatSymbol(symbol: string, source: "binance" | "delta"): { base: stri
     return { base: symbol.replace("USD", ""), quote: "USD" };
   }
   return { base: symbol.replace("USDT", ""), quote: "USDT" };
+}
+
+function distanceFromCPR(
+  price: number,
+  tc: number,
+  bc: number
+  ): { label: string; color: string } {
+  if (price > tc) {
+    const pct = ((price - tc) / tc * 100).toFixed(2);
+    return { label: `+${pct}% above TC`, color: "text-green-500" };
+  }
+  if (price < bc) {
+    const pct = ((bc - price) / bc * 100).toFixed(2);
+    return { label: `-${pct}% below BC`, color: "text-red-500" };
+  }
+  return { label: "Inside CPR", color: "text-yellow-500" };
 }
 
 function passesPattern(r: CPRResult, pattern: string): boolean {
@@ -592,7 +608,7 @@ export default function Screener({ activePattern = "rising" }: { activePattern?:
                         { key: "todayCPR.widthPct" as SortKey, label: "Today Width%" },
                         { key: "compressionRatio" as SortKey, label: "Compression%" },
                         { key: "change24h" as SortKey, label: "Change (5:30 AM IST)" },
-                        { key: "quoteVolume" as SortKey, label: "Volume" },
+                        { key: "DistfromCPR" as SortKey, label: "Dist from CPR" },
                       ].map((col) => (
                         <th
                           key={col.key}
@@ -692,8 +708,8 @@ export default function Screener({ activePattern = "rising" }: { activePattern?:
                           >
                             {fmtPct(r.change24h)}
                           </td>
-                          <td className="px-4 py-3 font-mono text-muted-foreground whitespace-nowrap text-xs">
-                            {fmtVol(r.quoteVolume)}
+                          <td className={distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).color}>
+                            {distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).label}
                           </td>
                           <td className="px-4 py-3 font-mono text-muted-foreground whitespace-nowrap text-xs">
                             <div className="text-xs text-muted-foreground">
