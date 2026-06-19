@@ -30,6 +30,7 @@ type SortKey =
   | "change24h"
   | "DistfromCPR"
   | "todayCPR.pivot"
+  | "prevCPR.widthPct"
   | "todayCPR.widthPct";
 
 type SortDir = "asc" | "desc";
@@ -62,6 +63,7 @@ function getVal(r: CPRResult, key: SortKey): number | string {
   if (key === "change24h") return r.change24h;
   if (key === "DistfromCPR") return r.DistfromCPR;
   if (key === "todayCPR.pivot") return r.todayCPR.pivot;
+  if (key === "prevCPR.widthPct") return r.prevCPR.widthPct;
   if (key === "todayCPR.widthPct") return r.todayCPR.widthPct;
   return 0;
 }
@@ -605,6 +607,7 @@ export default function Screener({ activePattern = "rising" }: { activePattern?:
                       {[
                         { key: "symbol" as SortKey, label: "Symbol" },
                         { key: "todayCPR.pivot" as SortKey, label: "Today Pivot" },
+                        { key: "prevCPR.widthPct" as SortKey, label: "PDay Width%" },
                         { key: "todayCPR.widthPct" as SortKey, label: "Today Width%" },
                         { key: "compressionRatio" as SortKey, label: "Compression%" },
                         { key: "change24h" as SortKey, label: "Change (5:30 AM IST)" },
@@ -672,6 +675,12 @@ export default function Screener({ activePattern = "rising" }: { activePattern?:
                             <div className="text-xs text-muted-foreground">
                               BC: {fmt(r.todayCPR.bc)}
                             </div>
+                          </td>
+                          <td  className="px-4 py-3 font-mono whitespace-nowrap">
+                            <span className="text-chart-3">
+                              // {(r.prevCPR.width / r.prevCPR.pivot * 100).toFixed(3)}%
+                               {r.prevCPR.widthPct.toFixed(4)}%
+                            </span>
                           </td>
                           <td className="px-4 py-3 font-mono whitespace-nowrap">
                             <span className="text-chart-3">
