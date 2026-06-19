@@ -116,7 +116,7 @@ const allTickers = await fetchTopUSDTSymbols(500);
 
     const batchResults = await Promise.all(
         batch.map(async (t) => {
-       +    const klines = await fetchKlines(t.symbol);
+    const klines = await fetchKlines(t.symbol);
     if (!klines || klines.length < 2) return null;
 
     const nowMs = Date.now();
