@@ -37,11 +37,6 @@ function getTodayISTDate(): string {
   return ist.toISOString().slice(0, 10);
 }
 
-function getTodayISTSessionStartMs(): number {
-  const now = new Date();
-  return Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
-}
-
 function getPinnedSessionOpenMap(): SessionOpenMap | null {
   const key = DELTA_SESSION_OPEN_KEY_PREFIX + getTodayISTDate();
   const stored = localStorage.getItem(key);
@@ -168,7 +163,6 @@ async function fetchDeltaCandles(symbol: string): Promise<OHLC[] | null> {
 export async function runDeltaScreener(
   onProgress: (done: number, total: number, symbol: string) => void
 ): Promise<CPRResult[]> {
-  const todaySessionStartMs = getTodayISTSessionStartMs();
 
   _candleDebugLogged = false;
 
@@ -194,22 +188,28 @@ export async function runDeltaScreener(
           return null;
         }
 
-        const todayLiveCandleIdx = candles.findIndex(
-          (c) => c.openTime === todaySessionStartMs
-        );
-
+        // Detect today's live (incomplete) candle by time — works regardless of
+        // whether Delta uses UTC midnight or IST/other session start.
+        // Any daily candle whose openTime is within the last 24 h is "live".
+        const nowMs = Date.now();
+        const lastCandle = candles[candles.length - 1];
+        const lastCandleIsLive = (nowMs - lastCandle.openTime) < 24 * 60 * 60 * 1000;
+        
         let prevCandle: OHLC;
         let todayCandle: OHLC;
         let todayLiveOpen: number | null = null;
-
-        if (todayLiveCandleIdx !== -1) {
-          if (todayLiveCandleIdx < 2) return null;
-          prevCandle = candles[todayLiveCandleIdx - 2];
-          todayCandle = candles[todayLiveCandleIdx - 1];
-          todayLiveOpen = candles[todayLiveCandleIdx].open;
-        } else {
-          prevCandle = candles[candles.length - 3] ?? candles[0];
+        
+        if (lastCandleIsLive) {
+          // Skip the live (incomplete) candle — use the two completed ones before it
+          if (candles.length < 3) return null;
+          prevCandle = candles[candles.length - 3];
           todayCandle = candles[candles.length - 2];
+          todayLiveOpen = lastCandle.open;
+        } else {
+          // All returned candles are completed — use the last two directly
+          if (candles.length < 2) return null;
+          prevCandle = candles[candles.length - 2];
+          todayCandle = candles[candles.length - 1];
           todayLiveOpen = savedSessionMap[t.symbol] ?? null;
         }
 
