@@ -56,11 +56,6 @@ function setPinnedSymbols(symbols: string[]): void {
     .forEach((k) => localStorage.removeItem(k));
 }
 
-function getTodayUTCMidnightMs(): number {
-  const now = new Date();
-  return Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
-}
-
 export async function fetchTopUSDTSymbols(limit = 500): Promise<Ticker24h[]> {
   const res = await fetch(`${BASE}/ticker/24hr`);
   if (!res.ok) throw new Error(`Binance ticker error: ${res.status}`);
