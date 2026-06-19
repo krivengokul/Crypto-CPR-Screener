@@ -332,22 +332,28 @@ export default function Screener({ activePattern = "rising" }: { activePattern?:
         {/* CPR Legend */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
           {[
-            {
-              label: "CPR = Central Pivot Range",
-              desc: "Pivot = (H+L+C)/3, BC = (H+L)/2, TC = 2×Pivot − BC",
-              color: "text-primary",
-            },
-            {
-              label: "CPR Rising",
-              desc: "Today's Pivot > Yesterday's Pivot — bullish directional bias",
-              color: "text-accent",
-            },
-            {
-              label: "CPR Narrowing <50%",
-              desc: "Today's width < 50% of yesterday — compressed zone, energy building",
-              color: "text-chart-3",
-            },
-          ].map((item) => (
+              {
+                label: "CPR = Central Pivot Range",
+                desc: "Pivot = (H+L+C)/3, BC = (H+L)/2, TC = 2×Pivot − BC",
+                color: "text-primary",
+              },
+              activePattern === "falling"
+                ? {
+                    label: "CPR Falling",
+                    desc: "Today's Pivot < Yesterday's Pivot — bearish directional bias",
+                    color: "text-destructive",
+                  }
+                : {
+                    label: "CPR Rising",
+                    desc: "Today's Pivot > Yesterday's Pivot — bullish directional bias",
+                    color: "text-accent",
+                  },
+              {
+                label: "CPR Narrowing <50%",
+                desc: "Today's width < 50% of yesterday — compressed zone, energy building",
+                color: "text-chart-3",
+              },
+            ].map((item) => (
             <div
               key={item.label}
               className="rounded-lg border border-border bg-card p-4"
@@ -590,7 +596,7 @@ export default function Screener({ activePattern = "rising" }: { activePattern?:
                         <tr
                           key={`${r.source}-${r.symbol}`}
                           className={`hover:bg-muted/30 transition-colors ${
-                            r.passes ? "" : "opacity-50"
+                            passesPattern(r, activePattern) ? "" : "opacity-50"
                           }`}
                         >
                           {activeTab === "combined" && (
@@ -675,9 +681,14 @@ export default function Screener({ activePattern = "rising" }: { activePattern?:
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             <div className="flex gap-1">
-                              {r.cprRising && (
+                             {r.cprRising && (
                                 <span className="text-xs px-1.5 py-0.5 rounded bg-accent/10 text-accent border border-accent/20 font-medium">
                                   Rising
+                                </span>
+                              )}
+                              {!r.cprRising && r.cprNarrowing && activePattern === "falling" && (
+                                <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">
+                                  Falling
                                 </span>
                               )}
                               {r.cprNarrowing && (
