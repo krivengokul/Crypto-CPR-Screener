@@ -720,7 +720,7 @@ export default function Screener({ activePattern = "rising" }: { activePattern?:
                           { key: "symbol" as SortKey, label: "Symbol", live: false },
                           { key: "todayCPR.pivot" as SortKey, label: "Today Pivot", live: false },
                           { key: "compressionRatio" as SortKey, label: "Pivot Width", live: false },
-                          { key: "change24h" as SortKey, label: "Change (5:30 AM IST)", live: true },
+                          { key: "change24h" as SortKey, label: "5.30AM %", live: true },
                           { key: "DistfromCPR" as SortKey, label: "Dist from CPR", live: true },
                         ] as { key: SortKey; label: string; live: boolean }[]
                       ).map((col) => (
@@ -830,12 +830,28 @@ export default function Screener({ activePattern = "rising" }: { activePattern?:
                               <span className="text-muted-foreground">PDay: </span>{r.prevCPR.widthPct.toFixed(4)}%
                             </div>
                           </td>
-                          <td
-                            className={`px-4 py-3 font-mono font-medium whitespace-nowrap ${
-                              r.change24h >= 0 ? "text-accent" : "text-destructive"
-                            }`}
-                          >
-                            {fmtPct(r.change24h)}
+                          <td className="px-4 py-3 font-mono whitespace-nowrap">
+                            <div className="text-xs font-semibold text-foreground">
+                              Price: {fmt(r.currentPrice)}
+                            </div>
+                            <div
+                              className={`text-xs font-semibold py-0.5 ${
+                                r.change24h >= 0 ? "text-green-400" : "text-destructive"
+                              }`}
+                            >
+                              {fmtPct(r.change24h)}
+                              <div className="w-full bg-muted rounded-full h-1 mt-0.5 max-w-[64px]">
+                                <div
+                                  className={`h-1 rounded-full transition-all ${
+                                    r.change24h >= 0 ? "bg-green-400" : "bg-destructive"
+                                  }`}
+                                  style={{ width: `${Math.min(Math.abs(r.change24h) * 5, 100)}%` }}
+                                />
+                              </div>
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              OPrice: {fmt(r.openPrice)}
+                            </div>
                           </td>
                           <td className={distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).color}>
                             {distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).label}
