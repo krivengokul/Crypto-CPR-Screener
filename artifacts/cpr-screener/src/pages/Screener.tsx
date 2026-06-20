@@ -108,8 +108,9 @@ function passesPattern(r: CPRResult, pattern: string): boolean {
     return (r.prevCPR.tc - r.todayCPR.tc) >= minGap &&
            (r.todayCPR.bc - r.prevCPR.bc) >= minGap;
   if (pattern === "structure-bullish")
-  return (r.cprRising  && r.cprNarrowing && r.todayCPR.r1 > r.prevCPR.r4) ||
-         (r.cprFalling && r.cprNarrowing && r.prevCPR.r1  > r.todayCPR.r4);
+  return (r.cprRising  && r.cprNarrowing && r.todayCPR.r1 > r.prevCPR.r4);
+  if (pattern === "lower-bullish")
+  return (r.cprFalling && r.cprNarrowing && r.prevCPR.r1  > r.todayCPR.r4);
   return r.cprRising && r.cprNarrowing;
 }
 
