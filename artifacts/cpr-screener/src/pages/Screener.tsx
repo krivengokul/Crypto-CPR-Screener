@@ -84,9 +84,9 @@ function passesPattern(r: CPRResult, pattern: string): boolean {
     case "inside-value":
       return r.todayCPR.tc < r.prevCPR.tc && r.todayCPR.bc > r.prevCPR.bc;
     case "structure-bullish":
-      return r.todayCPR.pivot > r.prevCPR.pivot && r.currentPrice > r.todayCPR.tc;
+      return (r.cprRising  && r.cprNarrowing && r.todayCPR.r1 > r.prevCPR.r4);
     case "lower-bullish":
-      return r.todayCPR.pivot < r.prevCPR.pivot && r.currentPrice > r.todayCPR.tc;
+      return (r.cprFalling && r.cprNarrowing && r.prevCPR.r1  > r.todayCPR.r4);
     default:
       return false;
   }
