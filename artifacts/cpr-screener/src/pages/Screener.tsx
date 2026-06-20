@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { runScreener } from "@/lib/binance";
 import { runDeltaScreener } from "@/lib/delta";
-import { CPRResult } from "@/lib/cpr";
+import { CPRResult, CPRLevels } from "@/lib/cpr";
 import {
   shouldAutoScan,
   markScannedToday,
@@ -68,8 +68,6 @@ function getVal(r: CPRResult, key: SortKey): number | string {
 
 function getChartUrl(symbol: string, source: "binance" | "delta"): string {
   if (source === "delta") {
-    // Delta perps on TradingView: DELTA:COAIUSDT.P
-    // Delta symbols end in USD → strip USD, append USDT.P
     const base = symbol.endsWith("USDT")
       ? symbol.slice(0, -4)
       : symbol.endsWith("USD")
@@ -77,7 +75,6 @@ function getChartUrl(symbol: string, source: "binance" | "delta"): string {
       : symbol;
     return `https://www.tradingview.com/chart/?symbol=BINANCE:${base}USDT.P`;
   }
-  // Binance: BINANCE:COAIUSDT
   return `https://www.tradingview.com/chart/?symbol=BINANCE:${symbol}`;
 }
 
@@ -92,7 +89,7 @@ function distanceFromCPR(
   price: number,
   tc: number,
   bc: number
-  ): { label: string; color: string } {
+): { label: string; color: string } {
   if (price > tc) {
     const pct = ((price - tc) / tc * 100).toFixed(2);
     return { label: `+${pct}% above TC`, color: "text-green-500" };
@@ -105,12 +102,86 @@ function distanceFromCPR(
 }
 
 function passesPattern(r: CPRResult, pattern: string): boolean {
-  const minGap = r.prevCPR.pivot * 0.001; // 0.1% of pivot — filters near-touching CPRs
+  const minGap = r.prevCPR.pivot * 0.001;
   if (pattern === "falling") return r.cprFalling && r.cprNarrowing;
   if (pattern === "inside-value")
     return (r.prevCPR.tc - r.todayCPR.tc) >= minGap &&
            (r.todayCPR.bc - r.prevCPR.bc) >= minGap;
   return r.cprRising && r.cprNarrowing;
+}
+
+// ── S/R Ladder ──────────────────────────────────────────────────────────────
+function SRLadder({
+  cpr,
+  currentPrice,
+  label,
+}: {
+  cpr: CPRLevels;
+  currentPrice: number;
+  label: string;
+}) {
+  const levels = [
+    { key: "R4",    value: cpr.r4 },
+    { key: "R3",    value: cpr.r3 },
+    { key: "R2",    value: cpr.r2 },
+    { key: "R1",    value: cpr.r1 },
+    { key: "TC",    value: cpr.tc },
+    { key: "Pivot", value: cpr.pivot },
+    { key: "BC",    value: cpr.bc },
+    { key: "S1",    value: cpr.s1 },
+    { key: "S2",    value: cpr.s2 },
+    { key: "S3",    value: cpr.s3 },
+    { key: "S4",    value: cpr.s4 },
+  ].sort((a, b) => b.value - a.value);
+
+  type Row =
+    | { type: "level"; key: string; value: number }
+    | { type: "price" };
+
+  const rows: Row[] = [];
+  let priceInserted = false;
+  for (const lvl of levels) {
+    if (!priceInserted && currentPrice > lvl.value) {
+      rows.push({ type: "price" });
+      priceInserted = true;
+    }
+    rows.push({ type: "level", key: lvl.key, value: lvl.value });
+  }
+  if (!priceInserted) rows.push({ type: "price" });
+
+  const rowColor = (key: string) => {
+    if (key === "TC" || key === "BC" || key === "Pivot")
+      return "text-yellow-500 font-semibold bg-yellow-500/5";
+    if (key.startsWith("R")) return "text-red-400";
+    return "text-green-400";
+  };
+
+  return (
+    <div className="min-w-[160px]">
+      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">
+        {label}
+      </p>
+      {rows.map((row, i) =>
+        row.type === "price" ? (
+          <div
+            key="price"
+            className="flex justify-between bg-blue-500 text-white text-xs px-2 py-1 rounded font-bold my-0.5"
+          >
+            <span>▶ Price</span>
+            <span className="font-mono">{fmt(currentPrice)}</span>
+          </div>
+        ) : (
+          <div
+            key={row.key}
+            className={`flex justify-between text-xs px-2 py-0.5 rounded ${rowColor(row.key)}`}
+          >
+            <span className="w-12 shrink-0">{row.key}</span>
+            <span className="font-mono">{fmt(row.value)}</span>
+          </div>
+        )
+      )}
+    </div>
+  );
 }
 
 export default function Screener({ activePattern = "rising" }: { activePattern?: string }) {
@@ -137,8 +208,17 @@ export default function Screener({ activePattern = "rising" }: { activePattern?:
   const [activeTab, setActiveTab] = useState<ActiveTab>("binance");
   const deltaScanRef = useRef(false);
 
-  // Refs so the live-refresh intervals always see the latest values without
-  // being included in effect deps (which would restart the interval every tick)
+  // Expandable S/R ladder state
+  const [expandedSymbols, setExpandedSymbols] = useState<Set<string>>(new Set());
+
+  function toggleExpand(key: string) {
+    setExpandedSymbols((prev) => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
+  }
+
   const allResultsRef = useRef<CPRResult[]>([]);
   const deltaAllResultsRef = useRef<CPRResult[]>([]);
   const activePatternRef = useRef(activePattern);
@@ -218,7 +298,6 @@ export default function Screener({ activePattern = "rising" }: { activePattern?:
       if (results.length === 0) return;
       try {
         const symbols = results.map((r) => r.symbol);
-        // Binance allows max 100 symbols per request
         const chunks: string[][] = [];
         for (let i = 0; i < symbols.length; i += 100)
           chunks.push(symbols.slice(i, i + 100));
@@ -256,7 +335,7 @@ export default function Screener({ activePattern = "rising" }: { activePattern?:
         setAllResults((prev) => applyUpdate(prev));
         setFiltered((prev) => applyUpdate(prev));
       } catch {
-        // silent — don't disrupt the UI on transient failures
+        // silent
       }
     };
 
@@ -313,7 +392,7 @@ export default function Screener({ activePattern = "rising" }: { activePattern?:
     return () => clearInterval(id);
   }, [deltaStatus]);
 
-   useEffect(() => {
+  useEffect(() => {
     if (allResults.length > 0) {
       setFiltered(allResults.filter((r) => passesPattern(r, activePattern)));
     }
@@ -474,40 +553,40 @@ export default function Screener({ activePattern = "rising" }: { activePattern?:
         {/* CPR Legend */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
           {[
-              {
-                label: "CPR = Central Pivot Range",
-                desc: "Pivot = (H+L+C)/3, BC = (H+L)/2, TC = 2×Pivot − BC",
-                color: "text-primary",
+            {
+              label: "CPR = Central Pivot Range",
+              desc: "Pivot = (H+L+C)/3, BC = (H+L)/2, TC = 2×Pivot − BC",
+              color: "text-primary",
+            },
+            activePattern === "falling"
+            ? {
+                label: "CPR Falling",
+                desc: "Today's TPivot < Yesterday's BPivot — bearish directional bias",
+                color: "text-destructive",
+              }
+            : activePattern === "inside-value"
+            ? {
+                label: "Inside Value CPR",
+                desc: "Today's TC < Yesterday's TC and Today's BC > Yesterday's BC",
+                color: "text-blue-400",
+              }
+            : {
+                label: "CPR Rising",
+                desc: "Today's BPivot > Yesterday's TPivot — bullish directional bias",
+                color: "text-accent",
               },
-              activePattern === "falling"
-              ? {
-                  label: "CPR Falling",
-                  desc: "Today's TPivot < Yesterday's BPivot — bearish directional bias",
-                  color: "text-destructive",
-                }
-              : activePattern === "inside-value"
-              ? {
-                  label: "Inside Value CPR",
-                  desc: "Today's TC < Yesterday's TC and Today's BC > Yesterday's BC",
-                  color: "text-blue-400",
-                }
-              : {
-                  label: "CPR Rising",
-                  desc: "Today's BPivot > Yesterday's TPivot — bullish directional bias",
-                  color: "text-accent",
-                },
-              activePattern === "inside-value"
-              ? {
-                  label: "Full Containment",
-                  desc: "Today's CPR fully inside yesterday's — volatility compression, breakout potential",
-                  color: "text-chart-3",
-                }
-              : {
-                  label: "CPR Narrowing <50%",
-                  desc: "Today's width < 50% of yesterday — compressed zone, energy building",
-                  color: "text-chart-3",
-                },
-            ].map((item) => (
+            activePattern === "inside-value"
+            ? {
+                label: "Full Containment",
+                desc: "Today's CPR fully inside yesterday's — volatility compression, breakout potential",
+                color: "text-chart-3",
+              }
+            : {
+                label: "CPR Narrowing <50%",
+                desc: "Today's width < 50% of yesterday — compressed zone, energy building",
+                color: "text-chart-3",
+              },
+          ].map((item) => (
             <div
               key={item.label}
               className="rounded-lg border border-border bg-card p-4"
@@ -701,7 +780,7 @@ export default function Screener({ activePattern = "rising" }: { activePattern?:
                 />
               </div>
               <span className="text-xs text-muted-foreground">
-                {displayed.length} rows
+                {displayed.length} rows · click symbol to expand S/R ladder
               </span>
             </div>
 
@@ -753,158 +832,192 @@ export default function Screener({ activePattern = "rising" }: { activePattern?:
                   <tbody className="divide-y divide-border">
                     {displayed.map((r) => {
                       const sym = formatSymbol(r.symbol, r.source);
+                      const rowKey = `${r.source}-${r.symbol}`;
+                      const isExpanded = expandedSymbols.has(rowKey);
                       return (
-                        <tr
-                          key={`${r.source}-${r.symbol}`}
-                          className={`hover:bg-muted/30 transition-colors ${
-                            passesPattern(r, activePattern) ? "" : "opacity-50"
-                          }`}
-                        >
-                          {activeTab === "combined" && (
-                            <td className="px-4 py-3 whitespace-nowrap">
-                              <span
-                                className={`text-xs px-2 py-0.5 rounded border font-semibold ${
-                                  r.source === "binance"
-                                    ? "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
-                                    : "bg-blue-500/10 text-blue-400 border-blue-500/20"
+                        <>
+                          <tr
+                            key={rowKey}
+                            className={`hover:bg-muted/30 transition-colors ${
+                              passesPattern(r, activePattern) ? "" : "opacity-50"
+                            }`}
+                          >
+                            {activeTab === "combined" && (
+                              <td className="px-4 py-3 whitespace-nowrap">
+                                <span
+                                  className={`text-xs px-2 py-0.5 rounded border font-semibold ${
+                                    r.source === "binance"
+                                      ? "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
+                                      : "bg-blue-500/10 text-blue-400 border-blue-500/20"
+                                  }`}
+                                >
+                                  {r.source === "binance" ? "Binance" : "Delta"}
+                                </span>
+                              </td>
+                            )}
+                            <td
+                              className="px-4 py-3 font-mono font-semibold text-foreground whitespace-nowrap cursor-pointer select-none"
+                              onClick={() => toggleExpand(rowKey)}
+                              title="Click to expand S/R ladder"
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className="text-muted-foreground text-xs">
+                                  {isExpanded ? "▼" : "▶"}
+                                </span>
+                                {r.passes && (
+                                  <div className="w-1.5 h-1.5 rounded-full bg-accent" />
+                                )}
+                                {sym.base}
+                                <span className="text-muted-foreground text-xs font-normal">
+                                  /{sym.quote}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 font-mono text-foreground whitespace-nowrap">
+                              <div className="text-xs text-muted-foreground">
+                                TC: {fmt(r.todayCPR.tc)}
+                              </div>
+                              <div className="font-medium">{fmt(r.todayCPR.pivot)}</div>
+                              <div className="text-xs text-muted-foreground">
+                                BC: {fmt(r.todayCPR.bc)}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 font-mono whitespace-nowrap">
+                              <div className="text-xs text-chart-3">
+                                <span className="text-muted-foreground">TDay: </span>{r.todayCPR.widthPct.toFixed(4)}%
+                              </div>
+                              <div
+                                className={`text-xs font-semibold py-0.5 ${
+                                  r.compressionRatio < 25
+                                    ? "text-green-400"
+                                    : r.compressionRatio < 50
+                                    ? "text-accent"
+                                    : r.compressionRatio < 75
+                                    ? "text-yellow-500"
+                                    : "text-destructive"
                                 }`}
                               >
-                                {r.source === "binance" ? "Binance" : "Delta"}
-                              </span>
+                                {r.compressionRatio.toFixed(1)}%
+                                <div className="w-full bg-muted rounded-full h-1 mt-0.5 max-w-[64px]">
+                                  <div
+                                    className={`h-1 rounded-full transition-all ${
+                                      r.compressionRatio < 25
+                                        ? "bg-green-400"
+                                        : r.compressionRatio < 50
+                                        ? "bg-accent"
+                                        : r.compressionRatio < 75
+                                        ? "bg-yellow-500"
+                                        : "bg-destructive"
+                                    }`}
+                                    style={{
+                                      width: `${Math.min(r.compressionRatio, 100)}%`,
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                              <div className="text-xs text-chart-3/70">
+                                <span className="text-muted-foreground">PDay: </span>{r.prevCPR.widthPct.toFixed(4)}%
+                              </div>
                             </td>
+                            <td className="px-4 py-3 font-mono whitespace-nowrap">
+                              <div className="text-xs font-semibold text-foreground">
+                                Price: {fmt(r.currentPrice)}
+                              </div>
+                              <div
+                                className={`text-xs font-semibold py-0.5 ${
+                                  r.change24h >= 0 ? "text-green-400" : "text-destructive"
+                                }`}
+                              >
+                                {fmtPct(r.change24h)}
+                                <div className="w-full bg-muted rounded-full h-1 mt-0.5 max-w-[64px]">
+                                  <div
+                                    className={`h-1 rounded-full transition-all ${
+                                      r.change24h >= 0 ? "bg-green-400" : "bg-destructive"
+                                    }`}
+                                    style={{ width: `${Math.min(Math.abs(r.change24h) * 5, 100)}%` }}
+                                  />
+                                </div>
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                OPrice: {fmt(r.openPrice)}
+                              </div>
+                            </td>
+                            <td className={`px-4 py-3 whitespace-nowrap text-xs font-medium ${distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).color}`}>
+                              {distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).label}
+                            </td>
+                            <td className="px-4 py-3 font-mono text-muted-foreground whitespace-nowrap text-xs">
+                              <div className="text-xs text-muted-foreground">
+                                TC: {fmt(r.prevCPR.tc)}
+                              </div>
+                              <div>{fmt(r.prevCPR.pivot)}</div>
+                              <div className="text-xs text-muted-foreground">
+                                BC: {fmt(r.prevCPR.bc)}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              <div className="flex gap-1">
+                                {r.cprRising && (
+                                  <span className="text-xs px-1.5 py-0.5 rounded bg-accent/10 text-accent border border-accent/20 font-medium">
+                                    Rising
+                                  </span>
+                                )}
+                                {r.cprFalling && r.cprNarrowing && activePattern === "falling" && (
+                                  <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">
+                                    Falling
+                                  </span>
+                                )}
+                                {passesPattern(r, "inside-value") && activePattern === "inside-value" && (
+                                  <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">
+                                    Inside
+                                  </span>
+                                )}
+                                {r.cprNarrowing && (
+                                  <span className="text-xs px-1.5 py-0.5 rounded bg-chart-3/10 text-chart-3 border border-chart-3/20 font-medium">
+                                    Narrow
+                                  </span>
+                                )}
+                                {!r.cprRising && !r.cprNarrowing && (
+                                  <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                                    Skip
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              <a
+                                href={getChartUrl(r.symbol, r.source)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-muted-foreground hover:text-primary transition-colors"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                              </a>
+                            </td>
+                          </tr>
+
+                          {/* ── Expandable S/R Ladder row ── */}
+                          {isExpanded && (
+                            <tr key={`${rowKey}-sr`} className="bg-muted/20 border-b border-border">
+                              <td
+                                colSpan={20}
+                                className="px-6 py-4"
+                              >
+                                <div className="flex flex-wrap gap-10">
+                                  <SRLadder
+                                    cpr={r.prevCPR}
+                                    currentPrice={r.currentPrice}
+                                    label="Prev Day S/R"
+                                  />
+                                  <SRLadder
+                                    cpr={r.todayCPR}
+                                    currentPrice={r.currentPrice}
+                                    label="Today S/R"
+                                  />
+                                </div>
+                              </td>
+                            </tr>
                           )}
-                          <td className="px-4 py-3 font-mono font-semibold text-foreground whitespace-nowrap">
-                            <div className="flex items-center gap-2">
-                              {r.passes && (
-                                <div className="w-1.5 h-1.5 rounded-full bg-accent" />
-                              )}
-                              {sym.base}
-                              <span className="text-muted-foreground text-xs font-normal">
-                                /{sym.quote}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 font-mono text-foreground whitespace-nowrap">
-                            <div className="text-xs text-muted-foreground">
-                              TC: {fmt(r.todayCPR.tc)}
-                            </div>
-                            <div className="font-medium">{fmt(r.todayCPR.pivot)}</div>
-                            <div className="text-xs text-muted-foreground">
-                              BC: {fmt(r.todayCPR.bc)}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 font-mono whitespace-nowrap">
-                            <div className="text-xs text-chart-3">
-                              <span className="text-muted-foreground">TDay: </span>{r.todayCPR.widthPct.toFixed(4)}%
-                            </div>
-                            <div
-                              className={`text-xs font-semibold py-0.5 ${
-                                r.compressionRatio < 25
-                                  ? "text-green-400"
-                                  : r.compressionRatio < 50
-                                  ? "text-accent"
-                                  : r.compressionRatio < 75
-                                  ? "text-yellow-500"
-                                  : "text-destructive"
-                              }`}
-                            >
-                              {r.compressionRatio.toFixed(1)}%
-                              <div className="w-full bg-muted rounded-full h-1 mt-0.5 max-w-[64px]">
-                                <div
-                                  className={`h-1 rounded-full transition-all ${
-                                    r.compressionRatio < 25
-                                      ? "bg-green-400"
-                                      : r.compressionRatio < 50
-                                      ? "bg-accent"
-                                      : r.compressionRatio < 75
-                                      ? "bg-yellow-500"
-                                      : "bg-destructive"
-                                  }`}
-                                  style={{
-                                    width: `${Math.min(r.compressionRatio, 100)}%`,
-                                  }}
-                                />
-                              </div>
-                            </div>
-                            <div className="text-xs text-chart-3/70">
-                              <span className="text-muted-foreground">PDay: </span>{r.prevCPR.widthPct.toFixed(4)}%
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 font-mono whitespace-nowrap">
-                            <div className="text-xs font-semibold text-foreground">
-                              Price: {fmt(r.currentPrice)}
-                            </div>
-                            <div
-                              className={`text-xs font-semibold py-0.5 ${
-                                r.change24h >= 0 ? "text-green-400" : "text-destructive"
-                              }`}
-                            >
-                              {fmtPct(r.change24h)}
-                              <div className="w-full bg-muted rounded-full h-1 mt-0.5 max-w-[64px]">
-                                <div
-                                  className={`h-1 rounded-full transition-all ${
-                                    r.change24h >= 0 ? "bg-green-400" : "bg-destructive"
-                                  }`}
-                                  style={{ width: `${Math.min(Math.abs(r.change24h) * 5, 100)}%` }}
-                                />
-                              </div>
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              OPrice: {fmt(r.openPrice)}
-                            </div>
-                          </td>
-                          <td className={distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).color}>
-                            {distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).label}
-                          </td>
-                          <td className="px-4 py-3 font-mono text-muted-foreground whitespace-nowrap text-xs">
-                            <div className="text-xs text-muted-foreground">
-                              TC: {fmt(r.prevCPR.tc)}
-                            </div>
-                            <div>{fmt(r.prevCPR.pivot)}</div>
-                            <div className="text-xs text-muted-foreground">
-                              BC: {fmt(r.prevCPR.bc)}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            <div className="flex gap-1">
-                             {r.cprRising && (
-                                <span className="text-xs px-1.5 py-0.5 rounded bg-accent/10 text-accent border border-accent/20 font-medium">
-                                  Rising
-                                </span>
-                              )}
-                              {r.cprFalling && r.cprNarrowing && activePattern === "falling" && (
-                                <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">
-                                  Falling
-                                </span>
-                              )}
-                              {passesPattern(r, "inside-value") && activePattern === "inside-value" && (
-                                <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">
-                                  Inside
-                                </span>
-                              )}
-                              {r.cprNarrowing && (
-                                <span className="text-xs px-1.5 py-0.5 rounded bg-chart-3/10 text-chart-3 border border-chart-3/20 font-medium">
-                                  Narrow
-                                </span>
-                              )}
-                              {!r.cprRising && !r.cprNarrowing && (
-                                <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-                                  Skip
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            <a
-                              href={getChartUrl(r.symbol, r.source)}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-muted-foreground hover:text-primary transition-colors"
-                            >
-                              <ExternalLink className="w-3.5 h-3.5" />
-                            </a>
-                          </td>
-                        </tr>
+                        </>
                       );
                     })}
                   </tbody>
