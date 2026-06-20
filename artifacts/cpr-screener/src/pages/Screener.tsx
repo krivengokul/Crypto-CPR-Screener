@@ -107,6 +107,7 @@ function passesPattern(r: CPRResult, pattern: string): boolean {
   if (pattern === "inside-value")
     return (r.prevCPR.tc - r.todayCPR.tc) >= minGap &&
            (r.todayCPR.bc - r.prevCPR.bc) >= minGap;
+  if (pattern === "structure-bullish") return r.cprRising && r.cprNarrowing;
   return r.cprRising && r.cprNarrowing;
 }
 
