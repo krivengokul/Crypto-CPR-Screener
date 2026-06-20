@@ -51,10 +51,20 @@ function setPinnedSessionOpenMap(map: SessionOpenMap): void {
     .forEach((k) => localStorage.removeItem(k));
 }
 
-// ─── Fetch ALL perpetual futures tickers ─────────────────────────────────────
-// FIX: add page_size=500 to get all tickers in one request instead of relying
-// solely on cursor pagination (which previously only returned ~7 results when
-// the cursor field wasn't found in the response meta).
+/**
+ * ADK FIX: Use UTC midnight boundary to detect live (incomplete) daily candles.
+ * Delta Exchange resets daily candles at UTC 00:00, same as TradingView.
+ * This matches ADK's `high[1]` + `lookahead_off` behaviour exactly.
+ */
+function isLiveDailyCandle(openTimeMs: number): boolean {
+  const now = new Date();
+  const utcMidnightToday = Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate()
+  );
+  return openTimeMs >= utcMidnightToday;
+}
 
 export async function fetchDeltaPerps(): Promise<DeltaTicker[]> {
   const all: DeltaTicker[] = [];
@@ -62,8 +72,6 @@ export async function fetchDeltaPerps(): Promise<DeltaTicker[]> {
   let pageNum = 0;
 
   while (true) {
-    // Request a large page so we usually get all 195 in one shot.
-    // page_size=500 is safe — Delta caps at 500 per page.
     const url =
       `${BASE}/tickers?contract_types=perpetual_futures&page_size=500` +
       (after ? `&after=${encodeURIComponent(after)}` : "");
@@ -72,7 +80,6 @@ export async function fetchDeltaPerps(): Promise<DeltaTicker[]> {
     if (!res.ok) throw new Error(`Delta ticker error: ${res.status}`);
     const data = await res.json();
 
-    // Log first page so we can inspect the real meta shape in DevTools
     if (pageNum === 0) {
       console.log(
         "[Delta tickers DEBUG] meta:",
@@ -84,7 +91,6 @@ export async function fetchDeltaPerps(): Promise<DeltaTicker[]> {
     const page: DeltaTicker[] = (data.result ?? []) as DeltaTicker[];
     all.push(...page);
 
-    // Try every known cursor field name the Delta API may use
     const nextAfter: string | null =
       data.meta?.after ??
       data.meta?.cursor ??
@@ -99,13 +105,6 @@ export async function fetchDeltaPerps(): Promise<DeltaTicker[]> {
 
   return all.sort((a, b) => (b.turnover_usd || 0) - (a.turnover_usd || 0));
 }
-
-// ─── Fetch daily candles ──────────────────────────────────────────────────────
-// Handles multiple known Delta API response shapes:
-//   Shape A (v2 docs):   { result: [...candles] }
-//   Shape B (some envs): { result: { candles: [...] } }
-//   Shape C:             { candles: [...] }
-//   Shape D:             [...candles]
 
 let _candleDebugLogged = false;
 
@@ -141,29 +140,25 @@ async function fetchDeltaCandles(symbol: string): Promise<OHLC[] | null> {
     }
 
     if (!raw || raw.length < 3) return null;
-    
-    // Delta returns candles newest-first — sort ascending so index 0 = oldest
+
     raw.sort((a, b) => a.time - b.time);
-    
+
     return raw.map((k) => ({
       openTime: k.time > 1e10 ? k.time : k.time * 1000,
-      open: Number(k.open),
-      high: Number(k.high),
-      low: Number(k.low),
-      close: Number(k.close),
-      volume: Number(k.volume),
+      open:     Number(k.open),
+      high:     Number(k.high),
+      low:      Number(k.low),
+      close:    Number(k.close),
+      volume:   Number(k.volume),
     }));
   } catch {
     return null;
   }
 }
 
-// ─── Main screener ────────────────────────────────────────────────────────────
-
 export async function runDeltaScreener(
   onProgress: (done: number, total: number, symbol: string) => void
 ): Promise<CPRResult[]> {
-
   _candleDebugLogged = false;
 
   const tickers = await fetchDeltaPerps();
@@ -183,33 +178,26 @@ export async function runDeltaScreener(
     const batchResults = await Promise.all(
       batch.map(async (t) => {
         const candles = await fetchDeltaCandles(t.symbol);
-        if (!candles || candles.length < 3) {
-          nullCount++;
-          return null;
-        }
+        if (!candles || candles.length < 3) { nullCount++; return null; }
 
-        // Detect today's live (incomplete) candle by time — works regardless of
-        // whether Delta uses UTC midnight or IST/other session start.
-        // Any daily candle whose openTime is within the last 24 h is "live".
-        const nowMs = Date.now();
         const lastCandle = candles[candles.length - 1];
-        const lastCandleIsLive = (nowMs - lastCandle.openTime) < 24 * 60 * 60 * 1000;
-        
+
+        // ADK FIX: UTC midnight boundary — matches TradingView high[1] lookahead_off
+        const lastCandleIsLive = isLiveDailyCandle(lastCandle.openTime);
+
         let prevCandle: OHLC;
         let todayCandle: OHLC;
         let todayLiveOpen: number | null = null;
-        
+
         if (lastCandleIsLive) {
-          // Skip the live (incomplete) candle — use the two completed ones before it
           if (candles.length < 3) return null;
-          prevCandle = candles[candles.length - 3];
-          todayCandle = candles[candles.length - 2];
-          todayLiveOpen = lastCandle.open;
+          prevCandle     = candles[candles.length - 3]; // 2 days ago (completed)
+          todayCandle    = candles[candles.length - 2]; // yesterday (completed) → today's CPR
+          todayLiveOpen  = lastCandle.open;              // today's forming candle open
         } else {
-          // All returned candles are completed — use the last two directly
           if (candles.length < 2) return null;
-          prevCandle = candles[candles.length - 2];
-          todayCandle = candles[candles.length - 1];
+          prevCandle    = candles[candles.length - 2];
+          todayCandle   = candles[candles.length - 1];
           todayLiveOpen = savedSessionMap[t.symbol] ?? null;
         }
 
@@ -233,9 +221,7 @@ export async function runDeltaScreener(
       })
     );
 
-    batchResults.forEach((r) => {
-      if (r) results.push(r);
-    });
+    batchResults.forEach((r) => { if (r) results.push(r); });
 
     onProgress(
       Math.min(i + batchSize, tickers.length),
