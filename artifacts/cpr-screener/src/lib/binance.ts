@@ -21,11 +21,11 @@ interface Ticker24h {
 function parseKline(k: KlineRaw): OHLC {
   return {
     openTime: k[0] as number,
-    open: parseFloat(k[1] as string),
-    high: parseFloat(k[2] as string),
-    low: parseFloat(k[3] as string),
-    close: parseFloat(k[4] as string),
-    volume: parseFloat(k[5] as string),
+    open:     parseFloat(k[1] as string),
+    high:     parseFloat(k[2] as string),
+    low:      parseFloat(k[3] as string),
+    close:    parseFloat(k[4] as string),
+    volume:   parseFloat(k[5] as string),
   };
 }
 
@@ -38,7 +38,7 @@ const PINNED_KEY_PREFIX = "cpr_symbols_";
 function getTodayISTDate(): string {
   const now = new Date();
   const istDate = new Date(now.getTime() + 5.5 * 60 * 60 * 1000);
-  return istDate.toISOString().slice(0, 10); // "YYYY-MM-DD"
+  return istDate.toISOString().slice(0, 10);
 }
 
 function getPinnedSymbols(): string[] | null {
@@ -50,10 +50,27 @@ function getPinnedSymbols(): string[] | null {
 function setPinnedSymbols(symbols: string[]): void {
   const key = PINNED_KEY_PREFIX + getTodayISTDate();
   localStorage.setItem(key, JSON.stringify(symbols));
-  // Clean up previous days
   Object.keys(localStorage)
     .filter((k) => k.startsWith(PINNED_KEY_PREFIX) && k !== key)
     .forEach((k) => localStorage.removeItem(k));
+}
+
+/**
+ * ADK FIX: Detect today's live (incomplete) daily candle using the UTC midnight
+ * boundary — identical to TradingView's `high[1]` + `lookahead_off` behaviour.
+ *
+ * Binance resets daily candles at UTC 00:00. Any candle whose openTime falls on
+ * today's UTC date is still forming and must NOT be used for CPR calculation.
+ * Using the 24h heuristic was fragile; this check is exact.
+ */
+function isLiveDailyCandle(openTimeMs: number): boolean {
+  const now = new Date();
+  const utcMidnightToday = Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate()
+  );
+  return openTimeMs >= utcMidnightToday;
 }
 
 export async function fetchTopUSDTSymbols(limit = 500): Promise<Ticker24h[]> {
@@ -92,8 +109,8 @@ async function fetchKlines(symbol: string): Promise<OHLC[] | null> {
 export async function runScreener(
   onProgress: (done: number, total: number, symbol: string) => void
 ): Promise<CPRResult[]> {
-const allTickers = await fetchTopUSDTSymbols(500);
-  // Pin today's symbol universe on first scan; reuse on rescans
+  const allTickers = await fetchTopUSDTSymbols(500);
+
   let pinnedSymbols = getPinnedSymbols();
   if (!pinnedSymbols) {
     pinnedSymbols = allTickers.map((t) => t.symbol);
@@ -101,7 +118,7 @@ const allTickers = await fetchTopUSDTSymbols(500);
   }
   const pinnedSet = new Set(pinnedSymbols);
   const tickers = allTickers.filter((t) => pinnedSet.has(t.symbol));
-  
+
   const results: CPRResult[] = [];
   const batchSize = 10;
   const delayMs = 300;
@@ -110,33 +127,35 @@ const allTickers = await fetchTopUSDTSymbols(500);
     const batch = tickers.slice(i, i + batchSize);
 
     const batchResults = await Promise.all(
-        batch.map(async (t) => {
-    const klines = await fetchKlines(t.symbol);
-    if (!klines || klines.length < 2) return null;
+      batch.map(async (t) => {
+        const klines = await fetchKlines(t.symbol);
+        if (!klines || klines.length < 2) return null;
 
-    const nowMs = Date.now();
-    const lastKline = klines[klines.length - 1];
-    const lastKlineIsLive = (nowMs - lastKline.openTime) < 24 * 60 * 60 * 1000;
+        const lastKline = klines[klines.length - 1];
 
-    let prevCandle: OHLC;
-    let todayCandle: OHLC;
-    let liveCandle: OHLC | null = null;
+        // ADK FIX: use UTC midnight boundary — matches TradingView high[1] lookahead_off
+        const lastKlineIsLive = isLiveDailyCandle(lastKline.openTime);
 
-    if (lastKlineIsLive) {
-      if (klines.length < 3) return null;
-      prevCandle  = klines[klines.length - 3];
-      todayCandle = klines[klines.length - 2];
-      liveCandle  = lastKline;
-    } else {
-      prevCandle  = klines[klines.length - 2];
-      todayCandle = klines[klines.length - 1];
-      liveCandle  = null;
-    }
+        let prevCandle: OHLC;
+        let todayCandle: OHLC;
+        let liveCandle: OHLC | null = null;
 
-    const currentPrice = parseFloat(t.lastPrice);
-    const changeFromDayOpen = liveCandle
-      ? ((currentPrice - liveCandle.open) / liveCandle.open) * 100
-      : parseFloat(t.priceChangePercent);
+        if (lastKlineIsLive) {
+          if (klines.length < 3) return null;
+          prevCandle  = klines[klines.length - 3]; // 2 days ago (completed)
+          todayCandle = klines[klines.length - 2]; // yesterday (completed) → today's CPR
+          liveCandle  = lastKline;                  // today's forming candle (not used for CPR)
+        } else {
+          prevCandle  = klines[klines.length - 2];
+          todayCandle = klines[klines.length - 1];
+          liveCandle  = null;
+        }
+
+        const currentPrice = parseFloat(t.lastPrice);
+        const changeFromDayOpen = liveCandle
+          ? ((currentPrice - liveCandle.open) / liveCandle.open) * 100
+          : parseFloat(t.priceChangePercent);
+
         return analyzeCPR(
           t.symbol,
           [prevCandle, todayCandle],
@@ -147,16 +166,12 @@ const allTickers = await fetchTopUSDTSymbols(500);
       })
     );
 
-    batchResults.forEach((r) => {
-      if (r) results.push(r);
-    });
+    batchResults.forEach((r) => { if (r) results.push(r); });
 
     const processed = Math.min(i + batchSize, tickers.length);
     onProgress(processed, tickers.length, batch[batch.length - 1].symbol);
 
-    if (i + batchSize < tickers.length) {
-      await sleep(delayMs);
-    }
+    if (i + batchSize < tickers.length) await sleep(delayMs);
   }
 
   return results;
