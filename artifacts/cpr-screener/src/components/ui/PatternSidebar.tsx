@@ -32,6 +32,7 @@ export const patterns: Pattern[] = [
   { id: "inside-value",       label: "Inside Value CPR",    subtitle: "Price inside CPR range",    icon: Crosshair },
   { id: "outside-value",      label: "Outside Value CPR",   subtitle: "Price outside CPR range",   icon: Maximize2 },
   { id: "structure-bullish",  label: "Structure Bullish",   subtitle: "Higher highs forming",      icon: BarChart2 },
+  { id: "lower-bullish",      label: "LowerCPR Bullish",    subtitle: "Higher highs forming",      icon: BarChart2 },
   { id: "structure-bearish",  label: "Structure Bearish",   subtitle: "Lower lows forming",        icon: BarChart },
 ];
 
