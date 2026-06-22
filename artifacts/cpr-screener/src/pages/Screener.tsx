@@ -87,6 +87,10 @@ function passesPattern(r: CPRResult, pattern: string): boolean {
       return r.cprFalling && r.cprNarrowing;
     case "inside-value":
       return r.todayCPR.tc < r.prevCPR.tc && r.todayCPR.bc > r.prevCPR.bc;
+    case "overlapping-higher":
+      return r.overlapHigher;
+      case "overlapping-lower":
+      return r.overlapLower;
     case "structure-bullish":
       return (r.cprRising && r.bothTight && r.todayCPR.r1 > r.prevCPR.r4);
     case "structure-bullish-all":

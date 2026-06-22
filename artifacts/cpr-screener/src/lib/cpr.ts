@@ -36,7 +36,9 @@ export interface CPRResult {
   cprRising: boolean;
   cprFalling: boolean;
   cprNarrowing: boolean;
-  bothTight: boolean;       
+  overlapHigher: boolean;
+  overlapLower: boolean;
+  bothTight: boolean;        
   passes: boolean;
   currentPrice: number;
   openPrice: number;
@@ -136,7 +138,9 @@ export function analyzeCPR(
 
   const compressionRatio = prevCPR.width > 0 ? (todayCPR.width / prevCPR.width) * 100 : 100;
   const cprNarrowing     = compressionRatio < 50;
-  const bothTight        = todayCPR.widthPct < 1 && prevCPR.widthPct < 1;  // ← ADD THIS
+  const bothTight        = todayCPR.widthPct < 1 && prevCPR.widthPct < 1;
+  const overlapHigher    = todayCPR.bc < prevCPR.tc && todayCPR.tc > prevCPR.tc;
+  const overlapLower    = todayCPR.bc < prevCPR.bc && todayCPR.tc > prevCPR.bc; 
 
   return {
     symbol,
@@ -146,7 +150,9 @@ export function analyzeCPR(
     cprRising,
     cprFalling,
     cprNarrowing,
-    bothTight,          // ← ADD THIS
+    overlapHigher,
+    overlapLower,  
+    bothTight,
     passes: cprRising && cprNarrowing,
     currentPrice,
     openPrice: openPrice ?? todayCandle.open,
