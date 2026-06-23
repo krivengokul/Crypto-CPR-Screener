@@ -103,8 +103,10 @@ function passesPattern(r: CPRResult, pattern: string): boolean {
       return (r.cprRising && r.todayCPR.r1 > r.prevCPR.r4);
     case "lower-bullish":
       return (r.cprFalling && r.cprNarrowing && r.prevCPR.r1  > r.todayCPR.r4);
-    case "structure-bearish":
-      return r.cprFalling && r.strHBBearish;
+    case "structure-bigabove":
+      return r.cprRising && r.strWideCPR;
+    case "structure-bigbelow":
+      return r.cprFalling && r.strWideCPR;
     default:
       return false;
   }
@@ -635,7 +637,7 @@ export default function Screener({ activePattern = "rising" }: { activePattern?:
                       Price <SortIcon k="change24h" />
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      vs CPR
+                      Price vs CPR
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Prev CPR

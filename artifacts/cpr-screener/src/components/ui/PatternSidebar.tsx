@@ -37,7 +37,8 @@ export const patterns: Pattern[] = [
   { id: "structure-bullish",  label: "U1>PU4 Bullish",   subtitle: "Higher highs forming",      icon: BarChart2 },
   { id: "structure-bullish-all",  label: "U1>PU4 Bullish All",   subtitle: "Higher highs forming",      icon: BarChart2 },
   { id: "lower-bullish",      label: "LowerCPR Bullish",    subtitle: "Higher highs forming",      icon: BarChart2 },
-  { id: "structure-bearish",  label: "Structure Bearish",   subtitle: "Wide CPR below PCPR",        icon: BarChart },
+  { id: "structure-bigabove",  label: "Structure BigAbove",   subtitle: "Wide CPR Above PCPR",        icon: BarChart },
+  { id: "structure-bigbelow",  label: "Structure BigBelow",   subtitle: "Wide CPR Below PCPR",        icon: BarChart }
 ];
 
 interface PatternSidebarProps {

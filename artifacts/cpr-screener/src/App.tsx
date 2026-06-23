@@ -75,7 +75,7 @@ function App() {
 
             {["rising", "falling-all", "1LB-PL12CL23", "LBALLD-U2<PU1", "HB-PU12CU23", "inside-value", 
             "structure-bullish", "overlapping-higher", "overlapping-lower", "structure-bullish-all", 
-            "lower-bullish", "structure-bearish"].includes(activePattern) ? (
+            "lower-bullish", "structure-bigabove", "structure-bigbelow"].includes(activePattern) ? (
               <Screener activePattern={activePattern} />
             ) : (
               <ComingSoon label={activeLabel} />
