@@ -52,7 +52,6 @@ function App() {
   // Nav click: switch pattern + trigger scan
   const handlePatternSelect = (id: string) => {
     setActivePattern(id);
-    setScanKey((k) => k + 1);                                         // ← bumps scanKey
   };
 
   const activeLabel =
