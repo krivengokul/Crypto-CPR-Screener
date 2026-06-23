@@ -73,7 +73,7 @@ function App() {
               <Menu className="w-5 h-5" />
             </button>
 
-            {["rising", "falling-all", "1LB-PL12CL23", "LBALLD-U2<PU1", "HB-PU12CU23", "inside-value", 
+            {["littleabove", "falling-all", "1LB-PL12CL23", "LBALLD-U2<PU1", "HB-PU12CU23", "inside-value", 
             "overlapping-higher", "overlapping-lower", "lower-bullish", "structure-bigabove", 
             "HA-U1>PU4", "HAThin-U1>PU4", "structure-bigbelow"].includes(activePattern) ? (
               <Screener activePattern={activePattern} />

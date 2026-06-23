@@ -81,8 +81,8 @@ function getChartUrl(symbol: string, source: "binance" | "delta"): string {
 
 function passesPattern(r: CPRResult, pattern: string): boolean {
   switch (pattern) {
-    case "rising":
-      return r.cprRising && r.cprNarrowing;
+    case "littleabove":
+      return r.cprRising && r.narrowCPR;
     case "falling-all":
       return r.cprFalling && r.cprNarrowing;
     case "1LB-PL12CL23":

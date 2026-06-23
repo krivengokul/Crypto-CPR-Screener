@@ -42,6 +42,7 @@ export interface CPRResult {
   overlapHigher: boolean;
   overlapLower: boolean;
   strWideCPR: boolean;
+  narrowCPR: boolean;
   bothTight: boolean;        
   passes: boolean;
   currentPrice: number;
@@ -152,6 +153,7 @@ export function analyzeCPR(
   const overlapHigher    = (todayCPR.bc > prevCPR.bc && todayCPR.bc < prevCPR.tc) && todayCPR.tc > prevCPR.tc;
   const overlapLower    = (todayCPR.tc < prevCPR.tc && todayCPR.tc > prevCPR.bc) && todayCPR.bc < prevCPR.bc;
   const strWideCPR    = todayCPR.widthPct > prevCPR.widthPct;
+  const narrowCPR    = todayCPR.widthPct < prevCPR.widthPct;
 
   return {
     symbol,
@@ -166,7 +168,8 @@ export function analyzeCPR(
     cprNarrowing,
     overlapHigher,
     overlapLower,
-    strWideCPR,  
+    strWideCPR,
+    narrowCPR,  
     bothTight,
     passes: cprRising && cprNarrowing,
     currentPrice,
