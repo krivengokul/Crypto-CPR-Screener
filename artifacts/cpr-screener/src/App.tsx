@@ -79,13 +79,19 @@ function App() {
             >
               <Menu className="w-5 h-5" />
             </button>
-            {["littleabove", "falling-all", "1LB-PL12CL23", "LBALLD-U2<PU1", "HB-PU12CU23", "inside-value",
-              "overlapping-higher", "overlapping-lower", "LBT-PU1>U1PL1>L1", "lower-bullish", "structure-bigabove",
-              "HA-U1>PU4", "HAThin-U1>PU4", "structure-bigbelow"].includes(activePattern) ? (
-              <Screener activePattern={activePattern} scanKey={scanKey} />  {/* ← pass scanKey */}
-            ) : (
-              <ComingSoon label={activeLabel} />
-            )}
+            {
+              ["littleabove", "falling-all", "1LB-PL12CL23", "LBALLD-U2<PU1", "HB-PU12CU23", "inside-value",
+              "overlapping-higher", "overlapping-lower", "LBT-PU1>U1PL1>L1", "lower-bullish",
+              "structure-bigabove", "HA-U1>PU4", "HAThin-U1>PU4", "structure-bigbelow"]
+                .includes(activePattern) ? (
+                  <>
+                    {/* pass scanKey */}
+                    <Screener activePattern={activePattern} scanKey={scanKey} />
+                  </>
+                ) : (
+                  <ComingSoon label={activeLabel} />
+                )
+            }
           </main>
         </div>
         <Toaster />
