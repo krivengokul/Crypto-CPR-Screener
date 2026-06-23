@@ -91,6 +91,8 @@ function passesPattern(r: CPRResult, pattern: string): boolean {
       return r.cprRising && r.narrowCPR && r.laallstepup;
     case "littlebelow":
       return r.cprFalling && r.narrowCPR;
+    case "lb-2tiny":
+      return r.cprFalling && r.narrowCPR && r.bothTight;
     case "lb-allstepdown":
       return r.cprFalling && r.narrowCPR && r.lballstepdown;
     case "1LB-PL12CL23":
@@ -99,8 +101,10 @@ function passesPattern(r: CPRResult, pattern: string): boolean {
       return r.lbJPattern2;
     case "HB-PU12CU23":
       return r.hbJPattern1;  
-    case "inside-value":
+    case "inside-cpr":
       return r.todayCPR.tc < r.prevCPR.tc && r.todayCPR.bc > r.prevCPR.bc;
+    case "outside-cpr":
+      return r.todayCPR.tc > r.prevCPR.tc && r.todayCPR.bc < r.prevCPR.bc;
     case "overlapping-higher":
       return r.overlapHigher;
     case "overlapping-lower":
