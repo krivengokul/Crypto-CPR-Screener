@@ -79,7 +79,7 @@ function App() {
               <Menu className="w-5 h-5" />
             </button>
             {
-              ["littleabove", "la-allstepup", "littlebelow", "lb-allstepdown", "1LB-PL12CL23", "LBALLD-U2<PU1",
+              ["littleabove", "la-2tiny", "LA-PL12CL23", "la-allstepup", "littlebelow", "lb-allstepdown", "1LB-PL12CL23", "LBALLD-U2<PU1",
                "HB-PU12CU23", "inside-value", "overlapping-higher", "overlapping-lower", "LBT-PU1>U1PL1>L1", "lower-bullish",
                 "structure-bigabove", "HA-U1>PU4", "HAThin-U1>PU4", "structure-bigbelow"]
                 .includes(activePattern) ? (

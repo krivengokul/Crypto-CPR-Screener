@@ -24,6 +24,8 @@ export interface Pattern {
 
 export const patterns: Pattern[] = [
   { id: "littleabove",        label: "Structure LittleAbove",subtitle: "Narrow CPR Above PCPR",    icon: TrendingUp },
+  { id: "la-2tiny",       label: "TinyAbove - Both Tiny", subtitle: "Tiny CPR Above, Tiny PCPR", icon: TrendingUp },
+  { id: "LA-PL12CL23",       label: "LA-PL12CL23:2PL4",   subtitle: "Bearish Target:2PL4",       icon: TrendingUp },
   { id: "la-allstepup",       label: "LittleAbove - Ladder", subtitle: "Narrow CPR Above -Ladder", icon: TrendingUp },
   { id: "littlebelow",        label: "Structure LittleBelow",subtitle: "Narrow CPR Below PCPR",    icon: TrendingDown },
   { id: "lb-allstepdown",     label: "LittleBelow - Ladder", subtitle: "Narrow CPR Below -Ladder", icon: TrendingUp },
