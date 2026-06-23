@@ -32,6 +32,7 @@ export const patterns: Pattern[] = [
   { id: "lower-value",        label: "Lower Value CPR",     subtitle: "Price below CPR zone",      icon: ArrowDownCircle },
   { id: "overlapping-higher", label: "Overlapping Higher",  subtitle: "CPR zones stacking up",     icon: Layers },
   { id: "overlapping-lower",  label: "Overlapping Lower",   subtitle: "CPR zones stacking down",   icon: LayersIcon },
+  { id: "LBT-PU1>U1PL1>L1",   label: "LBT-PU1>U1PL1>L1",    subtitle: "Bullish Target:2PU4",       icon: LayersIcon },
   { id: "inside-value",       label: "Inside Value CPR",    subtitle: "Price inside CPR range",    icon: Crosshair },
   { id: "outside-value",      label: "Outside Value CPR",   subtitle: "Price outside CPR range",   icon: Maximize2 },
   { id: "lower-bullish",      label: "LowerCPR Bullish",    subtitle: "Higher highs forming",      icon: BarChart2 },

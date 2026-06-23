@@ -95,8 +95,10 @@ function passesPattern(r: CPRResult, pattern: string): boolean {
       return r.todayCPR.tc < r.prevCPR.tc && r.todayCPR.bc > r.prevCPR.bc;
     case "overlapping-higher":
       return r.overlapHigher;
-      case "overlapping-lower":
+    case "overlapping-lower":
       return r.overlapLower;
+    case "LBT-PU1>U1PL1>L1":
+      return (r.overlapLower && r.lbtJPattern1 && r.bothTight);
     case "lower-bullish":
       return (r.cprFalling && r.cprNarrowing && r.prevCPR.r1  > r.todayCPR.r4);
     case "structure-bigabove":
