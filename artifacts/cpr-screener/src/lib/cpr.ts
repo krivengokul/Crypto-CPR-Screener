@@ -153,7 +153,8 @@ export function analyzeCPR(
   const bothTight        = todayCPR.widthPct < 1 && prevCPR.widthPct < 1;
   const overlapHigher    = (todayCPR.bc > prevCPR.bc && todayCPR.bc < prevCPR.tc) && todayCPR.tc > prevCPR.tc;
   const overlapLower    = (todayCPR.tc < prevCPR.tc && todayCPR.tc > prevCPR.bc) && todayCPR.bc < prevCPR.bc;
-  const lbtJPattern1   = (todayCPR.r1 < prevCPR.r1 && todayCPR.s1 < prevCPR.s1);
+  const lbtJPattern1   = (todayCPR.r1 < prevCPR.r1 && todayCPR.s1 < prevCPR.s1) &&
+                          (prevCPR.r1 > todayCPR.r1 && prevCPR.r2 > todayCPR.r2 && prevCPR.r3 > todayCPR.r3 && prevCPR.r4 > todayCPR.r4)
   const strWideCPR    = todayCPR.widthPct > prevCPR.widthPct;
   const narrowCPR    = todayCPR.widthPct < prevCPR.widthPct;
 
