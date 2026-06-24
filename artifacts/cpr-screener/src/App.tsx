@@ -81,7 +81,7 @@ function App() {
             {
               ["littleabove", "la-2tiny", "LA-PL12CL23", "la-allstepup", "littlebelow", "lb-2tiny", "lb-allstepdown", "LB-PU12CU23", "1LB-PL12CL23",
                 "LBALLD-U2<PU1", "HB-PU12CU23", "inside-cpr", "outside-cpr", "overlapping-higher", "overlapping-lower", "LBT-PU1>U1PL1>L1", "lower-bullish",
-                "structure-bigabove", "HA-U1>PU4", "HAThin-U1>PU4", "structure-bigbelow"]
+                "structure-bigabove", "HA-U1>PU4", "HAThin-U1>PU4", "structure-bigbelow", "HB-L1<PL4-U3>PU4"]
                 .includes(activePattern) ? (
                   <>
                     {/* pass scanKey */}
