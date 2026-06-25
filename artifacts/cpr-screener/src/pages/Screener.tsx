@@ -86,7 +86,7 @@ function passesPattern(r: CPRResult, pattern: string): boolean {
     case "la-2tiny":
       return r.cprRising && r.narrowCPR && r.bothTight;
     case "LA-PL12CL23":
-      return r.cprRising && r.narrowCPR && r.LAPL12CL23;
+      return r.cprRising && r.narrowCPR && r.PL12CL23;
     case "la-allstepup":
       return r.cprRising && r.narrowCPR && r.laallstepup;
     case "littlebelow":
@@ -108,7 +108,7 @@ function passesPattern(r: CPRResult, pattern: string): boolean {
     case "overlapping-higher":
       return r.overlapHigher;
     case  "LAT-PU12CU23":
-      return r.overlapHigher && r.allupbelow && r.PU12CU23;
+      return r.overlapHigher && r.allupbelow && r.PU12CU23 && r.PL12CL23;
     case "overlapping-lower":
       return r.overlapLower;
     case "LBT-PU1>U1PL1>L1":

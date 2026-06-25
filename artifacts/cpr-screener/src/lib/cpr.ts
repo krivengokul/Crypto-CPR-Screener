@@ -34,7 +34,7 @@ export interface CPRResult {
   prevCPR: CPRLevels;
   compressionRatio: number;
   cprRising: boolean;
-  LAPL12CL23: boolean;
+  PL12CL23: boolean;
   laallstepup: boolean;
   allupbelow: boolean;
   cprFalling: boolean;
@@ -121,11 +121,13 @@ export function calcCPR(candle: OHLC): CPRLevels {
     r1: 2 * pivot - l,
     r2: pivot + range,
     r3: h + 2 * (pivot - l),
-    r4: (h + 2 * (pivot - l)) + range,//h + 3 * (pivot - l),
+    //r4: (h + 2 * (pivot - l)) + range,
+    r4:h + 3 * (pivot - l),
     s1: 2 * pivot - h,
     s2: pivot - range,
     s3: l - 2 * (h - pivot),
-    s4: (l - 2 * (h - pivot)) - range,//l - 3 * (h - pivot),
+    //s4: (l - 2 * (h - pivot)) - range,
+    s4: l - 3 * (h - pivot)
   };
 }
 
@@ -156,7 +158,7 @@ export function analyzeCPR(
   const cprNarrowing     = compressionRatio < 50;
   const bothTight        = todayCPR.widthPct < 0.5 && prevCPR.widthPct < 0.5;
 
-  const LAPL12CL23 = (todayCPR.s2 < prevCPR.s1 && todayCPR.s3 > prevCPR.s2); //LA-PL12CL23:2PL4;
+  const PL12CL23 = (todayCPR.s2 < prevCPR.s1 && todayCPR.s3 > prevCPR.s2); //LA-PL12CL23:2PL4;
   const laallstepup   = (prevCPR.r1 < todayCPR.r1 && prevCPR.r2 < todayCPR.r2 && prevCPR.r3 < todayCPR.r3 && prevCPR.r4 < todayCPR.r4) &&
                         (prevCPR.s1 < todayCPR.s1 && prevCPR.s2 < todayCPR.s2 && prevCPR.s3 < todayCPR.s3 && prevCPR.s4 < todayCPR.s4);
   const lballstepdown   = (prevCPR.r1 > todayCPR.r1 && prevCPR.r2 > todayCPR.r2 && prevCPR.r3 > todayCPR.r3 && prevCPR.r4 > todayCPR.r4) &&
@@ -194,7 +196,7 @@ export function analyzeCPR(
     prevCPR,
     compressionRatio,
     cprRising,
-    LAPL12CL23,
+    PL12CL23,
     laallstepup,
     allupbelow,
     cprFalling,
