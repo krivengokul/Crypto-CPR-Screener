@@ -36,10 +36,11 @@ export interface CPRResult {
   cprRising: boolean;
   LAPL12CL23: boolean;
   laallstepup: boolean;
+  allupbelow: boolean;
   cprFalling: boolean;
   lballstepdown: boolean;
   LBAllStepsBdown: boolean;
-  LBPU12CU23: boolean;
+  PU12CU23: boolean;
   lbJPattern1: boolean;
   lbJPattern2: boolean;
   cprNarrowing: boolean;
@@ -162,7 +163,7 @@ export function analyzeCPR(
                         (prevCPR.s1 > todayCPR.s1 && prevCPR.s2 > todayCPR.s2 && prevCPR.s3 > todayCPR.s3 && prevCPR.s4 > todayCPR.s4);
   const LBAllStepsBdown = ((prevCPR.s1 > todayCPR.s1 && todayCPR.s1 > prevCPR.s2) && (prevCPR.s2 > todayCPR.s2 && todayCPR.s2 > prevCPR.s3)&& 
                     (prevCPR.s3 > todayCPR.s3 && todayCPR.s3 > prevCPR.s4) && prevCPR.s4 > todayCPR.s4);
-  const LBPU12CU23  = (todayCPR.r2 > prevCPR.r1 && todayCPR.r3 < prevCPR.r2); //LB-PU12CU23:2PU4
+  const PU12CU23  = (todayCPR.r2 > prevCPR.r1 && todayCPR.r3 < prevCPR.r2); //PU12CU23
   const lbJPattern1  = ((prevCPR.bc  - todayCPR.tc) >= minGap) && todayCPR.widthPct < 1 && 
                           (todayCPR.s2 < prevCPR.s1 && todayCPR.s3 > prevCPR.s2); //1LB-PL12CL23:2PU4
   const lbJPattern2  = ((prevCPR.bc  - todayCPR.tc) >= minGap) && todayCPR.widthPct < 1 && todayCPR.r2 < prevCPR.r1 &&
@@ -170,6 +171,13 @@ export function analyzeCPR(
                           todayCPR.s3 < prevCPR.s3 && todayCPR.s4 < prevCPR.s4); //LBALLD-U2<PU1:2U4
   
   const overlapHigher    = (todayCPR.bc > prevCPR.bc && todayCPR.bc < prevCPR.tc) && todayCPR.tc > prevCPR.tc;
+  
+  const allupbelow =  (todayCPR.s1 < prevCPR.bc) &&// S1 today below prev BC (supports lagged)
+                            (todayCPR.s1 > prevCPR.s1) &&// S1 stepped up
+                            (todayCPR.s2 > prevCPR.s2) &&// S2 stepped up
+                            (todayCPR.s3 > prevCPR.s3) &&// S3 stepped up
+                            (todayCPR.s4 > prevCPR.s4);// S4 stepped up
+  
   const overlapLower    = (todayCPR.tc < prevCPR.tc && todayCPR.tc > prevCPR.bc) && todayCPR.bc < prevCPR.bc;
   const lbtJPattern1   = (todayCPR.r1 < prevCPR.r1 && todayCPR.s1 < prevCPR.s1) &&
                           (prevCPR.r1 > todayCPR.r1 && prevCPR.r2 > todayCPR.r2 && prevCPR.r3 > todayCPR.r3 && prevCPR.r4 > todayCPR.r4)
@@ -189,10 +197,11 @@ export function analyzeCPR(
     cprRising,
     LAPL12CL23,
     laallstepup,
+    allupbelow,
     cprFalling,
     lballstepdown,
     LBAllStepsBdown,
-    LBPU12CU23,
+    PU12CU23,
     lbJPattern1,
     lbJPattern2,
     hbJPattern1,
