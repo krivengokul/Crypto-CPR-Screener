@@ -121,11 +121,11 @@ export function calcCPR(candle: OHLC): CPRLevels {
     r1: 2 * pivot - l,
     r2: pivot + range,
     r3: h + 2 * (pivot - l),
-    r4: h + 3 * (pivot - l),
+    r4: (h + 2 * (pivot - l)) + range,//h + 3 * (pivot - l),
     s1: 2 * pivot - h,
     s2: pivot - range,
     s3: l - 2 * (h - pivot),
-    s4: l - 3 * (h - pivot),
+    s4: (l - 2 * (h - pivot)) - range,//l - 3 * (h - pivot),
   };
 }
 
