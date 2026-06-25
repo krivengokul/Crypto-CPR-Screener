@@ -113,6 +113,10 @@ function passesPattern(r: CPRResult, pattern: string): boolean {
       return (r.overlapLower && r.lbtJPattern1 && r.bothTight);
     case "lower-bullish":
       return (r.cprFalling && r.cprNarrowing && r.prevCPR.r1  > r.todayCPR.r4);
+    case "Price-AbovePDH":
+      return (r.currentPrice > r.todayCPR.prevHigh);
+    case "Price-BelowPDL":
+      return (r.currentPrice < r.todayCPR.prevLow);
     case "structure-bigabove":
       return r.cprRising && r.strWideCPR;
     case "HA-U1>PU4":
