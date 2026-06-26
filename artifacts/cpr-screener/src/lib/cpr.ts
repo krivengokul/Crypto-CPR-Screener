@@ -41,6 +41,7 @@ export interface CPRResult {
   alldownbelow: boolean;
   cprFalling: boolean;
   PU12CU23: boolean;
+  PU23CU34: boolean;
   lbJPattern1: boolean;
   lbJPattern2: boolean;
   cprNarrowing: boolean;
@@ -160,6 +161,7 @@ export function analyzeCPR(
 
   const PL12CL23 = (todayCPR.s2 < prevCPR.s1 && todayCPR.s3 > prevCPR.s2); //LA-PL12CL23:2PL4;
   const PU12CU23  =  (prevCPR.r1 < todayCPR.r2 && prevCPR.r2 > todayCPR.r3); //PU12CU23
+  const PU23CU34  =  (prevCPR.r2 < todayCPR.r3 && prevCPR.r3 > todayCPR.r4); //PU23CU34
   const lbJPattern1  = ((prevCPR.bc  - todayCPR.tc) >= minGap) && todayCPR.widthPct < 1 && 
                           (todayCPR.s2 < prevCPR.s1 && todayCPR.s3 > prevCPR.s2); //1LB-PL12CL23:2PU4
   const lbJPattern2  = ((prevCPR.bc  - todayCPR.tc) >= minGap) && todayCPR.widthPct < 1 && todayCPR.r2 < prevCPR.r1 &&
@@ -212,6 +214,7 @@ export function analyzeCPR(
     alldownbelow,
     cprFalling,
     PU12CU23,
+    PU23CU34,
     lbJPattern1,
     lbJPattern2,
     hbJPattern1,
