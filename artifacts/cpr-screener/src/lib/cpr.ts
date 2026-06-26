@@ -35,11 +35,11 @@ export interface CPRResult {
   compressionRatio: number;
   cprRising: boolean;
   PL12CL23: boolean;
-  laallstepup: boolean;
+  allupabove: boolean;
   allupbelow: boolean;
+  alldownabove: boolean;
+  alldownbelow: boolean;
   cprFalling: boolean;
-  lballstepdown: boolean;
-  LBAllStepsBdown: boolean;
   PU12CU23: boolean;
   lbJPattern1: boolean;
   lbJPattern2: boolean;
@@ -159,12 +159,15 @@ export function analyzeCPR(
   const bothTight        = todayCPR.widthPct < 0.5 && prevCPR.widthPct < 0.5;
 
   const PL12CL23 = (todayCPR.s2 < prevCPR.s1 && todayCPR.s3 > prevCPR.s2); //LA-PL12CL23:2PL4;
-  const laallstepup   = (prevCPR.r1 < todayCPR.r1 && prevCPR.r2 < todayCPR.r2 && prevCPR.r3 < todayCPR.r3 && prevCPR.r4 < todayCPR.r4) &&
-                        (prevCPR.s1 < todayCPR.s1 && prevCPR.s2 < todayCPR.s2 && prevCPR.s3 < todayCPR.s3 && prevCPR.s4 < todayCPR.s4);
-  const lballstepdown   = (prevCPR.r1 > todayCPR.r1 && prevCPR.r2 > todayCPR.r2 && prevCPR.r3 > todayCPR.r3 && prevCPR.r4 > todayCPR.r4) &&
-                        (prevCPR.s1 > todayCPR.s1 && prevCPR.s2 > todayCPR.s2 && prevCPR.s3 > todayCPR.s3 && prevCPR.s4 > todayCPR.s4);
-  const LBAllStepsBdown = ((prevCPR.s1 > todayCPR.s1 && todayCPR.s1 > prevCPR.s2) && (prevCPR.s2 > todayCPR.s2 && todayCPR.s2 > prevCPR.s3)&& 
-                    (prevCPR.s3 > todayCPR.s3 && todayCPR.s3 > prevCPR.s4) && prevCPR.s4 > todayCPR.s4);
+  // const laallstepup   = (prevCPR.r1 < todayCPR.r1 && prevCPR.r2 < todayCPR.r2 && prevCPR.r3 < todayCPR.r3 && prevCPR.r4 < todayCPR.r4) &&
+  //                       (prevCPR.s1 < todayCPR.s1 && prevCPR.s2 < todayCPR.s2 && prevCPR.s3 < todayCPR.s3 && prevCPR.s4 < todayCPR.s4);
+  
+  // const lballstepdown   = (prevCPR.r1 > todayCPR.r1 && prevCPR.r2 > todayCPR.r2 && 
+  //                         prevCPR.r3 > todayCPR.r3 && prevCPR.r4 > todayCPR.r4) &&
+  //                       ((todayCPR.s1 < prevCPR.s1 && todayCPR.s1 > prevCPR.s2) && (todayCPR.s2 < prevCPR.s2 && todayCPR.s2 > prevCPR.s3) && 
+  //                         prevCPR.s3 > todayCPR.s3 && prevCPR.s4 > todayCPR.s4);
+
+  
   const PU12CU23  = (todayCPR.r2 > prevCPR.r1 && todayCPR.r3 < prevCPR.r2); //PU12CU23
   const lbJPattern1  = ((prevCPR.bc  - todayCPR.tc) >= minGap) && todayCPR.widthPct < 1 && 
                           (todayCPR.s2 < prevCPR.s1 && todayCPR.s3 > prevCPR.s2); //1LB-PL12CL23:2PU4
@@ -173,11 +176,26 @@ export function analyzeCPR(
                           todayCPR.s3 < prevCPR.s3 && todayCPR.s4 < prevCPR.s4); //LBALLD-U2<PU1:2U4
   
   const overlapHigher    = (todayCPR.bc > prevCPR.bc && todayCPR.bc < prevCPR.tc) && todayCPR.tc > prevCPR.tc;
+
+  const allupabove =  (todayCPR.r1 > prevCPR.r1) && (todayCPR.r1 < prevCPR.tc) &&// R1 stepped up
+                      (todayCPR.r2 > prevCPR.r2) && (todayCPR.r2 < prevCPR.r1) &&// R2 stepped up
+                      (todayCPR.r3 > prevCPR.r3) && (todayCPR.r3 < prevCPR.r2) &&// R3 stepped up
+                      (todayCPR.r4 > prevCPR.r4) && (todayCPR.r4 < prevCPR.r3);// R4 stepped up
   
   const allupbelow =  (todayCPR.s1 > prevCPR.s1) && (todayCPR.s1 < prevCPR.bc) &&// S1 stepped up
                       (todayCPR.s2 > prevCPR.s2) && (todayCPR.s2 < prevCPR.s1) &&// S2 stepped up
                       (todayCPR.s3 > prevCPR.s3) && (todayCPR.s3 < prevCPR.s2) &&// S3 stepped up
                       (todayCPR.s4 > prevCPR.s4) && (todayCPR.s4 < prevCPR.s3);// S4 stepped up
+
+  const alldownabove = (todayCPR.r1 < prevCPR.r1 && todayCPR.r1 > prevCPR.r2) && // R1 stepped down
+                        (todayCPR.r2 < prevCPR.r2  && todayCPR.r2 > prevCPR.r3)&& 
+                        (todayCPR.r3 < prevCPR.r3  && todayCPR.r3 > prevCPR.r4) && 
+                          todayCPR.r4 < prevCPR.r4 ; // R4 stepped down
+
+  const alldownbelow = (todayCPR.s1 < prevCPR.s1 && todayCPR.s1 > prevCPR.s2) && // S1 stepped down
+                        (todayCPR.s2 < prevCPR.s2  && todayCPR.s2 > prevCPR.s3)&& 
+                        (todayCPR.s3 < prevCPR.s3  && todayCPR.s3 > prevCPR.s4) && 
+                          todayCPR.s4 < prevCPR.s4 ; // S4 stepped down
 
   const overlapLower    = (todayCPR.tc < prevCPR.tc && todayCPR.tc > prevCPR.bc) && todayCPR.bc < prevCPR.bc;
   const lbtJPattern1   = (todayCPR.r1 < prevCPR.r1 && todayCPR.s1 < prevCPR.s1) &&
@@ -197,11 +215,11 @@ export function analyzeCPR(
     compressionRatio,
     cprRising,
     PL12CL23,
-    laallstepup,
+    allupabove,
     allupbelow,
+    alldownabove,
+    alldownbelow,
     cprFalling,
-    lballstepdown,
-    LBAllStepsBdown,
     PU12CU23,
     lbJPattern1,
     lbJPattern2,
