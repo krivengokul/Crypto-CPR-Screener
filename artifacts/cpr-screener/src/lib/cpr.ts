@@ -170,9 +170,9 @@ export function analyzeCPR(
   
   const overlapHigher    = (todayCPR.bc > prevCPR.bc && todayCPR.bc < prevCPR.tc) && todayCPR.tc > prevCPR.tc;
 
-  const allupabove =  (todayCPR.r1 > prevCPR.r1) && (todayCPR.r1 < prevCPR.r1) &&// R1 stepped up
-                      (todayCPR.r2 > prevCPR.r2) && (todayCPR.r2 < prevCPR.r2) &&// R2 stepped up
-                      (todayCPR.r3 > prevCPR.r3) && (todayCPR.r3 < prevCPR.r3) &&// R3 stepped up
+  const allupabove =  (todayCPR.r1 > prevCPR.r1) && (todayCPR.r1 < prevCPR.r2) &&// R1 stepped up
+                      (todayCPR.r2 > prevCPR.r2) && (todayCPR.r2 < prevCPR.r3) &&// R2 stepped up
+                      (todayCPR.r3 > prevCPR.r3) && (todayCPR.r3 < prevCPR.r4) &&// R3 stepped up
                       (todayCPR.r4 > prevCPR.r4);// R4 stepped up
   
   const allupbelow =  (todayCPR.s1 > prevCPR.s1) && (todayCPR.s1 < prevCPR.bc) &&// S1 stepped up
