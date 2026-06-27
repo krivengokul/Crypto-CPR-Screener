@@ -48,6 +48,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
   const [showLABothTiny, setShowLABothTiny] = useState(false);
   const [showLAAllUp, setShowLAAllUp] = useState(false);
   const [showLAPL12CL23, setShowLAPL12CL23] = useState(false);
+  const [showOutsideCPRCompressed, setShowOutsideCPRCompressed] = useState(false);
   const [error, setError] = useState("");
   const [countdown, setCountdown] = useState("");
   const [nextScanUtc, setNextScanUtc] = useState<Date>(getNextScanIST());
@@ -231,6 +232,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
     if (allResults.length > 0) setFiltered(allResults.filter((r) => passesPattern(r, activePattern)));
     if (deltaAllResults.length > 0) setDeltaFiltered(deltaAllResults.filter((r) => passesPattern(r, activePattern)));
     if (activePattern !== "littleabove") { setShowLABothTiny(false); setShowLAAllUp(false); setShowLAPL12CL23(false); }
+    if (activePattern !== "outside-cpr") { setShowOutsideCPRCompressed(false); }
   }, [activePattern, allResults, deltaAllResults]);
 
   const toggleSort = (key: SortKey) => {
@@ -268,6 +270,17 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
     if (showLAPL12CL23 && activePattern === "littleabove") {
       const binanceIntersect = allResults.filter((r) => passesPattern(r, "LA-PL12CL23")).map((r) => ({ ...r, source: "binance" as const }));
       const deltaIntersect = deltaAllResults.filter((r) => passesPattern(r, "LA-PL12CL23")).map((r) => ({ ...r, source: "delta" as const }));
+      if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
+      if (activeTab === "delta") return deltaIntersect;
+      return binanceIntersect;
+    }
+    if (showOutsideCPRCompressed && activePattern === "outside-cpr") {
+      const binanceIntersect = allResults
+        .filter((r) => passesPattern(r, "outside-cpr") && r.todayCPR.r4 < r.prevCPR.r4 && r.todayCPR.s4 > r.prevCPR.s4)
+        .map((r) => ({ ...r, source: "binance" as const }));
+      const deltaIntersect = deltaAllResults
+        .filter((r) => passesPattern(r, "outside-cpr") && r.todayCPR.r4 < r.prevCPR.r4 && r.todayCPR.s4 > r.prevCPR.s4)
+        .map((r) => ({ ...r, source: "delta" as const }));
       if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
       if (activeTab === "delta") return deltaIntersect;
       return binanceIntersect;
@@ -452,9 +465,11 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 ? currentAllCount
                 : (showLABothTiny || showLAAllUp || showLAPL12CL23) && activePattern === "littleabove"
                 ? displayed.length
+                : showOutsideCPRCompressed && activePattern === "outside-cpr"
+                ? displayed.length
                 : currentFilteredCount}{" "}
               results
-              {!showAll && !showLABothTiny && !showLAAllUp && !showLAPL12CL23 && ` (${currentFilteredCount} matching, ${currentAllCount} total)`}
+              {!showAll && !showLABothTiny && !showLAAllUp && !showLAPL12CL23 && !showOutsideCPRCompressed && ` (${currentFilteredCount} matching, ${currentAllCount} total)`}
               {showLABothTiny && activePattern === "littleabove" && (
                 <span className="ml-1 text-blue-400">(LA-BothTiny intersection)</span>
               )}
@@ -464,9 +479,12 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
               {showLAPL12CL23 && activePattern === "littleabove" && (
                 <span className="ml-1 text-blue-400">(PL12CL23 filter)</span>
               )}
+              {showOutsideCPRCompressed && activePattern === "outside-cpr" && (
+                <span className="ml-1 text-purple-400">(Compressed filter)</span>
+              )}
             </span>
             <button
-              onClick={() => { setShowAll((v) => !v); setShowLABothTiny(false); setShowLAAllUp(false); setShowLAPL12CL23(false); }}
+              onClick={() => { setShowAll((v) => !v); setShowLABothTiny(false); setShowLAAllUp(false); setShowLAPL12CL23(false); setShowOutsideCPRCompressed(false); }}
               className="text-xs px-2.5 py-1 rounded border border-border text-muted-foreground hover:text-foreground transition-colors"
             >
               {showAll ? "Show filtered only" : "Show all"}
@@ -508,6 +526,19 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 title="Show symbols matching LA-PL12CL23:2PL4 (Bearish Target: 2PL4)"
               >
                 {showLAPL12CL23 ? "✕ PL12CL23" : "PL12CL23"}
+              </button>
+            )}
+            {activePattern === "outside-cpr" && !showAll && (
+              <button
+                onClick={() => setShowOutsideCPRCompressed((v) => !v)}
+                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                  showOutsideCPRCompressed
+                    ? "border-purple-400 text-purple-400"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+                title="Show OutsideCPR symbols where today R4 < prev R4 AND today S4 > prev S4 (compressed range)"
+              >
+                {showOutsideCPRCompressed ? "✕ Compressed" : "Compressed"}
               </button>
             )}
           </div>
