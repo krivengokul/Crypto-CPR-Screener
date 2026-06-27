@@ -23,10 +23,13 @@ export interface Pattern {
 }
 
 export const patterns: Pattern[] = [
-  { id: "littleabove",        label: "Structure LittleAbove",subtitle: "Narrow CPR Above PCPR",    icon: TrendingUp },
-  { id: "la-2tiny",       label: "TinyAbove - Both Tiny", subtitle: "Tiny CPR Above, Tiny PCPR", icon: TrendingUp },
-  { id: "LA-PL12CL23",       label: "LA-PL12CL23:2PL4",   subtitle: "Bearish Target:2PL4",       icon: TrendingDown },
-  { id: "la-allstepup",       label: "LittleAbove - Ladder", subtitle: "Narrow CPR Above -Ladder", icon: TrendingUp },
+  { id: "littleabove",        label: "Little Above",          subtitle: "Narrow CPR Above PCPR",    icon: TrendingUp },
+  // hidden — accessible via LA-BothTiny button on Little Above
+  // { id: "la-2tiny",       label: "TinyAbove - Both Tiny", subtitle: "Tiny CPR Above, Tiny PCPR", icon: TrendingUp },
+  // hidden — accessible via PL12CL23 button on Little Above
+  // { id: "LA-PL12CL23",       label: "LA-PL12CL23:2PL4",   subtitle: "Bearish Target:2PL4",       icon: TrendingDown },
+  // hidden — accessible via LA-AllUp button on Little Above
+  // { id: "la-allstepup",       label: "LittleAbove - Ladder", subtitle: "Narrow CPR Above -Ladder", icon: TrendingUp },
   { id: "littlebelow",        label: "Structure LittleBelow",subtitle: "Narrow CPR Below PCPR",    icon: TrendingDown },
   { id: "lb-2tiny",       label: "TinyBelow - Both Tiny", subtitle: "Tiny CPR Below, Tiny PCPR", icon: TrendingDown },
   { id: "lb-allstepdown",     label: "LittleBelow - Ladder", subtitle: "Narrow CPR Below -Ladder", icon: TrendingUp },

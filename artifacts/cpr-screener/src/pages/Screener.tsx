@@ -253,6 +253,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
   const [showAll, setShowAll] = useState(false);
   const [showLABothTiny, setShowLABothTiny] = useState(false);
   const [showLAAllUp, setShowLAAllUp] = useState(false);
+  const [showLAPL12CL23, setShowLAPL12CL23] = useState(false);
   const [error, setError] = useState("");
   const [countdown, setCountdown] = useState("");
   const [nextScanUtc, setNextScanUtc] = useState<Date>(getNextScanIST());
@@ -435,7 +436,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
   useEffect(() => {
     if (allResults.length > 0) setFiltered(allResults.filter((r) => passesPattern(r, activePattern)));
     if (deltaAllResults.length > 0) setDeltaFiltered(deltaAllResults.filter((r) => passesPattern(r, activePattern)));
-    if (activePattern !== "littleabove") { setShowLABothTiny(false); setShowLAAllUp(false); }
+    if (activePattern !== "littleabove") { setShowLABothTiny(false); setShowLAAllUp(false); setShowLAPL12CL23(false); }
   }, [activePattern, allResults, deltaAllResults]);
 
   const toggleSort = (key: SortKey) => {
@@ -466,6 +467,13 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
     if (showLAAllUp && activePattern === "littleabove") {
       const binanceIntersect = allResults.filter((r) => passesPattern(r, "la-allstepup")).map((r) => ({ ...r, source: "binance" as const }));
       const deltaIntersect = deltaAllResults.filter((r) => passesPattern(r, "la-allstepup")).map((r) => ({ ...r, source: "delta" as const }));
+      if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
+      if (activeTab === "delta") return deltaIntersect;
+      return binanceIntersect;
+    }
+    if (showLAPL12CL23 && activePattern === "littleabove") {
+      const binanceIntersect = allResults.filter((r) => passesPattern(r, "LA-PL12CL23")).map((r) => ({ ...r, source: "binance" as const }));
+      const deltaIntersect = deltaAllResults.filter((r) => passesPattern(r, "LA-PL12CL23")).map((r) => ({ ...r, source: "delta" as const }));
       if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
       if (activeTab === "delta") return deltaIntersect;
       return binanceIntersect;
@@ -648,27 +656,30 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
             <span className="text-xs text-muted-foreground">
               {showAll
                 ? currentAllCount
-                : (showLABothTiny || showLAAllUp) && activePattern === "littleabove"
+                : (showLABothTiny || showLAAllUp || showLAPL12CL23) && activePattern === "littleabove"
                 ? displayed.length
                 : currentFilteredCount}{" "}
               results
-              {!showAll && !showLABothTiny && !showLAAllUp && ` (${currentFilteredCount} matching, ${currentAllCount} total)`}
+              {!showAll && !showLABothTiny && !showLAAllUp && !showLAPL12CL23 && ` (${currentFilteredCount} matching, ${currentAllCount} total)`}
               {showLABothTiny && activePattern === "littleabove" && (
                 <span className="ml-1 text-blue-400">(LA-BothTiny intersection)</span>
               )}
               {showLAAllUp && activePattern === "littleabove" && (
                 <span className="ml-1 text-blue-400">(LA-AllUp intersection)</span>
               )}
+              {showLAPL12CL23 && activePattern === "littleabove" && (
+                <span className="ml-1 text-blue-400">(PL12CL23 filter)</span>
+              )}
             </span>
             <button
-              onClick={() => { setShowAll((v) => !v); setShowLABothTiny(false); setShowLAAllUp(false); }}
+              onClick={() => { setShowAll((v) => !v); setShowLABothTiny(false); setShowLAAllUp(false); setShowLAPL12CL23(false); }}
               className="text-xs px-2.5 py-1 rounded border border-border text-muted-foreground hover:text-foreground transition-colors"
             >
               {showAll ? "Show filtered only" : "Show all"}
             </button>
             {activePattern === "littleabove" && !showAll && (
               <button
-                onClick={() => { setShowLABothTiny((v) => !v); setShowLAAllUp(false); }}
+                onClick={() => { setShowLABothTiny((v) => !v); setShowLAAllUp(false); setShowLAPL12CL23(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showLABothTiny
                     ? "border-foreground text-foreground"
@@ -681,7 +692,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
             )}
             {activePattern === "littleabove" && !showAll && (
               <button
-                onClick={() => { setShowLAAllUp((v) => !v); setShowLABothTiny(false); }}
+                onClick={() => { setShowLAAllUp((v) => !v); setShowLABothTiny(false); setShowLAPL12CL23(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showLAAllUp
                     ? "border-foreground text-foreground"
@@ -690,6 +701,19 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 title="Show symbols that match BOTH Structure LittleAbove AND LittleAbove-Ladder (all R/S levels stepped up)"
               >
                 {showLAAllUp ? "✕ LA-AllUp" : "LA-AllUp"}
+              </button>
+            )}
+            {activePattern === "littleabove" && !showAll && (
+              <button
+                onClick={() => { setShowLAPL12CL23((v) => !v); setShowLABothTiny(false); setShowLAAllUp(false); }}
+                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                  showLAPL12CL23
+                    ? "border-foreground text-foreground"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+                title="Show symbols matching LA-PL12CL23:2PL4 (Bearish Target: 2PL4)"
+              >
+                {showLAPL12CL23 ? "✕ PL12CL23" : "PL12CL23"}
               </button>
             )}
           </div>
