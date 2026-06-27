@@ -598,9 +598,9 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                     ? "border-cyan-400 text-cyan-400"
                     : "border-border text-muted-foreground hover:text-foreground"
                 }`}
-                title="Mini PCPR, PL34CL34, Prev U3 above U4; Target-APU4"
+                title="Compressed, Mini PCPR, PL34CL34, Prev U3 above U4: Target-APU4"
               >
-                {showBigBelowPMiniPL3 ? "✕ pMini-pl3>3u3>3" : "pMini-pl3>3u3>3"}
+                {showBigBelowPMiniPL3 ? "✕ pMini-pl3>3pu3>4" : "pMini-pl3>3pu3>4"}
               </button>
             )}
           </div>
