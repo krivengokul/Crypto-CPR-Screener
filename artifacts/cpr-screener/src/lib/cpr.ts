@@ -117,8 +117,8 @@ export function calcCPR(candle: OHLC): CPRLevels {
   const r3 = h + 2 * (pivot - l);
   const s3 = l - 2 * (h - pivot);
   // TradingView-style extension
-  const r4 = r3 + range;
-  const s4 = s3 - range;
+  const r4 = r3 + r2 - r1;
+  const s4 = s3 + s2 - s1;
 
   return {
     pivot,
