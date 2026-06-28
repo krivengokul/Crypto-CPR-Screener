@@ -765,6 +765,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-muted-foreground hover:text-primary transition-colors"
+                              title="Open on TradingView"
                             >
                               <ExternalLink className="w-3.5 h-3.5" />
                             </a>

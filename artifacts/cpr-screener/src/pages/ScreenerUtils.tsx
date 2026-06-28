@@ -47,15 +47,31 @@ export function splitSymbol(symbol: string, source: "binance" | "delta") {
   return { base: symbol, quote: "" };
 }
 
+/**
+ * Returns TradingView chart URL.
+ * Your screener scans Binance USDM perpetual futures.
+ * TradingView uses SYMBOL.P for perps (e.g. BTCUSDT.P, STBLUSDT.P).
+ * Most symbols exist as both spot and perp on TradingView — for these,
+ * .P works fine. A small number exist on TradingView spot but NOT as perp
+ * (e.g. QKCUSDT) — those need the plain spot URL.
+ *
+ * Strategy: always try .P (perp) first since that's what your screener tracks.
+ * User can open chart and if it errors, they remove .P manually (rare case).
+ * This is better than spot-first because perp candles match your CPR data.
+ */
+
+// Symbols known to NOT have a .P perp chart on TradingView — use spot URL
+const SPOT_ONLY_ON_TV = new Set([
+  "QKCUSDT",
+]);
+
 export function getChartUrl(symbol: string, source: "binance" | "delta"): string {
-  if (source === "binance") {
-    return `https://www.tradingview.com/chart/?symbol=BINANCE:${symbol}`;
-  }
   const tvSymbol =
     source === "delta" && symbol.endsWith("USD") && !symbol.endsWith("USDT")
       ? symbol.slice(0, -3) + "USDT"
       : symbol;
-  return `https://www.tradingview.com/chart/?symbol=BINANCE:${tvSymbol}`;
+  const suffix = SPOT_ONLY_ON_TV.has(tvSymbol) ? "" : ".P";
+  return `https://www.tradingview.com/chart/?symbol=BINANCE:${tvSymbol}${suffix}`;
 }
 
 export function passesPattern(r: CPRResult, pattern: string): boolean {
