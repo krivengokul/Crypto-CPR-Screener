@@ -128,7 +128,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return r.cprFalling && r.strWideCPR;
     case "bigbelow-pmini-pl3":
       return r.cprFalling && r.strWideCPR && r.prevCPR.widthPct < 0.5 && r.PL34CL4 &&
-             r.prevCPR.r3  > r.todayCPR.r4;
+             r.prevCPR.r3  > r.todayCPR.r4 && r.currentPrice > r.todayCPR.tc;
     case "HB-L1<PL1-PU12CU23":
       return r.cprFalling && r.strWideCPR && r.hbJPattern1;
     case "HB-L1<PL4-U1>TCPR":
