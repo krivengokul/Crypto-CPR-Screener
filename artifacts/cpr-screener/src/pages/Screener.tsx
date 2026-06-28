@@ -600,7 +600,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 }`}
                 title="Compressed, Mini PCPR, PL34CL34, Prev U3 above U4: Target-APU4"
               >
-                {showBigBelowPMiniPL3 ? "✕ pMini-pl3>3pu3>4" : "pMini-pl3>3pu3>4"}
+                {showBigBelowPMiniPL3 ? "✕ pMini-L34C4/U3>4" : "pMini-L34C4/U3>4"}
               </button>
             )}
           </div>
