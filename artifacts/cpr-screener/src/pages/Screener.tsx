@@ -683,8 +683,8 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                             <div className="flex items-center gap-2">
                               <span className="text-muted-foreground text-xs">{isExpanded ? "▼" : "▶"}</span>
                               {r.passes && <div className="w-1.5 h-1.5 rounded-full bg-accent" />}
-                              {sym.base}
-                              <span className="text-muted-foreground text-xs font-normal">/{sym.quote}</span>
+                              <span style={{ fontFamily: "'Courier New', 'Roboto Mono', 'Consolas', monospace" }}>{sym.base}</span>
+                              <span className="text-muted-foreground text-xs font-normal" style={{ fontFamily: "'Courier New', 'Roboto Mono', 'Consolas', monospace" }}>/{sym.quote}</span>
                             </div>
                           </td>
                           <td className="px-4 py-3 font-mono text-foreground whitespace-nowrap">
