@@ -60,9 +60,9 @@ export function splitSymbol(symbol: string, source: "binance" | "delta") {
  * This is better than spot-first because perp candles match your CPR data.
  */
 
-// Symbols known to NOT have a .P perp chart on TradingView — use spot URL
-const SPOT_ONLY_ON_TV = new Set([
-  "QKCUSDT",
+// Symbols that only exist as perp on TradingView (no spot) — append .P
+const PERP_ONLY_ON_TV = new Set([
+  "STBLUSDT",
 ]);
 
 export function getChartUrl(symbol: string, source: "binance" | "delta"): string {
@@ -70,7 +70,7 @@ export function getChartUrl(symbol: string, source: "binance" | "delta"): string
     source === "delta" && symbol.endsWith("USD") && !symbol.endsWith("USDT")
       ? symbol.slice(0, -3) + "USDT"
       : symbol;
-  const suffix = SPOT_ONLY_ON_TV.has(tvSymbol) ? "" : ".P";
+  const suffix = PERP_ONLY_ON_TV.has(tvSymbol) ? ".P" : "";
   return `https://www.tradingview.com/chart/?symbol=BINANCE:${tvSymbol}${suffix}`;
 }
 
