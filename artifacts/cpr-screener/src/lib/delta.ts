@@ -216,7 +216,8 @@ export async function runDeltaScreener(
           [prevCandle, todayCandle],
           currentPrice,
           changeFromDayOpen,
-          t.turnover_usd || 0
+          t.turnover_usd || 0,
+          todayLiveOpen ?? undefined   // today's session open (5:30 AM IST) for OPrice display
         );
       })
     );
