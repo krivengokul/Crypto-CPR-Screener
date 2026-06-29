@@ -698,9 +698,6 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                     >
                       Symbol <SortIcon k="symbol" />
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Today CPR
-                    </th>
                     <th
                       className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
                       onClick={() => toggleSort("compressionRatio")}
@@ -715,9 +712,6 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Price vs CPR
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Prev CPR
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Signals
@@ -763,11 +757,6 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                               <span className="text-muted-foreground text-xs font-normal">/{sym.quote}</span>
                             </div>
                           </td>
-                          <td className="px-4 py-3 font-mono text-foreground whitespace-nowrap">
-                            <div className="text-xs text-muted-foreground">TC: {fmt(r.todayCPR.tc)}</div>
-                            <div className="font-medium">{fmt(r.todayCPR.pivot)}</div>
-                            <div className="text-xs text-muted-foreground">BC: {fmt(r.todayCPR.bc)}</div>
-                          </td>
                           <td className="px-4 py-3 font-mono whitespace-nowrap">
                             <div className="text-xs text-chart-3">
                               <span className="text-muted-foreground">TDay: </span>{r.todayCPR.widthPct.toFixed(4)}%
@@ -811,11 +800,6 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                           <td className={`px-4 py-3 whitespace-nowrap text-xs font-medium ${distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).color}`}>
                             {distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).label}
                           </td>
-                          <td className="px-4 py-3 font-mono text-muted-foreground whitespace-nowrap text-xs">
-                            <div className="text-xs text-muted-foreground">TC: {fmt(r.prevCPR.tc)}</div>
-                            <div>{fmt(r.prevCPR.pivot)}</div>
-                            <div className="text-xs text-muted-foreground">BC: {fmt(r.prevCPR.bc)}</div>
-                          </td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             <div className="flex flex-wrap gap-1">
                               {r.cprRising && (
@@ -848,11 +832,50 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                           </td>
                         </tr>
 
-                        {/* ADK S/R Ladder (PH/PL included, matches ADK TradingView indicator) */}
+                        {/* ADK S/R Ladder + CPR boxes */}
                         {isExpanded && (
                           <tr key={`${rowKey}-sr`} className="bg-muted/20 border-b border-border">
                             <td colSpan={20} className="px-6 py-4">
-                              <div className="flex flex-wrap gap-10">
+                              <div className="flex flex-wrap gap-10 items-start">
+                                {/* Prev Day CPR box */}
+                                <div className="min-w-[130px]">
+                                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">Prev Day CPR</p>
+                                  <div className="rounded-lg border border-border bg-card/60 px-3 py-2 font-mono text-xs space-y-1">
+                                    <div className="flex justify-between gap-4">
+                                      <span className="text-muted-foreground">TC</span>
+                                      <span className="text-yellow-500 font-semibold">{fmt(r.prevCPR.tc)}</span>
+                                    </div>
+                                    <div className="flex justify-between gap-4">
+                                      <span className="text-muted-foreground">Pivot</span>
+                                      <span className="text-yellow-500 font-bold">{fmt(r.prevCPR.pivot)}</span>
+                                    </div>
+                                    <div className="flex justify-between gap-4">
+                                      <span className="text-muted-foreground">BC</span>
+                                      <span className="text-yellow-500 font-semibold">{fmt(r.prevCPR.bc)}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                                {/* Today CPR box */}
+                                <div className="min-w-[130px]">
+                                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">Today CPR</p>
+                                  <div className="rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 font-mono text-xs space-y-1">
+                                    <div className="flex justify-between gap-4">
+                                      <span className="text-muted-foreground">TC</span>
+                                      <span className="text-yellow-500 font-semibold">{fmt(r.todayCPR.tc)}</span>
+                                    </div>
+                                    <div className="flex justify-between gap-4">
+                                      <span className="text-muted-foreground">Pivot</span>
+                                      <span className="text-yellow-500 font-bold">{fmt(r.todayCPR.pivot)}</span>
+                                    </div>
+                                    <div className="flex justify-between gap-4">
+                                      <span className="text-muted-foreground">BC</span>
+                                      <span className="text-yellow-500 font-semibold">{fmt(r.todayCPR.bc)}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                                {/* Divider */}
+                                <div className="hidden sm:block w-px self-stretch bg-border/50 mx-2" />
+                                {/* S/R Ladders */}
                                 <SRLadder cpr={r.prevCPR} currentPrice={r.currentPrice} label="Prev Day S/R" />
                                 <SRLadder cpr={r.todayCPR} currentPrice={r.currentPrice} label="Today S/R" />
                               </div>
