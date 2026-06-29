@@ -98,6 +98,14 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return r.lbJPattern1;
     case "LBALLD-U2<PU1":
       return r.lbJPattern2;
+    // NEW: LB Compressed — LittleBelow + today S4 > prev S3 + today R4 < prev R2
+    case "lb-cmprss-l4>3-u4<2":
+      return (
+        r.cprFalling &&
+        r.narrowCPR &&
+        r.todayCPR.s4 > r.prevCPR.s3 &&
+        r.todayCPR.r4 < r.prevCPR.r2
+      );
     case "inside-cpr":
       return r.todayCPR.tc < r.prevCPR.tc && r.todayCPR.bc > r.prevCPR.bc;
     case "inside-cpr-expanded":

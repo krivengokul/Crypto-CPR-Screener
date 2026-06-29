@@ -30,7 +30,7 @@ export const patterns: Pattern[] = [
   // { id: "LA-PL12CL23",       label: "LA-PL12CL23:2PL4",   subtitle: "Bearish Target:2PL4",       icon: TrendingDown },
   // hidden — accessible via LA-AllUp button on Little Above
   // { id: "la-allstepup",       label: "LittleAbove - Ladder", subtitle: "Narrow CPR Above -Ladder", icon: TrendingUp },
-  { id: "littlebelow",        label: "Structure LittleBelow",subtitle: "Narrow CPR Below PCPR",    icon: TrendingDown },
+  { id: "littlebelow",        label: "Little Below",         subtitle: "Narrow CPR Below PCPR",    icon: TrendingDown },
   { id: "lb-2tiny",       label: "TinyBelow - Both Tiny", subtitle: "Tiny CPR Below, Tiny PCPR", icon: TrendingDown },
   { id: "lb-allstepdown",     label: "LittleBelow - Ladder", subtitle: "Narrow CPR Below -Ladder", icon: TrendingUp },
   { id: "LB-PU12CU23",        label: "L2>PL2-PU12CU23",     subtitle: "Bullish Target:2PU4",       icon: TrendingUp },

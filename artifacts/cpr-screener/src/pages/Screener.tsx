@@ -52,6 +52,8 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
   const [showInsideCPRExpanded, setShowInsideCPRExpanded] = useState(false);
   const [showBigBelowPMiniPL3, setShowBigBelowPMiniPL3] = useState(false);
   const [showBigAbovePL34CL4, setShowBigAbovePL34CL4] = useState(false);
+  // NEW: LB Compressed filter state
+  const [showLBCmprss, setShowLBCmprss] = useState(false);
   const [error, setError] = useState("");
   const [countdown, setCountdown] = useState("");
   const [nextScanUtc, setNextScanUtc] = useState<Date>(getNextScanIST());
@@ -239,6 +241,8 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
     if (activePattern !== "inside-cpr") { setShowInsideCPRExpanded(false); }
     if (activePattern !== "structure-bigbelow") { setShowBigBelowPMiniPL3(false); }
     if (activePattern !== "structure-bigabove") { setShowBigAbovePL34CL4(false); }
+    // Reset LB Compressed when leaving littlebelow
+    if (activePattern !== "littlebelow") { setShowLBCmprss(false); }
   }, [activePattern, allResults, deltaAllResults]);
 
   const toggleSort = (key: SortKey) => {
@@ -324,6 +328,18 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
       if (activeTab === "delta") return deltaIntersect;
       return binanceIntersect;
     }
+    // NEW: LB Compressed pool
+    if (showLBCmprss && activePattern === "littlebelow") {
+      const binanceIntersect = allResults
+        .filter((r) => passesPattern(r, "lb-cmprss-l4>3-u4<2"))
+        .map((r) => ({ ...r, source: "binance" as const }));
+      const deltaIntersect = deltaAllResults
+        .filter((r) => passesPattern(r, "lb-cmprss-l4>3-u4<2"))
+        .map((r) => ({ ...r, source: "delta" as const }));
+      if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
+      if (activeTab === "delta") return deltaIntersect;
+      return binanceIntersect;
+    }
     if (activeTab === "combined") return showAll ? combinedAllResults : combinedResults;
     if (activeTab === "delta") return (showAll ? deltaAllResults : deltaFiltered).map((r) => ({ ...r, source: "delta" as const }));
     return (showAll ? allResults : filtered).map((r) => ({ ...r, source: "binance" as const }));
@@ -366,6 +382,12 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
         ? <ChevronUp className="w-3 h-3 inline ml-1 text-primary" />
         : <ChevronDown className="w-3 h-3 inline ml-1 text-primary" />
       : <ArrowUpDown className="w-3 h-3 inline ml-1 opacity-30" />;
+
+  // Helper: is any sub-filter active (to decide the result count label)
+  const anySubFilter =
+    showLABothTiny || showLAAllUp || showLAPL12CL23 ||
+    showOutsideCPRCompressed || showInsideCPRExpanded ||
+    showBigBelowPMiniPL3 || showBigAbovePL34CL4 || showLBCmprss;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -496,25 +518,17 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
           </div>
         )}
 
-        {/* Show-all toggle */}
+        {/* Show-all toggle + sub-filter buttons */}
         {currentStatus === "done" && (
           <div className="flex items-center gap-3 mb-3 flex-wrap">
             <span className="text-xs text-muted-foreground">
               {showAll
                 ? currentAllCount
-                : (showLABothTiny || showLAAllUp || showLAPL12CL23) && activePattern === "littleabove"
-                ? displayed.length
-                : showOutsideCPRCompressed && activePattern === "outside-cpr"
-                ? displayed.length
-                : showInsideCPRExpanded && activePattern === "inside-cpr"
-                ? displayed.length
-                : showBigBelowPMiniPL3 && activePattern === "structure-bigbelow"
-                ? displayed.length
-                : showBigAbovePL34CL4 && activePattern === "structure-bigabove"
+                : anySubFilter
                 ? displayed.length
                 : currentFilteredCount}{" "}
               results
-              {!showAll && !showLABothTiny && !showLAAllUp && !showLAPL12CL23 && !showOutsideCPRCompressed && !showInsideCPRExpanded && !showBigBelowPMiniPL3 && !showBigAbovePL34CL4 && ` (${currentFilteredCount} matching, ${currentAllCount} total)`}
+              {!showAll && !anySubFilter && ` (${currentFilteredCount} matching, ${currentAllCount} total)`}
               {showLABothTiny && activePattern === "littleabove" && (
                 <span className="ml-1 text-blue-400">(LA-BothTiny intersection)</span>
               )}
@@ -536,13 +550,44 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
               {showBigAbovePL34CL4 && activePattern === "structure-bigabove" && (
                 <span className="ml-1 text-emerald-400">(PL34CL4/U3&gt;PU4)</span>
               )}
+              {showLBCmprss && activePattern === "littlebelow" && (
+                <span className="ml-1 text-violet-400">(LB-Compressed: L4&gt;PL3/U4&lt;PU2)</span>
+              )}
             </span>
+
+            {/* Show All button */}
             <button
-              onClick={() => { setShowAll((v) => !v); setShowLABothTiny(false); setShowLAAllUp(false); setShowLAPL12CL23(false); setShowOutsideCPRCompressed(false); setShowInsideCPRExpanded(false); setShowBigBelowPMiniPL3(false); setShowBigAbovePL34CL4(false); }}
+              onClick={() => {
+                setShowAll((v) => !v);
+                setShowLABothTiny(false);
+                setShowLAAllUp(false);
+                setShowLAPL12CL23(false);
+                setShowOutsideCPRCompressed(false);
+                setShowInsideCPRExpanded(false);
+                setShowBigBelowPMiniPL3(false);
+                setShowBigAbovePL34CL4(false);
+                setShowLBCmprss(false);
+              }}
               className="text-xs px-2.5 py-1 rounded border border-border text-muted-foreground hover:text-foreground transition-colors"
             >
               {showAll ? "Show filtered only" : "Show all"}
             </button>
+
+            {/* NEW: lb-Cmprss-L4>3/U4<2 button — only shown on littlebelow, mirrors Show All style */}
+            {activePattern === "littlebelow" && !showAll && (
+              <button
+                onClick={() => setShowLBCmprss((v) => !v)}
+                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                  showLBCmprss
+                    ? "border-violet-400 text-violet-400"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+                title="LB, Compressed: Todays L4 > PDay L3 / Todays U4 < PDays L2: Target:PU4"
+              >
+                {showLBCmprss ? "✕ lb-Cmprss-L4>3/U4<2" : "lb-Cmprss-L4>3/U4<2"}
+              </button>
+            )}
+
             {activePattern === "littleabove" && !showAll && (
               <button
                 onClick={() => { setShowLABothTiny((v) => !v); setShowLAAllUp(false); setShowLAPL12CL23(false); }}
