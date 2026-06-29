@@ -84,6 +84,14 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return r.cprRising && r.narrowCPR && r.bothTight;
     case "LA-PL12CL23":
       return r.cprRising && r.narrowCPR && r.PL12CL23;
+    // LA Expando: Little Above + today L4 < prev L4 (S4) AND today R4 > prev R4
+    case "la-expando":
+      return (
+        r.cprRising &&
+        r.narrowCPR &&
+        r.todayCPR.s4 < r.prevCPR.s4 &&
+        r.todayCPR.r4 > r.prevCPR.r4
+      );
     case "la-allstepup":
       return r.cprRising && r.narrowCPR && r.allupabove && r.allupbelow;
     case "littlebelow":
