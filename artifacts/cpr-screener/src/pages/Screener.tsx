@@ -57,6 +57,9 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
   const [showBigAbovePL34CL4, setShowBigAbovePL34CL4] = useState(false);
   // NEW: LB Compressed filter state
   const [showLBCmprss, setShowLBCmprss] = useState(false);
+  // NEW: LB-BothTiny / LB-AllUp filter state (replaces hidden left-nav items)
+  const [showLBBothTiny, setShowLBBothTiny] = useState(false);
+  const [showLBAllUp, setShowLBAllUp] = useState(false);
   const [pivotLevelFilter, setPivotLevelFilter] = useState<PivotLevelInfo["label"] | null>(null);
   const [error, setError] = useState("");
   const [countdown, setCountdown] = useState("");
@@ -245,8 +248,8 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
     if (activePattern !== "inside-cpr") { setShowInsideCPRExpanded(false); }
     if (activePattern !== "structure-bigbelow") { setShowBigBelowPMiniPL3(false); }
     if (activePattern !== "structure-bigabove") { setShowBigAbovePL34CL4(false); }
-    // Reset LB Compressed when leaving littlebelow
-    if (activePattern !== "littlebelow") { setShowLBCmprss(false); }
+    // Reset LB Compressed / LB-BothTiny / LB-AllUp when leaving littlebelow
+    if (activePattern !== "littlebelow") { setShowLBCmprss(false); setShowLBBothTiny(false); setShowLBAllUp(false); }
   }, [activePattern, allResults, deltaAllResults]);
 
   const toggleSort = (key: SortKey) => {
@@ -351,6 +354,30 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
       if (activeTab === "delta") return deltaIntersect;
       return binanceIntersect;
     }
+    // NEW: LB-BothTiny pool (formerly "TinyBelow - Both Tiny" left-nav item)
+    if (showLBBothTiny && activePattern === "littlebelow") {
+      const binanceIntersect = allResults
+        .filter((r) => passesPattern(r, "lb-2tiny"))
+        .map((r) => ({ ...r, source: "binance" as const }));
+      const deltaIntersect = deltaAllResults
+        .filter((r) => passesPattern(r, "lb-2tiny"))
+        .map((r) => ({ ...r, source: "delta" as const }));
+      if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
+      if (activeTab === "delta") return deltaIntersect;
+      return binanceIntersect;
+    }
+    // NEW: LB-AllUp pool (formerly "LittleBelow - Ladder" left-nav item)
+    if (showLBAllUp && activePattern === "littlebelow") {
+      const binanceIntersect = allResults
+        .filter((r) => passesPattern(r, "lb-allstepdown"))
+        .map((r) => ({ ...r, source: "binance" as const }));
+      const deltaIntersect = deltaAllResults
+        .filter((r) => passesPattern(r, "lb-allstepdown"))
+        .map((r) => ({ ...r, source: "delta" as const }));
+      if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
+      if (activeTab === "delta") return deltaIntersect;
+      return binanceIntersect;
+    }
     if (activeTab === "combined") return showAll ? combinedAllResults : combinedResults;
     if (activeTab === "delta") return (showAll ? deltaAllResults : deltaFiltered).map((r) => ({ ...r, source: "delta" as const }));
     return (showAll ? allResults : filtered).map((r) => ({ ...r, source: "binance" as const }));
@@ -400,6 +427,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
     showLABothTiny || showLAAllUp || showLAPL12CL23 || showLAExpando ||
     showOutsideCPRCompressed || showInsideCPRExpanded ||
     showBigBelowPMiniPL3 || showBigAbovePL34CL4 || showLBCmprss ||
+    showLBBothTiny || showLBAllUp ||
     !!pivotLevelFilter;
 
   return (
@@ -570,6 +598,12 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
               {showLBCmprss && activePattern === "littlebelow" && (
                 <span className="ml-1 text-violet-400">(LB-Compressed: L4&gt;PL3/U4&lt;PU2)</span>
               )}
+              {showLBBothTiny && activePattern === "littlebelow" && (
+                <span className="ml-1 text-blue-400">(LB-BothTiny intersection)</span>
+              )}
+              {showLBAllUp && activePattern === "littlebelow" && (
+                <span className="ml-1 text-blue-400">(LB-AllUp intersection)</span>
+              )}
               {pivotLevelFilter && (
                 <span className="ml-1 text-foreground">(Pivot Level: {pivotLevelFilter})</span>
               )}
@@ -588,6 +622,8 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 setShowBigBelowPMiniPL3(false);
                 setShowBigAbovePL34CL4(false);
                 setShowLBCmprss(false);
+                setShowLBBothTiny(false);
+                setShowLBAllUp(false);
                 setPivotLevelFilter(null);
               }}
               className="text-xs px-2.5 py-1 rounded border border-border text-muted-foreground hover:text-foreground transition-colors"
@@ -595,10 +631,40 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
               {showAll ? "Show filtered only" : "Show all"}
             </button>
 
+            {/* NEW: LB-BothTiny button — replaces hidden "TinyBelow - Both Tiny" left-nav item */}
+            {activePattern === "littlebelow" && !showAll && (
+              <button
+                onClick={() => { setShowLBBothTiny((v) => !v); setShowLBAllUp(false); setShowLBCmprss(false); }}
+                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                  showLBBothTiny
+                    ? "border-foreground text-foreground"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+                title="Show symbols that match BOTH Structure LittleBelow AND TinyBelow-Both Tiny"
+              >
+                {showLBBothTiny ? "✕ LB-BothTiny" : "LB-BothTiny"}
+              </button>
+            )}
+
+            {/* NEW: LB-AllUp button — replaces hidden "LittleBelow - Ladder" left-nav item */}
+            {activePattern === "littlebelow" && !showAll && (
+              <button
+                onClick={() => { setShowLBAllUp((v) => !v); setShowLBBothTiny(false); setShowLBCmprss(false); }}
+                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                  showLBAllUp
+                    ? "border-foreground text-foreground"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+                title="Show symbols that match BOTH Structure LittleBelow AND LittleBelow-Ladder (all R/S levels stepped down)"
+              >
+                {showLBAllUp ? "✕ LB-AllUp" : "LB-AllUp"}
+              </button>
+            )}
+
             {/* NEW: lb-Cmprss-L4>3/U4<2 button — only shown on littlebelow, mirrors Show All style */}
             {activePattern === "littlebelow" && !showAll && (
               <button
-                onClick={() => setShowLBCmprss((v) => !v)}
+                onClick={() => { setShowLBCmprss((v) => !v); setShowLBBothTiny(false); setShowLBAllUp(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showLBCmprss
                     ? "border-violet-400 text-violet-400"
