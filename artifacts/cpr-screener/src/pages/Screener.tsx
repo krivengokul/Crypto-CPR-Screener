@@ -533,7 +533,8 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
 
         {/* Show-all toggle + sub-filter buttons */}
         {currentStatus === "done" && (
-          <div className="flex items-center gap-3 mb-3 flex-wrap">
+          <div className="flex flex-col gap-2 mb-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <span className="text-xs text-muted-foreground">
               {showAll
                 ? currentAllCount
@@ -593,34 +594,6 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
             >
               {showAll ? "Show filtered only" : "Show all"}
             </button>
-
-            {/* Pivot Level filter buttons — independent of activePattern, mutually exclusive */}
-            {!showAll && (
-              <div className="flex items-center gap-1.5 pl-2 ml-1 border-l border-border">
-                <span className="text-[10px] text-muted-foreground uppercase tracking-wider mr-0.5">Pivot Level:</span>
-                {(
-                  [
-                    { label: "Expanded", active: "border-purple-400 text-purple-400" },
-                    { label: "Compressed", active: "border-cyan-400 text-cyan-400" },
-                    { label: "Higher", active: "border-green-400 text-green-400" },
-                    { label: "Lower", active: "border-destructive text-destructive" },
-                  ] as { label: PivotLevelInfo["label"]; active: string }[]
-                ).map(({ label, active }) => (
-                  <button
-                    key={label}
-                    onClick={() => setPivotLevelFilter((v) => (v === label ? null : label))}
-                    className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                      pivotLevelFilter === label
-                        ? active
-                        : "border-border text-muted-foreground hover:text-foreground"
-                    }`}
-                    title={`Show only rows where Pivot Level = ${label}`}
-                  >
-                    {pivotLevelFilter === label ? `✕ ${label}` : label}
-                  </button>
-                ))}
-              </div>
-            )}
 
             {/* NEW: lb-Cmprss-L4>3/U4<2 button — only shown on littlebelow, mirrors Show All style */}
             {activePattern === "littlebelow" && !showAll && (
@@ -741,6 +714,35 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 {showBigAbovePL34CL4 ? "✕ PL34CL4/U3>PU4" : "PL34CL4/U3>PU4"}
               </button>
             )}
+          </div>
+
+          {/* Pivot Level filter buttons — own line, independent of activePattern, mutually exclusive */}
+          {!showAll && (
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wider mr-0.5">Pivot Level:</span>
+              {(
+                [
+                  { label: "Expanded", active: "border-purple-400 text-purple-400" },
+                  { label: "Compressed", active: "border-cyan-400 text-cyan-400" },
+                  { label: "Higher", active: "border-green-400 text-green-400" },
+                  { label: "Lower", active: "border-destructive text-destructive" },
+                ] as { label: PivotLevelInfo["label"]; active: string }[]
+              ).map(({ label, active }) => (
+                <button
+                  key={label}
+                  onClick={() => setPivotLevelFilter((v) => (v === label ? null : label))}
+                  className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                    pivotLevelFilter === label
+                      ? active
+                      : "border-border text-muted-foreground hover:text-foreground"
+                  }`}
+                  title={`Show only rows where Pivot Level = ${label}`}
+                >
+                  {pivotLevelFilter === label ? `✕ ${label}` : label}
+                </button>
+              ))}
+            </div>
+          )}
           </div>
         )}
 
