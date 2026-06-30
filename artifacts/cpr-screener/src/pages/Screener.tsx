@@ -878,10 +878,10 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                           <td className="px-4 py-3 whitespace-nowrap">
                             <div className="flex flex-wrap gap-1">
                               {r.cprRising && (
-                                <span className="text-xs px-1.5 py-0.5 rounded bg-accent/10 text-accent border border-accent/20 font-medium">Above</span>
+                                <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">Above</span>
                               )}
-                              {r.cprFalling && r.cprNarrowing && activePattern === "falling" && (
-                                <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">Falling</span>
+                              {r.cprFalling && (
+                                <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 font-medium">Below</span>
                               )}
                               {passesPattern(r, "inside-value") && activePattern === "inside-value" && (
                                 <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">Inside</span>
@@ -889,7 +889,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                               {r.cprNarrowing && (
                                 <span className="text-xs px-1.5 py-0.5 rounded bg-chart-3/10 text-chart-3 border border-chart-3/20 font-medium">Narrow</span>
                               )}
-                              {!r.cprRising && !r.cprNarrowing && (
+                              {!r.cprRising && !r.cprFalling && !r.cprNarrowing && (
                                 <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">Skip</span>
                               )}
                             </div>
