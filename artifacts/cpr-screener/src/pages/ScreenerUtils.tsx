@@ -120,8 +120,8 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return (
         r.cprFalling &&
         r.narrowCPR &&
-        r.todayCPR.s4 > r.prevCPR.s3 &&
-        r.todayCPR.r4 < r.prevCPR.r2
+        (r.todayCPR.s4 > r.prevCPR.s3 && r.todayCPR.s4 < r.prevCPR.s2) &&
+        (r.todayCPR.r4 < r.prevCPR.r2 && r.todayCPR.r4 > r.prevCPR.r1)
       );
     case "inside-cpr":
       return r.todayCPR.tc < r.prevCPR.tc && r.todayCPR.bc > r.prevCPR.bc;
