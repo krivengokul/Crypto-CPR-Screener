@@ -872,8 +872,13 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             <div className="flex flex-wrap gap-1">
+                              {/* Signals column intentionally left empty — to be repurposed for a different calculation */}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <div className="flex flex-wrap gap-1">
                               {r.cprRising && (
-                                <span className="text-xs px-1.5 py-0.5 rounded bg-accent/10 text-accent border border-accent/20 font-medium">Rising</span>
+                                <span className="text-xs px-1.5 py-0.5 rounded bg-accent/10 text-accent border border-accent/20 font-medium">Above</span>
                               )}
                               {r.cprFalling && r.cprNarrowing && activePattern === "falling" && (
                                 <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">Falling</span>
@@ -887,19 +892,17 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                               {!r.cprRising && !r.cprNarrowing && (
                                 <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">Skip</span>
                               )}
+                              {(() => {
+                                const pl = getPivotLevel(r);
+                                return pl ? (
+                                  <span className={`text-xs px-1.5 py-0.5 rounded border font-medium ${pl.classes}`}>
+                                    {pl.label}
+                                  </span>
+                                ) : (
+                                  <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">—</span>
+                                );
+                              })()}
                             </div>
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            {(() => {
-                              const pl = getPivotLevel(r);
-                              return pl ? (
-                                <span className={`text-xs px-1.5 py-0.5 rounded border font-medium ${pl.classes}`}>
-                                  {pl.label}
-                                </span>
-                              ) : (
-                                <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">—</span>
-                              );
-                            })()}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             <a
