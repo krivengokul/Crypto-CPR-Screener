@@ -1189,7 +1189,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                               {r.passes && <div className="w-1.5 h-1.5 rounded-full bg-accent" />}
                               {sym.base}
                               <span className="text-muted-foreground text-xs font-normal">/{sym.quote}</span>
-                              {isRisingAboveTC(r) && (
+                              {isRisingAboveTC(r) && activePattern === "structure-bigbelow" && showBigBelowPMiniPL3 && (
                                 <span
                                   className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-green-500/15 text-green-400 border border-green-500/30"
                                   title="Currently trading above today's TC"
