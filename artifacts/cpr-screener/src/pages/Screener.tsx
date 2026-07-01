@@ -606,6 +606,15 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                   <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-500 text-white">Narrow</span>
                 </div>
               </>
+            ) : activePattern === "overlapping-lower" ? (
+              <>
+                <div className="text-xs font-semibold text-primary mb-1">Overlapping Lower</div>
+                <div className="text-xs text-muted-foreground mb-2">Today&apos;s CPR overlaps below yesterday&apos;s CPR</div>
+                <div className="flex gap-1.5">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-orange-500 text-white">Overlap</span>
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-500 text-white">Lower</span>
+                </div>
+              </>
             ) : (
               <>
                 <div className="text-xs font-semibold text-primary mb-1">ADK CPR Formula</div>
@@ -618,6 +627,11 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
               <>
                 <div className="text-xs font-semibold text-sky-400 mb-1">Compressed Inside Prev UL2</div>
                 <div className="text-xs text-muted-foreground">U3/U4 inside PU2/PU1 and L4 inside PL1/PL2</div>
+              </>
+            ) : showExpr4Pr4 && activePattern === "overlapping-lower" ? (
+              <>
+                <div className="text-xs font-semibold text-sky-400 mb-1">Expanded</div>
+                <div className="text-xs text-muted-foreground">Prev R4 between today&apos;s R3/R4 and Prev S4 between today&apos;s S3/S4 with today&apos;s CPR Mini</div>
               </>
             ) : (
               <>
@@ -632,6 +646,11 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
           </div>
           <div className="rounded-lg border border-border bg-card p-3">
             {showBAComp && activePattern === "structure-bigabove" ? (
+              <>
+                <div className="text-xs font-semibold text-emerald-400 mb-1">Target</div>
+                <div className="text-xs text-muted-foreground">These coins have the potential to go up to U4</div>
+              </>
+            ) : showExpr4Pr4 && activePattern === "overlapping-lower" ? (
               <>
                 <div className="text-xs font-semibold text-emerald-400 mb-1">Target</div>
                 <div className="text-xs text-muted-foreground">These coins have the potential to go up to U4</div>
