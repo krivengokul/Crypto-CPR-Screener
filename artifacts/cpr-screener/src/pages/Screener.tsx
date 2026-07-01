@@ -482,6 +482,12 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
               <>Filters where <span className="text-foreground font-medium">today&apos;s TC is below yesterday&apos;s BC</span> and <span className="text-foreground font-medium">CPR is narrower than 50% of yesterday&apos;s</span>.</>
             ) : activePattern === "inside-value" ? (
               <>Filters where <span className="text-foreground font-medium">today&apos;s CPR is fully inside yesterday&apos;s CPR</span> — compression with breakout potential.</>
+            ) : activePattern === "littlebelow" ? (
+              <span className="flex items-center gap-2 flex-wrap">
+                <span>Screens where today&apos;s CPR is below yesterday&apos;s and width is smaller than yesterday&apos;s CPR.</span>
+                <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 font-medium">Below</span>
+                <span className="text-xs px-1.5 py-0.5 rounded bg-chart-3/10 text-chart-3 border border-chart-3/20 font-medium">Narrow</span>
+              </span>
             ) : (
               <>Filters where <span className="text-foreground font-medium">today&apos;s BC is above yesterday&apos;s TC</span> and <span className="text-foreground font-medium">CPR width is less than 50% of yesterday&apos;s</span>.</>
             )}
@@ -1084,16 +1090,16 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                               {r.cprRising && (
                                 <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">Above</span>
                               )}
-                              {r.cprFalling && (
+                              {r.cprFalling && activePattern !== "littlebelow" && (
                                 <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 font-medium">Below</span>
                               )}
                               {passesPattern(r, "inside-value") && activePattern === "inside-value" && (
                                 <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">Inside</span>
                               )}
-                              {r.narrowCPR && (
+                              {r.narrowCPR && activePattern !== "littlebelow" && (
                                 <span className="text-xs px-1.5 py-0.5 rounded bg-chart-3/10 text-chart-3 border border-chart-3/20 font-medium">Narrow</span>
                               )}
-                              {!r.cprRising && !r.cprFalling && !r.narrowCPR && (
+                              {!r.cprRising && !(r.cprFalling && activePattern !== "littlebelow") && !r.narrowCPR && (
                                 <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">Skip</span>
                               )}
                             </div>
