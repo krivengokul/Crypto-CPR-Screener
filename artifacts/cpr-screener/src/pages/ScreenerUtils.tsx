@@ -245,7 +245,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return r.cprFalling && r.strWideCPR;
     case "bigbelow-pmini-pl3":
       return r.cprFalling && r.strWideCPR && r.prevCPR.widthPct < 0.5 && r.PL34CL4 &&
-             r.prevCPR.r3  > r.todayCPR.r4 && r.currentPrice > r.todayCPR.tc;
+             r.prevCPR.r3  > r.todayCPR.r4;
     case "HB-L1<PL1-PU12CU23":
       return r.cprFalling && r.strWideCPR && r.hbJPattern1;
     case "HB-L1<PL4-U1>TCPR":
@@ -290,6 +290,10 @@ export function getPivotLevel(r: CPRResult): PivotLevelInfo | null {
     return { label: "Lower", classes: "bg-destructive/10 text-destructive border-destructive/20" };
   }
   return null;
+}
+
+export function isRisingAboveTC(r: CPRResult): boolean {
+  return r.currentPrice > r.todayCPR.tc;
 }
 
 export function distanceFromCPR(

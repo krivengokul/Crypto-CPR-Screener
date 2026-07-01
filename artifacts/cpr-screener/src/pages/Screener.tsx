@@ -33,6 +33,7 @@ import {
   getChartUrl,
   passesPattern,
   distanceFromCPR,
+  isRisingAboveTC,
   cprDistancePct,
   levelsInDistanceRange,
   getPivotLevel,
@@ -56,6 +57,8 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
   const [showOutsideCPRCompressed, setShowOutsideCPRCompressed] = useState(false);
   const [showInsideCPRExpanded, setShowInsideCPRExpanded] = useState(false);
   const [showBigBelowPMiniPL3, setShowBigBelowPMiniPL3] = useState(false);
+  // NEW: live sub-toggle on top of pMini — restrict to rows currently trading above today's TC
+  const [showBigBelowPMiniRising, setShowBigBelowPMiniRising] = useState(false);
   const [showBigAbovePL34CL4, setShowBigAbovePL34CL4] = useState(false);
   // NEW: BigCPR Above — BAComp-l3>pl1/u3>pu1 filter state
   const [showBAComp, setShowBAComp] = useState(false);
@@ -252,7 +255,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
     if (activePattern !== "littleabove") { setShowLABothTiny(false); setShowLAAllUp(false); setShowLAPL12CL23(false); setShowLAExpando(false); }
     if (activePattern !== "outside-cpr") { setShowOutsideCPRCompressed(false); }
     if (activePattern !== "inside-cpr") { setShowInsideCPRExpanded(false); }
-    if (activePattern !== "structure-bigbelow") { setShowBigBelowPMiniPL3(false); }
+    if (activePattern !== "structure-bigbelow") { setShowBigBelowPMiniPL3(false); setShowBigBelowPMiniRising(false); }
     if (activePattern !== "structure-bigabove") { setShowBigAbovePL34CL4(false); setShowBAComp(false); }
     // Reset LB Compressed / LB-BothTiny / LB-AllUp when leaving littlebelow
     if (activePattern !== "littlebelow") { setShowLBCmprss(false); setShowLBBothTiny(false); setShowLBAllUp(false); }
@@ -327,12 +330,16 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
       return binanceIntersect;
     }
     if (showBigBelowPMiniPL3 && activePattern === "structure-bigbelow") {
-      const binanceIntersect = allResults
+      let binanceIntersect = allResults
         .filter((r) => passesPattern(r, "bigbelow-pmini-pl3"))
         .map((r) => ({ ...r, source: "binance" as const }));
-      const deltaIntersect = deltaAllResults
+      let deltaIntersect = deltaAllResults
         .filter((r) => passesPattern(r, "bigbelow-pmini-pl3"))
         .map((r) => ({ ...r, source: "delta" as const }));
+      if (showBigBelowPMiniRising) {
+        binanceIntersect = binanceIntersect.filter((r) => isRisingAboveTC(r));
+        deltaIntersect = deltaIntersect.filter((r) => isRisingAboveTC(r));
+      }
       if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
       if (activeTab === "delta") return deltaIntersect;
       return binanceIntersect;
@@ -463,7 +470,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
   const anySubFilter =
     showLABothTiny || showLAAllUp || showLAPL12CL23 || showLAExpando ||
     showOutsideCPRCompressed || showInsideCPRExpanded ||
-    showBigBelowPMiniPL3 || showBigAbovePL34CL4 || showBAComp || showLBCmprss || showLBC34 ||
+    showBigBelowPMiniPL3 || showBigBelowPMiniRising || showBigAbovePL34CL4 || showBAComp || showLBCmprss || showLBC34 ||
     showLBBothTiny || showLBAllUp ||
     !!pivotLevelFilter || !!widthFilter;
 
@@ -677,6 +684,9 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
               {showBigBelowPMiniPL3 && activePattern === "structure-bigbelow" && (
                 <span className="ml-1 text-cyan-400">(pMini-PL34C4/PU3&gt;U4)</span>
               )}
+              {showBigBelowPMiniRising && activePattern === "structure-bigbelow" && (
+                <span className="ml-1 text-green-400">(Rising: Price&gt;TC)</span>
+              )}
               {showBigAbovePL34CL4 && activePattern === "structure-bigabove" && (
                 <span className="ml-1 text-emerald-400">(PL34CL4/U3&gt;PU4)</span>
               )}
@@ -714,6 +724,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 setShowOutsideCPRCompressed(false);
                 setShowInsideCPRExpanded(false);
                 setShowBigBelowPMiniPL3(false);
+                setShowBigBelowPMiniRising(false);
                 setShowBigAbovePL34CL4(false);
                 setShowBAComp(false);
                 setShowLBCmprss(false);
@@ -868,7 +879,10 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
             )}
             {activePattern === "structure-bigbelow" && !showAll && (
               <button
-                onClick={() => setShowBigBelowPMiniPL3((v) => !v)}
+                onClick={() => {
+                  setShowBigBelowPMiniPL3((v) => !v);
+                  setShowBigBelowPMiniRising(false);
+                }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showBigBelowPMiniPL3
                     ? "border-cyan-400 text-cyan-400"
@@ -877,6 +891,20 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 title="Compressed, Mini PCPR, PL34CL4, Prev U3 above U4: Target-APU4"
               >
                 {showBigBelowPMiniPL3 ? "✕ pMini-L34C4/U3>4" : "pMini-L34C4/U3>4"}
+              </button>
+            )}
+            {/* NEW: live sub-toggle — restrict pMini results to rows currently trading above today's TC */}
+            {activePattern === "structure-bigbelow" && !showAll && showBigBelowPMiniPL3 && (
+              <button
+                onClick={() => setShowBigBelowPMiniRising((v) => !v)}
+                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                  showBigBelowPMiniRising
+                    ? "border-green-400 text-green-400"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+                title="Only show symbols currently trading above today's TC"
+              >
+                {showBigBelowPMiniRising ? "✕ Rising" : "Rising"}
               </button>
             )}
             {activePattern === "structure-bigabove" && !showAll && (
@@ -1067,6 +1095,14 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                               {r.passes && <div className="w-1.5 h-1.5 rounded-full bg-accent" />}
                               {sym.base}
                               <span className="text-muted-foreground text-xs font-normal">/{sym.quote}</span>
+                              {isRisingAboveTC(r) && (
+                                <span
+                                  className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-green-500/15 text-green-400 border border-green-500/30"
+                                  title="Currently trading above today's TC"
+                                >
+                                  Rising
+                                </span>
+                              )}
                             </div>
                           </td>
                           <td className="px-4 py-3 font-mono whitespace-nowrap">
