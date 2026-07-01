@@ -7,6 +7,8 @@ import {
   ChevronDown,
   ArrowUpDown,
   ExternalLink,
+  Bell,
+  BellOff,
 } from "lucide-react";
 import { runScreener } from "@/lib/binance";
 import { runDeltaScreener } from "@/lib/delta";
@@ -59,6 +61,10 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
   const [showBigBelowPMiniPL3, setShowBigBelowPMiniPL3] = useState(false);
   // NEW: live sub-toggle on top of pMini — restrict to rows currently trading above today's TC
   const [showBigBelowPMiniRising, setShowBigBelowPMiniRising] = useState(false);
+  // NEW: sound alert — fires only for pMini-L34C4/U3>4 when a coin newly crosses above today's TC
+  const [pMiniAlertsEnabled, setPMiniAlertsEnabled] = useState(false);
+  const pMiniRisingAlertedRef = useRef<Set<string>>(new Set());
+  const audioCtxRef = useRef<AudioContext | null>(null);
   const [showBigAbovePL34CL4, setShowBigAbovePL34CL4] = useState(false);
   // NEW: BigCPR Above — BAComp-l3>pl1/u3>pu1 filter state
   const [showBAComp, setShowBAComp] = useState(false);
@@ -249,13 +255,70 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
     return () => clearInterval(id);
   }, [deltaStatus]);
 
+  // NEW: sound alert — only for pMini-L34C4/U3>4 (structure-bigbelow) when a coin newly goes Rising
+  function playPMiniAlertSound() {
+    try {
+      if (!audioCtxRef.current) {
+        const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+        audioCtxRef.current = new Ctx();
+      }
+      const ctx = audioCtxRef.current;
+      if (ctx.state === "suspended") ctx.resume();
+      const now = ctx.currentTime;
+      [0, 0.18].forEach((offset) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(880, now + offset);
+        gain.gain.setValueAtTime(0.0001, now + offset);
+        gain.gain.exponentialRampToValueAtTime(0.3, now + offset + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.15);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + offset);
+        osc.stop(now + offset + 0.16);
+      });
+    } catch { /* silent */ }
+  }
+
+  useEffect(() => {
+    if (!pMiniAlertsEnabled) return;
+    if (activePattern !== "structure-bigbelow" || !showBigBelowPMiniPL3) return;
+
+    const binancePMini = allResults
+      .filter((r) => passesPattern(r, "bigbelow-pmini-pl3"))
+      .map((r) => ({ ...r, source: "binance" as const }));
+    const deltaPMini = deltaAllResults
+      .filter((r) => passesPattern(r, "bigbelow-pmini-pl3"))
+      .map((r) => ({ ...r, source: "delta" as const }));
+    const pool = [...binancePMini, ...deltaPMini];
+
+    const currentRisingKeys = new Set(
+      pool.filter((r) => isRisingAboveTC(r)).map((r) => `${r.source}-${r.symbol}`)
+    );
+
+    let newlyRising = false;
+    currentRisingKeys.forEach((key) => {
+      if (!pMiniRisingAlertedRef.current.has(key)) {
+        pMiniRisingAlertedRef.current.add(key);
+        newlyRising = true;
+      }
+    });
+    // Drop symbols that fell back out of Rising/pool so they can re-alert if they cross again later
+    pMiniRisingAlertedRef.current.forEach((key) => {
+      if (!currentRisingKeys.has(key)) pMiniRisingAlertedRef.current.delete(key);
+    });
+
+    if (newlyRising) playPMiniAlertSound();
+  }, [allResults, deltaAllResults, activePattern, showBigBelowPMiniPL3, pMiniAlertsEnabled]);
+
   useEffect(() => {
     if (allResults.length > 0) setFiltered(allResults.filter((r) => passesPattern(r, activePattern)));
     if (deltaAllResults.length > 0) setDeltaFiltered(deltaAllResults.filter((r) => passesPattern(r, activePattern)));
     if (activePattern !== "littleabove") { setShowLABothTiny(false); setShowLAAllUp(false); setShowLAPL12CL23(false); setShowLAExpando(false); }
     if (activePattern !== "outside-cpr") { setShowOutsideCPRCompressed(false); }
     if (activePattern !== "inside-cpr") { setShowInsideCPRExpanded(false); }
-    if (activePattern !== "structure-bigbelow") { setShowBigBelowPMiniPL3(false); setShowBigBelowPMiniRising(false); }
+    if (activePattern !== "structure-bigbelow") { setShowBigBelowPMiniPL3(false); setShowBigBelowPMiniRising(false); pMiniRisingAlertedRef.current.clear(); }
     if (activePattern !== "structure-bigabove") { setShowBigAbovePL34CL4(false); setShowBAComp(false); }
     // Reset LB Compressed / LB-BothTiny / LB-AllUp when leaving littlebelow
     if (activePattern !== "littlebelow") { setShowLBCmprss(false); setShowLBBothTiny(false); setShowLBAllUp(false); }
@@ -882,6 +945,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 onClick={() => {
                   setShowBigBelowPMiniPL3((v) => !v);
                   setShowBigBelowPMiniRising(false);
+                  pMiniRisingAlertedRef.current.clear();
                 }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showBigBelowPMiniPL3
@@ -905,6 +969,36 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 title="Only show symbols currently trading above today's TC"
               >
                 {showBigBelowPMiniRising ? "✕ Rising" : "Rising"}
+              </button>
+            )}
+            {/* NEW: sound alert toggle — scoped to pMini-L34C4/U3>4 only */}
+            {activePattern === "structure-bigbelow" && !showAll && showBigBelowPMiniPL3 && (
+              <button
+                onClick={() => {
+                  setPMiniAlertsEnabled((v) => {
+                    const next = !v;
+                    if (next) {
+                      try {
+                        if (!audioCtxRef.current) {
+                          const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+                          audioCtxRef.current = new Ctx();
+                        }
+                        audioCtxRef.current.resume();
+                      } catch { /* silent */ }
+                      playPMiniAlertSound();
+                    }
+                    return next;
+                  });
+                }}
+                className={`text-xs px-2.5 py-1 rounded border transition-colors flex items-center gap-1 ${
+                  pMiniAlertsEnabled
+                    ? "border-yellow-400 text-yellow-400"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+                title="Play a sound whenever a pMini coin newly crosses above today's TC"
+              >
+                {pMiniAlertsEnabled ? <Bell className="w-3 h-3" /> : <BellOff className="w-3 h-3" />}
+                {pMiniAlertsEnabled ? "Alerts On" : "Alerts Off"}
               </button>
             )}
             {activePattern === "structure-bigabove" && !showAll && (
