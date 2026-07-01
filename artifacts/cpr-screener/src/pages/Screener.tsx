@@ -485,8 +485,17 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
         {/* Legend */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
           <div className="rounded-lg border border-border bg-card p-3">
-            <div className="text-xs font-semibold text-primary mb-1">ADK CPR Formula</div>
-            <div className="text-xs text-muted-foreground">Pivot=(H+L+C)/3 · BC=(H+L)/2 · TC=2P−BC</div>
+            {activePattern === "structure-bigabove" ? (
+              <>
+                <div className="text-xs font-semibold text-primary mb-1">BigCPR Above</div>
+                <div className="text-xs text-muted-foreground">Wide CPR Above PCPR — today&apos;s CPR is wider than yesterday&apos;s and trading above it</div>
+              </>
+            ) : (
+              <>
+                <div className="text-xs font-semibold text-primary mb-1">ADK CPR Formula</div>
+                <div className="text-xs text-muted-foreground">Pivot=(H+L+C)/3 · BC=(H+L)/2 · TC=2P−BC</div>
+              </>
+            )}
           </div>
           <div className="rounded-lg border border-border bg-card p-3">
             <div className={`text-xs font-semibold mb-1 ${activePattern === "falling" ? "text-destructive" : "text-accent"}`}>
@@ -825,7 +834,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                     ? "border-foreground text-foreground"
                     : "border-border text-muted-foreground hover:text-foreground"
                 }`}
-                title="BigAbove: PL34CL4 AND today R3 above prev R4"
+                title="BigAbove: Compressed inside PU2: Target:U4"
               >
                 {showBigAbovePL34CL4 ? "✕ PL34CL4/U3>PU4" : "PL34CL4/U3>PU4"}
               </button>
@@ -839,7 +848,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                     ? "border-sky-400 text-sky-400"
                     : "border-border text-muted-foreground hover:text-foreground"
                 }`}
-                title="BigAbove: Compressed inside PL1/PU2: Target:U4"
+                title="BigAbove: Prev S1 inside Today S3/S4 AND Prev R1 inside Today R2/R3"
               >
                 {showBAComp ? "✕ BAComp-l3>pl1/u3>pu1" : "BAComp-l3>pl1/u3>pu1"}
               </button>
