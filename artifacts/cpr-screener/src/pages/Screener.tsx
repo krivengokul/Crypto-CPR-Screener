@@ -486,7 +486,6 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
               <>Filters where <span className="text-foreground font-medium">today&apos;s CPR is fully inside yesterday&apos;s CPR</span> — compression with breakout potential.</>
             ) : activePattern === "littlebelow" ? (
               <>Screens where today&apos;s CPR is below yesterday&apos;s and width is smaller than yesterday&apos;s CPR.</>
-
             ) : (
               <>Filters where <span className="text-foreground font-medium">today&apos;s BC is above yesterday&apos;s TC</span> and <span className="text-foreground font-medium">CPR width is less than 50% of yesterday&apos;s</span>.</>
             )}
@@ -509,7 +508,11 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
             ) : activePattern === "littleabove" ? (
               <>
                 <div className="text-xs font-semibold text-primary mb-1">LittleCPR Above</div>
-                <div className="text-xs text-muted-foreground">Narrow CPR Above PCPR — today&apos;s CPR is narrower than yesterday&apos;s and present above it</div>
+                <div className="text-xs text-muted-foreground mb-2">Narrow CPR Above PCPR — today&apos;s CPR is narrower than yesterday&apos;s and present above it</div>
+                <div className="flex gap-1.5">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-500 text-white">Above</span>
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-cyan-500 text-white">Narrow</span>
+                </div>
               </>
             ) : activePattern === "littlebelow" ? (
               <>
