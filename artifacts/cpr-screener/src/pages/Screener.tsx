@@ -1401,13 +1401,13 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             <div className="flex flex-wrap gap-1">
-                              {r.cprRising && activePattern !== "littleabove" && (
+                              {r.cprRising && (
                                 <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">Above</span>
                               )}
                               {r.cprRising && r.strWideCPR && activePattern === "structure-bigabove" && (
                                 <span className="text-xs px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-medium">Wide</span>
                               )}
-                              {r.cprFalling && activePattern !== "littlebelow" && (
+                              {r.cprFalling && (
                                 <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 font-medium">Below</span>
                               )}
                               {r.cprFalling && r.strWideCPR && activePattern === "structure-bigbelow" && (
@@ -1416,10 +1416,25 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                               {passesPattern(r, "inside-value") && activePattern === "inside-value" && (
                                 <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">Inside</span>
                               )}
-                              {r.narrowCPR && activePattern !== "littlebelow" && activePattern !== "littleabove" && (
+                              {/* NEW: Inside badge for inside-cpr page */}
+                              {passesPattern(r, "inside-cpr") && activePattern === "inside-cpr" && (
+                                <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 font-medium">Inside</span>
+                              )}
+                              {/* NEW: Outside badge for outside-cpr page */}
+                              {passesPattern(r, "outside-cpr") && activePattern === "outside-cpr" && (
+                                <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20 font-medium">Outside</span>
+                              )}
+                              {/* NEW: Overlap badge for overlapping-lower page */}
+                              {passesPattern(r, "overlapping-lower") && activePattern === "overlapping-lower" && (
+                                <span className="text-xs px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-medium">Overlap</span>
+                              )}
+                              {r.narrowCPR && (
                                 <span className="text-xs px-1.5 py-0.5 rounded bg-chart-3/10 text-chart-3 border border-chart-3/20 font-medium">Narrow</span>
                               )}
-                              {!r.cprRising && !(r.cprFalling && activePattern !== "littlebelow") && !r.narrowCPR && (
+                              {!r.cprRising &&
+                                !r.cprFalling &&
+                                !r.narrowCPR &&
+                                !(passesPattern(r, activePattern) && ["inside-cpr", "outside-cpr", "overlapping-lower"].includes(activePattern)) && (
                                 <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">Skip</span>
                               )}
                             </div>
