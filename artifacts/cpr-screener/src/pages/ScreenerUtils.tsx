@@ -156,6 +156,22 @@ export function getChartUrl(symbol: string, source: "binance" | "delta"): string
   return `https://www.tradingview.com/chart/?symbol=BINANCE:${symbol}${suffix}`;
 }
 
+/**
+ * EXP_U4APU4L4BPL4 — shared condition for the "Exp-U4>pU4" pattern:
+ * previous day's R4 sits between today's R3 and R4 (U4 Above prev U4),
+ * and previous day's S4 sits between today's S4 and S3 (L4 Below prev L4).
+ * Note: hyphens aren't valid in JS/TS identifiers, so underscores replace them
+ * in this variable's name.
+ */
+export function EXP_U4APU4L4BPL4(r: CPRResult): boolean {
+  return (
+    r.prevCPR.r4 > r.todayCPR.r3 &&
+    r.prevCPR.r4 < r.todayCPR.r4 &&
+    r.prevCPR.s4 > r.todayCPR.s4 &&
+    r.prevCPR.s4 < r.todayCPR.s3
+  );
+}
+
 export function passesPattern(r: CPRResult, pattern: string): boolean {
   switch (pattern) {
     case "littleabove":
@@ -203,15 +219,23 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.todayCPR.r4 > r.prevCPR.r2 &&
         r.todayCPR.r4 < r.prevCPR.r3
       );
-      case "Exp-r4>pr4":
+    case "Exp-U4>pU4":
       return (
         r.overlapLower &&
-        r.prevCPR.r4 > r.todayCPR.r3 &&
-        r.prevCPR.r4 < r.todayCPR.r4 &&
-        r.prevCPR.s4 > r.todayCPR.s4 &&
-        r.prevCPR.s4 < r.todayCPR.s3 &&
+        EXP_U4APU4L4BPL4(r) &&
         r.todayCPR.widthPct >= 0.1 &&
         r.todayCPR.widthPct < 0.5
+      );
+    // NEW: Exp-U3>U3 — Overlapping Lower + prev R4 inside today's R2/R3,
+    // prev S4 inside today's S2/S3, today's CPR Narrow
+    case "Exp-U3>U3":
+      return (
+        r.overlapLower &&
+        r.narrowCPR &&
+        r.prevCPR.r4 > r.todayCPR.r2 &&
+        r.prevCPR.r4 < r.todayCPR.r3 &&
+        r.prevCPR.s4 < r.todayCPR.s2 &&
+        r.prevCPR.s4 > r.todayCPR.s3
       );
     case "inside-cpr":
       return r.todayCPR.tc < r.prevCPR.tc && r.todayCPR.bc > r.prevCPR.bc;
