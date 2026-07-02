@@ -666,7 +666,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
             ) : showExpU3PU3 && activePattern === "overlapping-lower" ? (
               <>
                 <div className="text-xs font-semibold text-sky-400 mb-1">Expanded</div>
-                <div className="text-xs text-muted-foreground">Prev R4 inside today&apos;s R2/R3 and Prev S4 inside today&apos;s S2/S3, with today&apos;s CPR Narrow</div>
+                <div className="text-xs text-muted-foreground">Todays U3 &gt; Prev U4/Todays L3 &lt; Prev L4 , today&apos;s CPR is Narrow</div>
               </>
             ) : showHAU1 && activePattern === "structure-bigabove" ? (
               <>
@@ -699,7 +699,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
             ) : showExpU3PU3 && activePattern === "overlapping-lower" ? (
               <>
                 <div className="text-xs font-semibold text-emerald-400 mb-1">Target</div>
-                <div className="text-xs text-muted-foreground">These coins have the potential to go up to U3</div>
+                <div className="text-xs text-muted-foreground">These coins have the potential to go farAbove U4</div>
               </>
             ) : showHAU1 && activePattern === "structure-bigabove" ? (
               <>
@@ -855,7 +855,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 <span className="ml-1 text-sky-400">(Exp-U4&gt;pU4)</span>
               )}
               {showExpU3PU3 && activePattern === "overlapping-lower" && (
-                <span className="ml-1 text-sky-400">(Exp-U3&gt;U3)</span>
+                <span className="ml-1 text-sky-400">(Exp-U3&gt;pU4)</span>
               )}
               {pivotLevelFilter && (
                 <span className="ml-1 text-foreground">(Pivot Level: {pivotLevelFilter})</span>
@@ -1019,7 +1019,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 {showExpU4PU4 ? "✕ Exp-U4>pU4" : "Exp-U4>pU4"}
               </button>
             )}
-            {/* NEW: Exp-U3>U3 button — Overlapping Lower, placed right after Exp-U4>pU4 */}
+            {/* NEW: Exp-U3>pU4 button — Overlapping Lower, placed right after Exp-U4>pU4 */}
             {activePattern === "overlapping-lower" && !showAll && (
               <button
                 onClick={() => { setShowExpU3PU3((v) => !v); setShowExpU4PU4(false); }}
@@ -1028,9 +1028,9 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                     ? "border-sky-400 text-sky-400"
                     : "border-border text-muted-foreground hover:text-foreground"
                 }`}
-                title="Prev R4 inside today's R2/R3 and Prev S4 inside today's S2/S3, with today's CPR Narrow"
+                title="U3 > pU4/L3 < pL4 ,CPR Narrow: Target:AU4"
               >
-                {showExpU3PU3 ? "✕ Exp-U3>U3" : "Exp-U3>U3"}
+                {showExpU3PU3 ? "✕ Exp-U3>pU4" : "Exp-U3>pU4"}
               </button>
             )}
             {activePattern === "outside-cpr" && !showAll && (
