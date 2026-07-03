@@ -704,8 +704,9 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
               </>
             ) : showExpU3LtPU4 && activePattern === "structure-bigbelow" ? (
               <>
-                <div className="text-xs font-semibold text-rose-400 mb-1">Compressed Below PCPR</div>
-                <div className="text-xs text-muted-foreground">Prev R4 inside today&apos;s R3/R4 and Prev S4 inside today&apos;s S2/S3, Prev CPR &lt;1% / Today CPR &lt;3%</div>
+                <div className="text-xs font-semibold text-rose-400 mb-1">Expanded</div>
+                <div className="text-xs text-muted-foreground">Todays U4 is above PU4 and Todays L3/L4 below PL4</div>
+                <div className="text-xs text-muted-foreground">Prev CPR &lt;1% / Today CPR &lt;3%, PDL &lt;L1</div>
               </>
             ) : showHAU1 && activePattern === "structure-bigabove" ? (
               <>
@@ -883,7 +884,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 <span className="ml-1 text-green-400">(Rising: Price&gt;TC)</span>
               )}
               {showExpU3LtPU4 && activePattern === "structure-bigbelow" && (
-                <span className="ml-1 text-rose-400">(Exp-U3&lt;pU4)</span>
+                <span className="ml-1 text-rose-400">(eX-U4L34)</span>
               )}
               {showBigAbovePL34CL4 && activePattern === "structure-bigabove" && (
                 <span className="ml-1 text-emerald-400">(PL34CL4/U3&gt;PU4)</span>
@@ -1161,7 +1162,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                     ? "border-rose-400 text-rose-400"
                     : "border-border text-muted-foreground hover:text-foreground"
                 }`}
-                title="Prev R4 inside today's R3/R4, Prev S4 inside today's S2/S3, Prev CPR <1%, Today CPR <3%: Target:Far Below PL4"
+                title="Todays U4 is above PU4 and Todays L3/L4 below PL4: Target:Far Below PL4"
               >
                 {showExpU3LtPU4 ? "✕ eX-U4L34" : "eX-U4L34"}
               </button>
