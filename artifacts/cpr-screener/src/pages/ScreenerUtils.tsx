@@ -280,6 +280,19 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     case "bigbelow-pmini-pl3":
       return r.cprFalling && r.strWideCPR && r.prevCPR.widthPct < 0.5 && r.PL34CL4 &&
              r.prevCPR.r3  > r.todayCPR.r4;
+    // NEW: Exp-U3<pU4 — Big Below + prev R4 inside today's R3/R4, prev S4 inside
+    // today's S2/S3, prev day CPR tight (<1%), today's CPR tight (<3%)
+    case "Exp-U3<pU4":
+      return (
+        r.cprFalling &&
+        r.strWideCPR &&
+        r.prevCPR.r4 > r.todayCPR.r3 &&
+        r.prevCPR.r4 < r.todayCPR.r4 &&
+        r.prevCPR.s4 > r.todayCPR.s3 &&
+        r.prevCPR.s4 < r.todayCPR.s2 &&
+        r.prevCPR.widthPct < 1 &&
+        r.todayCPR.widthPct < 3
+      );
     case "HB-L1<PL1-PU12CU23":
       return r.cprFalling && r.strWideCPR && r.hbJPattern1;
     case "HB-L1<PL4-U1>TCPR":
