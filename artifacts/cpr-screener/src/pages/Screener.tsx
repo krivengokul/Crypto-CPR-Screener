@@ -1328,9 +1328,6 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                     >
                       DIST <SortIcon k="cprDistance" />
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Signals
-                    </th>
                     <th
                       className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
                       onClick={() => toggleSort("compressionRatio")}
@@ -1432,11 +1429,6 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                                 </>
                               );
                             })()}
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            <div className="flex flex-wrap gap-1">
-                              {/* Signals column intentionally left empty — to be repurposed for a different calculation */}
-                            </div>
                           </td>
                           <td className="px-4 py-3 font-mono whitespace-nowrap">
                             <div className="text-xs text-chart-3">
