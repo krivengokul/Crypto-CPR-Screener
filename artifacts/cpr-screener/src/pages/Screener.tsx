@@ -68,7 +68,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
   const [pMiniAlertsEnabled, setPMiniAlertsEnabled] = useState(false);
   const pMiniRisingAlertedRef = useRef<Set<string>>(new Set());
   const audioCtxRef = useRef<AudioContext | null>(null);
-  // NEW: Exp-U3<pU4 filter state (Big Below)
+  // NEW: eX-U4L34 filter state (Big Below)
   const [showExpU3LtPU4, setShowExpU3LtPU4] = useState(false);
   const [showBigAbovePL34CL4, setShowBigAbovePL34CL4] = useState(false);
   // NEW: BigCPR Above — BAComp-l3>pl1/u3>pu1 filter state
@@ -425,14 +425,14 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
       if (activeTab === "delta") return deltaIntersect;
       return binanceIntersect;
     }
-    // NEW: Exp-U3<pU4 pool — Big Below, prev R4 inside today's R3/R4, prev S4 inside
+    // NEW: eX-U4L34 pool — Big Below, prev R4 inside today's R3/R4, prev S4 inside
     // today's S2/S3, prev day CPR tight (<1%), today's CPR tight (<3%)
     if (showExpU3LtPU4 && activePattern === "structure-bigbelow") {
       const binanceIntersect = allResults
-        .filter((r) => passesPattern(r, "Exp-U3<pU4"))
+        .filter((r) => passesPattern(r, "eX-U4L34"))
         .map((r) => ({ ...r, source: "binance" as const }));
       const deltaIntersect = deltaAllResults
-        .filter((r) => passesPattern(r, "Exp-U3<pU4"))
+        .filter((r) => passesPattern(r, "eX-U4L34"))
         .map((r) => ({ ...r, source: "delta" as const }));
       if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
       if (activeTab === "delta") return deltaIntersect;
@@ -1147,7 +1147,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 {showBigBelowPMiniPL3 ? "✕ pMini-L34C4/U3>4" : "pMini-L34C4/U3>4"}
               </button>
             )}
-            {/* NEW: Exp-U3<pU4 button — Big Below, placed next to pMini-L34C4/U3>4 */}
+            {/* NEW: eX-U4L34 button — Big Below, placed next to pMini-L34C4/U3>4 */}
             {activePattern === "structure-bigbelow" && !showAll && (
               <button
                 onClick={() => {
@@ -1163,7 +1163,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 }`}
                 title="Prev R4 inside today's R3/R4, Prev S4 inside today's S2/S3, Prev CPR <1%, Today CPR <3%: Target:Far Below PL4"
               >
-                {showExpU3LtPU4 ? "✕ Exp-U3<pU4" : "Exp-U3<pU4"}
+                {showExpU3LtPU4 ? "✕ eX-U4L34" : "eX-U4L34"}
               </button>
             )}
             {/* NEW: live sub-toggle — restrict pMini results to rows currently trading above today's TC */}
