@@ -1409,9 +1409,8 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                           >
                             <div>{pdhPdlStatus(r).main}</div>
                             <div>{pdhPdlStatus(r).sub}</div>
-                            <div className="text-[10px] text-muted-foreground font-mono mt-0.5">
-                              H {fmt(r.todayCPR.prevHigh)} · L {fmt(r.todayCPR.prevLow)}
-                            </div>
+                            <div className="text-[10px] text-muted-foreground font-mono mt-0.5">H {fmt(r.todayCPR.prevHigh)}</div>
+                            <div className="text-[10px] text-muted-foreground font-mono">L {fmt(r.todayCPR.prevLow)}</div>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-xs font-mono font-medium">
                             {(() => {
