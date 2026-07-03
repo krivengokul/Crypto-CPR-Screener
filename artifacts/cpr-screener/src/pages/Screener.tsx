@@ -1303,6 +1303,9 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                     >
                       Symbol <SortIcon k="symbol" />
                     </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Pivot Level
+                    </th>
                     <th
                       className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
                       onClick={() => toggleSort("change24h")}
@@ -1333,9 +1336,6 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                       onClick={() => toggleSort("compressionRatio")}
                     >
                       Compression <SortIcon k="compressionRatio" />
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Pivot Level
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Chart
@@ -1384,78 +1384,6 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                                   Rising
                                 </span>
                               )}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 font-mono whitespace-nowrap">
-                            <div className="text-xs font-semibold text-foreground">Price: {fmt(r.currentPrice)}</div>
-                            <div className={`text-xs font-semibold py-0.5 ${r.change24h >= 0 ? "text-green-400" : "text-destructive"}`}>
-                              {fmtPct(r.change24h)}
-                              <div className="w-full bg-muted rounded-full h-1 mt-0.5 max-w-[64px]">
-                                <div
-                                  className={`h-1 rounded-full transition-all ${r.change24h >= 0 ? "bg-green-400" : "bg-destructive"}`}
-                                  style={{ width: `${Math.min(Math.abs(r.change24h) * 5, 100)}%` }}
-                                />
-                              </div>
-                            </div>
-                            <div className="text-xs text-muted-foreground">OPrice: {fmt(r.openPrice)}</div>
-                          </td>
-                          <td className={`px-4 py-3 whitespace-nowrap text-xs font-medium ${distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).color}`}>
-                            <div>{distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).main}</div>
-                            <div>{distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).sub}</div>
-                          </td>
-                          <td
-                            className={`px-4 py-3 whitespace-nowrap text-xs font-medium ${pdhPdlStatus(r).color}`}
-                            title={`PDH: ${fmt(r.todayCPR.prevHigh)}  |  PDL: ${fmt(r.todayCPR.prevLow)}`}
-                          >
-                            <div>{pdhPdlStatus(r).main}</div>
-                            <div>{pdhPdlStatus(r).sub}</div>
-                            <div className="text-[10px] text-muted-foreground font-mono mt-0.5">H {fmt(r.todayCPR.prevHigh)}</div>
-                            <div className="text-[10px] text-muted-foreground font-mono">L {fmt(r.todayCPR.prevLow)}</div>
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-xs font-mono font-medium">
-                            {(() => {
-                              const dist = cprDistancePct(r);
-                              if (dist === null) return <span className="text-muted-foreground">—</span>;
-                              const levels = levelsInDistanceRange(r);
-                              return (
-                                <>
-                                  <div className={r.cprRising ? "text-blue-400" : "text-orange-400"}>
-                                    {dist.toFixed(2)}%
-                                  </div>
-                                  {levels.length > 0 && (
-                                    <div className="text-[10px] text-muted-foreground mt-0.5 whitespace-normal max-w-[72px]">
-                                      {levels.map((lvl) => lvl.label).join(", ")}
-                                    </div>
-                                  )}
-                                </>
-                              );
-                            })()}
-                          </td>
-                          <td className="px-4 py-3 font-mono whitespace-nowrap">
-                            <div className="text-xs text-chart-3">
-                              <span className="text-muted-foreground">TDay: </span>{r.todayCPR.widthPct.toFixed(4)}%
-                            </div>
-                            <div className={`text-xs font-semibold py-0.5 ${
-                              r.compressionRatio < 25 ? "text-green-400"
-                              : r.compressionRatio < 50 ? "text-accent"
-                              : r.compressionRatio < 75 ? "text-yellow-500"
-                              : "text-destructive"
-                            }`}>
-                              {r.compressionRatio.toFixed(1)}%
-                              <div className="w-full bg-muted rounded-full h-1 mt-0.5 max-w-[64px]">
-                                <div
-                                  className={`h-1 rounded-full transition-all ${
-                                    r.compressionRatio < 25 ? "bg-green-400"
-                                    : r.compressionRatio < 50 ? "bg-accent"
-                                    : r.compressionRatio < 75 ? "bg-yellow-500"
-                                    : "bg-destructive"
-                                  }`}
-                                  style={{ width: `${Math.min(r.compressionRatio, 100)}%` }}
-                                />
-                              </div>
-                            </div>
-                            <div className="text-xs text-chart-3/70">
-                              <span className="text-muted-foreground">PDay: </span>{r.prevCPR.widthPct.toFixed(4)}%
                             </div>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
@@ -1524,6 +1452,76 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                                   <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">—</span>
                                 );
                               })()}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 font-mono whitespace-nowrap">
+                            <div className="text-xs font-semibold text-foreground">Price: {fmt(r.currentPrice)}</div>
+                            <div className={`text-xs font-semibold py-0.5 ${r.change24h >= 0 ? "text-green-400" : "text-destructive"}`}>
+                              {fmtPct(r.change24h)}
+                              <div className="w-full bg-muted rounded-full h-1 mt-0.5 max-w-[64px]">
+                                <div
+                                  className={`h-1 rounded-full transition-all ${r.change24h >= 0 ? "bg-green-400" : "bg-destructive"}`}
+                                  style={{ width: `${Math.min(Math.abs(r.change24h) * 5, 100)}%` }}
+                                />
+                              </div>
+                            </div>
+                            <div className="text-xs text-muted-foreground">OPrice: {fmt(r.openPrice)}</div>
+                          </td>
+                          <td className={`px-4 py-3 whitespace-nowrap text-xs font-medium ${distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).color}`}>
+                            <div>{distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).main}</div>
+                            <div>{distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).sub}</div>
+                          </td>
+                          <td
+                            className={`px-4 py-3 whitespace-nowrap text-xs font-medium ${pdhPdlStatus(r).color}`}
+                            title={`PDH: ${fmt(r.todayCPR.prevHigh)}  |  PDL: ${fmt(r.todayCPR.prevLow)}`}
+                          >
+                            <div>{pdhPdlStatus(r).main}</div>
+                            <div>{pdhPdlStatus(r).sub}</div>
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-xs font-mono font-medium">
+                            {(() => {
+                              const dist = cprDistancePct(r);
+                              if (dist === null) return <span className="text-muted-foreground">—</span>;
+                              const levels = levelsInDistanceRange(r);
+                              return (
+                                <>
+                                  <div className={r.cprRising ? "text-blue-400" : "text-orange-400"}>
+                                    {dist.toFixed(2)}%
+                                  </div>
+                                  {levels.length > 0 && (
+                                    <div className="text-[10px] text-muted-foreground mt-0.5 whitespace-normal max-w-[72px]">
+                                      {levels.map((lvl) => lvl.label).join(", ")}
+                                    </div>
+                                  )}
+                                </>
+                              );
+                            })()}
+                          </td>
+                          <td className="px-4 py-3 font-mono whitespace-nowrap">
+                            <div className="text-xs text-chart-3">
+                              <span className="text-muted-foreground">TDay: </span>{r.todayCPR.widthPct.toFixed(4)}%
+                            </div>
+                            <div className={`text-xs font-semibold py-0.5 ${
+                              r.compressionRatio < 25 ? "text-green-400"
+                              : r.compressionRatio < 50 ? "text-accent"
+                              : r.compressionRatio < 75 ? "text-yellow-500"
+                              : "text-destructive"
+                            }`}>
+                              {r.compressionRatio.toFixed(1)}%
+                              <div className="w-full bg-muted rounded-full h-1 mt-0.5 max-w-[64px]">
+                                <div
+                                  className={`h-1 rounded-full transition-all ${
+                                    r.compressionRatio < 25 ? "bg-green-400"
+                                    : r.compressionRatio < 50 ? "bg-accent"
+                                    : r.compressionRatio < 75 ? "bg-yellow-500"
+                                    : "bg-destructive"
+                                  }`}
+                                  style={{ width: `${Math.min(r.compressionRatio, 100)}%` }}
+                                />
+                              </div>
+                            </div>
+                            <div className="text-xs text-chart-3/70">
+                              <span className="text-muted-foreground">PDay: </span>{r.prevCPR.widthPct.toFixed(4)}%
                             </div>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
