@@ -1423,7 +1423,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                                     {dist.toFixed(2)}%
                                   </div>
                                   {levels.length > 0 && (
-                                    <div className="text-[10px] text-muted-foreground mt-0.5 whitespace-normal max-w-[140px]">
+                                    <div className="text-[10px] text-muted-foreground mt-0.5 whitespace-normal max-w-[72px]">
                                       {levels.map((lvl) => lvl.label).join(", ")}
                                     </div>
                                   )}
