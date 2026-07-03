@@ -256,16 +256,16 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.todayCPR.widthPct >= 0.1 &&
         r.todayCPR.widthPct < 0.5
       );
-    // NEW: Exp-U3>U3 — Overlapping Lower + prev R4 inside today's R2/R3,
-    // prev S4 inside today's S2/S3, today's CPR Narrow
+    // Exp-U3>U3 (displayed as "Exp-U3>pU4") — Overlapping Lower + today's R3
+    // above prev day's R4, today's S3 below prev day's S4, today's CPR Narrow.
+    // (Fixed to match the on-screen description: previously checked "prev R4
+    // inside today's R2/R3", which no longer matched the UI text.)
     case "Exp-U3>U3":
       return (
         r.overlapLower &&
         r.narrowCPR &&
-        r.prevCPR.r4 > r.todayCPR.r2 &&
-        r.prevCPR.r4 < r.todayCPR.r3 &&
-        r.prevCPR.s4 < r.todayCPR.s2 &&
-        r.prevCPR.s4 > r.todayCPR.s3
+        r.todayCPR.r3 > r.prevCPR.r4 &&
+        r.todayCPR.s3 < r.prevCPR.s4
       );
     case "inside-cpr":
       return r.todayCPR.tc < r.prevCPR.tc && r.todayCPR.bc > r.prevCPR.bc;
