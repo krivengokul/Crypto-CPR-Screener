@@ -334,7 +334,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.prevCPR.r4 < r.todayCPR.r4 &&
         r.prevCPR.s4 > r.todayCPR.s3 &&
         r.prevCPR.s4 < r.todayCPR.s2 &&
-        r.todayCPR.prevLow < r.todayCPR.s1 && // Added Condition
+        r.todayCPR.prevLow < r.todayCPR.s1 &&
         r.prevCPR.widthPct < 1 && r.todayCPR.widthPct < 3
       );
     case "HB-L1<PL1-PU12CU23":
