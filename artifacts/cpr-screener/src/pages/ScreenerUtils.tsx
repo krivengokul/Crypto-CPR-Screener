@@ -1,6 +1,6 @@
 import type { CPRLevels, CPRResult } from "@/lib/cpr";
 
-export type SortKey = "symbol" | "compressionRatio" | "currentPrice" | "change24h" | "quoteVolume" | "priceVsCpr" | "cprDistance";
+export type SortKey = "symbol" | "compressionRatio" | "currentPrice" | "change24h" | "quoteVolume" | "priceVsCpr" | "cprDistance" | "pdhPdlPct";
 export type SortDir = "asc" | "desc";
 export type ActiveTab = "binance" | "delta" | "combined";
 
@@ -33,6 +33,35 @@ export function priceVsCprValue(r: CPRResultWithSource): number {
   if (price > tc) return ((price - tc) / tc) * 100;
   if (price < bc) return -((bc - price) / bc) * 100;
   return 0;
+}
+
+/**
+ * PDH/PDL % — how far current price sits beyond yesterday's High/Low
+ * (r.todayCPR.prevHigh / r.todayCPR.prevLow — the "PH"/"PL" levels used
+ * to build today's CPR). Positive when price has broken above PDH,
+ * negative when it's broken below PDL, 0 when it's still inside the
+ * PDH–PDL range. Used for the PDH/PDL table column and its sort.
+ */
+export function pdhPdlValue(r: CPRResult): number {
+  const { currentPrice: price, todayCPR } = r;
+  const { prevHigh: pdh, prevLow: pdl } = todayCPR;
+  if (price > pdh) return ((price - pdh) / pdh) * 100;
+  if (price < pdl) return -((pdl - price) / pdl) * 100;
+  return 0;
+}
+
+export function pdhPdlStatus(r: CPRResult): { label: string; color: string } {
+  const { currentPrice: price, todayCPR } = r;
+  const { prevHigh: pdh, prevLow: pdl } = todayCPR;
+  if (price > pdh) {
+    const pct = ((price - pdh) / pdh) * 100;
+    return { label: `+${pct.toFixed(2)}% above PDH`, color: "text-green-400" };
+  }
+  if (price < pdl) {
+    const pct = ((pdl - price) / pdl) * 100;
+    return { label: `−${pct.toFixed(2)}% below PDL`, color: "text-destructive" };
+  }
+  return { label: "Inside PDH/PDL", color: "text-yellow-500" };
 }
 
 /**
@@ -114,6 +143,7 @@ export function getVal(r: CPRResultWithSource, key: SortKey): number | string {
     case "quoteVolume":     return r.quoteVolume;
     case "priceVsCpr":      return priceVsCprValue(r);
     case "cprDistance":     return cprDistancePct(r) ?? -Infinity;
+    case "pdhPdlPct":       return pdhPdlValue(r);
   }
 }
 

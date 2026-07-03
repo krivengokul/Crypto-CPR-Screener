@@ -35,6 +35,7 @@ import {
   getChartUrl,
   passesPattern,
   distanceFromCPR,
+  pdhPdlStatus,
   isRisingAboveTC,
   cprDistancePct,
   levelsInDistanceRange,
@@ -1316,6 +1317,13 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                     </th>
                     <th
                       className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
+                      onClick={() => toggleSort("pdhPdlPct")}
+                      title="Position vs yesterday's High/Low"
+                    >
+                      PDH / PDL <SortIcon k="pdhPdlPct" />
+                    </th>
+                    <th
+                      className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
                       onClick={() => toggleSort("cprDistance")}
                     >
                       DIST <SortIcon k="cprDistance" />
@@ -1396,6 +1404,15 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                           </td>
                           <td className={`px-4 py-3 whitespace-nowrap text-xs font-medium ${distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).color}`}>
                             {distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).label}
+                          </td>
+                          <td
+                            className={`px-4 py-3 whitespace-nowrap text-xs font-medium ${pdhPdlStatus(r).color}`}
+                            title={`PDH: ${fmt(r.todayCPR.prevHigh)}  |  PDL: ${fmt(r.todayCPR.prevLow)}`}
+                          >
+                            {pdhPdlStatus(r).label}
+                            <div className="text-[10px] text-muted-foreground font-mono mt-0.5">
+                              H {fmt(r.todayCPR.prevHigh)} · L {fmt(r.todayCPR.prevLow)}
+                            </div>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-xs font-mono font-medium">
                             {(() => {

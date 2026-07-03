@@ -193,11 +193,13 @@ export async function runDeltaScreener(
           if (candles.length < 3) return null;
           prevCandle     = candles[candles.length - 3]; // 2 days ago (completed)
           todayCandle    = candles[candles.length - 2]; // yesterday (completed) → today's CPR
-          todayLiveOpen  = lastCandle.open;              // today's forming candle open
+          todayLiveOpen  = lastCandle.open;              // today's forming candle open (fresh from API)
         } else {
           if (candles.length < 2) return null;
           prevCandle    = candles[candles.length - 2];
           todayCandle   = candles[candles.length - 1];
+          // ADK FIX: use today's completed candle's open straight from the API
+          // (matches binance.ts) instead of a stale localStorage-cached value.
           todayLiveOpen = todayCandle.open;
         }
 
