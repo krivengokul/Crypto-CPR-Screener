@@ -78,6 +78,8 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
   // NEW: LB Compressed filter state
   const [showLBCmprss, setShowLBCmprss] = useState(false);
   const [showLBC34, setShowLBC34] = useState(false);
+  // NEW: LB cO2-L2U2 filter state (Compressed inside Previous L2/U2)
+  const [showLBC2L2U2, setShowLBC2L2U2] = useState(false);
   // NEW: LB-BothTiny / LB-AllUp filter state (replaces hidden left-nav items)
   const [showLBBothTiny, setShowLBBothTiny] = useState(false);
   const [showLBAllUp, setShowLBAllUp] = useState(false);
@@ -331,8 +333,8 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
     if (activePattern !== "overlapping-lower") { setShowExpU4PU4(false); setShowExpU3PU3(false); }
     if (activePattern !== "structure-bigbelow") { setShowBigBelowPMiniPL3(false); setShowBigBelowPMiniRising(false); pMiniRisingAlertedRef.current.clear(); setShowExpU3LtPU4(false); }
     if (activePattern !== "structure-bigabove") { setShowBigAbovePL34CL4(false); setShowBAComp(false); setShowHAU1(false); }
-    // Reset LB Compressed / LB-BothTiny / LB-AllUp when leaving littlebelow
-    if (activePattern !== "littlebelow") { setShowLBCmprss(false); setShowLBBothTiny(false); setShowLBAllUp(false); }
+    // Reset LB Compressed / LB-C34 / LB-cO2-L2U2 / LB-BothTiny / LB-AllUp when leaving littlebelow
+    if (activePattern !== "littlebelow") { setShowLBCmprss(false); setShowLBC34(false); setShowLBC2L2U2(false); setShowLBBothTiny(false); setShowLBAllUp(false); }
   }, [activePattern, allResults, deltaAllResults]);
 
   const toggleSort = (key: SortKey) => {
@@ -497,6 +499,18 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
       if (activeTab === "delta") return deltaIntersect;
       return binanceIntersect;
     }
+    // NEW: LB cO2-L2U2 pool — Compressed inside Previous L2/U2
+    if (showLBC2L2U2 && activePattern === "littlebelow") {
+      const binanceIntersect = allResults
+        .filter((r) => passesPattern(r, "co2-l2u2"))
+        .map((r) => ({ ...r, source: "binance" as const }));
+      const deltaIntersect = deltaAllResults
+        .filter((r) => passesPattern(r, "co2-l2u2"))
+        .map((r) => ({ ...r, source: "delta" as const }));
+      if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
+      if (activeTab === "delta") return deltaIntersect;
+      return binanceIntersect;
+    }
     // NEW: LB-BothTiny pool (formerly "TinyBelow - Both Tiny" left-nav item)
     if (showLBBothTiny && activePattern === "littlebelow") {
       const binanceIntersect = allResults
@@ -603,7 +617,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
   const anySubFilter =
     showLABothTiny || showLAAllUp || showLAPL12CL23 || showLAExpando || showLACompressed ||
     showOutsideCPRCompressed || showInsideCPRExpanded ||
-    showBigBelowPMiniPL3 || showBigBelowPMiniRising || showExpU3LtPU4 || showBigAbovePL34CL4 || showBAComp || showHAU1 || showLBCmprss || showLBC34 ||
+    showBigBelowPMiniPL3 || showBigBelowPMiniRising || showExpU3LtPU4 || showBigAbovePL34CL4 || showBAComp || showHAU1 || showLBCmprss || showLBC34 || showLBC2L2U2 ||
     showLBBothTiny || showLBAllUp || showExpU4PU4 || showExpU3PU3 ||
     !!pivotLevelFilter || !!widthFilter;
 
@@ -692,6 +706,11 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 <div className="text-xs font-semibold text-emerald-400 mb-1">Compressed Inside Previous L2 and Previous U3</div>
                 <div className="text-xs text-muted-foreground">Compressed Todays L4/U4 Inside Previous L2/U3</div>
               </>
+            ) : showLBC2L2U2 && activePattern === "littlebelow" ? (
+              <>
+                <div className="text-xs font-semibold text-emerald-400 mb-1">Compressed Inside Previous L2 and Previous U2</div>
+                <div className="text-xs text-muted-foreground">Compressed Todays L4/U4 Inside Previous L2/U2</div>
+              </>
             ) : showExpU4PU4 && activePattern === "overlapping-lower" ? (
               <>
                 <div className="text-xs font-semibold text-sky-400 mb-1">Expanded</div>
@@ -735,6 +754,11 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
               <>
                 <div className="text-xs font-semibold text-emerald-400 mb-1">Target</div>
                 <div className="text-xs text-muted-foreground">Bullish Above PU4</div>
+              </>
+            ) : showLBC2L2U2 && activePattern === "littlebelow" ? (
+              <>
+                <div className="text-xs font-semibold text-emerald-400 mb-1">Target</div>
+                <div className="text-xs text-muted-foreground">Bullish to U4</div>
               </>
             ) : showExpU4PU4 && activePattern === "overlapping-lower" ? (
               <>
@@ -901,6 +925,9 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
               {showLBC34 && activePattern === "littlebelow" && (
                 <span className="ml-1 text-pink-400">(LB-C-L34C4/U23C4)</span>
               )}
+              {showLBC2L2U2 && activePattern === "littlebelow" && (
+                <span className="ml-1 text-emerald-400">(cO2-L2U2)</span>
+              )}
               {showLBBothTiny && activePattern === "littlebelow" && (
                 <span className="ml-1 text-blue-400">(LB-BothTiny intersection)</span>
               )}
@@ -940,6 +967,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 setShowHAU1(false);
                 setShowLBCmprss(false);
                 setShowLBC34(false);
+                setShowLBC2L2U2(false);
                 setShowLBBothTiny(false);
                 setShowLBAllUp(false);
                 setPivotLevelFilter(null);
@@ -955,7 +983,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
             {/* NEW: LB-BothTiny button — replaces hidden "TinyBelow - Both Tiny" left-nav item */}
             {activePattern === "littlebelow" && !showAll && (
               <button
-                onClick={() => { setShowLBBothTiny((v) => !v); setShowLBAllUp(false); setShowLBCmprss(false); setShowLBC34(false); }}
+                onClick={() => { setShowLBBothTiny((v) => !v); setShowLBAllUp(false); setShowLBCmprss(false); setShowLBC34(false); setShowLBC2L2U2(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showLBBothTiny
                     ? "border-foreground text-foreground"
@@ -970,7 +998,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
             {/* NEW: LB-AllUp button — replaces hidden "LittleBelow - Ladder" left-nav item */}
             {activePattern === "littlebelow" && !showAll && (
               <button
-                onClick={() => { setShowLBAllUp((v) => !v); setShowLBBothTiny(false); setShowLBCmprss(false); setShowLBC34(false); }}
+                onClick={() => { setShowLBAllUp((v) => !v); setShowLBBothTiny(false); setShowLBCmprss(false); setShowLBC34(false); setShowLBC2L2U2(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showLBAllUp
                     ? "border-foreground text-foreground"
@@ -985,7 +1013,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
             {/* NEW: lb-Cmprss-L4>3/U4<2 button — only shown on littlebelow, mirrors Show All style */}
             {activePattern === "littlebelow" && !showAll && (
               <button
-                onClick={() => { setShowLBCmprss((v) => !v); setShowLBBothTiny(false); setShowLBAllUp(false); setShowLBC34(false); }}
+                onClick={() => { setShowLBCmprss((v) => !v); setShowLBBothTiny(false); setShowLBAllUp(false); setShowLBC34(false); setShowLBC2L2U2(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showLBCmprss
                     ? "border-violet-400 text-violet-400"
@@ -1000,7 +1028,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
             {/* NEW: lb-c-l34c4/u23c4 button — only shown on littlebelow, mirrors lb-Cmprss style */}
             {activePattern === "littlebelow" && !showAll && (
               <button
-                onClick={() => { setShowLBC34((v) => !v); setShowLBBothTiny(false); setShowLBAllUp(false); setShowLBCmprss(false); }}
+                onClick={() => { setShowLBC34((v) => !v); setShowLBBothTiny(false); setShowLBAllUp(false); setShowLBCmprss(false); setShowLBC2L2U2(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showLBC34
                     ? "border-pink-400 text-pink-400"
@@ -1009,6 +1037,21 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 title="LB, PL34CL4 / Today R4 between Prev R2 and R3"
               >
                 {showLBC34 ? "✕ lb-c-l34c4/u23c4" : "lb-c-l34c4/u23c4"}
+              </button>
+            )}
+
+            {/* NEW: cO2-L2U2 button — only shown on littlebelow, placed right after lb-c-l34c4/u23c4 */}
+            {activePattern === "littlebelow" && !showAll && (
+              <button
+                onClick={() => { setShowLBC2L2U2((v) => !v); setShowLBBothTiny(false); setShowLBAllUp(false); setShowLBCmprss(false); setShowLBC34(false); }}
+                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                  showLBC2L2U2
+                    ? "border-emerald-400 text-emerald-400"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+                title="Compressed Inside Previous L2 and Previous U2: Target: Bullish U4"
+              >
+                {showLBC2L2U2 ? "✕ cO2-L2U2" : "cO2-L2U2"}
               </button>
             )}
 
@@ -1653,4 +1696,3 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
     </div>
   );
 }
-

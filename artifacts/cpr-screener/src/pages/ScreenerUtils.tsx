@@ -263,6 +263,19 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.todayCPR.r4 > r.prevCPR.r2 &&
         r.todayCPR.r4 < r.prevCPR.r3
       );
+    // NEW: cO2-L2U2 — LittleBelow + Compressed:
+    // today's S2 above prev S2, today's R2 below prev R2 (CPR narrowing inward),
+    // today's S4/R4 compressed inside prev S2/R2, GAP < 1%
+    case "co2-l2u2":
+      return (
+        r.cprFalling &&
+        r.narrowCPR &&
+        r.todayCPR.s2 > r.prevCPR.s2 &&
+        r.todayCPR.r2 < r.prevCPR.r2 &&
+        r.todayCPR.s4 > r.prevCPR.s2 &&
+        r.todayCPR.r4 < r.prevCPR.r2 &&
+        Math.abs(cprDistancePct(r) ?? Infinity) < 1
+      );
     case "Exp-U4>pU4":
       return (
         r.overlapLower &&
