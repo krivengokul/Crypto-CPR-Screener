@@ -218,6 +218,20 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.todayCPR.s4 < r.prevCPR.s4 &&
         r.todayCPR.r4 > r.prevCPR.r4
       );
+    // NEW: mP-U34>pU2 — Little Above + Compressed:
+    // today S4 > prev S2, today R3 > prev R2, today R4 < prev R4,
+    // today CPR width < 0.5%, prev CPR width < 2%, GAP (cprDistancePct) < 10%
+    case "mP-U34>pU2":
+      return (
+        r.cprRising &&
+        r.narrowCPR &&
+        r.todayCPR.widthPct < 0.5 &&
+        r.prevCPR.widthPct < 2 &&
+        r.todayCPR.s4 > r.prevCPR.s2 &&
+        r.todayCPR.r3 > r.prevCPR.r2 &&
+        r.todayCPR.r4 < r.prevCPR.r4 &&
+        (cprDistancePct(r) ?? Infinity) < 10
+      );
     case "la-allstepup":
       return r.cprRising && r.narrowCPR && r.allupabove && r.allupbelow;
     case "littlebelow":
