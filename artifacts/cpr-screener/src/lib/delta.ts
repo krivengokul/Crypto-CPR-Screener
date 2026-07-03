@@ -198,7 +198,7 @@ export async function runDeltaScreener(
           if (candles.length < 2) return null;
           prevCandle    = candles[candles.length - 2];
           todayCandle   = candles[candles.length - 1];
-          todayLiveOpen = savedSessionMap[t.symbol] ?? null;
+          todayLiveOpen = todayCandle.open;
         }
 
         if (todayLiveOpen !== null) {
