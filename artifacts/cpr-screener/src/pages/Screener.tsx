@@ -687,6 +687,11 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 <div className="text-xs font-semibold text-sky-400 mb-1">Compressed Inside Prev UL2</div>
                 <div className="text-xs text-muted-foreground">U3/U4 inside PU2/PU1 and L4 inside PL1/PL2</div>
               </>
+            ) : showLACompressed && activePattern === "littleabove" ? (
+              <>
+                <div className="text-xs font-semibold text-emerald-400 mb-1">Compressed Inside Previous L2 and Previous U3</div>
+                <div className="text-xs text-muted-foreground">Compressed Todays L4/U4 Inside Previous L2/U3</div>
+              </>
             ) : showExpU4PU4 && activePattern === "overlapping-lower" ? (
               <>
                 <div className="text-xs font-semibold text-sky-400 mb-1">Expanded</div>
@@ -724,6 +729,11 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
               <>
                 <div className="text-xs font-semibold text-emerald-400 mb-1">Target</div>
                 <div className="text-xs text-muted-foreground">These coins have the potential to go up to U4</div>
+              </>
+            ) : showLACompressed && activePattern === "littleabove" ? (
+              <>
+                <div className="text-xs font-semibold text-emerald-400 mb-1">Target</div>
+                <div className="text-xs text-muted-foreground">Bullish Above PU4</div>
               </>
             ) : showExpU4PU4 && activePattern === "overlapping-lower" ? (
               <>
@@ -858,7 +868,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 <span className="ml-1 text-emerald-400">(LA-Expando)</span>
               )}
               {showLACompressed && activePattern === "littleabove" && (
-                <span className="ml-1 text-emerald-400">(mP-U34&gt;pU2)</span>
+                <span className="ml-1 text-emerald-400">(cO3-L2U3)</span>
               )}
               {showOutsideCPRCompressed && activePattern === "outside-cpr" && (
                 <span className="ml-1 text-purple-400">(Compressed)</span>
@@ -1061,9 +1071,9 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                     ? "border-emerald-400 text-emerald-400"
                     : "border-border text-muted-foreground hover:text-foreground"
                 }`}
-                title="LA, Compressed: Today S4>Prev S2, Today R3>Prev R2, Today R4<Prev R4 — Narrow CPR, Width<0.5%, PrevWidth<2%, Gap<10%"
+                title="Compressed Inside Previous L2 and Previous U3: Target:Bullish APU4"
               >
-                {showLACompressed ? "✕ mP-U34>pU2" : "mP-U34>pU2"}
+                {showLACompressed ? "✕ cO3-L2U3" : "cO3-L2U3"}
               </button>
             )}
             {activePattern === "overlapping-lower" && !showAll && (
@@ -1642,3 +1652,4 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
     </div>
   );
 }
+
