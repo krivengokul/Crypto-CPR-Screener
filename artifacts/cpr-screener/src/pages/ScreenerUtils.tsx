@@ -50,18 +50,18 @@ export function pdhPdlValue(r: CPRResult): number {
   return 0;
 }
 
-export function pdhPdlStatus(r: CPRResult): { label: string; color: string } {
+export function pdhPdlStatus(r: CPRResult): { main: string; sub: string; color: string } {
   const { currentPrice: price, todayCPR } = r;
   const { prevHigh: pdh, prevLow: pdl } = todayCPR;
   if (price > pdh) {
     const pct = ((price - pdh) / pdh) * 100;
-    return { label: `+${pct.toFixed(2)}% above PDH`, color: "text-green-400" };
+    return { main: `+${pct.toFixed(2)}%`, sub: "above PDH", color: "text-green-400" };
   }
   if (price < pdl) {
     const pct = ((pdl - price) / pdl) * 100;
-    return { label: `−${pct.toFixed(2)}% below PDL`, color: "text-destructive" };
+    return { main: `−${pct.toFixed(2)}%`, sub: "below PDL", color: "text-destructive" };
   }
-  return { label: "Inside PDH/PDL", color: "text-yellow-500" };
+  return { main: "Inside", sub: "PDH/PDL", color: "text-yellow-500" };
 }
 
 /**
@@ -377,16 +377,16 @@ export function distanceFromCPR(
   price: number,
   tc: number,
   bc: number
-): { label: string; color: string } {
+): { main: string; sub: string; color: string } {
   if (price > tc) {
     const pct = ((price - tc) / tc) * 100;
-    return { label: `+${pct.toFixed(2)}% above TC`, color: "text-green-400" };
+    return { main: `+${pct.toFixed(2)}%`, sub: "above TC", color: "text-green-400" };
   }
   if (price < bc) {
     const pct = ((bc - price) / bc) * 100;
-    return { label: `−${pct.toFixed(2)}% below BC`, color: "text-destructive" };
+    return { main: `−${pct.toFixed(2)}%`, sub: "below BC", color: "text-destructive" };
   }
-  return { label: "Inside CPR", color: "text-yellow-500" };
+  return { main: "Inside", sub: "CPR", color: "text-yellow-500" };
 }
 
 /**

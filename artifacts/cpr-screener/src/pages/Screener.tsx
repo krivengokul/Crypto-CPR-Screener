@@ -1313,7 +1313,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                       className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
                       onClick={() => toggleSort("priceVsCpr")}
                     >
-                      Price vs CPR <SortIcon k="priceVsCpr" />
+                      Price/CPR <SortIcon k="priceVsCpr" />
                     </th>
                     <th
                       className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
@@ -1326,7 +1326,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                       className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
                       onClick={() => toggleSort("cprDistance")}
                     >
-                      DIST <SortIcon k="cprDistance" />
+                      GAP <SortIcon k="cprDistance" />
                     </th>
                     <th
                       className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
@@ -1400,13 +1400,15 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                             <div className="text-xs text-muted-foreground">OPrice: {fmt(r.openPrice)}</div>
                           </td>
                           <td className={`px-4 py-3 whitespace-nowrap text-xs font-medium ${distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).color}`}>
-                            {distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).label}
+                            <div>{distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).main}</div>
+                            <div>{distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).sub}</div>
                           </td>
                           <td
                             className={`px-4 py-3 whitespace-nowrap text-xs font-medium ${pdhPdlStatus(r).color}`}
                             title={`PDH: ${fmt(r.todayCPR.prevHigh)}  |  PDL: ${fmt(r.todayCPR.prevLow)}`}
                           >
-                            {pdhPdlStatus(r).label}
+                            <div>{pdhPdlStatus(r).main}</div>
+                            <div>{pdhPdlStatus(r).sub}</div>
                             <div className="text-[10px] text-muted-foreground font-mono mt-0.5">
                               H {fmt(r.todayCPR.prevHigh)} · L {fmt(r.todayCPR.prevLow)}
                             </div>
