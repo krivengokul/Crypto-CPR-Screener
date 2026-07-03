@@ -43,6 +43,7 @@ import {
   type PivotLevelInfo,
   SRLadder,
 } from "./ScreenerUtils";
+import LiveClock from "./LiveClock";
 
 export default function Screener({ activePattern = "littleabove", scanKey = 0 }: { activePattern?: string; scanKey?: number }) {
   const [status, setStatus] = useState<"idle" | "scanning" | "done" | "error">("idle");
@@ -610,27 +611,31 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
     <div className="min-h-screen bg-background text-foreground">
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
-              <TrendingUp className="w-6 h-6 text-primary" />
+        <div className="flex items-start justify-between gap-4 mb-8">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
+                <TrendingUp className="w-6 h-6 text-primary" />
+              </div>
+              <h1 className="text-2xl font-bold tracking-tight">CPR Screener</h1>
+              <span className="text-xs font-mono px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
+                by Kriven Gokul
+              </span>
             </div>
-            <h1 className="text-2xl font-bold tracking-tight">CPR Screener</h1>
-            <span className="text-xs font-mono px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
-              by Kriven Gokul
-            </span>
+            <p className="text-muted-foreground text-sm leading-relaxed max-w-2xl">
+              {activePattern === "falling" ? (
+                <>Filters where <span className="text-foreground font-medium">today&apos;s TC is below yesterday&apos;s BC</span> and <span className="text-foreground font-medium">CPR is narrower than 50% of yesterday&apos;s</span>.</>
+              ) : activePattern === "inside-value" ? (
+                <>Filters where <span className="text-foreground font-medium">today&apos;s CPR is fully inside yesterday&apos;s CPR</span> — compression with breakout potential.</>
+              ) : activePattern === "littlebelow" ? (
+                <>Screens where today&apos;s CPR is below yesterday&apos;s and width is smaller than yesterday&apos;s CPR.</>
+              ) : (
+                <>Screens where <span className="text-foreground font-medium">today&apos;s CPR is above yesterday&apos;s</span> and <span className="text-foreground font-medium">width is smaller than yesterday&apos;s CPR</span>.</>
+              )}
+            </p>
           </div>
-          <p className="text-muted-foreground text-sm leading-relaxed max-w-2xl">
-            {activePattern === "falling" ? (
-              <>Filters where <span className="text-foreground font-medium">today&apos;s TC is below yesterday&apos;s BC</span> and <span className="text-foreground font-medium">CPR is narrower than 50% of yesterday&apos;s</span>.</>
-            ) : activePattern === "inside-value" ? (
-              <>Filters where <span className="text-foreground font-medium">today&apos;s CPR is fully inside yesterday&apos;s CPR</span> — compression with breakout potential.</>
-            ) : activePattern === "littlebelow" ? (
-              <>Screens where today&apos;s CPR is below yesterday&apos;s and width is smaller than yesterday&apos;s CPR.</>
-            ) : (
-              <>Screens where <span className="text-foreground font-medium">today&apos;s CPR is above yesterday&apos;s</span> and <span className="text-foreground font-medium">width is smaller than yesterday&apos;s CPR</span>.</>
-            )}
-          </p>
+
+          <LiveClock />
         </div>
 
         {/* Legend */}
