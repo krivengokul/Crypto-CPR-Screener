@@ -56,7 +56,11 @@ export interface CPRResult {
   hbJPattern4: boolean;
   strWideCPR: boolean;
   narrowCPR: boolean;
-  bothTight: boolean;        
+  bothTight: boolean;
+  srHigher: boolean; 
+  srLower: boolean;
+  srExpanded: boolean;
+  srCompressed: boolean;       
   passes: boolean;
   currentPrice: number;
   openPrice: number;
@@ -167,6 +171,10 @@ export function analyzeCPR(
   const compressionRatio = prevCPR.width > 0 ? (todayCPR.width / prevCPR.width) * 100 : 100;
   const cprNarrowing     = compressionRatio < 50;
   const bothTight        = todayCPR.widthPct < 0.5 && prevCPR.widthPct < 0.5;
+  const srHigher =  todayCPR.r4 > prevCPR.r4 && todayCPR.s4 > prevCPR.s4;
+  const srLower = todayCPR.r4 < prevCPR.r4 && todayCPR.s4 < prevCPR.s4;
+  const srExpanded = todayCPR.r4 > prevCPR.r4 && todayCPR.s4 < prevCPR.s4;
+  const srCompressed = todayCPR.r4 < prevCPR.r4 && todayCPR.s4 > prevCPR.s4;
 
   const PL12CL23 = (todayCPR.s2 < prevCPR.s1 && todayCPR.s3 > prevCPR.s2); //LA-PL12CL23:2PL4;
   const PU12CU23  =  (prevCPR.r1 < todayCPR.r2 && prevCPR.r2 > todayCPR.r3); //PU12CU23
@@ -241,6 +249,10 @@ export function analyzeCPR(
     strWideCPR,
     narrowCPR,  
     bothTight,
+    srHigher,
+    srLower,
+    srExpanded,
+    srCompressed,
     passes: cprRising && cprNarrowing,
     currentPrice,
     openPrice: openPrice ?? todayCandle.open,

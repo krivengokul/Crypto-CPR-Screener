@@ -308,6 +308,15 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.todayCPR.bc > r.prevCPR.bc &&
         r.todayCPR.widthPct < 0.5
       );
+    // NEW: cO-U4L3 — Compressed inside prev R4 and prev S3: today's R4 below
+    // prev day's R4 AND today's S4 above prev day's S3. Literal condition
+    // only, no extra base condition (per Gokul's spec) — sibling of
+    // inside-cpr-expanded / inside-cpr-narrow under the inside-cpr tab.
+    case "cO-U4L3":
+      return (
+        r.todayCPR.r4 < r.prevCPR.r4 &&
+        r.todayCPR.s4 > r.prevCPR.s3
+      );
     case "outside-cpr":
       return r.todayCPR.tc > r.prevCPR.tc && r.todayCPR.bc < r.prevCPR.bc;
     case "outside-cpr-compressed":
@@ -359,6 +368,15 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.prevCPR.s4 < r.todayCPR.s2 &&
         r.todayCPR.prevLow < r.todayCPR.s1 &&
         r.prevCPR.widthPct < 1 && r.todayCPR.widthPct < 3
+      );
+    // NEW: L1<pL4 — Big Below: today's S1 below prev day's S4 AND today's R2
+    // above prev day's R4, wide CPR below prev CPR (structure-bigbelow base)
+    case "L1<pL4":
+      return (
+        r.cprFalling &&
+        r.strWideCPR &&
+        r.todayCPR.s1 < r.prevCPR.s4 &&
+        r.todayCPR.r2 > r.prevCPR.r4
       );
     case "HB-L1<PL1-PU12CU23":
       return r.cprFalling && r.strWideCPR && r.hbJPattern1;

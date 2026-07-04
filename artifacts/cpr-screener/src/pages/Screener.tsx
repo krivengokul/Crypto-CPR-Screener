@@ -75,6 +75,8 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
   const audioCtxRef = useRef<AudioContext | null>(null);
   // NEW: eX-U4L34 filter state (Big Below)
   const [showExpU3LtPU4, setShowExpU3LtPU4] = useState(false);
+  // NEW: L1<pL4 filter state (Big Below), next to eX-U4L34
+  const [showBigBelowL1LtPL4, setShowBigBelowL1LtPL4] = useState(false);
   const [showBigAbovePL34CL4, setShowBigAbovePL34CL4] = useState(false);
   // NEW: BigCPR Above — BAComp-l3>pl1/u3>pu1 filter state
   const [showBAComp, setShowBAComp] = useState(false);
@@ -341,7 +343,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
     if (activePattern !== "outside-cpr") { setShowOutsideCPRCompressed(false); }
     if (activePattern !== "inside-cpr") { setShowInsideCPRExpanded(false); setShowInsideCPRNarrow(false); setShowInsideCPRCoU4L3(false); }
     if (activePattern !== "overlapping-lower") { setShowExpU4PU4(false); setShowExpU3PU3(false); }
-    if (activePattern !== "structure-bigbelow") { setShowBigBelowPMiniPL3(false); setShowBigBelowPMiniRising(false); pMiniRisingAlertedRef.current.clear(); setShowExpU3LtPU4(false); }
+    if (activePattern !== "structure-bigbelow") { setShowBigBelowPMiniPL3(false); setShowBigBelowPMiniRising(false); pMiniRisingAlertedRef.current.clear(); setShowExpU3LtPU4(false); setShowBigBelowL1LtPL4(false); }
     if (activePattern !== "structure-bigabove") { setShowBigAbovePL34CL4(false); setShowBAComp(false); setShowHAU1(false); setShowHAU1CprAbovePU4(false); }
     // Reset LB Compressed / LB-C34 / LB-cO2-L2U2 / LB-BothTiny / LB-AllUp when leaving littlebelow
     if (activePattern !== "littlebelow") { setShowLBCmprss(false); setShowLBC34(false); setShowLBC2L2U2(false); setShowLBBothTiny(false); setShowLBAllUp(false); }
@@ -469,6 +471,18 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
         .map((r) => ({ ...r, source: "binance" as const }));
       const deltaIntersect = deltaAllResults
         .filter((r) => passesPattern(r, "eX-U4L34"))
+        .map((r) => ({ ...r, source: "delta" as const }));
+      if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
+      if (activeTab === "delta") return deltaIntersect;
+      return binanceIntersect;
+    }
+    // NEW: L1<pL4 pool — Big Below, today's S1 < prev S4 AND today's R2 > prev R4
+    if (showBigBelowL1LtPL4 && activePattern === "structure-bigbelow") {
+      const binanceIntersect = allResults
+        .filter((r) => passesPattern(r, "L1<pL4"))
+        .map((r) => ({ ...r, source: "binance" as const }));
+      const deltaIntersect = deltaAllResults
+        .filter((r) => passesPattern(r, "L1<pL4"))
         .map((r) => ({ ...r, source: "delta" as const }));
       if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
       if (activeTab === "delta") return deltaIntersect;
@@ -662,7 +676,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
   const anySubFilter =
     showLABothTiny || showLAAllUp || showLAPL12CL23 || showLAExpando || showLACompressed ||
     showOutsideCPRCompressed || showInsideCPRExpanded || showInsideCPRNarrow || showInsideCPRCoU4L3 ||
-    showBigBelowPMiniPL3 || showBigBelowPMiniRising || showExpU3LtPU4 || showBigAbovePL34CL4 || showBAComp || showHAU1 || showHAU1CprAbovePU4 || showLBCmprss || showLBC34 || showLBC2L2U2 ||
+    showBigBelowPMiniPL3 || showBigBelowPMiniRising || showExpU3LtPU4 || showBigBelowL1LtPL4 || showBigAbovePL34CL4 || showBAComp || showHAU1 || showHAU1CprAbovePU4 || showLBCmprss || showLBC34 || showLBC2L2U2 ||
     showLBBothTiny || showLBAllUp || showExpU4PU4 || showExpU3PU3 ||
     !!pivotLevelFilter || !!widthFilter || !!pdhPdlFilter;
 
@@ -981,6 +995,9 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
               {showExpU3LtPU4 && activePattern === "structure-bigbelow" && (
                 <span className="ml-1 text-rose-400">(eX-U4L34)</span>
               )}
+              {showBigBelowL1LtPL4 && activePattern === "structure-bigbelow" && (
+                <span className="ml-1 text-amber-400">(L1&lt;pL4)</span>
+              )}
               {showBigAbovePL34CL4 && activePattern === "structure-bigabove" && (
                 <span className="ml-1 text-emerald-400">(PL34CL4/U3&gt;PU4)</span>
               )}
@@ -1040,6 +1057,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 setShowBigBelowPMiniPL3(false);
                 setShowBigBelowPMiniRising(false);
                 setShowExpU3LtPU4(false);
+                setShowBigBelowL1LtPL4(false);
                 setShowBigAbovePL34CL4(false);
                 setShowBAComp(false);
                 setShowHAU1(false);
@@ -1273,6 +1291,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                   setShowBigBelowPMiniRising(false);
                   pMiniRisingAlertedRef.current.clear();
                   setShowExpU3LtPU4(false);
+                  setShowBigBelowL1LtPL4(false);
                 }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showBigBelowPMiniPL3
@@ -1292,6 +1311,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                   setShowBigBelowPMiniPL3(false);
                   setShowBigBelowPMiniRising(false);
                   pMiniRisingAlertedRef.current.clear();
+                  setShowBigBelowL1LtPL4(false);
                 }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showExpU3LtPU4
@@ -1301,6 +1321,26 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 title="Todays U4 is above PU4 and Todays L3/L4 below PL4: Target:Far Below PL4"
               >
                 {showExpU3LtPU4 ? "✕ eX-U4L34" : "eX-U4L34"}
+              </button>
+            )}
+            {/* NEW: L1<pL4 button — Big Below, placed next to eX-U4L34 */}
+            {activePattern === "structure-bigbelow" && !showAll && (
+              <button
+                onClick={() => {
+                  setShowBigBelowL1LtPL4((v) => !v);
+                  setShowBigBelowPMiniPL3(false);
+                  setShowBigBelowPMiniRising(false);
+                  pMiniRisingAlertedRef.current.clear();
+                  setShowExpU3LtPU4(false);
+                }}
+                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                  showBigBelowL1LtPL4
+                    ? "border-amber-400 text-amber-400"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+                title="Todays S1 below Prev S4 AND Todays R2 above Prev R4 (Wide CPR Below Prev CPR)"
+              >
+                {showBigBelowL1LtPL4 ? "✕ L1<pL4" : "L1<pL4"}
               </button>
             )}
             {/* NEW: live sub-toggle — restrict pMini results to rows currently trading above today's TC */}
