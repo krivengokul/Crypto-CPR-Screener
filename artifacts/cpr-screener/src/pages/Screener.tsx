@@ -882,10 +882,10 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
           <div className="flex flex-col gap-2 mb-3">
           <div className="flex items-center gap-3 flex-wrap">
             <span className="text-xs text-muted-foreground">
-              {showAll
-                ? currentAllCount
-                : anySubFilter
+              {anySubFilter
                 ? displayed.length
+                : showAll
+                ? currentAllCount
                 : currentFilteredCount}{" "}
               results
               {!showAll && !anySubFilter && ` (${currentFilteredCount} matching, ${currentAllCount} total)`}
