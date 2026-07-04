@@ -1731,3 +1731,4 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
     </div>
   );
 }
+
