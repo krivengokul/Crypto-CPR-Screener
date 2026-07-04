@@ -298,6 +298,16 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return r.todayCPR.tc < r.prevCPR.tc && r.todayCPR.bc > r.prevCPR.bc;
     case "inside-cpr-expanded":
       return r.todayCPR.tc < r.prevCPR.tc && r.todayCPR.bc > r.prevCPR.bc && (r.todayCPR.r4 > r.prevCPR.r4 || r.todayCPR.s4 < r.prevCPR.s4);
+    // NEW: inside-cpr-narrow — Inside CPR (today's CPR inside prev day's CPR)
+    // + today's CPR is Narrow (widthPct < 0.5%). Coiled-spring setup: sibling
+    // of inside-cpr-expanded, differentiated purely on today's CPR width%
+    // (no PDH/PDL width considered per Gokul's spec).
+    case "inside-cpr-narrow":
+      return (
+        r.todayCPR.tc < r.prevCPR.tc &&
+        r.todayCPR.bc > r.prevCPR.bc &&
+        r.todayCPR.widthPct < 0.5
+      );
     case "outside-cpr":
       return r.todayCPR.tc > r.prevCPR.tc && r.todayCPR.bc < r.prevCPR.bc;
     case "outside-cpr-compressed":
