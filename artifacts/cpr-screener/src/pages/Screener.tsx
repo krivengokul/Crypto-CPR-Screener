@@ -982,11 +982,10 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 setShowLBC2L2U2(false);
                 setShowLBBothTiny(false);
                 setShowLBAllUp(false);
-                setPivotLevelFilter(null);
-                setWidthFilter(null);
-                setPdhPdlFilter(null);
                 setShowExpU4PU4(false);
                 setShowExpU3PU3(false);
+                // NOTE: Pivot Level / Width / PDH-PDL filters are intentionally NOT reset here —
+                // they now persist across "Show All" toggles and stay applied on top of it.
               }}
               className="text-xs px-2.5 py-1 rounded border border-border text-muted-foreground hover:text-foreground transition-colors"
             >
@@ -1310,9 +1309,10 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
             )}
           </div>
 
-          {/* Pivot Level filter buttons — own line, independent of activePattern, mutually exclusive */}
-          {!showAll && (
-            <div className="flex items-center gap-1.5 flex-wrap">
+          {/* Pivot Level / Width / PDH-PDL filter buttons — own line, independent of activePattern
+              AND independent of showAll. These always render, regardless of Show All state, and
+              are mutually exclusive within their own group. */}
+          <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-[10px] text-muted-foreground uppercase tracking-wider mr-0.5">Pivot Level:</span>
               {(
                 [
@@ -1379,7 +1379,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
               >
                 {widthFilter === "ptiny" ? "✕ pTiny" : "pTiny"}
               </button>
-              {/* NEW: PDH / PDL buttons — mutually exclusive with each other, next to pTiny */}
+              {/* PDH / PDL buttons — mutually exclusive with each other, next to pTiny */}
               <button
                 onClick={() => setPdhPdlFilter((v) => (v === "above" ? null : "above"))}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
@@ -1402,8 +1402,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
               >
                 {pdhPdlFilter === "below" ? "✕ PDL" : "PDL"}
               </button>
-            </div>
-          )}
+          </div>
           </div>
         )}
 
@@ -1732,4 +1731,3 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
     </div>
   );
 }
-
