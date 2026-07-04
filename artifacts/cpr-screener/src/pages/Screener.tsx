@@ -88,6 +88,9 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
   const [showExpU3PU3, setShowExpU3PU3] = useState(false);
   const [pivotLevelFilter, setPivotLevelFilter] = useState<PivotLevelInfo["label"] | null>(null);
   const [widthFilter, setWidthFilter] = useState<"mini" | "tiny" | "pmini" | "ptiny" | null>(null);
+  // NEW: PDH/PDL filter — independent of activePattern, mutually exclusive (like pivot/width filters).
+  // Replaces the removed "Price Above PDH" / "Price Below PDL" left-nav patterns.
+  const [pdhPdlFilter, setPdhPdlFilter] = useState<"above" | "below" | null>(null);
   const [error, setError] = useState("");
   const [countdown, setCountdown] = useState("");
   const [nextScanUtc, setNextScanUtc] = useState<Date>(getNextScanIST());
@@ -577,6 +580,12 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
       if (widthFilter === "pmini") return r.prevCPR.widthPct >= 0.1 && r.prevCPR.widthPct < 0.5;
       return true;
     })
+    // NEW: PDH/PDL filter — price above PDH or below PDL
+    .filter((r) => {
+      if (pdhPdlFilter === "above") return passesPattern(r, "Price-AbovePDH");
+      if (pdhPdlFilter === "below") return passesPattern(r, "Price-BelowPDL");
+      return true;
+    })
     .slice()
     .sort((a, b) => {
       const av = getVal(a, sortKey);
@@ -619,7 +628,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
     showOutsideCPRCompressed || showInsideCPRExpanded ||
     showBigBelowPMiniPL3 || showBigBelowPMiniRising || showExpU3LtPU4 || showBigAbovePL34CL4 || showBAComp || showHAU1 || showLBCmprss || showLBC34 || showLBC2L2U2 ||
     showLBBothTiny || showLBAllUp || showExpU4PU4 || showExpU3PU3 ||
-    !!pivotLevelFilter || !!widthFilter;
+    !!pivotLevelFilter || !!widthFilter || !!pdhPdlFilter;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -946,6 +955,9 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
               {widthFilter && (
                 <span className="ml-1 text-foreground">(Width: {widthFilter === "tiny" ? "Tiny <0.1%" : widthFilter === "mini" ? "Mini 0.1–0.5%" : widthFilter === "ptiny" ? "pTiny <0.1%" : "pMini 0.1–0.5%"})</span>
               )}
+              {pdhPdlFilter && (
+                <span className="ml-1 text-foreground">(Price {pdhPdlFilter === "above" ? "Above PDH" : "Below PDL"})</span>
+              )}
             </span>
 
             {/* Show All button */}
@@ -972,6 +984,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 setShowLBAllUp(false);
                 setPivotLevelFilter(null);
                 setWidthFilter(null);
+                setPdhPdlFilter(null);
                 setShowExpU4PU4(false);
                 setShowExpU3PU3(false);
               }}
@@ -1365,6 +1378,29 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 title="Show only rows where prev day CPR width is less than 0.1%"
               >
                 {widthFilter === "ptiny" ? "✕ pTiny" : "pTiny"}
+              </button>
+              {/* NEW: PDH / PDL buttons — mutually exclusive with each other, next to pTiny */}
+              <button
+                onClick={() => setPdhPdlFilter((v) => (v === "above" ? null : "above"))}
+                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                  pdhPdlFilter === "above"
+                    ? "border-green-400 text-green-400"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+                title="Show only rows where price is currently above yesterday's High (PDH)"
+              >
+                {pdhPdlFilter === "above" ? "✕ PDH" : "PDH"}
+              </button>
+              <button
+                onClick={() => setPdhPdlFilter((v) => (v === "below" ? null : "below"))}
+                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                  pdhPdlFilter === "below"
+                    ? "border-destructive text-destructive"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+                title="Show only rows where price is currently below yesterday's Low (PDL)"
+              >
+                {pdhPdlFilter === "below" ? "✕ PDL" : "PDL"}
               </button>
             </div>
           )}

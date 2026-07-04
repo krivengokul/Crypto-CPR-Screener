@@ -1,8 +1,6 @@
 import {
   TrendingUp,
   TrendingDown,
-  ArrowUpCircle,
-  ArrowDownCircle,
   Layers,
   LayersIcon,
   Crosshair,
@@ -38,8 +36,9 @@ export const patterns: Pattern[] = [
   { id: "LB-PU12CU23",        label: "L2>PL2-PU12CU23",     subtitle: "Bullish Target:2PU4",       icon: TrendingUp },
   { id: "1LB-PL12CL23",       label: "1LB-PL12CL23:2PU4",   subtitle: "Bullish Target:2PU4",       icon: TrendingUp },
   { id: "LBALLD-U2<PU1",      label: "LBALLD-U2<PU1:2U4",   subtitle: "Bullish Target:2U4",        icon: TrendingUp },
-  { id: "Price-AbovePDH",     label: "Price Above PDH",     subtitle: "Price Above PDH zone",      icon: ArrowUpCircle },
-  { id: "Price-BelowPDL",     label: "Price Below PDL",     subtitle: "Price Below PDL zone",      icon: ArrowDownCircle },
+  // hidden — accessible via PDH/PDL buttons in the Pivot Level filter row
+  // { id: "Price-AbovePDH",     label: "Price Above PDH",     subtitle: "Price Above PDH zone",      icon: ArrowUpCircle },
+  // { id: "Price-BelowPDL",     label: "Price Below PDL",     subtitle: "Price Below PDL zone",      icon: ArrowDownCircle },
   { id: "overlapping-higher", label: "Overlapping Higher",  subtitle: "CPR zones stacking up",     icon: Layers },
   { id: "LAT-PU12CU23",       label: "PU12CU23,PL12CL23",   subtitle: "Bullish Target:2U4",        icon: Layers },
   { id: "overlapping-lower",  label: "Overlapping Lower",   subtitle: "CPR zones stacking down",   icon: LayersIcon },
