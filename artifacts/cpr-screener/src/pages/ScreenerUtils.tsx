@@ -398,19 +398,22 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
  *                          split by which side expanded more (srExpandedHigher/Lower)
  *   cO-Higher / cO-Lower:  Compressed (today R4 < prev R4 AND today S4 > prev S4),
  *                          split by which side squeezed harder (srCompressedHigher/Lower)
- *   Higher:     today R4 > prev R4  AND today S4 > prev S4  (range shifted up)
- *   Lower:      today R4 < prev R4  AND today S4 < prev S4  (range shifted down)
- * These are mutually exclusive (modulo exact ties, which fall through to null).
+ *   Higher:     today R4 >= prev R4  AND today S4 >= prev S4  (range shifted up, ties included)
+ *   Lower:      everything else not covered above (range shifted down)
+ *
+ * All six buckets are mutually exclusive and exhaustive by construction —
+ * cpr.ts guarantees exactly one of srExpanded / srCompressed / srHigher /
+ * srLower is true for every row, and within srExpanded/srCompressed exactly
+ * one of the High/Low sub-flags is true (ties are folded into the Higher
+ * variant in cpr.ts). getPivotLevel here just reads those flags in order —
+ * no re-derivation, no ties, no null/unclassified rows.
  */
 export interface PivotLevelInfo {
   label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "Lower";
   classes: string;
 }
 
-export function getPivotLevel(r: CPRResult): PivotLevelInfo | null {
-  const { r4: tR4, s4: tS4 } = r.todayCPR;
-  const { r4: pR4, s4: pS4 } = r.prevCPR;
-
+export function getPivotLevel(r: CPRResult): PivotLevelInfo {
   if (r.srExpandedHigher) {
     return { label: "eX-Higher", classes: "bg-purple-500/10 text-purple-400 border-purple-500/20" };
   }
@@ -423,13 +426,10 @@ export function getPivotLevel(r: CPRResult): PivotLevelInfo | null {
   if (r.srCompressedLower) {
     return { label: "cO-Lower", classes: "bg-teal-500/10 text-teal-400 border-teal-500/20" };
   }
-  if (tR4 > pR4 && tS4 > pS4) {
+  if (r.srHigher) {
     return { label: "Higher", classes: "bg-green-500/10 text-green-400 border-green-500/20" };
   }
-  if (tR4 < pR4 && tS4 < pS4) {
-    return { label: "Lower", classes: "bg-destructive/10 text-destructive border-destructive/20" };
-  }
-  return null;
+  return { label: "Lower", classes: "bg-destructive/10 text-destructive border-destructive/20" };
 }
 
 export function isRisingAboveTC(r: CPRResult): boolean {
