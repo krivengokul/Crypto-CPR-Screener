@@ -1477,15 +1477,17 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
             )}
           </div>
 
-          {/* Pivot Level / Width / PDH-PDL filter buttons — own line, independent of activePattern
+          {/* Pivot Level filter buttons — own line, independent of activePattern
               AND independent of showAll. These always render, regardless of Show All state, and
               are mutually exclusive within their own group. */}
           <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-[10px] text-muted-foreground uppercase tracking-wider mr-0.5">Pivot Level:</span>
               {(
                 [
-                  { label: "Expanded", active: "border-purple-400 text-purple-400" },
-                  { label: "Compressed", active: "border-cyan-400 text-cyan-400" },
+                  { label: "eX-Higher", active: "border-purple-400 text-purple-400" },
+                  { label: "eX-Lower", active: "border-fuchsia-400 text-fuchsia-400" },
+                  { label: "cO-Higher", active: "border-cyan-400 text-cyan-400" },
+                  { label: "cO-Lower", active: "border-teal-400 text-teal-400" },
                   { label: "Higher", active: "border-green-400 text-green-400" },
                   { label: "Lower", active: "border-destructive text-destructive" },
                 ] as { label: PivotLevelInfo["label"]; active: string }[]
@@ -1503,6 +1505,13 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                   {pivotLevelFilter === label ? `✕ ${label}` : label}
                 </button>
               ))}
+          </div>
+
+          {/* NEW: CPR filter buttons (Mini/Tiny/pMini/pTiny/PDH/PDL) — moved to their own row,
+              labeled "CPR:", still independent of activePattern and showAll, mutually
+              exclusive within their own sub-groups (width vs PDH/PDL). */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wider mr-0.5">CPR:</span>
               <button
                 onClick={() => setWidthFilter((v) => (v === "mini" ? null : "mini"))}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
