@@ -60,7 +60,11 @@ export interface CPRResult {
   srHigher: boolean; 
   srLower: boolean;
   srExpanded: boolean;
-  srCompressed: boolean;       
+  srCompressed: boolean;
+  srCompressedHigher: boolean;
+  srCompressedLower: boolean;
+  srExpandedHigher: boolean;
+  srExpandedLower: boolean;       
   passes: boolean;
   currentPrice: number;
   openPrice: number;
@@ -175,6 +179,15 @@ export function analyzeCPR(
   const srLower = todayCPR.r4 < prevCPR.r4 && todayCPR.s4 < prevCPR.s4;
   const srExpanded = todayCPR.r4 > prevCPR.r4 && todayCPR.s4 < prevCPR.s4;
   const srCompressed = todayCPR.r4 < prevCPR.r4 && todayCPR.s4 > prevCPR.s4;
+  // Shared distances
+  const r4Distance = Math.abs(todayCPR.r4 - prevCPR.r4);
+  const s4Distance = Math.abs(todayCPR.s4 - prevCPR.s4);
+  // Compressed: bigger S4 move (support rising) = bullish squeeze
+  const srCompressedHigher = srCompressed && s4Distance > r4Distance;
+  const srCompressedLower = srCompressed && r4Distance > s4Distance;
+  // Expanded: bigger R4 move (resistance rising) = bullish expansion
+  const srExpandedHigher = srExpanded && r4Distance > s4Distance;
+  const srExpandedLower = srExpanded && s4Distance > r4Distance;
 
   const PL12CL23 = (todayCPR.s2 < prevCPR.s1 && todayCPR.s3 > prevCPR.s2); //LA-PL12CL23:2PL4;
   const PU12CU23  =  (prevCPR.r1 < todayCPR.r2 && prevCPR.r2 > todayCPR.r3); //PU12CU23
@@ -253,6 +266,10 @@ export function analyzeCPR(
     srLower,
     srExpanded,
     srCompressed,
+    srCompressedHigher,
+    srCompressedLower,
+    srExpandedHigher,
+    srExpandedLower,
     passes: cprRising && cprNarrowing,
     currentPrice,
     openPrice: openPrice ?? todayCandle.open,
