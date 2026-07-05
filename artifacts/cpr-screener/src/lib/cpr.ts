@@ -175,10 +175,10 @@ export function analyzeCPR(
   const compressionRatio = prevCPR.width > 0 ? (todayCPR.width / prevCPR.width) * 100 : 100;
   const cprNarrowing     = compressionRatio < 50;
   const bothTight        = todayCPR.widthPct < 0.5 && prevCPR.widthPct < 0.5;
-  const srHigher =  todayCPR.r4 > prevCPR.r4 && todayCPR.s4 > prevCPR.s4;
-  const srLower = todayCPR.r4 < prevCPR.r4 && todayCPR.s4 < prevCPR.s4;
   const srExpanded = todayCPR.r4 > prevCPR.r4 && todayCPR.s4 < prevCPR.s4;
   const srCompressed = todayCPR.r4 < prevCPR.r4 && todayCPR.s4 > prevCPR.s4;
+  const srHigher =  todayCPR.r4 >= prevCPR.r4 && todayCPR.s4 >= prevCPR.s4;
+  const srLower = !srExpanded && !srCompressed && !srHigher;
   // Shared distances — normalized by prev day's CPR width so the R-side move
   // and the S-side move are compared on equal footing regardless of the
   // asset's price scale. Raw price differences (todayCPR.r4 - prevCPR.r4 vs
