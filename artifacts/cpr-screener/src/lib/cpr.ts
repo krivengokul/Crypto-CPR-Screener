@@ -179,9 +179,18 @@ export function analyzeCPR(
   const srLower = todayCPR.r4 < prevCPR.r4 && todayCPR.s4 < prevCPR.s4;
   const srExpanded = todayCPR.r4 > prevCPR.r4 && todayCPR.s4 < prevCPR.s4;
   const srCompressed = todayCPR.r4 < prevCPR.r4 && todayCPR.s4 > prevCPR.s4;
-  // Shared distances
-  const r4Distance = Math.abs(todayCPR.r4 - prevCPR.r4);
-  const s4Distance = Math.abs(todayCPR.s4 - prevCPR.s4);
+  // Shared distances — normalized by prev day's CPR width so the R-side move
+  // and the S-side move are compared on equal footing regardless of the
+  // asset's price scale. Raw price differences (todayCPR.r4 - prevCPR.r4 vs
+  // todayCPR.s4 - prevCPR.s4) unfairly favor whichever side sits at a larger
+  // absolute price level — e.g. a token whose R-side lives near 0.0146 but
+  // whose S-side lives near 0 would almost always show a "bigger" R4 move in
+  // raw terms even when the S4 move is proportionally much larger. Dividing
+  // by prevCPR.width expresses each move as "how many CPR-widths did this
+  // side travel", which is scale-independent.
+  const normDenom  = prevCPR.width > 0 ? prevCPR.width : prevCPR.pivot * 0.0001;
+  const r4Distance = Math.abs(todayCPR.r4 - prevCPR.r4) / normDenom;
+  const s4Distance = Math.abs(todayCPR.s4 - prevCPR.s4) / normDenom;
   // Compressed: bigger S4 move (support rising) = bullish squeeze
   const srCompressedHigher = srCompressed && s4Distance > r4Distance;
   const srCompressedLower = srCompressed && r4Distance > s4Distance;
