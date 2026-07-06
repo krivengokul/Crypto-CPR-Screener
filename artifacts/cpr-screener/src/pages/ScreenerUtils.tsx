@@ -219,6 +219,21 @@ export function isL1AbovePU4(r: CPRResult): boolean {
   return r.todayCPR.s1 > r.prevCPR.r4;
 }
 
+/**
+ * pWideAbove — sub-toggle condition nested under "U1>PU4" (BigCPR Above):
+ * Previous day's CPR is wider than pp-CPR (the day before previous) AND
+ * Previous day's CPR sits above pp-CPR (mirrors the cprRising check, but
+ * one day back). Returns false when ppCPR isn't available (not enough
+ * candle history).
+ */
+export function isPWideAbove(r: CPRResult): boolean {
+  if (!r.ppCPR) return false;
+  const minGap = r.ppCPR.pivot * 0.001;
+  const prevAbovePP = (r.prevCPR.bc - r.ppCPR.tc) >= minGap;
+  const prevWiderThanPP = r.prevCPR.widthPct > r.ppCPR.widthPct;
+  return prevAbovePP && prevWiderThanPP;
+}
+
 export function passesPattern(r: CPRResult, pattern: string): boolean {
   switch (pattern) {
     case "littleabove":

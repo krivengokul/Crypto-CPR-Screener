@@ -32,6 +32,10 @@ export interface CPRResult {
   symbol: string;
   todayCPR: CPRLevels;
   prevCPR: CPRLevels;
+  // NEW: ppCPR — CPR of the candle before prevCandle (previous-of-previous
+  // day). Optional — only present when there are at least 3 valid candles.
+  // Used solely by the "pWideAbove" sub-toggle (nested under U1>PU4).
+  ppCPR?: CPRLevels;
   compressionRatio: number;
   cprRising: boolean;
   PL12CL23: boolean;
@@ -167,6 +171,13 @@ export function analyzeCPR(
   const prevCPR  = calcCPR(prevCandle);
   const todayCPR = calcCPR(todayCandle);
 
+  // NEW: ppCPR — CPR of the candle before prevCandle, used only for the
+  // "pWideAbove" sub-toggle (Previous CPR wider than pp-CPR AND Previous
+  // CPR positioned above pp-CPR). Optional — only present when there are
+  // at least 3 candles and that 3rd-from-last candle is valid.
+  const ppCandle = candles.length >= 3 ? candles[candles.length - 3] : null;
+  const ppCPR = ppCandle && isValidCandle(ppCandle) ? calcCPR(ppCandle) : undefined;
+
   const minGap     = prevCPR.pivot * 0.001;
   const cprRising  = (todayCPR.bc - prevCPR.tc) >= minGap;
   const cprFalling = (prevCPR.bc  - todayCPR.tc) >= minGap;
@@ -246,6 +257,7 @@ export function analyzeCPR(
     symbol,
     todayCPR,
     prevCPR,
+    ppCPR,
     compressionRatio,
     cprRising,
     PL12CL23,
