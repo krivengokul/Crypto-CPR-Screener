@@ -375,6 +375,18 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return (r.cprRising && r.strWideCPR && r.todayCPR.r1 > r.prevCPR.r4);
     case "HAThin-U1>PU4":
       return (r.cprRising && r.strWideCPR && r.bothTight && r.todayCPR.r1 > r.prevCPR.r4);
+    // NEW: hR-HAL — BigCPR Above, top-level toggle next to Show All.
+    // WideAbove (cprRising + strWideCPR) + Pivot Level: Higher (srHigher) +
+    // today's TC between prev R1 and prev R2 + today's R3 above prev R4.
+    case "hR-HAL":
+      return (
+        r.cprRising &&
+        r.strWideCPR &&
+        r.srHigher &&
+        r.todayCPR.tc > r.prevCPR.r1 &&
+        r.todayCPR.tc < r.prevCPR.r2 &&
+        r.todayCPR.r3 > r.prevCPR.r4
+      );
     case "structure-bigbelow":
       return r.cprFalling && r.strWideCPR;
     case "bigbelow-pmini-pl3":
