@@ -107,10 +107,16 @@ export async function fetchTopUSDTSymbols(limit = 500): Promise<Ticker24h[]> {
     .slice(0, limit);
 }
 
+// ADK FIX: bumped from 4 → 6. We need at least 3 COMPLETED daily candles
+// available (pp / prev / today) plus room for the still-forming "live" candle
+// on top of that (4 total in the worst case), so 4 was one candle short of
+// ever having a pp-candle. 6 gives a comfortable safety margin (e.g. if
+// Binance has a brief gap in daily data for a thinly-traded pair) while
+// staying a cheap, single extra API page — well within rate limits.
 async function fetchKlines(symbol: string): Promise<OHLC[] | null> {
   try {
     const res = await fetch(
-      `${BASE}/klines?symbol=${symbol}&interval=1d&limit=4`
+      `${BASE}/klines?symbol=${symbol}&interval=1d&limit=6`
     );
     if (!res.ok) return null;
     const data: KlineRaw[] = await res.json();
@@ -154,16 +160,25 @@ export async function runScreener(
         let prevCandle: OHLC;
         let todayCandle: OHLC;
         let liveCandle: OHLC | null = null;
+        // ADK FIX: pp candle — the completed daily candle immediately before
+        // prevCandle. Needed for the "pWideAbove" sub-toggle (prevCPR wider
+        // than pp-CPR AND prevCPR positioned above pp-CPR). Previously this
+        // was always undefined because only [prevCandle, todayCandle] was
+        // ever forwarded to analyzeCPR, regardless of how many klines were
+        // actually fetched.
+        let ppCandle: OHLC | null = null;
 
         if (lastKlineIsLive) {
           if (klines.length < 3) return null;
           prevCandle  = klines[klines.length - 3]; // 2 days ago (completed)
           todayCandle = klines[klines.length - 2]; // yesterday (completed) → today's CPR
           liveCandle  = lastKline;                  // today's forming candle (not used for CPR)
+          if (klines.length >= 4) ppCandle = klines[klines.length - 4];
         } else {
           prevCandle  = klines[klines.length - 2];
           todayCandle = klines[klines.length - 1];
           liveCandle  = null;
+          if (klines.length >= 3) ppCandle = klines[klines.length - 3];
         }
 
         const currentPrice = parseFloat(t.lastPrice);
@@ -171,9 +186,16 @@ export async function runScreener(
         const openPriceUsed = liveCandle ? liveCandle.open : todayCandle.open;
         const changeFromDayOpen = ((currentPrice - openPriceUsed) / openPriceUsed) * 100;
 
+        // ADK FIX: prepend ppCandle (when available) so analyzeCPR's
+        // `candles[candles.length - 3]` lookup actually resolves to a real
+        // completed candle instead of always being undefined.
+        const candlesForAnalysis: OHLC[] = ppCandle
+          ? [ppCandle, prevCandle, todayCandle]
+          : [prevCandle, todayCandle];
+
           return analyzeCPR(
           t.symbol,
-          [prevCandle, todayCandle],
+          candlesForAnalysis,
           currentPrice,
           changeFromDayOpen,
           parseFloat(t.quoteVolume),
