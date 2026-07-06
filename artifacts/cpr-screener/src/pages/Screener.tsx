@@ -796,6 +796,11 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 <div className="text-xs text-muted-foreground">Todays U4 is above PU4 and Todays L3/L4 below PL4</div>
                 <div className="text-xs text-muted-foreground">Prev CPR &lt;1% / Today CPR &lt;3%, PDL &lt;L1</div>
               </>
+            ) : showHAU1L1AbovePU4 && activePattern === "structure-bigabove" ? (
+              <>
+                <div className="text-xs font-semibold text-lime-400 mb-1">L1 &gt; Previous U4</div>
+                <div className="text-xs text-muted-foreground">Today&apos;s L1 has broken above yesterday&apos;s R4 — strong bullish momentum</div>
+              </>
             ) : showHAU1 && activePattern === "structure-bigabove" ? (
               <>
                 <div className="text-xs font-semibold text-sky-400 mb-1">U1 &gt; Previous U4</div>
@@ -853,6 +858,11 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
               <>
                 <div className="text-xs font-semibold text-emerald-400 mb-1">Target</div>
                 <div className="text-xs text-muted-foreground">These coins have the potential to go far Below PL4</div>
+              </>
+            ) : showHAU1L1AbovePU4 && activePattern === "structure-bigabove" ? (
+              <>
+                <div className="text-xs font-semibold text-emerald-400 mb-1">Target</div>
+                <div className="text-xs text-muted-foreground">Bullish potential target of U4</div>
               </>
             ) : showHAU1 && activePattern === "structure-bigabove" ? (
               <>
