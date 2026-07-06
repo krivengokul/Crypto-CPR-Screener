@@ -469,7 +469,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
       if (activeTab === "delta") return deltaIntersect;
       return binanceIntersect;
     }
-    //NEW: eX-U4L34 pool — Big Below, prev R4 inside today's R3/R4, prev S4 inside
+    // NEW: eX-U4L34 pool — Big Below, prev R4 inside today's R3/R4, prev S4 inside
     // today's S2/S3, prev day CPR tight (<1%), today's CPR tight (<3%)
     if (showExpU3LtPU4 && activePattern === "structure-bigbelow") {
       const binanceIntersect = allResults
