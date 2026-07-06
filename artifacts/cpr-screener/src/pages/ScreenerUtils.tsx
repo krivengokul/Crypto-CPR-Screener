@@ -400,9 +400,8 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.cprRising &&
         r.strWideCPR &&
         r.srHigher &&
-        r.todayCPR.tc > r.prevCPR.r1 &&
-        r.todayCPR.tc < r.prevCPR.r3 &&
-        r.todayCPR.r3 > r.prevCPR.r4 &&
+        r.todayCPR.tc > r.prevCPR.r1 && r.todayCPR.tc < r.prevCPR.r3 &&  //Includes two variations: Type1 CPR>R1 && R3>pR4
+        r.todayCPR.r3 > r.prevCPR.r4 && r.todayCPR.r1 < r.prevCPR.r4 &&  // && Type2 CPR>R2 && R2>pR4 (More Bullish)
         r.prevCPR.widthPct >= 0.1 // NEW: exclude pTiny — prev day CPR must not be tiny (<0.1% width)
       );
     case "structure-bigbelow":
