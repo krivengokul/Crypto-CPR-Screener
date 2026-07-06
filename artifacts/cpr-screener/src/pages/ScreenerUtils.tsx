@@ -202,6 +202,23 @@ export function EXP_U4APU4L4BPL4(r: CPRResult): boolean {
   );
 }
 
+/**
+ * CPR>PU4 — sub-toggle condition for the "U1>PU4" filter (BigCPR Above):
+ * today's BC sits above previous day's R4.
+ */
+export function isCprAbovePU4(r: CPRResult): boolean {
+  return r.todayCPR.bc > r.prevCPR.r4;
+}
+
+/**
+ * L1>PU4 — nested sub-toggle condition, applied on top of CPR>PU4
+ * (BigCPR Above → U1>PU4 → CPR>PU4 → L1>PU4): today's S1 sits above
+ * previous day's R4.
+ */
+export function isL1AbovePU4(r: CPRResult): boolean {
+  return r.todayCPR.s1 > r.prevCPR.r4;
+}
+
 export function passesPattern(r: CPRResult, pattern: string): boolean {
   switch (pattern) {
     case "littleabove":

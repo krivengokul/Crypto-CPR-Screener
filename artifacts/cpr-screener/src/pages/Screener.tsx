@@ -37,6 +37,8 @@ import {
   distanceFromCPR,
   pdhPdlStatus,
   isRisingAboveTC,
+  isCprAbovePU4,
+  isL1AbovePU4,
   cprDistancePct,
   levelsInDistanceRange,
   getPivotLevel,
@@ -85,6 +87,9 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
   const [showHAU1, setShowHAU1] = useState(false);
   // NEW: CPR>PU4 sub-toggle on top of U1>PU4 — restrict to rows where today's BC is above prev day's R4
   const [showHAU1CprAbovePU4, setShowHAU1CprAbovePU4] = useState(false);
+  // NEW: L1>PU4 sub-toggle, nested on top of CPR>PU4 — restrict to rows where
+  // today's S1 is above prev day's R4
+  const [showHAU1L1AbovePU4, setShowHAU1L1AbovePU4] = useState(false);
   // NEW: LB Compressed filter state
   const [showLBCmprss, setShowLBCmprss] = useState(false);
   const [showLBC34, setShowLBC34] = useState(false);
@@ -345,7 +350,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
     if (activePattern !== "inside-cpr") { setShowInsideCPRExpanded(false); setShowInsideCPRNarrow(false); setShowInsideCPRCoU4L3(false); }
     if (activePattern !== "overlapping-lower") { setShowExpU4PU4(false); setShowExpU3PU3(false); }
     if (activePattern !== "structure-bigbelow") { setShowBigBelowPMiniPL3(false); setShowBigBelowPMiniRising(false); pMiniRisingAlertedRef.current.clear(); setShowExpU3LtPU4(false); setShowBigBelowL1LtPL4(false); setShowL1LtPL4CprLtPL4(false); }
-    if (activePattern !== "structure-bigabove") { setShowBigAbovePL34CL4(false); setShowBAComp(false); setShowHAU1(false); setShowHAU1CprAbovePU4(false); }
+    if (activePattern !== "structure-bigabove") { setShowBigAbovePL34CL4(false); setShowBAComp(false); setShowHAU1(false); setShowHAU1CprAbovePU4(false); setShowHAU1L1AbovePU4(false); }
     // Reset LB Compressed / LB-C34 / LB-cO2-L2U2 / LB-BothTiny / LB-AllUp when leaving littlebelow
     if (activePattern !== "littlebelow") { setShowLBCmprss(false); setShowLBC34(false); setShowLBC2L2U2(false); setShowLBBothTiny(false); setShowLBAllUp(false); }
   }, [activePattern, allResults, deltaAllResults]);
@@ -520,8 +525,14 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
         .map((r) => ({ ...r, source: "delta" as const }));
       // NEW: CPR>PU4 sub-toggle — restrict to rows where today's BC is above prev day's R4
       if (showHAU1CprAbovePU4) {
-        binanceIntersect = binanceIntersect.filter((r) => r.todayCPR.bc > r.prevCPR.r4);
-        deltaIntersect = deltaIntersect.filter((r) => r.todayCPR.bc > r.prevCPR.r4);
+        binanceIntersect = binanceIntersect.filter((r) => isCprAbovePU4(r));
+        deltaIntersect = deltaIntersect.filter((r) => isCprAbovePU4(r));
+        // NEW: L1>PU4 sub-toggle, nested on top of CPR>PU4 — restrict to rows
+        // where today's S1 is above prev day's R4
+        if (showHAU1L1AbovePU4) {
+          binanceIntersect = binanceIntersect.filter((r) => isL1AbovePU4(r));
+          deltaIntersect = deltaIntersect.filter((r) => isL1AbovePU4(r));
+        }
       }
       if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
       if (activeTab === "delta") return deltaIntersect;
@@ -675,7 +686,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
   const anySubFilter =
     showLABothTiny || showLAAllUp || showLAPL12CL23 || showLACompressed ||
     showOutsideCPRCompressed || showInsideCPRExpanded || showInsideCPRNarrow || showInsideCPRCoU4L3 ||
-    showBigBelowPMiniPL3 || showBigBelowPMiniRising || showExpU3LtPU4 || showBigBelowL1LtPL4 || showL1LtPL4CprLtPL4 || showBigAbovePL34CL4 || showBAComp || showHAU1 || showHAU1CprAbovePU4 || showLBCmprss || showLBC34 || showLBC2L2U2 ||
+    showBigBelowPMiniPL3 || showBigBelowPMiniRising || showExpU3LtPU4 || showBigBelowL1LtPL4 || showL1LtPL4CprLtPL4 || showBigAbovePL34CL4 || showBAComp || showHAU1 || showHAU1CprAbovePU4 || showHAU1L1AbovePU4 || showLBCmprss || showLBC34 || showLBC2L2U2 ||
     showLBBothTiny || showLBAllUp || showExpU4PU4 || showExpU3PU3 ||
     !!pivotLevelFilter || !!widthFilter || !!pdhPdlFilter;
 
@@ -1009,6 +1020,9 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
               {showHAU1CprAbovePU4 && activePattern === "structure-bigabove" && (
                 <span className="ml-1 text-green-400">(CPR&gt;PU4)</span>
               )}
+              {showHAU1L1AbovePU4 && activePattern === "structure-bigabove" && (
+                <span className="ml-1 text-lime-400">(L1&gt;PU4)</span>
+              )}
               {showLBCmprss && activePattern === "littlebelow" && (
                 <span className="ml-1 text-violet-400">(LB-Compressed: L4&gt;PL3/U4&lt;PU2)</span>
               )}
@@ -1061,6 +1075,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 setShowBAComp(false);
                 setShowHAU1(false);
                 setShowHAU1CprAbovePU4(false);
+                setShowHAU1L1AbovePU4(false);
                 setShowLBCmprss(false);
                 setShowLBC34(false);
                 setShowLBC2L2U2(false);
@@ -1392,7 +1407,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
             )}
             {activePattern === "structure-bigabove" && !showAll && (
               <button
-                onClick={() => { setShowBigAbovePL34CL4((v) => !v); setShowBAComp(false); setShowHAU1(false); setShowHAU1CprAbovePU4(false); }}
+                onClick={() => { setShowBigAbovePL34CL4((v) => !v); setShowBAComp(false); setShowHAU1(false); setShowHAU1CprAbovePU4(false); setShowHAU1L1AbovePU4(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showBigAbovePL34CL4
                     ? "border-foreground text-foreground"
@@ -1406,7 +1421,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
             {/* NEW: BAComp-l3>pl1/u3>pu1 button — inside BigCPR Above, next to Show All */}
             {activePattern === "structure-bigabove" && !showAll && (
               <button
-                onClick={() => { setShowBAComp((v) => !v); setShowBigAbovePL34CL4(false); setShowHAU1(false); setShowHAU1CprAbovePU4(false); }}
+                onClick={() => { setShowBAComp((v) => !v); setShowBigAbovePL34CL4(false); setShowHAU1(false); setShowHAU1CprAbovePU4(false); setShowHAU1L1AbovePU4(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showBAComp
                     ? "border-sky-400 text-sky-400"
@@ -1425,6 +1440,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                   setShowBigAbovePL34CL4(false);
                   setShowBAComp(false);
                   setShowHAU1CprAbovePU4(false);
+                  setShowHAU1L1AbovePU4(false);
                 }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showHAU1
@@ -1439,7 +1455,10 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
             {/* NEW: CPR>PU4 sub-toggle — restrict U1>PU4 results to rows where today's BC is above prev day's R4 */}
             {activePattern === "structure-bigabove" && !showAll && showHAU1 && (
               <button
-                onClick={() => setShowHAU1CprAbovePU4((v) => !v)}
+                onClick={() => {
+                  setShowHAU1CprAbovePU4((v) => !v);
+                  setShowHAU1L1AbovePU4(false);
+                }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showHAU1CprAbovePU4
                     ? "border-green-400 text-green-400"
@@ -1448,6 +1467,20 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 title="Only show symbols where today's BC is above prev day's R4"
               >
                 {showHAU1CprAbovePU4 ? "✕ CPR>PU4" : "CPR>PU4"}
+              </button>
+            )}
+            {/* NEW: L1>PU4 sub-toggle — nested on top of CPR>PU4, restrict further to rows where today's S1 is above prev day's R4 */}
+            {activePattern === "structure-bigabove" && !showAll && showHAU1 && showHAU1CprAbovePU4 && (
+              <button
+                onClick={() => setShowHAU1L1AbovePU4((v) => !v)}
+                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                  showHAU1L1AbovePU4
+                    ? "border-lime-400 text-lime-400"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+                title="Only show symbols where today's S1 is above prev day's R4"
+              >
+                {showHAU1L1AbovePU4 ? "✕ L1>PU4" : "L1>PU4"}
               </button>
             )}
           </div>
