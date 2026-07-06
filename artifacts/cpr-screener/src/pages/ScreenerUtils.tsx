@@ -234,6 +234,23 @@ export function isPWideAbove(r: CPRResult): boolean {
   return prevAbovePP && prevWiderThanPP;
 }
 
+/**
+ * Width filter — used by the "CPR: Mini / Tiny / pMini / pTiny" filter row.
+ * "mini"/"tiny" look at TODAY's CPR width; "pmini"/"ptiny" look at
+ * PREVIOUS day's CPR width. `null` (no filter selected) always passes.
+ * Moved here from Screener.tsx so the filtering logic lives alongside the
+ * rest of the pattern/condition helpers and isn't duplicated inline.
+ */
+export type WidthFilter = "mini" | "tiny" | "pmini" | "ptiny" | null;
+
+export function matchesWidthFilter(r: CPRResult, widthFilter: WidthFilter): boolean {
+  if (widthFilter === "tiny") return r.todayCPR.widthPct < 0.1;
+  if (widthFilter === "mini") return r.todayCPR.widthPct >= 0.1 && r.todayCPR.widthPct < 0.5;
+  if (widthFilter === "ptiny") return r.prevCPR.widthPct < 0.1;
+  if (widthFilter === "pmini") return r.prevCPR.widthPct >= 0.1 && r.prevCPR.widthPct < 0.5;
+  return true;
+}
+
 export function passesPattern(r: CPRResult, pattern: string): boolean {
   switch (pattern) {
     case "littleabove":
@@ -384,8 +401,9 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.strWideCPR &&
         r.srHigher &&
         r.todayCPR.tc > r.prevCPR.r1 &&
-        r.todayCPR.tc < r.prevCPR.r2 &&
-        r.todayCPR.r3 > r.prevCPR.r4
+        r.todayCPR.tc < r.prevCPR.r3 &&
+        r.todayCPR.r3 > r.prevCPR.r4 &&
+        r.prevCPR.widthPct >= 0.1 // NEW: exclude pTiny — prev day CPR must not be tiny (<0.1% width)
       );
     case "structure-bigbelow":
       return r.cprFalling && r.strWideCPR;

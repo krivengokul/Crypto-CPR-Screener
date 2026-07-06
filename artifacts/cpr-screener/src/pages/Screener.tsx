@@ -27,6 +27,7 @@ import {
   type SortDir,
   type ActiveTab,
   type CPRResultWithSource,
+  type WidthFilter,
   fmt,
   fmtPct,
   fmtVol,
@@ -34,6 +35,7 @@ import {
   splitSymbol,
   getChartUrl,
   passesPattern,
+  matchesWidthFilter,
   distanceFromCPR,
   pdhPdlStatus,
   isRisingAboveTC,
@@ -109,7 +111,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
   // NEW: Exp-U3>U3 filter state (Overlapping Lower)
   const [showExpU3PU3, setShowExpU3PU3] = useState(false);
   const [pivotLevelFilter, setPivotLevelFilter] = useState<PivotLevelInfo["label"] | null>(null);
-  const [widthFilter, setWidthFilter] = useState<"mini" | "tiny" | "pmini" | "ptiny" | null>(null);
+  const [widthFilter, setWidthFilter] = useState<WidthFilter>(null);
   // NEW: PDH/PDL filter — independent of activePattern, mutually exclusive (like pivot/width filters).
   // Replaces the removed "Price Above PDH" / "Price Below PDL" left-nav patterns.
   const [pdhPdlFilter, setPdhPdlFilter] = useState<"above" | "below" | null>(null);
@@ -659,13 +661,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
   const displayed = getActivePool()
     .filter((r) => r.symbol.toLowerCase().includes(search.toLowerCase()))
     .filter((r) => !pivotLevelFilter || getPivotLevel(r)?.label === pivotLevelFilter)
-    .filter((r) => {
-      if (widthFilter === "tiny") return r.todayCPR.widthPct < 0.1;
-      if (widthFilter === "mini") return r.todayCPR.widthPct >= 0.1 && r.todayCPR.widthPct < 0.5;
-      if (widthFilter === "ptiny") return r.prevCPR.widthPct < 0.1;
-      if (widthFilter === "pmini") return r.prevCPR.widthPct >= 0.1 && r.prevCPR.widthPct < 0.5;
-      return true;
-    })
+    .filter((r) => matchesWidthFilter(r, widthFilter))
     // NEW: PDH/PDL filter — price above PDH or below PDL
     .filter((r) => {
       if (pdhPdlFilter === "above") return passesPattern(r, "Price-AbovePDH");
