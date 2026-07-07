@@ -375,6 +375,20 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return r.todayCPR.tc > r.prevCPR.tc && r.todayCPR.bc < r.prevCPR.bc;
     case "outside-cpr-compressed":
       return r.todayCPR.tc > r.prevCPR.tc && r.todayCPR.bc < r.prevCPR.bc && r.todayCPR.r4 < r.prevCPR.r4 && r.todayCPR.s4 > r.prevCPR.s4;
+    // NEW: eXHrL3U3-AU4 — Outside CPR + prev S4 between today's S3/S4 AND
+    // prev R4 between today's R2/R3, today's CPR width between 0.5% and 2%,
+    // prev CPR width < 0.5% (tight prior day, today's range expanded outside it)
+    case "eXHrL3U3-AU4":
+      return (
+        r.todayCPR.tc > r.prevCPR.tc &&
+        r.todayCPR.bc < r.prevCPR.bc &&
+        r.prevCPR.s4 < r.todayCPR.s3 &&
+        r.prevCPR.s4 > r.todayCPR.s4 &&
+        r.prevCPR.r4 > r.todayCPR.r2 &&
+        r.prevCPR.r4 < r.todayCPR.r3 &&
+        r.todayCPR.widthPct > 0.5 && r.todayCPR.widthPct < 2 &&
+        r.prevCPR.widthPct < 0.5
+      );
     case "overlapping-higher":
       return r.overlapHigher;
     case  "LAT-PU12CU23":

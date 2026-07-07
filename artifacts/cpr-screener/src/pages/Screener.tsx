@@ -66,6 +66,8 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
   // NEW: 1LHr-L4U3-U4 filter state — Little Above, placed next to LA-AllUp
   const [showLA1LHr, setShowLA1LHr] = useState(false);
   const [showOutsideCPRCompressed, setShowOutsideCPRCompressed] = useState(false);
+  // NEW: eXHrL3U3-AU4 filter state — Outside CPR, placed next to Compressed
+  const [showOutsideCPReXHrL3U3AU4, setShowOutsideCPReXHrL3U3AU4] = useState(false);
   const [showInsideCPRExpanded, setShowInsideCPRExpanded] = useState(false);
   // NEW: inside-cpr-narrow — sibling of showInsideCPRExpanded, coiled-spring
   // setup: CPR inside prev day's CPR AND today's CPR width < 0.5% (Narrow)
@@ -357,7 +359,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
     if (allResults.length > 0) setFiltered(allResults.filter((r) => passesPattern(r, activePattern)));
     if (deltaAllResults.length > 0) setDeltaFiltered(deltaAllResults.filter((r) => passesPattern(r, activePattern)));
     if (activePattern !== "littleabove") { setShowLABothTiny(false); setShowLAAllUp(false); setShowLA1LHr(false); setShowLAPL12CL23(false); setShowLACompressed(false); }
-    if (activePattern !== "outside-cpr") { setShowOutsideCPRCompressed(false); }
+    if (activePattern !== "outside-cpr") { setShowOutsideCPRCompressed(false); setShowOutsideCPReXHrL3U3AU4(false); }
     if (activePattern !== "inside-cpr") { setShowInsideCPRExpanded(false); setShowInsideCPRNarrow(false); setShowInsideCPRCoU4L3(false); }
     if (activePattern !== "overlapping-lower") { setShowExpU4PU4(false); setShowExpU3PU3(false); }
     if (activePattern !== "structure-bigbelow") { setShowBigBelowPMiniPL3(false); setShowBigBelowPMiniRising(false); pMiniRisingAlertedRef.current.clear(); setShowExpU3LtPU4(false); setShowBigBelowL1LtPL4(false); setShowL1LtPL4CprLtPL4(false); }
@@ -428,6 +430,20 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
         .map((r) => ({ ...r, source: "binance" as const }));
       const deltaIntersect = deltaAllResults
         .filter((r) => passesPattern(r, "outside-cpr-compressed"))
+        .map((r) => ({ ...r, source: "delta" as const }));
+      if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
+      if (activeTab === "delta") return deltaIntersect;
+      return binanceIntersect;
+    }
+    // NEW: eXHrL3U3-AU4 pool — Outside CPR: prev S4 between today's S3/S4,
+    // prev R4 between today's R2/R3, today's CPR width 0.5%–2%, prev CPR
+    // width < 0.5%
+    if (showOutsideCPReXHrL3U3AU4 && activePattern === "outside-cpr") {
+      const binanceIntersect = allResults
+        .filter((r) => passesPattern(r, "eXHrL3U3-AU4"))
+        .map((r) => ({ ...r, source: "binance" as const }));
+      const deltaIntersect = deltaAllResults
+        .filter((r) => passesPattern(r, "eXHrL3U3-AU4"))
         .map((r) => ({ ...r, source: "delta" as const }));
       if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
       if (activeTab === "delta") return deltaIntersect;
@@ -719,7 +735,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
   // Helper: is any sub-filter active (to decide the result count label)
   const anySubFilter =
     showLABothTiny || showLAAllUp || showLA1LHr || showLAPL12CL23 || showLACompressed ||
-    showOutsideCPRCompressed || showInsideCPRExpanded || showInsideCPRNarrow || showInsideCPRCoU4L3 ||
+    showOutsideCPRCompressed || showOutsideCPReXHrL3U3AU4 || showInsideCPRExpanded || showInsideCPRNarrow || showInsideCPRCoU4L3 ||
     showBigBelowPMiniPL3 || showBigBelowPMiniRising || showExpU3LtPU4 || showBigBelowL1LtPL4 || showL1LtPL4CprLtPL4 || showBigAbovePL34CL4 || showBAComp || showHAU1 || showHAU1CprAbovePU4 || showHAU1L1AbovePU4 || showHAU1PWideAbove || showHRHAL || showLBCmprss || showLBC34 || showLBC2L2U2 ||
     showLBBothTiny || showLBAllUp || showExpU4PU4 || showExpU3PU3 ||
     !!pivotLevelFilter || !!widthFilter || !!pdhPdlFilter;
@@ -850,6 +866,11 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 <div className="text-xs font-semibold text-sky-400 mb-1">U1 &gt; Previous U4</div>
                 <div className="text-xs text-muted-foreground">Todays U1&gt; Previous U4</div>
               </>
+            ) : showOutsideCPReXHrL3U3AU4 && activePattern === "outside-cpr" ? (
+              <>
+                <div className="text-xs font-semibold text-rose-400 mb-1">eXHrL3U3-AU4</div>
+                <div className="text-xs text-muted-foreground">Prev S4 between today&apos;s S3/S4, Prev R4 between today&apos;s R2/R3</div>
+              </>
             ) : showInsideCPRNarrow && activePattern === "inside-cpr" ? (
               <>
                 <div className="text-xs font-semibold text-cyan-400 mb-1">Narrow</div>
@@ -922,6 +943,11 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
               <>
                 <div className="text-xs font-semibold text-emerald-400 mb-1">Breakout</div>
                 <div className="text-xs text-muted-foreground">Today&apos;s R1 has broken above yesterday&apos;s R4 — strong bullish momentum</div>
+              </>
+            ) : showOutsideCPReXHrL3U3AU4 && activePattern === "outside-cpr" ? (
+              <>
+                <div className="text-xs font-semibold text-emerald-400 mb-1">Target</div>
+                <div className="text-xs text-muted-foreground">Tight prior-day CPR that expanded outside it — breakout continuation potential</div>
               </>
             ) : showInsideCPRNarrow && activePattern === "inside-cpr" ? (
               <>
@@ -1051,6 +1077,9 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
               {showOutsideCPRCompressed && activePattern === "outside-cpr" && (
                 <span className="ml-1 text-purple-400">(Compressed)</span>
               )}
+              {showOutsideCPReXHrL3U3AU4 && activePattern === "outside-cpr" && (
+                <span className="ml-1 text-rose-400">(eXHrL3U3-AU4)</span>
+              )}
               {showInsideCPRExpanded && activePattern === "inside-cpr" && (
                 <span className="ml-1 text-orange-400">(Expanded)</span>
               )}
@@ -1138,6 +1167,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 setShowLAPL12CL23(false);
                 setShowLACompressed(false);
                 setShowOutsideCPRCompressed(false);
+                setShowOutsideCPReXHrL3U3AU4(false);
                 setShowInsideCPRExpanded(false);
                 setShowInsideCPRNarrow(false);
                 setShowBigBelowPMiniPL3(false);
@@ -1360,7 +1390,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
             )}
             {activePattern === "outside-cpr" && !showAll && (
               <button
-                onClick={() => setShowOutsideCPRCompressed((v) => !v)}
+                onClick={() => { setShowOutsideCPRCompressed((v) => !v); setShowOutsideCPReXHrL3U3AU4(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showOutsideCPRCompressed
                     ? "border-purple-400 text-purple-400"
@@ -1369,6 +1399,20 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 title="Show OutsideCPR symbols where today R4 < prev R4 AND today S4 > prev S4 (compressed range)"
               >
                 {showOutsideCPRCompressed ? "✕ Compressed" : "Compressed"}
+              </button>
+            )}
+            {/* NEW: eXHrL3U3-AU4 button — Outside CPR, placed next to Compressed */}
+            {activePattern === "outside-cpr" && !showAll && (
+              <button
+                onClick={() => { setShowOutsideCPReXHrL3U3AU4((v) => !v); setShowOutsideCPRCompressed(false); }}
+                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                  showOutsideCPReXHrL3U3AU4
+                    ? "border-rose-400 text-rose-400"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+                title="Prev S4 between today's S3/S4 AND Prev R4 between today's R2/R3, Today CPR width 0.5%-2%, Prev CPR width <0.5%"
+              >
+                {showOutsideCPReXHrL3U3AU4 ? "✕ eXHrL3U3-AU4" : "eXHrL3U3-AU4"}
               </button>
             )}
             {activePattern === "inside-cpr" && !showAll && (
