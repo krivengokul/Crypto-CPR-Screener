@@ -235,19 +235,21 @@ export function isPWideAbove(r: CPRResult): boolean {
 }
 
 /**
- * Width filter — used by the "CPR: Mini / Tiny / pMini / pTiny" filter row.
- * "mini"/"tiny" look at TODAY's CPR width; "pmini"/"ptiny" look at
- * PREVIOUS day's CPR width. `null` (no filter selected) always passes.
- * Moved here from Screener.tsx so the filtering logic lives alongside the
- * rest of the pattern/condition helpers and isn't duplicated inline.
+ * Width filter — used by the "CPR: Tiny / Mini / Small / pTiny / pMini / pSmall"
+ * filter row. "tiny"/"mini"/"small" look at TODAY's CPR width; "ptiny"/"pmini"/
+ * "psmall" look at PREVIOUS day's CPR width. `null` (no filter selected) always
+ * passes. Moved here from Screener.tsx so the filtering logic lives alongside
+ * the rest of the pattern/condition helpers and isn't duplicated inline.
  */
-export type WidthFilter = "mini" | "tiny" | "pmini" | "ptiny" | null;
+export type WidthFilter = "tiny" | "mini" | "small" | "ptiny" | "pmini" | "psmall" | null;
 
 export function matchesWidthFilter(r: CPRResult, widthFilter: WidthFilter): boolean {
   if (widthFilter === "tiny") return r.todayCPR.widthPct < 0.1;
   if (widthFilter === "mini") return r.todayCPR.widthPct >= 0.1 && r.todayCPR.widthPct < 0.5;
+  if (widthFilter === "small") return r.todayCPR.widthPct >= 0.5 && r.todayCPR.widthPct < 1;
   if (widthFilter === "ptiny") return r.prevCPR.widthPct < 0.1;
   if (widthFilter === "pmini") return r.prevCPR.widthPct >= 0.1 && r.prevCPR.widthPct < 0.5;
+  if (widthFilter === "psmall") return r.prevCPR.widthPct >= 0.5 && r.prevCPR.widthPct < 1;
   return true;
 }
 
@@ -329,6 +331,20 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.todayCPR.s4 > r.prevCPR.s2 &&
         r.todayCPR.r4 < r.prevCPR.r2 &&
         Math.abs(cprDistancePct(r) ?? Infinity) < 1
+      );
+    // NEW: pcOHrL3U4-AU4 — LittleBelow row: Wide Below (cprFalling + strWideCPR)
+    // + prev R4 between today's R3/R4 AND prev S4 above today's S3, today's
+    // CPR width between 0.5% and 2%, prev CPR width < 0.5%. Placed next to
+    // cO2-L2U2, highlighted green.
+    case "pcOHrL3U4-AU4":
+      return (
+        r.cprFalling &&
+        r.strWideCPR &&
+        r.prevCPR.r4 > r.todayCPR.r3 &&
+        r.prevCPR.r4 < r.todayCPR.r4 &&
+        r.prevCPR.s4 > r.todayCPR.s3 &&
+        r.todayCPR.widthPct > 0.5 && r.todayCPR.widthPct < 2 &&
+        r.prevCPR.widthPct < 0.5
       );
     case "Exp-U4>pU4":
       return (
