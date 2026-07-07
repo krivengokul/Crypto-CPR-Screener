@@ -332,10 +332,10 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.todayCPR.r4 < r.prevCPR.r2 &&
         Math.abs(cprDistancePct(r) ?? Infinity) < 1
       );
-    // NEW: pcOHrL3U4-AU4 — LittleBelow row: Wide Below (cprFalling + strWideCPR)
-    // + prev R4 between today's R3/R4 AND prev S4 above today's S3, today's
-    // CPR width between 0.5% and 2%, prev CPR width < 0.5%. Placed next to
-    // cO2-L2U2, highlighted green.
+    // NEW: pcOHrL3U4-AU4 — Big Below (structure-bigbelow: cprFalling + strWideCPR):
+    // prev R4 between today's R3/R4 AND prev S4 above today's S3, today's
+    // CPR width between 0.5% and 2%, prev CPR width < 0.5%. Moved here from
+    // LittleCPR Below — placed next to eX-U4L34 under Big Below.
     case "pcOHrL3U4-AU4":
       return (
         r.cprFalling &&
