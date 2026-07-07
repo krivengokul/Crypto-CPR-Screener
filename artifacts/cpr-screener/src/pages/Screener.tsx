@@ -63,6 +63,8 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
   const [showLAAllUp, setShowLAAllUp] = useState(false);
   const [showLAPL12CL23, setShowLAPL12CL23] = useState(false);
   const [showLACompressed, setShowLACompressed] = useState(false);
+  // NEW: 1LHr-L4U3-U4 filter state — Little Above, placed next to LA-AllUp
+  const [showLA1LHr, setShowLA1LHr] = useState(false);
   const [showOutsideCPRCompressed, setShowOutsideCPRCompressed] = useState(false);
   const [showInsideCPRExpanded, setShowInsideCPRExpanded] = useState(false);
   // NEW: inside-cpr-narrow — sibling of showInsideCPRExpanded, coiled-spring
@@ -354,7 +356,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
   useEffect(() => {
     if (allResults.length > 0) setFiltered(allResults.filter((r) => passesPattern(r, activePattern)));
     if (deltaAllResults.length > 0) setDeltaFiltered(deltaAllResults.filter((r) => passesPattern(r, activePattern)));
-    if (activePattern !== "littleabove") { setShowLABothTiny(false); setShowLAAllUp(false); setShowLAPL12CL23(false); setShowLACompressed(false); }
+    if (activePattern !== "littleabove") { setShowLABothTiny(false); setShowLAAllUp(false); setShowLA1LHr(false); setShowLAPL12CL23(false); setShowLACompressed(false); }
     if (activePattern !== "outside-cpr") { setShowOutsideCPRCompressed(false); }
     if (activePattern !== "inside-cpr") { setShowInsideCPRExpanded(false); setShowInsideCPRNarrow(false); setShowInsideCPRCoU4L3(false); }
     if (activePattern !== "overlapping-lower") { setShowExpU4PU4(false); setShowExpU3PU3(false); }
@@ -392,6 +394,16 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
     if (showLAAllUp && activePattern === "littleabove") {
       const binanceIntersect = allResults.filter((r) => passesPattern(r, "la-allstepup")).map((r) => ({ ...r, source: "binance" as const }));
       const deltaIntersect = deltaAllResults.filter((r) => passesPattern(r, "la-allstepup")).map((r) => ({ ...r, source: "delta" as const }));
+      if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
+      if (activeTab === "delta") return deltaIntersect;
+      return binanceIntersect;
+    }
+    // NEW: 1LHr-L4U3-U4 pool — Little Above: today's S4 above prev S4 and
+    // below prev S3, today's R3 above prev R4, today's CPR width < 0.1%,
+    // prev CPR width between 0.1% and 1%
+    if (showLA1LHr && activePattern === "littleabove") {
+      const binanceIntersect = allResults.filter((r) => passesPattern(r, "1LHr-L4U3-U4")).map((r) => ({ ...r, source: "binance" as const }));
+      const deltaIntersect = deltaAllResults.filter((r) => passesPattern(r, "1LHr-L4U3-U4")).map((r) => ({ ...r, source: "delta" as const }));
       if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
       if (activeTab === "delta") return deltaIntersect;
       return binanceIntersect;
@@ -706,7 +718,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
 
   // Helper: is any sub-filter active (to decide the result count label)
   const anySubFilter =
-    showLABothTiny || showLAAllUp || showLAPL12CL23 || showLACompressed ||
+    showLABothTiny || showLAAllUp || showLA1LHr || showLAPL12CL23 || showLACompressed ||
     showOutsideCPRCompressed || showInsideCPRExpanded || showInsideCPRNarrow || showInsideCPRCoU4L3 ||
     showBigBelowPMiniPL3 || showBigBelowPMiniRising || showExpU3LtPU4 || showBigBelowL1LtPL4 || showL1LtPL4CprLtPL4 || showBigAbovePL34CL4 || showBAComp || showHAU1 || showHAU1CprAbovePU4 || showHAU1L1AbovePU4 || showHAU1PWideAbove || showHRHAL || showLBCmprss || showLBC34 || showLBC2L2U2 ||
     showLBBothTiny || showLBAllUp || showExpU4PU4 || showExpU3PU3 ||
@@ -1027,6 +1039,9 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
               {showLAAllUp && activePattern === "littleabove" && (
                 <span className="ml-1 text-blue-400">(LA-AllUp intersection)</span>
               )}
+              {showLA1LHr && activePattern === "littleabove" && (
+                <span className="ml-1 text-teal-400">(1LHr-L4U3-U4)</span>
+              )}
               {showLAPL12CL23 && activePattern === "littleabove" && (
                 <span className="ml-1 text-blue-400">(PL12CL23)</span>
               )}
@@ -1119,6 +1134,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 setShowAll((v) => !v);
                 setShowLABothTiny(false);
                 setShowLAAllUp(false);
+                setShowLA1LHr(false);
                 setShowLAPL12CL23(false);
                 setShowLACompressed(false);
                 setShowOutsideCPRCompressed(false);
@@ -1251,7 +1267,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
 
             {activePattern === "littleabove" && !showAll && (
               <button
-                onClick={() => { setShowLABothTiny((v) => !v); setShowLAAllUp(false); setShowLAPL12CL23(false); setShowLACompressed(false); }}
+                onClick={() => { setShowLABothTiny((v) => !v); setShowLAAllUp(false); setShowLA1LHr(false); setShowLAPL12CL23(false); setShowLACompressed(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showLABothTiny
                     ? "border-foreground text-foreground"
@@ -1264,7 +1280,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
             )}
             {activePattern === "littleabove" && !showAll && (
               <button
-                onClick={() => { setShowLAAllUp((v) => !v); setShowLABothTiny(false); setShowLAPL12CL23(false); setShowLACompressed(false); }}
+                onClick={() => { setShowLAAllUp((v) => !v); setShowLABothTiny(false); setShowLA1LHr(false); setShowLAPL12CL23(false); setShowLACompressed(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showLAAllUp
                     ? "border-foreground text-foreground"
@@ -1275,9 +1291,23 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 {showLAAllUp ? "✕ LA-AllUp" : "LA-AllUp"}
               </button>
             )}
+            {/* NEW: 1LHr-L4U3-U4 button — Little Above, placed next to LA-AllUp */}
             {activePattern === "littleabove" && !showAll && (
               <button
-                onClick={() => { setShowLAPL12CL23((v) => !v); setShowLABothTiny(false); setShowLAAllUp(false); setShowLACompressed(false); }}
+                onClick={() => { setShowLA1LHr((v) => !v); setShowLABothTiny(false); setShowLAAllUp(false); setShowLAPL12CL23(false); setShowLACompressed(false); }}
+                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                  showLA1LHr
+                    ? "border-teal-400 text-teal-400"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+                title="Todays S4 > Prev S4 & < Prev S3, Todays R3 > Prev R4, Today CPR width < 0.1%, Prev CPR width 0.1%–1%"
+              >
+                {showLA1LHr ? "✕ 1LHr-L4U3-U4" : "1LHr-L4U3-U4"}
+              </button>
+            )}
+            {activePattern === "littleabove" && !showAll && (
+              <button
+                onClick={() => { setShowLAPL12CL23((v) => !v); setShowLABothTiny(false); setShowLAAllUp(false); setShowLA1LHr(false); setShowLACompressed(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showLAPL12CL23
                     ? "border-foreground text-foreground"
@@ -1290,7 +1320,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
             )}
             {activePattern === "littleabove" && !showAll && (
               <button
-                onClick={() => { setShowLACompressed((v) => !v); setShowLABothTiny(false); setShowLAAllUp(false); setShowLAPL12CL23(false); }}
+                onClick={() => { setShowLACompressed((v) => !v); setShowLABothTiny(false); setShowLAAllUp(false); setShowLA1LHr(false); setShowLAPL12CL23(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showLACompressed
                     ? "border-emerald-400 text-emerald-400"

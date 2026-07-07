@@ -275,6 +275,19 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       );
     case "la-allstepup":
       return r.cprRising && r.narrowCPR && r.allupabove && r.allupbelow;
+    // NEW: 1LHr-L4U3-U4 — Little Above + Compressed:
+    // today's S4 above prev S4 AND below prev S3, today's R3 above prev R4,
+    // today's CPR Narrow with width < 0.1%, prev CPR width between 0.1% and 1%
+    case "1LHr-L4U3-U4":
+      return (
+        r.cprRising &&
+        r.narrowCPR &&
+        r.todayCPR.s4 > r.prevCPR.s4 &&
+        r.todayCPR.s4 < r.prevCPR.s3 &&
+        r.todayCPR.r3 > r.prevCPR.r4 &&
+        r.todayCPR.widthPct < 0.1 &&
+        r.prevCPR.widthPct > 0.1 && r.prevCPR.widthPct < 1
+      );
     case "littlebelow":
       return r.cprFalling && r.narrowCPR;
     case "lb-2tiny":
