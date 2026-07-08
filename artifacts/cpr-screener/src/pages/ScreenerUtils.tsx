@@ -447,6 +447,19 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.todayCPR.r3 > r.prevCPR.r4 && r.todayCPR.r1 < r.prevCPR.r4 &&  // && Type2 CPR>R2 && R2>pR4 (More Bullish)
         r.prevCPR.widthPct >= 0.1 // NEW: exclude pTiny — prev day CPR must not be tiny (<0.1% width)
       );
+      // NEW: HA55-HrL4U34-FAU4 — BigCPR Above, placed next to hR-HAL
+    // Logic: today S4 between prev S4/S3 + prev R4 between today R3/R2 + both CPRs >=5% wide + cprRising + strWideCPR
+    case "HA55-HrL4U34-FAU4":
+      return (
+        r.cprRising &&
+        r.strWideCPR &&
+        r.todayCPR.widthPct >= 5 &&
+        r.prevCPR.widthPct >= 5 &&
+        r.todayCPR.s4 > r.prevCPR.s4 &&
+        r.todayCPR.s4 < r.prevCPR.s3 &&
+        r.prevCPR.r4 > r.todayCPR.r3 &&
+        r.prevCPR.r4 < r.todayCPR.r2
+      );
     case "structure-bigbelow":
       return r.cprFalling && r.strWideCPR;
     case "bigbelow-pmini-pl3":

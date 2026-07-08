@@ -72,6 +72,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
   // NEW: inside-cpr-narrow — sibling of showInsideCPRExpanded, coiled-spring
   // setup: CPR inside prev day's CPR AND today's CPR width < 0.5% (Narrow)
   const [showInsideCPRNarrow, setShowInsideCPRNarrow] = useState(false);
+  const [showHA55HrL4U34FAU4, setShowHA55HrL4U34FAU4] = useState(false);
   // NEW: cO-U4L3 — Compressed inside prev R4/prev S3, 3rd sub-filter under inside-cpr
   const [showInsideCPRCoU4L3, setShowInsideCPRCoU4L3] = useState(false);
   const [showBigBelowPMiniPL3, setShowBigBelowPMiniPL3] = useState(false);
@@ -366,7 +367,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
     if (activePattern !== "inside-cpr") { setShowInsideCPRExpanded(false); setShowInsideCPRNarrow(false); setShowInsideCPRCoU4L3(false); }
     if (activePattern !== "overlapping-lower") { setShowExpU4PU4(false); setShowExpU3PU3(false); }
     if (activePattern !== "structure-bigbelow") { setShowBigBelowPMiniPL3(false); setShowBigBelowPMiniRising(false); pMiniRisingAlertedRef.current.clear(); setShowExpU3LtPU4(false); setShowBigBelowPcOHrL3U4AU4(false); setShowBigBelowL1LtPL4(false); setShowL1LtPL4CprLtPL4(false); }
-    if (activePattern !== "structure-bigabove") { setShowBigAbovePL34CL4(false); setShowBAComp(false); setShowHAU1(false); setShowHAU1CprAbovePU4(false); setShowHAU1L1AbovePU4(false); setShowHAU1PWideAbove(false); setShowHRHAL(false); }
+    if (activePattern !== "structure-bigabove") { setShowBigAbovePL34CL4(false); setShowBAComp(false); setShowHAU1(false); setShowHAU1CprAbovePU4(false); setShowHAU1L1AbovePU4(false); setShowHAU1PWideAbove(false); setShowHRHAL(false); setShowHA55HrL4U34FAU4(false);}
     // Reset LB Compressed / LB-C34 / LB-cO2-L2U2 / LB-BothTiny / LB-AllUp when leaving littlebelow
     if (activePattern !== "littlebelow") { setShowLBCmprss(false); setShowLBC34(false); setShowLBC2L2U2(false); setShowLBBothTiny(false); setShowLBAllUp(false); }
   }, [activePattern, allResults, deltaAllResults]);
@@ -581,6 +582,18 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
       if (activeTab === "delta") return deltaIntersect;
       return binanceIntersect;
     }
+    // NEW: HA55-HrL4U34-FAU4 pool — BigCPR Above, placed next to hR-HAL
+    if (showHA55HrL4U34FAU4 && activePattern === "structure-bigabove") {
+      const binanceIntersect = allResults
+      .filter((r) => passesPattern(r, "HA55-HrL4U34-FAU4"))
+      .map((r) => ({...r, source: "binance" as const }));
+      const deltaIntersect = deltaAllResults
+      .filter((r) => passesPattern(r, "HA55-HrL4U34-FAU4"))
+      .map((r) => ({...r, source: "delta" as const }));
+      if (activeTab === "combined") return [...binanceIntersect,...deltaIntersect];
+      if (activeTab === "delta") return deltaIntersect;
+      return binanceIntersect;
+    }
     // NEW: U1>PU4 pool — BigCPR Above, today's R1 above prev day's R4
     if (showHAU1 && activePattern === "structure-bigabove") {
       let binanceIntersect = allResults
@@ -753,7 +766,8 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
   const anySubFilter =
     showLABothTiny || showLAAllUp || showLA1LHr || showLAPL12CL23 || showLACompressed ||
     showOutsideCPRCompressed || showOutsideCPReXHrL3U3AU4 || showInsideCPRExpanded || showInsideCPRNarrow || showInsideCPRCoU4L3 ||
-    showBigBelowPMiniPL3 || showBigBelowPMiniRising || showExpU3LtPU4 || showBigBelowPcOHrL3U4AU4 || showBigBelowL1LtPL4 || showL1LtPL4CprLtPL4 || showBigAbovePL34CL4 || showBAComp || showHAU1 || showHAU1CprAbovePU4 || showHAU1L1AbovePU4 || showHAU1PWideAbove || showHRHAL || showLBCmprss || showLBC34 || showLBC2L2U2 ||
+    showBigBelowPMiniPL3 || showBigBelowPMiniRising || showExpU3LtPU4 || showBigBelowPcOHrL3U4AU4 || showBigBelowL1LtPL4 || showL1LtPL4CprLtPL4 || 
+    showBigAbovePL34CL4 || showBAComp || showHAU1 || showHAU1CprAbovePU4 || showHAU1L1AbovePU4 || showHAU1PWideAbove || showHRHAL || showHA55HrL4U34FAU4 || showLBCmprss || showLBC34 || showLBC2L2U2 ||
     showLBBothTiny || showLBAllUp || showExpU4PU4 || showExpU3PU3 ||
     !!pivotLevelFilter || !!widthFilter || !!pdhPdlFilter;
 
@@ -1143,6 +1157,9 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
               {showHRHAL && activePattern === "structure-bigabove" && (
                 <span className="ml-1 text-orange-400">(hR-HAL)</span>
               )}
+              {showHA55HrL4U34FAU4 && activePattern === "structure-bigabove" && (
+                <span className="ml-1 text-green-400">(HA55-HrL4U34-FAU4)</span>
+              )}
               {showHAU1 && activePattern === "structure-bigabove" && (
                 <span className="ml-1 text-emerald-400">(U1&gt;PU4)</span>
               )}
@@ -1258,6 +1275,28 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
               </button>
             )}
 
+            {activePattern === "structure-bigabove" &&!showAll && (
+              <button
+                onClick={() => { 
+                  setShowHA55HrL4U34FAU4((v) =>!v); 
+                  setShowBigAbovePL34CL4(false); 
+                  setShowBAComp(false); 
+                  setShowHAU1(false); 
+                  setShowHAU1CprAbovePU4(false); 
+                  setShowHAU1L1AbovePU4(false); 
+                  setShowHAU1PWideAbove(false); 
+                  setShowHRHAL(false); 
+                }}
+                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                  showHA55HrL4U34FAU4
+                  ? "border-green-400 text-green-400"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+                title="Today S4 between Prev S3/S4, Prev R4 between Today R3/R2, Both CPRs Wide >=5%"
+              >
+                {showHA55HrL4U34FAU4? "✕ HA55-HrL4U34-FAU4" : "HA55-HrL4U34-FAU4"}
+              </button>
+            )}
             {/* NEW: LB-BothTiny button — replaces hidden "TinyBelow - Both Tiny" left-nav item */}
             {activePattern === "littlebelow" && !showAll && (
               <button
