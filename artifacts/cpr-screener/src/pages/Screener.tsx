@@ -1910,7 +1910,10 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                       Symbol <SortIcon k="symbol" />
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Pivot Level
+                      Pivot<br />Level
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      CPR
                     </th>
                     <th
                       className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
@@ -1992,6 +1995,26 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                               )}
                             </div>
                           </td>
+                          {/* Pivot Level column — now contains ONLY the directional
+                              eX-Higher/eX-Lower/cO-Higher/cO-Lower/Higher/Lower badge.
+                              All pattern/width badges moved to the new CPR column below. */}
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <div className="flex flex-wrap gap-1">
+                              {(() => {
+                                const pl = getPivotLevel(r);
+                                return pl ? (
+                                  <span className={`text-xs px-1.5 py-0.5 rounded border font-medium ${pl.classes}`}>
+                                    {pl.label}
+                                  </span>
+                                ) : (
+                                  <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">—</span>
+                                );
+                              })()}
+                            </div>
+                          </td>
+                          {/* NEW: CPR column — holds Above/Below/Inside/Outside/Overlap/Narrow/Skip
+                              plus the width badges Tiny/Mini/Small/pTiny/pMini/pSmall (moved out of
+                              the old Pivot Level cell). */}
                           <td className="px-4 py-3 whitespace-nowrap">
                             <div className="flex flex-wrap gap-1">
                               {r.cprRising && (
@@ -2009,15 +2032,15 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                               {passesPattern(r, "inside-value") && activePattern === "inside-value" && (
                                 <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">Inside</span>
                               )}
-                              {/* NEW: Inside badge for inside-cpr page */}
+                              {/* Inside badge for inside-cpr page */}
                               {passesPattern(r, "inside-cpr") && activePattern === "inside-cpr" && (
                                 <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 font-medium">Inside</span>
                               )}
-                              {/* NEW: Outside badge for outside-cpr page */}
+                              {/* Outside badge for outside-cpr page */}
                               {passesPattern(r, "outside-cpr") && activePattern === "outside-cpr" && (
                                 <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20 font-medium">Outside</span>
                               )}
-                              {/* NEW: Overlap badge for overlapping-lower page */}
+                              {/* Overlap badge for overlapping-lower page */}
                               {passesPattern(r, "overlapping-lower") && activePattern === "overlapping-lower" && (
                                 <span className="text-xs px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-medium">Overlap</span>
                               )}
@@ -2031,8 +2054,14 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                                 <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">Skip</span>
                               )}
                             </div>
-                            {(r.todayCPR.widthPct < 0.5 || r.prevCPR.widthPct < 0.5) && (
+                            {(r.todayCPR.widthPct < 1 || r.prevCPR.widthPct < 1) && (
                               <div className="flex flex-wrap gap-1 mt-1">
+                                {r.todayCPR.widthPct >= 0.5 && r.todayCPR.widthPct < 1 && (
+                                  <span className="text-xs px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-medium">Small</span>
+                                )}
+                                {r.prevCPR.widthPct >= 0.5 && r.prevCPR.widthPct < 1 && (
+                                  <span className="text-xs px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-300 border border-indigo-400/20 font-medium">pSmall</span>
+                                )}
                                 {r.todayCPR.widthPct >= 0.1 && r.todayCPR.widthPct < 0.5 && (
                                   <span className="text-xs px-1.5 py-0.5 rounded bg-teal-500/10 text-teal-400 border border-teal-500/20 font-medium">Mini</span>
                                 )}
@@ -2047,18 +2076,6 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                                 )}
                               </div>
                             )}
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              {(() => {
-                                const pl = getPivotLevel(r);
-                                return pl ? (
-                                  <span className={`text-xs px-1.5 py-0.5 rounded border font-medium ${pl.classes}`}>
-                                    {pl.label}
-                                  </span>
-                                ) : (
-                                  <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">—</span>
-                                );
-                              })()}
-                            </div>
                           </td>
                           <td className="px-4 py-3 font-mono whitespace-nowrap">
                             <div className="text-xs font-semibold text-foreground">Price: {fmt(r.currentPrice)}</div>
