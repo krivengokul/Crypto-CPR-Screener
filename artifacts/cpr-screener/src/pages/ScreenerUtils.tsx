@@ -418,7 +418,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     case  "LAT-PU12CU23":
       return r.overlapHigher && r.PU12CU23 && r.PL12CL23 && r.todayCPR.prevHigh > r.prevCPR.prevHigh;
     case "overlapping-lower":
-      return r.overlapLower;
+      return r.overlapLower && r.compressionRatio> 50;
     case "LBT-PU1>U1PL1>L1":
       return (r.overlapLower && r.lbtJPattern1 && r.bothTight);
     case "lower-bullish":
@@ -492,8 +492,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return (
         r.cprFalling &&
         r.strWideCPR &&
-        r.todayCPR.s1 < r.prevCPR.s4 &&
-        r.todayCPR.r2 > r.prevCPR.r4
+        r.todayCPR.s1 < r.prevCPR.s4
       );
     case "HB-L1<PL1-PU12CU23":
       return r.cprFalling && r.strWideCPR && r.hbJPattern1;
