@@ -523,15 +523,21 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
  *   Higher:     today R4 >= prev R4  AND today S4 >= prev S4  (range shifted up, ties included)
  *   Lower:      everything else not covered above (range shifted down)
  *
- * All six buckets are mutually exclusive and exhaustive by construction —
- * cpr.ts guarantees exactly one of srExpanded / srCompressed / srHigher /
- * srLower is true for every row, and within srExpanded/srCompressed exactly
- * one of the High/Low sub-flags is true (ties are folded into the Higher
- * variant in cpr.ts). getPivotLevel here just reads those flags in order —
- * no re-derivation, no ties, no null/unclassified rows.
+ * All six original buckets are mutually exclusive and exhaustive by
+ * construction — cpr.ts guarantees exactly one of srExpanded / srCompressed /
+ * srHigher / srLower is true for every row, and within srExpanded/srCompressed
+ * exactly one of the High/Low sub-flags is true (ties are folded into the
+ * Higher variant in cpr.ts). getPivotLevel here just reads those flags in
+ * order — no re-derivation, no ties, no null/unclassified rows.
+ *
+ * NEW: cOLoL2U1 / cOLoL4U3 — two further sub-classifications of the "Lower"
+ * bucket, computed in cpr.ts and mutually exclusive with each other and with
+ * generic "Lower" (only one of cOLoL2U1 / cOLoL4U3 / neither is ever true
+ * when srLower is the active bucket). Checked after srHigher and before the
+ * final generic "Lower" fallback.
  */
 export interface PivotLevelInfo {
-  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "Lower";
+  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "cOLoL2U1" | "cOLoL4U3" | "Lower";
   classes: string;
 }
 
@@ -550,6 +556,13 @@ export function getPivotLevel(r: CPRResult): PivotLevelInfo {
   }
   if (r.srHigher) {
     return { label: "Higher", classes: "bg-green-500/10 text-green-400 border-green-500/20" };
+  }
+  // NEW: cOLoL2U1 / cOLoL4U3 — sub-classifications of Lower
+  if (r.cOLoL2U1) {
+    return { label: "cOLoL2U1", classes: "bg-rose-500/10 text-rose-400 border-rose-500/20" };
+  }
+  if (r.cOLoL4U3) {
+    return { label: "cOLoL4U3", classes: "bg-amber-500/10 text-amber-400 border-amber-500/20" };
   }
   return { label: "Lower", classes: "bg-destructive/10 text-destructive border-destructive/20" };
 }

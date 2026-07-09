@@ -1818,6 +1818,8 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                   { label: "cO-Lower", active: "border-teal-400 text-teal-400" },
                   { label: "Higher", active: "border-green-400 text-green-400" },
                   { label: "Lower", active: "border-destructive text-destructive" },
+                  { label: "cOLoL2U1", active: "border-rose-400 text-rose-400" },
+                  { label: "cOLoL4U3", active: "border-amber-400 text-amber-400" },
                 ] as { label: PivotLevelInfo["label"]; active: string }[]
               ).map(({ label, active }) => (
                 <button
@@ -2055,6 +2057,17 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                                 );
                               })()}
                             </div>
+                            {/* NEW: cOLoL2U1 / cOLoL4U3 badges — second row, Pivot Level column */}
+                            {(r.cOLoL2U1 || r.cOLoL4U3) && (
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {r.cOLoL2U1 && (
+                                  <span className="text-xs px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 font-medium">cOLoL2U1</span>
+                                )}
+                                {r.cOLoL4U3 && (
+                                  <span className="text-xs px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium">cOLoL4U3</span>
+                                )}
+                              </div>
+                            )}
                           </td>
                           {/* NEW: CPR column — holds Above/Below/Inside/Outside/Overlap/Narrow/Skip
                               plus the width badges Tiny/Mini/Small/pTiny/pMini/pSmall (moved out of
