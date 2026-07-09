@@ -319,6 +319,19 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.todayCPR.r4 > r.prevCPR.r2 &&
         r.todayCPR.r4 < r.prevCPR.r3
       );
+    // NEW: lbE11-cOLoL3U2-PU4 — LittleCPR Below, placed next to lb-c-l34c4/u23c4:
+    // today's R4 inside prev day's R1/R2 AND today's S4 inside prev day's S2/S3,
+    // AND prev day CPR width between 1% and 1.5%, today CPR width between 1% and 1.5%.
+    // Target: Bullish to PU4.
+    case "lbE11-cOLoL3U2-PU4":
+      return (
+        r.cprFalling &&
+        r.narrowCPR &&
+        r.todayCPR.r4 > r.prevCPR.r1 && r.todayCPR.r4 < r.prevCPR.r2 &&
+        r.todayCPR.s4 < r.prevCPR.s2 && r.todayCPR.s4 > r.prevCPR.s3 &&
+        r.prevCPR.widthPct >= 1 && r.prevCPR.widthPct <= 1.5 &&
+        r.todayCPR.widthPct >= 1 && r.todayCPR.widthPct <= 1.5
+      );
     // NEW: cO2-L2U2 — LittleBelow + Compressed:
     // today's S2 above prev S2, today's R2 below prev R2 (CPR narrowing inward),
     // today's S4/R4 compressed inside prev S2/R2, GAP < 1%

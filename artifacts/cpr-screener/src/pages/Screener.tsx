@@ -110,6 +110,8 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
   // NEW: LB Compressed filter state
   const [showLBCmprss, setShowLBCmprss] = useState(false);
   const [showLBC34, setShowLBC34] = useState(false);
+  // NEW: lbE11-cOLoL3U2-PU4 filter state — LittleCPR Below, placed next to lb-c-l34c4/u23c4
+  const [showLBE11, setShowLBE11] = useState(false);
   // NEW: LB cO2-L2U2 filter state (Compressed inside Previous L2/U2)
   const [showLBC2L2U2, setShowLBC2L2U2] = useState(false);
   // NEW: LB-BothTiny / LB-AllUp filter state (replaces hidden left-nav items)
@@ -368,8 +370,8 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
     if (activePattern !== "overlapping-lower") { setShowExpU4PU4(false); setShowExpU3PU3(false); }
     if (activePattern !== "structure-bigbelow") { setShowBigBelowPMiniPL3(false); setShowBigBelowPMiniRising(false); pMiniRisingAlertedRef.current.clear(); setShowExpU3LtPU4(false); setShowBigBelowPcOHrL3U4AU4(false); setShowBigBelowL1LtPL4(false); setShowL1LtPL4CprLtPL4(false); }
     if (activePattern !== "structure-bigabove") { setShowBigAbovePL34CL4(false); setShowBAComp(false); setShowHAU1(false); setShowHAU1CprAbovePU4(false); setShowHAU1L1AbovePU4(false); setShowHAU1PWideAbove(false); setShowHRHAL(false); setShowHA55HrL4U34FAU4(false);}
-    // Reset LB Compressed / LB-C34 / LB-cO2-L2U2 / LB-BothTiny / LB-AllUp when leaving littlebelow
-    if (activePattern !== "littlebelow") { setShowLBCmprss(false); setShowLBC34(false); setShowLBC2L2U2(false); setShowLBBothTiny(false); setShowLBAllUp(false); }
+    // Reset LB Compressed / LB-C34 / lbE11-cOLoL3U2-PU4 / LB-cO2-L2U2 / LB-BothTiny / LB-AllUp when leaving littlebelow
+    if (activePattern !== "littlebelow") { setShowLBCmprss(false); setShowLBC34(false); setShowLBE11(false); setShowLBC2L2U2(false); setShowLBBothTiny(false); setShowLBAllUp(false); }
   }, [activePattern, allResults, deltaAllResults]);
 
   const toggleSort = (key: SortKey) => {
@@ -648,6 +650,19 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
       if (activeTab === "delta") return deltaIntersect;
       return binanceIntersect;
     }
+    // NEW: lbE11-cOLoL3U2-PU4 pool — LittleCPR Below, today's R4 inside prev
+    // R1/R2 AND today's S4 inside prev S2/S3, both CPRs between 1% and 1.5% wide
+    if (showLBE11 && activePattern === "littlebelow") {
+      const binanceIntersect = allResults
+        .filter((r) => passesPattern(r, "lbE11-cOLoL3U2-PU4"))
+        .map((r) => ({ ...r, source: "binance" as const }));
+      const deltaIntersect = deltaAllResults
+        .filter((r) => passesPattern(r, "lbE11-cOLoL3U2-PU4"))
+        .map((r) => ({ ...r, source: "delta" as const }));
+      if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
+      if (activeTab === "delta") return deltaIntersect;
+      return binanceIntersect;
+    }
     // NEW: LB cO2-L2U2 pool — Compressed inside Previous L2/U2
     if (showLBC2L2U2 && activePattern === "littlebelow") {
       const binanceIntersect = allResults
@@ -767,7 +782,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
     showLABothTiny || showLAAllUp || showLA1LHr || showLAPL12CL23 || showLACompressed ||
     showOutsideCPRCompressed || showOutsideCPReXHrL3U3AU4 || showInsideCPRExpanded || showInsideCPRNarrow || showInsideCPRCoU4L3 ||
     showBigBelowPMiniPL3 || showBigBelowPMiniRising || showExpU3LtPU4 || showBigBelowPcOHrL3U4AU4 || showBigBelowL1LtPL4 || showL1LtPL4CprLtPL4 || 
-    showBigAbovePL34CL4 || showBAComp || showHAU1 || showHAU1CprAbovePU4 || showHAU1L1AbovePU4 || showHAU1PWideAbove || showHRHAL || showHA55HrL4U34FAU4 || showLBCmprss || showLBC34 || showLBC2L2U2 ||
+    showBigAbovePL34CL4 || showBAComp || showHAU1 || showHAU1CprAbovePU4 || showHAU1L1AbovePU4 || showHAU1PWideAbove || showHRHAL || showHA55HrL4U34FAU4 || showLBCmprss || showLBC34 || showLBE11 || showLBC2L2U2 ||
     showLBBothTiny || showLBAllUp || showExpU4PU4 || showExpU3PU3 ||
     !!pivotLevelFilter || !!widthFilter || !!pdhPdlFilter;
 
@@ -856,6 +871,11 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 <div className="text-xs font-semibold text-emerald-400 mb-1">Compressed Inside Previous L2 and Previous U3</div>
                 <div className="text-xs text-muted-foreground">Compressed Todays L4/U4 Inside Previous L2/U3</div>
               </>
+            ) : showLBE11 && activePattern === "littlebelow" ? (
+              <>
+                <div className="text-xs font-semibold text-amber-400 mb-1">Compressed Inside Previous R1/R2 and Previous S2/S3</div>
+                <div className="text-xs text-muted-foreground">Today&apos;s R4 inside Prev R1/R2, Today&apos;s S4 inside Prev S2/S3, both CPRs 1%–1.5% wide</div>
+              </>
             ) : showLBC2L2U2 && activePattern === "littlebelow" ? (
               <>
                 <div className="text-xs font-semibold text-emerald-400 mb-1">Compressed Inside Previous L2 and Previous U2</div>
@@ -940,6 +960,11 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 <div className="text-xs font-semibold text-emerald-400 mb-1">Target</div>
                 <div className="text-xs text-muted-foreground">Bullish Above PU4</div>
               </>
+            ) : showLBE11 && activePattern === "littlebelow" ? (
+              <>
+                <div className="text-xs font-semibold text-emerald-400 mb-1">Target</div>
+                <div className="text-xs text-muted-foreground">Bullish to PU4</div>
+              </>
             ) : showLBC2L2U2 && activePattern === "littlebelow" ? (
               <>
                 <div className="text-xs font-semibold text-emerald-400 mb-1">Target</div>
@@ -1023,7 +1048,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
             style={{ background: "linear-gradient(135deg,#f59e0b,#d97706)", color: "#fff" }}
           >
             <RefreshCw className={`w-4 h-4 ${deltaStatus === "scanning" ? "animate-spin" : ""}`} />
-            {deltaStatus === "scanning" ? "Scanning Delta…" : "Scan Delta Exchange"}
+            {deltaStatus === "scanning" ? "Scanning Delta Exchange…" : "Scan Delta Exchange"}
           </button>
 
           {canShowCombined && (
@@ -1178,6 +1203,9 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
               {showLBC34 && activePattern === "littlebelow" && (
                 <span className="ml-1 text-pink-400">(LB-C-L34C4/U23C4)</span>
               )}
+              {showLBE11 && activePattern === "littlebelow" && (
+                <span className="ml-1 text-amber-400">(lbE11-cOLoL3U2-PU4)</span>
+              )}
               {showLBC2L2U2 && activePattern === "littlebelow" && (
                 <span className="ml-1 text-emerald-400">(cO2-L2U2)</span>
               )}
@@ -1239,6 +1267,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 setShowHRHAL(false);
                 setShowLBCmprss(false);
                 setShowLBC34(false);
+                setShowLBE11(false);
                 setShowLBC2L2U2(false);
                 setShowLBBothTiny(false);
                 setShowLBAllUp(false);
@@ -1300,7 +1329,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
             {/* NEW: LB-BothTiny button — replaces hidden "TinyBelow - Both Tiny" left-nav item */}
             {activePattern === "littlebelow" && !showAll && (
               <button
-                onClick={() => { setShowLBBothTiny((v) => !v); setShowLBAllUp(false); setShowLBCmprss(false); setShowLBC34(false); setShowLBC2L2U2(false); }}
+                onClick={() => { setShowLBBothTiny((v) => !v); setShowLBAllUp(false); setShowLBCmprss(false); setShowLBC34(false); setShowLBE11(false); setShowLBC2L2U2(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showLBBothTiny
                     ? "border-foreground text-foreground"
@@ -1315,7 +1344,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
             {/* NEW: LB-AllUp button — replaces hidden "LittleBelow - Ladder" left-nav item */}
             {activePattern === "littlebelow" && !showAll && (
               <button
-                onClick={() => { setShowLBAllUp((v) => !v); setShowLBBothTiny(false); setShowLBCmprss(false); setShowLBC34(false); setShowLBC2L2U2(false); }}
+                onClick={() => { setShowLBAllUp((v) => !v); setShowLBBothTiny(false); setShowLBCmprss(false); setShowLBC34(false); setShowLBE11(false); setShowLBC2L2U2(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showLBAllUp
                     ? "border-foreground text-foreground"
@@ -1330,7 +1359,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
             {/* NEW: lb-Cmprss-L4>3/U4<2 button — only shown on littlebelow, mirrors Show All style */}
             {activePattern === "littlebelow" && !showAll && (
               <button
-                onClick={() => { setShowLBCmprss((v) => !v); setShowLBBothTiny(false); setShowLBAllUp(false); setShowLBC34(false); setShowLBC2L2U2(false); }}
+                onClick={() => { setShowLBCmprss((v) => !v); setShowLBBothTiny(false); setShowLBAllUp(false); setShowLBC34(false); setShowLBE11(false); setShowLBC2L2U2(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showLBCmprss
                     ? "border-violet-400 text-violet-400"
@@ -1345,7 +1374,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
             {/* NEW: lb-c-l34c4/u23c4 button — only shown on littlebelow, mirrors lb-Cmprss style */}
             {activePattern === "littlebelow" && !showAll && (
               <button
-                onClick={() => { setShowLBC34((v) => !v); setShowLBBothTiny(false); setShowLBAllUp(false); setShowLBCmprss(false); setShowLBC2L2U2(false); }}
+                onClick={() => { setShowLBC34((v) => !v); setShowLBBothTiny(false); setShowLBAllUp(false); setShowLBCmprss(false); setShowLBE11(false); setShowLBC2L2U2(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showLBC34
                     ? "border-pink-400 text-pink-400"
@@ -1357,10 +1386,25 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
               </button>
             )}
 
-            {/* NEW: cO2-L2U2 button — only shown on littlebelow, placed right after lb-c-l34c4/u23c4 */}
+            {/* NEW: lbE11-cOLoL3U2-PU4 button — only shown on littlebelow, placed right after lb-c-l34c4/u23c4 */}
             {activePattern === "littlebelow" && !showAll && (
               <button
-                onClick={() => { setShowLBC2L2U2((v) => !v); setShowLBBothTiny(false); setShowLBAllUp(false); setShowLBCmprss(false); setShowLBC34(false); }}
+                onClick={() => { setShowLBE11((v) => !v); setShowLBBothTiny(false); setShowLBAllUp(false); setShowLBCmprss(false); setShowLBC34(false); setShowLBC2L2U2(false); }}
+                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                  showLBE11
+                    ? "border-amber-400 text-amber-400"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+                title="Today's R4 inside Prev R1/R2 AND Today's S4 inside Prev S2/S3, both CPRs 1%-1.5% wide: Target:Bullish PU4"
+              >
+                {showLBE11 ? "✕ lbE11-cOLoL3U2-PU4" : "lbE11-cOLoL3U2-PU4"}
+              </button>
+            )}
+
+            {/* NEW: cO2-L2U2 button — only shown on littlebelow, placed right after lbE11-cOLoL3U2-PU4 */}
+            {activePattern === "littlebelow" && !showAll && (
+              <button
+                onClick={() => { setShowLBC2L2U2((v) => !v); setShowLBBothTiny(false); setShowLBAllUp(false); setShowLBCmprss(false); setShowLBC34(false); setShowLBE11(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showLBC2L2U2
                     ? "border-emerald-400 text-emerald-400"
