@@ -345,19 +345,14 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.todayCPR.r4 < r.prevCPR.r2 &&
         Math.abs(cprDistancePct(r) ?? Infinity) < 1
       );
-    // NEW: pcOHrL3U4-AU4 — Big Below (structure-bigbelow: cprFalling + strWideCPR):
+    // NEW: eXLoL3U4-AU4 — Big Below (structure-bigbelow: cprFalling + strWideCPR):
     // prev R4 between today's R3/R4 AND prev S4 above today's S3, today's
     // CPR width between 0.5% and 2%, prev CPR width < 0.5%. Moved here from
     // LittleCPR Below — placed next to eX-U4L34 under Big Below.
-    case "pcOHrL3U4-AU4":
+    case "eXLoL3U4-AU4":
       return (
-        r.cprFalling &&
-        r.strWideCPR &&
-        r.prevCPR.r4 > r.todayCPR.r3 &&
-        r.prevCPR.r4 < r.todayCPR.r4 &&
-        r.prevCPR.s4 > r.todayCPR.s3 &&
-        r.todayCPR.widthPct > 0.5 && r.todayCPR.widthPct < 2 &&
-        r.prevCPR.widthPct < 0.5
+        r.cprFalling && r.strWideCPR && r.eXLoL3U4 &&
+        r.todayCPR.widthPct > 0.5 && r.todayCPR.widthPct < 2 && r.prevCPR.widthPct < 0.5
       );
     case "Exp-U4>pU4":
       return (
