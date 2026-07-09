@@ -733,7 +733,20 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
 
   const displayed = getActivePool()
     .filter((r) => r.symbol.toLowerCase().includes(search.toLowerCase()))
-    .filter((r) => !pivotLevelFilter || getPivotLevel(r)?.label === pivotLevelFilter)
+    // NEW: cOLoL2U1 / cOLoL4U3 are independent booleans in cpr.ts (not
+    // actually gated behind srLower), so a row can satisfy one of them
+    // AND a higher-priority bucket (e.g. srHigher) at the same time.
+    // getPivotLevel() only ever returns ONE label per row and checks the
+    // other buckets first, so matching on getPivotLevel(r)?.label would
+    // silently miss rows where cOLoL2U1/cOLoL4U3 is true but shadowed by
+    // an earlier bucket. Check the raw flags directly for these two so
+    // the filter buttons actually work independent of the primary badge.
+    .filter((r) => {
+      if (!pivotLevelFilter) return true;
+      if (pivotLevelFilter === "cOLoL2U1") return r.cOLoL2U1;
+      if (pivotLevelFilter === "cOLoL4U3") return r.cOLoL4U3;
+      return getPivotLevel(r)?.label === pivotLevelFilter;
+    })
     .filter((r) => matchesWidthFilter(r, widthFilter))
     // NEW: PDH/PDL filter — price above PDH or below PDL
     .filter((r) => {
