@@ -370,7 +370,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.overlapLower &&
         r.narrowCPR &&
         r.todayCPR.r3 > r.prevCPR.r4 &&
-        r.todayCPR.s3 < r.prevCPR.s4
+        r.todayCPR.s3 < r.prevCPR.s4 && r.compressionRatio > 50
       );
     case "inside-cpr":
       return r.todayCPR.tc < r.prevCPR.tc && r.todayCPR.bc > r.prevCPR.bc;
