@@ -120,6 +120,9 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
   const [showExpU4PU4, setShowExpU4PU4] = useState(false);
   // NEW: Exp-U3>U3 filter state (Overlapping Lower)
   const [showExpU3PU3, setShowExpU3PU3] = useState(false);
+  // NEW: OBN-LoL4U4-U4 / OBW-LoL4U4-L4 filter state (Overlapping Lower), placed next to Exp-U3>pU4
+  const [showOBNLoL4U4, setShowOBNLoL4U4] = useState(false);
+  const [showOBWLoL4U4, setShowOBWLoL4U4] = useState(false);
   const [pivotLevelFilter, setPivotLevelFilter] = useState<PivotLevelInfo["label"] | null>(null);
   const [widthFilter, setWidthFilter] = useState<WidthFilter>(null);
   // NEW: PDH/PDL filter — independent of activePattern, mutually exclusive (like pivot/width filters).
@@ -367,7 +370,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
     if (activePattern !== "littleabove") { setShowLABothTiny(false); setShowLAAllUp(false); setShowLA1LHr(false); setShowLAPL12CL23(false); setShowLACompressed(false); }
     if (activePattern !== "outside-cpr") { setShowOutsideCPRCompressed(false); setShowOutsideCPReXHrL3U3AU4(false); }
     if (activePattern !== "inside-cpr") { setShowInsideCPRExpanded(false); setShowInsideCPRNarrow(false); setShowInsideCPRCoU4L3(false); }
-    if (activePattern !== "overlapping-lower") { setShowExpU4PU4(false); setShowExpU3PU3(false); }
+    if (activePattern !== "overlapping-lower") { setShowExpU4PU4(false); setShowExpU3PU3(false); setShowOBNLoL4U4(false); setShowOBWLoL4U4(false); }
     if (activePattern !== "structure-bigbelow") { setShowBigBelowPMiniPL3(false); setShowBigBelowPMiniRising(false); pMiniRisingAlertedRef.current.clear(); setShowExpU3LtPU4(false); setShowBigBeloweXLoL3U4AU4(false); setShowBigBelowL1LtPL4(false); setShowL1LtPL4CprLtPL4(false); }
     if (activePattern !== "structure-bigabove") { setShowBigAbovePL34CL4(false); setShowBAComp(false); setShowHAU1(false); setShowHAU1CprAbovePU4(false); setShowHAU1L1AbovePU4(false); setShowHAU1PWideAbove(false); setShowHRHAL(false); setShowHA55HrL4U34FAU4(false);}
     // Reset LB Compressed / LB-C34 / lbE11-cOLoL3U2-PU4 / LB-cO2-L2U2 / LB-BothTiny / LB-AllUp when leaving littlebelow
@@ -714,6 +717,34 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
       if (activeTab === "delta") return deltaIntersect;
       return binanceIntersect;
     }
+    // NEW: OBN-LoL4U4-U4 pool — Overlapping Lower, Narrow variant
+    if (showOBNLoL4U4 && activePattern === "overlapping-lower") {
+      const binanceIntersect = allResults
+        .filter((r) => passesPattern(r, "OBN-LoL4U4-U4"))
+        .map((r) => ({ ...r, source: "binance" as const }));
+
+      const deltaIntersect = deltaAllResults
+        .filter((r) => passesPattern(r, "OBN-LoL4U4-U4"))
+        .map((r) => ({ ...r, source: "delta" as const }));
+
+      if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
+      if (activeTab === "delta") return deltaIntersect;
+      return binanceIntersect;
+    }
+    // NEW: OBW-LoL4U4-L4 pool — Overlapping Lower, Wide variant
+    if (showOBWLoL4U4 && activePattern === "overlapping-lower") {
+      const binanceIntersect = allResults
+        .filter((r) => passesPattern(r, "OBW-LoL4U4-L4"))
+        .map((r) => ({ ...r, source: "binance" as const }));
+
+      const deltaIntersect = deltaAllResults
+        .filter((r) => passesPattern(r, "OBW-LoL4U4-L4"))
+        .map((r) => ({ ...r, source: "delta" as const }));
+
+      if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
+      if (activeTab === "delta") return deltaIntersect;
+      return binanceIntersect;
+    }
     // NEW: LB-AllUp pool (formerly "LittleBelow - Ladder" left-nav item)
     if (showLBAllUp && activePattern === "littlebelow") {
       const binanceIntersect = allResults
@@ -796,7 +827,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
     showOutsideCPRCompressed || showOutsideCPReXHrL3U3AU4 || showInsideCPRExpanded || showInsideCPRNarrow || showInsideCPRCoU4L3 ||
     showBigBelowPMiniPL3 || showBigBelowPMiniRising || showExpU3LtPU4 || showBigBeloweXLoL3U4AU4 || showBigBelowL1LtPL4 || showL1LtPL4CprLtPL4 || 
     showBigAbovePL34CL4 || showBAComp || showHAU1 || showHAU1CprAbovePU4 || showHAU1L1AbovePU4 || showHAU1PWideAbove || showHRHAL || showHA55HrL4U34FAU4 || showLBCmprss || showLBC34 || showLBE11 || showLBC2L2U2 ||
-    showLBBothTiny || showLBAllUp || showExpU4PU4 || showExpU3PU3 ||
+    showLBBothTiny || showLBAllUp || showExpU4PU4 || showExpU3PU3 || showOBNLoL4U4 || showOBWLoL4U4 ||
     !!pivotLevelFilter || !!widthFilter || !!pdhPdlFilter;
 
   return (
@@ -904,6 +935,16 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 <div className="text-xs font-semibold text-sky-400 mb-1">Expanded</div>
                 <div className="text-xs text-muted-foreground">Todays U3 &gt; Prev U4/Todays L3 &lt; Prev L4 , today&apos;s CPR is Narrow</div>
               </>
+            ) : showOBNLoL4U4 && activePattern === "overlapping-lower" ? (
+              <>
+                <div className="text-xs font-semibold text-cyan-400 mb-1">Overlap Lower, Narrow</div>
+                <div className="text-xs text-muted-foreground">Today&apos;s R4 inside Prev R3/R4, Prev S4 inside Today&apos;s S3/S4, today&apos;s CPR Narrow, Compression &gt; 50%</div>
+              </>
+            ) : showOBWLoL4U4 && activePattern === "overlapping-lower" ? (
+              <>
+                <div className="text-xs font-semibold text-rose-400 mb-1">Overlap Lower, Wide</div>
+                <div className="text-xs text-muted-foreground">Today&apos;s R4 inside Prev R3/R4, Prev S4 inside Today&apos;s S3/S4, today&apos;s CPR Wide, Compression &gt; 50%</div>
+              </>
             ) : showExpU3LtPU4 && activePattern === "structure-bigbelow" ? (
               <>
                 <div className="text-xs font-semibold text-rose-400 mb-1">Expanded</div>
@@ -992,6 +1033,16 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
               <>
                 <div className="text-xs font-semibold text-emerald-400 mb-1">Target</div>
                 <div className="text-xs text-muted-foreground">These coins have the potential to go farAbove U4</div>
+              </>
+            ) : showOBNLoL4U4 && activePattern === "overlapping-lower" ? (
+              <>
+                <div className="text-xs font-semibold text-emerald-400 mb-1">Target</div>
+                <div className="text-xs text-muted-foreground">Compressed structure with today&apos;s CPR Narrow — bullish continuation to U4</div>
+              </>
+            ) : showOBWLoL4U4 && activePattern === "overlapping-lower" ? (
+              <>
+                <div className="text-xs font-semibold text-emerald-400 mb-1">Target</div>
+                <div className="text-xs text-muted-foreground">Same structure but today&apos;s CPR Wide — bullish continuation to U4</div>
               </>
             ) : showExpU3LtPU4 && activePattern === "structure-bigbelow" ? (
               <>
@@ -1234,6 +1285,12 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
               {showExpU3PU3 && activePattern === "overlapping-lower" && (
                 <span className="ml-1 text-sky-400">(Exp-U3&gt;pU4)</span>
               )}
+              {showOBNLoL4U4 && activePattern === "overlapping-lower" && (
+                <span className="ml-1 text-cyan-400">(OBN-LoL4U4-U4)</span>
+              )}
+              {showOBWLoL4U4 && activePattern === "overlapping-lower" && (
+                <span className="ml-1 text-rose-400">(OBW-LoL4U4-L4)</span>
+              )}
               {pivotLevelFilter && (
                 <span className="ml-1 text-foreground">(Pivot Level: {pivotLevelFilter})</span>
               )}
@@ -1286,6 +1343,8 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 setShowLBAllUp(false);
                 setShowExpU4PU4(false);
                 setShowExpU3PU3(false);
+                setShowOBNLoL4U4(false);
+                setShowOBWLoL4U4(false);
                 // NOTE: Pivot Level / Width / PDH-PDL filters are intentionally NOT reset here —
                 // they now persist across "Show All" toggles and stay applied on top of it.
               }}
@@ -1497,7 +1556,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
             )}
             {activePattern === "overlapping-lower" && !showAll && (
               <button
-                onClick={() => { setShowExpU4PU4((v) => !v); setShowExpU3PU3(false); }}
+                onClick={() => { setShowExpU4PU4((v) => !v); setShowExpU3PU3(false); setShowOBNLoL4U4(false); setShowOBWLoL4U4(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showExpU4PU4
                     ? "border-emerald-400 text-emerald-400"
@@ -1511,7 +1570,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
             {/* NEW: Exp-U3>pU4 button — Overlapping Lower, placed right after eXL4U4 */}
             {activePattern === "overlapping-lower" && !showAll && (
               <button
-                onClick={() => { setShowExpU3PU3((v) => !v); setShowExpU4PU4(false); }}
+                onClick={() => { setShowExpU3PU3((v) => !v); setShowExpU4PU4(false); setShowOBNLoL4U4(false); setShowOBWLoL4U4(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showExpU3PU3
                     ? "border-sky-400 text-sky-400"
@@ -1520,6 +1579,34 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 title="U3 > pU4/L3 < pL4 ,CPR Narrow: Target:AU4"
               >
                 {showExpU3PU3 ? "✕ Exp-U3>pU4" : "Exp-U3>pU4"}
+              </button>
+            )}
+            {/* NEW: OBN-LoL4U4-U4 button — Overlapping Lower, placed next to Exp-U3>pU4 */}
+            {activePattern === "overlapping-lower" && !showAll && (
+              <button
+                onClick={() => { setShowOBNLoL4U4((v) => !v); setShowExpU4PU4(false); setShowExpU3PU3(false); setShowOBWLoL4U4(false); }}
+                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                  showOBNLoL4U4
+                    ? "border-cyan-400 text-cyan-400"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+                title="Overlap Lower + today's CPR Narrow + LoL4U4 structure, Compression > 50%: Target:U4"
+              >
+                {showOBNLoL4U4 ? "✕ OBN-LoL4U4-U4" : "OBN-LoL4U4-U4"}
+              </button>
+            )}
+            {/* NEW: OBW-LoL4U4-L4 button — Overlapping Lower, placed next to OBN-LoL4U4-U4 */}
+            {activePattern === "overlapping-lower" && !showAll && (
+              <button
+                onClick={() => { setShowOBWLoL4U4((v) => !v); setShowExpU4PU4(false); setShowExpU3PU3(false); setShowOBNLoL4U4(false); }}
+                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                  showOBWLoL4U4
+                    ? "border-rose-400 text-rose-400"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+                title="Overlap Lower + today's CPR Wide + LoL4U4 structure, Compression > 50%: Target:U4"
+              >
+                {showOBWLoL4U4 ? "✕ OBW-LoL4U4-L4" : "OBW-LoL4U4-L4"}
               </button>
             )}
             {activePattern === "outside-cpr" && !showAll && (

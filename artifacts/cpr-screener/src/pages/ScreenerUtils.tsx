@@ -356,6 +356,26 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.todayCPR.r3 > r.prevCPR.r4 &&
         r.todayCPR.s3 < r.prevCPR.s4 && r.compressionRatio > 50
       );
+    // NEW: OBN-LoL4U4-U4 — Overlapping Lower, Narrow variant:
+    // Overlap Lower + today's CPR Narrow + LoL4U4 structure (today's R4 inside
+    // prev R3/R4, prev S4 inside today's S3/S4), compressionRatio > 50%.
+    case "OBN-LoL4U4-U4":
+      return (
+        r.overlapLower &&
+        r.narrowCPR &&
+        r.LoL4U4 &&
+        r.compressionRatio > 50
+      );
+    // NEW: OBW-LoL4U4-L4 — Overlapping Lower, Wide variant (sibling of
+    // OBN-LoL4U4-U4): same LoL4U4 structure, but today's CPR Wide instead
+    // of Narrow, compressionRatio > 50%.
+    case "OBW-LoL4U4-L4":
+      return (
+        r.overlapLower &&
+        r.strWideCPR &&
+        r.LoL4U4 &&
+        r.compressionRatio > 50
+      );
     case "inside-cpr":
       return r.todayCPR.tc < r.prevCPR.tc && r.todayCPR.bc > r.prevCPR.bc;
     case "inside-cpr-expanded":
