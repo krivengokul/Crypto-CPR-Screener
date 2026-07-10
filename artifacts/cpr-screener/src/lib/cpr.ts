@@ -73,7 +73,8 @@ export interface CPRResult {
   cOLoL4U3: boolean;
   eXLoL3U4: boolean;
   eXL4U4: boolean;
-  LoL4U4:boolean;      
+  LoL4U4:boolean;
+  eXHiU1L3: boolean;
   passes: boolean;
   currentPrice: number;
   openPrice: number;
@@ -222,7 +223,9 @@ export function analyzeCPR(
   const eXL4U4 = (prevCPR.r4 > todayCPR.r3 && prevCPR.r4 < todayCPR.r4) &&
                   (prevCPR.s4 > todayCPR.s4 && prevCPR.s4 < todayCPR.s3);
   const LoL4U4   = (todayCPR.r4 < prevCPR.r4 && todayCPR.r4 > prevCPR.r3) &&
-                  (prevCPR.s4 > todayCPR.s4 && prevCPR.s4 < todayCPR.s3);            
+                  (prevCPR.s4 > todayCPR.s4 && prevCPR.s4 < todayCPR.s3);
+  const eXHiU1L3 = (prevCPR.r4 < todayCPR.r1 && prevCPR.r4 > todayCPR.tc) &&
+                     (prevCPR.s4 > todayCPR.s3 && prevCPR.s4 < todayCPR.s2);
   const PL12CL23 = (todayCPR.s2 < prevCPR.s1 && todayCPR.s3 > prevCPR.s2); //LA-PL12CL23:2PL4;
   const PU12CU23  =  (prevCPR.r1 < todayCPR.r2 && prevCPR.r2 > todayCPR.r3); //PU12CU23
   const PU23CU34  =  (prevCPR.r2 < todayCPR.r3 && prevCPR.r3 > todayCPR.r4); //PU23CU34
@@ -310,6 +313,7 @@ export function analyzeCPR(
     eXLoL3U4,
     eXL4U4,
     LoL4U4,
+    eXHiU1L3,
     passes: cprRising && cprNarrowing,
     currentPrice,
     openPrice: openPrice ?? todayCandle.open,

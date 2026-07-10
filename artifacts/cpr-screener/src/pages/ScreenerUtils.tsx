@@ -274,6 +274,8 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.todayCPR.widthPct < 0.1 &&
         r.prevCPR.widthPct > 0.1 && r.prevCPR.widthPct < 1
       );
+    case "eXHiU1L3":
+      return r.cprRising && r.narrowCPR && r.eXHiU1L3;
     case "littlebelow":
       return r.cprFalling && r.narrowCPR;
     case "lb-2tiny":
