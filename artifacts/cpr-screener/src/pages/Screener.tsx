@@ -123,6 +123,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
   // NEW: OBN-LoL4U4-U4 / OBW-LoL4U4-L4 filter state (Overlapping Lower), placed next to Exp-U3>pU4
   const [showOBNLoL4U4, setShowOBNLoL4U4] = useState(false);
   const [showOBWLoL4U4, setShowOBWLoL4U4] = useState(false);
+  const [showeXHiL4U234, setShoweXHiL4U234] = useState(false);
   const [pivotLevelFilter, setPivotLevelFilter] = useState<PivotLevelInfo["label"] | null>(null);
   const [widthFilter, setWidthFilter] = useState<WidthFilter>(null);
   // NEW: PDH/PDL filter — independent of activePattern, mutually exclusive (like pivot/width filters).
@@ -372,7 +373,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
     if (activePattern !== "inside-cpr") { setShowInsideCPRExpanded(false); setShowInsideCPRNarrow(false); setShowInsideCPRCoU4L3(false); }
     if (activePattern !== "overlapping-lower") { setShowExpU4PU4(false); setShowExpU3PU3(false); setShowOBNLoL4U4(false); setShowOBWLoL4U4(false); }
     if (activePattern !== "structure-bigbelow") { setShowBigBelowPMiniPL3(false); setShowBigBelowPMiniRising(false); pMiniRisingAlertedRef.current.clear(); setShowExpU3LtPU4(false); setShowBigBeloweXLoL3U4AU4(false); setShowBigBelowL1LtPL4(false); setShowL1LtPL4CprLtPL4(false); }
-    if (activePattern !== "structure-bigabove") { setShowBigAbovePL34CL4(false); setShowBAComp(false); setShowHAU1(false); setShowHAU1CprAbovePU4(false); setShowHAU1L1AbovePU4(false); setShowHAU1PWideAbove(false); setShowHRHAL(false); setShowHA55HrL4U34FAU4(false);}
+    if (activePattern !== "structure-bigabove") { setShowBigAbovePL34CL4(false); setShowBAComp(false); setShowHAU1(false); setShowHAU1CprAbovePU4(false); setShowHAU1L1AbovePU4(false); setShowHAU1PWideAbove(false); setShowHRHAL(false); setShowHA55HrL4U34FAU4(false); setShoweXHiL4U234(false)}
     // Reset LB Compressed / LB-C34 / lbE11-cOLoL3U2-PU4 / LB-cO2-L2U2 / LB-BothTiny / LB-AllUp when leaving littlebelow
     if (activePattern !== "littlebelow") { setShowLBCmprss(false); setShowLBC34(false); setShowLBE11(false); setShowLBC2L2U2(false); setShowLBBothTiny(false); setShowLBAllUp(false); }
   }, [activePattern, allResults, deltaAllResults]);
@@ -607,6 +608,14 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
       let deltaIntersect = deltaAllResults
         .filter((r) => passesPattern(r, "HA-U1>PU4"))
         .map((r) => ({ ...r, source: "delta" as const }));
+    if (showeXHiL4U234 && activePattern === "structure-bigabove") {
+      let binanceIntersect = allResults
+        .filter((r) => passesPattern(r, "eXHi-L4U234-U4"))
+        .map((r) => ({ ...r, source: "binance" as const }));
+      let deltaIntersect = deltaAllResults
+        .filter((r) => passesPattern(r, "eXHi-L4U234-U4"))
+        .map((r) => ({ ...r, source: "delta" as const }));
+    
       // NEW: pWideAbove sub-toggle — restrict to rows where prev day's CPR is
       // wider than pp-CPR AND prev day's CPR sits above pp-CPR. Independent
       // of the CPR>PU4 / L1>PU4 chain below — both can be active together.
@@ -829,7 +838,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
     showOutsideCPRCompressed || showOutsideCPReXHrL3U3AU4 || showInsideCPRExpanded || showInsideCPRNarrow || showInsideCPRCoU4L3 ||
     showBigBelowPMiniPL3 || showBigBelowPMiniRising || showExpU3LtPU4 || showBigBeloweXLoL3U4AU4 || showBigBelowL1LtPL4 || showL1LtPL4CprLtPL4 || 
     showBigAbovePL34CL4 || showBAComp || showHAU1 || showHAU1CprAbovePU4 || showHAU1L1AbovePU4 || showHAU1PWideAbove || showHRHAL || showHA55HrL4U34FAU4 || showLBCmprss || showLBC34 || showLBE11 || showLBC2L2U2 ||
-    showLBBothTiny || showLBAllUp || showExpU4PU4 || showExpU3PU3 || showOBNLoL4U4 || showOBWLoL4U4 ||
+    showLBBothTiny || showLBAllUp || showExpU4PU4 || showExpU3PU3 || showOBNLoL4U4 || showOBWLoL4U4 || showeXHiL4U234 ||
     !!pivotLevelFilter || !!widthFilter || !!pdhPdlFilter;
 
   return (
@@ -1347,6 +1356,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 setShowExpU3PU3(false);
                 setShowOBNLoL4U4(false);
                 setShowOBWLoL4U4(false);
+                setShoweXHiL4U234(false);
                 // NOTE: Pivot Level / Width / PDH-PDL filters are intentionally NOT reset here —
                 // they now persist across "Show All" toggles and stay applied on top of it.
               }}
@@ -1812,7 +1822,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
             )}
             {activePattern === "structure-bigabove" && !showAll && (
               <button
-                onClick={() => { setShowBigAbovePL34CL4((v) => !v); setShowBAComp(false); setShowHAU1(false); setShowHAU1CprAbovePU4(false); setShowHAU1L1AbovePU4(false); setShowHAU1PWideAbove(false); setShowHRHAL(false); }}
+                onClick={() => { setShowBigAbovePL34CL4((v) => !v); setShowBAComp(false); setShowHAU1(false); setShowHAU1CprAbovePU4(false); setShowHAU1L1AbovePU4(false); setShowHAU1PWideAbove(false); setShowHRHAL(false); setShoweXHiL4U234(false);}}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showBigAbovePL34CL4
                     ? "border-foreground text-foreground"
@@ -1826,7 +1836,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
             {/* NEW: BAComp-l3>pl1/u3>pu1 button — inside BigCPR Above, next to Show All */}
             {activePattern === "structure-bigabove" && !showAll && (
               <button
-                onClick={() => { setShowBAComp((v) => !v); setShowBigAbovePL34CL4(false); setShowHAU1(false); setShowHAU1CprAbovePU4(false); setShowHAU1L1AbovePU4(false); setShowHAU1PWideAbove(false); setShowHRHAL(false); }}
+                onClick={() => { setShowBAComp((v) => !v); setShowBigAbovePL34CL4(false); setShowHAU1(false); setShowHAU1CprAbovePU4(false); setShowHAU1L1AbovePU4(false); setShowHAU1PWideAbove(false); setShowHRHAL(false); setShoweXHiL4U234(false);}}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showBAComp
                     ? "border-sky-400 text-sky-400"
@@ -1835,6 +1845,20 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 title="BigAbove: Compressed inside PU2: Target:U4"
               >
                 {showBAComp ? "✕ Inside PUL2" : "Inside PUL2"}
+              </button>
+            )}
+            {/* NEW: eXHi-L4U234-U4 button — inside BigCPR Above, next to Show All */}
+            {activePattern === "structure-bigabove" && !showAll && (
+              <button
+                onClick={() => { setShoweXHiL4U234((v) => !v); setShowBAComp(false); setShowBigAbovePL34CL4(false); setShowHAU1(false); setShowHAU1CprAbovePU4(false); setShowHAU1L1AbovePU4(false); setShowHAU1PWideAbove(false); setShowHRHAL(false);}}
+                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                  showeXHiL4U234
+                    ? "border-violet-400 text-violet-400"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+                title="BigAbove: eXHi-L4U234: Target:U4"
+              >
+                {showeXHiL4U234 ? "✕ eXHi-L4U234-U4" : "eXHi-L4U234-U4"}
               </button>
             )}
             {/* NEW: U1>PU4 button — inside BigCPR Above, next to Inside PUL2 (moved from left-nav) */}
@@ -1848,6 +1872,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                   setShowHAU1L1AbovePU4(false);
                   setShowHAU1PWideAbove(false);
                   setShowHRHAL(false);
+                  setShoweXHiL4U234(false);
                 }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showHAU1
