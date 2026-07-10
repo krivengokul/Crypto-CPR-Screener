@@ -533,9 +533,14 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
  * generic "Lower" (only one of cOLoL2U1 / cOLoL4U3 / neither is ever true
  * when srLower is the active bucket). Checked after srHigher and before the
  * final generic "Lower" fallback.
+ *
+ * NEW: LoL4U4 — a further sub-classification alongside cOLoL2U1 / cOLoL4U3,
+ * computed in cpr.ts (today's R4 inside prev R3/R4 AND prev S4 inside
+ * today's S3/S4). Checked after cOLoL4U3 and before the final generic
+ * "Lower" fallback, mirroring the same pattern.
  */
 export interface PivotLevelInfo {
-  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "cOLoL2U1" | "cOLoL4U3" | "Lower";
+  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "cOLoL2U1" | "cOLoL4U3" | "LoL4U4" | "Lower";
   classes: string;
 }
 
@@ -555,12 +560,15 @@ export function getPivotLevel(r: CPRResult): PivotLevelInfo {
   if (r.srHigher) {
     return { label: "Higher", classes: "bg-green-500/10 text-green-400 border-green-500/20" };
   }
-  // NEW: cOLoL2U1 / cOLoL4U3 — sub-classifications of Lower
+  // NEW: cOLoL2U1 / cOLoL4U3 / LoL4U4 — sub-classifications of Lower
   if (r.cOLoL2U1) {
     return { label: "cOLoL2U1", classes: "bg-rose-500/10 text-rose-400 border-rose-500/20" };
   }
   if (r.cOLoL4U3) {
     return { label: "cOLoL4U3", classes: "bg-amber-500/10 text-amber-400 border-amber-500/20" };
+  }
+  if (r.LoL4U4) {
+    return { label: "LoL4U4", classes: "bg-lime-500/10 text-lime-400 border-lime-500/20" };
   }
   return { label: "Lower", classes: "bg-destructive/10 text-destructive border-destructive/20" };
 }

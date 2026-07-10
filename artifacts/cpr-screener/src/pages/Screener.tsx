@@ -776,6 +776,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
       if (!pivotLevelFilter) return true;
       if (pivotLevelFilter === "cOLoL2U1") return r.cOLoL2U1;
       if (pivotLevelFilter === "cOLoL4U3") return r.cOLoL4U3;
+      if (pivotLevelFilter === "LoL4U4") return r.LoL4U4;
       return getPivotLevel(r)?.label === pivotLevelFilter;
     })
     .filter((r) => matchesWidthFilter(r, widthFilter))
@@ -1920,6 +1921,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                   { label: "Lower", active: "border-destructive text-destructive" },
                   { label: "cOLoL2U1", active: "border-rose-400 text-rose-400" },
                   { label: "cOLoL4U3", active: "border-amber-400 text-amber-400" },
+                  { label: "LoL4U4", active: "border-lime-400 text-lime-400" },
                 ] as { label: PivotLevelInfo["label"]; active: string }[]
               ).map(({ label, active }) => (
                 <button
@@ -2157,14 +2159,17 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                                 );
                               })()}
                             </div>
-                            {/* NEW: cOLoL2U1 / cOLoL4U3 badges — second row, Pivot Level column */}
-                            {(r.cOLoL2U1 || r.cOLoL4U3) && (
+                            {/* NEW: cOLoL2U1 / cOLoL4U3 / LoL4U4 badges — second row, Pivot Level column */}
+                            {(r.cOLoL2U1 || r.cOLoL4U3 || r.LoL4U4) && (
                               <div className="flex flex-wrap gap-1 mt-1">
                                 {r.cOLoL2U1 && (
                                   <span className="text-xs px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 font-medium">cOLoL2U1</span>
                                 )}
                                 {r.cOLoL4U3 && (
                                   <span className="text-xs px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium">cOLoL4U3</span>
+                                )}
+                                {r.LoL4U4 && (
+                                  <span className="text-xs px-1.5 py-0.5 rounded bg-lime-500/10 text-lime-400 border border-lime-500/20 font-medium">LoL4U4</span>
                                 )}
                               </div>
                             )}
@@ -2197,9 +2202,16 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                               {passesPattern(r, "outside-cpr") && activePattern === "outside-cpr" && (
                                 <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20 font-medium">Outside</span>
                               )}
-                              {/* Overlap badge for overlapping-lower page */}
-                              {passesPattern(r, "overlapping-lower") && activePattern === "overlapping-lower" && (
-                                <span className="text-xs px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-medium">Overlap</span>
+                              {/* Overlap badge — renamed Overlap-Lo / Overlap-Hi based on condition */}
+                              {r.overlapLower && (activePattern === "overlapping-lower" || activePattern === "overlapping-higher") && (
+                                <span className="text-xs px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-medium">Overlap-Lo</span>
+                              )}
+                              {r.overlapHigher && (activePattern === "overlapping-lower" || activePattern === "overlapping-higher") && (
+                                <span className="text-xs px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20 font-medium">Overlap-Hi</span>
+                              )}
+                              {/* NEW: Wide badge — Overlap Lower CPR column, when today's CPR is wider than prev day's */}
+                              {r.overlapLower && r.strWideCPR && activePattern === "overlapping-lower" && (
+                                <span className="text-xs px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-medium">Wide</span>
                               )}
                               {r.narrowCPR && (
                                 <span className="text-xs px-1.5 py-0.5 rounded bg-chart-3/10 text-chart-3 border border-chart-3/20 font-medium">Narrow</span>
@@ -2207,7 +2219,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                               {!r.cprRising &&
                                 !r.cprFalling &&
                                 !r.narrowCPR &&
-                                !(passesPattern(r, activePattern) && ["inside-cpr", "outside-cpr", "overlapping-lower"].includes(activePattern)) && (
+                                !(passesPattern(r, activePattern) && ["inside-cpr", "outside-cpr", "overlapping-lower", "overlapping-higher"].includes(activePattern)) && (
                                 <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">Skip</span>
                               )}
                             </div>
