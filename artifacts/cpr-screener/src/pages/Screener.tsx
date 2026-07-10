@@ -123,6 +123,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
   // NEW: OBN-LoL4U4-U4 / OBW-LoL4U4-L4 filter state (Overlapping Lower), placed next to Exp-U3>pU4
   const [showOBNLoL4U4, setShowOBNLoL4U4] = useState(false);
   const [showOBWLoL4U4, setShowOBWLoL4U4] = useState(false);
+  // NEW: eXHi-L4U234-U4 filter state (BigCPR Above)
   const [showeXHiL4U234, setShoweXHiL4U234] = useState(false);
   const [pivotLevelFilter, setPivotLevelFilter] = useState<PivotLevelInfo["label"] | null>(null);
   const [widthFilter, setWidthFilter] = useState<WidthFilter>(null);
@@ -600,6 +601,23 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
       if (activeTab === "delta") return deltaIntersect;
       return binanceIntersect;
     }
+    // NEW: eXHi-L4U234-U4 pool — BigCPR Above, independent toggle next to
+    // Show All. FIXED: this used to be nested inside the "U1>PU4" block
+    // below (missing its own closing brace), which both broke this pool's
+    // filtering and silently rewired the pWideAbove / CPR>PU4 / L1>PU4
+    // sub-toggles to apply to THIS pool's binance/deltaIntersect variables
+    // instead of the U1>PU4 pool's. Split into its own standalone block.
+    if (showeXHiL4U234 && activePattern === "structure-bigabove") {
+      const binanceIntersect = allResults
+        .filter((r) => passesPattern(r, "eXHi-L4U234-U4"))
+        .map((r) => ({ ...r, source: "binance" as const }));
+      const deltaIntersect = deltaAllResults
+        .filter((r) => passesPattern(r, "eXHi-L4U234-U4"))
+        .map((r) => ({ ...r, source: "delta" as const }));
+      if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
+      if (activeTab === "delta") return deltaIntersect;
+      return binanceIntersect;
+    }
     // NEW: U1>PU4 pool — BigCPR Above, today's R1 above prev day's R4
     if (showHAU1 && activePattern === "structure-bigabove") {
       let binanceIntersect = allResults
@@ -608,14 +626,6 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
       let deltaIntersect = deltaAllResults
         .filter((r) => passesPattern(r, "HA-U1>PU4"))
         .map((r) => ({ ...r, source: "delta" as const }));
-    if (showeXHiL4U234 && activePattern === "structure-bigabove") {
-      let binanceIntersect = allResults
-        .filter((r) => passesPattern(r, "eXHi-L4U234-U4"))
-        .map((r) => ({ ...r, source: "binance" as const }));
-      let deltaIntersect = deltaAllResults
-        .filter((r) => passesPattern(r, "eXHi-L4U234-U4"))
-        .map((r) => ({ ...r, source: "delta" as const }));
-    
       // NEW: pWideAbove sub-toggle — restrict to rows where prev day's CPR is
       // wider than pp-CPR AND prev day's CPR sits above pp-CPR. Independent
       // of the CPR>PU4 / L1>PU4 chain below — both can be active together.
@@ -987,6 +997,11 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 <div className="text-xs font-semibold text-sky-400 mb-1">U1 &gt; Previous U4</div>
                 <div className="text-xs text-muted-foreground">Todays U1&gt; Previous U4</div>
               </>
+            ) : showeXHiL4U234 && activePattern === "structure-bigabove" ? (
+              <>
+                <div className="text-xs font-semibold text-violet-400 mb-1">eXHi-L4U234-U4</div>
+                <div className="text-xs text-muted-foreground">Prev S4 inside today&apos;s S3/S4, prev R4 inside today&apos;s R2/R3, today&apos;s CPR expanded above prev</div>
+              </>
             ) : showOutsideCPReXHrL3U3AU4 && activePattern === "outside-cpr" ? (
               <>
                 <div className="text-xs font-semibold text-rose-400 mb-1">eXHrL3U3-AU4</div>
@@ -1084,6 +1099,11 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
               <>
                 <div className="text-xs font-semibold text-emerald-400 mb-1">Breakout</div>
                 <div className="text-xs text-muted-foreground">Today&apos;s R1 has broken above yesterday&apos;s R4 — strong bullish momentum</div>
+              </>
+            ) : showeXHiL4U234 && activePattern === "structure-bigabove" ? (
+              <>
+                <div className="text-xs font-semibold text-emerald-400 mb-1">Target</div>
+                <div className="text-xs text-muted-foreground">Expanded structure above prev day&apos;s range — continuation toward U4</div>
               </>
             ) : showOutsideCPReXHrL3U3AU4 && activePattern === "outside-cpr" ? (
               <>
@@ -1271,6 +1291,9 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
               )}
               {showHAU1PWideAbove && activePattern === "structure-bigabove" && (
                 <span className="ml-1 text-fuchsia-400">(pWideAbove)</span>
+              )}
+              {showeXHiL4U234 && activePattern === "structure-bigabove" && (
+                <span className="ml-1 text-violet-400">(eXHi-L4U234-U4)</span>
               )}
               {showLBCmprss && activePattern === "littlebelow" && (
                 <span className="ml-1 text-violet-400">(LB-Compressed: L4&gt;PL3/U4&lt;PU2)</span>
@@ -2186,7 +2209,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                                 );
                               })()}
                             </div>
-                            {/* NEW: cOLoL2U1 / cOLoL4U3 / LoL4U4 badges — second row, Pivot Level column */}
+                            {/* NEW: cOLoL2U1 / cOLoL4U3 / LoL4U4 / eXHiL4U234 badges — second row, Pivot Level column */}
                             {(r.cOLoL2U1 || r.cOLoL4U3 || r.LoL4U4 || r.eXHiL4U234) && (
                               <div className="flex flex-wrap gap-1 mt-1">
                                 {r.cOLoL2U1 && (
