@@ -187,22 +187,6 @@ export function getChartUrl(symbol: string, source: "binance" | "delta"): string
 }
 
 /**
- * EXP_U4APU4L4BPL4 — shared condition for the "Exp-U4>pU4" pattern:
- * previous day's R4 sits between today's R3 and R4 (U4 Above prev U4),
- * and previous day's S4 sits between today's S4 and S3 (L4 Below prev L4).
- * Note: hyphens aren't valid in JS/TS identifiers, so underscores replace them
- * in this variable's name.
- */
-export function EXP_U4APU4L4BPL4(r: CPRResult): boolean {
-  return (
-    r.prevCPR.r4 > r.todayCPR.r3 &&
-    r.prevCPR.r4 < r.todayCPR.r4 &&
-    r.prevCPR.s4 > r.todayCPR.s4 &&
-    r.prevCPR.s4 < r.todayCPR.s3
-  );
-}
-
-/**
  * CPR>PU4 — sub-toggle condition for the "U1>PU4" filter (BigCPR Above):
  * today's BC sits above previous day's R4.
  */
@@ -354,10 +338,10 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.cprFalling && r.strWideCPR && r.eXLoL3U4 &&
         r.todayCPR.widthPct > 0.5 && r.todayCPR.widthPct < 2 && r.prevCPR.widthPct < 0.5
       );
-    case "Exp-U4>pU4":
+      //EXP_U4APU4L4BPL4
+    case "eXL4U4":
       return (
-        r.overlapLower &&
-        EXP_U4APU4L4BPL4(r) &&
+        r.overlapLower && r.eXL4U4 &&
         r.todayCPR.widthPct >= 0.1 &&
         r.todayCPR.widthPct < 0.5
       );

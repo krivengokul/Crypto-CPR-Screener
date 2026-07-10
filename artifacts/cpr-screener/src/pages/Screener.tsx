@@ -689,11 +689,11 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
     }
     if (showExpU4PU4 && activePattern === "overlapping-lower") {
       const binanceIntersect = allResults
-        .filter((r) => passesPattern(r, "Exp-U4>pU4"))
+        .filter((r) => passesPattern(r, "eXL4U4"))
         .map((r) => ({ ...r, source: "binance" as const }));
 
       const deltaIntersect = deltaAllResults
-        .filter((r) => passesPattern(r, "Exp-U4>pU4"))
+        .filter((r) => passesPattern(r, "eXL4U4"))
         .map((r) => ({ ...r, source: "delta" as const }));
 
       if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
@@ -1505,10 +1505,10 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 }`}
                 title="Prev R4 between today's R3/R4 and Prev S4 between today's S3/S4 with today's CPR Mini"
               >
-                {showExpU4PU4 ? "✕ Exp-U4>pU4" : "Exp-U4>pU4"}
+                {showExpU4PU4 ? "✕ eXL4U4" : "eXL4U4"}
               </button>
             )}
-            {/* NEW: Exp-U3>pU4 button — Overlapping Lower, placed right after Exp-U4>pU4 */}
+            {/* NEW: Exp-U3>pU4 button — Overlapping Lower, placed right after eXL4U4 */}
             {activePattern === "overlapping-lower" && !showAll && (
               <button
                 onClick={() => { setShowExpU3PU3((v) => !v); setShowExpU4PU4(false); }}
