@@ -124,6 +124,10 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
   // NEW: OBN-LoL4U4-U4 / OBW-LoL4U4-L4 filter state (Overlapping Lower), placed next to Exp-U3>pU4
   const [showOBNLoL4U4, setShowOBNLoL4U4] = useState(false);
   const [showOBWLoL4U4, setShowOBWLoL4U4] = useState(false);
+  // NEW: eXHi-L4U4-U4 filter state (Overlapping Higher) — counterpart of
+  // eXLo-L4U4-U4 (Overlapping Lower), same r.eXL4U4 boolean, gated on
+  // r.overlapHigher instead of r.overlapLower.
+  const [showOBHiExL4U4, setShowOBHiExL4U4] = useState(false);
   // NEW: eXHi-L4U234-U4 filter state (BigCPR Above)
   const [showeXHiL4U234, setShoweXHiL4U234] = useState(false);
   const [pivotLevelFilter, setPivotLevelFilter] = useState<PivotLevelInfo["label"] | null>(null);
@@ -374,6 +378,8 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
     if (activePattern !== "outside-cpr") { setShowOutsideCPRCompressed(false); setShowOutsideCPReXHrL3U3AU4(false); }
     if (activePattern !== "inside-cpr") { setShowInsideCPRExpanded(false); setShowInsideCPRNarrow(false); setShowInsideCPRCoU4L3(false); }
     if (activePattern !== "overlapping-lower") { setShowExpU4PU4(false); setShowExpU3PU3(false); setShowOBNLoL4U4(false); setShowOBWLoL4U4(false); }
+    // NEW: reset eXHi-L4U4-U4 toggle when leaving Overlapping Higher
+    if (activePattern !== "overlapping-higher") { setShowOBHiExL4U4(false); }
     if (activePattern !== "structure-bigbelow") { setShowBigBelowPMiniPL3(false); setShowBigBelowPMiniRising(false); pMiniRisingAlertedRef.current.clear(); setShowExpU3LtPU4(false); setShowBigBeloweXLoL3U4AU4(false); setShowBigBelowL1LtPL4(false); setShowL1LtPL4CprLtPL4(false); }
     if (activePattern !== "structure-bigabove") { setShowBigAbovePL34CL4(false); setShowBAComp(false); setShowHAU1(false); setShowHAU1CprAbovePU4(false); setShowHAU1L1AbovePU4(false); setShowHAU1PWideAbove(false); setShowHRHAL(false); setShowHA55HrL4U34FAU4(false); setShoweXHiL4U234(false); }
     // Reset LB Compressed / LB-C34 / lbE11-cOLoL3U2-PU4 / LB-cO2-L2U2 / LB-BothTiny / LB-AllUp when leaving littlebelow
@@ -712,11 +718,27 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
     }
     if (showExpU4PU4 && activePattern === "overlapping-lower") {
       const binanceIntersect = allResults
-        .filter((r) => passesPattern(r, "eXL4U4"))
+        .filter((r) => passesPattern(r, "eXLo-L4U4-U4"))
         .map((r) => ({ ...r, source: "binance" as const }));
 
       const deltaIntersect = deltaAllResults
-        .filter((r) => passesPattern(r, "eXL4U4"))
+        .filter((r) => passesPattern(r, "eXLo-L4U4-U4"))
+        .map((r) => ({ ...r, source: "delta" as const }));
+
+      if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
+      if (activeTab === "delta") return deltaIntersect;
+      return binanceIntersect;
+    }
+    // NEW: eXHi-L4U4-U4 pool — Overlapping Higher counterpart of
+    // eXLo-L4U4-U4 (Overlapping Lower). Same r.eXL4U4 boolean, gated on
+    // r.overlapHigher and the pSmall(prev)/Tiny(today) width bands.
+    if (showOBHiExL4U4 && activePattern === "overlapping-higher") {
+      const binanceIntersect = allResults
+        .filter((r) => passesPattern(r, "eXHi-L4U4-U4"))
+        .map((r) => ({ ...r, source: "binance" as const }));
+
+      const deltaIntersect = deltaAllResults
+        .filter((r) => passesPattern(r, "eXHi-L4U4-U4"))
         .map((r) => ({ ...r, source: "delta" as const }));
 
       if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
@@ -798,6 +820,9 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
       if (pivotLevelFilter === "cOLoL4U3") return r.cOLoL4U3;
       if (pivotLevelFilter === "LoL4U4") return r.LoL4U4;
       if (pivotLevelFilter === "eXHiL4U234") return r.eXHiL4U234;
+      // NEW: eXL4U4 — independent, section-agnostic Pivot Level flag (see
+      // doc-comment on PivotLevelInfo/getPivotLevel in ScreenerUtils.tsx).
+      if (pivotLevelFilter === "eXL4U4") return r.eXL4U4;
       return getPivotLevel(r)?.label === pivotLevelFilter;
     })
     .filter((r) => matchesWidthFilter(r, widthFilter))
@@ -849,7 +874,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
     showOutsideCPRCompressed || showOutsideCPReXHrL3U3AU4 || showInsideCPRExpanded || showInsideCPRNarrow || showInsideCPRCoU4L3 ||
     showBigBelowPMiniPL3 || showBigBelowPMiniRising || showExpU3LtPU4 || showBigBeloweXLoL3U4AU4 || showBigBelowL1LtPL4 || showL1LtPL4CprLtPL4 || 
     showBigAbovePL34CL4 || showBAComp || showHAU1 || showHAU1CprAbovePU4 || showHAU1L1AbovePU4 || showHAU1PWideAbove || showHRHAL || showHA55HrL4U34FAU4 || showLBCmprss || showLBC34 || showLBE11 || showLBC2L2U2 ||
-    showLBBothTiny || showLBAllUp || showExpU4PU4 || showExpU3PU3 || showOBNLoL4U4 || showOBWLoL4U4 || showeXHiL4U234 ||
+    showLBBothTiny || showLBAllUp || showExpU4PU4 || showExpU3PU3 || showOBNLoL4U4 || showOBWLoL4U4 || showOBHiExL4U4 || showeXHiL4U234 ||
     !!pivotLevelFilter || !!widthFilter || !!pdhPdlFilter;
 
   return (
@@ -967,6 +992,11 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 <div className="text-xs font-semibold text-rose-400 mb-1">Overlap Lower, Wide</div>
                 <div className="text-xs text-muted-foreground">Today&apos;s R4 inside Prev R3/R4, Prev S4 inside Today&apos;s S3/S4, today&apos;s CPR Wide, Compression &gt; 50%</div>
               </>
+            ) : showOBHiExL4U4 && activePattern === "overlapping-higher" ? (
+              <>
+                <div className="text-xs font-semibold text-pink-400 mb-1">eXHi-L4U4-U4</div>
+                <div className="text-xs text-muted-foreground">Overlap Higher — Prev R4 between today&apos;s R3/R4, Prev S4 between today&apos;s S3/S4, Prev CPR pSmall, Today CPR Tiny</div>
+              </>
             ) : showExpU3LtPU4 && activePattern === "structure-bigbelow" ? (
               <>
                 <div className="text-xs font-semibold text-rose-400 mb-1">Expanded</div>
@@ -1070,6 +1100,11 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
               <>
                 <div className="text-xs font-semibold text-emerald-400 mb-1">Target</div>
                 <div className="text-xs text-muted-foreground">Same structure but today&apos;s CPR Wide — bullish continuation to U4</div>
+              </>
+            ) : showOBHiExL4U4 && activePattern === "overlapping-higher" ? (
+              <>
+                <div className="text-xs font-semibold text-emerald-400 mb-1">Target</div>
+                <div className="text-xs text-muted-foreground">Overlap Higher continuation — bullish bias toward U4</div>
               </>
             ) : showExpU3LtPU4 && activePattern === "structure-bigbelow" ? (
               <>
@@ -1315,7 +1350,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 <span className="ml-1 text-blue-400">(LB-AllUp intersection)</span>
               )}
               {showExpU4PU4 && activePattern === "overlapping-lower" && (
-                <span className="ml-1 text-sky-400">(Exp-U4&gt;pU4)</span>
+                <span className="ml-1 text-sky-400">(eXLo-L4U4-U4)</span>
               )}
               {showExpU3PU3 && activePattern === "overlapping-lower" && (
                 <span className="ml-1 text-sky-400">(Exp-U3&gt;pU4)</span>
@@ -1325,6 +1360,9 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
               )}
               {showOBWLoL4U4 && activePattern === "overlapping-lower" && (
                 <span className="ml-1 text-rose-400">(OBW-LoL4U4-L4)</span>
+              )}
+              {showOBHiExL4U4 && activePattern === "overlapping-higher" && (
+                <span className="ml-1 text-pink-400">(eXHi-L4U4-U4)</span>
               )}
               {pivotLevelFilter && (
                 <span className="ml-1 text-foreground">(Pivot Level: {pivotLevelFilter})</span>
@@ -1373,6 +1411,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 setShowExpU3PU3(false);
                 setShowOBNLoL4U4(false);
                 setShowOBWLoL4U4(false);
+                setShowOBHiExL4U4(false);
                 setShoweXHiL4U234(false);
                 // NOTE: Pivot Level / Width / PDH-PDL filters are intentionally NOT reset here —
                 // they now persist across "Show All" toggles and stay applied on top of it.
@@ -1593,10 +1632,10 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 }`}
                 title="Prev R4 between today's R3/R4 and Prev S4 between today's S3/S4 with today's CPR Mini"
               >
-                {showExpU4PU4 ? "✕ eXL4U4" : "eXL4U4"}
+                {showExpU4PU4 ? "✕ eXLo-L4U4-U4" : "eXLo-L4U4-U4"}
               </button>
             )}
-            {/* NEW: Exp-U3>pU4 button — Overlapping Lower, placed right after eXL4U4 */}
+            {/* NEW: Exp-U3>pU4 button — Overlapping Lower, placed right after eXLo-L4U4-U4 */}
             {activePattern === "overlapping-lower" && !showAll && (
               <button
                 onClick={() => { setShowExpU3PU3((v) => !v); setShowExpU4PU4(false); setShowOBNLoL4U4(false); setShowOBWLoL4U4(false); }}
@@ -1636,6 +1675,22 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 title="Overlap Lower + today's CPR Wide + LoL4U4 structure, Compression > 50%: Target:U4"
               >
                 {showOBWLoL4U4 ? "✕ OBW-LoL4U4-L4" : "OBW-LoL4U4-L4"}
+              </button>
+            )}
+            {/* NEW: eXHi-L4U4-U4 button — Overlapping Higher, counterpart of
+                eXLo-L4U4-U4 under Overlapping Lower. Same r.eXL4U4 boolean
+                from cpr.ts, gated on r.overlapHigher + pSmall(prev)/Tiny(today). */}
+            {activePattern === "overlapping-higher" && !showAll && (
+              <button
+                onClick={() => { setShowOBHiExL4U4((v) => !v); }}
+                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                  showOBHiExL4U4
+                    ? "border-pink-400 text-pink-400"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+                title="Overlap Higher: Prev R4 between today's R3/R4, Prev S4 between today's S3/S4, Prev CPR pSmall, Today CPR Tiny"
+              >
+                {showOBHiExL4U4 ? "✕ eXHi-L4U4-U4" : "eXHi-L4U4-U4"}
               </button>
             )}
             {activePattern === "outside-cpr" && !showAll && (
@@ -1966,6 +2021,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                   { label: "cOLoL4U3", active: "border-amber-400 text-amber-400" },
                   { label: "LoL4U4", active: "border-lime-400 text-lime-400" },
                   { label: "eXHiL4U234", active: "border-violet-400 text-violet-400" },
+                  { label: "eXL4U4", active: "border-pink-400 text-pink-400" },
                 ] as { label: PivotLevelInfo["label"]; active: string }[]
               ).map(({ label, active }) => (
                 <button
@@ -2169,8 +2225,8 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                                 );
                               })()}
                             </div>
-                            {/* NEW: cOLoL2U1 / cOLoL4U3 / LoL4U4 / eXHiL4U234 badges — second row, Pivot Level column */}
-                            {(r.cOLoL2U1 || r.cOLoL4U3 || r.LoL4U4 || r.eXHiL4U234) && (
+                            {/* NEW: cOLoL2U1 / cOLoL4U3 / LoL4U4 / eXHiL4U234 / eXL4U4 badges — second row, Pivot Level column */}
+                            {(r.cOLoL2U1 || r.cOLoL4U3 || r.LoL4U4 || r.eXHiL4U234 || r.eXL4U4) && (
                               <div className="flex flex-wrap gap-1 mt-1">
                                 {r.cOLoL2U1 && (
                                   <span className="text-xs px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 font-medium">cOLoL2U1</span>
@@ -2183,6 +2239,9 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                                 )}
                                 {r.eXHiL4U234 && (
                                   <span className="text-xs px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20 font-medium">eXHiL4U234</span>
+                                )}
+                                {r.eXL4U4 && (
+                                  <span className="text-xs px-1.5 py-0.5 rounded bg-pink-500/10 text-pink-400 border border-pink-500/20 font-medium">eXL4U4</span>
                                 )}
                               </div>
                             )}

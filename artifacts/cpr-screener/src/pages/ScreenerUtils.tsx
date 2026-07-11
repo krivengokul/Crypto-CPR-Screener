@@ -407,16 +407,31 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.todayCPR.widthPct > 0.5 && r.todayCPR.widthPct < 2 && r.prevCPR.widthPct < 0.5
       );
       //EXP_U4APU4L4BPL4
-    case "eXL4U4":
+    // RENAMED: was "eXL4U4" — this pattern is specific to Overlapping Lower
+    // only. Renamed to "eXLo-L4U4-U4" to make that scope explicit and to
+    // free up the plain "eXL4U4" name for the new section-independent
+    // Pivot Level badge (see getPivotLevel doc-comment below). The
+    // underlying boolean this reads (r.eXL4U4, computed in cpr.ts) is
+    // UNCHANGED — only this case's key/name changed.
+    case "eXLo-L4U4-U4":
       return (
         r.overlapLower && r.eXL4U4 &&
         r.todayCPR.widthPct >= 0.1 &&
         r.todayCPR.widthPct < 0.5
       );
-    // Exp-U3>U3 (displayed as "Exp-U3>pU4") — Overlapping Lower + today's R3
-    // above prev day's R4, today's S3 below prev day's S4, today's CPR Narrow.
-    // (Fixed to match the on-screen description: previously checked "prev R4
-    // inside today's R2/R3", which no longer matched the UI text.)
+    // NEW: eXHi-L4U4-U4 — Overlapping Higher counterpart of eXLo-L4U4-U4.
+    // Reuses the same r.eXL4U4 boolean from cpr.ts (prev R4 inside today's
+    // R3/R4 AND prev S4 inside today's S3/S4), but gated on r.overlapHigher
+    // instead of r.overlapLower, since the raw R/S math itself is direction-
+    // agnostic. Width condition matches the reference chart's badges
+    // exactly: prev day CPR category = pSmall (0.50%–1.00%), today's CPR
+    // category = Tiny (0.10%–0.25%) — rather than a loose "< X%" threshold.
+    case "eXHi-L4U4-U4":
+      return (
+        r.overlapHigher && r.eXL4U4 &&
+        r.prevCPR.widthPct > 0.50 && r.prevCPR.widthPct <= 1.00 &&   // pSmall
+        r.todayCPR.widthPct > 0.10 && r.todayCPR.widthPct <= 0.25   // Tiny
+      );
     case "Exp-U3>U3":
       return (
         r.overlapLower &&
@@ -610,9 +625,20 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
  * relying on this function's return value, so removing them here does not
  * affect filtering — only the primary badge, which now correctly falls
  * through to "Lower" for these rows.
+ *
+ * NEW: eXL4U4 — same treatment as cOLoL2U1/cOLoL4U3/LoL4U4/eXHiL4U234
+ * above: an independent, section-agnostic boolean (r.eXL4U4 from cpr.ts —
+ * prev R4 inside today's R3/R4 AND prev S4 inside today's S3/S4). It is
+ * NOT returned as the primary label here (same reasoning as above — it can
+ * co-occur with any of eX-Higher/eX-Lower/cO-Higher/cO-Lower/Higher/Lower
+ * and isn't mutually exclusive with them). Screener.tsx renders it as its
+ * own second-row badge and its own Pivot Level filter button, checking
+ * r.eXL4U4 directly — independent of activePattern/section, unlike the
+ * "eXLo-L4U4-U4" / "eXHi-L4U4-U4" *patterns*, which gate the same boolean
+ * behind overlapLower / overlapHigher respectively for their own sections.
  */
 export interface PivotLevelInfo {
-  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "cOLoL2U1" | "cOLoL4U3" | "LoL4U4"| "eXHiL4U234" | "Lower";
+  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "cOLoL2U1" | "cOLoL4U3" | "LoL4U4"| "eXHiL4U234" | "eXL4U4" | "Lower";
   classes: string;
 }
 
