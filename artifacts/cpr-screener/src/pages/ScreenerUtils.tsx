@@ -219,22 +219,88 @@ export function isPWideAbove(r: CPRResult): boolean {
 }
 
 /**
- * Width filter — used by the "CPR: Tiny / Mini / Small / pTiny / pMini / pSmall"
- * filter row. "tiny"/"mini"/"small" look at TODAY's CPR width; "ptiny"/"pmini"/
- * "psmall" look at PREVIOUS day's CPR width. `null` (no filter selected) always
- * passes. Moved here from Screener.tsx so the filtering logic lives alongside
- * the rest of the pattern/condition helpers and isn't duplicated inline.
+ * CPR Width Category ladder — replaces the old 3-tier Tiny/Mini/Small scheme
+ * with 8 tiers, ordered tightest → widest:
+ *
+ *   Width %          Category
+ *   ≤ 0.10%          Micro
+ *   0.10 – 0.25%     Tiny
+ *   0.25 – 0.50%     Mini
+ *   0.50 – 1.00%     Small
+ *   1.00 – 2.00%     Medium
+ *   2.00 – 5.00%     Large
+ *   5.00 – 10.00%    Mega
+ *   > 10.00%         Ultra
+ *
+ * Each tier has a badge color (today's CPR) and a slightly muted "p"
+ * variant used for previous day's CPR (pMicro, pTiny, pMini, pSmall,
+ * pMedium, pLarge, pMega, pUltra). Colors run cool→warm as width grows,
+ * mirroring "tight/coiled" → "blown-out/volatile".
  */
-export type WidthFilter = "tiny" | "mini" | "small" | "ptiny" | "pmini" | "psmall" | null;
+export type WidthCategoryKey =
+  | "micro" | "tiny" | "mini" | "small" | "medium" | "large" | "mega" | "ultra";
+
+export interface WidthCategoryInfo {
+  key: WidthCategoryKey;
+  label: string;
+  max: number; // inclusive upper bound of this tier (Infinity for Ultra)
+  classes: string;  // today's CPR badge
+  pClasses: string; // previous day's CPR badge (muted variant)
+}
+
+export const WIDTH_CATEGORIES: WidthCategoryInfo[] = [
+  { key: "micro",  label: "Micro",  max: 0.10,     classes: "bg-violet-500/10 text-violet-400 border-violet-500/20", pClasses: "bg-violet-500/10 text-violet-300 border-violet-400/20" },
+  { key: "tiny",   label: "Tiny",   max: 0.25,     classes: "bg-purple-500/10 text-purple-400 border-purple-500/20", pClasses: "bg-purple-500/10 text-purple-300 border-purple-400/20" },
+  { key: "mini",   label: "Mini",   max: 0.50,     classes: "bg-teal-500/10 text-teal-400 border-teal-500/20",       pClasses: "bg-teal-500/10 text-teal-300 border-teal-400/20" },
+  { key: "small",  label: "Small",  max: 1.00,     classes: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20", pClasses: "bg-indigo-500/10 text-indigo-300 border-indigo-400/20" },
+  { key: "medium", label: "Medium", max: 2.00,     classes: "bg-blue-500/10 text-blue-400 border-blue-500/20",       pClasses: "bg-blue-500/10 text-blue-300 border-blue-400/20" },
+  { key: "large",  label: "Large",  max: 5.00,     classes: "bg-amber-500/10 text-amber-400 border-amber-500/20",    pClasses: "bg-amber-500/10 text-amber-300 border-amber-400/20" },
+  { key: "mega",   label: "Mega",   max: 10.00,    classes: "bg-orange-500/10 text-orange-400 border-orange-500/20", pClasses: "bg-orange-500/10 text-orange-300 border-orange-400/20" },
+  { key: "ultra",  label: "Ultra",  max: Infinity, classes: "bg-rose-500/10 text-rose-400 border-rose-500/20",       pClasses: "bg-rose-500/10 text-rose-300 border-rose-400/20" },
+];
+
+/**
+ * Classifies a CPR width% into its tier. ≤0.10% → Micro, then each
+ * successive tier's upper bound is exclusive-open/inclusive-close on the
+ * previous one (e.g. Tiny is >0.10% and ≤0.25%), matching the table above.
+ */
+export function getWidthCategory(widthPct: number): WidthCategoryInfo {
+  for (const cat of WIDTH_CATEGORIES) {
+    if (widthPct <= cat.max) return cat;
+  }
+  return WIDTH_CATEGORIES[WIDTH_CATEGORIES.length - 1];
+}
+
+/**
+ * Width filter — used by the "CPR:" filter row. Unprefixed keys
+ * (micro/tiny/mini/small/medium/large/mega/ultra) look at TODAY's CPR
+ * width; "p"-prefixed keys (pmicro/ptiny/pmini/psmall/pmedium/plarge/
+ * pmega/pultra) look at PREVIOUS day's CPR width. `null` (no filter
+ * selected) always passes. Moved here from Screener.tsx so the filtering
+ * logic lives alongside the rest of the pattern/condition helpers and
+ * isn't duplicated inline.
+ */
+export type WidthFilter =
+  | "micro" | "tiny" | "mini" | "small" | "medium" | "large" | "mega" | "ultra"
+  | "pmicro" | "ptiny" | "pmini" | "psmall" | "pmedium" | "plarge" | "pmega" | "pultra"
+  | null;
 
 export function matchesWidthFilter(r: CPRResult, widthFilter: WidthFilter): boolean {
-  if (widthFilter === "tiny") return r.todayCPR.widthPct < 0.1;
-  if (widthFilter === "mini") return r.todayCPR.widthPct >= 0.1 && r.todayCPR.widthPct < 0.5;
-  if (widthFilter === "small") return r.todayCPR.widthPct >= 0.5 && r.todayCPR.widthPct < 1;
-  if (widthFilter === "ptiny") return r.prevCPR.widthPct < 0.1;
-  if (widthFilter === "pmini") return r.prevCPR.widthPct >= 0.1 && r.prevCPR.widthPct < 0.5;
-  if (widthFilter === "psmall") return r.prevCPR.widthPct >= 0.5 && r.prevCPR.widthPct < 1;
-  return true;
+  if (!widthFilter) return true;
+  const isPrev = widthFilter.startsWith("p");
+  const key = (isPrev ? widthFilter.slice(1) : widthFilter) as WidthCategoryKey;
+  const width = isPrev ? r.prevCPR.widthPct : r.todayCPR.widthPct;
+  switch (key) {
+    case "micro":  return width <= 0.10;
+    case "tiny":   return width > 0.10 && width <= 0.25;
+    case "mini":   return width > 0.25 && width <= 0.50;
+    case "small":  return width > 0.50 && width <= 1.00;
+    case "medium": return width > 1.00 && width <= 2.00;
+    case "large":  return width > 2.00 && width <= 5.00;
+    case "mega":   return width > 5.00 && width <= 10.00;
+    case "ultra":  return width > 10.00;
+    default: return true;
+  }
 }
 
 export function passesPattern(r: CPRResult, pattern: string): boolean {

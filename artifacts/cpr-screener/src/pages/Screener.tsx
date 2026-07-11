@@ -36,6 +36,7 @@ import {
   getChartUrl,
   passesPattern,
   matchesWidthFilter,
+  getWidthCategory,
   distanceFromCPR,
   pdhPdlStatus,
   isRisingAboveTC,
@@ -1329,14 +1330,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 <span className="ml-1 text-foreground">(Pivot Level: {pivotLevelFilter})</span>
               )}
               {widthFilter && (
-                <span className="ml-1 text-foreground">(Width: {
-                  widthFilter === "tiny" ? "Tiny <0.1%"
-                  : widthFilter === "mini" ? "Mini 0.1–0.5%"
-                  : widthFilter === "small" ? "Small 0.5–1%"
-                  : widthFilter === "ptiny" ? "pTiny <0.1%"
-                  : widthFilter === "pmini" ? "pMini 0.1–0.5%"
-                  : "pSmall 0.5–1%"
-                })</span>
+                <span className="ml-1 text-foreground">(Width: {formatWidthFilterLabel(widthFilter)})</span>
               )}
               {pdhPdlFilter && (
                 <span className="ml-1 text-foreground">(Price {pdhPdlFilter === "above" ? "Above PDH" : "Below PDL"})</span>
@@ -1989,82 +1983,48 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
               ))}
           </div>
 
-          {/* NEW: CPR filter buttons (Tiny/Mini/Small/pTiny/pMini/pSmall/PDH/PDL) — moved to their
-              own row, labeled "CPR:", still independent of activePattern and showAll, mutually
-              exclusive within their own sub-groups (width vs PDH/PDL). Ordered as two logical
-              groups: today's width (Tiny/Mini/Small) then prev day's width (pTiny/pMini/pSmall),
-              then PDH/PDL. */}
+          {/* CPR Width filter buttons — 8-tier Micro→Ultra ladder (today's CPR)
+              followed by the p-prefixed previous-day variants, then PDH/PDL.
+              Order per spec: pMicro-pTiny-pMini-pSmall-pMedium-pLarge-pMega-
+              pUltra, Micro-Tiny-Mini-Small-Medium-Large-Mega-Ultra, PDH-PDL.
+              Mutually exclusive within the whole row (single widthFilter
+              state), independent of activePattern and showAll. */}
           <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[10px] text-muted-foreground uppercase tracking-wider mr-0.5">CPR:</span>
-              <button
-                onClick={() => setWidthFilter((v) => (v === "tiny" ? null : "tiny"))}
-                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                  widthFilter === "tiny"
-                    ? "border-purple-400 text-purple-400"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-                title="Show only rows where today CPR width is less than 0.1%"
-              >
-                {widthFilter === "tiny" ? "✕ Tiny" : "Tiny"}
-              </button>
-              <button
-                onClick={() => setWidthFilter((v) => (v === "mini" ? null : "mini"))}
-                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                  widthFilter === "mini"
-                    ? "border-teal-400 text-teal-400"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-                title="Show only rows where today CPR width is between 0.1% and 0.5%"
-              >
-                {widthFilter === "mini" ? "✕ Mini" : "Mini"}
-              </button>
-              {/* NEW: Small — today's CPR width between 0.5% and 1% */}
-              <button
-                onClick={() => setWidthFilter((v) => (v === "small" ? null : "small"))}
-                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                  widthFilter === "small"
-                    ? "border-indigo-400 text-indigo-400"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-                title="Show only rows where today CPR width is between 0.5% and 1%"
-              >
-                {widthFilter === "small" ? "✕ Small" : "Small"}
-              </button>
-              <button
-                onClick={() => setWidthFilter((v) => (v === "ptiny" ? null : "ptiny"))}
-                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                  widthFilter === "ptiny"
-                    ? "border-purple-400 text-purple-400"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-                title="Show only rows where prev day CPR width is less than 0.1%"
-              >
-                {widthFilter === "ptiny" ? "✕ pTiny" : "pTiny"}
-              </button>
-              <button
-                onClick={() => setWidthFilter((v) => (v === "pmini" ? null : "pmini"))}
-                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                  widthFilter === "pmini"
-                    ? "border-teal-400 text-teal-400"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-                title="Show only rows where prev day CPR width is between 0.1% and 0.5%"
-              >
-                {widthFilter === "pmini" ? "✕ pMini" : "pMini"}
-              </button>
-              {/* NEW: pSmall — prev day's CPR width between 0.5% and 1% */}
-              <button
-                onClick={() => setWidthFilter((v) => (v === "psmall" ? null : "psmall"))}
-                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                  widthFilter === "psmall"
-                    ? "border-indigo-400 text-indigo-400"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-                title="Show only rows where prev day CPR width is between 0.5% and 1%"
-              >
-                {widthFilter === "psmall" ? "✕ pSmall" : "pSmall"}
-              </button>
-              {/* PDH / PDL buttons — mutually exclusive with each other, next to pSmall */}
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wider mr-0.5">CPR Width:</span>
+              {(
+                [
+                  { key: "pmicro",  label: "pMicro",  range: "≤0.10%",         active: "border-violet-400 text-violet-400" },
+                  { key: "ptiny",   label: "pTiny",   range: "0.10–0.25%",     active: "border-purple-400 text-purple-400" },
+                  { key: "pmini",   label: "pMini",   range: "0.25–0.50%",     active: "border-teal-400 text-teal-400" },
+                  { key: "psmall",  label: "pSmall",  range: "0.50–1.00%",     active: "border-indigo-400 text-indigo-400" },
+                  { key: "pmedium", label: "pMedium", range: "1.00–2.00%",     active: "border-blue-400 text-blue-400" },
+                  { key: "plarge",  label: "pLarge",  range: "2.00–5.00%",     active: "border-amber-400 text-amber-400" },
+                  { key: "pmega",   label: "pMega",   range: "5.00–10.00%",    active: "border-orange-400 text-orange-400" },
+                  { key: "pultra",  label: "pUltra",  range: ">10.00%",        active: "border-rose-400 text-rose-400" },
+                  { key: "micro",   label: "Micro",   range: "≤0.10%",         active: "border-violet-400 text-violet-400" },
+                  { key: "tiny",    label: "Tiny",    range: "0.10–0.25%",     active: "border-purple-400 text-purple-400" },
+                  { key: "mini",    label: "Mini",    range: "0.25–0.50%",     active: "border-teal-400 text-teal-400" },
+                  { key: "small",   label: "Small",   range: "0.50–1.00%",     active: "border-indigo-400 text-indigo-400" },
+                  { key: "medium",  label: "Medium",  range: "1.00–2.00%",     active: "border-blue-400 text-blue-400" },
+                  { key: "large",   label: "Large",   range: "2.00–5.00%",     active: "border-amber-400 text-amber-400" },
+                  { key: "mega",    label: "Mega",    range: "5.00–10.00%",    active: "border-orange-400 text-orange-400" },
+                  { key: "ultra",   label: "Ultra",   range: ">10.00%",        active: "border-rose-400 text-rose-400" },
+                ] as { key: NonNullable<WidthFilter>; label: string; range: string; active: string }[]
+              ).map(({ key, label, range, active }) => (
+                <button
+                  key={key}
+                  onClick={() => setWidthFilter((v) => (v === key ? null : key))}
+                  className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                    widthFilter === key
+                      ? active
+                      : "border-border text-muted-foreground hover:text-foreground"
+                  }`}
+                  title={`Show only rows where ${key.startsWith("p") ? "prev day's" : "today's"} CPR width is ${range}`}
+                >
+                  {widthFilter === key ? `✕ ${label}` : label}
+                </button>
+              ))}
+              {/* PDH / PDL buttons — mutually exclusive with each other, placed after Ultra */}
               <button
                 onClick={() => setPdhPdlFilter((v) => (v === "above" ? null : "above"))}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
@@ -2228,8 +2188,9 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                             )}
                           </td>
                           {/* NEW: CPR column — holds Above/Below/Inside/Outside/Overlap/Narrow/Skip
-                              plus the width badges Tiny/Mini/Small/pTiny/pMini/pSmall (moved out of
-                              the old Pivot Level cell). */}
+                              plus the width-category badges (2nd row): pCategory + Category, e.g.
+                              "pMini Mini", using the 8-tier Micro→Ultra ladder. Always shown,
+                              irrespective of which category the widths fall into. */}
                           <td className="px-4 py-3 whitespace-nowrap">
                             <div className="flex flex-wrap gap-1">
                               {r.cprRising && (
@@ -2276,28 +2237,31 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                                 <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">Skip</span>
                               )}
                             </div>
-                            {(r.todayCPR.widthPct < 1 || r.prevCPR.widthPct < 1) && (
-                              <div className="flex flex-wrap gap-1 mt-1">
-                                {r.todayCPR.widthPct >= 0.5 && r.todayCPR.widthPct < 1 && (
-                                  <span className="text-xs px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-medium">Small</span>
-                                )}
-                                {r.prevCPR.widthPct >= 0.5 && r.prevCPR.widthPct < 1 && (
-                                  <span className="text-xs px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-300 border border-indigo-400/20 font-medium">pSmall</span>
-                                )}
-                                {r.todayCPR.widthPct >= 0.1 && r.todayCPR.widthPct < 0.5 && (
-                                  <span className="text-xs px-1.5 py-0.5 rounded bg-teal-500/10 text-teal-400 border border-teal-500/20 font-medium">Mini</span>
-                                )}
-                                {r.prevCPR.widthPct >= 0.1 && r.prevCPR.widthPct < 0.5 && (
-                                  <span className="text-xs px-1.5 py-0.5 rounded bg-teal-500/10 text-teal-300 border border-teal-400/20 font-medium">pMini</span>
-                                )}
-                                {r.todayCPR.widthPct < 0.1 && (
-                                  <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20 font-medium">Tiny</span>
-                                )}
-                                {r.prevCPR.widthPct < 0.1 && (
-                                  <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-300 border border-purple-400/20 font-medium">pTiny</span>
-                                )}
-                              </div>
-                            )}
+                            {/* NEW: Width-category badges — always shown, "pCategory Category" format
+                                (e.g. "pMini Mini"), using the 8-tier Micro/Tiny/Mini/Small/Medium/
+                                Large/Mega/Ultra ladder, irrespective of which tier either width falls into. */}
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {(() => {
+                                const prevCat = getWidthCategory(r.prevCPR.widthPct);
+                                const todayCat = getWidthCategory(r.todayCPR.widthPct);
+                                return (
+                                  <>
+                                    <span
+                                      className={`text-xs px-1.5 py-0.5 rounded border font-medium ${prevCat.pClasses}`}
+                                      title={`Prev day CPR width: ${r.prevCPR.widthPct.toFixed(4)}%`}
+                                    >
+                                      p{prevCat.label}
+                                    </span>
+                                    <span
+                                      className={`text-xs px-1.5 py-0.5 rounded border font-medium ${todayCat.classes}`}
+                                      title={`Today's CPR width: ${r.todayCPR.widthPct.toFixed(4)}%`}
+                                    >
+                                      {todayCat.label}
+                                    </span>
+                                  </>
+                                );
+                              })()}
+                            </div>
                           </td>
                           <td className="px-4 py-3 font-mono whitespace-nowrap">
                             <div className="text-xs font-semibold text-foreground">Price: {fmt(r.currentPrice)}</div>
