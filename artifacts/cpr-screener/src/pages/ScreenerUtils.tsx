@@ -303,6 +303,37 @@ export function matchesWidthFilter(r: CPRResult, widthFilter: WidthFilter): bool
   }
 }
 
+/**
+ * Human-readable label for the active CPR Width filter, e.g. "psmall" ->
+ * "pSmall (0.50%-1.00%)". Used by the result-count summary line in
+ * Screener.tsx. Was previously called but never defined/exported — calling
+ * it with any width filter active threw a ReferenceError and crashed the
+ * component. Fixed by adding it here alongside the other width-filter helpers.
+ */
+const WIDTH_FILTER_LABELS: Record<NonNullable<WidthFilter>, string> = {
+  micro:  "Micro (\u22640.10%)",
+  tiny:   "Tiny (0.10%-0.25%)",
+  mini:   "Mini (0.25%-0.50%)",
+  small:  "Small (0.50%-1.00%)",
+  medium: "Medium (1.00%-2.00%)",
+  large:  "Large (2.00%-5.00%)",
+  mega:   "Mega (5.00%-10.00%)",
+  ultra:  "Ultra (>10.00%)",
+  pmicro:  "pMicro (\u22640.10%)",
+  ptiny:   "pTiny (0.10%-0.25%)",
+  pmini:   "pMini (0.25%-0.50%)",
+  psmall:  "pSmall (0.50%-1.00%)",
+  pmedium: "pMedium (1.00%-2.00%)",
+  plarge:  "pLarge (2.00%-5.00%)",
+  pmega:   "pMega (5.00%-10.00%)",
+  pultra:  "pUltra (>10.00%)",
+};
+
+export function formatWidthFilterLabel(widthFilter: WidthFilter): string {
+  if (!widthFilter) return "";
+  return WIDTH_FILTER_LABELS[widthFilter];
+}
+
 export function passesPattern(r: CPRResult, pattern: string): boolean {
   switch (pattern) {
     case "littleabove":

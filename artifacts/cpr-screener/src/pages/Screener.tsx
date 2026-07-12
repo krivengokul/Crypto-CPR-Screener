@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, Fragment } from "react";
 import {
   TrendingUp,
   RefreshCw,
@@ -36,6 +36,7 @@ import {
   getChartUrl,
   passesPattern,
   matchesWidthFilter,
+  formatWidthFilterLabel,
   getWidthCategory,
   distanceFromCPR,
   pdhPdlStatus,
@@ -2231,9 +2232,8 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                     const rowKey = `${r.source}-${r.symbol}`;
                     const isExpanded = expandedSymbols.has(rowKey);
                     return (
-                      <>
+                      <Fragment key={rowKey}>
                         <tr
-                          key={rowKey}
                           className={`hover:bg-muted/20 transition-colors ${r.passes ? "bg-accent/3" : ""}`}
                         >
                           {canShowCombined && activeTab === "combined" && (
@@ -2518,7 +2518,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                             </td>
                           </tr>
                         )}
-                      </>
+                      </Fragment>
                     );
                   })}
                 </tbody>
