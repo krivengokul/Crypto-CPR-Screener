@@ -73,6 +73,11 @@ export interface CPRResult {
   cOLoL4U3: boolean;
   eXLoL3U4: boolean;
   eXL4U4: boolean;
+  // NEW: HiL4U4 — mirror of eXL4U4: today's S4 sits inside prev day's
+  // S3/S4 band (rather than prev's S4 sitting inside today's S3/S4 band),
+  // same R condition as eXL4U4 (prev R4 inside today's R3/R4). Used by the
+  // "HiL4U4" Pivot Level badge and the "1T-HiL4U4-FAU4" pattern.
+  HiL4U4: boolean;
   LoL4U4:boolean;
   eXHiU1L3: boolean;
   eXHiL4U234: boolean;
@@ -223,6 +228,11 @@ export function analyzeCPR(
                     (prevCPR.s4 > todayCPR.s3 && prevCPR.s4 < todayCPR.s2); 
   const eXL4U4 = (prevCPR.r4 > todayCPR.r3 && prevCPR.r4 < todayCPR.r4) &&
                   (prevCPR.s4 > todayCPR.s4 && prevCPR.s4 < todayCPR.s3);
+  // NEW: HiL4U4 — mirror of eXL4U4 (see interface doc-comment above): same
+  // R condition (prev R4 inside today's R3/R4), but S condition flipped —
+  // today's S4 inside prev day's S3/S4 band.
+  const HiL4U4 = (prevCPR.r4 > todayCPR.r3 && prevCPR.r4 < todayCPR.r4) &&
+                  (todayCPR.s4 > prevCPR.s4 && todayCPR.s4 < prevCPR.s3);
   const LoL4U4   = (todayCPR.r4 < prevCPR.r4 && todayCPR.r4 > prevCPR.r3) &&
                   (prevCPR.s4 > todayCPR.s4 && prevCPR.s4 < todayCPR.s3);
   const eXHiU1L3 = (prevCPR.r4 < todayCPR.r1 && prevCPR.r4 > todayCPR.tc) &&
@@ -315,6 +325,7 @@ export function analyzeCPR(
     cOLoL4U3,
     eXLoL3U4,
     eXL4U4,
+    HiL4U4,
     LoL4U4,
     eXHiU1L3,
     eXHiL4U234,

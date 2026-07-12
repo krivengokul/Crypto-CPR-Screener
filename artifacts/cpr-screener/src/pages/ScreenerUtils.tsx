@@ -432,6 +432,18 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.prevCPR.widthPct > 0.50 && r.prevCPR.widthPct <= 1.00 &&   // pSmall
         r.todayCPR.widthPct > 0.10 && r.todayCPR.widthPct <= 0.25   // Tiny
       );
+    // NEW: 1T-HiL4U4-FAU4 — BigCPR Above: Wide Above (cprRising +
+    // strWideCPR) + HiL4U4 (prev R4 inside today's R3/R4, today's S4
+    // inside prev day's S3/S4) + prev CPR width category pMicro (<=0.10%)
+    // + today's CPR width category Tiny (0.10%-0.25%).
+    case "1T-HiL4U4-FAU4":
+      return (
+        r.cprRising &&
+        r.strWideCPR &&
+        r.HiL4U4 &&
+        r.prevCPR.widthPct <= 0.10 &&
+        r.todayCPR.widthPct > 0.10 && r.todayCPR.widthPct <= 0.25
+      );
     case "Exp-U3>U3":
       return (
         r.overlapLower &&
@@ -638,7 +650,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
  * behind overlapLower / overlapHigher respectively for their own sections.
  */
 export interface PivotLevelInfo {
-  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "cOLoL2U1" | "cOLoL4U3" | "LoL4U4"| "eXHiL4U234" | "eXL4U4" | "Lower";
+  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "cOLoL2U1" | "cOLoL4U3" | "LoL4U4"| "eXHiL4U234" | "eXL4U4" | "HiL4U4" | "Lower";
   classes: string;
 }
 
