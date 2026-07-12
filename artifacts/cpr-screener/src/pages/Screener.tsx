@@ -1297,7 +1297,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 <span className="ml-1 text-blue-400">(PL12CL23)</span>
               )}
               {showLACompressed && activePattern === "littleabove" && (
-                <span className="ml-1 text-emerald-400">(cO3-L2U3)</span>
+                <span className="ml-1 text-emerald-400">(cOHi-APU4)</span>
               )}
               {showOutsideCPRCompressed && activePattern === "outside-cpr" && (
                 <span className="ml-1 text-purple-400">(Compressed)</span>
@@ -1679,7 +1679,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 }`}
                 title="Compressed Inside Previous L2 and Previous U3: Target:Bullish APU4"
               >
-                {showLACompressed ? "✕ cO3-L2U3" : "cO3-L2U3"}
+                {showLACompressed ? "✕ cOHi-APU4" : "cOHi-APU4"}
               </button>
             )}
             {activePattern === "overlapping-lower" && !showAll && (
