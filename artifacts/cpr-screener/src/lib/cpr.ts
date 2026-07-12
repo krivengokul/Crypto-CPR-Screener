@@ -228,9 +228,9 @@ export function analyzeCPR(
                     (prevCPR.s4 > todayCPR.s3 && prevCPR.s4 < todayCPR.s2); 
   const eXL4U4 = (prevCPR.r4 > todayCPR.r3 && prevCPR.r4 < todayCPR.r4) &&
                   (prevCPR.s4 > todayCPR.s4 && prevCPR.s4 < todayCPR.s3);
-  const HiL4U4 = (prevCPR.r4 > todayCPR.r2 && prevCPR.r4 < todayCPR.r3) &&
+  const HiL4U34 = (prevCPR.r4 > todayCPR.r2 && prevCPR.r4 < todayCPR.r3) &&
                   (todayCPR.s4 > prevCPR.s4 && todayCPR.s4 < prevCPR.s3);
-  const HiL4U34 = (prevCPR.r4 > todayCPR.r3 && prevCPR.r4 < todayCPR.r4) &&
+  const HiL4U4 = (prevCPR.r4 > todayCPR.r3 && prevCPR.r4 < todayCPR.r4) &&
                   (todayCPR.s4 > prevCPR.s4 && todayCPR.s4 < prevCPR.s3);
   const LoL4U4   = (todayCPR.r4 < prevCPR.r4 && todayCPR.r4 > prevCPR.r3) &&
                   (prevCPR.s4 > todayCPR.s4 && prevCPR.s4 < todayCPR.s3);
