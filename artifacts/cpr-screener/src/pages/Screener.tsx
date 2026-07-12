@@ -842,6 +842,11 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
       // NEW: HiL4U4 — independent, section-agnostic Pivot Level flag,
       // mirror of eXL4U4 (see doc-comments in cpr.ts / ScreenerUtils.tsx).
       if (pivotLevelFilter === "HiL4U4") return r.HiL4U4;
+      // NEW: HiL4U34 / cOHiL2U3 — same treatment: independent,
+      // section-agnostic Pivot Level flags, always shown regardless of
+      // activePattern/left-nav.
+      if (pivotLevelFilter === "HiL4U34") return r.HiL4U34;
+      if (pivotLevelFilter === "cOHiL2U3") return r.cOHiL2U3;
       return getPivotLevel(r)?.label === pivotLevelFilter;
     })
     .filter((r) => matchesWidthFilter(r, widthFilter))
@@ -2084,6 +2089,8 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                   { label: "eXHiL4U234", active: "border-violet-400 text-violet-400" },
                   { label: "eXL4U4", active: "border-pink-400 text-pink-400" },
                   { label: "HiL4U4", active: "border-fuchsia-400 text-fuchsia-400" },
+                  { label: "HiL4U34", active: "border-indigo-400 text-indigo-400" },
+                  { label: "cOHiL2U3", active: "border-sky-400 text-sky-400" },
                 ] as { label: PivotLevelInfo["label"]; active: string }[]
               ).map(({ label, active }) => (
                 <button
@@ -2295,8 +2302,12 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                                 );
                               })()}
                             </div>
-                            {/* NEW: cOLoL2U1 / cOLoL4U3 / LoL4U4 / eXHiL4U234 / eXL4U4 / HiL4U4 badges — second row, Pivot Level column */}
-                            {(r.cOLoL2U1 || r.cOLoL4U3 || r.LoL4U4 || r.eXHiL4U234 || r.eXL4U4 || r.HiL4U4) && (
+                            {/* NEW: cOLoL2U1 / cOLoL4U3 / LoL4U4 / eXHiL4U234 / eXL4U4 / HiL4U4 /
+                                HiL4U34 / cOHiL2U3 badges — second row, Pivot Level column. These
+                                are all independent, section-agnostic booleans — they render
+                                whenever true, regardless of activePattern or any left-nav /
+                                Show All state. */}
+                            {(r.cOLoL2U1 || r.cOLoL4U3 || r.LoL4U4 || r.eXHiL4U234 || r.eXL4U4 || r.HiL4U4 || r.HiL4U34 || r.cOHiL2U3) && (
                               <div className="flex flex-wrap gap-1 mt-1">
                                 {r.cOLoL2U1 && (
                                   <span className="text-xs px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 font-medium">cOLoL2U1</span>
@@ -2316,13 +2327,28 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                                 {r.HiL4U4 && (
                                   <span className="text-xs px-1.5 py-0.5 rounded bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/20 font-medium">HiL4U4</span>
                                 )}
+                                {/* NEW */}
+                                {r.HiL4U34 && (
+                                  <span className="text-xs px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-medium">HiL4U34</span>
+                                )}
+                                {r.cOHiL2U3 && (
+                                  <span className="text-xs px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-medium">cOHiL2U3</span>
+                                )}
                               </div>
                             )}
                           </td>
                           {/* NEW: CPR column — holds Above/Below/Inside/Outside/Overlap/Narrow/Skip
                               plus the width-category badges (2nd row): pCategory + Category, e.g.
                               "pMini Mini", using the 8-tier Micro→Ultra ladder. Always shown,
-                              irrespective of which category the widths fall into. */}
+                              irrespective of which category the widths fall into.
+                              FIX: Overlap-Lo / Overlap-Hi badges were previously gated behind
+                              `activePattern === "overlapping-lower" || activePattern === "overlapping-higher"`,
+                              which meant they silently vanished whenever "Show All" was clicked on
+                              any OTHER left-nav tab (or, on the overlapping tabs themselves, added
+                              an unnecessary extra condition since r.overlapLower/r.overlapHigher
+                              already imply the row belongs in this bucket). Now unconditional, same
+                              treatment as the other structural badges above — shown for any row
+                              where the underlying boolean is true, irrespective of left-nav/Show All. */}
                           <td className="px-4 py-3 whitespace-nowrap">
                             <div className="flex flex-wrap gap-1">
                               {r.cprRising && (
@@ -2348,11 +2374,11 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                               {passesPattern(r, "outside-cpr") && activePattern === "outside-cpr" && (
                                 <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20 font-medium">Outside</span>
                               )}
-                              {/* Overlap badge — renamed Overlap-Lo / Overlap-Hi based on condition */}
-                              {r.overlapLower && (activePattern === "overlapping-lower" || activePattern === "overlapping-higher") && (
+                              {/* FIXED: Overlap badge — now unconditional (no activePattern gate) */}
+                              {r.overlapLower && (
                                 <span className="text-xs px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-medium">Overlap-Lo</span>
                               )}
-                              {r.overlapHigher && (activePattern === "overlapping-lower" || activePattern === "overlapping-higher") && (
+                              {r.overlapHigher && (
                                 <span className="text-xs px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20 font-medium">Overlap-Hi</span>
                               )}
                               {/* NEW: Wide badge — Overlap Lower CPR column, when today's CPR is wider than prev day's */}
