@@ -147,6 +147,22 @@ export function getVal(r: CPRResultWithSource, key: SortKey): number | string {
   }
 }
 
+/**
+ * Splits a raw exchange symbol into { base, quote } for display.
+ *
+ * Delta symbols are normally underscore-delimited (e.g. "BTC_USDT"). A
+ * handful of Delta products — notably tokenized-stock instruments like
+ * "INTCBUSD" — don't follow that convention and have no underscore at
+ * all. Previously those fell straight through to { base: symbol, quote:
+ * "" }, showing the whole raw ticker with a blank quote in the UI (e.g.
+ * "INTCBUSD /"). Added a fallback: if there's no underscore, try
+ * stripping a known quote suffix off the end instead. Longest/most-
+ * specific suffixes are checked first ("BUSD" before "USD") so e.g.
+ * "INTCBUSD" correctly splits to base "INTC" / quote "BUSD" rather than
+ * base "INTCB" / quote "USD".
+ */
+const DELTA_QUOTE_SUFFIXES = ["USDT", "BUSD", "USDC", "USD", "INR"];
+
 export function splitSymbol(symbol: string, source: "binance" | "delta") {
   if (source === "binance") {
     if (symbol.endsWith("USDT")) return { base: symbol.slice(0, -4), quote: "USDT" };
@@ -154,7 +170,31 @@ export function splitSymbol(symbol: string, source: "binance" | "delta") {
   }
   const parts = symbol.split("_");
   if (parts.length === 2) return { base: parts[0], quote: parts[1] };
+  // Fallback for non-underscore Delta symbols (e.g. stock-token tickers).
+  for (const q of DELTA_QUOTE_SUFFIXES) {
+    if (symbol.length > q.length && symbol.endsWith(q)) {
+      return { base: symbol.slice(0, -q.length), quote: q };
+    }
+  }
   return { base: symbol, quote: "" };
+}
+
+/**
+ * Whether we have a reliable TradingView chart mapping for this symbol.
+ * Binance symbols always map cleanly (BINANCE:<symbol>). Delta symbols
+ * only map reliably when they're underscore-delimited crypto pairs (e.g.
+ * "BTC_USDT") — that's the convention getChartUrl's DELTAIN: prefix was
+ * built against, and it matches what TradingView's Delta India
+ * integration actually lists. Non-underscore Delta symbols are mostly
+ * tokenized-stock products (e.g. "INTCBUSD") that TradingView's Delta
+ * India integration doesn't carry yet (per Delta's own Oct 2024
+ * announcement, direct data coverage started with BTC/ETH and has been
+ * rolling out to altcoins since — stock-tokens aren't part of that).
+ * Used to skip linking to a dead "This symbol doesn't exist" page.
+ */
+export function hasKnownChartMapping(symbol: string, source: "binance" | "delta"): boolean {
+  if (source === "binance") return true;
+  return symbol.includes("_");
 }
 
 /**
@@ -449,7 +489,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // R3/R4 AND prev S4 inside today's S3/S4), but gated on r.overlapHigher
     // instead of r.overlapLower, since the raw R/S math itself is direction-
     // agnostic. Width condition matches the reference chart's badges
-    // exactly: prev day CPR category = pSmall (0.50%–1.00%), today's CPR
+    // exactly: prev day CPR category = pSmall (0.60%–1.20%), today's CPR
     // category = Tiny (0.10%–0.25%) — rather than a loose "< X%" threshold.
     case "eXHi-L4U4-U4":
       return (

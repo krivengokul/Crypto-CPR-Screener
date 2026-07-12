@@ -34,6 +34,7 @@ import {
   getVal,
   splitSymbol,
   getChartUrl,
+  hasKnownChartMapping,
   passesPattern,
   matchesWidthFilter,
   formatWidthFilterLabel,
@@ -2112,16 +2113,16 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                 [
                   { key: "pmicro",  label: "pMicro",  range: "≤0.10%",         active: "border-violet-400 text-violet-400" },
                   { key: "ptiny",   label: "pTiny",   range: "0.10–0.25%",     active: "border-purple-400 text-purple-400" },
-                  { key: "pmini",   label: "pMini",   range: "0.25–0.50%",     active: "border-teal-400 text-teal-400" },
-                  { key: "psmall",  label: "pSmall",  range: "0.50–1.00%",     active: "border-indigo-400 text-indigo-400" },
+                  { key: "pmini",   label: "pMini",   range: "0.25–0.60%",     active: "border-teal-400 text-teal-400" },
+                  { key: "psmall",  label: "pSmall",  range: "0.60–1.20%",     active: "border-indigo-400 text-indigo-400" },
                   { key: "pmedium", label: "pMedium", range: "1.00–2.00%",     active: "border-blue-400 text-blue-400" },
                   { key: "plarge",  label: "pLarge",  range: "2.00–5.00%",     active: "border-amber-400 text-amber-400" },
                   { key: "pmega",   label: "pMega",   range: "5.00–10.00%",    active: "border-orange-400 text-orange-400" },
                   { key: "pultra",  label: "pUltra",  range: ">10.00%",        active: "border-rose-400 text-rose-400" },
                   { key: "micro",   label: "Micro",   range: "≤0.10%",         active: "border-violet-400 text-violet-400" },
                   { key: "tiny",    label: "Tiny",    range: "0.10–0.25%",     active: "border-purple-400 text-purple-400" },
-                  { key: "mini",    label: "Mini",    range: "0.25–0.50%",     active: "border-teal-400 text-teal-400" },
-                  { key: "small",   label: "Small",   range: "0.50–1.00%",     active: "border-indigo-400 text-indigo-400" },
+                  { key: "mini",    label: "Mini",    range: "0.25–0.60%",     active: "border-teal-400 text-teal-400" },
+                  { key: "small",   label: "Small",   range: "0.60–1.20%",     active: "border-indigo-400 text-indigo-400" },
                   { key: "medium",  label: "Medium",  range: "1.00–2.00%",     active: "border-blue-400 text-blue-400" },
                   { key: "large",   label: "Large",   range: "2.00–5.00%",     active: "border-amber-400 text-amber-400" },
                   { key: "mega",    label: "Mega",    range: "5.00–10.00%",    active: "border-orange-400 text-orange-400" },
@@ -2456,15 +2457,24 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                             </div>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
-                            <a
-                              href={getChartUrl(r.symbol, r.source)}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-muted-foreground hover:text-primary transition-colors"
-                              title="Open on TradingView"
-                            >
-                              <ExternalLink className="w-3.5 h-3.5" />
-                            </a>
+                            {hasKnownChartMapping(r.symbol, r.source) ? (
+                              <a
+                                href={getChartUrl(r.symbol, r.source)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-muted-foreground hover:text-primary transition-colors"
+                                title="Open on TradingView"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                              </a>
+                            ) : (
+                              <span
+                                className="text-muted-foreground/30 cursor-not-allowed inline-flex"
+                                title="Not available on TradingView — Delta stock-token instruments aren't listed under DELTAIN yet"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                              </span>
+                            )}
                           </td>
                         </tr>
 
