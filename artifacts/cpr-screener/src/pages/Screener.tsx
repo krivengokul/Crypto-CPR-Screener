@@ -439,8 +439,8 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
       return binanceIntersect;
     }
     if (showLACompressed && activePattern === "littleabove") {
-      const binanceIntersect = allResults.filter((r) => passesPattern(r, "mP-U34>pU2")).map((r) => ({ ...r, source: "binance" as const }));
-      const deltaIntersect = deltaAllResults.filter((r) => passesPattern(r, "mP-U34>pU2")).map((r) => ({ ...r, source: "delta" as const }));
+      const binanceIntersect = allResults.filter((r) => passesPattern(r, "sT-cOL2U3-APU4")).map((r) => ({ ...r, source: "binance" as const }));
+      const deltaIntersect = deltaAllResults.filter((r) => passesPattern(r, "sT-cOL2U3-APU4")).map((r) => ({ ...r, source: "delta" as const }));
       if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
       if (activeTab === "delta") return deltaIntersect;
       return binanceIntersect;

@@ -293,8 +293,8 @@ export function matchesWidthFilter(r: CPRResult, widthFilter: WidthFilter): bool
   switch (key) {
     case "micro":  return width <= 0.10;
     case "tiny":   return width > 0.10 && width <= 0.25;
-    case "mini":   return width > 0.25 && width <= 0.50;
-    case "small":  return width > 0.50 && width <= 1.00;
+    case "mini":   return width > 0.25 && width <= 0.60;
+    case "small":  return width > 0.60 && width <= 1.20;
     case "medium": return width > 1.00 && width <= 2.00;
     case "large":  return width > 2.00 && width <= 5.00;
     case "mega":   return width > 5.00 && width <= 10.00;
@@ -305,7 +305,7 @@ export function matchesWidthFilter(r: CPRResult, widthFilter: WidthFilter): bool
 
 /**
  * Human-readable label for the active CPR Width filter, e.g. "psmall" ->
- * "pSmall (0.50%-1.00%)". Used by the result-count summary line in
+ * "pSmall (0.60%-1.20%)". Used by the result-count summary line in
  * Screener.tsx. Was previously called but never defined/exported — calling
  * it with any width filter active threw a ReferenceError and crashed the
  * component. Fixed by adding it here alongside the other width-filter helpers.
@@ -313,16 +313,16 @@ export function matchesWidthFilter(r: CPRResult, widthFilter: WidthFilter): bool
 const WIDTH_FILTER_LABELS: Record<NonNullable<WidthFilter>, string> = {
   micro:  "Micro (\u22640.10%)",
   tiny:   "Tiny (0.10%-0.25%)",
-  mini:   "Mini (0.25%-0.50%)",
-  small:  "Small (0.50%-1.00%)",
+  mini:   "Mini (0.25%-0.60%)",
+  small:  "Small (0.60%-1.20%)",
   medium: "Medium (1.00%-2.00%)",
   large:  "Large (2.00%-5.00%)",
   mega:   "Mega (5.00%-10.00%)",
   ultra:  "Ultra (>10.00%)",
   pmicro:  "pMicro (\u22640.10%)",
   ptiny:   "pTiny (0.10%-0.25%)",
-  pmini:   "pMini (0.25%-0.50%)",
-  psmall:  "pSmall (0.50%-1.00%)",
+  pmini:   "pMini (0.25%-0.60%)",
+  psmall:  "pSmall (0.60%-1.20%)",
   pmedium: "pMedium (1.00%-2.00%)",
   plarge:  "pLarge (2.00%-5.00%)",
   pmega:   "pMega (5.00%-10.00%)",
@@ -342,19 +342,13 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return r.cprRising && r.narrowCPR && r.bothTight;
     case "LA-PL12CL23":
       return r.cprRising && r.narrowCPR && r.PL12CL23;
-    // NEW: mP-U34>pU2 — Little Above + Compressed:
-    // today S4 > prev S2, today R3 > prev R2, today R4 < prev R4,
-    // today CPR width < 0.5%, prev CPR width < 2%, GAP (cprDistancePct) < 10%
-    case "mP-U34>pU2":
+    case "sT-cOL2U3-APU4":
       return (
         r.cprRising &&
         r.narrowCPR &&
-        r.todayCPR.widthPct < 0.5 &&
-        r.prevCPR.widthPct < 2 &&
-        r.todayCPR.s4 > r.prevCPR.s2 &&
-        r.todayCPR.r3 > r.prevCPR.r2 &&
-        r.todayCPR.r4 < r.prevCPR.r4 &&
-        (cprDistancePct(r) ?? Infinity) < 10
+        r.cOHiL2U3 &&
+        r.prevCPR.widthPct > 0.60 && r.prevCPR.widthPct <= 1.20 &&   // pSmall
+        r.todayCPR.widthPct > 0.10 && r.todayCPR.widthPct <= 0.25   // Tiny
       );
     case "la-allstepup":
       return r.cprRising && r.narrowCPR && r.allupabove && r.allupbelow;
@@ -460,7 +454,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     case "eXHi-L4U4-U4":
       return (
         r.overlapHigher && r.eXL4U4 &&
-        r.prevCPR.widthPct > 0.50 && r.prevCPR.widthPct <= 1.00 &&   // pSmall
+        r.prevCPR.widthPct > 0.60 && r.prevCPR.widthPct <= 1.20 &&   // pSmall
         r.todayCPR.widthPct > 0.10 && r.todayCPR.widthPct <= 0.25   // Tiny
       );
     // NEW: 1T-HiL4U4-FAU4 — BigCPR Above: Wide Above (cprRising +
