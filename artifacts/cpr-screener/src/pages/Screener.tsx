@@ -2180,7 +2180,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                       <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Exchange</th>
                     )}
                     <th
-                      className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
+                      className="px-3 py-3 w-20 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
                       onClick={() => toggleSort("symbol")}
                     >
                       Symbol <SortIcon k="symbol" />
@@ -2250,24 +2250,33 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                               </span>
                             </td>
                           )}
+                          {/* NEW: Symbol column narrowed (w-20 on the header) and the
+                              quote (e.g. "USDT"/"USD") moved onto its own row directly
+                              under the base symbol, in the SAME cell, using the SAME
+                              font-size/color (text-muted-foreground text-xs font-normal)
+                              it always had — just stacked instead of inline. This lets
+                              the column itself shrink since it no longer needs to fit
+                              "BASE/QUOTE" side-by-side on one line. */}
                           <td
-                            className="px-4 py-3 font-mono font-semibold text-foreground whitespace-nowrap cursor-pointer select-none"
+                            className="px-3 py-3 w-20 font-mono font-semibold text-foreground cursor-pointer select-none"
                             onClick={() => toggleExpand(rowKey)}
                             title="Click to expand ADK S/R ladder"
                           >
-                            <div className="flex items-center gap-2">
-                              <span className="text-muted-foreground text-xs">{isExpanded ? "▼" : "▶"}</span>
-                              {r.passes && <div className="w-1.5 h-1.5 rounded-full bg-accent" />}
-                              {sym.base}
-                              <span className="text-muted-foreground text-xs font-normal">/{sym.quote}</span>
-                              {isRisingAboveTC(r) && activePattern === "structure-bigbelow" && showBigBelowPMiniPL3 && (
-                                <span
-                                  className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-green-500/15 text-green-400 border border-green-500/30"
-                                  title="Currently trading above today's TC"
-                                >
-                                  Rising
-                                </span>
-                              )}
+                            <div className="flex items-start gap-1.5">
+                              <span className="text-muted-foreground text-xs mt-0.5">{isExpanded ? "▼" : "▶"}</span>
+                              {r.passes && <div className="w-1.5 h-1.5 rounded-full bg-accent mt-1.5 shrink-0" />}
+                              <div className="flex flex-col leading-tight min-w-0">
+                                <span className="truncate">{sym.base}</span>
+                                <span className="text-muted-foreground text-xs font-normal">/{sym.quote}</span>
+                                {isRisingAboveTC(r) && activePattern === "structure-bigbelow" && showBigBelowPMiniPL3 && (
+                                  <span
+                                    className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-green-500/15 text-green-400 border border-green-500/30 mt-0.5 inline-block w-fit"
+                                    title="Currently trading above today's TC"
+                                  >
+                                    Rising
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </td>
                           {/* Pivot Level column — now contains ONLY the directional
@@ -2470,7 +2479,7 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
                             ) : (
                               <span
                                 className="text-muted-foreground/30 cursor-not-allowed inline-flex"
-                                title="Not available on TradingView — Delta stock-token instruments aren't listed under DELTAIN yet"
+                                title="Not available on TradingView — Delta's /BUSD tokenized-stock instruments aren't listed under DELTAIN yet"
                               >
                                 <ExternalLink className="w-3.5 h-3.5" />
                               </span>

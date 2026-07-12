@@ -181,20 +181,21 @@ export function splitSymbol(symbol: string, source: "binance" | "delta") {
 
 /**
  * Whether we have a reliable TradingView chart mapping for this symbol.
- * Binance symbols always map cleanly (BINANCE:<symbol>). Delta symbols
- * only map reliably when they're underscore-delimited crypto pairs (e.g.
- * "BTC_USDT") — that's the convention getChartUrl's DELTAIN: prefix was
- * built against, and it matches what TradingView's Delta India
- * integration actually lists. Non-underscore Delta symbols are mostly
- * tokenized-stock products (e.g. "INTCBUSD") that TradingView's Delta
- * India integration doesn't carry yet (per Delta's own Oct 2024
- * announcement, direct data coverage started with BTC/ETH and has been
- * rolling out to altcoins since — stock-tokens aren't part of that).
- * Used to skip linking to a dead "This symbol doesn't exist" page.
+ * Binance symbols always map cleanly (BINANCE:<symbol>).
+ *
+ * FIX (scoped to /BUSD only): Delta's TradingView (DELTAIN:) integration
+ * doesn't carry Delta's BUSD-quoted tokenized-stock instruments (e.g.
+ * "INTCBUSD") — those are the only Delta symbols known to be missing.
+ * Previously this also excluded every non-underscore Delta symbol (i.e.
+ * anything not shaped like "BTC_USDT"), which was too broad and hid the
+ * chart link for perfectly valid Delta symbols that just don't happen to
+ * use an underscore. Now the check is specific: only symbols whose quote
+ * (per splitSymbol) is "BUSD" are treated as unmapped; every other Delta
+ * symbol — underscore-delimited or not — gets a chart link as normal.
  */
 export function hasKnownChartMapping(symbol: string, source: "binance" | "delta"): boolean {
   if (source === "binance") return true;
-  return symbol.includes("_");
+  return splitSymbol(symbol, "delta").quote !== "BUSD";
 }
 
 /**
