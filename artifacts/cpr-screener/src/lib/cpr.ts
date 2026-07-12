@@ -75,6 +75,7 @@ export interface CPRResult {
   eXLoL3U4: boolean;
   eXL4U4: boolean;
   HiL4U4: boolean;
+  HiL4U34: boolean;
   LoL4U4:boolean;
   eXHiU1L3: boolean;
   eXHiL4U234: boolean;
@@ -227,10 +228,9 @@ export function analyzeCPR(
                     (prevCPR.s4 > todayCPR.s3 && prevCPR.s4 < todayCPR.s2); 
   const eXL4U4 = (prevCPR.r4 > todayCPR.r3 && prevCPR.r4 < todayCPR.r4) &&
                   (prevCPR.s4 > todayCPR.s4 && prevCPR.s4 < todayCPR.s3);
-  // NEW: HiL4U4 — mirror of eXL4U4 (see interface doc-comment above): same
-  // R condition (prev R4 inside today's R3/R4), but S condition flipped —
-  // today's S4 inside prev day's S3/S4 band.
-  const HiL4U4 = (prevCPR.r4 > todayCPR.r3 && prevCPR.r4 < todayCPR.r4) &&
+  const HiL4U4 = (prevCPR.r4 > todayCPR.r2 && prevCPR.r4 < todayCPR.r3) &&
+                  (todayCPR.s4 > prevCPR.s4 && todayCPR.s4 < prevCPR.s3);
+  const HiL4U34 = (prevCPR.r4 > todayCPR.r3 && prevCPR.r4 < todayCPR.r4) &&
                   (todayCPR.s4 > prevCPR.s4 && todayCPR.s4 < prevCPR.s3);
   const LoL4U4   = (todayCPR.r4 < prevCPR.r4 && todayCPR.r4 > prevCPR.r3) &&
                   (prevCPR.s4 > todayCPR.s4 && prevCPR.s4 < todayCPR.s3);
@@ -326,6 +326,7 @@ export function analyzeCPR(
     eXLoL3U4,
     eXL4U4,
     HiL4U4,
+    HiL4U34,
     LoL4U4,
     eXHiU1L3,
     eXHiL4U234,
