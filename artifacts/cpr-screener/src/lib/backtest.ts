@@ -14,6 +14,16 @@ export type BacktestSource = "binance" | "delta";
  * need later — "target = today's own CPR level" vs "target = previous
  * day's CPR level". Add more entries here once this is validated; each one
  * needs its target level worked out from that pattern's legend/condition.
+ *
+ * NEW: "1LHr-L4U3-U4" and "sT-cOL2U3-APU4" (displayed as "cOHi-APU4") —
+ * these are the two specific sub-patterns nested under the "LittleCPR
+ * Above" category (see BACKTEST_CATEGORIES below). Both are bullish,
+ * both target U4-style levels:
+ *   - "1LHr-L4U3-U4" has no distinct target called out in Screener.tsx's
+ *     legend, so it inherits the same target as its parent category
+ *     (today's own R4 / U4) — matching the base "littleabove" entry above.
+ *   - "sT-cOL2U3-APU4" ("cOHi-APU4" in the UI) explicitly targets "Bullish
+ *     Above PU4" per its legend card, i.e. prev day's R4.
  */
 export interface BacktestTargetDef {
   key: string;          // matches passesPattern's pattern-key string exactly
@@ -38,6 +48,48 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "PU4 (prev day's R4)",
     getTarget: (r) => r.prevCPR.r4,
   },
+  // NEW: the two "LittleCPR Above" sub-patterns
+  {
+    key: "1LHr-L4U3-U4",
+    label: "1LHr-L4U3-U4",
+    direction: "bullish",
+    targetLabel: "U4 (today's R4)",
+    getTarget: (r) => r.todayCPR.r4,
+  },
+  {
+    key: "sT-cOL2U3-APU4",
+    label: "cOHi-APU4",
+    direction: "bullish",
+    targetLabel: "PU4 (prev day's R4)",
+    getTarget: (r) => r.prevCPR.r4,
+  },
+];
+
+/**
+ * NEW: Category groupings — a "category" is a broad, non-specific base
+ * condition (e.g. "littleabove" = cprRising && narrowCPR) that itself has
+ * no single well-defined target, but has one or more specific sub-patterns
+ * nested under it that DO have defined targets (see BACKTEST_TARGETS).
+ *
+ * Selecting a category in the UI runs runCategoryScan (below): it lists
+ * every symbol matching the category's base condition on the entry date,
+ * with their CPR data, but WITHOUT Target/Result/Hit Date — there's no
+ * single target to grade against for the category as a whole. Selecting
+ * one of its subPatternKeys instead runs the normal runBacktest flow
+ * against that pattern's specific target.
+ */
+export interface BacktestCategoryDef {
+  key: string;              // matches passesPattern's BASE category key (e.g. "littleabove")
+  label: string;            // display name, e.g. "LittleCPR Above"
+  subPatternKeys: string[]; // BACKTEST_TARGETS keys nested under this category
+}
+
+export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
+  {
+    key: "littleabove",
+    label: "LittleCPR Above",
+    subPatternKeys: ["1LHr-L4U3-U4", "sT-cOL2U3-APU4"],
+  },
 ];
 
 export interface BacktestRow {
@@ -51,6 +103,23 @@ export interface BacktestRow {
   result: "pass" | "fail" | "insufficient-data";
   hitDate: string | null;          // which day (entryDate or entryDate+1) hit target, if any
   daysToHit: 0 | 1 | null;
+}
+
+/**
+ * NEW: Simplified row for category scans — same CPR reconstruction as
+ * BacktestRow, but deliberately has no targetLevel/result/hitDate fields.
+ * A category (e.g. "LittleCPR Above") has no single defined target, so
+ * there's nothing meaningful to grade; this just proves which symbols
+ * matched the category's base condition on the entry date, plus their CPR
+ * shape for reference (compressionRatio, widths via todayCPR/prevCPR).
+ */
+export interface CategoryScanRow {
+  symbol: string;
+  source: BacktestSource;
+  entryDate: string;
+  todayCPR: CPRResult["todayCPR"];
+  prevCPR: CPRResult["prevCPR"];
+  compressionRatio: number;
 }
 
 function utcDateKey(ms: number): string {
@@ -144,6 +213,45 @@ async function fetchDeltaWindow(symbol: string, entryDateISO: string): Promise<M
 }
 
 /**
+ * Shared reconstruction step used by both backtestSymbolOnDate (patterns,
+ * below) and categoryScanSymbolOnDate (categories, further below): fetches
+ * the candle window for a symbol/date and rebuilds the CPRResult that
+ * would have been active on entryDate, exactly as the live scanner does
+ * (pp/prev/today candle selection). Returns null if there isn't enough
+ * history to reconstruct it at all.
+ */
+async function reconstructCPRForDate(
+  symbol: string,
+  source: BacktestSource,
+  entryDateISO: string
+): Promise<{ result: CPRResult; window: Map<string, OHLC> } | null> {
+  const dMinus3 = addDaysISO(entryDateISO, -3);
+  const dMinus2 = addDaysISO(entryDateISO, -2);
+  const dMinus1 = addDaysISO(entryDateISO, -1);
+
+  const window =
+    source === "binance"
+      ? await fetchBinanceWindow(symbol, entryDateISO)
+      : await fetchDeltaWindow(symbol, entryDateISO);
+  if (!window) return null;
+
+  const ppCandle = window.get(dMinus3) ?? null;
+  const prevCandle = window.get(dMinus2);
+  const todayCandle = window.get(dMinus1);
+  if (!prevCandle || !todayCandle) return null; // not enough history to reconstruct the CPR
+
+  const candlesForAnalysis: OHLC[] = ppCandle ? [ppCandle, prevCandle, todayCandle] : [prevCandle, todayCandle];
+
+  // currentPrice/change24h/quoteVolume aren't read by passesPattern for
+  // any of the target/category patterns used here, so placeholder values
+  // (todayCandle.close, 0, 0) are fine.
+  const result = analyzeCPR(symbol, candlesForAnalysis, todayCandle.close, 0, 0, todayCandle.open);
+  if (!result) return null;
+
+  return { result, window };
+}
+
+/**
  * Backtests one symbol on one date:
  *   1. Reconstruct the CPR that would have been active on entryDate D
  *      (todayCPR from D-1's candle, prevCPR from D-2's, ppCPR from D-3's —
@@ -165,28 +273,12 @@ export async function backtestSymbolOnDate(
   target: BacktestTargetDef,
   passesPatternFn: (r: CPRResult, pattern: string) => boolean
 ): Promise<BacktestRow | null> {
-  const dMinus3 = addDaysISO(entryDateISO, -3);
-  const dMinus2 = addDaysISO(entryDateISO, -2);
-  const dMinus1 = addDaysISO(entryDateISO, -1);
   const dPlus1 = addDaysISO(entryDateISO, 1);
 
-  const window =
-    source === "binance"
-      ? await fetchBinanceWindow(symbol, entryDateISO)
-      : await fetchDeltaWindow(symbol, entryDateISO);
-  if (!window) return null;
+  const reconstructed = await reconstructCPRForDate(symbol, source, entryDateISO);
+  if (!reconstructed) return null;
+  const { result, window } = reconstructed;
 
-  const ppCandle = window.get(dMinus3) ?? null;
-  const prevCandle = window.get(dMinus2);
-  const todayCandle = window.get(dMinus1);
-  if (!prevCandle || !todayCandle) return null; // not enough history to reconstruct the CPR
-
-  const candlesForAnalysis: OHLC[] = ppCandle ? [ppCandle, prevCandle, todayCandle] : [prevCandle, todayCandle];
-
-  // currentPrice/change24h/quoteVolume aren't read by passesPattern for
-  // either of the v1 target patterns, so placeholder values are fine here.
-  const result = analyzeCPR(symbol, candlesForAnalysis, todayCandle.close, 0, 0, todayCandle.open);
-  if (!result) return null;
   if (!passesPatternFn(result, target.key)) return null; // didn't match the pattern on this date
 
   const targetLevel = target.getTarget(result);
@@ -220,6 +312,36 @@ export async function backtestSymbolOnDate(
     result: outcome,
     hitDate,
     daysToHit,
+  };
+}
+
+/**
+ * NEW: Category-scan version of backtestSymbolOnDate — same CPR
+ * reconstruction, but checks the CATEGORY's base condition (e.g.
+ * "littleabove") instead of a specific pattern's, and returns a
+ * CategoryScanRow with no target/result/hitDate fields, since a category
+ * has no single defined target to grade against.
+ */
+export async function categoryScanSymbolOnDate(
+  symbol: string,
+  source: BacktestSource,
+  entryDateISO: string,
+  categoryKey: string,
+  passesPatternFn: (r: CPRResult, pattern: string) => boolean
+): Promise<CategoryScanRow | null> {
+  const reconstructed = await reconstructCPRForDate(symbol, source, entryDateISO);
+  if (!reconstructed) return null;
+  const { result } = reconstructed;
+
+  if (!passesPatternFn(result, categoryKey)) return null; // didn't match the category's base condition
+
+  return {
+    symbol,
+    source,
+    entryDate: entryDateISO,
+    todayCPR: result.todayCPR,
+    prevCPR: result.prevCPR,
+    compressionRatio: result.compressionRatio,
   };
 }
 
@@ -258,6 +380,43 @@ export async function runBacktest(
     const batch = symbols.slice(i, i + batchSize);
     const batchResults = await Promise.all(
       batch.map((sym) => backtestSymbolOnDate(sym, source, entryDateISO, target, passesPatternFn))
+    );
+    batchResults.forEach((r) => {
+      if (r) rows.push(r);
+    });
+    onProgress?.(Math.min(i + batchSize, symbols.length), symbols.length, batch[batch.length - 1]);
+    if (i + batchSize < symbols.length) await new Promise((res) => setTimeout(res, delayMs));
+  }
+
+  return rows;
+}
+
+/**
+ * NEW: Category-scan counterpart of runBacktest — same symbol-universe
+ * caveat applies (see KNOWN LIMITATION above). Runs categoryScanSymbolOnDate
+ * across the full universe and returns the simplified CategoryScanRow list
+ * (symbol list + CPR data only, no target/result/hitDate).
+ */
+export async function runCategoryScan(
+  categoryKey: string,
+  entryDateISO: string,
+  source: BacktestSource,
+  passesPatternFn: (r: CPRResult, pattern: string) => boolean,
+  onProgress?: (done: number, total: number, symbol: string) => void
+): Promise<CategoryScanRow[]> {
+  const symbols: string[] =
+    source === "binance"
+      ? (await fetchTopUSDTSymbols(500)).map((t) => t.symbol)
+      : (await fetchDeltaPerps()).map((t) => t.symbol);
+
+  const rows: CategoryScanRow[] = [];
+  const batchSize = 10;
+  const delayMs = 300;
+
+  for (let i = 0; i < symbols.length; i += batchSize) {
+    const batch = symbols.slice(i, i + batchSize);
+    const batchResults = await Promise.all(
+      batch.map((sym) => categoryScanSymbolOnDate(sym, source, entryDateISO, categoryKey, passesPatternFn))
     );
     batchResults.forEach((r) => {
       if (r) rows.push(r);

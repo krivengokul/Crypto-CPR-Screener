@@ -4,24 +4,37 @@ import { useState } from "react";
 import { RefreshCw, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
 import {
   BACKTEST_TARGETS,
+  BACKTEST_CATEGORIES,
   runBacktest,
+  runCategoryScan,
   type BacktestRow,
+  type CategoryScanRow,
   type BacktestSource,
 } from "@/lib/backtest";
 import { passesPattern, fmt } from "./ScreenerUtils";
 
 /**
- * v1 backtest UI — proves out the engine on 2 patterns (see
- * lib/backtest.ts's BACKTEST_TARGETS). Pick a pattern + a past date +
- * exchange, run it, and see which symbols matched the pattern on that date
- * and whether they hit their target by end of the following day.
+ * v1 backtest UI — proves out the engine on a handful of patterns (see
+ * lib/backtest.ts's BACKTEST_TARGETS / BACKTEST_CATEGORIES). Pick a past
+ * date + exchange, then either:
+ *   - select a CATEGORY (e.g. "LittleCPR Above") to see the full symbol
+ *     list matching that category's base condition on that date, with
+ *     their CPR data — no Target/Result/Hit Date, since a category has no
+ *     single well-defined target to grade against; or
+ *   - select a specific PATTERN nested under a category (or a standalone
+ *     pattern like "U1 > Previous U4") to run the full backtest: matched
+ *     symbols PLUS whether each one hit its target by end of the
+ *     following day.
  *
  * Not yet wired into Screener.tsx's tab/nav structure — render this
  * wherever you want the backtest page to live (e.g. its own route, or as
  * an additional tab alongside the live scanner).
  */
 export default function BacktestPanel() {
-  const [patternKey, setPatternKey] = useState(BACKTEST_TARGETS[0].key);
+  // NEW: selection can be either a category key (e.g. "littleabove") or a
+  // pattern key (e.g. "1LHr-L4U3-U4", "HA-U1>PU4"). Default to the first
+  // category so the dropdown opens on a sensible, low-noise view.
+  const [selectedKey, setSelectedKey] = useState<string>(BACKTEST_CATEGORIES[0].key);
   const [entryDate, setEntryDate] = useState<string>(() => {
     const d = new Date();
     d.setUTCDate(d.getUTCDate() - 7);
@@ -31,24 +44,50 @@ export default function BacktestPanel() {
   const [status, setStatus] = useState<"idle" | "running" | "done" | "error">("idle");
   const [progress, setProgress] = useState({ done: 0, total: 0, symbol: "" });
   const [rows, setRows] = useState<BacktestRow[]>([]);
+  // NEW: separate state for category-scan rows — kept apart from `rows`
+  // since the two have different shapes (no target/result/hitDate here).
+  const [categoryRows, setCategoryRows] = useState<CategoryScanRow[]>([]);
   const [error, setError] = useState("");
 
-  const activeTarget = BACKTEST_TARGETS.find((t) => t.key === patternKey)!;
+  // NEW: is the current selection a category (symbol-list-only) or a
+  // specific pattern (full target/result/hitDate backtest)?
+  const isCategory = BACKTEST_CATEGORIES.some((c) => c.key === selectedKey);
+  const activeTarget = !isCategory ? BACKTEST_TARGETS.find((t) => t.key === selectedKey) : undefined;
+  const activeCategory = isCategory ? BACKTEST_CATEGORIES.find((c) => c.key === selectedKey) : undefined;
+
+  // Patterns not nested under any category — rendered in their own
+  // "Other Patterns" optgroup below (currently just "HA-U1>PU4").
+  const ungroupedPatterns = BACKTEST_TARGETS.filter(
+    (t) => !BACKTEST_CATEGORIES.some((c) => c.subPatternKeys.includes(t.key))
+  );
 
   const run = async () => {
     setStatus("running");
     setError("");
     setRows([]);
+    setCategoryRows([]);
     setProgress({ done: 0, total: 0, symbol: "" });
     try {
-      const result = await runBacktest(
-        patternKey,
-        entryDate,
-        source,
-        passesPattern,
-        (done, total, symbol) => setProgress({ done, total, symbol })
-      );
-      setRows(result);
+      if (isCategory) {
+        // NEW: category scan — symbol list + CPR data only
+        const result = await runCategoryScan(
+          selectedKey,
+          entryDate,
+          source,
+          passesPattern,
+          (done, total, symbol) => setProgress({ done, total, symbol })
+        );
+        setCategoryRows(result);
+      } else {
+        const result = await runBacktest(
+          selectedKey,
+          entryDate,
+          source,
+          passesPattern,
+          (done, total, symbol) => setProgress({ done, total, symbol })
+        );
+        setRows(result);
+      }
       setStatus("done");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unknown error");
@@ -67,29 +106,49 @@ export default function BacktestPanel() {
       <div className="flex items-center gap-2 mb-1">
         <h2 className="text-lg font-bold">Pattern Backtest</h2>
         <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium">
-          v1 — 2 patterns only
+          v1 — a few patterns only
         </span>
       </div>
       <p className="text-xs text-muted-foreground mb-4">
-        Pick a past date and a pattern. This reconstructs the CPR that would
-        have been active on that date (same candle logic as the live
-        scanner) and checks whether the target level was reached by end of
-        the following day.
+        Pick a past date and either a category (symbol list only) or a
+        specific pattern (symbol list + Target/Result/Hit Date). This
+        reconstructs the CPR that would have been active on that date (same
+        candle logic as the live scanner).
       </p>
 
       <div className="flex flex-wrap items-end gap-3 mb-4">
         <div>
-          <label className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Pattern</label>
+          <label className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1">
+            Category / Pattern
+          </label>
           <select
-            value={patternKey}
-            onChange={(e) => setPatternKey(e.target.value)}
+            value={selectedKey}
+            onChange={(e) => setSelectedKey(e.target.value)}
             className="text-sm px-2.5 py-1.5 rounded-lg border border-border bg-background text-foreground"
           >
-            {BACKTEST_TARGETS.map((t) => (
-              <option key={t.key} value={t.key}>
-                {t.label}
-              </option>
+            {BACKTEST_CATEGORIES.map((cat) => (
+              <optgroup key={cat.key} label={cat.label}>
+                <option value={cat.key}>{cat.label} — all (symbol list only)</option>
+                {cat.subPatternKeys.map((pk) => {
+                  const t = BACKTEST_TARGETS.find((t) => t.key === pk);
+                  if (!t) return null;
+                  return (
+                    <option key={pk} value={pk}>
+                      {t.label}
+                    </option>
+                  );
+                })}
+              </optgroup>
             ))}
+            {ungroupedPatterns.length > 0 && (
+              <optgroup label="Other Patterns">
+                {ungroupedPatterns.map((t) => (
+                  <option key={t.key} value={t.key}>
+                    {t.label}
+                  </option>
+                ))}
+              </optgroup>
+            )}
           </select>
         </div>
         <div>
@@ -131,10 +190,22 @@ export default function BacktestPanel() {
         </button>
       </div>
 
-      <div className="text-xs text-muted-foreground mb-3">
-        Target: <span className="text-foreground font-medium">{activeTarget.targetLabel}</span>{" "}
-        ({activeTarget.direction === "bullish" ? "price must reach or exceed it" : "price must reach or fall below it"})
-      </div>
+      {/* NEW: only show the Target line for actual patterns — a category
+          has no single target to describe here. */}
+      {!isCategory && activeTarget && (
+        <div className="text-xs text-muted-foreground mb-3">
+          Target: <span className="text-foreground font-medium">{activeTarget.targetLabel}</span>{" "}
+          ({activeTarget.direction === "bullish" ? "price must reach or exceed it" : "price must reach or fall below it"})
+        </div>
+      )}
+      {isCategory && activeCategory && (
+        <div className="text-xs text-muted-foreground mb-3">
+          Category scan — lists every symbol matching{" "}
+          <span className="text-foreground font-medium">{activeCategory.label}</span>&apos;s base
+          condition on the entry date. No Target/Result/Hit Date (select one of its sub-patterns
+          above for those).
+        </div>
+      )}
 
       {status === "running" && (
         <div className="mb-4 rounded-lg border border-border bg-background/50 p-3">
@@ -154,7 +225,62 @@ export default function BacktestPanel() {
         </div>
       )}
 
-      {status === "done" && (
+      {/* NEW: category-scan results — symbol list + CPR data only */}
+      {status === "done" && isCategory && (
+        <>
+          <div className="flex items-center gap-4 mb-3 text-xs flex-wrap">
+            <span className="text-muted-foreground">
+              {categoryRows.length} symbols matched {activeCategory?.label} on {entryDate}
+            </span>
+          </div>
+
+          {categoryRows.length === 0 ? (
+            <div className="text-xs text-muted-foreground text-center py-8">
+              No symbols matched this category on {entryDate}.
+            </div>
+          ) : (
+            <div className="overflow-x-auto rounded-lg border border-border">
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr className="border-b border-border bg-muted/30">
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Symbol
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Today TC / BC
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Prev TC / BC
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Compression
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {categoryRows.map((r) => (
+                    <tr key={`${r.source}-${r.symbol}`} className="hover:bg-muted/20">
+                      <td className="px-3 py-2 font-mono font-semibold">{r.symbol}</td>
+                      <td className="px-3 py-2 font-mono text-xs text-muted-foreground">
+                        {fmt(r.todayCPR.tc)} / {fmt(r.todayCPR.bc)}
+                      </td>
+                      <td className="px-3 py-2 font-mono text-xs text-muted-foreground">
+                        {fmt(r.prevCPR.tc)} / {fmt(r.prevCPR.bc)}
+                      </td>
+                      <td className="px-3 py-2 font-mono text-xs text-muted-foreground">
+                        {r.compressionRatio.toFixed(1)}%
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Pattern backtest results — symbol list + Target/Result/Hit Date */}
+      {status === "done" && !isCategory && (
         <>
           <div className="flex items-center gap-4 mb-3 text-xs flex-wrap">
             <span className="text-muted-foreground">
