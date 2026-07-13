@@ -11,6 +11,8 @@ import {
   ChevronRight,
   Activity,
   X,
+  LineChart,
+  FlaskConical,
 } from "lucide-react";
 
 export interface Pattern {
@@ -58,6 +60,8 @@ export const patterns: Pattern[] = [
   { id: "HB-L1>PL1-PU1CU234", label: "L1>PL1, PU1CU234",   subtitle: "Bearish Target:L4",       icon: TrendingDown }
 ];
 
+export type SidebarMode = "scanner" | "backtest";
+
 interface PatternSidebarProps {
   activePattern: string;
   onSelect: (id: string) => void;
@@ -65,6 +69,83 @@ interface PatternSidebarProps {
   onToggle: () => void;
   mobileOpen: boolean;
   onMobileClose: () => void;
+  // NEW: mode toggle — switches the main content between the live scanner
+  // (existing pattern-driven Screener/ComingSoon views) and the Backtest
+  // panel. Sidebar itself stays mounted and interactive in both modes so
+  // pattern selection is preserved when switching back to Live Scanner.
+  mode: SidebarMode;
+  onModeChange: (mode: SidebarMode) => void;
+}
+
+// NEW: Mode toggle — two pill buttons, "Live Scanner" and "Backtest".
+// Rendered both expanded (full label) and collapsed (icon-only, stacked)
+// so it works in every sidebar state (desktop collapsed/expanded, mobile).
+function ModeToggle({
+  mode,
+  onModeChange,
+  collapsed,
+}: {
+  mode: SidebarMode;
+  onModeChange: (mode: SidebarMode) => void;
+  collapsed: boolean;
+}) {
+  const options: { key: SidebarMode; label: string; icon: React.ElementType }[] = [
+    { key: "scanner", label: "Live Scanner", icon: LineChart },
+    { key: "backtest", label: "Backtest", icon: FlaskConical },
+  ];
+
+  if (collapsed) {
+    return (
+      <div className="flex flex-col gap-1 px-2 mb-2">
+        {options.map(({ key, label, icon: Icon }) => {
+          const isActive = mode === key;
+          return (
+            <button
+              key={key}
+              onClick={() => onModeChange(key)}
+              title={label}
+              className="flex items-center justify-center rounded-lg transition-colors"
+              style={{
+                width: 32,
+                height: 32,
+                margin: "0 auto",
+                background: isActive ? "rgba(59,130,246,0.2)" : "rgba(255,255,255,0.05)",
+              }}
+            >
+              <Icon className="w-4 h-4" style={{ color: isActive ? "#60a5fa" : "#4b6a8a" }} />
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+
+  return (
+    <div className="px-3 mb-3">
+      <div
+        className="flex rounded-lg overflow-hidden text-xs"
+        style={{ border: "1px solid #1e2d3d" }}
+      >
+        {options.map(({ key, label, icon: Icon }) => {
+          const isActive = mode === key;
+          return (
+            <button
+              key={key}
+              onClick={() => onModeChange(key)}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 transition-colors font-medium"
+              style={{
+                background: isActive ? "#3b82f6" : "transparent",
+                color: isActive ? "#fff" : "#8ba3bc",
+              }}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              {label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 function PatternList({
@@ -148,6 +229,8 @@ export default function PatternSidebar({
   onToggle,
   mobileOpen,
   onMobileClose,
+  mode,
+  onModeChange,
 }: PatternSidebarProps) {
   return (
     <>
@@ -188,8 +271,13 @@ export default function PatternSidebar({
           )}
         </div>
 
+        {/* NEW: Live Scanner / Backtest mode toggle */}
+        <div className="pt-3">
+          <ModeToggle mode={mode} onModeChange={onModeChange} collapsed={collapsed} />
+        </div>
+
         {/* Patterns Section */}
-        <div className="flex-1 py-4 overflow-y-auto">
+        <div className="flex-1 py-1 overflow-y-auto">
           {!collapsed && (
             <div
               className="px-4 pb-3 text-xs font-semibold tracking-widest uppercase"
@@ -297,8 +385,13 @@ export default function PatternSidebar({
               </button>
             </div>
 
+            {/* NEW: Live Scanner / Backtest mode toggle (mobile) */}
+            <div className="pt-3">
+              <ModeToggle mode={mode} onModeChange={onModeChange} collapsed={false} />
+            </div>
+
             {/* Patterns */}
-            <div className="flex-1 py-4 overflow-y-auto">
+            <div className="flex-1 py-1 overflow-y-auto">
               <div
                 className="px-4 pb-3 text-xs font-semibold tracking-widest uppercase"
                 style={{ color: "#3b5278" }}

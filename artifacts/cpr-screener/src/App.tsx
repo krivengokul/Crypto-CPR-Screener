@@ -3,17 +3,32 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Screener from "@/pages/Screener";
-import PatternSidebar, { patterns } from "@/components/ui/PatternSidebar";
+import BacktestPanel from "@/pages/BacktestPanel";
+import PatternSidebar, { patterns, type SidebarMode } from "@/components/ui/PatternSidebar";
 import { Menu } from "lucide-react";
 
 const queryClient = new QueryClient();
 const SIDEBAR_KEY = "cpr-sidebar-collapsed";
+// NEW: persist the Live Scanner / Backtest mode across reloads, same
+// pattern as the existing sidebar-collapsed persistence below.
+const MODE_KEY = "cpr-sidebar-mode";
 
 function getSavedCollapsed(): boolean {
   try {
     return localStorage.getItem(SIDEBAR_KEY) === "true";
   } catch {
     return false;
+  }
+}
+
+// NEW: read the last-used mode from localStorage, defaulting to "scanner"
+// so first-time / cleared-storage visitors land on the live scanner as before.
+function getSavedMode(): SidebarMode {
+  try {
+    const stored = localStorage.getItem(MODE_KEY);
+    return stored === "backtest" ? "backtest" : "scanner";
+  } catch {
+    return "scanner";
   }
 }
 
@@ -33,6 +48,9 @@ function App() {
   const [scanKey, setScanKey] = useState(0);                          // ← new
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(getSavedCollapsed);
   const [mobileOpen, setMobileOpen] = useState(false);
+  // NEW: Live Scanner / Backtest mode — controls whether <main> renders the
+  // existing pattern-driven Screener/ComingSoon views or <BacktestPanel />.
+  const [mode, setMode] = useState<SidebarMode>(getSavedMode);
 
   // Auto-scan on first page load
   useEffect(() => {
@@ -54,6 +72,15 @@ function App() {
     setActivePattern(id);
   };
 
+  // NEW: mode switch — persists the choice so a reload keeps you where
+  // you left off (mirrors handleToggle's localStorage pattern above).
+  const handleModeChange = (next: SidebarMode) => {
+    setMode(next);
+    try {
+      localStorage.setItem(MODE_KEY, next);
+    } catch { /* ignore */ }
+  };
+
   const activeLabel =
     patterns.find((p) => p.id === activePattern)?.label ?? activePattern;
 
@@ -68,6 +95,8 @@ function App() {
             onToggle={handleToggle}
             mobileOpen={mobileOpen}
             onMobileClose={() => setMobileOpen(false)}
+            mode={mode}
+            onModeChange={handleModeChange}
           />
           <main className="flex-1 overflow-auto min-w-0">
             <button
@@ -78,12 +107,19 @@ function App() {
             >
               <Menu className="w-5 h-5" />
             </button>
-            {
-              ["littleabove", "la-2tiny", "LA-PL12CL23", "la-allstepup", "littlebelow", "lb-2tiny", 
+            {mode === "backtest" ? (
+              // NEW: Backtest mode — renders the standalone BacktestPanel.
+              // Wrapped in the same padded container Screener/ComingSoon
+              // implicitly get from their own root divs, so it sits with
+              // consistent spacing rather than edge-to-edge.
+              <div className="max-w-5xl mx-auto px-4 py-8">
+                <BacktestPanel />
+              </div>
+            ) : ["littleabove", "la-2tiny", "LA-PL12CL23", "la-allstepup", "littlebelow", "lb-2tiny",
                 "lb-allstepdown", "LB-PU12CU23", "1LB-PL12CL23",
                 "LBALLD-U2<PU1", "inside-cpr", "outside-cpr", "overlapping-higher", "LAT-PU12CU23",
                 "overlapping-lower", "LBT-PU1>U1PL1>L1", "lower-bullish", "Price-AbovePDH", "Price-BelowPDL",
-                "structure-bigabove", "HA-U1>PU4", "HAThin-U1>PU4", "structure-bigbelow", "HB-L1<PL1-PU12CU23", 
+                "structure-bigabove", "HA-U1>PU4", "HAThin-U1>PU4", "structure-bigbelow", "HB-L1<PL1-PU12CU23",
                 "HB-L1<PL4-U1>TCPR", "HB-L1<PL2-U12CPU12", "HB-L1>PL1-PU1CU234"].includes(activePattern) ? (
                   <>
                     {/* pass scanKey */}
