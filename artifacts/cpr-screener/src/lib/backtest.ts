@@ -15,14 +15,14 @@ export type BacktestSource = "binance" | "delta";
  * day's CPR level". Add more entries here once this is validated; each one
  * needs its target level worked out from that pattern's legend/condition.
  *
- * NEW: "1LHr-L4U3-U4" and "sT-cOL2U3-APU4" (displayed as "cOHi-APU4") —
+ * NEW: "1LHr-L4U3-U4" and "sT-cOL2U3-APU4" (displayed as "cOL2U3-ApU4") —
  * these are the two specific sub-patterns nested under the "LittleCPR
  * Above" category (see BACKTEST_CATEGORIES below). Both are bullish,
  * both target U4-style levels:
  *   - "1LHr-L4U3-U4" has no distinct target called out in Screener.tsx's
  *     legend, so it inherits the same target as its parent category
  *     (today's own R4 / U4) — matching the base "littleabove" entry above.
- *   - "sT-cOL2U3-APU4" ("cOHi-APU4" in the UI) explicitly targets "Bullish
+ *   - "sT-cOL2U3-APU4" ("cOL2U3-ApU4" in the UI) explicitly targets "Bullish
  *     Above PU4" per its legend card, i.e. prev day's R4.
  */
 export interface BacktestTargetDef {
@@ -58,7 +58,7 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
   },
   {
     key: "sT-cOL2U3-APU4",
-    label: "cOHi-APU4",
+    label: "cOL2U3-ApU4",
     direction: "bullish",
     targetLabel: "PU4 (prev day's R4)",
     getTarget: (r) => r.prevCPR.r4,
