@@ -663,6 +663,27 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.strWideCPR &&
         r.todayCPR.s1 < r.prevCPR.s4
       );
+    // NEW: eXU4L234-AU4 — Big Below (structure-bigbelow: cprFalling +
+    // strWideCPR) + Pivot Level: eXU4L234 (prev R4 inside today's R3/R4 AND
+    // prev S4 inside today's S1/S2) + prev day's R3 above today's R3 + either
+    // today's R1 or prev day's S1 sits between prev day's Pivot and today's
+    // Pivot + prev CPR width category pSmall (0.6%-1.1%) + today's CPR width
+    // between 1% and 2%.
+    case "eXU4L234-AU4": {
+      const pivotLow = Math.min(r.prevCPR.pivot, r.todayCPR.pivot);
+      const pivotHigh = Math.max(r.prevCPR.pivot, r.todayCPR.pivot);
+      const r1BetweenPivots = r.todayCPR.r1 >= pivotLow && r.todayCPR.r1 <= pivotHigh;
+      const pS1BetweenPivots = r.prevCPR.s1 >= pivotLow && r.prevCPR.s1 <= pivotHigh;
+      return (
+        r.cprFalling &&
+        r.strWideCPR &&
+        r.eXU4L234 &&
+        r.prevCPR.r3 > r.todayCPR.r3 &&
+        (r1BetweenPivots || pS1BetweenPivots) &&
+        r.prevCPR.widthPct >= 0.6 && r.prevCPR.widthPct <= 1.1 &&
+        r.todayCPR.widthPct >= 1 && r.todayCPR.widthPct <= 2
+      );
+    }
     case "HB-L1<PL1-PU12CU23":
       return r.cprFalling && r.strWideCPR && r.hbJPattern1;
     case "HB-L1<PL4-U1>TCPR":
@@ -717,9 +738,18 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
  * r.eXL4U4 directly — independent of activePattern/section, unlike the
  * "eXLo-L4U4-U4" / "eXHi-L4U4-U4" *patterns*, which gate the same boolean
  * behind overlapLower / overlapHigher respectively for their own sections.
+ *
+ * NEW: eXU4L234 — same treatment again: an independent, section-agnostic
+ * boolean (r.eXU4L234 from cpr.ts — prev R4 inside today's R3/R4 AND prev
+ * S4 inside today's S1/S2). Not returned as the primary label here for the
+ * same reason as eXL4U4/HiL4U4/etc — Screener.tsx renders it as its own
+ * second-row badge and its own Pivot Level filter button, checking
+ * r.eXU4L234 directly, regardless of activePattern/left-nav section. The
+ * "eXU4L234-AU4" *pattern* (Big Below) additionally requires strWideCPR +
+ * cprFalling + extra R3/pivot/width conditions on top of this raw flag.
  */
 export interface PivotLevelInfo {
-  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "cOLoL2U1" | "cOLoL4U3" | "LoL4U4"| "eXHiL4U234" | "eXL4U4" | "HiL4U4" | "Lower";
+  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "cOLoL2U1" | "cOLoL4U3" | "LoL4U4"| "eXHiL4U234" | "eXL4U4" | "HiL4U4" | "HiL4U34" | "cOHiL2U3" | "eXU4L234" | "Lower";
   classes: string;
 }
 
