@@ -388,7 +388,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.cprRising &&
         r.narrowCPR &&
         r.cOHiL2U3 &&
-        (r.todayCPR.s3 > r.prevCPR.s2 && r.todayCPR.s3 < r.prevCPR.s3) && // Added Condition for nonmatching Charts
+        (r.todayCPR.r3 > r.prevCPR.r2 && r.todayCPR.r3 < r.prevCPR.r3) && // Added Condition for nonmatching Charts
         r.prevCPR.widthPct > 0.60 && r.prevCPR.widthPct <= 1.20 &&   // pSmall
         r.todayCPR.widthPct > 0.10 && r.todayCPR.widthPct <= 0.25   // Tiny
       );
