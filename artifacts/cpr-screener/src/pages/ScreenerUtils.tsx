@@ -265,10 +265,10 @@ export function isPWideAbove(r: CPRResult): boolean {
  *
  *   Width %          Category
  *   ≤ 0.10%          Micro
- *   0.10 – 0.25%     Tiny
- *   0.25 – 0.50%     Mini
- *   0.60 – 1.20%     Small
- *   1.20 – 2.00%     Medium
+ *   0.10 – 0.22%     Tiny
+ *   0.22 – 0.50%     Mini
+ *   0.60 – 1.10%     Small
+ *   1.10 – 2.00%     Medium
  *   2.00 – 5.00%     Large
  *   5.00 – 10.00%    Mega
  *   > 10.00%         Ultra
@@ -291,9 +291,9 @@ export interface WidthCategoryInfo {
 
 export const WIDTH_CATEGORIES: WidthCategoryInfo[] = [
   { key: "micro",  label: "Micro",  max: 0.10,     classes: "bg-violet-500/10 text-violet-400 border-violet-500/20", pClasses: "bg-violet-500/10 text-violet-300 border-violet-400/20" },
-  { key: "tiny",   label: "Tiny",   max: 0.25,     classes: "bg-purple-500/10 text-purple-400 border-purple-500/20", pClasses: "bg-purple-500/10 text-purple-300 border-purple-400/20" },
+  { key: "tiny",   label: "Tiny",   max: 0.22,     classes: "bg-purple-500/10 text-purple-400 border-purple-500/20", pClasses: "bg-purple-500/10 text-purple-300 border-purple-400/20" },
   { key: "mini",   label: "Mini",   max: 0.60,     classes: "bg-teal-500/10 text-teal-400 border-teal-500/20",       pClasses: "bg-teal-500/10 text-teal-300 border-teal-400/20" },
-  { key: "small",  label: "Small",  max: 1.20,     classes: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20", pClasses: "bg-indigo-500/10 text-indigo-300 border-indigo-400/20" },
+  { key: "small",  label: "Small",  max: 1.10,     classes: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20", pClasses: "bg-indigo-500/10 text-indigo-300 border-indigo-400/20" },
   { key: "medium", label: "Medium", max: 2.00,     classes: "bg-blue-500/10 text-blue-400 border-blue-500/20",       pClasses: "bg-blue-500/10 text-blue-300 border-blue-400/20" },
   { key: "large",  label: "Large",  max: 5.00,     classes: "bg-amber-500/10 text-amber-400 border-amber-500/20",    pClasses: "bg-amber-500/10 text-amber-300 border-amber-400/20" },
   { key: "mega",   label: "Mega",   max: 10.00,    classes: "bg-orange-500/10 text-orange-400 border-orange-500/20", pClasses: "bg-orange-500/10 text-orange-300 border-orange-400/20" },
@@ -333,10 +333,10 @@ export function matchesWidthFilter(r: CPRResult, widthFilter: WidthFilter): bool
   const width = isPrev ? r.prevCPR.widthPct : r.todayCPR.widthPct;
   switch (key) {
     case "micro":  return width <= 0.10;
-    case "tiny":   return width > 0.10 && width <= 0.25;
-    case "mini":   return width > 0.25 && width <= 0.60;
-    case "small":  return width > 0.60 && width <= 1.20;
-    case "medium": return width > 1.20 && width <= 2.00;
+    case "tiny":   return width > 0.10 && width <= 0.22;
+    case "mini":   return width > 0.22 && width <= 0.60;
+    case "small":  return width > 0.60 && width <= 1.10;
+    case "medium": return width > 1.10 && width <= 2.00;
     case "large":  return width > 2.00 && width <= 5.00;
     case "mega":   return width > 5.00 && width <= 10.00;
     case "ultra":  return width > 10.00;
@@ -353,18 +353,18 @@ export function matchesWidthFilter(r: CPRResult, widthFilter: WidthFilter): bool
  */
 const WIDTH_FILTER_LABELS: Record<NonNullable<WidthFilter>, string> = {
   micro:  "Micro (\u22640.10%)",
-  tiny:   "Tiny (0.10%-0.25%)",
-  mini:   "Mini (0.25%-0.60%)",
-  small:  "Small (0.60%-1.20%)",
-  medium: "Medium (1.00%-2.00%)",
+  tiny:   "Tiny (0.10%-0.22%)",
+  mini:   "Mini (0.22%-0.60%)",
+  small:  "Small (0.60%-1.10%)",
+  medium: "Medium (1.10%-2.00%)",
   large:  "Large (2.00%-5.00%)",
   mega:   "Mega (5.00%-10.00%)",
   ultra:  "Ultra (>10.00%)",
   pmicro:  "pMicro (\u22640.10%)",
-  ptiny:   "pTiny (0.10%-0.25%)",
-  pmini:   "pMini (0.25%-0.60%)",
-  psmall:  "pSmall (0.60%-1.20%)",
-  pmedium: "pMedium (1.00%-2.00%)",
+  ptiny:   "pTiny (0.10%-0.22%)",
+  pmini:   "pMini (0.22%-0.60%)",
+  psmall:  "pSmall (0.60%-1.10%)",
+  pmedium: "pMedium (1.10%-2.00%)",
   plarge:  "pLarge (2.00%-5.00%)",
   pmega:   "pMega (5.00%-10.00%)",
   pultra:  "pUltra (>10.00%)",
@@ -389,8 +389,8 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.narrowCPR &&
         r.cOHiL2U3 &&
         (r.todayCPR.r3 > r.prevCPR.r2 && r.todayCPR.r3 < r.prevCPR.r3) && // Added Condition for nonmatching Charts
-        r.prevCPR.widthPct > 0.60 && r.prevCPR.widthPct <= 1.20 &&   // pSmall
-        r.todayCPR.widthPct > 0.10 && r.todayCPR.widthPct <= 0.25   // Tiny
+        r.prevCPR.widthPct > 0.60 && r.prevCPR.widthPct <= 1.10 &&   // pSmall
+        r.todayCPR.widthPct > 0.10 && r.todayCPR.widthPct <= 0.22   // Tiny
       );
     case "la-allstepup":
       return r.cprRising && r.narrowCPR && r.allupabove && r.allupbelow;
@@ -496,9 +496,9 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     case "eXHi-L4U4-U4":
       return (
         r.overlapHigher && r.eXL4U4 &&
-        ((r.prevCPR.widthPct > 0.60 && r.prevCPR.widthPct <= 1.20 &&   // pSmall
-        r.todayCPR.widthPct > 0.10 && r.todayCPR.widthPct <= 0.25 ) ||  // Tiny
-        (r.prevCPR.widthPct > 0.60 && r.prevCPR.widthPct <= 1.20 &&   // pSmall
+        ((r.prevCPR.widthPct > 0.60 && r.prevCPR.widthPct <= 1.10 &&   // pSmall
+        r.todayCPR.widthPct > 0.10 && r.todayCPR.widthPct <= 0.22 ) ||  // Tiny
+        (r.prevCPR.widthPct > 0.60 && r.prevCPR.widthPct <= 1.10 &&   // pSmall
           r.compressionRatio > 120 && r.compressionRatio < 180 ))// Wider
       );
     // NEW: 1T-HiL4U4-FAU4 — BigCPR Above: Wide Above (cprRising +
