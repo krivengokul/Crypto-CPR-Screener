@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { RefreshCw, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import { RefreshCw, CheckCircle2, XCircle, AlertCircle, ExternalLink } from "lucide-react";
 import {
   BACKTEST_TARGETS,
   BACKTEST_CATEGORIES,
@@ -11,7 +11,7 @@ import {
   type CategoryScanRow,
   type BacktestSource,
 } from "@/lib/backtest";
-import { passesPattern, fmt } from "./ScreenerUtils";
+import { passesPattern, fmt, getChartUrl, hasKnownChartMapping } from "./ScreenerUtils";
 
 /**
  * v1 backtest UI — proves out the engine on a handful of patterns (see
@@ -100,6 +100,31 @@ export default function BacktestPanel() {
   const insufficientCount = rows.filter((r) => r.result === "insufficient-data").length;
   const gradedCount = rows.length - insufficientCount;
   const progressPct = progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0;
+
+  // NEW: TradingView chart link, rendered inside the Symbol cell itself —
+  // reuses the exact same getChartUrl/hasKnownChartMapping helpers Screener.tsx
+  // uses for its own Chart column, so backtest links match the live scanner
+  // (Binance plain/.P-for-perp-only, Delta DELTAIN:...p, BUSD-quote excluded).
+  const ChartLink = ({ symbol, source }: { symbol: string; source: BacktestSource }) =>
+    hasKnownChartMapping(symbol, source) ? (
+      <a
+        href={getChartUrl(symbol, source)}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={(e) => e.stopPropagation()}
+        className="text-muted-foreground hover:text-primary transition-colors inline-flex"
+        title="Open on TradingView"
+      >
+        <ExternalLink className="w-3 h-3" />
+      </a>
+    ) : (
+      <span
+        className="text-muted-foreground/30 cursor-not-allowed inline-flex"
+        title="Not available on TradingView — Delta's /BUSD tokenized-stock instruments aren't listed under DELTAIN yet"
+      >
+        <ExternalLink className="w-3 h-3" />
+      </span>
+    );
 
   return (
     <div className="rounded-xl border border-border bg-card p-4">
@@ -260,7 +285,12 @@ export default function BacktestPanel() {
                 <tbody className="divide-y divide-border">
                   {categoryRows.map((r) => (
                     <tr key={`${r.source}-${r.symbol}`} className="hover:bg-muted/20">
-                      <td className="px-3 py-2 font-mono font-semibold">{r.symbol}</td>
+                      <td className="px-3 py-2 font-mono font-semibold">
+                        <div className="flex items-center gap-1.5">
+                          <span>{r.symbol}</span>
+                          <ChartLink symbol={r.symbol} source={r.source} />
+                        </div>
+                      </td>
                       <td className="px-3 py-2 font-mono text-xs text-muted-foreground">
                         {fmt(r.todayCPR.tc)} / {fmt(r.todayCPR.bc)}
                       </td>
@@ -328,7 +358,12 @@ export default function BacktestPanel() {
                 <tbody className="divide-y divide-border">
                   {rows.map((r) => (
                     <tr key={`${r.source}-${r.symbol}`} className="hover:bg-muted/20">
-                      <td className="px-3 py-2 font-mono font-semibold">{r.symbol}</td>
+                      <td className="px-3 py-2 font-mono font-semibold">
+                        <div className="flex items-center gap-1.5">
+                          <span>{r.symbol}</span>
+                          <ChartLink symbol={r.symbol} source={r.source} />
+                        </div>
+                      </td>
                       <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{fmt(r.targetLevel)}</td>
                       <td className="px-3 py-2">
                         {r.result === "pass" && (
