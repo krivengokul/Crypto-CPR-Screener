@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { RefreshCw, CheckCircle2, XCircle, AlertCircle, ExternalLink } from "lucide-react";
 import {
   BACKTEST_TARGETS,
@@ -49,6 +49,27 @@ export default function BacktestPanel() {
   const [categoryRows, setCategoryRows] = useState<CategoryScanRow[]>([]);
   const [error, setError] = useState("");
 
+  // NEW: date-range sweep — PATTERN-only (a category has no single target
+  // to grade, so sweeping it across days wouldn't produce anything more
+  // useful than running each day separately via the single-date picker).
+  // "single" keeps the existing one-date behavior; "range" loops
+  // runBacktest once per UTC day in [fromDate, toDate] and pools every
+  // day's matches into one results table (each row already carries its
+  // own `entryDate`, so nothing else needs to change downstream).
+  const [dateMode, setDateMode] = useState<"single" | "range">("single");
+  const [fromDate, setFromDate] = useState<string>(() => {
+    const d = new Date();
+    d.setUTCDate(d.getUTCDate() - 7);
+    return d.toISOString().slice(0, 10);
+  });
+  const [toDate, setToDate] = useState<string>(() => {
+    const d = new Date();
+    d.setUTCDate(d.getUTCDate() - 1);
+    return d.toISOString().slice(0, 10);
+  });
+  // NEW: tracks which day of the sweep is currently running (range mode only)
+  const [dateProgress, setDateProgress] = useState({ current: 0, total: 0, date: "" });
+
   // NEW: is the current selection a category (symbol-list-only) or a
   // specific pattern (full target/result/hitDate backtest)?
   const isCategory = BACKTEST_CATEGORIES.some((c) => c.key === selectedKey);
@@ -61,15 +82,44 @@ export default function BacktestPanel() {
     (t) => !BACKTEST_CATEGORIES.some((c) => c.subPatternKeys.includes(t.key))
   );
 
+  // NEW: category has no date-range mode — if the person switches back to
+  // a category while "range" is selected, fall back to single-date so no
+  // stale range state leaks into a category run.
+  useEffect(() => {
+    if (isCategory && dateMode === "range") setDateMode("single");
+  }, [isCategory, dateMode]);
+
+  // NEW: inclusive list of UTC date strings between fromISO and toISO.
+  function enumerateDatesUTC(fromISO: string, toISO: string): string[] {
+    const dates: string[] = [];
+    const cur = new Date(fromISO + "T00:00:00.000Z");
+    const end = new Date(toISO + "T00:00:00.000Z");
+    while (cur.getTime() <= end.getTime()) {
+      dates.push(cur.toISOString().slice(0, 10));
+      cur.setUTCDate(cur.getUTCDate() + 1);
+    }
+    return dates;
+  }
+
   const run = async () => {
+    // NEW: guard range inputs before kicking off a (potentially long) sweep
+    if (!isCategory && dateMode === "range") {
+      if (fromDate > toDate) {
+        setError("From date must be on or before To date.");
+        setStatus("error");
+        return;
+      }
+    }
+
     setStatus("running");
     setError("");
     setRows([]);
     setCategoryRows([]);
     setProgress({ done: 0, total: 0, symbol: "" });
+    setDateProgress({ current: 0, total: 0, date: "" });
     try {
       if (isCategory) {
-        // NEW: category scan — symbol list + CPR data only
+        // NEW: category scan — symbol list + CPR data only, single date only
         const result = await runCategoryScan(
           selectedKey,
           entryDate,
@@ -78,7 +128,7 @@ export default function BacktestPanel() {
           (done, total, symbol) => setProgress({ done, total, symbol })
         );
         setCategoryRows(result);
-      } else {
+      } else if (dateMode === "single") {
         const result = await runBacktest(
           selectedKey,
           entryDate,
@@ -87,6 +137,27 @@ export default function BacktestPanel() {
           (done, total, symbol) => setProgress({ done, total, symbol })
         );
         setRows(result);
+      } else {
+        // NEW: range mode — run the full symbol-universe backtest once per
+        // UTC day in [fromDate, toDate], pooling every day's matches into
+        // one combined rows array. Each BacktestRow already carries its own
+        // `entryDate`, so passes/fails/hit-rates and the results table just
+        // work across the whole sweep with no further changes needed.
+        const dates = enumerateDatesUTC(fromDate, toDate);
+        const allRows: BacktestRow[] = [];
+        for (let i = 0; i < dates.length; i++) {
+          const d = dates[i];
+          setDateProgress({ current: i + 1, total: dates.length, date: d });
+          const dayResult = await runBacktest(
+            selectedKey,
+            d,
+            source,
+            passesPattern,
+            (done, total, symbol) => setProgress({ done, total, symbol })
+          );
+          allRows.push(...dayResult);
+        }
+        setRows(allRows);
       }
       setStatus("done");
     } catch (e) {
