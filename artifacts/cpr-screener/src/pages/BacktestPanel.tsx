@@ -247,16 +247,68 @@ export default function BacktestPanel() {
             )}
           </select>
         </div>
-        <div>
-          <label className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Entry Date (UTC)</label>
-          <input
-            type="date"
-            value={entryDate}
-            onChange={(e) => setEntryDate(e.target.value)}
-            max={new Date().toISOString().slice(0, 10)}
-            className="text-sm px-2.5 py-1.5 rounded-lg border border-border bg-background text-foreground"
-          />
-        </div>
+        {/* NEW: Single Date / Date Range toggle — pattern-only. A category
+            scan has no single target to grade, so sweeping it across many
+            days wouldn't add anything beyond running each day individually
+            via the single-date picker, hence this toggle is hidden entirely
+            for category selections. */}
+        {!isCategory && (
+          <div>
+            <label className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Date Mode</label>
+            <div className="flex rounded-lg border border-border overflow-hidden text-xs">
+              {(["single", "range"] as const).map((m) => (
+                <button
+                  key={m}
+                  onClick={() => setDateMode(m)}
+                  className="px-3 py-1.5 transition-colors capitalize"
+                  style={{
+                    background: dateMode === m ? "#3b82f6" : "transparent",
+                    color: dateMode === m ? "#fff" : "#8ba3bc",
+                  }}
+                >
+                  {m === "single" ? "Single Date" : "Date Range"}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {(isCategory || dateMode === "single") ? (
+          <div>
+            <label className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Entry Date (UTC)</label>
+            <input
+              type="date"
+              value={entryDate}
+              onChange={(e) => setEntryDate(e.target.value)}
+              max={new Date().toISOString().slice(0, 10)}
+              className="text-sm px-2.5 py-1.5 rounded-lg border border-border bg-background text-foreground"
+            />
+          </div>
+        ) : (
+          <>
+            <div>
+              <label className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1">From Date (UTC)</label>
+              <input
+                type="date"
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
+                max={toDate}
+                className="text-sm px-2.5 py-1.5 rounded-lg border border-border bg-background text-foreground"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1">To Date (UTC)</label>
+              <input
+                type="date"
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
+                min={fromDate}
+                max={new Date().toISOString().slice(0, 10)}
+                className="text-sm px-2.5 py-1.5 rounded-lg border border-border bg-background text-foreground"
+              />
+            </div>
+          </>
+        )}
         <div>
           <label className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Exchange</label>
           <div className="flex rounded-lg border border-border overflow-hidden text-xs">
@@ -305,6 +357,15 @@ export default function BacktestPanel() {
 
       {status === "running" && (
         <div className="mb-4 rounded-lg border border-border bg-background/50 p-3">
+          {/* NEW: date-sweep progress — only meaningful in range mode */}
+          {!isCategory && dateMode === "range" && dateProgress.total > 0 && (
+            <div className="flex justify-between text-xs text-muted-foreground mb-2 pb-2 border-b border-border/50">
+              <span>
+                Date {dateProgress.current} of {dateProgress.total} — {dateProgress.date}
+              </span>
+              <span>{Math.round((dateProgress.current / dateProgress.total) * 100)}%</span>
+            </div>
+          )}
           <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
             <span>Scanning… {progress.symbol}</span>
             <span>{progressPct}%</span>
@@ -385,7 +446,9 @@ export default function BacktestPanel() {
         <>
           <div className="flex items-center gap-4 mb-3 text-xs flex-wrap">
             <span className="text-muted-foreground">
-              {rows.length} symbols matched the pattern on {entryDate}
+              {dateMode === "range"
+                ? `${rows.length} symbols matched the pattern across ${enumerateDatesUTC(fromDate, toDate).length} days (${fromDate} to ${toDate})`
+                : `${rows.length} symbols matched the pattern on ${entryDate}`}
             </span>
             {rows.length > 0 && (
               <>
@@ -405,7 +468,9 @@ export default function BacktestPanel() {
 
           {rows.length === 0 ? (
             <div className="text-xs text-muted-foreground text-center py-8">
-              No symbols matched this pattern on {entryDate}.
+              {dateMode === "range"
+                ? `No symbols matched this pattern between ${fromDate} and ${toDate}.`
+                : `No symbols matched this pattern on ${entryDate}.`}
             </div>
           ) : (
             <div className="overflow-x-auto rounded-lg border border-border">
@@ -414,6 +479,9 @@ export default function BacktestPanel() {
                   <tr className="border-b border-border bg-muted/30">
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Symbol
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Entry Date
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Target
@@ -428,13 +496,14 @@ export default function BacktestPanel() {
                 </thead>
                 <tbody className="divide-y divide-border">
                   {rows.map((r) => (
-                    <tr key={`${r.source}-${r.symbol}`} className="hover:bg-muted/20">
+                    <tr key={`${r.source}-${r.symbol}-${r.entryDate}`} className="hover:bg-muted/20">
                       <td className="px-3 py-2 font-mono font-semibold">
                         <div className="flex items-center gap-1.5">
                           <span>{r.symbol}</span>
                           <ChartLink symbol={r.symbol} source={r.source} />
                         </div>
                       </td>
+                      <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{r.entryDate}</td>
                       <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{fmt(r.targetLevel)}</td>
                       <td className="px-3 py-2">
                         {r.result === "pass" && (
