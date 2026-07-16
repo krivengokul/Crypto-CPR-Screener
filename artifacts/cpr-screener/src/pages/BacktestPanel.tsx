@@ -28,9 +28,9 @@ import { passesPattern, matchesPivotLevelFlag, fmt, getChartUrl, hasKnownChartMa
  *     just additionally filtered by that Pivot Level's raw flag; or
  *   - a specific PATTERN nested under a category, under a sub-category, or
  *     standalone (e.g. "U1 > Previous U4") — the full backtest: matched
- *     symbols PLUS whether each one hit its target by end of the following
- *     day, and (pattern only) a Single Date / Date Range toggle to sweep
- *     several days at once.
+ *     symbols PLUS whether each one hit its target within the entry day,
+ *     the next day, or the day after that (entry + 2 days), and (pattern
+ *     only) a Single Date / Date Range toggle to sweep several days at once.
  *
  * Not yet wired into Screener.tsx's tab/nav structure — render this
  * wherever you want the backtest page to live (e.g. its own route, or as
@@ -620,7 +620,11 @@ export default function BacktestPanel() {
                         )}
                       </td>
                       <td className="px-3 py-2 text-xs text-muted-foreground">
-                        {r.hitDate ? `${r.hitDate}${r.daysToHit === 0 ? " (entry day)" : " (next day)"}` : "—"}
+                        {r.hitDate
+                          ? `${r.hitDate}${
+                              r.daysToHit === 0 ? " (entry day)" : r.daysToHit === 1 ? " (next day)" : " (2 days later)"
+                            }`
+                          : "—"}
                       </td>
                     </tr>
                   ))}

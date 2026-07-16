@@ -148,8 +148,8 @@ export interface BacktestRow {
   targetLevel: number;
   targetLabel: string;
   result: "pass" | "fail" | "insufficient-data";
-  hitDate: string | null;          // which day (entryDate or entryDate+1) hit target, if any
-  daysToHit: 0 | 1 | null;
+  hitDate: string | null;          // which day (entryDate, entryDate+1, or entryDate+2) hit target, if any
+  daysToHit: 0 | 1 | 2 | null;
 }
 
 /**
@@ -184,22 +184,22 @@ function addDaysISO(dateISO: string, days: number): string {
 }
 
 /**
- * Fetches the 5-day window [D-3, D-2, D-1, D, D+1] of daily candles for a
- * Binance symbol, keyed by UTC date string. D-3/D-2/D-1 reconstruct the CPR
- * that would have been active on entry date D (same candle selection
- * runScreener uses live — pp/prev/today); D and D+1 are the lookahead
- * window used to check "target hit by end of the very next day".
+ * Fetches the 6-day window [D-3, D-2, D-1, D, D+1, D+2] of daily candles for
+ * a Binance symbol, keyed by UTC date string. D-3/D-2/D-1 reconstruct the
+ * CPR that would have been active on entry date D (same candle selection
+ * runScreener uses live — pp/prev/today); D, D+1, and D+2 are the
+ * lookahead window used to check "target hit within entry day + 2 days".
  *
  * Reuses the same /klines endpoint runScreener already calls — just adds
  * the `endTime` param (which runScreener doesn't currently use, since it
  * only ever needs "now") to pin the window to a past date instead.
  */
 async function fetchBinanceWindow(symbol: string, entryDateISO: string): Promise<Map<string, OHLC> | null> {
-  const dPlus1 = addDaysISO(entryDateISO, 1);
-  const endTimeMs = new Date(dPlus1 + "T23:59:59.999Z").getTime();
+  const dPlus2 = addDaysISO(entryDateISO, 2);
+  const endTimeMs = new Date(dPlus2 + "T23:59:59.999Z").getTime();
   try {
     const res = await fetch(
-      `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=1d&endTime=${endTimeMs}&limit=8`
+      `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=1d&endTime=${endTimeMs}&limit=9`
     );
     if (!res.ok) return null;
     const raw: Array<[number, string, string, string, string, string]> = await res.json();
@@ -229,9 +229,9 @@ async function fetchBinanceWindow(symbol: string, entryDateISO: string): Promise
  */
 async function fetchDeltaWindow(symbol: string, entryDateISO: string): Promise<Map<string, OHLC> | null> {
   const dMinus3 = addDaysISO(entryDateISO, -3);
-  const dPlus1 = addDaysISO(entryDateISO, 1);
+  const dPlus2 = addDaysISO(entryDateISO, 2);
   const start = Math.floor(new Date(dMinus3 + "T00:00:00.000Z").getTime() / 1000);
-  const end = Math.floor(new Date(dPlus1 + "T23:59:59.999Z").getTime() / 1000);
+  const end = Math.floor(new Date(dPlus2 + "T23:59:59.999Z").getTime() / 1000);
   try {
     const res = await fetch(
       `https://api.india.delta.exchange/v2/history/candles?symbol=${symbol}&resolution=1d&start=${start}&end=${end}`,
@@ -312,11 +312,13 @@ async function reconstructCPRForDate(
  *      If not, this symbol isn't part of the backtest for D — returns null,
  *      NOT a "fail" (fail is reserved for "matched the pattern but target
  *      wasn't hit").
- *   3. If it matched, check whether target was reached by end of D+1,
- *      using D's and D+1's high (bullish) or low (bearish).
+ *   3. If it matched, check whether target was reached within the entry
+ *      day, D+1, or D+2 — using each day's high (bullish) or low (bearish).
+ *      A hit on any of these three days counts as a pass.
  *
  * Returns null when there isn't enough candle history to evaluate at all
- * (e.g. symbol didn't exist yet, or D is too recent for D+1 data to exist).
+ * (e.g. symbol didn't exist yet, or D is too recent for D+1/D+2 data to
+ * exist).
  */
 export async function backtestSymbolOnDate(
   symbol: string,
@@ -326,6 +328,7 @@ export async function backtestSymbolOnDate(
   passesPatternFn: (r: CPRResult, pattern: string) => boolean
 ): Promise<BacktestRow | null> {
   const dPlus1 = addDaysISO(entryDateISO, 1);
+  const dPlus2 = addDaysISO(entryDateISO, 2);
 
   const reconstructed = await reconstructCPRForDate(symbol, source, entryDateISO);
   if (!reconstructed) return null;
@@ -336,22 +339,26 @@ export async function backtestSymbolOnDate(
   const targetLevel = target.getTarget(result);
   const entryDayCandle = window.get(entryDateISO) ?? null;
   const nextDayCandle = window.get(dPlus1) ?? null;
+  const nextNextDayCandle = window.get(dPlus2) ?? null;
 
   const hits = (c: OHLC | null) =>
     !!c && (target.direction === "bullish" ? c.high >= targetLevel : c.low <= targetLevel);
 
   let hitDate: string | null = null;
-  let daysToHit: 0 | 1 | null = null;
+  let daysToHit: 0 | 1 | 2 | null = null;
   if (hits(entryDayCandle)) {
     hitDate = entryDateISO;
     daysToHit = 0;
   } else if (hits(nextDayCandle)) {
     hitDate = dPlus1;
     daysToHit = 1;
+  } else if (hits(nextNextDayCandle)) {
+    hitDate = dPlus2;
+    daysToHit = 2;
   }
 
   const outcome: BacktestRow["result"] =
-    entryDayCandle || nextDayCandle ? (hitDate ? "pass" : "fail") : "insufficient-data";
+    entryDayCandle || nextDayCandle || nextNextDayCandle ? (hitDate ? "pass" : "fail") : "insufficient-data";
 
   return {
     symbol,
