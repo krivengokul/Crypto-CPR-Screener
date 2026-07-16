@@ -41,9 +41,9 @@ export const patterns: Pattern[] = [
   // hidden — accessible via PDH/PDL buttons in the Pivot Level filter row
   // { id: "Price-AbovePDH",     label: "Price Above PDH",     subtitle: "Price Above PDH zone",      icon: ArrowUpCircle },
   // { id: "Price-BelowPDL",     label: "Price Below PDL",     subtitle: "Price Below PDL zone",      icon: ArrowDownCircle },
-  { id: "overlapping-higher", label: "Overlapping Higher",  subtitle: "CPR zones stacking up",     icon: Layers },
+  { id: "overlapping-higher", label: "Overlap Above",  subtitle: "CPR zones stacking up",     icon: Layers },
   { id: "LAT-PU12CU23",       label: "PU12CU23,PL12CL23",   subtitle: "Bullish Target:2U4",        icon: Layers },
-  { id: "overlapping-lower",  label: "Overlapping Lower",   subtitle: "CPR zones stacking down",   icon: LayersIcon },
+  { id: "overlapping-lower",  label: "Overlap Below",   subtitle: "CPR zones stacking down",   icon: LayersIcon },
   { id: "LBT-PU1>U1PL1>L1",   label: "LBT-PU1>U1PL1>L1",    subtitle: "Bullish Target:2PU4",       icon: LayersIcon },
   { id: "inside-cpr",         label: "Inside CPR",          subtitle: "Inside CPR range",         icon: Crosshair },
   { id: "outside-cpr",        label: "Outside CPR",         subtitle: "Outside CPR range",        icon: Maximize2 },
