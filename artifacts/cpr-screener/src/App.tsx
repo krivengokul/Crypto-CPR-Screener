@@ -179,16 +179,22 @@ function App() {
             >
               <Menu className="w-5 h-5" />
             </button>
-            {mode === "backtest" ? (
+
+            {/* Screener stays mounted at all times — only visually hidden when
+                not the active view — so switching modes/patterns never remounts
+                it and never re-triggers the scanKey effect / loses scan state. */}
+            <div style={{ display: mode === "backtest" ? "none" : "block" }}>
+              {SCREENER_PATTERN_IDS.has(activePattern) ? (
+                <Screener activePattern={activePattern} scanKey={scanKey} />
+              ) : (
+                <ComingSoon label={activeLabel} />
+              )}
+            </div>
+
+            {mode === "backtest" && (
               <div className="max-w-5xl mx-auto px-4 py-8">
                 <BacktestPanel />
               </div>
-            ) : SCREENER_PATTERN_IDS.has(activePattern) ? (
-              <>
-                <Screener activePattern={activePattern} scanKey={scanKey} />
-              </>
-            ) : (
-              <ComingSoon label={activeLabel} />
             )}
           </main>
         </div>
