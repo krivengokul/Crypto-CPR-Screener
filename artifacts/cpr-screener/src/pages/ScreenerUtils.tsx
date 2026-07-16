@@ -772,6 +772,33 @@ export function getPivotLevel(r: CPRResult): PivotLevelInfo {
   return { label: "Lower", classes: "bg-destructive/10 text-destructive border-destructive/20" };
 }
 
+/**
+ * matchesPivotLevelFlag — raw Pivot Level flag check, factored out of the
+ * inline pivotLevelFilter block in Screener.tsx's `displayed` filter so
+ * other consumers (the Backtest panel's Pivot Level sub-category scans,
+ * e.g. "Overlap Above" → "HiL4U34") can reuse the exact same lookups
+ * without duplicating the switch. For the six mutually-exclusive primary
+ * labels (eX-Higher/eX-Lower/cO-Higher/cO-Lower/Higher/Lower) this falls
+ * back to getPivotLevel(r)'s label; for the independent, section-agnostic
+ * booleans (cOLoL2U1, cOLoL4U3, LoL4U4, eXHiL4U234, eXL4U4, HiL4U4,
+ * HiL4U34, cOHiL2U3, eXU4L234) it reads the raw flag directly — same as
+ * Screener.tsx does today.
+ */
+export function matchesPivotLevelFlag(r: CPRResult, label: string): boolean {
+  switch (label) {
+    case "cOLoL2U1": return r.cOLoL2U1;
+    case "cOLoL4U3": return r.cOLoL4U3;
+    case "LoL4U4": return r.LoL4U4;
+    case "eXHiL4U234": return r.eXHiL4U234;
+    case "eXL4U4": return r.eXL4U4;
+    case "HiL4U4": return r.HiL4U4;
+    case "HiL4U34": return r.HiL4U34;
+    case "cOHiL2U3": return r.cOHiL2U3;
+    case "eXU4L234": return r.eXU4L234;
+    default: return getPivotLevel(r)?.label === label;
+  }
+}
+
 export function isRisingAboveTC(r: CPRResult): boolean {
   return r.currentPrice > r.todayCPR.tc;
 }

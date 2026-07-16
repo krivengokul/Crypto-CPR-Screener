@@ -24,6 +24,12 @@ export type BacktestSource = "binance" | "delta";
  *     (today's own R4 / U4) — matching the base "littleabove" entry above.
  *   - "sT-cOL2U3-APU4" ("cOL2U3-ApU4" in the UI) explicitly targets "Bullish
  *     Above PU4" per its legend card, i.e. prev day's R4.
+ *
+ * NEW: "eXHi-L4U4-U4" — nested under the "Overlap Above" category's
+ * "HiL4U34" Pivot Level sub-category (see BACKTEST_CATEGORIES below).
+ * Bullish, per Screener.tsx's legend card ("Overlap Higher continuation —
+ * bullish bias toward U4") the target is today's own R4 / U4, same target
+ * style as "littleabove".
  */
 export interface BacktestTargetDef {
   key: string;          // matches passesPattern's pattern-key string exactly
@@ -63,6 +69,14 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "PU4 (prev day's R4)",
     getTarget: (r) => r.prevCPR.r4,
   },
+  // NEW: "eXHi-L4U4-U4" — nested under "Overlap Above" → Pivot Level "HiL4U34"
+  {
+    key: "eXHi-L4U4-U4",
+    label: "eXHi-L4U4-U4",
+    direction: "bullish",
+    targetLabel: "U4 (today's R4)",
+    getTarget: (r) => r.todayCPR.r4,
+  },
 ];
 
 /**
@@ -77,11 +91,29 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
  * single target to grade against for the category as a whole. Selecting
  * one of its subPatternKeys instead runs the normal runBacktest flow
  * against that pattern's specific target.
+ *
+ * NEW: subCategories — a category can additionally nest one or more
+ * "Pivot Level" sub-categories (e.g. "Overlap Above" → Pivot Level
+ * "HiL4U34"). A Pivot Level sub-category is itself just another
+ * symbol-list-only, single-date, no-target scan — same as a category —
+ * except its base condition is the PARENT category's condition AND the
+ * named Pivot Level's raw flag (see matchesPivotLevelFlag in
+ * ScreenerUtils.tsx), both evaluated together. Selecting one of ITS
+ * subPatternKeys runs the normal runBacktest flow (single date or date
+ * range) against that pattern's specific target, same as a top-level
+ * category's direct sub-patterns.
  */
+export interface BacktestSubCategoryDef {
+  key: string;              // Pivot Level label (matches matchesPivotLevelFlag's `label` param, e.g. "HiL4U34")
+  label: string;            // display name, e.g. "HiL4U34"
+  subPatternKeys: string[]; // BACKTEST_TARGETS keys nested under this Pivot Level
+}
+
 export interface BacktestCategoryDef {
-  key: string;              // matches passesPattern's BASE category key (e.g. "littleabove")
-  label: string;            // display name, e.g. "LittleCPR Above"
-  subPatternKeys: string[]; // BACKTEST_TARGETS keys nested under this category
+  key: string;                          // matches passesPattern's BASE category key (e.g. "littleabove")
+  label: string;                        // display name, e.g. "LittleCPR Above"
+  subPatternKeys?: string[];            // BACKTEST_TARGETS keys nested directly under this category
+  subCategories?: BacktestSubCategoryDef[]; // NEW: Pivot Level sub-categories nested under this category
 }
 
 export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
@@ -89,6 +121,21 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
     key: "littleabove",
     label: "LittleCPR Above",
     subPatternKeys: ["1LHr-L4U3-U4", "sT-cOL2U3-APU4"],
+  },
+  // NEW: "Overlap Above" category (base condition: r.overlapHigher, same
+  // key passesPattern already uses for the "overlapping-higher" left-nav
+  // page) — nests the "HiL4U34" Pivot Level sub-category, which in turn
+  // nests the "eXHi-L4U4-U4" pattern.
+  {
+    key: "overlapping-higher",
+    label: "Overlap Above",
+    subCategories: [
+      {
+        key: "HiL4U34",
+        label: "HiL4U34",
+        subPatternKeys: ["eXHi-L4U4-U4"],
+      },
+    ],
   },
 ];
 
@@ -112,6 +159,10 @@ export interface BacktestRow {
  * there's nothing meaningful to grade; this just proves which symbols
  * matched the category's base condition on the entry date, plus their CPR
  * shape for reference (compressionRatio, widths via todayCPR/prevCPR).
+ *
+ * Also reused, unchanged, for Pivot Level sub-category scans (e.g.
+ * "Overlap Above" → "HiL4U34") — same shape, same reasoning: a Pivot Level
+ * bucket within a category still has no single target to grade.
  */
 export interface CategoryScanRow {
   symbol: string;
@@ -214,11 +265,12 @@ async function fetchDeltaWindow(symbol: string, entryDateISO: string): Promise<M
 
 /**
  * Shared reconstruction step used by both backtestSymbolOnDate (patterns,
- * below) and categoryScanSymbolOnDate (categories, further below): fetches
- * the candle window for a symbol/date and rebuilds the CPRResult that
- * would have been active on entryDate, exactly as the live scanner does
- * (pp/prev/today candle selection). Returns null if there isn't enough
- * history to reconstruct it at all.
+ * below), categoryScanSymbolOnDate (categories, further below), and
+ * pivotLevelScanSymbolOnDate (Pivot Level sub-categories, further below):
+ * fetches the candle window for a symbol/date and rebuilds the CPRResult
+ * that would have been active on entryDate, exactly as the live scanner
+ * does (pp/prev/today candle selection). Returns null if there isn't
+ * enough history to reconstruct it at all.
  */
 async function reconstructCPRForDate(
   symbol: string,
@@ -346,6 +398,41 @@ export async function categoryScanSymbolOnDate(
 }
 
 /**
+ * NEW: Pivot Level sub-category scan version of backtestSymbolOnDate —
+ * same CPR reconstruction, but checks BOTH the parent CATEGORY's base
+ * condition (e.g. "overlapping-higher") AND the named Pivot Level's raw
+ * flag (e.g. "HiL4U34", via matchesPivotLevelFn — see matchesPivotLevelFlag
+ * in ScreenerUtils.tsx). Returns a CategoryScanRow, same shape/reasoning as
+ * categoryScanSymbolOnDate: a Pivot Level bucket within a category still
+ * has no single target to grade against.
+ */
+export async function pivotLevelScanSymbolOnDate(
+  symbol: string,
+  source: BacktestSource,
+  entryDateISO: string,
+  categoryKey: string,
+  pivotLevelKey: string,
+  passesPatternFn: (r: CPRResult, pattern: string) => boolean,
+  matchesPivotLevelFn: (r: CPRResult, label: string) => boolean
+): Promise<CategoryScanRow | null> {
+  const reconstructed = await reconstructCPRForDate(symbol, source, entryDateISO);
+  if (!reconstructed) return null;
+  const { result } = reconstructed;
+
+  if (!passesPatternFn(result, categoryKey)) return null; // didn't match the parent category's base condition
+  if (!matchesPivotLevelFn(result, pivotLevelKey)) return null; // didn't match this Pivot Level's raw flag
+
+  return {
+    symbol,
+    source,
+    entryDate: entryDateISO,
+    todayCPR: result.todayCPR,
+    prevCPR: result.prevCPR,
+    compressionRatio: result.compressionRatio,
+  };
+}
+
+/**
  * Runs the full symbol universe through backtestSymbolOnDate.
  *
  * KNOWN LIMITATION: the "universe" of symbols is fetched from the CURRENT
@@ -417,6 +504,49 @@ export async function runCategoryScan(
     const batch = symbols.slice(i, i + batchSize);
     const batchResults = await Promise.all(
       batch.map((sym) => categoryScanSymbolOnDate(sym, source, entryDateISO, categoryKey, passesPatternFn))
+    );
+    batchResults.forEach((r) => {
+      if (r) rows.push(r);
+    });
+    onProgress?.(Math.min(i + batchSize, symbols.length), symbols.length, batch[batch.length - 1]);
+    if (i + batchSize < symbols.length) await new Promise((res) => setTimeout(res, delayMs));
+  }
+
+  return rows;
+}
+
+/**
+ * NEW: Pivot Level sub-category scan counterpart of runCategoryScan — same
+ * symbol-universe caveat applies (see KNOWN LIMITATION above). Runs
+ * pivotLevelScanSymbolOnDate across the full universe and returns the same
+ * simplified CategoryScanRow list (symbol list + CPR data only, no
+ * target/result/hitDate) for a category's Pivot Level sub-bucket (e.g.
+ * "Overlap Above" → "HiL4U34").
+ */
+export async function runPivotLevelScan(
+  categoryKey: string,
+  pivotLevelKey: string,
+  entryDateISO: string,
+  source: BacktestSource,
+  passesPatternFn: (r: CPRResult, pattern: string) => boolean,
+  matchesPivotLevelFn: (r: CPRResult, label: string) => boolean,
+  onProgress?: (done: number, total: number, symbol: string) => void
+): Promise<CategoryScanRow[]> {
+  const symbols: string[] =
+    source === "binance"
+      ? (await fetchTopUSDTSymbols(500)).map((t) => t.symbol)
+      : (await fetchDeltaPerps()).map((t) => t.symbol);
+
+  const rows: CategoryScanRow[] = [];
+  const batchSize = 10;
+  const delayMs = 300;
+
+  for (let i = 0; i < symbols.length; i += batchSize) {
+    const batch = symbols.slice(i, i + batchSize);
+    const batchResults = await Promise.all(
+      batch.map((sym) =>
+        pivotLevelScanSymbolOnDate(sym, source, entryDateISO, categoryKey, pivotLevelKey, passesPatternFn, matchesPivotLevelFn)
+      )
     );
     batchResults.forEach((r) => {
       if (r) rows.push(r);

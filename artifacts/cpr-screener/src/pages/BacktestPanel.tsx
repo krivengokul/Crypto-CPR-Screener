@@ -7,33 +7,41 @@ import {
   BACKTEST_CATEGORIES,
   runBacktest,
   runCategoryScan,
+  runPivotLevelScan,
   type BacktestRow,
   type CategoryScanRow,
   type BacktestSource,
+  type BacktestCategoryDef,
+  type BacktestSubCategoryDef,
 } from "@/lib/backtest";
-import { passesPattern, fmt, getChartUrl, hasKnownChartMapping } from "./ScreenerUtils";
+import { passesPattern, matchesPivotLevelFlag, fmt, getChartUrl, hasKnownChartMapping } from "./ScreenerUtils";
 
 /**
  * v1 backtest UI — proves out the engine on a handful of patterns (see
  * lib/backtest.ts's BACKTEST_TARGETS / BACKTEST_CATEGORIES). Pick a past
- * date + exchange, then either:
- *   - select a CATEGORY (e.g. "LittleCPR Above") to see the full symbol
- *     list matching that category's base condition on that date, with
- *     their CPR data — no Target/Result/Hit Date, since a category has no
- *     single well-defined target to grade against; or
- *   - select a specific PATTERN nested under a category (or a standalone
- *     pattern like "U1 > Previous U4") to run the full backtest: matched
- *     symbols PLUS whether each one hit its target by end of the
- *     following day.
+ * date and one of three selection levels:
+ *   - a CATEGORY (e.g. "LittleCPR Above", "Overlap Above") — symbol list
+ *     matching the category's base condition only, no Target/Result/Hit
+ *     Date, since a category has no single well-defined target;
+ *   - a Pivot Level SUB-CATEGORY nested under a category (e.g. "Overlap
+ *     Above" → "HiL4U34") — same symbol-list-only treatment as a category,
+ *     just additionally filtered by that Pivot Level's raw flag; or
+ *   - a specific PATTERN nested under a category, under a sub-category, or
+ *     standalone (e.g. "U1 > Previous U4") — the full backtest: matched
+ *     symbols PLUS whether each one hit its target by end of the following
+ *     day, and (pattern only) a Single Date / Date Range toggle to sweep
+ *     several days at once.
  *
  * Not yet wired into Screener.tsx's tab/nav structure — render this
  * wherever you want the backtest page to live (e.g. its own route, or as
  * an additional tab alongside the live scanner).
  */
 export default function BacktestPanel() {
-  // NEW: selection can be either a category key (e.g. "littleabove") or a
-  // pattern key (e.g. "1LHr-L4U3-U4", "HA-U1>PU4"). Default to the first
-  // category so the dropdown opens on a sensible, low-noise view.
+  // NEW: selection can be a category key (e.g. "littleabove"), a
+  // composite "categoryKey::subCategoryKey" Pivot Level selection (e.g.
+  // "overlapping-higher::HiL4U34"), or a pattern key (e.g. "1LHr-L4U3-U4",
+  // "HA-U1>PU4", "eXHi-L4U4-U4"). Default to the first category so the
+  // dropdown opens on a sensible, low-noise view.
   const [selectedKey, setSelectedKey] = useState<string>(BACKTEST_CATEGORIES[0].key);
   const [entryDate, setEntryDate] = useState<string>(() => {
     const d = new Date();
@@ -44,18 +52,21 @@ export default function BacktestPanel() {
   const [status, setStatus] = useState<"idle" | "running" | "done" | "error">("idle");
   const [progress, setProgress] = useState({ done: 0, total: 0, symbol: "" });
   const [rows, setRows] = useState<BacktestRow[]>([]);
-  // NEW: separate state for category-scan rows — kept apart from `rows`
-  // since the two have different shapes (no target/result/hitDate here).
+  // NEW: separate state for category / Pivot Level scan rows — kept apart
+  // from `rows` since the two have different shapes (no target/result/
+  // hitDate here). Reused for BOTH category scans and Pivot Level
+  // sub-category scans, since they're the same shape/reasoning.
   const [categoryRows, setCategoryRows] = useState<CategoryScanRow[]>([]);
   const [error, setError] = useState("");
 
-  // NEW: date-range sweep — PATTERN-only (a category has no single target
-  // to grade, so sweeping it across days wouldn't produce anything more
-  // useful than running each day separately via the single-date picker).
-  // "single" keeps the existing one-date behavior; "range" loops
-  // runBacktest once per UTC day in [fromDate, toDate] and pools every
-  // day's matches into one results table (each row already carries its
-  // own `entryDate`, so nothing else needs to change downstream).
+  // NEW: date-range sweep — PATTERN-only (a category or Pivot Level
+  // sub-category has no single target to grade, so sweeping either across
+  // days wouldn't produce anything more useful than running each day
+  // separately via the single-date picker). "single" keeps the existing
+  // one-date behavior; "range" loops runBacktest once per UTC day in
+  // [fromDate, toDate] and pools every day's matches into one results
+  // table (each row already carries its own `entryDate`, so nothing else
+  // needs to change downstream).
   const [dateMode, setDateMode] = useState<"single" | "range">("single");
   const [fromDate, setFromDate] = useState<string>(() => {
     const d = new Date();
@@ -70,24 +81,59 @@ export default function BacktestPanel() {
   // NEW: tracks which day of the sweep is currently running (range mode only)
   const [dateProgress, setDateProgress] = useState({ current: 0, total: 0, date: "" });
 
-  // NEW: is the current selection a category (symbol-list-only) or a
-  // specific pattern (full target/result/hitDate backtest)?
+  // NEW: composite key separator for Pivot Level sub-category selections —
+  // "categoryKey::subCategoryKey" (e.g. "overlapping-higher::HiL4U34").
+  const SUBCATEGORY_SEP = "::";
+
+  // Is the current selection a top-level category (symbol-list-only)?
   const isCategory = BACKTEST_CATEGORIES.some((c) => c.key === selectedKey);
-  const activeTarget = !isCategory ? BACKTEST_TARGETS.find((t) => t.key === selectedKey) : undefined;
+
+  // NEW: is the current selection a Pivot Level sub-category nested under
+  // a category (e.g. "Overlap Above" → "HiL4U34")? Also symbol-list-only,
+  // single-date — same treatment as a category, just additionally
+  // filtered by the named Pivot Level's raw flag.
+  let activeSubCategoryInfo: { category: BacktestCategoryDef; sub: BacktestSubCategoryDef } | undefined;
+  for (const cat of BACKTEST_CATEGORIES) {
+    const sub = cat.subCategories?.find((s) => `${cat.key}${SUBCATEGORY_SEP}${s.key}` === selectedKey);
+    if (sub) {
+      activeSubCategoryInfo = { category: cat, sub };
+      break;
+    }
+  }
+  const isSubCategory = !!activeSubCategoryInfo;
+
+  // Only a leaf PATTERN gets the full Target/Result/Hit Date backtest
+  // (and the Single Date / Date Range toggle below).
+  const isPatternOnly = !isCategory && !isSubCategory;
+
+  const activeTarget = isPatternOnly ? BACKTEST_TARGETS.find((t) => t.key === selectedKey) : undefined;
   const activeCategory = isCategory ? BACKTEST_CATEGORIES.find((c) => c.key === selectedKey) : undefined;
 
-  // Patterns not nested under any category — rendered in their own
-  // "Other Patterns" optgroup below (currently just "HA-U1>PU4").
-  const ungroupedPatterns = BACKTEST_TARGETS.filter(
-    (t) => !BACKTEST_CATEGORIES.some((c) => c.subPatternKeys.includes(t.key))
-  );
+  // NEW: display label for the category/Pivot-Level symbol-list results —
+  // combines category + sub-category label when a Pivot Level is selected.
+  const symbolListLabel = isCategory
+    ? activeCategory?.label
+    : isSubCategory && activeSubCategoryInfo
+    ? `${activeSubCategoryInfo.category.label} → Pivot Level ${activeSubCategoryInfo.sub.label}`
+    : undefined;
 
-  // NEW: category has no date-range mode — if the person switches back to
-  // a category while "range" is selected, fall back to single-date so no
-  // stale range state leaks into a category run.
+  // Patterns not nested under any category or Pivot Level sub-category —
+  // rendered in their own "Other Patterns" optgroup below (currently just
+  // "HA-U1>PU4").
+  const nestedPatternKeys = new Set<string>();
+  BACKTEST_CATEGORIES.forEach((cat) => {
+    cat.subPatternKeys?.forEach((k) => nestedPatternKeys.add(k));
+    cat.subCategories?.forEach((sub) => sub.subPatternKeys.forEach((k) => nestedPatternKeys.add(k)));
+  });
+  const ungroupedPatterns = BACKTEST_TARGETS.filter((t) => !nestedPatternKeys.has(t.key));
+
+  // NEW: category and Pivot Level sub-category selections have no
+  // date-range mode — if the person switches to either while "range" is
+  // selected, fall back to single-date so no stale range state leaks into
+  // a category/Pivot-Level run.
   useEffect(() => {
-    if (isCategory && dateMode === "range") setDateMode("single");
-  }, [isCategory, dateMode]);
+    if (!isPatternOnly && dateMode === "range") setDateMode("single");
+  }, [isPatternOnly, dateMode]);
 
   // NEW: inclusive list of UTC date strings between fromISO and toISO.
   function enumerateDatesUTC(fromISO: string, toISO: string): string[] {
@@ -103,7 +149,7 @@ export default function BacktestPanel() {
 
   const run = async () => {
     // NEW: guard range inputs before kicking off a (potentially long) sweep
-    if (!isCategory && dateMode === "range") {
+    if (isPatternOnly && dateMode === "range") {
       if (fromDate > toDate) {
         setError("From date must be on or before To date.");
         setStatus("error");
@@ -119,12 +165,26 @@ export default function BacktestPanel() {
     setDateProgress({ current: 0, total: 0, date: "" });
     try {
       if (isCategory) {
-        // NEW: category scan — symbol list + CPR data only, single date only
+        // Category scan — symbol list + CPR data only, single date only
         const result = await runCategoryScan(
           selectedKey,
           entryDate,
           source,
           passesPattern,
+          (done, total, symbol) => setProgress({ done, total, symbol })
+        );
+        setCategoryRows(result);
+      } else if (isSubCategory && activeSubCategoryInfo) {
+        // NEW: Pivot Level sub-category scan — category's base condition
+        // AND the named Pivot Level's raw flag, symbol list + CPR data
+        // only, single date only.
+        const result = await runPivotLevelScan(
+          activeSubCategoryInfo.category.key,
+          activeSubCategoryInfo.sub.key,
+          entryDate,
+          source,
+          passesPattern,
+          matchesPivotLevelFlag,
           (done, total, symbol) => setProgress({ done, total, symbol })
         );
         setCategoryRows(result);
@@ -206,16 +266,18 @@ export default function BacktestPanel() {
         </span>
       </div>
       <p className="text-xs text-muted-foreground mb-4">
-        Pick a past date and either a category (symbol list only) or a
-        specific pattern (symbol list + Target/Result/Hit Date). This
-        reconstructs the CPR that would have been active on that date (same
-        candle logic as the live scanner).
+        Pick a past date and either a category, a Pivot Level sub-category
+        nested under a category, or a specific pattern. Category and Pivot
+        Level selections give a symbol list only (single date); a pattern
+        gives the full Target/Result/Hit Date backtest, with an optional
+        date-range sweep. This reconstructs the CPR that would have been
+        active on that date (same candle logic as the live scanner).
       </p>
 
       <div className="flex flex-wrap items-end gap-3 mb-4">
         <div>
           <label className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1">
-            Category / Pattern
+            Category / Pivot Level / Pattern
           </label>
           <select
             value={selectedKey}
@@ -225,7 +287,7 @@ export default function BacktestPanel() {
             {BACKTEST_CATEGORIES.map((cat) => (
               <optgroup key={cat.key} label={cat.label}>
                 <option value={cat.key}>{cat.label} — all (symbol list only)</option>
-                {cat.subPatternKeys.map((pk) => {
+                {cat.subPatternKeys?.map((pk) => {
                   const t = BACKTEST_TARGETS.find((t) => t.key === pk);
                   if (!t) return null;
                   return (
@@ -234,6 +296,26 @@ export default function BacktestPanel() {
                     </option>
                   );
                 })}
+                {/* NEW: Pivot Level sub-categories nested under this category
+                    (e.g. "Overlap Above" → "HiL4U34"), each followed by its
+                    own nested pattern(s) (e.g. "eXHi-L4U4-U4"). <select>
+                    only supports one level of <optgroup>, so nesting is
+                    simulated with indentation/arrow prefixes on plain
+                    <option> entries within the same category optgroup. */}
+                {cat.subCategories?.flatMap((sub) => [
+                  <option key={`${cat.key}${SUBCATEGORY_SEP}${sub.key}`} value={`${cat.key}${SUBCATEGORY_SEP}${sub.key}`}>
+                    {"\u21B3"} Pivot Level: {sub.label} — all (symbol list only)
+                  </option>,
+                  ...sub.subPatternKeys.map((pk) => {
+                    const t = BACKTEST_TARGETS.find((t) => t.key === pk);
+                    if (!t) return null;
+                    return (
+                      <option key={pk} value={pk}>
+                        {"\u00A0\u00A0\u00A0\u00A0"}• {t.label}
+                      </option>
+                    );
+                  }),
+                ])}
               </optgroup>
             ))}
             {ungroupedPatterns.length > 0 && (
@@ -247,12 +329,13 @@ export default function BacktestPanel() {
             )}
           </select>
         </div>
-        {/* NEW: Single Date / Date Range toggle — pattern-only. A category
-            scan has no single target to grade, so sweeping it across many
-            days wouldn't add anything beyond running each day individually
-            via the single-date picker, hence this toggle is hidden entirely
-            for category selections. */}
-        {!isCategory && (
+        {/* Single Date / Date Range toggle — PATTERN-only. A category or
+            Pivot Level sub-category has no single target to grade, so
+            sweeping either across many days wouldn't add anything beyond
+            running each day individually via the single-date picker, hence
+            this toggle is hidden entirely for category/Pivot-Level
+            selections. */}
+        {isPatternOnly && (
           <div>
             <label className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Date Mode</label>
             <div className="flex rounded-lg border border-border overflow-hidden text-xs">
@@ -273,7 +356,7 @@ export default function BacktestPanel() {
           </div>
         )}
 
-        {(isCategory || dateMode === "single") ? (
+        {(!isPatternOnly || dateMode === "single") ? (
           <div>
             <label className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Entry Date (UTC)</label>
             <input
@@ -338,9 +421,9 @@ export default function BacktestPanel() {
         </button>
       </div>
 
-      {/* NEW: only show the Target line for actual patterns — a category
-          has no single target to describe here. */}
-      {!isCategory && activeTarget && (
+      {/* Only show the Target line for actual patterns — a category or
+          Pivot Level sub-category has no single target to describe here. */}
+      {isPatternOnly && activeTarget && (
         <div className="text-xs text-muted-foreground mb-3">
           Target: <span className="text-foreground font-medium">{activeTarget.targetLabel}</span>{" "}
           ({activeTarget.direction === "bullish" ? "price must reach or exceed it" : "price must reach or fall below it"})
@@ -351,14 +434,26 @@ export default function BacktestPanel() {
           Category scan — lists every symbol matching{" "}
           <span className="text-foreground font-medium">{activeCategory.label}</span>&apos;s base
           condition on the entry date. No Target/Result/Hit Date (select one of its sub-patterns
-          above for those).
+          or Pivot Level sub-categories above for those).
+        </div>
+      )}
+      {/* NEW: Pivot Level sub-category info line — mirrors the category
+          info line above, but names both the parent category and the
+          Pivot Level. */}
+      {isSubCategory && activeSubCategoryInfo && (
+        <div className="text-xs text-muted-foreground mb-3">
+          Pivot Level scan — lists every symbol matching{" "}
+          <span className="text-foreground font-medium">{activeSubCategoryInfo.category.label}</span>&apos;s
+          base condition AND Pivot Level{" "}
+          <span className="text-foreground font-medium">{activeSubCategoryInfo.sub.label}</span> on the
+          entry date. No Target/Result/Hit Date (select one of its patterns above for those).
         </div>
       )}
 
       {status === "running" && (
         <div className="mb-4 rounded-lg border border-border bg-background/50 p-3">
-          {/* NEW: date-sweep progress — only meaningful in range mode */}
-          {!isCategory && dateMode === "range" && dateProgress.total > 0 && (
+          {/* Date-sweep progress — only meaningful in pattern range mode */}
+          {isPatternOnly && dateMode === "range" && dateProgress.total > 0 && (
             <div className="flex justify-between text-xs text-muted-foreground mb-2 pb-2 border-b border-border/50">
               <span>
                 Date {dateProgress.current} of {dateProgress.total} — {dateProgress.date}
@@ -382,18 +477,20 @@ export default function BacktestPanel() {
         </div>
       )}
 
-      {/* NEW: category-scan results — symbol list + CPR data only */}
-      {status === "done" && isCategory && (
+      {/* Category / Pivot Level scan results — symbol list + CPR data only.
+          Shared rendering for both, since they're the same row shape and
+          only differ in the label used above the table. */}
+      {status === "done" && (isCategory || isSubCategory) && (
         <>
           <div className="flex items-center gap-4 mb-3 text-xs flex-wrap">
             <span className="text-muted-foreground">
-              {categoryRows.length} symbols matched {activeCategory?.label} on {entryDate}
+              {categoryRows.length} symbols matched {symbolListLabel} on {entryDate}
             </span>
           </div>
 
           {categoryRows.length === 0 ? (
             <div className="text-xs text-muted-foreground text-center py-8">
-              No symbols matched this category on {entryDate}.
+              No symbols matched {symbolListLabel} on {entryDate}.
             </div>
           ) : (
             <div className="overflow-x-auto rounded-lg border border-border">
@@ -442,7 +539,7 @@ export default function BacktestPanel() {
       )}
 
       {/* Pattern backtest results — symbol list + Target/Result/Hit Date */}
-      {status === "done" && !isCategory && (
+      {status === "done" && isPatternOnly && (
         <>
           <div className="flex items-center gap-4 mb-3 text-xs flex-wrap">
             <span className="text-muted-foreground">
