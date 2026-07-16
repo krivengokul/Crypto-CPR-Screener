@@ -35,29 +35,29 @@ export const patterns: Pattern[] = [
   // { id: "lb-2tiny",       label: "TinyBelow - Both Tiny", subtitle: "Tiny CPR Below, Tiny PCPR", icon: TrendingDown },
   // hidden — accessible via LB-AllUp button on Little Below
   // { id: "lb-allstepdown",     label: "LittleBelow - Ladder", subtitle: "Narrow CPR Below -Ladder", icon: TrendingUp },
-  { id: "LB-PU12CU23",        label: "L2>PL2-PU12CU23",     subtitle: "Bullish Target:2PU4",       icon: TrendingUp },
-  { id: "1LB-PL12CL23",       label: "1LB-PL12CL23:2PU4",   subtitle: "Bullish Target:2PU4",       icon: TrendingUp },
-  { id: "LBALLD-U2<PU1",      label: "LBALLD-U2<PU1:2U4",   subtitle: "Bullish Target:2U4",        icon: TrendingUp },
+  //{ id: "LB-PU12CU23",        label: "L2>PL2-PU12CU23",     subtitle: "Bullish Target:2PU4",       icon: TrendingUp },
+  //{ id: "1LB-PL12CL23",       label: "1LB-PL12CL23:2PU4",   subtitle: "Bullish Target:2PU4",       icon: TrendingUp },
+  //{ id: "LBALLD-U2<PU1",      label: "LBALLD-U2<PU1:2U4",   subtitle: "Bullish Target:2U4",        icon: TrendingUp },
   // hidden — accessible via PDH/PDL buttons in the Pivot Level filter row
   // { id: "Price-AbovePDH",     label: "Price Above PDH",     subtitle: "Price Above PDH zone",      icon: ArrowUpCircle },
   // { id: "Price-BelowPDL",     label: "Price Below PDL",     subtitle: "Price Below PDL zone",      icon: ArrowDownCircle },
   { id: "overlapping-higher", label: "Overlap Above",  subtitle: "CPR zones stacking up",     icon: Layers },
-  { id: "LAT-PU12CU23",       label: "PU12CU23,PL12CL23",   subtitle: "Bullish Target:2U4",        icon: Layers },
+  // id: "LAT-PU12CU23",       label: "PU12CU23,PL12CL23",   subtitle: "Bullish Target:2U4",        icon: Layers },
   { id: "overlapping-lower",  label: "Overlap Below",   subtitle: "CPR zones stacking down",   icon: LayersIcon },
-  { id: "LBT-PU1>U1PL1>L1",   label: "LBT-PU1>U1PL1>L1",    subtitle: "Bullish Target:2PU4",       icon: LayersIcon },
+  //{ id: "LBT-PU1>U1PL1>L1",   label: "LBT-PU1>U1PL1>L1",    subtitle: "Bullish Target:2PU4",       icon: LayersIcon },
   { id: "inside-cpr",         label: "Inside CPR",          subtitle: "Inside CPR range",         icon: Crosshair },
   { id: "outside-cpr",        label: "Outside CPR",         subtitle: "Outside CPR range",        icon: Maximize2 },
-  { id: "lower-bullish",      label: "LowerCPR Bullish",    subtitle: "Higher highs forming",      icon: BarChart2 },
+  //{ id: "lower-bullish",      label: "LowerCPR Bullish",    subtitle: "Higher highs forming",      icon: BarChart2 },
   { id: "structure-bigabove", label: "BIGCPR ABOVE",        subtitle: "Wide CPR Above PCPR",       icon: BarChart },
   // hidden — accessible via U1>PU4 button on BigCPR Above
   // { id: "HA-U1>PU4",          label: "U1 > Previous U4",    subtitle: "Todays U1> Previous U4",    icon: BarChart2 },
-  { id: "HAThin-U1>PU4",      label: "U1>PU4 Bullish",      subtitle: "Higher highs forming",      icon: BarChart2 },
+  //{ id: "HAThin-U1>PU4",      label: "U1>PU4 Bullish",      subtitle: "Higher highs forming",      icon: BarChart2 },
   { id: "structure-bigbelow", label: "Big Below",  subtitle: "Wide CPR Below PCPR",      icon: BarChart },
   // hidden — L1<PL1, PU12CU23
   // { id: "HB-L1<PL1-PU12CU23", label: "L1<PL1, PU12CU23",  subtitle: "Bullish Target:2PU4",       icon: TrendingUp },
-  { id: "HB-L1<PL4-U1>TCPR",  label: "L1<PL4, U1>TCPR",     subtitle: "Bullish Target:2U4",       icon: TrendingUp },
-  { id: "HB-L1<PL2-U12CPU12", label: "L1<PL2, U12CPU12",   subtitle: "Bearish Target:L4",       icon: TrendingDown },
-  { id: "HB-L1>PL1-PU1CU234", label: "L1>PL1, PU1CU234",   subtitle: "Bearish Target:L4",       icon: TrendingDown }
+  //{ id: "HB-L1<PL4-U1>TCPR",  label: "L1<PL4, U1>TCPR",     subtitle: "Bullish Target:2U4",       icon: TrendingUp },
+  //{ id: "HB-L1<PL2-U12CPU12", label: "L1<PL2, U12CPU12",   subtitle: "Bearish Target:L4",       icon: TrendingDown },
+  //{ id: "HB-L1>PL1-PU1CU234", label: "L1>PL1, PU1CU234",   subtitle: "Bearish Target:L4",       icon: TrendingDown }
 ];
 
 export type SidebarMode = "scanner" | "backtest";
