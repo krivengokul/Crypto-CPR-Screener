@@ -418,7 +418,7 @@ export default function Screener({
     }
     onCounts(counts);
   }, [allResults, deltaAllResults, activeTab, onCounts]);
-  
+
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     else { setSortKey(key); setSortDir("asc"); }
@@ -1290,6 +1290,72 @@ export default function Screener({
             </div>
           )}
 
+          {/* NEW: results summary + Show All, moved here from the sub-filter
+              section so it sits next to the exchange tab toggle. Same
+              text-xs sizing/border styling as the tab toggle and other pill
+              buttons in this row. Uses currentStatus/currentFilteredCount/
+              currentAllCount/anySubFilter/displayed, all declared further
+              down in the component body — fine since this reference only
+              executes when the JSX returned below is evaluated. */}
+          {currentStatus === "done" && (
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-muted-foreground">
+                {anySubFilter
+                  ? displayed.length
+                  : showAll
+                  ? currentAllCount
+                  : currentFilteredCount}{" "}
+                results
+                {!showAll && !anySubFilter && ` (${currentFilteredCount} matching, ${currentAllCount} total)`}
+              </span>
+              <button
+                onClick={() => {
+                  setShowAll((v) => !v);
+                  setShowLABothTiny(false);
+                  setShowLAAllUp(false);
+                  setShowLA1LHr(false);
+                  setShowLAPL12CL23(false);
+                  setShowLACompressed(false);
+                  setShowOutsideCPRCompressed(false);
+                  setShowOutsideCPReXHrL3U3AU4(false);
+                  setShowInsideCPRExpanded(false);
+                  setShowInsideCPRNarrow(false);
+                  setShowBigBelowPMiniPL3(false);
+                  setShowBigBelowPMiniRising(false);
+                  setShowExpU3LtPU4(false);
+                  setShowBigBeloweXLoL3U4AU4(false);
+                  setShowBigBelowL1LtPL4(false);
+                  setShowL1LtPL4CprLtPL4(false);
+                  setShowBigBeloweXU4L234AU4(false);
+                  setShowBigAbovePL34CL4(false);
+                  setShowBAComp(false);
+                  setShowHAU1(false);
+                  setShowHAU1CprAbovePU4(false);
+                  setShowHAU1L1AbovePU4(false);
+                  setShowHAU1PWideAbove(false);
+                  setShowHRHAL(false);
+                  setShowHA55HrL4U34FAU4(false);
+                  setShowHiL4U4FAU4(false);
+                  setShowLBCmprss(false);
+                  setShowLBC34(false);
+                  setShowLBE11(false);
+                  setShowLBC2L2U2(false);
+                  setShowLBBothTiny(false);
+                  setShowLBAllUp(false);
+                  setShowExpU4PU4(false);
+                  setShowExpU3PU3(false);
+                  setShowOBNLoL4U4(false);
+                  setShowOBWLoL4U4(false);
+                  setShowOBHiExL4U4(false);
+                  setShoweXHiL4U234(false);
+                }}
+                className="px-2.5 py-1 rounded border border-border text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {showAll ? "Show filtered only" : "Show all"}
+              </button>
+            </div>
+          )}
+
           <div className="relative ml-auto">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
             <input
@@ -1337,187 +1403,8 @@ export default function Screener({
         {/* Show-all toggle + sub-filter buttons */}
         {currentStatus === "done" && (
           <div className="flex flex-col gap-2 mb-3">
-          <div className="flex items-center gap-3 flex-wrap">
-            <span className="text-xs text-muted-foreground">
-              {anySubFilter
-                ? displayed.length
-                : showAll
-                ? currentAllCount
-                : currentFilteredCount}{" "}
-              results
-              {!showAll && !anySubFilter && ` (${currentFilteredCount} matching, ${currentAllCount} total)`}
-              {showLABothTiny && activePattern === "littleabove" && (
-                <span className="ml-1 text-blue-400">(LA-BothTiny intersection)</span>
-              )}
-              {showLAAllUp && activePattern === "littleabove" && (
-                <span className="ml-1 text-blue-400">(LA-AllUp intersection)</span>
-              )}
-              {showLA1LHr && activePattern === "littleabove" && (
-                <span className="ml-1 text-teal-400">(1LHr-L4U3-U4)</span>
-              )}
-              {showLAPL12CL23 && activePattern === "littleabove" && (
-                <span className="ml-1 text-blue-400">(PL12CL23)</span>
-              )}
-              {showLACompressed && activePattern === "littleabove" && (
-                <span className="ml-1 text-emerald-400">(cOL2U3-ApU4)</span>
-              )}
-              {showOutsideCPRCompressed && activePattern === "outside-cpr" && (
-                <span className="ml-1 text-purple-400">(Compressed)</span>
-              )}
-              {showOutsideCPReXHrL3U3AU4 && activePattern === "outside-cpr" && (
-                <span className="ml-1 text-rose-400">(eXHrL3U3-AU4)</span>
-              )}
-              {showInsideCPRExpanded && activePattern === "inside-cpr" && (
-                <span className="ml-1 text-orange-400">(Expanded)</span>
-              )}
-              {showInsideCPRNarrow && activePattern === "inside-cpr" && (
-                <span className="ml-1 text-cyan-400">(Narrow)</span>
-              )}
-              {showInsideCPRCoU4L3 && activePattern === "inside-cpr" && (
-                <span className="ml-1 text-indigo-400">(cO-U4L3)</span>
-              )}
-              {showBigBelowPMiniPL3 && activePattern === "structure-bigbelow" && (
-                <span className="ml-1 text-cyan-400">(pMini-PL34C4/PU3&gt;U4)</span>
-              )}
-              {showBigBelowPMiniRising && activePattern === "structure-bigbelow" && (
-                <span className="ml-1 text-green-400">(Rising: Price&gt;TC)</span>
-              )}
-              {showExpU3LtPU4 && activePattern === "structure-bigbelow" && (
-                <span className="ml-1 text-rose-400">(eX-U4L34)</span>
-              )}
-              {showBigBeloweXLoL3U4AU4 && activePattern === "structure-bigbelow" && (
-                <span className="ml-1 text-green-400">(eXLoL3U4-AU4)</span>
-              )}
-              {showBigBelowL1LtPL4 && activePattern === "structure-bigbelow" && (
-                <span className="ml-1 text-amber-400">(L1&lt;pL4)</span>
-              )}
-              {showL1LtPL4CprLtPL4 && activePattern === "structure-bigbelow" && (
-                <span className="ml-1 text-green-400">(CPR&lt;pL4)</span>
-              )}
-              {showBigBeloweXU4L234AU4 && activePattern === "structure-bigbelow" && (
-                <span className="ml-1 text-amber-400">(eXU4L234-AU4)</span>
-              )}
-              {showBigAbovePL34CL4 && activePattern === "structure-bigabove" && (
-                <span className="ml-1 text-emerald-400">(PL34CL4/U3&gt;PU4)</span>
-              )}
-              {showBAComp && activePattern === "structure-bigabove" && (
-                <span className="ml-1 text-sky-400">(BAComp-l3&gt;pl1/u3&gt;pu1)</span>
-              )}
-              {showHRHAL && activePattern === "structure-bigabove" && (
-                <span className="ml-1 text-orange-400">(hR-HAL)</span>
-              )}
-              {showHA55HrL4U34FAU4 && activePattern === "structure-bigabove" && (
-                <span className="ml-1 text-green-400">(HA55-HrL4U34-FAU4)</span>
-              )}
-              {showHiL4U4FAU4 && activePattern === "structure-bigabove" && (
-                <span className="ml-1 text-fuchsia-400">(1T-HiL4U4-FAU4)</span>
-              )}
-              {showHAU1 && activePattern === "structure-bigabove" && (
-                <span className="ml-1 text-emerald-400">(U1&gt;PU4)</span>
-              )}
-              {showHAU1CprAbovePU4 && activePattern === "structure-bigabove" && (
-                <span className="ml-1 text-green-400">(CPR&gt;PU4)</span>
-              )}
-              {showHAU1L1AbovePU4 && activePattern === "structure-bigabove" && (
-                <span className="ml-1 text-lime-400">(L1&gt;PU4)</span>
-              )}
-              {showHAU1PWideAbove && activePattern === "structure-bigabove" && (
-                <span className="ml-1 text-fuchsia-400">(pWideAbove)</span>
-              )}
-              {showeXHiL4U234 && activePattern === "structure-bigabove" && (
-                <span className="ml-1 text-violet-400">(eXHi-L4U234-U4)</span>
-              )}
-              {showLBCmprss && activePattern === "littlebelow" && (
-                <span className="ml-1 text-violet-400">(LB-Compressed: L4&gt;PL3/U4&lt;PU2)</span>
-              )}
-              {showLBC34 && activePattern === "littlebelow" && (
-                <span className="ml-1 text-pink-400">(LB-C-L34C4/U23C4)</span>
-              )}
-              {showLBE11 && activePattern === "littlebelow" && (
-                <span className="ml-1 text-amber-400">(lbE11-cOLoL3U2-PU4)</span>
-              )}
-              {showLBC2L2U2 && activePattern === "littlebelow" && (
-                <span className="ml-1 text-emerald-400">(cO2-L2U2)</span>
-              )}
-              {showLBBothTiny && activePattern === "littlebelow" && (
-                <span className="ml-1 text-blue-400">(LB-BothTiny intersection)</span>
-              )}
-              {showLBAllUp && activePattern === "littlebelow" && (
-                <span className="ml-1 text-blue-400">(LB-AllUp intersection)</span>
-              )}
-              {showExpU4PU4 && activePattern === "overlapping-lower" && (
-                <span className="ml-1 text-sky-400">(eXLo-L4U4-U4)</span>
-              )}
-              {showExpU3PU3 && activePattern === "overlapping-lower" && (
-                <span className="ml-1 text-sky-400">(Exp-U3&gt;pU4)</span>
-              )}
-              {showOBNLoL4U4 && activePattern === "overlapping-lower" && (
-                <span className="ml-1 text-cyan-400">(OBN-LoL4U4-U4)</span>
-              )}
-              {showOBWLoL4U4 && activePattern === "overlapping-lower" && (
-                <span className="ml-1 text-rose-400">(OBW-LoL4U4-L4)</span>
-              )}
-              {showOBHiExL4U4 && activePattern === "overlapping-higher" && (
-                <span className="ml-1 text-pink-400">(eXHi-L4U4-U4)</span>
-              )}
-              {pivotLevelFilter && (
-                <span className="ml-1 text-foreground">(Pivot Level: {pivotLevelFilter})</span>
-              )}
-              {widthFilter && (
-                <span className="ml-1 text-foreground">(Width: {formatWidthFilterLabel(widthFilter)})</span>
-              )}
-              {pdhPdlFilter && (
-                <span className="ml-1 text-foreground">(Price {pdhPdlFilter === "above" ? "Above PDH" : "Below PDL"})</span>
-              )}
-            </span>
-
-            {/* Show All button */}
-            <button
-              onClick={() => {
-                setShowAll((v) => !v);
-                setShowLABothTiny(false);
-                setShowLAAllUp(false);
-                setShowLA1LHr(false);
-                setShowLAPL12CL23(false);
-                setShowLACompressed(false);
-                setShowOutsideCPRCompressed(false);
-                setShowOutsideCPReXHrL3U3AU4(false);
-                setShowInsideCPRExpanded(false);
-                setShowInsideCPRNarrow(false);
-                setShowBigBelowPMiniPL3(false);
-                setShowBigBelowPMiniRising(false);
-                setShowExpU3LtPU4(false);
-                setShowBigBeloweXLoL3U4AU4(false);
-                setShowBigBelowL1LtPL4(false);
-                setShowL1LtPL4CprLtPL4(false);
-                setShowBigBeloweXU4L234AU4(false);
-                setShowBigAbovePL34CL4(false);
-                setShowBAComp(false);
-                setShowHAU1(false);
-                setShowHAU1CprAbovePU4(false);
-                setShowHAU1L1AbovePU4(false);
-                setShowHAU1PWideAbove(false);
-                setShowHRHAL(false);
-                setShowHiL4U4FAU4(false);
-                setShowLBCmprss(false);
-                setShowLBC34(false);
-                setShowLBE11(false);
-                setShowLBC2L2U2(false);
-                setShowLBBothTiny(false);
-                setShowLBAllUp(false);
-                setShowExpU4PU4(false);
-                setShowExpU3PU3(false);
-                setShowOBNLoL4U4(false);
-                setShowOBWLoL4U4(false);
-                setShowOBHiExL4U4(false);
-                setShoweXHiL4U234(false);
-                // NOTE: Pivot Level / Width / PDH-PDL filters are intentionally NOT reset here —
-                // they now persist across "Show All" toggles and stay applied on top of it.
-              }}
-              className="text-xs px-2.5 py-1 rounded border border-border text-muted-foreground hover:text-foreground transition-colors"
-            >
-              {showAll ? "Show filtered only" : "Show all"}
-            </button>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[10px] text-muted-foreground uppercase tracking-wider mr-0.5">Patterns:</span>
 
             {/* NEW: hR-HAL button — BigCPR Above, placed next to Show All */}
             {activePattern === "structure-bigabove" && !showAll && (
