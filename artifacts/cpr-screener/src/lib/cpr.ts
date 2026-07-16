@@ -193,8 +193,8 @@ export function analyzeCPR(
   const ppCPR = ppCandle && isValidCandle(ppCandle) ? calcCPR(ppCandle) : undefined;
 
   const minGap     = prevCPR.pivot * 0.001;
-  const cprRising  = (todayCPR.bc - prevCPR.tc) >= minGap;
-  const cprFalling = (prevCPR.bc  - todayCPR.tc) >= minGap;
+  const cprRising  = todayCPR.bc > prevCPR.tc;
+  const cprFalling = todayCPR.tc < prevCPR.bc;
   const strWideCPR    = todayCPR.widthPct > prevCPR.widthPct;
   const narrowCPR    = todayCPR.widthPct < prevCPR.widthPct;
   const compressionRatio = prevCPR.width > 0 ? (todayCPR.width / prevCPR.width) * 100 : 100;

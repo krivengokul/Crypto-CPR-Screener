@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, Fragment } from "react";
+import { patterns } from "@/components/ui/PatternSidebar";
 import {
   TrendingUp,
   RefreshCw,
@@ -53,7 +54,15 @@ import {
 } from "./ScreenerUtils";
 import LiveClock from "./LiveClock";
 
-export default function Screener({ activePattern = "littleabove", scanKey = 0 }: { activePattern?: string; scanKey?: number }) {
+export default function Screener({
+  activePattern = "littleabove",
+  scanKey = 0,
+  onCounts,
+}: {
+  activePattern?: string;
+  scanKey?: number;
+  onCounts?: (counts: Record<string, number>) => void;
+}) {
   const [status, setStatus] = useState<"idle" | "scanning" | "done" | "error">("idle");
   const [progress, setProgress] = useState({ done: 0, total: 0, symbol: "" });
   const [allResults, setAllResults] = useState<CPRResult[]>([]);
@@ -391,7 +400,25 @@ export default function Screener({ activePattern = "littleabove", scanKey = 0 }:
     // Reset LB Compressed / LB-C34 / lbE11-cOLoL3U2-PU4 / LB-cO2-L2U2 / LB-BothTiny / LB-AllUp when leaving littlebelow
     if (activePattern !== "littlebelow") { setShowLBCmprss(false); setShowLBC34(false); setShowLBE11(false); setShowLBC2L2U2(false); setShowLBBothTiny(false); setShowLBAllUp(false); }
   }, [activePattern, allResults, deltaAllResults]);
-
+  // NEW: report per-pattern (top-level nav) matching counts up to App so
+  // the left sidebar can show "Little ABOVE (41)" etc. Computed off the
+  // currently active tab's full unfiltered result set, so the counts
+  // track whichever of Binance/Delta/Combined is selected, and recompute
+  // whenever scan results or the active tab change.
+  useEffect(() => {
+    if (!onCounts) return;
+    const pool: CPRResult[] =
+      activeTab === "delta" ? deltaAllResults
+      : activeTab === "combined" ? [...allResults, ...deltaAllResults]
+      : allResults;
+    if (pool.length === 0) return;
+    const counts: Record<string, number> = {};
+    for (const p of patterns) {
+      counts[p.id] = pool.filter((r) => passesPattern(r, p.id)).length;
+    }
+    onCounts(counts);
+  }, [allResults, deltaAllResults, activeTab, onCounts]);
+  
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     else { setSortKey(key); setSortDir("asc"); }

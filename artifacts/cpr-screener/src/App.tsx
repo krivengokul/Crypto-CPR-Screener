@@ -126,6 +126,9 @@ function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(getSavedCollapsed);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mode, setMode] = useState<SidebarMode>(getSavedMode);
+  // NEW: top-level pattern -> matching count, reported up by Screener,
+  // passed down into PatternSidebar for the "(41)" labels.
+  const [patternCounts, setPatternCounts] = useState<Record<string, number>>({});
 
   // Auto-scan on first page load
   useEffect(() => {
@@ -169,6 +172,7 @@ function App() {
             onMobileClose={() => setMobileOpen(false)}
             mode={mode}
             onModeChange={handleModeChange}
+            counts={patternCounts}
           />
           <main className="flex-1 overflow-auto min-w-0">
             <button
@@ -185,7 +189,7 @@ function App() {
                 it and never re-triggers the scanKey effect / loses scan state. */}
             <div style={{ display: mode === "backtest" ? "none" : "block" }}>
               {SCREENER_PATTERN_IDS.has(activePattern) ? (
-                <Screener activePattern={activePattern} scanKey={scanKey} />
+                <Screener activePattern={activePattern} scanKey={scanKey} onCounts={setPatternCounts} />
               ) : (
                 <ComingSoon label={activeLabel} />
               )}

@@ -112,6 +112,10 @@ interface PatternSidebarProps {
   onMobileClose: () => void;
   mode: SidebarMode;
   onModeChange: (mode: SidebarMode) => void;
+  // NEW: top-level pattern id -> matching count, e.g. { littleabove: 41 }.
+  // Shown next to each pattern's label as "(41)". Undefined/missing entries
+  // (e.g. before the first scan completes) simply render no count.
+  counts?: Record<string, number>;
 }
 
 export default function PatternSidebar({
@@ -123,6 +127,7 @@ export default function PatternSidebar({
   onMobileClose,
   mode,
   onModeChange,
+  counts,
 }: PatternSidebarProps) {
   // Which parent pattern is currently open in the tree
   const [expandedId, setExpandedId] = useState<string | null>(() => {
@@ -350,6 +355,11 @@ export default function PatternSidebar({
                       }}
                     >
                       {pattern.label}
+                      {typeof counts?.[pattern.id] === "number" && (
+                        <span style={{ color: DIM_TEXT, fontWeight: 400 }}>
+                          {" "}({counts[pattern.id]})
+                        </span>
+                      )}
                     </div>
                     <div
                       style={{
@@ -492,7 +502,11 @@ export default function PatternSidebar({
             <button
               key={pattern.id}
               onClick={() => handleParentClick(pattern.id)}
-              title={pattern.label}
+              title={
+                typeof counts?.[pattern.id] === "number"
+                  ? `${pattern.label} (${counts[pattern.id]})`
+                  : pattern.label
+              }
               style={{
                 width: 36,
                 height: 36,
