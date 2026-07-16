@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import {
   TrendingUp,
   TrendingDown,
@@ -5,13 +6,11 @@ import {
   LayersIcon,
   Crosshair,
   Maximize2,
-  BarChart2,
   BarChart,
   ChevronLeft,
   ChevronRight,
-  Activity,
+  ChevronDown,
   X,
-  LineChart,
   FlaskConical,
 } from "lucide-react";
 
@@ -22,45 +21,87 @@ export interface Pattern {
   icon: React.ElementType;
 }
 
+export interface SubPattern {
+  id: string;
+  label: string;
+}
+
+/**
+ * Sub-patterns for each parent pattern.
+ * Each `id` maps to a passesPattern() case in ScreenerUtils.tsx so the
+ * existing Screener filtering logic works with no changes.
+ */
+export const subPatterns: Record<string, SubPattern[]> = {
+  littleabove: [
+    { id: "la-2tiny",                label: "LA-BothTiny" },
+    { id: "la-allstepup",            label: "LA-AllUp" },
+    { id: "1LHr-L4U3-U4",            label: "1LHr-L4U3-U4" },
+    { id: "LA-PL12CL23",             label: "PL12CL23" },
+    { id: "sT-cOL2U3-APU4",          label: "cOL2U3-ApU4" },
+  ],
+  littlebelow: [
+    { id: "lb-2tiny",                label: "LB-BothTiny" },
+    { id: "lb-allstepdown",          label: "LB-AllUp" },
+    { id: "lb-cmprss-l4>3-u4<2",     label: "lb-Cmprss-L4>3/U4<2" },
+    { id: "lb-c-l34c4/u23c4",        label: "lb-c-l34c4/u23c4" },
+    { id: "lbE11-cOLoL3U2-PU4",      label: "lbE11-cOLoL3U2-PU4" },
+    { id: "co2-l2u2",                label: "cO2-L2U2" },
+  ],
+  "overlapping-higher": [
+    { id: "eXHi-L4U4-U4",            label: "eXHi-L4U4-U4" },
+  ],
+  "overlapping-lower": [
+    { id: "eXLo-L4U4-U4",            label: "Exp-U3>pU4" },
+    { id: "Exp-U3>U3",               label: "Exp-U3>U3" },
+    { id: "OBN-LoL4U4-U4",           label: "OBN-LoL4U4-U4" },
+    { id: "OBW-LoL4U4-L4",           label: "OBW-LoL4U4-L4" },
+  ],
+  "inside-cpr": [
+    { id: "inside-cpr-expanded",     label: "Expanded" },
+    { id: "inside-cpr-narrow",       label: "Narrow" },
+    { id: "cO-U4L3",                label: "cO-U4L3" },
+  ],
+  "outside-cpr": [
+    { id: "outside-cpr-compressed",  label: "Compressed" },
+    { id: "eXHrL3U3-AU4",            label: "eXHrL3U3-AU4" },
+  ],
+  "structure-bigabove": [
+    { id: "bigabove-pl34cl4-u3>pu4", label: "pL34-cL4" },
+    { id: "bacomp-l3>pl1/u3>pu1",   label: "Inside PUL2" },
+    { id: "eXHi-L4U234-U4",          label: "eXHi-L4U234-U4" },
+    { id: "HA-U1>PU4",               label: "U1>PU4" },
+    { id: "hR-HAL",                  label: "hR-HAL" },
+    { id: "1T-HiL4U4-FAU4",          label: "1T-HiL4U4-FAU4" },
+  ],
+  "structure-bigbelow": [
+    { id: "bigbelow-pmini-pl3",      label: "pMini-L34C4/U3>4" },
+    { id: "eX-U4L34",               label: "eX-U4L34" },
+    { id: "eXLoL3U4-AU4",            label: "eXLoL3U4-AU4" },
+    { id: "L1<pL4",                  label: "L1<pL4" },
+    { id: "eXU4L234-AU4",            label: "eXU4L234-AU4" },
+  ],
+};
+
 export const patterns: Pattern[] = [
-  { id: "littleabove",        label: "Little ABOVE",          subtitle: "Narrow CPR Above PCPR",    icon: TrendingUp },
-  // hidden — accessible via LA-BothTiny button on Little Above
-  // { id: "la-2tiny",       label: "TinyAbove - Both Tiny", subtitle: "Tiny CPR Above, Tiny PCPR", icon: TrendingUp },
-  // hidden — accessible via PL12CL23 button on Little Above
-  // { id: "LA-PL12CL23",       label: "LA-PL12CL23:2PL4",   subtitle: "Bearish Target:2PL4",       icon: TrendingDown },
-  // hidden — accessible via LA-AllUp button on Little Above
-  // { id: "la-allstepup",       label: "LittleAbove - Ladder", subtitle: "Narrow CPR Above -Ladder", icon: TrendingUp },
-  { id: "littlebelow",        label: "Little BELOW",         subtitle: "Narrow CPR Below PCPR",    icon: TrendingDown },
-  // hidden — accessible via LB-BothTiny button on Little Below
-  // { id: "lb-2tiny",       label: "TinyBelow - Both Tiny", subtitle: "Tiny CPR Below, Tiny PCPR", icon: TrendingDown },
-  // hidden — accessible via LB-AllUp button on Little Below
-  // { id: "lb-allstepdown",     label: "LittleBelow - Ladder", subtitle: "Narrow CPR Below -Ladder", icon: TrendingUp },
-  //{ id: "LB-PU12CU23",        label: "L2>PL2-PU12CU23",     subtitle: "Bullish Target:2PU4",       icon: TrendingUp },
-  //{ id: "1LB-PL12CL23",       label: "1LB-PL12CL23:2PU4",   subtitle: "Bullish Target:2PU4",       icon: TrendingUp },
-  //{ id: "LBALLD-U2<PU1",      label: "LBALLD-U2<PU1:2U4",   subtitle: "Bullish Target:2U4",        icon: TrendingUp },
-  // hidden — accessible via PDH/PDL buttons in the Pivot Level filter row
-  // { id: "Price-AbovePDH",     label: "Price Above PDH",     subtitle: "Price Above PDH zone",      icon: ArrowUpCircle },
-  // { id: "Price-BelowPDL",     label: "Price Below PDL",     subtitle: "Price Below PDL zone",      icon: ArrowDownCircle },
-  { id: "overlapping-higher", label: "Overlap Above",  subtitle: "CPR zones stacking up",     icon: Layers },
-  // id: "LAT-PU12CU23",       label: "PU12CU23,PL12CL23",   subtitle: "Bullish Target:2U4",        icon: Layers },
-  { id: "overlapping-lower",  label: "Overlap Below",   subtitle: "CPR zones stacking down",   icon: LayersIcon },
-  //{ id: "LBT-PU1>U1PL1>L1",   label: "LBT-PU1>U1PL1>L1",    subtitle: "Bullish Target:2PU4",       icon: LayersIcon },
-  { id: "inside-cpr",         label: "CPR Inside ",          subtitle: "Inside CPR range",         icon: Crosshair },
-  { id: "outside-cpr",        label: "CPR Outside ",         subtitle: "Outside CPR range",        icon: Maximize2 },
-  //{ id: "lower-bullish",      label: "LowerCPR Bullish",    subtitle: "Higher highs forming",      icon: BarChart2 },
-  { id: "structure-bigabove", label: "Big ABOVE",        subtitle: "Wide CPR Above PCPR",       icon: BarChart },
-  // hidden — accessible via U1>PU4 button on BigCPR Above
-  // { id: "HA-U1>PU4",          label: "U1 > Previous U4",    subtitle: "Todays U1> Previous U4",    icon: BarChart2 },
-  //{ id: "HAThin-U1>PU4",      label: "U1>PU4 Bullish",      subtitle: "Higher highs forming",      icon: BarChart2 },
-  { id: "structure-bigbelow", label: "Big BELOW",  subtitle: "Wide CPR Below PCPR",      icon: BarChart },
-  // hidden — L1<PL1, PU12CU23
-  // { id: "HB-L1<PL1-PU12CU23", label: "L1<PL1, PU12CU23",  subtitle: "Bullish Target:2PU4",       icon: TrendingUp },
-  //{ id: "HB-L1<PL4-U1>TCPR",  label: "L1<PL4, U1>TCPR",     subtitle: "Bullish Target:2U4",       icon: TrendingUp },
-  //{ id: "HB-L1<PL2-U12CPU12", label: "L1<PL2, U12CPU12",   subtitle: "Bearish Target:L4",       icon: TrendingDown },
-  //{ id: "HB-L1>PL1-PU1CU234", label: "L1>PL1, PU1CU234",   subtitle: "Bearish Target:L4",       icon: TrendingDown }
+  { id: "littleabove",        label: "Little ABOVE",  subtitle: "Narrow CPR Above PCPR",    icon: TrendingUp },
+  { id: "littlebelow",        label: "Little BELOW",  subtitle: "Narrow CPR Below PCPR",    icon: TrendingDown },
+  { id: "overlapping-higher", label: "Overlap Above", subtitle: "CPR zones stacking up",    icon: Layers },
+  { id: "overlapping-lower",  label: "Overlap Below", subtitle: "CPR zones stacking down",  icon: LayersIcon },
+  { id: "inside-cpr",         label: "CPR Inside",    subtitle: "Inside CPR range",         icon: Crosshair },
+  { id: "outside-cpr",        label: "CPR Outside",   subtitle: "Outside CPR range",        icon: Maximize2 },
+  { id: "structure-bigabove", label: "Big ABOVE",     subtitle: "Wide CPR Above PCPR",      icon: BarChart },
+  { id: "structure-bigbelow", label: "Big BELOW",     subtitle: "Wide CPR Below PCPR",      icon: BarChart },
 ];
 
 export type SidebarMode = "scanner" | "backtest";
+
+/** Returns the parent ID for a sub-pattern, or null if it is a parent itself. */
+function getParentId(patternId: string): string | null {
+  for (const [parentId, children] of Object.entries(subPatterns)) {
+    if (children.some((c) => c.id === patternId)) return parentId;
+  }
+  return null;
+}
 
 interface PatternSidebarProps {
   activePattern: string;
@@ -69,157 +110,8 @@ interface PatternSidebarProps {
   onToggle: () => void;
   mobileOpen: boolean;
   onMobileClose: () => void;
-  // NEW: mode toggle — switches the main content between the live scanner
-  // (existing pattern-driven Screener/ComingSoon views) and the Backtest
-  // panel. Sidebar itself stays mounted and interactive in both modes so
-  // pattern selection is preserved when switching back to Live Scanner.
   mode: SidebarMode;
   onModeChange: (mode: SidebarMode) => void;
-}
-
-// NEW: Mode toggle — two pill buttons, "Live Scanner" and "Backtest".
-// Rendered both expanded (full label) and collapsed (icon-only, stacked)
-// so it works in every sidebar state (desktop collapsed/expanded, mobile).
-function ModeToggle({
-  mode,
-  onModeChange,
-  collapsed,
-}: {
-  mode: SidebarMode;
-  onModeChange: (mode: SidebarMode) => void;
-  collapsed: boolean;
-}) {
-  const options: { key: SidebarMode; label: string; icon: React.ElementType }[] = [
-    { key: "scanner", label: "Live Scanner", icon: LineChart },
-    { key: "backtest", label: "Backtest", icon: FlaskConical },
-  ];
-
-  if (collapsed) {
-    return (
-      <div className="flex flex-col gap-1 px-2 mb-2">
-        {options.map(({ key, label, icon: Icon }) => {
-          const isActive = mode === key;
-          return (
-            <button
-              key={key}
-              onClick={() => onModeChange(key)}
-              title={label}
-              className="flex items-center justify-center rounded-lg transition-colors"
-              style={{
-                width: 32,
-                height: 32,
-                margin: "0 auto",
-                background: isActive ? "rgba(59,130,246,0.2)" : "rgba(255,255,255,0.05)",
-              }}
-            >
-              <Icon className="w-4 h-4" style={{ color: isActive ? "#60a5fa" : "#4b6a8a" }} />
-            </button>
-          );
-        })}
-      </div>
-    );
-  }
-
-  return (
-    <div className="px-3 mb-3">
-      <div
-        className="flex rounded-lg overflow-hidden text-xs"
-        style={{ border: "1px solid #1e2d3d" }}
-      >
-        {options.map(({ key, label, icon: Icon }) => {
-          const isActive = mode === key;
-          return (
-            <button
-              key={key}
-              onClick={() => onModeChange(key)}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2 transition-colors font-medium"
-              style={{
-                background: isActive ? "#3b82f6" : "transparent",
-                color: isActive ? "#fff" : "#8ba3bc",
-              }}
-            >
-              <Icon className="w-3.5 h-3.5" />
-              {label}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function PatternList({
-  activePattern,
-  onSelect,
-  collapsed,
-}: {
-  activePattern: string;
-  onSelect: (id: string) => void;
-  collapsed: boolean;
-}) {
-  return (
-    <nav className="flex flex-col gap-0.5 px-2">
-      {patterns.map((pattern) => {
-        const Icon = pattern.icon;
-        const isActive = activePattern === pattern.id;
-        return (
-          <button
-            key={pattern.id}
-            onClick={() => onSelect(pattern.id)}
-            title={collapsed ? pattern.label : undefined}
-            className="w-full text-left rounded-lg transition-all duration-150 group"
-            style={{
-              padding: collapsed ? "10px" : "10px 12px",
-              background: isActive
-                ? "linear-gradient(90deg, rgba(59,130,246,0.18) 0%, rgba(99,102,241,0.08) 100%)"
-                : "transparent",
-              borderLeft: isActive ? "2px solid #3b82f6" : "2px solid transparent",
-            }}
-            onMouseEnter={(e) => {
-              if (!isActive)
-                (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.04)";
-            }}
-            onMouseLeave={(e) => {
-              if (!isActive)
-                (e.currentTarget as HTMLButtonElement).style.background = "transparent";
-            }}
-          >
-            <div className={`flex items-center ${collapsed ? "justify-center" : "gap-3"}`}>
-              <div
-                className="flex items-center justify-center rounded-lg shrink-0 transition-colors"
-                style={{
-                  width: 32,
-                  height: 32,
-                  background: isActive ? "rgba(59,130,246,0.2)" : "rgba(255,255,255,0.05)",
-                }}
-              >
-                <Icon
-                  className="w-4 h-4 transition-colors"
-                  style={{ color: isActive ? "#60a5fa" : "#4b6a8a" }}
-                />
-              </div>
-              {!collapsed && (
-                <div className="overflow-hidden">
-                  <div
-                    className="font-semibold text-sm leading-tight truncate"
-                    style={{ color: isActive ? "#e2e8f0" : "#8ba3bc" }}
-                  >
-                    {pattern.label}
-                  </div>
-                  <div
-                    className="text-xs truncate mt-0.5"
-                    style={{ color: "#3b5278", fontSize: 11 }}
-                  >
-                    {pattern.subtitle}
-                  </div>
-                </div>
-              )}
-            </div>
-          </button>
-        );
-      })}
-    </nav>
-  );
 }
 
 export default function PatternSidebar({
@@ -232,232 +124,438 @@ export default function PatternSidebar({
   mode,
   onModeChange,
 }: PatternSidebarProps) {
-  return (
-    <>
-      {/* ── Desktop sidebar (hidden on mobile) ─────────────────────── */}
-      <aside
-        className={`relative shrink-0 min-h-screen hidden md:flex flex-col transition-all duration-300 ${
-          collapsed ? "w-16" : "w-64"
-        }`}
-        style={{ background: "#0d1117", borderRight: "1px solid #1e2d3d" }}
+  // Which parent pattern is currently open in the tree
+  const [expandedId, setExpandedId] = useState<string | null>(() => {
+    const parent = getParentId(activePattern);
+    return parent ?? activePattern;
+  });
+
+  // Keep tree in sync when activePattern is changed from outside
+  useEffect(() => {
+    const parent = getParentId(activePattern);
+    if (parent) {
+      setExpandedId(parent);
+    } else if (patterns.some((p) => p.id === activePattern)) {
+      setExpandedId(activePattern);
+    }
+  }, [activePattern]);
+
+  function handleParentClick(patternId: string) {
+    setExpandedId(patternId);
+    onSelect(patternId);
+  }
+
+  function handleSubClick(subId: string, parentId: string) {
+    setExpandedId(parentId);
+    onSelect(subId);
+  }
+
+  // ─── Shared style helpers ─────────────────────────────────────────────────
+  const BG_DARK = "#0d1117";
+  const BORDER_COLOR = "#1e2d3d";
+  const ACTIVE_BLUE = "#3b82f6";
+  const ACTIVE_TEXT = "#60a5fa";
+  const MUTED_TEXT = "#8ba3bc";
+  const DIM_TEXT = "#4b6a8a";
+  const SUB_TEXT = "#5a7a96";
+
+  // ─── Full expanded sidebar ─────────────────────────────────────────────────
+  function ExpandedContent({ onClose }: { onClose?: () => void }) {
+    return (
+      <div
+        style={{
+          width: 228,
+          minHeight: "100vh",
+          background: BG_DARK,
+          borderRight: `1px solid ${BORDER_COLOR}`,
+          display: "flex",
+          flexDirection: "column",
+        }}
       >
-        {/* Brand Header */}
+        {/* Header */}
         <div
-          className="flex items-center gap-3 px-4 py-5"
-          style={{ borderBottom: "1px solid #1e2d3d" }}
+          style={{
+            padding: "13px 10px 12px 16px",
+            borderBottom: `1px solid ${BORDER_COLOR}`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexShrink: 0,
+          }}
         >
-          <div
-            className="flex items-center justify-center rounded-xl shrink-0"
+          <span
             style={{
-              width: 38,
-              height: 38,
-              background: "linear-gradient(135deg, #3b82f6 0%, #6366f1 100%)",
+              fontSize: 11,
+              fontWeight: 700,
+              color: DIM_TEXT,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
             }}
           >
-            <Activity className="w-5 h-5 text-white" />
-          </div>
-          {!collapsed && (
-            <div className="overflow-hidden">
-              <div
-                className="font-bold text-white leading-tight truncate"
-                style={{ fontSize: 15, letterSpacing: "-0.01em" }}
-              >
-                CPR Screener
-              </div>
-              <div className="text-xs" style={{ color: "#4b6a8a" }}>
-                by Kriven Gokul
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* NEW: Live Scanner / Backtest mode toggle */}
-        <div className="pt-3">
-          <ModeToggle mode={mode} onModeChange={onModeChange} collapsed={collapsed} />
-        </div>
-
-        {/* Patterns Section */}
-        <div className="flex-1 py-1 overflow-y-auto">
-          {!collapsed && (
-            <div
-              className="px-4 pb-3 text-xs font-semibold tracking-widest uppercase"
-              style={{ color: "#3b5278" }}
-            >
-              Patterns
-            </div>
-          )}
-          <PatternList
-            activePattern={activePattern}
-            onSelect={onSelect}
-            collapsed={collapsed}
-          />
-        </div>
-
-        {/* Collapse Toggle */}
-        <div className="px-3 py-3" style={{ borderTop: "1px solid #1e2d3d" }}>
+            PATTERNS
+          </span>
           <button
-            onClick={onToggle}
-            className="flex items-center justify-center w-full rounded-lg py-2 transition-colors"
-            style={{ color: "#3b5278" }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.05)";
-              (e.currentTarget as HTMLButtonElement).style.color = "#8ba3bc";
+            onClick={onClose ?? onToggle}
+            aria-label={onClose ? "Close menu" : "Collapse sidebar"}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              color: DIM_TEXT,
+              padding: "2px",
+              display: "flex",
+              alignItems: "center",
+              borderRadius: 4,
             }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.background = "transparent";
-              (e.currentTarget as HTMLButtonElement).style.color = "#3b5278";
-            }}
-            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
-            {collapsed ? (
-              <ChevronRight className="w-4 h-4" />
-            ) : (
-              <div className="flex items-center gap-2 text-xs font-medium">
-                <ChevronLeft className="w-4 h-4" />
-                Collapse
-              </div>
-            )}
+            {onClose
+              ? <X style={{ width: 15, height: 15 }} />
+              : <ChevronLeft style={{ width: 15, height: 15 }} />
+            }
           </button>
         </div>
-      </aside>
 
-      {/* ── Mobile drawer (hidden on md+) ───────────────────────────── */}
+        {/* Mode toggle */}
+        <div
+          style={{
+            padding: "8px 10px",
+            borderBottom: `1px solid ${BORDER_COLOR}`,
+            flexShrink: 0,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              borderRadius: 6,
+              overflow: "hidden",
+              border: `1px solid ${BORDER_COLOR}`,
+            }}
+          >
+            {(["scanner", "backtest"] as SidebarMode[]).map((m) => (
+              <button
+                key={m}
+                onClick={() => onModeChange(m)}
+                style={{
+                  flex: 1,
+                  padding: "5px 0",
+                  fontSize: 11,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  border: "none",
+                  background: mode === m ? "rgba(59,130,246,0.2)" : "transparent",
+                  color: mode === m ? ACTIVE_TEXT : DIM_TEXT,
+                  transition: "background 0.15s, color 0.15s",
+                }}
+              >
+                <span
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 4,
+                  }}
+                >
+                  <FlaskConical style={{ width: 11, height: 11 }} />
+                  {m === "scanner" ? "Live" : "Backtest"}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Tree nav */}
+        <nav
+          style={{
+            flex: 1,
+            overflowY: "auto",
+            paddingTop: 4,
+            paddingBottom: 16,
+          }}
+        >
+          {patterns.map((pattern) => {
+            const Icon = pattern.icon;
+            const children = subPatterns[pattern.id] ?? [];
+            const isActiveParent = activePattern === pattern.id;
+            const hasActiveChild = children.some((c) => c.id === activePattern);
+            const isHighlighted = isActiveParent || hasActiveChild;
+            const isExpanded = expandedId === pattern.id;
+
+            return (
+              <div key={pattern.id}>
+                {/* Parent row */}
+                <button
+                  onClick={() => handleParentClick(pattern.id)}
+                  style={{
+                    width: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "9px 10px 9px 14px",
+                    background: isHighlighted ? "rgba(59,130,246,0.10)" : "transparent",
+                    // border shorthand reset, then set left border via outline trick
+                    outline: "none",
+                    borderTop: "none",
+                    borderRight: "none",
+                    borderBottom: "none",
+                    borderLeft: `3px solid ${isHighlighted ? ACTIVE_BLUE : "transparent"}`,
+                    cursor: "pointer",
+                    textAlign: "left",
+                    transition: "background 0.12s",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isHighlighted)
+                      (e.currentTarget as HTMLElement).style.background =
+                        "rgba(59,130,246,0.05)";
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isHighlighted)
+                      (e.currentTarget as HTMLElement).style.background = "transparent";
+                  }}
+                >
+                  {/* Icon */}
+                  <div
+                    style={{
+                      width: 30,
+                      height: 30,
+                      borderRadius: 7,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                      background: isHighlighted
+                        ? "rgba(59,130,246,0.22)"
+                        : "rgba(255,255,255,0.04)",
+                    }}
+                  >
+                    <Icon
+                      style={{
+                        width: 14,
+                        height: 14,
+                        color: isHighlighted ? ACTIVE_TEXT : DIM_TEXT,
+                      }}
+                    />
+                  </div>
+
+                  {/* Label + subtitle */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 600,
+                        color: isHighlighted ? "#e2e8f0" : MUTED_TEXT,
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        lineHeight: 1.3,
+                      }}
+                    >
+                      {pattern.label}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 10,
+                        color: "#3b5278",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        marginTop: 1,
+                        lineHeight: 1.3,
+                      }}
+                    >
+                      {pattern.subtitle}
+                    </div>
+                  </div>
+
+                  {/* Expand arrow */}
+                  {children.length > 0 &&
+                    (isExpanded ? (
+                      <ChevronDown
+                        style={{ width: 12, height: 12, color: DIM_TEXT, flexShrink: 0 }}
+                      />
+                    ) : (
+                      <ChevronRight
+                        style={{ width: 12, height: 12, color: DIM_TEXT, flexShrink: 0 }}
+                      />
+                    ))}
+                </button>
+
+                {/* Sub-items (chips) — shown when parent is expanded */}
+                {isExpanded && children.length > 0 && (
+                  <div
+                    style={{
+                      marginLeft: 14,
+                      paddingLeft: 20,
+                      paddingRight: 10,
+                      paddingTop: 6,
+                      paddingBottom: 9,
+                      borderLeft: `1px solid ${BORDER_COLOR}`,
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: "5px 5px",
+                    }}
+                  >
+                    {children.map((sub) => {
+                      const isActiveSub = activePattern === sub.id;
+                      return (
+                        <button
+                          key={sub.id}
+                          onClick={() => handleSubClick(sub.id, pattern.id)}
+                          style={{
+                            padding: "3px 8px",
+                            fontSize: 11,
+                            fontWeight: isActiveSub ? 600 : 400,
+                            borderRadius: 4,
+                            cursor: "pointer",
+                            border: `1px solid ${isActiveSub ? ACTIVE_BLUE : BORDER_COLOR}`,
+                            background: isActiveSub
+                              ? "rgba(59,130,246,0.18)"
+                              : "rgba(255,255,255,0.02)",
+                            color: isActiveSub ? ACTIVE_TEXT : SUB_TEXT,
+                            transition: "all 0.1s",
+                            whiteSpace: "nowrap",
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!isActiveSub) {
+                              const el = e.currentTarget as HTMLElement;
+                              el.style.borderColor = "#2e4a6a";
+                              el.style.color = MUTED_TEXT;
+                              el.style.background = "rgba(59,130,246,0.06)";
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!isActiveSub) {
+                              const el = e.currentTarget as HTMLElement;
+                              el.style.borderColor = BORDER_COLOR;
+                              el.style.color = SUB_TEXT;
+                              el.style.background = "rgba(255,255,255,0.02)";
+                            }
+                          }}
+                        >
+                          {sub.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </nav>
+      </div>
+    );
+  }
+
+  // ─── Collapsed sidebar (icons only) ───────────────────────────────────────
+  function CollapsedContent() {
+    return (
+      <div
+        style={{
+          width: 52,
+          minHeight: "100vh",
+          background: BG_DARK,
+          borderRight: `1px solid ${BORDER_COLOR}`,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          paddingTop: 10,
+          gap: 2,
+        }}
+      >
+        {/* Expand button */}
+        <button
+          onClick={onToggle}
+          aria-label="Expand sidebar"
+          style={{
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            color: DIM_TEXT,
+            padding: "6px",
+            borderRadius: 6,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            marginBottom: 4,
+          }}
+        >
+          <ChevronRight style={{ width: 15, height: 15 }} />
+        </button>
+
+        {/* One icon per pattern */}
+        {patterns.map((pattern) => {
+          const Icon = pattern.icon;
+          const children = subPatterns[pattern.id] ?? [];
+          const isHighlighted =
+            activePattern === pattern.id ||
+            children.some((c) => c.id === activePattern);
+          return (
+            <button
+              key={pattern.id}
+              onClick={() => handleParentClick(pattern.id)}
+              title={pattern.label}
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 8,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                border: "none",
+                background: isHighlighted
+                  ? "rgba(59,130,246,0.2)"
+                  : "rgba(255,255,255,0.04)",
+                transition: "background 0.12s",
+              }}
+              onMouseEnter={(e) => {
+                if (!isHighlighted)
+                  (e.currentTarget as HTMLElement).style.background =
+                    "rgba(59,130,246,0.08)";
+              }}
+              onMouseLeave={(e) => {
+                if (!isHighlighted)
+                  (e.currentTarget as HTMLElement).style.background =
+                    "rgba(255,255,255,0.04)";
+              }}
+            >
+              <Icon
+                style={{
+                  width: 15,
+                  height: 15,
+                  color: isHighlighted ? ACTIVE_TEXT : DIM_TEXT,
+                }}
+              />
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+
+  // ─── Render ───────────────────────────────────────────────────────────────
+  return (
+    <>
+      {/* Desktop */}
+      <div className="hidden md:block">
+        {collapsed ? <CollapsedContent /> : <ExpandedContent />}
+      </div>
+
+      {/* Mobile overlay */}
       {mobileOpen && (
         <>
           {/* Backdrop */}
           <div
-            className="md:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+            className="md:hidden fixed inset-0 z-40"
+            style={{ background: "rgba(0,0,0,0.55)" }}
             onClick={onMobileClose}
           />
-
-          {/* Drawer panel */}
-          <aside
-            className="md:hidden fixed left-0 top-0 bottom-0 z-50 w-72 flex flex-col"
-            style={{
-              background: "#0d1117",
-              borderRight: "1px solid #1e2d3d",
-              animation: "slideInLeft 0.22s ease-out",
-            }}
+          {/* Slide-in panel */}
+          <div
+            className="md:hidden fixed top-0 left-0 bottom-0 z-50"
+            style={{ animation: "slideInLeft 0.22s ease-out" }}
           >
-            {/* Header */}
-            <div
-              className="flex items-center justify-between px-4 py-5"
-              style={{ borderBottom: "1px solid #1e2d3d" }}
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className="flex items-center justify-center rounded-xl shrink-0"
-                  style={{
-                    width: 38,
-                    height: 38,
-                    background: "linear-gradient(135deg, #3b82f6 0%, #6366f1 100%)",
-                  }}
-                >
-                  <Activity className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <div
-                    className="font-bold text-white leading-tight"
-                    style={{ fontSize: 15, letterSpacing: "-0.01em" }}
-                  >
-                    CPR Screener
-                  </div>
-                  <div className="text-xs" style={{ color: "#4b6a8a" }}>
-                    by Kriven Gokul
-                  </div>
-                </div>
-              </div>
-              <button
-                onClick={onMobileClose}
-                className="flex items-center justify-center w-8 h-8 rounded-lg transition-colors"
-                style={{ color: "#4b6a8a" }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.06)";
-                  (e.currentTarget as HTMLButtonElement).style.color = "#8ba3bc";
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.background = "transparent";
-                  (e.currentTarget as HTMLButtonElement).style.color = "#4b6a8a";
-                }}
-                aria-label="Close menu"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* NEW: Live Scanner / Backtest mode toggle (mobile) */}
-            <div className="pt-3">
-              <ModeToggle mode={mode} onModeChange={onModeChange} collapsed={false} />
-            </div>
-
-            {/* Patterns */}
-            <div className="flex-1 py-1 overflow-y-auto">
-              <div
-                className="px-4 pb-3 text-xs font-semibold tracking-widest uppercase"
-                style={{ color: "#3b5278" }}
-              >
-                Patterns
-              </div>
-              {/* Reuse PatternList but close drawer on select */}
-              <nav className="flex flex-col gap-0.5 px-2">
-                {patterns.map((pattern) => {
-                  const Icon = pattern.icon;
-                  const isActive = activePattern === pattern.id;
-                  return (
-                    <button
-                      key={pattern.id}
-                      onClick={() => {
-                        onSelect(pattern.id);
-                        onMobileClose();
-                      }}
-                      className="w-full text-left rounded-lg transition-all duration-150"
-                      style={{
-                        padding: "10px 12px",
-                        background: isActive
-                          ? "linear-gradient(90deg, rgba(59,130,246,0.18) 0%, rgba(99,102,241,0.08) 100%)"
-                          : "transparent",
-                        borderLeft: isActive ? "2px solid #3b82f6" : "2px solid transparent",
-                      }}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div
-                          className="flex items-center justify-center rounded-lg shrink-0"
-                          style={{
-                            width: 32,
-                            height: 32,
-                            background: isActive
-                              ? "rgba(59,130,246,0.2)"
-                              : "rgba(255,255,255,0.05)",
-                          }}
-                        >
-                          <Icon
-                            className="w-4 h-4"
-                            style={{ color: isActive ? "#60a5fa" : "#4b6a8a" }}
-                          />
-                        </div>
-                        <div className="overflow-hidden">
-                          <div
-                            className="font-semibold text-sm leading-tight truncate"
-                            style={{ color: isActive ? "#e2e8f0" : "#8ba3bc" }}
-                          >
-                            {pattern.label}
-                          </div>
-                          <div
-                            className="text-xs truncate mt-0.5"
-                            style={{ color: "#3b5278", fontSize: 11 }}
-                          >
-                            {pattern.subtitle}
-                          </div>
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </nav>
-            </div>
-          </aside>
-
-          {/* Slide-in keyframe — injected once */}
+            <ExpandedContent onClose={onMobileClose} />
+          </div>
           <style>{`
             @keyframes slideInLeft {
               from { transform: translateX(-100%); }

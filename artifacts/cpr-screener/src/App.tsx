@@ -9,8 +9,6 @@ import { Menu } from "lucide-react";
 
 const queryClient = new QueryClient();
 const SIDEBAR_KEY = "cpr-sidebar-collapsed";
-// NEW: persist the Live Scanner / Backtest mode across reloads, same
-// pattern as the existing sidebar-collapsed persistence below.
 const MODE_KEY = "cpr-sidebar-mode";
 
 function getSavedCollapsed(): boolean {
@@ -21,8 +19,6 @@ function getSavedCollapsed(): boolean {
   }
 }
 
-// NEW: read the last-used mode from localStorage, defaulting to "scanner"
-// so first-time / cleared-storage visitors land on the live scanner as before.
 function getSavedMode(): SidebarMode {
   try {
     const stored = localStorage.getItem(MODE_KEY);
@@ -43,13 +39,92 @@ function ComingSoon({ label }: { label: string }) {
   );
 }
 
+/**
+ * All pattern IDs (parent + sub-pattern) that the Screener component handles.
+ * Sub-pattern IDs correspond to passesPattern() cases in ScreenerUtils.tsx.
+ */
+const SCREENER_PATTERN_IDS = new Set([
+  // ── Top-level patterns ──
+  "littleabove",
+  "littlebelow",
+  "overlapping-higher",
+  "overlapping-lower",
+  "inside-cpr",
+  "outside-cpr",
+  "structure-bigabove",
+  "structure-bigbelow",
+
+  // ── Little ABOVE sub-patterns ──
+  "la-2tiny",
+  "la-allstepup",
+  "1LHr-L4U3-U4",
+  "LA-PL12CL23",
+  "sT-cOL2U3-APU4",
+  "eXHiU1L3",
+
+  // ── Little BELOW sub-patterns ──
+  "lb-2tiny",
+  "lb-allstepdown",
+  "lb-cmprss-l4>3-u4<2",
+  "lb-c-l34c4/u23c4",
+  "lbE11-cOLoL3U2-PU4",
+  "co2-l2u2",
+  "LB-PU12CU23",
+  "1LB-PL12CL23",
+  "LBALLD-U2<PU1",
+
+  // ── Overlap Above sub-patterns ──
+  "eXHi-L4U4-U4",
+  "LAT-PU12CU23",
+
+  // ── Overlap Below sub-patterns ──
+  "eXLo-L4U4-U4",
+  "Exp-U3>U3",
+  "OBN-LoL4U4-U4",
+  "OBW-LoL4U4-L4",
+  "LBT-PU1>U1PL1>L1",
+
+  // ── CPR Inside sub-patterns ──
+  "inside-cpr-expanded",
+  "inside-cpr-narrow",
+  "cO-U4L3",
+
+  // ── CPR Outside sub-patterns ──
+  "outside-cpr-compressed",
+  "eXHrL3U3-AU4",
+
+  // ── Big ABOVE sub-patterns ──
+  "bigabove-pl34cl4-u3>pu4",
+  "bacomp-l3>pl1/u3>pu1",
+  "eXHi-L4U234-U4",
+  "HA-U1>PU4",
+  "HAThin-U1>PU4",
+  "hR-HAL",
+  "HA55-HrL4U34-FAU4",
+  "1T-HiL4U4-FAU4",
+
+  // ── Big BELOW sub-patterns ──
+  "bigbelow-pmini-pl3",
+  "eX-U4L34",
+  "eXLoL3U4-AU4",
+  "L1<pL4",
+  "eXU4L234-AU4",
+
+  // ── Legacy / previously visible left-nav patterns ──
+  "lower-bullish",
+  "Price-AbovePDH",
+  "Price-BelowPDL",
+  "HB-L1<PL1-PU12CU23",
+  "HB-L1<PL4-U1>TCPR",
+  "HB-L1<PL2-U12CPU12",
+  "HB-L1>PL1-PU1CU234",
+]);
+
 function App() {
   const [activePattern, setActivePattern] = useState("littleabove");
-  const [scanKey, setScanKey] = useState(0);                          // ← new
+  const [scanKey, setScanKey] = useState(0);
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(getSavedCollapsed);
   const [mobileOpen, setMobileOpen] = useState(false);
-  // NEW: Live Scanner / Backtest mode — controls whether <main> renders the
-  // existing pattern-driven Screener/ComingSoon views or <BacktestPanel />.
   const [mode, setMode] = useState<SidebarMode>(getSavedMode);
 
   // Auto-scan on first page load
@@ -67,13 +142,10 @@ function App() {
     });
   };
 
-  // Nav click: switch pattern + trigger scan
   const handlePatternSelect = (id: string) => {
     setActivePattern(id);
   };
 
-  // NEW: mode switch — persists the choice so a reload keeps you where
-  // you left off (mirrors handleToggle's localStorage pattern above).
   const handleModeChange = (next: SidebarMode) => {
     setMode(next);
     try {
@@ -90,7 +162,7 @@ function App() {
         <div className="flex min-h-screen bg-background">
           <PatternSidebar
             activePattern={activePattern}
-            onSelect={handlePatternSelect}                             // ← was setActivePattern
+            onSelect={handlePatternSelect}
             collapsed={sidebarCollapsed}
             onToggle={handleToggle}
             mobileOpen={mobileOpen}
@@ -108,27 +180,16 @@ function App() {
               <Menu className="w-5 h-5" />
             </button>
             {mode === "backtest" ? (
-              // NEW: Backtest mode — renders the standalone BacktestPanel.
-              // Wrapped in the same padded container Screener/ComingSoon
-              // implicitly get from their own root divs, so it sits with
-              // consistent spacing rather than edge-to-edge.
               <div className="max-w-5xl mx-auto px-4 py-8">
                 <BacktestPanel />
               </div>
-            ) : ["littleabove", "la-2tiny", "LA-PL12CL23", "la-allstepup", "littlebelow", "lb-2tiny",
-                "lb-allstepdown", "LB-PU12CU23", "1LB-PL12CL23",
-                "LBALLD-U2<PU1", "inside-cpr", "outside-cpr", "overlapping-higher", "LAT-PU12CU23",
-                "overlapping-lower", "LBT-PU1>U1PL1>L1", "lower-bullish", "Price-AbovePDH", "Price-BelowPDL",
-                "structure-bigabove", "HA-U1>PU4", "HAThin-U1>PU4", "structure-bigbelow", "HB-L1<PL1-PU12CU23",
-                "HB-L1<PL4-U1>TCPR", "HB-L1<PL2-U12CPU12", "HB-L1>PL1-PU1CU234"].includes(activePattern) ? (
-                  <>
-                    {/* pass scanKey */}
-                    <Screener activePattern={activePattern} scanKey={scanKey} />
-                  </>
-                ) : (
-                  <ComingSoon label={activeLabel} />
-                )
-            }
+            ) : SCREENER_PATTERN_IDS.has(activePattern) ? (
+              <>
+                <Screener activePattern={activePattern} scanKey={scanKey} />
+              </>
+            ) : (
+              <ComingSoon label={activeLabel} />
+            )}
           </main>
         </div>
         <Toaster />
