@@ -23,14 +23,14 @@ export interface Pattern {
 }
 
 export const patterns: Pattern[] = [
-  { id: "littleabove",        label: "LittleCPR Above",          subtitle: "Narrow CPR Above PCPR",    icon: TrendingUp },
+  { id: "littleabove",        label: "Little ABOVE",          subtitle: "Narrow CPR Above PCPR",    icon: TrendingUp },
   // hidden — accessible via LA-BothTiny button on Little Above
   // { id: "la-2tiny",       label: "TinyAbove - Both Tiny", subtitle: "Tiny CPR Above, Tiny PCPR", icon: TrendingUp },
   // hidden — accessible via PL12CL23 button on Little Above
   // { id: "LA-PL12CL23",       label: "LA-PL12CL23:2PL4",   subtitle: "Bearish Target:2PL4",       icon: TrendingDown },
   // hidden — accessible via LA-AllUp button on Little Above
   // { id: "la-allstepup",       label: "LittleAbove - Ladder", subtitle: "Narrow CPR Above -Ladder", icon: TrendingUp },
-  { id: "littlebelow",        label: "LittleCPR Below",         subtitle: "Narrow CPR Below PCPR",    icon: TrendingDown },
+  { id: "littlebelow",        label: "Little BELOW",         subtitle: "Narrow CPR Below PCPR",    icon: TrendingDown },
   // hidden — accessible via LB-BothTiny button on Little Below
   // { id: "lb-2tiny",       label: "TinyBelow - Both Tiny", subtitle: "Tiny CPR Below, Tiny PCPR", icon: TrendingDown },
   // hidden — accessible via LB-AllUp button on Little Below
@@ -45,14 +45,14 @@ export const patterns: Pattern[] = [
   // id: "LAT-PU12CU23",       label: "PU12CU23,PL12CL23",   subtitle: "Bullish Target:2U4",        icon: Layers },
   { id: "overlapping-lower",  label: "Overlap Below",   subtitle: "CPR zones stacking down",   icon: LayersIcon },
   //{ id: "LBT-PU1>U1PL1>L1",   label: "LBT-PU1>U1PL1>L1",    subtitle: "Bullish Target:2PU4",       icon: LayersIcon },
-  { id: "inside-cpr",         label: "Inside CPR",          subtitle: "Inside CPR range",         icon: Crosshair },
-  { id: "outside-cpr",        label: "Outside CPR",         subtitle: "Outside CPR range",        icon: Maximize2 },
+  { id: "inside-cpr",         label: "CPR Inside ",          subtitle: "Inside CPR range",         icon: Crosshair },
+  { id: "outside-cpr",        label: "CPR Outside ",         subtitle: "Outside CPR range",        icon: Maximize2 },
   //{ id: "lower-bullish",      label: "LowerCPR Bullish",    subtitle: "Higher highs forming",      icon: BarChart2 },
-  { id: "structure-bigabove", label: "BIGCPR ABOVE",        subtitle: "Wide CPR Above PCPR",       icon: BarChart },
+  { id: "structure-bigabove", label: "Big ABOVE",        subtitle: "Wide CPR Above PCPR",       icon: BarChart },
   // hidden — accessible via U1>PU4 button on BigCPR Above
   // { id: "HA-U1>PU4",          label: "U1 > Previous U4",    subtitle: "Todays U1> Previous U4",    icon: BarChart2 },
   //{ id: "HAThin-U1>PU4",      label: "U1>PU4 Bullish",      subtitle: "Higher highs forming",      icon: BarChart2 },
-  { id: "structure-bigbelow", label: "Big Below",  subtitle: "Wide CPR Below PCPR",      icon: BarChart },
+  { id: "structure-bigbelow", label: "Big BELOW",  subtitle: "Wide CPR Below PCPR",      icon: BarChart },
   // hidden — L1<PL1, PU12CU23
   // { id: "HB-L1<PL1-PU12CU23", label: "L1<PL1, PU12CU23",  subtitle: "Bullish Target:2PU4",       icon: TrendingUp },
   //{ id: "HB-L1<PL4-U1>TCPR",  label: "L1<PL4, U1>TCPR",     subtitle: "Bullish Target:2U4",       icon: TrendingUp },
