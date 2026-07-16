@@ -385,10 +385,8 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return r.cprRising && r.narrowCPR && r.PL12CL23;
     case "sT-cOL2U3-APU4":
       return (
-        r.cprRising &&
-        r.narrowCPR &&
-        r.cOHiL2U3 &&
-        (r.todayCPR.r3 > r.prevCPR.r2 && r.todayCPR.r3 < r.prevCPR.r3) && // Added Condition for nonmatching Charts
+        r.cprRising && r.narrowCPR && r.cOHiL2U3 &&
+        (r.todayCPR.r3 > r.prevCPR.r2 && r.todayCPR.r3 < r.prevCPR.r3 && r.todayCPR.s1 > r.prevCPR.pivot) && // Added Condition for nonmatching Charts
         r.prevCPR.widthPct > 0.60 && r.prevCPR.widthPct <= 1.10 &&   // pSmall
         r.todayCPR.widthPct > 0.10 && r.todayCPR.widthPct <= 0.22   // Tiny
       );
