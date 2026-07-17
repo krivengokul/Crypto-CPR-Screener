@@ -291,7 +291,7 @@ export function analyzeCPR(
                         todayCPR.r4 < prevCPR.r1 ; //HB-PU1CU234:2L4
 
   // Equal CPR: today TC, Pivot and BC are within 0.001% of yesterday
-  const eqTol = (a, b) => Math.abs(a - b) <= Math.max(Math.abs(a), Math.abs(b)) * 0.00001;
+  const eqTol = (a: number, b: number): boolean => Math.abs(a - b) <= Math.max(Math.abs(a), Math.abs(b)) * 0.00001;
   const equalCPR =
     eqTol(prevCPR.tc, todayCPR.tc) &&
     eqTol(prevCPR.pivot, todayCPR.pivot) &&
