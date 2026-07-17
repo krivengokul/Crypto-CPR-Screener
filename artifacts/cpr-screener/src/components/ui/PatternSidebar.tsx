@@ -7,6 +7,7 @@ import {
   Crosshair,
   Maximize2,
   BarChart,
+  Equal,
   ChevronLeft,
   ChevronRight,
   ChevronDown,
@@ -80,17 +81,19 @@ export const subPatterns: Record<string, SubPattern[]> = {
     { id: "L1<pL4",                  label: "L1<pL4" },
     { id: "eXU4L234-AU4",            label: "eXU4L234-AU4" },
   ],
+  "equal-cpr": [],
 };
 
 export const patterns: Pattern[] = [
   { id: "littleabove",        label: "Little ABOVE",  subtitle: "Narrow CPR Above PCPR",    icon: TrendingUp },
   { id: "littlebelow",        label: "Little BELOW",  subtitle: "Narrow CPR Below PCPR",    icon: TrendingDown },
-  { id: "overlapping-higher", label: "Overlap Above", subtitle: "CPR zones stacking up",    icon: Layers },
-  { id: "overlapping-lower",  label: "Overlap Below", subtitle: "CPR zones stacking down",  icon: LayersIcon },
-  { id: "inside-cpr",         label: "CPR Inside",    subtitle: "Inside CPR range",         icon: Crosshair },
-  { id: "outside-cpr",        label: "CPR Outside",   subtitle: "Outside CPR range",        icon: Maximize2 },
   { id: "structure-bigabove", label: "Big ABOVE",     subtitle: "Wide CPR Above PCPR",      icon: BarChart },
   { id: "structure-bigbelow", label: "Big BELOW",     subtitle: "Wide CPR Below PCPR",      icon: BarChart },
+  { id: "inside-cpr",         label: "CPR Inside",    subtitle: "Inside CPR range",         icon: Crosshair },
+  { id: "outside-cpr",        label: "CPR Outside",   subtitle: "Outside CPR range",        icon: Maximize2 },
+  { id: "overlapping-higher", label: "Overlap Above", subtitle: "CPR zones stacking up",    icon: Layers },
+  { id: "overlapping-lower",  label: "Overlap Below", subtitle: "CPR zones stacking down",  icon: LayersIcon },
+  { id: "equal-cpr",          label: "Equal CPR",     subtitle: "Prev & Today CPR Equal",   icon: Equal },
 ];
 
 export type SidebarMode = "scanner" | "backtest";

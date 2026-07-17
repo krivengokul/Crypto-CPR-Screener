@@ -53,6 +53,7 @@ const SCREENER_PATTERN_IDS = new Set([
   "outside-cpr",
   "structure-bigabove",
   "structure-bigbelow",
+  "equal-cpr",
 
   // ── Little ABOVE sub-patterns ──
   "la-2tiny",
@@ -109,6 +110,9 @@ const SCREENER_PATTERN_IDS = new Set([
   "eXLoL3U4-AU4",
   "L1<pL4",
   "eXU4L234-AU4",
+
+  // ── Equal CPR ──
+  "equal-cpr",
 
   // ── Legacy / previously visible left-nav patterns ──
   "lower-bullish",

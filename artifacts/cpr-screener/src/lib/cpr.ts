@@ -81,6 +81,7 @@ export interface CPRResult {
   eXHiL4U234: boolean;
   eXU4L234: boolean;
   cOHiL2U4: boolean;
+  equalCPR: boolean;
   passes: boolean;
   currentPrice: number;
   openPrice: number;
@@ -287,7 +288,15 @@ export function analyzeCPR(
   const hbJPattern3  = (todayCPR.s1 < prevCPR.s2 && todayCPR.s1 > prevCPR.s3) && prevCPR.widthPct < 0.5 && // L1<PL2
                         ((todayCPR.r1 < prevCPR.r1 && todayCPR.r1 > prevCPR.tc) && (todayCPR.r2 > prevCPR.r2 && todayCPR.r2 < prevCPR.r3)); //HB-U12CPU12:2L4 REFACTOR THIS
   const hbJPattern4  = (todayCPR.s1 > prevCPR.s1 && todayCPR.s1 < prevCPR.bc) && prevCPR.widthPct < 0.5 && // L1>PL1
-                        todayCPR.r4 < prevCPR.r1 ; //HB-PU1CU234:2L4                      
+                        todayCPR.r4 < prevCPR.r1 ; //HB-PU1CU234:2L4
+
+  // Equal CPR: today TC, Pivot and BC are within 0.001% of yesterday
+  const eqTol = (a, b) => Math.abs(a - b) <= Math.max(Math.abs(a), Math.abs(b)) * 0.00001;
+  const equalCPR =
+    eqTol(prevCPR.tc, todayCPR.tc) &&
+    eqTol(prevCPR.pivot, todayCPR.pivot) &&
+    eqTol(prevCPR.bc, todayCPR.bc);
+
   return {
     symbol,
     todayCPR,
@@ -338,6 +347,7 @@ export function analyzeCPR(
     eXHiL4U234,
     eXU4L234,
     cOHiL2U4,
+    equalCPR,
     passes: cprRising && cprNarrowing,
     currentPrice,
     openPrice: openPrice ?? todayCandle.open,

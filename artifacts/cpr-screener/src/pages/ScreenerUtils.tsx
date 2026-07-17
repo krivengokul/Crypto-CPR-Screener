@@ -690,6 +690,9 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return r.cprFalling && r.strWideCPR && r.hbJPattern3;
     case "HB-L1>PL1-PU1CU234":
       return r.cprFalling && r.strWideCPR && r.hbJPattern4;
+    // Equal CPR: today TC, Pivot and BC match yesterday within a tiny tolerance
+    case "equal-cpr":
+      return r.equalCPR;
     default:
       return false;
   }
@@ -768,6 +771,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     { key: "L1<pL4", direction: "down" },
     { key: "eXU4L234-AU4", direction: "down" },
   ],
+  "equal-cpr": [],
 };
 
 /**
