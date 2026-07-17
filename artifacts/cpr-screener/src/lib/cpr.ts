@@ -82,6 +82,7 @@ export interface CPRResult {
   eXU4L234: boolean;
   cOHiL2U4: boolean;
   equalCPR: boolean;
+  eXL3U3: boolean;
   passes: boolean;
   currentPrice: number;
   openPrice: number;
@@ -304,6 +305,10 @@ export function analyzeCPR(
     eqTol(prevCPR.pivot, todayCPR.pivot) &&
     eqTol(prevCPR.bc, todayCPR.bc);
 
+  // eXL3U3: S&R bands Expanded AND both L3 (S3/S4 adjacency) AND U3 (R3/R4
+  // adjacency) gaps are non-zero — both boundaries crossed during expansion.
+  const eXL3U3 = srExpanded && r3R4Gap > 0 && s3S4Gap > 0;
+
   return {
     symbol,
     todayCPR,
@@ -355,6 +360,7 @@ export function analyzeCPR(
     eXU4L234,
     cOHiL2U4,
     equalCPR,
+    eXL3U3,
     passes: cprRising && cprNarrowing,
     currentPrice,
     openPrice: openPrice ?? todayCandle.open,

@@ -2071,6 +2071,7 @@ export default function Screener({
                   { label: "cOHiL2U3", active: "border-sky-400 text-sky-400" },
                   { label: "eXU4L234", active: "border-amber-400 text-amber-400" },
                   { label: "cOHiL2U4", active: "border-emerald-400 text-emerald-400" },
+                  { label: "eXL3U3", active: "border-orange-400 text-orange-400" },
                 ] as { label: PivotLevelInfo["label"]; active: string }[]
               ).map(({ label, active }) => (
                 <button
@@ -2298,7 +2299,7 @@ export default function Screener({
                                 column. These are all independent, section-agnostic booleans —
                                 they render whenever true, regardless of activePattern or any
                                 left-nav / Show All state. */}
-                            {(r.cOLoL2U1 || r.cOLoL4U3 || r.LoL4U4 || r.eXHiL4U234 || r.eXL4U4 || r.HiL4U4 || r.HiL4U34 || r.cOHiL2U3 || r.eXU4L234 || r.cOHiL2U4) && (
+                            {(r.cOLoL2U1 || r.cOLoL4U3 || r.LoL4U4 || r.eXHiL4U234 || r.eXL4U4 || r.HiL4U4 || r.HiL4U34 || r.cOHiL2U3 || r.eXU4L234 || r.cOHiL2U4 || r.eXL3U3) && (
                               <div className="flex flex-wrap gap-1 mt-1">
                                 {r.cOLoL2U1 && (
                                   <span className="text-xs px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 font-medium">cOLoL2U1</span>
@@ -2331,6 +2332,12 @@ export default function Screener({
                                 )}
                                 {r.cOHiL2U4 && (
                                   <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">cOHiL2U4</span>
+                                )}
+                                {/* NEW: eXL3U3 — independent Pivot Level flag.
+                                    srExpanded + both L3 (s3/s4 adjacency) and U3 (r3/r4 adjacency)
+                                    gaps non-zero — double-boundary expansion signal. */}
+                                {r.eXL3U3 && (
+                                  <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 font-medium">eXL3U3</span>
                                 )}
                               </div>
                             )}

@@ -113,6 +113,7 @@ const SCREENER_PATTERN_IDS = new Set([
 
   // ── Equal CPR ──
   "equal-cpr",
+  "eXLoL3U3-L3",
 
   // ── Legacy / previously visible left-nav patterns ──
   "lower-bullish",

@@ -694,6 +694,10 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // Equal CPR: today TC, Pivot and BC match yesterday within a tiny tolerance
     case "equal-cpr":
       return r.equalCPR;
+    // eXLoL3U3-L3: Equal CPR AND eX-Lower (srExpandedLower) — Equal bands
+    // that also show lower-side expansion dominance at the L3/U3 boundary.
+    case "eXLoL3U3-L3":
+      return r.equalCPR && r.srExpandedLower;
     default:
       return false;
   }
@@ -772,7 +776,9 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     { key: "L1<pL4", direction: "down" },
     { key: "eXU4L234-AU4", direction: "down" },
   ],
-  "equal-cpr": [],
+  "equal-cpr": [
+    { key: "eXLoL3U3-L3", direction: "down" },
+  ],
 };
 
 /**
@@ -841,7 +847,7 @@ export function getSubFilterDirection(r: CPRResult, activePattern: string): SubF
  * cprFalling + extra R3/pivot/width conditions on top of this raw flag.
  */
 export interface PivotLevelInfo {
-  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "cOLoL2U1" | "cOLoL4U3" | "LoL4U4"| "eXHiL4U234" | "eXL4U4" | "HiL4U4" | "HiL4U34" | "cOHiL2U3" | "eXU4L234" | "cOHiL2U4" | "Lower";
+  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "cOLoL2U1" | "cOLoL4U3" | "LoL4U4"| "eXHiL4U234" | "eXL4U4" | "HiL4U4" | "HiL4U34" | "cOHiL2U3" | "eXU4L234" | "cOHiL2U4" | "eXL3U3" | "Lower";
   classes: string;
 }
 
@@ -888,6 +894,7 @@ export function matchesPivotLevelFlag(r: CPRResult, label: string): boolean {
     case "cOHiL2U3": return r.cOHiL2U3;
     case "eXU4L234": return r.eXU4L234;
     case "cOHiL2U4": return r.cOHiL2U4;
+    case "eXL3U3": return r.eXL3U3;
     default: return getPivotLevel(r)?.label === label;
   }
 }
