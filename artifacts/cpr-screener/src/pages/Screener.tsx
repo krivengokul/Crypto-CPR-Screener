@@ -2311,7 +2311,7 @@ export default function Screener({
                                 column. These are all independent, section-agnostic booleans —
                                 they render whenever true, regardless of activePattern or any
                                 left-nav / Show All state. */}
-                            {(r.cOLoL2U1 || r.cOLoL4U3 || r.LoL4U4 || r.eXHiL4U234 || r.eXL4U4 || r.HiL4U4 || r.HiL4U34 || r.cOHiL2U3 || r.eXU4L234 || r.cOHiL2U4 || r.eXL3U3 || r.cOL4U4 || r.cOL3U4 || r.cOL3U3 || r.LoU3L4 || r.LoU3L34 || r.LoU2L4) && (
+                            {(r.cOLoL2U1 || r.cOLoL4U3 || r.LoL4U4 || r.eXHiL4U234 || r.eXL4U4 || r.HiL4U4 || r.HiL4U34 || r.cOHiL2U3 || r.eXU4L234 || r.cOHiL2U4 || r.eXL3U3 || r.cOL4U4 || r.cOL3U4 || r.cOL3U3 || (r.overlapLower && (r.LoU3L4 || r.LoU3L34 || r.LoU2L4))) && (
                               <div className="flex flex-wrap gap-1 mt-1">
                                 {r.cOLoL2U1 && (
                                   <span className="text-xs px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 font-medium">cOLoL2U1</span>
@@ -2361,13 +2361,13 @@ export default function Screener({
                                 {r.cOL3U3 && (
                                   <span className="text-xs px-1.5 py-0.5 rounded bg-teal-500/10 text-teal-400 border border-teal-500/20 font-medium">cOL3U3</span>
                                 )}
-                                {r.LoU3L4 && (
+                                {r.overlapLower && r.LoU3L4 && (
                                   <span className="text-xs px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-medium">LoU3L4</span>
                                 )}
-                                {r.LoU3L34 && (
+                                {r.overlapLower && r.LoU3L34 && (
                                   <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20 font-medium">LoU3L34</span>
                                 )}
-                                {r.LoU2L4 && (
+                                {r.overlapLower && r.LoU2L4 && (
                                   <span className="text-xs px-1.5 py-0.5 rounded bg-pink-500/10 text-pink-400 border border-pink-500/20 font-medium">LoU2L4</span>
                                 )}
                               </div>

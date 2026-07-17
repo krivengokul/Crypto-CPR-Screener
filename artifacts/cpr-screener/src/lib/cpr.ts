@@ -268,15 +268,15 @@ export function analyzeCPR(
   // cOL3U3: today's S4 sits in the prev L3–L2 band, today's R4 sits in the prev U2–U3 band
   const cOL3U3 = (todayCPR.s4 > prevCPR.s3 && todayCPR.s4 < prevCPR.s2) &&
                  (todayCPR.r4 > prevCPR.r2 && todayCPR.r4 < prevCPR.r3);
-  // LoU3L4: today's R4 in prev U3 band (R2→R3), today's S4 in prev L4 band (S4→S3)
+  // LoU3L4: today's R4 in prev U3 band (R2→R3), prev S4 between today's S4 and today's S3
   const LoU3L4 = (todayCPR.r4 > prevCPR.r2 && todayCPR.r4 < prevCPR.r3) &&
-                 (todayCPR.s4 > prevCPR.s4 && todayCPR.s4 < prevCPR.s3);
-  // LoU3L34: today's R4 in prev U3 band (R2→R3), today's S4 in prev L3 band (S3→S2)
+                 (prevCPR.s4 > todayCPR.s4 && prevCPR.s4 < todayCPR.s3);
+  // LoU3L34: today's R4 in prev U3 band (R2→R3), prev S4 between today's S3 and today's S2
   const LoU3L34 = (todayCPR.r4 > prevCPR.r2 && todayCPR.r4 < prevCPR.r3) &&
-                  (todayCPR.s4 > prevCPR.s3 && todayCPR.s4 < prevCPR.s2);
-  // LoU2L4: today's R4 in prev U2 band (R1→R2), today's S4 in prev L4 band (S4→S3)
+                  (prevCPR.s4 > todayCPR.s3 && prevCPR.s4 < todayCPR.s2);
+  // LoU2L4: today's R4 in prev U2 band (R1→R2), prev S4 between today's S4 and today's S3
   const LoU2L4 = (todayCPR.r4 > prevCPR.r1 && todayCPR.r4 < prevCPR.r2) &&
-                 (todayCPR.s4 > prevCPR.s4 && todayCPR.s4 < prevCPR.s3);
+                 (prevCPR.s4 > todayCPR.s4 && prevCPR.s4 < todayCPR.s3);
   const PL12CL23 = (todayCPR.s2 < prevCPR.s1 && todayCPR.s3 > prevCPR.s2); //LA-PL12CL23:2PL4;
   const PU12CU23  =  (prevCPR.r1 < todayCPR.r2 && prevCPR.r2 > todayCPR.r3); //PU12CU23
   const PU23CU34  =  (prevCPR.r2 < todayCPR.r3 && prevCPR.r3 > todayCPR.r4); //PU23CU34
