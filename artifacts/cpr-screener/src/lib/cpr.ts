@@ -256,7 +256,7 @@ export function analyzeCPR(
                         (todayCPR.s1 < prevCPR.s1 && todayCPR.s2 < prevCPR.s2 && 
                           todayCPR.s3 < prevCPR.s3 && todayCPR.s4 < prevCPR.s4); //LBALLD-U2<PU1:2U4
   
-  const overlapHigher    = (todayCPR.bc >= prevCPR.bc && todayCPR.bc < prevCPR.tc) && todayCPR.tc > prevCPR.tc;
+  const overlapHigher    = (todayCPR.bc >= prevCPR.bc && todayCPR.bc <= prevCPR.tc) && todayCPR.tc > prevCPR.tc;
 
   const allupabove =  (todayCPR.r1 > prevCPR.r1) && (todayCPR.r1 < prevCPR.r2) &&// R1 stepped up
                       (todayCPR.r2 > prevCPR.r2) && (todayCPR.r2 < prevCPR.r3) &&// R2 stepped up
@@ -278,7 +278,7 @@ export function analyzeCPR(
                         (todayCPR.s3 < prevCPR.s3  && todayCPR.s3 > prevCPR.s4) && 
                           todayCPR.s4 < prevCPR.s4 ; // S4 stepped down
 
-  const overlapLower    = (todayCPR.tc <= prevCPR.tc && todayCPR.tc > prevCPR.bc) && todayCPR.bc < prevCPR.bc;
+  const overlapLower    = (todayCPR.tc <= prevCPR.tc && todayCPR.tc >= prevCPR.bc) && todayCPR.bc < prevCPR.bc;
   const lbtJPattern1   = (todayCPR.r1 < prevCPR.r1 && todayCPR.s1 < prevCPR.s1) &&
                           (prevCPR.r1 > todayCPR.r1 && prevCPR.r2 > todayCPR.r2 && prevCPR.r3 > todayCPR.r3 && prevCPR.r4 > todayCPR.r4)
   
