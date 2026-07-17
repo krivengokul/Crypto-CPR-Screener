@@ -836,7 +836,7 @@ export function getSubFilterDirection(r: CPRResult, activePattern: string): SubF
  * cprFalling + extra R3/pivot/width conditions on top of this raw flag.
  */
 export interface PivotLevelInfo {
-  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "cOLoL2U1" | "cOLoL4U3" | "LoL4U4"| "eXHiL4U234" | "eXL4U4" | "HiL4U4" | "HiL4U34" | "cOHiL2U3" | "eXU4L234" | "Lower";
+  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "cOLoL2U1" | "cOLoL4U3" | "LoL4U4"| "eXHiL4U234" | "eXL4U4" | "HiL4U4" | "HiL4U34" | "cOHiL2U3" | "eXU4L234" | "cOHiL2U4" | "Lower";
   classes: string;
 }
 
@@ -882,6 +882,7 @@ export function matchesPivotLevelFlag(r: CPRResult, label: string): boolean {
     case "HiL4U34": return r.HiL4U34;
     case "cOHiL2U3": return r.cOHiL2U3;
     case "eXU4L234": return r.eXU4L234;
+    case "cOHiL2U4": return r.cOHiL2U4;
     default: return getPivotLevel(r)?.label === label;
   }
 }

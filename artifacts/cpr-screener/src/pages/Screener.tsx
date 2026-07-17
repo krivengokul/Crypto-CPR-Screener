@@ -894,6 +894,7 @@ export default function Screener({
       // NEW: eXU4L234 — independent, section-agnostic Pivot Level flag
       // (see doc-comments in cpr.ts / ScreenerUtils.tsx).
       if (pivotLevelFilter === "eXU4L234") return r.eXU4L234;
+      if (pivotLevelFilter === "cOHiL2U4") return r.cOHiL2U4;
       return getPivotLevel(r)?.label === pivotLevelFilter;
     })
     .filter((r) => matchesWidthFilter(r, widthFilter))
@@ -2069,6 +2070,7 @@ export default function Screener({
                   { label: "HiL4U34", active: "border-indigo-400 text-indigo-400" },
                   { label: "cOHiL2U3", active: "border-sky-400 text-sky-400" },
                   { label: "eXU4L234", active: "border-amber-400 text-amber-400" },
+                  { label: "cOHiL2U4", active: "border-emerald-400 text-emerald-400" },
                 ] as { label: PivotLevelInfo["label"]; active: string }[]
               ).map(({ label, active }) => (
                 <button
@@ -2296,7 +2298,7 @@ export default function Screener({
                                 column. These are all independent, section-agnostic booleans —
                                 they render whenever true, regardless of activePattern or any
                                 left-nav / Show All state. */}
-                            {(r.cOLoL2U1 || r.cOLoL4U3 || r.LoL4U4 || r.eXHiL4U234 || r.eXL4U4 || r.HiL4U4 || r.HiL4U34 || r.cOHiL2U3 || r.eXU4L234) && (
+                            {(r.cOLoL2U1 || r.cOLoL4U3 || r.LoL4U4 || r.eXHiL4U234 || r.eXL4U4 || r.HiL4U4 || r.HiL4U34 || r.cOHiL2U3 || r.eXU4L234 || r.cOHiL2U4) && (
                               <div className="flex flex-wrap gap-1 mt-1">
                                 {r.cOLoL2U1 && (
                                   <span className="text-xs px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 font-medium">cOLoL2U1</span>
@@ -2326,6 +2328,9 @@ export default function Screener({
                                 {/* NEW: eXU4L234 — independent, section-agnostic Pivot Level flag */}
                                 {r.eXU4L234 && (
                                   <span className="text-xs px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium">eXU4L234</span>
+                                )}
+                                {r.cOHiL2U4 && (
+                                  <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">cOHiL2U4</span>
                                 )}
                               </div>
                             )}

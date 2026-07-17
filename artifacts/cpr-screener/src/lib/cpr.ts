@@ -79,10 +79,8 @@ export interface CPRResult {
   LoL4U4:boolean;
   eXHiU1L3: boolean;
   eXHiL4U234: boolean;
-  // NEW: eXU4L234 — independent, section-agnostic Pivot Level flag (see
-  // doc-comment on getPivotLevel in ScreenerUtils.tsx). Prev day's R4 sits
-  // inside today's R3/R4 AND prev day's S4 sits inside today's S1/S2.
   eXU4L234: boolean;
+  cOHiL2U4: boolean;
   passes: boolean;
   currentPrice: number;
   openPrice: number;
@@ -242,14 +240,10 @@ export function analyzeCPR(
                      (prevCPR.s4 > todayCPR.s3 && prevCPR.s4 < todayCPR.s2);
   const eXHiL4U234 = (prevCPR.s4 > todayCPR.s4 && prevCPR.s4 < todayCPR.s3) &&
                      (prevCPR.r4 > todayCPR.r1 && prevCPR.r4 < todayCPR.r2);
-  // NEW: eXU4L234 — independent, section-agnostic Pivot Level flag.
-  // Prev day's R4 sits inside today's R3/R4 window AND prev day's S4 sits
-  // inside today's S1/S2 window. Used by the "eXU4L234-AU4" Big Below
-  // pattern in ScreenerUtils.tsx, and rendered as its own Pivot Level
-  // badge/filter regardless of activePattern/left-nav (same treatment as
-  // cOLoL2U1 / cOLoL4U3 / LoL4U4 / eXL4U4 / HiL4U4 / HiL4U34 / cOHiL2U3).
   const eXU4L234 = (prevCPR.r4 < todayCPR.r4 && prevCPR.r4 > todayCPR.r3) &&
                    (prevCPR.s4 < todayCPR.s1 && prevCPR.s4 > todayCPR.s2);
+  const cOHiL2U4 = (todayCPR.s4 < prevCPR.s1 && todayCPR.s4 > prevCPR.s2) &&
+                 (prevCPR.r3 > todayCPR.r3 && prevCPR.r3 < todayCPR.r4);
   const PL12CL23 = (todayCPR.s2 < prevCPR.s1 && todayCPR.s3 > prevCPR.s2); //LA-PL12CL23:2PL4;
   const PU12CU23  =  (prevCPR.r1 < todayCPR.r2 && prevCPR.r2 > todayCPR.r3); //PU12CU23
   const PU23CU34  =  (prevCPR.r2 < todayCPR.r3 && prevCPR.r3 > todayCPR.r4); //PU23CU34
@@ -343,6 +337,7 @@ export function analyzeCPR(
     eXHiU1L3,
     eXHiL4U234,
     eXU4L234,
+    cOHiL2U4,
     passes: cprRising && cprNarrowing,
     currentPrice,
     openPrice: openPrice ?? todayCandle.open,
