@@ -51,6 +51,7 @@ import {
   getPivotLevel,
   type PivotLevelInfo,
   SRLadder,
+  getSubFilterDirection,
 } from "./ScreenerUtils";
 import LiveClock from "./LiveClock";
 
@@ -2219,7 +2220,7 @@ export default function Screener({
                     return (
                       <Fragment key={rowKey}>
                         <tr
-                          className={`hover:bg-muted/20 transition-colors ${r.passes ? "bg-accent/3" : ""}`}
+                          className={`hover:bg-muted/20 transition-colors ${getSubFilterDirection(r, activePattern) ? "bg-accent/3" : ""}`}
                         >
                           {canShowCombined && activeTab === "combined" && (
                             <td className="px-4 py-3 whitespace-nowrap">
@@ -2248,7 +2249,18 @@ export default function Screener({
                           >
                             <div className="flex items-start gap-1.5">
                               <span className="text-muted-foreground text-xs mt-0.5">{isExpanded ? "▼" : "▶"}</span>
-                              {r.passes && <div className="w-1.5 h-1.5 rounded-full bg-accent mt-1.5 shrink-0" />}
+                              {(() => {
+                                const dir = getSubFilterDirection(r, activePattern);
+                                if (!dir) return null;
+                                return (
+                                  <div
+                                    className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${
+                                      dir === "up" ? "bg-green-400" : "bg-red-400"
+                                    }`}
+                                    title={dir === "up" ? "Matches a bullish sub-filter" : "Matches a bearish sub-filter"}
+                                  />
+                                );
+                              })()}
                               <div className="flex flex-col leading-tight min-w-0">
                                 <span className="truncate">{sym.base}</span>
                                 <span className="text-muted-foreground text-xs font-normal">/{sym.quote}</span>

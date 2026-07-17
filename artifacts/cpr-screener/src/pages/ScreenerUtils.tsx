@@ -696,6 +696,95 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
 }
 
 /**
+ * Sub-filter direction map, grouped by top-level section (activePattern).
+ * Used purely to color the row dot in the Symbol column — NOT tied to
+ * whether the sub-filter's toggle button is currently pressed. A row gets
+ * a dot the moment its data satisfies ANY sub-filter condition belonging
+ * to the active section, via the same passesPattern() check the toggle
+ * buttons use internally. Direction ("up" = bullish target = green, "down"
+ * = bearish target = red) is taken from each pattern's own "Target"
+ * description already shown in the Screener legend/tooltips — e.g.
+ * pMini-L34C4/U3>4 lives under "Big Below" but its own title says
+ * "Target-APU4", so it's green; LA-PL12CL23 lives under "Little ABOVE" but
+ * its own title says "Bearish Target: 2PL4", so it's red.
+ *
+ * When a row matches more than one sub-filter in the section, the FIRST
+ * match (in array order below) determines the dot's color.
+ */
+export type SubFilterDirection = "up" | "down";
+
+interface SubFilterDef {
+  key: string;
+  direction: SubFilterDirection;
+}
+
+const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
+  littleabove: [
+    { key: "la-2tiny", direction: "up" },
+    { key: "la-allstepup", direction: "up" },
+    { key: "1LHr-L4U3-U4", direction: "up" },
+    { key: "LA-PL12CL23", direction: "down" },
+    { key: "sT-cOL2U3-APU4", direction: "up" },
+  ],
+  littlebelow: [
+    { key: "lb-2tiny", direction: "down" },
+    { key: "lb-allstepdown", direction: "down" },
+    { key: "lb-cmprss-l4>3-u4<2", direction: "up" },
+    { key: "lb-c-l34c4/u23c4", direction: "down" },
+    { key: "lbE11-cOLoL3U2-PU4", direction: "up" },
+    { key: "co2-l2u2", direction: "up" },
+  ],
+  "overlapping-higher": [
+    { key: "eXHi-L4U4-U4", direction: "up" },
+  ],
+  "overlapping-lower": [
+    { key: "eXLo-L4U4-U4", direction: "up" },
+    { key: "Exp-U3>U3", direction: "up" },
+    { key: "OBN-LoL4U4-U4", direction: "up" },
+    { key: "OBW-LoL4U4-L4", direction: "up" },
+  ],
+  "inside-cpr": [
+    { key: "inside-cpr-expanded", direction: "up" },
+    { key: "inside-cpr-narrow", direction: "up" },
+    { key: "cO-U4L3", direction: "up" },
+  ],
+  "outside-cpr": [
+    { key: "outside-cpr-compressed", direction: "up" },
+    { key: "eXHrL3U3-AU4", direction: "up" },
+  ],
+  "structure-bigabove": [
+    { key: "bigabove-pl34cl4-u3>pu4", direction: "up" },
+    { key: "bacomp-l3>pl1/u3>pu1", direction: "up" },
+    { key: "eXHi-L4U234-U4", direction: "up" },
+    { key: "HA-U1>PU4", direction: "up" },
+    { key: "hR-HAL", direction: "up" },
+    { key: "HA55-HrL4U34-FAU4", direction: "up" },
+    { key: "1T-HiL4U4-FAU4", direction: "up" },
+  ],
+  "structure-bigbelow": [
+    { key: "bigbelow-pmini-pl3", direction: "up" },
+    { key: "eX-U4L34", direction: "down" },
+    { key: "eXLoL3U4-AU4", direction: "down" },
+    { key: "L1<pL4", direction: "down" },
+    { key: "eXU4L234-AU4", direction: "down" },
+  ],
+};
+
+/**
+ * Returns "up"/"down" if row r matches any sub-filter condition for the
+ * given section, or null if it matches none (or the section has no
+ * sub-filters defined, e.g. "falling"/"inside-value").
+ */
+export function getSubFilterDirection(r: CPRResult, activePattern: string): SubFilterDirection | null {
+  const defs = SUBFILTERS_BY_SECTION[activePattern];
+  if (!defs) return null;
+  for (const def of defs) {
+    if (passesPattern(r, def.key)) return def.direction;
+  }
+  return null;
+}
+
+/**
  * Pivot Level — classifies today's CPR range relative to yesterday's using
  * the directional sub-flags computed in cpr.ts:
  *   eX-Higher / eX-Lower:  Expanded (today R4 > prev R4 AND today S4 < prev S4),
