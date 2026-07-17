@@ -2386,10 +2386,14 @@ export default function Screener({
                               {r.narrowCPR && (
                                 <span className="text-xs px-1.5 py-0.5 rounded bg-chart-3/10 text-chart-3 border border-chart-3/20 font-medium">Narrow</span>
                               )}
+                              {r.equalCPR && (
+                                <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">Equal</span>
+                              )}
                               {!r.cprRising &&
                                 !r.cprFalling &&
                                 !r.narrowCPR &&
-                                !(passesPattern(r, activePattern) && ["inside-cpr", "outside-cpr", "overlapping-lower", "overlapping-higher"].includes(activePattern)) && (
+                                !r.equalCPR &&
+                                !(passesPattern(r, activePattern) && ["inside-cpr", "outside-cpr", "overlapping-lower", "overlapping-higher", "equal-cpr"].includes(activePattern)) && (
                                 <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">Skip</span>
                               )}
                             </div>

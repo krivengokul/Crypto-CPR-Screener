@@ -215,12 +215,19 @@ export function analyzeCPR(
   const normDenom  = prevCPR.width > 0 ? prevCPR.width : prevCPR.pivot * 0.0001;
   const r4Distance = Math.abs(todayCPR.r4 - prevCPR.r4) / normDenom;
   const s4Distance = Math.abs(todayCPR.s4 - prevCPR.s4) / normDenom;
+  // Secondary tiebreaker: gap between the adjacent S/R levels on each side.
+  // Used when r4Distance === s4Distance to decide Higher vs Lower.
+  // r3R4Gap = how far today's R3 is from prev R4 (upper-side adjacency)
+  // s3S4Gap = how far prev S4 is from today's S3 (lower-side adjacency)
+  // The side with the larger adjacent gap expanded more → wins the tie.
+  const r3R4Gap = Math.abs(todayCPR.r3 - prevCPR.r4);
+  const s3S4Gap = Math.abs(prevCPR.s4 - todayCPR.s3);
   // Compressed: bigger S4 move (support rising) = bullish squeeze
-  const srCompressedHigher = srCompressed && s4Distance > r4Distance;
-  const srCompressedLower = srCompressed && r4Distance > s4Distance;
+  const srCompressedHigher = srCompressed && (s4Distance > r4Distance || (s4Distance === r4Distance && s3S4Gap > r3R4Gap));
+  const srCompressedLower  = srCompressed && (r4Distance > s4Distance || (r4Distance === s4Distance && r3R4Gap > s3S4Gap));
   // Expanded: bigger R4 move (resistance rising) = bullish expansion
-  const srExpandedHigher = srExpanded && r4Distance > s4Distance;
-  const srExpandedLower = srExpanded && s4Distance > r4Distance;
+  const srExpandedHigher   = srExpanded   && (r4Distance > s4Distance || (r4Distance === s4Distance && r3R4Gap > s3S4Gap));
+  const srExpandedLower    = srExpanded   && (s4Distance > r4Distance || (s4Distance === r4Distance && s3S4Gap > r3R4Gap));
   const cOLoL2U1 = (prevCPR.s1  < todayCPR.s3 && prevCPR.s1 > todayCPR.s4) &&
                     (todayCPR.r4  < prevCPR.r1 && todayCPR.r4 > prevCPR.tc);
   const cOLoL4U3 =(todayCPR.s4 > prevCPR.s4 && todayCPR.s4 < prevCPR.s3 ) &&
