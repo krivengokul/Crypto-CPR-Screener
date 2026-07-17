@@ -895,6 +895,9 @@ export default function Screener({
       // (see doc-comments in cpr.ts / ScreenerUtils.tsx).
       if (pivotLevelFilter === "eXU4L234") return r.eXU4L234;
       if (pivotLevelFilter === "cOHiL2U4") return r.cOHiL2U4;
+      if (pivotLevelFilter === "cOL4U4") return r.cOL4U4;
+      if (pivotLevelFilter === "cOL3U4") return r.cOL3U4;
+      if (pivotLevelFilter === "cOL3U3") return r.cOL3U3;
       return getPivotLevel(r)?.label === pivotLevelFilter;
     })
     .filter((r) => matchesWidthFilter(r, widthFilter))
@@ -2072,6 +2075,9 @@ export default function Screener({
                   { label: "eXU4L234", active: "border-amber-400 text-amber-400" },
                   { label: "cOHiL2U4", active: "border-emerald-400 text-emerald-400" },
                   { label: "eXL3U3", active: "border-orange-400 text-orange-400" },
+                  { label: "cOL4U4",   active: "border-orange-400 text-orange-400" },
+                  { label: "cOL3U4",   active: "border-yellow-400 text-yellow-400" },
+                  { label: "cOL3U3",   active: "border-teal-400 text-teal-400" },
                 ] as { label: PivotLevelInfo["label"]; active: string }[]
               ).map(({ label, active }) => (
                 <button
@@ -2299,7 +2305,7 @@ export default function Screener({
                                 column. These are all independent, section-agnostic booleans —
                                 they render whenever true, regardless of activePattern or any
                                 left-nav / Show All state. */}
-                            {(r.cOLoL2U1 || r.cOLoL4U3 || r.LoL4U4 || r.eXHiL4U234 || r.eXL4U4 || r.HiL4U4 || r.HiL4U34 || r.cOHiL2U3 || r.eXU4L234 || r.cOHiL2U4 || r.eXL3U3) && (
+                            {(r.cOLoL2U1 || r.cOLoL4U3 || r.LoL4U4 || r.eXHiL4U234 || r.eXL4U4 || r.HiL4U4 || r.HiL4U34 || r.cOHiL2U3 || r.eXU4L234 || r.cOHiL2U4 || r.eXL3U3 || r.cOL4U4 || r.cOL3U4 || r.cOL3U3) && (
                               <div className="flex flex-wrap gap-1 mt-1">
                                 {r.cOLoL2U1 && (
                                   <span className="text-xs px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 font-medium">cOLoL2U1</span>
@@ -2338,6 +2344,16 @@ export default function Screener({
                                     gaps non-zero — double-boundary expansion signal. */}
                                 {r.eXL3U3 && (
                                   <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 font-medium">eXL3U3</span>
+                                )}
+                                {/* NEW: cOL4U4 / cOL3U4 / cOL3U3 — independent Pivot Level flags */}
+                                {r.cOL4U4 && (
+                                  <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 font-medium">cOL4U4</span>
+                                )}
+                                {r.cOL3U4 && (
+                                  <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 font-medium">cOL3U4</span>
+                                )}
+                                {r.cOL3U3 && (
+                                  <span className="text-xs px-1.5 py-0.5 rounded bg-teal-500/10 text-teal-400 border border-teal-500/20 font-medium">cOL3U3</span>
                                 )}
                               </div>
                             )}

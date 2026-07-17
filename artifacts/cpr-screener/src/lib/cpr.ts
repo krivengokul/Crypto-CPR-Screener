@@ -83,6 +83,9 @@ export interface CPRResult {
   cOHiL2U4: boolean;
   equalCPR: boolean;
   eXL3U3: boolean;
+  cOL4U4: boolean;
+  cOL3U4: boolean;
+  cOL3U3: boolean;
   passes: boolean;
   currentPrice: number;
   openPrice: number;
@@ -253,6 +256,15 @@ export function analyzeCPR(
                    (prevCPR.s4 < todayCPR.s1 && prevCPR.s4 > todayCPR.s2);
   const cOHiL2U4 = (todayCPR.s4 < prevCPR.s1 && todayCPR.s4 > prevCPR.s2) &&
                  (prevCPR.r3 > todayCPR.r3 && prevCPR.r3 < todayCPR.r4);
+  // cOL4U4: today's S4 sits in the prev L4–L3 band, today's R4 sits in the prev U3–U4 band
+  const cOL4U4 = (todayCPR.s4 > prevCPR.s4 && todayCPR.s4 < prevCPR.s3) &&
+                 (todayCPR.r4 > prevCPR.r3 && todayCPR.r4 < prevCPR.r4);
+  // cOL3U4: today's S4 sits in the prev L3–L2 band, today's R4 sits in the prev U3–U4 band
+  const cOL3U4 = (todayCPR.s4 > prevCPR.s3 && todayCPR.s4 < prevCPR.s2) &&
+                 (todayCPR.r4 > prevCPR.r3 && todayCPR.r4 < prevCPR.r4);
+  // cOL3U3: today's S4 sits in the prev L3–L2 band, today's R4 sits in the prev U2–U3 band
+  const cOL3U3 = (todayCPR.s4 > prevCPR.s3 && todayCPR.s4 < prevCPR.s2) &&
+                 (todayCPR.r4 > prevCPR.r2 && todayCPR.r4 < prevCPR.r3);
   const PL12CL23 = (todayCPR.s2 < prevCPR.s1 && todayCPR.s3 > prevCPR.s2); //LA-PL12CL23:2PL4;
   const PU12CU23  =  (prevCPR.r1 < todayCPR.r2 && prevCPR.r2 > todayCPR.r3); //PU12CU23
   const PU23CU34  =  (prevCPR.r2 < todayCPR.r3 && prevCPR.r3 > todayCPR.r4); //PU23CU34
@@ -361,6 +373,9 @@ export function analyzeCPR(
     cOHiL2U4,
     equalCPR,
     eXL3U3,
+    cOL4U4,
+    cOL3U4,
+    cOL3U3,
     passes: cprRising && cprNarrowing,
     currentPrice,
     openPrice: openPrice ?? todayCandle.open,
