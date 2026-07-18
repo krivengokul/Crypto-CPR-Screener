@@ -104,12 +104,18 @@ const SCREENER_PATTERN_IDS = new Set([
   "HA55-HrL4U34-FAU4",
   "1T-HiL4U4-FAU4",
 
+  // ── U1>pU4 (standalone category) ──
+  "u1-gt-pu4",
+
   // ── Big BELOW sub-patterns ──
   "bigbelow-pmini-pl3",
   "eX-U4L34",
   "eXLoL3U4-AU4",
   "L1<pL4",
   "eXU4L234-AU4",
+
+  // ── L1<pL4 (standalone category) ──
+  "l1-lt-pl4",
 
   // ── Equal CPR ──
   "equal-cpr",

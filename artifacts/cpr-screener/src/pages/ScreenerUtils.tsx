@@ -609,6 +609,9 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       );
     case "HA-U1>PU4":
       return (r.cprRising && r.strWideCPR && r.todayCPR.r1 > r.prevCPR.r4);
+    // Standalone top-level category: same condition as HA-U1>PU4
+    case "u1-gt-pu4":
+      return (r.cprRising && r.strWideCPR && r.todayCPR.r1 > r.prevCPR.r4);
     case "HAThin-U1>PU4":
       return (r.cprRising && r.strWideCPR && r.bothTight && r.todayCPR.r1 > r.prevCPR.r4);
     // NEW: hR-HAL — BigCPR Above, top-level toggle next to Show All.
@@ -657,6 +660,13 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // NEW: L1<pL4 — Big Below: today's S1 below prev day's S4 AND today's R2
     // above prev day's R4, wide CPR below prev CPR (structure-bigbelow base)
     case "L1<pL4":
+      return (
+        r.cprFalling &&
+        r.strWideCPR &&
+        r.todayCPR.s1 < r.prevCPR.s4
+      );
+    // Standalone top-level category: same condition as L1<pL4
+    case "l1-lt-pl4":
       return (
         r.cprFalling &&
         r.strWideCPR &&
@@ -764,18 +774,18 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     { key: "bigabove-pl34cl4-u3>pu4", direction: "up" },
     { key: "bacomp-l3>pl1/u3>pu1", direction: "up" },
     { key: "eXHi-L4U234-U4", direction: "up" },
-    { key: "HA-U1>PU4", direction: "up" },
     { key: "hR-HAL", direction: "up" },
     { key: "HA55-HrL4U34-FAU4", direction: "up" },
     { key: "1T-HiL4U4-FAU4", direction: "up" },
   ],
+  "u1-gt-pu4": [],
   "structure-bigbelow": [
     { key: "bigbelow-pmini-pl3", direction: "up" },
     { key: "eX-U4L34", direction: "down" },
     { key: "eXLoL3U4-AU4", direction: "down" },
-    { key: "L1<pL4", direction: "down" },
     { key: "eXU4L234-AU4", direction: "down" },
   ],
+  "l1-lt-pl4": [],
   "equal-cpr": [
     { key: "eXLoL3U3-L3", direction: "down" },
   ],
