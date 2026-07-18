@@ -2440,29 +2440,24 @@ export default function Screener({
                               {r.cprRising && (
                                 <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">Above</span>
                               )}
-                              {r.strWideCPR && (
-                                <span className="text-xs px-1.5 py-0.5 rounded bg-red-400/10 text-red-300 border border-red-400/20 font-medium">Wide</span>
-                              )}
                               {r.cprFalling && (
                                 <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 font-medium">Below</span>
                               )}
-                              {passesPattern(r, "inside-value") && activePattern === "inside-value" && (
-                                <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">Inside</span>
-                              )}
-                              {/* Inside badge for inside-cpr page */}
-                              {passesPattern(r, "inside-cpr") && activePattern === "inside-cpr" && (
+                              {passesPattern(r, "inside-cpr") && (
                                 <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 font-medium">Inside</span>
                               )}
-                              {/* Outside badge for outside-cpr page */}
-                              {passesPattern(r, "outside-cpr") && activePattern === "outside-cpr" && (
+                              {passesPattern(r, "outside-cpr") && (
                                 <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20 font-medium">Outside</span>
                               )}
-                              {/* FIXED: Overlap badge — now unconditional (no activePattern gate) */}
+                              {r.strWideCPR && (
+                                <span className="text-xs px-1.5 py-0.5 rounded bg-pink-500/10 text-pink-400 border border-pink-500/20 font-medium">Wide</span>
+                              )}
+                              {/* oV-Above / oV-Below — renamed from Overlap-Hi / Overlap-Lo, still unconditional */}
                               {r.overlapLower && (
-                                <span className="text-xs px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-medium">Overlap-Lo</span>
+                                <span className="text-xs px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-medium">oV-Below</span>
                               )}
                               {r.overlapHigher && (
-                                <span className="text-xs px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20 font-medium">Overlap-Hi</span>
+                                <span className="text-xs px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20 font-medium">oV-Above</span>
                               )}
                               {r.narrowCPR && (
                                 <span className="text-xs px-1.5 py-0.5 rounded bg-chart-3/10 text-chart-3 border border-chart-3/20 font-medium">Narrow</span>
