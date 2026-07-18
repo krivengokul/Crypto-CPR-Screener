@@ -596,7 +596,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     case "Price-BelowPDL":
       return (r.currentPrice < r.todayCPR.prevLow);
     case "structure-bigabove":
-      return r.cprRising && r.strWideCPR;
+      return r.cprRising && r.strWideCPR && !(r.todayCPR.r1 > r.prevCPR.r4);
     case "bigabove-pl34cl4-u3>pu4":
       return r.cprRising && r.strWideCPR && r.PL34CL4 && r.todayCPR.r3 > r.prevCPR.r4;
     // NEW: BAComp-l3>pl1/u3>pu1 — BigCPR Above + prev S1 inside today S3/S4 AND prev R1 inside today R2/R3
@@ -640,7 +640,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.prevCPR.r4 < r.todayCPR.r2
       );
     case "structure-bigbelow":
-      return r.cprFalling && r.strWideCPR;
+      return r.cprFalling && r.strWideCPR && !(r.todayCPR.s1 < r.prevCPR.s4);
     case "bigbelow-pmini-pl3":
       return r.cprFalling && r.strWideCPR && r.prevCPR.widthPct < 0.5 && r.PL34CL4 &&
              r.prevCPR.r3  > r.todayCPR.r4;
