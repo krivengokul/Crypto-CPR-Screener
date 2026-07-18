@@ -583,6 +583,8 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       );
     case "overlapping-higher":
       return r.overlapHigher;
+    case "cOHiL3U3-pL4":
+      return r.overlapHigher && r.cOHiL3U3;
     case  "LAT-PU12CU23":
       return r.overlapHigher && r.PU12CU23 && r.PL12CL23 && r.todayCPR.prevHigh > r.prevCPR.prevHigh;
     case "overlapping-lower":
@@ -753,7 +755,8 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     { key: "co2-l2u2", direction: "up" },
   ],
   "overlapping-higher": [
-    { key: "eXHi-L4U4-U4", direction: "up" },
+    { key: "eXHi-L4U4-U4",  direction: "up" },
+    { key: "cOHiL3U3-pL4",  direction: "down" },
   ],
   "overlapping-lower": [
     { key: "eXLo-L4U4-U4", direction: "up" },
@@ -857,7 +860,7 @@ export function getSubFilterDirection(r: CPRResult, activePattern: string): SubF
  * cprFalling + extra R3/pivot/width conditions on top of this raw flag.
  */
 export interface PivotLevelInfo {
-  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "cOLoL2U1" | "cOLoL4U3" | "LoL4U4"| "eXHiL4U234" | "eXL4U4" | "HiL4U4" | "HiL4U34" | "cOHiL2U3" | "eXU4L234" | "cOHiL2U4" | "eXL3U3" | "Lower";
+  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "cOLoL2U1" | "cOLoL4U3" | "LoL4U4"| "eXHiL4U234" | "eXL4U4" | "HiL4U4" | "HiL4U34" | "cOHiL2U3" | "cOHiL3U3" | "eXU4L234" | "cOHiL2U4" | "eXL3U3" | "Lower";
   classes: string;
 }
 
@@ -902,6 +905,7 @@ export function matchesPivotLevelFlag(r: CPRResult, label: string): boolean {
     case "HiL4U4": return r.HiL4U4;
     case "HiL4U34": return r.HiL4U34;
     case "cOHiL2U3": return r.cOHiL2U3;
+    case "cOHiL3U3": return r.cOHiL3U3;
     case "eXU4L234": return r.eXU4L234;
     case "cOHiL2U4": return r.cOHiL2U4;
     case "eXL3U3": return r.eXL3U3;
