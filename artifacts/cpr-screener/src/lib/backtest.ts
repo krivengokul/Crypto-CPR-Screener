@@ -77,6 +77,16 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
   },
+  // NEW: "cOHiL3U3-pL4" — nested under "Overlap Above" → Pivot Level
+  // "cOHiL3U3". Bearish — unlike its Overlap Above sibling eXHi-L4U4-U4,
+  // this one targets prev day's S4 (PL4).
+  {
+    key: "cOHiL3U3-pL4",
+    label: "cOHiL3U3-pL4",
+    direction: "bearish",
+    targetLabel: "PL4 (prev day's S4)",
+    getTarget: (r) => r.prevCPR.s4,
+  },
 ];
 
 /**
@@ -134,6 +144,13 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
         key: "HiL4U34",
         label: "HiL4U34",
         subPatternKeys: ["eXHi-L4U4-U4"],
+      },
+      // NEW: cOHiL3U3 Pivot Level sub-category, alongside HiL4U34 — nests
+      // the bearish "cOHiL3U3-pL4" pattern (target: prev day's S4 / PL4).
+      {
+        key: "cOHiL3U3",
+        label: "cOHiL3U3",
+        subPatternKeys: ["cOHiL3U3-pL4"],
       },
     ],
   },
