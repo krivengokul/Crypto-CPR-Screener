@@ -183,11 +183,11 @@ export default function Screener({
   useEffect(() => { deltaAllResultsRef.current = deltaAllResults; }, [deltaAllResults]);
   useEffect(() => { activePatternRef.current = activePattern; }, [activePattern]);
 
-  const doScan = useCallback(async () => {
+  const doScan = useCallback(async (switchTab: boolean = true) => {
     if (scanRef.current) return;
     scanRef.current = true;
     setStatus("scanning");
-    setActiveTab("binance");
+    if (switchTab) setActiveTab("binance");
     setAllResults([]);
     setFiltered([]);
     setError("");
@@ -209,11 +209,11 @@ export default function Screener({
     }
   }, [activePattern]);
 
-  const doDeltaScan = useCallback(async () => {
+  const doDeltaScan = useCallback(async (switchTab: boolean = true) => {
     if (deltaScanRef.current) return;
     deltaScanRef.current = true;
     setDeltaStatus("scanning");
-    setActiveTab("delta");
+    if (switchTab) setActiveTab("delta");
     setDeltaAllResults([]);
     setDeltaFiltered([]);
     setDeltaError("");
@@ -240,7 +240,7 @@ export default function Screener({
   useEffect(() => {
   if (scanKey > 0) {
     doScan();
-    doDeltaScan();
+    doDeltaScan(false); // don't let the auto Delta scan steal the active tab away from Binance
     }
   }, [scanKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -2449,12 +2449,11 @@ export default function Screener({
                               {passesPattern(r, "outside-cpr") && (
                                 <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20 font-medium">Outside</span>
                               )}
-                              {r.strWideCPR && (
-                                <span className="text-xs px-1.5 py-0.5 rounded bg-pink-500/10 text-pink-400 border border-pink-500/20 font-medium">Wide</span>
-                              )}
-                              {/* oV-Above / oV-Below — renamed from Overlap-Hi / Overlap-Lo, still unconditional */}
                               {r.overlapLower && (
                                 <span className="text-xs px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-medium">oV-Below</span>
+                              )}
+                              {r.strWideCPR && (
+                                <span className="text-xs px-1.5 py-0.5 rounded bg-pink-500/10 text-pink-400 border border-pink-500/20 font-medium">Wide</span>
                               )}
                               {r.overlapHigher && (
                                 <span className="text-xs px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20 font-medium">oV-Above</span>
@@ -2469,7 +2468,10 @@ export default function Screener({
                                 !r.cprFalling &&
                                 !r.narrowCPR &&
                                 !r.equalCPR &&
-                                !(passesPattern(r, activePattern) && ["inside-cpr", "outside-cpr", "overlapping-lower", "overlapping-higher", "equal-cpr"].includes(activePattern)) && (
+                                !r.strWideCPR &&
+                                !passesPattern(r, "inside-cpr") &&
+                                !passesPattern(r, "outside-cpr") &&
+                                !(passesPattern(r, activePattern) && ["overlapping-lower", "overlapping-higher", "equal-cpr"].includes(activePattern)) && (
                                 <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">Skip</span>
                               )}
                             </div>
