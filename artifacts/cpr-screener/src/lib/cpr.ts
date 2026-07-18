@@ -371,9 +371,8 @@ export function analyzeCPR(
     eqTol(prevCPR.pivot, todayCPR.pivot) &&
     eqTol(prevCPR.bc, todayCPR.bc);
 
-  // eXL3U3: S&R bands Expanded AND both L3 (S3/S4 adjacency) AND U3 (R3/R4
-  // adjacency) gaps are non-zero — both boundaries crossed during expansion.
-  const eXL3U3 = srExpanded && r3R4Gap > 0 && s3S4Gap > 0;
+  const eXL3U3 = (prevCPR.r4 < todayCPR.r3 && prevCPR.r4 > todayCPR.r2) && 
+                  (prevCPR.s4 > todayCPR.s3 && prevCPR.s4 < todayCPR.s2);
 
   return {
     symbol,
