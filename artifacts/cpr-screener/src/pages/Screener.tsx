@@ -900,7 +900,7 @@ export default function Screener({
       if (pivotLevelFilter === "cOHiL2U4") return r.cOHiL2U4;
       if (pivotLevelFilter === "cOL4U4") return r.cOL4U4;
       if (pivotLevelFilter === "cOL3U4") return r.cOL3U4;
-      if (pivotLevelFilter === "cOL3U3") return r.cOL3U3;
+      if (pivotLevelFilter === "cOU3L3") return r.cOU3L3;
       if (pivotLevelFilter === "LoU3L4") return r.LoU3L4;
       if (pivotLevelFilter === "LoU3L34") return r.LoU3L34;
       if (pivotLevelFilter === "LoU2L4") return r.LoU2L4;
@@ -2094,7 +2094,7 @@ export default function Screener({
                   { label: "eXL3U3", active: "border-orange-400 text-orange-400" },
                   { label: "cOL4U4",   active: "border-orange-400 text-orange-400" },
                   { label: "cOL3U4",   active: "border-yellow-400 text-yellow-400" },
-                  { label: "cOL3U3",   active: "border-teal-400 text-teal-400" },
+                  { label: "cOU3L3",   active: "border-teal-400 text-teal-400" },
                   { label: "LoU3L4",   active: "border-indigo-400 text-indigo-400" },
                   { label: "LoU3L34",  active: "border-purple-400 text-purple-400" },
                   { label: "LoU2L4",   active: "border-pink-400 text-pink-400" },
@@ -2333,7 +2333,7 @@ export default function Screener({
                                 column. These are all independent, section-agnostic booleans —
                                 they render whenever true, regardless of activePattern or any
                                 left-nav / Show All state. */}
-                            {(r.cOLoL2U1 || r.cOLoL4U3 || r.LoL4U4 || r.eXHiL4U234 || r.eXL4U4 || r.HiL4U4 || r.HiL4U34 || r.cOHiL2U3 || r.cOHiL3U3 || r.eXU4L234 || r.cOHiL2U4 || r.eXL3U3 || r.cOL4U4 || r.cOL3U4 || r.cOL3U3 || r.LoU3L4 || r.LoU3L34 || r.LoU2L4 || r.LoU2L3 || r.LoU4L34 || r.LoU4L234 || r.HiL2U4 || r.HiL3U4 || r.cOHiL2U2 || r.cOLoU2L3 || r.LoU4L1234 || r.cOLoU1L2 || r.cOLoU2L4) && (
+                            {(r.cOLoL2U1 || r.cOLoL4U3 || r.LoL4U4 || r.eXHiL4U234 || r.eXL4U4 || r.HiL4U4 || r.HiL4U34 || r.cOHiL2U3 || r.cOHiL3U3 || r.eXU4L234 || r.cOHiL2U4 || r.eXL3U3 || r.cOL4U4 || r.cOL3U4 || r.cOU3L3 || r.LoU3L4 || r.LoU3L34 || r.LoU2L4 || r.LoU2L3 || r.LoU4L34 || r.LoU4L234 || r.HiL2U4 || r.HiL3U4 || r.cOHiL2U2 || r.cOLoU2L3 || r.LoU4L1234 || r.cOLoU1L2 || r.cOLoU2L4) && (
                               <div className="flex flex-wrap gap-1 mt-1">
                                 {r.cOLoL2U1 && (
                                   <span className="text-xs px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 font-medium">cOLoL2U1</span>
@@ -2382,15 +2382,15 @@ export default function Screener({
                                 {r.eXL3U3 && (
                                   <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 font-medium">eXL3U3</span>
                                 )}
-                                {/* NEW: cOL4U4 / cOL3U4 / cOL3U3 — independent Pivot Level flags */}
+                                {/* NEW: cOL4U4 / cOL3U4 / cOU3L3 — independent Pivot Level flags */}
                                 {r.cOL4U4 && (
                                   <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 font-medium">cOL4U4</span>
                                 )}
                                 {r.cOL3U4 && (
                                   <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 font-medium">cOL3U4</span>
                                 )}
-                                {r.cOL3U3 && (
-                                  <span className="text-xs px-1.5 py-0.5 rounded bg-teal-500/10 text-teal-400 border border-teal-500/20 font-medium">cOL3U3</span>
+                                {r.cOU3L3 && (
+                                  <span className="text-xs px-1.5 py-0.5 rounded bg-teal-500/10 text-teal-400 border border-teal-500/20 font-medium">cOU3L3</span>
                                 )}
                                 {r.LoU3L4 && (
                                   <span className="text-xs px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-medium">LoU3L4</span>

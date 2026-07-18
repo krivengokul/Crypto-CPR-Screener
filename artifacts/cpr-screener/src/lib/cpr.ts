@@ -88,7 +88,7 @@ export interface CPRResult {
   eXL3U3: boolean;
   cOL4U4: boolean;
   cOL3U4: boolean;
-  cOL3U3: boolean;
+  cOU3L3: boolean;
   LoU3L4: boolean;
   LoU3L34: boolean;
   LoU2L4: boolean;
@@ -253,7 +253,7 @@ export function analyzeCPR(
   const cOHiL2U3 =(todayCPR.s4 > prevCPR.s2 && todayCPR.s4 < prevCPR.s1 ) &&
                   (todayCPR.r4 > prevCPR.r2  && todayCPR.r4 < prevCPR.r3);
   const cOHiL3U3 = (todayCPR.s4 > prevCPR.s3 && todayCPR.s4 < prevCPR.s2) &&
-                   (todayCPR.r4 > prevCPR.r2  && todayCPR.r4 < prevCPR.r3);
+                   (todayCPR.r4 > prevCPR.r2  && todayCPR.r4 < prevCPR.r3) && srCompressedHigher;
   const eXLoL3U4 = (prevCPR.r4 > todayCPR.r3 && prevCPR.r4 < todayCPR.r4) &&
                     (prevCPR.s4 > todayCPR.s3 && prevCPR.s4 < todayCPR.s2); 
   const eXL4U4 = (prevCPR.r4 > todayCPR.r3 && prevCPR.r4 < todayCPR.r4) &&
@@ -284,9 +284,9 @@ export function analyzeCPR(
   // cOL3U4: today's S4 sits in the prev L3–L2 band, today's R4 sits in the prev U3–U4 band
   const cOL3U4 = (todayCPR.s4 > prevCPR.s3 && todayCPR.s4 < prevCPR.s2) &&
                  (todayCPR.r4 > prevCPR.r3 && todayCPR.r4 < prevCPR.r4);
-  // cOL3U3: today's S4 sits in the prev L3–L2 band, today's R4 sits in the prev U2–U3 band
-  const cOL3U3 = (todayCPR.s4 > prevCPR.s3 && todayCPR.s4 < prevCPR.s2) &&
-                 (todayCPR.r4 > prevCPR.r2 && todayCPR.r4 < prevCPR.r3);
+  // cOU3L3: today's S4 sits in the prev L3–L2 band, today's R4 sits in the prev U2–U3 band
+  const cOU3L3 = (todayCPR.s4 > prevCPR.s3 && todayCPR.s4 < prevCPR.s2) &&
+                 (todayCPR.r4 > prevCPR.r2 && todayCPR.r4 < prevCPR.r3) && srCompressedLower;
   // LoU3L4: today's R4 in prev U3 band (R2→R3), prev S4 between today's S4 and today's S3
   const LoU3L4 = (todayCPR.r4 > prevCPR.r2 && todayCPR.r4 < prevCPR.r3) &&
                  (prevCPR.s4 > todayCPR.s4 && prevCPR.s4 < todayCPR.s3);
@@ -434,7 +434,7 @@ export function analyzeCPR(
     eXL3U3,
     cOL4U4,
     cOL3U4,
-    cOL3U3,
+    cOU3L3,
     LoU3L4,
     LoU3L34,
     LoU2L4,

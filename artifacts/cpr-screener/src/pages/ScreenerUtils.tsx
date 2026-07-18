@@ -584,7 +584,8 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     case "overlapping-higher":
       return r.overlapHigher;
     case "cOHiL3U3-pL4":
-      return r.overlapHigher && r.cOHiL3U3;
+      return r.overlapHigher && r.cOHiL3U3 && r.prevCPR.widthPct <= 0.10 &&   // pMicro
+              r.todayCPR.widthPct > 0.60 && r.todayCPR.widthPct <= 1.10;   // Small;
     case  "LAT-PU12CU23":
       return r.overlapHigher && r.PU12CU23 && r.PL12CL23 && r.todayCPR.prevHigh > r.prevCPR.prevHigh;
     case "overlapping-lower":
