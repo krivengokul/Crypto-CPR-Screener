@@ -2213,6 +2213,12 @@ export default function Screener({
                     </th>
                     <th
                       className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
+                      onClick={() => toggleSort("compressionRatio")}
+                    >
+                      SIZE RATIO <SortIcon k="compressionRatio" />
+                    </th>
+                    <th
+                      className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
                       onClick={() => toggleSort("change24h")}
                     >
                       Price <SortIcon k="change24h" />
@@ -2235,12 +2241,6 @@ export default function Screener({
                       onClick={() => toggleSort("cprDistance")}
                     >
                       GAP <SortIcon k="cprDistance" />
-                    </th>
-                    <th
-                      className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
-                      onClick={() => toggleSort("compressionRatio")}
-                    >
-                      Compression <SortIcon k="compressionRatio" />
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Chart
@@ -2440,14 +2440,11 @@ export default function Screener({
                               {r.cprRising && (
                                 <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">Above</span>
                               )}
-                              {r.cprRising && r.strWideCPR && activePattern === "structure-bigabove" && (
-                                <span className="text-xs px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-medium">Wide</span>
+                              {r.strWideCPR && (
+                                <span className="text-xs px-1.5 py-0.5 rounded bg-red-400/10 text-red-300 border border-red-400/20 font-medium">Wide</span>
                               )}
                               {r.cprFalling && (
                                 <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 font-medium">Below</span>
-                              )}
-                              {r.cprFalling && r.strWideCPR && activePattern === "structure-bigbelow" && (
-                                <span className="text-xs px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-medium">Wide</span>
                               )}
                               {passesPattern(r, "inside-value") && activePattern === "inside-value" && (
                                 <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">Inside</span>
@@ -2466,10 +2463,6 @@ export default function Screener({
                               )}
                               {r.overlapHigher && (
                                 <span className="text-xs px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20 font-medium">Overlap-Hi</span>
-                              )}
-                              {/* NEW: Wide badge — Overlap Lower CPR column, when today's CPR is wider than prev day's */}
-                              {r.overlapLower && r.strWideCPR && activePattern === "overlapping-lower" && (
-                                <span className="text-xs px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-medium">Wide</span>
                               )}
                               {r.narrowCPR && (
                                 <span className="text-xs px-1.5 py-0.5 rounded bg-chart-3/10 text-chart-3 border border-chart-3/20 font-medium">Narrow</span>
@@ -2509,6 +2502,33 @@ export default function Screener({
                                   </>
                                 );
                               })()}
+                           </div>
+                          </td>
+                          <td className="px-4 py-3 font-mono whitespace-nowrap">
+                            <div className="text-xs text-chart-3">
+                              <span className="text-muted-foreground">TDay: </span>{r.todayCPR.widthPct.toFixed(4)}%
+                            </div>
+                            <div className={`text-xs font-semibold py-0.5 ${
+                              r.compressionRatio < 25 ? "text-green-400"
+                              : r.compressionRatio < 50 ? "text-accent"
+                              : r.compressionRatio < 75 ? "text-yellow-500"
+                              : "text-destructive"
+                            }`}>
+                              {r.compressionRatio.toFixed(1)}%
+                              <div className="w-full bg-muted rounded-full h-1 mt-0.5 max-w-[64px]">
+                                <div
+                                  className={`h-1 rounded-full transition-all ${
+                                    r.compressionRatio < 25 ? "bg-green-400"
+                                    : r.compressionRatio < 50 ? "bg-accent"
+                                    : r.compressionRatio < 75 ? "bg-yellow-500"
+                                    : "bg-destructive"
+                                  }`}
+                                  style={{ width: `${Math.min(r.compressionRatio, 100)}%` }}
+                                />
+                              </div>
+                            </div>
+                            <div className="text-xs text-chart-3/70">
+                              <span className="text-muted-foreground">PDay: </span>{r.prevCPR.widthPct.toFixed(4)}%
                             </div>
                           </td>
                           <td className="px-4 py-3 font-mono whitespace-nowrap">
@@ -2553,33 +2573,6 @@ export default function Screener({
                                 </>
                               );
                             })()}
-                          </td>
-                          <td className="px-4 py-3 font-mono whitespace-nowrap">
-                            <div className="text-xs text-chart-3">
-                              <span className="text-muted-foreground">TDay: </span>{r.todayCPR.widthPct.toFixed(4)}%
-                            </div>
-                            <div className={`text-xs font-semibold py-0.5 ${
-                              r.compressionRatio < 25 ? "text-green-400"
-                              : r.compressionRatio < 50 ? "text-accent"
-                              : r.compressionRatio < 75 ? "text-yellow-500"
-                              : "text-destructive"
-                            }`}>
-                              {r.compressionRatio.toFixed(1)}%
-                              <div className="w-full bg-muted rounded-full h-1 mt-0.5 max-w-[64px]">
-                                <div
-                                  className={`h-1 rounded-full transition-all ${
-                                    r.compressionRatio < 25 ? "bg-green-400"
-                                    : r.compressionRatio < 50 ? "bg-accent"
-                                    : r.compressionRatio < 75 ? "bg-yellow-500"
-                                    : "bg-destructive"
-                                  }`}
-                                  style={{ width: `${Math.min(r.compressionRatio, 100)}%` }}
-                                />
-                              </div>
-                            </div>
-                            <div className="text-xs text-chart-3/70">
-                              <span className="text-muted-foreground">PDay: </span>{r.prevCPR.widthPct.toFixed(4)}%
-                            </div>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             {hasKnownChartMapping(r.symbol, r.source) ? (
