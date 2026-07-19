@@ -528,7 +528,7 @@ export default function Screener({
       if (activeTab === "delta") return deltaIntersect;
       return binanceIntersect;
     }
-    // NEW: cO-U4L3 pool — Compressed inside prev R4/prev S3 (today's R4 < prev R4, today's S4 > prev S3)
+    // NEW: cO-U4L3 — Compressed inside prev R4/prev S3 (today's R4 < prev R4, today's S4 > prev S3)
     if (showInsideCPRCoU4L3 && activePattern === "inside-cpr") {
       const binanceIntersect = allResults
         .filter((r) => passesPattern(r, "cO-U4L3"))
