@@ -890,6 +890,7 @@ export default function Screener({
       // doc-comment on PivotLevelInfo/getPivotLevel in ScreenerUtils.tsx).
       if (pivotLevelFilter === "eXL4U4") return r.eXL4U4;
       if (pivotLevelFilter === "eXL3U3") return r.eXL3U3;
+      if (pivotLevelFilter === "eXU3L3") return r.eXU3L3;
       // NEW: HiL4U4 — independent, section-agnostic Pivot Level flag,
       // mirror of eXL4U4 (see doc-comments in cpr.ts / ScreenerUtils.tsx).
       if (pivotLevelFilter === "HiL2U4") return r.HiL2U4;
