@@ -376,9 +376,9 @@ export function analyzeCPR(
     eqTol(prevCPR.bc, todayCPR.bc);
 
   const eXL3U3 = (prevCPR.r4 < todayCPR.r3 && prevCPR.r4 > todayCPR.r2) && 
-                  (prevCPR.s4 > todayCPR.s3 && prevCPR.s4 < todayCPR.s2) && srCompressedHigher;
+                  (prevCPR.s4 > todayCPR.s3 && prevCPR.s4 < todayCPR.s2) && srExpandedHigher;
   const eXU3L3 = (prevCPR.r4 < todayCPR.r3 && prevCPR.r4 > todayCPR.r2) && 
-                  (prevCPR.s4 > todayCPR.s3 && prevCPR.s4 < todayCPR.s2) && srCompressedLower;
+                  (prevCPR.s4 > todayCPR.s3 && prevCPR.s4 < todayCPR.s2) && srExpandedLower;
   return {
     symbol,
     todayCPR,
