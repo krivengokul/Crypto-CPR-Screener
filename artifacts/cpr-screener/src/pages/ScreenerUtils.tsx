@@ -842,7 +842,7 @@ export function getSubFilterDirection(r: CPRResult, activePattern: string): SubF
  * Higher variant in cpr.ts). getPivotLevel here just reads those flags in
  * order — no re-derivation, no ties, no null/unclassified rows.
  *
- * FIX (duplicate badge bug): cOLoL2U1 / cOLoL4U3 / LoL4U4 are intentionally
+ * FIX (duplicate badge bug): cOLoL2U1 / cOU3L4 / LoL4U4 are intentionally
  * NOT checked here anymore. They're independent booleans (not mutually
  * exclusive sub-buckets of "Lower" the way eX-Higher/eX-Lower or
  * cO-Higher/cO-Lower are) and Screener.tsx already renders them as their
@@ -850,13 +850,13 @@ export function getSubFilterDirection(r: CPRResult, activePattern: string): SubF
  * Having getPivotLevel() also return them as the PRIMARY label caused the
  * same badge (e.g. "LoL4U4") to show twice on a row — once as the primary
  * badge instead of "Lower", and once again in the second row. The pivot
- * level filter buttons for cOLoL2U1/cOLoL4U3/LoL4U4 in Screener.tsx already
- * check the raw r.cOLoL2U1/r.cOLoL4U3/r.LoL4U4 flags directly rather than
+ * level filter buttons for cOLoL2U1/cOU3L4/LoL4U4 in Screener.tsx already
+ * check the raw r.cOLoL2U1/r.cOU3L4/r.LoL4U4 flags directly rather than
  * relying on this function's return value, so removing them here does not
  * affect filtering — only the primary badge, which now correctly falls
  * through to "Lower" for these rows.
  *
- * NEW: eXL4U4 — same treatment as cOLoL2U1/cOLoL4U3/LoL4U4/eXHiL4U234
+ * NEW: eXL4U4 — same treatment as cOLoL2U1/cOU3L4/LoL4U4/eXHiL4U234
  * above: an independent, section-agnostic boolean (r.eXL4U4 from cpr.ts —
  * prev R4 inside today's R3/R4 AND prev S4 inside today's S3/S4). It is
  * NOT returned as the primary label here (same reasoning as above — it can
@@ -877,7 +877,7 @@ export function getSubFilterDirection(r: CPRResult, activePattern: string): SubF
  * cprFalling + extra R3/pivot/width conditions on top of this raw flag.
  */
 export interface PivotLevelInfo {
-  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "cOLoL2U1" | "cOLoL4U3" | "LoL4U4"| "eXHiL4U234" | "eXL4U4" | "HiL4U4" | "HiL4U34" | "cOHiL2U3" | "cOHiL3U3" | "eXU4L234" | "cOHiL2U4" | "eXL3U3" | "Lower";
+  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "cOLoL2U1" | "cOU3L4" | "LoL4U4"| "eXHiL4U234" | "eXL4U4" | "HiL4U4" | "HiL4U34" | "cOHiL2U3" | "cOHiL3U3" | "eXU4L234" | "cOHiL2U4" | "eXL3U3" | "Lower";
   classes: string;
 }
 
@@ -908,14 +908,14 @@ export function getPivotLevel(r: CPRResult): PivotLevelInfo {
  * without duplicating the switch. For the six mutually-exclusive primary
  * labels (eX-Higher/eX-Lower/cO-Higher/cO-Lower/Higher/Lower) this falls
  * back to getPivotLevel(r)'s label; for the independent, section-agnostic
- * booleans (cOLoL2U1, cOLoL4U3, LoL4U4, eXHiL4U234, eXL4U4, HiL4U4,
+ * booleans (cOLoL2U1, cOU3L4, LoL4U4, eXHiL4U234, eXL4U4, HiL4U4,
  * HiL4U34, cOHiL2U3, eXU4L234) it reads the raw flag directly — same as
  * Screener.tsx does today.
  */
 export function matchesPivotLevelFlag(r: CPRResult, label: string): boolean {
   switch (label) {
     case "cOLoL2U1": return r.cOLoL2U1;
-    case "cOLoL4U3": return r.cOLoL4U3;
+    case "cOU3L4": return r.cOU3L4;
     case "LoL4U4": return r.LoL4U4;
     case "eXHiL4U234": return r.eXHiL4U234;
     case "eXL4U4": return r.eXL4U4;

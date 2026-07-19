@@ -70,7 +70,7 @@ export interface CPRResult {
   srExpandedHigher: boolean;
   srExpandedLower: boolean;
   cOLoL2U1: boolean;
-  cOLoL4U3: boolean;
+  cOU3L4: boolean;
   cOHiL2U3: boolean;
   cOHiL3U3: boolean;
   eXLoL3U4: boolean;
@@ -249,7 +249,7 @@ export function analyzeCPR(
   const srExpandedLower    = srExpanded   && (s4Distance > r4Distance || (s4Distance === r4Distance && s3S4Gap > r3R4Gap));
   const cOLoL2U1 = (prevCPR.s1  < todayCPR.s3 && prevCPR.s1 > todayCPR.s4) &&
                     (todayCPR.r4  < prevCPR.r1 && todayCPR.r4 > prevCPR.tc);
-  const cOLoL4U3 =(todayCPR.s4 > prevCPR.s4 && todayCPR.s4 < prevCPR.s3 ) &&
+  const cOU3L4 =(todayCPR.s4 > prevCPR.s4 && todayCPR.s4 < prevCPR.s3 ) &&
                   (todayCPR.r4 > prevCPR.r2  && todayCPR.r4 < prevCPR.r3);
   const cOHiL2U3 =(todayCPR.s4 > prevCPR.s2 && todayCPR.s4 < prevCPR.s1 ) &&
                   (todayCPR.r4 > prevCPR.r2  && todayCPR.r4 < prevCPR.r3);
@@ -418,7 +418,7 @@ export function analyzeCPR(
     srExpandedHigher,
     srExpandedLower,
     cOLoL2U1,
-    cOLoL4U3,
+    cOU3L4,
     cOHiL2U3,
     cOHiL3U3,
     eXLoL3U4,

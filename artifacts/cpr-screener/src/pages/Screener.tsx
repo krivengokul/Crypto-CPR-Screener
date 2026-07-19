@@ -872,23 +872,24 @@ export default function Screener({
 
   const displayed = getActivePool()
     .filter((r) => r.symbol.toLowerCase().includes(search.toLowerCase()))
-    // NEW: cOLoL2U1 / cOLoL4U3 are independent booleans in cpr.ts (not
+    // NEW: cOLoL2U1 / cOU3L4 are independent booleans in cpr.ts (not
     // actually gated behind srLower), so a row can satisfy one of them
     // AND a higher-priority bucket (e.g. srHigher) at the same time.
     // getPivotLevel() only ever returns ONE label per row and checks the
     // other buckets first, so matching on getPivotLevel(r)?.label would
-    // silently miss rows where cOLoL2U1/cOLoL4U3 is true but shadowed by
+    // silently miss rows where cOLoL2U1/cOU3L4 is true but shadowed by
     // an earlier bucket. Check the raw flags directly for these two so
     // the filter buttons actually work independent of the primary badge.
     .filter((r) => {
       if (!pivotLevelFilter) return true;
       if (pivotLevelFilter === "cOLoL2U1") return r.cOLoL2U1;
-      if (pivotLevelFilter === "cOLoL4U3") return r.cOLoL4U3;
+      if (pivotLevelFilter === "cOU3L4") return r.cOU3L4;
       if (pivotLevelFilter === "LoL4U4") return r.LoL4U4;
       if (pivotLevelFilter === "eXHiL4U234") return r.eXHiL4U234;
       // NEW: eXL4U4 — independent, section-agnostic Pivot Level flag (see
       // doc-comment on PivotLevelInfo/getPivotLevel in ScreenerUtils.tsx).
       if (pivotLevelFilter === "eXL4U4") return r.eXL4U4;
+      if (pivotLevelFilter === "eXL3U3") return r.eXL3U3;
       // NEW: HiL4U4 — independent, section-agnostic Pivot Level flag,
       // mirror of eXL4U4 (see doc-comments in cpr.ts / ScreenerUtils.tsx).
       if (pivotLevelFilter === "HiL2U4") return r.HiL2U4;
@@ -2074,7 +2075,7 @@ export default function Screener({
                   { label: "Higher", active: "border-green-400 text-green-400" },
                   { label: "Lower", active: "border-destructive text-destructive" },
                   { label: "cOLoL2U1", active: "border-rose-400 text-rose-400" },
-                  { label: "cOLoL4U3", active: "border-amber-400 text-amber-400" },
+                  { label: "cOU3L4", active: "border-amber-400 text-amber-400" },
                   { label: "LoL4U4", active: "border-lime-400 text-lime-400" },
                   { label: "eXHiL4U234", active: "border-violet-400 text-violet-400" },
                   { label: "eXL4U4", active: "border-pink-400 text-pink-400" },
@@ -2087,6 +2088,7 @@ export default function Screener({
                   { label: "eXU4L234", active: "border-amber-400 text-amber-400" },
                   { label: "cOHiL2U4", active: "border-emerald-400 text-emerald-400" },
                   { label: "eXL3U3", active: "border-orange-400 text-orange-400" },
+                  { label: "eXU3L3", active: "border-red-400 text-red-400" },
                   { label: "cOL4U4",   active: "border-orange-400 text-orange-400" },
                   { label: "cOL3U4",   active: "border-yellow-400 text-yellow-400" },
                   { label: "cOU3L3",   active: "border-teal-400 text-teal-400" },
@@ -2366,18 +2368,18 @@ export default function Screener({
                                 );
                               })()}
                             </div>
-                            {/* NEW: cOLoL2U1 / cOLoL4U3 / LoL4U4 / eXHiL4U234 / eXL4U4 / HiL4U4 /
+                            {/* NEW: cOLoL2U1 / cOU3L4 / LoL4U4 / eXHiL4U234 / eXL4U4 / HiL4U4 /
                                 HiL4U34 / cOHiL2U3 / eXU4L234 badges — second row, Pivot Level
                                 column. These are all independent, section-agnostic booleans —
                                 they render whenever true, regardless of activePattern or any
                                 left-nav / Show All state. */}
-                            {(r.cOLoL2U1 || r.cOLoL4U3 || r.LoL4U4 || r.eXHiL4U234 || r.eXL4U4 || r.HiL4U4 || r.HiL4U34 || r.cOHiL2U3 || r.cOHiL3U3 || r.eXU4L234 || r.cOHiL2U4 || r.eXL3U3 || r.cOL4U4 || r.cOL3U4 || r.cOU3L3 || r.LoU3L4 || r.LoU3L34 || r.LoU2L4 || r.LoU2L3 || r.LoU4L34 || r.LoU4L234 || r.HiL2U4 || r.HiL3U4 || r.cOHiL2U2 || r.cOLoU2L3 || r.LoU4L1234 || r.cOLoU1L2 || r.cOLoU2L4) && (
+                            {(r.cOLoL2U1 || r.cOU3L4 || r.LoL4U4 || r.eXHiL4U234 || r.eXL4U4 || r.HiL4U4 || r.HiL4U34 || r.cOHiL2U3 || r.cOHiL3U3 || r.eXU4L234 || r.cOHiL2U4 || r.eXL3U3 || eXU3L3 || r.cOL4U4 || r.cOL3U4 || r.cOU3L3 || r.LoU3L4 || r.LoU3L34 || r.LoU2L4 || r.LoU2L3 || r.LoU4L34 || r.LoU4L234 || r.HiL2U4 || r.HiL3U4 || r.cOHiL2U2 || r.cOLoU2L3 || r.LoU4L1234 || r.cOLoU1L2 || r.cOLoU2L4) && (
                               <div className="flex flex-wrap gap-1 mt-1">
                                 {r.cOLoL2U1 && (
                                   <span className="text-xs px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 font-medium">cOLoL2U1</span>
                                 )}
-                                {r.cOLoL4U3 && (
-                                  <span className="text-xs px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium">cOLoL4U3</span>
+                                {r.cOU3L4 && (
+                                  <span className="text-xs px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium">cOU3L4</span>
                                 )}
                                 {r.LoL4U4 && (
                                   <span className="text-xs px-1.5 py-0.5 rounded bg-lime-500/10 text-lime-400 border border-lime-500/20 font-medium">LoL4U4</span>
@@ -2419,6 +2421,9 @@ export default function Screener({
                                     gaps non-zero — double-boundary expansion signal. */}
                                 {r.eXL3U3 && (
                                   <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 font-medium">eXL3U3</span>
+                                )}
+                                {r.eXU3L3 && (
+                                  <span className="text-xs px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/20 font-medium">eXU3L3</span>
                                 )}
                                 {/* NEW: cOL4U4 / cOL3U4 / cOU3L3 — independent Pivot Level flags */}
                                 {r.cOL4U4 && (
