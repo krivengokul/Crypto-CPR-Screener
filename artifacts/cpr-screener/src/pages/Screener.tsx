@@ -150,7 +150,8 @@ export default function Screener({
   const [widthFilter, setWidthFilter] = useState<WidthFilter>(null);
   // NEW: PDH/PDL filter — independent of activePattern, mutually exclusive (like pivot/width filters).
   // Replaces the removed "Price Above PDH" / "Price Below PDL" left-nav patterns.
-  const [pdhPdlFilter, setPdhPdlFilter] = useState<"above" | "below" | null>(null);
+  // NEW: "abovepu4" — price currently above previous day's R4 (Pivot U4)
+  const [pdhPdlFilter, setPdhPdlFilter] = useState<"above" | "below" | "abovepu4" | null>(null);
   const [error, setError] = useState("");
   const [countdown, setCountdown] = useState("");
   const [nextScanUtc, setNextScanUtc] = useState<Date>(getNextScanIST());
@@ -915,10 +916,11 @@ export default function Screener({
       return getPivotLevel(r)?.label === pivotLevelFilter;
     })
     .filter((r) => matchesWidthFilter(r, widthFilter))
-    // NEW: PDH/PDL filter — price above PDH or below PDL
+    // NEW: Price Level filter — price above PDH, below PDL, or above prev day's R4 (PU4)
     .filter((r) => {
       if (pdhPdlFilter === "above") return passesPattern(r, "Price-AbovePDH");
       if (pdhPdlFilter === "below") return passesPattern(r, "Price-BelowPDL");
+      if (pdhPdlFilter === "abovepu4") return r.currentPrice > r.prevCPR.r4;
       return true;
     })
     .slice()
@@ -2123,14 +2125,14 @@ export default function Screener({
               ))}
           </div>
 
-          {/* CPR Width filter buttons — 8-tier Micro→Ultra ladder (today's CPR)
-              followed by the p-prefixed previous-day variants, then PDH/PDL.
-              Order per spec: pMicro-pTiny-pMini-pSmall-pMedium-pLarge-pMega-
-              pUltra, Micro-Tiny-Mini-Small-Medium-Large-Mega-Ultra, PDH-PDL.
-              Mutually exclusive within the whole row (single widthFilter
-              state), independent of activePattern and showAll. */}
+          {/* CPR Size filter buttons — 8-tier Micro→Ultra ladder (today's CPR)
+              followed by the p-prefixed previous-day variants. Order per spec:
+              pMicro-pTiny-pMini-pSmall-pMedium-pLarge-pMega-pUltra, then
+              Micro-Tiny-Mini-Small-Medium-Large-Mega-Ultra. Mutually exclusive
+              within the whole row (single widthFilter state), independent of
+              activePattern and showAll. */}
           <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[10px] text-muted-foreground uppercase tracking-wider mr-0.5">CPR Width:</span>
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wider mr-0.5">CPR Size:</span>
               {(
                 [
                   { key: "pmicro",  label: "pMicro",  range: "≤0.10%",         active: "border-violet-400 text-violet-400" },
@@ -2164,7 +2166,13 @@ export default function Screener({
                   {widthFilter === key ? `✕ ${label}` : label}
                 </button>
               ))}
-              {/* PDH / PDL buttons — mutually exclusive with each other, placed after Ultra */}
+          </div>
+
+          {/* Price Level filter buttons — own row, below CPR Size. Mutually
+              exclusive with each other via the single pdhPdlFilter state,
+              independent of activePattern and showAll. */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wider mr-0.5">Price Level:</span>
               <button
                 onClick={() => setPdhPdlFilter((v) => (v === "above" ? null : "above"))}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
@@ -2174,7 +2182,7 @@ export default function Screener({
                 }`}
                 title="Show only rows where price is currently above yesterday's High (PDH)"
               >
-                {pdhPdlFilter === "above" ? "✕ PDH" : "PDH"}
+                {pdhPdlFilter === "above" ? "✕ >PDH" : ">PDH"}
               </button>
               <button
                 onClick={() => setPdhPdlFilter((v) => (v === "below" ? null : "below"))}
@@ -2185,7 +2193,19 @@ export default function Screener({
                 }`}
                 title="Show only rows where price is currently below yesterday's Low (PDL)"
               >
-                {pdhPdlFilter === "below" ? "✕ PDL" : "PDL"}
+                {pdhPdlFilter === "below" ? "✕ <PDL" : "<PDL"}
+              </button>
+              {/* NEW: >PU4 — price currently above previous day's R4 (Pivot U4) */}
+              <button
+                onClick={() => setPdhPdlFilter((v) => (v === "abovepu4" ? null : "abovepu4"))}
+                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                  pdhPdlFilter === "abovepu4"
+                    ? "border-emerald-400 text-emerald-400"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+                title="Show only rows where price is currently above previous day's R4 (PU4)"
+              >
+                {pdhPdlFilter === "abovepu4" ? "✕ >PU4" : ">PU4"}
               </button>
           </div>
           </div>
