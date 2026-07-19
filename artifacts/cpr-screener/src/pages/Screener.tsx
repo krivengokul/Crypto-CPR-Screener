@@ -2327,7 +2327,7 @@ export default function Screener({
                           )}
                           {/* NEW: Symbol column narrowed (w-20 on the header) and the
                               quote (e.g. "USDT"/"USD") moved onto its own row directly
-                              under the base symbol, in the SAME cell, using the SAME
+                              under the base symbol, in the SAME cell, using the SAME 
                               font-size/color (text-muted-foreground text-xs font-normal)
                               it always had — just stacked instead of inline. This lets
                               the column itself shrink since it no longer needs to fit
