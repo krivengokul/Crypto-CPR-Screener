@@ -154,9 +154,7 @@ export default function Screener({
   const [prevWidthFilter, setPrevWidthFilter] = useState<WidthCategoryKey | null>(null);
   const [todayWidthFilter, setTodayWidthFilter] = useState<WidthCategoryKey | null>(null);
   // NEW: PDH/PDL filter — independent of activePattern, mutually exclusive (like pivot/width filters).
-  // Replaces the removed "Price Above PDH" / "Price Below PDL" left-nav patterns.
-  // NEW: "abovepu4" — price currently above previous day's R4 (Pivot U4)
-  const [pdhPdlFilter, setPdhPdlFilter] = useState<"above" | "below" | "abovepu4" | null>(null);
+  const [pdhPdlFilter, setPdhPdlFilter] = useState<"above" | "below" | "abovepu4" | "belowpl4" | null>(null);
   const [error, setError] = useState("");
   const [countdown, setCountdown] = useState("");
   const [nextScanUtc, setNextScanUtc] = useState<Date>(getNextScanIST());
@@ -923,11 +921,13 @@ export default function Screener({
       return getPivotLevel(r)?.label === pivotLevelFilter;
     })
     .filter((r) => matchesWidthFilter(r, prevWidthFilter, todayWidthFilter))
-    // NEW: Price Level filter — price above PDH, below PDL, or above prev day's R4 (PU4)
+    // NEW: Price Level filter — price above PDH, below PDL, above prev day's
+    // R4 (PU4), or below prev day's S4 (PL4)
     .filter((r) => {
       if (pdhPdlFilter === "above") return passesPattern(r, "Price-AbovePDH");
       if (pdhPdlFilter === "below") return passesPattern(r, "Price-BelowPDL");
       if (pdhPdlFilter === "abovepu4") return r.currentPrice > r.prevCPR.r4;
+      if (pdhPdlFilter === "belowpl4") return r.currentPrice < r.prevCPR.s4;
       return true;
     })
     .slice()
@@ -2227,6 +2227,18 @@ export default function Screener({
                 title="Show only rows where price is currently above previous day's R4 (PU4)"
               >
                 {pdhPdlFilter === "abovepu4" ? "✕ >PU4" : ">PU4"}
+              </button>
+              {/* NEW: <PL4 — price currently below previous day's S4 (Pivot L4) */}
+              <button
+                onClick={() => setPdhPdlFilter((v) => (v === "belowpl4" ? null : "belowpl4"))}
+                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                  pdhPdlFilter === "belowpl4"
+                    ? "border-red-400 text-red-400"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+                title="Show only rows where price is currently below previous day's S4 (PL4)"
+              >
+                {pdhPdlFilter === "belowpl4" ? "✕ <PL4" : "<PL4"}
               </button>
           </div>
           </div>
