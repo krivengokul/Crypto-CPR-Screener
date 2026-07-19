@@ -86,6 +86,7 @@ export interface CPRResult {
   cOHiL2U4: boolean;
   equalCPR: boolean;
   eXL3U3: boolean;
+  eXU3L3: boolean;
   cOL4U4: boolean;
   cOL3U4: boolean;
   cOU3L3: boolean;
@@ -375,8 +376,9 @@ export function analyzeCPR(
     eqTol(prevCPR.bc, todayCPR.bc);
 
   const eXL3U3 = (prevCPR.r4 < todayCPR.r3 && prevCPR.r4 > todayCPR.r2) && 
-                  (prevCPR.s4 > todayCPR.s3 && prevCPR.s4 < todayCPR.s2);
-
+                  (prevCPR.s4 > todayCPR.s3 && prevCPR.s4 < todayCPR.s2) && srCompressedHigher;
+  const eXU3L3 = (prevCPR.r4 < todayCPR.r3 && prevCPR.r4 > todayCPR.r2) && 
+                  (prevCPR.s4 > todayCPR.s3 && prevCPR.s4 < todayCPR.s2) && srCompressedLower;
   return {
     symbol,
     todayCPR,
@@ -432,6 +434,7 @@ export function analyzeCPR(
     cOHiL2U4,
     equalCPR,
     eXL3U3,
+    eXU3L3,
     cOL4U4,
     cOL3U4,
     cOU3L3,
