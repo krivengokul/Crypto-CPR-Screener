@@ -1,4 +1,5 @@
 import { OHLC, CPRResult, analyzeCPR } from "./cpr";
+import { shouldExcludeSymbol } from "./symbolFilters";
 
 const BASE = "https://api.binance.com/api/v3";
 
@@ -101,6 +102,7 @@ export async function fetchTopUSDTSymbols(limit = 500): Promise<Ticker24h[]> {
         !t.symbol.includes("UP") &&
         !t.symbol.includes("BEAR") &&
         !t.symbol.includes("BULL") &&
+        !shouldExcludeSymbol(t.symbol) &&  // NEW: excludes stablecoins + non-ASCII tickers
         parseFloat(t.quoteVolume) > 0
     )
     .sort((a, b) => parseFloat(b.quoteVolume) - parseFloat(a.quoteVolume))

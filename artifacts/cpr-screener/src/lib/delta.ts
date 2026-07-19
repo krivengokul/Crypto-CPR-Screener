@@ -1,4 +1,5 @@
 import { OHLC, CPRResult, analyzeCPR } from "./cpr";
+import { shouldExcludeSymbol } from "./symbolFilters";
 
 const BASE = "https://api.india.delta.exchange/v2";
 
@@ -103,7 +104,9 @@ export async function fetchDeltaPerps(): Promise<DeltaTicker[]> {
     after = nextAfter;
   }
 
-  return all.sort((a, b) => (b.turnover_usd || 0) - (a.turnover_usd || 0));
+  return all
+  .filter((t) => !shouldExcludeSymbol(t.symbol)) // NEW: excludes stablecoins + non-ASCII tickers
+  .sort((a, b) => (b.turnover_usd || 0) - (a.turnover_usd || 0));
 }
 
 let _candleDebugLogged = false;
