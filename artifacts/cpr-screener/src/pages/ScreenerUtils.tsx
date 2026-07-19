@@ -326,11 +326,7 @@ export type WidthFilter =
   | "pmicro" | "ptiny" | "pmini" | "psmall" | "pmedium" | "plarge" | "pmega" | "pultra"
   | null;
 
-export function matchesWidthFilter(r: CPRResult, widthFilter: WidthFilter): boolean {
-  if (!widthFilter) return true;
-  const isPrev = widthFilter.startsWith("p");
-  const key = (isPrev ? widthFilter.slice(1) : widthFilter) as WidthCategoryKey;
-  const width = isPrev ? r.prevCPR.widthPct : r.todayCPR.widthPct;
+function widthMatchesTier(width: number, key: WidthCategoryKey): boolean {
   switch (key) {
     case "micro":  return width <= 0.10;
     case "tiny":   return width > 0.10 && width <= 0.22;
@@ -342,6 +338,26 @@ export function matchesWidthFilter(r: CPRResult, widthFilter: WidthFilter): bool
     case "ultra":  return width > 10.00;
     default: return true;
   }
+}
+
+/**
+ * CHANGED: split into two independent filters — one for prev day's CPR
+ * width (the "p"-prefixed pMicro..pUltra buttons), one for today's CPR
+ * width (the plain Micro..Ultra buttons). Previously both groups shared a
+ * single WidthFilter value, so picking one from either group always
+ * cleared the other. Now each group has its own state (see Screener.tsx:
+ * prevWidthFilter / todayWidthFilter) and both are ANDed together here —
+ * a row must satisfy whichever ones are actually selected (either, both,
+ * or neither).
+ */
+export function matchesWidthFilter(
+  r: CPRResult,
+  prevWidthFilter: WidthCategoryKey | null,
+  todayWidthFilter: WidthCategoryKey | null
+): boolean {
+  if (prevWidthFilter && !widthMatchesTier(r.prevCPR.widthPct, prevWidthFilter)) return false;
+  if (todayWidthFilter && !widthMatchesTier(r.todayCPR.widthPct, todayWidthFilter)) return false;
+  return true;
 }
 
 /**

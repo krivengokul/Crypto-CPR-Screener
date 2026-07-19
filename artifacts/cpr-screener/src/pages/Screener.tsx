@@ -29,6 +29,7 @@ import {
   type ActiveTab,
   type CPRResultWithSource,
   type WidthFilter,
+  type WidthCategoryKey,
   fmt,
   fmtPct,
   fmtVol,
@@ -147,7 +148,11 @@ export default function Screener({
   // NEW: eXHi-L4U234-U4 filter state (BigCPR Above)
   const [showeXHiL4U234, setShoweXHiL4U234] = useState(false);
   const [pivotLevelFilter, setPivotLevelFilter] = useState<PivotLevelInfo["label"] | null>(null);
-  const [widthFilter, setWidthFilter] = useState<WidthFilter>(null);
+  // CHANGED: split into two independent states so one pMicro..pUltra
+  // selection (prev day's CPR width) and one Micro..Ultra selection
+  // (today's CPR width) can be active at the same time.
+  const [prevWidthFilter, setPrevWidthFilter] = useState<WidthCategoryKey | null>(null);
+  const [todayWidthFilter, setTodayWidthFilter] = useState<WidthCategoryKey | null>(null);
   // NEW: PDH/PDL filter — independent of activePattern, mutually exclusive (like pivot/width filters).
   // Replaces the removed "Price Above PDH" / "Price Below PDL" left-nav patterns.
   // NEW: "abovepu4" — price currently above previous day's R4 (Pivot U4)
@@ -915,7 +920,7 @@ export default function Screener({
       if (pivotLevelFilter === "cOLoU2L4") return r.cOLoU2L4;
       return getPivotLevel(r)?.label === pivotLevelFilter;
     })
-    .filter((r) => matchesWidthFilter(r, widthFilter))
+    .filter((r) => matchesWidthFilter(r, prevWidthFilter, todayWidthFilter))
     // NEW: Price Level filter — price above PDH, below PDL, or above prev day's R4 (PU4)
     .filter((r) => {
       if (pdhPdlFilter === "above") return passesPattern(r, "Price-AbovePDH");
@@ -966,7 +971,7 @@ export default function Screener({
     showBigBelowPMiniPL3 || showBigBelowPMiniRising || showExpU3LtPU4 || showBigBeloweXLoL3U4AU4 || showBigBelowL1LtPL4 || showL1LtPL4CprLtPL4 || showBigBeloweXU4L234AU4 ||
     showBigAbovePL34CL4 || showBAComp || showHAU1 || showHAU1CprAbovePU4 || showHAU1L1AbovePU4 || showHAU1PWideAbove || showHRHAL || showHA55HrL4U34FAU4 || showHiL4U4FAU4 || showLBCmprss || showLBC34 || showLBE11 || showLBC2L2U2 ||
     showLBBothTiny || showLBAllUp || showExpU4PU4 || showExpU3PU3 || showOBNLoL4U4 || showOBWLoL4U4 || showOBHiExL4U4 || showeXHiL4U234 ||
-    !!pivotLevelFilter || !!widthFilter || !!pdhPdlFilter;
+    !!pivotLevelFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -2131,18 +2136,43 @@ export default function Screener({
               Micro-Tiny-Mini-Small-Medium-Large-Mega-Ultra. Mutually exclusive
               within the whole row (single widthFilter state), independent of
               activePattern and showAll. */}
+          {/* CPR Size — prev day's width (pMicro..pUltra). Own row, own state
+              (prevWidthFilter) — independent of the today's-width row below. */}
           <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[10px] text-muted-foreground uppercase tracking-wider mr-0.5">CPR Size:</span>
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wider mr-0.5">CPR Size (Prev):</span>
               {(
                 [
-                  { key: "pmicro",  label: "pMicro",  range: "≤0.10%",         active: "border-violet-400 text-violet-400" },
-                  { key: "ptiny",   label: "pTiny",   range: "0.10–0.22%",     active: "border-purple-400 text-purple-400" },
-                  { key: "pmini",   label: "pMini",   range: "0.22–0.60%",     active: "border-teal-400 text-teal-400" },
-                  { key: "psmall",  label: "pSmall",  range: "0.60–1.10%",     active: "border-indigo-400 text-indigo-400" },
-                  { key: "pmedium", label: "pMedium", range: "1.10–2.00%",     active: "border-blue-400 text-blue-400" },
-                  { key: "plarge",  label: "pLarge",  range: "2.00–5.00%",     active: "border-amber-400 text-amber-400" },
-                  { key: "pmega",   label: "pMega",   range: "5.00–10.00%",    active: "border-orange-400 text-orange-400" },
-                  { key: "pultra",  label: "pUltra",  range: ">10.00%",        active: "border-rose-400 text-rose-400" },
+                  { key: "micro",  label: "pMicro",  range: "≤0.10%",         active: "border-violet-400 text-violet-400" },
+                  { key: "tiny",   label: "pTiny",   range: "0.10–0.22%",     active: "border-purple-400 text-purple-400" },
+                  { key: "mini",   label: "pMini",   range: "0.22–0.60%",     active: "border-teal-400 text-teal-400" },
+                  { key: "small",  label: "pSmall",  range: "0.60–1.10%",     active: "border-indigo-400 text-indigo-400" },
+                  { key: "medium", label: "pMedium", range: "1.10–2.00%",     active: "border-blue-400 text-blue-400" },
+                  { key: "large",  label: "pLarge",  range: "2.00–5.00%",     active: "border-amber-400 text-amber-400" },
+                  { key: "mega",   label: "pMega",   range: "5.00–10.00%",    active: "border-orange-400 text-orange-400" },
+                  { key: "ultra",  label: "pUltra",  range: ">10.00%",        active: "border-rose-400 text-rose-400" },
+                ] as { key: WidthCategoryKey; label: string; range: string; active: string }[]
+              ).map(({ key, label, range, active }) => (
+                <button
+                  key={key}
+                  onClick={() => setPrevWidthFilter((v) => (v === key ? null : key))}
+                  className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                    prevWidthFilter === key
+                      ? active
+                      : "border-border text-muted-foreground hover:text-foreground"
+                  }`}
+                  title={`Show only rows where prev day's CPR width is ${range}`}
+                >
+                  {prevWidthFilter === key ? `✕ ${label}` : label}
+                </button>
+              ))}
+          </div>
+
+          {/* CPR Size — today's width (Micro..Ultra). Own row, own state
+              (todayWidthFilter) — can be combined with a selection above. */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wider mr-0.5">CPR Size (Today):</span>
+              {(
+                [
                   { key: "micro",   label: "Micro",   range: "≤0.10%",         active: "border-violet-400 text-violet-400" },
                   { key: "tiny",    label: "Tiny",    range: "0.10–0.22%",     active: "border-purple-400 text-purple-400" },
                   { key: "mini",    label: "Mini",    range: "0.22–0.60%",     active: "border-teal-400 text-teal-400" },
@@ -2151,19 +2181,19 @@ export default function Screener({
                   { key: "large",   label: "Large",   range: "2.00–5.00%",     active: "border-amber-400 text-amber-400" },
                   { key: "mega",    label: "Mega",    range: "5.00–10.00%",    active: "border-orange-400 text-orange-400" },
                   { key: "ultra",   label: "Ultra",   range: ">10.00%",        active: "border-rose-400 text-rose-400" },
-                ] as { key: NonNullable<WidthFilter>; label: string; range: string; active: string }[]
+                ] as { key: WidthCategoryKey; label: string; range: string; active: string }[]
               ).map(({ key, label, range, active }) => (
                 <button
                   key={key}
-                  onClick={() => setWidthFilter((v) => (v === key ? null : key))}
+                  onClick={() => setTodayWidthFilter((v) => (v === key ? null : key))}
                   className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                    widthFilter === key
+                    todayWidthFilter === key
                       ? active
                       : "border-border text-muted-foreground hover:text-foreground"
                   }`}
-                  title={`Show only rows where ${key.startsWith("p") ? "prev day's" : "today's"} CPR width is ${range}`}
+                  title={`Show only rows where today's CPR width is ${range}`}
                 >
-                  {widthFilter === key ? `✕ ${label}` : label}
+                  {todayWidthFilter === key ? `✕ ${label}` : label}
                 </button>
               ))}
           </div>
