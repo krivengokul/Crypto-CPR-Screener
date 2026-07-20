@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, Fragment } from "react";
-import { patterns } from "@/components/ui/PatternSidebar";
+import { patterns, subPatterns } from "@/components/ui/PatternSidebar";
 import {
   TrendingUp,
   RefreshCw,
@@ -421,6 +421,13 @@ export default function Screener({
     const counts: Record<string, number> = {};
     for (const p of patterns) {
       counts[p.id] = pool.filter((r) => passesPattern(r, p.id)).length;
+    }
+    // Also compute counts for each sub-pattern so the left-nav can show
+    // "LA-BothTiny (2)" style badges next to each subfilter chip.
+    for (const subs of Object.values(subPatterns)) {
+      for (const s of subs) {
+        counts[s.id] = pool.filter((r) => passesPattern(r, s.id)).length;
+      }
     }
     onCounts(counts);
   }, [allResults, deltaAllResults, activeTab, onCounts]);

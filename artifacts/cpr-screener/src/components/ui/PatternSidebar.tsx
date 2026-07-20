@@ -450,6 +450,11 @@ export default function PatternSidebar({
                           }}
                         >
                           {sub.label}
+                          {typeof counts?.[sub.id] === "number" && (
+                            <span style={{ opacity: 0.7, fontWeight: 400 }}>
+                              {" "}({counts[sub.id]})
+                            </span>
+                          )}
                         </button>
                       );
                     })}
