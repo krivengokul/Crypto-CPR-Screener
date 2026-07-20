@@ -1080,7 +1080,7 @@ export default function Screener({
                 <div className="text-xs font-semibold text-emerald-400 mb-1">Compressed Inside Previous L2 and Previous U3</div>
                 <div className="text-xs text-muted-foreground">Compressed Todays L4/U4 Inside Previous L2/U3</div>
               </>
-            ) : showLAT1U46AM && activePattern === "littleabove" ? (
+            ) : (showLAT1U46AM && activePattern === "littleabove") || activePattern === "T1-U4:6AM" ? (
               <>
                 <div className="text-xs font-semibold text-orange-400 mb-1">Pivot Level: exL3U2  PCPR: Tiny  CPR: Micro</div>
                 <div className="text-xs text-muted-foreground">Today's Pivot &gt; Prev R1, Prev CPR width 0.10%–0.22% (pTiny), Today CPR width ≤ 0.10% (Micro)</div>
