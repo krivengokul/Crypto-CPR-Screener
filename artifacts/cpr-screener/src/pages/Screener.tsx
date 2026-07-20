@@ -1204,9 +1204,9 @@ export default function Screener({
                 <div className="text-xs font-semibold text-emerald-400 mb-1">Target</div>
                 <div className="text-xs text-muted-foreground">Bullish Above PU4</div>
               </>
-            ) : showLAT1U46AM && activePattern === "littleabove" ? (
+            ) : (showLAT1U46AM && activePattern === "littleabove") || activePattern === "T1-U4:6AM" ? (
               <>
-                <div className="text-xs font-semibold text-orange-400 mb-1">Exp Target: U4  Time: 6AM</div>
+                <div className="text-xs font-semibold text-orange-400 mb-1">Expected Target: U4<br />Time: 6AM</div>
                 <div className="text-xs text-muted-foreground">Expected upside target U4 by ~6AM</div>
               </>
             ) : showLBE11 && activePattern === "littlebelow" ? (
