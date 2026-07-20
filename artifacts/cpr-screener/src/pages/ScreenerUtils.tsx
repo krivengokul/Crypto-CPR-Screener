@@ -875,9 +875,14 @@ export function getSubFilterDirection(r: CPRResult, activePattern: string): SubF
  * r.eXU4L234 directly, regardless of activePattern/left-nav section. The
  * "eXU4L234-AU4" *pattern* (Big Below) additionally requires strWideCPR +
  * cprFalling + extra R3/pivot/width conditions on top of this raw flag.
+ *
+ * NEW: cOU1L1 / cOL1U1 / cOU2L2 / cOL2U2 — same treatment again:
+ * independent, section-agnostic booleans (from cpr.ts). Not returned as the
+ * primary label here; Screener.tsx renders them as their own second-row
+ * badges and Pivot Level filter buttons, checking the raw flags directly.
  */
 export interface PivotLevelInfo {
-  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "cOLoL2U1" | "cOU3L4" | "LoL4U4"| "eXHiL4U234" | "eXL4U4" | "HiL4U4" | "HiL4U34" | "cOHiL2U3" | "cOHiL3U3" | "eXU4L234" | "cOHiL2U4" | "eXL3U3" | "eXL2U1" | "eXL3U1" | "eXL4U1" | "eXL1CPR" | "eXL2CPR" | "eXL3CPR" | "Lower";
+  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "cOLoL2U1" | "cOU3L4" | "LoL4U4"| "eXHiL4U234" | "eXL4U4" | "HiL4U4" | "HiL4U34" | "cOHiL2U3" | "cOHiL3U3" | "eXU4L234" | "cOHiL2U4" | "eXL3U3" | "eXL2U1" | "eXL3U1" | "eXL4U1" | "eXL1CPR" | "eXL2CPR" | "eXL3CPR" | "cOU1L1" | "cOL1U1" | "cOU2L2" | "cOL2U2" | "Lower";
   classes: string;
 }
 
@@ -909,8 +914,8 @@ export function getPivotLevel(r: CPRResult): PivotLevelInfo {
  * labels (eX-Higher/eX-Lower/cO-Higher/cO-Lower/Higher/Lower) this falls
  * back to getPivotLevel(r)'s label; for the independent, section-agnostic
  * booleans (cOLoL2U1, cOU3L4, LoL4U4, eXHiL4U234, eXL4U4, HiL4U4,
- * HiL4U34, cOHiL2U3, eXU4L234) it reads the raw flag directly — same as
- * Screener.tsx does today.
+ * HiL4U34, cOHiL2U3, eXU4L234, cOU1L1, cOL1U1, cOU2L2, cOL2U2) it reads
+ * the raw flag directly — same as Screener.tsx does today.
  */
 export function matchesPivotLevelFlag(r: CPRResult, label: string): boolean {
   switch (label) {
@@ -933,6 +938,11 @@ export function matchesPivotLevelFlag(r: CPRResult, label: string): boolean {
     case "eXL1CPR": return r.eXL1CPR;
     case "eXL2CPR": return r.eXL2CPR;
     case "eXL3CPR": return r.eXL3CPR;
+    // NEW: cOU1L1 / cOL1U1 / cOU2L2 / cOL2U2
+    case "cOU1L1": return r.cOU1L1;
+    case "cOL1U1": return r.cOL1U1;
+    case "cOU2L2": return r.cOU2L2;
+    case "cOL2U2": return r.cOL2U2;
     default: return getPivotLevel(r)?.label === label;
   }
 }

@@ -103,7 +103,6 @@ export interface CPRResult {
   cOLoU2L4: boolean;
   // NEW: eXL*U1 / eXL*CPR — Expanded-Higher sub-type pivot badges.
   // These narrow "eX-Higher" into specific S/R bands for the U1>pU4 section.
-  // All require srExpandedHigher; they are unconditional and section-agnostic.
   //   eXL2U1:  prevS4 in today's L2 band (s1/s2),  prevR4 in today's U1 band (tc/r1)
   //   eXL3U1:  prevS4 in today's L3 band (s2/s3),  prevR4 in today's U1 band (tc/r1)
   //   eXL4U1:  prevS4 in today's L4 band (s3/s4),  prevR4 in today's U1 band (tc/r1)
@@ -116,6 +115,20 @@ export interface CPRResult {
   eXL1CPR: boolean;
   eXL2CPR: boolean;
   eXL3CPR: boolean;
+  // NEW: cOU1L1 / cOL1U1 / cOU2L2 / cOL2U2 — independent, section-agnostic
+  // Pivot Level badges (see doc-comment above getPivotLevel in
+  // ScreenerUtils.tsx for how these are surfaced/filterable).
+  //   cOU1L1: today's S4 in prev L1 band (s1→tc), today's R4 in prev U1 band
+  //           (bc→r1), AND the R1-side move (|prevR1-todayR1|) is bigger
+  //           than the S1-side move (|prevS1-todayS1|)
+  //   cOL1U1: same bands as cOU1L1, but the S1-side move is bigger
+  //   cOU2L2: today's S4 in prev L2 band (s2→s1), today's R4 in prev U2
+  //           band (r1→r2), AND today's S3 is below prev S1
+  //   cOL2U2: same bands as cOU2L2, but today's R3 is above prev R1
+  cOU1L1: boolean;
+  cOL1U1: boolean;
+  cOU2L2: boolean;
+  cOL2U2: boolean;
   passes: boolean;
   currentPrice: number;
   openPrice: number;
@@ -395,27 +408,38 @@ export function analyzeCPR(
   const eXU3L3 = (prevCPR.r4 < todayCPR.r3 && prevCPR.r4 > todayCPR.r2) && 
                   (prevCPR.s4 > todayCPR.s3 && prevCPR.s4 < todayCPR.s2) && srExpandedLower;
 
-  // NEW: eXL*U1 — prevS4 in today's L2/L3/L4 band, prevR4 in today's U1 band (tc→r1), wide above
+  // NEW: eXL*U1 — prevS4 in today's L2/L3/L4 band, prevR4 in today's U1 band (tc→r1)
   const eXL2U1 = (prevCPR.s4 > todayCPR.s2 && prevCPR.s4 < todayCPR.s1) &&
-                 (prevCPR.r4 > todayCPR.tc  && prevCPR.r4 < todayCPR.r1) &&
-                 srExpandedHigher;
+                 (prevCPR.r4 > todayCPR.tc  && prevCPR.r4 < todayCPR.r1);
   const eXL3U1 = (prevCPR.s4 > todayCPR.s3 && prevCPR.s4 < todayCPR.s2) &&
-                 (prevCPR.r4 > todayCPR.tc  && prevCPR.r4 < todayCPR.r1) &&
-                 srExpandedHigher;
+                 (prevCPR.r4 > todayCPR.tc  && prevCPR.r4 < todayCPR.r1);
   const eXL4U1 = (prevCPR.s4 > todayCPR.s4 && prevCPR.s4 < todayCPR.s3) &&
-                 (prevCPR.r4 > todayCPR.tc  && prevCPR.r4 < todayCPR.r1) &&
-                 srExpandedHigher;
+                 (prevCPR.r4 > todayCPR.tc  && prevCPR.r4 < todayCPR.r1);
 
-  // NEW: eXL*CPR — prevS4 in today's L1/L2/L3 band, prevR4 inside today's CPR (s1→bc), wide above
+  // NEW: eXL*CPR — prevS4 in today's L1/L2/L3 band, prevR4 inside today's CPR (s1→bc)
   const eXL1CPR = (prevCPR.s4 > todayCPR.s1 && prevCPR.s4 < todayCPR.bc) &&
-                  (prevCPR.r4 > todayCPR.s1 && prevCPR.r4 < todayCPR.bc) &&
-                  srExpandedHigher;
+                  (prevCPR.r4 > todayCPR.s1 && prevCPR.r4 < todayCPR.bc);
   const eXL2CPR = (prevCPR.s4 > todayCPR.s2 && prevCPR.s4 < todayCPR.s1) &&
-                  (prevCPR.r4 > todayCPR.s1 && prevCPR.r4 < todayCPR.bc) &&
-                  srExpandedHigher;
+                  (prevCPR.r4 > todayCPR.s1 && prevCPR.r4 < todayCPR.bc);
   const eXL3CPR = (prevCPR.s4 > todayCPR.s3 && prevCPR.s4 < todayCPR.s2) &&
-                  (prevCPR.r4 > todayCPR.s1 && prevCPR.r4 < todayCPR.bc) &&
-                  srExpandedHigher;
+                  (prevCPR.r4 > todayCPR.s1 && prevCPR.r4 < todayCPR.bc);
+
+  // NEW: cOU1L1 / cOL1U1 — today's S4 in prev L1 band (s1→tc), today's R4 in
+  // prev U1 band (bc→r1); split by which side (R1 vs S1) moved further
+  // between prev-day and today (normalized-free, raw price gap per spec).
+  const r1Move = Math.abs(prevCPR.r1 - todayCPR.r1);
+  const s1Move = Math.abs(prevCPR.s1 - todayCPR.s1);
+  const cOU1L1Base = (todayCPR.s4 > prevCPR.s1 && todayCPR.s4 < prevCPR.tc) &&
+                      (todayCPR.r4 > prevCPR.bc && todayCPR.r4 < prevCPR.r1);
+  const cOU1L1 = cOU1L1Base && r1Move > s1Move;
+  const cOL1U1 = cOU1L1Base && r1Move < s1Move;
+
+  // NEW: cOU2L2 / cOL2U2 — today's S4 in prev L2 band (s2→s1), today's R4 in
+  // prev U2 band (r1→r2); split by an extra confirming condition on the S3/R3 side.
+  const cOU2L2Base = (todayCPR.s4 > prevCPR.s2 && todayCPR.s4 < prevCPR.s1) &&
+                      (todayCPR.r4 > prevCPR.r1 && todayCPR.r4 < prevCPR.r2);
+  const cOU2L2 = cOU2L2Base && todayCPR.s3 < prevCPR.s1;
+  const cOL2U2 = cOU2L2Base && todayCPR.r3 > prevCPR.r1;
 
   return {
     symbol,
@@ -493,6 +517,10 @@ export function analyzeCPR(
     eXL1CPR,
     eXL2CPR,
     eXL3CPR,
+    cOU1L1,
+    cOL1U1,
+    cOU2L2,
+    cOL2U2,
     passes: cprRising && cprNarrowing,
     currentPrice,
     openPrice: openPrice ?? todayCandle.open,
