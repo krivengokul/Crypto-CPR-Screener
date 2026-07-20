@@ -310,9 +310,9 @@ export function analyzeCPR(
                  (prevCPR.r3 > todayCPR.r3 && prevCPR.r3 < todayCPR.r4);
   // cOL4U4: today's S4 sits in the prev L4–L3 band, today's R4 sits in the prev U3–U4 band
   const cOL4U4 = (todayCPR.s4 > prevCPR.s4 && todayCPR.s4 < prevCPR.s3) &&
-                 (todayCPR.r4 > prevCPR.r3 && todayCPR.r4 < prevCPR.r4);
+                 (todayCPR.r4 > prevCPR.r3 && todayCPR.r4 < prevCPR.r4) && srCompressedHigher;
   const cOU4L4 = (todayCPR.s4 > prevCPR.s4 && todayCPR.s4 < prevCPR.s3) && 
-                  (todayCPR.r4 > prevCPR.r3 && todayCPR.r4 < prevCPR.r4);
+                  (todayCPR.r4 > prevCPR.r3 && todayCPR.r4 < prevCPR.r4) && srCompressedLower;
   // cOL3U4: today's S4 sits in the prev L3–L2 band, today's R4 sits in the prev U3–U4 band
   const cOL3U4 = (todayCPR.s4 > prevCPR.s3 && todayCPR.s4 < prevCPR.s2) &&
                  (todayCPR.r4 > prevCPR.r3 && todayCPR.r4 < prevCPR.r4);
