@@ -931,6 +931,7 @@ export default function Screener({
       if (pivotLevelFilter === "cOL1U1") return r.cOL1U1;
       if (pivotLevelFilter === "cOU2L2") return r.cOU2L2;
       if (pivotLevelFilter === "cOL2U2") return r.cOL2U2;
+      if (pivotLevelFilter === "cOU4L4") return r.cOU4L4;
       return getPivotLevel(r)?.label === pivotLevelFilter;
     })
     .filter((r) => matchesWidthFilter(r, prevWidthFilter, todayWidthFilter))
@@ -2128,6 +2129,8 @@ export default function Screener({
                   { label: "cOL1U1",   active: "border-cyan-400 text-cyan-400" },
                   { label: "cOU2L2",   active: "border-emerald-400 text-emerald-400" },
                   { label: "cOL2U2",   active: "border-lime-400 text-lime-400" },
+                  // NEW: cOU4L4 — independent, section-agnostic Pivot Level flag (see cpr.ts).
+                  { label: "cOU4L4",   active: "border-orange-400 text-orange-400" },
                 ] as { label: PivotLevelInfo["label"]; active: string }[]
               ).map(({ label, active }) => (
                 <button
@@ -2434,7 +2437,7 @@ export default function Screener({
                                 column. These are all independent, section-agnostic booleans —
                                 they render whenever true, regardless of activePattern or any
                                 left-nav / Show All state. */}
-                            {(r.cOLoL2U1 || r.cOU3L4 || r.LoL4U4 || r.eXHiL4U234 || r.eXL4U4 || r.HiL4U4 || r.HiL4U34 || r.cOHiL2U3 || r.cOHiL3U3 || r.eXU4L234 || r.cOHiL2U4 || r.eXL3U3 || r.eXU3L3 || r.cOL4U4 || r.cOL3U4 || r.cOU3L3 || r.LoU3L4 || r.LoU3L34 || r.LoU2L4 || r.LoU2L3 || r.LoU4L34 || r.LoU4L234 || r.HiL2U4 || r.HiL3U4 || r.cOLoU2L3 || r.LoU4L1234 || r.cOLoU1L2 || r.cOLoU2L4 || r.eXL2U1 || r.eXL3U1 || r.eXL4U1 || r.eXL1CPR || r.eXL2CPR || r.eXL3CPR || r.cOU1L1 || r.cOL1U1 || r.cOU2L2 || r.cOL2U2) && (
+                            {(r.cOLoL2U1 || r.cOU3L4 || r.LoL4U4 || r.eXHiL4U234 || r.eXL4U4 || r.HiL4U4 || r.HiL4U34 || r.cOHiL2U3 || r.cOHiL3U3 || r.eXU4L234 || r.cOHiL2U4 || r.eXL3U3 || r.eXU3L3 || r.cOL4U4 || r.cOL3U4 || r.cOU3L3 || r.LoU3L4 || r.LoU3L34 || r.LoU2L4 || r.LoU2L3 || r.LoU4L34 || r.LoU4L234 || r.HiL2U4 || r.HiL3U4 || r.cOLoU2L3 || r.LoU4L1234 || r.cOLoU1L2 || r.cOLoU2L4 || r.eXL2U1 || r.eXL3U1 || r.eXL4U1 || r.eXL1CPR || r.eXL2CPR || r.eXL3CPR || r.cOU1L1 || r.cOL1U1 || r.cOU2L2 || r.cOL2U2 || r.cOU4L4) && (
                               <div className="flex flex-wrap gap-1 mt-1">
                                 {r.cOLoL2U1 && (
                                   <span className="text-xs px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 font-medium">cOLoL2U1</span>
@@ -2539,6 +2542,10 @@ export default function Screener({
                                 )}
                                 {r.cOL2U2 && (
                                   <span className="text-xs px-1.5 py-0.5 rounded bg-lime-500/10 text-lime-400 border border-lime-500/20 font-medium">cOL2U2</span>
+                                )}
+                                {/* NEW: cOU4L4 — independent, section-agnostic Pivot Level flag (see cpr.ts). */}
+                                {r.cOU4L4 && (
+                                  <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 font-medium">cOU4L4</span>
                                 )}
                                 {/* eXL*U1 / eXL*CPR — Pivot Level sub-band badges. In U1>pU4 mode
                                     (left-nav "u1-gt-pu4" OR the Big-Above U1>PU4 sub-toggle) these
