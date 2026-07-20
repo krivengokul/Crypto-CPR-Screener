@@ -436,10 +436,12 @@ export function analyzeCPR(
 
   // NEW: cOU2L2 / cOL2U2 — today's S4 in prev L2 band (s2→s1), today's R4 in
   // prev U2 band (r1→r2); split by an extra confirming condition on the S3/R3 side.
+  const r2Move = Math.abs(prevCPR.r2 - todayCPR.r2);
+  const s2Move = Math.abs(prevCPR.s2 - todayCPR.s2);
   const cOU2L2Base = (todayCPR.s4 > prevCPR.s2 && todayCPR.s4 < prevCPR.s1) &&
                       (todayCPR.r4 > prevCPR.r1 && todayCPR.r4 < prevCPR.r2);
-  const cOU2L2 = cOU2L2Base && todayCPR.s3 < prevCPR.s1;
-  const cOL2U2 = cOU2L2Base && todayCPR.r3 > prevCPR.r1;
+  const cOU2L2 = cOU2L2Base && r2Move > s2Move;
+  const cOL2U2 = cOU2L2Base && r2Move < s2Move;
 
   return {
     symbol,
