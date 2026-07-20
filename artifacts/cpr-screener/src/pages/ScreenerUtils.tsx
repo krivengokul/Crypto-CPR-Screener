@@ -1006,6 +1006,24 @@ export function computePivotSubLabel(today: CPRLevels, prev: CPRLevels | undefin
   if ((prev.r4 < today.r3 && prev.r4 > today.r2) && (prev.s4 > today.s3 && prev.s4 < today.s2) && srExpandedHigher) return "eXL3U3";
   if ((prev.r4 < today.r3 && prev.r4 > today.r2) && (prev.s4 > today.s3 && prev.s4 < today.s2) && srExpandedLower) return "eXU3L3";
 
+  // NEW: cOU1L1 / cOL1U1 — today's S4 in prev L1 band (s1→tc), today's R4 in prev U1 band (bc→r1)
+  // split by which side (R1 vs S1) moved further
+  const r1Move = Math.abs(today.r1 - prev.r1);
+  const s1Move = Math.abs(today.s1 - prev.s1);
+  const cOU1L1Base = (today.s4 > prev.s1 && today.s4 < prev.tc) &&
+                      (today.r4 > prev.bc && today.r4 < prev.r1);
+  if (cOU1L1Base && r1Move > s1Move) return "cOU1L1";
+  if (cOU1L1Base && r1Move < s1Move) return "cOL1U1";
+
+  // NEW: cOU2L2 / cOL2U2 — today's S4 in prev L2 band (s2→s1), today's R4 in prev U2 band (r1→r2)
+  // split by which side (R2 vs S2) moved further
+  const r2Move = Math.abs(today.r2 - prev.r2);
+  const s2Move = Math.abs(today.s2 - prev.s2);
+  const cOU2L2Base = (today.s4 > prev.s2 && today.s4 < prev.s1) &&
+                      (today.r4 > prev.r1 && today.r4 < prev.r2);
+  if (cOU2L2Base && r2Move > s2Move) return "cOU2L2";
+  if (cOU2L2Base && r2Move < s2Move) return "cOL2U2";
+
   return null;
 }
 

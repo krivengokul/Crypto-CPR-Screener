@@ -88,6 +88,7 @@ export interface CPRResult {
   eXL3U3: boolean;
   eXU3L3: boolean;
   cOL4U4: boolean;
+  cOU4L4: boolean;
   cOL3U4: boolean;
   cOU3L3: boolean;
   LoU3L4: boolean;
@@ -310,6 +311,8 @@ export function analyzeCPR(
   // cOL4U4: today's S4 sits in the prev L4–L3 band, today's R4 sits in the prev U3–U4 band
   const cOL4U4 = (todayCPR.s4 > prevCPR.s4 && todayCPR.s4 < prevCPR.s3) &&
                  (todayCPR.r4 > prevCPR.r3 && todayCPR.r4 < prevCPR.r4);
+  const cOU4L4 = (todayCPR.s4 > prevCPR.s4 && todayCPR.s4 < prevCPR.s3) && 
+                  (todayCPR.r4 > prevCPR.r3 && todayCPR.r4 < prevCPR.r4);
   // cOL3U4: today's S4 sits in the prev L3–L2 band, today's R4 sits in the prev U3–U4 band
   const cOL3U4 = (todayCPR.s4 > prevCPR.s3 && todayCPR.s4 < prevCPR.s2) &&
                  (todayCPR.r4 > prevCPR.r3 && todayCPR.r4 < prevCPR.r4);
@@ -500,6 +503,7 @@ export function analyzeCPR(
     eXL3U3,
     eXU3L3,
     cOL4U4,
+    cOU4L4,
     cOL3U4,
     cOU3L3,
     LoU3L4,
