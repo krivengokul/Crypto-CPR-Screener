@@ -128,6 +128,8 @@ export default function Screener({
   const [showHRHAL, setShowHRHAL] = useState(false);
   // NEW: 1T-HiL4U4-FAU4 — BigCPR Above, placed next to hR-HAL/HA55-HrL4U34-FAU4
   const [showHiL4U4FAU4, setShowHiL4U4FAU4] = useState(false);
+  // NEW: 1S-cOHi-FAU4:1AM filter state — BigCPR Above
+  const [show1ScoHiFAU4, setShow1ScoHiFAU4] = useState(false);
   // NEW: LB Compressed filter state
   const [showLBCmprss, setShowLBCmprss] = useState(false);
   const [showLBC34, setShowLBC34] = useState(false);
@@ -404,7 +406,7 @@ export default function Screener({
     // NEW: reset eXHi-L4U4-U4 toggle when leaving Overlapping Higher
     if (activePattern !== "overlapping-higher") { setShowOBHiExL4U4(false); }
     if (activePattern !== "structure-bigbelow") { setShowBigBelowPMiniPL3(false); setShowBigBelowPMiniRising(false); pMiniRisingAlertedRef.current.clear(); setShowExpU3LtPU4(false); setShowBigBeloweXLoL3U4AU4(false); setShowBigBelowL1LtPL4(false); setShowL1LtPL4CprLtPL4(false); setShowBigBeloweXU4L234AU4(false); }
-    if (activePattern !== "structure-bigabove") { setShowBigAbovePL34CL4(false); setShowBAComp(false); setShowHAU1(false); setShowHAU1CprAbovePU4(false); setShowHAU1L1AbovePU4(false); setShowHAU1PWideAbove(false); setShowHRHAL(false); setShowHA55HrL4U34FAU4(false); setShoweXHiL4U234(false); setShowHiL4U4FAU4(false); }
+    if (activePattern !== "structure-bigabove") { setShowBigAbovePL34CL4(false); setShowBAComp(false); setShowHAU1(false); setShowHAU1CprAbovePU4(false); setShowHAU1L1AbovePU4(false); setShowHAU1PWideAbove(false); setShowHRHAL(false); setShowHA55HrL4U34FAU4(false); setShoweXHiL4U234(false); setShowHiL4U4FAU4(false); setShow1ScoHiFAU4(false); }
     // Reset LB Compressed / LB-C34 / lbE11-cOLoL3U2-PU4 / LB-cO2-L2U2 / LB-BothTiny / LB-AllUp when leaving littlebelow
     if (activePattern !== "littlebelow") { setShowLBCmprss(false); setShowLBC34(false); setShowLBE11(false); setShowLBC2L2U2(false); setShowLBBothTiny(false); setShowLBAllUp(false); }
   }, [activePattern, allResults, deltaAllResults]);
@@ -685,6 +687,18 @@ export default function Screener({
         .map((r) => ({ ...r, source: "binance" as const }));
       const deltaIntersect = deltaAllResults
         .filter((r) => passesPattern(r, "1T-HiL4U4-FAU4"))
+        .map((r) => ({ ...r, source: "delta" as const }));
+      if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
+      if (activeTab === "delta") return deltaIntersect;
+      return binanceIntersect;
+    }
+    // NEW: 1S-cOHi-FAU4:1AM pool — BigCPR Above
+    if (show1ScoHiFAU4 && activePattern === "structure-bigabove") {
+      const binanceIntersect = allResults
+        .filter((r) => passesPattern(r, "1S-cOHi-FAU4:1AM"))
+        .map((r) => ({ ...r, source: "binance" as const }));
+      const deltaIntersect = deltaAllResults
+        .filter((r) => passesPattern(r, "1S-cOHi-FAU4:1AM"))
         .map((r) => ({ ...r, source: "delta" as const }));
       if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
       if (activeTab === "delta") return deltaIntersect;
@@ -1003,7 +1017,7 @@ export default function Screener({
     showLABothTiny || showLAAllUp || showLA1LHr || showLAPL12CL23 || showLACompressed || showLAT1U46AM ||
     showOutsideCPRCompressed || showOutsideCPReXHrL3U3AU4 || showInsideCPRExpanded || showInsideCPRNarrow || showInsideCPRCoU4L3 ||
     showBigBelowPMiniPL3 || showBigBelowPMiniRising || showExpU3LtPU4 || showBigBeloweXLoL3U4AU4 || showBigBelowL1LtPL4 || showL1LtPL4CprLtPL4 || showBigBeloweXU4L234AU4 ||
-    showBigAbovePL34CL4 || showBAComp || showHAU1 || showHAU1CprAbovePU4 || showHAU1L1AbovePU4 || showHAU1PWideAbove || showHRHAL || showHA55HrL4U34FAU4 || showHiL4U4FAU4 || showLBCmprss || showLBC34 || showLBE11 || showLBC2L2U2 ||
+    showBigAbovePL34CL4 || showBAComp || showHAU1 || showHAU1CprAbovePU4 || showHAU1L1AbovePU4 || showHAU1PWideAbove || showHRHAL || showHA55HrL4U34FAU4 || showHiL4U4FAU4 || show1ScoHiFAU4 || showLBCmprss || showLBC34 || showLBE11 || showLBC2L2U2 ||
     showLBBothTiny || showLBAllUp || showExpU4PU4 || showExpU3PU3 || showOBNLoL4U4 || showOBWLoL4U4 || showOBHiExL4U4 || showeXHiL4U234 ||
     !!pivotLevelFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter;
 
@@ -1146,6 +1160,11 @@ export default function Screener({
                 <div className="text-xs font-semibold text-fuchsia-400 mb-1">1T-HiL4U4-FAU4</div>
                 <div className="text-xs text-muted-foreground">Wide Above + HiL4U4 (Prev R4 inside Today&apos;s R3/R4, Today&apos;s S4 inside Prev S3/S4), Prev CPR pMicro, Today CPR Tiny</div>
               </>
+            ) : show1ScoHiFAU4 && activePattern === "structure-bigabove" ? (
+              <>
+                <div className="text-xs font-semibold text-teal-400 mb-1">Pivot Level: cOL3U4  PCPR: Tiny  CPR: Small</div>
+                <div className="text-xs text-muted-foreground">Pivot cOL3U4, Today&apos;s S1 &gt; Prev Pivot, Prev CPR width ≤ 0.10% (Tiny), Today CPR width 0.60%–1.10% (Small)</div>
+              </>
             ) : showHAU1L1AbovePU4 && activePattern === "structure-bigabove" ? (
               <>
                 <div className="text-xs font-semibold text-lime-400 mb-1">L1 &gt; Previous U4</div>
@@ -1268,6 +1287,11 @@ export default function Screener({
               <>
                 <div className="text-xs font-semibold text-emerald-400 mb-1">Target</div>
                 <div className="text-xs text-muted-foreground">Tight compression breaking wide above prior structure — potential to run far above U4</div>
+              </>
+            ) : show1ScoHiFAU4 && activePattern === "structure-bigabove" ? (
+              <>
+                <div className="text-xs font-semibold text-teal-400 mb-1">Exp Target: Far Above U4 (T-5 U4)<br />Time: 1AM</div>
+                <div className="text-xs text-muted-foreground">Expected upside far above U4 (T-5 U4) by ~1AM</div>
               </>
             ) : showHAU1L1AbovePU4 && activePattern === "structure-bigabove" ? (
               <>
@@ -1395,6 +1419,7 @@ export default function Screener({
                   setShowHRHAL(false);
                   setShowHA55HrL4U34FAU4(false);
                   setShowHiL4U4FAU4(false);
+                  setShow1ScoHiFAU4(false);
                   setShowLBCmprss(false);
                   setShowLBC34(false);
                   setShowLBE11(false);
@@ -1477,6 +1502,7 @@ export default function Screener({
                   setShowHAU1L1AbovePU4(false);
                   setShowHAU1PWideAbove(false);
                   setShowHiL4U4FAU4(false);
+                  setShow1ScoHiFAU4(false);
                 }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showHRHAL
@@ -1501,6 +1527,7 @@ export default function Screener({
                   setShowHAU1PWideAbove(false); 
                   setShowHRHAL(false); 
                   setShowHiL4U4FAU4(false);
+                  setShow1ScoHiFAU4(false);
                 }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showHA55HrL4U34FAU4
@@ -1527,6 +1554,7 @@ export default function Screener({
                   setShowHAU1PWideAbove(false);
                   setShowHRHAL(false);
                   setShowHA55HrL4U34FAU4(false);
+                  setShow1ScoHiFAU4(false);
                 }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showHiL4U4FAU4
@@ -1536,6 +1564,33 @@ export default function Screener({
                 title="Wide Above + HiL4U4 (Prev R4 inside today's R3/R4, Today's S4 inside Prev S3/S4) + Prev CPR pMicro (<=0.10%) + Today CPR Tiny (0.10%-0.25%)"
               >
                 {showHiL4U4FAU4 ? "✕ 1T-HiL4U4-FAU4" : "1T-HiL4U4-FAU4"}
+              </button>
+            )}
+            {/* NEW: 1S-cOHi-FAU4:1AM button — BigCPR Above.
+                Pivot cOL3U4 + today's S1 > prev pivot + prev CPR ≤0.10% +
+                today CPR 0.60%–1.10%. */}
+            {activePattern === "structure-bigabove" && !showAll && (
+              <button
+                onClick={() => {
+                  setShow1ScoHiFAU4((v) => !v);
+                  setShowBigAbovePL34CL4(false);
+                  setShowBAComp(false);
+                  setShowHAU1(false);
+                  setShowHAU1CprAbovePU4(false);
+                  setShowHAU1L1AbovePU4(false);
+                  setShowHAU1PWideAbove(false);
+                  setShowHRHAL(false);
+                  setShowHA55HrL4U34FAU4(false);
+                  setShowHiL4U4FAU4(false);
+                }}
+                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                  show1ScoHiFAU4
+                    ? "border-teal-400 text-teal-400"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+                title="Pivot cOL3U4 + Today's S1 > Prev Pivot + Prev CPR width ≤ 0.10% + Today CPR width 0.60%–1.10%"
+              >
+                {show1ScoHiFAU4 ? "✕ 1S-cOHi-FAU4:1AM" : "1S-cOHi-FAU4:1AM"}
               </button>
             )}
             {/* NEW: LB-BothTiny button — replaces hidden "TinyBelow - Both Tiny" left-nav item */}
