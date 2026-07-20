@@ -2520,32 +2520,32 @@ export default function Screener({
                                 {r.cOLoU2L4 && (
                                   <span className="text-xs px-1.5 py-0.5 rounded bg-lime-500/10 text-lime-400 border border-lime-500/20 font-medium">cOLoU2L4</span>
                                 )}
-                                {/* NEW: eXL*U1 / eXL*CPR — Pivot Level sub-band badges.
-                                {/* NEW:                                     In U1>pU4 mode (left-nav "u1-gt-pu4" OR Big-Above sub-toggle)
-                                {/* NEW:                                     these already appear in row 1 — skip here to avoid
-                                {/* NEW:                                     duplication. In all other sections they show unconditionally. */}
-                                {/* NEW: {!(activePattern === "u1-gt-pu4" || (showHAU1 && activePattern === "structure-bigabove")) && (
-                                {/* NEW:   <>
-                                {/* NEW:     {r.eXL2U1 && (
-                                {/* NEW:       <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20 font-medium">eXL2U1</span>
-                                {/* NEW:     )}
-                                {/* NEW:     {r.eXL3U1 && (
-                                {/* NEW:       <span className="text-xs px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20 font-medium">eXL3U1</span>
-                                {/* NEW:     )}
-                                {/* NEW:     {r.eXL4U1 && (
-                                {/* NEW:       <span className="text-xs px-1.5 py-0.5 rounded bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/20 font-medium">eXL4U1</span>
-                                {/* NEW:     )}
-                                {/* NEW:     {r.eXL1CPR && (
-                                {/* NEW:       <span className="text-xs px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-medium">eXL1CPR</span>
-                                {/* NEW:     )}
-                                {/* NEW:     {r.eXL2CPR && (
-                                {/* NEW:       <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">eXL2CPR</span>
-                                {/* NEW:     )}
-                                {/* NEW:     {r.eXL3CPR && (
-                                {/* NEW:       <span className="text-xs px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-medium">eXL3CPR</span>
-                                {/* NEW:     )}
-                                {/* NEW:   </>
-                                {/* NEW: )}
+                                {/* eXL*U1 / eXL*CPR — Pivot Level sub-band badges. In U1>pU4 mode
+                                    (left-nav "u1-gt-pu4" OR the Big-Above U1>PU4 sub-toggle) these
+                                    already appear in row 1 above, so they're skipped here to avoid
+                                    showing twice. In every other section they render normally. */}
+                                {!(activePattern === "u1-gt-pu4" || (showHAU1 && activePattern === "structure-bigabove")) && (
+                                  <>
+                                    {r.eXL2U1 && (
+                                      <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20 font-medium">eXL2U1</span>
+                                    )}
+                                    {r.eXL3U1 && (
+                                      <span className="text-xs px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20 font-medium">eXL3U1</span>
+                                    )}
+                                    {r.eXL4U1 && (
+                                      <span className="text-xs px-1.5 py-0.5 rounded bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/20 font-medium">eXL4U1</span>
+                                    )}
+                                    {r.eXL1CPR && (
+                                      <span className="text-xs px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-medium">eXL1CPR</span>
+                                    )}
+                                    {r.eXL2CPR && (
+                                      <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">eXL2CPR</span>
+                                    )}
+                                    {r.eXL3CPR && (
+                                      <span className="text-xs px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-medium">eXL3CPR</span>
+                                    )}
+                                  </>
+                                )}
                               </div>
                             )}
                             {/* NEW: U1>pU4 sub-category row — previous day's CPR sub-label.
