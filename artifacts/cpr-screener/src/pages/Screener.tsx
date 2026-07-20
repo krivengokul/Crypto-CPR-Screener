@@ -2381,15 +2381,18 @@ export default function Screener({
                             </div>
                           </td>
                           {/* Pivot Level column — first row: directional badge.
-                              When U1>pU4 is active (showHAU1 + structure-bigabove),
-                              eX-Higher is replaced by the specific eXL*U1/eXL*CPR
-                              sub-badges that apply to this row. eX-Higher is hidden
-                              in that mode. In all other modes eX-Higher shows normally.
+                              When U1>pU4 is active — either via the dedicated left-nav
+                              item (activePattern === "u1-gt-pu4") or via the U1>PU4
+                              sub-toggle inside Big Above (showHAU1 + structure-bigabove)
+                              — eX-Higher is replaced by the specific eXL*U1/eXL*CPR
+                              sub-badges. In all other modes eX-Higher shows normally.
                               All pattern/width badges are in the CPR column below. */}
                           <td className="px-4 py-3 whitespace-nowrap">
                             <div className="flex flex-wrap gap-1">
                               {(() => {
-                                const isU1PU4Mode = showHAU1 && activePattern === "structure-bigabove";
+                                const isU1PU4Mode =
+                                  activePattern === "u1-gt-pu4" ||
+                                  (showHAU1 && activePattern === "structure-bigabove");
                                 if (isU1PU4Mode && r.srExpandedHigher) {
                                   // Show specific sub-badges instead of eX-Higher
                                   const subBadges: { label: string; classes: string }[] = [];
@@ -2542,11 +2545,13 @@ export default function Screener({
                               </div>
                             )}
                             {/* NEW: U1>pU4 sub-category row — previous day's CPR sub-label.
-                                Only shown when U1>pU4 is active (showHAU1 + structure-bigabove).
-                                Computes which sub-category label the PREVIOUS day's CPR belongs to
-                                (comparing prevCPR vs ppCPR), displayed as p(LoU4L34).
-                                Requires ppCPR to be available (3+ candles). */}
-                            {showHAU1 && activePattern === "structure-bigabove" && (() => {
+                                Shown when U1>pU4 is active via the left-nav item
+                                (activePattern === "u1-gt-pu4") OR via the Big-Above
+                                sub-toggle (showHAU1 + structure-bigabove).
+                                Computes which sub-category label the PREVIOUS day's CPR
+                                belongs to (comparing prevCPR vs ppCPR), displayed as
+                                p(LoU4L34). Requires ppCPR (3+ candles). */}
+                            {(activePattern === "u1-gt-pu4" || (showHAU1 && activePattern === "structure-bigabove")) && (() => {
                               const prevSubLabel = computePivotSubLabel(r.prevCPR, r.ppCPR);
                               if (!prevSubLabel) return null;
                               return (
