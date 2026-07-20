@@ -50,6 +50,7 @@ import {
   cprDistancePct,
   levelsInDistanceRange,
   getPivotLevel,
+  computePivotSubLabel,
   type PivotLevelInfo,
   SRLadder,
   getSubFilterDirection,
@@ -918,6 +919,13 @@ export default function Screener({
       if (pivotLevelFilter === "LoU4L1234") return r.LoU4L1234;
       if (pivotLevelFilter === "cOLoU1L2") return r.cOLoU1L2;
       if (pivotLevelFilter === "cOLoU2L4") return r.cOLoU2L4;
+      // NEW: eXL*U1 / eXL*CPR sub-type badges
+      if (pivotLevelFilter === "eXL2U1") return r.eXL2U1;
+      if (pivotLevelFilter === "eXL3U1") return r.eXL3U1;
+      if (pivotLevelFilter === "eXL4U1") return r.eXL4U1;
+      if (pivotLevelFilter === "eXL1CPR") return r.eXL1CPR;
+      if (pivotLevelFilter === "eXL2CPR") return r.eXL2CPR;
+      if (pivotLevelFilter === "eXL3CPR") return r.eXL3CPR;
       return getPivotLevel(r)?.label === pivotLevelFilter;
     })
     .filter((r) => matchesWidthFilter(r, prevWidthFilter, todayWidthFilter))
@@ -2104,6 +2112,13 @@ export default function Screener({
                   { label: "LoU4L1234", active: "border-orange-400 text-orange-400" },
                   { label: "cOLoU1L2",  active: "border-cyan-400 text-cyan-400" },
                   { label: "cOLoU2L4",  active: "border-lime-400 text-lime-400" },
+                  // NEW: eXL*U1 / eXL*CPR sub-type badges (unconditional, all sections)
+                  { label: "eXL2U1",   active: "border-purple-400 text-purple-400" },
+                  { label: "eXL3U1",   active: "border-violet-400 text-violet-400" },
+                  { label: "eXL4U1",   active: "border-fuchsia-400 text-fuchsia-400" },
+                  { label: "eXL1CPR",  active: "border-sky-400 text-sky-400" },
+                  { label: "eXL2CPR",  active: "border-blue-400 text-blue-400" },
+                  { label: "eXL3CPR",  active: "border-indigo-400 text-indigo-400" },
                 ] as { label: PivotLevelInfo["label"]; active: string }[]
               ).map(({ label, active }) => (
                 <button
@@ -2365,12 +2380,33 @@ export default function Screener({
                               </div>
                             </div>
                           </td>
-                          {/* Pivot Level column — now contains ONLY the directional
-                              eX-Higher/eX-Lower/cO-Higher/cO-Lower/Higher/Lower badge.
-                              All pattern/width badges moved to the new CPR column below. */}
+                          {/* Pivot Level column — first row: directional badge.
+                              When U1>pU4 is active (showHAU1 + structure-bigabove),
+                              eX-Higher is replaced by the specific eXL*U1/eXL*CPR
+                              sub-badges that apply to this row. eX-Higher is hidden
+                              in that mode. In all other modes eX-Higher shows normally.
+                              All pattern/width badges are in the CPR column below. */}
                           <td className="px-4 py-3 whitespace-nowrap">
                             <div className="flex flex-wrap gap-1">
                               {(() => {
+                                const isU1PU4Mode = showHAU1 && activePattern === "structure-bigabove";
+                                if (isU1PU4Mode && r.srExpandedHigher) {
+                                  // Show specific sub-badges instead of eX-Higher
+                                  const subBadges: { label: string; classes: string }[] = [];
+                                  if (r.eXL2U1)  subBadges.push({ label: "eXL2U1",  classes: "bg-purple-500/10 text-purple-400 border-purple-500/20" });
+                                  if (r.eXL3U1)  subBadges.push({ label: "eXL3U1",  classes: "bg-violet-500/10 text-violet-400 border-violet-500/20" });
+                                  if (r.eXL4U1)  subBadges.push({ label: "eXL4U1",  classes: "bg-fuchsia-500/10 text-fuchsia-400 border-fuchsia-500/20" });
+                                  if (r.eXL1CPR) subBadges.push({ label: "eXL1CPR", classes: "bg-sky-500/10 text-sky-400 border-sky-500/20" });
+                                  if (r.eXL2CPR) subBadges.push({ label: "eXL2CPR", classes: "bg-blue-500/10 text-blue-400 border-blue-500/20" });
+                                  if (r.eXL3CPR) subBadges.push({ label: "eXL3CPR", classes: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20" });
+                                  if (subBadges.length > 0) {
+                                    return <>{subBadges.map(b => (
+                                      <span key={b.label} className={`text-xs px-1.5 py-0.5 rounded border font-medium ${b.classes}`}>{b.label}</span>
+                                    ))}</>;
+                                  }
+                                  // No specific sub-badge matched — show eX-Higher as fallback
+                                  return <span className="text-xs px-1.5 py-0.5 rounded border font-medium bg-purple-500/10 text-purple-400 border-purple-500/20">eX-Higher</span>;
+                                }
                                 const pl = getPivotLevel(r);
                                 return pl ? (
                                   <span className={`text-xs px-1.5 py-0.5 rounded border font-medium ${pl.classes}`}>
@@ -2386,7 +2422,7 @@ export default function Screener({
                                 column. These are all independent, section-agnostic booleans —
                                 they render whenever true, regardless of activePattern or any
                                 left-nav / Show All state. */}
-                            {(r.cOLoL2U1 || r.cOU3L4 || r.LoL4U4 || r.eXHiL4U234 || r.eXL4U4 || r.HiL4U4 || r.HiL4U34 || r.cOHiL2U3 || r.cOHiL3U3 || r.eXU4L234 || r.cOHiL2U4 || r.eXL3U3 || r.eXU3L3 || r.cOL4U4 || r.cOL3U4 || r.cOU3L3 || r.LoU3L4 || r.LoU3L34 || r.LoU2L4 || r.LoU2L3 || r.LoU4L34 || r.LoU4L234 || r.HiL2U4 || r.HiL3U4 || r.cOHiL2U2 || r.cOLoU2L3 || r.LoU4L1234 || r.cOLoU1L2 || r.cOLoU2L4) && (
+                            {(r.cOLoL2U1 || r.cOU3L4 || r.LoL4U4 || r.eXHiL4U234 || r.eXL4U4 || r.HiL4U4 || r.HiL4U34 || r.cOHiL2U3 || r.cOHiL3U3 || r.eXU4L234 || r.cOHiL2U4 || r.eXL3U3 || r.eXU3L3 || r.cOL4U4 || r.cOL3U4 || r.cOU3L3 || r.LoU3L4 || r.LoU3L34 || r.LoU2L4 || r.LoU2L3 || r.LoU4L34 || r.LoU4L234 || r.HiL2U4 || r.HiL3U4 || r.cOHiL2U2 || r.cOLoU2L3 || r.LoU4L1234 || r.cOLoU1L2 || r.cOLoU2L4 || r.eXL2U1 || r.eXL3U1 || r.eXL4U1 || r.eXL1CPR || r.eXL2CPR || r.eXL3CPR) && (
                               <div className="flex flex-wrap gap-1 mt-1">
                                 {r.cOLoL2U1 && (
                                   <span className="text-xs px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 font-medium">cOLoL2U1</span>
@@ -2481,8 +2517,49 @@ export default function Screener({
                                 {r.cOLoU2L4 && (
                                   <span className="text-xs px-1.5 py-0.5 rounded bg-lime-500/10 text-lime-400 border border-lime-500/20 font-medium">cOLoU2L4</span>
                                 )}
+                                {/* NEW: eXL*U1 / eXL*CPR — unconditional, section-agnostic Pivot Level badges.
+                                    These narrow eX-Higher into specific S/R sub-bands. They display in all
+                                    sections as second-row badges. In U1>pU4 mode they also replace eX-Higher
+                                    in the first row (handled above in the first-row IIFE). */}
+                                {r.eXL2U1 && (
+                                  <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20 font-medium">eXL2U1</span>
+                                )}
+                                {r.eXL3U1 && (
+                                  <span className="text-xs px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20 font-medium">eXL3U1</span>
+                                )}
+                                {r.eXL4U1 && (
+                                  <span className="text-xs px-1.5 py-0.5 rounded bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/20 font-medium">eXL4U1</span>
+                                )}
+                                {r.eXL1CPR && (
+                                  <span className="text-xs px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-medium">eXL1CPR</span>
+                                )}
+                                {r.eXL2CPR && (
+                                  <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">eXL2CPR</span>
+                                )}
+                                {r.eXL3CPR && (
+                                  <span className="text-xs px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-medium">eXL3CPR</span>
+                                )}
                               </div>
                             )}
+                            {/* NEW: U1>pU4 sub-category row — previous day's CPR sub-label.
+                                Only shown when U1>pU4 is active (showHAU1 + structure-bigabove).
+                                Computes which sub-category label the PREVIOUS day's CPR belongs to
+                                (comparing prevCPR vs ppCPR), displayed as p(LoU4L34).
+                                Requires ppCPR to be available (3+ candles). */}
+                            {showHAU1 && activePattern === "structure-bigabove" && (() => {
+                              const prevSubLabel = computePivotSubLabel(r.prevCPR, r.ppCPR);
+                              if (!prevSubLabel) return null;
+                              return (
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  <span
+                                    className="text-xs px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20 font-medium"
+                                    title="Previous day's CPR sub-category (prevCPR vs ppCPR)"
+                                  >
+                                    p({prevSubLabel})
+                                  </span>
+                                </div>
+                              );
+                            })()}
                           </td>
                           {/* NEW: CPR column — holds Above/Below/Inside/Outside/Overlap/Narrow/Skip
                               plus the width-category badges (2nd row): pCategory + Category, e.g.

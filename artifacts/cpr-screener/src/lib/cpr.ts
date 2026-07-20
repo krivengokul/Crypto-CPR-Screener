@@ -101,6 +101,21 @@ export interface CPRResult {
   LoU4L1234: boolean;
   cOLoU1L2: boolean;
   cOLoU2L4: boolean;
+  // NEW: eXL*U1 / eXL*CPR — Expanded-Higher sub-type pivot badges.
+  // These narrow "eX-Higher" into specific S/R bands for the U1>pU4 section.
+  // All require srExpandedHigher; they are unconditional and section-agnostic.
+  //   eXL2U1:  prevS4 in today's L2 band (s1/s2),  prevR4 in today's U1 band (tc/r1)
+  //   eXL3U1:  prevS4 in today's L3 band (s2/s3),  prevR4 in today's U1 band (tc/r1)
+  //   eXL4U1:  prevS4 in today's L4 band (s3/s4),  prevR4 in today's U1 band (tc/r1)
+  //   eXL1CPR: prevS4 and prevR4 both inside today's CPR band (s1/bc)
+  //   eXL2CPR: prevS4 in today's L2 band (s1/s2),  prevR4 in today's CPR band (s1/bc)
+  //   eXL3CPR: prevS4 in today's L3 band (s2/s3),  prevR4 in today's CPR band (s1/bc)
+  eXL2U1: boolean;
+  eXL3U1: boolean;
+  eXL4U1: boolean;
+  eXL1CPR: boolean;
+  eXL2CPR: boolean;
+  eXL3CPR: boolean;
   passes: boolean;
   currentPrice: number;
   openPrice: number;
@@ -379,6 +394,29 @@ export function analyzeCPR(
                   (prevCPR.s4 > todayCPR.s3 && prevCPR.s4 < todayCPR.s2) && srExpandedHigher;
   const eXU3L3 = (prevCPR.r4 < todayCPR.r3 && prevCPR.r4 > todayCPR.r2) && 
                   (prevCPR.s4 > todayCPR.s3 && prevCPR.s4 < todayCPR.s2) && srExpandedLower;
+
+  // NEW: eXL*U1 — prevS4 in today's L2/L3/L4 band, prevR4 in today's U1 band (tc→r1), wide above
+  const eXL2U1 = (prevCPR.s4 > todayCPR.s2 && prevCPR.s4 < todayCPR.s1) &&
+                 (prevCPR.r4 > todayCPR.tc  && prevCPR.r4 < todayCPR.r1) &&
+                 srExpandedHigher;
+  const eXL3U1 = (prevCPR.s4 > todayCPR.s3 && prevCPR.s4 < todayCPR.s2) &&
+                 (prevCPR.r4 > todayCPR.tc  && prevCPR.r4 < todayCPR.r1) &&
+                 srExpandedHigher;
+  const eXL4U1 = (prevCPR.s4 > todayCPR.s4 && prevCPR.s4 < todayCPR.s3) &&
+                 (prevCPR.r4 > todayCPR.tc  && prevCPR.r4 < todayCPR.r1) &&
+                 srExpandedHigher;
+
+  // NEW: eXL*CPR — prevS4 in today's L1/L2/L3 band, prevR4 inside today's CPR (s1→bc), wide above
+  const eXL1CPR = (prevCPR.s4 > todayCPR.s1 && prevCPR.s4 < todayCPR.bc) &&
+                  (prevCPR.r4 > todayCPR.s1 && prevCPR.r4 < todayCPR.bc) &&
+                  srExpandedHigher;
+  const eXL2CPR = (prevCPR.s4 > todayCPR.s2 && prevCPR.s4 < todayCPR.s1) &&
+                  (prevCPR.r4 > todayCPR.s1 && prevCPR.r4 < todayCPR.bc) &&
+                  srExpandedHigher;
+  const eXL3CPR = (prevCPR.s4 > todayCPR.s3 && prevCPR.s4 < todayCPR.s2) &&
+                  (prevCPR.r4 > todayCPR.s1 && prevCPR.r4 < todayCPR.bc) &&
+                  srExpandedHigher;
+
   return {
     symbol,
     todayCPR,
@@ -449,6 +487,12 @@ export function analyzeCPR(
     LoU4L1234,
     cOLoU1L2,
     cOLoU2L4,
+    eXL2U1,
+    eXL3U1,
+    eXL4U1,
+    eXL1CPR,
+    eXL2CPR,
+    eXL3CPR,
     passes: cprRising && cprNarrowing,
     currentPrice,
     openPrice: openPrice ?? todayCandle.open,

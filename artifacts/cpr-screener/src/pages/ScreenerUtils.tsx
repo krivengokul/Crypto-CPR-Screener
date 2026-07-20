@@ -877,7 +877,7 @@ export function getSubFilterDirection(r: CPRResult, activePattern: string): SubF
  * cprFalling + extra R3/pivot/width conditions on top of this raw flag.
  */
 export interface PivotLevelInfo {
-  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "cOLoL2U1" | "cOU3L4" | "LoL4U4"| "eXHiL4U234" | "eXL4U4" | "HiL4U4" | "HiL4U34" | "cOHiL2U3" | "cOHiL3U3" | "eXU4L234" | "cOHiL2U4" | "eXL3U3" | "Lower";
+  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "cOLoL2U1" | "cOU3L4" | "LoL4U4"| "eXHiL4U234" | "eXL4U4" | "HiL4U4" | "HiL4U34" | "cOHiL2U3" | "cOHiL3U3" | "eXU4L234" | "cOHiL2U4" | "eXL3U3" | "eXL2U1" | "eXL3U1" | "eXL4U1" | "eXL1CPR" | "eXL2CPR" | "eXL3CPR" | "Lower";
   classes: string;
 }
 
@@ -926,8 +926,77 @@ export function matchesPivotLevelFlag(r: CPRResult, label: string): boolean {
     case "eXU4L234": return r.eXU4L234;
     case "cOHiL2U4": return r.cOHiL2U4;
     case "eXL3U3": return r.eXL3U3;
+    // NEW: eXL*U1 / eXL*CPR sub-type badges
+    case "eXL2U1": return r.eXL2U1;
+    case "eXL3U1": return r.eXL3U1;
+    case "eXL4U1": return r.eXL4U1;
+    case "eXL1CPR": return r.eXL1CPR;
+    case "eXL2CPR": return r.eXL2CPR;
+    case "eXL3CPR": return r.eXL3CPR;
     default: return getPivotLevel(r)?.label === label;
   }
+}
+
+/**
+ * computePivotSubLabel — given two CPR-level objects, computes which
+ * sub-category pivot label applies to the (today, prev) pair using the same
+ * conditions as cpr.ts. Used in the U1>pU4 section to find the PREVIOUS
+ * day's sub-category: call with (prevCPR, ppCPR). Returns null when prev is
+ * undefined/null or no known sub-category matches.
+ *
+ * The label is displayed in the format p(LoU4L34) — the "p" prefix is added
+ * by the caller.
+ */
+export function computePivotSubLabel(today: CPRLevels, prev: CPRLevels | undefined | null): string | null {
+  if (!prev) return null;
+
+  // Compute intermediate sr flags for this pair (same logic as cpr.ts)
+  const normDenom = prev.width > 0 ? prev.width : prev.pivot * 0.0001;
+  const r4Dist = Math.abs(today.r4 - prev.r4) / normDenom;
+  const s4Dist = Math.abs(today.s4 - prev.s4) / normDenom;
+  const r3R4Gap = Math.abs(today.r3 - prev.r4);
+  const s3S4Gap = Math.abs(prev.s4 - today.s3);
+  const srExpanded   = today.r4 > prev.r4 && today.s4 < prev.s4;
+  const srCompressed = today.r4 < prev.r4 && today.s4 > prev.s4;
+  const srExpandedHigher   = srExpanded   && (r4Dist > s4Dist || (r4Dist === s4Dist && r3R4Gap > s3S4Gap));
+  const srExpandedLower    = srExpanded   && (s4Dist > r4Dist || (s4Dist === r4Dist && s3S4Gap > r3R4Gap));
+  const srCompressedHigher = srCompressed && (s4Dist > r4Dist || (s4Dist === r4Dist && s3S4Gap > r3R4Gap));
+  const srCompressedLower  = srCompressed && (r4Dist > s4Dist || (r4Dist === s4Dist && r3R4Gap > s3S4Gap));
+
+  // Check sub-labels in same priority order as cpr.ts (first match wins)
+  if ((prev.s1 < today.s3 && prev.s1 > today.s4) && (today.r4 < prev.r1 && today.r4 > prev.tc)) return "cOLoL2U1";
+  if ((today.s4 > prev.s4 && today.s4 < prev.s3) && (today.r4 > prev.r2 && today.r4 < prev.r3)) return "cOU3L4";
+  if ((today.s4 > prev.s2 && today.s4 < prev.s1) && (today.r4 > prev.r2 && today.r4 < prev.r3)) return "cOHiL2U3";
+  if ((today.s4 > prev.s3 && today.s4 < prev.s2) && (today.r4 > prev.r2 && today.r4 < prev.r3) && srCompressedHigher) return "cOHiL3U3";
+  if ((prev.r4 > today.r3 && prev.r4 < today.r4) && (prev.s4 > today.s3 && prev.s4 < today.s2)) return "eXLoL3U4";
+  if ((prev.r4 > today.r3 && prev.r4 < today.r4) && (prev.s4 > today.s4 && prev.s4 < today.s3)) return "eXL4U4";
+  if ((prev.r4 > today.r2 && prev.r4 < today.r3) && (today.s4 > prev.s4 && today.s4 < prev.s3)) return "HiL4U34";
+  if ((today.s4 > prev.s2 && today.s4 < prev.s1) && (prev.r4 > today.r3 && prev.r4 < today.r4)) return "HiL2U4";
+  if ((today.s4 > prev.s3 && today.s4 < prev.s2) && (prev.r4 > today.r3 && prev.r4 < today.r4)) return "HiL3U4";
+  if ((prev.r4 > today.r3 && prev.r4 < today.r4) && (today.s4 > prev.s4 && today.s4 < prev.s3)) return "HiL4U4";
+  if ((today.r4 < prev.r4 && today.r4 > prev.r3) && (prev.s4 > today.s4 && prev.s4 < today.s3)) return "LoL4U4";
+  if ((prev.r4 < today.r1 && prev.r4 > today.tc) && (prev.s4 > today.s3 && prev.s4 < today.s2)) return "eXHiU1L3";
+  if ((prev.s4 > today.s4 && prev.s4 < today.s3) && (prev.r4 > today.r1 && prev.r4 < today.r2)) return "eXHiL4U234";
+  if ((prev.r4 < today.r4 && prev.r4 > today.r3) && (prev.s4 < today.s1 && prev.s4 > today.s2)) return "eXU4L234";
+  if ((today.s4 < prev.s1 && today.s4 > prev.s2) && (prev.r3 > today.r3 && prev.r3 < today.r4)) return "cOHiL2U4";
+  if ((today.s4 > prev.s4 && today.s4 < prev.s3) && (today.r4 > prev.r3 && today.r4 < prev.r4)) return "cOL4U4";
+  if ((today.s4 > prev.s3 && today.s4 < prev.s2) && (today.r4 > prev.r3 && today.r4 < prev.r4)) return "cOL3U4";
+  if ((today.s4 > prev.s3 && today.s4 < prev.s2) && (today.r4 > prev.r2 && today.r4 < prev.r3) && srCompressedLower) return "cOU3L3";
+  if ((today.r4 > prev.r2 && today.r4 < prev.r3) && (prev.s4 > today.s4 && prev.s4 < today.s3)) return "LoU3L4";
+  if ((today.r4 > prev.r2 && today.r4 < prev.r3) && (prev.s4 > today.s3 && prev.s4 < today.s2)) return "LoU3L34";
+  if ((today.r4 > prev.r1 && today.r4 < prev.r2) && (prev.s4 > today.s4 && prev.s4 < today.s3)) return "LoU2L4";
+  if ((today.r4 > prev.r1 && today.r4 < prev.r2) && (prev.s4 > today.s3 && prev.s4 < today.s2)) return "LoU2L3";
+  if ((today.r4 > prev.r3 && today.r4 < prev.r4) && (prev.s4 > today.s3 && prev.s4 < today.s2)) return "LoU4L34";
+  if ((today.r4 > prev.r3 && today.r4 < prev.r4) && (prev.s4 > today.s2 && prev.s4 < today.s1)) return "LoU4L234";
+  if ((today.r4 > prev.r1 && today.r4 < prev.r2) && today.r3 > prev.r1 && (today.s4 > prev.s2 && today.s4 < prev.s1)) return "cOHiL2U2";
+  if ((today.r4 > prev.r1 && today.r4 < prev.r2) && (today.s4 > prev.s3 && today.s4 < prev.s2) && today.s3 < prev.s2) return "cOLoU2L3";
+  if ((today.r4 > prev.r3 && today.r4 < prev.r4) && (prev.s4 > today.s1 && prev.s4 < today.bc)) return "LoU4L1234";
+  if ((today.r4 > prev.tc && today.r4 < prev.r1) && (today.s4 > prev.s2 && today.s4 < prev.s1)) return "cOLoU1L2";
+  if ((today.r4 > prev.r1 && today.r4 < prev.r2) && (today.s4 > prev.s4 && today.s4 < prev.s3)) return "cOLoU2L4";
+  if ((prev.r4 < today.r3 && prev.r4 > today.r2) && (prev.s4 > today.s3 && prev.s4 < today.s2) && srExpandedHigher) return "eXL3U3";
+  if ((prev.r4 < today.r3 && prev.r4 > today.r2) && (prev.s4 > today.s3 && prev.s4 < today.s2) && srExpandedLower) return "eXU3L3";
+
+  return null;
 }
 
 export function isRisingAboveTC(r: CPRResult): boolean {
