@@ -80,6 +80,8 @@ export default function Screener({
   const [showLACompressed, setShowLACompressed] = useState(false);
   // NEW: 1LHr-L4U3-U4 filter state — Little Above, placed next to LA-AllUp
   const [showLA1LHr, setShowLA1LHr] = useState(false);
+  // NEW: T1-U4:6AM filter state — Little Above
+  const [showLAT1U46AM, setShowLAT1U46AM] = useState(false);
   const [showOutsideCPRCompressed, setShowOutsideCPRCompressed] = useState(false);
   // NEW: eXHrL3U3-AU4 filter state — Outside CPR, placed next to Compressed
   const [showOutsideCPReXHrL3U3AU4, setShowOutsideCPReXHrL3U3AU4] = useState(false);
@@ -395,7 +397,7 @@ export default function Screener({
   useEffect(() => {
     if (allResults.length > 0) setFiltered(allResults.filter((r) => passesPattern(r, activePattern)));
     if (deltaAllResults.length > 0) setDeltaFiltered(deltaAllResults.filter((r) => passesPattern(r, activePattern)));
-    if (activePattern !== "littleabove") { setShowLABothTiny(false); setShowLAAllUp(false); setShowLA1LHr(false); setShowLAPL12CL23(false); setShowLACompressed(false); }
+    if (activePattern !== "littleabove") { setShowLABothTiny(false); setShowLAAllUp(false); setShowLA1LHr(false); setShowLAPL12CL23(false); setShowLACompressed(false); setShowLAT1U46AM(false); }
     if (activePattern !== "outside-cpr") { setShowOutsideCPRCompressed(false); setShowOutsideCPReXHrL3U3AU4(false); }
     if (activePattern !== "inside-cpr") { setShowInsideCPRExpanded(false); setShowInsideCPRNarrow(false); setShowInsideCPRCoU4L3(false); }
     if (activePattern !== "overlapping-lower") { setShowExpU4PU4(false); setShowExpU3PU3(false); setShowOBNLoL4U4(false); setShowOBWLoL4U4(false); }
@@ -484,6 +486,14 @@ export default function Screener({
     if (showLACompressed && activePattern === "littleabove") {
       const binanceIntersect = allResults.filter((r) => passesPattern(r, "sT-cOL2U3-APU4")).map((r) => ({ ...r, source: "binance" as const }));
       const deltaIntersect = deltaAllResults.filter((r) => passesPattern(r, "sT-cOL2U3-APU4")).map((r) => ({ ...r, source: "delta" as const }));
+      if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
+      if (activeTab === "delta") return deltaIntersect;
+      return binanceIntersect;
+    }
+    // NEW: T1-U4:6AM pool — Little Above
+    if (showLAT1U46AM && activePattern === "littleabove") {
+      const binanceIntersect = allResults.filter((r) => passesPattern(r, "T1-U4:6AM")).map((r) => ({ ...r, source: "binance" as const }));
+      const deltaIntersect = deltaAllResults.filter((r) => passesPattern(r, "T1-U4:6AM")).map((r) => ({ ...r, source: "delta" as const }));
       if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
       if (activeTab === "delta") return deltaIntersect;
       return binanceIntersect;
@@ -939,6 +949,7 @@ export default function Screener({
       if (pivotLevelFilter === "cOU2L2") return r.cOU2L2;
       if (pivotLevelFilter === "cOL2U2") return r.cOL2U2;
       if (pivotLevelFilter === "cOU4L4") return r.cOU4L4;
+      if (pivotLevelFilter === "exL3U2") return r.exL3U2;
       return getPivotLevel(r)?.label === pivotLevelFilter;
     })
     .filter((r) => matchesWidthFilter(r, prevWidthFilter, todayWidthFilter))
@@ -989,7 +1000,7 @@ export default function Screener({
 
   // Helper: is any sub-filter active (to decide the result count label)
   const anySubFilter =
-    showLABothTiny || showLAAllUp || showLA1LHr || showLAPL12CL23 || showLACompressed ||
+    showLABothTiny || showLAAllUp || showLA1LHr || showLAPL12CL23 || showLACompressed || showLAT1U46AM ||
     showOutsideCPRCompressed || showOutsideCPReXHrL3U3AU4 || showInsideCPRExpanded || showInsideCPRNarrow || showInsideCPRCoU4L3 ||
     showBigBelowPMiniPL3 || showBigBelowPMiniRising || showExpU3LtPU4 || showBigBeloweXLoL3U4AU4 || showBigBelowL1LtPL4 || showL1LtPL4CprLtPL4 || showBigBeloweXU4L234AU4 ||
     showBigAbovePL34CL4 || showBAComp || showHAU1 || showHAU1CprAbovePU4 || showHAU1L1AbovePU4 || showHAU1PWideAbove || showHRHAL || showHA55HrL4U34FAU4 || showHiL4U4FAU4 || showLBCmprss || showLBC34 || showLBE11 || showLBC2L2U2 ||
@@ -1068,6 +1079,11 @@ export default function Screener({
               <>
                 <div className="text-xs font-semibold text-emerald-400 mb-1">Compressed Inside Previous L2 and Previous U3</div>
                 <div className="text-xs text-muted-foreground">Compressed Todays L4/U4 Inside Previous L2/U3</div>
+              </>
+            ) : showLAT1U46AM && activePattern === "littleabove" ? (
+              <>
+                <div className="text-xs font-semibold text-orange-400 mb-1">Pivot Level: exL3U2  PCPR: Tiny  CPR: Micro</div>
+                <div className="text-xs text-muted-foreground">Today's Pivot &gt; Prev R1, Prev CPR width 0.10%–0.22% (pTiny), Today CPR width ≤ 0.10% (Micro)</div>
               </>
             ) : showLBE11 && activePattern === "littlebelow" ? (
               <>
@@ -1187,6 +1203,11 @@ export default function Screener({
               <>
                 <div className="text-xs font-semibold text-emerald-400 mb-1">Target</div>
                 <div className="text-xs text-muted-foreground">Bullish Above PU4</div>
+              </>
+            ) : showLAT1U46AM && activePattern === "littleabove" ? (
+              <>
+                <div className="text-xs font-semibold text-orange-400 mb-1">Exp Target: U4  Time: 6AM</div>
+                <div className="text-xs text-muted-foreground">Expected upside target U4 by ~6AM</div>
               </>
             ) : showLBE11 && activePattern === "littlebelow" ? (
               <>
@@ -1353,6 +1374,7 @@ export default function Screener({
                   setShowLA1LHr(false);
                   setShowLAPL12CL23(false);
                   setShowLACompressed(false);
+                  setShowLAT1U46AM(false);
                   setShowOutsideCPRCompressed(false);
                   setShowOutsideCPReXHrL3U3AU4(false);
                   setShowInsideCPRExpanded(false);
@@ -1608,7 +1630,7 @@ export default function Screener({
 
             {activePattern === "littleabove" && !showAll && (
               <button
-                onClick={() => { setShowLABothTiny((v) => !v); setShowLAAllUp(false); setShowLA1LHr(false); setShowLAPL12CL23(false); setShowLACompressed(false); }}
+                onClick={() => { setShowLABothTiny((v) => !v); setShowLAAllUp(false); setShowLA1LHr(false); setShowLAPL12CL23(false); setShowLACompressed(false); setShowLAT1U46AM(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showLABothTiny
                     ? "border-foreground text-foreground"
@@ -1621,7 +1643,7 @@ export default function Screener({
             )}
             {activePattern === "littleabove" && !showAll && (
               <button
-                onClick={() => { setShowLAAllUp((v) => !v); setShowLABothTiny(false); setShowLA1LHr(false); setShowLAPL12CL23(false); setShowLACompressed(false); }}
+                onClick={() => { setShowLAAllUp((v) => !v); setShowLABothTiny(false); setShowLA1LHr(false); setShowLAPL12CL23(false); setShowLACompressed(false); setShowLAT1U46AM(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showLAAllUp
                     ? "border-foreground text-foreground"
@@ -1635,7 +1657,7 @@ export default function Screener({
             {/* NEW: 1LHr-L4U3-U4 button — Little Above, placed next to LA-AllUp */}
             {activePattern === "littleabove" && !showAll && (
               <button
-                onClick={() => { setShowLA1LHr((v) => !v); setShowLABothTiny(false); setShowLAAllUp(false); setShowLAPL12CL23(false); setShowLACompressed(false); }}
+                onClick={() => { setShowLA1LHr((v) => !v); setShowLABothTiny(false); setShowLAAllUp(false); setShowLAPL12CL23(false); setShowLACompressed(false); setShowLAT1U46AM(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showLA1LHr
                     ? "border-teal-400 text-teal-400"
@@ -1648,7 +1670,7 @@ export default function Screener({
             )}
             {activePattern === "littleabove" && !showAll && (
               <button
-                onClick={() => { setShowLAPL12CL23((v) => !v); setShowLABothTiny(false); setShowLAAllUp(false); setShowLA1LHr(false); setShowLACompressed(false); }}
+                onClick={() => { setShowLAPL12CL23((v) => !v); setShowLABothTiny(false); setShowLAAllUp(false); setShowLA1LHr(false); setShowLACompressed(false); setShowLAT1U46AM(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showLAPL12CL23
                     ? "border-foreground text-foreground"
@@ -1661,7 +1683,7 @@ export default function Screener({
             )}
             {activePattern === "littleabove" && !showAll && (
               <button
-                onClick={() => { setShowLACompressed((v) => !v); setShowLABothTiny(false); setShowLAAllUp(false); setShowLA1LHr(false); setShowLAPL12CL23(false); }}
+                onClick={() => { setShowLACompressed((v) => !v); setShowLABothTiny(false); setShowLAAllUp(false); setShowLA1LHr(false); setShowLAPL12CL23(false); setShowLAT1U46AM(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showLACompressed
                     ? "border-emerald-400 text-emerald-400"
@@ -1670,6 +1692,20 @@ export default function Screener({
                 title="Compressed Inside Previous L2 and Previous U3: Target:Bullish APU4"
               >
                 {showLACompressed ? "✕ cOL2U3-ApU4" : "cOL2U3-ApU4"}
+              </button>
+            )}
+            {/* NEW: T1-U4:6AM — Little Above */}
+            {activePattern === "littleabove" && !showAll && (
+              <button
+                onClick={() => { setShowLAT1U46AM((v) => !v); setShowLABothTiny(false); setShowLAAllUp(false); setShowLA1LHr(false); setShowLAPL12CL23(false); setShowLACompressed(false); }}
+                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                  showLAT1U46AM
+                    ? "border-orange-400 text-orange-400"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+                title="Today's Pivot > Prev R1, Prev CPR pTiny (0.10–0.22%), Today CPR Micro (≤0.10%) — Target: U4 at 6AM"
+              >
+                {showLAT1U46AM ? "✕ T1-U4:6AM" : "T1-U4:6AM"}
               </button>
             )}
             {activePattern === "overlapping-lower" && !showAll && (
@@ -2138,6 +2174,8 @@ export default function Screener({
                   { label: "cOL2U2",   active: "border-lime-400 text-lime-400" },
                   // NEW: cOU4L4 — independent, section-agnostic Pivot Level flag (see cpr.ts).
                   { label: "cOU4L4",   active: "border-orange-400 text-orange-400" },
+                  // NEW: exL3U2 — prev S4 inside today S2/S3 AND prev R4 inside today R1/R2
+                  { label: "exL3U2",   active: "border-amber-400 text-amber-400" },
                 ] as { label: PivotLevelInfo["label"]; active: string }[]
               ).map(({ label, active }) => (
                 <button
@@ -2444,7 +2482,7 @@ export default function Screener({
                                 column. These are all independent, section-agnostic booleans —
                                 they render whenever true, regardless of activePattern or any
                                 left-nav / Show All state. */}
-                            {(r.cOLoL2U1 || r.cOU3L4 || r.LoL4U4 || r.eXHiL4U234 || r.eXL4U4 || r.HiL4U4 || r.HiL4U34 || r.cOHiL2U3 || r.cOHiL3U3 || r.eXU4L234 || r.cOHiL2U4 || r.eXL3U3 || r.eXU3L3 || r.cOL4U4 || r.cOL3U4 || r.cOU3L3 || r.LoU3L4 || r.LoU3L34 || r.LoU2L4 || r.LoU2L3 || r.LoU4L34 || r.LoU4L234 || r.HiL2U4 || r.HiL3U4 || r.cOLoU2L3 || r.LoU4L1234 || r.cOLoU1L2 || r.cOLoU2L4 || r.eXL2U1 || r.eXL3U1 || r.eXL4U1 || r.eXL1CPR || r.eXL2CPR || r.eXL3CPR || r.cOU1L1 || r.cOL1U1 || r.cOU2L2 || r.cOL2U2 || r.cOU4L4) && (
+                            {(r.cOLoL2U1 || r.cOU3L4 || r.LoL4U4 || r.eXHiL4U234 || r.eXL4U4 || r.HiL4U4 || r.HiL4U34 || r.cOHiL2U3 || r.cOHiL3U3 || r.eXU4L234 || r.cOHiL2U4 || r.eXL3U3 || r.eXU3L3 || r.cOL4U4 || r.cOL3U4 || r.cOU3L3 || r.LoU3L4 || r.LoU3L34 || r.LoU2L4 || r.LoU2L3 || r.LoU4L34 || r.LoU4L234 || r.HiL2U4 || r.HiL3U4 || r.cOLoU2L3 || r.LoU4L1234 || r.cOLoU1L2 || r.cOLoU2L4 || r.eXL2U1 || r.eXL3U1 || r.eXL4U1 || r.eXL1CPR || r.eXL2CPR || r.eXL3CPR || r.cOU1L1 || r.cOL1U1 || r.cOU2L2 || r.cOL2U2 || r.cOU4L4 || r.exL3U2) && (
                               <div className="flex flex-wrap gap-1 mt-1">
                                 {r.cOLoL2U1 && (
                                   <span className="text-xs px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 font-medium">cOLoL2U1</span>
@@ -2553,6 +2591,10 @@ export default function Screener({
                                 {/* NEW: cOU4L4 — independent, section-agnostic Pivot Level flag (see cpr.ts). */}
                                 {r.cOU4L4 && (
                                   <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 font-medium">cOU4L4</span>
+                                )}
+                                {/* NEW: exL3U2 — independent, section-agnostic Pivot Level flag (see cpr.ts). */}
+                                {r.exL3U2 && (
+                                  <span className="text-xs px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium">exL3U2</span>
                                 )}
                                 {/* eXL*U1 / eXL*CPR — Pivot Level sub-band badges. In U1>pU4 mode
                                     (left-nav "u1-gt-pu4" OR the Big-Above U1>PU4 sub-toggle) these

@@ -89,6 +89,8 @@ export interface CPRResult {
   eXU3L3: boolean;
   cOL4U4: boolean;
   cOU4L4: boolean;
+  // NEW: exL3U2 — prev S4 between today S2/S3 AND prev R4 between today R1/R2
+  exL3U2: boolean;
   cOL3U4: boolean;
   cOU3L3: boolean;
   LoU3L4: boolean;
@@ -313,6 +315,9 @@ export function analyzeCPR(
                  (todayCPR.r4 > prevCPR.r3 && todayCPR.r4 < prevCPR.r4) && srCompressedHigher;
   const cOU4L4 = (todayCPR.s4 > prevCPR.s4 && todayCPR.s4 < prevCPR.s3) && 
                   (todayCPR.r4 > prevCPR.r3 && todayCPR.r4 < prevCPR.r4) && srCompressedLower;
+  // NEW: exL3U2 — prev S4 inside today S2/S3 AND prev R4 inside today R1/R2
+  const exL3U2 = (prevCPR.s4 > todayCPR.s3 && prevCPR.s4 < todayCPR.s2) &&
+                 (prevCPR.r4 > todayCPR.r1 && prevCPR.r4 < todayCPR.r2);
   // cOL3U4: today's S4 sits in the prev L3–L2 band, today's R4 sits in the prev U3–U4 band
   const cOL3U4 = (todayCPR.s4 > prevCPR.s3 && todayCPR.s4 < prevCPR.s2) &&
                  (todayCPR.r4 > prevCPR.r3 && todayCPR.r4 < prevCPR.r4);
@@ -504,6 +509,7 @@ export function analyzeCPR(
     eXU3L3,
     cOL4U4,
     cOU4L4,
+    exL3U2,
     cOL3U4,
     cOU3L3,
     LoU3L4,

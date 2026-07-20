@@ -406,6 +406,17 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.prevCPR.widthPct > 0.60 && r.prevCPR.widthPct <= 1.10 &&   // pSmall
         r.todayCPR.widthPct > 0.10 && r.todayCPR.widthPct <= 0.22   // Tiny
       );
+    // NEW: T1-U4:6AM — Little Above: today's pivot > prev R1,
+    // prev CPR width in (0.10%, 0.22%], today CPR width <= 0.10%
+    case "T1-U4:6AM":
+      return (
+        r.cprRising &&
+        r.narrowCPR &&
+        r.exL3U2 &&
+        r.todayCPR.pivot > r.prevCPR.r1 &&
+        r.prevCPR.widthPct > 0.10 && r.prevCPR.widthPct <= 0.22 &&
+        r.todayCPR.widthPct <= 0.10
+      );
     case "la-allstepup":
       return r.cprRising && r.narrowCPR && r.allupabove && r.allupbelow;
     // NEW: 1LHr-L4U3-U4 — Little Above + Compressed:
@@ -775,6 +786,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     { key: "1LHr-L4U3-U4", direction: "up" },
     { key: "LA-PL12CL23", direction: "down" },
     { key: "sT-cOL2U3-APU4", direction: "up" },
+    { key: "T1-U4:6AM", direction: "up" },
   ],
   littlebelow: [
     { key: "lb-micro2-apu4", direction: "down" },
@@ -895,7 +907,7 @@ export function getSubFilterDirection(r: CPRResult, activePattern: string): SubF
  * badges and Pivot Level filter buttons, checking the raw flags directly.
  */
 export interface PivotLevelInfo {
-  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "cOLoL2U1" | "cOU3L4" | "LoL4U4"| "eXHiL4U234" | "eXL4U4" | "HiL4U4" | "HiL4U34" | "cOHiL2U3" | "cOHiL3U3" | "eXU4L234" | "cOHiL2U4" | "eXL3U3" | "eXL2U1" | "eXL3U1" | "eXL4U1" | "eXL1CPR" | "eXL2CPR" | "eXL3CPR" | "cOU1L1" | "cOL1U1" | "cOU2L2" | "cOL2U2" | "cOU4L4" | "Lower";
+  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "cOLoL2U1" | "cOU3L4" | "LoL4U4"| "eXHiL4U234" | "eXL4U4" | "HiL4U4" | "HiL4U34" | "cOHiL2U3" | "cOHiL3U3" | "eXU4L234" | "cOHiL2U4" | "eXL3U3" | "eXL2U1" | "eXL3U1" | "eXL4U1" | "eXL1CPR" | "eXL2CPR" | "eXL3CPR" | "cOU1L1" | "cOL1U1" | "cOU2L2" | "cOL2U2" | "cOU4L4" | "exL3U2" | "Lower";
   classes: string;
 }
 
@@ -957,6 +969,7 @@ export function matchesPivotLevelFlag(r: CPRResult, label: string): boolean {
     case "cOU2L2": return r.cOU2L2;
     case "cOL2U2": return r.cOL2U2;
     case "cOU4L4": return r.cOU4L4;
+    case "exL3U2": return r.exL3U2;
     default: return getPivotLevel(r)?.label === label;
   }
 }
