@@ -40,6 +40,7 @@ export const subPatterns: Record<string, SubPattern[]> = {
     { id: "sT-cOL2U3-APU4",          label: "cOL2U3-ApU4" },
     { id: "T1-U4:6AM",               label: "T1-U4:6AM" },
     { id: "Ss-HiL4U4-FAU4:2AM",      label: "Ss-HiL4U4-FAU4:2AM" },
+    { id: "MeMi-eXHiL4U3-U4:6PM",    label: "MeMi-eXHiL4U3-U4:6PM" },
   ],
   littlebelow: [
     { id: "lb-micro2-apu4",         label: "Micro2-ApU4" },

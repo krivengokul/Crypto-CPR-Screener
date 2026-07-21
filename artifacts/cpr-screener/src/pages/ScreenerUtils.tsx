@@ -435,6 +435,19 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.prevCPR.widthPct > 0.60 && r.prevCPR.widthPct <= 1.10 &&
         r.todayCPR.widthPct > 0.60 && r.todayCPR.widthPct <= 1.10
       );
+    // NEW: MeMi-eXHiL4U3-U4:6PM — Little Above: cprRising + narrowCPR +
+    // eXHiL4U3 (prev S4 in today's L4 band, prev R4 in today's U3 band)
+    // + today's TC >= prev R1. Prev CPR width 1.10%-2.00% (Medium),
+    // Today CPR width 0.22%-0.60% (Mini). Target: U4 at ~6PM.
+    case "MeMi-eXHiL4U3-U4:6PM":
+      return (
+        r.cprRising &&
+        r.narrowCPR &&
+        r.eXHiL4U3 &&
+        r.todayCPR.tc >= r.prevCPR.r1 &&
+        r.prevCPR.widthPct > 1.10 && r.prevCPR.widthPct <= 2.00 &&
+        r.todayCPR.widthPct > 0.22 && r.todayCPR.widthPct <= 0.60
+      );
     // NEW: 1LHr-L4U3-U4 — Little Above + Compressed:
     // today's S4 above prev S4 AND below prev S3, today's R3 above prev R4,
     // today's CPR Narrow with width < 0.1%, prev CPR width between 0.1% and 1%
@@ -816,6 +829,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     { key: "sT-cOL2U3-APU4", direction: "up" },
     { key: "T1-U4:6AM", direction: "up" },
     { key: "Ss-HiL4U4-FAU4:2AM", direction: "up" },
+    { key: "MeMi-eXHiL4U3-U4:6PM", direction: "up" },
   ],
   littlebelow: [
     { key: "lb-micro2-apu4", direction: "down" },
@@ -937,7 +951,7 @@ export function getSubFilterDirection(r: CPRResult, activePattern: string): SubF
  * badges and Pivot Level filter buttons, checking the raw flags directly.
  */
 export interface PivotLevelInfo {
-  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "cOLoL2U1" | "cOU3L4" | "LoL4U4"| "eXHiL4U234" | "eXL4U4" | "HiL4U4" | "HiL4U34" | "cOHiL2U3" | "cOHiL3U3" | "eXU4L234" | "cOHiL2U4" | "eXL3U3" | "eXL2U1" | "eXL3U1" | "eXL4U1" | "eXL1CPR" | "eXL2CPR" | "eXL3CPR" | "cOU1L1" | "cOL1U1" | "cOU2L2" | "cOL2U2" | "cOU4L4" | "exL3U2" | "Lower";
+  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "cOLoL2U1" | "cOU3L4" | "LoL4U4"| "eXHiL4U234" | "eXHiL4U3" | "eXL4U4" | "HiL4U4" | "HiL4U34" | "cOHiL2U3" | "cOHiL3U3" | "eXU4L234" | "cOHiL2U4" | "eXL3U3" | "eXL2U1" | "eXL3U1" | "eXL4U1" | "eXL1CPR" | "eXL2CPR" | "eXL3CPR" | "cOU1L1" | "cOL1U1" | "cOU2L2" | "cOL2U2" | "cOU4L4" | "exL3U2" | "Lower";
   classes: string;
 }
 
@@ -978,6 +992,7 @@ export function matchesPivotLevelFlag(r: CPRResult, label: string): boolean {
     case "cOU3L4": return r.cOU3L4;
     case "LoL4U4": return r.LoL4U4;
     case "eXHiL4U234": return r.eXHiL4U234;
+    case "eXHiL4U3": return r.eXHiL4U3;
     case "eXL4U4": return r.eXL4U4;
     case "HiL4U4": return r.HiL4U4;
     case "HiL4U34": return r.HiL4U34;
@@ -1044,6 +1059,7 @@ export function computePivotSubLabel(today: CPRLevels, prev: CPRLevels | undefin
   if ((today.r4 < prev.r4 && today.r4 > prev.r3) && (prev.s4 > today.s4 && prev.s4 < today.s3)) return "LoL4U4";
   if ((prev.r4 < today.r1 && prev.r4 > today.tc) && (prev.s4 > today.s3 && prev.s4 < today.s2)) return "eXHiU1L3";
   if ((prev.s4 > today.s4 && prev.s4 < today.s3) && (prev.r4 > today.r1 && prev.r4 < today.r2)) return "eXHiL4U234";
+  if ((prev.s4 > today.s4 && prev.s4 < today.s3) && (prev.r4 > today.r2 && prev.r4 < today.r3)) return "eXHiL4U3";
   if ((prev.r4 < today.r4 && prev.r4 > today.r3) && (prev.s4 < today.s1 && prev.s4 > today.s2)) return "eXU4L234";
   if ((today.s4 < prev.s1 && today.s4 > prev.s2) && (prev.r3 > today.r3 && prev.r3 < today.r4)) return "cOHiL2U4";
   if ((today.s4 > prev.s4 && today.s4 < prev.s3) && (today.r4 > prev.r3 && today.r4 < prev.r4)) return "cOL4U4";
