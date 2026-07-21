@@ -1067,12 +1067,14 @@ export function computePivotSubLabel(today: CPRLevels, prev: CPRLevels | undefin
   if ((today.s4 > prev.s3 && today.s4 < prev.s2) && (today.r4 > prev.r2 && today.r4 < prev.r3) && srCompressedLower) return "cOU3L3";
   if ((today.r4 > prev.r2 && today.r4 < prev.r3) && (prev.s4 > today.s4 && prev.s4 < today.s3)) return "LoU3L4";
   if ((today.r4 > prev.r2 && today.r4 < prev.r3) && (prev.s4 > today.s3 && prev.s4 < today.s2)) return "LoU3L34";
+  // Reordered: cOLoU2L3 is checked BEFORE the other U2-band branches (LoU2L4, LoU2L3, cOHiL2U2)
+  // so its badge wins when a row satisfies multiple U2-band conditions simultaneously.
+  if ((today.r4 > prev.r1 && today.r4 < prev.r2) && (today.s4 > prev.s3 && today.s4 < prev.s2) && today.s3 < prev.s2) return "cOLoU2L3";
   if ((today.r4 > prev.r1 && today.r4 < prev.r2) && (prev.s4 > today.s4 && prev.s4 < today.s3)) return "LoU2L4";
   if ((today.r4 > prev.r1 && today.r4 < prev.r2) && (prev.s4 > today.s3 && prev.s4 < today.s2)) return "LoU2L3";
   if ((today.r4 > prev.r3 && today.r4 < prev.r4) && (prev.s4 > today.s3 && prev.s4 < today.s2)) return "LoU4L34";
   if ((today.r4 > prev.r3 && today.r4 < prev.r4) && (prev.s4 > today.s2 && prev.s4 < today.s1)) return "LoU4L234";
   if ((today.r4 > prev.r1 && today.r4 < prev.r2) && today.r3 > prev.r1 && (today.s4 > prev.s2 && today.s4 < prev.s1)) return "cOHiL2U2";
-  if ((today.r4 > prev.r1 && today.r4 < prev.r2) && (today.s4 > prev.s3 && today.s4 < prev.s2) && today.s3 < prev.s2) return "cOLoU2L3";
   if ((today.r4 > prev.r3 && today.r4 < prev.r4) && (prev.s4 > today.s1 && prev.s4 < today.bc)) return "LoU4L1234";
   if ((today.r4 > prev.tc && today.r4 < prev.r1) && (today.s4 > prev.s2 && today.s4 < prev.s1)) return "cOLoU1L2";
   if ((today.r4 > prev.r1 && today.r4 < prev.r2) && (today.s4 > prev.s4 && today.s4 < prev.s3)) return "cOLoU2L4";
