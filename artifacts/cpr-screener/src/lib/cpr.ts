@@ -278,6 +278,11 @@ export function analyzeCPR(
   // Expanded: bigger R4 move (resistance rising) = bullish expansion
   const srExpandedHigher   = srExpanded   && (r4Distance > s4Distance || (r4Distance === s4Distance && r3R4Gap > s3S4Gap));
   const srExpandedLower    = srExpanded   && (s4Distance > r4Distance || (s4Distance === r4Distance && s3S4Gap > r3R4Gap));
+
+   // Equal CPR: today TC, Pivot and BC are within 0.001% of yesterday
+  const eqTol = (a: number, b: number): boolean => Math.abs(a - b) <= Math.max(Math.abs(a), Math.abs(b)) * 0.00001;
+  const equalCPR = eqTol(prevCPR.tc, todayCPR.tc) && eqTol(prevCPR.pivot, todayCPR.pivot) && eqTol(prevCPR.bc, todayCPR.bc);
+
   const cOLoL2U1 = (prevCPR.s1  < todayCPR.s3 && prevCPR.s1 > todayCPR.s4) &&
                     (todayCPR.r4  < prevCPR.r1 && todayCPR.r4 > prevCPR.tc);
   const cOU3L4 =(todayCPR.s4 > prevCPR.s4 && todayCPR.s4 < prevCPR.s3 ) &&
@@ -370,7 +375,8 @@ export function analyzeCPR(
                         (todayCPR.s1 < prevCPR.s1 && todayCPR.s2 < prevCPR.s2 && 
                           todayCPR.s3 < prevCPR.s3 && todayCPR.s4 < prevCPR.s4); //LBALLD-U2<PU1:2U4
   
-  const overlapHigher    = (todayCPR.bc >= prevCPR.bc && todayCPR.bc <= prevCPR.tc) && todayCPR.tc > prevCPR.tc;
+  const overlapHigher    = !equalCPR && (todayCPR.bc >= prevCPR.bc && todayCPR.bc <= prevCPR.tc) && todayCPR.tc > prevCPR.tc;
+  const overlapLower    = !equalCPR && (todayCPR.tc <= prevCPR.tc && todayCPR.tc >= prevCPR.bc) && todayCPR.bc < prevCPR.bc;
 
   const allupabove =  (todayCPR.r1 > prevCPR.r1) && (todayCPR.r1 < prevCPR.r2) &&// R1 stepped up
                       (todayCPR.r2 > prevCPR.r2) && (todayCPR.r2 < prevCPR.r3) &&// R2 stepped up
@@ -392,7 +398,6 @@ export function analyzeCPR(
                         (todayCPR.s3 < prevCPR.s3  && todayCPR.s3 > prevCPR.s4) && 
                           todayCPR.s4 < prevCPR.s4 ; // S4 stepped down
 
-  const overlapLower    = (todayCPR.tc <= prevCPR.tc && todayCPR.tc >= prevCPR.bc) && todayCPR.bc < prevCPR.bc;
   const lbtJPattern1   = (todayCPR.r1 < prevCPR.r1 && todayCPR.s1 < prevCPR.s1) &&
                           (prevCPR.r1 > todayCPR.r1 && prevCPR.r2 > todayCPR.r2 && prevCPR.r3 > todayCPR.r3 && prevCPR.r4 > todayCPR.r4)
   
@@ -404,12 +409,7 @@ export function analyzeCPR(
   const hbJPattern4  = (todayCPR.s1 > prevCPR.s1 && todayCPR.s1 < prevCPR.bc) && prevCPR.widthPct < 0.5 && // L1>PL1
                         todayCPR.r4 < prevCPR.r1 ; //HB-PU1CU234:2L4
 
-  // Equal CPR: today TC, Pivot and BC are within 0.001% of yesterday
-  const eqTol = (a: number, b: number): boolean => Math.abs(a - b) <= Math.max(Math.abs(a), Math.abs(b)) * 0.00001;
-  const equalCPR =
-    eqTol(prevCPR.tc, todayCPR.tc) &&
-    eqTol(prevCPR.pivot, todayCPR.pivot) &&
-    eqTol(prevCPR.bc, todayCPR.bc);
+ 
 
   const eXL3U3 = (prevCPR.r4 < todayCPR.r3 && prevCPR.r4 > todayCPR.r2) && 
                   (prevCPR.s4 > todayCPR.s3 && prevCPR.s4 < todayCPR.s2) && srExpandedHigher;
