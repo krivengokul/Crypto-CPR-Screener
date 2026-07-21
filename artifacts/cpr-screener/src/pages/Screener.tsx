@@ -1065,45 +1065,110 @@ export default function Screener({
         {/* Legend */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
           <div className="rounded-lg border border-border bg-card p-3">
+            {/* NEW: label + badges now share the first row (badges shrunk to
+                px-1.5 py-0.5 text-[10px]) so more horizontal room is freed
+                up. This card is keyed only on activePattern (never on any
+                showXXX subfilter state), so it stays exactly the same
+                regardless of which subfilter chip is selected inside a
+                section. The old "ADK CPR Formula" fallback for unmatched
+                patterns has been removed entirely — unmatched patterns now
+                render nothing here. Coverage extended to every category in
+                the left nav (patterns array in PatternSidebar.tsx). */}
             {activePattern === "structure-bigabove" ? (
               <>
-                <div className="text-xs font-semibold text-primary mb-1">BigCPR Above</div>
+                <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                  <span className="text-xs font-semibold text-primary">BigCPR Above</span>
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-500 text-white">Above</span>
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-500 text-white">Wide</span>
+                </div>
                 <div className="text-xs text-muted-foreground">Wide CPR Above PCPR — today&apos;s CPR is wider than yesterday&apos;s and present above it</div>
               </>
             ) : activePattern === "structure-bigbelow" ? (
               <>
-                <div className="text-xs font-semibold text-primary mb-1">Big Below</div>
+                <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                  <span className="text-xs font-semibold text-primary">Big Below</span>
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-orange-500 text-white">Below</span>
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-500 text-white">Wide</span>
+                </div>
                 <div className="text-xs text-muted-foreground">Wide CPR Below PCPR — today&apos;s CPR is wider than yesterday&apos;s and present below it</div>
               </>
             ) : activePattern === "littleabove" ? (
               <>
-                <div className="text-xs font-semibold text-primary mb-1">LittleCPR Above</div>
+                <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                  <span className="text-xs font-semibold text-primary">LittleCPR Above</span>
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-500 text-white">Above</span>
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-cyan-500 text-white">Narrow</span>
+                </div>
                 <div className="text-xs text-muted-foreground">Narrow CPR Above PCPR — today&apos;s CPR is narrower than yesterday&apos;s and present above it</div>
               </>
             ) : activePattern === "littlebelow" ? (
               <>
-                <div className="text-xs font-semibold text-primary mb-1">LittleCPR Below</div>
-                <div className="text-xs text-muted-foreground mb-2">Narrow CPR Below PCPR — today&apos;s CPR is narrower than yesterday&apos;s and present below it</div>
-                <div className="flex gap-1.5">
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-orange-500 text-white">Below</span>
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-500 text-white">Narrow</span>
+                <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                  <span className="text-xs font-semibold text-primary">LittleCPR Below</span>
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-orange-500 text-white">Below</span>
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-500 text-white">Narrow</span>
                 </div>
+                <div className="text-xs text-muted-foreground">Narrow CPR Below PCPR — today&apos;s CPR is narrower than yesterday&apos;s and present below it</div>
               </>
             ) : activePattern === "overlapping-lower" ? (
               <>
-                <div className="text-xs font-semibold text-primary mb-1">Overlapping Lower</div>
-                <div className="text-xs text-muted-foreground mb-2">Today&apos;s CPR overlaps below yesterday&apos;s CPR</div>
-                <div className="flex gap-1.5">
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-orange-500 text-white">Overlap</span>
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-500 text-white">Lower</span>
+                <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                  <span className="text-xs font-semibold text-primary">Overlapping Lower</span>
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-orange-500 text-white">Overlap</span>
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-500 text-white">Lower</span>
                 </div>
+                <div className="text-xs text-muted-foreground">Today&apos;s CPR overlaps below yesterday&apos;s CPR</div>
               </>
-            ) : (
+            ) : activePattern === "overlapping-higher" ? (
               <>
-                <div className="text-xs font-semibold text-primary mb-1">ADK CPR Formula</div>
-                <div className="text-xs text-muted-foreground">Pivot=(H+L+C)/3 · BC=(H+L)/2 · TC=2P−BC</div>
+                <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                  <span className="text-xs font-semibold text-primary">Overlapping Higher</span>
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-orange-500 text-white">Overlap</span>
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-violet-500 text-white">Higher</span>
+                </div>
+                <div className="text-xs text-muted-foreground">Today&apos;s CPR overlaps above yesterday&apos;s CPR</div>
               </>
-            )}
+            ) : activePattern === "inside-cpr" ? (
+              <>
+                <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                  <span className="text-xs font-semibold text-primary">CPR Inside</span>
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-orange-500 text-white">Inside</span>
+                </div>
+                <div className="text-xs text-muted-foreground">Today&apos;s CPR sits inside yesterday&apos;s CPR range</div>
+              </>
+            ) : activePattern === "outside-cpr" ? (
+              <>
+                <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                  <span className="text-xs font-semibold text-primary">CPR Outside</span>
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-purple-500 text-white">Outside</span>
+                </div>
+                <div className="text-xs text-muted-foreground">Today&apos;s CPR sits outside yesterday&apos;s CPR range</div>
+              </>
+            ) : activePattern === "equal-cpr" ? (
+              <>
+                <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                  <span className="text-xs font-semibold text-primary">Equal CPR</span>
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500 text-white">Equal</span>
+                </div>
+                <div className="text-xs text-muted-foreground">Previous &amp; today&apos;s CPR are effectively equal</div>
+              </>
+            ) : activePattern === "u1-gt-pu4" ? (
+              <>
+                <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                  <span className="text-xs font-semibold text-primary">U1&gt;pU4</span>
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500 text-white">U1&gt;PU4</span>
+                </div>
+                <div className="text-xs text-muted-foreground">Today&apos;s R1 above prev day&apos;s R4</div>
+              </>
+            ) : activePattern === "l1-lt-pl4" ? (
+              <>
+                <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                  <span className="text-xs font-semibold text-primary">L1&lt;pL4</span>
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-destructive text-white">L1&lt;PL4</span>
+                </div>
+                <div className="text-xs text-muted-foreground">Today&apos;s S1 below prev day&apos;s S4</div>
+              </>
+            ) : null}
           </div>
           <div className="rounded-lg border border-border bg-card p-3">
             {showBAComp && activePattern === "structure-bigabove" ? (
