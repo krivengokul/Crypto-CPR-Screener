@@ -1034,6 +1034,19 @@ export default function Screener({
         : <ChevronDown className="w-3 h-3 inline ml-1 text-primary" />
       : <ArrowUpDown className="w-3 h-3 inline ml-1 opacity-30" />;
 
+  // Map a sub-pattern id (selected via the sidebar tree, e.g. "co2-l2u2")
+  // back to its parent category id (e.g. "littlebelow"), so Legend Card 1
+  // still shows the parent's overview card instead of going blank when a
+  // child pattern is the active one. Parent ids and standalone patterns
+  // (which aren't anyone's child) just resolve to themselves.
+  function getLegendParentPattern(patternId: string): string {
+    for (const [parentId, children] of Object.entries(subPatterns)) {
+      if (children.some((c) => c.id === patternId)) return parentId;
+    }
+    return patternId;
+  }
+  const legendPattern = getLegendParentPattern(activePattern);
+
   // Helper: is any sub-filter active (to decide the result count label)
   const anySubFilter =
     showLABothTiny || showLAAllUp || showLA1LHr || showLAPL12CL23 || showLACompressed || showLAT1U46AM || showLASsHiL4U4FAU42AM || showLAMeMieXHiL4U3U46PM ||
@@ -1074,7 +1087,7 @@ export default function Screener({
                 patterns has been removed entirely — unmatched patterns now
                 render nothing here. Coverage extended to every category in
                 the left nav (patterns array in PatternSidebar.tsx). */}
-            {activePattern === "structure-bigabove" ? (
+            {legendPattern === "structure-bigabove" ? (
               <>
                 <div className="flex items-center gap-1.5 mb-1 flex-wrap">
                   <span className="text-xs font-semibold text-primary">BigCPR Above</span>
@@ -1083,7 +1096,7 @@ export default function Screener({
                 </div>
                 <div className="text-xs text-muted-foreground">Wide CPR Above PCPR — today&apos;s CPR is wider than yesterday&apos;s and present above it</div>
               </>
-            ) : activePattern === "structure-bigbelow" ? (
+            ) : legendPattern === "structure-bigbelow" ? (
               <>
                 <div className="flex items-center gap-1.5 mb-1 flex-wrap">
                   <span className="text-xs font-semibold text-primary">Big Below</span>
@@ -1092,7 +1105,7 @@ export default function Screener({
                 </div>
                 <div className="text-xs text-muted-foreground">Wide CPR Below PCPR — today&apos;s CPR is wider than yesterday&apos;s and present below it</div>
               </>
-            ) : activePattern === "littleabove" ? (
+            ) : legendPattern === "littleabove" ? (
               <>
                 <div className="flex items-center gap-1.5 mb-1 flex-wrap">
                   <span className="text-xs font-semibold text-primary">LittleCPR Above</span>
@@ -1101,7 +1114,7 @@ export default function Screener({
                 </div>
                 <div className="text-xs text-muted-foreground">Narrow CPR Above PCPR — today&apos;s CPR is narrower than yesterday&apos;s and present above it</div>
               </>
-            ) : activePattern === "littlebelow" ? (
+            ) : legendPattern === "littlebelow" ? (
               <>
                 <div className="flex items-center gap-1.5 mb-1 flex-wrap">
                   <span className="text-xs font-semibold text-primary">LittleCPR Below</span>
@@ -1110,7 +1123,7 @@ export default function Screener({
                 </div>
                 <div className="text-xs text-muted-foreground">Narrow CPR Below PCPR — today&apos;s CPR is narrower than yesterday&apos;s and present below it</div>
               </>
-            ) : activePattern === "overlapping-lower" ? (
+            ) : legendPattern === "overlapping-lower" ? (
               <>
                 <div className="flex items-center gap-1.5 mb-1 flex-wrap">
                   <span className="text-xs font-semibold text-primary">Overlapping Lower</span>
@@ -1119,7 +1132,7 @@ export default function Screener({
                 </div>
                 <div className="text-xs text-muted-foreground">Today&apos;s CPR overlaps below yesterday&apos;s CPR</div>
               </>
-            ) : activePattern === "overlapping-higher" ? (
+            ) : legendPattern === "overlapping-higher" ? (
               <>
                 <div className="flex items-center gap-1.5 mb-1 flex-wrap">
                   <span className="text-xs font-semibold text-primary">Overlapping Higher</span>
@@ -1128,7 +1141,7 @@ export default function Screener({
                 </div>
                 <div className="text-xs text-muted-foreground">Today&apos;s CPR overlaps above yesterday&apos;s CPR</div>
               </>
-            ) : activePattern === "inside-cpr" ? (
+            ) : legendPattern === "inside-cpr" ? (
               <>
                 <div className="flex items-center gap-1.5 mb-1 flex-wrap">
                   <span className="text-xs font-semibold text-primary">CPR Inside</span>
@@ -1136,7 +1149,7 @@ export default function Screener({
                 </div>
                 <div className="text-xs text-muted-foreground">Today&apos;s CPR sits inside yesterday&apos;s CPR range</div>
               </>
-            ) : activePattern === "outside-cpr" ? (
+            ) : legendPattern === "outside-cpr" ? (
               <>
                 <div className="flex items-center gap-1.5 mb-1 flex-wrap">
                   <span className="text-xs font-semibold text-primary">CPR Outside</span>
@@ -1144,7 +1157,7 @@ export default function Screener({
                 </div>
                 <div className="text-xs text-muted-foreground">Today&apos;s CPR sits outside yesterday&apos;s CPR range</div>
               </>
-            ) : activePattern === "equal-cpr" ? (
+            ) : legendPattern === "equal-cpr" ? (
               <>
                 <div className="flex items-center gap-1.5 mb-1 flex-wrap">
                   <span className="text-xs font-semibold text-primary">Equal CPR</span>
