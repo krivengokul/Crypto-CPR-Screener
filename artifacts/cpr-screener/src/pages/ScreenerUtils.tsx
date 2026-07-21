@@ -419,6 +419,22 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       );
     case "la-allstepup":
       return r.cprRising && r.narrowCPR && r.allupabove && r.allupbelow;
+    // NEW: Ss-HiL4U4-FAU4:2AM — Little Above: cprRising + narrowCPR +
+    // all step up above & below + today S1 above prev PDL + today R1 above
+    // prev PDH + today PDH > today R1. Prev CPR width 0.60%-1.10% (Small),
+    // Today CPR width 0.60%-1.10% (Small). Target: Far Above U4 at ~2AM.
+    case "Ss-HiL4U4-FAU4:2AM":
+      return (
+        r.cprRising &&
+        r.narrowCPR &&
+        r.allupabove &&
+        r.allupbelow &&
+        r.todayCPR.s1 > r.prevCPR.prevLow &&
+        r.todayCPR.r1 > r.prevCPR.prevHigh &&
+        r.todayCPR.prevHigh > r.todayCPR.r1 &&
+        r.prevCPR.widthPct > 0.60 && r.prevCPR.widthPct <= 1.10 &&
+        r.todayCPR.widthPct > 0.60 && r.todayCPR.widthPct <= 1.10
+      );
     // NEW: 1LHr-L4U3-U4 — Little Above + Compressed:
     // today's S4 above prev S4 AND below prev S3, today's R3 above prev R4,
     // today's CPR Narrow with width < 0.1%, prev CPR width between 0.1% and 1%
@@ -799,6 +815,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     { key: "LA-PL12CL23", direction: "down" },
     { key: "sT-cOL2U3-APU4", direction: "up" },
     { key: "T1-U4:6AM", direction: "up" },
+    { key: "Ss-HiL4U4-FAU4:2AM", direction: "up" },
   ],
   littlebelow: [
     { key: "lb-micro2-apu4", direction: "down" },

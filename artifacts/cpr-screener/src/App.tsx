@@ -63,6 +63,7 @@ const SCREENER_PATTERN_IDS = new Set([
   "sT-cOL2U3-APU4",
   "eXHiU1L3",
   "T1-U4:6AM",
+  "Ss-HiL4U4-FAU4:2AM",
 
   // ── Little BELOW sub-patterns ──
   "lb-micro2-apu4",
