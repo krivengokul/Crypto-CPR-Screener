@@ -25,8 +25,7 @@ export interface ScreenerLegendProps {
   showHAU1: boolean;
   showeXHiL4U234: boolean;
   showOutsideCPReXHrL3U3AU4: boolean;
-  showInsideCPRNarrow: boolean;
-  showInsideCPRCoU4L3: boolean;
+  showInsideCPRTiCOLo: boolean;
 }
 
 /**
@@ -61,8 +60,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
     showHAU1,
     showeXHiL4U234,
     showOutsideCPReXHrL3U3AU4,
-    showInsideCPRNarrow,
-    showInsideCPRCoU4L3,
+    showInsideCPRTiCOLo,
   } = props;
   
   // Map a sub-pattern id (selected via the sidebar tree, e.g. "co2-l2u2")
@@ -303,15 +301,10 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             <div className="text-xs font-semibold text-rose-400 mb-1">eXHrL3U3-AU4</div>
             <div className="text-xs text-muted-foreground">Prev S4 between today&apos;s S3/S4, Prev R4 between today&apos;s R2/R3</div>
           </>
-        ) : showInsideCPRNarrow && activePattern === "inside-cpr" ? (
+        ) : showInsideCPRTiCOLo && activePattern === "inside-cpr" ? (
           <>
-            <div className="text-xs font-semibold text-cyan-400 mb-1">Narrow</div>
-            <div className="text-xs text-muted-foreground">Inside CPR + today&apos;s CPR width &lt; 0.5% — coiled, low room to breathe</div>
-          </>
-        ) : showInsideCPRCoU4L3 && activePattern === "inside-cpr" ? (
-          <>
-            <div className="text-xs font-semibold text-indigo-400 mb-1">cO-U4L3</div>
-            <div className="text-xs text-muted-foreground">Compressed inside prev R4 / prev S3 — today&apos;s R4 &lt; Prev R4, today&apos;s S4 &gt; Prev S3</div>
+            <div className="text-xs font-semibold text-green-400 mb-1">Pivot Level: cOLo</div>
+            <div className="text-xs text-muted-foreground">CPR: Tiny / Mini</div>
           </>
         ) : activePattern === "falling" ? (
           <>
@@ -441,15 +434,10 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             <div className="text-xs font-semibold text-emerald-400 mb-1">Target</div>
             <div className="text-xs text-muted-foreground">Tight prior-day CPR that expanded outside it — breakout continuation potential</div>
           </>
-        ) : showInsideCPRNarrow && activePattern === "inside-cpr" ? (
+        ) : showInsideCPRTiCOLo && activePattern === "inside-cpr" ? (
           <>
-            <div className="text-xs font-semibold text-emerald-400 mb-1">Target</div>
-            <div className="text-xs text-muted-foreground">Coiled-spring — potential breakout beyond today&apos;s R4/S4</div>
-          </>
-        ) : showInsideCPRCoU4L3 && activePattern === "inside-cpr" ? (
-          <>
-            <div className="text-xs font-semibold text-emerald-400 mb-1">Target</div>
-            <div className="text-xs text-muted-foreground">Compressed range coiled within prev day&apos;s R4/S3 — breakout potential</div>
+            <div className="text-xs font-semibold text-green-400 mb-1">Exp Target: pU4</div>
+            <div className="text-xs text-muted-foreground">Time: 9PM</div>
           </>
         ) : null}
       </div>

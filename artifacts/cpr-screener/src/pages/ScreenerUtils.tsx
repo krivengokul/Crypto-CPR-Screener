@@ -623,27 +623,22 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     case "inside-cpr":
       return (r.todayCPR.tc <= r.prevCPR.tc && r.todayCPR.bc > r.prevCPR.bc) ||
               (r.todayCPR.tc < r.prevCPR.tc && r.todayCPR.bc >= r.prevCPR.bc);
-    case "inside-cpr-expanded":
-      return r.todayCPR.tc < r.prevCPR.tc && r.todayCPR.bc > r.prevCPR.bc && (r.todayCPR.r4 > r.prevCPR.r4 || r.todayCPR.s4 < r.prevCPR.s4);
-    // NEW: inside-cpr-narrow — Inside CPR (today's CPR inside prev day's CPR)
-    // + today's CPR is Narrow (widthPct < 0.5%). Coiled-spring setup: sibling
-    // of inside-cpr-expanded, differentiated purely on today's CPR width%
-    // (no PDH/PDL width considered per Gokul's spec).
-    case "inside-cpr-narrow":
-      return (
-        r.todayCPR.tc < r.prevCPR.tc &&
-        r.todayCPR.bc > r.prevCPR.bc &&
-        r.todayCPR.widthPct < 0.5
-      );
-    // NEW: cO-U4L3 — Compressed inside prev R4 and prev S3: today's R4 below
-    // prev day's R4 AND today's S4 above prev day's S3. Literal condition
-    // only, no extra base condition (per Gokul's spec) — sibling of
-    // inside-cpr-expanded / inside-cpr-narrow under the inside-cpr tab.
-    case "cO-U4L3":
-      return (
-        r.todayCPR.r4 < r.prevCPR.r4 &&
-        r.todayCPR.s4 > r.prevCPR.s3
-      );
+    // NEW: Ti-cOLo-APU4-9PM — Inside CPR + one of four (prev R1, prev S1)
+    // placements across today's ladder bands. Replaces the old Expanded /
+    // Narrow / cO-U4L3 sub-filters under CPR Inside.
+    case "Ti-cOLo-APU4-9PM": {
+      const inside =
+        (r.todayCPR.tc <= r.prevCPR.tc && r.todayCPR.bc > r.prevCPR.bc) ||
+        (r.todayCPR.tc < r.prevCPR.tc && r.todayCPR.bc >= r.prevCPR.bc);
+      if (!inside) return false;
+      const t = r.todayCPR;
+      const p = r.prevCPR;
+      const cond1 = p.r1 >= t.r1 && p.r1 <= t.r2 && p.s1 <= t.bc && p.s1 >= t.s1;
+      const cond2 = p.r1 >= t.r2 && p.r1 <= t.r3 && p.s1 <= t.s1 && p.s1 >= t.s2;
+      const cond3 = p.r1 >= t.r3 && p.r1 <= t.r4 && p.s1 <= t.s2 && p.s1 >= t.s3;
+      const cond4 = p.r1 > t.r4 && p.s1 <= t.s3 && p.s1 >= t.s4;
+      return cond1 || cond2 || cond3 || cond4;
+    }
     case "outside-cpr":
       return r.todayCPR.tc > r.prevCPR.tc && r.todayCPR.bc < r.prevCPR.bc;
     case "outside-cpr-compressed":
@@ -850,9 +845,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     { key: "OBW-LoL4U4-L4", direction: "up" },
   ],
   "inside-cpr": [
-    { key: "inside-cpr-expanded", direction: "up" },
-    { key: "inside-cpr-narrow", direction: "up" },
-    { key: "cO-U4L3", direction: "up" },
+    { key: "Ti-cOLo-APU4-9PM", direction: "up" },
   ],
   "outside-cpr": [
     { key: "outside-cpr-compressed", direction: "up" },

@@ -61,9 +61,7 @@ export const subPatterns: Record<string, SubPattern[]> = {
     { id: "OBW-LoL4U4-L4",           label: "OBW-LoL4U4-L4" },
   ],
   "inside-cpr": [
-    { id: "inside-cpr-expanded",     label: "Expanded" },
-    { id: "inside-cpr-narrow",       label: "Narrow" },
-    { id: "cO-U4L3",                label: "cO-U4L3" },
+    { id: "Ti-cOLo-APU4-9PM",        label: "Ti-cOLo-APU4-9PM" },
   ],
   "outside-cpr": [
     { id: "outside-cpr-compressed",  label: "Compressed" },

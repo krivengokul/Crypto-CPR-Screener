@@ -92,13 +92,10 @@ export default function Screener({
   const [showOutsideCPRCompressed, setShowOutsideCPRCompressed] = useState(false);
   // NEW: eXHrL3U3-AU4 filter state — Outside CPR, placed next to Compressed
   const [showOutsideCPReXHrL3U3AU4, setShowOutsideCPReXHrL3U3AU4] = useState(false);
-  const [showInsideCPRExpanded, setShowInsideCPRExpanded] = useState(false);
-  // NEW: inside-cpr-narrow — sibling of showInsideCPRExpanded, coiled-spring
-  // setup: CPR inside prev day's CPR AND today's CPR width < 0.5% (Narrow)
-  const [showInsideCPRNarrow, setShowInsideCPRNarrow] = useState(false);
+  // Ti-cOLo-APU4-9PM — single sub-filter under CPR Inside (replaces old
+  // Expanded / Narrow / cO-U4L3). Highlighted green.
+  const [showInsideCPRTiCOLo, setShowInsideCPRTiCOLo] = useState(false);
   const [showHA55HrL4U34FAU4, setShowHA55HrL4U34FAU4] = useState(false);
-  // NEW: cO-U4L3 — Compressed inside prev R4/prev S3, 3rd sub-filter under inside-cpr
-  const [showInsideCPRCoU4L3, setShowInsideCPRCoU4L3] = useState(false);
   const [showBigBelowPMiniPL3, setShowBigBelowPMiniPL3] = useState(false);
   // NEW: live sub-toggle on top of pMini — restrict to rows currently trading above today's TC
   const [showBigBelowPMiniRising, setShowBigBelowPMiniRising] = useState(false);
@@ -332,7 +329,7 @@ export default function Screener({
     if (deltaAllResults.length > 0) setDeltaFiltered(deltaAllResults.filter((r) => passesPattern(r, activePattern)));
     if (activePattern !== "littleabove") { setShowLABothTiny(false); setShowLAAllUp(false); setShowLA1LHr(false); setShowLAPL12CL23(false); setShowLACompressed(false); setShowLAT1U46AM(false); setShowLASsHiL4U4FAU42AM(false); setShowLAMeMieXHiL4U3U46PM(false); }
     if (activePattern !== "outside-cpr") { setShowOutsideCPRCompressed(false); setShowOutsideCPReXHrL3U3AU4(false); }
-    if (activePattern !== "inside-cpr") { setShowInsideCPRExpanded(false); setShowInsideCPRNarrow(false); setShowInsideCPRCoU4L3(false); }
+    if (activePattern !== "inside-cpr") { setShowInsideCPRTiCOLo(false); }
     if (activePattern !== "overlapping-lower") { setShowExpU4PU4(false); setShowExpU3PU3(false); setShowOBNLoL4U4(false); setShowOBWLoL4U4(false); }
     // NEW: reset eXHi-L4U4-U4 toggle when leaving Overlapping Higher
     if (activePattern !== "overlapping-higher") { setShowOBHiExL4U4(false); }
@@ -472,36 +469,14 @@ export default function Screener({
       if (activeTab === "delta") return deltaIntersect;
       return binanceIntersect;
     }
-    if (showInsideCPRExpanded && activePattern === "inside-cpr") {
+    // Ti-cOLo-APU4-9PM pool — Inside CPR with prev R1/S1 sitting in specific
+    // today ladder bands (see passesPattern("Ti-cOLo-APU4-9PM"))
+    if (showInsideCPRTiCOLo && activePattern === "inside-cpr") {
       const binanceIntersect = allResults
-        .filter((r) => passesPattern(r, "inside-cpr-expanded"))
+        .filter((r) => passesPattern(r, "Ti-cOLo-APU4-9PM"))
         .map((r) => ({ ...r, source: "binance" as const }));
       const deltaIntersect = deltaAllResults
-        .filter((r) => passesPattern(r, "inside-cpr-expanded"))
-        .map((r) => ({ ...r, source: "delta" as const }));
-      if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
-      if (activeTab === "delta") return deltaIntersect;
-      return binanceIntersect;
-    }
-    // NEW: inside-cpr-narrow pool — Inside CPR, today's CPR Narrow (<0.5% width)
-    if (showInsideCPRNarrow && activePattern === "inside-cpr") {
-      const binanceIntersect = allResults
-        .filter((r) => passesPattern(r, "inside-cpr-narrow"))
-        .map((r) => ({ ...r, source: "binance" as const }));
-      const deltaIntersect = deltaAllResults
-        .filter((r) => passesPattern(r, "inside-cpr-narrow"))
-        .map((r) => ({ ...r, source: "delta" as const }));
-      if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
-      if (activeTab === "delta") return deltaIntersect;
-      return binanceIntersect;
-    }
-    // NEW: cO-U4L3 — Compressed inside prev R4/prev S3 (today's R4 < prev R4, today's S4 > prev S3)
-    if (showInsideCPRCoU4L3 && activePattern === "inside-cpr") {
-      const binanceIntersect = allResults
-        .filter((r) => passesPattern(r, "cO-U4L3"))
-        .map((r) => ({ ...r, source: "binance" as const }));
-      const deltaIntersect = deltaAllResults
-        .filter((r) => passesPattern(r, "cO-U4L3"))
+        .filter((r) => passesPattern(r, "Ti-cOLo-APU4-9PM"))
         .map((r) => ({ ...r, source: "delta" as const }));
       if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
       if (activeTab === "delta") return deltaIntersect;
@@ -965,7 +940,7 @@ export default function Screener({
   // Helper: is any sub-filter active (to decide the result count label)
   const anySubFilter =
     showLABothTiny || showLAAllUp || showLA1LHr || showLAPL12CL23 || showLACompressed || showLAT1U46AM || showLASsHiL4U4FAU42AM || showLAMeMieXHiL4U3U46PM ||
-    showOutsideCPRCompressed || showOutsideCPReXHrL3U3AU4 || showInsideCPRExpanded || showInsideCPRNarrow || showInsideCPRCoU4L3 ||
+    showOutsideCPRCompressed || showOutsideCPReXHrL3U3AU4 || showInsideCPRTiCOLo ||
     showBigBelowPMiniPL3 || showBigBelowPMiniRising || showExpU3LtPU4 || showBigBeloweXLoL3U4AU4 || showBigBelowL1LtPL4 || showL1LtPL4CprLtPL4 || showBigBeloweXU4L234AU4 ||
     showBigAbovePL34CL4 || showBAComp || showHAU1 || showHAU1CprAbovePU4 || showHAU1L1AbovePU4 || showHAU1PWideAbove || showHRHAL || showHA55HrL4U34FAU4 || showHiL4U4FAU4 || show1ScoHiFAU4 || showLBCmprss || showLBC34 || showLBE11 || showLBC2L2U2 ||
     showLBBothTiny || showLBAllUp || showExpU4PU4 || showExpU3PU3 || showOBNLoL4U4 || showOBWLoL4U4 || showOBHiExL4U4 || showeXHiL4U234 ||
@@ -1016,8 +991,7 @@ export default function Screener({
           showHAU1={showHAU1}
           showeXHiL4U234={showeXHiL4U234}
           showOutsideCPReXHrL3U3AU4={showOutsideCPReXHrL3U3AU4}
-          showInsideCPRNarrow={showInsideCPRNarrow}
-          showInsideCPRCoU4L3={showInsideCPRCoU4L3}
+          showInsideCPRTiCOLo={showInsideCPRTiCOLo}
         />
 
         {/* Controls */}
@@ -1046,8 +1020,7 @@ export default function Screener({
                   setShowLAMeMieXHiL4U3U46PM(false);
                   setShowOutsideCPRCompressed(false);
                   setShowOutsideCPReXHrL3U3AU4(false);
-                  setShowInsideCPRExpanded(false);
-                  setShowInsideCPRNarrow(false);
+                  setShowInsideCPRTiCOLo(false);
                   setShowBigBelowPMiniPL3(false);
                   setShowBigBelowPMiniRising(false);
                   setShowExpU3LtPU4(false);
@@ -1575,29 +1548,15 @@ export default function Screener({
             )}
             {activePattern === "inside-cpr" && !showAll && (
               <button
-                onClick={() => { setShowInsideCPRExpanded((v) => !v); setShowInsideCPRNarrow(false); }}
+                onClick={() => { setShowInsideCPRTiCOLo((v) => !v); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                  showInsideCPRExpanded
-                    ? "border-orange-400 text-orange-400"
+                  showInsideCPRTiCOLo
+                    ? "border-green-400 text-green-400 bg-green-500/10"
                     : "border-border text-muted-foreground hover:text-foreground"
                 }`}
-                title="Show InsideCPR symbols where today R4 > prev R4 AND today S4 < prev S4 (expanded range)"
+                title="Inside CPR + prev R1/S1 in specific today ladder bands (Tiny/Mini cOLo, target pU4, 9PM)"
               >
-                {showInsideCPRExpanded ? "✕ Expanded" : "Expanded"}
-              </button>
-            )}
-            {/* NEW: inside-cpr-narrow button — sibling of Expanded, mutually exclusive with it */}
-            {activePattern === "inside-cpr" && !showAll && (
-              <button
-                onClick={() => { setShowInsideCPRNarrow((v) => !v); setShowInsideCPRExpanded(false); }}
-                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                  showInsideCPRNarrow
-                    ? "border-cyan-400 text-cyan-400"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-                title="Show InsideCPR symbols where today's CPR width < 0.5% (Narrow) — coiled-spring setup"
-              >
-                {showInsideCPRNarrow ? "✕ Narrow" : "Narrow"}
+                {showInsideCPRTiCOLo ? "✕ Ti-cOLo-APU4-9PM" : "Ti-cOLo-APU4-9PM"}
               </button>
             )}
             {activePattern === "structure-bigbelow" && !showAll && (
