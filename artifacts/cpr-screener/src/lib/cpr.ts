@@ -145,8 +145,8 @@ export interface CPRResult {
   change24h: number;
   quoteVolume: number;
   // NEW: Previous day Pivot→R1 distance and Pivot→S1 distance (raw price units)
-  pR1Dist: number;
-  pS1Dist: number;
+  prevR1Gap: number;
+  prevS1Gap: number;
 }
 
 function isValidCandle(c: OHLC): boolean {
@@ -465,8 +465,8 @@ export function analyzeCPR(
   // NEW: cOU2L2 / cOL2U2 — today's S4 in prev L2 band (s2→s1), today's R4 in
   // prev U2 band (r1→r2); split by an extra confirming condition on the S3/R3 side.
   // NEW: Previous day Pivot→R1 distance and Pivot→S1 distance
-  const pR1Dist = prevCPR.r1 - prevCPR.pivot;
-  const pS1Dist = prevCPR.pivot - prevCPR.s1;
+  const prevR1Gap = prevCPR.r1 - prevCPR.pivot;
+  const prevS1Gap = prevCPR.pivot - prevCPR.s1;
 
   const r2Move = Math.abs(prevCPR.r2 - todayCPR.r2);
   const s2Move = Math.abs(prevCPR.s2 - todayCPR.s2);
@@ -563,7 +563,7 @@ export function analyzeCPR(
     openPrice: openPrice ?? todayCandle.open,
     change24h,
     quoteVolume,
-    pR1Dist,
-    pS1Dist,
+    prevR1Gap,
+    prevS1Gap,
   };
 }
