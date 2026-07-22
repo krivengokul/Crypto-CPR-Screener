@@ -1175,8 +1175,8 @@ export function SRLadder({
       return "text-yellow-500 font-semibold bg-yellow-500/5";
     if (key === "PH" || key === "PL")
       return "text-orange-400 font-medium bg-orange-500/5";
-    if (key.startsWith("R")) return "text-red-400";
-    return "text-green-400";
+    if (key.startsWith("R")) return "text-green-400";
+    return "text-red-400";
   };
 
   return (

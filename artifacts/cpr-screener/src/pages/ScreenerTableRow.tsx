@@ -335,7 +335,7 @@ export default function ScreenerTableRow({
             <div className="flex flex-wrap gap-10 items-start">
               {r.ppCPR && (
                 <div className="min-w-[140px]">
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">Prev-to-Prev Day CPR</p>
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">PDay-1 CPR</p>
                   <div className="rounded-lg border border-border bg-card/40 px-3 py-2 font-mono space-y-1.5">
                     <div className="flex justify-between gap-4 text-xs">
                       <span style={{ color: "#6b7280" }}>TC:</span>
@@ -388,7 +388,7 @@ export default function ScreenerTableRow({
               </div>
               <div className="hidden sm:block w-px self-stretch bg-border/50 mx-2" />
               {r.ppCPR && (
-                <SRLadder cpr={r.ppCPR} currentPrice={r.currentPrice} label="Prev-to-Prev Day S/R" />
+                <SRLadder cpr={r.ppCPR} currentPrice={r.currentPrice} label="PDay-1 S/R" />
               )}
               <SRLadder cpr={r.prevCPR} currentPrice={r.currentPrice} label="Prev Day S/R" />
               <SRLadder cpr={r.todayCPR} currentPrice={r.currentPrice} label="Today S/R" />
