@@ -1031,7 +1031,7 @@ export default function Screener({
                   ? currentAllCount
                   : currentFilteredCount}{" "}
                 results
-                {!showAll && !anySubFilter && ` (${currentFilteredCount} matching, ${currentAllCount} total)`}
+                {!showAll && !anySubFilter && ` (${currentAllCount} total)`}
               </span>
               <button
                 onClick={() => {
@@ -1078,9 +1078,9 @@ export default function Screener({
                   setShowOBHiExL4U4(false);
                   setShoweXHiL4U234(false);
                 }}
-                className="px-2.5 py-1 rounded border border-border text-muted-foreground hover:text-foreground transition-colors"
+                className={`text-xs px-2.5 py-1 rounded border transition-colors ${showAll ? "border-foreground text-foreground" : "border-border text-muted-foreground hover:text-foreground"}`}
               >
-                Toggle only
+                {showAll ? "✕ Show All" : "Show All"}
               </button>
             </div>
           )}
