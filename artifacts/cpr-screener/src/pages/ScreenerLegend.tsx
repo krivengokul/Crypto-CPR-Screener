@@ -1,4 +1,4 @@
-import { subPatterns } from "@/lib/PatternSidebar"
+import { subPatterns } from "@/components/ui/PatternSidebar"
 
 export interface ScreenerLegendProps {
   activePattern: string;
