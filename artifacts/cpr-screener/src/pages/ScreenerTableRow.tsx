@@ -369,6 +369,39 @@ export default function ScreenerTableRow({
                 </span>
               );
             }
+            if (passesPattern(r, "inside-cpr")) {
+              if (r.prevR1Gap > r.prevS1Gap) {
+                badges.push(
+                  <span
+                    key="pu1-gt-pl1"
+                    className="text-xs px-1.5 py-0.5 rounded bg-green-500/10 text-green-400 border border-green-500/30 font-medium"
+                    title={`Prev R1 gap ${fmt(r.prevR1Gap)} > Prev S1 gap ${fmt(r.prevS1Gap)}`}
+                  >
+                    pU1&gt;pL1
+                  </span>
+                );
+              } else if (r.prevS1Gap > r.prevR1Gap) {
+                badges.push(
+                  <span
+                    key="pl1-gt-pu1"
+                    className="text-xs px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/30 font-medium"
+                    title={`Prev S1 gap ${fmt(r.prevS1Gap)} > Prev R1 gap ${fmt(r.prevR1Gap)}`}
+                  >
+                    pL1&gt;pU1
+                  </span>
+                );
+              } else {
+                badges.push(
+                  <span
+                    key="pu1-eq-pl1"
+                    className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground border border-border font-medium"
+                    title={`Prev R1 gap = Prev S1 gap (${fmt(r.prevR1Gap)})`}
+                  >
+                    pU1=pL1
+                  </span>
+                );
+              }
+            }
             if (badges.length === 0) {
               return <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">—</span>;
             }
