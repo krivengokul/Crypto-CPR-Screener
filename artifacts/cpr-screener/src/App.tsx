@@ -89,9 +89,7 @@ const SCREENER_PATTERN_IDS = new Set([
   "LBT-PU1>U1PL1>L1",
 
   // ── CPR Inside sub-patterns ──
-  "inside-cpr-expanded",
-  "inside-cpr-narrow",
-  "cO-U4L3",
+  "Ti-cOLo-APU4-9PM",
 
   // ── CPR Outside sub-patterns ──
   "outside-cpr-compressed",
