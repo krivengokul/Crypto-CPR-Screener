@@ -56,7 +56,7 @@ import {
   getSubFilterDirection,
 } from "./ScreenerUtils";
 import LiveClock from "./LiveClock";
-import { useBinanceLiveRefresh, useDeltaLiveRefresh } from "./hooks/useLivePriceRefresh";
+import { useBinanceLiveRefresh, useDeltaLiveRefresh } from "@/hooks/useLivePriceRefresh";
 
 export default function Screener({
   activePattern = "littleabove",
