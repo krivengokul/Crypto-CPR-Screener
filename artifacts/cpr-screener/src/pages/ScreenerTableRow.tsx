@@ -12,8 +12,6 @@ import {
   distanceFromCPR,
   pdhPdlStatus,
   isRisingAboveTC,
-  cprDistancePct,
-  levelsInDistanceRange,
   getPivotLevel,
   computePivotSubLabel,
   SRLadder,
@@ -343,23 +341,43 @@ export default function ScreenerTableRow({
         </td>
         <td className="px-4 py-3 whitespace-nowrap text-xs font-mono font-medium">
           {(() => {
-            const dist = cprDistancePct(r);
-            if (dist === null) return <span className="text-muted-foreground">—</span>;
-            const levels = levelsInDistanceRange(r);
+            const r4d = (r as any).r4Distance as number | undefined;
+            const s4d = (r as any).s4Distance as number | undefined;
+            if (r4d == null || s4d == null || !isFinite(r4d) || !isFinite(s4d)) {
+              return <span className="text-muted-foreground">—</span>;
+            }
+            const maxD = Math.max(r4d, s4d);
+            const diffPct = maxD > 0 ? ((r4d - s4d) / maxD) * 100 : 0;
+            const diffColor =
+              diffPct > 0 ? "text-green-400" : diffPct < 0 ? "text-orange-400" : "text-muted-foreground";
             return (
               <>
-                <div className={r.cprRising ? "text-blue-400" : "text-orange-400"}>
-                  {dist.toFixed(2)}%
+                <div className="text-xs text-chart-3">
+                  <span className="text-muted-foreground">U4Gap: </span>
+                  {r4d.toFixed(4)}
                 </div>
-                {levels.length > 0 && (
-                  <div className="text-[10px] text-muted-foreground mt-0.5 whitespace-normal max-w-[72px]">
-                    {levels.map((lvl) => lvl.label).join(", ")}
+                <div
+                  className={`text-xs font-semibold py-0.5 ${diffColor}`}
+                  title={`(U4Gap − L4Gap) / max × 100`}
+                >
+                  {diffPct >= 0 ? "+" : ""}
+                  {diffPct.toFixed(2)}%
+                  <div className="w-full bg-muted rounded-full h-1 mt-0.5 max-w-[64px]">
+                    <div
+                      className={`h-1 rounded-full transition-all ${
+                        diffPct > 0 ? "bg-green-400" : diffPct < 0 ? "bg-orange-400" : "bg-muted-foreground"
+                      }`}
+                      style={{ width: `${Math.min(Math.abs(diffPct), 100)}%` }}
+                    />
                   </div>
-                )}
+                </div>
+                <div className="text-xs text-chart-3/70">
+                  <span className="text-muted-foreground">L4Gap: </span>
+                  {s4d.toFixed(4)}
+                </div>
               </>
             );
           })()}
-          {gapBadge && <div className="flex flex-wrap gap-1 mt-1">{gapBadge}</div>}
         </td>
         <td className="px-4 py-3 whitespace-nowrap">
           {(() => {

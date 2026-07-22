@@ -147,6 +147,9 @@ export interface CPRResult {
   // NEW: Previous day Pivot→R1 distance and Pivot→S1 distance (raw price units)
   prevR1Gap: number;
   prevS1Gap: number;
+  r4Distance: number;
+  s4Distance: number;
+
 }
 
 function isValidCandle(c: OHLC): boolean {
@@ -565,5 +568,7 @@ export function analyzeCPR(
     quoteVolume,
     prevR1Gap,
     prevS1Gap,
+    r4Distance,
+    s4Distance,
   };
 }
