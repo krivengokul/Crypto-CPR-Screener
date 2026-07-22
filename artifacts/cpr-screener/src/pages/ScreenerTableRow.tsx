@@ -90,7 +90,28 @@ export default function ScreenerTableRow({
               );
             })()}
             <div className="flex flex-col leading-tight min-w-0">
-              <span className="truncate">{sym.base}</span>
+              <div className="flex items-center gap-1">
+                <span className="truncate">{sym.base}</span>
+                {hasKnownChartMapping(r.symbol, r.source) ? (
+                  <a
+                    href={getChartUrl(r.symbol, r.source)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="text-muted-foreground hover:text-primary transition-colors shrink-0"
+                    title="Open on TradingView"
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                ) : (
+                  <span
+                    className="text-muted-foreground/30 cursor-not-allowed inline-flex shrink-0"
+                    title="Not available on TradingView"
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                  </span>
+                )}
+              </div>
               <span className="text-muted-foreground text-xs font-normal">/{sym.quote}</span>
               {isRisingAboveTC(r) && activePattern === "structure-bigbelow" && showBigBelowPMiniPL3 && (
                 <span
@@ -308,24 +329,51 @@ export default function ScreenerTableRow({
           })()}
         </td>
         <td className="px-4 py-3 whitespace-nowrap">
-          {hasKnownChartMapping(r.symbol, r.source) ? (
-            <a
-              href={getChartUrl(r.symbol, r.source)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-muted-foreground hover:text-primary transition-colors"
-              title="Open on TradingView"
-            >
-              <ExternalLink className="w-3.5 h-3.5" />
-            </a>
-          ) : (
-            <span
-              className="text-muted-foreground/30 cursor-not-allowed inline-flex"
-              title="Not available on TradingView — Delta's /BUSD tokenized-stock instruments aren't listed under DELTAIN yet"
-            >
-              <ExternalLink className="w-3.5 h-3.5" />
-            </span>
-          )}
+          {(() => {
+            const pdh = r.todayCPR.prevHigh;
+            const pdl = r.todayCPR.prevLow;
+            const u1 = (r.todayCPR as any).r1 ?? (r.todayCPR as any).u1;
+            const l1 = (r.todayCPR as any).s1 ?? (r.todayCPR as any).l1;
+            const badges: JSX.Element[] = [];
+            if (pdh != null && u1 != null) {
+              if (pdh > u1) {
+                badges.push(
+                  <span
+                    key="pdh-gt-u1"
+                    className="text-xs px-1.5 py-0.5 rounded bg-green-500/10 text-green-400 border border-green-500/30 font-medium"
+                    title={`PDH ${fmt(pdh)} > U1 ${fmt(u1)}`}
+                  >
+                    PDH&gt;U1
+                  </span>
+                );
+              } else if (pdh === u1) {
+                badges.push(
+                  <span
+                    key="pdh-eq-u1"
+                    className="text-xs px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 font-medium"
+                    title={`PDH = U1 (${fmt(pdh)})`}
+                  >
+                    PDH=U1
+                  </span>
+                );
+              }
+            }
+            if (pdl != null && l1 != null && pdl < l1) {
+              badges.push(
+                <span
+                  key="pdl-lt-l1"
+                  className="text-xs px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/30 font-medium"
+                  title={`PDL ${fmt(pdl)} < L1 ${fmt(l1)}`}
+                >
+                  PDL&lt;L1
+                </span>
+              );
+            }
+            if (badges.length === 0) {
+              return <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">—</span>;
+            }
+            return <div className="flex flex-wrap gap-1">{badges}</div>;
+          })()}
         </td>
       </tr>
 
