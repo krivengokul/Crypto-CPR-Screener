@@ -52,6 +52,38 @@ export default function ScreenerTableRow({
 }: ScreenerTableRowProps) {
   const sym = splitSymbol(r.symbol, r.source);
 
+  // Shared "pU1 vs pL1" badge — compares previous day's Pivot→R1 gap against
+  // Pivot→S1 gap. Only meaningful (and only rendered) for Inside-CPR rows;
+  // used in both the CPR column (replacing "Narrow") and the GAP column.
+  const isInsideCPR = passesPattern(r, "inside-cpr");
+  const gapBadge = isInsideCPR
+    ? r.prevR1Gap > r.prevS1Gap ? (
+        <span
+          key="pu1-gt-pl1"
+          className="text-xs px-1.5 py-0.5 rounded bg-green-500/10 text-green-400 border border-green-500/30 font-medium"
+          title={`Prev R1 gap ${fmt(r.prevR1Gap)} > Prev S1 gap ${fmt(r.prevS1Gap)}`}
+        >
+          pU1&gt;pL1
+        </span>
+      ) : r.prevS1Gap > r.prevR1Gap ? (
+        <span
+          key="pl1-gt-pu1"
+          className="text-xs px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/30 font-medium"
+          title={`Prev S1 gap ${fmt(r.prevS1Gap)} > Prev R1 gap ${fmt(r.prevR1Gap)}`}
+        >
+          pL1&gt;pU1
+        </span>
+      ) : (
+        <span
+          key="pu1-eq-pl1"
+          className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground border border-border font-medium"
+          title={`Prev R1 gap = Prev S1 gap (${fmt(r.prevR1Gap)})`}
+        >
+          pU1=pL1
+        </span>
+      )
+    : null;
+
   return (
     <Fragment key={rowKey}>
       <tr
@@ -228,7 +260,7 @@ export default function ScreenerTableRow({
             {r.overlapLower && <span className="text-xs px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-medium">oV-Below</span>}
             {r.strWideCPR && <span className="text-xs px-1.5 py-0.5 rounded bg-pink-500/10 text-pink-400 border border-pink-500/20 font-medium">Wide</span>}
             {r.overlapHigher && <span className="text-xs px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20 font-medium">oV-Above</span>}
-            {r.narrowCPR && <span className="text-xs px-1.5 py-0.5 rounded bg-chart-3/10 text-chart-3 border border-chart-3/20 font-medium">Narrow</span>}
+            {r.narrowCPR && (isInsideCPR ? gapBadge : <span className="text-xs px-1.5 py-0.5 rounded bg-chart-3/10 text-chart-3 border border-chart-3/20 font-medium">Narrow</span>)}
             {r.equalCPR && <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">Equal</span>}
             {!r.cprRising &&
               !r.cprFalling &&
@@ -327,6 +359,7 @@ export default function ScreenerTableRow({
               </>
             );
           })()}
+          {gapBadge && <div className="flex flex-wrap gap-1 mt-1">{gapBadge}</div>}
         </td>
         <td className="px-4 py-3 whitespace-nowrap">
           {(() => {
@@ -368,39 +401,6 @@ export default function ScreenerTableRow({
                   PDL&lt;L1
                 </span>
               );
-            }
-            if (passesPattern(r, "inside-cpr")) {
-              if (r.prevR1Gap > r.prevS1Gap) {
-                badges.push(
-                  <span
-                    key="pu1-gt-pl1"
-                    className="text-xs px-1.5 py-0.5 rounded bg-green-500/10 text-green-400 border border-green-500/30 font-medium"
-                    title={`Prev R1 gap ${fmt(r.prevR1Gap)} > Prev S1 gap ${fmt(r.prevS1Gap)}`}
-                  >
-                    pU1&gt;pL1
-                  </span>
-                );
-              } else if (r.prevS1Gap > r.prevR1Gap) {
-                badges.push(
-                  <span
-                    key="pl1-gt-pu1"
-                    className="text-xs px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/30 font-medium"
-                    title={`Prev S1 gap ${fmt(r.prevS1Gap)} > Prev R1 gap ${fmt(r.prevR1Gap)}`}
-                  >
-                    pL1&gt;pU1
-                  </span>
-                );
-              } else {
-                badges.push(
-                  <span
-                    key="pu1-eq-pl1"
-                    className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground border border-border font-medium"
-                    title={`Prev R1 gap = Prev S1 gap (${fmt(r.prevR1Gap)})`}
-                  >
-                    pU1=pL1
-                  </span>
-                );
-              }
             }
             if (badges.length === 0) {
               return <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">—</span>;
