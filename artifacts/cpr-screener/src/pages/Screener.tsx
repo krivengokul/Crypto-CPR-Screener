@@ -56,6 +56,7 @@ import {
   getSubFilterDirection,
 } from "./ScreenerUtils";
 import LiveClock from "./LiveClock";
+import { useBinanceLiveRefresh, useDeltaLiveRefresh } from "./hooks/LivePriceRefresh";
 
 export default function Screener({
   activePattern = "littleabove",
@@ -263,85 +264,6 @@ export default function Screener({
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, [nextScanUtc]);
-
-  // Binance live price refresh every 30s
-  useEffect(() => {
-    if (status !== "done") return;
-    const refresh = async () => {
-      const results = allResultsRef.current;
-      if (!results.length) return;
-      try {
-        const symbols = results.map((r) => r.symbol);
-        const chunks: string[][] = [];
-        for (let i = 0; i < symbols.length; i += 100) chunks.push(symbols.slice(i, i + 100));
-        const priceMap = new Map<string, { price: number; change: number }>();
-        await Promise.all(
-          chunks.map(async (chunk) => {
-            const res = await fetch(
-              `https://api.binance.com/api/v3/ticker/24hr?symbols=${encodeURIComponent(JSON.stringify(chunk))}&type=MINI`
-            );
-            if (!res.ok) return;
-            const tickers: Array<{ symbol: string; lastPrice: string; openPrice: string }> = await res.json();
-            tickers.forEach((t) => {
-              const price = parseFloat(t.lastPrice);
-              const open  = parseFloat(t.openPrice);
-              priceMap.set(t.symbol, { price, change: open > 0 ? ((price - open) / open) * 100 : 0 });
-            });
-          })
-        );
-        // AFTER — use r.openPrice (your 5:30 AM IST baseline) for % calc
-      const apply = (prev: CPRResult[]): CPRResult[] =>
-        prev.map((r) => {
-          const live = priceMap.get(r.symbol);
-          if (!live) return r;
-          const change24h = r.openPrice > 0
-            ? ((live.price - r.openPrice) / r.openPrice) * 100
-            : live.change; // fallback
-          return { ...r, currentPrice: live.price, change24h };
-        });
-        setAllResults((p) => apply(p));
-        setFiltered((p) => apply(p));
-      } catch { /* silent */ }
-    };
-    const id = setInterval(refresh, 30_000);
-    return () => clearInterval(id);
-  }, [status]);
-
-  // Delta live price refresh every 30s
-  useEffect(() => {
-    if (deltaStatus !== "done") return;
-    const refresh = async () => {
-      const results = deltaAllResultsRef.current;
-      if (!results.length) return;
-      try {
-        const res = await fetch(
-          "https://api.india.delta.exchange/v2/tickers?contract_types=perpetual_futures&page_size=500",
-          { cache: "no-store" }
-        );
-        if (!res.ok) return;
-        const data = await res.json();
-        const tickers: Array<{ symbol: string; mark_price: string; ltp_change_24h: string }> =
-          (data.result ?? []) as Array<{ symbol: string; mark_price: string; ltp_change_24h: string }>;
-        const priceMap = new Map(tickers.map((t) => [t.symbol, t]));
-                // AFTER for Delta
-        const apply = (prev: CPRResult[]): CPRResult[] =>
-          prev.map((r) => {
-            const t = priceMap.get(r.symbol);
-            if (!t) return r;
-            const price = parseFloat(t.mark_price);
-            if (price <= 0) return r;
-            const change24h = r.openPrice > 0
-              ? ((price - r.openPrice) / r.openPrice) * 100
-              : parseFloat(t.ltp_change_24h); // fallback
-            return { ...r, currentPrice: price, change24h };
-          });
-        setDeltaAllResults((p) => apply(p));
-        setDeltaFiltered((p) => apply(p));
-      } catch { /* silent */ }
-    };
-    const id = setInterval(refresh, 30_000);
-    return () => clearInterval(id);
-  }, [deltaStatus]);
 
   // NEW: sound alert — only for pMini-L34C4/U3>4 (structure-bigbelow) when a coin newly goes Rising
   function playPMiniAlertSound() {
