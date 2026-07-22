@@ -960,19 +960,6 @@ export default function Screener({
         : <ChevronDown className="w-3 h-3 inline ml-1 text-primary" />
       : <ArrowUpDown className="w-3 h-3 inline ml-1 opacity-30" />;
 
-  // Map a sub-pattern id (selected via the sidebar tree, e.g. "co2-l2u2")
-  // back to its parent category id (e.g. "littlebelow"), so Legend Card 1
-  // still shows the parent's overview card instead of going blank when a
-  // child pattern is the active one. Parent ids and standalone patterns
-  // (which aren't anyone's child) just resolve to themselves.
-  function getLegendParentPattern(patternId: string): string {
-    for (const [parentId, children] of Object.entries(subPatterns)) {
-      if (children.some((c) => c.id === patternId)) return parentId;
-    }
-    return patternId;
-  }
-  const legendPattern = getLegendParentPattern(activePattern);
-
   // Helper: is any sub-filter active (to decide the result count label)
   const anySubFilter =
     showLABothTiny || showLAAllUp || showLA1LHr || showLAPL12CL23 || showLACompressed || showLAT1U46AM || showLASsHiL4U4FAU42AM || showLAMeMieXHiL4U3U46PM ||

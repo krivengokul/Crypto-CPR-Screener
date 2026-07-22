@@ -1,3 +1,5 @@
+import { subPatterns } from "@/lib/PatternSidebar"
+
 export interface ScreenerLegendProps {
   activePattern: string;
   showBAComp: boolean;
@@ -62,7 +64,20 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
     showInsideCPRNarrow,
     showInsideCPRCoU4L3,
   } = props;
-  const legendPattern = activePattern;
+  
+  // Map a sub-pattern id (selected via the sidebar tree, e.g. "co2-l2u2")
+  // back to its parent category id (e.g. "littlebelow"), so Legend Card 1
+  // still shows the parent's overview card instead of going blank when a
+  // child pattern is the active one. Parent ids and standalone patterns
+  // (which aren't anyone's child) just resolve to themselves.
+  function getLegendParentPattern(patternId: string): string {
+    for (const [parentId, children] of Object.entries(subPatterns)) {
+      if (children.some((c) => c.id === patternId)) return parentId;
+    }
+    return patternId;
+  }
+  const legendPattern = getLegendParentPattern(activePattern);
+
   return (
      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
       <div className="rounded-lg border border-border bg-card p-3">
