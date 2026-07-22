@@ -265,6 +265,9 @@ export default function Screener({
     return () => clearInterval(id);
   }, [nextScanUtc]);
 
+  useBinanceLiveRefresh(status, allResultsRef, setAllResults, setFiltered);
+  useDeltaLiveRefresh(deltaStatus, deltaAllResultsRef, setDeltaAllResults, setDeltaFiltered);
+
   // NEW: sound alert — only for pMini-L34C4/U3>4 (structure-bigbelow) when a coin newly goes Rising
   function playPMiniAlertSound() {
     try {
