@@ -973,7 +973,7 @@ export default function Screener({
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-4 py-8 min-h-screen flex flex-col">
         {/* Header — description paragraph removed, spacing tightened so the
             title row and the Legend grid below both sit higher on the page. */}
         <div className="flex items-center justify-between gap-4 mb-4">
@@ -2186,7 +2186,7 @@ export default function Screener({
           </div>
         )}
 
-        <div className="mt-8 text-xs text-muted-foreground text-center">
+        <div className="mt-auto pt-8 text-xs text-muted-foreground text-center">
           Binance: top 500 USDT pairs · Delta Exchange: 195 perpetual futures · CPR from completed UTC daily candles (ADK logic)
           <br />
           Auto-scans once daily at 5:31 AM IST · PH/PL = Previous Day High/Low · Not financial advice · by Kriven Gokul
