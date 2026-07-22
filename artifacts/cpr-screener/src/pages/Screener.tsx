@@ -1022,54 +1022,9 @@ export default function Screener({
 
         {/* Controls */}
         <div className="flex flex-wrap items-center gap-3 mb-4">
-          <button
-            onClick={doScan}
-            disabled={status === "scanning"}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-50"
-            style={{ background: "linear-gradient(135deg,#3b82f6,#6366f1)", color: "#fff" }}
-          >
-            <RefreshCw className={`w-4 h-4 ${status === "scanning" ? "animate-spin" : ""}`} />
-            {status === "scanning" ? "Scanning Binance…" : "Scan Binance"}
-          </button>
-
-          <button
-            onClick={doDeltaScan}
-            disabled={deltaStatus === "scanning"}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-50"
-            style={{ background: "linear-gradient(135deg,#f59e0b,#d97706)", color: "#fff" }}
-          >
-            <RefreshCw className={`w-4 h-4 ${deltaStatus === "scanning" ? "animate-spin" : ""}`} />
-            {deltaStatus === "scanning" ? "Scanning Delta Exchange…" : "Scan Delta Exchange"}
-          </button>
-
-          {canShowCombined && (
-            <div className="flex rounded-lg border border-border overflow-hidden text-xs">
-              {(["binance", "delta", "combined"] as ActiveTab[]).map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className="px-3 py-1.5 transition-colors capitalize"
-                  style={{
-                    background: activeTab === tab ? "#3b82f6" : "transparent",
-                    color: activeTab === tab ? "#fff" : "#8ba3bc",
-                  }}
-                >
-                  {tab}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* NEW: results summary + Show All, moved here from the sub-filter
-              section so it sits next to the exchange tab toggle. Same
-              text-xs sizing/border styling as the tab toggle and other pill
-              buttons in this row. Uses currentStatus/currentFilteredCount/
-              currentAllCount/anySubFilter/displayed, all declared further
-              down in the component body — fine since this reference only
-              executes when the JSX returned below is evaluated. */}
           {currentStatus === "done" && (
-            <div className="flex items-center gap-2 text-xs">
-              <span className="text-muted-foreground">
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-foreground font-medium">
                 {anySubFilter
                   ? displayed.length
                   : showAll
@@ -1125,10 +1080,49 @@ export default function Screener({
                 }}
                 className="px-2.5 py-1 rounded border border-border text-muted-foreground hover:text-foreground transition-colors"
               >
-                {showAll ? "Show filtered only" : "Show all"}
+                Toggle only
               </button>
             </div>
           )}
+
+          {canShowCombined && (
+            <div className="flex rounded-lg border border-border overflow-hidden text-xs">
+              {(["binance", "delta", "combined"] as ActiveTab[]).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className="px-3 py-1.5 transition-colors capitalize"
+                  style={{
+                    background: activeTab === tab ? "#3b82f6" : "transparent",
+                    color: activeTab === tab ? "#fff" : "#8ba3bc",
+                  }}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <button
+            onClick={doScan}
+            disabled={status === "scanning"}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all disabled:opacity-50"
+            style={{ background: "linear-gradient(135deg,#3b82f6,#6366f1)", color: "#fff" }}
+          >
+            <RefreshCw className={`w-3 h-3 ${status === "scanning" ? "animate-spin" : ""}`} />
+            {status === "scanning" ? "Scanning Binance…" : "Scan Binance"}
+          </button>
+
+          <button
+            onClick={doDeltaScan}
+            disabled={deltaStatus === "scanning"}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all disabled:opacity-50"
+            style={{ background: "linear-gradient(135deg,#f59e0b,#d97706)", color: "#fff" }}
+          >
+            <RefreshCw className={`w-3 h-3 ${deltaStatus === "scanning" ? "animate-spin" : ""}`} />
+            {deltaStatus === "scanning" ? "Scanning Delta Exchange…" : "Scan Delta Exchange"}
+          </button>
+
 
           <div className="relative ml-auto">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
