@@ -166,7 +166,7 @@ export default function Screener({
   const [prevWidthFilter, setPrevWidthFilter] = useState<WidthCategoryKey | null>(null);
   const [todayWidthFilter, setTodayWidthFilter] = useState<WidthCategoryKey | null>(null);
   // NEW: PDH/PDL filter — independent of activePattern, mutually exclusive (like pivot/width filters).
-  const [pdhPdlFilter, setPdhPdlFilter] = useState<"above" | "below" | "abovepu4" | "belowpl4" | null>(null);
+  const [pdhPdlFilter, setPdhPdlFilter] = useState<"above" | "below" | "abovepu4" | "belowpl4" | "pdhgtu1" | null>(null);
   const [error, setError] = useState("");
   const [countdown, setCountdown] = useState("");
   const [nextScanUtc, setNextScanUtc] = useState<Date>(getNextScanIST());
@@ -919,6 +919,7 @@ export default function Screener({
     // NEW: Price Level filter — price above PDH, below PDL, above prev day's
     // R4 (PU4), or below prev day's S4 (PL4)
     .filter((r) => {
+      if (pdhPdlFilter === "pdhgtu1") return r.todayCPR.prevHigh > r.todayCPR.r1;
       if (pdhPdlFilter === "above") return passesPattern(r, "Price-AbovePDH");
       if (pdhPdlFilter === "below") return passesPattern(r, "Price-BelowPDL");
       if (pdhPdlFilter === "abovepu4") return r.currentPrice > r.prevCPR.r4;
@@ -2038,6 +2039,18 @@ export default function Screener({
               independent of activePattern and showAll. */}
           <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-[10px] text-muted-foreground uppercase tracking-wider mr-0.5">Price Level:</span>
+              {/* NEW: PDH>U1 — today's Previous Day High is above today's R1 (U1) */}
+              <button
+                onClick={() => setPdhPdlFilter((v) => (v === "pdhgtu1" ? null : "pdhgtu1"))}
+                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                  pdhPdlFilter === "pdhgtu1"
+                    ? "border-cyan-400 text-cyan-400"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+                title="Show only rows where today's Previous Day High (PDH) is above today's R1 (U1)"
+              >
+                {pdhPdlFilter === "pdhgtu1" ? "✕ PDH>U1" : "PDH>U1"}
+              </button>
               <button
                 onClick={() => setPdhPdlFilter((v) => (v === "above" ? null : "above"))}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
