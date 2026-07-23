@@ -134,7 +134,7 @@ export default function Screener({
   const [showHRHAL, setShowHRHAL] = useState(false);
   // NEW: 1T-HiL4U4-FAU4 — BigCPR Above, placed next to hR-HAL/HA55-HrL4U34-FAU4
   const [showHiL4U4FAU4, setShowHiL4U4FAU4] = useState(false);
-  // NEW: 1S-cOHi-FAU4:1AM filter state — BigCPR Above
+  // NEW: 1S-cOL3U4-FAU4:1AM filter state — BigCPR Above
   const [show1ScoHiFAU4, setShow1ScoHiFAU4] = useState(false);
   // NEW: LB Compressed filter state
   const [showLBCmprss, setShowLBCmprss] = useState(false);
@@ -630,13 +630,13 @@ export default function Screener({
       if (activeTab === "delta") return deltaIntersect;
       return binanceIntersect;
     }
-    // NEW: 1S-cOHi-FAU4:1AM pool — BigCPR Above
+    // NEW: 1S-cOL3U4-FAU4:1AM pool — BigCPR Above
     if (show1ScoHiFAU4 && activePattern === "structure-bigabove") {
       const binanceIntersect = allResults
-        .filter((r) => passesPattern(r, "1S-cOHi-FAU4:1AM"))
+        .filter((r) => passesPattern(r, "1S-cOL3U4-FAU4:1AM"))
         .map((r) => ({ ...r, source: "binance" as const }));
       const deltaIntersect = deltaAllResults
-        .filter((r) => passesPattern(r, "1S-cOHi-FAU4:1AM"))
+        .filter((r) => passesPattern(r, "1S-cOL3U4-FAU4:1AM"))
         .map((r) => ({ ...r, source: "delta" as const }));
       if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
       if (activeTab === "delta") return deltaIntersect;
@@ -1258,7 +1258,7 @@ export default function Screener({
                 {showHiL4U4FAU4 ? "✕ 1T-HiL4U4-FAU4" : "1T-HiL4U4-FAU4"}
               </button>
             )}
-            {/* NEW: 1S-cOHi-FAU4:1AM button — BigCPR Above.
+            {/* NEW: 1S-cOL3U4-FAU4:1AM button — BigCPR Above.
                 Pivot cOL3U4 + today's S1 > prev pivot + prev CPR ≤0.10% +
                 today CPR 0.60%–1.10%. */}
             {activePattern === "structure-bigabove" && !showAll && (
@@ -1282,7 +1282,7 @@ export default function Screener({
                 }`}
                 title="Pivot cOL3U4 + Today's S1 > Prev Pivot + Prev CPR width ≤ 0.10% + Today CPR width 0.60%–1.10%"
               >
-                {show1ScoHiFAU4 ? "✕ 1S-cOHi-FAU4:1AM" : "1S-cOHi-FAU4:1AM"}
+                {show1ScoHiFAU4 ? "✕ 1S-cOL3U4-FAU4:1AM" : "1S-cOL3U4-FAU4:1AM"}
               </button>
             )}
             {/* NEW: LB-BothTiny button — replaces hidden "TinyBelow - Both Tiny" left-nav item */}

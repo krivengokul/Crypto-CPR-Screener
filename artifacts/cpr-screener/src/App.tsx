@@ -104,7 +104,7 @@ const SCREENER_PATTERN_IDS = new Set([
   "hR-HAL",
   "HA55-HrL4U34-FAU4",
   "1T-HiL4U4-FAU4",
-  "1S-cOHi-FAU4:1AM",
+  "1S-cOL3U4-FAU4:1AM",
 
   // ── U1>pU4 (standalone category) ──
   "u1-gt-pu4",

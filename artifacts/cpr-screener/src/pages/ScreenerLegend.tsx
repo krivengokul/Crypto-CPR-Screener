@@ -278,7 +278,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             <div className="text-xs font-semibold text-fuchsia-400 mb-1">1T-HiL4U4-FAU4</div>
             <div className="text-xs text-muted-foreground">Wide Above + HiL4U4 (Prev R4 inside Today&apos;s R3/R4, Today&apos;s S4 inside Prev S3/S4), Prev CPR pMicro, Today CPR Tiny</div>
           </>
-        ) : (show1ScoHiFAU4 && activePattern === "structure-bigabove") || activePattern === "1S-cOHi-FAU4:1AM" ? (
+        ) : (show1ScoHiFAU4 && activePattern === "structure-bigabove") || activePattern === "1S-cOL3U4-FAU4:1AM" ? (
           <>
             <div className="text-xs font-semibold text-teal-400 mb-1">Pivot Level: cOL3U4  PCPR: Tiny  CPR: Small</div>
             <div className="text-xs text-muted-foreground">Pivot cOL3U4, Today&apos;s S1 &gt; Prev Pivot, Prev CPR width ≤ 0.10% (Tiny), Today CPR width 0.60%–1.10% (Small)</div>
@@ -416,7 +416,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             <div className="text-xs font-semibold text-emerald-400 mb-1">Target</div>
             <div className="text-xs text-muted-foreground">Tight compression breaking wide above prior structure — potential to run far above U4</div>
           </>
-        ) : (show1ScoHiFAU4 && activePattern === "structure-bigabove")  || activePattern === "1S-cOHi-FAU4:1AM" ? (
+        ) : (show1ScoHiFAU4 && activePattern === "structure-bigabove")  || activePattern === "1S-cOL3U4-FAU4:1AM" ? (
           <>
             <div className="text-xs font-semibold text-teal-400 mb-1">Exp Target: Far Above U4 (T-5 U4)<br />Time: 1AM</div>
             <div className="text-xs text-muted-foreground">Expected upside far above U4 (T-5 U4) by ~1AM</div>

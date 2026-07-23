@@ -580,10 +580,10 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.prevCPR.widthPct <= 0.10 &&
         r.todayCPR.widthPct > 0.10 && r.todayCPR.widthPct <= 0.25
       );
-    // NEW: 1S-cOHi-FAU4:1AM — Big Above: pivot level cOL3U4 + today's S1 above
+    // NEW: 1S-cOL3U4-FAU4:1AM — Big Above: pivot level cOL3U4 + today's S1 above
     // prev day pivot + prev CPR width <= 0.10 (pMicro/pTiny) + today's CPR
     // width 0.60%-1.10% (Small).
-    case "1S-cOHi-FAU4:1AM":
+    case "1S-cOL3U4-FAU4:1AM":
       return (
         r.cprRising &&
         r.strWideCPR &&
@@ -873,7 +873,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     { key: "hR-HAL", direction: "up" },
     { key: "HA55-HrL4U34-FAU4", direction: "up" },
     { key: "1T-HiL4U4-FAU4", direction: "up" },
-    { key: "1S-cOHi-FAU4:1AM", direction: "up" },
+    { key: "1S-cOL3U4-FAU4:1AM", direction: "up" },
   ],
   "u1-gt-pu4": [],
   "structure-bigbelow": [
