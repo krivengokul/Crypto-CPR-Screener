@@ -17,6 +17,7 @@ export interface ScreenerLegendProps {
   showExpU3LtPU4: boolean;
   showBigBeloweXLoL3U4AU4: boolean;
   showBigBeloweXU4L234AU4: boolean;
+  showBigBelow1TcOU4L43PM: boolean;
   showHRHAL: boolean;
   showHiL4U4FAU4: boolean;
   show1ScoHiFAU4: boolean;
@@ -52,6 +53,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
     showExpU3LtPU4,
     showBigBeloweXLoL3U4AU4,
     showBigBeloweXU4L234AU4,
+    showBigBelow1TcOU4L43PM,
     showHRHAL,
     showHiL4U4FAU4,
     show1ScoHiFAU4,
@@ -261,6 +263,11 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             <div className="text-xs font-semibold text-amber-400 mb-1">eXU4L234-AU4</div>
             <div className="text-xs text-muted-foreground">Wide Below + eXU4L234 (Prev R4 inside today&apos;s R3/R4, Prev S4 inside today&apos;s S1/S2), Prev R3 &gt; Today R3, Today R1 or Prev S1 between the two Pivots</div>
           </>
+        ) : showBigBelow1TcOU4L43PM && activePattern === "structure-bigbelow" ? (
+          <>
+            <div className="text-xs font-semibold text-fuchsia-400 mb-1">Pivot Level: cOU4L4  PCPR: Micro  CPR: Tiny</div>
+            <div className="text-xs text-muted-foreground">Wide Below + cOU4L4, Prev R1 between Today&apos;s R1/R2, Today&apos;s S1 between Prev S1/S2, Prev PDH &gt; Prev R1, Prev CPR ≤ 0.10% (Micro), Today CPR 0.10%–0.22% (Tiny)</div>
+          </>
         ) : showHRHAL && activePattern === "structure-bigabove" ? (
           <>
             <div className="text-xs font-semibold text-orange-400 mb-1">hR-HAL</div>
@@ -393,6 +400,11 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
           <>
             <div className="text-xs font-semibold text-destructive mb-1">Target</div>
             <div className="text-xs text-muted-foreground">Bearish continuation — further downside below today&apos;s S4</div>
+          </>
+        ) : showBigBelow1TcOU4L43PM && activePattern === "structure-bigbelow" ? (
+          <>
+            <div className="text-xs font-semibold text-fuchsia-400 mb-1">Exp Target: U4<br />Time: 3PM</div>
+            <div className="text-xs text-muted-foreground">Expected downside target U4 by ~3PM</div>
           </>
         ) : showHRHAL && activePattern === "structure-bigabove" ? (
           <>

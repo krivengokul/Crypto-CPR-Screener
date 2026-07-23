@@ -772,6 +772,21 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.todayCPR.widthPct >= 1 && r.todayCPR.widthPct <= 2
       );
     }
+    // NEW: 1T-cOU4L4-ApU4:3PM — Big Below (cprFalling + strWideCPR) +
+    // cOU4L4 pivot level + prev R1 between today's R1/R2 + today's S1
+    // between prev day's S1/S2 + prev day PDH above prev R1 + prev CPR
+    // width <= 0.10% (pMicro) + today CPR width 0.10%-0.22% (Tiny).
+    case "1T-cOU4L4-ApU4:3PM":
+      return (
+        r.cprFalling &&
+        r.strWideCPR &&
+        r.cOU4L4 &&
+        r.prevCPR.r1 >= r.todayCPR.r1 && r.prevCPR.r1 <= r.todayCPR.r2 &&
+        r.todayCPR.s1 <= r.prevCPR.s1 && r.todayCPR.s1 >= r.prevCPR.s2 &&
+        r.prevCPR.prevHigh > r.prevCPR.r1 &&
+        r.prevCPR.widthPct <= 0.10 &&
+        r.todayCPR.widthPct > 0.10 && r.todayCPR.widthPct <= 0.22
+      );
     case "HB-L1<PL1-PU12CU23":
       return r.cprFalling && r.strWideCPR && r.hbJPattern1;
     case "HB-L1<PL4-U1>TCPR":
@@ -866,6 +881,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     { key: "eX-U4L34", direction: "down" },
     { key: "eXLoL3U4-AU4", direction: "down" },
     { key: "eXU4L234-AU4", direction: "down" },
+    { key: "1T-cOU4L4-ApU4:3PM", direction: "down" },
   ],
   "l1-lt-pl4": [],
   "equal-cpr": [

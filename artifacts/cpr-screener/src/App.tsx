@@ -115,6 +115,7 @@ const SCREENER_PATTERN_IDS = new Set([
   "eXLoL3U4-AU4",
   "L1<pL4",
   "eXU4L234-AU4",
+  "1T-cOU4L4-ApU4:3PM",
 
   // ── L1<pL4 (standalone category) ──
   "l1-lt-pl4",
