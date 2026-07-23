@@ -2100,8 +2100,6 @@ export default function Screener({
               >
                 {pdhPdlFilter === "belowpl4" ? "✕ <PL4" : "<PL4"}
               </button>
-              </button>
-
               {/* PDH/PDL: subgroup — S1-R1 IN, PDH>U1, PDL<L1 (same row, separator label) */}
               <span className="text-[10px] text-muted-foreground uppercase tracking-wider ml-2 mr-0.5">PDH/PDL:</span>
               {/* S1R1 IN — S1/R1 (today or prev) sits inside/touching today's or prev's CPR band. */}
