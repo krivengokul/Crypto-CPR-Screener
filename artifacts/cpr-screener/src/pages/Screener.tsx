@@ -165,7 +165,7 @@ export default function Screener({
   const [prevWidthFilter, setPrevWidthFilter] = useState<WidthCategoryKey | null>(null);
   const [todayWidthFilter, setTodayWidthFilter] = useState<WidthCategoryKey | null>(null);
   // NEW: PDH/PDL filter — independent of activePattern, mutually exclusive (like pivot/width filters).
-  const [pdhPdlFilter, setPdhPdlFilter] = useState<"above" | "below" | "abovepu4" | "belowpl4" | "pdhgtu1" | "s1r1in" | null>(null);
+  const [pdhPdlFilter, setPdhPdlFilter] = useState<"above" | "below" | "abovepu4" | "belowpl4" | "pdhgtu1" | "pdlltl1" | "s1r1in" | null>(null);
   const [error, setError] = useState("");
   const [countdown, setCountdown] = useState("");
   const [nextScanUtc, setNextScanUtc] = useState<Date>(getNextScanIST());
@@ -928,6 +928,7 @@ export default function Screener({
         return levels.some((l) => inBand(l, r.todayCPR) || inBand(l, r.prevCPR));
       }
       if (pdhPdlFilter === "pdhgtu1") return r.todayCPR.prevHigh > r.todayCPR.r1;
+      if (pdhPdlFilter === "pdlltl1") return r.todayCPR.prevLow < r.todayCPR.s1;
       if (pdhPdlFilter === "above") return passesPattern(r, "Price-AbovePDH");
       if (pdhPdlFilter === "below") return passesPattern(r, "Price-BelowPDL");
       if (pdhPdlFilter === "abovepu4") return r.currentPrice > r.prevCPR.r4;
@@ -2052,32 +2053,7 @@ export default function Screener({
               independent of activePattern and showAll. */}
           <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-[10px] text-muted-foreground uppercase tracking-wider mr-0.5">Price Level:</span>
-              {/* NEW: S1R1 IN — S1/R1 (today or prev) sits inside/touching today's or prev's CPR band.
-                  Only meaningful when the row is Inside / Outside / Overlap-Higher / Overlap-Lower. */}
-              <button
-                onClick={() => setPdhPdlFilter((v) => (v === "s1r1in" ? null : "s1r1in"))}
-                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                  pdhPdlFilter === "s1r1in"
-                    ? "border-amber-400 text-amber-400"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-                title="Inside/Outside/Overlap rows where S1, R1, prev S1, or prev R1 sits inside or touches today's or previous CPR band"
-              >
-                {pdhPdlFilter === "s1r1in" ? "✕ S1-R1 IN" : "S1-R1 IN"}
-              </button>
 
-              {/* NEW: PDH>U1 — today's Previous Day High is above today's R1 (U1) */}
-              <button
-                onClick={() => setPdhPdlFilter((v) => (v === "pdhgtu1" ? null : "pdhgtu1"))}
-                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                  pdhPdlFilter === "pdhgtu1"
-                    ? "border-cyan-400 text-cyan-400"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-                title="Show only rows where today's Previous Day High (PDH) is above today's R1 (U1)"
-              >
-                {pdhPdlFilter === "pdhgtu1" ? "✕ PDH>U1" : "PDH>U1"}
-              </button>
               <button
                 onClick={() => setPdhPdlFilter((v) => (v === "above" ? null : "above"))}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
@@ -2124,8 +2100,49 @@ export default function Screener({
               >
                 {pdhPdlFilter === "belowpl4" ? "✕ <PL4" : "<PL4"}
               </button>
+              </button>
+
+              {/* PDH/PDL: subgroup — S1-R1 IN, PDH>U1, PDL<L1 (same row, separator label) */}
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wider ml-2 mr-0.5">PDH/PDL:</span>
+              {/* S1R1 IN — S1/R1 (today or prev) sits inside/touching today's or prev's CPR band. */}
+              <button
+                onClick={() => setPdhPdlFilter((v) => (v === "s1r1in" ? null : "s1r1in"))}
+                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                  pdhPdlFilter === "s1r1in"
+                    ? "border-amber-400 text-amber-400"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+                title="Inside/Outside/Overlap rows where S1, R1, prev S1, or prev R1 sits inside or touches today's or previous CPR band"
+              >
+                {pdhPdlFilter === "s1r1in" ? "✕ S1-R1 IN" : "S1-R1 IN"}
+              </button>
+              {/* PDH>U1 — today's Previous Day High is above today's R1 (U1) */}
+              <button
+                onClick={() => setPdhPdlFilter((v) => (v === "pdhgtu1" ? null : "pdhgtu1"))}
+                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                  pdhPdlFilter === "pdhgtu1"
+                    ? "border-cyan-400 text-cyan-400"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+                title="Show only rows where today's Previous Day High (PDH) is above today's R1 (U1)"
+              >
+                {pdhPdlFilter === "pdhgtu1" ? "✕ PDH>U1" : "PDH>U1"}
+              </button>
+              {/* NEW: PDL<L1 — today's Previous Day Low is below today's S1 (L1) */}
+              <button
+                onClick={() => setPdhPdlFilter((v) => (v === "pdlltl1" ? null : "pdlltl1"))}
+                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                  pdhPdlFilter === "pdlltl1"
+                    ? "border-rose-400 text-rose-400"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+                title="Show only rows where today's Previous Day Low (PDL) is below today's S1 (L1)"
+              >
+                {pdhPdlFilter === "pdlltl1" ? "✕ PDL<L1" : "PDL<L1"}
+              </button>
           </div>
           </div>
+
         )}
 
         {/* Table */}
