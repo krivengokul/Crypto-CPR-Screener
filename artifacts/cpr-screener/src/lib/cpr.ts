@@ -130,6 +130,7 @@ export interface CPRResult {
   //           band (r1→r2), AND today's S3 is below prev S1
   //   cOL2U2: same bands as cOU2L2, but today's R3 is above prev R1
   cOU1L1: boolean;
+  cOU1L2: boolean;
   cOL1U1: boolean;
   cOU2L2: boolean;
   cOL2U2: boolean;
@@ -461,6 +462,8 @@ export function analyzeCPR(
   const cOU1L1 = cOU1L1Base && r1Move > s1Move;
   const cOL1U1 = cOU1L1Base && r1Move < s1Move;
 
+  const cOU1L2 = (todayCPR.s4 > prevCPR.s2 && todayCPR.s4 < prevCPR.s1) &&
+                      (todayCPR.r4 < prevCPR.s1 && todayCPR.r4 > prevCPR.tc);
   // NEW: cOU2L2 / cOL2U2 — today's S4 in prev L2 band (s2→s1), today's R4 in
   // prev U2 band (r1→r2); split by an extra confirming condition on the S3/R3 side.
   // NEW: Previous day Pivot→R1 distance and Pivot→S1 distance
@@ -556,6 +559,7 @@ export function analyzeCPR(
     eXL3CPR,
     cOU1L1,
     cOL1U1,
+    cOU1L2,
     cOU2L2,
     cOL2U2,
     passes: cprRising && cprNarrowing,
