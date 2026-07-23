@@ -341,26 +341,34 @@ export default function ScreenerTableRow({
           <div>{pdhPdlStatus(r).main}</div>
           <div>{pdhPdlStatus(r).sub}</div>
         </td>
-        <td className="px-4 py-3 whitespace-nowrap text-xs font-mono font-medium">
+       <td className="px-4 py-3 whitespace-nowrap text-xs font-mono font-medium">
           {(() => {
+            // Raw price gaps — what the column visually shows
+            const r4Gap = Math.abs(r.todayCPR.r4 - r.prevCPR.r4);
+            const s4Gap = Math.abs(r.todayCPR.s4 - r.prevCPR.s4);
+
+            // Normalized distances (moves in multiples of prev CPR width) — kept for
+            // the diff bar / tiebreakers so cross-asset ranking stays scale-independent
             const r4d = (r as any).r4Distance as number | undefined;
             const s4d = (r as any).s4Distance as number | undefined;
             if (r4d == null || s4d == null || !isFinite(r4d) || !isFinite(s4d)) {
               return <span className="text-muted-foreground">—</span>;
             }
+
             const maxD = Math.max(r4d, s4d);
             const diffPct = maxD > 0 ? ((r4d - s4d) / maxD) * 100 : 0;
             const diffColor =
               diffPct > 0 ? "text-green-400" : diffPct < 0 ? "text-orange-400" : "text-muted-foreground";
+
             return (
               <>
                 <div className="text-xs text-chart-3">
                   <span className="text-muted-foreground">U4Gap: </span>
-                  {r4d.toFixed(4)}
+                  {fmt(r4Gap)}
                 </div>
                 <div
                   className={`text-xs font-semibold py-0.5 ${diffColor}`}
-                  title={`(U4Gap − L4Gap) / max × 100`}
+                  title={`Normalized: U4Δ ${r4d.toFixed(2)}× vs L4Δ ${s4d.toFixed(2)}× of prev CPR width`}
                 >
                   {diffPct >= 0 ? "+" : ""}
                   {diffPct.toFixed(2)}%
@@ -375,7 +383,7 @@ export default function ScreenerTableRow({
                 </div>
                 <div className="text-xs text-chart-3/70">
                   <span className="text-muted-foreground">L4Gap: </span>
-                  {s4d.toFixed(4)}
+                  {fmt(s4Gap)}
                 </div>
               </>
             );
