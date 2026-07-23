@@ -1116,7 +1116,7 @@ export function computePivotSubLabel(today: CPRLevels, prev: CPRLevels | undefin
   if ((today.r4 > prev.r3 && today.r4 < prev.r4) && (prev.s4 > today.s2 && prev.s4 < today.s1)) return "LoU4L234";
   if ((today.r4 > prev.r1 && today.r4 < prev.r2) && today.r3 > prev.r1 && (today.s4 > prev.s2 && today.s4 < prev.s1)) return "cOHiL2U2";
   if ((today.r4 > prev.r3 && today.r4 < prev.r4) && (prev.s4 > today.s1 && prev.s4 < today.bc)) return "LoU4L1234";
-  if ((today.r4 > prev.tc && today.r4 < prev.r1) && (today.s4 > prev.s2 && today.s4 < prev.s1)) return "cOLoU1L2";
+  if ((today.r4 > prev.tc && today.r4 < prev.r1) && (today.s4 > prev.s2 && today.s4 < prev.s1)) return "cOU1L2";
   if ((today.r4 > prev.r1 && today.r4 < prev.r2) && (today.s4 > prev.s4 && today.s4 < prev.s3)) return "cOLoU2L4";
   if ((prev.r4 < today.r3 && prev.r4 > today.r2) && (prev.s4 > today.s3 && prev.s4 < today.s2) && srExpandedHigher) return "eXL3U3";
   if ((prev.r4 < today.r3 && prev.r4 > today.r2) && (prev.s4 > today.s3 && prev.s4 < today.s2) && srExpandedLower) return "eXU3L3";

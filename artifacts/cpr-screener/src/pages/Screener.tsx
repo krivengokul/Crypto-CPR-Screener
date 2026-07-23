@@ -902,7 +902,6 @@ export default function Screener({
       if (pivotLevelFilter === "LoU4L234") return r.LoU4L234;
       if (pivotLevelFilter === "cOLoU2L3") return r.cOLoU2L3;
       if (pivotLevelFilter === "LoU4L1234") return r.LoU4L1234;
-      if (pivotLevelFilter === "cOLoU1L2") return r.cOLoU1L2;
       if (pivotLevelFilter === "cOLoU2L4") return r.cOLoU2L4;
       // NEW: eXL*U1 / eXL*CPR sub-type badges
       if (pivotLevelFilter === "eXL2U1") return r.eXL2U1;
@@ -1996,7 +1995,6 @@ export default function Screener({
                   { label: "LoU4L234",  active: "border-violet-400 text-violet-400" },
                   { label: "cOLoU2L3",  active: "border-emerald-400 text-emerald-400" },
                   { label: "LoU4L1234", active: "border-orange-400 text-orange-400" },
-                  { label: "cOLoU1L2",  active: "border-cyan-400 text-cyan-400" },
                   { label: "cOLoU2L4",  active: "border-lime-400 text-lime-400" },
                   // NEW: eXL*U1 / eXL*CPR sub-type badges (unconditional, all sections)
                   { label: "eXL2U1",   active: "border-purple-400 text-purple-400" },
