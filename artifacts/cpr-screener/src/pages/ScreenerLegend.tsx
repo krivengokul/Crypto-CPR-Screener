@@ -21,6 +21,7 @@ export interface ScreenerLegendProps {
   showHRHAL: boolean;
   showHiL4U4FAU4: boolean;
   show1ScoHiFAU4: boolean;
+  show2ScoHiFAU4: boolean;
   showHAU1L1AbovePU4: boolean;
   showHAU1PWideAbove: boolean;
   showHAU1: boolean;
@@ -57,6 +58,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
     showHRHAL,
     showHiL4U4FAU4,
     show1ScoHiFAU4,
+    show2ScoHiFAU4,
     showHAU1L1AbovePU4,
     showHAU1PWideAbove,
     showHAU1,
@@ -283,6 +285,11 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             <div className="text-xs font-semibold text-teal-400 mb-1">Pivot Level: cOL3U4  PCPR: Tiny  CPR: Small</div>
             <div className="text-xs text-muted-foreground">Pivot cOL3U4, Today&apos;s S1 &gt; Prev Pivot, Prev CPR width ≤ 0.10% (Tiny), Today CPR width 0.60%–1.10% (Small)</div>
           </>
+        ) : (show2ScoHiFAU4 && activePattern === "structure-bigabove") || activePattern === "TS-cOL3U4-AU4R:4PM" ? (
+          <>
+            <div className="text-xs font-semibold text-cyan-400 mb-1">Pivot Level: cOL3U4  PCPR: Tiny  CPR: Small</div>
+            <div className="text-xs text-muted-foreground">Pivot cOL3U4, Today&apos;s S1 &gt; Prev Pivot, Prev CPR width 0.10%–0.22% (Tiny), Today CPR width 0.60%–1.10% (Small)</div>
+          </>
         ) : showHAU1L1AbovePU4 && activePattern === "structure-bigabove" ? (
           <>
             <div className="text-xs font-semibold text-lime-400 mb-1">L1 &gt; Previous U4</div>
@@ -420,6 +427,11 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
           <>
             <div className="text-xs font-semibold text-teal-400 mb-1">Exp Target: Far Above U4 (T-5 U4)<br />Time: 1AM</div>
             <div className="text-xs text-muted-foreground">Expected upside far above U4 (T-5 U4) by ~1AM</div>
+          </>
+        ) : (show2ScoHiFAU4 && activePattern === "structure-bigabove")  || activePattern === "TS-cOL3U4-AU4R:4PM" ? (
+          <>
+            <div className="text-xs font-semibold text-cyan-400 mb-1">Exp Target: Far Above U4 (T-5 U4)<br />Time: 5AM</div>
+            <div className="text-xs text-muted-foreground">Expected upside far above U4 (T-5 U4) by ~5AM</div>
           </>
         ) : showHAU1L1AbovePU4 && activePattern === "structure-bigabove" ? (
           <>

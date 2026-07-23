@@ -589,7 +589,21 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.strWideCPR &&
         r.cOL3U4 &&
         r.todayCPR.s1 > r.prevCPR.pivot &&
-        (r.prevCPR.widthPct <= 0.10 || (r.prevCPR.widthPct > 0.10 && r.prevCPR.widthPct <= 0.22)) && //micro||tiny PCPR
+        r.prevCPR.widthPct <= 0.10 &&
+        r.todayCPR.widthPct > 0.60 && r.todayCPR.widthPct <= 1.10
+      );
+    // NEW: TS-cOL3U4-AU4R:4PM — Big Above: same setup as 1S-cOHi-FAU4:1AM
+    // (pivot level cOL3U4 + today's S1 above prev day pivot + today's CPR
+    // width 0.60%-1.10% / Small) but for prev CPR width category Tiny
+    // (0.10%-0.22%) instead of pMicro (<=0.10%). Reverse-engineered from a
+    // chart showing prev CPR "Tiny (0.149%)" and today's CPR "Small (1.037%)".
+    case "TS-cOL3U4-AU4R:4PM":
+      return (
+        r.cprRising &&
+        r.strWideCPR &&
+        r.cOL3U4 &&
+        r.todayCPR.s1 > r.prevCPR.pivot &&
+        r.prevCPR.widthPct > 0.10 && r.prevCPR.widthPct <= 0.22 &&
         r.todayCPR.widthPct > 0.60 && r.todayCPR.widthPct <= 1.10
       );
     case "Exp-U3>U3":
@@ -874,6 +888,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     { key: "HA55-HrL4U34-FAU4", direction: "up" },
     { key: "1T-HiL4U4-FAU4", direction: "up" },
     { key: "1S-cOL3U4-FAU4:1AM", direction: "up" },
+    { key: "TS-cOL3U4-AU4R:4PM", direction: "up" },
   ],
   "u1-gt-pu4": [],
   "structure-bigbelow": [
