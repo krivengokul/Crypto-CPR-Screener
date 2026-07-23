@@ -84,8 +84,8 @@ const SCREENER_PATTERN_IDS = new Set([
   // ── Overlap Below sub-patterns ──
   "eXLo-L4U4-U4",
   "Exp-U3>U3",
-  "OBN-LoL4U4-U4",
-  "OBW-LoL4U4-L4",
+  "OBN-LoU4L4-U4",
+  "OBW-LoU4L4-L4",
   "LBT-PU1>U1PL1>L1",
 
   // ── CPR Inside sub-patterns ──
