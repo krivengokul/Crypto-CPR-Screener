@@ -17,6 +17,8 @@ import {
   SRLadder,
   getSubFilterDirection,
   getWidthCategory,
+  cprDistancePct,
+  levelsInDistanceRange,
 } from "./ScreenerUtils";
 
 export interface ScreenerTableRowProps {
@@ -378,6 +380,26 @@ export default function ScreenerTableRow({
               </>
             );
           })()}
+        </td>
+        <td className="px-4 py-3 whitespace-nowrap text-xs font-mono font-medium">
+          {(() => {
+            const dist = cprDistancePct(r);
+            if (dist === null) return <span className="text-muted-foreground">—</span>;
+            const levels = levelsInDistanceRange(r);
+            return (
+              <>
+                <div className={r.cprRising ? "text-blue-400" : "text-orange-400"}>
+                  {dist.toFixed(2)}%
+                </div>
+                {levels.length > 0 && (
+                  <div className="text-[10px] text-muted-foreground mt-0.5 whitespace-normal max-w-[72px]">
+                    {levels.map((lvl) => lvl.label).join(", ")}
+                  </div>
+                )}
+              </>
+            );
+          })()}
+          {gapBadge && <div className="flex flex-wrap gap-1 mt-1">{gapBadge}</div>}
         </td>
         <td className="px-4 py-3 whitespace-nowrap">
           {(() => {

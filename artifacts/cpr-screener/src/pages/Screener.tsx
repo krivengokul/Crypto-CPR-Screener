@@ -2108,6 +2108,9 @@ export default function Screener({
                       GAP <SortIcon k="cprDistance" />
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      CPR-GAP
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Chart
                     </th>
                   </tr>
