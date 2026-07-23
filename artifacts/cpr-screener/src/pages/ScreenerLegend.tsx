@@ -224,6 +224,11 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             <div className="text-xs font-semibold text-emerald-400 mb-1">Compressed Inside Previous L2 and Previous U2</div>
             <div className="text-xs text-muted-foreground">Compressed Todays L4/U4 Inside Previous L2/U2</div>
           </>
+        ) : activePattern === "L1-cOU1L2-U4:1AM" ? (
+          <>
+            <div className="text-xs font-semibold text-sky-400 mb-1">Pivot Level: cOU1L2  PCPR: Large  CPR: Micro</div>
+            <div className="text-xs text-muted-foreground">Pivot cOU1L2, Today&apos;s R1 &gt; Prev CPR BC, Today&apos;s R1 &lt; Today&apos;s PDH, Prev CPR width 2%–5% (Large), Today CPR width ≤ 0.10% (Micro)</div>
+          </>
         ) : showExpU4PU4 && activePattern === "overlapping-lower" ? (
           <>
             <div className="text-xs font-semibold text-sky-400 mb-1">Expanded</div>
@@ -367,6 +372,11 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
           <>
             <div className="text-xs font-semibold text-emerald-400 mb-1">Target</div>
             <div className="text-xs text-muted-foreground">Bullish to U4</div>
+          </>
+        ) : activePattern === "L1-cOU1L2-U4:1AM" ? (
+          <>
+            <div className="text-xs font-semibold text-sky-400 mb-1">Exp Target: U4<br />Time: 1AM</div>
+            <div className="text-xs text-muted-foreground">Expected upside target U4 by ~1AM</div>
           </>
         ) : showExpU4PU4 && activePattern === "overlapping-lower" ? (
           <>

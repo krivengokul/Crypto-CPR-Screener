@@ -531,6 +531,20 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.todayCPR.r4 < r.prevCPR.r2 &&
         Math.abs(cprDistancePct(r) ?? Infinity) < 1
       );
+    // NEW: L1-cOU1L2-U4:1AM — LittleBelow + cOU1L2 (today's S4 inside prev
+    // L2 band, today's R4 inside prev U1 band) + today's R1 above prev
+    // CPR's BC + today's R1 below today's PDH + prev CPR width category
+    // Large (2%-5%) + today's CPR width category Micro (<=0.10%).
+    case "L1-cOU1L2-U4:1AM":
+      return (
+        r.cprFalling &&
+        r.narrowCPR &&
+        r.cOU1L2 &&
+        r.todayCPR.r1 > r.prevCPR.bc &&
+        r.todayCPR.r1 < r.todayCPR.prevHigh &&
+        r.prevCPR.widthPct > 2 && r.prevCPR.widthPct <= 5 &&
+        r.todayCPR.widthPct <= 0.10
+      );
     // NEW: eXLoL3U4-AU4 — Big Below (structure-bigbelow: cprFalling + strWideCPR):
     // prev R4 between today's R3/R4 AND prev S4 above today's S3, today's
     // CPR width between 0.5% and 2%, prev CPR width < 0.5%. Moved here from
@@ -975,7 +989,7 @@ export function getSubFilterDirection(r: CPRResult, activePattern: string): SubF
  * badges and Pivot Level filter buttons, checking the raw flags directly.
  */
 export interface PivotLevelInfo {
-  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "cOLoL2U1" | "cOU3L4" | "LoU4L4"| "eXHiL4U234" | "eXHiL4U3" | "eXL4U4" | "HiL4U4" | "HiL4U34" | "cOHiL2U3" | "cOHiL3U3" | "eXU4L234" | "cOHiL2U4" | "eXL3U3" | "eXL2U1" | "eXL3U1" | "eXL4U1" | "eXL1CPR" | "eXL2CPR" | "eXL3CPR" | "cOU1L1" | "cOL1U1" | "cOU2L2" | "cOL2U2" | "cOU4L4" | "exL3U2" | "Lower";
+  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "cOLoL2U1" | "cOU3L4" | "LoU4L4"| "eXHiL4U234" | "eXHiL4U3" | "eXL4U4" | "HiL4U4" | "HiL4U34" | "cOHiL2U3" | "cOHiL3U3" | "eXU4L234" | "cOHiL2U4" | "eXL3U3" | "eXL2U1" | "eXL3U1" | "eXL4U1" | "eXL1CPR" | "eXL2CPR" | "eXL3CPR" | "cOU1L1" | "cOL1U1" | "cOU2L2" | "cOL2U2" | "cOU1L2" | "cOU4L4" | "exL3U2" | "Lower";
   classes: string;
 }
 
@@ -1037,6 +1051,8 @@ export function matchesPivotLevelFlag(r: CPRResult, label: string): boolean {
     case "cOL1U1": return r.cOL1U1;
     case "cOU2L2": return r.cOU2L2;
     case "cOL2U2": return r.cOL2U2;
+    // NEW: cOU1L2 — independent, section-agnostic Pivot Level flag (see cpr.ts).
+    case "cOU1L2": return r.cOU1L2;
     case "cOU4L4": return r.cOU4L4;
     case "exL3U2": return r.exL3U2;
     default: return getPivotLevel(r)?.label === label;

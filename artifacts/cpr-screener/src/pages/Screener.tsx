@@ -917,6 +917,8 @@ export default function Screener({
       if (pivotLevelFilter === "cOL1U1") return r.cOL1U1;
       if (pivotLevelFilter === "cOU2L2") return r.cOU2L2;
       if (pivotLevelFilter === "cOL2U2") return r.cOL2U2;
+      // NEW: cOU1L2 — independent, section-agnostic Pivot Level flag (see cpr.ts).
+      if (pivotLevelFilter === "cOU1L2") return r.cOU1L2;
       if (pivotLevelFilter === "cOU4L4") return r.cOU4L4;
       if (pivotLevelFilter === "exL3U2") return r.exL3U2;
       return getPivotLevel(r)?.label === pivotLevelFilter;
@@ -2008,6 +2010,8 @@ export default function Screener({
                   { label: "cOL1U1",   active: "border-cyan-400 text-cyan-400" },
                   { label: "cOU2L2",   active: "border-emerald-400 text-emerald-400" },
                   { label: "cOL2U2",   active: "border-lime-400 text-lime-400" },
+                  // NEW: cOU1L2 — independent, section-agnostic Pivot Level flag (see cpr.ts).
+                  { label: "cOU1L2",   active: "border-sky-400 text-sky-400" },
                   // NEW: cOU4L4 — independent, section-agnostic Pivot Level flag (see cpr.ts).
                   { label: "cOU4L4",   active: "border-orange-400 text-orange-400" },
                   // NEW: exL3U2 — prev S4 inside today S2/S3 AND prev R4 inside today R1/R2
