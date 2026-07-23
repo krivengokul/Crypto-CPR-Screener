@@ -895,18 +895,12 @@ export default function Screener({
     // R4 (PU4), or below prev day's S4 (PL4)
     .filter((r) => {
       if (pdhPdlFilter === "s1r1in") {
-        const eligible =
-          passesPattern(r, "inside-cpr") ||
-          passesPattern(r, "outside-cpr") ||
-          passesPattern(r, "overlapping-higher") ||
-          passesPattern(r, "overlapping-lower");
-        if (!eligible) return false;
         const inBand = (lvl: number, b: { bc: number; tc: number }) => {
           const lo = Math.min(b.bc, b.tc), hi = Math.max(b.bc, b.tc);
           return lvl >= lo && lvl <= hi;
         };
         const levels = [
-          r.todayCPR.s1, r.todayCPR.r1,
+          r.todayCPR.s1, r.todayCPR.r1, 
           r.prevCPR.s1,  r.prevCPR.r1,
         ];
         return levels.some((l) => inBand(l, r.todayCPR) || inBand(l, r.prevCPR));
