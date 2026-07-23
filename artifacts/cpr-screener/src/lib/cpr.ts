@@ -82,21 +82,15 @@ export interface CPRResult {
   LoL4U4:boolean;
   eXHiU1L3: boolean;
   eXHiL4U234: boolean;
-  // NEW: eXHiL4U3 — unconditional Pivot Level badge. Prev S4 sits in
-  // today's L4 band (today.s4→today.s3) AND prev R4 sits in today's U3
-  // band (today.r2→today.r3). Independent, section-agnostic flag (same
-  // treatment as HiL4U4/eXHiL4U234/etc — surfaced by getPivotLevel /
-  // matchesPivotLevelFlag / computePivotSubLabel and used by the
-  // MeMi-eXHiL4U3-U4:6PM sub-filter under Little Above).
   eXHiL4U3: boolean;
   eXU4L234: boolean;
+  eXU4L3: boolean;
   cOHiL2U4: boolean;
   equalCPR: boolean;
   eXL3U3: boolean;
   eXU3L3: boolean;
   cOL4U4: boolean;
   cOU4L4: boolean;
-  // NEW: exL3U2 — prev S4 between today S2/S3 AND prev R4 between today R1/R2
   exL3U2: boolean;
   cOL3U4: boolean;
   cOU3L3: boolean;
@@ -334,6 +328,8 @@ export function analyzeCPR(
                    (prevCPR.r4 > todayCPR.r2 && prevCPR.r4 < todayCPR.r3);
   const eXU4L234 = (prevCPR.r4 < todayCPR.r4 && prevCPR.r4 > todayCPR.r3) &&
                    (prevCPR.s4 < todayCPR.s1 && prevCPR.s4 > todayCPR.s2);
+  const eXU4L3 = (prevCPR.r4 < todayCPR.r4 && prevCPR.r4 > todayCPR.r3) &&
+                   (prevCPR.s4 < todayCPR.s2 && prevCPR.s4 > todayCPR.s3);
   const cOHiL2U4 = (todayCPR.s4 < prevCPR.s1 && todayCPR.s4 > prevCPR.s2) &&
                  (prevCPR.r3 > todayCPR.r3 && prevCPR.r3 < todayCPR.r4);
   // cOL4U4: today's S4 sits in the prev L4–L3 band, today's R4 sits in the prev U3–U4 band
@@ -531,6 +527,7 @@ export function analyzeCPR(
     eXHiL4U234,
     eXHiL4U3,
     eXU4L234,
+    eXU4L3,
     cOHiL2U4,
     equalCPR,
     eXL3U3,
