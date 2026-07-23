@@ -589,7 +589,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.strWideCPR &&
         r.cOL3U4 &&
         r.todayCPR.s1 > r.prevCPR.pivot &&
-        r.prevCPR.widthPct <= 0.10 &&
+        (r.prevCPR.widthPct <= 0.10 || (r.prevCPR.widthPct > 0.10 && r.prevCPR.widthPct <= 0.22)) && //micro||tiny PCPR
         r.todayCPR.widthPct > 0.60 && r.todayCPR.widthPct <= 1.10
       );
     case "Exp-U3>U3":
