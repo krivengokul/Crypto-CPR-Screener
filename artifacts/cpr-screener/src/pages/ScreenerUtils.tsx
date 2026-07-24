@@ -739,6 +739,18 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.prevCPR.r4 > r.todayCPR.r3 &&
         r.prevCPR.r4 < r.todayCPR.r2
       );
+    // NEW: eXL4U2-U4:4AM — BigCPR Above, placed next to HA55-HrL4U34-FAU4.
+    // Logic: cprRising + strWideCPR + pivot level eXL4U2 + today's S1 above
+    // prev day's TC + today's BC above prev day's R1 + compressionRatio >= 200.
+    case "eXL4U2-U4:4AM":
+      return (
+        r.cprRising &&
+        r.strWideCPR &&
+        r.eXL4U2 &&
+        r.todayCPR.s1 > r.prevCPR.tc &&
+        r.todayCPR.bc > r.prevCPR.r1 &&
+        r.compressionRatio >= 200
+      );
     case "structure-bigbelow":
       return r.cprFalling && r.strWideCPR && !(r.todayCPR.s1 < r.prevCPR.s4);
     case "bigbelow-pmini-pl3":
@@ -892,6 +904,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     { key: "bacomp-l3>pl1/u3>pu1", direction: "up" },
     { key: "hR-HAL", direction: "up" },
     { key: "HA55-HrL4U34-FAU4", direction: "up" },
+    { key: "eXL4U2-U4:4AM", direction: "up" },
     { key: "1T-HiL4U4-FAU4", direction: "up" },
     { key: "1S-cOL3U4-FAU4:1AM", direction: "up" },
     { key: "TS-cOL3U4-AU4R:4PM", direction: "up" },

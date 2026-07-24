@@ -72,6 +72,7 @@ export const subPatterns: Record<string, SubPattern[]> = {
     { id: "bigabove-pl34cl4-u3>pu4", label: "pL34-cL4" },
     { id: "bacomp-l3>pl1/u3>pu1",   label: "Inside PUL2" },
     { id: "hR-HAL",                  label: "hR-HAL" },
+    { id: "eXL4U2-U4:4AM",           label: "eXL4U2-U4:4AM" },
     { id: "1T-HiL4U4-FAU4",          label: "1T-HiL4U4-FAU4" },
     { id: "1S-cOL3U4-FAU4:1AM",        label: "1S-cOL3U4-FAU4:1AM" },
     { id: "TS-cOL3U4-AU4R:4PM",        label: "TS-cOL3U4-AU4R:4PM" },

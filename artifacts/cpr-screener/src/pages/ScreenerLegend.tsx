@@ -283,6 +283,11 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             <div className="text-xs font-semibold text-fuchsia-400 mb-1">1T-HiL4U4-FAU4</div>
             <div className="text-xs text-muted-foreground">Wide Above + HiL4U4 (Prev R4 inside Today&apos;s R3/R4, Today&apos;s S4 inside Prev S3/S4), Prev CPR pMicro, Today CPR Tiny</div>
           </>
+        ) : activePattern === "eXL4U2-U4:4AM" ? (
+          <>
+            <div className="text-xs font-semibold text-purple-400 mb-1">eXL4U2-U4:4AM</div>
+            <div className="text-xs text-muted-foreground">Wide Above + Pivot Level: eXL4U2, Today&apos;s S1 &gt; Prev TC, Today&apos;s BC &gt; Prev R1, Size Ratio ≥ 200%</div>
+          </>
         ) : (show1ScoHiFAU4 && activePattern === "structure-bigabove") || activePattern === "1S-cOL3U4-FAU4:1AM" ? (
           <>
             <div className="text-xs font-semibold text-teal-400 mb-1">Pivot Level: cOL3U4  PCPR: Tiny  CPR: Small</div>

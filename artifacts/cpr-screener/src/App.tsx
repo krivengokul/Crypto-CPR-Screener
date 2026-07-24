@@ -103,6 +103,7 @@ const SCREENER_PATTERN_IDS = new Set([
   "HAThin-U1>PU4",
   "hR-HAL",
   "HA55-HrL4U34-FAU4",
+  "eXL4U2-U4:4AM",
   "1T-HiL4U4-FAU4",
   "1S-cOL3U4-FAU4:1AM",
   "TS-cOL3U4-AU4R:4PM",
