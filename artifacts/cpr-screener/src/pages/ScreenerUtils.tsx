@@ -989,7 +989,7 @@ export function getSubFilterDirection(r: CPRResult, activePattern: string): SubF
  * badges and Pivot Level filter buttons, checking the raw flags directly.
  */
 export interface PivotLevelInfo {
-  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "cOU3L4" | "LoU4L4"| "eXHiL4U234" | "eXHiL4U3" | "eXL4U4" | "HiL4U4" | "HiL4U34" | "cOHiL2U3" | "cOHiL3U3" | "eXU4L234" | "cOHiL2U4" | "eXL3U3" | "eXL2U1" | "eXL3U1" | "eXL4U1" | "eXL1CPR" | "eXL2CPR" | "eXL3CPR" | "cOU1L1" | "cOL1U1" | "cOU2L2" | "cOL2U2" | "cOU1L2" | "cOU4L4" | "exL3U2" | "Lower";
+  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "cOU3L4" | "LoU4L4"| "eXHiL4U234" | "eXHiL4U3" | "eXL4U4" | "HiL4U4" | "HiL4U34" | "cOHiL2U3" | "cOHiL3U3" | "eXU4L234" | "eXU4L34" | "cOHiL2U4" | "eXL3U3" | "eXL2U1" | "eXL3U1" | "eXL4U1" | "eXL1CPR" | "eXL2CPR" | "eXL3CPR" | "cOU1L1" | "cOL1U1" | "cOU2L2" | "cOL2U2" | "cOU1L2" | "cOU4L4" | "exL3U2" | "Lower";
   classes: string;
 }
 
@@ -1021,7 +1021,7 @@ export function getPivotLevel(r: CPRResult): PivotLevelInfo {
  * labels (eX-Higher/eX-Lower/cO-Higher/cO-Lower/Higher/Lower) this falls
  * back to getPivotLevel(r)'s label; for the independent, section-agnostic
  * booleans (cOU1L2, cOU3L4, LoU4L4, eXHiL4U234, eXL4U4, HiL4U4,
- * HiL4U34, cOHiL2U3, eXU4L234, cOU1L1, cOL1U1, cOU2L2, cOL2U2) it reads
+ * HiL4U34, cOHiL2U3, eXU4L234, eXU4L34, cOU1L1, cOL1U1, cOU2L2, cOL2U2) it reads
  * the raw flag directly — same as Screener.tsx does today.
  */
 export function matchesPivotLevelFlag(r: CPRResult, label: string): boolean {
@@ -1036,6 +1036,7 @@ export function matchesPivotLevelFlag(r: CPRResult, label: string): boolean {
     case "cOHiL2U3": return r.cOHiL2U3;
     case "cOHiL3U3": return r.cOHiL3U3;
     case "eXU4L234": return r.eXU4L234;
+    case "eXU4L34": return r.eXU4L34;
     case "cOHiL2U4": return r.cOHiL2U4;
     case "eXL3U3": return r.eXL3U3;
     // NEW: eXL*U1 / eXL*CPR sub-type badges

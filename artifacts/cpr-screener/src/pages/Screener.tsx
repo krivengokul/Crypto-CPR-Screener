@@ -889,6 +889,9 @@ export default function Screener({
       // NEW: eXU4L234 — independent, section-agnostic Pivot Level flag
       // (see doc-comments in cpr.ts / ScreenerUtils.tsx).
       if (pivotLevelFilter === "eXU4L234") return r.eXU4L234;
+      // NEW: eXU4L34 — independent, section-agnostic Pivot Level flag
+      // (see doc-comments in cpr.ts / ScreenerUtils.tsx).
+      if (pivotLevelFilter === "eXU4L34") return r.eXU4L34;
       if (pivotLevelFilter === "cOHiL2U4") return r.cOHiL2U4;
       if (pivotLevelFilter === "cOL4U4") return r.cOL4U4;
       if (pivotLevelFilter === "cOL3U4") return r.cOL3U4;
@@ -1979,6 +1982,7 @@ export default function Screener({
                   { label: "cOHiL2U3", active: "border-sky-400 text-sky-400" },
                   { label: "cOHiL3U3", active: "border-sky-400 text-sky-400" },
                   { label: "eXU4L234", active: "border-amber-400 text-amber-400" },
+                  { label: "eXU4L34", active: "border-amber-300 text-amber-300" },
                   { label: "cOHiL2U4", active: "border-emerald-400 text-emerald-400" },
                   { label: "eXL3U3", active: "border-orange-400 text-orange-400" },
                   { label: "eXU3L3", active: "border-red-400 text-red-400" },
