@@ -25,7 +25,6 @@ export interface ScreenerLegendProps {
   showHAU1L1AbovePU4: boolean;
   showHAU1PWideAbove: boolean;
   showHAU1: boolean;
-  showeXHiL4U234: boolean;
   showOutsideCPReXHrL3U3AU4: boolean;
   showInsideCPRTiCOLo: boolean;
 }
@@ -62,7 +61,6 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
     showHAU1L1AbovePU4,
     showHAU1PWideAbove,
     showHAU1,
-    showeXHiL4U234,
     showOutsideCPReXHrL3U3AU4,
     showInsideCPRTiCOLo,
   } = props;
@@ -310,11 +308,6 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             <div className="text-xs font-semibold text-sky-400 mb-1">U1 &gt; Previous U4</div>
             <div className="text-xs text-muted-foreground">Todays U1&gt; Previous U4</div>
           </>
-        ) : showeXHiL4U234 && activePattern === "structure-bigabove" ? (
-          <>
-            <div className="text-xs font-semibold text-violet-400 mb-1">eXHi-L4U234-U4</div>
-            <div className="text-xs text-muted-foreground">Prev S4 inside today&apos;s S3/S4, prev R4 inside today&apos;s R2/R3, today&apos;s CPR expanded above prev</div>
-          </>
         ) : showOutsideCPReXHrL3U3AU4 && activePattern === "outside-cpr" ? (
           <>
             <div className="text-xs font-semibold text-rose-400 mb-1">eXHrL3U3-AU4</div>
@@ -457,11 +450,6 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
           <>
             <div className="text-xs font-semibold text-emerald-400 mb-1">Breakout</div>
             <div className="text-xs text-muted-foreground">Today&apos;s R1 has broken above yesterday&apos;s R4 — strong bullish momentum</div>
-          </>
-        ) : showeXHiL4U234 && activePattern === "structure-bigabove" ? (
-          <>
-            <div className="text-xs font-semibold text-emerald-400 mb-1">Target</div>
-            <div className="text-xs text-muted-foreground">Expanded structure above prev day&apos;s range — continuation toward U4</div>
           </>
         ) : showOutsideCPReXHrL3U3AU4 && activePattern === "outside-cpr" ? (
           <>

@@ -99,7 +99,6 @@ const SCREENER_PATTERN_IDS = new Set([
   // ── Big ABOVE sub-patterns ──
   "bigabove-pl34cl4-u3>pu4",
   "bacomp-l3>pl1/u3>pu1",
-  "eXHi-L4U234-U4",
   "HA-U1>PU4",
   "HAThin-U1>PU4",
   "hR-HAL",

@@ -641,13 +641,6 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.LoU4L4 &&
         r.compressionRatio > 50
       );
-    case "eXHi-L4U234-U4":
-      return (
-        r.cprRising &&
-        r.strWideCPR &&
-        r.eXHiL4U234 &&
-       r.compressionRatio >= 100 && r.compressionRatio <= 150
-      );
     case "inside-cpr":
       return (r.todayCPR.tc <= r.prevCPR.tc && r.todayCPR.bc > r.prevCPR.bc) ||
               (r.todayCPR.tc < r.prevCPR.tc && r.todayCPR.bc >= r.prevCPR.bc);
@@ -897,7 +890,6 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
   "structure-bigabove": [
     { key: "bigabove-pl34cl4-u3>pu4", direction: "up" },
     { key: "bacomp-l3>pl1/u3>pu1", direction: "up" },
-    { key: "eXHi-L4U234-U4", direction: "up" },
     { key: "hR-HAL", direction: "up" },
     { key: "HA55-HrL4U34-FAU4", direction: "up" },
     { key: "1T-HiL4U4-FAU4", direction: "up" },
@@ -963,7 +955,7 @@ export function getSubFilterDirection(r: CPRResult, activePattern: string): SubF
  * affect filtering — only the primary badge, which now correctly falls
  * through to "Lower" for these rows.
  *
- * NEW: eXL4U4 — same treatment as cOU1L2/cOU3L4/LoU4L4/eXHiL4U234
+ * NEW: eXL4U4 — same treatment as cOU1L2/cOU3L4/LoU4L4
  * above: an independent, section-agnostic boolean (r.eXL4U4 from cpr.ts —
  * prev R4 inside today's R3/R4 AND prev S4 inside today's S3/S4). It is
  * NOT returned as the primary label here (same reasoning as above — it can
@@ -989,7 +981,7 @@ export function getSubFilterDirection(r: CPRResult, activePattern: string): SubF
  * badges and Pivot Level filter buttons, checking the raw flags directly.
  */
 export interface PivotLevelInfo {
-  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "cOU3L4" | "LoU4L4"| "eXHiL4U234" | "eXHiL4U3" | "eXL4U4" | "HiL4U4" | "HiL4U34" | "cOHiL2U3" | "cOHiL3U3" | "eXU4L234" | "eXU4L34" | "cOHiL2U4" | "eXL3U3" | "eXL2U1" | "eXL3U1" | "eXL4U1" | "eXL1CPR" | "eXL2CPR" | "eXL3CPR" | "eXL3TC" | "eXL4U2" | "eXL2U2" | "eXL2TC" | "eXL1U1" | "cOU1L1" | "cOL1U1" | "cOU2L2" | "cOL2U2" | "cOU1L2" | "cOU4L4" | "exL3U2" | "Lower";
+  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "cOU3L4" | "LoU4L4" | "eXHiL4U3" | "eXL4U4" | "HiL4U4" | "HiL4U34" | "cOHiL2U3" | "cOHiL3U3" | "eXU4L234" | "eXU4L34" | "cOHiL2U4" | "eXL3U3" | "eXL2U1" | "eXL3U1" | "eXL4U1" | "eXL1CPR" | "eXL2CPR" | "eXL3CPR" | "eXL3TC" | "eXL4U2" | "eXL2U2" | "eXL2TC" | "eXL1U1" | "cOU1L1" | "cOL1U1" | "cOU2L2" | "cOL2U2" | "cOU1L2" | "cOU4L4" | "exL3U2" | "Lower";
   classes: string;
 }
 
@@ -1020,7 +1012,7 @@ export function getPivotLevel(r: CPRResult): PivotLevelInfo {
  * without duplicating the switch. For the six mutually-exclusive primary
  * labels (eX-Higher/eX-Lower/cO-Higher/cO-Lower/Higher/Lower) this falls
  * back to getPivotLevel(r)'s label; for the independent, section-agnostic
- * booleans (cOU1L2, cOU3L4, LoU4L4, eXHiL4U234, eXL4U4, HiL4U4,
+ * booleans (cOU1L2, cOU3L4, LoU4L4, eXL4U4, HiL4U4,
  * HiL4U34, cOHiL2U3, eXU4L234, eXU4L34, cOU1L1, cOL1U1, cOU2L2, cOL2U2) it reads
  * the raw flag directly — same as Screener.tsx does today.
  */
@@ -1028,7 +1020,6 @@ export function matchesPivotLevelFlag(r: CPRResult, label: string): boolean {
   switch (label) {
     case "cOU3L4": return r.cOU3L4;
     case "LoU4L4": return r.LoU4L4;
-    case "eXHiL4U234": return r.eXHiL4U234;
     case "eXHiL4U3": return r.eXHiL4U3;
     case "eXL4U4": return r.eXL4U4;
     case "HiL4U4": return r.HiL4U4;
@@ -1103,7 +1094,6 @@ export function computePivotSubLabel(today: CPRLevels, prev: CPRLevels | undefin
   if ((prev.r4 > today.r3 && prev.r4 < today.r4) && (today.s4 > prev.s4 && today.s4 < prev.s3)) return "HiL4U4";
   if ((today.r4 < prev.r4 && today.r4 > prev.r3) && (prev.s4 > today.s4 && prev.s4 < today.s3)) return "LoU4L4";
   if ((prev.r4 < today.r1 && prev.r4 > today.tc) && (prev.s4 > today.s3 && prev.s4 < today.s2)) return "eXHiU1L3";
-  if ((prev.s4 > today.s4 && prev.s4 < today.s3) && (prev.r4 > today.r1 && prev.r4 < today.r2)) return "eXHiL4U234";
   if ((prev.s4 > today.s4 && prev.s4 < today.s3) && (prev.r4 > today.r2 && prev.r4 < today.r3)) return "eXHiL4U3";
   if ((prev.r4 < today.r4 && prev.r4 > today.r3) && (prev.s4 < today.s1 && prev.s4 > today.s2)) return "eXU4L234";
   if ((today.s4 < prev.s1 && today.s4 > prev.s2) && (prev.r3 > today.r3 && prev.r3 < today.r4)) return "cOHiL2U4";

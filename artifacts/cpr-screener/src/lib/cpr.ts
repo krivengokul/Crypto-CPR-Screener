@@ -80,7 +80,6 @@ export interface CPRResult {
   HiL4U34: boolean;
   LoU4L4:boolean;
   eXHiU1L3: boolean;
-  eXHiL4U234: boolean;
   eXHiL4U3: boolean;
   eXU4L234: boolean;
   eXU4L34: boolean;
@@ -305,8 +304,6 @@ export function analyzeCPR(
                   (prevCPR.s4 > todayCPR.s4 && prevCPR.s4 < todayCPR.s3);
   const eXHiU1L3 = (prevCPR.r4 < todayCPR.r1 && prevCPR.r4 > todayCPR.tc) &&
                      (prevCPR.s4 > todayCPR.s3 && prevCPR.s4 < todayCPR.s2);
-  const eXHiL4U234 = (prevCPR.s4 > todayCPR.s4 && prevCPR.s4 < todayCPR.s3) &&
-                     (prevCPR.r4 > todayCPR.r1 && prevCPR.r4 < todayCPR.r2);
   // NEW: eXHiL4U3 — prev S4 in today's L4 band, prev R4 in today's U3 band.
   const eXHiL4U3 = (prevCPR.s4 > todayCPR.s4 && prevCPR.s4 < todayCPR.s3) &&
                    (prevCPR.r4 > todayCPR.r2 && prevCPR.r4 < todayCPR.r3);
@@ -522,7 +519,6 @@ export function analyzeCPR(
     HiL4U34,
     LoU4L4,
     eXHiU1L3,
-    eXHiL4U234,
     eXHiL4U3,
     eXU4L234,
     eXU4L34,
