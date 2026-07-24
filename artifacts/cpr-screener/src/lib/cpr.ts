@@ -83,7 +83,7 @@ export interface CPRResult {
   eXHiL4U234: boolean;
   eXHiL4U3: boolean;
   eXU4L234: boolean;
-  eXU4L3: boolean;
+  eXU4L34: boolean;
   cOHiL2U4: boolean;
   equalCPR: boolean;
   eXL3U3: boolean;
@@ -308,7 +308,7 @@ export function analyzeCPR(
                    (prevCPR.r4 > todayCPR.r2 && prevCPR.r4 < todayCPR.r3);
   const eXU4L234 = (prevCPR.r4 < todayCPR.r4 && prevCPR.r4 > todayCPR.r3) &&
                    (prevCPR.s4 < todayCPR.s1 && prevCPR.s4 > todayCPR.s2);
-  const eXU4L3 = (prevCPR.r4 < todayCPR.r4 && prevCPR.r4 > todayCPR.r3) &&
+  const eXU4L34 = (prevCPR.r4 < todayCPR.r4 && prevCPR.r4 > todayCPR.r3) &&
                    (prevCPR.s4 < todayCPR.s2 && prevCPR.s4 > todayCPR.s3);
   const cOHiL2U4 = (todayCPR.s4 < prevCPR.s1 && todayCPR.s4 > prevCPR.s2) &&
                  (prevCPR.r3 > todayCPR.r3 && prevCPR.r3 < todayCPR.r4);
@@ -507,7 +507,7 @@ export function analyzeCPR(
     eXHiL4U234,
     eXHiL4U3,
     eXU4L234,
-    eXU4L3,
+    eXU4L34,
     cOHiL2U4,
     equalCPR,
     eXL3U3,
