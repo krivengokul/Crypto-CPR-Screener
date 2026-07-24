@@ -436,7 +436,7 @@ export function analyzeCPR(
   // specified; flag if a different U2/U3 combination was intended.
   const eXL4U2 = (prevCPR.s4 > todayCPR.s4 && prevCPR.s4 < todayCPR.s3) && 
                   (prevCPR.r4 > todayCPR.r1  && prevCPR.r4 < todayCPR.r2);
-  const eXL2U2  = (prevCPR.s4 > todayCPR.s2 && prevCPR.s4 < todayCPR.s1) &&
+  const eXL2U2  = (prevCPR.s4 >= todayCPR.s2 && prevCPR.s4 < todayCPR.s1) &&
                  (prevCPR.r4 > todayCPR.r1  && prevCPR.r4 < todayCPR.r2);
   const eXL2TC  = (prevCPR.s4 > todayCPR.s2 && prevCPR.s4 < todayCPR.s1) &&
                  (prevCPR.r4 > todayCPR.pivot  && prevCPR.r4 < todayCPR.tc);
