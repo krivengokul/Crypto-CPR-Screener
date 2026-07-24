@@ -741,7 +741,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       );
     // NEW: eXL4U2-U4:4AM — BigCPR Above, placed next to HA55-HrL4U34-FAU4.
     // Logic: cprRising + strWideCPR + pivot level eXL4U2 + today's S1 above
-    // prev day's TC + today's BC above prev day's R1 + compressionRatio >= 200.
+    // prev day's TC + today's BC above prev day's R1 + compressionRatio >= 300.
     case "eXL4U2-U4:4AM":
       return (
         r.cprRising &&
@@ -749,7 +749,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.eXL4U2 &&
         r.todayCPR.s1 > r.prevCPR.tc &&
         r.todayCPR.bc > r.prevCPR.r1 &&
-        r.compressionRatio >= 200
+        r.compressionRatio >= 300
       );
     case "structure-bigbelow":
       return r.cprFalling && r.strWideCPR && !(r.todayCPR.s1 < r.prevCPR.s4);
