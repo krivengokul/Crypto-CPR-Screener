@@ -855,17 +855,16 @@ export default function Screener({
 
   const displayed = getActivePool()
     .filter((r) => r.symbol.toLowerCase().includes(search.toLowerCase()))
-    // NEW: cOLoL2U1 / cOU3L4 are independent booleans in cpr.ts (not
+    // NEW: cOU1L2 / cOU3L4 are independent booleans in cpr.ts (not
     // actually gated behind srLower), so a row can satisfy one of them
     // AND a higher-priority bucket (e.g. srHigher) at the same time.
     // getPivotLevel() only ever returns ONE label per row and checks the
     // other buckets first, so matching on getPivotLevel(r)?.label would
-    // silently miss rows where cOLoL2U1/cOU3L4 is true but shadowed by
+    // silently miss rows where cOU1L2/cOU3L4 is true but shadowed by
     // an earlier bucket. Check the raw flags directly for these two so
     // the filter buttons actually work independent of the primary badge.
     .filter((r) => {
       if (!pivotLevelFilter) return true;
-      if (pivotLevelFilter === "cOLoL2U1") return r.cOLoL2U1;
       if (pivotLevelFilter === "cOU3L4") return r.cOU3L4;
       if (pivotLevelFilter === "LoU4L4") return r.LoU4L4;
       if (pivotLevelFilter === "eXHiL4U234") return r.eXHiL4U234;
@@ -1969,7 +1968,6 @@ export default function Screener({
                   { label: "cO-Lower", active: "border-teal-400 text-teal-400" },
                   { label: "Higher", active: "border-green-400 text-green-400" },
                   { label: "Lower", active: "border-destructive text-destructive" },
-                  { label: "cOLoL2U1", active: "border-rose-400 text-rose-400" },
                   { label: "cOU3L4", active: "border-amber-400 text-amber-400" },
                   { label: "LoU4L4", active: "border-lime-400 text-lime-400" },
                   { label: "eXHiL4U234", active: "border-violet-400 text-violet-400" },
@@ -2009,7 +2007,7 @@ export default function Screener({
                   { label: "cOU2L2",   active: "border-emerald-400 text-emerald-400" },
                   { label: "cOL2U2",   active: "border-lime-400 text-lime-400" },
                   // NEW: cOU1L2 — independent, section-agnostic Pivot Level flag (see cpr.ts).
-                  { label: "cOU1L2",   active: "border-sky-400 text-sky-400" },
+                  { label: "cOU1L2",   active: "border-rose-400 text-rose-400" },
                   // NEW: cOU4L4 — independent, section-agnostic Pivot Level flag (see cpr.ts).
                   { label: "cOU4L4",   active: "border-orange-400 text-orange-400" },
                   // NEW: exL3U2 — prev S4 inside today S2/S3 AND prev R4 inside today R1/R2

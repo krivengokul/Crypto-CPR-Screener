@@ -69,7 +69,6 @@ export interface CPRResult {
   srCompressedLower: boolean;
   srExpandedHigher: boolean;
   srExpandedLower: boolean;
-  cOLoL2U1: boolean;
   cOU3L4: boolean;
   cOHiL2U3: boolean;
   cOHiL3U3: boolean;
@@ -103,32 +102,14 @@ export interface CPRResult {
   cOHiL2U2: boolean;
   cOLoU2L3: boolean;
   LoU4L1234: boolean;
-  cOLoU1L2: boolean;
   cOLoU2L4: boolean;
-  // NEW: eXL*U1 / eXL*CPR — Expanded-Higher sub-type pivot badges.
-  // These narrow "eX-Higher" into specific S/R bands for the U1>pU4 section.
-  //   eXL2U1:  prevS4 in today's L2 band (s1/s2),  prevR4 in today's U1 band (tc/r1)
-  //   eXL3U1:  prevS4 in today's L3 band (s2/s3),  prevR4 in today's U1 band (tc/r1)
-  //   eXL4U1:  prevS4 in today's L4 band (s3/s4),  prevR4 in today's U1 band (tc/r1)
-  //   eXL1CPR: prevS4 and prevR4 both inside today's CPR band (s1/bc)
-  //   eXL2CPR: prevS4 in today's L2 band (s1/s2),  prevR4 in today's CPR band (s1/bc)
-  //   eXL3CPR: prevS4 in today's L3 band (s2/s3),  prevR4 in today's CPR band (s1/bc)
   eXL2U1: boolean;
   eXL3U1: boolean;
   eXL4U1: boolean;
   eXL1CPR: boolean;
   eXL2CPR: boolean;
   eXL3CPR: boolean;
-  // NEW: cOU1L1 / cOL1U1 / cOU2L2 / cOL2U2 — independent, section-agnostic
-  // Pivot Level badges (see doc-comment above getPivotLevel in
-  // ScreenerUtils.tsx for how these are surfaced/filterable).
-  //   cOU1L1: today's S4 in prev L1 band (s1→tc), today's R4 in prev U1 band
-  //           (bc→r1), AND the R1-side move (|prevR1-todayR1|) is bigger
-  //           than the S1-side move (|prevS1-todayS1|)
-  //   cOL1U1: same bands as cOU1L1, but the S1-side move is bigger
-  //   cOU2L2: today's S4 in prev L2 band (s2→s1), today's R4 in prev U2
-  //           band (r1→r2), AND today's S3 is below prev S1
-  //   cOL2U2: same bands as cOU2L2, but today's R3 is above prev R1
+  eXL3TC: boolean;
   cOU1L1: boolean;
   cOU1L2: boolean;
   cOL1U1: boolean;
@@ -296,8 +277,6 @@ export function analyzeCPR(
   // Expanded: bigger R4 move (resistance rising) = bullish expansion
   const srExpandedHigher   = srExpanded   && (r4Distance > s4Distance || (r4Distance === s4Distance && r3R4Gap > s3S4Gap));
   const srExpandedLower    = srExpanded   && (s4Distance > r4Distance || (s4Distance === r4Distance && s3S4Gap > r3R4Gap));
-  const cOLoL2U1 = (prevCPR.s1  < todayCPR.s3 && prevCPR.s1 > todayCPR.s4) &&
-                    (todayCPR.r4  < prevCPR.r1 && todayCPR.r4 > prevCPR.tc);
   const cOU3L4 =(todayCPR.s4 > prevCPR.s4 && todayCPR.s4 < prevCPR.s3 ) &&
                   (todayCPR.r4 > prevCPR.r2  && todayCPR.r4 < prevCPR.r3);
   const cOHiL2U3 =(todayCPR.s4 > prevCPR.s2 && todayCPR.s4 < prevCPR.s1 ) &&
@@ -376,9 +355,6 @@ export function analyzeCPR(
   // LoU4L1234: today's R4 in prevU4 (R3→R4), prev S4 between today's S1 and today's BC
   const LoU4L1234 = (todayCPR.r4 > prevCPR.r3 && todayCPR.r4 < prevCPR.r4) &&
                     (prevCPR.s4 > todayCPR.s1 && prevCPR.s4 < todayCPR.bc);
-  // cOLoU1L2: today's R4 in prevU1 (TC→R1), today's S4 between prev S2→S1
-  const cOLoU1L2 = (todayCPR.r4 > prevCPR.tc && todayCPR.r4 < prevCPR.r1) &&
-                   (todayCPR.s4 > prevCPR.s2 && todayCPR.s4 < prevCPR.s1);
   // cOLoU2L4: today's R4 in prevU2 (R1→R2), today's S4 between prev S4→S3
   const cOLoU2L4 = (todayCPR.r4 > prevCPR.r1 && todayCPR.r4 < prevCPR.r2) &&
                    (todayCPR.s4 > prevCPR.s4 && todayCPR.s4 < prevCPR.s3);
@@ -451,6 +427,8 @@ export function analyzeCPR(
                   (prevCPR.r4 > todayCPR.s1 && prevCPR.r4 < todayCPR.bc);
   const eXL3CPR = (prevCPR.s4 > todayCPR.s3 && prevCPR.s4 < todayCPR.s2) &&
                   (prevCPR.r4 > todayCPR.s1 && prevCPR.r4 < todayCPR.bc);
+  const eXL3TC = (prevCPR.s4 > todayCPR.s3 && prevCPR.s4 < todayCPR.s2) &&
+                  (prevCPR.r4 > todayCPR.Pivot && prevCPR.r4 < todayCPR.bc);
 
   // NEW: cOU1L1 / cOL1U1 — today's S4 in prev L1 band (s1→tc), today's R4 in
   // prev U1 band (bc→r1); split by which side (R1 vs S1) moved further
@@ -515,7 +493,6 @@ export function analyzeCPR(
     srCompressedLower,
     srExpandedHigher,
     srExpandedLower,
-    cOLoL2U1,
     cOU3L4,
     cOHiL2U3,
     cOHiL3U3,
@@ -549,7 +526,6 @@ export function analyzeCPR(
     cOHiL2U2,
     cOLoU2L3,
     LoU4L1234,
-    cOLoU1L2,
     cOLoU2L4,
     eXL2U1,
     eXL3U1,
@@ -557,6 +533,7 @@ export function analyzeCPR(
     eXL1CPR,
     eXL2CPR,
     eXL3CPR,
+    eXL3TC,
     cOU1L1,
     cOL1U1,
     cOU1L2,

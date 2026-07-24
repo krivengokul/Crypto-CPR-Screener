@@ -187,9 +187,8 @@ export default function ScreenerTableRow({
               );
             })()}
           </div>
-          {(r.cOLoL2U1 || r.cOU3L4 || r.LoU4L4 || r.eXHiL4U234 || r.eXHiL4U3 || r.eXL4U4 || r.HiL4U4 || r.HiL4U34 || r.cOHiL2U3 || r.cOHiL3U3 || r.eXU4L234 || r.cOHiL2U4 || r.eXL3U3 || r.eXU3L3 || r.cOL4U4 || r.cOL3U4 || r.cOU3L3 || r.LoU3L4 || r.LoU3L34 || r.LoU2L4 || r.LoU2L3 || r.LoU4L34 || r.LoU4L234 || r.HiL2U4 || r.HiL3U4 || r.cOLoU2L3 || r.LoU4L1234 || r.cOU1L2 || r.cOLoU2L4 || r.eXL2U1 || r.eXL3U1 || r.eXL4U1 || r.eXL1CPR || r.eXL2CPR || r.eXL3CPR || r.cOU1L1 || r.cOL1U1 || r.cOU2L2 || r.cOL2U2 || r.cOU4L4 || r.exL3U2) && (
+          {(r.cOU3L4 || r.LoU4L4 || r.eXHiL4U234 || r.eXHiL4U3 || r.eXL4U4 || r.HiL4U4 || r.HiL4U34 || r.cOHiL2U3 || r.cOHiL3U3 || r.eXU4L234 || r.cOHiL2U4 || r.eXL3U3 || r.eXU3L3 || r.cOL4U4 || r.cOL3U4 || r.cOU3L3 || r.LoU3L4 || r.LoU3L34 || r.LoU2L4 || r.LoU2L3 || r.LoU4L34 || r.LoU4L234 || r.HiL2U4 || r.HiL3U4 || r.cOLoU2L3 || r.LoU4L1234 || r.cOU1L2 || r.cOLoU2L4 || r.eXL2U1 || r.eXL3U1 || r.eXL4U1 || r.eXL1CPR || r.eXL2CPR || r.eXL3CPR || r.cOU1L1 || r.cOL1U1 || r.cOU2L2 || r.cOL2U2 || r.cOU4L4 || r.exL3U2) && (
             <div className="flex flex-wrap gap-1 mt-1">
-              {r.cOLoL2U1 && <span className="text-xs px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 font-medium">cOLoL2U1</span>}
               {r.cOU3L4 && <span className="text-xs px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium">cOU3L4</span>}
               {r.LoU4L4 && <span className="text-xs px-1.5 py-0.5 rounded bg-lime-500/10 text-lime-400 border border-lime-500/20 font-medium">LoU4L4</span>}
               {r.eXHiL4U234 && <span className="text-xs px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20 font-medium">eXHiL4U234</span>}
@@ -216,7 +215,7 @@ export default function ScreenerTableRow({
               {r.LoU4L234 && <span className="text-xs px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20 font-medium">LoU4L234</span>}
               {r.cOLoU2L3 && <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">cOLoU2L3</span>}
               {r.LoU4L1234 && <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 font-medium">LoU4L1234</span>}
-              {r.cOU1L2 && <span className="text-xs px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-medium">cOU1L2</span>}
+              {r.cOU1L2 && <span className="text-xs px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 font-medium">cOU1L2</span>}
               {r.cOLoU2L4 && <span className="text-xs px-1.5 py-0.5 rounded bg-lime-500/10 text-lime-400 border border-lime-500/20 font-medium">cOLoU2L4</span>}
               {r.cOU1L1 && <span className="text-xs px-1.5 py-0.5 rounded bg-teal-500/10 text-teal-400 border border-teal-500/20 font-medium">cOU1L1</span>}
               {r.cOL1U1 && <span className="text-xs px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-medium">cOL1U1</span>}
