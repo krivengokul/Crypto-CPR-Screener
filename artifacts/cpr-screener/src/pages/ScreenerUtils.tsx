@@ -989,7 +989,7 @@ export function getSubFilterDirection(r: CPRResult, activePattern: string): SubF
  * badges and Pivot Level filter buttons, checking the raw flags directly.
  */
 export interface PivotLevelInfo {
-  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "cOU3L4" | "LoU4L4"| "eXHiL4U234" | "eXHiL4U3" | "eXL4U4" | "HiL4U4" | "HiL4U34" | "cOHiL2U3" | "cOHiL3U3" | "eXU4L234" | "eXU4L34" | "cOHiL2U4" | "eXL3U3" | "eXL2U1" | "eXL3U1" | "eXL4U1" | "eXL1CPR" | "eXL2CPR" | "eXL3CPR" | "cOU1L1" | "cOL1U1" | "cOU2L2" | "cOL2U2" | "cOU1L2" | "cOU4L4" | "exL3U2" | "Lower";
+  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "cOU3L4" | "LoU4L4"| "eXHiL4U234" | "eXHiL4U3" | "eXL4U4" | "HiL4U4" | "HiL4U34" | "cOHiL2U3" | "cOHiL3U3" | "eXU4L234" | "eXU4L34" | "cOHiL2U4" | "eXL3U3" | "eXL2U1" | "eXL3U1" | "eXL4U1" | "eXL1CPR" | "eXL2CPR" | "eXL3CPR" | "eXL3TC" | "eXL4U2" | "eXL2U2" | "eXL2TC" | "eXL1U1" | "cOU1L1" | "cOL1U1" | "cOU2L2" | "cOL2U2" | "cOU1L2" | "cOU4L4" | "exL3U2" | "Lower";
   classes: string;
 }
 
@@ -1046,6 +1046,12 @@ export function matchesPivotLevelFlag(r: CPRResult, label: string): boolean {
     case "eXL1CPR": return r.eXL1CPR;
     case "eXL2CPR": return r.eXL2CPR;
     case "eXL3CPR": return r.eXL3CPR;
+    // NEW: expanded family — eXL3TC / eXL4U2 / eXL2U2 / eXL2TC / eXL1U1
+    case "eXL3TC": return r.eXL3TC;
+    case "eXL4U2": return r.eXL4U2;
+    case "eXL2U2": return r.eXL2U2;
+    case "eXL2TC": return r.eXL2TC;
+    case "eXL1U1": return r.eXL1U1;
     // NEW: cOU1L1 / cOL1U1 / cOU2L2 / cOL2U2
     case "cOU1L1": return r.cOU1L1;
     case "cOL1U1": return r.cOL1U1;

@@ -922,6 +922,12 @@ export default function Screener({
       if (pivotLevelFilter === "cOU1L2") return r.cOU1L2;
       if (pivotLevelFilter === "cOU4L4") return r.cOU4L4;
       if (pivotLevelFilter === "exL3U2") return r.exL3U2;
+      // NEW: expanded family — eXL3TC / eXL4U2 / eXL2U2 / eXL2TC / eXL1U1
+      if (pivotLevelFilter === "eXL3TC") return r.eXL3TC;
+      if (pivotLevelFilter === "eXL4U2") return r.eXL4U2;
+      if (pivotLevelFilter === "eXL2U2") return r.eXL2U2;
+      if (pivotLevelFilter === "eXL2TC") return r.eXL2TC;
+      if (pivotLevelFilter === "eXL1U1") return r.eXL1U1;
       return getPivotLevel(r)?.label === pivotLevelFilter;
     })
     .filter((r) => matchesWidthFilter(r, prevWidthFilter, todayWidthFilter))
@@ -2016,6 +2022,13 @@ export default function Screener({
                   { label: "cOU4L4",   active: "border-orange-400 text-orange-400" },
                   // NEW: exL3U2 — prev S4 inside today S2/S3 AND prev R4 inside today R1/R2
                   { label: "exL3U2",   active: "border-amber-400 text-amber-400" },
+                  // NEW: expanded family — today's outer S-level broke below prev S4
+                  // AND today's outer R-level/TC broke above prev R4 (see cpr.ts).
+                  { label: "eXL4U2",  active: "border-purple-400 text-purple-400" },
+                  { label: "eXL2U2",   active: "border-blue-400 text-blue-400" },
+                  { label: "eXL2TC",   active: "border-sky-400 text-sky-400" },
+                  { label: "eXL3TC",   active: "border-indigo-400 text-indigo-400" },
+                  { label: "eXL1U1",   active: "border-fuchsia-400 text-fuchsia-400" },
                 ] as { label: PivotLevelInfo["label"]; active: string }[]
               ).map(({ label, active }) => (
                 <button

@@ -110,6 +110,10 @@ export interface CPRResult {
   eXL2CPR: boolean;
   eXL3CPR: boolean;
   eXL3TC: boolean;
+  eXL4U2: boolean;
+  eXL2U2: boolean;
+  eXL2TC: boolean;
+  eXL1U1: boolean;
   cOU1L1: boolean;
   cOU1L2: boolean;
   cOL1U1: boolean;
@@ -427,8 +431,22 @@ export function analyzeCPR(
                   (prevCPR.r4 > todayCPR.s1 && prevCPR.r4 < todayCPR.bc);
   const eXL3CPR = (prevCPR.s4 > todayCPR.s3 && prevCPR.s4 < todayCPR.s2) &&
                   (prevCPR.r4 > todayCPR.s1 && prevCPR.r4 < todayCPR.bc);
-  const eXL3TC = (prevCPR.s4 > todayCPR.s3 && prevCPR.s4 < todayCPR.s2) &&
-                  (prevCPR.r4 > todayCPR.Pivot && prevCPR.r4 < todayCPR.bc);
+  // NEW: expanded family — today's outer S-level has broken BELOW prev
+  // day's S4 AND today's outer R-level (or TC) has broken ABOVE prev day's
+  // R4, i.e. today's structure has expanded past yesterday's entire S4–R4
+  // range. Note: eXL4U2's name pairs "L4" with the s4 condition but "U23"
+  // with a single r2 condition (no r3 leg) — implemented literally as
+  // specified; flag if a different U2/U3 combination was intended.
+  const eXL4U2 = (prevCPR.s4 > todayCPR.s4 && prevCPR.s4 < todayCPR.s3) && 
+                  (prevCPR.r4 > todayCPR.r1  && prevCPR.r4 < todayCPR.r2);
+  const eXL2U2  = (prevCPR.s4 > todayCPR.s2 && prevCPR.s4 < todayCPR.s1) &&
+                 (prevCPR.r4 > todayCPR.r1  && prevCPR.r4 < todayCPR.r2);
+  const eXL2TC  = (prevCPR.s4 > todayCPR.s2 && prevCPR.s4 < todayCPR.s1) &&
+                 (prevCPR.r4 > todayCPR.pivot  && prevCPR.r4 < todayCPR.tc);
+  const eXL3TC  =(prevCPR.s4 > todayCPR.s3 && prevCPR.s4 < todayCPR.s2) &&
+                  (prevCPR.r4 > todayCPR.pivot && prevCPR.r4 < todayCPR.tc);
+  const eXL1U1  = (prevCPR.s4 > todayCPR.s1 && prevCPR.s4 < todayCPR.bc) &&
+                  (prevCPR.r4 > todayCPR.tc  && prevCPR.r4 < todayCPR.r1);
 
   // NEW: cOU1L1 / cOL1U1 — today's S4 in prev L1 band (s1→tc), today's R4 in
   // prev U1 band (bc→r1); split by which side (R1 vs S1) moved further
@@ -534,6 +552,10 @@ export function analyzeCPR(
     eXL2CPR,
     eXL3CPR,
     eXL3TC,
+    eXL4U2,
+    eXL2U2,
+    eXL2TC,
+    eXL1U1,
     cOU1L1,
     cOL1U1,
     cOU1L2,
