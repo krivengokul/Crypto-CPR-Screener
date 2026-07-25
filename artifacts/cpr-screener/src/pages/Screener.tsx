@@ -789,6 +789,7 @@ export default function Screener({
       if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
       if (activeTab === "delta") return deltaIntersect;
       return binanceIntersect;
+    }
     // NEW: Exp-U3>U3 pool
     if (showExpU3PU3 && activePattern === "overlapping-lower") {
       const binanceIntersect = allResults
