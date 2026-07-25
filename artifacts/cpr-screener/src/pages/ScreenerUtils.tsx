@@ -1,4 +1,9 @@
-import type { CPRLevels, CPRResult } from "@/lib/cpr";
+import {
+  classifyCPRPair,
+  pivotSubLabelFromFlags,
+  type CPRLevels,
+  type CPRResult,
+} from "@/lib/cpr";
 
 export type SortKey = "symbol" | "compressionRatio" | "currentPrice" | "change24h" | "quoteVolume" | "priceVsCpr" | "cprDistance" | "pdhPdlPct";
 export type SortDir = "asc" | "desc";
@@ -1071,84 +1076,22 @@ export function matchesPivotLevelFlag(r: CPRResult, label: string): boolean {
 
 /**
  * computePivotSubLabel — given two CPR-level objects, computes which
- * sub-category pivot label applies to the (today, prev) pair using the same
- * conditions as cpr.ts. Used in the U1>pU4 section to find the PREVIOUS
- * day's sub-category: call with (prevCPR, ppCPR). Returns null when prev is
- * undefined/null or no known sub-category matches.
+ * sub-category pivot label applies to the (today, prev) pair. Delegates
+ * entirely to classifyCPRPair + pivotSubLabelFromFlags in cpr.ts, which is
+ * the single source of truth for the band conditions and label priority.
  *
- * The label is displayed in the format p(LoU4L34) — the "p" prefix is added
- * by the caller.
+ * Used in the U1>pU4 section to find the PREVIOUS day's sub-category:
+ * call with (prevCPR, ppCPR). Returns null when prev is undefined/null or
+ * no known sub-category matches. The "p" prefix is added by the caller.
  */
-export function computePivotSubLabel(today: CPRLevels, prev: CPRLevels | undefined | null): string | null {
+export function computePivotSubLabel(
+  today: CPRLevels,
+  prev: CPRLevels | undefined | null,
+): string | null {
   if (!prev) return null;
-
-  // Compute intermediate sr flags for this pair (same logic as cpr.ts)
-  const normDenom = prev.width > 0 ? prev.width : prev.pivot * 0.0001;
-  const r4Dist = Math.abs(today.r4 - prev.r4) / normDenom;
-  const s4Dist = Math.abs(today.s4 - prev.s4) / normDenom;
-  const r3R4Gap = Math.abs(today.r3 - prev.r4);
-  const s3S4Gap = Math.abs(prev.s4 - today.s3);
-  const srExpanded   = today.r4 > prev.r4 && today.s4 < prev.s4;
-  const srCompressed = today.r4 < prev.r4 && today.s4 > prev.s4;
-  const srExpandedHigher   = srExpanded   && (r4Dist > s4Dist || (r4Dist === s4Dist && r3R4Gap > s3S4Gap));
-  const srExpandedLower    = srExpanded   && (s4Dist > r4Dist || (s4Dist === r4Dist && s3S4Gap > r3R4Gap));
-  const srCompressedHigher = srCompressed && (s4Dist > r4Dist || (s4Dist === r4Dist && s3S4Gap > r3R4Gap));
-  const srCompressedLower  = srCompressed && (r4Dist > s4Dist || (r4Dist === s4Dist && r3R4Gap > s3S4Gap));
-
-  // Check sub-labels in same priority order as cpr.ts (first match wins)
-  if ((today.s4 > prev.s4 && today.s4 < prev.s3) && (today.r4 > prev.r2 && today.r4 < prev.r3)) return "cOU3L4";
-  if ((today.s4 > prev.s2 && today.s4 < prev.s1) && (today.r4 > prev.r2 && today.r4 < prev.r3)) return "cOHiL2U3";
-  if ((today.s4 > prev.s3 && today.s4 < prev.s2) && (today.r4 > prev.r2 && today.r4 < prev.r3) && srCompressedHigher) return "cOHiL3U3";
-  if ((prev.r4 > today.r3 && prev.r4 < today.r4) && (prev.s4 > today.s3 && prev.s4 < today.s2)) return "eXLoL3U4";
-  if ((prev.r4 > today.r3 && prev.r4 < today.r4) && (prev.s4 > today.s4 && prev.s4 < today.s3)) return "eXL4U4";
-  if ((prev.r4 > today.r2 && prev.r4 < today.r3) && (today.s4 > prev.s4 && today.s4 < prev.s3)) return "HiL4U34";
-  if ((today.s4 > prev.s2 && today.s4 < prev.s1) && (prev.r4 > today.r3 && prev.r4 < today.r4)) return "HiL2U4";
-  if ((today.s4 > prev.s3 && today.s4 < prev.s2) && (prev.r4 > today.r3 && prev.r4 < today.r4)) return "HiL3U4";
-  if ((prev.r4 > today.r3 && prev.r4 < today.r4) && (today.s4 > prev.s4 && today.s4 < prev.s3)) return "HiL4U4";
-  if ((today.r4 < prev.r4 && today.r4 > prev.r3) && (prev.s4 > today.s4 && prev.s4 < today.s3)) return "LoU4L4";
-  if ((prev.r4 < today.r1 && prev.r4 > today.tc) && (prev.s4 > today.s3 && prev.s4 < today.s2)) return "eXHiU1L3";
-  if ((prev.s4 > today.s4 && prev.s4 < today.s3) && (prev.r4 > today.r2 && prev.r4 < today.r3)) return "eXHiL4U3";
-  if ((prev.r4 < today.r4 && prev.r4 > today.r3) && (prev.s4 < today.s1 && prev.s4 > today.s2)) return "eXU4L234";
-  if ((today.s4 < prev.s1 && today.s4 > prev.s2) && (prev.r3 > today.r3 && prev.r3 < today.r4)) return "cOHiL2U4";
-  if ((today.s4 > prev.s4 && today.s4 < prev.s3) && (today.r4 > prev.r3 && today.r4 < prev.r4)) return "cOL4U4";
-  if ((today.s4 > prev.s3 && today.s4 < prev.s2) && (today.r4 > prev.r3 && today.r4 < prev.r4)) return "cOL3U4";
-  if ((today.s4 > prev.s3 && today.s4 < prev.s2) && (today.r4 > prev.r2 && today.r4 < prev.r3) && srCompressedLower) return "cOU3L3";
-  if ((today.r4 > prev.r2 && today.r4 < prev.r3) && (prev.s4 > today.s4 && prev.s4 < today.s3)) return "LoU3L4";
-  if ((today.r4 > prev.r2 && today.r4 < prev.r3) && (prev.s4 > today.s3 && prev.s4 < today.s2)) return "LoU3L34";
-  // Reordered: cOLoU2L3 is checked BEFORE the other U2-band branches (LoU2L4, LoU2L3, cOHiL2U2)
-  // so its badge wins when a row satisfies multiple U2-band conditions simultaneously.
-  if ((today.r4 > prev.r1 && today.r4 < prev.r2) && (today.s4 > prev.s3 && today.s4 < prev.s2) && today.s3 < prev.s2) return "cOLoU2L3";
-  if ((today.r4 > prev.r1 && today.r4 < prev.r2) && (prev.s4 > today.s4 && prev.s4 < today.s3)) return "LoU2L4";
-  if ((today.r4 > prev.r1 && today.r4 < prev.r2) && (prev.s4 > today.s3 && prev.s4 < today.s2)) return "LoU2L3";
-  if ((today.r4 > prev.r3 && today.r4 < prev.r4) && (prev.s4 >= today.s3 && prev.s4 < today.s2)) return "LoU4L34";
-  if ((today.r4 > prev.r3 && today.r4 < prev.r4) && (prev.s4 > today.s2 && prev.s4 < today.s1)) return "LoU4L234";
-  if ((today.r4 > prev.r1 && today.r4 < prev.r2) && today.r3 > prev.r1 && (today.s4 > prev.s2 && today.s4 < prev.s1)) return "cOHiL2U2";
-  if ((today.r4 > prev.r3 && today.r4 < prev.r4) && (prev.s4 > today.s1 && prev.s4 < today.bc)) return "LoU4L1234";
-  if ((today.r4 > prev.tc && today.r4 < prev.r1) && (today.s4 > prev.s2 && today.s4 < prev.s1)) return "cOU1L2";
-  if ((today.r4 > prev.r1 && today.r4 < prev.r2) && (today.s4 > prev.s4 && today.s4 < prev.s3)) return "cOLoU2L4";
-  if ((prev.r4 < today.r3 && prev.r4 > today.r2) && (prev.s4 > today.s3 && prev.s4 < today.s2) && srExpandedHigher) return "eXL3U3";
-  if ((prev.r4 < today.r3 && prev.r4 > today.r2) && (prev.s4 > today.s3 && prev.s4 < today.s2) && srExpandedLower) return "eXU3L3";
-
-  // NEW: cOU1L1 / cOL1U1 — today's S4 in prev L1 band (s1→tc), today's R4 in prev U1 band (bc→r1)
-  // split by which side (R1 vs S1) moved further
-  const r1Move = Math.abs(today.r1 - prev.r1);
-  const s1Move = Math.abs(today.s1 - prev.s1);
-  const cOU1L1Base = (today.s4 > prev.s1 && today.s4 < prev.tc) &&
-                      (today.r4 > prev.bc && today.r4 < prev.r1);
-  if (cOU1L1Base && r1Move > s1Move) return "cOU1L1";
-  if (cOU1L1Base && r1Move < s1Move) return "cOL1U1";
-
-  // NEW: cOU2L2 / cOL2U2 — today's S4 in prev L2 band (s2→s1), today's R4 in prev U2 band (r1→r2)
-  // split by which side (R2 vs S2) moved further
-  const r2Move = Math.abs(today.r2 - prev.r2);
-  const s2Move = Math.abs(today.s2 - prev.s2);
-  const cOU2L2Base = (today.s4 > prev.s2 && today.s4 < prev.s1) &&
-                      (today.r4 > prev.r1 && today.r4 < prev.r2);
-  if (cOU2L2Base && r2Move > s2Move) return "cOU2L2";
-  if (cOU2L2Base && r2Move < s2Move) return "cOL2U2";
-
-  return null;
+  return pivotSubLabelFromFlags(classifyCPRPair(today, prev));
 }
+
 
 export function isRisingAboveTC(r: CPRResult): boolean {
   return r.currentPrice > r.todayCPR.tc;

@@ -28,13 +28,87 @@ export interface CPRLevels {
   s4: number;
 }
 
+/**
+ * Flags produced by classifyCPRPair for any two CPRLevels (a "today" and a
+ * "prev"). These are pure band-position classifications — they do NOT depend
+ * on equalCPR / widthPct / rising / falling / narrowing / etc., which are
+ * only meaningful for the today/prev pair on CPRResult.
+ *
+ * The exact same classifier is used by analyzeCPR (today vs prev) and by
+ * ScreenerUtils.computePivotSubLabel (prev vs pp) so there is a single
+ * source of truth for both the band conditions and the label priority order.
+ */
+export interface CPRPairFlags {
+  // Distances / directional aggregates
+  r4Distance: number;
+  s4Distance: number;
+  srHigher: boolean;
+  srLower: boolean;
+  srExpanded: boolean;
+  srCompressed: boolean;
+  srCompressedHigher: boolean;
+  srCompressedLower: boolean;
+  srExpandedHigher: boolean;
+  srExpandedLower: boolean;
+
+  // Band-classification flags (order below matches pivotSubLabelFromFlags priority)
+  cOU3L4: boolean;
+  cOHiL2U3: boolean;
+  cOHiL3U3: boolean;
+  eXLoL3U4: boolean;
+  eXL4U4: boolean;
+  HiL4U34: boolean;
+  HiL2U4: boolean;
+  HiL3U4: boolean;
+  HiL4U4: boolean;
+  LoU4L4: boolean;
+  eXHiU1L3: boolean;
+  eXHiL4U3: boolean;
+  eXU4L234: boolean;
+  eXU4L34: boolean;
+  cOHiL2U4: boolean;
+  cOL4U4: boolean;
+  cOU4L4: boolean;
+  exL3U2: boolean;
+  cOL3U4: boolean;
+  cOU3L3: boolean;
+  LoU3L4: boolean;
+  LoU3L34: boolean;
+  cOLoU2L3: boolean;
+  LoU2L4: boolean;
+  LoU2L3: boolean;
+  LoU4L34: boolean;
+  LoU4L234: boolean;
+  cOHiL2U2: boolean;
+  LoU4L1234: boolean;
+  cOU1L2: boolean;
+  cOLoU2L4: boolean;
+  eXL3U3: boolean;
+  eXU3L3: boolean;
+  cOU1L1: boolean;
+  cOL1U1: boolean;
+  cOU2L2: boolean;
+  cOL2U2: boolean;
+
+  // Additional flags consumed elsewhere on CPRResult (not part of the
+  // pivotSubLabel chain, but still pure functions of a (today, prev) pair).
+  eXL2U1: boolean;
+  eXL3U1: boolean;
+  eXL4U1: boolean;
+  eXL1CPR: boolean;
+  eXL2CPR: boolean;
+  eXL3CPR: boolean;
+  eXL3TC: boolean;
+  eXL4U2: boolean;
+  eXL2U2: boolean;
+  eXL2TC: boolean;
+  eXL1U1: boolean;
+}
+
 export interface CPRResult {
   symbol: string;
   todayCPR: CPRLevels;
   prevCPR: CPRLevels;
-  // NEW: ppCPR — CPR of the candle before prevCandle (previous-of-previous
-  // day). Optional — only present when there are at least 3 valid candles.
-  // Used solely by the "pWideAbove" sub-toggle (nested under U1>PU4).
   ppCPR?: CPRLevels;
   compressionRatio: number;
   cprRising: boolean;
@@ -61,7 +135,7 @@ export interface CPRResult {
   strWideCPR: boolean;
   narrowCPR: boolean;
   bothTight: boolean;
-  srHigher: boolean; 
+  srHigher: boolean;
   srLower: boolean;
   srExpanded: boolean;
   srCompressed: boolean;
@@ -78,7 +152,7 @@ export interface CPRResult {
   HiL3U4: boolean;
   HiL4U4: boolean;
   HiL4U34: boolean;
-  LoU4L4:boolean;
+  LoU4L4: boolean;
   eXHiU1L3: boolean;
   eXHiL4U3: boolean;
   eXU4L234: boolean;
@@ -123,12 +197,10 @@ export interface CPRResult {
   openPrice: number;
   change24h: number;
   quoteVolume: number;
-  // NEW: Previous day Pivot→R1 distance and Pivot→S1 distance (raw price units)
   prevR1Gap: number;
   prevS1Gap: number;
   r4Distance: number;
   s4Distance: number;
-
 }
 
 function isValidCandle(c: OHLC): boolean {
@@ -148,8 +220,8 @@ function isValidCandle(c: OHLC): boolean {
  *
  * Matches "CPR by Ask Dinesh Kumar (ADK)" TradingView indicator exactly:
  *   Pivot  = (H + L + C) / 3
- *   BC     = (H + L) / 2          — always the lower CPR boundary
- *   TC     = 2 × Pivot − BC       — always the upper CPR boundary
+ *   BC     = (H + L) / 2
+ *   TC     = 2 × Pivot − BC
  *
  * Resistance (R1–R4):
  *   R1 = 2P − L
@@ -162,9 +234,6 @@ function isValidCandle(c: OHLC): boolean {
  *   S2 = P − (H − L)
  *   S3 = L − 2 × (H − P)
  *   S4 = S3 + S2 − S1
- *
- * prevHigh / prevLow are stored so the S/R ladder can display them
- * exactly as ADK shows "PH" and "PL" lines on the chart.
  */
 export function calcCPR(candle: OHLC): CPRLevels {
   const h = candle.high;
@@ -185,27 +254,214 @@ export function calcCPR(candle: OHLC): CPRLevels {
   const s2 = pivot - range;
   const r3 = h + 2 * (pivot - l);
   const s3 = l - 2 * (h - pivot);
-  // TradingView-style extension
   const r4 = r3 + r2 - r1;
   const s4 = s3 + s2 - s1;
 
   return {
-    pivot,
-    bc,
-    tc,
-    width,
-    widthPct,
-    prevHigh: h,
-    prevLow:  l,
-    r1,
-    r2,
-    r3,
-    r4,
-    s1,
-    s2,
-    s3,
-    s4
+    pivot, bc, tc, width, widthPct,
+    prevHigh: h, prevLow: l,
+    r1, r2, r3, r4,
+    s1, s2, s3, s4,
   };
+}
+
+/**
+ * classifyCPRPair — pure band-position classifier for any (today, prev) pair.
+ *
+ * This is the ONLY place the band conditions live. analyzeCPR uses it for
+ * (todayCPR, prevCPR); ScreenerUtils.computePivotSubLabel uses it for
+ * (prevCPR, ppCPR) so both callers see identical logic. Change a boundary
+ * here and both today/prev flags on CPRResult and the p(...) sub-label
+ * update together.
+ */
+export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags {
+  // Distances — normalized by prev day's CPR width so R-side vs S-side moves
+  // are compared on equal footing regardless of the asset's price scale.
+  const normDenom  = prev.width > 0 ? prev.width : prev.pivot * 0.0001;
+  const r4Distance = Math.abs(today.r4 - prev.r4) / normDenom;
+  const s4Distance = Math.abs(today.s4 - prev.s4) / normDenom;
+
+  // Secondary tiebreaker: adjacent S/R gaps on each side.
+  const r3R4Gap = Math.abs(today.r3 - prev.r4);
+  const s3S4Gap = Math.abs(prev.s4 - today.s3);
+
+  const srHigher     = today.r4 > prev.r4 && today.s4 > prev.s4;
+  const srLower      = today.r4 < prev.r4 && today.s4 < prev.s4;
+  const srExpanded   = today.r4 > prev.r4 && today.s4 < prev.s4;
+  const srCompressed = today.r4 < prev.r4 && today.s4 > prev.s4;
+
+  const srCompressedHigher = srCompressed && (s4Distance > r4Distance || (s4Distance === r4Distance && s3S4Gap > r3R4Gap));
+  const srCompressedLower  = srCompressed && (r4Distance > s4Distance || (r4Distance === s4Distance && r3R4Gap > s3S4Gap));
+  const srExpandedHigher   = srExpanded   && (r4Distance > s4Distance || (r4Distance === s4Distance && r3R4Gap > s3S4Gap));
+  const srExpandedLower    = srExpanded   && (s4Distance > r4Distance || (s4Distance === r4Distance && s3S4Gap > r3R4Gap));
+
+  const cOU3L4 = (today.s4 > prev.s4 && today.s4 < prev.s3) &&
+                 (today.r4 > prev.r2 && today.r4 < prev.r3);
+  const cOHiL2U3 = (today.s4 > prev.s2 && today.s4 < prev.s1) &&
+                   (today.r4 > prev.r2 && today.r4 < prev.r3);
+  const cOHiL3U3 = (today.s4 > prev.s3 && today.s4 < prev.s2) &&
+                   (today.r4 > prev.r2 && today.r4 < prev.r3) && srCompressedHigher;
+  const eXLoL3U4 = (prev.r4 > today.r3 && prev.r4 < today.r4) &&
+                   (prev.s4 > today.s3 && prev.s4 < today.s2);
+  const eXL4U4   = (prev.r4 > today.r3 && prev.r4 < today.r4) &&
+                   (prev.s4 > today.s4 && prev.s4 < today.s3);
+  const HiL4U34  = (prev.r4 > today.r2 && prev.r4 < today.r3) &&
+                   (today.s4 > prev.s4 && today.s4 < prev.s3);
+  const HiL2U4   = (today.s4 > prev.s2 && today.s4 < prev.s1) &&
+                   (prev.r4 > today.r3 && prev.r4 < today.r4);
+  const HiL3U4   = (today.s4 > prev.s3 && today.s4 < prev.s2) &&
+                   (prev.r4 > today.r3 && prev.r4 < today.r4);
+  const HiL4U4   = (prev.r4 > today.r3 && prev.r4 < today.r4) &&
+                   (today.s4 > prev.s4 && today.s4 < prev.s3);
+  const LoU4L4   = (today.r4 < prev.r4 && today.r4 > prev.r3) &&
+                   (prev.s4 > today.s4 && prev.s4 < today.s3);
+  const eXHiU1L3 = (prev.r4 < today.r1 && prev.r4 > today.tc) &&
+                   (prev.s4 > today.s3 && prev.s4 < today.s2);
+  const eXHiL4U3 = (prev.s4 > today.s4 && prev.s4 < today.s3) &&
+                   (prev.r4 > today.r2 && prev.r4 < today.r3);
+  const eXU4L234 = (prev.r4 < today.r4 && prev.r4 > today.r3) &&
+                   (prev.s4 < today.s1 && prev.s4 > today.s2);
+  const eXU4L34  = (prev.r4 < today.r4 && prev.r4 > today.r3) &&
+                   (prev.s4 < today.s2 && prev.s4 > today.s3);
+  const cOHiL2U4 = (today.s4 < prev.s1 && today.s4 > prev.s2) &&
+                   (prev.r3 > today.r3 && prev.r3 < today.r4);
+  const cOL4U4   = (today.s4 > prev.s4 && today.s4 < prev.s3) &&
+                   (today.r4 > prev.r3 && today.r4 < prev.r4) && srCompressedHigher;
+  const cOU4L4   = (today.s4 > prev.s4 && today.s4 < prev.s3) &&
+                   (today.r4 > prev.r3 && today.r4 < prev.r4) && srCompressedLower;
+  const exL3U2   = (prev.s4 > today.s3 && prev.s4 < today.s2) &&
+                   (prev.r4 > today.r1 && prev.r4 < today.r2);
+  const cOL3U4   = (today.s4 > prev.s3 && today.s4 < prev.s2) &&
+                   (today.r4 > prev.r3 && today.r4 < prev.r4);
+  const cOU3L3   = (today.s4 > prev.s3 && today.s4 < prev.s2) &&
+                   (today.r4 > prev.r2 && today.r4 < prev.r3) && srCompressedLower;
+  const LoU3L4   = (today.r4 > prev.r2 && today.r4 < prev.r3) &&
+                   (prev.s4 > today.s4 && prev.s4 < today.s3);
+  const LoU3L34  = (today.r4 > prev.r2 && today.r4 < prev.r3) &&
+                   (prev.s4 > today.s3 && prev.s4 < today.s2);
+  const LoU2L4   = (today.r4 > prev.r1 && today.r4 < prev.r2) &&
+                   (prev.s4 > today.s4 && prev.s4 < today.s3);
+  const LoU2L3   = (today.r4 > prev.r1 && today.r4 < prev.r2) &&
+                   (prev.s4 > today.s3 && prev.s4 < today.s2);
+  const LoU4L34  = (today.r4 > prev.r3 && today.r4 < prev.r4) &&
+                   (prev.s4 >= today.s3 && prev.s4 < today.s2);
+  const LoU4L234 = (today.r4 > prev.r3 && today.r4 < prev.r4) &&
+                   (prev.s4 > today.s2 && prev.s4 < today.s1);
+  const cOHiL2U2 = (today.r4 > prev.r1 && today.r4 < prev.r2) &&
+                   (today.r3 > prev.r1) &&
+                   (today.s4 > prev.s2 && today.s4 < prev.s1);
+  const cOLoU2L3 = (today.r4 > prev.r1 && today.r4 < prev.r2) &&
+                   (today.s4 > prev.s3 && today.s4 < prev.s2);
+  const LoU4L1234 = (today.r4 > prev.r3 && today.r4 < prev.r4) &&
+                    (prev.s4 > today.s1 && prev.s4 < today.bc);
+  const cOLoU2L4 = (today.r4 > prev.r1 && today.r4 < prev.r2) &&
+                   (today.s4 > prev.s4 && today.s4 < prev.s3);
+
+  const eXL3U3 = (prev.r4 < today.r3 && prev.r4 > today.r2) &&
+                 (prev.s4 > today.s3 && prev.s4 < today.s2) && srExpandedHigher;
+  const eXU3L3 = (prev.r4 < today.r3 && prev.r4 > today.r2) &&
+                 (prev.s4 > today.s3 && prev.s4 < today.s2) && srExpandedLower;
+
+  const eXL2U1 = (prev.s4 > today.s2 && prev.s4 < today.s1) &&
+                 (prev.r4 > today.tc  && prev.r4 < today.r1);
+  const eXL3U1 = (prev.s4 > today.s3 && prev.s4 < today.s2) &&
+                 (prev.r4 > today.tc  && prev.r4 < today.r1);
+  const eXL4U1 = (prev.s4 > today.s4 && prev.s4 < today.s3) &&
+                 (prev.r4 > today.tc  && prev.r4 < today.r1);
+
+  const eXL1CPR = (prev.s4 > today.s1 && prev.s4 < today.bc) &&
+                  (prev.r4 > today.s1 && prev.r4 < today.bc);
+  const eXL2CPR = (prev.s4 > today.s2 && prev.s4 < today.s1) &&
+                  (prev.r4 > today.s1 && prev.r4 < today.bc);
+  const eXL3CPR = (prev.s4 > today.s3 && prev.s4 < today.s2) &&
+                  (prev.r4 > today.s1 && prev.r4 < today.bc);
+
+  const eXL4U2 = (prev.s4 > today.s4 && prev.s4 < today.s3) &&
+                 (prev.r4 > today.r1  && prev.r4 < today.r2);
+  const eXL2U2 = (prev.s4 >= today.s2 && prev.s4 < today.s1) &&
+                 (prev.r4 > today.r1  && prev.r4 < today.r2);
+  const eXL2TC = (prev.s4 > today.s2 && prev.s4 < today.s1) &&
+                 (prev.r4 > today.pivot && prev.r4 < today.tc);
+  const eXL3TC = (prev.s4 > today.s3 && prev.s4 < today.s2) &&
+                 (prev.r4 > today.pivot && prev.r4 < today.tc);
+  const eXL1U1 = (prev.s4 > today.s1 && prev.s4 < today.bc) &&
+                 (prev.r4 > today.tc  && prev.r4 < today.r1);
+
+  // cOU1L1 / cOL1U1 — split by which side (R1 vs S1) moved further.
+  const r1Move = Math.abs(prev.r1 - today.r1);
+  const s1Move = Math.abs(prev.s1 - today.s1);
+  const cOU1L1Base = (today.s4 > prev.s1 && today.s4 < prev.tc) &&
+                     (today.r4 > prev.bc && today.r4 < prev.r1);
+  const cOU1L1 = cOU1L1Base && r1Move > s1Move;
+  const cOL1U1 = cOU1L1Base && r1Move < s1Move;
+
+  const cOU1L2 = (today.s4 > prev.s2 && today.s4 < prev.s1) &&
+                 (today.r4 < prev.r1 && today.r4 > prev.tc);
+
+  // cOU2L2 / cOL2U2 — split by which side (R2 vs S2) moved further.
+  const r2Move = Math.abs(prev.r2 - today.r2);
+  const s2Move = Math.abs(prev.s2 - today.s2);
+  const cOU2L2Base = (today.s4 > prev.s2 && today.s4 < prev.s1) &&
+                     (today.r4 > prev.r1 && today.r4 < prev.r2);
+  const cOU2L2 = cOU2L2Base && r2Move > s2Move;
+  const cOL2U2 = cOU2L2Base && r2Move < s2Move;
+
+  return {
+    r4Distance, s4Distance,
+    srHigher, srLower, srExpanded, srCompressed,
+    srCompressedHigher, srCompressedLower, srExpandedHigher, srExpandedLower,
+    cOU3L4, cOHiL2U3, cOHiL3U3, eXLoL3U4, eXL4U4, HiL4U34, HiL2U4, HiL3U4, HiL4U4,
+    LoU4L4, eXHiU1L3, eXHiL4U3, eXU4L234, eXU4L34, cOHiL2U4, cOL4U4, cOU4L4, exL3U2,
+    cOL3U4, cOU3L3, LoU3L4, LoU3L34, cOLoU2L3, LoU2L4, LoU2L3, LoU4L34, LoU4L234,
+    cOHiL2U2, LoU4L1234, cOU1L2, cOLoU2L4, eXL3U3, eXU3L3,
+    cOU1L1, cOL1U1, cOU2L2, cOL2U2,
+    eXL2U1, eXL3U1, eXL4U1, eXL1CPR, eXL2CPR, eXL3CPR,
+    eXL3TC, eXL4U2, eXL2U2, eXL2TC, eXL1U1,
+  };
+}
+
+/**
+ * pivotSubLabelFromFlags — priority-ordered label lookup. This is the ONLY
+ * place the label strings and their tie-break order live. The order below
+ * must match the if-chain that historically lived in ScreenerUtils.
+ */
+export function pivotSubLabelFromFlags(f: CPRPairFlags): string | null {
+  if (f.cOU3L4)    return "cOU3L4";
+  if (f.cOHiL2U3)  return "cOHiL2U3";
+  if (f.cOHiL3U3)  return "cOHiL3U3";
+  if (f.eXLoL3U4)  return "eXLoL3U4";
+  if (f.eXL4U4)    return "eXL4U4";
+  if (f.HiL4U34)   return "HiL4U34";
+  if (f.HiL2U4)    return "HiL2U4";
+  if (f.HiL3U4)    return "HiL3U4";
+  if (f.HiL4U4)    return "HiL4U4";
+  if (f.LoU4L4)    return "LoU4L4";
+  if (f.eXHiU1L3)  return "eXHiU1L3";
+  if (f.eXHiL4U3)  return "eXHiL4U3";
+  if (f.eXU4L234)  return "eXU4L234";
+  if (f.cOHiL2U4)  return "cOHiL2U4";
+  if (f.cOL4U4)    return "cOL4U4";
+  if (f.cOL3U4)    return "cOL3U4";
+  if (f.cOU3L3)    return "cOU3L3";
+  if (f.LoU3L4)    return "LoU3L4";
+  if (f.LoU3L34)   return "LoU3L34";
+  // cOLoU2L3 checked before other U2-band branches so its badge wins ties.
+  if (f.cOLoU2L3)  return "cOLoU2L3";
+  if (f.LoU2L4)    return "LoU2L4";
+  if (f.LoU2L3)    return "LoU2L3";
+  if (f.LoU4L34)   return "LoU4L34";
+  if (f.LoU4L234)  return "LoU4L234";
+  if (f.cOHiL2U2)  return "cOHiL2U2";
+  if (f.LoU4L1234) return "LoU4L1234";
+  if (f.cOU1L2)    return "cOU1L2";
+  if (f.cOLoU2L4)  return "cOLoU2L4";
+  if (f.eXL3U3)    return "eXL3U3";
+  if (f.eXU3L3)    return "eXU3L3";
+  if (f.cOU1L1)    return "cOU1L1";
+  if (f.cOL1U1)    return "cOL1U1";
+  if (f.cOU2L2)    return "cOU2L2";
+  if (f.cOL2U2)    return "cOL2U2";
+  return null;
 }
 
 export function analyzeCPR(
@@ -226,248 +482,81 @@ export function analyzeCPR(
   const prevCPR  = calcCPR(prevCandle);
   const todayCPR = calcCPR(todayCandle);
 
-  // NEW: ppCPR — CPR of the candle before prevCandle, used only for the
-  // "pWideAbove" sub-toggle (Previous CPR wider than pp-CPR AND Previous
-  // CPR positioned above pp-CPR). Optional — only present when there are
-  // at least 3 candles and that 3rd-from-last candle is valid.
   const ppCandle = candles.length >= 3 ? candles[candles.length - 3] : null;
   const ppCPR = ppCandle && isValidCandle(ppCandle) ? calcCPR(ppCandle) : undefined;
 
-  const minGap     = prevCPR.pivot * 0.001;
-  // Equal CPR: today TC/Pivot/BC match yesterday within a tiny tolerance.
-  // Computed FIRST so wider/narrower/overlap flags can exclude the equal case
-  // — otherwise a hair-thin numeric drift lights up both "Equal" and
+  // Single source of truth for the (today, prev) band classification. Every
+  // pivot-band flag on CPRResult comes from here via spread; ScreenerUtils
+  // uses the same classifier for (prev, pp) to build the p(...) sub-label.
+  const flags = classifyCPRPair(todayCPR, prevCPR);
+
+  const minGap = prevCPR.pivot * 0.001;
+  // Equal CPR computed FIRST so wider/narrower/overlap flags can exclude it —
+  // otherwise a hair-thin numeric drift lights up both "Equal" and
   // "Wide"/"Narrow"/"Overlap Below" badges at once.
-  const eqTol = (a: number, b: number): boolean => Math.abs(a - b) <= Math.max(Math.abs(a), Math.abs(b)) * 0.00001;
+  const eqTol = (a: number, b: number): boolean =>
+    Math.abs(a - b) <= Math.max(Math.abs(a), Math.abs(b)) * 0.00001;
   const equalCPR =
     eqTol(prevCPR.tc, todayCPR.tc) &&
     eqTol(prevCPR.pivot, todayCPR.pivot) &&
     eqTol(prevCPR.bc, todayCPR.bc);
-  const cprRising  = !equalCPR && todayCPR.bc > prevCPR.tc;
-  const cprFalling = !equalCPR && todayCPR.tc < prevCPR.bc;
-  // Width state is mutually exclusive: equal > wider/narrower.
-  const strWideCPR   = !equalCPR && todayCPR.widthPct > prevCPR.widthPct;
-  const narrowCPR    = !equalCPR && todayCPR.widthPct < prevCPR.widthPct;
+
+  const cprRising        = !equalCPR && todayCPR.bc > prevCPR.tc;
+  const cprFalling       = !equalCPR && todayCPR.tc < prevCPR.bc;
+  const strWideCPR       = !equalCPR && todayCPR.widthPct > prevCPR.widthPct;
+  const narrowCPR        = !equalCPR && todayCPR.widthPct < prevCPR.widthPct;
   const compressionRatio = prevCPR.width > 0 ? (todayCPR.width / prevCPR.width) * 100 : 100;
   const cprNarrowing     = compressionRatio < 50;
   const bothTight        = todayCPR.widthPct < 0.5 && prevCPR.widthPct < 0.5;
-  const srHigher =  todayCPR.r4 > prevCPR.r4 && todayCPR.s4 > prevCPR.s4;
-  const srLower = todayCPR.r4 < prevCPR.r4 && todayCPR.s4 < prevCPR.s4;
-  const srExpanded = todayCPR.r4 > prevCPR.r4 && todayCPR.s4 < prevCPR.s4;
-  const srCompressed = todayCPR.r4 < prevCPR.r4 && todayCPR.s4 > prevCPR.s4;
-  // Shared distances — normalized by prev day's CPR width so the R-side move
-  // and the S-side move are compared on equal footing regardless of the
-  // asset's price scale. Raw price differences (todayCPR.r4 - prevCPR.r4 vs
-  // todayCPR.s4 - prevCPR.s4) unfairly favor whichever side sits at a larger
-  // absolute price level — e.g. a token whose R-side lives near 0.0146 but
-  // whose S-side lives near 0 would almost always show a "bigger" R4 move in
-  // raw terms even when the S4 move is proportionally much larger. Dividing
-  // by prevCPR.width expresses each move as "how many CPR-widths did this
-  // side travel", which is scale-independent.
-  const normDenom  = prevCPR.width > 0 ? prevCPR.width : prevCPR.pivot * 0.0001;
-  const r4Distance = Math.abs(todayCPR.r4 - prevCPR.r4) / normDenom;
-  const s4Distance = Math.abs(todayCPR.s4 - prevCPR.s4) / normDenom;
-  // Secondary tiebreaker: gap between the adjacent S/R levels on each side.
-  // Used when r4Distance === s4Distance to decide Higher vs Lower.
-  // r3R4Gap = how far today's R3 is from prev R4 (upper-side adjacency)
-  // s3S4Gap = how far prev S4 is from today's S3 (lower-side adjacency)
-  // The side with the larger adjacent gap expanded more → wins the tie.
-  const r3R4Gap = Math.abs(todayCPR.r3 - prevCPR.r4);
-  const s3S4Gap = Math.abs(prevCPR.s4 - todayCPR.s3);
-  // Compressed: bigger S4 move (support rising) = bullish squeeze
-  const srCompressedHigher = srCompressed && (s4Distance > r4Distance || (s4Distance === r4Distance && s3S4Gap > r3R4Gap));
-  const srCompressedLower  = srCompressed && (r4Distance > s4Distance || (r4Distance === s4Distance && r3R4Gap > s3S4Gap));
-  // Expanded: bigger R4 move (resistance rising) = bullish expansion
-  const srExpandedHigher   = srExpanded   && (r4Distance > s4Distance || (r4Distance === s4Distance && r3R4Gap > s3S4Gap));
-  const srExpandedLower    = srExpanded   && (s4Distance > r4Distance || (s4Distance === r4Distance && s3S4Gap > r3R4Gap));
-  const cOU3L4 =(todayCPR.s4 > prevCPR.s4 && todayCPR.s4 < prevCPR.s3 ) &&
-                  (todayCPR.r4 > prevCPR.r2  && todayCPR.r4 < prevCPR.r3);
-  const cOHiL2U3 =(todayCPR.s4 > prevCPR.s2 && todayCPR.s4 < prevCPR.s1 ) &&
-                  (todayCPR.r4 > prevCPR.r2  && todayCPR.r4 < prevCPR.r3);
-  const cOHiL3U3 = (todayCPR.s4 > prevCPR.s3 && todayCPR.s4 < prevCPR.s2) &&
-                   (todayCPR.r4 > prevCPR.r2  && todayCPR.r4 < prevCPR.r3) && srCompressedHigher;
-  const eXLoL3U4 = (prevCPR.r4 > todayCPR.r3 && prevCPR.r4 < todayCPR.r4) &&
-                    (prevCPR.s4 > todayCPR.s3 && prevCPR.s4 < todayCPR.s2); 
-  const eXL4U4 = (prevCPR.r4 > todayCPR.r3 && prevCPR.r4 < todayCPR.r4) &&
-                  (prevCPR.s4 > todayCPR.s4 && prevCPR.s4 < todayCPR.s3);
-  const HiL4U34 = (prevCPR.r4 > todayCPR.r2 && prevCPR.r4 < todayCPR.r3) &&
-                  (todayCPR.s4 > prevCPR.s4 && todayCPR.s4 < prevCPR.s3);
-  // HiL2U4: today's S4 in prev L2 band (S2→S1), prev R4 in today's U4 band (R3→R4)
-  const HiL2U4 = (todayCPR.s4 > prevCPR.s2 && todayCPR.s4 < prevCPR.s1) &&
-                 (prevCPR.r4 > todayCPR.r3 && prevCPR.r4 < todayCPR.r4);
-  // HiL3U4: today's S4 in prev L3 band (S3→S2), prev R4 in today's U4 band (R3→R4)
-  const HiL3U4 = (todayCPR.s4 > prevCPR.s3 && todayCPR.s4 < prevCPR.s2) &&
-                 (prevCPR.r4 > todayCPR.r3 && prevCPR.r4 < todayCPR.r4);
-  const HiL4U4 = (prevCPR.r4 > todayCPR.r3 && prevCPR.r4 < todayCPR.r4) &&
-                  (todayCPR.s4 > prevCPR.s4 && todayCPR.s4 < prevCPR.s3);
-  const LoU4L4   = (todayCPR.r4 < prevCPR.r4 && todayCPR.r4 > prevCPR.r3) &&
-                  (prevCPR.s4 > todayCPR.s4 && prevCPR.s4 < todayCPR.s3);
-  const eXHiU1L3 = (prevCPR.r4 < todayCPR.r1 && prevCPR.r4 > todayCPR.tc) &&
-                     (prevCPR.s4 > todayCPR.s3 && prevCPR.s4 < todayCPR.s2);
-  // NEW: eXHiL4U3 — prev S4 in today's L4 band, prev R4 in today's U3 band.
-  const eXHiL4U3 = (prevCPR.s4 > todayCPR.s4 && prevCPR.s4 < todayCPR.s3) &&
-                   (prevCPR.r4 > todayCPR.r2 && prevCPR.r4 < todayCPR.r3);
-  const eXU4L234 = (prevCPR.r4 < todayCPR.r4 && prevCPR.r4 > todayCPR.r3) &&
-                   (prevCPR.s4 < todayCPR.s1 && prevCPR.s4 > todayCPR.s2);
-  const eXU4L34 = (prevCPR.r4 < todayCPR.r4 && prevCPR.r4 > todayCPR.r3) &&
-                   (prevCPR.s4 < todayCPR.s2 && prevCPR.s4 > todayCPR.s3);
-  const cOHiL2U4 = (todayCPR.s4 < prevCPR.s1 && todayCPR.s4 > prevCPR.s2) &&
-                 (prevCPR.r3 > todayCPR.r3 && prevCPR.r3 < todayCPR.r4);
-  // cOL4U4: today's S4 sits in the prev L4–L3 band, today's R4 sits in the prev U3–U4 band
-  const cOL4U4 = (todayCPR.s4 > prevCPR.s4 && todayCPR.s4 < prevCPR.s3) &&
-                 (todayCPR.r4 > prevCPR.r3 && todayCPR.r4 < prevCPR.r4) && srCompressedHigher;
-  const cOU4L4 = (todayCPR.s4 > prevCPR.s4 && todayCPR.s4 < prevCPR.s3) && 
-                  (todayCPR.r4 > prevCPR.r3 && todayCPR.r4 < prevCPR.r4) && srCompressedLower;
-  // NEW: exL3U2 — prev S4 inside today S2/S3 AND prev R4 inside today R1/R2
-  const exL3U2 = (prevCPR.s4 > todayCPR.s3 && prevCPR.s4 < todayCPR.s2) &&
-                 (prevCPR.r4 > todayCPR.r1 && prevCPR.r4 < todayCPR.r2);
-  // cOL3U4: today's S4 sits in the prev L3–L2 band, today's R4 sits in the prev U3–U4 band
-  const cOL3U4 = (todayCPR.s4 > prevCPR.s3 && todayCPR.s4 < prevCPR.s2) &&
-                 (todayCPR.r4 > prevCPR.r3 && todayCPR.r4 < prevCPR.r4);
-  // cOU3L3: today's S4 sits in the prev L3–L2 band, today's R4 sits in the prev U2–U3 band
-  const cOU3L3 = (todayCPR.s4 > prevCPR.s3 && todayCPR.s4 < prevCPR.s2) &&
-                 (todayCPR.r4 > prevCPR.r2 && todayCPR.r4 < prevCPR.r3) && srCompressedLower;
-  // LoU3L4: today's R4 in prev U3 band (R2→R3), prev S4 between today's S4 and today's S3
-  const LoU3L4 = (todayCPR.r4 > prevCPR.r2 && todayCPR.r4 < prevCPR.r3) &&
-                 (prevCPR.s4 > todayCPR.s4 && prevCPR.s4 < todayCPR.s3);
-  // LoU3L34: today's R4 in prev U3 band (R2→R3), prev S4 between today's S3 and today's S2
-  const LoU3L34 = (todayCPR.r4 > prevCPR.r2 && todayCPR.r4 < prevCPR.r3) &&
-                  (prevCPR.s4 > todayCPR.s3 && prevCPR.s4 < todayCPR.s2);
-  // LoU2L4: today's R4 in prev U2 band (R1→R2), prev S4 between today's S4 and today's S3
-  const LoU2L4 = (todayCPR.r4 > prevCPR.r1 && todayCPR.r4 < prevCPR.r2) &&
-                 (prevCPR.s4 > todayCPR.s4 && prevCPR.s4 < todayCPR.s3);
-  // LoU2L3: today's R4 in prev U2 band (R1→R2), prev S4 between today's S3 and today's S2
-  const LoU2L3 = (todayCPR.r4 > prevCPR.r1 && todayCPR.r4 < prevCPR.r2) &&
-                 (prevCPR.s4 > todayCPR.s3 && prevCPR.s4 < todayCPR.s2);
-  // LoU4L34: today's R4 in prev U4 band (R3→R4), prev S4 between today's S3 and today's S2
-  const LoU4L34 = (todayCPR.r4 > prevCPR.r3 && todayCPR.r4 < prevCPR.r4) &&
-                  (prevCPR.s4 >= todayCPR.s3 && prevCPR.s4 < todayCPR.s2);
-  // LoU4L234: today's R4 in prev U4 band (R3→R4), prev S4 between today's S2 and today's S1
-  const LoU4L234 = (todayCPR.r4 > prevCPR.r3 && todayCPR.r4 < prevCPR.r4) &&
-                   (prevCPR.s4 > todayCPR.s2 && prevCPR.s4 < todayCPR.s1);
-  // cOHiL2U2: today's R4 in prevU2 (R1→R2), today's R3 above prev R1, today's S4 between prev S2→S1
-  const cOHiL2U2 = (todayCPR.r4 > prevCPR.r1 && todayCPR.r4 < prevCPR.r2) &&
-                   (todayCPR.r3 > prevCPR.r1) &&
-                   (todayCPR.s4 > prevCPR.s2 && todayCPR.s4 < prevCPR.s1);
-  // cOLoU2L3: today's R4 in prevU2 (R1→R2), today's S4 between prev S3→S2, today's S3 below prev S2
-  const cOLoU2L3 = (todayCPR.r4 > prevCPR.r1 && todayCPR.r4 < prevCPR.r2) &&
-                   (todayCPR.s4 > prevCPR.s3 && todayCPR.s4 < prevCPR.s2);
-  // LoU4L1234: today's R4 in prevU4 (R3→R4), prev S4 between today's S1 and today's BC
-  const LoU4L1234 = (todayCPR.r4 > prevCPR.r3 && todayCPR.r4 < prevCPR.r4) &&
-                    (prevCPR.s4 > todayCPR.s1 && prevCPR.s4 < todayCPR.bc);
-  // cOLoU2L4: today's R4 in prevU2 (R1→R2), today's S4 between prev S4→S3
-  const cOLoU2L4 = (todayCPR.r4 > prevCPR.r1 && todayCPR.r4 < prevCPR.r2) &&
-                   (todayCPR.s4 > prevCPR.s4 && todayCPR.s4 < prevCPR.s3);
-  const PL12CL23 = (todayCPR.s2 < prevCPR.s1 && todayCPR.s3 > prevCPR.s2); //LA-PL12CL23:2PL4;
-  const PU12CU23  =  (prevCPR.r1 < todayCPR.r2 && prevCPR.r2 > todayCPR.r3); //PU12CU23
-  const PU23CU34  =  (prevCPR.r2 < todayCPR.r3 && prevCPR.r3 > todayCPR.r4); //PU23CU34
-  const PL34CL34  =  (prevCPR.s3 > todayCPR.s3 && prevCPR.s4 < todayCPR.s4); //PL34CL34
-  const PL34CL4  =  (prevCPR.s3 > todayCPR.s4 && prevCPR.s4 < todayCPR.s4); //PL34CL4
-  const lbJPattern1  = ((prevCPR.bc  - todayCPR.tc) >= minGap) && todayCPR.widthPct < 1 && 
-                          (todayCPR.s2 < prevCPR.s1 && todayCPR.s3 > prevCPR.s2); //1LB-PL12CL23:2PU4
-  const lbJPattern2  = ((prevCPR.bc  - todayCPR.tc) >= minGap) && todayCPR.widthPct < 1 && todayCPR.r2 < prevCPR.r1 &&
-                        (todayCPR.s1 < prevCPR.s1 && todayCPR.s2 < prevCPR.s2 && 
-                          todayCPR.s3 < prevCPR.s3 && todayCPR.s4 < prevCPR.s4); //LBALLD-U2<PU1:2U4
-  
-  const overlapHigher    = !equalCPR && (todayCPR.bc >= prevCPR.bc && todayCPR.bc <= prevCPR.tc) && todayCPR.tc > prevCPR.tc;
 
-  const allupabove =  (todayCPR.r1 > prevCPR.r1) && (todayCPR.r1 < prevCPR.r2) &&// R1 stepped up
-                      (todayCPR.r2 > prevCPR.r2) && (todayCPR.r2 < prevCPR.r3) &&// R2 stepped up
-                      (todayCPR.r3 > prevCPR.r3) && (todayCPR.r3 < prevCPR.r4) &&// R3 stepped up
-                      (todayCPR.r4 > prevCPR.r4);// R4 stepped up
-  
-  const allupbelow =  (todayCPR.s1 > prevCPR.s1) && (todayCPR.s1 < prevCPR.bc) &&// S1 stepped up
-                      (todayCPR.s2 > prevCPR.s2) && (todayCPR.s2 < prevCPR.s1) &&// S2 stepped up
-                      (todayCPR.s3 > prevCPR.s3) && (todayCPR.s3 < prevCPR.s2) &&// S3 stepped up
-                      (todayCPR.s4 > prevCPR.s4) && (todayCPR.s4 < prevCPR.s3);// S4 stepped up
+  const PL12CL23 = (todayCPR.s2 < prevCPR.s1 && todayCPR.s3 > prevCPR.s2);
+  const PU12CU23 = (prevCPR.r1 < todayCPR.r2 && prevCPR.r2 > todayCPR.r3);
+  const PU23CU34 = (prevCPR.r2 < todayCPR.r3 && prevCPR.r3 > todayCPR.r4);
+  const PL34CL34 = (prevCPR.s3 > todayCPR.s3 && prevCPR.s4 < todayCPR.s4);
+  const PL34CL4  = (prevCPR.s3 > todayCPR.s4 && prevCPR.s4 < todayCPR.s4);
 
-  const alldownabove = (todayCPR.r1 < prevCPR.r1 && todayCPR.r1 > prevCPR.tc) && // R1 stepped down
-                        (todayCPR.r2 < prevCPR.r2  && todayCPR.r2 > prevCPR.r1)&& 
-                        (todayCPR.r3 < prevCPR.r3  && todayCPR.r3 > prevCPR.r2) && 
-                        (todayCPR.r4 < prevCPR.r4 && todayCPR.r4 > prevCPR.r3); // R4 stepped down
+  const lbJPattern1 = ((prevCPR.bc - todayCPR.tc) >= minGap) && todayCPR.widthPct < 1 &&
+                      (todayCPR.s2 < prevCPR.s1 && todayCPR.s3 > prevCPR.s2);
+  const lbJPattern2 = ((prevCPR.bc - todayCPR.tc) >= minGap) && todayCPR.widthPct < 1 && todayCPR.r2 < prevCPR.r1 &&
+                      (todayCPR.s1 < prevCPR.s1 && todayCPR.s2 < prevCPR.s2 &&
+                       todayCPR.s3 < prevCPR.s3 && todayCPR.s4 < prevCPR.s4);
 
-  const alldownbelow = (todayCPR.s1 < prevCPR.s1 && todayCPR.s1 > prevCPR.s2) && // S1 stepped down
-                        (todayCPR.s2 < prevCPR.s2  && todayCPR.s2 > prevCPR.s3)&& 
-                        (todayCPR.s3 < prevCPR.s3  && todayCPR.s3 > prevCPR.s4) && 
-                          todayCPR.s4 < prevCPR.s4 ; // S4 stepped down
+  const overlapHigher = !equalCPR && (todayCPR.bc >= prevCPR.bc && todayCPR.bc <= prevCPR.tc) && todayCPR.tc > prevCPR.tc;
+  const overlapLower  = !equalCPR && (todayCPR.tc <= prevCPR.tc && todayCPR.tc >= prevCPR.bc) && todayCPR.bc < prevCPR.bc;
 
-  const overlapLower    = !equalCPR && (todayCPR.tc <= prevCPR.tc && todayCPR.tc >= prevCPR.bc) && todayCPR.bc < prevCPR.bc;
-  const lbtJPattern1   = (todayCPR.r1 < prevCPR.r1 && todayCPR.s1 < prevCPR.s1) &&
-                          (prevCPR.r1 > todayCPR.r1 && prevCPR.r2 > todayCPR.r2 && prevCPR.r3 > todayCPR.r3 && prevCPR.r4 > todayCPR.r4)
-  
-  const hbJPattern1  = (todayCPR.s1 < prevCPR.s2 && todayCPR.s1 > prevCPR.s3) && prevCPR.widthPct < 0.5 && // L1<PL2
-                          (todayCPR.s2 > prevCPR.r1 && todayCPR.s3 < prevCPR.r2); //HB-PU12CU23:2PU4
-  const hbJPattern2  = (todayCPR.s1 < prevCPR.s4 && todayCPR.r1 > prevCPR.tc) && prevCPR.widthPct < 0.5; //ONE,2 MORE COND
-  const hbJPattern3  = (todayCPR.s1 < prevCPR.s2 && todayCPR.s1 > prevCPR.s3) && prevCPR.widthPct < 0.5 && // L1<PL2
-                        ((todayCPR.r1 < prevCPR.r1 && todayCPR.r1 > prevCPR.tc) && (todayCPR.r2 > prevCPR.r2 && todayCPR.r2 < prevCPR.r3)); //HB-U12CPU12:2L4 REFACTOR THIS
-  const hbJPattern4  = (todayCPR.s1 > prevCPR.s1 && todayCPR.s1 < prevCPR.bc) && prevCPR.widthPct < 0.5 && // L1>PL1
-                        todayCPR.r4 < prevCPR.r1 ; //HB-PU1CU234:2L4
+  const allupabove = (todayCPR.r1 > prevCPR.r1) && (todayCPR.r1 < prevCPR.r2) &&
+                     (todayCPR.r2 > prevCPR.r2) && (todayCPR.r2 < prevCPR.r3) &&
+                     (todayCPR.r3 > prevCPR.r3) && (todayCPR.r3 < prevCPR.r4) &&
+                     (todayCPR.r4 > prevCPR.r4);
+  const allupbelow = (todayCPR.s1 > prevCPR.s1) && (todayCPR.s1 < prevCPR.bc) &&
+                     (todayCPR.s2 > prevCPR.s2) && (todayCPR.s2 < prevCPR.s1) &&
+                     (todayCPR.s3 > prevCPR.s3) && (todayCPR.s3 < prevCPR.s2) &&
+                     (todayCPR.s4 > prevCPR.s4) && (todayCPR.s4 < prevCPR.s3);
+  const alldownabove = (todayCPR.r1 < prevCPR.r1 && todayCPR.r1 > prevCPR.tc) &&
+                       (todayCPR.r2 < prevCPR.r2 && todayCPR.r2 > prevCPR.r1) &&
+                       (todayCPR.r3 < prevCPR.r3 && todayCPR.r3 > prevCPR.r2) &&
+                       (todayCPR.r4 < prevCPR.r4 && todayCPR.r4 > prevCPR.r3);
+  const alldownbelow = (todayCPR.s1 < prevCPR.s1 && todayCPR.s1 > prevCPR.s2) &&
+                       (todayCPR.s2 < prevCPR.s2 && todayCPR.s2 > prevCPR.s3) &&
+                       (todayCPR.s3 < prevCPR.s3 && todayCPR.s3 > prevCPR.s4) &&
+                       todayCPR.s4 < prevCPR.s4;
 
-  // equalCPR + eqTol are computed above so wider/narrower/overlap flags can
-  // exclude the equal case — see the block near cprRising/cprFalling.
+  const lbtJPattern1 = (todayCPR.r1 < prevCPR.r1 && todayCPR.s1 < prevCPR.s1) &&
+                       (prevCPR.r1 > todayCPR.r1 && prevCPR.r2 > todayCPR.r2 &&
+                        prevCPR.r3 > todayCPR.r3 && prevCPR.r4 > todayCPR.r4);
 
+  const hbJPattern1 = (todayCPR.s1 < prevCPR.s2 && todayCPR.s1 > prevCPR.s3) && prevCPR.widthPct < 0.5 &&
+                      (todayCPR.s2 > prevCPR.r1 && todayCPR.s3 < prevCPR.r2);
+  const hbJPattern2 = (todayCPR.s1 < prevCPR.s4 && todayCPR.r1 > prevCPR.tc) && prevCPR.widthPct < 0.5;
+  const hbJPattern3 = (todayCPR.s1 < prevCPR.s2 && todayCPR.s1 > prevCPR.s3) && prevCPR.widthPct < 0.5 &&
+                      ((todayCPR.r1 < prevCPR.r1 && todayCPR.r1 > prevCPR.tc) &&
+                       (todayCPR.r2 > prevCPR.r2 && todayCPR.r2 < prevCPR.r3));
+  const hbJPattern4 = (todayCPR.s1 > prevCPR.s1 && todayCPR.s1 < prevCPR.bc) && prevCPR.widthPct < 0.5 &&
+                      todayCPR.r4 < prevCPR.r1;
 
-  const eXL3U3 = (prevCPR.r4 < todayCPR.r3 && prevCPR.r4 > todayCPR.r2) && 
-                  (prevCPR.s4 > todayCPR.s3 && prevCPR.s4 < todayCPR.s2) && srExpandedHigher;
-  const eXU3L3 = (prevCPR.r4 < todayCPR.r3 && prevCPR.r4 > todayCPR.r2) && 
-                  (prevCPR.s4 > todayCPR.s3 && prevCPR.s4 < todayCPR.s2) && srExpandedLower;
-
-  // NEW: eXL*U1 — prevS4 in today's L2/L3/L4 band, prevR4 in today's U1 band (tc→r1)
-  const eXL2U1 = (prevCPR.s4 > todayCPR.s2 && prevCPR.s4 < todayCPR.s1) &&
-                 (prevCPR.r4 > todayCPR.tc  && prevCPR.r4 < todayCPR.r1);
-  const eXL3U1 = (prevCPR.s4 > todayCPR.s3 && prevCPR.s4 < todayCPR.s2) &&
-                 (prevCPR.r4 > todayCPR.tc  && prevCPR.r4 < todayCPR.r1);
-  const eXL4U1 = (prevCPR.s4 > todayCPR.s4 && prevCPR.s4 < todayCPR.s3) &&
-                 (prevCPR.r4 > todayCPR.tc  && prevCPR.r4 < todayCPR.r1);
-
-  // NEW: eXL*CPR — prevS4 in today's L1/L2/L3 band, prevR4 inside today's CPR (s1→bc)
-  const eXL1CPR = (prevCPR.s4 > todayCPR.s1 && prevCPR.s4 < todayCPR.bc) &&
-                  (prevCPR.r4 > todayCPR.s1 && prevCPR.r4 < todayCPR.bc);
-  const eXL2CPR = (prevCPR.s4 > todayCPR.s2 && prevCPR.s4 < todayCPR.s1) &&
-                  (prevCPR.r4 > todayCPR.s1 && prevCPR.r4 < todayCPR.bc);
-  const eXL3CPR = (prevCPR.s4 > todayCPR.s3 && prevCPR.s4 < todayCPR.s2) &&
-                  (prevCPR.r4 > todayCPR.s1 && prevCPR.r4 < todayCPR.bc);
-  // NEW: expanded family — today's outer S-level has broken BELOW prev
-  // day's S4 AND today's outer R-level (or TC) has broken ABOVE prev day's
-  // R4, i.e. today's structure has expanded past yesterday's entire S4–R4
-  // range. Note: eXL4U2's name pairs "L4" with the s4 condition but "U23"
-  // with a single r2 condition (no r3 leg) — implemented literally as
-  // specified; flag if a different U2/U3 combination was intended.
-  const eXL4U2 = (prevCPR.s4 > todayCPR.s4 && prevCPR.s4 < todayCPR.s3) && 
-                  (prevCPR.r4 > todayCPR.r1  && prevCPR.r4 < todayCPR.r2);
-  const eXL2U2  = (prevCPR.s4 >= todayCPR.s2 && prevCPR.s4 < todayCPR.s1) &&
-                 (prevCPR.r4 > todayCPR.r1  && prevCPR.r4 < todayCPR.r2);
-  const eXL2TC  = (prevCPR.s4 > todayCPR.s2 && prevCPR.s4 < todayCPR.s1) &&
-                 (prevCPR.r4 > todayCPR.pivot  && prevCPR.r4 < todayCPR.tc);
-  const eXL3TC  =(prevCPR.s4 > todayCPR.s3 && prevCPR.s4 < todayCPR.s2) &&
-                  (prevCPR.r4 > todayCPR.pivot && prevCPR.r4 < todayCPR.tc);
-  const eXL1U1  = (prevCPR.s4 > todayCPR.s1 && prevCPR.s4 < todayCPR.bc) &&
-                  (prevCPR.r4 > todayCPR.tc  && prevCPR.r4 < todayCPR.r1);
-
-  // NEW: cOU1L1 / cOL1U1 — today's S4 in prev L1 band (s1→tc), today's R4 in
-  // prev U1 band (bc→r1); split by which side (R1 vs S1) moved further
-  // between prev-day and today (normalized-free, raw price gap per spec).
-  const r1Move = Math.abs(prevCPR.r1 - todayCPR.r1);
-  const s1Move = Math.abs(prevCPR.s1 - todayCPR.s1);
-  const cOU1L1Base = (todayCPR.s4 > prevCPR.s1 && todayCPR.s4 < prevCPR.tc) &&
-                      (todayCPR.r4 > prevCPR.bc && todayCPR.r4 < prevCPR.r1);
-  const cOU1L1 = cOU1L1Base && r1Move > s1Move;
-  const cOL1U1 = cOU1L1Base && r1Move < s1Move;
-
-  const cOU1L2 = (todayCPR.s4 > prevCPR.s2 && todayCPR.s4 < prevCPR.s1) &&
-                      (todayCPR.r4 < prevCPR.r1 && todayCPR.r4 > prevCPR.tc);
-  // NEW: cOU2L2 / cOL2U2 — today's S4 in prev L2 band (s2→s1), today's R4 in
-  // prev U2 band (r1→r2); split by an extra confirming condition on the S3/R3 side.
-  // NEW: Previous day Pivot→R1 distance and Pivot→S1 distance
+  // Previous day Pivot→R1 / Pivot→S1 gaps (raw price units)
   const prevR1Gap = prevCPR.r1 - prevCPR.pivot;
   const prevS1Gap = prevCPR.pivot - prevCPR.s1;
-
-  const r2Move = Math.abs(prevCPR.r2 - todayCPR.r2);
-  const s2Move = Math.abs(prevCPR.s2 - todayCPR.s2);
-  const cOU2L2Base = (todayCPR.s4 > prevCPR.s2 && todayCPR.s4 < prevCPR.s1) &&
-                      (todayCPR.r4 > prevCPR.r1 && todayCPR.r4 < prevCPR.r2);
-  const cOU2L2 = cOU2L2Base && r2Move > s2Move;
-  const cOL2U2 = cOU2L2Base && r2Move < s2Move;
 
   return {
     symbol,
@@ -497,65 +586,10 @@ export function analyzeCPR(
     overlapLower,
     lbtJPattern1,
     strWideCPR,
-    narrowCPR,  
+    narrowCPR,
     bothTight,
-    srHigher,
-    srLower,
-    srExpanded,
-    srCompressed,
-    srCompressedHigher,
-    srCompressedLower,
-    srExpandedHigher,
-    srExpandedLower,
-    cOU3L4,
-    cOHiL2U3,
-    cOHiL3U3,
-    eXLoL3U4,
-    eXL4U4,
-    HiL2U4,
-    HiL3U4,
-    HiL4U4,
-    HiL4U34,
-    LoU4L4,
-    eXHiU1L3,
-    eXHiL4U3,
-    eXU4L234,
-    eXU4L34,
-    cOHiL2U4,
     equalCPR,
-    eXL3U3,
-    eXU3L3,
-    cOL4U4,
-    cOU4L4,
-    exL3U2,
-    cOL3U4,
-    cOU3L3,
-    LoU3L4,
-    LoU3L34,
-    LoU2L4,
-    LoU2L3,
-    LoU4L34,
-    LoU4L234,
-    cOHiL2U2,
-    cOLoU2L3,
-    LoU4L1234,
-    cOLoU2L4,
-    eXL2U1,
-    eXL3U1,
-    eXL4U1,
-    eXL1CPR,
-    eXL2CPR,
-    eXL3CPR,
-    eXL3TC,
-    eXL4U2,
-    eXL2U2,
-    eXL2TC,
-    eXL1U1,
-    cOU1L1,
-    cOL1U1,
-    cOU1L2,
-    cOU2L2,
-    cOL2U2,
+    ...flags,
     passes: cprRising && cprNarrowing,
     currentPrice,
     openPrice: openPrice ?? todayCandle.open,
@@ -563,7 +597,5 @@ export function analyzeCPR(
     quoteVolume,
     prevR1Gap,
     prevS1Gap,
-    r4Distance,
-    s4Distance,
   };
 }
