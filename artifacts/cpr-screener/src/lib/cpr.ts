@@ -341,7 +341,7 @@ export function analyzeCPR(
                  (prevCPR.s4 > todayCPR.s3 && prevCPR.s4 < todayCPR.s2);
   // LoU4L34: today's R4 in prev U4 band (R3→R4), prev S4 between today's S3 and today's S2
   const LoU4L34 = (todayCPR.r4 > prevCPR.r3 && todayCPR.r4 < prevCPR.r4) &&
-                  (prevCPR.s4 > todayCPR.s3 && prevCPR.s4 < todayCPR.s2);
+                  (prevCPR.s4 >= todayCPR.s3 && prevCPR.s4 < todayCPR.s2);
   // LoU4L234: today's R4 in prev U4 band (R3→R4), prev S4 between today's S2 and today's S1
   const LoU4L234 = (todayCPR.r4 > prevCPR.r3 && todayCPR.r4 < prevCPR.r4) &&
                    (prevCPR.s4 > todayCPR.s2 && prevCPR.s4 < todayCPR.s1);
