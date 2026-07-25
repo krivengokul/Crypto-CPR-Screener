@@ -351,8 +351,7 @@ export function analyzeCPR(
                    (todayCPR.s4 > prevCPR.s2 && todayCPR.s4 < prevCPR.s1);
   // cOLoU2L3: today's R4 in prevU2 (R1→R2), today's S4 between prev S3→S2, today's S3 below prev S2
   const cOLoU2L3 = (todayCPR.r4 > prevCPR.r1 && todayCPR.r4 < prevCPR.r2) &&
-                   (todayCPR.s4 > prevCPR.s3 && todayCPR.s4 < prevCPR.s2) &&
-                   (todayCPR.s3 < prevCPR.s2);
+                   (todayCPR.s4 > prevCPR.s3 && todayCPR.s4 < prevCPR.s2);
   // LoU4L1234: today's R4 in prevU4 (R3→R4), prev S4 between today's S1 and today's BC
   const LoU4L1234 = (todayCPR.r4 > prevCPR.r3 && todayCPR.r4 < prevCPR.r4) &&
                     (prevCPR.s4 > todayCPR.s1 && prevCPR.s4 < todayCPR.bc);

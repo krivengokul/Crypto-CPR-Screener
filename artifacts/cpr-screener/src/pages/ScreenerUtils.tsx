@@ -654,10 +654,10 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       if (!inside) return false;
       const t = r.todayCPR;
       const p = r.prevCPR;
-      const cond1 = p.r1 >= t.r1 && p.r1 <= t.r2 && p.s1 <= t.bc && p.s1 >= t.s1;
-      const cond2 = p.r1 >= t.r2 && p.r1 <= t.r3 && p.s1 <= t.s1 && p.s1 >= t.s2;
-      const cond3 = p.r1 >= t.r3 && p.r1 <= t.r4 && p.s1 <= t.s2 && p.s1 >= t.s3;
-      const cond4 = p.r1 > t.r4 && p.s1 <= t.s3 && p.s1 >= t.s4;
+      const cond1 = p.r1 >= t.r1 && p.r1 <= t.r2 && p.s1 <= t.bc && p.s1 >= t.s1; // pR1 > R1 && pS1 > S1
+      const cond2 = p.r1 >= t.r2 && p.r1 <= t.r3 && p.s1 <= t.s1 && p.s1 >= t.s2; // pR1 > R2 && pS1 > S2
+      const cond3 = p.r1 >= t.r3 && p.r1 <= t.r4 && p.s1 <= t.s2 && p.s1 >= t.s3; // pR1 > R3 && pS1 > S3
+      const cond4 = p.r1 > t.r4 && p.s1 <= t.s3 && p.s1 >= t.s4;                  // pR1 > R4 && pS1 > S4
       return cond1 || cond2 || cond3 || cond4;
     }
     case "outside-cpr":
