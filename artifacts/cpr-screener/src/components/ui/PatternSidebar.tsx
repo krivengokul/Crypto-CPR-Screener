@@ -25,6 +25,12 @@ export interface Pattern {
 export interface SubPattern {
   id: string;
   label: string;
+  /** Optional per-sub-item highlight border color (CSS color). Defaults to ACTIVE_BLUE. */
+  activeColor?: string;
+  /** Optional per-sub-item highlight text color (CSS color). Defaults to ACTIVE_TEXT. */
+  activeText?: string;
+  /** Optional per-sub-item highlight background (CSS color). Defaults to blue-tinted. */
+  activeBg?: string;
 }
 
 /**
@@ -77,7 +83,10 @@ export const subPatterns: Record<string, SubPattern[]> = {
     { id: "1S-cOL3U4-FAU4:1AM",        label: "1S-cOL3U4-FAU4:1AM" },
     { id: "TS-cOL3U4-AU4R:4PM",        label: "TS-cOL3U4-AU4R:4PM" },
   ],
-  "u1-gt-pu4": [],
+  "u1-gt-pu4": [
+    { id: "SL-eXL3U1-FAU4:3PM", label: "SL-eXL3U1-FAU4:3PM",
+      activeColor: "#22c55e", activeText: "#4ade80", activeBg: "rgba(34,197,94,0.18)" },
+  ],
   "structure-bigbelow": [
     { id: "bigbelow-pmini-pl3",      label: "pMini-L34C4/U3>4" },
     { id: "eX-U4L34",               label: "eX-U4L34" },
@@ -418,6 +427,9 @@ export default function PatternSidebar({
                   >
                     {children.map((sub) => {
                       const isActiveSub = activePattern === sub.id;
+                      const subActiveColor = sub.activeColor ?? ACTIVE_BLUE;
+                      const subActiveText  = sub.activeText  ?? ACTIVE_TEXT;
+                      const subActiveBg    = sub.activeBg    ?? "rgba(59,130,246,0.18)";
                       return (
                         <button
                           key={sub.id}
@@ -428,11 +440,11 @@ export default function PatternSidebar({
                             fontWeight: isActiveSub ? 600 : 400,
                             borderRadius: 4,
                             cursor: "pointer",
-                            border: `1px solid ${isActiveSub ? ACTIVE_BLUE : BORDER_COLOR}`,
+                            border: `1px solid ${isActiveSub ? subActiveColor : BORDER_COLOR}`,
                             background: isActiveSub
-                              ? "rgba(59,130,246,0.18)"
+                              ? subActiveBg
                               : "rgba(255,255,255,0.02)",
-                            color: isActiveSub ? ACTIVE_TEXT : SUB_TEXT,
+                            color: isActiveSub ? subActiveText : SUB_TEXT,
                             transition: "all 0.1s",
                             whiteSpace: "nowrap",
                           }}

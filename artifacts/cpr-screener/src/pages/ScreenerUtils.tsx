@@ -717,6 +717,18 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // Standalone top-level category: same condition as HA-U1>PU4
     case "u1-gt-pu4":
       return (r.cprRising && r.strWideCPR && r.todayCPR.r1 > r.prevCPR.r4);
+    // NEW: SL-eXL3U1-FAU4:3PM — U1>pU4 sub-pattern.
+    // Condition: Big CPR + CPR Above (cprRising + strWideCPR) + today R1 above
+    // prev R4 (parent U1>pU4) + Pivot Level eXL3U1 + compressionRatio > 300.
+    // Legend labels: Pivot Level eXL3U1, PCPR Small, CPR Large. Target FAU4 @ 3PM.
+    case "SL-eXL3U1-FAU4:3PM":
+      return (
+        r.cprRising &&
+        r.strWideCPR &&
+        r.todayCPR.r1 > r.prevCPR.r4 &&
+        r.eXL3U1 &&
+        r.compressionRatio > 300
+      );
     case "HAThin-U1>PU4":
       return (r.cprRising && r.strWideCPR && r.bothTight && r.todayCPR.r1 > r.prevCPR.r4);
     // NEW: hR-HAL — BigCPR Above, top-level toggle next to Show All.
@@ -914,7 +926,9 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     { key: "1S-cOL3U4-FAU4:1AM", direction: "up" },
     { key: "TS-cOL3U4-AU4R:4PM", direction: "up" },
   ],
-  "u1-gt-pu4": [],
+  "u1-gt-pu4": [
+    { key: "SL-eXL3U1-FAU4:3PM", direction: "up" },
+  ],
   "structure-bigbelow": [
     { key: "bigbelow-pmini-pl3", direction: "up" },
     { key: "eX-U4L34", direction: "down" },

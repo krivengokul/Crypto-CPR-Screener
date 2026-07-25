@@ -187,7 +187,12 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
         ) : null}
       </div>
       <div className="rounded-lg border border-border bg-card p-3">
-        {showBAComp && activePattern === "structure-bigabove" ? (
+        {activePattern === "SL-eXL3U1-FAU4:3PM" ? (
+          <>
+            <div className="text-xs font-semibold text-green-400 mb-1">Pivot Level: eXL3U1  PCPR: Small  CPR: Large</div>
+            <div className="text-xs text-muted-foreground">Big CPR Above (Wide + Rising) + Today&apos;s R1 &gt; Prev R4 + Pivot Level eXL3U1 + Compression Ratio &gt; 300</div>
+          </>
+        ) : showBAComp && activePattern === "structure-bigabove" ? (
           <>
             <div className="text-xs font-semibold text-sky-400 mb-1">Compressed Inside Prev UL2</div>
             <div className="text-xs text-muted-foreground">U3/U4 inside PU2/PU1 and L4 inside PL1/PL2</div>
@@ -336,7 +341,12 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
         ) : null}
       </div>
       <div className="rounded-lg border border-border bg-card p-3">
-        {showBAComp && activePattern === "structure-bigabove" ? (
+        {activePattern === "SL-eXL3U1-FAU4:3PM" ? (
+          <>
+            <div className="text-xs font-semibold text-green-400 mb-1">Target: FAU4	Time: 3PM</div>
+            <div className="text-xs text-muted-foreground">Expected upside far above U4 by ~3PM</div>
+          </>
+        ) : showBAComp && activePattern === "structure-bigabove" ? (
           <>
             <div className="text-xs font-semibold text-emerald-400 mb-1">Target</div>
             <div className="text-xs text-muted-foreground">These coins have the potential to go up to U4</div>

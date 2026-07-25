@@ -135,6 +135,8 @@ const SCREENER_PATTERN_IDS = new Set([
   "HB-L1<PL4-U1>TCPR",
   "HB-L1<PL2-U12CPU12",
   "HB-L1>PL1-PU1CU234",
+  // ── U1>pU4 sub-patterns ──
+  "SL-eXL3U1-FAU4:3PM",
 ]);
 
 function App() {
