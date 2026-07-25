@@ -997,9 +997,15 @@ export function getSubFilterDirection(r: CPRResult, activePattern: string): SubF
  * independent, section-agnostic booleans (from cpr.ts). Not returned as the
  * primary label here; Screener.tsx renders them as their own second-row
  * badges and Pivot Level filter buttons, checking the raw flags directly.
+ *
+ * NEW: cOTCL2 — same treatment again: an independent, section-agnostic
+ * boolean (r.cOTCL2 from cpr.ts — today's R4 inside prev day's Pivot/TC
+ * band AND today's S4 inside prev day's S1/S2 band). Not returned as the
+ * primary label here; Screener.tsx (ScreenerTableRow.tsx) renders it as
+ * its own second-row badge, checking the raw flag directly.
  */
 export interface PivotLevelInfo {
-  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "cOU3L4" | "LoU4L4" | "eXHiL4U3" | "eXL4U4" | "HiL4U4" | "HiL4U34" | "cOHiL2U3" | "cOHiL3U3" | "eXU4L234" | "eXU4L34" | "cOHiL2U4" | "eXL3U3" | "eXL2U1" | "eXL3U1" | "eXL4U1" | "eXL1CPR" | "eXL2CPR" | "eXL3CPR" | "eXL3TC" | "eXL4U2" | "eXL2U2" | "eXL2TC" | "eXL1U1" | "cOU1L1" | "cOL1U1" | "cOU2L2" | "cOL2U2" | "cOU1L2" | "cOU4L4" | "exL3U2" | "Lower";
+  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "cOU3L4" | "LoU4L4" | "eXHiL4U3" | "eXL4U4" | "HiL4U4" | "HiL4U34" | "cOHiL2U3" | "cOHiL3U3" | "eXU4L234" | "eXU4L34" | "cOHiL2U4" | "eXL3U3" | "eXL2U1" | "eXL3U1" | "eXL4U1" | "eXL1CPR" | "eXL2CPR" | "eXL3CPR" | "eXL3TC" | "eXL4U2" | "eXL2U2" | "eXL2TC" | "eXL1U1" | "cOTCL2" | "cOU1L1" | "cOL1U1" | "cOU2L2" | "cOL2U2" | "cOU1L2" | "cOU4L4" | "exL3U2" | "Lower";
   classes: string;
 }
 
@@ -1031,8 +1037,8 @@ export function getPivotLevel(r: CPRResult): PivotLevelInfo {
  * labels (eX-Higher/eX-Lower/cO-Higher/cO-Lower/Higher/Lower) this falls
  * back to getPivotLevel(r)'s label; for the independent, section-agnostic
  * booleans (cOU1L2, cOU3L4, LoU4L4, eXL4U4, HiL4U4,
- * HiL4U34, cOHiL2U3, eXU4L234, eXU4L34, cOU1L1, cOL1U1, cOU2L2, cOL2U2) it reads
- * the raw flag directly — same as Screener.tsx does today.
+ * HiL4U34, cOHiL2U3, eXU4L234, eXU4L34, cOU1L1, cOL1U1, cOU2L2, cOL2U2, cOTCL2)
+ * it reads the raw flag directly — same as Screener.tsx does today.
  */
 export function matchesPivotLevelFlag(r: CPRResult, label: string): boolean {
   switch (label) {
@@ -1070,6 +1076,10 @@ export function matchesPivotLevelFlag(r: CPRResult, label: string): boolean {
     case "cOU1L2": return r.cOU1L2;
     case "cOU4L4": return r.cOU4L4;
     case "exL3U2": return r.exL3U2;
+    // NEW: cOTCL2 — independent, section-agnostic Pivot Level flag (see cpr.ts).
+    // Today's R4 inside prev day's Pivot/TC band AND today's S4 inside
+    // prev day's S1/S2 band.
+    case "cOTCL2": return r.cOTCL2;
     default: return getPivotLevel(r)?.label === label;
   }
 }

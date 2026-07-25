@@ -103,6 +103,7 @@ export interface CPRPairFlags {
   eXL2U2: boolean;
   eXL2TC: boolean;
   eXL1U1: boolean;
+  cOTCL2: boolean;
 }
 
 export interface CPRResult {
@@ -187,6 +188,7 @@ export interface CPRResult {
   eXL2U2: boolean;
   eXL2TC: boolean;
   eXL1U1: boolean;
+  cOTCL2: boolean;
   cOU1L1: boolean;
   cOU1L2: boolean;
   cOL1U1: boolean;
@@ -387,6 +389,13 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
   const eXL1U1 = (prev.s4 > today.s1 && prev.s4 < today.bc) &&
                  (prev.r4 > today.tc  && prev.r4 < today.r1);
 
+  // cOTCL2 — today's R4 lands inside the previous day's Pivot/TC band,
+  // AND today's S4 lands inside the previous day's S1/S2 band. Same
+  // compressed-band shape as cOU1L2 but the resistance side is measured
+  // against prev's Pivot→TC gap instead of prev's TC→R1 gap.
+  const cOTCL2 = (today.r4 > prev.pivot && today.r4 < prev.tc) &&
+                 (today.s4 > prev.s2 && today.s4 < prev.s1);
+
   // cOU1L1 / cOL1U1 — split by which side (R1 vs S1) moved further.
   const r1Move = Math.abs(prev.r1 - today.r1);
   const s1Move = Math.abs(prev.s1 - today.s1);
@@ -416,7 +425,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
     cOHiL2U2, LoU4L1234, cOU1L2, cOLoU2L4, eXL3U3, eXU3L3,
     cOU1L1, cOL1U1, cOU2L2, cOL2U2,
     eXL2U1, eXL3U1, eXL4U1, eXL1CPR, eXL2CPR, eXL3CPR,
-    eXL3TC, eXL4U2, eXL2U2, eXL2TC, eXL1U1,
+    eXL3TC, eXL4U2, eXL2U2, eXL2TC, eXL1U1, cOTCL2,
   };
 }
 
