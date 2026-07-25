@@ -159,6 +159,7 @@ export default function Screener({
   // eXLo-L4U4-U4 (Overlapping Lower), same r.eXL4U4 boolean, gated on
   // r.overlapHigher instead of r.overlapLower.
   const [showOBHiExL4U4, setShowOBHiExL4U4] = useState(false);
+   const [showLMeXL2U2, setShowLMeXL2U2] = useState(false);
   const [pivotLevelFilter, setPivotLevelFilter] = useState<PivotLevelInfo["label"] | null>(null);
   // CHANGED: split into two independent states so one pMicro..pUltra
   // selection (prev day's CPR width) and one Micro..Ultra selection
@@ -335,7 +336,7 @@ export default function Screener({
     if (activePattern !== "inside-cpr") { setShowInsideCPRTiCOLo(false); }
     if (activePattern !== "overlapping-lower") { setShowExpU4PU4(false); setShowExpU3PU3(false); setShowOBNLoU4L4(false); setShowOBWLoU4L4(false); }
     // NEW: reset eXHi-L4U4-U4 toggle when leaving Overlapping Higher
-    if (activePattern !== "overlapping-higher") { setShowOBHiExL4U4(false); }
+    if (activePattern !== "overlapping-higher") { setShowOBHiExL4U4(false); setShowLMeXL2U2(false);}
     if (activePattern !== "structure-bigbelow") { setShowBigBelowPMiniPL3(false); setShowBigBelowPMiniRising(false); pMiniRisingAlertedRef.current.clear(); setShowExpU3LtPU4(false); setShowBigBeloweXLoL3U4AU4(false); setShowBigBelowL1LtPL4(false); setShowL1LtPL4CprLtPL4(false); setShowBigBeloweXU4L234AU4(false); setShowBigBelow1TcOU4L43PM(false); }
     if (activePattern !== "structure-bigabove") { setShowBigAbovePL34CL4(false); setShowBAComp(false); setShowHAU1(false); setShowHAU1CprAbovePU4(false); setShowHAU1L1AbovePU4(false); setShowHAU1PWideAbove(false); setShowHRHAL(false); setShowHA55HrL4U34FAU4(false); setShowHiL4U4FAU4(false); setShow1ScoHiFAU4(false); setShow2ScoHiFAU4(false); }
     // Reset LB Compressed / LB-C34 / lbE11-cOLoL3U2-PU4 / LB-cO2-L2U2 / LB-BothTiny / LB-AllUp when leaving littlebelow
@@ -775,6 +776,19 @@ export default function Screener({
       if (activeTab === "delta") return deltaIntersect;
       return binanceIntersect;
     }
+    // NEW: LMe-eXL2U2-L4:10PM pool
+    if (showLMeXL2U2 && activePattern === "overlapping-higher") {
+      const binanceIntersect = allResults
+        .filter((r) => passesPattern(r, "LMe-eXL2U2-L4:10PM"))
+        .map((r) => ({ ...r, source: "binance" as const }));
+
+      const deltaIntersect = deltaAllResults
+        .filter((r) => passesPattern(r, "LMe-eXL2U2-L4:10PM"))
+        .map((r) => ({ ...r, source: "delta" as const }));
+
+      if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
+      if (activeTab === "delta") return deltaIntersect;
+      return binanceIntersect;
     // NEW: Exp-U3>U3 pool
     if (showExpU3PU3 && activePattern === "overlapping-lower") {
       const binanceIntersect = allResults
@@ -981,7 +995,7 @@ export default function Screener({
     showOutsideCPRCompressed || showOutsideCPReXHrL3U3AU4 || showInsideCPRTiCOLo ||
     showBigBelowPMiniPL3 || showBigBelowPMiniRising || showExpU3LtPU4 || showBigBeloweXLoL3U4AU4 || showBigBelowL1LtPL4 || showL1LtPL4CprLtPL4 || showBigBeloweXU4L234AU4 || showBigBelow1TcOU4L43PM ||
     showBigAbovePL34CL4 || showBAComp || showHAU1 || showHAU1CprAbovePU4 || showHAU1L1AbovePU4 || showHAU1PWideAbove || showHRHAL || showHA55HrL4U34FAU4 || showHiL4U4FAU4 || show1ScoHiFAU4 || show2ScoHiFAU4 || showLBCmprss || showLBC34 || showLBE11 || showLBC2L2U2 ||
-    showLBBothTiny || showLBAllUp || showExpU4PU4 || showExpU3PU3 || showOBNLoU4L4 || showOBWLoU4L4 || showOBHiExL4U4 ||
+    showLBBothTiny || showLBAllUp || showExpU4PU4 || showExpU3PU3 || showOBNLoU4L4 || showOBWLoU4L4 || showOBHiExL4U4 || showLMeXL2U2 ||
     !!pivotLevelFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter;
 
   return (
@@ -1031,6 +1045,7 @@ export default function Screener({
           showHAU1={showHAU1}
           showOutsideCPReXHrL3U3AU4={showOutsideCPReXHrL3U3AU4}
           showInsideCPRTiCOLo={showInsideCPRTiCOLo}
+          showLMeXL2U2={showLMeXL2U2}
         />
 
         {/* Controls */}
@@ -1628,6 +1643,23 @@ export default function Screener({
                 title="Inside CPR + prev R1/S1 in specific today ladder bands (Tiny/Mini cOLo, target pU4, 9PM)"
               >
                 {showInsideCPRTiCOLo ? "✕ Ti-cOLo-APU4-9PM" : "Ti-cOLo-APU4-9PM"}
+              </button>
+            )}
+             {/* NEW: LMe-eXL2U2-L4:10PM button — Overlap Above */}
+            {activePattern === "overlapping-higher" && !showAll && (
+              <button
+                onClick={() => {
+                  setShowLMeXL2U2((v) => !v);
+                  setShowOBHiExL4U4(false);
+                }}
+                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                  showLMeXL2U2
+                    ? "border-red-400 text-red-400 bg-red-500/10"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+                title="Overlap Above + eXL2U2 pivot band + Compression Ratio 60%–90%. Target L4 by ~10PM."
+              >
+                {showLMeXL2U2 ? "✕ LMe-eXL2U2-L4:10PM" : "LMe-eXL2U2-L4:10PM"}
               </button>
             )}
             {activePattern === "structure-bigbelow" && !showAll && (

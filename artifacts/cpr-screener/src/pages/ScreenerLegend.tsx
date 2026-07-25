@@ -14,6 +14,7 @@ export interface ScreenerLegendProps {
   showOBNLoL4U4: boolean;
   showOBWLoL4U4: boolean;
   showOBHiExL4U4: boolean;
+  showLMeXL2U2: boolean;
   showExpU3LtPU4: boolean;
   showBigBeloweXLoL3U4AU4: boolean;
   showBigBeloweXU4L234AU4: boolean;
@@ -50,6 +51,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
     showOBNLoL4U4,
     showOBWLoL4U4,
     showOBHiExL4U4,
+    showLMeXL2U2,
     showExpU3LtPU4,
     showBigBeloweXLoL3U4AU4,
     showBigBeloweXU4L234AU4,
@@ -257,6 +259,15 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             <div className="text-xs font-semibold text-pink-400 mb-1">eXHi-L4U4-U4</div>
             <div className="text-xs text-muted-foreground">Overlap Higher — Prev R4 between today&apos;s R3/R4, Prev S4 between today&apos;s S3/S4, Prev CPR pSmall, Today CPR Tiny</div>
           </>
+          ) : showLMeXL2U2 && activePattern === "overlapping-higher" ? (
+          <>
+            <div className="text-xs font-semibold text-red-400 mb-1">
+              Pivot Level: eXL2U2&nbsp;&nbsp;PCPR: Large&nbsp;&nbsp;CPR: Medium
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Overlap Above + eXL2U2 (today&apos;s S2 above prev S1 AND today&apos;s R2 above prev R1) + Compression Ratio 60%–90%.
+            </div>
+          </>
         ) : showExpU3LtPU4 && activePattern === "structure-bigbelow" ? (
           <>
             <div className="text-xs font-semibold text-rose-400 mb-1">Expanded</div>
@@ -410,6 +421,15 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
           <>
             <div className="text-xs font-semibold text-emerald-400 mb-1">Target</div>
             <div className="text-xs text-muted-foreground">Overlap Higher continuation — bullish bias toward U4</div>
+          </>
+          ) : showLMeXL2U2 && activePattern === "overlapping-higher" ? (
+          <>
+            <div className="text-xs font-semibold text-red-400 mb-1">
+              Target: L4&nbsp;&nbsp;&nbsp;Time: 10PM
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Bearish rotation from the Overlap-Above zone — expected sweep toward today&apos;s L4 by ~10PM IST.
+            </div>
           </>
         ) : showExpU3LtPU4 && activePattern === "structure-bigbelow" ? (
           <>

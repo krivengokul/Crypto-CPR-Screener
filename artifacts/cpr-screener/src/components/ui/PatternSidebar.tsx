@@ -60,6 +60,14 @@ export const subPatterns: Record<string, SubPattern[]> = {
   "overlapping-higher": [
     { id: "eXHi-L4U4-U4",            label: "eXHi-L4U4-U4" },
     { id: "cOHiL3U3-pL4",            label: "cOHiL3U3-pL4" },
+    // NEW
+    {
+      id: "LMe-eXL2U2-L4:10PM",
+      label: "LMe-eXL2U2-L4:10PM",
+      activeColor: "#f87171",      // red-400 border
+      activeText:  "#fca5a5",      // red-300 text
+      activeBg:    "rgba(239, 68, 68, 0.10)",
+    },
   ],
   "overlapping-lower": [
     { id: "eXLo-L4U4-U4",            label: "Exp-U3>pU4" },

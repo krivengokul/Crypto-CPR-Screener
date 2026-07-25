@@ -81,6 +81,7 @@ const SCREENER_PATTERN_IDS = new Set([
   // ── Overlap Above sub-patterns ──
   "eXHi-L4U4-U4",
   "LAT-PU12CU23",
+  "LMe-eXL2U2-L4:10PM",
 
   // ── Overlap Below sub-patterns ──
   "eXLo-L4U4-U4",

@@ -685,6 +685,15 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       );
     case "overlapping-higher":
       return r.overlapHigher;
+    // NEW: LMe-eXL2U2-L4:10PM — Overlap Above + eXL2U2 pivot band,
+    // compression ratio 60–90 (Little–Medium bracket). Target L4, ~10PM.
+    case "LMe-eXL2U2-L4:10PM":
+      return (
+        r.overlapHigher &&
+        r.eXL2U2 &&
+        r.compressionRatio >= 60 &&
+        r.compressionRatio <= 90
+      );
     case "cOHiL3U3-pL4":
       return r.overlapHigher && r.cOHiL3U3 && r.prevCPR.widthPct <= 0.10 &&   // pMicro
               r.todayCPR.widthPct > 0.60 && r.todayCPR.widthPct <= 1.10;   // Small;
@@ -902,6 +911,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
   "overlapping-higher": [
     { key: "eXHi-L4U4-U4",  direction: "up" },
     { key: "cOHiL3U3-pL4",  direction: "down" },
+    { key: "LMe-eXL2U2-L4:10PM", direction: "down" },
   ],
   "overlapping-lower": [
     { key: "eXLo-L4U4-U4", direction: "up" },
