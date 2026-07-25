@@ -994,9 +994,9 @@ export default function Screener({
             <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
               <TrendingUp className="w-6 h-6 text-primary" />
             </div>
-            <h1 className="text-2xl font-bold tracking-tight">CPR Screener</h1>
+            <h1 className="text-2xl font-bold tracking-tight">PIVOT LEVEL Screener</h1>
             <span className="text-xs font-mono px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
-              by Kriven Gokul
+              by Kriven Gokul (PivotBull)
             </span>
           </div>
 
@@ -2266,7 +2266,7 @@ export default function Screener({
         )}
 
         <div className="mt-auto pt-8 text-xs text-muted-foreground text-center">
-          Binance: top 500 USDT pairs · Delta Exchange: 195 perpetual futures · CPR from completed UTC daily candles (ADK logic)
+          Binance: top 500 USDT pairs · Delta Exchange: 195 perpetual futures · CPR from completed UTC daily candles
           <br />
           Auto-scans once daily at 5:31 AM IST · PH/PL = Previous Day High/Low · Not financial advice · by Kriven Gokul
         </div>
