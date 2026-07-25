@@ -2218,12 +2218,6 @@ export default function Screener({
                     >
                       PDH / PDL <SortIcon k="pdhPdlPct" />
                     </th>
-                    <th
-                      className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
-                      onClick={() => toggleSort("cprDistance")}
-                    >
-                      GAP <SortIcon k="cprDistance" />
-                    </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       CPR-GAP
                     </th>

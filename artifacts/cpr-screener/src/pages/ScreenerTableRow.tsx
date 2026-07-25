@@ -346,54 +346,6 @@ export default function ScreenerTableRow({
           <div>{pdhPdlStatus(r).main}</div>
           <div>{pdhPdlStatus(r).sub}</div>
         </td>
-       <td className="px-4 py-3 whitespace-nowrap text-xs font-mono font-medium">
-          {(() => {
-            // Raw price gaps — what the column visually shows
-            const r4Gap = Math.abs(r.todayCPR.r4 - r.prevCPR.r4);
-            const s4Gap = Math.abs(r.todayCPR.s4 - r.prevCPR.s4);
-
-            // Normalized distances (moves in multiples of prev CPR width) — kept for
-            // the diff bar / tiebreakers so cross-asset ranking stays scale-independent
-            const r4d = (r as any).r4Distance as number | undefined;
-            const s4d = (r as any).s4Distance as number | undefined;
-            if (r4d == null || s4d == null || !isFinite(r4d) || !isFinite(s4d)) {
-              return <span className="text-muted-foreground">—</span>;
-            }
-
-            const maxD = Math.max(r4d, s4d);
-            const diffPct = maxD > 0 ? ((r4d - s4d) / maxD) * 100 : 0;
-            const diffColor =
-              diffPct > 0 ? "text-green-400" : diffPct < 0 ? "text-orange-400" : "text-muted-foreground";
-
-            return (
-              <>
-                <div className="text-xs text-chart-3">
-                  <span className="text-muted-foreground">U4Gap: </span>
-                  {fmt(r4Gap)}
-                </div>
-                <div
-                  className={`text-xs font-semibold py-0.5 ${diffColor}`}
-                  title={`Normalized: U4Δ ${r4d.toFixed(2)}× vs L4Δ ${s4d.toFixed(2)}× of prev CPR width`}
-                >
-                  {diffPct >= 0 ? "+" : ""}
-                  {diffPct.toFixed(2)}%
-                  <div className="w-full bg-muted rounded-full h-1 mt-0.5 max-w-[64px]">
-                    <div
-                      className={`h-1 rounded-full transition-all ${
-                        diffPct > 0 ? "bg-green-400" : diffPct < 0 ? "bg-orange-400" : "bg-muted-foreground"
-                      }`}
-                      style={{ width: `${Math.min(Math.abs(diffPct), 100)}%` }}
-                    />
-                  </div>
-                </div>
-                <div className="text-xs text-chart-3/70">
-                  <span className="text-muted-foreground">L4Gap: </span>
-                  {fmt(s4Gap)}
-                </div>
-              </>
-            );
-          })()}
-        </td>
         <td className="px-4 py-3 whitespace-nowrap text-xs font-mono font-medium">
           {(() => {
             const dist = cprDistancePct(r);
@@ -523,6 +475,46 @@ export default function ScreenerTableRow({
                     </div>
                   </div>
                 </div>
+                {(() => {
+                  const r4Gap = Math.abs(r.todayCPR.r4 - r.prevCPR.r4);
+                  const s4Gap = Math.abs(r.todayCPR.s4 - r.prevCPR.s4);
+                  const r4d = (r as any).r4Distance as number | undefined;
+                  const s4d = (r as any).s4Distance as number | undefined;
+                  if (r4d == null || s4d == null || !isFinite(r4d) || !isFinite(s4d)) return null;
+                  const maxD = Math.max(r4d, s4d);
+                  const diffPct = maxD > 0 ? ((r4d - s4d) / maxD) * 100 : 0;
+                  const diffColor =
+                    diffPct > 0 ? "text-green-400" : diffPct < 0 ? "text-orange-400" : "text-muted-foreground";
+                  return (
+                    <div className="min-w-[140px]">
+                      <div
+                        className="rounded-lg border border-border bg-card/60 px-3 py-2 font-mono space-y-1"
+                        title={`Normalized: U4Δ ${r4d.toFixed(2)}× vs L4Δ ${s4d.toFixed(2)}× of prev CPR width`}
+                      >
+                        <div className="flex justify-between gap-4 text-xs text-chart-3">
+                          <span className="text-muted-foreground">U4Gap:</span>
+                          <span>{fmt(r4Gap)}</span>
+                        </div>
+                        <div className={`text-xs font-semibold ${diffColor}`}>
+                          {diffPct >= 0 ? "+" : ""}
+                          {diffPct.toFixed(2)}%
+                          <div className="w-full bg-muted rounded-full h-1 mt-0.5">
+                            <div
+                              className={`h-1 rounded-full transition-all ${
+                                diffPct > 0 ? "bg-green-400" : diffPct < 0 ? "bg-orange-400" : "bg-muted-foreground"
+                              }`}
+                              style={{ width: `${Math.min(Math.abs(diffPct), 100)}%` }}
+                            />
+                          </div>
+                        </div>
+                        <div className="flex justify-between gap-4 text-xs text-chart-3/70">
+                          <span className="text-muted-foreground">L4Gap:</span>
+                          <span>{fmt(s4Gap)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
               <div className="hidden sm:block w-px self-stretch bg-border/50 mx-2" />
               <SRLadder cpr={r.todayCPR} currentPrice={r.currentPrice} label="Today S/R" />
