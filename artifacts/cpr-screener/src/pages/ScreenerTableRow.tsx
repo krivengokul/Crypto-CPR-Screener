@@ -16,6 +16,7 @@ import {
   computePivotSubLabel,
   SRLadder,
   getSubFilterDirection,
+  getSectionForPattern,
   getWidthCategory,
   cprDistancePct,
   levelsInDistanceRange,
@@ -51,6 +52,11 @@ export default function ScreenerTableRow({
   showBigBelowPMiniPL3,
 }: ScreenerTableRowProps) {
   const sym = splitSymbol(r.symbol, r.source);
+
+  // Resolve the active pattern to its parent section id so that section-level
+  // UI (badges/columns keyed on "u1-gt-pu4", "structure-bigabove", …) stays
+  // visible when the user drills into a child sub-filter.
+  const sectionPattern = getSectionForPattern(activePattern);
 
   // Shared "pU1 vs pL1" badge — compares previous day's Pivot→R1 gap against
   // Pivot→S1 gap. Only meaningful (and only rendered) for Inside-CPR rows;
@@ -145,7 +151,7 @@ export default function ScreenerTableRow({
                 )}
               </div>
               <span className="text-muted-foreground text-xs font-normal">/{sym.quote}</span>
-              {isRisingAboveTC(r) && activePattern === "structure-bigbelow" && showBigBelowPMiniPL3 && (
+              {isRisingAboveTC(r) && sectionPattern === "structure-bigbelow" && showBigBelowPMiniPL3 && (
                 <span
                   className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-green-500/15 text-green-400 border border-green-500/30 mt-0.5 inline-block w-fit"
                   title="Currently trading above today's TC"
@@ -160,8 +166,8 @@ export default function ScreenerTableRow({
           <div className="flex flex-wrap gap-1">
             {(() => {
               const isU1PU4Mode =
-                activePattern === "u1-gt-pu4" ||
-                (showHAU1 && activePattern === "structure-bigabove");
+                sectionPattern === "u1-gt-pu4" ||
+                (showHAU1 && sectionPattern === "structure-bigabove");
               if (isU1PU4Mode && r.srExpandedHigher) {
                 const subBadges: { label: string; classes: string }[] = [];
                 if (r.eXL2U1)  subBadges.push({ label: "eXL2U1",  classes: "bg-purple-500/10 text-purple-400 border-purple-500/20" });
@@ -229,7 +235,7 @@ export default function ScreenerTableRow({
               {r.eXL3TC && <span className="text-xs px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-medium">eXL3TC</span>}
               {r.eXL1U1 && <span className="text-xs px-1.5 py-0.5 rounded bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/20 font-medium">eXL1U1</span>}
               {r.cOTCL2 && <span className="text-xs px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-medium">cOTCL2</span>}
-              {!(activePattern === "u1-gt-pu4" || (showHAU1 && activePattern === "structure-bigabove")) && (
+              {!(sectionPattern === "u1-gt-pu4" || (showHAU1 && sectionPattern === "structure-bigabove")) && (
                 <>
                   {r.eXL2U1 && <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20 font-medium">eXL2U1</span>}
                   {r.eXL3U1 && <span className="text-xs px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20 font-medium">eXL3U1</span>}
@@ -241,7 +247,7 @@ export default function ScreenerTableRow({
               )}
             </div>
           )}
-          {(activePattern === "u1-gt-pu4" || activePattern === "l1-lt-pl4") && (() => {
+          {(sectionPattern === "u1-gt-pu4" || sectionPattern === "l1-lt-pl4") && (() => {
             const prevSubLabel = computePivotSubLabel(r.prevCPR, r.ppCPR);
             if (!prevSubLabel) return null;
             return (

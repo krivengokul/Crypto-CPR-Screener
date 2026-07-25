@@ -957,6 +957,23 @@ export function getSubFilterDirection(r: CPRResult, activePattern: string): SubF
 }
 
 /**
+ * Resolve an activePattern id to its owning section (parent) id.
+ *
+ * When the user selects a sub-filter (e.g. "SL-eXL3U1-FAU4:3PM"), several
+ * row-level UI branches keyed on the parent section id (e.g. "u1-gt-pu4")
+ * would otherwise disappear. Callers use this to keep the parent section's
+ * badges/columns visible while a child sub-filter narrows the results.
+ *
+ * Returns the input unchanged if it is already a section id (or unknown).
+ */
+export function getSectionForPattern(activePattern: string): string {
+  for (const [section, defs] of Object.entries(SUBFILTERS_BY_SECTION)) {
+    if (defs.some((d) => d.key === activePattern)) return section;
+  }
+  return activePattern;
+}
+
+/**
  * Pivot Level — classifies today's CPR range relative to yesterday's using
  * the directional sub-flags computed in cpr.ts:
  *   eX-Higher / eX-Lower:  Expanded (today R4 > prev R4 AND today S4 < prev S4),
