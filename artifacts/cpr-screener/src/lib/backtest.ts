@@ -154,6 +154,19 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       },
     ],
   },
+  // NEW: left-nav sections exposed in the Backtest dropdown as
+  // symbol-list-only categories (no target grading). Each `key` matches an
+  // existing passesPattern() case in ScreenerUtils.tsx, so runCategoryScan
+  // works with no further changes.
+  { key: "littlebelow", label: "LittleCPR Below" },
+  { key: "structure-bigabove", label: "BigCPR Above" },
+  { key: "u1-gt-pu4", label: "U1 > pU4" },
+  { key: "structure-bigbelow", label: "BigCPR Below" },
+  { key: "l1-lt-pl4", label: "L1 < pL4" },
+  { key: "inside-cpr", label: "CPR Inside" },
+  { key: "outside-cpr", label: "CPR Outside" },
+  { key: "overlapping-lower", label: "Overlap Below" },
+  { key: "equal-cpr", label: "Equal CPR" },
 ];
 
 export interface BacktestRow {
