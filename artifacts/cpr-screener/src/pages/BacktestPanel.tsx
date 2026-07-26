@@ -32,7 +32,7 @@ import { passesPattern, matchesPivotLevelFlag, fmt, getChartUrl, hasKnownChartMa
  * Dropdown layout: the category/sub-category label is no longer rendered
  * as a separate bold <optgroup> header (that duplicated the "— all
  * (symbol list only)" option below it). Instead the category is a single
- * selectable row "<Category> — all (symbol list only)", with its patterns
+ * selectable row "<Category>", with its patterns
  * and Pivot-Level sub-categories indented directly beneath. Native <option>
  * elements can't render partial bold, so the category name is shown in
  * plain text; the visual grouping comes from indentation only.
@@ -263,7 +263,7 @@ export default function BacktestPanel() {
               const items: React.ReactNode[] = [];
               items.push(
                 <option key={cat.key} value={cat.key}>
-                  {cat.label} — all (symbol list only)
+                  {cat.label}
                 </option>
               );
               cat.subPatternKeys?.forEach((pk) => {
@@ -280,7 +280,7 @@ export default function BacktestPanel() {
                 items.push(
                   <option key={subKey} value={subKey}>
                     {"\u00A0\u00A0\u00A0\u00A0"}
-                    {"\u21B3"} Pivot Level: {sub.label} — all (symbol list only)
+                    {"\u21B3"} Pivot Level: {sub.label}
                   </option>
                 );
                 sub.subPatternKeys.forEach((pk) => {
