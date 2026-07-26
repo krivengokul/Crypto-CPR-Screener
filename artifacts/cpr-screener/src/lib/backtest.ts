@@ -169,6 +169,107 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
   { key: "equal-cpr", label: "Equal CPR" },
 ];
 
+/**
+ * NEW: flat option list for the "Category / Pivot Level / Pattern"
+ * dropdown in the Backtest panel.
+ *
+ * The dropdown no longer renders bold, non-selectable group headings
+ * ("LittleCPR Above", "Overlap Above", ...). Instead every group's own
+ * "— all (symbol list only)" row IS the heading: the category name is
+ * rendered bold and the "— all (symbol list only)" suffix normal-weight,
+ * e.g. render each option as:
+ *
+ *   <span className="font-semibold">{opt.boldLabel}</span>
+ *   <span className="font-normal opacity-70">{opt.suffix}</span>
+ *
+ * Sub-patterns follow their parent with depth = 1 (or 2 under a Pivot
+ * Level) and no bold part.
+ */
+export type BacktestOptionKind = "category" | "pivotLevel" | "pattern";
+
+export interface BacktestOption {
+  value: string;              // "<categoryKey>" | "<categoryKey>::<pivotLevelKey>" | "<patternKey>"
+  kind: BacktestOptionKind;
+  boldLabel: string;          // bold part, e.g. "LittleCPR Above" ("" for patterns)
+  suffix: string;             // normal-weight part, e.g. " — all (symbol list only)"
+  plainLabel: string;         // boldLabel + suffix, for the collapsed/selected value
+  depth: 0 | 1 | 2;           // indentation level
+  categoryKey: string;
+  pivotLevelKey?: string;
+  patternKey?: string;
+  symbolListOnly: boolean;    // true => runCategoryScan / runPivotLevelScan (Close + % Change columns)
+}
+
+export const SYMBOL_LIST_ONLY_SUFFIX = " — all (symbol list only)";
+
+export function buildBacktestOptions(): BacktestOption[] {
+  const opts: BacktestOption[] = [];
+  const patternLabel = (key: string) => BACKTEST_TARGETS.find((t) => t.key === key)?.label ?? key;
+
+  for (const cat of BACKTEST_CATEGORIES) {
+    opts.push({
+      value: cat.key,
+      kind: "category",
+      boldLabel: cat.label,
+      suffix: SYMBOL_LIST_ONLY_SUFFIX,
+      plainLabel: cat.label + SYMBOL_LIST_ONLY_SUFFIX,
+      depth: 0,
+      categoryKey: cat.key,
+      symbolListOnly: true,
+    });
+
+    for (const key of cat.subPatternKeys ?? []) {
+      opts.push({
+        value: key,
+        kind: "pattern",
+        boldLabel: "",
+        suffix: patternLabel(key),
+        plainLabel: patternLabel(key),
+        depth: 1,
+        categoryKey: cat.key,
+        patternKey: key,
+        symbolListOnly: false,
+      });
+    }
+
+    for (const sub of cat.subCategories ?? []) {
+      opts.push({
+        value: `${cat.key}::${sub.key}`,
+        kind: "pivotLevel",
+        boldLabel: sub.label,
+        suffix: SYMBOL_LIST_ONLY_SUFFIX,
+        plainLabel: sub.label + SYMBOL_LIST_ONLY_SUFFIX,
+        depth: 1,
+        categoryKey: cat.key,
+        pivotLevelKey: sub.key,
+        symbolListOnly: true,
+      });
+      for (const key of sub.subPatternKeys) {
+        opts.push({
+          value: key,
+          kind: "pattern",
+          boldLabel: "",
+          suffix: patternLabel(key),
+          plainLabel: patternLabel(key),
+          depth: 2,
+          categoryKey: cat.key,
+          pivotLevelKey: sub.key,
+          patternKey: key,
+          symbolListOnly: false,
+        });
+      }
+    }
+  }
+
+  return opts;
+}
+
+export const BACKTEST_OPTIONS: BacktestOption[] = buildBacktestOptions();
+
+export function findBacktestOption(value: string): BacktestOption | undefined {
+  return BACKTEST_OPTIONS.find((o) => o.value === value);
+}
+
 export interface BacktestRow {
   symbol: string;
   source: BacktestSource;
@@ -201,6 +302,34 @@ export interface CategoryScanRow {
   todayCPR: CPRResult["todayCPR"];
   prevCPR: CPRResult["prevCPR"];
   compressionRatio: number;
+  /**
+   * NEW: entry-day close price and day-over-day % change, so the results
+   * table can show "Close" and "% Change" columns (colour them green when
+   * changePct >= 0, red when < 0) for every "— all (symbol list only)"
+   * scan. Null when the entry-day candle isn't available (e.g. entryDate
+   * is today and the daily candle hasn't printed yet).
+   */
+  closePrice: number | null;
+  prevClose: number | null;
+  changePct: number | null;
+}
+
+/**
+ * NEW: entry-day close + day-over-day % change for a scanned symbol.
+ * Uses the entry date's own daily candle when it exists; falls back to the
+ * last completed candle (D-1, the one that built todayCPR) otherwise.
+ */
+function closeAndChange(
+  window: Map<string, OHLC>,
+  entryDateISO: string
+): { closePrice: number | null; prevClose: number | null; changePct: number | null } {
+  const candle = window.get(entryDateISO) ?? window.get(addDaysISO(entryDateISO, -1)) ?? null;
+  if (!candle) return { closePrice: null, prevClose: null, changePct: null };
+  const baseDate = window.get(entryDateISO) ? entryDateISO : addDaysISO(entryDateISO, -1);
+  const prevCandle = window.get(addDaysISO(baseDate, -1)) ?? null;
+  const prevClose = prevCandle ? prevCandle.close : candle.open;
+  const changePct = prevClose ? ((candle.close - prevClose) / prevClose) * 100 : null;
+  return { closePrice: candle.close, prevClose, changePct };
 }
 
 function utcDateKey(ms: number): string {
@@ -420,7 +549,7 @@ export async function categoryScanSymbolOnDate(
 ): Promise<CategoryScanRow | null> {
   const reconstructed = await reconstructCPRForDate(symbol, source, entryDateISO);
   if (!reconstructed) return null;
-  const { result } = reconstructed;
+  const { result, window } = reconstructed;
 
   if (!passesPatternFn(result, categoryKey)) return null; // didn't match the category's base condition
 
@@ -431,6 +560,7 @@ export async function categoryScanSymbolOnDate(
     todayCPR: result.todayCPR,
     prevCPR: result.prevCPR,
     compressionRatio: result.compressionRatio,
+    ...closeAndChange(window, entryDateISO),
   };
 }
 
@@ -454,7 +584,7 @@ export async function pivotLevelScanSymbolOnDate(
 ): Promise<CategoryScanRow | null> {
   const reconstructed = await reconstructCPRForDate(symbol, source, entryDateISO);
   if (!reconstructed) return null;
-  const { result } = reconstructed;
+  const { result, window } = reconstructed;
 
   if (!passesPatternFn(result, categoryKey)) return null; // didn't match the parent category's base condition
   if (!matchesPivotLevelFn(result, pivotLevelKey)) return null; // didn't match this Pivot Level's raw flag
@@ -466,6 +596,7 @@ export async function pivotLevelScanSymbolOnDate(
     todayCPR: result.todayCPR,
     prevCPR: result.prevCPR,
     compressionRatio: result.compressionRatio,
+    ...closeAndChange(window, entryDateISO),
   };
 }
 
