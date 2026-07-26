@@ -49,6 +49,7 @@ export default function BacktestPanel() {
   const [progress, setProgress] = useState({ done: 0, total: 0, symbol: "" });
   const [rows, setRows] = useState<BacktestRow[]>([]);
   const [categoryRows, setCategoryRows] = useState<CategoryScanRow[]>([]);
+  const [changeSortDir, setChangeSortDir] = useState<"asc" | "desc" | null>(null);
   const [error, setError] = useState("");
 
   const [dateMode, setDateMode] = useState<"single" | "range">("single");
@@ -142,6 +143,7 @@ export default function BacktestPanel() {
     setError("");
     setRows([]);
     setCategoryRows([]);
+      setChangeSortDir(null);
     setProgress({ done: 0, total: 0, symbol: "" });
     setDateProgress({ current: 0, total: 0, date: "" });
     try {
@@ -280,7 +282,7 @@ export default function BacktestPanel() {
                 items.push(
                   <option key={subKey} value={subKey}>
                     {"\u00A0\u00A0\u00A0\u00A0"}
-                    {"\u21B3"} Pivot Level: {sub.label}
+                    {"\u21B3"} {sub.label}
                   </option>
                 );
                 sub.subPatternKeys.forEach((pk) => {
@@ -461,7 +463,21 @@ export default function BacktestPanel() {
                       Close
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      % Change
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setChangeSortDir((d) =>
+                            d === null ? "desc" : d === "desc" ? "asc" : null
+                          )
+                        }
+                        className="inline-flex items-center gap-1 uppercase tracking-wider hover:text-foreground transition-colors"
+                        title="Sort by Change"
+                      >
+                        Change
+                        <span className="text-[10px]">
+                          {changeSortDir === "asc" ? "▲" : changeSortDir === "desc" ? "▼" : "↕"}
+                        </span>
+                      </button>
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Today TC / BC
@@ -475,7 +491,19 @@ export default function BacktestPanel() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {categoryRows.map((r) => {
+                  {(changeSortDir === null
+                    ? categoryRows
+                    : [...categoryRows].sort((a, b) => {
+                        const av = a.changePct;
+                        const bv = b.changePct;
+                        const aNull = av === null || av === undefined;
+                        const bNull = bv === null || bv === undefined;
+                        if (aNull && bNull) return 0;
+                        if (aNull) return 1;
+                        if (bNull) return -1;
+                        return changeSortDir === "asc" ? av - bv : bv - av;
+                      })
+                  ).map((r) => {
                     const chg = r.changePct;
                     const chgColor =
                       chg === null || chg === undefined
