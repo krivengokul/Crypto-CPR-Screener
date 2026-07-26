@@ -94,7 +94,25 @@ export default function BacktestPanel() {
     cat.subPatternKeys?.forEach((k) => nestedPatternKeys.add(k));
     cat.subCategories?.forEach((sub) => sub.subPatternKeys.forEach((k) => nestedPatternKeys.add(k)));
   });
-  const ungroupedPatterns = BACKTEST_TARGETS.filter((t) => !nestedPatternKeys.has(t.key));
+  // Ungrouped patterns intentionally omitted from the dropdown: the ones
+  // that were showing up at the bottom ("LittleCPR Above", "U1 > Previous U4
+  // (BigCPR Above)") duplicated options already rendered inside their
+  // categories above, so we no longer render this trailing list.
+
+  // Display order for the dropdown: place "Overlap Above" immediately after
+  // "CPR Outside" (per request), keeping every other category in its
+  // original position. Falls back to the original order if either key is
+  // missing.
+  const orderedCategories = (() => {
+    const list = [...BACKTEST_CATEGORIES];
+    const overlapIdx = list.findIndex((c) => /overlap\s*above/i.test(c.label));
+    const cprOutsideIdx = list.findIndex((c) => /cpr\s*outside/i.test(c.label));
+    if (overlapIdx === -1 || cprOutsideIdx === -1) return list;
+    const [overlap] = list.splice(overlapIdx, 1);
+    const insertAt = list.findIndex((c) => /cpr\s*outside/i.test(c.label)) + 1;
+    list.splice(insertAt, 0, overlap);
+    return list;
+  })();
 
   useEffect(() => {
     if (!isPatternOnly && dateMode === "range") setDateMode("single");
@@ -241,7 +259,7 @@ export default function BacktestPanel() {
              * sub-categories indented beneath it. This removes the
              * previous duplicated bold header row above every group.
              */}
-            {BACKTEST_CATEGORIES.flatMap((cat) => {
+            {orderedCategories.flatMap((cat) => {
               const items: React.ReactNode[] = [];
               items.push(
                 <option key={cat.key} value={cat.key}>
@@ -277,12 +295,6 @@ export default function BacktestPanel() {
               });
               return items;
             })}
-            {ungroupedPatterns.length > 0 &&
-              ungroupedPatterns.map((t) => (
-                <option key={t.key} value={t.key}>
-                  {t.label}
-                </option>
-              ))}
           </select>
         </div>
         {isPatternOnly && (
