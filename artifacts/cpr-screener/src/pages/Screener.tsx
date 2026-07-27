@@ -1200,7 +1200,7 @@ export default function Screener({
         {currentStatus === "done" && (
           <div className="flex flex-col gap-2 mb-3">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[10px] text-muted-foreground uppercase tracking-wider mr-0.5">Patterns:</span>
+            <span className="text-[10px] text-muted-foreground uppercase tracking-wider mr-0.5">VIEWS:</span>
 
             {/* NEW: hR-HAL button — BigCPR Above, placed next to Show All */}
             {activePattern === "structure-bigabove" && !showAll && (
@@ -1964,7 +1964,7 @@ export default function Screener({
               AND independent of showAll. These always render, regardless of Show All state, and
               are mutually exclusive within their own group. */}
           <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[10px] text-muted-foreground uppercase tracking-wider mr-0.5">Pivot Level:</span>
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wider mr-0.5">PATTERNS:</span>
               {(
                 [
                   { label: "eX-Higher", active: "border-purple-400 text-purple-400" },
@@ -2221,10 +2221,10 @@ export default function Screener({
                       Symbol <SortIcon k="symbol" />
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      LEVEL
+                      Pattern
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      PIVOT
+                      PIVOT LEVEL
                     </th>
                     <th
                       className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
