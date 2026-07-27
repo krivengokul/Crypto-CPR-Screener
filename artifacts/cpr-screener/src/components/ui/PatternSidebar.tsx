@@ -77,6 +77,13 @@ export const subPatterns: Record<string, SubPattern[]> = {
   ],
   "inside-cpr": [
     { id: "Ti-cOLo-APU4-9PM",        label: "Ti-cOLo-APU4-9PM" },
+    {
+      id: "SMi-L1pU1>-APU4:11PM",
+      label: "SMi-L1pU1>-APU4:11PM",
+      activeColor: "#22c55e",              // green-500 border
+      activeText:  "#4ade80",              // green-400 text
+      activeBg:    "rgba(34, 197, 94, 0.14)",
+    },
   ],
   "outside-cpr": [
     { id: "outside-cpr-compressed",  label: "Compressed" },

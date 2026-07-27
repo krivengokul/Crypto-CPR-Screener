@@ -665,6 +665,14 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       const cond4 = p.r1 > t.r4 && p.s1 <= t.s3 && p.s1 >= t.s4;                  // pR1 > R4 && pS1 > S4
       return cond1 || cond2 || cond3 || cond4;
     }
+    // NEW: SMi-L1pU1>-APU4:11PM — Inside CPR + L1pU1Above (from cpr.ts)
+    // + compression ratio >= 30. Target ApU4 by 11PM.
+    case "SMi-L1pU1>-APU4:11PM": {
+      const inside =
+        (r.todayCPR.tc <= r.prevCPR.tc && r.todayCPR.bc > r.prevCPR.bc) ||
+        (r.todayCPR.tc < r.prevCPR.tc && r.todayCPR.bc >= r.prevCPR.bc);
+      return inside && r.L1pU1Above && r.compressionRatio >= 30;
+    }
     case "outside-cpr":
       return r.todayCPR.tc > r.prevCPR.tc && r.todayCPR.bc < r.prevCPR.bc;
     case "outside-cpr-compressed":
@@ -921,6 +929,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
   ],
   "inside-cpr": [
     { key: "Ti-cOLo-APU4-9PM", direction: "up" },
+    { key: "SMi-L1pU1>-APU4:11PM", direction: "up" },
   ],
   "outside-cpr": [
     { key: "outside-cpr-compressed", direction: "up" },
