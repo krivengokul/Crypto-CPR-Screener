@@ -26,6 +26,10 @@ export interface CPRLevels {
   s2: number;
   s3: number;
   s4: number;
+  // PDH (this level set's high) vs R1 classification
+  PDHAbove: boolean;
+  PDLBelow: boolean;
+  PDHLEqual: boolean;
 }
 
 /**
@@ -259,11 +263,17 @@ export function calcCPR(candle: OHLC): CPRLevels {
   const r4 = r3 + r2 - r1;
   const s4 = s3 + s2 - s1;
 
+  // PDH (previous day high, i.e. this level set's candle high) vs R1.
+  const PDHAbove  = h > r1;
+  const PDLBelow  = h < r1;
+  const PDHLEqual = h === r1;
+
   return {
     pivot, bc, tc, width, widthPct,
     prevHigh: h, prevLow: l,
     r1, r2, r3, r4,
     s1, s2, s3, s4,
+    PDHAbove, PDLBelow, PDHLEqual,
   };
 }
 
