@@ -413,7 +413,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
   // higher) sits above prev's (PDL or S1, whichever is higher).
   const prevLowerR1PDH   = Math.min(prev.r1, prev.prevHigh);
   const todayHigherPDHR1 = Math.max(today.prevHigh, today.r1);
-  const todayHigherS1PDL = Math.max(today.s1, today.prevLow);
+  const todayHigherS1PDL = Math.min(today.s1, today.prevLow);
   const prevHigherPDLS1  = Math.max(prev.prevLow, prev.s1);
   const L1pU1Above = (prevLowerR1PDH > todayHigherPDHR1) &&
                      (todayHigherS1PDL > prevHigherPDLS1);
