@@ -108,6 +108,7 @@ export interface CPRPairFlags {
   eXL2TC: boolean;
   eXL1U1: boolean;
   cOTCL2: boolean;
+  L1pU1Above: boolean;
 }
 
 export interface CPRResult {
@@ -193,6 +194,7 @@ export interface CPRResult {
   eXL2TC: boolean;
   eXL1U1: boolean;
   cOTCL2: boolean;
+  L1pU1Above: boolean;
   cOU1L1: boolean;
   cOU1L2: boolean;
   cOL1U1: boolean;
@@ -406,6 +408,16 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
   const cOTCL2 = (today.r4 > prev.pivot && today.r4 < prev.tc) &&
                  (today.s4 > prev.s2 && today.s4 < prev.s1);
 
+  // L1pU1Above — prev's (R1 or PDH, whichever is lower) sits above today's
+  // (PDH or R1, whichever is higher), AND today's (S1 or PDL, whichever is
+  // higher) sits above prev's (PDL or S1, whichever is higher).
+  const prevLowerR1PDH   = Math.min(prev.r1, prev.prevHigh);
+  const todayHigherPDHR1 = Math.max(today.prevHigh, today.r1);
+  const todayHigherS1PDL = Math.max(today.s1, today.prevLow);
+  const prevHigherPDLS1  = Math.max(prev.prevLow, prev.s1);
+  const L1pU1Above = (prevLowerR1PDH > todayHigherPDHR1) &&
+                     (todayHigherS1PDL > prevHigherPDLS1);
+
   // cOU1L1 / cOL1U1 — split by which side (R1 vs S1) moved further.
   const r1Move = Math.abs(prev.r1 - today.r1);
   const s1Move = Math.abs(prev.s1 - today.s1);
@@ -435,7 +447,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
     cOHiL2U2, LoU4L1234, cOU1L2, cOLoU2L4, eXL3U3, eXU3L3,
     cOU1L1, cOL1U1, cOU2L2, cOL2U2,
     eXL2U1, eXL3U1, eXL4U1, eXL1CPR, eXL2CPR, eXL3CPR,
-    eXL3TC, eXL4U2, eXL2U2, eXL2TC, eXL1U1, cOTCL2,
+    eXL3TC, eXL4U2, eXL2U2, eXL2TC, eXL1U1, cOTCL2, L1pU1Above,
   };
 }
 
