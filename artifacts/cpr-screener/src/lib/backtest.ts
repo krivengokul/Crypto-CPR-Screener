@@ -54,6 +54,15 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "PU4 (prev day's R4)",
     getTarget: (r) => r.prevCPR.r4,
   },
+  // NEW: nested under the "U1 > pU4" category. Bullish, same PU4 target
+  // style as HA-U1>PU4 (matches PatternSidebar's u1-gt-pu4 sub-pattern).
+  {
+    key: "SL-eXL3U1-FAU4:3PM",
+    label: "SL-eXL3U1-FAU4:3PM",
+    direction: "bullish",
+    targetLabel: "PU4 (prev day's R4)",
+    getTarget: (r) => r.prevCPR.r4,
+  },
   // NEW: the two "LittleCPR Above" sub-patterns
   {
     key: "1LHr-L4U3-U4",
@@ -160,7 +169,11 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
   // works with no further changes.
   { key: "littlebelow", label: "LittleCPR Below" },
   { key: "structure-bigabove", label: "BigCPR Above" },
-  { key: "u1-gt-pu4", label: "U1 > pU4" },
+  {
+    key: "u1-gt-pu4",
+    label: "U1 > pU4",
+    subPatternKeys: ["HA-U1>PU4", "SL-eXL3U1-FAU4:3PM"],
+  },
   { key: "structure-bigbelow", label: "BigCPR Below" },
   { key: "l1-lt-pl4", label: "L1 < pL4" },
   { key: "inside-cpr", label: "CPR Inside" },

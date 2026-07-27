@@ -247,7 +247,7 @@ export default function BacktestPanel() {
       <div className="flex flex-wrap items-end gap-3 mb-4">
         <div>
           <label className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1">
-            Category / Pivot Level / Pattern
+            Pivot Level / Pattern / View
           </label>
           <select
             value={selectedKey}

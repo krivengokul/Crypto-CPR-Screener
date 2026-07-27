@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Screener from "@/pages/Screener";
 import BacktestPanel from "@/pages/BacktestPanel";
-import PatternSidebar, { patterns, type SidebarMode } from "@/components/ui/PatternSidebar";
+import PatternSidebar, { patterns, SCREENER_PATTERN_IDS, type SidebarMode } from "@/components/ui/PatternSidebar";
 import { Menu } from "lucide-react";
 
 const queryClient = new QueryClient();
@@ -39,106 +39,9 @@ function ComingSoon({ label }: { label: string }) {
   );
 }
 
-/**
- * All pattern IDs (parent + sub-pattern) that the Screener component handles.
- * Sub-pattern IDs correspond to passesPattern() cases in ScreenerUtils.tsx.
- */
-const SCREENER_PATTERN_IDS = new Set([
-  // ── Top-level patterns ──
-  "littleabove",
-  "littlebelow",
-  "overlapping-higher",
-  "overlapping-lower",
-  "inside-cpr",
-  "outside-cpr",
-  "structure-bigabove",
-  "structure-bigbelow",
-  "equal-cpr",
-
-  // ── Little ABOVE sub-patterns ──
-  "la-2tiny",
-  "la-allstepup",
-  "1LHr-L4U3-U4",
-  "LA-PL12CL23",
-  "sT-cOL2U3-APU4",
-  "eXHiU1L3",
-  "T1-U4:6AM",
-  "Ss-HiL4U4-FAU4:2AM",
-  "MeMi-eXHiL4U3-U4:6PM",
-
-  // ── Little BELOW sub-patterns ──
-  "lb-micro2-apu4",
-  "lb-allstepdown",
-  "lb-cmprss-l4>3-u4<2",
-  "lb-c-l34c4/u23c4",
-  "lbE11-cOLoL3U2-PU4",
-  "co2-l2u2",
-  "LB-PU12CU23",
-  "1LB-PL12CL23",
-  "LBALLD-U2<PU1",
-  "L1-cOU1L2-U4:1AM",
-
-  // ── Overlap Above sub-patterns ──
-  "eXHi-L4U4-U4",
-  "LAT-PU12CU23",
-  "LMe-eXL2U2-L4:10PM",
-
-  // ── Overlap Below sub-patterns ──
-  "eXLo-L4U4-U4",
-  "Exp-U3>U3",
-  "OBN-LoU4L4-U4",
-  "OBW-LoU4L4-L4",
-  "LBT-PU1>U1PL1>L1",
-
-  // ── CPR Inside sub-patterns ──
-  "Ti-cOLo-APU4-9PM",
-
-  // ── CPR Outside sub-patterns ──
-  "outside-cpr-compressed",
-  "eXHrL3U3-AU4",
-
-  // ── Big ABOVE sub-patterns ──
-  "bigabove-pl34cl4-u3>pu4",
-  "bacomp-l3>pl1/u3>pu1",
-  "HA-U1>PU4",
-  "HAThin-U1>PU4",
-  "hR-HAL",
-  "HA55-HrL4U34-FAU4",
-  "eXL4U2-U4:4AM",
-  "1T-HiL4U4-FAU4",
-  "1S-cOL3U4-FAU4:1AM",
-  "TS-cOL3U4-AU4R:4PM",
-
-  // ── U1>pU4 (standalone category) ──
-  "u1-gt-pu4",
-
-  // ── Big BELOW sub-patterns ──
-  "bigbelow-pmini-pl3",
-  "eX-U4L34",
-  "eXLoL3U4-AU4",
-  "L1<pL4",
-  "eXU4L234-AU4",
-  "1T-cOU4L4-ApU4:3PM",
-
-  // ── L1<pL4 (standalone category) ──
-  "l1-lt-pl4",
-
-  // ── Equal CPR ──
-  "equal-cpr",
-  "eXLoL3U3-L3",
-  "cOHiL3U3-pL4",
-
-  // ── Legacy / previously visible left-nav patterns ──
-  "lower-bullish",
-  "Price-AbovePDH",
-  "Price-BelowPDL",
-  "HB-L1<PL1-PU12CU23",
-  "HB-L1<PL4-U1>TCPR",
-  "HB-L1<PL2-U12CPU12",
-  "HB-L1>PL1-PU1CU234",
-  // ── U1>pU4 sub-patterns ──
-  "SL-eXL3U1-FAU4:3PM",
-]);
+// Screener-handled pattern IDs now come from PatternSidebar (single source
+// of truth — derived from its `patterns` + `subPatterns` tree, plus a small
+// LEGACY_SCREENER_PATTERN_IDS list). Kept out of App.tsx to avoid drift.
 
 function App() {
   const [activePattern, setActivePattern] = useState("littleabove");

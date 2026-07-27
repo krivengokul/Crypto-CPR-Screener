@@ -122,6 +122,40 @@ export const patterns: Pattern[] = [
   { id: "equal-cpr",          label: "Equal CPR",     subtitle: "Prev & Today CPR Equal",   icon: Equal },
 ];
 
+/**
+ * Single source of truth for every pattern id the Screener handles —
+ * derived from `patterns` (top-level) + `subPatterns` (nested). Legacy /
+ * previously-visible left-nav ids that aren't in the tree anymore live in
+ * LEGACY_SCREENER_PATTERN_IDS so App.tsx no longer has to duplicate the tree.
+ */
+export const LEGACY_SCREENER_PATTERN_IDS = [
+  "lower-bullish",
+  "Price-AbovePDH",
+  "Price-BelowPDL",
+  "HB-L1<PL1-PU12CU23",
+  "HB-L1<PL4-U1>TCPR",
+  "HB-L1<PL2-U12CPU12",
+  "HB-L1>PL1-PU1CU234",
+  // sub-patterns whose passesPattern() case exists but aren't in the tree yet
+  "la-allstepup",
+  "eXHiU1L3",
+  "LB-PU12CU23",
+  "1LB-PL12CL23",
+  "LBALLD-U2<PU1",
+  "LAT-PU12CU23",
+  "LBT-PU1>U1PL1>L1",
+  "HA-U1>PU4",
+  "HAThin-U1>PU4",
+  "HA55-HrL4U34-FAU4",
+  "L1<pL4",
+] as const;
+
+export const SCREENER_PATTERN_IDS: ReadonlySet<string> = new Set<string>([
+  ...patterns.map((p) => p.id),
+  ...Object.values(subPatterns).flatMap((subs) => subs.map((s) => s.id)),
+  ...LEGACY_SCREENER_PATTERN_IDS,
+]);
+
 export type SidebarMode = "scanner" | "backtest";
 
 /** Returns the parent ID for a sub-pattern, or null if it is a parent itself. */
