@@ -107,6 +107,11 @@ export interface CPRPairFlags {
   eXL2U2: boolean;
   eXL2TC: boolean;
   eXL1U1: boolean;
+  // eXU2L1 — prev's R4 lands inside today's R1/R2 band (U2), AND prev's S4
+  // lands inside today's BC/S1 band (L1). Same "L1" support band as
+  // eXL1U1/eXL1CPR but paired with the wider U2 (R1→R2) resistance band
+  // instead of U1 (TC→R1).
+  eXU2L1: boolean;
   cOTCL2: boolean;
   L1pU1Above: boolean;
 }
@@ -197,6 +202,7 @@ export interface CPRResult {
   eXL2U2: boolean;
   eXL2TC: boolean;
   eXL1U1: boolean;
+  eXU2L1: boolean;
   cOTCL2: boolean;
   L1pU1Above: boolean;
   cOU1L1: boolean;
@@ -422,6 +428,12 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
   const eXL1U1 = (prev.s4 > today.s1 && prev.s4 < today.bc) &&
                  (prev.r4 > today.tc  && prev.r4 < today.r1);
 
+  // eXU2L1 — prev's R4 sits inside today's R1/R2 band (U2) AND prev's S4
+  // sits inside today's BC/S1 band (L1). Same L1 support band as eXL1U1,
+  // but the wider U2 resistance band instead of U1.
+  const eXU2L1 = (prev.r4 > today.r1 && prev.r4 < today.r2) &&
+                 (prev.s4 > today.s1 && prev.s4 < today.bc);
+
   // cOTCL2 — today's R4 lands inside the previous day's Pivot/TC band,
   // AND today's S4 lands inside the previous day's S1/S2 band. Same
   // compressed-band shape as cOU1L2 but the resistance side is measured
@@ -468,7 +480,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
     cOHiL2U2, LoU4L1234, cOU1L2, cOLoU2L4, eXL3U3, eXU3L3,
     cOU1L1, cOL1U1, cOU2L2, cOL2U2,
     eXL2U1, eXL3U1, eXL4U1, eXL1CPR, eXL2CPR, eXL3CPR,
-    eXL3TC, eXL4U2, eXL2U2, eXL2TC, eXL1U1, cOTCL2, L1pU1Above,
+    eXL3TC, eXL4U2, eXL2U2, eXL2TC, eXL1U1, eXU2L1, cOTCL2, L1pU1Above,
   };
 }
 

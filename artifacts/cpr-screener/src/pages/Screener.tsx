@@ -923,6 +923,7 @@ export default function Screener({
       if (pivotLevelFilter === "eXL2U2") return r.eXL2U2;
       if (pivotLevelFilter === "eXL2TC") return r.eXL2TC;
       if (pivotLevelFilter === "eXL1U1") return r.eXL1U1;
+      if (pivotLevelFilter === "eXU2L1") return r.eXU2L1;
       return getPivotLevel(r)?.label === pivotLevelFilter;
     })
     .filter((r) => matchesWidthFilter(r, prevWidthFilter, todayWidthFilter))
@@ -2024,6 +2025,8 @@ export default function Screener({
                   { label: "eXL2TC",   active: "border-sky-400 text-sky-400" },
                   { label: "eXL3TC",   active: "border-indigo-400 text-indigo-400" },
                   { label: "eXL1U1",   active: "border-fuchsia-400 text-fuchsia-400" },
+                  // NEW: eXU2L1 — prev R4 inside today R1/R2 (U2) AND prev S4 inside today BC/S1 (L1).
+                  { label: "eXU2L1",   active: "border-violet-400 text-violet-400" },
                 ] as { label: PivotLevelInfo["label"]; active: string }[]
               ).map(({ label, active }) => (
                 <button
