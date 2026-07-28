@@ -2047,6 +2047,8 @@ export default function Screener({
                   { label: "eXU3TC",   active: "border-rose-400 text-rose-400" },
                   // NEW: eXU2CP — prev R4 inside today R1/R2 (U2) AND prev S4 inside today Pivot/TC.
                   { label: "eXU2CP",   active: "border-sky-400 text-sky-400" },
+                  // NEW: eXU4L1 — prev R4 inside today R3/R4 (U4) AND prev S4 inside today BC/S1 (L1).
+                  { label: "eXU4L1",   active: "border-green-400 text-green-400" },
                 ] as { label: PatternInfo["label"]; active: string }[]
               ).map(({ label, active }) => (
                 <button

@@ -135,6 +135,10 @@ export interface CPRPairFlags {
   // Same U2 resistance band as eXU2BC/eXU2L1/eXU2TC, paired with the
   // upper-CPR-half support band instead of BC/Pivot.
   eXU2CP: boolean;
+  // eXU4L1 — prev's R4 lands inside today's R3/R4 band (U4), AND prev's S4
+  // lands inside today's BC/S1 band (L1). Bearish-continuation shape used
+  // by the L1<pL4 sub-filter ss-eXU4L1-U4:10PM.
+  eXU4L1: boolean;
 }
 
 export interface CPRResult {
@@ -231,6 +235,7 @@ export interface CPRResult {
   eXU2BC: boolean;
   eXU3TC: boolean;
   eXU2CP: boolean;
+  eXU4L1: boolean;
   cOU1L1: boolean;
   cOU1L2: boolean;
   cOL1U1: boolean;
@@ -496,6 +501,12 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
   const eXU2CP = (prev.r4 > today.r1 && prev.r4 < today.r2) &&
                  (prev.s4 > today.pivot && prev.s4 < today.tc);
 
+  // eXU4L1 — prev's R4 sits inside today's R3/R4 band (U4) AND prev's S4
+  // sits inside today's BC/S1 band (L1). Mirror shape to eXU2L1/eXU3L1
+  // but with the widest U-band (R3→R4) on the resistance side.
+  const eXU4L1 = (prev.r4 > today.r3 && prev.r4 < today.r4) &&
+                 (prev.s4 > today.s1 && prev.s4 < today.bc);
+
   // cOTCL2 — today's R4 lands inside the previous day's Pivot/TC band,
   // AND today's S4 lands inside the previous day's S1/S2 band. Same
   // compressed-band shape as cOU1L2 but the resistance side is measured
@@ -543,7 +554,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
     cOU1L1, cOL1U1, cOU2L2, cOL2U2,
     eXL2U1, eXL3U1, eXL4U1, eXL1CPR, eXL2CPR, eXL3CPR,
     eXL3TC, eXL4U2, eXL2U2, eXL2TC, eXL1U1, eXU2L1, cOTCL2, L1pU1Above,
-    eXU3L1, eXU2TC, eXU2BC, eXU3TC, eXU2CP,
+    eXU3L1, eXU2TC, eXU2BC, eXU3TC, eXU2CP, eXU4L1,
   };
 }
 

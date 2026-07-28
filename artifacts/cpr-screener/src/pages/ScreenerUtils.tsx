@@ -807,6 +807,19 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.strWideCPR &&
         r.todayCPR.s1 < r.prevCPR.s4
       );
+    // NEW: ss-eXU4L1-U4:10PM — L1<pL4 sub-filter.
+    // cprFalling + strWideCPR + prevCPR.PDHLAbove + todayCPR.PDHLAbove +
+    // eXU4L1 (prev R4 inside today R3/R4 AND prev S4 inside today BC/S1)
+    // + prev CPR's BC above today's R1. Target U4 by ~10PM IST.
+    case "ss-eXU4L1-U4:10PM":
+      return (
+        r.cprFalling &&
+        r.strWideCPR &&
+        r.prevCPR.PDHLAbove &&
+        r.todayCPR.PDHLAbove &&
+        r.eXU4L1 &&
+        r.prevCPR.bc > r.todayCPR.r1
+      );
     // Standalone top-level category: same condition as L1<pL4
     case "l1-lt-pl4":
       return (
@@ -954,6 +967,8 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     { key: "1T-cOU4L4-ApU4:3PM", direction: "down" },
   ],
   "l1-lt-pl4": [],
+  // NEW: ss-eXU4L1-U4:10PM — L1<pL4 sub-filter.
+  // Bullish sweep from a deep-below setup back up to U4 by ~10PM.
   "equal-cpr": [
     { key: "eXLoL3U3-L3", direction: "down" },
   ],
@@ -1036,7 +1051,7 @@ export function getSubFilterDirection(r: CPRResult, activePattern: string): SubF
  * its own second-row badge, checking the raw flag directly.
  */
 export interface PatternInfo {
-  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "cOU3L4" | "LoU4L4" | "eXHiL4U3" | "eXL4U4" | "HiL4U4" | "HiL4U34" | "cOHiL2U3" | "cOHiL3U3" | "eXU4L234" | "eXU4L34" | "cOHiL2U4" | "eXL3U3" | "eXL2U1" | "eXL3U1" | "eXL4U1" | "eXL1CPR" | "eXL2CPR" | "eXL3CPR" | "eXL3TC" | "eXL4U2" | "eXL2U2" | "eXL2TC" | "eXL1U1" | "eXU2L1" | "cOTCL2" | "eXU3L1" | "eXU2TC" | "eXU2BC" | "eXU3TC" | "eXU2CP" | "cOU1L1" | "cOL1U1" | "cOU2L2" | "cOL2U2" | "cOU1L2" | "cOU4L4" | "exL3U2" | "Lower";
+  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "cOU3L4" | "LoU4L4" | "eXHiL4U3" | "eXL4U4" | "HiL4U4" | "HiL4U34" | "cOHiL2U3" | "cOHiL3U3" | "eXU4L234" | "eXU4L34" | "cOHiL2U4" | "eXL3U3" | "eXL2U1" | "eXL3U1" | "eXL4U1" | "eXL1CPR" | "eXL2CPR" | "eXL3CPR" | "eXL3TC" | "eXL4U2" | "eXL2U2" | "eXL2TC" | "eXL1U1" | "eXU2L1" | "cOTCL2" | "eXU3L1" | "eXU2TC" | "eXU2BC" | "eXU3TC" | "eXU2CP" | "eXU4L1" | "cOU1L1" | "cOL1U1" | "cOU2L2" | "cOL2U2" | "cOU1L2" | "cOU4L4" | "exL3U2" | "Lower";
   classes: string;
 }
 
@@ -1106,6 +1121,8 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     case "eXU2BC": return r.eXU2BC;
     case "eXU3TC": return r.eXU3TC;
     case "eXU2CP": return r.eXU2CP;
+    // NEW: eXU4L1 — prev R4 inside today R3/R4 (U4) AND prev S4 inside today BC/S1 (L1).
+    case "eXU4L1": return r.eXU4L1;
     // NEW: cOU1L1 / cOL1U1 / cOU2L2 / cOL2U2
     case "cOU1L1": return r.cOU1L1;
     case "cOL1U1": return r.cOL1U1;

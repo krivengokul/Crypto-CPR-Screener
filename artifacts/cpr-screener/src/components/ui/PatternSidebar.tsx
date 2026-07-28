@@ -129,7 +129,15 @@ export const subPatterns: Record<string, SubPattern[]> = {
     { id: "eXU4L234-AU4",            label: "eXU4L234-AU4" },
     { id: "1T-cOU4L4-ApU4:3PM",     label: "1T-cOU4L4-ApU4:3PM" },
   ],
-  "l1-lt-pl4": [],
+  "l1-lt-pl4": [
+    {
+      id: "ss-eXU4L1-U4:10PM",
+      label: "ss-eXU4L1-U4:10PM",
+      activeColor: "#22c55e",              // green-500 border
+      activeText:  "#4ade80",              // green-400 text
+      activeBg:    "rgba(34, 197, 94, 0.14)",
+    },
+  ],
   "equal-cpr": [
     { id: "eXLoL3U3-L3", label: "eXLoL3U3-L3" },
   ],
