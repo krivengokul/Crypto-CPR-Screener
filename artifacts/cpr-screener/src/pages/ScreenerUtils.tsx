@@ -649,24 +649,10 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     case "inside-cpr":
       return (r.todayCPR.tc <= r.prevCPR.tc && r.todayCPR.bc > r.prevCPR.bc) ||
               (r.todayCPR.tc < r.prevCPR.tc && r.todayCPR.bc >= r.prevCPR.bc);
-    // NEW: Ti-cOLo-APU4-9PM — Inside CPR + one of four (prev R1, prev S1)
-    // placements across today's ladder bands. Replaces the old Expanded /
-    // Narrow / cO-U4L3 sub-filters under CPR Inside.
-    case "Ti-cOLo-APU4-9PM": {
-      const inside =
-        (r.todayCPR.tc <= r.prevCPR.tc && r.todayCPR.bc > r.prevCPR.bc) ||
-        (r.todayCPR.tc < r.prevCPR.tc && r.todayCPR.bc >= r.prevCPR.bc);
-      if (!inside) return false;
-      const t = r.todayCPR;
-      const p = r.prevCPR;
-      const cond1 = p.r1 >= t.r1 && p.r1 <= t.r2 && p.s1 <= t.bc && p.s1 >= t.s1; // pR1 > R1 && pS1 > S1
-      const cond2 = p.r1 >= t.r2 && p.r1 <= t.r3 && p.s1 <= t.s1 && p.s1 >= t.s2; // pR1 > R2 && pS1 > S2
-      const cond3 = p.r1 >= t.r3 && p.r1 <= t.r4 && p.s1 <= t.s2 && p.s1 >= t.s3; // pR1 > R3 && pS1 > S3
-      const cond4 = p.r1 > t.r4 && p.s1 <= t.s3 && p.s1 >= t.s4;                  // pR1 > R4 && pS1 > S4
-      return cond1 || cond2 || cond3 || cond4;
-    }
     // NEW: SMi-L1pU1>-APU4:11PM — Inside CPR + L1pU1Above (from cpr.ts)
     // + compression ratio >= 30. Target ApU4 by 11PM.
+    case "l1pu1-above":
+      return r.L1pU1Above;
     case "SMi-L1pU1>-APU4:11PM": {
       const inside =
         (r.todayCPR.tc <= r.prevCPR.tc && r.todayCPR.bc > r.prevCPR.bc) ||
@@ -927,10 +913,10 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     { key: "OBN-LoU4L4-U4", direction: "up" },
     { key: "OBW-LoU4L4-L4", direction: "up" },
   ],
-  "inside-cpr": [
-    { key: "Ti-cOLo-APU4-9PM", direction: "up" },
+  "l1pu1-above": [
     { key: "SMi-L1pU1>-APU4:11PM", direction: "up" },
   ],
+  "inside-cpr": [],
   "outside-cpr": [
     { key: "outside-cpr-compressed", direction: "up" },
     { key: "eXHrL3U3-AU4", direction: "up" },

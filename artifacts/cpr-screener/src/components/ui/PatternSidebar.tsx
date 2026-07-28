@@ -75,8 +75,7 @@ export const subPatterns: Record<string, SubPattern[]> = {
     { id: "OBN-LoU4L4-U4",           label: "OBN-LoU4L4-U4" },
     { id: "OBW-LoU4L4-L4",           label: "OBW-LoU4L4-L4" },
   ],
-  "inside-cpr": [
-    { id: "Ti-cOLo-APU4-9PM",        label: "Ti-cOLo-APU4-9PM" },
+  "l1pu1-above": [
     {
       id: "SMi-L1pU1>-APU4:11PM",
       label: "SMi-L1pU1>-APU4:11PM",
@@ -85,6 +84,7 @@ export const subPatterns: Record<string, SubPattern[]> = {
       activeBg:    "rgba(34, 197, 94, 0.14)",
     },
   ],
+  "inside-cpr": [],
   "outside-cpr": [
     { id: "outside-cpr-compressed",  label: "Compressed" },
     { id: "eXHrL3U3-AU4",            label: "eXHrL3U3-AU4" },
@@ -116,6 +116,7 @@ export const subPatterns: Record<string, SubPattern[]> = {
 };
 
 export const patterns: Pattern[] = [
+  { id: "l1pu1-above",        label: "L1pU1 Above",   subtitle: "Today L1 above Prev U1",   icon: TrendingUp },
   { id: "littleabove",        label: "Little ABOVE",  subtitle: "Narrow CPR Above PCPR",    icon: TrendingUp },
   { id: "littlebelow",        label: "Little BELOW",  subtitle: "Narrow CPR Below PCPR",    icon: TrendingDown },
   { id: "structure-bigabove", label: "Big ABOVE",     subtitle: "Wide CPR Above PCPR",      icon: BarChart },

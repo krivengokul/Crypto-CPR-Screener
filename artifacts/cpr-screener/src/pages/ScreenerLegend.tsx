@@ -27,7 +27,8 @@ export interface ScreenerLegendProps {
   showHAU1PWideAbove: boolean;
   showHAU1: boolean;
   showOutsideCPReXHrL3U3AU4: boolean;
-  showInsideCPRTiCOLo: boolean;
+  /** @deprecated CPR Inside sub-filters removed; kept optional for callers. */
+  showInsideCPRTiCOLo?: boolean;
 }
 
 /**
@@ -64,7 +65,6 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
     showHAU1PWideAbove,
     showHAU1,
     showOutsideCPReXHrL3U3AU4,
-    showInsideCPRTiCOLo,
   } = props;
   
   // Map a sub-pattern id (selected via the sidebar tree, e.g. "co2-l2u2")
@@ -145,6 +145,14 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
               <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-violet-500 text-white">Higher</span>
             </div>
             <div className="text-xs text-muted-foreground">Today&apos;s CPR overlaps above yesterday&apos;s CPR</div>
+          </>
+        ) : legendPattern === "l1pu1-above" ? (
+          <>
+            <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+              <span className="text-xs font-semibold text-primary">L1pU1 Above</span>
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-green-500 text-white">Above</span>
+            </div>
+            <div className="text-xs text-muted-foreground">Today&apos;s S1 / PDL sits above yesterday&apos;s R1 / PDH</div>
           </>
         ) : legendPattern === "inside-cpr" ? (
           <>
@@ -339,11 +347,6 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             <div className="text-xs font-semibold text-green-400 mb-1">Pivot Level: Compressed</div>
             <div className="text-xs text-muted-foreground">PCPR: Small&nbsp;&nbsp;CPR: Mini</div>
           </>
-        ) : showInsideCPRTiCOLo && activePattern === "inside-cpr" ? (
-          <>
-            <div className="text-xs font-semibold text-green-400 mb-1">Pivot Level: cOLo</div>
-            <div className="text-xs text-muted-foreground">CPR: Tiny / Mini</div>
-          </>
         ) : activePattern === "falling" ? (
           <>
             <div className="text-xs font-semibold mb-1 text-destructive">CPR Falling</div>
@@ -500,11 +503,6 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
           <>
             <div className="text-xs font-semibold text-green-400 mb-1">Target: ApU4&nbsp;&nbsp;Time: 11PM</div>
             <div className="text-xs text-emerald-400/80">Expected move above prev U4 by ~11PM</div>
-          </>
-        ) : showInsideCPRTiCOLo && activePattern === "inside-cpr" ? (
-          <>
-            <div className="text-xs font-semibold text-green-400 mb-1">Exp Target: pU4</div>
-            <div className="text-xs text-muted-foreground">Time: 9PM</div>
           </>
         ) : null}
       </div>
