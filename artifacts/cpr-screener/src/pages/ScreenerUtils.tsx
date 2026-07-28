@@ -563,7 +563,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // RENAMED: was "eXL4U4" — this pattern is specific to Overlapping Lower
     // only. Renamed to "eXLo-L4U4-U4" to make that scope explicit and to
     // free up the plain "eXL4U4" name for the new section-independent
-    // Pivot Level badge (see getPivotLevel doc-comment below). The
+    // Pivot Level badge (see getPatternInfo doc-comment below). The
     // underlying boolean this reads (r.eXL4U4, computed in cpr.ts) is
     // UNCHANGED — only this case's key/name changed.
     case "eXLo-L4U4-U4":
@@ -987,7 +987,7 @@ export function getSubFilterDirection(r: CPRResult, activePattern: string): SubF
  * construction — cpr.ts guarantees exactly one of srExpanded / srCompressed /
  * srHigher / srLower is true for every row, and within srExpanded/srCompressed
  * exactly one of the High/Low sub-flags is true (ties are folded into the
- * Higher variant in cpr.ts). getPivotLevel here just reads those flags in
+ * Higher variant in cpr.ts). getPatternInfo here just reads those flags in
  * order — no re-derivation, no ties, no null/unclassified rows.
  *
  * FIX (duplicate badge bug): cOU1L2 / cOU3L4 / LoU4L4 are intentionally
@@ -995,7 +995,7 @@ export function getSubFilterDirection(r: CPRResult, activePattern: string): SubF
  * exclusive sub-buckets of "Lower" the way eX-Higher/eX-Lower or
  * cO-Higher/cO-Lower are) and Screener.tsx already renders them as their
  * OWN separate second-row badges alongside the primary Pivot Level badge.
- * Having getPivotLevel() also return them as the PRIMARY label caused the
+ * Having getPatternInfo() also return them as the PRIMARY label caused the
  * same badge (e.g. "LoU4L4") to show twice on a row — once as the primary
  * badge instead of "Lower", and once again in the second row. The pivot
  * level filter buttons for cOU1L2/cOU3L4/LoU4L4 in Screener.tsx already
@@ -1035,12 +1035,12 @@ export function getSubFilterDirection(r: CPRResult, activePattern: string): SubF
  * primary label here; Screener.tsx (ScreenerTableRow.tsx) renders it as
  * its own second-row badge, checking the raw flag directly.
  */
-export interface PivotLevelInfo {
+export interface PatternInfo {
   label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "cOU3L4" | "LoU4L4" | "eXHiL4U3" | "eXL4U4" | "HiL4U4" | "HiL4U34" | "cOHiL2U3" | "cOHiL3U3" | "eXU4L234" | "eXU4L34" | "cOHiL2U4" | "eXL3U3" | "eXL2U1" | "eXL3U1" | "eXL4U1" | "eXL1CPR" | "eXL2CPR" | "eXL3CPR" | "eXL3TC" | "eXL4U2" | "eXL2U2" | "eXL2TC" | "eXL1U1" | "eXU2L1" | "cOTCL2" | "cOU1L1" | "cOL1U1" | "cOU2L2" | "cOL2U2" | "cOU1L2" | "cOU4L4" | "exL3U2" | "Lower";
   classes: string;
 }
 
-export function getPivotLevel(r: CPRResult): PivotLevelInfo {
+export function getPatternInfo(r: CPRResult): PatternInfo {
   if (r.srExpandedHigher) {
     return { label: "eX-Higher", classes: "bg-purple-500/10 text-purple-400 border-purple-500/20" };
   }
@@ -1060,18 +1060,18 @@ export function getPivotLevel(r: CPRResult): PivotLevelInfo {
 }
 
 /**
- * matchesPivotLevelFlag — raw Pivot Level flag check, factored out of the
- * inline pivotLevelFilter block in Screener.tsx's `displayed` filter so
+ * matchesPatternFlag — raw Pivot Level flag check, factored out of the
+ * inline PatternFilter block in Screener.tsx's `displayed` filter so
  * other consumers (the Backtest panel's Pivot Level sub-category scans,
  * e.g. "Overlap Above" → "HiL4U34") can reuse the exact same lookups
  * without duplicating the switch. For the six mutually-exclusive primary
  * labels (eX-Higher/eX-Lower/cO-Higher/cO-Lower/Higher/Lower) this falls
- * back to getPivotLevel(r)'s label; for the independent, section-agnostic
+ * back to getPatternInfo(r)'s label; for the independent, section-agnostic
  * booleans (cOU1L2, cOU3L4, LoU4L4, eXL4U4, HiL4U4,
  * HiL4U34, cOHiL2U3, eXU4L234, eXU4L34, cOU1L1, cOL1U1, cOU2L2, cOL2U2, cOTCL2)
  * it reads the raw flag directly — same as Screener.tsx does today.
  */
-export function matchesPivotLevelFlag(r: CPRResult, label: string): boolean {
+export function matchesPatternFlag(r: CPRResult, label: string): boolean {
   switch (label) {
     case "cOU3L4": return r.cOU3L4;
     case "LoU4L4": return r.LoU4L4;
@@ -1112,7 +1112,7 @@ export function matchesPivotLevelFlag(r: CPRResult, label: string): boolean {
     // Today's R4 inside prev day's Pivot/TC band AND today's S4 inside
     // prev day's S1/S2 band.
     case "cOTCL2": return r.cOTCL2;
-    default: return getPivotLevel(r)?.label === label;
+    default: return getPatternInfo(r)?.label === label;
   }
 }
 

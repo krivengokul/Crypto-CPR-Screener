@@ -12,7 +12,7 @@ import {
   distanceFromCPR,
   pdhPdlStatus,
   isRisingAboveTC,
-  getPivotLevel,
+  getPatternInfo,
   computePivotSubLabel,
   SRLadder,
   getSubFilterDirection,
@@ -177,7 +177,7 @@ export default function ScreenerTableRow({
                 }
                 return <span className="text-xs px-1.5 py-0.5 rounded border font-medium bg-purple-500/10 text-purple-400 border-purple-500/20">eX-Higher</span>;
               }
-              const pl = getPivotLevel(r);
+              const pl = getPatternInfo(r);
               return pl ? (
                 <span className={`text-xs px-1.5 py-0.5 rounded border font-medium ${pl.classes}`}>
                   {pl.label}

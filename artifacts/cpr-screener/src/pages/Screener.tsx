@@ -49,9 +49,9 @@ import {
   isPWideAbove,
   cprDistancePct,
   levelsInDistanceRange,
-  getPivotLevel,
+  getPatternInfo,
   computePivotSubLabel,
-  type PivotLevelInfo,
+  type PatternInfo,
   SRLadder,
   getSubFilterDirection,
 } from "./ScreenerUtils";
@@ -160,7 +160,7 @@ export default function Screener({
   // r.overlapHigher instead of r.overlapLower.
   const [showOBHiExL4U4, setShowOBHiExL4U4] = useState(false);
    const [showLMeXL2U2, setShowLMeXL2U2] = useState(false);
-  const [pivotLevelFilter, setPivotLevelFilter] = useState<PivotLevelInfo["label"] | null>(null);
+  const [PatternFilter, setPatternFilter] = useState<PatternInfo["label"] | null>(null);
   // CHANGED: split into two independent states so one pMicro..pUltra
   // selection (prev day's CPR width) and one Micro..Ultra selection
   // (today's CPR width) can be active at the same time.
@@ -854,77 +854,77 @@ export default function Screener({
     // NEW: cOU1L2 / cOU3L4 are independent booleans in cpr.ts (not
     // actually gated behind srLower), so a row can satisfy one of them
     // AND a higher-priority bucket (e.g. srHigher) at the same time.
-    // getPivotLevel() only ever returns ONE label per row and checks the
-    // other buckets first, so matching on getPivotLevel(r)?.label would
+    // getPatternInfo() only ever returns ONE label per row and checks the
+    // other buckets first, so matching on getPatternInfo(r)?.label would
     // silently miss rows where cOU1L2/cOU3L4 is true but shadowed by
     // an earlier bucket. Check the raw flags directly for these two so
     // the filter buttons actually work independent of the primary badge.
     .filter((r) => {
-      if (!pivotLevelFilter) return true;
-      if (pivotLevelFilter === "cOU3L4") return r.cOU3L4;
-      if (pivotLevelFilter === "LoU4L4") return r.LoU4L4;
+      if (!PatternFilter) return true;
+      if (PatternFilter === "cOU3L4") return r.cOU3L4;
+      if (PatternFilter === "LoU4L4") return r.LoU4L4;
       // NEW: eXL4U4 — independent, section-agnostic Pivot Level flag (see
-      // doc-comment on PivotLevelInfo/getPivotLevel in ScreenerUtils.tsx).
-      if (pivotLevelFilter === "eXL4U4") return r.eXL4U4;
-      if (pivotLevelFilter === "eXL3U3") return r.eXL3U3;
-      if (pivotLevelFilter === "eXU3L3") return r.eXU3L3;
+      // doc-comment on PatternInfo/getPatternInfo in ScreenerUtils.tsx).
+      if (PatternFilter === "eXL4U4") return r.eXL4U4;
+      if (PatternFilter === "eXL3U3") return r.eXL3U3;
+      if (PatternFilter === "eXU3L3") return r.eXU3L3;
       // NEW: HiL4U4 — independent, section-agnostic Pivot Level flag,
       // mirror of eXL4U4 (see doc-comments in cpr.ts / ScreenerUtils.tsx).
-      if (pivotLevelFilter === "HiL2U4") return r.HiL2U4;
-      if (pivotLevelFilter === "HiL3U4") return r.HiL3U4;
-      if (pivotLevelFilter === "HiL4U4") return r.HiL4U4;
+      if (PatternFilter === "HiL2U4") return r.HiL2U4;
+      if (PatternFilter === "HiL3U4") return r.HiL3U4;
+      if (PatternFilter === "HiL4U4") return r.HiL4U4;
       // NEW: eXHiL4U3 — unconditional Pivot Level flag.
-      if (pivotLevelFilter === "eXHiL4U3") return r.eXHiL4U3;
+      if (PatternFilter === "eXHiL4U3") return r.eXHiL4U3;
       // NEW: HiL4U34 / cOHiL2U3 — same treatment: independent,
       // section-agnostic Pivot Level flags, always shown regardless of
       // activePattern/left-nav.
-      if (pivotLevelFilter === "HiL4U34") return r.HiL4U34;
-      if (pivotLevelFilter === "cOHiL2U3") return r.cOHiL2U3;
-      if (pivotLevelFilter === "cOHiL3U3") return r.cOHiL3U3;
+      if (PatternFilter === "HiL4U34") return r.HiL4U34;
+      if (PatternFilter === "cOHiL2U3") return r.cOHiL2U3;
+      if (PatternFilter === "cOHiL3U3") return r.cOHiL3U3;
       // NEW: eXU4L234 — independent, section-agnostic Pivot Level flag
       // (see doc-comments in cpr.ts / ScreenerUtils.tsx).
-      if (pivotLevelFilter === "eXU4L234") return r.eXU4L234;
+      if (PatternFilter === "eXU4L234") return r.eXU4L234;
       // NEW: eXU4L34 — independent, section-agnostic Pivot Level flag
       // (see doc-comments in cpr.ts / ScreenerUtils.tsx).
-      if (pivotLevelFilter === "eXU4L34") return r.eXU4L34;
-      if (pivotLevelFilter === "cOHiL2U4") return r.cOHiL2U4;
-      if (pivotLevelFilter === "cOL4U4") return r.cOL4U4;
-      if (pivotLevelFilter === "cOL3U4") return r.cOL3U4;
-      if (pivotLevelFilter === "cOU3L3") return r.cOU3L3;
-      if (pivotLevelFilter === "LoU3L4") return r.LoU3L4;
-      if (pivotLevelFilter === "LoU3L34") return r.LoU3L34;
-      if (pivotLevelFilter === "LoU2L4") return r.LoU2L4;
-      if (pivotLevelFilter === "LoU2L3") return r.LoU2L3;
-      if (pivotLevelFilter === "LoU4L34") return r.LoU4L34;
-      if (pivotLevelFilter === "LoU4L234") return r.LoU4L234;
-      if (pivotLevelFilter === "cOLoU2L3") return r.cOLoU2L3;
-      if (pivotLevelFilter === "LoU4L1234") return r.LoU4L1234;
-      if (pivotLevelFilter === "cOLoU2L4") return r.cOLoU2L4;
+      if (PatternFilter === "eXU4L34") return r.eXU4L34;
+      if (PatternFilter === "cOHiL2U4") return r.cOHiL2U4;
+      if (PatternFilter === "cOL4U4") return r.cOL4U4;
+      if (PatternFilter === "cOL3U4") return r.cOL3U4;
+      if (PatternFilter === "cOU3L3") return r.cOU3L3;
+      if (PatternFilter === "LoU3L4") return r.LoU3L4;
+      if (PatternFilter === "LoU3L34") return r.LoU3L34;
+      if (PatternFilter === "LoU2L4") return r.LoU2L4;
+      if (PatternFilter === "LoU2L3") return r.LoU2L3;
+      if (PatternFilter === "LoU4L34") return r.LoU4L34;
+      if (PatternFilter === "LoU4L234") return r.LoU4L234;
+      if (PatternFilter === "cOLoU2L3") return r.cOLoU2L3;
+      if (PatternFilter === "LoU4L1234") return r.LoU4L1234;
+      if (PatternFilter === "cOLoU2L4") return r.cOLoU2L4;
       // NEW: eXL*U1 / eXL*CPR sub-type badges
-      if (pivotLevelFilter === "eXL2U1") return r.eXL2U1;
-      if (pivotLevelFilter === "eXL3U1") return r.eXL3U1;
-      if (pivotLevelFilter === "eXL4U1") return r.eXL4U1;
-      if (pivotLevelFilter === "eXL1CPR") return r.eXL1CPR;
-      if (pivotLevelFilter === "eXL2CPR") return r.eXL2CPR;
-      if (pivotLevelFilter === "eXL3CPR") return r.eXL3CPR;
+      if (PatternFilter === "eXL2U1") return r.eXL2U1;
+      if (PatternFilter === "eXL3U1") return r.eXL3U1;
+      if (PatternFilter === "eXL4U1") return r.eXL4U1;
+      if (PatternFilter === "eXL1CPR") return r.eXL1CPR;
+      if (PatternFilter === "eXL2CPR") return r.eXL2CPR;
+      if (PatternFilter === "eXL3CPR") return r.eXL3CPR;
       // NEW: cOU1L1 / cOL1U1 / cOU2L2 / cOL2U2 — independent,
       // section-agnostic Pivot Level flags (see cpr.ts).
-      if (pivotLevelFilter === "cOU1L1") return r.cOU1L1;
-      if (pivotLevelFilter === "cOL1U1") return r.cOL1U1;
-      if (pivotLevelFilter === "cOU2L2") return r.cOU2L2;
-      if (pivotLevelFilter === "cOL2U2") return r.cOL2U2;
+      if (PatternFilter === "cOU1L1") return r.cOU1L1;
+      if (PatternFilter === "cOL1U1") return r.cOL1U1;
+      if (PatternFilter === "cOU2L2") return r.cOU2L2;
+      if (PatternFilter === "cOL2U2") return r.cOL2U2;
       // NEW: cOU1L2 — independent, section-agnostic Pivot Level flag (see cpr.ts).
-      if (pivotLevelFilter === "cOU1L2") return r.cOU1L2;
-      if (pivotLevelFilter === "cOU4L4") return r.cOU4L4;
-      if (pivotLevelFilter === "exL3U2") return r.exL3U2;
+      if (PatternFilter === "cOU1L2") return r.cOU1L2;
+      if (PatternFilter === "cOU4L4") return r.cOU4L4;
+      if (PatternFilter === "exL3U2") return r.exL3U2;
       // NEW: expanded family — eXL3TC / eXL4U2 / eXL2U2 / eXL2TC / eXL1U1
-      if (pivotLevelFilter === "eXL3TC") return r.eXL3TC;
-      if (pivotLevelFilter === "eXL4U2") return r.eXL4U2;
-      if (pivotLevelFilter === "eXL2U2") return r.eXL2U2;
-      if (pivotLevelFilter === "eXL2TC") return r.eXL2TC;
-      if (pivotLevelFilter === "eXL1U1") return r.eXL1U1;
-      if (pivotLevelFilter === "eXU2L1") return r.eXU2L1;
-      return getPivotLevel(r)?.label === pivotLevelFilter;
+      if (PatternFilter === "eXL3TC") return r.eXL3TC;
+      if (PatternFilter === "eXL4U2") return r.eXL4U2;
+      if (PatternFilter === "eXL2U2") return r.eXL2U2;
+      if (PatternFilter === "eXL2TC") return r.eXL2TC;
+      if (PatternFilter === "eXL1U1") return r.eXL1U1;
+      if (PatternFilter === "eXU2L1") return r.eXU2L1;
+      return getPatternInfo(r)?.label === PatternFilter;
     })
     .filter((r) => matchesWidthFilter(r, prevWidthFilter, todayWidthFilter))
     // NEW: Price Level filter — price above PDH, below PDL, above prev day's
@@ -998,7 +998,7 @@ export default function Screener({
     showBigBelowPMiniPL3 || showBigBelowPMiniRising || showExpU3LtPU4 || showBigBeloweXLoL3U4AU4 || showBigBelowL1LtPL4 || showL1LtPL4CprLtPL4 || showBigBeloweXU4L234AU4 || showBigBelow1TcOU4L43PM ||
     showBigAbovePL34CL4 || showBAComp || showHAU1 || showHAU1CprAbovePU4 || showHAU1L1AbovePU4 || showHAU1PWideAbove || showHRHAL || showHA55HrL4U34FAU4 || showHiL4U4FAU4 || show1ScoHiFAU4 || show2ScoHiFAU4 || showLBCmprss || showLBC34 || showLBE11 || showLBC2L2U2 ||
     showLBBothTiny || showLBAllUp || showExpU4PU4 || showExpU3PU3 || showOBNLoU4L4 || showOBWLoU4L4 || showOBHiExL4U4 || showLMeXL2U2 ||
-    !!pivotLevelFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter;
+    !!PatternFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -2027,19 +2027,19 @@ export default function Screener({
                   { label: "eXL1U1",   active: "border-fuchsia-400 text-fuchsia-400" },
                   // NEW: eXU2L1 — prev R4 inside today R1/R2 (U2) AND prev S4 inside today BC/S1 (L1).
                   { label: "eXU2L1",   active: "border-violet-400 text-violet-400" },
-                ] as { label: PivotLevelInfo["label"]; active: string }[]
+                ] as { label: PatternInfo["label"]; active: string }[]
               ).map(({ label, active }) => (
                 <button
                   key={label}
-                  onClick={() => setPivotLevelFilter((v) => (v === label ? null : label))}
+                  onClick={() => setPatternFilter((v) => (v === label ? null : label))}
                   className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                    pivotLevelFilter === label
+                    PatternFilter === label
                       ? active
                       : "border-border text-muted-foreground hover:text-foreground"
                   }`}
                   title={`Show only rows where Pivot Level = ${label}`}
                 >
-                  {pivotLevelFilter === label ? `✕ ${label}` : label}
+                  {PatternFilter === label ? `✕ ${label}` : label}
                 </button>
               ))}
           </div>

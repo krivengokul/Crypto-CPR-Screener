@@ -148,14 +148,14 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
  * "HiL4U34"). A Pivot Level sub-category is itself just another
  * symbol-list-only, single-date, no-target scan — same as a category —
  * except its base condition is the PARENT category's condition AND the
- * named Pivot Level's raw flag (see matchesPivotLevelFlag in
+ * named Pivot Level's raw flag (see matchesPatternFlag in
  * ScreenerUtils.tsx), both evaluated together. Selecting one of ITS
  * subPatternKeys runs the normal runBacktest flow (single date or date
  * range) against that pattern's specific target, same as a top-level
  * category's direct sub-patterns.
  */
 export interface BacktestSubCategoryDef {
-  key: string;              // Pivot Level label (matches matchesPivotLevelFlag's `label` param, e.g. "HiL4U34")
+  key: string;              // Pivot Level label (matches matchesPatternFlag's `label` param, e.g. "HiL4U34")
   label: string;            // display name, e.g. "HiL4U34"
   subPatternKeys: string[]; // BACKTEST_TARGETS keys nested under this Pivot Level
 }
@@ -622,7 +622,7 @@ export async function categoryScanSymbolOnDate(
  * NEW: Pivot Level sub-category scan version of backtestSymbolOnDate —
  * same CPR reconstruction, but checks BOTH the parent CATEGORY's base
  * condition (e.g. "overlapping-higher") AND the named Pivot Level's raw
- * flag (e.g. "HiL4U34", via matchesPivotLevelFn — see matchesPivotLevelFlag
+ * flag (e.g. "HiL4U34", via matchesPatternFn — see matchesPatternFlag
  * in ScreenerUtils.tsx). Returns a CategoryScanRow, same shape/reasoning as
  * categoryScanSymbolOnDate: a Pivot Level bucket within a category still
  * has no single target to grade against.
@@ -634,14 +634,14 @@ export async function pivotLevelScanSymbolOnDate(
   categoryKey: string,
   pivotLevelKey: string,
   passesPatternFn: (r: CPRResult, pattern: string) => boolean,
-  matchesPivotLevelFn: (r: CPRResult, label: string) => boolean
+  matchesPatternFn: (r: CPRResult, label: string) => boolean
 ): Promise<CategoryScanRow | null> {
   const reconstructed = await reconstructCPRForDate(symbol, source, entryDateISO);
   if (!reconstructed) return null;
   const { result, window } = reconstructed;
 
   if (!passesPatternFn(result, categoryKey)) return null; // didn't match the parent category's base condition
-  if (!matchesPivotLevelFn(result, pivotLevelKey)) return null; // didn't match this Pivot Level's raw flag
+  if (!matchesPatternFn(result, pivotLevelKey)) return null; // didn't match this Pivot Level's raw flag
 
   return {
     symbol,
@@ -751,7 +751,7 @@ export async function runPivotLevelScan(
   entryDateISO: string,
   source: BacktestSource,
   passesPatternFn: (r: CPRResult, pattern: string) => boolean,
-  matchesPivotLevelFn: (r: CPRResult, label: string) => boolean,
+  matchesPatternFn: (r: CPRResult, label: string) => boolean,
   onProgress?: (done: number, total: number, symbol: string) => void
 ): Promise<CategoryScanRow[]> {
   const symbols: string[] =
@@ -767,7 +767,7 @@ export async function runPivotLevelScan(
     const batch = symbols.slice(i, i + batchSize);
     const batchResults = await Promise.all(
       batch.map((sym) =>
-        pivotLevelScanSymbolOnDate(sym, source, entryDateISO, categoryKey, pivotLevelKey, passesPatternFn, matchesPivotLevelFn)
+        pivotLevelScanSymbolOnDate(sym, source, entryDateISO, categoryKey, pivotLevelKey, passesPatternFn, matchesPatternFn)
       )
     );
     batchResults.forEach((r) => {

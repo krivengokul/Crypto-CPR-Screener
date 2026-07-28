@@ -14,7 +14,7 @@ import {
   type BacktestCategoryDef,
   type BacktestSubCategoryDef,
 } from "@/lib/backtest";
-import { passesPattern, matchesPivotLevelFlag, fmt, getChartUrl, hasKnownChartMapping } from "./ScreenerUtils";
+import { passesPattern, matchesPatternFlag, fmt, getChartUrl, hasKnownChartMapping } from "./ScreenerUtils";
 
 /**
  * v1 backtest UI — proves out the engine on a handful of patterns (see
@@ -163,7 +163,7 @@ export default function BacktestPanel() {
           entryDate,
           source,
           passesPattern,
-          matchesPivotLevelFlag,
+          matchesPatternFlag,
           (done, total, symbol) => setProgress({ done, total, symbol })
         );
         setCategoryRows(result);
