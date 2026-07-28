@@ -917,6 +917,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
   ],
   "l1pu1-above": [
     { key: "SMi-L1pU1>-APU4:11PM", direction: "up" },
+    { key: "T0-L1pU1>-BPL4:5AM", direction: "down" },
   ],
   "inside-cpr": [],
   "outside-cpr": [

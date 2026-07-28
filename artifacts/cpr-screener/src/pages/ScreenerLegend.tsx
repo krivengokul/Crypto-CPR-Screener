@@ -347,6 +347,11 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             <div className="text-xs font-semibold text-green-400 mb-1">Pivot Level: Compressed</div>
             <div className="text-xs text-muted-foreground">PCPR: Small&nbsp;&nbsp;CPR: Mini</div>
           </>
+        ) : activePattern === "T0-L1pU1>-BPL4:5AM" ? (
+          <>
+            <div className="text-xs font-semibold text-rose-400 mb-1">Pivot Level: Tiny / 1-Line Inside</div>
+            <div className="text-xs text-muted-foreground">Today &amp; Prev PDH/L Above, not Outside CPR — PCPR &gt;300% compressed &amp; below today&apos;s S1, or a single-line inside CPR</div>
+          </>
         ) : activePattern === "falling" ? (
           <>
             <div className="text-xs font-semibold mb-1 text-destructive">CPR Falling</div>
@@ -503,6 +508,11 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
           <>
             <div className="text-xs font-semibold text-green-400 mb-1">Target: ApU4&nbsp;&nbsp;Time: 11PM</div>
             <div className="text-xs text-emerald-400/80">Expected move above prev U4 by ~11PM</div>
+          </>
+        ) : activePattern === "T0-L1pU1>-BPL4:5AM" ? (
+          <>
+            <div className="text-xs font-semibold text-rose-400 mb-1">Target: BPL4&nbsp;&nbsp;Time: 5AM</div>
+            <div className="text-xs text-muted-foreground">Expected move below prev S4 (PL4) by ~5AM</div>
           </>
         ) : null}
       </div>

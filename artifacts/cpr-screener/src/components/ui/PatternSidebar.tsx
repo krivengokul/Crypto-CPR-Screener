@@ -83,6 +83,16 @@ export const subPatterns: Record<string, SubPattern[]> = {
       activeText:  "#4ade80",              // green-400 text
       activeBg:    "rgba(34, 197, 94, 0.14)",
     },
+    // NEW: T0-L1pU1>-BPL4:5AM — bearish counterpart, targets prev day's
+    // S4 (PL4) by ~5AM. Rose color family to visually distinguish from
+    // the bullish (green) SMi-L1pU1>-APU4:11PM sibling.
+    {
+      id: "T0-L1pU1>-BPL4:5AM",
+      label: "T0-L1pU1>-BPL4:5AM",
+      activeColor: "#fb7185",              // rose-400 border
+      activeText:  "#fda4af",              // rose-300 text
+      activeBg:    "rgba(244, 63, 94, 0.14)", // rose-500 tint
+    },
   ],
   "inside-cpr": [],
   "outside-cpr": [
