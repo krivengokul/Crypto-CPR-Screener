@@ -652,8 +652,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // NEW: SMi-L1pU1>-APU4:11PM — Inside CPR + L1pU1Above (from cpr.ts)
     // + compression ratio >= 30. Target ApU4 by 11PM.
     case "l1pu1-above":
-      return r.L1pU1Above && r.prevCPR.PDHLAbove &&
-              !(r.todayCPR.tc > r.prevCPR.tc && r.todayCPR.bc < r.prevCPR.bc); // not OutCPR
+      return r.L1pU1Above && r.prevCPR.PDHLAbove && !r.outCPR; // not OutCPR
     case "SMi-L1pU1>-APU4:11PM": {
       const inside =
         (r.todayCPR.tc <= r.prevCPR.tc && r.todayCPR.bc > r.prevCPR.bc) ||
@@ -661,16 +660,15 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return r.L1pU1Above && r.compressionRatio >= 30; // removed inside condition
     }
     case "outside-cpr":
-      return r.todayCPR.tc > r.prevCPR.tc && r.todayCPR.bc < r.prevCPR.bc;
+      return r.outCPR;
     case "outside-cpr-compressed":
-      return r.todayCPR.tc > r.prevCPR.tc && r.todayCPR.bc < r.prevCPR.bc && r.todayCPR.r4 < r.prevCPR.r4 && r.todayCPR.s4 > r.prevCPR.s4;
+      return r.outCPR && r.todayCPR.r4 < r.prevCPR.r4 && r.todayCPR.s4 > r.prevCPR.s4;
     // NEW: eXHrL3U3-AU4 — Outside CPR + prev S4 between today's S3/S4 AND
     // prev R4 between today's R2/R3, today's CPR width between 0.5% and 2%,
     // prev CPR width < 0.5% (tight prior day, today's range expanded outside it)
     case "eXHrL3U3-AU4":
       return (
-        r.todayCPR.tc > r.prevCPR.tc &&
-        r.todayCPR.bc < r.prevCPR.bc &&
+        r.outCPR &&
         r.prevCPR.s4 < r.todayCPR.s3 &&
         r.prevCPR.s4 > r.todayCPR.s4 &&
         r.prevCPR.r4 > r.todayCPR.r2 &&

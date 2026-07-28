@@ -133,6 +133,10 @@ export interface CPRResult {
   cprNarrowing: boolean;
   overlapHigher: boolean;
   overlapLower: boolean;
+  // OutCPR — today's CPR band completely engulfs prev's CPR band
+  // (today.tc > prev.tc AND today.bc < prev.bc). Single source of truth,
+  // consumed by ScreenerUtils instead of recomputing the raw comparison.
+  outCPR: boolean;
   lbtJPattern1: boolean;
   hbJPattern1: boolean;
   hbJPattern2: boolean;
@@ -534,6 +538,7 @@ export function analyzeCPR(
 
   const cprRising        = !equalCPR && todayCPR.bc > prevCPR.tc;
   const cprFalling       = !equalCPR && todayCPR.tc < prevCPR.bc;
+  const outCPR           = todayCPR.tc > prevCPR.tc && todayCPR.bc < prevCPR.bc;
   const strWideCPR       = !equalCPR && todayCPR.widthPct > prevCPR.widthPct;
   const narrowCPR        = !equalCPR && todayCPR.widthPct < prevCPR.widthPct;
   const compressionRatio = prevCPR.width > 0 ? (todayCPR.width / prevCPR.width) * 100 : 100;
@@ -615,6 +620,7 @@ export function analyzeCPR(
     cprNarrowing,
     overlapHigher,
     overlapLower,
+    outCPR,
     lbtJPattern1,
     strWideCPR,
     narrowCPR,
