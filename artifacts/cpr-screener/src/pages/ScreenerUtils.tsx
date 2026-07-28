@@ -671,7 +671,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       const inside =
         (r.todayCPR.tc <= r.prevCPR.tc && r.todayCPR.bc > r.prevCPR.bc) ||
         (r.todayCPR.tc < r.prevCPR.tc && r.todayCPR.bc >= r.prevCPR.bc);
-      return inside && r.L1pU1Above && r.compressionRatio >= 30;
+      return r.L1pU1Above && r.compressionRatio >= 30; // removed inside condition
     }
     case "outside-cpr":
       return r.todayCPR.tc > r.prevCPR.tc && r.todayCPR.bc < r.prevCPR.bc;
