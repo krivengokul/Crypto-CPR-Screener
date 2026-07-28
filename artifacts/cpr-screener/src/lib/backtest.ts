@@ -96,6 +96,16 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "PL4 (prev day's S4)",
     getTarget: (r) => r.prevCPR.s4,
   },
+  // NEW: "SMi-L1pU1>-APU4:11PM" — nested under the new "L1pU1 Above"
+  // category (moved out of CPR Inside). Bullish, targets "Above PU4",
+  // i.e. prev day's R4.
+  {
+    key: "SMi-L1pU1>-APU4:11PM",
+    label: "SMi-L1pU1>-APU4:11PM",
+    direction: "bullish",
+    targetLabel: "PU4 (prev day's R4)",
+    getTarget: (r) => r.prevCPR.r4,
+  },
 ];
 
 /**
@@ -136,6 +146,13 @@ export interface BacktestCategoryDef {
 }
 
 export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
+  // NEW: "L1pU1 Above" left-nav section (first item), nesting the
+  // "SMi-L1pU1>-APU4:11PM" pattern that used to live under CPR Inside.
+  {
+    key: "l1pu1-above",
+    label: "L1pU1 Above",
+    subPatternKeys: ["SMi-L1pU1>-APU4:11PM"],
+  },
   {
     key: "littleabove",
     label: "LittleCPR Above",
