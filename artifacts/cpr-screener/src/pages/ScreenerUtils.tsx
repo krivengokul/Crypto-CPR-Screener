@@ -563,7 +563,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // RENAMED: was "eXL4U4" — this pattern is specific to Overlapping Lower
     // only. Renamed to "eXLo-L4U4-U4" to make that scope explicit and to
     // free up the plain "eXL4U4" name for the new section-independent
-    // Pivot Level badge (see getPatternInfo doc-comment below). The
+    // Pattern badge (see getPatternInfo doc-comment below). The
     // underlying boolean this reads (r.eXL4U4, computed in cpr.ts) is
     // UNCHANGED — only this case's key/name changed.
     case "eXLo-L4U4-U4":
@@ -599,7 +599,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.prevCPR.widthPct <= 0.10 &&
         r.todayCPR.widthPct > 0.10 && r.todayCPR.widthPct <= 0.25
       );
-    // NEW: 1S-cOL3U4-FAU4:1AM — Big Above: pivot level cOL3U4 + today's S1 above
+    // NEW: 1S-cOL3U4-FAU4:1AM — Big Above: Pattern cOL3U4 + today's S1 above
     // prev day pivot + prev CPR width <= 0.10 (pMicro/pTiny) + today's CPR
     // width 0.60%-1.10% (Small).
     case "1S-cOL3U4-FAU4:1AM":
@@ -612,7 +612,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.todayCPR.widthPct > 0.60 && r.todayCPR.widthPct <= 1.10
       );
     // NEW: TS-cOL3U4-AU4R:4PM — Big Above: same setup as 1S-cOHi-FAU4:1AM
-    // (pivot level cOL3U4 + today's S1 above prev day pivot + today's CPR
+    // (Pattern cOL3U4 + today's S1 above prev day pivot + today's CPR
     // width 0.60%-1.10% / Small) but for prev CPR width category Tiny
     // (0.10%-0.22%) instead of pMicro (<=0.10%). Reverse-engineered from a
     // chart showing prev CPR "Tiny (0.149%)" and today's CPR "Small (1.037%)".
@@ -732,8 +732,8 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return (r.cprRising && r.strWideCPR && r.todayCPR.r1 > r.prevCPR.r4);
     // NEW: SL-eXL3U1-FAU4:3PM — U1>pU4 sub-pattern.
     // Condition: Big CPR + CPR Above (cprRising + strWideCPR) + today R1 above
-    // prev R4 (parent U1>pU4) + Pivot Level eXL3U1 + compressionRatio > 300.
-    // Legend labels: Pivot Level eXL3U1, PCPR Small, CPR Large. Target FAU4 @ 3PM.
+    // prev R4 (parent U1>pU4) + Pattern eXL3U1 + compressionRatio > 300.
+    // Legend labels: Pattern eXL3U1, PCPR Small, CPR Large. Target FAU4 @ 3PM.
     case "SL-eXL3U1-FAU4:3PM":
       return (
         r.cprRising &&
@@ -745,7 +745,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     case "HAThin-U1>PU4":
       return (r.cprRising && r.strWideCPR && r.bothTight && r.todayCPR.r1 > r.prevCPR.r4);
     // NEW: hR-HAL — BigCPR Above, top-level toggle next to Show All.
-    // WideAbove (cprRising + strWideCPR) + Pivot Level: Higher (srHigher) +
+    // WideAbove (cprRising + strWideCPR) + Pattern: Higher (srHigher) +
     // today's TC between prev R1 and prev R2 + today's R3 above prev R4.
     case "hR-HAL":
       return (
@@ -770,7 +770,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.prevCPR.r4 < r.todayCPR.r2
       );
     // NEW: eXL4U2-U4:4AM — BigCPR Above, placed next to HA55-HrL4U34-FAU4.
-    // Logic: cprRising + strWideCPR + pivot level eXL4U2 + today's S1 above
+    // Logic: cprRising + strWideCPR + Pattern eXL4U2 + today's S1 above
     // prev day's TC + today's BC above prev day's R1 + compressionRatio >= 300.
     case "eXL4U2-U4:4AM":
       return (
@@ -815,7 +815,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.todayCPR.s1 < r.prevCPR.s4
       );
     // NEW: eXU4L234-AU4 — Big Below (structure-bigbelow: cprFalling +
-    // strWideCPR) + Pivot Level: eXU4L234 (prev R4 inside today's R3/R4 AND
+    // strWideCPR) + Pattern: eXU4L234 (prev R4 inside today's R3/R4 AND
     // prev S4 inside today's S1/S2) + prev day's R3 above today's R3 + either
     // today's R1 or prev day's S1 sits between prev day's Pivot and today's
     // Pivot + prev CPR width category pSmall (0.6%-1.1%) + today's CPR width
@@ -836,7 +836,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       );
     }
     // NEW: 1T-cOU4L4-ApU4:3PM — Big Below (cprFalling + strWideCPR) +
-    // cOU4L4 pivot level + prev R1 between today's R1/R2 + today's S1
+    // cOU4L4 Pattern + prev R1 between today's R1/R2 + today's S1
     // between prev day's S1/S2 + prev day PDH above prev R1 + prev CPR
     // width <= 0.10% (pMicro) + today CPR width 0.10%-0.22% (Tiny).
     case "1T-cOU4L4-ApU4:3PM":
@@ -974,7 +974,7 @@ export function getSubFilterDirection(r: CPRResult, activePattern: string): SubF
 }
 
 /**
- * Pivot Level — classifies today's CPR range relative to yesterday's using
+ * Pattern — classifies today's CPR range relative to yesterday's using
  * the directional sub-flags computed in cpr.ts:
  *   eX-Higher / eX-Lower:  Expanded (today R4 > prev R4 AND today S4 < prev S4),
  *                          split by which side expanded more (srExpandedHigher/Lower)
@@ -994,7 +994,7 @@ export function getSubFilterDirection(r: CPRResult, activePattern: string): SubF
  * NOT checked here anymore. They're independent booleans (not mutually
  * exclusive sub-buckets of "Lower" the way eX-Higher/eX-Lower or
  * cO-Higher/cO-Lower are) and Screener.tsx already renders them as their
- * OWN separate second-row badges alongside the primary Pivot Level badge.
+ * OWN separate second-row badges alongside the primary Pattern badge.
  * Having getPatternInfo() also return them as the PRIMARY label caused the
  * same badge (e.g. "LoU4L4") to show twice on a row — once as the primary
  * badge instead of "Lower", and once again in the second row. The pivot
@@ -1010,7 +1010,7 @@ export function getSubFilterDirection(r: CPRResult, activePattern: string): SubF
  * NOT returned as the primary label here (same reasoning as above — it can
  * co-occur with any of eX-Higher/eX-Lower/cO-Higher/cO-Lower/Higher/Lower
  * and isn't mutually exclusive with them). Screener.tsx renders it as its
- * own second-row badge and its own Pivot Level filter button, checking
+ * own second-row badge and its own Pattern filter button, checking
  * r.eXL4U4 directly — independent of activePattern/section, unlike the
  * "eXLo-L4U4-U4" / "eXHi-L4U4-U4" *patterns*, which gate the same boolean
  * behind overlapLower / overlapHigher respectively for their own sections.
@@ -1019,7 +1019,7 @@ export function getSubFilterDirection(r: CPRResult, activePattern: string): SubF
  * boolean (r.eXU4L234 from cpr.ts — prev R4 inside today's R3/R4 AND prev
  * S4 inside today's S1/S2). Not returned as the primary label here for the
  * same reason as eXL4U4/HiL4U4/etc — Screener.tsx renders it as its own
- * second-row badge and its own Pivot Level filter button, checking
+ * second-row badge and its own Pattern filter button, checking
  * r.eXU4L234 directly, regardless of activePattern/left-nav section. The
  * "eXU4L234-AU4" *pattern* (Big Below) additionally requires strWideCPR +
  * cprFalling + extra R3/pivot/width conditions on top of this raw flag.
@@ -1027,7 +1027,7 @@ export function getSubFilterDirection(r: CPRResult, activePattern: string): SubF
  * NEW: cOU1L1 / cOL1U1 / cOU2L2 / cOL2U2 — same treatment again:
  * independent, section-agnostic booleans (from cpr.ts). Not returned as the
  * primary label here; Screener.tsx renders them as their own second-row
- * badges and Pivot Level filter buttons, checking the raw flags directly.
+ * badges and Pattern filter buttons, checking the raw flags directly.
  *
  * NEW: cOTCL2 — same treatment again: an independent, section-agnostic
  * boolean (r.cOTCL2 from cpr.ts — today's R4 inside prev day's Pivot/TC
@@ -1060,9 +1060,9 @@ export function getPatternInfo(r: CPRResult): PatternInfo {
 }
 
 /**
- * matchesPatternFlag — raw Pivot Level flag check, factored out of the
+ * matchesPatternFlag — raw Pattern flag check, factored out of the
  * inline PatternFilter block in Screener.tsx's `displayed` filter so
- * other consumers (the Backtest panel's Pivot Level sub-category scans,
+ * other consumers (the Backtest panel's Pattern sub-category scans,
  * e.g. "Overlap Above" → "HiL4U34") can reuse the exact same lookups
  * without duplicating the switch. For the six mutually-exclusive primary
  * labels (eX-Higher/eX-Lower/cO-Higher/cO-Lower/Higher/Lower) this falls
@@ -1107,11 +1107,11 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     case "cOL1U1": return r.cOL1U1;
     case "cOU2L2": return r.cOU2L2;
     case "cOL2U2": return r.cOL2U2;
-    // NEW: cOU1L2 — independent, section-agnostic Pivot Level flag (see cpr.ts).
+    // NEW: cOU1L2 — independent, section-agnostic Pattern flag (see cpr.ts).
     case "cOU1L2": return r.cOU1L2;
     case "cOU4L4": return r.cOU4L4;
     case "exL3U2": return r.exL3U2;
-    // NEW: cOTCL2 — independent, section-agnostic Pivot Level flag (see cpr.ts).
+    // NEW: cOTCL2 — independent, section-agnostic Pattern flag (see cpr.ts).
     // Today's R4 inside prev day's Pivot/TC band AND today's S4 inside
     // prev day's S1/S2 band.
     case "cOTCL2": return r.cOTCL2;

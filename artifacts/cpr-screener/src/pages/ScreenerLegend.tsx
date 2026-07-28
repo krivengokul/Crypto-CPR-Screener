@@ -199,8 +199,8 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
       <div className="rounded-lg border border-border bg-card p-3">
         {activePattern === "SL-eXL3U1-FAU4:3PM" ? (
           <>
-            <div className="text-xs font-semibold text-green-400 mb-1">Pivot Level: eXL3U1  PCPR: Small  CPR: Large</div>
-            <div className="text-xs text-muted-foreground">Big CPR Above (Wide + Rising) + Today&apos;s R1 &gt; Prev R4 + Pivot Level eXL3U1 + Compression Ratio &gt; 300</div>
+            <div className="text-xs font-semibold text-green-400 mb-1">Pattern: eXL3U1  PCPR: Small  CPR: Large</div>
+            <div className="text-xs text-muted-foreground">Big CPR Above (Wide + Rising) + Today&apos;s R1 &gt; Prev R4 + Pattern eXL3U1 + Compression Ratio &gt; 300</div>
           </>
         ) : showBAComp && activePattern === "structure-bigabove" ? (
           <>
@@ -214,17 +214,17 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
           </>
         ) : (showLAT1U46AM && activePattern === "littleabove") || activePattern === "T1-U4:6AM" ? (
           <>
-            <div className="text-xs font-semibold text-orange-400 mb-1">Pivot Level: exL3U2  PCPR: Tiny  CPR: Micro</div>
+            <div className="text-xs font-semibold text-orange-400 mb-1">Pattern: exL3U2  PCPR: Tiny  CPR: Micro</div>
             <div className="text-xs text-muted-foreground">Today's Pivot &gt; Prev R1, Prev CPR width 0.10%–0.22% (pTiny), Today CPR width ≤ 0.10% (Micro)</div>
           </>
         ) : (showLASsHiL4U4FAU42AM && activePattern === "littleabove") || activePattern === "Ss-HiL4U4-FAU4:2AM" ? (
           <>
-            <div className="text-xs font-semibold text-fuchsia-400 mb-1">Pivot Level: HiL4U4  PCPR: Small  CPR: Small</div>
+            <div className="text-xs font-semibold text-fuchsia-400 mb-1">Pattern: HiL4U4  PCPR: Small  CPR: Small</div>
             <div className="text-xs text-muted-foreground">cprRising + narrowCPR + AllStepUp above/below, Today S1 &gt; Prev PDL, Today R1 &gt; Prev PDH, Today PDH &gt; Today R1, both CPRs 0.60%–1.10% (Small)</div>
           </>
         ) : (showLAMeMieXHiL4U3U46PM && activePattern === "littleabove") || activePattern === "MeMi-eXHiL4U3-U4:6PM" ? (
           <>
-            <div className="text-xs font-semibold text-green-400 mb-1">Pivot Level: eXHiL4U3  PCPR: Medium  CPR: Mini</div>
+            <div className="text-xs font-semibold text-green-400 mb-1">Pattern: eXHiL4U3  PCPR: Medium  CPR: Mini</div>
             <div className="text-xs text-muted-foreground">cprRising + narrowCPR + eXHiL4U3, Today's TC ≥ Prev R1, Prev CPR 1.10%–2.00% (Medium), Today CPR 0.22%–0.60% (Mini)</div>
           </>
         ) : showLBE11 && activePattern === "littlebelow" ? (
@@ -239,7 +239,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
           </>
         ) : activePattern === "L1-cOU1L2-U4:1AM" ? (
           <>
-            <div className="text-xs font-semibold text-sky-400 mb-1">Pivot Level: cOU1L2  PCPR: Large  CPR: Micro</div>
+            <div className="text-xs font-semibold text-sky-400 mb-1">Pattern: cOU1L2  PCPR: Large  CPR: Micro</div>
             <div className="text-xs text-muted-foreground">Pivot cOU1L2, Today&apos;s R1 &gt; Prev CPR BC, Today&apos;s R1 &lt; Today&apos;s PDH, Prev CPR width 2%–5% (Large), Today CPR width ≤ 0.10% (Micro)</div>
           </>
         ) : showExpU4PU4 && activePattern === "overlapping-lower" ? (
@@ -270,7 +270,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
           ) : showLMeXL2U2 && activePattern === "overlapping-higher" ? (
           <>
             <div className="text-xs font-semibold text-red-400 mb-1">
-              Pivot Level: eXL2U2&nbsp;&nbsp;PCPR: Large&nbsp;&nbsp;CPR: Medium
+              Pattern: eXL2U2&nbsp;&nbsp;PCPR: Large&nbsp;&nbsp;CPR: Medium
             </div>
             <div className="text-xs text-muted-foreground">
               Overlap Above + eXL2U2 (today&apos;s S2 above prev S1 AND today&apos;s R2 above prev R1) + Compression Ratio 60%–90%.
@@ -294,7 +294,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
           </>
         ) : showBigBelow1TcOU4L43PM && activePattern === "structure-bigbelow" ? (
           <>
-            <div className="text-xs font-semibold text-fuchsia-400 mb-1">Pivot Level: cOU4L4  PCPR: Micro  CPR: Tiny</div>
+            <div className="text-xs font-semibold text-fuchsia-400 mb-1">Pattern: cOU4L4  PCPR: Micro  CPR: Tiny</div>
             <div className="text-xs text-muted-foreground">Wide Below + cOU4L4, Prev R1 between Today&apos;s R1/R2, Today&apos;s S1 between Prev S1/S2, Prev PDH &gt; Prev R1, Prev CPR ≤ 0.10% (Micro), Today CPR 0.10%–0.22% (Tiny)</div>
           </>
         ) : showHRHAL && activePattern === "structure-bigabove" ? (
@@ -310,16 +310,16 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
         ) : activePattern === "eXL4U2-U4:4AM" ? (
           <>
             <div className="text-xs font-semibold text-purple-400 mb-1">eXL4U2-U4:4AM</div>
-            <div className="text-xs text-muted-foreground">Wide Above + Pivot Level: eXL4U2, Today&apos;s S1 &gt; Prev TC, Today&apos;s BC &gt; Prev R1, Size Ratio ≥ 200%</div>
+            <div className="text-xs text-muted-foreground">Wide Above + Pattern: eXL4U2, Today&apos;s S1 &gt; Prev TC, Today&apos;s BC &gt; Prev R1, Size Ratio ≥ 200%</div>
           </>
         ) : (show1ScoHiFAU4 && activePattern === "structure-bigabove") || activePattern === "1S-cOL3U4-FAU4:1AM" ? (
           <>
-            <div className="text-xs font-semibold text-teal-400 mb-1">Pivot Level: cOL3U4  PCPR: Tiny  CPR: Small</div>
+            <div className="text-xs font-semibold text-teal-400 mb-1">Pattern: cOL3U4  PCPR: Tiny  CPR: Small</div>
             <div className="text-xs text-muted-foreground">Pivot cOL3U4, Today&apos;s S1 &gt; Prev Pivot, Prev CPR width ≤ 0.10% (Tiny), Today CPR width 0.60%–1.10% (Small)</div>
           </>
         ) : (show2ScoHiFAU4 && activePattern === "structure-bigabove") || activePattern === "TS-cOL3U4-AU4R:4PM" ? (
           <>
-            <div className="text-xs font-semibold text-cyan-400 mb-1">Pivot Level: cOL3U4  PCPR: Tiny  CPR: Small</div>
+            <div className="text-xs font-semibold text-cyan-400 mb-1">Pattern: cOL3U4  PCPR: Tiny  CPR: Small</div>
             <div className="text-xs text-muted-foreground">Pivot cOL3U4, Today&apos;s S1 &gt; Prev Pivot, Prev CPR width 0.10%–0.22% (Tiny), Today CPR width 0.60%–1.10% (Small)</div>
           </>
         ) : showHAU1L1AbovePU4 && activePattern === "structure-bigabove" ? (

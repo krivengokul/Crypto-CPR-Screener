@@ -863,28 +863,28 @@ export default function Screener({
       if (!PatternFilter) return true;
       if (PatternFilter === "cOU3L4") return r.cOU3L4;
       if (PatternFilter === "LoU4L4") return r.LoU4L4;
-      // NEW: eXL4U4 — independent, section-agnostic Pivot Level flag (see
+      // NEW: eXL4U4 — independent, section-agnostic Pattern flag (see
       // doc-comment on PatternInfo/getPatternInfo in ScreenerUtils.tsx).
       if (PatternFilter === "eXL4U4") return r.eXL4U4;
       if (PatternFilter === "eXL3U3") return r.eXL3U3;
       if (PatternFilter === "eXU3L3") return r.eXU3L3;
-      // NEW: HiL4U4 — independent, section-agnostic Pivot Level flag,
+      // NEW: HiL4U4 — independent, section-agnostic Pattern flag,
       // mirror of eXL4U4 (see doc-comments in cpr.ts / ScreenerUtils.tsx).
       if (PatternFilter === "HiL2U4") return r.HiL2U4;
       if (PatternFilter === "HiL3U4") return r.HiL3U4;
       if (PatternFilter === "HiL4U4") return r.HiL4U4;
-      // NEW: eXHiL4U3 — unconditional Pivot Level flag.
+      // NEW: eXHiL4U3 — unconditional Pattern flag.
       if (PatternFilter === "eXHiL4U3") return r.eXHiL4U3;
       // NEW: HiL4U34 / cOHiL2U3 — same treatment: independent,
-      // section-agnostic Pivot Level flags, always shown regardless of
+      // section-agnostic Pattern flags, always shown regardless of
       // activePattern/left-nav.
       if (PatternFilter === "HiL4U34") return r.HiL4U34;
       if (PatternFilter === "cOHiL2U3") return r.cOHiL2U3;
       if (PatternFilter === "cOHiL3U3") return r.cOHiL3U3;
-      // NEW: eXU4L234 — independent, section-agnostic Pivot Level flag
+      // NEW: eXU4L234 — independent, section-agnostic Pattern flag
       // (see doc-comments in cpr.ts / ScreenerUtils.tsx).
       if (PatternFilter === "eXU4L234") return r.eXU4L234;
-      // NEW: eXU4L34 — independent, section-agnostic Pivot Level flag
+      // NEW: eXU4L34 — independent, section-agnostic Pattern flag
       // (see doc-comments in cpr.ts / ScreenerUtils.tsx).
       if (PatternFilter === "eXU4L34") return r.eXU4L34;
       if (PatternFilter === "cOHiL2U4") return r.cOHiL2U4;
@@ -908,12 +908,12 @@ export default function Screener({
       if (PatternFilter === "eXL2CPR") return r.eXL2CPR;
       if (PatternFilter === "eXL3CPR") return r.eXL3CPR;
       // NEW: cOU1L1 / cOL1U1 / cOU2L2 / cOL2U2 — independent,
-      // section-agnostic Pivot Level flags (see cpr.ts).
+      // section-agnostic Pattern flags (see cpr.ts).
       if (PatternFilter === "cOU1L1") return r.cOU1L1;
       if (PatternFilter === "cOL1U1") return r.cOL1U1;
       if (PatternFilter === "cOU2L2") return r.cOU2L2;
       if (PatternFilter === "cOL2U2") return r.cOL2U2;
-      // NEW: cOU1L2 — independent, section-agnostic Pivot Level flag (see cpr.ts).
+      // NEW: cOU1L2 — independent, section-agnostic Pattern flag (see cpr.ts).
       if (PatternFilter === "cOU1L2") return r.cOU1L2;
       if (PatternFilter === "cOU4L4") return r.cOU4L4;
       if (PatternFilter === "exL3U2") return r.exL3U2;
@@ -1774,7 +1774,7 @@ export default function Screener({
               </button>
             )}
             {/* NEW: eXU4L234-AU4 button — Big Below, placed next to L1<pL4.
-                Pivot Level eXU4L234 + prev R3 above today's R3 + today R1/prev
+                Pattern eXU4L234 + prev R3 above today's R3 + today R1/prev
                 S1 between the two pivots + prev CPR pSmall + today CPR 1%-2%. */}
             {activePattern === "structure-bigbelow" && !showAll && (
               <button
@@ -1965,7 +1965,7 @@ export default function Screener({
             )}
           </div>
 
-          {/* Pivot Level filter buttons — own line, independent of activePattern
+          {/* Pattern filter buttons — own line, independent of activePattern
               AND independent of showAll. These always render, regardless of Show All state, and
               are mutually exclusive within their own group. */}
           <div className="flex items-center gap-1.5 flex-wrap">
@@ -2016,9 +2016,9 @@ export default function Screener({
                   { label: "cOL1U1",   active: "border-cyan-400 text-cyan-400" },
                   { label: "cOU2L2",   active: "border-emerald-400 text-emerald-400" },
                   { label: "cOL2U2",   active: "border-lime-400 text-lime-400" },
-                  // NEW: cOU1L2 — independent, section-agnostic Pivot Level flag (see cpr.ts).
+                  // NEW: cOU1L2 — independent, section-agnostic Pattern flag (see cpr.ts).
                   { label: "cOU1L2",   active: "border-rose-400 text-rose-400" },
-                  // NEW: cOU4L4 — independent, section-agnostic Pivot Level flag (see cpr.ts).
+                  // NEW: cOU4L4 — independent, section-agnostic Pattern flag (see cpr.ts).
                   { label: "cOU4L4",   active: "border-orange-400 text-orange-400" },
                   // NEW: exL3U2 — prev S4 inside today S2/S3 AND prev R4 inside today R1/R2
                   { label: "exL3U2",   active: "border-amber-400 text-amber-400" },
@@ -2045,7 +2045,7 @@ export default function Screener({
                       ? active
                       : "border-border text-muted-foreground hover:text-foreground"
                   }`}
-                  title={`Show only rows where Pivot Level = ${label}`}
+                  title={`Show only rows where Pattern = ${label}`}
                 >
                   {PatternFilter === label ? `✕ ${label}` : label}
                 </button>
