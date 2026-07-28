@@ -668,7 +668,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return (r.L1pU1Above && r.prevCPR.PDHLAbove && r.todayCPR.PDHLBelow
               && !r.outCPR && r.compressionRatio > 300 && r.prevCPR.tc < r.todayCPR.s1) || //pTiny, Mini, pcpr < S1
               (r.L1pU1Above && r.prevCPR.PDHLAbove && (r.todayCPR.PDHLAbove || r.todayCPR.PDHLEqual ) 
-              && !r.outCPR && (r.todayCPR.r1 >= r.prevCPR.tc) && r.compressionRatio == 0); // 1 Line CPR , - R1>= PCPR.tc
+              && !r.outCPR && (r.todayCPR.tc < r.prevCPR.tc) && r.compressionRatio == 0); // 1 Line CPR , - todayCPR.tc < PCPR.tc
     }
     case "outside-cpr":
       return r.outCPR;
