@@ -657,9 +657,10 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return r.L1pU1Above && r.prevCPR.PDHLAbove && !r.outCPR && r.compressionRatio >= 30;
     }
      case "T0-L1pU1>-BPL4:5AM": {
-      return (r.L1pU1Above && r.prevCPR.PDHLAbove && (r.todayCPR.PDHLAbove || r.todayCPR.PDHLEqual ) 
+      return (r.L1pU1Above && r.prevCPR.PDHLAbove && r.todayCPR.PDHLBelow
               && !r.outCPR && r.compressionRatio > 300 && r.prevCPR.tc < r.todayCPR.s1) || //pTiny, Mini, pcpr < S1
-              (r.L1pU1Above && r.prevCPR.PDHLAbove && !r.outCPR && r.compressionRatio == 0); // 1 Line Inside CPR
+              (r.L1pU1Above && r.prevCPR.PDHLAbove && (r.todayCPR.PDHLAbove || r.todayCPR.PDHLEqual ) 
+              && !r.outCPR && r.compressionRatio == 0); // 1 Line CPR
     }
     case "outside-cpr":
       return r.outCPR;
