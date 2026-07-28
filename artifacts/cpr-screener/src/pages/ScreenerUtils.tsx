@@ -652,15 +652,19 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // NEW: SMi-L1pU1>-APU4:11PM — Inside CPR + L1pU1Above (from cpr.ts)
     // + compression ratio >= 30. Target ApU4 by 11PM.
     case "l1pu1-above":
-      return r.L1pU1Above ; // not OutCPR
+      return r.L1pU1Above ; 
     case "SMi-L1pU1>-APU4:11PM": {
       return r.L1pU1Above && r.prevCPR.PDHLAbove && !r.outCPR && r.compressionRatio >= 30;
+    }
+    case "S0-L1pU1>-AU4:7PM": {
+            (r.L1pU1Above && r.prevCPR.PDHLAbove && (r.todayCPR.PDHLAbove || r.todayCPR.PDHLEqual ) 
+                    && !r.outCPR && (r.todayCPR.r1 < r.prevCPR.tc) && r.compressionRatio == 0); // 1 Line CPR ,  R1< PCPR.tc
     }
      case "T0-L1pU1>-BPL4:5AM": {
       return (r.L1pU1Above && r.prevCPR.PDHLAbove && r.todayCPR.PDHLBelow
               && !r.outCPR && r.compressionRatio > 300 && r.prevCPR.tc < r.todayCPR.s1) || //pTiny, Mini, pcpr < S1
               (r.L1pU1Above && r.prevCPR.PDHLAbove && (r.todayCPR.PDHLAbove || r.todayCPR.PDHLEqual ) 
-              && !r.outCPR && r.compressionRatio == 0); // 1 Line CPR
+              && !r.outCPR && (r.todayCPR.r1 >= r.prevCPR.tc) && r.compressionRatio == 0); // 1 Line CPR , - R1>= PCPR.tc
     }
     case "outside-cpr":
       return r.outCPR;
