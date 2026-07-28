@@ -609,7 +609,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.cOL3U4 &&
         r.todayCPR.s1 > r.prevCPR.pivot &&
         r.prevCPR.widthPct <= 0.10 &&
-        r.todayCPR.widthPct > 0.60 && r.todayCPR.widthPct <= 1.10
+        r.todayCPR.widthPct > 0.60 && r.todayCPR.widthPct <= 1.10  // small
       );
     // NEW: TS-cOL3U4-AU4R:4PM — Big Above: same setup as 1S-cOHi-FAU4:1AM
     // (Pattern cOL3U4 + today's S1 above prev day pivot + today's CPR
@@ -813,12 +813,10 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // + prev CPR's BC above today's R1. Target U4 by ~10PM IST.
     case "ss-eXU4L1-U4:10PM":
       return (
-        r.cprFalling &&
-        r.strWideCPR &&
-        r.prevCPR.PDHLAbove &&
-        r.todayCPR.PDHLAbove &&
-        r.eXU4L1 &&
-        r.prevCPR.bc > r.todayCPR.r1
+        r.cprFalling && r.strWideCPR && r.prevCPR.PDHLAbove && r.todayCPR.PDHLAbove &&
+        r.eXU4L1 && r.prevCPR.bc >= r.todayCPR.r1 &&
+        r.prevCPR.widthPct > 0.60 && r.prevCPR.widthPct <= 1.10 &&
+        r.todayCPR.widthPct > 0.60 && r.todayCPR.widthPct <= 1.10
       );
     // Standalone top-level category: same condition as L1<pL4
     case "l1-lt-pl4":
