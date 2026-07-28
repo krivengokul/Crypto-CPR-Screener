@@ -652,7 +652,8 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // NEW: SMi-L1pU1>-APU4:11PM — Inside CPR + L1pU1Above (from cpr.ts)
     // + compression ratio >= 30. Target ApU4 by 11PM.
     case "l1pu1-above":
-      return r.L1pU1Above && r.prevCPR.PDHLAbove;
+      return r.L1pU1Above && r.prevCPR.PDHLAbove &&
+              !(r.todayCPR.tc > r.prevCPR.tc && r.todayCPR.bc < r.prevCPR.bc); // not OutCPR
     case "SMi-L1pU1>-APU4:11PM": {
       const inside =
         (r.todayCPR.tc <= r.prevCPR.tc && r.todayCPR.bc > r.prevCPR.bc) ||
