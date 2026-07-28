@@ -588,6 +588,9 @@ export default function BacktestPanel() {
                       Symbol
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Compression
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Entry Date
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -609,6 +612,9 @@ export default function BacktestPanel() {
                           <span>{r.symbol}</span>
                           <ChartLink symbol={r.symbol} source={r.source} />
                         </div>
+                      </td>
+                      <td className="px-3 py-2 font-mono text-xs text-muted-foreground">
+                        {r.compressionRatio.toFixed(1)}
                       </td>
                       <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{r.entryDate}</td>
                       <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{fmt(r.targetLevel)}</td>

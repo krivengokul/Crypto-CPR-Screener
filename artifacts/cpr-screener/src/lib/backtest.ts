@@ -328,6 +328,7 @@ export interface BacktestRow {
   entryDate: string;               // YYYY-MM-DD (UTC) — the date the pattern was flagged
   todayCPR: CPRResult["todayCPR"];
   prevCPR: CPRResult["prevCPR"];
+  compressionRatio: number;         // NEW: shown as a ratio in BacktestPanel's results table
   targetLevel: number;
   targetLabel: string;
   result: "pass" | "fail" | "insufficient-data";
@@ -577,6 +578,7 @@ export async function backtestSymbolOnDate(
     entryDate: entryDateISO,
     todayCPR: result.todayCPR,
     prevCPR: result.prevCPR,
+    compressionRatio: result.compressionRatio,
     targetLevel,
     targetLabel: target.targetLabel,
     result: outcome,
