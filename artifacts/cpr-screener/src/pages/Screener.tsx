@@ -924,6 +924,10 @@ export default function Screener({
       if (PatternFilter === "eXL2TC") return r.eXL2TC;
       if (PatternFilter === "eXL1U1") return r.eXL1U1;
       if (PatternFilter === "eXU2L1") return r.eXU2L1;
+      // NEW: eXU3L1 (prev R4 in today R2/R3, prev S4 in today BC/S1) /
+      // eXU2TC (prev R4 in today R1/R2, prev S4 in today TC/R1)
+      if (PatternFilter === "eXU3L1") return r.eXU3L1;
+      if (PatternFilter === "eXU2TC") return r.eXU2TC;
       return getPatternInfo(r)?.label === PatternFilter;
     })
     .filter((r) => matchesWidthFilter(r, prevWidthFilter, todayWidthFilter))
@@ -2027,6 +2031,10 @@ export default function Screener({
                   { label: "eXL1U1",   active: "border-fuchsia-400 text-fuchsia-400" },
                   // NEW: eXU2L1 — prev R4 inside today R1/R2 (U2) AND prev S4 inside today BC/S1 (L1).
                   { label: "eXU2L1",   active: "border-violet-400 text-violet-400" },
+                  // NEW: eXU3L1 — prev R4 inside today R2/R3 (U3) AND prev S4 inside today BC/S1 (L1).
+                  { label: "eXU3L1",   active: "border-red-400 text-red-400" },
+                  // NEW: eXU2TC — prev R4 inside today R1/R2 (U2) AND prev S4 inside today TC/R1.
+                  { label: "eXU2TC",   active: "border-teal-400 text-teal-400" },
                 ] as { label: PatternInfo["label"]; active: string }[]
               ).map(({ label, active }) => (
                 <button
