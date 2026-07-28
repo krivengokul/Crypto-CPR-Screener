@@ -656,8 +656,12 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     case "SMi-L1pU1>-APU4:11PM": {
       return r.L1pU1Above && r.prevCPR.PDHLAbove && !r.outCPR && r.compressionRatio >= 30;
     }
+    // NEW: S0-L1pU1>-AU4:7PM — second sub-pattern under "L1pU1 Above".
+    // Same L1pU1Above base as SMi-L1pU1>-APU4:11PM, but a 1-Line CPR
+    // (compressionRatio == 0) with today's R1 below prev day's TC.
+    // Target AU4 (prev day's R4) by ~7PM.
     case "S0-L1pU1>-AU4:7PM": {
-            (r.L1pU1Above && r.prevCPR.PDHLAbove && (r.todayCPR.PDHLAbove || r.todayCPR.PDHLEqual ) 
+      return (r.L1pU1Above && r.prevCPR.PDHLAbove && (r.todayCPR.PDHLAbove || r.todayCPR.PDHLEqual )
                     && !r.outCPR && (r.todayCPR.r1 < r.prevCPR.tc) && r.compressionRatio == 0); // 1 Line CPR ,  R1< PCPR.tc
     }
      case "T0-L1pU1>-BPL4:5AM": {
@@ -921,6 +925,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
   ],
   "l1pu1-above": [
     { key: "SMi-L1pU1>-APU4:11PM", direction: "up" },
+    { key: "S0-L1pU1>-AU4:7PM", direction: "up" },
     { key: "T0-L1pU1>-BPL4:5AM", direction: "down" },
   ],
   "inside-cpr": [],

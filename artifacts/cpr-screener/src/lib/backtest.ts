@@ -106,7 +106,18 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "PU4 (prev day's R4)",
     getTarget: (r) => r.prevCPR.r4,
   },
-  // NEW: "T0-L1pU1>-BPL4:5AM" — second sub-pattern under "L1pU1 Above".
+  // NEW: "S0-L1pU1>-AU4:7PM" — second sub-pattern under "L1pU1 Above".
+  // Same L1pU1Above base condition as SMi-L1pU1>-APU4:11PM, but the
+  // 1-Line CPR variant (compressionRatio == 0, today's R1 < prev TC).
+  // Bullish, targets AU4 (prev day's R4) by ~7PM.
+  {
+    key: "S0-L1pU1>-AU4:7PM",
+    label: "S0-L1pU1>-AU4:7PM",
+    direction: "bullish",
+    targetLabel: "AU4 (prev day's R4)",
+    getTarget: (r) => r.prevCPR.r4,
+  },
+  // NEW: "T0-L1pU1>-BPL4:5AM" — third sub-pattern under "L1pU1 Above".
   // Bearish counterpart to SMi-L1pU1>-APU4:11PM: same L1pU1Above base
   // condition (today & prev PDH/L above, not Outside CPR), but targets a
   // move BELOW prev day's S4 (PL4) by ~5AM instead of above PU4.
@@ -162,7 +173,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
   {
     key: "l1pu1-above",
     label: "L1pU1 Above",
-    subPatternKeys: ["SMi-L1pU1>-APU4:11PM", "T0-L1pU1>-BPL4:5AM"],
+    subPatternKeys: ["SMi-L1pU1>-APU4:11PM", "S0-L1pU1>-AU4:7PM", "T0-L1pU1>-BPL4:5AM"],
   },
   {
     key: "littleabove",

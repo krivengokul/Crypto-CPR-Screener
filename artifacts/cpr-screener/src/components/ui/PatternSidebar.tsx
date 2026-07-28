@@ -83,6 +83,16 @@ export const subPatterns: Record<string, SubPattern[]> = {
       activeText:  "#4ade80",              // green-400 text
       activeBg:    "rgba(34, 197, 94, 0.14)",
     },
+    // NEW: S0-L1pU1>-AU4:7PM — second sub-pattern, 1-Line CPR variant of
+    // SMi-L1pU1>-APU4:11PM. Bullish, targets AU4 (prev day's R4) by ~7PM.
+    // Amber color family to visually distinguish from its siblings.
+    {
+      id: "S0-L1pU1>-AU4:7PM",
+      label: "S0-L1pU1>-AU4:7PM",
+      activeColor: "#fbbf24",              // amber-400 border
+      activeText:  "#fcd34d",              // amber-300 text
+      activeBg:    "rgba(245, 158, 11, 0.14)", // amber-500 tint
+    },
     // NEW: T0-L1pU1>-BPL4:5AM — bearish counterpart, targets prev day's
     // S4 (PL4) by ~5AM. Rose color family to visually distinguish from
     // the bullish (green) SMi-L1pU1>-APU4:11PM sibling.
