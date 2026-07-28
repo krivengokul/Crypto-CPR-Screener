@@ -128,6 +128,16 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "PL4 (prev day's S4)",
     getTarget: (r) => r.prevCPR.s4,
   },
+  // NEW: "ss-eXU4L1-U4:10PM" — nested under the "L1 < pL4" category's
+  // "eXU4L1" Pivot Level sub-category. Bullish, targets U4 (today's R4)
+  // by ~10PM.
+  {
+    key: "ss-eXU4L1-U4:10PM",
+    label: "ss-eXU4L1-U4:10PM",
+    direction: "bullish",
+    targetLabel: "U4 (today's R4)",
+    getTarget: (r) => r.todayCPR.r4,
+  },
 ];
 
 /**
@@ -214,7 +224,19 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
     subPatternKeys: ["HA-U1>PU4", "SL-eXL3U1-FAU4:3PM"],
   },
   { key: "structure-bigbelow", label: "BigCPR Below" },
-  { key: "l1-lt-pl4", label: "L1 < pL4" },
+  // NEW: "L1 < pL4" now nests the "eXU4L1" Pivot Level sub-category, which
+  // in turn nests the bullish "ss-eXU4L1-U4:10PM" pattern.
+  {
+    key: "l1-lt-pl4",
+    label: "L1 < pL4",
+    subCategories: [
+      {
+        key: "eXU4L1",
+        label: "eXU4L1",
+        subPatternKeys: ["ss-eXU4L1-U4:10PM"],
+      },
+    ],
+  },
   { key: "inside-cpr", label: "CPR Inside" },
   { key: "outside-cpr", label: "CPR Outside" },
   { key: "overlapping-lower", label: "Overlap Below" },
