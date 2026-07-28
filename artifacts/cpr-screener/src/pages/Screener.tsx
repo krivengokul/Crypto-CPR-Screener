@@ -928,6 +928,12 @@ export default function Screener({
       // eXU2TC (prev R4 in today R1/R2, prev S4 in today TC/R1)
       if (PatternFilter === "eXU3L1") return r.eXU3L1;
       if (PatternFilter === "eXU2TC") return r.eXU2TC;
+      // NEW: eXU2BC (prev R4 in today R1/R2, prev S4 in today BC/Pivot) /
+      // eXU3TC (prev R4 in today R2/R3, prev S4 in today TC/R1) /
+      // eXU2CP (prev R4 in today R1/R2, prev S4 in today Pivot/TC)
+      if (PatternFilter === "eXU2BC") return r.eXU2BC;
+      if (PatternFilter === "eXU3TC") return r.eXU3TC;
+      if (PatternFilter === "eXU2CP") return r.eXU2CP;
       return getPatternInfo(r)?.label === PatternFilter;
     })
     .filter((r) => matchesWidthFilter(r, prevWidthFilter, todayWidthFilter))
@@ -2035,6 +2041,12 @@ export default function Screener({
                   { label: "eXU3L1",   active: "border-red-400 text-red-400" },
                   // NEW: eXU2TC — prev R4 inside today R1/R2 (U2) AND prev S4 inside today TC/R1.
                   { label: "eXU2TC",   active: "border-teal-400 text-teal-400" },
+                  // NEW: eXU2BC — prev R4 inside today R1/R2 (U2) AND prev S4 inside today BC/Pivot.
+                  { label: "eXU2BC",   active: "border-indigo-400 text-indigo-400" },
+                  // NEW: eXU3TC — prev R4 inside today R2/R3 (U3) AND prev S4 inside today TC/R1.
+                  { label: "eXU3TC",   active: "border-rose-400 text-rose-400" },
+                  // NEW: eXU2CP — prev R4 inside today R1/R2 (U2) AND prev S4 inside today Pivot/TC.
+                  { label: "eXU2CP",   active: "border-sky-400 text-sky-400" },
                 ] as { label: PatternInfo["label"]; active: string }[]
               ).map(({ label, active }) => (
                 <button
