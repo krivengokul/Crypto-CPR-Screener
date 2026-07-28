@@ -228,6 +228,19 @@ function isValidCandle(c: OHLC): boolean {
 }
 
 /**
+ * eqTol — relative-tolerance equality for two price levels. Raw levels are
+ * derived through chained floating-point arithmetic (Pivot, R1, etc.), so
+ * two values that are mathematically equal and display identically when
+ * rounded can still differ by a few units in the last binary digit. Strict
+ * `===` misses those cases; this catches them within 0.001% of magnitude.
+ * Single source of truth — used for both PDHLEqual (calcCPR) and equalCPR
+ * (analyzeCPR) so "equal" means the same thing everywhere in this file.
+ */
+function eqTol(a: number, b: number): boolean {
+  return Math.abs(a - b) <= Math.max(Math.abs(a), Math.abs(b)) * 0.00001;
+}
+
+/**
  * ADK Classic Pivot CPR calculation.
  *
  * Matches "CPR by Ask Dinesh Kumar (ADK)" TradingView indicator exactly:
@@ -270,9 +283,13 @@ export function calcCPR(candle: OHLC): CPRLevels {
   const s4 = s3 + s2 - s1;
 
   // PDH (previous day high, i.e. this level set's candle high) vs R1.
-  const PDHLAbove  = h > r1;
-  const PDHLBelow  = h < r1;
-  const PDHLEqual = h === r1;
+  // PDHLEqual uses eqTol (not strict ===) since h and r1 reach the "same"
+  // value through different arithmetic paths and can differ by a float
+  // rounding hair even when they display identically. PDHLAbove/Below
+  // exclude the equal band so exactly one of the three flags is ever true.
+  const PDHLEqual  = eqTol(h, r1);
+  const PDHLAbove  = !PDHLEqual && h > r1;
+  const PDHLBelow  = !PDHLEqual && h < r1;
 
   return {
     pivot, bc, tc, width, widthPct,
@@ -529,8 +546,6 @@ export function analyzeCPR(
   // Equal CPR computed FIRST so wider/narrower/overlap flags can exclude it —
   // otherwise a hair-thin numeric drift lights up both "Equal" and
   // "Wide"/"Narrow"/"Overlap Below" badges at once.
-  const eqTol = (a: number, b: number): boolean =>
-    Math.abs(a - b) <= Math.max(Math.abs(a), Math.abs(b)) * 0.00001;
   const equalCPR =
     eqTol(prevCPR.tc, todayCPR.tc) &&
     eqTol(prevCPR.pivot, todayCPR.pivot) &&
