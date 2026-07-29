@@ -1049,7 +1049,7 @@ export function getSubFilterDirection(r: CPRResult, activePattern: string): SubF
  * its own second-row badge, checking the raw flag directly.
  */
 export interface PatternInfo {
-  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "cOU3L4" | "LoU4L4" | "eXHiL4U3" | "eXL4U4" | "HiL4U4" | "HiL4U34" | "cOHiL2U3" | "cOHiL3U3" | "eXU4L234" | "eXU4L34" | "cOHiL2U4" | "eXL3U3" | "eXL2U1" | "eXL3U1" | "eXL4U1" | "eXL1CPR" | "eXL2CPR" | "eXL3CPR" | "eXL3TC" | "eXL4U2" | "eXL2U2" | "eXL2TC" | "eXL1U1" | "eXU2L1" | "cOTCL2" | "eXU3L1" | "eXU2TC" | "eXU2BC" | "eXU3TC" | "eXU2CP" | "eXU4L1" | "cOU1L1" | "cOL1U1" | "cOU2L2" | "cOL2U2" | "cOU1L2" | "cOU4L4" | "exL3U2" | "LoCPL3" | "LoCPL2" | "Lower";
+  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "cOU3L4" | "LoU4L4" | "eXHiL4U3" | "eXL4U4" | "HiL4U4" | "HiL4U34" | "cOHiL2U3" | "cOHiL3U3" | "eXU4L234" | "eXU4L34" | "cOHiL2U4" | "eXL3U3" | "eXL2U1" | "eXL3U1" | "eXL4U1" | "eXL1CPR" | "eXL2CPR" | "eXL3CPR" | "eXL3TC" | "eXL4U2" | "eXL2U2" | "eXL2TC" | "eXL1U1" | "eXU2L1" | "cOTCL2" | "eXU3L1" | "eXU2TC" | "eXU2BC" | "eXU3TC" | "eXU2CP" | "eXU4L1" | "cOU1L1" | "cOL1U1" | "cOU2L2" | "cOL2U2" | "cOU1L2" | "cOU4L4" | "exL3U2" | "LoCPL3" | "LoCPL2" | "LoTCL3" | "Lower";
   classes: string;
 }
 
@@ -1143,6 +1143,9 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     // NEW: LoCPL2 — same shape as LoCPL3, paired with prev day's S1/S2
     // band instead of S2/S3.
     case "LoCPL2": return r.LoCPL2;
+    // NEW: LoTCL3 — same L3 (S2/S3) support band as LoCPL3, resistance
+    // side measured against prev day's Pivot/TC band instead of Pivot/BC.
+    case "LoTCL3": return r.LoTCL3;
     default: return getPatternInfo(r)?.label === label;
   }
 }

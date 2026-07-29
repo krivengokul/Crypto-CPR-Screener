@@ -152,6 +152,12 @@ export interface CPRPairFlags {
   // band), but paired with the narrower L2 (S1/S2) support band instead of
   // L3 (S2/S3).
   LoCPL2: boolean;
+  // LoTCL3 — today's R4 lands inside prev's Pivot/TC band (the upper half
+  // of prev's CPR), AND today's S4 lands inside prev's S2/S3 band (L3).
+  // Same L3 support band as LoCPL3, but the resistance side is measured
+  // against prev's Pivot→TC gap (upper CPR half) instead of BC→Pivot
+  // (lower half).
+  LoTCL3: boolean;
 }
 
 export interface CPRResult {
@@ -258,6 +264,7 @@ export interface CPRResult {
   cOU1L3: boolean;
   LoCPL3: boolean;
   LoCPL2: boolean;
+  LoTCL3: boolean;
   passes: boolean;
   currentPrice: number;
   openPrice: number;
@@ -538,6 +545,13 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
   const LoCPL2 = (today.r4 > prev.bc && today.r4 < prev.pivot) &&
                  (today.s4 > prev.s2 && today.s4 < prev.s1);
 
+  // LoTCL3 — today's R4 lands inside prev's Pivot/TC band (the upper half
+  // of prev's CPR), AND today's S4 lands inside prev's S2/S3 band (L3).
+  // Same L3 support band as LoCPL3, but the resistance side is measured
+  // against prev's Pivot→TC gap instead of BC→Pivot.
+  const LoTCL3 = (today.r4 > prev.pivot && today.r4 < prev.tc) &&
+                 (today.s4 > prev.s3 && today.s4 < prev.s2);
+
   // cOTCL2 — today's R4 lands inside the previous day's Pivot/TC band,
   // AND today's S4 lands inside the previous day's S1/S2 band. Same
   // compressed-band shape as cOU1L2 but the resistance side is measured
@@ -596,7 +610,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
     HiL3U3, cOU1L3,
     eXL2U1, eXL3U1, eXL4U1, eXL1CPR, eXL2CPR, eXL3CPR,
     eXL3TC, eXL4U2, eXL2U2, eXL2TC, eXL1U1, eXU2L1, cOTCL2, L1pU1Above,
-    eXU3L1, eXU2TC, eXU2BC, eXU3TC, eXU2CP, eXU4L1, LoCPL3, LoCPL2,
+    eXU3L1, eXU2TC, eXU2BC, eXU3TC, eXU2CP, eXU4L1, LoCPL3, LoCPL2, LoTCL3,
   };
 }
 
@@ -667,6 +681,7 @@ export function pickCPRSubLabel(f: CPRPairFlags): string | null {
   if (f.eXU4L1)    return "eXU4L1";
   if (f.LoCPL3)    return "LoCPL3";
   if (f.LoCPL2)    return "LoCPL2";
+  if (f.LoTCL3)    return "LoTCL3";
   return null;
 }
 
