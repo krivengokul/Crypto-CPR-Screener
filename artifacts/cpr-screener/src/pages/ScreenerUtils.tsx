@@ -1,6 +1,6 @@
 import {
   classifyCPRPair,
-  pivotSubLabelFromFlags,
+  pickCPRSubLabel,
   type CPRLevels,
   type CPRResult,
 } from "@/lib/cpr";
@@ -1143,7 +1143,7 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
 /**
  * computePivotSubLabel — given two CPR-level objects, computes which
  * sub-category pivot label applies to the (today, prev) pair. Delegates
- * entirely to classifyCPRPair + pivotSubLabelFromFlags in cpr.ts, which is
+ * entirely to classifyCPRPair + pickCPRSubLabel in cpr.ts, which is
  * the single source of truth for the band conditions and label priority.
  *
  * Used in the U1>pU4 section to find the PREVIOUS day's sub-category:
@@ -1155,7 +1155,7 @@ export function computePivotSubLabel(
   prev: CPRLevels | undefined | null,
 ): string | null {
   if (!prev) return null;
-  return pivotSubLabelFromFlags(classifyCPRPair(today, prev));
+  return pickCPRSubLabel(classifyCPRPair(today, prev));
 }
 
 

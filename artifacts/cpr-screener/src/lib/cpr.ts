@@ -55,7 +55,7 @@ export interface CPRPairFlags {
   srExpandedHigher: boolean;
   srExpandedLower: boolean;
 
-  // Band-classification flags (order below matches pivotSubLabelFromFlags priority)
+  // Band-classification flags (order below matches pickCPRSubLabel priority)
   cOU3L4: boolean;
   cOHiL2U3: boolean;
   cOHiL3U3: boolean;
@@ -574,11 +574,11 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
 }
 
 /**
- * pivotSubLabelFromFlags — priority-ordered label lookup. This is the ONLY
+ * pickCPRSubLabel — priority-ordered label lookup. This is the ONLY
  * place the label strings and their tie-break order live. The order below
  * must match the if-chain that historically lived in ScreenerUtils.
  */
-export function pivotSubLabelFromFlags(f: CPRPairFlags): string | null {
+export function pickCPRSubLabel(f: CPRPairFlags): string | null {
   if (f.cOU3L4)    return "cOU3L4";
   if (f.cOHiL2U3)  return "cOHiL2U3";
   if (f.cOHiL3U3)  return "cOHiL3U3";
@@ -592,8 +592,11 @@ export function pivotSubLabelFromFlags(f: CPRPairFlags): string | null {
   if (f.eXHiU1L3)  return "eXHiU1L3";
   if (f.eXHiL4U3)  return "eXHiL4U3";
   if (f.eXU4L234)  return "eXU4L234";
+  if (f.eXU4L34)   return "eXU4L34";
   if (f.cOHiL2U4)  return "cOHiL2U4";
   if (f.cOL4U4)    return "cOL4U4";
+  if (f.cOU4L4)    return "cOU4L4";
+  if (f.exL3U2)    return "exL3U2";
   if (f.cOL3U4)    return "cOL3U4";
   if (f.cOU3L3)    return "cOU3L3";
   if (f.LoU3L4)    return "LoU3L4";
@@ -616,6 +619,25 @@ export function pivotSubLabelFromFlags(f: CPRPairFlags): string | null {
   if (f.cOL2U2)    return "cOL2U2";
   if (f.HiL3U3)    return "HiL3U3";
   if (f.cOU1L3)    return "cOU1L3";
+  if (f.eXL2U1)    return "eXL2U1";
+  if (f.eXL3U1)    return "eXL3U1";
+  if (f.eXL4U1)    return "eXL4U1";
+  if (f.eXL1CPR)   return "eXL1CPR";
+  if (f.eXL2CPR)   return "eXL2CPR";
+  if (f.eXL3CPR)   return "eXL3CPR";
+  if (f.eXL3TC)    return "eXL3TC";
+  if (f.eXL4U2)    return "eXL4U2";
+  if (f.eXL2U2)    return "eXL2U2";
+  if (f.eXL2TC)    return "eXL2TC";
+  if (f.eXL1U1)    return "eXL1U1";
+  if (f.eXU2L1)    return "eXU2L1";
+  if (f.cOTCL2)    return "cOTCL2";
+  if (f.eXU3L1)    return "eXU3L1";
+  if (f.eXU2TC)    return "eXU2TC";
+  if (f.eXU2BC)    return "eXU2BC";
+  if (f.eXU3TC)    return "eXU3TC";
+  if (f.eXU2CP)    return "eXU2CP";
+  if (f.eXU4L1)    return "eXU4L1";
   return null;
 }
 
