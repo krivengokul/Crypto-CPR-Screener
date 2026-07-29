@@ -23,9 +23,9 @@ import { passesPattern, matchesPatternFlag, fmt, getChartUrl, hasKnownChartMappi
  *   - a CATEGORY (e.g. "LittleCPR Above", "Overlap Above") — symbol list
  *     matching the category's base condition only, no Target/Result/Hit
  *     Date, since a category has no single well-defined target;
- *   - a Pivot Level SUB-CATEGORY nested under a category (e.g. "Overlap
+ *   - a Pattern SUB-CATEGORY nested under a category (e.g. "Overlap
  *     Above" → "HiL4U34") — same symbol-list-only treatment as a category,
- *     just additionally filtered by that Pivot Level's raw flag; or
+ *     just additionally filtered by that Pattern's raw flag; or
  *   - a specific PATTERN nested under a category, under a sub-category, or
  *     standalone (e.g. "U1 > Previous U4") — the full backtest.
  *
@@ -87,7 +87,7 @@ export default function BacktestPanel() {
   const symbolListLabel = isCategory
     ? activeCategory?.label
     : isSubCategory && activeSubCategoryInfo
-    ? `${activeSubCategoryInfo.category.label} → Pivot Level ${activeSubCategoryInfo.sub.label}`
+    ? `${activeSubCategoryInfo.category.label} → Pattern ${activeSubCategoryInfo.sub.label}`
     : undefined;
 
   const nestedPatternKeys = new Set<string>();
@@ -236,7 +236,7 @@ export default function BacktestPanel() {
         </span>
       </div>
       <p className="text-xs text-muted-foreground mb-4">
-        Pick a past date and either a category, a Pivot Level sub-category
+        Pick a past date and either a category, a Pattern sub-category
         nested under a category, or a specific pattern. Category and Pivot
         Level selections give a symbol list only (single date); a pattern
         gives the full Target/Result/Hit Date backtest, with an optional
@@ -396,14 +396,14 @@ export default function BacktestPanel() {
           Category scan — lists every symbol matching{" "}
           <span className="text-foreground font-medium">{activeCategory.label}</span>&apos;s base
           condition on the entry date. No Target/Result/Hit Date (select one of its sub-patterns
-          or Pivot Level sub-categories above for those).
+          or Pattern sub-categories above for those).
         </div>
       )}
       {isSubCategory && activeSubCategoryInfo && (
         <div className="text-xs text-muted-foreground mb-3">
-          Pivot Level scan — lists every symbol matching{" "}
+          Pattern scan — lists every symbol matching{" "}
           <span className="text-foreground font-medium">{activeSubCategoryInfo.category.label}</span>&apos;s
-          base condition AND Pivot Level{" "}
+          base condition AND Pattern{" "}
           <span className="text-foreground font-medium">{activeSubCategoryInfo.sub.label}</span> on the
           entry date. No Target/Result/Hit Date (select one of its patterns above for those).
         </div>
@@ -435,7 +435,7 @@ export default function BacktestPanel() {
         </div>
       )}
 
-      {/* Category / Pivot Level scan results — symbol list + CPR data +
+      {/* Category / Pattern scan results — symbol list + CPR data +
           entry-day Close price and % Change (green when >= 0, red when
           < 0). Shown whenever a category or Pivot-Level "— all (symbol
           list only)" selection is run. */}
