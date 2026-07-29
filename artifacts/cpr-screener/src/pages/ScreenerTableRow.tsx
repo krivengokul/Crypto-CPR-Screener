@@ -4,7 +4,7 @@ import { ExternalLink } from "lucide-react";
 /**
  * PATTERN_BADGE_CLASSES — single source of truth for pattern badge colours.
  * Keyed by badge label (cOU3L4, eXL4U4, ...). Used for today's pattern badges
- * and for the previous-day "p-(xxxx)" badge so both share the same palette.
+ * and for the previous-day "p-xxxx" badge so both share the same palette.
  */
 export const PATTERN_BADGE_CLASSES: Record<string, string> = {
   cOU3L4: "bg-amber-500/10 text-amber-400 border border-amber-500/20",
@@ -287,7 +287,7 @@ export default function ScreenerTableRow({
           )}
           {(() => {
             // Previous day's pattern (prevCPR vs ppCPR), always shown for every
-            // row in every category section, in "p-(xxxx)" format and colour-
+            // row in every category section, in "p-xxxx" format and colour-
             // coded with the same palette as today's pattern badges.
             const prevSubLabel = computePivotSubLabel(r.prevCPR, r.ppCPR);
             if (!prevSubLabel) return null;
@@ -297,7 +297,7 @@ export default function ScreenerTableRow({
                   className={`text-xs px-1.5 py-0.5 rounded border font-medium ${getBadgeClasses(prevSubLabel)}`}
                   title="Previous day's CPR sub-category (prevCPR vs ppCPR)"
                 >
-                  p-({prevSubLabel})
+                  p-{prevSubLabel}
                 </span>
               </div>
             );
