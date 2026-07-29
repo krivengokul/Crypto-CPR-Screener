@@ -93,6 +93,8 @@ export interface CPRPairFlags {
   cOL1U1: boolean;
   cOU2L2: boolean;
   cOL2U2: boolean;
+  HiL3U3: boolean;
+  cOU1L3: boolean;
 
   // Additional flags consumed elsewhere on CPRResult (not part of the
   // pivotSubLabel chain, but still pure functions of a (today, prev) pair).
@@ -241,6 +243,8 @@ export interface CPRResult {
   cOL1U1: boolean;
   cOU2L2: boolean;
   cOL2U2: boolean;
+  HiL3U3: boolean;
+  cOU1L3: boolean;
   passes: boolean;
   currentPrice: number;
   openPrice: number;
@@ -535,6 +539,16 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
   const cOU1L2 = (today.s4 > prev.s2 && today.s4 < prev.s1) &&
                  (today.r4 < prev.r1 && today.r4 > prev.tc);
 
+  // HiL3U3 — today's S4 lands inside prev's S3/S2 band (L3) AND prev's R4
+  // lands inside today's R2/R3 band (U3).
+  const HiL3U3 = (today.s4 > prev.s3 && today.s4 < prev.s2) &&
+                 (prev.r4 > today.r2 && prev.r4 < today.r3);
+
+  // cOU1L3 — today's R4 lands inside prev's TC/R1 band (U1) AND today's S4
+  // lands inside prev's S3/S2 band (L3).
+  const cOU1L3 = (today.r4 > prev.tc && today.r4 < prev.r1) &&
+                 (today.s4 > prev.s3 && today.s4 < prev.s2);
+
   // cOU2L2 / cOL2U2 — split by which side (R2 vs S2) moved further.
   const r2Move = Math.abs(prev.r2 - today.r2);
   const s2Move = Math.abs(prev.s2 - today.s2);
@@ -552,6 +566,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
     cOL3U4, cOU3L3, LoU3L4, LoU3L34, cOLoU2L3, LoU2L4, LoU2L3, LoU4L34, LoU4L234,
     cOHiL2U2, LoU4L1234, cOU1L2, cOLoU2L4, eXL3U3, eXU3L3,
     cOU1L1, cOL1U1, cOU2L2, cOL2U2,
+    HiL3U3, cOU1L3,
     eXL2U1, eXL3U1, eXL4U1, eXL1CPR, eXL2CPR, eXL3CPR,
     eXL3TC, eXL4U2, eXL2U2, eXL2TC, eXL1U1, eXU2L1, cOTCL2, L1pU1Above,
     eXU3L1, eXU2TC, eXU2BC, eXU3TC, eXU2CP, eXU4L1,
@@ -599,6 +614,8 @@ export function pivotSubLabelFromFlags(f: CPRPairFlags): string | null {
   if (f.cOL1U1)    return "cOL1U1";
   if (f.cOU2L2)    return "cOU2L2";
   if (f.cOL2U2)    return "cOL2U2";
+  if (f.HiL3U3)    return "HiL3U3";
+  if (f.cOU1L3)    return "cOU1L3";
   return null;
 }
 

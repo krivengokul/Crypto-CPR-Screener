@@ -1070,6 +1070,8 @@ export const PATTERN_BADGE_CLASSES: Record<string, string> = {
   HiL4U34: "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20",
   cOHiL2U3: "bg-sky-500/10 text-sky-400 border border-sky-500/20",
   cOHiL3U3: "bg-sky-500/10 text-sky-400 border border-sky-500/20",
+  HiL3U3: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
+  cOU1L3: "bg-rose-500/10 text-rose-400 border border-rose-500/20",
   eXU4L234: "bg-amber-500/10 text-amber-400 border border-amber-500/20",
   eXU4L34: "bg-amber-500/10 text-amber-300 border border-amber-500/20",
   cOHiL2U4: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
