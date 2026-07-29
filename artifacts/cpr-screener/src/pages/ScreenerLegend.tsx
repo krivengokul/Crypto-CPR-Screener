@@ -149,7 +149,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
         ) : legendPattern === "pcpr-u1-cpr-pl1" ? (
           <>
             <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-              <span className="text-xs font-semibold text-primary">pCPR&gt;U1 CPR&gt;pL1</span>
+              <span className="text-xs font-semibold text-primary">PREVCPR 1ABOVE</span>
               <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-green-500 text-white">Above</span>
               <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-500 text-white">Pivot Level</span>
             </div>
