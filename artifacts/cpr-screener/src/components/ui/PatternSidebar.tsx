@@ -75,6 +75,7 @@ export const subPatterns: Record<string, SubPattern[]> = {
     { id: "OBN-LoU4L4-U4",           label: "OBN-LoU4L4-U4" },
     { id: "OBW-LoU4L4-L4",           label: "OBW-LoU4L4-L4" },
   ],
+  "cpr-1-above": [],
   "pcpr-u1-cpr-pl1": [],
   "l1pu1-above": [
     {
@@ -145,6 +146,7 @@ export const subPatterns: Record<string, SubPattern[]> = {
 };
 
 export const patterns: Pattern[] = [
+  { id: "cpr-1-above",        label: "CPR 1ABOVE",    subtitle: "Today TC in prev U2 band, S1 in prev BC/R1 band", icon: TrendingUp },
   { id: "pcpr-u1-cpr-pl1",    label: "PREVCPR 1ABOVE", subtitle: "Prev Pivot in U1 band, CPR above pL1", icon: TrendingUp },
   { id: "l1pu1-above",        label: "L1pU1 Above",   subtitle: "Today L1 above Prev U1",   icon: TrendingUp },
   { id: "littleabove",        label: "Little ABOVE",  subtitle: "Narrow CPR Above PCPR",    icon: TrendingUp },

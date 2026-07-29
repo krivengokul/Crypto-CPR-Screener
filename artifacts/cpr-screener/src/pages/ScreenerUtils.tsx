@@ -653,6 +653,10 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // + compression ratio >= 30. Target ApU4 by 11PM.
     // NEW: pCPR>U1 CPR>pL1 — prev Pivot inside today's R1/R2 band and
     // today's BC inside prev's S1/BC band.
+    // NEW: CPR 1ABOVE — today's TC inside prev's R1/R2 band AND today's S1
+    // inside prev's BC/R1 band. Sits above "PREVCPR 1ABOVE" in the left-nav.
+    case "cpr-1-above":
+      return r.cpr1Above;
     case "pcpr-u1-cpr-pl1":
       return r.pCPRU1CPRpL1;
     case "l1pu1-above":
