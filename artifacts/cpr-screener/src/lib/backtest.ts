@@ -387,6 +387,15 @@ export interface CategoryScanRow {
   closePrice: number | null;
   prevClose: number | null;
   changePct: number | null;
+  /**
+   * NEW: the full reconstructed CPRResult (all pattern-flag booleans,
+   * todayCPR/prevCPR/ppCPR) for this symbol/date. Lets consumers (e.g.
+   * BacktestPanel's results table) render the same "Pattern" and
+   * "Prev Pattern" badges as ScreenerTableRow does, via
+   * renderTodayPatternBadges / renderPrevPatternBadge in
+   * ScreenerTableRow.tsx.
+   */
+  raw: CPRResult;
 }
 
 /**
@@ -637,6 +646,7 @@ export async function categoryScanSymbolOnDate(
     prevCPR: result.prevCPR,
     compressionRatio: result.compressionRatio,
     ...closeAndChange(window, entryDateISO),
+    raw: result,
   };
 }
 
@@ -673,6 +683,7 @@ export async function pivotLevelScanSymbolOnDate(
     prevCPR: result.prevCPR,
     compressionRatio: result.compressionRatio,
     ...closeAndChange(window, entryDateISO),
+    raw: result,
   };
 }
 

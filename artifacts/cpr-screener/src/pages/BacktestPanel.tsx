@@ -15,6 +15,7 @@ import {
   type BacktestSubCategoryDef,
 } from "@/lib/backtest";
 import { passesPattern, matchesPatternFlag, fmt, getChartUrl, hasKnownChartMapping } from "./ScreenerUtils";
+import { renderTodayPatternBadges, renderPrevPatternBadge } from "./ScreenerTableRow";
 
 /**
  * v1 backtest UI — proves out the engine on a handful of patterns (see
@@ -480,13 +481,13 @@ export default function BacktestPanel() {
                       </button>
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Today TC / BC
+                      Pattern
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Prev TC / BC
+                      Prev Pattern
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Compression
+                      CPSIZ Ratio
                     </th>
                   </tr>
                 </thead>
@@ -529,11 +530,11 @@ export default function BacktestPanel() {
                             ? `${chg >= 0 ? "+" : ""}${chg.toFixed(2)}%`
                             : "—"}
                         </td>
-                        <td className="px-3 py-2 font-mono text-xs text-muted-foreground">
-                          {fmt(r.todayCPR.tc)} / {fmt(r.todayCPR.bc)}
+                        <td className="px-3 py-2 whitespace-nowrap">
+                          {renderTodayPatternBadges(r.raw) ?? <span className="text-xs text-muted-foreground">—</span>}
                         </td>
-                        <td className="px-3 py-2 font-mono text-xs text-muted-foreground">
-                          {fmt(r.prevCPR.tc)} / {fmt(r.prevCPR.bc)}
+                        <td className="px-3 py-2 whitespace-nowrap">
+                          {renderPrevPatternBadge(r.raw) ?? <span className="text-xs text-muted-foreground">—</span>}
                         </td>
                         <td className="px-3 py-2 font-mono text-xs text-muted-foreground">
                           {r.compressionRatio.toFixed(1)}%
