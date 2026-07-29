@@ -814,9 +814,9 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     case "ss-eXU4L1-U4:10PM":
       return (
         r.cprFalling && r.strWideCPR && r.prevCPR.PDHLAbove && r.todayCPR.PDHLAbove &&
-        r.eXU4L1 && r.prevCPR.bc >= r.todayCPR.r1 &&
-        r.prevCPR.widthPct > 0.60 && r.prevCPR.widthPct <= 1.10 &&
-        r.todayCPR.widthPct > 0.60 && r.todayCPR.widthPct <= 1.10
+        r.eXU4L1 && r.prevCPR.bc >= r.todayCPR.prevHigh && r.prevCPR.s2 >= r.todayCPR.tc &&
+        r.prevCPR.widthPct > 0.60 && r.prevCPR.widthPct <= 1.10 && //pSmall
+        r.todayCPR.widthPct > 0.60 && r.todayCPR.widthPct <= 1.10 //Small
       );
     // Standalone top-level category: same condition as L1<pL4
     case "l1-lt-pl4":
