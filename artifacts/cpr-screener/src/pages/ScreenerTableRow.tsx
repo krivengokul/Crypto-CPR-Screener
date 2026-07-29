@@ -63,6 +63,7 @@ export const PATTERN_BADGE_CLASSES: Record<string, string> = {
   eXL2CPR: "bg-blue-500/10 text-blue-400 border border-blue-500/20",
   eXL3CPR: "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20",
   LoCPL3: "bg-teal-500/10 text-teal-400 border border-teal-500/20",
+  LoCPL2: "bg-teal-600/10 text-teal-300 border border-teal-600/20",
 };
 
 export function getBadgeClasses(label: string): string {
@@ -227,7 +228,7 @@ export default function ScreenerTableRow({
           </div>
         </td>
         <td className="px-4 py-3 whitespace-nowrap">
-          {(r.cOU3L4 || r.LoU4L4 || r.eXHiL4U3 || r.eXL4U4 || r.HiL4U4 || r.HiL4U34 || r.cOHiL2U3 || r.cOHiL3U3 || r.eXU4L234 || r.eXU4L34 || r.cOHiL2U4 || r.eXL3U3 || r.eXU3L3 || r.cOL4U4 || r.cOL3U4 || r.cOU3L3 || r.LoU3L4 || r.LoU3L34 || r.LoU2L4 || r.LoU2L3 || r.LoU4L34 || r.LoU4L234 || r.HiL2U4 || r.HiL3U4 || r.cOLoU2L3 || r.LoU4L1234 || r.cOU1L2 || r.cOLoU2L4 || r.eXL2U1 || r.eXL3U1 || r.eXL4U1 || r.eXL1CPR || r.eXL2CPR || r.eXL3CPR || r.cOU1L1 || r.cOL1U1 || r.cOU2L2 || r.cOL2U2 || r.cOU4L4 || r.exL3U2 || r.eXL3TC || r.eXL4U2 || r.eXL2U2 || r.eXL2TC || r.eXL1U1 || r.eXU2L1 || r.cOTCL2 || r.eXU3L1 || r.eXU2TC || r.eXU2BC || r.eXU3TC || r.eXU2CP || r.eXU4L1 || r.HiL3U3 || r.cOU1L3 || r.LoCPL3) && (
+          {(r.cOU3L4 || r.LoU4L4 || r.eXHiL4U3 || r.eXL4U4 || r.HiL4U4 || r.HiL4U34 || r.cOHiL2U3 || r.cOHiL3U3 || r.eXU4L234 || r.eXU4L34 || r.cOHiL2U4 || r.eXL3U3 || r.eXU3L3 || r.cOL4U4 || r.cOL3U4 || r.cOU3L3 || r.LoU3L4 || r.LoU3L34 || r.LoU2L4 || r.LoU2L3 || r.LoU4L34 || r.LoU4L234 || r.HiL2U4 || r.HiL3U4 || r.cOLoU2L3 || r.LoU4L1234 || r.cOU1L2 || r.cOLoU2L4 || r.eXL2U1 || r.eXL3U1 || r.eXL4U1 || r.eXL1CPR || r.eXL2CPR || r.eXL3CPR || r.cOU1L1 || r.cOL1U1 || r.cOU2L2 || r.cOL2U2 || r.cOU4L4 || r.exL3U2 || r.eXL3TC || r.eXL4U2 || r.eXL2U2 || r.eXL2TC || r.eXL1U1 || r.eXU2L1 || r.cOTCL2 || r.eXU3L1 || r.eXU2TC || r.eXU2BC || r.eXU3TC || r.eXU2CP || r.eXU4L1 || r.HiL3U3 || r.cOU1L3 || r.LoCPL3 || r.LoCPL2) && (
             <div className="flex flex-wrap gap-1">
               {r.cOU3L4 && <span className="text-xs px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium">cOU3L4</span>}
               {r.LoU4L4 && <span className="text-xs px-1.5 py-0.5 rounded bg-lime-500/10 text-lime-400 border border-lime-500/20 font-medium">LoU4L4</span>}
@@ -285,6 +286,7 @@ export default function ScreenerTableRow({
                 {r.eXL2CPR && <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">eXL2CPR</span>}
                 {r.eXL3CPR && <span className="text-xs px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-medium">eXL3CPR</span>}
                 {r.LoCPL3 && <span className="text-xs px-1.5 py-0.5 rounded bg-teal-500/10 text-teal-400 border border-teal-500/20 font-medium">LoCPL3</span>}
+                {r.LoCPL2 && <span className="text-xs px-1.5 py-0.5 rounded bg-teal-600/10 text-teal-300 border border-teal-600/20 font-medium">LoCPL2</span>}
             </div>
           )}
           {(() => {

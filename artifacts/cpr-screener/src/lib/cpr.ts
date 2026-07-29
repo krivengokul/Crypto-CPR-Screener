@@ -148,6 +148,10 @@ export interface CPRPairFlags {
   // half) instead of TC→R1 (U1) or Pivot→TC (TC), and paired with the
   // wider L3 (S2→S3) support band instead of L2 (S1→S2).
   LoCPL3: boolean;
+  // LoCPL2 — same shape as LoCPL3 (today's R4 lands inside prev's Pivot/BC
+  // band), but paired with the narrower L2 (S1/S2) support band instead of
+  // L3 (S2/S3).
+  LoCPL2: boolean;
 }
 
 export interface CPRResult {
@@ -253,6 +257,7 @@ export interface CPRResult {
   HiL3U3: boolean;
   cOU1L3: boolean;
   LoCPL3: boolean;
+  LoCPL2: boolean;
   passes: boolean;
   currentPrice: number;
   openPrice: number;
@@ -527,6 +532,12 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
   const LoCPL3 = (today.r4 > prev.bc && today.r4 < prev.pivot) &&
                  (today.s4 > prev.s3 && today.s4 < prev.s2);
 
+  // LoCPL2 — same resistance-side condition as LoCPL3 (today's R4 inside
+  // prev's Pivot/BC band), but paired with the narrower L2 (S1/S2) support
+  // band instead of L3 (S2/S3).
+  const LoCPL2 = (today.r4 > prev.bc && today.r4 < prev.pivot) &&
+                 (today.s4 > prev.s2 && today.s4 < prev.s1);
+
   // cOTCL2 — today's R4 lands inside the previous day's Pivot/TC band,
   // AND today's S4 lands inside the previous day's S1/S2 band. Same
   // compressed-band shape as cOU1L2 but the resistance side is measured
@@ -585,7 +596,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
     HiL3U3, cOU1L3,
     eXL2U1, eXL3U1, eXL4U1, eXL1CPR, eXL2CPR, eXL3CPR,
     eXL3TC, eXL4U2, eXL2U2, eXL2TC, eXL1U1, eXU2L1, cOTCL2, L1pU1Above,
-    eXU3L1, eXU2TC, eXU2BC, eXU3TC, eXU2CP, eXU4L1, LoCPL3,
+    eXU3L1, eXU2TC, eXU2BC, eXU3TC, eXU2CP, eXU4L1, LoCPL3, LoCPL2,
   };
 }
 
@@ -655,6 +666,7 @@ export function pickCPRSubLabel(f: CPRPairFlags): string | null {
   if (f.eXU2CP)    return "eXU2CP";
   if (f.eXU4L1)    return "eXU4L1";
   if (f.LoCPL3)    return "LoCPL3";
+  if (f.LoCPL2)    return "LoCPL2";
   return null;
 }
 
