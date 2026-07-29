@@ -178,6 +178,12 @@ export interface BacktestCategoryDef {
 }
 
 export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
+  // NEW: "PREVCPR 1ABOVE" left-nav section (top of the pattern tree in
+  // PatternSidebar.tsx) — symbol-list-only category, same treatment as
+  // "littlebelow" / "structure-bigabove" below (no subPatterns defined
+  // for it in PatternSidebar.tsx's `subPatterns` map, so there's nothing
+  // to nest here yet).
+  { key: "pcpr-u1-cpr-pl1", label: "PREVCPR 1ABOVE" },
   // NEW: "L1pU1 Above" left-nav section (first item), nesting the
   // "SMi-L1pU1>-APU4:11PM" pattern that used to live under CPR Inside.
   {
