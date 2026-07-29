@@ -651,6 +651,10 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
               (r.todayCPR.tc < r.prevCPR.tc && r.todayCPR.bc >= r.prevCPR.bc);
     // NEW: SMi-L1pU1>-APU4:11PM — Inside CPR + L1pU1Above (from cpr.ts)
     // + compression ratio >= 30. Target ApU4 by 11PM.
+    // NEW: pCPR>U1 CPR>pL1 — prev Pivot inside today's R1/R2 band and
+    // today's BC inside prev's S1/BC band.
+    case "pcpr-u1-cpr-pl1":
+      return r.pCPRU1CPRpL1;
     case "l1pu1-above":
       return r.L1pU1Above ; 
     case "SMi-L1pU1>-APU4:11PM": {
@@ -934,6 +938,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     { key: "OBN-LoU4L4-U4", direction: "up" },
     { key: "OBW-LoU4L4-L4", direction: "up" },
   ],
+  "pcpr-u1-cpr-pl1": [],
   "l1pu1-above": [
     { key: "SMi-L1pU1>-APU4:11PM", direction: "up" },
     { key: "S0-L1pU1>-AU4:7PM", direction: "up" },

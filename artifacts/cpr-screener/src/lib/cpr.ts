@@ -116,6 +116,9 @@ export interface CPRPairFlags {
   eXU2L1: boolean;
   cOTCL2: boolean;
   L1pU1Above: boolean;
+  // pCPRU1CPRpL1 — prev day's Pivot sits inside today's R1/R2 band (U1 side)
+  // AND today's BC sits inside prev day's S1/BC band (pL1 side).
+  pCPRU1CPRpL1: boolean;
   // eXU3L1 — prev's R4 lands inside today's R2/R3 band (U3), AND prev's S4
   // lands inside today's BC/S1 band (L1). Same L1 support band as eXU2L1/
   // eXL1U1/eXL1CPR but paired with the wider U3 (R2→R3) resistance band.
@@ -249,6 +252,7 @@ export interface CPRResult {
   eXU2L1: boolean;
   cOTCL2: boolean;
   L1pU1Above: boolean;
+  pCPRU1CPRpL1: boolean;
   eXU3L1: boolean;
   eXU2TC: boolean;
   eXU2BC: boolean;
@@ -569,6 +573,12 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
   const L1pU1Above = (prevLowerR1PDH > todayHigherPDHR1) &&
                      (todayHigherS1PDL > prevHigherPDLS1);
 
+  // pCPRU1CPRpL1 — "pCPR>U1 CPR>pL1":
+  //   prev day's Pivot is above today's R1 and below today's R2, AND
+  //   today's BC is above prev day's S1 and below prev day's BC.
+  const pCPRU1CPRpL1 = (prev.pivot > today.r1 && prev.pivot < today.r2) &&
+                       (today.bc > prev.s1 && today.bc < prev.bc);
+
   // cOU1L1 / cOL1U1 — split by which side (R1 vs S1) moved further.
   const r1Move = Math.abs(prev.r1 - today.r1);
   const s1Move = Math.abs(prev.s1 - today.s1);
@@ -609,7 +619,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
     cOU1L1, cOL1U1, cOU2L2, cOL2U2,
     HiL3U3, cOU1L3,
     eXL2U1, eXL3U1, eXL4U1, eXL1CPR, eXL2CPR, eXL3CPR,
-    eXL3TC, eXL4U2, eXL2U2, eXL2TC, eXL1U1, eXU2L1, cOTCL2, L1pU1Above,
+    eXL3TC, eXL4U2, eXL2U2, eXL2TC, eXL1U1, eXU2L1, cOTCL2, L1pU1Above, pCPRU1CPRpL1,
     eXU3L1, eXU2TC, eXU2BC, eXU3TC, eXU2CP, eXU4L1, LoCPL3, LoCPL2, LoTCL3,
   };
 }

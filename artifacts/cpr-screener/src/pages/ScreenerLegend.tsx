@@ -146,6 +146,15 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             </div>
             <div className="text-xs text-muted-foreground">Today&apos;s CPR overlaps above yesterday&apos;s CPR</div>
           </>
+        ) : legendPattern === "pcpr-u1-cpr-pl1" ? (
+          <>
+            <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+              <span className="text-xs font-semibold text-primary">pCPR&gt;U1 CPR&gt;pL1</span>
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-green-500 text-white">Above</span>
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-500 text-white">Pivot Level</span>
+            </div>
+            <div className="text-xs text-muted-foreground">Yesterday&apos;s Pivot sits between today&apos;s R1 and R2, and today&apos;s BC sits between yesterday&apos;s S1 and BC</div>
+          </>
         ) : legendPattern === "l1pu1-above" ? (
           <>
             <div className="flex items-center gap-1.5 mb-1 flex-wrap">
@@ -347,6 +356,11 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             <div className="text-xs font-semibold text-rose-400 mb-1">eXHrL3U3-AU4</div>
             <div className="text-xs text-muted-foreground">Prev S4 between today&apos;s S3/S4, Prev R4 between today&apos;s R2/R3</div>
           </>
+        ) : activePattern === "pcpr-u1-cpr-pl1" ? (
+          <>
+            <div className="text-xs font-semibold text-green-400 mb-1">Pivot Level: pCPR in U1 band</div>
+            <div className="text-xs text-muted-foreground">Prev Pivot &gt; today R1 &amp; &lt; today R2 — today BC &gt; prev S1 &amp; &lt; prev BC</div>
+          </>
         ) : activePattern === "SMi-L1pU1>-APU4:11PM" ? (
           <>
             <div className="text-xs font-semibold text-green-400 mb-1">Pivot Level: Compressed</div>
@@ -518,6 +532,11 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
           <>
             <div className="text-xs font-semibold text-emerald-400 mb-1">Target</div>
             <div className="text-xs text-muted-foreground">Tight prior-day CPR that expanded outside it — breakout continuation potential</div>
+          </>
+        ) : activePattern === "pcpr-u1-cpr-pl1" ? (
+          <>
+            <div className="text-xs font-semibold text-emerald-400 mb-1">Bias: Bullish shift</div>
+            <div className="text-xs text-emerald-400/80">Today&apos;s CPR has stepped above yesterday&apos;s lower band while prev Pivot still caps the U1/U2 zone</div>
           </>
         ) : activePattern === "SMi-L1pU1>-APU4:11PM" ? (
           <>
