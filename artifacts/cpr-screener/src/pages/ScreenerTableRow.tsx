@@ -236,13 +236,13 @@ export function ScreenerTableHeader({
           PIVOT LEVEL
         </th>
         <th
-          className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
+          className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
           onClick={() => toggleSort("compressionRatio")}
         >
           PIVOT SIZE <SortIcon k="compressionRatio" />
         </th>
         <th
-          className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
+          className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
           onClick={() => toggleSort("change24h")}
         >
           Price <SortIcon k="change24h" />
@@ -446,22 +446,26 @@ export default function ScreenerTableRow({
                   title={`Prev day CPR width: ${r.prevCPR.widthPct.toFixed(4)}%`}
                 >
                   <span>p{prevCat.label}</span>
-                  <span>{r.prevCPR.widthPct.toFixed(4)}%</span>
+                  <span className="text-[10px] font-mono">{r.prevCPR.widthPct.toFixed(4)}%</span>
                 </span>
                 <span
                   className={`font-sans text-xs px-1.5 py-0.5 rounded border font-medium flex flex-col items-center leading-tight ${todayCat.classes}`}
                   title={`Today's CPR width: ${r.todayCPR.widthPct.toFixed(4)}%`}
                 >
                   <span>{todayCat.label}</span>
-                  <span>{r.todayCPR.widthPct.toFixed(4)}%</span>
+                  <span className="text-[10px] font-mono">{r.todayCPR.widthPct.toFixed(4)}%</span>
                 </span>
               </div>
             );
           })()}
         </td>
         <td className="px-4 py-3 font-mono whitespace-nowrap">
-          <div className={`text-xs font-semibold ${r.change24h >= 0 ? "text-green-400" : "text-destructive"}`}>
-            {fmt(r.currentPrice)}({fmtPct(r.change24h)})
+          <div className="text-xs font-bold text-foreground">
+            {fmt(r.currentPrice)}(
+            <span className={r.change24h >= 0 ? "text-green-400" : "text-destructive"}>
+              {fmtPct(r.change24h)}
+            </span>
+            )
           </div>
           <div className="text-xs text-muted-foreground">OPrice: {fmt(r.openPrice)}</div>
         </td>
