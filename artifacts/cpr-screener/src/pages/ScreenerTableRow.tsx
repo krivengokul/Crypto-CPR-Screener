@@ -433,27 +433,27 @@ export default function ScreenerTableRow({
           </div>
         </td>
         <td className="px-4 py-3 font-mono whitespace-nowrap">
-          <div className="font-sans text-xs font-semibold text-foreground text-center mb-1">
-            {r.compressionRatio.toFixed(1)}%
+          <div className="flex justify-center mb-1.5">
+            <span className="font-sans text-xs font-semibold text-foreground bg-muted border border-border rounded-full px-2.5 py-0.5">
+              {r.compressionRatio.toFixed(1)}%
+            </span>
           </div>
           {(() => {
             const prevCat = getWidthCategory(r.prevCPR.widthPct);
             const todayCat = getWidthCategory(r.todayCPR.widthPct);
             return (
-              <div className="flex flex-wrap items-start justify-center gap-1">
+              <div className="flex flex-wrap items-center justify-center gap-1">
                 <span
-                  className={`font-sans text-xs px-1.5 py-0.5 rounded border font-medium flex flex-col items-center leading-tight ${prevCat.pClasses}`}
+                  className={`font-sans text-[11px] px-1.5 py-0.5 rounded border font-medium ${prevCat.pClasses}`}
                   title={`Prev day CPR width: ${r.prevCPR.widthPct.toFixed(4)}%`}
                 >
-                  <span>p{prevCat.label}</span>
-                  <span className="text-[10px] font-mono">{r.prevCPR.widthPct.toFixed(4)}%</span>
+                  p{prevCat.label} <span className="text-[10px] font-mono opacity-70">{r.prevCPR.widthPct.toFixed(4)}%</span>
                 </span>
                 <span
-                  className={`font-sans text-xs px-1.5 py-0.5 rounded border font-medium flex flex-col items-center leading-tight ${todayCat.classes}`}
+                  className={`font-sans text-[11px] px-1.5 py-0.5 rounded border font-medium ${todayCat.classes}`}
                   title={`Today's CPR width: ${r.todayCPR.widthPct.toFixed(4)}%`}
                 >
-                  <span>{todayCat.label}</span>
-                  <span className="text-[10px] font-mono">{r.todayCPR.widthPct.toFixed(4)}%</span>
+                  {todayCat.label} <span className="text-[10px] font-mono opacity-70">{r.todayCPR.widthPct.toFixed(4)}%</span>
                 </span>
               </div>
             );
