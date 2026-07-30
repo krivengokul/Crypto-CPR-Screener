@@ -236,7 +236,7 @@ export function ScreenerTableHeader({
           PIVOT LEVEL
         </th>
         <th
-          className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
+          className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground min-w-[220px]"
           onClick={() => toggleSort("compressionRatio")}
         >
           PIVOT SIZE <SortIcon k="compressionRatio" />
@@ -432,28 +432,28 @@ export default function ScreenerTableRow({
             )}
           </div>
         </td>
-        <td className="px-4 py-3 font-mono whitespace-nowrap">
-          <div className="flex justify-center mb-2">
-            <span className="font-sans text-xs font-semibold text-primary bg-primary/10 border border-primary/30 rounded-full px-3 py-1">
-              {r.compressionRatio.toFixed(1)}%
-            </span>
-          </div>
+        <td className="px-4 py-3 font-mono whitespace-nowrap min-w-[220px]">
           {(() => {
             const prevCat = getWidthCategory(r.prevCPR.widthPct);
             const todayCat = getWidthCategory(r.todayCPR.widthPct);
             return (
-              <div className="flex flex-wrap items-center justify-center gap-1.5">
+              <div className="flex flex-wrap items-center justify-center gap-2">
                 <span
-                  className={`font-sans text-[11px] px-2 py-1 rounded-lg border font-medium ${prevCat.pClasses}`}
+                  className={`font-sans text-xs px-1.5 py-0.5 rounded border font-medium flex flex-col items-center leading-tight ${prevCat.pClasses}`}
                   title={`Prev day CPR width: ${r.prevCPR.widthPct.toFixed(4)}%`}
                 >
-                  p{prevCat.label} <span className="text-[10px] font-mono opacity-70">{r.prevCPR.widthPct.toFixed(4)}%</span>
+                  <span>p{prevCat.label}</span>
+                  <span className="text-[10px] font-mono">{r.prevCPR.widthPct.toFixed(4)}%</span>
+                </span>
+                <span className="font-sans text-xs font-semibold text-primary bg-primary/10 border border-primary/30 rounded-full px-2.5 py-1 shrink-0">
+                  {r.compressionRatio.toFixed(1)}%
                 </span>
                 <span
-                  className={`font-sans text-[11px] px-2 py-1 rounded-lg border font-medium ${todayCat.classes}`}
+                  className={`font-sans text-xs px-1.5 py-0.5 rounded border font-medium flex flex-col items-center leading-tight ${todayCat.classes}`}
                   title={`Today's CPR width: ${r.todayCPR.widthPct.toFixed(4)}%`}
                 >
-                  {todayCat.label} <span className="text-[10px] font-mono opacity-70">{r.todayCPR.widthPct.toFixed(4)}%</span>
+                  <span>{todayCat.label}</span>
+                  <span className="text-[10px] font-mono">{r.todayCPR.widthPct.toFixed(4)}%</span>
                 </span>
               </div>
             );
