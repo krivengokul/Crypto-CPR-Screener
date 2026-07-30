@@ -58,7 +58,7 @@ export interface CPRPairFlags {
   // Band-classification flags (order below matches pickCPRSubLabel priority)
   cOU3L4: boolean;
   cOHiL2U3: boolean;
-  cOHiL3U3: boolean;
+  cOL3U3: boolean;
   eXLoL3U4: boolean;
   eXL4U4: boolean;
   HiL4U34: boolean;
@@ -211,7 +211,7 @@ export interface CPRResult {
   srExpandedLower: boolean;
   cOU3L4: boolean;
   cOHiL2U3: boolean;
-  cOHiL3U3: boolean;
+  cOL3U3: boolean;
   eXLoL3U4: boolean;
   eXL4U4: boolean;
   HiL2U4: boolean;
@@ -404,8 +404,10 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
                  (today.r4 > prev.r2 && today.r4 < prev.r3);
   const cOHiL2U3 = (today.s4 > prev.s2 && today.s4 < prev.s1) &&
                    (today.r4 > prev.r2 && today.r4 < prev.r3);
-  const cOHiL3U3 = (today.s4 > prev.s3 && today.s4 < prev.s2) &&
+  const cOL3U3 = (today.s4 > prev.s3 && today.s4 < prev.s2) &&
                    (today.r4 > prev.r2 && today.r4 < prev.r3) && srCompressedHigher;
+  const cOU3L3   = (today.s4 > prev.s3 && today.s4 < prev.s2) &&
+                   (today.r4 > prev.r2 && today.r4 < prev.r3) && srCompressedLower;
   const eXLoL3U4 = (prev.r4 > today.r3 && prev.r4 < today.r4) &&
                    (prev.s4 > today.s3 && prev.s4 < today.s2);
   const eXL4U4   = (prev.r4 > today.r3 && prev.r4 < today.r4) &&
@@ -438,8 +440,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
                    (prev.r4 > today.r1 && prev.r4 < today.r2);
   const cOL3U4   = (today.s4 > prev.s3 && today.s4 < prev.s2) &&
                    (today.r4 > prev.r3 && today.r4 < prev.r4);
-  const cOU3L3   = (today.s4 > prev.s3 && today.s4 < prev.s2) &&
-                   (today.r4 > prev.r2 && today.r4 < prev.r3);
+  
   const LoU3L4   = (today.r4 > prev.r2 && today.r4 <= prev.r3) &&
                    (prev.s4 > today.s4 && prev.s4 < today.s3);
   const LoU3L34  = (today.r4 > prev.r2 && today.r4 < prev.r3) &&
@@ -623,7 +624,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
     r4Distance, s4Distance,
     srHigher, srLower, srExpanded, srCompressed,
     srCompressedHigher, srCompressedLower, srExpandedHigher, srExpandedLower,
-    cOU3L4, cOHiL2U3, cOHiL3U3, eXLoL3U4, eXL4U4, HiL4U34, HiL2U4, HiL3U4, HiL4U4,
+    cOU3L4, cOHiL2U3, cOL3U3, eXLoL3U4, eXL4U4, HiL4U34, HiL2U4, HiL3U4, HiL4U4,
     LoU4L4, eXHiU1L3, eXHiL4U3, eXU4L234, eXU4L34, cOHiL2U4, cOL4U4, cOU4L4, exL3U2,
     cOL3U4, cOU3L3, LoU3L4, LoU3L34, cOLoU2L3, LoU2L4, LoU2L3, LoU4L34, LoU4L234,
     cOHiL2U2, LoU4L1234, cOU1L2, cOLoU2L4, eXL3U3, eXU3L3,
@@ -643,7 +644,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
 export function pickCPRSubLabel(f: CPRPairFlags): string | null {
   if (f.cOU3L4)    return "cOU3L4";
   if (f.cOHiL2U3)  return "cOHiL2U3";
-  if (f.cOHiL3U3)  return "cOHiL3U3";
+  if (f.cOL3U3)  return "cOL3U3";
   if (f.eXLoL3U4)  return "eXLoL3U4";
   if (f.eXL4U4)    return "eXL4U4";
   if (f.HiL4U34)   return "HiL4U34";

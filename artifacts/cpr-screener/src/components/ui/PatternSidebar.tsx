@@ -59,7 +59,7 @@ export const subPatterns: Record<string, SubPattern[]> = {
   ],
   "overlapping-higher": [
     { id: "eXHi-L4U4-U4",            label: "eXHi-L4U4-U4" },
-    { id: "cOHiL3U3-pL4",            label: "cOHiL3U3-pL4" },
+    { id: "cOL3U3-pL4",            label: "cOL3U3-pL4" },
     // NEW
     {
       id: "LMe-eXL2U2-L4:10PM",

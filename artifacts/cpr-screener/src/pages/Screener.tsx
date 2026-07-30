@@ -877,7 +877,7 @@ export default function Screener({
       // activePattern/left-nav.
       if (PatternFilter === "HiL4U34") return r.HiL4U34;
       if (PatternFilter === "cOHiL2U3") return r.cOHiL2U3;
-      if (PatternFilter === "cOHiL3U3") return r.cOHiL3U3;
+      if (PatternFilter === "cOL3U3") return r.cOL3U3;
       // NEW: eXU4L234 — independent, section-agnostic Pattern flag
       // (see doc-comments in cpr.ts / ScreenerUtils.tsx).
       if (PatternFilter === "eXU4L234") return r.eXU4L234;
@@ -1982,7 +1982,7 @@ export default function Screener({
                   { label: "HiL4U4", active: "border-fuchsia-400 text-fuchsia-400" },
                   { label: "HiL4U34", active: "border-indigo-400 text-indigo-400" },
                   { label: "cOHiL2U3", active: "border-sky-400 text-sky-400" },
-                  { label: "cOHiL3U3", active: "border-sky-400 text-sky-400" },
+                  { label: "cOL3U3", active: "border-sky-400 text-sky-400" },
                   { label: "eXU4L234", active: "border-amber-400 text-amber-400" },
                   { label: "eXU4L34", active: "border-amber-300 text-amber-300" },
                   { label: "cOHiL2U4", active: "border-emerald-400 text-emerald-400" },
