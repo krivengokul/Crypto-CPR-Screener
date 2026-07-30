@@ -1,5 +1,5 @@
 import { Fragment } from "react";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, ChevronUp, ChevronDown, ArrowUpDown } from "lucide-react";
 
 /**
  * PATTERN_BADGE_CLASSES — single source of truth for pattern badge colours.
@@ -175,6 +175,8 @@ import type { CPRResult } from "@/lib/cpr";
 import {
   type CPRResultWithSource,
   type ActiveTab,
+  type SortKey,
+  type SortDir,
   fmt,
   fmtPct,
   splitSymbol,
@@ -191,6 +193,83 @@ import {
   cprDistancePct,
   levelsInDistanceRange,
 } from "./ScreenerUtils";
+
+export interface ScreenerTableHeaderProps {
+  canShowCombined: boolean;
+  activeTab: ActiveTab;
+  sortKey: SortKey;
+  sortDir: SortDir;
+  toggleSort: (key: SortKey) => void;
+}
+
+/** Table <thead> for the screener results table. Moved from Screener.tsx as-is. */
+export function ScreenerTableHeader({
+  canShowCombined,
+  activeTab,
+  sortKey,
+  sortDir,
+  toggleSort,
+}: ScreenerTableHeaderProps) {
+  const SortIcon = ({ k }: { k: SortKey }) =>
+    sortKey === k
+      ? sortDir === "asc"
+        ? <ChevronUp className="w-3 h-3 inline ml-1 text-primary" />
+        : <ChevronDown className="w-3 h-3 inline ml-1 text-primary" />
+      : <ArrowUpDown className="w-3 h-3 inline ml-1 opacity-30" />;
+
+  return (
+    <thead>
+      <tr className="border-b border-border bg-muted/30">
+        {canShowCombined && activeTab === "combined" && (
+          <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Exchange</th>
+        )}
+        <th
+          className="px-3 py-3 w-20 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
+          onClick={() => toggleSort("symbol")}
+        >
+          Symbol <SortIcon k="symbol" />
+        </th>
+        <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          Pattern
+        </th>
+        <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          PIVOT LEVEL
+        </th>
+        <th
+          className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
+          onClick={() => toggleSort("compressionRatio")}
+        >
+          SIZE RATIO <SortIcon k="compressionRatio" />
+        </th>
+        <th
+          className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
+          onClick={() => toggleSort("change24h")}
+        >
+          Price <SortIcon k="change24h" />
+        </th>
+        <th
+          className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
+          onClick={() => toggleSort("priceVsCpr")}
+        >
+          Price/CPR <SortIcon k="priceVsCpr" />
+        </th>
+        <th
+          className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
+          onClick={() => toggleSort("pdhPdlPct")}
+          title="Position vs yesterday's High/Low"
+        >
+          PDH / PDL <SortIcon k="pdhPdlPct" />
+        </th>
+        <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          CPR-GAP
+        </th>
+        <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          Chart
+        </th>
+      </tr>
+    </thead>
+  );
+}
 
 export interface ScreenerTableRowProps {
   r: CPRResultWithSource;

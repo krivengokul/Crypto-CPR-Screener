@@ -4,9 +4,6 @@ import {
   TrendingUp,
   RefreshCw,
   Search,
-  ChevronUp,
-  ChevronDown,
-  ArrowUpDown,
   ExternalLink,
   Bell,
   BellOff,
@@ -57,7 +54,7 @@ import {
 } from "./ScreenerUtils";
 import LiveClock from "./LiveClock";
 import ScreenerLegend from "./ScreenerLegend";
-import ScreenerTableRow from "./ScreenerTableRow";
+import ScreenerTableRow, { ScreenerTableHeader } from "./ScreenerTableRow";
 import { useBinanceLiveRefresh, useDeltaLiveRefresh } from "@/hooks/useLivePriceRefresh";
 
 export default function Screener({
@@ -993,13 +990,6 @@ export default function Screener({
 
   const currentError = activeTab === "delta" ? deltaError : error;
   const canShowCombined = status === "done" || deltaStatus === "done";
-
-  const SortIcon = ({ k }: { k: SortKey }) =>
-    sortKey === k
-      ? sortDir === "asc"
-        ? <ChevronUp className="w-3 h-3 inline ml-1 text-primary" />
-        : <ChevronDown className="w-3 h-3 inline ml-1 text-primary" />
-      : <ArrowUpDown className="w-3 h-3 inline ml-1 opacity-30" />;
 
   // Helper: is any sub-filter active (to decide the result count label)
   const anySubFilter =
@@ -2234,56 +2224,13 @@ export default function Screener({
           <div className="rounded-xl border border-border bg-card overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm border-collapse">
-                <thead>
-                  <tr className="border-b border-border bg-muted/30">
-                    {canShowCombined && activeTab === "combined" && (
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Exchange</th>
-                    )}
-                    <th
-                      className="px-3 py-3 w-20 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
-                      onClick={() => toggleSort("symbol")}
-                    >
-                      Symbol <SortIcon k="symbol" />
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Pattern
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      PIVOT LEVEL
-                    </th>
-                    <th
-                      className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
-                      onClick={() => toggleSort("compressionRatio")}
-                    >
-                      SIZE RATIO <SortIcon k="compressionRatio" />
-                    </th>
-                    <th
-                      className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
-                      onClick={() => toggleSort("change24h")}
-                    >
-                      Price <SortIcon k="change24h" />
-                    </th>
-                    <th
-                      className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
-                      onClick={() => toggleSort("priceVsCpr")}
-                    >
-                      Price/CPR <SortIcon k="priceVsCpr" />
-                    </th>
-                    <th
-                      className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
-                      onClick={() => toggleSort("pdhPdlPct")}
-                      title="Position vs yesterday's High/Low"
-                    >
-                      PDH / PDL <SortIcon k="pdhPdlPct" />
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      CPR-GAP
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Chart
-                    </th>
-                  </tr>
-                </thead>
+                <ScreenerTableHeader
+                  canShowCombined={canShowCombined}
+                  activeTab={activeTab}
+                  sortKey={sortKey}
+                  sortDir={sortDir}
+                  toggleSort={toggleSort}
+                />
                 <tbody className="divide-y divide-border">
                   {displayed.map((r) => {
                     const sym = splitSymbol(r.symbol, r.source);
