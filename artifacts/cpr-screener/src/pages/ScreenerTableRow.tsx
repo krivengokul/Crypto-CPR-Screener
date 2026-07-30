@@ -501,7 +501,7 @@ export default function ScreenerTableRow({
                   badges.push(
                     <span
                       key="pdh-gt-u1"
-                      className="text-xs px-1.5 py-0.5 rounded bg-green-500/10 text-green-400 border border-green-500/30 font-medium"
+                      className="text-xs px-1.5 py-0.5 rounded bg-green-500/5 text-green-400/60 border border-green-500/10 font-normal opacity-70"
                       title={`PDH ${fmt(pdh)} > U1 ${fmt(u1)}`}
                     >
                       PDH&gt;U1
@@ -511,7 +511,7 @@ export default function ScreenerTableRow({
                   badges.push(
                     <span
                       key="pdh-eq-u1"
-                      className="text-xs px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 font-medium"
+                      className="text-xs px-1.5 py-0.5 rounded bg-emerald-500/5 text-emerald-300/60 border border-emerald-500/10 font-normal opacity-70"
                       title={`PDH = U1 (${fmt(pdh)})`}
                     >
                       PDH=U1
@@ -523,7 +523,7 @@ export default function ScreenerTableRow({
                 badges.push(
                   <span
                     key="pdl-lt-l1"
-                    className="text-xs px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/30 font-medium"
+                    className="text-xs px-1.5 py-0.5 rounded bg-red-500/5 text-red-400/60 border border-red-500/10 font-normal opacity-70"
                     title={`PDL ${fmt(pdl)} < L1 ${fmt(l1)}`}
                   >
                     PDL&lt;L1
