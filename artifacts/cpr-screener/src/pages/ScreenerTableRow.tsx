@@ -484,7 +484,7 @@ export default function ScreenerTableRow({
                     ? "text-green-400/70"
                     : pdhPdlStatus(r).sub === "< PDL"
                     ? "text-red-400/70"
-                    : "text-yellow-500/70"
+                    : "text-yellow-500/85"
                 }`}
               >
                 {pdhPdlStatus(r).sub}
