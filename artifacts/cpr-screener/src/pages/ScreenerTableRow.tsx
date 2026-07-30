@@ -360,14 +360,14 @@ export default function ScreenerTableRow({
             return (
               <div className="flex flex-wrap items-start gap-1">
                 <span
-                  className={`text-xs px-1.5 py-0.5 rounded border font-medium flex flex-col items-center leading-tight ${prevCat.pClasses}`}
+                  className={`font-sans text-xs px-1.5 py-0.5 rounded border font-medium flex flex-col items-center leading-tight ${prevCat.pClasses}`}
                   title={`Prev day CPR width: ${r.prevCPR.widthPct.toFixed(4)}%`}
                 >
                   <span>p{prevCat.label}</span>
                   <span>{r.prevCPR.widthPct.toFixed(4)}%</span>
                 </span>
                 <span
-                  className={`text-xs px-1.5 py-0.5 rounded border font-medium flex flex-col items-center leading-tight ${todayCat.classes}`}
+                  className={`font-sans text-xs px-1.5 py-0.5 rounded border font-medium flex flex-col items-center leading-tight ${todayCat.classes}`}
                   title={`Today's CPR width: ${r.todayCPR.widthPct.toFixed(4)}%`}
                 >
                   <span>{todayCat.label}</span>
@@ -376,7 +376,7 @@ export default function ScreenerTableRow({
               </div>
             );
           })()}
-          <div className="text-xs font-semibold text-foreground mt-1">
+          <div className="font-sans text-xs font-semibold text-foreground mt-1">
             {r.compressionRatio.toFixed(1)}%
           </div>
         </td>
