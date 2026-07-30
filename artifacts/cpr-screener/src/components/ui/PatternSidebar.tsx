@@ -79,7 +79,14 @@ export const subPatterns: Record<string, SubPattern[]> = {
   "pcpr-u1-cpr-pl1": [
     // NEW: BC>pPDL-U4:5AM — PREVCPR 1ABOVE + today's BC above prev day's PDH
     // (prevCPR.prevHigh, i.e. the actual high of the day before prev day).
-    { id: "BC>pPDL-U4:5AM", label: "BC>pPDL-U4:5AM" },
+    // Green color family to visually flag this as the bullish sub-pattern.
+    {
+      id: "BC>pPDL-U4:5AM",
+      label: "BC>pPDL-U4:5AM",
+      activeColor: "#22c55e",              // green-500 border
+      activeText:  "#4ade80",              // green-400 text
+      activeBg:    "rgba(34, 197, 94, 0.14)",
+    },
   ],
   "l1pu1-above": [
     {
@@ -151,7 +158,7 @@ export const subPatterns: Record<string, SubPattern[]> = {
 
 export const patterns: Pattern[] = [
   { id: "cpr-1-above",        label: "CPR 1ABOVE",    subtitle: "Today TC in prev U2 band, S1 in prev BC/R1 band", icon: TrendingUp },
-  { id: "pcpr-u1-cpr-pl1",    label: "PREVCPR 1ABOVE", subtitle: "Prev Pivot in U1 band, CPR above pL1", icon: TrendingUp },
+  { id: "pcpr-u1-cpr-pl1",    label: "PCPR 1ABOVE", subtitle: "Prev Pivot in U1 band, CPR above pL1", icon: TrendingUp },
   { id: "l1pu1-above",        label: "L1pU1 Above",   subtitle: "Today L1 above Prev U1",   icon: TrendingUp },
   { id: "littleabove",        label: "Little ABOVE",  subtitle: "Narrow CPR Above PCPR",    icon: TrendingUp },
   { id: "littlebelow",        label: "Little BELOW",  subtitle: "Narrow CPR Below PCPR",    icon: TrendingDown },

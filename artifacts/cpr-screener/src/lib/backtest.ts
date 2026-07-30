@@ -138,6 +138,18 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
   },
+  // NEW: "BC>pPDL-U4:5AM" — nested under "PREVCPR 1ABOVE" (pcpr-u1-cpr-pl1)
+  // category's new "cOU3L4" Pattern sub-category (see BACKTEST_CATEGORIES
+  // below). Bullish — per ScreenerUtils.tsx's condition (today's BC above
+  // prev day's PDH, prevCPR.bc > todayCPR.r1) — targets U4 (today's R4)
+  // by ~5AM, same target style as the other "little/overlap" bullish subs.
+  {
+    key: "BC>pPDL-U4:5AM",
+    label: "BC>pPDL-U4:5AM",
+    direction: "bullish",
+    targetLabel: "U4 (today's R4)",
+    getTarget: (r) => r.todayCPR.r4,
+  },
 ];
 
 /**
@@ -183,12 +195,23 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
   // subPatterns defined for it in PatternSidebar.tsx's `subPatterns` map
   // yet, so there's nothing to nest here).
   { key: "cpr-1-above", label: "CPR 1ABOVE" },
-  // NEW: "PREVCPR 1ABOVE" left-nav section (top of the pattern tree in
-  // PatternSidebar.tsx) — symbol-list-only category, same treatment as
-  // "littlebelow" / "structure-bigabove" below (no subPatterns defined
-  // for it in PatternSidebar.tsx's `subPatterns` map, so there's nothing
-  // to nest here yet).
-  { key: "pcpr-u1-cpr-pl1", label: "PREVCPR 1ABOVE" },
+  // NEW: "PREVCPR 1ABOVE" (displayed as "PCPR 1ABOVE" in PatternSidebar's
+  // left-nav) left-nav section (top of the pattern tree in
+  // PatternSidebar.tsx) — nests the "cOU3L4" Pattern sub-category, which
+  // in turn nests "BC>pPDL-U4:5AM" (base condition: this category's
+  // pCPRU1CPRpL1 condition AND the raw cOU3L4 flag — see
+  // matchesPatternFlag in ScreenerUtils.tsx).
+  {
+    key: "pcpr-u1-cpr-pl1",
+    label: "PREVCPR 1ABOVE",
+    subCategories: [
+      {
+        key: "cOU3L4",
+        label: "cOU3L4",
+        subPatternKeys: ["BC>pPDL-U4:5AM"],
+      },
+    ],
+  },
   // NEW: "L1pU1 Above" left-nav section (first item), nesting the
   // "SMi-L1pU1>-APU4:11PM" pattern that used to live under CPR Inside.
   {
