@@ -263,9 +263,6 @@ export function ScreenerTableHeader({
         <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           CPR-GAP
         </th>
-        <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          Chart
-        </th>
       </tr>
     </thead>
   );
@@ -476,8 +473,59 @@ export default function ScreenerTableRow({
           className={`px-4 py-3 whitespace-nowrap text-xs font-medium ${pdhPdlStatus(r).color}`}
           title={`PDH: ${fmt(r.todayCPR.prevHigh)}  |  PDL: ${fmt(r.todayCPR.prevLow)}`}
         >
-          <div>{pdhPdlStatus(r).main}</div>
-          <div>{pdhPdlStatus(r).sub}</div>
+          <div>
+            {pdhPdlStatus(r).main}
+            {pdhPdlStatus(r).sub && (
+              <span className="font-normal ml-1">{pdhPdlStatus(r).sub}</span>
+            )}
+          </div>
+          <div className="mt-0.5">
+            {(() => {
+              const pdh = r.todayCPR.prevHigh;
+              const pdl = r.todayCPR.prevLow;
+              const u1 = (r.todayCPR as any).r1 ?? (r.todayCPR as any).u1;
+              const l1 = (r.todayCPR as any).s1 ?? (r.todayCPR as any).l1;
+              const badges: JSX.Element[] = [];
+              if (pdh != null && u1 != null) {
+                if (pdh > u1) {
+                  badges.push(
+                    <span
+                      key="pdh-gt-u1"
+                      className="text-xs px-1.5 py-0.5 rounded bg-green-500/10 text-green-400 border border-green-500/30 font-medium"
+                      title={`PDH ${fmt(pdh)} > U1 ${fmt(u1)}`}
+                    >
+                      PDH&gt;U1
+                    </span>
+                  );
+                } else if (pdh === u1) {
+                  badges.push(
+                    <span
+                      key="pdh-eq-u1"
+                      className="text-xs px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 font-medium"
+                      title={`PDH = U1 (${fmt(pdh)})`}
+                    >
+                      PDH=U1
+                    </span>
+                  );
+                }
+              }
+              if (pdl != null && l1 != null && pdl < l1) {
+                badges.push(
+                  <span
+                    key="pdl-lt-l1"
+                    className="text-xs px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/30 font-medium"
+                    title={`PDL ${fmt(pdl)} < L1 ${fmt(l1)}`}
+                  >
+                    PDL&lt;L1
+                  </span>
+                );
+              }
+              if (badges.length === 0) {
+                return <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">—</span>;
+              }
+              return <div className="flex flex-wrap gap-1">{badges}</div>;
+            })()}
+          </div>
         </td>
         <td className="px-4 py-3 whitespace-nowrap text-xs font-mono font-medium">
           {(() => {
@@ -498,53 +546,6 @@ export default function ScreenerTableRow({
             );
           })()}
           {gapBadge && <div className="flex flex-wrap gap-1 mt-1">{gapBadge}</div>}
-        </td>
-        <td className="px-4 py-3 whitespace-nowrap">
-          {(() => {
-            const pdh = r.todayCPR.prevHigh;
-            const pdl = r.todayCPR.prevLow;
-            const u1 = (r.todayCPR as any).r1 ?? (r.todayCPR as any).u1;
-            const l1 = (r.todayCPR as any).s1 ?? (r.todayCPR as any).l1;
-            const badges: JSX.Element[] = [];
-            if (pdh != null && u1 != null) {
-              if (pdh > u1) {
-                badges.push(
-                  <span
-                    key="pdh-gt-u1"
-                    className="text-xs px-1.5 py-0.5 rounded bg-green-500/10 text-green-400 border border-green-500/30 font-medium"
-                    title={`PDH ${fmt(pdh)} > U1 ${fmt(u1)}`}
-                  >
-                    PDH&gt;U1
-                  </span>
-                );
-              } else if (pdh === u1) {
-                badges.push(
-                  <span
-                    key="pdh-eq-u1"
-                    className="text-xs px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 font-medium"
-                    title={`PDH = U1 (${fmt(pdh)})`}
-                  >
-                    PDH=U1
-                  </span>
-                );
-              }
-            }
-            if (pdl != null && l1 != null && pdl < l1) {
-              badges.push(
-                <span
-                  key="pdl-lt-l1"
-                  className="text-xs px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/30 font-medium"
-                  title={`PDL ${fmt(pdl)} < L1 ${fmt(l1)}`}
-                >
-                  PDL&lt;L1
-                </span>
-              );
-            }
-            if (badges.length === 0) {
-              return <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">—</span>;
-            }
-            return <div className="flex flex-wrap gap-1">{badges}</div>;
-          })()}
         </td>
       </tr>
 

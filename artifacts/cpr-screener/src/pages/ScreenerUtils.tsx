@@ -60,13 +60,13 @@ export function pdhPdlStatus(r: CPRResult): { main: string; sub: string; color: 
   const { prevHigh: pdh, prevLow: pdl } = todayCPR;
   if (price > pdh) {
     const pct = ((price - pdh) / pdh) * 100;
-    return { main: `+${pct.toFixed(2)}%`, sub: "above PDH", color: "text-green-400" };
+    return { main: `+${pct.toFixed(2)}%`, sub: "> PDH", color: "text-green-400" };
   }
   if (price < pdl) {
     const pct = ((pdl - price) / pdl) * 100;
-    return { main: `−${pct.toFixed(2)}%`, sub: "below PDL", color: "text-destructive" };
+    return { main: `−${pct.toFixed(2)}%`, sub: "< PDL", color: "text-destructive" };
   }
-  return { main: "Inside", sub: "PDH/PDL", color: "text-yellow-500" };
+  return { main: "", sub: "IN-PDH/PDL", color: "text-yellow-500" };
 }
 
 /**
