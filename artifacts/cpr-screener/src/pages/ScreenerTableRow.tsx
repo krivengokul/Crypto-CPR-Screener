@@ -470,13 +470,23 @@ export default function ScreenerTableRow({
           <div>{distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).sub}</div>
         </td>
         <td
-          className={`px-4 py-3 whitespace-nowrap text-xs font-medium ${pdhPdlStatus(r).color}`}
+          className="px-4 py-3 whitespace-nowrap text-xs font-medium"
           title={`PDH: ${fmt(r.todayCPR.prevHigh)}  |  PDL: ${fmt(r.todayCPR.prevLow)}`}
         >
           <div>
-            {pdhPdlStatus(r).main}
+            {pdhPdlStatus(r).main && (
+              <span className={pdhPdlStatus(r).color}>{pdhPdlStatus(r).main}</span>
+            )}
             {pdhPdlStatus(r).sub && (
-              <span className="font-normal ml-1">{pdhPdlStatus(r).sub}</span>
+              <span
+                className={
+                  pdhPdlStatus(r).sub === "IN-PDH/PDL"
+                    ? `font-normal ml-1 ${pdhPdlStatus(r).color}`
+                    : "font-normal ml-1 text-muted-foreground"
+                }
+              >
+                {pdhPdlStatus(r).sub}
+              </span>
             )}
           </div>
           <div className="mt-0.5">
