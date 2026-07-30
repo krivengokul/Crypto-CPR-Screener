@@ -76,7 +76,11 @@ export const subPatterns: Record<string, SubPattern[]> = {
     { id: "OBW-LoU4L4-L4",           label: "OBW-LoU4L4-L4" },
   ],
   "cpr-1-above": [],
-  "pcpr-u1-cpr-pl1": [],
+  "pcpr-u1-cpr-pl1": [
+    // NEW: BC>pPDH — PREVCPR 1ABOVE + today's BC above prev day's PDH
+    // (prevCPR.prevHigh, i.e. the actual high of the day before prev day).
+    { id: "BC>pPDH", label: "BC>pPDH" },
+  ],
   "l1pu1-above": [
     {
       id: "SMi-L1pU1>-APU4:11PM",
