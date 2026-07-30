@@ -16,7 +16,7 @@
 export const STABLECOIN_BASES = new Set([
   "USDC", "USDE", "FDUSD", "TUSD", "DAI", "USDS", "USDP",
   "PYUSD", "USD1", "XUSD", "EURI", "AEUR", "BFUSD", "FRAX",
-  "GUSD", "LUSD", "USDD", "RLUSD", "KGST", "BTTC", "UUSDT",
+  "GUSD", "LUSD", "USDD", "RLUSD", "KGST", "BTTC", "UUSD",
 ]);
 
 /**
