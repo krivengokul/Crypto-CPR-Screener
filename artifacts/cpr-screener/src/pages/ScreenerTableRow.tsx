@@ -479,11 +479,13 @@ export default function ScreenerTableRow({
             )}
             {pdhPdlStatus(r).sub && (
               <span
-                className={
-                  pdhPdlStatus(r).sub === "IN-PDH/PDL"
-                    ? `font-normal ml-1 ${pdhPdlStatus(r).color}`
-                    : "font-normal ml-1 text-muted-foreground"
-                }
+                className={`font-normal ml-1 opacity-80 ${
+                  pdhPdlStatus(r).sub === "> PDH"
+                    ? "text-green-400/70"
+                    : pdhPdlStatus(r).sub === "< PDL"
+                    ? "text-red-400/70"
+                    : "text-yellow-500/70"
+                }`}
               >
                 {pdhPdlStatus(r).sub}
               </span>
@@ -501,7 +503,7 @@ export default function ScreenerTableRow({
                   badges.push(
                     <span
                       key="pdh-gt-u1"
-                      className="text-xs px-1.5 py-0.5 rounded bg-green-500/5 text-green-400/60 border border-green-500/10 font-normal opacity-70"
+                      className="text-xs px-1.5 py-0.5 rounded bg-green-500/8 text-green-400/70 border border-green-500/15 font-normal opacity-80"
                       title={`PDH ${fmt(pdh)} > U1 ${fmt(u1)}`}
                     >
                       PDH&gt;U1
@@ -511,7 +513,7 @@ export default function ScreenerTableRow({
                   badges.push(
                     <span
                       key="pdh-eq-u1"
-                      className="text-xs px-1.5 py-0.5 rounded bg-emerald-500/5 text-emerald-300/60 border border-emerald-500/10 font-normal opacity-70"
+                      className="text-xs px-1.5 py-0.5 rounded bg-emerald-500/8 text-emerald-300/70 border border-emerald-500/15 font-normal opacity-80"
                       title={`PDH = U1 (${fmt(pdh)})`}
                     >
                       PDH=U1
@@ -523,7 +525,7 @@ export default function ScreenerTableRow({
                 badges.push(
                   <span
                     key="pdl-lt-l1"
-                    className="text-xs px-1.5 py-0.5 rounded bg-red-500/5 text-red-400/60 border border-red-500/10 font-normal opacity-70"
+                    className="text-xs px-1.5 py-0.5 rounded bg-red-500/8 text-red-400/70 border border-red-500/15 font-normal opacity-80"
                     title={`PDL ${fmt(pdl)} < L1 ${fmt(l1)}`}
                   >
                     PDL&lt;L1
