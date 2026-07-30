@@ -445,7 +445,7 @@ export default function ScreenerTableRow({
                   <span>p{prevCat.label}</span>
                   <span className="text-[10px] font-mono">{r.prevCPR.widthPct.toFixed(4)}%</span>
                 </span>
-                <span className="font-sans text-xs font-semibold text-primary bg-primary/10 border border-primary/30 rounded-full px-2.5 py-1 shrink-0">
+                <span className="font-sans text-[11px] font-semibold text-muted-foreground bg-primary/10 border border-primary/30 rounded-full px-2 py-0.5 shrink-0">
                   {r.compressionRatio.toFixed(1)}%
                 </span>
                 <span
@@ -460,12 +460,11 @@ export default function ScreenerTableRow({
           })()}
         </td>
         <td className="px-4 py-3 font-mono whitespace-nowrap">
-          <div className="text-xs font-bold text-foreground">
-            {fmt(r.currentPrice)}(
+          <div className="text-sm font-bold text-foreground">
+            {fmt(r.currentPrice)}
             <span className={r.change24h >= 0 ? "text-green-400" : "text-destructive"}>
-              {fmtPct(r.change24h)}
+              ({fmtPct(r.change24h)})
             </span>
-            )
           </div>
           <div className="text-xs text-muted-foreground">OPrice: {fmt(r.openPrice)}</div>
         </td>
