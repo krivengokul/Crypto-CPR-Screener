@@ -352,48 +352,32 @@ export default function ScreenerTableRow({
               <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">Skip</span>
             )}
           </div>
-          <div className="flex flex-wrap gap-1 mt-1">
-            {(() => {
-              const prevCat = getWidthCategory(r.prevCPR.widthPct);
-              const todayCat = getWidthCategory(r.todayCPR.widthPct);
-              return (
-                <>
-                  <span className={`text-xs px-1.5 py-0.5 rounded border font-medium ${prevCat.pClasses}`} title={`Prev day CPR width: ${r.prevCPR.widthPct.toFixed(4)}%`}>
-                    p{prevCat.label}
-                  </span>
-                  <span className={`text-xs px-1.5 py-0.5 rounded border font-medium ${todayCat.classes}`} title={`Today's CPR width: ${r.todayCPR.widthPct.toFixed(4)}%`}>
-                    {todayCat.label}
-                  </span>
-                </>
-              );
-            })()}
-          </div>
         </td>
         <td className="px-4 py-3 font-mono whitespace-nowrap">
-          <div className="text-xs text-chart-3">
-            <span className="text-muted-foreground">TDay: </span>{r.todayCPR.widthPct.toFixed(4)}%
-          </div>
-          <div className={`text-xs font-semibold py-0.5 ${
-            r.compressionRatio < 25 ? "text-green-400"
-            : r.compressionRatio < 50 ? "text-accent"
-            : r.compressionRatio < 75 ? "text-yellow-500"
-            : "text-destructive"
-          }`}>
+          {(() => {
+            const prevCat = getWidthCategory(r.prevCPR.widthPct);
+            const todayCat = getWidthCategory(r.todayCPR.widthPct);
+            return (
+              <div className="flex flex-wrap items-start gap-1">
+                <span
+                  className={`text-xs px-1.5 py-0.5 rounded border font-medium flex flex-col items-center leading-tight ${prevCat.pClasses}`}
+                  title={`Prev day CPR width: ${r.prevCPR.widthPct.toFixed(4)}%`}
+                >
+                  <span>p{prevCat.label}</span>
+                  <span>{r.prevCPR.widthPct.toFixed(4)}%</span>
+                </span>
+                <span
+                  className={`text-xs px-1.5 py-0.5 rounded border font-medium flex flex-col items-center leading-tight ${todayCat.classes}`}
+                  title={`Today's CPR width: ${r.todayCPR.widthPct.toFixed(4)}%`}
+                >
+                  <span>{todayCat.label}</span>
+                  <span>{r.todayCPR.widthPct.toFixed(4)}%</span>
+                </span>
+              </div>
+            );
+          })()}
+          <div className="text-xs font-semibold text-foreground mt-1">
             {r.compressionRatio.toFixed(1)}%
-            <div className="w-full bg-muted rounded-full h-1 mt-0.5 max-w-[64px]">
-              <div
-                className={`h-1 rounded-full transition-all ${
-                  r.compressionRatio < 25 ? "bg-green-400"
-                  : r.compressionRatio < 50 ? "bg-accent"
-                  : r.compressionRatio < 75 ? "bg-yellow-500"
-                  : "bg-destructive"
-                }`}
-                style={{ width: `${Math.min(r.compressionRatio, 100)}%` }}
-              />
-            </div>
-          </div>
-          <div className="text-xs text-chart-3/70">
-            <span className="text-muted-foreground">PDay: </span>{r.prevCPR.widthPct.toFixed(4)}%
           </div>
         </td>
         <td className="px-4 py-3 font-mono whitespace-nowrap">
