@@ -239,7 +239,7 @@ export function ScreenerTableHeader({
           className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
           onClick={() => toggleSort("compressionRatio")}
         >
-          SIZE RATIO <SortIcon k="compressionRatio" />
+          PIVOT SIZE <SortIcon k="compressionRatio" />
         </th>
         <th
           className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
@@ -433,11 +433,14 @@ export default function ScreenerTableRow({
           </div>
         </td>
         <td className="px-4 py-3 font-mono whitespace-nowrap">
+          <div className="font-sans text-xs font-semibold text-foreground text-center mb-1">
+            {r.compressionRatio.toFixed(1)}%
+          </div>
           {(() => {
             const prevCat = getWidthCategory(r.prevCPR.widthPct);
             const todayCat = getWidthCategory(r.todayCPR.widthPct);
             return (
-              <div className="flex flex-wrap items-start gap-1">
+              <div className="flex flex-wrap items-start justify-center gap-1">
                 <span
                   className={`font-sans text-xs px-1.5 py-0.5 rounded border font-medium flex flex-col items-center leading-tight ${prevCat.pClasses}`}
                   title={`Prev day CPR width: ${r.prevCPR.widthPct.toFixed(4)}%`}
@@ -455,20 +458,10 @@ export default function ScreenerTableRow({
               </div>
             );
           })()}
-          <div className="font-sans text-xs font-semibold text-foreground mt-1">
-            {r.compressionRatio.toFixed(1)}%
-          </div>
         </td>
         <td className="px-4 py-3 font-mono whitespace-nowrap">
-          <div className="text-xs font-semibold text-foreground">Price: {fmt(r.currentPrice)}</div>
-          <div className={`text-xs font-semibold py-0.5 ${r.change24h >= 0 ? "text-green-400" : "text-destructive"}`}>
-            {fmtPct(r.change24h)}
-            <div className="w-full bg-muted rounded-full h-1 mt-0.5 max-w-[64px]">
-              <div
-                className={`h-1 rounded-full transition-all ${r.change24h >= 0 ? "bg-green-400" : "bg-destructive"}`}
-                style={{ width: `${Math.min(Math.abs(r.change24h) * 5, 100)}%` }}
-              />
-            </div>
+          <div className={`text-xs font-semibold ${r.change24h >= 0 ? "text-green-400" : "text-destructive"}`}>
+            {fmt(r.currentPrice)}({fmtPct(r.change24h)})
           </div>
           <div className="text-xs text-muted-foreground">OPrice: {fmt(r.openPrice)}</div>
         </td>
