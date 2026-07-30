@@ -445,7 +445,7 @@ export default function ScreenerTableRow({
                   <span>p{prevCat.label}</span>
                   <span className="text-[10px] font-mono">{r.prevCPR.widthPct.toFixed(4)}%</span>
                 </span>
-                <span className="font-sans text-[11px] font-semibold text-slate-300 bg-slate-500/10 border border-slate-500/30 rounded-full px-2 py-0.5 shrink-0">
+                <span className="font-sans text-[11px] font-semibold text-muted-foreground bg-slate-500/10 border border-slate-500/30 rounded-full px-2 py-0.5 shrink-0">
                   {r.compressionRatio.toFixed(1)}%
                 </span>
                 <span
