@@ -77,7 +77,7 @@ export interface CPRPairFlags {
   cOL3U4: boolean;
   cOU3L3: boolean;
   LoU3L4: boolean;
-  LoU3L34: boolean;
+  LoU3L3: boolean;
   cOLoU2L3: boolean;
   LoU2L4: boolean;
   LoU2L3: boolean;
@@ -233,7 +233,7 @@ export interface CPRResult {
   cOL3U4: boolean;
   cOU3L3: boolean;
   LoU3L4: boolean;
-  LoU3L34: boolean;
+  LoU3L3: boolean;
   LoU2L4: boolean;
   LoU2L3: boolean;
   LoU4L34: boolean;
@@ -443,7 +443,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
   
   const LoU3L4   = (today.r4 > prev.r2 && today.r4 <= prev.r3) &&
                    (prev.s4 > today.s4 && prev.s4 < today.s3);
-  const LoU3L34  = (today.r4 > prev.r2 && today.r4 < prev.r3) &&
+  const LoU3L3  = (today.r4 > prev.r2 && today.r4 < prev.r3) &&
                    (prev.s4 > today.s3 && prev.s4 < today.s2);
   const LoU2L4   = (today.r4 > prev.r1 && today.r4 < prev.r2) &&
                    (prev.s4 > today.s4 && prev.s4 < today.s3);
@@ -626,7 +626,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
     srCompressedHigher, srCompressedLower, srExpandedHigher, srExpandedLower,
     cOU3L4, cOHiL2U3, cOL3U3, eXLoL3U4, eXL4U4, HiL4U34, HiL2U4, HiL3U4, HiL4U4,
     LoU4L4, eXHiU1L3, eXHiL4U3, eXU4L234, eXU4L34, cOHiL2U4, cOL4U4, cOU4L4, exL3U2,
-    cOL3U4, cOU3L3, LoU3L4, LoU3L34, cOLoU2L3, LoU2L4, LoU2L3, LoU4L34, LoU4L234,
+    cOL3U4, cOU3L3, LoU3L4, LoU3L3, cOLoU2L3, LoU2L4, LoU2L3, LoU4L34, LoU4L234,
     cOHiL2U2, LoU4L1234, cOU1L2, cOU2L4, eXL3U3, eXU3L3,
     cOU1L1, cOL1U1, cOU2L2, cOL2U2,
     HiL3U3, cOU1L3,
@@ -663,7 +663,7 @@ export function pickCPRSubLabel(f: CPRPairFlags): string | null {
   if (f.cOL3U4)    return "cOL3U4";
   if (f.cOU3L3)    return "cOU3L3";
   if (f.LoU3L4)    return "LoU3L4";
-  if (f.LoU3L34)   return "LoU3L34";
+  if (f.LoU3L3)   return "LoU3L3";
   // cOLoU2L3 checked before other U2-band branches so its badge wins ties.
   if (f.cOLoU2L3)  return "cOLoU2L3";
   if (f.LoU2L4)    return "LoU2L4";

@@ -889,7 +889,7 @@ export default function Screener({
       if (PatternFilter === "cOL3U4") return r.cOL3U4;
       if (PatternFilter === "cOU3L3") return r.cOU3L3;
       if (PatternFilter === "LoU3L4") return r.LoU3L4;
-      if (PatternFilter === "LoU3L34") return r.LoU3L34;
+      if (PatternFilter === "LoU3L3") return r.LoU3L3;
       if (PatternFilter === "LoU2L4") return r.LoU2L4;
       if (PatternFilter === "LoU2L3") return r.LoU2L3;
       if (PatternFilter === "LoU4L34") return r.LoU4L34;
@@ -1992,7 +1992,7 @@ export default function Screener({
                   { label: "cOL3U4",   active: "border-yellow-400 text-yellow-400" },
                   { label: "cOU3L3",   active: "border-teal-400 text-teal-400" },
                   { label: "LoU3L4",   active: "border-indigo-400 text-indigo-400" },
-                  { label: "LoU3L34",  active: "border-purple-400 text-purple-400" },
+                  { label: "LoU3L3",  active: "border-purple-400 text-purple-400" },
                   { label: "LoU2L4",   active: "border-pink-400 text-pink-400" },
                   { label: "LoU2L3",   active: "border-rose-400 text-rose-400" },
                   { label: "LoU4L34",  active: "border-amber-400 text-amber-400" },
