@@ -138,14 +138,14 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
   },
-  // NEW: "BC>pPDL-U4:5AM" — nested under "PREVCPR 1ABOVE" (pcpr-u1-cpr-pl1)
+  // NEW: "BC>pPDL-U3:5AM" — nested under "PREVCPR 1ABOVE" (pcpr-u1-cpr-pl1)
   // category's new "cOU3L4" Pattern sub-category (see BACKTEST_CATEGORIES
   // below). Bullish — per ScreenerUtils.tsx's condition (today's BC above
   // prev day's PDH, prevCPR.bc > todayCPR.r1) — targets U4 (today's R4)
   // by ~5AM, same target style as the other "little/overlap" bullish subs.
   {
-    key: "BC>pPDL-U4:5AM",
-    label: "BC>pPDL-U4:5AM",
+    key: "BC>pPDL-U3:5AM",
+    label: "BC>pPDL-U3:5AM",
     direction: "bullish",
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
@@ -198,7 +198,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
   // NEW: "PREVCPR 1ABOVE" (displayed as "PCPR 1ABOVE" in PatternSidebar's
   // left-nav) left-nav section (top of the pattern tree in
   // PatternSidebar.tsx) — nests the "cOU3L4" Pattern sub-category, which
-  // in turn nests "BC>pPDL-U4:5AM" (base condition: this category's
+  // in turn nests "BC>pPDL-U3:5AM" (base condition: this category's
   // pCPR1Above condition AND the raw cOU3L4 flag — see
   // matchesPatternFlag in ScreenerUtils.tsx).
   {
@@ -208,7 +208,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       {
         key: "cOU3L4",
         label: "cOU3L4",
-        subPatternKeys: ["BC>pPDL-U4:5AM"],
+        subPatternKeys: ["BC>pPDL-U3:5AM"],
       },
     ],
   },

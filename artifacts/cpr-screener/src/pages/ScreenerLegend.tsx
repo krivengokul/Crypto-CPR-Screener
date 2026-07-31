@@ -375,7 +375,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             <div className="text-xs font-semibold text-green-400 mb-1">Pivot Level: pCPR in U1 band</div>
             <div className="text-xs text-muted-foreground">Prev Pivot &gt; today R1 &amp; &lt; today R2 — today BC &gt; prev S1 &amp; &lt; prev BC</div>
           </>
-        ) : activePattern === "BC>pPDL-U4:5AM" ? (
+        ) : activePattern === "BC>pPDL-U3:5AM" ? (
           <>
             <div className="text-xs font-semibold text-green-400 mb-1">Pivot Level: pCPR in U1 band</div>
             <div className="text-xs text-muted-foreground">PCPR 1ABOVE base, plus today&apos;s BC above prev day&apos;s PDH</div>
@@ -562,10 +562,10 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             <div className="text-xs font-semibold text-emerald-400 mb-1">Bias: Bullish shift</div>
             <div className="text-xs text-emerald-400/80">Today&apos;s CPR has stepped above yesterday&apos;s lower band while prev Pivot still caps the U1/U2 zone</div>
           </>
-        ) : activePattern === "BC>pPDL-U4:5AM" ? (
+        ) : activePattern === "BC>pPDL-U3:5AM" ? (
           <>
-            <div className="text-xs font-semibold text-green-400 mb-1">Target: U4&nbsp;&nbsp;Time: 5AM</div>
-            <div className="text-xs text-emerald-400/80">Expected move toward today&apos;s U4 by ~5AM</div>
+            <div className="text-xs font-semibold text-green-400 mb-1">Target: U3&nbsp;&nbsp;Time: 5AM</div>
+            <div className="text-xs text-emerald-400/80">Expected move toward today&apos;s U3 by ~5AM</div>
           </>
         ) : activePattern === "SMi-L1pU1>-APU4:11PM" ? (
           <>

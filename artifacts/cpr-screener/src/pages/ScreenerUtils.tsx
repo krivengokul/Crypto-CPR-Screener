@@ -659,10 +659,10 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return r.cpr1Above;
     case "pcpr-u1-cpr-pl1":
       return r.pCPR1Above;
-    // NEW: BC>pPDL-U4:5AM — sub-filter under "PREVCPR 1ABOVE": base pCPR1Above
+    // NEW: BC>pPDL-U3:5AM — sub-filter under "PREVCPR 1ABOVE": base pCPR1Above
     // condition PLUS today's BC above prev day's PDH (prevCPR.prevHigh,
     // i.e. the actual candle high of the day before prev day).
-    case "BC>pPDL-U4:5AM":
+    case "BC>pPDL-U3:5AM":
       return r.pCPR1Above && r.cOU3L4  && r.todayCPR.bc > r.prevCPR.prevLow && r.prevCPR.bc > r.todayCPR.r1 && r.todayCPR.PDHLAbove && r.prevCPR.PDHLAbove;
     case "l1pu1-above":
       return r.L1pU1Above ; 
@@ -948,7 +948,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     { key: "OBW-LoU4L4-L4", direction: "up" },
   ],
   "pcpr-u1-cpr-pl1": [
-    { key: "BC>pPDL-U4:5AM", direction: "up" },
+    { key: "BC>pPDL-U3:5AM", direction: "up" },
   ],
   "l1pu1-above": [
     { key: "SMi-L1pU1>-APU4:11PM", direction: "up" },

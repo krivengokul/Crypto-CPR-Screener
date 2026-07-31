@@ -77,12 +77,12 @@ export const subPatterns: Record<string, SubPattern[]> = {
   ],
   "cpr-1-above": [],
   "pcpr-u1-cpr-pl1": [
-    // NEW: BC>pPDL-U4:5AM — PREVCPR 1ABOVE + today's BC above prev day's PDH
+    // NEW: BC>pPDL-U3:5AM — PREVCPR 1ABOVE + today's BC above prev day's PDH
     // (prevCPR.prevHigh, i.e. the actual high of the day before prev day).
     // Green color family to visually flag this as the bullish sub-pattern.
     {
-      id: "BC>pPDL-U4:5AM",
-      label: "BC>pPDL-U4:5AM",
+      id: "BC>pPDL-U3:5AM",
+      label: "BC>pPDL-U3:5AM",
       activeColor: "#22c55e",              // green-500 border
       activeText:  "#4ade80",              // green-400 text
       activeBg:    "rgba(34, 197, 94, 0.14)",
