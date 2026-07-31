@@ -461,6 +461,12 @@ export default function BacktestPanel() {
                       Symbol
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Pattern
+                    </th>
+                    <th className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[220px]">
+                      Pivot Size
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Close
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -479,12 +485,6 @@ export default function BacktestPanel() {
                           {changeSortDir === "asc" ? "▲" : changeSortDir === "desc" ? "▼" : "↕"}
                         </span>
                       </button>
-                    </th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Pattern
-                    </th>
-                    <th className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[220px]">
-                      Pivot Size
                     </th>
                   </tr>
                 </thead>
@@ -519,14 +519,6 @@ export default function BacktestPanel() {
                             <ChartLink symbol={r.symbol} source={r.source} />
                           </div>
                         </td>
-                        <td className={`px-3 py-2 font-mono text-xs font-medium ${closeColor}`}>
-                          {r.closePrice !== null && r.closePrice !== undefined ? fmt(r.closePrice) : "—"}
-                        </td>
-                        <td className={`px-3 py-2 font-mono text-xs font-medium ${chgColor}`}>
-                          {chg !== null && chg !== undefined
-                            ? `${chg >= 0 ? "+" : ""}${chg.toFixed(2)}%`
-                            : "—"}
-                        </td>
                         <td className="px-3 py-2 whitespace-nowrap">
                           {(() => {
                             const today = renderTodayPatternBadges(r.raw);
@@ -535,10 +527,10 @@ export default function BacktestPanel() {
                               return <span className="text-xs text-muted-foreground">—</span>;
                             }
                             return (
-                              <>
-                                {today}
+                              <div className="flex flex-wrap items-center gap-1.5">
                                 {prev}
-                              </>
+                                {today}
+                              </div>
                             );
                           })()}
                         </td>
@@ -568,6 +560,14 @@ export default function BacktestPanel() {
                               </div>
                             );
                           })()}
+                        </td>
+                        <td className={`px-3 py-2 font-mono text-sm font-medium ${closeColor}`}>
+                          {r.closePrice !== null && r.closePrice !== undefined ? fmt(r.closePrice) : "—"}
+                        </td>
+                        <td className={`px-3 py-2 font-mono text-sm font-medium ${chgColor}`}>
+                          {chg !== null && chg !== undefined
+                            ? `${chg >= 0 ? "+" : ""}${chg.toFixed(2)}%`
+                            : "—"}
                         </td>
                       </tr>
                     );
