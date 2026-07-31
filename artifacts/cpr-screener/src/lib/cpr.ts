@@ -583,7 +583,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
   //   prev day's Pivot is above today's R1 and below today's R2, AND
   //   today's BC is above prev day's S1 and below prev day's BC.
   const pCPR1Above = (prev.pivot > today.r1 && prev.pivot < today.r2) &&
-                       (today.tc > prev.s1 && today.tc < prev.bc);
+                       (today.tc > prev.s1 && today.tc < prev.bc); //In Some Scenarios p<s1 went up, so tc instead of pivot check
 
   // cpr1Above — "CPR 1ABOVE":
   //   today's TC is above prev day's R1 and below prev day's R2, AND

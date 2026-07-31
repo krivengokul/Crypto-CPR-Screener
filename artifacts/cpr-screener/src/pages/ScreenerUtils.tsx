@@ -755,6 +755,24 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.eXL3U1 &&
         r.compressionRatio > 300
       );
+    // NEW: TiMe-eXL3TC-AU4:2PM — U1>pU4 sub-pattern (moved from Big Above).
+    // Condition: Big CPR + CPR Above (cprRising + strWideCPR) + today R1
+    // above prev R4 (parent U1>pU4) + Pattern eXL3TC (prev's S4 inside
+    // today's S3/S2 band (L3), prev's R4 inside today's Pivot/TC band
+    // (TC)) + prev CPR width category Tiny (0.10%-0.22%) + today's CPR
+    // width category Mega (5.00%-10.00%). Reverse-engineered from a chart
+    // showing prev CPR "Tiny (0.21%)" and today's CPR "Mega (5.081%)" with
+    // price trading well above today's R4. Target AU4 (prev day's R4) by
+    // ~2PM.
+    case "TiMe-eXL3TC-AU4:2PM":
+      return (
+        r.cprRising &&
+        r.strWideCPR &&
+        r.todayCPR.r1 > r.prevCPR.r4 &&
+        r.eXL3TC &&
+        r.prevCPR.widthPct > 0.10 && r.prevCPR.widthPct <= 0.22 &&   // Tiny
+        r.todayCPR.widthPct > 5.00 && r.todayCPR.widthPct <= 10.00   // Mega
+      );
     case "HAThin-U1>PU4":
       return (r.cprRising && r.strWideCPR && r.bothTight && r.todayCPR.r1 > r.prevCPR.r4);
     // NEW: hR-HAL — BigCPR Above, top-level toggle next to Show All.
@@ -972,6 +990,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
   ],
   "u1-gt-pu4": [
     { key: "SL-eXL3U1-FAU4:3PM", direction: "up" },
+    { key: "TiMe-eXL3TC-AU4:2PM", direction: "up" },
   ],
   "structure-bigbelow": [
     { key: "bigbelow-pmini-pl3", direction: "up" },

@@ -134,6 +134,16 @@ export const subPatterns: Record<string, SubPattern[]> = {
   "u1-gt-pu4": [
     { id: "SL-eXL3U1-FAU4:3PM", label: "SL-eXL3U1-FAU4:3PM",
       activeColor: "#22c55e", activeText: "#4ade80", activeBg: "rgba(34,197,94,0.18)" },
+    // NEW: TiMe-eXL3TC-AU4:2PM — pTiny prev CPR + Mega today CPR +
+    // Pattern eXL3TC. Violet color family to visually distinguish it
+    // from its U1>pU4 sibling.
+    {
+      id: "TiMe-eXL3TC-AU4:2PM",
+      label: "TiMe-eXL3TC-AU4:2PM",
+      activeColor: "#a78bfa",              // violet-400 border
+      activeText:  "#c4b5fd",              // violet-300 text
+      activeBg:    "rgba(139, 92, 246, 0.14)", // violet-500 tint
+    },
   ],
   "structure-bigbelow": [
     { id: "bigbelow-pmini-pl3",      label: "pMini-L34C4/U3>4" },

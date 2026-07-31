@@ -150,6 +150,16 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
   },
+  // NEW: "TiMe-eXL3TC-AU4:2PM" — nested directly under "U1 > pU4"
+  // (u1-gt-pu4), alongside SL-eXL3U1-FAU4:3PM. Bullish, Pattern eXL3TC +
+  // pTiny/Mega width combo, targets AU4 (prev day's R4) by ~2PM.
+  {
+    key: "TiMe-eXL3TC-AU4:2PM",
+    label: "TiMe-eXL3TC-AU4:2PM",
+    direction: "bullish",
+    targetLabel: "AU4 (prev day's R4)",
+    getTarget: (r) => r.prevCPR.r4,
+  },
 ];
 
 /**
@@ -255,7 +265,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
   {
     key: "u1-gt-pu4",
     label: "U1 > pU4",
-    subPatternKeys: ["HA-U1>PU4", "SL-eXL3U1-FAU4:3PM"],
+    subPatternKeys: ["HA-U1>PU4", "SL-eXL3U1-FAU4:3PM", "TiMe-eXL3TC-AU4:2PM"],
   },
   { key: "structure-bigbelow", label: "BigCPR Below" },
   // NEW: "L1 < pL4" now nests the "eXU4L1" Pattern sub-category, which
