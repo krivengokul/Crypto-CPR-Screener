@@ -199,7 +199,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
   // left-nav) left-nav section (top of the pattern tree in
   // PatternSidebar.tsx) — nests the "cOU3L4" Pattern sub-category, which
   // in turn nests "BC>pPDL-U4:5AM" (base condition: this category's
-  // pCPRU1CPRpL1 condition AND the raw cOU3L4 flag — see
+  // pCPR1Above condition AND the raw cOU3L4 flag — see
   // matchesPatternFlag in ScreenerUtils.tsx).
   {
     key: "pcpr-u1-cpr-pl1",

@@ -116,9 +116,9 @@ export interface CPRPairFlags {
   eXU2L1: boolean;
   cOTCL2: boolean;
   L1pU1Above: boolean;
-  // pCPRU1CPRpL1 — prev day's Pivot sits inside today's R1/R2 band (U1 side)
+  // pCPR1Above — prev day's Pivot sits inside today's R1/R2 band (U1 side)
   // AND today's BC sits inside prev day's S1/BC band (pL1 side).
-  pCPRU1CPRpL1: boolean;
+  pCPR1Above: boolean;
   // cpr1Above — "CPR 1ABOVE": today's TC sits inside prev day's R1/R2 band
   // (U2 side) AND today's S1 sits inside prev day's BC/R1 band (a wide
   // band spanning prev's entire CPR, TC/Pivot/BC, up to prev's R1).
@@ -256,7 +256,7 @@ export interface CPRResult {
   eXU2L1: boolean;
   cOTCL2: boolean;
   L1pU1Above: boolean;
-  pCPRU1CPRpL1: boolean;
+  pCPR1Above: boolean;
   cpr1Above: boolean;
   eXU3L1: boolean;
   eXU2TC: boolean;
@@ -579,17 +579,17 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
   const L1pU1Above = (prevLowerR1PDH > todayHigherPDHR1) &&
                      (todayHigherS1PDL > prevHigherPDLS1);
 
-  // pCPRU1CPRpL1 — "pCPR>U1 CPR>pL1":
+  // pCPR1Above — "pCPR>U1 CPR>pL1":
   //   prev day's Pivot is above today's R1 and below today's R2, AND
   //   today's BC is above prev day's S1 and below prev day's BC.
-  const pCPRU1CPRpL1 = (prev.pivot > today.r1 && prev.pivot < today.r2) &&
-                       (today.bc > prev.s1 && today.bc < prev.bc);
+  const pCPR1Above = (prev.pivot > today.r1 && prev.pivot < today.r2) &&
+                       (today.pivot > prev.s1 && today.pivot < prev.bc);
 
   // cpr1Above — "CPR 1ABOVE":
   //   today's TC is above prev day's R1 and below prev day's R2, AND
   //   today's S1 is above prev day's BC and below prev day's R1.
-  const cpr1Above = (today.tc > prev.r1 && today.tc < prev.r2) &&
-                    (today.s1 > prev.bc && today.s1 < prev.r1);
+  const cpr1Above = (today.pivot > prev.r1 && today.pivot < prev.r2) &&
+                    (prev.pivot > today.s1 && prev.pivot < today.bc);
 
   // cOU1L1 / cOL1U1 — split by which side (R1 vs S1) moved further.
   const r1Move = Math.abs(prev.r1 - today.r1);
@@ -631,7 +631,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
     cOU1L1, cOL1U1, cOU2L2, cOL2U2,
     HiL3U3, cOU1L3,
     eXL2U1, eXL3U1, eXL4U1, eXL1CPR, eXL2CPR, eXL3CPR,
-    eXL3TC, eXL4U2, eXL2U2, eXL2TC, eXL1U1, eXU2L1, cOTCL2, L1pU1Above, pCPRU1CPRpL1, cpr1Above,
+    eXL3TC, eXL4U2, eXL2U2, eXL2TC, eXL1U1, eXU2L1, cOTCL2, L1pU1Above, pCPR1Above, cpr1Above,
     eXU3L1, eXU2TC, eXU2BC, eXU3TC, eXU2CP, eXU4L1, LoCPL3, LoCPL2, LoTCL3,
   };
 }

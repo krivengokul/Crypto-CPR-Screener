@@ -658,12 +658,12 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     case "cpr-1-above":
       return r.cpr1Above;
     case "pcpr-u1-cpr-pl1":
-      return r.pCPRU1CPRpL1;
-    // NEW: BC>pPDL-U4:5AM — sub-filter under "PREVCPR 1ABOVE": base pCPRU1CPRpL1
+      return r.pCPR1Above;
+    // NEW: BC>pPDL-U4:5AM — sub-filter under "PREVCPR 1ABOVE": base pCPR1Above
     // condition PLUS today's BC above prev day's PDH (prevCPR.prevHigh,
     // i.e. the actual candle high of the day before prev day).
     case "BC>pPDL-U4:5AM":
-      return r.pCPRU1CPRpL1 && r.cOU3L4  && r.todayCPR.bc > r.prevCPR.prevLow && r.prevCPR.bc > r.todayCPR.r1 && r.todayCPR.PDHLAbove && r.prevCPR.PDHLAbove;
+      return r.pCPR1Above && r.cOU3L4  && r.todayCPR.bc > r.prevCPR.prevLow && r.prevCPR.bc > r.todayCPR.r1 && r.todayCPR.PDHLAbove && r.prevCPR.PDHLAbove;
     case "l1pu1-above":
       return r.L1pU1Above ; 
     case "SMi-L1pU1>-APU4:11PM": {
