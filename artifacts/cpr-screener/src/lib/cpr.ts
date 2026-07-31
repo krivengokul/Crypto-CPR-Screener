@@ -86,7 +86,7 @@ export interface CPRPairFlags {
   cOHiL2U2: boolean;
   LoU4L1234: boolean;
   cOU1L2: boolean;
-  cOLoU2L4: boolean;
+  cOU2L4: boolean;
   eXL3U3: boolean;
   eXU3L3: boolean;
   cOU1L1: boolean;
@@ -241,7 +241,7 @@ export interface CPRResult {
   cOHiL2U2: boolean;
   cOLoU2L3: boolean;
   LoU4L1234: boolean;
-  cOLoU2L4: boolean;
+  cOU2L4: boolean;
   eXL2U1: boolean;
   eXL3U1: boolean;
   eXL4U1: boolean;
@@ -460,7 +460,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
                    (today.s4 > prev.s3 && today.s4 < prev.s2);
   const LoU4L1234 = (today.r4 > prev.r3 && today.r4 < prev.r4) &&
                     (prev.s4 > today.s1 && prev.s4 < today.bc);
-  const cOLoU2L4 = (today.r4 > prev.r1 && today.r4 < prev.r2) &&
+  const cOU2L4 = (today.r4 > prev.r1 && today.r4 < prev.r2) &&
                    (today.s4 > prev.s4 && today.s4 < prev.s3);
 
   const eXL3U3 = (prev.r4 < today.r3 && prev.r4 > today.r2) &&
@@ -627,7 +627,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
     cOU3L4, cOHiL2U3, cOL3U3, eXLoL3U4, eXL4U4, HiL4U34, HiL2U4, HiL3U4, HiL4U4,
     LoU4L4, eXHiU1L3, eXHiL4U3, eXU4L234, eXU4L34, cOHiL2U4, cOL4U4, cOU4L4, exL3U2,
     cOL3U4, cOU3L3, LoU3L4, LoU3L34, cOLoU2L3, LoU2L4, LoU2L3, LoU4L34, LoU4L234,
-    cOHiL2U2, LoU4L1234, cOU1L2, cOLoU2L4, eXL3U3, eXU3L3,
+    cOHiL2U2, LoU4L1234, cOU1L2, cOU2L4, eXL3U3, eXU3L3,
     cOU1L1, cOL1U1, cOU2L2, cOL2U2,
     HiL3U3, cOU1L3,
     eXL2U1, eXL3U1, eXL4U1, eXL1CPR, eXL2CPR, eXL3CPR,
@@ -673,7 +673,7 @@ export function pickCPRSubLabel(f: CPRPairFlags): string | null {
   if (f.cOHiL2U2)  return "cOHiL2U2";
   if (f.LoU4L1234) return "LoU4L1234";
   if (f.cOU1L2)    return "cOU1L2";
-  if (f.cOLoU2L4)  return "cOLoU2L4";
+  if (f.cOU2L4)  return "cOU2L4";
   if (f.eXL3U3)    return "eXL3U3";
   if (f.eXU3L3)    return "eXU3L3";
   if (f.cOU1L1)    return "cOU1L1";
