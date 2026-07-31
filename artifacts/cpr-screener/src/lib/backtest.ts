@@ -47,15 +47,14 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
   },
-  {
-    key: "HA-U1>PU4",
-    label: "U1 > Previous U4 (BigCPR Above)",
-    direction: "bullish",
-    targetLabel: "PU4 (prev day's R4)",
-    getTarget: (r) => r.prevCPR.r4,
-  },
+  // REMOVED: "HA-U1>PU4" — its condition (cprRising && strWideCPR &&
+  // todayCPR.r1 > prevCPR.r4) is identical to the "U1 > pU4" (u1-gt-pu4)
+  // parent category's own base condition, so it was just a duplicate
+  // "dot" in the Backtest dropdown. Use the "U1 > pU4" category's own
+  // symbol-list scan instead.
   // NEW: nested under the "U1 > pU4" category. Bullish, same PU4 target
-  // style as HA-U1>PU4 (matches PatternSidebar's u1-gt-pu4 sub-pattern).
+  // style as the (now-removed) HA-U1>PU4 (matches PatternSidebar's
+  // u1-gt-pu4 sub-pattern).
   {
     key: "SL-eXL3U1-FAU4:3PM",
     label: "SL-eXL3U1-FAU4:3PM",
@@ -265,7 +264,19 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
   {
     key: "u1-gt-pu4",
     label: "U1 > pU4",
-    subPatternKeys: ["HA-U1>PU4", "SL-eXL3U1-FAU4:3PM", "TiMe-eXL3TC-AU4:2PM"],
+    subPatternKeys: ["SL-eXL3U1-FAU4:3PM"],
+    // NEW: "eXL3TC" Pattern sub-category — shown above its own
+    // sub-pattern ("TiMe-eXL3TC-AU4:2PM") in the Backtest dropdown, same
+    // "Pattern" grouping style as cOL3U3 / eXU4L1 elsewhere. Base
+    // condition = parent u1-gt-pu4's condition AND the raw eXL3TC flag
+    // (see matchesPatternFlag in ScreenerUtils.tsx).
+    subCategories: [
+      {
+        key: "eXL3TC",
+        label: "eXL3TC",
+        subPatternKeys: ["TiMe-eXL3TC-AU4:2PM"],
+      },
+    ],
   },
   { key: "structure-bigbelow", label: "BigCPR Below" },
   // NEW: "L1 < pL4" now nests the "eXU4L1" Pattern sub-category, which
