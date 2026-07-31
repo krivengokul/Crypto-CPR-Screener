@@ -668,7 +668,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // condition PLUS today's PDH (todayCPR.prevHigh) above prev day's TC
     // (prevCPR.tc) — today already traded above the top of prev's CPR.
     case "PDH>pTC-U4:5AM":
-      return r.pCPR1Above && r.todayCPR.prevHigh > r.prevCPR.tc;
+      return r.pCPR1Above && r.todayCPR.prevHigh > r.prevCPR.tc && r.todayCPR.bc > r.prevCPR.s1;
     case "l1pu1-above":
       return r.L1pU1Above ; 
     case "SMi-L1pU1>-APU4:11PM": {
