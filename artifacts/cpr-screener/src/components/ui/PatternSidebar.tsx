@@ -87,6 +87,16 @@ export const subPatterns: Record<string, SubPattern[]> = {
       activeText:  "#4ade80",              // green-400 text
       activeBg:    "rgba(34, 197, 94, 0.14)",
     },
+    // NEW: PDH>pTC-U4:5AM — PREVCPR 1ABOVE + today's PDH (todayCPR.prevHigh)
+    // above prev day's TC (prevCPR.tc). Bullish, targets U4 (today's R4) by
+    // ~5AM. Same green color family as its sibling BC>pPDL-U3:5AM.
+    {
+      id: "PDH>pTC-U4:5AM",
+      label: "PDH>pTC-U4:5AM",
+      activeColor: "#22c55e",              // green-500 border
+      activeText:  "#4ade80",              // green-400 text
+      activeBg:    "rgba(34, 197, 94, 0.14)",
+    },
   ],
   "l1pu1-above": [
     {

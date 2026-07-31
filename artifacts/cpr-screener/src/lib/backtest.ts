@@ -149,6 +149,19 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
   },
+  // NEW: "PDH>pTC-U4:5AM" — nested directly under "PREVCPR 1ABOVE" (pcpr-u1-cpr-pl1)
+  // category, alongside the "cOU3L4" Pattern sub-category. Base condition:
+  // this category's pCPR1Above condition AND today's PDH (todayCPR.prevHigh)
+  // above prev day's TC (prevCPR.tc) — see ScreenerUtils.tsx. Bullish,
+  // targets U4 (today's R4), same target style as its sibling
+  // BC>pPDL-U3:5AM.
+  {
+    key: "PDH>pTC-U4:5AM",
+    label: "PDH>pTC-U4:5AM",
+    direction: "bullish",
+    targetLabel: "U4 (today's R4)",
+    getTarget: (r) => r.todayCPR.r4,
+  },
   // NEW: "TiMe-eXL3TC-AU4:2PM" — nested directly under "U1 > pU4"
   // (u1-gt-pu4), alongside SL-eXL3U1-FAU4:3PM. Bullish, Pattern eXL3TC +
   // pTiny/Mega width combo, targets AU4 (prev day's R4) by ~2PM.
@@ -213,6 +226,10 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
   {
     key: "pcpr-u1-cpr-pl1",
     label: "PREVCPR 1ABOVE",
+    // NEW: "PDH>pTC-U4:5AM" nested directly under the category (not inside a
+    // Pattern sub-category, since it's just the base pCPR1Above condition
+    // plus an extra CPR-level comparison — no raw matchesPatternFlag tie-in).
+    subPatternKeys: ["PDH>pTC-U4:5AM"],
     subCategories: [
       {
         key: "cOU3L4",
