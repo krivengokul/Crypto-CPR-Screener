@@ -664,11 +664,6 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // i.e. the actual candle high of the day before prev day).
     case "BC>pPDL-U3:5AM":
       return r.pCPR1Above && r.cOU3L4  && r.todayCPR.bc > r.prevCPR.prevLow && r.prevCPR.bc > r.todayCPR.r1 && r.todayCPR.PDHLAbove && r.prevCPR.PDHLAbove;
-    // NEW: LoU3L3 — sub-filter under "PREVCPR 1ABOVE": base pCPR1Above
-    // condition PLUS the raw LoU3L3 flag (today's R4 inside prev's R2/R3
-    // band AND prev's S4 inside today's S3/S2 band — see cpr.ts).
-    case "LoU3L3":
-      return r.pCPR1Above && r.LoU3L3;
     // NEW: PDH>pTC-U4:5AM — sub-filter under "PREVCPR 1ABOVE": base pCPR1Above
     // condition PLUS today's PDH (todayCPR.prevHigh) above prev day's TC
     // (prevCPR.tc) — today already traded above the top of prev's CPR.
@@ -1144,6 +1139,9 @@ export function getPatternInfo(r: CPRResult): PatternInfo {
 export function matchesPatternFlag(r: CPRResult, label: string): boolean {
   switch (label) {
     case "cOU3L4": return r.cOU3L4;
+    // NEW: LoU3L3 — Pattern sub-category raw flag (see BacktestPanel's
+    // "PREVCPR 1ABOVE" → "LoU3L3" nesting in backtest.ts).
+    case "LoU3L3": return r.LoU3L3;
     case "LoU4L4": return r.LoU4L4;
     case "eXHiL4U3": return r.eXHiL4U3;
     case "eXL4U4": return r.eXL4U4;

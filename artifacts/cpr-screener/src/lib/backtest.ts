@@ -149,19 +149,6 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
   },
-  // NEW: "LoU3L3" — nested directly under "PREVCPR 1ABOVE" (pcpr-u1-cpr-pl1)
-  // category, above "PDH>pTC-U4:5AM". Base condition: this category's
-  // pCPR1Above condition AND the raw LoU3L3 flag (see matchesPatternFlag-
-  // style raw flag in ScreenerUtils.tsx / cpr.ts). Bearish, targets L4
-  // (today's S4) — assumed default target/direction since none was
-  // specified; adjust if a different target/time is wanted.
-  {
-    key: "LoU3L3",
-    label: "LoU3L3",
-    direction: "bearish",
-    targetLabel: "L4 (today's S4)",
-    getTarget: (r) => r.todayCPR.s4,
-  },
   // NEW: "PDH>pTC-U4:5AM" — nested directly under "PREVCPR 1ABOVE" (pcpr-u1-cpr-pl1)
   // category, alongside the "cOU3L4" Pattern sub-category. Base condition:
   // this category's pCPR1Above condition AND today's PDH (todayCPR.prevHigh)
@@ -239,15 +226,26 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
   {
     key: "pcpr-u1-cpr-pl1",
     label: "PREVCPR 1ABOVE",
-    // NEW: "LoU3L3" and "PDH>pTC-U4:5AM" nested directly under the category
-    // (not inside a Pattern sub-category), in display order — LoU3L3 above
-    // PDH>pTC-U4:5AM.
-    subPatternKeys: ["LoU3L3", "PDH>pTC-U4:5AM"],
+    // NEW: "PDH>pTC-U4:5AM" nested directly under the category (not inside a
+    // Pattern sub-category, since it's just the base pCPR1Above condition
+    // plus an extra CPR-level comparison — no raw matchesPatternFlag tie-in).
+    subPatternKeys: ["PDH>pTC-U4:5AM"],
     subCategories: [
       {
         key: "cOU3L4",
         label: "cOU3L4",
         subPatternKeys: ["BC>pPDL-U3:5AM"],
+      },
+      // NEW: "LoU3L3" — Pattern sub-category (arrow), same shape as
+      // "cOU3L4": base condition = this category's pCPR1Above condition
+      // AND the raw LoU3L3 flag (see matchesPatternFlag in
+      // ScreenerUtils.tsx). No nested subPatternKeys yet — just a
+      // symbol-list-only Pivot-Level scan, matching cOU3L4's own
+      // top-level (arrow) behavior before BC>pPDL-U3:5AM was added.
+      {
+        key: "LoU3L3",
+        label: "LoU3L3",
+        subPatternKeys: [],
       },
     ],
   },
