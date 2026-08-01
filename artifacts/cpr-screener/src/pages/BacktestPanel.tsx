@@ -70,15 +70,15 @@ export default function BacktestPanel() {
 
   const isCategory = BACKTEST_CATEGORIES.some((c) => c.key === selectedKey);
 
-  let activeSubCategoryInfo: { category: BacktestCategoryDef; sub: BacktestSubCategoryDef } | undefined;
+  let activePatternInfo: { category: BacktestCategoryDef; sub: BacktestSubCategoryDef } | undefined;
   for (const cat of BACKTEST_CATEGORIES) {
     const sub = cat.subCategories?.find((s) => `${cat.key}${SUBCATEGORY_SEP}${s.key}` === selectedKey);
     if (sub) {
-      activeSubCategoryInfo = { category: cat, sub };
+      activePatternInfo = { category: cat, sub };
       break;
     }
   }
-  const isPatternOnly = !!activeSubCategoryInfo;
+  const isPatternOnly = !!activePatternInfo;
 
   const isViewOnly = !isCategory && !isPatternOnly;
 
@@ -87,8 +87,8 @@ export default function BacktestPanel() {
 
   const symbolListLabel = isCategory
     ? activeCategory?.label
-    : isPatternOnly && activeSubCategoryInfo
-    ? `${activeSubCategoryInfo.category.label} → Pattern ${activeSubCategoryInfo.sub.label}`
+    : isPatternOnly && activePatternInfo
+    ? `${activePatternInfo.category.label} → Pattern ${activePatternInfo.sub.label}`
     : undefined;
 
   const nestedPatternKeys = new Set<string>();
@@ -157,10 +157,10 @@ export default function BacktestPanel() {
           (done, total, symbol) => setProgress({ done, total, symbol })
         );
         setCategoryRows(result);
-      } else if (isPatternOnly && activeSubCategoryInfo) {
+      } else if (isPatternOnly && activePatternInfo) {
         const result = await runPivotLevelScan(
-          activeSubCategoryInfo.category.key,
-          activeSubCategoryInfo.sub.key,
+          activePatternInfo.category.key,
+          activePatternInfo.sub.key,
           entryDate,
           source,
           passesPattern,
@@ -400,12 +400,12 @@ export default function BacktestPanel() {
           or Pattern sub-categories above for those).
         </div>
       )}
-      {isPatternOnly && activeSubCategoryInfo && (
+      {isPatternOnly && activePatternInfo && (
         <div className="text-xs text-muted-foreground mb-3">
           Pattern scan — lists every symbol matching{" "}
-          <span className="text-foreground font-medium">{activeSubCategoryInfo.category.label}</span>&apos;s
+          <span className="text-foreground font-medium">{activePatternInfo.category.label}</span>&apos;s
           base condition AND Pattern{" "}
-          <span className="text-foreground font-medium">{activeSubCategoryInfo.sub.label}</span> on the
+          <span className="text-foreground font-medium">{activePatternInfo.sub.label}</span> on the
           entry date. No Target/Result/Hit Date (select one of its patterns above for those).
         </div>
       )}
