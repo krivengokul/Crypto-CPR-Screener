@@ -664,18 +664,19 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // i.e. the actual candle high of the day before prev day).
     case "BC>pPDL-U3:5AM":
       return r.pCPR1Above && r.cOU3L4  && r.todayCPR.bc > r.prevCPR.prevLow && r.prevCPR.bc > r.todayCPR.r1 && r.todayCPR.PDHLAbove && r.prevCPR.PDHLAbove;
-    // NEW: PDH>pTC-U4:5AM — sub-filter under "PREVCPR 1ABOVE": base pCPR1Above
-    // condition PLUS today's PDH (todayCPR.prevHigh) above prev day's TC
+    // NEW: PDH>pTC-U4:5AM — sub-filter under "PREVCPR 1ABOVE" → "LoU3L3"
+    // Pattern sub-category: base pCPR1Above condition PLUS the parent's raw
+    // LoU3L3 flag PLUS today's PDH (todayCPR.prevHigh) above prev day's TC
     // (prevCPR.tc) — today already traded above the top of prev's CPR.
-    // UPDATED: additionally requires a specific width-tier combo —
-    // (prev CPR Mini AND today CPR Small) OR (prev CPR Small AND today CPR
-    // Large). Mini: >0.22%–≤0.60%. Small: >0.60%–≤1.10%. Large: >2.00%–≤5.00%.
+    // Also requires a specific width-tier combo — (prev CPR Mini AND today
+    // CPR Small) OR (prev CPR Small AND today CPR Large). Mini: >0.22%–≤0.60%.
+    // Small: >0.60%–≤1.10%. Large: >2.00%–≤5.00%.
     case "PDH>pTC-U4:5AM": {
       const pMini  = r.prevCPR.widthPct  > 0.22 && r.prevCPR.widthPct  <= 0.60;
       const small  = r.todayCPR.widthPct > 0.60 && r.todayCPR.widthPct <= 1.10;
       const pSmall = r.prevCPR.widthPct  > 0.60 && r.prevCPR.widthPct  <= 1.10;
       const large  = r.todayCPR.widthPct > 2.00 && r.todayCPR.widthPct <= 5.00;
-      return r.pCPR1Above && r.todayCPR.prevHigh > r.prevCPR.tc &&
+      return r.pCPR1Above && r.LoU3L3 && r.todayCPR.prevHigh > r.prevCPR.tc &&
         ((pMini && small) || (pSmall && large));
     }
     case "l1pu1-above":

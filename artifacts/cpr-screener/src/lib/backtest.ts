@@ -226,10 +226,9 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
   {
     key: "pcpr-u1-cpr-pl1",
     label: "PREVCPR 1ABOVE",
-    // NEW: "PDH>pTC-U4:5AM" nested directly under the category (not inside a
-    // Pattern sub-category, since it's just the base pCPR1Above condition
-    // plus an extra CPR-level comparison — no raw matchesPatternFlag tie-in).
-    subPatternKeys: ["PDH>pTC-U4:5AM"],
+    // NEW: "PDH>pTC-U4:5AM" now nests under the "LoU3L3" Pattern
+    // sub-category below (not directly on the category), since it also
+    // requires the raw LoU3L3 flag — see ScreenerUtils.tsx.
     subCategories: [
       {
         key: "cOU3L4",
@@ -239,13 +238,11 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       // NEW: "LoU3L3" — Pattern sub-category (arrow), same shape as
       // "cOU3L4": base condition = this category's pCPR1Above condition
       // AND the raw LoU3L3 flag (see matchesPatternFlag in
-      // ScreenerUtils.tsx). No nested subPatternKeys yet — just a
-      // symbol-list-only Pivot-Level scan, matching cOU3L4's own
-      // top-level (arrow) behavior before BC>pPDL-U3:5AM was added.
+      // ScreenerUtils.tsx). Nests "PDH>pTC-U4:5AM".
       {
         key: "LoU3L3",
         label: "LoU3L3",
-        subPatternKeys: [],
+        subPatternKeys: ["PDH>pTC-U4:5AM"],
       },
     ],
   },
