@@ -618,8 +618,8 @@ export default function BacktestPanel() {
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Symbol
                     </th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Compression
+                    <th className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[220px]">
+                      Pivot Size
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Entry Date
@@ -644,8 +644,32 @@ export default function BacktestPanel() {
                           <ChartLink symbol={r.symbol} source={r.source} />
                         </div>
                       </td>
-                      <td className="px-3 py-2 font-mono text-xs text-muted-foreground">
-                        {r.compressionRatio.toFixed(1)}
+                      <td className="px-3 py-2 font-mono whitespace-nowrap min-w-[220px]">
+                        {(() => {
+                          const prevCat = getWidthCategory(r.prevCPR.widthPct);
+                          const todayCat = getWidthCategory(r.todayCPR.widthPct);
+                          return (
+                            <div className="flex flex-wrap items-center justify-center gap-2">
+                              <span
+                                className={`font-sans text-xs px-1.5 py-0.5 rounded border font-medium flex flex-col items-center leading-tight ${prevCat.pClasses}`}
+                                title={`Prev day CPR width: ${r.prevCPR.widthPct.toFixed(4)}%`}
+                              >
+                                <span>p{prevCat.label}</span>
+                                <span className="text-[10px] font-mono">{r.prevCPR.widthPct.toFixed(4)}%</span>
+                              </span>
+                              <span className="font-sans text-[11px] font-semibold text-muted-foreground bg-slate-500/10 border border-slate-500/30 rounded-full px-2 py-0.5 shrink-0">
+                                {r.compressionRatio.toFixed(1)}%
+                              </span>
+                              <span
+                                className={`font-sans text-xs px-1.5 py-0.5 rounded border font-medium flex flex-col items-center leading-tight ${todayCat.classes}`}
+                                title={`Today's CPR width: ${r.todayCPR.widthPct.toFixed(4)}%`}
+                              >
+                                <span>{todayCat.label}</span>
+                                <span className="text-[10px] font-mono">{r.todayCPR.widthPct.toFixed(4)}%</span>
+                              </span>
+                            </div>
+                          );
+                        })()}
                       </td>
                       <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{r.entryDate}</td>
                       <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{fmt(r.targetLevel)}</td>
