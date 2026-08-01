@@ -119,10 +119,10 @@ export interface CPRPairFlags {
   // pCPR1Above — prev day's Pivot sits inside today's R1/R2 band (U1 side)
   // AND today's BC sits inside prev day's S1/BC band (pL1 side).
   pCPR1Above: boolean;
-  // cpr1Above — "CPR 1ABOVE": today's TC sits inside prev day's R1/R2 band
+  // CPRs1Above — "CPR 1ABOVE": today's TC sits inside prev day's R1/R2 band
   // (U2 side) AND today's S1 sits inside prev day's BC/R1 band (a wide
   // band spanning prev's entire CPR, TC/Pivot/BC, up to prev's R1).
-  cpr1Above: boolean;
+  CPRs1Above: boolean;
   // eXU3L1 — prev's R4 lands inside today's R2/R3 band (U3), AND prev's S4
   // lands inside today's BC/S1 band (L1). Same L1 support band as eXU2L1/
   // eXL1U1/eXL1CPR but paired with the wider U3 (R2→R3) resistance band.
@@ -257,7 +257,7 @@ export interface CPRResult {
   cOTCL2: boolean;
   L1pU1Above: boolean;
   pCPR1Above: boolean;
-  cpr1Above: boolean;
+  CPRs1Above: boolean;
   eXU3L1: boolean;
   eXU2TC: boolean;
   eXU2BC: boolean;
@@ -585,11 +585,11 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
   const pCPR1Above = (prev.pivot > today.r1 && prev.pivot < today.r2) &&
                        (today.tc > prev.s1 && today.tc < prev.bc); //In Some Scenarios p<s1 went up, so tc instead of pivot check
 
-  // cpr1Above — "CPR 1ABOVE":
+  // CPRs1Above — "CPR 1ABOVE":
   //   today's TC is above prev day's R1 and below prev day's R2, AND
   //   today's S1 is above prev day's BC and below prev day's R1.
-  const cpr1Above = (today.pivot > prev.r1 && today.pivot < prev.r2) &&
-                    (prev.pivot > today.s1 && prev.pivot < today.bc);
+  const CPRs1Above = (today.bc > prev.r1 && today.bc < prev.r2) ||
+                    (prev.tc > today.s1 && prev.tc < today.bc);
 
   // cOU1L1 / cOL1U1 — split by which side (R1 vs S1) moved further.
   const r1Move = Math.abs(prev.r1 - today.r1);
@@ -631,7 +631,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
     cOU1L1, cOL1U1, cOU2L2, cOL2U2,
     HiL3U3, cOU1L3,
     eXL2U1, eXL3U1, eXL4U1, eXL1CPR, eXL2CPR, eXL3CPR,
-    eXL3TC, eXL4U2, eXL2U2, eXL2TC, eXL1U1, eXU2L1, cOTCL2, L1pU1Above, pCPR1Above, cpr1Above,
+    eXL3TC, eXL4U2, eXL2U2, eXL2TC, eXL1U1, eXU2L1, cOTCL2, L1pU1Above, pCPR1Above, CPRs1Above,
     eXU3L1, eXU2TC, eXU2BC, eXU3TC, eXU2CP, eXU4L1, LoCPL3, LoCPL2, LoTCL3,
   };
 }

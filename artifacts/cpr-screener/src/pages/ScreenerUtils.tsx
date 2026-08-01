@@ -656,7 +656,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // NEW: CPR 1ABOVE — today's TC inside prev's R1/R2 band AND today's S1
     // inside prev's BC/R1 band. Sits above "PREVCPR 1ABOVE" in the left-nav.
     case "cpr-1-above":
-      return r.cpr1Above;
+      return r.CPRs1Above;
     case "pcpr-u1-cpr-pl1":
       return r.pCPR1Above;
     // NEW: BC>pPDL-U3:5AM — sub-filter under "PREVCPR 1ABOVE": base pCPR1Above
