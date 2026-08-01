@@ -78,16 +78,16 @@ export default function BacktestPanel() {
       break;
     }
   }
-  const isSubCategory = !!activeSubCategoryInfo;
+  const isPatternOnly = !!activeSubCategoryInfo;
 
-  const isPatternOnly = !isCategory && !isSubCategory;
+  const isViewOnly = !isCategory && !isPatternOnly;
 
-  const activeTarget = isPatternOnly ? BACKTEST_TARGETS.find((t) => t.key === selectedKey) : undefined;
+  const activeTarget = isViewOnly ? BACKTEST_TARGETS.find((t) => t.key === selectedKey) : undefined;
   const activeCategory = isCategory ? BACKTEST_CATEGORIES.find((c) => c.key === selectedKey) : undefined;
 
   const symbolListLabel = isCategory
     ? activeCategory?.label
-    : isSubCategory && activeSubCategoryInfo
+    : isPatternOnly && activeSubCategoryInfo
     ? `${activeSubCategoryInfo.category.label} → Pattern ${activeSubCategoryInfo.sub.label}`
     : undefined;
 
@@ -117,8 +117,8 @@ export default function BacktestPanel() {
   })();
 
   useEffect(() => {
-    if (!isPatternOnly && dateMode === "range") setDateMode("single");
-  }, [isPatternOnly, dateMode]);
+    if (!isViewOnly && dateMode === "range") setDateMode("single");
+  }, [isViewOnly, dateMode]);
 
   function enumerateDatesUTC(fromISO: string, toISO: string): string[] {
     const dates: string[] = [];
@@ -132,7 +132,7 @@ export default function BacktestPanel() {
   }
 
   const run = async () => {
-    if (isPatternOnly && dateMode === "range") {
+    if (isViewOnly && dateMode === "range") {
       if (fromDate > toDate) {
         setError("From date must be on or before To date.");
         setStatus("error");
@@ -157,7 +157,7 @@ export default function BacktestPanel() {
           (done, total, symbol) => setProgress({ done, total, symbol })
         );
         setCategoryRows(result);
-      } else if (isSubCategory && activeSubCategoryInfo) {
+      } else if (isPatternOnly && activeSubCategoryInfo) {
         const result = await runPivotLevelScan(
           activeSubCategoryInfo.category.key,
           activeSubCategoryInfo.sub.key,
@@ -300,7 +300,7 @@ export default function BacktestPanel() {
             })}
           </select>
         </div>
-        {isPatternOnly && (
+        {isViewOnly && (
           <div>
             <label className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Date Mode</label>
             <div className="flex rounded-lg border border-border overflow-hidden text-xs">
@@ -321,7 +321,7 @@ export default function BacktestPanel() {
           </div>
         )}
 
-        {(!isPatternOnly || dateMode === "single") ? (
+        {(!isViewOnly || dateMode === "single") ? (
           <div>
             <label className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Entry Date (UTC)</label>
             <input
@@ -386,7 +386,7 @@ export default function BacktestPanel() {
         </button>
       </div>
 
-      {isPatternOnly && activeTarget && (
+      {isViewOnly && activeTarget && (
         <div className="text-xs text-muted-foreground mb-3">
           Target: <span className="text-foreground font-medium">{activeTarget.targetLabel}</span>{" "}
           ({activeTarget.direction === "bullish" ? "price must reach or exceed it" : "price must reach or fall below it"})
@@ -400,7 +400,7 @@ export default function BacktestPanel() {
           or Pattern sub-categories above for those).
         </div>
       )}
-      {isSubCategory && activeSubCategoryInfo && (
+      {isPatternOnly && activeSubCategoryInfo && (
         <div className="text-xs text-muted-foreground mb-3">
           Pattern scan — lists every symbol matching{" "}
           <span className="text-foreground font-medium">{activeSubCategoryInfo.category.label}</span>&apos;s
@@ -412,7 +412,7 @@ export default function BacktestPanel() {
 
       {status === "running" && (
         <div className="mb-4 rounded-lg border border-border bg-background/50 p-3">
-          {isPatternOnly && dateMode === "range" && dateProgress.total > 0 && (
+          {isViewOnly && dateMode === "range" && dateProgress.total > 0 && (
             <div className="flex justify-between text-xs text-muted-foreground mb-2 pb-2 border-b border-border/50">
               <span>
                 Date {dateProgress.current} of {dateProgress.total} — {dateProgress.date}
@@ -440,7 +440,7 @@ export default function BacktestPanel() {
           entry-day Close price and % Change (green when >= 0, red when
           < 0). Shown whenever a category or Pivot-Level "— all (symbol
           list only)" selection is run. */}
-      {status === "done" && (isCategory || isSubCategory) && (
+      {status === "done" && (isCategory || isPatternOnly) && (
         <>
           <div className="flex items-center gap-4 mb-3 text-xs flex-wrap">
             <span className="text-muted-foreground">
@@ -580,7 +580,7 @@ export default function BacktestPanel() {
       )}
 
       {/* Pattern backtest results — symbol list + Target/Result/Hit Date */}
-      {status === "done" && isPatternOnly && (
+      {status === "done" && isViewOnly && (
         <>
           <div className="flex items-center gap-4 mb-3 text-xs flex-wrap">
             <span className="text-muted-foreground">
