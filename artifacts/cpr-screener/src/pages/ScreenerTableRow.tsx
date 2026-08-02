@@ -21,7 +21,7 @@ export const PATTERN_BADGE_CLASSES: Record<string, string> = {
   HiL3U3: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
   cOU1L3: "bg-rose-500/10 text-rose-400 border border-rose-500/20",
   eXU4L2: "bg-amber-500/10 text-amber-400 border border-amber-500/20",
-  eXU4L3: "bg-amber-500/10 text-amber-300 border border-amber-500/20",
+  eXU4L3: "bg-blue-600/10 text-blue-400 border border-blue-600/20",
   cOHiL2U4: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
   eXL3U3: "bg-orange-500/10 text-orange-400 border border-orange-500/20",
   eXU3L3: "bg-red-500/10 text-red-400 border border-red-500/20",
@@ -102,7 +102,7 @@ export function renderTodayPatternBadges(r: CPRResult) {
       {r.cOL2U3 && <span className="text-xs px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-medium">cOL2U3</span>}
       {r.cOL3U3 && <span className="text-xs px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-medium">cOL3U3</span>}
       {r.eXU4L2 && <span className="text-xs px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium">eXU4L2</span>}
-      {r.eXU4L3 && <span className="text-xs px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20 font-medium">eXU4L3</span>}
+      {r.eXU4L3 && <span className="text-xs px-1.5 py-0.5 rounded bg-blue-600/10 text-blue-400 border border-blue-600/20 font-medium">eXU4L3</span>}
       {r.cOHiL2U4 && <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">cOHiL2U4</span>}
       {r.eXL3U3 && <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 font-medium">eXL3U3</span>}
       {r.eXU3L3 && <span className="text-xs px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/20 font-medium">eXU3L3</span>}

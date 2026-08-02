@@ -1996,7 +1996,7 @@ export default function Screener({
                   { label: "cOL2U3", active: "border-sky-400 text-sky-400" },
                   { label: "cOL3U3", active: "border-sky-400 text-sky-400" },
                   { label: "eXU4L2", active: "border-amber-400 text-amber-400" },
-                  { label: "eXU4L3", active: "border-amber-300 text-amber-300" },
+                  { label: "eXU4L3", active: "border-blue-400 text-blue-400" },
                   { label: "cOHiL2U4", active: "border-emerald-400 text-emerald-400" },
                   { label: "eXL3U3", active: "border-orange-400 text-orange-400" },
                   { label: "eXU3L3", active: "border-red-400 text-red-400" },
