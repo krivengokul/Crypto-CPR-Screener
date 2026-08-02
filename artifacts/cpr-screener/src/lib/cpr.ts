@@ -128,6 +128,10 @@ export interface CPRPairFlags {
   // lands inside today's BC/S1 band (L1). Same L1 support band as eXU2L1/
   // eXL1U1/eXL1CPR but paired with the wider U3 (R2→R3) resistance band.
   eXU3L1: boolean;
+  // eXU3L2 — prev's R4 lands inside today's R2/R3 band (U3, same
+  // resistance band as eXU3L1), AND prev's S3 (not S4) lands inside
+  // today's S1/S2 band (L2).
+  eXU3L2: boolean;
   // eXU2TC — prev's R4 lands inside today's R1/R2 band (U2), AND prev's S4
   // lands inside today's TC/R1 band (a "TC"-anchored band, same naming
   // convention as eXL2TC/eXL3TC/cOTCL2 which pair a level against today's
@@ -261,6 +265,7 @@ export interface CPRResult {
   pCPR1Above: boolean;
   CPRs1Above: boolean;
   eXU3L1: boolean;
+  eXU3L2: boolean;
   eXU2TC: boolean;
   eXU2BC: boolean;
   eXU3TC: boolean;
@@ -512,6 +517,13 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
   const eXU3L1 = (prev.r4 > today.r2 && prev.r4 < today.r3) &&
                  (prev.s4 > today.s1 && prev.s4 < today.bc);
 
+  // eXU3L2 — same U3 resistance band as eXU3L1 (prev's R4 inside today's
+  // R2/R3 band), but the support side is measured against prev's S3
+  // (not S4) landing inside today's S1/S2 band (L2) instead of prev's
+  // S4 landing inside today's BC/S1 band (L1).
+  const eXU3L2 = (prev.r4 > today.r2 && prev.r4 < today.r3) &&
+                 (prev.s3 > today.s2 && prev.s3 < today.s1);
+
   // eXU2TC — prev's R4 sits inside today's R1/R2 band (U2) AND prev's S4
   // sits inside today's TC/R1 band. Same U2 resistance band as eXU2L1, but
   // the support-side condition is measured against today's TC→R1 gap
@@ -639,7 +651,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
     HiL3U3, cOU1L3,
     eXL2U1, eXL3U1, eXL4U1, eXL1CPR, eXL2CPR, eXL3CPR,
     eXL3TC, eXL4U2, eXL2U2, eXL2TC, eXL1U1, eXU2L1, cOTCL2, L1pU1Above, pCPR1Above, CPRs1Above,
-    eXU3L1, eXU2TC, eXU2BC, eXU3TC, eXU2CP, eXU4L1, LoCPL3, LoCPL2, LoTCL3,
+    eXU3L1, eXU3L2, eXU2TC, eXU2BC, eXU3TC, eXU2CP, eXU4L1, LoCPL3, LoCPL2, LoTCL3,
   };
 }
 
@@ -704,6 +716,7 @@ export function pickCPRSubLabel(f: CPRPairFlags): string | null {
   if (f.eXU2L1)    return "eXU2L1";
   if (f.cOTCL2)    return "cOTCL2";
   if (f.eXU3L1)    return "eXU3L1";
+  if (f.eXU3L2)    return "eXU3L2";
   if (f.eXU2TC)    return "eXU2TC";
   if (f.eXU2BC)    return "eXU2BC";
   if (f.eXU3TC)    return "eXU3TC";

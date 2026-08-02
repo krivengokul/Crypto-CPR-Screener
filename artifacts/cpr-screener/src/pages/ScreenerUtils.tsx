@@ -1097,7 +1097,7 @@ export function getSubFilterDirection(r: CPRResult, activePattern: string): SubF
  * its own second-row badge, checking the raw flag directly.
  */
 export interface PatternInfo {
-  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "cOU3L4" | "LoU4L4" | "eXL4U3" | "eXL4U4" | "HiL4U4" | "HiL4U3" | "HiL4U2" | "cOL2U3" | "cOL3U3" | "eXU4L234" | "eXU4L34" | "cOHiL2U4" | "eXL3U3" | "eXL2U1" | "eXL3U1" | "eXL4U1" | "eXL1CPR" | "eXL2CPR" | "eXL3CPR" | "eXL3TC" | "eXL4U2" | "eXL2U2" | "eXL2TC" | "eXL1U1" | "eXU2L1" | "cOTCL2" | "eXU3L1" | "eXU2TC" | "eXU2BC" | "eXU3TC" | "eXU2CP" | "eXU4L1" | "cOU1L1" | "cOL1U1" | "cOU2L2" | "cOL2U2" | "cOU1L2" | "cOU4L4" | "exL3U2" | "LoCPL3" | "LoCPL2" | "LoTCL3" | "Lower";
+  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "cOU3L4" | "LoU4L4" | "eXL4U3" | "eXL4U4" | "HiL4U4" | "HiL4U3" | "HiL4U2" | "cOL2U3" | "cOL3U3" | "eXU4L234" | "eXU4L34" | "cOHiL2U4" | "eXL3U3" | "eXL2U1" | "eXL3U1" | "eXL4U1" | "eXL1CPR" | "eXL2CPR" | "eXL3CPR" | "eXL3TC" | "eXL4U2" | "eXL2U2" | "eXL2TC" | "eXL1U1" | "eXU2L1" | "cOTCL2" | "eXU3L1" | "eXU3L2" | "eXU2TC" | "eXU2BC" | "eXU3TC" | "eXU2CP" | "eXU4L1" | "cOU1L1" | "cOL1U1" | "cOU2L2" | "cOL2U2" | "cOU1L2" | "cOU4L4" | "exL3U2" | "LoCPL3" | "LoCPL2" | "LoTCL3" | "Lower";
   classes: string;
 }
 
@@ -1168,6 +1168,7 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     case "eXU2L1": return r.eXU2L1;
     // NEW: eXU3L1 / eXU2TC
     case "eXU3L1": return r.eXU3L1;
+    case "eXU3L2": return r.eXU3L2;
     case "eXU2TC": return r.eXU2TC;
     // NEW: eXU2BC / eXU3TC / eXU2CP
     case "eXU2BC": return r.eXU2BC;
