@@ -26,7 +26,7 @@ export type BacktestSource = "binance" | "delta";
  *     Above PU4" per its legend card, i.e. prev day's R4.
  *
  * NEW: "eXHi-L4U4-U4" — nested under the "Overlap Above" category's
- * "HiL4U34" Pattern sub-category (see BACKTEST_CATEGORIES below).
+ * "HiL4U3" Pattern sub-category (see BACKTEST_CATEGORIES below).
  * Bullish, per Screener.tsx's legend card ("Overlap Higher continuation —
  * bullish bias toward U4") the target is today's own R4 / U4, same target
  * style as "littleabove".
@@ -77,7 +77,7 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "PU4 (prev day's R4)",
     getTarget: (r) => r.prevCPR.r4,
   },
-  // NEW: "eXHi-L4U4-U4" — nested under "Overlap Above" → Pattern "HiL4U34"
+  // NEW: "eXHi-L4U4-U4" — nested under "Overlap Above" → Pattern "HiL4U3"
   {
     key: "eXHi-L4U4-U4",
     label: "eXHi-L4U4-U4",
@@ -189,7 +189,7 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
  *
  * NEW: subCategories — a category can additionally nest one or more
  * "Pattern" sub-categories (e.g. "Overlap Above" → Pattern
- * "HiL4U34"). A Pattern sub-category is itself just another
+ * "HiL4U3"). A Pattern sub-category is itself just another
  * symbol-list-only, single-date, no-target scan — same as a category —
  * except its base condition is the PARENT category's condition AND the
  * named Pattern's raw flag (see matchesPatternFlag in
@@ -199,8 +199,8 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
  * category's direct sub-patterns.
  */
 export interface BacktestSubCategoryDef {
-  key: string;              // Pattern label (matches matchesPatternFlag's `label` param, e.g. "HiL4U34")
-  label: string;            // display name, e.g. "HiL4U34"
+  key: string;              // Pattern label (matches matchesPatternFlag's `label` param, e.g. "HiL4U3")
+  label: string;            // display name, e.g. "HiL4U3"
   subPatternKeys: string[]; // BACKTEST_TARGETS keys nested under this Pattern
 }
 
@@ -260,18 +260,18 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
   },
   // NEW: "Overlap Above" category (base condition: r.overlapHigher, same
   // key passesPattern already uses for the "overlapping-higher" left-nav
-  // page) — nests the "HiL4U34" Pattern sub-category, which in turn
+  // page) — nests the "HiL4U3" Pattern sub-category, which in turn
   // nests the "eXHi-L4U4-U4" pattern.
   {
     key: "overlapping-higher",
     label: "Overlap Above",
     subCategories: [
       {
-        key: "HiL4U34",
-        label: "HiL4U34",
+        key: "HiL4U3",
+        label: "HiL4U3",
         subPatternKeys: ["eXHi-L4U4-U4"],
       },
-      // NEW: cOL3U3 Pattern sub-category, alongside HiL4U34 — nests
+      // NEW: cOL3U3 Pattern sub-category, alongside HiL4U3 — nests
       // the bearish "cOL3U3-pL4" pattern (target: prev day's S4 / PL4).
       {
         key: "cOL3U3",
@@ -447,7 +447,7 @@ export interface BacktestRow {
  * shape for reference (compressionRatio, widths via todayCPR/prevCPR).
  *
  * Also reused, unchanged, for Pattern sub-category scans (e.g.
- * "Overlap Above" → "HiL4U34") — same shape, same reasoning: a Pattern
+ * "Overlap Above" → "HiL4U3") — same shape, same reasoning: a Pattern
  * bucket within a category still has no single target to grade.
  */
 export interface CategoryScanRow {
@@ -734,7 +734,7 @@ export async function categoryScanSymbolOnDate(
  * NEW: Pattern sub-category scan version of backtestSymbolOnDate —
  * same CPR reconstruction, but checks BOTH the parent CATEGORY's base
  * condition (e.g. "overlapping-higher") AND the named Pattern's raw
- * flag (e.g. "HiL4U34", via matchesPatternFn — see matchesPatternFlag
+ * flag (e.g. "HiL4U3", via matchesPatternFn — see matchesPatternFlag
  * in ScreenerUtils.tsx). Returns a CategoryScanRow, same shape/reasoning as
  * categoryScanSymbolOnDate: a Pattern bucket within a category still
  * has no single target to grade against.
@@ -856,7 +856,7 @@ export async function runCategoryScan(
  * pivotLevelScanSymbolOnDate across the full universe and returns the same
  * simplified CategoryScanRow list (symbol list + CPR data only, no
  * target/result/hitDate) for a category's Pattern sub-bucket (e.g.
- * "Overlap Above" → "HiL4U34").
+ * "Overlap Above" → "HiL4U3").
  */
 export async function runPivotLevelScan(
   categoryKey: string,

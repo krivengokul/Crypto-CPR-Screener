@@ -1097,7 +1097,7 @@ export function getSubFilterDirection(r: CPRResult, activePattern: string): SubF
  * its own second-row badge, checking the raw flag directly.
  */
 export interface PatternInfo {
-  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "cOU3L4" | "LoU4L4" | "eXHiL4U3" | "eXL4U4" | "HiL4U4" | "HiL4U34" | "cOHiL2U3" | "cOL3U3" | "eXU4L234" | "eXU4L34" | "cOHiL2U4" | "eXL3U3" | "eXL2U1" | "eXL3U1" | "eXL4U1" | "eXL1CPR" | "eXL2CPR" | "eXL3CPR" | "eXL3TC" | "eXL4U2" | "eXL2U2" | "eXL2TC" | "eXL1U1" | "eXU2L1" | "cOTCL2" | "eXU3L1" | "eXU2TC" | "eXU2BC" | "eXU3TC" | "eXU2CP" | "eXU4L1" | "cOU1L1" | "cOL1U1" | "cOU2L2" | "cOL2U2" | "cOU1L2" | "cOU4L4" | "exL3U2" | "LoCPL3" | "LoCPL2" | "LoTCL3" | "Lower";
+  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "cOU3L4" | "LoU4L4" | "eXHiL4U3" | "eXL4U4" | "HiL4U4" | "HiL4U3" | "cOHiL2U3" | "cOL3U3" | "eXU4L234" | "eXU4L34" | "cOHiL2U4" | "eXL3U3" | "eXL2U1" | "eXL3U1" | "eXL4U1" | "eXL1CPR" | "eXL2CPR" | "eXL3CPR" | "eXL3TC" | "eXL4U2" | "eXL2U2" | "eXL2TC" | "eXL1U1" | "eXU2L1" | "cOTCL2" | "eXU3L1" | "eXU2TC" | "eXU2BC" | "eXU3TC" | "eXU2CP" | "eXU4L1" | "cOU1L1" | "cOL1U1" | "cOU2L2" | "cOL2U2" | "cOU1L2" | "cOU4L4" | "exL3U2" | "LoCPL3" | "LoCPL2" | "LoTCL3" | "Lower";
   classes: string;
 }
 
@@ -1126,12 +1126,12 @@ export function getPatternInfo(r: CPRResult): PatternInfo {
  * matchesPatternFlag — raw Pattern flag check, factored out of the
  * inline PatternFilter block in Screener.tsx's `displayed` filter so
  * other consumers (the Backtest panel's Pattern sub-category scans,
- * e.g. "Overlap Above" → "HiL4U34") can reuse the exact same lookups
+ * e.g. "Overlap Above" → "HiL4U3") can reuse the exact same lookups
  * without duplicating the switch. For the six mutually-exclusive primary
  * labels (eX-Higher/eX-Lower/cO-Higher/cO-Lower/Higher/Lower) this falls
  * back to getPatternInfo(r)'s label; for the independent, section-agnostic
  * booleans (cOU1L2, cOU3L4, LoU4L4, eXL4U4, HiL4U4,
- * HiL4U34, cOHiL2U3, eXU4L234, eXU4L34, cOU1L1, cOL1U1, cOU2L2, cOL2U2, cOTCL2)
+ * HiL4U3, cOHiL2U3, eXU4L234, eXU4L34, cOU1L1, cOL1U1, cOU2L2, cOL2U2, cOTCL2)
  * it reads the raw flag directly — same as Screener.tsx does today.
  */
 export function matchesPatternFlag(r: CPRResult, label: string): boolean {
@@ -1144,7 +1144,7 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     case "eXHiL4U3": return r.eXHiL4U3;
     case "eXL4U4": return r.eXL4U4;
     case "HiL4U4": return r.HiL4U4;
-    case "HiL4U34": return r.HiL4U34;
+    case "HiL4U3": return r.HiL4U3;
     case "cOHiL2U3": return r.cOHiL2U3;
     case "cOL3U3": return r.cOL3U3;
     case "eXU4L234": return r.eXU4L234;

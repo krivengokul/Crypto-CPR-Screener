@@ -872,10 +872,10 @@ export default function Screener({
       if (PatternFilter === "HiL4U4") return r.HiL4U4;
       // NEW: eXHiL4U3 — unconditional Pattern flag.
       if (PatternFilter === "eXHiL4U3") return r.eXHiL4U3;
-      // NEW: HiL4U34 / cOHiL2U3 — same treatment: independent,
+      // NEW: HiL4U3 / cOHiL2U3 — same treatment: independent,
       // section-agnostic Pattern flags, always shown regardless of
       // activePattern/left-nav.
-      if (PatternFilter === "HiL4U34") return r.HiL4U34;
+      if (PatternFilter === "HiL4U3") return r.HiL4U3;
       if (PatternFilter === "cOHiL2U3") return r.cOHiL2U3;
       if (PatternFilter === "cOL3U3") return r.cOL3U3;
       // NEW: eXU4L234 — independent, section-agnostic Pattern flag
@@ -1980,7 +1980,7 @@ export default function Screener({
                   { label: "HiL2U4", active: "border-cyan-400 text-cyan-400" },
                   { label: "HiL3U4", active: "border-lime-400 text-lime-400" },
                   { label: "HiL4U4", active: "border-fuchsia-400 text-fuchsia-400" },
-                  { label: "HiL4U34", active: "border-indigo-400 text-indigo-400" },
+                  { label: "HiL4U3", active: "border-indigo-400 text-indigo-400" },
                   { label: "cOHiL2U3", active: "border-sky-400 text-sky-400" },
                   { label: "cOL3U3", active: "border-sky-400 text-sky-400" },
                   { label: "eXU4L234", active: "border-amber-400 text-amber-400" },

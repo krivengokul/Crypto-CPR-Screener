@@ -14,7 +14,7 @@ export const PATTERN_BADGE_CLASSES: Record<string, string> = {
   HiL2U4: "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20",
   HiL3U4: "bg-lime-500/10 text-lime-400 border border-lime-500/20",
   HiL4U4: "bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/20",
-  HiL4U34: "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20",
+  HiL4U3: "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20",
   cOHiL2U3: "bg-sky-500/10 text-sky-400 border border-sky-500/20",
   cOL3U3: "bg-sky-500/10 text-sky-400 border border-sky-500/20",
   HiL3U3: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
@@ -84,7 +84,7 @@ export function getBadgeClasses(label: string): string {
  */
 export function renderTodayPatternBadges(r: CPRResult) {
   const hasAny =
-    r.cOU3L4 || r.LoU4L4 || r.eXHiL4U3 || r.eXL4U4 || r.HiL4U4 || r.HiL4U34 || r.cOHiL2U3 || r.cOL3U3 || r.eXU4L234 || r.eXU4L34 || r.cOHiL2U4 || r.eXL3U3 || r.eXU3L3 || r.cOL4U4 || r.cOL3U4 || r.cOU3L3 || r.LoU3L4 || r.LoU3L3 || r.LoU2L4 || r.LoU2L3 || r.LoU4L34 || r.LoU4L234 || r.HiL2U4 || r.HiL3U4 || r.cOLoU2L3 || r.LoU4L1234 || r.cOU1L2 || r.cOU2L4 || r.eXL2U1 || r.eXL3U1 || r.eXL4U1 || r.eXL1CPR || r.eXL2CPR || r.eXL3CPR || r.cOU1L1 || r.cOL1U1 || r.cOU2L2 || r.cOL2U2 || r.cOU4L4 || r.exL3U2 || r.eXL3TC || r.eXL4U2 || r.eXL2U2 || r.eXL2TC || r.eXL1U1 || r.eXU2L1 || r.cOTCL2 || r.eXU3L1 || r.eXU2TC || r.eXU2BC || r.eXU3TC || r.eXU2CP || r.eXU4L1 || r.HiL3U3 || r.cOU1L3 || r.LoCPL3 || r.LoCPL2 || r.LoTCL3;
+    r.cOU3L4 || r.LoU4L4 || r.eXHiL4U3 || r.eXL4U4 || r.HiL4U4 || r.HiL4U3 || r.cOHiL2U3 || r.cOL3U3 || r.eXU4L234 || r.eXU4L34 || r.cOHiL2U4 || r.eXL3U3 || r.eXU3L3 || r.cOL4U4 || r.cOL3U4 || r.cOU3L3 || r.LoU3L4 || r.LoU3L3 || r.LoU2L4 || r.LoU2L3 || r.LoU4L34 || r.LoU4L234 || r.HiL2U4 || r.HiL3U4 || r.cOLoU2L3 || r.LoU4L1234 || r.cOU1L2 || r.cOU2L4 || r.eXL2U1 || r.eXL3U1 || r.eXL4U1 || r.eXL1CPR || r.eXL2CPR || r.eXL3CPR || r.cOU1L1 || r.cOL1U1 || r.cOU2L2 || r.cOL2U2 || r.cOU4L4 || r.exL3U2 || r.eXL3TC || r.eXL4U2 || r.eXL2U2 || r.eXL2TC || r.eXL1U1 || r.eXU2L1 || r.cOTCL2 || r.eXU3L1 || r.eXU2TC || r.eXU2BC || r.eXU3TC || r.eXU2CP || r.eXU4L1 || r.HiL3U3 || r.cOU1L3 || r.LoCPL3 || r.LoCPL2 || r.LoTCL3;
   if (!hasAny) return null;
   return (
     <div className="flex flex-wrap gap-1">
@@ -95,7 +95,7 @@ export function renderTodayPatternBadges(r: CPRResult) {
       {r.HiL2U4 && <span className="text-xs px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-medium">HiL2U4</span>}
       {r.HiL3U4 && <span className="text-xs px-1.5 py-0.5 rounded bg-lime-500/10 text-lime-400 border border-lime-500/20 font-medium">HiL3U4</span>}
       {r.HiL4U4 && <span className="text-xs px-1.5 py-0.5 rounded bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/20 font-medium">HiL4U4</span>}
-      {r.HiL4U34 && <span className="text-xs px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-medium">HiL4U34</span>}
+      {r.HiL4U3 && <span className="text-xs px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-medium">HiL4U3</span>}
       {r.cOHiL2U3 && <span className="text-xs px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-medium">cOHiL2U3</span>}
       {r.cOL3U3 && <span className="text-xs px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-medium">cOL3U3</span>}
       {r.eXU4L234 && <span className="text-xs px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium">eXU4L234</span>}
