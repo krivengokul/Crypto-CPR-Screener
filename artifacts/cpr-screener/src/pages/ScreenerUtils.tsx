@@ -464,7 +464,10 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.prevCPR.widthPct > 0.1 && r.prevCPR.widthPct < 1
       );
     case "eXHiU1L3":
-      return r.cprRising && r.narrowCPR && r.eXHiU1L3;
+      // eXHiU1L3 raw flag was removed from cpr.ts (exact duplicate of
+      // eXL3U1); this composite pattern key is kept for any external
+      // caller still passing "eXHiU1L3", now pointed at eXL3U1.
+      return r.cprRising && r.narrowCPR && r.eXL3U1;
     case "littlebelow":
       return r.cprFalling && r.narrowCPR;
     case "lb-2tiny":
