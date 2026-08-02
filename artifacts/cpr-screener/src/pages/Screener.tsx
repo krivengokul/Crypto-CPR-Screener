@@ -109,9 +109,9 @@ export default function Screener({
   const [showBigBelowL1LtPL4, setShowBigBelowL1LtPL4] = useState(false);
   // NEW: CPR<pL4 sub-toggle on top of L1<pL4 — restrict to rows where today's BC is below prev day's S4
   const [showL1LtPL4CprLtPL4, setShowL1LtPL4CprLtPL4] = useState(false);
-  // NEW: eXU4L234-AU4 filter state (Big Below), placed next to L1<pL4
-  const [showBigBeloweXU4L234AU4, setShowBigBeloweXU4L234AU4] = useState(false);
-  // NEW: 1T-cOU4L4-ApU4:3PM filter state (Big Below), placed next to eXU4L234-AU4
+  // NEW: eXU4L2-AU4 filter state (Big Below), placed next to L1<pL4
+  const [showBigBeloweXU4L2AU4, setShowBigBeloweXU4L2AU4] = useState(false);
+  // NEW: 1T-cOU4L4-ApU4:3PM filter state (Big Below), placed next to eXU4L2-AU4
   const [showBigBelow1TcOU4L43PM, setShowBigBelow1TcOU4L43PM] = useState(false);
   const [showBigAbovePL34CL4, setShowBigAbovePL34CL4] = useState(false);
   // NEW: BigCPR Above — BAComp-l3>pl1/u3>pu1 filter state
@@ -334,7 +334,7 @@ export default function Screener({
     if (activePattern !== "overlapping-lower") { setShowExpU4PU4(false); setShowExpU3PU3(false); setShowOBNLoU4L4(false); setShowOBWLoU4L4(false); }
     // NEW: reset eXHi-L4U4-U4 toggle when leaving Overlapping Higher
     if (activePattern !== "overlapping-higher") { setShowOBHiExL4U4(false); setShowLMeXL2U2(false);}
-    if (activePattern !== "structure-bigbelow") { setShowBigBelowPMiniPL3(false); setShowBigBelowPMiniRising(false); pMiniRisingAlertedRef.current.clear(); setShowExpU3LtPU4(false); setShowBigBeloweXLoL3U4AU4(false); setShowBigBelowL1LtPL4(false); setShowL1LtPL4CprLtPL4(false); setShowBigBeloweXU4L234AU4(false); setShowBigBelow1TcOU4L43PM(false); }
+    if (activePattern !== "structure-bigbelow") { setShowBigBelowPMiniPL3(false); setShowBigBelowPMiniRising(false); pMiniRisingAlertedRef.current.clear(); setShowExpU3LtPU4(false); setShowBigBeloweXLoL3U4AU4(false); setShowBigBelowL1LtPL4(false); setShowL1LtPL4CprLtPL4(false); setShowBigBeloweXU4L2AU4(false); setShowBigBelow1TcOU4L43PM(false); }
     if (activePattern !== "structure-bigabove") { setShowBigAbovePL34CL4(false); setShowBAComp(false); setShowHAU1(false); setShowHAU1CprAbovePU4(false); setShowHAU1L1AbovePU4(false); setShowHAU1PWideAbove(false); setShowHRHAL(false); setShowHA55HrL4U34FAU4(false); setShowHiL4U4FAU4(false); setShow1ScoHiFAU4(false); setShow2ScoHiFAU4(false); }
     // Reset LB Compressed / LB-C34 / lbE11-cOLoL3U2-PU4 / LB-cO2-L2U2 / LB-BothTiny / LB-AllUp when leaving littlebelow
     if (activePattern !== "littlebelow") { setShowLBCmprss(false); setShowLBC34(false); setShowLBE11(false); setShowLBC2L2U2(false); setShowLBBothTiny(false); setShowLBAllUp(false); }
@@ -542,21 +542,21 @@ export default function Screener({
       if (activeTab === "delta") return deltaIntersect;
       return binanceIntersect;
     }
-    // NEW: eXU4L234-AU4 pool — Big Below, placed next to L1<pL4. Pivot
-    // Level eXU4L234 + prev R3 above today's R3 + today R1/prev S1 between
+    // NEW: eXU4L2-AU4 pool — Big Below, placed next to L1<pL4. Pivot
+    // Level eXU4L2 + prev R3 above today's R3 + today R1/prev S1 between
     // the two pivots + prev CPR pSmall + today CPR 1%-2% wide.
-    if (showBigBeloweXU4L234AU4 && activePattern === "structure-bigbelow") {
+    if (showBigBeloweXU4L2AU4 && activePattern === "structure-bigbelow") {
       const binanceIntersect = allResults
-        .filter((r) => passesPattern(r, "eXU4L234-AU4"))
+        .filter((r) => passesPattern(r, "eXU4L2-AU4"))
         .map((r) => ({ ...r, source: "binance" as const }));
       const deltaIntersect = deltaAllResults
-        .filter((r) => passesPattern(r, "eXU4L234-AU4"))
+        .filter((r) => passesPattern(r, "eXU4L2-AU4"))
         .map((r) => ({ ...r, source: "delta" as const }));
       if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
       if (activeTab === "delta") return deltaIntersect;
       return binanceIntersect;
     }
-    // NEW: 1T-cOU4L4-ApU4:3PM pool — Big Below, placed next to eXU4L234-AU4.
+    // NEW: 1T-cOU4L4-ApU4:3PM pool — Big Below, placed next to eXU4L2-AU4.
     // cOU4L4 pivot + prev R1 between today R1/R2 + today S1 between prev S1/S2
     // + prev PDH > prev R1 + prev CPR pMicro (<=0.10%) + today CPR Tiny (0.10%-0.22%).
     if (showBigBelow1TcOU4L43PM && activePattern === "structure-bigbelow") {
@@ -886,9 +886,9 @@ export default function Screener({
       if (PatternFilter === "LoTCL3") return r.LoTCL3;
       if (PatternFilter === "cOL2U3") return r.cOL2U3;
       if (PatternFilter === "cOL3U3") return r.cOL3U3;
-      // NEW: eXU4L234 — independent, section-agnostic Pattern flag
+      // NEW: eXU4L2 — independent, section-agnostic Pattern flag
       // (see doc-comments in cpr.ts / ScreenerUtils.tsx).
-      if (PatternFilter === "eXU4L234") return r.eXU4L234;
+      if (PatternFilter === "eXU4L2") return r.eXU4L2;
       // NEW: eXU4L34 — independent, section-agnostic Pattern flag
       // (see doc-comments in cpr.ts / ScreenerUtils.tsx).
       if (PatternFilter === "eXU4L34") return r.eXU4L34;
@@ -1004,7 +1004,7 @@ export default function Screener({
   const anySubFilter =
     showLABothTiny || showLAAllUp || showLA1LHr || showLAPL12CL23 || showLACompressed || showLAT1U46AM || showLASsHiL4U4FAU42AM || showLAMeMieXL4U3U46PM ||
     showOutsideCPRCompressed || showOutsideCPReXHrL3U3AU4 || showInsideCPRTiCOLo ||
-    showBigBelowPMiniPL3 || showBigBelowPMiniRising || showExpU3LtPU4 || showBigBeloweXLoL3U4AU4 || showBigBelowL1LtPL4 || showL1LtPL4CprLtPL4 || showBigBeloweXU4L234AU4 || showBigBelow1TcOU4L43PM ||
+    showBigBelowPMiniPL3 || showBigBelowPMiniRising || showExpU3LtPU4 || showBigBeloweXLoL3U4AU4 || showBigBelowL1LtPL4 || showL1LtPL4CprLtPL4 || showBigBeloweXU4L2AU4 || showBigBelow1TcOU4L43PM ||
     showBigAbovePL34CL4 || showBAComp || showHAU1 || showHAU1CprAbovePU4 || showHAU1L1AbovePU4 || showHAU1PWideAbove || showHRHAL || showHA55HrL4U34FAU4 || showHiL4U4FAU4 || show1ScoHiFAU4 || show2ScoHiFAU4 || showLBCmprss || showLBC34 || showLBE11 || showLBC2L2U2 ||
     showLBBothTiny || showLBAllUp || showExpU4PU4 || showExpU3PU3 || showOBNLoU4L4 || showOBWLoU4L4 || showOBHiExL4U4 || showLMeXL2U2 ||
     !!PatternFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter;
@@ -1045,7 +1045,7 @@ export default function Screener({
           showOBHiExL4U4={showOBHiExL4U4}
           showExpU3LtPU4={showExpU3LtPU4}
           showBigBeloweXLoL3U4AU4={showBigBeloweXLoL3U4AU4}
-          showBigBeloweXU4L234AU4={showBigBeloweXU4L234AU4}
+          showBigBeloweXU4L2AU4={showBigBeloweXU4L2AU4}
           showBigBelow1TcOU4L43PM={showBigBelow1TcOU4L43PM}
           showHRHAL={showHRHAL}
           showHiL4U4FAU4={showHiL4U4FAU4}
@@ -1092,7 +1092,7 @@ export default function Screener({
                   setShowBigBeloweXLoL3U4AU4(false);
                   setShowBigBelowL1LtPL4(false);
                   setShowL1LtPL4CprLtPL4(false);
-                  setShowBigBeloweXU4L234AU4(false);
+                  setShowBigBeloweXU4L2AU4(false);
                   setShowBigAbovePL34CL4(false);
                   setShowBAComp(false);
                   setShowHAU1(false);
@@ -1683,7 +1683,7 @@ export default function Screener({
                   setShowBigBeloweXLoL3U4AU4(false);
                   setShowBigBelowL1LtPL4(false);
                   setShowL1LtPL4CprLtPL4(false);
-                  setShowBigBeloweXU4L234AU4(false);
+                  setShowBigBeloweXU4L2AU4(false);
                 }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showBigBelowPMiniPL3
@@ -1706,7 +1706,7 @@ export default function Screener({
                   setShowBigBeloweXLoL3U4AU4(false);
                   setShowBigBelowL1LtPL4(false);
                   setShowL1LtPL4CprLtPL4(false);
-                  setShowBigBeloweXU4L234AU4(false);
+                  setShowBigBeloweXU4L2AU4(false);
                 }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showExpU3LtPU4
@@ -1729,7 +1729,7 @@ export default function Screener({
                   setShowExpU3LtPU4(false);
                   setShowBigBelowL1LtPL4(false);
                   setShowL1LtPL4CprLtPL4(false);
-                  setShowBigBeloweXU4L234AU4(false);
+                  setShowBigBeloweXU4L2AU4(false);
                 }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showBigBeloweXLoL3U4AU4
@@ -1752,7 +1752,7 @@ export default function Screener({
                   pMiniRisingAlertedRef.current.clear();
                   setShowExpU3LtPU4(false);
                   setShowBigBeloweXLoL3U4AU4(false);
-                  setShowBigBeloweXU4L234AU4(false);
+                  setShowBigBeloweXU4L2AU4(false);
                 }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showBigBelowL1LtPL4
@@ -1778,13 +1778,13 @@ export default function Screener({
                 {showL1LtPL4CprLtPL4 ? "✕ CPR<pL4" : "CPR<pL4"}
               </button>
             )}
-            {/* NEW: eXU4L234-AU4 button — Big Below, placed next to L1<pL4.
-                Pattern eXU4L234 + prev R3 above today's R3 + today R1/prev
+            {/* NEW: eXU4L2-AU4 button — Big Below, placed next to L1<pL4.
+                Pattern eXU4L2 + prev R3 above today's R3 + today R1/prev
                 S1 between the two pivots + prev CPR pSmall + today CPR 1%-2%. */}
             {activePattern === "structure-bigbelow" && !showAll && (
               <button
                 onClick={() => {
-                  setShowBigBeloweXU4L234AU4((v) => !v);
+                  setShowBigBeloweXU4L2AU4((v) => !v);
                   setShowBigBelowPMiniPL3(false);
                   setShowBigBelowPMiniRising(false);
                   pMiniRisingAlertedRef.current.clear();
@@ -1794,16 +1794,16 @@ export default function Screener({
                   setShowL1LtPL4CprLtPL4(false);
                 }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                  showBigBeloweXU4L234AU4
+                  showBigBeloweXU4L2AU4
                     ? "border-amber-400 text-amber-400"
                     : "border-border text-muted-foreground hover:text-foreground"
                 }`}
-                title="Wide Below + eXU4L234 (Prev R4 inside today's R3/R4, Prev S4 inside today's S1/S2), Prev R3 > Today R3, Today R1 or Prev S1 between the two Pivots, Prev CPR pSmall (0.6%-1.1%), Today CPR 1%-2%"
+                title="Wide Below + eXU4L2 (Prev R4 inside today's R3/R4, Prev S4 inside today's S1/S2), Prev R3 > Today R3, Today R1 or Prev S1 between the two Pivots, Prev CPR pSmall (0.6%-1.1%), Today CPR 1%-2%"
               >
-                {showBigBeloweXU4L234AU4 ? "✕ eXU4L234-AU4" : "eXU4L234-AU4"}
+                {showBigBeloweXU4L2AU4 ? "✕ eXU4L2-AU4" : "eXU4L2-AU4"}
               </button>
             )}
-            {/* NEW: 1T-cOU4L4-ApU4:3PM button — Big Below, placed next to eXU4L234-AU4.
+            {/* NEW: 1T-cOU4L4-ApU4:3PM button — Big Below, placed next to eXU4L2-AU4.
                 cOU4L4 + prev R1 between today R1/R2 + today S1 between prev S1/S2 +
                 prev PDH > prev R1 + prev CPR pMicro + today CPR Tiny. */}
             {activePattern === "structure-bigbelow" && !showAll && (
@@ -1817,7 +1817,7 @@ export default function Screener({
                   setShowBigBeloweXLoL3U4AU4(false);
                   setShowBigBelowL1LtPL4(false);
                   setShowL1LtPL4CprLtPL4(false);
-                  setShowBigBeloweXU4L234AU4(false);
+                  setShowBigBeloweXU4L2AU4(false);
                 }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showBigBelow1TcOU4L43PM
@@ -1995,7 +1995,7 @@ export default function Screener({
                   { label: "LoTCL3", active: "border-sky-600 text-sky-300" },
                   { label: "cOL2U3", active: "border-sky-400 text-sky-400" },
                   { label: "cOL3U3", active: "border-sky-400 text-sky-400" },
-                  { label: "eXU4L234", active: "border-amber-400 text-amber-400" },
+                  { label: "eXU4L2", active: "border-amber-400 text-amber-400" },
                   { label: "eXU4L34", active: "border-amber-300 text-amber-300" },
                   { label: "cOHiL2U4", active: "border-emerald-400 text-emerald-400" },
                   { label: "eXL3U3", active: "border-orange-400 text-orange-400" },

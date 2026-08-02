@@ -868,13 +868,13 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.strWideCPR &&
         r.todayCPR.s1 < r.prevCPR.s4
       );
-    // NEW: eXU4L234-AU4 — Big Below (structure-bigbelow: cprFalling +
-    // strWideCPR) + Pattern: eXU4L234 (prev R4 inside today's R3/R4 AND
+    // NEW: eXU4L2-AU4 — Big Below (structure-bigbelow: cprFalling +
+    // strWideCPR) + Pattern: eXU4L2 (prev R4 inside today's R3/R4 AND
     // prev S4 inside today's S1/S2) + prev day's R3 above today's R3 + either
     // today's R1 or prev day's S1 sits between prev day's Pivot and today's
     // Pivot + prev CPR width category pSmall (0.6%-1.1%) + today's CPR width
     // between 1% and 2%.
-    case "eXU4L234-AU4": {
+    case "eXU4L2-AU4": {
       const pivotLow = Math.min(r.prevCPR.pivot, r.todayCPR.pivot);
       const pivotHigh = Math.max(r.prevCPR.pivot, r.todayCPR.pivot);
       const r1BetweenPivots = r.todayCPR.r1 >= pivotLow && r.todayCPR.r1 <= pivotHigh;
@@ -882,7 +882,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return (
         r.cprFalling &&
         r.strWideCPR &&
-        r.eXU4L234 &&
+        r.eXU4L2 &&
         r.prevCPR.r3 > r.todayCPR.r3 &&
         (r1BetweenPivots || pS1BetweenPivots) &&
         r.prevCPR.widthPct >= 0.6 && r.prevCPR.widthPct <= 1.1 &&
@@ -1009,7 +1009,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     { key: "bigbelow-pmini-pl3", direction: "up" },
     { key: "eX-U4L34", direction: "down" },
     { key: "eXLoL3U4-AU4", direction: "down" },
-    { key: "eXU4L234-AU4", direction: "down" },
+    { key: "eXU4L2-AU4", direction: "down" },
     { key: "1T-cOU4L4-ApU4:3PM", direction: "down" },
   ],
   "l1-lt-pl4": [],
@@ -1076,13 +1076,13 @@ export function getSubFilterDirection(r: CPRResult, activePattern: string): SubF
  * "eXLo-L4U4-U4" / "eXHi-L4U4-U4" *patterns*, which gate the same boolean
  * behind overlapLower / overlapHigher respectively for their own sections.
  *
- * NEW: eXU4L234 — same treatment again: an independent, section-agnostic
- * boolean (r.eXU4L234 from cpr.ts — prev R4 inside today's R3/R4 AND prev
+ * NEW: eXU4L2 — same treatment again: an independent, section-agnostic
+ * boolean (r.eXU4L2 from cpr.ts — prev R4 inside today's R3/R4 AND prev
  * S4 inside today's S1/S2). Not returned as the primary label here for the
  * same reason as eXL4U4/HiL4U4/etc — Screener.tsx renders it as its own
  * second-row badge and its own Pattern filter button, checking
- * r.eXU4L234 directly, regardless of activePattern/left-nav section. The
- * "eXU4L234-AU4" *pattern* (Big Below) additionally requires strWideCPR +
+ * r.eXU4L2 directly, regardless of activePattern/left-nav section. The
+ * "eXU4L2-AU4" *pattern* (Big Below) additionally requires strWideCPR +
  * cprFalling + extra R3/pivot/width conditions on top of this raw flag.
  *
  * NEW: cOU1L1 / cOL1U1 / cOU2L2 / cOL2U2 — same treatment again:
@@ -1097,7 +1097,7 @@ export function getSubFilterDirection(r: CPRResult, activePattern: string): SubF
  * its own second-row badge, checking the raw flag directly.
  */
 export interface PatternInfo {
-  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "cOU3L4" | "LoU4L4" | "eXL4U3" | "eXL4U4" | "HiL4U4" | "HiL4U3" | "HiL4U2" | "cOL2U3" | "cOL3U3" | "eXU4L234" | "eXU4L34" | "cOHiL2U4" | "eXL3U3" | "eXL2U1" | "eXL3U1" | "eXL4U1" | "eXL1CPR" | "eXL2CPR" | "eXL3CPR" | "eXL3TC" | "eXL4U2" | "eXL2U2" | "eXL2TC" | "eXL1U1" | "eXU2L1" | "cOTCL2" | "eXU3L1" | "eXU3L2" | "eXU2TC" | "eXU2BC" | "eXU3TC" | "eXU2CP" | "eXU4L1" | "cOU1L1" | "cOL1U1" | "cOU2L2" | "cOL2U2" | "cOU1L2" | "cOU4L4" | "exL3U2" | "LoCPL3" | "LoCPL2" | "LoTCL3" | "Lower";
+  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "cOU3L4" | "LoU4L4" | "eXL4U3" | "eXL4U4" | "HiL4U4" | "HiL4U3" | "HiL4U2" | "cOL2U3" | "cOL3U3" | "eXU4L2" | "eXU4L34" | "cOHiL2U4" | "eXL3U3" | "eXL2U1" | "eXL3U1" | "eXL4U1" | "eXL1CPR" | "eXL2CPR" | "eXL3CPR" | "eXL3TC" | "eXL4U2" | "eXL2U2" | "eXL2TC" | "eXL1U1" | "eXU2L1" | "cOTCL2" | "eXU3L1" | "eXU3L2" | "eXU2TC" | "eXU2BC" | "eXU3TC" | "eXU2CP" | "eXU4L1" | "cOU1L1" | "cOL1U1" | "cOU2L2" | "cOL2U2" | "cOU1L2" | "cOU4L4" | "exL3U2" | "LoCPL3" | "LoCPL2" | "LoTCL3" | "Lower";
   classes: string;
 }
 
@@ -1131,7 +1131,7 @@ export function getPatternInfo(r: CPRResult): PatternInfo {
  * labels (eX-Higher/eX-Lower/cO-Higher/cO-Lower/Higher/Lower) this falls
  * back to getPatternInfo(r)'s label; for the independent, section-agnostic
  * booleans (cOU1L2, cOU3L4, LoU4L4, eXL4U4, HiL4U4,
- * HiL4U3, HiL4U2, cOL2U3, eXU4L234, eXU4L34, cOU1L1, cOL1U1, cOU2L2, cOL2U2, cOTCL2)
+ * HiL4U3, HiL4U2, cOL2U3, eXU4L2, eXU4L34, cOU1L1, cOL1U1, cOU2L2, cOL2U2, cOTCL2)
  * it reads the raw flag directly — same as Screener.tsx does today.
  */
 export function matchesPatternFlag(r: CPRResult, label: string): boolean {
@@ -1148,7 +1148,7 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     case "HiL4U2": return r.HiL4U2;
     case "cOL2U3": return r.cOL2U3;
     case "cOL3U3": return r.cOL3U3;
-    case "eXU4L234": return r.eXU4L234;
+    case "eXU4L2": return r.eXU4L2;
     case "eXU4L34": return r.eXU4L34;
     case "cOHiL2U4": return r.cOHiL2U4;
     case "eXL3U3": return r.eXL3U3;

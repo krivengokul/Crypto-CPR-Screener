@@ -69,7 +69,7 @@ export interface CPRPairFlags {
   LoU4L4: boolean;
   eXHiU1L3: boolean;
   eXL4U3: boolean;
-  eXU4L234: boolean;
+  eXU4L2: boolean;
   eXU4L34: boolean;
   cOHiL2U4: boolean;
   cOL4U4: boolean;
@@ -227,7 +227,7 @@ export interface CPRResult {
   LoU4L4: boolean;
   eXHiU1L3: boolean;
   eXL4U3: boolean;
-  eXU4L234: boolean;
+  eXU4L2: boolean;
   eXU4L34: boolean;
   cOHiL2U4: boolean;
   equalCPR: boolean;
@@ -438,7 +438,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
                    (prev.s4 > today.s3 && prev.s4 < today.s2);
   const eXL4U3 = (prev.s4 > today.s4 && prev.s4 < today.s3) &&
                    (prev.r4 > today.r2 && prev.r4 < today.r3);
-  const eXU4L234 = (prev.r4 < today.r4 && prev.r4 > today.r3) &&
+  const eXU4L2 = (prev.r4 < today.r4 && prev.r4 > today.r3) &&
                    (prev.s4 < today.s1 && prev.s4 > today.s2);
   const eXU4L34  = (prev.r4 < today.r4 && prev.r4 > today.r3) &&
                    (prev.s4 < today.s2 && prev.s4 >= today.s3);
@@ -644,7 +644,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
     srHigher, srLower, srExpanded, srCompressed,
     srCompressedHigher, srCompressedLower, srExpandedHigher, srExpandedLower,
     cOU3L4, cOL2U3, cOL3U3, eXLoL3U4, eXL4U4, HiL4U3, HiL4U2, HiL2U4, HiL3U4, HiL4U4,
-    LoU4L4, eXHiU1L3, eXL4U3, eXU4L234, eXU4L34, cOHiL2U4, cOL4U4, cOU4L4, exL3U2,
+    LoU4L4, eXHiU1L3, eXL4U3, eXU4L2, eXU4L34, cOHiL2U4, cOL4U4, cOU4L4, exL3U2,
     cOL3U4, cOU3L3, LoU3L4, LoU3L3, cOU2L3, LoU2L4, LoU2L3, LoU4L34, LoU4L234,
     cOHiL2U2, LoU4L1234, cOU1L2, cOU2L4, eXL3U3, eXU3L3,
     cOU1L1, cOL1U1, cOU2L2, cOL2U2,
@@ -674,7 +674,7 @@ export function pickCPRSubLabel(f: CPRPairFlags): string | null {
   if (f.LoU4L4)    return "LoU4L4";
   if (f.eXHiU1L3)  return "eXHiU1L3";
   if (f.eXL4U3)  return "eXL4U3";
-  if (f.eXU4L234)  return "eXU4L234";
+  if (f.eXU4L2)  return "eXU4L2";
   if (f.eXU4L34)   return "eXU4L34";
   if (f.cOHiL2U4)  return "cOHiL2U4";
   if (f.cOL4U4)    return "cOL4U4";

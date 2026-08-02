@@ -6,7 +6,7 @@ export interface ScreenerLegendProps {
   showLACompressed: boolean;
   showLAT1U46AM: boolean;
   showLASsHiL4U4FAU42AM: boolean;
-  showLAMeMieXHiL4U3U46PM: boolean;
+  showLAMeMieXL4U3U46PM: boolean;
   showLBE11: boolean;
   showLBC2L2U2: boolean;
   showExpU4PU4: boolean;
@@ -17,7 +17,7 @@ export interface ScreenerLegendProps {
   showLMeXL2U2: boolean;
   showExpU3LtPU4: boolean;
   showBigBeloweXLoL3U4AU4: boolean;
-  showBigBeloweXU4L234AU4: boolean;
+  showBigBeloweXU4L2AU4: boolean;
   showBigBelow1TcOU4L43PM: boolean;
   showHRHAL: boolean;
   showHiL4U4FAU4: boolean;
@@ -44,7 +44,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
     showLACompressed,
     showLAT1U46AM,
     showLASsHiL4U4FAU42AM,
-    showLAMeMieXHiL4U3U46PM,
+    showLAMeMieXL4U3U46PM,
     showLBE11,
     showLBC2L2U2,
     showExpU4PU4,
@@ -55,7 +55,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
     showLMeXL2U2,
     showExpU3LtPU4,
     showBigBeloweXLoL3U4AU4,
-    showBigBeloweXU4L234AU4,
+    showBigBeloweXU4L2AU4,
     showBigBelow1TcOU4L43PM,
     showHRHAL,
     showHiL4U4FAU4,
@@ -250,10 +250,10 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             <div className="text-xs font-semibold text-fuchsia-400 mb-1">Pattern: HiL4U4  PCPR: Small  CPR: Small</div>
             <div className="text-xs text-muted-foreground">cprRising + narrowCPR + AllStepUp above/below, Today S1 &gt; Prev PDL, Today R1 &gt; Prev PDH, Today PDH &gt; Today R1, both CPRs 0.60%–1.10% (Small)</div>
           </>
-        ) : (showLAMeMieXHiL4U3U46PM && activePattern === "littleabove") || activePattern === "MeMi-eXHiL4U3-U4:6PM" ? (
+        ) : (showLAMeMieXL4U3U46PM && activePattern === "littleabove") || activePattern === "MeMi-eXL4U3-U4:6PM" ? (
           <>
-            <div className="text-xs font-semibold text-green-400 mb-1">Pattern: eXHiL4U3  PCPR: Medium  CPR: Mini</div>
-            <div className="text-xs text-muted-foreground">cprRising + narrowCPR + eXHiL4U3, Today's TC ≥ Prev R1, Prev CPR 1.10%–2.00% (Medium), Today CPR 0.22%–0.60% (Mini)</div>
+            <div className="text-xs font-semibold text-green-400 mb-1">Pattern: eXL4U3  PCPR: Medium  CPR: Mini</div>
+            <div className="text-xs text-muted-foreground">cprRising + narrowCPR + eXL4U3, Today's TC ≥ Prev R1, Prev CPR 1.10%–2.00% (Medium), Today CPR 0.22%–0.60% (Mini)</div>
           </>
         ) : showLBE11 && activePattern === "littlebelow" ? (
           <>
@@ -315,10 +315,10 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             <div className="text-xs font-semibold text-green-400 mb-1">eXLoL3U4-AU4</div>
             <div className="text-xs text-muted-foreground">Wide Below — Prev R4 between today&apos;s R3/R4, Prev S4 above today&apos;s S3</div>
           </>
-        ) : showBigBeloweXU4L234AU4 && activePattern === "structure-bigbelow" ? (
+        ) : showBigBeloweXU4L2AU4 && activePattern === "structure-bigbelow" ? (
           <>
-            <div className="text-xs font-semibold text-amber-400 mb-1">eXU4L234-AU4</div>
-            <div className="text-xs text-muted-foreground">Wide Below + eXU4L234 (Prev R4 inside today&apos;s R3/R4, Prev S4 inside today&apos;s S1/S2), Prev R3 &gt; Today R3, Today R1 or Prev S1 between the two Pivots</div>
+            <div className="text-xs font-semibold text-amber-400 mb-1">eXU4L2-AU4</div>
+            <div className="text-xs text-muted-foreground">Wide Below + eXU4L2 (Prev R4 inside today&apos;s R3/R4, Prev S4 inside today&apos;s S1/S2), Prev R3 &gt; Today R3, Today R1 or Prev S1 between the two Pivots</div>
           </>
         ) : showBigBelow1TcOU4L43PM && activePattern === "structure-bigbelow" ? (
           <>
@@ -453,7 +453,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             <div className="text-xs font-semibold text-fuchsia-400 mb-1">Exp Target: Far Above U4 (T-5 U4)<br />Time: 2AM</div>
             <div className="text-xs text-muted-foreground">Expected upside far above U4 (T-5 U4) by ~2AM</div>
           </>
-        ) : (showLAMeMieXHiL4U3U46PM && activePattern === "littleabove") || activePattern === "MeMi-eXHiL4U3-U4:6PM" ? (
+        ) : (showLAMeMieXL4U3U46PM && activePattern === "littleabove") || activePattern === "MeMi-eXL4U3-U4:6PM" ? (
           <>
             <div className="text-xs font-semibold text-green-400 mb-1">Exp Target: U4 (T-5 AU4)<br />Time: 6PM</div>
             <div className="text-xs text-muted-foreground">Expected upside target U4 (T-5 AU4) by ~6PM</div>
@@ -517,7 +517,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             <div className="text-xs font-semibold text-emerald-400 mb-1">Target</div>
             <div className="text-xs text-muted-foreground">Bearish continuation — further downside below prev day&apos;s S3/S4</div>
           </>
-        ) : showBigBeloweXU4L234AU4 && activePattern === "structure-bigbelow" ? (
+        ) : showBigBeloweXU4L2AU4 && activePattern === "structure-bigbelow" ? (
           <>
             <div className="text-xs font-semibold text-destructive mb-1">Target</div>
             <div className="text-xs text-muted-foreground">Bearish continuation — further downside below today&apos;s S4</div>
