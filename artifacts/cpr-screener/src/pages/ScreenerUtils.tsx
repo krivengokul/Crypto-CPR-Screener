@@ -1100,7 +1100,7 @@ export function getSubFilterDirection(r: CPRResult, activePattern: string): SubF
  * its own second-row badge, checking the raw flag directly.
  */
 export interface PatternInfo {
-  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "cOU3L4" | "LoU4L4" | "eXL4U3" | "eXL4U4" | "HiL4U4" | "HiL4U3" | "HiL4U2" | "cOL2U3" | "cOL3U3" | "eXU4L2" | "eXU4L34" | "cOHiL2U4" | "eXL3U3" | "eXL2U1" | "eXL3U1" | "eXL4U1" | "eXL1CPR" | "eXL2CPR" | "eXL3CPR" | "eXL3TC" | "eXL4U2" | "eXL2U2" | "eXL2TC" | "eXL1U1" | "eXU2L1" | "cOTCL2" | "eXU3L1" | "eXU3L2" | "eXU2TC" | "eXU2BC" | "eXU3TC" | "eXU2CP" | "eXU4L1" | "cOU1L1" | "cOL1U1" | "cOU2L2" | "cOL2U2" | "cOU1L2" | "cOU4L4" | "exL3U2" | "LoCPL3" | "LoCPL2" | "LoTCL3" | "Lower";
+  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "cOU3L4" | "LoU4L4" | "eXL4U3" | "eXL4U4" | "HiL4U4" | "HiL4U3" | "HiL4U2" | "cOL2U3" | "cOL3U3" | "eXU4L2" | "eXU4L3" | "cOHiL2U4" | "eXL3U3" | "eXL2U1" | "eXL3U1" | "eXL4U1" | "eXL1CPR" | "eXL2CPR" | "eXL3CPR" | "eXL3TC" | "eXL4U2" | "eXL2U2" | "eXL2TC" | "eXL1U1" | "eXU2L1" | "cOTCL2" | "eXU3L1" | "eXU3L2" | "eXU2TC" | "eXU2BC" | "eXU3TC" | "eXU2CP" | "eXU4L1" | "cOU1L1" | "cOL1U1" | "cOU2L2" | "cOL2U2" | "cOU1L2" | "cOU4L4" | "exL3U2" | "LoCPL3" | "LoCPL2" | "LoTCL3" | "Lower";
   classes: string;
 }
 
@@ -1134,7 +1134,7 @@ export function getPatternInfo(r: CPRResult): PatternInfo {
  * labels (eX-Higher/eX-Lower/cO-Higher/cO-Lower/Higher/Lower) this falls
  * back to getPatternInfo(r)'s label; for the independent, section-agnostic
  * booleans (cOU1L2, cOU3L4, LoU4L4, eXL4U4, HiL4U4,
- * HiL4U3, HiL4U2, cOL2U3, eXU4L2, eXU4L34, cOU1L1, cOL1U1, cOU2L2, cOL2U2, cOTCL2)
+ * HiL4U3, HiL4U2, cOL2U3, eXU4L2, eXU4L3, cOU1L1, cOL1U1, cOU2L2, cOL2U2, cOTCL2)
  * it reads the raw flag directly — same as Screener.tsx does today.
  */
 export function matchesPatternFlag(r: CPRResult, label: string): boolean {
@@ -1152,7 +1152,7 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     case "cOL2U3": return r.cOL2U3;
     case "cOL3U3": return r.cOL3U3;
     case "eXU4L2": return r.eXU4L2;
-    case "eXU4L34": return r.eXU4L34;
+    case "eXU4L3": return r.eXU4L3;
     case "cOHiL2U4": return r.cOHiL2U4;
     case "eXL3U3": return r.eXL3U3;
     // NEW: eXL*U1 / eXL*CPR sub-type badges

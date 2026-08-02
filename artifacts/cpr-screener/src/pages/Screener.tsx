@@ -889,9 +889,9 @@ export default function Screener({
       // NEW: eXU4L2 — independent, section-agnostic Pattern flag
       // (see doc-comments in cpr.ts / ScreenerUtils.tsx).
       if (PatternFilter === "eXU4L2") return r.eXU4L2;
-      // NEW: eXU4L34 — independent, section-agnostic Pattern flag
+      // NEW: eXU4L3 — independent, section-agnostic Pattern flag
       // (see doc-comments in cpr.ts / ScreenerUtils.tsx).
-      if (PatternFilter === "eXU4L34") return r.eXU4L34;
+      if (PatternFilter === "eXU4L3") return r.eXU4L3;
       if (PatternFilter === "cOHiL2U4") return r.cOHiL2U4;
       if (PatternFilter === "cOL4U4") return r.cOL4U4;
       if (PatternFilter === "cOL3U4") return r.cOL3U4;
@@ -1718,7 +1718,7 @@ export default function Screener({
                 {showExpU3LtPU4 ? "✕ eX-U4L34" : "eX-U4L34"}
               </button>
             )}
-            {/* NEW: eXU4L3-AU4 button — Big Below, placed next to eX-U4L34 (moved from LittleCPR Below) */}
+            {/* NEW: eXU4L3-AU4 button — Big Below, placed next to eX-U4L3 (moved from LittleCPR Below) */}
             {activePattern === "structure-bigbelow" && !showAll && (
               <button
                 onClick={() => {
@@ -1996,7 +1996,7 @@ export default function Screener({
                   { label: "cOL2U3", active: "border-sky-400 text-sky-400" },
                   { label: "cOL3U3", active: "border-sky-400 text-sky-400" },
                   { label: "eXU4L2", active: "border-amber-400 text-amber-400" },
-                  { label: "eXU4L34", active: "border-amber-300 text-amber-300" },
+                  { label: "eXU4L3", active: "border-amber-300 text-amber-300" },
                   { label: "cOHiL2U4", active: "border-emerald-400 text-emerald-400" },
                   { label: "eXL3U3", active: "border-orange-400 text-orange-400" },
                   { label: "eXU3L3", active: "border-red-400 text-red-400" },
