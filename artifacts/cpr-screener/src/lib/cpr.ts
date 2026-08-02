@@ -522,7 +522,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
   // (not S4) landing inside today's S1/S2 band (L2) instead of prev's
   // S4 landing inside today's BC/S1 band (L1).
   const eXU3L2 = (prev.r4 > today.r2 && prev.r4 < today.r3) &&
-                 (prev.s3 > today.s2 && prev.s3 < today.s1);
+                 (prev.s4 > today.s2 && prev.s4 < today.s1);
 
   // eXU2TC — prev's R4 sits inside today's R1/R2 band (U2) AND prev's S4
   // sits inside today's TC/R1 band. Same U2 resistance band as eXU2L1, but
