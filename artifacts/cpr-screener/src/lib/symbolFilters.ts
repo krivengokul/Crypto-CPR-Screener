@@ -51,6 +51,18 @@ export function hasNonAsciiChars(symbol: string): boolean {
   return /[^\x00-\x7F]/.test(symbol);
 }
 
+/**
+ * Manually excluded exact symbols — for tickers that don't fit the
+ * stablecoin or non-ASCII categories but should still be kept out of
+ * scanning entirely (e.g. duplicate/confusing listings). Matched against
+ * the raw, uppercased exchange symbol (Binance-style, no separator).
+ */
+export const EXCLUDED_SYMBOLS = ["UUSDT"];
+
+export function isManuallyExcludedSymbol(symbol: string): boolean {
+  return EXCLUDED_SYMBOLS.includes(symbol.toUpperCase());
+}
+
 export function shouldExcludeSymbol(symbol: string): boolean {
-  return isStablecoinSymbol(symbol) || hasNonAsciiChars(symbol);
+  return isStablecoinSymbol(symbol) || hasNonAsciiChars(symbol) || isManuallyExcludedSymbol(symbol);
 }
