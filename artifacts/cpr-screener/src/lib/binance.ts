@@ -2,6 +2,9 @@ import { OHLC, CPRResult, analyzeCPR } from "./cpr";
 import { shouldExcludeSymbol } from "./symbolFilters";
 
 const BASE = "https://api.binance.com/api/v3";
+// ADK FIX: some pairs (e.g. UAIUSDT) only exist on USDⓈ-M Futures, never on
+// Spot. Scanning Spot alone silently drops them from the universe.
+const FBASE = "https://fapi.binance.com/fapi/v1";
 
 interface KlineRaw extends Array<string | number> {
   0: number;
@@ -18,6 +21,10 @@ interface Ticker24h {
   priceChangePercent: string;
   quoteVolume: string;
 }
+
+/** Which venue a symbol's klines must be fetched from. */
+type Venue = "spot" | "futures";
+const venueOf = new Map<string, Venue>();
 
 function parseKline(k: KlineRaw): OHLC {
   return {
@@ -60,9 +67,8 @@ function setPinnedSymbols(symbols: string[]): void {
  * ADK FIX: Detect today's live (incomplete) daily candle using the UTC midnight
  * boundary — identical to TradingView's `high[1]` + `lookahead_off` behaviour.
  *
- * Binance resets daily candles at UTC 00:00. Any candle whose openTime falls on
- * today's UTC date is still forming and must NOT be used for CPR calculation.
- * Using the 24h heuristic was fragile; this check is exact.
+ * Both Binance Spot and USDⓈ-M Futures reset daily candles at UTC 00:00, so the
+ * same check is valid for either venue.
  */
 function isLiveDailyCandle(openTimeMs: number): boolean {
   const now = new Date();
@@ -74,24 +80,74 @@ function isLiveDailyCandle(openTimeMs: number): boolean {
   return openTimeMs >= utcMidnightToday;
 }
 
+/**
+ * ADK FIX: active symbol set now spans Spot + USDⓈ-M perpetual futures.
+ * Spot wins on collision (deeper books, matches previous behaviour); a symbol
+ * only listed on futures is tagged "futures" so its klines are fetched from
+ * fapi instead of 404-ing on the spot endpoint.
+ */
 async function fetchActiveSymbols(): Promise<Set<string>> {
-  const res = await fetch(`${BASE}/exchangeInfo`);
-  if (!res.ok) throw new Error(`Binance exchangeInfo error: ${res.status}`);
-  const data: { symbols: { symbol: string; status: string }[] } = await res.json();
-  return new Set(
-    data.symbols
-      .filter((s) => s.status === "TRADING")
-      .map((s) => s.symbol)
-  );
+  const [spotRes, futRes] = await Promise.all([
+    fetch(`${BASE}/exchangeInfo`),
+    fetch(`${FBASE}/exchangeInfo`),
+  ]);
+  if (!spotRes.ok) throw new Error(`Binance exchangeInfo error: ${spotRes.status}`);
+
+  const spot: { symbols: { symbol: string; status: string }[] } = await spotRes.json();
+  const active = new Set<string>();
+
+  venueOf.clear();
+  for (const s of spot.symbols) {
+    if (s.status !== "TRADING") continue;
+    active.add(s.symbol);
+    venueOf.set(s.symbol, "spot");
+  }
+
+  // Futures is best-effort: if fapi is unreachable we still return the spot set.
+  if (futRes.ok) {
+    const fut: {
+      symbols: { symbol: string; status: string; contractType?: string }[];
+    } = await futRes.json();
+    for (const s of fut.symbols) {
+      if (s.status !== "TRADING") continue;
+      if (s.contractType && s.contractType !== "PERPETUAL") continue;
+      active.add(s.symbol);
+      if (!venueOf.has(s.symbol)) venueOf.set(s.symbol, "futures");
+    }
+  }
+
+  return active;
+}
+
+/**
+ * ADK FIX: merge Spot + Futures 24h tickers. Spot rows win on collision so
+ * volume/last-price semantics are unchanged for existing symbols; futures-only
+ * symbols (UAIUSDT and friends) are appended.
+ */
+async function fetchAllTickers(): Promise<Ticker24h[]> {
+  const [spotRes, futRes] = await Promise.all([
+    fetch(`${BASE}/ticker/24hr`),
+    fetch(`${FBASE}/ticker/24hr`),
+  ]);
+  if (!spotRes.ok) throw new Error(`Binance ticker error: ${spotRes.status}`);
+
+  const spot: Ticker24h[] = await spotRes.json();
+  const bySymbol = new Map<string, Ticker24h>();
+  for (const t of spot) bySymbol.set(t.symbol, t);
+
+  if (futRes.ok) {
+    const fut: Ticker24h[] = await futRes.json();
+    for (const t of fut) if (!bySymbol.has(t.symbol)) bySymbol.set(t.symbol, t);
+  }
+
+  return [...bySymbol.values()];
 }
 
 export async function fetchTopUSDTSymbols(limit = 500): Promise<Ticker24h[]> {
-  const [res, activeSymbols] = await Promise.all([
-    fetch(`${BASE}/ticker/24hr`),
+  const [data, activeSymbols] = await Promise.all([
+    fetchAllTickers(),
     fetchActiveSymbols(),
   ]);
-  if (!res.ok) throw new Error(`Binance ticker error: ${res.status}`);
-  const data: Ticker24h[] = await res.json();
 
   return data
     .filter(
@@ -102,7 +158,7 @@ export async function fetchTopUSDTSymbols(limit = 500): Promise<Ticker24h[]> {
         !t.symbol.includes("UP") &&
         !t.symbol.includes("BEAR") &&
         !t.symbol.includes("BULL") &&
-        !shouldExcludeSymbol(t.symbol) &&  // NEW: excludes stablecoins + non-ASCII tickers
+        !shouldExcludeSymbol(t.symbol) &&  // excludes stablecoins + non-ASCII tickers
         parseFloat(t.quoteVolume) > 0
     )
     .sort((a, b) => parseFloat(b.quoteVolume) - parseFloat(a.quoteVolume))
@@ -115,18 +171,25 @@ export async function fetchTopUSDTSymbols(limit = 500): Promise<Ticker24h[]> {
 // ever having a pp-candle. 6 gives a comfortable safety margin (e.g. if
 // Binance has a brief gap in daily data for a thinly-traded pair) while
 // staying a cheap, single extra API page — well within rate limits.
+//
+// ADK FIX: routes to fapi for futures-only symbols, and falls back to the
+// other venue if the primary one returns nothing.
 async function fetchKlines(symbol: string): Promise<OHLC[] | null> {
-  try {
-    const res = await fetch(
-      `${BASE}/klines?symbol=${symbol}&interval=1d&limit=6`
-    );
-    if (!res.ok) return null;
-    const data: KlineRaw[] = await res.json();
-    if (data.length < 2) return null;
-    return data.map(parseKline);
-  } catch {
-    return null;
+  const primary = venueOf.get(symbol) === "futures" ? FBASE : BASE;
+  const secondary = primary === BASE ? FBASE : BASE;
+
+  for (const base of [primary, secondary]) {
+    try {
+      const res = await fetch(`${base}/klines?symbol=${symbol}&interval=1d&limit=6`);
+      if (!res.ok) continue;
+      const data: KlineRaw[] = await res.json();
+      if (data.length < 2) continue;
+      return data.map(parseKline);
+    } catch {
+      // try the other venue
+    }
   }
+  return null;
 }
 
 export async function runScreener(
@@ -162,12 +225,6 @@ export async function runScreener(
         let prevCandle: OHLC;
         let todayCandle: OHLC;
         let liveCandle: OHLC | null = null;
-        // ADK FIX: pp candle — the completed daily candle immediately before
-        // prevCandle. Needed for the "pWideAbove" sub-toggle (prevCPR wider
-        // than pp-CPR AND prevCPR positioned above pp-CPR). Previously this
-        // was always undefined because only [prevCandle, todayCandle] was
-        // ever forwarded to analyzeCPR, regardless of how many klines were
-        // actually fetched.
         let ppCandle: OHLC | null = null;
 
         if (lastKlineIsLive) {
@@ -188,14 +245,11 @@ export async function runScreener(
         const openPriceUsed = liveCandle ? liveCandle.open : todayCandle.open;
         const changeFromDayOpen = ((currentPrice - openPriceUsed) / openPriceUsed) * 100;
 
-        // ADK FIX: prepend ppCandle (when available) so analyzeCPR's
-        // `candles[candles.length - 3]` lookup actually resolves to a real
-        // completed candle instead of always being undefined.
         const candlesForAnalysis: OHLC[] = ppCandle
           ? [ppCandle, prevCandle, todayCandle]
           : [prevCandle, todayCandle];
 
-          return analyzeCPR(
+        return analyzeCPR(
           t.symbol,
           candlesForAnalysis,
           currentPrice,
