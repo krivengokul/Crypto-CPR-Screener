@@ -872,7 +872,7 @@ export default function Screener({
       if (PatternFilter === "HiL4U4") return r.HiL4U4;
       // NEW: eXHiL4U3 — unconditional Pattern flag.
       if (PatternFilter === "eXHiL4U3") return r.eXHiL4U3;
-      // NEW: HiL4U3 / cOHiL2U3 — same treatment: independent,
+      // NEW: HiL4U3 / cOL2U3 — same treatment: independent,
       // section-agnostic Pattern flags, always shown regardless of
       // activePattern/left-nav.
       if (PatternFilter === "HiL4U3") return r.HiL4U3;
@@ -884,7 +884,7 @@ export default function Screener({
       // section-agnostic Pattern flag, always shown regardless of
       // activePattern/left-nav.
       if (PatternFilter === "LoTCL3") return r.LoTCL3;
-      if (PatternFilter === "cOHiL2U3") return r.cOHiL2U3;
+      if (PatternFilter === "cOL2U3") return r.cOL2U3;
       if (PatternFilter === "cOL3U3") return r.cOL3U3;
       // NEW: eXU4L234 — independent, section-agnostic Pattern flag
       // (see doc-comments in cpr.ts / ScreenerUtils.tsx).
@@ -1991,7 +1991,7 @@ export default function Screener({
                   { label: "HiL4U3", active: "border-indigo-400 text-indigo-400" },
                   { label: "HiL4U2", active: "border-violet-400 text-violet-400" },
                   { label: "LoTCL3", active: "border-sky-600 text-sky-300" },
-                  { label: "cOHiL2U3", active: "border-sky-400 text-sky-400" },
+                  { label: "cOL2U3", active: "border-sky-400 text-sky-400" },
                   { label: "cOL3U3", active: "border-sky-400 text-sky-400" },
                   { label: "eXU4L234", active: "border-amber-400 text-amber-400" },
                   { label: "eXU4L34", active: "border-amber-300 text-amber-300" },
