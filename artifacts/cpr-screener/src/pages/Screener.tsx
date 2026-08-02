@@ -84,8 +84,8 @@ export default function Screener({
   const [showLAT1U46AM, setShowLAT1U46AM] = useState(false);
   // NEW: Ss-HiL4U4-FAU4:2AM filter state — Little Above
   const [showLASsHiL4U4FAU42AM, setShowLASsHiL4U4FAU42AM] = useState(false);
-  // NEW: MeMi-eXHiL4U3-U4:6PM filter state — Little Above (green family)
-  const [showLAMeMieXHiL4U3U46PM, setShowLAMeMieXHiL4U3U46PM] = useState(false);
+  // NEW: MeMi-eXL4U3-U4:6PM filter state — Little Above (green family)
+  const [showLAMeMieXL4U3U46PM, setShowLAMeMieXL4U3U46PM] = useState(false);
   const [showOutsideCPRCompressed, setShowOutsideCPRCompressed] = useState(false);
   // NEW: eXHrL3U3-AU4 filter state — Outside CPR, placed next to Compressed
   const [showOutsideCPReXHrL3U3AU4, setShowOutsideCPReXHrL3U3AU4] = useState(false);
@@ -328,7 +328,7 @@ export default function Screener({
   useEffect(() => {
     if (allResults.length > 0) setFiltered(allResults.filter((r) => passesPattern(r, activePattern)));
     if (deltaAllResults.length > 0) setDeltaFiltered(deltaAllResults.filter((r) => passesPattern(r, activePattern)));
-    if (activePattern !== "littleabove") { setShowLABothTiny(false); setShowLAAllUp(false); setShowLA1LHr(false); setShowLAPL12CL23(false); setShowLACompressed(false); setShowLAT1U46AM(false); setShowLASsHiL4U4FAU42AM(false); setShowLAMeMieXHiL4U3U46PM(false); }
+    if (activePattern !== "littleabove") { setShowLABothTiny(false); setShowLAAllUp(false); setShowLA1LHr(false); setShowLAPL12CL23(false); setShowLACompressed(false); setShowLAT1U46AM(false); setShowLASsHiL4U4FAU42AM(false); setShowLAMeMieXL4U3U46PM(false); }
     if (activePattern !== "outside-cpr") { setShowOutsideCPRCompressed(false); setShowOutsideCPReXHrL3U3AU4(false); }
     if (activePattern !== "inside-cpr") { setShowInsideCPRTiCOLo(false); }
     if (activePattern !== "overlapping-lower") { setShowExpU4PU4(false); setShowExpU3PU3(false); setShowOBNLoU4L4(false); setShowOBWLoU4L4(false); }
@@ -437,10 +437,10 @@ export default function Screener({
       if (activeTab === "delta") return deltaIntersect;
       return binanceIntersect;
     }
-    // NEW: MeMi-eXHiL4U3-U4:6PM pool — Little Above (green family)
-    if (showLAMeMieXHiL4U3U46PM && activePattern === "littleabove") {
-      const binanceIntersect = allResults.filter((r) => passesPattern(r, "MeMi-eXHiL4U3-U4:6PM")).map((r) => ({ ...r, source: "binance" as const }));
-      const deltaIntersect = deltaAllResults.filter((r) => passesPattern(r, "MeMi-eXHiL4U3-U4:6PM")).map((r) => ({ ...r, source: "delta" as const }));
+    // NEW: MeMi-eXL4U3-U4:6PM pool — Little Above (green family)
+    if (showLAMeMieXL4U3U46PM && activePattern === "littleabove") {
+      const binanceIntersect = allResults.filter((r) => passesPattern(r, "MeMi-eXL4U3-U4:6PM")).map((r) => ({ ...r, source: "binance" as const }));
+      const deltaIntersect = deltaAllResults.filter((r) => passesPattern(r, "MeMi-eXL4U3-U4:6PM")).map((r) => ({ ...r, source: "delta" as const }));
       if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
       if (activeTab === "delta") return deltaIntersect;
       return binanceIntersect;
@@ -870,8 +870,8 @@ export default function Screener({
       if (PatternFilter === "HiL2U4") return r.HiL2U4;
       if (PatternFilter === "HiL3U4") return r.HiL3U4;
       if (PatternFilter === "HiL4U4") return r.HiL4U4;
-      // NEW: eXHiL4U3 — unconditional Pattern flag.
-      if (PatternFilter === "eXHiL4U3") return r.eXHiL4U3;
+      // NEW: eXL4U3 — unconditional Pattern flag.
+      if (PatternFilter === "eXL4U3") return r.eXL4U3;
       // NEW: HiL4U3 / cOL2U3 — same treatment: independent,
       // section-agnostic Pattern flags, always shown regardless of
       // activePattern/left-nav.
@@ -902,7 +902,7 @@ export default function Screener({
       if (PatternFilter === "LoU2L3") return r.LoU2L3;
       if (PatternFilter === "LoU4L34") return r.LoU4L34;
       if (PatternFilter === "LoU4L234") return r.LoU4L234;
-      if (PatternFilter === "cOLoU2L3") return r.cOLoU2L3;
+      if (PatternFilter === "cOU2L3") return r.cOU2L3;
       if (PatternFilter === "LoU4L1234") return r.LoU4L1234;
       if (PatternFilter === "cOU2L4") return r.cOU2L4;
       // NEW: eXL*U1 / eXL*CPR sub-type badges
@@ -1001,7 +1001,7 @@ export default function Screener({
 
   // Helper: is any sub-filter active (to decide the result count label)
   const anySubFilter =
-    showLABothTiny || showLAAllUp || showLA1LHr || showLAPL12CL23 || showLACompressed || showLAT1U46AM || showLASsHiL4U4FAU42AM || showLAMeMieXHiL4U3U46PM ||
+    showLABothTiny || showLAAllUp || showLA1LHr || showLAPL12CL23 || showLACompressed || showLAT1U46AM || showLASsHiL4U4FAU42AM || showLAMeMieXL4U3U46PM ||
     showOutsideCPRCompressed || showOutsideCPReXHrL3U3AU4 || showInsideCPRTiCOLo ||
     showBigBelowPMiniPL3 || showBigBelowPMiniRising || showExpU3LtPU4 || showBigBeloweXLoL3U4AU4 || showBigBelowL1LtPL4 || showL1LtPL4CprLtPL4 || showBigBeloweXU4L234AU4 || showBigBelow1TcOU4L43PM ||
     showBigAbovePL34CL4 || showBAComp || showHAU1 || showHAU1CprAbovePU4 || showHAU1L1AbovePU4 || showHAU1PWideAbove || showHRHAL || showHA55HrL4U34FAU4 || showHiL4U4FAU4 || show1ScoHiFAU4 || show2ScoHiFAU4 || showLBCmprss || showLBC34 || showLBE11 || showLBC2L2U2 ||
@@ -1034,7 +1034,7 @@ export default function Screener({
           showLACompressed={showLACompressed}
           showLAT1U46AM={showLAT1U46AM}
           showLASsHiL4U4FAU42AM={showLASsHiL4U4FAU42AM}
-          showLAMeMieXHiL4U3U46PM={showLAMeMieXHiL4U3U46PM}
+          showLAMeMieXL4U3U46PM={showLAMeMieXL4U3U46PM}
           showLBE11={showLBE11}
           showLBC2L2U2={showLBC2L2U2}
           showExpU4PU4={showExpU4PU4}
@@ -1081,7 +1081,7 @@ export default function Screener({
                   setShowLACompressed(false);
                   setShowLAT1U46AM(false);
                   setShowLASsHiL4U4FAU42AM(false);
-                  setShowLAMeMieXHiL4U3U46PM(false);
+                  setShowLAMeMieXL4U3U46PM(false);
                   setShowOutsideCPRCompressed(false);
                   setShowOutsideCPReXHrL3U3AU4(false);
                   setShowInsideCPRTiCOLo(false);
@@ -1438,7 +1438,7 @@ export default function Screener({
 
             {activePattern === "littleabove" && !showAll && (
               <button
-                onClick={() => { setShowLABothTiny((v) => !v); setShowLAAllUp(false); setShowLA1LHr(false); setShowLAPL12CL23(false); setShowLACompressed(false); setShowLAT1U46AM(false); setShowLASsHiL4U4FAU42AM(false); setShowLAMeMieXHiL4U3U46PM(false); }}
+                onClick={() => { setShowLABothTiny((v) => !v); setShowLAAllUp(false); setShowLA1LHr(false); setShowLAPL12CL23(false); setShowLACompressed(false); setShowLAT1U46AM(false); setShowLASsHiL4U4FAU42AM(false); setShowLAMeMieXL4U3U46PM(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showLABothTiny
                     ? "border-foreground text-foreground"
@@ -1451,7 +1451,7 @@ export default function Screener({
             )}
             {activePattern === "littleabove" && !showAll && (
               <button
-                onClick={() => { setShowLAAllUp((v) => !v); setShowLABothTiny(false); setShowLA1LHr(false); setShowLAPL12CL23(false); setShowLACompressed(false); setShowLAT1U46AM(false); setShowLASsHiL4U4FAU42AM(false); setShowLAMeMieXHiL4U3U46PM(false); }}
+                onClick={() => { setShowLAAllUp((v) => !v); setShowLABothTiny(false); setShowLA1LHr(false); setShowLAPL12CL23(false); setShowLACompressed(false); setShowLAT1U46AM(false); setShowLASsHiL4U4FAU42AM(false); setShowLAMeMieXL4U3U46PM(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showLAAllUp
                     ? "border-foreground text-foreground"
@@ -1465,7 +1465,7 @@ export default function Screener({
             {/* NEW: 1LHr-L4U3-U4 button — Little Above, placed next to LA-AllUp */}
             {activePattern === "littleabove" && !showAll && (
               <button
-                onClick={() => { setShowLA1LHr((v) => !v); setShowLABothTiny(false); setShowLAAllUp(false); setShowLAPL12CL23(false); setShowLACompressed(false); setShowLAT1U46AM(false); setShowLASsHiL4U4FAU42AM(false); setShowLAMeMieXHiL4U3U46PM(false); }}
+                onClick={() => { setShowLA1LHr((v) => !v); setShowLABothTiny(false); setShowLAAllUp(false); setShowLAPL12CL23(false); setShowLACompressed(false); setShowLAT1U46AM(false); setShowLASsHiL4U4FAU42AM(false); setShowLAMeMieXL4U3U46PM(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showLA1LHr
                     ? "border-teal-400 text-teal-400"
@@ -1478,7 +1478,7 @@ export default function Screener({
             )}
             {activePattern === "littleabove" && !showAll && (
               <button
-                onClick={() => { setShowLAPL12CL23((v) => !v); setShowLABothTiny(false); setShowLAAllUp(false); setShowLA1LHr(false); setShowLACompressed(false); setShowLAT1U46AM(false); setShowLASsHiL4U4FAU42AM(false); setShowLAMeMieXHiL4U3U46PM(false); }}
+                onClick={() => { setShowLAPL12CL23((v) => !v); setShowLABothTiny(false); setShowLAAllUp(false); setShowLA1LHr(false); setShowLACompressed(false); setShowLAT1U46AM(false); setShowLASsHiL4U4FAU42AM(false); setShowLAMeMieXL4U3U46PM(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showLAPL12CL23
                     ? "border-foreground text-foreground"
@@ -1491,7 +1491,7 @@ export default function Screener({
             )}
             {activePattern === "littleabove" && !showAll && (
               <button
-                onClick={() => { setShowLACompressed((v) => !v); setShowLABothTiny(false); setShowLAAllUp(false); setShowLA1LHr(false); setShowLAPL12CL23(false); setShowLAT1U46AM(false); setShowLASsHiL4U4FAU42AM(false); setShowLAMeMieXHiL4U3U46PM(false); }}
+                onClick={() => { setShowLACompressed((v) => !v); setShowLABothTiny(false); setShowLAAllUp(false); setShowLA1LHr(false); setShowLAPL12CL23(false); setShowLAT1U46AM(false); setShowLASsHiL4U4FAU42AM(false); setShowLAMeMieXL4U3U46PM(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showLACompressed
                     ? "border-emerald-400 text-emerald-400"
@@ -1505,7 +1505,7 @@ export default function Screener({
             {/* NEW: T1-U4:6AM — Little Above */}
             {activePattern === "littleabove" && !showAll && (
               <button
-                onClick={() => { setShowLAT1U46AM((v) => !v); setShowLABothTiny(false); setShowLAAllUp(false); setShowLA1LHr(false); setShowLAPL12CL23(false); setShowLACompressed(false); setShowLASsHiL4U4FAU42AM(false); setShowLAMeMieXHiL4U3U46PM(false); }}
+                onClick={() => { setShowLAT1U46AM((v) => !v); setShowLABothTiny(false); setShowLAAllUp(false); setShowLA1LHr(false); setShowLAPL12CL23(false); setShowLACompressed(false); setShowLASsHiL4U4FAU42AM(false); setShowLAMeMieXL4U3U46PM(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showLAT1U46AM
                     ? "border-orange-400 text-orange-400"
@@ -1519,7 +1519,7 @@ export default function Screener({
             {/* NEW: Ss-HiL4U4-FAU4:2AM — Little Above */}
             {activePattern === "littleabove" && !showAll && (
               <button
-                onClick={() => { setShowLASsHiL4U4FAU42AM((v) => !v); setShowLABothTiny(false); setShowLAAllUp(false); setShowLA1LHr(false); setShowLAPL12CL23(false); setShowLACompressed(false); setShowLAT1U46AM(false); setShowLAMeMieXHiL4U3U46PM(false); }}
+                onClick={() => { setShowLASsHiL4U4FAU42AM((v) => !v); setShowLABothTiny(false); setShowLAAllUp(false); setShowLA1LHr(false); setShowLAPL12CL23(false); setShowLACompressed(false); setShowLAT1U46AM(false); setShowLAMeMieXL4U3U46PM(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showLASsHiL4U4FAU42AM
                     ? "border-fuchsia-400 text-fuchsia-400"
@@ -1530,18 +1530,18 @@ export default function Screener({
                 {showLASsHiL4U4FAU42AM ? "✕ Ss-HiL4U4-FAU4:2AM" : "Ss-HiL4U4-FAU4:2AM"}
               </button>
             )}
-            {/* NEW: MeMi-eXHiL4U3-U4:6PM — Little Above (green family) */}
+            {/* NEW: MeMi-eXL4U3-U4:6PM — Little Above (green family) */}
             {activePattern === "littleabove" && !showAll && (
               <button
-                onClick={() => { setShowLAMeMieXHiL4U3U46PM((v) => !v); setShowLABothTiny(false); setShowLAAllUp(false); setShowLA1LHr(false); setShowLAPL12CL23(false); setShowLACompressed(false); setShowLAT1U46AM(false); setShowLASsHiL4U4FAU42AM(false); }}
+                onClick={() => { setShowLAMeMieXL4U3U46PM((v) => !v); setShowLABothTiny(false); setShowLAAllUp(false); setShowLA1LHr(false); setShowLAPL12CL23(false); setShowLACompressed(false); setShowLAT1U46AM(false); setShowLASsHiL4U4FAU42AM(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                  showLAMeMieXHiL4U3U46PM
+                  showLAMeMieXL4U3U46PM
                     ? "border-green-400 text-green-400"
                     : "border-border text-muted-foreground hover:text-foreground"
                 }`}
-                title="cprRising + narrowCPR + eXHiL4U3 + Today's TC >= Prev R1, Prev CPR 1.10%–2.00% (Medium), Today CPR 0.22%–0.60% (Mini) — Target: U4 (T-5 AU4) at 6PM"
+                title="cprRising + narrowCPR + eXL4U3 + Today's TC >= Prev R1, Prev CPR 1.10%–2.00% (Medium), Today CPR 0.22%–0.60% (Mini) — Target: U4 (T-5 AU4) at 6PM"
               >
-                {showLAMeMieXHiL4U3U46PM ? "✕ MeMi-eXHiL4U3-U4:6PM" : "MeMi-eXHiL4U3-U4:6PM"}
+                {showLAMeMieXL4U3U46PM ? "✕ MeMi-eXL4U3-U4:6PM" : "MeMi-eXL4U3-U4:6PM"}
               </button>
             )}
             {activePattern === "overlapping-lower" && !showAll && (
@@ -1990,6 +1990,7 @@ export default function Screener({
                   { label: "HiL4U4", active: "border-fuchsia-400 text-fuchsia-400" },
                   { label: "HiL4U3", active: "border-indigo-400 text-indigo-400" },
                   { label: "HiL4U2", active: "border-violet-400 text-violet-400" },
+                  { label: "eXL4U3", active: "border-green-400 text-green-400" },
                   { label: "LoTCL3", active: "border-sky-600 text-sky-300" },
                   { label: "cOL2U3", active: "border-sky-400 text-sky-400" },
                   { label: "cOL3U3", active: "border-sky-400 text-sky-400" },
@@ -2007,7 +2008,7 @@ export default function Screener({
                   { label: "LoU2L3",   active: "border-rose-400 text-rose-400" },
                   { label: "LoU4L34",  active: "border-amber-400 text-amber-400" },
                   { label: "LoU4L234",  active: "border-violet-400 text-violet-400" },
-                  { label: "cOLoU2L3",  active: "border-emerald-400 text-emerald-400" },
+                  { label: "cOU2L3",  active: "border-emerald-400 text-emerald-400" },
                   { label: "LoU4L1234", active: "border-orange-400 text-orange-400" },
                   { label: "cOU2L4",  active: "border-lime-400 text-lime-400" },
                   // NEW: eXL*U1 / eXL*CPR sub-type badges (unconditional, all sections)
