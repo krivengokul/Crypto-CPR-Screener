@@ -59,7 +59,7 @@ export interface CPRPairFlags {
   cOU3L4: boolean;
   cOL2U3: boolean;
   cOL3U3: boolean;
-  eXLoL3U4: boolean;
+  eXU4L3: boolean;
   eXL4U4: boolean;
   HiL4U3: boolean;
   HiL4U2: boolean;
@@ -217,7 +217,7 @@ export interface CPRResult {
   cOU3L4: boolean;
   cOL2U3: boolean;
   cOL3U3: boolean;
-  eXLoL3U4: boolean;
+  eXU4L3: boolean;
   eXL4U4: boolean;
   HiL2U4: boolean;
   HiL3U4: boolean;
@@ -415,7 +415,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
                    (today.r4 > prev.r2 && today.r4 < prev.r3) && srCompressedHigher;
   const cOU3L3   = (today.s4 >= prev.s3 && today.s4 < prev.s2) &&
                    (today.r4 > prev.r2 && today.r4 < prev.r3) && srCompressedLower;
-  const eXLoL3U4 = (prev.r4 > today.r3 && prev.r4 < today.r4) &&
+  const eXU4L3 = (prev.r4 > today.r3 && prev.r4 < today.r4) &&
                    (prev.s4 > today.s3 && prev.s4 < today.s2);
   const eXL4U4   = (prev.r4 > today.r3 && prev.r4 < today.r4) &&
                    (prev.s4 > today.s4 && prev.s4 < today.s3);
@@ -643,7 +643,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
     r4Distance, s4Distance,
     srHigher, srLower, srExpanded, srCompressed,
     srCompressedHigher, srCompressedLower, srExpandedHigher, srExpandedLower,
-    cOU3L4, cOL2U3, cOL3U3, eXLoL3U4, eXL4U4, HiL4U3, HiL4U2, HiL2U4, HiL3U4, HiL4U4,
+    cOU3L4, cOL2U3, cOL3U3, eXU4L3, eXL4U4, HiL4U3, HiL4U2, HiL2U4, HiL3U4, HiL4U4,
     LoU4L4, eXHiU1L3, eXL4U3, eXU4L2, eXU4L34, cOHiL2U4, cOL4U4, cOU4L4, exL3U2,
     cOL3U4, cOU3L3, LoU3L4, LoU3L3, cOU2L3, LoU2L4, LoU2L3, LoU4L34, LoU4L234,
     cOHiL2U2, LoU4L1234, cOU1L2, cOU2L4, eXL3U3, eXU3L3,
@@ -664,7 +664,7 @@ export function pickCPRSubLabel(f: CPRPairFlags): string | null {
   if (f.cOU3L4)    return "cOU3L4";
   if (f.cOL2U3)  return "cOL2U3";
   if (f.cOL3U3)  return "cOL3U3";
-  if (f.eXLoL3U4)  return "eXLoL3U4";
+  if (f.eXU4L3)  return "eXU4L3";
   if (f.eXL4U4)    return "eXL4U4";
   if (f.HiL4U3)   return "HiL4U3";
   if (f.HiL4U2)   return "HiL4U2";

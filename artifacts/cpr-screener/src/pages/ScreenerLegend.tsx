@@ -16,7 +16,7 @@ export interface ScreenerLegendProps {
   showOBHiExL4U4: boolean;
   showLMeXL2U2: boolean;
   showExpU3LtPU4: boolean;
-  showBigBeloweXLoL3U4AU4: boolean;
+  showBigBeloweXU4L3AU4: boolean;
   showBigBeloweXU4L2AU4: boolean;
   showBigBelow1TcOU4L43PM: boolean;
   showHRHAL: boolean;
@@ -54,7 +54,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
     showOBHiExL4U4,
     showLMeXL2U2,
     showExpU3LtPU4,
-    showBigBeloweXLoL3U4AU4,
+    showBigBeloweXU4L3AU4,
     showBigBeloweXU4L2AU4,
     showBigBelow1TcOU4L43PM,
     showHRHAL,
@@ -310,9 +310,9 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             <div className="text-xs text-muted-foreground">Todays U4 is above PU4 and Todays L3/L4 below PL4</div>
             <div className="text-xs text-muted-foreground">Prev CPR &lt;1% / Today CPR &lt;3%, PDL &lt;L1</div>
           </>
-        ) : showBigBeloweXLoL3U4AU4 && activePattern === "structure-bigbelow" ? (
+        ) : showBigBeloweXU4L3AU4 && activePattern === "structure-bigbelow" ? (
           <>
-            <div className="text-xs font-semibold text-green-400 mb-1">eXLoL3U4-AU4</div>
+            <div className="text-xs font-semibold text-green-400 mb-1">eXU4L3-AU4</div>
             <div className="text-xs text-muted-foreground">Wide Below — Prev R4 between today&apos;s R3/R4, Prev S4 above today&apos;s S3</div>
           </>
         ) : showBigBeloweXU4L2AU4 && activePattern === "structure-bigbelow" ? (
@@ -512,7 +512,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             <div className="text-xs font-semibold text-emerald-400 mb-1">Target</div>
             <div className="text-xs text-muted-foreground">These coins have the potential to go far Below PL4</div>
           </>
-        ) : showBigBeloweXLoL3U4AU4 && activePattern === "structure-bigbelow" ? (
+        ) : showBigBeloweXU4L3AU4 && activePattern === "structure-bigbelow" ? (
           <>
             <div className="text-xs font-semibold text-emerald-400 mb-1">Target</div>
             <div className="text-xs text-muted-foreground">Bearish continuation — further downside below prev day&apos;s S3/S4</div>

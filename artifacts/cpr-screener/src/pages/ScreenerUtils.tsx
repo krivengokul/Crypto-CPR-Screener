@@ -547,13 +547,13 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.prevCPR.widthPct > 2 && r.prevCPR.widthPct <= 5 &&
         r.todayCPR.widthPct <= 0.10
       );
-    // NEW: eXLoL3U4-AU4 — Big Below (structure-bigbelow: cprFalling + strWideCPR):
+    // NEW: eXU4L3-AU4 — Big Below (structure-bigbelow: cprFalling + strWideCPR):
     // prev R4 between today's R3/R4 AND prev S4 above today's S3, today's
     // CPR width between 0.5% and 2%, prev CPR width < 0.5%. Moved here from
     // LittleCPR Below — placed next to eX-U4L34 under Big Below.
-    case "eXLoL3U4-AU4":
+    case "eXU4L3-AU4":
       return (
-        r.cprFalling && r.strWideCPR && r.eXLoL3U4 &&
+        r.cprFalling && r.strWideCPR && r.eXU4L3 &&
         r.todayCPR.widthPct > 0.5 && r.todayCPR.widthPct < 2 && r.prevCPR.widthPct < 0.5
       );
       //EXP_U4APU4L4BPL4
@@ -1008,7 +1008,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
   "structure-bigbelow": [
     { key: "bigbelow-pmini-pl3", direction: "up" },
     { key: "eX-U4L34", direction: "down" },
-    { key: "eXLoL3U4-AU4", direction: "down" },
+    { key: "eXU4L3-AU4", direction: "down" },
     { key: "eXU4L2-AU4", direction: "down" },
     { key: "1T-cOU4L4-ApU4:3PM", direction: "down" },
   ],
