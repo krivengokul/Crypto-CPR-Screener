@@ -211,24 +211,39 @@ export function hasKnownChartMapping(symbol: string, source: "binance" | "delta"
  * .P works fine. A small number exist on TradingView spot but NOT as perp
  * (e.g. QKCUSDT) — those need the plain spot URL.
  *
- * Strategy: always try .P (perp) first since that's what your screener tracks.
- * User can open chart and if it errors, they remove .P manually (rare case).
- * This is better than spot-first because perp candles match your CPR data.
+ * Since the screener merges Spot + USDⓈ-M Futures, each result should carry its
+ * venue. Futures-only symbols (e.g. UAIUSDT) have no BINANCE:<SYM> spot ticker on
+ * TradingView — passing them without .P makes TradingView ignore the symbol param
+ * and keep the previously open chart ("This symbol doesn't exist").
  */
 
-// Symbols that only exist as perp on TradingView (no spot) — append .P
+// Binance venue for a scanned symbol. "futures" = USDⓈ-M perpetual only
+// (no Binance Spot listing) — TradingView has no BINANCE:<SYM> spot ticker for
+// these, so the plain URL silently keeps whatever chart was last open and shows
+// "This symbol doesn't exist". Those MUST be requested as BINANCE:<SYM>.P.
+export type BinanceVenue = "spot" | "futures";
+
+// Fallback list for callers that don't (yet) pass a venue: symbols known to be
+// futures-only on Binance / perp-only on TradingView.
 const PERP_ONLY_ON_TV = new Set([
   "STBLUSDT",
+  "UAIUSDT",
 ]);
 
-export function getChartUrl(symbol: string, source: "binance" | "delta"): string {
+export function getChartUrl(
+  symbol: string,
+  source: "binance" | "delta",
+  venue?: BinanceVenue,
+): string {
   if (source === "delta") {
     // Delta Exchange India symbols on TradingView: DELTAIN: prefix, in.tradingview.com, .p suffix
     // e.g. AAPLXUSD → https://in.tradingview.com/chart/?symbol=DELTAIN:AAPLXUSD.p
     return `https://in.tradingview.com/chart/?symbol=DELTAIN:${symbol}.p`;
   }
-  // Binance — default no suffix, .P only for known perp-only symbols
-  const suffix = PERP_ONLY_ON_TV.has(symbol) ? ".P" : "";
+  // Binance — append .P whenever the symbol has no spot listing (futures-only),
+  // otherwise use the plain spot ticker.
+  const isPerpOnly = venue ? venue === "futures" : PERP_ONLY_ON_TV.has(symbol);
+  const suffix = isPerpOnly ? ".P" : "";
   return `https://www.tradingview.com/chart/?symbol=BINANCE:${symbol}${suffix}`;
 }
 
