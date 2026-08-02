@@ -393,10 +393,21 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
   const r3R4Gap = Math.abs(today.r3 - prev.r4);
   const s3S4Gap = Math.abs(prev.s4 - today.s3);
 
-  const srHigher     = today.r4 > prev.r4 && today.s4 > prev.s4;
-  const srLower      = today.r4 < prev.r4 && today.s4 < prev.s4;
-  const srExpanded   = today.r4 > prev.r4 && today.s4 < prev.s4;
-  const srCompressed = today.r4 < prev.r4 && today.s4 > prev.s4;
+  // r4Fell / s4Fell — did this side genuinely drop, beyond eqTol's
+  // floating-point tolerance? A tie (within tolerance) counts as "did not
+  // fall" on that axis. Deriving all four sr* flags from these two
+  // booleans makes them mutually exclusive AND exhaustive — exactly one
+  // of the four is always true, so an exact R4/S4 tie (e.g. COOKIEUSDT:
+  // both r4 and s4 unchanged day-over-day) now correctly lands in
+  // srHigher instead of silently falling through every strict inequality
+  // and defaulting to "Lower" in getPatternInfo.
+  const r4Fell = today.r4 < prev.r4 && !eqTol(today.r4, prev.r4);
+  const s4Fell = today.s4 < prev.s4 && !eqTol(today.s4, prev.s4);
+
+  const srHigher     = !r4Fell && !s4Fell;
+  const srLower      =  r4Fell &&  s4Fell;
+  const srExpanded   = !r4Fell &&  s4Fell;
+  const srCompressed =  r4Fell && !s4Fell;
 
   const srCompressedHigher = srCompressed && (s4Distance > r4Distance || (s4Distance === r4Distance && s3S4Gap > r3R4Gap));
   const srCompressedLower  = srCompressed && (r4Distance > s4Distance || (r4Distance === s4Distance && r3R4Gap > s3S4Gap));
