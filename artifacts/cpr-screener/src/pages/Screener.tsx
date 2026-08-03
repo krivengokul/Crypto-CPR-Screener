@@ -868,6 +868,7 @@ export default function Screener({
       // NEW: HiL4U4 — independent, section-agnostic Pattern flag,
       // mirror of eXL4U4 (see doc-comments in cpr.ts / ScreenerUtils.tsx).
       if (PatternFilter === "HiL2U4") return r.HiL2U4;
+      if (PatternFilter === "HiL2U3") return r.HiL2U3;
       if (PatternFilter === "HiL3U4") return r.HiL3U4;
       if (PatternFilter === "HiL4U4") return r.HiL4U4;
       // NEW: eXL4U3 — unconditional Pattern flag.
@@ -1989,6 +1990,7 @@ export default function Screener({
                   { label: "LoU4L4", active: "border-lime-400 text-lime-400" },
                   { label: "eXL4U4", active: "border-pink-400 text-pink-400" },
                   { label: "HiL2U4", active: "border-cyan-400 text-cyan-400" },
+                  { label: "HiL2U3", active: "border-blue-400 text-blue-400" },
                   { label: "HiL3U4", active: "border-lime-400 text-lime-400" },
                   { label: "HiL4U4", active: "border-fuchsia-400 text-fuchsia-400" },
                   { label: "HiL4U3", active: "border-indigo-400 text-indigo-400" },

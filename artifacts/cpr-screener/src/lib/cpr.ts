@@ -63,6 +63,7 @@ export interface CPRPairFlags {
   HiL4U3: boolean;
   HiL4U2: boolean;
   HiL2U4: boolean;
+  HiL2U3: boolean;
   HiL3U4: boolean;
   HiL4U4: boolean;
   LoU4L4: boolean;
@@ -223,6 +224,7 @@ export interface CPRResult {
   cOL3U3: boolean;
   eXL4U4: boolean;
   HiL2U4: boolean;
+  HiL2U3: boolean;
   HiL3U4: boolean;
   HiL4U4: boolean;
   HiL4U3: boolean;
@@ -441,6 +443,11 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
                    (prev.r4 > today.r1 && prev.r4 < today.r2);
   const HiL2U4   = (today.s4 > prev.s2 && today.s4 < prev.s1) &&
                    (prev.r4 > today.r3 && prev.r4 < today.r4);
+  // HiL2U3 — today's S4 lands inside prev's S1/S2 band (L2, same support
+  // band as HiL2U4), AND prev's R4 lands inside today's R2/R3 band (U3,
+  // one tier narrower than HiL2U4's U4 band).
+  const HiL2U3   = (today.s4 >= prev.s2 && today.s4 < prev.s1) &&
+                   (prev.r4 > today.r2 && prev.r4 < today.r3);
   const HiL3U4   = (today.s4 > prev.s3 && today.s4 < prev.s2) &&
                    (prev.r4 > today.r3 && prev.r4 < today.r4);
   const HiL4U4   = (prev.r4 > today.r3 && prev.r4 < today.r4) &&
@@ -666,7 +673,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
     r4Distance, s4Distance,
     srHigher, srLower, srExpanded, srCompressed,
     srCompressedHigher, srCompressedLower, srExpandedHigher, srExpandedLower,
-    cOU3L4, cOL2U3, cOL3U3, eXL4U4, HiL4U3, HiL4U2, HiL2U4, HiL3U4, HiL4U4,
+    cOU3L4, cOL2U3, cOL3U3, eXL4U4, HiL4U3, HiL4U2, HiL2U4, HiL2U3, HiL3U4, HiL4U4,
     LoU4L4, eXL4U3, eXU4L2, eXU4L3, cOHiL2U4, cOL4U4, cOU4L4, exL3U2,
     cOL3U4, cOU3L3, LoU3L4, LoU3L3, cOU2L3, LoU2L4, LoU2L3, LoU4L34, LoU4L234,
     cOHiL2U2, LoU4L1234, cOU1L2, cOU2L4, eXL3U3, eXU3L3,
@@ -692,6 +699,7 @@ export function pickCPRSubLabel(f: CPRPairFlags): string | null {
   if (f.HiL4U3)   return "HiL4U3";
   if (f.HiL4U2)   return "HiL4U2";
   if (f.HiL2U4)    return "HiL2U4";
+  if (f.HiL2U3)    return "HiL2U3";
   if (f.HiL3U4)    return "HiL3U4";
   if (f.HiL4U4)    return "HiL4U4";
   if (f.LoU4L4)    return "LoU4L4";
