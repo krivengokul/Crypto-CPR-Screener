@@ -13,6 +13,8 @@ import {
   ChevronDown,
   X,
   FlaskConical,
+  Plus,
+  Minus,
 } from "lucide-react";
 
 export interface Pattern {
@@ -271,30 +273,53 @@ export default function PatternSidebar({
   onModeChange,
   counts,
 }: PatternSidebarProps) {
-  // Which parent pattern is currently open in the tree
-  const [expandedId, setExpandedId] = useState<string | null>(() => {
+  // Which parent patterns are currently open in the tree
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(() => {
     const parent = getParentId(activePattern);
-    return parent ?? activePattern;
+    const initial = new Set<string>();
+    if (parent) initial.add(parent);
+    else if (patterns.some((p) => p.id === activePattern)) initial.add(activePattern);
+    return initial;
   });
 
   // Keep tree in sync when activePattern is changed from outside
   useEffect(() => {
     const parent = getParentId(activePattern);
-    if (parent) {
-      setExpandedId(parent);
-    } else if (patterns.some((p) => p.id === activePattern)) {
-      setExpandedId(activePattern);
-    }
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (parent) next.add(parent);
+      else if (patterns.some((p) => p.id === activePattern)) next.add(activePattern);
+      return next;
+    });
   }, [activePattern]);
 
   function handleParentClick(patternId: string) {
-    setExpandedId(patternId);
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(patternId)) next.delete(patternId);
+      else next.add(patternId);
+      return next;
+    });
     onSelect(patternId);
   }
 
   function handleSubClick(subId: string, parentId: string) {
-    setExpandedId(parentId);
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      next.add(parentId);
+      return next;
+    });
     onSelect(subId);
+  }
+
+  // Expand/collapse all pattern groups with one click
+  const expandableIds = patterns
+    .filter((p) => (subPatterns[p.id] ?? []).length > 0)
+    .map((p) => p.id);
+  const allExpanded = expandableIds.length > 0 && expandableIds.every((id) => expandedIds.has(id));
+
+  function toggleAll() {
+    setExpandedIds(allExpanded ? new Set<string>() : new Set<string>(expandableIds));
   }
 
   // ─── Shared style helpers ─────────────────────────────────────────────────
@@ -341,26 +366,59 @@ export default function PatternSidebar({
           >
             PATTERNS
           </span>
-          <button
-            onClick={onClose ?? onToggle}
-            aria-label={onClose ? "Close menu" : "Collapse sidebar"}
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              color: DIM_TEXT,
-              padding: "2px",
-              display: "flex",
-              alignItems: "center",
-              borderRadius: 4,
-            }}
-          >
-            {onClose
-              ? <X style={{ width: 15, height: 15 }} />
-              : <ChevronLeft style={{ width: 15, height: 15 }} />
-            }
-          </button>
-        </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <button
+              onClick={toggleAll}
+              aria-label={allExpanded ? "Collapse all patterns" : "Expand all patterns"}
+              title={allExpanded ? "Collapse all" : "Expand all"}
+              style={{
+                width: 18,
+                height: 18,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "rgba(255,255,255,0.04)",
+                border: `1px solid ${BORDER_COLOR}`,
+                borderRadius: 4,
+                cursor: "pointer",
+                color: DIM_TEXT,
+                padding: 0,
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLElement).style.color = MUTED_TEXT;
+                (e.currentTarget as HTMLElement).style.borderColor = "#2e4a6a";
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.color = DIM_TEXT;
+                (e.currentTarget as HTMLElement).style.borderColor = BORDER_COLOR;
+              }}
+            >
+              {allExpanded ? (
+                <Minus style={{ width: 12, height: 12 }} />
+              ) : (
+                <Plus style={{ width: 12, height: 12 }} />
+              )}
+            </button>
+            <button
+              onClick={onClose ?? onToggle}
+              aria-label={onClose ? "Close menu" : "Collapse sidebar"}
+              style={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                color: DIM_TEXT,
+                padding: "2px",
+                display: "flex",
+                alignItems: "center",
+                borderRadius: 4,
+              }}
+            >
+              {onClose
+                ? <X style={{ width: 15, height: 15 }} />
+                : <ChevronLeft style={{ width: 15, height: 15 }} />
+              }
+            </button>
+          </div>
 
         {/* Mode toggle */}
         <div
@@ -425,7 +483,7 @@ export default function PatternSidebar({
             const isActiveParent = activePattern === pattern.id;
             const hasActiveChild = children.some((c) => c.id === activePattern);
             const isHighlighted = isActiveParent || hasActiveChild;
-            const isExpanded = expandedId === pattern.id;
+            const isExpanded = expandedIds.has(pattern.id);
 
             return (
               <div key={pattern.id}>
