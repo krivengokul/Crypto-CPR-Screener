@@ -102,6 +102,7 @@ export interface CPRPairFlags {
   eXL3U1: boolean;
   eXL4U1: boolean;
   eXL1BC: boolean;
+  eXL1CP: boolean;
   eXL2BC: boolean;
   eXL3BC: boolean;
   eXL3CP: boolean;
@@ -257,6 +258,7 @@ export interface CPRResult {
   eXL3U1: boolean;
   eXL4U1: boolean;
   eXL1BC: boolean;
+  eXL1CP: boolean;
   eXL2BC: boolean;
   eXL3BC: boolean;
   eXL3CP: boolean;
@@ -512,6 +514,11 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
 
   const eXL1BC = (prev.s4 > today.s1 && prev.s4 < today.bc) &&
                   (prev.r4 > today.s1 && prev.r4 < today.bc);
+  // eXL1CP — prev's S4 lands inside today's S1/BC band (L1, same support
+  // band as eXL1BC), AND prev's R4 lands inside today's BC/Pivot band (the
+  // lower half of today's CPR) instead of the wider S1/BC (CP) band eXL1BC uses.
+  const eXL1CP = (prev.s4 >= today.s1 && prev.s4 < today.bc) &&
+                  (prev.r4 > today.bc && prev.r4 < today.pivot);
   const eXL2BC = (prev.s4 > today.s2 && prev.s4 < today.s1) &&
                   (prev.r4 > today.s1 && prev.r4 < today.bc);
   const eXL3BC = (prev.s4 > today.s3 && prev.s4 < today.s2) &&
@@ -686,7 +693,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
     cOHiL2U2, LoU4L1234, cOU1L2, cOU2L4, eXL3U3, eXU3L3,
     cOU1L1, cOL1U1, cOU2L2, cOL2U2,
     HiL3U3, cOU1L3,
-    eXL2U1, eXL3U1, eXL4U1, eXL1BC, eXL2BC, eXL3BC, eXL3CP,
+    eXL2U1, eXL3U1, eXL4U1, eXL1BC, eXL1CP, eXL2BC, eXL3BC, eXL3CP,
     eXL3TC, eXL4U2, eXL2U2, eXL2TC, eXL1U1, eXU2L1, cOTCL2, L1pU1Above, pCPR1Above, CPRs1Above,
     eXU3L1, eXU3L2, eXU2TC, eXU2BC, eXU3TC, eXU2CP, eXU4L1, LoCPL3, LoCPL2, LoTCL3,
     eXHiL2L1, eXLoL2L1,
@@ -743,6 +750,7 @@ export function pickCPRSubLabel(f: CPRPairFlags): string | null {
   if (f.eXL3U1)    return "eXL3U1";
   if (f.eXL4U1)    return "eXL4U1";
   if (f.eXL1BC)   return "eXL1BC";
+  if (f.eXL1CP)   return "eXL1CP";
   if (f.eXL2BC)   return "eXL2BC";
   if (f.eXL3BC)   return "eXL3BC";
   if (f.eXL3CP)   return "eXL3CP";

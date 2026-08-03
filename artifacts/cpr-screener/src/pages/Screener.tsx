@@ -913,6 +913,7 @@ export default function Screener({
       if (PatternFilter === "eXL3U1") return r.eXL3U1;
       if (PatternFilter === "eXL4U1") return r.eXL4U1;
       if (PatternFilter === "eXL1BC") return r.eXL1BC;
+      if (PatternFilter === "eXL1CP") return r.eXL1CP;
       if (PatternFilter === "eXL2BC") return r.eXL2BC;
       if (PatternFilter === "eXL3BC") return r.eXL3BC;
       if (PatternFilter === "eXL3CP") return r.eXL3CP;
@@ -2024,6 +2025,7 @@ export default function Screener({
                   { label: "eXL3U1",   active: "border-violet-400 text-violet-400" },
                   { label: "eXL4U1",   active: "border-fuchsia-400 text-fuchsia-400" },
                   { label: "eXL1BC",  active: "border-sky-400 text-sky-400" },
+                  { label: "eXL1CP",  active: "border-cyan-400 text-cyan-400" },
                   { label: "eXL2BC",  active: "border-blue-400 text-blue-400" },
                   { label: "eXL3BC",  active: "border-indigo-400 text-indigo-400" },
                   { label: "eXL3CP",  active: "border-fuchsia-400 text-fuchsia-400" },
