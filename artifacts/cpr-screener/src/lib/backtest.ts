@@ -172,6 +172,15 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "AU4 (prev day's R4)",
     getTarget: (r) => r.prevCPR.r4,
   },
+  // NEW: "SMg-exHiL2L1-U4:3AM" — nested under "U1 > pU4" via the
+  // "eXHiL2L1" Pattern sub-category. Bullish, targets U4 (today's R4) @ 3AM.
+  {
+    key: "SMg-exHiL2L1-U4:3AM",
+    label: "SMg-exHiL2L1-U4:3AM",
+    direction: "bullish",
+    targetLabel: "U4 (today's R4)",
+    getTarget: (r) => r.todayCPR.r4,
+  },
 ];
 
 /**
@@ -300,6 +309,11 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
         key: "eXL3TC",
         label: "eXL3TC",
         subPatternKeys: ["TiMe-eXL3TC-AU4:2PM"],
+      },
+      {
+        key: "eXHiL2L1",
+        label: "eXHiL2L1",
+        subPatternKeys: ["SMg-exHiL2L1-U4:3AM"],
       },
     ],
   },

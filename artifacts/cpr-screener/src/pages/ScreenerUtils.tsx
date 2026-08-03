@@ -788,6 +788,17 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.prevCPR.widthPct > 0.10 && r.prevCPR.widthPct <= 0.22 &&   // Tiny
         r.todayCPR.widthPct > 5.00 && r.todayCPR.widthPct <= 10.00   // Mega
       );
+    // NEW: SMg-exHiL2L1-U4:3AM — U1>pU4 sub-pattern.
+    // Condition: parent U1>pU4 (cprRising + strWideCPR + today R1 > prev R4)
+    // + Pattern eXHiL2L1 (prev's R4 and prev's S4 both inside today's S2/S1
+    // band, with today's PDL above prev's Pivot). Target U4 (today's R4) @ 3AM.
+    case "SMg-exHiL2L1-U4:3AM":
+      return (
+        r.cprRising &&
+        r.strWideCPR &&
+        r.todayCPR.r1 > r.prevCPR.r4 &&
+        r.eXHiL2L1
+      );
     case "HAThin-U1>PU4":
       return (r.cprRising && r.strWideCPR && r.bothTight && r.todayCPR.r1 > r.prevCPR.r4);
     // NEW: hR-HAL — BigCPR Above, top-level toggle next to Show All.
@@ -1007,6 +1018,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
   "u1-gt-pu4": [
     { key: "SL-eXL3U1-FAU4:3PM", direction: "up" },
     { key: "TiMe-eXL3TC-AU4:2PM", direction: "up" },
+    { key: "SMg-exHiL2L1-U4:3AM", direction: "up" },
   ],
   "structure-bigbelow": [
     { key: "bigbelow-pmini-pl3", direction: "up" },

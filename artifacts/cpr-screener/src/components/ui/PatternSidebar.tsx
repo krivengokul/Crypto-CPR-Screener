@@ -154,6 +154,14 @@ export const subPatterns: Record<string, SubPattern[]> = {
       activeText:  "#c4b5fd",              // violet-300 text
       activeBg:    "rgba(139, 92, 246, 0.14)", // violet-500 tint
     },
+    // NEW: SMg-exHiL2L1-U4:3AM — U1>pU4 + Pattern eXHiL2L1. Target U4 @ 3AM.
+    {
+      id: "SMg-exHiL2L1-U4:3AM",
+      label: "SMg-exHiL2L1-U4:3AM",
+      activeColor: "#38bdf8",              // sky-400 border
+      activeText:  "#7dd3fc",              // sky-300 text
+      activeBg:    "rgba(56, 189, 248, 0.14)",
+    },
   ],
   "structure-bigbelow": [
     { id: "bigbelow-pmini-pl3",      label: "pMini-L34C4/U3>4" },
