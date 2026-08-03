@@ -884,6 +884,8 @@ export default function Screener({
       // section-agnostic Pattern flag, always shown regardless of
       // activePattern/left-nav.
       if (PatternFilter === "LoTCL3") return r.LoTCL3;
+      if (PatternFilter === "eXHiL2L1") return r.eXHiL2L1;
+      if (PatternFilter === "eXLoL2L1") return r.eXLoL2L1;
       if (PatternFilter === "cOL2U3") return r.cOL2U3;
       if (PatternFilter === "cOL3U3") return r.cOL3U3;
       // NEW: eXU4L2 — independent, section-agnostic Pattern flag
@@ -1993,6 +1995,8 @@ export default function Screener({
                   { label: "HiL4U2", active: "border-violet-400 text-violet-400" },
                   { label: "eXL4U3", active: "border-green-400 text-green-400" },
                   { label: "LoTCL3", active: "border-sky-600 text-sky-300" },
+                  { label: "eXHiL2L1", active: "border-teal-400 text-teal-400" },
+                  { label: "eXLoL2L1", active: "border-rose-400 text-rose-400" },
                   { label: "cOL2U3", active: "border-sky-400 text-sky-400" },
                   { label: "cOL3U3", active: "border-sky-400 text-sky-400" },
                   { label: "eXU4L2", active: "border-amber-400 text-amber-400" },
