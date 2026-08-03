@@ -520,7 +520,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
   // band as eXL3BC), AND prev's R4 lands inside today's BC/TC band (the
   // core of today's CPR) instead of the wider S1/BC (CP) band eXL3BC uses.
   const eXL3CP = (prev.s4 >= today.s3 && prev.s4 < today.s2) &&
-                  (prev.r4 > today.bc && prev.r4 < today.tc);
+                  (prev.r4 > today.bc && prev.r4 < today.pivot);
 
   const eXL4U2 = (prev.s4 > today.s4 && prev.s4 < today.s3) &&
                  (prev.r4 > today.r1  && prev.r4 < today.r2);
