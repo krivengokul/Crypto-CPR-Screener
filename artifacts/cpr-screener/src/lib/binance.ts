@@ -81,29 +81,27 @@ function isLiveDailyCandle(openTimeMs: number): boolean {
 }
 
 /**
- * ADK FIX: active symbol set now spans Spot + USDⓈ-M perpetual futures.
- * Spot wins on collision (deeper books, matches previous behaviour); a symbol
- * only listed on futures is tagged "futures" so its klines are fetched from
- * fapi instead of 404-ing on the spot endpoint.
+ * ADK FIX (venue priority): FUTURES-FIRST.
+ *
+ * The screener links every Binance row to TradingView's perpetual chart
+ * (`BINANCE:<SYMBOL>.P`), so the candles we analyse must come from the same
+ * instrument. USDⓈ-M perpetual wins on collision; Spot is only used for
+ * symbols that are not listed on fapi at all. Both venues reset daily candles
+ * at UTC 00:00, so isLiveDailyCandle() is unaffected.
  */
 async function fetchActiveSymbols(): Promise<Set<string>> {
   const [spotRes, futRes] = await Promise.all([
     fetch(`${BASE}/exchangeInfo`),
     fetch(`${FBASE}/exchangeInfo`),
   ]);
-  if (!spotRes.ok) throw new Error(`Binance exchangeInfo error: ${spotRes.status}`);
-
-  const spot: { symbols: { symbol: string; status: string }[] } = await spotRes.json();
-  const active = new Set<string>();
-
-  venueOf.clear();
-  for (const s of spot.symbols) {
-    if (s.status !== "TRADING") continue;
-    active.add(s.symbol);
-    venueOf.set(s.symbol, "spot");
+  if (!spotRes.ok && !futRes.ok) {
+    throw new Error(`Binance exchangeInfo error: spot ${spotRes.status} / futures ${futRes.status}`);
   }
 
-  // Futures is best-effort: if fapi is unreachable we still return the spot set.
+  const active = new Set<string>();
+  venueOf.clear();
+
+  // 1) Perpetual futures first — these are the authoritative candles.
   if (futRes.ok) {
     const fut: {
       symbols: { symbol: string; status: string; contractType?: string }[];
@@ -112,7 +110,17 @@ async function fetchActiveSymbols(): Promise<Set<string>> {
       if (s.status !== "TRADING") continue;
       if (s.contractType && s.contractType !== "PERPETUAL") continue;
       active.add(s.symbol);
-      if (!venueOf.has(s.symbol)) venueOf.set(s.symbol, "futures");
+      venueOf.set(s.symbol, "futures");
+    }
+  }
+
+  // 2) Spot fills in only the symbols with no perpetual listing.
+  if (spotRes.ok) {
+    const spot: { symbols: { symbol: string; status: string }[] } = await spotRes.json();
+    for (const s of spot.symbols) {
+      if (s.status !== "TRADING") continue;
+      active.add(s.symbol);
+      if (!venueOf.has(s.symbol)) venueOf.set(s.symbol, "spot");
     }
   }
 
@@ -120,24 +128,30 @@ async function fetchActiveSymbols(): Promise<Set<string>> {
 }
 
 /**
- * ADK FIX: merge Spot + Futures 24h tickers. Spot rows win on collision so
- * volume/last-price semantics are unchanged for existing symbols; futures-only
- * symbols (UAIUSDT and friends) are appended.
+ * ADK FIX (venue priority): FUTURES-FIRST, mirroring fetchActiveSymbols.
+ * Perpetual 24h tickers win on collision so last price / % change / volume
+ * describe the same instrument whose klines we analyse and whose `.P` chart
+ * we link to. Spot only supplies symbols with no perpetual listing.
  */
 async function fetchAllTickers(): Promise<Ticker24h[]> {
   const [spotRes, futRes] = await Promise.all([
     fetch(`${BASE}/ticker/24hr`),
     fetch(`${FBASE}/ticker/24hr`),
   ]);
-  if (!spotRes.ok) throw new Error(`Binance ticker error: ${spotRes.status}`);
+  if (!spotRes.ok && !futRes.ok) {
+    throw new Error(`Binance ticker error: spot ${spotRes.status} / futures ${futRes.status}`);
+  }
 
-  const spot: Ticker24h[] = await spotRes.json();
   const bySymbol = new Map<string, Ticker24h>();
-  for (const t of spot) bySymbol.set(t.symbol, t);
 
   if (futRes.ok) {
     const fut: Ticker24h[] = await futRes.json();
-    for (const t of fut) if (!bySymbol.has(t.symbol)) bySymbol.set(t.symbol, t);
+    for (const t of fut) bySymbol.set(t.symbol, t);
+  }
+
+  if (spotRes.ok) {
+    const spot: Ticker24h[] = await spotRes.json();
+    for (const t of spot) if (!bySymbol.has(t.symbol)) bySymbol.set(t.symbol, t);
   }
 
   return [...bySymbol.values()];
@@ -175,7 +189,8 @@ export async function fetchTopUSDTSymbols(limit = 500): Promise<Ticker24h[]> {
 // ADK FIX: routes to fapi for futures-only symbols, and falls back to the
 // other venue if the primary one returns nothing.
 async function fetchKlines(symbol: string): Promise<OHLC[] | null> {
-  const primary = venueOf.get(symbol) === "futures" ? FBASE : BASE;
+  // Futures-first: unknown symbols default to fapi, spot is the fallback.
+  const primary = venueOf.get(symbol) === "spot" ? BASE : FBASE;
   const secondary = primary === BASE ? FBASE : BASE;
 
   for (const base of [primary, secondary]) {
