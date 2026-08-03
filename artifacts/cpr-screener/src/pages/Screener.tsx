@@ -912,8 +912,8 @@ export default function Screener({
       if (PatternFilter === "eXL2U1") return r.eXL2U1;
       if (PatternFilter === "eXL3U1") return r.eXL3U1;
       if (PatternFilter === "eXL4U1") return r.eXL4U1;
-      if (PatternFilter === "eXL1CPR") return r.eXL1CPR;
-      if (PatternFilter === "eXL2CPR") return r.eXL2CPR;
+      if (PatternFilter === "eXL1BC") return r.eXL1BC;
+      if (PatternFilter === "eXL2BC") return r.eXL2BC;
       if (PatternFilter === "eXL3BC") return r.eXL3BC;
       if (PatternFilter === "eXL3CP") return r.eXL3CP;
       // NEW: cOU1L1 / cOL1U1 / cOU2L2 / cOL2U2 — independent,
@@ -2023,8 +2023,8 @@ export default function Screener({
                   { label: "eXL2U1",   active: "border-purple-400 text-purple-400" },
                   { label: "eXL3U1",   active: "border-violet-400 text-violet-400" },
                   { label: "eXL4U1",   active: "border-fuchsia-400 text-fuchsia-400" },
-                  { label: "eXL1CPR",  active: "border-sky-400 text-sky-400" },
-                  { label: "eXL2CPR",  active: "border-blue-400 text-blue-400" },
+                  { label: "eXL1BC",  active: "border-sky-400 text-sky-400" },
+                  { label: "eXL2BC",  active: "border-blue-400 text-blue-400" },
                   { label: "eXL3BC",  active: "border-indigo-400 text-indigo-400" },
                   { label: "eXL3CP",  active: "border-fuchsia-400 text-fuchsia-400" },
                   // NEW: cOU1L1 / cOL1U1 / cOU2L2 / cOL2U2 badges (unconditional, all sections)
