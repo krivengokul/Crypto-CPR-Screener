@@ -298,13 +298,23 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
   {
     key: "u1-gt-pu4",
     label: "U1 > pU4",
-    subPatternKeys: ["SL-eXL3U1-FAU4:3PM"],
-    // NEW: "eXL3TC" Pattern sub-category — shown above its own
-    // sub-pattern ("TiMe-eXL3TC-AU4:2PM") in the Backtest dropdown, same
-    // "Pattern" grouping style as cOL3U3 / eXU4L1 elsewhere. Base
-    // condition = parent u1-gt-pu4's condition AND the raw eXL3TC flag
-    // (see matchesPatternFlag in ScreenerUtils.tsx).
+    // NEW: "eXL3U1" Pattern sub-category (arrow) — same shape as
+    // cOU3L4/LoU3L3/eXL3TC/eXHiL2L1 elsewhere. Base condition = parent
+    // u1-gt-pu4's condition AND the raw eXL3U1 flag (see
+    // matchesPatternFlag in ScreenerUtils.tsx). Nests the existing
+    // "SL-eXL3U1-FAU4:3PM" pattern, which used to sit directly on this
+    // category's own subPatternKeys.
     subCategories: [
+      {
+        key: "eXL3U1",
+        label: "eXL3U1",
+        subPatternKeys: ["SL-eXL3U1-FAU4:3PM"],
+      },
+      // NEW: "eXL3TC" Pattern sub-category — shown above its own
+      // sub-pattern ("TiMe-eXL3TC-AU4:2PM") in the Backtest dropdown, same
+      // "Pattern" grouping style as cOL3U3 / eXU4L1 elsewhere. Base
+      // condition = parent u1-gt-pu4's condition AND the raw eXL3TC flag
+      // (see matchesPatternFlag in ScreenerUtils.tsx).
       {
         key: "eXL3TC",
         label: "eXL3TC",
