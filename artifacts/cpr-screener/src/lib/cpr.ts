@@ -83,7 +83,6 @@ export interface CPRPairFlags {
   LoU2L3: boolean;
   LoU4L34: boolean;
   LoU4L234: boolean;
-  cOHiL2U2: boolean;
   LoU4L1234: boolean;
   cOU1L2: boolean;
   cOU2L4: boolean;
@@ -250,7 +249,6 @@ export interface CPRResult {
   LoU2L3: boolean;
   LoU4L34: boolean;
   LoU4L234: boolean;
-  cOHiL2U2: boolean;
   cOU2L3: boolean;
   LoU4L1234: boolean;
   cOU2L4: boolean;
@@ -490,9 +488,6 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
                    (prev.s4 >= today.s3 && prev.s4 < today.s2);
   const LoU4L234 = (today.r4 > prev.r3 && today.r4 < prev.r4) &&
                    (prev.s4 > today.s2 && prev.s4 < today.s1);
-  const cOHiL2U2 = (today.r4 > prev.r1 && today.r4 < prev.r2) &&
-                   (today.r3 > prev.r1) &&
-                   (today.s4 > prev.s2 && today.s4 < prev.s1);
   const cOU2L3 = (today.r4 > prev.r1 && today.r4 < prev.r2) &&
                    (today.s4 > prev.s3 && today.s4 < prev.s2);
   const LoU4L1234 = (today.r4 > prev.r3 && today.r4 < prev.r4) &&
@@ -690,7 +685,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
     cOU3L4, cOL2U3, cOL3U3, eXL4U4, HiL4U3, HiL4U2, HiL2U4, HiL2U3, HiL3U4, HiL4U4,
     LoU4L4, eXL4U3, eXU4L2, eXU4L3, cOHiL2U4, cOL4U4, cOU4L4, exL3U2,
     cOL3U4, cOU3L3, LoU3L4, LoU3L3, cOU2L3, LoU2L4, LoU2L3, LoU4L34, LoU4L234,
-    cOHiL2U2, LoU4L1234, cOU1L2, cOU2L4, eXL3U3, eXU3L3,
+    LoU4L1234, cOU1L2, cOU2L4, eXL3U3, eXU3L3,
     cOU1L1, cOL1U1, cOU2L2, cOL2U2,
     HiL3U3, cOU1L3,
     eXL2U1, eXL3U1, eXL4U1, eXL1BC, eXL1CP, eXL2BC, eXL3BC, eXL3CP,
@@ -734,7 +729,7 @@ export function pickCPRSubLabel(f: CPRPairFlags): string | null {
   if (f.LoU2L3)    return "LoU2L3";
   if (f.LoU4L34)   return "LoU4L34";
   if (f.LoU4L234)  return "LoU4L234";
-  if (f.cOHiL2U2)  return "cOHiL2U2";
+  if (f.cOL2U2)    return "cOL2U2";
   if (f.LoU4L1234) return "LoU4L1234";
   if (f.cOU1L2)    return "cOU1L2";
   if (f.cOU2L4)  return "cOU2L4";
@@ -743,7 +738,6 @@ export function pickCPRSubLabel(f: CPRPairFlags): string | null {
   if (f.cOU1L1)    return "cOU1L1";
   if (f.cOL1U1)    return "cOL1U1";
   if (f.cOU2L2)    return "cOU2L2";
-  if (f.cOL2U2)    return "cOL2U2";
   if (f.HiL3U3)    return "HiL3U3";
   if (f.cOU1L3)    return "cOU1L3";
   if (f.eXL2U1)    return "eXL2U1";
