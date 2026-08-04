@@ -3,8 +3,8 @@ import type { CPRResult } from "@/lib/cpr";
 
 /**
  * Refreshes Binance live prices every 15s while status === "done".
- * Behavior is unchanged from the original inline effect in Screener.tsx —
- * this is a mechanical extraction only.
+ * USDⓈ-M perpetual prices take precedence over spot so the displayed price
+ * stays aligned with the BINANCE:<SYMBOL>.P TradingView chart.
  */
 export function useBinanceLiveRefresh(
   status: "idle" | "scanning" | "done" | "error",
@@ -22,21 +22,34 @@ export function useBinanceLiveRefresh(
       }
       try {
         const priceMap = new Map<string, { price: number; change: number }>();
-        const res = await fetch("https://api.binance.com/api/v3/ticker/24hr?type=MINI");
-        if (!res.ok) {
-          console.error(`[binance-live-refresh] ticker/24hr ${res.status} ${res.statusText}`, await res.text().catch(() => ""));
+        const [spotRes, futuresRes] = await Promise.all([
+          fetch("https://api.binance.com/api/v3/ticker/24hr?type=MINI"),
+          fetch("https://fapi.binance.com/fapi/v1/ticker/24hr"),
+        ]);
+        if (!spotRes.ok && !futuresRes.ok) {
+          console.error(
+            `[binance-live-refresh] ticker/24hr failed: spot ${spotRes.status}, futures ${futuresRes.status}`
+          );
           return;
         }
-        const tickers: Array<{ symbol: string; lastPrice: string; openPrice: string }> = await res.json();
+        type LiveTicker = { symbol: string; lastPrice: string; openPrice: string };
+        const [spotTickers, futuresTickers]: [LiveTicker[], LiveTicker[]] = await Promise.all([
+          spotRes.ok ? spotRes.json() : Promise.resolve([]),
+          futuresRes.ok ? futuresRes.json() : Promise.resolve([]),
+        ]);
         // Only keep symbols we actually need — the response covers every
         // Binance symbol, not just the ones currently in `results`.
         const wanted = new Set(results.map((r) => r.symbol));
-        tickers.forEach((t) => {
+        const addTickers = (tickers: LiveTicker[]) => tickers.forEach((t) => {
           if (!wanted.has(t.symbol)) return;
           const price = parseFloat(t.lastPrice);
           const open  = parseFloat(t.openPrice);
+          if (!Number.isFinite(price) || price <= 0) return;
           priceMap.set(t.symbol, { price, change: open > 0 ? ((price - open) / open) * 100 : 0 });
         });
+        // Match binance.ts: spot is fallback; perpetual overwrites collisions.
+        addTickers(spotTickers);
+        addTickers(futuresTickers);
         // Use r.openPrice (the 5:30 AM IST baseline) for % calc
         const apply = (prev: CPRResult[]): CPRResult[] =>
           prev.map((r) => {
