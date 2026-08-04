@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, Fragment } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, Fragment } from "react";
 import { patterns, subPatterns } from "@/components/ui/PatternSidebar";
 import {
   TrendingUp,
@@ -160,6 +160,33 @@ export default function Screener({
   const [PatternFilter, setPatternFilter] = useState<PatternInfo["label"] | null>(null);
   const [showPatternList, setShowPatternList] = useState(false);
   const [showSizeList, setShowSizeList] = useState(false);
+  // NEW: TIME filter — 24 hourly toggles (6AM..5AM next day). Selecting an
+  // hour shows only rows that satisfy at least one Views (sub-pattern)
+  // whose id/label ends with that hour, e.g. clicking "6PM" matches every
+  // sub-pattern id ending in ":6PM" (T1-U4:6AM, MeMi-eXHiL4U3-U4:6PM, etc.)
+  // across ALL parent patterns — independent of activePattern.
+  const [timeFilter, setTimeFilter] = useState<string | null>(null);
+
+  // NEW: full 24hr cycle starting at 6AM through 5AM the next day, matching
+  // the order the TIME row's buttons should render in.
+  const TIME_SLOTS: string[] = [
+    "6AM", "7AM", "8AM", "9AM", "10AM", "11AM",
+    "12PM", "1PM", "2PM", "3PM", "4PM", "5PM",
+    "6PM", "7PM", "8PM", "9PM", "10PM", "11PM",
+    "12AM", "1AM", "2AM", "3AM", "4AM", "5AM",
+  ];
+
+  // NEW: every sub-pattern (Views) id across every parent pattern whose
+  // id ends with ":<selected time>" — flattened once per timeFilter change
+  // so the display filter below stays a cheap .some() lookup per row.
+  const timeMatchedSubIds = useMemo(() => {
+    if (!timeFilter) return [] as string[];
+    const suffix = `:${timeFilter}`;
+    return Object.values(subPatterns)
+      .flat()
+      .filter((s) => s.id.endsWith(suffix))
+      .map((s) => s.id);
+  }, [timeFilter]);
   // CHANGED: split into two independent states so one pMicro..pUltra
   // selection (prev day's CPR width) and one Micro..Ultra selection
   // (today's CPR width) can be active at the same time.
@@ -978,6 +1005,13 @@ export default function Screener({
       if (pdhPdlFilter === "belowpl4") return r.currentPrice < r.prevCPR.s4;
       return true;
     })
+    // NEW: TIME filter — when an hour is selected, keep only rows that
+    // satisfy at least one Views (sub-pattern) targeting that hour, across
+    // every parent pattern (independent of activePattern/PatternFilter).
+    .filter((r) => {
+      if (!timeFilter) return true;
+      return timeMatchedSubIds.some((id) => passesPattern(r, id));
+    })
     .slice()
     .sort((a, b) => {
       const av = getVal(a, sortKey);
@@ -1014,7 +1048,7 @@ export default function Screener({
     showBigBelowPMiniPL3 || showBigBelowPMiniRising || showExpU3LtPU4 || showBigBeloweXU4L3AU4 || showBigBelowL1LtPL4 || showL1LtPL4CprLtPL4 || showBigBeloweXU4L2AU4 || showBigBelow1TcOU4L43PM ||
     showBigAbovePL34CL4 || showBAComp || showHAU1 || showHAU1CprAbovePU4 || showHAU1L1AbovePU4 || showHAU1PWideAbove || showHRHAL || showHA55HrL4U34FAU4 || showHiL4U4FAU4 || show1ScoHiFAU4 || show2ScoHiFAU4 || showLBCmprss || showLBC34 || showLBE11 || showLBC2L2U2 ||
     showLBBothTiny || showLBAllUp || showExpU4PU4 || showExpU3PU3 || showOBNLoU4L4 || showOBWLoU4L4 || showOBHiExL4U4 || showLMeXL2U2 ||
-    !!PatternFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter;
+    !!PatternFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter || !!timeFilter;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -2181,6 +2215,29 @@ export default function Screener({
               ))}
           </div>
           )}
+
+          {/* NEW: TIME filter — 24 hourly toggles (6AM..5AM next day).
+              Clicking an hour (e.g. "6PM") shows only rows that satisfy at
+              least one Views/sub-pattern targeting that hour, across every
+              parent pattern. Mutually exclusive (single timeFilter state),
+              independent of activePattern, PatternFilter, and showAll. */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[10px] text-indigo-400/90 uppercase tracking-wider mr-0.5 font-semibold">Time:</span>
+              {TIME_SLOTS.map((slot) => (
+                <button
+                  key={slot}
+                  onClick={() => setTimeFilter((v) => (v === slot ? null : slot))}
+                  className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                    timeFilter === slot
+                      ? "bg-foreground/15 text-foreground border-border"
+                      : "border-border text-muted-foreground hover:text-foreground"
+                  }`}
+                  title={`Show only rows with a Views (sub-pattern) target of ~${slot}`}
+                >
+                  {timeFilter === slot ? `✕ ${slot}` : slot}
+                </button>
+              ))}
+          </div>
 
           {/* Price Level filter buttons — own row, below CPR Size. Mutually
               exclusive with each other via the single pdhPdlFilter state,
