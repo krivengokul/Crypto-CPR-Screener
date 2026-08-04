@@ -160,6 +160,7 @@ export default function Screener({
   const [PatternFilter, setPatternFilter] = useState<PatternInfo["label"] | null>(null);
   const [showPatternList, setShowPatternList] = useState(false);
   const [showSizeList, setShowSizeList] = useState(false);
+  const [showTimeList, setShowTimeList] = useState(false);
   // NEW: TIME filter — 24 hourly toggles (6AM..5AM next day). Selecting an
   // hour shows only rows that satisfy at least one Views (sub-pattern)
   // whose id/label ends with that hour, e.g. clicking "6PM" matches every
@@ -167,14 +168,17 @@ export default function Screener({
   // across ALL parent patterns — independent of activePattern.
   const [timeFilter, setTimeFilter] = useState<string | null>(null);
 
-  // NEW: full 24hr cycle starting at 6AM through 5AM the next day, matching
-  // the order the TIME row's buttons should render in.
+  // NEW: full 24hr cycle starting at 5AM through 4AM the next day, split
+  // into two 12-item rows: 5AM..4PM on the first line, 5PM..4AM on the
+  // second — matching the requested layout.
   const TIME_SLOTS: string[] = [
-    "6AM", "7AM", "8AM", "9AM", "10AM", "11AM",
-    "12PM", "1PM", "2PM", "3PM", "4PM", "5PM",
-    "6PM", "7PM", "8PM", "9PM", "10PM", "11PM",
-    "12AM", "1AM", "2AM", "3AM", "4AM", "5AM",
+    "5AM", "6AM", "7AM", "8AM", "9AM", "10AM", "11AM",
+    "12PM", "1PM", "2PM", "3PM", "4PM",
+    "5PM", "6PM", "7PM", "8PM", "9PM", "10PM", "11PM",
+    "12AM", "1AM", "2AM", "3AM", "4AM",
   ];
+  const TIME_SLOTS_ROW1 = TIME_SLOTS.slice(0, 12); // 5AM..4PM
+  const TIME_SLOTS_ROW2 = TIME_SLOTS.slice(12);    // 5PM..4AM
 
   // NEW: every sub-pattern (Views) id across every parent pattern whose
   // id ends with ":<selected time>" — flattened once per timeFilter change
@@ -1187,6 +1191,19 @@ export default function Screener({
               >
                 Size
                 <span className="leading-none">{showSizeList ? "−" : "+"}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowTimeList((v) => !v)}
+                className={`flex items-center gap-1 text-xs font-bold uppercase tracking-wide px-2.5 py-1 rounded border border-border transition-colors ${
+                  showTimeList
+                    ? "bg-foreground/15 text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                title={showTimeList ? "Hide time filters" : "Show time filters"}
+              >
+                Time
+                <span className="leading-none">{showTimeList ? "−" : "+"}</span>
               </button>
             </div>
           )}
@@ -2216,14 +2233,18 @@ export default function Screener({
           </div>
           )}
 
-          {/* NEW: TIME filter — 24 hourly toggles (6AM..5AM next day).
-              Clicking an hour (e.g. "6PM") shows only rows that satisfy at
-              least one Views/sub-pattern targeting that hour, across every
-              parent pattern. Mutually exclusive (single timeFilter state),
-              independent of activePattern, PatternFilter, and showAll. */}
-          <div className="flex items-center gap-1.5 flex-wrap">
+          {/* NEW: TIME filter — 24 hourly toggles (5AM..4AM next day), split
+              across two 12-item rows (5AM-4PM, then 5PM-4AM). Clicking an
+              hour (e.g. "6PM") shows only rows that satisfy at least one
+              Views/sub-pattern targeting that hour, across every parent
+              pattern. Mutually exclusive (single timeFilter state),
+              independent of activePattern, PatternFilter, and showAll.
+              Whole section hidden until "Time +" is toggled on. */}
+          {showTimeList && (
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-[10px] text-indigo-400/90 uppercase tracking-wider mr-0.5 font-semibold">Time:</span>
-              {TIME_SLOTS.map((slot) => (
+              {TIME_SLOTS_ROW1.map((slot) => (
                 <button
                   key={slot}
                   onClick={() => setTimeFilter((v) => (v === slot ? null : slot))}
@@ -2237,7 +2258,25 @@ export default function Screener({
                   {timeFilter === slot ? `✕ ${slot}` : slot}
                 </button>
               ))}
+            </div>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {TIME_SLOTS_ROW2.map((slot) => (
+                <button
+                  key={slot}
+                  onClick={() => setTimeFilter((v) => (v === slot ? null : slot))}
+                  className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                    timeFilter === slot
+                      ? "bg-foreground/15 text-foreground border-border"
+                      : "border-border text-muted-foreground hover:text-foreground"
+                  }`}
+                  title={`Show only rows with a Views (sub-pattern) target of ~${slot}`}
+                >
+                  {timeFilter === slot ? `✕ ${slot}` : slot}
+                </button>
+              ))}
+            </div>
           </div>
+          )}
 
           {/* Price Level filter buttons — own row, below CPR Size. Mutually
               exclusive with each other via the single pdhPdlFilter state,
