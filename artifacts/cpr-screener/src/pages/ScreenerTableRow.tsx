@@ -1,5 +1,5 @@
 import { Fragment } from "react";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Info } from "lucide-react";
 
 /**
  * PATTERN_BADGE_CLASSES — single source of truth for pattern badge colours.
@@ -208,6 +208,106 @@ import {
   levelsInDistanceRange,
 } from "./ScreenerUtils";
 
+const WIDTH_CATEGORIES: {
+  key: string;
+  label: string;
+  range: string;
+  classes: string;
+  pClasses: string;
+}[] = [
+  {
+    key: "micro",
+    label: "Micro",
+    range: "≤ 0.10%",
+    classes: "bg-slate-500/10 text-slate-400 border border-slate-500/20",
+    pClasses: "bg-slate-500/5 text-slate-400/70 border border-slate-500/10",
+  },
+  {
+    key: "tiny",
+    label: "Tiny",
+    range: "0.10 – 0.22%",
+    classes: "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20",
+    pClasses: "bg-cyan-500/5 text-cyan-400/70 border border-cyan-500/10",
+  },
+  {
+    key: "mini",
+    label: "Mini",
+    range: "0.22 – 0.50%",
+    classes: "bg-teal-500/10 text-teal-400 border border-teal-500/20",
+    pClasses: "bg-teal-500/5 text-teal-400/70 border border-teal-500/10",
+  },
+  {
+    key: "small",
+    label: "Small",
+    range: "0.60 – 1.10%",
+    classes: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
+    pClasses: "bg-emerald-500/5 text-emerald-400/70 border border-emerald-500/10",
+  },
+  {
+    key: "medium",
+    label: "Medium",
+    range: "1.10 – 2.00%",
+    classes: "bg-yellow-500/10 text-yellow-400 border border-yellow-500/20",
+    pClasses: "bg-yellow-500/5 text-yellow-400/70 border border-yellow-500/10",
+  },
+  {
+    key: "large",
+    label: "Large",
+    range: "2.00 – 5.00%",
+    classes: "bg-orange-500/10 text-orange-400 border border-orange-500/20",
+    pClasses: "bg-orange-500/5 text-orange-400/70 border border-orange-500/10",
+  },
+  {
+    key: "mega",
+    label: "Mega",
+    range: "5.00 – 10.00%",
+    classes: "bg-red-500/10 text-red-400 border border-red-500/20",
+    pClasses: "bg-red-500/5 text-red-400/70 border border-red-500/10",
+  },
+  {
+    key: "ultra",
+    label: "Ultra",
+    range: "> 10.00%",
+    classes: "bg-rose-500/10 text-rose-400 border border-rose-500/20",
+    pClasses: "bg-rose-500/5 text-rose-400/70 border border-rose-500/10",
+  },
+];
+
+function PivotSizeInfo() {
+  return (
+    <span className="relative inline-flex items-center group" tabIndex={0}>
+      <Info className="w-3 h-3 text-muted-foreground hover:text-foreground focus:text-foreground cursor-help" />
+      <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 hidden group-hover:block group-focus:block w-72 p-2 rounded-lg border border-border bg-popover text-popover-foreground shadow-lg z-50">
+        <span className="block text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
+          CPR Width Categories
+        </span>
+        <span className="grid grid-cols-4 gap-1.5">
+          {WIDTH_CATEGORIES.map((cat) => (
+            <span key={cat.key} className="flex flex-col gap-0.5">
+              <span
+                className={`text-[10px] px-1 py-0.5 rounded border text-center font-medium ${cat.classes}`}
+              >
+                {cat.label}
+              </span>
+              <span
+                className={`text-[10px] px-1 py-0.5 rounded border text-center font-medium ${cat.pClasses}`}
+              >
+                p{cat.label}
+              </span>
+              <span className="text-[9px] text-center text-muted-foreground leading-none">
+                {cat.range}
+              </span>
+            </span>
+          ))}
+        </span>
+        <span className="block text-[9px] text-muted-foreground mt-1.5">
+          p- prefix = previous day's CPR width (muted palette).
+        </span>
+      </span>
+    </span>
+  );
+}
+
 export interface ScreenerTableHeaderProps {
   canShowCombined: boolean;
   activeTab: ActiveTab;
@@ -252,7 +352,10 @@ export function ScreenerTableHeader({
           className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground min-w-[220px]"
           onClick={() => toggleSort("compressionRatio")}
         >
-          PIVOT SIZE <SortIcon k="compressionRatio" />
+          <span className="inline-flex items-center gap-1.5">
+            <PivotSizeInfo />
+            PIVOT SIZE <SortIcon k="compressionRatio" />
+          </span>
         </th>
         <th
           className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
