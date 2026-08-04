@@ -1111,6 +1111,44 @@ export default function Screener({
 
         {/* Controls */}
         <div className="flex flex-wrap items-center gap-3 mb-4">
+          <button
+            onClick={doScan}
+            disabled={status === "scanning"}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all disabled:opacity-50"
+            style={{ background: "linear-gradient(135deg,#3b82f6,#6366f1)", color: "#fff" }}
+          >
+            <RefreshCw className={`w-3 h-3 ${status === "scanning" ? "animate-spin" : ""}`} />
+            {status === "scanning" ? "Scanning Binance…" : "Scan Binance"}
+          </button>
+
+          <button
+            onClick={doDeltaScan}
+            disabled={deltaStatus === "scanning"}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all disabled:opacity-50"
+            style={{ background: "linear-gradient(135deg,#8b5cf6,#6d28d9)", color: "#fff" }}
+          >
+            <RefreshCw className={`w-3 h-3 ${deltaStatus === "scanning" ? "animate-spin" : ""}`} />
+            {deltaStatus === "scanning" ? "Scanning Delta…" : "Scan Delta"}
+          </button>
+
+          {canShowCombined && (
+            <div className="flex rounded-lg border border-border overflow-hidden text-xs">
+              {(["binance", "delta", "combined"] as ActiveTab[]).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className="px-3 py-1.5 transition-colors capitalize"
+                  style={{
+                    background: activeTab === tab ? "#3b82f6" : "transparent",
+                    color: activeTab === tab ? "#fff" : "#8ba3bc",
+                  }}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
+          )}
+
           {currentStatus === "done" && (
             <div className="flex items-center gap-2 text-sm">
               <span className="text-foreground font-medium">
@@ -1168,8 +1206,8 @@ export default function Screener({
                 }}
                 className={`flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded border border-border transition-colors ${showAll ? "bg-foreground/15 text-foreground" : "text-muted-foreground hover:text-foreground"}`}
               >
-                Show All
                 <span className="leading-none">{showAll ? "−" : "+"}</span>
+                Show All
               </button>
               <button
                 type="button"
@@ -1181,8 +1219,8 @@ export default function Screener({
                 }`}
                 title={showPatternList ? "Hide patterns" : "Show patterns"}
               >
-                Patterns
                 <span className="leading-none">{showPatternList ? "−" : "+"}</span>
+                Patterns
               </button>
               <button
                 type="button"
@@ -1194,8 +1232,8 @@ export default function Screener({
                 }`}
                 title={showSizeList ? "Hide CPR size filters" : "Show CPR size filters"}
               >
-                Size
                 <span className="leading-none">{showSizeList ? "−" : "+"}</span>
+                Size
               </button>
               <button
                 type="button"
@@ -1207,8 +1245,8 @@ export default function Screener({
                 }`}
                 title={showEntryTimeList ? "Hide entry time filters" : "Show entry time filters"}
               >
-                NTime
                 <span className="leading-none">{showEntryTimeList ? "−" : "+"}</span>
+                NTime
               </button>
               <button
                 type="button"
@@ -1220,50 +1258,11 @@ export default function Screener({
                 }`}
                 title={showExitTimeList ? "Hide exit time filters" : "Show exit time filters"}
               >
-                XTime
                 <span className="leading-none">{showExitTimeList ? "−" : "+"}</span>
+                XTime
               </button>
             </div>
           )}
-
-          {canShowCombined && (
-            <div className="flex rounded-lg border border-border overflow-hidden text-xs">
-              {(["binance", "delta", "combined"] as ActiveTab[]).map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className="px-3 py-1.5 transition-colors capitalize"
-                  style={{
-                    background: activeTab === tab ? "#3b82f6" : "transparent",
-                    color: activeTab === tab ? "#fff" : "#8ba3bc",
-                  }}
-                >
-                  {tab}
-                </button>
-              ))}
-            </div>
-          )}
-
-          <button
-            onClick={doScan}
-            disabled={status === "scanning"}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all disabled:opacity-50"
-            style={{ background: "linear-gradient(135deg,#3b82f6,#6366f1)", color: "#fff" }}
-          >
-            <RefreshCw className={`w-3 h-3 ${status === "scanning" ? "animate-spin" : ""}`} />
-            {status === "scanning" ? "Scanning Binance…" : "Scan Binance"}
-          </button>
-
-          <button
-            onClick={doDeltaScan}
-            disabled={deltaStatus === "scanning"}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all disabled:opacity-50"
-            style={{ background: "linear-gradient(135deg,#8b5cf6,#6d28d9)", color: "#fff" }}
-          >
-            <RefreshCw className={`w-3 h-3 ${deltaStatus === "scanning" ? "animate-spin" : ""}`} />
-            {deltaStatus === "scanning" ? "Scanning Delta…" : "Scan Delta"}
-          </button>
-
 
           <div className="relative ml-auto">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
