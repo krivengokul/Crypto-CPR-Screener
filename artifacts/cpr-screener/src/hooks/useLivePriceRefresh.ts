@@ -16,18 +16,26 @@ export function useBinanceLiveRefresh(
     if (status !== "done") return;
     const refresh = async () => {
       const results = allResultsRef.current;
-      if (!results.length) return;
+      if (!results.length) {
+        console.debug("[binance-live-refresh] tick — no results in ref yet, skipping");
+        return;
+      }
       try {
         const symbols = results.map((r) => r.symbol);
         const chunks: string[][] = [];
         for (let i = 0; i < symbols.length; i += 100) chunks.push(symbols.slice(i, i + 100));
         const priceMap = new Map<string, { price: number; change: number }>();
+        let failedChunks = 0;
         await Promise.all(
           chunks.map(async (chunk) => {
             const res = await fetch(
               `https://api.binance.com/api/v3/ticker/24hr?symbols=${encodeURIComponent(JSON.stringify(chunk))}&type=MINI`
             );
-            if (!res.ok) return;
+            if (!res.ok) {
+              failedChunks++;
+              console.error(`[binance-live-refresh] ticker/24hr ${res.status} ${res.statusText}`, await res.text().catch(() => ""));
+              return;
+            }
             const tickers: Array<{ symbol: string; lastPrice: string; openPrice: string }> = await res.json();
             tickers.forEach((t) => {
               const price = parseFloat(t.lastPrice);
@@ -36,6 +44,9 @@ export function useBinanceLiveRefresh(
             });
           })
         );
+        if (failedChunks > 0) {
+          console.warn(`[binance-live-refresh] ${failedChunks}/${chunks.length} chunk(s) failed; ${priceMap.size} symbols updated this cycle`);
+        }
         // Use r.openPrice (the 5:30 AM IST baseline) for % calc
         const apply = (prev: CPRResult[]): CPRResult[] =>
           prev.map((r) => {
@@ -48,7 +59,9 @@ export function useBinanceLiveRefresh(
           });
         setAllResults((p) => apply(p));
         setFiltered((p) => apply(p));
-      } catch { /* silent */ }
+      } catch (err) {
+        console.error("[binance-live-refresh] refresh cycle threw", err);
+      }
     };
     const id = setInterval(refresh, 30_000);
     return () => clearInterval(id);
@@ -70,13 +83,19 @@ export function useDeltaLiveRefresh(
     if (deltaStatus !== "done") return;
     const refresh = async () => {
       const results = deltaAllResultsRef.current;
-      if (!results.length) return;
+      if (!results.length) {
+        console.debug("[delta-live-refresh] tick — no results in ref yet, skipping");
+        return;
+      }
       try {
         const res = await fetch(
           "https://api.india.delta.exchange/v2/tickers?contract_types=perpetual_futures&page_size=500",
           { cache: "no-store" }
         );
-        if (!res.ok) return;
+        if (!res.ok) {
+          console.error(`[delta-live-refresh] tickers ${res.status} ${res.statusText}`, await res.text().catch(() => ""));
+          return;
+        }
         const data = await res.json();
         const tickers: Array<{ symbol: string; mark_price: string; ltp_change_24h: string }> =
           (data.result ?? []) as Array<{ symbol: string; mark_price: string; ltp_change_24h: string }>;
@@ -94,7 +113,9 @@ export function useDeltaLiveRefresh(
           });
         setDeltaAllResults((p) => apply(p));
         setDeltaFiltered((p) => apply(p));
-      } catch { /* silent */ }
+      } catch (err) {
+        console.error("[delta-live-refresh] refresh cycle threw", err);
+      }
     };
     const id = setInterval(refresh, 30_000);
     return () => clearInterval(id);
