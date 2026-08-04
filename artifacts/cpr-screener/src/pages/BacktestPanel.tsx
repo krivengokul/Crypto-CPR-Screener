@@ -1,7 +1,18 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from "react";
-import { RefreshCw, CheckCircle2, XCircle, AlertCircle, ExternalLink, ChevronDown, ChevronRight, Search } from "lucide-react";
+import {
+  RefreshCw,
+  CheckCircle2,
+  XCircle,
+  AlertCircle,
+  ExternalLink,
+  ChevronDown,
+  ChevronRight,
+  ChevronLeft,
+  Search,
+  Calendar as CalendarIcon,
+} from "lucide-react";
 import {
   BACKTEST_TARGETS,
   BACKTEST_CATEGORIES,
@@ -17,6 +28,173 @@ import {
 } from "@/lib/backtest";
 import { passesPattern, matchesPatternFlag, fmt, getChartUrl, hasKnownChartMapping, getWidthCategory } from "./ScreenerUtils";
 import { renderTodayPatternBadges, renderPrevPatternBadge } from "./ScreenerTableRow";
+
+// --- Small UTC date helpers (all dates in this panel are UTC ISO strings) ---
+function toISO(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+function fromISO(iso: string): Date {
+  return new Date(iso + "T00:00:00.000Z");
+}
+function addDaysUTC(d: Date, n: number): Date {
+  const c = new Date(d);
+  c.setUTCDate(c.getUTCDate() + n);
+  return c;
+}
+function startOfMonthUTC(d: Date): Date {
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1));
+}
+function daysInMonthUTC(d: Date): number {
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
+}
+function formatDisplay(iso: string): string {
+  return fromISO(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+}
+
+/**
+ * Calendar-based replacement for the old native <input type="date">.
+ * Shows Yesterday / 7d ago / 30d ago quick-picks (clamped to min/max)
+ * above a month grid. All dates are UTC ISO strings ("YYYY-MM-DD").
+ */
+function DateField({
+  label,
+  value,
+  onChange,
+  max,
+  min,
+}: {
+  label: string;
+  value: string;
+  onChange: (iso: string) => void;
+  max?: string;
+  min?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [viewMonth, setViewMonth] = useState(() => startOfMonthUTC(fromISO(value)));
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, []);
+
+  useEffect(() => {
+    if (open) setViewMonth(startOfMonthUTC(fromISO(value)));
+  }, [open, value]);
+
+  const today = new Date();
+  const todayISO = toISO(today);
+  const quickPicks = [
+    { label: "Yesterday", iso: toISO(addDaysUTC(today, -1)) },
+    { label: "7d ago", iso: toISO(addDaysUTC(today, -7)) },
+    { label: "30d ago", iso: toISO(addDaysUTC(today, -30)) },
+  ].filter((q) => (!max || q.iso <= max) && (!min || q.iso >= min));
+
+  const firstWeekday = startOfMonthUTC(viewMonth).getUTCDay();
+  const totalDays = daysInMonthUTC(viewMonth);
+  const cells: (string | null)[] = [
+    ...Array(firstWeekday).fill(null),
+    ...Array.from({ length: totalDays }, (_, i) => toISO(new Date(Date.UTC(viewMonth.getUTCFullYear(), viewMonth.getUTCMonth(), i + 1)))),
+  ];
+
+  return (
+    <div ref={ref} className="relative">
+      <label className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1">{label}</label>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="text-sm px-2.5 py-1.5 rounded-lg border border-border bg-background text-foreground flex items-center gap-2"
+      >
+        <CalendarIcon className="w-3.5 h-3.5 text-muted-foreground" />
+        <span>{formatDisplay(value)}</span>
+      </button>
+
+      {open && (
+        <div className="absolute z-20 mt-1 w-[260px] rounded-lg border border-border bg-popover shadow-lg p-2">
+          {quickPicks.length > 0 && (
+            <div className="flex gap-1.5 flex-wrap mb-2 pb-2 border-b border-border">
+              {quickPicks.map((q) => (
+                <button
+                  key={q.label}
+                  type="button"
+                  onClick={() => {
+                    onChange(q.iso);
+                    setOpen(false);
+                  }}
+                  className={`text-[11px] px-2 py-1 rounded-full ${
+                    value === q.iso ? "bg-blue-500/20 text-blue-300" : "bg-muted/40 text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {q.label}
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="flex items-center justify-between mb-1.5 px-1">
+            <button
+              type="button"
+              onClick={() => setViewMonth((m) => new Date(Date.UTC(m.getUTCFullYear(), m.getUTCMonth() - 1, 1)))}
+              className="text-muted-foreground hover:text-foreground p-1"
+              aria-label="Previous month"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+            </button>
+            <span className="text-xs text-foreground">
+              {viewMonth.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" })}
+            </span>
+            <button
+              type="button"
+              onClick={() => setViewMonth((m) => new Date(Date.UTC(m.getUTCFullYear(), m.getUTCMonth() + 1, 1)))}
+              className="text-muted-foreground hover:text-foreground p-1"
+              aria-label="Next month"
+            >
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <div className="grid grid-cols-7 gap-0.5 text-center">
+            {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
+              <span key={i} className="text-[9px] text-muted-foreground py-1">
+                {d}
+              </span>
+            ))}
+            {cells.map((iso, i) => {
+              if (!iso) return <span key={i} />;
+              const disabled = (!!max && iso > max) || (!!min && iso < min);
+              const isSelected = iso === value;
+              const isToday = iso === todayISO;
+              return (
+                <button
+                  key={iso}
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => {
+                    onChange(iso);
+                    setOpen(false);
+                  }}
+                  className={`text-[11px] rounded-full w-6 h-6 flex items-center justify-center mx-auto ${
+                    isSelected
+                      ? "bg-blue-500 text-white font-medium"
+                      : disabled
+                      ? "text-muted-foreground/30 cursor-not-allowed"
+                      : isToday
+                      ? "text-blue-300 border border-blue-500/40 hover:bg-muted/40"
+                      : "text-foreground/80 hover:bg-muted/40"
+                  }`}
+                >
+                  {Number(iso.slice(-2))}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 
 /**
  * v1 backtest UI — proves out the engine on a handful of patterns (see
@@ -504,39 +682,22 @@ export default function BacktestPanel() {
         )}
 
         {(!isViewOnly || dateMode === "single") ? (
-          <div>
-            <label className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Entry Date (UTC)</label>
-            <input
-              type="date"
-              value={entryDate}
-              onChange={(e) => setEntryDate(e.target.value)}
-              max={new Date().toISOString().slice(0, 10)}
-              className="text-sm px-2.5 py-1.5 rounded-lg border border-border bg-background text-foreground"
-            />
-          </div>
+          <DateField
+            label="Entry Date (UTC)"
+            value={entryDate}
+            onChange={setEntryDate}
+            max={new Date().toISOString().slice(0, 10)}
+          />
         ) : (
           <>
-            <div>
-              <label className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1">From Date (UTC)</label>
-              <input
-                type="date"
-                value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
-                max={toDate}
-                className="text-sm px-2.5 py-1.5 rounded-lg border border-border bg-background text-foreground"
-              />
-            </div>
-            <div>
-              <label className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1">To Date (UTC)</label>
-              <input
-                type="date"
-                value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
-                min={fromDate}
-                max={new Date().toISOString().slice(0, 10)}
-                className="text-sm px-2.5 py-1.5 rounded-lg border border-border bg-background text-foreground"
-              />
-            </div>
+            <DateField label="From Date (UTC)" value={fromDate} onChange={setFromDate} max={toDate} />
+            <DateField
+              label="To Date (UTC)"
+              value={toDate}
+              onChange={setToDate}
+              min={fromDate}
+              max={new Date().toISOString().slice(0, 10)}
+            />
           </>
         )}
         <div>
