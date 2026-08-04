@@ -246,7 +246,7 @@ export function ScreenerTableHeader({
           Pattern
         </th>
         <th className="px-2 py-3 w-20 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          PIVOT LEVEL
+          LEVEL
         </th>
         <th
           className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground min-w-[220px]"
@@ -255,7 +255,7 @@ export function ScreenerTableHeader({
             PIVOT SIZE <SortIcon k="compressionRatio" />
         </th>
         <th
-          className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
+          className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
           onClick={() => toggleSort("change24h")}
         >
           Price <SortIcon k="change24h" />
@@ -481,10 +481,12 @@ export default function ScreenerTableRow({
           <div className="text-xs text-muted-foreground">OPrice: {fmt(r.openPrice)}</div>
         </td>
         <td className={`px-4 py-3 whitespace-nowrap text-xs font-medium min-w-[110px] ${distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).color}`}>
-          <div>{distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).main}</div>
-          {distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).sub && (
-            <div className="text-[10px]">{distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).sub}</div>
-          )}
+          <div>
+            {distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).main}
+            {distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).sub && (
+              <span className="text-[10px] ml-1">{distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).sub}</span>
+            )}
+          </div>
         </td>
         <td
           className="px-4 py-3 whitespace-nowrap text-xs font-medium"
