@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { RefreshCw, CheckCircle2, XCircle, AlertCircle, ExternalLink } from "lucide-react";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { RefreshCw, CheckCircle2, XCircle, AlertCircle, ExternalLink, ChevronDown, ChevronRight, Search } from "lucide-react";
 import {
   BACKTEST_TARGETS,
   BACKTEST_CATEGORIES,
@@ -13,6 +13,7 @@ import {
   type BacktestSource,
   type BacktestCategoryDef,
   type BacktestSubCategoryDef,
+  type BacktestTargetDef,
 } from "@/lib/backtest";
 import { passesPattern, matchesPatternFlag, fmt, getChartUrl, hasKnownChartMapping, getWidthCategory } from "./ScreenerUtils";
 import { renderTodayPatternBadges, renderPrevPatternBadge } from "./ScreenerTableRow";
@@ -66,6 +67,14 @@ export default function BacktestPanel() {
   });
   const [dateProgress, setDateProgress] = useState({ current: 0, total: 0, date: "" });
 
+  // Pattern picker (replaces the old native <select>) — supports search
+  // and collapsible top-level groups, which a native <select>/<option>
+  // list can't do.
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerQuery, setPickerQuery] = useState("");
+  const [expandedCats, setExpandedCats] = useState<Set<string>>(new Set());
+  const pickerRef = useRef<HTMLDivElement>(null);
+
   const SUBCATEGORY_SEP = "::";
 
   const isCategory = BACKTEST_CATEGORIES.some((c) => c.key === selectedKey);
@@ -115,6 +124,80 @@ export default function BacktestPanel() {
     list.splice(insertAt, 0, overlap);
     return list;
   })();
+
+  // Resolve each category's nested keys into full BacktestTargetDef objects
+  // once, so the picker can filter/render without re-searching
+  // BACKTEST_TARGETS on every keystroke.
+  type ResolvedSub = { sub: BacktestSubCategoryDef; subPatterns: BacktestTargetDef[] };
+  type ResolvedCat = { cat: BacktestCategoryDef; directPatterns: BacktestTargetDef[]; subCats: ResolvedSub[] };
+  const categoryTree: ResolvedCat[] = useMemo(
+    () =>
+      orderedCategories.map((cat) => ({
+        cat,
+        directPatterns: (cat.subPatternKeys ?? [])
+          .map((pk) => BACKTEST_TARGETS.find((t) => t.key === pk))
+          .filter((t): t is BacktestTargetDef => !!t),
+        subCats: (cat.subCategories ?? []).map((sub) => ({
+          sub,
+          subPatterns: sub.subPatternKeys
+            .map((pk) => BACKTEST_TARGETS.find((t) => t.key === pk))
+            .filter((t): t is BacktestTargetDef => !!t),
+        })),
+      })),
+    [orderedCategories]
+  );
+
+  const triggerLabel = isCategory
+    ? activeCategory?.label
+    : isPatternOnly && activePatternInfo
+    ? activePatternInfo.sub.label
+    : activeTarget?.label ?? selectedKey;
+
+  // Close on outside click / Escape.
+  useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) setPickerOpen(false);
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setPickerOpen(false);
+    }
+    document.addEventListener("mousedown", onDocClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDocClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, []);
+
+  // On open, expand whichever group contains the current selection and
+  // clear any leftover search text.
+  useEffect(() => {
+    if (!pickerOpen) return;
+    const cat = categoryTree.find(
+      ({ cat, directPatterns, subCats }) =>
+        cat.key === selectedKey ||
+        directPatterns.some((t) => t.key === selectedKey) ||
+        subCats.some((s) => `${cat.key}${SUBCATEGORY_SEP}${s.sub.key}` === selectedKey || s.subPatterns.some((t) => t.key === selectedKey))
+    );
+    setExpandedCats(cat ? new Set([cat.cat.key]) : new Set());
+    setPickerQuery("");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pickerOpen]);
+
+  function toggleCat(key: string) {
+    setExpandedCats((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
+  function selectAndClose(key: string, expandCat?: string) {
+    setSelectedKey(key);
+    if (expandCat) setExpandedCats(new Set([expandCat]));
+    setPickerOpen(false);
+  }
 
   useEffect(() => {
     if (!isViewOnly && dateMode === "range") setDateMode("single");
@@ -246,59 +329,158 @@ export default function BacktestPanel() {
       </p>
 
       <div className="flex flex-wrap items-end gap-3 mb-4">
-        <div>
+        <div ref={pickerRef} className="relative">
           <label className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1">
             Pivot Level / Pattern / View
           </label>
-          <select
-            value={selectedKey}
-            onChange={(e) => setSelectedKey(e.target.value)}
-            className="text-sm px-2.5 py-1.5 rounded-lg border border-border bg-background text-foreground"
+          <button
+            type="button"
+            onClick={() => setPickerOpen((v) => !v)}
+            aria-haspopup="listbox"
+            aria-expanded={pickerOpen}
+            className="text-sm px-2.5 py-1.5 rounded-lg border border-border bg-background text-foreground flex items-center gap-2 min-w-[240px] justify-between"
           >
-            {/*
-             * Flat option list (no <optgroup> headers). Each category
-             * appears as a single selectable "— all (symbol list only)"
-             * row, immediately followed by its patterns and Pivot-Level
-             * sub-categories indented beneath it. This removes the
-             * previous duplicated bold header row above every group.
-             */}
-            {orderedCategories.flatMap((cat) => {
-              const items: React.ReactNode[] = [];
-              items.push(
-                <option key={cat.key} value={cat.key}>
-                  {cat.label}
-                </option>
-              );
-              cat.subPatternKeys?.forEach((pk) => {
-                const t = BACKTEST_TARGETS.find((t) => t.key === pk);
-                if (!t) return;
-                items.push(
-                  <option key={pk} value={pk}>
-                    {"\u00A0\u00A0\u00A0\u00A0"}• {t.label}
-                  </option>
-                );
-              });
-              cat.subCategories?.forEach((sub) => {
-                const subKey = `${cat.key}${SUBCATEGORY_SEP}${sub.key}`;
-                items.push(
-                  <option key={subKey} value={subKey}>
-                    {"\u00A0\u00A0\u00A0\u00A0"}
-                    {"\u21B3"} {sub.label}
-                  </option>
-                );
-                sub.subPatternKeys.forEach((pk) => {
-                  const t = BACKTEST_TARGETS.find((t) => t.key === pk);
-                  if (!t) return;
-                  items.push(
-                    <option key={pk} value={pk}>
-                      {"\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0"}• {t.label}
-                    </option>
-                  );
-                });
-              });
-              return items;
-            })}
-          </select>
+            <span className="truncate">{triggerLabel}</span>
+            <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground shrink-0 transition-transform ${pickerOpen ? "rotate-180" : ""}`} />
+          </button>
+
+          {pickerOpen && (
+            <div
+              role="listbox"
+              className="absolute z-20 mt-1 w-[340px] max-h-[380px] overflow-y-auto rounded-lg border border-border bg-popover shadow-lg"
+            >
+              <div className="sticky top-0 z-10 bg-popover border-b border-border p-2">
+                <div className="flex items-center gap-2 px-2 py-1.5 rounded-md bg-muted/40">
+                  <Search className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                  <input
+                    autoFocus
+                    value={pickerQuery}
+                    onChange={(e) => setPickerQuery(e.target.value)}
+                    placeholder="Search levels, patterns…"
+                    className="bg-transparent text-xs outline-none w-full text-foreground placeholder:text-muted-foreground"
+                  />
+                </div>
+              </div>
+
+              <div className="py-1 px-1">
+                {(() => {
+                  const q = pickerQuery.trim().toLowerCase();
+                  const hit = (s: string) => s.toLowerCase().includes(q);
+                  const blocks = categoryTree
+                    .map(({ cat, directPatterns, subCats }) => {
+                      const catLabelHit = hit(cat.label);
+                      const directHits = directPatterns.filter((t) => !q || catLabelHit || hit(t.label));
+                      const subCatHits = subCats
+                        .map((s) => ({
+                          sub: s.sub,
+                          patternHits: s.subPatterns.filter((t) => !q || catLabelHit || hit(s.sub.label) || hit(t.label)),
+                          subLabelHit: hit(s.sub.label),
+                        }))
+                        .filter((s) => !q || catLabelHit || s.subLabelHit || s.patternHits.length > 0);
+                      const visible = !q || catLabelHit || directHits.length > 0 || subCatHits.length > 0;
+                      if (!visible) return null;
+                      const isExpanded = !!q || expandedCats.has(cat.key);
+                      const subKeyFor = (subKey: string) => `${cat.key}${SUBCATEGORY_SEP}${subKey}`;
+
+                      return (
+                        <div key={cat.key} className="mb-0.5">
+                          <div className="flex items-center">
+                            {!q && (
+                              <button
+                                type="button"
+                                onClick={() => toggleCat(cat.key)}
+                                aria-label={isExpanded ? "Collapse group" : "Expand group"}
+                                className="p-1 text-muted-foreground hover:text-foreground shrink-0"
+                              >
+                                <ChevronRight className={`w-3.5 h-3.5 transition-transform ${isExpanded ? "rotate-90" : ""}`} />
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              role="option"
+                              aria-selected={selectedKey === cat.key}
+                              onClick={() => selectAndClose(cat.key, cat.key)}
+                              className={`flex-1 text-left px-2 py-1.5 rounded-md text-xs font-medium tracking-wide truncate ${
+                                selectedKey === cat.key
+                                  ? "bg-blue-500/20 text-blue-300"
+                                  : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                              } ${q ? "ml-1" : ""}`}
+                            >
+                              {cat.label}
+                            </button>
+                          </div>
+
+                          {isExpanded && (
+                            <div className="ml-3 pl-2 border-l border-border/60 mt-0.5 space-y-0.5">
+                              {directHits.map((t) => (
+                                <button
+                                  key={t.key}
+                                  type="button"
+                                  role="option"
+                                  aria-selected={selectedKey === t.key}
+                                  onClick={() => selectAndClose(t.key, cat.key)}
+                                  className={`w-full flex items-center gap-2 text-left px-2 py-1 rounded-md text-xs font-mono truncate ${
+                                    selectedKey === t.key ? "bg-blue-500/20 text-blue-300" : "text-foreground/80 hover:bg-muted/40"
+                                  }`}
+                                >
+                                  <span className="w-1.5 h-1.5 rounded-full bg-teal-500 shrink-0" />
+                                  <span className="truncate">{t.label}</span>
+                                </button>
+                              ))}
+
+                              {subCatHits.map(({ sub, patternHits }) => {
+                                const subKey = subKeyFor(sub.key);
+                                return (
+                                  <div key={sub.key}>
+                                    <button
+                                      type="button"
+                                      role="option"
+                                      aria-selected={selectedKey === subKey}
+                                      onClick={() => selectAndClose(subKey, cat.key)}
+                                      className={`w-full flex items-center gap-1.5 text-left px-2 py-1 rounded-md text-xs truncate ${
+                                        selectedKey === subKey ? "bg-blue-500/20 text-blue-300" : "text-foreground/90 hover:bg-muted/40"
+                                      }`}
+                                    >
+                                      <span className="text-muted-foreground shrink-0">{"\u21B3"}</span>
+                                      <span className="truncate">{sub.label}</span>
+                                    </button>
+                                    {patternHits.length > 0 && (
+                                      <div className="ml-3 pl-2 border-l border-border/60 mt-0.5 space-y-0.5">
+                                        {patternHits.map((t) => (
+                                          <button
+                                            key={t.key}
+                                            type="button"
+                                            role="option"
+                                            aria-selected={selectedKey === t.key}
+                                            onClick={() => selectAndClose(t.key, cat.key)}
+                                            className={`w-full flex items-center gap-2 text-left px-2 py-1 rounded-md text-xs font-mono truncate ${
+                                              selectedKey === t.key ? "bg-blue-500/20 text-blue-300" : "text-foreground/80 hover:bg-muted/40"
+                                            }`}
+                                          >
+                                            <span className="w-1.5 h-1.5 rounded-full bg-teal-500 shrink-0" />
+                                            <span className="truncate">{t.label}</span>
+                                          </button>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                    .filter((b): b is NonNullable<typeof b> => b !== null);
+
+                  if (q && blocks.length === 0) {
+                    return <div className="px-3 py-6 text-xs text-center text-muted-foreground">No matches for &quot;{pickerQuery}&quot;</div>;
+                  }
+                  return blocks;
+                })()}
+              </div>
+            </div>
+          )}
         </div>
         {isViewOnly && (
           <div>
