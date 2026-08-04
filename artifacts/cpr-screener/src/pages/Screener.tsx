@@ -158,6 +158,7 @@ export default function Screener({
   const [showOBHiExL4U4, setShowOBHiExL4U4] = useState(false);
    const [showLMeXL2U2, setShowLMeXL2U2] = useState(false);
   const [PatternFilter, setPatternFilter] = useState<PatternInfo["label"] | null>(null);
+  const [showPatternList, setShowPatternList] = useState(false);
   // CHANGED: split into two independent states so one pMicro..pUltra
   // selection (prev day's CPR width) and one Micro..Ultra selection
   // (today's CPR width) can be active at the same time.
@@ -1979,8 +1980,19 @@ export default function Screener({
               AND independent of showAll. These always render, regardless of Show All state, and
               are mutually exclusive within their own group. */}
           <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[10px] text-muted-foreground uppercase tracking-wider mr-0.5">PATTERNS:</span>
-              {(
+              <span className="flex items-center gap-1 text-[10px] text-muted-foreground uppercase tracking-wider mr-0.5">
+                PATTERNS:
+                <button
+                  type="button"
+                  onClick={() => setShowPatternList((v) => !v)}
+                  className="flex items-center justify-center w-3.5 h-3.5 rounded-sm border border-border text-muted-foreground hover:text-foreground hover:border-foreground transition-colors leading-none"
+                  title={showPatternList ? "Hide patterns" : "Show patterns"}
+                >
+                  {showPatternList ? "−" : "+"}
+                </button>
+              </span>
+              {showPatternList && (
+              (
                 [
                   { label: "eX-Higher", active: "border-purple-400 text-purple-400" },
                   { label: "eX-Lower", active: "border-fuchsia-400 text-fuchsia-400" },
@@ -2076,7 +2088,8 @@ export default function Screener({
                 >
                   {PatternFilter === label ? `✕ ${label}` : label}
                 </button>
-              ))}
+              ))
+              )}
           </div>
 
           {/* CPR Size filter buttons — 8-tier Micro→Ultra ladder (today's CPR)
