@@ -1313,7 +1313,9 @@ export default function Screener({
         {currentStatus === "done" && (
           <div className="flex flex-col gap-2 mb-3">
           <div className="flex items-center gap-2 flex-wrap">
+            {!showAll && (
             <span className="text-[10px] text-pink-400/90 uppercase tracking-wider mr-0.5 font-semibold">VIEWS:</span>
+            )}
 
             {/* NEW: hR-HAL button — BigCPR Above, placed next to Show All */}
             {activePattern === "structure-bigabove" && !showAll && (
