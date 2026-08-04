@@ -1993,7 +1993,9 @@ export default function Screener({
               AND independent of showAll. These always render, regardless of Show All state, and
               are mutually exclusive within their own group. */}
           <div className="flex items-center gap-1.5 flex-wrap">
+              {showPatternList && (
               <span className="text-[10px] text-muted-foreground uppercase tracking-wider mr-0.5">PATTERNS:</span>
+              )}
               {showPatternList && (
               (
                 [
