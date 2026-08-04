@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import type { CPRResult } from "@/lib/cpr";
 
 /**
- * Refreshes Binance live prices every 30s while status === "done".
+ * Refreshes Binance live prices every 15s while status === "done".
  * Behavior is unchanged from the original inline effect in Screener.tsx —
  * this is a mechanical extraction only.
  */
@@ -53,13 +53,13 @@ export function useBinanceLiveRefresh(
         console.error("[binance-live-refresh] refresh cycle threw", err);
       }
     };
-    const id = setInterval(refresh, 30_000);
+    const id = setInterval(refresh, 15_000);
     return () => clearInterval(id);
   }, [status, allResultsRef, setAllResults, setFiltered]);
 }
 
 /**
- * Refreshes Delta Exchange live prices every 30s while deltaStatus === "done".
+ * Refreshes Delta Exchange live prices every 15s while deltaStatus === "done".
  * Behavior is unchanged from the original inline effect in Screener.tsx —
  * this is a mechanical extraction only.
  */
@@ -107,7 +107,7 @@ export function useDeltaLiveRefresh(
         console.error("[delta-live-refresh] refresh cycle threw", err);
       }
     };
-    const id = setInterval(refresh, 30_000);
+    const id = setInterval(refresh, 15_000);
     return () => clearInterval(id);
   }, [deltaStatus, deltaAllResultsRef, setDeltaAllResults, setDeltaFiltered]);
 }
