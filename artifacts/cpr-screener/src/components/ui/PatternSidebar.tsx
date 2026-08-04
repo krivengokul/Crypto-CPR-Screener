@@ -531,9 +531,7 @@ export default function PatternSidebar({
                     ))}
                 </button>
 
-                {/* Sub-items (chips) — shown when parent is expanded.
-                    These are "Views" (sub-filters of the parent Pattern),
-                    labeled explicitly so it's clear Views != Patterns. */}
+                {/* Sub-items (chips) — shown when parent is expanded */}
                 {isExpanded && children.length > 0 && (
                   <div
                     style={{
@@ -544,28 +542,10 @@ export default function PatternSidebar({
                       paddingBottom: 9,
                       borderLeft: `1px solid ${BORDER_COLOR}`,
                       display: "flex",
-                      flexDirection: "column",
-                      gap: 6,
+                      flexWrap: "wrap",
+                      gap: "5px 5px",
                     }}
                   >
-                    <div
-                      style={{
-                        fontSize: 9,
-                        fontWeight: 700,
-                        letterSpacing: "0.08em",
-                        textTransform: "uppercase",
-                        color: "#fbbf24", // amber-400 — matches VIEWS: label in Screener
-                      }}
-                    >
-                      Views
-                    </div>
-                    <div
-                      style={{
-                        display: "flex",
-                        flexWrap: "wrap",
-                        gap: "5px 5px",
-                      }}
-                    >
                     {children.map((sub) => {
                       const isActiveSub = activePattern === sub.id;
                       const subActiveColor = sub.activeColor ?? ACTIVE_BLUE;
@@ -615,7 +595,6 @@ export default function PatternSidebar({
                         </button>
                       );
                     })}
-                    </div>
                   </div>
                 )}
               </div>
