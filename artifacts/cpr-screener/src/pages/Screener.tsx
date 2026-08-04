@@ -159,6 +159,7 @@ export default function Screener({
    const [showLMeXL2U2, setShowLMeXL2U2] = useState(false);
   const [PatternFilter, setPatternFilter] = useState<PatternInfo["label"] | null>(null);
   const [showPatternList, setShowPatternList] = useState(false);
+  const [showSizeList, setShowSizeList] = useState(false);
   // CHANGED: split into two independent states so one pMicro..pUltra
   // selection (prev day's CPR width) and one Micro..Ultra selection
   // (today's CPR width) can be active at the same time.
@@ -1139,6 +1140,19 @@ export default function Screener({
                 Patterns
                 <span className="leading-none">{showPatternList ? "−" : "+"}</span>
               </button>
+              <button
+                type="button"
+                onClick={() => setShowSizeList((v) => !v)}
+                className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded border transition-colors ${
+                  showSizeList
+                    ? "border-foreground text-foreground"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+                title={showSizeList ? "Hide CPR size filters" : "Show CPR size filters"}
+              >
+                Size
+                <span className="leading-none">{showSizeList ? "−" : "+"}</span>
+              </button>
             </div>
           )}
 
@@ -1994,7 +2008,7 @@ export default function Screener({
               are mutually exclusive within their own group. */}
           <div className="flex items-center gap-1.5 flex-wrap">
               {showPatternList && (
-              <span className="text-[10px] text-muted-foreground uppercase tracking-wider mr-0.5">PATTERNS:</span>
+              <span className="text-[10px] text-sky-400/90 uppercase tracking-wider mr-0.5 font-semibold">PATTERNS:</span>
               )}
               {showPatternList && (
               (
@@ -2105,8 +2119,9 @@ export default function Screener({
               activePattern and showAll. */}
           {/* CPR Size — prev day's width (pMicro..pUltra). Own row, own state
               (prevWidthFilter) — independent of the today's-width row below. */}
+          {showSizeList && (
           <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[10px] text-muted-foreground uppercase tracking-wider mr-0.5">CPR Size (Prev):</span>
+              <span className="text-[10px] text-fuchsia-400/90 uppercase tracking-wider mr-0.5 font-semibold">CPR Size (Prev):</span>
               {(
                 [
                   { key: "micro",  label: "pMicro",  range: "≤0.10%",         active: "border-violet-400 text-violet-400" },
@@ -2133,11 +2148,11 @@ export default function Screener({
                 </button>
               ))}
           </div>
+          )}
 
-          {/* CPR Size — today's width (Micro..Ultra). Own row, own state
-              (todayWidthFilter) — can be combined with a selection above. */}
+          {showSizeList && (
           <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[10px] text-muted-foreground uppercase tracking-wider mr-0.5">CPR Size (Today):</span>
+              <span className="text-[10px] text-cyan-400/90 uppercase tracking-wider mr-0.5 font-semibold">CPR Size (Today):</span>
               {(
                 [
                   { key: "micro",   label: "Micro",   range: "≤0.10%",         active: "border-violet-400 text-violet-400" },
@@ -2164,12 +2179,13 @@ export default function Screener({
                 </button>
               ))}
           </div>
+          )}
 
           {/* Price Level filter buttons — own row, below CPR Size. Mutually
               exclusive with each other via the single pdhPdlFilter state,
               independent of activePattern and showAll. */}
           <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[10px] text-muted-foreground uppercase tracking-wider mr-0.5">Price Level:</span>
+              <span className="text-[10px] text-emerald-400/90 uppercase tracking-wider mr-0.5 font-semibold">Price Level:</span>
 
               <button
                 onClick={() => setPdhPdlFilter((v) => (v === "above" ? null : "above"))}
