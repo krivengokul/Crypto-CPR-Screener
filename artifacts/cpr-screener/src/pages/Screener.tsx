@@ -1110,11 +1110,11 @@ export default function Screener({
         />
 
         {/* Controls */}
-        <div className="flex flex-wrap items-center gap-3 mb-4">
+        <div className="flex flex-nowrap items-center gap-2 mb-4 overflow-x-auto">
           <button
             onClick={doScan}
             disabled={status === "scanning"}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all disabled:opacity-50"
+            className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-all disabled:opacity-50 shrink-0"
             style={{ background: "linear-gradient(135deg,#3b82f6,#6366f1)", color: "#fff" }}
           >
             <RefreshCw className={`w-3 h-3 ${status === "scanning" ? "animate-spin" : ""}`} />
@@ -1124,7 +1124,7 @@ export default function Screener({
           <button
             onClick={doDeltaScan}
             disabled={deltaStatus === "scanning"}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all disabled:opacity-50"
+            className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-all disabled:opacity-50 shrink-0"
             style={{ background: "linear-gradient(135deg,#8b5cf6,#6d28d9)", color: "#fff" }}
           >
             <RefreshCw className={`w-3 h-3 ${deltaStatus === "scanning" ? "animate-spin" : ""}`} />
@@ -1132,12 +1132,12 @@ export default function Screener({
           </button>
 
           {canShowCombined && (
-            <div className="flex rounded-lg border border-border overflow-hidden text-xs">
+            <div className="flex rounded-lg border border-border overflow-hidden text-xs shrink-0">
               {(["binance", "delta", "combined"] as ActiveTab[]).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className="px-3 py-1.5 transition-colors capitalize"
+                  className="px-2.5 py-1 transition-colors capitalize"
                   style={{
                     background: activeTab === tab ? "#3b82f6" : "transparent",
                     color: activeTab === tab ? "#fff" : "#8ba3bc",
@@ -1150,7 +1150,7 @@ export default function Screener({
           )}
 
           {currentStatus === "done" && (
-            <div className="flex items-center gap-2 text-sm">
+            <div className="flex items-center gap-1.5 text-xs shrink-0">
               <span className="text-foreground font-medium">
                 {anySubFilter
                   ? displayed.length
@@ -1204,7 +1204,7 @@ export default function Screener({
                   setShowOBWLoU4L4(false);
                   setShowOBHiExL4U4(false);
                 }}
-                className={`flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded border border-border transition-colors ${showAll ? "bg-foreground/15 text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                className={`flex items-center gap-0.5 text-xs font-bold px-2 py-1 rounded border border-border transition-colors shrink-0 ${showAll ? "bg-foreground/15 text-foreground" : "text-muted-foreground hover:text-foreground"}`}
               >
                 <span className="leading-none">{showAll ? "−" : "+"}</span>
                 Show All
@@ -1212,7 +1212,7 @@ export default function Screener({
               <button
                 type="button"
                 onClick={() => setShowPatternList((v) => !v)}
-                className={`flex items-center gap-1 text-xs font-bold uppercase tracking-wide px-2.5 py-1 rounded border border-border transition-colors ${
+                className={`flex items-center gap-0.5 text-xs font-bold uppercase tracking-wide px-2 py-1 rounded border border-border transition-colors shrink-0 ${
                   showPatternList
                     ? "bg-foreground/15 text-foreground"
                     : "text-muted-foreground hover:text-foreground"
@@ -1225,7 +1225,7 @@ export default function Screener({
               <button
                 type="button"
                 onClick={() => setShowSizeList((v) => !v)}
-                className={`flex items-center gap-1 text-xs font-bold uppercase tracking-wide px-2.5 py-1 rounded border border-border transition-colors ${
+                className={`flex items-center gap-0.5 text-xs font-bold uppercase tracking-wide px-2 py-1 rounded border border-border transition-colors shrink-0 ${
                   showSizeList
                     ? "bg-foreground/15 text-foreground"
                     : "text-muted-foreground hover:text-foreground"
@@ -1238,7 +1238,7 @@ export default function Screener({
               <button
                 type="button"
                 onClick={() => setShowEntryTimeList((v) => !v)}
-                className={`flex items-center gap-1 text-xs font-bold uppercase tracking-wide px-2.5 py-1 rounded border border-border transition-colors ${
+                className={`flex items-center gap-0.5 text-xs font-bold uppercase tracking-wide px-2 py-1 rounded border border-border transition-colors shrink-0 ${
                   showEntryTimeList
                     ? "bg-foreground/15 text-foreground"
                     : "text-muted-foreground hover:text-foreground"
@@ -1251,7 +1251,7 @@ export default function Screener({
               <button
                 type="button"
                 onClick={() => setShowExitTimeList((v) => !v)}
-                className={`flex items-center gap-1 text-xs font-bold uppercase tracking-wide px-2.5 py-1 rounded border border-border transition-colors ${
+                className={`flex items-center gap-0.5 text-xs font-bold uppercase tracking-wide px-2 py-1 rounded border border-border transition-colors shrink-0 ${
                   showExitTimeList
                     ? "bg-foreground/15 text-foreground"
                     : "text-muted-foreground hover:text-foreground"
@@ -1264,14 +1264,14 @@ export default function Screener({
             </div>
           )}
 
-          <div className="relative ml-auto">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+          <div className="relative ml-auto shrink-0">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
             <input
               type="search"
               placeholder="Search symbol…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-8 pr-3 py-1.5 text-sm rounded-lg border border-border bg-card text-foreground w-44 focus:outline-none focus:ring-1 focus:ring-primary"
+              className="pl-7 pr-2 py-1 text-xs rounded-lg border border-border bg-card text-foreground w-32 focus:outline-none focus:ring-1 focus:ring-primary"
             />
           </div>
         </div>
