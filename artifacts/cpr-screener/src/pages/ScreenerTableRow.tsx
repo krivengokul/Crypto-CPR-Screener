@@ -1,5 +1,5 @@
 import { Fragment } from "react";
-import { ExternalLink, ChevronUp, ChevronDown, ArrowUpDown } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 
 /**
  * PATTERN_BADGE_CLASSES — single source of truth for pattern badge colours.
@@ -224,12 +224,11 @@ export function ScreenerTableHeader({
   sortDir,
   toggleSort,
 }: ScreenerTableHeaderProps) {
-  const SortIcon = ({ k }: { k: SortKey }) =>
-    sortKey === k
-      ? sortDir === "asc"
-        ? <ChevronUp className="w-3 h-3 inline ml-1 text-primary" />
-        : <ChevronDown className="w-3 h-3 inline ml-1 text-primary" />
-      : <ArrowUpDown className="w-3 h-3 inline ml-1 opacity-30" />;
+  const SortIcon = ({ k }: { k: SortKey }) => (
+    <span className="text-[10px] ml-1 text-white">
+      {sortKey === k ? (sortDir === "asc" ? "▲" : "▼") : "↕"}
+    </span>
+  );
 
   return (
     <thead>
