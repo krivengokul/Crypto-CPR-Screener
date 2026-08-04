@@ -1265,13 +1265,13 @@ export default function Screener({
           )}
 
           <div className="relative ml-auto shrink-0">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
             <input
               type="search"
               placeholder="Search symbol…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-7 pr-2 py-1 text-xs rounded-lg border border-border bg-card text-foreground w-32 focus:outline-none focus:ring-1 focus:ring-primary"
+              className="pl-8 pr-2 py-1 text-xs rounded-lg border border-border bg-card text-foreground w-36 focus:outline-none focus:ring-1 focus:ring-primary"
             />
           </div>
         </div>
