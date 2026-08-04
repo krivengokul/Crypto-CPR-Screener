@@ -1252,13 +1252,13 @@ export function distanceFromCPR(
 ): { main: string; sub: string; color: string } {
   if (price > tc) {
     const pct = ((price - tc) / tc) * 100;
-    return { main: `+${pct.toFixed(2)}%`, sub: "above TC", color: "text-green-400" };
+    return { main: `+${pct.toFixed(2)}%`, sub: ">TC", color: "text-green-400" };
   }
   if (price < bc) {
     const pct = ((bc - price) / bc) * 100;
-    return { main: `−${pct.toFixed(2)}%`, sub: "below BC", color: "text-destructive" };
+    return { main: `−${pct.toFixed(2)}%`, sub: "<BC", color: "text-destructive" };
   }
-  return { main: "Inside", sub: "CPR", color: "text-yellow-500" };
+  return { main: "IN-CPR", sub: "", color: "text-yellow-500" };
 }
 
 /**

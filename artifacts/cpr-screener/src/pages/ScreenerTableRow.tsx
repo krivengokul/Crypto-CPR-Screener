@@ -245,14 +245,14 @@ export function ScreenerTableHeader({
         <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           Pattern
         </th>
-        <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+        <th className="px-2 py-3 w-20 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           PIVOT LEVEL
         </th>
         <th
           className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground min-w-[220px]"
           onClick={() => toggleSort("compressionRatio")}
         >
-          PIVOT SIZE <SortIcon k="compressionRatio" />
+            PIVOT SIZE <SortIcon k="compressionRatio" />
         </th>
         <th
           className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
@@ -261,7 +261,7 @@ export function ScreenerTableHeader({
           Price <SortIcon k="change24h" />
         </th>
         <th
-          className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
+          className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground min-w-[110px]"
           onClick={() => toggleSort("priceVsCpr")}
         >
           Price/CPR <SortIcon k="priceVsCpr" />
@@ -419,8 +419,8 @@ export default function ScreenerTableRow({
           {renderTodayPatternBadges(r)}
           {renderPrevPatternBadge(r)}
         </td>
-        <td className="px-4 py-3 whitespace-nowrap">
-          <div className="flex flex-wrap gap-1">
+        <td className="px-2 py-3 w-20">
+          <div className="flex flex-wrap gap-1 max-w-[90px]">
             {r.cprRising && <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">Above</span>}
             {r.cprFalling && <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 font-medium">Below</span>}
             {passesPattern(r, "inside-cpr") && <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 font-medium">Inside</span>}
@@ -472,15 +472,19 @@ export default function ScreenerTableRow({
         <td className="px-4 py-3 font-mono whitespace-nowrap">
           <div className="text-sm font-bold text-foreground">
             {fmt(r.currentPrice)}
+            <span className="text-muted-foreground">(</span>
             <span className={r.change24h >= 0 ? "text-green-400" : "text-destructive"}>
-              ({fmtPct(r.change24h)})
+              {fmtPct(r.change24h)}
             </span>
+            <span className="text-muted-foreground">)</span>
           </div>
           <div className="text-xs text-muted-foreground">OPrice: {fmt(r.openPrice)}</div>
         </td>
-        <td className={`px-4 py-3 whitespace-nowrap text-xs font-medium ${distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).color}`}>
+        <td className={`px-4 py-3 whitespace-nowrap text-xs font-medium min-w-[110px] ${distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).color}`}>
           <div>{distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).main}</div>
-          <div>{distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).sub}</div>
+          {distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).sub && (
+            <div className="text-[10px]">{distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).sub}</div>
+          )}
         </td>
         <td
           className="px-4 py-3 whitespace-nowrap text-xs font-medium"
