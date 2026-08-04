@@ -181,6 +181,19 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
   },
+  // NEW: "TiMi-cOL2U2-pL4:5AM" — nested under "BigCPR Above"
+  // (structure-bigabove) via the new "cOL2U2" Pattern sub-category. Base
+  // structure-bigabove condition + raw cOL2U2 flag + today's PDH below
+  // today's R1 + pTiny/Mini width combo + prev day's own pattern (prevCPR
+  // vs ppCPR) being cOL4U4 (the "p-cOL4U4" badge). Bearish, targets PL4
+  // (prev day's S4) by ~5AM.
+  {
+    key: "TiMi-cOL2U2-pL4:5AM",
+    label: "TiMi-cOL2U2-pL4:5AM",
+    direction: "bearish",
+    targetLabel: "PL4 (prev day's S4)",
+    getTarget: (r) => r.prevCPR.s4,
+  },
 ];
 
 /**
@@ -294,7 +307,22 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
   // existing passesPattern() case in ScreenerUtils.tsx, so runCategoryScan
   // works with no further changes.
   { key: "littlebelow", label: "LittleCPR Below" },
-  { key: "structure-bigabove", label: "BigCPR Above" },
+  // NEW: "cOL2U2" Pattern sub-category (arrow), same shape as cOU3L4/
+  // LoU3L3/HiL4U3/cOL3U3/eXL3U1/eXL3TC/eXHiL2L1/eXU4L1 elsewhere. Base
+  // condition = parent structure-bigabove's condition AND the raw cOL2U2
+  // flag (see matchesPatternFlag in ScreenerUtils.tsx). Nests the new
+  // "TiMi-cOL2U2-pL4:5AM" pattern.
+  {
+    key: "structure-bigabove",
+    label: "BigCPR Above",
+    subCategories: [
+      {
+        key: "cOL2U2",
+        label: "cOL2U2",
+        subPatternKeys: ["TiMi-cOL2U2-pL4:5AM"],
+      },
+    ],
+  },
   {
     key: "u1-gt-pu4",
     label: "U1 > pU4",

@@ -140,6 +140,17 @@ export const subPatterns: Record<string, SubPattern[]> = {
     { id: "1T-HiL4U4-FAU4",          label: "1T-HiL4U4-FAU4" },
     { id: "1S-cOL3U4-FAU4:1AM",        label: "1S-cOL3U4-FAU4:1AM" },
     { id: "TS-cOL3U4-AU4R:4PM",        label: "TS-cOL3U4-AU4R:4PM" },
+    // NEW: TiMi-cOL2U2-pL4:5AM — BigCPR Above + Pattern cOL2U2, pTiny/Mini
+    // width combo, today's PDH below today's R1, prev day pattern
+    // p-cOL4U4. Bearish, targets PL4 (prev day's S4) by ~5AM. Rose color
+    // family to visually flag it as bearish, same as the other pL4 views.
+    {
+      id: "TiMi-cOL2U2-pL4:5AM",
+      label: "TiMi-cOL2U2-pL4:5AM",
+      activeColor: "#fb7185",              // rose-400 border
+      activeText:  "#fda4af",              // rose-300 text
+      activeBg:    "rgba(244, 63, 94, 0.14)", // rose-500 tint
+    },
   ],
   "u1-gt-pu4": [
     { id: "SL-eXL3U1-FAU4:3PM", label: "SL-eXL3U1-FAU4:3PM",

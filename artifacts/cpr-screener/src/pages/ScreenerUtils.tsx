@@ -838,6 +838,25 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.todayCPR.bc > r.prevCPR.r1 &&
         r.compressionRatio >= 300
       );
+    // NEW: TiMi-cOL2U2-pL4:5AM — BigCPR Above sub-pattern, nested under the
+    // "cOL2U2" Pattern sub-category. Base structure-bigabove condition
+    // (cprRising + strWideCPR + !(today R1 > prev R4)) PLUS: today's raw
+    // cOL2U2 flag, today's PDH below today's R1, prev CPR width category
+    // Tiny (0.10%-0.22%), today CPR width category Mini (0.22%-0.60%), and
+    // the PREVIOUS day's own pivot sub-label (prevCPR vs ppCPR) being
+    // cOL4U4 — i.e. the "p-cOL4U4" badge shown by renderPrevPatternBadge in
+    // ScreenerTableRow.tsx. Bearish, targets PL4 (prev day's S4) by ~5AM.
+    case "TiMi-cOL2U2-pL4:5AM":
+      return (
+        r.cprRising &&
+        r.strWideCPR &&
+        !(r.todayCPR.r1 > r.prevCPR.r4) &&
+        r.cOL2U2 &&
+        r.todayCPR.prevHigh < r.todayCPR.r1 &&
+        r.prevCPR.widthPct > 0.10 && r.prevCPR.widthPct <= 0.22 &&    // pTiny
+        r.todayCPR.widthPct > 0.22 && r.todayCPR.widthPct <= 0.60 &&  // Mini
+        computePivotSubLabel(r.prevCPR, r.ppCPR) === "cOL4U4"
+      );
     case "structure-bigbelow":
       return r.cprFalling && r.strWideCPR && !(r.todayCPR.s1 < r.prevCPR.s4);
     case "bigbelow-pmini-pl3":
@@ -1014,6 +1033,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     { key: "1T-HiL4U4-FAU4", direction: "up" },
     { key: "1S-cOL3U4-FAU4:1AM", direction: "up" },
     { key: "TS-cOL3U4-AU4R:4PM", direction: "up" },
+    { key: "TiMi-cOL2U2-pL4:5AM", direction: "down" },
   ],
   "u1-gt-pu4": [
     { key: "SL-eXL3U1-FAU4:3PM", direction: "up" },

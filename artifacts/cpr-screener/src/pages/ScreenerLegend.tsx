@@ -410,6 +410,11 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             <div className="text-xs font-semibold text-rose-400 mb-1">Pivot Level: Tiny / 1-Line Inside</div>
             <div className="text-xs text-muted-foreground">Today &amp; Prev PDH/L Above, not Outside CPR — PCPR &gt;300% compressed &amp; below today&apos;s S1, or a single-line inside CPR</div>
           </>
+        ) : activePattern === "TiMi-cOL2U2-pL4:5AM" ? (
+          <>
+            <div className="text-xs font-semibold text-rose-400 mb-1">Pattern: cOL2U2  PCPR: Tiny  CPR: Mini</div>
+            <div className="text-xs text-muted-foreground">Wide CPR Above base, plus Pattern cOL2U2, today&apos;s PDH &lt; today&apos;s R1, prev day pattern p-cOL4U4</div>
+          </>
         ) : activePattern === "falling" ? (
           <>
             <div className="text-xs font-semibold mb-1 text-destructive">CPR Falling</div>
@@ -611,6 +616,11 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
           <>
             <div className="text-xs font-semibold text-rose-400 mb-1">Target: BPL4&nbsp;&nbsp;Time: 5AM</div>
             <div className="text-xs text-muted-foreground">Expected move below prev S4 (PL4) by ~5AM</div>
+          </>
+        ) : activePattern === "TiMi-cOL2U2-pL4:5AM" ? (
+          <>
+            <div className="text-xs font-semibold text-rose-400 mb-1">Target: PL4&nbsp;&nbsp;Time: 5AM</div>
+            <div className="text-xs text-muted-foreground">Expected move below prev day&apos;s S4 (PL4) by ~5AM</div>
           </>
         ) : null}
       </div>
