@@ -1123,9 +1123,10 @@ export default function Screener({
                   setShowOBWLoU4L4(false);
                   setShowOBHiExL4U4(false);
                 }}
-                className={`text-xs font-bold uppercase tracking-wide px-2.5 py-1 rounded border border-border transition-colors ${showAll ? "bg-foreground/15 text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                className={`flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded border border-border transition-colors ${showAll ? "bg-foreground/15 text-foreground" : "text-muted-foreground hover:text-foreground"}`}
               >
-                {showAll ? "✕ Show All" : "Show All"}
+                Show All
+                <span className="leading-none">{showAll ? "−" : "+"}</span>
               </button>
               <button
                 type="button"
