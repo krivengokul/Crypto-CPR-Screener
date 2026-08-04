@@ -1014,7 +1014,7 @@ export default function BacktestPanel() {
                           );
                         })()}
                       </td>
-                      <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{r.entryDate}</td>
+                      <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{formatDisplay(r.entryDate)}</td>
                       <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{fmt(r.targetLevel)}</td>
                       <td className="px-3 py-2">
                         {r.result === "pass" && (
@@ -1035,7 +1035,7 @@ export default function BacktestPanel() {
                       </td>
                       <td className="px-3 py-2 text-xs text-muted-foreground">
                         {r.hitDate
-                          ? `${r.hitDate}${
+                          ? `${formatDisplay(r.hitDate)}${
                               r.daysToHit === 0 ? " (entry day)" : r.daysToHit === 1 ? " (next day)" : " (2 days later)"
                             }`
                           : "—"}
