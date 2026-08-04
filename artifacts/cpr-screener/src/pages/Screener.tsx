@@ -1126,6 +1126,19 @@ export default function Screener({
               >
                 {showAll ? "✕ Show All" : "Show All"}
               </button>
+              <button
+                type="button"
+                onClick={() => setShowPatternList((v) => !v)}
+                className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded border transition-colors ${
+                  showPatternList
+                    ? "border-foreground text-foreground"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+                title={showPatternList ? "Hide patterns" : "Show patterns"}
+              >
+                Patterns
+                <span className="leading-none">{showPatternList ? "−" : "+"}</span>
+              </button>
             </div>
           )}
 
@@ -1980,17 +1993,7 @@ export default function Screener({
               AND independent of showAll. These always render, regardless of Show All state, and
               are mutually exclusive within their own group. */}
           <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="flex items-center gap-1 text-[10px] text-muted-foreground uppercase tracking-wider mr-0.5">
-                PATTERNS:
-                <button
-                  type="button"
-                  onClick={() => setShowPatternList((v) => !v)}
-                  className="flex items-center justify-center w-3.5 h-3.5 rounded-sm border border-border text-muted-foreground hover:text-foreground hover:border-foreground transition-colors leading-none"
-                  title={showPatternList ? "Hide patterns" : "Show patterns"}
-                >
-                  {showPatternList ? "−" : "+"}
-                </button>
-              </span>
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wider mr-0.5">PATTERNS:</span>
               {showPatternList && (
               (
                 [
