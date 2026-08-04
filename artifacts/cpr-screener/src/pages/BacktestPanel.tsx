@@ -11,6 +11,7 @@ import {
   ChevronRight,
   ChevronLeft,
   Search,
+  Info,
   Calendar as CalendarIcon,
 } from "lucide-react";
 import {
@@ -49,6 +50,57 @@ function daysInMonthUTC(d: Date): number {
 }
 function formatDisplay(iso: string): string {
   return fromISO(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+}
+
+const CPR_WIDTH_TIERS = [
+  { label: "Micro", range: "≤0.10%", sample: 0.1 },
+  { label: "Tiny", range: "0.10–0.22%", sample: 0.15 },
+  { label: "Mini", range: "0.22–0.50%", sample: 0.3 },
+  { label: "Small", range: "0.60–1.10%", sample: 0.8 },
+  { label: "Medium", range: "1.10–2.00%", sample: 1.5 },
+  { label: "Large", range: "2.00–5.00%", sample: 3 },
+  { label: "Mega", range: "5.00–10.00%", sample: 7 },
+  { label: "Ultra", range: ">10.00%", sample: 11 },
+] as const;
+
+function PivotSizeInfo() {
+  return (
+    <span className="group relative inline-flex align-middle normal-case tracking-normal">
+      <button
+        type="button"
+        aria-label="CPR width category guide"
+        className="inline-flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+      >
+        <Info className="h-3.5 w-3.5" />
+      </button>
+      <span
+        role="tooltip"
+        className="pointer-events-none absolute left-1/2 top-full z-30 mt-1.5 hidden w-[282px] -translate-x-1/2 rounded-md border border-border bg-popover p-2 text-popover-foreground shadow-lg group-hover:block group-focus-within:block"
+      >
+        <span className="mb-1.5 flex items-center justify-between border-b border-border pb-1.5">
+          <span className="text-[11px] font-semibold">CPR width</span>
+          <span className="text-[9px] text-muted-foreground">tight → volatile</span>
+        </span>
+        <span className="grid grid-cols-4 gap-1">
+          {CPR_WIDTH_TIERS.map((tier) => {
+            const category = getWidthCategory(tier.sample);
+            return (
+              <span
+                key={tier.label}
+                className={`flex min-w-0 flex-col items-center rounded border px-1 py-1 leading-tight ${category.classes}`}
+              >
+                <span className="text-[10px] font-semibold">{tier.label}</span>
+                <span className="mt-0.5 whitespace-nowrap font-mono text-[8px]">{tier.range}</span>
+              </span>
+            );
+          })}
+        </span>
+        <span className="mt-1.5 block text-[9px] leading-tight text-muted-foreground">
+          <span className="font-semibold text-foreground">p</span> prefix = previous day (muted badge)
+        </span>
+      </span>
+    </span>
+  );
 }
 
 /**
@@ -807,7 +859,9 @@ export default function BacktestPanel() {
                       Pattern
                     </th>
                     <th className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[220px]">
-                      Pivot Size
+                      <span className="inline-flex items-center gap-1">
+                        Pivot Size <PivotSizeInfo />
+                      </span>
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Close
@@ -962,7 +1016,9 @@ export default function BacktestPanel() {
                       Symbol
                     </th>
                     <th className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[220px]">
-                      Pivot Size
+                      <span className="inline-flex items-center gap-1">
+                        Pivot Size <PivotSizeInfo />
+                      </span>
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Entry Date
