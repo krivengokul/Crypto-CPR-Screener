@@ -676,8 +676,8 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
                  (today.s4 > prev.s3 && today.s4 < prev.s2);
 
   // cOU2L2 / cOL2U2 — split by which side (R2 vs S2) moved further.
-  const r2Move = Math.abs(prev.r2 - today.r2);
-  const s2Move = Math.abs(prev.s2 - today.s2);
+  const r2Move = Math.abs(prev.r2 - today.r4);
+  const s2Move = Math.abs(prev.s2 - today.s4);
   const cOU2L2Base = (today.s4 > prev.s2 && today.s4 < prev.s1) &&
                      (today.r4 > prev.r1 && today.r4 < prev.r2);
   const cOU2L2 = cOU2L2Base && r2Move > s2Move;
