@@ -1110,7 +1110,7 @@ export default function Screener({
         />
 
         {/* Controls */}
-        <div className="flex flex-nowrap items-center gap-2 mb-4 overflow-x-auto">
+        <div className="flex flex-wrap items-center gap-2 mb-4">
           <button
             onClick={doScan}
             disabled={status === "scanning"}
