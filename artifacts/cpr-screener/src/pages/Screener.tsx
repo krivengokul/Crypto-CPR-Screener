@@ -1123,17 +1123,17 @@ export default function Screener({
                   setShowOBWLoU4L4(false);
                   setShowOBHiExL4U4(false);
                 }}
-                className={`text-xs px-2.5 py-1 rounded border transition-colors ${showAll ? "border-foreground text-foreground" : "border-border text-muted-foreground hover:text-foreground"}`}
+                className={`text-xs font-bold uppercase tracking-wide px-2.5 py-1 rounded border border-border transition-colors ${showAll ? "bg-foreground/15 text-foreground" : "text-muted-foreground hover:text-foreground"}`}
               >
                 {showAll ? "✕ Show All" : "Show All"}
               </button>
               <button
                 type="button"
                 onClick={() => setShowPatternList((v) => !v)}
-                className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded border transition-colors ${
+                className={`flex items-center gap-1 text-xs font-bold uppercase tracking-wide px-2.5 py-1 rounded border border-border transition-colors ${
                   showPatternList
-                    ? "border-foreground text-foreground"
-                    : "border-border text-muted-foreground hover:text-foreground"
+                    ? "bg-foreground/15 text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
                 title={showPatternList ? "Hide patterns" : "Show patterns"}
               >
@@ -1143,10 +1143,10 @@ export default function Screener({
               <button
                 type="button"
                 onClick={() => setShowSizeList((v) => !v)}
-                className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded border transition-colors ${
+                className={`flex items-center gap-1 text-xs font-bold uppercase tracking-wide px-2.5 py-1 rounded border border-border transition-colors ${
                   showSizeList
-                    ? "border-foreground text-foreground"
-                    : "border-border text-muted-foreground hover:text-foreground"
+                    ? "bg-foreground/15 text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
                 title={showSizeList ? "Hide CPR size filters" : "Show CPR size filters"}
               >
@@ -1243,7 +1243,7 @@ export default function Screener({
         {currentStatus === "done" && (
           <div className="flex flex-col gap-2 mb-3">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[10px] text-muted-foreground uppercase tracking-wider mr-0.5">VIEWS:</span>
+            <span className="text-[10px] text-amber-400/90 uppercase tracking-wider mr-0.5 font-semibold">VIEWS:</span>
 
             {/* NEW: hR-HAL button — BigCPR Above, placed next to Show All */}
             {activePattern === "structure-bigabove" && !showAll && (
@@ -2234,7 +2234,7 @@ export default function Screener({
                 {pdhPdlFilter === "belowpl4" ? "✕ <PL4" : "<PL4"}
               </button>
               {/* PDH/PDL: subgroup — S1-R1 IN, PDH>U1, PDL<L1 (same row, separator label) */}
-              <span className="text-[10px] text-muted-foreground uppercase tracking-wider ml-2 mr-0.5">PDH/PDL:</span>
+              <span className="text-[10px] text-rose-400/90 uppercase tracking-wider ml-2 mr-0.5 font-semibold">PDH/PDL:</span>
               {/* S1R1 IN — S1/R1 (today or prev) sits inside/touching today's or prev's CPR band. */}
               <button
                 onClick={() => setPdhPdlFilter((v) => (v === "s1r1in" ? null : "s1r1in"))}
