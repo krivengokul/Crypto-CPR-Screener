@@ -21,32 +21,22 @@ export function useBinanceLiveRefresh(
         return;
       }
       try {
-        const symbols = results.map((r) => r.symbol);
-        const chunks: string[][] = [];
-        for (let i = 0; i < symbols.length; i += 100) chunks.push(symbols.slice(i, i + 100));
         const priceMap = new Map<string, { price: number; change: number }>();
-        let failedChunks = 0;
-        await Promise.all(
-          chunks.map(async (chunk) => {
-            const res = await fetch(
-              `https://api.binance.com/api/v3/ticker/24hr?symbols=${encodeURIComponent(JSON.stringify(chunk))}&type=MINI`
-            );
-            if (!res.ok) {
-              failedChunks++;
-              console.error(`[binance-live-refresh] ticker/24hr ${res.status} ${res.statusText}`, await res.text().catch(() => ""));
-              return;
-            }
-            const tickers: Array<{ symbol: string; lastPrice: string; openPrice: string }> = await res.json();
-            tickers.forEach((t) => {
-              const price = parseFloat(t.lastPrice);
-              const open  = parseFloat(t.openPrice);
-              priceMap.set(t.symbol, { price, change: open > 0 ? ((price - open) / open) * 100 : 0 });
-            });
-          })
-        );
-        if (failedChunks > 0) {
-          console.warn(`[binance-live-refresh] ${failedChunks}/${chunks.length} chunk(s) failed; ${priceMap.size} symbols updated this cycle`);
+        const res = await fetch("https://api.binance.com/api/v3/ticker/24hr?type=MINI");
+        if (!res.ok) {
+          console.error(`[binance-live-refresh] ticker/24hr ${res.status} ${res.statusText}`, await res.text().catch(() => ""));
+          return;
         }
+        const tickers: Array<{ symbol: string; lastPrice: string; openPrice: string }> = await res.json();
+        // Only keep symbols we actually need — the response covers every
+        // Binance symbol, not just the ones currently in `results`.
+        const wanted = new Set(results.map((r) => r.symbol));
+        tickers.forEach((t) => {
+          if (!wanted.has(t.symbol)) return;
+          const price = parseFloat(t.lastPrice);
+          const open  = parseFloat(t.openPrice);
+          priceMap.set(t.symbol, { price, change: open > 0 ? ((price - open) / open) * 100 : 0 });
+        });
         // Use r.openPrice (the 5:30 AM IST baseline) for % calc
         const apply = (prev: CPRResult[]): CPRResult[] =>
           prev.map((r) => {
