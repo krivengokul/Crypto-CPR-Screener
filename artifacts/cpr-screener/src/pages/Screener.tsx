@@ -160,13 +160,18 @@ export default function Screener({
   const [PatternFilter, setPatternFilter] = useState<PatternInfo["label"] | null>(null);
   const [showPatternList, setShowPatternList] = useState(false);
   const [showSizeList, setShowSizeList] = useState(false);
-  const [showTimeList, setShowTimeList] = useState(false);
+  const [showExitTimeList, setShowExitTimeList] = useState(false);
+  // NEW: ENTRY TIME — mirrors Exit Time's UI (label, 2-row hour grid,
+  // toggle button) but is not yet wired into the display filter chain.
+  // Functionality to filter by entry time will be added in a future update.
+  const [showEntryTimeList, setShowEntryTimeList] = useState(false);
+  const [entryTimeFilter, setEntryTimeFilter] = useState<string | null>(null);
   // NEW: TIME filter — 24 hourly toggles (6AM..5AM next day). Selecting an
   // hour shows only rows that satisfy at least one Views (sub-pattern)
   // whose id/label ends with that hour, e.g. clicking "6PM" matches every
   // sub-pattern id ending in ":6PM" (T1-U4:6AM, MeMi-eXHiL4U3-U4:6PM, etc.)
   // across ALL parent patterns — independent of activePattern.
-  const [timeFilter, setTimeFilter] = useState<string | null>(null);
+  const [exitTimeFilter, setExitTimeFilter] = useState<string | null>(null);
 
   // NEW: full 24hr cycle starting at 5AM through 4AM the next day, split
   // into two 12-item rows: 5AM..4PM on the first line, 5PM..4AM on the
@@ -181,16 +186,16 @@ export default function Screener({
   const TIME_SLOTS_ROW2 = TIME_SLOTS.slice(12);    // 5PM..4AM
 
   // NEW: every sub-pattern (Views) id across every parent pattern whose
-  // id ends with ":<selected time>" — flattened once per timeFilter change
+  // id ends with ":<selected time>" — flattened once per exitTimeFilter change
   // so the display filter below stays a cheap .some() lookup per row.
-  const timeMatchedSubIds = useMemo(() => {
-    if (!timeFilter) return [] as string[];
-    const suffix = `:${timeFilter}`;
+  const exitTimeMatchedSubIds = useMemo(() => {
+    if (!exitTimeFilter) return [] as string[];
+    const suffix = `:${exitTimeFilter}`;
     return Object.values(subPatterns)
       .flat()
       .filter((s) => s.id.endsWith(suffix))
       .map((s) => s.id);
-  }, [timeFilter]);
+  }, [exitTimeFilter]);
   // CHANGED: split into two independent states so one pMicro..pUltra
   // selection (prev day's CPR width) and one Micro..Ultra selection
   // (today's CPR width) can be active at the same time.
@@ -1013,8 +1018,8 @@ export default function Screener({
     // satisfy at least one Views (sub-pattern) targeting that hour, across
     // every parent pattern (independent of activePattern/PatternFilter).
     .filter((r) => {
-      if (!timeFilter) return true;
-      return timeMatchedSubIds.some((id) => passesPattern(r, id));
+      if (!exitTimeFilter) return true;
+      return exitTimeMatchedSubIds.some((id) => passesPattern(r, id));
     })
     .slice()
     .sort((a, b) => {
@@ -1052,7 +1057,7 @@ export default function Screener({
     showBigBelowPMiniPL3 || showBigBelowPMiniRising || showExpU3LtPU4 || showBigBeloweXU4L3AU4 || showBigBelowL1LtPL4 || showL1LtPL4CprLtPL4 || showBigBeloweXU4L2AU4 || showBigBelow1TcOU4L43PM ||
     showBigAbovePL34CL4 || showBAComp || showHAU1 || showHAU1CprAbovePU4 || showHAU1L1AbovePU4 || showHAU1PWideAbove || showHRHAL || showHA55HrL4U34FAU4 || showHiL4U4FAU4 || show1ScoHiFAU4 || show2ScoHiFAU4 || showLBCmprss || showLBC34 || showLBE11 || showLBC2L2U2 ||
     showLBBothTiny || showLBAllUp || showExpU4PU4 || showExpU3PU3 || showOBNLoU4L4 || showOBWLoU4L4 || showOBHiExL4U4 || showLMeXL2U2 ||
-    !!PatternFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter || !!timeFilter;
+    !!PatternFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter || !!exitTimeFilter;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -1194,16 +1199,29 @@ export default function Screener({
               </button>
               <button
                 type="button"
-                onClick={() => setShowTimeList((v) => !v)}
+                onClick={() => setShowEntryTimeList((v) => !v)}
                 className={`flex items-center gap-1 text-xs font-bold uppercase tracking-wide px-2.5 py-1 rounded border border-border transition-colors ${
-                  showTimeList
+                  showEntryTimeList
                     ? "bg-foreground/15 text-foreground"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
-                title={showTimeList ? "Hide time filters" : "Show time filters"}
+                title={showEntryTimeList ? "Hide entry time filters" : "Show entry time filters"}
               >
-                Time
-                <span className="leading-none">{showTimeList ? "−" : "+"}</span>
+                NTime
+                <span className="leading-none">{showEntryTimeList ? "−" : "+"}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowExitTimeList((v) => !v)}
+                className={`flex items-center gap-1 text-xs font-bold uppercase tracking-wide px-2.5 py-1 rounded border border-border transition-colors ${
+                  showExitTimeList
+                    ? "bg-foreground/15 text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                title={showExitTimeList ? "Hide exit time filters" : "Show exit time filters"}
+              >
+                XTime
+                <span className="leading-none">{showExitTimeList ? "−" : "+"}</span>
               </button>
             </div>
           )}
@@ -2233,48 +2251,115 @@ export default function Screener({
           </div>
           )}
 
-          {/* NEW: TIME filter — 24 hourly toggles (5AM..4AM next day), split
-              across two 12-item rows (5AM-4PM, then 5PM-4AM). Clicking an
-              hour (e.g. "6PM") shows only rows that satisfy at least one
-              Views/sub-pattern targeting that hour, across every parent
-              pattern. Mutually exclusive (single timeFilter state),
-              independent of activePattern, PatternFilter, and showAll.
-              Whole section hidden until "Time +" is toggled on. */}
-          {showTimeList && (
-          <div className="flex flex-col gap-1.5">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[10px] text-indigo-400/90 uppercase tracking-wider mr-0.5 font-semibold">Time:</span>
-              {TIME_SLOTS_ROW1.map((slot) => (
-                <button
-                  key={slot}
-                  onClick={() => setTimeFilter((v) => (v === slot ? null : slot))}
-                  className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                    timeFilter === slot
-                      ? "bg-foreground/15 text-foreground border-border"
-                      : "border-border text-muted-foreground hover:text-foreground"
-                  }`}
-                  title={`Show only rows with a Views (sub-pattern) target of ~${slot}`}
-                >
-                  {timeFilter === slot ? `✕ ${slot}` : slot}
-                </button>
-              ))}
-            </div>
-            <div className="flex items-center gap-1.5 flex-wrap">
-              {TIME_SLOTS_ROW2.map((slot) => (
-                <button
-                  key={slot}
-                  onClick={() => setTimeFilter((v) => (v === slot ? null : slot))}
-                  className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                    timeFilter === slot
-                      ? "bg-foreground/15 text-foreground border-border"
-                      : "border-border text-muted-foreground hover:text-foreground"
-                  }`}
-                  title={`Show only rows with a Views (sub-pattern) target of ~${slot}`}
-                >
-                  {timeFilter === slot ? `✕ ${slot}` : slot}
-                </button>
-              ))}
-            </div>
+          {/* NEW: ENTRY TIME filter — mirrors Exit Time's UI (24 hourly
+              toggles, 5AM..4AM next day, 2-row grid aligned so row 2 sits
+              directly under row 1). Selection state only for now — not yet
+              wired into the display filter chain; functionality to filter
+              by entry time will be added in a future update. Whole section
+              hidden until "NTime +" is toggled on. */}
+          {showEntryTimeList && (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: `auto repeat(${TIME_SLOTS_ROW1.length}, max-content)`,
+              columnGap: "6px",
+              rowGap: "6px",
+              alignItems: "center",
+            }}
+          >
+            <span
+              style={{ gridColumn: 1, gridRow: 1 }}
+              className="text-[10px] text-teal-400/90 uppercase tracking-wider mr-0.5 font-semibold"
+            >
+              Entry Time:
+            </span>
+            {TIME_SLOTS_ROW1.map((slot, i) => (
+              <button
+                key={slot}
+                style={{ gridColumn: i + 2, gridRow: 1 }}
+                onClick={() => setEntryTimeFilter((v) => (v === slot ? null : slot))}
+                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                  entryTimeFilter === slot
+                    ? "bg-foreground/15 text-foreground border-border"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+                title={`Entry time ~${slot} (filtering coming soon)`}
+              >
+                {entryTimeFilter === slot ? `✕ ${slot}` : slot}
+              </button>
+            ))}
+            {TIME_SLOTS_ROW2.map((slot, i) => (
+              <button
+                key={slot}
+                style={{ gridColumn: i + 2, gridRow: 2 }}
+                onClick={() => setEntryTimeFilter((v) => (v === slot ? null : slot))}
+                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                  entryTimeFilter === slot
+                    ? "bg-foreground/15 text-foreground border-border"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+                title={`Entry time ~${slot} (filtering coming soon)`}
+              >
+                {entryTimeFilter === slot ? `✕ ${slot}` : slot}
+              </button>
+            ))}
+          </div>
+          )}
+
+          {/* NEW: EXIT TIME filter — 24 hourly toggles (5AM..4AM next day),
+              2-row grid aligned so row 2 (5PM..4AM) sits directly under row 1
+              (5AM..4PM). Clicking an hour (e.g. "6PM") shows only rows that
+              satisfy at least one Views/sub-pattern targeting that hour,
+              across every parent pattern. Mutually exclusive (single
+              exitTimeFilter state), independent of activePattern,
+              PatternFilter, and showAll. Whole section hidden until
+              "XTime +" is toggled on. */}
+          {showExitTimeList && (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: `auto repeat(${TIME_SLOTS_ROW1.length}, max-content)`,
+              columnGap: "6px",
+              rowGap: "6px",
+              alignItems: "center",
+            }}
+          >
+            <span
+              style={{ gridColumn: 1, gridRow: 1 }}
+              className="text-[10px] text-indigo-400/90 uppercase tracking-wider mr-0.5 font-semibold"
+            >
+              Exit Time:
+            </span>
+            {TIME_SLOTS_ROW1.map((slot, i) => (
+              <button
+                key={slot}
+                style={{ gridColumn: i + 2, gridRow: 1 }}
+                onClick={() => setExitTimeFilter((v) => (v === slot ? null : slot))}
+                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                  exitTimeFilter === slot
+                    ? "bg-foreground/15 text-foreground border-border"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+                title={`Show only rows with a Views (sub-pattern) target of ~${slot}`}
+              >
+                {exitTimeFilter === slot ? `✕ ${slot}` : slot}
+              </button>
+            ))}
+            {TIME_SLOTS_ROW2.map((slot, i) => (
+              <button
+                key={slot}
+                style={{ gridColumn: i + 2, gridRow: 2 }}
+                onClick={() => setExitTimeFilter((v) => (v === slot ? null : slot))}
+                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                  exitTimeFilter === slot
+                    ? "bg-foreground/15 text-foreground border-border"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+                title={`Show only rows with a Views (sub-pattern) target of ~${slot}`}
+              >
+                {exitTimeFilter === slot ? `✕ ${slot}` : slot}
+              </button>
+            ))}
           </div>
           )}
 
