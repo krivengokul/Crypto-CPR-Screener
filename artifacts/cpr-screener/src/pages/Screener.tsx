@@ -1258,10 +1258,10 @@ export default function Screener({
             onClick={doDeltaScan}
             disabled={deltaStatus === "scanning"}
             className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all disabled:opacity-50"
-            style={{ background: "linear-gradient(135deg,#f59e0b,#d97706)", color: "#fff" }}
+            style={{ background: "linear-gradient(135deg,#8b5cf6,#6d28d9)", color: "#fff" }}
           >
             <RefreshCw className={`w-3 h-3 ${deltaStatus === "scanning" ? "animate-spin" : ""}`} />
-            {deltaStatus === "scanning" ? "Scanning Delta Exchange…" : "Scan Delta Exchange"}
+            {deltaStatus === "scanning" ? "Scanning Delta…" : "Scan Delta"}
           </button>
 
 
@@ -2261,7 +2261,7 @@ export default function Screener({
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: `auto repeat(${TIME_SLOTS_ROW1.length}, max-content)`,
+              gridTemplateColumns: `max-content repeat(${TIME_SLOTS_ROW1.length}, max-content)`,
               columnGap: "6px",
               rowGap: "6px",
               alignItems: "center",
@@ -2318,7 +2318,7 @@ export default function Screener({
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: `auto repeat(${TIME_SLOTS_ROW1.length}, max-content)`,
+              gridTemplateColumns: `max-content repeat(${TIME_SLOTS_ROW1.length}, max-content)`,
               columnGap: "6px",
               rowGap: "6px",
               alignItems: "center",
