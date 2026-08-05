@@ -119,7 +119,7 @@ function App() {
             </div>
 
             {mode === "backtest" && (
-              <div className="w-full px-4 py-8">
+              <div className="w-full px-1 py-8 sm:px-2">
                 <BacktestPanel />
               </div>
             )}
