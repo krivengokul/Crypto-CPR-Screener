@@ -919,6 +919,7 @@ export default function Screener({
       // section-agnostic Pattern flag, always shown regardless of
       // activePattern/left-nav.
       if (PatternFilter === "HiL4U2") return r.HiL4U2;
+      if (PatternFilter === "HiL4U1") return r.HiL4U1;
       // NEW: LoTCL3 — same treatment as HiL4U3/HiL4U2: independent,
       // section-agnostic Pattern flag, always shown regardless of
       // activePattern/left-nav.
@@ -2109,6 +2110,7 @@ export default function Screener({
                   { label: "HiL4U4", active: "border-fuchsia-400 text-fuchsia-400" },
                   { label: "HiL4U3", active: "border-indigo-400 text-indigo-400" },
                   { label: "HiL4U2", active: "border-violet-400 text-violet-400" },
+                  { label: "HiL4U1", active: "border-fuchsia-400 text-fuchsia-400" },
                   { label: "eXL4U3", active: "border-green-400 text-green-400" },
                   { label: "LoTCL3", active: "border-sky-600 text-sky-300" },
                   { label: "eXHiL2L1", active: "border-teal-400 text-teal-400" },
