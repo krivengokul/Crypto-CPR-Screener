@@ -971,6 +971,8 @@ export default function Screener({
       if (PatternFilter === "eXL2U2") return r.eXL2U2;
       if (PatternFilter === "eXL2TC") return r.eXL2TC;
       if (PatternFilter === "eXL1U1") return r.eXL1U1;
+      // NEW: eXU1L1 — same band shape as eXL1U1, split by which gap (R1-R4 vs S1-S4) is larger
+      if (PatternFilter === "eXU1L1") return r.eXU1L1;
       if (PatternFilter === "eXU2L1") return r.eXU2L1;
       // NEW: eXU3L1 (prev R4 in today R2/R3, prev S4 in today BC/S1) /
       // eXU2TC (prev R4 in today R1/R2, prev S4 in today TC/R1)
@@ -2155,6 +2157,8 @@ export default function Screener({
                   { label: "eXL2TC",   active: "border-sky-400 text-sky-400" },
                   { label: "eXL3TC",   active: "border-indigo-400 text-indigo-400" },
                   { label: "eXL1U1",   active: "border-fuchsia-400 text-fuchsia-400" },
+                  // NEW: eXU1L1 — same band shape as eXL1U1, fires when the R1/R4 gap is larger.
+                  { label: "eXU1L1",   active: "border-cyan-400 text-cyan-400" },
                   // NEW: eXU2L1 — prev R4 inside today R1/R2 (U2) AND prev S4 inside today BC/S1 (L1).
                   { label: "eXU2L1",   active: "border-violet-400 text-violet-400" },
                   // NEW: eXU3L1 — prev R4 inside today R2/R3 (U3) AND prev S4 inside today BC/S1 (L1).
