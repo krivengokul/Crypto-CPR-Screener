@@ -100,7 +100,7 @@ export function SRLadder({
   };
 
   return (
-    <div className="min-w-[170px]">
+    <div className="w-[180px] min-w-0">
       <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">
         {label}
       </p>
@@ -108,7 +108,7 @@ export function SRLadder({
         row.type === "price" ? (
           <div
             key={`price-${i}`}
-            className="flex justify-between bg-blue-500 text-white text-xs px-2 py-1 rounded font-bold my-0.5"
+            className="grid grid-cols-[auto_auto] justify-start gap-3 bg-blue-500 text-white text-xs px-2 py-1 rounded font-bold my-0.5"
           >
             <span>▶ Price</span>
             <span className="font-mono">{fmt(currentPrice as number)}</span>
@@ -116,9 +116,9 @@ export function SRLadder({
         ) : (
           <div
             key={row.key}
-            className={`flex justify-between text-xs px-2 py-0.5 rounded ${rowColor(row.key)}`}
+            className={`grid grid-cols-[3.5rem_auto] justify-start gap-1 text-xs px-2 py-0.5 rounded ${rowColor(row.key)}`}
           >
-            <span className="w-14 shrink-0">{row.key}</span>
+             <span>{row.key}</span>
             <span className="font-mono">{fmt(row.value)}</span>
           </div>
         )
@@ -134,7 +134,7 @@ export function SRLadder({
  */
 export function SRLadderPanel({ r }: { r: SRLadderData }) {
   return (
-    <div className="grid min-w-[920px] grid-cols-[minmax(300px,340px)_repeat(3,minmax(160px,1fr))] items-start gap-5">
+    <div className="grid min-w-[920px] grid-cols-[minmax(300px,340px)_repeat(3,180px)] items-start gap-5">
       <div className="flex min-w-0 flex-col gap-4 border-r border-border/50 pr-5">
         <div className="flex flex-wrap gap-6 items-start">
           {r.ppCPR && (
