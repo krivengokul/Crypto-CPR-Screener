@@ -720,7 +720,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
   // band as HiL3U3), AND prev's R4 lands inside prev's OWN R1/R2 band (U2)
   // instead of today's R-levels.
   const HiL3U2 = (today.s4 >= prev.s3 && today.s4 < prev.s2) &&
-                 (prev.r4 < prev.r2 && prev.r4 > prev.r1);
+                 (prev.r4 < today.r2 && prev.r4 > today.r1);
 
   // cOU1L3 — today's R4 lands inside prev's TC/R1 band (U1) AND today's S4
   // lands inside prev's S3/S2 band (L3).
