@@ -181,6 +181,11 @@ export interface CPRPairFlags {
   // Same L2 support band as eXL2BC/eXL2U1/eXL2U2/eXL2TC, paired with the
   // BC/Pivot resistance band instead of the usual U-side (R-anchored) bands.
   eXL2CP: boolean;
+  // LoU3L2 — today's R4 lands inside prev's R2/R3 band (U3, same
+  // resistance band as LoU3L4/LoU3L3), AND prev's S4 lands inside today's
+  // S2/S1 band (L2). Same L2 support band as LoU4L234, but paired with the
+  // narrower U3 resistance band instead of U4.
+  LoU3L2: boolean;
 }
 
 export interface CPRResult {
@@ -295,6 +300,7 @@ export interface CPRResult {
   eXHiL2L1: boolean;
   eXLoL2L1: boolean;
   eXL2CP: boolean;
+  LoU3L2: boolean;
   passes: boolean;
   currentPrice: number;
   openPrice: number;
@@ -490,6 +496,12 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
                    (prev.s4 > today.s4 && prev.s4 < today.s3);
   const LoU2L3   = (today.r4 > prev.r1 && today.r4 < prev.r2) &&
                    (prev.s4 > today.s3 && prev.s4 < today.s2);
+  // LoU3L2 — today's R4 lands inside prev's R2/R3 band (U3, same resistance
+  // band as LoU3L4/LoU3L3), AND prev's S4 lands inside today's S2/S1 band
+  // (L2, same support band as LoU4L234) instead of the L4/L3 bands used by
+  // LoU3L4/LoU3L3.
+  const LoU3L2   = (today.r4 > prev.r2 && today.r4 <= prev.r3) &&
+                   (prev.s4 > today.s2 && prev.s4 < today.s1);
   const LoU4L34  = (today.r4 > prev.r3 && today.r4 < prev.r4) &&
                    (prev.s4 >= today.s3 && prev.s4 < today.s2);
   const LoU4L234 = (today.r4 > prev.r3 && today.r4 < prev.r4) &&
@@ -704,7 +716,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
     eXL2U1, eXL3U1, eXL4U1, eXL1BC, eXL1CP, eXL2BC, eXL3BC, eXL3CP,
     eXL3TC, eXL4U2, eXL2U2, eXL2TC, eXL1U1, eXU2L1, cOTCL2, L1pU1Above, pCPR1Above, CPRs1Above,
     eXU3L1, eXU3L2, eXU2TC, eXU2BC, eXU3TC, eXU2CP, eXU4L1, LoCPL3, LoCPL2, LoTCL3,
-    eXHiL2L1, eXLoL2L1, eXL2CP,
+    eXHiL2L1, eXLoL2L1, eXL2CP, LoU3L2,
   };
 }
 
@@ -781,6 +793,7 @@ export function pickCPRSubLabel(f: CPRPairFlags): string | null {
   if (f.eXHiL2L1)  return "eXHiL2L1";
   if (f.eXLoL2L1)  return "eXLoL2L1";
   if (f.eXL2CP)    return "eXL2CP";
+  if (f.LoU3L2)    return "LoU3L2";
   return null;
 }
 
