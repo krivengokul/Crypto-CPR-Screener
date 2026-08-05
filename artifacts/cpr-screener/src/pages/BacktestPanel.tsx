@@ -227,7 +227,7 @@ function DateField({
                     onChange(iso);
                     setOpen(false);
                   }}
-                  className={`text-[11px] rounded-full w-6 h-6 flex items-center justify-center ${
+                  className={`text-[11px] rounded-full w-6 h-6 flex items-center justify-center mx-auto ${
                     isSelected
                       ? "bg-blue-500 text-white font-medium"
                       : disabled

@@ -134,7 +134,7 @@ export function SRLadder({
  */
 export function SRLadderPanel({ r }: { r: SRLadderData }) {
   return (
-    <div className="flex flex-wrap gap-10 items-start">
+    <div className="flex min-w-0 flex-wrap items-start gap-8">
       <div className="flex flex-col gap-4">
         <div className="flex flex-wrap gap-6 items-start">
           {r.ppCPR && (
@@ -232,12 +232,18 @@ export function SRLadderPanel({ r }: { r: SRLadderData }) {
           );
         })()}
       </div>
-      <div className="hidden sm:block w-px self-stretch bg-border/50 mx-2" />
-      <SRLadder cpr={r.todayCPR} currentPrice={r.currentPrice} label="Today S/R" />
-      <SRLadder cpr={r.prevCPR} currentPrice={r.currentPrice} label="Prev Day S/R" />
-      {r.ppCPR && (
-        <SRLadder cpr={r.ppCPR} currentPrice={r.currentPrice} label="PDay-1 S/R" />
-      )}
+      <div className="hidden sm:block w-px self-stretch bg-border/50" />
+      <div
+        className={`grid min-w-0 flex-1 gap-6 ${
+          r.ppCPR ? "grid-cols-3" : "grid-cols-2"
+        }`}
+      >
+        <SRLadder cpr={r.todayCPR} currentPrice={r.currentPrice} label="Today S/R" />
+        <SRLadder cpr={r.prevCPR} currentPrice={r.currentPrice} label="Prev Day S/R" />
+        {r.ppCPR && (
+          <SRLadder cpr={r.ppCPR} currentPrice={r.currentPrice} label="PDay-1 S/R" />
+        )}
+      </div>
     </div>
   );
 }
