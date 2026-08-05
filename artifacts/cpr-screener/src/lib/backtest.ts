@@ -569,32 +569,82 @@ function addDaysISO(dateISO: string, days: number): string {
  * the `endTime` param (which runScreener doesn't currently use, since it
  * only ever needs "now") to pin the window to a past date instead.
  */
-async function fetchBinanceWindow(symbol: string, entryDateISO: string): Promise<Map<string, OHLC> | null> {
-  const dPlus2 = addDaysISO(entryDateISO, 2);
-  const endTimeMs = new Date(dPlus2 + "T23:59:59.999Z").getTime();
+type BinanceVenue = "futures" | "spot";
+
+/**
+ * ADK FIX (venue parity with the live screener): binance.ts resolves candles
+ * FUTURES-FIRST (`fapi`) because every Binance row links to TradingView's
+ * perpetual chart (`BINANCE:<SYMBOL>.P`). The backtest window used to hit
+ * Spot only, so its reconstructed CPR came from a different order book than
+ * the chart — e.g. BICOUSDT on 2 Aug 2026 showed TC/P/BC 0.01182/0.01180/
+ * 0.01178 (spot) instead of 0.01183/0.01179/0.01175 (perp). Now we try the
+ * perpetual klines first and fall back to Spot only for symbols with no
+ * perpetual listing.
+ */
+const binanceVenueCache = new Map<string, BinanceVenue>();
+
+function parseBinanceKlines(
+  raw: Array<[number, string, string, string, string, string]>
+): Map<string, OHLC> {
+  const map = new Map<string, OHLC>();
+  for (const k of raw) {
+    const openTime = k[0];
+    map.set(utcDateKey(openTime), {
+      openTime,
+      open: parseFloat(k[1]),
+      high: parseFloat(k[2]),
+      low: parseFloat(k[3]),
+      close: parseFloat(k[4]),
+      volume: parseFloat(k[5]),
+    });
+  }
+  return map;
+}
+
+async function fetchBinanceKlineWindow(
+  venue: BinanceVenue,
+  symbol: string,
+  endTimeMs: number
+): Promise<Map<string, OHLC> | null> {
+  const base =
+    venue === "futures"
+      ? "https://fapi.binance.com/fapi/v1/klines"
+      : "https://api.binance.com/api/v3/klines";
   try {
-    const res = await fetch(
-      `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=1d&endTime=${endTimeMs}&limit=9`
-    );
+    const res = await fetch(`${base}?symbol=${symbol}&interval=1d&endTime=${endTimeMs}&limit=9`);
     if (!res.ok) return null;
     const raw: Array<[number, string, string, string, string, string]> = await res.json();
-    if (!raw.length) return null;
-    const map = new Map<string, OHLC>();
-    for (const k of raw) {
-      const openTime = k[0];
-      map.set(utcDateKey(openTime), {
-        openTime,
-        open: parseFloat(k[1]),
-        high: parseFloat(k[2]),
-        low: parseFloat(k[3]),
-        close: parseFloat(k[4]),
-        volume: parseFloat(k[5]),
-      });
-    }
-    return map;
+    if (!Array.isArray(raw) || !raw.length) return null;
+    return parseBinanceKlines(raw);
   } catch {
     return null;
   }
+}
+
+async function fetchBinanceWindow(symbol: string, entryDateISO: string): Promise<Map<string, OHLC> | null> {
+  const dPlus2 = addDaysISO(entryDateISO, 2);
+  const endTimeMs = new Date(dPlus2 + "T23:59:59.999Z").getTime();
+
+  const cached = binanceVenueCache.get(symbol);
+  if (cached) {
+    const hit = await fetchBinanceKlineWindow(cached, symbol, endTimeMs);
+    if (hit) return hit;
+    // cached venue has no data for this window — fall through and re-probe
+  }
+
+  const fut = await fetchBinanceKlineWindow("futures", symbol, endTimeMs);
+  if (fut) {
+    binanceVenueCache.set(symbol, "futures");
+    return fut;
+  }
+
+  const spot = await fetchBinanceKlineWindow("spot", symbol, endTimeMs);
+  if (spot) {
+    binanceVenueCache.set(symbol, "spot");
+    return spot;
+  }
+
+  return null;
 }
 
 /**
