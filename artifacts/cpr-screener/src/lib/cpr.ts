@@ -196,6 +196,11 @@ export interface CPRPairFlags {
   // band" shape as cOU1L2/cOU2L2, but pairs the L1 support band with the
   // wider U2 resistance band instead of L2+U1 or L2+U2.
   cOL1U2: boolean;
+  // HiL3U2 — today's S4 lands inside prev's S3/S2 band (L3, same support
+  // band as HiL3U3/HiL3U4), AND prev's R4 lands inside prev's OWN R1/R2
+  // band (U2) — unlike the other Hi* patterns, the resistance side here
+  // checks prev's R4 against prev's own R1/R2 levels, not today's.
+  HiL3U2: boolean;
 }
 
 export interface CPRResult {
@@ -313,6 +318,7 @@ export interface CPRResult {
   eXL2CP: boolean;
   LoU3L2: boolean;
   cOL1U2: boolean;
+  HiL3U2: boolean;
   passes: boolean;
   currentPrice: number;
   openPrice: number;
@@ -710,6 +716,12 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
   const HiL3U3 = (today.s4 > prev.s3 && today.s4 < prev.s2) &&
                  (prev.r4 > today.r2 && prev.r4 < today.r3);
 
+  // HiL3U2 — today's S4 lands inside prev's S3/S2 band (L3, same support
+  // band as HiL3U3), AND prev's R4 lands inside prev's OWN R1/R2 band (U2)
+  // instead of today's R-levels.
+  const HiL3U2 = (today.s4 >= prev.s3 && today.s4 < prev.s2) &&
+                 (prev.r4 < prev.r2 && prev.r4 > prev.r1);
+
   // cOU1L3 — today's R4 lands inside prev's TC/R1 band (U1) AND today's S4
   // lands inside prev's S3/S2 band (L3).
   const cOU1L3 = (today.r4 > prev.tc && today.r4 < prev.r1) &&
@@ -743,7 +755,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
     eXL2U1, eXL3U1, eXL4U1, eXL1BC, eXL1CP, eXL2BC, eXL3BC, eXL3CP,
     eXL3TC, eXL4U2, eXL2U2, eXL2TC, eXL1U1, eXU1L1, eXU2L1, cOTCL2, L1pU1Above, pCPR1Above, CPRs1Above,
     eXU3L1, eXU3L2, eXU2TC, eXU2BC, eXU3TC, eXU2CP, eXU4L1, LoCPL3, LoCPL2, LoTCL3,
-    eXHiL2L1, eXLoL2L1, eXL2CP, LoU3L2, cOL1U2,
+    eXHiL2L1, eXLoL2L1, eXL2CP, LoU3L2, cOL1U2, HiL3U2,
   };
 }
 
@@ -823,6 +835,7 @@ export function pickCPRSubLabel(f: CPRPairFlags): string | null {
   if (f.eXL2CP)    return "eXL2CP";
   if (f.LoU3L2)    return "LoU3L2";
   if (f.cOL1U2)    return "cOL1U2";
+  if (f.HiL3U2)    return "HiL3U2";
   return null;
 }
 

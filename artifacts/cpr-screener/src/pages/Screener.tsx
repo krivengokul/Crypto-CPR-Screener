@@ -991,6 +991,8 @@ export default function Screener({
       if (PatternFilter === "LoU3L2") return r.LoU3L2;
       // NEW: cOL1U2 (today S4 in prev S1/BC, today R4 in prev R1/R2)
       if (PatternFilter === "cOL1U2") return r.cOL1U2;
+      // NEW: HiL3U2 (today S4 in prev S3/S2, prev R4 in prev R1/R2)
+      if (PatternFilter === "HiL3U2") return r.HiL3U2;
       return getPatternInfo(r)?.label === PatternFilter;
     })
     .filter((r) => matchesWidthFilter(r, prevWidthFilter, todayWidthFilter))
@@ -2178,6 +2180,8 @@ export default function Screener({
                   { label: "LoU3L2",   active: "border-amber-400 text-amber-400" },
                   // NEW: cOL1U2 — today S4 inside prev S1/BC (L1) AND today R4 inside prev R1/R2 (U2).
                   { label: "cOL1U2",   active: "border-teal-400 text-teal-400" },
+                  // NEW: HiL3U2 — today S4 inside prev S3/S2 (L3) AND prev R4 inside prev's own R1/R2 (U2).
+                  { label: "HiL3U2",   active: "border-fuchsia-400 text-fuchsia-400" },
                   // NEW: eXU4L1 — prev R4 inside today R3/R4 (U4) AND prev S4 inside today BC/S1 (L1).
                   { label: "eXU4L1",   active: "border-green-400 text-green-400" },
                 ] as { label: PatternInfo["label"]; active: string }[]
