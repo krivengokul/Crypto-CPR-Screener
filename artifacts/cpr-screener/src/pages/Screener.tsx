@@ -942,7 +942,7 @@ export default function Screener({
       if (PatternFilter === "LoU3L3") return r.LoU3L3;
       if (PatternFilter === "LoU2L4") return r.LoU2L4;
       if (PatternFilter === "LoU2L3") return r.LoU2L3;
-      if (PatternFilter === "LoU4L34") return r.LoU4L34;
+      if (PatternFilter === "LoU4L3") return r.LoU4L3;
       if (PatternFilter === "LoU4L2") return r.LoU4L2;
       if (PatternFilter === "cOU2L3") return r.cOU2L3;
       if (PatternFilter === "LoU4L1") return r.LoU4L1;
@@ -986,6 +986,8 @@ export default function Screener({
       if (PatternFilter === "eXU2BC") return r.eXU2BC;
       if (PatternFilter === "eXU3TC") return r.eXU3TC;
       if (PatternFilter === "eXU2CP") return r.eXU2CP;
+      // NEW: eXU3CP (prev R4 in today R2/R3, prev S4 in today Pivot/TC)
+      if (PatternFilter === "eXU3CP") return r.eXU3CP;
       // NEW: eXL2CP (prev S4 in today S2/S1, prev R4 in today BC/Pivot)
       if (PatternFilter === "eXL2CP") return r.eXL2CP;
       // NEW: LoU3L2 (today R4 in prev R2/R3, prev S4 in today S2/S1)
@@ -2129,7 +2131,7 @@ export default function Screener({
                   { label: "LoU3L3",  active: "border-purple-400 text-purple-400" },
                   { label: "LoU2L4",   active: "border-pink-400 text-pink-400" },
                   { label: "LoU2L3",   active: "border-rose-400 text-rose-400" },
-                  { label: "LoU4L34",  active: "border-amber-400 text-amber-400" },
+                  { label: "LoU4L3",  active: "border-amber-400 text-amber-400" },
                   { label: "LoU4L2",  active: "border-violet-400 text-violet-400" },
                   { label: "cOU2L3",  active: "border-emerald-400 text-emerald-400" },
                   { label: "LoU4L1", active: "border-orange-400 text-orange-400" },
@@ -2176,6 +2178,8 @@ export default function Screener({
                   { label: "eXU3TC",   active: "border-rose-400 text-rose-400" },
                   // NEW: eXU2CP — prev R4 inside today R1/R2 (U2) AND prev S4 inside today Pivot/TC.
                   { label: "eXU2CP",   active: "border-sky-400 text-sky-400" },
+                  // NEW: eXU3CP — prev R4 inside today R2/R3 (U3) AND prev S4 inside today Pivot/TC.
+                  { label: "eXU3CP",   active: "border-yellow-400 text-yellow-400" },
                   // NEW: eXL2CP — prev S4 inside today S2/S1 (L2) AND prev R4 inside today BC/Pivot.
                   { label: "eXL2CP",   active: "border-emerald-400 text-emerald-400" },
                   // NEW: LoU3L2 — today R4 inside prev R2/R3 (U3) AND prev S4 inside today S2/S1 (L2).
@@ -2186,6 +2190,8 @@ export default function Screener({
                   { label: "HiL3U2",   active: "border-fuchsia-400 text-fuchsia-400" },
                   // NEW: eXU4L1 — prev R4 inside today R3/R4 (U4) AND prev S4 inside today BC/S1 (L1).
                   { label: "eXU4L1",   active: "border-green-400 text-green-400" },
+                  // NEW: eXU4BC — prev R4 inside today R3/R4 (U4) AND prev S4 inside today BC/Pivot.
+                  { label: "eXU4BC",   active: "border-lime-400 text-lime-400" },
                 ] as { label: PatternInfo["label"]; active: string }[]
               ).map(({ label, active }) => (
                 <button
