@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, Fragment } from "react";
 import {
   RefreshCw,
   CheckCircle2,
@@ -29,6 +29,7 @@ import {
 } from "@/lib/backtest";
 import { passesPattern, matchesPatternFlag, fmt, getChartUrl, hasKnownChartMapping, getWidthCategory } from "./ScreenerUtils";
 import { renderTodayPatternBadges, renderPrevPatternBadge } from "./ScreenerTableRow";
+import { SRLadderRow, toSRLadderData } from "./SRLadderPanel";
 
 // --- Small UTC date helpers (all dates in this panel are UTC ISO strings) ---
 function toISO(d: Date): string {
@@ -278,6 +279,15 @@ export default function BacktestPanel() {
   });
   const [source, setSource] = useState<BacktestSource>("binance");
   const [status, setStatus] = useState<"idle" | "running" | "done" | "error">("idle");
+  // Symbol-click → ADK S/R ladder, same behaviour as the Screener table.
+  const [expandedSymbols, setExpandedSymbols] = useState<Set<string>>(new Set());
+  function toggleExpand(key: string) {
+    setExpandedSymbols((prev) => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
+  }
   const [progress, setProgress] = useState({ done: 0, total: 0, symbol: "" });
   const [rows, setRows] = useState<BacktestRow[]>([]);
   const [categoryRows, setCategoryRows] = useState<CategoryScanRow[]>([]);
@@ -909,11 +919,21 @@ export default function BacktestPanel() {
                     // Close price colored by the same day-over-day sign as % change.
                     const closeColor = chgColor;
                     return (
-                      <tr key={`${r.source}-${r.symbol}`} className="hover:bg-muted/20">
-                        <td className="px-3 py-2 font-mono font-semibold">
+                      <Fragment key={`${r.source}-${r.symbol}`}>
+                      <tr className="hover:bg-muted/20">
+                        <td
+                          className="px-3 py-2 font-mono font-semibold cursor-pointer select-none"
+                          onClick={() => toggleExpand(`${r.source}-${r.symbol}`)}
+                          title="Click to expand ADK S/R ladder"
+                        >
                           <div className="flex items-center gap-1.5">
+                            <span className="text-muted-foreground text-xs">
+                              {expandedSymbols.has(`${r.source}-${r.symbol}`) ? "▼" : "▶"}
+                            </span>
                             <span>{r.symbol}</span>
-                            <ChartLink symbol={r.symbol} source={r.source} />
+                            <span onClick={(e) => e.stopPropagation()}>
+                              <ChartLink symbol={r.symbol} source={r.source} />
+                            </span>
                           </div>
                         </td>
                         <td className="px-3 py-2 whitespace-nowrap">
@@ -967,6 +987,14 @@ export default function BacktestPanel() {
                             : "—"}
                         </td>
                       </tr>
+                      {expandedSymbols.has(`${r.source}-${r.symbol}`) && (
+                        <SRLadderRow
+                          r={toSRLadderData(r.raw, r.closePrice ?? undefined)}
+                          rowKey={`${r.source}-${r.symbol}`}
+                          colSpan={5}
+                        />
+                      )}
+                      </Fragment>
                     );
                   })}
                 </tbody>
@@ -1036,11 +1064,21 @@ export default function BacktestPanel() {
                 </thead>
                 <tbody className="divide-y divide-border">
                   {rows.map((r) => (
-                    <tr key={`${r.source}-${r.symbol}-${r.entryDate}`} className="hover:bg-muted/20">
-                      <td className="px-3 py-2 font-mono font-semibold">
+                    <Fragment key={`${r.source}-${r.symbol}-${r.entryDate}`}>
+                    <tr className="hover:bg-muted/20">
+                      <td
+                        className="px-3 py-2 font-mono font-semibold cursor-pointer select-none"
+                        onClick={() => toggleExpand(`${r.source}-${r.symbol}-${r.entryDate}`)}
+                        title="Click to expand ADK S/R ladder"
+                      >
                         <div className="flex items-center gap-1.5">
+                          <span className="text-muted-foreground text-xs">
+                            {expandedSymbols.has(`${r.source}-${r.symbol}-${r.entryDate}`) ? "▼" : "▶"}
+                          </span>
                           <span>{r.symbol}</span>
-                          <ChartLink symbol={r.symbol} source={r.source} />
+                          <span onClick={(e) => e.stopPropagation()}>
+                            <ChartLink symbol={r.symbol} source={r.source} />
+                          </span>
                         </div>
                       </td>
                       <td className="px-3 py-2 font-mono whitespace-nowrap min-w-[220px]">
@@ -1097,6 +1135,14 @@ export default function BacktestPanel() {
                           : "—"}
                       </td>
                     </tr>
+                    {expandedSymbols.has(`${r.source}-${r.symbol}-${r.entryDate}`) && (
+                      <SRLadderRow
+                        r={toSRLadderData(r)}
+                        rowKey={`${r.source}-${r.symbol}-${r.entryDate}`}
+                        colSpan={6}
+                      />
+                    )}
+                    </Fragment>
                   ))}
                 </tbody>
               </table>

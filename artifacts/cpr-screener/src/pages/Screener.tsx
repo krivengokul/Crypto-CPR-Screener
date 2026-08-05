@@ -49,7 +49,6 @@ import {
   getPatternInfo,
   computePivotSubLabel,
   type PatternInfo,
-  SRLadder,
   getSubFilterDirection,
 } from "./ScreenerUtils";
 import LiveClock from "./LiveClock";
