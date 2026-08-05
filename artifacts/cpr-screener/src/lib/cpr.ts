@@ -465,7 +465,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
   const HiL3U4   = (today.s4 > prev.s3 && today.s4 < prev.s2) &&
                    (prev.r4 > today.r3 && prev.r4 < today.r4);
   const HiL4U4   = (prev.r4 > today.r3 && prev.r4 < today.r4) &&
-                   (today.s4 > prev.s4 && today.s4 < prev.s3);
+                   (today.s4 >= prev.s4 && today.s4 < prev.s3);
   const LoU4L4   = (today.r4 < prev.r4 && today.r4 > prev.r3) &&
                    (prev.s4 > today.s4 && prev.s4 < today.s3);
   // eXHiU1L3 removed — it was an exact duplicate of eXL3U1 (same U1/L3
