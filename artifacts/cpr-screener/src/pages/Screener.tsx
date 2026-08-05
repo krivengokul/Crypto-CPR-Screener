@@ -934,7 +934,7 @@ export default function Screener({
       // NEW: eXU4L3 — independent, section-agnostic Pattern flag
       // (see doc-comments in cpr.ts / ScreenerUtils.tsx).
       if (PatternFilter === "eXU4L3") return r.eXU4L3;
-      if (PatternFilter === "cOHiL2U4") return r.cOHiL2U4;
+      if (PatternFilter === "cOL2U4") return r.cOL2U4;
       if (PatternFilter === "cOL4U4") return r.cOL4U4;
       if (PatternFilter === "cOL3U4") return r.cOL3U4;
       if (PatternFilter === "cOU3L3") return r.cOU3L3;
@@ -943,9 +943,9 @@ export default function Screener({
       if (PatternFilter === "LoU2L4") return r.LoU2L4;
       if (PatternFilter === "LoU2L3") return r.LoU2L3;
       if (PatternFilter === "LoU4L34") return r.LoU4L34;
-      if (PatternFilter === "LoU4L234") return r.LoU4L234;
+      if (PatternFilter === "LoU4L2") return r.LoU4L2;
       if (PatternFilter === "cOU2L3") return r.cOU2L3;
-      if (PatternFilter === "LoU4L1234") return r.LoU4L1234;
+      if (PatternFilter === "LoU4L1") return r.LoU4L1;
       if (PatternFilter === "cOU2L4") return r.cOU2L4;
       // NEW: eXL*U1 / eXL*CPR sub-type badges
       if (PatternFilter === "eXL2U1") return r.eXL2U1;
@@ -2119,7 +2119,7 @@ export default function Screener({
                   { label: "cOL3U3", active: "border-sky-400 text-sky-400" },
                   { label: "eXU4L2", active: "border-amber-400 text-amber-400" },
                   { label: "eXU4L3", active: "border-blue-400 text-blue-400" },
-                  { label: "cOHiL2U4", active: "border-emerald-400 text-emerald-400" },
+                  { label: "cOL2U4", active: "border-emerald-400 text-emerald-400" },
                   { label: "eXL3U3", active: "border-orange-400 text-orange-400" },
                   { label: "eXU3L3", active: "border-red-400 text-red-400" },
                   { label: "cOL4U4",   active: "border-orange-400 text-orange-400" },
@@ -2130,9 +2130,9 @@ export default function Screener({
                   { label: "LoU2L4",   active: "border-pink-400 text-pink-400" },
                   { label: "LoU2L3",   active: "border-rose-400 text-rose-400" },
                   { label: "LoU4L34",  active: "border-amber-400 text-amber-400" },
-                  { label: "LoU4L234",  active: "border-violet-400 text-violet-400" },
+                  { label: "LoU4L2",  active: "border-violet-400 text-violet-400" },
                   { label: "cOU2L3",  active: "border-emerald-400 text-emerald-400" },
-                  { label: "LoU4L1234", active: "border-orange-400 text-orange-400" },
+                  { label: "LoU4L1", active: "border-orange-400 text-orange-400" },
                   { label: "cOU2L4",  active: "border-lime-400 text-lime-400" },
                   // NEW: eXL*U1 / eXL*CPR sub-type badges (unconditional, all sections)
                   { label: "eXL2U1",   active: "border-purple-400 text-purple-400" },
