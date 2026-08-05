@@ -988,6 +988,8 @@ export default function Screener({
       if (PatternFilter === "eXU2CP") return r.eXU2CP;
       // NEW: eXU3CP (prev R4 in today R2/R3, prev S4 in today Pivot/TC)
       if (PatternFilter === "eXU3CP") return r.eXU3CP;
+      // NEW: eXU3BC (prev R4 in today R2/R3, prev S4 in today BC/Pivot)
+      if (PatternFilter === "eXU3BC") return r.eXU3BC;
       // NEW: eXL2CP (prev S4 in today S2/S1, prev R4 in today BC/Pivot)
       if (PatternFilter === "eXL2CP") return r.eXL2CP;
       // NEW: LoU3L2 (today R4 in prev R2/R3, prev S4 in today S2/S1)
@@ -2180,6 +2182,8 @@ export default function Screener({
                   { label: "eXU2CP",   active: "border-sky-400 text-sky-400" },
                   // NEW: eXU3CP — prev R4 inside today R2/R3 (U3) AND prev S4 inside today Pivot/TC.
                   { label: "eXU3CP",   active: "border-yellow-400 text-yellow-400" },
+                  // NEW: eXU3BC — prev R4 inside today R2/R3 (U3) AND prev S4 inside today BC/Pivot.
+                  { label: "eXU3BC",   active: "border-pink-400 text-pink-400" },
                   // NEW: eXL2CP — prev S4 inside today S2/S1 (L2) AND prev R4 inside today BC/Pivot.
                   { label: "eXL2CP",   active: "border-emerald-400 text-emerald-400" },
                   // NEW: LoU3L2 — today R4 inside prev R2/R3 (U3) AND prev S4 inside today S2/S1 (L2).
