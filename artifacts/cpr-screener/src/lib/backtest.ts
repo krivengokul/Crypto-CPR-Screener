@@ -617,17 +617,51 @@ function parseBinanceKlines(
   return map;
 }
 
-async function fetchBinanceKlineWindow(
+/**
+ * ADK PERF FIX (instant multi-date / yearly backtests)
+ * ----------------------------------------------------
+ * The old implementation fetched a fresh 9-candle window PER SYMBOL PER DATE.
+ * A 1-day scan of 500 symbols = 500 HTTP calls; a 31-day sweep = 15,500 calls;
+ * a full year = ~180,000 calls. That's why even a monthly sweep crawled.
+ *
+ * Daily candles never change once closed, so we now fetch each symbol's WHOLE
+ * daily history ONCE (up to 1500 candles ≈ 4 years, a single API page) and
+ * cache it in memory for the session. Every subsequent date in the sweep is a
+ * pure in-memory Map lookup — zero network. A yearly sweep therefore costs the
+ * same ~500 requests as a single day, and every date after the first is
+ * effectively instant.
+ */
+const HISTORY_LIMIT = 1500;
+
+/** symbol -> full daily-candle history, keyed by UTC date string. */
+const binanceHistoryCache = new Map<string, Map<string, OHLC> | null>();
+const deltaHistoryCache = new Map<string, Map<string, OHLC> | null>();
+/** In-flight de-dupe so parallel dates/symbols never double-fetch. */
+const inFlight = new Map<string, Promise<Map<string, OHLC> | null>>();
+
+/** True when a symbol's history is already in memory (no network needed). */
+export function hasCachedHistory(symbol: string, source: BacktestSource): boolean {
+  const cache = source === "binance" ? binanceHistoryCache : deltaHistoryCache;
+  return cache.has(symbol);
+}
+
+/** Drop all cached candle history (e.g. to pick up a newly closed day). */
+export function clearBacktestHistoryCache(): void {
+  binanceHistoryCache.clear();
+  deltaHistoryCache.clear();
+  inFlight.clear();
+}
+
+async function fetchBinanceHistoryFrom(
   venue: BinanceVenue,
-  symbol: string,
-  endTimeMs: number
+  symbol: string
 ): Promise<Map<string, OHLC> | null> {
   const base =
     venue === "futures"
       ? "https://fapi.binance.com/fapi/v1/klines"
       : "https://api.binance.com/api/v3/klines";
   try {
-    const res = await fetch(`${base}?symbol=${symbol}&interval=1d&endTime=${endTimeMs}&limit=9`);
+    const res = await fetch(`${base}?symbol=${symbol}&interval=1d&limit=${HISTORY_LIMIT}`);
     if (!res.ok) return null;
     const raw: Array<[number, string, string, string, string, string]> = await res.json();
     if (!Array.isArray(raw) || !raw.length) return null;
@@ -637,42 +671,34 @@ async function fetchBinanceKlineWindow(
   }
 }
 
-async function fetchBinanceWindow(symbol: string, entryDateISO: string): Promise<Map<string, OHLC> | null> {
-  const dPlus2 = addDaysISO(entryDateISO, 2);
-  const endTimeMs = new Date(dPlus2 + "T23:59:59.999Z").getTime();
-
-  const cached = binanceVenueCache.get(symbol);
-  if (cached) {
-    const hit = await fetchBinanceKlineWindow(cached, symbol, endTimeMs);
+/** Full Binance daily history for a symbol (futures-first, spot fallback). */
+async function fetchBinanceHistory(symbol: string): Promise<Map<string, OHLC> | null> {
+  const cachedVenue = binanceVenueCache.get(symbol);
+  if (cachedVenue) {
+    const hit = await fetchBinanceHistoryFrom(cachedVenue, symbol);
     if (hit) return hit;
-    // cached venue has no data for this window — fall through and re-probe
   }
-
-  const fut = await fetchBinanceKlineWindow("futures", symbol, endTimeMs);
+  const fut = await fetchBinanceHistoryFrom("futures", symbol);
   if (fut) {
     binanceVenueCache.set(symbol, "futures");
     return fut;
   }
-
-  const spot = await fetchBinanceKlineWindow("spot", symbol, endTimeMs);
+  const spot = await fetchBinanceHistoryFrom("spot", symbol);
   if (spot) {
     binanceVenueCache.set(symbol, "spot");
     return spot;
   }
-
   return null;
 }
 
 /**
- * Same window, for Delta Exchange India symbols — reuses the same
- * history/candles endpoint runDeltaScreener calls live, just with
- * start/end pinned to the historical window instead of "last 8 days".
+ * Full Delta Exchange India daily history for a symbol. Delta's candles
+ * endpoint requires an explicit start/end, so we ask for the last
+ * HISTORY_LIMIT days up to now — same coverage as the Binance page.
  */
-async function fetchDeltaWindow(symbol: string, entryDateISO: string): Promise<Map<string, OHLC> | null> {
-  const dMinus3 = addDaysISO(entryDateISO, -3);
-  const dPlus2 = addDaysISO(entryDateISO, 2);
-  const start = Math.floor(new Date(dMinus3 + "T00:00:00.000Z").getTime() / 1000);
-  const end = Math.floor(new Date(dPlus2 + "T23:59:59.999Z").getTime() / 1000);
+async function fetchDeltaHistory(symbol: string): Promise<Map<string, OHLC> | null> {
+  const end = Math.floor(Date.now() / 1000) + 86400;
+  const start = end - HISTORY_LIMIT * 86400;
   try {
     const res = await fetch(
       `https://api.india.delta.exchange/v2/history/candles?symbol=${symbol}&resolution=1d&start=${start}&end=${end}`,
@@ -705,6 +731,55 @@ async function fetchDeltaWindow(symbol: string, entryDateISO: string): Promise<M
 }
 
 /**
+ * Cached accessor — one network call per symbol per session, shared by every
+ * date in a sweep. Replaces the old fetchBinanceWindow/fetchDeltaWindow.
+ */
+async function getHistory(symbol: string, source: BacktestSource): Promise<Map<string, OHLC> | null> {
+  const cache = source === "binance" ? binanceHistoryCache : deltaHistoryCache;
+  const cached = cache.get(symbol);
+  if (cached !== undefined) return cached;
+
+  const key = `${source}:${symbol}`;
+  const existing = inFlight.get(key);
+  if (existing) return existing;
+
+  const p = (source === "binance" ? fetchBinanceHistory(symbol) : fetchDeltaHistory(symbol))
+    .then((hist) => {
+      cache.set(symbol, hist);
+      inFlight.delete(key);
+      return hist;
+    })
+    .catch(() => {
+      cache.set(symbol, null);
+      inFlight.delete(key);
+      return null;
+    });
+  inFlight.set(key, p);
+  return p;
+}
+
+/**
+ * Warms the cache for a whole symbol universe in parallel chunks. Call this
+ * once before a multi-date sweep: after it resolves, every date in the range
+ * scans purely in memory.
+ */
+export async function prefetchHistories(
+  symbols: string[],
+  source: BacktestSource,
+  onProgress?: (done: number, total: number, symbol: string) => void,
+  concurrency = 25
+): Promise<void> {
+  const pending = symbols.filter((s) => !hasCachedHistory(s, source));
+  let done = symbols.length - pending.length;
+  for (let i = 0; i < pending.length; i += concurrency) {
+    const chunk = pending.slice(i, i + concurrency);
+    await Promise.all(chunk.map((s) => getHistory(s, source)));
+    done += chunk.length;
+    onProgress?.(done, symbols.length, chunk[chunk.length - 1]);
+  }
+}
+
+/**
  * Shared reconstruction step used by both backtestSymbolOnDate (patterns,
  * below), categoryScanSymbolOnDate (categories, further below), and
  * pivotLevelScanSymbolOnDate (Pattern sub-categories, further below):
@@ -722,10 +797,7 @@ async function reconstructCPRForDate(
   const dMinus2 = addDaysISO(entryDateISO, -2);
   const dMinus1 = addDaysISO(entryDateISO, -1);
 
-  const window =
-    source === "binance"
-      ? await fetchBinanceWindow(symbol, entryDateISO)
-      : await fetchDeltaWindow(symbol, entryDateISO);
+  const window = await getHistory(symbol, source);
   if (!window) return null;
 
   const ppCandle = window.get(dMinus3) ?? null;
@@ -912,9 +984,11 @@ export async function runBacktest(
       ? (await fetchTopUSDTSymbols(500)).map((t) => t.symbol)
       : (await fetchDeltaPerps()).map((t) => t.symbol);
 
+  // Warm the candle cache once; subsequent dates in a sweep hit memory only.
+  await prefetchHistories(symbols, source, onProgress);
+
   const rows: BacktestRow[] = [];
-  const batchSize = 10;
-  const delayMs = 300;
+  const batchSize = 50;
 
   for (let i = 0; i < symbols.length; i += batchSize) {
     const batch = symbols.slice(i, i + batchSize);
@@ -925,7 +999,6 @@ export async function runBacktest(
       if (r) rows.push(r);
     });
     onProgress?.(Math.min(i + batchSize, symbols.length), symbols.length, batch[batch.length - 1]);
-    if (i + batchSize < symbols.length) await new Promise((res) => setTimeout(res, delayMs));
   }
 
   return rows;
@@ -950,8 +1023,9 @@ export async function runCategoryScan(
       : (await fetchDeltaPerps()).map((t) => t.symbol);
 
   const rows: CategoryScanRow[] = [];
-  const batchSize = 10;
-  const delayMs = 300;
+  await prefetchHistories(symbols, source, onProgress);
+
+  const batchSize = 50;
 
   for (let i = 0; i < symbols.length; i += batchSize) {
     const batch = symbols.slice(i, i + batchSize);
@@ -962,7 +1036,6 @@ export async function runCategoryScan(
       if (r) rows.push(r);
     });
     onProgress?.(Math.min(i + batchSize, symbols.length), symbols.length, batch[batch.length - 1]);
-    if (i + batchSize < symbols.length) await new Promise((res) => setTimeout(res, delayMs));
   }
 
   return rows;
@@ -991,8 +1064,9 @@ export async function runPivotLevelScan(
       : (await fetchDeltaPerps()).map((t) => t.symbol);
 
   const rows: CategoryScanRow[] = [];
-  const batchSize = 10;
-  const delayMs = 300;
+  await prefetchHistories(symbols, source, onProgress);
+
+  const batchSize = 50;
 
   for (let i = 0; i < symbols.length; i += batchSize) {
     const batch = symbols.slice(i, i + batchSize);
@@ -1005,7 +1079,6 @@ export async function runPivotLevelScan(
       if (r) rows.push(r);
     });
     onProgress?.(Math.min(i + batchSize, symbols.length), symbols.length, batch[batch.length - 1]);
-    if (i + batchSize < symbols.length) await new Promise((res) => setTimeout(res, delayMs));
   }
 
   return rows;
