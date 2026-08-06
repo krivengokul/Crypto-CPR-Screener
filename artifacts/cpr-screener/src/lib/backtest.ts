@@ -54,6 +54,16 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
   },
+  // NEW: "7PM:MoMi:2AM" — nested under "CPR 1ABOVE" → Pattern "eXL4U2",
+  // alongside its sibling "9AM:MegL-3PM". Bullish, targets today's own
+  // R4 / U4 by ~2AM.
+  {
+    key: "7PM:MoMi:2AM",
+    label: "7PM:MoMi:2AM",
+    direction: "bullish",
+    targetLabel: "U4 (today's R4)",
+    getTarget: (r) => r.todayCPR.r4,
+  },
   // REMOVED: "HA-U1>PU4" — its condition (cprRising && strWideCPR &&
   // todayCPR.r1 > prevCPR.r4) is identical to the "U1 > pU4" (u1-gt-pu4)
   // parent category's own base condition, so it was just a duplicate
@@ -263,7 +273,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       {
         key: "eXL4U2",
         label: "eXL4U2",
-        subPatternKeys: ["9AM:MegL-3PM"],
+        subPatternKeys: ["9AM:MegL-3PM", "7PM:MoMi:2AM"],
       },
     ],
   },
