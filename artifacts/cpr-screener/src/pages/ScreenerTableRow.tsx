@@ -536,13 +536,56 @@ export default function ScreenerTableRow({
               const pdl = r.todayCPR.prevLow;
               const u1 = (r.todayCPR as any).r1 ?? (r.todayCPR as any).u1;
               const l1 = (r.todayCPR as any).s1 ?? (r.todayCPR as any).l1;
+              // Prev-day equivalents: same PDH/PDL-vs-U1/L1 shape, but
+              // checked one day back — prev's own PDH/PDL (prevCPR.prevHigh/
+              // prevLow) against prev's own U1/L1 (prevCPR.r1/s1). Mirrors
+              // the today-vs-today check above, applied to r.prevCPR instead
+              // of r.todayCPR (same self-referential shape as HiL3U2).
+              const pPdh = r.prevCPR.prevHigh;
+              const pPdl = r.prevCPR.prevLow;
+              const pU1 = (r.prevCPR as any).r1 ?? (r.prevCPR as any).u1;
+              const pL1 = (r.prevCPR as any).s1 ?? (r.prevCPR as any).l1;
               const badges: JSX.Element[] = [];
+              if (pPdh != null && pU1 != null) {
+                if (pPdh > pU1) {
+                  badges.push(
+                    <span
+                      key="p-pdh-gt-u1"
+                      className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-green-500/8 text-green-400/70 border border-green-500/15 font-normal opacity-80"
+                      title={`Prev PDH ${fmt(pPdh)} > Prev U1 ${fmt(pU1)}`}
+                    >
+                      p-PDH&gt;U1
+                    </span>
+                  );
+                } else if (pPdh === pU1) {
+                  badges.push(
+                    <span
+                      key="p-pdh-eq-u1"
+                      className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-emerald-500/8 text-emerald-300/70 border border-emerald-500/15 font-normal opacity-80"
+                      title={`Prev PDH = Prev U1 (${fmt(pPdh)})`}
+                    >
+                      p-PDH=U1
+                    </span>
+                  );
+                }
+              }
+              if (pPdl != null && pL1 != null && pPdl < pL1) {
+                badges.push(
+                  <span
+                    key="p-pdl-lt-l1"
+                    className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-red-500/8 text-red-400/70 border border-red-500/15 font-normal opacity-80"
+                    title={`Prev PDL ${fmt(pPdl)} < Prev L1 ${fmt(pL1)}`}
+                  >
+                    p-PDL&lt;L1
+                  </span>
+                );
+              }
               if (pdh != null && u1 != null) {
                 if (pdh > u1) {
                   badges.push(
                     <span
                       key="pdh-gt-u1"
-                      className="text-xs px-1.5 py-0.5 rounded bg-green-500/8 text-green-400/70 border border-green-500/15 font-normal opacity-80"
+                      className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-green-500/8 text-green-400/70 border border-green-500/15 font-normal opacity-80"
                       title={`PDH ${fmt(pdh)} > U1 ${fmt(u1)}`}
                     >
                       PDH&gt;U1
@@ -552,7 +595,7 @@ export default function ScreenerTableRow({
                   badges.push(
                     <span
                       key="pdh-eq-u1"
-                      className="text-xs px-1.5 py-0.5 rounded bg-emerald-500/8 text-emerald-300/70 border border-emerald-500/15 font-normal opacity-80"
+                      className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-emerald-500/8 text-emerald-300/70 border border-emerald-500/15 font-normal opacity-80"
                       title={`PDH = U1 (${fmt(pdh)})`}
                     >
                       PDH=U1
@@ -564,7 +607,7 @@ export default function ScreenerTableRow({
                 badges.push(
                   <span
                     key="pdl-lt-l1"
-                    className="text-xs px-1.5 py-0.5 rounded bg-red-500/8 text-red-400/70 border border-red-500/15 font-normal opacity-80"
+                    className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-red-500/8 text-red-400/70 border border-red-500/15 font-normal opacity-80"
                     title={`PDL ${fmt(pdl)} < L1 ${fmt(l1)}`}
                   >
                     PDL&lt;L1
