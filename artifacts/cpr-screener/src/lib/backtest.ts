@@ -85,6 +85,15 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
   },
+  // NEW: "7AM:MiMi:11PM" — nested under "Overlap Above" → Pattern "cOL4U4".
+  // Bullish; per its legend card the target is today's own R4 / U4 (~11PM IST).
+  {
+    key: "7AM:MiMi:11PM",
+    label: "7AM:MiMi:11PM",
+    direction: "bullish",
+    targetLabel: "U4 (today's R4)",
+    getTarget: (r) => r.todayCPR.r4,
+  },
   // NEW: "cOL3U3-pL4" — nested under "Overlap Above" → Pattern
   // "cOL3U3". Bearish — unlike its Overlap Above sibling eXHi-L4U4-U4,
   // this one targets prev day's S4 (PL4).
@@ -299,6 +308,13 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
         key: "cOL3U3",
         label: "cOL3U3",
         subPatternKeys: ["cOL3U3-pL4"],
+      },
+      // NEW: cOL4U4 Pattern sub-category — nests the bullish
+      // "7AM:MiMi:11PM" pattern (target: today's R4 / U4).
+      {
+        key: "cOL4U4",
+        label: "cOL4U4",
+        subPatternKeys: ["7AM:MiMi:11PM"],
       },
     ],
   },

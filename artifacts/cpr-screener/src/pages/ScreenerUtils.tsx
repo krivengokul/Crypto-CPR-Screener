@@ -726,6 +726,23 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.compressionRatio >= 60 &&
         r.compressionRatio <= 90
       );
+    // NEW: 7AM:MiMi:11PM — Overlap Above + today's cOL4U4 (prev R4 inside
+    // today's R3/R4, prev S4 inside today's S3/S4 direction-agnostic cO
+    // variant) + the PREVIOUS day's own pivot sub-label (prevCPR vs ppCPR)
+    // being HiL4U4 ("p-HiL4U4" badge) + prev CPR width category pMini
+    // (0.22%-0.60%) + today CPR width category Mini (0.22%-0.60%) +
+    // prev day's PDH above prev R1 + today's PDH above today's R1.
+    // Bullish, target U4 (today's R4) by ~11PM IST.
+    case "7AM:MiMi:11PM":
+      return (
+        r.overlapHigher &&
+        r.cOL4U4 &&
+        computePivotSubLabel(r.prevCPR, r.ppCPR) === "HiL4U4" &&
+        r.prevCPR.widthPct > 0.22 && r.prevCPR.widthPct <= 0.60 &&   // pMini
+        r.todayCPR.widthPct > 0.22 && r.todayCPR.widthPct <= 0.60 && // Mini
+        r.prevCPR.PDHLAbove &&
+        r.todayCPR.PDHLAbove
+      );
     case "cOL3U3-pL4":
       return r.overlapHigher && r.cOL3U3 && r.prevCPR.widthPct <= 0.10 &&   // pMicro
               r.todayCPR.widthPct > 0.60 && r.todayCPR.widthPct <= 1.10;   // Small;
@@ -1003,6 +1020,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     { key: "eXHi-L4U4-U4",  direction: "up" },
     { key: "cOL3U3-pL4",  direction: "down" },
     { key: "LMe-eXL2U2-L4:10PM", direction: "down" },
+    { key: "7AM:MiMi:11PM", direction: "up" },
   ],
   "overlapping-lower": [
     { key: "eXLo-L4U4-U4", direction: "up" },

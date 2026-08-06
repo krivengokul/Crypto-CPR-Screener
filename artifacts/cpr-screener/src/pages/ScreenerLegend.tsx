@@ -309,6 +309,15 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
               Overlap Above + eXL2U2 (today&apos;s S2 above prev S1 AND today&apos;s R2 above prev R1) + Compression Ratio 60%–90%.
             </div>
           </>
+        ) : activePattern === "7AM:MiMi:11PM" ? (
+          <>
+            <div className="text-xs font-semibold text-emerald-400 mb-1">
+              Pattern: cOL4U4&nbsp;&nbsp;Prev: p-HiL4U4&nbsp;&nbsp;PCPR: pMini&nbsp;&nbsp;CPR: Mini
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Overlap Above + cOL4U4 + previous day&apos;s pattern p-HiL4U4 + prev CPR pMini (0.22%–0.60%) + today CPR Mini (0.22%–0.60%) + prev PDH above prev U1 + today PDH above today U1.
+            </div>
+          </>
         ) : showExpU3LtPU4 && activePattern === "structure-bigbelow" ? (
           <>
             <div className="text-xs font-semibold text-rose-400 mb-1">Expanded</div>
@@ -520,6 +529,15 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             </div>
             <div className="text-xs text-muted-foreground">
               Bearish rotation from the Overlap-Above zone — expected sweep toward today&apos;s L4 by ~10PM IST.
+            </div>
+          </>
+        ) : activePattern === "7AM:MiMi:11PM" ? (
+          <>
+            <div className="text-xs font-semibold text-emerald-400 mb-1">
+              Target: U4&nbsp;&nbsp;&nbsp;Entry: 7AM&nbsp;&nbsp;&nbsp;Time: 11PM
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Bullish continuation from the Overlap-Above zone — expected move toward today&apos;s U4 by ~11PM IST.
             </div>
           </>
         ) : showExpU3LtPU4 && activePattern === "structure-bigbelow" ? (
