@@ -617,7 +617,7 @@ export default function ScreenerTableRow({
               if (badges.length === 0) {
                 return <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">—</span>;
               }
-              return <div className="flex flex-wrap gap-1">{badges}</div>;
+              return <div className="flex flex-nowrap items-center gap-1">{badges}</div>;
             })()}
           </div>
         </td>
