@@ -253,7 +253,19 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
   {
     key: "cpr-1-above",
     label: "CPR 1ABOVE",
-    subPatternKeys: ["9AM:MegL-3PM"],
+    // NEW: "eXL4U2" Pattern sub-category (arrow) — same shape as
+    // cOU3L4/LoU3L3/HiL4U3 elsewhere. Base condition = parent
+    // cpr-1-above's condition AND the raw eXL4U2 flag (see
+    // matchesPatternFlag in ScreenerUtils.tsx). Nests the existing
+    // "9AM:MegL-3PM" pattern, which used to sit directly on this
+    // category's own subPatternKeys.
+    subCategories: [
+      {
+        key: "eXL4U2",
+        label: "eXL4U2",
+        subPatternKeys: ["9AM:MegL-3PM"],
+      },
+    ],
   },
   // NEW: "PREVCPR 1ABOVE" (displayed as "PCPR 1ABOVE" in PatternSidebar's
   // left-nav) left-nav section (top of the pattern tree in
