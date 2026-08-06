@@ -758,8 +758,8 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
   // CPRs1Above — "CPR 1ABOVE":
   //   today's TC is above prev day's R1 and below prev day's R2, AND
   //   today's S1 is above prev day's BC and below prev day's R1.
-  const CPRs1Above = (today.bc > prev.r1 && today.bc < prev.r2) ||
-                    (prev.tc < today.s1 && prev.tc > today.s2);
+  const CPRs1Above = (today.pivot > prev.r1 && today.pivot < prev.r2) ||
+                    (prev.pivot < today.s1 && prev.pivot > today.s2);
 
   // cOU1L1 / cOL1U1 — split by which side (R1 vs S1) moved further.
   const r1Move = Math.abs(prev.r1 - today.r1);
