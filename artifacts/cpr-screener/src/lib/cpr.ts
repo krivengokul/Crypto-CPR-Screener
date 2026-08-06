@@ -218,10 +218,6 @@ export interface CPRPairFlags {
   // band" shape as cOU1L2/cOU2L2, but pairs the L1 support band with the
   // wider U2 resistance band instead of L2+U1 or L2+U2.
   cOL1U2: boolean;
-  // HiL3U2 — today's S4 lands inside prev's S3/S2 band (L3, same support
-  // band as HiL3U3/HiL3U4), AND prev's R4 lands inside prev's OWN R1/R2
-  // band (U2) — unlike the other Hi* patterns, the resistance side here
-  // checks prev's R4 against prev's own R1/R2 levels, not today's.
   HiL3U2: boolean;
 }
 
