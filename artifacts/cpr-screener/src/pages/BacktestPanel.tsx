@@ -28,7 +28,7 @@ import {
   type BacktestTargetDef,
 } from "@/lib/backtest";
 import { passesPattern, matchesPatternFlag, fmt, getChartUrl, hasKnownChartMapping, getWidthCategory } from "./ScreenerUtils";
-import { renderTodayPatternBadges, renderPrevPatternBadge } from "./ScreenerTableRow";
+import { renderTodayPatternBadges, renderPrevPatternBadge, renderPdhPdlSubBadges } from "./ScreenerTableRow";
 import { SRLadderRow, toSRLadderData } from "./SRLadderPanel";
 
 // --- Small UTC date helpers (all dates in this panel are UTC ISO strings) ---
@@ -866,6 +866,9 @@ export default function BacktestPanel() {
                       Symbol
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Close
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Pattern
                     </th>
                     <th className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[220px]">
@@ -874,7 +877,7 @@ export default function BacktestPanel() {
                       </span>
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Close
+                      PDH / PDL
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       <button
@@ -936,6 +939,9 @@ export default function BacktestPanel() {
                             </span>
                           </div>
                         </td>
+                        <td className={`px-3 py-2 font-mono text-sm font-medium ${closeColor}`}>
+                          {r.closePrice !== null && r.closePrice !== undefined ? fmt(r.closePrice) : "—"}
+                        </td>
                         <td className="px-3 py-2 whitespace-nowrap">
                           {(() => {
                             const today = renderTodayPatternBadges(r.raw);
@@ -978,8 +984,8 @@ export default function BacktestPanel() {
                             );
                           })()}
                         </td>
-                        <td className={`px-3 py-2 font-mono text-sm font-medium ${closeColor}`}>
-                          {r.closePrice !== null && r.closePrice !== undefined ? fmt(r.closePrice) : "—"}
+                        <td className="px-3 py-2 whitespace-nowrap">
+                          {renderPdhPdlSubBadges(r.raw) ?? <span className="text-xs text-muted-foreground">—</span>}
                         </td>
                         <td className={`px-3 py-2 font-mono text-sm font-medium ${chgColor}`}>
                           {chg !== null && chg !== undefined
@@ -991,7 +997,7 @@ export default function BacktestPanel() {
                         <SRLadderRow
                           r={toSRLadderData(r.raw, r.closePrice ?? undefined)}
                           rowKey={`${r.source}-${r.symbol}`}
-                          colSpan={5}
+                          colSpan={6}
                         />
                       )}
                       </Fragment>
