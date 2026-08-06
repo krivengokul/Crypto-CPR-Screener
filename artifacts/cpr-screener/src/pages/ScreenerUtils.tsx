@@ -311,7 +311,13 @@ export function getWidthCategory(widthPct: number): WidthCategoryInfo {
   for (const cat of WIDTH_CATEGORIES) {
     if (widthPct <= cat.max) return cat;
   }
-  return WIDTH_CATEGORIES[WIDTH_CATEGORIES.length - 1];
+  return WIDTH_CATEGORIES[WIDTH_CATEGORIES.length - 1] ?? {
+    key: "ultra",
+    label: "Ultra",
+    max: Infinity,
+    classes: "bg-rose-500/10 text-rose-400 border-rose-500/20",
+    pClasses: "bg-rose-500/10 text-rose-300 border-rose-400/20",
+  };
 }
 
 /**
@@ -657,6 +663,18 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // inside prev's BC/R1 band. Sits above "PREVCPR 1ABOVE" in the left-nav.
     case "cpr-1-above":
       return r.CPRs1Above;
+    // 9AM:MegL-3PM — CPR 1ABOVE + previous pair eXU1L1 + current pair
+    // eXL4U2 + pMega/Large widths + both PDLs below their respective L1s.
+    case "9AM:MegL-3PM":
+      return (
+        r.CPRs1Above &&
+        computePivotSubLabel(r.prevCPR, r.ppCPR) === "eXU1L1" &&
+        r.eXL4U2 &&
+        r.prevCPR.widthPct > 5.00 && r.prevCPR.widthPct <= 10.00 &&
+        r.todayCPR.widthPct > 2.00 && r.todayCPR.widthPct <= 5.00 &&
+        r.prevCPR.prevLow < r.prevCPR.s1 &&
+        r.todayCPR.prevLow < r.todayCPR.s1
+      );
     case "pcpr-u1-cpr-pl1":
       return r.pCPR1Above;
     // NEW: BC>pPDL-U3:5AM — sub-filter under "PREVCPR 1ABOVE": base pCPR1Above
@@ -1031,6 +1049,9 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
   "pcpr-u1-cpr-pl1": [
     { key: "BC>pPDL-U3:5AM", direction: "up" },
     { key: "PDH>pTC-U4:5AM", direction: "up" },
+  ],
+  "cpr-1-above": [
+    { key: "9AM:MegL-3PM", direction: "up" },
   ],
   "l1pu1-above": [
     { key: "SMi-L1pU1>-APU4:11PM", direction: "up" },

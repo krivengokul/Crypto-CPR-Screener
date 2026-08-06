@@ -47,6 +47,13 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
   },
+  {
+    key: "9AM:MegL-3PM",
+    label: "9AM:MegL-3PM",
+    direction: "bullish",
+    targetLabel: "U4 (today's R4)",
+    getTarget: (r) => r.todayCPR.r4,
+  },
   // REMOVED: "HA-U1>PU4" — its condition (cprRising && strWideCPR &&
   // todayCPR.r1 > prevCPR.r4) is identical to the "U1 > pU4" (u1-gt-pu4)
   // parent category's own base condition, so it was just a duplicate
@@ -243,11 +250,11 @@ export interface BacktestCategoryDef {
 }
 
 export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
-  // NEW: "CPR 1ABOVE" left-nav section — sits above "PREVCPR 1ABOVE" in
-  // PatternSidebar.tsx's pattern tree. Symbol-list-only category (no
-  // subPatterns defined for it in PatternSidebar.tsx's `subPatterns` map
-  // yet, so there's nothing to nest here).
-  { key: "cpr-1-above", label: "CPR 1ABOVE" },
+  {
+    key: "cpr-1-above",
+    label: "CPR 1ABOVE",
+    subPatternKeys: ["9AM:MegL-3PM"],
+  },
   // NEW: "PREVCPR 1ABOVE" (displayed as "PCPR 1ABOVE" in PatternSidebar's
   // left-nav) left-nav section (top of the pattern tree in
   // PatternSidebar.tsx) — nests the "cOU3L4" Pattern sub-category, which

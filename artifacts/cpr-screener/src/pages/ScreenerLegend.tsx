@@ -215,7 +215,12 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
         ) : null}
       </div>
       <div className="rounded-lg border border-border bg-card p-3">
-        {activePattern === "ss-eXU4L1-U4:10PM" ? (
+        {activePattern === "9AM:MegL-3PM" ? (
+          <>
+            <div className="text-xs font-semibold text-green-400 mb-1">Pattern: p-eXU1L1 → eXL4U2&nbsp;&nbsp;PCPR: Mega&nbsp;&nbsp;CPR: Large</div>
+            <div className="text-xs text-muted-foreground">CPR 1ABOVE, previous pair eXU1L1, current pair eXL4U2, and both previous and current PDL below L1</div>
+          </>
+        ) : activePattern === "ss-eXU4L1-U4:10PM" ? (
           <>
             <div className="text-xs font-semibold text-green-400 mb-1">Pattern: eXU4L1&nbsp;&nbsp;PCPR: Wide&nbsp;&nbsp;pBC &gt; U1</div>
             <div className="text-xs text-muted-foreground">L1&lt;pL4 base — cprFalling + strWideCPR + Prev &amp; Today PDH above their R1 + eXU4L1 (Prev R4 in Today R3/R4, Prev S4 in Today BC/S1) + Prev CPR&apos;s BC above Today&apos;s R1</div>
@@ -437,7 +442,12 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
         ) : null}
       </div>
       <div className="rounded-lg border border-border bg-card p-3">
-        {activePattern === "ss-eXU4L1-U4:10PM" ? (
+        {activePattern === "9AM:MegL-3PM" ? (
+          <>
+            <div className="text-xs font-semibold text-green-400 mb-1">Target: U4&nbsp;&nbsp;Time: 3PM</div>
+            <div className="text-xs text-emerald-400/80">9AM setup with bullish continuation expected toward today&apos;s U4 by ~3PM</div>
+          </>
+        ) : activePattern === "ss-eXU4L1-U4:10PM" ? (
           <>
             <div className="text-xs font-semibold text-green-400 mb-1">Target: U4&nbsp;&nbsp;Time: 10PM</div>
             <div className="text-xs text-emerald-400/80">Bullish sweep from a deep L1&lt;pL4 setup — expected recovery toward today&apos;s U4 by ~10PM IST</div>
