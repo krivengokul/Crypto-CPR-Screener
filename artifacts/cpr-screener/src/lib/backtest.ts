@@ -357,6 +357,17 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
         label: "cOL4U4",
         subPatternKeys: ["7AM:MiMi-pU4:11PM"],
       },
+      // NEW: eXL4U4 Pattern sub-category (arrow), same shape as its
+      // HiL4U3/cOL3U3/cOL4U4 siblings — base condition = Overlap Above's
+      // r.overlapHigher condition AND the raw eXL4U4 flag (see
+      // matchesPatternFlag in ScreenerUtils.tsx, which already has a
+      // "eXL4U4" case). No target-graded pattern nested under it yet, so
+      // it shows up as a symbol-list-only scan in the Backtest dropdown.
+      {
+        key: "eXL4U4",
+        label: "eXL4U4",
+        subPatternKeys: [],
+      },
     ],
   },
   // NEW: left-nav sections exposed in the Backtest dropdown as
