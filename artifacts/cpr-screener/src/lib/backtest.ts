@@ -133,6 +133,19 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "PL4 (prev day's S4)",
     getTarget: (r) => r.prevCPR.s4,
   },
+  // NEW: "6PM:LaLa->U4:2AM" — nested under "Overlap Above" → Pattern
+  // "eXL4U4" (previously an empty symbol-list-only sub-category, see
+  // BACKTEST_CATEGORIES below). Base eXL4U4 flag + prev day's own pivot
+  // sub-label p-cOU3L3 + pLarge/Large width combo + p-PDL<L1 + today's
+  // PDH>U1 + today's PDH/PDL above prev day's R1/S1. Bullish, targets
+  // today's own R4 / U4, entry ~6PM by ~2AM.
+  {
+    key: "6PM:LaLa->U4:2AM",
+    label: "6PM:LaLa->U4:2AM",
+    direction: "bullish",
+    targetLabel: "U4 (today's R4)",
+    getTarget: (r) => r.todayCPR.r4,
+  },
   // NEW: "SMi-L1pU1>-APU4:11PM" — nested under the new "L1pU1 Above"
   // category (moved out of CPR Inside). Bullish, targets "Above PU4",
   // i.e. prev day's R4.
@@ -366,7 +379,9 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       {
         key: "eXL4U4",
         label: "eXL4U4",
-        subPatternKeys: [],
+        // NEW: now nests "6PM:LaLa->U4:2AM" (was previously an empty,
+        // symbol-list-only scan).
+        subPatternKeys: ["6PM:LaLa->U4:2AM"],
       },
     ],
   },

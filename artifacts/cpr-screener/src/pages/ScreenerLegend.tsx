@@ -333,6 +333,15 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
               Overlap Above + cOL4U4 + previous day&apos;s pattern p-HiL4U4 + prev CPR pMini (0.22%–0.60%) + today CPR Mini (0.22%–0.60%) + prev PDH above prev U1 + today PDH above today U1.
             </div>
           </>
+        ) : activePattern === "6PM:LaLa->U4:2AM" ? (
+          <>
+            <div className="text-xs font-semibold text-amber-400 mb-1">
+              Pattern: eXL4U4&nbsp;&nbsp;Prev: p-cOU3L3&nbsp;&nbsp;PCPR: pLarge&nbsp;&nbsp;CPR: Large
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Overlap Above + previous day&apos;s pattern p-cOU3L3 + eXL4U4 (prev R4 inside today&apos;s R3/R4, prev S4 inside today&apos;s S3/S4) + prev CPR pLarge (2.00%–5.00%) + today CPR Large (2.00%–5.00%) + prev day&apos;s PDL below prev S1 (p-PDL&lt;L1) + today PDH above today R1 (PDH&gt;U1) + today&apos;s PDH above prev R1 + today&apos;s PDL above prev S1.
+            </div>
+          </>
         ) : showExpU3LtPU4 && activePattern === "structure-bigbelow" ? (
           <>
             <div className="text-xs font-semibold text-rose-400 mb-1">Expanded</div>
@@ -568,6 +577,15 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             </div>
             <div className="text-xs text-muted-foreground">
               Bullish continuation from the Overlap-Above zone — expected move toward today&apos;s U4 by ~11PM IST.
+            </div>
+          </>
+        ) : activePattern === "6PM:LaLa->U4:2AM" ? (
+          <>
+            <div className="text-xs font-semibold text-amber-400 mb-1">
+              Target: U4&nbsp;&nbsp;&nbsp;Entry: 6PM&nbsp;&nbsp;&nbsp;Time: 2AM
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Bullish continuation from a Large/pLarge Overlap-Above setup — expected move toward today&apos;s U4 by ~2AM IST.
             </div>
           </>
         ) : showExpU3LtPU4 && activePattern === "structure-bigbelow" ? (

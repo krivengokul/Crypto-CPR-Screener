@@ -791,6 +791,26 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     case "cOL3U3-pL4":
       return r.overlapHigher && r.cOL3U3 && r.prevCPR.widthPct <= 0.10 &&   // pMicro
               r.todayCPR.widthPct > 0.60 && r.todayCPR.widthPct <= 1.10;   // Small;
+    // NEW: 6PM:LaLa->U4:2AM — Overlap Above + the PREVIOUS day's own pivot
+    // sub-label (prevCPR vs ppCPR) being cOU3L3 ("p-cOU3L3" badge) + raw
+    // eXL4U4 flag (prev R4 inside today's R3/R4 AND prev S4 inside today's
+    // S3/S4) + prev CPR width category pLarge (2.00%-5.00%) + today CPR
+    // width category Large (2.00%-5.00%) + prev day's own PDL below prev
+    // day's S1 ("p-PDL<L1") + today's PDH above today's R1 ("PDH>U1") +
+    // today's PDH above prev day's R1 + today's PDL above prev day's S1.
+    // Bullish, entry ~6PM, target U4 (today's R4) by ~2AM.
+    case "6PM:LaLa->U4:2AM":
+      return (
+        r.overlapHigher &&
+        computePivotSubLabel(r.prevCPR, r.ppCPR) === "cOU3L3" &&
+        r.eXL4U4 &&
+        r.prevCPR.widthPct > 2.00 && r.prevCPR.widthPct <= 5.00 &&   // pLarge
+        r.todayCPR.widthPct > 2.00 && r.todayCPR.widthPct <= 5.00 && // Large
+        r.prevCPR.prevLow < r.prevCPR.s1 &&                          // p-PDL<L1
+        r.todayCPR.PDHLAbove &&                                      // PDH>U1
+        r.todayCPR.prevHigh > r.prevCPR.r1 &&
+        r.todayCPR.prevLow > r.prevCPR.s1
+      );
     case  "LAT-PU12CU23":
       return r.overlapHigher && r.PU12CU23 && r.PL12CL23 && r.todayCPR.prevHigh > r.prevCPR.prevHigh;
     case "overlapping-lower":
@@ -1066,6 +1086,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     { key: "cOL3U3-pL4",  direction: "down" },
     { key: "LMe-eXL2U2-L4:10PM", direction: "down" },
     { key: "7AM:MiMi-pU4:11PM", direction: "up" },
+    { key: "6PM:LaLa->U4:2AM", direction: "up" },
   ],
   "overlapping-lower": [
     { key: "eXLo-L4U4-U4", direction: "up" },

@@ -77,6 +77,15 @@ export const subPatterns: Record<string, SubPattern[]> = {
       activeText:  "#6ee7b7",      // emerald-300 text
       activeBg:    "rgba(16, 185, 129, 0.10)",
     },
+    // NEW: 6PM:LaLa->U4:2AM — Overlap Above + p-cOU3L3 + eXL4U4 + pLarge +
+    // Large + p-PDL<L1 + PDH>U1 + today's PDH > prev R1 + today's PDL > prev S1
+    {
+      id: "6PM:LaLa->U4:2AM",
+      label: "6PM:LaLa->U4:2AM",
+      activeColor: "#fbbf24",      // amber-400 border
+      activeText:  "#fcd34d",      // amber-300 text
+      activeBg:    "rgba(245, 158, 11, 0.10)",
+    },
   ],
   "overlapping-lower": [
     { id: "eXLo-L4U4-U4",            label: "Exp-U3>pU4" },
