@@ -317,8 +317,7 @@ export async function runScreener(
     const batchResults = await Promise.all(
       batch.map(async (t) => {
         const klines = await fetchKlines(t.symbol);
-        // Newly listed coins need at least 3 daily candles to be shown.
-        if (!klines || klines.length < 3) {
+        if (!klines || klines.length < 2) {
           skipped.push(t.symbol);
           return null;
         }

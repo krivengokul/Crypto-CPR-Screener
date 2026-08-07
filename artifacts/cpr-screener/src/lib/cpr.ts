@@ -218,6 +218,11 @@ export interface CPRPairFlags {
   // band" shape as cOU1L2/cOU2L2, but pairs the L1 support band with the
   // wider U2 resistance band instead of L2+U1 or L2+U2.
   cOL1U2: boolean;
+  // cOL1U3 — today's S4 lands inside prev's S1/BC band (L1, same support
+  // band as cOL1U2/cOL1U1), AND today's R4 lands inside prev's R2/R3 band
+  // (U3, same resistance band as cOL2U3/cOL3U3/cOU3L4). Pairs the
+  // narrowest support band (L1) with the wider U3 resistance band.
+  cOL1U3: boolean;
   HiL3U2: boolean;
 }
 
@@ -341,6 +346,7 @@ export interface CPRResult {
   eXL4TC: boolean;
   LoU3L2: boolean;
   cOL1U2: boolean;
+  cOL1U3: boolean;
   HiL3U2: boolean;
   passes: boolean;
   currentPrice: number;
@@ -799,6 +805,12 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
   const cOL1U2 = (today.s4 >= prev.s1 && today.s4 < prev.bc) &&
                  (today.r4 > prev.r1 && today.r4 < prev.r2);
 
+  // cOL1U3 — today's S4 lands inside prev's S1/BC band (L1, same support
+  // band as cOL1U2) AND today's R4 lands inside prev's R2/R3 band (U3,
+  // same resistance band as cOL2U3/cOL3U3).
+  const cOL1U3 = (today.s4 >= prev.s1 && today.s4 < prev.bc) &&
+                 (today.r4 > prev.r2 && today.r4 < prev.r3);
+
   return {
     r4Distance, s4Distance,
     srHigher, srLower, srExpanded, srCompressed,
@@ -812,7 +824,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
     eXL2U1, eXL3U1, eXL4U1, eXL1BC, eXL1CP, eXL2BC, eXL3BC, eXL3CP,
     eXL3TC, eXL4U2, eXL2U2, eXL2TC, eXL1U1, eXU1L1, eXU2L1, cOTCL2, L1pU1Above, pCPR1Above, CPRs1Above,
     eXU3L1, eXU3L2, eXU2TC, eXU2BC, eXU3TC, eXU2CP, eXU3CP, eXU3BC, eXU4L1, eXU4BC, LoCPL3, LoCPL2, LoTCL3,
-    eXHiL2L1, eXLoL2L1, eXL2CP, eXL4TC, LoU3L2, cOL1U2, HiL3U2,
+    eXHiL2L1, eXLoL2L1, eXL2CP, eXL4TC, LoU3L2, cOL1U2, cOL1U3, HiL3U2,
   };
 }
 
@@ -897,6 +909,7 @@ export function pickCPRSubLabel(f: CPRPairFlags): string | null {
   if (f.eXL4TC)    return "eXL4TC";
   if (f.LoU3L2)    return "LoU3L2";
   if (f.cOL1U2)    return "cOL1U2";
+  if (f.cOL1U3)    return "cOL1U3";
   if (f.HiL3U2)    return "HiL3U2";
   return null;
 }
