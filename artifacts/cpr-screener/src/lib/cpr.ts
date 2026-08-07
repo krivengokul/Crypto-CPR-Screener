@@ -503,7 +503,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
   // one tier narrower than HiL2U4's U4 band).
   const HiL2U3   = (today.s4 >= prev.s2 && today.s4 < prev.s1) &&
                    (prev.r4 > today.r2 && prev.r4 < today.r3);
-  const HiL3U4   = (today.s4 > prev.s3 && today.s4 < prev.s2) &&
+  const HiL3U4   = (today.s4 >= prev.s3 && today.s4 < prev.s2) &&
                    (prev.r4 > today.r3 && prev.r4 < today.r4);
   const HiL4U4   = (prev.r4 > today.r3 && prev.r4 < today.r4) &&
                    (today.s4 >= prev.s4 && today.s4 < prev.s3);
