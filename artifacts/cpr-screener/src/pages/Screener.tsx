@@ -56,6 +56,37 @@ import ScreenerLegend from "./ScreenerLegend";
 import ScreenerTableRow, { ScreenerTableHeader } from "./ScreenerTableRow";
 import { useBinanceLiveRefresh, useDeltaLiveRefresh } from "@/hooks/useLivePriceRefresh";
 
+/**
+ * GENERIC_VIEW_CATEGORIES — left-nav categories whose Views (sub-patterns)
+ * are rendered generically (see the "Generic Views" block in the JSX below
+ * and the matching fallback in getActivePool), instead of each sub-pattern
+ * getting its own hand-written useState + button + pool block like
+ * "littleabove"/"littlebelow"/etc. do above it.
+ *
+ * Why: every new sub-pattern under those older categories needs a new
+ * useState, a cleanup-effect entry, a getActivePool() branch, an
+ * anySubFilter entry, AND a JSX button — five places to touch, and it's
+ * easy to add a sub-pattern to PatternSidebar's `subPatterns` map and
+ * forget one of them (exactly what happened here: CPR 1ABOVE's three
+ * Views existed in the left-nav but never got a Screener button, so the
+ * Views list showed empty). The generic path here only needs the
+ * subPatterns entry — passesPattern(r, sub.id) already resolves any
+ * sub-pattern id generically (see the per-sub-pattern count loop above),
+ * so no per-view code is needed on this side at all.
+ *
+ * Add a category key here any time a NEW top-level left-nav pattern is
+ * introduced (or move one of the older hardcoded categories in here later
+ * if it stops needing its bespoke behaviour).
+ */
+const GENERIC_VIEW_CATEGORIES = new Set([
+  "cpr-1-above",
+  "pcpr-u1-cpr-pl1",
+  "l1pu1-above",
+  "u1-gt-pu4",
+  "l1-lt-pl4",
+  "equal-cpr",
+]);
+
 export default function Screener({
   activePattern = "littleabove",
   scanKey = 0,
@@ -156,6 +187,12 @@ export default function Screener({
   // r.overlapHigher instead of r.overlapLower.
   const [showOBHiExL4U4, setShowOBHiExL4U4] = useState(false);
    const [showLMeXL2U2, setShowLMeXL2U2] = useState(false);
+  // NEW: generic Views (sub-pattern) toggle — covers every category listed
+  // in GENERIC_VIEW_CATEGORIES (CPR 1ABOVE, PREVCPR 1ABOVE, L1pU1 Above,
+  // U1>pU4, L1<pL4, Equal CPR, and any future category added there) instead
+  // of a bespoke useState per sub-pattern. Holds the currently-selected
+  // sub-pattern id (e.g. "7PM:MoMi->U4:2AM"), or null when none selected.
+  const [activeGenericSubView, setActiveGenericSubView] = useState<string | null>(null);
   const [PatternFilter, setPatternFilter] = useState<PatternInfo["label"] | null>(null);
   const [showPatternList, setShowPatternList] = useState(false);
   const [showSizeList, setShowSizeList] = useState(false);
@@ -376,6 +413,18 @@ export default function Screener({
     // Reset LB Compressed / LB-C34 / lbE11-cOLoL3U2-PU4 / LB-cO2-L2U2 / LB-BothTiny / LB-AllUp when leaving littlebelow
     if (activePattern !== "littlebelow") { setShowLBCmprss(false); setShowLBC34(false); setShowLBE11(false); setShowLBC2L2U2(false); setShowLBBothTiny(false); setShowLBAllUp(false); }
   }, [activePattern, allResults, deltaAllResults]);
+  // NEW: reset the generic Views toggle whenever it no longer belongs to
+  // the current activePattern — either because we've left every generic
+  // category entirely, or because we've switched from one generic category
+  // to another (e.g. "cpr-1-above" -> "l1pu1-above") and the previously
+  // selected sub-pattern id doesn't exist under the new one.
+  useEffect(() => {
+    if (!activeGenericSubView) return;
+    const stillValid =
+      GENERIC_VIEW_CATEGORIES.has(activePattern) &&
+      (subPatterns[activePattern] ?? []).some((s) => s.id === activeGenericSubView);
+    if (!stillValid) setActiveGenericSubView(null);
+  }, [activePattern]);
   // NEW: report per-pattern (top-level nav) matching counts up to App so
   // the left sidebar can show "Little ABOVE (41)" etc. Computed off the
   // currently active tab's full unfiltered result set, so the counts
@@ -878,6 +927,22 @@ export default function Screener({
       if (activeTab === "delta") return deltaIntersect;
       return binanceIntersect;
     }
+    // NEW: generic Views (sub-pattern) pool — covers every category in
+    // GENERIC_VIEW_CATEGORIES. passesPattern(r, id) already resolves any
+    // sub-pattern id generically (same lookup used for the left-nav counts
+    // above), so this one branch replaces what would otherwise be a
+    // separate hand-written pool block per sub-pattern.
+    if (activeGenericSubView && GENERIC_VIEW_CATEGORIES.has(activePattern)) {
+      const binanceIntersect = allResults
+        .filter((r) => passesPattern(r, activeGenericSubView))
+        .map((r) => ({ ...r, source: "binance" as const }));
+      const deltaIntersect = deltaAllResults
+        .filter((r) => passesPattern(r, activeGenericSubView))
+        .map((r) => ({ ...r, source: "delta" as const }));
+      if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
+      if (activeTab === "delta") return deltaIntersect;
+      return binanceIntersect;
+    }
     if (activeTab === "combined") return showAll ? combinedAllResults : combinedResults;
     if (activeTab === "delta") return (showAll ? deltaAllResults : deltaFiltered).map((r) => ({ ...r, source: "delta" as const }));
     return (showAll ? allResults : filtered).map((r) => ({ ...r, source: "binance" as const }));
@@ -1073,6 +1138,7 @@ export default function Screener({
     showBigBelowPMiniPL3 || showBigBelowPMiniRising || showExpU3LtPU4 || showBigBeloweXU4L3AU4 || showBigBelowL1LtPL4 || showL1LtPL4CprLtPL4 || showBigBeloweXU4L2AU4 || showBigBelow1TcOU4L43PM ||
     showBigAbovePL34CL4 || showBAComp || showHAU1 || showHAU1CprAbovePU4 || showHAU1L1AbovePU4 || showHAU1PWideAbove || showHRHAL || showHA55HrL4U34FAU4 || showHiL4U4FAU4 || show1ScoHiFAU4 || show2ScoHiFAU4 || showLBCmprss || showLBC34 || showLBE11 || showLBC2L2U2 ||
     showLBBothTiny || showLBAllUp || showExpU4PU4 || showExpU3PU3 || showOBNLoU4L4 || showOBWLoU4L4 || showOBHiExL4U4 || showLMeXL2U2 ||
+    !!activeGenericSubView ||
     !!PatternFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter || !!exitTimeFilter;
 
   return (
@@ -1665,6 +1731,35 @@ export default function Screener({
                 {showLAMeMieXL4U3U46PM ? "✕ MeMi-eXL4U3-U4:6PM" : "MeMi-eXL4U3-U4:6PM"}
               </button>
             )}
+            {/* NEW: generic Views (sub-pattern) buttons — covers CPR 1ABOVE,
+                PREVCPR 1ABOVE, L1pU1 Above, U1>pU4, L1<pL4, Equal CPR (see
+                GENERIC_VIEW_CATEGORIES above), and any future category added
+                there. Colours come straight from each sub-pattern's own
+                activeColor/activeText/activeBg in PatternSidebar's
+                subPatterns map, same as the left-nav itself, so a newly
+                added Views entry is styled automatically without touching
+                this file. */}
+            {GENERIC_VIEW_CATEGORIES.has(activePattern) &&
+              !showAll &&
+              (subPatterns[activePattern] ?? []).map((sub) => {
+                const isActive = activeGenericSubView === sub.id;
+                const borderColor = sub.activeColor ?? "var(--foreground)";
+                const textColor = sub.activeText ?? "var(--foreground)";
+                const bg = sub.activeBg;
+                return (
+                  <button
+                    key={sub.id}
+                    onClick={() => setActiveGenericSubView((v) => (v === sub.id ? null : sub.id))}
+                    className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                      isActive ? "" : "border-border text-muted-foreground hover:text-foreground"
+                    }`}
+                    style={isActive ? { borderColor, color: textColor, backgroundColor: bg } : undefined}
+                    title={`Show only rows matching ${sub.label}`}
+                  >
+                    {isActive ? `✕ ${sub.label}` : sub.label}
+                  </button>
+                );
+              })}
             {activePattern === "overlapping-lower" && !showAll && (
               <button
                 onClick={() => { setShowExpU4PU4((v) => !v); setShowExpU3PU3(false); setShowOBNLoU4L4(false); setShowOBWLoU4L4(false); }}
