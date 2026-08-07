@@ -85,6 +85,14 @@ const GENERIC_VIEW_CATEGORIES = new Set([
   "u1-gt-pu4",
   "l1-lt-pl4",
   "equal-cpr",
+  // NEW: inside-cpr — was hand-wired to a single legacy button
+  // ("Ti-cOLo-APU4-9PM") that no longer matches the left-nav's subPatterns
+  // list (8AM:pSR-PDHL-pU4+1:8AM, 2PM:pPDHLA-SRA-U4:7PM), so the left-nav
+  // Views were invisible in the Screener and the Screener's button pointed
+  // at a Views entry no longer in the left-nav. Moving it to the generic
+  // path makes PatternSidebar's subPatterns the single source of truth for
+  // both surfaces.
+  "inside-cpr",
 ]);
 
 export default function Screener({
@@ -119,9 +127,6 @@ export default function Screener({
   const [showOutsideCPRCompressed, setShowOutsideCPRCompressed] = useState(false);
   // NEW: eXHrL3U3-AU4 filter state — Outside CPR, placed next to Compressed
   const [showOutsideCPReXHrL3U3AU4, setShowOutsideCPReXHrL3U3AU4] = useState(false);
-  // Ti-cOLo-APU4-9PM — single sub-filter under CPR Inside (replaces old
-  // Expanded / Narrow / cO-U4L3). Highlighted green.
-  const [showInsideCPRTiCOLo, setShowInsideCPRTiCOLo] = useState(false);
   const [showHA55HrL4U34FAU4, setShowHA55HrL4U34FAU4] = useState(false);
   const [showBigBelowPMiniPL3, setShowBigBelowPMiniPL3] = useState(false);
   // NEW: live sub-toggle on top of pMini — restrict to rows currently trading above today's TC
@@ -166,6 +171,12 @@ export default function Screener({
   // NEW: TS-cOL3U4-AU4R:4PM filter state — BigCPR Above (same as 1S-cOHi-FAU4:1AM
   // but prev CPR width category Tiny instead of pMicro)
   const [show2ScoHiFAU4, setShow2ScoHiFAU4] = useState(false);
+  // NEW: eXL4U2-U4:4AM / TiMi-cOL2U2-pL4:5AM filter state — BigCPR Above
+  // Views entries that existed in PatternSidebar's subPatterns list but had
+  // no matching Screener button (same class of bug as CPR Inside's missing
+  // Views).
+  const [showBAeXL4U2, setShowBAeXL4U2] = useState(false);
+  const [showBATiMicOL2U2, setShowBATiMicOL2U2] = useState(false);
   // NEW: LB Compressed filter state
   const [showLBCmprss, setShowLBCmprss] = useState(false);
   const [showLBC34, setShowLBC34] = useState(false);
@@ -176,6 +187,9 @@ export default function Screener({
   // NEW: LB-BothTiny / LB-AllUp filter state (replaces hidden left-nav items)
   const [showLBBothTiny, setShowLBBothTiny] = useState(false);
   const [showLBAllUp, setShowLBAllUp] = useState(false);
+  // NEW: L1-cOU1L2-U4:1AM filter state — Little Below Views entry that had
+  // no Screener button (see LB-BothTiny comment above for the same class of bug)
+  const [showLBL1cOU1L2, setShowLBL1cOU1L2] = useState(false);
   const [showExpU4PU4, setShowExpU4PU4] = useState(false);
   // NEW: Exp-U3>U3 filter state (Overlapping Lower)
   const [showExpU3PU3, setShowExpU3PU3] = useState(false);
@@ -187,6 +201,13 @@ export default function Screener({
   // r.overlapHigher instead of r.overlapLower.
   const [showOBHiExL4U4, setShowOBHiExL4U4] = useState(false);
    const [showLMeXL2U2, setShowLMeXL2U2] = useState(false);
+  // NEW: cOL3U3-pL4 / 7AM:MiMi-pU4:11PM / 6PM:LaLa->U4:2AM filter state —
+  // Overlapping Higher Views entries that existed in PatternSidebar's
+  // subPatterns list but had no matching Screener button (same class of
+  // bug as CPR Inside's missing Views).
+  const [showOBHicOL3U3pL4, setShowOBHicOL3U3pL4] = useState(false);
+  const [showOBHi7AMMiMi, setShowOBHi7AMMiMi] = useState(false);
+  const [showOBHi6PMLaLa, setShowOBHi6PMLaLa] = useState(false);
   // NEW: generic Views (sub-pattern) toggle — covers every category listed
   // in GENERIC_VIEW_CATEGORIES (CPR 1ABOVE, PREVCPR 1ABOVE, L1pU1 Above,
   // U1>pU4, L1<pL4, Equal CPR, and any future category added there) instead
@@ -425,14 +446,13 @@ export default function Screener({
     if (deltaAllResults.length > 0) setDeltaFiltered(deltaAllResults.filter((r) => passesPattern(r, activePattern)));
     if (activePattern !== "littleabove") { setShowLABothTiny(false); setShowLAAllUp(false); setShowLA1LHr(false); setShowLAPL12CL23(false); setShowLACompressed(false); setShowLAT1U46AM(false); setShowLASsHiL4U4FAU42AM(false); setShowLAMeMieXL4U3U46PM(false); }
     if (activePattern !== "outside-cpr") { setShowOutsideCPRCompressed(false); setShowOutsideCPReXHrL3U3AU4(false); }
-    if (activePattern !== "inside-cpr") { setShowInsideCPRTiCOLo(false); }
     if (activePattern !== "overlapping-lower") { setShowExpU4PU4(false); setShowExpU3PU3(false); setShowOBNLoU4L4(false); setShowOBWLoU4L4(false); }
     // NEW: reset eXHi-L4U4-U4 toggle when leaving Overlapping Higher
-    if (activePattern !== "overlapping-higher") { setShowOBHiExL4U4(false); setShowLMeXL2U2(false);}
+    if (activePattern !== "overlapping-higher") { setShowOBHiExL4U4(false); setShowLMeXL2U2(false); setShowOBHicOL3U3pL4(false); setShowOBHi7AMMiMi(false); setShowOBHi6PMLaLa(false); }
     if (activePattern !== "structure-bigbelow") { setShowBigBelowPMiniPL3(false); setShowBigBelowPMiniRising(false); pMiniRisingAlertedRef.current.clear(); setShowExpU3LtPU4(false); setShowBigBeloweXU4L3AU4(false); setShowBigBelowL1LtPL4(false); setShowL1LtPL4CprLtPL4(false); setShowBigBeloweXU4L2AU4(false); setShowBigBelow1TcOU4L43PM(false); }
-    if (activePattern !== "structure-bigabove") { setShowBigAbovePL34CL4(false); setShowBAComp(false); setShowHAU1(false); setShowHAU1CprAbovePU4(false); setShowHAU1L1AbovePU4(false); setShowHAU1PWideAbove(false); setShowHRHAL(false); setShowHA55HrL4U34FAU4(false); setShowHiL4U4FAU4(false); setShow1ScoHiFAU4(false); setShow2ScoHiFAU4(false); }
+    if (activePattern !== "structure-bigabove") { setShowBigAbovePL34CL4(false); setShowBAComp(false); setShowHAU1(false); setShowHAU1CprAbovePU4(false); setShowHAU1L1AbovePU4(false); setShowHAU1PWideAbove(false); setShowHRHAL(false); setShowHA55HrL4U34FAU4(false); setShowHiL4U4FAU4(false); setShow1ScoHiFAU4(false); setShow2ScoHiFAU4(false); setShowBAeXL4U2(false); setShowBATiMicOL2U2(false); }
     // Reset LB Compressed / LB-C34 / lbE11-cOLoL3U2-PU4 / LB-cO2-L2U2 / LB-BothTiny / LB-AllUp when leaving littlebelow
-    if (activePattern !== "littlebelow") { setShowLBCmprss(false); setShowLBC34(false); setShowLBE11(false); setShowLBC2L2U2(false); setShowLBBothTiny(false); setShowLBAllUp(false); }
+    if (activePattern !== "littlebelow") { setShowLBCmprss(false); setShowLBC34(false); setShowLBE11(false); setShowLBC2L2U2(false); setShowLBBothTiny(false); setShowLBAllUp(false); setShowLBL1cOU1L2(false); }
   }, [activePattern, allResults, deltaAllResults]);
   // NEW: reset the generic Views toggle whenever it no longer belongs to
   // the current activePattern — either because we've left every generic
@@ -572,19 +592,6 @@ export default function Screener({
         .map((r) => ({ ...r, source: "binance" as const }));
       const deltaIntersect = deltaAllResults
         .filter((r) => passesPattern(r, "eXHrL3U3-AU4"))
-        .map((r) => ({ ...r, source: "delta" as const }));
-      if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
-      if (activeTab === "delta") return deltaIntersect;
-      return binanceIntersect;
-    }
-    // Ti-cOLo-APU4-9PM pool — Inside CPR with prev R1/S1 sitting in specific
-    // today ladder bands (see passesPattern("Ti-cOLo-APU4-9PM"))
-    if (showInsideCPRTiCOLo && activePattern === "inside-cpr") {
-      const binanceIntersect = allResults
-        .filter((r) => passesPattern(r, "Ti-cOLo-APU4-9PM"))
-        .map((r) => ({ ...r, source: "binance" as const }));
-      const deltaIntersect = deltaAllResults
-        .filter((r) => passesPattern(r, "Ti-cOLo-APU4-9PM"))
         .map((r) => ({ ...r, source: "delta" as const }));
       if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
       if (activeTab === "delta") return deltaIntersect;
@@ -839,13 +846,32 @@ export default function Screener({
       if (activeTab === "delta") return deltaIntersect;
       return binanceIntersect;
     }
-    // NEW: LB-BothTiny pool (formerly "TinyBelow - Both Tiny" left-nav item)
+    // Micro2-ApU4 pool — CHANGED: was wired to legacy id "lb-2tiny", which
+    // dropped out of PatternSidebar's littlebelow subPatterns list (replaced
+    // by "lb-micro2-apu4" / "Micro2-ApU4"), so the left-nav Views entry had
+    // no matching Screener button and this button pointed at a Views entry
+    // no longer in the left-nav. Repointed at "lb-micro2-apu4" so both
+    // surfaces agree.
     if (showLBBothTiny && activePattern === "littlebelow") {
       const binanceIntersect = allResults
-        .filter((r) => passesPattern(r, "lb-2tiny"))
+        .filter((r) => passesPattern(r, "lb-micro2-apu4"))
         .map((r) => ({ ...r, source: "binance" as const }));
       const deltaIntersect = deltaAllResults
-        .filter((r) => passesPattern(r, "lb-2tiny"))
+        .filter((r) => passesPattern(r, "lb-micro2-apu4"))
+        .map((r) => ({ ...r, source: "delta" as const }));
+      if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
+      if (activeTab === "delta") return deltaIntersect;
+      return binanceIntersect;
+    }
+    // NEW: L1-cOU1L2-U4:1AM pool — Little Below Views entry that existed in
+    // the left-nav (PatternSidebar subPatterns.littlebelow) but never got a
+    // Screener button.
+    if (showLBL1cOU1L2 && activePattern === "littlebelow") {
+      const binanceIntersect = allResults
+        .filter((r) => passesPattern(r, "L1-cOU1L2-U4:1AM"))
+        .map((r) => ({ ...r, source: "binance" as const }));
+      const deltaIntersect = deltaAllResults
+        .filter((r) => passesPattern(r, "L1-cOU1L2-U4:1AM"))
         .map((r) => ({ ...r, source: "delta" as const }));
       if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
       if (activeTab === "delta") return deltaIntersect;
@@ -890,6 +916,69 @@ export default function Screener({
         .filter((r) => passesPattern(r, "LMe-eXL2U2-L4:10PM"))
         .map((r) => ({ ...r, source: "delta" as const }));
 
+      if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
+      if (activeTab === "delta") return deltaIntersect;
+      return binanceIntersect;
+    }
+    // NEW: cOL3U3-pL4 pool — Overlapping Higher Views entry with no
+    // Screener button
+    if (showOBHicOL3U3pL4 && activePattern === "overlapping-higher") {
+      const binanceIntersect = allResults
+        .filter((r) => passesPattern(r, "cOL3U3-pL4"))
+        .map((r) => ({ ...r, source: "binance" as const }));
+      const deltaIntersect = deltaAllResults
+        .filter((r) => passesPattern(r, "cOL3U3-pL4"))
+        .map((r) => ({ ...r, source: "delta" as const }));
+      if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
+      if (activeTab === "delta") return deltaIntersect;
+      return binanceIntersect;
+    }
+    // NEW: 7AM:MiMi-pU4:11PM pool — Overlapping Higher Views entry with no
+    // Screener button
+    if (showOBHi7AMMiMi && activePattern === "overlapping-higher") {
+      const binanceIntersect = allResults
+        .filter((r) => passesPattern(r, "7AM:MiMi-pU4:11PM"))
+        .map((r) => ({ ...r, source: "binance" as const }));
+      const deltaIntersect = deltaAllResults
+        .filter((r) => passesPattern(r, "7AM:MiMi-pU4:11PM"))
+        .map((r) => ({ ...r, source: "delta" as const }));
+      if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
+      if (activeTab === "delta") return deltaIntersect;
+      return binanceIntersect;
+    }
+    // NEW: 6PM:LaLa->U4:2AM pool — Overlapping Higher Views entry with no
+    // Screener button
+    if (showOBHi6PMLaLa && activePattern === "overlapping-higher") {
+      const binanceIntersect = allResults
+        .filter((r) => passesPattern(r, "6PM:LaLa->U4:2AM"))
+        .map((r) => ({ ...r, source: "binance" as const }));
+      const deltaIntersect = deltaAllResults
+        .filter((r) => passesPattern(r, "6PM:LaLa->U4:2AM"))
+        .map((r) => ({ ...r, source: "delta" as const }));
+      if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
+      if (activeTab === "delta") return deltaIntersect;
+      return binanceIntersect;
+    }
+    // NEW: eXL4U2-U4:4AM pool — BigCPR Above Views entry with no Screener button
+    if (showBAeXL4U2 && activePattern === "structure-bigabove") {
+      const binanceIntersect = allResults
+        .filter((r) => passesPattern(r, "eXL4U2-U4:4AM"))
+        .map((r) => ({ ...r, source: "binance" as const }));
+      const deltaIntersect = deltaAllResults
+        .filter((r) => passesPattern(r, "eXL4U2-U4:4AM"))
+        .map((r) => ({ ...r, source: "delta" as const }));
+      if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
+      if (activeTab === "delta") return deltaIntersect;
+      return binanceIntersect;
+    }
+    // NEW: TiMi-cOL2U2-pL4:5AM pool — BigCPR Above Views entry with no Screener button
+    if (showBATiMicOL2U2 && activePattern === "structure-bigabove") {
+      const binanceIntersect = allResults
+        .filter((r) => passesPattern(r, "TiMi-cOL2U2-pL4:5AM"))
+        .map((r) => ({ ...r, source: "binance" as const }));
+      const deltaIntersect = deltaAllResults
+        .filter((r) => passesPattern(r, "TiMi-cOL2U2-pL4:5AM"))
+        .map((r) => ({ ...r, source: "delta" as const }));
       if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
       if (activeTab === "delta") return deltaIntersect;
       return binanceIntersect;
@@ -1157,10 +1246,10 @@ export default function Screener({
   // Helper: is any sub-filter active (to decide the result count label)
   const anySubFilter =
     showLABothTiny || showLAAllUp || showLA1LHr || showLAPL12CL23 || showLACompressed || showLAT1U46AM || showLASsHiL4U4FAU42AM || showLAMeMieXL4U3U46PM ||
-    showOutsideCPRCompressed || showOutsideCPReXHrL3U3AU4 || showInsideCPRTiCOLo ||
+    showOutsideCPRCompressed || showOutsideCPReXHrL3U3AU4 ||
     showBigBelowPMiniPL3 || showBigBelowPMiniRising || showExpU3LtPU4 || showBigBeloweXU4L3AU4 || showBigBelowL1LtPL4 || showL1LtPL4CprLtPL4 || showBigBeloweXU4L2AU4 || showBigBelow1TcOU4L43PM ||
-    showBigAbovePL34CL4 || showBAComp || showHAU1 || showHAU1CprAbovePU4 || showHAU1L1AbovePU4 || showHAU1PWideAbove || showHRHAL || showHA55HrL4U34FAU4 || showHiL4U4FAU4 || show1ScoHiFAU4 || show2ScoHiFAU4 || showLBCmprss || showLBC34 || showLBE11 || showLBC2L2U2 ||
-    showLBBothTiny || showLBAllUp || showExpU4PU4 || showExpU3PU3 || showOBNLoU4L4 || showOBWLoU4L4 || showOBHiExL4U4 || showLMeXL2U2 ||
+    showBigAbovePL34CL4 || showBAComp || showHAU1 || showHAU1CprAbovePU4 || showHAU1L1AbovePU4 || showHAU1PWideAbove || showHRHAL || showHA55HrL4U34FAU4 || showHiL4U4FAU4 || show1ScoHiFAU4 || show2ScoHiFAU4 || showBAeXL4U2 || showBATiMicOL2U2 || showLBCmprss || showLBC34 || showLBE11 || showLBC2L2U2 ||
+    showLBBothTiny || showLBAllUp || showLBL1cOU1L2 || showExpU4PU4 || showExpU3PU3 || showOBNLoU4L4 || showOBWLoU4L4 || showOBHiExL4U4 || showLMeXL2U2 || showOBHicOL3U3pL4 || showOBHi7AMMiMi || showOBHi6PMLaLa ||
     !!activeGenericSubView ||
     !!PatternFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter || !!exitTimeFilter;
 
@@ -1210,7 +1299,6 @@ export default function Screener({
           showHAU1PWideAbove={showHAU1PWideAbove}
           showHAU1={showHAU1}
           showOutsideCPReXHrL3U3AU4={showOutsideCPReXHrL3U3AU4}
-          showInsideCPRTiCOLo={showInsideCPRTiCOLo}
           showLMeXL2U2={showLMeXL2U2}
         />
 
@@ -1278,7 +1366,10 @@ export default function Screener({
                   setShowLAMeMieXL4U3U46PM(false);
                   setShowOutsideCPRCompressed(false);
                   setShowOutsideCPReXHrL3U3AU4(false);
-                  setShowInsideCPRTiCOLo(false);
+                  // NEW: also clear the generic Views (sub-pattern) selection —
+                  // covers inside-cpr and every other GENERIC_VIEW_CATEGORIES
+                  // category, so "Show All" fully resets state everywhere.
+                  setActiveGenericSubView(null);
                   setShowBigBelowPMiniPL3(false);
                   setShowBigBelowPMiniRising(false);
                   setShowExpU3LtPU4(false);
@@ -1297,17 +1388,23 @@ export default function Screener({
                   setShowHiL4U4FAU4(false);
                   setShow1ScoHiFAU4(false);
                   setShow2ScoHiFAU4(false);
+                  setShowBAeXL4U2(false);
+                  setShowBATiMicOL2U2(false);
                   setShowLBCmprss(false);
                   setShowLBC34(false);
                   setShowLBE11(false);
                   setShowLBC2L2U2(false);
                   setShowLBBothTiny(false);
                   setShowLBAllUp(false);
+                  setShowLBL1cOU1L2(false);
                   setShowExpU4PU4(false);
                   setShowExpU3PU3(false);
                   setShowOBNLoU4L4(false);
                   setShowOBWLoU4L4(false);
                   setShowOBHiExL4U4(false);
+                  setShowOBHicOL3U3pL4(false);
+                  setShowOBHi7AMMiMi(false);
+                  setShowOBHi6PMLaLa(false);
                 }}
                 className={`flex items-center gap-0.5 text-xs font-bold px-2 py-1 rounded border border-border transition-colors shrink-0 ${showAll ? "bg-foreground/15 text-foreground" : "text-muted-foreground hover:text-foreground"}`}
               >
@@ -1435,6 +1532,8 @@ export default function Screener({
                   setShowHiL4U4FAU4(false);
                   setShow1ScoHiFAU4(false);
                   setShow2ScoHiFAU4(false);
+                  setShowBAeXL4U2(false);
+                  setShowBATiMicOL2U2(false);
                 }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showHRHAL
@@ -1461,6 +1560,8 @@ export default function Screener({
                   setShowHiL4U4FAU4(false);
                   setShow1ScoHiFAU4(false);
                   setShow2ScoHiFAU4(false);
+                  setShowBAeXL4U2(false);
+                  setShowBATiMicOL2U2(false);
                 }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showHA55HrL4U34FAU4
@@ -1489,6 +1590,8 @@ export default function Screener({
                   setShowHA55HrL4U34FAU4(false);
                   setShow1ScoHiFAU4(false);
                   setShow2ScoHiFAU4(false);
+                  setShowBAeXL4U2(false);
+                  setShowBATiMicOL2U2(false);
                 }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showHiL4U4FAU4
@@ -1517,6 +1620,8 @@ export default function Screener({
                   setShowHA55HrL4U34FAU4(false);
                   setShowHiL4U4FAU4(false);
                   setShow2ScoHiFAU4(false);
+                  setShowBAeXL4U2(false);
+                  setShowBATiMicOL2U2(false);
                 }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   show1ScoHiFAU4
@@ -1545,6 +1650,8 @@ export default function Screener({
                   setShowHA55HrL4U34FAU4(false);
                   setShowHiL4U4FAU4(false);
                   setShow1ScoHiFAU4(false);
+                  setShowBAeXL4U2(false);
+                  setShowBATiMicOL2U2(false);
                 }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   show2ScoHiFAU4
@@ -1556,25 +1663,84 @@ export default function Screener({
                 {show2ScoHiFAU4 ? "✕ TS-cOL3U4-AU4R:4PM" : "TS-cOL3U4-AU4R:4PM"}
               </button>
             )}
-            {/* NEW: LB-BothTiny button — replaces hidden "TinyBelow - Both Tiny" left-nav item */}
+            {/* NEW: eXL4U2-U4:4AM button — BigCPR Above Views entry with no Screener button */}
+            {activeSectionKey === "structure-bigabove" && !showAll && (
+              <button
+                onClick={() => {
+                  setShowBAeXL4U2((v) => !v);
+                  setShowBigAbovePL34CL4(false);
+                  setShowBAComp(false);
+                  setShowHAU1(false);
+                  setShowHAU1CprAbovePU4(false);
+                  setShowHAU1L1AbovePU4(false);
+                  setShowHAU1PWideAbove(false);
+                  setShowHRHAL(false);
+                  setShowHA55HrL4U34FAU4(false);
+                  setShowHiL4U4FAU4(false);
+                  setShow1ScoHiFAU4(false);
+                  setShow2ScoHiFAU4(false);
+                  setShowBATiMicOL2U2(false);
+                }}
+                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                  showBAeXL4U2
+                    ? "border-lime-400 text-lime-400"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+                title="Show only rows matching eXL4U2-U4:4AM"
+              >
+                {showBAeXL4U2 ? "✕ eXL4U2-U4:4AM" : "eXL4U2-U4:4AM"}
+              </button>
+            )}
+            {/* NEW: TiMi-cOL2U2-pL4:5AM button — BigCPR Above Views entry with no Screener button */}
+            {activeSectionKey === "structure-bigabove" && !showAll && (
+              <button
+                onClick={() => {
+                  setShowBATiMicOL2U2((v) => !v);
+                  setShowBigAbovePL34CL4(false);
+                  setShowBAComp(false);
+                  setShowHAU1(false);
+                  setShowHAU1CprAbovePU4(false);
+                  setShowHAU1L1AbovePU4(false);
+                  setShowHAU1PWideAbove(false);
+                  setShowHRHAL(false);
+                  setShowHA55HrL4U34FAU4(false);
+                  setShowHiL4U4FAU4(false);
+                  setShow1ScoHiFAU4(false);
+                  setShow2ScoHiFAU4(false);
+                  setShowBAeXL4U2(false);
+                }}
+                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                  showBATiMicOL2U2
+                    ? "border-rose-400 text-rose-400"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+                title="Show only rows matching TiMi-cOL2U2-pL4:5AM"
+              >
+                {showBATiMicOL2U2 ? "✕ TiMi-cOL2U2-pL4:5AM" : "TiMi-cOL2U2-pL4:5AM"}
+              </button>
+            )}
+            {/* CHANGED: label/id now match PatternSidebar's littlebelow
+                subPatterns entry "lb-micro2-apu4" / "Micro2-ApU4" (was
+                stuck on the legacy "lb-2tiny" id + "LB-BothTiny" label,
+                which no longer appears in the left-nav). */}
             {activeSectionKey === "littlebelow" && !showAll && (
               <button
-                onClick={() => { setShowLBBothTiny((v) => !v); setShowLBAllUp(false); setShowLBCmprss(false); setShowLBC34(false); setShowLBE11(false); setShowLBC2L2U2(false); }}
+                onClick={() => { setShowLBBothTiny((v) => !v); setShowLBAllUp(false); setShowLBCmprss(false); setShowLBC34(false); setShowLBE11(false); setShowLBC2L2U2(false); setShowLBL1cOU1L2(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showLBBothTiny
                     ? "border-foreground text-foreground"
                     : "border-border text-muted-foreground hover:text-foreground"
                 }`}
-                title="Show symbols that match BOTH Structure LittleBelow AND TinyBelow-Both Tiny"
+                title="Little Below, both CPRs micro-narrow (<=0.10%), all step-down / all up-below stacked, prev R4/S4 inside today's R3-R4/S3-S4"
               >
-                {showLBBothTiny ? "✕ LB-BothTiny" : "LB-BothTiny"}
+                {showLBBothTiny ? "✕ Micro2-ApU4" : "Micro2-ApU4"}
               </button>
             )}
 
             {/* NEW: LB-AllUp button — replaces hidden "LittleBelow - Ladder" left-nav item */}
             {activeSectionKey === "littlebelow" && !showAll && (
               <button
-                onClick={() => { setShowLBAllUp((v) => !v); setShowLBBothTiny(false); setShowLBCmprss(false); setShowLBC34(false); setShowLBE11(false); setShowLBC2L2U2(false); }}
+                onClick={() => { setShowLBAllUp((v) => !v); setShowLBBothTiny(false); setShowLBCmprss(false); setShowLBC34(false); setShowLBE11(false); setShowLBC2L2U2(false); setShowLBL1cOU1L2(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showLBAllUp
                     ? "border-foreground text-foreground"
@@ -1589,7 +1755,7 @@ export default function Screener({
             {/* NEW: lb-Cmprss-L4>3/U4<2 button — only shown on littlebelow, mirrors Show All style */}
             {activeSectionKey === "littlebelow" && !showAll && (
               <button
-                onClick={() => { setShowLBCmprss((v) => !v); setShowLBBothTiny(false); setShowLBAllUp(false); setShowLBC34(false); setShowLBE11(false); setShowLBC2L2U2(false); }}
+                onClick={() => { setShowLBCmprss((v) => !v); setShowLBBothTiny(false); setShowLBAllUp(false); setShowLBC34(false); setShowLBE11(false); setShowLBC2L2U2(false); setShowLBL1cOU1L2(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showLBCmprss
                     ? "border-violet-400 text-violet-400"
@@ -1604,7 +1770,7 @@ export default function Screener({
             {/* NEW: lb-c-l34c4/u23c4 button — only shown on littlebelow, mirrors lb-Cmprss style */}
             {activeSectionKey === "littlebelow" && !showAll && (
               <button
-                onClick={() => { setShowLBC34((v) => !v); setShowLBBothTiny(false); setShowLBAllUp(false); setShowLBCmprss(false); setShowLBE11(false); setShowLBC2L2U2(false); }}
+                onClick={() => { setShowLBC34((v) => !v); setShowLBBothTiny(false); setShowLBAllUp(false); setShowLBCmprss(false); setShowLBE11(false); setShowLBC2L2U2(false); setShowLBL1cOU1L2(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showLBC34
                     ? "border-pink-400 text-pink-400"
@@ -1619,7 +1785,7 @@ export default function Screener({
             {/* NEW: lbE11-cOLoL3U2-PU4 button — only shown on littlebelow, placed right after lb-c-l34c4/u23c4 */}
             {activeSectionKey === "littlebelow" && !showAll && (
               <button
-                onClick={() => { setShowLBE11((v) => !v); setShowLBBothTiny(false); setShowLBAllUp(false); setShowLBCmprss(false); setShowLBC34(false); setShowLBC2L2U2(false); }}
+                onClick={() => { setShowLBE11((v) => !v); setShowLBBothTiny(false); setShowLBAllUp(false); setShowLBCmprss(false); setShowLBC34(false); setShowLBC2L2U2(false); setShowLBL1cOU1L2(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showLBE11
                     ? "border-amber-400 text-amber-400"
@@ -1634,7 +1800,7 @@ export default function Screener({
             {/* NEW: cO2-L2U2 button — only shown on littlebelow, placed right after lbE11-cOLoL3U2-PU4 */}
             {activeSectionKey === "littlebelow" && !showAll && (
               <button
-                onClick={() => { setShowLBC2L2U2((v) => !v); setShowLBBothTiny(false); setShowLBAllUp(false); setShowLBCmprss(false); setShowLBC34(false); setShowLBE11(false); }}
+                onClick={() => { setShowLBC2L2U2((v) => !v); setShowLBBothTiny(false); setShowLBAllUp(false); setShowLBCmprss(false); setShowLBC34(false); setShowLBE11(false); setShowLBL1cOU1L2(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showLBC2L2U2
                     ? "border-emerald-400 text-emerald-400"
@@ -1643,6 +1809,21 @@ export default function Screener({
                 title="Compressed Inside Previous L2 and Previous U2: Target: Bullish U4"
               >
                 {showLBC2L2U2 ? "✕ cO2-L2U2" : "cO2-L2U2"}
+              </button>
+            )}
+
+            {/* NEW: L1-cOU1L2-U4:1AM button — left-nav Views entry that had no Screener button */}
+            {activeSectionKey === "littlebelow" && !showAll && (
+              <button
+                onClick={() => { setShowLBL1cOU1L2((v) => !v); setShowLBBothTiny(false); setShowLBAllUp(false); setShowLBCmprss(false); setShowLBC34(false); setShowLBE11(false); setShowLBC2L2U2(false); }}
+                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                  showLBL1cOU1L2
+                    ? "border-sky-400 text-sky-400"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+                title="cOU1L2 + today's R1 above prev BC and below today's PDH, prev CPR Large (2%-5%), today CPR Micro (<=0.10%): Target U4 ~1AM"
+              >
+                {showLBL1cOU1L2 ? "✕ L1-cOU1L2-U4:1AM" : "L1-cOU1L2-U4:1AM"}
               </button>
             )}
 
@@ -1845,7 +2026,13 @@ export default function Screener({
                 from cpr.ts, gated on r.overlapHigher + pSmall(prev)/Tiny(today). */}
             {activeSectionKey === "overlapping-higher" && !showAll && (
               <button
-                onClick={() => { setShowOBHiExL4U4((v) => !v); }}
+                onClick={() => {
+                  setShowOBHiExL4U4((v) => !v);
+                  setShowLMeXL2U2(false);
+                  setShowOBHicOL3U3pL4(false);
+                  setShowOBHi7AMMiMi(false);
+                  setShowOBHi6PMLaLa(false);
+                }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showOBHiExL4U4
                     ? "border-pink-400 text-pink-400"
@@ -1883,25 +2070,15 @@ export default function Screener({
                 {showOutsideCPReXHrL3U3AU4 ? "✕ eXHrL3U3-AU4" : "eXHrL3U3-AU4"}
               </button>
             )}
-            {activeSectionKey === "inside-cpr" && !showAll && (
-              <button
-                onClick={() => { setShowInsideCPRTiCOLo((v) => !v); }}
-                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                  showInsideCPRTiCOLo
-                    ? "border-green-400 text-green-400 bg-green-500/10"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-                title="Inside CPR + prev R1/S1 in specific today ladder bands (Tiny/Mini cOLo, target pU4, 9PM)"
-              >
-                {showInsideCPRTiCOLo ? "✕ Ti-cOLo-APU4-9PM" : "Ti-cOLo-APU4-9PM"}
-              </button>
-            )}
              {/* NEW: LMe-eXL2U2-L4:10PM button — Overlap Above */}
             {activeSectionKey === "overlapping-higher" && !showAll && (
               <button
                 onClick={() => {
                   setShowLMeXL2U2((v) => !v);
                   setShowOBHiExL4U4(false);
+                  setShowOBHicOL3U3pL4(false);
+                  setShowOBHi7AMMiMi(false);
+                  setShowOBHi6PMLaLa(false);
                 }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showLMeXL2U2
@@ -1911,6 +2088,66 @@ export default function Screener({
                 title="Overlap Above + eXL2U2 pivot band + Compression Ratio 60%–90%. Target L4 by ~10PM."
               >
                 {showLMeXL2U2 ? "✕ LMe-eXL2U2-L4:10PM" : "LMe-eXL2U2-L4:10PM"}
+              </button>
+            )}
+            {/* NEW: cOL3U3-pL4 button — Overlapping Higher Views entry with no Screener button */}
+            {activeSectionKey === "overlapping-higher" && !showAll && (
+              <button
+                onClick={() => {
+                  setShowOBHicOL3U3pL4((v) => !v);
+                  setShowOBHiExL4U4(false);
+                  setShowLMeXL2U2(false);
+                  setShowOBHi7AMMiMi(false);
+                  setShowOBHi6PMLaLa(false);
+                }}
+                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                  showOBHicOL3U3pL4
+                    ? "border-blue-400 text-blue-400"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+                title="Show only rows matching cOL3U3-pL4"
+              >
+                {showOBHicOL3U3pL4 ? "✕ cOL3U3-pL4" : "cOL3U3-pL4"}
+              </button>
+            )}
+            {/* NEW: 7AM:MiMi-pU4:11PM button — Overlapping Higher Views entry with no Screener button */}
+            {activeSectionKey === "overlapping-higher" && !showAll && (
+              <button
+                onClick={() => {
+                  setShowOBHi7AMMiMi((v) => !v);
+                  setShowOBHiExL4U4(false);
+                  setShowLMeXL2U2(false);
+                  setShowOBHicOL3U3pL4(false);
+                  setShowOBHi6PMLaLa(false);
+                }}
+                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                  showOBHi7AMMiMi
+                    ? "border-emerald-400 text-emerald-400"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+                title="Show only rows matching 7AM:MiMi-pU4:11PM"
+              >
+                {showOBHi7AMMiMi ? "✕ 7AM:MiMi-pU4:11PM" : "7AM:MiMi-pU4:11PM"}
+              </button>
+            )}
+            {/* NEW: 6PM:LaLa->U4:2AM button — Overlapping Higher Views entry with no Screener button */}
+            {activeSectionKey === "overlapping-higher" && !showAll && (
+              <button
+                onClick={() => {
+                  setShowOBHi6PMLaLa((v) => !v);
+                  setShowOBHiExL4U4(false);
+                  setShowLMeXL2U2(false);
+                  setShowOBHicOL3U3pL4(false);
+                  setShowOBHi7AMMiMi(false);
+                }}
+                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                  showOBHi6PMLaLa
+                    ? "border-amber-400 text-amber-400"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+                title="Show only rows matching 6PM:LaLa->U4:2AM"
+              >
+                {showOBHi6PMLaLa ? "✕ 6PM:LaLa->U4:2AM" : "6PM:LaLa->U4:2AM"}
               </button>
             )}
             {activeSectionKey === "structure-bigbelow" && !showAll && (

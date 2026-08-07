@@ -46,7 +46,7 @@ export const subPatterns: Record<string, SubPattern[]> = {
     { id: "sT-cOL2U3-APU4",          label: "cOL2U3-ApU4" },
     { id: "T1-U4:6AM",               label: "T1-U4:6AM" },
     { id: "Ss-HiL4U4-FAU4:2AM",      label: "Ss-HiL4U4-FAU4:2AM" },
-    { id: "MeMi-eXHiL4U3-U4:6PM",    label: "MeMi-eXHiL4U3-U4:6PM" },
+    { id: "MeMi-eXL4U3-U4:6PM",      label: "MeMi-eXL4U3-U4:6PM" },
   ],
   littlebelow: [
     { id: "lb-micro2-apu4",         label: "Micro2-ApU4" },
@@ -255,8 +255,15 @@ export const subPatterns: Record<string, SubPattern[]> = {
   "structure-bigbelow": [
     { id: "bigbelow-pmini-pl3",      label: "pMini-L34C4/U3>4" },
     { id: "eX-U4L34",               label: "eX-U4L34" },
-    { id: "eXLoL3U4-AU4",            label: "eXLoL3U4-AU4" },
-    { id: "eXU4L234-AU4",            label: "eXU4L234-AU4" },
+    // CHANGED: these two ids ("eXLoL3U4-AU4" / "eXU4L234-AU4") had no
+    // matching passesPattern() case in ScreenerUtils at all (always 0
+    // results) — they were stale names for what the Screener's Big Below
+    // buttons actually implement as "eXU4L3-AU4" / "eXU4L2-AU4". Renamed to
+    // match the real, working ids so the left-nav Views and the Screener's
+    // buttons refer to the same filter (see LEGACY_SCREENER_PATTERN_IDS
+    // doc-comment for the reverse direction of this same fix).
+    { id: "eXU4L3-AU4",              label: "eXU4L3-AU4" },
+    { id: "eXU4L2-AU4",              label: "eXU4L2-AU4" },
     { id: "1T-cOU4L4-ApU4:3PM",     label: "1T-cOU4L4-ApU4:3PM" },
   ],
   "l1-lt-pl4": [
