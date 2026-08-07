@@ -351,6 +351,15 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
               Inside CPR + cOL3U3 + prev CPR pLarge (2.00%–5.00%) + today CPR Medium (1.10%–2.00%) + prev day&apos;s PDL below prev S1 (p-PDL&lt;L1) + today PDH above today R1 (PDH&gt;U1) + prev R1 above today R1 + prev S1 above today S1 + today&apos;s PDH above prev PDH + today&apos;s PDL above prev PDL.
             </div>
           </>
+        ) : activePattern === "2PM:pPDHLA-SRA-U4:7PM" ? (
+          <>
+            <div className="text-xs font-semibold text-green-400 mb-1">
+              Pattern: cOL4U4&nbsp;&nbsp;PCPR: pLarge&nbsp;&nbsp;CPR: Large
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Inside CPR + cOL4U4 + prev CPR pLarge (2.00%–5.00%) + today CPR Large (2.00%–5.00%) + prev day&apos;s PDH above prev R1 (p-PDH&gt;U1) + today PDL below today S1 (PDL&lt;L1) + today R1 above prev R1 + today S1 above prev S1 + prev day&apos;s PDH above today&apos;s PDH + prev day&apos;s PDL above today&apos;s PDL.
+            </div>
+          </>
         ) : showExpU3LtPU4 && activePattern === "structure-bigbelow" ? (
           <>
             <div className="text-xs font-semibold text-rose-400 mb-1">Expanded</div>
@@ -604,6 +613,15 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             </div>
             <div className="text-xs text-muted-foreground">
               Bullish continuation from an Inside-CPR/cOL3U3 setup with contracting pivots — expected move toward prev day&apos;s U4 by ~8AM the next day.
+            </div>
+          </>
+        ) : activePattern === "2PM:pPDHLA-SRA-U4:7PM" ? (
+          <>
+            <div className="text-xs font-semibold text-green-400 mb-1">
+              Target: U4&nbsp;&nbsp;&nbsp;Entry: 2PM&nbsp;&nbsp;&nbsp;Time: 7PM
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Bullish continuation from an Inside-CPR/cOL4U4 setup with pivots stepping up — expected move toward today&apos;s U4 by ~7PM IST.
             </div>
           </>
         ) : showExpU3LtPU4 && activePattern === "structure-bigbelow" ? (

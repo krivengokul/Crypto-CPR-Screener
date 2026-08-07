@@ -677,6 +677,27 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.todayCPR.prevHigh > r.prevCPR.prevHigh &&
         r.todayCPR.prevLow > r.prevCPR.prevLow
       );
+    // NEW: 2PM:pPDHLA-SRA-U4:7PM — Inside CPR + cOL4U4 + prev CPR width
+    // category pLarge (2.00%-5.00%) + today CPR width category Large
+    // (2.00%-5.00%) + prev day's PDH above prev R1 ("p-PDH>U1") + today's
+    // PDL below today's S1 ("PDL<L1") + today R1 above prev R1 + today S1
+    // above prev S1 (today's pivots stepped up out of prev day's) + prev
+    // day's PDH above today's PDH + prev day's PDL above today's PDL.
+    // Bullish, entry ~2PM, targets U4 (today's R4) by ~7PM.
+    case "2PM:pPDHLA-SRA-U4:7PM":
+      return (
+        ((r.todayCPR.tc <= r.prevCPR.tc && r.todayCPR.bc > r.prevCPR.bc) ||
+          (r.todayCPR.tc < r.prevCPR.tc && r.todayCPR.bc >= r.prevCPR.bc)) &&
+        r.cOL4U4 &&
+        r.prevCPR.widthPct > 2.00 && r.prevCPR.widthPct <= 5.00 &&   // pLarge
+        r.todayCPR.widthPct > 2.00 && r.todayCPR.widthPct <= 5.00 && // Large
+        r.prevCPR.PDHLAbove &&                                       // p-PDH>U1
+        r.todayCPR.prevLow < r.todayCPR.s1 &&                        // PDL<L1
+        r.todayCPR.r1 > r.prevCPR.r1 &&
+        r.todayCPR.s1 > r.prevCPR.s1 &&
+        r.prevCPR.prevHigh > r.todayCPR.prevHigh &&
+        r.prevCPR.prevLow > r.todayCPR.prevLow
+      );
     // NEW: SMi-L1pU1>-APU4:11PM — Inside CPR + L1pU1Above (from cpr.ts)
     // + compression ratio >= 30. Target ApU4 by 11PM.
     // NEW: pCPR>U1 CPR>pL1 — prev Pivot inside today's R1/R2 band and
@@ -1132,6 +1153,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
   ],
   "inside-cpr": [
     { key: "8AM:pSR-PDHL-pU4+1:8AM", direction: "up" },
+    { key: "2PM:pPDHLA-SRA-U4:7PM", direction: "up" },
   ],
   "outside-cpr": [
     { key: "outside-cpr-compressed", direction: "up" },
@@ -1297,6 +1319,9 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     case "HiL4U1": return r.HiL4U1;
     case "cOL2U3": return r.cOL2U3;
     case "cOL3U3": return r.cOL3U3;
+    // NEW: cOL4U4 — Pattern sub-category raw flag (see BacktestPanel's
+    // "CPR Inside" -> "cOL4U4" nesting in backtest.ts).
+    case "cOL4U4": return r.cOL4U4;
     case "eXU4L2": return r.eXU4L2;
     case "eXU4L3": return r.eXU4L3;
     case "cOL2U4": return r.cOL2U4;

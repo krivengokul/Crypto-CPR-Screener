@@ -258,6 +258,19 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "PU4 (prev day's R4)",
     getTarget: (r) => r.prevCPR.r4,
   },
+  // NEW: "2PM:pPDHLA-SRA-U4:7PM" — nested under "CPR Inside" (inside-cpr)
+  // via the new "cOL4U4" Pattern sub-category (see BACKTEST_CATEGORIES
+  // below). Base inside-cpr condition + raw cOL4U4 flag + pLarge/Large
+  // width combo + p-PDH>U1 + PDL<L1 + today R1>prev R1 + today S1>prev S1
+  // + prev day's PDH/PDL above today's PDH/PDL. Bullish, entry ~2PM,
+  // targets U4 (today's R4) by ~7PM.
+  {
+    key: "2PM:pPDHLA-SRA-U4:7PM",
+    label: "2PM:pPDHLA-SRA-U4:7PM",
+    direction: "bullish",
+    targetLabel: "U4 (today's R4)",
+    getTarget: (r) => r.todayCPR.r4,
+  },
 ];
 
 /**
@@ -478,6 +491,14 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
         key: "cOL3U3",
         label: "cOL3U3",
         subPatternKeys: ["8AM:pSR-PDHL-pU4+1:8AM"],
+      },
+      // NEW: cOL4U4 Pattern sub-category — base condition = the inside-cpr
+      // condition AND the raw cOL4U4 flag. Nests the bullish
+      // "2PM:pPDHLA-SRA-U4:7PM" pattern (target: today's R4 / U4).
+      {
+        key: "cOL4U4",
+        label: "cOL4U4",
+        subPatternKeys: ["2PM:pPDHLA-SRA-U4:7PM"],
       },
     ],
   },

@@ -191,6 +191,20 @@ export const subPatterns: Record<string, SubPattern[]> = {
       activeText:  "#4ade80",              // green-400 text
       activeBg:    "rgba(34, 197, 94, 0.14)",
     },
+    // NEW: 2PM:pPDHLA-SRA-U4:7PM — Inside CPR + cOL4U4 + prev CPR width
+    // category pLarge (2.00%-5.00%) + today CPR width category Large
+    // (2.00%-5.00%) + prev day's PDH above prev R1 (p-PDH>U1) + today's PDL
+    // below today's S1 (PDL<L1) + today R1 above prev R1 + today S1 above
+    // prev S1 (today's pivots stepped up) + prev day's PDH above today's PDH
+    // + prev day's PDL above today's PDL. Bullish, entry ~2PM, targets U4
+    // (today's R4) by ~7PM. Green color family.
+    {
+      id: "2PM:pPDHLA-SRA-U4:7PM",
+      label: "2PM:pPDHLA-SRA-U4:7PM",
+      activeColor: "#22c55e",              // green-500 border
+      activeText:  "#4ade80",              // green-400 text
+      activeBg:    "rgba(34, 197, 94, 0.14)",
+    },
   ],
   "outside-cpr": [
     { id: "outside-cpr-compressed",  label: "Compressed" },
