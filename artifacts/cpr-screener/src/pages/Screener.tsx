@@ -2834,7 +2834,7 @@ export default function Screener({
                 }`}
                 title="Show only rows where today's Previous Day High (PDH) is above today's R1 (U1)"
               >
-                {pdhPdlFilter === "pdhgtu1" ? "✕ PDH>U1" : "PDH>U1"}
+                {pdhPdlFilter === "pdhgtu1" ? "✕ PDHL-A" : "PDHL-A"}
               </button>
               {/* NEW: PDL<L1 — today's Previous Day Low is below today's S1 (L1) */}
               <button
@@ -2846,7 +2846,7 @@ export default function Screener({
                 }`}
                 title="Show only rows where today's Previous Day Low (PDL) is below today's S1 (L1)"
               >
-                {pdhPdlFilter === "pdlltl1" ? "✕ PDL<L1" : "PDL<L1"}
+                {pdhPdlFilter === "pdlltl1" ? "✕ PDHL-B" : "PDHL-B"}
               </button>
           </div>
           </div>
