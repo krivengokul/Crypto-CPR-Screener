@@ -1439,7 +1439,7 @@ export function renderPdhPdlSubBadges(r: CPRResult) {
     badges.push(
       <span
         key="p-pdh-gt-u1"
-        className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-green-500/8 text-green-400/70 border border-green-500/15 font-normal opacity-80"
+        className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-green-500/8 text-green-400/70 border border-green-500/15 font-normal"
         title={`Prev PDH ${fmt(r.prevCPR.prevHigh)} > Prev U1 ${fmt(r.prevCPR.r1)}`}
       >
         p-PDHL-A
@@ -1449,17 +1449,17 @@ export function renderPdhPdlSubBadges(r: CPRResult) {
     badges.push(
       <span
         key="p-pdh-eq-u1"
-        className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 font-normal opacity-90"
-        title={`Prev PDH = Prev U1 (${fmt(r.prevCPR.prevHigh)})`}
+        className="text-[10px] px-1 py-0.5 rounded border border-amber-500/40 bg-amber-500/15 text-amber-600 dark:text-amber-400 whitespace-nowrap"
+        title={`PDH ${fmt(r.prevCPR.prevHigh)} = U1 ${fmt(r.prevCPR.r1)}`}
       >
-        p-PDH=U1
+        p-PDHL==
       </span>
     );
   } else if (r.prevCPR.PDHLBelow) {
     badges.push(
       <span
         key="p-pdl-lt-l1"
-        className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-red-500/8 text-red-400/70 border border-red-500/15 font-normal opacity-80"
+        className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-red-500/8 text-red-400/70 border border-red-500/15 font-normal"
         title={`Prev PDH ${fmt(r.prevCPR.prevHigh)} < Prev U1 ${fmt(r.prevCPR.r1)}`}
       >
         p-PDHL-B
@@ -1470,7 +1470,7 @@ export function renderPdhPdlSubBadges(r: CPRResult) {
     badges.push(
       <span
         key="pdh-gt-u1"
-        className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-green-500/8 text-green-400/70 border border-green-500/15 font-normal opacity-80"
+        className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-green-500/8 text-green-400/70 border border-green-500/15 font-normal"
         title={`PDH ${fmt(r.todayCPR.prevHigh)} > U1 ${fmt(r.todayCPR.r1)}`}
       >
         PDHL-A
@@ -1480,17 +1480,17 @@ export function renderPdhPdlSubBadges(r: CPRResult) {
     badges.push(
       <span
         key="pdh-eq-u1"
-        className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 font-normal opacity-90"
-        title={`PDH = U1 (${fmt(r.todayCPR.prevHigh)})`}
+        className="text-[10px] px-1 py-0.5 rounded border border-amber-500/40 bg-amber-500/15 text-amber-600 dark:text-amber-400 whitespace-nowrap"
+        title={`PDH ${fmt(r.todayCPR.prevHigh)} = U1 ${fmt(r.todayCPR.r1)}`}
       >
-        PDH=U1
+        PDHL==
       </span>
     );
   } else if (r.todayCPR.PDHLBelow) {
     badges.push(
       <span
         key="pdl-lt-l1"
-        className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-red-500/8 text-red-400/70 border border-red-500/15 font-normal opacity-80"
+        className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-red-500/8 text-red-400/70 border border-red-500/15 font-normal"
         title={`PDH ${fmt(r.todayCPR.prevHigh)} < U1 ${fmt(r.todayCPR.r1)}`}
       >
         PDHL-B
