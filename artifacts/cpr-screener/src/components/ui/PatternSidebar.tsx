@@ -92,13 +92,13 @@ export const subPatterns: Record<string, SubPattern[]> = {
       activeText: "#4ade80",
       activeBg: "rgba(34, 197, 94, 0.14)",
     },
-    // NEW: 7PM:MoMi:2AM — CPR 1ABOVE + prev day's own pivot sub-label
+    // NEW: 7PM:MoMi->U4:2AM — CPR 1ABOVE + prev day's own pivot sub-label
     // p-cOL1U1 + today's Pattern eXL4U2 + prev CPR pMicro + today CPR Mini
     // + both prev and today PDL below their respective L1s. Cyan color
     // family to visually distinguish it from its 9AM:MegL-3PM sibling.
     {
-      id: "7PM:MoMi:2AM",
-      label: "7PM:MoMi:2AM",
+      id: "7PM:MoMi->U4:2AM",
+      label: "7PM:MoMi->U4:2AM",
       activeColor: "#22d3ee",      // cyan-400 border
       activeText:  "#67e8f9",      // cyan-300 text
       activeBg:    "rgba(6, 182, 212, 0.14)",

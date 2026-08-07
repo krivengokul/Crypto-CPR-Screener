@@ -220,7 +220,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             <div className="text-xs font-semibold text-green-400 mb-1">Pattern: p-eXU1L1 → eXL4U2&nbsp;&nbsp;PCPR: Mega&nbsp;&nbsp;CPR: Large</div>
             <div className="text-xs text-muted-foreground">CPR 1ABOVE, previous pair eXU1L1, current pair eXL4U2, and both previous and current PDL below L1</div>
           </>
-        ) : activePattern === "7PM:MoMi:2AM" ? (
+        ) : activePattern === "7PM:MoMi->U4:2AM" ? (
           <>
             <div className="text-xs font-semibold text-cyan-400 mb-1">Pattern: p-cOL1U1 → eXL4U2&nbsp;&nbsp;PCPR: pMicro&nbsp;&nbsp;CPR: Mini</div>
             <div className="text-xs text-muted-foreground">CPR 1ABOVE, prev day&apos;s own pattern p-cOL1U1, today&apos;s Pattern eXL4U2, prev CPR pMicro (≤0.10%), today CPR Mini (0.22%–0.60%), and both previous and current PDL below L1</div>
@@ -452,7 +452,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             <div className="text-xs font-semibold text-green-400 mb-1">Target: U4&nbsp;&nbsp;Time: 3PM</div>
             <div className="text-xs text-emerald-400/80">9AM setup with bullish continuation expected toward today&apos;s U4 by ~3PM</div>
           </>
-        ) : activePattern === "7PM:MoMi:2AM" ? (
+        ) : activePattern === "7PM:MoMi->U4:2AM" ? (
           <>
             <div className="text-xs font-semibold text-cyan-400 mb-1">Target: U4&nbsp;&nbsp;&nbsp;Entry: 7PM&nbsp;&nbsp;&nbsp;Time: 2AM</div>
             <div className="text-xs text-cyan-400/80">7PM setup with bullish continuation expected toward today&apos;s U4 by ~2AM</div>

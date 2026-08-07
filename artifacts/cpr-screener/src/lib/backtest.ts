@@ -54,12 +54,12 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
   },
-  // NEW: "7PM:MoMi:2AM" — nested under "CPR 1ABOVE" → Pattern "eXL4U2",
+  // NEW: "7PM:MoMi->U4:2AM" — nested under "CPR 1ABOVE" → Pattern "eXL4U2",
   // alongside its sibling "9AM:MegL-3PM". Bullish, targets today's own
   // R4 / U4 by ~2AM.
   {
-    key: "7PM:MoMi:2AM",
-    label: "7PM:MoMi:2AM",
+    key: "7PM:MoMi->U4:2AM",
+    label: "7PM:MoMi->U4:2AM",
     direction: "bullish",
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
@@ -273,7 +273,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       {
         key: "eXL4U2",
         label: "eXL4U2",
-        subPatternKeys: ["9AM:MegL-3PM", "7PM:MoMi:2AM"],
+        subPatternKeys: ["9AM:MegL-3PM", "7PM:MoMi->U4:2AM"],
       },
     ],
   },

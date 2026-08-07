@@ -675,12 +675,12 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.prevCPR.prevLow < r.prevCPR.s1 &&
         r.todayCPR.prevLow < r.todayCPR.s1
       );
-    // NEW: 7PM:MoMi:2AM — CPR 1ABOVE + the PREVIOUS day's own pivot
+    // NEW: 7PM:MoMi->U4:2AM — CPR 1ABOVE + the PREVIOUS day's own pivot
     // sub-label (prevCPR vs ppCPR) being cOL1U1 ("p-cOL1U1" badge) +
     // today's Pattern eXL4U2 + prev CPR width category pMicro (<=0.10%)
     // + today CPR width category Mini (0.22%-0.60%) + both prev and
     // today PDL below their respective L1s (S1).
-    case "7PM:MoMi:2AM":
+    case "7PM:MoMi->U4:2AM":
       return (
         r.CPRs1Above &&
         computePivotSubLabel(r.prevCPR, r.ppCPR) === "cOL1U1" &&
@@ -1067,7 +1067,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
   ],
   "cpr-1-above": [
     { key: "9AM:MegL-3PM", direction: "up" },
-    { key: "7PM:MoMi:2AM", direction: "up" },
+    { key: "7PM:MoMi->U4:2AM", direction: "up" },
   ],
   "l1pu1-above": [
     { key: "SMi-L1pU1>-APU4:11PM", direction: "up" },
