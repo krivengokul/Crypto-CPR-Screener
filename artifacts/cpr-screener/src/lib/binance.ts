@@ -41,6 +41,40 @@ async function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+/**
+ * ADK FIX (missing symbols): every network read now goes through one retrying
+ * fetch. Binance answers a burst of parallel requests with 429 / 418 (and
+ * occasionally 5xx) and the old code treated those as "no data" — the symbol
+ * was silently dropped from the results instead of being retried. That is the
+ * single biggest cause of the row count sagging between two scans minutes
+ * apart with no error shown anywhere.
+ */
+async function fetchWithRetry(
+  url: string,
+  { attempts = 4, baseDelayMs = 500 }: { attempts?: number; baseDelayMs?: number } = {}
+): Promise<Response | null> {
+  let lastStatus = 0;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const res = await fetch(url);
+      if (res.ok) return res;
+      lastStatus = res.status;
+      // 429 = rate limited, 418 = banned-for-a-bit, 5xx = transient upstream.
+      const retryable = res.status === 429 || res.status === 418 || res.status >= 500;
+      if (!retryable) return res;
+      const retryAfter = parseInt(res.headers.get("retry-after") ?? "", 10);
+      const waitMs = Number.isFinite(retryAfter)
+        ? retryAfter * 1000
+        : baseDelayMs * 2 ** i + Math.random() * 250;
+      if (i < attempts - 1) await sleep(waitMs);
+    } catch {
+      if (i < attempts - 1) await sleep(baseDelayMs * 2 ** i);
+    }
+  }
+  if (lastStatus) console.warn(`[binance] giving up on ${url} (last status ${lastStatus})`);
+  return null;
+}
+
 const PINNED_KEY_PREFIX = "cpr_symbols_";
 
 function getTodayISTDate(): string {
@@ -86,42 +120,45 @@ function isLiveDailyCandle(openTimeMs: number): boolean {
  * The screener links every Binance row to TradingView's perpetual chart
  * (`BINANCE:<SYMBOL>.P`), so the candles we analyse must come from the same
  * instrument. USDⓈ-M perpetual wins on collision; Spot is only used for
- * symbols that are not listed on fapi at all. Both venues reset daily candles
- * at UTC 00:00, so isLiveDailyCandle() is unaffected.
+ * symbols that are not listed on fapi at all.
+ *
+ * ADK FIX (missing symbols): a venue that fails is now a hard error instead of
+ * a silent half-universe. Previously, one 429 from fapi quietly reduced the
+ * scan to Spot-only and ~170 perp-only pairs vanished with no warning.
  */
 async function fetchActiveSymbols(): Promise<Set<string>> {
   const [spotRes, futRes] = await Promise.all([
-    fetch(`${BASE}/exchangeInfo`),
-    fetch(`${FBASE}/exchangeInfo`),
+    fetchWithRetry(`${BASE}/exchangeInfo`),
+    fetchWithRetry(`${FBASE}/exchangeInfo`),
   ]);
-  if (!spotRes.ok && !futRes.ok) {
-    throw new Error(`Binance exchangeInfo error: spot ${spotRes.status} / futures ${futRes.status}`);
+  if (!spotRes?.ok || !futRes?.ok) {
+    throw new Error(
+      `Binance exchangeInfo unavailable (spot ${spotRes?.status ?? "network error"} / ` +
+        `futures ${futRes?.status ?? "network error"}). Refusing to scan a partial ` +
+        `symbol universe — retry in a moment.`
+    );
   }
 
   const active = new Set<string>();
   venueOf.clear();
 
   // 1) Perpetual futures first — these are the authoritative candles.
-  if (futRes.ok) {
-    const fut: {
-      symbols: { symbol: string; status: string; contractType?: string }[];
-    } = await futRes.json();
-    for (const s of fut.symbols) {
-      if (s.status !== "TRADING") continue;
-      if (s.contractType && s.contractType !== "PERPETUAL") continue;
-      active.add(s.symbol);
-      venueOf.set(s.symbol, "futures");
-    }
+  const fut: {
+    symbols: { symbol: string; status: string; contractType?: string }[];
+  } = await futRes.json();
+  for (const s of fut.symbols) {
+    if (s.status !== "TRADING") continue;
+    if (s.contractType && s.contractType !== "PERPETUAL") continue;
+    active.add(s.symbol);
+    venueOf.set(s.symbol, "futures");
   }
 
   // 2) Spot fills in only the symbols with no perpetual listing.
-  if (spotRes.ok) {
-    const spot: { symbols: { symbol: string; status: string }[] } = await spotRes.json();
-    for (const s of spot.symbols) {
-      if (s.status !== "TRADING") continue;
-      active.add(s.symbol);
-      if (!venueOf.has(s.symbol)) venueOf.set(s.symbol, "spot");
-    }
+  const spot: { symbols: { symbol: string; status: string }[] } = await spotRes.json();
+  for (const s of spot.symbols) {
+    if (s.status !== "TRADING") continue;
+    active.add(s.symbol);
+    if (!venueOf.has(s.symbol)) venueOf.set(s.symbol, "spot");
   }
 
   return active;
@@ -132,38 +169,46 @@ async function fetchActiveSymbols(): Promise<Set<string>> {
  * Perpetual 24h tickers win on collision so last price / % change / volume
  * describe the same instrument whose klines we analyse and whose `.P` chart
  * we link to. Spot only supplies symbols with no perpetual listing.
+ *
+ * Also fails loudly when either venue is down — same reasoning as above.
  */
 async function fetchAllTickers(): Promise<Ticker24h[]> {
   const [spotRes, futRes] = await Promise.all([
-    fetch(`${BASE}/ticker/24hr`),
-    fetch(`${FBASE}/ticker/24hr`),
+    fetchWithRetry(`${BASE}/ticker/24hr`),
+    fetchWithRetry(`${FBASE}/ticker/24hr`),
   ]);
-  if (!spotRes.ok && !futRes.ok) {
-    throw new Error(`Binance ticker error: spot ${spotRes.status} / futures ${futRes.status}`);
+  if (!spotRes?.ok || !futRes?.ok) {
+    throw new Error(
+      `Binance 24h tickers unavailable (spot ${spotRes?.status ?? "network error"} / ` +
+        `futures ${futRes?.status ?? "network error"}). Refusing to scan a partial ` +
+        `symbol universe — retry in a moment.`
+    );
   }
 
   const bySymbol = new Map<string, Ticker24h>();
 
-  if (futRes.ok) {
-    const fut: Ticker24h[] = await futRes.json();
-    for (const t of fut) bySymbol.set(t.symbol, t);
-  }
+  const fut: Ticker24h[] = await futRes.json();
+  for (const t of fut) bySymbol.set(t.symbol, t);
 
-  if (spotRes.ok) {
-    const spot: Ticker24h[] = await spotRes.json();
-    for (const t of spot) if (!bySymbol.has(t.symbol)) bySymbol.set(t.symbol, t);
-  }
+  const spot: Ticker24h[] = await spotRes.json();
+  for (const t of spot) if (!bySymbol.has(t.symbol)) bySymbol.set(t.symbol, t);
 
   return [...bySymbol.values()];
 }
 
-export async function fetchTopUSDTSymbols(limit = 500): Promise<Ticker24h[]> {
+/**
+ * ADK FIX (missing symbols): `limit` no longer defaults to 500. Binance's
+ * tradable USDT universe (perp + spot union) is already north of 650 pairs and
+ * still growing, so a 500 cap was quietly amputating the tail of the list every
+ * single scan. Pass a number only if you deliberately want a top-N slice.
+ */
+export async function fetchTopUSDTSymbols(limit?: number): Promise<Ticker24h[]> {
   const [data, activeSymbols] = await Promise.all([
     fetchAllTickers(),
     fetchActiveSymbols(),
   ]);
 
-  return data
+  const filtered = data
     .filter(
       (t) =>
         activeSymbols.has(t.symbol) &&     // ← filters out delisted coins
@@ -175,8 +220,9 @@ export async function fetchTopUSDTSymbols(limit = 500): Promise<Ticker24h[]> {
         !shouldExcludeSymbol(t.symbol) &&  // excludes stablecoins + non-ASCII tickers
         parseFloat(t.quoteVolume) > 0
     )
-    .sort((a, b) => parseFloat(b.quoteVolume) - parseFloat(a.quoteVolume))
-    .slice(0, limit);
+    .sort((a, b) => parseFloat(b.quoteVolume) - parseFloat(a.quoteVolume));
+
+  return typeof limit === "number" ? filtered.slice(0, limit) : filtered;
 }
 
 // ADK FIX: bumped from 4 → 6. We need at least 3 COMPLETED daily candles
@@ -187,40 +233,59 @@ export async function fetchTopUSDTSymbols(limit = 500): Promise<Ticker24h[]> {
 // staying a cheap, single extra API page — well within rate limits.
 //
 // ADK FIX: routes to fapi for futures-only symbols, and falls back to the
-// other venue if the primary one returns nothing.
+// other venue if the primary one returns nothing. Rate-limited responses are
+// now retried with backoff rather than dropping the symbol from the scan.
 async function fetchKlines(symbol: string): Promise<OHLC[] | null> {
   // Futures-first: unknown symbols default to fapi, spot is the fallback.
   const primary = venueOf.get(symbol) === "spot" ? BASE : FBASE;
   const secondary = primary === BASE ? FBASE : BASE;
 
   for (const base of [primary, secondary]) {
+    const res = await fetchWithRetry(`${base}/klines?symbol=${symbol}&interval=1d&limit=6`);
+    if (!res?.ok) continue;
     try {
-      const res = await fetch(`${base}/klines?symbol=${symbol}&interval=1d&limit=6`);
-      if (!res.ok) continue;
       const data: KlineRaw[] = await res.json();
       if (data.length < 2) continue;
       return data.map(parseKline);
     } catch {
-      // try the other venue
+      // malformed payload — try the other venue
     }
   }
+  console.warn(`[binance] no klines for ${symbol} — dropped from results`);
   return null;
+}
+
+/**
+ * ADK FIX (missing symbols): the daily pin used to freeze whatever list the
+ * FIRST scan of the IST day happened to produce. If that scan ran while a
+ * venue was rate-limited, the short list stayed pinned for the rest of the
+ * day and newly listed pairs never appeared. The pin now only ever grows: any
+ * symbol currently tradable is merged in, while symbols pinned earlier today
+ * are still kept so rows don't disappear mid-session.
+ */
+function reconcilePinnedSymbols(currentSymbols: string[]): Set<string> {
+  const pinned = getPinnedSymbols();
+  const merged = new Set<string>(pinned ?? []);
+  for (const s of currentSymbols) merged.add(s);
+  if (!pinned || merged.size !== pinned.length) {
+    setPinnedSymbols([...merged]);
+  }
+  return merged;
 }
 
 export async function runScreener(
   onProgress: (done: number, total: number, symbol: string) => void
 ): Promise<CPRResult[]> {
-  const allTickers = await fetchTopUSDTSymbols(500);
+  // No limit: scan the full tradable USDT universe.
+  const allTickers = await fetchTopUSDTSymbols();
 
-  let pinnedSymbols = getPinnedSymbols();
-  if (!pinnedSymbols) {
-    pinnedSymbols = allTickers.map((t) => t.symbol);
-    setPinnedSymbols(pinnedSymbols);
-  }
-  const pinnedSet = new Set(pinnedSymbols);
+  const pinnedSet = reconcilePinnedSymbols(allTickers.map((t) => t.symbol));
+  // Only symbols with a live ticker can be analysed, but the pin no longer
+  // shrinks the universe — it can only ever be a superset of past scans.
   const tickers = allTickers.filter((t) => pinnedSet.has(t.symbol));
 
   const results: CPRResult[] = [];
+  const skipped: string[] = [];
   const batchSize = 10;
   const delayMs = 300;
 
@@ -230,7 +295,10 @@ export async function runScreener(
     const batchResults = await Promise.all(
       batch.map(async (t) => {
         const klines = await fetchKlines(t.symbol);
-        if (!klines || klines.length < 2) return null;
+        if (!klines || klines.length < 2) {
+          skipped.push(t.symbol);
+          return null;
+        }
 
         const lastKline = klines[klines.length - 1];
 
@@ -243,7 +311,10 @@ export async function runScreener(
         let ppCandle: OHLC | null = null;
 
         if (lastKlineIsLive) {
-          if (klines.length < 3) return null;
+          if (klines.length < 3) {
+            skipped.push(t.symbol);
+            return null;
+          }
           prevCandle  = klines[klines.length - 3]; // 2 days ago (completed)
           todayCandle = klines[klines.length - 2]; // yesterday (completed) → today's CPR
           liveCandle  = lastKline;                  // today's forming candle (not used for CPR)
@@ -281,6 +352,14 @@ export async function runScreener(
     onProgress(processed, tickers.length, batch[batch.length - 1].symbol);
 
     if (i + batchSize < tickers.length) await sleep(delayMs);
+  }
+
+  if (skipped.length) {
+    console.warn(
+      `[binance] scanned ${tickers.length} symbols, ${results.length} analysed, ` +
+        `${skipped.length} skipped for missing candle data:`,
+      skipped
+    );
   }
 
   return results;
