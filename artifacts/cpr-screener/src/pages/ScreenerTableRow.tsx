@@ -205,85 +205,6 @@ export function renderPrevPatternBadge(r: CPRResult) {
   );
 }
 
-/**
- * renderPdhPdlSubBadges — the "2nd row" PDH/PDL badges (p-PDH>U1/p-PDH=U1/
- * p-PDL<L1 and PDH>U1/PDH=U1/PDL<L1), extracted out of the Screener table's
- * PDH/PDL column so BacktestPanel can render the exact same badges next to
- * its Pivot Size column. All comparisons come straight from cpr.ts's
- * calcCPR (PDHLAbove/PDHLEqual/PDHLBelow on each CPRLevels set) — the three
- * states are mutually exclusive and exhaustive, so "not Above, not Equal"
- * is always "Below", which renders as the PDL<L1 badge. Returns null when
- * neither prev nor today has any of the three states (shouldn't normally
- * happen since the three are exhaustive, but kept defensive).
- */
-export function renderPdhPdlSubBadges(r: CPRResult) {
-  const badges: JSX.Element[] = [];
-  if (r.prevCPR.PDHLAbove) {
-    badges.push(
-      <span
-        key="p-pdh-gt-u1"
-        className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-green-500/8 text-green-400/70 border border-green-500/15 font-normal opacity-80"
-        title={`Prev PDH ${fmt(r.prevCPR.prevHigh)} > Prev U1 ${fmt(r.prevCPR.r1)}`}
-      >
-        p-PDH&gt;U1
-      </span>
-    );
-  } else if (r.prevCPR.PDHLEqual) {
-    badges.push(
-      <span
-        key="p-pdh-eq-u1"
-        className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-emerald-500/8 text-emerald-300/70 border border-emerald-500/15 font-normal opacity-80"
-        title={`Prev PDH = Prev U1 (${fmt(r.prevCPR.prevHigh)})`}
-      >
-        p-PDH=U1
-      </span>
-    );
-  } else if (r.prevCPR.PDHLBelow) {
-    badges.push(
-      <span
-        key="p-pdl-lt-l1"
-        className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-red-500/8 text-red-400/70 border border-red-500/15 font-normal opacity-80"
-        title={`Prev PDH ${fmt(r.prevCPR.prevHigh)} < Prev U1 ${fmt(r.prevCPR.r1)}`}
-      >
-        p-PDL&lt;L1
-      </span>
-    );
-  }
-  if (r.todayCPR.PDHLAbove) {
-    badges.push(
-      <span
-        key="pdh-gt-u1"
-        className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-green-500/8 text-green-400/70 border border-green-500/15 font-normal opacity-80"
-        title={`PDH ${fmt(r.todayCPR.prevHigh)} > U1 ${fmt(r.todayCPR.r1)}`}
-      >
-        PDH&gt;U1
-      </span>
-    );
-  } else if (r.todayCPR.PDHLEqual) {
-    badges.push(
-      <span
-        key="pdh-eq-u1"
-        className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-emerald-500/8 text-emerald-300/70 border border-emerald-500/15 font-normal opacity-80"
-        title={`PDH = U1 (${fmt(r.todayCPR.prevHigh)})`}
-      >
-        PDH=U1
-      </span>
-    );
-  } else if (r.todayCPR.PDHLBelow) {
-    badges.push(
-      <span
-        key="pdl-lt-l1"
-        className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-red-500/8 text-red-400/70 border border-red-500/15 font-normal opacity-80"
-        title={`PDH ${fmt(r.todayCPR.prevHigh)} < U1 ${fmt(r.todayCPR.r1)}`}
-      >
-        PDL&lt;L1
-      </span>
-    );
-  }
-  if (badges.length === 0) return null;
-  return <div className="flex flex-nowrap items-center gap-1">{badges}</div>;
-}
-
 import type { CPRResult } from "@/lib/cpr";
 import {
   type CPRResultWithSource,
@@ -304,6 +225,7 @@ import {
   getWidthCategory,
   cprDistancePct,
   levelsInDistanceRange,
+  renderPdhPdlSubBadges,
 } from "./ScreenerUtils";
 import { SRLadderRow, toSRLadderData } from "./SRLadderPanel";
 
