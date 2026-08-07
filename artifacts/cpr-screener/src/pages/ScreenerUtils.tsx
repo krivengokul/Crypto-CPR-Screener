@@ -655,6 +655,28 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     case "inside-cpr":
       return (r.todayCPR.tc <= r.prevCPR.tc && r.todayCPR.bc > r.prevCPR.bc) ||
               (r.todayCPR.tc < r.prevCPR.tc && r.todayCPR.bc >= r.prevCPR.bc);
+    // NEW: 8AM:pSR-PDHL-pU4+1:8AM — Inside CPR + cOL3U3 + prev CPR width
+    // category pLarge (2.00%-5.00%) + today CPR width category Medium
+    // (1.10%-2.00%) + prev day's own PDL below prev S1 ("p-PDL<L1") +
+    // today's PDH above today's R1 ("PDH>U1") + prev R1 above today R1 +
+    // prev S1 above today S1 (today's pivots have contracted inside prev
+    // day's) + today's PDH above prev day's PDH + today's PDL above prev
+    // day's PDL. Bullish, entry ~8AM, targets pU4 (prev day's R4) by ~8AM
+    // the next day.
+    case "8AM:pSR-PDHL-pU4+1:8AM":
+      return (
+        ((r.todayCPR.tc <= r.prevCPR.tc && r.todayCPR.bc > r.prevCPR.bc) ||
+          (r.todayCPR.tc < r.prevCPR.tc && r.todayCPR.bc >= r.prevCPR.bc)) &&
+        r.cOL3U3 &&
+        r.prevCPR.widthPct > 2.00 && r.prevCPR.widthPct <= 5.00 &&   // pLarge
+        r.todayCPR.widthPct > 1.10 && r.todayCPR.widthPct <= 2.00 && // Medium
+        r.prevCPR.prevLow < r.prevCPR.s1 &&                          // p-PDL<L1
+        r.todayCPR.PDHLAbove &&                                      // PDH>U1
+        r.prevCPR.r1 > r.todayCPR.r1 &&
+        r.prevCPR.s1 > r.todayCPR.s1 &&
+        r.todayCPR.prevHigh > r.prevCPR.prevHigh &&
+        r.todayCPR.prevLow > r.prevCPR.prevLow
+      );
     // NEW: SMi-L1pU1>-APU4:11PM — Inside CPR + L1pU1Above (from cpr.ts)
     // + compression ratio >= 30. Target ApU4 by 11PM.
     // NEW: pCPR>U1 CPR>pL1 — prev Pivot inside today's R1/R2 band and
@@ -1108,7 +1130,9 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     { key: "S0-L1pU1>-AU4:7PM", direction: "up" },
     { key: "T0-L1pU1>-BPL4:5AM", direction: "down" },
   ],
-  "inside-cpr": [],
+  "inside-cpr": [
+    { key: "8AM:pSR-PDHL-pU4+1:8AM", direction: "up" },
+  ],
   "outside-cpr": [
     { key: "outside-cpr-compressed", direction: "up" },
     { key: "eXHrL3U3-AU4", direction: "up" },

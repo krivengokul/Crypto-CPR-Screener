@@ -175,7 +175,23 @@ export const subPatterns: Record<string, SubPattern[]> = {
       activeBg:    "rgba(244, 63, 94, 0.14)", // rose-500 tint
     },
   ],
-  "inside-cpr": [],
+  "inside-cpr": [
+    // NEW: 8AM:pSR-PDHL-pU4+1:8AM — Inside CPR + cOL3U3 + prev CPR width
+    // category pLarge (2.00%-5.00%) + today CPR width category Medium
+    // (1.10%-2.00%) + prev day's own PDL below prev S1 (p-PDL<L1) + today's
+    // PDH above today's R1 (PDH>U1) + prev R1 above today R1 + prev S1
+    // above today S1 (today's pivots contracted inside prev day's) +
+    // today's PDH above prev PDH + today's PDL above prev PDL. Bullish,
+    // entry ~8AM, targets pU4 (prev day's R4) by ~8AM the next day. Green
+    // color family.
+    {
+      id: "8AM:pSR-PDHL-pU4+1:8AM",
+      label: "8AM:pSR-PDHL-pU4+1:8AM",
+      activeColor: "#22c55e",              // green-500 border
+      activeText:  "#4ade80",              // green-400 text
+      activeBg:    "rgba(34, 197, 94, 0.14)",
+    },
+  ],
   "outside-cpr": [
     { id: "outside-cpr-compressed",  label: "Compressed" },
     { id: "eXHrL3U3-AU4",            label: "eXHrL3U3-AU4" },
