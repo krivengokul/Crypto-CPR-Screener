@@ -689,7 +689,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.todayCPR.widthPct > 0.22 && r.todayCPR.widthPct <= 0.60 && // Mini
         r.prevCPR.prevLow < r.prevCPR.s1 &&                          // p-PDL<L1
         r.todayCPR.prevLow < r.todayCPR.s1 &&                        // PDL<L1
-        r.todayCPR.PDL > r.prevCPR.pivot
+        r.todayCPR.prevLow > r.prevCPR.pivot
       );
     case "7PM:MoMi-<L4:2AM":
     return (
@@ -700,7 +700,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       r.todayCPR.widthPct > 0.22 && r.todayCPR.widthPct <= 0.60 && // Mini
       r.prevCPR.prevLow < r.prevCPR.s1 &&                          // p-PDL<L1
       r.todayCPR.prevLow < r.todayCPR.s1  &&                       // PDL<L1
-      r.todayCPR.PDL < r.prevCPR.pivot
+      r.todayCPR.prevLow < r.prevCPR.pivot
     );
     case "pcpr-u1-cpr-pl1":
       return r.pCPR1Above;
