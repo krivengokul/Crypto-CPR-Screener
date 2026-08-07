@@ -1,5 +1,5 @@
 import { OHLC, CPRResult, analyzeCPR } from "./cpr";
-import { fetchTopUSDTSymbols } from "./binance";
+import { fetchTopUSDTSymbols, fetchDailyKlines } from "./binance";
 import { fetchDeltaPerps } from "./delta";
 
 export type BacktestSource = "binance" | "delta";
@@ -642,49 +642,6 @@ function addDaysISO(dateISO: string, days: number): string {
 }
 
 /**
- * Fetches the 6-day window [D-3, D-2, D-1, D, D+1, D+2] of daily candles for
- * a Binance symbol, keyed by UTC date string. D-3/D-2/D-1 reconstruct the
- * CPR that would have been active on entry date D (same candle selection
- * runScreener uses live — pp/prev/today); D, D+1, and D+2 are the
- * lookahead window used to check "target hit within entry day + 2 days".
- *
- * Reuses the same /klines endpoint runScreener already calls — just adds
- * the `endTime` param (which runScreener doesn't currently use, since it
- * only ever needs "now") to pin the window to a past date instead.
- */
-type BinanceVenue = "futures" | "spot";
-
-/**
- * ADK FIX (venue parity with the live screener): binance.ts resolves candles
- * FUTURES-FIRST (`fapi`) because every Binance row links to TradingView's
- * perpetual chart (`BINANCE:<SYMBOL>.P`). The backtest window used to hit
- * Spot only, so its reconstructed CPR came from a different order book than
- * the chart — e.g. BICOUSDT on 2 Aug 2026 showed TC/P/BC 0.01182/0.01180/
- * 0.01178 (spot) instead of 0.01183/0.01179/0.01175 (perp). Now we try the
- * perpetual klines first and fall back to Spot only for symbols with no
- * perpetual listing.
- */
-const binanceVenueCache = new Map<string, BinanceVenue>();
-
-function parseBinanceKlines(
-  raw: Array<[number, string, string, string, string, string]>
-): Map<string, OHLC> {
-  const map = new Map<string, OHLC>();
-  for (const k of raw) {
-    const openTime = k[0];
-    map.set(utcDateKey(openTime), {
-      openTime,
-      open: parseFloat(k[1]),
-      high: parseFloat(k[2]),
-      low: parseFloat(k[3]),
-      close: parseFloat(k[4]),
-      volume: parseFloat(k[5]),
-    });
-  }
-  return map;
-}
-
-/**
  * ADK PERF FIX (instant multi-date / yearly backtests)
  * ----------------------------------------------------
  * The old implementation fetched a fresh 9-candle window PER SYMBOL PER DATE.
@@ -719,43 +676,21 @@ export function clearBacktestHistoryCache(): void {
   inFlight.clear();
 }
 
-async function fetchBinanceHistoryFrom(
-  venue: BinanceVenue,
-  symbol: string
-): Promise<Map<string, OHLC> | null> {
-  const base =
-    venue === "futures"
-      ? "https://fapi.binance.com/fapi/v1/klines"
-      : "https://api.binance.com/api/v3/klines";
-  try {
-    const res = await fetch(`${base}?symbol=${symbol}&interval=1d&limit=${HISTORY_LIMIT}`);
-    if (!res.ok) return null;
-    const raw: Array<[number, string, string, string, string, string]> = await res.json();
-    if (!Array.isArray(raw) || !raw.length) return null;
-    return parseBinanceKlines(raw);
-  } catch {
-    return null;
-  }
-}
-
-/** Full Binance daily history for a symbol (futures-first, spot fallback). */
+/**
+ * Full Binance daily history for a symbol, keyed by UTC date string.
+ *
+ * ADK FIX (single source of truth): this used to re-implement Binance access
+ * — its own URLs, its own venue cache, its own kline parsing and NO retry on
+ * 429/418. It now delegates to binance.ts's `fetchDailyKlines`, so venue
+ * resolution (futures-first, spot fallback) and rate-limit backoff are shared
+ * with the live screener and can never drift apart again.
+ */
 async function fetchBinanceHistory(symbol: string): Promise<Map<string, OHLC> | null> {
-  const cachedVenue = binanceVenueCache.get(symbol);
-  if (cachedVenue) {
-    const hit = await fetchBinanceHistoryFrom(cachedVenue, symbol);
-    if (hit) return hit;
-  }
-  const fut = await fetchBinanceHistoryFrom("futures", symbol);
-  if (fut) {
-    binanceVenueCache.set(symbol, "futures");
-    return fut;
-  }
-  const spot = await fetchBinanceHistoryFrom("spot", symbol);
-  if (spot) {
-    binanceVenueCache.set(symbol, "spot");
-    return spot;
-  }
-  return null;
+  const candles = await fetchDailyKlines(symbol, HISTORY_LIMIT);
+  if (!candles || !candles.length) return null;
+  const map = new Map<string, OHLC>();
+  for (const c of candles) map.set(utcDateKey(c.openTime), c);
+  return map;
 }
 
 /**

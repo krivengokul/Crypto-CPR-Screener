@@ -235,17 +235,33 @@ export async function fetchTopUSDTSymbols(limit?: number): Promise<Ticker24h[]> 
 // ADK FIX: routes to fapi for futures-only symbols, and falls back to the
 // other venue if the primary one returns nothing. Rate-limited responses are
 // now retried with backoff rather than dropping the symbol from the scan.
-async function fetchKlines(symbol: string): Promise<OHLC[] | null> {
+/**
+ * SINGLE SOURCE OF TRUTH for Binance daily candles.
+ *
+ * Every consumer (live screener, backtest, anything added later) must go
+ * through this function so that venue resolution (futures-first, spot
+ * fallback), retry/backoff on 429/418/5xx and kline parsing exist in exactly
+ * one place. `limit` lets callers ask for the small live window (6 candles) or
+ * a long history page (up to 1500 candles ≈ 4 years).
+ */
+export async function fetchDailyKlines(
+  symbol: string,
+  limit = 6
+): Promise<OHLC[] | null> {
   // Futures-first: unknown symbols default to fapi, spot is the fallback.
   const primary = venueOf.get(symbol) === "spot" ? BASE : FBASE;
   const secondary = primary === BASE ? FBASE : BASE;
 
   for (const base of [primary, secondary]) {
-    const res = await fetchWithRetry(`${base}/klines?symbol=${symbol}&interval=1d&limit=6`);
+    const res = await fetchWithRetry(
+      `${base}/klines?symbol=${symbol}&interval=1d&limit=${limit}`
+    );
     if (!res?.ok) continue;
     try {
       const data: KlineRaw[] = await res.json();
-      if (data.length < 2) continue;
+      if (!Array.isArray(data) || data.length < 2) continue;
+      // Remember which venue actually answered so later calls skip the miss.
+      venueOf.set(symbol, base === FBASE ? "futures" : "spot");
       return data.map(parseKline);
     } catch {
       // malformed payload — try the other venue
@@ -253,6 +269,12 @@ async function fetchKlines(symbol: string): Promise<OHLC[] | null> {
   }
   console.warn(`[binance] no klines for ${symbol} — dropped from results`);
   return null;
+}
+
+// ADK FIX: bumped from 4 → 6 (see note above); thin wrapper over the shared
+// fetcher so the live screener and the backtest cannot drift apart.
+async function fetchKlines(symbol: string): Promise<OHLC[] | null> {
+  return fetchDailyKlines(symbol, 6);
 }
 
 /**
