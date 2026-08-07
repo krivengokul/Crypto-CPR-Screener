@@ -688,8 +688,20 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.prevCPR.widthPct <= 0.10 &&                                // pMicro
         r.todayCPR.widthPct > 0.22 && r.todayCPR.widthPct <= 0.60 && // Mini
         r.prevCPR.prevLow < r.prevCPR.s1 &&                          // p-PDL<L1
-        r.todayCPR.prevLow < r.todayCPR.s1                           // PDL<L1
+        r.todayCPR.prevLow < r.todayCPR.s1 &&                        // PDL<L1
+        r.todayCPR.PDL > r.prevCPR.pivot
       );
+    case "7PM:MoMi-<L4:2AM":
+    return (
+      r.CPRs1Above &&
+      computePivotSubLabel(r.prevCPR, r.ppCPR) === "cOL1U1" &&
+      r.eXL4U2 &&
+      r.prevCPR.widthPct <= 0.10 &&                                // pMicro
+      r.todayCPR.widthPct > 0.22 && r.todayCPR.widthPct <= 0.60 && // Mini
+      r.prevCPR.prevLow < r.prevCPR.s1 &&                          // p-PDL<L1
+      r.todayCPR.prevLow < r.todayCPR.s1  &&                       // PDL<L1
+      r.todayCPR.PDL < r.prevCPR.pivot
+    );
     case "pcpr-u1-cpr-pl1":
       return r.pCPR1Above;
     // NEW: BC>pPDL-U3:5AM — sub-filter under "PREVCPR 1ABOVE": base pCPR1Above
@@ -1068,6 +1080,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
   "cpr-1-above": [
     { key: "9AM:MegL-3PM", direction: "up" },
     { key: "7PM:MoMi->U4:2AM", direction: "up" },
+    { key: "7PM:MoMi-<L4:2AM", direction: "down" },
   ],
   "l1pu1-above": [
     { key: "SMi-L1pU1>-APU4:11PM", direction: "up" },
