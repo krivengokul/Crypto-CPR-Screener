@@ -225,6 +225,11 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             <div className="text-xs font-semibold text-cyan-400 mb-1">Pattern: p-cOL1U1 → eXL4U2&nbsp;&nbsp;PCPR: pMicro&nbsp;&nbsp;CPR: Mini</div>
             <div className="text-xs text-muted-foreground">CPR 1ABOVE, prev day&apos;s own pattern p-cOL1U1, today&apos;s Pattern eXL4U2, prev CPR pMicro (≤0.10%), today CPR Mini (0.22%–0.60%), and both previous and current PDL below L1</div>
           </>
+        ) : activePattern === "7PM:MoMi-<L4:2AM" ? (
+          <>
+            <div className="text-xs font-semibold text-rose-400 mb-1">Pattern: p-cOL1U1 → eXL4U2&nbsp;&nbsp;PCPR: pMicro&nbsp;&nbsp;CPR: Mini</div>
+            <div className="text-xs text-muted-foreground">CPR 1ABOVE, prev day&apos;s own pattern p-cOL1U1, today&apos;s Pattern eXL4U2, prev CPR pMicro (≤0.10%), today CPR Mini (0.22%–0.60%), both previous and current PDL below L1, and today&apos;s PDL below prev day&apos;s pivot</div>
+          </>
         ) : activePattern === "ss-eXU4L1-U4:10PM" ? (
           <>
             <div className="text-xs font-semibold text-green-400 mb-1">Pattern: eXU4L1&nbsp;&nbsp;PCPR: Wide&nbsp;&nbsp;pBC &gt; U1</div>
@@ -456,6 +461,11 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
           <>
             <div className="text-xs font-semibold text-cyan-400 mb-1">Target: U4&nbsp;&nbsp;&nbsp;Entry: 7PM&nbsp;&nbsp;&nbsp;Time: 2AM</div>
             <div className="text-xs text-cyan-400/80">7PM setup with bullish continuation expected toward today&apos;s U4 by ~2AM</div>
+          </>
+        ) : activePattern === "7PM:MoMi-<L4:2AM" ? (
+          <>
+            <div className="text-xs font-semibold text-rose-400 mb-1">Target: L4&nbsp;&nbsp;&nbsp;Entry: 7PM&nbsp;&nbsp;&nbsp;Time: 2AM</div>
+            <div className="text-xs text-rose-400/80">7PM setup with bearish continuation expected toward today&apos;s L4 by ~2AM</div>
           </>
         ) : activePattern === "ss-eXU4L1-U4:10PM" ? (
           <>

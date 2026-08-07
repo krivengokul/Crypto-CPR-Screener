@@ -103,6 +103,17 @@ export const subPatterns: Record<string, SubPattern[]> = {
       activeText:  "#67e8f9",      // cyan-300 text
       activeBg:    "rgba(6, 182, 212, 0.14)",
     },
+    // NEW: 7PM:MoMi-<L4:2AM — bearish sibling of 7PM:MoMi->U4:2AM, same
+    // p-cOL1U1 + eXL4U2 + pMicro/Mini base, but splits on todayCPR.PDL <
+    // prevCPR.pivot instead. Targets today's own L4 (S4) by ~2AM. Rose
+    // color family to visually flag it as the downtrend/bearish sibling.
+    {
+      id: "7PM:MoMi-<L4:2AM",
+      label: "7PM:MoMi-<L4:2AM",
+      activeColor: "#fb7185",      // rose-400 border
+      activeText:  "#fda4af",      // rose-300 text
+      activeBg:    "rgba(244, 63, 94, 0.14)",
+    },
   ],
   "pcpr-u1-cpr-pl1": [
     // NEW: BC>pPDL-U3:5AM — PREVCPR 1ABOVE + today's BC above prev day's PDH

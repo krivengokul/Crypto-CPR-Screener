@@ -64,6 +64,18 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
   },
+  // NEW: "7PM:MoMi-<L4:2AM" — bearish sibling of "7PM:MoMi->U4:2AM", same
+  // nesting ("CPR 1ABOVE" → Pattern "eXL4U2") and same base condition
+  // (p-cOL1U1, pMicro/Mini widths, both PDLs below L1), but split on
+  // today's PDL vs prev day's pivot: this variant fires when
+  // todayCPR.PDL < prevCPR.pivot, targeting today's own S4 / L4 by ~2AM.
+  {
+    key: "7PM:MoMi-<L4:2AM",
+    label: "7PM:MoMi-<L4:2AM",
+    direction: "bearish",
+    targetLabel: "L4 (today's S4)",
+    getTarget: (r) => r.todayCPR.s4,
+  },
   // REMOVED: "HA-U1>PU4" — its condition (cprRising && strWideCPR &&
   // todayCPR.r1 > prevCPR.r4) is identical to the "U1 > pU4" (u1-gt-pu4)
   // parent category's own base condition, so it was just a duplicate
@@ -273,7 +285,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       {
         key: "eXL4U2",
         label: "eXL4U2",
-        subPatternKeys: ["9AM:MegL-3PM", "7PM:MoMi->U4:2AM"],
+        subPatternKeys: ["9AM:MegL-3PM", "7PM:MoMi->U4:2AM", "7PM:MoMi-<L4:2AM"],
       },
     ],
   },
