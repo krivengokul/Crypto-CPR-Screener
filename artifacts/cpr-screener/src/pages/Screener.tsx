@@ -271,6 +271,27 @@ export default function Screener({
   useEffect(() => { deltaAllResultsRef.current = deltaAllResults; }, [deltaAllResults]);
   useEffect(() => { activePatternRef.current = activePattern; }, [activePattern]);
 
+  // NEW: resolve activePattern to its parent left-nav category ("section").
+  // Clicking a top-level category in the left-nav sets activePattern to the
+  // category id directly (e.g. "l1pu1-above"), but clicking one of its
+  // Views/sub-patterns instead (e.g. "SMi-L1pU1>-APU4:11PM") sets
+  // activePattern to that LEAF id — PatternSidebar's handleSubClick calls
+  // onSelect(subId), not onSelect(parentId). Row filtering already handles
+  // both cases fine (passesPattern resolves leaf ids directly), but
+  // anything keyed off the *category* — the Views button row and the
+  // per-row green/red direction dot (getSubFilterDirection) — was comparing
+  // against the raw activePattern and so went blank whenever a leaf was
+  // selected via the left-nav. activeSectionKey resolves either case back
+  // to the owning category so those two stay populated regardless of
+  // whether the category or one of its leaves triggered the selection.
+  const activeSectionKey = useMemo(() => {
+    if (subPatterns[activePattern]) return activePattern; // already a category id
+    for (const [section, subs] of Object.entries(subPatterns)) {
+      if (subs.some((s) => s.id === activePattern)) return section;
+    }
+    return activePattern; // not a known category or leaf — leave as-is
+  }, [activePattern]);
+
   const doScan = useCallback(async (switchTab: boolean = true) => {
     if (scanRef.current) return;
     scanRef.current = true;
@@ -421,10 +442,10 @@ export default function Screener({
   useEffect(() => {
     if (!activeGenericSubView) return;
     const stillValid =
-      GENERIC_VIEW_CATEGORIES.has(activePattern) &&
-      (subPatterns[activePattern] ?? []).some((s) => s.id === activeGenericSubView);
+      GENERIC_VIEW_CATEGORIES.has(activeSectionKey) &&
+      (subPatterns[activeSectionKey] ?? []).some((s) => s.id === activeGenericSubView);
     if (!stillValid) setActiveGenericSubView(null);
-  }, [activePattern]);
+  }, [activePattern, activeSectionKey]);
   // NEW: report per-pattern (top-level nav) matching counts up to App so
   // the left sidebar can show "Little ABOVE (41)" etc. Computed off the
   // currently active tab's full unfiltered result set, so the counts
@@ -932,7 +953,7 @@ export default function Screener({
     // sub-pattern id generically (same lookup used for the left-nav counts
     // above), so this one branch replaces what would otherwise be a
     // separate hand-written pool block per sub-pattern.
-    if (activeGenericSubView && GENERIC_VIEW_CATEGORIES.has(activePattern)) {
+    if (activeGenericSubView && GENERIC_VIEW_CATEGORIES.has(activeSectionKey)) {
       const binanceIntersect = allResults
         .filter((r) => passesPattern(r, activeGenericSubView))
         .map((r) => ({ ...r, source: "binance" as const }));
@@ -1399,7 +1420,7 @@ export default function Screener({
             )}
 
             {/* NEW: hR-HAL button — BigCPR Above, placed next to Show All */}
-            {activePattern === "structure-bigabove" && !showAll && (
+            {activeSectionKey === "structure-bigabove" && !showAll && (
               <button
                 onClick={() => {
                   setShowHRHAL((v) => !v);
@@ -1424,7 +1445,7 @@ export default function Screener({
               </button>
             )}
 
-            {activePattern === "structure-bigabove" &&!showAll && (
+            {activeSectionKey === "structure-bigabove" &&!showAll && (
               <button
                 onClick={() => { 
                   setShowHA55HrL4U34FAU4((v) =>!v); 
@@ -1452,7 +1473,7 @@ export default function Screener({
             {/* NEW: 1T-HiL4U4-FAU4 button — BigCPR Above, placed next to
                 HA55-HrL4U34-FAU4. Wide Above + HiL4U4 + prev CPR pMicro +
                 today's CPR Tiny. */}
-            {activePattern === "structure-bigabove" && !showAll && (
+            {activeSectionKey === "structure-bigabove" && !showAll && (
               <button
                 onClick={() => {
                   setShowHiL4U4FAU4((v) => !v);
@@ -1480,7 +1501,7 @@ export default function Screener({
             {/* NEW: 1S-cOL3U4-FAU4:1AM button — BigCPR Above.
                 Pivot cOL3U4 + today's S1 > prev pivot + prev CPR ≤0.10% +
                 today CPR 0.60%–1.10%. */}
-            {activePattern === "structure-bigabove" && !showAll && (
+            {activeSectionKey === "structure-bigabove" && !showAll && (
               <button
                 onClick={() => {
                   setShow1ScoHiFAU4((v) => !v);
@@ -1508,7 +1529,7 @@ export default function Screener({
             {/* NEW: TS-cOL3U4-AU4R:4PM button — BigCPR Above.
                 Same as 1S-cOHi-FAU4:1AM but prev CPR width category Tiny
                 (0.10%-0.22%) instead of pMicro (<=0.10%). */}
-            {activePattern === "structure-bigabove" && !showAll && (
+            {activeSectionKey === "structure-bigabove" && !showAll && (
               <button
                 onClick={() => {
                   setShow2ScoHiFAU4((v) => !v);
@@ -1534,7 +1555,7 @@ export default function Screener({
               </button>
             )}
             {/* NEW: LB-BothTiny button — replaces hidden "TinyBelow - Both Tiny" left-nav item */}
-            {activePattern === "littlebelow" && !showAll && (
+            {activeSectionKey === "littlebelow" && !showAll && (
               <button
                 onClick={() => { setShowLBBothTiny((v) => !v); setShowLBAllUp(false); setShowLBCmprss(false); setShowLBC34(false); setShowLBE11(false); setShowLBC2L2U2(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
@@ -1549,7 +1570,7 @@ export default function Screener({
             )}
 
             {/* NEW: LB-AllUp button — replaces hidden "LittleBelow - Ladder" left-nav item */}
-            {activePattern === "littlebelow" && !showAll && (
+            {activeSectionKey === "littlebelow" && !showAll && (
               <button
                 onClick={() => { setShowLBAllUp((v) => !v); setShowLBBothTiny(false); setShowLBCmprss(false); setShowLBC34(false); setShowLBE11(false); setShowLBC2L2U2(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
@@ -1564,7 +1585,7 @@ export default function Screener({
             )}
 
             {/* NEW: lb-Cmprss-L4>3/U4<2 button — only shown on littlebelow, mirrors Show All style */}
-            {activePattern === "littlebelow" && !showAll && (
+            {activeSectionKey === "littlebelow" && !showAll && (
               <button
                 onClick={() => { setShowLBCmprss((v) => !v); setShowLBBothTiny(false); setShowLBAllUp(false); setShowLBC34(false); setShowLBE11(false); setShowLBC2L2U2(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
@@ -1579,7 +1600,7 @@ export default function Screener({
             )}
 
             {/* NEW: lb-c-l34c4/u23c4 button — only shown on littlebelow, mirrors lb-Cmprss style */}
-            {activePattern === "littlebelow" && !showAll && (
+            {activeSectionKey === "littlebelow" && !showAll && (
               <button
                 onClick={() => { setShowLBC34((v) => !v); setShowLBBothTiny(false); setShowLBAllUp(false); setShowLBCmprss(false); setShowLBE11(false); setShowLBC2L2U2(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
@@ -1594,7 +1615,7 @@ export default function Screener({
             )}
 
             {/* NEW: lbE11-cOLoL3U2-PU4 button — only shown on littlebelow, placed right after lb-c-l34c4/u23c4 */}
-            {activePattern === "littlebelow" && !showAll && (
+            {activeSectionKey === "littlebelow" && !showAll && (
               <button
                 onClick={() => { setShowLBE11((v) => !v); setShowLBBothTiny(false); setShowLBAllUp(false); setShowLBCmprss(false); setShowLBC34(false); setShowLBC2L2U2(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
@@ -1609,7 +1630,7 @@ export default function Screener({
             )}
 
             {/* NEW: cO2-L2U2 button — only shown on littlebelow, placed right after lbE11-cOLoL3U2-PU4 */}
-            {activePattern === "littlebelow" && !showAll && (
+            {activeSectionKey === "littlebelow" && !showAll && (
               <button
                 onClick={() => { setShowLBC2L2U2((v) => !v); setShowLBBothTiny(false); setShowLBAllUp(false); setShowLBCmprss(false); setShowLBC34(false); setShowLBE11(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
@@ -1623,7 +1644,7 @@ export default function Screener({
               </button>
             )}
 
-            {activePattern === "littleabove" && !showAll && (
+            {activeSectionKey === "littleabove" && !showAll && (
               <button
                 onClick={() => { setShowLABothTiny((v) => !v); setShowLAAllUp(false); setShowLA1LHr(false); setShowLAPL12CL23(false); setShowLACompressed(false); setShowLAT1U46AM(false); setShowLASsHiL4U4FAU42AM(false); setShowLAMeMieXL4U3U46PM(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
@@ -1636,7 +1657,7 @@ export default function Screener({
                 {showLABothTiny ? "✕ LA-BothTiny" : "LA-BothTiny"}
               </button>
             )}
-            {activePattern === "littleabove" && !showAll && (
+            {activeSectionKey === "littleabove" && !showAll && (
               <button
                 onClick={() => { setShowLAAllUp((v) => !v); setShowLABothTiny(false); setShowLA1LHr(false); setShowLAPL12CL23(false); setShowLACompressed(false); setShowLAT1U46AM(false); setShowLASsHiL4U4FAU42AM(false); setShowLAMeMieXL4U3U46PM(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
@@ -1650,7 +1671,7 @@ export default function Screener({
               </button>
             )}
             {/* NEW: 1LHr-L4U3-U4 button — Little Above, placed next to LA-AllUp */}
-            {activePattern === "littleabove" && !showAll && (
+            {activeSectionKey === "littleabove" && !showAll && (
               <button
                 onClick={() => { setShowLA1LHr((v) => !v); setShowLABothTiny(false); setShowLAAllUp(false); setShowLAPL12CL23(false); setShowLACompressed(false); setShowLAT1U46AM(false); setShowLASsHiL4U4FAU42AM(false); setShowLAMeMieXL4U3U46PM(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
@@ -1663,7 +1684,7 @@ export default function Screener({
                 {showLA1LHr ? "✕ 1LHr-L4U3-U4" : "1LHr-L4U3-U4"}
               </button>
             )}
-            {activePattern === "littleabove" && !showAll && (
+            {activeSectionKey === "littleabove" && !showAll && (
               <button
                 onClick={() => { setShowLAPL12CL23((v) => !v); setShowLABothTiny(false); setShowLAAllUp(false); setShowLA1LHr(false); setShowLACompressed(false); setShowLAT1U46AM(false); setShowLASsHiL4U4FAU42AM(false); setShowLAMeMieXL4U3U46PM(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
@@ -1676,7 +1697,7 @@ export default function Screener({
                 {showLAPL12CL23 ? "✕ PL12CL23" : "PL12CL23"}
               </button>
             )}
-            {activePattern === "littleabove" && !showAll && (
+            {activeSectionKey === "littleabove" && !showAll && (
               <button
                 onClick={() => { setShowLACompressed((v) => !v); setShowLABothTiny(false); setShowLAAllUp(false); setShowLA1LHr(false); setShowLAPL12CL23(false); setShowLAT1U46AM(false); setShowLASsHiL4U4FAU42AM(false); setShowLAMeMieXL4U3U46PM(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
@@ -1690,7 +1711,7 @@ export default function Screener({
               </button>
             )}
             {/* NEW: T1-U4:6AM — Little Above */}
-            {activePattern === "littleabove" && !showAll && (
+            {activeSectionKey === "littleabove" && !showAll && (
               <button
                 onClick={() => { setShowLAT1U46AM((v) => !v); setShowLABothTiny(false); setShowLAAllUp(false); setShowLA1LHr(false); setShowLAPL12CL23(false); setShowLACompressed(false); setShowLASsHiL4U4FAU42AM(false); setShowLAMeMieXL4U3U46PM(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
@@ -1704,7 +1725,7 @@ export default function Screener({
               </button>
             )}
             {/* NEW: Ss-HiL4U4-FAU4:2AM — Little Above */}
-            {activePattern === "littleabove" && !showAll && (
+            {activeSectionKey === "littleabove" && !showAll && (
               <button
                 onClick={() => { setShowLASsHiL4U4FAU42AM((v) => !v); setShowLABothTiny(false); setShowLAAllUp(false); setShowLA1LHr(false); setShowLAPL12CL23(false); setShowLACompressed(false); setShowLAT1U46AM(false); setShowLAMeMieXL4U3U46PM(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
@@ -1718,7 +1739,7 @@ export default function Screener({
               </button>
             )}
             {/* NEW: MeMi-eXL4U3-U4:6PM — Little Above (green family) */}
-            {activePattern === "littleabove" && !showAll && (
+            {activeSectionKey === "littleabove" && !showAll && (
               <button
                 onClick={() => { setShowLAMeMieXL4U3U46PM((v) => !v); setShowLABothTiny(false); setShowLAAllUp(false); setShowLA1LHr(false); setShowLAPL12CL23(false); setShowLACompressed(false); setShowLAT1U46AM(false); setShowLASsHiL4U4FAU42AM(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
@@ -1739,10 +1760,12 @@ export default function Screener({
                 subPatterns map, same as the left-nav itself, so a newly
                 added Views entry is styled automatically without touching
                 this file. */}
-            {GENERIC_VIEW_CATEGORIES.has(activePattern) &&
+            {GENERIC_VIEW_CATEGORIES.has(activeSectionKey) &&
               !showAll &&
-              (subPatterns[activePattern] ?? []).map((sub) => {
-                const isActive = activeGenericSubView === sub.id;
+              (subPatterns[activeSectionKey] ?? []).map((sub) => {
+                const isActive = activeGenericSubView
+                  ? activeGenericSubView === sub.id
+                  : activePattern === sub.id; // left-nav navigated straight to this leaf
                 const borderColor = sub.activeColor ?? "var(--foreground)";
                 const textColor = sub.activeText ?? "var(--foreground)";
                 const bg = sub.activeBg;
@@ -1760,7 +1783,7 @@ export default function Screener({
                   </button>
                 );
               })}
-            {activePattern === "overlapping-lower" && !showAll && (
+            {activeSectionKey === "overlapping-lower" && !showAll && (
               <button
                 onClick={() => { setShowExpU4PU4((v) => !v); setShowExpU3PU3(false); setShowOBNLoU4L4(false); setShowOBWLoU4L4(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
@@ -1774,7 +1797,7 @@ export default function Screener({
               </button>
             )}
             {/* NEW: Exp-U3>pU4 button — Overlapping Lower, placed right after eXLo-L4U4-U4 */}
-            {activePattern === "overlapping-lower" && !showAll && (
+            {activeSectionKey === "overlapping-lower" && !showAll && (
               <button
                 onClick={() => { setShowExpU3PU3((v) => !v); setShowExpU4PU4(false); setShowOBNLoU4L4(false); setShowOBWLoU4L4(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
@@ -1788,7 +1811,7 @@ export default function Screener({
               </button>
             )}
             {/* NEW: OBN-LoU4L4-U4 button — Overlapping Lower, placed next to Exp-U3>pU4 */}
-            {activePattern === "overlapping-lower" && !showAll && (
+            {activeSectionKey === "overlapping-lower" && !showAll && (
               <button
                 onClick={() => { setShowOBNLoU4L4((v) => !v); setShowExpU4PU4(false); setShowExpU3PU3(false); setShowOBWLoU4L4(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
@@ -1802,7 +1825,7 @@ export default function Screener({
               </button>
             )}
             {/* NEW: OBW-LoU4L4-L4 button — Overlapping Lower, placed next to OBN-LoU4L4-U4 */}
-            {activePattern === "overlapping-lower" && !showAll && (
+            {activeSectionKey === "overlapping-lower" && !showAll && (
               <button
                 onClick={() => { setShowOBWLoU4L4((v) => !v); setShowExpU4PU4(false); setShowExpU3PU3(false); setShowOBNLoU4L4(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
@@ -1818,7 +1841,7 @@ export default function Screener({
             {/* NEW: eXHi-L4U4-U4 button — Overlapping Higher, counterpart of
                 eXLo-L4U4-U4 under Overlapping Lower. Same r.eXL4U4 boolean
                 from cpr.ts, gated on r.overlapHigher + pSmall(prev)/Tiny(today). */}
-            {activePattern === "overlapping-higher" && !showAll && (
+            {activeSectionKey === "overlapping-higher" && !showAll && (
               <button
                 onClick={() => { setShowOBHiExL4U4((v) => !v); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
@@ -1831,7 +1854,7 @@ export default function Screener({
                 {showOBHiExL4U4 ? "✕ eXHi-L4U4-U4" : "eXHi-L4U4-U4"}
               </button>
             )}
-            {activePattern === "outside-cpr" && !showAll && (
+            {activeSectionKey === "outside-cpr" && !showAll && (
               <button
                 onClick={() => { setShowOutsideCPRCompressed((v) => !v); setShowOutsideCPReXHrL3U3AU4(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
@@ -1845,7 +1868,7 @@ export default function Screener({
               </button>
             )}
             {/* NEW: eXHrL3U3-AU4 button — Outside CPR, placed next to Compressed */}
-            {activePattern === "outside-cpr" && !showAll && (
+            {activeSectionKey === "outside-cpr" && !showAll && (
               <button
                 onClick={() => { setShowOutsideCPReXHrL3U3AU4((v) => !v); setShowOutsideCPRCompressed(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
@@ -1858,7 +1881,7 @@ export default function Screener({
                 {showOutsideCPReXHrL3U3AU4 ? "✕ eXHrL3U3-AU4" : "eXHrL3U3-AU4"}
               </button>
             )}
-            {activePattern === "inside-cpr" && !showAll && (
+            {activeSectionKey === "inside-cpr" && !showAll && (
               <button
                 onClick={() => { setShowInsideCPRTiCOLo((v) => !v); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
@@ -1872,7 +1895,7 @@ export default function Screener({
               </button>
             )}
              {/* NEW: LMe-eXL2U2-L4:10PM button — Overlap Above */}
-            {activePattern === "overlapping-higher" && !showAll && (
+            {activeSectionKey === "overlapping-higher" && !showAll && (
               <button
                 onClick={() => {
                   setShowLMeXL2U2((v) => !v);
@@ -1888,7 +1911,7 @@ export default function Screener({
                 {showLMeXL2U2 ? "✕ LMe-eXL2U2-L4:10PM" : "LMe-eXL2U2-L4:10PM"}
               </button>
             )}
-            {activePattern === "structure-bigbelow" && !showAll && (
+            {activeSectionKey === "structure-bigbelow" && !showAll && (
               <button
                 onClick={() => {
                   setShowBigBelowPMiniPL3((v) => !v);
@@ -1911,7 +1934,7 @@ export default function Screener({
               </button>
             )}
             {/* NEW: eX-U4L34 button — Big Below, placed next to pMini-L34C4/U3>4 */}
-            {activePattern === "structure-bigbelow" && !showAll && (
+            {activeSectionKey === "structure-bigbelow" && !showAll && (
               <button
                 onClick={() => {
                   setShowExpU3LtPU4((v) => !v);
@@ -1934,7 +1957,7 @@ export default function Screener({
               </button>
             )}
             {/* NEW: eXU4L3-AU4 button — Big Below, placed next to eX-U4L3 (moved from LittleCPR Below) */}
-            {activePattern === "structure-bigbelow" && !showAll && (
+            {activeSectionKey === "structure-bigbelow" && !showAll && (
               <button
                 onClick={() => {
                   setShowBigBeloweXU4L3AU4((v) => !v);
@@ -1957,7 +1980,7 @@ export default function Screener({
               </button>
             )}
             {/* NEW: L1<pL4 button — Big Below, placed next to eX-U4L34 */}
-            {activePattern === "structure-bigbelow" && !showAll && (
+            {activeSectionKey === "structure-bigbelow" && !showAll && (
               <button
                 onClick={() => {
                   setShowBigBelowL1LtPL4((v) => !v);
@@ -1980,7 +2003,7 @@ export default function Screener({
               </button>
             )}
             {/* NEW: CPR<pL4 sub-toggle — restrict L1<pL4 results to rows where today's TC is below prev day's S4 */}
-            {activePattern === "structure-bigbelow" && !showAll && showBigBelowL1LtPL4 && (
+            {activeSectionKey === "structure-bigbelow" && !showAll && showBigBelowL1LtPL4 && (
               <button
                 onClick={() => setShowL1LtPL4CprLtPL4((v) => !v)}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
@@ -1996,7 +2019,7 @@ export default function Screener({
             {/* NEW: eXU4L2-AU4 button — Big Below, placed next to L1<pL4.
                 Pattern eXU4L2 + prev R3 above today's R3 + today R1/prev
                 S1 between the two pivots + prev CPR pSmall + today CPR 1%-2%. */}
-            {activePattern === "structure-bigbelow" && !showAll && (
+            {activeSectionKey === "structure-bigbelow" && !showAll && (
               <button
                 onClick={() => {
                   setShowBigBeloweXU4L2AU4((v) => !v);
@@ -2021,7 +2044,7 @@ export default function Screener({
             {/* NEW: 1T-cOU4L4-ApU4:3PM button — Big Below, placed next to eXU4L2-AU4.
                 cOU4L4 + prev R1 between today R1/R2 + today S1 between prev S1/S2 +
                 prev PDH > prev R1 + prev CPR pMicro + today CPR Tiny. */}
-            {activePattern === "structure-bigbelow" && !showAll && (
+            {activeSectionKey === "structure-bigbelow" && !showAll && (
               <button
                 onClick={() => {
                   setShowBigBelow1TcOU4L43PM((v) => !v);
@@ -2045,7 +2068,7 @@ export default function Screener({
               </button>
             )}
             {/* NEW: live sub-toggle — restrict pMini results to rows currently trading above today's TC */}
-            {activePattern === "structure-bigbelow" && !showAll && showBigBelowPMiniPL3 && (
+            {activeSectionKey === "structure-bigbelow" && !showAll && showBigBelowPMiniPL3 && (
               <button
                 onClick={() => setShowBigBelowPMiniRising((v) => !v)}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
@@ -2059,7 +2082,7 @@ export default function Screener({
               </button>
             )}
             {/* NEW: sound alert toggle — scoped to pMini-L34C4/U3>4 only */}
-            {activePattern === "structure-bigbelow" && !showAll && showBigBelowPMiniPL3 && (
+            {activeSectionKey === "structure-bigbelow" && !showAll && showBigBelowPMiniPL3 && (
               <button
                 onClick={() => {
                   setPMiniAlertsEnabled((v) => {
@@ -2088,7 +2111,7 @@ export default function Screener({
                 {pMiniAlertsEnabled ? "Alerts On" : "Alerts Off"}
               </button>
             )}
-            {activePattern === "structure-bigabove" && !showAll && (
+            {activeSectionKey === "structure-bigabove" && !showAll && (
               <button
                 onClick={() => { setShowBigAbovePL34CL4((v) => !v); setShowBAComp(false); setShowHAU1(false); setShowHAU1CprAbovePU4(false); setShowHAU1L1AbovePU4(false); setShowHAU1PWideAbove(false); setShowHRHAL(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
@@ -2102,7 +2125,7 @@ export default function Screener({
               </button>
             )}
             {/* NEW: BAComp-l3>pl1/u3>pu1 button — inside BigCPR Above, next to Show All */}
-            {activePattern === "structure-bigabove" && !showAll && (
+            {activeSectionKey === "structure-bigabove" && !showAll && (
               <button
                 onClick={() => { setShowBAComp((v) => !v); setShowBigAbovePL34CL4(false); setShowHAU1(false); setShowHAU1CprAbovePU4(false); setShowHAU1L1AbovePU4(false); setShowHAU1PWideAbove(false); setShowHRHAL(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
@@ -2116,7 +2139,7 @@ export default function Screener({
               </button>
             )}
             {/* NEW: U1>PU4 button — inside BigCPR Above, next to Inside PUL2 (moved from left-nav) */}
-            {activePattern === "structure-bigabove" && !showAll && (
+            {activeSectionKey === "structure-bigabove" && !showAll && (
               <button
                 onClick={() => {
                   setShowHAU1((v) => !v);
@@ -2139,7 +2162,7 @@ export default function Screener({
             )}
             {/* NEW: pWideAbove button — nested under U1>PU4, independent of the
                 CPR>PU4/L1>PU4 chain. Prev CPR wider than pp-CPR AND Prev CPR above pp-CPR. */}
-            {activePattern === "structure-bigabove" && !showAll && showHAU1 && (
+            {activeSectionKey === "structure-bigabove" && !showAll && showHAU1 && (
               <button
                 onClick={() => setShowHAU1PWideAbove((v) => !v)}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
@@ -2153,7 +2176,7 @@ export default function Screener({
               </button>
             )}
             {/* NEW: CPR>PU4 sub-toggle — restrict U1>PU4 results to rows where today's BC is above prev day's R4 */}
-            {activePattern === "structure-bigabove" && !showAll && showHAU1 && (
+            {activeSectionKey === "structure-bigabove" && !showAll && showHAU1 && (
               <button
                 onClick={() => {
                   setShowHAU1CprAbovePU4((v) => !v);
@@ -2170,7 +2193,7 @@ export default function Screener({
               </button>
             )}
             {/* NEW: L1>PU4 sub-toggle — nested on top of CPR>PU4, restrict further to rows where today's S1 is above prev day's R4 */}
-            {activePattern === "structure-bigabove" && !showAll && showHAU1 && showHAU1CprAbovePU4 && (
+            {activeSectionKey === "structure-bigabove" && !showAll && showHAU1 && showHAU1CprAbovePU4 && (
               <button
                 onClick={() => setShowHAU1L1AbovePU4((v) => !v)}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
@@ -2615,7 +2638,7 @@ export default function Screener({
                         toggleExpand={toggleExpand}
                         canShowCombined={canShowCombined}
                         activeTab={activeTab}
-                        activePattern={activePattern}
+                        activePattern={activeSectionKey}
                         showHAU1={showHAU1}
                         showBigBelowPMiniPL3={showBigBelowPMiniPL3}
                       />
