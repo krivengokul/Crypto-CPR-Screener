@@ -663,9 +663,9 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // inside prev's BC/R1 band. Sits above "PREVCPR 1ABOVE" in the left-nav.
     case "cpr-1-above":
       return r.CPRs1Above;
-    // 9AM:MegL-3PM — CPR 1ABOVE + previous pair eXU1L1 + current pair
+    // 9AM:MegL-U4+1:3PM — CPR 1ABOVE + previous pair eXU1L1 + current pair
     // eXL4U2 + pMega/Large widths + both PDLs below their respective L1s.
-    case "9AM:MegL-3PM":
+    case "9AM:MegL-U4+1:3PM":
       return (
         r.CPRs1Above &&
         computePivotSubLabel(r.prevCPR, r.ppCPR) === "eXU1L1" &&
@@ -1078,7 +1078,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     { key: "PDH>pTC-U4:5AM", direction: "up" },
   ],
   "cpr-1-above": [
-    { key: "9AM:MegL-3PM", direction: "up" },
+    { key: "9AM:MegL-U4+1:3PM", direction: "up" },
     { key: "7PM:MoMi->U4:2AM", direction: "up" },
     { key: "7PM:MoMi-<L4:2AM", direction: "down" },
   ],

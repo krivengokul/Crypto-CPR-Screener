@@ -48,14 +48,14 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     getTarget: (r) => r.todayCPR.r4,
   },
   {
-    key: "9AM:MegL-3PM",
-    label: "9AM:MegL-3PM",
+    key: "9AM:MegL-U4+1:3PM",
+    label: "9AM:MegL-U4+1:3PM",
     direction: "bullish",
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
   },
   // NEW: "7PM:MoMi->U4:2AM" — nested under "CPR 1ABOVE" → Pattern "eXL4U2",
-  // alongside its sibling "9AM:MegL-3PM". Bullish, targets today's own
+  // alongside its sibling "9AM:MegL-U4+1:3PM". Bullish, targets today's own
   // R4 / U4 by ~2AM.
   {
     key: "7PM:MoMi->U4:2AM",
@@ -279,13 +279,13 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
     // cOU3L4/LoU3L3/HiL4U3 elsewhere. Base condition = parent
     // cpr-1-above's condition AND the raw eXL4U2 flag (see
     // matchesPatternFlag in ScreenerUtils.tsx). Nests the existing
-    // "9AM:MegL-3PM" pattern, which used to sit directly on this
+    // "9AM:MegL-U4+1:3PM" pattern, which used to sit directly on this
     // category's own subPatternKeys.
     subCategories: [
       {
         key: "eXL4U2",
         label: "eXL4U2",
-        subPatternKeys: ["9AM:MegL-3PM", "7PM:MoMi->U4:2AM", "7PM:MoMi-<L4:2AM"],
+        subPatternKeys: ["9AM:MegL-U4+1:3PM", "7PM:MoMi->U4:2AM", "7PM:MoMi-<L4:2AM"],
       },
     ],
   },
