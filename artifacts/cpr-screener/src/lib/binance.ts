@@ -2,7 +2,7 @@ import { OHLC, CPRResult, analyzeCPR } from "./cpr";
 import { shouldExcludeSymbol } from "./symbolFilters";
 
 const BASE = "https://api.binance.com/api/v3";
-// ADK FIX: some pairs (e.g. UAIUSDT) only exist on USDⓈ-M Futures, never on
+// FIX: some pairs (e.g. UAIUSDT) only exist on USDⓈ-M Futures, never on
 // Spot. Scanning Spot alone silently drops them from the universe.
 const FBASE = "https://fapi.binance.com/fapi/v1";
 
@@ -42,7 +42,7 @@ async function sleep(ms: number) {
 }
 
 /**
- * ADK FIX (missing symbols): every network read now goes through one retrying
+ * FIX (missing symbols): every network read now goes through one retrying
  * fetch. Binance answers a burst of parallel requests with 429 / 418 (and
  * occasionally 5xx) and the old code treated those as "no data" — the symbol
  * was silently dropped from the results instead of being retried. That is the
@@ -98,7 +98,7 @@ function setPinnedSymbols(symbols: string[]): void {
 }
 
 /**
- * ADK FIX: Detect today's live (incomplete) daily candle using the UTC midnight
+ * FIX: Detect today's live (incomplete) daily candle using the UTC midnight
  * boundary — identical to TradingView's `high[1]` + `lookahead_off` behaviour.
  *
  * Both Binance Spot and USDⓈ-M Futures reset daily candles at UTC 00:00, so the
@@ -115,14 +115,14 @@ function isLiveDailyCandle(openTimeMs: number): boolean {
 }
 
 /**
- * ADK FIX (venue priority): FUTURES-FIRST.
+ * FIX (venue priority): FUTURES-FIRST.
  *
  * The screener links every Binance row to TradingView's perpetual chart
  * (`BINANCE:<SYMBOL>.P`), so the candles we analyse must come from the same
  * instrument. USDⓈ-M perpetual wins on collision; Spot is only used for
  * symbols that are not listed on fapi at all.
  *
- * ADK FIX (missing symbols): a venue that fails is now a hard error instead of
+ * FIX (missing symbols): a venue that fails is now a hard error instead of
  * a silent half-universe. Previously, one 429 from fapi quietly reduced the
  * scan to Spot-only and ~170 perp-only pairs vanished with no warning.
  */
@@ -165,7 +165,7 @@ async function fetchActiveSymbols(): Promise<Set<string>> {
 }
 
 /**
- * ADK FIX (venue priority): FUTURES-FIRST, mirroring fetchActiveSymbols.
+ * FIX (venue priority): FUTURES-FIRST, mirroring fetchActiveSymbols.
  * Perpetual 24h tickers win on collision so last price / % change / volume
  * describe the same instrument whose klines we analyse and whose `.P` chart
  * we link to. Spot only supplies symbols with no perpetual listing.
@@ -197,7 +197,7 @@ async function fetchAllTickers(): Promise<Ticker24h[]> {
 }
 
 /**
- * ADK FIX (missing symbols): `limit` no longer defaults to 500. Binance's
+ * FIX (missing symbols): `limit` no longer defaults to 500. Binance's
  * tradable USDT universe (perp + spot union) is already north of 650 pairs and
  * still growing, so a 500 cap was quietly amputating the tail of the list every
  * single scan. Pass a number only if you deliberately want a top-N slice.
@@ -225,14 +225,14 @@ export async function fetchTopUSDTSymbols(limit?: number): Promise<Ticker24h[]> 
   return typeof limit === "number" ? filtered.slice(0, limit) : filtered;
 }
 
-// ADK FIX: bumped from 4 → 6. We need at least 3 COMPLETED daily candles
+// FIX: bumped from 4 → 6. We need at least 3 COMPLETED daily candles
 // available (pp / prev / today) plus room for the still-forming "live" candle
 // on top of that (4 total in the worst case), so 4 was one candle short of
 // ever having a pp-candle. 6 gives a comfortable safety margin (e.g. if
 // Binance has a brief gap in daily data for a thinly-traded pair) while
 // staying a cheap, single extra API page — well within rate limits.
 //
-// ADK FIX: routes to fapi for futures-only symbols, and falls back to the
+// FIX: routes to fapi for futures-only symbols, and falls back to the
 // other venue if the primary one returns nothing. Rate-limited responses are
 // now retried with backoff rather than dropping the symbol from the scan.
 /**
@@ -271,14 +271,14 @@ export async function fetchDailyKlines(
   return null;
 }
 
-// ADK FIX: bumped from 4 → 6 (see note above); thin wrapper over the shared
+// FIX: bumped from 4 → 6 (see note above); thin wrapper over the shared
 // fetcher so the live screener and the backtest cannot drift apart.
 async function fetchKlines(symbol: string): Promise<OHLC[] | null> {
   return fetchDailyKlines(symbol, 6);
 }
 
 /**
- * ADK FIX (missing symbols): the daily pin used to freeze whatever list the
+ * FIX (missing symbols): the daily pin used to freeze whatever list the
  * FIRST scan of the IST day happened to produce. If that scan ran while a
  * venue was rate-limited, the short list stayed pinned for the rest of the
  * day and newly listed pairs never appeared. The pin now only ever grows: any
@@ -324,7 +324,7 @@ export async function runScreener(
 
         const lastKline = klines[klines.length - 1];
 
-        // ADK FIX: use UTC midnight boundary — matches TradingView high[1] lookahead_off
+        // FIX: use UTC midnight boundary — matches TradingView high[1] lookahead_off
         const lastKlineIsLive = isLiveDailyCandle(lastKline.openTime);
 
         let prevCandle: OHLC;
