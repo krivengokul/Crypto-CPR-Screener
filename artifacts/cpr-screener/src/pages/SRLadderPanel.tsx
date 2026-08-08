@@ -101,14 +101,14 @@ export function SRLadder({
 
   return (
     <div className="w-[180px] min-w-0">
-      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">
+      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5 text-center">
         {label}
       </p>
       {rows.map((row, i) =>
         row.type === "price" ? (
           <div
             key={`price-${i}`}
-            className="grid grid-cols-[auto_auto] justify-start gap-3 bg-blue-500 text-white text-xs px-2 py-1 rounded font-bold my-0.5"
+            className="grid grid-cols-[3.5rem_auto] justify-start gap-1 w-fit bg-blue-100 text-blue-900 text-xs px-2 py-0.5 rounded font-bold my-0.5"
           >
             <span>▶ Price</span>
             <span className="font-mono">{fmt(currentPrice as number)}</span>
@@ -232,13 +232,13 @@ export function SRLadderPanel({ r }: { r: SRLadderData }) {
           );
         })()}
       </div>
-      <SRLadder cpr={r.todayCPR} currentPrice={r.currentPrice} label="Today S/R" />
-      <SRLadder cpr={r.prevCPR} currentPrice={r.currentPrice} label="Prev Day S/R" />
       {r.ppCPR ? (
         <SRLadder cpr={r.ppCPR} currentPrice={r.currentPrice} label="PDay-1 S/R" />
       ) : (
         <div aria-hidden="true" />
       )}
+      <SRLadder cpr={r.prevCPR} currentPrice={r.currentPrice} label="Prev Day S/R" />
+      <SRLadder cpr={r.todayCPR} currentPrice={r.currentPrice} label="Today S/R" />
     </div>
   );
 }
