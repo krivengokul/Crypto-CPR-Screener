@@ -264,6 +264,20 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
   // width combo + p-PDH>U1 + PDL<L1 + today R1>prev R1 + today S1>prev S1
   // + prev day's PDH/PDL above today's PDH/PDL. Bullish, entry ~2PM,
   // targets U4 (today's R4) by ~7PM.
+  // NEW: "8AM:pPDHA-SRA-U4+2:2AM" — nested under "CPR Inside" (inside-cpr)
+  // via the new "eXL4U4" Pattern sub-category (see BACKTEST_CATEGORIES
+  // below). Base inside-cpr condition + raw eXL4U4 flag + today's SRAbove
+  // + prev day's PDH above today's PDH + prev day's PDL above today's PDL
+  // + (if today's own PDH is below today's own R1, additionally require
+  // prev day's PDH above today's R1). Bullish, entry ~8AM, targets today's
+  // own R4 / U4 two days out (+2), by ~2AM.
+  {
+    key: "8AM:pPDHA-SRA-U4+2:2AM",
+    label: "8AM:pPDHA-SRA-U4+2:2AM",
+    direction: "bullish",
+    targetLabel: "U4 (today's R4)",
+    getTarget: (r) => r.todayCPR.r4,
+  },
   {
     key: "2PM:pPDHLA-SRA-U4:7PM",
     label: "2PM:pPDHLA-SRA-U4:7PM",
@@ -499,6 +513,15 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
         key: "cOL4U4",
         label: "cOL4U4",
         subPatternKeys: ["2PM:pPDHLA-SRA-U4:7PM"],
+      },
+      // NEW: eXL4U4 Pattern sub-category — base condition = the inside-cpr
+      // condition AND the raw eXL4U4 flag (see matchesPatternFlag in
+      // ScreenerUtils.tsx, which already has an "eXL4U4" case). Nests the
+      // bullish "8AM:pPDHA-SRA-U4+2:2AM" pattern (target: today's R4 / U4).
+      {
+        key: "eXL4U4",
+        label: "eXL4U4",
+        subPatternKeys: ["8AM:pPDHA-SRA-U4+2:2AM"],
       },
     ],
   },

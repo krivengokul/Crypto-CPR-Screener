@@ -694,6 +694,26 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.prevCPR.prevHigh > r.todayCPR.prevHigh &&
         r.prevCPR.prevLow > r.todayCPR.prevLow
       );
+    // NEW: 8AM:pPDHA-SRA-U4+2:2AM — Inside CPR + raw eXL4U4 flag (prev R4
+    // inside today's R3/R4, prev S4 inside today's S3/S4) + today's
+    // SRAbove (today's R1 above prev R1 AND today's S1 held at/above prev
+    // S1) + prev day's PDH above today's PDH ("prev prevHigh > today
+    // prevHigh") + prev day's PDL above today's PDL ("prev prevLow > today
+    // prevLow") + IF today's own PDH is below today's own R1 (PDHLBelow),
+    // additionally require prev day's PDH above today's R1 ("p-PDHA",
+    // i.e. prev's high still cleared today's R1 even though today hasn't
+    // broken out yet). Bullish, entry ~8AM, targets today's U4 two days
+    // out (+2), by ~2AM. Green color family.
+    case "8AM:pPDHA-SRA-U4+2:2AM":
+      return (
+        ((r.todayCPR.tc <= r.prevCPR.tc && r.todayCPR.bc > r.prevCPR.bc) ||
+          (r.todayCPR.tc < r.prevCPR.tc && r.todayCPR.bc >= r.prevCPR.bc)) &&
+        r.eXL4U4 &&
+        r.SRAbove &&
+        r.prevCPR.prevHigh > r.todayCPR.prevHigh &&
+        r.prevCPR.prevLow > r.todayCPR.prevLow &&
+        (!r.todayCPR.PDHLBelow || r.prevCPR.prevHigh > r.todayCPR.r1)
+      );
     // NEW: SMi-L1pU1>-APU4:11PM — Inside CPR + L1pU1Above (from cpr.ts)
     // + compression ratio >= 30. Target ApU4 by 11PM.
     // NEW: pCPR>U1 CPR>pL1 — prev Pivot inside today's R1/R2 band and
@@ -1150,6 +1170,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
   "inside-cpr": [
     { key: "8AM:pSR-PDHL-pU4+1:8AM", direction: "up" },
     { key: "2PM:pPDHLA-SRA-U4:7PM", direction: "up" },
+    { key: "8AM:pPDHA-SRA-U4+2:2AM", direction: "up" },
   ],
   "outside-cpr": [
     { key: "outside-cpr-compressed", direction: "up" },
