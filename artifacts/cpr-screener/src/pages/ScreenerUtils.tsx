@@ -670,10 +670,8 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.cOL3U3 &&
         r.prevCPR.widthPct > 2.00 && r.prevCPR.widthPct <= 5.00 &&   // pLarge
         r.todayCPR.widthPct > 1.10 && r.todayCPR.widthPct <= 2.00 && // Medium
-        r.prevCPR.prevLow < r.prevCPR.s1 &&                          // p-PDL<L1
-        r.todayCPR.PDHLAbove &&                                      // PDH>U1
-        r.prevCPR.r1 > r.todayCPR.r1 &&
-        r.prevCPR.s1 > r.todayCPR.s1 &&
+        r.prevCPR.PDHLBelow && r.todayCPR.PDHLAbove &&       // p-PDHLBelow  // PDHLAbove
+        r.todayCPR.SRBelow 
         r.todayCPR.prevHigh > r.prevCPR.prevHigh &&
         r.todayCPR.prevLow > r.prevCPR.prevLow
       );
@@ -691,10 +689,8 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.cOL4U4 &&
         r.prevCPR.widthPct > 2.00 && r.prevCPR.widthPct <= 5.00 &&   // pLarge
         r.todayCPR.widthPct > 2.00 && r.todayCPR.widthPct <= 5.00 && // Large
-        r.prevCPR.PDHLAbove &&                                       // p-PDH>U1
-        r.todayCPR.prevLow < r.todayCPR.s1 &&                        // PDL<L1
-        r.todayCPR.r1 > r.prevCPR.r1 &&
-        r.todayCPR.s1 > r.prevCPR.s1 &&
+        r.prevCPR.PDHLAbove && r.todayCPR.PDHLBelow &&            // p-PDH>U1     // PDL<L1
+        r.todayCPR.SRAbove &&
         r.prevCPR.prevHigh > r.todayCPR.prevHigh &&
         r.prevCPR.prevLow > r.todayCPR.prevLow
       );

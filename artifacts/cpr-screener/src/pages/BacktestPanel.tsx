@@ -28,7 +28,7 @@ import {
   type BacktestTargetDef,
 } from "@/lib/backtest";
 import { passesPattern, matchesPatternFlag, fmt, getChartUrl, hasKnownChartMapping, getWidthCategory, renderPdhPdlSubBadges } from "./ScreenerUtils";
-import { renderTodayPatternBadges, renderPrevPatternBadge } from "./ScreenerTableRow";
+import { renderTodayPatternBadges, renderPrevPatternBadge, renderLevelBadges } from "./ScreenerTableRow";
 import { SRLadderRow, toSRLadderData } from "./SRLadderPanel";
 
 // --- Small UTC date helpers (all dates in this panel are UTC ISO strings) ---
@@ -862,11 +862,14 @@ export default function BacktestPanel() {
               <table className="w-full text-sm border-collapse">
                 <thead>
                   <tr className="border-b border-border bg-muted/30">
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    <th className="px-2 py-2 w-20 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Symbol
                     </th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    <th className="px-2 py-2 w-16 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Close
+                    </th>
+                    <th className="px-2 py-2 w-20 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      LEVEL
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Pattern
@@ -925,7 +928,7 @@ export default function BacktestPanel() {
                       <Fragment key={`${r.source}-${r.symbol}`}>
                       <tr className="hover:bg-muted/20">
                         <td
-                          className="px-3 py-2 font-mono font-semibold cursor-pointer select-none"
+                          className="px-2 py-2 w-20 font-mono font-semibold cursor-pointer select-none"
                           onClick={() => toggleExpand(`${r.source}-${r.symbol}`)}
                           title="Click to expand ADK S/R ladder"
                         >
@@ -933,14 +936,17 @@ export default function BacktestPanel() {
                             <span className="text-muted-foreground text-xs">
                               {expandedSymbols.has(`${r.source}-${r.symbol}`) ? "▼" : "▶"}
                             </span>
-                            <span>{r.symbol}</span>
+                            <span className="truncate">{r.symbol}</span>
                             <span onClick={(e) => e.stopPropagation()}>
                               <ChartLink symbol={r.symbol} source={r.source} />
                             </span>
                           </div>
                         </td>
-                        <td className={`px-3 py-2 font-mono text-sm font-medium ${closeColor}`}>
+                        <td className={`px-2 py-2 w-16 font-mono text-sm font-medium ${closeColor}`}>
                           {r.closePrice !== null && r.closePrice !== undefined ? fmt(r.closePrice) : "—"}
+                        </td>
+                        <td className="px-2 py-2 w-20">
+                          {renderLevelBadges(r.raw)}
                         </td>
                         <td className="px-3 py-2 whitespace-nowrap">
                           {(() => {
@@ -997,7 +1003,7 @@ export default function BacktestPanel() {
                         <SRLadderRow
                           r={toSRLadderData(r.raw, r.closePrice ?? undefined)}
                           rowKey={`${r.source}-${r.symbol}`}
-                          colSpan={6}
+                          colSpan={7}
                         />
                       )}
                       </Fragment>
