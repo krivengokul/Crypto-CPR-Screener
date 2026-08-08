@@ -1186,6 +1186,11 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
   "pcpr-u1-cpr-pl1": [
     { key: "BC>pPDL-U3:5AM", direction: "up" },
     { key: "PDH>pTC-U4:5AM", direction: "up" },
+    // FIX: "11AM:pCPR1AHi-FApU4:1PM" (nested under the "LoU3L4" Pattern
+    // sub-category) was missing here, so rows matching it never got the
+    // per-row green direction dot even though the Views button itself
+    // filtered correctly. Bullish → "up".
+    { key: "11AM:pCPR1AHi-FApU4:1PM", direction: "up" },
   ],
   "cpr-1-above": [
     { key: "9AM:MegL-U4+1:3PM", direction: "up" },
@@ -1219,6 +1224,11 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
   ],
   "u1-gt-pu4": [
     { key: "SL-eXL3U1-FAU4:3PM", direction: "up" },
+    // FIX: "8AM:MegUl-FAU4:4AM" (nested under the same "eXL3U1" Pattern
+    // sub-category as SL-eXL3U1-FAU4:3PM above) was missing here, so
+    // rows matching it never got the per-row green direction dot even
+    // though the Views button itself filtered correctly. Bullish → "up".
+    { key: "8AM:MegUl-FAU4:4AM", direction: "up" },
     { key: "TiMe-eXL3TC-AU4:2PM", direction: "up" },
     { key: "SMg-exHiL2L1-U4:3AM", direction: "up" },
   ],
@@ -1229,9 +1239,15 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     { key: "eXU4L2-AU4", direction: "down" },
     { key: "1T-cOU4L4-ApU4:3PM", direction: "down" },
   ],
-  "l1-lt-pl4": [],
-  // NEW: ss-eXU4L1-U4:10PM — L1<pL4 sub-filter.
-  // Bullish sweep from a deep-below setup back up to U4 by ~10PM.
+  // FIX: "l1-lt-pl4" was left as an empty array while the comment below
+  // (for "ss-eXU4L1-U4:10PM") described it as belonging here — the actual
+  // entry was never added, so every row matching that pattern showed no
+  // per-row direction dot even though the Views button filtered
+  // correctly. Bullish sweep from a deep-below setup back up to U4 by
+  // ~10PM → "up".
+  "l1-lt-pl4": [
+    { key: "ss-eXU4L1-U4:10PM", direction: "up" },
+  ],
   "equal-cpr": [
     { key: "eXLoL3U3-L3", direction: "down" },
   ],
