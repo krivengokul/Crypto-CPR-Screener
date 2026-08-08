@@ -788,10 +788,15 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // NEW: 11AM:pCPR1AHi-FApU4:1PM — sub-filter under "PREVCPR 1ABOVE" →
     // "LoU3L4" Pattern sub-category: base pCPR1Above condition PLUS the
     // parent's raw LoU3L4 flag PLUS HHLLBelow (today's PDH at/below prev
-    // day's PDH AND today's PDL below prev day's PDL). Bullish, targets
-    // Far Above pU4 (prev day's R4) by ~1PM. Green color family.
+    // day's PDH AND today's PDL below prev day's PDL) PLUS prev day's own
+    // PDH below prev day's own R1 (p-PDHL-B, prevCPR.PDHLBelow) PLUS
+    // today's PDH above today's own R1 (PDHL-A, todayCPR.PDHLAbove) PLUS
+    // today's R1 at/above prev day's BC. Bullish, targets Far Above pU4
+    // (prev day's R4) by ~1PM. Green color family.
     case "11AM:pCPR1AHi-FApU4:1PM":
-      return r.pCPR1Above && r.LoU3L4 && r.HHLLBelow;
+      return r.pCPR1Above && r.LoU3L4 && r.HHLLBelow &&
+        r.prevCPR.PDHLBelow && r.todayCPR.PDHLAbove &&
+        r.todayCPR.r1 >= r.prevCPR.bc;
     case "l1pu1-above":
       return r.L1pU1Above ; 
     case "SMi-L1pU1>-APU4:11PM": {
