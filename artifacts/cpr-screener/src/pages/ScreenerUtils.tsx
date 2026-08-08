@@ -796,7 +796,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     case "11AM:pCPR1AHi-FApU4:1PM":
       return r.pCPR1Above && r.LoU3L4 && r.HHLLBelow &&
         r.prevCPR.PDHLBelow && r.todayCPR.PDHLAbove &&
-        r.todayCPR.r1 >= r.prevCPR.bc;
+        r.todayCPR.r1 > r.prevCPR.bc;
     case "l1pu1-above":
       return r.L1pU1Above ; 
     case "SMi-L1pU1>-APU4:11PM": {
