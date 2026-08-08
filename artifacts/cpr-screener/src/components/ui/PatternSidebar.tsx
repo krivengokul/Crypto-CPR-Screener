@@ -145,6 +145,18 @@ export const subPatterns: Record<string, SubPattern[]> = {
       activeText:  "#4ade80",              // green-400 text
       activeBg:    "rgba(34, 197, 94, 0.14)",
     },
+    // NEW: 11AM:pCPR1AHi-FApU4:1PM — PREVCPR 1ABOVE + LoU3L4 + HHLLBelow
+    // (today's PDH at/below prev day's PDH AND today's PDL below prev
+    // day's PDL). Bullish, targets Far Above pU4 (prev day's R4) by ~1PM.
+    // Same green color family as its BC>pPDL-U3:5AM / PDH>pTC-U4:5AM
+    // siblings.
+    {
+      id: "11AM:pCPR1AHi-FApU4:1PM",
+      label: "11AM:pCPR1AHi-FApU4:1PM",
+      activeColor: "#22c55e",              // green-500 border
+      activeText:  "#4ade80",              // green-400 text
+      activeBg:    "rgba(34, 197, 94, 0.14)",
+    },
   ],
   "l1pu1-above": [
     {

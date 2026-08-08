@@ -213,6 +213,19 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
   },
+  // NEW: "11AM:pCPR1AHi-FApU4:1PM" — nested under "PREVCPR 1ABOVE"
+  // (pcpr-u1-cpr-pl1) category's new "LoU3L4" Pattern sub-category (see
+  // BACKTEST_CATEGORIES below), alongside its "cOU3L4"/"LoU3L3" siblings.
+  // Base condition: this category's pCPR1Above condition AND the raw
+  // LoU3L4 flag AND HHLLBelow — see ScreenerUtils.tsx. Bullish, targets
+  // Far Above pU4 (prev day's R4) by ~1PM.
+  {
+    key: "11AM:pCPR1AHi-FApU4:1PM",
+    label: "11AM:pCPR1AHi-FApU4:1PM",
+    direction: "bullish",
+    targetLabel: "FApU4 (prev day's R4)",
+    getTarget: (r) => r.prevCPR.r4,
+  },
   // NEW: "TiMe-eXL3TC-AU4:2PM" — nested directly under "U1 > pU4"
   // (u1-gt-pu4), alongside SL-eXL3U1-FAU4:3PM. Bullish, Pattern eXL3TC +
   // pTiny/Mega width combo, targets AU4 (prev day's R4) by ~2PM.
@@ -368,6 +381,15 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
         key: "LoU3L3",
         label: "LoU3L3",
         subPatternKeys: ["PDH>pTC-U4:5AM"],
+      },
+      // NEW: "LoU3L4" — Pattern sub-category (arrow), same shape as its
+      // "LoU3L3" sibling: base condition = this category's pCPR1Above
+      // condition AND the raw LoU3L4 flag (see matchesPatternFlag in
+      // ScreenerUtils.tsx). Nests "11AM:pCPR1AHi-FApU4:1PM".
+      {
+        key: "LoU3L4",
+        label: "LoU3L4",
+        subPatternKeys: ["11AM:pCPR1AHi-FApU4:1PM"],
       },
     ],
   },

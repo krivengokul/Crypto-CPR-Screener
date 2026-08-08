@@ -785,6 +785,13 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return r.pCPR1Above && r.LoU3L3 && r.todayCPR.prevHigh > r.prevCPR.tc &&
         ((pMini && small) || (pSmall && large));
     }
+    // NEW: 11AM:pCPR1AHi-FApU4:1PM — sub-filter under "PREVCPR 1ABOVE" →
+    // "LoU3L4" Pattern sub-category: base pCPR1Above condition PLUS the
+    // parent's raw LoU3L4 flag PLUS HHLLBelow (today's PDH at/below prev
+    // day's PDH AND today's PDL below prev day's PDL). Bullish, targets
+    // Far Above pU4 (prev day's R4) by ~1PM. Green color family.
+    case "11AM:pCPR1AHi-FApU4:1PM":
+      return r.pCPR1Above && r.LoU3L4 && r.HHLLBelow;
     case "l1pu1-above":
       return r.L1pU1Above ; 
     case "SMi-L1pU1>-APU4:11PM": {
@@ -1329,6 +1336,10 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     // NEW: LoU3L3 — Pattern sub-category raw flag (see BacktestPanel's
     // "PREVCPR 1ABOVE" → "LoU3L3" nesting in backtest.ts).
     case "LoU3L3": return r.LoU3L3;
+    // NEW: LoU3L4 — Pattern sub-category raw flag, same shape as its
+    // LoU3L3 sibling (see BacktestPanel's "PREVCPR 1ABOVE" → "LoU3L4"
+    // nesting in backtest.ts).
+    case "LoU3L4": return r.LoU3L4;
     case "LoU4L4": return r.LoU4L4;
     case "eXL4U3": return r.eXL4U3;
     case "eXL4U4": return r.eXL4U4;
