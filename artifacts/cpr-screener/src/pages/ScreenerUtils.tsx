@@ -671,7 +671,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.prevCPR.widthPct > 2.00 && r.prevCPR.widthPct <= 5.00 &&   // pLarge
         r.todayCPR.widthPct > 1.10 && r.todayCPR.widthPct <= 2.00 && // Medium
         r.prevCPR.PDHLBelow && r.todayCPR.PDHLAbove &&       // p-PDHLBelow  // PDHLAbove
-        r.todayCPR.SRBelow 
+        r.todayCPR.SRBelow &&
         r.todayCPR.prevHigh > r.prevCPR.prevHigh &&
         r.todayCPR.prevLow > r.prevCPR.prevLow
       );
