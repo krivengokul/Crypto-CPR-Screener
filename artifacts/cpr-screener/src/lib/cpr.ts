@@ -365,6 +365,14 @@ export interface CPRResult {
   // has dropped below prev's S1 (support eroded while resistance stayed
   // capped or fell).
   SRBelow: boolean;
+  // HHLLAbove — today's PDH (prevHigh) is strictly above prev's PDH AND
+  // today's PDL (prevLow) is at or above prev's PDL (higher high, higher
+  // or equal low).
+  HHLLAbove: boolean;
+  // HHLLBelow — today's PDH (prevHigh) is at or below prev's PDH AND
+  // today's PDL (prevLow) is strictly below prev's PDL (lower or equal
+  // high, lower low).
+  HHLLBelow: boolean;
 }
 
 function isValidCandle(c: OHLC): boolean {
@@ -1019,6 +1027,10 @@ export function analyzeCPR(
   const SRAbove = todayCPR.r1 > prevCPR.r1 && todayCPR.s1 >= prevCPR.s1;
   const SRBelow = todayCPR.r1 <= prevCPR.r1 && todayCPR.s1 < prevCPR.s1;
 
+  // HHLLAbove / HHLLBelow — today vs prev PDH/PDL directional classification.
+  const HHLLAbove = todayCPR.prevHigh > prevCPR.prevHigh && todayCPR.prevLow >= prevCPR.prevLow;
+  const HHLLBelow = todayCPR.prevHigh <= prevCPR.prevHigh && todayCPR.prevLow < prevCPR.prevLow;
+
   return {
     symbol,
     todayCPR,
@@ -1061,5 +1073,7 @@ export function analyzeCPR(
     prevS1Gap,
     SRAbove,
     SRBelow,
+    HHLLAbove,
+    HHLLBelow,
   };
 }
