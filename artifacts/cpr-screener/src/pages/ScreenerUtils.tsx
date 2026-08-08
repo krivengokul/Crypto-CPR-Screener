@@ -700,10 +700,11 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // S1) + prev day's PDH above today's PDH ("prev prevHigh > today
     // prevHigh") + prev day's PDL above today's PDL ("prev prevLow > today
     // prevLow") + IF today's own PDH is below today's own R1 (PDHLBelow),
-    // additionally require prev day's PDH above today's R1 ("p-PDHA",
+    // additionally require BOTH prev day's PDH above today's R1 ("p-PDHA",
     // i.e. prev's high still cleared today's R1 even though today hasn't
-    // broken out yet). Bullish, entry ~8AM, targets today's U4 two days
-    // out (+2), by ~2AM. Green color family.
+    // broken out yet) AND today's PDL above prev day's S1. Bullish, entry
+    // ~8AM, targets today's U4 two days out (+2), by ~2AM. Green color
+    // family.
     case "8AM:pPDHA-SRA-U4+2:2AM":
       return (
         ((r.todayCPR.tc <= r.prevCPR.tc && r.todayCPR.bc > r.prevCPR.bc) ||
@@ -712,7 +713,8 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.SRAbove &&
         r.prevCPR.prevHigh > r.todayCPR.prevHigh &&
         r.prevCPR.prevLow > r.todayCPR.prevLow &&
-        (!r.todayCPR.PDHLBelow || r.prevCPR.prevHigh > r.todayCPR.r1)
+        (!r.todayCPR.PDHLBelow ||
+          (r.prevCPR.prevHigh > r.todayCPR.r1 && r.todayCPR.prevLow > r.prevCPR.s1))
       );
     // NEW: SMi-L1pU1>-APU4:11PM — Inside CPR + L1pU1Above (from cpr.ts)
     // + compression ratio >= 30. Target ApU4 by 11PM.
