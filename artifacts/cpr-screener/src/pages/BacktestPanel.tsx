@@ -290,7 +290,7 @@ export default function BacktestPanel() {
   }
   const [progress, setProgress] = useState({ done: 0, total: 0, symbol: "" });
   const [rows, setRows] = useState<BacktestRow[]>([]);
-  const [categoryRows, setCategoryRows] = useState<CategoryScanRow[]>([]);
+  const [categoryRows, setCategoryRows] = useState<(CategoryScanRow & { entryDate: string })[]>([]);
   const [changeSortDir, setChangeSortDir] = useState<"asc" | "desc" | null>(null);
   const [error, setError] = useState("");
 
@@ -439,10 +439,6 @@ export default function BacktestPanel() {
     setPickerOpen(false);
   }
 
-  useEffect(() => {
-    if (!isViewOnly && dateMode === "range") setDateMode("single");
-  }, [isViewOnly, dateMode]);
-
   function enumerateDatesUTC(fromISO: string, toISO: string): string[] {
     const dates: string[] = [];
     const cur = new Date(fromISO + "T00:00:00.000Z");
@@ -455,7 +451,7 @@ export default function BacktestPanel() {
   }
 
   const run = async () => {
-    if (isViewOnly && dateMode === "range") {
+    if (dateMode === "range") {
       if (fromDate > toDate) {
         setError("From date must be on or before To date.");
         setStatus("error");
@@ -472,25 +468,63 @@ export default function BacktestPanel() {
     setDateProgress({ current: 0, total: 0, date: "" });
     try {
       if (isCategory) {
-        const result = await runCategoryScan(
-          selectedKey,
-          entryDate,
-          source,
-          passesPattern,
-          (done, total, symbol) => setProgress({ done, total, symbol })
-        );
-        setCategoryRows(result);
+        if (dateMode === "single") {
+          const result = await runCategoryScan(
+            selectedKey,
+            entryDate,
+            source,
+            passesPattern,
+            (done, total, symbol) => setProgress({ done, total, symbol })
+          );
+          setCategoryRows(result.map((r) => ({ ...r, entryDate })));
+        } else {
+          const dates = enumerateDatesUTC(fromDate, toDate);
+          const allRows: (CategoryScanRow & { entryDate: string })[] = [];
+          for (let i = 0; i < dates.length; i++) {
+            const d = dates[i];
+            setDateProgress({ current: i + 1, total: dates.length, date: d });
+            const dayResult = await runCategoryScan(
+              selectedKey,
+              d,
+              source,
+              passesPattern,
+              (done, total, symbol) => setProgress({ done, total, symbol })
+            );
+            allRows.push(...dayResult.map((r) => ({ ...r, entryDate: d })));
+          }
+          setCategoryRows(allRows);
+        }
       } else if (isPatternOnly && activePatternInfo) {
-        const result = await runPivotLevelScan(
-          activePatternInfo.category.key,
-          activePatternInfo.sub.key,
-          entryDate,
-          source,
-          passesPattern,
-          matchesPatternFlag,
-          (done, total, symbol) => setProgress({ done, total, symbol })
-        );
-        setCategoryRows(result);
+        if (dateMode === "single") {
+          const result = await runPivotLevelScan(
+            activePatternInfo.category.key,
+            activePatternInfo.sub.key,
+            entryDate,
+            source,
+            passesPattern,
+            matchesPatternFlag,
+            (done, total, symbol) => setProgress({ done, total, symbol })
+          );
+          setCategoryRows(result.map((r) => ({ ...r, entryDate })));
+        } else {
+          const dates = enumerateDatesUTC(fromDate, toDate);
+          const allRows: (CategoryScanRow & { entryDate: string })[] = [];
+          for (let i = 0; i < dates.length; i++) {
+            const d = dates[i];
+            setDateProgress({ current: i + 1, total: dates.length, date: d });
+            const dayResult = await runPivotLevelScan(
+              activePatternInfo.category.key,
+              activePatternInfo.sub.key,
+              d,
+              source,
+              passesPattern,
+              matchesPatternFlag,
+              (done, total, symbol) => setProgress({ done, total, symbol })
+            );
+            allRows.push(...dayResult.map((r) => ({ ...r, entryDate: d })));
+          }
+          setCategoryRows(allRows);
+        }
       } else if (dateMode === "single") {
         const result = await runBacktest(
           selectedKey,
@@ -560,12 +594,13 @@ export default function BacktestPanel() {
         </span>
       </div>
       <p className="text-xs text-muted-foreground mb-4">
-        Pick a past date and either a category, a Pattern sub-category
-        nested under a category, or a specific pattern. Category and Pivot
-        Level selections give a symbol list only (single date); a pattern
-        gives the full Target/Result/Hit Date backtest, with an optional
-        date-range sweep. This reconstructs the CPR that would have been
-        active on that date (same candle logic as the live scanner).
+        Pick a date (or a date range) and either a category, a Pattern
+        sub-category nested under a category, or a specific pattern.
+        Category and Pivot Level selections give a symbol list only, with
+        an optional date-range sweep; a pattern gives the full
+        Target/Result/Hit Date backtest, also with an optional date-range
+        sweep. This reconstructs the CPR that would have been active on
+        that date (same candle logic as the live scanner).
       </p>
 
       <div className="flex flex-wrap items-end gap-3 mb-4">
@@ -722,28 +757,26 @@ export default function BacktestPanel() {
             </div>
           )}
         </div>
-        {isViewOnly && (
-          <div>
-            <label className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Date Mode</label>
-            <div className="flex rounded-lg border border-border overflow-hidden text-xs">
-              {(["single", "range"] as const).map((m) => (
-                <button
-                  key={m}
-                  onClick={() => setDateMode(m)}
-                  className="px-3 py-1.5 transition-colors capitalize"
-                  style={{
-                    background: dateMode === m ? "#3b82f6" : "transparent",
-                    color: dateMode === m ? "#fff" : "#8ba3bc",
-                  }}
-                >
-                  {m === "single" ? "Single Date" : "Date Range"}
-                </button>
-              ))}
-            </div>
+        <div>
+          <label className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Date Mode</label>
+          <div className="flex rounded-lg border border-border overflow-hidden text-xs">
+            {(["single", "range"] as const).map((m) => (
+              <button
+                key={m}
+                onClick={() => setDateMode(m)}
+                className="px-3 py-1.5 transition-colors capitalize"
+                style={{
+                  background: dateMode === m ? "#3b82f6" : "transparent",
+                  color: dateMode === m ? "#fff" : "#8ba3bc",
+                }}
+              >
+                {m === "single" ? "Single Date" : "Date Range"}
+              </button>
+            ))}
           </div>
-        )}
+        </div>
 
-        {(!isViewOnly || dateMode === "single") ? (
+        {dateMode === "single" ? (
           <DateField
             label="Entry Date (UTC)"
             value={entryDate}
@@ -801,8 +834,9 @@ export default function BacktestPanel() {
         <div className="text-xs text-muted-foreground mb-3">
           Category scan — lists every symbol matching{" "}
           <span className="text-foreground font-medium">{activeCategory.label}</span>&apos;s base
-          condition on the entry date. No Target/Result/Hit Date (select one of its sub-patterns
-          or Pattern sub-categories above for those).
+          condition on {dateMode === "range" ? "each date in the range" : "the entry date"}. No
+          Target/Result/Hit Date (select one of its sub-patterns or Pattern sub-categories above
+          for those).
         </div>
       )}
       {isPatternOnly && activePatternInfo && (
@@ -810,14 +844,15 @@ export default function BacktestPanel() {
           Pattern scan — lists every symbol matching{" "}
           <span className="text-foreground font-medium">{activePatternInfo.category.label}</span>&apos;s
           base condition AND Pattern{" "}
-          <span className="text-foreground font-medium">{activePatternInfo.sub.label}</span> on the
-          entry date. No Target/Result/Hit Date (select one of its patterns above for those).
+          <span className="text-foreground font-medium">{activePatternInfo.sub.label}</span> on{" "}
+          {dateMode === "range" ? "each date in the range" : "the entry date"}. No
+          Target/Result/Hit Date (select one of its patterns above for those).
         </div>
       )}
 
       {status === "running" && (
         <div className="mb-4 rounded-lg border border-border bg-background/50 p-3">
-          {isViewOnly && dateMode === "range" && dateProgress.total > 0 && (
+          {dateMode === "range" && dateProgress.total > 0 && (
             <div className="flex justify-between text-xs text-muted-foreground mb-2 pb-2 border-b border-border/50">
               <span>
                 Date {dateProgress.current} of {dateProgress.total} — {dateProgress.date}
@@ -849,13 +884,17 @@ export default function BacktestPanel() {
         <>
           <div className="flex items-center gap-4 mb-3 text-xs flex-wrap">
             <span className="text-muted-foreground">
-              {categoryRows.length} symbols matched {symbolListLabel} on {entryDate}
+              {dateMode === "range"
+                ? `${categoryRows.length} symbols matched ${symbolListLabel} across ${enumerateDatesUTC(fromDate, toDate).length} days (${fromDate} to ${toDate})`
+                : `${categoryRows.length} symbols matched ${symbolListLabel} on ${entryDate}`}
             </span>
           </div>
 
           {categoryRows.length === 0 ? (
             <div className="text-xs text-muted-foreground text-center py-8">
-              No symbols matched {symbolListLabel} on {entryDate}.
+              {dateMode === "range"
+                ? `No symbols matched ${symbolListLabel} between ${fromDate} and ${toDate}.`
+                : `No symbols matched ${symbolListLabel} on ${entryDate}.`}
             </div>
           ) : (
             <div className="overflow-x-auto rounded-lg border border-border">
@@ -870,6 +909,9 @@ export default function BacktestPanel() {
                     </th>
                     <th className="px-2 py-2 w-20 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       LEVEL
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Entry Date
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Pattern
@@ -925,16 +967,16 @@ export default function BacktestPanel() {
                     // Close price colored by the same day-over-day sign as % change.
                     const closeColor = chgColor;
                     return (
-                      <Fragment key={`${r.source}-${r.symbol}`}>
+                      <Fragment key={`${r.source}-${r.symbol}-${r.entryDate}`}>
                       <tr className="hover:bg-muted/20">
                         <td
                           className="px-2 py-2 w-20 font-mono font-semibold cursor-pointer select-none"
-                          onClick={() => toggleExpand(`${r.source}-${r.symbol}`)}
+                          onClick={() => toggleExpand(`${r.source}-${r.symbol}-${r.entryDate}`)}
                           title="Click to expand ADK S/R ladder"
                         >
                           <div className="flex items-center gap-1.5">
                             <span className="text-muted-foreground text-xs">
-                              {expandedSymbols.has(`${r.source}-${r.symbol}`) ? "▼" : "▶"}
+                              {expandedSymbols.has(`${r.source}-${r.symbol}-${r.entryDate}`) ? "▼" : "▶"}
                             </span>
                             <span className="truncate">{r.symbol}</span>
                             <span onClick={(e) => e.stopPropagation()}>
@@ -947,6 +989,9 @@ export default function BacktestPanel() {
                         </td>
                         <td className="px-2 py-2 w-20">
                           {renderLevelBadges(r.raw)}
+                        </td>
+                        <td className="px-3 py-2 font-mono text-xs text-muted-foreground whitespace-nowrap">
+                          {formatDisplay(r.entryDate)}
                         </td>
                         <td className="px-3 py-2 whitespace-nowrap">
                           {(() => {
@@ -999,11 +1044,11 @@ export default function BacktestPanel() {
                             : "—"}
                         </td>
                       </tr>
-                      {expandedSymbols.has(`${r.source}-${r.symbol}`) && (
+                      {expandedSymbols.has(`${r.source}-${r.symbol}-${r.entryDate}`) && (
                         <SRLadderRow
                           r={toSRLadderData(r.raw, r.closePrice ?? undefined)}
-                          rowKey={`${r.source}-${r.symbol}`}
-                          colSpan={7}
+                          rowKey={`${r.source}-${r.symbol}-${r.entryDate}`}
+                          colSpan={8}
                         />
                       )}
                       </Fragment>
