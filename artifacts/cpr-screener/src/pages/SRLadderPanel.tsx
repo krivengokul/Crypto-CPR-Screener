@@ -101,14 +101,14 @@ export function SRLadder({
 
   return (
     <div className="w-[180px] min-w-0">
-      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5 text-center pr-5">
+      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5 text-center pr-3">
         {label}
       </p>
       {rows.map((row, i) =>
         row.type === "price" ? (
           <div
             key={`price-${i}`}
-            className="grid grid-cols-[3.5rem_auto] justify-start gap-1 w-fit bg-emerald-50/60 text-teal-900 text-xs px-2 py-0.5 rounded font-bold my-0.5"
+            className="grid grid-cols-[3.5rem_auto] justify-start gap-1 w-fit bg-emerald-50/30 text-teal-900 text-xs px-2 py-0.5 rounded font-bold my-0.5"
           >
             <span>▶ Price</span>
             <span className="font-mono">{fmt(currentPrice as number)}</span>
