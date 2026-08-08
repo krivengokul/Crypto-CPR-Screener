@@ -357,6 +357,14 @@ export interface CPRResult {
   prevS1Gap: number;
   r4Distance: number;
   s4Distance: number;
+  // SRAbove — today's R1 has moved above prev's R1 AND today's S1 has held
+  // at or above prev's S1 (support hasn't given up ground while resistance
+  // expanded upward).
+  SRAbove: boolean;
+  // SRBelow — today's R1 has NOT expanded above prev's R1 AND today's S1
+  // has dropped below prev's S1 (support eroded while resistance stayed
+  // capped or fell).
+  SRBelow: boolean;
 }
 
 function isValidCandle(c: OHLC): boolean {
@@ -1007,6 +1015,10 @@ export function analyzeCPR(
   const prevR1Gap = prevCPR.r1 - prevCPR.pivot;
   const prevS1Gap = prevCPR.pivot - prevCPR.s1;
 
+  // SRAbove / SRBelow — today vs prev R1/S1 directional classification.
+  const SRAbove = todayCPR.r1 > prevCPR.r1 && todayCPR.s1 >= prevCPR.s1;
+  const SRBelow = todayCPR.r1 <= prevCPR.r1 && todayCPR.s1 < prevCPR.s1;
+
   return {
     symbol,
     todayCPR,
@@ -1047,5 +1059,7 @@ export function analyzeCPR(
     quoteVolume,
     prevR1Gap,
     prevS1Gap,
+    SRAbove,
+    SRBelow,
   };
 }

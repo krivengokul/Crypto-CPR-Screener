@@ -366,6 +366,34 @@ export default function ScreenerTableRow({
       )
     : null;
 
+  // "SR-A / SR-B" badges — LEVEL-column-only replacement for the pU1/pL1 gap
+  // badges above. Driven by CPRResult.SRAbove / SRBelow (cpr.ts), which
+  // compare today's R1/S1 against prev's R1/S1 directly instead of the
+  // prev-day gap sizes. Only meaningful (and only rendered) for Inside-CPR
+  // rows.
+  const srBadge = isInsideCPR ? (
+    <>
+      {r.SRAbove && (
+        <span
+          key="sr-above"
+          className="text-xs px-1.5 py-0.5 rounded bg-green-500/10 text-green-400 border border-green-500/30 font-medium"
+          title="Today's R1 > Prev R1 and Today's S1 >= Prev S1"
+        >
+          SR-A
+        </span>
+      )}
+      {r.SRBelow && (
+        <span
+          key="sr-below"
+          className="text-xs px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/30 font-medium"
+          title="Today's R1 <= Prev R1 and Today's S1 < Prev S1"
+        >
+          SR-B
+        </span>
+      )}
+    </>
+  ) : null;
+
   return (
     <Fragment key={rowKey}>
       <tr
@@ -451,7 +479,7 @@ export default function ScreenerTableRow({
             {r.overlapLower && <span className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-medium">oV-Below</span>}
             {r.strWideCPR && <span className="text-xs px-1.5 py-0.5 rounded bg-pink-500/10 text-pink-400 border border-pink-500/20 font-medium">Wide</span>}
             {r.overlapHigher && <span className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20 font-medium">oV-Above</span>}
-            {r.narrowCPR && (isInsideCPR ? gapBadge : <span className="text-xs px-1.5 py-0.5 rounded bg-chart-3/10 text-chart-3 border border-chart-3/20 font-medium">Narrow</span>)}
+            {r.narrowCPR && (isInsideCPR ? srBadge : <span className="text-xs px-1.5 py-0.5 rounded bg-chart-3/10 text-chart-3 border border-chart-3/20 font-medium">Narrow</span>)}
             {r.equalCPR && <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">Equal</span>}
             {!r.cprRising &&
               !r.cprFalling &&
