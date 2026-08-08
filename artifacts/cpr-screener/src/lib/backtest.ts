@@ -88,8 +88,21 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     key: "SL-eXL3U1-FAU4:3PM",
     label: "SL-eXL3U1-FAU4:3PM",
     direction: "bullish",
-    targetLabel: "PU4 (prev day's R4)",
-    getTarget: (r) => r.prevCPR.r4,
+    targetLabel: "FAU4 (Far Above today's R4)",
+    getTarget: (r) => r.todayCPR.r4,
+  },
+  // NEW: "8AM:MegUl-FAU4:4AM" — nested under the "U1 > pU4" (u1-gt-pu4)
+  // category's "eXL3U1" Pattern sub-category, alongside its
+  // "SL-eXL3U1-FAU4:3PM" sibling. Base condition: this category's
+  // U1>pU4 condition AND the raw eXL3U1 flag AND today's BC above prev
+  // day's own PDH AND today's S1 above prev day's TC — see
+  // ScreenerUtils.tsx. Bullish, targets Far Above U4 (today's R4) by ~4AM.
+  {
+    key: "8AM:MegUl-FAU4:4AM",
+    label: "8AM:MegUl-FAU4:4AM",
+    direction: "bullish",
+    targetLabel: "FAU4 (Far Above today's R4)",
+    getTarget: (r) => r.todayCPR.r4,
   },
   // NEW: the two "LittleCPR Above" sub-patterns
   {
@@ -481,7 +494,9 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       {
         key: "eXL3U1",
         label: "eXL3U1",
-        subPatternKeys: ["SL-eXL3U1-FAU4:3PM"],
+        // NEW: "8AM:MegUl-FAU4:4AM" now also nests here, alongside
+        // "SL-eXL3U1-FAU4:3PM".
+        subPatternKeys: ["SL-eXL3U1-FAU4:3PM", "8AM:MegUl-FAU4:4AM"],
       },
       // NEW: "eXL3TC" Pattern sub-category — shown above its own
       // sub-pattern ("TiMe-eXL3TC-AU4:2PM") in the Backtest dropdown, same

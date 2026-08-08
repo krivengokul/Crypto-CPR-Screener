@@ -260,6 +260,18 @@ export const subPatterns: Record<string, SubPattern[]> = {
   "u1-gt-pu4": [
     { id: "SL-eXL3U1-FAU4:3PM", label: "SL-eXL3U1-FAU4:3PM",
       activeColor: "#22c55e", activeText: "#4ade80", activeBg: "rgba(34,197,94,0.18)" },
+    // NEW: 8AM:MegUl-FAU4:4AM — U1>pU4 + Pattern eXL3U1 (same "eXL3U1"
+    // Pattern sub-category as SL-eXL3U1-FAU4:3PM above) + today's BC above
+    // prev day's own PDH + today's S1 above prev day's TC. Bullish,
+    // targets Far Above U4 (today's R4) by ~4AM. Same green color family
+    // as its SL-eXL3U1-FAU4:3PM sibling.
+    {
+      id: "8AM:MegUl-FAU4:4AM",
+      label: "8AM:MegUl-FAU4:4AM",
+      activeColor: "#22c55e",              // green-500 border
+      activeText:  "#4ade80",              // green-400 text
+      activeBg:    "rgba(34, 197, 94, 0.14)",
+    },
     // NEW: TiMe-eXL3TC-AU4:2PM — pTiny prev CPR + Mega today CPR +
     // Pattern eXL3TC. Violet color family to visually distinguish it
     // from its U1>pU4 sibling.

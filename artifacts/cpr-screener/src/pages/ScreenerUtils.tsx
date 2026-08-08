@@ -925,6 +925,22 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.eXL3U1 &&
         r.compressionRatio > 300
       );
+    // NEW: 8AM:MegUl-FAU4:4AM — U1>pU4 sub-pattern, nested under the same
+    // "eXL3U1" Pattern sub-category as SL-eXL3U1-FAU4:3PM.
+    // Condition: Big CPR + CPR Above (cprRising + strWideCPR) + today R1
+    // above prev R4 (parent U1>pU4) + Pattern eXL3U1 + today's BC above
+    // prev day's PDH (todayCPR.bc > prevCPR.prevHigh) + today's S1 above
+    // prev day's TC (todayCPR.s1 > prevCPR.tc). Bullish, targets Far
+    // Above U4 (today's R4) by ~4AM. Green color family.
+    case "8AM:MegUl-FAU4:4AM":
+      return (
+        r.cprRising &&
+        r.strWideCPR &&
+        r.todayCPR.r1 > r.prevCPR.r4 &&
+        r.eXL3U1 &&
+        r.todayCPR.bc > r.prevCPR.prevHigh &&
+        r.todayCPR.s1 > r.prevCPR.tc
+      );
     // NEW: TiMe-eXL3TC-AU4:2PM — U1>pU4 sub-pattern (moved from Big Above).
     // Condition: Big CPR + CPR Above (cprRising + strWideCPR) + today R1
     // above prev R4 (parent U1>pU4) + Pattern eXL3TC (prev's S4 inside
