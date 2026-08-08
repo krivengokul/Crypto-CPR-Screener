@@ -101,7 +101,7 @@ export function SRLadder({
 
   return (
     <div className="w-[180px] min-w-0">
-      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5 text-left pl-[4.25rem]">
+      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5 text-center">
         {label}
       </p>
       {rows.map((row, i) =>
