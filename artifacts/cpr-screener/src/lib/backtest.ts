@@ -494,9 +494,8 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       {
         key: "eXL3U1",
         label: "eXL3U1",
-        // NEW: "8AM:MegUl-FAU4:4AM" now also nests here, alongside
-        // "SL-eXL3U1-FAU4:3PM".
-        subPatternKeys: ["SL-eXL3U1-FAU4:3PM", "8AM:MegUl-FAU4:4AM"],
+        // "SL-eXL3U1-FAU4:3PM" moved to the sibling "eXL3TC" sub-category.
+        subPatternKeys: ["8AM:MegUl-FAU4:4AM"],
       },
       // NEW: "eXL3TC" Pattern sub-category — shown above its own
       // sub-pattern ("TiMe-eXL3TC-AU4:2PM") in the Backtest dropdown, same
@@ -506,7 +505,8 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       {
         key: "eXL3TC",
         label: "eXL3TC",
-        subPatternKeys: ["TiMe-eXL3TC-AU4:2PM"],
+        // "SL-eXL3U1-FAU4:3PM" now nests here (moved from "eXL3U1").
+        subPatternKeys: ["TiMe-eXL3TC-AU4:2PM", "SL-eXL3U1-FAU4:3PM"],
       },
       {
         key: "eXHiL2L1",
