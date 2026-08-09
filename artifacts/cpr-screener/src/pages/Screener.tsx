@@ -111,7 +111,10 @@ export default function Screener({
   const [sortKey, setSortKey] = useState<SortKey>("compressionRatio");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [search, setSearch] = useState("");
-  const [showAll, setShowAll] = useState(false);
+  // Default to true: on first load / refresh, before the user picks a
+  // left-nav pattern, the screener should show ALL scanned results
+  // (unfiltered) rather than being pre-filtered to a specific pattern.
+  const [showAll, setShowAll] = useState(true);
   const [showLABothTiny, setShowLABothTiny] = useState(false);
   const [showLAAllUp, setShowLAAllUp] = useState(false);
   const [showLAPL12CL23, setShowLAPL12CL23] = useState(false);

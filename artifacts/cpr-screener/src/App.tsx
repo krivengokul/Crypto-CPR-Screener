@@ -44,7 +44,14 @@ function ComingSoon({ label }: { label: string }) {
 // LEGACY_SCREENER_PATTERN_IDS list). Kept out of App.tsx to avoid drift.
 
 function App() {
-  const [activePattern, setActivePattern] = useState("littleabove");
+  // Empty string = no left-nav pattern selected. On first load / refresh we
+  // want the screener to open on "Show All" (Binance tab, unfiltered
+  // results) rather than pre-selecting a specific pattern like Little
+  // Above. "" isn't a real pattern id, so PatternSidebar won't highlight
+  // any nav item, and the Screener render check below special-cases it to
+  // still render the Screener (with its own showAll-defaults-true state)
+  // instead of the ComingSoon placeholder.
+  const [activePattern, setActivePattern] = useState("");
   const [scanKey, setScanKey] = useState(0);
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(getSavedCollapsed);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -111,7 +118,7 @@ function App() {
                 not the active view — so switching modes/patterns never remounts
                 it and never re-triggers the scanKey effect / loses scan state. */}
             <div style={{ display: mode === "backtest" ? "none" : "block" }}>
-              {SCREENER_PATTERN_IDS.has(activePattern) ? (
+              {activePattern === "" || SCREENER_PATTERN_IDS.has(activePattern) ? (
                 <Screener activePattern={activePattern} scanKey={scanKey} onCounts={setPatternCounts} />
               ) : (
                 <ComingSoon label={activeLabel} />
