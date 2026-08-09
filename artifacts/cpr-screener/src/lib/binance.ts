@@ -260,8 +260,40 @@ export async function fetchDailyKlines(
     try {
       const data: KlineRaw[] = await res.json();
       if (!Array.isArray(data) || data.length < 2) continue;
-      // Remember which venue actually answered so later calls skip the miss.
-      venueOf.set(symbol, base === FBASE ? "futures" : "spot");
+      const answeredVenue: Venue = base === FBASE ? "futures" : "spot";
+      // FIX (venue poisoning): only fill in venue info that's still unknown.
+      // venueOf's authoritative source is fetchActiveSymbols (based on actual
+      // exchangeInfo listings — futures-first, spot only for symbols with no
+      // perpetual listing at all). Previously this line unconditionally
+      // overwrote that on every call: if a symbol's FUTURES request merely
+      // failed transiently here (rate limit, momentary 5xx) and the Spot
+      // fallback succeeded, "spot" got permanently cached — silently
+      // demoting an authoritatively-futures symbol to Spot data for the rest
+      // of the session, for every caller (Live Scanner AND Backtest alike),
+      // even after futures recovers. A large HISTORY_LIMIT request (the
+      // Backtest's 1500-candle pull) is far more likely to hit a transient
+      // failure than the Live Scanner's small 6-candle one, so this could
+      // silently flip a symbol's data source out from under just one of the
+      // two callers, producing exactly the kind of Scanner-vs-Backtest
+      // pattern mismatch this was chasing. Now it only records venue for a
+      // symbol venueOf doesn't already have an answer for.
+      const priorVenue = venueOf.get(symbol);
+      if (!venueOf.has(symbol)) {
+        venueOf.set(symbol, answeredVenue);
+      } else if (priorVenue !== answeredVenue) {
+        // FIX (silent substitution): this call's primary (authoritative)
+        // venue attempt failed and fell through to the other one, so this
+        // computation is now built on a DIFFERENT instrument than the one
+        // this symbol is normally analysed on (and than what the Live
+        // Scanner's small, rarely-rate-limited request will use). Warn
+        // loudly instead of letting a mismatched pattern show up with no
+        // trace — this is what a Backtest-only pattern mismatch against the
+        // Live Scanner for the same symbol/date usually means.
+        console.warn(
+          `[binance] ${symbol}: using ${answeredVenue} data this call (${priorVenue} request failed/rate-limited) — ` +
+            `results may not match the Live Scanner, which normally analyses this symbol on ${priorVenue}.`
+        );
+      }
       return data.map(parseKline);
     } catch {
       // malformed payload — try the other venue
