@@ -914,6 +914,22 @@ async function getHistory(symbol: string, source: BacktestSource): Promise<Map<s
 }
 
 /**
+ * Single source of truth for the Backtest's tradable symbol universe.
+ *
+ * Delegates entirely to binance.ts's fetchTopUSDTSymbols() (Binance) / the
+ * delta.ts equivalent (Delta) — no separate filtering, sorting, or capping
+ * logic lives here. This mirrors the Live Scanner's universe exactly
+ * ("No limit: scan the full tradable USDT universe" per binance.ts's
+ * runScreener), and is called once by runBacktest, runCategoryScan, and
+ * runPivotLevelScan instead of each duplicating this same lookup.
+ */
+async function getSymbolUniverse(source: BacktestSource): Promise<string[]> {
+  return source === "binance"
+    ? (await fetchTopUSDTSymbols()).map((t) => t.symbol)
+    : (await fetchDeltaPerps()).map((t) => t.symbol);
+}
+
+/**
  * Warms the cache for a whole symbol universe in parallel chunks. Call this
  * once before a multi-date sweep: after it resolves, every date in the range
  * scans purely in memory.
@@ -1136,10 +1152,9 @@ export async function runBacktest(
   const target = BACKTEST_TARGETS.find((t) => t.key === patternKey);
   if (!target) throw new Error(`No backtest target defined yet for pattern "${patternKey}"`);
 
-  const symbols: string[] =
-    source === "binance"
-      ? (await fetchTopUSDTSymbols(500)).map((t) => t.symbol)
-      : (await fetchDeltaPerps()).map((t) => t.symbol);
+  // Single source of truth — see getSymbolUniverse above. No per-call
+  // duplication of the fetch/filter/sort logic.
+  const symbols: string[] = await getSymbolUniverse(source);
 
   // Warm the candle cache once; subsequent dates in a sweep hit memory only.
   await prefetchHistories(symbols, source, onProgress);
@@ -1174,10 +1189,9 @@ export async function runCategoryScan(
   passesPatternFn: (r: CPRResult, pattern: string) => boolean,
   onProgress?: (done: number, total: number, symbol: string) => void
 ): Promise<CategoryScanRow[]> {
-  const symbols: string[] =
-    source === "binance"
-      ? (await fetchTopUSDTSymbols(500)).map((t) => t.symbol)
-      : (await fetchDeltaPerps()).map((t) => t.symbol);
+  // Single source of truth — see getSymbolUniverse above. No per-call
+  // duplication of the fetch/filter/sort logic.
+  const symbols: string[] = await getSymbolUniverse(source);
 
   const rows: CategoryScanRow[] = [];
   await prefetchHistories(symbols, source, onProgress);
@@ -1215,10 +1229,9 @@ export async function runPivotLevelScan(
   matchesPatternFn: (r: CPRResult, label: string) => boolean,
   onProgress?: (done: number, total: number, symbol: string) => void
 ): Promise<CategoryScanRow[]> {
-  const symbols: string[] =
-    source === "binance"
-      ? (await fetchTopUSDTSymbols(500)).map((t) => t.symbol)
-      : (await fetchDeltaPerps()).map((t) => t.symbol);
+  // Single source of truth — see getSymbolUniverse above. No per-call
+  // duplication of the fetch/filter/sort logic.
+  const symbols: string[] = await getSymbolUniverse(source);
 
   const rows: CategoryScanRow[] = [];
   await prefetchHistories(symbols, source, onProgress);
