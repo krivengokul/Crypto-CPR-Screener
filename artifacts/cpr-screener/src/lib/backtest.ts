@@ -680,6 +680,17 @@ export interface BacktestRow {
   result: "pass" | "fail" | "insufficient-data";
   hitDate: string | null;          // which day (entryDate, entryDate+1, or entryDate+2) hit target, if any
   daysToHit: 0 | 1 | 2 | null;
+  /** Entry-day close / prev close / day-over-day % change (same as CategoryScanRow). */
+  closePrice: number | null;
+  prevClose: number | null;
+  changePct: number | null;
+  /**
+   * The full reconstructed CPRResult (all pattern-flag booleans,
+   * todayCPR/prevCPR/ppCPR) — same field CategoryScanRow carries, so the
+   * pattern-backtest ("view") table renders the IDENTICAL S/R ladder panel
+   * and Pattern badges as the category-scan tables.
+   */
+  raw: CPRResult;
 }
 
 /**
@@ -996,6 +1007,8 @@ export async function backtestSymbolOnDate(
     result: outcome,
     hitDate,
     daysToHit,
+    ...closeAndChange(window, entryDateISO),
+    raw: result,
   };
 }
 

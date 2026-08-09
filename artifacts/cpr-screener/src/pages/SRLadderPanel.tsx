@@ -62,8 +62,7 @@ export function SRLadder({
   /**
    * Optional pattern badge(s) for the day this ladder represents (e.g.
    * renderTodayPatternBadges(r) for "Today S/R", renderPrevPatternBadge(r)
-   * for "PrevDay S/R"). Rendered right after the header label, above the
-   * R4/level rows. Omit when there's no pattern to show (e.g. "PDay-1
+   * for "PrevDay S/R"). Rendered inline, to the RIGHT of the header label. Omit when there's no pattern to show (e.g. "PDay-1
    * S/R" has no earlier CPR to compare against).
    */
   badge?: ReactNode;
@@ -111,10 +110,12 @@ export function SRLadder({
 
   return (
     <div className="w-[180px] min-w-0">
-      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1 text-left pl-2">
-        {label}
-      </p>
-      {badge && <div className="pl-2 mb-1.5">{badge}</div>}
+      <div className="mb-1.5 flex flex-wrap items-center gap-1.5 pl-2 text-left">
+        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+          {label}
+        </p>
+        {badge}
+      </div>
       {rows.map((row, i) =>
         row.type === "price" ? (
           <div

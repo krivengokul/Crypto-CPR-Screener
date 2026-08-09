@@ -1049,6 +1049,8 @@ export default function BacktestPanel() {
                           r={toSRLadderData(r.raw, r.closePrice ?? undefined)}
                           rowKey={`${r.source}-${r.symbol}-${r.entryDate}`}
                           colSpan={8}
+                          todayPatternBadge={renderTodayPatternBadges(r.raw)}
+                          prevPatternBadge={renderPrevPatternBadge(r.raw)}
                         />
                       )}
                       </Fragment>
@@ -1100,6 +1102,9 @@ export default function BacktestPanel() {
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Symbol
                     </th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Pattern
+                    </th>
                     <th className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[220px]">
                       <span className="inline-flex items-center gap-1">
                         Pivot Size <PivotSizeInfo />
@@ -1137,6 +1142,21 @@ export default function BacktestPanel() {
                             <ChartLink symbol={r.symbol} source={r.source} />
                           </span>
                         </div>
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap">
+                        {(() => {
+                          const today = renderTodayPatternBadges(r.raw);
+                          const prev = renderPrevPatternBadge(r.raw);
+                          if (!today && !prev) {
+                            return <span className="text-xs text-muted-foreground">—</span>;
+                          }
+                          return (
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              {prev}
+                              {today}
+                            </div>
+                          );
+                        })()}
                       </td>
                       <td className="px-3 py-2 font-mono whitespace-nowrap min-w-[220px]">
                         {(() => {
@@ -1194,9 +1214,11 @@ export default function BacktestPanel() {
                     </tr>
                     {expandedSymbols.has(`${r.source}-${r.symbol}-${r.entryDate}`) && (
                       <SRLadderRow
-                        r={toSRLadderData(r)}
+                        r={toSRLadderData(r.raw, r.closePrice ?? undefined)}
                         rowKey={`${r.source}-${r.symbol}-${r.entryDate}`}
-                        colSpan={6}
+                        colSpan={7}
+                        todayPatternBadge={renderTodayPatternBadges(r.raw)}
+                        prevPatternBadge={renderPrevPatternBadge(r.raw)}
                       />
                     )}
                     </Fragment>
