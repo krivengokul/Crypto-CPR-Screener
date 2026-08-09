@@ -240,6 +240,11 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             <div className="text-xs font-semibold text-green-400 mb-1">Pattern: eXL3U1  PCPR: Small  CPR: Large</div>
             <div className="text-xs text-muted-foreground">Big CPR Above (Wide + Rising) + Today&apos;s R1 &gt; Prev R4 + Pattern eXL3U1 + Compression Ratio &gt; 300</div>
           </>
+        ) : activePattern === "6AM:pX-APHS1A-pL4:4AM" ? (
+          <>
+            <div className="text-xs font-semibold text-red-400 mb-1">Pattern: eXL3TC&nbsp;&nbsp;p-eXL4U3&nbsp;&nbsp;BC &gt; pPDH&nbsp;&nbsp;S1 &gt; pTC</div>
+            <div className="text-xs text-muted-foreground">Big CPR Above (Wide + Rising) + Today&apos;s R1 &gt; Prev R4 + Pattern eXL3TC + Today&apos;s BC above prev day&apos;s own PDH + Today&apos;s S1 above prev day&apos;s TC + prev day&apos;s own pattern p-eXL4U3</div>
+          </>
         ) : activePattern === "8AM:APHS1A-FAU4:4AM" ? (
           <>
             <div className="text-xs font-semibold text-green-400 mb-1">Pattern: eXL3U1&nbsp;&nbsp;BC &gt; pPDH&nbsp;&nbsp;S1 &gt; pTC</div>
@@ -522,6 +527,11 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
           <>
             <div className="text-xs font-semibold text-green-400 mb-1">Target: FAU4	Time: 3PM</div>
             <div className="text-xs text-muted-foreground">Expected upside far above U4 by ~3PM</div>
+          </>
+        ) : activePattern === "6AM:pX-APHS1A-pL4:4AM" ? (
+          <>
+            <div className="text-xs font-semibold text-red-400 mb-1">Exp Target: pL4 (prev day&apos;s S4)<br />Entry: 6AM&nbsp;&nbsp;Time: 4AM</div>
+            <div className="text-xs text-red-400/80">6AM setup with the prev day&apos;s own p-eXL4U3 pattern — expected downside toward pL4 by ~4AM</div>
           </>
         ) : activePattern === "8AM:APHS1A-FAU4:4AM" ? (
           <>

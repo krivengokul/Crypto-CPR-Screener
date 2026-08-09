@@ -91,6 +91,18 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "FAU4 (Far Above today's R4)",
     getTarget: (r) => r.todayCPR.r4,
   },
+  // NEW: "6AM:pX-APHS1A-pL4:4AM" — nested under the "U1 > pU4" (u1-gt-pu4)
+  // category's "eXL3TC" Pattern sub-category, alongside
+  // "9AM:APHS1A-FAU4:4AM". Same base condition as that sibling plus the
+  // prev day's own pivot sub-label being eXL4U3 (see ScreenerUtils.tsx).
+  // Bearish, targets pL4 (prev day's S4) by ~4AM.
+  {
+    key: "6AM:pX-APHS1A-pL4:4AM",
+    label: "6AM:pX-APHS1A-pL4:4AM",
+    direction: "bearish",
+    targetLabel: "pL4 (prev day's S4)",
+    getTarget: (r) => r.prevCPR.s4,
+  },
   // NEW: "8AM:APHS1A-FAU4:4AM" — nested under the "U1 > pU4" (u1-gt-pu4)
   // category's "eXL3U1" Pattern sub-category, alongside its
   // "9AM:APHS1A-FAU4:4AM" sibling. Base condition: this category's
@@ -506,7 +518,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
         key: "eXL3TC",
         label: "eXL3TC",
         // "9AM:APHS1A-FAU4:4AM" now nests here (moved from "eXL3U1").
-        subPatternKeys: ["TiMe-eXL3TC-AU4:2PM", "9AM:APHS1A-FAU4:4AM"],
+        subPatternKeys: ["TiMe-eXL3TC-AU4:2PM", "9AM:APHS1A-FAU4:4AM", "6AM:pX-APHS1A-pL4:4AM"],
       },
       {
         key: "eXHiL2L1",

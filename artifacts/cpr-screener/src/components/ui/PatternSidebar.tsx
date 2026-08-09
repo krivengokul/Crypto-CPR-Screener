@@ -260,6 +260,16 @@ export const subPatterns: Record<string, SubPattern[]> = {
   "u1-gt-pu4": [
     { id: "9AM:APHS1A-FAU4:4AM", label: "9AM:APHS1A-FAU4:4AM",
       activeColor: "#22c55e", activeText: "#4ade80", activeBg: "rgba(34,197,94,0.18)" },
+    // NEW: 6AM:pX-APHS1A-pL4:4AM — same condition as 9AM:APHS1A-FAU4:4AM plus
+    // the prev day's own pattern being p-eXL4U3. Bearish, targets pL4
+    // (prev day's S4) by ~4AM. Red color family.
+    {
+      id: "6AM:pX-APHS1A-pL4:4AM",
+      label: "6AM:pX-APHS1A-pL4:4AM",
+      activeColor: "#f87171",              // red-400 border
+      activeText:  "#fca5a5",              // red-300 text
+      activeBg:    "rgba(239, 68, 68, 0.14)",
+    },
     // NEW: 8AM:APHS1A-FAU4:4AM — U1>pU4 + Pattern eXL3U1 (same "eXL3U1"
     // Pattern sub-category as 9AM:APHS1A-FAU4:4AM above) + today's BC above
     // prev day's own PDH + today's S1 above prev day's TC. Bullish,

@@ -926,6 +926,23 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.todayCPR.bc > r.prevCPR.prevHigh &&
         r.todayCPR.s1 > r.prevCPR.tc
       );
+    // NEW: 6AM:pX-APHS1A-pL4:4AM — U1>pU4 sub-pattern, same "eXL3U1" Pattern
+    // sub-category and identical base condition as 9AM:APHS1A-FAU4:4AM
+    // (cprRising + strWideCPR + today R1 above prev R4 + eXL3TC + today's
+    // BC above prev day's PDH + today's S1 above prev day's TC), PLUS one
+    // extra check: the PREVIOUS day's own pivot sub-label (prevCPR vs
+    // ppCPR) is eXL4U3 ("p-eXL4U3" badge). Bearish, targets pL4 (prev
+    // day's S4) by ~4AM. Red color family.
+    case "6AM:pX-APHS1A-pL4:4AM":
+      return (
+        r.cprRising &&
+        r.strWideCPR &&
+        r.todayCPR.r1 > r.prevCPR.r4 &&
+        r.eXL3TC &&
+        r.todayCPR.bc > r.prevCPR.prevHigh &&
+        r.todayCPR.s1 > r.prevCPR.tc &&
+        computePivotSubLabel(r.prevCPR, r.ppCPR) === "eXL4U3"
+      );
     // NEW: 8AM:APHS1A-FAU4:4AM — U1>pU4 sub-pattern, nested under the same
     // "eXL3U1" Pattern sub-category as 9AM:APHS1A-FAU4:4AM.
     // Condition: Big CPR + CPR Above (cprRising + strWideCPR) + today R1
@@ -1230,6 +1247,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     // rows matching it never got the per-row green direction dot even
     // though the Views button itself filtered correctly. Bullish → "up".
     { key: "8AM:APHS1A-FAU4:4AM", direction: "up" },
+    { key: "6AM:pX-APHS1A-pL4:4AM", direction: "down" },
     { key: "TiMe-eXL3TC-AU4:2PM", direction: "up" },
     { key: "SMg-exHiL2L1-U4:3AM", direction: "up" },
   ],
