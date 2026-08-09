@@ -649,7 +649,14 @@ export default function ScreenerTableRow({
       </tr>
 
       {isExpanded && (
-        <SRLadderRow key={`${rowKey}-sr`} r={toSRLadderData(r)} rowKey={rowKey} colSpan={20} />
+        <SRLadderRow
+          key={`${rowKey}-sr`}
+          r={toSRLadderData(r)}
+          rowKey={rowKey}
+          colSpan={20}
+          todayPatternBadge={renderTodayPatternBadges(r)}
+          prevPatternBadge={renderPrevPatternBadge(r)}
+        />
       )}
     </Fragment>
   );

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { CPRLevels, CPRResult } from "@/lib/cpr";
 import { fmt } from "./ScreenerUtils";
 
@@ -52,11 +53,20 @@ export function SRLadder({
   cpr,
   currentPrice,
   label,
+  badge,
 }: {
   cpr: CPRLevels;
   /** Omit when no price is known (e.g. historical backtest rows). */
   currentPrice?: number;
   label: string;
+  /**
+   * Optional pattern badge(s) for the day this ladder represents (e.g.
+   * renderTodayPatternBadges(r) for "Today S/R", renderPrevPatternBadge(r)
+   * for "PrevDay S/R"). Rendered right after the header label, above the
+   * R4/level rows. Omit when there's no pattern to show (e.g. "PDay-1
+   * S/R" has no earlier CPR to compare against).
+   */
+  badge?: ReactNode;
 }) {
   const levels = [
     { key: "R4",    value: cpr.r4 },
@@ -101,9 +111,10 @@ export function SRLadder({
 
   return (
     <div className="w-[180px] min-w-0">
-      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5 text-left pl-2">
+      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1 text-left pl-2">
         {label}
       </p>
+      {badge && <div className="pl-2 mb-1.5">{badge}</div>}
       {rows.map((row, i) =>
         row.type === "price" ? (
           <div
@@ -132,7 +143,20 @@ export function SRLadder({
  * PDay-1 / Prev / Today CPR mini-cards, the U4/L4 gap card, and the three
  * S/R ladders. Reused by Screener and BacktestPanel.
  */
-export function SRLadderPanel({ r }: { r: SRLadderData }) {
+export function SRLadderPanel({
+  r,
+  todayPatternBadge,
+  prevPatternBadge,
+  pDay1PatternBadge,
+}: {
+  r: SRLadderData;
+  /** Today's pattern badge(s) — e.g. renderTodayPatternBadges(r) — shown on the "Today S/R" ladder. */
+  todayPatternBadge?: ReactNode;
+  /** Prev day's pattern badge — e.g. renderPrevPatternBadge(r) — shown on the "PrevDay S/R" ladder. */
+  prevPatternBadge?: ReactNode;
+  /** PDay-1's pattern badge, shown on the "PDay-1 S/R" ladder. Not currently computable (no ppp CPR to compare against) — reserved for future use. */
+  pDay1PatternBadge?: ReactNode;
+}) {
   return (
     <div className="grid min-w-[920px] grid-cols-[minmax(300px,340px)_repeat(3,180px)] items-start gap-5">
       <div className="flex min-w-0 flex-col gap-4 border-r border-border/50 pr-5">
@@ -233,12 +257,12 @@ export function SRLadderPanel({ r }: { r: SRLadderData }) {
         })()}
       </div>
       {r.ppCPR ? (
-        <SRLadder cpr={r.ppCPR} currentPrice={r.currentPrice} label="PDay-1 S/R" />
+        <SRLadder cpr={r.ppCPR} currentPrice={r.currentPrice} label="PDay-1 S/R" badge={pDay1PatternBadge} />
       ) : (
         <div aria-hidden="true" />
       )}
-      <SRLadder cpr={r.prevCPR} currentPrice={r.currentPrice} label="PrevDay S/R" />
-      <SRLadder cpr={r.todayCPR} currentPrice={r.currentPrice} label="Today S/R" />
+      <SRLadder cpr={r.prevCPR} currentPrice={r.currentPrice} label="PrevDay S/R" badge={prevPatternBadge} />
+      <SRLadder cpr={r.todayCPR} currentPrice={r.currentPrice} label="Today S/R" badge={todayPatternBadge} />
     </div>
   );
 }
@@ -251,15 +275,29 @@ export function SRLadderRow({
   r,
   colSpan = 20,
   rowKey,
+  todayPatternBadge,
+  prevPatternBadge,
+  pDay1PatternBadge,
 }: {
   r: SRLadderData;
   colSpan?: number;
   rowKey?: string;
+  /** Today's pattern badge(s) — e.g. renderTodayPatternBadges(r) — shown on the "Today S/R" ladder. */
+  todayPatternBadge?: ReactNode;
+  /** Prev day's pattern badge — e.g. renderPrevPatternBadge(r) — shown on the "PrevDay S/R" ladder. */
+  prevPatternBadge?: ReactNode;
+  /** PDay-1's pattern badge, shown on the "PDay-1 S/R" ladder. Not currently computable (no ppp CPR to compare against) — reserved for future use. */
+  pDay1PatternBadge?: ReactNode;
 }) {
   return (
     <tr key={rowKey ? `${rowKey}-sr` : undefined} className="bg-muted/20 border-b border-border">
       <td colSpan={colSpan} className="px-3 py-4 sm:px-4">
-        <SRLadderPanel r={r} />
+        <SRLadderPanel
+          r={r}
+          todayPatternBadge={todayPatternBadge}
+          prevPatternBadge={prevPatternBadge}
+          pDay1PatternBadge={pDay1PatternBadge}
+        />
       </td>
     </tr>
   );
