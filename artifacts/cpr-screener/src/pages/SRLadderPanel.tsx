@@ -198,63 +198,65 @@ export function SRLadderPanel({
             </div>
           </div>
         </div>
-        <div className="min-w-[140px]">
-          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">Today CPR</p>
-          <div className="rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 font-mono space-y-1.5">
-            <div className="flex justify-between gap-4 text-xs">
-              <span style={{ color: "#6b7280" }}>TC:</span>
-              <span style={{ color: "#9ca3af" }}>{fmt(r.todayCPR.tc)}</span>
-            </div>
-            <div className="flex justify-between gap-4">
-              <span className="text-xs" style={{ color: "#6b7280" }}>Pivot</span>
-              <span className="font-bold text-sm" style={{ color: "#ffffff" }}>{fmt(r.todayCPR.pivot)}</span>
-            </div>
-            <div className="flex justify-between gap-4 text-xs">
-              <span style={{ color: "#6b7280" }}>BC:</span>
-              <span style={{ color: "#9ca3af" }}>{fmt(r.todayCPR.bc)}</span>
-            </div>
-          </div>
-        </div>
-        {(() => {
-          const r4Gap = Math.abs(r.todayCPR.r4 - r.prevCPR.r4);
-          const s4Gap = Math.abs(r.todayCPR.s4 - r.prevCPR.s4);
-          const r4d = (r as any).r4Distance as number | undefined;
-          const s4d = (r as any).s4Distance as number | undefined;
-          if (r4d == null || s4d == null || !isFinite(r4d) || !isFinite(s4d)) return null;
-          const maxD = Math.max(r4d, s4d);
-          const diffPct = maxD > 0 ? ((r4d - s4d) / maxD) * 100 : 0;
-          const diffColor =
-            diffPct > 0 ? "text-green-400" : diffPct < 0 ? "text-orange-400" : "text-muted-foreground";
-          return (
-            <div className="min-w-[140px]">
-              <div
-                className="rounded-lg border border-border bg-card/60 px-3 py-2 font-mono space-y-1"
-                title={`Normalized: U4Δ ${r4d.toFixed(2)}× vs L4Δ ${s4d.toFixed(2)}× of prev CPR width`}
-              >
-                <div className="flex justify-between gap-4 text-xs text-chart-3">
-                  <span className="text-muted-foreground">U4Gap:</span>
-                  <span>{fmt(r4Gap)}</span>
-                </div>
-                <div className={`text-xs font-semibold ${diffColor}`}>
-                  {diffPct >= 0 ? "+" : ""}
-                  {diffPct.toFixed(2)}%
-                  <div className="w-full bg-muted rounded-full h-1 mt-0.5">
-                    <div
-                      className={`h-1 rounded-full transition-all ${
-                        diffPct > 0 ? "bg-green-400" : diffPct < 0 ? "bg-orange-400" : "bg-muted-foreground"
-                      }`}
-                      style={{ width: `${Math.min(Math.abs(diffPct), 100)}%` }}
-                    />
-                  </div>
-                </div>
-                <div className="flex justify-between gap-4 text-xs text-chart-3/70">
-                  <span className="text-muted-foreground">L4Gap:</span>
-                  <span>{fmt(s4Gap)}</span>
-                </div>
+        <div className="flex flex-wrap gap-6 items-start">
+          <div className="min-w-[140px]">
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">Today CPR</p>
+            <div className="rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 font-mono space-y-1.5">
+              <div className="flex justify-between gap-4 text-xs">
+                <span style={{ color: "#6b7280" }}>TC:</span>
+                <span style={{ color: "#9ca3af" }}>{fmt(r.todayCPR.tc)}</span>
+              </div>
+              <div className="flex justify-between gap-4">
+                <span className="text-xs" style={{ color: "#6b7280" }}>Pivot</span>
+                <span className="font-bold text-sm" style={{ color: "#ffffff" }}>{fmt(r.todayCPR.pivot)}</span>
+              </div>
+              <div className="flex justify-between gap-4 text-xs">
+                <span style={{ color: "#6b7280" }}>BC:</span>
+                <span style={{ color: "#9ca3af" }}>{fmt(r.todayCPR.bc)}</span>
               </div>
             </div>
-          );
-        })()}
+          </div>
+          {(() => {
+            const r4Gap = Math.abs(r.todayCPR.r4 - r.prevCPR.r4);
+            const s4Gap = Math.abs(r.todayCPR.s4 - r.prevCPR.s4);
+            const r4d = (r as any).r4Distance as number | undefined;
+            const s4d = (r as any).s4Distance as number | undefined;
+            if (r4d == null || s4d == null || !isFinite(r4d) || !isFinite(s4d)) return null;
+            const maxD = Math.max(r4d, s4d);
+            const diffPct = maxD > 0 ? ((r4d - s4d) / maxD) * 100 : 0;
+            const diffColor =
+              diffPct > 0 ? "text-green-400" : diffPct < 0 ? "text-orange-400" : "text-muted-foreground";
+            return (
+              <div className="min-w-[140px]">
+                <div
+                  className="rounded-lg border border-border bg-card/60 px-3 py-2 font-mono space-y-1"
+                  title={`Normalized: U4Δ ${r4d.toFixed(2)}× vs L4Δ ${s4d.toFixed(2)}× of prev CPR width`}
+                >
+                  <div className="flex items-center gap-1 text-xs text-chart-3">
+                    <span className="text-muted-foreground">U4Gap:</span>
+                    <span>{fmt(r4Gap)}</span>
+                  </div>
+                  <div className={`text-xs font-semibold ${diffColor}`}>
+                    {diffPct >= 0 ? "+" : ""}
+                    {diffPct.toFixed(2)}%
+                    <div className="w-full bg-muted rounded-full h-1 mt-0.5">
+                      <div
+                        className={`h-1 rounded-full transition-all ${
+                          diffPct > 0 ? "bg-green-400" : diffPct < 0 ? "bg-orange-400" : "bg-muted-foreground"
+                        }`}
+                        style={{ width: `${Math.min(Math.abs(diffPct), 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 text-xs text-chart-3/70">
+                    <span className="text-muted-foreground">L4Gap:</span>
+                    <span>{fmt(s4Gap)}</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
       </div>
       {r.ppCPR ? (
         <SRLadder cpr={r.ppCPR} currentPrice={r.currentPrice} label="PDay-1 S/R" badge={pDay1PatternBadge} />
