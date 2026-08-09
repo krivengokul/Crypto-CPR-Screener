@@ -913,26 +913,27 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // Standalone top-level category: same condition as HA-U1>PU4
     case "u1-gt-pu4":
       return (r.cprRising && r.strWideCPR && r.todayCPR.r1 > r.prevCPR.r4);
-    // NEW: SL-eXL3U1-FAU4:3PM — U1>pU4 sub-pattern.
+    // NEW: 9AM:APHS1A-FAU4:4AM — U1>pU4 sub-pattern.
     // Condition: Big CPR + CPR Above (cprRising + strWideCPR) + today R1 above
     // prev R4 (parent U1>pU4) + Pattern eXL3U1 + compressionRatio > 300.
     // Legend labels: Pattern eXL3U1, PCPR Small, CPR Large. Target FAU4 @ 3PM.
-    case "SL-eXL3U1-FAU4:3PM":
+    case "9AM:APHS1A-FAU4:4AM":
       return (
         r.cprRising &&
         r.strWideCPR &&
         r.todayCPR.r1 > r.prevCPR.r4 &&
-        r.eXL3U1 &&
-        r.compressionRatio > 300
+        r.eXL3TC &&
+        r.todayCPR.bc > r.prevCPR.prevHigh &&
+        r.todayCPR.s1 > r.prevCPR.tc
       );
-    // NEW: 8AM:MegUl-FAU4:4AM — U1>pU4 sub-pattern, nested under the same
-    // "eXL3U1" Pattern sub-category as SL-eXL3U1-FAU4:3PM.
+    // NEW: 8AM:APHS1A-FAU4:4AM — U1>pU4 sub-pattern, nested under the same
+    // "eXL3U1" Pattern sub-category as 9AM:APHS1A-FAU4:4AM.
     // Condition: Big CPR + CPR Above (cprRising + strWideCPR) + today R1
     // above prev R4 (parent U1>pU4) + Pattern eXL3U1 + today's BC above
     // prev day's PDH (todayCPR.bc > prevCPR.prevHigh) + today's S1 above
     // prev day's TC (todayCPR.s1 > prevCPR.tc). Bullish, targets Far
     // Above U4 (today's R4) by ~4AM. Green color family.
-    case "8AM:MegUl-FAU4:4AM":
+    case "8AM:APHS1A-FAU4:4AM":
       return (
         r.cprRising &&
         r.strWideCPR &&
@@ -1223,12 +1224,12 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     { key: "TiMi-cOL2U2-pL4:5AM", direction: "down" },
   ],
   "u1-gt-pu4": [
-    { key: "SL-eXL3U1-FAU4:3PM", direction: "up" },
-    // FIX: "8AM:MegUl-FAU4:4AM" (nested under the same "eXL3U1" Pattern
-    // sub-category as SL-eXL3U1-FAU4:3PM above) was missing here, so
+    { key: "9AM:APHS1A-FAU4:4AM", direction: "up" },
+    // FIX: "8AM:APHS1A-FAU4:4AM" (nested under the same "eXL3U1" Pattern
+    // sub-category as 9AM:APHS1A-FAU4:4AM above) was missing here, so
     // rows matching it never got the per-row green direction dot even
     // though the Views button itself filtered correctly. Bullish → "up".
-    { key: "8AM:MegUl-FAU4:4AM", direction: "up" },
+    { key: "8AM:APHS1A-FAU4:4AM", direction: "up" },
     { key: "TiMe-eXL3TC-AU4:2PM", direction: "up" },
     { key: "SMg-exHiL2L1-U4:3AM", direction: "up" },
   ],

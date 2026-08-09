@@ -235,12 +235,12 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             <div className="text-xs font-semibold text-green-400 mb-1">Pattern: eXU4L1&nbsp;&nbsp;PCPR: Wide&nbsp;&nbsp;pBC &gt; U1</div>
             <div className="text-xs text-muted-foreground">L1&lt;pL4 base — cprFalling + strWideCPR + Prev &amp; Today PDH above their R1 + eXU4L1 (Prev R4 in Today R3/R4, Prev S4 in Today BC/S1) + Prev CPR&apos;s BC above Today&apos;s R1</div>
           </>
-        ) : activePattern === "SL-eXL3U1-FAU4:3PM" ? (
+        ) : activePattern === "9AM:APHS1A-FAU4:4AM" ? (
           <>
             <div className="text-xs font-semibold text-green-400 mb-1">Pattern: eXL3U1  PCPR: Small  CPR: Large</div>
             <div className="text-xs text-muted-foreground">Big CPR Above (Wide + Rising) + Today&apos;s R1 &gt; Prev R4 + Pattern eXL3U1 + Compression Ratio &gt; 300</div>
           </>
-        ) : activePattern === "8AM:MegUl-FAU4:4AM" ? (
+        ) : activePattern === "8AM:APHS1A-FAU4:4AM" ? (
           <>
             <div className="text-xs font-semibold text-green-400 mb-1">Pattern: eXL3U1&nbsp;&nbsp;BC &gt; pPDH&nbsp;&nbsp;S1 &gt; pTC</div>
             <div className="text-xs text-muted-foreground">Big CPR Above (Wide + Rising) + Today&apos;s R1 &gt; Prev R4 + Pattern eXL3U1 + Today&apos;s BC above prev day&apos;s own PDH + Today&apos;s S1 above prev day&apos;s TC</div>
@@ -518,12 +518,12 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             <div className="text-xs font-semibold text-green-400 mb-1">Target: U4&nbsp;&nbsp;Time: 10PM</div>
             <div className="text-xs text-emerald-400/80">Bullish sweep from a deep L1&lt;pL4 setup — expected recovery toward today&apos;s U4 by ~10PM IST</div>
           </>
-        ) : activePattern === "SL-eXL3U1-FAU4:3PM" ? (
+        ) : activePattern === "9AM:APHS1A-FAU4:4AM" ? (
           <>
             <div className="text-xs font-semibold text-green-400 mb-1">Target: FAU4	Time: 3PM</div>
             <div className="text-xs text-muted-foreground">Expected upside far above U4 by ~3PM</div>
           </>
-        ) : activePattern === "8AM:MegUl-FAU4:4AM" ? (
+        ) : activePattern === "8AM:APHS1A-FAU4:4AM" ? (
           <>
             <div className="text-xs font-semibold text-green-400 mb-1">Target: FAU4&nbsp;&nbsp;Time: 4AM</div>
             <div className="text-xs text-muted-foreground">eXL3U1 base plus today&apos;s BC above prev day&apos;s own PDH and today&apos;s S1 above prev day&apos;s TC — expected upside far above U4 by ~4AM</div>
