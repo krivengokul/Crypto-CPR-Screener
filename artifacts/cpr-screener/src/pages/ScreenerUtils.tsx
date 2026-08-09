@@ -988,6 +988,21 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.todayCPR.r1 > r.prevCPR.r4 &&
         r.eXHiL2L1
       );
+    // NEW: 6AM:MegMeg-L3:8PM — U1>pU4 sub-pattern, nested under the
+    // "eXL4U1" Pattern sub-category. Condition: Big CPR + CPR Above
+    // (cprRising + strWideCPR) + today R1 above prev R4 (parent U1>pU4) +
+    // Pattern eXL4U1 + prev CPR width category Mega (5.00%-10.00%,
+    // pMega) + today's CPR width category Mega (5.00%-10.00%). Bearish,
+    // targets L3 (today's S3) by ~8PM. Red color family.
+    case "6AM:MegMeg-L3:8PM":
+      return (
+        r.cprRising &&
+        r.strWideCPR &&
+        r.todayCPR.r1 > r.prevCPR.r4 &&
+        r.eXL4U1 &&
+        r.prevCPR.widthPct > 5.00 && r.prevCPR.widthPct <= 10.00 &&   // pMega
+        r.todayCPR.widthPct > 5.00 && r.todayCPR.widthPct <= 10.00    // Mega
+      );
     case "HAThin-U1>PU4":
       return (r.cprRising && r.strWideCPR && r.bothTight && r.todayCPR.r1 > r.prevCPR.r4);
     // NEW: hR-HAL — BigCPR Above, top-level toggle next to Show All.
@@ -1250,6 +1265,9 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     { key: "6AM:pX-APHS1A-pL4:4AM", direction: "down" },
     { key: "TiMe-eXL3TC-AU4:2PM", direction: "up" },
     { key: "SMg-exHiL2L1-U4:3AM", direction: "up" },
+    // NEW: "6AM:MegMeg-L3:8PM" (nested under the new "eXL4U1" Pattern
+    // sub-category). Bearish → "down".
+    { key: "6AM:MegMeg-L3:8PM", direction: "down" },
   ],
   "structure-bigbelow": [
     { key: "bigbelow-pmini-pl3", direction: "up" },

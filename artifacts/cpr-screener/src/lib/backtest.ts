@@ -270,6 +270,17 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
   },
+  // NEW: "6AM:MegMeg-L3:8PM" — nested under "U1 > pU4" (u1-gt-pu4) via
+  // the new "eXL4U1" Pattern sub-category. Base u1-gt-pu4 condition +
+  // raw eXL4U1 flag + prev/today CPR both width category Mega
+  // (5.00%-10.00%). Bearish, targets L3 (today's S3) by ~8PM.
+  {
+    key: "6AM:MegMeg-L3:8PM",
+    label: "6AM:MegMeg-L3:8PM",
+    direction: "bearish",
+    targetLabel: "L3 (today's S3)",
+    getTarget: (r) => r.todayCPR.s3,
+  },
   // NEW: "TiMi-cOL2U2-pL4:5AM" — nested under "BigCPR Above"
   // (structure-bigabove) via the new "cOL2U2" Pattern sub-category. Base
   // structure-bigabove condition + raw cOL2U2 flag + today's PDH below
@@ -528,13 +539,12 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       // NEW: "eXL4U1" Pattern sub-category (arrow), same shape as its
       // eXL3U1/eXL3TC/eXHiL2L1 siblings above. Base condition = parent
       // u1-gt-pu4's condition AND the raw eXL4U1 flag (see
-      // matchesPatternFlag in ScreenerUtils.tsx). No specific
-      // target-graded sub-pattern nested under it yet — selecting it in
-      // the Backtest dropdown runs a symbol-list-only category scan.
+      // matchesPatternFlag in ScreenerUtils.tsx). Nests the new
+      // "6AM:MegMeg-L3:8PM" pattern.
       {
         key: "eXL4U1",
         label: "eXL4U1",
-        subPatternKeys: [],
+        subPatternKeys: ["6AM:MegMeg-L3:8PM"],
       },
     ],
   },

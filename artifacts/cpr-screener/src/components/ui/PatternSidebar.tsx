@@ -300,6 +300,17 @@ export const subPatterns: Record<string, SubPattern[]> = {
       activeText:  "#7dd3fc",              // sky-300 text
       activeBg:    "rgba(56, 189, 248, 0.14)",
     },
+    // NEW: 6AM:MegMeg-L3:8PM — U1>pU4 + Pattern eXL4U1 + pMega (prev CPR
+    // width Mega, 5.00%-10.00%) + Mega (today's CPR width Mega,
+    // 5.00%-10.00%). Bearish, targets L3 (today's S3) by ~8PM. Red color
+    // family, same as its 6AM:pX-APHS1A-pL4:4AM sibling.
+    {
+      id: "6AM:MegMeg-L3:8PM",
+      label: "6AM:MegMeg-L3:8PM",
+      activeColor: "#f87171",              // red-400 border
+      activeText:  "#fca5a5",              // red-300 text
+      activeBg:    "rgba(239, 68, 68, 0.14)",
+    },
   ],
   "structure-bigbelow": [
     { id: "bigbelow-pmini-pl3",      label: "pMini-L34C4/U3>4" },
