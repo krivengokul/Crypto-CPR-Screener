@@ -160,9 +160,9 @@ export function SRLadderPanel({
   return (
     <div className="grid min-w-[920px] grid-cols-[minmax(300px,340px)_repeat(3,180px)] items-start gap-5">
       <div className="flex min-w-0 flex-col gap-4 border-r border-border/50 pr-5">
-        <div className="flex flex-wrap gap-6 items-start">
+        <div className="flex flex-nowrap gap-3 items-start">
           {r.ppCPR && (
-            <div className="min-w-[140px]">
+            <div className="min-w-[130px]">
               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">PDay-1 CPR</p>
               <div className="rounded-lg border border-border bg-card/40 px-3 py-2 font-mono space-y-1.5">
                 <div className="flex justify-between gap-4 text-xs">
@@ -180,7 +180,7 @@ export function SRLadderPanel({
               </div>
             </div>
           )}
-          <div className="min-w-[140px]">
+          <div className="min-w-[130px]">
             <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">Prev Day CPR</p>
             <div className="rounded-lg border border-border bg-card/60 px-3 py-2 font-mono space-y-1.5">
               <div className="flex justify-between gap-4 text-xs">
@@ -198,8 +198,8 @@ export function SRLadderPanel({
             </div>
           </div>
         </div>
-        <div className="flex flex-wrap gap-6 items-start">
-          <div className="min-w-[140px]">
+        <div className="flex flex-nowrap gap-3 items-start">
+          <div className="min-w-[130px]">
             <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">Today CPR</p>
             <div className="rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 font-mono space-y-1.5">
               <div className="flex justify-between gap-4 text-xs">
@@ -227,7 +227,7 @@ export function SRLadderPanel({
             const diffColor =
               diffPct > 0 ? "text-green-400" : diffPct < 0 ? "text-orange-400" : "text-muted-foreground";
             return (
-              <div className="min-w-[140px]">
+              <div className="min-w-[130px]">
                 <div
                   className="rounded-lg border border-border bg-card/60 px-3 py-2 font-mono space-y-1"
                   title={`Normalized: U4Δ ${r4d.toFixed(2)}× vs L4Δ ${s4d.toFixed(2)}× of prev CPR width`}
