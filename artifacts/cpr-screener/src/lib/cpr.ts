@@ -780,7 +780,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
   // alone, pulling in an unrelated second population of symbols and
   // inflating the match count. Both clauses must now hold (AND).
   const CPRs1Above = (today.pivot > prev.r1 && today.pivot < prev.r2) &&
-                    (prev.pivot < today.s1 && prev.pivot > today.s2);
+                    (prev.bc < today.s1 && prev.bc > today.s2);//In Some Scenarios p>s1 went up, so bc instead of pivot check
 
   // cOU1L1 / cOL1U1 — split by which side (R1 vs S1) moved further.
   const r1Move = Math.abs(prev.r1 - today.r1);
