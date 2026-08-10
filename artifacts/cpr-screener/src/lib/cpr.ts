@@ -933,6 +933,137 @@ export function pickCPRSubLabel(f: CPRPairFlags): string | null {
   return null;
 }
 
+/**
+ * PatternCategory — the four structural buckets every band-classification
+ * pattern flag (CPRPairFlags key) belongs to, derived from the flag's name
+ * prefix:
+ *   cO -> "Compressed"  (today/prev R4–S4 spread pulled in vs the other side)
+ *   eX -> "Expanded"    (today/prev R4–S4 spread pushed out vs the other side)
+ *   Hi -> "Higher"      (today's band sits higher relative to prev's)
+ *   Lo -> "Lower"       (today's band sits lower relative to prev's)
+ */
+export type PatternCategory = "Compressed" | "Expanded" | "Higher" | "Lower";
+
+/**
+ * PATTERN_CATEGORY — single source of truth mapping every pattern flag
+ * name to its PatternCategory, for gating left-nav sub-filter (view)
+ * check conditions (e.g. "only show this view's checkbox under the
+ * Compressed group"). Built directly from the CPRPairFlags keys above —
+ * do not re-derive a flag's category by eyeballing its name at the call
+ * site, look it up here instead.
+ *
+ * Two gotchas baked into this table on purpose:
+ *  - `exL3U2` is a legacy lowercase-x spelling (not `eXL3U2`) but is still
+ *    an Expanded-family flag; it's included here under its actual key.
+ *  - `eXHiL2L1` and `eXLoL2L1` start with "eX", not "Hi"/"Lo" — the
+ *    Hi/Lo in their names refers to the PDL-vs-prev-Pivot split described
+ *    in cpr.ts, not the Higher/Lower category. Both are categorized here
+ *    as "Expanded", matching their literal prefix.
+ *
+ * Flags that don't carry a cO/eX/Hi/Lo prefix (srHigher/srLower/srExpanded/
+ * srCompressed and their *Higher/*Lower variants, r4Distance, s4Distance,
+ * L1pU1Above, pCPR1Above, CPRs1Above) are intentionally excluded — they're
+ * aggregate/directional signals, not named band-classification patterns,
+ * so they don't belong in a prefix-based category map.
+ */
+export const PATTERN_CATEGORY: Record<string, PatternCategory> = {
+  // ---- Compressed (cO...) ----
+  cOU3L4: "Compressed",
+  cOL2U3: "Compressed",
+  cOL3U3: "Compressed",
+  cOL2U4: "Compressed",
+  cOL4U4: "Compressed",
+  cOU4L4: "Compressed",
+  cOL3U4: "Compressed",
+  cOU3L3: "Compressed",
+  cOU2L3: "Compressed",
+  cOU1L2: "Compressed",
+  cOU2L4: "Compressed",
+  cOU1L1: "Compressed",
+  cOL1U1: "Compressed",
+  cOU2L2: "Compressed",
+  cOL2U2: "Compressed",
+  cOU1L3: "Compressed",
+  cOTCL2: "Compressed",
+  cOL1U2: "Compressed",
+  cOL1U3: "Compressed",
+
+  // ---- Expanded (eX... / legacy exL3U2) ----
+  eXL4U4: "Expanded",
+  eXL4U3: "Expanded",
+  eXU4L2: "Expanded",
+  eXU4L3: "Expanded",
+  exL3U2: "Expanded", // legacy lowercase spelling — see note above
+  eXL3U3: "Expanded",
+  eXU3L3: "Expanded",
+  eXL2U1: "Expanded",
+  eXL3U1: "Expanded",
+  eXL4U1: "Expanded",
+  eXL1BC: "Expanded",
+  eXL1CP: "Expanded",
+  eXL2BC: "Expanded",
+  eXL3BC: "Expanded",
+  eXL3CP: "Expanded",
+  eXL3TC: "Expanded",
+  eXL4U2: "Expanded",
+  eXL2U2: "Expanded",
+  eXL2TC: "Expanded",
+  eXL1U1: "Expanded",
+  eXU1L1: "Expanded",
+  eXU2L1: "Expanded",
+  eXU3L1: "Expanded",
+  eXU3L2: "Expanded",
+  eXU2TC: "Expanded",
+  eXU2BC: "Expanded",
+  eXU3TC: "Expanded",
+  eXU2CP: "Expanded",
+  eXU3CP: "Expanded",
+  eXU3BC: "Expanded",
+  eXU4L1: "Expanded",
+  eXU4BC: "Expanded",
+  eXHiL2L1: "Expanded", // name contains "Hi" but prefix is "eX" — see note above
+  eXLoL2L1: "Expanded", // name contains "Lo" but prefix is "eX" — see note above
+  eXL2CP: "Expanded",
+  eXL4TC: "Expanded",
+
+  // ---- Higher (Hi...) ----
+  HiL4U3: "Higher",
+  HiL4U2: "Higher",
+  HiL4U1: "Higher",
+  HiL2U4: "Higher",
+  HiL2U3: "Higher",
+  HiL3U4: "Higher",
+  HiL4U4: "Higher",
+  HiL3U3: "Higher",
+  HiL3U2: "Higher",
+
+  // ---- Lower (Lo...) ----
+  LoU4L4: "Lower",
+  LoU3L4: "Lower",
+  LoU3L3: "Lower",
+  LoU2L4: "Lower",
+  LoU2L3: "Lower",
+  LoU4L3: "Lower",
+  LoU4L2: "Lower",
+  LoU4L1: "Lower",
+  LoCPL3: "Lower",
+  LoCPL2: "Lower",
+  LoTCL3: "Lower",
+  LoU3L2: "Lower",
+};
+
+/**
+ * getPatternCategory — look up a pattern flag's category by name (e.g.
+ * the string returned by pickCPRSubLabel / computePivotSubLabel). Returns
+ * null for names outside PATTERN_CATEGORY (unprefixed aggregate flags,
+ * or an unrecognized string) instead of throwing, since sub-label strings
+ * may originate from user-facing filter config.
+ */
+export function getPatternCategory(name: string | null | undefined): PatternCategory | null {
+  if (!name) return null;
+  return PATTERN_CATEGORY[name] ?? null;
+}
+
 export function analyzeCPR(
     symbol: string,
     candles: OHLC[],
