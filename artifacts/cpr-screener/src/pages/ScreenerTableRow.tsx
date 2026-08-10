@@ -193,7 +193,7 @@ export function renderTodayPatternBadges(r: CPRResult) {
  * Returns null when there isn't enough history (no ppCPR) to compute it.
  */
 export function renderPrevPatternBadge(r: CPRResult) {
-  const prevSubLabel = computePivotSubLabel(r.prevCPR, r.ppCPR);
+  const prevSubLabel = computePrevPattern(r.prevCPR, r.ppCPR);
   if (!prevSubLabel) return null;
   return (
     <div className="flex flex-wrap gap-1 mt-1">
@@ -281,7 +281,7 @@ import {
   distanceFromCPR,
   pdhPdlStatus,
   isRisingAboveTC,
-  computePivotSubLabel,
+  computePrevPattern,
   getSubFilterDirection,
   getWidthCategory,
   cprDistancePct,

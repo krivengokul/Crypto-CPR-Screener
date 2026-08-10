@@ -1,6 +1,7 @@
 import {
   classifyCPRPair,
-  pickCPRSubLabel,
+  pickPattern,
+  getPatternCategory,
   type CPRLevels,
   type CPRResult,
 } from "@/lib/cpr";
@@ -729,7 +730,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     case "9AM:MegL-U4+1:3PM":
       return (
         r.CPRs1Above &&
-        computePivotSubLabel(r.prevCPR, r.ppCPR) === "eXU1L1" &&
+        computePrevPattern(r.prevCPR, r.ppCPR) === "eXU1L1" &&
         r.eXL4U2 &&
         r.prevCPR.widthPct > 5.00 && r.prevCPR.widthPct <= 10.00 &&
         r.todayCPR.widthPct > 2.00 && r.todayCPR.widthPct <= 5.00 &&
@@ -744,7 +745,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     case "7PM:MoMi->U4:2AM":
       return (
         r.CPRs1Above &&
-        computePivotSubLabel(r.prevCPR, r.ppCPR) === "cOL1U1" &&
+        computePrevPattern(r.prevCPR, r.ppCPR) === "cOL1U1" &&
         r.eXL4U2 &&
         r.prevCPR.widthPct <= 0.10 &&                                // pMicro
         r.todayCPR.widthPct > 0.22 && r.todayCPR.widthPct <= 0.60 && // Mini
@@ -755,7 +756,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     case "7PM:MoMi-<L4:2AM":
     return (
       r.CPRs1Above &&
-      computePivotSubLabel(r.prevCPR, r.ppCPR) === "cOL1U1" &&
+      computePrevPattern(r.prevCPR, r.ppCPR) === "cOL1U1" &&
       r.eXL4U2 &&
       r.prevCPR.widthPct <= 0.10 &&                                // pMicro
       r.todayCPR.widthPct > 0.22 && r.todayCPR.widthPct <= 0.60 && // Mini
@@ -855,7 +856,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return (
         r.overlapHigher &&
         r.cOL4U4 &&
-        computePivotSubLabel(r.prevCPR, r.ppCPR) === "HiL4U4" &&
+        computePrevPattern(r.prevCPR, r.ppCPR) === "HiL4U4" &&
         r.prevCPR.widthPct > 0.22 && r.prevCPR.widthPct <= 0.60 &&   // pMini
         r.todayCPR.widthPct > 0.22 && r.todayCPR.widthPct <= 0.60 && // Mini
         r.prevCPR.PDHLAbove &&
@@ -875,7 +876,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     case "6PM:LaLa->U4:2AM":
       return (
         r.overlapHigher &&
-        computePivotSubLabel(r.prevCPR, r.ppCPR) === "cOU3L3" &&
+        computePrevPattern(r.prevCPR, r.ppCPR) === "cOU3L3" &&
         r.eXL4U4 &&
         r.prevCPR.widthPct > 2.00 && r.prevCPR.widthPct <= 5.00 &&   // pLarge
         r.todayCPR.widthPct > 2.00 && r.todayCPR.widthPct <= 5.00 && // Large
@@ -941,7 +942,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.eXL3TC &&
         r.todayCPR.bc > r.prevCPR.prevHigh &&
         r.todayCPR.s1 > r.prevCPR.tc &&
-        computePivotSubLabel(r.prevCPR, r.ppCPR) === "eXL4U3"
+        computePrevPattern(r.prevCPR, r.ppCPR) === "eXL4U3"
       );
     // NEW: 8AM:APHS1A-FAU4:4AM — U1>pU4 sub-pattern, nested under the same
     // "eXL3U1" Pattern sub-category as 9AM:APHS1A-FAU4:4AM.
@@ -980,13 +981,17 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // NEW: SMg-exHiL2L1-U4:3AM — U1>pU4 sub-pattern.
     // Condition: parent U1>pU4 (cprRising + strWideCPR + today R1 > prev R4)
     // + Pattern eXHiL2L1 (prev's R4 and prev's S4 both inside today's S2/S1
-    // band, with today's PDL above prev's Pivot). Target U4 (today's R4) @ 3AM.
+    // band, with today's PDL above prev's Pivot) + prev day's own CPR
+    // sub-label (prevCPR vs ppCPR) falling in the "Compressed" category —
+    // i.e. getPatternCategory(computePrevPattern(prev, pp)) === "Compressed".
+    // Target U4 (today's R4) @ 3AM.
     case "SMg-exHiL2L1-U4:3AM":
       return (
         r.cprRising &&
         r.strWideCPR &&
         r.todayCPR.r1 > r.prevCPR.r4 &&
-        r.eXHiL2L1
+        r.eXHiL2L1 &&
+        getPatternCategory(computePrevPattern(r.prevCPR, r.ppCPR)) === "Compressed"
       );
     // NEW: 6AM:MegMeg-L3:8PM — U1>pU4 sub-pattern, nested under the
     // "eXL4U1" Pattern sub-category. Condition: Big CPR + CPR Above
@@ -1059,7 +1064,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.todayCPR.prevHigh < r.todayCPR.r1 &&
         r.prevCPR.widthPct > 0.10 && r.prevCPR.widthPct <= 0.22 &&    // pTiny
         r.todayCPR.widthPct > 0.22 && r.todayCPR.widthPct <= 0.60 &&  // Mini
-        computePivotSubLabel(r.prevCPR, r.ppCPR) === "cOL4U4"
+        computePrevPattern(r.prevCPR, r.ppCPR) === "cOL4U4"
       );
     case "structure-bigbelow":
       return r.cprFalling && r.strWideCPR && !(r.todayCPR.s1 < r.prevCPR.s4);
@@ -1506,21 +1511,21 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
 }
 
 /**
- * computePivotSubLabel — given two CPR-level objects, computes which
+ * computePrevPattern — given two CPR-level objects, computes which
  * sub-category pivot label applies to the (today, prev) pair. Delegates
- * entirely to classifyCPRPair + pickCPRSubLabel in cpr.ts, which is
+ * entirely to classifyCPRPair + pickPattern in cpr.ts, which is
  * the single source of truth for the band conditions and label priority.
  *
  * Used in the U1>pU4 section to find the PREVIOUS day's sub-category:
  * call with (prevCPR, ppCPR). Returns null when prev is undefined/null or
  * no known sub-category matches. The "p" prefix is added by the caller.
  */
-export function computePivotSubLabel(
+export function computePrevPattern(
   today: CPRLevels,
   prev: CPRLevels | undefined | null,
 ): string | null {
   if (!prev) return null;
-  return pickCPRSubLabel(classifyCPRPair(today, prev));
+  return pickPattern(classifyCPRPair(today, prev));
 }
 
 

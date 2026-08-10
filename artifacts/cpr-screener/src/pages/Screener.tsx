@@ -47,7 +47,7 @@ import {
   cprDistancePct,
   levelsInDistanceRange,
   getPatternInfo,
-  computePivotSubLabel,
+  computePrevPattern,
   type PatternInfo,
   getSubFilterDirection,
 } from "./ScreenerUtils";

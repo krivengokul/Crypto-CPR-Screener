@@ -39,7 +39,7 @@ export interface CPRLevels {
  * only meaningful for the today/prev pair on CPRResult.
  *
  * The exact same classifier is used by analyzeCPR (today vs prev) and by
- * ScreenerUtils.computePivotSubLabel (prev vs pp) so there is a single
+ * ScreenerUtils.computePrevPattern (prev vs pp) so there is a single
  * source of truth for both the band conditions and the label priority order.
  */
 export interface CPRPairFlags {
@@ -55,7 +55,7 @@ export interface CPRPairFlags {
   srExpandedHigher: boolean;
   srExpandedLower: boolean;
 
-  // Band-classification flags (order below matches pickCPRSubLabel priority)
+  // Band-classification flags (order below matches pickPattern priority)
   cOU3L4: boolean;
   cOL2U3: boolean;
   cOL3U3: boolean;
@@ -464,7 +464,7 @@ export function calcCPR(candle: OHLC): CPRLevels {
  * classifyCPRPair — pure band-position classifier for any (today, prev) pair.
  *
  * This is the ONLY place the band conditions live. analyzeCPR uses it for
- * (todayCPR, prevCPR); ScreenerUtils.computePivotSubLabel uses it for
+ * (todayCPR, prevCPR); ScreenerUtils.computePrevPattern uses it for
  * (prevCPR, ppCPR) so both callers see identical logic. Change a boundary
  * here and both today/prev flags on CPRResult and the p(...) sub-label
  * update together.
@@ -848,11 +848,11 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
 }
 
 /**
- * pickCPRSubLabel — priority-ordered label lookup. This is the ONLY
+ * pickPattern — priority-ordered label lookup. This is the ONLY
  * place the label strings and their tie-break order live. The order below
  * must match the if-chain that historically lived in ScreenerUtils.
  */
-export function pickCPRSubLabel(f: CPRPairFlags): string | null {
+export function pickPattern(f: CPRPairFlags): string | null {
   if (f.cOU3L4)    return "cOU3L4";
   if (f.cOL2U3)  return "cOL2U3";
   if (f.cOL3U3)  return "cOL3U3";
@@ -1054,7 +1054,7 @@ export const PATTERN_CATEGORY: Record<string, PatternCategory> = {
 
 /**
  * getPatternCategory — look up a pattern flag's category by name (e.g.
- * the string returned by pickCPRSubLabel / computePivotSubLabel). Returns
+ * the string returned by pickPattern / computePrevPattern). Returns
  * null for names outside PATTERN_CATEGORY (unprefixed aggregate flags,
  * or an unrecognized string) instead of throwing, since sub-label strings
  * may originate from user-facing filter config.
