@@ -557,6 +557,19 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
         label: "eXL2CP",
         subPatternKeys: [],
       },
+      // NEW: "eXLoL2L1" Pattern sub-category (arrow), same shape as its
+      // eXHiL2L1 sibling above (both derive from the same
+      // eXHiLoL2L1Bands base band check in cpr.ts, split on today's PDL
+      // vs prev Pivot). Base condition = parent u1-gt-pu4's condition
+      // AND the raw eXLoL2L1 flag (see matchesPatternFlag in
+      // ScreenerUtils.tsx). No specific target-graded sub-pattern
+      // nested under it yet — selecting it in the Backtest dropdown
+      // runs a symbol-list-only category scan.
+      {
+        key: "eXLoL2L1",
+        label: "eXLoL2L1",
+        subPatternKeys: [],
+      },
     ],
   },
   { key: "structure-bigbelow", label: "BigCPR Below" },
