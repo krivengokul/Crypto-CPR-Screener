@@ -546,6 +546,17 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
         label: "eXL4U1",
         subPatternKeys: ["6AM:MegMeg-L3:8PM"],
       },
+      // NEW: "eXL2CP" Pattern sub-category (arrow), same shape as its
+      // eXL3U1/eXL3TC/eXHiL2L1/eXL4U1 siblings above. Base condition =
+      // parent u1-gt-pu4's condition AND the raw eXL2CP flag (see
+      // matchesPatternFlag in ScreenerUtils.tsx). No specific
+      // target-graded sub-pattern nested under it yet — selecting it in
+      // the Backtest dropdown runs a symbol-list-only category scan.
+      {
+        key: "eXL2CP",
+        label: "eXL2CP",
+        subPatternKeys: [],
+      },
     ],
   },
   { key: "structure-bigbelow", label: "BigCPR Below" },
