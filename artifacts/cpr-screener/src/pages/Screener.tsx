@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo, Fragment } from "react";
-import { patterns, subPatterns } from "@/components/ui/PatternSidebar";
+import { pivotcategories, subPatterns } from "@/components/ui/PatternSidebar";
 import {
   TrendingUp,
   RefreshCw,
@@ -482,7 +482,7 @@ export default function Screener({
       : allResults;
     if (pool.length === 0) return;
     const counts: Record<string, number> = {};
-    for (const p of patterns) {
+    for (const p of pivotcategories) {
       counts[p.id] = pool.filter((r) => passesPattern(r, p.id)).length;
     }
     // Also compute counts for each sub-pattern so the left-nav can show

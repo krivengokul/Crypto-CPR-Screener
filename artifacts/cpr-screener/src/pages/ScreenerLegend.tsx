@@ -91,7 +91,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             section. The old "ADK CPR Formula" fallback for unmatched
             patterns has been removed entirely — unmatched patterns now
             render nothing here. Coverage extended to every category in
-            the left nav (patterns array in PatternSidebar.tsx). */}
+            the left nav (pivotcategories array in PatternSidebar.tsx). */}
         {legendPattern === "structure-bigabove" ? (
           <>
             <div className="flex items-center gap-1.5 mb-1 flex-wrap">

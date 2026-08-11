@@ -15,7 +15,7 @@ import {
   FlaskConical,
 } from "lucide-react";
 
-export interface Pattern {
+export interface Category {
   id: string;
   label: string;
   subtitle: string;
@@ -354,7 +354,7 @@ export const subPatterns: Record<string, SubPattern[]> = {
   ],
 };
 
-export const patterns: Pattern[] = [
+export const pivotcategories: Category[] = [
   { id: "cpr-1-above",        label: "CPR 1ABOVE",    subtitle: "Today TC in prev U2 band, S1 in prev BC/R1 band", icon: TrendingUp },
   { id: "pcpr-u1-cpr-pl1",    label: "PCPR 1ABOVE", subtitle: "Prev Pivot in U1 band, CPR above pL1", icon: TrendingUp },
   { id: "l1pu1-above",        label: "L1pU1 Above",   subtitle: "Today L1 above Prev U1",   icon: TrendingUp },
@@ -373,7 +373,7 @@ export const patterns: Pattern[] = [
 
 /**
  * Single source of truth for every pattern id the Screener handles —
- * derived from `patterns` (top-level) + `subPatterns` (nested). Legacy /
+ * derived from `pivotcategories` (top-level) + `subPatterns` (nested). Legacy /
  * previously-visible left-nav ids that aren't in the tree anymore live in
  * LEGACY_SCREENER_PATTERN_IDS so App.tsx no longer has to duplicate the tree.
  */
@@ -400,7 +400,7 @@ export const LEGACY_SCREENER_PATTERN_IDS = [
 ] as const;
 
 export const SCREENER_PATTERN_IDS: ReadonlySet<string> = new Set<string>([
-  ...patterns.map((p) => p.id),
+  ...pivotcategories.map((p) => p.id),
   ...Object.values(subPatterns).flatMap((subs) => subs.map((s) => s.id)),
   ...LEGACY_SCREENER_PATTERN_IDS,
 ]);
@@ -452,7 +452,7 @@ export default function PatternSidebar({
     const parent = getParentId(activePattern);
     if (parent) {
       setExpandedId(parent);
-    } else if (patterns.some((p) => p.id === activePattern)) {
+    } else if (pivotcategories.some((p) => p.id === activePattern)) {
       setExpandedId(activePattern);
     }
   }, [activePattern]);
@@ -589,7 +589,7 @@ export default function PatternSidebar({
             paddingBottom: 16,
           }}
         >
-          {patterns.map((pattern) => {
+          {pivotcategories.map((pattern) => {
             const Icon = pattern.icon;
             const children = subPatterns[pattern.id] ?? [];
             const isActiveParent = activePattern === pattern.id;
@@ -812,7 +812,7 @@ export default function PatternSidebar({
         </button>
 
         {/* One icon per pattern */}
-        {patterns.map((pattern) => {
+        {pivotcategories.map((pattern) => {
           const Icon = pattern.icon;
           const children = subPatterns[pattern.id] ?? [];
           const isHighlighted =
