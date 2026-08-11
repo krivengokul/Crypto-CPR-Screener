@@ -41,40 +41,6 @@ async function sleep(ms: number) {
 }
 
 /**
- * PERF: fixed-size batches with a forced sleep between every batch (the old
- * runScreener loop) waste time twice over — the sleep runs even when nothing
- * was rate-limited, and a slow request in batch N holds up batch N+1 from
- * starting at all. A small worker pool keeps `concurrency` requests in
- * flight at all times and starts the next item the moment a slot frees up,
- * with no artificial idle time. Binance's own 429/418 responses (handled in
- * fetchWithRetry) are still the thing that actually throttles us when
- * needed — this just stops throttling ourselves on top of that.
- */
-async function mapWithConcurrency<T, R>(
-  items: T[],
-  concurrency: number,
-  worker: (item: T, index: number) => Promise<R>,
-  onItemDone?: (done: number, total: number, item: T) => void
-): Promise<R[]> {
-  const results: R[] = new Array(items.length);
-  let nextIndex = 0;
-  let doneCount = 0;
-
-  async function run() {
-    while (nextIndex < items.length) {
-      const i = nextIndex++;
-      results[i] = await worker(items[i], i);
-      doneCount++;
-      onItemDone?.(doneCount, items.length, items[i]);
-    }
-  }
-
-  const workers = Array.from({ length: Math.min(concurrency, items.length) }, run);
-  await Promise.all(workers);
-  return results;
-}
-
-/**
  * FIX (missing symbols): every network read now goes through one retrying
  * fetch. Binance answers a burst of parallel requests with 429 / 418 (and
  * occasionally 5xx) and the old code treated those as "no data" — the symbol
@@ -276,37 +242,6 @@ async function fetchKlines(symbol: string): Promise<OHLC[] | null> {
 }
 
 /**
- * PERF (scan taking too long): runScreener used to call fetchKlines for
- * every symbol on every scan, even though nothing in the response can have
- * changed since the last scan except the still-forming "live" candle's
- * high/low/close (which analyzeCPR never reads — only .open, fixed at day
- * start). For 400+ perpetual pairs that's 400+ klines requests every single
- * poll, which is the actual source of the slowdown, not the batching below.
- *
- * This cache keeps each symbol's last-fetched daily candles in memory for
- * the rest of the IST trading day (same day boundary already used by
- * getPinnedSymbols/setPinnedSymbols, so cache and pin invalidate together).
- * A scan only hits the network for a symbol the first time it's seen that
- * day, or once IST date rolls over. Current price / 24h change / volume
- * still come fresh from the ticker on every scan regardless — only the
- * expensive daily-candle fetch is skipped.
- */
-const klineCache = new Map<string, { istDate: string; klines: OHLC[] }>();
-
-async function fetchKlinesCached(symbol: string): Promise<OHLC[] | null> {
-  const today = getTodayISTDate();
-  const cached = klineCache.get(symbol);
-  if (cached && cached.istDate === today) {
-    return cached.klines;
-  }
-  const klines = await fetchKlines(symbol);
-  if (klines) {
-    klineCache.set(symbol, { istDate: today, klines });
-  }
-  return klines;
-}
-
-/**
  * FIX (missing symbols): the daily pin used to freeze whatever list the
  * FIRST scan of the IST day happened to produce. If that scan ran while a
  * venue was rate-limited, the short list stayed pinned for the rest of the
@@ -335,71 +270,75 @@ export async function runScreener(
   // shrinks the universe — it can only ever be a superset of past scans.
   const tickers = allTickers.filter((t) => pinnedSet.has(t.symbol));
 
+  const results: CPRResult[] = [];
   const skipped: string[] = [];
-  // PERF: worker pool instead of batch-of-10 + forced 300ms sleep — see
-  // mapWithConcurrency's comment. Combined with fetchKlinesCached, warm
-  // scans (the common case) make ~zero klines requests, and cold scans
-  // finish in one continuous pool sweep instead of N sequential batches.
-  const concurrency = 20;
+  const batchSize = 10;
+  const delayMs = 300;
 
-  const perTickerResults = await mapWithConcurrency(
-    tickers,
-    concurrency,
-    async (t) => {
-      const klines = await fetchKlinesCached(t.symbol);
-      if (!klines || klines.length < 2) {
-        skipped.push(t.symbol);
-        return null;
-      }
+  for (let i = 0; i < tickers.length; i += batchSize) {
+    const batch = tickers.slice(i, i + batchSize);
 
-      const lastKline = klines[klines.length - 1];
-
-      // FIX: use UTC midnight boundary — matches TradingView high[1] lookahead_off
-      const lastKlineIsLive = isLiveDailyCandle(lastKline.openTime);
-
-      let prevCandle: OHLC;
-      let todayCandle: OHLC;
-      let liveCandle: OHLC | null = null;
-      let ppCandle: OHLC | null = null;
-
-      if (lastKlineIsLive) {
-        if (klines.length < 3) {
+    const batchResults = await Promise.all(
+      batch.map(async (t) => {
+        const klines = await fetchKlines(t.symbol);
+        if (!klines || klines.length < 2) {
           skipped.push(t.symbol);
           return null;
         }
-        prevCandle  = klines[klines.length - 3]; // 2 days ago (completed)
-        todayCandle = klines[klines.length - 2]; // yesterday (completed) → today's CPR
-        liveCandle  = lastKline;                  // today's forming candle (not used for CPR)
-        if (klines.length >= 4) ppCandle = klines[klines.length - 4];
-      } else {
-        prevCandle  = klines[klines.length - 2];
-        todayCandle = klines[klines.length - 1];
-        liveCandle  = null;
-        if (klines.length >= 3) ppCandle = klines[klines.length - 3];
-      }
 
-      const currentPrice = parseFloat(t.lastPrice);
-      // AFTER — always derive % from the same openPrice that's displayed
-      const openPriceUsed = liveCandle ? liveCandle.open : todayCandle.open;
-      const changeFromDayOpen = ((currentPrice - openPriceUsed) / openPriceUsed) * 100;
+        const lastKline = klines[klines.length - 1];
 
-      const candlesForAnalysis: OHLC[] = ppCandle
-        ? [ppCandle, prevCandle, todayCandle]
-        : [prevCandle, todayCandle];
+        // FIX: use UTC midnight boundary — matches TradingView high[1] lookahead_off
+        const lastKlineIsLive = isLiveDailyCandle(lastKline.openTime);
 
-      return analyzeCPR(
-        t.symbol,
-        candlesForAnalysis,
-        currentPrice,
-        changeFromDayOpen,
-        parseFloat(t.quoteVolume),
-        liveCandle ? liveCandle.open : todayCandle.open
-      );
-    },
-    (done, total, t) => onProgress(done, total, t.symbol)
-  );
+        let prevCandle: OHLC;
+        let todayCandle: OHLC;
+        let liveCandle: OHLC | null = null;
+        let ppCandle: OHLC | null = null;
 
-  const results: CPRResult[] = perTickerResults.filter((r): r is CPRResult => r !== null);
+        if (lastKlineIsLive) {
+          if (klines.length < 3) {
+            skipped.push(t.symbol);
+            return null;
+          }
+          prevCandle  = klines[klines.length - 3]; // 2 days ago (completed)
+          todayCandle = klines[klines.length - 2]; // yesterday (completed) → today's CPR
+          liveCandle  = lastKline;                  // today's forming candle (not used for CPR)
+          if (klines.length >= 4) ppCandle = klines[klines.length - 4];
+        } else {
+          prevCandle  = klines[klines.length - 2];
+          todayCandle = klines[klines.length - 1];
+          liveCandle  = null;
+          if (klines.length >= 3) ppCandle = klines[klines.length - 3];
+        }
+
+        const currentPrice = parseFloat(t.lastPrice);
+        // AFTER — always derive % from the same openPrice that's displayed
+        const openPriceUsed = liveCandle ? liveCandle.open : todayCandle.open;
+        const changeFromDayOpen = ((currentPrice - openPriceUsed) / openPriceUsed) * 100;
+
+        const candlesForAnalysis: OHLC[] = ppCandle
+          ? [ppCandle, prevCandle, todayCandle]
+          : [prevCandle, todayCandle];
+
+        return analyzeCPR(
+          t.symbol,
+          candlesForAnalysis,
+          currentPrice,
+          changeFromDayOpen,
+          parseFloat(t.quoteVolume),
+          liveCandle ? liveCandle.open : todayCandle.open
+        );
+      })
+    );
+
+    batchResults.forEach((r) => { if (r) results.push(r); });
+
+    const processed = Math.min(i + batchSize, tickers.length);
+    onProgress(processed, tickers.length, batch[batch.length - 1].symbol);
+
+    if (i + batchSize < tickers.length) await sleep(delayMs);
+  }
 
   if (skipped.length) {
     console.warn(
