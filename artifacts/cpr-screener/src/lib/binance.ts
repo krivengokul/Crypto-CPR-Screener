@@ -7,7 +7,23 @@ import { shouldExcludeSymbol } from "./symbolFilters";
 // tickers must all come from the same USDⓈ-M Futures instrument. Mixing in
 // Spot data (even just as a fallback) risks analysing a different
 // instrument than the one being charted/linked.
-const FBASE = "https://fapi.binance.com/fapi/v1";
+// FIX ("exchangeInfo unavailable (network error)"): a single host is a single
+// point of failure. `fapi.binance.com` intermittently drops connections /
+// fails CORS preflight from the browser depending on the edge PoP. Binance
+// publishes four equivalent mirrors that serve the identical futures API, so
+// every request now walks this list until one answers.
+const FHOSTS = [
+  "https://fapi.binance.com/fapi/v1",
+  "https://fapi1.binance.com/fapi/v1",
+  "https://fapi2.binance.com/fapi/v1",
+  "https://fapi3.binance.com/fapi/v1",
+  "https://fapi4.binance.com/fapi/v1",
+];
+
+// Hard per-request ceiling. Without it a hung socket blocks the whole scan
+// until the browser's own (very long) timeout fires, which surfaced as the
+// generic "network error" after a long stall.
+const REQUEST_TIMEOUT_MS = 12_000;
 
 interface KlineRaw extends Array<string | number> {
   0: number;
@@ -55,7 +71,7 @@ async function fetchWithRetry(
   let lastStatus = 0;
   for (let i = 0; i < attempts; i++) {
     try {
-      const res = await fetch(url);
+      const res = await fetch(url, { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
       if (res.ok) return res;
       lastStatus = res.status;
       // 429 = rate limited, 418 = banned-for-a-bit, 5xx = transient upstream.
@@ -74,7 +90,57 @@ async function fetchWithRetry(
   return null;
 }
 
+/**
+ * Same retry semantics as `fetchWithRetry`, but tries every futures mirror
+ * before giving up. Used for the two whole-universe endpoints
+ * (`exchangeInfo`, `ticker/24hr`) whose failure aborts the entire scan.
+ */
+async function fetchFuturesPath(
+  path: string,
+  opts?: { attempts?: number; baseDelayMs?: number }
+): Promise<Response | null> {
+  for (const host of FHOSTS) {
+    const res = await fetchWithRetry(`${host}${path}`, opts);
+    if (res?.ok) return res;
+  }
+  return null;
+}
+
 const PINNED_KEY_PREFIX = "cpr_symbols_";
+
+// Last COMPLETE futures universe, kept only as an outage fallback so a
+// network blip can't turn into a silently partial (or empty) scan.
+const UNIVERSE_KEY = "cpr_futures_universe";
+const UNIVERSE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
+function setCachedUniverse(symbols: string[]): void {
+  try {
+    localStorage.setItem(UNIVERSE_KEY, JSON.stringify({ at: Date.now(), symbols }));
+  } catch {
+    /* storage full / disabled — cache is best-effort only */
+  }
+}
+
+function readCachedUniverse(): { at: number; symbols: string[] } | null {
+  try {
+    const raw = localStorage.getItem(UNIVERSE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { at: number; symbols: string[] };
+    if (!Array.isArray(parsed?.symbols) || !parsed.symbols.length) return null;
+    if (Date.now() - parsed.at > UNIVERSE_MAX_AGE_MS) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function getCachedUniverse(): string[] | null {
+  return readCachedUniverse()?.symbols ?? null;
+}
+
+function getCachedUniverseAt(): number | null {
+  return readCachedUniverse()?.at ?? null;
+}
 
 function getTodayISTDate(): string {
   const now = new Date();
@@ -122,11 +188,22 @@ function isLiveDailyCandle(openTimeMs: number): boolean {
  * of a silent empty universe.
  */
 async function fetchActiveSymbols(): Promise<Set<string>> {
-  const futRes = await fetchWithRetry(`${FBASE}/exchangeInfo`);
+  const futRes = await fetchFuturesPath(`/exchangeInfo`, { attempts: 5, baseDelayMs: 700 });
+
   if (!futRes?.ok) {
+    // Every mirror failed. Fall back to the last COMPLETE universe snapshot
+    // (never a partial one) so a transient outage doesn't kill the scan.
+    const cached = getCachedUniverse();
+    if (cached) {
+      console.warn(
+        `[binance] exchangeInfo unreachable — reusing last complete universe ` +
+          `(${cached.length} perps, cached ${new Date(getCachedUniverseAt()!).toLocaleTimeString()})`
+      );
+      return new Set(cached);
+    }
     throw new Error(
-      `Binance futures exchangeInfo unavailable (${futRes?.status ?? "network error"}). ` +
-        `Refusing to scan a partial symbol universe — retry in a moment.`
+      `Binance futures exchangeInfo unavailable (${futRes?.status ?? "network error"}) ` +
+        `on all ${FHOSTS.length} mirrors. Refusing to scan a partial symbol universe — retry in a moment.`
     );
   }
 
@@ -141,6 +218,7 @@ async function fetchActiveSymbols(): Promise<Set<string>> {
     active.add(s.symbol);
   }
 
+  if (active.size) setCachedUniverse([...active]);
   return active;
 }
 
@@ -152,11 +230,11 @@ async function fetchActiveSymbols(): Promise<Set<string>> {
  * Also fails loudly when futures is down — same reasoning as above.
  */
 async function fetchAllTickers(): Promise<Ticker24h[]> {
-  const futRes = await fetchWithRetry(`${FBASE}/ticker/24hr`);
+  const futRes = await fetchFuturesPath(`/ticker/24hr`, { attempts: 5, baseDelayMs: 700 });
   if (!futRes?.ok) {
     throw new Error(
-      `Binance futures 24h tickers unavailable (${futRes?.status ?? "network error"}). ` +
-        `Refusing to scan a partial symbol universe — retry in a moment.`
+      `Binance futures 24h tickers unavailable (${futRes?.status ?? "network error"}) ` +
+        `on all ${FHOSTS.length} mirrors. Refusing to scan a partial symbol universe — retry in a moment.`
     );
   }
 
@@ -218,8 +296,8 @@ export async function fetchDailyKlines(
   symbol: string,
   limit = 6
 ): Promise<OHLC[] | null> {
-  const res = await fetchWithRetry(
-    `${FBASE}/klines?symbol=${symbol}&interval=1d&limit=${limit}`
+  const res = await fetchFuturesPath(
+    `/klines?symbol=${symbol}&interval=1d&limit=${limit}`
   );
   if (res?.ok) {
     try {
