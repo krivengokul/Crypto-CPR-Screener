@@ -212,13 +212,14 @@ export function renderPrevPatternBadge(r: CPRResult) {
 }
 
 /**
- * "LEVEL" column body — Above/Below/Inside/Outside/Narrow (or SSRR-A/SSRR-B
- * + HHLL-A/HHLL-B when Inside or Outside)/Equal/Wide/oV-Below/oV-Above
- * badges, plus a "Skip" fallback when none apply. Extracted out of the row
- * JSX so other views (e.g. BacktestPanel) can reuse the same LEVEL column.
- * Mirrors ScreenerTableRow's own LEVEL cell, minus the activePattern-aware
- * tweak to the "Skip" fallback, which only makes sense inside the
- * Screener's own pattern-filter context.
+ * "LEVEL" column body — row 1: Above/Below/Inside/Outside/Narrow/Equal/Wide/
+ * oV-B/oV-A badges (plus a "Skip" fallback when none apply); row 2:
+ * SSRR-A/SSRR-B + HHLL-A/HHLL-B, shown only for Inside-CPR-narrow or
+ * Outside-CPR rows, always on its own row underneath row 1. Extracted out
+ * of the row JSX so other views (e.g. BacktestPanel) can reuse the same
+ * LEVEL column. Mirrors ScreenerTableRow's own LEVEL cell, minus the
+ * activePattern-aware tweak to the "Skip" fallback, which only makes sense
+ * inside the Screener's own pattern-filter context.
  */
 export function renderLevelBadges(r: CPRResult) {
   const isInsideCPR = passesPattern(r, "inside-cpr");
@@ -232,29 +233,22 @@ export function renderLevelBadges(r: CPRResult) {
     !showWide &&
     !isInsideCPR &&
     !isOutsideCPR;
+  const ssrrHhllRow = isOutsideCPR || (isInsideCPR && r.narrowCPR) ? renderSSRRHHLLBadges(r) : null;
   return (
-    <div className="flex flex-wrap gap-1 max-w-[130px]">
-      {r.cprRising && <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">Above</span>}
-      {r.cprFalling && <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 font-medium">Below</span>}
-      {isInsideCPR && <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 font-medium">Inside</span>}
-      {isOutsideCPR && (
-        <>
-          <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20 font-medium">Outside</span>
-          {renderSSRRHHLLBadges(r)}
-        </>
-      )}
-      {r.overlapLower && <span className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-medium">oV-Below</span>}
-      {showWide && <span className="text-xs px-1.5 py-0.5 rounded bg-pink-500/10 text-pink-400 border border-pink-500/20 font-medium">Wide</span>}
-      {r.overlapHigher && <span className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20 font-medium">oV-Above</span>}
-      {r.narrowCPR && (
-        isInsideCPR ? (
-          renderSSRRHHLLBadges(r)
-        ) : (
-          <span className="text-xs px-1.5 py-0.5 rounded bg-chart-3/10 text-chart-3 border border-chart-3/20 font-medium">Narrow</span>
-        )
-      )}
-      {r.equalCPR && <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">Equal</span>}
-      {nothingMatched && <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">Skip</span>}
+    <div className="flex flex-col gap-1 max-w-[130px]">
+      <div className="flex flex-wrap gap-1">
+        {r.cprRising && <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">Above</span>}
+        {r.cprFalling && <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 font-medium">Below</span>}
+        {isInsideCPR && <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 font-medium">Inside</span>}
+        {isOutsideCPR && <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20 font-medium">Outside</span>}
+        {r.overlapLower && <span className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-medium">oV-B</span>}
+        {showWide && <span className="text-xs px-1.5 py-0.5 rounded bg-pink-500/10 text-pink-400 border border-pink-500/20 font-medium">Wide</span>}
+        {r.overlapHigher && <span className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20 font-medium">oV-A</span>}
+        {r.narrowCPR && !isInsideCPR && <span className="text-xs px-1.5 py-0.5 rounded bg-chart-3/10 text-chart-3 border border-chart-3/20 font-medium">Narrow</span>}
+        {r.equalCPR && <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">Equal</span>}
+        {nothingMatched && <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">Skip</span>}
+      </div>
+      {ssrrHhllRow}
     </div>
   );
 }
@@ -428,10 +422,10 @@ export default function ScreenerTableRow({
   // replacement for the pU1/pL1 gap badges above. Driven by
   // CPRResult.SSRRAbove / SSRRBelow (today's R1/S1 vs prev's R1/S1) and
   // CPRResult.HHLLAbove / HHLLBelow (today's PDH/PDL vs prev's PDH/PDL),
-  // both from cpr.ts. Rendered for both Inside-CPR and Outside-CPR rows via
+  // both from cpr.ts. Rendered for Inside-CPR-narrow or Outside-CPR rows,
+  // always on its own row underneath the Above/Below/Inside/Outside row via
   // the shared renderSSRRHHLLBadges helper.
-  const ssrrHhllBadge = isInsideCPR ? renderSSRRHHLLBadges(r) : null;
-  const outsideSsrrHhllBadge = isOutsideCPR ? renderSSRRHHLLBadges(r) : null;
+  const ssrrHhllRow = isOutsideCPR || (isInsideCPR && r.narrowCPR) ? renderSSRRHHLLBadges(r) : null;
 
   return (
     <Fragment key={rowKey}>
@@ -510,31 +504,29 @@ export default function ScreenerTableRow({
           {renderPrevPatternBadge(r)}
         </td>
         <td className="px-2 py-3 w-28">
-          <div className="flex flex-wrap gap-1 max-w-[130px]">
-            {r.cprRising && <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">Above</span>}
-            {r.cprFalling && <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 font-medium">Below</span>}
-            {isInsideCPR && <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 font-medium">Inside</span>}
-            {isOutsideCPR && (
-              <>
-                <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20 font-medium">Outside</span>
-                {outsideSsrrHhllBadge}
-              </>
-            )}
-            {r.overlapLower && <span className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-medium">oV-Below</span>}
-            {showWide && <span className="text-xs px-1.5 py-0.5 rounded bg-pink-500/10 text-pink-400 border border-pink-500/20 font-medium">Wide</span>}
-            {r.overlapHigher && <span className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20 font-medium">oV-Above</span>}
-            {r.narrowCPR && (isInsideCPR ? ssrrHhllBadge : <span className="text-xs px-1.5 py-0.5 rounded bg-chart-3/10 text-chart-3 border border-chart-3/20 font-medium">Narrow</span>)}
-            {r.equalCPR && <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">Equal</span>}
-            {!r.cprRising &&
-              !r.cprFalling &&
-              !r.narrowCPR &&
-              !r.equalCPR &&
-              !showWide &&
-              !isInsideCPR &&
-              !isOutsideCPR &&
-              !(passesPattern(r, activePattern) && ["overlapping-lower", "overlapping-higher", "equal-cpr"].includes(activePattern)) && (
-              <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">Skip</span>
-            )}
+          <div className="flex flex-col gap-1 max-w-[130px]">
+            <div className="flex flex-wrap gap-1">
+              {r.cprRising && <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">Above</span>}
+              {r.cprFalling && <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 font-medium">Below</span>}
+              {isInsideCPR && <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 font-medium">Inside</span>}
+              {isOutsideCPR && <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20 font-medium">Outside</span>}
+              {r.overlapLower && <span className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-medium">oV-B</span>}
+              {showWide && <span className="text-xs px-1.5 py-0.5 rounded bg-pink-500/10 text-pink-400 border border-pink-500/20 font-medium">Wide</span>}
+              {r.overlapHigher && <span className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20 font-medium">oV-A</span>}
+              {r.narrowCPR && !isInsideCPR && <span className="text-xs px-1.5 py-0.5 rounded bg-chart-3/10 text-chart-3 border border-chart-3/20 font-medium">Narrow</span>}
+              {r.equalCPR && <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">Equal</span>}
+              {!r.cprRising &&
+                !r.cprFalling &&
+                !r.narrowCPR &&
+                !r.equalCPR &&
+                !showWide &&
+                !isInsideCPR &&
+                !isOutsideCPR &&
+                !(passesPattern(r, activePattern) && ["overlapping-lower", "overlapping-higher", "equal-cpr"].includes(activePattern)) && (
+                <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">Skip</span>
+              )}
+            </div>
+            {ssrrHhllRow}
           </div>
         </td>
         <td className="px-4 py-3 font-mono whitespace-nowrap min-w-[190px]">
