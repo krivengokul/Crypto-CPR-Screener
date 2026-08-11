@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Screener from "@/pages/Screener";
 import BacktestPanel from "@/pages/BacktestPanel";
-import PatternSidebar, { patterns, SCREENER_PATTERN_IDS, type SidebarMode } from "@/components/ui/PatternSidebar";
+import PatternSidebar, { pivotcategories, SCREENER_PATTERN_IDS, type SidebarMode } from "@/components/ui/PatternSidebar";
 import { Menu } from "lucide-react";
 
 const queryClient = new QueryClient();
@@ -40,7 +40,7 @@ function ComingSoon({ label }: { label: string }) {
 }
 
 // Screener-handled pattern IDs now come from PatternSidebar (single source
-// of truth — derived from its `patterns` + `subPatterns` tree, plus a small
+// of truth — derived from its `pivotcategories` + `subPatterns` tree, plus a small
 // LEGACY_SCREENER_PATTERN_IDS list). Kept out of App.tsx to avoid drift.
 
 function App() {
@@ -87,7 +87,7 @@ function App() {
   };
 
   const activeLabel =
-    patterns.find((p) => p.id === activePattern)?.label ?? activePattern;
+    pivotcategories.find((p) => p.id === activePattern)?.label ?? activePattern;
 
   return (
     <QueryClientProvider client={queryClient}>
