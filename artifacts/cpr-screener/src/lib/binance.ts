@@ -7,23 +7,7 @@ import { shouldExcludeSymbol } from "./symbolFilters";
 // tickers must all come from the same USDⓈ-M Futures instrument. Mixing in
 // Spot data (even just as a fallback) risks analysing a different
 // instrument than the one being charted/linked.
-// FIX ("exchangeInfo unavailable (network error)"): a single host is a single
-// point of failure. `fapi.binance.com` intermittently drops connections /
-// fails CORS preflight from the browser depending on the edge PoP. Binance
-// publishes four equivalent mirrors that serve the identical futures API, so
-// every request now walks this list until one answers.
-const FHOSTS = [
-  "https://fapi.binance.com/fapi/v1",
-  "https://fapi1.binance.com/fapi/v1",
-  "https://fapi2.binance.com/fapi/v1",
-  "https://fapi3.binance.com/fapi/v1",
-  "https://fapi4.binance.com/fapi/v1",
-];
-
-// Hard per-request ceiling. Without it a hung socket blocks the whole scan
-// until the browser's own (very long) timeout fires, which surfaced as the
-// generic "network error" after a long stall.
-const REQUEST_TIMEOUT_MS = 12_000;
+const FBASE = "https://fapi.binance.com/fapi/v1";
 
 interface KlineRaw extends Array<string | number> {
   0: number;
@@ -57,6 +41,40 @@ async function sleep(ms: number) {
 }
 
 /**
+ * PERF: fixed-size batches with a forced sleep between every batch (the old
+ * runScreener loop) waste time twice over — the sleep runs even when nothing
+ * was rate-limited, and a slow request in batch N holds up batch N+1 from
+ * starting at all. A small worker pool keeps `concurrency` requests in
+ * flight at all times and starts the next item the moment a slot frees up,
+ * with no artificial idle time. Binance's own 429/418 responses (handled in
+ * fetchWithRetry) are still the thing that actually throttles us when
+ * needed — this just stops throttling ourselves on top of that.
+ */
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  worker: (item: T, index: number) => Promise<R>,
+  onItemDone?: (done: number, total: number, item: T) => void
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let nextIndex = 0;
+  let doneCount = 0;
+
+  async function run() {
+    while (nextIndex < items.length) {
+      const i = nextIndex++;
+      results[i] = await worker(items[i], i);
+      doneCount++;
+      onItemDone?.(doneCount, items.length, items[i]);
+    }
+  }
+
+  const workers = Array.from({ length: Math.min(concurrency, items.length) }, run);
+  await Promise.all(workers);
+  return results;
+}
+
+/**
  * FIX (missing symbols): every network read now goes through one retrying
  * fetch. Binance answers a burst of parallel requests with 429 / 418 (and
  * occasionally 5xx) and the old code treated those as "no data" — the symbol
@@ -71,7 +89,7 @@ async function fetchWithRetry(
   let lastStatus = 0;
   for (let i = 0; i < attempts; i++) {
     try {
-      const res = await fetch(url, { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
+      const res = await fetch(url);
       if (res.ok) return res;
       lastStatus = res.status;
       // 429 = rate limited, 418 = banned-for-a-bit, 5xx = transient upstream.
@@ -90,57 +108,7 @@ async function fetchWithRetry(
   return null;
 }
 
-/**
- * Same retry semantics as `fetchWithRetry`, but tries every futures mirror
- * before giving up. Used for the two whole-universe endpoints
- * (`exchangeInfo`, `ticker/24hr`) whose failure aborts the entire scan.
- */
-async function fetchFuturesPath(
-  path: string,
-  opts?: { attempts?: number; baseDelayMs?: number }
-): Promise<Response | null> {
-  for (const host of FHOSTS) {
-    const res = await fetchWithRetry(`${host}${path}`, opts);
-    if (res?.ok) return res;
-  }
-  return null;
-}
-
 const PINNED_KEY_PREFIX = "cpr_symbols_";
-
-// Last COMPLETE futures universe, kept only as an outage fallback so a
-// network blip can't turn into a silently partial (or empty) scan.
-const UNIVERSE_KEY = "cpr_futures_universe";
-const UNIVERSE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
-
-function setCachedUniverse(symbols: string[]): void {
-  try {
-    localStorage.setItem(UNIVERSE_KEY, JSON.stringify({ at: Date.now(), symbols }));
-  } catch {
-    /* storage full / disabled — cache is best-effort only */
-  }
-}
-
-function readCachedUniverse(): { at: number; symbols: string[] } | null {
-  try {
-    const raw = localStorage.getItem(UNIVERSE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as { at: number; symbols: string[] };
-    if (!Array.isArray(parsed?.symbols) || !parsed.symbols.length) return null;
-    if (Date.now() - parsed.at > UNIVERSE_MAX_AGE_MS) return null;
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
-function getCachedUniverse(): string[] | null {
-  return readCachedUniverse()?.symbols ?? null;
-}
-
-function getCachedUniverseAt(): number | null {
-  return readCachedUniverse()?.at ?? null;
-}
 
 function getTodayISTDate(): string {
   const now = new Date();
@@ -188,22 +156,11 @@ function isLiveDailyCandle(openTimeMs: number): boolean {
  * of a silent empty universe.
  */
 async function fetchActiveSymbols(): Promise<Set<string>> {
-  const futRes = await fetchFuturesPath(`/exchangeInfo`, { attempts: 5, baseDelayMs: 700 });
-
+  const futRes = await fetchWithRetry(`${FBASE}/exchangeInfo`);
   if (!futRes?.ok) {
-    // Every mirror failed. Fall back to the last COMPLETE universe snapshot
-    // (never a partial one) so a transient outage doesn't kill the scan.
-    const cached = getCachedUniverse();
-    if (cached) {
-      console.warn(
-        `[binance] exchangeInfo unreachable — reusing last complete universe ` +
-          `(${cached.length} perps, cached ${new Date(getCachedUniverseAt()!).toLocaleTimeString()})`
-      );
-      return new Set(cached);
-    }
     throw new Error(
-      `Binance futures exchangeInfo unavailable (${futRes?.status ?? "network error"}) ` +
-        `on all ${FHOSTS.length} mirrors. Refusing to scan a partial symbol universe — retry in a moment.`
+      `Binance futures exchangeInfo unavailable (${futRes?.status ?? "network error"}). ` +
+        `Refusing to scan a partial symbol universe — retry in a moment.`
     );
   }
 
@@ -218,7 +175,6 @@ async function fetchActiveSymbols(): Promise<Set<string>> {
     active.add(s.symbol);
   }
 
-  if (active.size) setCachedUniverse([...active]);
   return active;
 }
 
@@ -230,11 +186,11 @@ async function fetchActiveSymbols(): Promise<Set<string>> {
  * Also fails loudly when futures is down — same reasoning as above.
  */
 async function fetchAllTickers(): Promise<Ticker24h[]> {
-  const futRes = await fetchFuturesPath(`/ticker/24hr`, { attempts: 5, baseDelayMs: 700 });
+  const futRes = await fetchWithRetry(`${FBASE}/ticker/24hr`);
   if (!futRes?.ok) {
     throw new Error(
-      `Binance futures 24h tickers unavailable (${futRes?.status ?? "network error"}) ` +
-        `on all ${FHOSTS.length} mirrors. Refusing to scan a partial symbol universe — retry in a moment.`
+      `Binance futures 24h tickers unavailable (${futRes?.status ?? "network error"}). ` +
+        `Refusing to scan a partial symbol universe — retry in a moment.`
     );
   }
 
@@ -296,8 +252,8 @@ export async function fetchDailyKlines(
   symbol: string,
   limit = 6
 ): Promise<OHLC[] | null> {
-  const res = await fetchFuturesPath(
-    `/klines?symbol=${symbol}&interval=1d&limit=${limit}`
+  const res = await fetchWithRetry(
+    `${FBASE}/klines?symbol=${symbol}&interval=1d&limit=${limit}`
   );
   if (res?.ok) {
     try {
@@ -317,6 +273,37 @@ export async function fetchDailyKlines(
 // fetcher so the live screener and the backtest cannot drift apart.
 async function fetchKlines(symbol: string): Promise<OHLC[] | null> {
   return fetchDailyKlines(symbol, 6);
+}
+
+/**
+ * PERF (scan taking too long): runScreener used to call fetchKlines for
+ * every symbol on every scan, even though nothing in the response can have
+ * changed since the last scan except the still-forming "live" candle's
+ * high/low/close (which analyzeCPR never reads — only .open, fixed at day
+ * start). For 400+ perpetual pairs that's 400+ klines requests every single
+ * poll, which is the actual source of the slowdown, not the batching below.
+ *
+ * This cache keeps each symbol's last-fetched daily candles in memory for
+ * the rest of the IST trading day (same day boundary already used by
+ * getPinnedSymbols/setPinnedSymbols, so cache and pin invalidate together).
+ * A scan only hits the network for a symbol the first time it's seen that
+ * day, or once IST date rolls over. Current price / 24h change / volume
+ * still come fresh from the ticker on every scan regardless — only the
+ * expensive daily-candle fetch is skipped.
+ */
+const klineCache = new Map<string, { istDate: string; klines: OHLC[] }>();
+
+async function fetchKlinesCached(symbol: string): Promise<OHLC[] | null> {
+  const today = getTodayISTDate();
+  const cached = klineCache.get(symbol);
+  if (cached && cached.istDate === today) {
+    return cached.klines;
+  }
+  const klines = await fetchKlines(symbol);
+  if (klines) {
+    klineCache.set(symbol, { istDate: today, klines });
+  }
+  return klines;
 }
 
 /**
@@ -348,75 +335,71 @@ export async function runScreener(
   // shrinks the universe — it can only ever be a superset of past scans.
   const tickers = allTickers.filter((t) => pinnedSet.has(t.symbol));
 
-  const results: CPRResult[] = [];
   const skipped: string[] = [];
-  const batchSize = 10;
-  const delayMs = 300;
+  // PERF: worker pool instead of batch-of-10 + forced 300ms sleep — see
+  // mapWithConcurrency's comment. Combined with fetchKlinesCached, warm
+  // scans (the common case) make ~zero klines requests, and cold scans
+  // finish in one continuous pool sweep instead of N sequential batches.
+  const concurrency = 20;
 
-  for (let i = 0; i < tickers.length; i += batchSize) {
-    const batch = tickers.slice(i, i + batchSize);
+  const perTickerResults = await mapWithConcurrency(
+    tickers,
+    concurrency,
+    async (t) => {
+      const klines = await fetchKlinesCached(t.symbol);
+      if (!klines || klines.length < 2) {
+        skipped.push(t.symbol);
+        return null;
+      }
 
-    const batchResults = await Promise.all(
-      batch.map(async (t) => {
-        const klines = await fetchKlines(t.symbol);
-        if (!klines || klines.length < 2) {
+      const lastKline = klines[klines.length - 1];
+
+      // FIX: use UTC midnight boundary — matches TradingView high[1] lookahead_off
+      const lastKlineIsLive = isLiveDailyCandle(lastKline.openTime);
+
+      let prevCandle: OHLC;
+      let todayCandle: OHLC;
+      let liveCandle: OHLC | null = null;
+      let ppCandle: OHLC | null = null;
+
+      if (lastKlineIsLive) {
+        if (klines.length < 3) {
           skipped.push(t.symbol);
           return null;
         }
+        prevCandle  = klines[klines.length - 3]; // 2 days ago (completed)
+        todayCandle = klines[klines.length - 2]; // yesterday (completed) → today's CPR
+        liveCandle  = lastKline;                  // today's forming candle (not used for CPR)
+        if (klines.length >= 4) ppCandle = klines[klines.length - 4];
+      } else {
+        prevCandle  = klines[klines.length - 2];
+        todayCandle = klines[klines.length - 1];
+        liveCandle  = null;
+        if (klines.length >= 3) ppCandle = klines[klines.length - 3];
+      }
 
-        const lastKline = klines[klines.length - 1];
+      const currentPrice = parseFloat(t.lastPrice);
+      // AFTER — always derive % from the same openPrice that's displayed
+      const openPriceUsed = liveCandle ? liveCandle.open : todayCandle.open;
+      const changeFromDayOpen = ((currentPrice - openPriceUsed) / openPriceUsed) * 100;
 
-        // FIX: use UTC midnight boundary — matches TradingView high[1] lookahead_off
-        const lastKlineIsLive = isLiveDailyCandle(lastKline.openTime);
+      const candlesForAnalysis: OHLC[] = ppCandle
+        ? [ppCandle, prevCandle, todayCandle]
+        : [prevCandle, todayCandle];
 
-        let prevCandle: OHLC;
-        let todayCandle: OHLC;
-        let liveCandle: OHLC | null = null;
-        let ppCandle: OHLC | null = null;
+      return analyzeCPR(
+        t.symbol,
+        candlesForAnalysis,
+        currentPrice,
+        changeFromDayOpen,
+        parseFloat(t.quoteVolume),
+        liveCandle ? liveCandle.open : todayCandle.open
+      );
+    },
+    (done, total, t) => onProgress(done, total, t.symbol)
+  );
 
-        if (lastKlineIsLive) {
-          if (klines.length < 3) {
-            skipped.push(t.symbol);
-            return null;
-          }
-          prevCandle  = klines[klines.length - 3]; // 2 days ago (completed)
-          todayCandle = klines[klines.length - 2]; // yesterday (completed) → today's CPR
-          liveCandle  = lastKline;                  // today's forming candle (not used for CPR)
-          if (klines.length >= 4) ppCandle = klines[klines.length - 4];
-        } else {
-          prevCandle  = klines[klines.length - 2];
-          todayCandle = klines[klines.length - 1];
-          liveCandle  = null;
-          if (klines.length >= 3) ppCandle = klines[klines.length - 3];
-        }
-
-        const currentPrice = parseFloat(t.lastPrice);
-        // AFTER — always derive % from the same openPrice that's displayed
-        const openPriceUsed = liveCandle ? liveCandle.open : todayCandle.open;
-        const changeFromDayOpen = ((currentPrice - openPriceUsed) / openPriceUsed) * 100;
-
-        const candlesForAnalysis: OHLC[] = ppCandle
-          ? [ppCandle, prevCandle, todayCandle]
-          : [prevCandle, todayCandle];
-
-        return analyzeCPR(
-          t.symbol,
-          candlesForAnalysis,
-          currentPrice,
-          changeFromDayOpen,
-          parseFloat(t.quoteVolume),
-          liveCandle ? liveCandle.open : todayCandle.open
-        );
-      })
-    );
-
-    batchResults.forEach((r) => { if (r) results.push(r); });
-
-    const processed = Math.min(i + batchSize, tickers.length);
-    onProgress(processed, tickers.length, batch[batch.length - 1].symbol);
-
-    if (i + batchSize < tickers.length) await sleep(delayMs);
-  }
+  const results: CPRResult[] = perTickerResults.filter((r): r is CPRResult => r !== null);
 
   if (skipped.length) {
     console.warn(
