@@ -618,6 +618,24 @@ export default function Screener({
   }, [activePattern, isLeafView, allResults, deltaAllResults]);
   /* eslint-enable react-hooks/exhaustive-deps */
 
+  // Sidebar → Screener (deselect): clicking the "✕" on an active View chip in
+  // the left nav falls back to its parent category, so activePattern goes from
+  // a leaf to a non-leaf. The category-level reset above only clears buttons
+  // when leaving the category entirely, so clear every View filter button here
+  // too — both surfaces show the same filter and must switch off together.
+  const prevPatternRef = useRef(activePattern);
+  useEffect(() => {
+    const prev = prevPatternRef.current;
+    prevPatternRef.current = activePattern;
+    if (prev === activePattern) return;
+    const prevWasLeaf = Object.values(Views).some((subs) => subs.some((s) => s.id === prev));
+    if (prevWasLeaf && !isLeafView) {
+      Object.values(VIEW_SETTERS).forEach((set) => set(false));
+      setActiveGenericSubView(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activePattern, isLeafView]);
+
   // Screener → Sidebar: when the currently-selected View's Screener button is
   // closed with its ✕, tell the left-nav to deselect the same View (falls back
   // to its parent category). Only fires on a true → false transition so the
