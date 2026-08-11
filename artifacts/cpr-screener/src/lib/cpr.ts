@@ -60,6 +60,10 @@ export interface CPRPairFlags {
   cOL2U3: boolean;
   cOL3U3: boolean;
   eXL4U4: boolean;
+  /** EqL4U4 — today's R4 equals prev's R4 AND today's S4 equals prev's S4 (within eqTol). */
+  EqL4U4: boolean;
+  /** InsideCPR — today's CPR band sits strictly inside prev day's CPR band. */
+  InsideCPR: boolean;
   HiL4U3: boolean;
   HiL4U2: boolean;
   HiL4U1: boolean;
@@ -277,6 +281,10 @@ export interface CPRResult {
   cOL2U3: boolean;
   cOL3U3: boolean;
   eXL4U4: boolean;
+  /** EqL4U4 — today's R4 equals prev's R4 AND today's S4 equals prev's S4 (within eqTol). */
+  EqL4U4: boolean;
+  /** InsideCPR — today's CPR band sits strictly inside prev day's CPR band. */
+  InsideCPR: boolean;
   HiL2U4: boolean;
   HiL2U3: boolean;
   HiL3U4: boolean;
@@ -521,6 +529,16 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
                    (today.r4 > prev.r2 && today.r4 < prev.r3) && srCompressedLower;
   const eXL4U4   = (prev.r4 > today.r3 && prev.r4 < today.r4) &&
                    (prev.s4 > today.s4 && prev.s4 < today.s3);
+
+  // EqL4U4 — exact (within eqTol) day-over-day tie on BOTH outer levels:
+  // today's R4 == prev's R4 and today's S4 == prev's S4.
+  const EqL4U4 = eqTol(today.r4, prev.r4) && eqTol(today.s4, prev.s4);
+
+  // InsideCPR — today's CPR band is contained inside prev day's CPR band
+  // (single source of truth; ScreenerUtils reuses r.InsideCPR).
+  const InsideCPR =
+    (today.tc <= prev.tc && today.bc > prev.bc) ||
+    (today.tc < prev.tc && today.bc >= prev.bc);
   const HiL4U3   = (prev.r4 >= today.r2 && prev.r4 < today.r3) &&
                    (today.s4 > prev.s4 && today.s4 < prev.s3);
   // HiL4U2 — today's S4 lands inside prev's S3/S4 band (L4, same support
@@ -850,7 +868,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
     r4Distance, s4Distance,
     srHigher, srLower, srExpanded, srCompressed,
     srCompressedHigher, srCompressedLower, srExpandedHigher, srExpandedLower,
-    cOU3L4, cOL2U3, cOL3U3, eXL4U4, HiL4U3, HiL4U2, HiL2U4, HiL2U3, HiL3U4, HiL4U4, HiL4U1,
+    cOU3L4, cOL2U3, cOL3U3, eXL4U4, EqL4U4, InsideCPR, HiL4U3, HiL4U2, HiL2U4, HiL2U3, HiL3U4, HiL4U4, HiL4U1,
     LoU4L4, eXL4U3, eXU4L2, eXU4L3, cOL2U4, cOL4U4, cOU4L4, exL3U2,
     cOL3U4, cOU3L3, LoU3L4, LoU3L3, cOU2L3, LoU2L4, LoU2L3, LoU4L3, LoU4L2,
     LoU4L1, cOU1L2, cOU2L4, eXL3U3, eXU3L3,
@@ -872,6 +890,7 @@ export function pickPattern(f: CPRPairFlags): string | null {
   if (f.cOU3L4)    return "cOU3L4";
   if (f.cOL2U3)  return "cOL2U3";
   if (f.cOL3U3)  return "cOL3U3";
+  if (f.EqL4U4)    return "EqL4U4";
   if (f.eXL4U4)    return "eXL4U4";
   if (f.HiL4U3)   return "HiL4U3";
   if (f.HiL4U2)   return "HiL4U2";
@@ -1054,6 +1073,7 @@ export const PATTERN_CATEGORY: Record<string, PatternCategory> = {
   HiL4U4: "Higher",
   HiL3U3: "Higher",
   HiL3U2: "Higher",
+  EqL4U4: "Higher", // exact R4/S4 tie — lands in srHigher (see classifyCPRPair)
 
   // ---- Lower (Lo...) ----
   LoU4L4: "Lower",
