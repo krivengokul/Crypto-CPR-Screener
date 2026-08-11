@@ -669,9 +669,7 @@ export default function ViewsSidebar({
                     >
                       {pattern.label}
                       {typeof counts?.[pattern.id] === "number" && (
-                        <span style={{ color: "#ffffff", fontWeight: 700 }}>
-                          {" "}({counts[pattern.id]})
-                        </span>
+                        <> ({counts[pattern.id]})</>
                       )}
                     </div>
                     <div
@@ -798,7 +796,7 @@ export default function ViewsSidebar({
                         >
                           {sub.label}
                           {typeof counts?.[sub.id] === "number" && (
-                            <span style={{ color: "#ffffff", fontWeight: 700 }}>
+                            <span style={{ color: "#ffffff" }}>
                               {" "}({counts[sub.id]})
                             </span>
                           )}

@@ -58,13 +58,13 @@ import { useBinanceLiveRefresh, useDeltaLiveRefresh } from "@/hooks/useLivePrice
 
 /**
  * ViewCount — "(n)" badge shown at the end of every Views filter button,
- * matching the bold-white count style used in the left-nav (ViewsSidebar).
+ * matching the white count style used in the left-nav (ViewsSidebar).
  * Renders nothing until counts for that view id are available.
  */
 function ViewCount({ id, counts }: { id: string; counts: Record<string, number> }) {
   const n = counts[id];
   if (typeof n !== "number") return null;
-  return <span className="ml-1 font-bold text-white">({n})</span>;
+  return <span className="ml-1 text-white">({n})</span>;
 }
 
 /**
