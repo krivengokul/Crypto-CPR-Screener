@@ -406,6 +406,25 @@ export const SCREENER_PATTERN_IDS: ReadonlySet<string> = new Set<string>([
 
 export type SidebarMode = "scanner" | "backtest";
 
+/**
+ * Tiny pub/sub used by the Screener to tell the sidebar that a View was
+ * deselected there (its "✕" filter button was closed), so the same View gets
+ * deselected in the left nav too — both surfaces show the same filter.
+ */
+type ViewDeselectListener = (viewId: string) => void;
+const viewDeselectListeners = new Set<ViewDeselectListener>();
+
+export function requestViewDeselect(viewId: string) {
+  viewDeselectListeners.forEach((listener) => listener(viewId));
+}
+
+export function subscribeViewDeselect(listener: ViewDeselectListener) {
+  viewDeselectListeners.add(listener);
+  return () => {
+    viewDeselectListeners.delete(listener);
+  };
+}
+
 /** Returns the parent ID for a sub-pattern, or null if it is a parent itself. */
 function getParentId(patternId: string): string | null {
   for (const [parentId, children] of Object.entries(Views)) {
@@ -463,8 +482,22 @@ export default function ViewsSidebar({
 
   function handleSubClick(subId: string, parentId: string) {
     setExpandedId(parentId);
-    onSelect(subId);
+    // Clicking an already-selected sub-view (its "✕") deselects it and falls
+    // back to the parent category — mirroring the Screener's ✕ filter buttons.
+    onSelect(activePattern === subId ? parentId : subId);
   }
+
+  // Screener → sidebar: closing the matching ✕ filter button in the Screener
+  // deselects the same View here.
+  useEffect(
+    () =>
+      subscribeViewDeselect((viewId) => {
+        if (viewId !== activePattern) return;
+        const parent = getParentId(viewId);
+        if (parent) onSelect(parent);
+      }),
+    [activePattern, onSelect],
+  );
 
   // ─── Shared style helpers ─────────────────────────────────────────────────
   const BG_DARK = "#0d1117";
@@ -796,7 +829,7 @@ export default function ViewsSidebar({
                             }
                           }}
                         >
-                          {sub.label}
+                          {isActiveSub ? `\u2715 ${sub.label}` : sub.label}
                           {!!counts?.[sub.id] && (
                             <span style={{ color: "#ffffff" }}>
                               {" "}({counts[sub.id]})

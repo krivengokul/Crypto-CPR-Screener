@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo, Fragment } from "react";
-import { pivotcategories, Views } from "@/lib/ViewsSidebar";
+import { pivotcategories, Views, requestViewDeselect } from "@/lib/ViewsSidebar";
 import {
   TrendingUp,
   RefreshCw,
@@ -491,6 +491,146 @@ export default function Screener({
     // Reset LB Compressed / LB-C34 / lbE11-cOLoL3U2-PU4 / LB-cO2-L2U2 / LB-BothTiny / LB-AllUp when leaving littlebelow
     if (activePattern !== "littlebelow") { setShowLBCmprss(false); setShowLBC34(false); setShowLBE11(false); setShowLBC2L2U2(false); setShowLBBothTiny(false); setShowLBAllUp(false); setShowLBL1cOU1L2(false); }
   }, [activePattern, allResults, deltaAllResults]);
+
+  // ─── Two-way sync between the left-nav Views and the Screener's own
+  //     Views filter buttons ────────────────────────────────────────────────
+  // VIEW_SETTERS maps a left-nav Views (sub-pattern) id to the Screener
+  // state setter of the hand-written button that implements the same filter,
+  // so selecting a View in the sidebar also switches its Screener button on
+  // (and the effect below turns every other one off).
+  const VIEW_SETTERS: Record<string, (v: boolean) => void> = {
+    // littleabove
+    "la-2tiny": setShowLABothTiny,
+    "la-allstepup": setShowLAAllUp,
+    "1LHr-L4U3-U4": setShowLA1LHr,
+    "LA-PL12CL23": setShowLAPL12CL23,
+    "sT-cOL2U3-APU4": setShowLACompressed,
+    "T1-U4:6AM": setShowLAT1U46AM,
+    "Ss-HiL4U4-FAU4:2AM": setShowLASsHiL4U4FAU42AM,
+    "MeMi-eXL4U3-U4:6PM": setShowLAMeMieXL4U3U46PM,
+    // littlebelow
+    "lb-micro2-apu4": setShowLBBothTiny,
+    "lb-allstepdown": setShowLBAllUp,
+    "lb-cmprss-l4>3-u4<2": setShowLBCmprss,
+    "lb-c-l34c4/u23c4": setShowLBC34,
+    "lbE11-cOLoL3U2-PU4": setShowLBE11,
+    "co2-l2u2": setShowLBC2L2U2,
+    "L1-cOU1L2-U4:1AM": setShowLBL1cOU1L2,
+    // overlapping-lower
+    "eXLo-L4U4-U4": setShowExpU4PU4,
+    "OBN-LoU4L4-U4": setShowOBNLoU4L4,
+    "OBW-LoU4L4-L4": setShowOBWLoU4L4,
+    // overlapping-higher
+    "eXHi-L4U4-U4": setShowOBHiExL4U4,
+    "LMe-eXL2U2-L4:10PM": setShowLMeXL2U2,
+    "cOL3U3-pL4": setShowOBHicOL3U3pL4,
+    "7AM:MiMi-pU4:11PM": setShowOBHi7AMMiMi,
+    "6PM:LaLa->U4:2AM": setShowOBHi6PMLaLa,
+    // outside-cpr
+    "outside-cpr-compressed": setShowOutsideCPRCompressed,
+    "eXHrL3U3-AU4": setShowOutsideCPReXHrL3U3AU4,
+    // structure-bigabove
+    "bigabove-pl34cl4-u3>pu4": setShowBigAbovePL34CL4,
+    "bacomp-l3>pl1/u3>pu1": setShowBAComp,
+    "HA-U1>PU4": setShowHAU1,
+    "hR-HAL": setShowHRHAL,
+    "HA55-HrL4U34-FAU4": setShowHA55HrL4U34FAU4,
+    "1T-HiL4U4-FAU4": setShowHiL4U4FAU4,
+    "1S-cOL3U4-FAU4:1AM": setShow1ScoHiFAU4,
+    "TS-cOL3U4-AU4R:4PM": setShow2ScoHiFAU4,
+    "eXL4U2-U4:4AM": setShowBAeXL4U2,
+    "TiMi-cOL2U2-pL4:5AM": setShowBATiMicOL2U2,
+    // structure-bigbelow
+    "bigbelow-pmini-pl3": setShowBigBelowPMiniPL3,
+    "eX-U4L34": setShowExpU3LtPU4,
+    "eXU4L3-AU4": setShowBigBeloweXU4L3AU4,
+    "eXU4L2-AU4": setShowBigBeloweXU4L2AU4,
+    "1T-cOU4L4-ApU4:3PM": setShowBigBelow1TcOU4L43PM,
+  };
+
+  // Current on/off state of each of those buttons — used to detect when the
+  // user closes (✕) the Screener button for the View that the left-nav has
+  // selected, so we can deselect it in the sidebar too.
+  const VIEW_STATES: Record<string, boolean> = {
+    "la-2tiny": showLABothTiny,
+    "la-allstepup": showLAAllUp,
+    "1LHr-L4U3-U4": showLA1LHr,
+    "LA-PL12CL23": showLAPL12CL23,
+    "sT-cOL2U3-APU4": showLACompressed,
+    "T1-U4:6AM": showLAT1U46AM,
+    "Ss-HiL4U4-FAU4:2AM": showLASsHiL4U4FAU42AM,
+    "MeMi-eXL4U3-U4:6PM": showLAMeMieXL4U3U46PM,
+    "lb-micro2-apu4": showLBBothTiny,
+    "lb-allstepdown": showLBAllUp,
+    "lb-cmprss-l4>3-u4<2": showLBCmprss,
+    "lb-c-l34c4/u23c4": showLBC34,
+    "lbE11-cOLoL3U2-PU4": showLBE11,
+    "co2-l2u2": showLBC2L2U2,
+    "L1-cOU1L2-U4:1AM": showLBL1cOU1L2,
+    "eXLo-L4U4-U4": showExpU4PU4,
+    "OBN-LoU4L4-U4": showOBNLoU4L4,
+    "OBW-LoU4L4-L4": showOBWLoU4L4,
+    "eXHi-L4U4-U4": showOBHiExL4U4,
+    "LMe-eXL2U2-L4:10PM": showLMeXL2U2,
+    "cOL3U3-pL4": showOBHicOL3U3pL4,
+    "7AM:MiMi-pU4:11PM": showOBHi7AMMiMi,
+    "6PM:LaLa->U4:2AM": showOBHi6PMLaLa,
+    "outside-cpr-compressed": showOutsideCPRCompressed,
+    "eXHrL3U3-AU4": showOutsideCPReXHrL3U3AU4,
+    "bigabove-pl34cl4-u3>pu4": showBigAbovePL34CL4,
+    "bacomp-l3>pl1/u3>pu1": showBAComp,
+    "HA-U1>PU4": showHAU1,
+    "hR-HAL": showHRHAL,
+    "HA55-HrL4U34-FAU4": showHA55HrL4U34FAU4,
+    "1T-HiL4U4-FAU4": showHiL4U4FAU4,
+    "1S-cOL3U4-FAU4:1AM": show1ScoHiFAU4,
+    "TS-cOL3U4-AU4R:4PM": show2ScoHiFAU4,
+    "eXL4U2-U4:4AM": showBAeXL4U2,
+    "TiMi-cOL2U2-pL4:5AM": showBATiMicOL2U2,
+    "bigbelow-pmini-pl3": showBigBelowPMiniPL3,
+    "eX-U4L34": showExpU3LtPU4,
+    "eXU4L3-AU4": showBigBeloweXU4L3AU4,
+    "eXU4L2-AU4": showBigBeloweXU4L2AU4,
+    "1T-cOU4L4-ApU4:3PM": showBigBelow1TcOU4L43PM,
+  };
+
+  // Is activePattern a Views leaf (a sub-pattern) rather than a category?
+  const isLeafView = useMemo(
+    () => Object.values(Views).some((subs) => subs.some((s) => s.id === activePattern)),
+    [activePattern],
+  );
+
+  // Sidebar → Screener: whenever the left-nav selects a View leaf, switch the
+  // matching Screener filter button on. Runs after the reset effect above
+  // (which clears every button on each activePattern / results change), so the
+  // selected one survives while the rest stay off.
+  /* eslint-disable react-hooks/exhaustive-deps */
+  useEffect(() => {
+    if (!isLeafView) return;
+    const setter = VIEW_SETTERS[activePattern];
+    if (setter) {
+      Object.entries(VIEW_SETTERS).forEach(([id, set]) => set(id === activePattern));
+      setActiveGenericSubView(null);
+    } else {
+      // generic (data-driven) Views button
+      setActiveGenericSubView(activePattern);
+    }
+  }, [activePattern, isLeafView, allResults, deltaAllResults]);
+  /* eslint-enable react-hooks/exhaustive-deps */
+
+  // Screener → Sidebar: when the currently-selected View's Screener button is
+  // closed with its ✕, tell the left-nav to deselect the same View (falls back
+  // to its parent category). Only fires on a true → false transition so the
+  // sync effect above never triggers it.
+  const activeViewOn = VIEW_SETTERS[activePattern]
+    ? !!VIEW_STATES[activePattern]
+    : activeGenericSubView === activePattern;
+  const prevActiveViewOnRef = useRef(false);
+  useEffect(() => {
+    const wasOn = prevActiveViewOnRef.current;
+    prevActiveViewOnRef.current = activeViewOn;
+    if (isLeafView && wasOn && !activeViewOn) requestViewDeselect(activePattern);
+  }, [activeViewOn, isLeafView, activePattern]);
   // NEW: reset the generic Views toggle whenever it no longer belongs to
   // the current activePattern — either because we've left every generic
   // category entirely, or because we've switched from one generic category
