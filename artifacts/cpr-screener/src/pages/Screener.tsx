@@ -311,6 +311,24 @@ export default function Screener({
   useEffect(() => { deltaAllResultsRef.current = deltaAllResults; }, [deltaAllResults]);
   useEffect(() => { activePatternRef.current = activePattern; }, [activePattern]);
 
+  // NEW: auto-hide "Show All" whenever a left-nav view/category is clicked.
+  // ViewsSidebar's onSelect (both handlePatternClick for top-level categories
+  // and handleSubClick for their Views/sub-patterns) updates activePattern,
+  // so any change to activePattern after the initial mount means the user
+  // just picked something in the left nav — at that point showAll should be
+  // turned off so the screener actually reflects the selected filter instead
+  // of continuing to show every scanned result. The isFirstPatternRef guard
+  // skips the mount-time run so the intentional "start in Show All" default
+  // (see showAll's useState above) is left alone on first load.
+  const isFirstPatternRef = useRef(true);
+  useEffect(() => {
+    if (isFirstPatternRef.current) {
+      isFirstPatternRef.current = false;
+      return;
+    }
+    setShowAll(false);
+  }, [activePattern]);
+
   // NEW: resolve activePattern to its parent left-nav category ("section").
   // Clicking a top-level category in the left-nav sets activePattern to the
   // category id directly (e.g. "l1pu1-above"), but clicking one of its
