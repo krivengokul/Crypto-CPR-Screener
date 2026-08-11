@@ -1,4 +1,4 @@
-import { Views } from "@/components/ui/ViewsSidebar"
+import { Views } from "@/lib/ViewsSidebar"
 
 export interface ScreenerLegendProps {
   activePattern: string;

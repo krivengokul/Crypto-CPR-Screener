@@ -618,7 +618,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
   // "8AM:SRBHHLLA-pU4+1:8AM" pattern (target: prev day's R4 / PU4).
   {
     key: "inside-cpr",
-    label: "CPR Inside",
+    label: "Inside CPR",
     subCategories: [
       {
         key: "cOL3U3",
@@ -644,7 +644,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       },
     ],
   },
-  { key: "outside-cpr", label: "CPR Outside" },
+  { key: "outside-cpr", label: "Outside CPR" },
   { key: "overlapping-lower", label: "Overlap Below" },
   { key: "equal-cpr", label: "Equal CPR" },
 ];

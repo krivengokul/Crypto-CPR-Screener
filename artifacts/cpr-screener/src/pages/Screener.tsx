@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo, Fragment } from "react";
-import { pivotcategories, Views } from "@/components/ui/ViewsSidebar";
+import { pivotcategories, Views } from "@/lib/ViewsSidebar";
 import {
   TrendingUp,
   RefreshCw,

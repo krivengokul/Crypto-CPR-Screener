@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Screener from "@/pages/Screener";
 import BacktestPanel from "@/pages/BacktestPanel";
-import ViewsSidebar, { pivotcategories, SCREENER_PATTERN_IDS, type SidebarMode } from "@/components/ui/ViewsSidebar";
+import ViewsSidebar, { pivotcategories, SCREENER_PATTERN_IDS, type SidebarMode } from "@/lib/ViewsSidebar";
 import { Menu } from "lucide-react";
 
 const queryClient = new QueryClient();
