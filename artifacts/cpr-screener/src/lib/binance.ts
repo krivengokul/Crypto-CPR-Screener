@@ -41,6 +41,14 @@ async function sleep(ms: number) {
 }
 
 /**
+ * FIX (very slow scans): every fetch used to have no timeout at all. On a
+ * flaky connection a single hung request could sit open for a very long
+ * time (well past any sane wait), and — because the old scan loop awaited
+ * a whole `Promise.all` batch of 10 before moving on — that one hang stalled
+ * the other 9 requests in its batch right along with it. Every request now
+ * gets a hard timeout via AbortController, so a stuck connection fails fast
+ * and gets retried instead of silently stalling the whole scan.
+ *
  * FIX (missing symbols): every network read now goes through one retrying
  * fetch. Binance answers a burst of parallel requests with 429 / 418 (and
  * occasionally 5xx) and the old code treated those as "no data" — the symbol
@@ -50,12 +58,19 @@ async function sleep(ms: number) {
  */
 async function fetchWithRetry(
   url: string,
-  { attempts = 4, baseDelayMs = 500 }: { attempts?: number; baseDelayMs?: number } = {}
+  {
+    attempts = 5,
+    baseDelayMs = 500,
+    timeoutMs = 12000,
+  }: { attempts?: number; baseDelayMs?: number; timeoutMs?: number } = {}
 ): Promise<Response | null> {
   let lastStatus = 0;
   for (let i = 0; i < attempts; i++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      const res = await fetch(url);
+      const res = await fetch(url, { signal: controller.signal });
+      clearTimeout(timer);
       if (res.ok) return res;
       lastStatus = res.status;
       // 429 = rate limited, 418 = banned-for-a-bit, 5xx = transient upstream.
@@ -67,7 +82,10 @@ async function fetchWithRetry(
         : baseDelayMs * 2 ** i + Math.random() * 250;
       if (i < attempts - 1) await sleep(waitMs);
     } catch {
-      if (i < attempts - 1) await sleep(baseDelayMs * 2 ** i);
+      // Includes AbortError (timeout) and genuine network errors — both are
+      // transient, so retry with the same backoff as a 429/5xx.
+      clearTimeout(timer);
+      if (i < attempts - 1) await sleep(baseDelayMs * 2 ** i + Math.random() * 250);
     }
   }
   if (lastStatus) console.warn(`[binance] giving up on ${url} (last status ${lastStatus})`);
@@ -112,18 +130,39 @@ function isLiveDailyCandle(openTimeMs: number): boolean {
   return openTimeMs >= utcMidnightToday;
 }
 
+// FIX (intermittent "network error" abort + varying results): these two
+// calls are foundational — every scan needs both to succeed. Previously a
+// single transient blip on either one threw and aborted the *entire* scan
+// (the "Refusing to scan a partial symbol universe" error), and a scan that
+// aborted early vs. one that completed naturally produced a different row
+// count each time even though nothing about the market changed — that's
+// the "results vary between clicks" symptom. Both calls now (a) get more
+// retry attempts than a per-symbol kline call, since losing them is much
+// more costly, and (b) fall back to the last successful response — cached
+// in module scope — if every retry still fails, instead of hard-failing the
+// whole scan. The exchange's active-symbol list changes rarely (new listing
+// events), so a few-minutes-stale universe is a safe trade for "scan still
+// works." Tickers are always attempted fresh; the cache is purely a
+// last-resort fallback, never a substitute for a working request.
+let cachedActiveSymbols: Set<string> | null = null;
+let cachedTickers: Ticker24h[] | null = null;
+
 /**
  * FUTURES/PERPS ONLY. The screener links every row to TradingView's
  * perpetual chart (`BINANCE:<SYMBOL>.P`), so the tradable universe is drawn
  * exclusively from USDⓈ-M Futures — Spot is never consulted, so a symbol
  * with no perpetual listing simply isn't scanned.
- *
- * FIX (missing symbols): a failed futures request is a hard error instead
- * of a silent empty universe.
  */
 async function fetchActiveSymbols(): Promise<Set<string>> {
-  const futRes = await fetchWithRetry(`${FBASE}/exchangeInfo`);
+  const futRes = await fetchWithRetry(`${FBASE}/exchangeInfo`, { attempts: 6 });
   if (!futRes?.ok) {
+    if (cachedActiveSymbols) {
+      console.warn(
+        `[binance] exchangeInfo unavailable (${futRes?.status ?? "network error"}) — ` +
+          `reusing the last successful symbol universe (${cachedActiveSymbols.size} symbols) for this scan.`
+      );
+      return cachedActiveSymbols;
+    }
     throw new Error(
       `Binance futures exchangeInfo unavailable (${futRes?.status ?? "network error"}). ` +
         `Refusing to scan a partial symbol universe — retry in a moment.`
@@ -141,6 +180,7 @@ async function fetchActiveSymbols(): Promise<Set<string>> {
     active.add(s.symbol);
   }
 
+  cachedActiveSymbols = active;
   return active;
 }
 
@@ -148,12 +188,18 @@ async function fetchActiveSymbols(): Promise<Set<string>> {
  * FUTURES/PERPS ONLY, mirroring fetchActiveSymbols. Perpetual 24h tickers
  * describe the same instrument whose klines we analyse and whose `.P`
  * chart we link to — Spot tickers are never consulted.
- *
- * Also fails loudly when futures is down — same reasoning as above.
  */
 async function fetchAllTickers(): Promise<Ticker24h[]> {
-  const futRes = await fetchWithRetry(`${FBASE}/ticker/24hr`);
+  const futRes = await fetchWithRetry(`${FBASE}/ticker/24hr`, { attempts: 6 });
   if (!futRes?.ok) {
+    if (cachedTickers) {
+      console.warn(
+        `[binance] 24h tickers unavailable (${futRes?.status ?? "network error"}) — ` +
+          `reusing the last successful ticker snapshot (${cachedTickers.length} symbols) for this scan. ` +
+          `Prices/volume may be a few minutes stale until the next successful fetch.`
+      );
+      return cachedTickers;
+    }
     throw new Error(
       `Binance futures 24h tickers unavailable (${futRes?.status ?? "network error"}). ` +
         `Refusing to scan a partial symbol universe — retry in a moment.`
@@ -161,6 +207,7 @@ async function fetchAllTickers(): Promise<Ticker24h[]> {
   }
 
   const fut: Ticker24h[] = await futRes.json();
+  cachedTickers = fut;
   return fut;
 }
 
@@ -259,6 +306,42 @@ function reconcilePinnedSymbols(currentSymbols: string[]): Set<string> {
   return merged;
 }
 
+/**
+ * FIX (very slow scans): the old loop processed the universe in fixed
+ * batches of 10 and always waited a flat 300ms after each batch — even when
+ * every request in that batch had already come back in 50ms. Worse, one
+ * slow/hung request in a batch blocked the other 9 from starting their
+ * follow-up work (they'd all resolve, but the *next* batch of 10 couldn't
+ * start until the whole `Promise.all` settled), so a handful of slow
+ * symbols could stretch a scan out far longer than the sum of the actual
+ * network time. A bounded worker pool instead keeps `concurrency` requests
+ * continuously in flight — the moment one finishes, the next symbol starts
+ * immediately, with no artificial pause and no batch-of-10 waiting on a
+ * straggler. `fetchWithRetry`'s own timeout+retry logic still protects
+ * against hammering Binance if a symbol keeps failing.
+ */
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  worker: (item: T) => Promise<R>
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let nextIndex = 0;
+
+  async function runWorker() {
+    while (true) {
+      const i = nextIndex++;
+      if (i >= items.length) return;
+      results[i] = await worker(items[i]);
+    }
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, items.length) }, runWorker)
+  );
+  return results;
+}
+
 export async function runScreener(
   onProgress: (done: number, total: number, symbol: string) => void
 ): Promise<CPRResult[]> {
@@ -270,75 +353,66 @@ export async function runScreener(
   // shrinks the universe — it can only ever be a superset of past scans.
   const tickers = allTickers.filter((t) => pinnedSet.has(t.symbol));
 
-  const results: CPRResult[] = [];
   const skipped: string[] = [];
-  const batchSize = 10;
-  const delayMs = 300;
+  let done = 0;
+  const CONCURRENCY = 10;
 
-  for (let i = 0; i < tickers.length; i += batchSize) {
-    const batch = tickers.slice(i, i + batchSize);
+  const perSymbolResults = await mapWithConcurrency(tickers, CONCURRENCY, async (t) => {
+    const klines = await fetchKlines(t.symbol);
+    done++;
+    onProgress(done, tickers.length, t.symbol);
 
-    const batchResults = await Promise.all(
-      batch.map(async (t) => {
-        const klines = await fetchKlines(t.symbol);
-        if (!klines || klines.length < 2) {
-          skipped.push(t.symbol);
-          return null;
-        }
+    if (!klines || klines.length < 2) {
+      skipped.push(t.symbol);
+      return null;
+    }
 
-        const lastKline = klines[klines.length - 1];
+    const lastKline = klines[klines.length - 1];
 
-        // FIX: use UTC midnight boundary — matches TradingView high[1] lookahead_off
-        const lastKlineIsLive = isLiveDailyCandle(lastKline.openTime);
+    // FIX: use UTC midnight boundary — matches TradingView high[1] lookahead_off
+    const lastKlineIsLive = isLiveDailyCandle(lastKline.openTime);
 
-        let prevCandle: OHLC;
-        let todayCandle: OHLC;
-        let liveCandle: OHLC | null = null;
-        let ppCandle: OHLC | null = null;
+    let prevCandle: OHLC;
+    let todayCandle: OHLC;
+    let liveCandle: OHLC | null = null;
+    let ppCandle: OHLC | null = null;
 
-        if (lastKlineIsLive) {
-          if (klines.length < 3) {
-            skipped.push(t.symbol);
-            return null;
-          }
-          prevCandle  = klines[klines.length - 3]; // 2 days ago (completed)
-          todayCandle = klines[klines.length - 2]; // yesterday (completed) → today's CPR
-          liveCandle  = lastKline;                  // today's forming candle (not used for CPR)
-          if (klines.length >= 4) ppCandle = klines[klines.length - 4];
-        } else {
-          prevCandle  = klines[klines.length - 2];
-          todayCandle = klines[klines.length - 1];
-          liveCandle  = null;
-          if (klines.length >= 3) ppCandle = klines[klines.length - 3];
-        }
+    if (lastKlineIsLive) {
+      if (klines.length < 3) {
+        skipped.push(t.symbol);
+        return null;
+      }
+      prevCandle  = klines[klines.length - 3]; // 2 days ago (completed)
+      todayCandle = klines[klines.length - 2]; // yesterday (completed) → today's CPR
+      liveCandle  = lastKline;                  // today's forming candle (not used for CPR)
+      if (klines.length >= 4) ppCandle = klines[klines.length - 4];
+    } else {
+      prevCandle  = klines[klines.length - 2];
+      todayCandle = klines[klines.length - 1];
+      liveCandle  = null;
+      if (klines.length >= 3) ppCandle = klines[klines.length - 3];
+    }
 
-        const currentPrice = parseFloat(t.lastPrice);
-        // AFTER — always derive % from the same openPrice that's displayed
-        const openPriceUsed = liveCandle ? liveCandle.open : todayCandle.open;
-        const changeFromDayOpen = ((currentPrice - openPriceUsed) / openPriceUsed) * 100;
+    const currentPrice = parseFloat(t.lastPrice);
+    // AFTER — always derive % from the same openPrice that's displayed
+    const openPriceUsed = liveCandle ? liveCandle.open : todayCandle.open;
+    const changeFromDayOpen = ((currentPrice - openPriceUsed) / openPriceUsed) * 100;
 
-        const candlesForAnalysis: OHLC[] = ppCandle
-          ? [ppCandle, prevCandle, todayCandle]
-          : [prevCandle, todayCandle];
+    const candlesForAnalysis: OHLC[] = ppCandle
+      ? [ppCandle, prevCandle, todayCandle]
+      : [prevCandle, todayCandle];
 
-        return analyzeCPR(
-          t.symbol,
-          candlesForAnalysis,
-          currentPrice,
-          changeFromDayOpen,
-          parseFloat(t.quoteVolume),
-          liveCandle ? liveCandle.open : todayCandle.open
-        );
-      })
+    return analyzeCPR(
+      t.symbol,
+      candlesForAnalysis,
+      currentPrice,
+      changeFromDayOpen,
+      parseFloat(t.quoteVolume),
+      liveCandle ? liveCandle.open : todayCandle.open
     );
+  });
 
-    batchResults.forEach((r) => { if (r) results.push(r); });
-
-    const processed = Math.min(i + batchSize, tickers.length);
-    onProgress(processed, tickers.length, batch[batch.length - 1].symbol);
-
-    if (i + batchSize < tickers.length) await sleep(delayMs);
-  }
+  const results: CPRResult[] = perSymbolResults.filter((r): r is CPRResult => r !== null);
 
   if (skipped.length) {
     console.warn(
