@@ -777,7 +777,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.eXL4U2 &&
         computePrevPattern(r.prevCPR, r.ppCPR) === "eXL4U3" &&
         r.todayCPR.bc > r.prevCPR.prevHigh &&
-        r.todayCPR.s1 > r.prevCPR.tc &&
+        r.todayCPR.s1 > r.prevCPR.tc
       );
     case "pcpr-u1-cpr-pl1":
       return r.pCPR1Above;
