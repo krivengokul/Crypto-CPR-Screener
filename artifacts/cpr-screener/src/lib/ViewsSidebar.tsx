@@ -509,7 +509,7 @@ export default function ViewsSidebar({
               textTransform: "uppercase",
             }}
           >
-            PIVOT LEVEL -> VIEWS
+            PIVOT LEVEL | VIEWS
           </span>
           <button
             onClick={onClose ?? onToggle}
