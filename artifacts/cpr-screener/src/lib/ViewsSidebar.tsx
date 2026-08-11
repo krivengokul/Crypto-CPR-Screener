@@ -232,7 +232,7 @@ export const Views: Record<string, SubPattern[]> = {
     },
     // NEW: 8AM:pPDHA-SRA-U4+2:2AM — Inside CPR + raw eXL4U4 flag (prev R4
     // inside today's R3/R4, prev S4 inside today's S3/S4) + today's
-    // SRAbove (today's R1 above prev R1 AND today's S1 held at/above prev
+    // SSRRAbove (today's R1 above prev R1 AND today's S1 held at/above prev
     // S1) + prev day's PDH above today's PDH + prev day's PDL above
     // today's PDL + IF today's own PDH is below today's own R1
     // (PDHLBelow), additionally require prev day's PDH above today's R1

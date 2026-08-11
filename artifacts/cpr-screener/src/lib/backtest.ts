@@ -329,7 +329,7 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
   // targets U4 (today's R4) by ~7PM.
   // NEW: "8AM:pPDHA-SRA-U4+2:2AM" — nested under "CPR Inside" (inside-cpr)
   // via the new "eXL4U4" Pattern sub-category (see BACKTEST_CATEGORIES
-  // below). Base inside-cpr condition + raw eXL4U4 flag + today's SRAbove
+  // below). Base inside-cpr condition + raw eXL4U4 flag + today's SSRRAbove
   // + prev day's PDH above today's PDH + prev day's PDL above today's PDL
   // + (if today's own PDH is below today's own R1, additionally require
   // prev day's PDH above today's R1). Bullish, entry ~8AM, targets today's

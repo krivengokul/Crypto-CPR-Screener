@@ -667,7 +667,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return (
         (r.InsideCPR) &&
           (r.cOL3U3 || r.cOU3L3) && 
-        r.SRBelow && r.HHLLAbove
+        r.SSRRBelow && r.HHLLAbove
         //r.prevCPR.widthPct > 2.00 && r.prevCPR.widthPct <= 5.00 &&   // pLarge
         //r.todayCPR.widthPct > 1.10 && r.todayCPR.widthPct <= 2.00 && // Medium
         //r.prevCPR.PDHLBelow && r.todayCPR.PDHLAbove &&       // p-PDHLBelow  // PDHLAbove
@@ -686,13 +686,13 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.prevCPR.widthPct > 2.00 && r.prevCPR.widthPct <= 5.00 &&   // pLarge
         r.todayCPR.widthPct > 2.00 && r.todayCPR.widthPct <= 5.00 && // Large
         r.prevCPR.PDHLAbove && r.todayCPR.PDHLBelow &&            // p-PDH>U1     // PDL<L1
-        r.todayCPR.SRAbove &&
+        r.todayCPR.SSRRAbove &&
         r.prevCPR.prevHigh > r.todayCPR.prevHigh &&
         r.prevCPR.prevLow > r.todayCPR.prevLow
       );
     // NEW: 8AM:pPDHA-SRA-U4+2:2AM — Inside CPR + raw eXL4U4 flag (prev R4
     // inside today's R3/R4, prev S4 inside today's S3/S4) + today's
-    // SRAbove (today's R1 above prev R1 AND today's S1 held at/above prev
+    // SSRRAbove (today's R1 above prev R1 AND today's S1 held at/above prev
     // S1) + prev day's PDH above today's PDH ("prev prevHigh > today
     // prevHigh") + prev day's PDL above today's PDL ("prev prevLow > today
     // prevLow") + IF today's own PDH is below today's own R1 (PDHLBelow),
@@ -705,7 +705,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return (
         (r.InsideCPR) &&
         r.eXL4U4 &&
-        r.SRAbove &&
+        r.SSRRAbove &&
         r.prevCPR.prevHigh > r.todayCPR.prevHigh &&
         r.prevCPR.prevLow > r.todayCPR.prevLow &&
         (!r.todayCPR.PDHLBelow ||
@@ -1630,6 +1630,60 @@ export function renderPdhPdlSubBadges(r: CPRResult) {
   }
   if (badges.length === 0) return null;
   return <div className="flex flex-nowrap items-center gap-1">{badges}</div>;
+}
+
+/**
+ * renderSSRRHHLLBadges — the SSRR-A/SSRR-B (support/resistance directional,
+ * from CPRResult.SSRRAbove/SSRRBelow, formerly labelled SR-A/SR-B) badge
+ * pair plus the HHLL-A/HHLL-B (PDH/PDL directional, from
+ * CPRResult.HHLLAbove/HHLLBelow) badge pair. Shared by the LEVEL column's
+ * Inside CPR and Outside CPR categories (both ScreenerTableRow's
+ * renderLevelBadges and its own inline row JSX) so all four call sites stay
+ * in sync. SSRR-A/B keep the solid green/red palette (now a touch smaller);
+ * HHLL-A/B mirror the soft p-PDHL-A/p-PDHL-B styling and are colour-coded
+ * green (Above) / red (Below).
+ */
+export function renderSSRRHHLLBadges(r: CPRResult) {
+  return (
+    <>
+      {r.SSRRAbove && (
+        <span
+          key="ssrr-above"
+          className="text-[10px] px-1 py-0.5 rounded bg-green-500/10 text-green-400 border border-green-500/30 font-medium"
+          title="Today's R1 > Prev R1 and Today's S1 >= Prev S1"
+        >
+          SSRR-A
+        </span>
+      )}
+      {r.SSRRBelow && (
+        <span
+          key="ssrr-below"
+          className="text-[10px] px-1 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/30 font-medium"
+          title="Today's R1 <= Prev R1 and Today's S1 < Prev S1"
+        >
+          SSRR-B
+        </span>
+      )}
+      {r.HHLLAbove && (
+        <span
+          key="hhll-above"
+          className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-green-500/8 text-green-400/70 border border-green-500/15 font-normal"
+          title="Today's PDH > Prev PDH and Today's PDL >= Prev PDL"
+        >
+          HHLL-A
+        </span>
+      )}
+      {r.HHLLBelow && (
+        <span
+          key="hhll-below"
+          className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-red-500/8 text-red-400/70 border border-red-500/15 font-normal"
+          title="Today's PDH <= Prev PDH and Today's PDL < Prev PDL"
+        >
+          HHLL-B
+        </span>
+      )}
+    </>
+  );
 }
 
 export function isRisingAboveTC(r: CPRResult): boolean {

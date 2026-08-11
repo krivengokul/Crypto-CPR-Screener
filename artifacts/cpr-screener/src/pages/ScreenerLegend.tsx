@@ -383,10 +383,10 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
         ) : activePattern === "8AM:pPDHA-SRA-U4+2:2AM" ? (
           <>
             <div className="text-xs font-semibold text-green-400 mb-1">
-              Pattern: eXL4U4&nbsp;&nbsp;SR: SRAbove
+              Pattern: eXL4U4&nbsp;&nbsp;SSRR: SSRRAbove
             </div>
             <div className="text-xs text-muted-foreground">
-              Inside CPR + eXL4U4 (prev R4 inside today&apos;s R3/R4, prev S4 inside today&apos;s S3/S4) + today&apos;s SRAbove (today R1 above prev R1, today S1 held at/above prev S1) + prev day&apos;s PDH above today&apos;s PDH + prev day&apos;s PDL above today&apos;s PDL + if today&apos;s PDH is below today&apos;s R1 (PDHLBelow), prev day&apos;s PDH must also be above today&apos;s R1 (p-PDHA).
+              Inside CPR + eXL4U4 (prev R4 inside today&apos;s R3/R4, prev S4 inside today&apos;s S3/S4) + today&apos;s SSRRAbove (today R1 above prev R1, today S1 held at/above prev S1) + prev day&apos;s PDH above today&apos;s PDH + prev day&apos;s PDL above today&apos;s PDL + if today&apos;s PDH is below today&apos;s R1 (PDHLBelow), prev day&apos;s PDH must also be above today&apos;s R1 (p-PDHA).
             </div>
           </>
         ) : showExpU3LtPU4 && activePattern === "structure-bigbelow" ? (
@@ -684,7 +684,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
               Target: U4&nbsp;&nbsp;&nbsp;Entry: 8AM&nbsp;&nbsp;&nbsp;Time: 2AM (+2)
             </div>
             <div className="text-xs text-muted-foreground">
-              Bullish continuation from an Inside-CPR/eXL4U4 setup with today&apos;s SRAbove holding — expected move toward today&apos;s U4 by ~2AM, two days out.
+              Bullish continuation from an Inside-CPR/eXL4U4 setup with today&apos;s SSRRAbove holding — expected move toward today&apos;s U4 by ~2AM, two days out.
             </div>
           </>
         ) : showExpU3LtPU4 && activePattern === "structure-bigbelow" ? (
