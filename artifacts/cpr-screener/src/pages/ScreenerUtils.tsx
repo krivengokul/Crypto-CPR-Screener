@@ -773,11 +773,11 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // sibling.
     case "6PM:APHS1A-FAU4:9PM":
       return (
-        r.CPRs1Above &&
-        r.eXL4U2 &&
-        computePrevPattern(r.prevCPR, r.ppCPR) === "eXL4U3" &&
-        r.todayCPR.bc > r.prevCPR.prevHigh &&
-        r.todayCPR.s1 > r.prevCPR.tc
+        r.CPRs1Above && r.eXL4U2 &&
+        r.todayCPR.bc > r.prevCPR.prevHigh && r.todayCPR.s1 > r.prevCPR.tc &&
+        (computePrevPattern(r.prevCPR, r.ppCPR) === "eXL3U3" ||
+        (computePrevPattern(r.prevCPR, r.ppCPR) === "eXL4U3" &&
+        r.prevCPR.pivot > r.todayCPR.prevLow && r.todayCPR.s3 > r.prevCPR.s3 ))
       );
     case "pcpr-u1-cpr-pl1":
       return r.pCPR1Above;
