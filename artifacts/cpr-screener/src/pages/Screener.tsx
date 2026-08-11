@@ -57,6 +57,17 @@ import ScreenerTableRow, { ScreenerTableHeader } from "./ScreenerTableRow";
 import { useBinanceLiveRefresh, useDeltaLiveRefresh } from "@/hooks/useLivePriceRefresh";
 
 /**
+ * ViewCount — "(n)" badge shown at the end of every Views filter button,
+ * matching the bold-white count style used in the left-nav (ViewsSidebar).
+ * Renders nothing until counts for that view id are available.
+ */
+function ViewCount({ id, counts }: { id: string; counts: Record<string, number> }) {
+  const n = counts[id];
+  if (typeof n !== "number") return null;
+  return <span className="ml-1 font-bold text-white">({n})</span>;
+}
+
+/**
  * GENERIC_VIEW_CATEGORIES — left-nav categories whose Views (sub-patterns)
  * are rendered generically (see the "Generic Views" block in the JSX below
  * and the matching fallback in getActivePool), instead of each sub-pattern
@@ -94,6 +105,10 @@ const GENERIC_VIEW_CATEGORIES = new Set([
   // both surfaces.
   "inside-cpr",
 ]);
+
+/** View ids used by hand-written Views filter buttons that aren't listed in
+ *  ViewsSidebar's `Views` map, but still need a "(n)" count. */
+const EXTRA_VIEW_COUNT_IDS = ["la-allstepup", "eXLo-L4U4-U4", "bigabove-pl34cl4-u3>pu4", "HA-U1>PU4"];
 
 export default function Screener({
   activePattern = "littleabove",
@@ -494,6 +509,24 @@ export default function Screener({
     }
     onCounts(counts);
   }, [allResults, deltaAllResults, activeTab, onCounts]);
+
+  // NEW: per-view matching counts for the Views filter buttons rendered in
+  // this screen ("(41)" suffix), computed off the same unfiltered pool used
+  // for the left-nav counts so both always agree.
+  const viewCounts = useMemo(() => {
+    const pool: CPRResult[] =
+      activeTab === "delta" ? deltaAllResults
+      : activeTab === "combined" ? [...allResults, ...deltaAllResults]
+      : allResults;
+    const map: Record<string, number> = {};
+    if (pool.length === 0) return map;
+    const ids = new Set<string>();
+    for (const p of pivotcategories) ids.add(p.id);
+    for (const subs of Object.values(Views)) for (const s of subs) ids.add(s.id);
+    for (const extra of EXTRA_VIEW_COUNT_IDS) ids.add(extra);
+    for (const id of ids) map[id] = pool.filter((r) => passesPattern(r, id)).length;
+    return map;
+  }, [allResults, deltaAllResults, activeTab]);
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -1548,7 +1581,7 @@ export default function Screener({
                 }`}
                 title="WideAbove, Pivot Level: Higher, Today's TC between Prev R1/R2, Today's R3 > Prev R4"
               >
-                {showHRHAL ? "✕ hR-HAL" : "hR-HAL"}
+                {showHRHAL ? "✕ hR-HAL" : "hR-HAL"}<ViewCount id={"hR-HAL"} counts={viewCounts} />
               </button>
             )}
 
@@ -1606,7 +1639,7 @@ export default function Screener({
                 }`}
                 title="Wide Above + HiL4U4 (Prev R4 inside today's R3/R4, Today's S4 inside Prev S3/S4) + Prev CPR pMicro (<=0.10%) + Today CPR Tiny (0.10%-0.25%)"
               >
-                {showHiL4U4FAU4 ? "✕ 1T-HiL4U4-FAU4" : "1T-HiL4U4-FAU4"}
+                {showHiL4U4FAU4 ? "✕ 1T-HiL4U4-FAU4" : "1T-HiL4U4-FAU4"}<ViewCount id={"1T-HiL4U4-FAU4"} counts={viewCounts} />
               </button>
             )}
             {/* NEW: 1S-cOL3U4-FAU4:1AM button — BigCPR Above.
@@ -1636,7 +1669,7 @@ export default function Screener({
                 }`}
                 title="Pivot cOL3U4 + Today's S1 > Prev Pivot + Prev CPR width ≤ 0.10% + Today CPR width 0.60%–1.10%"
               >
-                {show1ScoHiFAU4 ? "✕ 1S-cOL3U4-FAU4:1AM" : "1S-cOL3U4-FAU4:1AM"}
+                {show1ScoHiFAU4 ? "✕ 1S-cOL3U4-FAU4:1AM" : "1S-cOL3U4-FAU4:1AM"}<ViewCount id={"1S-cOL3U4-FAU4:1AM"} counts={viewCounts} />
               </button>
             )}
             {/* NEW: TS-cOL3U4-AU4R:4PM button — BigCPR Above.
@@ -1666,7 +1699,7 @@ export default function Screener({
                 }`}
                 title="Pivot cOL3U4 + Today's S1 > Prev Pivot + Prev CPR width 0.10%–0.22% (Tiny) + Today CPR width 0.60%–1.10% (Small)"
               >
-                {show2ScoHiFAU4 ? "✕ TS-cOL3U4-AU4R:4PM" : "TS-cOL3U4-AU4R:4PM"}
+                {show2ScoHiFAU4 ? "✕ TS-cOL3U4-AU4R:4PM" : "TS-cOL3U4-AU4R:4PM"}<ViewCount id={"TS-cOL3U4-AU4R:4PM"} counts={viewCounts} />
               </button>
             )}
             {/* NEW: eXL4U2-U4:4AM button — BigCPR Above Views entry with no Screener button */}
@@ -1694,7 +1727,7 @@ export default function Screener({
                 }`}
                 title="Show only rows matching eXL4U2-U4:4AM"
               >
-                {showBAeXL4U2 ? "✕ eXL4U2-U4:4AM" : "eXL4U2-U4:4AM"}
+                {showBAeXL4U2 ? "✕ eXL4U2-U4:4AM" : "eXL4U2-U4:4AM"}<ViewCount id={"eXL4U2-U4:4AM"} counts={viewCounts} />
               </button>
             )}
             {/* NEW: TiMi-cOL2U2-pL4:5AM button — BigCPR Above Views entry with no Screener button */}
@@ -1722,7 +1755,7 @@ export default function Screener({
                 }`}
                 title="Show only rows matching TiMi-cOL2U2-pL4:5AM"
               >
-                {showBATiMicOL2U2 ? "✕ TiMi-cOL2U2-pL4:5AM" : "TiMi-cOL2U2-pL4:5AM"}
+                {showBATiMicOL2U2 ? "✕ TiMi-cOL2U2-pL4:5AM" : "TiMi-cOL2U2-pL4:5AM"}<ViewCount id={"TiMi-cOL2U2-pL4:5AM"} counts={viewCounts} />
               </button>
             )}
             {/* CHANGED: label/id now match ViewsSidebar's littlebelow
@@ -1739,7 +1772,7 @@ export default function Screener({
                 }`}
                 title="Little Below, both CPRs micro-narrow (<=0.10%), all step-down / all up-below stacked, prev R4/S4 inside today's R3-R4/S3-S4"
               >
-                {showLBBothTiny ? "✕ Micro2-ApU4" : "Micro2-ApU4"}
+                {showLBBothTiny ? "✕ Micro2-ApU4" : "Micro2-ApU4"}<ViewCount id={"lb-micro2-apu4"} counts={viewCounts} />
               </button>
             )}
 
@@ -1754,7 +1787,7 @@ export default function Screener({
                 }`}
                 title="Show symbols that match BOTH Structure LittleBelow AND LittleBelow-Ladder (all R/S levels stepped down)"
               >
-                {showLBAllUp ? "✕ LB-AllUp" : "LB-AllUp"}
+                {showLBAllUp ? "✕ LB-AllUp" : "LB-AllUp"}<ViewCount id={"lb-allstepdown"} counts={viewCounts} />
               </button>
             )}
 
@@ -1769,7 +1802,7 @@ export default function Screener({
                 }`}
                 title="LB, Compressed: Todays L4 > PDay L3 / Todays U4 < PDays L2: Target:PU4"
               >
-                {showLBCmprss ? "✕ lb-Cmprss-L4>3/U4<2" : "lb-Cmprss-L4>3/U4<2"}
+                {showLBCmprss ? "✕ lb-Cmprss-L4>3/U4<2" : "lb-Cmprss-L4>3/U4<2"}<ViewCount id={"lb-cmprss-l4>3-u4<2"} counts={viewCounts} />
               </button>
             )}
 
@@ -1784,7 +1817,7 @@ export default function Screener({
                 }`}
                 title="LB, PL34CL4 / Today R4 between Prev R2 and R3"
               >
-                {showLBC34 ? "✕ lb-c-l34c4/u23c4" : "lb-c-l34c4/u23c4"}
+                {showLBC34 ? "✕ lb-c-l34c4/u23c4" : "lb-c-l34c4/u23c4"}<ViewCount id={"lb-c-l34c4/u23c4"} counts={viewCounts} />
               </button>
             )}
 
@@ -1799,7 +1832,7 @@ export default function Screener({
                 }`}
                 title="Today's R4 inside Prev R1/R2 AND Today's S4 inside Prev S2/S3, both CPRs 1%-1.5% wide: Target:Bullish PU4"
               >
-                {showLBE11 ? "✕ lbE11-cOLoL3U2-PU4" : "lbE11-cOLoL3U2-PU4"}
+                {showLBE11 ? "✕ lbE11-cOLoL3U2-PU4" : "lbE11-cOLoL3U2-PU4"}<ViewCount id={"lbE11-cOLoL3U2-PU4"} counts={viewCounts} />
               </button>
             )}
 
@@ -1814,7 +1847,7 @@ export default function Screener({
                 }`}
                 title="Compressed Inside Previous L2 and Previous U2: Target: Bullish U4"
               >
-                {showLBC2L2U2 ? "✕ cO2-L2U2" : "cO2-L2U2"}
+                {showLBC2L2U2 ? "✕ cO2-L2U2" : "cO2-L2U2"}<ViewCount id={"co2-l2u2"} counts={viewCounts} />
               </button>
             )}
 
@@ -1829,7 +1862,7 @@ export default function Screener({
                 }`}
                 title="cOU1L2 + today's R1 above prev BC and below today's PDH, prev CPR Large (2%-5%), today CPR Micro (<=0.10%): Target U4 ~1AM"
               >
-                {showLBL1cOU1L2 ? "✕ L1-cOU1L2-U4:1AM" : "L1-cOU1L2-U4:1AM"}
+                {showLBL1cOU1L2 ? "✕ L1-cOU1L2-U4:1AM" : "L1-cOU1L2-U4:1AM"}<ViewCount id={"L1-cOU1L2-U4:1AM"} counts={viewCounts} />
               </button>
             )}
 
@@ -1843,7 +1876,7 @@ export default function Screener({
                 }`}
                 title="Show symbols that match BOTH Structure LittleAbove AND TinyAbove-Both Tiny"
               >
-                {showLABothTiny ? "✕ LA-BothTiny" : "LA-BothTiny"}
+                {showLABothTiny ? "✕ LA-BothTiny" : "LA-BothTiny"}<ViewCount id={"la-2tiny"} counts={viewCounts} />
               </button>
             )}
             {activeSectionKey === "littleabove" && !showAll && (
@@ -1856,7 +1889,7 @@ export default function Screener({
                 }`}
                 title="Show symbols that match BOTH Structure LittleAbove AND LittleAbove-Ladder (all R/S levels stepped up)"
               >
-                {showLAAllUp ? "✕ LA-AllUp" : "LA-AllUp"}
+                {showLAAllUp ? "✕ LA-AllUp" : "LA-AllUp"}<ViewCount id={"la-allstepup"} counts={viewCounts} />
               </button>
             )}
             {/* NEW: 1LHr-L4U3-U4 button — Little Above, placed next to LA-AllUp */}
@@ -1870,7 +1903,7 @@ export default function Screener({
                 }`}
                 title="Todays S4 > Prev S4 & < Prev S3, Todays R3 > Prev R4, Today CPR width < 0.1%, Prev CPR width 0.1%–1%"
               >
-                {showLA1LHr ? "✕ 1LHr-L4U3-U4" : "1LHr-L4U3-U4"}
+                {showLA1LHr ? "✕ 1LHr-L4U3-U4" : "1LHr-L4U3-U4"}<ViewCount id={"1LHr-L4U3-U4"} counts={viewCounts} />
               </button>
             )}
             {activeSectionKey === "littleabove" && !showAll && (
@@ -1883,7 +1916,7 @@ export default function Screener({
                 }`}
                 title="Show symbols matching LA-PL12CL23:2PL4 (Bearish Target: 2PL4)"
               >
-                {showLAPL12CL23 ? "✕ PL12CL23" : "PL12CL23"}
+                {showLAPL12CL23 ? "✕ PL12CL23" : "PL12CL23"}<ViewCount id={"LA-PL12CL23"} counts={viewCounts} />
               </button>
             )}
             {activeSectionKey === "littleabove" && !showAll && (
@@ -1896,7 +1929,7 @@ export default function Screener({
                 }`}
                 title="Compressed Inside Previous L2 and Previous U3: Target:Bullish APU4"
               >
-                {showLACompressed ? "✕ cOL2U3-ApU4" : "cOL2U3-ApU4"}
+                {showLACompressed ? "✕ cOL2U3-ApU4" : "cOL2U3-ApU4"}<ViewCount id={"sT-cOL2U3-APU4"} counts={viewCounts} />
               </button>
             )}
             {/* NEW: T1-U4:6AM — Little Above */}
@@ -1910,7 +1943,7 @@ export default function Screener({
                 }`}
                 title="Today's Pivot > Prev R1, Prev CPR pTiny (0.10–0.22%), Today CPR Micro (≤0.10%) — Target: U4 at 6AM"
               >
-                {showLAT1U46AM ? "✕ T1-U4:6AM" : "T1-U4:6AM"}
+                {showLAT1U46AM ? "✕ T1-U4:6AM" : "T1-U4:6AM"}<ViewCount id={"T1-U4:6AM"} counts={viewCounts} />
               </button>
             )}
             {/* NEW: Ss-HiL4U4-FAU4:2AM — Little Above */}
@@ -1924,7 +1957,7 @@ export default function Screener({
                 }`}
                 title="cprRising + narrowCPR + AllStepUp above/below + Today S1>Prev PDL + Today R1>Prev PDH + Today PDH>Today R1, both CPRs 0.60%–1.10% (Small) — Target: Far Above U4 (T-5 U4) at 2AM"
               >
-                {showLASsHiL4U4FAU42AM ? "✕ Ss-HiL4U4-FAU4:2AM" : "Ss-HiL4U4-FAU4:2AM"}
+                {showLASsHiL4U4FAU42AM ? "✕ Ss-HiL4U4-FAU4:2AM" : "Ss-HiL4U4-FAU4:2AM"}<ViewCount id={"Ss-HiL4U4-FAU4:2AM"} counts={viewCounts} />
               </button>
             )}
             {/* NEW: MeMi-eXL4U3-U4:6PM — Little Above (green family) */}
@@ -1938,7 +1971,7 @@ export default function Screener({
                 }`}
                 title="cprRising + narrowCPR + eXL4U3 + Today's TC >= Prev R1, Prev CPR 1.10%–2.00% (Medium), Today CPR 0.22%–0.60% (Mini) — Target: U4 (T-5 AU4) at 6PM"
               >
-                {showLAMeMieXL4U3U46PM ? "✕ MeMi-eXL4U3-U4:6PM" : "MeMi-eXL4U3-U4:6PM"}
+                {showLAMeMieXL4U3U46PM ? "✕ MeMi-eXL4U3-U4:6PM" : "MeMi-eXL4U3-U4:6PM"}<ViewCount id={"MeMi-eXL4U3-U4:6PM"} counts={viewCounts} />
               </button>
             )}
             {/* NEW: generic Views (sub-pattern) buttons — covers CPR 1ABOVE,
@@ -1969,6 +2002,7 @@ export default function Screener({
                     title={`Show only rows matching ${sub.label}`}
                   >
                     {isActive ? `✕ ${sub.label}` : sub.label}
+                    <ViewCount id={sub.id} counts={viewCounts} />
                   </button>
                 );
               })}
@@ -1982,7 +2016,7 @@ export default function Screener({
                 }`}
                 title="Prev R4 between today's R3/R4 and Prev S4 between today's S3/S4 with today's CPR Mini"
               >
-                {showExpU4PU4 ? "✕ eXLo-L4U4-U4" : "eXLo-L4U4-U4"}
+                {showExpU4PU4 ? "✕ eXLo-L4U4-U4" : "eXLo-L4U4-U4"}<ViewCount id={"eXLo-L4U4-U4"} counts={viewCounts} />
               </button>
             )}
             {/* NEW: Exp-U3>pU4 button — Overlapping Lower, placed right after eXLo-L4U4-U4 */}
@@ -1996,7 +2030,7 @@ export default function Screener({
                 }`}
                 title="U3 > pU4/L3 < pL4 ,CPR Narrow: Target:AU4"
               >
-                {showExpU3PU3 ? "✕ Exp-U3>pU4" : "Exp-U3>pU4"}
+                {showExpU3PU3 ? "✕ Exp-U3>pU4" : "Exp-U3>pU4"}<ViewCount id={"eXLo-L4U4-U4"} counts={viewCounts} />
               </button>
             )}
             {/* NEW: OBN-LoU4L4-U4 button — Overlapping Lower, placed next to Exp-U3>pU4 */}
@@ -2010,7 +2044,7 @@ export default function Screener({
                 }`}
                 title="Overlap Lower + today's CPR Narrow + LoU4L4 structure, Compression > 50%: Target:U4"
               >
-                {showOBNLoU4L4 ? "✕ OBN-LoU4L4-U4" : "OBN-LoU4L4-U4"}
+                {showOBNLoU4L4 ? "✕ OBN-LoU4L4-U4" : "OBN-LoU4L4-U4"}<ViewCount id={"OBN-LoU4L4-U4"} counts={viewCounts} />
               </button>
             )}
             {/* NEW: OBW-LoU4L4-L4 button — Overlapping Lower, placed next to OBN-LoU4L4-U4 */}
@@ -2024,7 +2058,7 @@ export default function Screener({
                 }`}
                 title="Overlap Lower + today's CPR Wide + LoU4L4 structure, Compression > 50%: Target:U4"
               >
-                {showOBWLoU4L4 ? "✕ OBW-LoU4L4-L4" : "OBW-LoU4L4-L4"}
+                {showOBWLoU4L4 ? "✕ OBW-LoU4L4-L4" : "OBW-LoU4L4-L4"}<ViewCount id={"OBW-LoU4L4-L4"} counts={viewCounts} />
               </button>
             )}
             {/* NEW: eXHi-L4U4-U4 button — Overlapping Higher, counterpart of
@@ -2046,7 +2080,7 @@ export default function Screener({
                 }`}
                 title="Overlap Higher: Prev R4 between today's R3/R4, Prev S4 between today's S3/S4, Prev CPR pSmall, Today CPR Tiny"
               >
-                {showOBHiExL4U4 ? "✕ eXHi-L4U4-U4" : "eXHi-L4U4-U4"}
+                {showOBHiExL4U4 ? "✕ eXHi-L4U4-U4" : "eXHi-L4U4-U4"}<ViewCount id={"eXHi-L4U4-U4"} counts={viewCounts} />
               </button>
             )}
             {activeSectionKey === "outside-cpr" && !showAll && (
@@ -2059,7 +2093,7 @@ export default function Screener({
                 }`}
                 title="Show OutsideCPR symbols where today R4 < prev R4 AND today S4 > prev S4 (compressed range)"
               >
-                {showOutsideCPRCompressed ? "✕ Compressed" : "Compressed"}
+                {showOutsideCPRCompressed ? "✕ Compressed" : "Compressed"}<ViewCount id={"outside-cpr-compressed"} counts={viewCounts} />
               </button>
             )}
             {/* NEW: eXHrL3U3-AU4 button — Outside CPR, placed next to Compressed */}
@@ -2073,7 +2107,7 @@ export default function Screener({
                 }`}
                 title="Prev S4 between today's S3/S4 AND Prev R4 between today's R2/R3, Today CPR width 0.5%-2%, Prev CPR width <0.5%"
               >
-                {showOutsideCPReXHrL3U3AU4 ? "✕ eXHrL3U3-AU4" : "eXHrL3U3-AU4"}
+                {showOutsideCPReXHrL3U3AU4 ? "✕ eXHrL3U3-AU4" : "eXHrL3U3-AU4"}<ViewCount id={"eXHrL3U3-AU4"} counts={viewCounts} />
               </button>
             )}
              {/* NEW: LMe-eXL2U2-L4:10PM button — Overlap Above */}
@@ -2093,7 +2127,7 @@ export default function Screener({
                 }`}
                 title="Overlap Above + eXL2U2 pivot band + Compression Ratio 60%–90%. Target L4 by ~10PM."
               >
-                {showLMeXL2U2 ? "✕ LMe-eXL2U2-L4:10PM" : "LMe-eXL2U2-L4:10PM"}
+                {showLMeXL2U2 ? "✕ LMe-eXL2U2-L4:10PM" : "LMe-eXL2U2-L4:10PM"}<ViewCount id={"LMe-eXL2U2-L4:10PM"} counts={viewCounts} />
               </button>
             )}
             {/* NEW: cOL3U3-pL4 button — Overlapping Higher Views entry with no Screener button */}
@@ -2113,7 +2147,7 @@ export default function Screener({
                 }`}
                 title="Show only rows matching cOL3U3-pL4"
               >
-                {showOBHicOL3U3pL4 ? "✕ cOL3U3-pL4" : "cOL3U3-pL4"}
+                {showOBHicOL3U3pL4 ? "✕ cOL3U3-pL4" : "cOL3U3-pL4"}<ViewCount id={"cOL3U3-pL4"} counts={viewCounts} />
               </button>
             )}
             {/* NEW: 7AM:MiMi-pU4:11PM button — Overlapping Higher Views entry with no Screener button */}
@@ -2133,7 +2167,7 @@ export default function Screener({
                 }`}
                 title="Show only rows matching 7AM:MiMi-pU4:11PM"
               >
-                {showOBHi7AMMiMi ? "✕ 7AM:MiMi-pU4:11PM" : "7AM:MiMi-pU4:11PM"}
+                {showOBHi7AMMiMi ? "✕ 7AM:MiMi-pU4:11PM" : "7AM:MiMi-pU4:11PM"}<ViewCount id={"7AM:MiMi-pU4:11PM"} counts={viewCounts} />
               </button>
             )}
             {/* NEW: 6PM:LaLa->U4:2AM button — Overlapping Higher Views entry with no Screener button */}
@@ -2153,7 +2187,7 @@ export default function Screener({
                 }`}
                 title="Show only rows matching 6PM:LaLa->U4:2AM"
               >
-                {showOBHi6PMLaLa ? "✕ 6PM:LaLa->U4:2AM" : "6PM:LaLa->U4:2AM"}
+                {showOBHi6PMLaLa ? "✕ 6PM:LaLa->U4:2AM" : "6PM:LaLa->U4:2AM"}<ViewCount id={"6PM:LaLa->U4:2AM"} counts={viewCounts} />
               </button>
             )}
             {activeSectionKey === "structure-bigbelow" && !showAll && (
@@ -2175,7 +2209,7 @@ export default function Screener({
                 }`}
                 title="Compressed, Mini PCPR, PL34CL4, Prev U3 above U4: Target-APU4"
               >
-                {showBigBelowPMiniPL3 ? "✕ pMini-L34C4/U3>4" : "pMini-L34C4/U3>4"}
+                {showBigBelowPMiniPL3 ? "✕ pMini-L34C4/U3>4" : "pMini-L34C4/U3>4"}<ViewCount id={"bigbelow-pmini-pl3"} counts={viewCounts} />
               </button>
             )}
             {/* NEW: eX-U4L34 button — Big Below, placed next to pMini-L34C4/U3>4 */}
@@ -2198,7 +2232,7 @@ export default function Screener({
                 }`}
                 title="Todays U4 is above PU4 and Todays L3/L4 below PL4: Target:Far Below PL4"
               >
-                {showExpU3LtPU4 ? "✕ eX-U4L34" : "eX-U4L34"}
+                {showExpU3LtPU4 ? "✕ eX-U4L34" : "eX-U4L34"}<ViewCount id={"eX-U4L34"} counts={viewCounts} />
               </button>
             )}
             {/* NEW: eXU4L3-AU4 button — Big Below, placed next to eX-U4L3 (moved from LittleCPR Below) */}
@@ -2221,7 +2255,7 @@ export default function Screener({
                 }`}
                 title="Wide Below: Prev R4 between today's R3/R4 AND Prev S4 above today's S3, Today CPR width 0.5%-2%, Prev CPR width <0.5%"
               >
-                {showBigBeloweXU4L3AU4 ? "✕ eXU4L3-AU4" : "eXU4L3-AU4"}
+                {showBigBeloweXU4L3AU4 ? "✕ eXU4L3-AU4" : "eXU4L3-AU4"}<ViewCount id={"eXU4L3-AU4"} counts={viewCounts} />
               </button>
             )}
             {/* NEW: L1<pL4 button — Big Below, placed next to eX-U4L34 */}
@@ -2244,7 +2278,7 @@ export default function Screener({
                 }`}
                 title="Todays S1 below Prev S4 AND Todays R2 above Prev R4 (Wide CPR Below Prev CPR)"
               >
-                {showBigBelowL1LtPL4 ? "✕ L1<pL4" : "L1<pL4"}
+                {showBigBelowL1LtPL4 ? "✕ L1<pL4" : "L1<pL4"}<ViewCount id={"l1-lt-pl4"} counts={viewCounts} />
               </button>
             )}
             {/* NEW: CPR<pL4 sub-toggle — restrict L1<pL4 results to rows where today's TC is below prev day's S4 */}
@@ -2283,7 +2317,7 @@ export default function Screener({
                 }`}
                 title="Wide Below + eXU4L2 (Prev R4 inside today's R3/R4, Prev S4 inside today's S1/S2), Prev R3 > Today R3, Today R1 or Prev S1 between the two Pivots, Prev CPR pSmall (0.6%-1.1%), Today CPR 1%-2%"
               >
-                {showBigBeloweXU4L2AU4 ? "✕ eXU4L2-AU4" : "eXU4L2-AU4"}
+                {showBigBeloweXU4L2AU4 ? "✕ eXU4L2-AU4" : "eXU4L2-AU4"}<ViewCount id={"eXU4L2-AU4"} counts={viewCounts} />
               </button>
             )}
             {/* NEW: 1T-cOU4L4-ApU4:3PM button — Big Below, placed next to eXU4L2-AU4.
@@ -2309,7 +2343,7 @@ export default function Screener({
                 }`}
                 title="Wide Below + cOU4L4 + Prev R1 between Today R1/R2 + Today S1 between Prev S1/S2 + Prev PDH > Prev R1 + Prev CPR pMicro (<=0.10%) + Today CPR Tiny (0.10%-0.22%)"
               >
-                {showBigBelow1TcOU4L43PM ? "✕ 1T-cOU4L4-ApU4:3PM" : "1T-cOU4L4-ApU4:3PM"}
+                {showBigBelow1TcOU4L43PM ? "✕ 1T-cOU4L4-ApU4:3PM" : "1T-cOU4L4-ApU4:3PM"}<ViewCount id={"1T-cOU4L4-ApU4:3PM"} counts={viewCounts} />
               </button>
             )}
             {/* NEW: live sub-toggle — restrict pMini results to rows currently trading above today's TC */}
@@ -2366,7 +2400,7 @@ export default function Screener({
                 }`}
                 title="BigAbove: PL34CL4 AND today R3 above prev R4"
               >
-                {showBigAbovePL34CL4 ? "✕ PL34CL4/U3>PU4" : "PL34CL4/U3>PU4"}
+                {showBigAbovePL34CL4 ? "✕ PL34CL4/U3>PU4" : "PL34CL4/U3>PU4"}<ViewCount id={"bigabove-pl34cl4-u3>pu4"} counts={viewCounts} />
               </button>
             )}
             {/* NEW: BAComp-l3>pl1/u3>pu1 button — inside BigCPR Above, next to Show All */}
@@ -2380,7 +2414,7 @@ export default function Screener({
                 }`}
                 title="BigAbove: Compressed inside PU2: Target:U4"
               >
-                {showBAComp ? "✕ Inside PUL2" : "Inside PUL2"}
+                {showBAComp ? "✕ Inside PUL2" : "Inside PUL2"}<ViewCount id={"bacomp-l3>pl1/u3>pu1"} counts={viewCounts} />
               </button>
             )}
             {/* NEW: U1>PU4 button — inside BigCPR Above, next to Inside PUL2 (moved from left-nav) */}
@@ -2402,7 +2436,7 @@ export default function Screener({
                 }`}
                 title="Todays U1> Previous U4"
               >
-                {showHAU1 ? "✕ U1>PU4" : "U1>PU4"}
+                {showHAU1 ? "✕ U1>PU4" : "U1>PU4"}<ViewCount id={"HA-U1>PU4"} counts={viewCounts} />
               </button>
             )}
             {/* NEW: pWideAbove button — nested under U1>PU4, independent of the

@@ -10,7 +10,6 @@ import {
   Equal,
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
   X,
   FlaskConical,
 } from "lucide-react";
@@ -600,7 +599,9 @@ export default function ViewsSidebar({
             return (
               <div key={pattern.id}>
                 {/* Parent row */}
-                <button
+                <div
+                  role="button"
+                  tabIndex={0}
                   onClick={() => handleParentClick(pattern.id)}
                   style={{
                     width: "100%",
@@ -668,7 +669,7 @@ export default function ViewsSidebar({
                     >
                       {pattern.label}
                       {typeof counts?.[pattern.id] === "number" && (
-                        <span style={{ color: DIM_TEXT, fontWeight: 400 }}>
+                        <span style={{ color: "#ffffff", fontWeight: 700 }}>
                           {" "}({counts[pattern.id]})
                         </span>
                       )}
@@ -688,18 +689,57 @@ export default function ViewsSidebar({
                     </div>
                   </div>
 
-                  {/* Expand arrow */}
-                  {children.length > 0 &&
-                    (isExpanded ? (
-                      <ChevronDown
-                        style={{ width: 12, height: 12, color: DIM_TEXT, flexShrink: 0 }}
-                      />
-                    ) : (
-                      <ChevronRight
-                        style={{ width: 12, height: 12, color: DIM_TEXT, flexShrink: 0 }}
-                      />
-                    ))}
-                </button>
+                  {/* +/- expand toggle — styled like the Screener filter buttons */}
+                  {children.length > 0 && (
+                    <button
+                      type="button"
+                      aria-label={isExpanded ? `Collapse ${pattern.label}` : `Expand ${pattern.label}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (isExpanded) {
+                          setExpandedId(null);
+                        } else {
+                          handleParentClick(pattern.id);
+                        }
+                      }}
+                      style={{
+                        flexShrink: 0,
+                        width: 18,
+                        height: 18,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 12,
+                        lineHeight: 1,
+                        fontWeight: 700,
+                        borderRadius: 4,
+                        cursor: "pointer",
+                        border: `1px solid ${isExpanded ? ACTIVE_BLUE : BORDER_COLOR}`,
+                        background: isExpanded ? "rgba(59,130,246,0.18)" : "rgba(255,255,255,0.02)",
+                        color: isExpanded ? ACTIVE_TEXT : SUB_TEXT,
+                        transition: "all 0.1s",
+                      }}
+                      onMouseEnter={(e) => {
+                        const el = e.currentTarget as HTMLElement;
+                        if (!isExpanded) {
+                          el.style.borderColor = "#2e4a6a";
+                          el.style.color = MUTED_TEXT;
+                          el.style.background = "rgba(59,130,246,0.06)";
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        const el = e.currentTarget as HTMLElement;
+                        if (!isExpanded) {
+                          el.style.borderColor = BORDER_COLOR;
+                          el.style.color = SUB_TEXT;
+                          el.style.background = "rgba(255,255,255,0.02)";
+                        }
+                      }}
+                    >
+                      {isExpanded ? "\u2212" : "+"}
+                    </button>
+                  )}
+                </div>
 
                 {/* Sub-items (chips) — shown when parent is expanded */}
                 {isExpanded && children.length > 0 && (
@@ -758,7 +798,7 @@ export default function ViewsSidebar({
                         >
                           {sub.label}
                           {typeof counts?.[sub.id] === "number" && (
-                            <span style={{ opacity: 0.7, fontWeight: 400 }}>
+                            <span style={{ color: "#ffffff", fontWeight: 700 }}>
                               {" "}({counts[sub.id]})
                             </span>
                           )}
