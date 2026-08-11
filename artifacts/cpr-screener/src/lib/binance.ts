@@ -130,22 +130,26 @@ function isLiveDailyCandle(openTimeMs: number): boolean {
   return openTimeMs >= utcMidnightToday;
 }
 
-// FIX (intermittent "network error" abort + varying results): these two
-// calls are foundational — every scan needs both to succeed. Previously a
-// single transient blip on either one threw and aborted the *entire* scan
-// (the "Refusing to scan a partial symbol universe" error), and a scan that
-// aborted early vs. one that completed naturally produced a different row
-// count each time even though nothing about the market changed — that's
-// the "results vary between clicks" symptom. Both calls now (a) get more
-// retry attempts than a per-symbol kline call, since losing them is much
-// more costly, and (b) fall back to the last successful response — cached
-// in module scope — if every retry still fails, instead of hard-failing the
-// whole scan. The exchange's active-symbol list changes rarely (new listing
-// events), so a few-minutes-stale universe is a safe trade for "scan still
-// works." Tickers are always attempted fresh; the cache is purely a
-// last-resort fallback, never a substitute for a working request.
+// FIX (intermittent "network error" abort — universe list only): a single
+// transient blip on exchangeInfo used to throw and abort the *entire* scan
+// (the "Refusing to scan a partial symbol universe" error). exchangeInfo
+// only decides which symbols are tradable — it plays no part in price/%
+// math — and that list changes rarely (new listing events), so a
+// few-minutes-stale universe is a safe trade for "scan still works": this
+// call gets extra retry attempts, and falls back to the last successful
+// response (cached in module scope) only if every retry still fails.
+//
+// IMPORTANT: this fallback deliberately does NOT extend to fetchAllTickers.
+// A ticker snapshot feeds `currentPrice` directly, while `openPrice` always
+// comes fresh from fetchDailyKlines (never cached) — so reusing a stale
+// ticker snapshot pairs an old lastPrice with a brand-new open price for
+// every symbol in the scan, producing wildly wrong "change %" values across
+// the whole table (e.g. a coin showing -70% because its cached lastPrice was
+// from hours/days ago while its OPrice is today's real open). Price data
+// must be correct or the scan should say so — never silently wrong — so
+// fetchAllTickers keeps the original hard-fail behaviour; it only gets the
+// extra retry attempts.
 let cachedActiveSymbols: Set<string> | null = null;
-let cachedTickers: Ticker24h[] | null = null;
 
 /**
  * FUTURES/PERPS ONLY. The screener links every row to TradingView's
@@ -188,18 +192,14 @@ async function fetchActiveSymbols(): Promise<Set<string>> {
  * FUTURES/PERPS ONLY, mirroring fetchActiveSymbols. Perpetual 24h tickers
  * describe the same instrument whose klines we analyse and whose `.P`
  * chart we link to — Spot tickers are never consulted.
+ *
+ * FIX (wrong % change / stale prices): no stale-cache fallback here — see
+ * the comment above `cachedActiveSymbols`. A failed fetch fails loudly
+ * instead of silently pairing an old price snapshot with fresh open prices.
  */
 async function fetchAllTickers(): Promise<Ticker24h[]> {
   const futRes = await fetchWithRetry(`${FBASE}/ticker/24hr`, { attempts: 6 });
   if (!futRes?.ok) {
-    if (cachedTickers) {
-      console.warn(
-        `[binance] 24h tickers unavailable (${futRes?.status ?? "network error"}) — ` +
-          `reusing the last successful ticker snapshot (${cachedTickers.length} symbols) for this scan. ` +
-          `Prices/volume may be a few minutes stale until the next successful fetch.`
-      );
-      return cachedTickers;
-    }
     throw new Error(
       `Binance futures 24h tickers unavailable (${futRes?.status ?? "network error"}). ` +
         `Refusing to scan a partial symbol universe — retry in a moment.`
@@ -207,7 +207,6 @@ async function fetchAllTickers(): Promise<Ticker24h[]> {
   }
 
   const fut: Ticker24h[] = await futRes.json();
-  cachedTickers = fut;
   return fut;
 }
 
