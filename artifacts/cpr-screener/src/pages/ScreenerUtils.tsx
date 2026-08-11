@@ -668,13 +668,10 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return (
         ((r.todayCPR.tc <= r.prevCPR.tc && r.todayCPR.bc > r.prevCPR.bc) ||
           (r.todayCPR.tc < r.prevCPR.tc && r.todayCPR.bc >= r.prevCPR.bc)) &&
-        r.cOL3U3 &&
-        r.prevCPR.widthPct > 2.00 && r.prevCPR.widthPct <= 5.00 &&   // pLarge
-        r.todayCPR.widthPct > 1.10 && r.todayCPR.widthPct <= 2.00 && // Medium
-        r.prevCPR.PDHLBelow && r.todayCPR.PDHLAbove &&       // p-PDHLBelow  // PDHLAbove
-        r.todayCPR.SRBelow &&
-        r.todayCPR.prevHigh > r.prevCPR.prevHigh &&
-        r.todayCPR.prevLow > r.prevCPR.prevLow
+        r.cOL3U3 && r.todayCPR.SRBelow && r.todayCPR.HHLLAbove
+        //r.prevCPR.widthPct > 2.00 && r.prevCPR.widthPct <= 5.00 &&   // pLarge
+        //r.todayCPR.widthPct > 1.10 && r.todayCPR.widthPct <= 2.00 && // Medium
+        //r.prevCPR.PDHLBelow && r.todayCPR.PDHLAbove &&       // p-PDHLBelow  // PDHLAbove
       );
     // NEW: 2PM:pPDHLA-SRA-U4:7PM — Inside CPR + cOL4U4 + prev CPR width
     // category pLarge (2.00%-5.00%) + today CPR width category Large
@@ -775,7 +772,8 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return (
         r.CPRs1Above && r.eXL4U2 &&
         r.todayCPR.bc > r.prevCPR.prevHigh && r.todayCPR.s1 > r.prevCPR.tc &&
-        (computePrevPattern(r.prevCPR, r.ppCPR) === "eXL3U3" ||
+        (computePrevPattern(r.prevCPR, r.ppCPR) === "eXL3U3" || //Target next day
+        computePrevPattern(r.prevCPR, r.ppCPR) === "LoU4L4" ||
         (computePrevPattern(r.prevCPR, r.ppCPR) === "eXL4U3" &&
         r.prevCPR.pivot > r.todayCPR.prevLow && r.todayCPR.s3 > r.prevCPR.s3 ))
       );
