@@ -103,6 +103,11 @@ export interface CPRPairFlags {
   eXL4U1: boolean;
   eXL1BC: boolean;
   eXL1CP: boolean;
+  // eXL1TC — same L1 support band as eXL1BC/eXL1CP (prev's S4 inside
+  // today's S1/BC), AND prev's R4 lands inside today's Pivot/TC band —
+  // one band higher than eXL1CP's BC/Pivot band, same TC-anchored
+  // resistance band as eXL2TC/eXL3TC.
+  eXL1TC: boolean;
   eXL2BC: boolean;
   eXL3BC: boolean;
   eXL3CP: boolean;
@@ -306,6 +311,11 @@ export interface CPRResult {
   eXL4U1: boolean;
   eXL1BC: boolean;
   eXL1CP: boolean;
+  // eXL1TC — same L1 support band as eXL1BC/eXL1CP (prev's S4 inside
+  // today's S1/BC), AND prev's R4 lands inside today's Pivot/TC band —
+  // one band higher than eXL1CP's BC/Pivot band, same TC-anchored
+  // resistance band as eXL2TC/eXL3TC.
+  eXL1TC: boolean;
   eXL2BC: boolean;
   eXL3BC: boolean;
   eXL3CP: boolean;
@@ -600,6 +610,12 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
   // lower half of today's CPR) instead of the wider S1/BC (CP) band eXL1BC uses.
   const eXL1CP = (prev.s4 >= today.s1 && prev.s4 < today.bc) &&
                   (prev.r4 > today.bc && prev.r4 < today.pivot);
+  // eXL1TC — prev's S4 lands inside today's S1/BC band (L1, same support
+  // band as eXL1BC/eXL1CP), AND prev's R4 lands inside today's Pivot/TC
+  // band — one band higher than eXL1CP's BC/Pivot band, same TC-anchored
+  // resistance band as eXL2TC/eXL3TC.
+  const eXL1TC = (prev.s4 > today.s1 && prev.s4 < today.bc) &&
+                  (prev.r4 > today.pivot && prev.r4 < today.tc);
   const eXL2BC = (prev.s4 > today.s2 && prev.s4 < today.s1) &&
                   (prev.r4 > today.s1 && prev.r4 < today.bc);
   const eXL3BC = (prev.s4 > today.s3 && prev.s4 < today.s2) &&
@@ -840,7 +856,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
     LoU4L1, cOU1L2, cOU2L4, eXL3U3, eXU3L3,
     cOU1L1, cOL1U1, cOU2L2, cOL2U2,
     HiL3U3, cOU1L3,
-    eXL2U1, eXL3U1, eXL4U1, eXL1BC, eXL1CP, eXL2BC, eXL3BC, eXL3CP,
+    eXL2U1, eXL3U1, eXL4U1, eXL1BC, eXL1CP, eXL1TC, eXL2BC, eXL3BC, eXL3CP,
     eXL3TC, eXL4U2, eXL2U2, eXL2TC, eXL1U1, eXU1L1, eXU2L1, cOTCL2, L1pU1Above, pCPR1Above, CPRs1Above,
     eXU3L1, eXU3L2, eXU2TC, eXU2BC, eXU3TC, eXU2CP, eXU3CP, eXU3BC, eXU4L1, eXU4BC, LoCPL3, LoCPL2, LoTCL3,
     eXHiL2L1, eXLoL2L1, eXL2CP, eXL4TC, LoU3L2, cOL1U2, cOL1U3, HiL3U2,
@@ -898,6 +914,7 @@ export function pickPattern(f: CPRPairFlags): string | null {
   if (f.eXL4U1)    return "eXL4U1";
   if (f.eXL1BC)   return "eXL1BC";
   if (f.eXL1CP)   return "eXL1CP";
+  if (f.eXL1TC)   return "eXL1TC";
   if (f.eXL2BC)   return "eXL2BC";
   if (f.eXL3BC)   return "eXL3BC";
   if (f.eXL3CP)   return "eXL3CP";
@@ -1001,6 +1018,7 @@ export const PATTERN_CATEGORY: Record<string, PatternCategory> = {
   eXL4U1: "Expanded",
   eXL1BC: "Expanded",
   eXL1CP: "Expanded",
+  eXL1TC: "Expanded",
   eXL2BC: "Expanded",
   eXL3BC: "Expanded",
   eXL3CP: "Expanded",

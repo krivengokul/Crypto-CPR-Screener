@@ -87,7 +87,7 @@ const GENERIC_VIEW_CATEGORIES = new Set([
   "equal-cpr",
   // NEW: inside-cpr — was hand-wired to a single legacy button
   // ("Ti-cOLo-APU4-9PM") that no longer matches the left-nav's subPatterns
-  // list (8AM:pSR-PDHL-pU4+1:8AM, 2PM:pPDHLA-SRA-U4:7PM), so the left-nav
+  // list (8AM:SRBHHLLA-pU4+1:8AM, 2PM:pPDHLA-SRA-U4:7PM), so the left-nav
   // Views were invisible in the Screener and the Screener's button pointed
   // at a Views entry no longer in the left-nav. Moving it to the generic
   // path makes PatternSidebar's subPatterns the single source of truth for
@@ -1130,6 +1130,7 @@ export default function Screener({
       if (PatternFilter === "eXL4U1") return r.eXL4U1;
       if (PatternFilter === "eXL1BC") return r.eXL1BC;
       if (PatternFilter === "eXL1CP") return r.eXL1CP;
+      if (PatternFilter === "eXL1TC") return r.eXL1TC;
       if (PatternFilter === "eXL2BC") return r.eXL2BC;
       if (PatternFilter === "eXL3BC") return r.eXL3BC;
       if (PatternFilter === "eXL3CP") return r.eXL3CP;
@@ -2505,6 +2506,7 @@ export default function Screener({
                   { label: "eXL4U1",   active: "border-fuchsia-400 text-fuchsia-400" },
                   { label: "eXL1BC",  active: "border-sky-400 text-sky-400" },
                   { label: "eXL1CP",  active: "border-cyan-400 text-cyan-400" },
+                  { label: "eXL1TC",  active: "border-teal-400 text-teal-400" },
                   { label: "eXL2BC",  active: "border-blue-400 text-blue-400" },
                   { label: "eXL3BC",  active: "border-indigo-400 text-indigo-400" },
                   { label: "eXL3CP",  active: "border-fuchsia-400 text-fuchsia-400" },

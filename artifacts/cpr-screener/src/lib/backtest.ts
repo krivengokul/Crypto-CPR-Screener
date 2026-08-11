@@ -308,15 +308,15 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "PL4 (prev day's S4)",
     getTarget: (r) => r.prevCPR.s4,
   },
-  // NEW: "8AM:pSR-PDHL-pU4+1:8AM" — nested under "CPR Inside" (inside-cpr)
+  // NEW: "8AM:SRBHHLLA-pU4+1:8AM" — nested under "CPR Inside" (inside-cpr)
   // via the new "cOL3U3" Pattern sub-category (see BACKTEST_CATEGORIES
   // below). Base inside-cpr condition + raw cOL3U3 flag + pLarge/Medium
   // width combo + p-PDL<L1 + PDH>U1 + prev R1>today R1 + prev S1>today S1
   // + today's PDH/PDL above prev day's PDH/PDL. Bullish, targets pU4
   // (prev day's R4), entry ~8AM, by ~8AM the next day.
   {
-    key: "8AM:pSR-PDHL-pU4+1:8AM",
-    label: "8AM:pSR-PDHL-pU4+1:8AM",
+    key: "8AM:SRBHHLLA-pU4+1:8AM",
+    label: "8AM:SRBHHLLA-pU4+1:8AM",
     direction: "bullish",
     targetLabel: "PU4 (prev day's R4)",
     getTarget: (r) => r.prevCPR.r4,
@@ -440,6 +440,17 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
         key: "LoU3L4",
         label: "LoU3L4",
         subPatternKeys: ["11AM:pCPR1AHi-FApU4:1PM"],
+      },
+      // NEW: "cOU2L4" — Pattern sub-category (arrow), same shape as its
+      // cOU3L4/LoU3L3/LoU3L4 siblings above: base condition = this
+      // category's pCPR1Above condition AND the raw cOU2L4 flag (see
+      // matchesPatternFlag in ScreenerUtils.tsx). No specific
+      // target-graded sub-pattern nested under it yet — selecting it in
+      // the Backtest dropdown runs a symbol-list-only category scan.
+      {
+        key: "cOU2L4",
+        label: "cOU2L4",
+        subPatternKeys: [],
       },
     ],
   },
@@ -604,7 +615,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
   // shape as its "Overlap Above" sibling — base condition = this
   // category's inside-cpr condition AND the raw cOL3U3 flag (see
   // matchesPatternFlag in ScreenerUtils.tsx). Nests the bullish
-  // "8AM:pSR-PDHL-pU4+1:8AM" pattern (target: prev day's R4 / PU4).
+  // "8AM:SRBHHLLA-pU4+1:8AM" pattern (target: prev day's R4 / PU4).
   {
     key: "inside-cpr",
     label: "CPR Inside",
@@ -612,7 +623,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       {
         key: "cOL3U3",
         label: "cOL3U3",
-        subPatternKeys: ["8AM:pSR-PDHL-pU4+1:8AM"],
+        subPatternKeys: ["8AM:SRBHHLLA-pU4+1:8AM"],
       },
       // NEW: cOL4U4 Pattern sub-category — base condition = the inside-cpr
       // condition AND the raw cOL4U4 flag. Nests the bullish

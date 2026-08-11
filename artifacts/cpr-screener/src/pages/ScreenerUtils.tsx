@@ -656,7 +656,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     case "inside-cpr":
       return (r.todayCPR.tc <= r.prevCPR.tc && r.todayCPR.bc > r.prevCPR.bc) ||
               (r.todayCPR.tc < r.prevCPR.tc && r.todayCPR.bc >= r.prevCPR.bc);
-    // NEW: 8AM:pSR-PDHL-pU4+1:8AM — Inside CPR + cOL3U3 + prev CPR width
+    // NEW: 8AM:SRBHHLLA-pU4+1:8AM — Inside CPR + cOL3U3 + prev CPR width
     // category pLarge (2.00%-5.00%) + today CPR width category Medium
     // (1.10%-2.00%) + prev day's own PDL below prev S1 ("p-PDL<L1") +
     // today's PDH above today's R1 ("PDH>U1") + prev R1 above today R1 +
@@ -664,7 +664,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // day's) + today's PDH above prev day's PDH + today's PDL above prev
     // day's PDL. Bullish, entry ~8AM, targets pU4 (prev day's R4) by ~8AM
     // the next day.
-    case "8AM:pSR-PDHL-pU4+1:8AM":
+    case "8AM:SRBHHLLA-pU4+1:8AM":
       return (
         ((r.todayCPR.tc <= r.prevCPR.tc && r.todayCPR.bc > r.prevCPR.bc) ||
           (r.todayCPR.tc < r.prevCPR.tc && r.todayCPR.bc >= r.prevCPR.bc)) &&
@@ -1243,6 +1243,10 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     // per-row green direction dot even though the Views button itself
     // filtered correctly. Bullish → "up".
     { key: "11AM:pCPR1AHi-FApU4:1PM", direction: "up" },
+    // NEW: "cOU2L4" Pattern sub-category (arrow), nested under "PCPR
+    // 1ABOVE" in backtest.ts. Bullish (Compressed, same pCPR1Above base
+    // condition) → "up".
+    { key: "cOU2L4", direction: "up" },
   ],
   "cpr-1-above": [
     { key: "9AM:MegL-U4+1:3PM", direction: "up" },
@@ -1256,7 +1260,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     { key: "T0-L1pU1>-BPL4:5AM", direction: "down" },
   ],
   "inside-cpr": [
-    { key: "8AM:pSR-PDHL-pU4+1:8AM", direction: "up" },
+    { key: "8AM:SRBHHLLA-pU4+1:8AM", direction: "up" },
     { key: "2PM:pPDHLA-SRA-U4:7PM", direction: "up" },
     { key: "8AM:pPDHA-SRA-U4+2:2AM", direction: "up" },
   ],
@@ -1387,7 +1391,7 @@ export function getSubFilterDirection(r: CPRResult, activePattern: string): SubF
  * its own second-row badge, checking the raw flag directly.
  */
 export interface PatternInfo {
-  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "cOU3L4" | "LoU4L4" | "eXL4U3" | "eXL4U4" | "HiL4U4" | "HiL4U3" | "HiL4U2" | "HiL4U1" | "HiL2U3" | "cOL2U3" | "cOL3U3" | "eXU4L2" | "eXU4L3" | "cOL2U4" | "eXL3U3" | "eXL2U1" | "eXL3U1" | "eXL4U1" | "eXL1BC" | "eXL1CP" | "eXL2BC" | "eXL3BC" | "eXL3CP" | "eXL3TC" | "eXL4U2" | "eXL2U2" | "eXL2TC" | "eXL1U1" | "eXU1L1" | "eXU2L1" | "cOTCL2" | "eXU3L1" | "eXU3L2" | "eXU2TC" | "eXU2BC" | "eXU3TC" | "eXU2CP" | "eXU3CP" | "eXU3BC" | "eXU4L1" | "eXU4BC" | "cOU1L1" | "cOL1U1" | "cOU2L2" | "cOL2U2" | "cOU1L2" | "cOU4L4" | "exL3U2" | "LoCPL3" | "LoCPL2" | "LoTCL3" | "eXHiL2L1" | "eXLoL2L1" | "eXL2CP" | "eXL4TC" | "LoU3L2" | "cOL1U2" | "cOL1U3" | "HiL3U2" | "Lower";
+  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "cOU3L4" | "LoU4L4" | "eXL4U3" | "eXL4U4" | "HiL4U4" | "HiL4U3" | "HiL4U2" | "HiL4U1" | "HiL2U3" | "cOL2U3" | "cOL3U3" | "eXU4L2" | "eXU4L3" | "cOL2U4" | "eXL3U3" | "eXL2U1" | "eXL3U1" | "eXL4U1" | "eXL1BC" | "eXL1CP" | "eXL1TC" | "eXL2BC" | "eXL3BC" | "eXL3CP" | "eXL3TC" | "eXL4U2" | "eXL2U2" | "eXL2TC" | "eXL1U1" | "eXU1L1" | "eXU2L1" | "cOTCL2" | "eXU3L1" | "eXU3L2" | "eXU2TC" | "eXU2BC" | "eXU3TC" | "eXU2CP" | "eXU3CP" | "eXU3BC" | "eXU4L1" | "eXU4BC" | "cOU1L1" | "cOL1U1" | "cOU2L2" | "cOL2U2" | "cOU1L2" | "cOU4L4" | "exL3U2" | "LoCPL3" | "LoCPL2" | "LoTCL3" | "eXHiL2L1" | "eXLoL2L1" | "eXL2CP" | "eXL4TC" | "LoU3L2" | "cOL1U2" | "cOL1U3" | "HiL3U2" | "Lower";
   classes: string;
 }
 
@@ -1456,6 +1460,9 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     case "eXL4U1": return r.eXL4U1;
     case "eXL1BC": return r.eXL1BC;
     case "eXL1CP": return r.eXL1CP;
+    // NEW: eXL1TC (prev S4 in today S1/BC, prev R4 in today Pivot/TC —
+    // one band higher than eXL1CP's BC/Pivot band)
+    case "eXL1TC": return r.eXL1TC;
     case "eXL2BC": return r.eXL2BC;
     case "eXL3BC": return r.eXL3BC;
     case "eXL3CP": return r.eXL3CP;
@@ -1503,6 +1510,9 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     case "cOL2U2": return r.cOL2U2;
     // NEW: cOU1L2 — independent, section-agnostic Pattern flag (see cpr.ts).
     case "cOU1L2": return r.cOU1L2;
+    // NEW: cOU2L4 — Pattern sub-category raw flag (see BacktestPanel's
+    // "PREVCPR 1ABOVE" (PCPR 1ABOVE) nesting in backtest.ts).
+    case "cOU2L4": return r.cOU2L4;
     case "cOU4L4": return r.cOU4L4;
     case "exL3U2": return r.exL3U2;
     // NEW: cOTCL2 — independent, section-agnostic Pattern flag (see cpr.ts).

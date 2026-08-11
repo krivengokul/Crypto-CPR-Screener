@@ -362,7 +362,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
               Overlap Above + previous day&apos;s pattern p-cOU3L3 + eXL4U4 (prev R4 inside today&apos;s R3/R4, prev S4 inside today&apos;s S3/S4) + prev CPR pLarge (2.00%–5.00%) + today CPR Large (2.00%–5.00%) + prev day&apos;s PDL below prev S1 (p-PDL&lt;L1) + today PDH above today R1 (PDH&gt;U1) + today&apos;s PDH above prev R1 + today&apos;s PDL above prev S1.
             </div>
           </>
-        ) : activePattern === "8AM:pSR-PDHL-pU4+1:8AM" ? (
+        ) : activePattern === "8AM:SRBHHLLA-pU4+1:8AM" ? (
           <>
             <div className="text-xs font-semibold text-green-400 mb-1">
               Pattern: cOL3U3&nbsp;&nbsp;PCPR: pLarge&nbsp;&nbsp;CPR: Medium
@@ -660,7 +660,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
               Bullish continuation from a Large/pLarge Overlap-Above setup — expected move toward today&apos;s U4 by ~2AM IST.
             </div>
           </>
-        ) : activePattern === "8AM:pSR-PDHL-pU4+1:8AM" ? (
+        ) : activePattern === "8AM:SRBHHLLA-pU4+1:8AM" ? (
           <>
             <div className="text-xs font-semibold text-green-400 mb-1">
               Target: PU4&nbsp;&nbsp;&nbsp;Entry: 8AM&nbsp;&nbsp;&nbsp;Time: 8AM (+1)
