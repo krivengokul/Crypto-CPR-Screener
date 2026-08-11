@@ -668,7 +668,7 @@ export default function ViewsSidebar({
                       }}
                     >
                       {pattern.label}
-                      {typeof counts?.[pattern.id] === "number" && (
+                      {!!counts?.[pattern.id] && (
                         <> ({counts[pattern.id]})</>
                       )}
                     </div>
@@ -702,6 +702,8 @@ export default function ViewsSidebar({
                       }}
                       style={{
                         flexShrink: 0,
+                        alignSelf: "flex-start",
+                        marginTop: 1,
                         width: 18,
                         height: 18,
                         display: "flex",
@@ -795,7 +797,7 @@ export default function ViewsSidebar({
                           }}
                         >
                           {sub.label}
-                          {typeof counts?.[sub.id] === "number" && (
+                          {!!counts?.[sub.id] && (
                             <span style={{ color: "#ffffff" }}>
                               {" "}({counts[sub.id]})
                             </span>
