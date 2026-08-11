@@ -1,4 +1,4 @@
-import { subPatterns } from "@/components/ui/PatternSidebar"
+import { Views } from "@/components/ui/ViewsSidebar"
 
 export interface ScreenerLegendProps {
   activePattern: string;
@@ -73,7 +73,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
   // child pattern is the active one. Parent ids and standalone patterns
   // (which aren't anyone's child) just resolve to themselves.
   function getLegendParentPattern(patternId: string): string {
-    for (const [parentId, children] of Object.entries(subPatterns)) {
+    for (const [parentId, children] of Object.entries(Views)) {
       if (children.some((c) => c.id === patternId)) return parentId;
     }
     return patternId;
@@ -91,7 +91,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             section. The old "ADK CPR Formula" fallback for unmatched
             patterns has been removed entirely — unmatched patterns now
             render nothing here. Coverage extended to every category in
-            the left nav (pivotcategories array in PatternSidebar.tsx). */}
+            the left nav (pivotcategories array in ViewsSidebar.tsx). */}
         {legendPattern === "structure-bigabove" ? (
           <>
             <div className="flex items-center gap-1.5 mb-1 flex-wrap">

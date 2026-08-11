@@ -96,7 +96,7 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
   // "dot" in the Backtest dropdown. Use the "U1 > pU4" category's own
   // symbol-list scan instead.
   // NEW: nested under the "U1 > pU4" category. Bullish, same PU4 target
-  // style as the (now-removed) HA-U1>PU4 (matches PatternSidebar's
+  // style as the (now-removed) HA-U1>PU4 (matches ViewsSidebar's
   // u1-gt-pu4 sub-pattern).
   {
     key: "9AM:APHS1A-FAU4:4AM",
@@ -405,9 +405,9 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       },
     ],
   },
-  // NEW: "PREVCPR 1ABOVE" (displayed as "PCPR 1ABOVE" in PatternSidebar's
+  // NEW: "PREVCPR 1ABOVE" (displayed as "PCPR 1ABOVE" in ViewsSidebar's
   // left-nav) left-nav section (top of the pattern tree in
-  // PatternSidebar.tsx) — nests the "cOU3L4" Pattern sub-category, which
+  // ViewsSidebar.tsx) — nests the "cOU3L4" Pattern sub-category, which
   // in turn nests "BC>pPDL-U3:5AM" (base condition: this category's
   // pCPR1Above condition AND the raw cOU3L4 flag — see
   // matchesPatternFlag in ScreenerUtils.tsx).

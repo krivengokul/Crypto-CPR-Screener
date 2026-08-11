@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Screener from "@/pages/Screener";
 import BacktestPanel from "@/pages/BacktestPanel";
-import PatternSidebar, { pivotcategories, SCREENER_PATTERN_IDS, type SidebarMode } from "@/components/ui/PatternSidebar";
+import ViewsSidebar, { pivotcategories, SCREENER_PATTERN_IDS, type SidebarMode } from "@/components/ui/ViewsSidebar";
 import { Menu } from "lucide-react";
 
 const queryClient = new QueryClient();
@@ -39,15 +39,15 @@ function ComingSoon({ label }: { label: string }) {
   );
 }
 
-// Screener-handled pattern IDs now come from PatternSidebar (single source
-// of truth — derived from its `pivotcategories` + `subPatterns` tree, plus a small
+// Screener-handled pattern IDs now come from ViewsSidebar (single source
+// of truth — derived from its `pivotcategories` + `Views` tree, plus a small
 // LEGACY_SCREENER_PATTERN_IDS list). Kept out of App.tsx to avoid drift.
 
 function App() {
   // Empty string = no left-nav pattern selected. On first load / refresh we
   // want the screener to open on "Show All" (Binance tab, unfiltered
   // results) rather than pre-selecting a specific pattern like Little
-  // Above. "" isn't a real pattern id, so PatternSidebar won't highlight
+  // Above. "" isn't a real pattern id, so ViewsSidebar won't highlight
   // any nav item, and the Screener render check below special-cases it to
   // still render the Screener (with its own showAll-defaults-true state)
   // instead of the ComingSoon placeholder.
@@ -57,7 +57,7 @@ function App() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mode, setMode] = useState<SidebarMode>(getSavedMode);
   // NEW: top-level pattern -> matching count, reported up by Screener,
-  // passed down into PatternSidebar for the "(41)" labels.
+  // passed down into ViewsSidebar for the "(41)" labels.
   const [patternCounts, setPatternCounts] = useState<Record<string, number>>({});
 
   // Auto-scan on first page load
@@ -93,7 +93,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <div className="flex min-h-screen bg-background">
-          <PatternSidebar
+          <ViewsSidebar
             activePattern={activePattern}
             onSelect={handlePatternSelect}
             collapsed={sidebarCollapsed}

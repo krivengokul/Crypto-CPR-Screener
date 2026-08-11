@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo, Fragment } from "react";
-import { pivotcategories, subPatterns } from "@/components/ui/PatternSidebar";
+import { pivotcategories, Views } from "@/components/ui/ViewsSidebar";
 import {
   TrendingUp,
   RefreshCw,
@@ -66,11 +66,11 @@ import { useBinanceLiveRefresh, useDeltaLiveRefresh } from "@/hooks/useLivePrice
  * Why: every new sub-pattern under those older categories needs a new
  * useState, a cleanup-effect entry, a getActivePool() branch, an
  * anySubFilter entry, AND a JSX button — five places to touch, and it's
- * easy to add a sub-pattern to PatternSidebar's `subPatterns` map and
+ * easy to add a sub-pattern to ViewsSidebar's `Views` map and
  * forget one of them (exactly what happened here: CPR 1ABOVE's three
  * Views existed in the left-nav but never got a Screener button, so the
  * Views list showed empty). The generic path here only needs the
- * subPatterns entry — passesPattern(r, sub.id) already resolves any
+ * Views entry — passesPattern(r, sub.id) already resolves any
  * sub-pattern id generically (see the per-sub-pattern count loop above),
  * so no per-view code is needed on this side at all.
  *
@@ -86,11 +86,11 @@ const GENERIC_VIEW_CATEGORIES = new Set([
   "l1-lt-pl4",
   "equal-cpr",
   // NEW: inside-cpr — was hand-wired to a single legacy button
-  // ("Ti-cOLo-APU4-9PM") that no longer matches the left-nav's subPatterns
+  // ("Ti-cOLo-APU4-9PM") that no longer matches the left-nav's Views
   // list (8AM:SRBHHLLA-pU4+1:8AM, 2PM:pPDHLA-SRA-U4:7PM), so the left-nav
   // Views were invisible in the Screener and the Screener's button pointed
   // at a Views entry no longer in the left-nav. Moving it to the generic
-  // path makes PatternSidebar's subPatterns the single source of truth for
+  // path makes ViewsSidebar's Views the single source of truth for
   // both surfaces.
   "inside-cpr",
 ]);
@@ -175,7 +175,7 @@ export default function Screener({
   // but prev CPR width category Tiny instead of pMicro)
   const [show2ScoHiFAU4, setShow2ScoHiFAU4] = useState(false);
   // NEW: eXL4U2-U4:4AM / TiMi-cOL2U2-pL4:5AM filter state — BigCPR Above
-  // Views entries that existed in PatternSidebar's subPatterns list but had
+  // Views entries that existed in ViewsSidebar's Views list but had
   // no matching Screener button (same class of bug as CPR Inside's missing
   // Views).
   const [showBAeXL4U2, setShowBAeXL4U2] = useState(false);
@@ -205,8 +205,8 @@ export default function Screener({
   const [showOBHiExL4U4, setShowOBHiExL4U4] = useState(false);
    const [showLMeXL2U2, setShowLMeXL2U2] = useState(false);
   // NEW: cOL3U3-pL4 / 7AM:MiMi-pU4:11PM / 6PM:LaLa->U4:2AM filter state —
-  // Overlapping Higher Views entries that existed in PatternSidebar's
-  // subPatterns list but had no matching Screener button (same class of
+  // Overlapping Higher Views entries that existed in ViewsSidebar's
+  // Views list but had no matching Screener button (same class of
   // bug as CPR Inside's missing Views).
   const [showOBHicOL3U3pL4, setShowOBHicOL3U3pL4] = useState(false);
   const [showOBHi7AMMiMi, setShowOBHi7AMMiMi] = useState(false);
@@ -251,7 +251,7 @@ export default function Screener({
   const exitTimeMatchedSubIds = useMemo(() => {
     if (!exitTimeFilter) return [] as string[];
     const suffix = `:${exitTimeFilter}`;
-    return Object.values(subPatterns)
+    return Object.values(Views)
       .flat()
       .filter((s) => s.id.endsWith(suffix))
       .map((s) => s.id);
@@ -299,7 +299,7 @@ export default function Screener({
   // Clicking a top-level category in the left-nav sets activePattern to the
   // category id directly (e.g. "l1pu1-above"), but clicking one of its
   // Views/sub-patterns instead (e.g. "SMi-L1pU1>-APU4:11PM") sets
-  // activePattern to that LEAF id — PatternSidebar's handleSubClick calls
+  // activePattern to that LEAF id — ViewsSidebar's handleSubClick calls
   // onSelect(subId), not onSelect(parentId). Row filtering already handles
   // both cases fine (passesPattern resolves leaf ids directly), but
   // anything keyed off the *category* — the Views button row and the
@@ -309,8 +309,8 @@ export default function Screener({
   // to the owning category so those two stay populated regardless of
   // whether the category or one of its leaves triggered the selection.
   const activeSectionKey = useMemo(() => {
-    if (subPatterns[activePattern]) return activePattern; // already a category id
-    for (const [section, subs] of Object.entries(subPatterns)) {
+    if (Views[activePattern]) return activePattern; // already a category id
+    for (const [section, subs] of Object.entries(Views)) {
       if (subs.some((s) => s.id === activePattern)) return section;
     }
     return activePattern; // not a known category or leaf — leave as-is
@@ -466,7 +466,7 @@ export default function Screener({
     if (!activeGenericSubView) return;
     const stillValid =
       GENERIC_VIEW_CATEGORIES.has(activeSectionKey) &&
-      (subPatterns[activeSectionKey] ?? []).some((s) => s.id === activeGenericSubView);
+      (Views[activeSectionKey] ?? []).some((s) => s.id === activeGenericSubView);
     if (!stillValid) setActiveGenericSubView(null);
   }, [activePattern, activeSectionKey]);
   // NEW: report per-pattern (top-level nav) matching counts up to App so
@@ -487,7 +487,7 @@ export default function Screener({
     }
     // Also compute counts for each sub-pattern so the left-nav can show
     // "LA-BothTiny (2)" style badges next to each subfilter chip.
-    for (const subs of Object.values(subPatterns)) {
+    for (const subs of Object.values(Views)) {
       for (const s of subs) {
         counts[s.id] = pool.filter((r) => passesPattern(r, s.id)).length;
       }
@@ -850,7 +850,7 @@ export default function Screener({
       return binanceIntersect;
     }
     // Micro2-ApU4 pool — CHANGED: was wired to legacy id "lb-2tiny", which
-    // dropped out of PatternSidebar's littlebelow subPatterns list (replaced
+    // dropped out of ViewsSidebar's littlebelow Views list (replaced
     // by "lb-micro2-apu4" / "Micro2-ApU4"), so the left-nav Views entry had
     // no matching Screener button and this button pointed at a Views entry
     // no longer in the left-nav. Repointed at "lb-micro2-apu4" so both
@@ -867,7 +867,7 @@ export default function Screener({
       return binanceIntersect;
     }
     // NEW: L1-cOU1L2-U4:1AM pool — Little Below Views entry that existed in
-    // the left-nav (PatternSidebar subPatterns.littlebelow) but never got a
+    // the left-nav (ViewsSidebar Views.littlebelow) but never got a
     // Screener button.
     if (showLBL1cOU1L2 && activePattern === "littlebelow") {
       const binanceIntersect = allResults
@@ -1725,8 +1725,8 @@ export default function Screener({
                 {showBATiMicOL2U2 ? "✕ TiMi-cOL2U2-pL4:5AM" : "TiMi-cOL2U2-pL4:5AM"}
               </button>
             )}
-            {/* CHANGED: label/id now match PatternSidebar's littlebelow
-                subPatterns entry "lb-micro2-apu4" / "Micro2-ApU4" (was
+            {/* CHANGED: label/id now match ViewsSidebar's littlebelow
+                Views entry "lb-micro2-apu4" / "Micro2-ApU4" (was
                 stuck on the legacy "lb-2tiny" id + "LB-BothTiny" label,
                 which no longer appears in the left-nav). */}
             {activeSectionKey === "littlebelow" && !showAll && (
@@ -1945,13 +1945,13 @@ export default function Screener({
                 PREVCPR 1ABOVE, L1pU1 Above, U1>pU4, L1<pL4, Equal CPR (see
                 GENERIC_VIEW_CATEGORIES above), and any future category added
                 there. Colours come straight from each sub-pattern's own
-                activeColor/activeText/activeBg in PatternSidebar's
-                subPatterns map, same as the left-nav itself, so a newly
+                activeColor/activeText/activeBg in ViewsSidebar's
+                Views map, same as the left-nav itself, so a newly
                 added Views entry is styled automatically without touching
                 this file. */}
             {GENERIC_VIEW_CATEGORIES.has(activeSectionKey) &&
               !showAll &&
-              (subPatterns[activeSectionKey] ?? []).map((sub) => {
+              (Views[activeSectionKey] ?? []).map((sub) => {
                 const isActive = activeGenericSubView
                   ? activeGenericSubView === sub.id
                   : activePattern === sub.id; // left-nav navigated straight to this leaf

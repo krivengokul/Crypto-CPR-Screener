@@ -368,7 +368,7 @@ export default function BacktestPanel() {
   // Resolve each category's nested keys into full BacktestTargetDef objects
   // once, so the picker can filter/render without re-searching
   // BACKTEST_TARGETS on every keystroke.
-  type ResolvedSub = { sub: BacktestSubCategoryDef; subPatterns: BacktestTargetDef[] };
+  type ResolvedSub = { sub: BacktestSubCategoryDef; Views: BacktestTargetDef[] };
   type ResolvedCat = { cat: BacktestCategoryDef; directPatterns: BacktestTargetDef[]; subCats: ResolvedSub[] };
   const categoryTree: ResolvedCat[] = useMemo(
     () =>
@@ -379,7 +379,7 @@ export default function BacktestPanel() {
           .filter((t): t is BacktestTargetDef => !!t),
         subCats: (cat.subCategories ?? []).map((sub) => ({
           sub,
-          subPatterns: sub.subPatternKeys
+          Views: sub.subPatternKeys
             .map((pk) => BACKTEST_TARGETS.find((t) => t.key === pk))
             .filter((t): t is BacktestTargetDef => !!t),
         })),
@@ -417,7 +417,7 @@ export default function BacktestPanel() {
       ({ cat, directPatterns, subCats }) =>
         cat.key === selectedKey ||
         directPatterns.some((t) => t.key === selectedKey) ||
-        subCats.some((s) => `${cat.key}${SUBCATEGORY_SEP}${s.sub.key}` === selectedKey || s.subPatterns.some((t) => t.key === selectedKey))
+        subCats.some((s) => `${cat.key}${SUBCATEGORY_SEP}${s.sub.key}` === selectedKey || s.Views.some((t) => t.key === selectedKey))
     );
     setExpandedCats(cat ? new Set([cat.cat.key]) : new Set());
     setPickerQuery("");
@@ -648,7 +648,7 @@ export default function BacktestPanel() {
                       const subCatHits = subCats
                         .map((s) => ({
                           sub: s.sub,
-                          patternHits: s.subPatterns.filter((t) => !q || catLabelHit || hit(s.sub.label) || hit(t.label)),
+                          patternHits: s.Views.filter((t) => !q || catLabelHit || hit(s.sub.label) || hit(t.label)),
                           subLabelHit: hit(s.sub.label),
                         }))
                         .filter((s) => !q || catLabelHit || s.subLabelHit || s.patternHits.length > 0);

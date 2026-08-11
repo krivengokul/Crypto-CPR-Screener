@@ -38,7 +38,7 @@ export interface SubPattern {
  * Each `id` maps to a passesPattern() case in ScreenerUtils.tsx so the
  * existing Screener filtering logic works with no changes.
  */
-export const subPatterns: Record<string, SubPattern[]> = {
+export const Views: Record<string, SubPattern[]> = {
   littleabove: [
     { id: "la-2tiny",                label: "LA-BothTiny" },
     { id: "1LHr-L4U3-U4",            label: "1LHr-L4U3-U4" },
@@ -373,7 +373,7 @@ export const pivotcategories: Category[] = [
 
 /**
  * Single source of truth for every pattern id the Screener handles —
- * derived from `pivotcategories` (top-level) + `subPatterns` (nested). Legacy /
+ * derived from `pivotcategories` (top-level) + `Views` (nested). Legacy /
  * previously-visible left-nav ids that aren't in the tree anymore live in
  * LEGACY_SCREENER_PATTERN_IDS so App.tsx no longer has to duplicate the tree.
  */
@@ -401,7 +401,7 @@ export const LEGACY_SCREENER_PATTERN_IDS = [
 
 export const SCREENER_PATTERN_IDS: ReadonlySet<string> = new Set<string>([
   ...pivotcategories.map((p) => p.id),
-  ...Object.values(subPatterns).flatMap((subs) => subs.map((s) => s.id)),
+  ...Object.values(Views).flatMap((subs) => subs.map((s) => s.id)),
   ...LEGACY_SCREENER_PATTERN_IDS,
 ]);
 
@@ -409,13 +409,13 @@ export type SidebarMode = "scanner" | "backtest";
 
 /** Returns the parent ID for a sub-pattern, or null if it is a parent itself. */
 function getParentId(patternId: string): string | null {
-  for (const [parentId, children] of Object.entries(subPatterns)) {
+  for (const [parentId, children] of Object.entries(Views)) {
     if (children.some((c) => c.id === patternId)) return parentId;
   }
   return null;
 }
 
-interface PatternSidebarProps {
+interface ViewsSidebarProps {
   activePattern: string;
   onSelect: (id: string) => void;
   collapsed: boolean;
@@ -430,7 +430,7 @@ interface PatternSidebarProps {
   counts?: Record<string, number>;
 }
 
-export default function PatternSidebar({
+export default function ViewsSidebar({
   activePattern,
   onSelect,
   collapsed,
@@ -440,7 +440,7 @@ export default function PatternSidebar({
   mode,
   onModeChange,
   counts,
-}: PatternSidebarProps) {
+}: ViewsSidebarProps) {
   // Which parent pattern is currently open in the tree
   const [expandedId, setExpandedId] = useState<string | null>(() => {
     const parent = getParentId(activePattern);
@@ -591,7 +591,7 @@ export default function PatternSidebar({
         >
           {pivotcategories.map((pattern) => {
             const Icon = pattern.icon;
-            const children = subPatterns[pattern.id] ?? [];
+            const children = Views[pattern.id] ?? [];
             const isActiveParent = activePattern === pattern.id;
             const hasActiveChild = children.some((c) => c.id === activePattern);
             const isHighlighted = isActiveParent || hasActiveChild;
@@ -814,7 +814,7 @@ export default function PatternSidebar({
         {/* One icon per pattern */}
         {pivotcategories.map((pattern) => {
           const Icon = pattern.icon;
-          const children = subPatterns[pattern.id] ?? [];
+          const children = Views[pattern.id] ?? [];
           const isHighlighted =
             activePattern === pattern.id ||
             children.some((c) => c.id === activePattern);
