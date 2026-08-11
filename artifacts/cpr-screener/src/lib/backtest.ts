@@ -872,9 +872,16 @@ export function clearBacktestHistoryCache(): void {
  *
  * ADK FIX (single source of truth): this used to re-implement Binance access
  * — its own URLs, its own venue cache, its own kline parsing and NO retry on
- * 429/418. It now delegates to binance.ts's `fetchDailyKlines`, so venue
- * resolution (futures-first, spot fallback) and rate-limit backoff are shared
- * with the live screener and can never drift apart again.
+ * 429/418. It now delegates to binance.ts's `fetchDailyKlines`, so
+ * rate-limit backoff and kline parsing are shared with the live screener
+ * and can never drift apart again.
+ *
+ * FUTURES/PERPS ONLY: `fetchDailyKlines` only ever fetches from Binance
+ * USDⓈ-M Futures now — there is no Spot fallback anywhere in the app. A
+ * symbol with no perpetual listing, or whose futures request keeps
+ * failing, is simply skipped for this backtest run rather than silently
+ * analysed on Spot data (which could be a different instrument than the
+ * one the Live Scanner charts/links).
  */
 async function fetchBinanceHistory(symbol: string): Promise<Map<string, OHLC> | null> {
   const candles = await fetchDailyKlines(symbol, HISTORY_LIMIT);

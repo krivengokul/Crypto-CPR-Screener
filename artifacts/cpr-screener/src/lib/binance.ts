@@ -1,9 +1,12 @@
 import { OHLC, CPRResult, analyzeCPR } from "./cpr";
 import { shouldExcludeSymbol } from "./symbolFilters";
 
-const BASE = "https://api.binance.com/api/v3";
-// FIX: some pairs (e.g. UAIUSDT) only exist on USDⓈ-M Futures, never on
-// Spot. Scanning Spot alone silently drops them from the universe.
+// FUTURES/PERPS ONLY — Spot is no longer used anywhere in this file. The
+// screener links every row to TradingView's perpetual chart
+// (`BINANCE:<SYMBOL>.P`), so candles, the tradable-symbol universe, and 24h
+// tickers must all come from the same USDⓈ-M Futures instrument. Mixing in
+// Spot data (even just as a fallback) risks analysing a different
+// instrument than the one being charted/linked.
 const FBASE = "https://fapi.binance.com/fapi/v1";
 
 interface KlineRaw extends Array<string | number> {
@@ -21,10 +24,6 @@ interface Ticker24h {
   priceChangePercent: string;
   quoteVolume: string;
 }
-
-/** Which venue a symbol's klines must be fetched from. */
-type Venue = "spot" | "futures";
-const venueOf = new Map<string, Venue>();
 
 function parseKline(k: KlineRaw): OHLC {
   return {
@@ -101,8 +100,7 @@ function setPinnedSymbols(symbols: string[]): void {
  * FIX: Detect today's live (incomplete) daily candle using the UTC midnight
  * boundary — identical to TradingView's `high[1]` + `lookahead_off` behaviour.
  *
- * Both Binance Spot and USDⓈ-M Futures reset daily candles at UTC 00:00, so the
- * same check is valid for either venue.
+ * USDⓈ-M Futures resets daily candles at UTC 00:00.
  */
 function isLiveDailyCandle(openTimeMs: number): boolean {
   const now = new Date();
@@ -115,34 +113,25 @@ function isLiveDailyCandle(openTimeMs: number): boolean {
 }
 
 /**
- * FIX (venue priority): FUTURES-FIRST.
+ * FUTURES/PERPS ONLY. The screener links every row to TradingView's
+ * perpetual chart (`BINANCE:<SYMBOL>.P`), so the tradable universe is drawn
+ * exclusively from USDⓈ-M Futures — Spot is never consulted, so a symbol
+ * with no perpetual listing simply isn't scanned.
  *
- * The screener links every Binance row to TradingView's perpetual chart
- * (`BINANCE:<SYMBOL>.P`), so the candles we analyse must come from the same
- * instrument. USDⓈ-M perpetual wins on collision; Spot is only used for
- * symbols that are not listed on fapi at all.
- *
- * FIX (missing symbols): a venue that fails is now a hard error instead of
- * a silent half-universe. Previously, one 429 from fapi quietly reduced the
- * scan to Spot-only and ~170 perp-only pairs vanished with no warning.
+ * FIX (missing symbols): a failed futures request is a hard error instead
+ * of a silent empty universe.
  */
 async function fetchActiveSymbols(): Promise<Set<string>> {
-  const [spotRes, futRes] = await Promise.all([
-    fetchWithRetry(`${BASE}/exchangeInfo`),
-    fetchWithRetry(`${FBASE}/exchangeInfo`),
-  ]);
-  if (!spotRes?.ok || !futRes?.ok) {
+  const futRes = await fetchWithRetry(`${FBASE}/exchangeInfo`);
+  if (!futRes?.ok) {
     throw new Error(
-      `Binance exchangeInfo unavailable (spot ${spotRes?.status ?? "network error"} / ` +
-        `futures ${futRes?.status ?? "network error"}). Refusing to scan a partial ` +
-        `symbol universe — retry in a moment.`
+      `Binance futures exchangeInfo unavailable (${futRes?.status ?? "network error"}). ` +
+        `Refusing to scan a partial symbol universe — retry in a moment.`
     );
   }
 
   const active = new Set<string>();
-  venueOf.clear();
 
-  // 1) Perpetual futures first — these are the authoritative candles.
   const fut: {
     symbols: { symbol: string; status: string; contractType?: string }[];
   } = await futRes.json();
@@ -150,55 +139,34 @@ async function fetchActiveSymbols(): Promise<Set<string>> {
     if (s.status !== "TRADING") continue;
     if (s.contractType && s.contractType !== "PERPETUAL") continue;
     active.add(s.symbol);
-    venueOf.set(s.symbol, "futures");
-  }
-
-  // 2) Spot fills in only the symbols with no perpetual listing.
-  const spot: { symbols: { symbol: string; status: string }[] } = await spotRes.json();
-  for (const s of spot.symbols) {
-    if (s.status !== "TRADING") continue;
-    active.add(s.symbol);
-    if (!venueOf.has(s.symbol)) venueOf.set(s.symbol, "spot");
   }
 
   return active;
 }
 
 /**
- * FIX (venue priority): FUTURES-FIRST, mirroring fetchActiveSymbols.
- * Perpetual 24h tickers win on collision so last price / % change / volume
- * describe the same instrument whose klines we analyse and whose `.P` chart
- * we link to. Spot only supplies symbols with no perpetual listing.
+ * FUTURES/PERPS ONLY, mirroring fetchActiveSymbols. Perpetual 24h tickers
+ * describe the same instrument whose klines we analyse and whose `.P`
+ * chart we link to — Spot tickers are never consulted.
  *
- * Also fails loudly when either venue is down — same reasoning as above.
+ * Also fails loudly when futures is down — same reasoning as above.
  */
 async function fetchAllTickers(): Promise<Ticker24h[]> {
-  const [spotRes, futRes] = await Promise.all([
-    fetchWithRetry(`${BASE}/ticker/24hr`),
-    fetchWithRetry(`${FBASE}/ticker/24hr`),
-  ]);
-  if (!spotRes?.ok || !futRes?.ok) {
+  const futRes = await fetchWithRetry(`${FBASE}/ticker/24hr`);
+  if (!futRes?.ok) {
     throw new Error(
-      `Binance 24h tickers unavailable (spot ${spotRes?.status ?? "network error"} / ` +
-        `futures ${futRes?.status ?? "network error"}). Refusing to scan a partial ` +
-        `symbol universe — retry in a moment.`
+      `Binance futures 24h tickers unavailable (${futRes?.status ?? "network error"}). ` +
+        `Refusing to scan a partial symbol universe — retry in a moment.`
     );
   }
 
-  const bySymbol = new Map<string, Ticker24h>();
-
   const fut: Ticker24h[] = await futRes.json();
-  for (const t of fut) bySymbol.set(t.symbol, t);
-
-  const spot: Ticker24h[] = await spotRes.json();
-  for (const t of spot) if (!bySymbol.has(t.symbol)) bySymbol.set(t.symbol, t);
-
-  return [...bySymbol.values()];
+  return fut;
 }
 
 /**
  * FIX (missing symbols): `limit` no longer defaults to 500. Binance's
- * tradable USDT universe (perp + spot union) is already north of 650 pairs and
+ * tradable USDT perpetual-futures universe is already north of 400 pairs and
  * still growing, so a 500 cap was quietly amputating the tail of the list every
  * single scan. Pass a number only if you deliberately want a top-N slice.
  */
@@ -232,74 +200,38 @@ export async function fetchTopUSDTSymbols(limit?: number): Promise<Ticker24h[]> 
 // Binance has a brief gap in daily data for a thinly-traded pair) while
 // staying a cheap, single extra API page — well within rate limits.
 //
-// FIX: routes to fapi for futures-only symbols, and falls back to the
-// other venue if the primary one returns nothing. Rate-limited responses are
-// now retried with backoff rather than dropping the symbol from the scan.
+// FUTURES/PERPS ONLY: always fetches from fapi. Rate-limited responses are
+// retried with backoff rather than dropping the symbol from the scan, but
+// there is no Spot fallback — a symbol with no perpetual listing (or one
+// whose futures request keeps failing) is simply skipped, never silently
+// analysed on Spot data.
 /**
  * SINGLE SOURCE OF TRUTH for Binance daily candles.
  *
  * Every consumer (live screener, backtest, anything added later) must go
- * through this function so that venue resolution (futures-first, spot
- * fallback), retry/backoff on 429/418/5xx and kline parsing exist in exactly
- * one place. `limit` lets callers ask for the small live window (6 candles) or
- * a long history page (up to 1500 candles ≈ 4 years).
+ * through this function so that retry/backoff on 429/418/5xx and kline
+ * parsing exist in exactly one place. `limit` lets callers ask for the small
+ * live window (6 candles) or a long history page (up to 1500 candles ≈ 4
+ * years).
  */
 export async function fetchDailyKlines(
   symbol: string,
   limit = 6
 ): Promise<OHLC[] | null> {
-  // Futures-first: unknown symbols default to fapi, spot is the fallback.
-  const primary = venueOf.get(symbol) === "spot" ? BASE : FBASE;
-  const secondary = primary === BASE ? FBASE : BASE;
-
-  for (const base of [primary, secondary]) {
-    const res = await fetchWithRetry(
-      `${base}/klines?symbol=${symbol}&interval=1d&limit=${limit}`
-    );
-    if (!res?.ok) continue;
+  const res = await fetchWithRetry(
+    `${FBASE}/klines?symbol=${symbol}&interval=1d&limit=${limit}`
+  );
+  if (res?.ok) {
     try {
       const data: KlineRaw[] = await res.json();
-      if (!Array.isArray(data) || data.length < 2) continue;
-      const answeredVenue: Venue = base === FBASE ? "futures" : "spot";
-      // FIX (venue poisoning): only fill in venue info that's still unknown.
-      // venueOf's authoritative source is fetchActiveSymbols (based on actual
-      // exchangeInfo listings — futures-first, spot only for symbols with no
-      // perpetual listing at all). Previously this line unconditionally
-      // overwrote that on every call: if a symbol's FUTURES request merely
-      // failed transiently here (rate limit, momentary 5xx) and the Spot
-      // fallback succeeded, "spot" got permanently cached — silently
-      // demoting an authoritatively-futures symbol to Spot data for the rest
-      // of the session, for every caller (Live Scanner AND Backtest alike),
-      // even after futures recovers. A large HISTORY_LIMIT request (the
-      // Backtest's 1500-candle pull) is far more likely to hit a transient
-      // failure than the Live Scanner's small 6-candle one, so this could
-      // silently flip a symbol's data source out from under just one of the
-      // two callers, producing exactly the kind of Scanner-vs-Backtest
-      // pattern mismatch this was chasing. Now it only records venue for a
-      // symbol venueOf doesn't already have an answer for.
-      const priorVenue = venueOf.get(symbol);
-      if (!venueOf.has(symbol)) {
-        venueOf.set(symbol, answeredVenue);
-      } else if (priorVenue !== answeredVenue) {
-        // FIX (silent substitution): this call's primary (authoritative)
-        // venue attempt failed and fell through to the other one, so this
-        // computation is now built on a DIFFERENT instrument than the one
-        // this symbol is normally analysed on (and than what the Live
-        // Scanner's small, rarely-rate-limited request will use). Warn
-        // loudly instead of letting a mismatched pattern show up with no
-        // trace — this is what a Backtest-only pattern mismatch against the
-        // Live Scanner for the same symbol/date usually means.
-        console.warn(
-          `[binance] ${symbol}: using ${answeredVenue} data this call (${priorVenue} request failed/rate-limited) — ` +
-            `results may not match the Live Scanner, which normally analyses this symbol on ${priorVenue}.`
-        );
+      if (Array.isArray(data) && data.length >= 2) {
+        return data.map(parseKline);
       }
-      return data.map(parseKline);
     } catch {
-      // malformed payload — try the other venue
+      // malformed payload — fall through to the "no klines" warning below
     }
   }
-  console.warn(`[binance] no klines for ${symbol} — dropped from results`);
+  console.warn(`[binance] no futures klines for ${symbol} — dropped from results`);
   return null;
 }
 
