@@ -1651,7 +1651,7 @@ export function renderSSRRHHLLBadges(r: CPRResult) {
     badges.push(
       <span
         key="ssrr-above"
-        className="text-[10px] px-1 py-0.5 rounded bg-green-500/10 text-green-400 border border-green-500/30 font-medium"
+        className="text-[10px] whitespace-nowrap px-1 py-0.5 rounded bg-green-500/10 text-green-400 border border-green-500/30 font-medium"
         title="Today's R1 > Prev R1 and Today's S1 >= Prev S1"
       >
         SSRR-A
@@ -1662,7 +1662,7 @@ export function renderSSRRHHLLBadges(r: CPRResult) {
     badges.push(
       <span
         key="ssrr-below"
-        className="text-[10px] px-1 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/30 font-medium"
+        className="text-[10px] whitespace-nowrap px-1 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/30 font-medium"
         title="Today's R1 <= Prev R1 and Today's S1 < Prev S1"
       >
         SSRR-B
