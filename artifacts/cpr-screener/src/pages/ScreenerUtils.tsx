@@ -764,6 +764,21 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       r.todayCPR.prevLow < r.todayCPR.s1  &&                       // PDL<L1
       r.todayCPR.prevLow < r.prevCPR.pivot
     );
+    // NEW: 6PM:APHS1A-FAU4:9PM — CPR 1ABOVE + Pattern eXL4U2 + the
+    // PREVIOUS day's own pivot sub-label (prevCPR vs ppCPR) being eXL4U3
+    // ("p-eXL4U3" badge) + today's BC above prev day's own PDH
+    // (todayCPR.bc > prevCPR.prevHigh) + today's S1 above prev day's TC
+    // (todayCPR.s1 > prevCPR.tc). Bullish, entry ~6PM, targets Far Above
+    // U4 by ~9PM. Green color family, same as its 9AM:MegL-U4+1:3PM
+    // sibling.
+    case "6PM:APHS1A-FAU4:9PM":
+      return (
+        r.CPRs1Above &&
+        r.eXL4U2 &&
+        computePrevPattern(r.prevCPR, r.ppCPR) === "eXL4U3" &&
+        r.todayCPR.bc > r.prevCPR.prevHigh &&
+        r.todayCPR.s1 > r.prevCPR.tc
+      );
     case "pcpr-u1-cpr-pl1":
       return r.pCPR1Above;
     // NEW: BC>pPDL-U3:5AM — sub-filter under "PREVCPR 1ABOVE": base pCPR1Above
@@ -1234,6 +1249,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     { key: "9AM:MegL-U4+1:3PM", direction: "up" },
     { key: "7PM:MoMi->U4:2AM", direction: "up" },
     { key: "7PM:MoMi-<L4:2AM", direction: "down" },
+    { key: "6PM:APHS1A-FAU4:9PM", direction: "up" },
   ],
   "l1pu1-above": [
     { key: "SMi-L1pU1>-APU4:11PM", direction: "up" },

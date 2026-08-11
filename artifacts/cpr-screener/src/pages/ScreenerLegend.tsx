@@ -230,6 +230,11 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             <div className="text-xs font-semibold text-rose-400 mb-1">Pattern: p-cOL1U1 → eXL4U2&nbsp;&nbsp;PCPR: pMicro&nbsp;&nbsp;CPR: Mini</div>
             <div className="text-xs text-muted-foreground">CPR 1ABOVE, prev day&apos;s own pattern p-cOL1U1, today&apos;s Pattern eXL4U2, prev CPR pMicro (≤0.10%), today CPR Mini (0.22%–0.60%), both previous and current PDL below L1, and today&apos;s PDL below prev day&apos;s pivot</div>
           </>
+        ) : activePattern === "6PM:APHS1A-FAU4:9PM" ? (
+          <>
+            <div className="text-xs font-semibold text-green-400 mb-1">Pattern: eXL4U2&nbsp;&nbsp;Prev: p-eXL4U3&nbsp;&nbsp;BC &gt; pPDH&nbsp;&nbsp;S1 &gt; pTC</div>
+            <div className="text-xs text-muted-foreground">CPR 1ABOVE + Pattern eXL4U2 + prev day&apos;s own pattern p-eXL4U3 + today&apos;s BC above prev day&apos;s own PDH + today&apos;s S1 above prev day&apos;s TC</div>
+          </>
         ) : activePattern === "ss-eXU4L1-U4:10PM" ? (
           <>
             <div className="text-xs font-semibold text-green-400 mb-1">Pattern: eXU4L1&nbsp;&nbsp;PCPR: Wide&nbsp;&nbsp;pBC &gt; U1</div>
@@ -522,6 +527,11 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
           <>
             <div className="text-xs font-semibold text-rose-400 mb-1">Target: L4&nbsp;&nbsp;&nbsp;Entry: 7PM&nbsp;&nbsp;&nbsp;Time: 2AM</div>
             <div className="text-xs text-rose-400/80">7PM setup with bearish continuation expected toward today&apos;s L4 by ~2AM</div>
+          </>
+        ) : activePattern === "6PM:APHS1A-FAU4:9PM" ? (
+          <>
+            <div className="text-xs font-semibold text-green-400 mb-1">Target: FAU4&nbsp;&nbsp;&nbsp;Entry: 6PM&nbsp;&nbsp;&nbsp;Time: 9PM</div>
+            <div className="text-xs text-muted-foreground">eXL4U2 base plus prev day&apos;s own p-eXL4U3 pattern, today&apos;s BC above prev day&apos;s own PDH and today&apos;s S1 above prev day&apos;s TC — expected upside far above U4 by ~9PM</div>
           </>
         ) : activePattern === "ss-eXU4L1-U4:10PM" ? (
           <>

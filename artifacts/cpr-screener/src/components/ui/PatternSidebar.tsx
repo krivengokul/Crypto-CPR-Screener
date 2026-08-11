@@ -123,6 +123,20 @@ export const subPatterns: Record<string, SubPattern[]> = {
       activeText:  "#fda4af",      // rose-300 text
       activeBg:    "rgba(244, 63, 94, 0.14)",
     },
+    // NEW: 6PM:APHS1A-FAU4:9PM — CPR 1ABOVE + Pattern eXL4U2 + the PREVIOUS
+    // day's own pivot sub-label (prevCPR vs ppCPR) being eXL4U3
+    // ("p-eXL4U3" badge) + today's BC above prev day's own PDH
+    // (todayCPR.bc > prevCPR.prevHigh) + today's S1 above prev day's TC
+    // (todayCPR.s1 > prevCPR.tc). Bullish, entry ~6PM, targets Far Above
+    // U4 by ~9PM. Green color family, same as its 9AM:MegL-U4+1:3PM
+    // sibling, to flag it as bullish.
+    {
+      id: "6PM:APHS1A-FAU4:9PM",
+      label: "6PM:APHS1A-FAU4:9PM",
+      activeColor: "#22c55e",      // green-500 border
+      activeText:  "#4ade80",      // green-400 text
+      activeBg:    "rgba(34, 197, 94, 0.14)",
+    },
   ],
   "pcpr-u1-cpr-pl1": [
     // NEW: BC>pPDL-U3:5AM — PREVCPR 1ABOVE + today's BC above prev day's PDH

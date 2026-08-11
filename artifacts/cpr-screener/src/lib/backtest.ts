@@ -76,6 +76,20 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "L4 (today's S4)",
     getTarget: (r) => r.todayCPR.s4,
   },
+  // NEW: "6PM:APHS1A-FAU4:9PM" — nested under "CPR 1ABOVE" → Pattern
+  // "eXL4U2", alongside its "9AM:MegL-U4+1:3PM" / "7PM:MoMi->U4:2AM" /
+  // "7PM:MoMi-<L4:2AM" siblings. Condition: CPRs1Above + eXL4U2 + the
+  // prev day's own pivot sub-label being eXL4U3 (p-eXL4U3) + today's BC
+  // above prev day's own PDH + today's S1 above prev day's TC — see
+  // ScreenerUtils.tsx. Bullish, entry ~6PM, targets Far Above today's R4
+  // by ~9PM.
+  {
+    key: "6PM:APHS1A-FAU4:9PM",
+    label: "6PM:APHS1A-FAU4:9PM",
+    direction: "bullish",
+    targetLabel: "FAU4 (Far Above today's R4)",
+    getTarget: (r) => r.todayCPR.r4,
+  },
   // REMOVED: "HA-U1>PU4" — its condition (cprRising && strWideCPR &&
   // todayCPR.r1 > prevCPR.r4) is identical to the "U1 > pU4" (u1-gt-pu4)
   // parent category's own base condition, so it was just a duplicate
@@ -387,7 +401,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       {
         key: "eXL4U2",
         label: "eXL4U2",
-        subPatternKeys: ["9AM:MegL-U4+1:3PM", "7PM:MoMi->U4:2AM", "7PM:MoMi-<L4:2AM"],
+        subPatternKeys: ["9AM:MegL-U4+1:3PM", "7PM:MoMi->U4:2AM", "7PM:MoMi-<L4:2AM", "6PM:APHS1A-FAU4:9PM"],
       },
     ],
   },
