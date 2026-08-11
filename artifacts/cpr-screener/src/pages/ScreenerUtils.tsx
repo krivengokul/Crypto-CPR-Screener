@@ -1635,55 +1635,64 @@ export function renderPdhPdlSubBadges(r: CPRResult) {
 /**
  * renderSSRRHHLLBadges — the SSRR-A/SSRR-B (support/resistance directional,
  * from CPRResult.SSRRAbove/SSRRBelow, formerly labelled SR-A/SR-B) badge
- * pair plus the HHLL-A/HHLL-B (PDH/PDL directional, from
- * CPRResult.HHLLAbove/HHLLBelow) badge pair. Shared by the LEVEL column's
- * Inside CPR and Outside CPR categories (both ScreenerTableRow's
- * renderLevelBadges and its own inline row JSX) so all four call sites stay
- * in sync. SSRR-A/B keep the solid green/red palette (now a touch smaller);
- * HHLL-A/B mirror the soft p-PDHL-A/p-PDHL-B styling and are colour-coded
- * green (Above) / red (Below).
+ * plus the HHLL-A/HHLL-B (PDH/PDL directional, from
+ * CPRResult.HHLLAbove/HHLLBelow) badge, rendered as one inline nowrap pair —
+ * same layout pattern as the p-PDHL-A/PDHL-A pair in renderPdhPdlSubBadges.
+ * Shared by the LEVEL column's Inside CPR and Outside CPR categories (both
+ * ScreenerTableRow's renderLevelBadges and its own inline row JSX) so all
+ * call sites stay in sync. SSRR-A/B keep the solid green/red palette (now a
+ * touch smaller); HHLL-A/B mirror the soft p-PDHL-A/p-PDHL-B styling and are
+ * colour-coded green (Above) / red (Below). Returns null when neither flag
+ * pair is set.
  */
 export function renderSSRRHHLLBadges(r: CPRResult) {
-  return (
-    <>
-      {r.SSRRAbove && (
-        <span
-          key="ssrr-above"
-          className="text-[10px] px-1 py-0.5 rounded bg-green-500/10 text-green-400 border border-green-500/30 font-medium"
-          title="Today's R1 > Prev R1 and Today's S1 >= Prev S1"
-        >
-          SSRR-A
-        </span>
-      )}
-      {r.SSRRBelow && (
-        <span
-          key="ssrr-below"
-          className="text-[10px] px-1 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/30 font-medium"
-          title="Today's R1 <= Prev R1 and Today's S1 < Prev S1"
-        >
-          SSRR-B
-        </span>
-      )}
-      {r.HHLLAbove && (
-        <span
-          key="hhll-above"
-          className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-green-500/8 text-green-400/70 border border-green-500/15 font-normal"
-          title="Today's PDH > Prev PDH and Today's PDL >= Prev PDL"
-        >
-          HHLL-A
-        </span>
-      )}
-      {r.HHLLBelow && (
-        <span
-          key="hhll-below"
-          className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-red-500/8 text-red-400/70 border border-red-500/15 font-normal"
-          title="Today's PDH <= Prev PDH and Today's PDL < Prev PDL"
-        >
-          HHLL-B
-        </span>
-      )}
-    </>
-  );
+  const badges: JSX.Element[] = [];
+  if (r.SSRRAbove) {
+    badges.push(
+      <span
+        key="ssrr-above"
+        className="text-[10px] px-1 py-0.5 rounded bg-green-500/10 text-green-400 border border-green-500/30 font-medium"
+        title="Today's R1 > Prev R1 and Today's S1 >= Prev S1"
+      >
+        SSRR-A
+      </span>
+    );
+  }
+  if (r.SSRRBelow) {
+    badges.push(
+      <span
+        key="ssrr-below"
+        className="text-[10px] px-1 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/30 font-medium"
+        title="Today's R1 <= Prev R1 and Today's S1 < Prev S1"
+      >
+        SSRR-B
+      </span>
+    );
+  }
+  if (r.HHLLAbove) {
+    badges.push(
+      <span
+        key="hhll-above"
+        className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-green-500/8 text-green-400/70 border border-green-500/15 font-normal"
+        title="Today's PDH > Prev PDH and Today's PDL >= Prev PDL"
+      >
+        HHLL-A
+      </span>
+    );
+  }
+  if (r.HHLLBelow) {
+    badges.push(
+      <span
+        key="hhll-below"
+        className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-red-500/8 text-red-400/70 border border-red-500/15 font-normal"
+        title="Today's PDH <= Prev PDH and Today's PDL < Prev PDL"
+      >
+        HHLL-B
+      </span>
+    );
+  }
+  if (badges.length === 0) return null;
+  return <div className="flex flex-nowrap items-center gap-1">{badges}</div>;
 }
 
 export function isRisingAboveTC(r: CPRResult): boolean {

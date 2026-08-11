@@ -223,16 +223,17 @@ export function renderPrevPatternBadge(r: CPRResult) {
 export function renderLevelBadges(r: CPRResult) {
   const isInsideCPR = passesPattern(r, "inside-cpr");
   const isOutsideCPR = passesPattern(r, "outside-cpr");
+  const showWide = r.strWideCPR && !isOutsideCPR;
   const nothingMatched =
     !r.cprRising &&
     !r.cprFalling &&
     !r.narrowCPR &&
     !r.equalCPR &&
-    !r.strWideCPR &&
+    !showWide &&
     !isInsideCPR &&
     !isOutsideCPR;
   return (
-    <div className="flex flex-wrap gap-1 max-w-[90px]">
+    <div className="flex flex-wrap gap-1 max-w-[130px]">
       {r.cprRising && <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">Above</span>}
       {r.cprFalling && <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 font-medium">Below</span>}
       {isInsideCPR && <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 font-medium">Inside</span>}
@@ -243,7 +244,7 @@ export function renderLevelBadges(r: CPRResult) {
         </>
       )}
       {r.overlapLower && <span className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-medium">oV-Below</span>}
-      {r.strWideCPR && <span className="text-xs px-1.5 py-0.5 rounded bg-pink-500/10 text-pink-400 border border-pink-500/20 font-medium">Wide</span>}
+      {showWide && <span className="text-xs px-1.5 py-0.5 rounded bg-pink-500/10 text-pink-400 border border-pink-500/20 font-medium">Wide</span>}
       {r.overlapHigher && <span className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20 font-medium">oV-Above</span>}
       {r.narrowCPR && (
         isInsideCPR ? (
@@ -320,11 +321,11 @@ export function ScreenerTableHeader({
         <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           Pattern
         </th>
-        <th className="px-2 py-3 w-20 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+        <th className="px-2 py-3 w-28 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           LEVEL
         </th>
         <th
-          className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground min-w-[220px]"
+          className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground min-w-[190px]"
           onClick={() => toggleSort("compressionRatio")}
         >
             PIVOT SIZE <SortIcon k="compressionRatio" />
@@ -391,6 +392,10 @@ export default function ScreenerTableRow({
   // used in both the CPR column (replacing "Narrow") and the GAP column.
   const isInsideCPR = passesPattern(r, "inside-cpr");
   const isOutsideCPR = passesPattern(r, "outside-cpr");
+  // Outside-CPR rows don't need the "Wide" badge — Outside already implies
+  // the CPR bands separated from prev day's, so width-category noise (Wide)
+  // is redundant there; only show it for non-Outside rows.
+  const showWide = r.strWideCPR && !isOutsideCPR;
   const gapBadge = isInsideCPR
     ? r.prevR1Gap > r.prevS1Gap ? (
         <span
@@ -504,8 +509,8 @@ export default function ScreenerTableRow({
           {renderTodayPatternBadges(r)}
           {renderPrevPatternBadge(r)}
         </td>
-        <td className="px-2 py-3 w-20">
-          <div className="flex flex-wrap gap-1 max-w-[90px]">
+        <td className="px-2 py-3 w-28">
+          <div className="flex flex-wrap gap-1 max-w-[130px]">
             {r.cprRising && <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">Above</span>}
             {r.cprFalling && <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 font-medium">Below</span>}
             {isInsideCPR && <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 font-medium">Inside</span>}
@@ -516,7 +521,7 @@ export default function ScreenerTableRow({
               </>
             )}
             {r.overlapLower && <span className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-medium">oV-Below</span>}
-            {r.strWideCPR && <span className="text-xs px-1.5 py-0.5 rounded bg-pink-500/10 text-pink-400 border border-pink-500/20 font-medium">Wide</span>}
+            {showWide && <span className="text-xs px-1.5 py-0.5 rounded bg-pink-500/10 text-pink-400 border border-pink-500/20 font-medium">Wide</span>}
             {r.overlapHigher && <span className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20 font-medium">oV-Above</span>}
             {r.narrowCPR && (isInsideCPR ? ssrrHhllBadge : <span className="text-xs px-1.5 py-0.5 rounded bg-chart-3/10 text-chart-3 border border-chart-3/20 font-medium">Narrow</span>)}
             {r.equalCPR && <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">Equal</span>}
@@ -524,7 +529,7 @@ export default function ScreenerTableRow({
               !r.cprFalling &&
               !r.narrowCPR &&
               !r.equalCPR &&
-              !r.strWideCPR &&
+              !showWide &&
               !isInsideCPR &&
               !isOutsideCPR &&
               !(passesPattern(r, activePattern) && ["overlapping-lower", "overlapping-higher", "equal-cpr"].includes(activePattern)) && (
@@ -532,7 +537,7 @@ export default function ScreenerTableRow({
             )}
           </div>
         </td>
-        <td className="px-4 py-3 font-mono whitespace-nowrap min-w-[220px]">
+        <td className="px-4 py-3 font-mono whitespace-nowrap min-w-[190px]">
           {(() => {
             const prevCat = getWidthCategory(r.prevCPR.widthPct);
             const todayCat = getWidthCategory(r.todayCPR.widthPct);
