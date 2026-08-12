@@ -774,14 +774,14 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         (computePrevPattern(r.prevCPR, r.ppCPR) === "eXL4U3" &&
         r.prevCPR.pivot > r.todayCPR.prevLow && r.todayCPR.s3 > r.prevCPR.s3 ))
       );
-    // NEW: 9AM:pPALPAH-FAU4:2PM — sub-filter under "CPR 1ABOVE" → Pattern
+    // NEW: co9AM:pPALPApH-FAU4:2PM — sub-filter under "CPR 1ABOVE" → Pattern
     // "HiL3U4" (today's S4 in prev's S3/S2 band L3, prev's R4 in today's
     // R3/R4 band U4). Base CPRs1Above condition PLUS the raw HiL3U4 flag
     // PLUS prev day's Pivot above today's PDL ("pPivot > PDL") PLUS
     // today's own Pivot above today's PDH ("Pivot > PAH"). Bullish, entry
     // ~9AM, targets Far Above U4 by ~2PM. Green color family, same as its
     // 9AM:MegL-U4+1:3PM / 6PM:APHS1A-FAU4:9PM siblings.
-    case "9AM:pPALPAH-FAU4:2PM":
+    case "co9AM:pPALPApH-FAU4:2PM":
       return (
         r.CPRs1Above &&
         r.HiL3U4 &&

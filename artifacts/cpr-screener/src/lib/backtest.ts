@@ -90,15 +90,15 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "FAU4 (Far Above today's R4)",
     getTarget: (r) => r.todayCPR.r4,
   },
-  // NEW: "9AM:pPALPAH-FAU4:2PM" — nested under "CPR 1ABOVE" → Pattern
+  // NEW: "co9AM:pPALPApH-FAU4:2PM" — nested under "CPR 1ABOVE" → Pattern
   // "HiL3U4" (see BACKTEST_CATEGORIES below), alongside its "eXL4U2"
   // siblings. Condition: CPRs1Above + raw HiL3U4 flag + prev day's Pivot
   // above today's PDL + today's own Pivot above today's PDH — see
   // ScreenerUtils.tsx. Bullish, entry ~9AM, targets Far Above today's R4
   // by ~2PM.
   {
-    key: "9AM:pPALPAH-FAU4:2PM",
-    label: "9AM:pPALPAH-FAU4:2PM",
+    key: "co9AM:pPALPApH-FAU4:2PM",
+    label: "co9AM:pPALPApH-FAU4:2PM",
     direction: "bullish",
     targetLabel: "FAU4 (Far Above today's R4)",
     getTarget: (r) => r.todayCPR.r4,
@@ -419,11 +419,11 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       // NEW: "HiL3U4" Pattern sub-category (arrow) — same shape as its
       // "eXL4U2" sibling above. Base condition = parent cpr-1-above's
       // condition AND the raw HiL3U4 flag (see matchesPatternFlag in
-      // ScreenerUtils.tsx). Nests "9AM:pPALPAH-FAU4:2PM".
+      // ScreenerUtils.tsx). Nests "co9AM:pPALPApH-FAU4:2PM".
       {
         key: "HiL3U4",
         label: "HiL3U4",
-        subPatternKeys: ["9AM:pPALPAH-FAU4:2PM"],
+        subPatternKeys: ["co9AM:pPALPApH-FAU4:2PM"],
       },
     ],
   },

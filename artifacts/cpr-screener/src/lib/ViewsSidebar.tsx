@@ -136,15 +136,15 @@ export const Views: Record<string, SubPattern[]> = {
       activeText:  "#4ade80",      // green-400 text
       activeBg:    "rgba(34, 197, 94, 0.14)",
     },
-    // NEW: 9AM:pPALPAH-FAU4:2PM — CPR 1ABOVE + Pattern HiL3U4 + prev day's
+    // NEW: co9AM:pPALPApH-FAU4:2PM — CPR 1ABOVE + Pattern HiL3U4 + prev day's
     // own Pivot above today's PDL (prevCPR.pivot > todayCPR.prevLow) +
     // today's own Pivot above today's own PDH (todayCPR.pivot >
     // todayCPR.prevHigh). Bullish, entry ~9AM, targets Far Above U4 by
     // ~2PM. Green color family, same as its 9AM:MegL-U4+1:3PM /
     // 6PM:APHS1A-FAU4:9PM siblings.
     {
-      id: "9AM:pPALPAH-FAU4:2PM",
-      label: "9AM:pPALPAH-FAU4:2PM",
+      id: "co9AM:pPALPApH-FAU4:2PM",
+      label: "co9AM:pPALPApH-FAU4:2PM",
       activeColor: "#22c55e",      // green-500 border
       activeText:  "#4ade80",      // green-400 text
       activeBg:    "rgba(34, 197, 94, 0.14)",
