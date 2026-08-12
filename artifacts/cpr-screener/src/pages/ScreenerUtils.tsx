@@ -1640,10 +1640,9 @@ export function renderPdhPdlSubBadges(r: CPRResult) {
  * same layout pattern as the p-PDHL-A/PDHL-A pair in renderPdhPdlSubBadges.
  * Shared by the LEVEL column's Inside CPR and Outside CPR categories (both
  * ScreenerTableRow's renderLevelBadges and its own inline row JSX) so all
- * call sites stay in sync. SSRR-A/B keep the solid green/red palette (now a
- * touch smaller); HHLL-A/B mirror the soft p-PDHL-A/p-PDHL-B styling and are
- * colour-coded green (Above) / red (Below). Returns null when neither flag
- * pair is set.
+ * call sites stay in sync. SSRR-A/B and HHLL-A/B now share the same solid
+ * green/red badge styling, colour-coded green (Above) / red (Below).
+ * Returns null when neither flag pair is set.
  */
 export function renderSSRRHHLLBadges(r: CPRResult) {
   const badges: JSX.Element[] = [];
@@ -1673,7 +1672,7 @@ export function renderSSRRHHLLBadges(r: CPRResult) {
     badges.push(
       <span
         key="hhll-above"
-        className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-green-500/8 text-green-400/70 border border-green-500/15 font-normal"
+        className="text-[10px] whitespace-nowrap px-1 py-0.5 rounded bg-green-500/10 text-green-400 border border-green-500/30 font-medium"
         title="Today's PDH > Prev PDH and Today's PDL >= Prev PDL"
       >
         HHLL-A
@@ -1684,7 +1683,7 @@ export function renderSSRRHHLLBadges(r: CPRResult) {
     badges.push(
       <span
         key="hhll-below"
-        className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-red-500/8 text-red-400/70 border border-red-500/15 font-normal"
+        className="text-[10px] whitespace-nowrap px-1 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/30 font-medium"
         title="Today's PDH <= Prev PDH and Today's PDL < Prev PDL"
       >
         HHLL-B
