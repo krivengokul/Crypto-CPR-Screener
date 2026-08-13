@@ -669,7 +669,9 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return (
         r.InsideCPR &&
         r.todayCPR.prevLow > r.prevCPR.s1 &&
-        (r.todayCPR.prevHigh > r.prevCPR.r1 || r.prevCPR.prevHigh > r.todayCPR.r1)
+        (r.todayCPR.prevHigh > r.prevCPR.r1 || r.prevCPR.prevHigh > r.todayCPR.r1) &&
+        ((r.todayCPR.pivot > prevCPR.pivot && r.todayCPR.prevHigh > r.prevCPR.prevHigh) || 
+          (r.todayCPR.pivot < prevCPR.pivot && r.todayCPR.prevHigh < r.prevCPR.prevHigh))
       );
     // NEW: 8AM:SRBHHLLA-pU4+1:8AM — Inside CPR + cOL3U3 + prev CPR width
     // category pLarge (2.00%-5.00%) + today CPR width category Medium
