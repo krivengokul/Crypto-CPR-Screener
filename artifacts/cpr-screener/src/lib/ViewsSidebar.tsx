@@ -214,6 +214,18 @@ export const Views: Record<string, SubPattern[]> = {
     },
   ],
   "inside-cpr": [
+    // NEW: 8AM:S1LAR1HA-faU4+1:8AM — Inside CPR + today's PDL above prev
+    // day's S1 ("PDL>pS1") + EITHER today's PDH above prev day's R1
+    // ("PDH>pR1") OR prev day's PDH above today's R1 ("pPDH>R1"). Bullish,
+    // entry ~8AM, targets pU4 (prev day's R4) by ~8AM the next day. Green
+    // color family, same as its Inside CPR siblings below.
+    {
+      id: "8AM:S1LAR1HA-faU4+1:8AM",
+      label: "8AM:S1LAR1HA-faU4+1:8AM",
+      activeColor: "#22c55e",              // green-500 border
+      activeText:  "#4ade80",              // green-400 text
+      activeBg:    "rgba(34, 197, 94, 0.14)",
+    },
     // NEW: 8AM:SRBHHLLA-pU4+1:8AM — Inside CPR + cOL3U3 + prev CPR width
     // category pLarge (2.00%-5.00%) + today CPR width category Medium
     // (1.10%-2.00%) + prev day's own PDL below prev S1 (p-PDL<L1) + today's

@@ -655,6 +655,22 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       );
     case "inside-cpr":
       return r.InsideCPR;
+    // NEW: 8AM:S1LAR1HA-faU4+1:8AM — nested under "Inside CPR" (inside-cpr)
+    // in ViewsSidebar's left-nav, same as its "8AM:SRBHHLLA-pU4+1:8AM" /
+    // "2PM:pPDHLA-SRA-U4:7PM" / "8AM:pPDHA-SRA-U4+2:2AM" siblings below —
+    // but (per backtest.ts's BACKTEST_CATEGORIES) sits directly on the
+    // "inside-cpr" category's own subPatternKeys rather than behind a
+    // "Pattern" sub-category/arrow. Base InsideCPR condition + today's PDL
+    // above prev day's S1 ("PDL>pS1") + EITHER today's PDH above prev
+    // day's R1 ("PDH>pR1") OR prev day's PDH above today's R1
+    // ("pPDH>R1"). Bullish, entry ~8AM, targets pU4 (prev day's R4) by
+    // ~8AM the next day. Green color family.
+    case "8AM:S1LAR1HA-faU4+1:8AM":
+      return (
+        r.InsideCPR &&
+        r.todayCPR.prevLow > r.prevCPR.s1 &&
+        (r.todayCPR.prevHigh > r.prevCPR.r1 || r.prevCPR.prevHigh > r.todayCPR.r1)
+      );
     // NEW: 8AM:SRBHHLLA-pU4+1:8AM — Inside CPR + cOL3U3 + prev CPR width
     // category pLarge (2.00%-5.00%) + today CPR width category Medium
     // (1.10%-2.00%) + prev day's own PDL below prev S1 ("p-PDL<L1") +
@@ -1270,6 +1286,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     { key: "T0-L1pU1>-BPL4:5AM", direction: "down" },
   ],
   "inside-cpr": [
+    { key: "8AM:S1LAR1HA-faU4+1:8AM", direction: "up" },
     { key: "8AM:SRBHHLLA-pU4+1:8AM", direction: "up" },
     { key: "2PM:pPDHLA-SRA-U4:7PM", direction: "up" },
     { key: "8AM:pPDHA-SRA-U4+2:2AM", direction: "up" },

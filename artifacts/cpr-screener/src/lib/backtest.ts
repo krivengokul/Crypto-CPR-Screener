@@ -321,6 +321,22 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "PL4 (prev day's S4)",
     getTarget: (r) => r.prevCPR.s4,
   },
+  // NEW: "8AM:S1LAR1HA-faU4+1:8AM" — Direct View, sits directly on the
+  // "inside-cpr" category's own subPatternKeys in BACKTEST_CATEGORIES
+  // (NOT nested under a "Pattern" sub-category / arrow like its
+  // "8AM:SRBHHLLA-pU4+1:8AM" sibling just below — matches ViewsSidebar's
+  // left-nav, where it's a top-level item under "Inside CPR" rather than
+  // one of its Views). Base InsideCPR condition + today's PDL above prev
+  // day's S1 ("PDL>pS1") + EITHER today's PDH above prev day's R1
+  // ("PDH>pR1") OR prev day's PDH above today's R1 ("pPDH>R1"). Bullish,
+  // targets pU4 (prev day's R4), entry ~8AM, by ~8AM the next day.
+  {
+    key: "8AM:S1LAR1HA-faU4+1:8AM",
+    label: "8AM:S1LAR1HA-faU4+1:8AM",
+    direction: "bullish",
+    targetLabel: "Far Above U4 (today's R4)",
+    getTarget: (r) => r.todayCPR.r4,
+  },
   // NEW: "8AM:SRBHHLLA-pU4+1:8AM" — nested under "CPR Inside" (inside-cpr)
   // via the new "cOL3U3" Pattern sub-category (see BACKTEST_CATEGORIES
   // below). Base inside-cpr condition + raw cOL3U3 flag + pLarge/Medium
@@ -641,6 +657,13 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
   {
     key: "inside-cpr",
     label: "Inside CPR",
+    // NEW: "8AM:S1LAR1HA-faU4+1:8AM" sits directly on this category's own
+    // subPatternKeys (not inside a "Pattern" sub-category/arrow below) —
+    // it's a Direct View in ViewsSidebar's left-nav (top-level, under but
+    // not nested inside "Inside CPR"), so it isn't gated behind one of
+    // the raw Pattern flags (cOL3U3/cOL4U4/eXL4U4) the way its
+    // subCategories siblings are.
+    subPatternKeys: ["8AM:S1LAR1HA-faU4+1:8AM"],
     subCategories: [
       {
         key: "cOL3U3",

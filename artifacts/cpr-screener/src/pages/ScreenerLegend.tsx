@@ -367,6 +367,15 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
               Overlap Above + previous day&apos;s pattern p-cOU3L3 + eXL4U4 (prev R4 inside today&apos;s R3/R4, prev S4 inside today&apos;s S3/S4) + prev CPR pLarge (2.00%–5.00%) + today CPR Large (2.00%–5.00%) + prev day&apos;s PDL below prev S1 (p-PDL&lt;L1) + today PDH above today R1 (PDH&gt;U1) + today&apos;s PDH above prev R1 + today&apos;s PDL above prev S1.
             </div>
           </>
+        ) : activePattern === "8AM:S1LAR1HA-faU4+1:8AM" ? (
+          <>
+            <div className="text-xs font-semibold text-green-400 mb-1">
+              Pattern: PDL&gt;pS1&nbsp;&nbsp;PDH&gt;pR1 or pPDH&gt;R1
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Inside CPR + today&apos;s PDL above prev day&apos;s S1 (PDL&gt;pS1) + EITHER today&apos;s PDH above prev day&apos;s R1 (PDH&gt;pR1) OR prev day&apos;s PDH above today&apos;s R1 (pPDH&gt;R1).
+            </div>
+          </>
         ) : activePattern === "8AM:SRBHHLLA-pU4+1:8AM" ? (
           <>
             <div className="text-xs font-semibold text-green-400 mb-1">
@@ -663,6 +672,15 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             </div>
             <div className="text-xs text-muted-foreground">
               Bullish continuation from a Large/pLarge Overlap-Above setup — expected move toward today&apos;s U4 by ~2AM IST.
+            </div>
+          </>
+        ) : activePattern === "8AM:S1LAR1HA-faU4+1:8AM" ? (
+          <>
+            <div className="text-xs font-semibold text-green-400 mb-1">
+              Target: PU4&nbsp;&nbsp;&nbsp;Entry: 8AM&nbsp;&nbsp;&nbsp;Time: 8AM (+1)
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Bullish continuation from an Inside-CPR setup where today&apos;s PDL holds above prev day&apos;s S1 and either today&apos;s PDH clears prev day&apos;s R1 or prev day&apos;s PDH clears today&apos;s R1 — expected move toward prev day&apos;s U4 by ~8AM the next day.
             </div>
           </>
         ) : activePattern === "8AM:SRBHHLLA-pU4+1:8AM" ? (
