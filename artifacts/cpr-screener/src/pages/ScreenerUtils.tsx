@@ -964,9 +964,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // Legend labels: Pattern eXL3U1, PCPR Small, CPR Large. Target FAU4 @ 3PM.
     case "9AM:APHS1A-FAU4:4AM":
       return (
-        r.cprRising &&
-        r.strWideCPR &&
-        r.todayCPR.r1 > r.prevCPR.r4 &&
+        r.cprRising && r.strWideCPR && r.todayCPR.r1 > r.prevCPR.r4 &&   // U1 > pU4
         r.eXL3TC &&
         r.todayCPR.bc > r.prevCPR.prevHigh &&
         r.todayCPR.s1 > r.prevCPR.tc
@@ -980,9 +978,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // day's S4) by ~4AM. Red color family.
     case "6AM:pX-APHS1A-pL4:4AM":
       return (
-        r.cprRising &&
-        r.strWideCPR &&
-        r.todayCPR.r1 > r.prevCPR.r4 &&
+        r.cprRising && r.strWideCPR && r.todayCPR.r1 > r.prevCPR.r4 &&   // U1 > pU4
         r.eXL3TC &&
         r.todayCPR.bc > r.prevCPR.prevHigh &&
         r.todayCPR.s1 > r.prevCPR.tc &&
@@ -997,9 +993,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // Above U4 (today's R4) by ~4AM. Green color family.
     case "8AM:APHS1A-FAU4:4AM":
       return (
-        r.cprRising &&
-        r.strWideCPR &&
-        r.todayCPR.r1 > r.prevCPR.r4 &&
+       r.cprRising && r.strWideCPR && r.todayCPR.r1 > r.prevCPR.r4 &&   // U1 > pU4
         r.eXL3U1 &&
         r.todayCPR.bc > r.prevCPR.prevHigh &&
         r.todayCPR.s1 > r.prevCPR.tc
