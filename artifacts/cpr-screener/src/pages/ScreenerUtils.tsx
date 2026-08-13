@@ -1023,16 +1023,20 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // + Pattern eXHiL2L1 (prev's R4 and prev's S4 both inside today's S2/S1
     // band, with today's PDL above prev's Pivot) + prev day's own CPR
     // sub-label (prevCPR vs ppCPR) falling in the "Compressed" category —
-    // i.e. getPatternCategory(computePrevPattern(prev, pp)) === "Compressed".
+    // i.e. getPatternCategory(computePrevPattern(prev, pp)) === "cOHigher"
+    // || "cOLower" (the former single "Compressed" category was split into
+    // cOHigher/cOLower in cpr.ts; this check now matches either half).
     // Target U4 (today's R4) @ 3AM.
-    case "SMg-exHiL2L1-U4:3AM":
+    case "SMg-exHiL2L1-U4:3AM": {
+      const prevCat = getPatternCategory(computePrevPattern(r.prevCPR, r.ppCPR));
       return (
         r.cprRising &&
         r.strWideCPR &&
         r.todayCPR.r1 > r.prevCPR.r4 &&
         r.eXHiL2L1 &&
-        getPatternCategory(computePrevPattern(r.prevCPR, r.ppCPR)) === "Compressed"
+        (prevCat === "cOHigher" || prevCat === "cOLower")
       );
+    }
     // NEW: 6AM:MegMeg-L3:8PM — U1>pU4 sub-pattern, nested under the
     // "eXL4U1" Pattern sub-category. Condition: Big CPR + CPR Above
     // (cprRising + strWideCPR) + today R1 above prev R4 (parent U1>pU4) +

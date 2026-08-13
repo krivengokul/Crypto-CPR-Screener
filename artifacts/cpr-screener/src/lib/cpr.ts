@@ -976,31 +976,42 @@ export function pickPattern(f: CPRPairFlags): string | null {
 }
 
 /**
- * PatternCategory — the four structural buckets every band-classification
+ * PatternCategory — the six structural buckets every band-classification
  * pattern flag (CPRPairFlags key) belongs to, derived from the flag's name
- * prefix:
- *   cO -> "Compressed"  (today/prev R4–S4 spread pulled in vs the other side)
- *   eX -> "Expanded"    (today/prev R4–S4 spread pushed out vs the other side)
- *   Hi -> "Higher"      (today's band sits higher relative to prev's)
- *   Lo -> "Lower"       (today's band sits lower relative to prev's)
+ * prefix (and, for cO/eX, whether the name starts with cOU/eXU):
+ *   cOU... -> "cOLower"   (Compressed, name starts with "cOU")
+ *   cO...  -> "cOHigher"  (Compressed, everything else)
+ *   eXU... -> "eXLower"   (Expanded, name starts with "eXU")
+ *   eX...  -> "eXHigher"  (Expanded, everything else)
+ *   Hi     -> "Higher"    (today's band sits higher relative to prev's)
+ *   Lo     -> "Lower"     (today's band sits lower relative to prev's)
+ *
+ * cO/eX were originally a single "Compressed"/"Expanded" category each;
+ * they were split into Higher/Lower sub-buckets purely by name prefix
+ * (cOU.../eXU... vs everything else) so left-nav sub-filters can group
+ * them more granularly. This split is name-prefix based only — it is
+ * NOT the same thing as the pre-existing "Higher"/"Lower" category
+ * (Hi.../Lo... prefixed flags), which is unrelated and unchanged.
  */
-export type PatternCategory = "Compressed" | "Expanded" | "Higher" | "Lower";
+export type PatternCategory = "cOHigher" | "cOLower" | "eXHigher" | "eXLower" | "Higher" | "Lower";
 
 /**
  * PATTERN_CATEGORY — single source of truth mapping every pattern flag
  * name to its PatternCategory, for gating left-nav sub-filter (view)
  * check conditions (e.g. "only show this view's checkbox under the
- * Compressed group"). Built directly from the CPRPairFlags keys above —
+ * cOHigher group"). Built directly from the CPRPairFlags keys above —
  * do not re-derive a flag's category by eyeballing its name at the call
  * site, look it up here instead.
  *
  * Two gotchas baked into this table on purpose:
  *  - `exL3U2` is a legacy lowercase-x spelling (not `eXL3U2`) but is still
  *    an Expanded-family flag; it's included here under its actual key.
+ *    It does not start with "eXU" (case-sensitive), so it lands in
+ *    "eXHigher".
  *  - `eXHiL2L1` and `eXLoL2L1` start with "eX", not "Hi"/"Lo" — the
  *    Hi/Lo in their names refers to the PDL-vs-prev-Pivot split described
- *    in cpr.ts, not the Higher/Lower category. Both are categorized here
- *    as "Expanded", matching their literal prefix.
+ *    in cpr.ts, not the Higher/Lower category. Neither starts with "eXU",
+ *    so both are categorized here as "eXHigher".
  *
  * Flags that don't carry a cO/eX/Hi/Lo prefix (srHigher/srLower/srExpanded/
  * srCompressed and their *Higher/*Lower variants, r4Distance, s4Distance,
@@ -1009,66 +1020,70 @@ export type PatternCategory = "Compressed" | "Expanded" | "Higher" | "Lower";
  * so they don't belong in a prefix-based category map.
  */
 export const PATTERN_CATEGORY: Record<string, PatternCategory> = {
-  // ---- Compressed (cO...) ----
-  cOU3L4: "Compressed",
-  cOL2U3: "Compressed",
-  cOL3U3: "Compressed",
-  cOL2U4: "Compressed",
-  cOL4U4: "Compressed",
-  cOU4L4: "Compressed",
-  cOL3U4: "Compressed",
-  cOU3L3: "Compressed",
-  cOU2L3: "Compressed",
-  cOU1L2: "Compressed",
-  cOU2L4: "Compressed",
-  cOU1L1: "Compressed",
-  cOL1U1: "Compressed",
-  cOU2L2: "Compressed",
-  cOL2U2: "Compressed",
-  cOU1L3: "Compressed",
-  cOTCL2: "Compressed",
-  cOL1U2: "Compressed",
-  cOL1U3: "Compressed",
+  // ---- Compressed: cOLower (name starts with "cOU") ----
+  cOU3L4: "cOLower",
+  cOU4L4: "cOLower",
+  cOU3L3: "cOLower",
+  cOU2L3: "cOLower",
+  cOU1L2: "cOLower",
+  cOU2L4: "cOLower",
+  cOU1L1: "cOLower",
+  cOU2L2: "cOLower",
+  cOU1L3: "cOLower",
 
-  // ---- Expanded (eX... / legacy exL3U2) ----
-  eXL4U4: "Expanded",
-  eXU4L4: "Expanded",
-  eXL4U3: "Expanded",
-  eXU4L2: "Expanded",
-  eXU4L3: "Expanded",
-  exL3U2: "Expanded", // legacy lowercase spelling — see note above
-  eXL3U3: "Expanded",
-  eXU3L3: "Expanded",
-  eXL2U1: "Expanded",
-  eXL3U1: "Expanded",
-  eXL4U1: "Expanded",
-  eXL1BC: "Expanded",
-  eXL1CP: "Expanded",
-  eXL1TC: "Expanded",
-  eXL2BC: "Expanded",
-  eXL3BC: "Expanded",
-  eXL3CP: "Expanded",
-  eXL3TC: "Expanded",
-  eXL4U2: "Expanded",
-  eXL2U2: "Expanded",
-  eXL2TC: "Expanded",
-  eXL1U1: "Expanded",
-  eXU1L1: "Expanded",
-  eXU2L1: "Expanded",
-  eXU3L1: "Expanded",
-  eXU3L2: "Expanded",
-  eXU2TC: "Expanded",
-  eXU2BC: "Expanded",
-  eXU3TC: "Expanded",
-  eXU2CP: "Expanded",
-  eXU3CP: "Expanded",
-  eXU3BC: "Expanded",
-  eXU4L1: "Expanded",
-  eXU4BC: "Expanded",
-  eXHiL2L1: "Expanded", // name contains "Hi" but prefix is "eX" — see note above
-  eXLoL2L1: "Expanded", // name contains "Lo" but prefix is "eX" — see note above
-  eXL2CP: "Expanded",
-  eXL4TC: "Expanded",
+  // ---- Compressed: cOHigher (remaining cO...) ----
+  cOL2U3: "cOHigher",
+  cOL3U3: "cOHigher",
+  cOL2U4: "cOHigher",
+  cOL4U4: "cOHigher",
+  cOL3U4: "cOHigher",
+  cOL1U1: "cOHigher",
+  cOL2U2: "cOHigher",
+  cOTCL2: "cOHigher",
+  cOL1U2: "cOHigher",
+  cOL1U3: "cOHigher",
+
+  // ---- Expanded: eXLower (name starts with "eXU") ----
+  eXU4L4: "eXLower",
+  eXU4L2: "eXLower",
+  eXU4L3: "eXLower",
+  eXU3L3: "eXLower",
+  eXU1L1: "eXLower",
+  eXU2L1: "eXLower",
+  eXU3L1: "eXLower",
+  eXU3L2: "eXLower",
+  eXU2TC: "eXLower",
+  eXU2BC: "eXLower",
+  eXU3TC: "eXLower",
+  eXU2CP: "eXLower",
+  eXU3CP: "eXLower",
+  eXU3BC: "eXLower",
+  eXU4L1: "eXLower",
+  eXU4BC: "eXLower",
+
+  // ---- Expanded: eXHigher (remaining eX... / legacy exL3U2) ----
+  eXL4U4: "eXHigher",
+  eXL4U3: "eXHigher",
+  exL3U2: "eXHigher", // legacy lowercase spelling — see note above
+  eXL3U3: "eXHigher",
+  eXL2U1: "eXHigher",
+  eXL3U1: "eXHigher",
+  eXL4U1: "eXHigher",
+  eXL1BC: "eXHigher",
+  eXL1CP: "eXHigher",
+  eXL1TC: "eXHigher",
+  eXL2BC: "eXHigher",
+  eXL3BC: "eXHigher",
+  eXL3CP: "eXHigher",
+  eXL3TC: "eXHigher",
+  eXL4U2: "eXHigher",
+  eXL2U2: "eXHigher",
+  eXL2TC: "eXHigher",
+  eXL1U1: "eXHigher",
+  eXHiL2L1: "eXHigher", // name contains "Hi" but prefix is "eX" — see note above
+  eXLoL2L1: "eXHigher", // name contains "Lo" but prefix is "eX" — see note above
+  eXL2CP: "eXHigher",
+  eXL4TC: "eXHigher",
 
   // ---- Higher (Hi...) ----
   HiL4U3: "Higher",
