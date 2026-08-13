@@ -527,8 +527,6 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
                    (today.r4 > prev.r2 && today.r4 < prev.r3) && srCompressedHigher;
   const cOU3L3   = (today.s4 >= prev.s3 && today.s4 < prev.s2) &&
                    (today.r4 > prev.r2 && today.r4 < prev.r3) && srCompressedLower;
-  const eXL4U4   = (prev.r4 > today.r3 && prev.r4 < today.r4) &&
-                   (prev.s4 > today.s4 && prev.s4 < today.s3);
 
   // EqL4U4 — exact (within eqTol) day-over-day tie on BOTH outer levels:
   // today's R4 == prev's R4 and today's S4 == prev's S4.
@@ -613,6 +611,11 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
                  (prev.s4 > today.s3 && prev.s4 < today.s2) && srExpandedHigher;
   const eXU3L3 = (prev.r4 < today.r3 && prev.r4 > today.r2) &&
                  (prev.s4 > today.s3 && prev.s4 < today.s2) && srExpandedLower;
+
+   const eXL4U4   = (prev.r4 > today.r3 && prev.r4 < today.r4) &&
+                   (prev.s4 > today.s4 && prev.s4 < today.s3) && srExpandedHigher;
+  const eXU4L4   = (prev.r4 > today.r3 && prev.r4 < today.r4) &&
+                   (prev.s4 > today.s4 && prev.s4 < today.s3) && srExpandedLower;
 
   const eXL2U1 = (prev.s4 > today.s2 && prev.s4 < today.s1) &&
                  (prev.r4 > today.tc  && prev.r4 < today.r1);
