@@ -663,15 +663,17 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // "Pattern" sub-category/arrow. Base InsideCPR condition + today's PDL
     // above prev day's S1 ("PDL>pS1") + EITHER today's PDH above prev
     // day's R1 ("PDH>pR1") OR prev day's PDH above today's R1
-    // ("pPDH>R1"). Bullish, entry ~8AM, targets pU4 (prev day's R4) by
-    // ~8AM the next day. Green color family.
+    // ("pPDH>R1") + today's pivot and today's PDH move the SAME direction
+    // relative to prev day's (both up OR both down) — i.e. pivot and PDH
+    // aren't drifting in opposite directions. Bullish, entry ~8AM, targets
+    // pU4 (prev day's R4) by ~8AM the next day. Green color family.
     case "8AM:S1LAR1HA-faU4+1:8AM":
       return (
         r.InsideCPR &&
         r.todayCPR.prevLow > r.prevCPR.s1 &&
         (r.todayCPR.prevHigh > r.prevCPR.r1 || r.prevCPR.prevHigh > r.todayCPR.r1) &&
-        ((r.todayCPR.pivot > prevCPR.pivot && r.todayCPR.prevHigh > r.prevCPR.prevHigh) || 
-          (r.todayCPR.pivot < prevCPR.pivot && r.todayCPR.prevHigh < r.prevCPR.prevHigh))
+        ((r.todayCPR.pivot > r.prevCPR.pivot && r.todayCPR.prevHigh > r.prevCPR.prevHigh) ||
+          (r.todayCPR.pivot < r.prevCPR.pivot && r.todayCPR.prevHigh < r.prevCPR.prevHigh))
       );
     // NEW: 8AM:SRBHHLLA-pU4+1:8AM — Inside CPR + cOL3U3 + prev CPR width
     // category pLarge (2.00%-5.00%) + today CPR width category Medium
