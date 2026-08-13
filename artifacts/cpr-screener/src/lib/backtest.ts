@@ -879,7 +879,35 @@ function addDaysISO(dateISO: string, days: number): string {
  * same ~500 requests as a single day, and every date after the first is
  * effectively instant.
  */
-const HISTORY_LIMIT = 1500;
+/**
+ * ADK FIX (backtest returned far fewer symbols than the Live Scanner)
+ * ------------------------------------------------------------------
+ * A 1500-candle klines page costs request-weight 10 on Binance Futures.
+ * Prefetching ~530 symbols therefore burned ~5300 weight in one burst,
+ * well past the 2400/min ceiling: most symbols came back 429/418, their
+ * retries were exhausted, and they were silently dropped — which is why a
+ * category showing 20 live only listed 9 in the backtest.
+ *
+ * A 500-candle page costs weight 2 (~1060 total for the whole universe),
+ * which stays inside the limit, and still covers ~16 months of history —
+ * more than enough for the date ranges the UI offers. Longer sweeps can
+ * opt in via setBacktestHistoryLimit().
+ */
+let HISTORY_LIMIT = 500;
+
+/** Opt-in for very long sweeps (max 1500). Clears the cache when changed. */
+export function setBacktestHistoryLimit(limit: number): void {
+  const next = Math.max(10, Math.min(1500, Math.floor(limit)));
+  if (next === HISTORY_LIMIT) return;
+  HISTORY_LIMIT = next;
+  clearBacktestHistoryCache();
+}
+
+/** Symbols dropped by the last run because Binance never returned candles. */
+let lastRunSkipped: string[] = [];
+export function getLastRunSkippedSymbols(): string[] {
+  return [...lastRunSkipped];
+}
 
 /** symbol -> full daily-candle history, keyed by UTC date string. */
 const binanceHistoryCache = new Map<string, Map<string, OHLC> | null>();
@@ -978,12 +1006,14 @@ async function getHistory(symbol: string, source: BacktestSource): Promise<Map<s
 
   const p = (source === "binance" ? fetchBinanceHistory(symbol) : fetchDeltaHistory(symbol))
     .then((hist) => {
-      cache.set(symbol, hist);
+      // Only cache SUCCESS. A null here almost always means "rate-limited
+      // / transient network failure", and caching it used to permanently
+      // amputate that symbol from every later scan in the session.
+      if (hist) cache.set(symbol, hist);
       inFlight.delete(key);
       return hist;
     })
     .catch(() => {
-      cache.set(symbol, null);
       inFlight.delete(key);
       return null;
     });
@@ -1016,15 +1046,32 @@ export async function prefetchHistories(
   symbols: string[],
   source: BacktestSource,
   onProgress?: (done: number, total: number, symbol: string) => void,
-  concurrency = 25
+  // Matches the Live Scanner's CONCURRENCY of 10 so both put the same
+  // pressure on Binance's rate limiter and see the same symbol universe.
+  concurrency = 10
 ): Promise<void> {
-  const pending = symbols.filter((s) => !hasCachedHistory(s, source));
-  let done = symbols.length - pending.length;
-  for (let i = 0; i < pending.length; i += concurrency) {
-    const chunk = pending.slice(i, i + concurrency);
-    await Promise.all(chunk.map((s) => getHistory(s, source)));
-    done += chunk.length;
-    onProgress?.(done, symbols.length, chunk[chunk.length - 1]);
+  lastRunSkipped = [];
+
+  // Up to 3 passes: anything that failed (almost always a 429 burst) is
+  // retried after a short cool-off instead of vanishing from the results.
+  let pending = symbols.filter((s) => !hasCachedHistory(s, source));
+  for (let pass = 0; pass < 3 && pending.length; pass++) {
+    if (pass > 0) await new Promise((r) => setTimeout(r, 2000 * pass));
+    for (let i = 0; i < pending.length; i += concurrency) {
+      const chunk = pending.slice(i, i + concurrency);
+      await Promise.all(chunk.map((s) => getHistory(s, source)));
+      const done = symbols.length - pending.length + Math.min(i + concurrency, pending.length);
+      onProgress?.(done, symbols.length, chunk[chunk.length - 1]);
+    }
+    pending = pending.filter((s) => !hasCachedHistory(s, source));
+  }
+
+  lastRunSkipped = pending;
+  if (pending.length) {
+    console.warn(
+      `[backtest] ${pending.length}/${symbols.length} symbols had no Binance candles after 3 passes:`,
+      pending
+    );
   }
 }
 
@@ -1042,17 +1089,26 @@ async function reconstructCPRForDate(
   source: BacktestSource,
   entryDateISO: string
 ): Promise<{ result: CPRResult; window: Map<string, OHLC> } | null> {
-  const dMinus3 = addDaysISO(entryDateISO, -3);
-  const dMinus2 = addDaysISO(entryDateISO, -2);
-  const dMinus1 = addDaysISO(entryDateISO, -1);
-
   const window = await getHistory(symbol, source);
   if (!window) return null;
 
-  const ppCandle = window.get(dMinus3) ?? null;
-  const prevCandle = window.get(dMinus2);
-  const todayCandle = window.get(dMinus1);
-  if (!prevCandle || !todayCandle) return null; // not enough history to reconstruct the CPR
+  // ADK FIX (backtest count < live count): the old version looked up the
+  // EXACT calendar keys D-1/D-2/D-3 and bailed out whenever one was
+  // missing. Binance occasionally has gaps in daily data for thin pairs,
+  // and the Live Scanner never sees those gaps because it selects candles
+  // BY POSITION (the last completed klines), not by date. We now do the
+  // same: take every completed candle strictly before the entry date and
+  // use the last three — identical semantics to runScreener's
+  // pp/prev/today selection in binance.ts.
+  const entryMs = Date.parse(entryDateISO + "T00:00:00.000Z");
+  const completed = [...window.values()]
+    .filter((c) => c.openTime < entryMs)
+    .sort((a, b) => a.openTime - b.openTime);
+  if (completed.length < 2) return null; // not enough history to reconstruct the CPR
+
+  const todayCandle = completed[completed.length - 1]; // D-1 → today's CPR
+  const prevCandle = completed[completed.length - 2]; // D-2 → prev CPR
+  const ppCandle = completed.length >= 3 ? completed[completed.length - 3] : null;
 
   const candlesForAnalysis: OHLC[] = ppCandle ? [ppCandle, prevCandle, todayCandle] : [prevCandle, todayCandle];
 
