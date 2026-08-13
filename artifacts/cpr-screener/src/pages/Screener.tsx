@@ -1288,6 +1288,10 @@ export default function Screener({
       // NEW: eXL4U4 — independent, section-agnostic Pattern flag (see
       // doc-comment on PatternInfo/getPatternInfo in ScreenerUtils.tsx).
       if (PatternFilter === "eXL4U4") return r.eXL4U4;
+      // NEW: eXU4L4 — independent, section-agnostic Pattern flag, mirror
+      // of eXL4U4 gated on srExpandedLower instead of srExpandedHigher
+      // (see doc-comments in cpr.ts / ScreenerUtils.tsx).
+      if (PatternFilter === "eXU4L4") return r.eXU4L4;
       // NEW: EqL4U4 — today R4 == prev R4 AND today S4 == prev S4 (cpr.ts).
       if (PatternFilter === "EqL4U4") return r.EqL4U4;
       if (PatternFilter === "eXL3U3") return r.eXL3U3;
@@ -2683,6 +2687,7 @@ export default function Screener({
                   { label: "cOU3L4", active: "border-amber-400 text-amber-400" },
                   { label: "LoU4L4", active: "border-lime-400 text-lime-400" },
                   { label: "eXL4U4", active: "border-pink-400 text-pink-400" },
+                  { label: "eXU4L4", active: "border-red-400 text-red-400" },
                   { label: "EqL4U4", active: "border-slate-400 text-slate-300" },
                   { label: "HiL2U4", active: "border-cyan-400 text-cyan-400" },
                   { label: "HiL2U3", active: "border-blue-400 text-blue-400" },
