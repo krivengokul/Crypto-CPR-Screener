@@ -1001,10 +1001,10 @@ export default function BacktestPanel() {
                               return <span className="text-xs text-muted-foreground">—</span>;
                             }
                             return (
-                              <div className="flex flex-wrap items-center gap-1.5">
-                                {prev}
+                              <>
                                 {today}
-                              </div>
+                                {prev}
+                              </>
                             );
                           })()}
                         </td>
@@ -1105,6 +1105,9 @@ export default function BacktestPanel() {
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Pattern
                     </th>
+                    <th className="px-2 py-2 w-20 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      LEVEL
+                    </th>
                     <th className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[220px]">
                       <span className="inline-flex items-center gap-1">
                         Pivot Size <PivotSizeInfo />
@@ -1151,12 +1154,15 @@ export default function BacktestPanel() {
                             return <span className="text-xs text-muted-foreground">—</span>;
                           }
                           return (
-                            <div className="flex flex-wrap items-center gap-1.5">
-                              {prev}
+                            <>
                               {today}
-                            </div>
+                              {prev}
+                            </>
                           );
                         })()}
+                      </td>
+                      <td className="px-2 py-2 w-20">
+                        {renderLevelBadges(r.raw)}
                       </td>
                       <td className="px-3 py-2 font-mono whitespace-nowrap min-w-[220px]">
                         {(() => {
@@ -1216,7 +1222,7 @@ export default function BacktestPanel() {
                       <SRLadderRow
                         r={toSRLadderData(r.raw, r.closePrice ?? undefined)}
                         rowKey={`${r.source}-${r.symbol}-${r.entryDate}`}
-                        colSpan={7}
+                        colSpan={8}
                         todayPatternBadge={renderTodayPatternBadges(r.raw)}
                         prevPatternBadge={renderPrevPatternBadge(r.raw)}
                       />
