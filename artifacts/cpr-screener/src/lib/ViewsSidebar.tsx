@@ -91,6 +91,19 @@ export const Views: Record<string, SubPattern[]> = {
     { id: "Exp-U3>U3",               label: "Exp-U3>U3" },
     { id: "OBN-LoU4L4-U4",           label: "OBN-LoU4L4-U4" },
     { id: "OBW-LoU4L4-L4",           label: "OBW-LoU4L4-L4" },
+    // NEW: 2PM:SSLLpRRHHA-ApU4:5PM — Overlap Below + SSLLAbove (today's S1
+    // AND today's PDL both above the higher of prev's S1/PDL) + RRHHBelow
+    // (today's R1 AND today's PDH both below the lower of prev's R1/PDH).
+    // Bullish, entry ~2PM, targets ApU4 (prev day's R4) by ~5PM. Green
+    // color family to flag it as bullish, matching the other ApU4/AU4
+    // bullish siblings elsewhere (e.g. SMi-L1pU1>-APU4:11PM).
+    {
+      id: "2PM:SSLLpRRHHA-ApU4:5PM",
+      label: "2PM:SSLLpRRHHA-ApU4:5PM",
+      activeColor: "#22c55e",      // green-500 border
+      activeText:  "#4ade80",      // green-400 text
+      activeBg:    "rgba(34, 197, 94, 0.14)",
+    },
   ],
   "cpr-1-above": [
     {

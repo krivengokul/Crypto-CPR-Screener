@@ -933,6 +933,16 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return r.overlapHigher && r.PU12CU23 && r.PL12CL23 && r.todayCPR.prevHigh > r.prevCPR.prevHigh;
     case "overlapping-lower":
       return r.overlapLower;
+    // NEW: 2PM:SSLLpRRHHA-ApU4:5PM — Overlap Below + SSLLAbove (today's S1
+    // AND today's PDL both above the higher of prev's S1/PDL) + RRHHBelow
+    // (today's R1 AND today's PDH both below the lower of prev's R1/PDH).
+    // Bullish, entry ~2PM, targets ApU4 (prev day's R4) by ~5PM.
+    case "2PM:SSLLpRRHHA-ApU4:5PM":
+      return (
+        r.overlapLower &&
+        r.SSLLAbove &&
+        r.RRHHBelow
+      );
     case "LBT-PU1>U1PL1>L1":
       return (r.overlapLower && r.lbtJPattern1 && r.bothTight);
     case "lower-bullish":
