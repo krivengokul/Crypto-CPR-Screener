@@ -1272,6 +1272,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     { key: "Exp-U3>U3", direction: "up" },
     { key: "OBN-LoU4L4-U4", direction: "up" },
     { key: "OBW-LoU4L4-L4", direction: "up" },
+    { key: "2PM:SSLLpRRHHA-ApU4:5PM", direction: "up" },
   ],
   "pcpr-u1-cpr-pl1": [
     { key: "BC>pPDL-U3:5AM", direction: "up" },

@@ -215,6 +215,10 @@ export default function Screener({
   // NEW: OBN-LoU4L4-U4 / OBW-LoU4L4-L4 filter state (Overlapping Lower), placed next to Exp-U3>pU4
   const [showOBNLoU4L4, setShowOBNLoU4L4] = useState(false);
   const [showOBWLoU4L4, setShowOBWLoU4L4] = useState(false);
+  // NEW: 2PM:SSLLpRRHHA-ApU4:5PM filter state (Overlapping Lower) — placed
+  // next to OBN-LoU4L4-U4 / OBW-LoU4L4-L4. Overlap Below + SSLLAbove +
+  // RRHHBelow, bullish, targets ApU4 (prev day's R4) by ~5PM.
+  const [showOBLoSSLLRRHH, setShowOBLoSSLLRRHH] = useState(false);
   // NEW: eXHi-L4U4-U4 filter state (Overlapping Higher) — counterpart of
   // eXLo-L4U4-U4 (Overlapping Lower), same r.eXL4U4 boolean, gated on
   // r.overlapHigher instead of r.overlapLower.
@@ -483,7 +487,7 @@ export default function Screener({
     if (deltaAllResults.length > 0) setDeltaFiltered(deltaAllResults.filter((r) => passesPattern(r, activePattern)));
     if (activePattern !== "littleabove") { setShowLABothTiny(false); setShowLAAllUp(false); setShowLA1LHr(false); setShowLAPL12CL23(false); setShowLACompressed(false); setShowLAT1U46AM(false); setShowLASsHiL4U4FAU42AM(false); setShowLAMeMieXL4U3U46PM(false); }
     if (activePattern !== "outside-cpr") { setShowOutsideCPRCompressed(false); setShowOutsideCPReXHrL3U3AU4(false); }
-    if (activePattern !== "overlapping-lower") { setShowExpU4PU4(false); setShowExpU3PU3(false); setShowOBNLoU4L4(false); setShowOBWLoU4L4(false); }
+    if (activePattern !== "overlapping-lower") { setShowExpU4PU4(false); setShowExpU3PU3(false); setShowOBNLoU4L4(false); setShowOBWLoU4L4(false); setShowOBLoSSLLRRHH(false); }
     // NEW: reset eXHi-L4U4-U4 toggle when leaving Overlapping Higher
     if (activePattern !== "overlapping-higher") { setShowOBHiExL4U4(false); setShowLMeXL2U2(false); setShowOBHicOL3U3pL4(false); setShowOBHi7AMMiMi(false); setShowOBHi6PMLaLa(false); }
     if (activePattern !== "structure-bigbelow") { setShowBigBelowPMiniPL3(false); setShowBigBelowPMiniRising(false); pMiniRisingAlertedRef.current.clear(); setShowExpU3LtPU4(false); setShowBigBeloweXU4L3AU4(false); setShowBigBelowL1LtPL4(false); setShowL1LtPL4CprLtPL4(false); setShowBigBeloweXU4L2AU4(false); setShowBigBelow1TcOU4L43PM(false); }
@@ -520,6 +524,7 @@ export default function Screener({
     "eXLo-L4U4-U4": setShowExpU4PU4,
     "OBN-LoU4L4-U4": setShowOBNLoU4L4,
     "OBW-LoU4L4-L4": setShowOBWLoU4L4,
+    "2PM:SSLLpRRHHA-ApU4:5PM": setShowOBLoSSLLRRHH,
     // overlapping-higher
     "eXHi-L4U4-U4": setShowOBHiExL4U4,
     "LMe-eXL2U2-L4:10PM": setShowLMeXL2U2,
@@ -570,6 +575,7 @@ export default function Screener({
     "eXLo-L4U4-U4": showExpU4PU4,
     "OBN-LoU4L4-U4": showOBNLoU4L4,
     "OBW-LoU4L4-L4": showOBWLoU4L4,
+    "2PM:SSLLpRRHHA-ApU4:5PM": showOBLoSSLLRRHH,
     "eXHi-L4U4-U4": showOBHiExL4U4,
     "LMe-eXL2U2-L4:10PM": showLMeXL2U2,
     "cOL3U3-pL4": showOBHicOL3U3pL4,
@@ -1238,6 +1244,21 @@ export default function Screener({
       if (activeTab === "delta") return deltaIntersect;
       return binanceIntersect;
     }
+    // NEW: 2PM:SSLLpRRHHA-ApU4:5PM pool — Overlapping Lower, SSLLAbove +
+    // RRHHBelow variant, placed next to OBW-LoU4L4-L4.
+    if (showOBLoSSLLRRHH && activePattern === "overlapping-lower") {
+      const binanceIntersect = allResults
+        .filter((r) => passesPattern(r, "2PM:SSLLpRRHHA-ApU4:5PM"))
+        .map((r) => ({ ...r, source: "binance" as const }));
+
+      const deltaIntersect = deltaAllResults
+        .filter((r) => passesPattern(r, "2PM:SSLLpRRHHA-ApU4:5PM"))
+        .map((r) => ({ ...r, source: "delta" as const }));
+
+      if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
+      if (activeTab === "delta") return deltaIntersect;
+      return binanceIntersect;
+    }
     // NEW: LB-AllUp pool (formerly "LittleBelow - Ladder" left-nav item)
     if (showLBAllUp && activePattern === "littlebelow") {
       const binanceIntersect = allResults
@@ -1469,7 +1490,7 @@ export default function Screener({
     showOutsideCPRCompressed || showOutsideCPReXHrL3U3AU4 ||
     showBigBelowPMiniPL3 || showBigBelowPMiniRising || showExpU3LtPU4 || showBigBeloweXU4L3AU4 || showBigBelowL1LtPL4 || showL1LtPL4CprLtPL4 || showBigBeloweXU4L2AU4 || showBigBelow1TcOU4L43PM ||
     showBigAbovePL34CL4 || showBAComp || showHAU1 || showHAU1CprAbovePU4 || showHAU1L1AbovePU4 || showHAU1PWideAbove || showHRHAL || showHA55HrL4U34FAU4 || showHiL4U4FAU4 || show1ScoHiFAU4 || show2ScoHiFAU4 || showBAeXL4U2 || showBATiMicOL2U2 || showLBCmprss || showLBC34 || showLBE11 || showLBC2L2U2 ||
-    showLBBothTiny || showLBAllUp || showLBL1cOU1L2 || showExpU4PU4 || showExpU3PU3 || showOBNLoU4L4 || showOBWLoU4L4 || showOBHiExL4U4 || showLMeXL2U2 || showOBHicOL3U3pL4 || showOBHi7AMMiMi || showOBHi6PMLaLa ||
+    showLBBothTiny || showLBAllUp || showLBL1cOU1L2 || showExpU4PU4 || showExpU3PU3 || showOBNLoU4L4 || showOBWLoU4L4 || showOBLoSSLLRRHH || showOBHiExL4U4 || showLMeXL2U2 || showOBHicOL3U3pL4 || showOBHi7AMMiMi || showOBHi6PMLaLa ||
     !!activeGenericSubView ||
     !!PatternFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter || !!exitTimeFilter;
 
@@ -2189,7 +2210,7 @@ export default function Screener({
               })}
             {activeSectionKey === "overlapping-lower" && !showAll && (
               <button
-                onClick={() => { setShowExpU4PU4((v) => !v); setShowExpU3PU3(false); setShowOBNLoU4L4(false); setShowOBWLoU4L4(false); }}
+                onClick={() => { setShowExpU4PU4((v) => !v); setShowExpU3PU3(false); setShowOBNLoU4L4(false); setShowOBWLoU4L4(false); setShowOBLoSSLLRRHH(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showExpU4PU4
                     ? "border-emerald-400 text-emerald-400"
@@ -2203,7 +2224,7 @@ export default function Screener({
             {/* NEW: Exp-U3>pU4 button — Overlapping Lower, placed right after eXLo-L4U4-U4 */}
             {activeSectionKey === "overlapping-lower" && !showAll && (
               <button
-                onClick={() => { setShowExpU3PU3((v) => !v); setShowExpU4PU4(false); setShowOBNLoU4L4(false); setShowOBWLoU4L4(false); }}
+                onClick={() => { setShowExpU3PU3((v) => !v); setShowExpU4PU4(false); setShowOBNLoU4L4(false); setShowOBWLoU4L4(false); setShowOBLoSSLLRRHH(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showExpU3PU3
                     ? "border-sky-400 text-sky-400"
@@ -2217,7 +2238,7 @@ export default function Screener({
             {/* NEW: OBN-LoU4L4-U4 button — Overlapping Lower, placed next to Exp-U3>pU4 */}
             {activeSectionKey === "overlapping-lower" && !showAll && (
               <button
-                onClick={() => { setShowOBNLoU4L4((v) => !v); setShowExpU4PU4(false); setShowExpU3PU3(false); setShowOBWLoU4L4(false); }}
+                onClick={() => { setShowOBNLoU4L4((v) => !v); setShowExpU4PU4(false); setShowExpU3PU3(false); setShowOBWLoU4L4(false); setShowOBLoSSLLRRHH(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showOBNLoU4L4
                     ? "border-cyan-400 text-cyan-400"
@@ -2231,7 +2252,7 @@ export default function Screener({
             {/* NEW: OBW-LoU4L4-L4 button — Overlapping Lower, placed next to OBN-LoU4L4-U4 */}
             {activeSectionKey === "overlapping-lower" && !showAll && (
               <button
-                onClick={() => { setShowOBWLoU4L4((v) => !v); setShowExpU4PU4(false); setShowExpU3PU3(false); setShowOBNLoU4L4(false); }}
+                onClick={() => { setShowOBWLoU4L4((v) => !v); setShowExpU4PU4(false); setShowExpU3PU3(false); setShowOBNLoU4L4(false); setShowOBLoSSLLRRHH(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showOBWLoU4L4
                     ? "border-rose-400 text-rose-400"
@@ -2240,6 +2261,25 @@ export default function Screener({
                 title="Overlap Lower + today's CPR Wide + LoU4L4 structure, Compression > 50%: Target:U4"
               >
                 {showOBWLoU4L4 ? "✕ OBW-LoU4L4-L4" : "OBW-LoU4L4-L4"}<ViewCount id={"OBW-LoU4L4-L4"} counts={viewCounts} />
+              </button>
+            )}
+            {/* NEW: 2PM:SSLLpRRHHA-ApU4:5PM button — Overlapping Lower, placed
+                next to OBW-LoU4L4-L4. Overlap Below + SSLLAbove (today's S1
+                AND today's PDL both above the higher of prev's S1/PDL) +
+                RRHHBelow (today's R1 AND today's PDH both below the lower of
+                prev's R1/PDH). Bullish, green color family, targets ApU4
+                (prev day's R4) by ~5PM. */}
+            {activeSectionKey === "overlapping-lower" && !showAll && (
+              <button
+                onClick={() => { setShowOBLoSSLLRRHH((v) => !v); setShowExpU4PU4(false); setShowExpU3PU3(false); setShowOBNLoU4L4(false); setShowOBWLoU4L4(false); }}
+                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                  showOBLoSSLLRRHH
+                    ? "border-green-400 text-green-400"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+                title="Overlap Lower + SSLLAbove (today's S1 & PDL above the higher of prev S1/PDL) + RRHHBelow (today's R1 & PDH below the lower of prev R1/PDH): Target ApU4 (prev day's R4) by ~5PM"
+              >
+                {showOBLoSSLLRRHH ? "✕ 2PM:SSLLpRRHHA-ApU4:5PM" : "2PM:SSLLpRRHHA-ApU4:5PM"}<ViewCount id={"2PM:SSLLpRRHHA-ApU4:5PM"} counts={viewCounts} />
               </button>
             )}
             {/* NEW: eXHi-L4U4-U4 button — Overlapping Higher, counterpart of
