@@ -679,13 +679,8 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // aren't drifting in opposite directions. Bullish, entry ~8AM, targets
     // pU4 (prev day's R4) by ~8AM the next day. Green color family.
     case "8AM:S1LAR1HA-faU4+1:8AM":
-      return (
-        r.InsideCPR &&
-        r.todayCPR.prevLow > r.prevCPR.s1 &&
-        (r.todayCPR.prevHigh > r.prevCPR.r1 || r.prevCPR.prevHigh > r.todayCPR.r1) &&
-        ((r.todayCPR.pivot > r.prevCPR.pivot && r.todayCPR.prevHigh > r.prevCPR.prevHigh) ||
-          (r.todayCPR.pivot < r.prevCPR.pivot && r.todayCPR.prevHigh < r.prevCPR.prevHigh))
-      );
+      return (r.InsideCPR && r.SSLLAbove &&
+        (r.todayCPR.prevHigh > r.prevCPR.r1 || r.prevCPR.prevHigh > r.todayCPR.r1));
     // NEW: 8AM:SRBHHLLA-pU4+1:8AM — Inside CPR + cOL3U3 + prev CPR width
     // category pLarge (2.00%-5.00%) + today CPR width category Medium
     // (1.10%-2.00%) + prev day's own PDL below prev S1 ("p-PDL<L1") +
