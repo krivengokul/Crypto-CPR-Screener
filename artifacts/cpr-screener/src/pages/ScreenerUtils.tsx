@@ -632,13 +632,6 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.prevCPR.widthPct > 0.10 && r.prevCPR.widthPct <= 0.22 &&
         r.todayCPR.widthPct > 0.60 && r.todayCPR.widthPct <= 1.10
       );
-    case "Exp-U3>U3":
-      return (
-        r.overlapLower &&
-        r.narrowCPR &&
-        r.todayCPR.r3 > r.prevCPR.r4 &&
-        r.todayCPR.s3 < r.prevCPR.s4 && r.compressionRatio > 50
-      );
     case "OBN-LoU4L4-U4":
       return (
         r.overlapLower &&
@@ -653,6 +646,20 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.LoU4L4 &&
         r.compressionRatio > 50
       );
+     case "Exp-U3>U3":
+      return (r.overlapLower && r.HHLLAbove && r.SSRRBelow);
+    // NEW: 2PM:SSLLpRRHHA-ApU4:5PM — Overlap Below + SSLLAbove (today's S1
+    // AND today's PDL both above the higher of prev's S1/PDL) + RRHHBelow
+    // (today's R1 AND today's PDH both below the lower of prev's R1/PDH).
+    // Bullish, entry ~2PM, targets ApU4 (prev day's R4) by ~5PM.
+    case "2PM:SSLLpRRHHA-ApU4:5PM":
+      return (
+        r.overlapLower &&
+        r.SSLLAbove &&
+        r.RRHHBelow
+      );
+    case "LBT-PU1>U1PL1>L1":
+      return (r.overlapLower && r.lbtJPattern1 && r.bothTight);
     case "inside-cpr":
       return r.InsideCPR;
     // NEW: 8AM:S1LAR1HA-faU4+1:8AM — nested under "Inside CPR" (inside-cpr)
@@ -933,18 +940,6 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return r.overlapHigher && r.PU12CU23 && r.PL12CL23 && r.todayCPR.prevHigh > r.prevCPR.prevHigh;
     case "overlapping-lower":
       return r.overlapLower;
-    // NEW: 2PM:SSLLpRRHHA-ApU4:5PM — Overlap Below + SSLLAbove (today's S1
-    // AND today's PDL both above the higher of prev's S1/PDL) + RRHHBelow
-    // (today's R1 AND today's PDH both below the lower of prev's R1/PDH).
-    // Bullish, entry ~2PM, targets ApU4 (prev day's R4) by ~5PM.
-    case "2PM:SSLLpRRHHA-ApU4:5PM":
-      return (
-        r.overlapLower &&
-        r.SSLLAbove &&
-        r.RRHHBelow
-      );
-    case "LBT-PU1>U1PL1>L1":
-      return (r.overlapLower && r.lbtJPattern1 && r.bothTight);
     case "lower-bullish":
       return (r.cprFalling && r.cprNarrowing && r.prevCPR.r1  > r.todayCPR.r4);
     case "Price-AbovePDH":
