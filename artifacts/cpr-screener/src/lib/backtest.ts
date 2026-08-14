@@ -321,7 +321,7 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "PL4 (prev day's S4)",
     getTarget: (r) => r.prevCPR.s4,
   },
-  // NEW: "8AM:S1LAR1HA-faU4+1:8AM" — Direct View, sits directly on the
+  // NEW: "8AM:CoLApHA-U4+1:8AM" — Direct View, sits directly on the
   // "inside-cpr" category's own subPatternKeys in BACKTEST_CATEGORIES
   // (NOT nested under a "Pattern" sub-category / arrow like its
   // "8AM:SRBHHLLA-pU4+1:8AM" sibling just below — matches ViewsSidebar's
@@ -331,8 +331,8 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
   // ("PDH>pR1") OR prev day's PDH above today's R1 ("pPDH>R1"). Bullish,
   // targets pU4 (prev day's R4), entry ~8AM, by ~8AM the next day.
   {
-    key: "8AM:S1LAR1HA-faU4+1:8AM",
-    label: "8AM:S1LAR1HA-faU4+1:8AM",
+    key: "8AM:CoLApHA-U4+1:8AM",
+    label: "8AM:CoLApHA-U4+1:8AM",
     direction: "bullish",
     targetLabel: "Far Above U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
@@ -379,7 +379,7 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
   },
   // NEW: "2PM:SSLLpRRHHA-ApU4:5PM" — nested directly under "Overlap Below"
   // (overlapping-lower, see BACKTEST_CATEGORIES below), same shape as
-  // "8AM:S1LAR1HA-faU4+1:8AM" sitting directly on "inside-cpr"'s own
+  // "8AM:CoLApHA-U4+1:8AM" sitting directly on "inside-cpr"'s own
   // subPatternKeys rather than behind a Pattern sub-category. Base
   // overlapLower condition + SSLLAbove (today's S1 AND today's PDL both
   // above the higher of prev's S1/PDL) + RRHHBelow (today's R1 AND
@@ -707,13 +707,13 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
   {
     key: "inside-cpr",
     label: "Inside CPR",
-    // NEW: "8AM:S1LAR1HA-faU4+1:8AM" sits directly on this category's own
+    // NEW: "8AM:CoLApHA-U4+1:8AM" sits directly on this category's own
     // subPatternKeys (not inside a "Pattern" sub-category/arrow below) —
     // it's a Direct View in ViewsSidebar's left-nav (top-level, under but
     // not nested inside "Inside CPR"), so it isn't gated behind one of
     // the raw Pattern flags (cOL3U3/cOL4U4/eXL4U4) the way its
     // subCategories siblings are.
-    subPatternKeys: ["8AM:S1LAR1HA-faU4+1:8AM"],
+    subPatternKeys: ["8AM:CoLApHA-U4+1:8AM"],
     subCategories: [
       {
         key: "cOL3U3",
@@ -743,7 +743,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
   // NEW: "Overlap Below" now nests "2PM:SSLLpRRHHA-ApU4:5PM" directly on
   // its own subPatternKeys (Direct View in ViewsSidebar's left-nav, not
   // behind a Pattern sub-category/arrow), same shape as
-  // "8AM:S1LAR1HA-faU4+1:8AM" under "inside-cpr" above.
+  // "8AM:CoLApHA-U4+1:8AM" under "inside-cpr" above.
   // RENAMED: "Exp-U3>U3" -> "9AM:SSRRBHHLLA-U4:9PM", now exposed here in
   // the Backtest panel alongside its "2PM:SSLLpRRHHA-ApU4:5PM" sibling.
   {

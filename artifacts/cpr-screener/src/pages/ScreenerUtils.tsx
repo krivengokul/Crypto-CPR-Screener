@@ -666,7 +666,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return (r.overlapLower && r.lbtJPattern1 && r.bothTight);
     case "inside-cpr":
       return r.InsideCPR;
-    // NEW: 8AM:S1LAR1HA-faU4+1:8AM — nested under "Inside CPR" (inside-cpr)
+    // NEW: 8AM:CoLApHA-U4+1:8AM — nested under "Inside CPR" (inside-cpr)
     // in ViewsSidebar's left-nav, same as its "8AM:SRBHHLLA-pU4+1:8AM" /
     // "2PM:pPDHLA-SRA-U4:7PM" / "8AM:pPDHA-SRA-U4+2:2AM" siblings below —
     // but (per backtest.ts's BACKTEST_CATEGORIES) sits directly on the
@@ -678,7 +678,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // relative to prev day's (both up OR both down) — i.e. pivot and PDH
     // aren't drifting in opposite directions. Bullish, entry ~8AM, targets
     // pU4 (prev day's R4) by ~8AM the next day. Green color family.
-    case "8AM:S1LAR1HA-faU4+1:8AM":
+    case "8AM:CoLApHA-U4+1:8AM":
       return (r.InsideCPR && r.SSLLAbove &&
         (r.todayCPR.prevHigh > r.prevCPR.r1 || r.prevCPR.prevHigh > r.todayCPR.r1));
     // NEW: 8AM:SRBHHLLA-pU4+1:8AM — Inside CPR + cOL3U3 + prev CPR width
@@ -1295,7 +1295,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     { key: "T0-L1pU1>-BPL4:5AM", direction: "down" },
   ],
   "inside-cpr": [
-    { key: "8AM:S1LAR1HA-faU4+1:8AM", direction: "up" },
+    { key: "8AM:CoLApHA-U4+1:8AM", direction: "up" },
     { key: "8AM:SRBHHLLA-pU4+1:8AM", direction: "up" },
     { key: "2PM:pPDHLA-SRA-U4:7PM", direction: "up" },
     { key: "8AM:pPDHA-SRA-U4+2:2AM", direction: "up" },

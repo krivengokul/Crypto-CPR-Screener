@@ -376,7 +376,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
               Overlap Below + SSLLAbove (today&apos;s S1 AND today&apos;s PDL both above the higher of prev day&apos;s S1/PDL) + RRHHBelow (today&apos;s R1 AND today&apos;s PDH both below the lower of prev day&apos;s R1/PDH).
             </div>
           </>
-        ) : activePattern === "8AM:S1LAR1HA-faU4+1:8AM" ? (
+        ) : activePattern === "8AM:CoLApHA-U4+1:8AM" ? (
           <>
             <div className="text-xs font-semibold text-green-400 mb-1">
               Pattern: PDL&gt;pS1&nbsp;&nbsp;PDH&gt;pR1 or pPDH&gt;R1
@@ -701,7 +701,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
               Bullish continuation from an Overlap-Below setup where today&apos;s S1/PDL both hold above prev day&apos;s tighter floor and today&apos;s R1/PDH both stay under prev day&apos;s tighter ceiling — expected move toward prev day&apos;s U4 by ~5PM IST.
             </div>
           </>
-        ) : activePattern === "8AM:S1LAR1HA-faU4+1:8AM" ? (
+        ) : activePattern === "8AM:CoLApHA-U4+1:8AM" ? (
           <>
             <div className="text-xs font-semibold text-green-400 mb-1">
               Target: PU4&nbsp;&nbsp;&nbsp;Entry: 8AM&nbsp;&nbsp;&nbsp;Time: 8AM (+1)
