@@ -390,8 +390,8 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     key: "2PM:SSLLpRRHHA-ApU4:5PM",
     label: "2PM:SSLLpRRHHA-ApU4:5PM",
     direction: "bullish",
-    targetLabel: "ApU4 (prev day's R4)",
-    getTarget: (r) => r.prevCPR.r4,
+    targetLabel: "U4 (today's R4)",
+    getTarget: (r) => r.todayCPR.r4,
   },
 ];
 
