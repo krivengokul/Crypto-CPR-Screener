@@ -2624,7 +2624,7 @@ export default function Screener({
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showBigAbovePL34CL4
                     ? "border-emerald-400 text-emerald-300 bg-emerald-500/10"
-                    : "border-emerald-500/40 text-emerald-500/80 hover:text-emerald-300 hover:border-emerald-400"
+                    : "border-border text-muted-foreground hover:text-foreground"
                 }`}
                 title="9AM:SSRRHHLLA-U4:11PM — BigCPR Above + SSRRAbove + HHLLAbove + PDHLAbove (entry ~9AM, target U4 by ~11PM)"
               >
