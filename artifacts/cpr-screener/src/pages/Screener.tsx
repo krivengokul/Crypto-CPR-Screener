@@ -210,7 +210,8 @@ export default function Screener({
   // no Screener button (see LB-BothTiny comment above for the same class of bug)
   const [showLBL1cOU1L2, setShowLBL1cOU1L2] = useState(false);
   const [showExpU4PU4, setShowExpU4PU4] = useState(false);
-  // NEW: Exp-U3>U3 filter state (Overlapping Lower)
+  // RENAMED from "Exp-U3>U3": 9AM:SSRRBHHLLA-U4:9PM filter state
+  // (Overlapping Lower). Bullish/uptrend, green color family.
   const [showExpU3PU3, setShowExpU3PU3] = useState(false);
   // NEW: OBN-LoU4L4-U4 / OBW-LoU4L4-L4 filter state (Overlapping Lower), placed next to Exp-U3>pU4
   const [showOBNLoU4L4, setShowOBNLoU4L4] = useState(false);
@@ -522,6 +523,10 @@ export default function Screener({
     "L1-cOU1L2-U4:1AM": setShowLBL1cOU1L2,
     // overlapping-lower
     "eXLo-L4U4-U4": setShowExpU4PU4,
+    // NEW: wire renamed "9AM:SSRRBHHLLA-U4:9PM" (was "Exp-U3>U3") into
+    // VIEW_SETTERS — it existed in ViewsSidebar's Views list but had no
+    // matching entry here, same class of bug as CPR Inside's missing Views.
+    "9AM:SSRRBHHLLA-U4:9PM": setShowExpU3PU3,
     "OBN-LoU4L4-U4": setShowOBNLoU4L4,
     "OBW-LoU4L4-L4": setShowOBWLoU4L4,
     "2PM:SSLLpRRHHA-ApU4:5PM": setShowOBLoSSLLRRHH,
@@ -1202,14 +1207,14 @@ export default function Screener({
       if (activeTab === "delta") return deltaIntersect;
       return binanceIntersect;
     }
-    // NEW: Exp-U3>U3 pool
+    // RENAMED from "Exp-U3>U3": 9AM:SSRRBHHLLA-U4:9PM pool
     if (showExpU3PU3 && activePattern === "overlapping-lower") {
       const binanceIntersect = allResults
-        .filter((r) => passesPattern(r, "Exp-U3>U3"))
+        .filter((r) => passesPattern(r, "9AM:SSRRBHHLLA-U4:9PM"))
         .map((r) => ({ ...r, source: "binance" as const }));
 
       const deltaIntersect = deltaAllResults
-        .filter((r) => passesPattern(r, "Exp-U3>U3"))
+        .filter((r) => passesPattern(r, "9AM:SSRRBHHLLA-U4:9PM"))
         .map((r) => ({ ...r, source: "delta" as const }));
 
       if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
@@ -2221,18 +2226,20 @@ export default function Screener({
                 {showExpU4PU4 ? "✕ eXLo-L4U4-U4" : "eXLo-L4U4-U4"}<ViewCount id={"eXLo-L4U4-U4"} counts={viewCounts} />
               </button>
             )}
-            {/* NEW: Exp-U3>pU4 button — Overlapping Lower, placed right after eXLo-L4U4-U4 */}
+            {/* RENAMED from "Exp-U3>U3" -> "9AM:SSRRBHHLLA-U4:9PM" button —
+                Overlapping Lower, placed right after eXLo-L4U4-U4.
+                Bullish/uptrend, green color family (was sky-400). */}
             {activeSectionKey === "overlapping-lower" && !showAll && (
               <button
                 onClick={() => { setShowExpU3PU3((v) => !v); setShowExpU4PU4(false); setShowOBNLoU4L4(false); setShowOBWLoU4L4(false); setShowOBLoSSLLRRHH(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showExpU3PU3
-                    ? "border-sky-400 text-sky-400"
+                    ? "border-green-400 text-green-400"
                     : "border-border text-muted-foreground hover:text-foreground"
                 }`}
                 title="U3 > pU4/L3 < pL4 ,CPR Narrow: Target:AU4"
               >
-                {showExpU3PU3 ? "✕ Exp-U3>pU4" : "Exp-U3>pU4"}<ViewCount id={"eXLo-L4U4-U4"} counts={viewCounts} />
+                {showExpU3PU3 ? "✕ 9AM:SSRRBHHLLA-U4:9PM" : "9AM:SSRRBHHLLA-U4:9PM"}<ViewCount id={"9AM:SSRRBHHLLA-U4:9PM"} counts={viewCounts} />
               </button>
             )}
             {/* NEW: OBN-LoU4L4-U4 button — Overlapping Lower, placed next to Exp-U3>pU4 */}

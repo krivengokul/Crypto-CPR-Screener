@@ -322,7 +322,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
           </>
         ) : showExpU3PU3 && activePattern === "overlapping-lower" ? (
           <>
-            <div className="text-xs font-semibold text-sky-400 mb-1">Expanded</div>
+            <div className="text-xs font-semibold text-emerald-400 mb-1">9AM:SSRRBHHLLA-U4:9PM</div>
             <div className="text-xs text-muted-foreground">Todays U3 &gt; Prev U4/Todays L3 &lt; Prev L4 , today&apos;s CPR is Narrow</div>
           </>
         ) : showOBNLoL4U4 && activePattern === "overlapping-lower" ? (
