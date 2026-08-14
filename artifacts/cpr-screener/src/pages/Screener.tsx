@@ -109,7 +109,7 @@ const GENERIC_VIEW_CATEGORIES = new Set([
 
 /** View ids used by hand-written Views filter buttons that aren't listed in
  *  ViewsSidebar's `Views` map, but still need a "(n)" count. */
-const EXTRA_VIEW_COUNT_IDS = ["la-allstepup", "eXLo-L4U4-U4", "bigabove-pl34cl4-u3>pu4", "HA-U1>PU4"];
+const EXTRA_VIEW_COUNT_IDS = ["la-allstepup", "eXLo-L4U4-U4", "9AM:SSRRHHLLA-U4:11PM", "HA-U1>PU4"];
 
 export default function Screener({
   activePattern = "littleabove",
@@ -540,7 +540,7 @@ export default function Screener({
     "outside-cpr-compressed": setShowOutsideCPRCompressed,
     "eXHrL3U3-AU4": setShowOutsideCPReXHrL3U3AU4,
     // structure-bigabove
-    "bigabove-pl34cl4-u3>pu4": setShowBigAbovePL34CL4,
+    "9AM:SSRRHHLLA-U4:11PM": setShowBigAbovePL34CL4,
     "bacomp-l3>pl1/u3>pu1": setShowBAComp,
     "HA-U1>PU4": setShowHAU1,
     "hR-HAL": setShowHRHAL,
@@ -588,7 +588,7 @@ export default function Screener({
     "6PM:LaLa->U4:2AM": showOBHi6PMLaLa,
     "outside-cpr-compressed": showOutsideCPRCompressed,
     "eXHrL3U3-AU4": showOutsideCPReXHrL3U3AU4,
-    "bigabove-pl34cl4-u3>pu4": showBigAbovePL34CL4,
+    "9AM:SSRRHHLLA-U4:11PM": showBigAbovePL34CL4,
     "bacomp-l3>pl1/u3>pu1": showBAComp,
     "HA-U1>PU4": showHAU1,
     "hR-HAL": showHRHAL,
@@ -910,10 +910,10 @@ export default function Screener({
     }
     if (showBigAbovePL34CL4 && activePattern === "structure-bigabove") {
       const binanceIntersect = allResults
-        .filter((r) => passesPattern(r, "bigabove-pl34cl4-u3>pu4"))
+        .filter((r) => passesPattern(r, "9AM:SSRRHHLLA-U4:11PM"))
         .map((r) => ({ ...r, source: "binance" as const }));
       const deltaIntersect = deltaAllResults
-        .filter((r) => passesPattern(r, "bigabove-pl34cl4-u3>pu4"))
+        .filter((r) => passesPattern(r, "9AM:SSRRHHLLA-U4:11PM"))
         .map((r) => ({ ...r, source: "delta" as const }));
       if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
       if (activeTab === "delta") return deltaIntersect;
@@ -2628,7 +2628,7 @@ export default function Screener({
                 }`}
                 title="BigAbove: PL34CL4 AND today R3 above prev R4"
               >
-                {showBigAbovePL34CL4 ? "✕ PL34CL4/U3>PU4" : "PL34CL4/U3>PU4"}<ViewCount id={"bigabove-pl34cl4-u3>pu4"} counts={viewCounts} />
+                {showBigAbovePL34CL4 ? "✕ PL34CL4/U3>PU4" : "PL34CL4/U3>PU4"}<ViewCount id={"9AM:SSRRHHLLA-U4:11PM"} counts={viewCounts} />
               </button>
             )}
             {/* NEW: BAComp-l3>pl1/u3>pu1 button — inside BigCPR Above, next to Show All */}

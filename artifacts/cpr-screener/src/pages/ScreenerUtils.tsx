@@ -952,7 +952,8 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return (r.currentPrice < r.todayCPR.prevLow);
     case "structure-bigabove":
       return r.cprRising && r.strWideCPR && !(r.todayCPR.r1 > r.prevCPR.r4);
-    case "bigabove-pl34cl4-u3>pu4":
+    // RENAMED: was "bigabove-pl34cl4-u3>pu4" -> "9AM:SSRRHHLLA-U4:11PM"
+    case "9AM:SSRRHHLLA-U4:11PM":
       return (r.cprRising && r.strWideCPR && 
             r.SSRRAbove && r.HHLLAbove & r.PDHLAbove);
     // NEW: BAComp-l3>pl1/u3>pu1 — BigCPR Above + prev S1 inside today S3/S4 AND prev R1 inside today R2/R3
@@ -1309,7 +1310,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     { key: "eXHrL3U3-AU4", direction: "up" },
   ],
   "structure-bigabove": [
-    { key: "bigabove-pl34cl4-u3>pu4", direction: "up" },
+    { key: "9AM:SSRRHHLLA-U4:11PM", direction: "up" },
     { key: "bacomp-l3>pl1/u3>pu1", direction: "up" },
     { key: "hR-HAL", direction: "up" },
     { key: "HA55-HrL4U34-FAU4", direction: "up" },

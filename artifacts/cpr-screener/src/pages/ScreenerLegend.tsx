@@ -322,7 +322,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
           </>
         ) : showExpU3PU3 && activePattern === "overlapping-lower" ? (
           <>
-            <div className="text-xs font-semibold text-emerald-400 mb-1">9AM:SSRRBHHLLA-U4:9PM</div>
+            <div className="text-xs font-semibold text-sky-400 mb-1">Expanded</div>
             <div className="text-xs text-muted-foreground">Todays U3 &gt; Prev U4/Todays L3 &lt; Prev L4 , today&apos;s CPR is Narrow</div>
           </>
         ) : showOBNLoL4U4 && activePattern === "overlapping-lower" ? (
@@ -522,6 +522,15 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
           <>
             <div className="text-xs font-semibold text-rose-400 mb-1">Pattern: cOL2U2  PCPR: Tiny  CPR: Mini</div>
             <div className="text-xs text-muted-foreground">Wide CPR Above base, plus Pattern cOL2U2, today&apos;s PDH &lt; today&apos;s R1, prev day pattern p-cOL4U4</div>
+          </>
+        ) : activePattern === "9AM:SSRRHHLLA-U4:11PM" ? (
+          <>
+            <div className="text-xs font-semibold text-green-400 mb-1">
+              Pattern: SSRRAbove&nbsp;&nbsp;HHLLAbove&nbsp;&nbsp;PDHLAbove
+            </div>
+            <div className="text-xs text-muted-foreground">
+              BigCPR Above (CPR rising + Wide CPR) + SSRRAbove (today&apos;s S1/R1 both above prev day&apos;s S1/R1) + HHLLAbove (today&apos;s PDH/PDL both above prev day&apos;s PDH/PDL) + PDHLAbove.
+            </div>
           </>
         ) : activePattern === "falling" ? (
           <>
@@ -832,6 +841,15 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
           <>
             <div className="text-xs font-semibold text-rose-400 mb-1">Target: PL4&nbsp;&nbsp;Time: 5AM</div>
             <div className="text-xs text-muted-foreground">Expected move below prev day&apos;s S4 (PL4) by ~5AM</div>
+          </>
+        ) : activePattern === "9AM:SSRRHHLLA-U4:11PM" ? (
+          <>
+            <div className="text-xs font-semibold text-green-400 mb-1">
+              Target: U4&nbsp;&nbsp;&nbsp;Entry: 9AM&nbsp;&nbsp;&nbsp;Time: 11PM
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Bullish continuation from a BigCPR Above setup where today&apos;s S1/R1 and PDH/PDL both climbed above prev day&apos;s levels — expected move toward today&apos;s own U4 by ~11PM.
+            </div>
           </>
         ) : null}
       </div>

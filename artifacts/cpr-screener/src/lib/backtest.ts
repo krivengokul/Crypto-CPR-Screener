@@ -408,6 +408,20 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "U4 (today's R2)",
     getTarget: (r) => r.todayCPR.r2,
   },
+  // RENAMED: "bigabove-pl34cl4-u3>pu4" -> "9AM:SSRRHHLLA-U4:11PM", nested
+  // directly on "structure-bigabove"'s own subPatternKeys (see
+  // BACKTEST_CATEGORIES below), alongside the "cOL2U2" Pattern
+  // sub-category. Base structure-bigabove condition (cprRising +
+  // strWideCPR) + SSRRAbove + HHLLAbove + PDHLAbove — see cpr.ts /
+  // ScreenerUtils.tsx. Bullish, entry ~9AM, targets today's own R4 / U4
+  // by ~11PM.
+  {
+    key: "9AM:SSRRHHLLA-U4:11PM",
+    label: "9AM:SSRRHHLLA-U4:11PM",
+    direction: "bullish",
+    targetLabel: "U4 (today's R4)",
+    getTarget: (r) => r.todayCPR.r4,
+  },
 ];
 
 /**
@@ -590,6 +604,11 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
   {
     key: "structure-bigabove",
     label: "BigCPR Above",
+    // RENAMED: "bigabove-pl34cl4-u3>pu4" -> "9AM:SSRRHHLLA-U4:11PM"
+    // (BigCPR Above + SSRRAbove + HHLLAbove + PDHLAbove). Nested directly
+    // on the category's own subPatternKeys (same shape as "inside-cpr"'s
+    // own subPatternKeys), alongside the "cOL2U2" Pattern sub-category.
+    subPatternKeys: ["9AM:SSRRHHLLA-U4:11PM"],
     subCategories: [
       {
         key: "cOL2U2",

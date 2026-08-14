@@ -289,7 +289,11 @@ export const Views: Record<string, SubPattern[]> = {
     { id: "eXHrL3U3-AU4",            label: "eXHrL3U3-AU4" },
   ],
   "structure-bigabove": [
-    { id: "bigabove-pl34cl4-u3>pu4", label: "pL34-cL4" },
+    // RENAMED: was "bigabove-pl34cl4-u3>pu4" -> "9AM:SSRRHHLLA-U4:11PM"
+    // (BigCPR Above + SSRRAbove + HHLLAbove + PDHLAbove; entry ~9AM, target
+    // U4 by ~11PM). Same condition, id/label updated for consistency with
+    // the other time-stamped View ids.
+    { id: "9AM:SSRRHHLLA-U4:11PM", label: "9AM:SSRRHHLLA-U4:11PM" },
     { id: "bacomp-l3>pl1/u3>pu1",   label: "Inside PUL2" },
     { id: "hR-HAL",                  label: "hR-HAL" },
     { id: "eXL4U2-U4:4AM",           label: "eXL4U2-U4:4AM" },
