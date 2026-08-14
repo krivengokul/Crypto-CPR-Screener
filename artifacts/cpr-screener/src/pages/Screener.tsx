@@ -2623,12 +2623,12 @@ export default function Screener({
                 onClick={() => { setShowBigAbovePL34CL4((v) => !v); setShowBAComp(false); setShowHAU1(false); setShowHAU1CprAbovePU4(false); setShowHAU1L1AbovePU4(false); setShowHAU1PWideAbove(false); setShowHRHAL(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showBigAbovePL34CL4
-                    ? "border-foreground text-foreground"
-                    : "border-border text-muted-foreground hover:text-foreground"
+                    ? "border-emerald-400 text-emerald-300 bg-emerald-500/10"
+                    : "border-emerald-500/40 text-emerald-500/80 hover:text-emerald-300 hover:border-emerald-400"
                 }`}
-                title="BigAbove: PL34CL4 AND today R3 above prev R4"
+                title="9AM:SSRRHHLLA-U4:11PM — BigCPR Above + SSRRAbove + HHLLAbove + PDHLAbove (entry ~9AM, target U4 by ~11PM)"
               >
-                {showBigAbovePL34CL4 ? "✕ PL34CL4/U3>PU4" : "PL34CL4/U3>PU4"}<ViewCount id={"9AM:SSRRHHLLA-U4:11PM"} counts={viewCounts} />
+                {showBigAbovePL34CL4 ? "✕ 9AM:SSRRHHLLA-U4:11PM" : "9AM:SSRRHHLLA-U4:11PM"}<ViewCount id={"9AM:SSRRHHLLA-U4:11PM"} counts={viewCounts} />
               </button>
             )}
             {/* NEW: BAComp-l3>pl1/u3>pu1 button — inside BigCPR Above, next to Show All */}
