@@ -954,7 +954,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return r.cprRising && r.strWideCPR && !(r.todayCPR.r1 > r.prevCPR.r4);
     case "bigabove-pl34cl4-u3>pu4":
       return (r.cprRising && r.strWideCPR && 
-            r.SSLLAbove && r.HHLLAbove & r.PDHLAbove);
+            r.SSRRAbove && r.HHLLAbove & r.PDHLAbove);
     // NEW: BAComp-l3>pl1/u3>pu1 — BigCPR Above + prev S1 inside today S3/S4 AND prev R1 inside today R2/R3
     case "bacomp-l3>pl1/u3>pu1":
       return (
