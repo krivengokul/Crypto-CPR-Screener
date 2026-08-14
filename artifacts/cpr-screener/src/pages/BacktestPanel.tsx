@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo, Fragment } from "react";
+import { useState, useEffect, useRef, useMemo, Fragment, cloneElement } from "react";
 import {
   RefreshCw,
   CheckCircle2,
@@ -1110,6 +1110,9 @@ export default function BacktestPanel() {
                     <th className="px-2 py-2 w-20 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       LEVEL
                     </th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      PDH / PDL
+                    </th>
                     <th className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[220px]">
                       <span className="inline-flex items-center gap-1">
                         Pivot Size <PivotSizeInfo />
@@ -1117,9 +1120,6 @@ export default function BacktestPanel() {
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Entry Date
-                    </th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Target
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Result
@@ -1195,6 +1195,15 @@ export default function BacktestPanel() {
                       <td className="px-2 py-2 w-20">
                         {renderLevelBadges(r.raw)}
                       </td>
+                      <td className="px-3 py-2 whitespace-nowrap">
+                        {(() => {
+                          const badges = renderPdhPdlSubBadges(r.raw);
+                          if (!badges) return <span className="text-xs text-muted-foreground">—</span>;
+                          // Stack the prev/today badges as row 1 / row 2 in this cell,
+                          // instead of renderPdhPdlSubBadges' default horizontal layout.
+                          return cloneElement(badges, { className: "flex flex-col items-start gap-1" });
+                        })()}
+                      </td>
                       <td className="px-3 py-2 font-mono whitespace-nowrap min-w-[220px]">
                         {(() => {
                           const prevCat = getWidthCategory(r.prevCPR.widthPct);
@@ -1223,23 +1232,27 @@ export default function BacktestPanel() {
                         })()}
                       </td>
                       <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{formatDisplay(r.entryDate)}</td>
-                      <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{fmt(r.targetLevel)}</td>
                       <td className="px-3 py-2">
-                        {r.result === "pass" && (
-                          <span className="inline-flex items-center gap-1 text-xs font-medium text-green-400">
-                            <CheckCircle2 className="w-3.5 h-3.5" /> Pass
+                        <div className="flex flex-col items-start gap-0.5">
+                          {r.result === "pass" && (
+                            <span className="inline-flex items-center gap-1 text-xs font-medium text-green-400">
+                              <CheckCircle2 className="w-3.5 h-3.5" /> Pass
+                            </span>
+                          )}
+                          {r.result === "fail" && (
+                            <span className="inline-flex items-center gap-1 text-xs font-medium text-destructive">
+                              <XCircle className="w-3.5 h-3.5" /> Fail
+                            </span>
+                          )}
+                          {r.result === "insufficient-data" && (
+                            <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground">
+                              <AlertCircle className="w-3.5 h-3.5" /> No data
+                            </span>
+                          )}
+                          <span className="font-mono text-[10px] text-muted-foreground">
+                            Target: {fmt(r.targetLevel)}
                           </span>
-                        )}
-                        {r.result === "fail" && (
-                          <span className="inline-flex items-center gap-1 text-xs font-medium text-destructive">
-                            <XCircle className="w-3.5 h-3.5" /> Fail
-                          </span>
-                        )}
-                        {r.result === "insufficient-data" && (
-                          <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground">
-                            <AlertCircle className="w-3.5 h-3.5" /> No data
-                          </span>
-                        )}
+                        </div>
                       </td>
                       <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">
                         {r.hitDate ? (
