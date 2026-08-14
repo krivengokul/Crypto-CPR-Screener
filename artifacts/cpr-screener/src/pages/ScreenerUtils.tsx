@@ -646,7 +646,11 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.LoU4L4 &&
         r.compressionRatio > 50
       );
-     case "Exp-U3>U3":
+    // RENAMED from "Exp-U3>U3": Overlap Below + HHLLAbove (today's PDH AND
+    // today's R1 both above prev's R1/PDH) + SSRRBelow (today's S1 AND
+    // today's PDL both below prev's S1/PDL). Bullish, entry ~9AM, targets
+    // today's own R4 / U4 by ~9PM.
+    case "9AM:SSRRBHHLLA-U4:9PM":
       return (r.overlapLower && r.HHLLAbove && r.SSRRBelow);
     // NEW: 2PM:SSLLpRRHHA-ApU4:5PM — Overlap Below + SSLLAbove (today's S1
     // AND today's PDL both above the higher of prev's S1/PDL) + RRHHBelow
@@ -1264,7 +1268,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
   ],
   "overlapping-lower": [
     { key: "eXLo-L4U4-U4", direction: "up" },
-    { key: "Exp-U3>U3", direction: "up" },
+    { key: "9AM:SSRRBHHLLA-U4:9PM", direction: "up" },
     { key: "OBN-LoU4L4-U4", direction: "up" },
     { key: "OBW-LoU4L4-L4", direction: "up" },
     { key: "2PM:SSLLpRRHHA-ApU4:5PM", direction: "up" },

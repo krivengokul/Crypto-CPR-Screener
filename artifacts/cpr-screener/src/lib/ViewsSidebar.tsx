@@ -88,7 +88,7 @@ export const Views: Record<string, SubPattern[]> = {
   ],
   "overlapping-lower": [
     { id: "eXLo-L4U4-U4",            label: "Exp-U3>pU4" },
-    { id: "Exp-U3>U3",               label: "Exp-U3>U3" },
+    { id: "9AM:SSRRBHHLLA-U4:9PM",   label: "9AM:SSRRBHHLLA-U4:9PM" },
     { id: "OBN-LoU4L4-U4",           label: "OBN-LoU4L4-U4" },
     { id: "OBW-LoU4L4-L4",           label: "OBW-LoU4L4-L4" },
     // NEW: 2PM:SSLLpRRHHA-ApU4:5PM — Overlap Below + SSLLAbove (today's S1

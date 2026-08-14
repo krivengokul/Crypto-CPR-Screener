@@ -393,6 +393,21 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
   },
+  // NEW: "9AM:SSRRBHHLLA-U4:9PM" — RENAMED from "Exp-U3>U3", nested
+  // directly under "Overlap Below" (overlapping-lower, see
+  // BACKTEST_CATEGORIES below), same shape as its
+  // "2PM:SSLLpRRHHA-ApU4:5PM" sibling. Base overlapLower condition +
+  // HHLLAbove (today's PDH AND today's R1 both above prev's R1/PDH) +
+  // SSRRBelow (today's S1 AND today's PDL both below prev's S1/PDL) —
+  // see cpr.ts / ScreenerUtils.tsx. Bullish, entry ~9AM, targets today's
+  // own R4 / U4 by ~9PM.
+  {
+    key: "9AM:SSRRBHHLLA-U4:9PM",
+    label: "9AM:SSRRBHHLLA-U4:9PM",
+    direction: "bullish",
+    targetLabel: "U4 (today's R4)",
+    getTarget: (r) => r.todayCPR.r4,
+  },
 ];
 
 /**
@@ -710,10 +725,12 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
   // its own subPatternKeys (Direct View in ViewsSidebar's left-nav, not
   // behind a Pattern sub-category/arrow), same shape as
   // "8AM:S1LAR1HA-faU4+1:8AM" under "inside-cpr" above.
+  // RENAMED: "Exp-U3>U3" -> "9AM:SSRRBHHLLA-U4:9PM", now exposed here in
+  // the Backtest panel alongside its "2PM:SSLLpRRHHA-ApU4:5PM" sibling.
   {
     key: "overlapping-lower",
     label: "Overlap Below",
-    subPatternKeys: ["2PM:SSLLpRRHHA-ApU4:5PM"],
+    subPatternKeys: ["2PM:SSLLpRRHHA-ApU4:5PM", "9AM:SSRRBHHLLA-U4:9PM"],
   },
   { key: "equal-cpr", label: "Equal CPR" },
 ];
