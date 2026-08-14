@@ -293,7 +293,13 @@ export const Views: Record<string, SubPattern[]> = {
     // (BigCPR Above + SSRRAbove + HHLLAbove + PDHLAbove; entry ~9AM, target
     // U4 by ~11PM). Same condition, id/label updated for consistency with
     // the other time-stamped View ids.
-    { id: "9AM:SSRRHHLLA-U4:11PM", label: "9AM:SSRRHHLLA-U4:11PM" },
+    {
+      id: "9AM:SSRRHHLLA-U4:11PM",
+      label: "9AM:SSRRHHLLA-U4:11PM",
+      activeColor: "#34d399",      // emerald-400 border
+      activeText:  "#6ee7b7",      // emerald-300 text
+      activeBg:    "rgba(16, 185, 129, 0.10)",
+    },
     { id: "bacomp-l3>pl1/u3>pu1",   label: "Inside PUL2" },
     { id: "hR-HAL",                  label: "hR-HAL" },
     { id: "eXL4U2-U4:4AM",           label: "eXL4U2-U4:4AM" },
