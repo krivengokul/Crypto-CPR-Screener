@@ -397,10 +397,10 @@ export interface CPRResult {
   // higher of prev's S1 / prev's PDL (support and PDL both climbed above
   // whichever of prev's two floor levels was higher).
   SSLLAbove: boolean;
-  // RRHHBelow — both today's R1 AND today's PDH (prevHigh) sit below the
+  // HHRRBelow — both today's R1 AND today's PDH (prevHigh) sit below the
   // lower of prev's R1 / prev's PDH (resistance and PDH both stayed under
   // whichever of prev's two ceiling levels was lower).
-  RRHHBelow: boolean;
+  HHRRBelow: boolean;
 }
 
 function isValidCandle(c: OHLC): boolean {
@@ -1233,14 +1233,14 @@ export function analyzeCPR(
   const HHLLAbove = todayCPR.prevHigh > prevCPR.prevHigh && todayCPR.prevLow >= prevCPR.prevLow;
   const HHLLBelow = todayCPR.prevHigh <= prevCPR.prevHigh && todayCPR.prevLow < prevCPR.prevLow;
 
-  // SSLLAbove / RRHHBelow — today vs prev S1/PDL and R1/PDH directional
+  // SSLLAbove / HHRRBelow — today vs prev S1/PDL and R1/PDH directional
   // classification, anchored to whichever of prev's two levels is more
   // extreme (higher floor / lower ceiling).
   const prevSLLFloor = Math.max(prevCPR.s1, prevCPR.prevLow);
   const SSLLAbove = todayCPR.s1 > prevSLLFloor && todayCPR.prevLow > prevSLLFloor;
 
   const prevRHHCeiling = Math.min(prevCPR.r1, prevCPR.prevHigh);
-  const RRHHBelow = todayCPR.r1 < prevRHHCeiling && todayCPR.prevHigh < prevRHHCeiling;
+  const HHRRBelow = todayCPR.r1 < prevRHHCeiling && todayCPR.prevHigh < prevRHHCeiling;
 
   return {
     symbol,
@@ -1287,6 +1287,6 @@ export function analyzeCPR(
     HHLLAbove,
     HHLLBelow,
     SSLLAbove,
-    RRHHBelow,
+    HHRRBelow,
   };
 }

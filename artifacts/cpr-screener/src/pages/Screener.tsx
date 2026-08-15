@@ -218,11 +218,11 @@ export default function Screener({
   const [showOBWLoU4L4, setShowOBWLoU4L4] = useState(false);
   // NEW: 2PM:SSLLpRRHHA-ApU4:5PM filter state (Overlapping Lower) — placed
   // next to OBN-LoU4L4-U4 / OBW-LoU4L4-L4. Overlap Below + SSLLAbove +
-  // RRHHBelow, bullish, targets ApU4 (prev day's R4) by ~5PM.
+  // HHRRBelow, bullish, targets ApU4 (prev day's R4) by ~5PM.
   const [showOBLoSSLLRRHH, setShowOBLoSSLLRRHH] = useState(false);
   // NEW: 8AM:SSLLpRRHHA-L4:1PM filter state (Overlapping Lower) — bearish
   // sibling of 2PM:SSLLpRRHHA-ApU4:5PM, same Overlap Below + SSLLAbove +
-  // RRHHBelow base, split the opposite way, targets today's own L4 by ~1PM.
+  // HHRRBelow base, split the opposite way, targets today's own L4 by ~1PM.
   const [showOBLoSSLLRRHHDown, setShowOBLoSSLLRRHHDown] = useState(false);
   // NEW: eXHi-L4U4-U4 filter state (Overlapping Higher) — counterpart of
   // eXLo-L4U4-U4 (Overlapping Lower), same r.eXL4U4 boolean, gated on
@@ -1256,7 +1256,7 @@ export default function Screener({
       return binanceIntersect;
     }
     // NEW: 2PM:SSLLpRRHHA-ApU4:5PM pool — Overlapping Lower, SSLLAbove +
-    // RRHHBelow variant, placed next to OBW-LoU4L4-L4.
+    // HHRRBelow variant, placed next to OBW-LoU4L4-L4.
     if (showOBLoSSLLRRHH && activePattern === "overlapping-lower") {
       const binanceIntersect = allResults
         .filter((r) => passesPattern(r, "2PM:SSLLpRRHHA-ApU4:5PM"))
@@ -2295,7 +2295,7 @@ export default function Screener({
             {/* NEW: 2PM:SSLLpRRHHA-ApU4:5PM button — Overlapping Lower, placed
                 next to OBW-LoU4L4-L4. Overlap Below + SSLLAbove (today's S1
                 AND today's PDL both above the higher of prev's S1/PDL) +
-                RRHHBelow (today's R1 AND today's PDH both below the lower of
+                HHRRBelow (today's R1 AND today's PDH both below the lower of
                 prev's R1/PDH) + (prev R1 above today's R2 OR today's S3
                 above prev's S2). Bullish, green color family, targets ApU4
                 (prev day's R4) by ~5PM. */}
@@ -2307,14 +2307,14 @@ export default function Screener({
                     ? "border-green-400 text-green-400"
                     : "border-border text-muted-foreground hover:text-foreground"
                 }`}
-                title="Overlap Lower + SSLLAbove (today's S1 & PDL above the higher of prev S1/PDL) + RRHHBelow (today's R1 & PDH below the lower of prev R1/PDH) + (prev R1 above today's R2 OR today's S3 above prev S2): Target ApU4 (prev day's R4) by ~5PM"
+                title="Overlap Lower + SSLLAbove (today's S1 & PDL above the higher of prev S1/PDL) + HHRRBelow (today's R1 & PDH below the lower of prev R1/PDH) + (prev R1 above today's R2 OR today's S3 above prev S2): Target ApU4 (prev day's R4) by ~5PM"
               >
                 {showOBLoSSLLRRHH ? "✕ 2PM:SSLLpRRHHA-ApU4:5PM" : "2PM:SSLLpRRHHA-ApU4:5PM"}<ViewCount id={"2PM:SSLLpRRHHA-ApU4:5PM"} counts={viewCounts} />
               </button>
             )}
             {/* NEW: 8AM:SSLLpRRHHA-L4:1PM button — Overlapping Lower, placed
                 next to 2PM:SSLLpRRHHA-ApU4:5PM. Bearish sibling: same
-                Overlap Below + SSLLAbove + RRHHBelow base, but split the
+                Overlap Below + SSLLAbove + HHRRBelow base, but split the
                 opposite way (prev R1 below today's R2 OR today's S3 below
                 prev S2). Red color family, targets today's own L4 by ~1PM. */}
             {activeSectionKey === "overlapping-lower" && !showAll && (
@@ -2325,7 +2325,7 @@ export default function Screener({
                     ? "border-red-400 text-red-400"
                     : "border-border text-muted-foreground hover:text-foreground"
                 }`}
-                title="Overlap Lower + SSLLAbove (today's S1 & PDL above the higher of prev S1/PDL) + RRHHBelow (today's R1 & PDH below the lower of prev R1/PDH) + (prev R1 below today's R2 OR today's S3 below prev S2): Target today's own L4 by ~1PM"
+                title="Overlap Lower + SSLLAbove (today's S1 & PDL above the higher of prev S1/PDL) + HHRRBelow (today's R1 & PDH below the lower of prev R1/PDH) + (prev R1 below today's R2 OR today's S3 below prev S2): Target today's own L4 by ~1PM"
               >
                 {showOBLoSSLLRRHHDown ? "✕ 8AM:SSLLpRRHHA-L4:1PM" : "8AM:SSLLpRRHHA-L4:1PM"}<ViewCount id={"8AM:SSLLpRRHHA-L4:1PM"} counts={viewCounts} />
               </button>

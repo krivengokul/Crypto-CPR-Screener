@@ -653,7 +653,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     case "9AM:SSRRBHHLLA-U4:9PM":
       return (r.overlapLower && r.HHLLAbove && r.SSRRBelow);
     // NEW: 2PM:SSLLpRRHHA-ApU4:5PM — Overlap Below + SSLLAbove (today's S1
-    // AND today's PDL both above the higher of prev's S1/PDL) + RRHHBelow
+    // AND today's PDL both above the higher of prev's S1/PDL) + HHRRBelow
     // (today's R1 AND today's PDH both below the lower of prev's R1/PDH)
     // + (prev day's R1 above today's R2 OR today's S3 above prev day's S2).
     // Bullish, entry ~2PM, targets ApU4 (prev day's R4) by ~5PM.
@@ -661,11 +661,11 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return (
         r.overlapLower &&
         r.SSLLAbove &&
-        r.RRHHBelow &&
+        r.HHRRBelow &&
         (r.prevCPR.r1 > r.todayCPR.r2 || r.todayCPR.s3 > r.prevCPR.s2)
       );
     // NEW: 8AM:SSLLpRRHHA-L4:1PM — same base conditions as
-    // "2PM:SSLLpRRHHA-ApU4:5PM" (overlapLower + SSLLAbove + RRHHBelow), but
+    // "2PM:SSLLpRRHHA-ApU4:5PM" (overlapLower + SSLLAbove + HHRRBelow), but
     // with the comparison direction reversed (prev day's R1 below today's
     // R2 OR today's S3 below prev day's S2). Bearish, entry ~8AM, targets
     // today's own L4/S4 by ~1PM. Red color family.
@@ -673,7 +673,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return (
         r.overlapLower &&
         r.SSLLAbove &&
-        r.RRHHBelow &&
+        r.HHRRBelow &&
         (r.prevCPR.r1 < r.todayCPR.r2 || r.todayCPR.s3 < r.prevCPR.s2)
       );
     case "LBT-PU1>U1PL1>L1":

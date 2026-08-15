@@ -370,19 +370,19 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
         ) : activePattern === "2PM:SSLLpRRHHA-ApU4:5PM" ? (
           <>
             <div className="text-xs font-semibold text-green-400 mb-1">
-              Pattern: SSLLAbove&nbsp;&nbsp;RRHHBelow
+              Pattern: SSLLAbove&nbsp;&nbsp;HHRRBelow
             </div>
             <div className="text-xs text-muted-foreground">
-              Overlap Below + SSLLAbove (today&apos;s S1 AND today&apos;s PDL both above the higher of prev day&apos;s S1/PDL) + RRHHBelow (today&apos;s R1 AND today&apos;s PDH both below the lower of prev day&apos;s R1/PDH) + EITHER prev day&apos;s R1 above today&apos;s R2 OR today&apos;s S3 above prev day&apos;s S2.
+              Overlap Below + SSLLAbove (today&apos;s S1 AND today&apos;s PDL both above the higher of prev day&apos;s S1/PDL) + HHRRBelow (today&apos;s R1 AND today&apos;s PDH both below the lower of prev day&apos;s R1/PDH) + EITHER prev day&apos;s R1 above today&apos;s R2 OR today&apos;s S3 above prev day&apos;s S2.
             </div>
           </>
         ) : activePattern === "8AM:SSLLpRRHHA-L4:1PM" ? (
           <>
             <div className="text-xs font-semibold text-red-400 mb-1">
-              Pattern: SSLLAbove&nbsp;&nbsp;RRHHBelow
+              Pattern: SSLLAbove&nbsp;&nbsp;HHRRBelow
             </div>
             <div className="text-xs text-muted-foreground">
-              Overlap Below + SSLLAbove (today&apos;s S1 AND today&apos;s PDL both above the higher of prev day&apos;s S1/PDL) + RRHHBelow (today&apos;s R1 AND today&apos;s PDH both below the lower of prev day&apos;s R1/PDH) + EITHER prev day&apos;s R1 below today&apos;s R2 OR today&apos;s S3 below prev day&apos;s S2. Bearish sibling of 2PM:SSLLpRRHHA-ApU4:5PM, targets today&apos;s own L4/S4 by ~1PM.
+              Overlap Below + SSLLAbove (today&apos;s S1 AND today&apos;s PDL both above the higher of prev day&apos;s S1/PDL) + HHRRBelow (today&apos;s R1 AND today&apos;s PDH both below the lower of prev day&apos;s R1/PDH) + EITHER prev day&apos;s R1 below today&apos;s R2 OR today&apos;s S3 below prev day&apos;s S2. Bearish sibling of 2PM:SSLLpRRHHA-ApU4:5PM, targets today&apos;s own L4/S4 by ~1PM.
             </div>
           </>
         ) : activePattern === "8AM:CoLApHA-U4+1:8AM" ? (
