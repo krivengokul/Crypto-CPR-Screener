@@ -767,6 +767,19 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
     key: "overlapping-lower",
     label: "Overlap Below",
     subPatternKeys: ["2PM:SSLLpRRHHA-ApU4:5PM", "8AM:SSLLpRRHHA-L4:1PM", "9AM:SSRRBHHLLA-U4:9PM"],
+    // NEW: "LoU4L4" Pattern sub-category (arrow), same shape as its
+    // "eXL4U4" counterpart under "overlapping-higher" — base condition =
+    // Overlap Below's r.overlapLower condition AND the raw LoU4L4 flag
+    // (see matchesPatternFlag in ScreenerUtils.tsx, which already has a
+    // "LoU4L4" case). No target-graded pattern nested under it yet, so it
+    // shows up as a symbol-list-only scan in the Backtest dropdown.
+    subCategories: [
+      {
+        key: "LoU4L4",
+        label: "LoU4L4",
+        subPatternKeys: [],
+      },
+    ],
   },
   { key: "equal-cpr", label: "Equal CPR" },
 ];
