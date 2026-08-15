@@ -658,7 +658,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // PDL). Bullish, green color family, entry ~9AM, targets today's own
     // U4 by ~9PM.
     case "9AM:pRRHHLLA-U4:9PM":
-      return (r.overlapLower && r.HHRRBelow && r.HHLLAbove);
+      return (r.overlapLower && r.HHRRBelow && r.HHLLBelow);
     // NEW: 2PM:SSLLpRRHHA-ApU4:5PM — Overlap Below + SSLLAbove (today's S1
     // AND today's PDL both above the higher of prev's S1/PDL) + HHRRBelow
     // (today's R1 AND today's PDH both below the lower of prev's R1/PDH)
