@@ -676,11 +676,19 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // day's R1 ("PDH>pR1") OR prev day's PDH above today's R1
     // ("pPDH>R1") + today's pivot and today's PDH move the SAME direction
     // relative to prev day's (both up OR both down) — i.e. pivot and PDH
-    // aren't drifting in opposite directions. Bullish, entry ~8AM, targets
-    // pU4 (prev day's R4) by ~8AM the next day. Green color family.
-    case "8AM:CoLApHA-U4+1:8AM":
-      return (r.InsideCPR && r.SSLLAbove && r.prevCPR.PDHLAbove && r.todayCPR.PDHLBelow && 
-        (r.todayCPR.prevHigh > r.prevCPR.r1 || r.prevCPR.prevHigh > r.todayCPR.r1));
+    // aren't drifting in opposite directions — EXCLUDING rows where prev
+    // day's own pattern (p-xxx, i.e. getPatternCategory(computePrevPattern
+    // (prevCPR, ppCPR))) falls in the "eXLower" category. Bullish, entry
+    // ~8AM, targets pU4 (prev day's R4) by ~8AM the next day. Green color
+    // family.
+    case "8AM:CoLApHA-U4+1:8AM": {
+      const prevCat = getPatternCategory(computePrevPattern(r.prevCPR, r.ppCPR));
+      return (
+        r.InsideCPR && r.SSLLAbove &&
+        (r.todayCPR.prevHigh > r.prevCPR.r1 || r.prevCPR.prevHigh > r.todayCPR.r1) &&
+        prevCat !== "eXLower" // exclude prev day's own pattern (p-xxx) falling in eXLower
+      );
+    }
     // NEW: 8AM:SRBHHLLA-pU4+1:8AM — Inside CPR + cOL3U3 + prev CPR width
     // category pLarge (2.00%-5.00%) + today CPR width category Medium
     // (1.10%-2.00%) + prev day's own PDL below prev S1 ("p-PDL<L1") +
