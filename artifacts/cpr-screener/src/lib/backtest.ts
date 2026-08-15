@@ -383,7 +383,8 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
   // subPatternKeys rather than behind a Pattern sub-category. Base
   // overlapLower condition + SSLLAbove (today's S1 AND today's PDL both
   // above the higher of prev's S1/PDL) + RRHHBelow (today's R1 AND
-  // today's PDH both below the lower of prev's R1/PDH) — see cpr.ts /
+  // today's PDH both below the lower of prev's R1/PDH) + (prev day's R1
+  // above today's R2 OR today's S3 above prev day's S2) — see cpr.ts /
   // ScreenerUtils.tsx. Bullish, entry ~2PM, targets ApU4 (prev day's R4)
   // by ~5PM.
   {
@@ -392,6 +393,20 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     direction: "bullish",
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
+  },
+  // NEW: "8AM:SSLLpRRHHA-L4:1PM" — bearish sibling of
+  // "2PM:SSLLpRRHHA-ApU4:5PM", nested directly under "Overlap Below"
+  // (overlapping-lower). Same base overlapLower + SSLLAbove + RRHHBelow
+  // condition, but with the comparison direction reversed (prev day's R1
+  // below today's R2 OR today's S3 below prev day's S2) — see cpr.ts /
+  // ScreenerUtils.tsx. Bearish, entry ~8AM, targets today's own L4 (S4)
+  // by ~1PM.
+  {
+    key: "8AM:SSLLpRRHHA-L4:1PM",
+    label: "8AM:SSLLpRRHHA-L4:1PM",
+    direction: "bearish",
+    targetLabel: "L4 (today's S4)",
+    getTarget: (r) => r.todayCPR.s4,
   },
   // NEW: "9AM:SSRRBHHLLA-U4:9PM" — RENAMED from "Exp-U3>U3", nested
   // directly under "Overlap Below" (overlapping-lower, see
@@ -746,10 +761,12 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
   // "8AM:CoLApHA-U4+1:8AM" under "inside-cpr" above.
   // RENAMED: "Exp-U3>U3" -> "9AM:SSRRBHHLLA-U4:9PM", now exposed here in
   // the Backtest panel alongside its "2PM:SSLLpRRHHA-ApU4:5PM" sibling.
+  // NEW: "8AM:SSLLpRRHHA-L4:1PM" added as the bearish sibling of
+  // "2PM:SSLLpRRHHA-ApU4:5PM".
   {
     key: "overlapping-lower",
     label: "Overlap Below",
-    subPatternKeys: ["2PM:SSLLpRRHHA-ApU4:5PM", "9AM:SSRRBHHLLA-U4:9PM"],
+    subPatternKeys: ["2PM:SSLLpRRHHA-ApU4:5PM", "8AM:SSLLpRRHHA-L4:1PM", "9AM:SSRRBHHLLA-U4:9PM"],
   },
   { key: "equal-cpr", label: "Equal CPR" },
 ];

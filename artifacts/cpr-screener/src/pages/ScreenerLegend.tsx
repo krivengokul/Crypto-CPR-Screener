@@ -373,7 +373,16 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
               Pattern: SSLLAbove&nbsp;&nbsp;RRHHBelow
             </div>
             <div className="text-xs text-muted-foreground">
-              Overlap Below + SSLLAbove (today&apos;s S1 AND today&apos;s PDL both above the higher of prev day&apos;s S1/PDL) + RRHHBelow (today&apos;s R1 AND today&apos;s PDH both below the lower of prev day&apos;s R1/PDH).
+              Overlap Below + SSLLAbove (today&apos;s S1 AND today&apos;s PDL both above the higher of prev day&apos;s S1/PDL) + RRHHBelow (today&apos;s R1 AND today&apos;s PDH both below the lower of prev day&apos;s R1/PDH) + EITHER prev day&apos;s R1 above today&apos;s R2 OR today&apos;s S3 above prev day&apos;s S2.
+            </div>
+          </>
+        ) : activePattern === "8AM:SSLLpRRHHA-L4:1PM" ? (
+          <>
+            <div className="text-xs font-semibold text-red-400 mb-1">
+              Pattern: SSLLAbove&nbsp;&nbsp;RRHHBelow
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Overlap Below + SSLLAbove (today&apos;s S1 AND today&apos;s PDL both above the higher of prev day&apos;s S1/PDL) + RRHHBelow (today&apos;s R1 AND today&apos;s PDH both below the lower of prev day&apos;s R1/PDH) + EITHER prev day&apos;s R1 below today&apos;s R2 OR today&apos;s S3 below prev day&apos;s S2. Bearish sibling of 2PM:SSLLpRRHHA-ApU4:5PM, targets today&apos;s own L4/S4 by ~1PM.
             </div>
           </>
         ) : activePattern === "8AM:CoLApHA-U4+1:8AM" ? (
@@ -699,6 +708,15 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             </div>
             <div className="text-xs text-muted-foreground">
               Bullish continuation from an Overlap-Below setup where today&apos;s S1/PDL both hold above prev day&apos;s tighter floor and today&apos;s R1/PDH both stay under prev day&apos;s tighter ceiling — expected move toward prev day&apos;s U4 by ~5PM IST.
+            </div>
+          </>
+        ) : activePattern === "8AM:SSLLpRRHHA-L4:1PM" ? (
+          <>
+            <div className="text-xs font-semibold text-red-400 mb-1">
+              Target: L4&nbsp;&nbsp;&nbsp;Entry: 8AM&nbsp;&nbsp;&nbsp;Time: 1PM
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Bearish sibling of 2PM:SSLLpRRHHA-ApU4:5PM from the same Overlap-Below setup, but split the opposite way (prev day&apos;s R1 below today&apos;s R2, or today&apos;s S3 below prev day&apos;s S2) — expected move toward today&apos;s own L4 by ~1PM IST.
             </div>
           </>
         ) : activePattern === "8AM:CoLApHA-U4+1:8AM" ? (
