@@ -322,7 +322,7 @@ export default function BacktestPanel() {
 
   let activePatternInfo: { category: BacktestCategoryDef; sub: BacktestSubCategoryDef } | undefined;
   for (const cat of BACKTEST_CATEGORIES) {
-    const sub = cat.subCategories?.find((s) => `${cat.key}${SUBCATEGORY_SEP}${s.key}` === selectedKey);
+    const sub = cat.patterns?.find((s) => `${cat.key}${SUBCATEGORY_SEP}${s.key}` === selectedKey);
     if (sub) {
       activePatternInfo = { category: cat, sub };
       break;
@@ -344,7 +344,7 @@ export default function BacktestPanel() {
   const nestedPatternKeys = new Set<string>();
   BACKTEST_CATEGORIES.forEach((cat) => {
     cat.subPatternKeys?.forEach((k) => nestedPatternKeys.add(k));
-    cat.subCategories?.forEach((sub) => sub.subPatternKeys.forEach((k) => nestedPatternKeys.add(k)));
+    cat.patterns?.forEach((sub) => sub.subPatternKeys.forEach((k) => nestedPatternKeys.add(k)));
   });
   // Ungrouped patterns intentionally omitted from the dropdown: the ones
   // that were showing up at the bottom ("LittleCPR Above", "U1 > Previous U4
@@ -378,7 +378,7 @@ export default function BacktestPanel() {
         directPatterns: (cat.subPatternKeys ?? [])
           .map((pk) => BACKTEST_TARGETS.find((t) => t.key === pk))
           .filter((t): t is BacktestTargetDef => !!t),
-        subCats: (cat.subCategories ?? []).map((sub) => ({
+        subCats: (cat.patterns ?? []).map((sub) => ({
           sub,
           Views: sub.subPatternKeys
             .map((pk) => BACKTEST_TARGETS.find((t) => t.key === pk))

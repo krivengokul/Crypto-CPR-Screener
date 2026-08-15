@@ -452,7 +452,7 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
  * one of its subPatternKeys instead runs the normal runBacktest flow
  * against that pattern's specific target.
  *
- * NEW: subCategories — a category can additionally nest one or more
+ * NEW: patterns — a category can additionally nest one or more
  * "Pattern" sub-categories (e.g. "Overlap Above" → Pattern
  * "HiL4U3"). A Pattern sub-category is itself just another
  * symbol-list-only, single-date, no-target scan — same as a category —
@@ -473,7 +473,7 @@ export interface BacktestCategoryDef {
   key: string;                          // matches passesPattern's BASE category key (e.g. "littleabove")
   label: string;                        // display name, e.g. "LittleCPR Above"
   subPatternKeys?: string[];            // BACKTEST_TARGETS keys nested directly under this category
-  subCategories?: BacktestSubCategoryDef[]; // NEW: Pattern sub-categories nested under this category
+  patterns?: BacktestSubCategoryDef[]; // NEW: Pattern sub-categories nested under this category
 }
 
 export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
@@ -486,7 +486,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
     // matchesPatternFlag in ScreenerUtils.tsx). Nests the existing
     // "9AM:MegL-U4+1:3PM" pattern, which used to sit directly on this
     // category's own subPatternKeys.
-    subCategories: [
+    patterns: [
       {
         key: "eXL4U2",
         label: "eXL4U2",
@@ -515,7 +515,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
     // NEW: "PDH>pTC-U4:5AM" now nests under the "LoU3L3" Pattern
     // sub-category below (not directly on the category), since it also
     // requires the raw LoU3L3 flag — see ScreenerUtils.tsx.
-    subCategories: [
+    patterns: [
       {
         key: "cOU3L4",
         label: "cOU3L4",
@@ -571,7 +571,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
   {
     key: "overlapping-higher",
     label: "Overlap Above",
-    subCategories: [
+    patterns: [
       {
         key: "HiL4U3",
         label: "HiL4U3",
@@ -624,7 +624,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
     // on the category's own subPatternKeys (same shape as "inside-cpr"'s
     // own subPatternKeys), alongside the "cOL2U2" Pattern sub-category.
     subPatternKeys: ["9AM:SSRRHHLLA-U4:11PM"],
-    subCategories: [
+    patterns: [
       {
         key: "cOL2U2",
         label: "cOL2U2",
@@ -641,7 +641,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
     // matchesPatternFlag in ScreenerUtils.tsx). Nests the existing
     // "9AM:APHS1A-FAU4:4AM" pattern, which used to sit directly on this
     // category's own subPatternKeys.
-    subCategories: [
+    patterns: [
       {
         key: "eXL3U1",
         label: "eXL3U1",
@@ -706,7 +706,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
   {
     key: "l1-lt-pl4",
     label: "L1 < pL4",
-    subCategories: [
+    patterns: [
       {
         key: "eXU4L1",
         label: "eXU4L1",
@@ -727,9 +727,9 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
     // it's a Direct View in ViewsSidebar's left-nav (top-level, under but
     // not nested inside "Inside CPR"), so it isn't gated behind one of
     // the raw Pattern flags (cOL3U3/cOL4U4/eXL4U4) the way its
-    // subCategories siblings are.
+    // patterns siblings are.
     subPatternKeys: ["8AM:CoLApHA-U4+1:8AM"],
-    subCategories: [
+    patterns: [
       {
         key: "cOL3U3",
         label: "cOL3U3",
@@ -773,7 +773,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
     // (see matchesPatternFlag in ScreenerUtils.tsx, which already has a
     // "LoU4L4" case). No target-graded pattern nested under it yet, so it
     // shows up as a symbol-list-only scan in the Backtest dropdown.
-    subCategories: [
+    patterns: [
       {
         key: "LoU4L4",
         label: "LoU4L4",
@@ -847,7 +847,7 @@ export function buildBacktestOptions(): BacktestOption[] {
       });
     }
 
-    for (const sub of cat.subCategories ?? []) {
+    for (const sub of cat.patterns ?? []) {
       opts.push({
         value: `${cat.key}::${sub.key}`,
         kind: "pivotLevel",
