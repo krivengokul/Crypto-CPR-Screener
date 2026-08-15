@@ -684,7 +684,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     case "8AM:CoLApHA-U4+1:8AM": {
       const prevCat = getPatternCategory(computePrevPattern(r.prevCPR, r.ppCPR));
       return (
-        r.InsideCPR && r.SSLLAbove &&
+        r.InsideCPR && r.SSLLAbove &&  r.prevCPR.PDHLAbove && r.todayCPR.PDHLBelow && 
         (r.todayCPR.prevHigh > r.prevCPR.r1 || r.prevCPR.prevHigh > r.todayCPR.r1) &&
         prevCat !== "eXLower" && prevCat !== "cOLower" // exclude prev day's own pattern (p-xxx) falling in eXLower/cOLower
       );
