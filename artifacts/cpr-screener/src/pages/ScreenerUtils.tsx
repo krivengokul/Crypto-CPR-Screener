@@ -652,6 +652,13 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // today's own R4 / U4 by ~9PM.
     case "9AM:SSRRBHHLLA-U4:9PM":
       return (r.overlapLower && r.HHLLAbove && r.SSRRBelow);
+    // NEW: 9AM:pRRHHLLA-U4:9PM — Overlap Below + HHRRBelow (today's R1 AND
+    // today's PDH both below the lower of prev's R1/PDH) + HHLLAbove
+    // (today's PDH strictly above prev's PDH AND today's PDL >= prev's
+    // PDL). Bullish, green color family, entry ~9AM, targets today's own
+    // U4 by ~9PM.
+    case "9AM:pRRHHLLA-U4:9PM":
+      return (r.overlapLower && r.HHRRBelow && r.HHLLAbove);
     // NEW: 2PM:SSLLpRRHHA-ApU4:5PM — Overlap Below + SSLLAbove (today's S1
     // AND today's PDL both above the higher of prev's S1/PDL) + HHRRBelow
     // (today's R1 AND today's PDH both below the lower of prev's R1/PDH)
@@ -1288,6 +1295,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
   "overlapping-lower": [
     { key: "eXLo-L4U4-U4", direction: "up" },
     { key: "9AM:SSRRBHHLLA-U4:9PM", direction: "up" },
+    { key: "9AM:pRRHHLLA-U4:9PM", direction: "up" },
     { key: "OBN-LoU4L4-U4", direction: "up" },
     { key: "OBW-LoU4L4-L4", direction: "up" },
     { key: "2PM:SSLLpRRHHA-ApU4:5PM", direction: "up" },

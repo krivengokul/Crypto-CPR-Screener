@@ -89,6 +89,18 @@ export const Views: Record<string, SubPattern[]> = {
   "overlapping-lower": [
     { id: "eXLo-L4U4-U4",            label: "Exp-U3>pU4" },
     { id: "9AM:SSRRBHHLLA-U4:9PM",   label: "9AM:SSRRBHHLLA-U4:9PM" },
+    // NEW: 9AM:pRRHHLLA-U4:9PM — Overlap Below + HHRRBelow (today's R1 AND
+    // today's PDH both below the lower of prev's R1/PDH) + HHLLAbove
+    // (today's PDH above prev's PDH AND today's PDL >= prev's PDL).
+    // Bullish, entry ~9AM, targets today's own U4 by ~9PM. Green color
+    // family, sibling of 9AM:SSRRBHHLLA-U4:9PM.
+    {
+      id: "9AM:pRRHHLLA-U4:9PM",
+      label: "9AM:pRRHHLLA-U4:9PM",
+      activeColor: "#22c55e",      // green-500 border
+      activeText:  "#4ade80",      // green-400 text
+      activeBg:    "rgba(34, 197, 94, 0.14)",
+    },
     { id: "OBN-LoU4L4-U4",           label: "OBN-LoU4L4-U4" },
     { id: "OBW-LoU4L4-L4",           label: "OBW-LoU4L4-L4" },
     // NEW: 2PM:SSLLpRRHHA-ApU4:5PM — Overlap Below + SSLLAbove (today's S1

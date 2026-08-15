@@ -213,6 +213,10 @@ export default function Screener({
   // RENAMED from "Exp-U3>U3": 9AM:SSRRBHHLLA-U4:9PM filter state
   // (Overlapping Lower). Bullish/uptrend, green color family.
   const [showExpU3PU3, setShowExpU3PU3] = useState(false);
+  // NEW: 9AM:pRRHHLLA-U4:9PM filter state (Overlapping Lower) — sibling of
+  // 9AM:SSRRBHHLLA-U4:9PM. Overlap Below + HHRRBelow + HHLLAbove. Bullish,
+  // green color family.
+  const [showOBLoRRHHLLA, setShowOBLoRRHHLLA] = useState(false);
   // NEW: OBN-LoU4L4-U4 / OBW-LoU4L4-L4 filter state (Overlapping Lower), placed next to Exp-U3>pU4
   const [showOBNLoU4L4, setShowOBNLoU4L4] = useState(false);
   const [showOBWLoU4L4, setShowOBWLoU4L4] = useState(false);
@@ -492,7 +496,7 @@ export default function Screener({
     if (deltaAllResults.length > 0) setDeltaFiltered(deltaAllResults.filter((r) => passesPattern(r, activePattern)));
     if (activePattern !== "littleabove") { setShowLABothTiny(false); setShowLAAllUp(false); setShowLA1LHr(false); setShowLAPL12CL23(false); setShowLACompressed(false); setShowLAT1U46AM(false); setShowLASsHiL4U4FAU42AM(false); setShowLAMeMieXL4U3U46PM(false); }
     if (activePattern !== "outside-cpr") { setShowOutsideCPRCompressed(false); setShowOutsideCPReXHrL3U3AU4(false); }
-    if (activePattern !== "overlapping-lower") { setShowExpU4PU4(false); setShowExpU3PU3(false); setShowOBNLoU4L4(false); setShowOBWLoU4L4(false); setShowOBLoSSLLRRHH(false); setShowOBLoSSLLRRHHDown(false); }
+    if (activePattern !== "overlapping-lower") { setShowExpU4PU4(false); setShowExpU3PU3(false); setShowOBLoRRHHLLA(false); setShowOBNLoU4L4(false); setShowOBWLoU4L4(false); setShowOBLoSSLLRRHH(false); setShowOBLoSSLLRRHHDown(false); }
     // NEW: reset eXHi-L4U4-U4 toggle when leaving Overlapping Higher
     if (activePattern !== "overlapping-higher") { setShowOBHiExL4U4(false); setShowLMeXL2U2(false); setShowOBHicOL3U3pL4(false); setShowOBHi7AMMiMi(false); setShowOBHi6PMLaLa(false); }
     if (activePattern !== "structure-bigbelow") { setShowBigBelowPMiniPL3(false); setShowBigBelowPMiniRising(false); pMiniRisingAlertedRef.current.clear(); setShowExpU3LtPU4(false); setShowBigBeloweXU4L3AU4(false); setShowBigBelowL1LtPL4(false); setShowL1LtPL4CprLtPL4(false); setShowBigBeloweXU4L2AU4(false); setShowBigBelow1TcOU4L43PM(false); }
@@ -531,6 +535,7 @@ export default function Screener({
     // VIEW_SETTERS — it existed in ViewsSidebar's Views list but had no
     // matching entry here, same class of bug as CPR Inside's missing Views.
     "9AM:SSRRBHHLLA-U4:9PM": setShowExpU3PU3,
+    "9AM:pRRHHLLA-U4:9PM": setShowOBLoRRHHLLA,
     "OBN-LoU4L4-U4": setShowOBNLoU4L4,
     "OBW-LoU4L4-L4": setShowOBWLoU4L4,
     "2PM:SSLLpRRHHA-ApU4:5PM": setShowOBLoSSLLRRHH,
@@ -1227,6 +1232,21 @@ export default function Screener({
       if (activeTab === "delta") return deltaIntersect;
       return binanceIntersect;
     }
+    // NEW: 9AM:pRRHHLLA-U4:9PM pool — Overlapping Lower, HHRRBelow +
+    // HHLLAbove variant, placed next to 9AM:SSRRBHHLLA-U4:9PM.
+    if (showOBLoRRHHLLA && activePattern === "overlapping-lower") {
+      const binanceIntersect = allResults
+        .filter((r) => passesPattern(r, "9AM:pRRHHLLA-U4:9PM"))
+        .map((r) => ({ ...r, source: "binance" as const }));
+
+      const deltaIntersect = deltaAllResults
+        .filter((r) => passesPattern(r, "9AM:pRRHHLLA-U4:9PM"))
+        .map((r) => ({ ...r, source: "delta" as const }));
+
+      if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
+      if (activeTab === "delta") return deltaIntersect;
+      return binanceIntersect;
+    }
     // NEW: OBN-LoU4L4-U4 pool — Overlapping Lower, Narrow variant
     if (showOBNLoU4L4 && activePattern === "overlapping-lower") {
       const binanceIntersect = allResults
@@ -1516,7 +1536,7 @@ export default function Screener({
     showOutsideCPRCompressed || showOutsideCPReXHrL3U3AU4 ||
     showBigBelowPMiniPL3 || showBigBelowPMiniRising || showExpU3LtPU4 || showBigBeloweXU4L3AU4 || showBigBelowL1LtPL4 || showL1LtPL4CprLtPL4 || showBigBeloweXU4L2AU4 || showBigBelow1TcOU4L43PM ||
     showBigAbovePL34CL4 || showBAComp || showHAU1 || showHAU1CprAbovePU4 || showHAU1L1AbovePU4 || showHAU1PWideAbove || showHRHAL || showHA55HrL4U34FAU4 || showHiL4U4FAU4 || show1ScoHiFAU4 || show2ScoHiFAU4 || showBAeXL4U2 || showBATiMicOL2U2 || showLBCmprss || showLBC34 || showLBE11 || showLBC2L2U2 ||
-    showLBBothTiny || showLBAllUp || showLBL1cOU1L2 || showExpU4PU4 || showExpU3PU3 || showOBNLoU4L4 || showOBWLoU4L4 || showOBLoSSLLRRHH || showOBHiExL4U4 || showLMeXL2U2 || showOBHicOL3U3pL4 || showOBHi7AMMiMi || showOBHi6PMLaLa ||
+    showLBBothTiny || showLBAllUp || showLBL1cOU1L2 || showExpU4PU4 || showExpU3PU3 || showOBLoRRHHLLA || showOBNLoU4L4 || showOBWLoU4L4 || showOBLoSSLLRRHH || showOBHiExL4U4 || showLMeXL2U2 || showOBHicOL3U3pL4 || showOBHi7AMMiMi || showOBHi6PMLaLa ||
     !!activeGenericSubView ||
     !!PatternFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter || !!exitTimeFilter;
 
@@ -1551,6 +1571,7 @@ export default function Screener({
           showLBC2L2U2={showLBC2L2U2}
           showExpU4PU4={showExpU4PU4}
           showExpU3PU3={showExpU3PU3}
+          showOBLoRRHHLLA={showOBLoRRHHLLA}
           showOBNLoU4L4={showOBNLoU4L4}
           showOBWLoU4L4={showOBWLoU4L4}
           showOBHiExL4U4={showOBHiExL4U4}
@@ -1666,6 +1687,7 @@ export default function Screener({
                   setShowLBL1cOU1L2(false);
                   setShowExpU4PU4(false);
                   setShowExpU3PU3(false);
+                  setShowOBLoRRHHLLA(false);
                   setShowOBNLoU4L4(false);
                   setShowOBWLoU4L4(false);
                   setShowOBLoSSLLRRHHDown(false);
@@ -2237,7 +2259,7 @@ export default function Screener({
               })}
             {activeSectionKey === "overlapping-lower" && !showAll && (
               <button
-                onClick={() => { setShowExpU4PU4((v) => !v); setShowExpU3PU3(false); setShowOBNLoU4L4(false); setShowOBWLoU4L4(false); setShowOBLoSSLLRRHH(false); setShowOBLoSSLLRRHHDown(false); }}
+                onClick={() => { setShowExpU4PU4((v) => !v); setShowExpU3PU3(false); setShowOBLoRRHHLLA(false); setShowOBNLoU4L4(false); setShowOBWLoU4L4(false); setShowOBLoSSLLRRHH(false); setShowOBLoSSLLRRHHDown(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showExpU4PU4
                     ? "border-emerald-400 text-emerald-400"
@@ -2253,7 +2275,7 @@ export default function Screener({
                 Bullish/uptrend, green color family (was sky-400). */}
             {activeSectionKey === "overlapping-lower" && !showAll && (
               <button
-                onClick={() => { setShowExpU3PU3((v) => !v); setShowExpU4PU4(false); setShowOBNLoU4L4(false); setShowOBWLoU4L4(false); setShowOBLoSSLLRRHH(false); setShowOBLoSSLLRRHHDown(false); }}
+                onClick={() => { setShowExpU3PU3((v) => !v); setShowExpU4PU4(false); setShowOBLoRRHHLLA(false); setShowOBNLoU4L4(false); setShowOBWLoU4L4(false); setShowOBLoSSLLRRHH(false); setShowOBLoSSLLRRHHDown(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showExpU3PU3
                     ? "border-green-400 text-green-400"
@@ -2264,10 +2286,29 @@ export default function Screener({
                 {showExpU3PU3 ? "✕ 9AM:SSRRBHHLLA-U4:9PM" : "9AM:SSRRBHHLLA-U4:9PM"}<ViewCount id={"9AM:SSRRBHHLLA-U4:9PM"} counts={viewCounts} />
               </button>
             )}
+            {/* NEW: 9AM:pRRHHLLA-U4:9PM button — Overlapping Lower, placed
+                right after 9AM:SSRRBHHLLA-U4:9PM. Overlap Below +
+                HHRRBelow (today's R1 AND today's PDH both below the lower
+                of prev's R1/PDH) + HHLLAbove (today's PDH above prev's
+                PDH AND today's PDL >= prev's PDL). Bullish, green color
+                family, targets today's own U4 by ~9PM. */}
+            {activeSectionKey === "overlapping-lower" && !showAll && (
+              <button
+                onClick={() => { setShowOBLoRRHHLLA((v) => !v); setShowExpU4PU4(false); setShowExpU3PU3(false); setShowOBNLoU4L4(false); setShowOBWLoU4L4(false); setShowOBLoSSLLRRHH(false); setShowOBLoSSLLRRHHDown(false); }}
+                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                  showOBLoRRHHLLA
+                    ? "border-green-400 text-green-400"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+                title="Overlap Below + HHRRBelow (today's R1 & PDH below the lower of prev R1/PDH) + HHLLAbove (today's PDH above prev PDH & PDL >= prev PDL): Target today's own U4 by ~9PM"
+              >
+                {showOBLoRRHHLLA ? "✕ 9AM:pRRHHLLA-U4:9PM" : "9AM:pRRHHLLA-U4:9PM"}<ViewCount id={"9AM:pRRHHLLA-U4:9PM"} counts={viewCounts} />
+              </button>
+            )}
             {/* NEW: OBN-LoU4L4-U4 button — Overlapping Lower, placed next to Exp-U3>pU4 */}
             {activeSectionKey === "overlapping-lower" && !showAll && (
               <button
-                onClick={() => { setShowOBNLoU4L4((v) => !v); setShowExpU4PU4(false); setShowExpU3PU3(false); setShowOBWLoU4L4(false); setShowOBLoSSLLRRHH(false); setShowOBLoSSLLRRHHDown(false); }}
+                onClick={() => { setShowOBNLoU4L4((v) => !v); setShowExpU4PU4(false); setShowExpU3PU3(false); setShowOBLoRRHHLLA(false); setShowOBWLoU4L4(false); setShowOBLoSSLLRRHH(false); setShowOBLoSSLLRRHHDown(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showOBNLoU4L4
                     ? "border-cyan-400 text-cyan-400"
@@ -2281,7 +2322,7 @@ export default function Screener({
             {/* NEW: OBW-LoU4L4-L4 button — Overlapping Lower, placed next to OBN-LoU4L4-U4 */}
             {activeSectionKey === "overlapping-lower" && !showAll && (
               <button
-                onClick={() => { setShowOBWLoU4L4((v) => !v); setShowExpU4PU4(false); setShowExpU3PU3(false); setShowOBNLoU4L4(false); setShowOBLoSSLLRRHH(false); setShowOBLoSSLLRRHHDown(false); }}
+                onClick={() => { setShowOBWLoU4L4((v) => !v); setShowExpU4PU4(false); setShowExpU3PU3(false); setShowOBLoRRHHLLA(false); setShowOBNLoU4L4(false); setShowOBLoSSLLRRHH(false); setShowOBLoSSLLRRHHDown(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showOBWLoU4L4
                     ? "border-rose-400 text-rose-400"
@@ -2301,7 +2342,7 @@ export default function Screener({
                 (prev day's R4) by ~5PM. */}
             {activeSectionKey === "overlapping-lower" && !showAll && (
               <button
-                onClick={() => { setShowOBLoSSLLRRHH((v) => !v); setShowExpU4PU4(false); setShowExpU3PU3(false); setShowOBNLoU4L4(false); setShowOBWLoU4L4(false); setShowOBLoSSLLRRHHDown(false); }}
+                onClick={() => { setShowOBLoSSLLRRHH((v) => !v); setShowExpU4PU4(false); setShowExpU3PU3(false); setShowOBLoRRHHLLA(false); setShowOBNLoU4L4(false); setShowOBWLoU4L4(false); setShowOBLoSSLLRRHHDown(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showOBLoSSLLRRHH
                     ? "border-green-400 text-green-400"
@@ -2319,7 +2360,7 @@ export default function Screener({
                 prev S2). Red color family, targets today's own L4 by ~1PM. */}
             {activeSectionKey === "overlapping-lower" && !showAll && (
               <button
-                onClick={() => { setShowOBLoSSLLRRHHDown((v) => !v); setShowExpU4PU4(false); setShowExpU3PU3(false); setShowOBNLoU4L4(false); setShowOBWLoU4L4(false); setShowOBLoSSLLRRHH(false); }}
+                onClick={() => { setShowOBLoSSLLRRHHDown((v) => !v); setShowExpU4PU4(false); setShowExpU3PU3(false); setShowOBLoRRHHLLA(false); setShowOBNLoU4L4(false); setShowOBWLoU4L4(false); setShowOBLoSSLLRRHH(false); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showOBLoSSLLRRHHDown
                     ? "border-red-400 text-red-400"

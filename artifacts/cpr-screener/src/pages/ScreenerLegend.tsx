@@ -11,6 +11,7 @@ export interface ScreenerLegendProps {
   showLBC2L2U2: boolean;
   showExpU4PU4: boolean;
   showExpU3PU3: boolean;
+  showOBLoRRHHLLA: boolean;
   showOBNLoL4U4: boolean;
   showOBWLoL4U4: boolean;
   showOBHiExL4U4: boolean;
@@ -49,6 +50,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
     showLBC2L2U2,
     showExpU4PU4,
     showExpU3PU3,
+    showOBLoRRHHLLA,
     showOBNLoL4U4,
     showOBWLoL4U4,
     showOBHiExL4U4,
@@ -324,6 +326,15 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
           <>
             <div className="text-xs font-semibold text-sky-400 mb-1">Expanded</div>
             <div className="text-xs text-muted-foreground">Todays U3 &gt; Prev U4/Todays L3 &lt; Prev L4 , today&apos;s CPR is Narrow</div>
+          </>
+        ) : showOBLoRRHHLLA && activePattern === "overlapping-lower" ? (
+          <>
+            <div className="text-xs font-semibold text-green-400 mb-1">
+              Pattern: HHRRBelow&nbsp;&nbsp;HHLLAbove
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Overlap Below + HHRRBelow (today&apos;s R1 AND today&apos;s PDH both below the lower of prev day&apos;s R1/PDH) + HHLLAbove (today&apos;s PDH strictly above prev day&apos;s PDH AND today&apos;s PDL &gt;= prev day&apos;s PDL).
+            </div>
           </>
         ) : showOBNLoL4U4 && activePattern === "overlapping-lower" ? (
           <>
@@ -658,6 +669,11 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
           <>
             <div className="text-xs font-semibold text-emerald-400 mb-1">Target</div>
             <div className="text-xs text-muted-foreground">These coins have the potential to go farAbove U4</div>
+          </>
+        ) : showOBLoRRHHLLA && activePattern === "overlapping-lower" ? (
+          <>
+            <div className="text-xs font-semibold text-emerald-400 mb-1">Target</div>
+            <div className="text-xs text-muted-foreground">Bullish continuation — these coins have the potential to go up to today&apos;s own U4</div>
           </>
         ) : showOBNLoL4U4 && activePattern === "overlapping-lower" ? (
           <>
