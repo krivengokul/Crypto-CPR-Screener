@@ -1656,22 +1656,28 @@ export function computePrevPattern(
 
 
 /**
- * renderPdhPdlSubBadges — the "2nd row" PDH/PDL badges (p-PDH>U1/p-PDH=U1/
- * p-PDL<L1 and PDH>U1/PDH=U1/PDL<L1). Moved here from ScreenerTableRow.tsx
- * so it lives alongside the other shared row-rendering helpers (fmt, etc.)
- * instead of a component file — both ScreenerTableRow's PDH/PDL column and
- * BacktestPanel's Pivot Size column render the exact same badges via this
- * one function. All comparisons come straight from cpr.ts's calcCPR
- * (PDHLAbove/PDHLEqual/PDHLBelow on each CPRLevels set) — the three states
- * are mutually exclusive and exhaustive, so "not Above, not Equal" is
- * always "Below", which renders as the PDL<L1 badge. Returns null when
- * neither prev nor today has any of the three states (shouldn't normally
- * happen since the three are exhaustive, but kept defensive).
+ * renderPrevPdhPdlBadge / renderTodayPdhPdlBadge — the individual prev-day
+ * (p-PDH>U1/p-PDH=U1/p-PDL<L1) and today (PDH>U1/PDH=U1/PDL<L1) PDH/PDL sub
+ * badges, split out so callers that need to place them in different rows
+ * (e.g. BacktestPanel's "result section" PDH/PDL column: Gap badge + today
+ * badge on row 1, prev "p-xx" badge on row 2) can do so without relying on
+ * cloneElement/DOM-order tricks. All comparisons come straight from
+ * cpr.ts's calcCPR (PDHLAbove/PDHLEqual/PDHLBelow on each CPRLevels set) —
+ * the three states are mutually exclusive and exhaustive, so "not Above,
+ * not Equal" is always "Below". Each returns null when its side has none
+ * of the three states set (shouldn't normally happen since the three are
+ * exhaustive, but kept defensive).
+ *
+ * renderPdhPdlSubBadges — the original combined "2nd row" PDH/PDL badges
+ * (both prev + today in one inline row), now a thin wrapper around the two
+ * functions above for existing call sites (ScreenerTableRow's PDH/PDL
+ * column, BacktestPanel's category-scan table) that still want both
+ * badges together on one line. Returns null when neither side has any
+ * badge to show.
  */
-export function renderPdhPdlSubBadges(r: CPRResult) {
-  const badges: JSX.Element[] = [];
+export function renderPrevPdhPdlBadge(r: CPRResult): JSX.Element | null {
   if (r.prevCPR.PDHLAbove) {
-    badges.push(
+    return (
       <span
         key="p-pdh-gt-u1"
         className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-green-500/8 text-green-400/70 border border-green-500/15 font-normal"
@@ -1680,8 +1686,9 @@ export function renderPdhPdlSubBadges(r: CPRResult) {
         p-PDHL-A
       </span>
     );
-  } else if (r.prevCPR.PDHLEqual) {
-    badges.push(
+  }
+  if (r.prevCPR.PDHLEqual) {
+    return (
       <span
         key="p-pdh-eq-u1"
         className="text-[10px] px-1 py-0.5 rounded border border-amber-500/40 bg-amber-500/15 text-amber-600 dark:text-amber-400 whitespace-nowrap"
@@ -1690,8 +1697,9 @@ export function renderPdhPdlSubBadges(r: CPRResult) {
         p-PDHL==
       </span>
     );
-  } else if (r.prevCPR.PDHLBelow) {
-    badges.push(
+  }
+  if (r.prevCPR.PDHLBelow) {
+    return (
       <span
         key="p-pdl-lt-l1"
         className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-red-500/8 text-red-400/70 border border-red-500/15 font-normal"
@@ -1701,8 +1709,12 @@ export function renderPdhPdlSubBadges(r: CPRResult) {
       </span>
     );
   }
+  return null;
+}
+
+export function renderTodayPdhPdlBadge(r: CPRResult): JSX.Element | null {
   if (r.todayCPR.PDHLAbove) {
-    badges.push(
+    return (
       <span
         key="pdh-gt-u1"
         className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-green-500/8 text-green-400/70 border border-green-500/15 font-normal"
@@ -1711,8 +1723,9 @@ export function renderPdhPdlSubBadges(r: CPRResult) {
         PDHL-A
       </span>
     );
-  } else if (r.todayCPR.PDHLEqual) {
-    badges.push(
+  }
+  if (r.todayCPR.PDHLEqual) {
+    return (
       <span
         key="pdh-eq-u1"
         className="text-[10px] px-1 py-0.5 rounded border border-amber-500/40 bg-amber-500/15 text-amber-600 dark:text-amber-400 whitespace-nowrap"
@@ -1721,8 +1734,9 @@ export function renderPdhPdlSubBadges(r: CPRResult) {
         PDHL==
       </span>
     );
-  } else if (r.todayCPR.PDHLBelow) {
-    badges.push(
+  }
+  if (r.todayCPR.PDHLBelow) {
+    return (
       <span
         key="pdl-lt-l1"
         className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-red-500/8 text-red-400/70 border border-red-500/15 font-normal"
@@ -1732,6 +1746,13 @@ export function renderPdhPdlSubBadges(r: CPRResult) {
       </span>
     );
   }
+  return null;
+}
+
+export function renderPdhPdlSubBadges(r: CPRResult) {
+  const prevBadge = renderPrevPdhPdlBadge(r);
+  const todayBadge = renderTodayPdhPdlBadge(r);
+  const badges = [prevBadge, todayBadge].filter((b): b is JSX.Element => b !== null);
   if (badges.length === 0) return null;
   return <div className="flex flex-nowrap items-center gap-1">{badges}</div>;
 }
