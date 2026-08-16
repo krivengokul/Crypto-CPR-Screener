@@ -667,7 +667,6 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.HHRRBelow &&
         r.HHLLBelow &&
         r.todayCPR.r1 > r.prevCPR.tc &&
-        r.todayCPR.s2 > r.prevCPR.prevHigh &&
         r.todayCPR.s2 > r.prevCPR.s2 &&
         r.prevCPR.prevHigh > r.todayCPR.s1
       );
