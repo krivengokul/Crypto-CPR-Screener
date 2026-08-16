@@ -329,7 +329,7 @@ export function ScreenerTableHeader({
           Price <SortIcon k="change24h" />
         </th>
         <th
-          className="pl-4 pr-2 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground min-w-[110px]"
+          className="pl-4 pr-2 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground min-w-[100px]"
           onClick={() => toggleSort("priceVsCpr")}
         >
           Price/CPR <SortIcon k="priceVsCpr" />

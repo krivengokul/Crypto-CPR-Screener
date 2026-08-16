@@ -77,7 +77,7 @@ export function pdhPdlStatus(r: CPRResult): { main: string; sub: string; color: 
   // renders with the same font-size/weight/brightness as distanceFromCPR's
   // "IN-CPR" (main-only, text-xs font-medium, no muted opacity-80 "sub"
   // treatment) — same {main, sub, color} shape as distanceFromCPR itself.
-  return { main: "IN-PDHL", sub: "", color: "text-yellow-500" };
+  return { main: "IN-PDHL", sub: "", color: "text-yellow-400" };
 }
 
 /**
@@ -2173,5 +2173,5 @@ export function distanceFromCPR(
     const pct = ((bc - price) / bc) * 100;
     return { main: `−${pct.toFixed(2)}%`, sub: "<BC", color: "text-destructive" };
   }
-  return { main: "IN-CPR", sub: "", color: "text-yellow-500" };
+  return { main: "IN-CPR", sub: "", color: "text-yellow-400" };
 }
