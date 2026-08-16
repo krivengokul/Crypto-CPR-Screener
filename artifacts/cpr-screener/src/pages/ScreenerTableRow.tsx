@@ -263,7 +263,6 @@ import {
   hasKnownChartMapping,
   passesPattern,
   distanceFromCPR,
-  pdhPdlStatus,
   isRisingAboveTC,
   computePrevPattern,
   getSubFilterDirection,
@@ -323,7 +322,7 @@ export function ScreenerTableHeader({
             PIVOT SIZE <SortIcon k="compressionRatio" />
         </th>
         <th
-          className="px-4 py-3 pr-6 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
+          className="px-4 py-3 pr-6 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
           onClick={() => toggleSort("change24h")}
         >
           Price <SortIcon k="change24h" />
@@ -563,12 +562,6 @@ export default function ScreenerTableRow({
             {distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).main}
             {distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).sub && (
               <span className="text-[10px] ml-1">{distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).sub}</span>
-            )}
-          </div>
-          <div className={`mt-0.5 ${pdhPdlStatus(r).color}`} title={`PDH: ${fmt(r.todayCPR.prevHigh)}  |  PDL: ${fmt(r.todayCPR.prevLow)}`}>
-            {pdhPdlStatus(r).main}
-            {pdhPdlStatus(r).sub && (
-              <span className="text-[10px] ml-1">{pdhPdlStatus(r).sub}</span>
             )}
           </div>
         </td>
