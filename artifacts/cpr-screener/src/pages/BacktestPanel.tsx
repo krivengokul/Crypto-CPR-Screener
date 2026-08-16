@@ -909,7 +909,7 @@ export default function BacktestPanel() {
                     <th className="px-2 py-2 w-16 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Close
                     </th>
-                    <th className="px-2 py-2 w-20 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    <th className="px-2 py-3 w-32 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       LEVEL
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -923,7 +923,7 @@ export default function BacktestPanel() {
                         Pivot Size <PivotSizeInfo />
                       </span>
                     </th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    <th className="pl-8 pr-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       PDH / PDL
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -989,7 +989,7 @@ export default function BacktestPanel() {
                         <td className={`px-2 py-2 w-16 font-mono text-sm font-medium ${closeColor}`}>
                           {r.closePrice !== null && r.closePrice !== undefined ? fmt(r.closePrice) : "—"}
                         </td>
-                        <td className="px-2 py-2 w-20">
+                        <td className="px-2 py-3 w-32">
                           {renderLevelBadges(r.raw)}
                         </td>
                         <td className="px-3 py-2 font-mono text-xs text-muted-foreground whitespace-nowrap">
@@ -1037,7 +1037,7 @@ export default function BacktestPanel() {
                             );
                           })()}
                         </td>
-                        <td className="px-3 py-2 whitespace-nowrap">
+                        <td className="pl-8 pr-4 py-3 whitespace-nowrap text-xs font-medium">
                           {renderPdhPdlColumnBadges(r.raw)}
                         </td>
                         <td className={`px-3 py-2 font-mono text-sm font-medium ${chgColor}`}>
@@ -1107,10 +1107,10 @@ export default function BacktestPanel() {
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Pattern
                     </th>
-                    <th className="px-2 py-2 w-20 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    <th className="px-2 py-3 w-32 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       LEVEL
                     </th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    <th className="pl-8 pr-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       PDH / PDL
                     </th>
                     <th className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[220px]">
@@ -1192,10 +1192,10 @@ export default function BacktestPanel() {
                           );
                         })()}
                       </td>
-                      <td className="px-2 py-2 w-20">
+                      <td className="px-2 py-3 w-32">
                         {renderLevelBadges(r.raw)}
                       </td>
-                      <td className="px-3 py-2 whitespace-nowrap">
+                      <td className="pl-8 pr-4 py-3 whitespace-nowrap text-xs font-medium">
                         {renderPdhPdlColumnBadges(r.raw)}
                       </td>
                       <td className="px-3 py-2 font-mono whitespace-nowrap min-w-[220px]">

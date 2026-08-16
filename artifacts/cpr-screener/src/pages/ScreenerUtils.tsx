@@ -1920,19 +1920,22 @@ export function renderSSRRHHLLBadges(r: CPRResult) {
  *   1. Status badge — Above / Below / Inside / Outside / Skip (always
  *      exactly one, mutually exclusive).
  *   2. oV-B / oV-A (overlapLower / overlapHigher).
- *   3. Narrow / Wide — merged into a single badge wherever Above/Below/
- *      oV-B/oV-A pairs with Narrow/Wide: oV-ANarrow -> Narrow-AoV,
- *      AboveNarrow -> Narrow-A, BelowNarrow -> Narrow-B, oV-BNarrow ->
- *      Narrow-BoV, oV-AWide -> Wide-AoV, AboveWide -> Wide-A, BelowWide ->
- *      Wide-B. The merged badge replaces both halves' bare badges (so
- *      "Above" becomes "Narrow-A" in place, rather than appearing twice);
- *      when nothing merges, the bare Above/Below/oV-B/oV-A/Narrow/Wide
- *      badges render as before. Priority when more than one combo could
- *      apply on the same row: for Narrow, oV-A > Above > Below > oV-B; for
- *      Wide, oV-A > Above > Below (matches the row's own left-to-right
- *      badge order).
+ *   3. Narow / Wide — merged into a single badge wherever Above/Below/
+ *      oV-B/oV-A pairs with Narow/Wide: oV-ANarow -> Narow-AoV,
+ *      AboveNarow -> Narow-A, BelowNarow -> Narow-B, oV-BNarow ->
+ *      Narow-BoV, oV-AWide -> Wide-AoV, AboveWide -> Wide-A, BelowWide ->
+ *      Wide-B, oV-BWide -> Wide-BoV. The merged badge replaces both
+ *      halves' bare badges (so "Above" becomes "Narow-A" in place, rather
+ *      than appearing twice); when nothing merges, the bare
+ *      Above/Below/oV-B/oV-A/Narrow/Wide badges render as before (the
+ *      standalone "Narrow"/"Wide" fallback badges keep their original
+ *      spelling — only the four/four merged combo labels were renamed to
+ *      "Narow-*"/"Wide-*BoV"). Priority when more than one combo could
+ *      apply on the same row: for Narow, oV-A > Above > Below > oV-B; for
+ *      Wide, oV-A > Above > Below > oV-B (matches the row's own
+ *      left-to-right badge order).
  *   4. SSRR badge — CPRResult.SSRRCategory (SSRR-A/SSRR-B/SSRR-C/SSRR-X),
- *      pulled out of row 2 to sit here, right after the Narrow/Wide badges
+ *      pulled out of row 2 to sit here, right after the Narow/Wide badges
  *      (row 2 now only carries SSLL + RRHH — see renderSSRRHHLLBadges).
  *   5. Equal.
  */
@@ -1951,15 +1954,16 @@ export function renderLevelStatusRow1Badges(
     isNarrow && r.cprFalling ? "B" :
     isNarrow && r.overlapLower ? "BoV" :
     null;
-  const wideMerge: "AoV" | "A" | "B" | null =
+  const wideMerge: "AoV" | "A" | "B" | "BoV" | null =
     showWide && r.overlapHigher ? "AoV" :
     showWide && r.cprRising ? "A" :
     showWide && r.cprFalling ? "B" :
+    showWide && r.overlapLower ? "BoV" :
     null;
 
   const aboveConsumed = narrowMerge === "A" || wideMerge === "A";
   const belowConsumed = narrowMerge === "B" || wideMerge === "B";
-  const ovLowerConsumed = narrowMerge === "BoV";
+  const ovLowerConsumed = narrowMerge === "BoV" || wideMerge === "BoV";
   const ovHigherConsumed = narrowMerge === "AoV" || wideMerge === "AoV";
   const narrowConsumed = narrowMerge !== null;
   const wideConsumed = wideMerge !== null;
@@ -1988,16 +1992,16 @@ export function renderLevelStatusRow1Badges(
         <span className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20 font-medium">oV-A</span>
       )}
       {narrowMerge === "AoV" && (
-        <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>Narrow-AoV</span>
+        <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>Narow-AoV</span>
       )}
       {narrowMerge === "A" && (
-        <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>Narrow-A</span>
+        <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>Narow-A</span>
       )}
       {narrowMerge === "B" && (
-        <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>Narrow-B</span>
+        <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>Narow-B</span>
       )}
       {narrowMerge === "BoV" && (
-        <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>Narrow-BoV</span>
+        <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>Narow-BoV</span>
       )}
       {wideMerge === "AoV" && (
         <span className={`${smallBadge} bg-pink-500/10 text-pink-400 border border-pink-500/20`}>Wide-AoV</span>
@@ -2007,6 +2011,9 @@ export function renderLevelStatusRow1Badges(
       )}
       {wideMerge === "B" && (
         <span className={`${smallBadge} bg-pink-500/10 text-pink-400 border border-pink-500/20`}>Wide-B</span>
+      )}
+      {wideMerge === "BoV" && (
+        <span className={`${smallBadge} bg-pink-500/10 text-pink-400 border border-pink-500/20`}>Wide-BoV</span>
       )}
       {isNarrow && !narrowConsumed && (
         <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>Narrow</span>
