@@ -652,6 +652,8 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // today's own R4 / U4 by ~9PM.
     case "9AM:SSRRBHHLLA-U4:9PM":
       return (r.overlapLower && r.HHLLAbove && r.SSRRBelow);
+    case "pRRHHLLA":
+      return (r.overlapLower && r.HHRRBelow && r.HHLLBelow);
     // NEW: 9AM:pRRHHLLA-U4:9PM — Overlap Below + HHRRBelow (today's R1 AND
     // today's PDH both below the lower of prev's R1/PDH) + HHLLAbove
     // (today's PDH strictly above prev's PDH AND today's PDL >= prev's
