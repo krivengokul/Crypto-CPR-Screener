@@ -290,9 +290,10 @@ import {
   getWidthCategory,
   cprDistancePct,
   levelsInDistanceRange,
-  renderPdhPdlSubBadges,
   renderSSRRHHLLBadges,
   renderPDHPDLGapCategoryBadge,
+  renderPrevPdhPdlBadge,
+  renderTodayPdhPdlBadge,
 } from "./ScreenerUtils";
 import { SRLadderRow, toSRLadderData } from "./SRLadderPanel";
 
@@ -615,14 +616,25 @@ export default function ScreenerTableRow({
           className="px-4 py-3 whitespace-nowrap text-xs font-medium"
           title={`PDH: ${fmt(r.todayCPR.prevHigh)}  |  PDL: ${fmt(r.todayCPR.prevLow)}`}
         >
-          <div>
-            {renderPDHPDLGapCategoryBadge(r)}
-          </div>
-          <div className="mt-0.5">
-            {renderPdhPdlSubBadges(r) ?? (
-              <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">—</span>
-            )}
-          </div>
+          {(() => {
+            const gapBadge = renderPDHPDLGapCategoryBadge(r);
+            const todayBadge = renderTodayPdhPdlBadge(r);
+            const prevBadge = renderPrevPdhPdlBadge(r);
+            if (!gapBadge && !todayBadge && !prevBadge) {
+              return <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">—</span>;
+            }
+            // Row 1: Gap badge first, then today's own PDH/PDL badge.
+            // Row 2: prev day's "p-xx" PDH/PDL badge, below.
+            return (
+              <div className="flex flex-col items-start gap-1">
+                <div className="flex flex-wrap items-center gap-1">
+                  {gapBadge}
+                  {todayBadge}
+                </div>
+                {prevBadge && <div>{prevBadge}</div>}
+              </div>
+            );
+          })()}
         </td>
         <td className="px-4 py-3 whitespace-nowrap text-xs font-mono font-medium">
           {(() => {

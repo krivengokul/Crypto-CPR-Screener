@@ -27,7 +27,7 @@ import {
   type BacktestSubCategoryDef,
   type BacktestTargetDef,
 } from "@/lib/backtest";
-import { passesPattern, matchesPatternFlag, fmt, getChartUrl, hasKnownChartMapping, getWidthCategory, renderPdhPdlSubBadges, renderPDHPDLGapCategoryBadge, renderPrevPdhPdlBadge, renderTodayPdhPdlBadge } from "./ScreenerUtils";
+import { passesPattern, matchesPatternFlag, fmt, getChartUrl, hasKnownChartMapping, getWidthCategory, renderPDHPDLGapCategoryBadge, renderPrevPdhPdlBadge, renderTodayPdhPdlBadge } from "./ScreenerUtils";
 import { renderTodayPatternBadges, renderPrevPatternBadge, renderLevelBadges } from "./ScreenerTableRow";
 import { SRLadderRow, toSRLadderData } from "./SRLadderPanel";
 
@@ -1038,7 +1038,25 @@ export default function BacktestPanel() {
                           })()}
                         </td>
                         <td className="px-3 py-2 whitespace-nowrap">
-                          {renderPdhPdlSubBadges(r.raw) ?? <span className="text-xs text-muted-foreground">—</span>}
+                          {(() => {
+                            const gapBadge = renderPDHPDLGapCategoryBadge(r.raw);
+                            const todayBadge = renderTodayPdhPdlBadge(r.raw);
+                            const prevBadge = renderPrevPdhPdlBadge(r.raw);
+                            if (!gapBadge && !todayBadge && !prevBadge) {
+                              return <span className="text-xs text-muted-foreground">—</span>;
+                            }
+                            // Row 1: Gap badge first, then today's own PDH/PDL badge.
+                            // Row 2: prev day's "p-xx" PDH/PDL badge, below.
+                            return (
+                              <div className="flex flex-col items-start gap-1">
+                                <div className="flex flex-wrap items-center gap-1">
+                                  {gapBadge}
+                                  {todayBadge}
+                                </div>
+                                {prevBadge && <div>{prevBadge}</div>}
+                              </div>
+                            );
+                          })()}
                         </td>
                         <td className={`px-3 py-2 font-mono text-sm font-medium ${chgColor}`}>
                           {chg !== null && chg !== undefined
