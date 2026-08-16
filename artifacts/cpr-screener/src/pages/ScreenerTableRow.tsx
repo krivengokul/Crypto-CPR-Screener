@@ -323,7 +323,7 @@ export function ScreenerTableHeader({
             PIVOT SIZE <SortIcon k="compressionRatio" />
         </th>
         <th
-          className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground max-w-[100px]"
+          className="px-4 py-3 pr-6 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
           onClick={() => toggleSort("change24h")}
         >
           Price <SortIcon k="change24h" />
@@ -547,7 +547,7 @@ export default function ScreenerTableRow({
             );
           })()}
         </td>
-        <td className="px-3 py-3 font-mono whitespace-nowrap max-w-[100px]">
+        <td className="px-4 py-3 pr-6 font-mono whitespace-nowrap">
           <div className="text-sm font-bold text-foreground">
             {fmt(r.currentPrice)}
             <span className="text-muted-foreground">(</span>
