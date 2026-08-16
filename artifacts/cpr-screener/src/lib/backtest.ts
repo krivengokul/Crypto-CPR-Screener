@@ -594,14 +594,14 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
         subPatternKeys: ["eXHi-L4U4-U4"],
       },
       // NEW: cOL3U3 Pattern, alongside HiL4U3 — nests
-      // the bearish "cOL3U3-pL4" pattern (target: prev day's S4 / PL4).
+      // the bearish "cOL3U3-pL4" View (target: prev day's S4 / PL4).
       {
         key: "cOL3U3",
         label: "cOL3U3",
         subPatternKeys: ["cOL3U3-pL4"],
       },
       // NEW: cOL4U4 Pattern — nests the bullish
-      // "7AM:MiMi-pU4:11PM" pattern (target: today's R4 / U4).
+      // "7AM:MiMi-pU4:11PM" View (target: today's R4 / U4).
       {
         key: "cOL4U4",
         label: "cOL4U4",
@@ -734,7 +734,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
   // shape as its "Overlap Above" sibling — base condition = this
   // category's inside-cpr condition AND the raw cOL3U3 flag (see
   // matchesPatternFlag in ScreenerUtils.tsx). Nests the bullish
-  // "8AM:SRBHHLLA-pU4+1:8AM" pattern (target: prev day's R4 / PU4).
+  // "8AM:SRBHHLLA-pU4+1:8AM" View (target: prev day's R4 / PU4).
   {
     key: "inside-cpr",
     label: "Inside CPR",
@@ -753,7 +753,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       },
       // NEW: cOL4U4 Pattern — base condition = the inside-cpr
       // condition AND the raw cOL4U4 flag. Nests the bullish
-      // "2PM:pPDHLA-SRA-U4:7PM" pattern (target: today's R4 / U4).
+      // "2PM:pPDHLA-SRA-U4:7PM" View (target: today's R4 / U4).
       {
         key: "cOL4U4",
         label: "cOL4U4",
@@ -762,7 +762,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       // NEW: eXL4U4 Pattern — base condition = the inside-cpr
       // condition AND the raw eXL4U4 flag (see matchesPatternFlag in
       // ScreenerUtils.tsx, which already has an "eXL4U4" case). Nests the
-      // bullish "8AM:pPDHA-SRA-U4+2:2AM" pattern (target: today's R4 / U4).
+      // bullish "8AM:pPDHA-SRA-U4+2:2AM" View (target: today's R4 / U4).
       {
         key: "eXL4U4",
         label: "eXL4U4",
