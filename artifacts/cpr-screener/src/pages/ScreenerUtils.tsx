@@ -657,10 +657,20 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // NEW: 9AM:pRRHHLLA-U4:9PM — Overlap Below + HHRRBelow (today's R1 AND
     // today's PDH both below the lower of prev's R1/PDH) + HHLLAbove
     // (today's PDH strictly above prev's PDH AND today's PDL >= prev's
-    // PDL). Bullish, green color family, entry ~9AM, targets today's own
-    // U4 by ~9PM.
+    // PDL) + (today's R1 above prev day's TC) + (today's S2 above prev
+    // day's PDH) + (today's S2 above prev day's S2) + (prev day's PDH
+    // above today's S1). Bullish, green color family, entry ~9AM, targets
+    // today's own U4 by ~9PM.
     case "9AM:pRRHHLLA-U4:9PM":
-      return (r.overlapLower && r.HHRRBelow && r.HHLLBelow);
+      return (
+        r.overlapLower &&
+        r.HHRRBelow &&
+        r.HHLLBelow &&
+        r.todayCPR.r1 > r.prevCPR.tc &&
+        r.todayCPR.s2 > r.prevCPR.prevHigh &&
+        r.todayCPR.s2 > r.prevCPR.s2 &&
+        r.prevCPR.prevHigh > r.todayCPR.s1
+      );
     // NEW: 2PM:SSLLpRRHHA-ApU4:5PM — Overlap Below + SSLLAbove (today's S1
     // AND today's PDL both above the higher of prev's S1/PDL) + HHRRBelow
     // (today's R1 AND today's PDH both below the lower of prev's R1/PDH)
@@ -1508,6 +1518,15 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     // nesting in backtest.ts).
     case "LoU3L4": return r.LoU3L4;
     case "LoU4L4": return r.LoU4L4;
+    // NEW: pRRHHLLA — Pattern sub-category compound flag for Overlap
+    // Below's "9AM:pRRHHLLA-U4:9PM" family: today's R1/PDH both below
+    // prev's tighter ceiling (HHRRBelow) AND today's PDH strictly above
+    // prev's PDH with today's PDL >= prev's PDL (HHLLBelow). The base
+    // overlapLower condition is already covered by the parent
+    // "overlapping-lower" category key, so this only needs the raw
+    // Pattern-flag part — same shape as LoU4L4 above. Symbol-list-only
+    // nesting under "Overlap Below" in backtest.ts.
+    case "pRRHHLLA": return r.HHRRBelow && r.HHLLBelow;
     case "eXL4U3": return r.eXL4U3;
     case "eXL4U4": return r.eXL4U4;
     // NEW: eXU4L4 — same treatment as eXL4U4 above: an independent,

@@ -428,8 +428,10 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
   // "9AM:SSRRBHHLLA-U4:9PM". Base overlapLower condition + HHRRBelow
   // (today's R1 AND today's PDH both below the lower of prev's R1/PDH) +
   // HHLLAbove (today's PDH strictly above prev's PDH AND today's PDL
-  // >= prev's PDL) — see cpr.ts / ScreenerUtils.tsx. Bullish, entry ~9AM,
-  // targets today's own U4 by ~9PM.
+  // >= prev's PDL) + (today's R1 above prev day's TC) + (today's S2
+  // above prev day's PDH) + (today's S2 above prev day's S2) + (prev
+  // day's PDH above today's S1) — see cpr.ts / ScreenerUtils.tsx.
+  // Bullish, entry ~9AM, targets today's own U4 by ~9PM.
   {
     key: "9AM:pRRHHLLA-U4:9PM",
     label: "9AM:pRRHHLLA-U4:9PM",
@@ -791,6 +793,20 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       {
         key: "LoU4L4",
         label: "LoU4L4",
+        subPatternKeys: [],
+      },
+      // NEW: "pRRHHLLA" Pattern sub-category (arrow), same shape as
+      // "LoU4L4" above — base condition = Overlap Below's r.overlapLower
+      // condition AND the raw pRRHHLLA compound flag (see
+      // matchesPatternFlag in ScreenerUtils.tsx, which already has a
+      // "pRRHHLLA" case). "9AM:pRRHHLLA-U4:9PM" is its target-graded
+      // sibling, nested directly on the parent's own subPatternKeys
+      // above rather than under this arrow. No target-graded pattern
+      // nested under this arrow itself yet, so it shows up as a
+      // symbol-list-only scan in the Backtest dropdown.
+      {
+        key: "pRRHHLLA",
+        label: "pRRHHLLA",
         subPatternKeys: [],
       },
     ],
