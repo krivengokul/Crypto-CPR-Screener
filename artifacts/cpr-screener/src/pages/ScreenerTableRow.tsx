@@ -313,7 +313,7 @@ export function ScreenerTableHeader({
         <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           Pattern
         </th>
-        <th className="px-2 py-3 w-32 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+        <th className="px-2 py-3 w-48 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           LEVEL
         </th>
         <th
@@ -329,13 +329,13 @@ export function ScreenerTableHeader({
           Price <SortIcon k="change24h" />
         </th>
         <th
-          className="pl-4 pr-2 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground min-w-[100px]"
+          className="pl-4 pr-2 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground w-[70px] min-w-[70px]"
           onClick={() => toggleSort("priceVsCpr")}
         >
           Price/CPR <SortIcon k="priceVsCpr" />
         </th>
         <th
-          className="pl-8 pr-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
+          className="pl-8 pr-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground min-w-[220px]"
           onClick={() => toggleSort("pdhPdlPct")}
           title="Position vs yesterday's High/Low"
         >
@@ -512,7 +512,7 @@ export default function ScreenerTableRow({
           {renderTodayPatternBadges(r)}
           {renderPrevPatternBadge(r)}
         </td>
-        <td className="px-2 py-3 w-32">
+        <td className="px-2 py-3 w-48">
           <div className="flex flex-col gap-1 max-w-[150px]">
             <div className="flex flex-wrap items-center gap-1">
               {renderLevelStatusRow1Badges(r, isInsideCPR, isOutsideCPR, showWide, nothingMatchedMain)}
@@ -558,7 +558,7 @@ export default function ScreenerTableRow({
           </div>
           <div className="text-xs text-muted-foreground">OPrice: {fmt(r.openPrice)}</div>
         </td>
-        <td className={`pl-4 pr-2 py-3 whitespace-nowrap text-xs font-medium min-w-[110px] ${distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).color}`}>
+        <td className={`pl-4 pr-2 py-3 whitespace-nowrap text-xs font-medium w-[70px] min-w-[70px] ${distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).color}`}>
           <div>
             {distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).main}
             {distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).sub && (
@@ -573,7 +573,7 @@ export default function ScreenerTableRow({
           </div>
         </td>
         <td
-          className="pl-8 pr-4 py-3 whitespace-nowrap text-xs font-medium"
+          className="pl-8 pr-4 py-3 whitespace-nowrap text-xs font-medium min-w-[220px]"
           title={`PDH: ${fmt(r.todayCPR.prevHigh)}  |  PDL: ${fmt(r.todayCPR.prevLow)}`}
         >
           {renderPdhPdlColumnBadges(r)}
