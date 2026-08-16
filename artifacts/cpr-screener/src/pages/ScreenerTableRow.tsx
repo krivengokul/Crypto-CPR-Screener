@@ -217,8 +217,8 @@ export function renderPrevPatternBadge(r: CPRResult) {
  * "LEVEL" column body — row 1: Above/Below/Inside/Outside/Skip, oV-B/oV-A,
  * Narrow/Wide, Equal — all rendered inline on one line (Narrow/Wide is
  * always the badge right after oV-B/oV-A); row 2:
- * SSRR-A/SSRR-B + HHLL-A/HHLL-B, shown only for Inside-CPR-narrow or
- * Outside-CPR rows, always on its own row underneath row 1. Extracted out
+ * the single SSRR badge (SSRR-A/-B/-C/-X/=), always on its own row
+ * underneath row 1. Extracted out
  * of the row JSX so other views (e.g. BacktestPanel) can reuse the same
  * LEVEL column. Mirrors ScreenerTableRow's own LEVEL cell, minus the
  * activePattern-aware tweak to the "Skip" fallback, which only makes sense
@@ -249,9 +249,9 @@ export function renderLevelBadges(r: CPRResult) {
         Wide
       </span>
     ) : null;
-  // SSRR-A/SSRR-B + HHLL-A/HHLL-B now always render on their own row,
-  // regardless of Inside/Outside/narrow state.
-  const ssrrHhllRow = renderSSRRHHLLBadges(r);
+  // The SSRR badge always renders on its own row, regardless of
+  // Inside/Outside/narrow state.
+  const ssrrHhllRow = renderSSRRCategoryBadge(r);
   return (
     <div className="flex flex-col gap-1 max-w-[130px]">
       <div className="flex flex-wrap items-center gap-1">
@@ -290,10 +290,13 @@ import {
   getWidthCategory,
   cprDistancePct,
   levelsInDistanceRange,
-  renderSSRRHHLLBadges,
   renderPdhPdlColumnBadges,
+  renderSSRRCategoryBadge,
 } from "./ScreenerUtils";
-import { SRLadderRow, toSRLadderData } from "./SRLadderPanel";
+// TODO: SRLadderPanel.tsx is not part of this project folder yet — restore this
+// import (and the <SRLadderRow /> block at the end of ScreenerTableRow) once it
+// is added back.
+// import { SRLadderRow, toSRLadderData } from "./SRLadderPanel";
 
 export interface ScreenerTableHeaderProps {
   canShowCombined: boolean;
@@ -435,14 +438,12 @@ export default function ScreenerTableRow({
       )
     : null;
 
-  // "SSRR-A / SSRR-B" + "HHLL-A / HHLL-B" badges — LEVEL-column-only
-  // replacement for the pU1/pL1 gap badges above. Driven by
-  // CPRResult.SSRRAbove / SSRRBelow (today's R1/S1 vs prev's R1/S1) and
-  // CPRResult.HHLLAbove / HHLLBelow (today's PDH/PDL vs prev's PDH/PDL),
-  // both from cpr.ts. Always rendered on its own row underneath the
-  // Above/Below/Inside/Outside row, regardless of Inside/Outside/narrow
-  // state, via the shared renderSSRRHHLLBadges helper.
-  const ssrrHhllRow = renderSSRRHHLLBadges(r);
+  // Single SSRR badge (SSRR-A / SSRR-B / SSRR-C / SSRR-X / SSRR=) —
+  // LEVEL-column-only replacement for the pU1/pL1 gap badges above. Driven by
+  // CPRResult.SSRRCategory (today's R1/S1 vs prev's R1/S1) from cpr.ts.
+  // Always rendered on its own row underneath the Above/Below/Inside/Outside
+  // row, via the shared renderSSRRCategoryBadge helper.
+  const ssrrHhllRow = renderSSRRCategoryBadge(r);
   // Row 1 keeps every LEVEL-status badge inline on one line (Above/Below/
   // Inside/Outside/Skip, then oV-B/oV-A, then Narrow/Wide, then Equal) so
   // nothing gets pushed down to a second line.
@@ -638,6 +639,7 @@ export default function ScreenerTableRow({
         </td>
       </tr>
 
+      {/* TODO: re-enable once SRLadderPanel.tsx is added back to the project:
       {isExpanded && (
         <SRLadderRow
           key={`${rowKey}-sr`}
@@ -647,7 +649,7 @@ export default function ScreenerTableRow({
           todayPatternBadge={renderTodayPatternBadges(r)}
           prevPatternBadge={renderPrevPatternBadge(r)}
         />
-      )}
+      )} */}
     </Fragment>
   );
 }
