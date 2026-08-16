@@ -1914,18 +1914,141 @@ export function renderRRHHCategoryBadge(r: CPRResult) {
 }
 
 /**
+ * renderSSRRXBadge — the SSRR-X badge specifically, pulled out of the LEVEL
+ * column's row 2 (see renderSSRRHHLLBadges) to render as the 2nd badge on
+ * row 1 instead, right after the Above/Below/Inside/Outside/Skip status
+ * badge. Returns null unless CPRResult.SSRRCategory is exactly "SSRR-X".
+ */
+export function renderSSRRXBadge(r: CPRResult) {
+  if (r.SSRRCategory !== "SSRR-X") return null;
+  const cfg = SSRR_BADGE["SSRR-X"];
+  return (
+    <span
+      className={`text-[10px] whitespace-nowrap px-1 py-0.5 rounded border font-medium ${cfg.className}`}
+      title={cfg.title}
+    >
+      {cfg.label}
+    </span>
+  );
+}
+
+/**
  * renderSSRRHHLLBadges — the LEVEL column's second-row badges. Renders the
- * SSRR badge (CPRResult.SSRRCategory), the SSLL badge
+ * SSRR badge (CPRResult.SSRRCategory, EXCLUDING "SSRR-X" — that badge now
+ * renders on row 1 instead, see renderSSRRXBadge), the SSLL badge
  * (CPRResult.SSLLCategory), and the RRHH badge (CPRResult.RRHHCategory) in
- * that order. Returns null when all three are "none".
+ * that order. Returns null when all three are absent.
  */
 export function renderSSRRHHLLBadges(r: CPRResult) {
-  const ssrrBadge = renderSSRRCategoryBadge(r);
+  const ssrrBadge = r.SSRRCategory === "SSRR-X" ? null : renderSSRRCategoryBadge(r);
   const ssllBadge = renderSSLLCategoryBadge(r);
   const rrhhBadge = renderRRHHCategoryBadge(r);
   const badges = [ssrrBadge, ssllBadge, rrhhBadge].filter((b): b is React.JSX.Element => b !== null);
   if (badges.length === 0) return null;
   return <div className="flex flex-nowrap items-center gap-1">{badges}</div>;
+}
+
+/**
+ * renderLevelStatusRow1Badges — the LEVEL column's row-1 badges, shared by
+ * renderLevelBadges and ScreenerTableRow's own LEVEL cell so both stay in
+ * sync. Order:
+ *   1. Status badge — Above / Below / Inside / Outside / Skip (always
+ *      exactly one, mutually exclusive).
+ *   2. SSRR-X badge (see renderSSRRXBadge) — pulled out of row 2 to sit
+ *      here as the 2nd badge.
+ *   3. oV-B / oV-A (overlapLower / overlapHigher).
+ *   4. Narrow / Wide — merged into a single badge wherever Above/Below/
+ *      oV-B/oV-A pairs with Narrow/Wide: AboveNarrow -> Narrow-A,
+ *      BelowNarrow -> Narrow-B, oV-BNarrow -> Narrow-BoV, oV-AWide ->
+ *      Wide-AoV, AboveWide -> Wide-A, BelowWide -> Wide-B. The merged
+ *      badge replaces both halves' bare badges (so "Above" becomes
+ *      "Narrow-A" in place, rather than appearing twice); when nothing
+ *      merges, the bare Above/Below/oV-B/oV-A/Narrow/Wide badges render as
+ *      before. Priority when more than one combo could apply on the same
+ *      row: for Narrow, Above > Below > oV-B; for Wide, oV-A > Above >
+ *      Below (matches the row's own left-to-right badge order).
+ *   5. Equal.
+ */
+export function renderLevelStatusRow1Badges(
+  r: CPRResult,
+  isInsideCPR: boolean,
+  isOutsideCPR: boolean,
+  showWide: boolean,
+  nothingMatched: boolean
+) {
+  const isNarrow = r.narrowCPR && !isInsideCPR;
+
+  const narrowMerge: "A" | "B" | "BoV" | null =
+    isNarrow && r.cprRising ? "A" :
+    isNarrow && r.cprFalling ? "B" :
+    isNarrow && r.overlapLower ? "BoV" :
+    null;
+  const wideMerge: "AoV" | "A" | "B" | null =
+    showWide && r.overlapHigher ? "AoV" :
+    showWide && r.cprRising ? "A" :
+    showWide && r.cprFalling ? "B" :
+    null;
+
+  const aboveConsumed = narrowMerge === "A" || wideMerge === "A";
+  const belowConsumed = narrowMerge === "B" || wideMerge === "B";
+  const ovLowerConsumed = narrowMerge === "BoV";
+  const ovHigherConsumed = wideMerge === "AoV";
+  const narrowConsumed = narrowMerge !== null;
+  const wideConsumed = wideMerge !== null;
+
+  const smallBadge = "text-[10px] px-1 py-0.5 rounded font-medium whitespace-nowrap shrink-0";
+
+  return (
+    <>
+      {r.cprRising && !aboveConsumed && (
+        <span className={`${smallBadge} bg-blue-500/10 text-blue-400 border border-blue-500/20`}>Above</span>
+      )}
+      {r.cprFalling && !belowConsumed && (
+        <span className={`${smallBadge} bg-orange-500/10 text-orange-400 border border-orange-500/20`}>Below</span>
+      )}
+      {isInsideCPR && (
+        <span className={`${smallBadge} bg-orange-500/10 text-orange-400 border border-orange-500/20`}>Inside</span>
+      )}
+      {isOutsideCPR && (
+        <span className={`${smallBadge} bg-purple-500/10 text-purple-400 border border-purple-500/20`}>Outside</span>
+      )}
+      {nothingMatched && <span className={`${smallBadge} bg-muted text-muted-foreground`}>Skip</span>}
+      {renderSSRRXBadge(r)}
+      {r.overlapLower && !ovLowerConsumed && (
+        <span className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-medium">oV-B</span>
+      )}
+      {r.overlapHigher && !ovHigherConsumed && (
+        <span className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20 font-medium">oV-A</span>
+      )}
+      {narrowMerge === "A" && (
+        <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>Narrow-A</span>
+      )}
+      {narrowMerge === "B" && (
+        <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>Narrow-B</span>
+      )}
+      {narrowMerge === "BoV" && (
+        <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>Narrow-BoV</span>
+      )}
+      {wideMerge === "AoV" && (
+        <span className={`${smallBadge} bg-pink-500/10 text-pink-400 border border-pink-500/20`}>Wide-AoV</span>
+      )}
+      {wideMerge === "A" && (
+        <span className={`${smallBadge} bg-pink-500/10 text-pink-400 border border-pink-500/20`}>Wide-A</span>
+      )}
+      {wideMerge === "B" && (
+        <span className={`${smallBadge} bg-pink-500/10 text-pink-400 border border-pink-500/20`}>Wide-B</span>
+      )}
+      {isNarrow && !narrowConsumed && (
+        <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>Narrow</span>
+      )}
+      {showWide && !wideConsumed && (
+        <span className={`${smallBadge} bg-pink-500/10 text-pink-400 border border-pink-500/20`}>Wide</span>
+      )}
+      {r.equalCPR && (
+        <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">Equal</span>
+      )}
+    </>
+  );
 }
 
 /**
