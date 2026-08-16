@@ -416,11 +416,26 @@ export interface CPRResult {
   // ScreenerUtils.renderHHLLCategoryBadge), also covering the
   // Compressed/Expanded/Equal cases those two booleans never captured.
   HHLLCategory: HHLLCategory;
+  // SSLLCategory — 5-way mutually exclusive partition over two derived
+  // "floor" levels (mirrors SSRRCategory's shape). Each side's floor level
+  // is picked dynamically from its own PDHLAbove/PDHLBelow state:
+  //   Axis 1 (primary):   todayLevel1 = today.PDHLAbove ? today.s1 : today.prevLow
+  //                        prevLevel1  = prev.PDHLAbove  ? prev.prevLow : prev.s1
+  //   Axis 2 (mirrored):  todayLevel2 = today.PDHLAbove ? today.prevLow : today.s1
+  //                        prevLevel2  = prev.PDHLAbove  ? prev.s1 : prev.prevLow
+  //   SSLL-A (Above)      — todayLevel1 >  prevLevel1 AND todayLevel2 >= prevLevel2
+  //   SSLL-B (Below)      — todayLevel1 <= prevLevel1 AND todayLevel2 <  prevLevel2
+  //   SSLL-C (Compressed) — todayLevel1 <  prevLevel1 AND todayLevel2 >  prevLevel2
+  //   SSLL-X (Expanded)   — todayLevel1 >  prevLevel1 AND todayLevel2 <  prevLevel2
+  //   SSLL=  (Equal)      — todayLevel1 == prevLevel1 AND todayLevel2 == prevLevel2
+  // "none" when none of the five conditions match.
+  SSLLCategory: SSLLCategory;
 }
 
 export type PDHPDLGapCategory = "HHGap" | "LLGap" | "EqGap";
 export type SSRRCategory = "SSRR-A" | "SSRR-B" | "SSRR-C" | "SSRR-X" | "SSRR=" | "none";
 export type HHLLCategory = "HHLL-A" | "HHLL-B" | "HHLL-C" | "HHLL-X" | "HHLL=" | "none";
+export type SSLLCategory = "SSLL-A" | "SSLL-B" | "SSLL-C" | "SSLL-X" | "SSLL=" | "none";
 
 function isValidCandle(c: OHLC): boolean {
   return (
@@ -1294,6 +1309,29 @@ export function analyzeCPR(
     (todayCPR.prevHigh === prevCPR.prevHigh && todayCPR.prevLow === prevCPR.prevLow) ? "HHLL=" :
     "none";
 
+  // SSLLCategory — see field doc on CPRResult. 5-way partition over two
+  // derived floor levels: Axis 1 is the original SSLLAbove selection rule
+  // (s1 when PDHLAbove, else prevLow); Axis 2 mirrors it with the
+  // selection swapped, so the two axes behave like SSRR's R1-pair/S1-pair.
+  const todaySSLLLevel1 = todayCPR.PDHLAbove ? todayCPR.s1 : todayCPR.prevLow;
+  const prevSSLLLevel1  = prevCPR.PDHLAbove  ? prevCPR.prevLow : prevCPR.s1;
+  const todaySSLLLevel2 = todayCPR.PDHLAbove ? todayCPR.prevLow : todayCPR.s1;
+  const prevSSLLLevel2  = prevCPR.PDHLAbove  ? prevCPR.s1 : prevCPR.prevLow;
+
+  const SSLLAboveCond      = todaySSLLLevel1 > prevSSLLLevel1 && todaySSLLLevel2 >= prevSSLLLevel2;
+  const SSLLBelowCond      = todaySSLLLevel1 <= prevSSLLLevel1 && todaySSLLLevel2 < prevSSLLLevel2;
+  const SSLLCompressedCond = todaySSLLLevel1 < prevSSLLLevel1 && todaySSLLLevel2 > prevSSLLLevel2;
+  const SSLLExpandedCond   = todaySSLLLevel1 > prevSSLLLevel1 && todaySSLLLevel2 < prevSSLLLevel2;
+  const SSLLEqualCond      = todaySSLLLevel1 === prevSSLLLevel1 && todaySSLLLevel2 === prevSSLLLevel2;
+
+  const SSLLCategory: SSLLCategory =
+    SSLLAboveCond ? "SSLL-A" :
+    SSLLBelowCond ? "SSLL-B" :
+    SSLLCompressedCond ? "SSLL-C" :
+    SSLLExpandedCond ? "SSLL-X" :
+    SSLLEqualCond ? "SSLL=" :
+    "none";
+
   return {
     symbol,
     todayCPR,
@@ -1339,5 +1377,6 @@ export function analyzeCPR(
     PDHPDLGapCategory,
     SSRRCategory,
     HHLLCategory,
+    SSLLCategory,
   };
 }

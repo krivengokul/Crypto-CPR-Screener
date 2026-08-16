@@ -8,6 +8,7 @@ import {
   type PDHPDLGapCategory,
   type SSRRCategory,
   type HHLLCategory,
+  type SSLLCategory,
 } from "@/lib/cpr";
 
 export type SortKey = "symbol" | "compressionRatio" | "currentPrice" | "change24h" | "quoteVolume" | "priceVsCpr" | "cprDistance" | "pdhPdlPct";
@@ -1815,14 +1816,70 @@ export function renderSSRRCategoryBadge(r: CPRResult) {
 }
 
 /**
- * renderSSRRHHLLBadges — the LEVEL column's second-row badge. Renders only
- * the single SSRR badge (from CPRResult.SSRRCategory, via
- * renderSSRRCategoryBadge). Returns null when SSRRCategory is "none".
+ * SSLL_BADGE — display config for each CPRResult.SSLLCategory value, keyed
+ * by category so renderSSRRHHLLBadges/renderSSLLCategoryBadge stay in sync.
+ */
+const SSLL_BADGE: Record<Exclude<SSLLCategory, "none">, { label: string; className: string; title: string }> = {
+  "SSLL-A": {
+    label: "SSLL-A",
+    className: "bg-green-500/10 text-green-400 border-green-500/30",
+    title: "Today's floor level > Prev's floor level (Axis 1) and Today's mirrored floor >= Prev's mirrored floor (Axis 2)",
+  },
+  "SSLL-B": {
+    label: "SSLL-B",
+    className: "bg-red-500/10 text-red-400 border-red-500/30",
+    title: "Today's floor level <= Prev's floor level (Axis 1) and Today's mirrored floor < Prev's mirrored floor (Axis 2)",
+  },
+  "SSLL-C": {
+    label: "SSLL-C",
+    className: "bg-blue-500/10 text-blue-400 border-blue-500/30",
+    title: "Compressed: Axis 1 down and Axis 2 up",
+  },
+  "SSLL-X": {
+    label: "SSLL-X",
+    className: "bg-orange-500/10 text-orange-400 border-orange-500/30",
+    title: "Expanded: Axis 1 up and Axis 2 down",
+  },
+  "SSLL=": {
+    label: "SSLL=",
+    className: "bg-yellow-500/10 text-yellow-400 border-yellow-500/30",
+    title: "Equal: Axis 1 and Axis 2 both unchanged",
+  },
+};
+
+/**
+ * renderSSLLCategoryBadge — single badge for CPRResult.SSLLCategory
+ * ("SSLL-A" | "SSLL-B" | "SSLL-C" | "SSLL-X" | "SSLL=" | "none"), same
+ * solid-badge styling used elsewhere (renderSSRRCategoryBadge). Always
+ * renders at most one badge, since SSLLCategory is a mutually exclusive
+ * partition. Returns null for "none".
+ */
+export function renderSSLLCategoryBadge(r: CPRResult) {
+  const cat = r.SSLLCategory;
+  if (cat === "none") return null;
+  const cfg = SSLL_BADGE[cat];
+  return (
+    <span
+      className={`text-[10px] whitespace-nowrap px-1 py-0.5 rounded border font-medium ${cfg.className}`}
+      title={cfg.title}
+    >
+      {cfg.label}
+    </span>
+  );
+}
+
+/**
+ * renderSSRRHHLLBadges — the LEVEL column's second-row badges. Renders the
+ * SSRR badge (from CPRResult.SSRRCategory, via renderSSRRCategoryBadge)
+ * followed by the SSLL badge (from CPRResult.SSLLCategory, via
+ * renderSSLLCategoryBadge). Returns null when both are "none".
  */
 export function renderSSRRHHLLBadges(r: CPRResult) {
   const ssrrBadge = renderSSRRCategoryBadge(r);
-  if (!ssrrBadge) return null;
-  return <div className="flex flex-nowrap items-center gap-1">{ssrrBadge}</div>;
+  const ssllBadge = renderSSLLCategoryBadge(r);
+  const badges = [ssrrBadge, ssllBadge].filter((b): b is React.JSX.Element => b !== null);
+  if (badges.length === 0) return null;
+  return <div className="flex flex-nowrap items-center gap-1">{badges}</div>;
 }
 
 /**
