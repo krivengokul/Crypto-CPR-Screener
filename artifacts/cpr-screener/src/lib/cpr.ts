@@ -422,10 +422,26 @@ export interface CPRResult {
   //     rules out) — so SSLLAbove stands alone as "SSLL-A".
   // "none" when none of the three source flags are set.
   SSRRSSLLCategory: SSRRSSLLCategory;
+  // HHLLCategory — 5-way mutually exclusive partition classifying today's
+  // PDH/PDL (prevHigh/prevLow) move against prev's PDH/PDL:
+  //   HHLL-A (Above)      — today.prevHigh > prev.prevHigh AND today.prevLow >= prev.prevLow
+  //   HHLL-B (Below)      — today.prevHigh <= prev.prevHigh AND today.prevLow < prev.prevLow
+  //   HHLL-C (Compressed) — today.prevHigh < prev.prevHigh AND today.prevLow > prev.prevLow
+  //   HHLL-X (Expanded)   — today.prevHigh > prev.prevHigh AND today.prevLow < prev.prevLow
+  //   HHLL=  (Equal)      — today.prevHigh == prev.prevHigh AND today.prevLow == prev.prevLow
+  // Verified mutually exclusive (no row can satisfy two of the five), but
+  // not exhaustive: PDH flat + PDL up, or PDH down + PDL flat, match none
+  // of the five and fall through to "none". HHLL-A/HHLL-B here are the
+  // same conditions as the raw HHLLAbove/HHLLBelow booleans above; this
+  // field supersedes them for badge-rendering purposes (see
+  // ScreenerUtils.renderHHLLCategoryBadge) by also covering the
+  // Compressed/Expanded/Equal cases those two booleans left as "neither".
+  HHLLCategory: HHLLCategory;
 }
 
 export type PDHPDLGapCategory = "HHGap" | "LLGap" | "EqGap";
 export type SSRRSSLLCategory = "SSRR-A" | "SSRR-B" | "SSLL-A" | "none";
+export type HHLLCategory = "HHLL-A" | "HHLL-B" | "HHLL-C" | "HHLL-X" | "HHLL=" | "none";
 
 function isValidCandle(c: OHLC): boolean {
   return (
@@ -1285,6 +1301,19 @@ export function analyzeCPR(
     SSLLAbove ? "SSLL-A" :
     "none";
 
+  // HHLLCategory — see field doc on CPRResult. A true 5-way mutually
+  // exclusive partition over today's PDH/PDL vs prev's PDH/PDL (verified:
+  // no two of the five conditions can both be true for the same row).
+  // Not exhaustive — a PDH held flat while PDL rose, or PDH fell while PDL
+  // held flat, matches none of the five and falls through to "none".
+  const HHLLCategory: HHLLCategory =
+    (todayCPR.prevHigh > prevCPR.prevHigh && todayCPR.prevLow >= prevCPR.prevLow) ? "HHLL-A" :
+    (todayCPR.prevHigh <= prevCPR.prevHigh && todayCPR.prevLow < prevCPR.prevLow) ? "HHLL-B" :
+    (todayCPR.prevHigh < prevCPR.prevHigh && todayCPR.prevLow > prevCPR.prevLow) ? "HHLL-C" :
+    (todayCPR.prevHigh > prevCPR.prevHigh && todayCPR.prevLow < prevCPR.prevLow) ? "HHLL-X" :
+    (todayCPR.prevHigh === prevCPR.prevHigh && todayCPR.prevLow === prevCPR.prevLow) ? "HHLL=" :
+    "none";
+
   return {
     symbol,
     todayCPR,
@@ -1333,5 +1362,6 @@ export function analyzeCPR(
     HHRRBelow,
     PDHPDLGapCategory,
     SSRRSSLLCategory,
+    HHLLCategory,
   };
 }

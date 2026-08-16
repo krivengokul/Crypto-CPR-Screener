@@ -6,6 +6,7 @@ import {
   type CPRResult,
   type PDHPDLGapCategory,
   type SSRRSSLLCategory,
+  type HHLLCategory,
 } from "@/lib/cpr";
 
 export type SortKey = "symbol" | "compressionRatio" | "currentPrice" | "change24h" | "quoteVolume" | "priceVsCpr" | "cprDistance" | "pdhPdlPct";
@@ -1804,48 +1805,28 @@ export function renderSSRRSSLLCategoryBadge(r: CPRResult) {
 }
 
 /**
- * renderSSRRHHLLBadges — the single SSRR-A/SSRR-B/SSLL-A badge (from
- * CPRResult.SSRRSSLLCategory, via renderSSRRSSLLCategoryBadge — formerly
- * two independent SSRRAbove/SSRRBelow checks, now a proper 4-way category
- * so SSLL-A is never silently dropped when it overlaps SSRRAbove/Below)
- * plus the HHLL-A/HHLL-B (PDH/PDL directional, from
- * CPRResult.HHLLAbove/HHLLBelow) badge, rendered as one inline nowrap pair —
- * same layout pattern as the p-PDHL-A/PDHL-A pair in renderPdhPdlSubBadges.
- * Shared by the LEVEL column's Inside CPR and Outside CPR categories (both
- * ScreenerTableRow's renderLevelBadges and its own inline row JSX) so all
- * call sites stay in sync. Returns null when neither the category nor the
- * HHLL flags are set.
+ * renderSSRRHHLLBadges — the LEVEL column's second-row badge. Now renders
+ * only the single SSRR-A/SSRR-B/SSLL-A badge (from
+ * CPRResult.SSRRSSLLCategory, via renderSSRRSSLLCategoryBadge).
+ *
+ * MOVED: the HHLL-A/HHLL-B badge that used to render alongside this one
+ * (from the raw CPRResult.HHLLAbove/HHLLBelow booleans) has been moved out
+ * of the LEVEL column entirely — it now lives in the PDH/PDL column as
+ * part of the 5-way renderHHLLCategoryBadge (HHLL-A/HHLL-B/HHLL-C/HHLL-X/
+ * HHLL=, from CPRResult.HHLLCategory), which also covers the two cases
+ * (Compressed/Expanded) the old booleans didn't. See
+ * renderPdhPdlColumnBadges below for the new PDH/PDL column layout.
+ *
+ * Function name kept as-is (rather than renamed) to avoid churn at its one
+ * call site (ScreenerTableRow's renderLevelBadges). Shared by the LEVEL
+ * column's Inside CPR and Outside CPR categories (both ScreenerTableRow's
+ * renderLevelBadges and its own inline row JSX) so all call sites stay in
+ * sync. Returns null when SSRRSSLLCategory is "none".
  */
 export function renderSSRRHHLLBadges(r: CPRResult) {
-  const badges: JSX.Element[] = [];
   const ssrrSsllBadge = renderSSRRSSLLCategoryBadge(r);
-  if (ssrrSsllBadge) {
-    badges.push(<span key="ssrr-ssll">{ssrrSsllBadge}</span>);
-  }
-  if (r.HHLLAbove) {
-    badges.push(
-      <span
-        key="hhll-above"
-        className="text-[10px] whitespace-nowrap px-1 py-0.5 rounded bg-green-500/10 text-green-400 border border-green-500/30 font-medium"
-        title="Today's PDH > Prev PDH and Today's PDL >= Prev PDL"
-      >
-        HHLL-A
-      </span>
-    );
-  }
-  if (r.HHLLBelow) {
-    badges.push(
-      <span
-        key="hhll-below"
-        className="text-[10px] whitespace-nowrap px-1 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/30 font-medium"
-        title="Today's PDH <= Prev PDH and Today's PDL < Prev PDL"
-      >
-        HHLL-B
-      </span>
-    );
-  }
-  if (badges.length === 0) return null;
-  return <div className="flex flex-nowrap items-center gap-1">{badges}</div>;
+  if (!ssrrSsllBadge) return null;
+  return <div className="flex flex-nowrap items-center gap-1">{ssrrSsllBadge}</div>;
 }
 
 /**
@@ -1876,6 +1857,100 @@ export function renderPDHPDLGapCategoryBadge(r: CPRResult) {
     >
       {cat}
     </span>
+  );
+}
+
+/**
+ * HHLL_CATEGORY_BADGE — display config for each CPRResult.HHLLCategory
+ * value (Above/Below reuse the same green/red as the old HHLLAbove/
+ * HHLLBelow badges; Compressed/Expanded/Equal are new). Keyed by category
+ * so renderHHLLCategoryBadge stays easy to extend.
+ */
+const HHLL_CATEGORY_BADGE: Record<Exclude<HHLLCategory, "none">, { label: string; className: string; title: string }> = {
+  "HHLL-A": {
+    label: "HHLL-A",
+    className: "bg-green-500/10 text-green-400 border-green-500/30",
+    title: "Today's PDH > Prev PDH and Today's PDL >= Prev PDL (Above)",
+  },
+  "HHLL-B": {
+    label: "HHLL-B",
+    className: "bg-red-500/10 text-red-400 border-red-500/30",
+    title: "Today's PDH <= Prev PDH and Today's PDL < Prev PDL (Below)",
+  },
+  "HHLL-C": {
+    label: "HHLL-C",
+    className: "bg-purple-500/10 text-purple-400 border-purple-500/30",
+    title: "Today's PDH < Prev PDH and Today's PDL > Prev PDL (Compressed)",
+  },
+  "HHLL-X": {
+    label: "HHLL-X",
+    className: "bg-pink-500/10 text-pink-400 border-pink-500/30",
+    title: "Today's PDH > Prev PDH and Today's PDL < Prev PDL (Expanded)",
+  },
+  "HHLL=": {
+    label: "HHLL=",
+    className: "border-amber-500/40 bg-amber-500/15 text-amber-600 dark:text-amber-400",
+    title: "Today's PDH == Prev PDH and Today's PDL == Prev PDL (Equal)",
+  },
+};
+
+/**
+ * renderHHLLCategoryBadge — single badge for CPRResult.HHLLCategory
+ * ("HHLL-A" | "HHLL-B" | "HHLL-C" | "HHLL-X" | "HHLL=" | "none"), same
+ * solid-badge styling as renderPDHPDLGapCategoryBadge /
+ * renderSSRRSSLLCategoryBadge. MOVED here from the LEVEL column (see
+ * renderSSRRHHLLBadges) — HHLL-A/HHLL-B keep their original green/red
+ * colours, HHLL-C/HHLL-X/HHLL= are new. Returns null for "none".
+ */
+export function renderHHLLCategoryBadge(r: CPRResult) {
+  const cat = r.HHLLCategory;
+  if (cat === "none") return null;
+  const cfg = HHLL_CATEGORY_BADGE[cat];
+  return (
+    <span
+      className={`text-[10px] whitespace-nowrap px-1 py-0.5 rounded border font-medium ${cfg.className}`}
+      title={cfg.title}
+    >
+      {cfg.label}
+    </span>
+  );
+}
+
+/**
+ * renderPdhPdlColumnBadges — the full PDH/PDL table column body, shared by
+ * ScreenerTableRow and BacktestPanel's two result tables so all three call
+ * sites stay in sync. Layout (updated):
+ *   Row 1: HHLLCategory badge (HHLL-A/B/C/X/=) first, then the Gap badge
+ *          (HHGap/LLGap/EqGap).
+ *   Row 2: prev day's "p-xx" PDH/PDL badge first, then today's own "xx"
+ *          PDH/PDL badge second.
+ * (Previously Row 1 was Gap badge + today badge, Row 2 was prev badge
+ * alone — the HHLLCategory badge now takes the first slot on Row 1, and
+ * today's own-PDH-vs-own-R1 badge shifted down to join prev's equivalent
+ * badge on Row 2, since those two are a matched pair.)
+ * Returns a "—" placeholder span when none of the four badges apply.
+ */
+export function renderPdhPdlColumnBadges(r: CPRResult) {
+  const hhllBadge = renderHHLLCategoryBadge(r);
+  const gapBadge = renderPDHPDLGapCategoryBadge(r);
+  const prevBadge = renderPrevPdhPdlBadge(r);
+  const todayBadge = renderTodayPdhPdlBadge(r);
+  if (!hhllBadge && !gapBadge && !prevBadge && !todayBadge) {
+    return <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">—</span>;
+  }
+  return (
+    <div className="flex flex-col items-start gap-1">
+      <div className="flex flex-wrap items-center gap-1">
+        {hhllBadge}
+        {gapBadge}
+      </div>
+      {(prevBadge || todayBadge) && (
+        <div className="flex flex-wrap items-center gap-1">
+          {prevBadge}
+          {todayBadge}
+        </div>
+      )}
+    </div>
   );
 }
 
