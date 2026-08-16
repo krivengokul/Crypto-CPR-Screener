@@ -27,7 +27,7 @@ import {
   type BacktestSubCategoryDef,
   type BacktestTargetDef,
 } from "@/lib/backtest";
-import { passesPattern, matchesPatternFlag, fmt, getChartUrl, hasKnownChartMapping, getWidthCategory, renderPdhPdlSubBadges } from "./ScreenerUtils";
+import { passesPattern, matchesPatternFlag, fmt, getChartUrl, hasKnownChartMapping, getWidthCategory, renderPdhPdlSubBadges, renderPDHPDLGapCategoryBadge } from "./ScreenerUtils";
 import { renderTodayPatternBadges, renderPrevPatternBadge, renderLevelBadges } from "./ScreenerTableRow";
 import { SRLadderRow, toSRLadderData } from "./SRLadderPanel";
 
@@ -1179,16 +1179,20 @@ export default function BacktestPanel() {
                       </td>
                       <td className="px-3 py-2 whitespace-nowrap">
                         {(() => {
+                          const gapBadge = renderPDHPDLGapCategoryBadge(r.raw);
                           const today = renderTodayPatternBadges(r.raw);
                           const prev = renderPrevPatternBadge(r.raw);
-                          if (!today && !prev) {
+                          if (!gapBadge && !today && !prev) {
                             return <span className="text-xs text-muted-foreground">—</span>;
                           }
                           return (
-                            <>
-                              {today}
-                              {prev}
-                            </>
+                            <div className="flex flex-col items-start gap-1">
+                              <div className="flex flex-wrap items-center gap-1">
+                                {gapBadge}
+                                {today}
+                              </div>
+                              {prev && <div>{prev}</div>}
+                            </div>
                           );
                         })()}
                       </td>
