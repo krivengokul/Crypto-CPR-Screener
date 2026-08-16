@@ -377,14 +377,6 @@ export interface CPRResult {
   prevS1Gap: number;
   r4Distance: number;
   s4Distance: number;
-  // SSRRAbove — today's R1 has moved above prev's R1 AND today's S1 has held
-  // at or above prev's S1 (support hasn't given up ground while resistance
-  // expanded upward).
-  SSRRAbove: boolean;
-  // SSRRBelow — today's R1 has NOT expanded above prev's R1 AND today's S1
-  // has dropped below prev's S1 (support eroded while resistance stayed
-  // capped or fell).
-  SSRRBelow: boolean;
   // SSLLAbove — both today's S1 AND today's PDL (prevLow) sit above the
   // higher of prev's S1 / prev's PDL (support and PDL both climbed above
   // whichever of prev's two floor levels was higher).
@@ -398,22 +390,17 @@ export interface CPRResult {
   // (LLGap). "HHGap" when the PDH gap is larger, "LLGap" when the PDL gap
   // is larger, "EqGap" when the two gaps are equal.
   PDHPDLGapCategory: PDHPDLGapCategory;
-  // SSRRSSLLCategory — single-badge partition over SSRRAbove / SSRRBelow /
-  // SSLLAbove. Unlike those three raw booleans, this is a true mutually
-  // exclusive AND exhaustive 4-way category (exactly one value per row),
-  // matching the PDHPDLGapCategory pattern.
-  //
-  // SSRRAbove and SSRRBelow are already mutually exclusive on their own
-  // (one needs today.r1 > prev.r1, the other today.r1 <= prev.r1), so they
-  // simply keep their own labels. SSLLAbove is NOT a clean third case: it
-  // always forces today.s1 > prev.s1, which means:
-  //   - when today.r1 > prev.r1 too, SSRRAbove is ALSO true (SSLLAbove is
-  //     a subset of SSRRAbove in that case) — SSRRAbove wins the label.
-  //   - when today.r1 <= prev.r1, SSRRAbove is false, and SSRRBelow is
-  //     impossible too (SSRRBelow needs s1 < prev.s1, which SSLLAbove
-  //     rules out) — so SSLLAbove stands alone as "SSLL-A".
-  // "none" when none of the three source flags are set.
-  SSRRSSLLCategory: SSRRSSLLCategory;
+  // SSRRCategory — single-badge 5-way partition over today's R1/S1 vs
+  // prev's R1/S1 (mirrors HHLLCategory's shape):
+  //   SSRR-A (Above)      — today.r1 >  prev.r1 AND today.s1 >= prev.s1
+  //   SSRR-B (Below)      — today.r1 <= prev.r1 AND today.s1 <  prev.s1
+  //   SSRR-C (Compressed) — today.r1 <  prev.r1 AND today.s1 >  prev.s1
+  //   SSRR-X (Expanded)   — today.r1 >  prev.r1 AND today.s1 <  prev.s1
+  //   SSRR=  (Equal)      — today.r1 == prev.r1 AND today.s1 == prev.s1
+  // "none" when none of the five conditions match. This field is the ONLY
+  // source for that classification — the raw SSRRAbove/SSRRBelow booleans
+  // have been removed from CPRResult.
+  SSRRCategory: SSRRCategory;
   // HHLLCategory — 5-way mutually exclusive partition classifying today's
   // PDH/PDL (prevHigh/prevLow) move against prev's PDH/PDL:
   //   HHLL-A (Above)      — today.prevHigh > prev.prevHigh AND today.prevLow >= prev.prevLow
@@ -432,7 +419,7 @@ export interface CPRResult {
 }
 
 export type PDHPDLGapCategory = "HHGap" | "LLGap" | "EqGap";
-export type SSRRSSLLCategory = "SSRR-A" | "SSRR-B" | "SSLL-A" | "none";
+export type SSRRCategory = "SSRR-A" | "SSRR-B" | "SSRR-C" | "SSRR-X" | "SSRR=" | "none";
 export type HHLLCategory = "HHLL-A" | "HHLL-B" | "HHLL-C" | "HHLL-X" | "HHLL=" | "none";
 
 function isValidCandle(c: OHLC): boolean {
@@ -1177,6 +1164,7 @@ export function analyzeCPR(
   const prevCandle  = candles[candles.length - 2];
   const todayCandle = candles[candles.length - 1];
 
+  if (!prevCandle || !todayCandle) return null;
   if (!isValidCandle(prevCandle) || !isValidCandle(todayCandle)) return null;
 
   const prevCPR  = calcCPR(prevCandle);
@@ -1184,6 +1172,7 @@ export function analyzeCPR(
 
   const ppCandle = candles.length >= 3 ? candles[candles.length - 3] : null;
   const ppCPR = ppCandle && isValidCandle(ppCandle) ? calcCPR(ppCandle) : undefined;
+  const ppCPRField = ppCPR ? { ppCPR } : {};
 
   // Single source of truth for the (today, prev) band classification. Every
   // pivot-band flag on CPRResult comes from here via spread; ScreenerUtils
@@ -1257,9 +1246,6 @@ export function analyzeCPR(
   const prevR1Gap = prevCPR.r1 - prevCPR.pivot;
   const prevS1Gap = prevCPR.pivot - prevCPR.s1;
 
-  // SSRRAbove / SSRRBelow — today vs prev R1/S1 directional classification.
-  const SSRRAbove = todayCPR.r1 > prevCPR.r1 && todayCPR.s1 >= prevCPR.s1;
-  const SSRRBelow = todayCPR.r1 <= prevCPR.r1 && todayCPR.s1 < prevCPR.s1;
 
   // SSLLAbove / HHRRBelow — today vs prev S1/PDL and R1/PDH directional
   // classification, anchored to whichever of prev's two levels is more
@@ -1280,13 +1266,19 @@ export function analyzeCPR(
     LLGapVal > HHGapVal ? "LLGap" :
     "EqGap";
 
-  // SSRRSSLLCategory — see field doc on CPRResult. SSRRAbove/SSRRBelow are
-  // checked first (mutually exclusive with each other), SSLLAbove only
-  // wins the label when neither SSRR flag fired.
-  const SSRRSSLLCategory: SSRRSSLLCategory =
+  // SSRRCategory — see field doc on CPRResult. 5-way partition over
+  // today's R1/S1 vs prev's R1/S1; falls through to "none".
+  const SSRRAbove = todayCPR.r1 > prevCPR.r1 && todayCPR.s1 >= prevCPR.s1;
+  const SSRRBelow = todayCPR.r1 <= prevCPR.r1 && todayCPR.s1 < prevCPR.s1;
+  const SSRRCompressed = todayCPR.r1 < prevCPR.r1 && todayCPR.s1 > prevCPR.s1;
+  const SSRRExpanded = todayCPR.r1 > prevCPR.r1 && todayCPR.s1 < prevCPR.s1;
+  const SSRREqual = todayCPR.r1 === prevCPR.r1 && todayCPR.s1 === prevCPR.s1;
+  const SSRRCategory: SSRRCategory =
     SSRRAbove ? "SSRR-A" :
     SSRRBelow ? "SSRR-B" :
-    SSLLAbove ? "SSLL-A" :
+    SSRRCompressed ? "SSRR-C" :
+    SSRRExpanded ? "SSRR-X" :
+    SSRREqual ? "SSRR=" :
     "none";
 
   // HHLLCategory — see field doc on CPRResult. A true 5-way mutually
@@ -1306,7 +1298,7 @@ export function analyzeCPR(
     symbol,
     todayCPR,
     prevCPR,
-    ppCPR,
+    ...ppCPRField,
     compressionRatio,
     cprRising,
     PL12CL23,
@@ -1342,12 +1334,10 @@ export function analyzeCPR(
     quoteVolume,
     prevR1Gap,
     prevS1Gap,
-    SSRRAbove,
-    SSRRBelow,
     SSLLAbove,
     HHRRBelow,
     PDHPDLGapCategory,
-    SSRRSSLLCategory,
+    SSRRCategory,
     HHLLCategory,
   };
 }

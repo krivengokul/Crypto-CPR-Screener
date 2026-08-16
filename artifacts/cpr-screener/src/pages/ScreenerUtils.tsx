@@ -1,3 +1,4 @@
+import type React from "react";
 import {
   classifyCPRPair,
   pickPattern,
@@ -5,7 +6,7 @@ import {
   type CPRLevels,
   type CPRResult,
   type PDHPDLGapCategory,
-  type SSRRSSLLCategory,
+  type SSRRCategory,
   type HHLLCategory,
 } from "@/lib/cpr";
 
@@ -658,7 +659,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // today's PDL both below prev's S1/PDL). Bullish, entry ~9AM, targets
     // today's own R4 / U4 by ~9PM.
     case "9AM:SSRRBHHLLA-U4:9PM":
-      return (r.overlapLower && r.HHLLCategory === "HHLL-A" && r.SSRRBelow);
+      return (r.overlapLower && r.HHLLCategory === "HHLL-A" && r.SSRRCategory === "SSRR-B");
     case "pRRHHLLA":
       return (r.overlapLower && r.HHRRBelow && r.HHLLCategory === "HHLL-B");
     // NEW: 9AM:pRRHHLLA-U4:9PM — Overlap Below + HHRRBelow (today's R1 AND
@@ -739,7 +740,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return (
         (r.InsideCPR) &&
           (r.cOL3U3 || r.cOU3L3) && 
-        r.SSRRBelow && r.HHLLCategory === "HHLL-A"
+        r.SSRRCategory === "SSRR-B" && r.HHLLCategory === "HHLL-A"
         //r.prevCPR.widthPct > 2.00 && r.prevCPR.widthPct <= 5.00 &&   // pLarge
         //r.todayCPR.widthPct > 1.10 && r.todayCPR.widthPct <= 2.00 && // Medium
         //r.prevCPR.PDHLBelow && r.todayCPR.PDHLAbove &&       // p-PDHLBelow  // PDHLAbove
@@ -758,7 +759,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.prevCPR.widthPct > 2.00 && r.prevCPR.widthPct <= 5.00 &&   // pLarge
         r.todayCPR.widthPct > 2.00 && r.todayCPR.widthPct <= 5.00 && // Large
         r.prevCPR.PDHLAbove && r.todayCPR.PDHLBelow &&            // p-PDH>U1     // PDL<L1
-        r.todayCPR.SSRRAbove &&
+        r.SSRRCategory === "SSRR-A" &&
         r.prevCPR.prevHigh > r.todayCPR.prevHigh &&
         r.prevCPR.prevLow > r.todayCPR.prevLow
       );
@@ -777,7 +778,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return (
         (r.InsideCPR) &&
         r.eXL4U4 &&
-        r.SSRRAbove &&
+        r.SSRRCategory === "SSRR-A" &&
         r.prevCPR.prevHigh > r.todayCPR.prevHigh &&
         r.prevCPR.prevLow > r.todayCPR.prevLow &&
         (!r.todayCPR.PDHLBelow ||
@@ -996,7 +997,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // RENAMED: was "bigabove-pl34cl4-u3>pu4" -> "9AM:SSRRHHLLA-U4:11PM"
     case "9AM:SSRRHHLLA-U4:11PM":
     return (r.cprRising && r.strWideCPR && 
-            r.SSRRAbove && r.HHLLCategory === "HHLL-A" && r.todayCPR.PDHLAbove);
+            r.SSRRCategory === "SSRR-A" && r.HHLLCategory === "HHLL-A" && r.todayCPR.PDHLAbove);
     // NEW: BAComp-l3>pl1/u3>pu1 — BigCPR Above + prev S1 inside today S3/S4 AND prev R1 inside today R2/R3
     case "bacomp-l3>pl1/u3>pu1":
       return (
@@ -1677,7 +1678,7 @@ export function computePrevPattern(
  * badges together on one line. Returns null when neither side has any
  * badge to show.
  */
-export function renderPrevPdhPdlBadge(r: CPRResult): JSX.Element | null {
+export function renderPrevPdhPdlBadge(r: CPRResult): React.JSX.Element | null {
   if (r.prevCPR.PDHLAbove) {
     return (
       <span
@@ -1714,7 +1715,7 @@ export function renderPrevPdhPdlBadge(r: CPRResult): JSX.Element | null {
   return null;
 }
 
-export function renderTodayPdhPdlBadge(r: CPRResult): JSX.Element | null {
+export function renderTodayPdhPdlBadge(r: CPRResult): React.JSX.Element | null {
   if (r.todayCPR.PDHLAbove) {
     return (
       <span
@@ -1754,17 +1755,17 @@ export function renderTodayPdhPdlBadge(r: CPRResult): JSX.Element | null {
 export function renderPdhPdlSubBadges(r: CPRResult) {
   const prevBadge = renderPrevPdhPdlBadge(r);
   const todayBadge = renderTodayPdhPdlBadge(r);
-  const badges = [prevBadge, todayBadge].filter((b): b is JSX.Element => b !== null);
+  const badges = [prevBadge, todayBadge].filter((b): b is React.JSX.Element => b !== null);
   if (badges.length === 0) return null;
   return <div className="flex flex-nowrap items-center gap-1">{badges}</div>;
 }
 
 /**
- * SSRR_SSLL_BADGE — display config for each CPRResult.SSRRSSLLCategory
- * value, keyed by category so renderSSRRHHLLBadges/renderSSRRSSLLCategoryBadge
- * stay in sync. "none" renders nothing.
+ * SSRR_BADGE — display config for each CPRResult.SSRRCategory value, keyed
+ * by category so renderSSRRHHLLBadges/renderSSRRCategoryBadge stay in sync.
+ * "none" renders nothing.
  */
-const SSRR_SSLL_BADGE: Record<Exclude<SSRRSSLLCategory, "none">, { label: string; className: string; title: string }> = {
+const SSRR_BADGE: Record<Exclude<SSRRCategory, "none">, { label: string; className: string; title: string }> = {
   "SSRR-A": {
     label: "SSRR-A",
     className: "bg-green-500/10 text-green-400 border-green-500/30",
@@ -1775,25 +1776,34 @@ const SSRR_SSLL_BADGE: Record<Exclude<SSRRSSLLCategory, "none">, { label: string
     className: "bg-red-500/10 text-red-400 border-red-500/30",
     title: "Today's R1 <= Prev R1 and Today's S1 < Prev S1",
   },
-  "SSLL-A": {
-    label: "SSLL-A",
+  "SSRR-C": {
+    label: "SSRR-C",
     className: "bg-blue-500/10 text-blue-400 border-blue-500/30",
-    title: "Today's S1 and Today's PDL both above the higher of Prev S1 / Prev PDL (SSRR-A/B did not fire)",
+    title: "Compressed: Today's R1 < Prev R1 and Today's S1 > Prev S1",
+  },
+  "SSRR-X": {
+    label: "SSRR-X",
+    className: "bg-orange-500/10 text-orange-400 border-orange-500/30",
+    title: "Expanded: Today's R1 > Prev R1 and Today's S1 < Prev S1",
+  },
+  "SSRR=": {
+    label: "SSRR=",
+    className: "bg-yellow-500/10 text-yellow-400 border-yellow-500/30",
+    title: "Equal: Today's R1 == Prev R1 and Today's S1 == Prev S1",
   },
 };
 
 /**
- * renderSSRRSSLLCategoryBadge — single badge for CPRResult.SSRRSSLLCategory
- * ("SSRR-A" | "SSRR-B" | "SSLL-A" | "none"), same solid-badge styling used
- * elsewhere (renderPDHPDLGapCategoryBadge). Always renders at most one
- * badge, since SSRRSSLLCategory is a mutually exclusive, exhaustive
- * partition — unlike the raw SSRRAbove/SSRRBelow/SSLLAbove booleans, which
- * can overlap. Returns null for "none".
+ * renderSSRRCategoryBadge — single badge for CPRResult.SSRRCategory
+ * ("SSRR-A" | "SSRR-B" | "SSRR-C" | "SSRR-X" | "SSRR=" | "none"), same
+ * solid-badge styling used elsewhere (renderPDHPDLGapCategoryBadge). Always
+ * renders at most one badge, since SSRRCategory is a mutually exclusive
+ * partition. Returns null for "none".
  */
-export function renderSSRRSSLLCategoryBadge(r: CPRResult) {
-  const cat = r.SSRRSSLLCategory;
+export function renderSSRRCategoryBadge(r: CPRResult) {
+  const cat = r.SSRRCategory;
   if (cat === "none") return null;
-  const cfg = SSRR_SSLL_BADGE[cat];
+  const cfg = SSRR_BADGE[cat];
   return (
     <span
       className={`text-[10px] whitespace-nowrap px-1 py-0.5 rounded border font-medium ${cfg.className}`}
@@ -1805,30 +1815,14 @@ export function renderSSRRSSLLCategoryBadge(r: CPRResult) {
 }
 
 /**
- * renderSSRRHHLLBadges — the LEVEL column's second-row badge. Now renders
- * only the single SSRR-A/SSRR-B/SSLL-A badge (from
- * CPRResult.SSRRSSLLCategory, via renderSSRRSSLLCategoryBadge).
- *
- * MOVED: the HHLL-A/HHLL-B badge that used to render alongside this one
- * (from the raw CPRResult.HHLLAbove/HHLLBelow booleans, since removed —
- * their conditions now live only as the HHLL-A/HHLL-B cases of
- * CPRResult.HHLLCategory) has been moved out of the LEVEL column entirely
- * — it now lives in the PDH/PDL column as
- * part of the 5-way renderHHLLCategoryBadge (HHLL-A/HHLL-B/HHLL-C/HHLL-X/
- * HHLL=, from CPRResult.HHLLCategory), which also covers the two cases
- * (Compressed/Expanded) the old booleans didn't. See
- * renderPdhPdlColumnBadges below for the new PDH/PDL column layout.
- *
- * Function name kept as-is (rather than renamed) to avoid churn at its one
- * call site (ScreenerTableRow's renderLevelBadges). Shared by the LEVEL
- * column's Inside CPR and Outside CPR categories (both ScreenerTableRow's
- * renderLevelBadges and its own inline row JSX) so all call sites stay in
- * sync. Returns null when SSRRSSLLCategory is "none".
+ * renderSSRRHHLLBadges — the LEVEL column's second-row badge. Renders only
+ * the single SSRR badge (from CPRResult.SSRRCategory, via
+ * renderSSRRCategoryBadge). Returns null when SSRRCategory is "none".
  */
 export function renderSSRRHHLLBadges(r: CPRResult) {
-  const ssrrSsllBadge = renderSSRRSSLLCategoryBadge(r);
-  if (!ssrrSsllBadge) return null;
-  return <div className="flex flex-nowrap items-center gap-1">{ssrrSsllBadge}</div>;
+  const ssrrBadge = renderSSRRCategoryBadge(r);
+  if (!ssrrBadge) return null;
+  return <div className="flex flex-nowrap items-center gap-1">{ssrrBadge}</div>;
 }
 
 /**
@@ -1900,7 +1894,7 @@ const HHLL_CATEGORY_BADGE: Record<Exclude<HHLLCategory, "none">, { label: string
  * renderHHLLCategoryBadge — single badge for CPRResult.HHLLCategory
  * ("HHLL-A" | "HHLL-B" | "HHLL-C" | "HHLL-X" | "HHLL=" | "none"), same
  * solid-badge styling as renderPDHPDLGapCategoryBadge /
- * renderSSRRSSLLCategoryBadge. MOVED here from the LEVEL column (see
+ * renderSSRRCategoryBadge. MOVED here from the LEVEL column (see
  * renderSSRRHHLLBadges) — HHLL-A/HHLL-B keep their original green/red
  * colours, HHLL-C/HHLL-X/HHLL= are new. Returns null for "none".
  */
