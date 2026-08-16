@@ -2125,7 +2125,8 @@ export function renderHHLLCategoryBadge(r: CPRResult) {
  *   Row 1: HHLLCategory badge (HHLL-A/B/C/X) first, then the Gap badge
  *          (HHGap/LLGap/EqGap).
  *   Row 2: prev day's "p-xx" PDH/PDL badge first, then today's own "xx"
- *          PDH/PDL badge second.
+ *          PDH/PDL badge second — kept on a single non-wrapping line so
+ *          the pair never spills onto a 3rd row.
  * (Previously Row 1 was Gap badge + today badge, Row 2 was prev badge
  * alone — the HHLLCategory badge now takes the first slot on Row 1, and
  * today's own-PDH-vs-own-R1 badge shifted down to join prev's equivalent
@@ -2147,7 +2148,7 @@ export function renderPdhPdlColumnBadges(r: CPRResult) {
         {gapBadge}
       </div>
       {(prevBadge || todayBadge) && (
-        <div className="flex flex-wrap items-center gap-1">
+        <div className="flex flex-nowrap items-center gap-1">
           {prevBadge}
           {todayBadge}
         </div>
