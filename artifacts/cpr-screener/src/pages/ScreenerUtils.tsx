@@ -2119,52 +2119,25 @@ export function renderHHLLCategoryBadge(r: CPRResult) {
 }
 
 /**
- * renderPdhPdlStatusBadge — badge wrapper around pdhPdlStatus (the
- * "+x% > PDH" / "−x% < PDL" / "IN-PDHL" live-price-vs-PDH/PDL status),
- * styled as a solid pill to match the other PDH/PDL badges. Moved here
- * from its own inline row in the Price/CPR column so it can sit as the
- * 2nd badge on PDH/PDL column's row 2 (see renderPdhPdlColumnBadges),
- * between the prev "p-xx" badge and today's own "xx" badge.
- */
-export function renderPdhPdlStatusBadge(r: CPRResult) {
-  const status = pdhPdlStatus(r);
-  const tint =
-    status.color === "text-green-400" ? "bg-green-500/10 border-green-500/20" :
-    status.color === "text-destructive" ? "bg-red-500/10 border-red-500/20" :
-    "bg-yellow-500/10 border-yellow-500/20";
-  return (
-    <span
-      className={`text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded border font-medium ${status.color} ${tint}`}
-      title={`PDH: ${fmt(r.todayCPR.prevHigh)}  |  PDL: ${fmt(r.todayCPR.prevLow)}`}
-    >
-      {status.main}{status.sub && ` ${status.sub}`}
-    </span>
-  );
-}
-
-/**
  * renderPdhPdlColumnBadges — the full PDH/PDL table column body, shared by
  * ScreenerTableRow and BacktestPanel's two result tables so all three call
  * sites stay in sync. Layout (updated):
  *   Row 1: HHLLCategory badge (HHLL-A/B/C/X) first, then the Gap badge
  *          (HHGap/LLGap/EqGap).
- *   Row 2: prev day's "p-xx" PDH/PDL badge first, then the live-price
- *          pdhPdlStatus badge (moved here from the Price/CPR column) as
- *          the 2nd badge, then today's own "xx" PDH/PDL badge third.
+ *   Row 2: prev day's "p-xx" PDH/PDL badge first, then today's own "xx"
+ *          PDH/PDL badge second.
  * (Previously Row 1 was Gap badge + today badge, Row 2 was prev badge
  * alone — the HHLLCategory badge now takes the first slot on Row 1, and
  * today's own-PDH-vs-own-R1 badge shifted down to join prev's equivalent
- * badge on Row 2, since those two are a matched pair. The pdhPdlStatus
- * badge was later moved in from the Price/CPR column to sit between them.)
- * Returns a "—" placeholder span when none of the badges apply.
+ * badge on Row 2, since those two are a matched pair.)
+ * Returns a "—" placeholder span when none of the four badges apply.
  */
 export function renderPdhPdlColumnBadges(r: CPRResult) {
   const hhllBadge = renderHHLLCategoryBadge(r);
   const gapBadge = renderPDHPDLGapCategoryBadge(r);
   const prevBadge = renderPrevPdhPdlBadge(r);
-  const statusBadge = renderPdhPdlStatusBadge(r);
   const todayBadge = renderTodayPdhPdlBadge(r);
-  if (!hhllBadge && !gapBadge && !prevBadge && !statusBadge && !todayBadge) {
+  if (!hhllBadge && !gapBadge && !prevBadge && !todayBadge) {
     return <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">—</span>;
   }
   return (
@@ -2173,10 +2146,9 @@ export function renderPdhPdlColumnBadges(r: CPRResult) {
         {hhllBadge}
         {gapBadge}
       </div>
-      {(prevBadge || statusBadge || todayBadge) && (
+      {(prevBadge || todayBadge) && (
         <div className="flex flex-wrap items-center gap-1">
           {prevBadge}
-          {statusBadge}
           {todayBadge}
         </div>
       )}
