@@ -4,6 +4,7 @@ import {
   getPatternCategory,
   type CPRLevels,
   type CPRResult,
+  type PDHPDLGapCategory,
 } from "@/lib/cpr";
 
 export type SortKey = "symbol" | "compressionRatio" | "currentPrice" | "change24h" | "quoteVolume" | "priceVsCpr" | "cprDistance" | "pdhPdlPct";
@@ -67,7 +68,11 @@ export function pdhPdlStatus(r: CPRResult): { main: string; sub: string; color: 
     const pct = ((pdl - price) / pdl) * 100;
     return { main: `−${pct.toFixed(2)}%`, sub: "< PDL", color: "text-destructive" };
   }
-  return { main: "", sub: "IN-PDH/PDL", color: "text-yellow-500" };
+  // RENAMED: "IN-PDH/PDL" -> "IN-PDHL", moved from `sub` into `main` so it
+  // renders with the same font-size/weight/brightness as distanceFromCPR's
+  // "IN-CPR" (main-only, text-xs font-medium, no muted opacity-80 "sub"
+  // treatment) — same {main, sub, color} shape as distanceFromCPR itself.
+  return { main: "IN-PDHL", sub: "", color: "text-yellow-500" };
 }
 
 /**
@@ -1791,6 +1796,37 @@ export function renderSSRRHHLLBadges(r: CPRResult) {
   }
   if (badges.length === 0) return null;
   return <div className="flex flex-nowrap items-center gap-1">{badges}</div>;
+}
+
+/**
+ * renderPDHPDLGapCategoryBadge — single badge for CPRResult.PDHPDLGapCategory
+ * ("HHGap" | "LLGap" | "EqGap"), same solid-badge styling as the
+ * SSRR-A/SSRR-B + HHLL-A/HHLL-B badges above (renderSSRRHHLLBadges):
+ * green for HHGap (PDH gap bigger), red for LLGap (PDL gap bigger),
+ * yellow/neutral for EqGap (gaps equal) — matching the "IN-CPR"/"IN-PDHL"
+ * neutral colour used elsewhere. Always renders exactly one badge, since
+ * PDHPDLGapCategory is always exactly one of the three values.
+ */
+export function renderPDHPDLGapCategoryBadge(r: CPRResult) {
+  const cat = r.PDHPDLGapCategory;
+  const styles: Record<PDHPDLGapCategory, string> = {
+    HHGap: "bg-green-500/10 text-green-400 border-green-500/30",
+    LLGap: "bg-red-500/10 text-red-400 border-red-500/30",
+    EqGap: "bg-yellow-500/10 text-yellow-400 border-yellow-500/30",
+  };
+  const titles: Record<PDHPDLGapCategory, string> = {
+    HHGap: "Gap between today's PDH and prev's PDH is larger than the PDL gap",
+    LLGap: "Gap between today's PDL and prev's PDL is larger than the PDH gap",
+    EqGap: "PDH gap and PDL gap are equal",
+  };
+  return (
+    <span
+      className={`text-[10px] whitespace-nowrap px-1 py-0.5 rounded border font-medium ${styles[cat]}`}
+      title={titles[cat]}
+    >
+      {cat}
+    </span>
+  );
 }
 
 export function isRisingAboveTC(r: CPRResult): boolean {

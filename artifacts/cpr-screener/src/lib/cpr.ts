@@ -401,7 +401,14 @@ export interface CPRResult {
   // lower of prev's R1 / prev's PDH (resistance and PDH both stayed under
   // whichever of prev's two ceiling levels was lower).
   HHRRBelow: boolean;
+  // PDHPDLGapCategory — compares the gap between today's PDH and prev's
+  // PDH (HHGap) against the gap between today's PDL and prev's PDL
+  // (LLGap). "HHGap" when the PDH gap is larger, "LLGap" when the PDL gap
+  // is larger, "EqGap" when the two gaps are equal.
+  PDHPDLGapCategory: PDHPDLGapCategory;
 }
+
+export type PDHPDLGapCategory = "HHGap" | "LLGap" | "EqGap";
 
 function isValidCandle(c: OHLC): boolean {
   return (
@@ -1242,6 +1249,16 @@ export function analyzeCPR(
   const prevRHHCeiling = Math.min(prevCPR.r1, prevCPR.prevHigh);
   const HHRRBelow = todayCPR.r1 < prevRHHCeiling && todayCPR.prevHigh < prevRHHCeiling;
 
+  // PDHPDLGapCategory — HHGap = |today's PDH - prev's PDH|, LLGap =
+  // |today's PDL - prev's PDL|. Whichever gap is larger wins; equal gaps
+  // fall back to "EqGap".
+  const HHGapVal = Math.abs(todayCPR.prevHigh - prevCPR.prevHigh);
+  const LLGapVal = Math.abs(todayCPR.prevLow - prevCPR.prevLow);
+  const PDHPDLGapCategory: PDHPDLGapCategory =
+    HHGapVal > LLGapVal ? "HHGap" :
+    LLGapVal > HHGapVal ? "LLGap" :
+    "EqGap";
+
   return {
     symbol,
     todayCPR,
@@ -1288,5 +1305,6 @@ export function analyzeCPR(
     HHLLBelow,
     SSLLAbove,
     HHRRBelow,
+    PDHPDLGapCategory,
   };
 }

@@ -292,6 +292,7 @@ import {
   levelsInDistanceRange,
   renderPdhPdlSubBadges,
   renderSSRRHHLLBadges,
+  renderPDHPDLGapCategoryBadge,
 } from "./ScreenerUtils";
 import { SRLadderRow, toSRLadderData } from "./SRLadderPanel";
 
@@ -603,28 +604,19 @@ export default function ScreenerTableRow({
               <span className="text-[10px] ml-1">{distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).sub}</span>
             )}
           </div>
+          <div className={`mt-0.5 ${pdhPdlStatus(r).color}`} title={`PDH: ${fmt(r.todayCPR.prevHigh)}  |  PDL: ${fmt(r.todayCPR.prevLow)}`}>
+            {pdhPdlStatus(r).main}
+            {pdhPdlStatus(r).sub && (
+              <span className="text-[10px] ml-1">{pdhPdlStatus(r).sub}</span>
+            )}
+          </div>
         </td>
         <td
           className="px-4 py-3 whitespace-nowrap text-xs font-medium"
           title={`PDH: ${fmt(r.todayCPR.prevHigh)}  |  PDL: ${fmt(r.todayCPR.prevLow)}`}
         >
           <div>
-            {pdhPdlStatus(r).main && (
-              <span className={pdhPdlStatus(r).color}>{pdhPdlStatus(r).main}</span>
-            )}
-            {pdhPdlStatus(r).sub && (
-              <span
-                className={`font-normal ml-1 opacity-80 ${
-                  pdhPdlStatus(r).sub === "> PDH"
-                    ? "text-green-400/70"
-                    : pdhPdlStatus(r).sub === "< PDL"
-                    ? "text-red-400/70"
-                    : "text-yellow-500/85"
-                }`}
-              >
-                {pdhPdlStatus(r).sub}
-              </span>
-            )}
+            {renderPDHPDLGapCategoryBadge(r)}
           </div>
           <div className="mt-0.5">
             {renderPdhPdlSubBadges(r) ?? (
