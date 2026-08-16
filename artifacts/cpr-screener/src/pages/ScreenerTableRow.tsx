@@ -215,16 +215,16 @@ export function renderPrevPatternBadge(r: CPRResult) {
 
 /**
  * "LEVEL" column body — row 1: Above/Below/Inside/Outside/Skip, then the
- * SSRR-X badge (2nd badge), then
+ * SSRR badge (SSRR-A/SSRR-B/SSRR-C/SSRR-X, 2nd badge), then
  * oV-B/oV-A, then Narrow/Wide (merged into a single badge wherever
  * Above/Below/oV-B/oV-A pairs with Narrow/Wide — see
  * renderLevelStatusRow1Badges for the full merge table), then Equal — all
- * rendered inline on one line; row 2: SSRR-A/SSRR-B/SSRR=/SSRR-C (excluding
- * SSRR-X) + SSLL + RRHH, always on its own row underneath row 1. Extracted
- * out of the row JSX so other views (e.g. BacktestPanel) can reuse the same
- * LEVEL column. Mirrors ScreenerTableRow's own LEVEL cell, minus the
- * activePattern-aware tweak to the "Skip" fallback, which only makes sense
- * inside the Screener's own pattern-filter context.
+ * rendered inline on one line; row 2: SSLL + RRHH, always on its own row
+ * underneath row 1. Extracted out of the row JSX so other views (e.g.
+ * BacktestPanel) can reuse the same LEVEL column. Mirrors
+ * ScreenerTableRow's own LEVEL cell, minus the activePattern-aware tweak
+ * to the "Skip" fallback, which only makes sense inside the Screener's own
+ * pattern-filter context.
  */
 export function renderLevelBadges(r: CPRResult) {
   const isInsideCPR = passesPattern(r, "inside-cpr");
@@ -238,8 +238,8 @@ export function renderLevelBadges(r: CPRResult) {
     !showWide &&
     !isInsideCPR &&
     !isOutsideCPR;
-  // SSRR-A/SSRR-B (excluding SSRR-X, now on row 1) + SSLL + RRHH now always
-  // render on their own row, regardless of Inside/Outside/narrow state.
+  // SSLL + RRHH now always render on their own row, regardless of
+  // Inside/Outside/narrow state. SSRR now renders entirely on row 1.
   const ssrrHhllRow = renderSSRRHHLLBadges(r);
   return (
     <div className="flex flex-col gap-1 max-w-[130px]">
@@ -417,17 +417,16 @@ export default function ScreenerTableRow({
       )
     : null;
 
-  // "SSRR-A / SSRR-B" + "HHLL-A / HHLL-B" badges — LEVEL-column-only
-  // replacement for the pU1/pL1 gap badges above. Driven by
-  // CPRResult.SSRRAbove / SSRRBelow (today's R1/S1 vs prev's R1/S1) and
-  // CPRResult.HHLLAbove / HHLLBelow (today's PDH/PDL vs prev's PDH/PDL),
-  // both from cpr.ts. Always rendered on its own row underneath the
-  // Above/Below/Inside/Outside row, regardless of Inside/Outside/narrow
-  // state, via the shared renderSSRRHHLLBadges helper.
+  // "SSLL-A / SSLL-B" + "RRHH-A / RRHH-B" badges — LEVEL-column-only
+  // second row. SSRR (CPRResult.SSRRCategory) now renders entirely on row
+  // 1 instead (2nd badge, right after the status badge). Always rendered
+  // on its own row underneath the Above/Below/Inside/Outside row,
+  // regardless of Inside/Outside/narrow state, via the shared
+  // renderSSRRHHLLBadges helper.
   const ssrrHhllRow = renderSSRRHHLLBadges(r);
   // Row 1 keeps every LEVEL-status badge inline on one line (Above/Below/
-  // Inside/Outside/Skip, then oV-B/oV-A, then Narrow/Wide, then Equal) so
-  // nothing gets pushed down to a second line.
+  // Inside/Outside/Skip, then SSRR, then oV-B/oV-A, then Narrow/Wide, then
+  // Equal) so nothing gets pushed down to a second line.
   const nothingMatchedMain =
     !r.cprRising &&
     !r.cprFalling &&

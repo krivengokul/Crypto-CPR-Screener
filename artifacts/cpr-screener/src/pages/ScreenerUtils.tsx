@@ -1900,16 +1900,15 @@ export function renderRRHHCategoryBadge(r: CPRResult) {
 
 /**
  * renderSSRRHHLLBadges — the LEVEL column's second-row badges. Renders the
- * SSRR badge (CPRResult.SSRRCategory, EXCLUDING "SSRR-X" — that badge now
- * renders on row 1 instead), the SSLL badge
- * (CPRResult.SSLLCategory), and the RRHH badge (CPRResult.RRHHCategory) in
- * that order. Returns null when all three are absent.
+ * SSLL badge (CPRResult.SSLLCategory) and the RRHH badge
+ * (CPRResult.RRHHCategory) in that order. SSRR (CPRResult.SSRRCategory) no
+ * longer appears here — it now renders on row 1 instead (see
+ * renderLevelStatusRow1Badges). Returns null when both are absent.
  */
 export function renderSSRRHHLLBadges(r: CPRResult) {
-  const ssrrBadge = r.SSRRCategory === "SSRR-X" ? null : renderSSRRCategoryBadge(r);
   const ssllBadge = renderSSLLCategoryBadge(r);
   const rrhhBadge = renderRRHHCategoryBadge(r);
-  const badges = [ssrrBadge, ssllBadge, rrhhBadge].filter((b): b is React.JSX.Element => b !== null);
+  const badges = [ssllBadge, rrhhBadge].filter((b): b is React.JSX.Element => b !== null);
   if (badges.length === 0) return null;
   return <div className="flex flex-nowrap items-center gap-1">{badges}</div>;
 }
@@ -1920,18 +1919,21 @@ export function renderSSRRHHLLBadges(r: CPRResult) {
  * sync. Order:
  *   1. Status badge — Above / Below / Inside / Outside / Skip (always
  *      exactly one, mutually exclusive).
- *   2. SSRR-X badge — pulled out of row 2 to sit here as the 2nd badge.
+ *   2. SSRR badge — CPRResult.SSRRCategory (SSRR-A/SSRR-B/SSRR-C/SSRR-X),
+ *      pulled out of row 2 to sit here as the 2nd badge (row 2 now only
+ *      carries SSLL + RRHH — see renderSSRRHHLLBadges).
  *   3. oV-B / oV-A (overlapLower / overlapHigher).
  *   4. Narrow / Wide — merged into a single badge wherever Above/Below/
- *      oV-B/oV-A pairs with Narrow/Wide: AboveNarrow -> Narrow-A,
- *      BelowNarrow -> Narrow-B, oV-BNarrow -> Narrow-BoV, oV-AWide ->
- *      Wide-AoV, AboveWide -> Wide-A, BelowWide -> Wide-B. The merged
- *      badge replaces both halves' bare badges (so "Above" becomes
- *      "Narrow-A" in place, rather than appearing twice); when nothing
- *      merges, the bare Above/Below/oV-B/oV-A/Narrow/Wide badges render as
- *      before. Priority when more than one combo could apply on the same
- *      row: for Narrow, Above > Below > oV-B; for Wide, oV-A > Above >
- *      Below (matches the row's own left-to-right badge order).
+ *      oV-B/oV-A pairs with Narrow/Wide: oV-ANarrow -> Narrow-AoV,
+ *      AboveNarrow -> Narrow-A, BelowNarrow -> Narrow-B, oV-BNarrow ->
+ *      Narrow-BoV, oV-AWide -> Wide-AoV, AboveWide -> Wide-A, BelowWide ->
+ *      Wide-B. The merged badge replaces both halves' bare badges (so
+ *      "Above" becomes "Narrow-A" in place, rather than appearing twice);
+ *      when nothing merges, the bare Above/Below/oV-B/oV-A/Narrow/Wide
+ *      badges render as before. Priority when more than one combo could
+ *      apply on the same row: for Narrow, oV-A > Above > Below > oV-B; for
+ *      Wide, oV-A > Above > Below (matches the row's own left-to-right
+ *      badge order).
  *   5. Equal.
  */
 export function renderLevelStatusRow1Badges(
@@ -1943,7 +1945,8 @@ export function renderLevelStatusRow1Badges(
 ) {
   const isNarrow = r.narrowCPR && !isInsideCPR;
 
-  const narrowMerge: "A" | "B" | "BoV" | null =
+  const narrowMerge: "AoV" | "A" | "B" | "BoV" | null =
+    isNarrow && r.overlapHigher ? "AoV" :
     isNarrow && r.cprRising ? "A" :
     isNarrow && r.cprFalling ? "B" :
     isNarrow && r.overlapLower ? "BoV" :
@@ -1957,7 +1960,7 @@ export function renderLevelStatusRow1Badges(
   const aboveConsumed = narrowMerge === "A" || wideMerge === "A";
   const belowConsumed = narrowMerge === "B" || wideMerge === "B";
   const ovLowerConsumed = narrowMerge === "BoV";
-  const ovHigherConsumed = wideMerge === "AoV";
+  const ovHigherConsumed = narrowMerge === "AoV" || wideMerge === "AoV";
   const narrowConsumed = narrowMerge !== null;
   const wideConsumed = wideMerge !== null;
 
@@ -1978,12 +1981,12 @@ export function renderLevelStatusRow1Badges(
         <span className={`${smallBadge} bg-purple-500/10 text-purple-400 border border-purple-500/20`}>Outside</span>
       )}
       {nothingMatched && <span className={`${smallBadge} bg-muted text-muted-foreground`}>Skip</span>}
-      {r.SSRRCategory === "SSRR-X" && (
+      {r.SSRRCategory !== "none" && (
         <span
-          className={`text-[10px] whitespace-nowrap px-1 py-0.5 rounded border font-medium ${SSRR_BADGE["SSRR-X"].className}`}
-          title={SSRR_BADGE["SSRR-X"].title}
+          className={`text-[10px] whitespace-nowrap px-1 py-0.5 rounded border font-medium ${SSRR_BADGE[r.SSRRCategory].className}`}
+          title={SSRR_BADGE[r.SSRRCategory].title}
         >
-          {SSRR_BADGE["SSRR-X"].label}
+          {SSRR_BADGE[r.SSRRCategory].label}
         </span>
       )}
       {r.overlapLower && !ovLowerConsumed && (
@@ -1991,6 +1994,9 @@ export function renderLevelStatusRow1Badges(
       )}
       {r.overlapHigher && !ovHigherConsumed && (
         <span className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20 font-medium">oV-A</span>
+      )}
+      {narrowMerge === "AoV" && (
+        <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>Narrow-AoV</span>
       )}
       {narrowMerge === "A" && (
         <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>Narrow-A</span>
@@ -2026,7 +2032,7 @@ export function renderLevelStatusRow1Badges(
 /**
  * renderPDHPDLGapCategoryBadge — single badge for CPRResult.PDHPDLGapCategory
  * ("HHGap" | "LLGap" | "EqGap"), same solid-badge styling as the
- * SSRR-A/SSRR-B + HHLL-A/HHLL-B badges above (renderSSRRHHLLBadges):
+ * SSLL + HHLL-A/HHLL-B badges above (renderSSRRHHLLBadges):
  * green for HHGap (PDH gap bigger), red for LLGap (PDL gap bigger),
  * yellow/neutral for EqGap (gaps equal) — matching the "IN-CPR"/"IN-PDHL"
  * neutral colour used elsewhere. Always renders exactly one badge, since
