@@ -440,6 +440,20 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
   },
+  // NEW: "pRRHHLLA" — exposed as its own direct View (subPattern) on
+  // "Overlap Below" (overlapping-lower, see BACKTEST_CATEGORIES below),
+  // in addition to its "9AM:pRRHHLLA-U4:9PM" child nested under the
+  // "pRRHHLLA" Pattern (arrow) above. Uses the base overlapLower +
+  // HHRRBelow + HHLLAbove condition only (see passesPattern's own
+  // "pRRHHLLA" case in ScreenerUtils.tsx — no extra conditions), target
+  // graded the same as its "9AM:pRRHHLLA-U4:9PM" sibling.
+  {
+    key: "pRRHHLLA",
+    label: "pRRHHLLA",
+    direction: "bullish",
+    targetLabel: "U4 (today's R4)",
+    getTarget: (r) => r.todayCPR.r4,
+  },
   // RENAMED: "bigabove-pl34cl4-u3>pu4" -> "9AM:SSRRHHLLA-U4:11PM", nested
   // directly on "structure-bigabove"'s own subPatternKeys (see
   // BACKTEST_CATEGORIES below), alongside the "cOL2U2" Pattern
@@ -783,7 +797,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
   {
     key: "overlapping-lower",
     label: "Overlap Below",
-    subPatternKeys: ["2PM:SSLLpRRHHA-ApU4:5PM", "8AM:SSLLpRRHHA-L4:1PM", "9AM:SSRRBHHLLA-U4:9PM"],
+    subPatternKeys: ["2PM:SSLLpRRHHA-ApU4:5PM", "8AM:SSLLpRRHHA-L4:1PM", "9AM:SSRRBHHLLA-U4:9PM", "pRRHHLLA"],
     // NEW: "LoU4L4" Pattern (arrow), same shape as its
     // "eXL4U4" counterpart under "overlapping-higher" — base condition =
     // Overlap Below's r.overlapLower condition AND the raw LoU4L4 flag
