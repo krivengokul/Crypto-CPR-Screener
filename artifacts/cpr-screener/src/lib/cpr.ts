@@ -381,10 +381,6 @@ export interface CPRResult {
   // higher of prev's S1 / prev's PDL (support and PDL both climbed above
   // whichever of prev's two floor levels was higher).
   SSLLAbove: boolean;
-  // HHRRBelow — both today's R1 AND today's PDH (prevHigh) sit below the
-  // lower of prev's R1 / prev's PDH (resistance and PDH both stayed under
-  // whichever of prev's two ceiling levels was lower).
-  HHRRBelow: boolean;
   // PDHPDLGapCategory — compares the gap between today's PDH and prev's
   // PDH (HHGap) against the gap between today's PDL and prev's PDL
   // (LLGap). "HHGap" when the PDH gap is larger, "LLGap" when the PDL gap
@@ -396,8 +392,7 @@ export interface CPRResult {
   //   SSRR-B (Below)      — today.r1 <= prev.r1 AND today.s1 <  prev.s1
   //   SSRR-C (Compressed) — today.r1 <  prev.r1 AND today.s1 >  prev.s1
   //   SSRR-X (Expanded)   — today.r1 >  prev.r1 AND today.s1 <  prev.s1
-  //   SSRR=  (Equal)      — today.r1 == prev.r1 AND today.s1 == prev.s1
-  // "none" when none of the five conditions match. This field is the ONLY
+  // "none" when none of the four conditions match. This field is the ONLY
   // source for that classification — the raw SSRRAbove/SSRRBelow booleans
   // have been removed from CPRResult.
   SSRRCategory: SSRRCategory;
@@ -407,10 +402,9 @@ export interface CPRResult {
   //   HHLL-B (Below)      — today.prevHigh <= prev.prevHigh AND today.prevLow < prev.prevLow
   //   HHLL-C (Compressed) — today.prevHigh < prev.prevHigh AND today.prevLow > prev.prevLow
   //   HHLL-X (Expanded)   — today.prevHigh > prev.prevHigh AND today.prevLow < prev.prevLow
-  //   HHLL=  (Equal)      — today.prevHigh == prev.prevHigh AND today.prevLow == prev.prevLow
-  // Verified mutually exclusive (no row can satisfy two of the five), but
+  // Verified mutually exclusive (no row can satisfy two of the four), but
   // not exhaustive: PDH flat + PDL up, or PDH down + PDL flat, match none
-  // of the five and fall through to "none". HHLL-A/HHLL-B carry the same
+  // of the four and fall through to "none". HHLL-A/HHLL-B carry the same
   // conditions the removed HHLLAbove/HHLLBelow booleans used to hold; this
   // field is now the only source for that classification (see
   // ScreenerUtils.renderHHLLCategoryBadge), also covering the
@@ -426,9 +420,7 @@ export interface CPRResult {
   //   SSLL-A (Above)      — todayLevel1 >  prevLevel1 AND todayLevel2 >= prevLevel2
   //   SSLL-B (Below)      — todayLevel1 <= prevLevel1 AND todayLevel2 <  prevLevel2
   //   SSLL-C (Compressed) — todayLevel1 <  prevLevel1 AND todayLevel2 >  prevLevel2
-  //   SSLL-X (Expanded)   — todayLevel1 >  prevLevel1 AND todayLevel2 <  prevLevel2
-  //   SSLL=  (Equal)      — todayLevel1 == prevLevel1 AND todayLevel2 == prevLevel2
-  // "none" when none of the five conditions match.
+  // "none" when none of the three conditions match.
   SSLLCategory: SSLLCategory;
   // RRHHCategory — 3-way partition over two derived "ceiling" levels
   // (mirrors SSLLCategory's construction, over r1/prevHigh instead of
@@ -450,9 +442,9 @@ export interface CPRResult {
 }
 
 export type PDHPDLGapCategory = "HHGap" | "LLGap" | "EqGap";
-export type SSRRCategory = "SSRR-A" | "SSRR-B" | "SSRR-C" | "SSRR-X" | "SSRR=" | "none";
-export type HHLLCategory = "HHLL-A" | "HHLL-B" | "HHLL-C" | "HHLL-X" | "HHLL=" | "none";
-export type SSLLCategory = "SSLL-A" | "SSLL-B" | "SSLL-C" | "SSLL-X" | "SSLL=" | "none";
+export type SSRRCategory = "SSRR-A" | "SSRR-B" | "SSRR-C" | "SSRR-X" | "none";
+export type HHLLCategory = "HHLL-A" | "HHLL-B" | "HHLL-C" | "HHLL-X" | "none";
+export type SSLLCategory = "SSLL-A" | "SSLL-B" | "SSLL-C" | "none";
 export type RRHHCategory = "RRHH-A" | "RRHH-B" | "RRHH-C" | "none";
 
 function isValidCandle(c: OHLC): boolean {
@@ -1280,14 +1272,10 @@ export function analyzeCPR(
   const prevS1Gap = prevCPR.pivot - prevCPR.s1;
 
 
-  // SSLLAbove / HHRRBelow — today vs prev S1/PDL and R1/PDH directional
-  // classification, anchored to whichever of prev's two levels is more
-  // extreme (higher floor / lower ceiling).
+  // SSLLAbove — today vs prev S1/PDL directional classification, anchored
+  // to whichever of prev's two levels is more extreme (higher floor).
   const prevSLLFloor = Math.max(prevCPR.s1, prevCPR.prevLow);
   const SSLLAbove = todayCPR.s1 > prevSLLFloor && todayCPR.prevLow > prevSLLFloor;
-
-  const prevRHHCeiling = Math.min(prevCPR.r1, prevCPR.prevHigh);
-  const HHRRBelow = todayCPR.r1 < prevRHHCeiling && todayCPR.prevHigh < prevRHHCeiling;
 
   // PDHPDLGapCategory — HHGap = |today's PDH - prev's PDH|, LLGap =
   // |today's PDL - prev's PDL|. Whichever gap is larger wins; equal gaps
@@ -1305,13 +1293,11 @@ export function analyzeCPR(
   const SSRRBelow = todayCPR.r1 <= prevCPR.r1 && todayCPR.s1 < prevCPR.s1;
   const SSRRCompressed = todayCPR.r1 < prevCPR.r1 && todayCPR.s1 > prevCPR.s1;
   const SSRRExpanded = todayCPR.r1 > prevCPR.r1 && todayCPR.s1 < prevCPR.s1;
-  const SSRREqual = todayCPR.r1 === prevCPR.r1 && todayCPR.s1 === prevCPR.s1;
   const SSRRCategory: SSRRCategory =
     SSRRAbove ? "SSRR-A" :
     SSRRBelow ? "SSRR-B" :
     SSRRCompressed ? "SSRR-C" :
     SSRRExpanded ? "SSRR-X" :
-    SSRREqual ? "SSRR=" :
     "none";
 
   // HHLLCategory — see field doc on CPRResult. A true 5-way mutually
@@ -1324,7 +1310,6 @@ export function analyzeCPR(
     (todayCPR.prevHigh <= prevCPR.prevHigh && todayCPR.prevLow < prevCPR.prevLow) ? "HHLL-B" :
     (todayCPR.prevHigh < prevCPR.prevHigh && todayCPR.prevLow > prevCPR.prevLow) ? "HHLL-C" :
     (todayCPR.prevHigh > prevCPR.prevHigh && todayCPR.prevLow < prevCPR.prevLow) ? "HHLL-X" :
-    (todayCPR.prevHigh === prevCPR.prevHigh && todayCPR.prevLow === prevCPR.prevLow) ? "HHLL=" :
     "none";
 
   // SSLLCategory — see field doc on CPRResult. 5-way partition over two
@@ -1339,15 +1324,11 @@ export function analyzeCPR(
   const SSLLAboveCond      = todaySSLLLevel1 > prevSSLLLevel1 && todaySSLLLevel2 >= prevSSLLLevel2;
   const SSLLBelowCond      = todaySSLLLevel1 <= prevSSLLLevel1 && todaySSLLLevel2 < prevSSLLLevel2;
   const SSLLCompressedCond = todaySSLLLevel1 < prevSSLLLevel1 && todaySSLLLevel2 > prevSSLLLevel2;
-  const SSLLExpandedCond   = todaySSLLLevel1 > prevSSLLLevel1 && todaySSLLLevel2 < prevSSLLLevel2;
-  const SSLLEqualCond      = todaySSLLLevel1 === prevSSLLLevel1 && todaySSLLLevel2 === prevSSLLLevel2;
 
   const SSLLCategory: SSLLCategory =
     SSLLAboveCond ? "SSLL-A" :
     SSLLBelowCond ? "SSLL-B" :
     SSLLCompressedCond ? "SSLL-C" :
-    SSLLExpandedCond ? "SSLL-X" :
-    SSLLEqualCond ? "SSLL=" :
     "none";
 
   // RRHHCategory — see field doc on CPRResult. Same mirrored-axis
@@ -1415,7 +1396,6 @@ export function analyzeCPR(
     prevR1Gap,
     prevS1Gap,
     SSLLAbove,
-    HHRRBelow,
     PDHPDLGapCategory,
     SSRRCategory,
     HHLLCategory,

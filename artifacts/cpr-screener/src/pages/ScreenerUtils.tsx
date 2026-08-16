@@ -663,8 +663,8 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     case "9AM:SSRRBHHLLA-U4:9PM":
       return (r.overlapLower && r.HHLLCategory === "HHLL-A" && r.SSRRCategory === "SSRR-B");
     case "pRRHHLLA":
-      return (r.overlapLower && r.HHRRBelow && r.HHLLCategory === "HHLL-B");
-    // NEW: 9AM:pRRHHLLA-U4:9PM — Overlap Below + HHRRBelow (today's R1 AND
+      return (r.overlapLower && r.RRHHCategory === "RRHH-B" && r.HHLLCategory === "HHLL-B");
+    // NEW: 9AM:pRRHHLLA-U4:9PM — Overlap Below + RRHH-B (today's R1 AND
     // today's PDH both below the lower of prev's R1/PDH) + HHLLAbove
     // (today's PDH strictly above prev's PDH AND today's PDL >= prev's
     // PDL) + (today's R1 above prev day's TC) + (today's S2 above prev
@@ -674,13 +674,13 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     case "9AM:pRRHHLLA-U4:9PM":
       return (
         r.overlapLower &&
-        r.HHRRBelow &&
+        r.RRHHCategory === "RRHH-B" &&
         r.HHLLCategory === "HHLL-B" &&
         r.todayCPR.r1 > r.prevCPR.tc &&
         r.prevCPR.prevHigh > r.todayCPR.s1
       );
     // NEW: 2PM:SSLLpRRHHA-ApU4:5PM — Overlap Below + SSLLAbove (today's S1
-    // AND today's PDL both above the higher of prev's S1/PDL) + HHRRBelow
+    // AND today's PDL both above the higher of prev's S1/PDL) + RRHH-B
     // (today's R1 AND today's PDH both below the lower of prev's R1/PDH)
     // + (prev day's R1 above today's R2 OR today's S3 above prev day's S2).
     // Bullish, entry ~2PM, targets ApU4 (prev day's R4) by ~5PM.
@@ -688,11 +688,11 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return (
         r.overlapLower &&
         r.SSLLAbove &&
-        r.HHRRBelow &&
+        r.RRHHCategory === "RRHH-B" &&
         (r.prevCPR.r1 > r.todayCPR.r2 || r.todayCPR.s3 > r.prevCPR.s2)
       );
     // NEW: 8AM:SSLLpRRHHA-L4:1PM — same base conditions as
-    // "2PM:SSLLpRRHHA-ApU4:5PM" (overlapLower + SSLLAbove + HHRRBelow), but
+    // "2PM:SSLLpRRHHA-ApU4:5PM" (overlapLower + SSLLAbove + RRHH-B), but
     // with the comparison direction reversed (prev day's R1 below today's
     // R2 OR today's S3 below prev day's S2). Bearish, entry ~8AM, targets
     // today's own L4/S4 by ~1PM. Red color family.
@@ -700,7 +700,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return (
         r.overlapLower &&
         r.SSLLAbove &&
-        r.HHRRBelow &&
+        r.RRHHCategory === "RRHH-B" &&
         (r.prevCPR.r1 < r.todayCPR.r2 || r.todayCPR.s3 < r.prevCPR.s2)
       );
     case "LBT-PU1>U1PL1>L1":
@@ -1528,13 +1528,13 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     case "LoU4L4": return r.LoU4L4;
     // NEW: pRRHHLLA — Pattern compound flag for Overlap
     // Below's "9AM:pRRHHLLA-U4:9PM" family: today's R1/PDH both below
-    // prev's tighter ceiling (HHRRBelow) AND today's PDH strictly above
-    // prev's PDH with today's PDL >= prev's PDL (HHLLBelow). The base
-    // overlapLower condition is already covered by the parent
+    // prev's tighter ceiling (RRHHCategory === "RRHH-B") AND today's PDH
+    // strictly above prev's PDH with today's PDL >= prev's PDL (HHLLBelow).
+    // The base overlapLower condition is already covered by the parent
     // "overlapping-lower" category key, so this only needs the raw
     // Pattern-flag part — same shape as LoU4L4 above. Symbol-list-only
     // nesting under "Overlap Below" in backtest.ts.
-    case "pRRHHLLA": return r.HHRRBelow && r.HHLLCategory === "HHLL-B";
+    case "pRRHHLLA": return r.RRHHCategory === "RRHH-B" && r.HHLLCategory === "HHLL-B";
     case "eXL4U3": return r.eXL4U3;
     case "eXL4U4": return r.eXL4U4;
     // NEW: eXU4L4 — same treatment as eXL4U4 above: an independent,
@@ -1788,16 +1788,11 @@ const SSRR_BADGE: Record<Exclude<SSRRCategory, "none">, { label: string; classNa
     className: "bg-orange-500/10 text-orange-400 border-orange-500/30",
     title: "Expanded: Today's R1 > Prev R1 and Today's S1 < Prev S1",
   },
-  "SSRR=": {
-    label: "SSRR=",
-    className: "bg-yellow-500/10 text-yellow-400 border-yellow-500/30",
-    title: "Equal: Today's R1 == Prev R1 and Today's S1 == Prev S1",
-  },
 };
 
 /**
  * renderSSRRCategoryBadge — single badge for CPRResult.SSRRCategory
- * ("SSRR-A" | "SSRR-B" | "SSRR-C" | "SSRR-X" | "SSRR=" | "none"), same
+ * ("SSRR-A" | "SSRR-B" | "SSRR-C" | "SSRR-X" | "none"), same
  * solid-badge styling used elsewhere (renderPDHPDLGapCategoryBadge). Always
  * renders at most one badge, since SSRRCategory is a mutually exclusive
  * partition. Returns null for "none".
@@ -1836,21 +1831,11 @@ const SSLL_BADGE: Record<Exclude<SSLLCategory, "none">, { label: string; classNa
     className: "bg-blue-500/10 text-blue-400 border-blue-500/30",
     title: "Compressed: Axis 1 down and Axis 2 up",
   },
-  "SSLL-X": {
-    label: "SSLL-X",
-    className: "bg-orange-500/10 text-orange-400 border-orange-500/30",
-    title: "Expanded: Axis 1 up and Axis 2 down",
-  },
-  "SSLL=": {
-    label: "SSLL=",
-    className: "bg-yellow-500/10 text-yellow-400 border-yellow-500/30",
-    title: "Equal: Axis 1 and Axis 2 both unchanged",
-  },
 };
 
 /**
  * renderSSLLCategoryBadge — single badge for CPRResult.SSLLCategory
- * ("SSLL-A" | "SSLL-B" | "SSLL-C" | "SSLL-X" | "SSLL=" | "none"), same
+ * ("SSLL-A" | "SSLL-B" | "SSLL-C" | "none"), same
  * solid-badge styling used elsewhere (renderSSRRCategoryBadge). Always
  * renders at most one badge, since SSLLCategory is a mutually exclusive
  * partition. Returns null for "none".
@@ -2096,20 +2081,15 @@ const HHLL_CATEGORY_BADGE: Record<Exclude<HHLLCategory, "none">, { label: string
     className: "bg-pink-500/10 text-pink-400 border-pink-500/30",
     title: "Today's PDH > Prev PDH and Today's PDL < Prev PDL (Expanded)",
   },
-  "HHLL=": {
-    label: "HHLL=",
-    className: "border-amber-500/40 bg-amber-500/15 text-amber-600 dark:text-amber-400",
-    title: "Today's PDH == Prev PDH and Today's PDL == Prev PDL (Equal)",
-  },
 };
 
 /**
  * renderHHLLCategoryBadge — single badge for CPRResult.HHLLCategory
- * ("HHLL-A" | "HHLL-B" | "HHLL-C" | "HHLL-X" | "HHLL=" | "none"), same
+ * ("HHLL-A" | "HHLL-B" | "HHLL-C" | "HHLL-X" | "none"), same
  * solid-badge styling as renderPDHPDLGapCategoryBadge /
  * renderSSRRCategoryBadge. MOVED here from the LEVEL column (see
  * renderSSRRHHLLBadges) — HHLL-A/HHLL-B keep their original green/red
- * colours, HHLL-C/HHLL-X/HHLL= are new. Returns null for "none".
+ * colours, HHLL-C/HHLL-X are new. Returns null for "none".
  */
 export function renderHHLLCategoryBadge(r: CPRResult) {
   const cat = r.HHLLCategory;
@@ -2129,7 +2109,7 @@ export function renderHHLLCategoryBadge(r: CPRResult) {
  * renderPdhPdlColumnBadges — the full PDH/PDL table column body, shared by
  * ScreenerTableRow and BacktestPanel's two result tables so all three call
  * sites stay in sync. Layout (updated):
- *   Row 1: HHLLCategory badge (HHLL-A/B/C/X/=) first, then the Gap badge
+ *   Row 1: HHLLCategory badge (HHLL-A/B/C/X) first, then the Gap badge
  *          (HHGap/LLGap/EqGap).
  *   Row 2: prev day's "p-xx" PDH/PDL badge first, then today's own "xx"
  *          PDH/PDL badge second.
