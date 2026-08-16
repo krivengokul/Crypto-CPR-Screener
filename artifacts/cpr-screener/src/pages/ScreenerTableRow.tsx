@@ -520,12 +520,12 @@ export default function ScreenerTableRow({
             {ssrrHhllRow}
           </div>
         </td>
-        <td className="px-4 py-3 font-mono whitespace-nowrap min-w-[175px]">
+        <td className="px-4 py-3 font-mono whitespace-nowrap min-w-[205px]">
           {(() => {
             const prevCat = getWidthCategory(r.prevCPR.widthPct);
             const todayCat = getWidthCategory(r.todayCPR.widthPct);
             return (
-              <div className="flex flex-wrap items-center justify-start gap-2">
+              <div className="flex flex-nowrap items-center justify-start gap-2">
                 <span
                   className={`font-sans text-xs px-1.5 py-0.5 rounded border font-medium flex flex-col items-center leading-tight ${prevCat.pClasses}`}
                   title={`Prev day CPR width: ${r.prevCPR.widthPct.toFixed(4)}%`}
