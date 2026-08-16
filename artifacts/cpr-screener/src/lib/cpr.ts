@@ -430,12 +430,30 @@ export interface CPRResult {
   //   SSLL=  (Equal)      — todayLevel1 == prevLevel1 AND todayLevel2 == prevLevel2
   // "none" when none of the five conditions match.
   SSLLCategory: SSLLCategory;
+  // RRHHCategory — 3-way partition over two derived "ceiling" levels
+  // (mirrors SSLLCategory's construction, over r1/prevHigh instead of
+  // s1/prevLow). Each side's ceiling level is picked dynamically from its
+  // own PDHLAbove/PDHLBelow state:
+  //   Axis 1 (primary):   todayLevel1 = today.PDHLAbove ? today.r1 : today.prevHigh
+  //                        prevLevel1  = prev.PDHLAbove  ? prev.prevHigh : prev.r1
+  //   Axis 2 (mirrored):  todayLevel2 = today.PDHLAbove ? today.prevHigh : today.r1
+  //                        prevLevel2  = prev.PDHLAbove  ? prev.r1 : prev.prevHigh
+  //   RRHH-A (Above) — todayLevel1 >  prevLevel1 AND todayLevel2 >= prevLevel2
+  //   RRHH-B (Below) — todayLevel1 <= prevLevel1 AND todayLevel2 <  prevLevel2
+  //   RRHH-C         — everything else (Compressed, plus the
+  //                    mathematically-near-impossible exact-Equal case)
+  // Only 3 badges: unlike SSRR/HHLL/SSLL, "Expanded" is provably impossible
+  // for this pairing (r1 and prevHigh always move together for a given
+  // day's PDHLAbove/Below state, so axis2 can never fall below axis1).
+  // "none" is a defensive fallback for non-finite inputs only.
+  RRHHCategory: RRHHCategory;
 }
 
 export type PDHPDLGapCategory = "HHGap" | "LLGap" | "EqGap";
 export type SSRRCategory = "SSRR-A" | "SSRR-B" | "SSRR-C" | "SSRR-X" | "SSRR=" | "none";
 export type HHLLCategory = "HHLL-A" | "HHLL-B" | "HHLL-C" | "HHLL-X" | "HHLL=" | "none";
 export type SSLLCategory = "SSLL-A" | "SSLL-B" | "SSLL-C" | "SSLL-X" | "SSLL=" | "none";
+export type RRHHCategory = "RRHH-A" | "RRHH-B" | "RRHH-C" | "none";
 
 function isValidCandle(c: OHLC): boolean {
   return (
@@ -1332,6 +1350,30 @@ export function analyzeCPR(
     SSLLEqualCond ? "SSLL=" :
     "none";
 
+  // RRHHCategory — see field doc on CPRResult. Same mirrored-axis
+  // construction as SSLLCategory, but over the ceiling pair (r1/prevHigh)
+  // instead of the floor pair (s1/prevLow). Only 3 badges: "Expanded" is
+  // mathematically impossible here (r1 and prevHigh always shift by the
+  // same signed amount for a given day, so axis2 can never fall below
+  // axis1), and exact "Equal" is a razor-thin coincidence that in practice
+  // never fires — both collapse into RRHH-C alongside "Compressed".
+  const todayRRHHLevel1 = todayCPR.PDHLAbove ? todayCPR.r1 : todayCPR.prevHigh;
+  const prevRRHHLevel1  = prevCPR.PDHLAbove  ? prevCPR.prevHigh : prevCPR.r1;
+  const todayRRHHLevel2 = todayCPR.PDHLAbove ? todayCPR.prevHigh : todayCPR.r1;
+  const prevRRHHLevel2  = prevCPR.PDHLAbove  ? prevCPR.r1 : prevCPR.prevHigh;
+
+  const RRHHAboveCond = todayRRHHLevel1 > prevRRHHLevel1 && todayRRHHLevel2 >= prevRRHHLevel2;
+  const RRHHBelowCond = todayRRHHLevel1 <= prevRRHHLevel1 && todayRRHHLevel2 < prevRRHHLevel2;
+  const RRHHValid =
+    isFinite(todayRRHHLevel1) && isFinite(prevRRHHLevel1) &&
+    isFinite(todayRRHHLevel2) && isFinite(prevRRHHLevel2);
+
+  const RRHHCategory: RRHHCategory =
+    !RRHHValid ? "none" :
+    RRHHAboveCond ? "RRHH-A" :
+    RRHHBelowCond ? "RRHH-B" :
+    "RRHH-C";
+
   return {
     symbol,
     todayCPR,
@@ -1378,5 +1420,6 @@ export function analyzeCPR(
     SSRRCategory,
     HHLLCategory,
     SSLLCategory,
+    RRHHCategory,
   };
 }

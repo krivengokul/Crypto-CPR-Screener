@@ -9,6 +9,7 @@ import {
   type SSRRCategory,
   type HHLLCategory,
   type SSLLCategory,
+  type RRHHCategory,
 } from "@/lib/cpr";
 
 export type SortKey = "symbol" | "compressionRatio" | "currentPrice" | "change24h" | "quoteVolume" | "priceVsCpr" | "cprDistance" | "pdhPdlPct";
@@ -1869,15 +1870,60 @@ export function renderSSLLCategoryBadge(r: CPRResult) {
 }
 
 /**
+ * RRHH_BADGE — display config for each CPRResult.RRHHCategory value, keyed
+ * by category so renderSSRRHHLLBadges/renderRRHHCategoryBadge stay in sync.
+ * Only 3 badges — "Expanded" is mathematically impossible for this pairing
+ * and exact "Equal" collapses into RRHH-C (see field doc on CPRResult).
+ */
+const RRHH_BADGE: Record<Exclude<RRHHCategory, "none">, { label: string; className: string; title: string }> = {
+  "RRHH-A": {
+    label: "RRHH-A",
+    className: "bg-green-500/10 text-green-400 border-green-500/30",
+    title: "Today's ceiling level > Prev's ceiling level (Axis 1) and Today's mirrored ceiling >= Prev's mirrored ceiling (Axis 2)",
+  },
+  "RRHH-B": {
+    label: "RRHH-B",
+    className: "bg-red-500/10 text-red-400 border-red-500/30",
+    title: "Today's ceiling level <= Prev's ceiling level (Axis 1) and Today's mirrored ceiling < Prev's mirrored ceiling (Axis 2)",
+  },
+  "RRHH-C": {
+    label: "RRHH-C",
+    className: "bg-blue-500/10 text-blue-400 border-blue-500/30",
+    title: "Compressed (or, rarely, exactly Equal): Axis 1 and Axis 2 don't both move the same direction",
+  },
+};
+
+/**
+ * renderRRHHCategoryBadge — single badge for CPRResult.RRHHCategory
+ * ("RRHH-A" | "RRHH-B" | "RRHH-C" | "none"), same solid-badge styling used
+ * elsewhere (renderSSLLCategoryBadge). Always renders at most one badge.
+ * Returns null for "none" (defensive fallback only — see field doc).
+ */
+export function renderRRHHCategoryBadge(r: CPRResult) {
+  const cat = r.RRHHCategory;
+  if (cat === "none") return null;
+  const cfg = RRHH_BADGE[cat];
+  return (
+    <span
+      className={`text-[10px] whitespace-nowrap px-1 py-0.5 rounded border font-medium ${cfg.className}`}
+      title={cfg.title}
+    >
+      {cfg.label}
+    </span>
+  );
+}
+
+/**
  * renderSSRRHHLLBadges — the LEVEL column's second-row badges. Renders the
- * SSRR badge (from CPRResult.SSRRCategory, via renderSSRRCategoryBadge)
- * followed by the SSLL badge (from CPRResult.SSLLCategory, via
- * renderSSLLCategoryBadge). Returns null when both are "none".
+ * SSRR badge (CPRResult.SSRRCategory), the SSLL badge
+ * (CPRResult.SSLLCategory), and the RRHH badge (CPRResult.RRHHCategory) in
+ * that order. Returns null when all three are "none".
  */
 export function renderSSRRHHLLBadges(r: CPRResult) {
   const ssrrBadge = renderSSRRCategoryBadge(r);
   const ssllBadge = renderSSLLCategoryBadge(r);
-  const badges = [ssrrBadge, ssllBadge].filter((b): b is React.JSX.Element => b !== null);
+  const rrhhBadge = renderRRHHCategoryBadge(r);
+  const badges = [ssrrBadge, ssllBadge, rrhhBadge].filter((b): b is React.JSX.Element => b !== null);
   if (badges.length === 0) return null;
   return <div className="flex flex-nowrap items-center gap-1">{badges}</div>;
 }
