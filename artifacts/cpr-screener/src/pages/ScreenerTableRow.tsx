@@ -313,29 +313,29 @@ export function ScreenerTableHeader({
         <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           Pattern
         </th>
-        <th className="px-2 py-3 w-32 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+        <th className="px-2 py-3 w-32 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           LEVEL
         </th>
         <th
-          className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground min-w-[175px]"
+          className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground min-w-[175px]"
           onClick={() => toggleSort("compressionRatio")}
         >
             PIVOT SIZE <SortIcon k="compressionRatio" />
         </th>
         <th
-          className="px-4 py-3 pr-6 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
+          className="px-4 py-3 pr-6 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
           onClick={() => toggleSort("change24h")}
         >
           Price <SortIcon k="change24h" />
         </th>
         <th
-          className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground min-w-[110px]"
+          className="pl-4 pr-2 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground min-w-[110px]"
           onClick={() => toggleSort("priceVsCpr")}
         >
           Price/CPR <SortIcon k="priceVsCpr" />
         </th>
         <th
-          className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
+          className="pl-8 pr-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
           onClick={() => toggleSort("pdhPdlPct")}
           title="Position vs yesterday's High/Low"
         >
@@ -558,7 +558,7 @@ export default function ScreenerTableRow({
           </div>
           <div className="text-xs text-muted-foreground">OPrice: {fmt(r.openPrice)}</div>
         </td>
-        <td className={`px-4 py-3 whitespace-nowrap text-xs font-medium min-w-[110px] ${distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).color}`}>
+        <td className={`pl-4 pr-2 py-3 whitespace-nowrap text-xs font-medium min-w-[110px] ${distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).color}`}>
           <div>
             {distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).main}
             {distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).sub && (
@@ -573,7 +573,7 @@ export default function ScreenerTableRow({
           </div>
         </td>
         <td
-          className="px-4 py-3 whitespace-nowrap text-xs font-medium"
+          className="pl-8 pr-4 py-3 whitespace-nowrap text-xs font-medium"
           title={`PDH: ${fmt(r.todayCPR.prevHigh)}  |  PDL: ${fmt(r.todayCPR.prevLow)}`}
         >
           {renderPdhPdlColumnBadges(r)}
