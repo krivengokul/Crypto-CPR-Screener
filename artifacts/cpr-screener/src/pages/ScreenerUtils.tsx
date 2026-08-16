@@ -1919,11 +1919,8 @@ export function renderSSRRHHLLBadges(r: CPRResult) {
  * sync. Order:
  *   1. Status badge — Above / Below / Inside / Outside / Skip (always
  *      exactly one, mutually exclusive).
- *   2. SSRR badge — CPRResult.SSRRCategory (SSRR-A/SSRR-B/SSRR-C/SSRR-X),
- *      pulled out of row 2 to sit here as the 2nd badge (row 2 now only
- *      carries SSLL + RRHH — see renderSSRRHHLLBadges).
- *   3. oV-B / oV-A (overlapLower / overlapHigher).
- *   4. Narrow / Wide — merged into a single badge wherever Above/Below/
+ *   2. oV-B / oV-A (overlapLower / overlapHigher).
+ *   3. Narrow / Wide — merged into a single badge wherever Above/Below/
  *      oV-B/oV-A pairs with Narrow/Wide: oV-ANarrow -> Narrow-AoV,
  *      AboveNarrow -> Narrow-A, BelowNarrow -> Narrow-B, oV-BNarrow ->
  *      Narrow-BoV, oV-AWide -> Wide-AoV, AboveWide -> Wide-A, BelowWide ->
@@ -1934,6 +1931,9 @@ export function renderSSRRHHLLBadges(r: CPRResult) {
  *      apply on the same row: for Narrow, oV-A > Above > Below > oV-B; for
  *      Wide, oV-A > Above > Below (matches the row's own left-to-right
  *      badge order).
+ *   4. SSRR badge — CPRResult.SSRRCategory (SSRR-A/SSRR-B/SSRR-C/SSRR-X),
+ *      pulled out of row 2 to sit here, right after the Narrow/Wide badges
+ *      (row 2 now only carries SSLL + RRHH — see renderSSRRHHLLBadges).
  *   5. Equal.
  */
 export function renderLevelStatusRow1Badges(
@@ -1981,14 +1981,6 @@ export function renderLevelStatusRow1Badges(
         <span className={`${smallBadge} bg-purple-500/10 text-purple-400 border border-purple-500/20`}>Outside</span>
       )}
       {nothingMatched && <span className={`${smallBadge} bg-muted text-muted-foreground`}>Skip</span>}
-      {r.SSRRCategory !== "none" && (
-        <span
-          className={`text-[10px] whitespace-nowrap px-1 py-0.5 rounded border font-medium ${SSRR_BADGE[r.SSRRCategory].className}`}
-          title={SSRR_BADGE[r.SSRRCategory].title}
-        >
-          {SSRR_BADGE[r.SSRRCategory].label}
-        </span>
-      )}
       {r.overlapLower && !ovLowerConsumed && (
         <span className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-medium">oV-B</span>
       )}
@@ -2021,6 +2013,14 @@ export function renderLevelStatusRow1Badges(
       )}
       {showWide && !wideConsumed && (
         <span className={`${smallBadge} bg-pink-500/10 text-pink-400 border border-pink-500/20`}>Wide</span>
+      )}
+      {r.SSRRCategory !== "none" && (
+        <span
+          className={`text-[10px] whitespace-nowrap px-1 py-0.5 rounded border font-medium ${SSRR_BADGE[r.SSRRCategory].className}`}
+          title={SSRR_BADGE[r.SSRRCategory].title}
+        >
+          {SSRR_BADGE[r.SSRRCategory].label}
+        </span>
       )}
       {r.equalCPR && (
         <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">Equal</span>

@@ -214,17 +214,16 @@ export function renderPrevPatternBadge(r: CPRResult) {
 }
 
 /**
- * "LEVEL" column body — row 1: Above/Below/Inside/Outside/Skip, then the
- * SSRR badge (SSRR-A/SSRR-B/SSRR-C/SSRR-X, 2nd badge), then
+ * "LEVEL" column body — row 1: Above/Below/Inside/Outside/Skip, then
  * oV-B/oV-A, then Narrow/Wide (merged into a single badge wherever
  * Above/Below/oV-B/oV-A pairs with Narrow/Wide — see
- * renderLevelStatusRow1Badges for the full merge table), then Equal — all
- * rendered inline on one line; row 2: SSLL + RRHH, always on its own row
- * underneath row 1. Extracted out of the row JSX so other views (e.g.
- * BacktestPanel) can reuse the same LEVEL column. Mirrors
- * ScreenerTableRow's own LEVEL cell, minus the activePattern-aware tweak
- * to the "Skip" fallback, which only makes sense inside the Screener's own
- * pattern-filter context.
+ * renderLevelStatusRow1Badges for the full merge table), then the SSRR
+ * badge (SSRR-A/SSRR-B/SSRR-C/SSRR-X), then Equal — all rendered inline
+ * on one line; row 2: SSLL + RRHH, always on its own row underneath row
+ * 1. Extracted out of the row JSX so other views (e.g. BacktestPanel) can
+ * reuse the same LEVEL column. Mirrors ScreenerTableRow's own LEVEL cell,
+ * minus the activePattern-aware tweak to the "Skip" fallback, which only
+ * makes sense inside the Screener's own pattern-filter context.
  */
 export function renderLevelBadges(r: CPRResult) {
   const isInsideCPR = passesPattern(r, "inside-cpr");
@@ -242,7 +241,7 @@ export function renderLevelBadges(r: CPRResult) {
   // Inside/Outside/narrow state. SSRR now renders entirely on row 1.
   const ssrrHhllRow = renderSSRRHHLLBadges(r);
   return (
-    <div className="flex flex-col gap-1 max-w-[130px]">
+    <div className="flex flex-col gap-1 max-w-[150px]">
       <div className="flex flex-wrap items-center gap-1">
         {renderLevelStatusRow1Badges(r, isInsideCPR, isOutsideCPR, showWide, nothingMatched)}
       </div>
@@ -314,7 +313,7 @@ export function ScreenerTableHeader({
         <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           Pattern
         </th>
-        <th className="px-2 py-3 w-28 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+        <th className="px-2 py-3 w-32 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           LEVEL
         </th>
         <th
@@ -324,7 +323,7 @@ export function ScreenerTableHeader({
             PIVOT SIZE <SortIcon k="compressionRatio" />
         </th>
         <th
-          className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
+          className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground max-w-[100px]"
           onClick={() => toggleSort("change24h")}
         >
           Price <SortIcon k="change24h" />
@@ -425,7 +424,7 @@ export default function ScreenerTableRow({
   // renderSSRRHHLLBadges helper.
   const ssrrHhllRow = renderSSRRHHLLBadges(r);
   // Row 1 keeps every LEVEL-status badge inline on one line (Above/Below/
-  // Inside/Outside/Skip, then SSRR, then oV-B/oV-A, then Narrow/Wide, then
+  // Inside/Outside/Skip, then oV-B/oV-A, then Narrow/Wide, then SSRR, then
   // Equal) so nothing gets pushed down to a second line.
   const nothingMatchedMain =
     !r.cprRising &&
@@ -513,8 +512,8 @@ export default function ScreenerTableRow({
           {renderTodayPatternBadges(r)}
           {renderPrevPatternBadge(r)}
         </td>
-        <td className="px-2 py-3 w-28">
-          <div className="flex flex-col gap-1 max-w-[130px]">
+        <td className="px-2 py-3 w-32">
+          <div className="flex flex-col gap-1 max-w-[150px]">
             <div className="flex flex-wrap items-center gap-1">
               {renderLevelStatusRow1Badges(r, isInsideCPR, isOutsideCPR, showWide, nothingMatchedMain)}
             </div>
@@ -548,7 +547,7 @@ export default function ScreenerTableRow({
             );
           })()}
         </td>
-        <td className="px-4 py-3 font-mono whitespace-nowrap">
+        <td className="px-3 py-3 font-mono whitespace-nowrap max-w-[100px]">
           <div className="text-sm font-bold text-foreground">
             {fmt(r.currentPrice)}
             <span className="text-muted-foreground">(</span>
