@@ -658,9 +658,9 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // today's PDL both below prev's S1/PDL). Bullish, entry ~9AM, targets
     // today's own R4 / U4 by ~9PM.
     case "9AM:SSRRBHHLLA-U4:9PM":
-      return (r.overlapLower && r.HHLLAbove && r.SSRRBelow);
+      return (r.overlapLower && r.HHLLCategory === "HHLL-A" && r.SSRRBelow);
     case "pRRHHLLA":
-      return (r.overlapLower && r.HHRRBelow && r.HHLLBelow);
+      return (r.overlapLower && r.HHRRBelow && r.HHLLCategory === "HHLL-B");
     // NEW: 9AM:pRRHHLLA-U4:9PM — Overlap Below + HHRRBelow (today's R1 AND
     // today's PDH both below the lower of prev's R1/PDH) + HHLLAbove
     // (today's PDH strictly above prev's PDH AND today's PDL >= prev's
@@ -672,7 +672,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return (
         r.overlapLower &&
         r.HHRRBelow &&
-        r.HHLLBelow &&
+        r.HHLLCategory === "HHLL-B" &&
         r.todayCPR.r1 > r.prevCPR.tc &&
         r.prevCPR.prevHigh > r.todayCPR.s1
       );
@@ -739,7 +739,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return (
         (r.InsideCPR) &&
           (r.cOL3U3 || r.cOU3L3) && 
-        r.SSRRBelow && r.HHLLAbove
+        r.SSRRBelow && r.HHLLCategory === "HHLL-A"
         //r.prevCPR.widthPct > 2.00 && r.prevCPR.widthPct <= 5.00 &&   // pLarge
         //r.todayCPR.widthPct > 1.10 && r.todayCPR.widthPct <= 2.00 && // Medium
         //r.prevCPR.PDHLBelow && r.todayCPR.PDHLAbove &&       // p-PDHLBelow  // PDHLAbove
@@ -891,7 +891,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // today's R1 at/above prev day's BC. Bullish, targets Far Above pU4
     // (prev day's R4) by ~1PM. Green color family.
     case "11AM:pCPR1AHi-FApU4:1PM":
-      return r.pCPR1Above && r.LoU3L4 && r.HHLLBelow &&
+      return r.pCPR1Above && r.LoU3L4 && r.HHLLCategory === "HHLL-B" &&
         r.prevCPR.PDHLBelow && r.todayCPR.PDHLAbove &&
         r.todayCPR.r1 > r.prevCPR.bc;
     case "l1pu1-above":
@@ -996,7 +996,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // RENAMED: was "bigabove-pl34cl4-u3>pu4" -> "9AM:SSRRHHLLA-U4:11PM"
     case "9AM:SSRRHHLLA-U4:11PM":
     return (r.cprRising && r.strWideCPR && 
-            r.SSRRAbove && r.HHLLAbove && r.todayCPR.PDHLAbove);
+            r.SSRRAbove && r.HHLLCategory === "HHLL-A" && r.todayCPR.PDHLAbove);
     // NEW: BAComp-l3>pl1/u3>pu1 — BigCPR Above + prev S1 inside today S3/S4 AND prev R1 inside today R2/R3
     case "bacomp-l3>pl1/u3>pu1":
       return (
@@ -1531,7 +1531,7 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     // "overlapping-lower" category key, so this only needs the raw
     // Pattern-flag part — same shape as LoU4L4 above. Symbol-list-only
     // nesting under "Overlap Below" in backtest.ts.
-    case "pRRHHLLA": return r.HHRRBelow && r.HHLLBelow;
+    case "pRRHHLLA": return r.HHRRBelow && r.HHLLCategory === "HHLL-B";
     case "eXL4U3": return r.eXL4U3;
     case "eXL4U4": return r.eXL4U4;
     // NEW: eXU4L4 — same treatment as eXL4U4 above: an independent,
@@ -1810,8 +1810,10 @@ export function renderSSRRSSLLCategoryBadge(r: CPRResult) {
  * CPRResult.SSRRSSLLCategory, via renderSSRRSSLLCategoryBadge).
  *
  * MOVED: the HHLL-A/HHLL-B badge that used to render alongside this one
- * (from the raw CPRResult.HHLLAbove/HHLLBelow booleans) has been moved out
- * of the LEVEL column entirely — it now lives in the PDH/PDL column as
+ * (from the raw CPRResult.HHLLAbove/HHLLBelow booleans, since removed —
+ * their conditions now live only as the HHLL-A/HHLL-B cases of
+ * CPRResult.HHLLCategory) has been moved out of the LEVEL column entirely
+ * — it now lives in the PDH/PDL column as
  * part of the 5-way renderHHLLCategoryBadge (HHLL-A/HHLL-B/HHLL-C/HHLL-X/
  * HHLL=, from CPRResult.HHLLCategory), which also covers the two cases
  * (Compressed/Expanded) the old booleans didn't. See
@@ -1862,9 +1864,9 @@ export function renderPDHPDLGapCategoryBadge(r: CPRResult) {
 
 /**
  * HHLL_CATEGORY_BADGE — display config for each CPRResult.HHLLCategory
- * value (Above/Below reuse the same green/red as the old HHLLAbove/
- * HHLLBelow badges; Compressed/Expanded/Equal are new). Keyed by category
- * so renderHHLLCategoryBadge stays easy to extend.
+ * value (Above/Below reuse the same green/red the removed HHLLAbove/
+ * HHLLBelow booleans used to render with; Compressed/Expanded/Equal are
+ * new). Keyed by category so renderHHLLCategoryBadge stays easy to extend.
  */
 const HHLL_CATEGORY_BADGE: Record<Exclude<HHLLCategory, "none">, { label: string; className: string; title: string }> = {
   "HHLL-A": {

@@ -385,14 +385,6 @@ export interface CPRResult {
   // has dropped below prev's S1 (support eroded while resistance stayed
   // capped or fell).
   SSRRBelow: boolean;
-  // HHLLAbove — today's PDH (prevHigh) is strictly above prev's PDH AND
-  // today's PDL (prevLow) is at or above prev's PDL (higher high, higher
-  // or equal low).
-  HHLLAbove: boolean;
-  // HHLLBelow — today's PDH (prevHigh) is at or below prev's PDH AND
-  // today's PDL (prevLow) is strictly below prev's PDL (lower or equal
-  // high, lower low).
-  HHLLBelow: boolean;
   // SSLLAbove — both today's S1 AND today's PDL (prevLow) sit above the
   // higher of prev's S1 / prev's PDL (support and PDL both climbed above
   // whichever of prev's two floor levels was higher).
@@ -431,11 +423,11 @@ export interface CPRResult {
   //   HHLL=  (Equal)      — today.prevHigh == prev.prevHigh AND today.prevLow == prev.prevLow
   // Verified mutually exclusive (no row can satisfy two of the five), but
   // not exhaustive: PDH flat + PDL up, or PDH down + PDL flat, match none
-  // of the five and fall through to "none". HHLL-A/HHLL-B here are the
-  // same conditions as the raw HHLLAbove/HHLLBelow booleans above; this
-  // field supersedes them for badge-rendering purposes (see
-  // ScreenerUtils.renderHHLLCategoryBadge) by also covering the
-  // Compressed/Expanded/Equal cases those two booleans left as "neither".
+  // of the five and fall through to "none". HHLL-A/HHLL-B carry the same
+  // conditions the removed HHLLAbove/HHLLBelow booleans used to hold; this
+  // field is now the only source for that classification (see
+  // ScreenerUtils.renderHHLLCategoryBadge), also covering the
+  // Compressed/Expanded/Equal cases those two booleans never captured.
   HHLLCategory: HHLLCategory;
 }
 
@@ -1269,10 +1261,6 @@ export function analyzeCPR(
   const SSRRAbove = todayCPR.r1 > prevCPR.r1 && todayCPR.s1 >= prevCPR.s1;
   const SSRRBelow = todayCPR.r1 <= prevCPR.r1 && todayCPR.s1 < prevCPR.s1;
 
-  // HHLLAbove / HHLLBelow — today vs prev PDH/PDL directional classification.
-  const HHLLAbove = todayCPR.prevHigh > prevCPR.prevHigh && todayCPR.prevLow >= prevCPR.prevLow;
-  const HHLLBelow = todayCPR.prevHigh <= prevCPR.prevHigh && todayCPR.prevLow < prevCPR.prevLow;
-
   // SSLLAbove / HHRRBelow — today vs prev S1/PDL and R1/PDH directional
   // classification, anchored to whichever of prev's two levels is more
   // extreme (higher floor / lower ceiling).
@@ -1356,8 +1344,6 @@ export function analyzeCPR(
     prevS1Gap,
     SSRRAbove,
     SSRRBelow,
-    HHLLAbove,
-    HHLLBelow,
     SSLLAbove,
     HHRRBelow,
     PDHPDLGapCategory,
