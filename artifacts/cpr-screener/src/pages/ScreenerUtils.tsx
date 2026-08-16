@@ -704,7 +704,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // "2PM:pPDHLA-SRA-U4:7PM" / "8AM:pPDHA-SRA-U4+2:2AM" siblings below —
     // but (per backtest.ts's BACKTEST_CATEGORIES) sits directly on the
     // "inside-cpr" category's own subPatternKeys rather than behind a
-    // "Pattern" sub-category/arrow. Base InsideCPR condition + today's PDL
+    // "Pattern" /arrow. Base InsideCPR condition + today's PDL
     // above prev day's S1 ("PDL>pS1") + EITHER today's PDH above prev
     // day's R1 ("PDH>pR1") OR prev day's PDH above today's R1
     // ("pPDH>R1") + today's pivot and today's PDH move the SAME direction
@@ -863,7 +863,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     case "BC>pPDL-U3:5AM":
       return r.pCPR1Above && r.cOU3L4  && r.todayCPR.bc > r.prevCPR.prevLow && r.prevCPR.bc > r.todayCPR.r1 && r.todayCPR.PDHLAbove && r.prevCPR.PDHLAbove;
     // NEW: PDH>pTC-U4:5AM — sub-filter under "PREVCPR 1ABOVE" → "LoU3L3"
-    // Pattern sub-category: base pCPR1Above condition PLUS the parent's raw
+    // Pattern: base pCPR1Above condition PLUS the parent's raw
     // LoU3L3 flag PLUS today's PDH (todayCPR.prevHigh) above prev day's TC
     // (prevCPR.tc) — today already traded above the top of prev's CPR.
     // Also requires a specific width-tier combo — (prev CPR Mini AND today
@@ -878,7 +878,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         ((pMini && small) || (pSmall && large));
     }
     // NEW: 11AM:pCPR1AHi-FApU4:1PM — sub-filter under "PREVCPR 1ABOVE" →
-    // "LoU3L4" Pattern sub-category: base pCPR1Above condition PLUS the
+    // "LoU3L4" Pattern: base pCPR1Above condition PLUS the
     // parent's raw LoU3L4 flag PLUS HHLLBelow (today's PDH at/below prev
     // day's PDH AND today's PDL below prev day's PDL) PLUS prev day's own
     // PDH below prev day's own R1 (p-PDHL-B, prevCPR.PDHLBelow) PLUS
@@ -1017,7 +1017,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.todayCPR.s1 > r.prevCPR.tc
       );
     // NEW: 6AM:pX-APHS1A-pL4:4AM — U1>pU4 sub-pattern, same "eXL3U1" Pattern
-    // sub-category and identical base condition as 9AM:APHS1A-FAU4:4AM
+    //  and identical base condition as 9AM:APHS1A-FAU4:4AM
     // (cprRising + strWideCPR + today R1 above prev R4 + eXL3TC + today's
     // BC above prev day's PDH + today's S1 above prev day's TC), PLUS one
     // extra check: the PREVIOUS day's own pivot sub-label (prevCPR vs
@@ -1032,7 +1032,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         computePrevPattern(r.prevCPR, r.ppCPR) === "eXL4U3"
       );
     // NEW: 8AM:APHS1A-FAU4:4AM — U1>pU4 sub-pattern, nested under the same
-    // "eXL3U1" Pattern sub-category as 9AM:APHS1A-FAU4:4AM.
+    // "eXL3U1" Pattern as 9AM:APHS1A-FAU4:4AM.
     // Condition: Big CPR + CPR Above (cprRising + strWideCPR) + today R1
     // above prev R4 (parent U1>pU4) + Pattern eXL3U1 + today's BC above
     // prev day's PDH (todayCPR.bc > prevCPR.prevHigh) + today's S1 above
@@ -1083,7 +1083,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       );
     }
     // NEW: 6AM:MegMeg-L3:8PM — U1>pU4 sub-pattern, nested under the
-    // "eXL4U1" Pattern sub-category. Condition: Big CPR + CPR Above
+    // "eXL4U1" Pattern. Condition: Big CPR + CPR Above
     // (cprRising + strWideCPR) + today R1 above prev R4 (parent U1>pU4) +
     // Pattern eXL4U1 + prev CPR width category Mega (5.00%-10.00%,
     // pMega) + today's CPR width category Mega (5.00%-10.00%). Bearish,
@@ -1137,7 +1137,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.compressionRatio >= 300
       );
     // NEW: TiMi-cOL2U2-pL4:5AM — BigCPR Above sub-pattern, nested under the
-    // "cOL2U2" Pattern sub-category. Base structure-bigabove condition
+    // "cOL2U2" Pattern. Base structure-bigabove condition
     // (cprRising + strWideCPR + !(today R1 > prev R4)) PLUS: today's raw
     // cOL2U2 flag, today's PDH below today's R1, prev CPR width category
     // Tiny (0.10%-0.22%), today CPR width category Mini (0.22%-0.60%), and
@@ -1317,11 +1317,11 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     { key: "BC>pPDL-U3:5AM", direction: "up" },
     { key: "PDH>pTC-U4:5AM", direction: "up" },
     // FIX: "11AM:pCPR1AHi-FApU4:1PM" (nested under the "LoU3L4" Pattern
-    // sub-category) was missing here, so rows matching it never got the
+    // ) was missing here, so rows matching it never got the
     // per-row green direction dot even though the Views button itself
     // filtered correctly. Bullish → "up".
     { key: "11AM:pCPR1AHi-FApU4:1PM", direction: "up" },
-    // NEW: "cOU2L4" Pattern sub-category (arrow), nested under "PCPR
+    // NEW: "cOU2L4" Pattern (arrow), nested under "PCPR
     // 1ABOVE" in backtest.ts. Bullish (Compressed, same pCPR1Above base
     // condition) → "up".
     { key: "cOU2L4", direction: "up" },
@@ -1361,7 +1361,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
   "u1-gt-pu4": [
     { key: "9AM:APHS1A-FAU4:4AM", direction: "up" },
     // FIX: "8AM:APHS1A-FAU4:4AM" (nested under the same "eXL3U1" Pattern
-    // sub-category as 9AM:APHS1A-FAU4:4AM above) was missing here, so
+    //  as 9AM:APHS1A-FAU4:4AM above) was missing here, so
     // rows matching it never got the per-row green direction dot even
     // though the Views button itself filtered correctly. Bullish → "up".
     { key: "8AM:APHS1A-FAU4:4AM", direction: "up" },
@@ -1369,7 +1369,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     { key: "TiMe-eXL3TC-AU4:2PM", direction: "up" },
     { key: "SMg-exHiL2L1-U4:3AM", direction: "up" },
     // NEW: "6AM:MegMeg-L3:8PM" (nested under the new "eXL4U1" Pattern
-    // sub-category). Bearish → "down".
+    // ). Bearish → "down".
     { key: "6AM:MegMeg-L3:8PM", direction: "down" },
   ],
   "structure-bigbelow": [
@@ -1498,7 +1498,7 @@ export function getPatternInfo(r: CPRResult): PatternInfo {
 /**
  * matchesPatternFlag — raw Pattern flag check, factored out of the
  * inline PatternFilter block in Screener.tsx's `displayed` filter so
- * other consumers (the Backtest panel's Pattern sub-category scans,
+ * other consumers (the Backtest panel's Pattern scans,
  * e.g. "Overlap Above" → "HiL4U3") can reuse the exact same lookups
  * without duplicating the switch. For the six mutually-exclusive primary
  * labels (eX-Higher/eX-Lower/cO-Higher/cO-Lower/Higher/Lower) this falls
@@ -1510,15 +1510,15 @@ export function getPatternInfo(r: CPRResult): PatternInfo {
 export function matchesPatternFlag(r: CPRResult, label: string): boolean {
   switch (label) {
     case "cOU3L4": return r.cOU3L4;
-    // NEW: LoU3L3 — Pattern sub-category raw flag (see BacktestPanel's
+    // NEW: LoU3L3 — Pattern raw flag (see BacktestPanel's
     // "PREVCPR 1ABOVE" → "LoU3L3" nesting in backtest.ts).
     case "LoU3L3": return r.LoU3L3;
-    // NEW: LoU3L4 — Pattern sub-category raw flag, same shape as its
+    // NEW: LoU3L4 — Pattern raw flag, same shape as its
     // LoU3L3 sibling (see BacktestPanel's "PREVCPR 1ABOVE" → "LoU3L4"
     // nesting in backtest.ts).
     case "LoU3L4": return r.LoU3L4;
     case "LoU4L4": return r.LoU4L4;
-    // NEW: pRRHHLLA — Pattern sub-category compound flag for Overlap
+    // NEW: pRRHHLLA — Pattern compound flag for Overlap
     // Below's "9AM:pRRHHLLA-U4:9PM" family: today's R1/PDH both below
     // prev's tighter ceiling (HHRRBelow) AND today's PDH strictly above
     // prev's PDH with today's PDL >= prev's PDL (HHLLBelow). The base
@@ -1542,7 +1542,7 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     case "HiL4U1": return r.HiL4U1;
     case "cOL2U3": return r.cOL2U3;
     case "cOL3U3": return r.cOL3U3;
-    // NEW: cOL4U4 — Pattern sub-category raw flag (see BacktestPanel's
+    // NEW: cOL4U4 — Pattern raw flag (see BacktestPanel's
     // "CPR Inside" -> "cOL4U4" nesting in backtest.ts).
     case "cOL4U4": return r.cOL4U4;
     case "eXU4L2": return r.eXU4L2;
@@ -1594,7 +1594,7 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     case "cOL1U3": return r.cOL1U3;
     // NEW: HiL3U2 (today S4 in prev S3/S2, prev R4 in prev R1/R2)
     case "HiL3U2": return r.HiL3U2;
-    // NEW: HiL3U4 — Pattern sub-category raw flag (see BacktestPanel's
+    // NEW: HiL3U4 — Pattern raw flag (see BacktestPanel's
     // "CPR 1ABOVE" → "HiL3U4" nesting in backtest.ts).
     case "HiL3U4": return r.HiL3U4;
     // NEW: eXU4L1 — prev R4 inside today R3/R4 (U4) AND prev S4 inside today BC/S1 (L1).
@@ -1608,7 +1608,7 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     case "cOL2U2": return r.cOL2U2;
     // NEW: cOU1L2 — independent, section-agnostic Pattern flag (see cpr.ts).
     case "cOU1L2": return r.cOU1L2;
-    // NEW: cOU2L4 — Pattern sub-category raw flag (see BacktestPanel's
+    // NEW: cOU2L4 — Pattern raw flag (see BacktestPanel's
     // "PREVCPR 1ABOVE" (PCPR 1ABOVE) nesting in backtest.ts).
     case "cOU2L4": return r.cOU2L4;
     case "cOU4L4": return r.cOU4L4;
@@ -1635,13 +1635,13 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
 
 /**
  * computePrevPattern — given two CPR-level objects, computes which
- * sub-category pivot label applies to the (today, prev) pair. Delegates
+ * Pattern pivot label applies to the (today, prev) pair. Delegates
  * entirely to classifyCPRPair + pickPattern in cpr.ts, which is
  * the single source of truth for the band conditions and label priority.
  *
- * Used in the U1>pU4 section to find the PREVIOUS day's sub-category:
+ * Used in the U1>pU4 section to find the PREVIOUS day's Pattern:
  * call with (prevCPR, ppCPR). Returns null when prev is undefined/null or
- * no known sub-category matches. The "p" prefix is added by the caller.
+ * no known Pattern matches. The "p" prefix is added by the caller.
  */
 export function computePrevPattern(
   today: CPRLevels,

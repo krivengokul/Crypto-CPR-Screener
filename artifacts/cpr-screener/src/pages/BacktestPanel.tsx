@@ -256,13 +256,13 @@ function DateField({
  *   - a CATEGORY (e.g. "LittleCPR Above", "Overlap Above") — symbol list
  *     matching the category's base condition only, no Target/Result/Hit
  *     Date, since a category has no single well-defined target;
- *   - a Pattern SUB-CATEGORY nested under a category (e.g. "Overlap
+ *   - a Pattern  nested under a category (e.g. "Overlap
  *     Above" → "HiL4U34") — same symbol-list-only treatment as a category,
  *     just additionally filtered by that Pattern's raw flag; or
- *   - a specific PATTERN nested under a category, under a sub-category, or
+ *   - a specific PATTERN nested under a category, under a pattern, or
  *     standalone (e.g. "U1 > Previous U4") — the full backtest.
  *
- * Dropdown layout: the category/sub-category label is no longer rendered
+ * Dropdown layout: the category/pattern label is no longer rendered
  * as a separate bold <optgroup> header (that duplicated the "— all
  * (symbol list only)" option below it). Instead the category is a single
  * selectable row "<Category>", with its patterns
@@ -597,7 +597,7 @@ export default function BacktestPanel() {
       </div>
       <p className="text-xs text-muted-foreground mb-4">
         Pick a date (or a date range) and either a category, a Pattern
-        sub-category nested under a category, or a specific pattern.
+         nested under a category, or a specific pattern.
         Category and Pivot Level selections give a symbol list only, with
         an optional date-range sweep; a pattern gives the full
         Target/Result/Hit Date backtest, also with an optional date-range
