@@ -406,9 +406,26 @@ export interface CPRResult {
   // (LLGap). "HHGap" when the PDH gap is larger, "LLGap" when the PDL gap
   // is larger, "EqGap" when the two gaps are equal.
   PDHPDLGapCategory: PDHPDLGapCategory;
+  // SSRRSSLLCategory — single-badge partition over SSRRAbove / SSRRBelow /
+  // SSLLAbove. Unlike those three raw booleans, this is a true mutually
+  // exclusive AND exhaustive 4-way category (exactly one value per row),
+  // matching the PDHPDLGapCategory pattern.
+  //
+  // SSRRAbove and SSRRBelow are already mutually exclusive on their own
+  // (one needs today.r1 > prev.r1, the other today.r1 <= prev.r1), so they
+  // simply keep their own labels. SSLLAbove is NOT a clean third case: it
+  // always forces today.s1 > prev.s1, which means:
+  //   - when today.r1 > prev.r1 too, SSRRAbove is ALSO true (SSLLAbove is
+  //     a subset of SSRRAbove in that case) — SSRRAbove wins the label.
+  //   - when today.r1 <= prev.r1, SSRRAbove is false, and SSRRBelow is
+  //     impossible too (SSRRBelow needs s1 < prev.s1, which SSLLAbove
+  //     rules out) — so SSLLAbove stands alone as "SSLL-A".
+  // "none" when none of the three source flags are set.
+  SSRRSSLLCategory: SSRRSSLLCategory;
 }
 
 export type PDHPDLGapCategory = "HHGap" | "LLGap" | "EqGap";
+export type SSRRSSLLCategory = "SSRR-A" | "SSRR-B" | "SSLL-A" | "none";
 
 function isValidCandle(c: OHLC): boolean {
   return (
@@ -1259,6 +1276,15 @@ export function analyzeCPR(
     LLGapVal > HHGapVal ? "LLGap" :
     "EqGap";
 
+  // SSRRSSLLCategory — see field doc on CPRResult. SSRRAbove/SSRRBelow are
+  // checked first (mutually exclusive with each other), SSLLAbove only
+  // wins the label when neither SSRR flag fired.
+  const SSRRSSLLCategory: SSRRSSLLCategory =
+    SSRRAbove ? "SSRR-A" :
+    SSRRBelow ? "SSRR-B" :
+    SSLLAbove ? "SSLL-A" :
+    "none";
+
   return {
     symbol,
     todayCPR,
@@ -1306,5 +1332,6 @@ export function analyzeCPR(
     SSLLAbove,
     HHRRBelow,
     PDHPDLGapCategory,
+    SSRRSSLLCategory,
   };
 }

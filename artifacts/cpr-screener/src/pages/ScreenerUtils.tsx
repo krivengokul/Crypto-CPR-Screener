@@ -5,6 +5,7 @@ import {
   type CPRLevels,
   type CPRResult,
   type PDHPDLGapCategory,
+  type SSRRSSLLCategory,
 } from "@/lib/cpr";
 
 export type SortKey = "symbol" | "compressionRatio" | "currentPrice" | "change24h" | "quoteVolume" | "priceVsCpr" | "cprDistance" | "pdhPdlPct";
@@ -1758,40 +1759,68 @@ export function renderPdhPdlSubBadges(r: CPRResult) {
 }
 
 /**
- * renderSSRRHHLLBadges — the SSRR-A/SSRR-B (support/resistance directional,
- * from CPRResult.SSRRAbove/SSRRBelow, formerly labelled SR-A/SR-B) badge
+ * SSRR_SSLL_BADGE — display config for each CPRResult.SSRRSSLLCategory
+ * value, keyed by category so renderSSRRHHLLBadges/renderSSRRSSLLCategoryBadge
+ * stay in sync. "none" renders nothing.
+ */
+const SSRR_SSLL_BADGE: Record<Exclude<SSRRSSLLCategory, "none">, { label: string; className: string; title: string }> = {
+  "SSRR-A": {
+    label: "SSRR-A",
+    className: "bg-green-500/10 text-green-400 border-green-500/30",
+    title: "Today's R1 > Prev R1 and Today's S1 >= Prev S1",
+  },
+  "SSRR-B": {
+    label: "SSRR-B",
+    className: "bg-red-500/10 text-red-400 border-red-500/30",
+    title: "Today's R1 <= Prev R1 and Today's S1 < Prev S1",
+  },
+  "SSLL-A": {
+    label: "SSLL-A",
+    className: "bg-blue-500/10 text-blue-400 border-blue-500/30",
+    title: "Today's S1 and Today's PDL both above the higher of Prev S1 / Prev PDL (SSRR-A/B did not fire)",
+  },
+};
+
+/**
+ * renderSSRRSSLLCategoryBadge — single badge for CPRResult.SSRRSSLLCategory
+ * ("SSRR-A" | "SSRR-B" | "SSLL-A" | "none"), same solid-badge styling used
+ * elsewhere (renderPDHPDLGapCategoryBadge). Always renders at most one
+ * badge, since SSRRSSLLCategory is a mutually exclusive, exhaustive
+ * partition — unlike the raw SSRRAbove/SSRRBelow/SSLLAbove booleans, which
+ * can overlap. Returns null for "none".
+ */
+export function renderSSRRSSLLCategoryBadge(r: CPRResult) {
+  const cat = r.SSRRSSLLCategory;
+  if (cat === "none") return null;
+  const cfg = SSRR_SSLL_BADGE[cat];
+  return (
+    <span
+      className={`text-[10px] whitespace-nowrap px-1 py-0.5 rounded border font-medium ${cfg.className}`}
+      title={cfg.title}
+    >
+      {cfg.label}
+    </span>
+  );
+}
+
+/**
+ * renderSSRRHHLLBadges — the single SSRR-A/SSRR-B/SSLL-A badge (from
+ * CPRResult.SSRRSSLLCategory, via renderSSRRSSLLCategoryBadge — formerly
+ * two independent SSRRAbove/SSRRBelow checks, now a proper 4-way category
+ * so SSLL-A is never silently dropped when it overlaps SSRRAbove/Below)
  * plus the HHLL-A/HHLL-B (PDH/PDL directional, from
  * CPRResult.HHLLAbove/HHLLBelow) badge, rendered as one inline nowrap pair —
  * same layout pattern as the p-PDHL-A/PDHL-A pair in renderPdhPdlSubBadges.
  * Shared by the LEVEL column's Inside CPR and Outside CPR categories (both
  * ScreenerTableRow's renderLevelBadges and its own inline row JSX) so all
- * call sites stay in sync. SSRR-A/B and HHLL-A/B now share the same solid
- * green/red badge styling, colour-coded green (Above) / red (Below).
- * Returns null when neither flag pair is set.
+ * call sites stay in sync. Returns null when neither the category nor the
+ * HHLL flags are set.
  */
 export function renderSSRRHHLLBadges(r: CPRResult) {
   const badges: JSX.Element[] = [];
-  if (r.SSRRAbove) {
-    badges.push(
-      <span
-        key="ssrr-above"
-        className="text-[10px] whitespace-nowrap px-1 py-0.5 rounded bg-green-500/10 text-green-400 border border-green-500/30 font-medium"
-        title="Today's R1 > Prev R1 and Today's S1 >= Prev S1"
-      >
-        SSRR-A
-      </span>
-    );
-  }
-  if (r.SSRRBelow) {
-    badges.push(
-      <span
-        key="ssrr-below"
-        className="text-[10px] whitespace-nowrap px-1 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/30 font-medium"
-        title="Today's R1 <= Prev R1 and Today's S1 < Prev S1"
-      >
-        SSRR-B
-      </span>
-    );
+  const ssrrSsllBadge = renderSSRRSSLLCategoryBadge(r);
+  if (ssrrSsllBadge) {
+    badges.push(<span key="ssrr-ssll">{ssrrSsllBadge}</span>);
   }
   if (r.HHLLAbove) {
     badges.push(
