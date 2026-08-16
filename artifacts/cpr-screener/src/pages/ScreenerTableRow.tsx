@@ -215,7 +215,7 @@ export function renderPrevPatternBadge(r: CPRResult) {
 
 /**
  * "LEVEL" column body — row 1: Above/Below/Inside/Outside/Skip, then the
- * SSRR-X badge (2nd badge — see renderSSRRXBadge in ScreenerUtils), then
+ * SSRR-X badge (2nd badge), then
  * oV-B/oV-A, then Narrow/Wide (merged into a single badge wherever
  * Above/Below/oV-B/oV-A pairs with Narrow/Wide — see
  * renderLevelStatusRow1Badges for the full merge table), then Equal — all

@@ -1914,28 +1914,9 @@ export function renderRRHHCategoryBadge(r: CPRResult) {
 }
 
 /**
- * renderSSRRXBadge — the SSRR-X badge specifically, pulled out of the LEVEL
- * column's row 2 (see renderSSRRHHLLBadges) to render as the 2nd badge on
- * row 1 instead, right after the Above/Below/Inside/Outside/Skip status
- * badge. Returns null unless CPRResult.SSRRCategory is exactly "SSRR-X".
- */
-export function renderSSRRXBadge(r: CPRResult) {
-  if (r.SSRRCategory !== "SSRR-X") return null;
-  const cfg = SSRR_BADGE["SSRR-X"];
-  return (
-    <span
-      className={`text-[10px] whitespace-nowrap px-1 py-0.5 rounded border font-medium ${cfg.className}`}
-      title={cfg.title}
-    >
-      {cfg.label}
-    </span>
-  );
-}
-
-/**
  * renderSSRRHHLLBadges — the LEVEL column's second-row badges. Renders the
  * SSRR badge (CPRResult.SSRRCategory, EXCLUDING "SSRR-X" — that badge now
- * renders on row 1 instead, see renderSSRRXBadge), the SSLL badge
+ * renders on row 1 instead), the SSLL badge
  * (CPRResult.SSLLCategory), and the RRHH badge (CPRResult.RRHHCategory) in
  * that order. Returns null when all three are absent.
  */
@@ -1954,8 +1935,7 @@ export function renderSSRRHHLLBadges(r: CPRResult) {
  * sync. Order:
  *   1. Status badge — Above / Below / Inside / Outside / Skip (always
  *      exactly one, mutually exclusive).
- *   2. SSRR-X badge (see renderSSRRXBadge) — pulled out of row 2 to sit
- *      here as the 2nd badge.
+ *   2. SSRR-X badge — pulled out of row 2 to sit here as the 2nd badge.
  *   3. oV-B / oV-A (overlapLower / overlapHigher).
  *   4. Narrow / Wide — merged into a single badge wherever Above/Below/
  *      oV-B/oV-A pairs with Narrow/Wide: AboveNarrow -> Narrow-A,
@@ -2013,7 +1993,14 @@ export function renderLevelStatusRow1Badges(
         <span className={`${smallBadge} bg-purple-500/10 text-purple-400 border border-purple-500/20`}>Outside</span>
       )}
       {nothingMatched && <span className={`${smallBadge} bg-muted text-muted-foreground`}>Skip</span>}
-      {renderSSRRXBadge(r)}
+      {r.SSRRCategory === "SSRR-X" && (
+        <span
+          className={`text-[10px] whitespace-nowrap px-1 py-0.5 rounded border font-medium ${SSRR_BADGE["SSRR-X"].className}`}
+          title={SSRR_BADGE["SSRR-X"].title}
+        >
+          {SSRR_BADGE["SSRR-X"].label}
+        </span>
+      )}
       {r.overlapLower && !ovLowerConsumed && (
         <span className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-medium">oV-B</span>
       )}
