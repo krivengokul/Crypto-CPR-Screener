@@ -1812,8 +1812,8 @@ const SSLL_BADGE: Record<Exclude<SSLLCategory, "none">, { label: string; classNa
     className: "bg-blue-500/10 text-blue-400 border-blue-500/30",
     title: "Compressed: today's S1/PDL band narrowed vs prev (top fell, bottom rose)",
   },
-  "SSLL-X": {
-    label: "SSLL-X",
+  "SSLL-E": {
+    label: "SSLL-E",
     className: "bg-orange-500/10 text-orange-400 border-orange-500/30",
     title: "Expanded: today's S1/PDL band widened vs prev (top rose, bottom fell)",
   },
@@ -1826,7 +1826,7 @@ const SSLL_BADGE: Record<Exclude<SSLLCategory, "none">, { label: string; classNa
 
 /**
  * renderSSLLCategoryBadge — single badge for CPRResult.SSLLCategory
- * ("SSLL-A" | "SSLL-B" | "SSLL-C" | "SSLL-X" | "SSLL=" | "none"), same
+ * ("SSLL-A" | "SSLL-B" | "SSLL-C" | "SSLL-E" | "SSLL=" | "none"), same
  * solid-badge styling used elsewhere (renderSSRRCategoryBadge). Always
  * renders at most one badge, since SSLLCategory is a mutually exclusive
  * partition. Returns null for "none".

@@ -421,7 +421,7 @@ export interface CPRResult {
   //   SSLL-A (Above)      — todayHi >  prevHi AND todayLo >= prevLo (band shifted up)
   //   SSLL-B (Below)      — todayHi <= prevHi AND todayLo <  prevLo (band shifted down)
   //   SSLL-C (Compressed) — todayHi <  prevHi AND todayLo >  prevLo (band narrowed)
-  //   SSLL-X (Expanded)   — todayHi >  prevHi AND todayLo <  prevLo (band widened)
+  //   SSLL-E (Expanded)   — todayHi >  prevHi AND todayLo <  prevLo (band widened)
   //   SSLL=  (Equal)      — todayHi == prevHi AND todayLo == prevLo (eqTol)
   // A/B are additionally gated on S1 keeping the same top/bottom role on
   // both days (S1 is the band's hi level on both days, or its lo level on
@@ -454,7 +454,7 @@ export type PDHPDLGapCategory = "HHGap" | "LLGap" | "EqGap";
 export type HLSwitch = "HL-A" | "HL-B" | "HL=";
 export type SSRRCategory = "SSRR-A" | "SSRR-B" | "SSRR-C" | "SSRR-X" | "SSRR=" | "none";
 export type HHLLCategory = "HHLL-A" | "HHLL-B" | "HHLL-C" | "HHLL-X" | "HHLL=" | "none";
-export type SSLLCategory = "SSLL-A" | "SSLL-B" | "SSLL-C" | "SSLL-X" | "SSLL=" | "none";
+export type SSLLCategory = "SSLL-A" | "SSLL-B" | "SSLL-C" | "SSLL-E" | "SSLL=" | "none";
 export type RRHHCategory = "RRHH-A" | "RRHH-B" | "RRHH-C" | "none";
 
 function isValidCandle(c: OHLC): boolean {
@@ -1389,7 +1389,7 @@ export function analyzeCPR(
   const SSLLCategoryRaw: SSLLCategory =
     (SSLLDirHi === 0 && SSLLDirLo === 0) ? "SSLL=" :
     (SSLLDirHi > 0 && SSLLDirLo >= 0) ? "SSLL-A" :
-    (SSLLDirHi > 0 && SSLLDirLo < 0) ? "SSLL-X" :
+    (SSLLDirHi > 0 && SSLLDirLo < 0) ? "SSLL-E" :
     (SSLLDirHi <= 0 && SSLLDirLo < 0) ? "SSLL-B" :
     (SSLLDirHi < 0 && SSLLDirLo >= 0) ? "SSLL-C" :
     (SSLLDirHi === 0 && SSLLDirLo > 0) ? "SSLL-C" :
