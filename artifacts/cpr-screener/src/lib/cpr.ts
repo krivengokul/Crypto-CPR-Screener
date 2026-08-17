@@ -389,7 +389,7 @@ export interface CPRResult {
   //   SSRR-A (Above)      — today.r1 >  prev.r1 AND today.s1 >= prev.s1
   //   SSRR-B (Below)      — today.r1 <= prev.r1 AND today.s1 <  prev.s1
   //   SSRR-C (Compressed) — today.r1 <  prev.r1 AND today.s1 >  prev.s1
-  //   SSRR-X (Expanded)   — today.r1 >  prev.r1 AND today.s1 <  prev.s1
+  //   SSRR-E (Expanded)   — today.r1 >  prev.r1 AND today.s1 <  prev.s1
   //   SSRR=  (Equal)      — today.r1 == prev.r1 AND today.s1 == prev.s1 (eqTol)
   // "none" when none of the five conditions match. This field is the ONLY
   // source for that classification — the raw SSRRAbove/SSRRBelow booleans
@@ -400,7 +400,7 @@ export interface CPRResult {
   //   HHLL-A (Above)      — today.prevHigh > prev.prevHigh AND today.prevLow >= prev.prevLow
   //   HHLL-B (Below)      — today.prevHigh <= prev.prevHigh AND today.prevLow < prev.prevLow
   //   HHLL-C (Compressed) — today.prevHigh < prev.prevHigh AND today.prevLow > prev.prevLow
-  //   HHLL-X (Expanded)   — today.prevHigh > prev.prevHigh AND today.prevLow < prev.prevLow
+  //   HHLL-E (Expanded)   — today.prevHigh > prev.prevHigh AND today.prevLow < prev.prevLow
   //   HHLL=  (Equal)      — today.prevHigh == prev.prevHigh AND today.prevLow == prev.prevLow (eqTol)
   // Mutually exclusive AND exhaustive: comparisons use a tolerance-aware
   // direction (eqTol), and the one-sided cases (PDH flat + PDL up, PDH down
@@ -452,8 +452,8 @@ export interface CPRResult {
 
 export type PDHPDLGapCategory = "HHGap" | "LLGap" | "EqGap";
 export type HLSwitch = "HL-A" | "HL-B" | "HL=";
-export type SSRRCategory = "SSRR-A" | "SSRR-B" | "SSRR-C" | "SSRR-X" | "SSRR=" | "none";
-export type HHLLCategory = "HHLL-A" | "HHLL-B" | "HHLL-C" | "HHLL-X" | "HHLL=" | "none";
+export type SSRRCategory = "SSRR-A" | "SSRR-B" | "SSRR-C" | "SSRR-E" | "SSRR=" | "none";
+export type HHLLCategory = "HHLL-A" | "HHLL-B" | "HHLL-C" | "HHLL-E" | "HHLL=" | "none";
 export type SSLLCategory = "SSLL-A" | "SSLL-B" | "SSLL-C" | "SSLL-E" | "SSLL=" | "none";
 export type RRHHCategory = "RRHH-A" | "RRHH-B" | "RRHH-C" | "none";
 
@@ -1332,7 +1332,7 @@ export function analyzeCPR(
   const SSRRCategory: SSRRCategory =
     (SSRRDirR1 === 0 && SSRRDirS1 === 0) ? "SSRR=" :
     (SSRRDirR1 > 0 && SSRRDirS1 >= 0) ? "SSRR-A" :
-    (SSRRDirR1 > 0 && SSRRDirS1 < 0) ? "SSRR-X" :
+    (SSRRDirR1 > 0 && SSRRDirS1 < 0) ? "SSRR-E" :
     (SSRRDirR1 <= 0 && SSRRDirS1 < 0) ? "SSRR-B" :
     (SSRRDirR1 < 0 && SSRRDirS1 >= 0) ? "SSRR-C" :
     (SSRRDirR1 === 0 && SSRRDirS1 > 0) ? "SSRR-C" :
@@ -1346,7 +1346,7 @@ export function analyzeCPR(
   const HHLLCategory: HHLLCategory =
     (HHDir === 0 && LLDir === 0) ? "HHLL=" :
     (HHDir > 0 && LLDir >= 0) ? "HHLL-A" :
-    (HHDir > 0 && LLDir < 0) ? "HHLL-X" :
+    (HHDir > 0 && LLDir < 0) ? "HHLL-E" :
     (HHDir <= 0 && LLDir < 0) ? "HHLL-B" :
     (HHDir < 0 && LLDir >= 0) ? "HHLL-C" :
     (HHDir === 0 && LLDir > 0) ? "HHLL-C" :
