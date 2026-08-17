@@ -1354,33 +1354,38 @@ export function analyzeCPR(
 
   // SSLLCategory — S1 and PDL don't have a fixed top/bottom relationship
   // like R1/S1 do (S1 can sit above or below PDL on any given day), so
-  // same-field comparison (today.s1 vs prev.s1) breaks once the two levels
-  // swap relative order day-to-day. Instead, compare the band each day
-  // forms: today's [lo,hi] band from min/max(s1, prevLow) vs prev's
+  // same-field comparison (today.s1 vs prev.s1) alone breaks once the two
+  // levels swap relative order day-to-day. Instead, compare the band each
+  // day forms: today's [lo,hi] band from min/max(s1, prevLow) vs prev's
   // [lo,hi] band. If the band's top rose and its bottom rose too, that's
   // "Above"; both fell is "Below"; top rose while bottom fell is
   // "Expanded" (band widened); top fell while bottom rose is "Compressed"
   // (band narrowed). This still mirrors HHLLCategory's A/B/C/X shape, just
   // over the sorted band edges instead of the raw named fields.
   //
-  // "Above"/"Below" additionally require that S1 plays the same top/bottom
-  // role on both days (today.s1 is the band's hi level on both days, or
-  // the band's lo level on both days). If S1 was on top yesterday but
-  // today PDL is on top instead (or vice versa), the two days' bands are
-  // built from swapped identities, so a claimed "the band shifted up/down"
-  // isn't really comparing the same thing — that case resolves to "none"
-  // rather than a false-confidence A/B. Expanded/Compressed don't need
-  // this check since they only describe how the band's width changed and
-  // stay meaningful even when S1/PDL swap roles.
+  // "Above"/"Below" are additionally gated on the two RAW same-field
+  // trends agreeing with that verdict: today.s1 vs prev.s1 and
+  // today.prevLow vs prev.prevLow must both be non-decreasing (for Above)
+  // or both non-increasing (for Below). A swap in which level sits on top
+  // (S1 above PDL one day, below it the next) does NOT by itself break
+  // this — e.g. today.s1/today.prevLow both sitting above prev.s1/
+  // prev.prevLow entirely is still an unambiguous "Above" even though S1's
+  // relative position flipped. What actually makes the verdict unsafe is
+  // the two individual fields disagreeing in direction (one rose, the
+  // other fell) — that case resolves to "none" instead of a
+  // false-confidence A/B. Expanded/Compressed don't need this gate since
+  // they only describe how the band's width changed and stay meaningful
+  // regardless of role swaps or same-field disagreement.
   const todaySSLLLo = Math.min(todayCPR.s1, todayCPR.prevLow);
   const todaySSLLHi = Math.max(todayCPR.s1, todayCPR.prevLow);
   const prevSSLLLo = Math.min(prevCPR.s1, prevCPR.prevLow);
   const prevSSLLHi = Math.max(prevCPR.s1, prevCPR.prevLow);
   const SSLLDirHi = dirTol(todaySSLLHi, prevSSLLHi);
   const SSLLDirLo = dirTol(todaySSLLLo, prevSSLLLo);
-  const todaySSLLS1IsHi = dirTol(todayCPR.s1, todayCPR.prevLow) >= 0;
-  const prevSSLLS1IsHi = dirTol(prevCPR.s1, prevCPR.prevLow) >= 0;
-  const SSLLIdentityConsistent = todaySSLLS1IsHi === prevSSLLS1IsHi;
+  const SSLLDirS1 = dirTol(todayCPR.s1, prevCPR.s1);
+  const SSLLDirPL = dirTol(todayCPR.prevLow, prevCPR.prevLow);
+  const SSLLSameFieldAgreesUp = SSLLDirS1 >= 0 && SSLLDirPL >= 0;
+  const SSLLSameFieldAgreesDown = SSLLDirS1 <= 0 && SSLLDirPL <= 0;
   const SSLLCategoryRaw: SSLLCategory =
     (SSLLDirHi === 0 && SSLLDirLo === 0) ? "SSLL=" :
     (SSLLDirHi > 0 && SSLLDirLo >= 0) ? "SSLL-A" :
@@ -1390,9 +1395,9 @@ export function analyzeCPR(
     (SSLLDirHi === 0 && SSLLDirLo > 0) ? "SSLL-C" :
     "none";
   const SSLLCategory: SSLLCategory =
-    ((SSLLCategoryRaw === "SSLL-A" || SSLLCategoryRaw === "SSLL-B") && !SSLLIdentityConsistent)
-      ? "none"
-      : SSLLCategoryRaw;
+    (SSLLCategoryRaw === "SSLL-A" && !SSLLSameFieldAgreesUp) ? "none" :
+    (SSLLCategoryRaw === "SSLL-B" && !SSLLSameFieldAgreesDown) ? "none" :
+    SSLLCategoryRaw;
 
   // RRHHCategory — same mirrored-axis construction over the ceiling pair
   // (r1/prevHigh). "Expanded" is impossible here, so everything that is
