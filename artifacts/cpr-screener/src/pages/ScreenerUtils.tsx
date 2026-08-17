@@ -1800,23 +1800,33 @@ const SSLL_BADGE: Record<Exclude<SSLLCategory, "none">, { label: string; classNa
   "SSLL-A": {
     label: "SSLL-A",
     className: "bg-green-500/10 text-green-400 border-green-500/30",
-    title: "Today's floor level > Prev's floor level (Axis 1) and Today's mirrored floor >= Prev's mirrored floor (Axis 2)",
+    title: "Today's S1 > Prev S1 and Today's PDL >= Prev PDL",
   },
   "SSLL-B": {
     label: "SSLL-B",
     className: "bg-red-500/10 text-red-400 border-red-500/30",
-    title: "Today's floor level <= Prev's floor level (Axis 1) and Today's mirrored floor < Prev's mirrored floor (Axis 2)",
+    title: "Today's S1 <= Prev S1 and Today's PDL < Prev PDL",
   },
   "SSLL-C": {
     label: "SSLL-C",
     className: "bg-blue-500/10 text-blue-400 border-blue-500/30",
-    title: "Compressed: Axis 1 down and Axis 2 up",
+    title: "Compressed: Today's S1 < Prev S1 and Today's PDL > Prev PDL",
+  },
+  "SSLL-X": {
+    label: "SSLL-X",
+    className: "bg-orange-500/10 text-orange-400 border-orange-500/30",
+    title: "Expanded: Today's S1 > Prev S1 and Today's PDL < Prev PDL",
+  },
+  "SSLL=": {
+    label: "SSLL=",
+    className: "bg-slate-500/10 text-slate-300 border-slate-500/30",
+    title: "Equal: Today's S1 = Prev S1 and Today's PDL = Prev PDL",
   },
 };
 
 /**
  * renderSSLLCategoryBadge — single badge for CPRResult.SSLLCategory
- * ("SSLL-A" | "SSLL-B" | "SSLL-C" | "none"), same
+ * ("SSLL-A" | "SSLL-B" | "SSLL-C" | "SSLL-X" | "SSLL=" | "none"), same
  * solid-badge styling used elsewhere (renderSSRRCategoryBadge). Always
  * renders at most one badge, since SSLLCategory is a mutually exclusive
  * partition. Returns null for "none".

@@ -411,19 +411,18 @@ export interface CPRResult {
   // ScreenerUtils.renderHHLLCategoryBadge), also covering the
   // Compressed/Expanded/Equal cases those two booleans never captured.
   HHLLCategory: HHLLCategory;
-  // SSLLCategory — 5-way mutually exclusive partition over two derived
-  // "floor" levels (mirrors SSRRCategory's shape). Each side's floor level
-  // is picked dynamically from its own HLSwitch state:
-  //   Axis 1 (primary):   todayLevel1 = today.HLSwitch === "HL-A" ? today.s1 : today.prevLow
-  //                        prevLevel1  = prev.HLSwitch  === "HL-A" ? prev.prevLow : prev.s1
-  //   Axis 2 (mirrored):  todayLevel2 = today.HLSwitch === "HL-A" ? today.prevLow : today.s1
-  //                        prevLevel2  = prev.HLSwitch  === "HL-A" ? prev.s1 : prev.prevLow
-  //   SSLL-A (Above)      — todayLevel1 >  prevLevel1 AND todayLevel2 >= prevLevel2
-  //   SSLL-B (Below)      — todayLevel1 <= prevLevel1 AND todayLevel2 <  prevLevel2
-  //   SSLL-C (Compressed) — todayLevel1 <  prevLevel1 AND todayLevel2 >  prevLevel2
-  // Comparisons are tolerance-aware (eqTol): axis1 down + axis2 flat maps to
-  // SSLL-B, axis1 flat + axis2 up maps to SSLL-A. "none" only remains for
-  // the fully-flat case (both axes unchanged).
+  // SSLLCategory — single-badge 6-way partition over today's S1/PDL vs
+  // prev's S1/PDL (mirrors SSRRCategory's and HHLLCategory's shape, using
+  // s1 in place of r1 and prevLow in place of prevHigh):
+  //   SSLL-A (Above)      — today.s1 >  prev.s1 AND today.prevLow >= prev.prevLow
+  //   SSLL-B (Below)      — today.s1 <= prev.s1 AND today.prevLow <  prev.prevLow
+  //   SSLL-C (Compressed) — today.s1 <  prev.s1 AND today.prevLow >  prev.prevLow
+  //   SSLL-X (Expanded)   — today.s1 >  prev.s1 AND today.prevLow <  prev.prevLow
+  //   SSLL=  (Equal)      — today.s1 == prev.s1 AND today.prevLow == prev.prevLow (eqTol)
+  // "none" is a defensive fallback for non-finite inputs only. Comparisons
+  // are tolerance-aware (eqTol), so the one-sided cases (s1 down + prevLow
+  // flat, s1 flat + prevLow up) resolve to SSLL-B / SSLL-A respectively,
+  // matching HHLLCategory's construction.
   SSLLCategory: SSLLCategory;
   // RRHHCategory — 3-way partition over two derived "ceiling" levels
   // (mirrors SSLLCategory's construction, over r1/prevHigh instead of
@@ -448,7 +447,7 @@ export type PDHPDLGapCategory = "HHGap" | "LLGap" | "EqGap";
 export type HLSwitch = "HL-A" | "HL-B" | "HL=";
 export type SSRRCategory = "SSRR-A" | "SSRR-B" | "SSRR-C" | "SSRR-X" | "SSRR=" | "none";
 export type HHLLCategory = "HHLL-A" | "HHLL-B" | "HHLL-C" | "HHLL-X" | "HHLL=" | "none";
-export type SSLLCategory = "SSLL-A" | "SSLL-B" | "SSLL-C" | "none";
+export type SSLLCategory = "SSLL-A" | "SSLL-B" | "SSLL-C" | "SSLL-X" | "SSLL=" | "none";
 export type RRHHCategory = "RRHH-A" | "RRHH-B" | "RRHH-C" | "none";
 
 function isValidCandle(c: OHLC): boolean {
@@ -1346,23 +1345,18 @@ export function analyzeCPR(
     (HHDir === 0 && LLDir > 0) ? "HHLL-C" :
     "none";
 
-  // SSLLCategory — two derived floor levels: Axis 1 is the original
-  // SSLLAbove selection rule (s1 when HLSwitch is "HL-A", else prevLow);
-  // Axis 2 mirrors it with the selection swapped. With only A/B/C badges
-  // available, a flat axis 2 paired with a falling axis 1 resolves to
-  // SSLL-B (floors sank), and a flat axis 1 paired with a rising axis 2
-  // resolves to SSLL-A (floors lifted).
-  const todaySSLLLevel1 = todayCPR.HLSwitch === "HL-A" ? todayCPR.s1 : todayCPR.prevLow;
-  const prevSSLLLevel1  = prevCPR.HLSwitch  === "HL-A" ? prevCPR.prevLow : prevCPR.s1;
-  const todaySSLLLevel2 = todayCPR.HLSwitch === "HL-A" ? todayCPR.prevLow : todayCPR.s1;
-  const prevSSLLLevel2  = prevCPR.HLSwitch  === "HL-A" ? prevCPR.s1 : prevCPR.prevLow;
-
-  const SSLLDir1 = dirTol(todaySSLLLevel1, prevSSLLLevel1);
-  const SSLLDir2 = dirTol(todaySSLLLevel2, prevSSLLLevel2);
+  // SSLLCategory — today's S1/PDL (prevLow) vs prev's S1/PDL, built the
+  // same way as SSRRCategory/HHLLCategory (direct field comparison, no
+  // HLSwitch-based level selection).
+  const SSLLDirS1 = dirTol(todayCPR.s1, prevCPR.s1);
+  const SSLLDirPL = dirTol(todayCPR.prevLow, prevCPR.prevLow);
   const SSLLCategory: SSLLCategory =
-    ((SSLLDir1 > 0 && SSLLDir2 >= 0) || (SSLLDir1 === 0 && SSLLDir2 > 0)) ? "SSLL-A" :
-    ((SSLLDir1 <= 0 && SSLLDir2 < 0) || (SSLLDir1 < 0 && SSLLDir2 === 0)) ? "SSLL-B" :
-    (SSLLDir1 < 0 && SSLLDir2 > 0) ? "SSLL-C" :
+    (SSLLDirS1 === 0 && SSLLDirPL === 0) ? "SSLL=" :
+    (SSLLDirS1 > 0 && SSLLDirPL >= 0) ? "SSLL-A" :
+    (SSLLDirS1 > 0 && SSLLDirPL < 0) ? "SSLL-X" :
+    (SSLLDirS1 <= 0 && SSLLDirPL < 0) ? "SSLL-B" :
+    (SSLLDirS1 < 0 && SSLLDirPL >= 0) ? "SSLL-C" :
+    (SSLLDirS1 === 0 && SSLLDirPL > 0) ? "SSLL-C" :
     "none";
 
   // RRHHCategory — same mirrored-axis construction over the ceiling pair
