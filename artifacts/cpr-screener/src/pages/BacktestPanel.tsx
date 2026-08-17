@@ -909,22 +909,22 @@ export default function BacktestPanel() {
                     <th className="px-2 py-2 w-16 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Close
                     </th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Pattern
+                    </th>
                     <th className="px-2 py-3 w-32 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       LEVEL
                     </th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Entry Date
-                    </th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Pattern
+                    <th className="pl-8 pr-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      PDH / PDL
                     </th>
                     <th className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[220px]">
                       <span className="inline-flex items-center gap-1">
                         Pivot Size <PivotSizeInfo />
                       </span>
                     </th>
-                    <th className="pl-8 pr-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      PDH / PDL
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Entry Date
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       <button
@@ -989,12 +989,6 @@ export default function BacktestPanel() {
                         <td className={`px-2 py-2 w-16 font-mono text-sm font-medium ${closeColor}`}>
                           {r.closePrice !== null && r.closePrice !== undefined ? fmt(r.closePrice) : "—"}
                         </td>
-                        <td className="px-2 py-3 w-32">
-                          {renderLevelBadges(r.raw)}
-                        </td>
-                        <td className="px-3 py-2 font-mono text-xs text-muted-foreground whitespace-nowrap">
-                          {formatDisplay(r.entryDate)}
-                        </td>
                         <td className="px-3 py-2 whitespace-nowrap">
                           {(() => {
                             const today = renderTodayPatternBadges(r.raw);
@@ -1009,6 +1003,12 @@ export default function BacktestPanel() {
                               </>
                             );
                           })()}
+                        </td>
+                        <td className="px-2 py-3 w-32">
+                          {renderLevelBadges(r.raw)}
+                        </td>
+                        <td className="pl-8 pr-4 py-3 whitespace-nowrap text-xs font-medium">
+                          {renderPdhPdlColumnBadges(r.raw)}
                         </td>
                         <td className="px-3 py-2 font-mono whitespace-nowrap min-w-[220px]">
                           {(() => {
@@ -1037,8 +1037,8 @@ export default function BacktestPanel() {
                             );
                           })()}
                         </td>
-                        <td className="pl-8 pr-4 py-3 whitespace-nowrap text-xs font-medium">
-                          {renderPdhPdlColumnBadges(r.raw)}
+                        <td className="px-3 py-2 font-mono text-xs text-muted-foreground whitespace-nowrap">
+                          {formatDisplay(r.entryDate)}
                         </td>
                         <td className={`px-3 py-2 font-mono text-sm font-medium ${chgColor}`}>
                           {chg !== null && chg !== undefined
