@@ -454,7 +454,7 @@ export type PDHPDLGapCategory = "HHGap" | "LLGap" | "EqGap";
 export type HLSwitch = "HL-A" | "HL-B" | "HL=";
 export type SSRRCategory = "SSRR-A" | "SSRR-B" | "SSRR-C" | "SSRR-E" | "SSRR=" | "none";
 export type HHLLCategory = "HHLL-A" | "HHLL-B" | "HHLL-C" | "HHLL-E" | "HHLL=" | "none";
-export type SSLLCategory = "SSLL-A" | "SSLL-B" | "SSLL-C" | "SSLL-E" | "SSLL=" | "none";
+export type SSLLCategory = "SSLL-A" | "SSLL-B" | "SSLL-C" | "SSLL-E" | "SSLL-XA" | "SSLL-XB" | "SSLL=" | "none";
 export type RRHHCategory = "RRHH-A" | "RRHH-B" | "RRHH-C" | "none";
 
 function isValidCandle(c: OHLC): boolean {
@@ -1372,7 +1372,7 @@ export function analyzeCPR(
   // prev.prevLow entirely is still an unambiguous "Above" even though S1's
   // relative position flipped. What actually makes the verdict unsafe is
   // the two individual fields disagreeing in direction (one rose, the
-  // other fell) — that case resolves to "none" instead of a
+  // other fell) — that case resolves to "SSLL-XA"/"SSLL-XB" instead of a
   // false-confidence A/B. Expanded/Compressed don't need this gate since
   // they only describe how the band's width changed and stay meaningful
   // regardless of role swaps or same-field disagreement.
@@ -1395,8 +1395,8 @@ export function analyzeCPR(
     (SSLLDirHi === 0 && SSLLDirLo > 0) ? "SSLL-C" :
     "none";
   const SSLLCategory: SSLLCategory =
-    (SSLLCategoryRaw === "SSLL-A" && !SSLLSameFieldAgreesUp) ? "none" :
-    (SSLLCategoryRaw === "SSLL-B" && !SSLLSameFieldAgreesDown) ? "none" :
+    (SSLLCategoryRaw === "SSLL-A" && !SSLLSameFieldAgreesUp) ? "SSLL-XA" :
+    (SSLLCategoryRaw === "SSLL-B" && !SSLLSameFieldAgreesDown) ? "SSLL-XB" :
     SSLLCategoryRaw;
 
   // RRHHCategory — same mirrored-axis construction over the ceiling pair
