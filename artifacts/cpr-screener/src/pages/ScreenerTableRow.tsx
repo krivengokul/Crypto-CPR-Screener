@@ -241,7 +241,7 @@ export function renderLevelBadges(r: CPRResult) {
   // Inside/Outside/narrow state. SSRR now renders entirely on row 1.
   const ssrrHhllRow = renderSSRRHHLLBadges(r);
   return (
-    <div className="flex flex-col gap-1 max-w-[150px]">
+    <div className="flex flex-col gap-1 max-w-[190px]">
       <div className="flex flex-wrap items-center gap-1">
         {renderLevelStatusRow1Badges(r, isInsideCPR, isOutsideCPR, showWide, nothingMatched)}
       </div>
@@ -313,7 +313,7 @@ export function ScreenerTableHeader({
         <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           Pattern
         </th>
-        <th className="px-2 py-3 w-32 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+        <th className="px-2 py-3 w-44 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           LEVEL
         </th>
         <th
@@ -512,8 +512,8 @@ export default function ScreenerTableRow({
           {renderTodayPatternBadges(r)}
           {renderPrevPatternBadge(r)}
         </td>
-        <td className="px-2 py-3 w-32">
-          <div className="flex flex-col gap-1 max-w-[150px]">
+        <td className="px-2 py-3 w-44">
+          <div className="flex flex-col gap-1 max-w-[190px]">
             <div className="flex flex-wrap items-center gap-1">
               {renderLevelStatusRow1Badges(r, isInsideCPR, isOutsideCPR, showWide, nothingMatchedMain)}
             </div>
