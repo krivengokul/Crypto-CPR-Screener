@@ -1800,12 +1800,12 @@ const SSLL_BADGE: Record<Exclude<SSLLCategory, "none">, { label: string; classNa
   "SSLL-A": {
     label: "SSLL-A",
     className: "bg-green-500/10 text-green-400 border-green-500/30",
-    title: "Today's S1/PDL band shifted up: band top and bottom both rose vs prev",
+    title: "Today's S1/PDL band shifted up (band top and bottom both rose vs prev), with S1 keeping the same top/bottom role on both days",
   },
   "SSLL-B": {
     label: "SSLL-B",
     className: "bg-red-500/10 text-red-400 border-red-500/30",
-    title: "Today's S1/PDL band shifted down: band top and bottom both fell vs prev",
+    title: "Today's S1/PDL band shifted down (band top and bottom both fell vs prev), with S1 keeping the same top/bottom role on both days",
   },
   "SSLL-C": {
     label: "SSLL-C",
