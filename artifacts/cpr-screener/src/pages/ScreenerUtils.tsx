@@ -1800,27 +1800,27 @@ const SSLL_BADGE: Record<Exclude<SSLLCategory, "none">, { label: string; classNa
   "SSLL-A": {
     label: "SSLL-A",
     className: "bg-green-500/10 text-green-400 border-green-500/30",
-    title: "Today's S1 > Prev PDL and Today's PDL >= Prev S1",
+    title: "Today's S1/PDL band shifted up: band top and bottom both rose vs prev",
   },
   "SSLL-B": {
     label: "SSLL-B",
     className: "bg-red-500/10 text-red-400 border-red-500/30",
-    title: "Today's S1 <= Prev PDL and Today's PDL < Prev S1",
+    title: "Today's S1/PDL band shifted down: band top and bottom both fell vs prev",
   },
   "SSLL-C": {
     label: "SSLL-C",
     className: "bg-blue-500/10 text-blue-400 border-blue-500/30",
-    title: "Compressed: Today's S1 < Prev PDL and Today's PDL > Prev S1",
+    title: "Compressed: today's S1/PDL band narrowed vs prev (top fell, bottom rose)",
   },
   "SSLL-X": {
     label: "SSLL-X",
     className: "bg-orange-500/10 text-orange-400 border-orange-500/30",
-    title: "Expanded: Today's S1 > Prev PDL and Today's PDL < Prev S1",
+    title: "Expanded: today's S1/PDL band widened vs prev (top rose, bottom fell)",
   },
   "SSLL=": {
     label: "SSLL=",
     className: "bg-slate-500/10 text-slate-300 border-slate-500/30",
-    title: "Equal: Today's S1 = Prev PDL and Today's PDL = Prev S1",
+    title: "Equal: today's S1/PDL band unchanged vs prev",
   },
 };
 

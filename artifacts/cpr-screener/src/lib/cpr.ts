@@ -411,19 +411,22 @@ export interface CPRResult {
   // ScreenerUtils.renderHHLLCategoryBadge), also covering the
   // Compressed/Expanded/Equal cases those two booleans never captured.
   HHLLCategory: HHLLCategory;
-  // SSLLCategory — single-badge 6-way partition over today's S1/PDL vs
-  // prev's PDL/S1, cross-paired (mirrors SSRRCategory's and HHLLCategory's
-  // shape, but axis 1 compares today's S1 against prev's PDL, and axis 2
-  // compares today's PDL against prev's S1):
-  //   SSLL-A (Above)      — today.s1 >  prev.prevLow AND today.prevLow >= prev.s1
-  //   SSLL-B (Below)      — today.s1 <= prev.prevLow AND today.prevLow <  prev.s1
-  //   SSLL-C (Compressed) — today.s1 <  prev.prevLow AND today.prevLow >  prev.s1
-  //   SSLL-X (Expanded)   — today.s1 >  prev.prevLow AND today.prevLow <  prev.s1
-  //   SSLL=  (Equal)      — today.s1 == prev.prevLow AND today.prevLow == prev.s1 (eqTol)
-  // "none" is a defensive fallback for non-finite inputs only. Comparisons
-  // are tolerance-aware (eqTol), so the one-sided cases (axis1 down + axis2
-  // flat, axis1 flat + axis2 up) resolve to SSLL-B / SSLL-A respectively,
-  // matching HHLLCategory's construction.
+  // SSLLCategory — single-badge 6-way partition comparing the band formed
+  // by today's [S1, PDL] (sorted low→high) against the band formed by
+  // prev's [S1, PDL]. S1 and PDL don't have a fixed relative order, so the
+  // band's top/bottom are computed via min/max rather than same-field
+  // comparison:
+  //   todayLo/todayHi = min/max(today.s1, today.prevLow)
+  //   prevLo/prevHi   = min/max(prev.s1, prev.prevLow)
+  //   SSLL-A (Above)      — todayHi >  prevHi AND todayLo >= prevLo (band shifted up)
+  //   SSLL-B (Below)      — todayHi <= prevHi AND todayLo <  prevLo (band shifted down)
+  //   SSLL-C (Compressed) — todayHi <  prevHi AND todayLo >  prevLo (band narrowed)
+  //   SSLL-X (Expanded)   — todayHi >  prevHi AND todayLo <  prevLo (band widened)
+  //   SSLL=  (Equal)      — todayHi == prevHi AND todayLo == prevLo (eqTol)
+  // "none" is a defensive fallback for non-finite inputs only. Mirrors
+  // HHLLCategory's A/B/C/X shape, applied to sorted band edges instead of
+  // raw named fields, since (unlike prevHigh/prevLow) S1 vs PDL can flip
+  // which one is higher from day to day.
   SSLLCategory: SSLLCategory;
   // RRHHCategory — 3-way partition over two derived "ceiling" levels
   // (mirrors SSLLCategory's construction, over r1/prevHigh instead of
@@ -1346,20 +1349,29 @@ export function analyzeCPR(
     (HHDir === 0 && LLDir > 0) ? "HHLL-C" :
     "none";
 
-  // SSLLCategory — today's S1/PDL (prevLow) vs prev's PDL/S1, cross-paired
-  // the same way the old HLSwitch-"HL-A" case did (axis 1: today's S1
-  // against prev's PDL; axis 2: today's PDL against prev's S1), built the
-  // same way as SSRRCategory/HHLLCategory otherwise (single fixed pairing,
-  // no HLSwitch-based level selection).
-  const SSLLDir1 = dirTol(todayCPR.s1, prevCPR.prevLow);
-  const SSLLDir2 = dirTol(todayCPR.prevLow, prevCPR.s1);
+  // SSLLCategory — S1 and PDL don't have a fixed top/bottom relationship
+  // like R1/S1 do (S1 can sit above or below PDL on any given day), so
+  // same-field comparison (today.s1 vs prev.s1) breaks once the two levels
+  // swap relative order day-to-day. Instead, compare the band each day
+  // forms: today's [lo,hi] band from min/max(s1, prevLow) vs prev's
+  // [lo,hi] band. If the band's top rose and its bottom rose too, that's
+  // "Above"; both fell is "Below"; top rose while bottom fell is
+  // "Expanded" (band widened); top fell while bottom rose is "Compressed"
+  // (band narrowed). This still mirrors HHLLCategory's A/B/C/X shape, just
+  // over the sorted band edges instead of the raw named fields.
+  const todaySSLLLo = Math.min(todayCPR.s1, todayCPR.prevLow);
+  const todaySSLLHi = Math.max(todayCPR.s1, todayCPR.prevLow);
+  const prevSSLLLo = Math.min(prevCPR.s1, prevCPR.prevLow);
+  const prevSSLLHi = Math.max(prevCPR.s1, prevCPR.prevLow);
+  const SSLLDirHi = dirTol(todaySSLLHi, prevSSLLHi);
+  const SSLLDirLo = dirTol(todaySSLLLo, prevSSLLLo);
   const SSLLCategory: SSLLCategory =
-    (SSLLDir1 === 0 && SSLLDir2 === 0) ? "SSLL=" :
-    (SSLLDir1 > 0 && SSLLDir2 >= 0) ? "SSLL-A" :
-    (SSLLDir1 > 0 && SSLLDir2 < 0) ? "SSLL-X" :
-    (SSLLDir1 <= 0 && SSLLDir2 < 0) ? "SSLL-B" :
-    (SSLLDir1 < 0 && SSLLDir2 >= 0) ? "SSLL-C" :
-    (SSLLDir1 === 0 && SSLLDir2 > 0) ? "SSLL-C" :
+    (SSLLDirHi === 0 && SSLLDirLo === 0) ? "SSLL=" :
+    (SSLLDirHi > 0 && SSLLDirLo >= 0) ? "SSLL-A" :
+    (SSLLDirHi > 0 && SSLLDirLo < 0) ? "SSLL-X" :
+    (SSLLDirHi <= 0 && SSLLDirLo < 0) ? "SSLL-B" :
+    (SSLLDirHi < 0 && SSLLDirLo >= 0) ? "SSLL-C" :
+    (SSLLDirHi === 0 && SSLLDirLo > 0) ? "SSLL-C" :
     "none";
 
   // RRHHCategory — same mirrored-axis construction over the ceiling pair
