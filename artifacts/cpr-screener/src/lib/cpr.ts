@@ -431,7 +431,8 @@ export interface CPRResult {
   // this gate since band-width change stays meaningful under a role swap.
   // "none" is otherwise a defensive fallback for non-finite inputs only.
   SSLLCategory: SSLLCategory;
-  // RRHHCategory — 3-way partition over two derived "ceiling" levels
+  // RRHHCategory — 7-way partition over the ceiling band formed by
+  // [R1, PDH] for today and the previous day, mirroring SSLLCategory.
   // (mirrors SSLLCategory's construction, over r1/prevHigh instead of
   // s1/prevLow). Each side's ceiling level is picked dynamically from its
   // own HLSwitch state:
@@ -455,7 +456,7 @@ export type HLSwitch = "HL-A" | "HL-B" | "HL=";
 export type SSRRCategory = "SSRR-A" | "SSRR-B" | "SSRR-C" | "SSRR-E" | "SSRR=" | "none";
 export type HHLLCategory = "HHLL-A" | "HHLL-B" | "HHLL-C" | "HHLL-E" | "HHLL=" | "none";
 export type SSLLCategory = "SSLL-A" | "SSLL-B" | "SSLL-C" | "SSLL-E" | "SSLL-XA" | "SSLL-XB" | "SSLL=" | "none";
-export type RRHHCategory = "RRHH-A" | "RRHH-B" | "RRHH-C" | "none";
+export type RRHHCategory = "RRHH-A" | "RRHH-B" | "RRHH-C" | "RRHH-E" | "RRHH-XA" | "RRHH-XB" | "RRHH=" | "none";
 
 function isValidCandle(c: OHLC): boolean {
   return (
@@ -1399,26 +1400,38 @@ export function analyzeCPR(
     (SSLLCategoryRaw === "SSLL-B" && !SSLLSameFieldAgreesDown) ? "SSLL-XB" :
     SSLLCategoryRaw;
 
-  // RRHHCategory — same mirrored-axis construction over the ceiling pair
-  // (r1/prevHigh). "Expanded" is impossible here, so everything that is
-  // neither Above nor Below collapses into RRHH-C; "none" is a defensive
-  // fallback for non-finite inputs only.
-  const todayRRHHLevel1 = todayCPR.HLSwitch === "HL-A" ? todayCPR.r1 : todayCPR.prevHigh;
-  const prevRRHHLevel1  = prevCPR.HLSwitch  === "HL-A" ? prevCPR.prevHigh : prevCPR.r1;
-  const todayRRHHLevel2 = todayCPR.HLSwitch === "HL-A" ? todayCPR.prevHigh : todayCPR.r1;
-  const prevRRHHLevel2  = prevCPR.HLSwitch  === "HL-A" ? prevCPR.r1 : prevCPR.prevHigh;
-
+  // RRHHCategory — mirror SSLLCategory over the resistance-side ceiling band
+  // [R1, PDH], where PDH is stored as prevHigh in each CPRLevels object.
+  // Sorting is required because R1 and PDH can swap their relative order.
+  const todayRRHHLo = Math.min(todayCPR.r1, todayCPR.prevHigh);
+  const todayRRHHHi = Math.max(todayCPR.r1, todayCPR.prevHigh);
+  const prevRRHHLo = Math.min(prevCPR.r1, prevCPR.prevHigh);
+  const prevRRHHHi = Math.max(prevCPR.r1, prevCPR.prevHigh);
   const RRHHValid =
-    isFinite(todayRRHHLevel1) && isFinite(prevRRHHLevel1) &&
-    isFinite(todayRRHHLevel2) && isFinite(prevRRHHLevel2);
-  const RRHHDir1 = dirTol(todayRRHHLevel1, prevRRHHLevel1);
-  const RRHHDir2 = dirTol(todayRRHHLevel2, prevRRHHLevel2);
+    isFinite(todayRRHHLo) && isFinite(todayRRHHHi) &&
+    isFinite(prevRRHHLo) && isFinite(prevRRHHHi);
+
+  const RRHHDirHi = dirTol(todayRRHHHi, prevRRHHHi);
+  const RRHHDirLo = dirTol(todayRRHHLo, prevRRHHLo);
+  const RRHHDirR1 = dirTol(todayCPR.r1, prevCPR.r1);
+  const RRHHDirPDH = dirTol(todayCPR.prevHigh, prevCPR.prevHigh);
+  const RRHHSameFieldAgreesUp = RRHHDirR1 >= 0 && RRHHDirPDH >= 0;
+  const RRHHSameFieldAgreesDown = RRHHDirR1 <= 0 && RRHHDirPDH <= 0;
+
+  const RRHHCategoryRaw: RRHHCategory =
+    !RRHHValid ? "none" :
+    (RRHHDirHi === 0 && RRHHDirLo === 0) ? "RRHH=" :
+    (RRHHDirHi > 0 && RRHHDirLo >= 0) ? "RRHH-A" :
+    (RRHHDirHi > 0 && RRHHDirLo < 0) ? "RRHH-E" :
+    (RRHHDirHi <= 0 && RRHHDirLo < 0) ? "RRHH-B" :
+    (RRHHDirHi < 0 && RRHHDirLo >= 0) ? "RRHH-C" :
+    (RRHHDirHi === 0 && RRHHDirLo > 0) ? "RRHH-C" :
+    "none";
 
   const RRHHCategory: RRHHCategory =
-    !RRHHValid ? "none" :
-    ((RRHHDir1 > 0 && RRHHDir2 >= 0) || (RRHHDir1 === 0 && RRHHDir2 > 0)) ? "RRHH-A" :
-    ((RRHHDir1 <= 0 && RRHHDir2 < 0) || (RRHHDir1 < 0 && RRHHDir2 === 0)) ? "RRHH-B" :
-    "RRHH-C";
+    (RRHHCategoryRaw === "RRHH-A" && !RRHHSameFieldAgreesUp) ? "RRHH-XA" :
+    (RRHHCategoryRaw === "RRHH-B" && !RRHHSameFieldAgreesDown) ? "RRHH-XB" :
+    RRHHCategoryRaw;
 
   return {
     symbol,

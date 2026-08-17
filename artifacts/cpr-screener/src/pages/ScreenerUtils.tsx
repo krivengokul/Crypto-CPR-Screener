@@ -10,7 +10,6 @@ import {
   type SSRRCategory,
   type HHLLCategory,
   type SSLLCategory,
-  type RRHHCategory,
 } from "@/lib/cpr";
 
 export type SortKey = "symbol" | "compressionRatio" | "currentPrice" | "change24h" | "quoteVolume" | "priceVsCpr" | "cprDistance" | "pdhPdlPct";
@@ -1856,34 +1855,51 @@ export function renderSSLLCategoryBadge(r: CPRResult) {
 }
 
 /**
- * RRHH_BADGE — display config for each CPRResult.RRHHCategory value, keyed
- * by category so renderSSRRHHLLBadges/renderRRHHCategoryBadge stay in sync.
- * Only 3 badges — "Expanded" is mathematically impossible for this pairing
- * and exact "Equal" collapses into RRHH-C (see field doc on CPRResult).
+ * RRHH_BADGE — display config for each mirrored RRHH category, keyed by
+ * category so renderSSRRHHLLBadges/renderRRHHCategoryBadge stay in sync.
  */
 const RRHH_BADGE: Record<Exclude<RRHHCategory, "none">, { label: string; className: string; title: string }> = {
   "RRHH-A": {
     label: "RRHH-A",
     className: "bg-green-500/10 text-green-400 border-green-500/30",
-    title: "Today's ceiling level > Prev's ceiling level (Axis 1) and Today's mirrored ceiling >= Prev's mirrored ceiling (Axis 2)",
+    title: "Today's R1 > Prev R1 and Today's PDH > Prev PDH, with R1/PDH keeping the same top/bottom role on both days",
   },
   "RRHH-B": {
     label: "RRHH-B",
     className: "bg-red-500/10 text-red-400 border-red-500/30",
-    title: "Today's ceiling level <= Prev's ceiling level (Axis 1) and Today's mirrored ceiling < Prev's mirrored ceiling (Axis 2)",
+    title: "Today's R1 < Prev R1 and Today's PDH < Prev PDH, with R1/PDH keeping the same top/bottom role on both days",
   },
   "RRHH-C": {
     label: "RRHH-C",
     className: "bg-blue-500/10 text-blue-400 border-blue-500/30",
-    title: "Compressed (or, rarely, exactly Equal): Axis 1 and Axis 2 don't both move the same direction",
+    title: "Compressed: Today's R1 < Prev R1 while Today's PDH > Prev PDH",
+  },
+  "RRHH-E": {
+    label: "RRHH-E",
+    className: "bg-orange-500/10 text-orange-400 border-orange-500/30",
+    title: "Expanded: Today's R1 > Prev R1 while Today's PDH < Prev PDH",
+  },
+  "RRHH-XA": {
+    label: "RRHH-XA",
+    className: "bg-yellow-500/10 text-yellow-400 border-yellow-500/30",
+    title: "Ambiguous Above: Today's R1 and PDH both rose, but their top/bottom roles differ between the two days",
+  },
+  "RRHH-XB": {
+    label: "RRHH-XB",
+    className: "bg-yellow-500/10 text-yellow-400 border-yellow-500/30",
+    title: "Ambiguous Below: Today's R1 and PDH both fell, but their top/bottom roles differ between the two days",
+  },
+  "RRHH=": {
+    label: "RRHH=",
+    className: "bg-slate-500/10 text-slate-300 border-slate-500/30",
+    title: "Equal: today's R1/PDH pair is unchanged from the previous day's R1/PDH pair",
   },
 };
 
 /**
- * renderRRHHCategoryBadge — single badge for CPRResult.RRHHCategory
- * ("RRHH-A" | "RRHH-B" | "RRHH-C" | "none"), same solid-badge styling used
- * elsewhere (renderSSLLCategoryBadge). Always renders at most one badge.
- * Returns null for "none" (defensive fallback only — see field doc).
+ * renderRRHHCategoryBadge — single badge for the mirrored R1/PDH RRHH pair,
+ * using the same solid-badge styling and mutually-exclusive categories as
+ * renderSSLLCategoryBadge.
  */
 export function renderRRHHCategoryBadge(r: CPRResult) {
   const cat = r.RRHHCategory;
@@ -1901,10 +1917,9 @@ export function renderRRHHCategoryBadge(r: CPRResult) {
 
 /**
  * renderSSRRHHLLBadges — the LEVEL column's second-row badges. Renders the
- * SSLL badge (CPRResult.SSLLCategory) and the RRHH badge
- * (CPRResult.RRHHCategory) in that order. SSRR (CPRResult.SSRRCategory) no
- * longer appears here — it now renders on row 1 instead (see
- * renderLevelStatusRow1Badges). Returns null when both are absent.
+ * SSLL badge and the mirrored RRHH badge in that order. SSRR
+ * (CPRResult.SSRRCategory) no longer appears here — it now renders on row 1
+ * instead (see renderLevelStatusRow1Badges). Returns null when both are absent.
  */
 export function renderSSRRHHLLBadges(r: CPRResult) {
   const ssllBadge = renderSSLLCategoryBadge(r);
