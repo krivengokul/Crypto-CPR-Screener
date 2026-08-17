@@ -423,10 +423,13 @@ export interface CPRResult {
   //   SSLL-C (Compressed) — todayHi <  prevHi AND todayLo >  prevLo (band narrowed)
   //   SSLL-X (Expanded)   — todayHi >  prevHi AND todayLo <  prevLo (band widened)
   //   SSLL=  (Equal)      — todayHi == prevHi AND todayLo == prevLo (eqTol)
-  // "none" is a defensive fallback for non-finite inputs only. Mirrors
-  // HHLLCategory's A/B/C/X shape, applied to sorted band edges instead of
-  // raw named fields, since (unlike prevHigh/prevLow) S1 vs PDL can flip
-  // which one is higher from day to day.
+  // A/B are additionally gated on S1 keeping the same top/bottom role on
+  // both days (S1 is the band's hi level on both days, or its lo level on
+  // both days). If S1 was on top yesterday but PDL is on top today (or
+  // vice versa), the "shift" claim isn't comparing the same identities, so
+  // this resolves to "none" instead of a misleading A/B. X/C don't need
+  // this gate since band-width change stays meaningful under a role swap.
+  // "none" is otherwise a defensive fallback for non-finite inputs only.
   SSLLCategory: SSLLCategory;
   // RRHHCategory — 3-way partition over two derived "ceiling" levels
   // (mirrors SSLLCategory's construction, over r1/prevHigh instead of
@@ -1359,13 +1362,26 @@ export function analyzeCPR(
   // "Expanded" (band widened); top fell while bottom rose is "Compressed"
   // (band narrowed). This still mirrors HHLLCategory's A/B/C/X shape, just
   // over the sorted band edges instead of the raw named fields.
+  //
+  // "Above"/"Below" additionally require that S1 plays the same top/bottom
+  // role on both days (today.s1 is the band's hi level on both days, or
+  // the band's lo level on both days). If S1 was on top yesterday but
+  // today PDL is on top instead (or vice versa), the two days' bands are
+  // built from swapped identities, so a claimed "the band shifted up/down"
+  // isn't really comparing the same thing — that case resolves to "none"
+  // rather than a false-confidence A/B. Expanded/Compressed don't need
+  // this check since they only describe how the band's width changed and
+  // stay meaningful even when S1/PDL swap roles.
   const todaySSLLLo = Math.min(todayCPR.s1, todayCPR.prevLow);
   const todaySSLLHi = Math.max(todayCPR.s1, todayCPR.prevLow);
   const prevSSLLLo = Math.min(prevCPR.s1, prevCPR.prevLow);
   const prevSSLLHi = Math.max(prevCPR.s1, prevCPR.prevLow);
   const SSLLDirHi = dirTol(todaySSLLHi, prevSSLLHi);
   const SSLLDirLo = dirTol(todaySSLLLo, prevSSLLLo);
-  const SSLLCategory: SSLLCategory =
+  const todaySSLLS1IsHi = dirTol(todayCPR.s1, todayCPR.prevLow) >= 0;
+  const prevSSLLS1IsHi = dirTol(prevCPR.s1, prevCPR.prevLow) >= 0;
+  const SSLLIdentityConsistent = todaySSLLS1IsHi === prevSSLLS1IsHi;
+  const SSLLCategoryRaw: SSLLCategory =
     (SSLLDirHi === 0 && SSLLDirLo === 0) ? "SSLL=" :
     (SSLLDirHi > 0 && SSLLDirLo >= 0) ? "SSLL-A" :
     (SSLLDirHi > 0 && SSLLDirLo < 0) ? "SSLL-X" :
@@ -1373,6 +1389,10 @@ export function analyzeCPR(
     (SSLLDirHi < 0 && SSLLDirLo >= 0) ? "SSLL-C" :
     (SSLLDirHi === 0 && SSLLDirLo > 0) ? "SSLL-C" :
     "none";
+  const SSLLCategory: SSLLCategory =
+    ((SSLLCategoryRaw === "SSLL-A" || SSLLCategoryRaw === "SSLL-B") && !SSLLIdentityConsistent)
+      ? "none"
+      : SSLLCategoryRaw;
 
   // RRHHCategory — same mirrored-axis construction over the ceiling pair
   // (r1/prevHigh). "Expanded" is impossible here, so everything that is
