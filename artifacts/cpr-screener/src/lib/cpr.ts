@@ -412,16 +412,17 @@ export interface CPRResult {
   // Compressed/Expanded/Equal cases those two booleans never captured.
   HHLLCategory: HHLLCategory;
   // SSLLCategory — single-badge 6-way partition over today's S1/PDL vs
-  // prev's S1/PDL (mirrors SSRRCategory's and HHLLCategory's shape, using
-  // s1 in place of r1 and prevLow in place of prevHigh):
-  //   SSLL-A (Above)      — today.s1 >  prev.s1 AND today.prevLow >= prev.prevLow
-  //   SSLL-B (Below)      — today.s1 <= prev.s1 AND today.prevLow <  prev.prevLow
-  //   SSLL-C (Compressed) — today.s1 <  prev.s1 AND today.prevLow >  prev.prevLow
-  //   SSLL-X (Expanded)   — today.s1 >  prev.s1 AND today.prevLow <  prev.prevLow
-  //   SSLL=  (Equal)      — today.s1 == prev.s1 AND today.prevLow == prev.prevLow (eqTol)
+  // prev's PDL/S1, cross-paired (mirrors SSRRCategory's and HHLLCategory's
+  // shape, but axis 1 compares today's S1 against prev's PDL, and axis 2
+  // compares today's PDL against prev's S1):
+  //   SSLL-A (Above)      — today.s1 >  prev.prevLow AND today.prevLow >= prev.s1
+  //   SSLL-B (Below)      — today.s1 <= prev.prevLow AND today.prevLow <  prev.s1
+  //   SSLL-C (Compressed) — today.s1 <  prev.prevLow AND today.prevLow >  prev.s1
+  //   SSLL-X (Expanded)   — today.s1 >  prev.prevLow AND today.prevLow <  prev.s1
+  //   SSLL=  (Equal)      — today.s1 == prev.prevLow AND today.prevLow == prev.s1 (eqTol)
   // "none" is a defensive fallback for non-finite inputs only. Comparisons
-  // are tolerance-aware (eqTol), so the one-sided cases (s1 down + prevLow
-  // flat, s1 flat + prevLow up) resolve to SSLL-B / SSLL-A respectively,
+  // are tolerance-aware (eqTol), so the one-sided cases (axis1 down + axis2
+  // flat, axis1 flat + axis2 up) resolve to SSLL-B / SSLL-A respectively,
   // matching HHLLCategory's construction.
   SSLLCategory: SSLLCategory;
   // RRHHCategory — 3-way partition over two derived "ceiling" levels
@@ -1345,18 +1346,20 @@ export function analyzeCPR(
     (HHDir === 0 && LLDir > 0) ? "HHLL-C" :
     "none";
 
-  // SSLLCategory — today's S1/PDL (prevLow) vs prev's S1/PDL, built the
-  // same way as SSRRCategory/HHLLCategory (direct field comparison, no
-  // HLSwitch-based level selection).
-  const SSLLDirS1 = dirTol(todayCPR.s1, prevCPR.s1);
-  const SSLLDirPL = dirTol(todayCPR.prevLow, prevCPR.prevLow);
+  // SSLLCategory — today's S1/PDL (prevLow) vs prev's PDL/S1, cross-paired
+  // the same way the old HLSwitch-"HL-A" case did (axis 1: today's S1
+  // against prev's PDL; axis 2: today's PDL against prev's S1), built the
+  // same way as SSRRCategory/HHLLCategory otherwise (single fixed pairing,
+  // no HLSwitch-based level selection).
+  const SSLLDir1 = dirTol(todayCPR.s1, prevCPR.prevLow);
+  const SSLLDir2 = dirTol(todayCPR.prevLow, prevCPR.s1);
   const SSLLCategory: SSLLCategory =
-    (SSLLDirS1 === 0 && SSLLDirPL === 0) ? "SSLL=" :
-    (SSLLDirS1 > 0 && SSLLDirPL >= 0) ? "SSLL-A" :
-    (SSLLDirS1 > 0 && SSLLDirPL < 0) ? "SSLL-X" :
-    (SSLLDirS1 <= 0 && SSLLDirPL < 0) ? "SSLL-B" :
-    (SSLLDirS1 < 0 && SSLLDirPL >= 0) ? "SSLL-C" :
-    (SSLLDirS1 === 0 && SSLLDirPL > 0) ? "SSLL-C" :
+    (SSLLDir1 === 0 && SSLLDir2 === 0) ? "SSLL=" :
+    (SSLLDir1 > 0 && SSLLDir2 >= 0) ? "SSLL-A" :
+    (SSLLDir1 > 0 && SSLLDir2 < 0) ? "SSLL-X" :
+    (SSLLDir1 <= 0 && SSLLDir2 < 0) ? "SSLL-B" :
+    (SSLLDir1 < 0 && SSLLDir2 >= 0) ? "SSLL-C" :
+    (SSLLDir1 === 0 && SSLLDir2 > 0) ? "SSLL-C" :
     "none";
 
   // RRHHCategory — same mirrored-axis construction over the ceiling pair
