@@ -27,9 +27,7 @@ export interface CPRLevels {
   s3: number;
   s4: number;
   // PDH (this level set's high) vs R1 classification
-  PDHLAbove: boolean;
-  PDHLBelow: boolean;
-  PDHLEqual: boolean;
+  HLSwitch: HLSwitch;
 }
 
 /**
@@ -412,11 +410,11 @@ export interface CPRResult {
   HHLLCategory: HHLLCategory;
   // SSLLCategory — 5-way mutually exclusive partition over two derived
   // "floor" levels (mirrors SSRRCategory's shape). Each side's floor level
-  // is picked dynamically from its own PDHLAbove/PDHLBelow state:
-  //   Axis 1 (primary):   todayLevel1 = today.PDHLAbove ? today.s1 : today.prevLow
-  //                        prevLevel1  = prev.PDHLAbove  ? prev.prevLow : prev.s1
-  //   Axis 2 (mirrored):  todayLevel2 = today.PDHLAbove ? today.prevLow : today.s1
-  //                        prevLevel2  = prev.PDHLAbove  ? prev.s1 : prev.prevLow
+  // is picked dynamically from its own HLSwitch state:
+  //   Axis 1 (primary):   todayLevel1 = today.HLSwitch === "HL-A" ? today.s1 : today.prevLow
+  //                        prevLevel1  = prev.HLSwitch  === "HL-A" ? prev.prevLow : prev.s1
+  //   Axis 2 (mirrored):  todayLevel2 = today.HLSwitch === "HL-A" ? today.prevLow : today.s1
+  //                        prevLevel2  = prev.HLSwitch  === "HL-A" ? prev.s1 : prev.prevLow
   //   SSLL-A (Above)      — todayLevel1 >  prevLevel1 AND todayLevel2 >= prevLevel2
   //   SSLL-B (Below)      — todayLevel1 <= prevLevel1 AND todayLevel2 <  prevLevel2
   //   SSLL-C (Compressed) — todayLevel1 <  prevLevel1 AND todayLevel2 >  prevLevel2
@@ -425,23 +423,24 @@ export interface CPRResult {
   // RRHHCategory — 3-way partition over two derived "ceiling" levels
   // (mirrors SSLLCategory's construction, over r1/prevHigh instead of
   // s1/prevLow). Each side's ceiling level is picked dynamically from its
-  // own PDHLAbove/PDHLBelow state:
-  //   Axis 1 (primary):   todayLevel1 = today.PDHLAbove ? today.r1 : today.prevHigh
-  //                        prevLevel1  = prev.PDHLAbove  ? prev.prevHigh : prev.r1
-  //   Axis 2 (mirrored):  todayLevel2 = today.PDHLAbove ? today.prevHigh : today.r1
-  //                        prevLevel2  = prev.PDHLAbove  ? prev.r1 : prev.prevHigh
+  // own HLSwitch state:
+  //   Axis 1 (primary):   todayLevel1 = today.HLSwitch === "HL-A" ? today.r1 : today.prevHigh
+  //                        prevLevel1  = prev.HLSwitch  === "HL-A" ? prev.prevHigh : prev.r1
+  //   Axis 2 (mirrored):  todayLevel2 = today.HLSwitch === "HL-A" ? today.prevHigh : today.r1
+  //                        prevLevel2  = prev.HLSwitch  === "HL-A" ? prev.r1 : prev.prevHigh
   //   RRHH-A (Above) — todayLevel1 >  prevLevel1 AND todayLevel2 >= prevLevel2
   //   RRHH-B (Below) — todayLevel1 <= prevLevel1 AND todayLevel2 <  prevLevel2
   //   RRHH-C         — everything else (Compressed, plus the
   //                    mathematically-near-impossible exact-Equal case)
   // Only 3 badges: unlike SSRR/HHLL/SSLL, "Expanded" is provably impossible
   // for this pairing (r1 and prevHigh always move together for a given
-  // day's PDHLAbove/Below state, so axis2 can never fall below axis1).
+  // day's HLSwitch state, so axis2 can never fall below axis1).
   // "none" is a defensive fallback for non-finite inputs only.
   RRHHCategory: RRHHCategory;
 }
 
 export type PDHPDLGapCategory = "HHGap" | "LLGap" | "EqGap";
+export type HLSwitch = "HL-A" | "HL-B" | "HL=";
 export type SSRRCategory = "SSRR-A" | "SSRR-B" | "SSRR-C" | "SSRR-X" | "none";
 export type HHLLCategory = "HHLL-A" | "HHLL-B" | "HHLL-C" | "HHLL-X" | "none";
 export type SSLLCategory = "SSLL-A" | "SSLL-B" | "SSLL-C" | "none";
@@ -465,7 +464,8 @@ function isValidCandle(c: OHLC): boolean {
  * two values that are mathematically equal and display identically when
  * rounded can still differ by a few units in the last binary digit. Strict
  * `===` misses those cases; this catches them within 0.001% of magnitude.
- * Single source of truth — used for both PDHLEqual (calcCPR) and equalCPR
+ * Single source of truth — used for both the "HL=" case of HLSwitch
+ * (calcCPR) and equalCPR
  * (analyzeCPR) so "equal" means the same thing everywhere in this file.
  */
 function eqTol(a: number, b: number): boolean {
@@ -515,20 +515,22 @@ export function calcCPR(candle: OHLC): CPRLevels {
   const s4 = s3 + s2 - s1;
 
   // PDH (previous day high, i.e. this level set's candle high) vs R1.
-  // PDHLEqual uses eqTol (not strict ===) since h and r1 reach the "same"
-  // value through different arithmetic paths and can differ by a float
-  // rounding hair even when they display identically. PDHLAbove/Below
-  // exclude the equal band so exactly one of the three flags is ever true.
-  const PDHLEqual  = eqTol(h, r1);
-  const PDHLAbove  = !PDHLEqual && h > r1;
-  const PDHLBelow  = !PDHLEqual && h < r1;
+  // Uses eqTol (not strict ===) for the "HL=" case since h and r1 reach
+  // the "same" value through different arithmetic paths and can differ by
+  // a float rounding hair even when they display identically. "HL-A" /
+  // "HL-B" exclude the equal band so exactly one of the three states is
+  // ever picked.
+  const HLSwitch: HLSwitch =
+    eqTol(h, r1) ? "HL=" :
+    h > r1 ? "HL-A" :
+    "HL-B";
 
   return {
     pivot, bc, tc, width, widthPct,
     prevHigh: h, prevLow: l,
     r1, r2, r3, r4,
     s1, s2, s3, s4,
-    PDHLAbove, PDHLBelow, PDHLEqual,
+    HLSwitch,
   };
 }
 
@@ -1314,12 +1316,12 @@ export function analyzeCPR(
 
   // SSLLCategory — see field doc on CPRResult. 5-way partition over two
   // derived floor levels: Axis 1 is the original SSLLAbove selection rule
-  // (s1 when PDHLAbove, else prevLow); Axis 2 mirrors it with the
+  // (s1 when HLSwitch is "HL-A", else prevLow); Axis 2 mirrors it with the
   // selection swapped, so the two axes behave like SSRR's R1-pair/S1-pair.
-  const todaySSLLLevel1 = todayCPR.PDHLAbove ? todayCPR.s1 : todayCPR.prevLow;
-  const prevSSLLLevel1  = prevCPR.PDHLAbove  ? prevCPR.prevLow : prevCPR.s1;
-  const todaySSLLLevel2 = todayCPR.PDHLAbove ? todayCPR.prevLow : todayCPR.s1;
-  const prevSSLLLevel2  = prevCPR.PDHLAbove  ? prevCPR.s1 : prevCPR.prevLow;
+  const todaySSLLLevel1 = todayCPR.HLSwitch === "HL-A" ? todayCPR.s1 : todayCPR.prevLow;
+  const prevSSLLLevel1  = prevCPR.HLSwitch  === "HL-A" ? prevCPR.prevLow : prevCPR.s1;
+  const todaySSLLLevel2 = todayCPR.HLSwitch === "HL-A" ? todayCPR.prevLow : todayCPR.s1;
+  const prevSSLLLevel2  = prevCPR.HLSwitch  === "HL-A" ? prevCPR.s1 : prevCPR.prevLow;
 
   const SSLLAboveCond      = todaySSLLLevel1 > prevSSLLLevel1 && todaySSLLLevel2 >= prevSSLLLevel2;
   const SSLLBelowCond      = todaySSLLLevel1 <= prevSSLLLevel1 && todaySSLLLevel2 < prevSSLLLevel2;
@@ -1338,10 +1340,10 @@ export function analyzeCPR(
   // same signed amount for a given day, so axis2 can never fall below
   // axis1), and exact "Equal" is a razor-thin coincidence that in practice
   // never fires — both collapse into RRHH-C alongside "Compressed".
-  const todayRRHHLevel1 = todayCPR.PDHLAbove ? todayCPR.r1 : todayCPR.prevHigh;
-  const prevRRHHLevel1  = prevCPR.PDHLAbove  ? prevCPR.prevHigh : prevCPR.r1;
-  const todayRRHHLevel2 = todayCPR.PDHLAbove ? todayCPR.prevHigh : todayCPR.r1;
-  const prevRRHHLevel2  = prevCPR.PDHLAbove  ? prevCPR.r1 : prevCPR.prevHigh;
+  const todayRRHHLevel1 = todayCPR.HLSwitch === "HL-A" ? todayCPR.r1 : todayCPR.prevHigh;
+  const prevRRHHLevel1  = prevCPR.HLSwitch  === "HL-A" ? prevCPR.prevHigh : prevCPR.r1;
+  const todayRRHHLevel2 = todayCPR.HLSwitch === "HL-A" ? todayCPR.prevHigh : todayCPR.r1;
+  const prevRRHHLevel2  = prevCPR.HLSwitch  === "HL-A" ? prevCPR.r1 : prevCPR.prevHigh;
 
   const RRHHAboveCond = todayRRHHLevel1 > prevRRHHLevel1 && todayRRHHLevel2 >= prevRRHHLevel2;
   const RRHHBelowCond = todayRRHHLevel1 <= prevRRHHLevel1 && todayRRHHLevel2 < prevRRHHLevel2;

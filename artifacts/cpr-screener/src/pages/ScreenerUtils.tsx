@@ -725,7 +725,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     case "8AM:CoLApHA-U4+1:8AM": {
       const prevCat = getPatternCategory(computePrevPattern(r.prevCPR, r.ppCPR));
       return (
-        r.InsideCPR && r.SSLLAbove &&  r.prevCPR.PDHLAbove && r.todayCPR.PDHLBelow && 
+        r.InsideCPR && r.SSLLAbove &&  r.prevCPR.HLSwitch === "HL-A" && r.todayCPR.HLSwitch === "HL-B" && 
         (r.todayCPR.prevHigh > r.prevCPR.r1 || r.prevCPR.prevHigh > r.todayCPR.r1) &&
         prevCat !== "eXLower" && prevCat !== "cOLower" // exclude prev day's own pattern (p-xxx) falling in eXLower/cOLower
       );
@@ -745,7 +745,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.SSRRCategory === "SSRR-B" && r.HHLLCategory === "HHLL-A"
         //r.prevCPR.widthPct > 2.00 && r.prevCPR.widthPct <= 5.00 &&   // pLarge
         //r.todayCPR.widthPct > 1.10 && r.todayCPR.widthPct <= 2.00 && // Medium
-        //r.prevCPR.PDHLBelow && r.todayCPR.PDHLAbove &&       // p-PDHLBelow  // PDHLAbove
+        //r.prevCPR.HLSwitch === "HL-B" && r.todayCPR.HLSwitch === "HL-A" &&       // p-HL-B  // HL-A
       );
     // NEW: 2PM:pPDHLA-SRA-U4:7PM — Inside CPR + cOL4U4 + prev CPR width
     // category pLarge (2.00%-5.00%) + today CPR width category Large
@@ -760,7 +760,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.cOL4U4 &&
         r.prevCPR.widthPct > 2.00 && r.prevCPR.widthPct <= 5.00 &&   // pLarge
         r.todayCPR.widthPct > 2.00 && r.todayCPR.widthPct <= 5.00 && // Large
-        r.prevCPR.PDHLAbove && r.todayCPR.PDHLBelow &&            // p-PDH>U1     // PDL<L1
+        r.prevCPR.HLSwitch === "HL-A" && r.todayCPR.HLSwitch === "HL-B" &&            // p-PDH>U1     // PDL<L1
         r.SSRRCategory === "SSRR-A" &&
         r.prevCPR.prevHigh > r.todayCPR.prevHigh &&
         r.prevCPR.prevLow > r.todayCPR.prevLow
@@ -770,7 +770,8 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // SSRRAbove (today's R1 above prev R1 AND today's S1 held at/above prev
     // S1) + prev day's PDH above today's PDH ("prev prevHigh > today
     // prevHigh") + prev day's PDL above today's PDL ("prev prevLow > today
-    // prevLow") + IF today's own PDH is below today's own R1 (PDHLBelow),
+    // prevLow") + IF today's own PDH is below today's own R1 (HLSwitch ===
+    // "HL-B"),
     // additionally require BOTH prev day's PDH above today's R1 ("p-PDHA",
     // i.e. prev's high still cleared today's R1 even though today hasn't
     // broken out yet) AND today's PDL above prev day's S1. Bullish, entry
@@ -783,7 +784,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.SSRRCategory === "SSRR-A" &&
         r.prevCPR.prevHigh > r.todayCPR.prevHigh &&
         r.prevCPR.prevLow > r.todayCPR.prevLow &&
-        (!r.todayCPR.PDHLBelow ||
+        (r.todayCPR.HLSwitch !== "HL-B" ||
           (r.prevCPR.prevHigh > r.todayCPR.r1 && r.todayCPR.prevLow > r.prevCPR.s1))
       );
     // NEW: SMi-L1pU1>-APU4:11PM — Inside CPR + L1pU1Above (from cpr.ts)
@@ -869,7 +870,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // condition PLUS today's BC above prev day's PDH (prevCPR.prevHigh,
     // i.e. the actual candle high of the day before prev day).
     case "BC>pPDL-U3:5AM":
-      return r.pCPR1Above && r.cOU3L4  && r.todayCPR.bc > r.prevCPR.prevLow && r.prevCPR.bc > r.todayCPR.r1 && r.todayCPR.PDHLAbove && r.prevCPR.PDHLAbove;
+      return r.pCPR1Above && r.cOU3L4  && r.todayCPR.bc > r.prevCPR.prevLow && r.prevCPR.bc > r.todayCPR.r1 && r.todayCPR.HLSwitch === "HL-A" && r.prevCPR.HLSwitch === "HL-A";
     // NEW: PDH>pTC-U4:5AM — sub-filter under "PREVCPR 1ABOVE" → "LoU3L3"
     // Pattern: base pCPR1Above condition PLUS the parent's raw
     // LoU3L3 flag PLUS today's PDH (todayCPR.prevHigh) above prev day's TC
@@ -889,31 +890,31 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // "LoU3L4" Pattern: base pCPR1Above condition PLUS the
     // parent's raw LoU3L4 flag PLUS HHLLBelow (today's PDH at/below prev
     // day's PDH AND today's PDL below prev day's PDL) PLUS prev day's own
-    // PDH below prev day's own R1 (p-PDHL-B, prevCPR.PDHLBelow) PLUS
-    // today's PDH above today's own R1 (PDHL-A, todayCPR.PDHLAbove) PLUS
+    // PDH below prev day's own R1 (p-PDHL-B, prevCPR.HLSwitch === "HL-B") PLUS
+    // today's PDH above today's own R1 (PDHL-A, todayCPR.HLSwitch === "HL-A") PLUS
     // today's R1 at/above prev day's BC. Bullish, targets Far Above pU4
     // (prev day's R4) by ~1PM. Green color family.
     case "11AM:pCPR1AHi-FApU4:1PM":
       return r.pCPR1Above && r.LoU3L4 && r.HHLLCategory === "HHLL-B" &&
-        r.prevCPR.PDHLBelow && r.todayCPR.PDHLAbove &&
+        r.prevCPR.HLSwitch === "HL-B" && r.todayCPR.HLSwitch === "HL-A" &&
         r.todayCPR.r1 > r.prevCPR.bc;
     case "l1pu1-above":
       return r.L1pU1Above ; 
     case "SMi-L1pU1>-APU4:11PM": {
-      return r.L1pU1Above && r.prevCPR.PDHLAbove && !r.outCPR && r.compressionRatio >= 30;
+      return r.L1pU1Above && r.prevCPR.HLSwitch === "HL-A" && !r.outCPR && r.compressionRatio >= 30;
     }
     // NEW: S0-L1pU1>-AU4:7PM — second sub-pattern under "L1pU1 Above".
     // Same L1pU1Above base as SMi-L1pU1>-APU4:11PM, but a 1-Line CPR
     // (compressionRatio == 0) with today's R1 below prev day's TC.
     // Target AU4 (prev day's R4) by ~7PM.
     case "S0-L1pU1>-AU4:7PM": {
-      return (r.L1pU1Above && r.prevCPR.PDHLAbove && (r.todayCPR.PDHLAbove || r.todayCPR.PDHLEqual )
+      return (r.L1pU1Above && r.prevCPR.HLSwitch === "HL-A" && (r.todayCPR.HLSwitch === "HL-A" || r.todayCPR.HLSwitch === "HL=" )
                     && !r.outCPR && (r.todayCPR.r1 < r.prevCPR.tc) && r.compressionRatio == 0); // 1 Line CPR ,  R1< PCPR.tc
     }
      case "T0-L1pU1>-BPL4:5AM": {
-      return (r.L1pU1Above && r.prevCPR.PDHLAbove && r.todayCPR.PDHLBelow
+      return (r.L1pU1Above && r.prevCPR.HLSwitch === "HL-A" && r.todayCPR.HLSwitch === "HL-B"
               && !r.outCPR && r.compressionRatio > 300 && r.prevCPR.tc < r.todayCPR.s1) || //pTiny, Mini, pcpr < S1
-              (r.L1pU1Above && r.prevCPR.PDHLAbove && (r.todayCPR.PDHLAbove || r.todayCPR.PDHLEqual ) 
+              (r.L1pU1Above && r.prevCPR.HLSwitch === "HL-A" && (r.todayCPR.HLSwitch === "HL-A" || r.todayCPR.HLSwitch === "HL=" ) 
               && !r.outCPR && (r.todayCPR.tc < r.prevCPR.tc) && r.compressionRatio == 0); // 1 Line CPR , - todayCPR.tc < PCPR.tc
     }
     case "outside-cpr":
@@ -958,8 +959,8 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         computePrevPattern(r.prevCPR, r.ppCPR) === "HiL4U4" &&
         r.prevCPR.widthPct > 0.22 && r.prevCPR.widthPct <= 0.60 &&   // pMini
         r.todayCPR.widthPct > 0.22 && r.todayCPR.widthPct <= 0.60 && // Mini
-        r.prevCPR.PDHLAbove &&
-        r.todayCPR.PDHLAbove
+        r.prevCPR.HLSwitch === "HL-A" &&
+        r.todayCPR.HLSwitch === "HL-A"
       );
     case "cOL3U3-pL4":
       return r.overlapHigher && r.cOL3U3 && r.prevCPR.widthPct <= 0.10 &&   // pMicro
@@ -980,7 +981,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.prevCPR.widthPct > 2.00 && r.prevCPR.widthPct <= 5.00 &&   // pLarge
         r.todayCPR.widthPct > 2.00 && r.todayCPR.widthPct <= 5.00 && // Large
         r.prevCPR.prevLow < r.prevCPR.s1 &&                          // p-PDL<L1
-        r.todayCPR.PDHLAbove &&                                      // PDH>U1
+        r.todayCPR.HLSwitch === "HL-A" &&                                      // PDH>U1
         r.todayCPR.prevHigh > r.prevCPR.r1 &&
         r.todayCPR.prevLow > r.prevCPR.s1
       );
@@ -999,7 +1000,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // RENAMED: was "bigabove-pl34cl4-u3>pu4" -> "9AM:SSRRHHLLA-U4:11PM"
     case "9AM:SSRRHHLLA-U4:11PM":
     return (r.cprRising && r.strWideCPR && 
-            r.SSRRCategory === "SSRR-A" && r.HHLLCategory === "HHLL-A" && r.todayCPR.PDHLAbove);
+            r.SSRRCategory === "SSRR-A" && r.HHLLCategory === "HHLL-A" && r.todayCPR.HLSwitch === "HL-A");
     // NEW: BAComp-l3>pl1/u3>pu1 — BigCPR Above + prev S1 inside today S3/S4 AND prev R1 inside today R2/R3
     case "bacomp-l3>pl1/u3>pu1":
       return (
@@ -1190,12 +1191,12 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.todayCPR.s1 < r.prevCPR.s4
       );
     // NEW: ss-eXU4L1-U4:10PM — L1<pL4 sub-filter.
-    // cprFalling + strWideCPR + prevCPR.PDHLAbove + todayCPR.PDHLAbove +
+    // cprFalling + strWideCPR + prevCPR.HLSwitch === "HL-A" + todayCPR.HLSwitch === "HL-A" +
     // eXU4L1 (prev R4 inside today R3/R4 AND prev S4 inside today BC/S1)
     // + prev CPR's BC above today's R1. Target U4 by ~10PM IST.
     case "ss-eXU4L1-U4:10PM":
       return (
-        r.cprFalling && r.strWideCPR && r.prevCPR.PDHLAbove && r.todayCPR.PDHLAbove &&
+        r.cprFalling && r.strWideCPR && r.prevCPR.HLSwitch === "HL-A" && r.todayCPR.HLSwitch === "HL-A" &&
         r.eXU4L1 && r.prevCPR.bc >= r.todayCPR.prevHigh && r.prevCPR.s2 >= r.todayCPR.tc &&
         r.prevCPR.widthPct > 0.60 && r.prevCPR.widthPct <= 1.10 && //pSmall
         r.todayCPR.widthPct > 0.60 && r.todayCPR.widthPct <= 1.10 //Small
@@ -1667,7 +1668,7 @@ export function computePrevPattern(
  * (e.g. BacktestPanel's "result section" PDH/PDL column: Gap badge + today
  * badge on row 1, prev "p-xx" badge on row 2) can do so without relying on
  * cloneElement/DOM-order tricks. All comparisons come straight from
- * cpr.ts's calcCPR (PDHLAbove/PDHLEqual/PDHLBelow on each CPRLevels set) —
+ * cpr.ts's calcCPR (HLSwitch: "HL-A"/"HL="/"HL-B" on each CPRLevels set) —
  * the three states are mutually exclusive and exhaustive, so "not Above,
  * not Equal" is always "Below". Each returns null when its side has none
  * of the three states set (shouldn't normally happen since the three are
@@ -1681,7 +1682,7 @@ export function computePrevPattern(
  * badge to show.
  */
 export function renderPrevPdhPdlBadge(r: CPRResult): React.JSX.Element | null {
-  if (r.prevCPR.PDHLAbove) {
+  if (r.prevCPR.HLSwitch === "HL-A") {
     return (
       <span
         key="p-pdh-gt-u1"
@@ -1692,7 +1693,7 @@ export function renderPrevPdhPdlBadge(r: CPRResult): React.JSX.Element | null {
       </span>
     );
   }
-  if (r.prevCPR.PDHLEqual) {
+  if (r.prevCPR.HLSwitch === "HL=") {
     return (
       <span
         key="p-pdh-eq-u1"
@@ -1703,7 +1704,7 @@ export function renderPrevPdhPdlBadge(r: CPRResult): React.JSX.Element | null {
       </span>
     );
   }
-  if (r.prevCPR.PDHLBelow) {
+  if (r.prevCPR.HLSwitch === "HL-B") {
     return (
       <span
         key="p-pdl-lt-l1"
@@ -1718,7 +1719,7 @@ export function renderPrevPdhPdlBadge(r: CPRResult): React.JSX.Element | null {
 }
 
 export function renderTodayPdhPdlBadge(r: CPRResult): React.JSX.Element | null {
-  if (r.todayCPR.PDHLAbove) {
+  if (r.todayCPR.HLSwitch === "HL-A") {
     return (
       <span
         key="pdh-gt-u1"
@@ -1729,7 +1730,7 @@ export function renderTodayPdhPdlBadge(r: CPRResult): React.JSX.Element | null {
       </span>
     );
   }
-  if (r.todayCPR.PDHLEqual) {
+  if (r.todayCPR.HLSwitch === "HL=") {
     return (
       <span
         key="pdh-eq-u1"
@@ -1740,7 +1741,7 @@ export function renderTodayPdhPdlBadge(r: CPRResult): React.JSX.Element | null {
       </span>
     );
   }
-  if (r.todayCPR.PDHLBelow) {
+  if (r.todayCPR.HLSwitch === "HL-B") {
     return (
       <span
         key="pdl-lt-l1"
