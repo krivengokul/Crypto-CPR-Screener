@@ -6,6 +6,7 @@ import {
   type CPRLevels,
   type CPRResult,
   type PDHPDLGapCategory,
+  type HLSwitch,
   type SSRRCategory,
   type HHLLCategory,
   type SSLLCategory,
@@ -890,8 +891,8 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // "LoU3L4" Pattern: base pCPR1Above condition PLUS the
     // parent's raw LoU3L4 flag PLUS HHLLBelow (today's PDH at/below prev
     // day's PDH AND today's PDL below prev day's PDL) PLUS prev day's own
-    // PDH below prev day's own R1 (p-PDHL-B, prevCPR.HLSwitch === "HL-B") PLUS
-    // today's PDH above today's own R1 (PDHL-A, todayCPR.HLSwitch === "HL-A") PLUS
+    // PDH below prev day's own R1 (p-HL-B, prevCPR.HLSwitch === "HL-B") PLUS
+    // today's PDH above today's own R1 (HL-A, todayCPR.HLSwitch === "HL-A") PLUS
     // today's R1 at/above prev day's BC. Bullish, targets Far Above pU4
     // (prev day's R4) by ~1PM. Green color family.
     case "11AM:pCPR1AHi-FApU4:1PM":
@@ -1663,16 +1664,14 @@ export function computePrevPattern(
 
 /**
  * renderPrevPdhPdlBadge / renderTodayPdhPdlBadge — the individual prev-day
- * (p-PDH>U1/p-PDH=U1/p-PDL<L1) and today (PDH>U1/PDH=U1/PDL<L1) PDH/PDL sub
- * badges, split out so callers that need to place them in different rows
- * (e.g. BacktestPanel's "result section" PDH/PDL column: Gap badge + today
+ * (pHL-A/pHL=/pHL-B) and today (HL-A/HL=/HL-B) PDH/PDL sub badges, split
+ * out so callers that need to place them in different rows (e.g.
+ * BacktestPanel's "result section" PDH/PDL column: Gap badge + today
  * badge on row 1, prev "p-xx" badge on row 2) can do so without relying on
  * cloneElement/DOM-order tricks. All comparisons come straight from
  * cpr.ts's calcCPR (HLSwitch: "HL-A"/"HL="/"HL-B" on each CPRLevels set) —
- * the three states are mutually exclusive and exhaustive, so "not Above,
- * not Equal" is always "Below". Each returns null when its side has none
- * of the three states set (shouldn't normally happen since the three are
- * exhaustive, but kept defensive).
+ * the three states are mutually exclusive and exhaustive, so every row
+ * always has exactly one badge on each side.
  *
  * renderPdhPdlSubBadges — the original combined "2nd row" PDH/PDL badges
  * (both prev + today in one inline row), now a thin wrapper around the two
@@ -1681,78 +1680,54 @@ export function computePrevPattern(
  * badges together on one line. Returns null when neither side has any
  * badge to show.
  */
+/**
+ * HL_SWITCH_BADGE — display config for each HLSwitch value ("HL-A" /
+ * "HL=" / "HL-B"), styled to exactly match HHLL_CATEGORY_BADGE: same
+ * text-[10px] size, font-medium weight, px-1 py-0.5 rounded border shape,
+ * and the same /10 (bg) + /30 (border) + solid -400 (text) brightness
+ * level. HL-A/HL-B reuse HHLL-A/HHLL-B's green/red; HL= gets the matching
+ * amber at the same brightness.
+ */
+const HL_SWITCH_BADGE: Record<HLSwitch, { className: string }> = {
+  "HL-A": { className: "bg-green-500/10 text-green-400 border-green-500/30" },
+  "HL=": { className: "bg-amber-500/10 text-amber-400 border-amber-500/30" },
+  "HL-B": { className: "bg-red-500/10 text-red-400 border-red-500/30" },
+};
+
 export function renderPrevPdhPdlBadge(r: CPRResult): React.JSX.Element | null {
-  if (r.prevCPR.HLSwitch === "HL-A") {
-    return (
-      <span
-        key="p-pdh-gt-u1"
-        className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-green-500/8 text-green-400/70 border border-green-500/15 font-normal"
-        title={`Prev PDH ${fmt(r.prevCPR.prevHigh)} > Prev U1 ${fmt(r.prevCPR.r1)}`}
-      >
-        p-PDHL-A
-      </span>
-    );
-  }
-  if (r.prevCPR.HLSwitch === "HL=") {
-    return (
-      <span
-        key="p-pdh-eq-u1"
-        className="text-[10px] px-1 py-0.5 rounded border border-amber-500/40 bg-amber-500/15 text-amber-600 dark:text-amber-400 whitespace-nowrap"
-        title={`PDH ${fmt(r.prevCPR.prevHigh)} = U1 ${fmt(r.prevCPR.r1)}`}
-      >
-        p-PDHL==
-      </span>
-    );
-  }
-  if (r.prevCPR.HLSwitch === "HL-B") {
-    return (
-      <span
-        key="p-pdl-lt-l1"
-        className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-red-500/8 text-red-400/70 border border-red-500/15 font-normal"
-        title={`Prev PDH ${fmt(r.prevCPR.prevHigh)} < Prev U1 ${fmt(r.prevCPR.r1)}`}
-      >
-        p-PDHL-B
-      </span>
-    );
-  }
-  return null;
+  const sw = r.prevCPR.HLSwitch;
+  const label = sw === "HL-A" ? "pHL-A" : sw === "HL=" ? "pHL=" : "pHL-B";
+  const title =
+    sw === "HL-A" ? `Prev PDH ${fmt(r.prevCPR.prevHigh)} > Prev U1 ${fmt(r.prevCPR.r1)}` :
+    sw === "HL=" ? `PDH ${fmt(r.prevCPR.prevHigh)} = U1 ${fmt(r.prevCPR.r1)}` :
+    `Prev PDH ${fmt(r.prevCPR.prevHigh)} < Prev U1 ${fmt(r.prevCPR.r1)}`;
+  return (
+    <span
+      key="p-hl-switch"
+      className={`text-[10px] whitespace-nowrap px-1 py-0.5 rounded border font-medium ${HL_SWITCH_BADGE[sw].className}`}
+      title={title}
+    >
+      {label}
+    </span>
+  );
 }
 
 export function renderTodayPdhPdlBadge(r: CPRResult): React.JSX.Element | null {
-  if (r.todayCPR.HLSwitch === "HL-A") {
-    return (
-      <span
-        key="pdh-gt-u1"
-        className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-green-500/8 text-green-400/70 border border-green-500/15 font-normal"
-        title={`PDH ${fmt(r.todayCPR.prevHigh)} > U1 ${fmt(r.todayCPR.r1)}`}
-      >
-        PDHL-A
-      </span>
-    );
-  }
-  if (r.todayCPR.HLSwitch === "HL=") {
-    return (
-      <span
-        key="pdh-eq-u1"
-        className="text-[10px] px-1 py-0.5 rounded border border-amber-500/40 bg-amber-500/15 text-amber-600 dark:text-amber-400 whitespace-nowrap"
-        title={`PDH ${fmt(r.todayCPR.prevHigh)} = U1 ${fmt(r.todayCPR.r1)}`}
-      >
-        PDHL==
-      </span>
-    );
-  }
-  if (r.todayCPR.HLSwitch === "HL-B") {
-    return (
-      <span
-        key="pdl-lt-l1"
-        className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-red-500/8 text-red-400/70 border border-red-500/15 font-normal"
-        title={`PDH ${fmt(r.todayCPR.prevHigh)} < U1 ${fmt(r.todayCPR.r1)}`}
-      >
-        PDHL-B
-      </span>
-    );
-  }
-  return null;
+  const sw = r.todayCPR.HLSwitch;
+  const label = sw === "HL-A" ? "HL-A" : sw === "HL=" ? "HL=" : "HL-B";
+  const title =
+    sw === "HL-A" ? `PDH ${fmt(r.todayCPR.prevHigh)} > U1 ${fmt(r.todayCPR.r1)}` :
+    sw === "HL=" ? `PDH ${fmt(r.todayCPR.prevHigh)} = U1 ${fmt(r.todayCPR.r1)}` :
+    `PDH ${fmt(r.todayCPR.prevHigh)} < U1 ${fmt(r.todayCPR.r1)}`;
+  return (
+    <span
+      key="hl-switch"
+      className={`text-[10px] whitespace-nowrap px-1 py-0.5 rounded border font-medium ${HL_SWITCH_BADGE[sw].className}`}
+      title={title}
+    >
+      {label}
+    </span>
+  );
 }
 
 export function renderPdhPdlSubBadges(r: CPRResult) {
