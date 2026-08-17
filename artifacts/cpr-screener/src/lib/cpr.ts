@@ -402,9 +402,10 @@ export interface CPRResult {
   //   HHLL-C (Compressed) — today.prevHigh < prev.prevHigh AND today.prevLow > prev.prevLow
   //   HHLL-X (Expanded)   — today.prevHigh > prev.prevHigh AND today.prevLow < prev.prevLow
   //   HHLL=  (Equal)      — today.prevHigh == prev.prevHigh AND today.prevLow == prev.prevLow (eqTol)
-  // Verified mutually exclusive (no row can satisfy two of the five), but
-  // not exhaustive: PDH flat + PDL up, or PDH down + PDL flat, match none
-  // of the five and fall through to "none". HHLL-A/HHLL-B carry the same
+  // Mutually exclusive AND exhaustive: comparisons use a tolerance-aware
+  // direction (eqTol), and the one-sided cases (PDH flat + PDL up, PDH down
+  // + PDL flat) resolve to HHLL-C instead of falling through to "none".
+  // "none" is now unreachable for finite inputs. HHLL-A/HHLL-B carry the same
   // conditions the removed HHLLAbove/HHLLBelow booleans used to hold; this
   // field is now the only source for that classification (see
   // ScreenerUtils.renderHHLLCategoryBadge), also covering the
@@ -420,7 +421,9 @@ export interface CPRResult {
   //   SSLL-A (Above)      — todayLevel1 >  prevLevel1 AND todayLevel2 >= prevLevel2
   //   SSLL-B (Below)      — todayLevel1 <= prevLevel1 AND todayLevel2 <  prevLevel2
   //   SSLL-C (Compressed) — todayLevel1 <  prevLevel1 AND todayLevel2 >  prevLevel2
-  // "none" when none of the three conditions match.
+  // Comparisons are tolerance-aware (eqTol): axis1 down + axis2 flat maps to
+  // SSLL-B, axis1 flat + axis2 up maps to SSLL-A. "none" only remains for
+  // the fully-flat case (both axes unchanged).
   SSLLCategory: SSLLCategory;
   // RRHHCategory — 3-way partition over two derived "ceiling" levels
   // (mirrors SSLLCategory's construction, over r1/prevHigh instead of
@@ -472,6 +475,18 @@ function isValidCandle(c: OHLC): boolean {
  */
 function eqTol(a: number, b: number): boolean {
   return Math.abs(a - b) <= Math.max(Math.abs(a), Math.abs(b)) * 0.00001;
+}
+
+/**
+ * dirTol — tolerance-aware direction of `today` relative to `prev`:
+ * +1 when today is meaningfully higher, -1 when meaningfully lower, and 0
+ * when the two levels are equal within eqTol. Used by all the two-axis
+ * category classifiers so an exactly-flat axis is an explicit state rather
+ * than a value that satisfies neither `<` nor `>`.
+ */
+function dirTol(today: number, prev: number): -1 | 0 | 1 {
+  if (eqTol(today, prev)) return 0;
+  return today > prev ? 1 : -1;
 }
 
 /**
@@ -1291,76 +1306,84 @@ export function analyzeCPR(
     LLGapVal > HHGapVal ? "LLGap" :
     "EqGap";
 
-  // SSRRCategory — see field doc on CPRResult. 6-way partition over
-  // today's R1/S1 vs prev's R1/S1; falls through to "none".
-  const SSRRAbove = todayCPR.r1 > prevCPR.r1 && todayCPR.s1 >= prevCPR.s1;
-  const SSRRBelow = todayCPR.r1 <= prevCPR.r1 && todayCPR.s1 < prevCPR.s1;
-  const SSRRCompressed = todayCPR.r1 < prevCPR.r1 && todayCPR.s1 > prevCPR.s1;
-  const SSRRExpanded = todayCPR.r1 > prevCPR.r1 && todayCPR.s1 < prevCPR.s1;
-  const SSRREqual = eqTol(todayCPR.r1, prevCPR.r1) && eqTol(todayCPR.s1, prevCPR.s1);
+  // SSRRCategory / HHLLCategory / SSLLCategory / RRHHCategory
+  //
+  // All four partitions are built from the same tolerance-aware axis
+  // direction helper (dirTol: -1 down, 0 flat within eqTol, +1 up), so a
+  // level that is *exactly* flat no longer slips between two strict
+  // comparisons and falls through to "none".
+  //
+  // Generic rules (per pair of axes, axis1 = ceiling/primary, axis2 = floor/mirror):
+  //   Above      — axis1 up   AND axis2 not down            (flat axis1 + axis2 up also counts)
+  //   Below      — axis1 not up AND axis2 down              (axis1 down + flat axis2 also counts)
+  //   Compressed — axis1 down AND axis2 up, plus the one-sided
+  //                narrowing cases (axis1 down + axis2 flat,
+  //                axis1 flat + axis2 up) for the HH/LL-style pairs
+  //   Expanded   — axis1 up   AND axis2 down
+  //   Equal      — both axes flat
+  const SSRRDirR1 = dirTol(todayCPR.r1, prevCPR.r1);
+  const SSRRDirS1 = dirTol(todayCPR.s1, prevCPR.s1);
   const SSRRCategory: SSRRCategory =
-    SSRRAbove ? "SSRR-A" :
-    SSRRBelow ? "SSRR-B" :
-    SSRRCompressed ? "SSRR-C" :
-    SSRRExpanded ? "SSRR-X" :
-    SSRREqual ? "SSRR=" :
+    (SSRRDirR1 === 0 && SSRRDirS1 === 0) ? "SSRR=" :
+    (SSRRDirR1 > 0 && SSRRDirS1 >= 0) ? "SSRR-A" :
+    (SSRRDirR1 > 0 && SSRRDirS1 < 0) ? "SSRR-X" :
+    (SSRRDirR1 <= 0 && SSRRDirS1 < 0) ? "SSRR-B" :
+    (SSRRDirR1 < 0 && SSRRDirS1 >= 0) ? "SSRR-C" :
+    (SSRRDirR1 === 0 && SSRRDirS1 > 0) ? "SSRR-C" :
     "none";
 
-  // HHLLCategory — see field doc on CPRResult. A true 6-way mutually
-  // exclusive partition over today's PDH/PDL vs prev's PDH/PDL (verified:
-  // no two of the six conditions can both be true for the same row).
-  // Not exhaustive — a PDH held flat while PDL rose, or PDH fell while PDL
-  // held flat, matches none of the six and falls through to "none".
-  const HHLLEqual = eqTol(todayCPR.prevHigh, prevCPR.prevHigh) && eqTol(todayCPR.prevLow, prevCPR.prevLow);
+  // HHLLCategory — today's PDH/PDL vs prev's PDH/PDL. Now exhaustive: the
+  // old "PDH down + PDL flat" and "PDH flat + PDL up" gaps both resolve to
+  // HHLL-C (the range narrowed on one side and held on the other).
+  const HHDir = dirTol(todayCPR.prevHigh, prevCPR.prevHigh);
+  const LLDir = dirTol(todayCPR.prevLow, prevCPR.prevLow);
   const HHLLCategory: HHLLCategory =
-    (todayCPR.prevHigh > prevCPR.prevHigh && todayCPR.prevLow >= prevCPR.prevLow) ? "HHLL-A" :
-    (todayCPR.prevHigh <= prevCPR.prevHigh && todayCPR.prevLow < prevCPR.prevLow) ? "HHLL-B" :
-    (todayCPR.prevHigh < prevCPR.prevHigh && todayCPR.prevLow > prevCPR.prevLow) ? "HHLL-C" :
-    (todayCPR.prevHigh > prevCPR.prevHigh && todayCPR.prevLow < prevCPR.prevLow) ? "HHLL-X" :
-    HHLLEqual ? "HHLL=" :
+    (HHDir === 0 && LLDir === 0) ? "HHLL=" :
+    (HHDir > 0 && LLDir >= 0) ? "HHLL-A" :
+    (HHDir > 0 && LLDir < 0) ? "HHLL-X" :
+    (HHDir <= 0 && LLDir < 0) ? "HHLL-B" :
+    (HHDir < 0 && LLDir >= 0) ? "HHLL-C" :
+    (HHDir === 0 && LLDir > 0) ? "HHLL-C" :
     "none";
 
-  // SSLLCategory — see field doc on CPRResult. 5-way partition over two
-  // derived floor levels: Axis 1 is the original SSLLAbove selection rule
-  // (s1 when HLSwitch is "HL-A", else prevLow); Axis 2 mirrors it with the
-  // selection swapped, so the two axes behave like SSRR's R1-pair/S1-pair.
+  // SSLLCategory — two derived floor levels: Axis 1 is the original
+  // SSLLAbove selection rule (s1 when HLSwitch is "HL-A", else prevLow);
+  // Axis 2 mirrors it with the selection swapped. With only A/B/C badges
+  // available, a flat axis 2 paired with a falling axis 1 resolves to
+  // SSLL-B (floors sank), and a flat axis 1 paired with a rising axis 2
+  // resolves to SSLL-A (floors lifted).
   const todaySSLLLevel1 = todayCPR.HLSwitch === "HL-A" ? todayCPR.s1 : todayCPR.prevLow;
   const prevSSLLLevel1  = prevCPR.HLSwitch  === "HL-A" ? prevCPR.prevLow : prevCPR.s1;
   const todaySSLLLevel2 = todayCPR.HLSwitch === "HL-A" ? todayCPR.prevLow : todayCPR.s1;
   const prevSSLLLevel2  = prevCPR.HLSwitch  === "HL-A" ? prevCPR.s1 : prevCPR.prevLow;
 
-  const SSLLAboveCond      = todaySSLLLevel1 > prevSSLLLevel1 && todaySSLLLevel2 >= prevSSLLLevel2;
-  const SSLLBelowCond      = todaySSLLLevel1 <= prevSSLLLevel1 && todaySSLLLevel2 < prevSSLLLevel2;
-  const SSLLCompressedCond = todaySSLLLevel1 < prevSSLLLevel1 && todaySSLLLevel2 > prevSSLLLevel2;
-
+  const SSLLDir1 = dirTol(todaySSLLLevel1, prevSSLLLevel1);
+  const SSLLDir2 = dirTol(todaySSLLLevel2, prevSSLLLevel2);
   const SSLLCategory: SSLLCategory =
-    SSLLAboveCond ? "SSLL-A" :
-    SSLLBelowCond ? "SSLL-B" :
-    SSLLCompressedCond ? "SSLL-C" :
+    ((SSLLDir1 > 0 && SSLLDir2 >= 0) || (SSLLDir1 === 0 && SSLLDir2 > 0)) ? "SSLL-A" :
+    ((SSLLDir1 <= 0 && SSLLDir2 < 0) || (SSLLDir1 < 0 && SSLLDir2 === 0)) ? "SSLL-B" :
+    (SSLLDir1 < 0 && SSLLDir2 > 0) ? "SSLL-C" :
     "none";
 
-  // RRHHCategory — see field doc on CPRResult. Same mirrored-axis
-  // construction as SSLLCategory, but over the ceiling pair (r1/prevHigh)
-  // instead of the floor pair (s1/prevLow). Only 3 badges: "Expanded" is
-  // mathematically impossible here (r1 and prevHigh always shift by the
-  // same signed amount for a given day, so axis2 can never fall below
-  // axis1), and exact "Equal" is a razor-thin coincidence that in practice
-  // never fires — both collapse into RRHH-C alongside "Compressed".
+  // RRHHCategory — same mirrored-axis construction over the ceiling pair
+  // (r1/prevHigh). "Expanded" is impossible here, so everything that is
+  // neither Above nor Below collapses into RRHH-C; "none" is a defensive
+  // fallback for non-finite inputs only.
   const todayRRHHLevel1 = todayCPR.HLSwitch === "HL-A" ? todayCPR.r1 : todayCPR.prevHigh;
   const prevRRHHLevel1  = prevCPR.HLSwitch  === "HL-A" ? prevCPR.prevHigh : prevCPR.r1;
   const todayRRHHLevel2 = todayCPR.HLSwitch === "HL-A" ? todayCPR.prevHigh : todayCPR.r1;
   const prevRRHHLevel2  = prevCPR.HLSwitch  === "HL-A" ? prevCPR.r1 : prevCPR.prevHigh;
 
-  const RRHHAboveCond = todayRRHHLevel1 > prevRRHHLevel1 && todayRRHHLevel2 >= prevRRHHLevel2;
-  const RRHHBelowCond = todayRRHHLevel1 <= prevRRHHLevel1 && todayRRHHLevel2 < prevRRHHLevel2;
   const RRHHValid =
     isFinite(todayRRHHLevel1) && isFinite(prevRRHHLevel1) &&
     isFinite(todayRRHHLevel2) && isFinite(prevRRHHLevel2);
+  const RRHHDir1 = dirTol(todayRRHHLevel1, prevRRHHLevel1);
+  const RRHHDir2 = dirTol(todayRRHHLevel2, prevRRHHLevel2);
 
   const RRHHCategory: RRHHCategory =
     !RRHHValid ? "none" :
-    RRHHAboveCond ? "RRHH-A" :
-    RRHHBelowCond ? "RRHH-B" :
+    ((RRHHDir1 > 0 && RRHHDir2 >= 0) || (RRHHDir1 === 0 && RRHHDir2 > 0)) ? "RRHH-A" :
+    ((RRHHDir1 <= 0 && RRHHDir2 < 0) || (RRHHDir1 < 0 && RRHHDir2 === 0)) ? "RRHH-B" :
     "RRHH-C";
 
   return {
