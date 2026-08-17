@@ -2099,10 +2099,11 @@ export function renderHHLLCategoryBadge(r: CPRResult) {
  * ScreenerTableRow and BacktestPanel's two result tables so all three call
  * sites stay in sync. Layout (updated):
  *   Row 1: HHLLCategory badge (HHLL-A/B/C/X) first, then the Gap badge
- *          (HHGap/LLGap/EqGap).
+ *          (HHGap/LLGap/EqGap) — kept on a single non-wrapping line so the
+ *          pair stays inline instead of stacking.
  *   Row 2: prev day's "p-xx" PDH/PDL badge first, then today's own "xx"
- *          PDH/PDL badge second — kept on a single non-wrapping line so
- *          the pair never spills onto a 3rd row.
+ *          PDH/PDL badge second — also kept non-wrapping so the pair never
+ *          spills onto a 3rd row.
  * (Previously Row 1 was Gap badge + today badge, Row 2 was prev badge
  * alone — the HHLLCategory badge now takes the first slot on Row 1, and
  * today's own-PDH-vs-own-R1 badge shifted down to join prev's equivalent
@@ -2118,13 +2119,13 @@ export function renderPdhPdlColumnBadges(r: CPRResult) {
     return <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">—</span>;
   }
   return (
-    <div className="flex flex-col items-start gap-1">
-      <div className="flex flex-wrap items-center gap-1">
+    <div className="flex flex-col items-start gap-1.5">
+      <div className="flex flex-nowrap items-center gap-2">
         {hhllBadge}
         {gapBadge}
       </div>
       {(prevBadge || todayBadge) && (
-        <div className="flex flex-nowrap items-center gap-1">
+        <div className="flex flex-nowrap items-center gap-2">
           {prevBadge}
           {todayBadge}
         </div>

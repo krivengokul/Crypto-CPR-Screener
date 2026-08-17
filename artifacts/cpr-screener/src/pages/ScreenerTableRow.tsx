@@ -317,6 +317,13 @@ export function ScreenerTableHeader({
           LEVEL
         </th>
         <th
+          className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground min-w-[165px]"
+          onClick={() => toggleSort("pdhPdlPct")}
+          title="Position vs yesterday's High/Low"
+        >
+          PDH / PDL <SortIcon k="pdhPdlPct" />
+        </th>
+        <th
           className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground min-w-[175px]"
           onClick={() => toggleSort("compressionRatio")}
         >
@@ -333,13 +340,6 @@ export function ScreenerTableHeader({
           onClick={() => toggleSort("priceVsCpr")}
         >
           Price/CPR <SortIcon k="priceVsCpr" />
-        </th>
-        <th
-          className="pl-8 pr-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
-          onClick={() => toggleSort("pdhPdlPct")}
-          title="Position vs yesterday's High/Low"
-        >
-          PDH / PDL <SortIcon k="pdhPdlPct" />
         </th>
         <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           CPR-GAP
@@ -520,6 +520,12 @@ export default function ScreenerTableRow({
             {ssrrHhllRow}
           </div>
         </td>
+        <td
+          className="px-4 py-3 whitespace-nowrap text-xs font-medium min-w-[165px]"
+          title={`PDH: ${fmt(r.todayCPR.prevHigh)}  |  PDL: ${fmt(r.todayCPR.prevLow)}`}
+        >
+          {renderPdhPdlColumnBadges(r)}
+        </td>
         <td className="px-4 py-3 font-mono whitespace-nowrap min-w-[205px]">
           {(() => {
             const prevCat = getWidthCategory(r.prevCPR.widthPct);
@@ -571,12 +577,6 @@ export default function ScreenerTableRow({
               <span className="text-[10px] ml-1">{pdhPdlStatus(r).sub}</span>
             )}
           </div>
-        </td>
-        <td
-          className="pl-8 pr-4 py-3 whitespace-nowrap text-xs font-medium"
-          title={`PDH: ${fmt(r.todayCPR.prevHigh)}  |  PDL: ${fmt(r.todayCPR.prevLow)}`}
-        >
-          {renderPdhPdlColumnBadges(r)}
         </td>
         <td className="px-4 py-3 whitespace-nowrap text-xs font-mono font-medium">
           {(() => {
