@@ -384,25 +384,27 @@ export interface CPRResult {
   // (LLGap). "HHGap" when the PDH gap is larger, "LLGap" when the PDL gap
   // is larger, "EqGap" when the two gaps are equal.
   PDHPDLGapCategory: PDHPDLGapCategory;
-  // SSRRCategory — single-badge 5-way partition over today's R1/S1 vs
+  // SSRRCategory — single-badge 6-way partition over today's R1/S1 vs
   // prev's R1/S1 (mirrors HHLLCategory's shape):
   //   SSRR-A (Above)      — today.r1 >  prev.r1 AND today.s1 >= prev.s1
   //   SSRR-B (Below)      — today.r1 <= prev.r1 AND today.s1 <  prev.s1
   //   SSRR-C (Compressed) — today.r1 <  prev.r1 AND today.s1 >  prev.s1
   //   SSRR-X (Expanded)   — today.r1 >  prev.r1 AND today.s1 <  prev.s1
-  // "none" when none of the four conditions match. This field is the ONLY
+  //   SSRR=  (Equal)      — today.r1 == prev.r1 AND today.s1 == prev.s1 (eqTol)
+  // "none" when none of the five conditions match. This field is the ONLY
   // source for that classification — the raw SSRRAbove/SSRRBelow booleans
   // have been removed from CPRResult.
   SSRRCategory: SSRRCategory;
-  // HHLLCategory — 5-way mutually exclusive partition classifying today's
+  // HHLLCategory — 6-way mutually exclusive partition classifying today's
   // PDH/PDL (prevHigh/prevLow) move against prev's PDH/PDL:
   //   HHLL-A (Above)      — today.prevHigh > prev.prevHigh AND today.prevLow >= prev.prevLow
   //   HHLL-B (Below)      — today.prevHigh <= prev.prevHigh AND today.prevLow < prev.prevLow
   //   HHLL-C (Compressed) — today.prevHigh < prev.prevHigh AND today.prevLow > prev.prevLow
   //   HHLL-X (Expanded)   — today.prevHigh > prev.prevHigh AND today.prevLow < prev.prevLow
-  // Verified mutually exclusive (no row can satisfy two of the four), but
+  //   HHLL=  (Equal)      — today.prevHigh == prev.prevHigh AND today.prevLow == prev.prevLow (eqTol)
+  // Verified mutually exclusive (no row can satisfy two of the five), but
   // not exhaustive: PDH flat + PDL up, or PDH down + PDL flat, match none
-  // of the four and fall through to "none". HHLL-A/HHLL-B carry the same
+  // of the five and fall through to "none". HHLL-A/HHLL-B carry the same
   // conditions the removed HHLLAbove/HHLLBelow booleans used to hold; this
   // field is now the only source for that classification (see
   // ScreenerUtils.renderHHLLCategoryBadge), also covering the
@@ -441,8 +443,8 @@ export interface CPRResult {
 
 export type PDHPDLGapCategory = "HHGap" | "LLGap" | "EqGap";
 export type HLSwitch = "HL-A" | "HL-B" | "HL=";
-export type SSRRCategory = "SSRR-A" | "SSRR-B" | "SSRR-C" | "SSRR-X" | "none";
-export type HHLLCategory = "HHLL-A" | "HHLL-B" | "HHLL-C" | "HHLL-X" | "none";
+export type SSRRCategory = "SSRR-A" | "SSRR-B" | "SSRR-C" | "SSRR-X" | "SSRR=" | "none";
+export type HHLLCategory = "HHLL-A" | "HHLL-B" | "HHLL-C" | "HHLL-X" | "HHLL=" | "none";
 export type SSLLCategory = "SSLL-A" | "SSLL-B" | "SSLL-C" | "none";
 export type RRHHCategory = "RRHH-A" | "RRHH-B" | "RRHH-C" | "none";
 
@@ -1289,29 +1291,33 @@ export function analyzeCPR(
     LLGapVal > HHGapVal ? "LLGap" :
     "EqGap";
 
-  // SSRRCategory — see field doc on CPRResult. 5-way partition over
+  // SSRRCategory — see field doc on CPRResult. 6-way partition over
   // today's R1/S1 vs prev's R1/S1; falls through to "none".
   const SSRRAbove = todayCPR.r1 > prevCPR.r1 && todayCPR.s1 >= prevCPR.s1;
   const SSRRBelow = todayCPR.r1 <= prevCPR.r1 && todayCPR.s1 < prevCPR.s1;
   const SSRRCompressed = todayCPR.r1 < prevCPR.r1 && todayCPR.s1 > prevCPR.s1;
   const SSRRExpanded = todayCPR.r1 > prevCPR.r1 && todayCPR.s1 < prevCPR.s1;
+  const SSRREqual = eqTol(todayCPR.r1, prevCPR.r1) && eqTol(todayCPR.s1, prevCPR.s1);
   const SSRRCategory: SSRRCategory =
     SSRRAbove ? "SSRR-A" :
     SSRRBelow ? "SSRR-B" :
     SSRRCompressed ? "SSRR-C" :
     SSRRExpanded ? "SSRR-X" :
+    SSRREqual ? "SSRR=" :
     "none";
 
-  // HHLLCategory — see field doc on CPRResult. A true 5-way mutually
+  // HHLLCategory — see field doc on CPRResult. A true 6-way mutually
   // exclusive partition over today's PDH/PDL vs prev's PDH/PDL (verified:
-  // no two of the five conditions can both be true for the same row).
+  // no two of the six conditions can both be true for the same row).
   // Not exhaustive — a PDH held flat while PDL rose, or PDH fell while PDL
-  // held flat, matches none of the five and falls through to "none".
+  // held flat, matches none of the six and falls through to "none".
+  const HHLLEqual = eqTol(todayCPR.prevHigh, prevCPR.prevHigh) && eqTol(todayCPR.prevLow, prevCPR.prevLow);
   const HHLLCategory: HHLLCategory =
     (todayCPR.prevHigh > prevCPR.prevHigh && todayCPR.prevLow >= prevCPR.prevLow) ? "HHLL-A" :
     (todayCPR.prevHigh <= prevCPR.prevHigh && todayCPR.prevLow < prevCPR.prevLow) ? "HHLL-B" :
     (todayCPR.prevHigh < prevCPR.prevHigh && todayCPR.prevLow > prevCPR.prevLow) ? "HHLL-C" :
     (todayCPR.prevHigh > prevCPR.prevHigh && todayCPR.prevLow < prevCPR.prevLow) ? "HHLL-X" :
+    HHLLEqual ? "HHLL=" :
     "none";
 
   // SSLLCategory — see field doc on CPRResult. 5-way partition over two

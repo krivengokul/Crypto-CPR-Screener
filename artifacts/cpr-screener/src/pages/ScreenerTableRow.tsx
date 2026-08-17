@@ -218,7 +218,7 @@ export function renderPrevPatternBadge(r: CPRResult) {
  * oV-B/oV-A, then Narrow/Wide (merged into a single badge wherever
  * Above/Below/oV-B/oV-A pairs with Narrow/Wide — see
  * renderLevelStatusRow1Badges for the full merge table), then the SSRR
- * badge (SSRR-A/SSRR-B/SSRR-C/SSRR-X), then Equal — all rendered inline
+ * badge (SSRR-A/SSRR-B/SSRR-C/SSRR-X/SSRR=), then Equal — all rendered inline
  * on one line; row 2: SSLL + RRHH, always on its own row underneath row
  * 1. Extracted out of the row JSX so other views (e.g. BacktestPanel) can
  * reuse the same LEVEL column. Mirrors ScreenerTableRow's own LEVEL cell,

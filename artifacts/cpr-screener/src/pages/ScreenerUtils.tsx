@@ -1764,11 +1764,16 @@ const SSRR_BADGE: Record<Exclude<SSRRCategory, "none">, { label: string; classNa
     className: "bg-orange-500/10 text-orange-400 border-orange-500/30",
     title: "Expanded: Today's R1 > Prev R1 and Today's S1 < Prev S1",
   },
+  "SSRR=": {
+    label: "SSRR=",
+    className: "bg-amber-500/10 text-amber-400 border-amber-500/30",
+    title: "Equal: Today's R1 == Prev R1 and Today's S1 == Prev S1",
+  },
 };
 
 /**
  * renderSSRRCategoryBadge — single badge for CPRResult.SSRRCategory
- * ("SSRR-A" | "SSRR-B" | "SSRR-C" | "SSRR-X" | "none"), same
+ * ("SSRR-A" | "SSRR-B" | "SSRR-C" | "SSRR-X" | "SSRR=" | "none"), same
  * solid-badge styling used elsewhere (renderPDHPDLGapCategoryBadge). Always
  * renders at most one badge, since SSRRCategory is a mutually exclusive
  * partition. Returns null for "none".
@@ -1910,7 +1915,7 @@ export function renderSSRRHHLLBadges(r: CPRResult) {
  *      apply on the same row: for Narow, oV-A > Above > Below > oV-B; for
  *      Wide, oV-A > Above > Below > oV-B (matches the row's own
  *      left-to-right badge order).
- *   4. SSRR badge — CPRResult.SSRRCategory (SSRR-A/SSRR-B/SSRR-C/SSRR-X),
+ *   4. SSRR badge — CPRResult.SSRRCategory (SSRR-A/SSRR-B/SSRR-C/SSRR-X/SSRR=),
  *      pulled out of row 2 to sit here, right after the Narow/Wide badges
  *      (row 2 now only carries SSLL + RRHH — see renderSSRRHHLLBadges).
  *   5. Equal.
@@ -2070,15 +2075,20 @@ const HHLL_CATEGORY_BADGE: Record<Exclude<HHLLCategory, "none">, { label: string
     className: "bg-pink-500/10 text-pink-400 border-pink-500/30",
     title: "Today's PDH > Prev PDH and Today's PDL < Prev PDL (Expanded)",
   },
+  "HHLL=": {
+    label: "HHLL=",
+    className: "bg-amber-500/10 text-amber-400 border-amber-500/30",
+    title: "Today's PDH == Prev PDH and Today's PDL == Prev PDL (Equal)",
+  },
 };
 
 /**
  * renderHHLLCategoryBadge — single badge for CPRResult.HHLLCategory
- * ("HHLL-A" | "HHLL-B" | "HHLL-C" | "HHLL-X" | "none"), same
+ * ("HHLL-A" | "HHLL-B" | "HHLL-C" | "HHLL-X" | "HHLL=" | "none"), same
  * solid-badge styling as renderPDHPDLGapCategoryBadge /
  * renderSSRRCategoryBadge. MOVED here from the LEVEL column (see
  * renderSSRRHHLLBadges) — HHLL-A/HHLL-B keep their original green/red
- * colours, HHLL-C/HHLL-X are new. Returns null for "none".
+ * colours, HHLL-C/HHLL-X/HHLL= are new. Returns null for "none".
  */
 export function renderHHLLCategoryBadge(r: CPRResult) {
   const cat = r.HHLLCategory;
@@ -2098,7 +2108,7 @@ export function renderHHLLCategoryBadge(r: CPRResult) {
  * renderPdhPdlColumnBadges — the full PDH/PDL table column body, shared by
  * ScreenerTableRow and BacktestPanel's two result tables so all three call
  * sites stay in sync. Layout (updated):
- *   Row 1: HHLLCategory badge (HHLL-A/B/C/X) first, then the Gap badge
+ *   Row 1: HHLLCategory badge (HHLL-A/B/C/X/=) first, then the Gap badge
  *          (HHGap/LLGap/EqGap) — kept on a single non-wrapping line so the
  *          pair stays inline instead of stacking.
  *   Row 2: prev day's "p-xx" PDH/PDL badge first, then today's own "xx"
