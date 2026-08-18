@@ -1857,13 +1857,13 @@ const SSLL_BADGE: Record<Exclude<SSLLCategory, "none">, { label: string; classNa
     className: "bg-orange-500/10 text-orange-400 border-orange-500/30",
     title: "Expanded: today's S1/PDL band widened vs prev (top rose, bottom fell)",
   },
-  "SSLL-XA": {
-    label: "SSLL-XA",
+  "SSLL-SB": {
+    label: "SSLL-SB",
     className: "bg-yellow-500/10 text-yellow-400 border-yellow-500/30",
     title: "Ambiguous Above: band top and bottom both rose vs prev, but S1 and PDL disagree in direction, so the Above verdict isn't safe",
   },
-  "SSLL-XB": {
-    label: "SSLL-XB",
+  "SSLL-LB": {
+    label: "SSLL-LB",
     className: "bg-yellow-500/10 text-yellow-400 border-yellow-500/30",
     title: "Ambiguous Below: band top and bottom both fell vs prev, but S1 and PDL disagree in direction, so the Below verdict isn't safe",
   },
@@ -1876,7 +1876,7 @@ const SSLL_BADGE: Record<Exclude<SSLLCategory, "none">, { label: string; classNa
 
 /**
  * renderSSLLCategoryBadge — single badge for CPRResult.SSLLCategory
- * ("SSLL-A" | "SSLL-B" | "SSLL-C" | "SSLL-E" | "SSLL-XA" | "SSLL-XB" | "SSLL=" | "none"), same
+ * ("SSLL-A" | "SSLL-B" | "SSLL-C" | "SSLL-E" | "SSLL-SB" | "SSLL-LB" | "SSLL=" | "none"), same
  * solid-badge styling used elsewhere (renderSSRRCategoryBadge). Always
  * renders at most one badge, since SSLLCategory is a mutually exclusive
  * partition. Returns null for "none".
@@ -1920,13 +1920,13 @@ const RRHH_BADGE: Record<Exclude<RRHHCategory, "none">, { label: string; classNa
     className: "bg-orange-500/10 text-orange-400 border-orange-500/30",
     title: "Expanded: Today's R1 > Prev R1 while Today's PDH < Prev PDH",
   },
-  "RRHH-XA": {
-    label: "RRHH-XA",
+  "RRHH-RA": {
+    label: "RRHH-RA",
     className: "bg-yellow-500/10 text-yellow-400 border-yellow-500/30",
     title: "Ambiguous Above: Today's R1 and PDH both rose, but their top/bottom roles differ between the two days",
   },
-  "RRHH-XB": {
-    label: "RRHH-XB",
+  "RRHH-LA": {
+    label: "RRHH-LA",
     className: "bg-yellow-500/10 text-yellow-400 border-yellow-500/30",
     title: "Ambiguous Below: Today's R1 and PDH both fell, but their top/bottom roles differ between the two days",
   },

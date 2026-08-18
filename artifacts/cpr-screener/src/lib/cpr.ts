@@ -462,8 +462,8 @@ export type RRSSGapCategory = "RRGap" | "SSGap" | "SSRR=";
 export type HLSwitch = "HL-A" | "HL-B" | "HL=";
 export type SSRRCategory = "RRSS-A" | "RRSS-B" | "RRSS-C" | "RRSS-E" | "RRSS=" | "none";
 export type HHLLCategory = "HHLL-A" | "HHLL-B" | "HHLL-C" | "HHLL-E" | "HHLL=" | "none";
-export type SSLLCategory = "SSLL-A" | "SSLL-B" | "SSLL-C" | "SSLL-E" | "SSLL-XA" | "SSLL-XB" | "SSLL=" | "none";
-export type RRHHCategory = "RRHH-A" | "RRHH-B" | "RRHH-C" | "RRHH-E" | "RRHH-XA" | "RRHH-XB" | "RRHH=" | "none";
+export type SSLLCategory = "SSLL-A" | "SSLL-B" | "SSLL-C" | "SSLL-E" | "SSLL-SB" | "SSLL-LB" | "SSLL=" | "none";
+export type RRHHCategory = "RRHH-A" | "RRHH-B" | "RRHH-C" | "RRHH-E" | "RRHH-RA" | "RRHH-LA" | "RRHH=" | "none";
 
 function isValidCandle(c: OHLC): boolean {
   return (
@@ -1390,7 +1390,7 @@ export function analyzeCPR(
   // prev.prevLow entirely is still an unambiguous "Above" even though S1's
   // relative position flipped. What actually makes the verdict unsafe is
   // the two individual fields disagreeing in direction (one rose, the
-  // other fell) — that case resolves to "SSLL-XA"/"SSLL-XB" instead of a
+  // other fell) — that case resolves to "SSLL-SB"/"SSLL-LB" instead of a
   // false-confidence A/B. Expanded/Compressed don't need this gate since
   // they only describe how the band's width changed and stay meaningful
   // regardless of role swaps or same-field disagreement.
@@ -1413,8 +1413,8 @@ export function analyzeCPR(
     (SSLLDirHi === 0 && SSLLDirLo > 0) ? "SSLL-C" :
     "none";
   const SSLLCategory: SSLLCategory =
-    (SSLLCategoryRaw === "SSLL-A" && !SSLLSameFieldAgreesUp) ? "SSLL-XA" :
-    (SSLLCategoryRaw === "SSLL-B" && !SSLLSameFieldAgreesDown) ? "SSLL-XB" :
+    (SSLLCategoryRaw === "SSLL-A" && !SSLLSameFieldAgreesUp) ? "SSLL-SB" :
+    (SSLLCategoryRaw === "SSLL-B" && !SSLLSameFieldAgreesDown) ? "SSLL-LB" :
     SSLLCategoryRaw;
 
   // RRHHCategory — mirror SSLLCategory over the resistance-side ceiling band
@@ -1446,8 +1446,8 @@ export function analyzeCPR(
     "none";
 
   const RRHHCategory: RRHHCategory =
-    (RRHHCategoryRaw === "RRHH-A" && !RRHHSameFieldAgreesUp) ? "RRHH-XA" :
-    (RRHHCategoryRaw === "RRHH-B" && !RRHHSameFieldAgreesDown) ? "RRHH-XB" :
+    (RRHHCategoryRaw === "RRHH-A" && !RRHHSameFieldAgreesUp) ? "RRHH-RA" :
+    (RRHHCategoryRaw === "RRHH-B" && !RRHHSameFieldAgreesDown) ? "RRHH-LA" :
     RRHHCategoryRaw;
 
   return {
