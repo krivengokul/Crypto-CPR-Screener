@@ -1925,8 +1925,8 @@ const RRHH_BADGE: Record<Exclude<RRHHCategory, "none">, { label: string; classNa
     className: "bg-yellow-500/10 text-yellow-400 border-yellow-500/30",
     title: "Ambiguous Above: Today's R1 and PDH both rose, but their top/bottom roles differ between the two days",
   },
-  "RRHH-LA": {
-    label: "RRHH-LA",
+  "RRHH-HA": {
+    label: "RRHH-HA",
     className: "bg-yellow-500/10 text-yellow-400 border-yellow-500/30",
     title: "Ambiguous Below: Today's R1 and PDH both fell, but their top/bottom roles differ between the two days",
   },

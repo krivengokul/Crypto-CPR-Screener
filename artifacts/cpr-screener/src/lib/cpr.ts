@@ -463,7 +463,7 @@ export type HLSwitch = "HL-A" | "HL-B" | "HL=";
 export type SSRRCategory = "RRSS-A" | "RRSS-B" | "RRSS-C" | "RRSS-E" | "RRSS=" | "none";
 export type HHLLCategory = "HHLL-A" | "HHLL-B" | "HHLL-C" | "HHLL-E" | "HHLL=" | "none";
 export type SSLLCategory = "SSLL-A" | "SSLL-B" | "SSLL-C" | "SSLL-E" | "SSLL-SB" | "SSLL-LB" | "SSLL=" | "none";
-export type RRHHCategory = "RRHH-A" | "RRHH-B" | "RRHH-C" | "RRHH-E" | "RRHH-RA" | "RRHH-LA" | "RRHH=" | "none";
+export type RRHHCategory = "RRHH-A" | "RRHH-B" | "RRHH-C" | "RRHH-E" | "RRHH-RA" | "RRHH-HA" | "RRHH=" | "none";
 
 function isValidCandle(c: OHLC): boolean {
   return (
@@ -1447,7 +1447,7 @@ export function analyzeCPR(
 
   const RRHHCategory: RRHHCategory =
     (RRHHCategoryRaw === "RRHH-A" && !RRHHSameFieldAgreesUp) ? "RRHH-RA" :
-    (RRHHCategoryRaw === "RRHH-B" && !RRHHSameFieldAgreesDown) ? "RRHH-LA" :
+    (RRHHCategoryRaw === "RRHH-B" && !RRHHSameFieldAgreesDown) ? "RRHH-HA" :
     RRHHCategoryRaw;
 
   return {
