@@ -1412,9 +1412,14 @@ export function analyzeCPR(
     (SSLLDirHi < 0 && SSLLDirLo >= 0) ? "SSLL-C" :
     (SSLLDirHi === 0 && SSLLDirLo > 0) ? "SSLL-C" :
     "none";
+  // Which field (S1 vs PDL) actually drove the divergence decides SB vs LB —
+  // not merely which raw bucket (A vs B) we landed in, since either bucket
+  // can be produced by either field swapping to the top/bottom role.
   const SSLLCategory: SSLLCategory =
-    (SSLLCategoryRaw === "SSLL-A" && !SSLLSameFieldAgreesUp) ? "SSLL-SB" :
-    (SSLLCategoryRaw === "SSLL-B" && !SSLLSameFieldAgreesDown) ? "SSLL-LB" :
+    (SSLLCategoryRaw === "SSLL-A" && !SSLLSameFieldAgreesUp)
+      ? (SSLLDirS1 >= SSLLDirPL ? "SSLL-SB" : "SSLL-LB") :
+    (SSLLCategoryRaw === "SSLL-B" && !SSLLSameFieldAgreesDown)
+      ? (SSLLDirS1 >= SSLLDirPL ? "SSLL-SB" : "SSLL-LB") :
     SSLLCategoryRaw;
 
   // RRHHCategory — mirror SSLLCategory over the resistance-side ceiling band
@@ -1445,9 +1450,14 @@ export function analyzeCPR(
     (RRHHDirHi === 0 && RRHHDirLo > 0) ? "RRHH-C" :
     "none";
 
+  // Which field (R1 vs PDH) actually drove the divergence decides RA vs HA —
+  // not merely which raw bucket (A vs B) we landed in, since either bucket
+  // can be produced by either field swapping to the top/bottom role.
   const RRHHCategory: RRHHCategory =
-    (RRHHCategoryRaw === "RRHH-A" && !RRHHSameFieldAgreesUp) ? "RRHH-RA" :
-    (RRHHCategoryRaw === "RRHH-B" && !RRHHSameFieldAgreesDown) ? "RRHH-HA" :
+    (RRHHCategoryRaw === "RRHH-A" && !RRHHSameFieldAgreesUp)
+      ? (RRHHDirR1 >= RRHHDirPDH ? "RRHH-RA" : "RRHH-HA") :
+    (RRHHCategoryRaw === "RRHH-B" && !RRHHSameFieldAgreesDown)
+      ? (RRHHDirR1 >= RRHHDirPDH ? "RRHH-RA" : "RRHH-HA") :
     RRHHCategoryRaw;
 
   return {
