@@ -6,6 +6,7 @@ import {
   type CPRLevels,
   type CPRResult,
   type PDHPDLGapCategory,
+  type RRSSGapCategory,
   type HLSwitch,
   type SSRRCategory,
   type HHLLCategory,
@@ -1954,6 +1955,12 @@ export function renderSSRRHHLLBadges(r: CPRResult) {
  *      pulled out of row 2 to sit here, right after the Narow/Wide badges
  *      (row 2 now only carries SSLL + RRHH — see renderSSRRHHLLBadges).
  *   5. Equal.
+ *
+ * The RRSSGapCategory badge (RRGap/SSGap/SSRR=, via
+ * renderRRSSGapCategoryBadge) always renders as the SECOND badge overall —
+ * right after the mutually-exclusive status badge (Above/Below/Inside/
+ * Outside/Skip) and before oV-B/oV-A — since it's unconditional (always
+ * exactly one of the three values, like PDHPDLGapCategory).
  */
 export function renderLevelStatusRow1Badges(
   r: CPRResult,
@@ -2001,6 +2008,7 @@ export function renderLevelStatusRow1Badges(
         <span className={`${smallBadge} bg-purple-500/10 text-purple-400 border border-purple-500/20`}>Outside</span>
       )}
       {nothingMatched && <span className={`${smallBadge} bg-muted text-muted-foreground`}>Skip</span>}
+      {renderRRSSGapCategoryBadge(r)}
       {r.overlapLower && !ovLowerConsumed && (
         <span className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-medium">oV-B</span>
       )}
@@ -2141,6 +2149,7 @@ export function renderLevelStatusRestBadges(
 
   return (
     <>
+      {renderRRSSGapCategoryBadge(r)}
       {r.overlapLower && !ovLowerConsumed && (
         <span className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-medium">oV-B</span>
       )}
@@ -2164,10 +2173,10 @@ export function renderLevelStatusRestBadges(
 
 /**
  * renderPDHPDLGapCategoryBadge — single badge for CPRResult.PDHPDLGapCategory
- * ("HHGap" | "LLGap" | "EqGap"), same solid-badge styling as the
+ * ("HHGap" | "LLGap" | "HHLL="), same solid-badge styling as the
  * SSLL + HHLL-A/HHLL-B badges above (renderSSRRHHLLBadges):
  * green for HHGap (PDH gap bigger), red for LLGap (PDL gap bigger),
- * yellow/neutral for EqGap (gaps equal) — matching the "IN-CPR"/"IN-PDHL"
+ * yellow/neutral for HHLL= (gaps equal) — matching the "IN-CPR"/"IN-PDHL"
  * neutral colour used elsewhere. Always renders exactly one badge, since
  * PDHPDLGapCategory is always exactly one of the three values.
  */
@@ -2176,12 +2185,42 @@ export function renderPDHPDLGapCategoryBadge(r: CPRResult) {
   const styles: Record<PDHPDLGapCategory, string> = {
     HHGap: "bg-green-500/10 text-green-400 border-green-500/30",
     LLGap: "bg-red-500/10 text-red-400 border-red-500/30",
-    EqGap: "bg-yellow-500/10 text-yellow-400 border-yellow-500/30",
+    "HHLL=": "bg-yellow-500/10 text-yellow-400 border-yellow-500/30",
   };
   const titles: Record<PDHPDLGapCategory, string> = {
     HHGap: "Gap between today's PDH and prev's PDH is larger than the PDL gap",
     LLGap: "Gap between today's PDL and prev's PDL is larger than the PDH gap",
-    EqGap: "PDH gap and PDL gap are equal",
+    "HHLL=": "PDH gap and PDL gap are equal",
+  };
+  return (
+    <span
+      className={`text-[10px] whitespace-nowrap px-1 py-0.5 rounded border font-medium ${styles[cat]}`}
+      title={titles[cat]}
+    >
+      {cat}
+    </span>
+  );
+}
+
+/**
+ * renderRRSSGapCategoryBadge — single badge for CPRResult.RRSSGapCategory
+ * ("RRGap" | "SSGap" | "SSRR="), mirrors renderPDHPDLGapCategoryBadge but
+ * over R1/S1 instead of PDH/PDL: green for RRGap (R1 gap bigger), red for
+ * SSGap (S1 gap bigger), yellow/neutral for SSRR= (gaps equal). Always
+ * renders exactly one badge, since RRSSGapCategory is always exactly one
+ * of the three values.
+ */
+export function renderRRSSGapCategoryBadge(r: CPRResult) {
+  const cat = r.RRSSGapCategory;
+  const styles: Record<RRSSGapCategory, string> = {
+    RRGap: "bg-green-500/10 text-green-400 border-green-500/30",
+    SSGap: "bg-red-500/10 text-red-400 border-red-500/30",
+    "SSRR=": "bg-yellow-500/10 text-yellow-400 border-yellow-500/30",
+  };
+  const titles: Record<RRSSGapCategory, string> = {
+    RRGap: "Gap between today's R1 and prev's R1 is larger than the S1 gap",
+    SSGap: "Gap between today's S1 and prev's S1 is larger than the R1 gap",
+    "SSRR=": "R1 gap and S1 gap are equal",
   };
   return (
     <span

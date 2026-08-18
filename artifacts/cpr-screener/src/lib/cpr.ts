@@ -382,8 +382,14 @@ export interface CPRResult {
   // PDHPDLGapCategory — compares the gap between today's PDH and prev's
   // PDH (HHGap) against the gap between today's PDL and prev's PDL
   // (LLGap). "HHGap" when the PDH gap is larger, "LLGap" when the PDL gap
-  // is larger, "EqGap" when the two gaps are equal.
+  // is larger, "HHLL=" when the two gaps are equal.
   PDHPDLGapCategory: PDHPDLGapCategory;
+  // RRSSGapCategory — mirrors PDHPDLGapCategory, but over R1/S1 instead of
+  // PDH/PDL: compares the gap between today's R1 and prev's R1 (RRGap)
+  // against the gap between today's S1 and prev's S1 (SSGap). "RRGap" when
+  // the R1 gap is larger, "SSGap" when the S1 gap is larger, "SSRR=" when
+  // the two gaps are equal.
+  RRSSGapCategory: RRSSGapCategory;
   // SSRRCategory — single-badge 6-way partition over today's R1/S1 vs
   // prev's R1/S1 (mirrors HHLLCategory's shape):
   //   SSRR-A (Above)      — today.r1 >  prev.r1 AND today.s1 >= prev.s1
@@ -451,7 +457,8 @@ export interface CPRResult {
   RRHHCategory: RRHHCategory;
 }
 
-export type PDHPDLGapCategory = "HHGap" | "LLGap" | "EqGap";
+export type PDHPDLGapCategory = "HHGap" | "LLGap" | "HHLL=";
+export type RRSSGapCategory = "RRGap" | "SSGap" | "SSRR=";
 export type HLSwitch = "HL-A" | "HL-B" | "HL=";
 export type SSRRCategory = "SSRR-A" | "SSRR-B" | "SSRR-C" | "SSRR-E" | "SSRR=" | "none";
 export type HHLLCategory = "HHLL-A" | "HHLL-B" | "HHLL-C" | "HHLL-E" | "HHLL=" | "none";
@@ -1305,13 +1312,23 @@ export function analyzeCPR(
 
   // PDHPDLGapCategory — HHGap = |today's PDH - prev's PDH|, LLGap =
   // |today's PDL - prev's PDL|. Whichever gap is larger wins; equal gaps
-  // fall back to "EqGap".
+  // fall back to "HHLL=".
   const HHGapVal = Math.abs(todayCPR.prevHigh - prevCPR.prevHigh);
   const LLGapVal = Math.abs(todayCPR.prevLow - prevCPR.prevLow);
   const PDHPDLGapCategory: PDHPDLGapCategory =
     HHGapVal > LLGapVal ? "HHGap" :
     LLGapVal > HHGapVal ? "LLGap" :
-    "EqGap";
+    "HHLL=";
+
+  // RRSSGapCategory — mirrors PDHPDLGapCategory over R1/S1: RRGap =
+  // |today's R1 - prev's R1|, SSGap = |today's S1 - prev's S1|. Whichever
+  // gap is larger wins; equal gaps fall back to "SSRR=".
+  const RRGapVal = Math.abs(todayCPR.r1 - prevCPR.r1);
+  const SSGapVal = Math.abs(todayCPR.s1 - prevCPR.s1);
+  const RRSSGapCategory: RRSSGapCategory =
+    RRGapVal > SSGapVal ? "RRGap" :
+    SSGapVal > RRGapVal ? "SSGap" :
+    "SSRR=";
 
   // SSRRCategory / HHLLCategory / SSLLCategory / RRHHCategory
   //
@@ -1475,6 +1492,7 @@ export function analyzeCPR(
     prevS1Gap,
     SSLLAbove,
     PDHPDLGapCategory,
+    RRSSGapCategory,
     SSRRCategory,
     HHLLCategory,
     SSLLCategory,
