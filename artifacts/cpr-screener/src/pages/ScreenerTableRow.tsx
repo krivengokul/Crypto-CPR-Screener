@@ -387,13 +387,13 @@ export function ScreenerTableHeader({
           PDH / PDL <SortIcon k="pdhPdlPct" />
         </th>
         <th
-          className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground min-w-[175px]"
+          className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
           onClick={() => toggleSort("compressionRatio")}
         >
             PIVOT SIZE <SortIcon k="compressionRatio" />
         </th>
         <th
-          className="px-4 py-3 pr-6 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
+          className="px-4 py-3 pr-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
           onClick={() => toggleSort("change24h")}
         >
           Price <SortIcon k="change24h" />
@@ -594,7 +594,7 @@ export default function ScreenerTableRow({
         >
           {renderPdhPdlColumnBadges(r)}
         </td>
-        <td className="px-4 py-3 font-mono whitespace-nowrap min-w-[205px]">
+        <td className="px-4 py-3 font-mono whitespace-nowrap">
           {(() => {
             const prevCat = getWidthCategory(r.prevCPR.widthPct);
             const todayCat = getWidthCategory(r.todayCPR.widthPct);
@@ -621,7 +621,7 @@ export default function ScreenerTableRow({
             );
           })()}
         </td>
-        <td className="px-4 py-3 pr-6 font-mono whitespace-nowrap">
+        <td className="px-4 py-3 pr-4 font-mono whitespace-nowrap">
           <div className="text-sm font-bold text-foreground">
             {fmt(r.currentPrice)}
             <span className="text-muted-foreground">(</span>
