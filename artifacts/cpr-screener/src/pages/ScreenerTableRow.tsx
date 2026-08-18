@@ -250,6 +250,67 @@ export function renderLevelBadges(r: CPRResult) {
   );
 }
 
+/**
+ * "Pattern" column body for callers outside ScreenerTableRow's own row
+ * (BacktestPanel's two results tables) — mirrors the same restructuring
+ * applied to the Screener's own Pattern column: row 1 is the LEVEL
+ * column's leading status badge (Narow-B/Inside/Wide-A/etc, via
+ * renderLevelStatusBadge) shown inline with today's pattern badge(s); row
+ * 2 is the prev-day "p-xxxx" badge, unchanged. Pairs with
+ * renderLevelColumnRestBadges, which renders what's left of the LEVEL
+ * column once the leading badge is pulled out here. Returns null when
+ * there's nothing to show in either row.
+ */
+export function renderPatternColumnBadges(r: CPRResult) {
+  const isInsideCPR = passesPattern(r, "inside-cpr");
+  const isOutsideCPR = passesPattern(r, "outside-cpr");
+  const showWide = r.strWideCPR && !isOutsideCPR;
+  const nothingMatched =
+    !r.cprRising &&
+    !r.cprFalling &&
+    !r.narrowCPR &&
+    !r.equalCPR &&
+    !showWide &&
+    !isInsideCPR &&
+    !isOutsideCPR;
+  const statusBadge = renderLevelStatusBadge(r, isInsideCPR, isOutsideCPR, showWide, nothingMatched);
+  const todayBadges = renderTodayPatternBadges(r);
+  const prevBadge = renderPrevPatternBadge(r);
+  if (!statusBadge && !todayBadges && !prevBadge) return null;
+  return (
+    <div className="flex flex-col gap-1 max-w-[228px]">
+      <div className="flex flex-nowrap items-center gap-1">
+        {statusBadge}
+        {todayBadges}
+      </div>
+      {prevBadge}
+    </div>
+  );
+}
+
+/**
+ * "LEVEL" column body for callers outside ScreenerTableRow's own row
+ * (BacktestPanel's two results tables) — same as renderLevelBadges, minus
+ * the leading status badge that renderPatternColumnBadges now shows in the
+ * Pattern column instead. Row 1: whatever's left of
+ * renderLevelStatusRow1Badges (oV-B/oV-A when unmerged, SSRR, Equal); row
+ * 2: SSLL + RRHH, unchanged.
+ */
+export function renderLevelColumnRestBadges(r: CPRResult) {
+  const isInsideCPR = passesPattern(r, "inside-cpr");
+  const isOutsideCPR = passesPattern(r, "outside-cpr");
+  const showWide = r.strWideCPR && !isOutsideCPR;
+  const ssrrHhllRow = renderSSRRHHLLBadges(r);
+  return (
+    <div className="flex flex-col gap-1 max-w-[228px]">
+      <div className="flex flex-nowrap items-center gap-1">
+        {renderLevelStatusRestBadges(r, isInsideCPR, showWide)}
+      </div>
+      {ssrrHhllRow}
+    </div>
+  );
+}
+
 import type { CPRResult } from "@/lib/cpr";
 import {
   type CPRResultWithSource,
@@ -272,6 +333,8 @@ import {
   levelsInDistanceRange,
   renderSSRRHHLLBadges,
   renderLevelStatusRow1Badges,
+  renderLevelStatusBadge,
+  renderLevelStatusRestBadges,
   renderPdhPdlColumnBadges,
 } from "./ScreenerUtils";
 import { SRLadderRow, toSRLadderData } from "./SRLadderPanel";
@@ -508,14 +571,19 @@ export default function ScreenerTableRow({
             </div>
           </div>
         </td>
-        <td className="px-4 py-3 whitespace-nowrap">
-          {renderTodayPatternBadges(r)}
-          {renderPrevPatternBadge(r)}
+        <td className="px-2 py-3 w-64">
+          <div className="flex flex-col gap-1 max-w-[228px]">
+            <div className="flex flex-nowrap items-center gap-1">
+              {renderLevelStatusBadge(r, isInsideCPR, isOutsideCPR, showWide, nothingMatchedMain)}
+              {renderTodayPatternBadges(r)}
+            </div>
+            {renderPrevPatternBadge(r)}
+          </div>
         </td>
         <td className="px-2 py-3 w-64">
           <div className="flex flex-col gap-1 max-w-[228px]">
             <div className="flex flex-nowrap items-center gap-1">
-              {renderLevelStatusRow1Badges(r, isInsideCPR, isOutsideCPR, showWide, nothingMatchedMain)}
+              {renderLevelStatusRestBadges(r, isInsideCPR, showWide)}
             </div>
             {ssrrHhllRow}
           </div>

@@ -28,7 +28,12 @@ import {
   type BacktestTargetDef,
 } from "@/lib/backtest";
 import { passesPattern, matchesPatternFlag, fmt, getChartUrl, hasKnownChartMapping, getWidthCategory, renderPdhPdlColumnBadges } from "./ScreenerUtils";
-import { renderTodayPatternBadges, renderPrevPatternBadge, renderLevelBadges } from "./ScreenerTableRow";
+import {
+  renderTodayPatternBadges,
+  renderPrevPatternBadge,
+  renderPatternColumnBadges,
+  renderLevelColumnRestBadges,
+} from "./ScreenerTableRow";
 import { SRLadderRow, toSRLadderData } from "./SRLadderPanel";
 
 // --- Small UTC date helpers (all dates in this panel are UTC ISO strings) ---
@@ -909,7 +914,7 @@ export default function BacktestPanel() {
                     <th className="px-2 py-2 w-16 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Close
                     </th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    <th className="px-2 py-3 w-32 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Pattern
                     </th>
                     <th className="px-2 py-3 w-32 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -989,23 +994,13 @@ export default function BacktestPanel() {
                         <td className={`px-2 py-2 w-16 font-mono text-sm font-medium ${closeColor}`}>
                           {r.closePrice !== null && r.closePrice !== undefined ? fmt(r.closePrice) : "—"}
                         </td>
-                        <td className="px-3 py-2 whitespace-nowrap">
-                          {(() => {
-                            const today = renderTodayPatternBadges(r.raw);
-                            const prev = renderPrevPatternBadge(r.raw);
-                            if (!today && !prev) {
-                              return <span className="text-xs text-muted-foreground">—</span>;
-                            }
-                            return (
-                              <>
-                                {today}
-                                {prev}
-                              </>
-                            );
-                          })()}
+                        <td className="px-2 py-3 w-32">
+                          {renderPatternColumnBadges(r.raw) ?? (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
                         </td>
                         <td className="px-2 py-3 w-32">
-                          {renderLevelBadges(r.raw)}
+                          {renderLevelColumnRestBadges(r.raw)}
                         </td>
                         <td className="pl-8 pr-4 py-3 whitespace-nowrap text-xs font-medium">
                           {renderPdhPdlColumnBadges(r.raw)}
@@ -1104,7 +1099,7 @@ export default function BacktestPanel() {
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Symbol
                     </th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    <th className="px-2 py-3 w-32 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Pattern
                     </th>
                     <th className="px-2 py-3 w-32 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -1177,23 +1172,13 @@ export default function BacktestPanel() {
                           </span>
                         </div>
                       </td>
-                      <td className="px-3 py-2 whitespace-nowrap">
-                        {(() => {
-                          const today = renderTodayPatternBadges(r.raw);
-                          const prev = renderPrevPatternBadge(r.raw);
-                          if (!today && !prev) {
-                            return <span className="text-xs text-muted-foreground">—</span>;
-                          }
-                          return (
-                            <>
-                              {today}
-                              {prev}
-                            </>
-                          );
-                        })()}
+                      <td className="px-2 py-3 w-32">
+                        {renderPatternColumnBadges(r.raw) ?? (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
                       </td>
                       <td className="px-2 py-3 w-32">
-                        {renderLevelBadges(r.raw)}
+                        {renderLevelColumnRestBadges(r.raw)}
                       </td>
                       <td className="pl-8 pr-4 py-3 whitespace-nowrap text-xs font-medium">
                         {renderPdhPdlColumnBadges(r.raw)}

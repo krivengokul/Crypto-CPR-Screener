@@ -2053,6 +2053,116 @@ export function renderLevelStatusRow1Badges(
 }
 
 /**
+ * renderLevelStatusBadge — just the single, mutually-exclusive "first
+ * button" out of renderLevelStatusRow1Badges (Above/Below/Inside/Outside/
+ * Skip, or its Narow-A/Narow-B/Nrow-oVA/Nrow-oVB/Wide-A/Wide-B/Wide-AoV/
+ * Wide-BoV merged form, or the bare Narrow/Wide fallback). Split out so the
+ * Screener's Pattern column can show it as the leading badge alongside
+ * today's pattern badge(s), while the LEVEL column keeps the rest (see
+ * renderLevelStatusRestBadges). Always returns at most one badge.
+ */
+export function renderLevelStatusBadge(
+  r: CPRResult,
+  isInsideCPR: boolean,
+  isOutsideCPR: boolean,
+  showWide: boolean,
+  nothingMatched: boolean
+) {
+  const isNarrow = r.narrowCPR && !isInsideCPR;
+
+  const narrowMerge: "AoV" | "A" | "B" | "BoV" | null =
+    isNarrow && r.overlapHigher ? "AoV" :
+    isNarrow && r.cprRising ? "A" :
+    isNarrow && r.cprFalling ? "B" :
+    isNarrow && r.overlapLower ? "BoV" :
+    null;
+  const wideMerge: "AoV" | "A" | "B" | "BoV" | null =
+    showWide && r.overlapHigher ? "AoV" :
+    showWide && r.cprRising ? "A" :
+    showWide && r.cprFalling ? "B" :
+    showWide && r.overlapLower ? "BoV" :
+    null;
+
+  const aboveConsumed = narrowMerge === "A" || wideMerge === "A";
+  const belowConsumed = narrowMerge === "B" || wideMerge === "B";
+  const narrowConsumed = narrowMerge !== null;
+  const wideConsumed = wideMerge !== null;
+
+  const smallBadge = "text-[10px] px-1 py-0.5 rounded font-medium whitespace-nowrap shrink-0";
+
+  if (narrowMerge === "AoV") return <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>Nrow-oVA</span>;
+  if (narrowMerge === "A") return <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>Narow-A</span>;
+  if (narrowMerge === "B") return <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>Narow-B</span>;
+  if (narrowMerge === "BoV") return <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>Nrow-oVB</span>;
+  if (wideMerge === "AoV") return <span className={`${smallBadge} bg-pink-500/10 text-pink-400 border border-pink-500/20`}>Wide-AoV</span>;
+  if (wideMerge === "A") return <span className={`${smallBadge} bg-pink-500/10 text-pink-400 border border-pink-500/20`}>Wide-A</span>;
+  if (wideMerge === "B") return <span className={`${smallBadge} bg-pink-500/10 text-pink-400 border border-pink-500/20`}>Wide-B</span>;
+  if (wideMerge === "BoV") return <span className={`${smallBadge} bg-pink-500/10 text-pink-400 border border-pink-500/20`}>Wide-BoV</span>;
+  if (r.cprRising && !aboveConsumed) return <span className={`${smallBadge} bg-blue-500/10 text-blue-400 border border-blue-500/20`}>Above</span>;
+  if (r.cprFalling && !belowConsumed) return <span className={`${smallBadge} bg-orange-500/10 text-orange-400 border border-orange-500/20`}>Below</span>;
+  if (isInsideCPR) return <span className={`${smallBadge} bg-orange-500/10 text-orange-400 border border-orange-500/20`}>Inside</span>;
+  if (isOutsideCPR) return <span className={`${smallBadge} bg-purple-500/10 text-purple-400 border border-purple-500/20`}>Outside</span>;
+  if (nothingMatched) return <span className={`${smallBadge} bg-muted text-muted-foreground`}>Skip</span>;
+  if (isNarrow && !narrowConsumed) return <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>Narrow</span>;
+  if (showWide && !wideConsumed) return <span className={`${smallBadge} bg-pink-500/10 text-pink-400 border border-pink-500/20`}>Wide</span>;
+  return null;
+}
+
+/**
+ * renderLevelStatusRestBadges — everything renderLevelStatusRow1Badges
+ * renders MINUS the single leading status badge (see
+ * renderLevelStatusBadge): oV-B/oV-A (only when not absorbed into a
+ * Narrow/Wide merge), the SSRR category badge, and Equal. Used by the
+ * Screener's own LEVEL column now that the leading status badge has moved
+ * to the Pattern column.
+ */
+export function renderLevelStatusRestBadges(
+  r: CPRResult,
+  isInsideCPR: boolean,
+  showWide: boolean
+) {
+  const isNarrow = r.narrowCPR && !isInsideCPR;
+
+  const narrowMerge: "AoV" | "A" | "B" | "BoV" | null =
+    isNarrow && r.overlapHigher ? "AoV" :
+    isNarrow && r.cprRising ? "A" :
+    isNarrow && r.cprFalling ? "B" :
+    isNarrow && r.overlapLower ? "BoV" :
+    null;
+  const wideMerge: "AoV" | "A" | "B" | "BoV" | null =
+    showWide && r.overlapHigher ? "AoV" :
+    showWide && r.cprRising ? "A" :
+    showWide && r.cprFalling ? "B" :
+    showWide && r.overlapLower ? "BoV" :
+    null;
+
+  const ovLowerConsumed = narrowMerge === "BoV" || wideMerge === "BoV";
+  const ovHigherConsumed = narrowMerge === "AoV" || wideMerge === "AoV";
+
+  return (
+    <>
+      {r.overlapLower && !ovLowerConsumed && (
+        <span className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-medium">oV-B</span>
+      )}
+      {r.overlapHigher && !ovHigherConsumed && (
+        <span className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20 font-medium">oV-A</span>
+      )}
+      {r.SSRRCategory !== "none" && (
+        <span
+          className={`text-[10px] whitespace-nowrap px-1 py-0.5 rounded border font-medium ${SSRR_BADGE[r.SSRRCategory].className}`}
+          title={SSRR_BADGE[r.SSRRCategory].title}
+        >
+          {SSRR_BADGE[r.SSRRCategory].label}
+        </span>
+      )}
+      {r.equalCPR && (
+        <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">Equal</span>
+      )}
+    </>
+  );
+}
+
+/**
  * renderPDHPDLGapCategoryBadge — single badge for CPRResult.PDHPDLGapCategory
  * ("HHGap" | "LLGap" | "EqGap"), same solid-badge styling as the
  * SSLL + HHLL-A/HHLL-B badges above (renderSSRRHHLLBadges):
