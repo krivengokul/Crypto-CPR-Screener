@@ -604,17 +604,17 @@ export default function ScreenerTableRow({
                   className={`font-sans text-xs px-1.5 py-0.5 rounded border font-medium flex flex-col items-center leading-tight ${prevCat.pClasses}`}
                   title={`Prev day CPR width: ${r.prevCPR.widthPct.toFixed(4)}%`}
                 >
-                  <span>p{prevCat.label}</span>
+                  <span className="text-[10px]">p{prevCat.label}</span>
                   <span className="text-[10px] font-mono">{r.prevCPR.widthPct.toFixed(4)}%</span>
                 </span>
                 <span className="font-sans text-[11px] font-semibold text-muted-foreground bg-slate-500/10 border border-slate-500/30 rounded-full px-2 py-0.5 shrink-0">
-                  {r.compressionRatio.toFixed(1)}%
+                  {r.compressionRatio > 999 ? "999%" : `${Math.round(r.compressionRatio)}%`}
                 </span>
                 <span
                   className={`font-sans text-xs px-1.5 py-0.5 rounded border font-medium flex flex-col items-center leading-tight ${todayCat.classes}`}
                   title={`Today's CPR width: ${r.todayCPR.widthPct.toFixed(4)}%`}
                 >
-                  <span>{todayCat.label}</span>
+                  <span className="text-[10px]">{todayCat.label}</span>
                   <span className="text-[10px] font-mono">{r.todayCPR.widthPct.toFixed(4)}%</span>
                 </span>
               </div>
