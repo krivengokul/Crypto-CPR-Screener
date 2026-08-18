@@ -392,11 +392,11 @@ export interface CPRResult {
   RRSSGapCategory: RRSSGapCategory;
   // SSRRCategory — single-badge 6-way partition over today's R1/S1 vs
   // prev's R1/S1 (mirrors HHLLCategory's shape):
-  //   SSRR-A (Above)      — today.r1 >  prev.r1 AND today.s1 >= prev.s1
-  //   SSRR-B (Below)      — today.r1 <= prev.r1 AND today.s1 <  prev.s1
-  //   SSRR-C (Compressed) — today.r1 <  prev.r1 AND today.s1 >  prev.s1
-  //   SSRR-E (Expanded)   — today.r1 >  prev.r1 AND today.s1 <  prev.s1
-  //   SSRR=  (Equal)      — today.r1 == prev.r1 AND today.s1 == prev.s1 (eqTol)
+  //   RRSS-A (Above)      — today.r1 >  prev.r1 AND today.s1 >= prev.s1
+  //   RRSS-B (Below)      — today.r1 <= prev.r1 AND today.s1 <  prev.s1
+  //   RRSS-C (Compressed) — today.r1 <  prev.r1 AND today.s1 >  prev.s1
+  //   RRSS-E (Expanded)   — today.r1 >  prev.r1 AND today.s1 <  prev.s1
+  //   RRSS=  (Equal)      — today.r1 == prev.r1 AND today.s1 == prev.s1 (eqTol)
   // "none" when none of the five conditions match. This field is the ONLY
   // source for that classification — the raw SSRRAbove/SSRRBelow booleans
   // have been removed from CPRResult.
@@ -460,7 +460,7 @@ export interface CPRResult {
 export type PDHPDLGapCategory = "HHGap" | "LLGap" | "HHLL=";
 export type RRSSGapCategory = "RRGap" | "SSGap" | "SSRR=";
 export type HLSwitch = "HL-A" | "HL-B" | "HL=";
-export type SSRRCategory = "SSRR-A" | "SSRR-B" | "SSRR-C" | "SSRR-E" | "SSRR=" | "none";
+export type SSRRCategory = "RRSS-A" | "RRSS-B" | "RRSS-C" | "RRSS-E" | "RRSS=" | "none";
 export type HHLLCategory = "HHLL-A" | "HHLL-B" | "HHLL-C" | "HHLL-E" | "HHLL=" | "none";
 export type SSLLCategory = "SSLL-A" | "SSLL-B" | "SSLL-C" | "SSLL-E" | "SSLL-XA" | "SSLL-XB" | "SSLL=" | "none";
 export type RRHHCategory = "RRHH-A" | "RRHH-B" | "RRHH-C" | "RRHH-E" | "RRHH-XA" | "RRHH-XB" | "RRHH=" | "none";
@@ -1348,12 +1348,12 @@ export function analyzeCPR(
   const SSRRDirR1 = dirTol(todayCPR.r1, prevCPR.r1);
   const SSRRDirS1 = dirTol(todayCPR.s1, prevCPR.s1);
   const SSRRCategory: SSRRCategory =
-    (SSRRDirR1 === 0 && SSRRDirS1 === 0) ? "SSRR=" :
-    (SSRRDirR1 > 0 && SSRRDirS1 >= 0) ? "SSRR-A" :
-    (SSRRDirR1 > 0 && SSRRDirS1 < 0) ? "SSRR-E" :
-    (SSRRDirR1 <= 0 && SSRRDirS1 < 0) ? "SSRR-B" :
-    (SSRRDirR1 < 0 && SSRRDirS1 >= 0) ? "SSRR-C" :
-    (SSRRDirR1 === 0 && SSRRDirS1 > 0) ? "SSRR-C" :
+    (SSRRDirR1 === 0 && SSRRDirS1 === 0) ? "RRSS=" :
+    (SSRRDirR1 > 0 && SSRRDirS1 >= 0) ? "RRSS-A" :
+    (SSRRDirR1 > 0 && SSRRDirS1 < 0) ? "RRSS-E" :
+    (SSRRDirR1 <= 0 && SSRRDirS1 < 0) ? "RRSS-B" :
+    (SSRRDirR1 < 0 && SSRRDirS1 >= 0) ? "RRSS-C" :
+    (SSRRDirR1 === 0 && SSRRDirS1 > 0) ? "RRSS-C" :
     "none";
 
   // HHLLCategory — today's PDH/PDL vs prev's PDH/PDL. Now exhaustive: the

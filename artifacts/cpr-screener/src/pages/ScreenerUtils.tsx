@@ -662,7 +662,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // today's PDL both below prev's S1/PDL). Bullish, entry ~9AM, targets
     // today's own R4 / U4 by ~9PM.
     case "9AM:SSRRBHHLLA-U4:9PM":
-      return (r.overlapLower && r.HHLLCategory === "HHLL-A" && r.SSRRCategory === "SSRR-B");
+      return (r.overlapLower && r.HHLLCategory === "HHLL-A" && r.SSRRCategory === "RRSS-B");
     case "pRRHHLLA":
       return (r.overlapLower && r.RRHHCategory === "RRHH-B" && r.HHLLCategory === "HHLL-B");
     // NEW: 9AM:pRRHHLLA-U4:9PM — Overlap Below + RRHH-B (today's R1 AND
@@ -743,7 +743,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return (
         (r.InsideCPR) &&
           (r.cOL3U3 || r.cOU3L3) && 
-        r.SSRRCategory === "SSRR-B" && r.HHLLCategory === "HHLL-A"
+        r.SSRRCategory === "RRSS-B" && r.HHLLCategory === "HHLL-A"
         //r.prevCPR.widthPct > 2.00 && r.prevCPR.widthPct <= 5.00 &&   // pLarge
         //r.todayCPR.widthPct > 1.10 && r.todayCPR.widthPct <= 2.00 && // Medium
         //r.prevCPR.HLSwitch === "HL-B" && r.todayCPR.HLSwitch === "HL-A" &&       // p-HL-B  // HL-A
@@ -762,7 +762,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.prevCPR.widthPct > 2.00 && r.prevCPR.widthPct <= 5.00 &&   // pLarge
         r.todayCPR.widthPct > 2.00 && r.todayCPR.widthPct <= 5.00 && // Large
         r.prevCPR.HLSwitch === "HL-A" && r.todayCPR.HLSwitch === "HL-B" &&            // p-PDH>U1     // PDL<L1
-        r.SSRRCategory === "SSRR-A" &&
+        r.SSRRCategory === "RRSS-A" &&
         r.prevCPR.prevHigh > r.todayCPR.prevHigh &&
         r.prevCPR.prevLow > r.todayCPR.prevLow
       );
@@ -782,7 +782,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return (
         (r.InsideCPR) &&
         r.eXL4U4 &&
-        r.SSRRCategory === "SSRR-A" &&
+        r.SSRRCategory === "RRSS-A" &&
         r.prevCPR.prevHigh > r.todayCPR.prevHigh &&
         r.prevCPR.prevLow > r.todayCPR.prevLow &&
         (r.todayCPR.HLSwitch !== "HL-B" ||
@@ -1001,7 +1001,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // RENAMED: was "bigabove-pl34cl4-u3>pu4" -> "9AM:SSRRHHLLA-U4:11PM"
     case "9AM:SSRRHHLLA-U4:11PM":
     return (r.cprRising && r.strWideCPR && 
-            r.SSRRCategory === "SSRR-A" && r.HHLLCategory === "HHLL-A" && r.todayCPR.HLSwitch === "HL-A");
+            r.SSRRCategory === "RRSS-A" && r.HHLLCategory === "HHLL-A" && r.todayCPR.HLSwitch === "HL-A");
     // NEW: BAComp-l3>pl1/u3>pu1 — BigCPR Above + prev S1 inside today S3/S4 AND prev R1 inside today R2/R3
     case "bacomp-l3>pl1/u3>pu1":
       return (
@@ -1744,28 +1744,28 @@ export function renderPdhPdlSubBadges(r: CPRResult) {
  * "none" renders nothing.
  */
 const SSRR_BADGE: Record<Exclude<SSRRCategory, "none">, { label: string; className: string; title: string }> = {
-  "SSRR-A": {
-    label: "SSRR-A",
+  "RRSS-A": {
+    label: "RRSS-A",
     className: "bg-green-500/10 text-green-400 border-green-500/30",
     title: "Today's R1 > Prev R1 and Today's S1 >= Prev S1",
   },
-  "SSRR-B": {
-    label: "SSRR-B",
+  "RRSS-B": {
+    label: "RRSS-B",
     className: "bg-red-500/10 text-red-400 border-red-500/30",
     title: "Today's R1 <= Prev R1 and Today's S1 < Prev S1",
   },
-  "SSRR-C": {
-    label: "SSRR-C",
+  "RRSS-C": {
+    label: "RRSS-C",
     className: "bg-blue-500/10 text-blue-400 border-blue-500/30",
     title: "Compressed: Today's R1 < Prev R1 and Today's S1 > Prev S1",
   },
-  "SSRR-E": {
-    label: "SSRR-E",
+  "RRSS-E": {
+    label: "RRSS-E",
     className: "bg-orange-500/10 text-orange-400 border-orange-500/30",
     title: "Expanded: Today's R1 > Prev R1 and Today's S1 < Prev S1",
   },
-  "SSRR=": {
-    label: "SSRR=",
+  "RRSS=": {
+    label: "RRSS=",
     className: "bg-amber-500/10 text-amber-400 border-amber-500/30",
     title: "Equal: Today's R1 == Prev R1 and Today's S1 == Prev S1",
   },
@@ -1773,7 +1773,7 @@ const SSRR_BADGE: Record<Exclude<SSRRCategory, "none">, { label: string; classNa
 
 /**
  * renderSSRRCategoryBadge — single badge for CPRResult.SSRRCategory
- * ("SSRR-A" | "SSRR-B" | "SSRR-C" | "SSRR-E" | "SSRR=" | "none"), same
+ * ("RRSS-A" | "RRSS-B" | "RRSS-C" | "RRSS-E" | "RRSS=" | "none"), same
  * solid-badge styling used elsewhere (renderPDHPDLGapCategoryBadge). Always
  * renders at most one badge, since SSRRCategory is a mutually exclusive
  * partition. Returns null for "none".
@@ -1951,16 +1951,21 @@ export function renderSSRRHHLLBadges(r: CPRResult) {
  *      apply on the same row: for Narow, oV-A > Above > Below > oV-B; for
  *      Wide, oV-A > Above > Below > oV-B (matches the row's own
  *      left-to-right badge order).
- *   4. SSRR badge — CPRResult.SSRRCategory (SSRR-A/SSRR-B/SSRR-C/SSRR-E/SSRR=),
+ *   4. SSRR badge — CPRResult.SSRRCategory (RRSS-A/RRSS-B/RRSS-C/RRSS-E/RRSS=),
  *      pulled out of row 2 to sit here, right after the Narow/Wide badges
  *      (row 2 now only carries SSLL + RRHH — see renderSSRRHHLLBadges).
  *   5. Equal.
  *
- * The RRSSGapCategory badge (RRGap/SSGap/SSRR=, via
- * renderRRSSGapCategoryBadge) always renders as the SECOND badge overall —
- * right after the mutually-exclusive status badge (Above/Below/Inside/
- * Outside/Skip) and before oV-B/oV-A — since it's unconditional (always
- * exactly one of the three values, like PDHPDLGapCategory).
+ * Two unconditional badges now sit right after the mutually-exclusive
+ * status badge (Above/Below/Inside/Outside/Skip), before oV-B/oV-A, in
+ * this order:
+ *   1. SSRR badge — CPRResult.SSRRCategory (RRSS-A/RRSS-B/RRSS-C/RRSS-E/
+ *      RRSS=, via renderSSRRCategoryBadge/SSRR_BADGE) — moved up from its
+ *      old slot after Narow/Wide (see point 4 above, now superseded).
+ *   2. RRSSGapCategory badge (RRGap/SSGap/SSRR=, via
+ *      renderRRSSGapCategoryBadge), right after the SSRR badge.
+ * Both are unconditional (always exactly one of their possible values,
+ * like PDHPDLGapCategory), so neither needs a "none" guard here.
  */
 export function renderLevelStatusRow1Badges(
   r: CPRResult,
@@ -2008,6 +2013,14 @@ export function renderLevelStatusRow1Badges(
         <span className={`${smallBadge} bg-purple-500/10 text-purple-400 border border-purple-500/20`}>Outside</span>
       )}
       {nothingMatched && <span className={`${smallBadge} bg-muted text-muted-foreground`}>Skip</span>}
+      {r.SSRRCategory !== "none" && (
+        <span
+          className={`text-[10px] whitespace-nowrap px-1 py-0.5 rounded border font-medium ${SSRR_BADGE[r.SSRRCategory].className}`}
+          title={SSRR_BADGE[r.SSRRCategory].title}
+        >
+          {SSRR_BADGE[r.SSRRCategory].label}
+        </span>
+      )}
       {renderRRSSGapCategoryBadge(r)}
       {r.overlapLower && !ovLowerConsumed && (
         <span className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-medium">oV-B</span>
@@ -2044,14 +2057,6 @@ export function renderLevelStatusRow1Badges(
       )}
       {showWide && !wideConsumed && (
         <span className={`${smallBadge} bg-pink-500/10 text-pink-400 border border-pink-500/20`}>Wide</span>
-      )}
-      {r.SSRRCategory !== "none" && (
-        <span
-          className={`text-[10px] whitespace-nowrap px-1 py-0.5 rounded border font-medium ${SSRR_BADGE[r.SSRRCategory].className}`}
-          title={SSRR_BADGE[r.SSRRCategory].title}
-        >
-          {SSRR_BADGE[r.SSRRCategory].label}
-        </span>
       )}
       {r.equalCPR && (
         <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">Equal</span>
@@ -2119,10 +2124,11 @@ export function renderLevelStatusBadge(
 /**
  * renderLevelStatusRestBadges — everything renderLevelStatusRow1Badges
  * renders MINUS the single leading status badge (see
- * renderLevelStatusBadge): oV-B/oV-A (only when not absorbed into a
- * Narrow/Wide merge), the SSRR category badge, and Equal. Used by the
- * Screener's own LEVEL column now that the leading status badge has moved
- * to the Pattern column.
+ * renderLevelStatusBadge): the SSRR category badge (RRSS-A/RRSS-B/RRSS-C/
+ * RRSS-E/RRSS=), the RRSSGapCategory badge (RRGap/SSGap/SSRR=, right after
+ * it), oV-B/oV-A (only when not absorbed into a Narrow/Wide merge), and
+ * Equal. Used by the Screener's own LEVEL column now that the leading
+ * status badge has moved to the Pattern column.
  */
 export function renderLevelStatusRestBadges(
   r: CPRResult,
@@ -2149,13 +2155,6 @@ export function renderLevelStatusRestBadges(
 
   return (
     <>
-      {renderRRSSGapCategoryBadge(r)}
-      {r.overlapLower && !ovLowerConsumed && (
-        <span className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-medium">oV-B</span>
-      )}
-      {r.overlapHigher && !ovHigherConsumed && (
-        <span className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20 font-medium">oV-A</span>
-      )}
       {r.SSRRCategory !== "none" && (
         <span
           className={`text-[10px] whitespace-nowrap px-1 py-0.5 rounded border font-medium ${SSRR_BADGE[r.SSRRCategory].className}`}
@@ -2163,6 +2162,13 @@ export function renderLevelStatusRestBadges(
         >
           {SSRR_BADGE[r.SSRRCategory].label}
         </span>
+      )}
+      {renderRRSSGapCategoryBadge(r)}
+      {r.overlapLower && !ovLowerConsumed && (
+        <span className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-medium">oV-B</span>
+      )}
+      {r.overlapHigher && !ovHigherConsumed && (
+        <span className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20 font-medium">oV-A</span>
       )}
       {r.equalCPR && (
         <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">Equal</span>
