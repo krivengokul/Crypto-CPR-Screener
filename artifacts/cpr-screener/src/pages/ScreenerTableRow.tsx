@@ -328,7 +328,6 @@ import {
   isRisingAboveTC,
   computePrevPattern,
   getSubFilterDirection,
-  getWidthCategory,
   cprDistancePct,
   levelsInDistanceRange,
   renderSSRRHHLLBadges,
@@ -336,6 +335,7 @@ import {
   renderLevelStatusBadge,
   renderLevelStatusRestBadges,
   renderPdhPdlColumnBadges,
+  renderPivotSizeCell,
 } from "./ScreenerUtils";
 import { SRLadderRow, toSRLadderData } from "./SRLadderPanel";
 
@@ -442,42 +442,12 @@ export default function ScreenerTableRow({
 }: ScreenerTableRowProps) {
   const sym = splitSymbol(r.symbol, r.source);
 
-  // Shared "pU1 vs pL1" badge — compares previous day's Pivot→R1 gap against
-  // Pivot→S1 gap. Only meaningful (and only rendered) for Inside-CPR rows;
-  // used in both the CPR column (replacing "NaroW") and the GAP column.
   const isInsideCPR = passesPattern(r, "inside-cpr");
   const isOutsideCPR = passesPattern(r, "outside-cpr");
   // Outside-CPR rows don't need the "Wide" badge — Outside already implies
   // the CPR bands separated from prev day's, so width-category noise (Wide)
   // is redundant there; only show it for non-Outside rows.
   const showWide = r.strWideCPR && !isOutsideCPR;
-  const gapBadge = isInsideCPR
-    ? r.prevR1Gap > r.prevS1Gap ? (
-        <span
-          key="pu1-gt-pl1"
-          className="text-xs px-1.5 py-0.5 rounded bg-green-500/10 text-green-400 border border-green-500/30 font-medium"
-          title={`Prev R1 gap ${fmt(r.prevR1Gap)} > Prev S1 gap ${fmt(r.prevS1Gap)}`}
-        >
-          pU1&gt;pL1
-        </span>
-      ) : r.prevS1Gap > r.prevR1Gap ? (
-        <span
-          key="pl1-gt-pu1"
-          className="text-xs px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/30 font-medium"
-          title={`Prev S1 gap ${fmt(r.prevS1Gap)} > Prev R1 gap ${fmt(r.prevR1Gap)}`}
-        >
-          pL1&gt;pU1
-        </span>
-      ) : (
-        <span
-          key="pu1-eq-pl1"
-          className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground border border-border font-medium"
-          title={`Prev R1 gap = Prev S1 gap (${fmt(r.prevR1Gap)})`}
-        >
-          pU1=pL1
-        </span>
-      )
-    : null;
 
   // SSLL/RRHH category badges — LEVEL-column-only second row. SSRR
   // (CPRResult.SSRRCategory) now renders entirely on row
@@ -595,31 +565,7 @@ export default function ScreenerTableRow({
           {renderPdhPdlColumnBadges(r)}
         </td>
         <td className="px-4 py-3 font-mono whitespace-nowrap">
-          {(() => {
-            const prevCat = getWidthCategory(r.prevCPR.widthPct);
-            const todayCat = getWidthCategory(r.todayCPR.widthPct);
-            return (
-              <div className="flex flex-nowrap items-center justify-start gap-2">
-                <span
-                  className={`font-sans text-xs px-1.5 py-0.5 rounded border font-medium flex flex-col items-center leading-tight ${prevCat.pClasses}`}
-                  title={`Prev day CPR width: ${r.prevCPR.widthPct.toFixed(4)}%`}
-                >
-                  <span className="text-[10px]">p{prevCat.label}</span>
-                  <span className="text-[10px] font-mono">{r.prevCPR.widthPct.toFixed(4)}%</span>
-                </span>
-                <span className="font-sans text-[11px] font-semibold text-muted-foreground bg-slate-500/10 border border-slate-500/30 rounded-full px-2 py-0.5 shrink-0">
-                  {r.compressionRatio > 999 ? "999%" : `${Math.round(r.compressionRatio)}%`}
-                </span>
-                <span
-                  className={`font-sans text-xs px-1.5 py-0.5 rounded border font-medium flex flex-col items-center leading-tight ${todayCat.classes}`}
-                  title={`Today's CPR width: ${r.todayCPR.widthPct.toFixed(4)}%`}
-                >
-                  <span className="text-[10px]">{todayCat.label}</span>
-                  <span className="text-[10px] font-mono">{r.todayCPR.widthPct.toFixed(4)}%</span>
-                </span>
-              </div>
-            );
-          })()}
+          {renderPivotSizeCell(r.prevCPR, r.todayCPR, r.compressionRatio)}
         </td>
         <td className="px-4 py-3 pr-4 font-mono whitespace-nowrap">
           <div className="text-sm font-bold text-foreground">
@@ -664,7 +610,6 @@ export default function ScreenerTableRow({
               </>
             );
           })()}
-          {gapBadge && <div className="flex flex-wrap gap-1 mt-1">{gapBadge}</div>}
         </td>
       </tr>
 

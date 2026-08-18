@@ -333,6 +333,46 @@ export function getWidthCategory(widthPct: number): WidthCategoryInfo {
 }
 
 /**
+ * renderPivotSizeCell — the PIVOT SIZE column's contents: the prev/today
+ * width-category badges (pMedium/Medium etc, via getWidthCategory) with
+ * the compressionRatio value shown plain between them (no pill/badge/
+ * border — just a small colored number, matching the CPR-GAP column's
+ * plain "x.xx%" style). Shared by the Screener table (ScreenerTableRow)
+ * and BacktestPanel's results tables so the column looks identical
+ * everywhere, and rounds compressionRatio to a whole number, capped at
+ * "999%" display for anything larger.
+ */
+export function renderPivotSizeCell(
+  prevCPR: { widthPct: number },
+  todayCPR: { widthPct: number },
+  compressionRatio: number
+) {
+  const prevCat = getWidthCategory(prevCPR.widthPct);
+  const todayCat = getWidthCategory(todayCPR.widthPct);
+  return (
+    <div className="flex flex-nowrap items-center justify-start gap-2">
+      <span
+        className={`font-sans text-xs px-1.5 py-0.5 rounded border font-medium flex flex-col items-center leading-tight ${prevCat.pClasses}`}
+        title={`Prev day CPR width: ${prevCPR.widthPct.toFixed(4)}%`}
+      >
+        <span className="text-[10px]">p{prevCat.label}</span>
+        <span className="text-[10px] font-mono">{prevCPR.widthPct.toFixed(4)}%</span>
+      </span>
+      <span className="font-sans text-[10px] font-semibold text-muted-foreground shrink-0">
+        {compressionRatio > 999 ? "999%" : `${Math.round(compressionRatio)}%`}
+      </span>
+      <span
+        className={`font-sans text-xs px-1.5 py-0.5 rounded border font-medium flex flex-col items-center leading-tight ${todayCat.classes}`}
+        title={`Today's CPR width: ${todayCPR.widthPct.toFixed(4)}%`}
+      >
+        <span className="text-[10px]">{todayCat.label}</span>
+        <span className="text-[10px] font-mono">{todayCPR.widthPct.toFixed(4)}%</span>
+      </span>
+    </div>
+  );
+}
+
+/**
  * Width filter — used by the "CPR:" filter row. Unprefixed keys
  * (micro/tiny/mini/small/medium/large/mega/ultra) look at TODAY's CPR
  * width; "p"-prefixed keys (pmicro/ptiny/pmini/psmall/pmedium/plarge/
