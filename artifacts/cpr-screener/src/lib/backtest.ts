@@ -1178,19 +1178,118 @@ async function getHistory(symbol: string, source: BacktestSource): Promise<Map<s
 }
 
 /**
- * Single source of truth for the Backtest's tradable symbol universe.
+ * Returns a date-aware symbol universe for a backtest.
  *
- * Delegates entirely to binance.ts's fetchTopUSDTSymbols() (Binance) / the
- * delta.ts equivalent (Delta) — no separate filtering, sorting, or capping
- * logic lives here. This mirrors the Live Scanner's universe exactly
- * ("No limit: scan the full tradable USDT universe" per binance.ts's
- * runScreener), and is called once by runBacktest, runCategoryScan, and
- * runPivotLevelScan instead of each duplicating this same lookup.
+ * Binance and Delta expose the current tradable universe, not a complete
+ * historical listing/unlisting archive. This function uses three protections
+ * against look-ahead bias:
+ *
+ * 1. A saved snapshot for the requested UTC date is preferred when available.
+ * 2. For older dates without a snapshot, only symbols with an actual candle on
+ *    the requested date are retained. This prevents later listings from
+ *    entering an older backtest.
+ * 3. For today's date, the current live universe is valid and is snapshotted
+ *    for future reuse.
+ *
+ * The candle-based fallback cannot recover symbols that were delisted and are
+ * no longer returned by the exchange's current universe endpoint. That is an
+ * exchange-data limitation, so the fallback is logged as approximate.
  */
-async function getSymbolUniverse(source: BacktestSource): Promise<string[]> {
-  return source === "binance"
-    ? (await fetchTopUSDTSymbols()).map((t) => t.symbol)
-    : (await fetchDeltaPerps()).map((t) => t.symbol);
+const HISTORICAL_UNIVERSE_STORAGE_PREFIX = "cpr_historical_universe_v1:";
+
+type StoredUniverse = string[];
+
+function universeStorageKey(source: BacktestSource, dateISO: string): string {
+  return HISTORICAL_UNIVERSE_STORAGE_PREFIX + source + ":" + dateISO;
+}
+
+function readStoredUniverse(source: BacktestSource, dateISO: string): StoredUniverse | null {
+  if (typeof localStorage === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(universeStorageKey(source, dateISO));
+    if (!raw) return null;
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed) || !parsed.every((value): value is string => typeof value === "string" && value.length > 0)) {
+      return null;
+    }
+    return [...new Set(parsed)];
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredUniverse(source: BacktestSource, dateISO: string, symbols: string[]): void {
+  if (typeof localStorage === "undefined") return;
+  try {
+    localStorage.setItem(universeStorageKey(source, dateISO), JSON.stringify([...new Set(symbols)]));
+  } catch {
+    // Storage may be disabled or full. The backtest can still run in memory.
+  }
+}
+
+function utcTodayISO(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function isValidUTCDateISO(dateISO: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateISO)) return false;
+  const parsed = Date.parse(dateISO + "T00:00:00.000Z");
+  return Number.isFinite(parsed);
+}
+
+async function getCurrentSymbolCandidates(source: BacktestSource): Promise<string[]> {
+  const symbols = source === "binance"
+    ? (await fetchTopUSDTSymbols()).map((ticker) => ticker.symbol)
+    : (await fetchDeltaPerps()).map((ticker) => ticker.symbol);
+  return [...new Set(symbols)];
+}
+
+async function getSymbolUniverse(
+  source: BacktestSource,
+  entryDateISO: string,
+): Promise<string[]> {
+  if (!isValidUTCDateISO(entryDateISO)) {
+    throw new Error("Invalid backtest date " + entryDateISO + ". Expected YYYY-MM-DD.");
+  }
+
+  const saved = readStoredUniverse(source, entryDateISO);
+  if (saved && saved.length > 0) return saved;
+
+  const currentCandidates = await getCurrentSymbolCandidates(source);
+  if (!currentCandidates.length) {
+    throw new Error("No current " + source + " symbols were returned by the exchange.");
+  }
+
+  // Today's current exchange universe is the correct as-of-date universe.
+  if (entryDateISO === utcTodayISO()) {
+    writeStoredUniverse(source, entryDateISO, currentCandidates);
+    return currentCandidates;
+  }
+
+  // Warm history once. The run functions prefetch the filtered list again,
+  // but those entries are already cached here.
+  await prefetchHistories(currentCandidates, source);
+
+  const historicalSymbols: string[] = [];
+  for (const symbol of currentCandidates) {
+    const history = await getHistory(symbol, source);
+    if (history?.has(entryDateISO)) historicalSymbols.push(symbol);
+  }
+
+  if (!historicalSymbols.length) {
+    throw new Error(
+      "No historical candle coverage was found for " + source + " on " + entryDateISO + ". " +
+      "The date may be outside the configured history limit, or a date-specific universe snapshot is required."
+    );
+  }
+
+  console.warn(
+    "[backtest] Using a candle-availability universe for " + entryDateISO + ": " +
+    historicalSymbols.length + "/" + currentCandidates.length + " current symbols had a candle on that date. " +
+    "Delisted symbols cannot be recovered from the exchange's current universe endpoint; treat this as approximate unless a saved snapshot exists."
+  );
+
+  return historicalSymbols;
 }
 
 /**
@@ -1421,16 +1520,12 @@ export async function pivotLevelScanSymbolOnDate(
 }
 
 /**
- * Runs the full symbol universe through backtestSymbolOnDate.
+ * Runs the requested historical universe through backtestSymbolOnDate.
  *
- * KNOWN LIMITATION: the "universe" of symbols is fetched from the CURRENT
- * top-500-by-volume (Binance) / current perpetuals list (Delta) — not a
- * point-in-time snapshot of what was actively traded/liquid on entryDate.
- * A coin that's since been delisted, or one that's only recently become
- * liquid, won't be included even if it would have matched the pattern
- * historically. Fine for the v1 prove-out; flag if you need a true
- * point-in-time universe later (would need a separate historical-listings
- * source, which neither exchange's public API straightforwardly provides).
+ * The universe is date-aware: saved point-in-time snapshots are preferred,
+ * and otherwise symbols must have a candle on the requested entry date. The
+ * fallback still cannot restore delisted symbols that are absent from the
+ * exchange's current symbol endpoint.
  */
 export async function runBacktest(
   patternKey: string,
@@ -1444,7 +1539,7 @@ export async function runBacktest(
 
   // Single source of truth — see getSymbolUniverse above. No per-call
   // duplication of the fetch/filter/sort logic.
-  const symbols: string[] = await getSymbolUniverse(source);
+  const symbols: string[] = await getSymbolUniverse(source, entryDateISO);
 
   // Warm the candle cache once; subsequent dates in a sweep hit memory only.
   await prefetchHistories(symbols, source, onProgress);
@@ -1481,7 +1576,7 @@ export async function runCategoryScan(
 ): Promise<CategoryScanRow[]> {
   // Single source of truth — see getSymbolUniverse above. No per-call
   // duplication of the fetch/filter/sort logic.
-  const symbols: string[] = await getSymbolUniverse(source);
+  const symbols: string[] = await getSymbolUniverse(source, entryDateISO);
 
   const rows: CategoryScanRow[] = [];
   await prefetchHistories(symbols, source, onProgress);
@@ -1521,7 +1616,7 @@ export async function runPivotLevelScan(
 ): Promise<CategoryScanRow[]> {
   // Single source of truth — see getSymbolUniverse above. No per-call
   // duplication of the fetch/filter/sort logic.
-  const symbols: string[] = await getSymbolUniverse(source);
+  const symbols: string[] = await getSymbolUniverse(source, entryDateISO);
 
   const rows: CategoryScanRow[] = [];
   await prefetchHistories(symbols, source, onProgress);
