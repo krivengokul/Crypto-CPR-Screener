@@ -1417,9 +1417,9 @@ export function analyzeCPR(
   // can be produced by either field swapping to the top/bottom role.
   const SSLLCategory: SSLLCategory =
     (SSLLCategoryRaw === "SSLL-A" && !SSLLSameFieldAgreesUp)
-      ? (SSLLDirS1 >= SSLLDirPL ? "SSLL-SB" : "SSLL-LB") :
+      ? (SSLLDirS1 >= SSLLDirPL ? "SSLL-LB" : "SSLL-SB") :
     (SSLLCategoryRaw === "SSLL-B" && !SSLLSameFieldAgreesDown)
-      ? (SSLLDirS1 >= SSLLDirPL ? "SSLL-SB" : "SSLL-LB") :
+      ? (SSLLDirS1 >= SSLLDirPL ? "SSLL-LB" : "SSLL-SB") :
     SSLLCategoryRaw;
 
   // RRHHCategory — mirror SSLLCategory over the resistance-side ceiling band
