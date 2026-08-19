@@ -1607,8 +1607,11 @@ export default function Screener({
           <LiveClock />
         </div>
 
-        {/* Legend */}
-       <ScreenerLegend
+        {/* Legend — hidden while idle (initial load/refresh, before the
+            first scan resolves) and while a scan is in progress, so no
+            stale/empty legend cards flash before results are ready. */}
+        {currentStatus === "done" && (
+        <ScreenerLegend
           activePattern={activePattern}
           showBAComp={showBAComp}
           showLACompressed={showLACompressed}
@@ -1637,6 +1640,7 @@ export default function Screener({
           showOutsideCPReXHrL3U3AU4={showOutsideCPReXHrL3U3AU4}
           showLMeXL2U2={showLMeXL2U2}
         />
+        )}
 
         {/* Controls */}
         <div className="flex flex-wrap items-center gap-2 mb-4">
@@ -3299,11 +3303,15 @@ export default function Screener({
           </div>
         )}
 
+        {/* Footer legend — same idle/scanning hide as the Legend cards above,
+            so it doesn't flash before the first scan resolves. */}
+        {currentStatus === "done" && (
         <div className="mt-auto pt-8 text-xs text-muted-foreground text-center">
           Binance: top 500 USDT pairs · Delta Exchange: 195 perpetual futures · CPR from completed UTC daily candles
           <br />
           Auto-scans once daily at 5:31 AM IST · PH/PL = Previous Day High/Low · Not financial advice · by Kriven Gokul
         </div>
+        )}
       </div>
     </div>
   );
