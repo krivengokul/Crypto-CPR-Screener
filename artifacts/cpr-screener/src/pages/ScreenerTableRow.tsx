@@ -387,19 +387,19 @@ export function ScreenerTableHeader({
           PDH / PDL <SortIcon k="pdhPdlPct" />
         </th>
         <th
-          className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
+          className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
           onClick={() => toggleSort("compressionRatio")}
         >
             PIVOT SIZE <SortIcon k="compressionRatio" />
         </th>
         <th
-          className="px-4 py-3 pr-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
+          className="px-3 py-3 pr-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
           onClick={() => toggleSort("change24h")}
         >
           Price <SortIcon k="change24h" />
         </th>
         <th
-          className="pl-4 pr-2 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground min-w-[110px]"
+          className="pl-3 pr-2 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
           onClick={() => toggleSort("priceVsCpr")}
         >
           Price/CPR <SortIcon k="priceVsCpr" />
@@ -564,10 +564,10 @@ export default function ScreenerTableRow({
         >
           {renderPdhPdlColumnBadges(r)}
         </td>
-        <td className="px-4 py-3 font-mono whitespace-nowrap">
+        <td className="px-3 py-3 font-mono whitespace-nowrap">
           {renderPivotSizeCell(r.prevCPR, r.todayCPR, r.compressionRatio)}
         </td>
-        <td className="px-4 py-3 pr-4 font-mono whitespace-nowrap">
+        <td className="px-3 py-3 pr-3 font-mono whitespace-nowrap">
           <div className="text-sm font-bold text-foreground">
             {fmt(r.currentPrice)}
             <span className="text-muted-foreground">(</span>
@@ -578,7 +578,7 @@ export default function ScreenerTableRow({
           </div>
           <div className="text-xs text-muted-foreground">OPrice: {fmt(r.openPrice)}</div>
         </td>
-        <td className={`pl-4 pr-2 py-3 whitespace-nowrap text-xs font-medium min-w-[110px] ${distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).color}`}>
+        <td className={`pl-3 pr-2 py-3 whitespace-nowrap text-xs font-medium ${distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).color}`}>
           <div>
             {distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).main}
             {distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).sub && (
