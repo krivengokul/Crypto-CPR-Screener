@@ -8,9 +8,13 @@ export interface SignalDeskSymbol {
   currentPrice: number;
   /** Today's CPR S4/R4 band, used to draw the level range bar. Omit to hide the bar for this symbol. */
   s4?: number;
+  s3?: number;
+  s2?: number;
   s1?: number;
   pivot?: number;
   r1?: number;
+  r2?: number;
+  r3?: number;
   r4?: number;
 }
 
@@ -34,25 +38,43 @@ function displaySymbol(symbol: string): string {
 }
 
 /**
- * LevelRangeBar — S4 → R4 horizontal band with tick marks at S4/S1/PIVOT/
- * R1/R4 and an orange "NOW" marker at the current price, mirroring the
- * drishtisignals.in TP2/TP1/ENTRY/SL bar but built from CPR levels instead
- * of a trade setup. Support side (S4→PIVOT) reads green, resistance side
- * (PIVOT→R4) reads rose, matching the green/rose convention used
- * elsewhere in the app for R-levels vs S-levels.
+ * LevelRangeBar — S4 → R4 horizontal band with tick marks at every CPR
+ * level (S4/S3/S2/S1/PIVOT/R1/R2/R3/R4) and an orange "NOW" marker at the
+ * current price, mirroring the drishtisignals.in TP2/TP1/ENTRY/SL bar but
+ * built from CPR levels instead of a trade setup. Support side
+ * (S4→PIVOT) reads green, resistance side (PIVOT→R4) reads rose, matching
+ * the green/rose convention used elsewhere in the app for R-levels vs
+ * S-levels.
+ *
+ * Tick marks on the bar itself always show every available level (they're
+ * just 1px lines, so they cost no layout space). The text labels below the
+ * bar are what actually compete for room, so they adapt to the card's
+ * width: the full ladder (S4/S3/S2/S1/PIVOT/R1/R2/R3/R4) shows on wider
+ * cards (below the xl 3-column breakpoint, where cards have the most
+ * room), and a reduced ladder — S1/S3/R1/R3 dropped, S2/R2 kept as the
+ * inner anchors — shows at xl+ where 3-per-row cards get tight. S2/S3 are
+ * only rendered as labels when the caller actually supplied them.
  */
 function LevelRangeBar({
   s4,
+  s3,
+  s2,
   s1,
   pivot,
   r1,
+  r2,
+  r3,
   r4,
   current,
 }: {
   s4: number;
+  s3?: number;
+  s2?: number;
   s1: number;
   pivot: number;
   r1: number;
+  r2?: number;
+  r3?: number;
   r4: number;
   current: number;
 }) {
@@ -64,16 +86,48 @@ function LevelRangeBar({
     return ((clamped - s4) / span) * 100;
   };
 
-  const ticks: Array<{ label: string; value: number }> = [
+  type Tick = { label: string; value: number };
+  const allTicks: Tick[] = [
     { label: "S4", value: s4 },
+    ...(s3 != null ? [{ label: "S3", value: s3 }] : []),
+    ...(s2 != null ? [{ label: "S2", value: s2 }] : []),
     { label: "S1", value: s1 },
     { label: "PIVOT", value: pivot },
     { label: "R1", value: r1 },
+    ...(r2 != null ? [{ label: "R2", value: r2 }] : []),
+    ...(r3 != null ? [{ label: "R3", value: r3 }] : []),
+    { label: "R4", value: r4 },
+  ];
+
+  // Reduced ladder for narrow (xl 3-column) cards: drop S1/S3/R1/R3, keep
+  // S2/R2 in their place alongside the S4/PIVOT/R4 anchors. Falls back to
+  // S1/R1 when S2/R2 weren't supplied, so the bar never goes anchor-only.
+  const reducedTicks: Tick[] = [
+    { label: "S4", value: s4 },
+    s2 != null ? { label: "S2", value: s2 } : { label: "S1", value: s1 },
+    { label: "PIVOT", value: pivot },
+    r2 != null ? { label: "R2", value: r2 } : { label: "R1", value: r1 },
     { label: "R4", value: r4 },
   ];
 
   const nowPct = pct(current);
   const pivotPct = pct(pivot);
+
+  const renderLabels = (ticks: Tick[]) =>
+    ticks.map((tick) => (
+      <div
+        key={tick.label}
+        className="absolute top-0 -translate-x-1/2 whitespace-nowrap text-center"
+        style={{ left: `${pct(tick.value)}%` }}
+      >
+        <p className="text-[9px] font-medium uppercase tracking-wider text-muted-foreground">
+          {tick.label}
+        </p>
+        <p className="font-mono text-[10px] text-foreground/80">
+          {formatPrice(tick.value)}
+        </p>
+      </div>
+    ));
 
   return (
     <div className="mt-4">
@@ -96,7 +150,7 @@ function LevelRangeBar({
           className="absolute inset-y-0 rounded-r-full bg-rose-500/50"
           style={{ left: `${pivotPct}%`, right: 0 }}
         />
-        {ticks.map((tick) => (
+        {allTicks.map((tick) => (
           <span
             key={tick.label}
             className="absolute top-1/2 h-2.5 w-px -translate-x-1/2 -translate-y-1/2 bg-border"
@@ -108,21 +162,11 @@ function LevelRangeBar({
           style={{ left: `${nowPct}%` }}
         />
       </div>
-      <div className="relative mt-1 h-8">
-        {ticks.map((tick) => (
-          <div
-            key={tick.label}
-            className="absolute top-0 -translate-x-1/2 whitespace-nowrap text-center"
-            style={{ left: `${pct(tick.value)}%` }}
-          >
-            <p className="text-[9px] font-medium uppercase tracking-wider text-muted-foreground">
-              {tick.label}
-            </p>
-            <p className="font-mono text-[10px] text-foreground/80">
-              {formatPrice(tick.value)}
-            </p>
-          </div>
-        ))}
+      <div className="relative mt-1 hidden h-8 xl:block">
+        {renderLabels(reducedTicks)}
+      </div>
+      <div className="relative mt-1 h-8 xl:hidden">
+        {renderLabels(allTicks)}
       </div>
     </div>
   );
@@ -287,9 +331,13 @@ export default function SignalDesk({
                   {item.s4 != null && item.s1 != null && item.pivot != null && item.r1 != null && item.r4 != null && (
                     <LevelRangeBar
                       s4={item.s4}
+                      s3={item.s3}
+                      s2={item.s2}
                       s1={item.s1}
                       pivot={item.pivot}
                       r1={item.r1}
+                      r2={item.r2}
+                      r3={item.r3}
                       r4={item.r4}
                       current={item.currentPrice}
                     />

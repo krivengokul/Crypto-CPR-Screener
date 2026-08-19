@@ -126,6 +126,15 @@ export default function Screener({
       symbol: string;
       source: "binance" | "delta";
       currentPrice: number;
+      s4: number;
+      s3: number;
+      s2: number;
+      s1: number;
+      pivot: number;
+      r1: number;
+      r2: number;
+      r3: number;
+      r4: number;
     }>,
   ) => void;
 }) {
@@ -1527,6 +1536,15 @@ export default function Screener({
     symbol: r.symbol,
     source: r.source,
     currentPrice: r.currentPrice,
+    s4: r.todayCPR.s4,
+    s3: r.todayCPR.s3,
+    s2: r.todayCPR.s2,
+    s1: r.todayCPR.s1,
+    pivot: r.todayCPR.pivot,
+    r1: r.todayCPR.r1,
+    r2: r.todayCPR.r2,
+    r3: r.todayCPR.r3,
+    r4: r.todayCPR.r4,
   }));
   const signalSymbolsKey = signalSymbols
     .map((r) => `${r.key}:${r.currentPrice}`)
