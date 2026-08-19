@@ -147,6 +147,8 @@ function App() {
                 symbols={signalSymbols}
                 activePattern={activePattern}
                 activeLabel={activeLabel}
+                counts={patternCounts}
+                onSelectPattern={handlePatternSelect}
               />
             )}
           </main>

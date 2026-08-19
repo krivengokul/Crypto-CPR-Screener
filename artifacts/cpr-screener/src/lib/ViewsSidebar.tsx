@@ -480,6 +480,19 @@ export const SCREENER_PATTERN_IDS: ReadonlySet<string> = new Set<string>([
 export type SidebarMode = "scanner" | "backtest" | "signals";
 
 /**
+ * Flat id → label lookup covering every view in the tree — both the
+ * top-level `pivotcategories` entries and every nested `Views` sub-item.
+ * Used by SignalDesk's chip strip (and anywhere else that needs a view's
+ * display label from just its id, without walking the nested tree).
+ */
+export const VIEW_LABEL_BY_ID: Record<string, string> = {
+  ...Object.fromEntries(pivotcategories.map((p) => [p.id, p.label])),
+  ...Object.fromEntries(
+    Object.values(Views).flatMap((subs) => subs.map((s) => [s.id, s.label] as const)),
+  ),
+};
+
+/**
  * Tiny pub/sub used by the Screener to tell the sidebar that a View was
  * deselected there (its "✕" filter button was closed), so the same View gets
  * deselected in the left nav too — both surfaces show the same filter.

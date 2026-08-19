@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { ArrowDownRight, ArrowUpRight, Radio, Search } from "lucide-react";
+import { VIEW_LABEL_BY_ID } from "@/lib/ViewsSidebar";
 
 export interface SignalDeskSymbol {
   key: string;
@@ -22,6 +23,10 @@ interface SignalDeskProps {
   symbols: SignalDeskSymbol[];
   activePattern: string;
   activeLabel: string;
+  /** Pattern id → matching-symbol count, e.g. App's patternCounts. Drives the chip strip — only views with a count > 0 get a chip. Omit to hide the strip. */
+  counts?: Record<string, number>;
+  /** Called with a view id when its chip is clicked — wire to the same handler passed to ViewsSidebar's onSelect so both surfaces stay in sync. */
+  onSelectPattern?: (id: string) => void;
 }
 
 function formatPrice(value: number): string {
@@ -172,10 +177,73 @@ function LevelRangeBar({
   );
 }
 
+/**
+ * ViewChipStrip — horizontally-scrollable row of pill buttons, one per
+ * view that currently has ≥1 matching symbol (per `counts`). Clicking a
+ * chip fires `onSelect` with that view's id, mirroring what clicking the
+ * same view in the left ViewsSidebar does. The active view (matching
+ * `activePattern`) gets the filled emerald treatment; the rest are
+ * outlined/muted. Renders nothing when there are no active (count > 0)
+ * views to show.
+ */
+function ViewChipStrip({
+  counts,
+  activePattern,
+  onSelect,
+}: {
+  counts: Record<string, number>;
+  activePattern: string;
+  onSelect?: (id: string) => void;
+}) {
+  const chips = useMemo(
+    () =>
+      Object.entries(counts)
+        .filter(([, count]) => count > 0)
+        .sort((a, b) => b[1] - a[1])
+        .map(([id, count]) => ({ id, count, label: VIEW_LABEL_BY_ID[id] ?? id })),
+    [counts],
+  );
+
+  if (chips.length === 0) return null;
+
+  return (
+    <div className="mb-6 -mx-1 flex gap-2 overflow-x-auto px-1 pb-2">
+      {chips.map((chip) => {
+        const isActive = chip.id === activePattern;
+        return (
+          <button
+            key={chip.id}
+            type="button"
+            onClick={() => onSelect?.(chip.id)}
+            className={[
+              "flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-medium transition",
+              isActive
+                ? "border-emerald-400 bg-emerald-500/15 text-emerald-300"
+                : "border-border bg-card text-muted-foreground hover:border-emerald-400/40 hover:text-foreground",
+            ].join(" ")}
+          >
+            <span>{chip.label}</span>
+            <span
+              className={[
+                "rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
+                isActive ? "bg-emerald-400/20 text-emerald-200" : "bg-background/60 text-foreground/70",
+              ].join(" ")}
+            >
+              {chip.count}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function SignalDesk({
   symbols,
   activePattern,
   activeLabel,
+  counts,
+  onSelectPattern,
 }: SignalDeskProps) {
   const [search, setSearch] = useState("");
 
@@ -218,6 +286,10 @@ export default function SignalDesk({
             </p>
           </div>
         </header>
+
+        {counts && (
+          <ViewChipStrip counts={counts} activePattern={activePattern} onSelect={onSelectPattern} />
+        )}
 
         <section className="mb-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
           <div className="rounded-xl border border-border bg-card p-4">
