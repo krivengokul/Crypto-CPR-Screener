@@ -376,11 +376,11 @@ export function ScreenerTableHeader({
         <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           Pattern
         </th>
-        <th className="px-2 py-3 w-64 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+        <th className="px-2 py-3 w-56 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           LEVEL
         </th>
         <th
-          className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground min-w-[165px]"
+          className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground min-w-[150px]"
           onClick={() => toggleSort("pdhPdlPct")}
           title="Position vs yesterday's High/Low"
         >
@@ -405,7 +405,7 @@ export function ScreenerTableHeader({
           Price/CPR <SortIcon k="priceVsCpr" />
         </th>
         <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          CPR-GAP
+          GAP
         </th>
       </tr>
     </thead>
@@ -541,8 +541,8 @@ export default function ScreenerTableRow({
             </div>
           </div>
         </td>
-        <td className="px-2 py-3 w-64">
-          <div className="flex flex-col gap-1 max-w-[228px]">
+        <td className="px-2 py-3 w-56">
+          <div className="flex flex-col gap-1 max-w-[200px]">
             <div className="flex flex-nowrap items-center gap-1">
               {renderLevelStatusBadge(r, isInsideCPR, isOutsideCPR, showWide, nothingMatchedMain)}
               {renderTodayPatternBadges(r)}
@@ -550,8 +550,8 @@ export default function ScreenerTableRow({
             {renderPrevPatternBadge(r)}
           </div>
         </td>
-        <td className="px-2 py-3 w-64">
-          <div className="flex flex-col gap-1 max-w-[228px]">
+        <td className="px-2 py-3 w-56">
+          <div className="flex flex-col gap-1 max-w-[200px]">
             <div className="flex flex-nowrap items-center gap-1">
               {renderLevelStatusRestBadges(r, isInsideCPR, showWide)}
             </div>
@@ -559,7 +559,7 @@ export default function ScreenerTableRow({
           </div>
         </td>
         <td
-          className="px-4 py-3 whitespace-nowrap text-xs font-medium min-w-[165px]"
+          className="px-3 py-3 whitespace-nowrap text-xs font-medium min-w-[150px]"
           title={`PDH: ${fmt(r.todayCPR.prevHigh)}  |  PDL: ${fmt(r.todayCPR.prevLow)}`}
         >
           {renderPdhPdlColumnBadges(r)}
