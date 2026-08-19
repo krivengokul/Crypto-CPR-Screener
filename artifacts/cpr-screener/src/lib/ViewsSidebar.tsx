@@ -493,15 +493,6 @@ export const VIEW_LABEL_BY_ID: Record<string, string> = {
 };
 
 /**
- * Ids of nested `Views` sub-items only — excludes the top-level
- * `pivotcategories` (parent section) ids. Used by SignalDesk's chip strip
- * so it surfaces individual views, not their parent category.
- */
-export const SUBVIEW_IDS: ReadonlySet<string> = new Set<string>(
-  Object.values(Views).flatMap((subs) => subs.map((s) => s.id)),
-);
-
-/**
  * Tiny pub/sub used by the Screener to tell the sidebar that a View was
  * deselected there (its "✕" filter button was closed), so the same View gets
  * deselected in the left nav too — both surfaces show the same filter.

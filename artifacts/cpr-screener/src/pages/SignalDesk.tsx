@@ -1,6 +1,28 @@
 import { useMemo, useState } from "react";
 import { ArrowDownRight, ArrowUpRight, Radio, Search } from "lucide-react";
-import { VIEW_LABEL_BY_ID, SUBVIEW_IDS } from "@/lib/ViewsSidebar";
+import { pivotcategories, Views } from "@/lib/ViewsSidebar";
+
+/**
+ * Flat id → label lookup covering every view in the tree — both the
+ * top-level `pivotcategories` entries and every nested `Views` sub-item.
+ * Built locally from ViewsSidebar's existing exports so no changes are
+ * needed there.
+ */
+const VIEW_LABEL_BY_ID: Record<string, string> = {
+  ...Object.fromEntries(pivotcategories.map((p) => [p.id, p.label])),
+  ...Object.fromEntries(
+    Object.values(Views).flatMap((subs) => subs.map((s) => [s.id, s.label] as const)),
+  ),
+};
+
+/**
+ * Ids of nested `Views` sub-items only — excludes the top-level
+ * `pivotcategories` (parent section) ids. Used by the chip strip so it
+ * surfaces individual views, not their parent category.
+ */
+const SUBVIEW_IDS: ReadonlySet<string> = new Set<string>(
+  Object.values(Views).flatMap((subs) => subs.map((s) => s.id)),
+);
 
 export interface SignalDeskSymbol {
   key: string;
