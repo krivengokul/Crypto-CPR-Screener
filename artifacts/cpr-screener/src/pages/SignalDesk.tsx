@@ -6,6 +6,12 @@ export interface SignalDeskSymbol {
   symbol: string;
   source: "binance" | "delta";
   currentPrice: number;
+  /** Today's CPR S4/R4 band, used to draw the level range bar. Omit to hide the bar for this symbol. */
+  s4?: number;
+  s1?: number;
+  pivot?: number;
+  r1?: number;
+  r4?: number;
 }
 
 interface SignalDeskProps {
@@ -25,6 +31,101 @@ function formatPrice(value: number): string {
 
 function displaySymbol(symbol: string): string {
   return symbol.replace(/[_-]?(USDT|USDC|USD|BUSD)$/i, "");
+}
+
+/**
+ * LevelRangeBar — S4 → R4 horizontal band with tick marks at S4/S1/PIVOT/
+ * R1/R4 and an orange "NOW" marker at the current price, mirroring the
+ * drishtisignals.in TP2/TP1/ENTRY/SL bar but built from CPR levels instead
+ * of a trade setup. Support side (S4→PIVOT) reads green, resistance side
+ * (PIVOT→R4) reads rose, matching the green/rose convention used
+ * elsewhere in the app for R-levels vs S-levels.
+ */
+function LevelRangeBar({
+  s4,
+  s1,
+  pivot,
+  r1,
+  r4,
+  current,
+}: {
+  s4: number;
+  s1: number;
+  pivot: number;
+  r1: number;
+  r4: number;
+  current: number;
+}) {
+  const span = r4 - s4;
+  if (!Number.isFinite(span) || span <= 0) return null;
+
+  const pct = (value: number) => {
+    const clamped = Math.min(Math.max(value, s4), r4);
+    return ((clamped - s4) / span) * 100;
+  };
+
+  const ticks: Array<{ label: string; value: number }> = [
+    { label: "S4", value: s4 },
+    { label: "S1", value: s1 },
+    { label: "PIVOT", value: pivot },
+    { label: "R1", value: r1 },
+    { label: "R4", value: r4 },
+  ];
+
+  const nowPct = pct(current);
+  const pivotPct = pct(pivot);
+
+  return (
+    <div className="mt-4">
+      <div className="relative mb-1 h-4">
+        <div
+          className="absolute -translate-x-1/2 whitespace-nowrap text-center"
+          style={{ left: `${nowPct}%` }}
+        >
+          <p className="font-mono text-[11px] font-semibold text-orange-400">
+            {formatPrice(current)}
+          </p>
+        </div>
+      </div>
+      <div className="relative h-1.5 rounded-full bg-background/80">
+        <div
+          className="absolute inset-y-0 left-0 rounded-l-full bg-emerald-500/50"
+          style={{ width: `${pivotPct}%` }}
+        />
+        <div
+          className="absolute inset-y-0 rounded-r-full bg-rose-500/50"
+          style={{ left: `${pivotPct}%`, right: 0 }}
+        />
+        {ticks.map((tick) => (
+          <span
+            key={tick.label}
+            className="absolute top-1/2 h-2.5 w-px -translate-x-1/2 -translate-y-1/2 bg-border"
+            style={{ left: `${pct(tick.value)}%` }}
+          />
+        ))}
+        <span
+          className="absolute top-1/2 h-3 w-0.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-orange-400"
+          style={{ left: `${nowPct}%` }}
+        />
+      </div>
+      <div className="relative mt-1 h-8">
+        {ticks.map((tick) => (
+          <div
+            key={tick.label}
+            className="absolute top-0 -translate-x-1/2 whitespace-nowrap text-center"
+            style={{ left: `${pct(tick.value)}%` }}
+          >
+            <p className="text-[9px] font-medium uppercase tracking-wider text-muted-foreground">
+              {tick.label}
+            </p>
+            <p className="font-mono text-[10px] text-foreground/80">
+              {formatPrice(tick.value)}
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export default function SignalDesk({
@@ -182,6 +283,17 @@ export default function SignalDesk({
                       {formatPrice(item.currentPrice)}
                     </p>
                   </div>
+
+                  {item.s4 != null && item.s1 != null && item.pivot != null && item.r1 != null && item.r4 != null && (
+                    <LevelRangeBar
+                      s4={item.s4}
+                      s1={item.s1}
+                      pivot={item.pivot}
+                      r1={item.r1}
+                      r4={item.r4}
+                      current={item.currentPrice}
+                    />
+                  )}
 
                   <div className="mt-4 flex items-center justify-between text-xs">
                     <span className="text-muted-foreground">CPR filter</span>
