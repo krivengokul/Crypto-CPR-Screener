@@ -379,6 +379,10 @@ export interface CPRResult {
   // higher of prev's S1 / prev's PDL (support and PDL both climbed above
   // whichever of prev's two floor levels was higher).
   SSLLAbove: boolean;
+  // SSLLBelow — mirror of SSLLAbove. Both today's S1 AND today's PDL
+  // (prevLow) sit below the lower of prev's S1 / prev's PDL (support and
+  // PDL both fell below whichever of prev's two floor levels was lower).
+  SSLLBelow: boolean;
   // PDHPDLGapCategory — compares the gap between today's PDH and prev's
   // PDH (HHGap) against the gap between today's PDL and prev's PDL
   // (LLGap). "HHGap" when the PDH gap is larger, "LLGap" when the PDL gap
@@ -462,7 +466,7 @@ export type RRSSGapCategory = "RRGap" | "SSGap" | "SSRR=";
 export type HLSwitch = "HL-A" | "HL-B" | "HL=";
 export type SSRRCategory = "RRSS-A" | "RRSS-B" | "RRSS-C" | "RRSS-E" | "RRSS=" | "none";
 export type HHLLCategory = "HHLL-A" | "HHLL-B" | "HHLL-C" | "HHLL-E" | "HHLL=" | "none";
-export type SSLLCategory = "SSLL-A" | "SSLL-B" | "SSLL-C" | "SSLL-E" | "SSLL-SB" | "SSLL-LB" | "SSLL=" | "none";
+export type SSLLCategory = "SSLL-AA" | "SSLL-OA" | "SSLL-BB" | "SSLL-OB" | "SSLL-C" | "SSLL-E" | "SSLL-SB" | "SSLL-LB" | "SSLL=" | "none";
 export type RRHHCategory = "RRHH-A" | "RRHH-B" | "RRHH-C" | "RRHH-E" | "RRHH-RA" | "RRHH-HA" | "RRHH=" | "none";
 
 function isValidCandle(c: OHLC): boolean {
@@ -1310,6 +1314,11 @@ export function analyzeCPR(
   const prevSLLFloor = Math.max(prevCPR.s1, prevCPR.prevLow);
   const SSLLAbove = todayCPR.s1 > prevSLLFloor && todayCPR.prevLow > prevSLLFloor;
 
+  // SSLLBelow — mirror of SSLLAbove, anchored to whichever of prev's two
+  // levels is less extreme (lower ceiling).
+  const prevSLLCeiling = Math.min(prevCPR.s1, prevCPR.prevLow);
+  const SSLLBelow = todayCPR.s1 < prevSLLCeiling && todayCPR.prevLow < prevSLLCeiling;
+
   // PDHPDLGapCategory — HHGap = |today's PDH - prev's PDH|, LLGap =
   // |today's PDL - prev's PDL|. Whichever gap is larger wins; equal gaps
   // fall back to "HHLL=".
@@ -1404,23 +1413,24 @@ export function analyzeCPR(
   const SSLLDirPL = dirTol(todayCPR.prevLow, prevCPR.prevLow);
   const SSLLSameFieldAgreesUp = SSLLDirS1 >= 0 && SSLLDirPL >= 0;
   const SSLLSameFieldAgreesDown = SSLLDirS1 <= 0 && SSLLDirPL <= 0;
-  const SSLLCategoryRaw: SSLLCategory =
+  // Which field (S1 vs PDL) actually drove the divergence decides SB vs LB —
+  // not merely which shape (A vs B) the band matched, since either shape
+  // can be produced by either field swapping to the top/bottom role. That
+  // gate is checked first, inline, for each shape; once it passes, the
+  // shape is further split into a "full separation" vs "overlapping" badge
+  // using SSLLAbove/SSLLBelow (single source of truth — see those flags
+  // above): the "A" shape -> SSLL-AA (SSLLAbove) or SSLL-OA (overlapping);
+  // the "B" shape -> SSLL-BB (SSLLBelow) or SSLL-OB (overlapping).
+  const SSLLCategory: SSLLCategory =
     (SSLLDirHi === 0 && SSLLDirLo === 0) ? "SSLL=" :
-    (SSLLDirHi > 0 && SSLLDirLo >= 0) ? "SSLL-A" :
+    (SSLLDirHi > 0 && SSLLDirLo >= 0 && !SSLLSameFieldAgreesUp) ? (SSLLDirS1 >= SSLLDirPL ? "SSLL-LB" : "SSLL-SB") :
+    (SSLLDirHi > 0 && SSLLDirLo >= 0) ? (SSLLAbove ? "SSLL-AA" : "SSLL-OA") :
     (SSLLDirHi > 0 && SSLLDirLo < 0) ? "SSLL-E" :
-    (SSLLDirHi <= 0 && SSLLDirLo < 0) ? "SSLL-B" :
+    (SSLLDirHi <= 0 && SSLLDirLo < 0 && !SSLLSameFieldAgreesDown) ? (SSLLDirS1 >= SSLLDirPL ? "SSLL-LB" : "SSLL-SB") :
+    (SSLLDirHi <= 0 && SSLLDirLo < 0) ? (SSLLBelow ? "SSLL-BB" : "SSLL-OB") :
     (SSLLDirHi < 0 && SSLLDirLo >= 0) ? "SSLL-C" :
     (SSLLDirHi === 0 && SSLLDirLo > 0) ? "SSLL-C" :
     "none";
-  // Which field (S1 vs PDL) actually drove the divergence decides SB vs LB —
-  // not merely which raw bucket (A vs B) we landed in, since either bucket
-  // can be produced by either field swapping to the top/bottom role.
-  const SSLLCategory: SSLLCategory =
-    (SSLLCategoryRaw === "SSLL-A" && !SSLLSameFieldAgreesUp)
-      ? (SSLLDirS1 >= SSLLDirPL ? "SSLL-LB" : "SSLL-SB") :
-    (SSLLCategoryRaw === "SSLL-B" && !SSLLSameFieldAgreesDown)
-      ? (SSLLDirS1 >= SSLLDirPL ? "SSLL-LB" : "SSLL-SB") :
-    SSLLCategoryRaw;
 
   // RRHHCategory — mirror SSLLCategory over the resistance-side ceiling band
   // [R1, PDH], where PDH is stored as prevHigh in each CPRLevels object.
@@ -1501,6 +1511,7 @@ export function analyzeCPR(
     prevR1Gap,
     prevS1Gap,
     SSLLAbove,
+    SSLLBelow,
     PDHPDLGapCategory,
     RRSSGapCategory,
     SSRRCategory,

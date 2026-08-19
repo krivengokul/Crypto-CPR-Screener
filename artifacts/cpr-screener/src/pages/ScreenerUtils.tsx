@@ -1846,15 +1846,25 @@ export function renderSSRRCategoryBadge(r: CPRResult) {
  * by category so renderSSRRHHLLBadges/renderSSLLCategoryBadge stay in sync.
  */
 const SSLL_BADGE: Record<Exclude<SSLLCategory, "none">, { label: string; className: string; title: string }> = {
-  "SSLL-A": {
-    label: "SSLL-A",
+  "SSLL-AA": {
+    label: "SSLL-AA",
     className: "bg-green-500/10 text-green-400 border-green-500/30",
-    title: "Today's S1/PDL band shifted up (band top and bottom both rose vs prev), with S1 keeping the same top/bottom role on both days",
+    title: "Today's whole S1/PDL band sits strictly above prev's whole band (full separation, no overlap)",
   },
-  "SSLL-B": {
-    label: "SSLL-B",
+  "SSLL-OA": {
+    label: "SSLL-OA",
+    className: "bg-green-500/10 text-green-400 border-green-500/30",
+    title: "Today's S1/PDL band shifted up (band top and bottom both rose vs prev), but today's band overlaps prev's band",
+  },
+  "SSLL-BB": {
+    label: "SSLL-BB",
     className: "bg-red-500/10 text-red-400 border-red-500/30",
-    title: "Today's S1/PDL band shifted down (band top and bottom both fell vs prev), with S1 keeping the same top/bottom role on both days",
+    title: "Today's whole S1/PDL band sits strictly below prev's whole band (full separation, no overlap)",
+  },
+  "SSLL-OB": {
+    label: "SSLL-OB",
+    className: "bg-red-500/10 text-red-400 border-red-500/30",
+    title: "Today's S1/PDL band shifted down (band top and bottom both fell vs prev), but today's band overlaps prev's band",
   },
   "SSLL-C": {
     label: "SSLL-C",
@@ -1885,10 +1895,14 @@ const SSLL_BADGE: Record<Exclude<SSLLCategory, "none">, { label: string; classNa
 
 /**
  * renderSSLLCategoryBadge — single badge for CPRResult.SSLLCategory
- * ("SSLL-A" | "SSLL-B" | "SSLL-C" | "SSLL-E" | "SSLL-SB" | "SSLL-LB" | "SSLL=" | "none"), same
- * solid-badge styling used elsewhere (renderSSRRCategoryBadge). Always
- * renders at most one badge, since SSLLCategory is a mutually exclusive
- * partition. Returns null for "none".
+ * ("SSLL-AA" | "SSLL-OA" | "SSLL-BB" | "SSLL-OB" | "SSLL-C" | "SSLL-E" |
+ * "SSLL-SB" | "SSLL-LB" | "SSLL=" | "none"), same solid-badge styling used
+ * elsewhere (renderSSRRCategoryBadge). Always renders at most one badge,
+ * since SSLLCategory is a mutually exclusive partition. Returns null for
+ * "none". SSLL-AA/SSLL-OA (full separation vs overlap, both "up") and
+ * SSLL-BB/SSLL-OB (full separation vs overlap, both "down") are computed
+ * directly in cpr.ts's SSLLCategory — this is a plain lookup, no
+ * SSLLAbove/SSLLBelow branching needed here anymore.
  */
 export function renderSSLLCategoryBadge(r: CPRResult) {
   const cat = r.SSLLCategory;
