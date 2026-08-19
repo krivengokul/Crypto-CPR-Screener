@@ -381,8 +381,8 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
   // (overlapping-lower, see BACKTEST_CATEGORIES below), same shape as
   // "8AM:CoLApHA-U4+1:8AM" sitting directly on "inside-cpr"'s own
   // subPatternKeys rather than behind a Pattern. Base
-  // overlapLower condition + SSLLAbove (today's S1 AND today's PDL both
-  // above the higher of prev's S1/PDL) + HHRRBelow (today's R1 AND
+  // overlapLower condition + SSLL-AA (today's S1 AND today's PDL both
+  // above the higher of prev's S1/PDL, full separation) + HHRRBelow (today's R1 AND
   // today's PDH both below the lower of prev's R1/PDH) + (prev day's R1
   // above today's R2 OR today's S3 above prev day's S2) — see cpr.ts /
   // ScreenerUtils.tsx. Bullish, entry ~2PM, targets ApU4 (prev day's R4)
@@ -396,7 +396,7 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
   },
   // NEW: "8AM:SSLLpRRHHA-L4:1PM" — bearish sibling of
   // "2PM:SSLLpRRHHA-ApU4:5PM", nested directly under "Overlap Below"
-  // (overlapping-lower). Same base overlapLower + SSLLAbove + HHRRBelow
+  // (overlapping-lower). Same base overlapLower + SSLL-AA + HHRRBelow
   // condition, but with the comparison direction reversed (prev day's R1
   // below today's R2 OR today's S3 below prev day's S2) — see cpr.ts /
   // ScreenerUtils.tsx. Bearish, entry ~8AM, targets today's own L4 (S4)
