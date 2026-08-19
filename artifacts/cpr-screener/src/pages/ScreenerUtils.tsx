@@ -720,27 +720,28 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.todayCPR.r1 > r.prevCPR.tc &&
         r.prevCPR.prevHigh > r.todayCPR.s1
       );
-    // NEW: 2PM:SSLLpRRHHA-ApU4:5PM — Overlap Below + SSLLAbove (today's S1
-    // AND today's PDL both above the higher of prev's S1/PDL) + RRHH-B
+    // NEW: 2PM:SSLLpRRHHA-ApU4:5PM — Overlap Below + SSLL-AA (today's S1
+    // AND today's PDL both above the higher of prev's S1/PDL, full
+    // separation) + RRHH-B
     // (today's R1 AND today's PDH both below the lower of prev's R1/PDH)
     // + (prev day's R1 above today's R2 OR today's S3 above prev day's S2).
     // Bullish, entry ~2PM, targets ApU4 (prev day's R4) by ~5PM.
     case "2PM:SSLLpRRHHA-ApU4:5PM":
       return (
         r.overlapLower &&
-        r.SSLLAbove &&
+        r.SSLLCategory === "SSLL-AA" &&
         r.RRHHCategory === "RRHH-B" &&
         (r.prevCPR.r1 > r.todayCPR.r2 || r.todayCPR.s3 > r.prevCPR.s2)
       );
     // NEW: 8AM:SSLLpRRHHA-L4:1PM — same base conditions as
-    // "2PM:SSLLpRRHHA-ApU4:5PM" (overlapLower + SSLLAbove + RRHH-B), but
+    // "2PM:SSLLpRRHHA-ApU4:5PM" (overlapLower + SSLL-AA + RRHH-B), but
     // with the comparison direction reversed (prev day's R1 below today's
     // R2 OR today's S3 below prev day's S2). Bearish, entry ~8AM, targets
     // today's own L4/S4 by ~1PM. Red color family.
     case "8AM:SSLLpRRHHA-L4:1PM":
       return (
         r.overlapLower &&
-        r.SSLLAbove &&
+        r.SSLLCategory === "SSLL-AA" &&
         r.RRHHCategory === "RRHH-B" &&
         (r.prevCPR.r1 < r.todayCPR.r2 || r.todayCPR.s3 < r.prevCPR.s2)
       );
@@ -766,7 +767,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     case "8AM:CoLApHA-U4+1:8AM": {
       const prevCat = getPatternCategory(computePrevPattern(r.prevCPR, r.ppCPR));
       return (
-        r.InsideCPR && r.SSLLAbove &&  r.prevCPR.HLSwitch === "HL-A" && r.todayCPR.HLSwitch === "HL-B" && 
+        r.InsideCPR && r.SSLLCategory === "SSLL-AA" &&  r.prevCPR.HLSwitch === "HL-A" && r.todayCPR.HLSwitch === "HL-B" && 
         (r.todayCPR.prevHigh > r.prevCPR.r1 || r.prevCPR.prevHigh > r.todayCPR.r1) &&
         prevCat !== "eXLower" && prevCat !== "cOLower" // exclude prev day's own pattern (p-xxx) falling in eXLower/cOLower
       );

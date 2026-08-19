@@ -375,14 +375,6 @@ export interface CPRResult {
   prevS1Gap: number;
   r4Distance: number;
   s4Distance: number;
-  // SSLLAbove — both today's S1 AND today's PDL (prevLow) sit above the
-  // higher of prev's S1 / prev's PDL (support and PDL both climbed above
-  // whichever of prev's two floor levels was higher).
-  SSLLAbove: boolean;
-  // SSLLBelow — mirror of SSLLAbove. Both today's S1 AND today's PDL
-  // (prevLow) sit below the lower of prev's S1 / prev's PDL (support and
-  // PDL both fell below whichever of prev's two floor levels was lower).
-  SSLLBelow: boolean;
   // PDHPDLGapCategory — compares the gap between today's PDH and prev's
   // PDH (HHGap) against the gap between today's PDL and prev's PDL
   // (LLGap). "HHGap" when the PDH gap is larger, "LLGap" when the PDL gap
@@ -1309,6 +1301,12 @@ export function analyzeCPR(
   const prevS1Gap = prevCPR.pivot - prevCPR.s1;
 
 
+  // SSLLAbove/SSLLBelow — internal-only helpers feeding SSLLCategory's
+  // AA/OA/BB/OB split below. Not exposed on CPRResult: consumers should
+  // check r.SSLLCategory === "SSLL-AA" / "SSLL-BB" instead (single source
+  // of truth, tolerance-aware via dirTol, so it stays consistent with every
+  // other SSLLCategory-based check).
+  //
   // SSLLAbove — today vs prev S1/PDL directional classification, anchored
   // to whichever of prev's two levels is more extreme (higher floor).
   const prevSLLFloor = Math.max(prevCPR.s1, prevCPR.prevLow);
@@ -1510,8 +1508,6 @@ export function analyzeCPR(
     quoteVolume,
     prevR1Gap,
     prevS1Gap,
-    SSLLAbove,
-    SSLLBelow,
     PDHPDLGapCategory,
     RRSSGapCategory,
     SSRRCategory,
