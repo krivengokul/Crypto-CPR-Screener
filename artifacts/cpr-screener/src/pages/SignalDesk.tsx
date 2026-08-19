@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { ArrowDownRight, ArrowUpRight, Radio, Search } from "lucide-react";
-import { VIEW_LABEL_BY_ID } from "@/lib/ViewsSidebar";
+import { VIEW_LABEL_BY_ID, SUBVIEW_IDS } from "@/lib/ViewsSidebar";
 
 export interface SignalDeskSymbol {
   key: string;
@@ -178,13 +178,14 @@ function LevelRangeBar({
 }
 
 /**
- * ViewChipStrip — horizontally-scrollable row of pill buttons, one per
- * view that currently has ≥1 matching symbol (per `counts`). Clicking a
- * chip fires `onSelect` with that view's id, mirroring what clicking the
- * same view in the left ViewsSidebar does. The active view (matching
- * `activePattern`) gets the filled emerald treatment; the rest are
- * outlined/muted. Renders nothing when there are no active (count > 0)
- * views to show.
+ * ViewChipStrip — a wrapping row of pill buttons (no horizontal scroll —
+ * it flows onto additional lines once it runs out of width), one per
+ * nested View (not top-level categories) that currently has ≥1 matching
+ * symbol (per `counts`). Clicking a chip fires `onSelect` with that view's
+ * id, mirroring what clicking the same view in the left ViewsSidebar does.
+ * The active view (matching `activePattern`) gets the filled emerald
+ * treatment; the rest are outlined/muted. Renders nothing when there are
+ * no active (count > 0) views to show.
  */
 function ViewChipStrip({
   counts,
@@ -198,7 +199,7 @@ function ViewChipStrip({
   const chips = useMemo(
     () =>
       Object.entries(counts)
-        .filter(([, count]) => count > 0)
+        .filter(([id, count]) => count > 0 && SUBVIEW_IDS.has(id))
         .sort((a, b) => b[1] - a[1])
         .map(([id, count]) => ({ id, count, label: VIEW_LABEL_BY_ID[id] ?? id })),
     [counts],
@@ -207,7 +208,7 @@ function ViewChipStrip({
   if (chips.length === 0) return null;
 
   return (
-    <div className="mb-6 -mx-1 flex gap-2 overflow-x-auto px-1 pb-2">
+    <div className="mb-6 flex flex-wrap gap-2">
       {chips.map((chip) => {
         const isActive = chip.id === activePattern;
         return (
