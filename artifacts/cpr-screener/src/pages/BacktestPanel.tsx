@@ -956,7 +956,7 @@ export default function BacktestPanel() {
                     <th className="pl-8 pr-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       PDH / PDL
                     </th>
-                    <th className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[220px]">
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[220px]">
                       <span className="inline-flex items-center gap-1">
                         Pivot Size <PivotSizeInfo />
                       </span>
@@ -1117,7 +1117,7 @@ export default function BacktestPanel() {
                     <th className="pl-8 pr-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       PDH / PDL
                     </th>
-                    <th className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[220px]">
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[220px]">
                       <span className="inline-flex items-center gap-1">
                         Pivot Size <PivotSizeInfo />
                       </span>

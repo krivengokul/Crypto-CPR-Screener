@@ -1992,14 +1992,14 @@ export function renderRRHHCategoryBadge(r: CPRResult) {
 
 /**
  * renderSSRRHHLLBadges — the LEVEL column's second-row badges. Renders the
- * SSLL badge and the mirrored RRHH badge in that order. SSRR
+ * RRHH badge and the mirrored SSLL badge in that order. SSRR
  * (CPRResult.SSRRCategory) no longer appears here — it now renders on row 1
  * instead (see renderLevelStatusRow1Badges). Returns null when both are absent.
  */
 export function renderSSRRHHLLBadges(r: CPRResult) {
   const ssllBadge = renderSSLLCategoryBadge(r);
   const rrhhBadge = renderRRHHCategoryBadge(r);
-  const badges = [ssllBadge, rrhhBadge].filter((b): b is React.JSX.Element => b !== null);
+  const badges = [rrhhBadge, ssllBadge].filter((b): b is React.JSX.Element => b !== null);
   if (badges.length === 0) return null;
   return <div className="flex flex-nowrap items-center gap-1">{badges}</div>;
 }
