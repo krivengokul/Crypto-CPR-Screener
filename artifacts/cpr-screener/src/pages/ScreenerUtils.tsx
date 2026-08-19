@@ -1300,6 +1300,15 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // that also show lower-side expansion dominance at the L3/U3 boundary.
     case "eXLoL3U3-L3":
       return r.equalCPR && r.srExpandedLower;
+    // NEW: TOP 15 GAINERS / TOP 15 LOSERS — these categories aren't
+    // CPR-shape filters, they're a ranking over the whole symbol universe
+    // by day-over-day % change (CategoryScanRow.changePct). Every symbol
+    // passes the base condition here; BacktestPanel sorts the resulting
+    // CategoryScanRow list by changePct and keeps only the top 15 in each
+    // direction.
+    case "top15gainers":
+    case "top15losers":
+      return true;
     default:
       return false;
   }

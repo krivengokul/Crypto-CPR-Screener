@@ -508,6 +508,17 @@ export interface BacktestCategoryDef {
 }
 
 export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
+  // NEW: "TOP 15 GAINERS" / "TOP 15 LOSERS" — ranking categories, not
+  // CPR-shape filters. passesPattern's "top15gainers"/"top15losers" cases
+  // (ScreenerUtils.tsx) let every symbol through the base-condition check,
+  // so runCategoryScan returns the full universe with each symbol's
+  // entry-day changePct already attached (see closeAndChange below);
+  // BacktestPanel then sorts by changePct and keeps only the top 15 in
+  // each direction before rendering. No subPatternKeys/patterns, same
+  // shape as "Equal CPR" below — symbol-list-only, no single target to
+  // grade.
+  { key: "top15gainers", label: "TOP 15 GAINERS" },
+  { key: "top15losers", label: "TOP 15 LOSERS" },
   {
     key: "cpr-1-above",
     label: "CPR 1ABOVE",

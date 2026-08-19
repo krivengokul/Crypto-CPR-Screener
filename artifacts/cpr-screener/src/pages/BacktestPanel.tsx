@@ -54,6 +54,25 @@ function startOfMonthUTC(d: Date): Date {
 function daysInMonthUTC(d: Date): number {
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
 }
+
+// NEW: ranking helper for the "TOP 15 GAINERS" / "TOP 15 LOSERS"
+// categories (lib/backtest.ts's BACKTEST_CATEGORIES). Those categories let
+// every symbol through the base-condition check (see passesPattern's
+// "top15gainers"/"top15losers" cases in ScreenerUtils.tsx), so
+// runCategoryScan returns the full universe for that entry date; this
+// sorts by CategoryScanRow.changePct (entry-day % change) and keeps only
+// the top 15 in the requested direction. Rows with a null changePct (no
+// entry-day candle yet) are excluded — there's nothing to rank them by.
+function selectTopByChange<T extends { changePct: number | null }>(
+  rows: T[],
+  direction: "gainers" | "losers",
+  limit = 15
+): T[] {
+  return rows
+    .filter((r): r is T & { changePct: number } => r.changePct !== null && r.changePct !== undefined)
+    .sort((a, b) => (direction === "gainers" ? b.changePct - a.changePct : a.changePct - b.changePct))
+    .slice(0, limit);
+}
 function formatDisplay(iso: string): string {
   return fromISO(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
 }
@@ -475,6 +494,16 @@ export default function BacktestPanel() {
     setDateProgress({ current: 0, total: 0, date: "" });
     try {
       if (isCategory) {
+        // NEW: "TOP 15 GAINERS" / "TOP 15 LOSERS" rank the whole scanned
+        // pool by entry-day % change instead of showing every match — see
+        // selectTopByChange above. In range mode, every day's rows are
+        // collected first and the top 15 is taken once across the entire
+        // range (not per day), so the result is a single ranked list
+        // spanning the whole date range.
+        const topByChangeDirection =
+          selectedKey === "top15gainers" ? "gainers" :
+          selectedKey === "top15losers" ? "losers" :
+          undefined;
         if (dateMode === "single") {
           const result = await runCategoryScan(
             selectedKey,
@@ -483,7 +512,10 @@ export default function BacktestPanel() {
             passesPattern,
             (done, total, symbol) => setProgress({ done, total, symbol })
           );
-          setCategoryRows(result.map((r) => ({ ...r, entryDate })));
+          const withDate = result.map((r) => ({ ...r, entryDate }));
+          setCategoryRows(
+            topByChangeDirection ? selectTopByChange(withDate, topByChangeDirection) : withDate
+          );
         } else {
           const dates = enumerateDatesUTC(fromDate, toDate);
           const allRows: (CategoryScanRow & { entryDate: string })[] = [];
@@ -499,7 +531,9 @@ export default function BacktestPanel() {
             );
             allRows.push(...dayResult.map((r) => ({ ...r, entryDate: d })));
           }
-          setCategoryRows(allRows);
+          setCategoryRows(
+            topByChangeDirection ? selectTopByChange(allRows, topByChangeDirection) : allRows
+          );
         }
       } else if (isPatternOnly && activePatternInfo) {
         if (dateMode === "single") {
