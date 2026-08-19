@@ -284,19 +284,50 @@ export default function SignalDesk({
   return (
     <div className="min-h-screen bg-background px-4 py-8 text-foreground sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
-        <header className="mb-8 flex flex-col justify-between gap-5 border-b border-border pb-6 lg:flex-row lg:items-end">
-          <div>
-            <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-400">
-              <Radio className="h-4 w-4" />
-              Signal Desk
+        <header className="mb-8 flex flex-col justify-between gap-5 border-b border-border pb-6 lg:flex-row lg:items-center">
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-400">
+                <Radio className="h-4 w-4" />
+                Signal Desk
+              </span>
+              <span className="text-sm leading-6 text-muted-foreground">
+                A live views of the symbols from the Screener.
+              </span>
             </div>
-            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-              Filtered market symbols
-            </h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-              A live view of the symbols currently returned by the same CPR
-              filter selected in the Screener.
-            </p>
+
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <div className="rounded-lg border border-border bg-card px-3 py-2">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  Matching symbols
+                </p>
+                <p className="mt-1 text-lg font-semibold">{symbols.length}</p>
+              </div>
+              <div className="rounded-lg border border-border bg-card px-3 py-2">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  Binance
+                </p>
+                <p className="mt-1 text-lg font-semibold text-blue-300">
+                  {binanceCount}
+                </p>
+              </div>
+              <div className="rounded-lg border border-border bg-card px-3 py-2">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  Delta
+                </p>
+                <p className="mt-1 text-lg font-semibold text-violet-300">
+                  {deltaCount}
+                </p>
+              </div>
+              <div className="rounded-lg border border-border bg-card px-3 py-2">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  Active view
+                </p>
+                <p className="mt-1 truncate text-sm font-semibold">
+                  {activePattern ? activeLabel || activePattern : "All scanned"}
+                </p>
+              </div>
+            </div>
           </div>
 
           <div className="rounded-lg border border-emerald-500/25 bg-emerald-500/5 px-4 py-3">
@@ -313,39 +344,6 @@ export default function SignalDesk({
         {counts && (
           <ViewChipStrip counts={counts} activePattern={activePattern} onSelect={onSelectPattern} />
         )}
-
-        <section className="mb-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <div className="rounded-xl border border-border bg-card p-4">
-            <p className="text-xs uppercase tracking-wider text-muted-foreground">
-              Matching symbols
-            </p>
-            <p className="mt-2 text-2xl font-semibold">{symbols.length}</p>
-          </div>
-          <div className="rounded-xl border border-border bg-card p-4">
-            <p className="text-xs uppercase tracking-wider text-muted-foreground">
-              Binance
-            </p>
-            <p className="mt-2 text-2xl font-semibold text-blue-300">
-              {binanceCount}
-            </p>
-          </div>
-          <div className="rounded-xl border border-border bg-card p-4">
-            <p className="text-xs uppercase tracking-wider text-muted-foreground">
-              Delta
-            </p>
-            <p className="mt-2 text-2xl font-semibold text-violet-300">
-              {deltaCount}
-            </p>
-          </div>
-          <div className="rounded-xl border border-border bg-card p-4">
-            <p className="text-xs uppercase tracking-wider text-muted-foreground">
-              Active view
-            </p>
-            <p className="mt-2 truncate text-sm font-semibold">
-              {activePattern ? activeLabel || activePattern : "All scanned"}
-            </p>
-          </div>
-        </section>
 
         <div className="mb-6 flex flex-col gap-4 border-b border-border pb-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
