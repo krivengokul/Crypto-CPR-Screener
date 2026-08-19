@@ -356,7 +356,7 @@ export function renderPivotSizeCell(
         title={`Prev day CPR width: ${prevCPR.widthPct.toFixed(4)}%`}
       >
         <span className="text-[10px]">p{prevCat.label}</span>
-        <span className="text-[10px] font-mono">{prevCPR.widthPct.toFixed(4)}%</span>
+        <span className="text-[10px] font-mono">{prevCPR.widthPct.toFixed(2)}%</span>
       </span>
       <span className="font-sans text-[10px] font-semibold text-muted-foreground shrink-0">
         {compressionRatio > 999 ? "999%" : `${Math.round(compressionRatio)}%`}
@@ -366,7 +366,7 @@ export function renderPivotSizeCell(
         title={`Today's CPR width: ${todayCPR.widthPct.toFixed(4)}%`}
       >
         <span className="text-[10px]">{todayCat.label}</span>
-        <span className="text-[10px] font-mono">{todayCPR.widthPct.toFixed(4)}%</span>
+        <span className="text-[10px] font-mono">{todayCPR.widthPct.toFixed(2)}%</span>
       </span>
     </div>
   );
