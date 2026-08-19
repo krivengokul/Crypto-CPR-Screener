@@ -1301,22 +1301,6 @@ export function analyzeCPR(
   const prevS1Gap = prevCPR.pivot - prevCPR.s1;
 
 
-  // SSLLAbove/SSLLBelow — internal-only helpers feeding SSLLCategory's
-  // AA/OA/BB/OB split below. Not exposed on CPRResult: consumers should
-  // check r.SSLLCategory === "SSLL-AA" / "SSLL-BB" instead (single source
-  // of truth, tolerance-aware via dirTol, so it stays consistent with every
-  // other SSLLCategory-based check).
-  //
-  // SSLLAbove — today vs prev S1/PDL directional classification, anchored
-  // to whichever of prev's two levels is more extreme (higher floor).
-  const prevSLLFloor = Math.max(prevCPR.s1, prevCPR.prevLow);
-  const SSLLAbove = todayCPR.s1 > prevSLLFloor && todayCPR.prevLow > prevSLLFloor;
-
-  // SSLLBelow — mirror of SSLLAbove, anchored to whichever of prev's two
-  // levels is less extreme (lower ceiling).
-  const prevSLLCeiling = Math.min(prevCPR.s1, prevCPR.prevLow);
-  const SSLLBelow = todayCPR.s1 < prevSLLCeiling && todayCPR.prevLow < prevSLLCeiling;
-
   // PDHPDLGapCategory — HHGap = |today's PDH - prev's PDH|, LLGap =
   // |today's PDL - prev's PDL|. Whichever gap is larger wins; equal gaps
   // fall back to "HHLL=".
@@ -1405,6 +1389,22 @@ export function analyzeCPR(
   const todaySSLLHi = Math.max(todayCPR.s1, todayCPR.prevLow);
   const prevSSLLLo = Math.min(prevCPR.s1, prevCPR.prevLow);
   const prevSSLLHi = Math.max(prevCPR.s1, prevCPR.prevLow);
+
+  // SSLLAbove/SSLLBelow — internal-only helpers feeding the AA/OA/BB/OB
+  // split below. Not exposed on CPRResult: consumers should check
+  // r.SSLLCategory === "SSLL-AA" / "SSLL-BB" instead (single source of
+  // truth, tolerance-aware via dirTol, so it stays consistent with every
+  // other SSLLCategory-based check). Reuses prevSSLLHi/prevSSLLLo (just
+  // computed above) rather than recomputing Math.max/min a second time.
+  //
+  // Both use STRICT inequality on purpose: a boundary touch (today's s1 or
+  // prevLow landing exactly on prevSSLLHi/prevSSLLLo) does NOT count as
+  // "full separation" — today's band and prev's band would still share
+  // that one price level, so it resolves to the overlapping variant
+  // (SSLL-OA/SSLL-OB), not the clean AA/BB one. Switching either to >=/<=
+  // would fold that touch case into AA/BB instead.
+  const SSLLAbove = todayCPR.s1 > prevSSLLHi && todayCPR.prevLow > prevSSLLHi;
+  const SSLLBelow = todayCPR.s1 < prevSSLLLo && todayCPR.prevLow < prevSSLLLo;
   const SSLLDirHi = dirTol(todaySSLLHi, prevSSLLHi);
   const SSLLDirLo = dirTol(todaySSLLLo, prevSSLLLo);
   const SSLLDirS1 = dirTol(todayCPR.s1, prevCPR.s1);
