@@ -496,10 +496,8 @@ export default function BacktestPanel() {
       if (isCategory) {
         // NEW: "TOP 15 GAINERS" / "TOP 15 LOSERS" rank the whole scanned
         // pool by entry-day % change instead of showing every match — see
-        // selectTopByChange above. In range mode, every day's rows are
-        // collected first and the top 15 is taken once across the entire
-        // range (not per day), so the result is a single ranked list
-        // spanning the whole date range.
+        // selectTopByChange above. Applied per entry date, so a date-range
+        // scan shows each day's own top 15, not a cross-day aggregate.
         const topByChangeDirection =
           selectedKey === "top15gainers" ? "gainers" :
           selectedKey === "top15losers" ? "losers" :
@@ -529,11 +527,12 @@ export default function BacktestPanel() {
               passesPattern,
               (done, total, symbol) => setProgress({ done, total, symbol })
             );
-            allRows.push(...dayResult.map((r) => ({ ...r, entryDate: d })));
+            const withDate = dayResult.map((r) => ({ ...r, entryDate: d }));
+            allRows.push(
+              ...(topByChangeDirection ? selectTopByChange(withDate, topByChangeDirection) : withDate)
+            );
           }
-          setCategoryRows(
-            topByChangeDirection ? selectTopByChange(allRows, topByChangeDirection) : allRows
-          );
+          setCategoryRows(allRows);
         }
       } else if (isPatternOnly && activePatternInfo) {
         if (dateMode === "single") {
