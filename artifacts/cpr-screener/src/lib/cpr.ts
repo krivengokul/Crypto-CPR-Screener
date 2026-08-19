@@ -442,8 +442,8 @@ export interface CPRResult {
   //                        prevLevel1  = prev.HLSwitch  === "HL-A" ? prev.prevHigh : prev.r1
   //   Axis 2 (mirrored):  todayLevel2 = today.HLSwitch === "HL-A" ? today.prevHigh : today.r1
   //                        prevLevel2  = prev.HLSwitch  === "HL-A" ? prev.r1 : prev.prevHigh
-  //   RRHH-A (Above) — todayLevel1 >  prevLevel1 AND todayLevel2 >= prevLevel2
-  //   RRHH-B (Below) — todayLevel1 <= prevLevel1 AND todayLevel2 <  prevLevel2
+  //   RRHH-AA/RRHH-OA (Above) — todayLevel1 >  prevLevel1 AND todayLevel2 >= prevLevel2
+  //   RRHH-BB/RRHH-OB (Below) — todayLevel1 <= prevLevel1 AND todayLevel2 <  prevLevel2
   //   RRHH-C         — everything else (Compressed, plus the
   //                    mathematically-near-impossible exact-Equal case)
   // Only 3 badges: unlike SSRR/HHLL/SSLL, "Expanded" is provably impossible
@@ -459,7 +459,7 @@ export type HLSwitch = "HL-A" | "HL-B" | "HL=";
 export type SSRRCategory = "RRSS-A" | "RRSS-B" | "RRSS-C" | "RRSS-E" | "RRSS=" | "none";
 export type HHLLCategory = "HHLL-A" | "HHLL-B" | "HHLL-C" | "HHLL-E" | "HHLL=" | "none";
 export type SSLLCategory = "SSLL-AA" | "SSLL-OA" | "SSLL-BB" | "SSLL-OB" | "SSLL-C" | "SSLL-E" | "SSLL-SB" | "SSLL-LB" | "SSLL=" | "none";
-export type RRHHCategory = "RRHH-A" | "RRHH-B" | "RRHH-C" | "RRHH-E" | "RRHH-RA" | "RRHH-HA" | "RRHH=" | "none";
+export type RRHHCategory = "RRHH-AA" | "RRHH-OA" | "RRHH-BB" | "RRHH-OB" | "RRHH-C" | "RRHH-E" | "RRHH-RA" | "RRHH-HA" | "RRHH=" | "none";
 
 function isValidCandle(c: OHLC): boolean {
   return (
@@ -1448,25 +1448,39 @@ export function analyzeCPR(
   const RRHHSameFieldAgreesUp = RRHHDirR1 >= 0 && RRHHDirPDH >= 0;
   const RRHHSameFieldAgreesDown = RRHHDirR1 <= 0 && RRHHDirPDH <= 0;
 
-  const RRHHCategoryRaw: RRHHCategory =
+  // RRHHAbove/RRHHBelow — internal-only helpers feeding the AA/OA/BB/OB
+  // split below. Not exposed on CPRResult: consumers should check
+  // r.RRHHCategory === "RRHH-AA" / "RRHH-BB" instead (single source of
+  // truth, tolerance-aware via dirTol). Reuses prevRRHHHi/prevRRHHLo
+  // (already computed above) rather than recomputing Math.max/min again.
+  //
+  // Both use STRICT inequality on purpose, mirroring SSLLAbove/SSLLBelow:
+  // a boundary touch (today's r1 or prevHigh landing exactly on
+  // prevRRHHHi/prevRRHHLo) does NOT count as "full separation" — it
+  // resolves to the overlapping variant (RRHH-OA/RRHH-OB), not the clean
+  // AA/BB one.
+  const RRHHAbove = todayCPR.r1 > prevRRHHHi && todayCPR.prevHigh > prevRRHHHi;
+  const RRHHBelow = todayCPR.r1 < prevRRHHLo && todayCPR.prevHigh < prevRRHHLo;
+
+  // Which field (R1 vs PDH) actually drove the divergence decides RA vs HA —
+  // not merely which shape (A vs B) the band matched, since either shape
+  // can be produced by either field swapping to the top/bottom role. That
+  // gate is checked first, inline, for each shape; once it passes, the
+  // shape is further split into a "full separation" vs "overlapping" badge
+  // using RRHHAbove/RRHHBelow (single source of truth — see those flags
+  // above): the "A" shape -> RRHH-AA (RRHHAbove) or RRHH-OA (overlapping);
+  // the "B" shape -> RRHH-BB (RRHHBelow) or RRHH-OB (overlapping).
+  const RRHHCategory: RRHHCategory =
     !RRHHValid ? "none" :
     (RRHHDirHi === 0 && RRHHDirLo === 0) ? "RRHH=" :
-    (RRHHDirHi > 0 && RRHHDirLo >= 0) ? "RRHH-A" :
+    (RRHHDirHi > 0 && RRHHDirLo >= 0 && !RRHHSameFieldAgreesUp) ? (RRHHDirR1 >= RRHHDirPDH ? "RRHH-RA" : "RRHH-HA") :
+    (RRHHDirHi > 0 && RRHHDirLo >= 0) ? (RRHHAbove ? "RRHH-AA" : "RRHH-OA") :
     (RRHHDirHi > 0 && RRHHDirLo < 0) ? "RRHH-E" :
-    (RRHHDirHi <= 0 && RRHHDirLo < 0) ? "RRHH-B" :
+    (RRHHDirHi <= 0 && RRHHDirLo < 0 && !RRHHSameFieldAgreesDown) ? (RRHHDirR1 >= RRHHDirPDH ? "RRHH-RA" : "RRHH-HA") :
+    (RRHHDirHi <= 0 && RRHHDirLo < 0) ? (RRHHBelow ? "RRHH-BB" : "RRHH-OB") :
     (RRHHDirHi < 0 && RRHHDirLo >= 0) ? "RRHH-C" :
     (RRHHDirHi === 0 && RRHHDirLo > 0) ? "RRHH-C" :
     "none";
-
-  // Which field (R1 vs PDH) actually drove the divergence decides RA vs HA —
-  // not merely which raw bucket (A vs B) we landed in, since either bucket
-  // can be produced by either field swapping to the top/bottom role.
-  const RRHHCategory: RRHHCategory =
-    (RRHHCategoryRaw === "RRHH-A" && !RRHHSameFieldAgreesUp)
-      ? (RRHHDirR1 >= RRHHDirPDH ? "RRHH-RA" : "RRHH-HA") :
-    (RRHHCategoryRaw === "RRHH-B" && !RRHHSameFieldAgreesDown)
-      ? (RRHHDirR1 >= RRHHDirPDH ? "RRHH-RA" : "RRHH-HA") :
-    RRHHCategoryRaw;
 
   return {
     symbol,

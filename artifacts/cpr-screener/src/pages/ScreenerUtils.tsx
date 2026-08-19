@@ -704,7 +704,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     case "9AM:SSRRBHHLLA-U4:9PM":
       return (r.overlapLower && r.HHLLCategory === "HHLL-A" && r.SSRRCategory === "RRSS-B");
     case "pRRHHLLA":
-      return (r.overlapLower && r.RRHHCategory === "RRHH-B" && r.HHLLCategory === "HHLL-B");
+      return (r.overlapLower && (r.RRHHCategory === "RRHH-BB" || r.RRHHCategory === "RRHH-OB") && r.HHLLCategory === "HHLL-B");
     // NEW: 9AM:pRRHHLLA-U4:9PM — Overlap Below + RRHH-B (today's R1 AND
     // today's PDH both below the lower of prev's R1/PDH) + HHLLAbove
     // (today's PDH strictly above prev's PDH AND today's PDL >= prev's
@@ -715,7 +715,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     case "9AM:pRRHHLLA-U4:9PM":
       return (
         r.overlapLower &&
-        r.RRHHCategory === "RRHH-B" &&
+        (r.RRHHCategory === "RRHH-BB" || r.RRHHCategory === "RRHH-OB") &&
         r.HHLLCategory === "HHLL-B" &&
         r.todayCPR.r1 > r.prevCPR.tc &&
         r.prevCPR.prevHigh > r.todayCPR.s1
@@ -730,7 +730,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return (
         r.overlapLower &&
         r.SSLLCategory === "SSLL-AA" &&
-        r.RRHHCategory === "RRHH-B" &&
+        (r.RRHHCategory === "RRHH-BB" || r.RRHHCategory === "RRHH-OB") &&
         (r.prevCPR.r1 > r.todayCPR.r2 || r.todayCPR.s3 > r.prevCPR.s2)
       );
     // NEW: 8AM:SSLLpRRHHA-L4:1PM — same base conditions as
@@ -742,7 +742,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return (
         r.overlapLower &&
         r.SSLLCategory === "SSLL-AA" &&
-        r.RRHHCategory === "RRHH-B" &&
+        (r.RRHHCategory === "RRHH-BB" || r.RRHHCategory === "RRHH-OB") &&
         (r.prevCPR.r1 < r.todayCPR.r2 || r.todayCPR.s3 < r.prevCPR.s2)
       );
     case "LBT-PU1>U1PL1>L1":
@@ -1580,13 +1580,13 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     case "LoU4L4": return r.LoU4L4;
     // NEW: pRRHHLLA — Pattern compound flag for Overlap
     // Below's "9AM:pRRHHLLA-U4:9PM" family: today's R1/PDH both below
-    // prev's tighter ceiling (RRHHCategory === "RRHH-B") AND today's PDH
+    // prev's tighter ceiling (RRHHCategory === "RRHH-BB" or "RRHH-OB") AND today's PDH
     // strictly above prev's PDH with today's PDL >= prev's PDL (HHLLBelow).
     // The base overlapLower condition is already covered by the parent
     // "overlapping-lower" category key, so this only needs the raw
     // Pattern-flag part — same shape as LoU4L4 above. Symbol-list-only
     // nesting under "Overlap Below" in backtest.ts.
-    case "pRRHHLLA": return r.RRHHCategory === "RRHH-B" && r.HHLLCategory === "HHLL-B";
+    case "pRRHHLLA": return (r.RRHHCategory === "RRHH-BB" || r.RRHHCategory === "RRHH-OB") && r.HHLLCategory === "HHLL-B";
     case "eXL4U3": return r.eXL4U3;
     case "eXL4U4": return r.eXL4U4;
     // NEW: eXU4L4 — same treatment as eXL4U4 above: an independent,
@@ -1924,15 +1924,25 @@ export function renderSSLLCategoryBadge(r: CPRResult) {
  * category so renderSSRRHHLLBadges/renderRRHHCategoryBadge stay in sync.
  */
 const RRHH_BADGE: Record<Exclude<RRHHCategory, "none">, { label: string; className: string; title: string }> = {
-  "RRHH-A": {
-    label: "RRHH-A",
+  "RRHH-AA": {
+    label: "RRHH-AA",
     className: "bg-green-500/10 text-green-400 border-green-500/30",
-    title: "Today's R1 > Prev R1 and Today's PDH > Prev PDH, with R1/PDH keeping the same top/bottom role on both days",
+    title: "Today's whole R1/PDH band sits strictly above prev's whole band (full separation, no overlap)",
   },
-  "RRHH-B": {
-    label: "RRHH-B",
+  "RRHH-OA": {
+    label: "RRHH-OA",
+    className: "bg-green-500/10 text-green-400 border-green-500/30",
+    title: "Today's R1/PDH band shifted up (band top and bottom both rose vs prev), but today's band overlaps prev's band",
+  },
+  "RRHH-BB": {
+    label: "RRHH-BB",
     className: "bg-red-500/10 text-red-400 border-red-500/30",
-    title: "Today's R1 < Prev R1 and Today's PDH < Prev PDH, with R1/PDH keeping the same top/bottom role on both days",
+    title: "Today's whole R1/PDH band sits strictly below prev's whole band (full separation, no overlap)",
+  },
+  "RRHH-OB": {
+    label: "RRHH-OB",
+    className: "bg-red-500/10 text-red-400 border-red-500/30",
+    title: "Today's R1/PDH band shifted down (band top and bottom both fell vs prev), but today's band overlaps prev's band",
   },
   "RRHH-C": {
     label: "RRHH-C",
