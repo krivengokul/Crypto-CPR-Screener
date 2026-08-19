@@ -477,7 +477,7 @@ export const SCREENER_PATTERN_IDS: ReadonlySet<string> = new Set<string>([
   ...LEGACY_SCREENER_PATTERN_IDS,
 ]);
 
-export type SidebarMode = "scanner" | "backtest";
+export type SidebarMode = "scanner" | "backtest" | "signals";
 
 /**
  * Tiny pub/sub used by the Screener to tell the sidebar that a View was
@@ -653,7 +653,7 @@ export default function ViewsSidebar({
               border: `1px solid ${BORDER_COLOR}`,
             }}
           >
-            {(["scanner", "backtest"] as SidebarMode[]).map((m) => (
+            {(["scanner", "backtest", "signals"] as SidebarMode[]).map((m) => (
               <button
                 key={m}
                 onClick={() => onModeChange(m)}
@@ -678,7 +678,11 @@ export default function ViewsSidebar({
                   }}
                 >
                   <FlaskConical style={{ width: 11, height: 11 }} />
-                  {m === "scanner" ? "Live" : "Backtest"}
+                  {m === "scanner"
+                    ? "Live"
+                    : m === "backtest"
+                      ? "Backtest"
+                      : "Signals"}
                 </span>
               </button>
             ))}

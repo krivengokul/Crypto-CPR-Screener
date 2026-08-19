@@ -115,10 +115,19 @@ export default function Screener({
   activePattern = "littleabove",
   scanKey = 0,
   onCounts,
+  onSignalSymbols,
 }: {
   activePattern?: string;
   scanKey?: number;
   onCounts?: (counts: Record<string, number>) => void;
+  onSignalSymbols?: (
+    symbols: Array<{
+      key: string;
+      symbol: string;
+      source: "binance" | "delta";
+      currentPrice: number;
+    }>,
+  ) => void;
 }) {
   const [status, setStatus] = useState<"idle" | "scanning" | "done" | "error">("idle");
   const [progress, setProgress] = useState({ done: 0, total: 0, symbol: "" });
@@ -1509,6 +1518,27 @@ export default function Screener({
         return sortDir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
       return sortDir === "asc" ? (av as number) - (bv as number) : (bv as number) - (av as number);
     });
+
+  // Signal Desk consumes this exact post-filter pool. Keeping the projection
+  // here means it automatically follows all existing sidebar Views and
+  // hand-written Screener filters without duplicating their logic.
+  const signalSymbols = displayed.map((r) => ({
+    key: `${r.source}-${r.symbol}`,
+    symbol: r.symbol,
+    source: r.source,
+    currentPrice: r.currentPrice,
+  }));
+  const signalSymbolsKey = signalSymbols
+    .map((r) => `${r.key}:${r.currentPrice}`)
+    .join("|");
+
+  useEffect(() => {
+    onSignalSymbols?.(signalSymbols);
+    // signalSymbolsKey is a stable primitive representation of the displayed
+    // result pool; it prevents a new array instance from retriggering this
+    // effect on every Screener render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onSignalSymbols, signalSymbolsKey]);
 
   const currentStatus =
     activeTab === "binance" ? status

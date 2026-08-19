@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Screener from "@/pages/Screener";
 import BacktestPanel from "@/pages/BacktestPanel";
+import SignalDesk, { type SignalDeskSymbol } from "@/pages/SignalDesk";
 import ViewsSidebar, { pivotcategories, SCREENER_PATTERN_IDS, type SidebarMode } from "@/lib/ViewsSidebar";
 import { Menu } from "lucide-react";
 
@@ -22,7 +23,11 @@ function getSavedCollapsed(): boolean {
 function getSavedMode(): SidebarMode {
   try {
     const stored = localStorage.getItem(MODE_KEY);
-    return stored === "backtest" ? "backtest" : "scanner";
+    return stored === "backtest"
+      ? "backtest"
+      : stored === "signals"
+        ? "signals"
+        : "scanner";
   } catch {
     return "scanner";
   }
@@ -59,6 +64,7 @@ function App() {
   // NEW: top-level pattern -> matching count, reported up by Screener,
   // passed down into ViewsSidebar for the "(41)" labels.
   const [patternCounts, setPatternCounts] = useState<Record<string, number>>({});
+  const [signalSymbols, setSignalSymbols] = useState<SignalDeskSymbol[]>([]);
 
   // Auto-scan on first page load
   useEffect(() => {
@@ -117,9 +123,14 @@ function App() {
             {/* Screener stays mounted at all times — only visually hidden when
                 not the active view — so switching modes/patterns never remounts
                 it and never re-triggers the scanKey effect / loses scan state. */}
-            <div style={{ display: mode === "backtest" ? "none" : "block" }}>
+            <div style={{ display: mode === "scanner" ? "block" : "none" }}>
               {activePattern === "" || SCREENER_PATTERN_IDS.has(activePattern) ? (
-                <Screener activePattern={activePattern} scanKey={scanKey} onCounts={setPatternCounts} />
+                <Screener
+                  activePattern={activePattern}
+                  scanKey={scanKey}
+                  onCounts={setPatternCounts}
+                  onSignalSymbols={setSignalSymbols}
+                />
               ) : (
                 <ComingSoon label={activeLabel} />
               )}
@@ -129,6 +140,14 @@ function App() {
               <div className="w-full px-1 py-8 sm:px-2">
                 <BacktestPanel />
               </div>
+            )}
+
+            {mode === "signals" && (
+              <SignalDesk
+                symbols={signalSymbols}
+                activePattern={activePattern}
+                activeLabel={activeLabel}
+              />
             )}
           </main>
         </div>
