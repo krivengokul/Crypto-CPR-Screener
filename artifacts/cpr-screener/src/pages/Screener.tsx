@@ -1022,18 +1022,17 @@ export default function Screener({
       <div className="max-w-7xl px-4 py-8 min-h-screen flex flex-col">
         {/* Header — description paragraph removed, spacing tightened so the
             title row and the Legend grid below both sit higher on the page.
-            Title now stacks over the byline (instead of sitting side by
-            side), both pinned to the icon's top/bottom edge via
-            items-stretch + justify-between, and the matching-symbols stat
-            cards fill the empty space between the title block and the
+            Title stacks tightly over the byline (no gap between them), the
+            title is sized to use the extra width now available, and the
+            stat cards fill the empty space between the title block and the
             live clock. */}
         <div className="flex items-stretch justify-between gap-4 mb-4 flex-wrap">
-          <div className="flex items-stretch gap-3">
+          <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
               <TrendingUp className="w-6 h-6 text-primary" />
             </div>
-            <div className="flex flex-col justify-between py-0.5">
-              <h1 className="text-2xl font-bold tracking-tight leading-tight">PIVOT LEVELs Live</h1>
+            <div className="flex flex-col gap-0">
+              <h1 className="text-4xl font-bold tracking-tight leading-none whitespace-nowrap">PIVOT LEVELS Live</h1>
               <span className="text-xs font-mono px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 w-fit">
                 by Kriven Gokul (PivotBull)
               </span>
@@ -1042,29 +1041,29 @@ export default function Screener({
 
           {currentStatus === "done" && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 flex-1 min-w-[220px] max-w-md">
-              <div className="rounded-lg border border-border bg-card px-3 py-2">
+              <div className="rounded-lg border border-border bg-card px-3 py-1">
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                  Matching symbols
+                  Symbols
                 </p>
-                <p className="mt-1 text-lg font-semibold">{combinedAllResults.length}</p>
+                <p className="mt-0.5 text-lg font-semibold">{combinedAllResults.length}</p>
               </div>
-              <div className="rounded-lg border border-border bg-card px-3 py-2">
+              <div className="rounded-lg border border-border bg-card px-3 py-1">
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
                   Binance
                 </p>
-                <p className="mt-1 text-lg font-semibold text-blue-300">{allResults.length}</p>
+                <p className="mt-0.5 text-lg font-semibold text-blue-300">{allResults.length}</p>
               </div>
-              <div className="rounded-lg border border-border bg-card px-3 py-2">
+              <div className="rounded-lg border border-border bg-card px-3 py-1">
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
                   Delta
                 </p>
-                <p className="mt-1 text-lg font-semibold text-violet-300">{deltaAllResults.length}</p>
+                <p className="mt-0.5 text-lg font-semibold text-violet-300">{deltaAllResults.length}</p>
               </div>
-              <div className="rounded-lg border border-border bg-card px-3 py-2">
+              <div className="rounded-lg border border-border bg-card px-3 py-1">
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
                   Active view
                 </p>
-                <p className="mt-1 truncate text-sm font-semibold">
+                <p className="mt-0.5 truncate text-sm font-semibold">
                   {!showAll ? (VIEW_LABEL_BY_ID[activePattern] || activePattern) : "All scanned"}
                 </p>
               </div>
