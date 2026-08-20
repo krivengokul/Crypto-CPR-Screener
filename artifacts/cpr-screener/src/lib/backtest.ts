@@ -540,6 +540,15 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
     label: "COMPRESSED",
     subPatternKeys: ["SMi-L1pU1>-APU4:11PM", "S0-L1pU1>-AU4:7PM", "T0-L1pU1>-BPL4:5AM"],
   },
+  // NEW: "EXPANDED" left-nav section, mirroring "COMPRESSED" above but for
+  // RRSS-E (today's R1 up AND today's S1 down vs prev — levels widening
+  // outward). No sub-patterns nested yet — selecting it in the Backtest
+  // dropdown runs a symbol-list-only category scan (see runCategoryScan).
+  {
+    key: "expanded",
+    label: "EXPANDED",
+    subPatternKeys: [],
+  },
   // NEW: "Overlap Above" category (base condition: r.overlapHigher, same
   // key passesPattern already uses for the "overlapping-higher" left-nav
   // page) — nests the "HiL4U3" Pattern, which in turn

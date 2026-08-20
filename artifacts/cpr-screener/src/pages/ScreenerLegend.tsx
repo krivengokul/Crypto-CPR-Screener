@@ -102,6 +102,14 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             </div>
             <div className="text-xs text-muted-foreground">RRSS-C only — today&apos;s R1 down and today&apos;s S1 up vs yesterday (levels squeezing inward)</div>
           </>
+        ) : legendPattern === "expanded" ? (
+          <>
+            <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+              <span className="text-xs font-semibold text-primary">EXPANDED</span>
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-sky-500 text-white">Expanded</span>
+            </div>
+            <div className="text-xs text-muted-foreground">RRSS-E only — today&apos;s R1 up and today&apos;s S1 down vs yesterday (levels widening outward)</div>
+          </>
         ) : legendPattern === "inside-cpr" ? (
           <>
             <div className="flex items-center gap-1.5 mb-1 flex-wrap">

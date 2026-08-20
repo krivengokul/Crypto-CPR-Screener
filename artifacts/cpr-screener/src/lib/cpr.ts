@@ -141,6 +141,10 @@ export interface CPRPairFlags {
   // exact tolerance-aware R1/S1 test, mirroring SSRRCategory === "RRSS-C").
   // Formerly a two-clause CPR-band test named L1pU1Above; simplified.
   compressed: boolean;
+  // expanded — "EXPANDED": RRSS-E only (see classifyCPRPair for the
+  // exact tolerance-aware R1/S1 test, mirroring SSRRCategory === "RRSS-E").
+  // Mirrors compressed above.
+  expanded: boolean;
   // LevelsBelow — "LEVELs BELOW": RRSS-B only (today's R1 not up AND today's
   // S1 down vs prev, i.e. same tolerance-aware test as SSRRCategory ===
   // "RRSS-B"). Formerly a two-clause CPR-band test named pCPR1Above; simplified.
@@ -349,6 +353,7 @@ export interface CPRResult {
   eXU2L1: boolean;
   cOTCL2: boolean;
   compressed: boolean;
+  expanded: boolean;
   LevelsBelow: boolean;
   LevelsAbove: boolean;
   eXU3L1: boolean;
@@ -903,6 +908,11 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
   const compressed = (r1DirVsPrev < 0 && s1DirVsPrev >= 0) ||
                       (r1DirVsPrev === 0 && s1DirVsPrev > 0);
 
+  // expanded — "EXPANDED": RRSS-E only. Same tolerance-aware R1/S1
+  // direction test used for SSRRCategory === "RRSS-E": today's R1 up vs
+  // prev's R1 AND today's S1 down vs prev's S1. Mirrors compressed above.
+  const expanded = r1DirVsPrev > 0 && s1DirVsPrev < 0;
+
   // LevelsBelow — "LEVELs BELOW": RRSS-B only. Replaces the old two-clause
   // CPR-band condition (formerly named pCPR1Above) with the same
   // tolerance-aware R1/S1 direction test used for SSRRCategory ===
@@ -977,7 +987,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
     cOU1L1, cOL1U1, cOU2L2, cOL2U2,
     HiL3U3, cOU1L3,
     eXL2U1, eXL3U1, eXL4U1, eXL1BC, eXL1CP, eXL1TC, eXL2BC, eXL3BC, eXL3CP,
-    eXL3TC, eXL4U2, eXL2U2, eXL2TC, eXL1U1, eXU1L1, eXU2L1, cOTCL2, compressed, LevelsBelow, LevelsAbove,
+    eXL3TC, eXL4U2, eXL2U2, eXL2TC, eXL1U1, eXU1L1, eXU2L1, cOTCL2, compressed, expanded, LevelsBelow, LevelsAbove,
     eXU3L1, eXU3L2, eXU2TC, eXU2BC, eXU3TC, eXU2CP, eXU3CP, eXU3BC, eXU4L1, eXU4BC, LoCPL3, LoCPL2, LoTCL3,
     eXHiL2L1, eXLoL2L1, eXL2CP, eXL4TC, LoU3L2, cOL1U2, cOL1U3, HiL3U2,
   };
@@ -1112,7 +1122,7 @@ export type PatternCategory = "cOHigher" | "cOLower" | "eXHigher" | "eXLower" | 
  *
  * Flags that don't carry a cO/eX/Hi/Lo prefix (srHigher/srLower/srExpanded/
  * srCompressed and their *Higher/*Lower variants, r4Distance, s4Distance,
- * L1pU1Above (now compressed), pCPR1Above (now LevelsBelow), LevelsAbove) are intentionally excluded — they're
+ * L1pU1Above (now compressed), expanded, pCPR1Above (now LevelsBelow), LevelsAbove) are intentionally excluded — they're
  * aggregate/directional signals, not named band-classification patterns,
  * so they don't belong in a prefix-based category map.
  */

@@ -739,6 +739,8 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.todayCPR.r1 > r.prevCPR.bc;
     case "compressed":
       return r.compressed ; 
+    case "expanded":
+      return r.expanded ;
     case "SMi-L1pU1>-APU4:11PM": {
       return r.compressed && r.prevCPR.HLSwitch === "HL-A" && !r.outCPR && r.compressionRatio >= 30;
     }

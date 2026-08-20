@@ -90,6 +90,7 @@ const GENERIC_VIEW_CATEGORIES = new Set([
   "levelsabove",
   "levelsbelow",
   "compressed",
+  "expanded",
   "u1-gt-pu4",
   "l1-lt-pl4",
   "equal-cpr",

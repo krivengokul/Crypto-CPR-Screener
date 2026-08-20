@@ -233,6 +233,10 @@ export const Views: Record<string, SubPattern[]> = {
       activeBg:    "rgba(244, 63, 94, 0.14)", // rose-500 tint
     },
   ],
+  // "expanded" — "EXPANDED": RRSS-E only, mirroring "compressed" above.
+  // No sub-patterns yet; kept as an empty array (same generic-category
+  // shape as "compressed") so it's ready to hold Views if any are added.
+  "expanded": [],
   "inside-cpr": [
     // NEW: 8AM:CoLApHA-U4+1:8AM — Inside CPR + today's PDL above prev
     // day's S1 ("PDL>pS1") + EITHER today's PDH above prev day's R1
@@ -368,6 +372,7 @@ export const pivotcategories: Category[] = [
   { id: "levelsabove",        label: "LEVELs ABOVE",    subtitle: "RRSS-A only (today's R1 up, S1 not down vs prev)", icon: TrendingUp },
   { id: "levelsbelow",    label: "LEVELs BELOW", subtitle: "RRSS-B only (today's R1 not up, S1 down vs prev)", icon: TrendingUp },
   { id: "compressed",        label: "COMPRESSED",   subtitle: "RRSS-C only (today's R1 down, S1 up vs prev)",   icon: TrendingUp },
+  { id: "expanded",          label: "EXPANDED",     subtitle: "RRSS-E only (today's R1 up, S1 down vs prev)",   icon: TrendingUp },
   { id: "u1-gt-pu4",          label: "U1>pU4",        subtitle: "Today R1 above Prev R4",   icon: TrendingUp },
   { id: "l1-lt-pl4",          label: "L1<pL4",        subtitle: "Today S1 below Prev S4",   icon: TrendingDown },
   { id: "inside-cpr",         label: "Inside CPR",     subtitle: "Inside CPR range",         icon: Crosshair },
