@@ -79,7 +79,7 @@ function ViewCount({ id, counts }: { id: string; counts: Record<string, number> 
  * useState, a cleanup-effect entry, a getActivePool() branch, an
  * anySubFilter entry, AND a JSX button — five places to touch, and it's
  * easy to add a sub-pattern to ViewsSidebar's `Views` map and
- * forget one of them (exactly what happened here: CPR 1ABOVE's three
+ * forget one of them (exactly what happened here: LEVELS ABOVE's three
  * Views existed in the left-nav but never got a Screener button, so the
  * Views list showed empty). The generic path here only needs the
  * Views entry — passesPattern(r, sub.id) already resolves any
@@ -91,7 +91,7 @@ function ViewCount({ id, counts }: { id: string; counts: Record<string, number> 
  * if it stops needing its bespoke behaviour).
  */
 const GENERIC_VIEW_CATEGORIES = new Set([
-  "cpr-1-above",
+  "levelsabove",
   "pcpr-u1-cpr-pl1",
   "l1pu1-above",
   "u1-gt-pu4",
@@ -259,7 +259,7 @@ export default function Screener({
   const [showOBHi7AMMiMi, setShowOBHi7AMMiMi] = useState(false);
   const [showOBHi6PMLaLa, setShowOBHi6PMLaLa] = useState(false);
   // NEW: generic Views (sub-pattern) toggle — covers every category listed
-  // in GENERIC_VIEW_CATEGORIES (CPR 1ABOVE, PREVCPR 1ABOVE, L1pU1 Above,
+  // in GENERIC_VIEW_CATEGORIES (LEVELS ABOVE, PREVCPR 1ABOVE, L1pU1 Above,
   // U1>pU4, L1<pL4, Equal CPR, and any future category added there) instead
   // of a bespoke useState per sub-pattern. Holds the currently-selected
   // sub-pattern id (e.g. "7PM:MoMi->U4:2AM"), or null when none selected.
@@ -692,7 +692,7 @@ export default function Screener({
   // NEW: reset the generic Views toggle whenever it no longer belongs to
   // the current activePattern — either because we've left every generic
   // category entirely, or because we've switched from one generic category
-  // to another (e.g. "cpr-1-above" -> "l1pu1-above") and the previously
+  // to another (e.g. "levelsabove" -> "l1pu1-above") and the previously
   // selected sub-pattern id doesn't exist under the new one.
   useEffect(() => {
     if (!activeGenericSubView) return;
@@ -2277,7 +2277,7 @@ export default function Screener({
                 {showLAMeMieXL4U3U46PM ? "✕ MeMi-eXL4U3-U4:6PM" : "MeMi-eXL4U3-U4:6PM"}<ViewCount id={"MeMi-eXL4U3-U4:6PM"} counts={viewCounts} />
               </button>
             )}
-            {/* NEW: generic Views (sub-pattern) buttons — covers CPR 1ABOVE,
+            {/* NEW: generic Views (sub-pattern) buttons — covers LEVELS ABOVE,
                 PREVCPR 1ABOVE, L1pU1 Above, U1>pU4, L1<pL4, Equal CPR (see
                 GENERIC_VIEW_CATEGORIES above), and any future category added
                 there. Colours come straight from each sub-pattern's own

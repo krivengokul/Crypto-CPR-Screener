@@ -134,10 +134,10 @@ export interface CPRPairFlags {
   // pCPR1Above — prev day's Pivot sits inside today's R1/R2 band (U1 side)
   // AND today's BC sits inside prev day's S1/BC band (pL1 side).
   pCPR1Above: boolean;
-  // CPRs1Above — "CPR 1ABOVE": today's TC sits inside prev day's R1/R2 band
-  // (U2 side) AND today's S1 sits inside prev day's BC/R1 band (a wide
-  // band spanning prev's entire CPR, TC/Pivot/BC, up to prev's R1).
-  CPRs1Above: boolean;
+  // LevelsAbove — "LEVELS ABOVE": RRSS-A only (today's R1 up AND today's S1
+  // not down vs prev, i.e. same tolerance-aware test as SSRRCategory ===
+  // "RRSS-A"). Formerly a two-clause CPR-band test named CPRs1Above; simplified.
+  LevelsAbove: boolean;
   // eXU3L1 — prev's R4 lands inside today's R2/R3 band (U3), AND prev's S4
   // lands inside today's BC/S1 band (L1). Same L1 support band as eXU2L1/
   // eXL1U1/eXL1BC but paired with the wider U3 (R2→R3) resistance band.
@@ -337,7 +337,7 @@ export interface CPRResult {
   cOTCL2: boolean;
   L1pU1Above: boolean;
   pCPR1Above: boolean;
-  CPRs1Above: boolean;
+  LevelsAbove: boolean;
   eXU3L1: boolean;
   eXU3L2: boolean;
   eXU2TC: boolean;
@@ -893,14 +893,12 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
   const pCPR1Above = (prev.pivot > today.r1 && prev.pivot < today.r2) &&
                        (today.tc > prev.s1 && today.tc < prev.bc); //In Some Scenarios p<s1 went up, so tc instead of pivot check
 
-  // CPRs1Above — "CPR 1ABOVE":
-  //   today's Pivot is above prev day's R1 and below prev day's R2, AND
-  //   prev day's Pivot is below today's S1 and above today's S2.
-  // FIX: was combined with || (OR), so a symbol matched on either clause
-  // alone, pulling in an unrelated second population of symbols and
-  // inflating the match count. Both clauses must now hold (AND).
-  const CPRs1Above = (today.tc > prev.r1 && today.tc < prev.r2) && //tc instead of pivot check
-                    (prev.bc < today.s1 && prev.bc > today.s2);//In Some Scenarios p>s1 went up, so bc instead of pivot check
+  // LevelsAbove — "LEVELS ABOVE": RRSS-A only. Replaces the old two-clause
+  // CPR-band condition (formerly named CPRs1Above) with the same
+  // tolerance-aware R1/S1 direction test used for SSRRCategory ===
+  // "RRSS-A": today's R1 up vs prev's R1, AND today's S1 not down vs
+  // prev's S1.
+  const LevelsAbove = dirTol(today.r1, prev.r1) > 0 && dirTol(today.s1, prev.s1) >= 0;
 
   // cOU1L1 / cOL1U1 — split by which side (R1 vs S1) moved further.
   const r1Move = Math.abs(prev.r1 - today.r1);
@@ -961,7 +959,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
     cOU1L1, cOL1U1, cOU2L2, cOL2U2,
     HiL3U3, cOU1L3,
     eXL2U1, eXL3U1, eXL4U1, eXL1BC, eXL1CP, eXL1TC, eXL2BC, eXL3BC, eXL3CP,
-    eXL3TC, eXL4U2, eXL2U2, eXL2TC, eXL1U1, eXU1L1, eXU2L1, cOTCL2, L1pU1Above, pCPR1Above, CPRs1Above,
+    eXL3TC, eXL4U2, eXL2U2, eXL2TC, eXL1U1, eXU1L1, eXU2L1, cOTCL2, L1pU1Above, pCPR1Above, LevelsAbove,
     eXU3L1, eXU3L2, eXU2TC, eXU2BC, eXU3TC, eXU2CP, eXU3CP, eXU3BC, eXU4L1, eXU4BC, LoCPL3, LoCPL2, LoTCL3,
     eXHiL2L1, eXLoL2L1, eXL2CP, eXL4TC, LoU3L2, cOL1U2, cOL1U3, HiL3U2,
   };
@@ -1096,7 +1094,7 @@ export type PatternCategory = "cOHigher" | "cOLower" | "eXHigher" | "eXLower" | 
  *
  * Flags that don't carry a cO/eX/Hi/Lo prefix (srHigher/srLower/srExpanded/
  * srCompressed and their *Higher/*Lower variants, r4Distance, s4Distance,
- * L1pU1Above, pCPR1Above, CPRs1Above) are intentionally excluded — they're
+ * L1pU1Above, pCPR1Above, LevelsAbove) are intentionally excluded — they're
  * aggregate/directional signals, not named band-classification patterns,
  * so they don't belong in a prefix-based category map.
  */

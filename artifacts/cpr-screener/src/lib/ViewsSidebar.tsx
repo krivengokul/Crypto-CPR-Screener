@@ -130,7 +130,7 @@ export const Views: Record<string, SubPattern[]> = {
       activeBg:    "rgba(239, 68, 68, 0.14)",
     },
   ],
-  "cpr-1-above": [
+  "levelsabove": [
     {
       id: "9AM:MegL-U4+1:3PM",
       label: "9AM:MegL-U4+1:3PM",
@@ -138,7 +138,7 @@ export const Views: Record<string, SubPattern[]> = {
       activeText: "#4ade80",
       activeBg: "rgba(34, 197, 94, 0.14)",
     },
-    // NEW: 7PM:MoMi->U4:2AM — CPR 1ABOVE + prev day's own pivot sub-label
+    // NEW: 7PM:MoMi->U4:2AM — LEVELS ABOVE + prev day's own pivot sub-label
     // p-cOL1U1 + today's Pattern eXL4U2 + prev CPR pMicro + today CPR Mini
     // + both prev and today PDL below their respective L1s. Cyan color
     // family to visually distinguish it from its 9AM:MegL-U4+1:3PM sibling.
@@ -160,7 +160,7 @@ export const Views: Record<string, SubPattern[]> = {
       activeText:  "#fda4af",      // rose-300 text
       activeBg:    "rgba(244, 63, 94, 0.14)",
     },
-    // NEW: 6PM:APHS1A-FAU4:9PM — CPR 1ABOVE + Pattern eXL4U2 + the PREVIOUS
+    // NEW: 6PM:APHS1A-FAU4:9PM — LEVELS ABOVE + Pattern eXL4U2 + the PREVIOUS
     // day's own pivot sub-label (prevCPR vs ppCPR) being eXL4U3
     // ("p-eXL4U3" badge) + today's BC above prev day's own PDH
     // (todayCPR.bc > prevCPR.prevHigh) + today's S1 above prev day's TC
@@ -174,7 +174,7 @@ export const Views: Record<string, SubPattern[]> = {
       activeText:  "#4ade80",      // green-400 text
       activeBg:    "rgba(34, 197, 94, 0.14)",
     },
-    // NEW: 9AM:pPALPApH-FAU4:2PM — CPR 1ABOVE + Pattern HiL3U4 + prev day's
+    // NEW: 9AM:pPALPApH-FAU4:2PM — LEVELS ABOVE + Pattern HiL3U4 + prev day's
     // own Pivot above today's PDL (prevCPR.pivot > todayCPR.prevLow) +
     // today's own Pivot above today's own PDH (todayCPR.pivot >
     // todayCPR.prevHigh). Bullish, entry ~9AM, targets Far Above U4 by
@@ -427,7 +427,7 @@ export const Views: Record<string, SubPattern[]> = {
 };
 
 export const pivotcategories: Category[] = [
-  { id: "cpr-1-above",        label: "CPR 1ABOVE",    subtitle: "Today TC in prev U2 band, S1 in prev BC/R1 band", icon: TrendingUp },
+  { id: "levelsabove",        label: "LEVELS ABOVE",    subtitle: "RRSS-A only (today's R1 up, S1 not down vs prev)", icon: TrendingUp },
   { id: "pcpr-u1-cpr-pl1",    label: "PCPR 1ABOVE", subtitle: "Prev Pivot in U1 band, CPR above pL1", icon: TrendingUp },
   { id: "l1pu1-above",        label: "L1pU1 Above",   subtitle: "Today L1 above Prev U1",   icon: TrendingUp },
   { id: "littleabove",        label: "Little ABOVE",  subtitle: "Narrow CPR Above PCPR",    icon: TrendingUp },

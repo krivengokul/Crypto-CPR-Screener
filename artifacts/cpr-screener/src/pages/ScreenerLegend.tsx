@@ -148,10 +148,10 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             </div>
             <div className="text-xs text-muted-foreground">Today&apos;s CPR overlaps above yesterday&apos;s CPR</div>
           </>
-        ) : legendPattern === "cpr-1-above" ? (
+        ) : legendPattern === "levelsabove" ? (
           <>
             <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-              <span className="text-xs font-semibold text-primary">CPR 1ABOVE</span>
+              <span className="text-xs font-semibold text-primary">LEVELS ABOVE</span>
               <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-green-500 text-white">Above</span>
               <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-500 text-white">Pivot Level</span>
             </div>
@@ -220,27 +220,27 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
         {activePattern === "9AM:MegL-U4+1:3PM" ? (
           <>
             <div className="text-xs font-semibold text-green-400 mb-1">Pattern: p-eXU1L1 → eXL4U2&nbsp;&nbsp;PCPR: Mega&nbsp;&nbsp;CPR: Large</div>
-            <div className="text-xs text-muted-foreground">CPR 1ABOVE, previous pair eXU1L1, current pair eXL4U2, and both previous and current PDL below L1</div>
+            <div className="text-xs text-muted-foreground">LEVELS ABOVE, previous pair eXU1L1, current pair eXL4U2, and both previous and current PDL below L1</div>
           </>
         ) : activePattern === "7PM:MoMi->U4:2AM" ? (
           <>
             <div className="text-xs font-semibold text-cyan-400 mb-1">Pattern: p-cOL1U1 → eXL4U2&nbsp;&nbsp;PCPR: pMicro&nbsp;&nbsp;CPR: Mini</div>
-            <div className="text-xs text-muted-foreground">CPR 1ABOVE, prev day&apos;s own pattern p-cOL1U1, today&apos;s Pattern eXL4U2, prev CPR pMicro (≤0.10%), today CPR Mini (0.22%–0.60%), and both previous and current PDL below L1</div>
+            <div className="text-xs text-muted-foreground">LEVELS ABOVE, prev day&apos;s own pattern p-cOL1U1, today&apos;s Pattern eXL4U2, prev CPR pMicro (≤0.10%), today CPR Mini (0.22%–0.60%), and both previous and current PDL below L1</div>
           </>
         ) : activePattern === "7PM:MoMi-<L4:2AM" ? (
           <>
             <div className="text-xs font-semibold text-rose-400 mb-1">Pattern: p-cOL1U1 → eXL4U2&nbsp;&nbsp;PCPR: pMicro&nbsp;&nbsp;CPR: Mini</div>
-            <div className="text-xs text-muted-foreground">CPR 1ABOVE, prev day&apos;s own pattern p-cOL1U1, today&apos;s Pattern eXL4U2, prev CPR pMicro (≤0.10%), today CPR Mini (0.22%–0.60%), both previous and current PDL below L1, and today&apos;s PDL below prev day&apos;s pivot</div>
+            <div className="text-xs text-muted-foreground">LEVELS ABOVE, prev day&apos;s own pattern p-cOL1U1, today&apos;s Pattern eXL4U2, prev CPR pMicro (≤0.10%), today CPR Mini (0.22%–0.60%), both previous and current PDL below L1, and today&apos;s PDL below prev day&apos;s pivot</div>
           </>
         ) : activePattern === "6PM:APHS1A-FAU4:9PM" ? (
           <>
             <div className="text-xs font-semibold text-green-400 mb-1">Pattern: eXL4U2&nbsp;&nbsp;Prev: p-eXL4U3&nbsp;&nbsp;BC &gt; pPDH&nbsp;&nbsp;S1 &gt; pTC</div>
-            <div className="text-xs text-muted-foreground">CPR 1ABOVE + Pattern eXL4U2 + prev day&apos;s own pattern p-eXL4U3 + today&apos;s BC above prev day&apos;s own PDH + today&apos;s S1 above prev day&apos;s TC</div>
+            <div className="text-xs text-muted-foreground">LEVELS ABOVE + Pattern eXL4U2 + prev day&apos;s own pattern p-eXL4U3 + today&apos;s BC above prev day&apos;s own PDH + today&apos;s S1 above prev day&apos;s TC</div>
           </>
         ) : activePattern === "9AM:pPALPApH-FAU4:2PM" ? (
           <>
             <div className="text-xs font-semibold text-green-400 mb-1">Pattern: HiL3U4&nbsp;&nbsp;pPivot &gt; PDL&nbsp;&nbsp;Pivot &gt; PDH</div>
-            <div className="text-xs text-muted-foreground">CPR 1ABOVE + Pattern HiL3U4 (today&apos;s S4 in prev&apos;s S3/S2 band, prev&apos;s R4 in today&apos;s R3/R4 band) + prev day&apos;s own Pivot above today&apos;s PDL + today&apos;s own Pivot above today&apos;s PDH</div>
+            <div className="text-xs text-muted-foreground">LEVELS ABOVE + Pattern HiL3U4 (today&apos;s S4 in prev&apos;s S3/S2 band, prev&apos;s R4 in today&apos;s R3/R4 band) + prev day&apos;s own Pivot above today&apos;s PDL + today&apos;s own Pivot above today&apos;s PDH</div>
           </>
         ) : activePattern === "ss-eXU4L1-U4:10PM" ? (
           <>
@@ -498,7 +498,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             <div className="text-xs font-semibold text-rose-400 mb-1">eXHrL3U3-AU4</div>
             <div className="text-xs text-muted-foreground">Prev S4 between today&apos;s S3/S4, Prev R4 between today&apos;s R2/R3</div>
           </>
-        ) : activePattern === "cpr-1-above" ? (
+        ) : activePattern === "levelsabove" ? (
           <>
             <div className="text-xs font-semibold text-green-400 mb-1">Pivot Level: CPR in prev U2 band</div>
             <div className="text-xs text-muted-foreground">Today TC &gt; prev R1 &amp; &lt; prev R2 — today S1 &gt; prev BC &amp; &lt; prev R1</div>
@@ -831,7 +831,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             <div className="text-xs font-semibold text-emerald-400 mb-1">Target</div>
             <div className="text-xs text-muted-foreground">Tight prior-day CPR that expanded outside it — breakout continuation potential</div>
           </>
-        ) : activePattern === "cpr-1-above" ? (
+        ) : activePattern === "levelsabove" ? (
           <>
             <div className="text-xs font-semibold text-emerald-400 mb-1">Bias: Bullish shift</div>
             <div className="text-xs text-emerald-400/80">Today&apos;s CPR has stepped one band above yesterday&apos;s — TC inside prev&apos;s U2 zone, S1 still within prev&apos;s wider BC/R1 range</div>
