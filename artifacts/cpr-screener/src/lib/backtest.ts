@@ -15,21 +15,10 @@ export type BacktestSource = "binance" | "delta";
  * day's CPR level". Add more entries here once this is validated; each one
  * needs its target level worked out from that pattern's legend/condition.
  *
- * NEW: "1LHr-L4U3-U4" and "sT-cOL2U3-APU4" (displayed as "cOL2U3-ApU4") —
- * these are the two specific sub-patterns nested under the "LittleCPR
- * Above" category (see BACKTEST_CATEGORIES below). Both are bullish,
- * both target U4-style levels:
- *   - "1LHr-L4U3-U4" has no distinct target called out in Screener.tsx's
- *     legend, so it inherits the same target as its parent category
- *     (today's own R4 / U4) — matching the base "littleabove" entry above.
- *   - "sT-cOL2U3-APU4" ("cOL2U3-ApU4" in the UI) explicitly targets "Bullish
- *     Above PU4" per its legend card, i.e. prev day's R4.
- *
  * NEW: "eXHi-L4U4-U4" — nested under the "Overlap Above" category's
  * "HiL4U3" Pattern (see BACKTEST_CATEGORIES below).
  * Bullish, per Screener.tsx's legend card ("Overlap Higher continuation —
- * bullish bias toward U4") the target is today's own R4 / U4, same target
- * style as "littleabove".
+ * bullish bias toward U4") the target is today's own R4 / U4.
  */
 export interface BacktestTargetDef {
   key: string;          // matches passesPattern's pattern-key string exactly
@@ -40,13 +29,6 @@ export interface BacktestTargetDef {
 }
 
 export const BACKTEST_TARGETS: BacktestTargetDef[] = [
-  {
-    key: "littleabove",
-    label: "LittleCPR Above",
-    direction: "bullish",
-    targetLabel: "U4 (today's R4)",
-    getTarget: (r) => r.todayCPR.r4,
-  },
   {
     key: "9AM:MegL-U4+1:3PM",
     label: "9AM:MegL-U4+1:3PM",
@@ -142,21 +124,6 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     direction: "bullish",
     targetLabel: "FAU4 (Far Above today's R4)",
     getTarget: (r) => r.todayCPR.r4,
-  },
-  // NEW: the two "LittleCPR Above" sub-patterns
-  {
-    key: "1LHr-L4U3-U4",
-    label: "1LHr-L4U3-U4",
-    direction: "bullish",
-    targetLabel: "U4 (today's R4)",
-    getTarget: (r) => r.todayCPR.r4,
-  },
-  {
-    key: "sT-cOL2U3-APU4",
-    label: "cOL2U3-ApU4",
-    direction: "bullish",
-    targetLabel: "PU4 (prev day's R4)",
-    getTarget: (r) => r.prevCPR.r4,
   },
   // NEW: "eXHi-L4U4-U4" — nested under "Overlap Above" → Pattern "HiL4U3"
   {
@@ -308,19 +275,6 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "L3 (today's S3)",
     getTarget: (r) => r.todayCPR.s3,
   },
-  // NEW: "TiMi-cOL2U2-pL4:5AM" — nested under "BigCPR Above"
-  // (structure-bigabove) via the new "cOL2U2" Pattern. Base
-  // structure-bigabove condition + raw cOL2U2 flag + today's PDH below
-  // today's R1 + pTiny/Mini width combo + prev day's own pattern (prevCPR
-  // vs ppCPR) being cOL4U4 (the "p-cOL4U4" badge). Bearish, targets PL4
-  // (prev day's S4) by ~5AM.
-  {
-    key: "TiMi-cOL2U2-pL4:5AM",
-    label: "TiMi-cOL2U2-pL4:5AM",
-    direction: "bearish",
-    targetLabel: "PL4 (prev day's S4)",
-    getTarget: (r) => r.prevCPR.s4,
-  },
   // NEW: "8AM:CoLApHA-U4+1:8AM" — Direct View, sits directly on the
   // "inside-cpr" category's own subPatternKeys in BACKTEST_CATEGORIES
   // (NOT nested under a "Pattern"  / arrow like its
@@ -454,25 +408,11 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
   },
-  // RENAMED: "bigabove-pl34cl4-u3>pu4" -> "9AM:SSRRHHLLA-U4:11PM", nested
-  // directly on "structure-bigabove"'s own subPatternKeys (see
-  // BACKTEST_CATEGORIES below), alongside the "cOL2U2" Pattern
-  // . Base structure-bigabove condition (cprRising +
-  // strWideCPR) + SSRRAbove + HHLLAbove + PDHLAbove — see cpr.ts /
-  // ScreenerUtils.tsx. Bullish, entry ~9AM, targets today's own R4 / U4
-  // by ~11PM.
-  {
-    key: "9AM:SSRRHHLLA-U4:11PM",
-    label: "9AM:SSRRHHLLA-U4:11PM",
-    direction: "bullish",
-    targetLabel: "U4 (today's R4)",
-    getTarget: (r) => r.todayCPR.r4,
-  },
 ];
 
 /**
  * NEW: Category groupings — a "category" is a broad, non-specific base
- * condition (e.g. "littleabove" = cprRising && narrowCPR) that itself has
+ * condition (e.g. "compressed" = the COMPRESSED base condition) that itself has
  * no single well-defined target, but has one or more specific sub-patterns
  * nested under it that DO have defined targets (see BACKTEST_TARGETS).
  *
@@ -501,7 +441,7 @@ export interface BacktestSubCategoryDef {
 }
 
 export interface BacktestCategoryDef {
-  key: string;                          // matches passesPattern's BASE category key (e.g. "littleabove")
+  key: string;                          // matches passesPattern's BASE category key (e.g. "compressed")
   label: string;                        // display name, e.g. "LittleCPR Above"
   subPatternKeys?: string[];            // BACKTEST_TARGETS keys nested directly under this category
   patterns?: BacktestSubCategoryDef[]; // NEW: Pattern sub-categories nested under this category
@@ -600,11 +540,6 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
     label: "COMPRESSED",
     subPatternKeys: ["SMi-L1pU1>-APU4:11PM", "S0-L1pU1>-AU4:7PM", "T0-L1pU1>-BPL4:5AM"],
   },
-  {
-    key: "littleabove",
-    label: "LittleCPR Above",
-    subPatternKeys: ["1LHr-L4U3-U4", "sT-cOL2U3-APU4"],
-  },
   // NEW: "Overlap Above" category (base condition: r.overlapHigher, same
   // key passesPattern already uses for the "overlapping-higher" left-nav
   // page) — nests the "HiL4U3" Pattern, which in turn
@@ -651,28 +586,6 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
   // symbol-list-only categories (no target grading). Each `key` matches an
   // existing passesPattern() case in ScreenerUtils.tsx, so runCategoryScan
   // works with no further changes.
-  { key: "littlebelow", label: "LittleCPR Below" },
-  // NEW: "cOL2U2" Pattern (arrow), same shape as cOU3L4/
-  // LoU3L3/HiL4U3/cOL3U3/eXL3U1/eXL3TC/eXHiL2L1/eXU4L1 elsewhere. Base
-  // condition = parent structure-bigabove's condition AND the raw cOL2U2
-  // flag (see matchesPatternFlag in ScreenerUtils.tsx). Nests the new
-  // "TiMi-cOL2U2-pL4:5AM" pattern.
-  {
-    key: "structure-bigabove",
-    label: "BigCPR Above",
-    // RENAMED: "bigabove-pl34cl4-u3>pu4" -> "9AM:SSRRHHLLA-U4:11PM"
-    // (BigCPR Above + SSRRAbove + HHLLAbove + PDHLAbove). Nested directly
-    // on the category's own subPatternKeys (same shape as "inside-cpr"'s
-    // own subPatternKeys), alongside the "cOL2U2" Pattern.
-    subPatternKeys: ["9AM:SSRRHHLLA-U4:11PM"],
-    patterns: [
-      {
-        key: "cOL2U2",
-        label: "cOL2U2",
-        subPatternKeys: ["TiMi-cOL2U2-pL4:5AM"],
-      },
-    ],
-  },
   {
     key: "u1-gt-pu4",
     label: "U1 > pU4",
@@ -741,7 +654,6 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       },
     ],
   },
-  { key: "structure-bigbelow", label: "BigCPR Below" },
   // NEW: "L1 < pL4" now nests the "eXU4L1" Pattern, which
   // in turn nests the bullish "ss-eXU4L1-U4:10PM" pattern.
   {
@@ -1463,7 +1375,7 @@ export async function backtestSymbolOnDate(
 /**
  * NEW: Category-scan version of backtestSymbolOnDate — same CPR
  * reconstruction, but checks the CATEGORY's base condition (e.g.
- * "littleabove") instead of a specific pattern's, and returns a
+ * "compressed") instead of a specific pattern's, and returns a
  * CategoryScanRow with no target/result/hitDate fields, since a category
  * has no single defined target to grade against.
  */

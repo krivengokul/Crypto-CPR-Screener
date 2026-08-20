@@ -38,24 +38,6 @@ export interface SubPattern {
  * existing Screener filtering logic works with no changes.
  */
 export const Views: Record<string, SubPattern[]> = {
-  littleabove: [
-    { id: "la-2tiny",                label: "LA-BothTiny" },
-    { id: "1LHr-L4U3-U4",            label: "1LHr-L4U3-U4" },
-    { id: "LA-PL12CL23",             label: "PL12CL23" },
-    { id: "sT-cOL2U3-APU4",          label: "cOL2U3-ApU4" },
-    { id: "T1-U4:6AM",               label: "T1-U4:6AM" },
-    { id: "Ss-HiL4U4-FAU4:2AM",      label: "Ss-HiL4U4-FAU4:2AM" },
-    { id: "MeMi-eXL4U3-U4:6PM",      label: "MeMi-eXL4U3-U4:6PM" },
-  ],
-  littlebelow: [
-    { id: "lb-micro2-apu4",         label: "Micro2-ApU4" },
-    { id: "lb-allstepdown",          label: "LB-AllUp" },
-    { id: "lb-cmprss-l4>3-u4<2",     label: "lb-Cmprss-L4>3/U4<2" },
-    { id: "lb-c-l34c4/u23c4",        label: "lb-c-l34c4/u23c4" },
-    { id: "lbE11-cOLoL3U2-PU4",      label: "lbE11-cOLoL3U2-PU4" },
-    { id: "co2-l2u2",                label: "cO2-L2U2" },
-    { id: "L1-cOU1L2-U4:1AM",        label: "L1-cOU1L2-U4:1AM" },
-  ],
   "overlapping-higher": [
     { id: "eXHi-L4U4-U4",            label: "eXHi-L4U4-U4" },
     { id: "cOL3U3-pL4",            label: "cOL3U3-pL4" },
@@ -313,36 +295,6 @@ export const Views: Record<string, SubPattern[]> = {
     { id: "outside-cpr-compressed",  label: "Compressed" },
     { id: "eXHrL3U3-AU4",            label: "eXHrL3U3-AU4" },
   ],
-  "structure-bigabove": [
-    // RENAMED: was "bigabove-pl34cl4-u3>pu4" -> "9AM:SSRRHHLLA-U4:11PM"
-    // (BigCPR Above + SSRRAbove + HHLLAbove + PDHLAbove; entry ~9AM, target
-    // U4 by ~11PM). Same condition, id/label updated for consistency with
-    // the other time-stamped View ids.
-    {
-      id: "9AM:SSRRHHLLA-U4:11PM",
-      label: "9AM:SSRRHHLLA-U4:11PM",
-      activeColor: "#34d399",      // emerald-400 border
-      activeText:  "#6ee7b7",      // emerald-300 text
-      activeBg:    "rgba(16, 185, 129, 0.10)",
-    },
-    { id: "bacomp-l3>pl1/u3>pu1",   label: "Inside PUL2" },
-    { id: "hR-HAL",                  label: "hR-HAL" },
-    { id: "eXL4U2-U4:4AM",           label: "eXL4U2-U4:4AM" },
-    { id: "1T-HiL4U4-FAU4",          label: "1T-HiL4U4-FAU4" },
-    { id: "1S-cOL3U4-FAU4:1AM",        label: "1S-cOL3U4-FAU4:1AM" },
-    { id: "TS-cOL3U4-AU4R:4PM",        label: "TS-cOL3U4-AU4R:4PM" },
-    // NEW: TiMi-cOL2U2-pL4:5AM — BigCPR Above + Pattern cOL2U2, pTiny/Mini
-    // width combo, today's PDH below today's R1, prev day pattern
-    // p-cOL4U4. Bearish, targets PL4 (prev day's S4) by ~5AM. Rose color
-    // family to visually flag it as bearish, same as the other pL4 views.
-    {
-      id: "TiMi-cOL2U2-pL4:5AM",
-      label: "TiMi-cOL2U2-pL4:5AM",
-      activeColor: "#fb7185",              // rose-400 border
-      activeText:  "#fda4af",              // rose-300 text
-      activeBg:    "rgba(244, 63, 94, 0.14)", // rose-500 tint
-    },
-  ],
   "u1-gt-pu4": [
     { id: "9AM:APHS1A-FAU4:4AM", label: "9AM:APHS1A-FAU4:4AM",
       activeColor: "#22c55e", activeText: "#4ade80", activeBg: "rgba(34,197,94,0.18)" },
@@ -398,20 +350,6 @@ export const Views: Record<string, SubPattern[]> = {
       activeBg:    "rgba(239, 68, 68, 0.14)",
     },
   ],
-  "structure-bigbelow": [
-    { id: "bigbelow-pmini-pl3",      label: "pMini-L34C4/U3>4" },
-    { id: "eX-U4L34",               label: "eX-U4L34" },
-    // CHANGED: these two ids ("eXLoL3U4-AU4" / "eXU4L234-AU4") had no
-    // matching passesPattern() case in ScreenerUtils at all (always 0
-    // results) — they were stale names for what the Screener's Big Below
-    // buttons actually implement as "eXU4L3-AU4" / "eXU4L2-AU4". Renamed to
-    // match the real, working ids so the left-nav Views and the Screener's
-    // buttons refer to the same filter (see LEGACY_SCREENER_PATTERN_IDS
-    // doc-comment for the reverse direction of this same fix).
-    { id: "eXU4L3-AU4",              label: "eXU4L3-AU4" },
-    { id: "eXU4L2-AU4",              label: "eXU4L2-AU4" },
-    { id: "1T-cOU4L4-ApU4:3PM",     label: "1T-cOU4L4-ApU4:3PM" },
-  ],
   "l1-lt-pl4": [
     {
       id: "ss-eXU4L1-U4:10PM",
@@ -430,11 +368,7 @@ export const pivotcategories: Category[] = [
   { id: "levelsabove",        label: "LEVELs ABOVE",    subtitle: "RRSS-A only (today's R1 up, S1 not down vs prev)", icon: TrendingUp },
   { id: "levelsbelow",    label: "LEVELs BELOW", subtitle: "RRSS-B only (today's R1 not up, S1 down vs prev)", icon: TrendingUp },
   { id: "compressed",        label: "COMPRESSED",   subtitle: "RRSS-C only (today's R1 down, S1 up vs prev)",   icon: TrendingUp },
-  { id: "littleabove",        label: "Little ABOVE",  subtitle: "Narrow CPR Above PCPR",    icon: TrendingUp },
-  { id: "littlebelow",        label: "Little BELOW",  subtitle: "Narrow CPR Below PCPR",    icon: TrendingDown },
-  { id: "structure-bigabove", label: "Big ABOVE",     subtitle: "Wide CPR Above PCPR",      icon: BarChart },
   { id: "u1-gt-pu4",          label: "U1>pU4",        subtitle: "Today R1 above Prev R4",   icon: TrendingUp },
-  { id: "structure-bigbelow", label: "Big BELOW",     subtitle: "Wide CPR Below PCPR",      icon: BarChart },
   { id: "l1-lt-pl4",          label: "L1<pL4",        subtitle: "Today S1 below Prev S4",   icon: TrendingDown },
   { id: "inside-cpr",         label: "Inside CPR",     subtitle: "Inside CPR range",         icon: Crosshair },
   { id: "outside-cpr",        label: "Outside CPR",  subtitle: "Outside CPR range",        icon: Maximize2 },
@@ -528,7 +462,7 @@ interface ViewsSidebarProps {
   onMobileClose: () => void;
   mode: SidebarMode;
   onModeChange: (mode: SidebarMode) => void;
-  // NEW: top-level pattern id -> matching count, e.g. { littleabove: 41 }.
+  // NEW: top-level pattern id -> matching count, e.g. { "u1-gt-pu4": 41 }.
   // Shown next to each pattern's label as "(41)". Undefined/missing entries
   // (e.g. before the first scan completes) simply render no count.
   counts?: Record<string, number>;

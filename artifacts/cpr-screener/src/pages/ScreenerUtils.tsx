@@ -453,171 +453,6 @@ export function formatWidthFilterLabel(widthFilter: WidthFilter): string {
 
 export function passesPattern(r: CPRResult, pattern: string): boolean {
   switch (pattern) {
-    case "littleabove":
-      return r.cprRising && r.narrowCPR;
-    case "la-2tiny":
-      return r.cprRising && r.narrowCPR && r.bothTight;
-    case "LA-PL12CL23":
-      return r.cprRising && r.narrowCPR && r.PL12CL23;
-    case "sT-cOL2U3-APU4":
-      return (
-        r.cprRising && r.narrowCPR && r.cOL2U3 &&
-        (r.todayCPR.r3 > r.prevCPR.r2 && r.todayCPR.r3 < r.prevCPR.r3 && r.todayCPR.s1 > r.prevCPR.pivot) && // Added Condition for nonmatching Charts
-        r.prevCPR.widthPct > 0.60 && r.prevCPR.widthPct <= 1.10 &&   // pSmall
-        r.todayCPR.widthPct > 0.10 && r.todayCPR.widthPct <= 0.22   // Tiny
-      );
-    // NEW: T1-U4:6AM — Little Above: today's pivot > prev R1,
-    // prev CPR width in (0.10%, 0.22%], today CPR width <= 0.10%
-    case "T1-U4:6AM":
-      return (
-        r.cprRising &&
-        r.narrowCPR &&
-        r.exL3U2 &&
-        r.todayCPR.pivot > r.prevCPR.r1 &&
-        r.prevCPR.widthPct > 0.10 && r.prevCPR.widthPct <= 0.22 &&
-        r.todayCPR.widthPct <= 0.10
-      );
-    case "la-allstepup":
-      return r.cprRising && r.narrowCPR && r.allupabove && r.allupbelow;
-    // NEW: Ss-HiL4U4-FAU4:2AM — Little Above: cprRising + narrowCPR +
-    // all step up above & below + today S1 above prev PDL + today R1 above
-    // prev PDH + today PDH > today R1. Prev CPR width 0.60%-1.10% (Small),
-    // Today CPR width 0.60%-1.10% (Small). Target: Far Above U4 at ~2AM.
-    case "Ss-HiL4U4-FAU4:2AM":
-      return (
-        r.cprRising &&
-        r.narrowCPR &&
-        r.allupabove &&
-        r.allupbelow &&
-        r.todayCPR.s1 > r.prevCPR.prevLow &&
-        r.todayCPR.r1 > r.prevCPR.prevHigh &&
-        r.todayCPR.prevHigh > r.todayCPR.r1 &&
-        r.prevCPR.widthPct > 0.60 && r.prevCPR.widthPct <= 1.10 &&
-        r.todayCPR.widthPct > 0.60 && r.todayCPR.widthPct <= 1.10
-      );
-    // NEW: MeMi-eXL4U3-U4:6PM — Little Above: cprRising + narrowCPR +
-    // eXL4U3 (prev S4 in today's L4 band, prev R4 in today's U3 band)
-    // + today's TC >= prev R1. Prev CPR width 1.10%-2.00% (Medium),
-    // Today CPR width 0.22%-0.60% (Mini). Target: U4 at ~6PM.
-    case "MeMi-eXL4U3-U4:6PM":
-      return (
-        r.cprRising &&
-        r.narrowCPR &&
-        r.eXL4U3 &&
-        r.todayCPR.tc >= r.prevCPR.r1 &&
-        r.prevCPR.widthPct > 1.10 && r.prevCPR.widthPct <= 2.00 &&
-        r.todayCPR.widthPct > 0.22 && r.todayCPR.widthPct <= 0.60
-      );
-    // NEW: 1LHr-L4U3-U4 — Little Above + Compressed:
-    // today's S4 above prev S4 AND below prev S3, today's R3 above prev R4,
-    // today's CPR Narrow with width < 0.1%, prev CPR width between 0.1% and 1%
-    case "1LHr-L4U3-U4":
-      return (
-        r.cprRising &&
-        r.narrowCPR &&
-        r.todayCPR.s4 > r.prevCPR.s4 &&
-        r.todayCPR.s4 < r.prevCPR.s3 &&
-        r.todayCPR.r3 > r.prevCPR.r4 &&
-        r.todayCPR.widthPct < 0.1 &&
-        r.prevCPR.widthPct > 0.1 && r.prevCPR.widthPct < 1
-      );
-    case "eXHiU1L3":
-      // eXHiU1L3 raw flag was removed from cpr.ts (exact duplicate of
-      // eXL3U1); this composite pattern key is kept for any external
-      // caller still passing "eXHiU1L3", now pointed at eXL3U1.
-      return r.cprRising && r.narrowCPR && r.eXL3U1;
-    case "littlebelow":
-      return r.cprFalling && r.narrowCPR;
-    case "lb-2tiny":
-      return r.cprFalling && r.narrowCPR && r.bothTight;
-    // NEW: Micro2-ApU4 — Little Below, both CPRs micro-narrow (<=0.10%),
-    // all step-down / all up-below stacked, plus prev R4 inside today's R3/R4
-    // AND prev S4 inside today's S3/S4 (cOU4L4).
-    case "lb-micro2-apu4":
-      return (
-        r.cprFalling &&
-        r.narrowCPR &&
-        r.alldownabove &&
-        r.allupbelow &&
-        r.cOU4L4 &&
-        r.prevCPR.widthPct <= 0.10 &&
-        r.todayCPR.widthPct <= 0.10
-      );
-    case "lb-allstepdown":
-      return r.cprFalling && r.narrowCPR && r.alldownabove && r.alldownbelow;
-    case "LB-PU12CU23":
-      return r.cprFalling && r.narrowCPR  && r.todayCPR.s2  > r.prevCPR.s2 && (r.PU12CU23 || r.PU23CU34);
-    case "1LB-PL12CL23":
-      return r.lbJPattern1;
-    case "LBALLD-U2<PU1":
-      return r.lbJPattern2;
-    // NEW: LB Compressed — LittleBelow + today S4 > prev S3 + today R4 < prev R2
-    case "lb-cmprss-l4>3-u4<2":
-      return (
-        r.cprFalling &&
-        r.narrowCPR &&
-        (r.todayCPR.s4 > r.prevCPR.s3 && r.todayCPR.s4 < r.prevCPR.s2) &&
-        (r.todayCPR.r4 < r.prevCPR.r2 && r.todayCPR.r4 > r.prevCPR.r1)
-      );
-    // NEW: LB-C-L34C4/U23C4 — LittleBelow + PL34CL4 + today R4 between prev R2 and R3
-    case "lb-c-l34c4/u23c4":
-      return (
-        r.cprFalling &&
-        r.narrowCPR &&
-        r.PL34CL4 &&
-        r.todayCPR.r4 > r.prevCPR.r2 &&
-        r.todayCPR.r4 < r.prevCPR.r3
-      );
-    // NEW: lbE11-cOLoL3U2-PU4 — LittleCPR Below, placed next to lb-c-l34c4/u23c4:
-    // today's R4 inside prev day's R1/R2 AND today's S4 inside prev day's S2/S3,
-    // AND prev day CPR width between 1% and 1.5%, today CPR width between 1% and 1.5%.
-    // Target: Bullish to PU4.
-    case "lbE11-cOLoL3U2-PU4":
-      return (
-        r.cprFalling &&
-        r.narrowCPR &&
-        r.todayCPR.r4 > r.prevCPR.r1 && r.todayCPR.r4 < r.prevCPR.r2 &&
-        r.todayCPR.s4 < r.prevCPR.s2 && r.todayCPR.s4 > r.prevCPR.s3 &&
-        r.prevCPR.widthPct >= 1 && r.prevCPR.widthPct <= 1.5 &&
-        r.todayCPR.widthPct >= 1 && r.todayCPR.widthPct <= 1.5
-      );
-    // NEW: cO2-L2U2 — LittleBelow + Compressed:
-    // today's S2 above prev S2, today's R2 below prev R2 (CPR narrowing inward),
-    // today's S4/R4 compressed inside prev S2/R2, GAP < 1%
-    case "co2-l2u2":
-      return (
-        r.cprFalling &&
-        r.narrowCPR &&
-        r.todayCPR.s2 > r.prevCPR.s2 &&
-        r.todayCPR.r2 < r.prevCPR.r2 &&
-        r.todayCPR.s4 > r.prevCPR.s2 &&
-        r.todayCPR.r4 < r.prevCPR.r2 &&
-        Math.abs(cprDistancePct(r) ?? Infinity) < 1
-      );
-    // NEW: L1-cOU1L2-U4:1AM — LittleBelow + cOU1L2 (today's S4 inside prev
-    // L2 band, today's R4 inside prev U1 band) + today's R1 above prev
-    // CPR's BC + today's R1 below today's PDH + prev CPR width category
-    // Large (2%-5%) + today's CPR width category Micro (<=0.10%).
-    case "L1-cOU1L2-U4:1AM":
-      return (
-        r.cprFalling &&
-        r.narrowCPR &&
-        r.cOU1L2 &&
-        r.todayCPR.r1 > r.prevCPR.bc &&
-        r.todayCPR.r1 < r.todayCPR.prevHigh &&
-        r.prevCPR.widthPct > 2 && r.prevCPR.widthPct <= 5 &&
-        r.todayCPR.widthPct <= 0.10
-      );
-    // NEW: eXU4L3-AU4 — Big Below (structure-bigbelow: cprFalling + strWideCPR):
-    // prev R4 between today's R3/R4 AND prev S4 above today's S3, today's
-    // CPR width between 0.5% and 2%, prev CPR width < 0.5%. Moved here from
-    // LittleCPR Below — placed next to eX-U4L34 under Big Below.
-    case "eXU4L3-AU4":
-      return (
-        r.cprFalling && r.strWideCPR && r.eXU4L3 &&
-        r.todayCPR.widthPct > 0.5 && r.todayCPR.widthPct < 2 && r.prevCPR.widthPct < 0.5
-      );
-      //EXP_U4APU4L4BPL4
     // RENAMED: was "eXL4U4" — this pattern is specific to Overlapping Lower
     // only. Renamed to "eXLo-L4U4-U4" to make that scope explicit and to
     // free up the plain "eXL4U4" name for the new section-independent
@@ -644,44 +479,6 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.todayCPR.widthPct > 0.10 && r.todayCPR.widthPct <= 0.22 ) ||  // Tiny
         (r.prevCPR.widthPct > 0.60 && r.prevCPR.widthPct <= 1.10 &&   // pSmall
           r.compressionRatio > 120 && r.compressionRatio < 180 ))// Wider
-      );
-    // NEW: 1T-HiL4U4-FAU4 — BigCPR Above: Wide Above (cprRising +
-    // strWideCPR) + HiL4U4 (prev R4 inside today's R3/R4, today's S4
-    // inside prev day's S3/S4) + prev CPR width category pMicro (<=0.10%)
-    // + today's CPR width category Tiny (0.10%-0.25%).
-    case "1T-HiL4U4-FAU4":
-      return (
-        r.cprRising &&
-        r.strWideCPR &&
-        r.HiL4U4 &&
-        r.prevCPR.widthPct <= 0.10 &&
-        r.todayCPR.widthPct > 0.10 && r.todayCPR.widthPct <= 0.25
-      );
-    // NEW: 1S-cOL3U4-FAU4:1AM — Big Above: Pattern cOL3U4 + today's S1 above
-    // prev day pivot + prev CPR width <= 0.10 (pMicro/pTiny) + today's CPR
-    // width 0.60%-1.10% (Small).
-    case "1S-cOL3U4-FAU4:1AM":
-      return (
-        r.cprRising &&
-        r.strWideCPR &&
-        r.cOL3U4 &&
-        r.todayCPR.s1 > r.prevCPR.pivot &&
-        r.prevCPR.widthPct <= 0.10 &&
-        r.todayCPR.widthPct > 0.60 && r.todayCPR.widthPct <= 1.10  // small
-      );
-    // NEW: TS-cOL3U4-AU4R:4PM — Big Above: same setup as 1S-cOHi-FAU4:1AM
-    // (Pattern cOL3U4 + today's S1 above prev day pivot + today's CPR
-    // width 0.60%-1.10% / Small) but for prev CPR width category Tiny
-    // (0.10%-0.22%) instead of pMicro (<=0.10%). Reverse-engineered from a
-    // chart showing prev CPR "Tiny (0.149%)" and today's CPR "Small (1.037%)".
-    case "TS-cOL3U4-AU4R:4PM":
-      return (
-        r.cprRising &&
-        r.strWideCPR &&
-        r.cOL3U4 &&
-        r.todayCPR.s1 > r.prevCPR.pivot &&
-        r.prevCPR.widthPct > 0.10 && r.prevCPR.widthPct <= 0.22 &&
-        r.todayCPR.widthPct > 0.60 && r.todayCPR.widthPct <= 1.10
       );
     case "OBN-LoU4L4-U4":
       return (
@@ -1037,23 +834,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return (r.currentPrice > r.todayCPR.prevHigh);
     case "Price-BelowPDL":
       return (r.currentPrice < r.todayCPR.prevLow);
-    case "structure-bigabove":
-      return r.cprRising && r.strWideCPR && !(r.todayCPR.r1 > r.prevCPR.r4);
-    // RENAMED: was "bigabove-pl34cl4-u3>pu4" -> "9AM:SSRRHHLLA-U4:11PM"
-    case "9AM:SSRRHHLLA-U4:11PM":
-    return (r.cprRising && r.strWideCPR && 
-            r.SSRRCategory === "RRSS-A" && r.HHLLCategory === "HHLL-A" && r.todayCPR.HLSwitch === "HL-A");
-    // NEW: BAComp-l3>pl1/u3>pu1 — BigCPR Above + prev S1 inside today S3/S4 AND prev R1 inside today R2/R3
-    case "bacomp-l3>pl1/u3>pu1":
-      return (
-        r.cprRising &&
-        r.strWideCPR &&
-        (r.prevCPR.s1 < r.todayCPR.s3 && r.prevCPR.s1 > r.todayCPR.s4) &&
-        (r.prevCPR.r1 > r.todayCPR.r2 && r.prevCPR.r1 < r.todayCPR.r3)
-      );
-    case "HA-U1>PU4":
-      return (r.cprRising && r.strWideCPR && r.todayCPR.r1 > r.prevCPR.r4);
-    // Standalone top-level category: same condition as HA-U1>PU4
+    // Standalone top-level category: same condition as the removed "HA-U1>PU4" Big Above view
     case "u1-gt-pu4":
       return (r.cprRising && r.strWideCPR && r.todayCPR.r1 > r.prevCPR.r4);
     // NEW: 9AM:APHS1A-FAU4:4AM — U1>pU4 sub-pattern.
@@ -1153,85 +934,6 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // NEW: hR-HAL — BigCPR Above, top-level toggle next to Show All.
     // WideAbove (cprRising + strWideCPR) + Pattern: Higher (srHigher) +
     // today's TC between prev R1 and prev R2 + today's R3 above prev R4.
-    case "hR-HAL":
-      return (
-        r.cprRising &&
-        r.strWideCPR &&
-        r.srHigher &&
-        r.todayCPR.tc > r.prevCPR.r1 && r.todayCPR.tc < r.prevCPR.r3 &&  //Includes two variations: Type1 CPR>R1 && R3>pR4
-        r.todayCPR.r3 > r.prevCPR.r4 && r.todayCPR.r1 < r.prevCPR.r4 &&  // && Type2 CPR>R2 && R2>pR4 (More Bullish)
-        r.prevCPR.widthPct >= 0.1 // NEW: exclude pTiny — prev day CPR must not be tiny (<0.1% width)
-      );
-      // NEW: HA55-HrL4U34-FAU4 — BigCPR Above, placed next to hR-HAL
-    // Logic: today S4 between prev S4/S3 + prev R4 between today R3/R2 + both CPRs >=5% wide + cprRising + strWideCPR
-    case "HA55-HrL4U34-FAU4":
-      return (
-        r.cprRising &&
-        r.strWideCPR &&
-        r.todayCPR.widthPct >= 5 &&
-        r.prevCPR.widthPct >= 5 &&
-        r.todayCPR.s4 > r.prevCPR.s4 &&
-        r.todayCPR.s4 < r.prevCPR.s3 &&
-        r.prevCPR.r4 > r.todayCPR.r3 &&
-        r.prevCPR.r4 < r.todayCPR.r2
-      );
-    // NEW: eXL4U2-U4:4AM — BigCPR Above, placed next to HA55-HrL4U34-FAU4.
-    // Logic: cprRising + strWideCPR + Pattern eXL4U2 + today's S1 above
-    // prev day's TC + today's BC above prev day's R1 + compressionRatio >= 300.
-    case "eXL4U2-U4:4AM":
-      return (
-        r.cprRising &&
-        r.strWideCPR &&
-        r.eXL4U2 &&
-        r.todayCPR.s1 > r.prevCPR.tc &&
-        r.todayCPR.bc > r.prevCPR.r1 &&
-        r.compressionRatio >= 300
-      );
-    // NEW: TiMi-cOL2U2-pL4:5AM — BigCPR Above sub-pattern, nested under the
-    // "cOL2U2" Pattern. Base structure-bigabove condition
-    // (cprRising + strWideCPR + !(today R1 > prev R4)) PLUS: today's raw
-    // cOL2U2 flag, today's PDH below today's R1, prev CPR width category
-    // Tiny (0.10%-0.22%), today CPR width category Mini (0.22%-0.60%), and
-    // the PREVIOUS day's own pivot sub-label (prevCPR vs ppCPR) being
-    // cOL4U4 — i.e. the "p-cOL4U4" badge shown by renderPrevPatternBadge in
-    // ScreenerTableRow.tsx. Bearish, targets PL4 (prev day's S4) by ~5AM.
-    case "TiMi-cOL2U2-pL4:5AM":
-      return (
-        r.cprRising &&
-        r.strWideCPR &&
-        !(r.todayCPR.r1 > r.prevCPR.r4) &&
-        r.cOL2U2 &&
-        r.todayCPR.prevHigh < r.todayCPR.r1 &&
-        r.prevCPR.widthPct > 0.10 && r.prevCPR.widthPct <= 0.22 &&    // pTiny
-        r.todayCPR.widthPct > 0.22 && r.todayCPR.widthPct <= 0.60 &&  // Mini
-        computePrevPattern(r.prevCPR, r.ppCPR) === "cOL4U4"
-      );
-    case "structure-bigbelow":
-      return r.cprFalling && r.strWideCPR && !(r.todayCPR.s1 < r.prevCPR.s4);
-    case "bigbelow-pmini-pl3":
-      return r.cprFalling && r.strWideCPR && r.prevCPR.widthPct < 0.5 && r.PL34CL4 &&
-             r.prevCPR.r3  > r.todayCPR.r4;
-    // NEW: eX-U4L34 — Big Below + prev R4 inside today's R3/R4, prev S4 inside
-    // today's S2/S3, prev day CPR tight (<1%), today's CPR tight (<3%)
-    case "eX-U4L34":
-      return (
-        r.cprFalling &&
-        r.strWideCPR &&
-        r.prevCPR.r4 > r.todayCPR.r3 &&
-        r.prevCPR.r4 < r.todayCPR.r4 &&
-        r.prevCPR.s4 > r.todayCPR.s3 &&
-        r.prevCPR.s4 < r.todayCPR.s2 &&
-        r.todayCPR.prevLow < r.todayCPR.s1 &&
-        r.prevCPR.widthPct < 1 && r.todayCPR.widthPct < 3
-      );
-    // NEW: L1<pL4 — Big Below: today's S1 below prev day's S4 AND today's R2
-    // above prev day's R4, wide CPR below prev CPR (structure-bigbelow base)
-    case "L1<pL4":
-      return (
-        r.cprFalling &&
-        r.strWideCPR &&
-        r.todayCPR.s1 < r.prevCPR.s4
-      );
     // NEW: ss-eXU4L1-U4:10PM — L1<pL4 sub-filter.
     // cprFalling + strWideCPR + prevCPR.HLSwitch === "HL-A" + todayCPR.HLSwitch === "HL-A" +
     // eXU4L1 (prev R4 inside today R3/R4 AND prev S4 inside today BC/S1)
@@ -1249,42 +951,6 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.cprFalling &&
         r.strWideCPR &&
         r.todayCPR.s1 < r.prevCPR.s4
-      );
-    // NEW: eXU4L2-AU4 — Big Below (structure-bigbelow: cprFalling +
-    // strWideCPR) + Pattern: eXU4L2 (prev R4 inside today's R3/R4 AND
-    // prev S4 inside today's S1/S2) + prev day's R3 above today's R3 + either
-    // today's R1 or prev day's S1 sits between prev day's Pivot and today's
-    // Pivot + prev CPR width category pSmall (0.6%-1.1%) + today's CPR width
-    // between 1% and 2%.
-    case "eXU4L2-AU4": {
-      const pivotLow = Math.min(r.prevCPR.pivot, r.todayCPR.pivot);
-      const pivotHigh = Math.max(r.prevCPR.pivot, r.todayCPR.pivot);
-      const r1BetweenPivots = r.todayCPR.r1 >= pivotLow && r.todayCPR.r1 <= pivotHigh;
-      const pS1BetweenPivots = r.prevCPR.s1 >= pivotLow && r.prevCPR.s1 <= pivotHigh;
-      return (
-        r.cprFalling &&
-        r.strWideCPR &&
-        r.eXU4L2 &&
-        r.prevCPR.r3 > r.todayCPR.r3 &&
-        (r1BetweenPivots || pS1BetweenPivots) &&
-        r.prevCPR.widthPct >= 0.6 && r.prevCPR.widthPct <= 1.1 &&
-        r.todayCPR.widthPct >= 1 && r.todayCPR.widthPct <= 2
-      );
-    }
-    // NEW: 1T-cOU4L4-ApU4:3PM — Big Below (cprFalling + strWideCPR) +
-    // cOU4L4 Pattern + prev R1 between today's R1/R2 + today's S1
-    // between prev day's S1/S2 + prev day PDH above prev R1 + prev CPR
-    // width <= 0.10% (pMicro) + today CPR width 0.10%-0.22% (Tiny).
-    case "1T-cOU4L4-ApU4:3PM":
-      return (
-        r.cprFalling &&
-        r.strWideCPR &&
-        r.cOU4L4 &&
-        r.prevCPR.r1 >= r.todayCPR.r1 && r.prevCPR.r1 <= r.todayCPR.r2 &&
-        r.todayCPR.s1 <= r.prevCPR.s1 && r.todayCPR.s1 >= r.prevCPR.s2 &&
-        r.prevCPR.prevHigh > r.prevCPR.r1 &&
-        r.prevCPR.widthPct <= 0.10 &&
-        r.todayCPR.widthPct > 0.10 && r.todayCPR.widthPct <= 0.22
       );
     case "HB-L1<PL1-PU12CU23":
       return r.cprFalling && r.strWideCPR && r.hbJPattern1;
@@ -1339,24 +1005,6 @@ interface SubFilterDef {
 }
 
 const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
-  littleabove: [
-    { key: "la-2tiny", direction: "up" },
-    { key: "la-allstepup", direction: "up" },
-    { key: "1LHr-L4U3-U4", direction: "up" },
-    { key: "LA-PL12CL23", direction: "down" },
-    { key: "sT-cOL2U3-APU4", direction: "up" },
-    { key: "T1-U4:6AM", direction: "up" },
-    { key: "Ss-HiL4U4-FAU4:2AM", direction: "up" },
-    { key: "MeMi-eXL4U3-U4:6PM", direction: "up" },
-  ],
-  littlebelow: [
-    { key: "lb-micro2-apu4", direction: "down" },
-    { key: "lb-allstepdown", direction: "down" },
-    { key: "lb-cmprss-l4>3-u4<2", direction: "up" },
-    { key: "lb-c-l34c4/u23c4", direction: "down" },
-    { key: "lbE11-cOLoL3U2-PU4", direction: "up" },
-    { key: "co2-l2u2", direction: "up" },
-  ],
   "overlapping-higher": [
     { key: "eXHi-L4U4-U4",  direction: "up" },
     { key: "cOL3U3-pL4",  direction: "down" },
@@ -1407,17 +1055,6 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     { key: "outside-cpr-compressed", direction: "up" },
     { key: "eXHrL3U3-AU4", direction: "up" },
   ],
-  "structure-bigabove": [
-    { key: "9AM:SSRRHHLLA-U4:11PM", direction: "up" },
-    { key: "bacomp-l3>pl1/u3>pu1", direction: "up" },
-    { key: "hR-HAL", direction: "up" },
-    { key: "HA55-HrL4U34-FAU4", direction: "up" },
-    { key: "eXL4U2-U4:4AM", direction: "up" },
-    { key: "1T-HiL4U4-FAU4", direction: "up" },
-    { key: "1S-cOL3U4-FAU4:1AM", direction: "up" },
-    { key: "TS-cOL3U4-AU4R:4PM", direction: "up" },
-    { key: "TiMi-cOL2U2-pL4:5AM", direction: "down" },
-  ],
   "u1-gt-pu4": [
     { key: "9AM:APHS1A-FAU4:4AM", direction: "up" },
     // FIX: "8AM:APHS1A-FAU4:4AM" (nested under the same "eXL3U1" Pattern
@@ -1431,13 +1068,6 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     // NEW: "6AM:MegMeg-L3:8PM" (nested under the new "eXL4U1" Pattern
     // ). Bearish → "down".
     { key: "6AM:MegMeg-L3:8PM", direction: "down" },
-  ],
-  "structure-bigbelow": [
-    { key: "bigbelow-pmini-pl3", direction: "up" },
-    { key: "eX-U4L34", direction: "down" },
-    { key: "eXU4L3-AU4", direction: "down" },
-    { key: "eXU4L2-AU4", direction: "down" },
-    { key: "1T-cOU4L4-ApU4:3PM", direction: "down" },
   ],
   // FIX: "l1-lt-pl4" was left as an empty array while the comment below
   // (for "ss-eXU4L1-U4:10PM") described it as belonging here — the actual
