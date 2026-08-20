@@ -1032,7 +1032,7 @@ export default function Screener({
               <TrendingUp className="w-6 h-6 text-primary" />
             </div>
             <div className="flex flex-col gap-0">
-              <h1 className="text-3xl font-bold tracking-tight leading-none whitespace-nowrap">PIVOT LEVELS Live</h1>
+              <h1 className="text-2xl font-bold tracking-tight leading-none whitespace-nowrap">PIVOT LEVELS Live</h1>
               <span className="text-xs font-mono px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 w-fit">
                 by Kriven Gokul (PivotBull)
               </span>
