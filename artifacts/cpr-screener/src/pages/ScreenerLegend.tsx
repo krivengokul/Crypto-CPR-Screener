@@ -151,7 +151,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
         ) : legendPattern === "levelsabove" ? (
           <>
             <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-              <span className="text-xs font-semibold text-primary">LEVELS ABOVE</span>
+              <span className="text-xs font-semibold text-primary">LEVELs ABOVE</span>
               <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-green-500 text-white">Above</span>
               <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-500 text-white">Pivot Level</span>
             </div>

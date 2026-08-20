@@ -427,7 +427,7 @@ export const Views: Record<string, SubPattern[]> = {
 };
 
 export const pivotcategories: Category[] = [
-  { id: "levelsabove",        label: "LEVELS ABOVE",    subtitle: "RRSS-A only (today's R1 up, S1 not down vs prev)", icon: TrendingUp },
+  { id: "levelsabove",        label: "LEVELs ABOVE",    subtitle: "RRSS-A only (today's R1 up, S1 not down vs prev)", icon: TrendingUp },
   { id: "pcpr-u1-cpr-pl1",    label: "PCPR 1ABOVE", subtitle: "Prev Pivot in U1 band, CPR above pL1", icon: TrendingUp },
   { id: "l1pu1-above",        label: "L1pU1 Above",   subtitle: "Today L1 above Prev U1",   icon: TrendingUp },
   { id: "littleabove",        label: "Little ABOVE",  subtitle: "Narrow CPR Above PCPR",    icon: TrendingUp },
@@ -781,7 +781,7 @@ export default function ViewsSidebar({
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div
                       style={{
-                        fontSize: 13,
+                        fontSize: 12,
                         fontWeight: 600,
                         color: isHighlighted ? "#e2e8f0" : MUTED_TEXT,
                         whiteSpace: "nowrap",

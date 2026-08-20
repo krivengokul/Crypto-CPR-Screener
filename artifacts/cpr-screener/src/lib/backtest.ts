@@ -521,7 +521,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
   { key: "top15losers", label: "TOP 15 LOSERS" },
   {
     key: "levelsabove",
-    label: "LEVELS ABOVE",
+    label: "LEVELs ABOVE",
     // NEW: "eXL4U2" Pattern (arrow) — same shape as
     // cOU3L4/LoU3L3/HiL4U3 elsewhere. Base condition = parent
     // levelsabove's condition AND the raw eXL4U2 flag (see
