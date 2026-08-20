@@ -157,10 +157,10 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             </div>
             <div className="text-xs text-muted-foreground">Today&apos;s TC sits between prev R1 and R2, and today&apos;s S1 sits between prev BC and R1</div>
           </>
-        ) : legendPattern === "pcpr-u1-cpr-pl1" ? (
+        ) : legendPattern === "levelsbelow" ? (
           <>
             <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-              <span className="text-xs font-semibold text-primary">PREVCPR 1ABOVE</span>
+              <span className="text-xs font-semibold text-primary">LEVELs BELOW</span>
               <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-green-500 text-white">Above</span>
               <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-500 text-white">Pivot Level</span>
             </div>
@@ -503,7 +503,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             <div className="text-xs font-semibold text-green-400 mb-1">Pivot Level: CPR in prev U2 band</div>
             <div className="text-xs text-muted-foreground">Today TC &gt; prev R1 &amp; &lt; prev R2 — today S1 &gt; prev BC &amp; &lt; prev R1</div>
           </>
-        ) : activePattern === "pcpr-u1-cpr-pl1" ? (
+        ) : activePattern === "levelsbelow" ? (
           <>
             <div className="text-xs font-semibold text-green-400 mb-1">Pivot Level: pCPR in U1 band</div>
             <div className="text-xs text-muted-foreground">Prev Pivot &gt; today R1 &amp; &lt; today R2 — today BC &gt; prev S1 &amp; &lt; prev BC</div>
@@ -511,17 +511,17 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
         ) : activePattern === "BC>pPDL-U3:5AM" ? (
           <>
             <div className="text-xs font-semibold text-green-400 mb-1">Pivot Level: pCPR in U1 band</div>
-            <div className="text-xs text-muted-foreground">PCPR 1ABOVE base, plus today&apos;s BC above prev day&apos;s PDH</div>
+            <div className="text-xs text-muted-foreground">LEVELs BELOW base, plus today&apos;s BC above prev day&apos;s PDH</div>
           </>
         ) : activePattern === "PDH>pTC-U4:5AM" ? (
           <>
             <div className="text-xs font-semibold text-green-400 mb-1">Pivot Level: pCPR in U1 band</div>
-            <div className="text-xs text-muted-foreground">PCPR 1ABOVE base, plus today&apos;s PDH above prev day&apos;s TC, plus (pMini &amp; today Small) or (pSmall &amp; today Large)</div>
+            <div className="text-xs text-muted-foreground">LEVELs BELOW base, plus today&apos;s PDH above prev day&apos;s TC, plus (pMini &amp; today Small) or (pSmall &amp; today Large)</div>
           </>
         ) : activePattern === "11AM:pCPR1AHi-FApU4:1PM" ? (
           <>
             <div className="text-xs font-semibold text-green-400 mb-1">Pattern: LoU3L4&nbsp;&nbsp;PDH/PDL: HHLLBelow&nbsp;&nbsp;p-PDHL-B / PDHL-A</div>
-            <div className="text-xs text-muted-foreground">PCPR 1ABOVE base, plus LoU3L4 (today&apos;s R4 in prev R2/R3 band), today&apos;s PDH at/below prev PDH and today&apos;s PDL below prev PDL, prev day&apos;s own PDH below prev day&apos;s R1 (p-PDHL-B), today&apos;s PDH above today&apos;s R1 (PDHL-A), and today&apos;s R1 at/above prev day&apos;s BC</div>
+            <div className="text-xs text-muted-foreground">LEVELs BELOW base, plus LoU3L4 (today&apos;s R4 in prev R2/R3 band), today&apos;s PDH at/below prev PDH and today&apos;s PDL below prev PDL, prev day&apos;s own PDH below prev day&apos;s R1 (p-PDHL-B), today&apos;s PDH above today&apos;s R1 (PDHL-A), and today&apos;s R1 at/above prev day&apos;s BC</div>
           </>
         ) : activePattern === "SMi-L1pU1>-APU4:11PM" ? (
           <>
@@ -836,7 +836,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             <div className="text-xs font-semibold text-emerald-400 mb-1">Bias: Bullish shift</div>
             <div className="text-xs text-emerald-400/80">Today&apos;s CPR has stepped one band above yesterday&apos;s — TC inside prev&apos;s U2 zone, S1 still within prev&apos;s wider BC/R1 range</div>
           </>
-        ) : activePattern === "pcpr-u1-cpr-pl1" ? (
+        ) : activePattern === "levelsbelow" ? (
           <>
             <div className="text-xs font-semibold text-emerald-400 mb-1">Bias: Bullish shift</div>
             <div className="text-xs text-emerald-400/80">Today&apos;s CPR has stepped above yesterday&apos;s lower band while prev Pivot still caps the U1/U2 zone</div>

@@ -92,7 +92,7 @@ function ViewCount({ id, counts }: { id: string; counts: Record<string, number> 
  */
 const GENERIC_VIEW_CATEGORIES = new Set([
   "levelsabove",
-  "pcpr-u1-cpr-pl1",
+  "levelsbelow",
   "l1pu1-above",
   "u1-gt-pu4",
   "l1-lt-pl4",
@@ -259,7 +259,7 @@ export default function Screener({
   const [showOBHi7AMMiMi, setShowOBHi7AMMiMi] = useState(false);
   const [showOBHi6PMLaLa, setShowOBHi6PMLaLa] = useState(false);
   // NEW: generic Views (sub-pattern) toggle — covers every category listed
-  // in GENERIC_VIEW_CATEGORIES (LEVELS ABOVE, PREVCPR 1ABOVE, L1pU1 Above,
+  // in GENERIC_VIEW_CATEGORIES (LEVELS ABOVE, LEVELs BELOW, L1pU1 Above,
   // U1>pU4, L1<pL4, Equal CPR, and any future category added there) instead
   // of a bespoke useState per sub-pattern. Holds the currently-selected
   // sub-pattern id (e.g. "7PM:MoMi->U4:2AM"), or null when none selected.
@@ -2278,7 +2278,7 @@ export default function Screener({
               </button>
             )}
             {/* NEW: generic Views (sub-pattern) buttons — covers LEVELS ABOVE,
-                PREVCPR 1ABOVE, L1pU1 Above, U1>pU4, L1<pL4, Equal CPR (see
+                LEVELs BELOW, L1pU1 Above, U1>pU4, L1<pL4, Equal CPR (see
                 GENERIC_VIEW_CATEGORIES above), and any future category added
                 there. Colours come straight from each sub-pattern's own
                 activeColor/activeText/activeBg in ViewsSidebar's

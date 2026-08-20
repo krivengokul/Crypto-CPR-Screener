@@ -240,7 +240,7 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
   },
-  // NEW: "BC>pPDL-U3:5AM" — nested under "PREVCPR 1ABOVE" (pcpr-u1-cpr-pl1)
+  // NEW: "BC>pPDL-U3:5AM" — nested under "LEVELs BELOW" (levelsbelow)
   // category's new "cOU3L4" Pattern (see BACKTEST_CATEGORIES
   // below). Bullish — per ScreenerUtils.tsx's condition (today's BC above
   // prev day's PDH, prevCPR.bc > todayCPR.r1) — targets U4 (today's R4)
@@ -252,9 +252,9 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
   },
-  // NEW: "PDH>pTC-U4:5AM" — nested directly under "PREVCPR 1ABOVE" (pcpr-u1-cpr-pl1)
+  // NEW: "PDH>pTC-U4:5AM" — nested directly under "LEVELs BELOW" (levelsbelow)
   // category, alongside the "cOU3L4" Pattern. Base condition:
-  // this category's pCPR1Above condition AND today's PDH (todayCPR.prevHigh)
+  // this category's LevelsBelow condition AND today's PDH (todayCPR.prevHigh)
   // above prev day's TC (prevCPR.tc) — see ScreenerUtils.tsx. Bullish,
   // targets U4 (today's R4), same target style as its sibling
   // BC>pPDL-U3:5AM.
@@ -265,10 +265,10 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
   },
-  // NEW: "11AM:pCPR1AHi-FApU4:1PM" — nested under "PREVCPR 1ABOVE"
-  // (pcpr-u1-cpr-pl1) category's new "LoU3L4" Pattern (see
+  // NEW: "11AM:pCPR1AHi-FApU4:1PM" — nested under "LEVELs BELOW"
+  // (levelsbelow) category's new "LoU3L4" Pattern (see
   // BACKTEST_CATEGORIES below), alongside its "cOU3L4"/"LoU3L3" siblings.
-  // Base condition: this category's pCPR1Above condition AND the raw
+  // Base condition: this category's LevelsBelow condition AND the raw
   // LoU3L4 flag AND HHLLBelow — see ScreenerUtils.tsx. Bullish, targets
   // Far Above pU4 (prev day's R4) by ~1PM.
   {
@@ -545,15 +545,14 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       },
     ],
   },
-  // NEW: "PREVCPR 1ABOVE" (displayed as "PCPR 1ABOVE" in ViewsSidebar's
-  // left-nav) left-nav section (top of the pattern tree in
+  // NEW: "LEVELs BELOW" left-nav section (top of the pattern tree in
   // ViewsSidebar.tsx) — nests the "cOU3L4" Pattern, which
   // in turn nests "BC>pPDL-U3:5AM" (base condition: this category's
-  // pCPR1Above condition AND the raw cOU3L4 flag — see
+  // LevelsBelow condition AND the raw cOU3L4 flag — see
   // matchesPatternFlag in ScreenerUtils.tsx).
   {
-    key: "pcpr-u1-cpr-pl1",
-    label: "PREVCPR 1ABOVE",
+    key: "levelsbelow",
+    label: "LEVELs BELOW",
     // NEW: "PDH>pTC-U4:5AM" now nests under the "LoU3L3" Pattern
     //  below (not directly on the category), since it also
     // requires the raw LoU3L3 flag — see ScreenerUtils.tsx.
@@ -564,7 +563,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
         subPatternKeys: ["BC>pPDL-U3:5AM"],
       },
       // NEW: "LoU3L3" — Pattern (arrow), same shape as
-      // "cOU3L4": base condition = this category's pCPR1Above condition
+      // "cOU3L4": base condition = this category's LevelsBelow condition
       // AND the raw LoU3L3 flag (see matchesPatternFlag in
       // ScreenerUtils.tsx). Nests "PDH>pTC-U4:5AM".
       {
@@ -573,7 +572,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
         subPatternKeys: ["PDH>pTC-U4:5AM"],
       },
       // NEW: "LoU3L4" — Pattern (arrow), same shape as its
-      // "LoU3L3" sibling: base condition = this category's pCPR1Above
+      // "LoU3L3" sibling: base condition = this category's LevelsBelow
       // condition AND the raw LoU3L4 flag (see matchesPatternFlag in
       // ScreenerUtils.tsx). Nests "11AM:pCPR1AHi-FApU4:1PM".
       {
@@ -583,7 +582,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       },
       // NEW: "cOU2L4" — Pattern (arrow), same shape as its
       // cOU3L4/LoU3L3/LoU3L4 siblings above: base condition = this
-      // category's pCPR1Above condition AND the raw cOU2L4 flag (see
+      // category's LevelsBelow condition AND the raw cOU2L4 flag (see
       // matchesPatternFlag in ScreenerUtils.tsx). No specific
       // target-graded sub-pattern nested under it yet — selecting it in
       // the Backtest dropdown runs a symbol-list-only category scan.

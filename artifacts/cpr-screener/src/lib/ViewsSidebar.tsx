@@ -188,8 +188,8 @@ export const Views: Record<string, SubPattern[]> = {
       activeBg:    "rgba(34, 197, 94, 0.14)",
     },
   ],
-  "pcpr-u1-cpr-pl1": [
-    // NEW: BC>pPDL-U3:5AM — PREVCPR 1ABOVE + today's BC above prev day's PDH
+  "levelsbelow": [
+    // NEW: BC>pPDL-U3:5AM — LEVELs BELOW + today's BC above prev day's PDH
     // (prevCPR.prevHigh, i.e. the actual high of the day before prev day).
     // Green color family to visually flag this as the bullish sub-pattern.
     {
@@ -199,7 +199,7 @@ export const Views: Record<string, SubPattern[]> = {
       activeText:  "#4ade80",              // green-400 text
       activeBg:    "rgba(34, 197, 94, 0.14)",
     },
-    // NEW: PDH>pTC-U4:5AM — PREVCPR 1ABOVE + today's PDH (todayCPR.prevHigh)
+    // NEW: PDH>pTC-U4:5AM — LEVELs BELOW + today's PDH (todayCPR.prevHigh)
     // above prev day's TC (prevCPR.tc). Bullish, targets U4 (today's R4) by
     // ~5AM. Same green color family as its sibling BC>pPDL-U3:5AM.
     {
@@ -209,7 +209,7 @@ export const Views: Record<string, SubPattern[]> = {
       activeText:  "#4ade80",              // green-400 text
       activeBg:    "rgba(34, 197, 94, 0.14)",
     },
-    // NEW: 11AM:pCPR1AHi-FApU4:1PM — PREVCPR 1ABOVE + LoU3L4 + HHLLBelow
+    // NEW: 11AM:pCPR1AHi-FApU4:1PM — LEVELs BELOW + LoU3L4 + HHLLBelow
     // (today's PDH at/below prev day's PDH AND today's PDL below prev
     // day's PDL). Bullish, targets Far Above pU4 (prev day's R4) by ~1PM.
     // Same green color family as its BC>pPDL-U3:5AM / PDH>pTC-U4:5AM
@@ -428,7 +428,7 @@ export const Views: Record<string, SubPattern[]> = {
 
 export const pivotcategories: Category[] = [
   { id: "levelsabove",        label: "LEVELs ABOVE",    subtitle: "RRSS-A only (today's R1 up, S1 not down vs prev)", icon: TrendingUp },
-  { id: "pcpr-u1-cpr-pl1",    label: "PCPR 1ABOVE", subtitle: "Prev Pivot in U1 band, CPR above pL1", icon: TrendingUp },
+  { id: "levelsbelow",    label: "LEVELs BELOW", subtitle: "RRSS-B only (today's R1 not up, S1 down vs prev)", icon: TrendingUp },
   { id: "l1pu1-above",        label: "L1pU1 Above",   subtitle: "Today L1 above Prev U1",   icon: TrendingUp },
   { id: "littleabove",        label: "Little ABOVE",  subtitle: "Narrow CPR Above PCPR",    icon: TrendingUp },
   { id: "littlebelow",        label: "Little BELOW",  subtitle: "Narrow CPR Below PCPR",    icon: TrendingDown },
