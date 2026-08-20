@@ -139,15 +139,19 @@ export interface CPRPairFlags {
   cOTCL2: boolean;
   // compressed — "COMPRESSED": RRSS-C only (see classifyCPRPair for the
   // exact tolerance-aware R1/S1 test, mirroring SSRRCategory === "RRSS-C").
-  // Formerly a two-clause CPR-band test named L1pU1Above; simplified.
+  // Note: r1 down + s1 flat is NOT compressed — that lands in LevelsBelow
+  // (RRSS-B) instead. Formerly a two-clause CPR-band test named
+  // L1pU1Above; simplified.
   compressed: boolean;
   // expanded — "EXPANDED": RRSS-E only (see classifyCPRPair for the
   // exact tolerance-aware R1/S1 test, mirroring SSRRCategory === "RRSS-E").
   // Mirrors compressed above.
   expanded: boolean;
-  // LevelsBelow — "LEVELs BELOW": RRSS-B only (today's R1 not up AND today's
-  // S1 down vs prev, i.e. same tolerance-aware test as SSRRCategory ===
-  // "RRSS-B"). Formerly a two-clause CPR-band test named pCPR1Above; simplified.
+  // LevelsBelow — "LEVELs BELOW": RRSS-B only (today's R1 down AND today's
+  // S1 not up vs prev — this includes r1 down + s1 flat — OR today's R1
+  // flat AND today's S1 down, i.e. same tolerance-aware test as
+  // SSRRCategory === "RRSS-B"). Formerly a two-clause CPR-band test named
+  // pCPR1Above; simplified.
   LevelsBelow: boolean;
   // LevelsAbove — "LEVELS ABOVE": RRSS-A only (today's R1 up AND today's S1
   // not down vs prev, i.e. same tolerance-aware test as SSRRCategory ===
@@ -407,10 +411,13 @@ export interface CPRResult {
   // SSRRCategory — single-badge 6-way partition over today's R1/S1 vs
   // prev's R1/S1 (mirrors HHLLCategory's shape):
   //   RRSS-A (Above)      — today.r1 >  prev.r1 AND today.s1 >= prev.s1
-  //   RRSS-B (Below)      — today.r1 <= prev.r1 AND today.s1 <  prev.s1
-  //   RRSS-C (Compressed) — today.r1 <  prev.r1 AND today.s1 >  prev.s1
+  //   RRSS-B (Below)      — today.r1 <  prev.r1 AND today.s1 <= prev.s1,
+  //                         OR today.r1 == prev.r1 AND today.s1 < prev.s1
+  //   RRSS-C (Compressed) — today.r1 <= prev.r1 AND today.s1 >  prev.s1
   //   RRSS-E (Expanded)   — today.r1 >  prev.r1 AND today.s1 <  prev.s1
   //   RRSS=  (Equal)      — today.r1 == prev.r1 AND today.s1 == prev.s1 (eqTol)
+  // Note: r1 down + s1 flat lands in RRSS-B (not RRSS-C) — a narrowing R1
+  // with an unmoved S1 reads as the range shifting down, not compressing.
   // "none" when none of the five conditions match. This field is the ONLY
   // source for that classification — the raw SSRRAbove/SSRRBelow booleans
   // have been removed from CPRResult.
@@ -902,11 +909,12 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
   const s1DirVsPrev = dirTol(today.s1, prev.s1);
 
   // compressed — "COMPRESSED": RRSS-C only. Same tolerance-aware R1/S1
-  // direction test used for SSRRCategory === "RRSS-C": today's R1 down vs
-  // prev's R1 (with today's S1 not down), OR today's R1 flat AND today's
-  // S1 up. Formerly a two-clause CPR-band test named L1pU1Above; simplified.
-  const compressed = (r1DirVsPrev < 0 && s1DirVsPrev >= 0) ||
-                      (r1DirVsPrev === 0 && s1DirVsPrev > 0);
+  // direction test used for SSRRCategory === "RRSS-C": today's R1 not up
+  // vs prev's R1 AND today's S1 up vs prev's S1 (i.e. r1 down or flat,
+  // s1 strictly up). Note: r1 down + s1 flat is NOT compressed — that
+  // case belongs to LevelsBelow/RRSS-B below. Formerly a two-clause
+  // CPR-band test named L1pU1Above; simplified.
+  const compressed = r1DirVsPrev <= 0 && s1DirVsPrev > 0;
 
   // expanded — "EXPANDED": RRSS-E only. Same tolerance-aware R1/S1
   // direction test used for SSRRCategory === "RRSS-E": today's R1 up vs
@@ -916,9 +924,11 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
   // LevelsBelow — "LEVELs BELOW": RRSS-B only. Replaces the old two-clause
   // CPR-band condition (formerly named pCPR1Above) with the same
   // tolerance-aware R1/S1 direction test used for SSRRCategory ===
-  // "RRSS-B": today's R1 not up vs prev's R1, AND today's S1 down vs
-  // prev's S1.
-  const LevelsBelow = r1DirVsPrev <= 0 && s1DirVsPrev < 0;
+  // "RRSS-B": today's R1 down vs prev's R1 AND today's S1 not up vs
+  // prev's S1 (covers r1 down + s1 flat too), OR today's R1 flat AND
+  // today's S1 down vs prev's S1.
+  const LevelsBelow = (r1DirVsPrev < 0 && s1DirVsPrev <= 0) ||
+                       (r1DirVsPrev === 0 && s1DirVsPrev < 0);
 
   // LevelsAbove — "LEVELS ABOVE": RRSS-A only. Replaces the old two-clause
   // CPR-band condition (formerly named CPRs1Above) with the same
@@ -1371,9 +1381,9 @@ export function analyzeCPR(
     (SSRRDirR1 === 0 && SSRRDirS1 === 0) ? "RRSS=" :
     (SSRRDirR1 > 0 && SSRRDirS1 >= 0) ? "RRSS-A" :
     (SSRRDirR1 > 0 && SSRRDirS1 < 0) ? "RRSS-E" :
-    (SSRRDirR1 <= 0 && SSRRDirS1 < 0) ? "RRSS-B" :
-    (SSRRDirR1 < 0 && SSRRDirS1 >= 0) ? "RRSS-C" :
-    (SSRRDirR1 === 0 && SSRRDirS1 > 0) ? "RRSS-C" :
+    (SSRRDirR1 <= 0 && SSRRDirS1 > 0) ? "RRSS-C" :
+    (SSRRDirR1 < 0 && SSRRDirS1 <= 0) ? "RRSS-B" :
+    (SSRRDirR1 === 0 && SSRRDirS1 < 0) ? "RRSS-B" :
     "none";
 
   // HHLLCategory — today's PDH/PDL vs prev's PDH/PDL. Now exhaustive: the
