@@ -108,6 +108,20 @@ const GENERIC_VIEW_CATEGORIES = new Set([
  *  ViewsSidebar's `Views` map, but still need a "(n)" count. */
 const EXTRA_VIEW_COUNT_IDS = ["eXLo-L4U4-U4"];
 
+/**
+ * Flat id → label lookup covering every view in the tree — both the
+ * top-level `pivotcategories` entries and every nested `Views` sub-item.
+ * Used by the header's "Active view" stat card so it can show a readable
+ * label instead of the raw activePattern id (mirrors SignalDesk's
+ * VIEW_LABEL_BY_ID).
+ */
+const VIEW_LABEL_BY_ID: Record<string, string> = {
+  ...Object.fromEntries(pivotcategories.map((p) => [p.id, p.label])),
+  ...Object.fromEntries(
+    Object.values(Views).flatMap((subs) => subs.map((s) => [s.id, s.label] as const)),
+  ),
+};
+
 export default function Screener({
   activePattern = "levelsabove",
   scanKey = 0,
@@ -1007,25 +1021,65 @@ export default function Screener({
     <div className="min-h-screen bg-background text-foreground">
       <div className="max-w-7xl px-4 py-8 min-h-screen flex flex-col">
         {/* Header — description paragraph removed, spacing tightened so the
-            title row and the Legend grid below both sit higher on the page. */}
-        <div className="flex items-center justify-between gap-4 mb-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
+            title row and the Legend grid below both sit higher on the page.
+            Title now stacks over the byline (instead of sitting side by
+            side), both pinned to the icon's top/bottom edge via
+            items-stretch + justify-between, and the matching-symbols stat
+            cards fill the empty space between the title block and the
+            live clock. */}
+        <div className="flex items-stretch justify-between gap-4 mb-4 flex-wrap">
+          <div className="flex items-stretch gap-3">
+            <div className="p-2 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
               <TrendingUp className="w-6 h-6 text-primary" />
             </div>
-            <h1 className="text-2xl font-bold tracking-tight">PIVOT LEVEL Screener</h1>
-            <span className="text-xs font-mono px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
-              by Kriven Gokul (PivotBull)
-            </span>
+            <div className="flex flex-col justify-between py-0.5">
+              <h1 className="text-2xl font-bold tracking-tight leading-tight">PIVOT LEVELs Live</h1>
+              <span className="text-xs font-mono px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 w-fit">
+                by Kriven Gokul (PivotBull)
+              </span>
+            </div>
           </div>
+
+          {currentStatus === "done" && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 flex-1 min-w-[220px] max-w-md">
+              <div className="rounded-lg border border-border bg-card px-3 py-2">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  Matching symbols
+                </p>
+                <p className="mt-1 text-lg font-semibold">{combinedAllResults.length}</p>
+              </div>
+              <div className="rounded-lg border border-border bg-card px-3 py-2">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  Binance
+                </p>
+                <p className="mt-1 text-lg font-semibold text-blue-300">{allResults.length}</p>
+              </div>
+              <div className="rounded-lg border border-border bg-card px-3 py-2">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  Delta
+                </p>
+                <p className="mt-1 text-lg font-semibold text-violet-300">{deltaAllResults.length}</p>
+              </div>
+              <div className="rounded-lg border border-border bg-card px-3 py-2">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  Active view
+                </p>
+                <p className="mt-1 truncate text-sm font-semibold">
+                  {!showAll ? (VIEW_LABEL_BY_ID[activePattern] || activePattern) : "All scanned"}
+                </p>
+              </div>
+            </div>
+          )}
 
           <LiveClock />
         </div>
 
         {/* Legend — hidden while idle (initial load/refresh, before the
-            first scan resolves) and while a scan is in progress, so no
-            stale/empty legend cards flash before results are ready. */}
-        {currentStatus === "done" && (
+            first scan resolves), while a scan is in progress, AND whenever
+            no left-nav category is selected (showAll true, i.e. "All
+            scanned"/no filter), so the three empty legend cards don't
+            render with nothing to show. */}
+        {currentStatus === "done" && !showAll && (
         <ScreenerLegend
           activePattern={activePattern}
           showExpU4PU4={showExpU4PU4}
