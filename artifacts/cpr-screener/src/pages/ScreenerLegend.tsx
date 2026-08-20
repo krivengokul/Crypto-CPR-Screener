@@ -153,10 +153,10 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
         ) : null}
       </div>
       <div className="rounded-lg border border-border bg-card p-3">
-        {activePattern === "9AM:MegL-U4+1:3PM" ? (
+        {activePattern === "6PM:HHLLA-RRHHGap:6AM" ? (
           <>
-            <div className="text-xs font-semibold text-green-400 mb-1">Pattern: p-eXU1L1 → eXL4U2&nbsp;&nbsp;PCPR: Mega&nbsp;&nbsp;CPR: Large</div>
-            <div className="text-xs text-muted-foreground">LEVELS ABOVE, previous pair eXU1L1, current pair eXL4U2, and both previous and current PDL below L1</div>
+            <div className="text-xs font-semibold text-green-400 mb-1">RRGap&nbsp;&nbsp;RRHH-AA&nbsp;&nbsp;SSLL-AA&nbsp;&nbsp;HHLL-A&nbsp;&nbsp;HHGap</div>
+            <div className="text-xs text-muted-foreground">LEVELS ABOVE, R1 gap larger than S1 gap (RRGap), today&apos;s R1 and PDH both fully above prev&apos;s R1/PDH (RRHH-AA), today&apos;s S1 and PDL both fully above prev&apos;s S1/PDL (SSLL-AA), today&apos;s PDH/PDL both above prev&apos;s (HHLL-A), and today&apos;s PDH gap larger than the PDL gap (HHGap)</div>
           </>
         ) : activePattern === "7PM:MoMi->U4:2AM" ? (
           <>
@@ -386,10 +386,10 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
         ) : null}
       </div>
       <div className="rounded-lg border border-border bg-card p-3">
-        {activePattern === "9AM:MegL-U4+1:3PM" ? (
+        {activePattern === "6PM:HHLLA-RRHHGap:6AM" ? (
           <>
-            <div className="text-xs font-semibold text-green-400 mb-1">Target: U4&nbsp;&nbsp;Time: 3PM</div>
-            <div className="text-xs text-emerald-400/80">9AM setup with bullish continuation expected toward today&apos;s U4 by ~3PM</div>
+            <div className="text-xs font-semibold text-green-400 mb-1">Target: U4&nbsp;&nbsp;&nbsp;Entry: 6PM&nbsp;&nbsp;&nbsp;Time: 6AM</div>
+            <div className="text-xs text-emerald-400/80">6PM setup with bullish continuation expected toward today&apos;s U4 by ~6AM</div>
           </>
         ) : activePattern === "7PM:MoMi->U4:2AM" ? (
           <>

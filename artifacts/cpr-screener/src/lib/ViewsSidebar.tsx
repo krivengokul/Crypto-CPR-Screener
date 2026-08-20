@@ -113,9 +113,12 @@ export const Views: Record<string, SubPattern[]> = {
     },
   ],
   "levelsabove": [
+    // RENAMED from "9AM:MegL-U4+1:3PM": all existing conditions removed.
+    // New conditions: LevelsAbove + RRGap + RRHH-AA + SSLL-AA + HHLL-A +
+    // HHGap (see ScreenerUtils.tsx / cpr.ts for the category definitions).
     {
-      id: "9AM:MegL-U4+1:3PM",
-      label: "9AM:MegL-U4+1:3PM",
+      id: "6PM:HHLLA-RRHHGap:6AM",
+      label: "6PM:HHLLA-RRHHGap:6AM",
       activeColor: "#22c55e",
       activeText: "#4ade80",
       activeBg: "rgba(34, 197, 94, 0.14)",
@@ -123,7 +126,7 @@ export const Views: Record<string, SubPattern[]> = {
     // NEW: 7PM:MoMi->U4:2AM — LEVELS ABOVE + prev day's own pivot sub-label
     // p-cOL1U1 + today's Pattern eXL4U2 + prev CPR pMicro + today CPR Mini
     // + both prev and today PDL below their respective L1s. Cyan color
-    // family to visually distinguish it from its 9AM:MegL-U4+1:3PM sibling.
+    // family to visually distinguish it from its 6PM:HHLLA-RRHHGap:6AM sibling.
     {
       id: "7PM:MoMi->U4:2AM",
       label: "7PM:MoMi->U4:2AM",
@@ -147,7 +150,7 @@ export const Views: Record<string, SubPattern[]> = {
     // ("p-eXL4U3" badge) + today's BC above prev day's own PDH
     // (todayCPR.bc > prevCPR.prevHigh) + today's S1 above prev day's TC
     // (todayCPR.s1 > prevCPR.tc). Bullish, entry ~6PM, targets Far Above
-    // U4 by ~9PM. Green color family, same as its 9AM:MegL-U4+1:3PM
+    // U4 by ~9PM. Green color family, same as its 6PM:HHLLA-RRHHGap:6AM
     // sibling, to flag it as bullish.
     {
       id: "6PM:APHS1A-FAU4:9PM",
@@ -160,7 +163,7 @@ export const Views: Record<string, SubPattern[]> = {
     // own Pivot above today's PDL (prevCPR.pivot > todayCPR.prevLow) +
     // today's own Pivot above today's own PDH (todayCPR.pivot >
     // todayCPR.prevHigh). Bullish, entry ~9AM, targets Far Above U4 by
-    // ~2PM. Green color family, same as its 9AM:MegL-U4+1:3PM /
+    // ~2PM. Green color family, same as its 6PM:HHLLA-RRHHGap:6AM /
     // 6PM:APHS1A-FAU4:9PM siblings.
     {
       id: "9AM:pPALPApH-FAU4:2PM",

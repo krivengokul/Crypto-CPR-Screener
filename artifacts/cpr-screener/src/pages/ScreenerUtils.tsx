@@ -634,17 +634,23 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // inside prev's BC/R1 band. Sits above "LEVELs BELOW" in the left-nav.
     case "levelsabove":
       return r.LevelsAbove;
-    // 9AM:MegL-U4+1:3PM — LEVELS ABOVE + previous pair eXU1L1 + current pair
-    // eXL4U2 + pMega/Large widths + both PDLs below their respective L1s.
-    case "9AM:MegL-U4+1:3PM":
+    // RENAMED from "9AM:MegL-U4+1:3PM": all previous conditions removed.
+    // 6PM:HHLLA-RRHHGap:6AM — LEVELS ABOVE + RRSSGapCategory RRGap (today's
+    // R1 gap vs prev's R1 larger than the S1 gap) + RRHHCategory RRHH-AA
+    // (today's R1 AND today's PDH both fully above prev's R1/PDH) +
+    // SSLLCategory SSLL-AA (today's S1 AND today's PDL both fully above
+    // prev's S1/PDL) + HHLLCategory HHLL-A (today's PDH/PDL both above
+    // prev's) + PDHPDLGapCategory HHGap (today's PDH gap vs prev's PDH
+    // larger than the PDL gap). Bullish, entry ~6PM, targets today's own
+    // U4 by ~6AM.
+    case "6PM:HHLLA-RRHHGap:6AM":
       return (
         r.LevelsAbove &&
-        computePrevPattern(r.prevCPR, r.ppCPR) === "eXU1L1" &&
-        r.eXL4U2 &&
-        r.prevCPR.widthPct > 5.00 && r.prevCPR.widthPct <= 10.00 &&
-        r.todayCPR.widthPct > 2.00 && r.todayCPR.widthPct <= 5.00 &&
-        r.prevCPR.prevLow < r.prevCPR.s1 &&
-        r.todayCPR.prevLow < r.todayCPR.s1
+        r.RRSSGapCategory === "RRGap" &&
+        r.RRHHCategory === "RRHH-AA" &&
+        r.SSLLCategory === "SSLL-AA" &&
+        r.HHLLCategory === "HHLL-A" &&
+        r.PDHPDLGapCategory === "HHGap"
       );
     // NEW: 7PM:MoMi->U4:2AM — LEVELS ABOVE + the PREVIOUS day's own pivot
     // sub-label (prevCPR vs ppCPR) being cOL1U1 ("p-cOL1U1" badge) +
@@ -678,7 +684,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // ("p-eXL4U3" badge) + today's BC above prev day's own PDH
     // (todayCPR.bc > prevCPR.prevHigh) + today's S1 above prev day's TC
     // (todayCPR.s1 > prevCPR.tc). Bullish, entry ~6PM, targets Far Above
-    // U4 by ~9PM. Green color family, same as its 9AM:MegL-U4+1:3PM
+    // U4 by ~9PM. Green color family, same as its 6PM:HHLLA-RRHHGap:6AM
     // sibling.
     case "6PM:APHS1A-FAU4:9PM":
       return (
@@ -695,7 +701,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // PLUS prev day's Pivot above today's PDL ("pPivot > PDL") PLUS
     // today's own Pivot above today's PDH ("Pivot > PAH"). Bullish, entry
     // ~9AM, targets Far Above U4 by ~2PM. Green color family, same as its
-    // 9AM:MegL-U4+1:3PM / 6PM:APHS1A-FAU4:9PM siblings.
+    // 6PM:HHLLA-RRHHGap:6AM / 6PM:APHS1A-FAU4:9PM siblings.
     case "9AM:pPALPApH-FAU4:2PM":
       return (
         r.LevelsAbove &&
@@ -1037,7 +1043,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     { key: "cOU2L4", direction: "up" },
   ],
   "levelsabove": [
-    { key: "9AM:MegL-U4+1:3PM", direction: "up" },
+    { key: "6PM:HHLLA-RRHHGap:6AM", direction: "up" },
     { key: "7PM:MoMi->U4:2AM", direction: "up" },
     { key: "7PM:MoMi-<L4:2AM", direction: "down" },
     { key: "6PM:APHS1A-FAU4:9PM", direction: "up" },

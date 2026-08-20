@@ -29,16 +29,22 @@ export interface BacktestTargetDef {
 }
 
 export const BACKTEST_TARGETS: BacktestTargetDef[] = [
+  // RENAMED from "9AM:MegL-U4+1:3PM": all previous conditions removed.
+  // "6PM:HHLLA-RRHHGap:6AM" — nested directly under "LEVELS ABOVE" (no
+  // longer gated on the "eXL4U2" Pattern flag). Condition: LevelsAbove +
+  // RRSSGapCategory RRGap + RRHHCategory RRHH-AA + SSLLCategory SSLL-AA +
+  // HHLLCategory HHLL-A + PDHPDLGapCategory HHGap — see ScreenerUtils.tsx.
+  // Bullish, entry ~6PM, targets today's own R4 / U4 by ~6AM.
   {
-    key: "9AM:MegL-U4+1:3PM",
-    label: "9AM:MegL-U4+1:3PM",
+    key: "6PM:HHLLA-RRHHGap:6AM",
+    label: "6PM:HHLLA-RRHHGap:6AM",
     direction: "bullish",
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
   },
   // NEW: "7PM:MoMi->U4:2AM" — nested under "LEVELS ABOVE" → Pattern "eXL4U2",
-  // alongside its sibling "9AM:MegL-U4+1:3PM". Bullish, targets today's own
-  // R4 / U4 by ~2AM.
+  // alongside its sibling "6PM:HHLLA-RRHHGap:6AM". Bullish, targets today's
+  // own R4 / U4 by ~2AM.
   {
     key: "7PM:MoMi->U4:2AM",
     label: "7PM:MoMi->U4:2AM",
@@ -59,7 +65,7 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     getTarget: (r) => r.todayCPR.s4,
   },
   // NEW: "6PM:APHS1A-FAU4:9PM" — nested under "LEVELS ABOVE" → Pattern
-  // "eXL4U2", alongside its "9AM:MegL-U4+1:3PM" / "7PM:MoMi->U4:2AM" /
+  // "eXL4U2", alongside its "7PM:MoMi->U4:2AM" /
   // "7PM:MoMi-<L4:2AM" siblings. Condition: LevelsAbove + eXL4U2 + the
   // prev day's own pivot sub-label being eXL4U3 (p-eXL4U3) + today's BC
   // above prev day's own PDH + today's S1 above prev day's TC — see
@@ -462,17 +468,22 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
   {
     key: "levelsabove",
     label: "LEVELs ABOVE",
+    // RENAMED from "9AM:MegL-U4+1:3PM": all previous conditions removed,
+    // so "6PM:HHLLA-RRHHGap:6AM" is no longer gated on the "eXL4U2"
+    // Pattern flag — it now sits directly on this category's own
+    // subPatternKeys again (base condition = parent levelsabove's
+    // condition AND RRGap/RRHH-AA/SSLL-AA/HHLL-A/HHGap — see
+    // ScreenerUtils.tsx).
+    subPatternKeys: ["6PM:HHLLA-RRHHGap:6AM"],
     // NEW: "eXL4U2" Pattern (arrow) — same shape as
     // cOU3L4/LoU3L3/HiL4U3 elsewhere. Base condition = parent
     // levelsabove's condition AND the raw eXL4U2 flag (see
-    // matchesPatternFlag in ScreenerUtils.tsx). Nests the existing
-    // "9AM:MegL-U4+1:3PM" pattern, which used to sit directly on this
-    // category's own subPatternKeys.
+    // matchesPatternFlag in ScreenerUtils.tsx).
     patterns: [
       {
         key: "eXL4U2",
         label: "eXL4U2",
-        subPatternKeys: ["9AM:MegL-U4+1:3PM", "7PM:MoMi->U4:2AM", "7PM:MoMi-<L4:2AM", "6PM:APHS1A-FAU4:9PM"],
+        subPatternKeys: ["7PM:MoMi->U4:2AM", "7PM:MoMi-<L4:2AM", "6PM:APHS1A-FAU4:9PM"],
       },
       // NEW: "HiL3U4" Pattern (arrow) — same shape as its
       // "eXL4U2" sibling above. Base condition = parent levelsabove's
