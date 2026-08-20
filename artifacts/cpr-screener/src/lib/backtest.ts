@@ -198,7 +198,7 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
   },
-  // NEW: "SMi-L1pU1>-APU4:11PM" — nested under the new "L1pU1 Above"
+  // NEW: "SMi-L1pU1>-APU4:11PM" — nested under the new "COMPRESSED"
   // category (moved out of CPR Inside). Bullish, targets "Above PU4",
   // i.e. prev day's R4.
   {
@@ -208,8 +208,8 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "PU4 (prev day's R4)",
     getTarget: (r) => r.prevCPR.r4,
   },
-  // NEW: "S0-L1pU1>-AU4:7PM" — second sub-pattern under "L1pU1 Above".
-  // Same L1pU1Above base condition as SMi-L1pU1>-APU4:11PM, but the
+  // NEW: "S0-L1pU1>-AU4:7PM" — second sub-pattern under "COMPRESSED".
+  // Same compressed base condition as SMi-L1pU1>-APU4:11PM, but the
   // 1-Line CPR variant (compressionRatio == 0, today's R1 < prev TC).
   // Bullish, targets AU4 (prev day's R4) by ~7PM.
   {
@@ -219,8 +219,8 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "AU4 (prev day's R4)",
     getTarget: (r) => r.prevCPR.r4,
   },
-  // NEW: "T0-L1pU1>-BPL4:5AM" — third sub-pattern under "L1pU1 Above".
-  // Bearish counterpart to SMi-L1pU1>-APU4:11PM: same L1pU1Above base
+  // NEW: "T0-L1pU1>-BPL4:5AM" — third sub-pattern under "COMPRESSED".
+  // Bearish counterpart to SMi-L1pU1>-APU4:11PM: same compressed base
   // condition (today & prev PDH/L above, not Outside CPR), but targets a
   // move BELOW prev day's S4 (PL4) by ~5AM instead of above PU4.
   {
@@ -593,11 +593,11 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       },
     ],
   },
-  // NEW: "L1pU1 Above" left-nav section (first item), nesting the
+  // NEW: "COMPRESSED" left-nav section (first item), nesting the
   // "SMi-L1pU1>-APU4:11PM" pattern that used to live under CPR Inside.
   {
-    key: "l1pu1-above",
-    label: "L1pU1 Above",
+    key: "compressed",
+    label: "COMPRESSED",
     subPatternKeys: ["SMi-L1pU1>-APU4:11PM", "S0-L1pU1>-AU4:7PM", "T0-L1pU1>-BPL4:5AM"],
   },
   {

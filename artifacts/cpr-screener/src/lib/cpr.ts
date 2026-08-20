@@ -52,6 +52,13 @@ export interface CPRPairFlags {
   srCompressedLower: boolean;
   srExpandedHigher: boolean;
   srExpandedLower: boolean;
+  // r1DirVsPrev / s1DirVsPrev — tolerance-aware direction (dirTol: -1 down,
+  // 0 flat, +1 up) of today's R1/S1 vs prev's R1/S1. Computed once here and
+  // reused by compressed/LevelsBelow/LevelsAbove below, and by analyzeCPR's
+  // SSRRCategory partition (same underlying R1/S1 comparison), so it's
+  // exposed on the flags object instead of being recomputed per caller.
+  r1DirVsPrev: -1 | 0 | 1;
+  s1DirVsPrev: -1 | 0 | 1;
 
   // Band-classification flags (order below matches pickPattern priority)
   cOU3L4: boolean;
@@ -130,7 +137,10 @@ export interface CPRPairFlags {
   // instead of U1 (TC→R1).
   eXU2L1: boolean;
   cOTCL2: boolean;
-  L1pU1Above: boolean;
+  // compressed — "COMPRESSED": RRSS-C only (see classifyCPRPair for the
+  // exact tolerance-aware R1/S1 test, mirroring SSRRCategory === "RRSS-C").
+  // Formerly a two-clause CPR-band test named L1pU1Above; simplified.
+  compressed: boolean;
   // LevelsBelow — "LEVELs BELOW": RRSS-B only (today's R1 not up AND today's
   // S1 down vs prev, i.e. same tolerance-aware test as SSRRCategory ===
   // "RRSS-B"). Formerly a two-clause CPR-band test named pCPR1Above; simplified.
@@ -277,6 +287,8 @@ export interface CPRResult {
   srCompressedLower: boolean;
   srExpandedHigher: boolean;
   srExpandedLower: boolean;
+  r1DirVsPrev: -1 | 0 | 1;
+  s1DirVsPrev: -1 | 0 | 1;
   cOU3L4: boolean;
   cOL2U3: boolean;
   cOL3U3: boolean;
@@ -336,7 +348,7 @@ export interface CPRResult {
   eXU1L1: boolean;
   eXU2L1: boolean;
   cOTCL2: boolean;
-  L1pU1Above: boolean;
+  compressed: boolean;
   LevelsBelow: boolean;
   LevelsAbove: boolean;
   eXU3L1: boolean;
@@ -878,29 +890,32 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
   const cOTCL2 = (today.r4 > prev.pivot && today.r4 < prev.tc) &&
                  (today.s4 > prev.s2 && today.s4 < prev.s1);
 
-  // L1pU1Above — prev's (R1 or PDH, whichever is lower) sits above today's
-  // (PDH or R1, whichever is higher), AND today's (S1 or PDL, whichever is
-  // higher) sits above prev's (PDL or S1, whichever is higher).
-  const prevLowerR1PDH   = Math.min(prev.r1, prev.prevHigh);
-  const todayHigherPDHR1 = Math.max(today.prevHigh, today.r1);
-  const todayHigherS1PDL = Math.min(today.s1, today.prevLow);
-  const prevHigherPDLS1  = Math.max(prev.prevLow, prev.s1);
-  const L1pU1Above = (prevLowerR1PDH > todayHigherPDHR1) &&
-                     (todayHigherS1PDL > prevHigherPDLS1);
+  // Shared R1/S1 tolerance-aware direction (dirTol: -1 down, 0 flat, +1 up)
+  // vs prev — feeds compressed/LevelsBelow/LevelsAbove below, and mirrors
+  // the SSRRDirR1/SSRRDirS1 pairing used for SSRRCategory in analyzeCPR.
+  const r1DirVsPrev = dirTol(today.r1, prev.r1);
+  const s1DirVsPrev = dirTol(today.s1, prev.s1);
+
+  // compressed — "COMPRESSED": RRSS-C only. Same tolerance-aware R1/S1
+  // direction test used for SSRRCategory === "RRSS-C": today's R1 down vs
+  // prev's R1 (with today's S1 not down), OR today's R1 flat AND today's
+  // S1 up. Formerly a two-clause CPR-band test named L1pU1Above; simplified.
+  const compressed = (r1DirVsPrev < 0 && s1DirVsPrev >= 0) ||
+                      (r1DirVsPrev === 0 && s1DirVsPrev > 0);
 
   // LevelsBelow — "LEVELs BELOW": RRSS-B only. Replaces the old two-clause
   // CPR-band condition (formerly named pCPR1Above) with the same
   // tolerance-aware R1/S1 direction test used for SSRRCategory ===
   // "RRSS-B": today's R1 not up vs prev's R1, AND today's S1 down vs
   // prev's S1.
-  const LevelsBelow = dirTol(today.r1, prev.r1) <= 0 && dirTol(today.s1, prev.s1) < 0;
+  const LevelsBelow = r1DirVsPrev <= 0 && s1DirVsPrev < 0;
 
   // LevelsAbove — "LEVELS ABOVE": RRSS-A only. Replaces the old two-clause
   // CPR-band condition (formerly named CPRs1Above) with the same
   // tolerance-aware R1/S1 direction test used for SSRRCategory ===
   // "RRSS-A": today's R1 up vs prev's R1, AND today's S1 not down vs
   // prev's S1.
-  const LevelsAbove = dirTol(today.r1, prev.r1) > 0 && dirTol(today.s1, prev.s1) >= 0;
+  const LevelsAbove = r1DirVsPrev > 0 && s1DirVsPrev >= 0;
 
   // cOU1L1 / cOL1U1 — split by which side (R1 vs S1) moved further.
   const r1Move = Math.abs(prev.r1 - today.r1);
@@ -954,6 +969,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
     r4Distance, s4Distance,
     srHigher, srLower, srExpanded, srCompressed,
     srCompressedHigher, srCompressedLower, srExpandedHigher, srExpandedLower,
+    r1DirVsPrev, s1DirVsPrev,
     cOU3L4, cOL2U3, cOL3U3, eXL4U4, eXU4L4, EqL4U4, InsideCPR, HiL4U3, HiL4U2, HiL2U4, HiL2U3, HiL3U4, HiL4U4, HiL4U1,
     LoU4L4, eXL4U3, eXU4L2, eXU4L3, cOL2U4, cOL4U4, cOU4L4, exL3U2,
     cOL3U4, cOU3L3, LoU3L4, LoU3L3, cOU2L3, LoU2L4, LoU2L3, LoU4L3, LoU4L2,
@@ -961,7 +977,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
     cOU1L1, cOL1U1, cOU2L2, cOL2U2,
     HiL3U3, cOU1L3,
     eXL2U1, eXL3U1, eXL4U1, eXL1BC, eXL1CP, eXL1TC, eXL2BC, eXL3BC, eXL3CP,
-    eXL3TC, eXL4U2, eXL2U2, eXL2TC, eXL1U1, eXU1L1, eXU2L1, cOTCL2, L1pU1Above, LevelsBelow, LevelsAbove,
+    eXL3TC, eXL4U2, eXL2U2, eXL2TC, eXL1U1, eXU1L1, eXU2L1, cOTCL2, compressed, LevelsBelow, LevelsAbove,
     eXU3L1, eXU3L2, eXU2TC, eXU2BC, eXU3TC, eXU2CP, eXU3CP, eXU3BC, eXU4L1, eXU4BC, LoCPL3, LoCPL2, LoTCL3,
     eXHiL2L1, eXLoL2L1, eXL2CP, eXL4TC, LoU3L2, cOL1U2, cOL1U3, HiL3U2,
   };
@@ -1096,7 +1112,7 @@ export type PatternCategory = "cOHigher" | "cOLower" | "eXHigher" | "eXLower" | 
  *
  * Flags that don't carry a cO/eX/Hi/Lo prefix (srHigher/srLower/srExpanded/
  * srCompressed and their *Higher/*Lower variants, r4Distance, s4Distance,
- * L1pU1Above, pCPR1Above (now LevelsBelow), LevelsAbove) are intentionally excluded — they're
+ * L1pU1Above (now compressed), pCPR1Above (now LevelsBelow), LevelsAbove) are intentionally excluded — they're
  * aggregate/directional signals, not named band-classification patterns,
  * so they don't belong in a prefix-based category map.
  */
@@ -1336,8 +1352,11 @@ export function analyzeCPR(
   //                axis1 flat + axis2 up) for the HH/LL-style pairs
   //   Expanded   — axis1 up   AND axis2 down
   //   Equal      — both axes flat
-  const SSRRDirR1 = dirTol(todayCPR.r1, prevCPR.r1);
-  const SSRRDirS1 = dirTol(todayCPR.s1, prevCPR.s1);
+  // R1/S1 direction already computed once in classifyCPRPair (see
+  // flags.r1DirVsPrev / flags.s1DirVsPrev — also backs compressed/
+  // LevelsBelow/LevelsAbove above), reused here instead of recomputing.
+  const SSRRDirR1 = flags.r1DirVsPrev;
+  const SSRRDirS1 = flags.s1DirVsPrev;
   const SSRRCategory: SSRRCategory =
     (SSRRDirR1 === 0 && SSRRDirS1 === 0) ? "RRSS=" :
     (SSRRDirR1 > 0 && SSRRDirS1 >= 0) ? "RRSS-A" :

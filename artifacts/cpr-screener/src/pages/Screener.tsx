@@ -93,7 +93,7 @@ function ViewCount({ id, counts }: { id: string; counts: Record<string, number> 
 const GENERIC_VIEW_CATEGORIES = new Set([
   "levelsabove",
   "levelsbelow",
-  "l1pu1-above",
+  "compressed",
   "u1-gt-pu4",
   "l1-lt-pl4",
   "equal-cpr",
@@ -259,7 +259,7 @@ export default function Screener({
   const [showOBHi7AMMiMi, setShowOBHi7AMMiMi] = useState(false);
   const [showOBHi6PMLaLa, setShowOBHi6PMLaLa] = useState(false);
   // NEW: generic Views (sub-pattern) toggle — covers every category listed
-  // in GENERIC_VIEW_CATEGORIES (LEVELS ABOVE, LEVELs BELOW, L1pU1 Above,
+  // in GENERIC_VIEW_CATEGORIES (LEVELS ABOVE, LEVELs BELOW, COMPRESSED,
   // U1>pU4, L1<pL4, Equal CPR, and any future category added there) instead
   // of a bespoke useState per sub-pattern. Holds the currently-selected
   // sub-pattern id (e.g. "7PM:MoMi->U4:2AM"), or null when none selected.
@@ -362,7 +362,7 @@ export default function Screener({
 
   // NEW: resolve activePattern to its parent left-nav category ("section").
   // Clicking a top-level category in the left-nav sets activePattern to the
-  // category id directly (e.g. "l1pu1-above"), but clicking one of its
+  // category id directly (e.g. "compressed"), but clicking one of its
   // Views/sub-patterns instead (e.g. "SMi-L1pU1>-APU4:11PM") sets
   // activePattern to that LEAF id — ViewsSidebar's handleSubClick calls
   // onSelect(subId), not onSelect(parentId). Row filtering already handles
@@ -692,7 +692,7 @@ export default function Screener({
   // NEW: reset the generic Views toggle whenever it no longer belongs to
   // the current activePattern — either because we've left every generic
   // category entirely, or because we've switched from one generic category
-  // to another (e.g. "levelsabove" -> "l1pu1-above") and the previously
+  // to another (e.g. "levelsabove" -> "compressed") and the previously
   // selected sub-pattern id doesn't exist under the new one.
   useEffect(() => {
     if (!activeGenericSubView) return;
@@ -2278,7 +2278,7 @@ export default function Screener({
               </button>
             )}
             {/* NEW: generic Views (sub-pattern) buttons — covers LEVELS ABOVE,
-                LEVELs BELOW, L1pU1 Above, U1>pU4, L1<pL4, Equal CPR (see
+                LEVELs BELOW, COMPRESSED, U1>pU4, L1<pL4, Equal CPR (see
                 GENERIC_VIEW_CATEGORIES above), and any future category added
                 there. Colours come straight from each sub-pattern's own
                 activeColor/activeText/activeBg in ViewsSidebar's

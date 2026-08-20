@@ -829,7 +829,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         (r.todayCPR.HLSwitch !== "HL-B" ||
           (r.prevCPR.prevHigh > r.todayCPR.r1 && r.todayCPR.prevLow > r.prevCPR.s1))
       );
-    // NEW: SMi-L1pU1>-APU4:11PM — Inside CPR + L1pU1Above (from cpr.ts)
+    // NEW: SMi-L1pU1>-APU4:11PM — Inside CPR + compressed (from cpr.ts)
     // + compression ratio >= 30. Target ApU4 by 11PM.
     // NEW: pCPR>U1 CPR>pL1 — prev Pivot inside today's R1/R2 band and
     // today's BC inside prev's S1/BC band.
@@ -940,23 +940,23 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return r.LevelsBelow && r.LoU3L4 && r.HHLLCategory === "HHLL-B" &&
         r.prevCPR.HLSwitch === "HL-B" && r.todayCPR.HLSwitch === "HL-A" &&
         r.todayCPR.r1 > r.prevCPR.bc;
-    case "l1pu1-above":
-      return r.L1pU1Above ; 
+    case "compressed":
+      return r.compressed ; 
     case "SMi-L1pU1>-APU4:11PM": {
-      return r.L1pU1Above && r.prevCPR.HLSwitch === "HL-A" && !r.outCPR && r.compressionRatio >= 30;
+      return r.compressed && r.prevCPR.HLSwitch === "HL-A" && !r.outCPR && r.compressionRatio >= 30;
     }
-    // NEW: S0-L1pU1>-AU4:7PM — second sub-pattern under "L1pU1 Above".
-    // Same L1pU1Above base as SMi-L1pU1>-APU4:11PM, but a 1-Line CPR
+    // NEW: S0-L1pU1>-AU4:7PM — second sub-pattern under "COMPRESSED".
+    // Same compressed base as SMi-L1pU1>-APU4:11PM, but a 1-Line CPR
     // (compressionRatio == 0) with today's R1 below prev day's TC.
     // Target AU4 (prev day's R4) by ~7PM.
     case "S0-L1pU1>-AU4:7PM": {
-      return (r.L1pU1Above && r.prevCPR.HLSwitch === "HL-A" && (r.todayCPR.HLSwitch === "HL-A" || r.todayCPR.HLSwitch === "HL=" )
+      return (r.compressed && r.prevCPR.HLSwitch === "HL-A" && (r.todayCPR.HLSwitch === "HL-A" || r.todayCPR.HLSwitch === "HL=" )
                     && !r.outCPR && (r.todayCPR.r1 < r.prevCPR.tc) && r.compressionRatio == 0); // 1 Line CPR ,  R1< PCPR.tc
     }
      case "T0-L1pU1>-BPL4:5AM": {
-      return (r.L1pU1Above && r.prevCPR.HLSwitch === "HL-A" && r.todayCPR.HLSwitch === "HL-B"
+      return (r.compressed && r.prevCPR.HLSwitch === "HL-A" && r.todayCPR.HLSwitch === "HL-B"
               && !r.outCPR && r.compressionRatio > 300 && r.prevCPR.tc < r.todayCPR.s1) || //pTiny, Mini, pcpr < S1
-              (r.L1pU1Above && r.prevCPR.HLSwitch === "HL-A" && (r.todayCPR.HLSwitch === "HL-A" || r.todayCPR.HLSwitch === "HL=" ) 
+              (r.compressed && r.prevCPR.HLSwitch === "HL-A" && (r.todayCPR.HLSwitch === "HL-A" || r.todayCPR.HLSwitch === "HL=" ) 
               && !r.outCPR && (r.todayCPR.tc < r.prevCPR.tc) && r.compressionRatio == 0); // 1 Line CPR , - todayCPR.tc < PCPR.tc
     }
     case "outside-cpr":
@@ -1392,7 +1392,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     { key: "7PM:MoMi-<L4:2AM", direction: "down" },
     { key: "6PM:APHS1A-FAU4:9PM", direction: "up" },
   ],
-  "l1pu1-above": [
+  "compressed": [
     { key: "SMi-L1pU1>-APU4:11PM", direction: "up" },
     { key: "S0-L1pU1>-AU4:7PM", direction: "up" },
     { key: "T0-L1pU1>-BPL4:5AM", direction: "down" },

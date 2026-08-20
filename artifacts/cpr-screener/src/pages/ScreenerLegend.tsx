@@ -166,13 +166,13 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             </div>
             <div className="text-xs text-muted-foreground">Yesterday&apos;s Pivot sits between today&apos;s R1 and R2, and today&apos;s BC sits between yesterday&apos;s S1 and BC</div>
           </>
-        ) : legendPattern === "l1pu1-above" ? (
+        ) : legendPattern === "compressed" ? (
           <>
             <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-              <span className="text-xs font-semibold text-primary">L1pU1 Above</span>
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-green-500 text-white">Above</span>
+              <span className="text-xs font-semibold text-primary">COMPRESSED</span>
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500 text-white">Compressed</span>
             </div>
-            <div className="text-xs text-muted-foreground">Today&apos;s S1 / PDL sits above yesterday&apos;s R1 / PDH</div>
+            <div className="text-xs text-muted-foreground">RRSS-C only — today&apos;s R1 down and today&apos;s S1 up vs yesterday (levels squeezing inward)</div>
           </>
         ) : legendPattern === "inside-cpr" ? (
           <>

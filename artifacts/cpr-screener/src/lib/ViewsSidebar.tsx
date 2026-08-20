@@ -222,7 +222,7 @@ export const Views: Record<string, SubPattern[]> = {
       activeBg:    "rgba(34, 197, 94, 0.14)",
     },
   ],
-  "l1pu1-above": [
+  "compressed": [
     {
       id: "SMi-L1pU1>-APU4:11PM",
       label: "SMi-L1pU1>-APU4:11PM",
@@ -429,7 +429,7 @@ export const Views: Record<string, SubPattern[]> = {
 export const pivotcategories: Category[] = [
   { id: "levelsabove",        label: "LEVELs ABOVE",    subtitle: "RRSS-A only (today's R1 up, S1 not down vs prev)", icon: TrendingUp },
   { id: "levelsbelow",    label: "LEVELs BELOW", subtitle: "RRSS-B only (today's R1 not up, S1 down vs prev)", icon: TrendingUp },
-  { id: "l1pu1-above",        label: "L1pU1 Above",   subtitle: "Today L1 above Prev U1",   icon: TrendingUp },
+  { id: "compressed",        label: "COMPRESSED",   subtitle: "RRSS-C only (today's R1 down, S1 up vs prev)",   icon: TrendingUp },
   { id: "littleabove",        label: "Little ABOVE",  subtitle: "Narrow CPR Above PCPR",    icon: TrendingUp },
   { id: "littlebelow",        label: "Little BELOW",  subtitle: "Narrow CPR Below PCPR",    icon: TrendingDown },
   { id: "structure-bigabove", label: "Big ABOVE",     subtitle: "Wide CPR Above PCPR",      icon: BarChart },
