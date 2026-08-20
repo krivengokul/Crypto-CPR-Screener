@@ -325,7 +325,6 @@ import {
   passesPattern,
   distanceFromCPR,
   pdhPdlStatus,
-  isRisingAboveTC,
   computePrevPattern,
   getSubFilterDirection,
   cprDistancePct,
@@ -420,8 +419,6 @@ export interface ScreenerTableRowProps {
   canShowCombined: boolean;
   activeTab: ActiveTab;
   activePattern: string;
-  showHAU1: boolean;
-  showBigBelowPMiniPL3: boolean;
 }
 
 /**
@@ -438,7 +435,6 @@ export default function ScreenerTableRow({
   canShowCombined,
   activeTab,
   activePattern,
-  showBigBelowPMiniPL3,
 }: ScreenerTableRowProps) {
   const sym = splitSymbol(r.symbol, r.source);
 
@@ -530,14 +526,6 @@ export default function ScreenerTableRow({
                 )}
               </div>
               <span className="text-muted-foreground text-xs font-normal">/{sym.quote}</span>
-              {isRisingAboveTC(r) && activePattern === "structure-bigbelow" && showBigBelowPMiniPL3 && (
-                <span
-                  className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-green-500/15 text-green-400 border border-green-500/30 mt-0.5 inline-block w-fit"
-                  title="Currently trading above today's TC"
-                >
-                  Rising
-                </span>
-              )}
             </div>
           </div>
         </td>

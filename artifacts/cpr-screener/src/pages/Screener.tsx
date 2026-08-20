@@ -40,10 +40,6 @@ import {
   getWidthCategory,
   distanceFromCPR,
   pdhPdlStatus,
-  isRisingAboveTC,
-  isCprAbovePU4,
-  isL1AbovePU4,
-  isPWideAbove,
   cprDistancePct,
   levelsInDistanceRange,
   getPatternInfo,
@@ -72,8 +68,8 @@ function ViewCount({ id, counts }: { id: string; counts: Record<string, number> 
  * GENERIC_VIEW_CATEGORIES — left-nav categories whose Views (sub-patterns)
  * are rendered generically (see the "Generic Views" block in the JSX below
  * and the matching fallback in getActivePool), instead of each sub-pattern
- * getting its own hand-written useState + button + pool block like
- * "littleabove"/"littlebelow"/etc. do above it.
+ * getting its own hand-written useState + button + pool block like the
+ * older hardcoded categories above it used to.
  *
  * Why: every new sub-pattern under those older categories needs a new
  * useState, a cleanup-effect entry, a getActivePool() branch, an
@@ -109,10 +105,10 @@ const GENERIC_VIEW_CATEGORIES = new Set([
 
 /** View ids used by hand-written Views filter buttons that aren't listed in
  *  ViewsSidebar's `Views` map, but still need a "(n)" count. */
-const EXTRA_VIEW_COUNT_IDS = ["la-allstepup", "eXLo-L4U4-U4", "9AM:SSRRHHLLA-U4:11PM", "HA-U1>PU4"];
+const EXTRA_VIEW_COUNT_IDS = ["eXLo-L4U4-U4"];
 
 export default function Screener({
-  activePattern = "littleabove",
+  activePattern = "levelsabove",
   scanKey = 0,
   onCounts,
   onSignalSymbols,
@@ -1096,47 +1092,12 @@ export default function Screener({
               <button
                 onClick={() => {
                   setShowAll((v) => !v);
-                  setShowLABothTiny(false);
-                  setShowLAAllUp(false);
-                  setShowLA1LHr(false);
-                  setShowLAPL12CL23(false);
-                  setShowLACompressed(false);
-                  setShowLAT1U46AM(false);
-                  setShowLASsHiL4U4FAU42AM(false);
-                  setShowLAMeMieXL4U3U46PM(false);
                   setShowOutsideCPRCompressed(false);
                   setShowOutsideCPReXHrL3U3AU4(false);
                   // NEW: also clear the generic Views (sub-pattern) selection —
                   // covers inside-cpr and every other GENERIC_VIEW_CATEGORIES
                   // category, so "Show All" fully resets state everywhere.
                   setActiveGenericSubView(null);
-                  setShowBigBelowPMiniPL3(false);
-                  setShowBigBelowPMiniRising(false);
-                  setShowExpU3LtPU4(false);
-                  setShowBigBeloweXU4L3AU4(false);
-                  setShowBigBelowL1LtPL4(false);
-                  setShowL1LtPL4CprLtPL4(false);
-                  setShowBigBeloweXU4L2AU4(false);
-                  setShowBigAbovePL34CL4(false);
-                  setShowBAComp(false);
-                  setShowHAU1(false);
-                  setShowHAU1CprAbovePU4(false);
-                  setShowHAU1L1AbovePU4(false);
-                  setShowHAU1PWideAbove(false);
-                  setShowHRHAL(false);
-                  setShowHA55HrL4U34FAU4(false);
-                  setShowHiL4U4FAU4(false);
-                  setShow1ScoHiFAU4(false);
-                  setShow2ScoHiFAU4(false);
-                  setShowBAeXL4U2(false);
-                  setShowBATiMicOL2U2(false);
-                  setShowLBCmprss(false);
-                  setShowLBC34(false);
-                  setShowLBE11(false);
-                  setShowLBC2L2U2(false);
-                  setShowLBBothTiny(false);
-                  setShowLBAllUp(false);
-                  setShowLBL1cOU1L2(false);
                   setShowExpU4PU4(false);
                   setShowExpU3PU3(false);
                   setShowOBLoRRHHLLA(false);
@@ -1533,301 +1494,6 @@ export default function Screener({
                 title="Show only rows matching 6PM:LaLa->U4:2AM"
               >
                 {showOBHi6PMLaLa ? "✕ 6PM:LaLa->U4:2AM" : "6PM:LaLa->U4:2AM"}<ViewCount id={"6PM:LaLa->U4:2AM"} counts={viewCounts} />
-              </button>
-            )}
-            {activeSectionKey === "structure-bigbelow" && !showAll && (
-              <button
-                onClick={() => {
-                  setShowBigBelowPMiniPL3((v) => !v);
-                  setShowBigBelowPMiniRising(false);
-                  pMiniRisingAlertedRef.current.clear();
-                  setShowExpU3LtPU4(false);
-                  setShowBigBeloweXU4L3AU4(false);
-                  setShowBigBelowL1LtPL4(false);
-                  setShowL1LtPL4CprLtPL4(false);
-                  setShowBigBeloweXU4L2AU4(false);
-                }}
-                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                  showBigBelowPMiniPL3
-                    ? "border-cyan-400 text-cyan-400"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-                title="Compressed, Mini PCPR, PL34CL4, Prev U3 above U4: Target-APU4"
-              >
-                {showBigBelowPMiniPL3 ? "✕ pMini-L34C4/U3>4" : "pMini-L34C4/U3>4"}<ViewCount id={"bigbelow-pmini-pl3"} counts={viewCounts} />
-              </button>
-            )}
-            {/* NEW: eX-U4L34 button — Big Below, placed next to pMini-L34C4/U3>4 */}
-            {activeSectionKey === "structure-bigbelow" && !showAll && (
-              <button
-                onClick={() => {
-                  setShowExpU3LtPU4((v) => !v);
-                  setShowBigBelowPMiniPL3(false);
-                  setShowBigBelowPMiniRising(false);
-                  pMiniRisingAlertedRef.current.clear();
-                  setShowBigBeloweXU4L3AU4(false);
-                  setShowBigBelowL1LtPL4(false);
-                  setShowL1LtPL4CprLtPL4(false);
-                  setShowBigBeloweXU4L2AU4(false);
-                }}
-                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                  showExpU3LtPU4
-                    ? "border-rose-400 text-rose-400"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-                title="Todays U4 is above PU4 and Todays L3/L4 below PL4: Target:Far Below PL4"
-              >
-                {showExpU3LtPU4 ? "✕ eX-U4L34" : "eX-U4L34"}<ViewCount id={"eX-U4L34"} counts={viewCounts} />
-              </button>
-            )}
-            {/* NEW: eXU4L3-AU4 button — Big Below, placed next to eX-U4L3 (moved from LittleCPR Below) */}
-            {activeSectionKey === "structure-bigbelow" && !showAll && (
-              <button
-                onClick={() => {
-                  setShowBigBeloweXU4L3AU4((v) => !v);
-                  setShowBigBelowPMiniPL3(false);
-                  setShowBigBelowPMiniRising(false);
-                  pMiniRisingAlertedRef.current.clear();
-                  setShowExpU3LtPU4(false);
-                  setShowBigBelowL1LtPL4(false);
-                  setShowL1LtPL4CprLtPL4(false);
-                  setShowBigBeloweXU4L2AU4(false);
-                }}
-                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                  showBigBeloweXU4L3AU4
-                    ? "border-green-400 text-green-400"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-                title="Wide Below: Prev R4 between today's R3/R4 AND Prev S4 above today's S3, Today CPR width 0.5%-2%, Prev CPR width <0.5%"
-              >
-                {showBigBeloweXU4L3AU4 ? "✕ eXU4L3-AU4" : "eXU4L3-AU4"}<ViewCount id={"eXU4L3-AU4"} counts={viewCounts} />
-              </button>
-            )}
-            {/* NEW: L1<pL4 button — Big Below, placed next to eX-U4L34 */}
-            {activeSectionKey === "structure-bigbelow" && !showAll && (
-              <button
-                onClick={() => {
-                  setShowBigBelowL1LtPL4((v) => !v);
-                  setShowL1LtPL4CprLtPL4(false);
-                  setShowBigBelowPMiniPL3(false);
-                  setShowBigBelowPMiniRising(false);
-                  pMiniRisingAlertedRef.current.clear();
-                  setShowExpU3LtPU4(false);
-                  setShowBigBeloweXU4L3AU4(false);
-                  setShowBigBeloweXU4L2AU4(false);
-                }}
-                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                  showBigBelowL1LtPL4
-                    ? "border-amber-400 text-amber-400"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-                title="Todays S1 below Prev S4 AND Todays R2 above Prev R4 (Wide CPR Below Prev CPR)"
-              >
-                {showBigBelowL1LtPL4 ? "✕ L1<pL4" : "L1<pL4"}<ViewCount id={"l1-lt-pl4"} counts={viewCounts} />
-              </button>
-            )}
-            {/* NEW: CPR<pL4 sub-toggle — restrict L1<pL4 results to rows where today's TC is below prev day's S4 */}
-            {activeSectionKey === "structure-bigbelow" && !showAll && showBigBelowL1LtPL4 && (
-              <button
-                onClick={() => setShowL1LtPL4CprLtPL4((v) => !v)}
-                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                  showL1LtPL4CprLtPL4
-                    ? "border-green-400 text-green-400"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-                title="Only show symbols where today's TC is below prev day's S4"
-              >
-                {showL1LtPL4CprLtPL4 ? "✕ CPR<pL4" : "CPR<pL4"}
-              </button>
-            )}
-            {/* NEW: eXU4L2-AU4 button — Big Below, placed next to L1<pL4.
-                Pattern eXU4L2 + prev R3 above today's R3 + today R1/prev
-                S1 between the two pivots + prev CPR pSmall + today CPR 1%-2%. */}
-            {activeSectionKey === "structure-bigbelow" && !showAll && (
-              <button
-                onClick={() => {
-                  setShowBigBeloweXU4L2AU4((v) => !v);
-                  setShowBigBelowPMiniPL3(false);
-                  setShowBigBelowPMiniRising(false);
-                  pMiniRisingAlertedRef.current.clear();
-                  setShowExpU3LtPU4(false);
-                  setShowBigBeloweXU4L3AU4(false);
-                  setShowBigBelowL1LtPL4(false);
-                  setShowL1LtPL4CprLtPL4(false);
-                }}
-                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                  showBigBeloweXU4L2AU4
-                    ? "border-amber-400 text-amber-400"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-                title="Wide Below + eXU4L2 (Prev R4 inside today's R3/R4, Prev S4 inside today's S1/S2), Prev R3 > Today R3, Today R1 or Prev S1 between the two Pivots, Prev CPR pSmall (0.6%-1.1%), Today CPR 1%-2%"
-              >
-                {showBigBeloweXU4L2AU4 ? "✕ eXU4L2-AU4" : "eXU4L2-AU4"}<ViewCount id={"eXU4L2-AU4"} counts={viewCounts} />
-              </button>
-            )}
-            {/* NEW: 1T-cOU4L4-ApU4:3PM button — Big Below, placed next to eXU4L2-AU4.
-                cOU4L4 + prev R1 between today R1/R2 + today S1 between prev S1/S2 +
-                prev PDH > prev R1 + prev CPR pMicro + today CPR Tiny. */}
-            {activeSectionKey === "structure-bigbelow" && !showAll && (
-              <button
-                onClick={() => {
-                  setShowBigBelow1TcOU4L43PM((v) => !v);
-                  setShowBigBelowPMiniPL3(false);
-                  setShowBigBelowPMiniRising(false);
-                  pMiniRisingAlertedRef.current.clear();
-                  setShowExpU3LtPU4(false);
-                  setShowBigBeloweXU4L3AU4(false);
-                  setShowBigBelowL1LtPL4(false);
-                  setShowL1LtPL4CprLtPL4(false);
-                  setShowBigBeloweXU4L2AU4(false);
-                }}
-                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                  showBigBelow1TcOU4L43PM
-                    ? "border-fuchsia-400 text-fuchsia-400"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-                title="Wide Below + cOU4L4 + Prev R1 between Today R1/R2 + Today S1 between Prev S1/S2 + Prev PDH > Prev R1 + Prev CPR pMicro (<=0.10%) + Today CPR Tiny (0.10%-0.22%)"
-              >
-                {showBigBelow1TcOU4L43PM ? "✕ 1T-cOU4L4-ApU4:3PM" : "1T-cOU4L4-ApU4:3PM"}<ViewCount id={"1T-cOU4L4-ApU4:3PM"} counts={viewCounts} />
-              </button>
-            )}
-            {/* NEW: live sub-toggle — restrict pMini results to rows currently trading above today's TC */}
-            {activeSectionKey === "structure-bigbelow" && !showAll && showBigBelowPMiniPL3 && (
-              <button
-                onClick={() => setShowBigBelowPMiniRising((v) => !v)}
-                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                  showBigBelowPMiniRising
-                    ? "border-green-400 text-green-400"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-                title="Only show symbols currently trading above today's TC"
-              >
-                {showBigBelowPMiniRising ? "✕ Rising" : "Rising"}
-              </button>
-            )}
-            {/* NEW: sound alert toggle — scoped to pMini-L34C4/U3>4 only */}
-            {activeSectionKey === "structure-bigbelow" && !showAll && showBigBelowPMiniPL3 && (
-              <button
-                onClick={() => {
-                  setPMiniAlertsEnabled((v) => {
-                    const next = !v;
-                    if (next) {
-                      try {
-                        if (!audioCtxRef.current) {
-                          const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-                          audioCtxRef.current = new Ctx();
-                        }
-                        audioCtxRef.current.resume();
-                      } catch { /* silent */ }
-                      playPMiniAlertSound();
-                    }
-                    return next;
-                  });
-                }}
-                className={`text-xs px-2.5 py-1 rounded border transition-colors flex items-center gap-1 ${
-                  pMiniAlertsEnabled
-                    ? "border-yellow-400 text-yellow-400"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-                title="Play a sound whenever a pMini coin newly crosses above today's TC"
-              >
-                {pMiniAlertsEnabled ? <Bell className="w-3 h-3" /> : <BellOff className="w-3 h-3" />}
-                {pMiniAlertsEnabled ? "Alerts On" : "Alerts Off"}
-              </button>
-            )}
-            {activeSectionKey === "structure-bigabove" && !showAll && (
-              <button
-                onClick={() => { setShowBigAbovePL34CL4((v) => !v); setShowBAComp(false); setShowHAU1(false); setShowHAU1CprAbovePU4(false); setShowHAU1L1AbovePU4(false); setShowHAU1PWideAbove(false); setShowHRHAL(false); }}
-                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                  showBigAbovePL34CL4
-                    ? "border-emerald-400 text-emerald-300 bg-emerald-500/10"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-                title="9AM:SSRRHHLLA-U4:11PM — BigCPR Above + SSRRAbove + HHLLAbove + PDHLAbove (entry ~9AM, target U4 by ~11PM)"
-              >
-                {showBigAbovePL34CL4 ? "✕ 9AM:SSRRHHLLA-U4:11PM" : "9AM:SSRRHHLLA-U4:11PM"}<ViewCount id={"9AM:SSRRHHLLA-U4:11PM"} counts={viewCounts} />
-              </button>
-            )}
-            {/* NEW: BAComp-l3>pl1/u3>pu1 button — inside BigCPR Above, next to Show All */}
-            {activeSectionKey === "structure-bigabove" && !showAll && (
-              <button
-                onClick={() => { setShowBAComp((v) => !v); setShowBigAbovePL34CL4(false); setShowHAU1(false); setShowHAU1CprAbovePU4(false); setShowHAU1L1AbovePU4(false); setShowHAU1PWideAbove(false); setShowHRHAL(false); }}
-                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                  showBAComp
-                    ? "border-sky-400 text-sky-400"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-                title="BigAbove: Compressed inside PU2: Target:U4"
-              >
-                {showBAComp ? "✕ Inside PUL2" : "Inside PUL2"}<ViewCount id={"bacomp-l3>pl1/u3>pu1"} counts={viewCounts} />
-              </button>
-            )}
-            {/* NEW: U1>PU4 button — inside BigCPR Above, next to Inside PUL2 (moved from left-nav) */}
-            {activeSectionKey === "structure-bigabove" && !showAll && (
-              <button
-                onClick={() => {
-                  setShowHAU1((v) => !v);
-                  setShowBigAbovePL34CL4(false);
-                  setShowBAComp(false);
-                  setShowHAU1CprAbovePU4(false);
-                  setShowHAU1L1AbovePU4(false);
-                  setShowHAU1PWideAbove(false);
-                  setShowHRHAL(false);
-                }}
-                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                  showHAU1
-                    ? "border-emerald-400 text-emerald-400"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-                title="Todays U1> Previous U4"
-              >
-                {showHAU1 ? "✕ U1>PU4" : "U1>PU4"}<ViewCount id={"HA-U1>PU4"} counts={viewCounts} />
-              </button>
-            )}
-            {/* NEW: pWideAbove button — nested under U1>PU4, independent of the
-                CPR>PU4/L1>PU4 chain. Prev CPR wider than pp-CPR AND Prev CPR above pp-CPR. */}
-            {activeSectionKey === "structure-bigabove" && !showAll && showHAU1 && (
-              <button
-                onClick={() => setShowHAU1PWideAbove((v) => !v)}
-                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                  showHAU1PWideAbove
-                    ? "border-fuchsia-400 text-fuchsia-400"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-                title="Prev day's CPR wider than pp-CPR AND Prev CPR sits above pp-CPR"
-              >
-                {showHAU1PWideAbove ? "✕ pWideAbove" : "pWideAbove"}
-              </button>
-            )}
-            {/* NEW: CPR>PU4 sub-toggle — restrict U1>PU4 results to rows where today's BC is above prev day's R4 */}
-            {activeSectionKey === "structure-bigabove" && !showAll && showHAU1 && (
-              <button
-                onClick={() => {
-                  setShowHAU1CprAbovePU4((v) => !v);
-                  setShowHAU1L1AbovePU4(false);
-                }}
-                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                  showHAU1CprAbovePU4
-                    ? "border-green-400 text-green-400"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-                title="Only show symbols where today's BC is above prev day's R4"
-              >
-                {showHAU1CprAbovePU4 ? "✕ CPR>PU4" : "CPR>PU4"}
-              </button>
-            )}
-            {/* NEW: L1>PU4 sub-toggle — nested on top of CPR>PU4, restrict further to rows where today's S1 is above prev day's R4 */}
-            {activeSectionKey === "structure-bigabove" && !showAll && showHAU1 && showHAU1CprAbovePU4 && (
-              <button
-                onClick={() => setShowHAU1L1AbovePU4((v) => !v)}
-                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                  showHAU1L1AbovePU4
-                    ? "border-lime-400 text-lime-400"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-                title="Only show symbols where today's S1 is above prev day's R4"
-              >
-                {showHAU1L1AbovePU4 ? "✕ L1>PU4" : "L1>PU4"}
               </button>
             )}
           </div>
@@ -2268,8 +1934,6 @@ export default function Screener({
                         canShowCombined={canShowCombined}
                         activeTab={activeTab}
                         activePattern={activeSectionKey}
-                        showHAU1={showHAU1}
-                        showBigBelowPMiniPL3={showBigBelowPMiniPL3}
                       />
                     );
                   })}
