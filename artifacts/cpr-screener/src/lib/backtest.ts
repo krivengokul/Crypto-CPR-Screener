@@ -171,18 +171,20 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
   },
-  // NEW: "SMi-L1pU1>-APU4:11PM" — nested under the new "COMPRESSED"
-  // category (moved out of CPR Inside). Bullish, targets "Above PU4",
-  // i.e. prev day's R4.
+  // RENAMED from "SMi-L1pU1>-APU4:11PM": all previous conditions removed.
+  // "6A:HBLA-SSLL-R4:6P" — nested under "COMPRESSED". Condition:
+  // compressed + HHLL-C + SSLL-AA + RRHH-BB + SSGap + LLGap — see
+  // ScreenerUtils.tsx. Bullish, entry ~6AM, targets today's own R4 (U4)
+  // by ~6PM.
   {
-    key: "SMi-L1pU1>-APU4:11PM",
-    label: "SMi-L1pU1>-APU4:11PM",
+    key: "6A:HBLA-SSLL-R4:6P",
+    label: "6A:HBLA-SSLL-R4:6P",
     direction: "bullish",
-    targetLabel: "PU4 (prev day's R4)",
-    getTarget: (r) => r.prevCPR.r4,
+    targetLabel: "U4 (today's R4)",
+    getTarget: (r) => r.todayCPR.r4,
   },
   // NEW: "S0-L1pU1>-AU4:7PM" — second sub-pattern under "COMPRESSED".
-  // Same compressed base condition as SMi-L1pU1>-APU4:11PM, but the
+  // Same compressed base condition as 6A:HBLA-SSLL-R4:6P, but the
   // 1-Line CPR variant (compressionRatio == 0, today's R1 < prev TC).
   // Bullish, targets AU4 (prev day's R4) by ~7PM.
   {
@@ -546,11 +548,11 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
     ],
   },
   // NEW: "COMPRESSED" left-nav section (first item), nesting the
-  // "SMi-L1pU1>-APU4:11PM" pattern that used to live under CPR Inside.
+  // "6A:HBLA-SSLL-R4:6P" pattern that used to live under CPR Inside.
   {
     key: "compressed",
     label: "COMPRESSED",
-    subPatternKeys: ["SMi-L1pU1>-APU4:11PM", "S0-L1pU1>-AU4:7PM", "9AM:RHLB-RRHHGap:5AM"],
+    subPatternKeys: ["6A:HBLA-SSLL-R4:6P", "S0-L1pU1>-AU4:7PM", "9AM:RHLB-RRHHGap:5AM"],
   },
   // NEW: "EXPANDED" left-nav section, mirroring "COMPRESSED" above but for
   // RRSS-E (today's R1 up AND today's S1 down vs prev — levels widening

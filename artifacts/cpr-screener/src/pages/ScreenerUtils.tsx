@@ -626,8 +626,6 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         (r.todayCPR.HLSwitch !== "HL-B" ||
           (r.prevCPR.prevHigh > r.todayCPR.r1 && r.todayCPR.prevLow > r.prevCPR.s1))
       );
-    // NEW: SMi-L1pU1>-APU4:11PM — Inside CPR + compressed (from cpr.ts)
-    // + compression ratio >= 30. Target ApU4 by 11PM.
     // NEW: pCPR>U1 CPR>pL1 — prev Pivot inside today's R1/R2 band and
     // today's BC inside prev's S1/BC band.
     // NEW: LEVELS ABOVE — today's TC inside prev's R1/R2 band AND today's S1
@@ -747,11 +745,23 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return r.compressed ; 
     case "expanded":
       return r.expanded ;
-    case "SMi-L1pU1>-APU4:11PM": {
-      return r.compressed && r.prevCPR.HLSwitch === "HL-A" && !r.outCPR && r.compressionRatio >= 30;
+    // RENAMED from "SMi-L1pU1>-APU4:11PM": all previous conditions removed.
+    // "6A:HBLA-SSLL-R4:6P" — sub-pattern under "COMPRESSED". Condition:
+    // compressed + HHLLCategory HHLL-C + SSLLCategory SSLL-AA + RRHHCategory
+    // RRHH-BB + RRSSGapCategory SSGap + PDHPDLGapCategory LLGap. Bullish,
+    // entry ~6AM, targets today's own R4 (U4) by ~6PM.
+    case "6A:HBLA-SSLL-R4:6P": {
+      return (
+        r.compressed &&
+        r.HHLLCategory === "HHLL-C" &&
+        r.SSLLCategory === "SSLL-AA" &&
+        r.RRHHCategory === "RRHH-BB" &&
+        r.RRSSGapCategory === "SSGap" &&
+        r.PDHPDLGapCategory === "LLGap"
+      );
     }
     // NEW: S0-L1pU1>-AU4:7PM — second sub-pattern under "COMPRESSED".
-    // Same compressed base as SMi-L1pU1>-APU4:11PM, but a 1-Line CPR
+    // Same compressed base as 6A:HBLA-SSLL-R4:6P, but a 1-Line CPR
     // (compressionRatio == 0) with today's R1 below prev day's TC.
     // Target AU4 (prev day's R4) by ~7PM.
     case "S0-L1pU1>-AU4:7PM": {
@@ -1055,7 +1065,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     { key: "6PM:APHS1A-FAU4:9PM", direction: "up" },
   ],
   "compressed": [
-    { key: "SMi-L1pU1>-APU4:11PM", direction: "up" },
+    { key: "6A:HBLA-SSLL-R4:6P", direction: "up" },
     { key: "S0-L1pU1>-AU4:7PM", direction: "up" },
     { key: "9AM:RHLB-RRHHGap:5AM", direction: "down" },
   ],
