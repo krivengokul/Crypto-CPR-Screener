@@ -758,12 +758,22 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return (r.compressed && r.prevCPR.HLSwitch === "HL-A" && (r.todayCPR.HLSwitch === "HL-A" || r.todayCPR.HLSwitch === "HL=" )
                     && !r.outCPR && (r.todayCPR.r1 < r.prevCPR.tc) && r.compressionRatio == 0); // 1 Line CPR ,  R1< PCPR.tc
     }
-     case "T0-L1pU1>-BPL4:5AM": {
-      return (r.compressed && r.prevCPR.HLSwitch === "HL-A" && r.todayCPR.HLSwitch === "HL-B"
-              && !r.outCPR && r.compressionRatio > 300 && r.prevCPR.tc < r.todayCPR.s1) || //pTiny, Mini, pcpr < S1
-              (r.compressed && r.prevCPR.HLSwitch === "HL-A" && (r.todayCPR.HLSwitch === "HL-A" || r.todayCPR.HLSwitch === "HL=" ) 
-              && !r.outCPR && (r.todayCPR.tc < r.prevCPR.tc) && r.compressionRatio == 0); // 1 Line CPR , - todayCPR.tc < PCPR.tc
-    }
+    // RENAMED from "T0-L1pU1>-BPL4:5AM": all previous conditions removed.
+    // "9AM:RHLB-RRHHGap:5AM" — third sub-pattern under "COMPRESSED".
+    // Condition: compressed + RRSSGapCategory RRGap (today's R1 gap vs
+    // prev's R1 larger than the S1 gap) + RRHHCategory RRHH-BB (today's
+    // R1 AND today's PDH both fully below prev's R1/PDH) + HHLLCategory
+    // HHLL-B (today's PDH/PDL both below prev's) + PDHPDLGapCategory
+    // HHGap (today's PDH gap vs prev's PDH larger than the PDL gap).
+    // Bearish, targets today's own S2 (L2) by ~5AM.
+    case "9AM:RHLB-RRHHGap:5AM":
+      return (
+        r.compressed &&
+        r.RRSSGapCategory === "RRGap" &&
+        r.RRHHCategory === "RRHH-BB" &&
+        r.HHLLCategory === "HHLL-B" &&
+        r.PDHPDLGapCategory === "HHGap"
+      );
     case "outside-cpr":
       return r.outCPR;
     case "outside-cpr-compressed":
@@ -1047,7 +1057,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
   "compressed": [
     { key: "SMi-L1pU1>-APU4:11PM", direction: "up" },
     { key: "S0-L1pU1>-AU4:7PM", direction: "up" },
-    { key: "T0-L1pU1>-BPL4:5AM", direction: "down" },
+    { key: "9AM:RHLB-RRHHGap:5AM", direction: "down" },
   ],
   "inside-cpr": [
     { key: "8AM:CoLApHA-U4+1:8AM", direction: "up" },

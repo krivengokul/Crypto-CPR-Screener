@@ -192,16 +192,17 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "AU4 (prev day's R4)",
     getTarget: (r) => r.prevCPR.r4,
   },
-  // NEW: "T0-L1pU1>-BPL4:5AM" — third sub-pattern under "COMPRESSED".
-  // Bearish counterpart to SMi-L1pU1>-APU4:11PM: same compressed base
-  // condition (today & prev PDH/L above, not Outside CPR), but targets a
-  // move BELOW prev day's S4 (PL4) by ~5AM instead of above PU4.
+  // RENAMED from "T0-L1pU1>-BPL4:5AM": all previous conditions removed.
+  // "9AM:RHLB-RRHHGap:5AM" — third sub-pattern under "COMPRESSED".
+  // Condition: compressed + RRSSGapCategory RRGap + RRHHCategory RRHH-BB +
+  // HHLLCategory HHLL-B + PDHPDLGapCategory HHGap — see ScreenerUtils.tsx.
+  // Bearish, targets today's own S2 (L2) by ~5AM.
   {
-    key: "T0-L1pU1>-BPL4:5AM",
-    label: "T0-L1pU1>-BPL4:5AM",
+    key: "9AM:RHLB-RRHHGap:5AM",
+    label: "9AM:RHLB-RRHHGap:5AM",
     direction: "bearish",
-    targetLabel: "PL4 (prev day's S4)",
-    getTarget: (r) => r.prevCPR.s4,
+    targetLabel: "L2 (today's S2)",
+    getTarget: (r) => r.todayCPR.s2,
   },
   // NEW: "ss-eXU4L1-U4:10PM" — nested under the "L1 < pL4" category's
   // "eXU4L1" Pattern. Bullish, targets U4 (today's R4)
@@ -549,7 +550,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
   {
     key: "compressed",
     label: "COMPRESSED",
-    subPatternKeys: ["SMi-L1pU1>-APU4:11PM", "S0-L1pU1>-AU4:7PM", "T0-L1pU1>-BPL4:5AM"],
+    subPatternKeys: ["SMi-L1pU1>-APU4:11PM", "S0-L1pU1>-AU4:7PM", "9AM:RHLB-RRHHGap:5AM"],
   },
   // NEW: "EXPANDED" left-nav section, mirroring "COMPRESSED" above but for
   // RRSS-E (today's R1 up AND today's S1 down vs prev — levels widening

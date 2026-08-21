@@ -225,12 +225,15 @@ export const Views: Record<string, SubPattern[]> = {
       activeText:  "#fcd34d",              // amber-300 text
       activeBg:    "rgba(245, 158, 11, 0.14)", // amber-500 tint
     },
-    // NEW: T0-L1pU1>-BPL4:5AM — bearish counterpart, targets prev day's
-    // S4 (PL4) by ~5AM. Rose color family to visually distinguish from
-    // the bullish (green) SMi-L1pU1>-APU4:11PM sibling.
+    // RENAMED from "T0-L1pU1>-BPL4:5AM": all previous conditions removed.
+    // "9AM:RHLB-RRHHGap:5AM" — bearish counterpart, condition is
+    // compressed + RRHH-BB + HHLL-B + RRGap + HHGap (see
+    // ScreenerUtils.tsx), targets today's own S2 (L2) by ~5AM. Rose
+    // color family to visually distinguish from the bullish (green)
+    // SMi-L1pU1>-APU4:11PM sibling.
     {
-      id: "T0-L1pU1>-BPL4:5AM",
-      label: "T0-L1pU1>-BPL4:5AM",
+      id: "9AM:RHLB-RRHHGap:5AM",
+      label: "9AM:RHLB-RRHHGap:5AM",
       activeColor: "#fb7185",              // rose-400 border
       activeText:  "#fda4af",              // rose-300 text
       activeBg:    "rgba(244, 63, 94, 0.14)", // rose-500 tint

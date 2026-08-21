@@ -368,10 +368,10 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             <div className="text-xs font-semibold text-amber-400 mb-1">Pivot Level: 1-Line CPR</div>
             <div className="text-xs text-muted-foreground">Today &amp; Prev PDH/L Above, not Outside CPR — single-line CPR (compression 0%) &amp; today&apos;s R1 below Prev TC</div>
           </>
-        ) : activePattern === "T0-L1pU1>-BPL4:5AM" ? (
+        ) : activePattern === "9AM:RHLB-RRHHGap:5AM" ? (
           <>
-            <div className="text-xs font-semibold text-rose-400 mb-1">Pivot Level: Tiny / 1-Line Inside</div>
-            <div className="text-xs text-muted-foreground">Today &amp; Prev PDH/L Above, not Outside CPR — PCPR &gt;300% compressed &amp; below today&apos;s S1, or a single-line inside CPR</div>
+            <div className="text-xs font-semibold text-rose-400 mb-1">RRGap&nbsp;&nbsp;RRHH-BB&nbsp;&nbsp;HHLL-B&nbsp;&nbsp;HHGap</div>
+            <div className="text-xs text-muted-foreground">Compressed, R1 gap larger than S1 gap (RRGap), today&apos;s R1 and PDH both fully below prev&apos;s R1/PDH (RRHH-BB), today&apos;s PDH/PDL both below prev&apos;s (HHLL-B), and today&apos;s PDH gap larger than the PDL gap (HHGap)</div>
           </>
         ) : activePattern === "falling" ? (
           <>
@@ -592,10 +592,10 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             <div className="text-xs font-semibold text-amber-400 mb-1">Target: AU4&nbsp;&nbsp;Time: 7PM</div>
             <div className="text-xs text-emerald-400/80">Expected move above prev U4 (AU4) by ~7PM</div>
           </>
-        ) : activePattern === "T0-L1pU1>-BPL4:5AM" ? (
+        ) : activePattern === "9AM:RHLB-RRHHGap:5AM" ? (
           <>
-            <div className="text-xs font-semibold text-rose-400 mb-1">Target: BPL4&nbsp;&nbsp;Time: 5AM</div>
-            <div className="text-xs text-muted-foreground">Expected move below prev S4 (PL4) by ~5AM</div>
+            <div className="text-xs font-semibold text-rose-400 mb-1">Target: L2&nbsp;&nbsp;Time: 5AM</div>
+            <div className="text-xs text-muted-foreground">Expected move down to today&apos;s S2 (L2) by ~5AM</div>
           </>
         ) : null}
       </div>
