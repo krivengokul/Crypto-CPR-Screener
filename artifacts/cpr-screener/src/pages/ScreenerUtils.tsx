@@ -748,16 +748,28 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // RENAMED from "SMi-L1pU1>-APU4:11PM": all previous conditions removed.
     // "6A:HBLA-SSLL-R4:6P" — sub-pattern under "COMPRESSED". Condition:
     // compressed + HHLLCategory HHLL-C + SSLLCategory SSLL-AA + RRHHCategory
-    // RRHH-BB + RRSSGapCategory SSGap + PDHPDLGapCategory LLGap. Bullish,
-    // entry ~6AM, targets today's own R4 (U4) by ~6PM.
+    // RRHH-BB + RRSSGapCategory SSGap + PDHPDLGapCategory LLGap, PLUS one of
+    // the following prev-day-pattern/today-flag combos:
+    //   p-eXL3U1 & cOL3U3   OR   p-eXL2U1 & cOL2U2   OR
+    //   p-eXL4U3 & cOL2U2   OR   p-eXL3U1 & cOL2U2
+    // ("p-xxx" = prev day's own pivot sub-label via computePrevPattern;
+    // cOL3U3/cOL2U2 = today's own flags). Bullish, entry ~6AM, targets
+    // today's own R4 (U4) by ~6PM.
     case "6A:HBLA-SSLL-R4:6P": {
+      const prevPattern = computePrevPattern(r.prevCPR, r.ppCPR);
       return (
         r.compressed &&
         r.HHLLCategory === "HHLL-C" &&
         r.SSLLCategory === "SSLL-AA" &&
         r.RRHHCategory === "RRHH-BB" &&
         r.RRSSGapCategory === "SSGap" &&
-        r.PDHPDLGapCategory === "LLGap"
+        r.PDHPDLGapCategory === "LLGap" &&
+        (
+          (prevPattern === "eXL3U1" && r.cOL3U3) ||
+          (prevPattern === "eXL2U1" && r.cOL2U2) ||
+          (prevPattern === "eXL4U3" && r.cOL2U2) ||
+          (prevPattern === "eXL3U1" && r.cOL2U2)
+        )
       );
     }
     // NEW: "HLCOMP-ABOVE" — duplicate of "6A:HBLA-SSLL-R4:6P", added only

@@ -361,7 +361,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
         ) : activePattern === "6A:HBLA-SSLL-R4:6P" ? (
           <>
             <div className="text-xs font-semibold text-green-400 mb-1">HHLL-C&nbsp;&nbsp;SSLL-AA&nbsp;&nbsp;RRHH-BB&nbsp;&nbsp;SSGap&nbsp;&nbsp;LLGap</div>
-            <div className="text-xs text-muted-foreground">Compressed, today&apos;s PDH/PDL range narrowed on one side and held on the other (HHLL-C), today&apos;s S1/PDL band fully above prev&apos;s (SSLL-AA), today&apos;s R1/PDH band fully below prev&apos;s (RRHH-BB), today&apos;s S1 gap larger than the R1 gap (SSGap), and today&apos;s PDL gap larger than the PDH gap (LLGap)</div>
+            <div className="text-xs text-muted-foreground">Compressed, today&apos;s PDH/PDL range narrowed on one side and held on the other (HHLL-C), today&apos;s S1/PDL band fully above prev&apos;s (SSLL-AA), today&apos;s R1/PDH band fully below prev&apos;s (RRHH-BB), today&apos;s S1 gap larger than the R1 gap (SSGap), today&apos;s PDL gap larger than the PDH gap (LLGap), and one of: prev day&apos;s own pattern eXL3U1 with today&apos;s cOL3U3, prev day&apos;s own pattern eXL2U1 with today&apos;s cOL2U2, prev day&apos;s own pattern eXL4U3 with today&apos;s cOL2U2, or prev day&apos;s own pattern eXL3U1 with today&apos;s cOL2U2</div>
           </>
         ) : activePattern === "S0-L1pU1>-AU4:7PM" ? (
           <>
