@@ -608,7 +608,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
   // works with no further changes.
   {
     key: "u1-gt-pu4",
-    label: "U1 > pU4",
+    label: "ABOVE LEVEL4",
     // NEW: "eXL3U1" Pattern (arrow) — same shape as
     // cOU3L4/LoU3L3/eXL3TC/eXHiL2L1 elsewhere. Base condition = parent
     // u1-gt-pu4's condition AND the raw eXL3U1 flag (see

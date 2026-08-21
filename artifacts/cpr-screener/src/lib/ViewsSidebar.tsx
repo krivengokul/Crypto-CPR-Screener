@@ -372,11 +372,11 @@ export const Views: Record<string, SubPattern[]> = {
 };
 
 export const pivotcategories: Category[] = [
-  { id: "levelsabove",        label: "LEVELs ABOVE",    subtitle: "RRSS-A only (today's R1 up, S1 not down vs prev)", icon: TrendingUp },
+  { id: "levelsabove",        label: "LEVELs ABOVE",    subtitle: "RRSS-A only (today's R1 up, S1 not down vs prev), excludes ABOVE LEVEL4", icon: TrendingUp },
+  { id: "u1-gt-pu4",          label: "ABOVE LEVEL4",  subtitle: "Today R1 above Prev R4",   icon: TrendingUp },
   { id: "levelsbelow",    label: "LEVELs BELOW", subtitle: "RRSS-B only (today's R1 not up, S1 down vs prev)", icon: TrendingUp },
   { id: "compressed",        label: "COMPRESSED",   subtitle: "RRSS-C only (today's R1 down, S1 up vs prev)",   icon: TrendingUp },
   { id: "expanded",          label: "EXPANDED",     subtitle: "RRSS-E only (today's R1 up, S1 down vs prev)",   icon: TrendingUp },
-  { id: "u1-gt-pu4",          label: "U1>pU4",        subtitle: "Today R1 above Prev R4",   icon: TrendingUp },
   { id: "l1-lt-pl4",          label: "L1<pL4",        subtitle: "Today S1 below Prev S4",   icon: TrendingDown },
   { id: "inside-cpr",         label: "Inside CPR",     subtitle: "Inside CPR range",         icon: Crosshair },
   { id: "outside-cpr",        label: "Outside CPR",  subtitle: "Outside CPR range",        icon: Maximize2 },

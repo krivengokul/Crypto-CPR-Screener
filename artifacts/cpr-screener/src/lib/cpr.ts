@@ -155,8 +155,16 @@ export interface CPRPairFlags {
   LevelsBelow: boolean;
   // LevelsAbove — "LEVELS ABOVE": RRSS-A only (today's R1 up AND today's S1
   // not down vs prev, i.e. same tolerance-aware test as SSRRCategory ===
-  // "RRSS-A"). Formerly a two-clause CPR-band test named CPRs1Above; simplified.
+  // "RRSS-A"), AND NOT R1AbovePR4 (see below) — that carve-out belongs to
+  // "ABOVE LEVEL4" instead. Formerly a two-clause CPR-band test named
+  // CPRs1Above; simplified.
   LevelsAbove: boolean;
+  // R1AbovePR4 — "ABOVE LEVEL4" base condition: today's R1 above prev's R4
+  // (plain magnitude comparison, no tolerance — matches the raw
+  // `today.r1 > prev.r4` test formerly inlined at every "u1-gt-pu4" call
+  // site). Also subtracted out of LevelsAbove above so the two sections
+  // never share a symbol.
+  R1AbovePR4: boolean;
   // eXU3L1 — prev's R4 lands inside today's R2/R3 band (U3), AND prev's S4
   // lands inside today's BC/S1 band (L1). Same L1 support band as eXU2L1/
   // eXL1U1/eXL1BC but paired with the wider U3 (R2→R3) resistance band.
@@ -360,6 +368,7 @@ export interface CPRResult {
   expanded: boolean;
   LevelsBelow: boolean;
   LevelsAbove: boolean;
+  R1AbovePR4: boolean;
   eXU3L1: boolean;
   eXU3L2: boolean;
   eXU2TC: boolean;
@@ -934,8 +943,12 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
   // CPR-band condition (formerly named CPRs1Above) with the same
   // tolerance-aware R1/S1 direction test used for SSRRCategory ===
   // "RRSS-A": today's R1 up vs prev's R1, AND today's S1 not down vs
-  // prev's S1.
-  const LevelsAbove = r1DirVsPrev > 0 && s1DirVsPrev >= 0;
+  // prev's S1. Excludes R1AbovePR4 (see below) — a symbol whose today's
+  // R1 has already cleared prev's R4 belongs exclusively to the "ABOVE
+  // LEVEL4" (u1-gt-pu4) section, not LEVELS ABOVE, so it's carved out
+  // here at the source rather than in each caller.
+  const R1AbovePR4 = today.r1 > prev.r4;
+  const LevelsAbove = r1DirVsPrev > 0 && s1DirVsPrev >= 0 && !R1AbovePR4;
 
   // cOU1L1 / cOL1U1 — split by which side (R1 vs S1) moved further.
   const r1Move = Math.abs(prev.r1 - today.r1);
@@ -997,7 +1010,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
     cOU1L1, cOL1U1, cOU2L2, cOL2U2,
     HiL3U3, cOU1L3,
     eXL2U1, eXL3U1, eXL4U1, eXL1BC, eXL1CP, eXL1TC, eXL2BC, eXL3BC, eXL3CP,
-    eXL3TC, eXL4U2, eXL2U2, eXL2TC, eXL1U1, eXU1L1, eXU2L1, cOTCL2, compressed, expanded, LevelsBelow, LevelsAbove,
+    eXL3TC, eXL4U2, eXL2U2, eXL2TC, eXL1U1, eXU1L1, eXU2L1, cOTCL2, compressed, expanded, LevelsBelow, LevelsAbove, R1AbovePR4,
     eXU3L1, eXU3L2, eXU2TC, eXU2BC, eXU3TC, eXU2CP, eXU3CP, eXU3BC, eXU4L1, eXU4BC, LoCPL3, LoCPL2, LoTCL3,
     eXHiL2L1, eXLoL2L1, eXL2CP, eXL4TC, LoU3L2, cOL1U2, cOL1U3, HiL3U2,
   };

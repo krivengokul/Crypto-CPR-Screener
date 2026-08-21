@@ -137,10 +137,10 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
         ) : activePattern === "u1-gt-pu4" ? (
           <>
             <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-              <span className="text-xs font-semibold text-primary">U1&gt;pU4</span>
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500 text-white">U1&gt;PU4</span>
+              <span className="text-xs font-semibold text-primary">ABOVE LEVEL4</span>
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500 text-white">Above L4</span>
             </div>
-            <div className="text-xs text-muted-foreground">Today&apos;s R1 above prev day&apos;s R4</div>
+            <div className="text-xs text-muted-foreground">Today&apos;s R1 above prev day&apos;s R4 (also excluded from LEVELs ABOVE — a symbol here never appears there)</div>
           </>
         ) : activePattern === "l1-lt-pl4" ? (
           <>

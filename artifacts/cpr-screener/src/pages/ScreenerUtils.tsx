@@ -844,14 +844,14 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return (r.currentPrice < r.todayCPR.prevLow);
     // Standalone top-level category: same condition as the removed "HA-U1>PU4" Big Above view
     case "u1-gt-pu4":
-      return (r.cprRising && r.strWideCPR && r.todayCPR.r1 > r.prevCPR.r4);
+      return (r.cprRising && r.strWideCPR && r.R1AbovePR4);
     // NEW: 9AM:APHS1A-FAU4:4AM — U1>pU4 sub-pattern.
     // Condition: Big CPR + CPR Above (cprRising + strWideCPR) + today R1 above
     // prev R4 (parent U1>pU4) + Pattern eXL3U1 + compressionRatio > 300.
     // Legend labels: Pattern eXL3U1, PCPR Small, CPR Large. Target FAU4 @ 3PM.
     case "9AM:APHS1A-FAU4:4AM":
       return (
-        r.cprRising && r.strWideCPR && r.todayCPR.r1 > r.prevCPR.r4 &&   // U1 > pU4
+        r.cprRising && r.strWideCPR && r.R1AbovePR4 &&   // U1 > pU4
         r.eXL3TC &&
         r.todayCPR.bc > r.prevCPR.prevHigh &&
         r.todayCPR.s1 > r.prevCPR.tc
@@ -865,7 +865,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // day's S4) by ~4AM. Red color family.
     case "6AM:pX-APHS1A-pL4:4AM":
       return (
-        r.cprRising && r.strWideCPR && r.todayCPR.r1 > r.prevCPR.r4 &&   // U1 > pU4
+        r.cprRising && r.strWideCPR && r.R1AbovePR4 &&   // U1 > pU4
         r.eXL3TC &&
         r.todayCPR.bc > r.prevCPR.prevHigh &&
         r.todayCPR.s1 > r.prevCPR.tc &&
@@ -880,7 +880,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // Above U4 (today's R4) by ~4AM. Green color family.
     case "8AM:APHS1A-FAU4:4AM":
       return (
-       r.cprRising && r.strWideCPR && r.todayCPR.r1 > r.prevCPR.r4 &&   // U1 > pU4
+       r.cprRising && r.strWideCPR && r.R1AbovePR4 &&   // U1 > pU4
         r.eXL3U1 &&
         r.todayCPR.bc > r.prevCPR.prevHigh &&
         r.todayCPR.s1 > r.prevCPR.tc
@@ -898,7 +898,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return (
         r.cprRising &&
         r.strWideCPR &&
-        r.todayCPR.r1 > r.prevCPR.r4 &&
+        r.R1AbovePR4 &&
         r.eXL3TC &&
         r.prevCPR.widthPct > 0.10 && r.prevCPR.widthPct <= 0.22 &&   // Tiny
         r.todayCPR.widthPct > 5.00 && r.todayCPR.widthPct <= 10.00   // Mega
@@ -917,7 +917,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return (
         r.cprRising &&
         r.strWideCPR &&
-        r.todayCPR.r1 > r.prevCPR.r4 &&
+        r.R1AbovePR4 &&
         r.eXHiL2L1 &&
         (prevCat === "cOHigher" || prevCat === "cOLower")
       );
@@ -932,13 +932,13 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return (
         r.cprRising &&
         r.strWideCPR &&
-        r.todayCPR.r1 > r.prevCPR.r4 &&
+        r.R1AbovePR4 &&
         r.eXL4U1 &&
         r.prevCPR.widthPct > 5.00 && r.prevCPR.widthPct <= 10.00 &&   // pMega
         r.todayCPR.widthPct > 5.00 && r.todayCPR.widthPct <= 10.00    // Mega
       );
     case "HAThin-U1>PU4":
-      return (r.cprRising && r.strWideCPR && r.bothTight && r.todayCPR.r1 > r.prevCPR.r4);
+      return (r.cprRising && r.strWideCPR && r.bothTight && r.R1AbovePR4);
     // NEW: hR-HAL — BigCPR Above, top-level toggle next to Show All.
     // WideAbove (cprRising + strWideCPR) + Pattern: Higher (srHigher) +
     // today's TC between prev R1 and prev R2 + today's R3 above prev R4.
