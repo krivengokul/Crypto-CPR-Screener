@@ -842,30 +842,33 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return (r.currentPrice > r.todayCPR.prevHigh);
     case "Price-BelowPDL":
       return (r.currentPrice < r.todayCPR.prevLow);
-    // Standalone top-level category: same condition as the removed "HA-U1>PU4" Big Above view
+    // Standalone top-level category: true complement of LEVELS ABOVE
+    // (r.LevelsAbove). Gate is exactly R1AbovePR4 -- the cprRising +
+    // strWideCPR gate was dropped so every symbol leaving LEVELS ABOVE
+    // lands here and the two categories partition cleanly.
     case "u1-gt-pu4":
-      return (r.cprRising && r.strWideCPR && r.R1AbovePR4);
+      return r.R1AbovePR4;
     // NEW: 9AM:APHS1A-FAU4:4AM — U1>pU4 sub-pattern.
-    // Condition: Big CPR + CPR Above (cprRising + strWideCPR) + today R1 above
-    // prev R4 (parent U1>pU4) + Pattern eXL3U1 + compressionRatio > 300.
+    // Condition: today R1 above prev R4 (parent U1>pU4) + Pattern eXL3U1 +
+    // compressionRatio > 300.
     // Legend labels: Pattern eXL3U1, PCPR Small, CPR Large. Target FAU4 @ 3PM.
     case "9AM:APHS1A-FAU4:4AM":
       return (
-        r.cprRising && r.strWideCPR && r.R1AbovePR4 &&   // U1 > pU4
+        r.R1AbovePR4 &&   // U1 > pU4
         r.eXL3TC &&
         r.todayCPR.bc > r.prevCPR.prevHigh &&
         r.todayCPR.s1 > r.prevCPR.tc
       );
     // NEW: 6AM:pX-APHS1A-pL4:4AM — U1>pU4 sub-pattern, same "eXL3U1" Pattern
     //  and identical base condition as 9AM:APHS1A-FAU4:4AM
-    // (cprRising + strWideCPR + today R1 above prev R4 + eXL3TC + today's
-    // BC above prev day's PDH + today's S1 above prev day's TC), PLUS one
+    // (today R1 above prev R4 + eXL3TC + today's BC above prev day's PDH
+    // + today's S1 above prev day's TC), PLUS one
     // extra check: the PREVIOUS day's own pivot sub-label (prevCPR vs
     // ppCPR) is eXL4U3 ("p-eXL4U3" badge). Bearish, targets pL4 (prev
     // day's S4) by ~4AM. Red color family.
     case "6AM:pX-APHS1A-pL4:4AM":
       return (
-        r.cprRising && r.strWideCPR && r.R1AbovePR4 &&   // U1 > pU4
+        r.R1AbovePR4 &&   // U1 > pU4
         r.eXL3TC &&
         r.todayCPR.bc > r.prevCPR.prevHigh &&
         r.todayCPR.s1 > r.prevCPR.tc &&
@@ -873,21 +876,21 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       );
     // NEW: 8AM:APHS1A-FAU4:4AM — U1>pU4 sub-pattern, nested under the same
     // "eXL3U1" Pattern as 9AM:APHS1A-FAU4:4AM.
-    // Condition: Big CPR + CPR Above (cprRising + strWideCPR) + today R1
-    // above prev R4 (parent U1>pU4) + Pattern eXL3U1 + today's BC above
-    // prev day's PDH (todayCPR.bc > prevCPR.prevHigh) + today's S1 above
+    // Condition: today R1 above prev R4 (parent U1>pU4) + Pattern eXL3U1 +
+    // today's BC above prev day's PDH (todayCPR.bc > prevCPR.prevHigh) +
+    // today's S1 above
     // prev day's TC (todayCPR.s1 > prevCPR.tc). Bullish, targets Far
     // Above U4 (today's R4) by ~4AM. Green color family.
     case "8AM:APHS1A-FAU4:4AM":
       return (
-       r.cprRising && r.strWideCPR && r.R1AbovePR4 &&   // U1 > pU4
+       r.R1AbovePR4 &&   // U1 > pU4
         r.eXL3U1 &&
         r.todayCPR.bc > r.prevCPR.prevHigh &&
         r.todayCPR.s1 > r.prevCPR.tc
       );
     // NEW: TiMe-eXL3TC-AU4:2PM — U1>pU4 sub-pattern (moved from Big Above).
-    // Condition: Big CPR + CPR Above (cprRising + strWideCPR) + today R1
-    // above prev R4 (parent U1>pU4) + Pattern eXL3TC (prev's S4 inside
+    // Condition: today R1 above prev R4 (parent U1>pU4) + Pattern eXL3TC
+    // (prev's S4 inside
     // today's S3/S2 band (L3), prev's R4 inside today's Pivot/TC band
     // (TC)) + prev CPR width category Tiny (0.10%-0.22%) + today's CPR
     // width category Mega (5.00%-10.00%). Reverse-engineered from a chart
@@ -896,15 +899,13 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // ~2PM.
     case "TiMe-eXL3TC-AU4:2PM":
       return (
-        r.cprRising &&
-        r.strWideCPR &&
         r.R1AbovePR4 &&
         r.eXL3TC &&
         r.prevCPR.widthPct > 0.10 && r.prevCPR.widthPct <= 0.22 &&   // Tiny
         r.todayCPR.widthPct > 5.00 && r.todayCPR.widthPct <= 10.00   // Mega
       );
     // NEW: SMg-exHiL2L1-U4:3AM — U1>pU4 sub-pattern.
-    // Condition: parent U1>pU4 (cprRising + strWideCPR + today R1 > prev R4)
+    // Condition: parent U1>pU4 (today R1 > prev R4)
     // + Pattern eXHiL2L1 (prev's R4 and prev's S4 both inside today's S2/S1
     // band, with today's PDL above prev's Pivot) + prev day's own CPR
     // sub-label (prevCPR vs ppCPR) falling in the "Compressed" category —
@@ -915,23 +916,18 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     case "SMg-exHiL2L1-U4:3AM": {
       const prevCat = getPatternCategory(computePrevPattern(r.prevCPR, r.ppCPR));
       return (
-        r.cprRising &&
-        r.strWideCPR &&
         r.R1AbovePR4 &&
         r.eXHiL2L1 &&
         (prevCat === "cOHigher" || prevCat === "cOLower")
       );
     }
     // NEW: 6AM:MegMeg-L3:8PM — U1>pU4 sub-pattern, nested under the
-    // "eXL4U1" Pattern. Condition: Big CPR + CPR Above
-    // (cprRising + strWideCPR) + today R1 above prev R4 (parent U1>pU4) +
-    // Pattern eXL4U1 + prev CPR width category Mega (5.00%-10.00%,
+    // "eXL4U1" Pattern. Condition: today R1 above prev R4
+    // (parent U1>pU4) + Pattern eXL4U1 + prev CPR width category Mega (5.00%-10.00%,
     // pMega) + today's CPR width category Mega (5.00%-10.00%). Bearish,
     // targets L3 (today's S3) by ~8PM. Red color family.
     case "6AM:MegMeg-L3:8PM":
       return (
-        r.cprRising &&
-        r.strWideCPR &&
         r.R1AbovePR4 &&
         r.eXL4U1 &&
         r.prevCPR.widthPct > 5.00 && r.prevCPR.widthPct <= 10.00 &&   // pMega
