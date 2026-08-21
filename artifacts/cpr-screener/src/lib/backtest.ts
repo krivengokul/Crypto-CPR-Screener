@@ -673,6 +673,29 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
         label: "eXLoL2L1",
         subPatternKeys: [],
       },
+      // NEW: "eXL3BC" Pattern (arrow), same shape as its
+      // eXL3U1/eXL3TC/eXHiL2L1/eXL4U1/eXL2CP/eXLoL2L1 siblings above.
+      // Base condition = parent u1-gt-pu4's condition AND the raw
+      // eXL3BC flag (see matchesPatternFlag in ScreenerUtils.tsx). No
+      // specific target-graded sub-pattern nested under it yet —
+      // selecting it in the Backtest dropdown runs a symbol-list-only
+      // category scan.
+      {
+        key: "eXL3BC",
+        label: "eXL3BC",
+        subPatternKeys: [],
+      },
+      // NEW: "eXL2BC" Pattern (arrow), same shape as its eXL3BC sibling
+      // directly above. Base condition = parent u1-gt-pu4's condition
+      // AND the raw eXL2BC flag (see matchesPatternFlag in
+      // ScreenerUtils.tsx). No specific target-graded sub-pattern
+      // nested under it yet — selecting it in the Backtest dropdown
+      // runs a symbol-list-only category scan.
+      {
+        key: "eXL2BC",
+        label: "eXL2BC",
+        subPatternKeys: [],
+      },
     ],
   },
   // NEW: "L1 < pL4" now nests the "eXU4L1" Pattern, which
