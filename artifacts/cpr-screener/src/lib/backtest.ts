@@ -171,6 +171,16 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
   },
+  // NEW: "HLCOMP-ABOVE" — duplicate of "6A:HBLA-SSLL-R4:6P", added only
+  // for the Backtest dropdown (not exposed in Screener/left-nav/legend).
+  // Same condition and target as its 6A:HBLA-SSLL-R4:6P sibling.
+  {
+    key: "HLCOMP-ABOVE",
+    label: "HLCOMP-ABOVE",
+    direction: "bullish",
+    targetLabel: "U4 (today's R4)",
+    getTarget: (r) => r.todayCPR.r4,
+  },
   // RENAMED from "SMi-L1pU1>-APU4:11PM": all previous conditions removed.
   // "6A:HBLA-SSLL-R4:6P" — nested under "COMPRESSED". Condition:
   // compressed + HHLL-C + SSLL-AA + RRHH-BB + SSGap + LLGap — see
@@ -548,11 +558,12 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
     ],
   },
   // NEW: "COMPRESSED" left-nav section (first item), nesting the
-  // "6A:HBLA-SSLL-R4:6P" pattern that used to live under CPR Inside.
+  // "6A:HBLA-SSLL-R4:6P" pattern that used to live under CPR Inside, plus
+  // the Backtest-only "HLCOMP-ABOVE" duplicate placed just above it.
   {
     key: "compressed",
     label: "COMPRESSED",
-    subPatternKeys: ["6A:HBLA-SSLL-R4:6P", "S0-L1pU1>-AU4:7PM", "9AM:RHLB-RRHHGap:5AM"],
+    subPatternKeys: ["HLCOMP-ABOVE", "6A:HBLA-SSLL-R4:6P", "S0-L1pU1>-AU4:7PM", "9AM:RHLB-RRHHGap:5AM"],
   },
   // NEW: "EXPANDED" left-nav section, mirroring "COMPRESSED" above but for
   // RRSS-E (today's R1 up AND today's S1 down vs prev — levels widening

@@ -760,6 +760,21 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.PDHPDLGapCategory === "LLGap"
       );
     }
+    // NEW: "HLCOMP-ABOVE" — duplicate of "6A:HBLA-SSLL-R4:6P", added only
+    // so the Backtest dropdown can list it as its own entry (just above
+    // 6A:HBLA-SSLL-R4:6P). Not surfaced in Screener/left-nav/legend —
+    // intentionally omitted from SUBFILTERS_BY_SECTION below and from
+    // ViewsSidebar.tsx / ScreenerLegend.tsx / Screener.tsx.
+    case "HLCOMP-ABOVE": {
+      return (
+        r.compressed &&
+        r.HHLLCategory === "HHLL-C" &&
+        r.SSLLCategory === "SSLL-AA" &&
+        r.RRHHCategory === "RRHH-BB" &&
+        r.RRSSGapCategory === "SSGap" &&
+        r.PDHPDLGapCategory === "LLGap"
+      );
+    }
     // NEW: S0-L1pU1>-AU4:7PM — second sub-pattern under "COMPRESSED".
     // Same compressed base as 6A:HBLA-SSLL-R4:6P, but a 1-Line CPR
     // (compressionRatio == 0) with today's R1 below prev day's TC.
