@@ -119,8 +119,12 @@ function setPinnedSymbols(symbols: string[]): void {
  * boundary — identical to TradingView's `high[1]` + `lookahead_off` behaviour.
  *
  * USDⓈ-M Futures resets daily candles at UTC 00:00.
+ *
+ * Exported so backtest.ts's history cache can also recognise (and refuse to
+ * permanently freeze) a still-forming candle — see fetchBinanceHistory in
+ * backtest.ts.
  */
-function isLiveDailyCandle(openTimeMs: number): boolean {
+export function isLiveDailyCandle(openTimeMs: number): boolean {
   const now = new Date();
   const utcMidnightToday = Date.UTC(
     now.getUTCFullYear(),

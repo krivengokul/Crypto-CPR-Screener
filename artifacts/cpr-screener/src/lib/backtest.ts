@@ -879,7 +879,13 @@ export interface BacktestRow {
   compressionRatio: number;         // NEW: shown as a ratio in BacktestPanel's results table
   targetLevel: number;
   targetLabel: string;
-  result: "pass" | "fail" | "insufficient-data";
+  // NEW: "invalid-target" — the pattern matched on this date, but the CPR
+  // level getTarget() reads off (e.g. todayCPR.r4) came back NaN/undefined
+  // for this reconstruction, so there's no real price to grade the outcome
+  // against. Previously this silently fell through to "fail", which read
+  // as a real miss even though the target itself was never computable —
+  // see BACKTEST_TARGETS' getTarget comment and backtestSymbolOnDate below.
+  result: "pass" | "fail" | "insufficient-data" | "invalid-target";
   hitDate: string | null;          // which day (entryDate, entryDate+1, or entryDate+2) hit target, if any
   daysToHit: 0 | 1 | 2 | null;
   /** Entry-day close / prev close / day-over-day % change (same as CategoryScanRow). */
@@ -1007,16 +1013,26 @@ export function getLastRunSkippedSymbols(): string[] {
   return [...lastRunSkipped];
 }
 
-/** symbol -> full daily-candle history, keyed by UTC date string. */
-const binanceHistoryCache = new Map<string, Map<string, OHLC> | null>();
-const deltaHistoryCache = new Map<string, Map<string, OHLC> | null>();
+/** symbol -> full daily-candle history, keyed by UTC date string, plus which
+ *  UTC calendar day the fetch happened on. */
+interface CachedHistory {
+  map: Map<string, OHLC>;
+  fetchedOnUTCDate: string;
+}
+const binanceHistoryCache = new Map<string, CachedHistory | null>();
+const deltaHistoryCache = new Map<string, CachedHistory | null>();
 /** In-flight de-dupe so parallel dates/symbols never double-fetch. */
 const inFlight = new Map<string, Promise<Map<string, OHLC> | null>>();
 
-/** True when a symbol's history is already in memory (no network needed). */
+/** True when a symbol's history is already in memory for TODAY (no network
+ *  needed) — a cache entry from a previous UTC day doesn't count, since it
+ *  may still be holding yesterday's live/incomplete candle (see getHistory). */
 export function hasCachedHistory(symbol: string, source: BacktestSource): boolean {
   const cache = source === "binance" ? binanceHistoryCache : deltaHistoryCache;
-  return cache.has(symbol);
+  const cached = cache.get(symbol);
+  if (cached === undefined) return false;
+  if (cached === null) return true; // cached failure — still "resolved", don't re-hammer it
+  return cached.fetchedOnUTCDate === utcDateKey(Date.now());
 }
 
 /** Drop all cached candle history (e.g. to pick up a newly closed day). */
@@ -1049,7 +1065,6 @@ async function fetchBinanceHistory(symbol: string): Promise<Map<string, OHLC> | 
   for (const c of candles) map.set(utcDateKey(c.openTime), c);
   return map;
 }
-
 /**
  * Full Delta Exchange India daily history for a symbol. Delta's candles
  * endpoint requires an explicit start/end, so we ask for the last
@@ -1090,13 +1105,32 @@ async function fetchDeltaHistory(symbol: string): Promise<Map<string, OHLC> | nu
 }
 
 /**
- * Cached accessor — one network call per symbol per session, shared by every
- * date in a sweep. Replaces the old fetchBinanceWindow/fetchDeltaWindow.
+ * Cached accessor — one network call per symbol per UTC calendar day, shared
+ * by every date in a sweep within that day. Replaces the old
+ * fetchBinanceWindow/fetchDeltaWindow.
+ *
+ * FIX (false "Fail" on a same-day breakout): fetchDailyKlines has no
+ * endTime, so its response always includes TODAY's still-forming daily
+ * candle — whatever high/low it has SO FAR at fetch time, not the day's
+ * eventual final high/low (see isLiveDailyCandle in binance.ts, used for the
+ * exact same reason by the live screener). The old cache kept that
+ * snapshot for the rest of the browser session with no expiry: fetch once
+ * mid-day, and even after the real day closes with a much higher high (a
+ * late breakout, say), every later backtest run in that session kept
+ * grading against the stale, incomplete candle — a pattern whose target was
+ * genuinely reached could still show "Fail" for the rest of the session.
+ * Cache entries now carry the UTC calendar date they were fetched on; once
+ * "now" rolls past that date, the entry is treated as stale and refetched,
+ * so a candle that was live at fetch time is re-read once it's actually
+ * closed. Still only one network call per symbol per day, not per request.
  */
 async function getHistory(symbol: string, source: BacktestSource): Promise<Map<string, OHLC> | null> {
   const cache = source === "binance" ? binanceHistoryCache : deltaHistoryCache;
+  const today = utcDateKey(Date.now());
   const cached = cache.get(symbol);
-  if (cached !== undefined) return cached;
+  if (cached !== undefined && (cached === null || cached.fetchedOnUTCDate === today)) {
+    return cached ? cached.map : null;
+  }
 
   const key = `${source}:${symbol}`;
   const existing = inFlight.get(key);
@@ -1107,7 +1141,7 @@ async function getHistory(symbol: string, source: BacktestSource): Promise<Map<s
       // Only cache SUCCESS. A null here almost always means "rate-limited
       // / transient network failure", and caching it used to permanently
       // amputate that symbol from every later scan in the session.
-      if (hist) cache.set(symbol, hist);
+      if (hist) cache.set(symbol, { map: hist, fetchedOnUTCDate: today });
       inFlight.delete(key);
       return hist;
     })
@@ -1355,6 +1389,34 @@ export async function backtestSymbolOnDate(
   const entryDayCandle = window.get(entryDateISO) ?? null;
   const nextDayCandle = window.get(dPlus1) ?? null;
   const nextNextDayCandle = window.get(dPlus2) ?? null;
+
+  // FIX: a NaN/undefined targetLevel (getTarget read off a CPR level that
+  // wasn't computed for this reconstruction, e.g. todayCPR.r4 missing) used
+  // to fall through to the hits() check below, where every `c.high >=
+  // NaN` comparison is false — so hitDate never got set and the row was
+  // mislabeled "fail" even though no real target existed to miss. Bail out
+  // to "invalid-target" instead so it reads distinctly from a genuine miss.
+  if (!Number.isFinite(targetLevel)) {
+    console.warn(
+      `[backtest] ${symbol} on ${entryDateISO}: pattern "${target.key}" matched but its target ` +
+        `level ("${target.targetLabel}") came back non-finite (${targetLevel}) — marking invalid-target.`
+    );
+    return {
+      symbol,
+      source,
+      entryDate: entryDateISO,
+      todayCPR: result.todayCPR,
+      prevCPR: result.prevCPR,
+      compressionRatio: result.compressionRatio,
+      targetLevel,
+      targetLabel: target.targetLabel,
+      result: "invalid-target",
+      hitDate: null,
+      daysToHit: null,
+      ...closeAndChange(window, entryDateISO),
+      raw: result,
+    };
+  }
 
   const hits = (c: OHLC | null) =>
     !!c && (target.direction === "bullish" ? c.high >= targetLevel : c.low <= targetLevel);

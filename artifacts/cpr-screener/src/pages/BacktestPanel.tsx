@@ -601,7 +601,11 @@ export default function BacktestPanel() {
   const passCount = rows.filter((r) => r.result === "pass").length;
   const failCount = rows.filter((r) => r.result === "fail").length;
   const insufficientCount = rows.filter((r) => r.result === "insufficient-data").length;
-  const gradedCount = rows.length - insufficientCount;
+  // NEW: rows where the pattern matched but its target level came back
+  // non-finite (see backtest.ts's "invalid-target" fix) — excluded from
+  // gradedCount same as insufficient-data, since neither is a real pass/fail.
+  const invalidTargetCount = rows.filter((r) => r.result === "invalid-target").length;
+  const gradedCount = rows.length - insufficientCount - invalidTargetCount;
   const progressPct = progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0;
 
   const ChartLink = ({ symbol, source }: { symbol: string; source: BacktestSource }) =>
@@ -1085,6 +1089,9 @@ export default function BacktestPanel() {
                 {insufficientCount > 0 && (
                   <span className="text-muted-foreground">{insufficientCount} insufficient data</span>
                 )}
+                {invalidTargetCount > 0 && (
+                  <span className="text-amber-400">{invalidTargetCount} no target</span>
+                )}
                 {gradedCount > 0 && (
                   <span className="text-foreground font-medium">
                     {Math.round((passCount / gradedCount) * 100)}% hit rate
@@ -1211,6 +1218,14 @@ export default function BacktestPanel() {
                           {r.result === "insufficient-data" && (
                             <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground">
                               <AlertCircle className="w-3.5 h-3.5" /> No data
+                            </span>
+                          )}
+                          {r.result === "invalid-target" && (
+                            <span
+                              className="inline-flex items-center gap-1 text-xs font-medium text-amber-400"
+                              title="Pattern matched, but its target level couldn't be computed for this date — not a real pass or fail."
+                            >
+                              <AlertCircle className="w-3.5 h-3.5" /> No target
                             </span>
                           )}
                           <span className="font-mono text-[10px] text-muted-foreground">
