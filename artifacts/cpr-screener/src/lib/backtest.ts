@@ -870,16 +870,19 @@ export function buildBacktestOptions(): BacktestOption[] {
     }
 
     for (const sub of cat.patterns ?? []) {
+      // CHANGED: Pattern-level selections are no longer symbol-list-only —
+      // they now grade against today's R4 / U4 (bullish), so the label
+      // gets a "-R4" suffix instead of the old SYMBOL_LIST_ONLY_SUFFIX.
       opts.push({
         value: `${cat.key}::${sub.key}`,
         kind: "pivotLevel",
         boldLabel: sub.label,
-        suffix: SYMBOL_LIST_ONLY_SUFFIX,
-        plainLabel: sub.label + SYMBOL_LIST_ONLY_SUFFIX,
+        suffix: "-R4",
+        plainLabel: `${sub.label}-R4`,
         depth: 1,
         categoryKey: cat.key,
         pivotLevelKey: sub.key,
-        symbolListOnly: true,
+        symbolListOnly: false,
       });
       for (const key of sub.subPatternKeys) {
         opts.push({
@@ -1524,15 +1527,20 @@ export async function categoryScanSymbolOnDate(
 }
 
 /**
- * NEW: Pattern scan version of backtestSymbolOnDate —
- * same CPR reconstruction, but checks BOTH the parent CATEGORY's base
- * condition (e.g. "overlapping-higher") AND the named Pattern's raw
- * flag (e.g. "HiL4U3", via matchesPatternFn — see matchesPatternFlag
- * in ScreenerUtils.tsx). Returns a CategoryScanRow, same shape/reasoning as
- * categoryScanSymbolOnDate: a Pattern bucket within a category still
- * has no single target to grade against.
+ * NEW: Pattern backtest version of backtestSymbolOnDate — same CPR
+ * reconstruction, and checks BOTH the parent CATEGORY's base condition
+ * (e.g. "overlapping-higher") AND the named Pattern's raw flag (e.g.
+ * "HiL4U3", via matchesPatternFn — see matchesPatternFlag in
+ * ScreenerUtils.tsx), same two-part match as before. CHANGED: every
+ * existing Pattern now grades against a fixed target — today's own R4 /
+ * U4, bullish ("-R4") — instead of running as a symbol-list-only scan, so
+ * it returns a full BacktestRow (targetLevel/result/hitDate/daysToHit)
+ * using the identical entry/D+1/D+2 hit-window logic as
+ * backtestSymbolOnDate. This lets the Backtest panel render Pattern
+ * selections with the exact same Result/Hit Date/Change columns as a
+ * View backtest.
  */
-export async function pivotLevelScanSymbolOnDate(
+export async function pivotLevelBacktestSymbolOnDate(
   symbol: string,
   source: BacktestSource,
   entryDateISO: string,
@@ -1540,13 +1548,64 @@ export async function pivotLevelScanSymbolOnDate(
   pivotLevelKey: string,
   passesPatternFn: (r: CPRResult, pattern: string) => boolean,
   matchesPatternFn: (r: CPRResult, label: string) => boolean
-): Promise<CategoryScanRow | null> {
+): Promise<BacktestRow | null> {
+  const dPlus1 = addDaysISO(entryDateISO, 1);
+  const dPlus2 = addDaysISO(entryDateISO, 2);
+
   const reconstructed = await reconstructCPRForDate(symbol, source, entryDateISO);
   if (!reconstructed) return null;
   const { result, window } = reconstructed;
 
   if (!passesPatternFn(result, categoryKey)) return null; // didn't match the parent category's base condition
   if (!matchesPatternFn(result, pivotLevelKey)) return null; // didn't match this Pattern's raw flag
+
+  const targetLevel = result.todayCPR.r4;
+  const targetLabel = "U4 (today's R4)";
+  const entryDayCandle = window.get(entryDateISO) ?? null;
+  const nextDayCandle = window.get(dPlus1) ?? null;
+  const nextNextDayCandle = window.get(dPlus2) ?? null;
+
+  // Same non-finite-target guard as backtestSymbolOnDate — see its
+  // comment for why this is "invalid-target" rather than a silent "fail".
+  if (!Number.isFinite(targetLevel)) {
+    console.warn(
+      `[backtest] ${symbol} on ${entryDateISO}: Pattern "${pivotLevelKey}-R4" matched but its R4 ` +
+        `target came back non-finite (${targetLevel}) — marking invalid-target.`
+    );
+    return {
+      symbol,
+      source,
+      entryDate: entryDateISO,
+      todayCPR: result.todayCPR,
+      prevCPR: result.prevCPR,
+      compressionRatio: result.compressionRatio,
+      targetLevel,
+      targetLabel,
+      result: "invalid-target",
+      hitDate: null,
+      daysToHit: null,
+      ...closeAndChange(window, entryDateISO),
+      raw: result,
+    };
+  }
+
+  const hits = (c: OHLC | null) => !!c && c.high >= targetLevel; // bullish only — R4/U4 target
+
+  let hitDate: string | null = null;
+  let daysToHit: 0 | 1 | 2 | null = null;
+  if (hits(entryDayCandle)) {
+    hitDate = entryDateISO;
+    daysToHit = 0;
+  } else if (hits(nextDayCandle)) {
+    hitDate = dPlus1;
+    daysToHit = 1;
+  } else if (hits(nextNextDayCandle)) {
+    hitDate = dPlus2;
+    daysToHit = 2;
+  }
+
+  const outcome: BacktestRow["result"] =
+    entryDayCandle || nextDayCandle || nextNextDayCandle ? (hitDate ? "pass" : "fail") : "insufficient-data";
 
   return {
     symbol,
@@ -1555,6 +1614,11 @@ export async function pivotLevelScanSymbolOnDate(
     todayCPR: result.todayCPR,
     prevCPR: result.prevCPR,
     compressionRatio: result.compressionRatio,
+    targetLevel,
+    targetLabel,
+    result: outcome,
+    hitDate,
+    daysToHit,
     ...closeAndChange(window, entryDateISO),
     raw: result,
   };
@@ -1639,14 +1703,14 @@ export async function runCategoryScan(
 }
 
 /**
- * NEW: Pattern scan counterpart of runCategoryScan — same
+ * NEW: Pattern backtest counterpart of runCategoryScan — same
  * symbol-universe caveat applies (see KNOWN LIMITATION above). Runs
- * pivotLevelScanSymbolOnDate across the full universe and returns the same
- * simplified CategoryScanRow list (symbol list + CPR data only, no
- * target/result/hitDate) for a category's Pattern sub-bucket (e.g.
- * "Overlap Above" → "HiL4U3").
+ * pivotLevelBacktestSymbolOnDate across the full universe and returns a
+ * graded BacktestRow list (Target/Result/Hit Date, target = today's R4 /
+ * U4, bullish) for a category's Pattern sub-bucket (e.g. "Overlap Above"
+ * → "HiL4U3-R4"), same shape as runBacktest's output.
  */
-export async function runPivotLevelScan(
+export async function runPivotLevelBacktest(
   categoryKey: string,
   pivotLevelKey: string,
   entryDateISO: string,
@@ -1654,12 +1718,12 @@ export async function runPivotLevelScan(
   passesPatternFn: (r: CPRResult, pattern: string) => boolean,
   matchesPatternFn: (r: CPRResult, label: string) => boolean,
   onProgress?: (done: number, total: number, symbol: string) => void
-): Promise<CategoryScanRow[]> {
+): Promise<BacktestRow[]> {
   // Single source of truth — see getSymbolUniverse above. No per-call
   // duplication of the fetch/filter/sort logic.
   const symbols: string[] = await getSymbolUniverse(source, entryDateISO);
 
-  const rows: CategoryScanRow[] = [];
+  const rows: BacktestRow[] = [];
   await prefetchHistories(symbols, source, onProgress);
 
   const batchSize = 50;
@@ -1668,7 +1732,7 @@ export async function runPivotLevelScan(
     const batch = symbols.slice(i, i + batchSize);
     const batchResults = await Promise.all(
       batch.map((sym) =>
-        pivotLevelScanSymbolOnDate(sym, source, entryDateISO, categoryKey, pivotLevelKey, passesPatternFn, matchesPatternFn)
+        pivotLevelBacktestSymbolOnDate(sym, source, entryDateISO, categoryKey, pivotLevelKey, passesPatternFn, matchesPatternFn)
       )
     );
     batchResults.forEach((r) => {

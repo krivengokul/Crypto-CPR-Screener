@@ -19,7 +19,7 @@ import {
   BACKTEST_CATEGORIES,
   runBacktest,
   runCategoryScan,
-  runPivotLevelScan,
+  runPivotLevelBacktest,
   type BacktestRow,
   type CategoryScanRow,
   type BacktestSource,
@@ -415,7 +415,7 @@ export default function BacktestPanel() {
   const triggerLabel = isCategory
     ? activeCategory?.label
     : isPatternOnly && activePatternInfo
-    ? activePatternInfo.sub.label
+    ? `${activePatternInfo.sub.label}-R4`
     : activeTarget?.label ?? selectedKey;
 
   // Close on outside click / Escape.
@@ -535,8 +535,12 @@ export default function BacktestPanel() {
           setCategoryRows(allRows);
         }
       } else if (isPatternOnly && activePatternInfo) {
+        // CHANGED: Pattern selections now grade against today's R4 / U4
+        // (bullish) — see runPivotLevelBacktest — so results land in
+        // `rows` (BacktestRow[]) and render via the same Result/Hit
+        // Date/Change table as a View backtest, not `categoryRows`.
         if (dateMode === "single") {
-          const result = await runPivotLevelScan(
+          const result = await runPivotLevelBacktest(
             activePatternInfo.category.key,
             activePatternInfo.sub.key,
             entryDate,
@@ -545,14 +549,14 @@ export default function BacktestPanel() {
             matchesPatternFlag,
             (done, total, symbol) => setProgress({ done, total, symbol })
           );
-          setCategoryRows(result.map((r) => ({ ...r, entryDate })));
+          setRows(result);
         } else {
           const dates = enumerateDatesUTC(fromDate, toDate);
-          const allRows: (CategoryScanRow & { entryDate: string })[] = [];
+          const allRows: BacktestRow[] = [];
           for (let i = 0; i < dates.length; i++) {
             const d = dates[i];
             setDateProgress({ current: i + 1, total: dates.length, date: d });
-            const dayResult = await runPivotLevelScan(
+            const dayResult = await runPivotLevelBacktest(
               activePatternInfo.category.key,
               activePatternInfo.sub.key,
               d,
@@ -561,9 +565,9 @@ export default function BacktestPanel() {
               matchesPatternFlag,
               (done, total, symbol) => setProgress({ done, total, symbol })
             );
-            allRows.push(...dayResult.map((r) => ({ ...r, entryDate: d })));
+            allRows.push(...dayResult);
           }
-          setCategoryRows(allRows);
+          setRows(allRows);
         }
       } else if (dateMode === "single") {
         const result = await runBacktest(
@@ -761,7 +765,7 @@ export default function BacktestPanel() {
                                       }`}
                                     >
                                       <span className="text-muted-foreground shrink-0">{"\u21B3"}</span>
-                                      <span className="truncate">{sub.label}</span>
+                                      <span className="truncate">{sub.label}-R4</span>
                                     </button>
                                     {patternHits.length > 0 && (
                                       <div className="ml-3 pl-2 border-l border-border/60 mt-0.5 space-y-0.5">
@@ -885,12 +889,12 @@ export default function BacktestPanel() {
       )}
       {isPatternOnly && activePatternInfo && (
         <div className="text-xs text-muted-foreground mb-3">
-          Pattern scan — lists every symbol matching{" "}
+          Target: <span className="text-foreground font-medium">U4 (today's R4)</span> (price must
+          reach or exceed it) — every symbol matching{" "}
           <span className="text-foreground font-medium">{activePatternInfo.category.label}</span>&apos;s
           base condition AND Pattern{" "}
-          <span className="text-foreground font-medium">{activePatternInfo.sub.label}</span> on{" "}
-          {dateMode === "range" ? "each date in the range" : "the entry date"}. No
-          Target/Result/Hit Date (select one of its patterns above for those).
+          <span className="text-foreground font-medium">{activePatternInfo.sub.label}-R4</span> on{" "}
+          {dateMode === "range" ? "each date in the range" : "the entry date"} is graded against it.
         </div>
       )}
 
@@ -920,11 +924,13 @@ export default function BacktestPanel() {
         </div>
       )}
 
-      {/* Category / Pattern scan results — symbol list + CPR data +
-          entry-day Close price and % Change (green when >= 0, red when
-          < 0). Shown whenever a category or Pivot-Level "— all (symbol
-          list only)" selection is run. */}
-      {status === "done" && (isCategory || isPatternOnly) && (
+      {/* Category scan results — symbol list + CPR data + entry-day
+          Close price and % Change (green when >= 0, red when < 0). Shown
+          whenever a category's "— all (symbol list only)" selection is
+          run. CHANGED: Pattern selections no longer render here — they're
+          graded backtests now (see the Pattern backtest results block
+          below), same as a View. */}
+      {status === "done" && isCategory && (
         <>
           <div className="flex items-center gap-4 mb-3 text-xs flex-wrap">
             <span className="text-muted-foreground">
@@ -1073,8 +1079,12 @@ export default function BacktestPanel() {
         </>
       )}
 
-      {/* Pattern backtest results — symbol list + Target/Result/Hit Date */}
-      {status === "done" && isViewOnly && (
+      {/* Pattern backtest results — symbol list + Target/Result/Hit Date.
+          CHANGED: also shown for isPatternOnly ("-R4" Pattern selections),
+          which now grade identically to a View backtest — same columns
+          (Symbol/Pattern/LEVEL/PDH-PDL/Pivot Size/Entry Date/Result/Hit
+          Date/Change). */}
+      {status === "done" && (isViewOnly || isPatternOnly) && (
         <>
           <div className="flex items-center gap-4 mb-3 text-xs flex-wrap">
             <span className="text-muted-foreground">
