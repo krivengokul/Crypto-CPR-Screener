@@ -558,12 +558,23 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
     ],
   },
   // NEW: "COMPRESSED" left-nav section (first item), nesting the
-  // "6A:HLC-ABOVE:R4-6P" pattern that used to live under CPR Inside, plus
-  // the Backtest-only "RRHH-BB:SSLL-AA:SSLLGap" duplicate placed just above it.
+  // "6A:HLC-ABOVE:R4-6P" pattern that used to live under CPR Inside.
+  // CHANGED: "RRHH-BB:SSLL-AA:SSLLGap" moved off this category's own
+  // subPatternKeys into its own Pattern arrow below, so it's also
+  // selectable as a bare Pattern (graded "-R4", see
+  // runPivotLevelBacktest) — its raw flag now lives in
+  // matchesPatternFlag (ScreenerUtils.tsx), not just passesPattern.
   {
     key: "compressed",
     label: "COMPRESSED",
-    subPatternKeys: ["RRHH-BB:SSLL-AA:SSLLGap", "6A:HLC-ABOVE:R4-6P", "S0-L1pU1>-AU4:7PM", "9AM:RHLB-RRHHGap:5AM"],
+    subPatternKeys: ["6A:HLC-ABOVE:R4-6P", "S0-L1pU1>-AU4:7PM", "9AM:RHLB-RRHHGap:5AM"],
+    patterns: [
+      {
+        key: "RRHH-BB:SSLL-AA:SSLLGap",
+        label: "RRHH-BB:SSLL-AA:SSLLGap",
+        subPatternKeys: ["RRHH-BB:SSLL-AA:SSLLGap"],
+      },
+    ],
   },
   // NEW: "EXPANDED" left-nav section, mirroring "COMPRESSED" above but for
   // RRSS-E (today's R1 up AND today's S1 down vs prev — levels widening

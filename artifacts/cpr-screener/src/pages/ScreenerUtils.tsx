@@ -1370,6 +1370,20 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     case "LoTCL3": return r.LoTCL3;
     case "eXHiL2L1": return r.eXHiL2L1;
     case "eXLoL2L1": return r.eXLoL2L1;
+    // NEW: RRHH-BB:SSLL-AA:SSLLGap — Pattern raw flag for the Backtest
+    // dropdown's Pattern-level ("-R4") selection nested under
+    // "COMPRESSED". Same compound condition as its View-level case in
+    // passesPattern above, minus r.compressed (the parent "compressed"
+    // category condition already covers that): HHLL-C + SSLL-AA +
+    // RRHH-BB + SSGap + LLGap.
+    case "RRHH-BB:SSLL-AA:SSLLGap":
+      return (
+        r.HHLLCategory === "HHLL-C" &&
+        r.SSLLCategory === "SSLL-AA" &&
+        r.RRHHCategory === "RRHH-BB" &&
+        r.RRSSGapCategory === "SSGap" &&
+        r.PDHPDLGapCategory === "LLGap"
+      );
     default: return getPatternInfo(r)?.label === label;
   }
 }
