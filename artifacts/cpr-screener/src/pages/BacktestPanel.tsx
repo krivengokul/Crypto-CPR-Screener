@@ -415,7 +415,7 @@ export default function BacktestPanel() {
   const triggerLabel = isCategory
     ? activeCategory?.label
     : isPatternOnly && activePatternInfo
-    ? `${activePatternInfo.sub.label}-R4`
+    ? activePatternInfo.sub.label
     : activeTarget?.label ?? selectedKey;
 
   // Close on outside click / Escape.
@@ -765,7 +765,7 @@ export default function BacktestPanel() {
                                       }`}
                                     >
                                       <span className="text-muted-foreground shrink-0">{"\u21B3"}</span>
-                                      <span className="truncate">{sub.label}-R4</span>
+                                      <span className="truncate">{sub.label}</span>
                                     </button>
                                     {patternHits.length > 0 && (
                                       <div className="ml-3 pl-2 border-l border-border/60 mt-0.5 space-y-0.5">
@@ -893,7 +893,7 @@ export default function BacktestPanel() {
           reach or exceed it) — every symbol matching{" "}
           <span className="text-foreground font-medium">{activePatternInfo.category.label}</span>&apos;s
           base condition AND Pattern{" "}
-          <span className="text-foreground font-medium">{activePatternInfo.sub.label}-R4</span> on{" "}
+          <span className="text-foreground font-medium">{activePatternInfo.sub.label}</span> on{" "}
           {dateMode === "range" ? "each date in the range" : "the entry date"} is graded against it.
         </div>
       )}

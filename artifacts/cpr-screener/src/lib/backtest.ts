@@ -881,14 +881,15 @@ export function buildBacktestOptions(): BacktestOption[] {
 
     for (const sub of cat.patterns ?? []) {
       // CHANGED: Pattern-level selections are no longer symbol-list-only —
-      // they now grade against today's R4 / U4 (bullish), so the label
-      // gets a "-R4" suffix instead of the old SYMBOL_LIST_ONLY_SUFFIX.
+      // they now grade against today's R4 / U4 (bullish) — but the label
+      // itself stays plain (no "-R4" suffix); the target is still shown
+      // separately wherever Result/Hit Date/pass-fail is displayed.
       opts.push({
         value: `${cat.key}::${sub.key}`,
         kind: "pivotLevel",
         boldLabel: sub.label,
-        suffix: "-R4",
-        plainLabel: `${sub.label}-R4`,
+        suffix: "",
+        plainLabel: sub.label,
         depth: 1,
         categoryKey: cat.key,
         pivotLevelKey: sub.key,
