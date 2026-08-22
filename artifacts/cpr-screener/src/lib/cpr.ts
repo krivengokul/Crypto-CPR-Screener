@@ -28,6 +28,11 @@ export interface CPRLevels {
   s4: number;
   // PDH (this level set's high) vs R1 classification
   HLSwitch: HLSwitch;
+  // hlGap — |prevHigh - r1| magnitude for this single level set. Used only
+  // to compare "today's gap" vs "prev's gap" (see CPRResult.hlGapWinner) —
+  // a cosmetic modifier on the existing HL-A/HL-B PDH/PDL badges, not a new
+  // filterable category.
+  hlGap: number;
 }
 
 /**
@@ -485,6 +490,16 @@ export interface CPRResult {
   // day's HLSwitch state, so axis2 can never fall below axis1).
   // "none" is a defensive fallback for non-finite inputs only.
   RRHHCategory: RRHHCategory;
+  // hlGapWinner — cosmetic-only comparison of todayCPR.hlGap vs
+  // prevCPR.hlGap (tolerance-aware via dirTol): "today" swaps the PDH/PDL
+  // "HL-A"/"HL-B" badge to "HLGap-A"/"HLGap-B"; "prev" swaps "pHL-A"/
+  // "pHL-B" to "pHLGap-A"/"pHLGap-B"; "none" leaves both badges plain
+  // (gaps tied within tolerance). Deliberately NOT part of
+  // classifyCPRPair/CPRPairFlags — that classifier is also reused for the
+  // (prev, pp) comparison in ScreenerUtils.computePrevPattern, and this
+  // gap-winner concept is scoped to today vs prev only (a relabel of the
+  // existing badges, not a new filterable category).
+  hlGapWinner: "today" | "prev" | "none";
 }
 
 export type PDHPDLGapCategory = "HHGap" | "LLGap" | "HHLL=";
@@ -586,12 +601,16 @@ export function calcCPR(candle: OHLC): CPRLevels {
     h > r1 ? "HL-A" :
     "HL-B";
 
+  // hlGap — see CPRLevels.hlGap doc comment above.
+  const hlGap = Math.abs(h - r1);
+
   return {
     pivot, bc, tc, width, widthPct,
     prevHigh: h, prevLow: l,
     r1, r2, r3, r4,
     s1, s2, s3, s4,
     HLSwitch,
+    hlGap,
   };
 }
 
@@ -1534,6 +1553,13 @@ export function analyzeCPR(
     (RRHHDirHi === 0 && RRHHDirLo > 0) ? "RRHH-C" :
     "none";
 
+  // hlGapWinner — see CPRResult.hlGapWinner doc comment above.
+  const hlGapDir = dirTol(todayCPR.hlGap, prevCPR.hlGap);
+  const hlGapWinner: CPRResult["hlGapWinner"] =
+    hlGapDir === 1 ? "today" :
+    hlGapDir === -1 ? "prev" :
+    "none";
+
   return {
     symbol,
     todayCPR,
@@ -1580,5 +1606,6 @@ export function analyzeCPR(
     HHLLCategory,
     SSLLCategory,
     RRHHCategory,
+    hlGapWinner,
   };
 }

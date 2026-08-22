@@ -1441,7 +1441,14 @@ const HL_SWITCH_BADGE: Record<HLSwitch, { className: string }> = {
 
 export function renderPrevPdhPdlBadge(r: CPRResult): React.JSX.Element | null {
   const sw = r.prevCPR.HLSwitch;
-  const label = sw === "HL-A" ? "pHL-A" : sw === "HL=" ? "pHL=" : "pHL-B";
+  // CHANGED: when prevCPR's HL gap is the bigger of the two (today vs
+  // prev), relabel "pHL-A"/"pHL-B" to "pHLGap-A"/"pHLGap-B". Purely
+  // cosmetic — "HL=" is untouched regardless of hlGapWinner.
+  const gapWins = sw !== "HL=" && r.hlGapWinner === "prev";
+  const label =
+    sw === "HL-A" ? (gapWins ? "pHLGap-A" : "pHL-A") :
+    sw === "HL=" ? "pHL=" :
+    (gapWins ? "pHLGap-B" : "pHL-B");
   const title =
     sw === "HL-A" ? `Prev PDH ${fmt(r.prevCPR.prevHigh)} > Prev U1 ${fmt(r.prevCPR.r1)}` :
     sw === "HL=" ? `PDH ${fmt(r.prevCPR.prevHigh)} = U1 ${fmt(r.prevCPR.r1)}` :
@@ -1450,7 +1457,7 @@ export function renderPrevPdhPdlBadge(r: CPRResult): React.JSX.Element | null {
     <span
       key="p-hl-switch"
       className={`text-[10px] whitespace-nowrap px-1 py-0.5 rounded border font-medium ${HL_SWITCH_BADGE[sw].className}`}
-      title={title}
+      title={gapWins ? `${title} (prev's PDH/U1 gap is wider than today's)` : title}
     >
       {label}
     </span>
@@ -1459,7 +1466,14 @@ export function renderPrevPdhPdlBadge(r: CPRResult): React.JSX.Element | null {
 
 export function renderTodayPdhPdlBadge(r: CPRResult): React.JSX.Element | null {
   const sw = r.todayCPR.HLSwitch;
-  const label = sw === "HL-A" ? "HL-A" : sw === "HL=" ? "HL=" : "HL-B";
+  // CHANGED: when todayCPR's HL gap is the bigger of the two (today vs
+  // prev), relabel "HL-A"/"HL-B" to "HLGap-A"/"HLGap-B". Purely cosmetic —
+  // "HL=" is untouched regardless of hlGapWinner.
+  const gapWins = sw !== "HL=" && r.hlGapWinner === "today";
+  const label =
+    sw === "HL-A" ? (gapWins ? "HLGap-A" : "HL-A") :
+    sw === "HL=" ? "HL=" :
+    (gapWins ? "HLGap-B" : "HL-B");
   const title =
     sw === "HL-A" ? `PDH ${fmt(r.todayCPR.prevHigh)} > U1 ${fmt(r.todayCPR.r1)}` :
     sw === "HL=" ? `PDH ${fmt(r.todayCPR.prevHigh)} = U1 ${fmt(r.todayCPR.r1)}` :
@@ -1468,7 +1482,7 @@ export function renderTodayPdhPdlBadge(r: CPRResult): React.JSX.Element | null {
     <span
       key="hl-switch"
       className={`text-[10px] whitespace-nowrap px-1 py-0.5 rounded border font-medium ${HL_SWITCH_BADGE[sw].className}`}
-      title={title}
+      title={gapWins ? `${title} (today's PDH/U1 gap is wider than prev's)` : title}
     >
       {label}
     </span>
