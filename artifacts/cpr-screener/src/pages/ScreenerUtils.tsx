@@ -746,7 +746,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     case "expanded":
       return r.expanded ;
     // RENAMED from "SMi-L1pU1>-APU4:11PM": all previous conditions removed.
-    // "6A:HBLA-SSLL-R4:6P" — sub-pattern under "COMPRESSED". Condition:
+    // "6A:HLC-ABOVE:R4-6P" — sub-pattern under "COMPRESSED". Condition:
     // compressed + HHLLCategory HHLL-C + SSLLCategory SSLL-AA + RRHHCategory
     // RRHH-BB + RRSSGapCategory SSGap + PDHPDLGapCategory LLGap, PLUS one of
     // the following prev-day-pattern/today-flag combos:
@@ -755,7 +755,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // ("p-xxx" = prev day's own pivot sub-label via computePrevPattern;
     // cOL3U3/cOL2U2 = today's own flags). Bullish, entry ~6AM, targets
     // today's own R4 (U4) by ~6PM.
-    case "6A:HBLA-SSLL-R4:6P": {
+    case "6A:HLC-ABOVE:R4-6P": {
       const prevPattern = computePrevPattern(r.prevCPR, r.ppCPR);
       return (
         r.compressed &&
@@ -772,12 +772,12 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         )
       );
     }
-    // NEW: "HLCOMP-ABOVE" — duplicate of "6A:HBLA-SSLL-R4:6P", added only
+    // NEW: "RRHH-BB:SSLL-AA:SSLLGap" — duplicate of "6A:HLC-ABOVE:R4-6P", added only
     // so the Backtest dropdown can list it as its own entry (just above
-    // 6A:HBLA-SSLL-R4:6P). Not surfaced in Screener/left-nav/legend —
+    // 6A:HLC-ABOVE:R4-6P). Not surfaced in Screener/left-nav/legend —
     // intentionally omitted from SUBFILTERS_BY_SECTION below and from
     // ViewsSidebar.tsx / ScreenerLegend.tsx / Screener.tsx.
-    case "HLCOMP-ABOVE": {
+    case "RRHH-BB:SSLL-AA:SSLLGap": {
       return (
         r.compressed &&
         r.HHLLCategory === "HHLL-C" &&
@@ -788,7 +788,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       );
     }
     // NEW: S0-L1pU1>-AU4:7PM — second sub-pattern under "COMPRESSED".
-    // Same compressed base as 6A:HBLA-SSLL-R4:6P, but a 1-Line CPR
+    // Same compressed base as 6A:HLC-ABOVE:R4-6P, but a 1-Line CPR
     // (compressionRatio == 0) with today's R1 below prev day's TC.
     // Target AU4 (prev day's R4) by ~7PM.
     case "S0-L1pU1>-AU4:7PM": {
@@ -1092,7 +1092,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     { key: "6PM:APHS1A-FAU4:9PM", direction: "up" },
   ],
   "compressed": [
-    { key: "6A:HBLA-SSLL-R4:6P", direction: "up" },
+    { key: "6A:HLC-ABOVE:R4-6P", direction: "up" },
     { key: "S0-L1pU1>-AU4:7PM", direction: "up" },
     { key: "9AM:RHLB-RRHHGap:5AM", direction: "down" },
   ],
