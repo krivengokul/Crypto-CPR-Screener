@@ -746,17 +746,16 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     case "expanded":
       return r.expanded ;
     // RENAMED from "SMi-L1pU1>-APU4:11PM": all previous conditions removed.
-    // "6A:HLC-ABOVE:R4-6P" — sub-pattern under "COMPRESSED". Condition:
-    // compressed + HHLLCategory HHLL-C + SSLLCategory SSLL-AA + RRHHCategory
-    // RRHH-BB + RRSSGapCategory SSGap + PDHPDLGapCategory LLGap, PLUS one of
-    // the following prev-day-pattern/today-flag combos:
-    //   p-eXL3U1 & cOL3U3   OR   p-eXL2U1 & cOL2U2   OR
-    //   p-eXL4U3 & cOL2U2   OR   p-eXL3U1 & cOL2U2
-    // ("p-xxx" = prev day's own pivot sub-label via computePrevPattern;
-    // cOL3U3/cOL2U2 = today's own flags). Bullish, entry ~6AM, targets
-    // today's own R4 (U4) by ~6PM.
+    // "6A:HLC-ABOVE:R4-6P" — sub-pattern under "COMPRESSED", nested under
+    // the "RRHH-BB:SSLL-AA:SSLLGap" Pattern arrow. Condition: same base as
+    // that Pattern (compressed + HHLLCategory HHLL-C + SSLLCategory
+    // SSLL-AA + RRHHCategory RRHH-BB + RRSSGapCategory SSGap +
+    // PDHPDLGapCategory LLGap) PLUS today's S2 above prev's S1 — a plain
+    // magnitude comparison, no tolerance. CHANGED: dropped the old
+    // computePrevPattern-based prev-day-pattern/today-flag combo check
+    // (p-eXL3U1 & cOL3U3, etc.) in favor of this single additional S2/S1
+    // condition. Bullish, entry ~6AM, targets today's own R4 (U4) by ~6PM.
     case "6A:HLC-ABOVE:R4-6P": {
-      const prevPattern = computePrevPattern(r.prevCPR, r.ppCPR);
       return (
         r.compressed &&
         r.HHLLCategory === "HHLL-C" &&
@@ -764,12 +763,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.RRHHCategory === "RRHH-BB" &&
         r.RRSSGapCategory === "SSGap" &&
         r.PDHPDLGapCategory === "LLGap" &&
-        (
-          (prevPattern === "eXL3U1" && r.cOL3U3) ||
-          (prevPattern === "eXL2U1" && r.cOL2U2) ||
-          (prevPattern === "eXL4U3" && r.cOL2U2) ||
-          (prevPattern === "eXL3U1" && r.cOL2U2)
-        )
+        r.todayCPR.s2 > r.prevCPR.s1
       );
     }
     // NEW: "RRHH-BB:SSLL-AA:SSLLGap" — duplicate of "6A:HLC-ABOVE:R4-6P", added only
