@@ -557,22 +557,21 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       },
     ],
   },
-  // NEW: "COMPRESSED" left-nav section (first item), nesting the
-  // "6A:HLC-ABOVE:R4-6P" pattern that used to live under CPR Inside.
-  // CHANGED: "RRHH-BB:SSLL-AA:SSLLGap" moved off this category's own
-  // subPatternKeys into its own Pattern arrow below, so it's also
-  // selectable as a bare Pattern (graded "-R4", see
-  // runPivotLevelBacktest) — its raw flag now lives in
-  // matchesPatternFlag (ScreenerUtils.tsx), not just passesPattern.
+  // NEW: "COMPRESSED" left-nav section (first item). CHANGED:
+  // "6A:HLC-ABOVE:R4-6P" moved off this category's own subPatternKeys and
+  // nested under the "RRHH-BB:SSLL-AA:SSLLGap-R4" Pattern arrow instead
+  // (same shape as HiL4U3/cOL3U3 elsewhere); the Pattern arrow no longer
+  // duplicates itself as a nested View, since selecting the bare Pattern
+  // already grades the identical condition via runPivotLevelBacktest.
   {
     key: "compressed",
     label: "COMPRESSED",
-    subPatternKeys: ["6A:HLC-ABOVE:R4-6P", "S0-L1pU1>-AU4:7PM", "9AM:RHLB-RRHHGap:5AM"],
+    subPatternKeys: ["S0-L1pU1>-AU4:7PM", "9AM:RHLB-RRHHGap:5AM"],
     patterns: [
       {
         key: "RRHH-BB:SSLL-AA:SSLLGap",
         label: "RRHH-BB:SSLL-AA:SSLLGap",
-        subPatternKeys: ["RRHH-BB:SSLL-AA:SSLLGap"],
+        subPatternKeys: ["6A:HLC-ABOVE:R4-6P"],
       },
     ],
   },
