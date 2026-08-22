@@ -763,7 +763,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.RRHHCategory === "RRHH-BB" &&
         r.RRSSGapCategory === "SSGap" &&
         r.PDHPDLGapCategory === "LLGap" &&
-        r.todayCPR.s2 > r.prevCPR.s1
+        r.todayCPR.r2 > r.prevCPR.r1
       );
     }
     // NEW: "RRHH-BB:SSLL-AA:SSLLGap" — duplicate of "6A:HLC-ABOVE:R4-6P", added only
