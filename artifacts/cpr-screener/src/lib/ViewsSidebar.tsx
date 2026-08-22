@@ -91,7 +91,7 @@ export const Views: Record<string, SubPattern[]> = {
     // + (prev day's R1 above today's R2 OR today's S3 above prev day's S2).
     // Bullish, entry ~2PM, targets ApU4 (prev day's R4) by ~5PM. Green
     // color family to flag it as bullish, matching the other ApU4/AU4
-    // bullish siblings elsewhere (e.g. 6A:HLC-ABOVE:R4-6P).
+    // bullish siblings elsewhere (e.g. 6A:HLC-SSLL:R4-6P).
     {
       id: "2PM:SSLLpRRHHA-ApU4:5PM",
       label: "2PM:SSLLpRRHHA-ApU4:5PM",
@@ -209,35 +209,38 @@ export const Views: Record<string, SubPattern[]> = {
   ],
   "compressed": [
     // RENAMED from "SMi-L1pU1>-APU4:11PM": all previous conditions removed.
-    // "6A:HLC-ABOVE:R4-6P" — compressed + HHLL-C + SSLL-AA + RRHH-BB +
+    // "6A:HLC-SSLL:R4-6P" — compressed + HHLL-C + SSLL-AA + RRHH-BB +
     // SSGap + LLGap (see ScreenerUtils.tsx / cpr.ts). Bullish, entry ~6AM,
     // targets today's own R4 (U4) by ~6PM.
     {
-      id: "6A:HLC-ABOVE:R4-6P",
-      label: "6A:HLC-ABOVE:R4-6P",
+      id: "6A:HLC-SSLL:R4-6P",
+      label: "6A:HLC-SSLL:R4-6P",
       activeColor: "#22c55e",              // green-500 border
       activeText:  "#4ade80",              // green-400 text
       activeBg:    "rgba(34, 197, 94, 0.14)",
     },
-    // NEW: S0-L1pU1>-AU4:7PM — second sub-pattern, 1-Line CPR variant of
-    // 6A:HLC-ABOVE:R4-6P. Bullish, targets AU4 (prev day's R4) by ~7PM.
-    // Amber color family to visually distinguish from its siblings.
+    // RENAMED from "S0-L1pU1>-AU4:7PM": all previous conditions removed.
+    // "8A:HLC-SSHH:S4-1P" — second sub-pattern under "COMPRESSED". Condition
+    // is compressed + SSGap + RRHH-BB + SSLL-AA + HHLL-C + HHGap + pHL-A +
+    // HLGap-B (see ScreenerUtils.tsx / cpr.ts). Bearish, entry ~8AM,
+    // targets today's own S4 (L4) by ~1PM. Rose color family to visually
+    // distinguish as bearish, matching its 9AM:RHLB-RRHH:5AM sibling.
     {
-      id: "S0-L1pU1>-AU4:7PM",
-      label: "S0-L1pU1>-AU4:7PM",
-      activeColor: "#fbbf24",              // amber-400 border
-      activeText:  "#fcd34d",              // amber-300 text
-      activeBg:    "rgba(245, 158, 11, 0.14)", // amber-500 tint
+      id: "8A:HLC-SSHH:S4-1P",
+      label: "8A:HLC-SSHH:S4-1P",
+      activeColor: "#fb7185",              // rose-400 border
+      activeText:  "#fda4af",              // rose-300 text
+      activeBg:    "rgba(244, 63, 94, 0.14)", // rose-500 tint
     },
     // RENAMED from "T0-L1pU1>-BPL4:5AM": all previous conditions removed.
-    // "9AM:RHLB-RRHHGap:5AM" — bearish counterpart, condition is
+    // "9AM:RHLB-RRHH:5AM" — bearish counterpart, condition is
     // compressed + RRHH-BB + HHLL-B + RRGap + HHGap (see
     // ScreenerUtils.tsx), targets today's own S2 (L2) by ~5AM. Rose
     // color family to visually distinguish from the bullish (green)
-    // 6A:HLC-ABOVE:R4-6P sibling.
+    // 6A:HLC-SSLL:R4-6P sibling.
     {
-      id: "9AM:RHLB-RRHHGap:5AM",
-      label: "9AM:RHLB-RRHHGap:5AM",
+      id: "9AM:RHLB-RRHH:5AM",
+      label: "9AM:RHLB-RRHH:5AM",
       activeColor: "#fb7185",              // rose-400 border
       activeText:  "#fda4af",              // rose-300 text
       activeBg:    "rgba(244, 63, 94, 0.14)", // rose-500 tint

@@ -299,7 +299,7 @@ export default function Screener({
   // NEW: resolve activePattern to its parent left-nav category ("section").
   // Clicking a top-level category in the left-nav sets activePattern to the
   // category id directly (e.g. "compressed"), but clicking one of its
-  // Views/sub-patterns instead (e.g. "6A:HLC-ABOVE:R4-6P") sets
+  // Views/sub-patterns instead (e.g. "6A:HLC-SSLL:R4-6P") sets
   // activePattern to that LEAF id — ViewsSidebar's handleSubClick calls
   // onSelect(subId), not onSelect(parentId). Row filtering already handles
   // both cases fine (passesPattern resolves leaf ids directly), but

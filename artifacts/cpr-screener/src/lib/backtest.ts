@@ -171,9 +171,9 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
   },
-  // NEW: "RRHH-BB:SSLL-AA:SSLLGap" — duplicate of "6A:HLC-ABOVE:R4-6P", added only
+  // NEW: "RRHH-BB:SSLL-AA:SSLLGap" — duplicate of "6A:HLC-SSLL:R4-6P", added only
   // for the Backtest dropdown (not exposed in Screener/left-nav/legend).
-  // Same condition and target as its 6A:HLC-ABOVE:R4-6P sibling.
+  // Same condition and target as its 6A:HLC-SSLL:R4-6P sibling.
   {
     key: "RRHH-BB:SSLL-AA:SSLLGap",
     label: "RRHH-BB:SSLL-AA:SSLLGap",
@@ -182,36 +182,39 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     getTarget: (r) => r.todayCPR.r4,
   },
   // RENAMED from "SMi-L1pU1>-APU4:11PM": all previous conditions removed.
-  // "6A:HLC-ABOVE:R4-6P" — nested under "COMPRESSED". Condition:
+  // "6A:HLC-SSLL:R4-6P" — nested under "COMPRESSED". Condition:
   // compressed + HHLL-C + SSLL-AA + RRHH-BB + SSGap + LLGap — see
   // ScreenerUtils.tsx. Bullish, entry ~6AM, targets today's own R4 (U4)
   // by ~6PM.
   {
-    key: "6A:HLC-ABOVE:R4-6P",
-    label: "6A:HLC-ABOVE:R4-6P",
+    key: "6A:HLC-SSLL:R4-6P",
+    label: "6A:HLC-SSLL:R4-6P",
     direction: "bullish",
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
   },
-  // NEW: "S0-L1pU1>-AU4:7PM" — second sub-pattern under "COMPRESSED".
-  // Same compressed base condition as 6A:HLC-ABOVE:R4-6P, but the
-  // 1-Line CPR variant (compressionRatio == 0, today's R1 < prev TC).
-  // Bullish, targets AU4 (prev day's R4) by ~7PM.
+  // RENAMED from "S0-L1pU1>-AU4:7PM": all previous conditions removed.
+  // "8A:HLC-SSHH:S4-1P" — second sub-pattern under "COMPRESSED". Condition:
+  // compressed + RRSSGapCategory SSGap + RRHHCategory RRHH-BB +
+  // SSLLCategory SSLL-AA + HHLLCategory HHLL-C + PDHPDLGapCategory HHGap +
+  // prevCPR.HLSwitch HL-A + todayCPR.HLSwitch HL-B with hlGapWinner
+  // "today" (HLGap-B) — see ScreenerUtils.tsx. Bearish, entry ~8AM,
+  // targets today's own S4 (L4) by ~1PM.
   {
-    key: "S0-L1pU1>-AU4:7PM",
-    label: "S0-L1pU1>-AU4:7PM",
-    direction: "bullish",
-    targetLabel: "AU4 (prev day's R4)",
-    getTarget: (r) => r.prevCPR.r4,
+    key: "8A:HLC-SSHH:S4-1P",
+    label: "8A:HLC-SSHH:S4-1P",
+    direction: "bearish",
+    targetLabel: "L4 (today's S4)",
+    getTarget: (r) => r.todayCPR.s4,
   },
   // RENAMED from "T0-L1pU1>-BPL4:5AM": all previous conditions removed.
-  // "9AM:RHLB-RRHHGap:5AM" — third sub-pattern under "COMPRESSED".
+  // "9AM:RHLB-RRHH:5AM" — third sub-pattern under "COMPRESSED".
   // Condition: compressed + RRSSGapCategory RRGap + RRHHCategory RRHH-BB +
   // HHLLCategory HHLL-B + PDHPDLGapCategory HHGap — see ScreenerUtils.tsx.
   // Bearish, targets today's own S2 (L2) by ~5AM.
   {
-    key: "9AM:RHLB-RRHHGap:5AM",
-    label: "9AM:RHLB-RRHHGap:5AM",
+    key: "9AM:RHLB-RRHH:5AM",
+    label: "9AM:RHLB-RRHH:5AM",
     direction: "bearish",
     targetLabel: "L2 (today's S2)",
     getTarget: (r) => r.todayCPR.s2,
@@ -558,7 +561,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
     ],
   },
   // NEW: "COMPRESSED" left-nav section (first item). CHANGED:
-  // "6A:HLC-ABOVE:R4-6P" moved off this category's own subPatternKeys and
+  // "6A:HLC-SSLL:R4-6P" moved off this category's own subPatternKeys and
   // nested under the "RRHH-BB:SSLL-AA:SSLLGap-R4" Pattern arrow instead
   // (same shape as HiL4U3/cOL3U3 elsewhere); the Pattern arrow no longer
   // duplicates itself as a nested View, since selecting the bare Pattern
@@ -566,12 +569,12 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
   {
     key: "compressed",
     label: "COMPRESSED",
-    subPatternKeys: ["S0-L1pU1>-AU4:7PM", "9AM:RHLB-RRHHGap:5AM"],
+    subPatternKeys: ["8A:HLC-SSHH:S4-1P", "9AM:RHLB-RRHH:5AM"],
     patterns: [
       {
         key: "RRHH-BB:SSLL-AA:SSLLGap",
         label: "RRHH-BB:SSLL-AA:SSLLGap",
-        subPatternKeys: ["6A:HLC-ABOVE:R4-6P"],
+        subPatternKeys: ["6A:HLC-SSLL:R4-6P"],
       },
     ],
   },

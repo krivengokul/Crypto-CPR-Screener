@@ -746,7 +746,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     case "expanded":
       return r.expanded ;
     // RENAMED from "SMi-L1pU1>-APU4:11PM": all previous conditions removed.
-    // "6A:HLC-ABOVE:R4-6P" — sub-pattern under "COMPRESSED", nested under
+    // "6A:HLC-SSLL:R4-6P" — sub-pattern under "COMPRESSED", nested under
     // the "RRHH-BB:SSLL-AA:SSLLGap" Pattern arrow. Condition: same base as
     // that Pattern (compressed + HHLLCategory HHLL-C + SSLLCategory
     // SSLL-AA + RRHHCategory RRHH-BB + RRSSGapCategory SSGap +
@@ -755,7 +755,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // computePrevPattern-based prev-day-pattern/today-flag combo check
     // (p-eXL3U1 & cOL3U3, etc.) in favor of this single additional S2/S1
     // condition. Bullish, entry ~6AM, targets today's own R4 (U4) by ~6PM.
-    case "6A:HLC-ABOVE:R4-6P": {
+    case "6A:HLC-SSLL:R4-6P": {
       return (
         r.compressed &&
         r.HHLLCategory === "HHLL-C" &&
@@ -766,9 +766,9 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.todayCPR.r2 > r.prevCPR.r1
       );
     }
-    // NEW: "RRHH-BB:SSLL-AA:SSLLGap" — duplicate of "6A:HLC-ABOVE:R4-6P", added only
+    // NEW: "RRHH-BB:SSLL-AA:SSLLGap" — duplicate of "6A:HLC-SSLL:R4-6P", added only
     // so the Backtest dropdown can list it as its own entry (just above
-    // 6A:HLC-ABOVE:R4-6P). Not surfaced in Screener/left-nav/legend —
+    // 6A:HLC-SSLL:R4-6P). Not surfaced in Screener/left-nav/legend —
     // intentionally omitted from SUBFILTERS_BY_SECTION below and from
     // ViewsSidebar.tsx / ScreenerLegend.tsx / Screener.tsx.
     case "RRHH-BB:SSLL-AA:SSLLGap": {
@@ -781,23 +781,35 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.PDHPDLGapCategory === "LLGap"
       );
     }
-    // NEW: S0-L1pU1>-AU4:7PM — second sub-pattern under "COMPRESSED".
-    // Same compressed base as 6A:HLC-ABOVE:R4-6P, but a 1-Line CPR
-    // (compressionRatio == 0) with today's R1 below prev day's TC.
-    // Target AU4 (prev day's R4) by ~7PM.
-    case "S0-L1pU1>-AU4:7PM": {
-      return (r.compressed && r.prevCPR.HLSwitch === "HL-A" && (r.todayCPR.HLSwitch === "HL-A" || r.todayCPR.HLSwitch === "HL=" )
-                    && !r.outCPR && (r.todayCPR.r1 < r.prevCPR.tc) && r.compressionRatio == 0); // 1 Line CPR ,  R1< PCPR.tc
+    // RENAMED from "S0-L1pU1>-AU4:7PM": all previous conditions removed.
+    // "8A:HLC-SSHH:S4-1P" — second sub-pattern under "COMPRESSED".
+    // Condition: compressed + RRSSGapCategory SSGap + RRHHCategory RRHH-BB +
+    // SSLLCategory SSLL-AA + HHLLCategory HHLL-C + PDHPDLGapCategory HHGap +
+    // prev day's HLSwitch HL-A (pHL-A) + today's HLSwitch HL-B with
+    // hlGapWinner "today" (HLGap-B). Bearish, targets today's own S4 (L4)
+    // by ~1PM.
+    case "8A:HLC-SSHH:S4-1P": {
+      return (
+        r.compressed &&
+        r.RRSSGapCategory === "SSGap" &&
+        r.RRHHCategory === "RRHH-BB" &&
+        r.SSLLCategory === "SSLL-AA" &&
+        r.HHLLCategory === "HHLL-C" &&
+        r.PDHPDLGapCategory === "HHGap" &&
+        r.prevCPR.HLSwitch === "HL-A" &&
+        r.todayCPR.HLSwitch === "HL-B" &&
+        r.hlGapWinner === "today"
+      );
     }
     // RENAMED from "T0-L1pU1>-BPL4:5AM": all previous conditions removed.
-    // "9AM:RHLB-RRHHGap:5AM" — third sub-pattern under "COMPRESSED".
+    // "9AM:RHLB-RRHH:5AM" — third sub-pattern under "COMPRESSED".
     // Condition: compressed + RRSSGapCategory RRGap (today's R1 gap vs
     // prev's R1 larger than the S1 gap) + RRHHCategory RRHH-BB (today's
     // R1 AND today's PDH both fully below prev's R1/PDH) + HHLLCategory
     // HHLL-B (today's PDH/PDL both below prev's) + PDHPDLGapCategory
     // HHGap (today's PDH gap vs prev's PDH larger than the PDL gap).
     // Bearish, targets today's own S2 (L2) by ~5AM.
-    case "9AM:RHLB-RRHHGap:5AM":
+    case "9AM:RHLB-RRHH:5AM":
       return (
         r.compressed &&
         r.RRSSGapCategory === "RRGap" &&
@@ -1086,9 +1098,9 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     { key: "6PM:APHS1A-FAU4:9PM", direction: "up" },
   ],
   "compressed": [
-    { key: "6A:HLC-ABOVE:R4-6P", direction: "up" },
-    { key: "S0-L1pU1>-AU4:7PM", direction: "up" },
-    { key: "9AM:RHLB-RRHHGap:5AM", direction: "down" },
+    { key: "6A:HLC-SSLL:R4-6P", direction: "up" },
+    { key: "8A:HLC-SSHH:S4-1P", direction: "down" },
+    { key: "9AM:RHLB-RRHH:5AM", direction: "down" },
   ],
   "inside-cpr": [
     { key: "8AM:CoLApHA-U4+1:8AM", direction: "up" },
