@@ -750,11 +750,9 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // the "RRHH-BB:SSLL-AA:SSLLGap" Pattern arrow. Condition: same base as
     // that Pattern (compressed + HHLLCategory HHLL-C + SSLLCategory
     // SSLL-AA + RRHHCategory RRHH-BB + RRSSGapCategory SSGap +
-    // PDHPDLGapCategory LLGap) PLUS either today's HLSwitch HL-B with
-    // hlGapWinner "today" (HLGap-B) or prev day's HLSwitch HL-B with
-    // hlGapWinner "prev" (pHLGap-B). CHANGED: dropped the today's S2 above
-    // prev's S1 magnitude check in favor of this HLGap-B/pHLGap-B
-    // condition. Bullish, entry ~6AM, targets today's own R4 (U4) by ~6PM.
+    // PDHPDLGapCategory LLGap) PLUS today's R2 above prev's R1 and today's
+    // S2 at or above prev's S1 — plain magnitude comparisons, no
+    // tolerance. Bullish, entry ~6AM, targets today's own R4 (U4) by ~6PM.
     case "6A:HLC-SSLL:R4-6P": {
       return (
         r.compressed &&
@@ -763,8 +761,8 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.RRHHCategory === "RRHH-BB" &&
         r.RRSSGapCategory === "SSGap" &&
         r.PDHPDLGapCategory === "LLGap" &&
-        ((r.todayCPR.HLSwitch === "HL-B" && r.hlGapWinner === "today") ||
-          (r.prevCPR.HLSwitch === "HL-B" && r.hlGapWinner === "prev"))
+        r.todayCPR.r2 > r.prevCPR.r1 &&
+        r.todayCPR.s2 >= r.prevCPR.s1
       );
     }
     // NEW: "RRHH-BB:SSLL-AA:SSLLGap" — duplicate of "6A:HLC-SSLL:R4-6P", added only
