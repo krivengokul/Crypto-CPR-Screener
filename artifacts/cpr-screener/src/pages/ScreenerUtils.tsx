@@ -844,10 +844,6 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.HHLLCategory === "HHLL-B" &&
         r.PDHPDLGapCategory === "HHGap"
       );
-    case "outside-cpr":
-      return r.outCPR;
-    case "outside-cpr-compressed":
-      return r.outCPR && r.todayCPR.r4 < r.prevCPR.r4 && r.todayCPR.s4 > r.prevCPR.s4;
     case "overlapping-higher":
       return r.overlapHigher;
     // NEW: LMe-eXL2U2-L4:10PM — Overlap Above + eXL2U2 pivot band,
@@ -1124,9 +1120,6 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     { key: "8AM:SRBHHLLA-pU4+1:8AM", direction: "up" },
     { key: "2PM:pPDHLA-SRA-U4:7PM", direction: "up" },
     { key: "8AM:pPDHA-SRA-U4+2:2AM", direction: "up" },
-  ],
-  "outside-cpr": [
-    { key: "outside-cpr-compressed", direction: "up" },
   ],
   "u1-gt-pu4": [
     { key: "9AM:APHS1A-FAU4:4AM", direction: "up" },

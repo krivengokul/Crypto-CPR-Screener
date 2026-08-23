@@ -160,7 +160,6 @@ export default function Screener({
   // left-nav pattern, the screener should show ALL scanned results
   // (unfiltered) rather than being pre-filtered to a specific pattern.
   const [showAll, setShowAll] = useState(true);
-  const [showOutsideCPRCompressed, setShowOutsideCPRCompressed] = useState(false);
   const [showExpU4PU4, setShowExpU4PU4] = useState(false);
   // RENAMED from "Exp-U3>U3": 9AM:SSRRBHHLLA-U4:9PM filter state
   // (Overlapping Lower). Bullish/uptrend, green color family.
@@ -389,7 +388,6 @@ export default function Screener({
   useEffect(() => {
     if (allResults.length > 0) setFiltered(allResults.filter((r) => passesPattern(r, activePattern)));
     if (deltaAllResults.length > 0) setDeltaFiltered(deltaAllResults.filter((r) => passesPattern(r, activePattern)));
-    if (activePattern !== "outside-cpr") { setShowOutsideCPRCompressed(false); }
     if (activePattern !== "overlapping-lower") { setShowExpU4PU4(false); setShowExpU3PU3(false); setShowOBLoRRHHLLA(false); setShowOBNLoU4L4(false); setShowOBWLoU4L4(false); setShowOBLoSSLLRRHH(false); setShowOBLoSSLLRRHHDown(false); }
     // NEW: reset eXHi-L4U4-U4 toggle when leaving Overlapping Higher
     if (activePattern !== "overlapping-higher") { setShowOBHiExL4U4(false); setShowLMeXL2U2(false); setShowOBHicOL3U3pL4(false); setShowOBHi7AMMiMi(false); setShowOBHi6PMLaLa(false); }
@@ -419,8 +417,6 @@ export default function Screener({
     "cOL3U3-pL4": setShowOBHicOL3U3pL4,
     "7AM:MiMi-pU4:11PM": setShowOBHi7AMMiMi,
     "6PM:LaLa->U4:2AM": setShowOBHi6PMLaLa,
-    // outside-cpr
-    "outside-cpr-compressed": setShowOutsideCPRCompressed,
   };
 
   // Current on/off state of each of those buttons — used to detect when the
@@ -437,7 +433,6 @@ export default function Screener({
     "cOL3U3-pL4": showOBHicOL3U3pL4,
     "7AM:MiMi-pU4:11PM": showOBHi7AMMiMi,
     "6PM:LaLa->U4:2AM": showOBHi6PMLaLa,
-    "outside-cpr-compressed": showOutsideCPRCompressed,
   };
 
   // Is activePattern a Views leaf (a sub-pattern) rather than a category?
@@ -569,17 +564,6 @@ export default function Screener({
   ];
 
   const getActivePool = (): CPRResultWithSource[] => {
-    if (showOutsideCPRCompressed && activePattern === "outside-cpr") {
-      const binanceIntersect = allResults
-        .filter((r) => passesPattern(r, "outside-cpr-compressed"))
-        .map((r) => ({ ...r, source: "binance" as const }));
-      const deltaIntersect = deltaAllResults
-        .filter((r) => passesPattern(r, "outside-cpr-compressed"))
-        .map((r) => ({ ...r, source: "delta" as const }));
-      if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
-      if (activeTab === "delta") return deltaIntersect;
-      return binanceIntersect;
-    }
     if (showExpU4PU4 && activePattern === "overlapping-lower") {
       const binanceIntersect = allResults
         .filter((r) => passesPattern(r, "eXLo-L4U4-U4"))
@@ -904,7 +888,6 @@ export default function Screener({
       if (pdhPdlFilter === "s1r1in") {
         const eligible =
           passesPattern(r, "inside-cpr") ||
-          passesPattern(r, "outside-cpr") ||
           passesPattern(r, "overlapping-higher") ||
           passesPattern(r, "overlapping-lower");
         if (!eligible) return false;
@@ -994,7 +977,6 @@ export default function Screener({
 
   // Helper: is any sub-filter active (to decide the result count label)
   const anySubFilter =
-    showOutsideCPRCompressed ||
     showExpU4PU4 || showExpU3PU3 || showOBLoRRHHLLA || showOBNLoU4L4 || showOBWLoU4L4 || showOBLoSSLLRRHH || showOBHiExL4U4 || showLMeXL2U2 || showOBHicOL3U3pL4 || showOBHi7AMMiMi || showOBHi6PMLaLa ||
     !!activeGenericSubView ||
     !!PatternFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter || !!exitTimeFilter;
@@ -1139,7 +1121,6 @@ export default function Screener({
               <button
                 onClick={() => {
                   setShowAll((v) => !v);
-                  setShowOutsideCPRCompressed(false);
                   // NEW: also clear the generic Views (sub-pattern) selection —
                   // covers inside-cpr and every other GENERIC_VIEW_CATEGORIES
                   // category, so "Show All" fully resets state everywhere.
@@ -1433,19 +1414,6 @@ export default function Screener({
                 title="Overlap Higher: Prev R4 between today's R3/R4, Prev S4 between today's S3/S4, Prev CPR pSmall, Today CPR Tiny"
               >
                 {showOBHiExL4U4 ? "✕ eXHi-L4U4-U4" : "eXHi-L4U4-U4"}<ViewCount id={"eXHi-L4U4-U4"} counts={viewCounts} />
-              </button>
-            )}
-            {activeSectionKey === "outside-cpr" && !showAll && (
-              <button
-                onClick={() => { setShowOutsideCPRCompressed((v) => !v); }}
-                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                  showOutsideCPRCompressed
-                    ? "border-purple-400 text-purple-400"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-                title="Show OutsideCPR symbols where today R4 < prev R4 AND today S4 > prev S4 (compressed range)"
-              >
-                {showOutsideCPRCompressed ? "✕ Compressed" : "Compressed"}<ViewCount id={"outside-cpr-compressed"} counts={viewCounts} />
               </button>
             )}
              {/* NEW: LMe-eXL2U2-L4:10PM button — Overlap Above */}

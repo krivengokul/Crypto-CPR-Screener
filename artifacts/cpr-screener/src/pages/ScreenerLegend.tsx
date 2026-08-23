@@ -116,14 +116,6 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             </div>
             <div className="text-xs text-muted-foreground">Today&apos;s CPR sits inside yesterday&apos;s CPR range</div>
           </>
-        ) : legendPattern === "outside-cpr" ? (
-          <>
-            <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-              <span className="text-xs font-semibold text-primary">CPR Outside</span>
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-purple-500 text-white">Outside</span>
-            </div>
-            <div className="text-xs text-muted-foreground">Today&apos;s CPR sits outside yesterday&apos;s CPR range</div>
-          </>
         ) : legendPattern === "equal-cpr" ? (
           <>
             <div className="flex items-center gap-1.5 mb-1 flex-wrap">

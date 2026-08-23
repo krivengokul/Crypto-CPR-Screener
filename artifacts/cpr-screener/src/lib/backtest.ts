@@ -792,7 +792,6 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       },
     ],
   },
-  { key: "outside-cpr", label: "Outside CPR" },
   // NEW: "Overlap Below" now nests "2PM:SSLLpRRHHA-ApU4:5PM" directly on
   // its own subPatternKeys (Direct View in ViewsSidebar's left-nav, not
   // behind a Pattern/arrow), same shape as

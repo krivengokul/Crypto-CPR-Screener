@@ -5,7 +5,6 @@ import {
   Layers,
   LayersIcon,
   Crosshair,
-  Maximize2,
   BarChart,
   Equal,
   ChevronLeft,
@@ -319,9 +318,6 @@ export const Views: Record<string, SubPattern[]> = {
       activeBg:    "rgba(34, 197, 94, 0.14)",
     },
   ],
-  "outside-cpr": [
-    { id: "outside-cpr-compressed",  label: "Compressed" },
-  ],
   "u1-gt-pu4": [
     { id: "9AM:APHS1A-FAU4:4AM", label: "9AM:APHS1A-FAU4:4AM",
       activeColor: "#22c55e", activeText: "#4ade80", activeBg: "rgba(34,197,94,0.18)" },
@@ -399,7 +395,6 @@ export const pivotcategories: Category[] = [
   { id: "expanded",          label: "EXPANDED",     subtitle: "RRSS-E only (today's R1 up, S1 down vs prev)",   icon: TrendingUp },
   { id: "l1-lt-pl4",          label: "L1<pL4",        subtitle: "Today S1 below Prev S4",   icon: TrendingDown },
   { id: "inside-cpr",         label: "Inside CPR",     subtitle: "Inside CPR range",         icon: Crosshair },
-  { id: "outside-cpr",        label: "Outside CPR",  subtitle: "Outside CPR range",        icon: Maximize2 },
   { id: "overlapping-higher", label: "Overlap Above", subtitle: "CPR zones stacking up",    icon: Layers },
   { id: "overlapping-lower",  label: "Overlap Below", subtitle: "CPR zones stacking down",  icon: LayersIcon },
   { id: "equal-cpr",          label: "Equal CPR",     subtitle: "Prev & Today CPR Equal",   icon: Equal },
