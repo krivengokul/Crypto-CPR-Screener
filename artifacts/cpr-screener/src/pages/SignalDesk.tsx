@@ -29,6 +29,8 @@ export interface SignalDeskSymbol {
   symbol: string;
   source: "binance" | "delta";
   currentPrice: number;
+  /** 24h price change, as a percent (e.g. 3.2 for +3.2%, -1.4 for -1.4%). Omit to hide the change badge. */
+  change24h?: number;
   /** Today's CPR S4/R4 band, used to draw the level range bar. Omit to hide the bar for this symbol. */
   s4?: number;
   s3?: number;
@@ -81,6 +83,11 @@ function displaySymbol(symbol: string): string {
  * room), and a reduced ladder — S1/S3/R1/R3 dropped, S2/R2 kept as the
  * inner anchors — shows at xl+ where 3-per-row cards get tight. S2/S3 are
  * only rendered as labels when the caller actually supplied them.
+ *
+ * Below the labels, an "X% to next level" line shows the gap to the
+ * nearest tick above and below the live price, in either direction —
+ * quick context on how much room is left before the price crosses the
+ * next level.
  */
 function LevelRangeBar({
   s4,
@@ -140,6 +147,16 @@ function LevelRangeBar({
   const nowPct = pct(current);
   const pivotPct = pct(pivot);
 
+  // Nearest tick above/below the live price, for the "X% to next level"
+  // microcopy under the bar — tells someone at a glance how much room is
+  // left before the next level, in either direction.
+  const nextAbove = allTicks
+    .filter((t) => t.value > current)
+    .sort((a, b) => a.value - b.value)[0];
+  const nextBelow = allTicks
+    .filter((t) => t.value < current)
+    .sort((a, b) => b.value - a.value)[0];
+
   const renderLabels = (ticks: Tick[]) =>
     ticks.map((tick) => (
       <div
@@ -195,6 +212,26 @@ function LevelRangeBar({
       <div className="relative mt-1 h-8 xl:hidden">
         {renderLabels(allTicks)}
       </div>
+      {(nextBelow || nextAbove) && (
+        <div className="mt-1 flex items-center justify-center gap-3 text-[10px] font-medium text-muted-foreground">
+          {nextBelow && (
+            <span>
+              <span className="text-rose-400/80">
+                {(((current - nextBelow.value) / current) * 100).toFixed(2)}%
+              </span>{" "}
+              above {nextBelow.label}
+            </span>
+          )}
+          {nextAbove && (
+            <span>
+              <span className="text-emerald-400/80">
+                {(((nextAbove.value - current) / current) * 100).toFixed(2)}%
+              </span>{" "}
+              to {nextAbove.label}
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -379,7 +416,12 @@ export default function SignalDesk({
               return (
                 <article
                   key={item.key}
-                  className="rounded-xl border border-border bg-card p-5 transition hover:-translate-y-0.5 hover:border-emerald-400/50"
+                  className={[
+                    "rounded-xl border border-l-4 bg-card p-5 transition hover:-translate-y-0.5",
+                    isLong
+                      ? "border-border border-l-emerald-400/70 hover:border-emerald-400/50"
+                      : "border-border border-l-rose-400/70 hover:border-rose-400/50",
+                  ].join(" ")}
                 >
                   <div className="mb-6 flex items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
@@ -407,11 +449,28 @@ export default function SignalDesk({
                       </div>
                     </div>
 
-                    <p className="font-mono text-lg font-semibold text-foreground">
-                      {formatPrice(item.currentPrice)}
-                    </p>
+                    <div className="flex flex-col items-end">
+                      <p className="font-mono text-base font-semibold text-foreground">
+                        {formatPrice(item.currentPrice)}
+                      </p>
+                      {item.change24h != null && (
+                        <span
+                          className={[
+                            "text-[11px] font-semibold",
+                            item.change24h >= 0 ? "text-emerald-400" : "text-rose-400",
+                          ].join(" ")}
+                        >
+                          {item.change24h >= 0 ? "+" : ""}
+                          {item.change24h.toFixed(2)}%
+                        </span>
+                      )}
+                    </div>
 
-                    <span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-emerald-300">
+                    <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-300">
+                      <span className="relative flex h-1.5 w-1.5">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                        <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                      </span>
                       Live
                     </span>
                   </div>
@@ -432,7 +491,7 @@ export default function SignalDesk({
                   )}
 
                   <div className="mt-4 flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">
+                    <span className="font-medium text-muted-foreground">
                       {SUBVIEW_IDS.has(activePattern) ? "View" : "Category"}
                     </span>
                     <span className="max-w-[65%] truncate font-medium text-foreground">

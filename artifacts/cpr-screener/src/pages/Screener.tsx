@@ -137,6 +137,7 @@ export default function Screener({
       symbol: string;
       source: "binance" | "delta";
       currentPrice: number;
+      change24h: number;
       s4: number;
       s3: number;
       s2: number;
@@ -833,11 +834,14 @@ export default function Screener({
   // Signal Desk consumes this exact post-filter pool. Keeping the projection
   // here means it automatically follows all existing sidebar Views and
   // hand-written Screener filters without duplicating their logic.
+  // change24h is passed straight through so SignalDeskSymbol's optional
+  // 24h-change badge has data to render.
   const signalSymbols = displayed.map((r) => ({
     key: `${r.source}-${r.symbol}`,
     symbol: r.symbol,
     source: r.source,
     currentPrice: r.currentPrice,
+    change24h: r.change24h,
     s4: r.todayCPR.s4,
     s3: r.todayCPR.s3,
     s2: r.todayCPR.s2,
@@ -849,7 +853,7 @@ export default function Screener({
     r4: r.todayCPR.r4,
   }));
   const signalSymbolsKey = signalSymbols
-    .map((r) => `${r.key}:${r.currentPrice}`)
+    .map((r) => `${r.key}:${r.currentPrice}:${r.change24h}`)
     .join("|");
 
   useEffect(() => {
