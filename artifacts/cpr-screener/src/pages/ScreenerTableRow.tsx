@@ -383,7 +383,7 @@ export function ScreenerTableHeader({
           onClick={() => toggleSort("pdhPdlPct")}
           title="Position vs yesterday's High/Low"
         >
-          PDH / PDL <SortIcon k="pdhPdlPct" />
+          PDH PDL <SortIcon k="pdhPdlPct" />
         </th>
         <th
           className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
@@ -401,7 +401,7 @@ export function ScreenerTableHeader({
           className="pl-3 pr-2 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
           onClick={() => toggleSort("priceVsCpr")}
         >
-          Price/CPR <SortIcon k="priceVsCpr" />
+          MOVE <SortIcon k="priceVsCpr" />
         </th>
         <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           GAP
