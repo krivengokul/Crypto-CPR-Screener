@@ -543,7 +543,7 @@ function eqTol(a: number, b: number): boolean {
  * category classifiers so an exactly-flat axis is an explicit state rather
  * than a value that satisfies neither `<` nor `>`.
  */
-function dirTol(today: number, prev: number): -1 | 0 | 1 {
+export function dirTol(today: number, prev: number): -1 | 0 | 1 {
   if (eqTol(today, prev)) return 0;
   return today > prev ? 1 : -1;
 }
