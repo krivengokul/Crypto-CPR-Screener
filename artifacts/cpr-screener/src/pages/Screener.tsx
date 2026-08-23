@@ -1036,12 +1036,13 @@ export default function Screener({
                 <span className="bg-gradient-to-r from-primary to-sky-400 bg-clip-text text-transparent">
                   PIVOT LEVELS
                 </span>
-                <span className="relative inline-flex items-center gap-1 text-emerald-400 italic">
-                  Live
-                  <span className="relative flex h-1.5 w-1.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400" />
+                <span className="relative inline-flex items-center text-emerald-400 italic">
+                  L
+                  <span className="relative inline-block">
+                    ı
+                    <span className="absolute -top-1 left-1/2 -translate-x-1/2 h-1 w-1 rounded-full bg-emerald-400 animate-pulse" />
                   </span>
+                  ve
                 </span>
               </h1>
               <span className="text-xs font-mono text-primary">
