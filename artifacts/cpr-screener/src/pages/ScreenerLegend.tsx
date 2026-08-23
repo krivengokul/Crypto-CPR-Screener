@@ -361,7 +361,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
         ) : activePattern === "6A:HLC-SSLL:R4-6P" ? (
           <>
             <div className="text-xs font-semibold text-green-400 mb-1">HHLL-C&nbsp;&nbsp;SSLL-AA&nbsp;&nbsp;RRHH-BB&nbsp;&nbsp;SSGap&nbsp;&nbsp;LLGap</div>
-            <div className="text-xs text-muted-foreground">Compressed, today&apos;s PDH/PDL range narrowed on one side and held on the other (HHLL-C), today&apos;s S1/PDL band fully above prev&apos;s (SSLL-AA), today&apos;s R1/PDH band fully below prev&apos;s (RRHH-BB), today&apos;s S1 gap larger than the R1 gap (SSGap), today&apos;s PDL gap larger than the PDH gap (LLGap), today&apos;s R2 above the lower of prev&apos;s R1 and prev&apos;s PDH, and today&apos;s S2 at or above prev&apos;s S1</div>
+            <div className="text-xs text-muted-foreground">Compressed, today&apos;s PDH/PDL range narrowed on one side and held on the other (HHLL-C), today&apos;s S1/PDL band fully above prev&apos;s (SSLL-AA), today&apos;s R1/PDH band fully below prev&apos;s (RRHH-BB), today&apos;s S1 gap larger than the R1 gap (SSGap), today&apos;s PDL gap larger than the PDH gap (LLGap), today&apos;s S2 above the lower of prev&apos;s S1 and prev&apos;s PDL, and either today&apos;s R2 above the lower of prev&apos;s R1 and prev&apos;s PDH or today&apos;s S3 above the lower of prev&apos;s S1 and prev&apos;s PDL</div>
           </>
         ) : activePattern === "8A:HLC-SSHH:S4-1P" ? (
           <>

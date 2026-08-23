@@ -751,12 +751,15 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // the "RRHH-BB:SSLL-AA:SSLLGap" Pattern arrow. Condition: same base as
     // that Pattern (compressed + HHLLCategory HHLL-C + SSLLCategory
     // SSLL-AA + RRHHCategory RRHH-BB + RRSSGapCategory SSGap +
-    // PDHPDLGapCategory LLGap) PLUS today's R2 meaningfully above the
-    // lower of prev's R1 and prev's PDH, and today's S2 not meaningfully
-    // below prev's S1 — all compared via dirTol so a value that's equal
-    // within the standard tolerance isn't misread as strictly
-    // greater/lesser due to floating-point noise. Bullish, entry ~6AM,
-    // targets today's own R4 (U4) by ~6PM.
+    // PDHPDLGapCategory LLGap) PLUS today's S2 meaningfully above the
+    // lower of prev's S1 and prev's PDL, AND either today's R2 meaningfully
+    // above the lower of prev's R1 and prev's PDH, or today's S3
+    // meaningfully above the lower of prev's S1 and prev's PDL (the R2
+    // check is skipped when the S3 alternative already holds) — all
+    // compared via dirTol so a value that's equal within the standard
+    // tolerance isn't misread as strictly greater/lesser due to
+    // floating-point noise. Bullish, entry ~6AM, targets today's own R4
+    // (U4) by ~6PM.
     case "6A:HLC-SSLL:R4-6P": {
       return (
         r.compressed &&
@@ -765,8 +768,9 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.RRHHCategory === "RRHH-BB" &&
         r.RRSSGapCategory === "SSGap" &&
         r.PDHPDLGapCategory === "LLGap" &&
-        dirTol(r.todayCPR.r2, Math.min(r.prevCPR.r1, r.prevCPR.prevHigh)) === 1 &&
-        dirTol(r.todayCPR.s2, r.prevCPR.s1) >= 0
+        (dirTol(r.todayCPR.r2, Math.min(r.prevCPR.r1, r.prevCPR.prevHigh)) === 1 ||
+          dirTol(r.todayCPR.s3, Math.min(r.prevCPR.s1, r.prevCPR.prevLow)) === 1) &&
+        dirTol(r.todayCPR.s2, Math.min(r.prevCPR.s1, r.prevCPR.prevLow)) === 1
       );
     }
     // NEW: "RRHH-BB:SSLL-AA:SSLLGap" — duplicate of "6A:HLC-SSLL:R4-6P", added only
