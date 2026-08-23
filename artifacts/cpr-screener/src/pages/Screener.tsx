@@ -1040,7 +1040,7 @@ export default function Screener({
                   L
                   <span className="relative inline-block">
                     ı
-                    <span className="absolute -top-1 left-1/2 -translate-x-[45%] h-1 w-1 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="absolute -top-1 left-1/2 -translate-x-[15%] h-1 w-1 rounded-full bg-emerald-400 animate-pulse" />
                   </span>
                   ve
                 </span>
