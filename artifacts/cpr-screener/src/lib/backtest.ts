@@ -14,11 +14,6 @@ export type BacktestSource = "binance" | "delta";
  * need later — "target = today's own CPR level" vs "target = previous
  * day's CPR level". Add more entries here once this is validated; each one
  * needs its target level worked out from that pattern's legend/condition.
- *
- * NEW: "eXHi-L4U4-U4" — nested under the "Overlap Above" category's
- * "HiL4U3" Pattern (see BACKTEST_CATEGORIES below).
- * Bullish, per Screener.tsx's legend card ("Overlap Higher continuation —
- * bullish bias toward U4") the target is today's own R4 / U4.
  */
 export interface BacktestTargetDef {
   key: string;          // matches passesPattern's pattern-key string exactly
@@ -129,46 +124,6 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     label: "8AM:APHS1A-FAU4:4AM",
     direction: "bullish",
     targetLabel: "FAU4 (Far Above today's R4)",
-    getTarget: (r) => r.todayCPR.r4,
-  },
-  // NEW: "eXHi-L4U4-U4" — nested under "Overlap Above" → Pattern "HiL4U3"
-  {
-    key: "eXHi-L4U4-U4",
-    label: "eXHi-L4U4-U4",
-    direction: "bullish",
-    targetLabel: "U4 (today's R4)",
-    getTarget: (r) => r.todayCPR.r4,
-  },
-  // NEW: "7AM:MiMi-pU4:11PM" — nested under "Overlap Above" → Pattern "cOL4U4".
-  // Bullish; per its legend card the target is today's own R4 / U4 (~11PM IST).
-  {
-    key: "7AM:MiMi-pU4:11PM",
-    label: "7AM:MiMi-pU4:11PM",
-    direction: "bullish",
-    targetLabel: "U4 (today's R4)",
-    getTarget: (r) => r.todayCPR.r4,
-  },
-  // NEW: "cOL3U3-pL4" — nested under "Overlap Above" → Pattern
-  // "cOL3U3". Bearish — unlike its Overlap Above sibling eXHi-L4U4-U4,
-  // this one targets prev day's S4 (PL4).
-  {
-    key: "cOL3U3-pL4",
-    label: "cOL3U3-pL4",
-    direction: "bearish",
-    targetLabel: "PL4 (prev day's S4)",
-    getTarget: (r) => r.prevCPR.s4,
-  },
-  // NEW: "6PM:LaLa->U4:2AM" — nested under "Overlap Above" → Pattern
-  // "eXL4U4" (previously an empty symbol-list-only Pattern, see
-  // BACKTEST_CATEGORIES below). Base eXL4U4 flag + prev day's own pivot
-  // sub-label p-cOU3L3 + pLarge/Large width combo + p-PDL<L1 + today's
-  // PDH>U1 + today's PDH/PDL above prev day's R1/S1. Bullish, targets
-  // today's own R4 / U4, entry ~6PM by ~2AM.
-  {
-    key: "6PM:LaLa->U4:2AM",
-    label: "6PM:LaLa->U4:2AM",
-    direction: "bullish",
-    targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
   },
   // NEW: "RRHH-BB:SSLL-AA:SSLLGap" — duplicate of "6A:HLC-SSLL:R4-6P", added only
@@ -461,8 +416,8 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
  * against that pattern's specific target.
  *
  * NEW: patterns — a category can additionally nest one or more
- * "Pattern" sub-categories (e.g. "Overlap Above" → Pattern
- * "HiL4U3"). A Pattern is itself just another
+ * "Pattern" sub-categories (e.g. "CPR Inside" → Pattern
+ * "cOL4U4"). A Pattern is itself just another
  * symbol-list-only, single-date, no-target scan — same as a category —
  * except its base condition is the PARENT category's condition AND the
  * named Pattern's raw flag (see matchesPatternFlag in
@@ -602,48 +557,6 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
     label: "EXPANDED",
     subPatternKeys: ["6A:SLE-RRHH:R2-6A"],
   },
-  // NEW: "Overlap Above" category (base condition: r.overlapHigher, same
-  // key passesPattern already uses for the "overlapping-higher" left-nav
-  // page) — nests the "HiL4U3" Pattern, which in turn
-  // nests the "eXHi-L4U4-U4" pattern.
-  {
-    key: "overlapping-higher",
-    label: "Overlap Above",
-    patterns: [
-      {
-        key: "HiL4U3",
-        label: "HiL4U3",
-        subPatternKeys: ["eXHi-L4U4-U4"],
-      },
-      // NEW: cOL3U3 Pattern, alongside HiL4U3 — nests
-      // the bearish "cOL3U3-pL4" View (target: prev day's S4 / PL4).
-      {
-        key: "cOL3U3",
-        label: "cOL3U3",
-        subPatternKeys: ["cOL3U3-pL4"],
-      },
-      // NEW: cOL4U4 Pattern — nests the bullish
-      // "7AM:MiMi-pU4:11PM" View (target: today's R4 / U4).
-      {
-        key: "cOL4U4",
-        label: "cOL4U4",
-        subPatternKeys: ["7AM:MiMi-pU4:11PM"],
-      },
-      // NEW: eXL4U4 Pattern (arrow), same shape as its
-      // HiL4U3/cOL3U3/cOL4U4 siblings — base condition = Overlap Above's
-      // r.overlapHigher condition AND the raw eXL4U4 flag (see
-      // matchesPatternFlag in ScreenerUtils.tsx, which already has a
-      // "eXL4U4" case). No target-graded pattern nested under it yet, so
-      // it shows up as a symbol-list-only scan in the Backtest dropdown.
-      {
-        key: "eXL4U4",
-        label: "eXL4U4",
-        // NEW: now nests "6PM:LaLa->U4:2AM" (was previously an empty,
-        // symbol-list-only scan).
-        subPatternKeys: ["6PM:LaLa->U4:2AM"],
-      },
-    ],
-  },
   // NEW: left-nav sections exposed in the Backtest dropdown as
   // symbol-list-only categories (no target grading). Each `key` matches an
   // existing passesPattern() case in ScreenerUtils.tsx, so runCategoryScan
@@ -752,9 +665,8 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       },
     ],
   },
-  // NEW: "CPR Inside" now nests the "cOL3U3" Pattern, same
-  // shape as its "Overlap Above" sibling — base condition = this
-  // category's inside-cpr condition AND the raw cOL3U3 flag (see
+  // NEW: "CPR Inside" now nests the "cOL3U3" Pattern — base condition =
+  // this category's inside-cpr condition AND the raw cOL3U3 flag (see
   // matchesPatternFlag in ScreenerUtils.tsx). Nests the bullish
   // "8AM:SRBHHLLA-pU4+1:8AM" View (target: prev day's R4 / PU4).
   {
@@ -804,8 +716,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
     key: "overlapping-lower",
     label: "Overlap Below",
     subPatternKeys: ["2PM:SSLLpRRHHA-ApU4:5PM", "8AM:SSLLpRRHHA-L4:1PM", "9AM:SSRRBHHLLA-U4:9PM", "pRRHHLLA"],
-    // NEW: "LoU4L4" Pattern (arrow), same shape as its
-    // "eXL4U4" counterpart under "overlapping-higher" — base condition =
+    // NEW: "LoU4L4" Pattern (arrow) — base condition =
     // Overlap Below's r.overlapLower condition AND the raw LoU4L4 flag
     // (see matchesPatternFlag in ScreenerUtils.tsx, which already has a
     // "LoU4L4" case). No target-graded pattern nested under it yet, so it
@@ -838,7 +749,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
  * dropdown in the Backtest panel.
  *
  * The dropdown no longer renders bold, non-selectable group headings
- * ("LittleCPR Above", "Overlap Above", ...). Instead every group's own
+ * ("LittleCPR Above", "Overlap Below", ...). Instead every group's own
  * "— all (symbol list only)" row IS the heading: the category name is
  * rendered bold and the "— all (symbol list only)" suffix normal-weight,
  * e.g. render each option as:
@@ -978,7 +889,7 @@ export interface BacktestRow {
  * shape for reference (compressionRatio, widths via todayCPR/prevCPR).
  *
  * Also reused, unchanged, for Pattern scans (e.g.
- * "Overlap Above" → "HiL4U3") — same shape, same reasoning: a Pattern
+ * "CPR Inside" → "cOL4U4") — same shape, same reasoning: a Pattern
  * bucket within a category still has no single target to grade.
  */
 export interface CategoryScanRow {
@@ -1554,8 +1465,8 @@ export async function categoryScanSymbolOnDate(
 /**
  * NEW: Pattern backtest version of backtestSymbolOnDate — same CPR
  * reconstruction, and checks BOTH the parent CATEGORY's base condition
- * (e.g. "overlapping-higher") AND the named Pattern's raw flag (e.g.
- * "HiL4U3", via matchesPatternFn — see matchesPatternFlag in
+ * (e.g. "inside-cpr") AND the named Pattern's raw flag (e.g.
+ * "cOL4U4", via matchesPatternFn — see matchesPatternFlag in
  * ScreenerUtils.tsx), same two-part match as before. CHANGED: every
  * existing Pattern now grades against a fixed target — today's own R4 /
  * U4, bullish ("-R4") — instead of running as a symbol-list-only scan, so
@@ -1727,8 +1638,8 @@ export async function runCategoryScan(
  * symbol-universe caveat applies (see KNOWN LIMITATION above). Runs
  * pivotLevelBacktestSymbolOnDate across the full universe and returns a
  * graded BacktestRow list (Target/Result/Hit Date, target = today's R4 /
- * U4, bullish) for a category's Pattern sub-bucket (e.g. "Overlap Above"
- * → "HiL4U3-R4"), same shape as runBacktest's output.
+ * U4, bullish) for a category's Pattern sub-bucket (e.g. "CPR Inside"
+ * → "cOL4U4-R4"), same shape as runBacktest's output.
  */
 export async function runPivotLevelBacktest(
   categoryKey: string,

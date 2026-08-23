@@ -179,18 +179,6 @@ export default function Screener({
   // sibling of 2PM:SSLLpRRHHA-ApU4:5PM, same Overlap Below + SSLLAbove +
   // HHRRBelow base, split the opposite way, targets today's own L4 by ~1PM.
   const [showOBLoSSLLRRHHDown, setShowOBLoSSLLRRHHDown] = useState(false);
-  // NEW: eXHi-L4U4-U4 filter state (Overlapping Higher) — counterpart of
-  // eXLo-L4U4-U4 (Overlapping Lower), same r.eXL4U4 boolean, gated on
-  // r.overlapHigher instead of r.overlapLower.
-  const [showOBHiExL4U4, setShowOBHiExL4U4] = useState(false);
-   const [showLMeXL2U2, setShowLMeXL2U2] = useState(false);
-  // NEW: cOL3U3-pL4 / 7AM:MiMi-pU4:11PM / 6PM:LaLa->U4:2AM filter state —
-  // Overlapping Higher Views entries that existed in ViewsSidebar's
-  // Views list but had no matching Screener button (same class of
-  // bug as CPR Inside's missing Views).
-  const [showOBHicOL3U3pL4, setShowOBHicOL3U3pL4] = useState(false);
-  const [showOBHi7AMMiMi, setShowOBHi7AMMiMi] = useState(false);
-  const [showOBHi6PMLaLa, setShowOBHi6PMLaLa] = useState(false);
   // NEW: generic Views (sub-pattern) toggle — covers every category listed
   // in GENERIC_VIEW_CATEGORIES (LEVELS ABOVE, LEVELs BELOW, COMPRESSED,
   // U1>pU4, L1<pL4, Equal CPR, and any future category added there) instead
@@ -389,8 +377,6 @@ export default function Screener({
     if (allResults.length > 0) setFiltered(allResults.filter((r) => passesPattern(r, activePattern)));
     if (deltaAllResults.length > 0) setDeltaFiltered(deltaAllResults.filter((r) => passesPattern(r, activePattern)));
     if (activePattern !== "overlapping-lower") { setShowExpU4PU4(false); setShowExpU3PU3(false); setShowOBLoRRHHLLA(false); setShowOBNLoU4L4(false); setShowOBWLoU4L4(false); setShowOBLoSSLLRRHH(false); setShowOBLoSSLLRRHHDown(false); }
-    // NEW: reset eXHi-L4U4-U4 toggle when leaving Overlapping Higher
-    if (activePattern !== "overlapping-higher") { setShowOBHiExL4U4(false); setShowLMeXL2U2(false); setShowOBHicOL3U3pL4(false); setShowOBHi7AMMiMi(false); setShowOBHi6PMLaLa(false); }
   }, [activePattern, allResults, deltaAllResults]);
 
   // ─── Two-way sync between the left-nav Views and the Screener's own
@@ -411,12 +397,6 @@ export default function Screener({
     "OBW-LoU4L4-L4": setShowOBWLoU4L4,
     "2PM:SSLLpRRHHA-ApU4:5PM": setShowOBLoSSLLRRHH,
     "8AM:SSLLpRRHHA-L4:1PM": setShowOBLoSSLLRRHHDown,
-    // overlapping-higher
-    "eXHi-L4U4-U4": setShowOBHiExL4U4,
-    "LMe-eXL2U2-L4:10PM": setShowLMeXL2U2,
-    "cOL3U3-pL4": setShowOBHicOL3U3pL4,
-    "7AM:MiMi-pU4:11PM": setShowOBHi7AMMiMi,
-    "6PM:LaLa->U4:2AM": setShowOBHi6PMLaLa,
   };
 
   // Current on/off state of each of those buttons — used to detect when the
@@ -428,11 +408,6 @@ export default function Screener({
     "OBW-LoU4L4-L4": showOBWLoU4L4,
     "2PM:SSLLpRRHHA-ApU4:5PM": showOBLoSSLLRRHH,
     "8AM:SSLLpRRHHA-L4:1PM": showOBLoSSLLRRHHDown,
-    "eXHi-L4U4-U4": showOBHiExL4U4,
-    "LMe-eXL2U2-L4:10PM": showLMeXL2U2,
-    "cOL3U3-pL4": showOBHicOL3U3pL4,
-    "7AM:MiMi-pU4:11PM": showOBHi7AMMiMi,
-    "6PM:LaLa->U4:2AM": showOBHi6PMLaLa,
   };
 
   // Is activePattern a Views leaf (a sub-pattern) rather than a category?
@@ -573,75 +548,6 @@ export default function Screener({
         .filter((r) => passesPattern(r, "eXLo-L4U4-U4"))
         .map((r) => ({ ...r, source: "delta" as const }));
 
-      if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
-      if (activeTab === "delta") return deltaIntersect;
-      return binanceIntersect;
-    }
-    // NEW: eXHi-L4U4-U4 pool — Overlapping Higher counterpart of
-    // eXLo-L4U4-U4 (Overlapping Lower). Same r.eXL4U4 boolean, gated on
-    // r.overlapHigher and the pSmall(prev)/Tiny(today) width bands.
-    if (showOBHiExL4U4 && activePattern === "overlapping-higher") {
-      const binanceIntersect = allResults
-        .filter((r) => passesPattern(r, "eXHi-L4U4-U4"))
-        .map((r) => ({ ...r, source: "binance" as const }));
-
-      const deltaIntersect = deltaAllResults
-        .filter((r) => passesPattern(r, "eXHi-L4U4-U4"))
-        .map((r) => ({ ...r, source: "delta" as const }));
-
-      if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
-      if (activeTab === "delta") return deltaIntersect;
-      return binanceIntersect;
-    }
-    // NEW: LMe-eXL2U2-L4:10PM pool
-    if (showLMeXL2U2 && activePattern === "overlapping-higher") {
-      const binanceIntersect = allResults
-        .filter((r) => passesPattern(r, "LMe-eXL2U2-L4:10PM"))
-        .map((r) => ({ ...r, source: "binance" as const }));
-
-      const deltaIntersect = deltaAllResults
-        .filter((r) => passesPattern(r, "LMe-eXL2U2-L4:10PM"))
-        .map((r) => ({ ...r, source: "delta" as const }));
-
-      if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
-      if (activeTab === "delta") return deltaIntersect;
-      return binanceIntersect;
-    }
-    // NEW: cOL3U3-pL4 pool — Overlapping Higher Views entry with no
-    // Screener button
-    if (showOBHicOL3U3pL4 && activePattern === "overlapping-higher") {
-      const binanceIntersect = allResults
-        .filter((r) => passesPattern(r, "cOL3U3-pL4"))
-        .map((r) => ({ ...r, source: "binance" as const }));
-      const deltaIntersect = deltaAllResults
-        .filter((r) => passesPattern(r, "cOL3U3-pL4"))
-        .map((r) => ({ ...r, source: "delta" as const }));
-      if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
-      if (activeTab === "delta") return deltaIntersect;
-      return binanceIntersect;
-    }
-    // NEW: 7AM:MiMi-pU4:11PM pool — Overlapping Higher Views entry with no
-    // Screener button
-    if (showOBHi7AMMiMi && activePattern === "overlapping-higher") {
-      const binanceIntersect = allResults
-        .filter((r) => passesPattern(r, "7AM:MiMi-pU4:11PM"))
-        .map((r) => ({ ...r, source: "binance" as const }));
-      const deltaIntersect = deltaAllResults
-        .filter((r) => passesPattern(r, "7AM:MiMi-pU4:11PM"))
-        .map((r) => ({ ...r, source: "delta" as const }));
-      if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
-      if (activeTab === "delta") return deltaIntersect;
-      return binanceIntersect;
-    }
-    // NEW: 6PM:LaLa->U4:2AM pool — Overlapping Higher Views entry with no
-    // Screener button
-    if (showOBHi6PMLaLa && activePattern === "overlapping-higher") {
-      const binanceIntersect = allResults
-        .filter((r) => passesPattern(r, "6PM:LaLa->U4:2AM"))
-        .map((r) => ({ ...r, source: "binance" as const }));
-      const deltaIntersect = deltaAllResults
-        .filter((r) => passesPattern(r, "6PM:LaLa->U4:2AM"))
-        .map((r) => ({ ...r, source: "delta" as const }));
       if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
       if (activeTab === "delta") return deltaIntersect;
       return binanceIntersect;
@@ -888,7 +794,6 @@ export default function Screener({
       if (pdhPdlFilter === "s1r1in") {
         const eligible =
           passesPattern(r, "inside-cpr") ||
-          passesPattern(r, "overlapping-higher") ||
           passesPattern(r, "overlapping-lower");
         if (!eligible) return false;
         const inBand = (lvl: number, b: { bc: number; tc: number }) => {
@@ -977,7 +882,7 @@ export default function Screener({
 
   // Helper: is any sub-filter active (to decide the result count label)
   const anySubFilter =
-    showExpU4PU4 || showExpU3PU3 || showOBLoRRHHLLA || showOBNLoU4L4 || showOBWLoU4L4 || showOBLoSSLLRRHH || showOBHiExL4U4 || showLMeXL2U2 || showOBHicOL3U3pL4 || showOBHi7AMMiMi || showOBHi6PMLaLa ||
+    showExpU4PU4 || showExpU3PU3 || showOBLoRRHHLLA || showOBNLoU4L4 || showOBWLoU4L4 || showOBLoSSLLRRHH ||
     !!activeGenericSubView ||
     !!PatternFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter || !!exitTimeFilter;
 
@@ -1062,8 +967,6 @@ export default function Screener({
           showOBLoRRHHLLA={showOBLoRRHHLLA}
           showOBNLoU4L4={showOBNLoU4L4}
           showOBWLoU4L4={showOBWLoU4L4}
-          showOBHiExL4U4={showOBHiExL4U4}
-          showLMeXL2U2={showLMeXL2U2}
         />
         )}
 
@@ -1131,10 +1034,6 @@ export default function Screener({
                   setShowOBNLoU4L4(false);
                   setShowOBWLoU4L4(false);
                   setShowOBLoSSLLRRHHDown(false);
-                  setShowOBHiExL4U4(false);
-                  setShowOBHicOL3U3pL4(false);
-                  setShowOBHi7AMMiMi(false);
-                  setShowOBHi6PMLaLa(false);
                 }}
                 className={`flex items-center gap-0.5 text-xs font-bold px-2 py-1 rounded border border-border transition-colors shrink-0 ${showAll ? "bg-foreground/15 text-foreground" : "text-muted-foreground hover:text-foreground"}`}
               >
@@ -1392,108 +1291,6 @@ export default function Screener({
                 title="Overlap Lower + SSLLAbove (today's S1 & PDL above the higher of prev S1/PDL) + HHRRBelow (today's R1 & PDH below the lower of prev R1/PDH) + (prev R1 below today's R2 OR today's S3 below prev S2): Target today's own L4 by ~1PM"
               >
                 {showOBLoSSLLRRHHDown ? "✕ 8AM:SSLLpRRHHA-L4:1PM" : "8AM:SSLLpRRHHA-L4:1PM"}<ViewCount id={"8AM:SSLLpRRHHA-L4:1PM"} counts={viewCounts} />
-              </button>
-            )}
-            {/* NEW: eXHi-L4U4-U4 button — Overlapping Higher, counterpart of
-                eXLo-L4U4-U4 under Overlapping Lower. Same r.eXL4U4 boolean
-                from cpr.ts, gated on r.overlapHigher + pSmall(prev)/Tiny(today). */}
-            {activeSectionKey === "overlapping-higher" && !showAll && (
-              <button
-                onClick={() => {
-                  setShowOBHiExL4U4((v) => !v);
-                  setShowLMeXL2U2(false);
-                  setShowOBHicOL3U3pL4(false);
-                  setShowOBHi7AMMiMi(false);
-                  setShowOBHi6PMLaLa(false);
-                }}
-                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                  showOBHiExL4U4
-                    ? "border-pink-400 text-pink-400"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-                title="Overlap Higher: Prev R4 between today's R3/R4, Prev S4 between today's S3/S4, Prev CPR pSmall, Today CPR Tiny"
-              >
-                {showOBHiExL4U4 ? "✕ eXHi-L4U4-U4" : "eXHi-L4U4-U4"}<ViewCount id={"eXHi-L4U4-U4"} counts={viewCounts} />
-              </button>
-            )}
-             {/* NEW: LMe-eXL2U2-L4:10PM button — Overlap Above */}
-            {activeSectionKey === "overlapping-higher" && !showAll && (
-              <button
-                onClick={() => {
-                  setShowLMeXL2U2((v) => !v);
-                  setShowOBHiExL4U4(false);
-                  setShowOBHicOL3U3pL4(false);
-                  setShowOBHi7AMMiMi(false);
-                  setShowOBHi6PMLaLa(false);
-                }}
-                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                  showLMeXL2U2
-                    ? "border-red-400 text-red-400 bg-red-500/10"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-                title="Overlap Above + eXL2U2 pivot band + Compression Ratio 60%–90%. Target L4 by ~10PM."
-              >
-                {showLMeXL2U2 ? "✕ LMe-eXL2U2-L4:10PM" : "LMe-eXL2U2-L4:10PM"}<ViewCount id={"LMe-eXL2U2-L4:10PM"} counts={viewCounts} />
-              </button>
-            )}
-            {/* NEW: cOL3U3-pL4 button — Overlapping Higher Views entry with no Screener button */}
-            {activeSectionKey === "overlapping-higher" && !showAll && (
-              <button
-                onClick={() => {
-                  setShowOBHicOL3U3pL4((v) => !v);
-                  setShowOBHiExL4U4(false);
-                  setShowLMeXL2U2(false);
-                  setShowOBHi7AMMiMi(false);
-                  setShowOBHi6PMLaLa(false);
-                }}
-                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                  showOBHicOL3U3pL4
-                    ? "border-blue-400 text-blue-400"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-                title="Show only rows matching cOL3U3-pL4"
-              >
-                {showOBHicOL3U3pL4 ? "✕ cOL3U3-pL4" : "cOL3U3-pL4"}<ViewCount id={"cOL3U3-pL4"} counts={viewCounts} />
-              </button>
-            )}
-            {/* NEW: 7AM:MiMi-pU4:11PM button — Overlapping Higher Views entry with no Screener button */}
-            {activeSectionKey === "overlapping-higher" && !showAll && (
-              <button
-                onClick={() => {
-                  setShowOBHi7AMMiMi((v) => !v);
-                  setShowOBHiExL4U4(false);
-                  setShowLMeXL2U2(false);
-                  setShowOBHicOL3U3pL4(false);
-                  setShowOBHi6PMLaLa(false);
-                }}
-                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                  showOBHi7AMMiMi
-                    ? "border-emerald-400 text-emerald-400"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-                title="Show only rows matching 7AM:MiMi-pU4:11PM"
-              >
-                {showOBHi7AMMiMi ? "✕ 7AM:MiMi-pU4:11PM" : "7AM:MiMi-pU4:11PM"}<ViewCount id={"7AM:MiMi-pU4:11PM"} counts={viewCounts} />
-              </button>
-            )}
-            {/* NEW: 6PM:LaLa->U4:2AM button — Overlapping Higher Views entry with no Screener button */}
-            {activeSectionKey === "overlapping-higher" && !showAll && (
-              <button
-                onClick={() => {
-                  setShowOBHi6PMLaLa((v) => !v);
-                  setShowOBHiExL4U4(false);
-                  setShowLMeXL2U2(false);
-                  setShowOBHicOL3U3pL4(false);
-                  setShowOBHi7AMMiMi(false);
-                }}
-                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                  showOBHi6PMLaLa
-                    ? "border-amber-400 text-amber-400"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-                title="Show only rows matching 6PM:LaLa->U4:2AM"
-              >
-                {showOBHi6PMLaLa ? "✕ 6PM:LaLa->U4:2AM" : "6PM:LaLa->U4:2AM"}<ViewCount id={"6PM:LaLa->U4:2AM"} counts={viewCounts} />
               </button>
             )}
           </div>

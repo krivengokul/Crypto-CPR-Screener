@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import {
   TrendingUp,
   TrendingDown,
-  Layers,
   LayersIcon,
   Crosshair,
   BarChart,
@@ -37,36 +36,6 @@ export interface SubPattern {
  * existing Screener filtering logic works with no changes.
  */
 export const Views: Record<string, SubPattern[]> = {
-  "overlapping-higher": [
-    { id: "eXHi-L4U4-U4",            label: "eXHi-L4U4-U4" },
-    { id: "cOL3U3-pL4",            label: "cOL3U3-pL4" },
-    // NEW
-    {
-      id: "LMe-eXL2U2-L4:10PM",
-      label: "LMe-eXL2U2-L4:10PM",
-      activeColor: "#f87171",      // red-400 border
-      activeText:  "#fca5a5",      // red-300 text
-      activeBg:    "rgba(239, 68, 68, 0.10)",
-    },
-    // NEW: 7AM:MiMi-pU4:11PM — Overlap Above + cOL4U4 + p-HiL4U4 + pMini + Mini
-    // + p-PDH>U1 + PDH>U1
-    {
-      id: "7AM:MiMi-pU4:11PM",
-      label: "7AM:MiMi-pU4:11PM",
-      activeColor: "#34d399",      // emerald-400 border
-      activeText:  "#6ee7b7",      // emerald-300 text
-      activeBg:    "rgba(16, 185, 129, 0.10)",
-    },
-    // NEW: 6PM:LaLa->U4:2AM — Overlap Above + p-cOU3L3 + eXL4U4 + pLarge +
-    // Large + p-PDL<L1 + PDH>U1 + today's PDH > prev R1 + today's PDL > prev S1
-    {
-      id: "6PM:LaLa->U4:2AM",
-      label: "6PM:LaLa->U4:2AM",
-      activeColor: "#fbbf24",      // amber-400 border
-      activeText:  "#fcd34d",      // amber-300 text
-      activeBg:    "rgba(245, 158, 11, 0.10)",
-    },
-  ],
   "overlapping-lower": [
     { id: "eXLo-L4U4-U4",            label: "Exp-U3>pU4" },
     { id: "9AM:SSRRBHHLLA-U4:9PM",   label: "9AM:SSRRBHHLLA-U4:9PM" },
@@ -395,7 +364,6 @@ export const pivotcategories: Category[] = [
   { id: "expanded",          label: "EXPANDED",     subtitle: "RRSS-E only (today's R1 up, S1 down vs prev)",   icon: TrendingUp },
   { id: "l1-lt-pl4",          label: "L1<pL4",        subtitle: "Today S1 below Prev S4",   icon: TrendingDown },
   { id: "inside-cpr",         label: "Inside CPR",     subtitle: "Inside CPR range",         icon: Crosshair },
-  { id: "overlapping-higher", label: "Overlap Above", subtitle: "CPR zones stacking up",    icon: Layers },
   { id: "overlapping-lower",  label: "Overlap Below", subtitle: "CPR zones stacking down",  icon: LayersIcon },
   { id: "equal-cpr",          label: "Equal CPR",     subtitle: "Prev & Today CPR Equal",   icon: Equal },
 ];

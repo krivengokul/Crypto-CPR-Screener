@@ -467,21 +467,6 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.todayCPR.widthPct >= 0.1 &&
         r.todayCPR.widthPct < 0.5
       );
-    // NEW: eXHi-L4U4-U4 — Overlapping Higher counterpart of eXLo-L4U4-U4.
-    // Reuses the same r.eXL4U4 boolean from cpr.ts (prev R4 inside today's
-    // R3/R4 AND prev S4 inside today's S3/S4), but gated on r.overlapHigher
-    // instead of r.overlapLower, since the raw R/S math itself is direction-
-    // agnostic. Width condition matches the reference chart's badges
-    // exactly: prev day CPR category = pSmall (0.60%–1.20%), today's CPR
-    // category = Tiny (0.10%–0.25%) — rather than a loose "< X%" threshold.
-    case "eXHi-L4U4-U4":
-      return (
-        r.overlapHigher && r.eXL4U4 &&
-        ((r.prevCPR.widthPct > 0.60 && r.prevCPR.widthPct <= 1.10 &&   // pSmall
-        r.todayCPR.widthPct > 0.10 && r.todayCPR.widthPct <= 0.22 ) ||  // Tiny
-        (r.prevCPR.widthPct > 0.60 && r.prevCPR.widthPct <= 1.10 &&   // pSmall
-          r.compressionRatio > 120 && r.compressionRatio < 180 ))// Wider
-      );
     case "OBN-LoU4L4-U4":
       return (
         r.overlapLower &&
@@ -844,57 +829,6 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.HHLLCategory === "HHLL-B" &&
         r.PDHPDLGapCategory === "HHGap"
       );
-    case "overlapping-higher":
-      return r.overlapHigher;
-    // NEW: LMe-eXL2U2-L4:10PM — Overlap Above + eXL2U2 pivot band,
-    // compression ratio 60–90 (Little–Medium bracket). Target L4, ~10PM.
-    case "LMe-eXL2U2-L4:10PM":
-      return (
-        r.overlapHigher &&
-        r.eXL2U2 &&
-        r.compressionRatio >= 60 &&
-        r.compressionRatio <= 90
-      );
-    // NEW: 7AM:MiMi-pU4:11PM — Overlap Above + today's cOL4U4 (prev R4 inside
-    // today's R3/R4, prev S4 inside today's S3/S4 direction-agnostic cO
-    // variant) + the PREVIOUS day's own pivot sub-label (prevCPR vs ppCPR)
-    // being HiL4U4 ("p-HiL4U4" badge) + prev CPR width category pMini
-    // (0.22%-0.60%) + today CPR width category Mini (0.22%-0.60%) +
-    // prev day's PDH above prev R1 + today's PDH above today's R1.
-    // Bullish, target U4 (today's R4) by ~11PM IST.
-    case "7AM:MiMi-pU4:11PM":
-      return (
-        r.overlapHigher &&
-        r.cOL4U4 &&
-        computePrevPattern(r.prevCPR, r.ppCPR) === "HiL4U4" &&
-        r.prevCPR.widthPct > 0.22 && r.prevCPR.widthPct <= 0.60 &&   // pMini
-        r.todayCPR.widthPct > 0.22 && r.todayCPR.widthPct <= 0.60 && // Mini
-        r.prevCPR.HLSwitch === "HL-A" &&
-        r.todayCPR.HLSwitch === "HL-A"
-      );
-    case "cOL3U3-pL4":
-      return r.overlapHigher && r.cOL3U3 && r.prevCPR.widthPct <= 0.10 &&   // pMicro
-              r.todayCPR.widthPct > 0.60 && r.todayCPR.widthPct <= 1.10;   // Small;
-    // NEW: 6PM:LaLa->U4:2AM — Overlap Above + the PREVIOUS day's own pivot
-    // sub-label (prevCPR vs ppCPR) being cOU3L3 ("p-cOU3L3" badge) + raw
-    // eXL4U4 flag (prev R4 inside today's R3/R4 AND prev S4 inside today's
-    // S3/S4) + prev CPR width category pLarge (2.00%-5.00%) + today CPR
-    // width category Large (2.00%-5.00%) + prev day's own PDL below prev
-    // day's S1 ("p-PDL<L1") + today's PDH above today's R1 ("PDH>U1") +
-    // today's PDH above prev day's R1 + today's PDL above prev day's S1.
-    // Bullish, entry ~6PM, target U4 (today's R4) by ~2AM.
-    case "6PM:LaLa->U4:2AM":
-      return (
-        r.overlapHigher &&
-        computePrevPattern(r.prevCPR, r.ppCPR) === "cOU3L3" &&
-        r.eXL4U4 &&
-        r.prevCPR.widthPct > 2.00 && r.prevCPR.widthPct <= 5.00 &&   // pLarge
-        r.todayCPR.widthPct > 2.00 && r.todayCPR.widthPct <= 5.00 && // Large
-        r.prevCPR.prevLow < r.prevCPR.s1 &&                          // p-PDL<L1
-        r.todayCPR.HLSwitch === "HL-A" &&                                      // PDH>U1
-        r.todayCPR.prevHigh > r.prevCPR.r1 &&
-        r.todayCPR.prevLow > r.prevCPR.s1
-      );
     case  "LAT-PU12CU23":
       return r.overlapHigher && r.PU12CU23 && r.PL12CL23 && r.todayCPR.prevHigh > r.prevCPR.prevHigh;
     case "overlapping-lower":
@@ -1072,13 +1006,6 @@ interface SubFilterDef {
 }
 
 const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
-  "overlapping-higher": [
-    { key: "eXHi-L4U4-U4",  direction: "up" },
-    { key: "cOL3U3-pL4",  direction: "down" },
-    { key: "LMe-eXL2U2-L4:10PM", direction: "down" },
-    { key: "7AM:MiMi-pU4:11PM", direction: "up" },
-    { key: "6PM:LaLa->U4:2AM", direction: "up" },
-  ],
   "overlapping-lower": [
     { key: "eXLo-L4U4-U4", direction: "up" },
     { key: "9AM:SSRRBHHLLA-U4:9PM", direction: "up" },
@@ -1202,8 +1129,8 @@ export function getSubFilterDirection(r: CPRResult, activePattern: string): SubF
  * and isn't mutually exclusive with them). Screener.tsx renders it as its
  * own second-row badge and its own Pattern filter button, checking
  * r.eXL4U4 directly — independent of activePattern/section, unlike the
- * "eXLo-L4U4-U4" / "eXHi-L4U4-U4" *patterns*, which gate the same boolean
- * behind overlapLower / overlapHigher respectively for their own sections.
+ * "eXLo-L4U4-U4" *pattern*, which gates the same boolean behind
+ * overlapLower for its own section.
  *
  * NEW: eXU4L2 — same treatment again: an independent, section-agnostic
  * boolean (r.eXU4L2 from cpr.ts — prev R4 inside today's R3/R4 AND prev
@@ -1255,7 +1182,7 @@ export function getPatternInfo(r: CPRResult): PatternInfo {
  * matchesPatternFlag — raw Pattern flag check, factored out of the
  * inline PatternFilter block in Screener.tsx's `displayed` filter so
  * other consumers (the Backtest panel's Pattern scans,
- * e.g. "Overlap Above" → "HiL4U3") can reuse the exact same lookups
+ * e.g. "CPR Inside" → "cOL4U4") can reuse the exact same lookups
  * without duplicating the switch. For the six mutually-exclusive primary
  * labels (eX-Higher/eX-Lower/cO-Higher/cO-Lower/Higher/Lower) this falls
  * back to getPatternInfo(r)'s label; for the independent, section-agnostic

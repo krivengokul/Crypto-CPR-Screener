@@ -7,8 +7,6 @@ export interface ScreenerLegendProps {
   showOBLoRRHHLLA: boolean;
   showOBNLoL4U4: boolean;
   showOBWLoL4U4: boolean;
-  showOBHiExL4U4: boolean;
-  showLMeXL2U2: boolean;
   /** @deprecated CPR Inside sub-filters removed; kept optional for callers. */
   showInsideCPRTiCOLo?: boolean;
 }
@@ -27,12 +25,10 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
     showOBLoRRHHLLA,
     showOBNLoL4U4,
     showOBWLoL4U4,
-    showOBHiExL4U4,
-    showLMeXL2U2,
   } = props;
   
-  // Map a sub-pattern id (selected via the sidebar tree, e.g. "cOL3U3-pL4")
-  // back to its parent category id (e.g. "overlapping-higher"), so Legend Card 1
+  // Map a sub-pattern id (selected via the sidebar tree, e.g. "eXLo-L4U4-U4")
+  // back to its parent category id (e.g. "overlapping-lower"), so Legend Card 1
   // still shows the parent's overview card instead of going blank when a
   // child pattern is the active one. Parent ids and standalone patterns
   // (which aren't anyone's child) just resolve to themselves.
@@ -64,15 +60,6 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
               <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-500 text-white">Lower</span>
             </div>
             <div className="text-xs text-muted-foreground">Today&apos;s CPR overlaps below yesterday&apos;s CPR</div>
-          </>
-        ) : legendPattern === "overlapping-higher" ? (
-          <>
-            <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-              <span className="text-xs font-semibold text-primary">Overlapping Higher</span>
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-orange-500 text-white">Overlap</span>
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-violet-500 text-white">Higher</span>
-            </div>
-            <div className="text-xs text-muted-foreground">Today&apos;s CPR overlaps above yesterday&apos;s CPR</div>
           </>
         ) : legendPattern === "levelsabove" ? (
           <>
@@ -231,38 +218,6 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
           <>
             <div className="text-xs font-semibold text-rose-400 mb-1">Overlap Lower, Wide</div>
             <div className="text-xs text-muted-foreground">Today&apos;s R4 inside Prev R3/R4, Prev S4 inside Today&apos;s S3/S4, today&apos;s CPR Wide, Compression &gt; 50%</div>
-          </>
-        ) : showOBHiExL4U4 && activePattern === "overlapping-higher" ? (
-          <>
-            <div className="text-xs font-semibold text-pink-400 mb-1">eXHi-L4U4-U4</div>
-            <div className="text-xs text-muted-foreground">Overlap Higher — Prev R4 between today&apos;s R3/R4, Prev S4 between today&apos;s S3/S4, Prev CPR pSmall, Today CPR Tiny</div>
-          </>
-          ) : showLMeXL2U2 && activePattern === "overlapping-higher" ? (
-          <>
-            <div className="text-xs font-semibold text-red-400 mb-1">
-              Pattern: eXL2U2&nbsp;&nbsp;PCPR: Large&nbsp;&nbsp;CPR: Medium
-            </div>
-            <div className="text-xs text-muted-foreground">
-              Overlap Above + eXL2U2 (today&apos;s S2 above prev S1 AND today&apos;s R2 above prev R1) + Compression Ratio 60%–90%.
-            </div>
-          </>
-        ) : activePattern === "7AM:MiMi-pU4:11PM" ? (
-          <>
-            <div className="text-xs font-semibold text-emerald-400 mb-1">
-              Pattern: cOL4U4&nbsp;&nbsp;Prev: p-HiL4U4&nbsp;&nbsp;PCPR: pMini&nbsp;&nbsp;CPR: Mini
-            </div>
-            <div className="text-xs text-muted-foreground">
-              Overlap Above + cOL4U4 + previous day&apos;s pattern p-HiL4U4 + prev CPR pMini (0.22%–0.60%) + today CPR Mini (0.22%–0.60%) + prev PDH above prev U1 + today PDH above today U1.
-            </div>
-          </>
-        ) : activePattern === "6PM:LaLa->U4:2AM" ? (
-          <>
-            <div className="text-xs font-semibold text-amber-400 mb-1">
-              Pattern: eXL4U4&nbsp;&nbsp;Prev: p-cOU3L3&nbsp;&nbsp;PCPR: pLarge&nbsp;&nbsp;CPR: Large
-            </div>
-            <div className="text-xs text-muted-foreground">
-              Overlap Above + previous day&apos;s pattern p-cOU3L3 + eXL4U4 (prev R4 inside today&apos;s R3/R4, prev S4 inside today&apos;s S3/S4) + prev CPR pLarge (2.00%–5.00%) + today CPR Large (2.00%–5.00%) + prev day&apos;s PDL below prev S1 (p-PDL&lt;L1) + today PDH above today R1 (PDH&gt;U1) + today&apos;s PDH above prev R1 + today&apos;s PDL above prev S1.
-            </div>
           </>
         ) : activePattern === "2PM:SSLLpRRHHA-ApU4:5PM" ? (
           <>
@@ -455,38 +410,6 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
           <>
             <div className="text-xs font-semibold text-emerald-400 mb-1">Target</div>
             <div className="text-xs text-muted-foreground">Same structure but today&apos;s CPR Wide — bullish continuation to U4</div>
-          </>
-        ) : showOBHiExL4U4 && activePattern === "overlapping-higher" ? (
-          <>
-            <div className="text-xs font-semibold text-emerald-400 mb-1">Target</div>
-            <div className="text-xs text-muted-foreground">Overlap Higher continuation — bullish bias toward U4</div>
-          </>
-          ) : showLMeXL2U2 && activePattern === "overlapping-higher" ? (
-          <>
-            <div className="text-xs font-semibold text-red-400 mb-1">
-              Target: L4&nbsp;&nbsp;&nbsp;Time: 10PM
-            </div>
-            <div className="text-xs text-muted-foreground">
-              Bearish rotation from the Overlap-Above zone — expected sweep toward today&apos;s L4 by ~10PM IST.
-            </div>
-          </>
-        ) : activePattern === "7AM:MiMi-pU4:11PM" ? (
-          <>
-            <div className="text-xs font-semibold text-emerald-400 mb-1">
-              Target: U4&nbsp;&nbsp;&nbsp;Entry: 7AM&nbsp;&nbsp;&nbsp;Time: 11PM
-            </div>
-            <div className="text-xs text-muted-foreground">
-              Bullish continuation from the Overlap-Above zone — expected move toward today&apos;s U4 by ~11PM IST.
-            </div>
-          </>
-        ) : activePattern === "6PM:LaLa->U4:2AM" ? (
-          <>
-            <div className="text-xs font-semibold text-amber-400 mb-1">
-              Target: U4&nbsp;&nbsp;&nbsp;Entry: 6PM&nbsp;&nbsp;&nbsp;Time: 2AM
-            </div>
-            <div className="text-xs text-muted-foreground">
-              Bullish continuation from a Large/pLarge Overlap-Above setup — expected move toward today&apos;s U4 by ~2AM IST.
-            </div>
           </>
         ) : activePattern === "2PM:SSLLpRRHHA-ApU4:5PM" ? (
           <>
