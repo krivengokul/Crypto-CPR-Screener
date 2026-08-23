@@ -591,7 +591,7 @@ export default function ViewsSidebar({
               border: `1px solid ${BORDER_COLOR}`,
             }}
           >
-            {(["scanner", "backtest", "signals"] as SidebarMode[]).map((m) => (
+            {(["scanner", "signals", "backtest"] as SidebarMode[]).map((m) => (
               <button
                 key={m}
                 onClick={() => onModeChange(m)}
