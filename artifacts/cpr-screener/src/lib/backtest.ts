@@ -941,7 +941,7 @@ export interface BacktestRow {
   // see BACKTEST_TARGETS' getTarget comment and backtestSymbolOnDate below.
   result: "pass" | "fail" | "insufficient-data" | "invalid-target";
   hitDate: string | null;          // which day (entryDate, entryDate+1, or entryDate+2) hit target, if any
-  daysToHit: 0 | 1 | 2 | null;
+  daysToHit: 0 | 1 | null;
   /** Entry-day close / prev close / day-over-day % change (same as CategoryScanRow). */
   closePrice: number | null;
   prevClose: number | null;
@@ -1416,11 +1416,13 @@ async function reconstructCPRForDate(
  *      NOT a "fail" (fail is reserved for "matched the pattern but target
  *      wasn't hit").
  *   3. If it matched, check whether target was reached within the entry
- *      day, D+1, or D+2 — using each day's high (bullish) or low (bearish).
- *      A hit on any of these three days counts as a pass.
+ *      day or D+1 — using each day's high (bullish) or low (bearish).
+ *      A hit on either of these two days counts as a pass; CHANGED: D+2 is
+ *      no longer checked at all, so a miss on both the entry day and D+1
+ *      is graded "fail" outright instead of getting a third D+2 chance.
  *
  * Returns null when there isn't enough candle history to evaluate at all
- * (e.g. symbol didn't exist yet, or D is too recent for D+1/D+2 data to
+ * (e.g. symbol didn't exist yet, or D is too recent for D+1 data to
  * exist).
  */
 export async function backtestSymbolOnDate(
@@ -1431,7 +1433,6 @@ export async function backtestSymbolOnDate(
   passesPatternFn: (r: CPRResult, pattern: string) => boolean
 ): Promise<BacktestRow | null> {
   const dPlus1 = addDaysISO(entryDateISO, 1);
-  const dPlus2 = addDaysISO(entryDateISO, 2);
 
   const reconstructed = await reconstructCPRForDate(symbol, source, entryDateISO);
   if (!reconstructed) return null;
@@ -1442,7 +1443,6 @@ export async function backtestSymbolOnDate(
   const targetLevel = target.getTarget(result);
   const entryDayCandle = window.get(entryDateISO) ?? null;
   const nextDayCandle = window.get(dPlus1) ?? null;
-  const nextNextDayCandle = window.get(dPlus2) ?? null;
 
   // FIX: a NaN/undefined targetLevel (getTarget read off a CPR level that
   // wasn't computed for this reconstruction, e.g. todayCPR.r4 missing) used
@@ -1476,20 +1476,17 @@ export async function backtestSymbolOnDate(
     !!c && (target.direction === "bullish" ? c.high >= targetLevel : c.low <= targetLevel);
 
   let hitDate: string | null = null;
-  let daysToHit: 0 | 1 | 2 | null = null;
+  let daysToHit: 0 | 1 | null = null;
   if (hits(entryDayCandle)) {
     hitDate = entryDateISO;
     daysToHit = 0;
   } else if (hits(nextDayCandle)) {
     hitDate = dPlus1;
     daysToHit = 1;
-  } else if (hits(nextNextDayCandle)) {
-    hitDate = dPlus2;
-    daysToHit = 2;
   }
 
   const outcome: BacktestRow["result"] =
-    entryDayCandle || nextDayCandle || nextNextDayCandle ? (hitDate ? "pass" : "fail") : "insufficient-data";
+    entryDayCandle || nextDayCandle ? (hitDate ? "pass" : "fail") : "insufficient-data";
 
   return {
     symbol,
@@ -1549,7 +1546,7 @@ export async function categoryScanSymbolOnDate(
  * existing Pattern now grades against a fixed target — today's own R4 /
  * U4, bullish ("-R4") — instead of running as a symbol-list-only scan, so
  * it returns a full BacktestRow (targetLevel/result/hitDate/daysToHit)
- * using the identical entry/D+1/D+2 hit-window logic as
+ * using the identical entry/D+1 hit-window logic as
  * backtestSymbolOnDate. This lets the Backtest panel render Pattern
  * selections with the exact same Result/Hit Date/Change columns as a
  * View backtest.
@@ -1564,7 +1561,6 @@ export async function pivotLevelBacktestSymbolOnDate(
   matchesPatternFn: (r: CPRResult, label: string) => boolean
 ): Promise<BacktestRow | null> {
   const dPlus1 = addDaysISO(entryDateISO, 1);
-  const dPlus2 = addDaysISO(entryDateISO, 2);
 
   const reconstructed = await reconstructCPRForDate(symbol, source, entryDateISO);
   if (!reconstructed) return null;
@@ -1577,7 +1573,6 @@ export async function pivotLevelBacktestSymbolOnDate(
   const targetLabel = "U4 (today's R4)";
   const entryDayCandle = window.get(entryDateISO) ?? null;
   const nextDayCandle = window.get(dPlus1) ?? null;
-  const nextNextDayCandle = window.get(dPlus2) ?? null;
 
   // Same non-finite-target guard as backtestSymbolOnDate — see its
   // comment for why this is "invalid-target" rather than a silent "fail".
@@ -1606,20 +1601,17 @@ export async function pivotLevelBacktestSymbolOnDate(
   const hits = (c: OHLC | null) => !!c && c.high >= targetLevel; // bullish only — R4/U4 target
 
   let hitDate: string | null = null;
-  let daysToHit: 0 | 1 | 2 | null = null;
+  let daysToHit: 0 | 1 | null = null;
   if (hits(entryDayCandle)) {
     hitDate = entryDateISO;
     daysToHit = 0;
   } else if (hits(nextDayCandle)) {
     hitDate = dPlus1;
     daysToHit = 1;
-  } else if (hits(nextNextDayCandle)) {
-    hitDate = dPlus2;
-    daysToHit = 2;
   }
 
   const outcome: BacktestRow["result"] =
-    entryDayCandle || nextDayCandle || nextNextDayCandle ? (hitDate ? "pass" : "fail") : "insufficient-data";
+    entryDayCandle || nextDayCandle ? (hitDate ? "pass" : "fail") : "insufficient-data";
 
   return {
     symbol,

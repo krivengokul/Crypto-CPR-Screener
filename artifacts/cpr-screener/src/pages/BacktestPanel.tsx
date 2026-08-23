@@ -1247,8 +1247,8 @@ export default function BacktestPanel() {
                         {r.hitDate ? (
                           <div className="flex flex-col leading-tight">
                             <span>{formatDisplay(r.hitDate)}</span>
-                            <span className="text-[10px] text-muted-foreground/70">
-                              {r.daysToHit === 0 ? "(entry day)" : r.daysToHit === 1 ? "(next day)" : "(2 days later)"}
+                            <span className="text-[11px] text-muted-foreground/70">
+                              {r.daysToHit === 0 ? "(entry day)" : "(next day)"}
                             </span>
                           </div>
                         ) : (
