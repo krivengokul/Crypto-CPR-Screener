@@ -768,9 +768,9 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.RRHHCategory === "RRHH-BB" &&
         r.RRSSGapCategory === "SSGap" &&
         r.PDHPDLGapCategory === "LLGap" &&
-        (dirTol(r.todayCPR.r2, Math.min(r.prevCPR.r1, r.prevCPR.prevHigh)) === 1 ||
-          dirTol(r.todayCPR.s3, Math.max(r.prevCPR.s1, r.prevCPR.prevLow)) === 1) &&
-        dirTol(r.todayCPR.s2, Math.min(r.prevCPR.s1, r.prevCPR.prevLow)) === 1
+        (dirTol(r.todayCPR.r2, r.prevCPR.r1) === 1 ||
+          dirTol(r.todayCPR.s3, r.prevCPR.s1) === 1) &&
+        dirTol(r.todayCPR.s2, r.prevCPR.s1) === 1
       );
     }
     // NEW: "RRHH-BB:SSLL-AA:SSLLGap" — duplicate of "6A:HLC-SSLL:R4-6P", added only
