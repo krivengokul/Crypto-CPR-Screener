@@ -219,6 +219,21 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "L2 (today's S2)",
     getTarget: (r) => r.todayCPR.s2,
   },
+  // RENAMED from "eXHrL3U3-AU4": all previous conditions removed and moved
+  // from "Outside CPR" into "EXPANDED". "6A:SLE-RRHH:R2-6A" — sub-pattern
+  // under "EXPANDED". Condition: expanded + RRSSGapCategory RRGap +
+  // RRHHCategory RRHH-AA + SSLLCategory SSLL-E + HHLLCategory HHLL-A +
+  // PDHPDLGapCategory HHGap + prevCPR.HLSwitch HL-B (pHL-B) +
+  // todayCPR.HLSwitch HL-A with hlGapWinner "today" (HLGap-A) — see
+  // cpr.ts / ScreenerUtils.tsx. Bullish, entry ~6AM, targets today's own
+  // R2 (U2) by ~6AM.
+  {
+    key: "6A:SLE-RRHH:R2-6A",
+    label: "6A:SLE-RRHH:R2-6A",
+    direction: "bullish",
+    targetLabel: "U2 (today's R2)",
+    getTarget: (r) => r.todayCPR.r2,
+  },
   // NEW: "ss-eXU4L1-U4:10PM" — nested under the "L1 < pL4" category's
   // "eXU4L1" Pattern. Bullish, targets U4 (today's R4)
   // by ~10PM.
@@ -580,12 +595,12 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
   },
   // NEW: "EXPANDED" left-nav section, mirroring "COMPRESSED" above but for
   // RRSS-E (today's R1 up AND today's S1 down vs prev — levels widening
-  // outward). No sub-patterns nested yet — selecting it in the Backtest
-  // dropdown runs a symbol-list-only category scan (see runCategoryScan).
+  // outward). RENAMED from "eXHrL3U3-AU4" (moved out of "Outside CPR"):
+  // "6A:SLE-RRHH:R2-6A" nests directly under this category.
   {
     key: "expanded",
     label: "EXPANDED",
-    subPatternKeys: [],
+    subPatternKeys: ["6A:SLE-RRHH:R2-6A"],
   },
   // NEW: "Overlap Above" category (base condition: r.overlapHigher, same
   // key passesPattern already uses for the "overlapping-higher" left-nav

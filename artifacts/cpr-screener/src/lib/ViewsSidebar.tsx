@@ -247,9 +247,20 @@ export const Views: Record<string, SubPattern[]> = {
     },
   ],
   // "expanded" — "EXPANDED": RRSS-E only, mirroring "compressed" above.
-  // No sub-patterns yet; kept as an empty array (same generic-category
-  // shape as "compressed") so it's ready to hold Views if any are added.
-  "expanded": [],
+  // "6A:SLE-RRHH:R2-6A" — expanded + RRGap + RRHH-AA + SSLL-E + HHLL-A +
+  // HHGap + pHL-B + HLGap-A (see ScreenerUtils.tsx / cpr.ts). RENAMED
+  // from "eXHrL3U3-AU4" and moved here from "Outside CPR" (all previous
+  // conditions removed). Bullish, entry ~6AM, targets today's own R2
+  // (U2) by ~6AM. Green color family.
+  "expanded": [
+    {
+      id: "6A:SLE-RRHH:R2-6A",
+      label: "6A:SLE-RRHH:R2-6A",
+      activeColor: "#22c55e",              // green-500 border
+      activeText:  "#4ade80",              // green-400 text
+      activeBg:    "rgba(34, 197, 94, 0.14)",
+    },
+  ],
   "inside-cpr": [
     // NEW: 8AM:CoLApHA-U4+1:8AM — Inside CPR + today's PDL above prev
     // day's S1 ("PDL>pS1") + EITHER today's PDH above prev day's R1
@@ -310,7 +321,6 @@ export const Views: Record<string, SubPattern[]> = {
   ],
   "outside-cpr": [
     { id: "outside-cpr-compressed",  label: "Compressed" },
-    { id: "eXHrL3U3-AU4",            label: "eXHrL3U3-AU4" },
   ],
   "u1-gt-pu4": [
     { id: "9AM:APHS1A-FAU4:4AM", label: "9AM:APHS1A-FAU4:4AM",

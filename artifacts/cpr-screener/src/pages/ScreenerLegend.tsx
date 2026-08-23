@@ -9,7 +9,6 @@ export interface ScreenerLegendProps {
   showOBWLoL4U4: boolean;
   showOBHiExL4U4: boolean;
   showLMeXL2U2: boolean;
-  showOutsideCPReXHrL3U3AU4: boolean;
   /** @deprecated CPR Inside sub-filters removed; kept optional for callers. */
   showInsideCPRTiCOLo?: boolean;
 }
@@ -30,7 +29,6 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
     showOBWLoL4U4,
     showOBHiExL4U4,
     showLMeXL2U2,
-    showOutsideCPReXHrL3U3AU4,
   } = props;
   
   // Map a sub-pattern id (selected via the sidebar tree, e.g. "cOL3U3-pL4")
@@ -328,10 +326,10 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
               Inside CPR + eXL4U4 (prev R4 inside today&apos;s R3/R4, prev S4 inside today&apos;s S3/S4) + today&apos;s SSRRAbove (today R1 above prev R1, today S1 held at/above prev S1) + prev day&apos;s PDH above today&apos;s PDH + prev day&apos;s PDL above today&apos;s PDL + if today&apos;s PDH is below today&apos;s R1 (PDHLBelow), prev day&apos;s PDH must also be above today&apos;s R1 (p-PDHA).
             </div>
           </>
-        ) : showOutsideCPReXHrL3U3AU4 && activePattern === "outside-cpr" ? (
+        ) : activePattern === "6A:SLE-RRHH:R2-6A" ? (
           <>
-            <div className="text-xs font-semibold text-rose-400 mb-1">eXHrL3U3-AU4</div>
-            <div className="text-xs text-muted-foreground">Prev S4 between today&apos;s S3/S4, Prev R4 between today&apos;s R2/R3</div>
+            <div className="text-xs font-semibold text-green-400 mb-1">RRHH-AA&nbsp;&nbsp;SSLL-E&nbsp;&nbsp;HHLL-A&nbsp;&nbsp;RRGap&nbsp;&nbsp;HHGap&nbsp;&nbsp;pHL-B&nbsp;&nbsp;HLGap-A</div>
+            <div className="text-xs text-muted-foreground">Expanded, today&apos;s R1/PDH band fully above prev&apos;s (RRHH-AA), today&apos;s S1/PDL band straddling prev&apos;s (SSLL-E), today&apos;s PDH/PDL both above prev&apos;s (HHLL-A), today&apos;s R1 gap larger than the S1 gap (RRGap), today&apos;s PDH gap larger than the PDL gap (HHGap), prev day&apos;s PDH below prev day&apos;s R1 (pHL-B), and today&apos;s PDH above today&apos;s R1 with today&apos;s HL gap the larger of the two (HLGap-A)</div>
           </>
         ) : activePattern === "levelsabove" ? (
           <>
@@ -552,10 +550,10 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
               Bullish continuation from an Inside-CPR/eXL4U4 setup with today&apos;s SSRRAbove holding — expected move toward today&apos;s U4 by ~2AM, two days out.
             </div>
           </>
-        ) : showOutsideCPReXHrL3U3AU4 && activePattern === "outside-cpr" ? (
+        ) : activePattern === "6A:SLE-RRHH:R2-6A" ? (
           <>
-            <div className="text-xs font-semibold text-emerald-400 mb-1">Target</div>
-            <div className="text-xs text-muted-foreground">Tight prior-day CPR that expanded outside it — breakout continuation potential</div>
+            <div className="text-xs font-semibold text-emerald-400 mb-1">Target: U2&nbsp;&nbsp;&nbsp;Entry: 6AM&nbsp;&nbsp;&nbsp;Time: 6AM</div>
+            <div className="text-xs text-muted-foreground">6AM setup with bullish continuation expected toward today&apos;s U2 (R2) by ~6AM</div>
           </>
         ) : activePattern === "levelsabove" ? (
           <>

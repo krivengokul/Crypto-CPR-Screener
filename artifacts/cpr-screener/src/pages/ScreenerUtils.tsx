@@ -744,6 +744,25 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.todayCPR.r1 > r.prevCPR.bc;
     case "compressed":
       return r.compressed ; 
+    // NEW: "6A:SLE-RRHH:R2-6A" — sub-pattern under "EXPANDED". Condition:
+    // expanded + RRSSGapCategory RRGap + RRHHCategory RRHH-AA +
+    // SSLLCategory SSLL-E + HHLLCategory HHLL-A + PDHPDLGapCategory
+    // HHGap + prevCPR.HLSwitch HL-B (pHL-B) + todayCPR.HLSwitch HL-A with
+    // hlGapWinner "today" (HLGap-A) — see cpr.ts. Bullish, entry ~6AM,
+    // targets today's own R2 (U2) by ~6AM. Green color family.
+    case "6A:SLE-RRHH:R2-6A": {
+      return (
+        r.expanded &&
+        r.RRSSGapCategory === "RRGap" &&
+        r.RRHHCategory === "RRHH-AA" &&
+        r.SSLLCategory === "SSLL-E" &&
+        r.HHLLCategory === "HHLL-A" &&
+        r.PDHPDLGapCategory === "HHGap" &&
+        r.prevCPR.HLSwitch === "HL-B" &&
+        r.todayCPR.HLSwitch === "HL-A" &&
+        r.hlGapWinner === "today"
+      );
+    }
     case "expanded":
       return r.expanded ;
     // RENAMED from "SMi-L1pU1>-APU4:11PM": all previous conditions removed.
@@ -828,19 +847,6 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return r.outCPR;
     case "outside-cpr-compressed":
       return r.outCPR && r.todayCPR.r4 < r.prevCPR.r4 && r.todayCPR.s4 > r.prevCPR.s4;
-    // NEW: eXHrL3U3-AU4 — Outside CPR + prev S4 between today's S3/S4 AND
-    // prev R4 between today's R2/R3, today's CPR width between 0.5% and 2%,
-    // prev CPR width < 0.5% (tight prior day, today's range expanded outside it)
-    case "eXHrL3U3-AU4":
-      return (
-        r.outCPR &&
-        r.prevCPR.s4 < r.todayCPR.s3 &&
-        r.prevCPR.s4 > r.todayCPR.s4 &&
-        r.prevCPR.r4 > r.todayCPR.r2 &&
-        r.prevCPR.r4 < r.todayCPR.r3 &&
-        r.todayCPR.widthPct > 0.5 && r.todayCPR.widthPct < 2 &&
-        r.prevCPR.widthPct < 0.5
-      );
     case "overlapping-higher":
       return r.overlapHigher;
     // NEW: LMe-eXL2U2-L4:10PM — Overlap Above + eXL2U2 pivot band,
@@ -1109,6 +1115,9 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     { key: "8A:HLC-SSHH:S4-1P", direction: "down" },
     { key: "9AM:RHLB-RRHH:5AM", direction: "down" },
   ],
+  "expanded": [
+    { key: "6A:SLE-RRHH:R2-6A", direction: "up" },
+  ],
   "inside-cpr": [
     { key: "8AM:CoLApHA-U4+1:8AM", direction: "up" },
     { key: "8AM:SRBHHLLA-pU4+1:8AM", direction: "up" },
@@ -1117,7 +1126,6 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
   ],
   "outside-cpr": [
     { key: "outside-cpr-compressed", direction: "up" },
-    { key: "eXHrL3U3-AU4", direction: "up" },
   ],
   "u1-gt-pu4": [
     { key: "9AM:APHS1A-FAU4:4AM", direction: "up" },

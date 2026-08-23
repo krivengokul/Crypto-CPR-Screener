@@ -161,8 +161,6 @@ export default function Screener({
   // (unfiltered) rather than being pre-filtered to a specific pattern.
   const [showAll, setShowAll] = useState(true);
   const [showOutsideCPRCompressed, setShowOutsideCPRCompressed] = useState(false);
-  // NEW: eXHrL3U3-AU4 filter state — Outside CPR, placed next to Compressed
-  const [showOutsideCPReXHrL3U3AU4, setShowOutsideCPReXHrL3U3AU4] = useState(false);
   const [showExpU4PU4, setShowExpU4PU4] = useState(false);
   // RENAMED from "Exp-U3>U3": 9AM:SSRRBHHLLA-U4:9PM filter state
   // (Overlapping Lower). Bullish/uptrend, green color family.
@@ -423,7 +421,6 @@ export default function Screener({
     "6PM:LaLa->U4:2AM": setShowOBHi6PMLaLa,
     // outside-cpr
     "outside-cpr-compressed": setShowOutsideCPRCompressed,
-    "eXHrL3U3-AU4": setShowOutsideCPReXHrL3U3AU4,
   };
 
   // Current on/off state of each of those buttons — used to detect when the
@@ -441,7 +438,6 @@ export default function Screener({
     "7AM:MiMi-pU4:11PM": showOBHi7AMMiMi,
     "6PM:LaLa->U4:2AM": showOBHi6PMLaLa,
     "outside-cpr-compressed": showOutsideCPRCompressed,
-    "eXHrL3U3-AU4": showOutsideCPReXHrL3U3AU4,
   };
 
   // Is activePattern a Views leaf (a sub-pattern) rather than a category?
@@ -579,20 +575,6 @@ export default function Screener({
         .map((r) => ({ ...r, source: "binance" as const }));
       const deltaIntersect = deltaAllResults
         .filter((r) => passesPattern(r, "outside-cpr-compressed"))
-        .map((r) => ({ ...r, source: "delta" as const }));
-      if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
-      if (activeTab === "delta") return deltaIntersect;
-      return binanceIntersect;
-    }
-    // NEW: eXHrL3U3-AU4 pool — Outside CPR: prev S4 between today's S3/S4,
-    // prev R4 between today's R2/R3, today's CPR width 0.5%–2%, prev CPR
-    // width < 0.5%
-    if (showOutsideCPReXHrL3U3AU4 && activePattern === "outside-cpr") {
-      const binanceIntersect = allResults
-        .filter((r) => passesPattern(r, "eXHrL3U3-AU4"))
-        .map((r) => ({ ...r, source: "binance" as const }));
-      const deltaIntersect = deltaAllResults
-        .filter((r) => passesPattern(r, "eXHrL3U3-AU4"))
         .map((r) => ({ ...r, source: "delta" as const }));
       if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
       if (activeTab === "delta") return deltaIntersect;
@@ -1012,7 +994,7 @@ export default function Screener({
 
   // Helper: is any sub-filter active (to decide the result count label)
   const anySubFilter =
-    showOutsideCPRCompressed || showOutsideCPReXHrL3U3AU4 ||
+    showOutsideCPRCompressed ||
     showExpU4PU4 || showExpU3PU3 || showOBLoRRHHLLA || showOBNLoU4L4 || showOBWLoU4L4 || showOBLoSSLLRRHH || showOBHiExL4U4 || showLMeXL2U2 || showOBHicOL3U3pL4 || showOBHi7AMMiMi || showOBHi6PMLaLa ||
     !!activeGenericSubView ||
     !!PatternFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter || !!exitTimeFilter;
@@ -1099,7 +1081,6 @@ export default function Screener({
           showOBNLoU4L4={showOBNLoU4L4}
           showOBWLoU4L4={showOBWLoU4L4}
           showOBHiExL4U4={showOBHiExL4U4}
-          showOutsideCPReXHrL3U3AU4={showOutsideCPReXHrL3U3AU4}
           showLMeXL2U2={showLMeXL2U2}
         />
         )}
@@ -1457,7 +1438,7 @@ export default function Screener({
             )}
             {activeSectionKey === "outside-cpr" && !showAll && (
               <button
-                onClick={() => { setShowOutsideCPRCompressed((v) => !v); setShowOutsideCPReXHrL3U3AU4(false); }}
+                onClick={() => { setShowOutsideCPRCompressed((v) => !v); }}
                 className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                   showOutsideCPRCompressed
                     ? "border-purple-400 text-purple-400"
@@ -1466,20 +1447,6 @@ export default function Screener({
                 title="Show OutsideCPR symbols where today R4 < prev R4 AND today S4 > prev S4 (compressed range)"
               >
                 {showOutsideCPRCompressed ? "✕ Compressed" : "Compressed"}<ViewCount id={"outside-cpr-compressed"} counts={viewCounts} />
-              </button>
-            )}
-            {/* NEW: eXHrL3U3-AU4 button — Outside CPR, placed next to Compressed */}
-            {activeSectionKey === "outside-cpr" && !showAll && (
-              <button
-                onClick={() => { setShowOutsideCPReXHrL3U3AU4((v) => !v); setShowOutsideCPRCompressed(false); }}
-                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                  showOutsideCPReXHrL3U3AU4
-                    ? "border-rose-400 text-rose-400"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-                title="Prev S4 between today's S3/S4 AND Prev R4 between today's R2/R3, Today CPR width 0.5%-2%, Prev CPR width <0.5%"
-              >
-                {showOutsideCPReXHrL3U3AU4 ? "✕ eXHrL3U3-AU4" : "eXHrL3U3-AU4"}<ViewCount id={"eXHrL3U3-AU4"} counts={viewCounts} />
               </button>
             )}
              {/* NEW: LMe-eXL2U2-L4:10PM button — Overlap Above */}
