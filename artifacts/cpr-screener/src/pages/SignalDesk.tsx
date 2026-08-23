@@ -31,6 +31,8 @@ export interface SignalDeskSymbol {
   currentPrice: number;
   /** 24h price change, as a percent (e.g. 3.2 for +3.2%, -1.4 for -1.4%). Omit to hide the change badge. */
   change24h?: number;
+  /** Bullish/bearish call for this row — see getRowDirection in ScreenerUtils.tsx. Drives the header icon/color; falls back to an alternating pattern when omitted. */
+  direction?: "up" | "down";
   /** Today's CPR S4/R4 band, used to draw the level range bar. Omit to hide the bar for this symbol. */
   s4?: number;
   s3?: number;
@@ -411,7 +413,10 @@ export default function SignalDesk({
         ) : (
           <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {visibleSymbols.map((item, index) => {
-              const isLong = index % 2 === 0;
+              // Bullish/bearish call for this row — see getRowDirection in
+              // ScreenerUtils.tsx. Falls back to the old alternating
+              // placeholder only if a caller doesn't supply direction.
+              const isLong = item.direction ? item.direction === "up" : index % 2 === 0;
 
               return (
                 <article

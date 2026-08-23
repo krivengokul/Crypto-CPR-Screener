@@ -46,6 +46,7 @@ import {
   computePrevPattern,
   type PatternInfo,
   getSubFilterDirection,
+  getRowDirection,
 } from "./ScreenerUtils";
 import LiveClock from "./LiveClock";
 import ScreenerLegend from "./ScreenerLegend";
@@ -138,6 +139,7 @@ export default function Screener({
       source: "binance" | "delta";
       currentPrice: number;
       change24h: number;
+      direction: "up" | "down";
       s4: number;
       s3: number;
       s2: number;
@@ -835,13 +837,15 @@ export default function Screener({
   // here means it automatically follows all existing sidebar Views and
   // hand-written Screener filters without duplicating their logic.
   // change24h is passed straight through so SignalDeskSymbol's optional
-  // 24h-change badge has data to render.
+  // 24h-change badge has data to render. direction drives SignalDesk's
+  // long/short header icon — see getRowDirection in ScreenerUtils.tsx.
   const signalSymbols = displayed.map((r) => ({
     key: `${r.source}-${r.symbol}`,
     symbol: r.symbol,
     source: r.source,
     currentPrice: r.currentPrice,
     change24h: r.change24h,
+    direction: getRowDirection(r, activePattern),
     s4: r.todayCPR.s4,
     s3: r.todayCPR.s3,
     s2: r.todayCPR.s2,
@@ -853,7 +857,7 @@ export default function Screener({
     r4: r.todayCPR.r4,
   }));
   const signalSymbolsKey = signalSymbols
-    .map((r) => `${r.key}:${r.currentPrice}:${r.change24h}`)
+    .map((r) => `${r.key}:${r.currentPrice}:${r.change24h}:${r.direction}`)
     .join("|");
 
   useEffect(() => {

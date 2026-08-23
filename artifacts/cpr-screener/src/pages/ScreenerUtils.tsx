@@ -1091,6 +1091,22 @@ export function getSubFilterDirection(r: CPRResult, activePattern: string): SubF
 }
 
 /**
+ * getRowDirection — single up/down call for a row, for consumers (e.g.
+ * SignalDesk's long/short arrow) that need one answer regardless of
+ * whether the active section has per-sub-pattern directions defined.
+ * Tries getSubFilterDirection(r, activePattern) first — the specific
+ * sub-pattern's own bullish/bearish call when the row matches one — and
+ * falls back to the row's own 24h change (change24h >= 0 → up, else
+ * down) when it doesn't (e.g. no sub-pattern selected, or the section
+ * has none defined).
+ */
+export function getRowDirection(r: CPRResult, activePattern: string): "up" | "down" {
+  const subDir = getSubFilterDirection(r, activePattern);
+  if (subDir) return subDir;
+  return r.change24h >= 0 ? "up" : "down";
+}
+
+/**
  * Pattern — classifies today's CPR range relative to yesterday's using
  * the directional sub-flags computed in cpr.ts:
  *   eX-Higher / eX-Lower:  Expanded (today R4 > prev R4 AND today S4 < prev S4),
