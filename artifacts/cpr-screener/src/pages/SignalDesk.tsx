@@ -68,10 +68,10 @@ function displaySymbol(symbol: string): string {
  * LevelRangeBar — S4 → R4 horizontal band with tick marks at every CPR
  * level (S4/S3/S2/S1/PIVOT/R1/R2/R3/R4) and an orange "NOW" marker at the
  * current price, mirroring the drishtisignals.in TP2/TP1/ENTRY/SL bar but
- * built from CPR levels instead of a trade setup. Support side
- * (S4→PIVOT) reads green, resistance side (PIVOT→R4) reads rose, matching
- * the green/rose convention used elsewhere in the app for R-levels vs
- * S-levels.
+ * built from CPR levels instead of a trade setup. CHANGED: support side
+ * (S4→PIVOT) now reads rose, resistance side (PIVOT→R4) now reads green —
+ * inverted from the green/rose-by-S/R convention used elsewhere in the
+ * app, per request.
  *
  * Tick marks on the bar itself always show every available level (they're
  * just 1px lines, so they cost no layout space). The text labels below the
@@ -170,11 +170,11 @@ function LevelRangeBar({
       </div>
       <div className="relative h-1.5 rounded-full bg-background/80">
         <div
-          className="absolute inset-y-0 left-0 rounded-l-full bg-emerald-500/50"
+          className="absolute inset-y-0 left-0 rounded-l-full bg-rose-500/50"
           style={{ width: `${pivotPct}%` }}
         />
         <div
-          className="absolute inset-y-0 rounded-r-full bg-rose-500/50"
+          className="absolute inset-y-0 rounded-r-full bg-emerald-500/50"
           style={{ left: `${pivotPct}%`, right: 0 }}
         />
         {allTicks.map((tick) => (
@@ -381,7 +381,7 @@ export default function SignalDesk({
                   key={item.key}
                   className="rounded-xl border border-border bg-card p-5 transition hover:-translate-y-0.5 hover:border-emerald-400/50"
                 >
-                  <div className="mb-6 flex items-start justify-between gap-4">
+                  <div className="mb-6 flex items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
                       <div
                         className={[
@@ -407,18 +407,13 @@ export default function SignalDesk({
                       </div>
                     </div>
 
+                    <p className="font-mono text-lg font-semibold text-foreground">
+                      {formatPrice(item.currentPrice)}
+                    </p>
+
                     <span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-emerald-300">
                       Live
                     </span>
-                  </div>
-
-                  <div className="rounded-lg bg-background/60 p-4">
-                    <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                      Current price
-                    </p>
-                    <p className="mt-1 font-mono text-2xl font-semibold">
-                      {formatPrice(item.currentPrice)}
-                    </p>
                   </div>
 
                   {item.s4 != null && item.s1 != null && item.pivot != null && item.r1 != null && item.r4 != null && (
@@ -437,7 +432,9 @@ export default function SignalDesk({
                   )}
 
                   <div className="mt-4 flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">CPR filter</span>
+                    <span className="text-muted-foreground">
+                      {SUBVIEW_IDS.has(activePattern) ? "View" : "Category"}
+                    </span>
                     <span className="max-w-[65%] truncate font-medium text-foreground">
                       {activeLabel || activePattern || "All scanned"}
                     </span>
