@@ -389,7 +389,7 @@ export default function Screener({
   useEffect(() => {
     if (allResults.length > 0) setFiltered(allResults.filter((r) => passesPattern(r, activePattern)));
     if (deltaAllResults.length > 0) setDeltaFiltered(deltaAllResults.filter((r) => passesPattern(r, activePattern)));
-    if (activePattern !== "outside-cpr") { setShowOutsideCPRCompressed(false); setShowOutsideCPReXHrL3U3AU4(false); }
+    if (activePattern !== "outside-cpr") { setShowOutsideCPRCompressed(false); }
     if (activePattern !== "overlapping-lower") { setShowExpU4PU4(false); setShowExpU3PU3(false); setShowOBLoRRHHLLA(false); setShowOBNLoU4L4(false); setShowOBWLoU4L4(false); setShowOBLoSSLLRRHH(false); setShowOBLoSSLLRRHHDown(false); }
     // NEW: reset eXHi-L4U4-U4 toggle when leaving Overlapping Higher
     if (activePattern !== "overlapping-higher") { setShowOBHiExL4U4(false); setShowLMeXL2U2(false); setShowOBHicOL3U3pL4(false); setShowOBHi7AMMiMi(false); setShowOBHi6PMLaLa(false); }
@@ -1140,7 +1140,6 @@ export default function Screener({
                 onClick={() => {
                   setShowAll((v) => !v);
                   setShowOutsideCPRCompressed(false);
-                  setShowOutsideCPReXHrL3U3AU4(false);
                   // NEW: also clear the generic Views (sub-pattern) selection —
                   // covers inside-cpr and every other GENERIC_VIEW_CATEGORIES
                   // category, so "Show All" fully resets state everywhere.

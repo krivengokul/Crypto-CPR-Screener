@@ -12,6 +12,7 @@ import {
   type SSRRCategory,
   type HHLLCategory,
   type SSLLCategory,
+  type RRHHCategory,
 } from "@/lib/cpr";
 
 export type SortKey = "symbol" | "compressionRatio" | "currentPrice" | "change24h" | "quoteVolume" | "priceVsCpr" | "cprDistance" | "pdhPdlPct";
