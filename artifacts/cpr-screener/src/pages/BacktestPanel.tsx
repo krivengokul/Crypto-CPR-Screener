@@ -954,14 +954,14 @@ export default function BacktestPanel() {
                     <th className="px-2 py-2 w-20 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Symbol
                     </th>
-                    <th className="px-2 py-3 w-32 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Pattern
-                    </th>
                     <th className="px-2 py-3 w-32 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       LEVEL
                     </th>
                     <th className="pl-8 pr-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      PDH / PDL
+                      GAP
+                    </th>
+                    <th className="px-2 py-3 w-32 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Pattern
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[220px]">
                       <span className="inline-flex items-center gap-1">
@@ -1039,15 +1039,15 @@ export default function BacktestPanel() {
                           </div>
                         </td>
                         <td className="px-2 py-3 w-32">
-                          {renderPatternColumnBadges(r.raw) ?? (
-                            <span className="text-xs text-muted-foreground">—</span>
-                          )}
-                        </td>
-                        <td className="px-2 py-3 w-32">
                           {renderLevelColumnRestBadges(r.raw)}
                         </td>
                         <td className="pl-8 pr-4 py-3 whitespace-nowrap text-xs font-medium">
                           {renderPdhPdlColumnBadges(r.raw)}
+                        </td>
+                        <td className="px-2 py-3 w-32">
+                          {renderPatternColumnBadges(r.raw) ?? (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
                         </td>
                         <td className="px-3 py-2 font-mono whitespace-nowrap">
                           {renderPivotSizeCell(r.prevCPR, r.todayCPR, r.compressionRatio)}
@@ -1083,7 +1083,7 @@ export default function BacktestPanel() {
       {/* Pattern backtest results — symbol list + Target/Result/Hit Date.
           CHANGED: also shown for isPatternOnly ("-R4" Pattern selections),
           which now grade identically to a View backtest — same columns
-          (Symbol/Pattern/LEVEL/PDH-PDL/Pivot Size/Entry Date/Result/Hit
+          (Symbol/LEVEL/GAP/Pattern/Pivot Size/Entry Date/Result/Hit
           Date/Change). */}
       {status === "done" && (isViewOnly || isPatternOnly) && (
         <>
@@ -1126,14 +1126,14 @@ export default function BacktestPanel() {
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Symbol
                     </th>
-                    <th className="px-2 py-3 w-32 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Pattern
-                    </th>
                     <th className="px-2 py-3 w-32 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       LEVEL
                     </th>
                     <th className="pl-8 pr-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      PDH / PDL
+                      GAP
+                    </th>
+                    <th className="px-2 py-3 w-32 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Pattern
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[220px]">
                       <span className="inline-flex items-center gap-1">
@@ -1218,15 +1218,15 @@ export default function BacktestPanel() {
                         </div>
                       </td>
                       <td className="px-2 py-3 w-32">
-                        {renderPatternColumnBadges(r.raw) ?? (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
-                      </td>
-                      <td className="px-2 py-3 w-32">
                         {renderLevelColumnRestBadges(r.raw)}
                       </td>
                       <td className="pl-8 pr-4 py-3 whitespace-nowrap text-xs font-medium">
                         {renderPdhPdlColumnBadges(r.raw)}
+                      </td>
+                      <td className="px-2 py-3 w-32">
+                        {renderPatternColumnBadges(r.raw) ?? (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
                       </td>
                       <td className="px-3 py-2 font-mono whitespace-nowrap">
                         {renderPivotSizeCell(r.prevCPR, r.todayCPR, r.compressionRatio)}
