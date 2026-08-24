@@ -223,7 +223,7 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     getTarget: (r) => r.todayCPR.s2,
   },
   // NEW: "PDH>pTC-U4:5AM" — nested directly under "LEVELs BELOW" (levelsbelow)
-  // category, alongside the "cOU3L4" Pattern. Base condition:
+  // category, alongside the "HALB-SSLLGap" Pattern. Base condition:
   // this category's LevelsBelow condition AND today's PDH (todayCPR.prevHigh)
   // above prev day's TC (prevCPR.tc) — see ScreenerUtils.tsx. Bullish,
   // targets U4 (today's R4), same target style as its sibling
@@ -237,7 +237,7 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
   },
   // NEW: "11AM:pCPR1AHi-FApU4:1PM" — nested under "LEVELs BELOW"
   // (levelsbelow) category's new "LoU3L4" Pattern (see
-  // BACKTEST_CATEGORIES below), alongside its "cOU3L4"/"LoU3L3" siblings.
+  // BACKTEST_CATEGORIES below), alongside its "HALB-SSLLGap"/"LoU3L3" siblings.
   // Base condition: this category's LevelsBelow condition AND the raw
   // LoU3L4 flag AND HHLLBelow — see ScreenerUtils.tsx. Bullish, targets
   // Far Above pU4 (prev day's R4) by ~1PM.
@@ -494,13 +494,13 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
     ],
   },
   // NEW: "LEVELs BELOW" left-nav section (top of the pattern tree in
-  // ViewsSidebar.tsx) — nests the "cOU3L4" Pattern, which
+  // ViewsSidebar.tsx) — nests the "HALB-SSLLGap" Pattern (REPLACES
+  // "cOU3L4" here — see matchesPatternFlag in ScreenerUtils.tsx), which
   // in turn nests "3P:HA-pBELOWR1:R2-3A" (RENAMED from "BC>pPDL-U3:5AM",
   // then from "3P:HA-pABOVE:pR4-3A") and its replica
-  // "3P:HA-pABOVER1:S2-6P"; note neither condition includes the raw
-  // cOU3L4 flag — see ScreenerUtils.tsx — they're kept nested here under
-  // "cOU3L4" only for dropdown grouping, matching the sidebar/legend
-  // structure).
+  // "3P:HA-pABOVER1:S2-6P"; note neither leaf condition includes the raw
+  // HALB-SSLLGap flag — see ScreenerUtils.tsx — they're kept nested here
+  // only for dropdown grouping, matching the sidebar/legend structure).
   {
     key: "levelsbelow",
     label: "LEVELs BELOW",
@@ -509,8 +509,8 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
     // requires the raw LoU3L3 flag — see ScreenerUtils.tsx.
     patterns: [
       {
-        key: "cOU3L4",
-        label: "cOU3L4",
+        key: "HALB-SSLLGap",
+        label: "HALB-SSLLGap",
         subPatternKeys: ["3P:HA-pBELOWR1:R2-3A", "3P:HA-pABOVER1:S2-6P"],
       },
       // NEW: "LoU3L3" — Pattern (arrow), same shape as

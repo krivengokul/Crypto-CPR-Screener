@@ -1245,6 +1245,31 @@ export function getPatternInfo(r: CPRResult): PatternInfo {
 export function matchesPatternFlag(r: CPRResult, label: string): boolean {
   switch (label) {
     case "cOU3L4": return r.cOU3L4;
+    // NEW: HALB-SSLLGap — replaces cOU3L4 as the Pattern node nested
+    // under "LEVELs BELOW" in backtest.ts's BACKTEST_CATEGORIES (the
+    // cOU3L4 case above is left intact in case it's still referenced as
+    // an independent Pattern-flag filter chip elsewhere, e.g.
+    // Screener.tsx). Compound flag (not a single raw boolean field, same
+    // treatment as pRRHHLLA above): today's PDH/PDL range widened on
+    // both sides (HHLL-E), today's R1/PDH band mixed vs prev's (RRHH-HA),
+    // today's S1/PDL band fully below prev's (SSLL-BB), today's S1 gap
+    // larger than the R1 gap (SSGap), today's PDL gap larger than the
+    // PDH gap (LLGap), prev day's PDH/U1 relation HL-B (pHL-B), today's
+    // PDH/U1 relation HL-A with today's HL gap the wider of the two
+    // (HLGap-A). The parent "levelsbelow" category's own
+    // passesPattern("levelsbelow") already ANDs in r.LevelsBelow, so
+    // it's intentionally omitted here.
+    case "HALB-SSLLGap":
+      return (
+        r.HHLLCategory === "HHLL-E" &&
+        r.RRHHCategory === "RRHH-HA" &&
+        r.SSLLCategory === "SSLL-BB" &&
+        r.RRSSGapCategory === "SSGap" &&
+        r.PDHPDLGapCategory === "LLGap" &&
+        r.prevCPR.HLSwitch === "HL-B" &&
+        r.todayCPR.HLSwitch === "HL-A" &&
+        r.hlGapWinner === "today"
+      );
     // NEW: LoU3L3 — Pattern raw flag (see BacktestPanel's
     // "LEVELs BELOW" → "LoU3L3" nesting in backtest.ts).
     case "LoU3L3": return r.LoU3L3;
