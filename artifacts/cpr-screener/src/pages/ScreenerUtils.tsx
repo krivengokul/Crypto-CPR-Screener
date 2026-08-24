@@ -1798,7 +1798,7 @@ export function renderLevelStatusRow1Badges(
           {SSRR_BADGE[r.SSRRCategory].label}
         </span>
       )}
-      {renderRRSSGapCategoryBadge(r)}
+      {renderHHLLCategoryBadge(r)}
       {r.overlapLower && !ovLowerConsumed && (
         <span className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-medium">oV-B</span>
       )}
@@ -1940,7 +1940,7 @@ export function renderLevelStatusRestBadges(
           {SSRR_BADGE[r.SSRRCategory].label}
         </span>
       )}
-      {renderRRSSGapCategoryBadge(r)}
+      {renderHHLLCategoryBadge(r)}
       {r.overlapLower && !ovLowerConsumed && (
         <span className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-medium">oV-B</span>
       )}
@@ -2088,7 +2088,7 @@ export function renderHHLLCategoryBadge(r: CPRResult) {
  * Returns a "—" placeholder span when none of the four badges apply.
  */
 export function renderPdhPdlColumnBadges(r: CPRResult) {
-  const hhllBadge = renderHHLLCategoryBadge(r);
+  const hhllBadge = renderRRSSGapCategoryBadge(r);
   const gapBadge = renderPDHPDLGapCategoryBadge(r);
   const prevBadge = renderPrevPdhPdlBadge(r);
   const todayBadge = renderTodayPdhPdlBadge(r);
