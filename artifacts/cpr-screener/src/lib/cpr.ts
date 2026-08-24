@@ -166,7 +166,7 @@ export interface CPRPairFlags {
   LevelsAbove: boolean;
   // R1AbovePR4 — "ABOVE LEVEL4" base condition: today's R1 above prev's R4
   // (plain magnitude comparison, no tolerance — matches the raw
-  // `today.r1 > prev.r4` test formerly inlined at every "u1-gt-pu4" call
+  // `today.r1 > prev.r4` test formerly inlined at every "R1AbovePR4" call
   // site). Also subtracted out of LevelsAbove above so the two sections
   // never share a symbol.
   R1AbovePR4: boolean;
@@ -975,7 +975,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
   // "RRSS-A": today's R1 up vs prev's R1, AND today's S1 not down vs
   // prev's S1. Excludes R1AbovePR4 (see below) — a symbol whose today's
   // R1 has already cleared prev's R4 belongs exclusively to the "ABOVE
-  // LEVEL4" (u1-gt-pu4) section, not LEVELS ABOVE, so it's carved out
+  // LEVEL4" (R1AbovePR4) section, not LEVELS ABOVE, so it's carved out
   // here at the source rather than in each caller.
   const R1AbovePR4 = today.r1 > prev.r4;
   const LevelsAbove = r1DirVsPrev > 0 && s1DirVsPrev >= 0 && !R1AbovePR4;

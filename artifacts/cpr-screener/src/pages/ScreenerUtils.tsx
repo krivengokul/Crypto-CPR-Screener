@@ -858,7 +858,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // (r.LevelsAbove). Gate is exactly R1AbovePR4 -- the cprRising +
     // strWideCPR gate was dropped so every symbol leaving LEVELS ABOVE
     // lands here and the two categories partition cleanly.
-    case "u1-gt-pu4":
+    case "R1AbovePR4":
       return r.R1AbovePR4;
     // NEW: 9AM:APHS1A-FAU4:4AM — U1>pU4 sub-pattern.
     // Condition: today R1 above prev R4 (parent U1>pU4) + Pattern eXL3U1 +
@@ -963,7 +963,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       );
     // Standalone top-level category: true complement of LEVELs BELOW
     // (r.LevelsBelow). Gate is exactly S1BelowPS4 -- the cprFalling +
-    // strWideCPR gate was dropped (mirroring u1-gt-pu4's treatment of
+    // strWideCPR gate was dropped (mirroring R1AbovePR4's treatment of
     // R1AbovePR4 above) so every symbol leaving LEVELs BELOW lands here
     // and the two categories partition cleanly.
     case "S1BelowPS4":
@@ -1063,7 +1063,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     { key: "2PM:pPDHLA-SRA-U4:7PM", direction: "up" },
     { key: "8AM:pPDHA-SRA-U4+2:2AM", direction: "up" },
   ],
-  "u1-gt-pu4": [
+  "R1AbovePR4": [
     { key: "9AM:APHS1A-FAU4:4AM", direction: "up" },
     // FIX: "8AM:APHS1A-FAU4:4AM" (nested under the same "eXL3U1" Pattern
     //  as 9AM:APHS1A-FAU4:4AM above) was missing here, so

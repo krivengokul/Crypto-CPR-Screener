@@ -111,7 +111,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             </div>
             <div className="text-xs text-muted-foreground">Previous &amp; today&apos;s CPR are effectively equal</div>
           </>
-        ) : activePattern === "u1-gt-pu4" ? (
+        ) : activePattern === "R1AbovePR4" ? (
           <>
             <div className="flex items-center gap-1.5 mb-1 flex-wrap">
               <span className="text-xs font-semibold text-primary">ABOVE LEVEL4</span>

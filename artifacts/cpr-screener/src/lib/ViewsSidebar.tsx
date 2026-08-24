@@ -292,7 +292,7 @@ export const Views: Record<string, SubPattern[]> = {
       activeBg:    "rgba(34, 197, 94, 0.14)",
     },
   ],
-  "u1-gt-pu4": [
+  "R1AbovePR4": [
     { id: "9AM:APHS1A-FAU4:4AM", label: "9AM:APHS1A-FAU4:4AM",
       activeColor: "#22c55e", activeText: "#4ade80", activeBg: "rgba(34,197,94,0.18)" },
     // NEW: 6AM:pX-APHS1A-pL4:4AM — same condition as 9AM:APHS1A-FAU4:4AM plus
@@ -363,7 +363,7 @@ export const Views: Record<string, SubPattern[]> = {
 
 export const pivotcategories: Category[] = [
   { id: "levelsabove",        label: "LEVELs ABOVE",    subtitle: "RRSS-A only (today's R1 up, S1 not down vs prev), excludes ABOVE LEVEL4", icon: TrendingUp },
-  { id: "u1-gt-pu4",          label: "ABOVE LEVEL4",  subtitle: "Today R1 above Prev R4",   icon: TrendingUp },
+  { id: "R1AbovePR4",          label: "ABOVE LEVEL4",  subtitle: "Today R1 above Prev R4",   icon: TrendingUp },
   { id: "levelsbelow",    label: "LEVELs BELOW", subtitle: "RRSS-B only (today's R1 not up, S1 down vs prev)", icon: TrendingUp },
   { id: "compressed",        label: "COMPRESSED",   subtitle: "RRSS-C only (today's R1 down, S1 up vs prev)",   icon: TrendingUp },
   { id: "expanded",          label: "EXPANDED",     subtitle: "RRSS-E only (today's R1 up, S1 down vs prev)",   icon: TrendingUp },
@@ -458,7 +458,7 @@ interface ViewsSidebarProps {
   onMobileClose: () => void;
   mode: SidebarMode;
   onModeChange: (mode: SidebarMode) => void;
-  // NEW: top-level pattern id -> matching count, e.g. { "u1-gt-pu4": 41 }.
+  // NEW: top-level pattern id -> matching count, e.g. { "R1AbovePR4": 41 }.
   // Shown next to each pattern's label as "(41)". Undefined/missing entries
   // (e.g. before the first scan completes) simply render no count.
   counts?: Record<string, number>;

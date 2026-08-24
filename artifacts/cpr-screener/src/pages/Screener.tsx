@@ -92,7 +92,7 @@ const GENERIC_VIEW_CATEGORIES = new Set([
   "levelsbelow",
   "compressed",
   "expanded",
-  "u1-gt-pu4",
+  "R1AbovePR4",
   "S1BelowPS4",
   "equal-cpr",
   // NEW: inside-cpr — was hand-wired to a single legacy button
