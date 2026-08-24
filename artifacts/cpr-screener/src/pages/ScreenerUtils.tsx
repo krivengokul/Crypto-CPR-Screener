@@ -716,7 +716,8 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.todayCPR.HLSwitch === "HL-A" &&
         r.hlGapWinner === "today" &&
         r.prevCPR.s3 > r.todayCPR.s1 &&
-        r.prevCPR.pivot > r.todayCPR.r1
+        r.prevCPR.pivot > r.todayCPR.r1 &&
+        r.todayCPR.pivot > r.prevCPR.prevLow
       );
     // NEW: "3P:HA-pABOVER1:S2-6P" — replica of "3P:HA-pBELOWR1:R2-3A"
     // with the same base conditions, but prev day's own Pivot BELOW
