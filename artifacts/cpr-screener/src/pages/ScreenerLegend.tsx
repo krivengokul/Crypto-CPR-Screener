@@ -298,6 +298,11 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             <div className="text-xs font-semibold text-rose-400 mb-1">RRHH-HA&nbsp;&nbsp;SSLL-BB&nbsp;&nbsp;HHLL-E&nbsp;&nbsp;SSGap&nbsp;&nbsp;LLGap&nbsp;&nbsp;pHL-B&nbsp;&nbsp;HLGap-A</div>
             <div className="text-xs text-muted-foreground">LEVELs BELOW base, today&apos;s R1/PDH band mixed vs prev&apos;s (RRHH-HA), today&apos;s S1/PDL band fully below prev&apos;s (SSLL-BB), today&apos;s PDH/PDL range widened on both sides (HHLL-E), today&apos;s S1 gap larger than the R1 gap (SSGap), today&apos;s PDL gap larger than the PDH gap (LLGap), prev day&apos;s PDH/U1 relation is HL-B (pHL-B), today&apos;s PDH/U1 relation is HL-A with today&apos;s HL gap the wider of the two (HLGap-A), prev day&apos;s S3 above today&apos;s S1, and prev day&apos;s own Pivot below today&apos;s R1</div>
           </>
+        ) : activePattern === "2P:HA-HABOVEpR1:R4-4P" ? (
+          <>
+            <div className="text-xs font-semibold text-green-400 mb-1">RRHH-HA&nbsp;&nbsp;SSLL-BB&nbsp;&nbsp;HHLL-E&nbsp;&nbsp;SSGap&nbsp;&nbsp;LLGap&nbsp;&nbsp;pHL-B&nbsp;&nbsp;HLGap-A</div>
+            <div className="text-xs text-muted-foreground">LEVELs BELOW base, today&apos;s R1/PDH band mixed vs prev&apos;s (RRHH-HA), today&apos;s S1/PDL band fully below prev&apos;s (SSLL-BB), today&apos;s PDH/PDL range widened on both sides (HHLL-E), today&apos;s S1 gap larger than the R1 gap (SSGap), today&apos;s PDL gap larger than the PDH gap (LLGap), prev day&apos;s PDH/U1 relation is HL-B (pHL-B), today&apos;s PDH/U1 relation is HL-A with today&apos;s HL gap the wider of the two (HLGap-A), prev day&apos;s S3 above today&apos;s S1, today&apos;s own R1 above prev day&apos;s PDH, today&apos;s own Pivot above prev day&apos;s PDL, and today&apos;s R3 above prev day&apos;s R4</div>
+          </>
         ) : activePattern === "PDH>pTC-U4:5AM" ? (
           <>
             <div className="text-xs font-semibold text-green-400 mb-1">Pivot Level: pCPR in U1 band</div>
@@ -494,6 +499,11 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
           <>
             <div className="text-xs font-semibold text-rose-400 mb-1">Target: L2&nbsp;&nbsp;&nbsp;Entry: 3PM&nbsp;&nbsp;&nbsp;Time: 6PM</div>
             <div className="text-xs text-muted-foreground">3PM setup with bearish continuation expected toward today&apos;s S2 (L2) by ~6PM</div>
+          </>
+        ) : activePattern === "2P:HA-HABOVEpR1:R4-4P" ? (
+          <>
+            <div className="text-xs font-semibold text-green-400 mb-1">Target: U4&nbsp;&nbsp;&nbsp;Entry: 2PM&nbsp;&nbsp;&nbsp;Time: 4PM</div>
+            <div className="text-xs text-emerald-400/80">2PM setup with bullish continuation expected toward today&apos;s U4 (R4) by ~4PM</div>
           </>
         ) : activePattern === "PDH>pTC-U4:5AM" ? (
           <>

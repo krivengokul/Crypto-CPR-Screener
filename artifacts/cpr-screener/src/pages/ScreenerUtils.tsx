@@ -722,6 +722,19 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.prevCPR.s3 > r.todayCPR.s1 &&
         r.prevCPR.pivot < r.todayCPR.r1
       );
+    // NEW: "2P:HA-HABOVEpR1:R4-4P" — replica of "3P:HA-pBELOWR1:R2-3A"
+    // with the same shared "HALB-SSLLGap" base and the same prev day's S3
+    // above today's S1 / today's own Pivot above prev day's PDL legs, but
+    // today's own R1 above prev day's PDH (instead of prev day's Pivot
+    // above today's R1), and today's R3 above prev day's R4 (instead of
+    // prev day's R3). Bullish, entry ~2PM, targets today's own R4 (U4)
+    // by ~4PM.
+    case "2P:HA-HABOVEpR1:R4-4P":
+      return (
+        passesPattern(r, "HALB-SSLLGap") &&
+        r.todayCPR.r1 > r.prevCPR.prevHigh && r.todayCPR.pivot > r.prevCPR.prevLow &&
+        r.prevCPR.s3 > r.todayCPR.s1 && r.todayCPR.r3 > r.prevCPR.r4
+      );
     // NEW: PDH>pTC-U4:5AM — sub-filter under "LEVELs BELOW" → "LoU3L3"
     // Pattern: base LevelsBelow condition PLUS the parent's raw
     // LoU3L3 flag PLUS today's PDH (todayCPR.prevHigh) above prev day's TC
@@ -1039,6 +1052,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
   "levelsbelow": [
     { key: "3P:HA-pBELOWR1:R2-3A", direction: "up" },
     { key: "3P:HA-pABOVER1:S2-6P", direction: "down" },
+    { key: "2P:HA-HABOVEpR1:R4-4P", direction: "up" },
     { key: "PDH>pTC-U4:5AM", direction: "up" },
     // FIX: "11AM:pCPR1AHi-FApU4:1PM" (nested under the "LoU3L4" Pattern
     // ) was missing here, so rows matching it never got the

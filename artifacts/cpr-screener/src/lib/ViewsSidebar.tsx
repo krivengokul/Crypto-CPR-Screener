@@ -170,6 +170,19 @@ export const Views: Record<string, SubPattern[]> = {
       activeText:  "#fda4af",              // rose-300 text
       activeBg:    "rgba(244, 63, 94, 0.14)", // rose-500 tint
     },
+    // NEW: "2P:HA-HABOVEpR1:R4-4P" — replica of "3P:HA-pBELOWR1:R2-3A"
+    // with the same base conditions, but today's own R1 above prev day's
+    // PDH (instead of prev day's own Pivot above today's R1) and today's
+    // R3 above prev day's R4 (instead of prev day's R3). Bullish, entry
+    // ~2PM, targets today's own R4 (U4) by ~4PM. Green color family to
+    // visually flag this as the bullish sub-pattern.
+    {
+      id: "2P:HA-HABOVEpR1:R4-4P",
+      label: "2P:HA-HABOVEpR1:R4-4P",
+      activeColor: "#22c55e",              // green-500 border
+      activeText:  "#4ade80",              // green-400 text
+      activeBg:    "rgba(34, 197, 94, 0.14)",
+    },
     // NEW: PDH>pTC-U4:5AM — LEVELs BELOW + today's PDH (todayCPR.prevHigh)
     // above prev day's TC (prevCPR.tc). Bullish, targets U4 (today's R4) by
     // ~5AM. Same green color family as its sibling BC>pPDL-U3:5AM.

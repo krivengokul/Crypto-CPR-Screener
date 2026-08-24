@@ -222,6 +222,18 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "L2 (today's S2)",
     getTarget: (r) => r.todayCPR.s2,
   },
+  // NEW: "2P:HA-HABOVEpR1:R4-4P" — replica of "3P:HA-pBELOWR1:R2-3A" with
+  // the same base conditions, but today's own R1 above prev day's PDH
+  // (instead of prev day's own Pivot above today's R1) and today's R3
+  // above prev day's R4 (instead of prev day's R3). Bullish, targets
+  // today's own R4 (U4) by ~4PM.
+  {
+    key: "2P:HA-HABOVEpR1:R4-4P",
+    label: "2P:HA-HABOVEpR1:R4-4P",
+    direction: "bullish",
+    targetLabel: "U4 (today's R4)",
+    getTarget: (r) => r.todayCPR.r4,
+  },
   // NEW: "PDH>pTC-U4:5AM" — nested directly under "LEVELs BELOW" (levelsbelow)
   // category, alongside the "HALB-SSLLGap" Pattern. Base condition:
   // this category's LevelsBelow condition AND today's PDH (todayCPR.prevHigh)
@@ -497,10 +509,11 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
   // ViewsSidebar.tsx) — nests the "HALB-SSLLGap" Pattern (REPLACES
   // "cOU3L4" here — see matchesPatternFlag in ScreenerUtils.tsx), which
   // in turn nests "3P:HA-pBELOWR1:R2-3A" (RENAMED from "BC>pPDL-U3:5AM",
-  // then from "3P:HA-pABOVE:pR4-3A") and its replica
-  // "3P:HA-pABOVER1:S2-6P"; note neither leaf condition includes the raw
-  // HALB-SSLLGap flag — see ScreenerUtils.tsx — they're kept nested here
-  // only for dropdown grouping, matching the sidebar/legend structure).
+  // then from "3P:HA-pABOVE:pR4-3A") and its replicas
+  // "3P:HA-pABOVER1:S2-6P" and "2P:HA-HABOVEpR1:R4-4P"; note none of the
+  // leaf conditions include the raw HALB-SSLLGap flag — see
+  // ScreenerUtils.tsx — they're kept nested here only for dropdown
+  // grouping, matching the sidebar/legend structure).
   {
     key: "levelsbelow",
     label: "LEVELs BELOW",
@@ -511,7 +524,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       {
         key: "HALB-SSLLGap",
         label: "HALB-SSLLGap",
-        subPatternKeys: ["3P:HA-pBELOWR1:R2-3A", "3P:HA-pABOVER1:S2-6P"],
+        subPatternKeys: ["3P:HA-pBELOWR1:R2-3A", "3P:HA-pABOVER1:S2-6P", "2P:HA-HABOVEpR1:R4-4P"],
       },
       // NEW: "LoU3L3" — Pattern (arrow), same shape as
       // "cOU3L4": base condition = this category's LevelsBelow condition
