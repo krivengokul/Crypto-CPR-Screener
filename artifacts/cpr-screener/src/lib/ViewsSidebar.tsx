@@ -347,7 +347,7 @@ export const Views: Record<string, SubPattern[]> = {
       activeBg:    "rgba(239, 68, 68, 0.14)",
     },
   ],
-  "l1-lt-pl4": [
+  "S1BelowPS4": [
     {
       id: "ss-eXU4L1-U4:10PM",
       label: "ss-eXU4L1-U4:10PM",
@@ -367,7 +367,7 @@ export const pivotcategories: Category[] = [
   { id: "levelsbelow",    label: "LEVELs BELOW", subtitle: "RRSS-B only (today's R1 not up, S1 down vs prev)", icon: TrendingUp },
   { id: "compressed",        label: "COMPRESSED",   subtitle: "RRSS-C only (today's R1 down, S1 up vs prev)",   icon: TrendingUp },
   { id: "expanded",          label: "EXPANDED",     subtitle: "RRSS-E only (today's R1 up, S1 down vs prev)",   icon: TrendingUp },
-  { id: "l1-lt-pl4",          label: "L1<pL4",        subtitle: "Today S1 below Prev S4",   icon: TrendingDown },
+  { id: "S1BelowPS4",          label: "BELOW LEVEL4",  subtitle: "Today S1 below Prev S4",   icon: TrendingDown },
   { id: "inside-cpr",         label: "Inside CPR",     subtitle: "Inside CPR range",         icon: Crosshair },
   { id: "overlapping-lower",  label: "Overlap Below", subtitle: "CPR zones stacking down",  icon: LayersIcon },
   { id: "equal-cpr",          label: "Equal CPR",     subtitle: "Prev & Today CPR Equal",   icon: Equal },

@@ -189,9 +189,9 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "U2 (today's R2)",
     getTarget: (r) => r.todayCPR.r2,
   },
-  // NEW: "ss-eXU4L1-U4:10PM" — nested under the "L1 < pL4" category's
-  // "eXU4L1" Pattern. Bullish, targets U4 (today's R4)
-  // by ~10PM.
+  // NEW: "ss-eXU4L1-U4:10PM" — nested under the "BELOW LEVEL4"
+  // (S1BelowPS4) category's "eXU4L1" Pattern. Bullish, targets U4
+  // (today's R4) by ~10PM.
   {
     key: "ss-eXU4L1-U4:10PM",
     label: "ss-eXU4L1-U4:10PM",
@@ -653,11 +653,12 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       },
     ],
   },
-  // NEW: "L1 < pL4" now nests the "eXU4L1" Pattern, which
-  // in turn nests the bullish "ss-eXU4L1-U4:10PM" pattern.
+  // RENAMED from "L1 < pL4" to "BELOW LEVEL4" (mirrors "u1-gt-pu4"'s
+  // "ABOVE LEVEL4" label). Nests the "eXU4L1" Pattern, which in turn
+  // nests the bullish "ss-eXU4L1-U4:10PM" pattern.
   {
-    key: "l1-lt-pl4",
-    label: "L1 < pL4",
+    key: "S1BelowPS4",
+    label: "BELOW LEVEL4",
     patterns: [
       {
         key: "eXU4L1",

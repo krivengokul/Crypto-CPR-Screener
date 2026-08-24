@@ -961,13 +961,13 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.prevCPR.widthPct > 0.60 && r.prevCPR.widthPct <= 1.10 && //pSmall
         r.todayCPR.widthPct > 0.60 && r.todayCPR.widthPct <= 1.10 //Small
       );
-    // Standalone top-level category: same condition as L1<pL4
-    case "l1-lt-pl4":
-      return (
-        r.cprFalling &&
-        r.strWideCPR &&
-        r.todayCPR.s1 < r.prevCPR.s4
-      );
+    // Standalone top-level category: true complement of LEVELs BELOW
+    // (r.LevelsBelow). Gate is exactly S1BelowPS4 -- the cprFalling +
+    // strWideCPR gate was dropped (mirroring u1-gt-pu4's treatment of
+    // R1AbovePR4 above) so every symbol leaving LEVELs BELOW lands here
+    // and the two categories partition cleanly.
+    case "S1BelowPS4":
+      return r.S1BelowPS4;
     case "HB-L1<PL1-PU12CU23":
       return r.cprFalling && r.strWideCPR && r.hbJPattern1;
     case "HB-L1<PL4-U1>TCPR":
@@ -1077,13 +1077,13 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     // ). Bearish → "down".
     { key: "6AM:MegMeg-L3:8PM", direction: "down" },
   ],
-  // FIX: "l1-lt-pl4" was left as an empty array while the comment below
+  // FIX: "S1BelowPS4" was left as an empty array while the comment below
   // (for "ss-eXU4L1-U4:10PM") described it as belonging here — the actual
   // entry was never added, so every row matching that pattern showed no
   // per-row direction dot even though the Views button filtered
   // correctly. Bullish sweep from a deep-below setup back up to U4 by
   // ~10PM → "up".
-  "l1-lt-pl4": [
+  "S1BelowPS4": [
     { key: "ss-eXU4L1-U4:10PM", direction: "up" },
   ],
   "equal-cpr": [

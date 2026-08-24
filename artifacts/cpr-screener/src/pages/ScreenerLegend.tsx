@@ -119,13 +119,13 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             </div>
             <div className="text-xs text-muted-foreground">Today&apos;s R1 above prev day&apos;s R4 (also excluded from LEVELs ABOVE — a symbol here never appears there)</div>
           </>
-        ) : activePattern === "l1-lt-pl4" ? (
+        ) : activePattern === "S1BelowPS4" ? (
           <>
             <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-              <span className="text-xs font-semibold text-primary">L1&lt;pL4</span>
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-destructive text-white">L1&lt;PL4</span>
+              <span className="text-xs font-semibold text-primary">BELOW LEVEL4</span>
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-destructive text-white">Below L4</span>
             </div>
-            <div className="text-xs text-muted-foreground">Today&apos;s S1 below prev day&apos;s S4</div>
+            <div className="text-xs text-muted-foreground">Today&apos;s S1 below prev day&apos;s S4 (also excluded from LEVELs BELOW — a symbol here never appears there)</div>
           </>
         ) : null}
       </div>
@@ -158,7 +158,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
         ) : activePattern === "ss-eXU4L1-U4:10PM" ? (
           <>
             <div className="text-xs font-semibold text-green-400 mb-1">Pattern: eXU4L1&nbsp;&nbsp;PCPR: Wide&nbsp;&nbsp;pBC &gt; U1</div>
-            <div className="text-xs text-muted-foreground">L1&lt;pL4 base — cprFalling + strWideCPR + Prev &amp; Today PDH above their R1 + eXU4L1 (Prev R4 in Today R3/R4, Prev S4 in Today BC/S1) + Prev CPR&apos;s BC above Today&apos;s R1</div>
+            <div className="text-xs text-muted-foreground">BELOW LEVEL4 base — cprFalling + strWideCPR + Prev &amp; Today PDH above their R1 + eXU4L1 (Prev R4 in Today R3/R4, Prev S4 in Today BC/S1) + Prev CPR&apos;s BC above Today&apos;s R1</div>
           </>
         ) : activePattern === "9AM:APHS1A-FAU4:4AM" ? (
           <>
@@ -354,7 +354,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
         ) : activePattern === "ss-eXU4L1-U4:10PM" ? (
           <>
             <div className="text-xs font-semibold text-green-400 mb-1">Target: U4&nbsp;&nbsp;Time: 10PM</div>
-            <div className="text-xs text-emerald-400/80">Bullish sweep from a deep L1&lt;pL4 setup — expected recovery toward today&apos;s U4 by ~10PM IST</div>
+            <div className="text-xs text-emerald-400/80">Bullish sweep from a deep BELOW LEVEL4 setup — expected recovery toward today&apos;s U4 by ~10PM IST</div>
           </>
         ) : activePattern === "9AM:APHS1A-FAU4:4AM" ? (
           <>

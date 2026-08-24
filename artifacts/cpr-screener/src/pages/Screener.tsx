@@ -93,7 +93,7 @@ const GENERIC_VIEW_CATEGORIES = new Set([
   "compressed",
   "expanded",
   "u1-gt-pu4",
-  "l1-lt-pl4",
+  "S1BelowPS4",
   "equal-cpr",
   // NEW: inside-cpr — was hand-wired to a single legacy button
   // ("Ti-cOLo-APU4-9PM") that no longer matches the left-nav's Views
