@@ -696,14 +696,15 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       );
     case "levelsbelow":
       return r.LevelsBelow;
-    // RENAMED from "BC>pPDL-U3:5AM": all previous conditions removed.
-    // "3P:HA-pABOVE:pR4-3A" — sub-filter under "LEVELs BELOW". Condition:
+    // RENAMED from "BC>pPDL-U3:5AM", then from "3P:HA-pABOVE:pR4-3A".
+    // "3P:HA-pBELOWR1:R2-3A" — sub-filter under "LEVELs BELOW". Condition:
     // base LevelsBelow + RRSSGapCategory SSGap + RRHHCategory RRHH-HA +
     // SSLLCategory SSLL-BB + HHLLCategory HHLL-E + PDHPDLGapCategory
     // LLGap + prevCPR.HLSwitch HL-B (pHL-B) + todayCPR.HLSwitch HL-A with
-    // hlGapWinner "today" (HLGap-A) + prev day's S3 above today's S1.
-    // Bullish, entry ~3PM, targets pR4 (prev day's R4) by ~3AM (+1).
-    case "3P:HA-pABOVE:pR4-3A":
+    // hlGapWinner "today" (HLGap-A) + prev day's S3 above today's S1 +
+    // prev day's own Pivot above today's R1. Bullish, entry ~3PM, targets
+    // today's own R2 (U2) by ~3AM (+1).
+    case "3P:HA-pBELOWR1:R2-3A":
       return (
         r.LevelsBelow &&
         r.RRSSGapCategory === "SSGap" &&
@@ -714,7 +715,26 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.prevCPR.HLSwitch === "HL-B" &&
         r.todayCPR.HLSwitch === "HL-A" &&
         r.hlGapWinner === "today" &&
-        r.prevCPR.s3 > r.todayCPR.s1
+        r.prevCPR.s3 > r.todayCPR.s1 &&
+        r.prevCPR.pivot > r.todayCPR.r1
+      );
+    // NEW: "3P:HA-pABOVER1:S2-6P" — replica of "3P:HA-pBELOWR1:R2-3A"
+    // with the same base conditions, but prev day's own Pivot BELOW
+    // today's R1 (instead of above). Bearish, entry ~3PM, targets
+    // today's own S2 (L2) by ~6PM. Red/rose color family.
+    case "3P:HA-pABOVER1:S2-6P":
+      return (
+        r.LevelsBelow &&
+        r.RRSSGapCategory === "SSGap" &&
+        r.RRHHCategory === "RRHH-HA" &&
+        r.SSLLCategory === "SSLL-BB" &&
+        r.HHLLCategory === "HHLL-E" &&
+        r.PDHPDLGapCategory === "LLGap" &&
+        r.prevCPR.HLSwitch === "HL-B" &&
+        r.todayCPR.HLSwitch === "HL-A" &&
+        r.hlGapWinner === "today" &&
+        r.prevCPR.s3 > r.todayCPR.s1 &&
+        r.prevCPR.pivot < r.todayCPR.r1
       );
     // NEW: PDH>pTC-U4:5AM — sub-filter under "LEVELs BELOW" → "LoU3L3"
     // Pattern: base LevelsBelow condition PLUS the parent's raw
@@ -1031,7 +1051,8 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     { key: "8AM:SSLLpRRHHA-L4:1PM", direction: "down" },
   ],
   "levelsbelow": [
-    { key: "3P:HA-pABOVE:pR4-3A", direction: "up" },
+    { key: "3P:HA-pBELOWR1:R2-3A", direction: "up" },
+    { key: "3P:HA-pABOVER1:S2-6P", direction: "down" },
     { key: "PDH>pTC-U4:5AM", direction: "up" },
     // FIX: "11AM:pCPR1AHi-FApU4:1PM" (nested under the "LoU3L4" Pattern
     // ) was missing here, so rows matching it never got the

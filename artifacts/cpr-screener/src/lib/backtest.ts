@@ -199,17 +199,28 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
   },
-  // RENAMED from "BC>pPDL-U3:5AM": all previous conditions removed.
-  // "3P:HA-pABOVE:pR4-3A" — nested under "LEVELs BELOW" (levelsbelow)
+  // RENAMED from "BC>pPDL-U3:5AM", then from "3P:HA-pABOVE:pR4-3A".
+  // "3P:HA-pBELOWR1:R2-3A" — nested under "LEVELs BELOW" (levelsbelow)
   // category. Bullish — per ScreenerUtils.tsx's condition (LevelsBelow +
   // SSGap + RRHH-HA + SSLL-BB + HHLL-E + LLGap + pHL-B + HLGap-A + prev
-  // day's S3 above today's S1) — targets pR4 (prev day's R4) by ~3AM (+1).
+  // day's S3 above today's S1 + prev day's own Pivot above today's R1) —
+  // targets today's own R2 (U2) by ~3AM (+1).
   {
-    key: "3P:HA-pABOVE:pR4-3A",
-    label: "3P:HA-pABOVE:pR4-3A",
+    key: "3P:HA-pBELOWR1:R2-3A",
+    label: "3P:HA-pBELOWR1:R2-3A",
     direction: "bullish",
-    targetLabel: "pR4 (prev day's R4)",
-    getTarget: (r) => r.prevCPR.r4,
+    targetLabel: "U2 (today's R2)",
+    getTarget: (r) => r.todayCPR.r2,
+  },
+  // NEW: "3P:HA-pABOVER1:S2-6P" — replica of "3P:HA-pBELOWR1:R2-3A" with
+  // the same base conditions, but prev day's own Pivot BELOW today's R1
+  // (instead of above). Bearish, targets today's own S2 (L2) by ~6PM.
+  {
+    key: "3P:HA-pABOVER1:S2-6P",
+    label: "3P:HA-pABOVER1:S2-6P",
+    direction: "bearish",
+    targetLabel: "L2 (today's S2)",
+    getTarget: (r) => r.todayCPR.s2,
   },
   // NEW: "PDH>pTC-U4:5AM" — nested directly under "LEVELs BELOW" (levelsbelow)
   // category, alongside the "cOU3L4" Pattern. Base condition:
@@ -484,10 +495,12 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
   },
   // NEW: "LEVELs BELOW" left-nav section (top of the pattern tree in
   // ViewsSidebar.tsx) — nests the "cOU3L4" Pattern, which
-  // in turn nests "3P:HA-pABOVE:pR4-3A" (RENAMED from "BC>pPDL-U3:5AM";
-  // note its condition no longer includes the raw cOU3L4 flag — see
-  // ScreenerUtils.tsx — it's kept nested here under "cOU3L4" only for
-  // dropdown grouping, matching the sidebar/legend structure).
+  // in turn nests "3P:HA-pBELOWR1:R2-3A" (RENAMED from "BC>pPDL-U3:5AM",
+  // then from "3P:HA-pABOVE:pR4-3A") and its replica
+  // "3P:HA-pABOVER1:S2-6P"; note neither condition includes the raw
+  // cOU3L4 flag — see ScreenerUtils.tsx — they're kept nested here under
+  // "cOU3L4" only for dropdown grouping, matching the sidebar/legend
+  // structure).
   {
     key: "levelsbelow",
     label: "LEVELs BELOW",
@@ -498,7 +511,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       {
         key: "cOU3L4",
         label: "cOU3L4",
-        subPatternKeys: ["3P:HA-pABOVE:pR4-3A"],
+        subPatternKeys: ["3P:HA-pBELOWR1:R2-3A", "3P:HA-pABOVER1:S2-6P"],
       },
       // NEW: "LoU3L3" — Pattern (arrow), same shape as
       // "cOU3L4": base condition = this category's LevelsBelow condition

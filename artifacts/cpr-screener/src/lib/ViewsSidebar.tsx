@@ -142,20 +142,33 @@ export const Views: Record<string, SubPattern[]> = {
     },
   ],
   "levelsbelow": [
-    // RENAMED from "BC>pPDL-U3:5AM": all previous conditions removed.
-    // "3P:HA-pABOVE:pR4-3A" — LEVELs BELOW + RRSSGapCategory SSGap +
+    // RENAMED from "BC>pPDL-U3:5AM", then from "3P:HA-pABOVE:pR4-3A".
+    // "3P:HA-pBELOWR1:R2-3A" — LEVELs BELOW + RRSSGapCategory SSGap +
     // RRHHCategory RRHH-HA + SSLLCategory SSLL-BB + HHLLCategory HHLL-E +
     // PDHPDLGapCategory LLGap + prevCPR.HLSwitch HL-B (pHL-B) +
     // todayCPR.HLSwitch HL-A with hlGapWinner "today" (HLGap-A) + prev
-    // day's S3 above today's S1 (see ScreenerUtils.tsx / cpr.ts). Bullish,
-    // entry ~3PM, targets pR4 (prev day's R4) by ~3AM (+1). Green color
-    // family to visually flag this as the bullish sub-pattern.
+    // day's S3 above today's S1 + prev day's own Pivot above today's R1
+    // (see ScreenerUtils.tsx / cpr.ts). Bullish, entry ~3PM, targets
+    // today's own R2 (U2) by ~3AM (+1). Green color family to visually
+    // flag this as the bullish sub-pattern.
     {
-      id: "3P:HA-pABOVE:pR4-3A",
-      label: "3P:HA-pABOVE:pR4-3A",
+      id: "3P:HA-pBELOWR1:R2-3A",
+      label: "3P:HA-pBELOWR1:R2-3A",
       activeColor: "#22c55e",              // green-500 border
       activeText:  "#4ade80",              // green-400 text
       activeBg:    "rgba(34, 197, 94, 0.14)",
+    },
+    // NEW: "3P:HA-pABOVER1:S2-6P" — replica of "3P:HA-pBELOWR1:R2-3A"
+    // with the same base conditions, but prev day's own Pivot BELOW
+    // today's R1 (instead of above). Bearish, entry ~3PM, targets
+    // today's own S2 (L2) by ~6PM. Rose color family to visually flag
+    // this as the bearish sub-pattern.
+    {
+      id: "3P:HA-pABOVER1:S2-6P",
+      label: "3P:HA-pABOVER1:S2-6P",
+      activeColor: "#fb7185",              // rose-400 border
+      activeText:  "#fda4af",              // rose-300 text
+      activeBg:    "rgba(244, 63, 94, 0.14)", // rose-500 tint
     },
     // NEW: PDH>pTC-U4:5AM — LEVELs BELOW + today's PDH (todayCPR.prevHigh)
     // above prev day's TC (prevCPR.tc). Bullish, targets U4 (today's R4) by

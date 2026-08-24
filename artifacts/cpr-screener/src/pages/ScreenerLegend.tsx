@@ -288,10 +288,15 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             <div className="text-xs font-semibold text-green-400 mb-1">Pivot Level: pCPR in U1 band</div>
             <div className="text-xs text-muted-foreground">Prev Pivot &gt; today R1 &amp; &lt; today R2 — today BC &gt; prev S1 &amp; &lt; prev BC</div>
           </>
-        ) : activePattern === "3P:HA-pABOVE:pR4-3A" ? (
+        ) : activePattern === "3P:HA-pBELOWR1:R2-3A" ? (
           <>
             <div className="text-xs font-semibold text-green-400 mb-1">RRHH-HA&nbsp;&nbsp;SSLL-BB&nbsp;&nbsp;HHLL-E&nbsp;&nbsp;SSGap&nbsp;&nbsp;LLGap&nbsp;&nbsp;pHL-B&nbsp;&nbsp;HLGap-A</div>
-            <div className="text-xs text-muted-foreground">LEVELs BELOW base, today&apos;s R1/PDH band mixed vs prev&apos;s (RRHH-HA), today&apos;s S1/PDL band fully below prev&apos;s (SSLL-BB), today&apos;s PDH/PDL range widened on both sides (HHLL-E), today&apos;s S1 gap larger than the R1 gap (SSGap), today&apos;s PDL gap larger than the PDH gap (LLGap), prev day&apos;s PDH/U1 relation is HL-B (pHL-B), today&apos;s PDH/U1 relation is HL-A with today&apos;s HL gap the wider of the two (HLGap-A), and prev day&apos;s S3 above today&apos;s S1</div>
+            <div className="text-xs text-muted-foreground">LEVELs BELOW base, today&apos;s R1/PDH band mixed vs prev&apos;s (RRHH-HA), today&apos;s S1/PDL band fully below prev&apos;s (SSLL-BB), today&apos;s PDH/PDL range widened on both sides (HHLL-E), today&apos;s S1 gap larger than the R1 gap (SSGap), today&apos;s PDL gap larger than the PDH gap (LLGap), prev day&apos;s PDH/U1 relation is HL-B (pHL-B), today&apos;s PDH/U1 relation is HL-A with today&apos;s HL gap the wider of the two (HLGap-A), prev day&apos;s S3 above today&apos;s S1, and prev day&apos;s own Pivot above today&apos;s R1</div>
+          </>
+        ) : activePattern === "3P:HA-pABOVER1:S2-6P" ? (
+          <>
+            <div className="text-xs font-semibold text-rose-400 mb-1">RRHH-HA&nbsp;&nbsp;SSLL-BB&nbsp;&nbsp;HHLL-E&nbsp;&nbsp;SSGap&nbsp;&nbsp;LLGap&nbsp;&nbsp;pHL-B&nbsp;&nbsp;HLGap-A</div>
+            <div className="text-xs text-muted-foreground">LEVELs BELOW base, today&apos;s R1/PDH band mixed vs prev&apos;s (RRHH-HA), today&apos;s S1/PDL band fully below prev&apos;s (SSLL-BB), today&apos;s PDH/PDL range widened on both sides (HHLL-E), today&apos;s S1 gap larger than the R1 gap (SSGap), today&apos;s PDL gap larger than the PDH gap (LLGap), prev day&apos;s PDH/U1 relation is HL-B (pHL-B), today&apos;s PDH/U1 relation is HL-A with today&apos;s HL gap the wider of the two (HLGap-A), prev day&apos;s S3 above today&apos;s S1, and prev day&apos;s own Pivot below today&apos;s R1</div>
           </>
         ) : activePattern === "PDH>pTC-U4:5AM" ? (
           <>
@@ -480,10 +485,15 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             <div className="text-xs font-semibold text-emerald-400 mb-1">Bias: Bullish shift</div>
             <div className="text-xs text-emerald-400/80">Today&apos;s CPR has stepped above yesterday&apos;s lower band while prev Pivot still caps the U1/U2 zone</div>
           </>
-        ) : activePattern === "3P:HA-pABOVE:pR4-3A" ? (
+        ) : activePattern === "3P:HA-pBELOWR1:R2-3A" ? (
           <>
-            <div className="text-xs font-semibold text-green-400 mb-1">Target: pR4&nbsp;&nbsp;&nbsp;Entry: 3PM&nbsp;&nbsp;&nbsp;Time: 3AM (+1)</div>
-            <div className="text-xs text-emerald-400/80">3PM setup with bullish continuation expected toward prev day&apos;s U4 (pR4) by ~3AM the next day</div>
+            <div className="text-xs font-semibold text-green-400 mb-1">Target: U2&nbsp;&nbsp;&nbsp;Entry: 3PM&nbsp;&nbsp;&nbsp;Time: 3AM (+1)</div>
+            <div className="text-xs text-emerald-400/80">3PM setup with bullish continuation expected toward today&apos;s U2 (R2) by ~3AM the next day</div>
+          </>
+        ) : activePattern === "3P:HA-pABOVER1:S2-6P" ? (
+          <>
+            <div className="text-xs font-semibold text-rose-400 mb-1">Target: L2&nbsp;&nbsp;&nbsp;Entry: 3PM&nbsp;&nbsp;&nbsp;Time: 6PM</div>
+            <div className="text-xs text-muted-foreground">3PM setup with bearish continuation expected toward today&apos;s S2 (L2) by ~6PM</div>
           </>
         ) : activePattern === "PDH>pTC-U4:5AM" ? (
           <>
