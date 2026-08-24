@@ -199,17 +199,17 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
   },
-  // NEW: "BC>pPDL-U3:5AM" — nested under "LEVELs BELOW" (levelsbelow)
-  // category's new "cOU3L4" Pattern (see BACKTEST_CATEGORIES
-  // below). Bullish — per ScreenerUtils.tsx's condition (today's BC above
-  // prev day's PDH, prevCPR.bc > todayCPR.r1) — targets U4 (today's R4)
-  // by ~5AM, same target style as the other "little/overlap" bullish subs.
+  // RENAMED from "BC>pPDL-U3:5AM": all previous conditions removed.
+  // "3P:HA-pABOVE:pR4-3A" — nested under "LEVELs BELOW" (levelsbelow)
+  // category. Bullish — per ScreenerUtils.tsx's condition (LevelsBelow +
+  // SSGap + RRHH-HA + SSLL-BB + HHLL-E + LLGap + pHL-B + HLGap-A + prev
+  // day's S3 above today's S1) — targets pR4 (prev day's R4) by ~3AM (+1).
   {
-    key: "BC>pPDL-U3:5AM",
-    label: "BC>pPDL-U3:5AM",
+    key: "3P:HA-pABOVE:pR4-3A",
+    label: "3P:HA-pABOVE:pR4-3A",
     direction: "bullish",
-    targetLabel: "U4 (today's R4)",
-    getTarget: (r) => r.todayCPR.r4,
+    targetLabel: "pR4 (prev day's R4)",
+    getTarget: (r) => r.prevCPR.r4,
   },
   // NEW: "PDH>pTC-U4:5AM" — nested directly under "LEVELs BELOW" (levelsbelow)
   // category, alongside the "cOU3L4" Pattern. Base condition:
@@ -484,9 +484,10 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
   },
   // NEW: "LEVELs BELOW" left-nav section (top of the pattern tree in
   // ViewsSidebar.tsx) — nests the "cOU3L4" Pattern, which
-  // in turn nests "BC>pPDL-U3:5AM" (base condition: this category's
-  // LevelsBelow condition AND the raw cOU3L4 flag — see
-  // matchesPatternFlag in ScreenerUtils.tsx).
+  // in turn nests "3P:HA-pABOVE:pR4-3A" (RENAMED from "BC>pPDL-U3:5AM";
+  // note its condition no longer includes the raw cOU3L4 flag — see
+  // ScreenerUtils.tsx — it's kept nested here under "cOU3L4" only for
+  // dropdown grouping, matching the sidebar/legend structure).
   {
     key: "levelsbelow",
     label: "LEVELs BELOW",
@@ -497,7 +498,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       {
         key: "cOU3L4",
         label: "cOU3L4",
-        subPatternKeys: ["BC>pPDL-U3:5AM"],
+        subPatternKeys: ["3P:HA-pABOVE:pR4-3A"],
       },
       // NEW: "LoU3L3" — Pattern (arrow), same shape as
       // "cOU3L4": base condition = this category's LevelsBelow condition

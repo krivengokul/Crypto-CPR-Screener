@@ -142,12 +142,17 @@ export const Views: Record<string, SubPattern[]> = {
     },
   ],
   "levelsbelow": [
-    // NEW: BC>pPDL-U3:5AM — LEVELs BELOW + today's BC above prev day's PDH
-    // (prevCPR.prevHigh, i.e. the actual high of the day before prev day).
-    // Green color family to visually flag this as the bullish sub-pattern.
+    // RENAMED from "BC>pPDL-U3:5AM": all previous conditions removed.
+    // "3P:HA-pABOVE:pR4-3A" — LEVELs BELOW + RRSSGapCategory SSGap +
+    // RRHHCategory RRHH-HA + SSLLCategory SSLL-BB + HHLLCategory HHLL-E +
+    // PDHPDLGapCategory LLGap + prevCPR.HLSwitch HL-B (pHL-B) +
+    // todayCPR.HLSwitch HL-A with hlGapWinner "today" (HLGap-A) + prev
+    // day's S3 above today's S1 (see ScreenerUtils.tsx / cpr.ts). Bullish,
+    // entry ~3PM, targets pR4 (prev day's R4) by ~3AM (+1). Green color
+    // family to visually flag this as the bullish sub-pattern.
     {
-      id: "BC>pPDL-U3:5AM",
-      label: "BC>pPDL-U3:5AM",
+      id: "3P:HA-pABOVE:pR4-3A",
+      label: "3P:HA-pABOVE:pR4-3A",
       activeColor: "#22c55e",              // green-500 border
       activeText:  "#4ade80",              // green-400 text
       activeBg:    "rgba(34, 197, 94, 0.14)",

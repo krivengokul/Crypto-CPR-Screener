@@ -696,11 +696,26 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       );
     case "levelsbelow":
       return r.LevelsBelow;
-    // NEW: BC>pPDL-U3:5AM — sub-filter under "LEVELs BELOW": base LevelsBelow
-    // condition PLUS today's BC above prev day's PDH (prevCPR.prevHigh,
-    // i.e. the actual candle high of the day before prev day).
-    case "BC>pPDL-U3:5AM":
-      return r.LevelsBelow && r.cOU3L4  && r.todayCPR.bc > r.prevCPR.prevLow && r.prevCPR.bc > r.todayCPR.r1 && r.todayCPR.HLSwitch === "HL-A" && r.prevCPR.HLSwitch === "HL-A";
+    // RENAMED from "BC>pPDL-U3:5AM": all previous conditions removed.
+    // "3P:HA-pABOVE:pR4-3A" — sub-filter under "LEVELs BELOW". Condition:
+    // base LevelsBelow + RRSSGapCategory SSGap + RRHHCategory RRHH-HA +
+    // SSLLCategory SSLL-BB + HHLLCategory HHLL-E + PDHPDLGapCategory
+    // LLGap + prevCPR.HLSwitch HL-B (pHL-B) + todayCPR.HLSwitch HL-A with
+    // hlGapWinner "today" (HLGap-A) + prev day's S3 above today's S1.
+    // Bullish, entry ~3PM, targets pR4 (prev day's R4) by ~3AM (+1).
+    case "3P:HA-pABOVE:pR4-3A":
+      return (
+        r.LevelsBelow &&
+        r.RRSSGapCategory === "SSGap" &&
+        r.RRHHCategory === "RRHH-HA" &&
+        r.SSLLCategory === "SSLL-BB" &&
+        r.HHLLCategory === "HHLL-E" &&
+        r.PDHPDLGapCategory === "LLGap" &&
+        r.prevCPR.HLSwitch === "HL-B" &&
+        r.todayCPR.HLSwitch === "HL-A" &&
+        r.hlGapWinner === "today" &&
+        r.prevCPR.s3 > r.todayCPR.s1
+      );
     // NEW: PDH>pTC-U4:5AM — sub-filter under "LEVELs BELOW" → "LoU3L3"
     // Pattern: base LevelsBelow condition PLUS the parent's raw
     // LoU3L3 flag PLUS today's PDH (todayCPR.prevHigh) above prev day's TC
@@ -1016,7 +1031,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     { key: "8AM:SSLLpRRHHA-L4:1PM", direction: "down" },
   ],
   "levelsbelow": [
-    { key: "BC>pPDL-U3:5AM", direction: "up" },
+    { key: "3P:HA-pABOVE:pR4-3A", direction: "up" },
     { key: "PDH>pTC-U4:5AM", direction: "up" },
     // FIX: "11AM:pCPR1AHi-FApU4:1PM" (nested under the "LoU3L4" Pattern
     // ) was missing here, so rows matching it never got the
