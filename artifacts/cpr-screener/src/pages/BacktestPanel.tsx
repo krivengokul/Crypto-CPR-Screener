@@ -954,9 +954,6 @@ export default function BacktestPanel() {
                     <th className="px-2 py-2 w-20 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Symbol
                     </th>
-                    <th className="px-2 py-2 w-16 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Close
-                    </th>
                     <th className="px-2 py-3 w-32 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Pattern
                     </th>
@@ -1028,14 +1025,18 @@ export default function BacktestPanel() {
                             <span className="text-muted-foreground text-xs">
                               {expandedSymbols.has(`${r.source}-${r.symbol}-${r.entryDate}`) ? "▼" : "▶"}
                             </span>
-                            <span className="truncate">{r.symbol}</span>
-                            <span onClick={(e) => e.stopPropagation()}>
-                              <ChartLink symbol={r.symbol} source={r.source} />
-                            </span>
+                            <div className="min-w-0 flex flex-col">
+                              <div className="flex items-center gap-1.5">
+                                <span className="truncate">{r.symbol}</span>
+                                <span onClick={(e) => e.stopPropagation()}>
+                                  <ChartLink symbol={r.symbol} source={r.source} />
+                                </span>
+                              </div>
+                              <span className={`font-mono text-[11px] font-medium ${closeColor}`}>
+                                {r.closePrice !== null && r.closePrice !== undefined ? fmt(r.closePrice) : "—"}
+                              </span>
+                            </div>
                           </div>
-                        </td>
-                        <td className={`px-2 py-2 w-16 font-mono text-sm font-medium ${closeColor}`}>
-                          {r.closePrice !== null && r.closePrice !== undefined ? fmt(r.closePrice) : "—"}
                         </td>
                         <td className="px-2 py-3 w-32">
                           {renderPatternColumnBadges(r.raw) ?? (
@@ -1064,7 +1065,7 @@ export default function BacktestPanel() {
                         <SRLadderRow
                           r={toSRLadderData(r.raw, r.closePrice ?? undefined)}
                           rowKey={`${r.source}-${r.symbol}-${r.entryDate}`}
-                          colSpan={8}
+                          colSpan={7}
                           todayPatternBadge={renderTodayPatternBadges(r.raw)}
                           prevPatternBadge={renderPrevPatternBadge(r.raw)}
                         />
@@ -1192,10 +1193,28 @@ export default function BacktestPanel() {
                           <span className="text-muted-foreground text-xs">
                             {expandedSymbols.has(`${r.source}-${r.symbol}-${r.entryDate}`) ? "▼" : "▶"}
                           </span>
-                          <span>{r.symbol}</span>
-                          <span onClick={(e) => e.stopPropagation()}>
-                            <ChartLink symbol={r.symbol} source={r.source} />
-                          </span>
+                          <div className="min-w-0 flex flex-col">
+                            <div className="flex items-center gap-1.5">
+                              <span className="truncate">{r.symbol}</span>
+                              <span onClick={(e) => e.stopPropagation()}>
+                                <ChartLink symbol={r.symbol} source={r.source} />
+                              </span>
+                            </div>
+                            {(() => {
+                              const chg = r.changePct;
+                              const closeColor =
+                                chg === null || chg === undefined
+                                  ? "text-muted-foreground"
+                                  : chg >= 0
+                                  ? "text-green-400"
+                                  : "text-destructive";
+                              return (
+                                <span className={`font-mono text-[11px] font-medium ${closeColor}`}>
+                                  {r.closePrice !== null && r.closePrice !== undefined ? fmt(r.closePrice) : "—"}
+                                </span>
+                              );
+                            })()}
+                          </div>
                         </div>
                       </td>
                       <td className="px-2 py-3 w-32">
