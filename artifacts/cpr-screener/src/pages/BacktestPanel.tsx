@@ -27,7 +27,7 @@ import {
   type BacktestSubCategoryDef,
   type BacktestTargetDef,
 } from "@/lib/backtest";
-import { passesPattern, matchesPatternFlag, fmt, getChartUrl, hasKnownChartMapping, getWidthCategory, renderPdhPdlColumnBadges, renderPivotSizeCell } from "./ScreenerUtils";
+import { passesPattern, matchesPatternFlag, fmt, getChartUrl, hasKnownChartMapping, getWidthCategory, renderGapColumnBadges, renderPivotSizeCell } from "./ScreenerUtils";
 import {
   renderTodayPatternBadges,
   renderPrevPatternBadge,
@@ -1042,7 +1042,7 @@ export default function BacktestPanel() {
                           {renderLevelColumnRestBadges(r.raw)}
                         </td>
                         <td className="pl-8 pr-4 py-3 whitespace-nowrap text-xs font-medium">
-                          {renderPdhPdlColumnBadges(r.raw)}
+                          {renderGapColumnBadges(r.raw)}
                         </td>
                         <td className="px-2 py-3 w-32">
                           {renderPatternColumnBadges(r.raw) ?? (
@@ -1221,7 +1221,7 @@ export default function BacktestPanel() {
                         {renderLevelColumnRestBadges(r.raw)}
                       </td>
                       <td className="pl-8 pr-4 py-3 whitespace-nowrap text-xs font-medium">
-                        {renderPdhPdlColumnBadges(r.raw)}
+                        {renderGapColumnBadges(r.raw)}
                       </td>
                       <td className="px-2 py-3 w-32">
                         {renderPatternColumnBadges(r.raw) ?? (

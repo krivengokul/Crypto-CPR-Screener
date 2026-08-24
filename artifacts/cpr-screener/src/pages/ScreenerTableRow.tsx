@@ -326,14 +326,14 @@ import {
   distanceFromCPR,
   pdhPdlStatus,
   computePrevPattern,
-  getSubFilterDirection,
+  getViewDirection,
   cprDistancePct,
   levelsInDistanceRange,
   renderSSRRHHLLBadges,
   renderLevelStatusRow1Badges,
   renderLevelStatusBadge,
   renderLevelStatusRestBadges,
-  renderPdhPdlColumnBadges,
+  renderGapColumnBadges,
   renderPivotSizeCell,
 } from "./ScreenerUtils";
 import { SRLadderRow, toSRLadderData } from "./SRLadderPanel";
@@ -468,7 +468,7 @@ export default function ScreenerTableRow({
   return (
     <Fragment key={rowKey}>
       <tr
-        className={`hover:bg-muted/20 transition-colors ${getSubFilterDirection(r, activePattern) ? "bg-accent/3" : ""}`}
+        className={`hover:bg-muted/20 transition-colors ${getViewDirection(r, activePattern) ? "bg-accent/3" : ""}`}
       >
         {canShowCombined && activeTab === "combined" && (
           <td className="px-4 py-3 whitespace-nowrap">
@@ -491,7 +491,7 @@ export default function ScreenerTableRow({
           <div className="flex items-start gap-1.5">
             <span className="text-muted-foreground text-xs mt-0.5">{isExpanded ? "▼" : "▶"}</span>
             {(() => {
-              const dir = getSubFilterDirection(r, activePattern);
+              const dir = getViewDirection(r, activePattern);
               if (!dir) return null;
               return (
                 <div
@@ -541,7 +541,7 @@ export default function ScreenerTableRow({
           className="px-3 py-3 whitespace-nowrap text-xs font-medium min-w-[150px]"
           title={`PDH: ${fmt(r.todayCPR.prevHigh)}  |  PDL: ${fmt(r.todayCPR.prevLow)}`}
         >
-          {renderPdhPdlColumnBadges(r)}
+          {renderGapColumnBadges(r)}
         </td>
         <td className="px-2 py-3 w-56">
           <div className="flex flex-col gap-1 max-w-[200px]">

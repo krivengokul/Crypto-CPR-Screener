@@ -45,7 +45,7 @@ import {
   getPatternInfo,
   computePrevPattern,
   type PatternInfo,
-  getSubFilterDirection,
+  getViewDirection,
   getRowDirection,
 } from "./ScreenerUtils";
 import LiveClock from "./LiveClock";
@@ -292,7 +292,7 @@ export default function Screener({
   // onSelect(subId), not onSelect(parentId). Row filtering already handles
   // both cases fine (passesPattern resolves leaf ids directly), but
   // anything keyed off the *category* — the Views button row and the
-  // per-row green/red direction dot (getSubFilterDirection) — was comparing
+  // per-row green/red direction dot (getViewDirection) — was comparing
   // against the raw activePattern and so went blank whenever a leaf was
   // selected via the left-nav. activeSectionKey resolves either case back
   // to the owning category so those two stay populated regardless of

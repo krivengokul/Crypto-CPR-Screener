@@ -1033,11 +1033,11 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
  * When a row matches more than one sub-filter in the section, the FIRST
  * match (in array order below) determines the dot's color.
  */
-export type SubFilterDirection = "up" | "down";
+export type ViewDirection = "up" | "down";
 
 interface SubFilterDef {
   key: string;
-  direction: SubFilterDirection;
+  direction: ViewDirection;
 }
 
 const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
@@ -1117,7 +1117,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
  * given section, or null if it matches none (or the section has no
  * sub-filters defined, e.g. "falling"/"inside-value").
  */
-export function getSubFilterDirection(r: CPRResult, activePattern: string): SubFilterDirection | null {
+export function getViewDirection(r: CPRResult, activePattern: string): ViewDirection | null {
   const defs = SUBFILTERS_BY_SECTION[activePattern];
   if (!defs) return null;
   for (const def of defs) {
@@ -1130,14 +1130,14 @@ export function getSubFilterDirection(r: CPRResult, activePattern: string): SubF
  * getRowDirection — single up/down call for a row, for consumers (e.g.
  * SignalDesk's long/short arrow) that need one answer regardless of
  * whether the active section has per-sub-pattern directions defined.
- * Tries getSubFilterDirection(r, activePattern) first — the specific
+ * Tries getViewDirection(r, activePattern) first — the specific
  * sub-pattern's own bullish/bearish call when the row matches one — and
  * falls back to the row's own 24h change (change24h >= 0 → up, else
  * down) when it doesn't (e.g. no sub-pattern selected, or the section
  * has none defined).
  */
 export function getRowDirection(r: CPRResult, activePattern: string): "up" | "down" {
-  const subDir = getSubFilterDirection(r, activePattern);
+  const subDir = getViewDirection(r, activePattern);
   if (subDir) return subDir;
   return r.change24h >= 0 ? "up" : "down";
 }
@@ -2072,7 +2072,7 @@ export function renderHHLLCategoryBadge(r: CPRResult) {
 }
 
 /**
- * renderPdhPdlColumnBadges — the full PDH/PDL table column body, shared by
+ * renderGapColumnBadges — the full PDH/PDL table column body, shared by
  * ScreenerTableRow and BacktestPanel's two result tables so all three call
  * sites stay in sync. Layout (updated):
  *   Row 1: HHLLCategory badge (HHLL-A/B/C/X/=) first, then the Gap badge
@@ -2087,7 +2087,7 @@ export function renderHHLLCategoryBadge(r: CPRResult) {
  * badge on Row 2, since those two are a matched pair.)
  * Returns a "—" placeholder span when none of the four badges apply.
  */
-export function renderPdhPdlColumnBadges(r: CPRResult) {
+export function renderGapColumnBadges(r: CPRResult) {
   const hhllBadge = renderRRSSGapCategoryBadge(r);
   const gapBadge = renderPDHPDLGapCategoryBadge(r);
   const prevBadge = renderPrevPdhPdlBadge(r);
