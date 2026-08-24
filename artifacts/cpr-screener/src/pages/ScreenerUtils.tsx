@@ -733,7 +733,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return (
         matchesPatternFlag(r, "HALB-SSLLGap") &&
         dirTol(r.prevCPR.s3, r.todayCPR.s1) > 0 &&  dirTol(r.todayCPR.r1, r.prevCPR.prevHigh) > 0 &&
-        dirTol(r.todayCPR.pivot, r.prevCPR.prevLow) > 0 && dirTol(r.todayCPR.r3, r.prevCPR.r3) > 0
+        dirTol(r.todayCPR.pivot, r.prevCPR.prevLow) > 0 && dirTol(r.todayCPR.r3, r.prevCPR.r3) > 0 && dirTol(r.todayCPR.prevLow, r.prevCPR.s2) > 0
       );
     // NEW: PDH>pTC-U4:5AM — sub-filter under "LEVELs BELOW" → "LoU3L3"
     // Pattern: base LevelsBelow condition PLUS the parent's raw
