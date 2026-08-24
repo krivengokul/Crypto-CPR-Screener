@@ -1263,6 +1263,19 @@ async function getSymbolUniverse(
 }
 
 /**
+ * Yields to the browser's paint cycle. `await Promise.all(...)` alone only
+ * yields a microtask — when every symbol in a batch already has cached
+ * candles (no real network I/O), the whole scan resolves as a chain of
+ * microtasks with no macrotask in between, so the browser never gets a
+ * chance to repaint the progress bar between onProgress calls: it stays at
+ * 0% until the entire scan finishes, then jumps straight to 100%. This
+ * forces an actual macrotask boundary so each progress update gets painted.
+ */
+function yieldToBrowser(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+/**
  * Warms the cache for a whole symbol universe in parallel chunks. Call this
  * once before a multi-date sweep: after it resolves, every date in the range
  * scans purely in memory.
@@ -1287,6 +1300,7 @@ export async function prefetchHistories(
       await Promise.all(chunk.map((s) => getHistory(s, source)));
       const done = symbols.length - pending.length + Math.min(i + concurrency, pending.length);
       onProgress?.(done, symbols.length, chunk[chunk.length - 1]);
+      await yieldToBrowser();
     }
     pending = pending.filter((s) => !hasCachedHistory(s, source));
   }
@@ -1607,6 +1621,7 @@ export async function runBacktest(
       if (r) rows.push(r);
     });
     onProgress?.(Math.min(i + batchSize, symbols.length), symbols.length, batch[batch.length - 1]);
+    await yieldToBrowser();
   }
 
   return rows;
@@ -1643,6 +1658,7 @@ export async function runCategoryScan(
       if (r) rows.push(r);
     });
     onProgress?.(Math.min(i + batchSize, symbols.length), symbols.length, batch[batch.length - 1]);
+    await yieldToBrowser();
   }
 
   return rows;
@@ -1685,6 +1701,7 @@ export async function runPivotLevelBacktest(
       if (r) rows.push(r);
     });
     onProgress?.(Math.min(i + batchSize, symbols.length), symbols.length, batch[batch.length - 1]);
+    await yieldToBrowser();
   }
 
   return rows;
