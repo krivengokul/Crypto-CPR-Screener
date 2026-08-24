@@ -708,7 +708,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // by ~3AM (+1).
     case "3P:HA-pBELOWR1:R2-3A":
       return (
-        passesPattern(r, "HALB-SSLLGap") &&
+        matchesPatternFlag(r, "HALB-SSLLGap") &&
         r.prevCPR.pivot > r.todayCPR.r1 && r.todayCPR.pivot > r.prevCPR.prevLow &&
         r.prevCPR.s3 > r.todayCPR.s1 && r.todayCPR.r3 > r.prevCPR.r3
       );
@@ -718,9 +718,9 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // today's own S2 (L2) by ~6PM. Red/rose color family.
     case "3P:HA-pABOVER1:S2-6P":
       return (
-        passesPattern(r, "HALB-SSLLGap") &&
-        r.prevCPR.s3 > r.todayCPR.s1 &&
-        r.prevCPR.pivot < r.todayCPR.r1
+        matchesPatternFlag(r, "HALB-SSLLGap")
+        && r.prevCPR.s3 > r.todayCPR.s1 
+        && r.prevCPR.pivot < r.todayCPR.r1
       );
     // NEW: "2P:HA-HABOVEpR1:R4-4P" — replica of "3P:HA-pBELOWR1:R2-3A"
     // with the same shared "HALB-SSLLGap" base and the same prev day's S3
@@ -731,8 +731,8 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // by ~4PM.
     case "2P:HA-HABOVEpR1:R4-4P":
       return (
-        passesPattern(r, "HALB-SSLLGap") &&
-        dirTol(r.prevCPR.s3, r.todayCPR.s1) > 0 && dirTol(r.todayCPR.prevHigh, r.prevCPR.prevHigh) > 0 && 
+        matchesPatternFlag(r, "HALB-SSLLGap") &&
+        dirTol(r.prevCPR.s3, r.todayCPR.s1) > 0  
         dirTol(r.todayCPR.pivot, r.prevCPR.prevLow) > 0 && dirTol(r.todayCPR.r3, r.prevCPR.r3) > 0
       );
     // NEW: PDH>pTC-U4:5AM — sub-filter under "LEVELs BELOW" → "LoU3L3"
@@ -1261,6 +1261,7 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     // it's intentionally omitted here.
     case "HALB-SSLLGap":
       return (
+        r.LevelsBelow &&
         r.HHLLCategory === "HHLL-E" &&
         r.RRHHCategory === "RRHH-HA" &&
         r.SSLLCategory === "SSLL-BB" &&
