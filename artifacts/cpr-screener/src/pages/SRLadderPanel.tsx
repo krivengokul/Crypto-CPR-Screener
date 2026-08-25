@@ -105,13 +105,13 @@ export function SRLadder({
     if (key === "Pivot")
       return "text-yellow-300 font-semibold bg-yellow-500/5";
     if (key === "BC")
-      return "text-violet-400 font-semibold bg-violet-500/5";
+      return "text-pink-400 font-semibold bg-pink-500/5";
     if (key === "PH")
       return "text-sky-400 font-medium bg-sky-500/5";
     if (key === "PL")
-      return "text-purple-400 font-medium bg-purple-500/5";
+      return "text-sky-400 font-medium bg-sky-500/5";
     if (key.startsWith("R")) return "text-green-400";
-    return "text-red-400";
+    return "text-destructive bg-destructive/5";
   };
 
   return (
@@ -171,13 +171,13 @@ function levelLabel(key: (typeof LEVEL_KEYS)[number]): string {
 
 /** Same color coding as SRLadder's rowColor, expressed as hex for SVG stroke/fill. */
 function levelColor(key: (typeof LEVEL_KEYS)[number]): string {
-  if (key === "tc") return "#fbbf24"; // amber-400
+  if (key === "tc") return "#f97316"; // orange-500
   if (key === "pivot") return "#fde047"; // yellow-300
-  if (key === "bc") return "#a78bfa"; // violet-400
+  if (key === "bc") return "#f472b6"; // pink-400
   if (key === "prevHigh") return "#38bdf8"; // sky-400
-  if (key === "prevLow") return "#c084fc"; // purple-400
+  if (key === "prevLow") return "#38bdf8"; // sky-400
   if (key.startsWith("r")) return "#4ade80"; // green-400
-  return "#f87171"; // red-400
+  return "#ef4444"; // destructive / red-500
 }
 
 /**
