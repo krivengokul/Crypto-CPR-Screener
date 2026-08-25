@@ -56,7 +56,7 @@ function App() {
   // any nav item, and the Screener render check below special-cases it to
   // still render the Screener (with its own showAll-defaults-true state)
   // instead of the ComingSoon placeholder.
-  const [activePattern, setActivePattern] = useState("");
+  const [activeView, setActiveView] = useState("");
   const [scanKey, setScanKey] = useState(0);
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(getSavedCollapsed);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -82,7 +82,7 @@ function App() {
   };
 
   const handlePatternSelect = (id: string) => {
-    setActivePattern(id);
+    setActiveView(id);
   };
 
   const handleModeChange = (next: SidebarMode) => {
@@ -93,14 +93,14 @@ function App() {
   };
 
   const activeLabel =
-    pivotcategories.find((p) => p.id === activePattern)?.label ?? activePattern;
+    pivotcategories.find((p) => p.id === activeView)?.label ?? activeView;
 
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <div className="flex min-h-screen bg-background">
           <ViewsSidebar
-            activePattern={activePattern}
+            activeView={activeView}
             onSelect={handlePatternSelect}
             collapsed={sidebarCollapsed}
             onToggle={handleToggle}
@@ -124,9 +124,9 @@ function App() {
                 not the active view — so switching modes/patterns never remounts
                 it and never re-triggers the scanKey effect / loses scan state. */}
             <div style={{ display: mode === "scanner" ? "block" : "none" }}>
-              {activePattern === "" || SCREENER_PATTERN_IDS.has(activePattern) ? (
+              {activeView === "" || SCREENER_PATTERN_IDS.has(activeView) ? (
                 <Screener
-                  activePattern={activePattern}
+                  activeView={activeView}
                   scanKey={scanKey}
                   onCounts={setPatternCounts}
                   onSignalSymbols={setSignalSymbols}
@@ -145,7 +145,7 @@ function App() {
             {mode === "signals" && (
               <SignalDesk
                 symbols={signalSymbols}
-                activePattern={activePattern}
+                activeView={activeView}
                 activeLabel={activeLabel}
                 counts={patternCounts}
                 onSelectPattern={handlePatternSelect}
