@@ -110,12 +110,16 @@ export function SRLadder({
   };
 
   return (
-    <div className="w-[180px] min-w-0">
-      <div className="mb-1.5 flex flex-wrap items-center gap-1.5 pl-2 text-left">
+    <div className="w-[160px] min-w-0">
+      <div className="mb-1.5 flex flex-nowrap items-center gap-1.5 pl-2 text-left">
         <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
           {label}
         </p>
-        {badge}
+        {badge && (
+          <span className="inline-flex shrink-0 translate-y-[-1px] items-center">
+            {badge}
+          </span>
+        )}
       </div>
       {rows.map((row, i) =>
         row.type === "price" ? (
@@ -228,10 +232,12 @@ function CPRLevelChart({
   // Keep the chart compact when it sits beside the ladders. The ladders
   // remain the readable, full-size value reference next to it.
   const height = 300;
-  const leftMargin = 96;
-  const rightMargin = 96;
+  // Keep labels readable while reducing the total chart footprint so the
+  // chart and three ladders can fit without a page-level horizontal scrollbar.
+  const leftMargin = 76;
+  const rightMargin = 76;
   const plotWidth = width - leftMargin - rightMargin;
-  const prevSegmentEnd = leftMargin + plotWidth * 0.45;
+  const prevSegmentEnd = leftMargin + plotWidth * 0.43;
 
   const allValues = LEVEL_KEYS.flatMap((k) => [
     prevCPR[k as keyof CPRLevels] as number,
@@ -385,14 +391,14 @@ export function SRLadderPanel({
   pDay1PatternBadge?: ReactNode;
 }) {
   return (
-    <div className="flex min-w-[920px] flex-col gap-3">
-      <div className="flex items-start gap-4 overflow-x-auto border-b border-border/50 pb-3 xl:overflow-visible">
-        <div className="min-w-[560px] flex-1">
+    <div className="flex w-full min-w-0 flex-col gap-3">
+      <div className="flex flex-wrap items-start gap-3 border-b border-border/50 pb-3">
+        <div className="min-w-[440px] flex-1">
           <CPRLevelChart prevCPR={r.prevCPR} todayCPR={r.todayCPR} />
         </div>
-        <div className="flex shrink-0 items-start gap-3 pt-0.5">
+        <div className="flex min-w-0 flex-1 items-start justify-between gap-2 pt-0.5">
           <SRLadder cpr={r.todayCPR} currentPrice={r.currentPrice} label="Today S/R" badge={todayPatternBadge} />
-          <SRLadder cpr={r.prevCPR} currentPrice={r.currentPrice} label="PrevDay S/R" badge={prevPatternBadge} />
+          <SRLadder cpr={r.prevCPR} currentPrice={r.currentPrice} label="PDay S/R" badge={prevPatternBadge} />
           {r.ppCPR && (
             <SRLadder cpr={r.ppCPR} currentPrice={r.currentPrice} label="PDay-1 S/R" badge={pDay1PatternBadge} />
           )}
