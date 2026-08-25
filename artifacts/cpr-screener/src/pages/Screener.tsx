@@ -171,11 +171,11 @@ export default function Screener({
   // 9AM:SSRRBHHLLA-U4:9PM. Overlap Below + HHRRBelow + HHLLAbove. Bullish,
   // green color family.
   const [showOBLoRRHHLLA, setShowOBLoRRHHLLA] = useState(false);
-  // NEW: OBN-LoU4L4-U4 / OBW-LoU4L4-L4 filter state (Overlapping Lower), placed next to Exp-U3>pU4
+  // NEW: OBN-L4U4-U4 / OBW-L4U4-L4 filter state (Overlapping Lower), placed next to Exp-U3>pU4
   const [showOBNLoU4L4, setShowOBNLoU4L4] = useState(false);
   const [showOBWLoU4L4, setShowOBWLoU4L4] = useState(false);
   // NEW: 2PM:SSLLpRRHHA-ApU4:5PM filter state (Overlapping Lower) — placed
-  // next to OBN-LoU4L4-U4 / OBW-LoU4L4-L4. Overlap Below + SSLLAbove +
+  // next to OBN-L4U4-U4 / OBW-L4U4-L4. Overlap Below + SSLLAbove +
   // HHRRBelow, bullish, targets ApU4 (prev day's R4) by ~5PM.
   const [showOBLoSSLLRRHH, setShowOBLoSSLLRRHH] = useState(false);
   // NEW: 8AM:SSLLpRRHHA-L4:1PM filter state (Overlapping Lower) — bearish
@@ -396,8 +396,8 @@ export default function Screener({
     // matching entry here, same class of bug as CPR Inside's missing Views.
     "9AM:SSRRBHHLLA-U4:9PM": setShowExpU3PU3,
     "9AM:pRRHHLLA-U4:9PM": setShowOBLoRRHHLLA,
-    "OBN-LoU4L4-U4": setShowOBNLoU4L4,
-    "OBW-LoU4L4-L4": setShowOBWLoU4L4,
+    "OBN-L4U4-U4": setShowOBNLoU4L4,
+    "OBW-L4U4-L4": setShowOBWLoU4L4,
     "2PM:SSLLpRRHHA-ApU4:5PM": setShowOBLoSSLLRRHH,
     "8AM:SSLLpRRHHA-L4:1PM": setShowOBLoSSLLRRHHDown,
   };
@@ -407,8 +407,8 @@ export default function Screener({
   // selected, so we can deselect it in the sidebar too.
   const VIEW_STATES: Record<string, boolean> = {
     "eXLo-L4U4-U4": showExpU4PU4,
-    "OBN-LoU4L4-U4": showOBNLoU4L4,
-    "OBW-LoU4L4-L4": showOBWLoU4L4,
+    "OBN-L4U4-U4": showOBNLoU4L4,
+    "OBW-L4U4-L4": showOBWLoU4L4,
     "2PM:SSLLpRRHHA-ApU4:5PM": showOBLoSSLLRRHH,
     "8AM:SSLLpRRHHA-L4:1PM": showOBLoSSLLRRHHDown,
   };
@@ -584,28 +584,28 @@ export default function Screener({
       if (activeTab === "delta") return deltaIntersect;
       return binanceIntersect;
     }
-    // NEW: OBN-LoU4L4-U4 pool — Overlapping Lower, Narrow variant
+    // NEW: OBN-L4U4-U4 pool — Overlapping Lower, Narrow variant
     if (showOBNLoU4L4 && activeView === "overlapping-lower") {
       const binanceIntersect = allResults
-        .filter((r) => passesPattern(r, "OBN-LoU4L4-U4"))
+        .filter((r) => passesPattern(r, "OBN-L4U4-U4"))
         .map((r) => ({ ...r, source: "binance" as const }));
 
       const deltaIntersect = deltaAllResults
-        .filter((r) => passesPattern(r, "OBN-LoU4L4-U4"))
+        .filter((r) => passesPattern(r, "OBN-L4U4-U4"))
         .map((r) => ({ ...r, source: "delta" as const }));
 
       if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
       if (activeTab === "delta") return deltaIntersect;
       return binanceIntersect;
     }
-    // NEW: OBW-LoU4L4-L4 pool — Overlapping Lower, Wide variant
+    // NEW: OBW-L4U4-L4 pool — Overlapping Lower, Wide variant
     if (showOBWLoU4L4 && activeView === "overlapping-lower") {
       const binanceIntersect = allResults
-        .filter((r) => passesPattern(r, "OBW-LoU4L4-L4"))
+        .filter((r) => passesPattern(r, "OBW-L4U4-L4"))
         .map((r) => ({ ...r, source: "binance" as const }));
 
       const deltaIntersect = deltaAllResults
-        .filter((r) => passesPattern(r, "OBW-LoU4L4-L4"))
+        .filter((r) => passesPattern(r, "OBW-L4U4-L4"))
         .map((r) => ({ ...r, source: "delta" as const }));
 
       if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
@@ -613,7 +613,7 @@ export default function Screener({
       return binanceIntersect;
     }
     // NEW: 2PM:SSLLpRRHHA-ApU4:5PM pool — Overlapping Lower, SSLLAbove +
-    // HHRRBelow variant, placed next to OBW-LoU4L4-L4.
+    // HHRRBelow variant, placed next to OBW-L4U4-L4.
     if (showOBLoSSLLRRHH && activeView === "overlapping-lower") {
       const binanceIntersect = allResults
         .filter((r) => passesPattern(r, "2PM:SSLLpRRHHA-ApU4:5PM"))
@@ -665,129 +665,129 @@ export default function Screener({
 
   const displayed = getActivePool()
     .filter((r) => r.symbol.toLowerCase().includes(search.toLowerCase()))
-    // NEW: cOU1L2 / cOU3L4 are independent booleans in cpr.ts (not
+    // NEW: CL2U1 / CL4U3 are independent booleans in cpr.ts (not
     // actually gated behind srLower), so a row can satisfy one of them
     // AND a higher-priority bucket (e.g. srHigher) at the same time.
     // getPatternInfo() only ever returns ONE label per row and checks the
     // other buckets first, so matching on getPatternInfo(r)?.label would
-    // silently miss rows where cOU1L2/cOU3L4 is true but shadowed by
+    // silently miss rows where CL2U1/CL4U3 is true but shadowed by
     // an earlier bucket. Check the raw flags directly for these two so
     // the filter buttons actually work independent of the primary badge.
     .filter((r) => {
       if (!PatternFilter) return true;
-      if (PatternFilter === "cOU3L4") return r.cOU3L4;
-      if (PatternFilter === "LoU4L4") return r.LoU4L4;
-      // NEW: eXL4U4 — independent, section-agnostic Pattern flag (see
+      if (PatternFilter === "CL4U3") return r.CL4U3;
+      if (PatternFilter === "L4U4") return r.L4U4;
+      // NEW: EU4L4 — independent, section-agnostic Pattern flag (see
       // doc-comment on PatternInfo/getPatternInfo in ScreenerUtils.tsx).
-      if (PatternFilter === "eXL4U4") return r.eXL4U4;
-      // NEW: eXU4L4 — independent, section-agnostic Pattern flag, mirror
-      // of eXL4U4 gated on srExpandedLower instead of srExpandedHigher
+      if (PatternFilter === "EU4L4") return r.EU4L4;
+      // NEW: EL4U4 — independent, section-agnostic Pattern flag, mirror
+      // of EU4L4 gated on srExpandedLower instead of srExpandedHigher
       // (see doc-comments in cpr.ts / ScreenerUtils.tsx).
-      if (PatternFilter === "eXU4L4") return r.eXU4L4;
-      // NEW: EqL4U4 — today R4 == prev R4 AND today S4 == prev S4 (cpr.ts).
-      if (PatternFilter === "EqL4U4") return r.EqL4U4;
-      if (PatternFilter === "eXL3U3") return r.eXL3U3;
-      if (PatternFilter === "eXU3L3") return r.eXU3L3;
-      // NEW: HiL4U4 — independent, section-agnostic Pattern flag,
-      // mirror of eXL4U4 (see doc-comments in cpr.ts / ScreenerUtils.tsx).
-      if (PatternFilter === "HiL2U4") return r.HiL2U4;
-      if (PatternFilter === "HiL2U3") return r.HiL2U3;
-      if (PatternFilter === "HiL3U4") return r.HiL3U4;
-      if (PatternFilter === "HiL4U4") return r.HiL4U4;
-      // NEW: eXL4U3 — unconditional Pattern flag.
-      if (PatternFilter === "eXL4U3") return r.eXL4U3;
-      // NEW: HiL4U3 / cOL2U3 — same treatment: independent,
+      if (PatternFilter === "EL4U4") return r.EL4U4;
+      // NEW: U4L4= — today R4 == prev R4 AND today S4 == prev S4 (cpr.ts).
+      if (PatternFilter === "U4L4=") return r.U4L4=;
+      if (PatternFilter === "EU3L3") return r.EU3L3;
+      if (PatternFilter === "EL3U3") return r.EL3U3;
+      // NEW: U4L4 — independent, section-agnostic Pattern flag,
+      // mirror of EU4L4 (see doc-comments in cpr.ts / ScreenerUtils.tsx).
+      if (PatternFilter === "U4L2") return r.U4L2;
+      if (PatternFilter === "U3L2") return r.U3L2;
+      if (PatternFilter === "U4L3") return r.U4L3;
+      if (PatternFilter === "U4L4") return r.U4L4;
+      // NEW: EU3L4 — unconditional Pattern flag.
+      if (PatternFilter === "EU3L4") return r.EU3L4;
+      // NEW: U3L4 / CU3L2 — same treatment: independent,
       // section-agnostic Pattern flags, always shown regardless of
       // activeView/left-nav.
-      if (PatternFilter === "HiL4U3") return r.HiL4U3;
-      // NEW: HiL4U2 — same treatment as HiL4U3: independent,
+      if (PatternFilter === "U3L4") return r.U3L4;
+      // NEW: U2L4 — same treatment as U3L4: independent,
       // section-agnostic Pattern flag, always shown regardless of
       // activeView/left-nav.
-      if (PatternFilter === "HiL4U2") return r.HiL4U2;
-      if (PatternFilter === "HiL4U1") return r.HiL4U1;
-      // NEW: LoTCL3 — same treatment as HiL4U3/HiL4U2: independent,
+      if (PatternFilter === "U2L4") return r.U2L4;
+      if (PatternFilter === "U1L4") return r.U1L4;
+      // NEW: L3TC — same treatment as U3L4/U2L4: independent,
       // section-agnostic Pattern flag, always shown regardless of
       // activeView/left-nav.
-      if (PatternFilter === "LoTCL3") return r.LoTCL3;
-      if (PatternFilter === "eXHiL2L1") return r.eXHiL2L1;
-      if (PatternFilter === "eXLoL2L1") return r.eXLoL2L1;
-      if (PatternFilter === "cOL2U3") return r.cOL2U3;
-      if (PatternFilter === "cOL3U3") return r.cOL3U3;
-      // NEW: eXU4L2 — independent, section-agnostic Pattern flag
+      if (PatternFilter === "L3TC") return r.L3TC;
+      if (PatternFilter === "EL1L2") return r.EL1L2;
+      if (PatternFilter === "EL2L1") return r.EL2L1;
+      if (PatternFilter === "CU3L2") return r.CU3L2;
+      if (PatternFilter === "CU3L3") return r.CU3L3;
+      // NEW: EL2U4 — independent, section-agnostic Pattern flag
       // (see doc-comments in cpr.ts / ScreenerUtils.tsx).
-      if (PatternFilter === "eXU4L2") return r.eXU4L2;
-      // NEW: eXU4L3 — independent, section-agnostic Pattern flag
+      if (PatternFilter === "EL2U4") return r.EL2U4;
+      // NEW: EL3U4 — independent, section-agnostic Pattern flag
       // (see doc-comments in cpr.ts / ScreenerUtils.tsx).
-      if (PatternFilter === "eXU4L3") return r.eXU4L3;
-      if (PatternFilter === "cOL2U4") return r.cOL2U4;
-      if (PatternFilter === "cOL4U4") return r.cOL4U4;
-      if (PatternFilter === "cOL3U4") return r.cOL3U4;
-      if (PatternFilter === "cOU3L3") return r.cOU3L3;
-      if (PatternFilter === "LoU3L4") return r.LoU3L4;
-      if (PatternFilter === "LoU3L3") return r.LoU3L3;
-      if (PatternFilter === "LoU2L4") return r.LoU2L4;
-      if (PatternFilter === "LoU2L3") return r.LoU2L3;
-      if (PatternFilter === "LoU4L3") return r.LoU4L3;
-      if (PatternFilter === "LoU4L2") return r.LoU4L2;
-      if (PatternFilter === "cOU2L3") return r.cOU2L3;
-      if (PatternFilter === "LoU4L1") return r.LoU4L1;
-      if (PatternFilter === "cOU2L4") return r.cOU2L4;
+      if (PatternFilter === "EL3U4") return r.EL3U4;
+      if (PatternFilter === "CU4L2") return r.CU4L2;
+      if (PatternFilter === "CU4L4") return r.CU4L4;
+      if (PatternFilter === "CU4L3") return r.CU4L3;
+      if (PatternFilter === "CL3U3") return r.CL3U3;
+      if (PatternFilter === "L4U3") return r.L4U3;
+      if (PatternFilter === "L3U3") return r.L3U3;
+      if (PatternFilter === "L4U2") return r.L4U2;
+      if (PatternFilter === "L3U2") return r.L3U2;
+      if (PatternFilter === "L3U4") return r.L3U4;
+      if (PatternFilter === "L2U4") return r.L2U4;
+      if (PatternFilter === "CL3U2") return r.CL3U2;
+      if (PatternFilter === "L1U4") return r.L1U4;
+      if (PatternFilter === "CL4U2") return r.CL4U2;
       // NEW: eXL*U1 / eXL*CPR sub-type badges
-      if (PatternFilter === "eXL2U1") return r.eXL2U1;
-      if (PatternFilter === "eXL3U1") return r.eXL3U1;
-      if (PatternFilter === "eXL4U1") return r.eXL4U1;
-      if (PatternFilter === "eXL1BC") return r.eXL1BC;
-      if (PatternFilter === "eXL1CP") return r.eXL1CP;
-      if (PatternFilter === "eXL1TC") return r.eXL1TC;
-      if (PatternFilter === "eXL2BC") return r.eXL2BC;
-      if (PatternFilter === "eXL3BC") return r.eXL3BC;
-      if (PatternFilter === "eXL3CP") return r.eXL3CP;
-      // NEW: cOU1L1 / cOL1U1 / cOU2L2 / cOL2U2 — independent,
+      if (PatternFilter === "EU1L2") return r.EU1L2;
+      if (PatternFilter === "EU1L3") return r.EU1L3;
+      if (PatternFilter === "EU1L4") return r.EU1L4;
+      if (PatternFilter === "EUBL1") return r.EUBL1;
+      if (PatternFilter === "EUPL1") return r.EUPL1;
+      if (PatternFilter === "EUTL1") return r.EUTL1;
+      if (PatternFilter === "EUBL2") return r.EUBL2;
+      if (PatternFilter === "EUBL3") return r.EUBL3;
+      if (PatternFilter === "EUPL3") return r.EUPL3;
+      // NEW: CL1U1 / CU1L1 / CL2U2 / CU2L2 — independent,
       // section-agnostic Pattern flags (see cpr.ts).
-      if (PatternFilter === "cOU1L1") return r.cOU1L1;
-      if (PatternFilter === "cOL1U1") return r.cOL1U1;
-      if (PatternFilter === "cOU2L2") return r.cOU2L2;
-      if (PatternFilter === "cOL2U2") return r.cOL2U2;
-      // NEW: cOU1L2 — independent, section-agnostic Pattern flag (see cpr.ts).
-      if (PatternFilter === "cOU1L2") return r.cOU1L2;
-      if (PatternFilter === "cOU4L4") return r.cOU4L4;
-      if (PatternFilter === "exL3U2") return r.exL3U2;
-      // NEW: expanded family — eXL3TC / eXL4U2 / eXL2U2 / eXL2TC / eXL1U1
-      if (PatternFilter === "eXL3TC") return r.eXL3TC;
-      if (PatternFilter === "eXL4U2") return r.eXL4U2;
-      if (PatternFilter === "eXL2U2") return r.eXL2U2;
-      if (PatternFilter === "eXL2TC") return r.eXL2TC;
-      if (PatternFilter === "eXL1U1") return r.eXL1U1;
-      // NEW: eXU1L1 — same band shape as eXL1U1, split by which gap (R1-R4 vs S1-S4) is larger
-      if (PatternFilter === "eXU1L1") return r.eXU1L1;
-      if (PatternFilter === "eXU2L1") return r.eXU2L1;
-      // NEW: eXU3L1 (prev R4 in today R2/R3, prev S4 in today BC/S1) /
-      // eXU2TC (prev R4 in today R1/R2, prev S4 in today TC/R1)
-      if (PatternFilter === "eXU3L1") return r.eXU3L1;
-      if (PatternFilter === "eXU3L2") return r.eXU3L2;
-      if (PatternFilter === "eXU2TC") return r.eXU2TC;
-      // NEW: eXU2BC (prev R4 in today R1/R2, prev S4 in today BC/Pivot) /
-      // eXU3TC (prev R4 in today R2/R3, prev S4 in today TC/R1) /
-      // eXU2CP (prev R4 in today R1/R2, prev S4 in today Pivot/TC)
-      if (PatternFilter === "eXU2BC") return r.eXU2BC;
-      if (PatternFilter === "eXU3TC") return r.eXU3TC;
-      if (PatternFilter === "eXU2CP") return r.eXU2CP;
-      // NEW: eXU3CP (prev R4 in today R2/R3, prev S4 in today Pivot/TC)
-      if (PatternFilter === "eXU3CP") return r.eXU3CP;
-      // NEW: eXU3BC (prev R4 in today R2/R3, prev S4 in today BC/Pivot)
-      if (PatternFilter === "eXU3BC") return r.eXU3BC;
-      // NEW: eXL2CP (prev S4 in today S2/S1, prev R4 in today BC/Pivot)
-      if (PatternFilter === "eXL2CP") return r.eXL2CP;
-      // NEW: eXL4TC (prev S4 in today S4/S3, prev R4 in today Pivot/TC)
-      if (PatternFilter === "eXL4TC") return r.eXL4TC;
-      // NEW: LoU3L2 (today R4 in prev R2/R3, prev S4 in today S2/S1)
-      if (PatternFilter === "LoU3L2") return r.LoU3L2;
-      // NEW: cOL1U2 (today S4 in prev S1/BC, today R4 in prev R1/R2)
-      if (PatternFilter === "cOL1U2") return r.cOL1U2;
-      // NEW: cOL1U3 (today S4 in prev S1/BC, today R4 in prev R2/R3)
-      if (PatternFilter === "cOL1U3") return r.cOL1U3;
-      // NEW: HiL3U2 (today S4 in prev S3/S2, prev R4 in prev R1/R2)
-      if (PatternFilter === "HiL3U2") return r.HiL3U2;
+      if (PatternFilter === "CL1U1") return r.CL1U1;
+      if (PatternFilter === "CU1L1") return r.CU1L1;
+      if (PatternFilter === "CL2U2") return r.CL2U2;
+      if (PatternFilter === "CU2L2") return r.CU2L2;
+      // NEW: CL2U1 — independent, section-agnostic Pattern flag (see cpr.ts).
+      if (PatternFilter === "CL2U1") return r.CL2U1;
+      if (PatternFilter === "CL4U4") return r.CL4U4;
+      if (PatternFilter === "EU2L3") return r.EU2L3;
+      // NEW: expanded family — EUTL3 / EU2L4 / EU2L2 / EUTL2 / EU1L1
+      if (PatternFilter === "EUTL3") return r.EUTL3;
+      if (PatternFilter === "EU2L4") return r.EU2L4;
+      if (PatternFilter === "EU2L2") return r.EU2L2;
+      if (PatternFilter === "EUTL2") return r.EUTL2;
+      if (PatternFilter === "EU1L1") return r.EU1L1;
+      // NEW: EL1U1 — same band shape as EU1L1, split by which gap (R1-R4 vs S1-S4) is larger
+      if (PatternFilter === "EL1U1") return r.EL1U1;
+      if (PatternFilter === "EL1U2") return r.EL1U2;
+      // NEW: EL1U3 (prev R4 in today R2/R3, prev S4 in today BC/S1) /
+      // ELTU2 (prev R4 in today R1/R2, prev S4 in today TC/R1)
+      if (PatternFilter === "EL1U3") return r.EL1U3;
+      if (PatternFilter === "EL2U3") return r.EL2U3;
+      if (PatternFilter === "ELTU2") return r.ELTU2;
+      // NEW: ELBU2 (prev R4 in today R1/R2, prev S4 in today BC/Pivot) /
+      // ELTU3 (prev R4 in today R2/R3, prev S4 in today TC/R1) /
+      // ELPU2 (prev R4 in today R1/R2, prev S4 in today Pivot/TC)
+      if (PatternFilter === "ELBU2") return r.ELBU2;
+      if (PatternFilter === "ELTU3") return r.ELTU3;
+      if (PatternFilter === "ELPU2") return r.ELPU2;
+      // NEW: ELPU3 (prev R4 in today R2/R3, prev S4 in today Pivot/TC)
+      if (PatternFilter === "ELPU3") return r.ELPU3;
+      // NEW: ELBU3 (prev R4 in today R2/R3, prev S4 in today BC/Pivot)
+      if (PatternFilter === "ELBU3") return r.ELBU3;
+      // NEW: EUPL2 (prev S4 in today S2/S1, prev R4 in today BC/Pivot)
+      if (PatternFilter === "EUPL2") return r.EUPL2;
+      // NEW: EUTL4 (prev S4 in today S4/S3, prev R4 in today Pivot/TC)
+      if (PatternFilter === "EUTL4") return r.EUTL4;
+      // NEW: L2U3 (today R4 in prev R2/R3, prev S4 in today S2/S1)
+      if (PatternFilter === "L2U3") return r.L2U3;
+      // NEW: CU2L1 (today S4 in prev S1/BC, today R4 in prev R1/R2)
+      if (PatternFilter === "CU2L1") return r.CU2L1;
+      // NEW: CU3L1 (today S4 in prev S1/BC, today R4 in prev R2/R3)
+      if (PatternFilter === "CU3L1") return r.CU3L1;
+      // NEW: U2L3 (today S4 in prev S3/S2, prev R4 in prev R1/R2)
+      if (PatternFilter === "U2L3") return r.U2L3;
       return getPatternInfo(r)?.label === PatternFilter;
     })
     .filter((r) => matchesWidthFilter(r, prevWidthFilter, todayWidthFilter))
@@ -1235,7 +1235,7 @@ export default function Screener({
                 {showOBLoRRHHLLA ? "✕ 9AM:pRRHHLLA-U4:9PM" : "9AM:pRRHHLLA-U4:9PM"}<ViewCount id={"9AM:pRRHHLLA-U4:9PM"} counts={viewCounts} />
               </button>
             )}
-            {/* NEW: OBN-LoU4L4-U4 button — Overlapping Lower, placed next to Exp-U3>pU4 */}
+            {/* NEW: OBN-L4U4-U4 button — Overlapping Lower, placed next to Exp-U3>pU4 */}
             {activeSectionKey === "overlapping-lower" && !showAll && (
               <button
                 onClick={() => { setShowOBNLoU4L4((v) => !v); setShowExpU4PU4(false); setShowExpU3PU3(false); setShowOBLoRRHHLLA(false); setShowOBWLoU4L4(false); setShowOBLoSSLLRRHH(false); setShowOBLoSSLLRRHHDown(false); }}
@@ -1244,12 +1244,12 @@ export default function Screener({
                     ? "border-cyan-400 text-cyan-400"
                     : "border-border text-muted-foreground hover:text-foreground"
                 }`}
-                title="Overlap Lower + today's CPR Narrow + LoU4L4 structure, Compression > 50%: Target:U4"
+                title="Overlap Lower + today's CPR Narrow + L4U4 structure, Compression > 50%: Target:U4"
               >
-                {showOBNLoU4L4 ? "✕ OBN-LoU4L4-U4" : "OBN-LoU4L4-U4"}<ViewCount id={"OBN-LoU4L4-U4"} counts={viewCounts} />
+                {showOBNLoU4L4 ? "✕ OBN-L4U4-U4" : "OBN-L4U4-U4"}<ViewCount id={"OBN-L4U4-U4"} counts={viewCounts} />
               </button>
             )}
-            {/* NEW: OBW-LoU4L4-L4 button — Overlapping Lower, placed next to OBN-LoU4L4-U4 */}
+            {/* NEW: OBW-L4U4-L4 button — Overlapping Lower, placed next to OBN-L4U4-U4 */}
             {activeSectionKey === "overlapping-lower" && !showAll && (
               <button
                 onClick={() => { setShowOBWLoU4L4((v) => !v); setShowExpU4PU4(false); setShowExpU3PU3(false); setShowOBLoRRHHLLA(false); setShowOBNLoU4L4(false); setShowOBLoSSLLRRHH(false); setShowOBLoSSLLRRHHDown(false); }}
@@ -1258,13 +1258,13 @@ export default function Screener({
                     ? "border-rose-400 text-rose-400"
                     : "border-border text-muted-foreground hover:text-foreground"
                 }`}
-                title="Overlap Lower + today's CPR Wide + LoU4L4 structure, Compression > 50%: Target:U4"
+                title="Overlap Lower + today's CPR Wide + L4U4 structure, Compression > 50%: Target:U4"
               >
-                {showOBWLoU4L4 ? "✕ OBW-LoU4L4-L4" : "OBW-LoU4L4-L4"}<ViewCount id={"OBW-LoU4L4-L4"} counts={viewCounts} />
+                {showOBWLoU4L4 ? "✕ OBW-L4U4-L4" : "OBW-L4U4-L4"}<ViewCount id={"OBW-L4U4-L4"} counts={viewCounts} />
               </button>
             )}
             {/* NEW: 2PM:SSLLpRRHHA-ApU4:5PM button — Overlapping Lower, placed
-                next to OBW-LoU4L4-L4. Overlap Below + SSLLAbove (today's S1
+                next to OBW-L4U4-L4. Overlap Below + SSLLAbove (today's S1
                 AND today's PDL both above the higher of prev's S1/PDL) +
                 HHRRBelow (today's R1 AND today's PDH both below the lower of
                 prev's R1/PDH) + (prev R1 above today's R2 OR today's S3
@@ -1319,104 +1319,104 @@ export default function Screener({
                   { label: "cO-Lower", active: "border-teal-400 text-teal-400" },
                   { label: "Higher", active: "border-green-400 text-green-400" },
                   { label: "Lower", active: "border-destructive text-destructive" },
-                  { label: "cOU3L4", active: "border-amber-400 text-amber-400" },
-                  { label: "LoU4L4", active: "border-lime-400 text-lime-400" },
-                  { label: "eXL4U4", active: "border-pink-400 text-pink-400" },
-                  { label: "eXU4L4", active: "border-red-400 text-red-400" },
-                  { label: "EqL4U4", active: "border-slate-400 text-slate-300" },
-                  { label: "HiL2U4", active: "border-cyan-400 text-cyan-400" },
-                  { label: "HiL2U3", active: "border-blue-400 text-blue-400" },
-                  { label: "HiL3U4", active: "border-lime-400 text-lime-400" },
-                  { label: "HiL4U4", active: "border-fuchsia-400 text-fuchsia-400" },
-                  { label: "HiL4U3", active: "border-indigo-400 text-indigo-400" },
-                  { label: "HiL4U2", active: "border-violet-400 text-violet-400" },
-                  { label: "HiL4U1", active: "border-fuchsia-400 text-fuchsia-400" },
-                  { label: "eXL4U3", active: "border-green-400 text-green-400" },
-                  { label: "LoTCL3", active: "border-sky-600 text-sky-300" },
-                  { label: "eXHiL2L1", active: "border-teal-400 text-teal-400" },
-                  { label: "eXLoL2L1", active: "border-rose-400 text-rose-400" },
-                  { label: "cOL2U3", active: "border-sky-400 text-sky-400" },
-                  { label: "cOL3U3", active: "border-sky-400 text-sky-400" },
-                  { label: "eXU4L2", active: "border-amber-400 text-amber-400" },
-                  { label: "eXU4L3", active: "border-blue-400 text-blue-400" },
-                  { label: "cOL2U4", active: "border-emerald-400 text-emerald-400" },
-                  { label: "eXL3U3", active: "border-orange-400 text-orange-400" },
-                  { label: "eXU3L3", active: "border-red-400 text-red-400" },
-                  { label: "cOL4U4",   active: "border-orange-400 text-orange-400" },
-                  { label: "cOL3U4",   active: "border-yellow-400 text-yellow-400" },
-                  { label: "cOU3L3",   active: "border-teal-400 text-teal-400" },
-                  { label: "LoU3L4",   active: "border-indigo-400 text-indigo-400" },
-                  { label: "LoU3L3",  active: "border-purple-400 text-purple-400" },
-                  { label: "LoU2L4",   active: "border-pink-400 text-pink-400" },
-                  { label: "LoU2L3",   active: "border-rose-400 text-rose-400" },
-                  { label: "LoU4L3",  active: "border-amber-400 text-amber-400" },
-                  { label: "LoU4L2",  active: "border-violet-400 text-violet-400" },
-                  { label: "cOU2L3",  active: "border-emerald-400 text-emerald-400" },
-                  { label: "LoU4L1", active: "border-orange-400 text-orange-400" },
-                  { label: "cOU2L4",  active: "border-lime-400 text-lime-400" },
+                  { label: "CL4U3", active: "border-amber-400 text-amber-400" },
+                  { label: "L4U4", active: "border-lime-400 text-lime-400" },
+                  { label: "EU4L4", active: "border-pink-400 text-pink-400" },
+                  { label: "EL4U4", active: "border-red-400 text-red-400" },
+                  { label: "U4L4=", active: "border-slate-400 text-slate-300" },
+                  { label: "U4L2", active: "border-cyan-400 text-cyan-400" },
+                  { label: "U3L2", active: "border-blue-400 text-blue-400" },
+                  { label: "U4L3", active: "border-lime-400 text-lime-400" },
+                  { label: "U4L4", active: "border-fuchsia-400 text-fuchsia-400" },
+                  { label: "U3L4", active: "border-indigo-400 text-indigo-400" },
+                  { label: "U2L4", active: "border-violet-400 text-violet-400" },
+                  { label: "U1L4", active: "border-fuchsia-400 text-fuchsia-400" },
+                  { label: "EU3L4", active: "border-green-400 text-green-400" },
+                  { label: "L3TC", active: "border-sky-600 text-sky-300" },
+                  { label: "EL1L2", active: "border-teal-400 text-teal-400" },
+                  { label: "EL2L1", active: "border-rose-400 text-rose-400" },
+                  { label: "CU3L2", active: "border-sky-400 text-sky-400" },
+                  { label: "CU3L3", active: "border-sky-400 text-sky-400" },
+                  { label: "EL2U4", active: "border-amber-400 text-amber-400" },
+                  { label: "EL3U4", active: "border-blue-400 text-blue-400" },
+                  { label: "CU4L2", active: "border-emerald-400 text-emerald-400" },
+                  { label: "EU3L3", active: "border-orange-400 text-orange-400" },
+                  { label: "EL3U3", active: "border-red-400 text-red-400" },
+                  { label: "CU4L4",   active: "border-orange-400 text-orange-400" },
+                  { label: "CU4L3",   active: "border-yellow-400 text-yellow-400" },
+                  { label: "CL3U3",   active: "border-teal-400 text-teal-400" },
+                  { label: "L4U3",   active: "border-indigo-400 text-indigo-400" },
+                  { label: "L3U3",  active: "border-purple-400 text-purple-400" },
+                  { label: "L4U2",   active: "border-pink-400 text-pink-400" },
+                  { label: "L3U2",   active: "border-rose-400 text-rose-400" },
+                  { label: "L3U4",  active: "border-amber-400 text-amber-400" },
+                  { label: "L2U4",  active: "border-violet-400 text-violet-400" },
+                  { label: "CL3U2",  active: "border-emerald-400 text-emerald-400" },
+                  { label: "L1U4", active: "border-orange-400 text-orange-400" },
+                  { label: "CL4U2",  active: "border-lime-400 text-lime-400" },
                   // NEW: eXL*U1 / eXL*CPR sub-type badges (unconditional, all sections)
-                  { label: "eXL2U1",   active: "border-purple-400 text-purple-400" },
-                  { label: "eXL3U1",   active: "border-violet-400 text-violet-400" },
-                  { label: "eXL4U1",   active: "border-fuchsia-400 text-fuchsia-400" },
-                  { label: "eXL1BC",  active: "border-sky-400 text-sky-400" },
-                  { label: "eXL1CP",  active: "border-cyan-400 text-cyan-400" },
-                  { label: "eXL1TC",  active: "border-teal-400 text-teal-400" },
-                  { label: "eXL2BC",  active: "border-blue-400 text-blue-400" },
-                  { label: "eXL3BC",  active: "border-indigo-400 text-indigo-400" },
-                  { label: "eXL3CP",  active: "border-fuchsia-400 text-fuchsia-400" },
-                  // NEW: cOU1L1 / cOL1U1 / cOU2L2 / cOL2U2 badges (unconditional, all sections)
-                  { label: "cOU1L1",   active: "border-teal-400 text-teal-400" },
-                  { label: "cOL1U1",   active: "border-cyan-400 text-cyan-400" },
-                  { label: "cOU2L2",   active: "border-emerald-400 text-emerald-400" },
-                  { label: "cOL2U2",   active: "border-lime-400 text-lime-400" },
-                  // NEW: cOU1L2 — independent, section-agnostic Pattern flag (see cpr.ts).
-                  { label: "cOU1L2",   active: "border-rose-400 text-rose-400" },
-                  // NEW: cOU4L4 — independent, section-agnostic Pattern flag (see cpr.ts).
-                  { label: "cOU4L4",   active: "border-orange-400 text-orange-400" },
-                  // NEW: exL3U2 — prev S4 inside today S2/S3 AND prev R4 inside today R1/R2
-                  { label: "exL3U2",   active: "border-amber-400 text-amber-400" },
+                  { label: "EU1L2",   active: "border-purple-400 text-purple-400" },
+                  { label: "EU1L3",   active: "border-violet-400 text-violet-400" },
+                  { label: "EU1L4",   active: "border-fuchsia-400 text-fuchsia-400" },
+                  { label: "EUBL1",  active: "border-sky-400 text-sky-400" },
+                  { label: "EUPL1",  active: "border-cyan-400 text-cyan-400" },
+                  { label: "EUTL1",  active: "border-teal-400 text-teal-400" },
+                  { label: "EUBL2",  active: "border-blue-400 text-blue-400" },
+                  { label: "EUBL3",  active: "border-indigo-400 text-indigo-400" },
+                  { label: "EUPL3",  active: "border-fuchsia-400 text-fuchsia-400" },
+                  // NEW: CL1U1 / CU1L1 / CL2U2 / CU2L2 badges (unconditional, all sections)
+                  { label: "CL1U1",   active: "border-teal-400 text-teal-400" },
+                  { label: "CU1L1",   active: "border-cyan-400 text-cyan-400" },
+                  { label: "CL2U2",   active: "border-emerald-400 text-emerald-400" },
+                  { label: "CU2L2",   active: "border-lime-400 text-lime-400" },
+                  // NEW: CL2U1 — independent, section-agnostic Pattern flag (see cpr.ts).
+                  { label: "CL2U1",   active: "border-rose-400 text-rose-400" },
+                  // NEW: CL4U4 — independent, section-agnostic Pattern flag (see cpr.ts).
+                  { label: "CL4U4",   active: "border-orange-400 text-orange-400" },
+                  // NEW: EU2L3 — prev S4 inside today S2/S3 AND prev R4 inside today R1/R2
+                  { label: "EU2L3",   active: "border-amber-400 text-amber-400" },
                   // NEW: expanded family — today's outer S-level broke below prev S4
                   // AND today's outer R-level/TC broke above prev R4 (see cpr.ts).
-                  { label: "eXL4U2",  active: "border-purple-400 text-purple-400" },
-                  { label: "eXL2U2",   active: "border-blue-400 text-blue-400" },
-                  { label: "eXL2TC",   active: "border-sky-400 text-sky-400" },
-                  { label: "eXL3TC",   active: "border-indigo-400 text-indigo-400" },
-                  { label: "eXL1U1",   active: "border-fuchsia-400 text-fuchsia-400" },
-                  // NEW: eXU1L1 — same band shape as eXL1U1, fires when the R1/R4 gap is larger.
-                  { label: "eXU1L1",   active: "border-cyan-400 text-cyan-400" },
-                  // NEW: eXU2L1 — prev R4 inside today R1/R2 (U2) AND prev S4 inside today BC/S1 (L1).
-                  { label: "eXU2L1",   active: "border-violet-400 text-violet-400" },
-                  // NEW: eXU3L1 — prev R4 inside today R2/R3 (U3) AND prev S4 inside today BC/S1 (L1).
-                  { label: "eXU3L1",   active: "border-red-400 text-red-400" },
-                  { label: "eXU3L2",   active: "border-orange-400 text-orange-400" },
-                  // NEW: eXU2TC — prev R4 inside today R1/R2 (U2) AND prev S4 inside today TC/R1.
-                  { label: "eXU2TC",   active: "border-teal-400 text-teal-400" },
-                  // NEW: eXU2BC — prev R4 inside today R1/R2 (U2) AND prev S4 inside today BC/Pivot.
-                  { label: "eXU2BC",   active: "border-indigo-400 text-indigo-400" },
-                  // NEW: eXU3TC — prev R4 inside today R2/R3 (U3) AND prev S4 inside today TC/R1.
-                  { label: "eXU3TC",   active: "border-rose-400 text-rose-400" },
-                  // NEW: eXU2CP — prev R4 inside today R1/R2 (U2) AND prev S4 inside today Pivot/TC.
-                  { label: "eXU2CP",   active: "border-sky-400 text-sky-400" },
-                  // NEW: eXU3CP — prev R4 inside today R2/R3 (U3) AND prev S4 inside today Pivot/TC.
-                  { label: "eXU3CP",   active: "border-yellow-400 text-yellow-400" },
-                  // NEW: eXU3BC — prev R4 inside today R2/R3 (U3) AND prev S4 inside today BC/Pivot.
-                  { label: "eXU3BC",   active: "border-pink-400 text-pink-400" },
-                  // NEW: eXL2CP — prev S4 inside today S2/S1 (L2) AND prev R4 inside today BC/Pivot.
-                  { label: "eXL2CP",   active: "border-emerald-400 text-emerald-400" },
-                  // NEW: eXL4TC — prev S4 inside today S4/S3 (L4) AND prev R4 inside today Pivot/TC.
-                  { label: "eXL4TC",   active: "border-indigo-300 text-indigo-300" },
-                  // NEW: LoU3L2 — today R4 inside prev R2/R3 (U3) AND prev S4 inside today S2/S1 (L2).
-                  { label: "LoU3L2",   active: "border-amber-400 text-amber-400" },
-                  // NEW: cOL1U2 — today S4 inside prev S1/BC (L1) AND today R4 inside prev R1/R2 (U2).
-                  { label: "cOL1U2",   active: "border-teal-400 text-teal-400" },
-                  // NEW: cOL1U3 — today S4 inside prev S1/BC (L1) AND today R4 inside prev R2/R3 (U3).
-                  { label: "cOL1U3",   active: "border-cyan-300 text-cyan-300" },
-                  // NEW: HiL3U2 — today S4 inside prev S3/S2 (L3) AND prev R4 inside prev's own R1/R2 (U2).
-                  { label: "HiL3U2",   active: "border-fuchsia-400 text-fuchsia-400" },
-                  // NEW: eXU4L1 — prev R4 inside today R3/R4 (U4) AND prev S4 inside today BC/S1 (L1).
-                  { label: "eXU4L1",   active: "border-green-400 text-green-400" },
-                  // NEW: eXU4BC — prev R4 inside today R3/R4 (U4) AND prev S4 inside today BC/Pivot.
-                  { label: "eXU4BC",   active: "border-lime-400 text-lime-400" },
+                  { label: "EU2L4",  active: "border-purple-400 text-purple-400" },
+                  { label: "EU2L2",   active: "border-blue-400 text-blue-400" },
+                  { label: "EUTL2",   active: "border-sky-400 text-sky-400" },
+                  { label: "EUTL3",   active: "border-indigo-400 text-indigo-400" },
+                  { label: "EU1L1",   active: "border-fuchsia-400 text-fuchsia-400" },
+                  // NEW: EL1U1 — same band shape as EU1L1, fires when the R1/R4 gap is larger.
+                  { label: "EL1U1",   active: "border-cyan-400 text-cyan-400" },
+                  // NEW: EL1U2 — prev R4 inside today R1/R2 (U2) AND prev S4 inside today BC/S1 (L1).
+                  { label: "EL1U2",   active: "border-violet-400 text-violet-400" },
+                  // NEW: EL1U3 — prev R4 inside today R2/R3 (U3) AND prev S4 inside today BC/S1 (L1).
+                  { label: "EL1U3",   active: "border-red-400 text-red-400" },
+                  { label: "EL2U3",   active: "border-orange-400 text-orange-400" },
+                  // NEW: ELTU2 — prev R4 inside today R1/R2 (U2) AND prev S4 inside today TC/R1.
+                  { label: "ELTU2",   active: "border-teal-400 text-teal-400" },
+                  // NEW: ELBU2 — prev R4 inside today R1/R2 (U2) AND prev S4 inside today BC/Pivot.
+                  { label: "ELBU2",   active: "border-indigo-400 text-indigo-400" },
+                  // NEW: ELTU3 — prev R4 inside today R2/R3 (U3) AND prev S4 inside today TC/R1.
+                  { label: "ELTU3",   active: "border-rose-400 text-rose-400" },
+                  // NEW: ELPU2 — prev R4 inside today R1/R2 (U2) AND prev S4 inside today Pivot/TC.
+                  { label: "ELPU2",   active: "border-sky-400 text-sky-400" },
+                  // NEW: ELPU3 — prev R4 inside today R2/R3 (U3) AND prev S4 inside today Pivot/TC.
+                  { label: "ELPU3",   active: "border-yellow-400 text-yellow-400" },
+                  // NEW: ELBU3 — prev R4 inside today R2/R3 (U3) AND prev S4 inside today BC/Pivot.
+                  { label: "ELBU3",   active: "border-pink-400 text-pink-400" },
+                  // NEW: EUPL2 — prev S4 inside today S2/S1 (L2) AND prev R4 inside today BC/Pivot.
+                  { label: "EUPL2",   active: "border-emerald-400 text-emerald-400" },
+                  // NEW: EUTL4 — prev S4 inside today S4/S3 (L4) AND prev R4 inside today Pivot/TC.
+                  { label: "EUTL4",   active: "border-indigo-300 text-indigo-300" },
+                  // NEW: L2U3 — today R4 inside prev R2/R3 (U3) AND prev S4 inside today S2/S1 (L2).
+                  { label: "L2U3",   active: "border-amber-400 text-amber-400" },
+                  // NEW: CU2L1 — today S4 inside prev S1/BC (L1) AND today R4 inside prev R1/R2 (U2).
+                  { label: "CU2L1",   active: "border-teal-400 text-teal-400" },
+                  // NEW: CU3L1 — today S4 inside prev S1/BC (L1) AND today R4 inside prev R2/R3 (U3).
+                  { label: "CU3L1",   active: "border-cyan-300 text-cyan-300" },
+                  // NEW: U2L3 — today S4 inside prev S3/S2 (L3) AND prev R4 inside prev's own R1/R2 (U2).
+                  { label: "U2L3",   active: "border-fuchsia-400 text-fuchsia-400" },
+                  // NEW: EL1U4 — prev R4 inside today R3/R4 (U4) AND prev S4 inside today BC/S1 (L1).
+                  { label: "EL1U4",   active: "border-green-400 text-green-400" },
+                  // NEW: ELBU4 — prev R4 inside today R3/R4 (U4) AND prev S4 inside today BC/Pivot.
+                  { label: "ELBU4",   active: "border-lime-400 text-lime-400" },
                 ] as { label: PatternInfo["label"]; active: string }[]
               ).map(({ label, active }) => (
                 <button

@@ -66,82 +66,82 @@ export interface CPRPairFlags {
   s1DirVsPrev: -1 | 0 | 1;
 
   // Band-classification flags (order below matches pickPattern priority)
-  cOU3L4: boolean;
-  cOL2U3: boolean;
-  cOL3U3: boolean;
-  eXL4U4: boolean;
-  eXU4L4: boolean;
-  /** EqL4U4 — today's R4 equals prev's R4 AND today's S4 equals prev's S4 (within eqTol). */
-  EqL4U4: boolean;
+  CL4U3: boolean;
+  CU3L2: boolean;
+  CU3L3: boolean;
+  EU4L4: boolean;
+  EL4U4: boolean;
+  /** U4L4= — today's R4 equals prev's R4 AND today's S4 equals prev's S4 (within eqTol). */
+  U4L4=: boolean;
   /** InsideCPR — today's CPR band sits strictly inside prev day's CPR band. */
   InsideCPR: boolean;
-  HiL4U3: boolean;
-  HiL4U2: boolean;
-  HiL4U1: boolean;
-  HiL2U4: boolean;
-  HiL2U3: boolean;
-  HiL3U4: boolean;
-  HiL4U4: boolean;
-  LoU4L4: boolean;
-  eXL4U3: boolean;
-  eXU4L2: boolean;
-  eXU4L3: boolean;
-  cOL2U4: boolean;
-  cOL4U4: boolean;
-  cOU4L4: boolean;
-  exL3U2: boolean;
-  cOL3U4: boolean;
-  cOU3L3: boolean;
-  LoU3L4: boolean;
-  LoU3L3: boolean;
-  cOU2L3: boolean;
-  LoU2L4: boolean;
-  LoU2L3: boolean;
-  LoU4L3: boolean;
-  LoU4L2: boolean;
-  LoU4L1: boolean;
-  cOU1L2: boolean;
-  cOU2L4: boolean;
-  eXL3U3: boolean;
-  eXU3L3: boolean;
-  cOU1L1: boolean;
-  cOL1U1: boolean;
-  cOU2L2: boolean;
-  cOL2U2: boolean;
-  HiL3U3: boolean;
-  cOU1L3: boolean;
+  U3L4: boolean;
+  U2L4: boolean;
+  U1L4: boolean;
+  U4L2: boolean;
+  U3L2: boolean;
+  U4L3: boolean;
+  U4L4: boolean;
+  L4U4: boolean;
+  EU3L4: boolean;
+  EL2U4: boolean;
+  EL3U4: boolean;
+  CU4L2: boolean;
+  CU4L4: boolean;
+  CL4U4: boolean;
+  EU2L3: boolean;
+  CU4L3: boolean;
+  CL3U3: boolean;
+  L4U3: boolean;
+  L3U3: boolean;
+  CL3U2: boolean;
+  L4U2: boolean;
+  L3U2: boolean;
+  L3U4: boolean;
+  L2U4: boolean;
+  L1U4: boolean;
+  CL2U1: boolean;
+  CL4U2: boolean;
+  EU3L3: boolean;
+  EL3U3: boolean;
+  CL1U1: boolean;
+  CU1L1: boolean;
+  CL2U2: boolean;
+  CU2L2: boolean;
+  U3L3: boolean;
+  CL3U1: boolean;
 
   // Additional flags consumed elsewhere on CPRResult (not part of the
   // pivotSubLabel chain, but still pure functions of a (today, prev) pair).
-  eXL2U1: boolean;
-  eXL3U1: boolean;
-  eXL4U1: boolean;
-  eXL1BC: boolean;
-  eXL1CP: boolean;
-  // eXL1TC — same L1 support band as eXL1BC/eXL1CP (prev's S4 inside
+  EU1L2: boolean;
+  EU1L3: boolean;
+  EU1L4: boolean;
+  EUBL1: boolean;
+  EUPL1: boolean;
+  // EUTL1 — same L1 support band as EUBL1/EUPL1 (prev's S4 inside
   // today's S1/BC), AND prev's R4 lands inside today's Pivot/TC band —
-  // one band higher than eXL1CP's BC/Pivot band, same TC-anchored
-  // resistance band as eXL2TC/eXL3TC.
-  eXL1TC: boolean;
-  eXL2BC: boolean;
-  eXL3BC: boolean;
-  eXL3CP: boolean;
-  eXL3TC: boolean;
-  eXL4U2: boolean;
-  eXL2U2: boolean;
-  eXL2TC: boolean;
-  eXL1U1: boolean;
-  // eXU1L1 — same band shape as eXL1U1 (prev's S4 inside today's S1/BC (L1)
+  // one band higher than EUPL1's BC/Pivot band, same TC-anchored
+  // resistance band as EUTL2/EUTL3.
+  EUTL1: boolean;
+  EUBL2: boolean;
+  EUBL3: boolean;
+  EUPL3: boolean;
+  EUTL3: boolean;
+  EU2L4: boolean;
+  EU2L2: boolean;
+  EUTL2: boolean;
+  EU1L1: boolean;
+  // EL1U1 — same band shape as EU1L1 (prev's S4 inside today's S1/BC (L1)
   // AND prev's R4 inside today's TC/R1 (U1)), but split from it by which
   // gap is larger: if today's R1-to-prev's R4 gap is bigger, this fires
-  // (eXU1L1); if today's S1-to-prev's S4 gap is bigger, eXL1U1 fires instead.
-  eXU1L1: boolean;
-  // eXU2L1 — prev's R4 lands inside today's R1/R2 band (U2), AND prev's S4
+  // (EL1U1); if today's S1-to-prev's S4 gap is bigger, EU1L1 fires instead.
+  EL1U1: boolean;
+  // EL1U2 — prev's R4 lands inside today's R1/R2 band (U2), AND prev's S4
   // lands inside today's BC/S1 band (L1). Same "L1" support band as
-  // eXL1U1/eXL1BC but paired with the wider U2 (R1→R2) resistance band
+  // EU1L1/EUBL1 but paired with the wider U2 (R1→R2) resistance band
   // instead of U1 (TC→R1).
-  eXU2L1: boolean;
-  cOTCL2: boolean;
+  EL1U2: boolean;
+  CL2UT: boolean;
   // compressed — "COMPRESSED": RRSS-C only (see classifyCPRPair for the
   // exact tolerance-aware R1/S1 test, mirroring SSRRCategory === "RRSS-C").
   // Note: r1 down + s1 flat is NOT compressed — that lands in LevelsBelow
@@ -175,100 +175,100 @@ export interface CPRPairFlags {
   // — matches the raw `today.s1 < prev.s4` test). Also subtracted out of
   // LevelsBelow below so the two sections never share a symbol.
   S1BelowPS4: boolean;
-  // eXU3L1 — prev's R4 lands inside today's R2/R3 band (U3), AND prev's S4
-  // lands inside today's BC/S1 band (L1). Same L1 support band as eXU2L1/
-  // eXL1U1/eXL1BC but paired with the wider U3 (R2→R3) resistance band.
-  eXU3L1: boolean;
-  // eXU3L2 — prev's R4 lands inside today's R2/R3 band (U3, same
-  // resistance band as eXU3L1), AND prev's S3 (not S4) lands inside
+  // EL1U3 — prev's R4 lands inside today's R2/R3 band (U3), AND prev's S4
+  // lands inside today's BC/S1 band (L1). Same L1 support band as EL1U2/
+  // EU1L1/EUBL1 but paired with the wider U3 (R2→R3) resistance band.
+  EL1U3: boolean;
+  // EL2U3 — prev's R4 lands inside today's R2/R3 band (U3, same
+  // resistance band as EL1U3), AND prev's S3 (not S4) lands inside
   // today's S1/S2 band (L2).
-  eXU3L2: boolean;
-  // eXU2TC — prev's R4 lands inside today's R1/R2 band (U2), AND prev's S4
+  EL2U3: boolean;
+  // ELTU2 — prev's R4 lands inside today's R1/R2 band (U2), AND prev's S4
   // lands inside today's TC/R1 band (a "TC"-anchored band, same naming
-  // convention as eXL2TC/eXL3TC/cOTCL2 which pair a level against today's
+  // convention as EUTL2/EUTL3/CL2UT which pair a level against today's
   // Pivot/TC or TC/R1 boundary rather than the usual S-side L bands).
-  eXU2TC: boolean;
-  // eXU2BC — prev's R4 lands inside today's R1/R2 band (U2), AND prev's S4
+  ELTU2: boolean;
+  // ELBU2 — prev's R4 lands inside today's R1/R2 band (U2), AND prev's S4
   // lands inside today's BC/Pivot band (the lower half of today's CPR).
-  eXU2BC: boolean;
-  // eXU3TC — prev's R4 lands inside today's R2/R3 band (U3), AND prev's S4
+  ELBU2: boolean;
+  // ELTU3 — prev's R4 lands inside today's R2/R3 band (U3), AND prev's S4
   // lands inside today's TC/R1 band. Same TC-anchored support band as
-  // eXU2TC, paired with the wider U3 resistance band instead of U2.
-  eXU3TC: boolean;
-  // eXU2CP — prev's R4 lands inside today's R1/R2 band (U2), AND prev's S4
+  // ELTU2, paired with the wider U3 resistance band instead of U2.
+  ELTU3: boolean;
+  // ELPU2 — prev's R4 lands inside today's R1/R2 band (U2), AND prev's S4
   // lands inside today's Pivot/TC band (the upper half of today's CPR).
-  // Same U2 resistance band as eXU2BC/eXU2L1/eXU2TC, paired with the
+  // Same U2 resistance band as ELBU2/EL1U2/ELTU2, paired with the
   // upper-CPR-half support band instead of BC/Pivot.
-  eXU2CP: boolean;
-  // eXU3CP — prev's R4 lands inside today's R2/R3 band (U3), AND prev's S4
+  ELPU2: boolean;
+  // ELPU3 — prev's R4 lands inside today's R2/R3 band (U3), AND prev's S4
   // lands inside today's Pivot/TC band (the upper half of today's CPR).
-  // Same U3 resistance band as eXU3TC/eXU3L1/eXU3L2, paired with the
+  // Same U3 resistance band as ELTU3/EL1U3/EL2U3, paired with the
   // upper-CPR-half support band instead of TC/R1.
-  eXU3CP: boolean;
-  // eXU3BC — prev's R4 lands inside today's R2/R3 band (U3), AND prev's S4
+  ELPU3: boolean;
+  // ELBU3 — prev's R4 lands inside today's R2/R3 band (U3), AND prev's S4
   // lands inside today's BC/Pivot band (the lower half of today's CPR).
-  // Same U3 resistance band as eXU3TC/eXU3CP, paired with the
+  // Same U3 resistance band as ELTU3/ELPU3, paired with the
   // lower-CPR-half support band instead of TC/R1 or Pivot/TC.
-  eXU3BC: boolean;
-  // eXU4L1 — prev's R4 lands inside today's R3/R4 band (U4), AND prev's S4
+  ELBU3: boolean;
+  // EL1U4 — prev's R4 lands inside today's R3/R4 band (U4), AND prev's S4
   // lands inside today's BC/S1 band (L1). Bearish-continuation shape used
-  // by the L1<pL4 sub-filter ss-eXU4L1-U4:10PM.
-  eXU4L1: boolean;
-  // eXU4BC — prev's R4 lands inside today's R3/R4 band (U4), AND prev's S4
+  // by the L1<pL4 sub-filter ss-EL1U4-U4:10PM.
+  EL1U4: boolean;
+  // ELBU4 — prev's R4 lands inside today's R3/R4 band (U4), AND prev's S4
   // lands inside today's BC/Pivot band (the lower half of today's CPR).
-  // Same U4 resistance band as eXU4L1, paired with the lower-CPR-half
+  // Same U4 resistance band as EL1U4, paired with the lower-CPR-half
   // support band instead of BC/S1.
-  eXU4BC: boolean;
-  // LoCPL3 — today's R4 lands inside prev's Pivot/BC band (the lower half
+  ELBU4: boolean;
+  // L3CP — today's R4 lands inside prev's Pivot/BC band (the lower half
   // of prev's CPR), AND today's S4 lands inside prev's S2/S3 band (L3).
-  // Same "today lands inside prev's band" shape as cOTCL2/cOU1L2, but the
+  // Same "today lands inside prev's band" shape as CL2UT/CL2U1, but the
   // resistance side is measured against prev's BC→Pivot gap (lower CPR
   // half) instead of TC→R1 (U1) or Pivot→TC (TC), and paired with the
   // wider L3 (S2→S3) support band instead of L2 (S1→S2).
-  LoCPL3: boolean;
-  // LoCPL2 — same shape as LoCPL3 (today's R4 lands inside prev's Pivot/BC
+  L3CP: boolean;
+  // L2CP — same shape as L3CP (today's R4 lands inside prev's Pivot/BC
   // band), but paired with the narrower L2 (S1/S2) support band instead of
   // L3 (S2/S3).
-  LoCPL2: boolean;
-  // LoTCL3 — today's R4 lands inside prev's Pivot/TC band (the upper half
+  L2CP: boolean;
+  // L3TC — today's R4 lands inside prev's Pivot/TC band (the upper half
   // of prev's CPR), AND today's S4 lands inside prev's S2/S3 band (L3).
-  // Same L3 support band as LoCPL3, but the resistance side is measured
+  // Same L3 support band as L3CP, but the resistance side is measured
   // against prev's Pivot→TC gap (upper CPR half) instead of BC→Pivot
   // (lower half).
-  LoTCL3: boolean;
-  // eXHiL2L1 / eXLoL2L1 — prev's R4 AND prev's S4 both land inside today's
+  L3TC: boolean;
+  // EL1L2 / EL2L1 — prev's R4 AND prev's S4 both land inside today's
   // S1/S2 band (an unusually collapsed range — prev's whole R4-to-S4 span
   // squeezed into one of today's support bands). Split into Hi/Lo variants
   // by whether today's PDL sits above (Hi) or below (Lo) prev's Pivot.
-  eXHiL2L1: boolean;
-  eXLoL2L1: boolean;
-  // eXL2CP — prev's S4 lands inside today's S2/S1 band (L2), AND prev's R4
+  EL1L2: boolean;
+  EL2L1: boolean;
+  // EUPL2 — prev's S4 lands inside today's S2/S1 band (L2), AND prev's R4
   // lands inside today's BC/Pivot band (the lower half of today's CPR).
-  // Same L2 support band as eXL2BC/eXL2U1/eXL2U2/eXL2TC, paired with the
+  // Same L2 support band as EUBL2/EU1L2/EU2L2/EUTL2, paired with the
   // BC/Pivot resistance band instead of the usual U-side (R-anchored) bands.
-  eXL2CP: boolean;
-  // eXL4TC — prev's S4 lands inside today's S4/S3 band (L4, same support
-  // band as eXL4U2/eXL4U1), AND prev's R4 lands inside today's Pivot/TC
+  EUPL2: boolean;
+  // EUTL4 — prev's S4 lands inside today's S4/S3 band (L4, same support
+  // band as EU2L4/EU1L4), AND prev's R4 lands inside today's Pivot/TC
   // band (the upper half of today's CPR). Same TC-anchored resistance band
-  // as eXL2TC/eXL3TC, paired with the widest L4 support band instead of
+  // as EUTL2/EUTL3, paired with the widest L4 support band instead of
   // L2/L3.
-  eXL4TC: boolean;
-  // LoU3L2 — today's R4 lands inside prev's R2/R3 band (U3, same
-  // resistance band as LoU3L4/LoU3L3), AND prev's S4 lands inside today's
-  // S2/S1 band (L2). Same L2 support band as LoU4L2, but paired with the
+  EUTL4: boolean;
+  // L2U3 — today's R4 lands inside prev's R2/R3 band (U3, same
+  // resistance band as L4U3/L3U3), AND prev's S4 lands inside today's
+  // S2/S1 band (L2). Same L2 support band as L2U4, but paired with the
   // narrower U3 resistance band instead of U4.
-  LoU3L2: boolean;
-  // cOL1U2 — today's S4 lands inside prev's S1/BC band (L1), AND today's R4
+  L2U3: boolean;
+  // CU2L1 — today's S4 lands inside prev's S1/BC band (L1), AND today's R4
   // lands inside prev's R1/R2 band (U2). Same "today lands inside prev's
-  // band" shape as cOU1L2/cOU2L2, but pairs the L1 support band with the
+  // band" shape as CL2U1/CL2U2, but pairs the L1 support band with the
   // wider U2 resistance band instead of L2+U1 or L2+U2.
-  cOL1U2: boolean;
-  // cOL1U3 — today's S4 lands inside prev's S1/BC band (L1, same support
-  // band as cOL1U2/cOL1U1), AND today's R4 lands inside prev's R2/R3 band
-  // (U3, same resistance band as cOL2U3/cOL3U3/cOU3L4). Pairs the
+  CU2L1: boolean;
+  // CU3L1 — today's S4 lands inside prev's S1/BC band (L1, same support
+  // band as CU2L1/CU1L1), AND today's R4 lands inside prev's R2/R3 band
+  // (U3, same resistance band as CU3L2/CU3L3/CL4U3). Pairs the
   // narrowest support band (L1) with the wider U3 resistance band.
-  cOL1U3: boolean;
-  HiL3U2: boolean;
+  CU3L1: boolean;
+  U2L3: boolean;
 }
 
 export interface CPRResult {
@@ -315,99 +315,99 @@ export interface CPRResult {
   srExpandedLower: boolean;
   r1DirVsPrev: -1 | 0 | 1;
   s1DirVsPrev: -1 | 0 | 1;
-  cOU3L4: boolean;
-  cOL2U3: boolean;
-  cOL3U3: boolean;
-  eXL4U4: boolean;
-  eXU4L4: boolean;
-  /** EqL4U4 — today's R4 equals prev's R4 AND today's S4 equals prev's S4 (within eqTol). */
-  EqL4U4: boolean;
+  CL4U3: boolean;
+  CU3L2: boolean;
+  CU3L3: boolean;
+  EU4L4: boolean;
+  EL4U4: boolean;
+  /** U4L4= — today's R4 equals prev's R4 AND today's S4 equals prev's S4 (within eqTol). */
+  U4L4=: boolean;
   /** InsideCPR — today's CPR band sits strictly inside prev day's CPR band. */
   InsideCPR: boolean;
-  HiL2U4: boolean;
-  HiL2U3: boolean;
-  HiL3U4: boolean;
-  HiL4U4: boolean;
-  HiL4U3: boolean;
-  HiL4U2: boolean;
-  HiL4U1: boolean;
-  LoU4L4: boolean;
-  eXL4U3: boolean;
-  eXU4L2: boolean;
-  eXU4L3: boolean;
-  cOL2U4: boolean;
+  U4L2: boolean;
+  U3L2: boolean;
+  U4L3: boolean;
+  U4L4: boolean;
+  U3L4: boolean;
+  U2L4: boolean;
+  U1L4: boolean;
+  L4U4: boolean;
+  EU3L4: boolean;
+  EL2U4: boolean;
+  EL3U4: boolean;
+  CU4L2: boolean;
   equalCPR: boolean;
-  eXL3U3: boolean;
-  eXU3L3: boolean;
-  cOL4U4: boolean;
-  cOU4L4: boolean;
-  exL3U2: boolean;
-  cOL3U4: boolean;
-  cOU3L3: boolean;
-  LoU3L4: boolean;
-  LoU3L3: boolean;
-  LoU2L4: boolean;
-  LoU2L3: boolean;
-  LoU4L3: boolean;
-  LoU4L2: boolean;
-  cOU2L3: boolean;
-  LoU4L1: boolean;
-  cOU2L4: boolean;
-  eXL2U1: boolean;
-  eXL3U1: boolean;
-  eXL4U1: boolean;
-  eXL1BC: boolean;
-  eXL1CP: boolean;
-  // eXL1TC — same L1 support band as eXL1BC/eXL1CP (prev's S4 inside
+  EU3L3: boolean;
+  EL3U3: boolean;
+  CU4L4: boolean;
+  CL4U4: boolean;
+  EU2L3: boolean;
+  CU4L3: boolean;
+  CL3U3: boolean;
+  L4U3: boolean;
+  L3U3: boolean;
+  L4U2: boolean;
+  L3U2: boolean;
+  L3U4: boolean;
+  L2U4: boolean;
+  CL3U2: boolean;
+  L1U4: boolean;
+  CL4U2: boolean;
+  EU1L2: boolean;
+  EU1L3: boolean;
+  EU1L4: boolean;
+  EUBL1: boolean;
+  EUPL1: boolean;
+  // EUTL1 — same L1 support band as EUBL1/EUPL1 (prev's S4 inside
   // today's S1/BC), AND prev's R4 lands inside today's Pivot/TC band —
-  // one band higher than eXL1CP's BC/Pivot band, same TC-anchored
-  // resistance band as eXL2TC/eXL3TC.
-  eXL1TC: boolean;
-  eXL2BC: boolean;
-  eXL3BC: boolean;
-  eXL3CP: boolean;
-  eXL3TC: boolean;
-  eXL4U2: boolean;
-  eXL2U2: boolean;
-  eXL2TC: boolean;
-  eXL1U1: boolean;
-  eXU1L1: boolean;
-  eXU2L1: boolean;
-  cOTCL2: boolean;
+  // one band higher than EUPL1's BC/Pivot band, same TC-anchored
+  // resistance band as EUTL2/EUTL3.
+  EUTL1: boolean;
+  EUBL2: boolean;
+  EUBL3: boolean;
+  EUPL3: boolean;
+  EUTL3: boolean;
+  EU2L4: boolean;
+  EU2L2: boolean;
+  EUTL2: boolean;
+  EU1L1: boolean;
+  EL1U1: boolean;
+  EL1U2: boolean;
+  CL2UT: boolean;
   compressed: boolean;
   expanded: boolean;
   LevelsBelow: boolean;
   LevelsAbove: boolean;
   R1AbovePR4: boolean;
   S1BelowPS4: boolean;
-  eXU3L1: boolean;
-  eXU3L2: boolean;
-  eXU2TC: boolean;
-  eXU2BC: boolean;
-  eXU3TC: boolean;
-  eXU2CP: boolean;
-  eXU3CP: boolean;
-  eXU3BC: boolean;
-  eXU4L1: boolean;
-  eXU4BC: boolean;
-  cOU1L1: boolean;
-  cOU1L2: boolean;
-  cOL1U1: boolean;
-  cOU2L2: boolean;
-  cOL2U2: boolean;
-  HiL3U3: boolean;
-  cOU1L3: boolean;
-  LoCPL3: boolean;
-  LoCPL2: boolean;
-  LoTCL3: boolean;
-  eXHiL2L1: boolean;
-  eXLoL2L1: boolean;
-  eXL2CP: boolean;
-  eXL4TC: boolean;
-  LoU3L2: boolean;
-  cOL1U2: boolean;
-  cOL1U3: boolean;
-  HiL3U2: boolean;
+  EL1U3: boolean;
+  EL2U3: boolean;
+  ELTU2: boolean;
+  ELBU2: boolean;
+  ELTU3: boolean;
+  ELPU2: boolean;
+  ELPU3: boolean;
+  ELBU3: boolean;
+  EL1U4: boolean;
+  ELBU4: boolean;
+  CL1U1: boolean;
+  CL2U1: boolean;
+  CU1L1: boolean;
+  CL2U2: boolean;
+  CU2L2: boolean;
+  U3L3: boolean;
+  CL3U1: boolean;
+  L3CP: boolean;
+  L2CP: boolean;
+  L3TC: boolean;
+  EL1L2: boolean;
+  EL2L1: boolean;
+  EUPL2: boolean;
+  EUTL4: boolean;
+  L2U3: boolean;
+  CU2L1: boolean;
+  CU3L1: boolean;
+  U2L3: boolean;
   passes: boolean;
   currentPrice: number;
   openPrice: number;
@@ -661,279 +661,279 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
   const srExpandedHigher   = srExpanded   && (r4Distance > s4Distance || (r4Distance === s4Distance && r3R4Gap > s3S4Gap));
   const srExpandedLower    = srExpanded   && (s4Distance > r4Distance || (s4Distance === r4Distance && s3S4Gap > r3R4Gap));
 
-  const cOU3L4 = (today.s4 > prev.s4 && today.s4 < prev.s3) &&
+  const CL4U3 = (today.s4 > prev.s4 && today.s4 < prev.s3) &&
                  (today.r4 > prev.r2 && today.r4 < prev.r3);
-  const cOL2U3 = (today.s4 >= prev.s2 && today.s4 < prev.s1) &&
+  const CU3L2 = (today.s4 >= prev.s2 && today.s4 < prev.s1) &&
                    (today.r4 > prev.r2 && today.r4 < prev.r3);
-  const cOL3U3 = (today.s4 > prev.s3 && today.s4 < prev.s2) &&
+  const CU3L3 = (today.s4 > prev.s3 && today.s4 < prev.s2) &&
                    (today.r4 > prev.r2 && today.r4 < prev.r3) && srCompressedHigher;
-  const cOU3L3   = (today.s4 >= prev.s3 && today.s4 < prev.s2) &&
+  const CL3U3   = (today.s4 >= prev.s3 && today.s4 < prev.s2) &&
                    (today.r4 > prev.r2 && today.r4 < prev.r3) && srCompressedLower;
 
-  // EqL4U4 — exact (within eqTol) day-over-day tie on BOTH outer levels:
+  // U4L4= — exact (within eqTol) day-over-day tie on BOTH outer levels:
   // today's R4 == prev's R4 and today's S4 == prev's S4.
-  const EqL4U4 = eqTol(today.r4, prev.r4) && eqTol(today.s4, prev.s4);
+  const U4L4= = eqTol(today.r4, prev.r4) && eqTol(today.s4, prev.s4);
 
   // InsideCPR — today's CPR band is contained inside prev day's CPR band
   // (single source of truth; ScreenerUtils reuses r.InsideCPR).
   const InsideCPR =
     (today.tc <= prev.tc && today.bc > prev.bc) ||
     (today.tc < prev.tc && today.bc >= prev.bc);
-  const HiL4U3   = (prev.r4 >= today.r2 && prev.r4 < today.r3) &&
+  const U3L4   = (prev.r4 >= today.r2 && prev.r4 < today.r3) &&
                    (today.s4 > prev.s4 && today.s4 < prev.s3);
-  // HiL4U2 — today's S4 lands inside prev's S3/S4 band (L4, same support
-  // band as HiL4U3/HiL4U4), AND prev's R4 lands inside today's R1/R2 band
-  // (U2, one tier narrower than HiL4U3's U3 band).
-  const HiL4U2   = (today.s4 > prev.s4 && today.s4 < prev.s3) &&
+  // U2L4 — today's S4 lands inside prev's S3/S4 band (L4, same support
+  // band as U3L4/U4L4), AND prev's R4 lands inside today's R1/R2 band
+  // (U2, one tier narrower than U3L4's U3 band).
+  const U2L4   = (today.s4 > prev.s4 && today.s4 < prev.s3) &&
                    (prev.r4 > today.r1 && prev.r4 < today.r2);
-  const HiL2U4   = (today.s4 > prev.s2 && today.s4 < prev.s1) &&
+  const U4L2   = (today.s4 > prev.s2 && today.s4 < prev.s1) &&
                    (prev.r4 > today.r3 && prev.r4 < today.r4);
-  // HiL2U3 — today's S4 lands inside prev's S1/S2 band (L2, same support
-  // band as HiL2U4), AND prev's R4 lands inside today's R2/R3 band (U3,
-  // one tier narrower than HiL2U4's U4 band).
-  const HiL2U3   = (today.s4 >= prev.s2 && today.s4 < prev.s1) &&
+  // U3L2 — today's S4 lands inside prev's S1/S2 band (L2, same support
+  // band as U4L2), AND prev's R4 lands inside today's R2/R3 band (U3,
+  // one tier narrower than U4L2's U4 band).
+  const U3L2   = (today.s4 >= prev.s2 && today.s4 < prev.s1) &&
                    (prev.r4 > today.r2 && prev.r4 < today.r3);
-  const HiL3U4   = (today.s4 >= prev.s3 && today.s4 < prev.s2) &&
+  const U4L3   = (today.s4 >= prev.s3 && today.s4 < prev.s2) &&
                    (prev.r4 > today.r3 && prev.r4 < today.r4);
-  const HiL4U4   = (prev.r4 > today.r3 && prev.r4 < today.r4) &&
+  const U4L4   = (prev.r4 > today.r3 && prev.r4 < today.r4) &&
                    (today.s4 >= prev.s4 && today.s4 < prev.s3);
-  // HiL4U1 — today's S4 sits inside prev's S4/S3 band (L4) while prev's R4
+  // U1L4 — today's S4 sits inside prev's S4/S3 band (L4) while prev's R4
   // lands inside today's BC/R1 band (U1): a much shallower upside overlap
-  // than HiL4U4/U3/U2.
-  const HiL4U1   = (today.s4 >= prev.s4 && today.s4 < prev.s3) &&
+  // than U4L4/U3/U2.
+  const U1L4   = (today.s4 >= prev.s4 && today.s4 < prev.s3) &&
                    (prev.r4 > today.bc && prev.r4 < today.r1);
-  const LoU4L4   = (today.r4 < prev.r4 && today.r4 > prev.r3) &&
+  const L4U4   = (today.r4 < prev.r4 && today.r4 > prev.r3) &&
                    (prev.s4 > today.s4 && prev.s4 < today.s3);
-  // eXHiU1L3 removed — it was an exact duplicate of eXL3U1 (same U1/L3
+  // eXHiU1L3 removed — it was an exact duplicate of EU1L3 (same U1/L3
   // band conditions, just written in reverse order). All references now
-  // point at eXL3U1 (see below).
-  const eXL4U3 = (prev.s4 > today.s4 && prev.s4 < today.s3) &&
+  // point at EU1L3 (see below).
+  const EU3L4 = (prev.s4 > today.s4 && prev.s4 < today.s3) &&
                    (prev.r4 > today.r2 && prev.r4 < today.r3);
-  const eXU4L2 = (prev.r4 < today.r4 && prev.r4 > today.r3) &&
+  const EL2U4 = (prev.r4 < today.r4 && prev.r4 > today.r3) &&
                    (prev.s4 < today.s1 && prev.s4 > today.s2);
-  const eXU4L3  = (prev.r4 < today.r4 && prev.r4 > today.r3) &&
+  const EL3U4  = (prev.r4 < today.r4 && prev.r4 > today.r3) &&
                    (prev.s4 < today.s2 && prev.s4 >= today.s3);
-  const cOL2U4 = (today.s4 < prev.s1 && today.s4 > prev.s2) &&
+  const CU4L2 = (today.s4 < prev.s1 && today.s4 > prev.s2) &&
                    (prev.r3 > today.r3 && prev.r3 < today.r4);
-  const cOL4U4   = (today.s4 > prev.s4 && today.s4 < prev.s3) &&
+  const CU4L4   = (today.s4 > prev.s4 && today.s4 < prev.s3) &&
                    (today.r4 > prev.r3 && today.r4 <= prev.r4) && (srCompressedHigher || srHigher);
-  const cOU4L4   = (today.s4 > prev.s4 && today.s4 < prev.s3) &&
+  const CL4U4   = (today.s4 > prev.s4 && today.s4 < prev.s3) &&
                    (today.r4 > prev.r3 && today.r4 < prev.r4) && srCompressedLower;
-  const exL3U2   = (prev.s4 > today.s3 && prev.s4 < today.s2) &&
+  const EU2L3   = (prev.s4 > today.s3 && prev.s4 < today.s2) &&
                    (prev.r4 > today.r1 && prev.r4 < today.r2);
-  const cOL3U4   = (today.s4 >= prev.s3 && today.s4 < prev.s2) &&
+  const CU4L3   = (today.s4 >= prev.s3 && today.s4 < prev.s2) &&
                    (today.r4 > prev.r3 && today.r4 < prev.r4);
   
-  const LoU3L4   = (today.r4 > prev.r2 && today.r4 <= prev.r3) &&
+  const L4U3   = (today.r4 > prev.r2 && today.r4 <= prev.r3) &&
                    (prev.s4 > today.s4 && prev.s4 < today.s3);
-  const LoU3L3  = (today.r4 > prev.r2 && today.r4 < prev.r3) &&
+  const L3U3  = (today.r4 > prev.r2 && today.r4 < prev.r3) &&
                    (prev.s4 > today.s3 && prev.s4 < today.s2);
-  const LoU2L4   = (today.r4 > prev.r1 && today.r4 < prev.r2) &&
+  const L4U2   = (today.r4 > prev.r1 && today.r4 < prev.r2) &&
                    (prev.s4 > today.s4 && prev.s4 < today.s3);
-  const LoU2L3   = (today.r4 > prev.r1 && today.r4 < prev.r2) &&
+  const L3U2   = (today.r4 > prev.r1 && today.r4 < prev.r2) &&
                    (prev.s4 > today.s3 && prev.s4 < today.s2);
-  // LoU3L2 — today's R4 lands inside prev's R2/R3 band (U3, same resistance
-  // band as LoU3L4/LoU3L3), AND prev's S4 lands inside today's S2/S1 band
-  // (L2, same support band as LoU4L2) instead of the L4/L3 bands used by
-  // LoU3L4/LoU3L3.
-  const LoU3L2   = (today.r4 > prev.r2 && today.r4 <= prev.r3) &&
+  // L2U3 — today's R4 lands inside prev's R2/R3 band (U3, same resistance
+  // band as L4U3/L3U3), AND prev's S4 lands inside today's S2/S1 band
+  // (L2, same support band as L2U4) instead of the L4/L3 bands used by
+  // L4U3/L3U3.
+  const L2U3   = (today.r4 > prev.r2 && today.r4 <= prev.r3) &&
                    (prev.s4 > today.s2 && prev.s4 < today.s1);
-  const LoU4L3  = (today.r4 > prev.r3 && today.r4 < prev.r4) &&
+  const L3U4  = (today.r4 > prev.r3 && today.r4 < prev.r4) &&
                    (prev.s4 >= today.s3 && prev.s4 < today.s2);
-  const LoU4L2 = (today.r4 > prev.r3 && today.r4 < prev.r4) &&
+  const L2U4 = (today.r4 > prev.r3 && today.r4 < prev.r4) &&
                    (prev.s4 > today.s2 && prev.s4 < today.s1);
-  const cOU2L3 = (today.r4 > prev.r1 && today.r4 < prev.r2) &&
+  const CL3U2 = (today.r4 > prev.r1 && today.r4 < prev.r2) &&
                    (today.s4 > prev.s3 && today.s4 < prev.s2);
-  const LoU4L1 = (today.r4 > prev.r3 && today.r4 < prev.r4) &&
+  const L1U4 = (today.r4 > prev.r3 && today.r4 < prev.r4) &&
                     (prev.s4 > today.s1 && prev.s4 < today.bc);
-  const cOU2L4 = (today.r4 > prev.r1 && today.r4 < prev.r2) &&
+  const CL4U2 = (today.r4 > prev.r1 && today.r4 < prev.r2) &&
                    (today.s4 > prev.s4 && today.s4 < prev.s3);
 
-  const eXL3U3 = (prev.r4 < today.r3 && prev.r4 > today.r2) &&
+  const EU3L3 = (prev.r4 < today.r3 && prev.r4 > today.r2) &&
                  (prev.s4 > today.s3 && prev.s4 < today.s2) && srExpandedHigher;
-  const eXU3L3 = (prev.r4 < today.r3 && prev.r4 > today.r2) &&
+  const EL3U3 = (prev.r4 < today.r3 && prev.r4 > today.r2) &&
                  (prev.s4 > today.s3 && prev.s4 < today.s2) && srExpandedLower;
 
-   const eXL4U4   = (prev.r4 > today.r3 && prev.r4 < today.r4) &&
+   const EU4L4   = (prev.r4 > today.r3 && prev.r4 < today.r4) &&
                    (prev.s4 > today.s4 && prev.s4 < today.s3) && srExpandedHigher;
-  const eXU4L4   = (prev.r4 > today.r3 && prev.r4 < today.r4) &&
+  const EL4U4   = (prev.r4 > today.r3 && prev.r4 < today.r4) &&
                    (prev.s4 > today.s4 && prev.s4 < today.s3) && srExpandedLower;
 
-  const eXL2U1 = (prev.s4 > today.s2 && prev.s4 < today.s1) &&
+  const EU1L2 = (prev.s4 > today.s2 && prev.s4 < today.s1) &&
                  (prev.r4 > today.tc  && prev.r4 < today.r1);
-  const eXL3U1 = (prev.s4 > today.s3 && prev.s4 < today.s2) &&
+  const EU1L3 = (prev.s4 > today.s3 && prev.s4 < today.s2) &&
                  (prev.r4 > today.tc  && prev.r4 < today.r1);
-  const eXL4U1 = (prev.s4 > today.s4 && prev.s4 < today.s3) &&
+  const EU1L4 = (prev.s4 > today.s4 && prev.s4 < today.s3) &&
                  (prev.r4 > today.tc  && prev.r4 < today.r1);
 
-  const eXL1BC = (prev.s4 > today.s1 && prev.s4 < today.bc) &&
+  const EUBL1 = (prev.s4 > today.s1 && prev.s4 < today.bc) &&
                   (prev.r4 > today.s1 && prev.r4 < today.bc);
-  // eXL1CP — prev's S4 lands inside today's S1/BC band (L1, same support
-  // band as eXL1BC), AND prev's R4 lands inside today's BC/Pivot band (the
-  // lower half of today's CPR) instead of the wider S1/BC (CP) band eXL1BC uses.
-  const eXL1CP = (prev.s4 >= today.s1 && prev.s4 < today.bc) &&
+  // EUPL1 — prev's S4 lands inside today's S1/BC band (L1, same support
+  // band as EUBL1), AND prev's R4 lands inside today's BC/Pivot band (the
+  // lower half of today's CPR) instead of the wider S1/BC (CP) band EUBL1 uses.
+  const EUPL1 = (prev.s4 >= today.s1 && prev.s4 < today.bc) &&
                   (prev.r4 > today.bc && prev.r4 < today.pivot);
-  // eXL1TC — prev's S4 lands inside today's S1/BC band (L1, same support
-  // band as eXL1BC/eXL1CP), AND prev's R4 lands inside today's Pivot/TC
-  // band — one band higher than eXL1CP's BC/Pivot band, same TC-anchored
-  // resistance band as eXL2TC/eXL3TC.
-  const eXL1TC = (prev.s4 > today.s1 && prev.s4 < today.bc) &&
+  // EUTL1 — prev's S4 lands inside today's S1/BC band (L1, same support
+  // band as EUBL1/EUPL1), AND prev's R4 lands inside today's Pivot/TC
+  // band — one band higher than EUPL1's BC/Pivot band, same TC-anchored
+  // resistance band as EUTL2/EUTL3.
+  const EUTL1 = (prev.s4 > today.s1 && prev.s4 < today.bc) &&
                   (prev.r4 > today.pivot && prev.r4 < today.tc);
-  const eXL2BC = (prev.s4 > today.s2 && prev.s4 < today.s1) &&
+  const EUBL2 = (prev.s4 > today.s2 && prev.s4 < today.s1) &&
                   (prev.r4 > today.s1 && prev.r4 < today.bc);
-  const eXL3BC = (prev.s4 > today.s3 && prev.s4 < today.s2) &&
+  const EUBL3 = (prev.s4 > today.s3 && prev.s4 < today.s2) &&
                   (prev.r4 > today.s1 && prev.r4 < today.bc);
-  // eXL3CP — prev's S4 lands inside today's S2/S3 band (L3, same support
-  // band as eXL3BC), AND prev's R4 lands inside today's BC/Pivot band (the
-  // lower half of today's CPR) instead of the wider S1/BC (CP) band eXL3BC uses.
-  const eXL3CP = (prev.s4 >= today.s3 && prev.s4 < today.s2) &&
+  // EUPL3 — prev's S4 lands inside today's S2/S3 band (L3, same support
+  // band as EUBL3), AND prev's R4 lands inside today's BC/Pivot band (the
+  // lower half of today's CPR) instead of the wider S1/BC (CP) band EUBL3 uses.
+  const EUPL3 = (prev.s4 >= today.s3 && prev.s4 < today.s2) &&
                   (prev.r4 > today.bc && prev.r4 < today.pivot);
 
-  const eXL4U2 = (prev.s4 > today.s4 && prev.s4 < today.s3) &&
+  const EU2L4 = (prev.s4 > today.s4 && prev.s4 < today.s3) &&
                  (prev.r4 > today.r1  && prev.r4 < today.r2);
-  const eXL2U2 = (prev.s4 >= today.s2 && prev.s4 < today.s1) &&
+  const EU2L2 = (prev.s4 >= today.s2 && prev.s4 < today.s1) &&
                  (prev.r4 > today.r1  && prev.r4 < today.r2);
-  const eXL2TC = (prev.s4 > today.s2 && prev.s4 < today.s1) &&
+  const EUTL2 = (prev.s4 > today.s2 && prev.s4 < today.s1) &&
                  (prev.r4 > today.pivot && prev.r4 < today.tc);
-  const eXL3TC = (prev.s4 > today.s3 && prev.s4 < today.s2) &&
+  const EUTL3 = (prev.s4 > today.s3 && prev.s4 < today.s2) &&
                  (prev.r4 > today.pivot && prev.r4 < today.tc);
-  // eXL1U1 / eXU1L1 — same band shape (prev's S4 inside today's S1/BC (L1)
+  // EU1L1 / EL1U1 — same band shape (prev's S4 inside today's S1/BC (L1)
   // AND prev's R4 inside today's TC/R1 (U1)), split by which gap is larger:
-  // if today's R1-to-prev's R4 gap is bigger, eXU1L1 fires; if today's
-  // S1-to-prev's S4 gap is bigger, eXL1U1 fires.
+  // if today's R1-to-prev's R4 gap is bigger, EL1U1 fires; if today's
+  // S1-to-prev's S4 gap is bigger, EU1L1 fires.
   const eXL1U1Base = (prev.s4 > today.s1 && prev.s4 < today.bc) &&
                       (prev.r4 > today.tc  && prev.r4 < today.r1);
   const r1U1Gap = Math.abs(today.r1 - prev.r4);
   const s1U1Gap = Math.abs(today.s1 - prev.s4);
-  const eXL1U1 = eXL1U1Base && s1U1Gap > r1U1Gap;
-  const eXU1L1 = eXL1U1Base && r1U1Gap > s1U1Gap;
+  const EU1L1 = eXL1U1Base && s1U1Gap > r1U1Gap;
+  const EL1U1 = eXL1U1Base && r1U1Gap > s1U1Gap;
 
-  // eXU2L1 — prev's R4 sits inside today's R1/R2 band (U2) AND prev's S4
-  // sits inside today's BC/S1 band (L1). Same L1 support band as eXL1U1,
+  // EL1U2 — prev's R4 sits inside today's R1/R2 band (U2) AND prev's S4
+  // sits inside today's BC/S1 band (L1). Same L1 support band as EU1L1,
   // but the wider U2 resistance band instead of U1.
-  const eXU2L1 = (prev.r4 > today.r1 && prev.r4 < today.r2) &&
+  const EL1U2 = (prev.r4 > today.r1 && prev.r4 < today.r2) &&
                  (prev.s4 > today.s1 && prev.s4 < today.bc);
 
-  // eXU3L1 — prev's R4 sits inside today's R2/R3 band (U3) AND prev's S4
-  // sits inside today's BC/S1 band (L1). Same L1 support band as eXU2L1,
+  // EL1U3 — prev's R4 sits inside today's R2/R3 band (U3) AND prev's S4
+  // sits inside today's BC/S1 band (L1). Same L1 support band as EL1U2,
   // but the wider U3 resistance band (R2→R3) instead of U2 (R1→R2).
-  const eXU3L1 = (prev.r4 > today.r2 && prev.r4 < today.r3) &&
+  const EL1U3 = (prev.r4 > today.r2 && prev.r4 < today.r3) &&
                  (prev.s4 > today.s1 && prev.s4 < today.bc);
 
-  // eXU3L2 — same U3 resistance band as eXU3L1 (prev's R4 inside today's
+  // EL2U3 — same U3 resistance band as EL1U3 (prev's R4 inside today's
   // R2/R3 band), but the support side is measured against prev's S3
   // (not S4) landing inside today's S1/S2 band (L2) instead of prev's
   // S4 landing inside today's BC/S1 band (L1).
-  const eXU3L2 = (prev.r4 > today.r2 && prev.r4 < today.r3) &&
+  const EL2U3 = (prev.r4 > today.r2 && prev.r4 < today.r3) &&
                  (prev.s4 > today.s2 && prev.s4 < today.s1);
 
-  // eXU2TC — prev's R4 sits inside today's R1/R2 band (U2) AND prev's S4
-  // sits inside today's TC/R1 band. Same U2 resistance band as eXU2L1, but
+  // ELTU2 — prev's R4 sits inside today's R1/R2 band (U2) AND prev's S4
+  // sits inside today's TC/R1 band. Same U2 resistance band as EL1U2, but
   // the support-side condition is measured against today's TC→R1 gap
   // instead of the usual BC→S1 (L1) band — same "TC"-anchored naming
-  // convention as eXL2TC/eXL3TC/cOTCL2.
-  const eXU2TC = (prev.r4 > today.r1 && prev.r4 < today.r2) &&
+  // convention as EUTL2/EUTL3/CL2UT.
+  const ELTU2 = (prev.r4 > today.r1 && prev.r4 < today.r2) &&
                  (prev.s4 > today.tc && prev.s4 < today.r1);
 
-  // eXU2BC — prev's R4 sits inside today's R1/R2 band (U2) AND prev's S4
+  // ELBU2 — prev's R4 sits inside today's R1/R2 band (U2) AND prev's S4
   // sits inside today's BC/Pivot band (the lower half of today's CPR).
-  // Same U2 resistance band as eXU2L1/eXU2TC, but the support-side
+  // Same U2 resistance band as EL1U2/ELTU2, but the support-side
   // condition is measured against today's BC→Pivot gap instead of the
   // usual BC→S1 (L1) or TC→R1 (TC) bands.
-  const eXU2BC = (prev.r4 > today.r1 && prev.r4 < today.r2) &&
+  const ELBU2 = (prev.r4 > today.r1 && prev.r4 < today.r2) &&
                  (prev.s4 > today.bc && prev.s4 < today.pivot);
 
-  // eXU3TC — prev's R4 sits inside today's R2/R3 band (U3) AND prev's S4
+  // ELTU3 — prev's R4 sits inside today's R2/R3 band (U3) AND prev's S4
   // sits inside today's TC/R1 band. Same TC-anchored support band as
-  // eXU2TC, but paired with the wider U3 resistance band (R2→R3) instead
+  // ELTU2, but paired with the wider U3 resistance band (R2→R3) instead
   // of U2 (R1→R2).
-  const eXU3TC = (prev.r4 > today.r2 && prev.r4 < today.r3) &&
+  const ELTU3 = (prev.r4 > today.r2 && prev.r4 < today.r3) &&
                  (prev.s4 > today.tc && prev.s4 < today.r1);
 
-  // eXU2CP — prev's R4 sits inside today's R1/R2 band (U2) AND prev's S4
+  // ELPU2 — prev's R4 sits inside today's R1/R2 band (U2) AND prev's S4
   // sits inside today's Pivot/TC band (the upper half of today's CPR).
-  // Same U2 resistance band as eXU2BC, but the support-side condition is
+  // Same U2 resistance band as ELBU2, but the support-side condition is
   // measured against today's Pivot→TC gap instead of BC→Pivot.
-  const eXU2CP = (prev.r4 > today.r1 && prev.r4 < today.r2) &&
+  const ELPU2 = (prev.r4 > today.r1 && prev.r4 < today.r2) &&
                  (prev.s4 > today.pivot && prev.s4 < today.tc);
 
-  // eXU3CP — prev's R4 sits inside today's R2/R3 band (U3) AND prev's S4
+  // ELPU3 — prev's R4 sits inside today's R2/R3 band (U3) AND prev's S4
   // sits inside today's Pivot/TC band (the upper half of today's CPR).
-  // Same U3 resistance band as eXU3TC, but the support-side condition is
+  // Same U3 resistance band as ELTU3, but the support-side condition is
   // measured against today's Pivot→TC gap instead of TC→R1.
-  const eXU3CP = (prev.r4 > today.r2 && prev.r4 < today.r3) &&
+  const ELPU3 = (prev.r4 > today.r2 && prev.r4 < today.r3) &&
                  (prev.s4 > today.pivot && prev.s4 < today.tc);
 
-  // eXU3BC — prev's R4 sits inside today's R2/R3 band (U3) AND prev's S4
+  // ELBU3 — prev's R4 sits inside today's R2/R3 band (U3) AND prev's S4
   // sits inside today's BC/Pivot band (the lower half of today's CPR).
-  // Same U3 resistance band as eXU3TC/eXU3CP, but the support-side
+  // Same U3 resistance band as ELTU3/ELPU3, but the support-side
   // condition is measured against today's BC→Pivot gap instead of TC→R1
   // or Pivot→TC.
-  const eXU3BC = (prev.r4 > today.r2 && prev.r4 < today.r3) &&
+  const ELBU3 = (prev.r4 > today.r2 && prev.r4 < today.r3) &&
                  (prev.s4 > today.bc && prev.s4 < today.pivot);
 
-  // eXL2CP — prev's S4 sits inside today's S2/S1 band (L2) AND prev's R4
+  // EUPL2 — prev's S4 sits inside today's S2/S1 band (L2) AND prev's R4
   // sits inside today's BC/Pivot band (the lower half of today's CPR).
-  // Same L2 support band as eXL2BC, but the resistance-side condition is
+  // Same L2 support band as EUBL2, but the resistance-side condition is
   // measured against today's BC→Pivot gap instead of the usual S1→BC band.
-  const eXL2CP = (prev.s4 >= today.s2 && prev.s4 < today.s1) &&
+  const EUPL2 = (prev.s4 >= today.s2 && prev.s4 < today.s1) &&
                  (prev.r4 > today.bc && prev.r4 <= today.pivot);
 
-  // eXL4TC — prev's S4 sits inside today's S4/S3 band (L4, same support
-  // band as eXL4U2) AND prev's R4 sits inside today's Pivot/TC band (the
+  // EUTL4 — prev's S4 sits inside today's S4/S3 band (L4, same support
+  // band as EU2L4) AND prev's R4 sits inside today's Pivot/TC band (the
   // upper half of today's CPR). Same TC-anchored resistance band as
-  // eXL2TC/eXL3TC, paired with the widest L4 support band instead of L2/L3.
-  const eXL4TC = (prev.s4 >= today.s4 && prev.s4 < today.s3) &&
+  // EUTL2/EUTL3, paired with the widest L4 support band instead of L2/L3.
+  const EUTL4 = (prev.s4 >= today.s4 && prev.s4 < today.s3) &&
                  (prev.r4 > today.pivot && prev.r4 < today.tc);
 
-  // eXU4L1 — prev's R4 sits inside today's R3/R4 band (U4) AND prev's S4
-  // sits inside today's BC/S1 band (L1). Mirror shape to eXU2L1/eXU3L1
+  // EL1U4 — prev's R4 sits inside today's R3/R4 band (U4) AND prev's S4
+  // sits inside today's BC/S1 band (L1). Mirror shape to EL1U2/EL1U3
   // but with the widest U-band (R3→R4) on the resistance side.
-  const eXU4L1 = (prev.r4 > today.r3 && prev.r4 < today.r4) &&
+  const EL1U4 = (prev.r4 > today.r3 && prev.r4 < today.r4) &&
                  (prev.s4 > today.s1 && prev.s4 < today.bc);
 
-  // eXU4BC — prev's R4 sits inside today's R3/R4 band (U4) AND prev's S4
+  // ELBU4 — prev's R4 sits inside today's R3/R4 band (U4) AND prev's S4
   // sits inside today's BC/Pivot band (the lower half of today's CPR).
-  // Same U4 resistance band as eXU4L1, but the support-side condition is
+  // Same U4 resistance band as EL1U4, but the support-side condition is
   // measured against today's BC→Pivot gap instead of BC→S1 (L1).
-  const eXU4BC = (prev.r4 > today.r3 && prev.r4 < today.r4) &&
+  const ELBU4 = (prev.r4 > today.r3 && prev.r4 < today.r4) &&
                  (prev.s4 > today.bc && prev.s4 < today.pivot);
 
-  // LoCPL3 — today's R4 lands inside prev's Pivot/BC band (the lower half
+  // L3CP — today's R4 lands inside prev's Pivot/BC band (the lower half
   // of prev's CPR), AND today's S4 lands inside prev's S2/S3 band (L3).
-  // Same "today lands inside prev's band" shape as cOTCL2, but the
+  // Same "today lands inside prev's band" shape as CL2UT, but the
   // resistance side is measured against prev's BC→Pivot gap instead of
   // Pivot→TC, and paired with the wider L3 band instead of L2.
-  const LoCPL3 = (today.r4 > prev.bc && today.r4 < prev.pivot) &&
+  const L3CP = (today.r4 > prev.bc && today.r4 < prev.pivot) &&
                  (today.s4 > prev.s3 && today.s4 < prev.s2);
 
-  // LoCPL2 — same resistance-side condition as LoCPL3 (today's R4 inside
+  // L2CP — same resistance-side condition as L3CP (today's R4 inside
   // prev's Pivot/BC band), but paired with the narrower L2 (S1/S2) support
   // band instead of L3 (S2/S3).
-  const LoCPL2 = (today.r4 > prev.bc && today.r4 < prev.pivot) &&
+  const L2CP = (today.r4 > prev.bc && today.r4 < prev.pivot) &&
                  (today.s4 > prev.s2 && today.s4 < prev.s1);
 
-  // LoTCL3 — today's R4 lands inside prev's Pivot/TC band (the upper half
+  // L3TC — today's R4 lands inside prev's Pivot/TC band (the upper half
   // of prev's CPR), AND today's S4 lands inside prev's S2/S3 band (L3).
-  // Same L3 support band as LoCPL3, but the resistance side is measured
+  // Same L3 support band as L3CP, but the resistance side is measured
   // against prev's Pivot→TC gap instead of BC→Pivot.
-  const LoTCL3 = (today.r4 > prev.pivot && today.r4 < prev.tc) &&
+  const L3TC = (today.r4 > prev.pivot && today.r4 < prev.tc) &&
                  (today.s4 > prev.s3 && today.s4 < prev.s2);
 
-  // eXHiL2L1 / eXLoL2L1 — prev's R4 AND prev's S4 both land inside today's
+  // EL1L2 / EL2L1 — prev's R4 AND prev's S4 both land inside today's
   // S1/S2 band (an unusually collapsed range where prev's entire R4-to-S4
   // span squeezed into a single today support band). Split by whether
   // today's PDL (today.prevLow) sits above (Hi) or below (Lo) prev's Pivot.
   const eXHiLoL2L1Bands = (prev.r4 > today.s2 && prev.r4 < today.s1) &&
                           (prev.s4 > today.s2 && prev.s4 < today.s1);
-  const eXHiL2L1 = eXHiLoL2L1Bands && (today.prevLow > prev.pivot);
-  const eXLoL2L1 = eXHiLoL2L1Bands && (today.prevLow < prev.pivot);
+  const EL1L2 = eXHiLoL2L1Bands && (today.prevLow > prev.pivot);
+  const EL2L1 = eXHiLoL2L1Bands && (today.prevLow < prev.pivot);
 
-  // cOTCL2 — today's R4 lands inside the previous day's Pivot/TC band,
+  // CL2UT — today's R4 lands inside the previous day's Pivot/TC band,
   // AND today's S4 lands inside the previous day's S1/S2 band. Same
-  // compressed-band shape as cOU1L2 but the resistance side is measured
+  // compressed-band shape as CL2U1 but the resistance side is measured
   // against prev's Pivot→TC gap instead of prev's TC→R1 gap.
-  const cOTCL2 = (today.r4 > prev.pivot && today.r4 < prev.tc) &&
+  const CL2UT = (today.r4 > prev.pivot && today.r4 < prev.tc) &&
                  (today.s4 > prev.s2 && today.s4 < prev.s1);
 
   // Shared R1/S1 tolerance-aware direction (dirTol: -1 down, 0 flat, +1 up)
@@ -985,52 +985,52 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
   // sections never share a symbol.
   const S1BelowPS4 = today.s1 < prev.s4;
 
-  // cOU1L1 / cOL1U1 — split by which side (R1 vs S1) moved further.
+  // CL1U1 / CU1L1 — split by which side (R1 vs S1) moved further.
   const r1Move = Math.abs(prev.r1 - today.r1);
   const s1Move = Math.abs(prev.s1 - today.s1);
   const cOU1L1Base = (today.s4 > prev.s1 && today.s4 < prev.tc) &&
                      (today.r4 > prev.bc && today.r4 < prev.r1);
-  const cOU1L1 = cOU1L1Base && r1Move > s1Move;
-  const cOL1U1 = cOU1L1Base && r1Move < s1Move;
+  const CL1U1 = cOU1L1Base && r1Move > s1Move;
+  const CU1L1 = cOU1L1Base && r1Move < s1Move;
 
-  const cOU1L2 = (today.s4 > prev.s2 && today.s4 < prev.s1) &&
+  const CL2U1 = (today.s4 > prev.s2 && today.s4 < prev.s1) &&
                  (today.r4 < prev.r1 && today.r4 > prev.tc);
 
-  // HiL3U3 — today's S4 lands inside prev's S3/S2 band (L3) AND prev's R4
+  // U3L3 — today's S4 lands inside prev's S3/S2 band (L3) AND prev's R4
   // lands inside today's R2/R3 band (U3).
-  const HiL3U3 = (today.s4 > prev.s3 && today.s4 < prev.s2) &&
+  const U3L3 = (today.s4 > prev.s3 && today.s4 < prev.s2) &&
                  (prev.r4 > today.r2 && prev.r4 < today.r3);
 
-  // HiL3U2 — today's S4 lands inside prev's S3/S2 band (L3, same support
-  // band as HiL3U3), AND prev's R4 lands inside prev's OWN R1/R2 band (U2)
+  // U2L3 — today's S4 lands inside prev's S3/S2 band (L3, same support
+  // band as U3L3), AND prev's R4 lands inside prev's OWN R1/R2 band (U2)
   // instead of today's R-levels.
-  const HiL3U2 = (today.s4 >= prev.s3 && today.s4 < prev.s2) &&
+  const U2L3 = (today.s4 >= prev.s3 && today.s4 < prev.s2) &&
                  (prev.r4 < today.r2 && prev.r4 > today.r1);
 
-  // cOU1L3 — today's R4 lands inside prev's TC/R1 band (U1) AND today's S4
+  // CL3U1 — today's R4 lands inside prev's TC/R1 band (U1) AND today's S4
   // lands inside prev's S3/S2 band (L3).
-  const cOU1L3 = (today.r4 > prev.tc && today.r4 < prev.r1) &&
+  const CL3U1 = (today.r4 > prev.tc && today.r4 < prev.r1) &&
                  (today.s4 > prev.s3 && today.s4 < prev.s2);
 
-  // cOU2L2 / cOL2U2 — split by which side (R2 vs S2) moved further.
+  // CL2U2 / CU2L2 — split by which side (R2 vs S2) moved further.
   const r2Move = Math.abs(prev.r2 - today.r4);
   const s2Move = Math.abs(prev.s2 - today.s4);
   const cOU2L2Base = (today.s4 >= prev.s2 && today.s4 < prev.s1) &&
                      (today.r4 > prev.r1 && today.r4 < prev.r2);
-  const cOU2L2 = cOU2L2Base && r2Move > s2Move;
-  const cOL2U2 = cOU2L2Base && r2Move < s2Move;
+  const CL2U2 = cOU2L2Base && r2Move > s2Move;
+  const CU2L2 = cOU2L2Base && r2Move < s2Move;
 
-  // cOL1U2 — today's S4 lands inside prev's S1/BC band (L1) AND today's R4
+  // CU2L1 — today's S4 lands inside prev's S1/BC band (L1) AND today's R4
   // lands inside prev's R1/R2 band (U2). Same U2 resistance band as
-  // cOU2L2/cOL2U2, but the support side uses prev's S1→BC gap (L1) instead
+  // CL2U2/CU2L2, but the support side uses prev's S1→BC gap (L1) instead
   // of S2→S1 (L2).
-  const cOL1U2 = (today.s4 >= prev.s1 && today.s4 < prev.bc) &&
+  const CU2L1 = (today.s4 >= prev.s1 && today.s4 < prev.bc) &&
                  (today.r4 > prev.r1 && today.r4 < prev.r2);
 
-  // cOL1U3 — today's S4 lands inside prev's S1/BC band (L1, same support
-  // band as cOL1U2) AND today's R4 lands inside prev's R2/R3 band (U3,
-  // same resistance band as cOL2U3/cOL3U3).
-  const cOL1U3 = (today.s4 >= prev.s1 && today.s4 < prev.bc) &&
+  // CU3L1 — today's S4 lands inside prev's S1/BC band (L1, same support
+  // band as CU2L1) AND today's R4 lands inside prev's R2/R3 band (U3,
+  // same resistance band as CU3L2/CU3L3).
+  const CU3L1 = (today.s4 >= prev.s1 && today.s4 < prev.bc) &&
                  (today.r4 > prev.r2 && today.r4 < prev.r3);
 
   return {
@@ -1038,16 +1038,16 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
     srHigher, srLower, srExpanded, srCompressed,
     srCompressedHigher, srCompressedLower, srExpandedHigher, srExpandedLower,
     r1DirVsPrev, s1DirVsPrev,
-    cOU3L4, cOL2U3, cOL3U3, eXL4U4, eXU4L4, EqL4U4, InsideCPR, HiL4U3, HiL4U2, HiL2U4, HiL2U3, HiL3U4, HiL4U4, HiL4U1,
-    LoU4L4, eXL4U3, eXU4L2, eXU4L3, cOL2U4, cOL4U4, cOU4L4, exL3U2,
-    cOL3U4, cOU3L3, LoU3L4, LoU3L3, cOU2L3, LoU2L4, LoU2L3, LoU4L3, LoU4L2,
-    LoU4L1, cOU1L2, cOU2L4, eXL3U3, eXU3L3,
-    cOU1L1, cOL1U1, cOU2L2, cOL2U2,
-    HiL3U3, cOU1L3,
-    eXL2U1, eXL3U1, eXL4U1, eXL1BC, eXL1CP, eXL1TC, eXL2BC, eXL3BC, eXL3CP,
-    eXL3TC, eXL4U2, eXL2U2, eXL2TC, eXL1U1, eXU1L1, eXU2L1, cOTCL2, compressed, expanded, LevelsBelow, LevelsAbove, R1AbovePR4, S1BelowPS4,
-    eXU3L1, eXU3L2, eXU2TC, eXU2BC, eXU3TC, eXU2CP, eXU3CP, eXU3BC, eXU4L1, eXU4BC, LoCPL3, LoCPL2, LoTCL3,
-    eXHiL2L1, eXLoL2L1, eXL2CP, eXL4TC, LoU3L2, cOL1U2, cOL1U3, HiL3U2,
+    CL4U3, CU3L2, CU3L3, EU4L4, EL4U4, U4L4=, InsideCPR, U3L4, U2L4, U4L2, U3L2, U4L3, U4L4, U1L4,
+    L4U4, EU3L4, EL2U4, EL3U4, CU4L2, CU4L4, CL4U4, EU2L3,
+    CU4L3, CL3U3, L4U3, L3U3, CL3U2, L4U2, L3U2, L3U4, L2U4,
+    L1U4, CL2U1, CL4U2, EU3L3, EL3U3,
+    CL1U1, CU1L1, CL2U2, CU2L2,
+    U3L3, CL3U1,
+    EU1L2, EU1L3, EU1L4, EUBL1, EUPL1, EUTL1, EUBL2, EUBL3, EUPL3,
+    EUTL3, EU2L4, EU2L2, EUTL2, EU1L1, EL1U1, EL1U2, CL2UT, compressed, expanded, LevelsBelow, LevelsAbove, R1AbovePR4, S1BelowPS4,
+    EL1U3, EL2U3, ELTU2, ELBU2, ELTU3, ELPU2, ELPU3, ELBU3, EL1U4, ELBU4, L3CP, L2CP, L3TC,
+    EL1L2, EL2L1, EUPL2, EUTL4, L2U3, CU2L1, CU3L1, U2L3,
   };
 }
 
@@ -1057,86 +1057,86 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
  * must match the if-chain that historically lived in ScreenerUtils.
  */
 export function pickPattern(f: CPRPairFlags): string | null {
-  if (f.cOU3L4)    return "cOU3L4";
-  if (f.cOL2U3)  return "cOL2U3";
-  if (f.cOL3U3)  return "cOL3U3";
-  if (f.EqL4U4)    return "EqL4U4";
-  if (f.eXL4U4)    return "eXL4U4";
-  if (f.eXU4L4)    return "eXU4L4";
-  if (f.HiL4U3)   return "HiL4U3";
-  if (f.HiL4U2)   return "HiL4U2";
-  if (f.HiL4U1)   return "HiL4U1";
-  if (f.HiL2U4)    return "HiL2U4";
-  if (f.HiL2U3)    return "HiL2U3";
-  if (f.HiL3U4)    return "HiL3U4";
-  if (f.HiL4U4)    return "HiL4U4";
-  if (f.LoU4L4)    return "LoU4L4";
-  if (f.eXL4U3)  return "eXL4U3";
-  if (f.eXU4L2)  return "eXU4L2";
-  if (f.eXU4L3)   return "eXU4L3";
-  if (f.cOL2U4)  return "cOL2U4";
-  if (f.cOL4U4)    return "cOL4U4";
-  if (f.cOU4L4)    return "cOU4L4";
-  if (f.exL3U2)    return "exL3U2";
-  if (f.cOL3U4)    return "cOL3U4";
-  if (f.cOU3L3)    return "cOU3L3";
-  if (f.LoU3L4)    return "LoU3L4";
-  if (f.LoU3L3)   return "LoU3L3";
-  // cOU2L3 checked before other U2-band branches so its badge wins ties.
-  if (f.cOU2L3)  return "cOU2L3";
-  if (f.LoU2L4)    return "LoU2L4";
-  if (f.LoU2L3)    return "LoU2L3";
-  if (f.LoU4L3)   return "LoU4L3";
-  if (f.LoU4L2)  return "LoU4L2";
-  if (f.cOL2U2)    return "cOL2U2";
-  if (f.LoU4L1) return "LoU4L1";
-  if (f.cOU1L2)    return "cOU1L2";
-  if (f.cOU2L4)  return "cOU2L4";
-  if (f.eXL3U3)    return "eXL3U3";
-  if (f.eXU3L3)    return "eXU3L3";
-  if (f.cOU1L1)    return "cOU1L1";
-  if (f.cOL1U1)    return "cOL1U1";
-  if (f.cOU2L2)    return "cOU2L2";
-  if (f.HiL3U3)    return "HiL3U3";
-  if (f.cOU1L3)    return "cOU1L3";
-  if (f.eXL2U1)    return "eXL2U1";
-  if (f.eXL3U1)    return "eXL3U1";
-  if (f.eXL4U1)    return "eXL4U1";
-  if (f.eXL1BC)   return "eXL1BC";
-  if (f.eXL1CP)   return "eXL1CP";
-  if (f.eXL1TC)   return "eXL1TC";
-  if (f.eXL2BC)   return "eXL2BC";
-  if (f.eXL3BC)   return "eXL3BC";
-  if (f.eXL3CP)   return "eXL3CP";
-  if (f.eXL3TC)    return "eXL3TC";
-  if (f.eXL4U2)    return "eXL4U2";
-  if (f.eXL2U2)    return "eXL2U2";
-  if (f.eXL2TC)    return "eXL2TC";
-  if (f.eXL1U1)    return "eXL1U1";
-  if (f.eXU1L1)    return "eXU1L1";
-  if (f.eXU2L1)    return "eXU2L1";
-  if (f.cOTCL2)    return "cOTCL2";
-  if (f.eXU3L1)    return "eXU3L1";
-  if (f.eXU3L2)    return "eXU3L2";
-  if (f.eXU2TC)    return "eXU2TC";
-  if (f.eXU2BC)    return "eXU2BC";
-  if (f.eXU3TC)    return "eXU3TC";
-  if (f.eXU2CP)    return "eXU2CP";
-  if (f.eXU3CP)    return "eXU3CP";
-  if (f.eXU3BC)    return "eXU3BC";
-  if (f.eXU4L1)    return "eXU4L1";
-  if (f.eXU4BC)    return "eXU4BC";
-  if (f.LoCPL3)    return "LoCPL3";
-  if (f.LoCPL2)    return "LoCPL2";
-  if (f.LoTCL3)    return "LoTCL3";
-  if (f.eXHiL2L1)  return "eXHiL2L1";
-  if (f.eXLoL2L1)  return "eXLoL2L1";
-  if (f.eXL2CP)    return "eXL2CP";
-  if (f.eXL4TC)    return "eXL4TC";
-  if (f.LoU3L2)    return "LoU3L2";
-  if (f.cOL1U2)    return "cOL1U2";
-  if (f.cOL1U3)    return "cOL1U3";
-  if (f.HiL3U2)    return "HiL3U2";
+  if (f.CL4U3)    return "CL4U3";
+  if (f.CU3L2)  return "CU3L2";
+  if (f.CU3L3)  return "CU3L3";
+  if (f.U4L4=)    return "U4L4=";
+  if (f.EU4L4)    return "EU4L4";
+  if (f.EL4U4)    return "EL4U4";
+  if (f.U3L4)   return "U3L4";
+  if (f.U2L4)   return "U2L4";
+  if (f.U1L4)   return "U1L4";
+  if (f.U4L2)    return "U4L2";
+  if (f.U3L2)    return "U3L2";
+  if (f.U4L3)    return "U4L3";
+  if (f.U4L4)    return "U4L4";
+  if (f.L4U4)    return "L4U4";
+  if (f.EU3L4)  return "EU3L4";
+  if (f.EL2U4)  return "EL2U4";
+  if (f.EL3U4)   return "EL3U4";
+  if (f.CU4L2)  return "CU4L2";
+  if (f.CU4L4)    return "CU4L4";
+  if (f.CL4U4)    return "CL4U4";
+  if (f.EU2L3)    return "EU2L3";
+  if (f.CU4L3)    return "CU4L3";
+  if (f.CL3U3)    return "CL3U3";
+  if (f.L4U3)    return "L4U3";
+  if (f.L3U3)   return "L3U3";
+  // CL3U2 checked before other U2-band branches so its badge wins ties.
+  if (f.CL3U2)  return "CL3U2";
+  if (f.L4U2)    return "L4U2";
+  if (f.L3U2)    return "L3U2";
+  if (f.L3U4)   return "L3U4";
+  if (f.L2U4)  return "L2U4";
+  if (f.CU2L2)    return "CU2L2";
+  if (f.L1U4) return "L1U4";
+  if (f.CL2U1)    return "CL2U1";
+  if (f.CL4U2)  return "CL4U2";
+  if (f.EU3L3)    return "EU3L3";
+  if (f.EL3U3)    return "EL3U3";
+  if (f.CL1U1)    return "CL1U1";
+  if (f.CU1L1)    return "CU1L1";
+  if (f.CL2U2)    return "CL2U2";
+  if (f.U3L3)    return "U3L3";
+  if (f.CL3U1)    return "CL3U1";
+  if (f.EU1L2)    return "EU1L2";
+  if (f.EU1L3)    return "EU1L3";
+  if (f.EU1L4)    return "EU1L4";
+  if (f.EUBL1)   return "EUBL1";
+  if (f.EUPL1)   return "EUPL1";
+  if (f.EUTL1)   return "EUTL1";
+  if (f.EUBL2)   return "EUBL2";
+  if (f.EUBL3)   return "EUBL3";
+  if (f.EUPL3)   return "EUPL3";
+  if (f.EUTL3)    return "EUTL3";
+  if (f.EU2L4)    return "EU2L4";
+  if (f.EU2L2)    return "EU2L2";
+  if (f.EUTL2)    return "EUTL2";
+  if (f.EU1L1)    return "EU1L1";
+  if (f.EL1U1)    return "EL1U1";
+  if (f.EL1U2)    return "EL1U2";
+  if (f.CL2UT)    return "CL2UT";
+  if (f.EL1U3)    return "EL1U3";
+  if (f.EL2U3)    return "EL2U3";
+  if (f.ELTU2)    return "ELTU2";
+  if (f.ELBU2)    return "ELBU2";
+  if (f.ELTU3)    return "ELTU3";
+  if (f.ELPU2)    return "ELPU2";
+  if (f.ELPU3)    return "ELPU3";
+  if (f.ELBU3)    return "ELBU3";
+  if (f.EL1U4)    return "EL1U4";
+  if (f.ELBU4)    return "ELBU4";
+  if (f.L3CP)    return "L3CP";
+  if (f.L2CP)    return "L2CP";
+  if (f.L3TC)    return "L3TC";
+  if (f.EL1L2)  return "EL1L2";
+  if (f.EL2L1)  return "EL2L1";
+  if (f.EUPL2)    return "EUPL2";
+  if (f.EUTL4)    return "EUTL4";
+  if (f.L2U3)    return "L2U3";
+  if (f.CU2L1)    return "CU2L1";
+  if (f.CU3L1)    return "CU3L1";
+  if (f.U2L3)    return "U2L3";
   return null;
 }
 
@@ -1169,11 +1169,11 @@ export type PatternCategory = "cOHigher" | "cOLower" | "eXHigher" | "eXLower" | 
  * site, look it up here instead.
  *
  * Two gotchas baked into this table on purpose:
- *  - `exL3U2` is a legacy lowercase-x spelling (not `eXL3U2`) but is still
+ *  - `EU2L3` is a legacy lowercase-x spelling (not `eXL3U2`) but is still
  *    an Expanded-family flag; it's included here under its actual key.
  *    It does not start with "eXU" (case-sensitive), so it lands in
  *    "eXHigher".
- *  - `eXHiL2L1` and `eXLoL2L1` start with "eX", not "Hi"/"Lo" — the
+ *  - `EL1L2` and `EL2L1` start with "eX", not "Hi"/"Lo" — the
  *    Hi/Lo in their names refers to the PDL-vs-prev-Pivot split described
  *    in cpr.ts, not the Higher/Lower category. Neither starts with "eXU",
  *    so both are categorized here as "eXHigher".
@@ -1186,95 +1186,95 @@ export type PatternCategory = "cOHigher" | "cOLower" | "eXHigher" | "eXLower" | 
  */
 export const PATTERN_CATEGORY: Record<string, PatternCategory> = {
   // ---- Compressed: cOLower (name starts with "cOU") ----
-  cOU3L4: "cOLower",
-  cOU4L4: "cOLower",
-  cOU3L3: "cOLower",
-  cOU2L3: "cOLower",
-  cOU1L2: "cOLower",
-  cOU2L4: "cOLower",
-  cOU1L1: "cOLower",
-  cOU2L2: "cOLower",
-  cOU1L3: "cOLower",
+  CL4U3: "cOLower",
+  CL4U4: "cOLower",
+  CL3U3: "cOLower",
+  CL3U2: "cOLower",
+  CL2U1: "cOLower",
+  CL4U2: "cOLower",
+  CL1U1: "cOLower",
+  CL2U2: "cOLower",
+  CL3U1: "cOLower",
 
   // ---- Compressed: cOHigher (remaining cO...) ----
-  cOL2U3: "cOHigher",
-  cOL3U3: "cOHigher",
-  cOL2U4: "cOHigher",
-  cOL4U4: "cOHigher",
-  cOL3U4: "cOHigher",
-  cOL1U1: "cOHigher",
-  cOL2U2: "cOHigher",
-  cOTCL2: "cOHigher",
-  cOL1U2: "cOHigher",
-  cOL1U3: "cOHigher",
+  CU3L2: "cOHigher",
+  CU3L3: "cOHigher",
+  CU4L2: "cOHigher",
+  CU4L4: "cOHigher",
+  CU4L3: "cOHigher",
+  CU1L1: "cOHigher",
+  CU2L2: "cOHigher",
+  CL2UT: "cOHigher",
+  CU2L1: "cOHigher",
+  CU3L1: "cOHigher",
 
   // ---- Expanded: eXLower (name starts with "eXU") ----
-  eXU4L4: "eXLower",
-  eXU4L2: "eXLower",
-  eXU4L3: "eXLower",
-  eXU3L3: "eXLower",
-  eXU1L1: "eXLower",
-  eXU2L1: "eXLower",
-  eXU3L1: "eXLower",
-  eXU3L2: "eXLower",
-  eXU2TC: "eXLower",
-  eXU2BC: "eXLower",
-  eXU3TC: "eXLower",
-  eXU2CP: "eXLower",
-  eXU3CP: "eXLower",
-  eXU3BC: "eXLower",
-  eXU4L1: "eXLower",
-  eXU4BC: "eXLower",
+  EL4U4: "eXLower",
+  EL2U4: "eXLower",
+  EL3U4: "eXLower",
+  EL3U3: "eXLower",
+  EL1U1: "eXLower",
+  EL1U2: "eXLower",
+  EL1U3: "eXLower",
+  EL2U3: "eXLower",
+  ELTU2: "eXLower",
+  ELBU2: "eXLower",
+  ELTU3: "eXLower",
+  ELPU2: "eXLower",
+  ELPU3: "eXLower",
+  ELBU3: "eXLower",
+  EL1U4: "eXLower",
+  ELBU4: "eXLower",
 
-  // ---- Expanded: eXHigher (remaining eX... / legacy exL3U2) ----
-  eXL4U4: "eXHigher",
-  eXL4U3: "eXHigher",
-  exL3U2: "eXHigher", // legacy lowercase spelling — see note above
-  eXL3U3: "eXHigher",
-  eXL2U1: "eXHigher",
-  eXL3U1: "eXHigher",
-  eXL4U1: "eXHigher",
-  eXL1BC: "eXHigher",
-  eXL1CP: "eXHigher",
-  eXL1TC: "eXHigher",
-  eXL2BC: "eXHigher",
-  eXL3BC: "eXHigher",
-  eXL3CP: "eXHigher",
-  eXL3TC: "eXHigher",
-  eXL4U2: "eXHigher",
-  eXL2U2: "eXHigher",
-  eXL2TC: "eXHigher",
-  eXL1U1: "eXHigher",
-  eXHiL2L1: "eXHigher", // name contains "Hi" but prefix is "eX" — see note above
-  eXLoL2L1: "eXHigher", // name contains "Lo" but prefix is "eX" — see note above
-  eXL2CP: "eXHigher",
-  eXL4TC: "eXHigher",
+  // ---- Expanded: eXHigher (remaining eX... / legacy EU2L3) ----
+  EU4L4: "eXHigher",
+  EU3L4: "eXHigher",
+  EU2L3: "eXHigher", // legacy lowercase spelling — see note above
+  EU3L3: "eXHigher",
+  EU1L2: "eXHigher",
+  EU1L3: "eXHigher",
+  EU1L4: "eXHigher",
+  EUBL1: "eXHigher",
+  EUPL1: "eXHigher",
+  EUTL1: "eXHigher",
+  EUBL2: "eXHigher",
+  EUBL3: "eXHigher",
+  EUPL3: "eXHigher",
+  EUTL3: "eXHigher",
+  EU2L4: "eXHigher",
+  EU2L2: "eXHigher",
+  EUTL2: "eXHigher",
+  EU1L1: "eXHigher",
+  EL1L2: "eXHigher", // name contains "Hi" but prefix is "eX" — see note above
+  EL2L1: "eXHigher", // name contains "Lo" but prefix is "eX" — see note above
+  EUPL2: "eXHigher",
+  EUTL4: "eXHigher",
 
   // ---- Higher (Hi...) ----
-  HiL4U3: "Higher",
-  HiL4U2: "Higher",
-  HiL4U1: "Higher",
-  HiL2U4: "Higher",
-  HiL2U3: "Higher",
-  HiL3U4: "Higher",
-  HiL4U4: "Higher",
-  HiL3U3: "Higher",
-  HiL3U2: "Higher",
-  EqL4U4: "Higher", // exact R4/S4 tie — lands in srHigher (see classifyCPRPair)
+  U3L4: "Higher",
+  U2L4: "Higher",
+  U1L4: "Higher",
+  U4L2: "Higher",
+  U3L2: "Higher",
+  U4L3: "Higher",
+  U4L4: "Higher",
+  U3L3: "Higher",
+  U2L3: "Higher",
+  U4L4=: "Higher", // exact R4/S4 tie — lands in srHigher (see classifyCPRPair)
 
   // ---- Lower (Lo...) ----
-  LoU4L4: "Lower",
-  LoU3L4: "Lower",
-  LoU3L3: "Lower",
-  LoU2L4: "Lower",
-  LoU2L3: "Lower",
-  LoU4L3: "Lower",
-  LoU4L2: "Lower",
-  LoU4L1: "Lower",
-  LoCPL3: "Lower",
-  LoCPL2: "Lower",
-  LoTCL3: "Lower",
-  LoU3L2: "Lower",
+  L4U4: "Lower",
+  L4U3: "Lower",
+  L3U3: "Lower",
+  L4U2: "Lower",
+  L3U2: "Lower",
+  L3U4: "Lower",
+  L2U4: "Lower",
+  L1U4: "Lower",
+  L3CP: "Lower",
+  L2CP: "Lower",
+  L3TC: "Lower",
+  L2U3: "Lower",
 };
 
 /**
