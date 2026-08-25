@@ -867,28 +867,20 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // Pattern arrow (see BACKTEST_CATEGORIES in backtest.ts and its
     // matchesPatternFlag raw-flag case below), not a bare dot on
     // "COMPRESSED" itself and not exposed in Screener/left-nav/legend.
-    // "8A:pLAPpPAH:R4-5P" — same base condition as the Pattern's raw flag
-    // (compressed + RRSSGapCategory RRGap + RRHHCategory RRHH-BB +
-    // HHLLCategory HHLL-B + PDHPDLGapCategory HHGap + SSRRCategory RRSS-C +
-    // SSLLCategory SSLL-C + prevCPR.HLSwitch HL-A with hlGapWinner "prev"
-    // (pHLGap-A) + todayCPR.HLSwitch HL-A) PLUS: prev day's PDL above
-    // today's pivot ("prev prevLow > today's pivot") + prev day's own
-    // pivot above today's PDH ("prev pivot > today's prevHigh"). Bullish,
-    // entry ~8AM, targets today's own R4 (U4) by ~5PM.
+    // "8A:pLAPpPAH:R4-5P" — the shared "RHLB-RRHHpGap" base (compressed +
+    // RRSSGapCategory RRGap + RRHHCategory RRHH-BB + HHLLCategory HHLL-B +
+    // PDHPDLGapCategory HHGap + SSRRCategory RRSS-C + SSLLCategory SSLL-C +
+    // prevCPR.HLSwitch HL-A with hlGapWinner "prev" (pHLGap-A) +
+    // todayCPR.HLSwitch HL-A) PLUS: prev day's PDL above today's pivot
+    // ("prev prevLow > today's pivot") + today's PDH above prev day's BC
+    // ("today's prevHigh > prev BC"). Bullish, entry ~8AM, targets
+    // today's own R4 (U4) by ~5PM.
     case "8A:pLAPpPAH:R4-5P":
       return (
         r.compressed &&
-        r.RRSSGapCategory === "RRGap" &&
-        r.RRHHCategory === "RRHH-BB" &&
-        r.HHLLCategory === "HHLL-B" &&
-        r.PDHPDLGapCategory === "HHGap" &&
-        r.SSRRCategory === "RRSS-C" &&
-        r.SSLLCategory === "SSLL-C" &&
-        r.prevCPR.HLSwitch === "HL-A" &&
-        r.hlGapWinner === "prev" &&
-        r.todayCPR.HLSwitch === "HL-A" &&
+        matchesPatternFlag(r, "RHLB-RRHHpGap") &&
         r.prevCPR.prevLow > r.todayCPR.pivot &&
-        r.prevCPR.pivot > r.todayCPR.prevHigh
+        r.todayCPR.prevHigh > r.prevCPR.bc
       );
     case  "LAT-PU12CU23":
       return r.overlapHigher && r.PU12CU23 && r.PL12CL23 && r.todayCPR.prevHigh > r.prevCPR.prevHigh;
