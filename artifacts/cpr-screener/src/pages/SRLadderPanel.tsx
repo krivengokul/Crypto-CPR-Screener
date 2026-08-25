@@ -100,10 +100,16 @@ export function SRLadder({
   if (!priceInserted) rows.push({ type: "price" });
 
   const rowColor = (key: string) => {
-    if (key === "TC" || key === "BC" || key === "Pivot")
-      return "text-yellow-500 font-semibold bg-yellow-500/5";
-    if (key === "PH" || key === "PL")
-      return "text-orange-400 font-medium bg-orange-500/5";
+    if (key === "TC")
+      return "text-amber-400 font-semibold bg-amber-500/5";
+    if (key === "Pivot")
+      return "text-yellow-300 font-semibold bg-yellow-500/5";
+    if (key === "BC")
+      return "text-violet-400 font-semibold bg-violet-500/5";
+    if (key === "PH")
+      return "text-sky-400 font-medium bg-sky-500/5";
+    if (key === "PL")
+      return "text-purple-400 font-medium bg-purple-500/5";
     if (key.startsWith("R")) return "text-green-400";
     return "text-red-400";
   };
@@ -165,8 +171,11 @@ function levelLabel(key: (typeof LEVEL_KEYS)[number]): string {
 
 /** Same color coding as SRLadder's rowColor, expressed as hex for SVG stroke/fill. */
 function levelColor(key: (typeof LEVEL_KEYS)[number]): string {
-  if (key === "tc" || key === "bc" || key === "pivot") return "#eab308"; // yellow-500
-  if (key === "prevHigh" || key === "prevLow") return "#fb923c"; // orange-400
+  if (key === "tc") return "#fbbf24"; // amber-400
+  if (key === "pivot") return "#fde047"; // yellow-300
+  if (key === "bc") return "#a78bfa"; // violet-400
+  if (key === "prevHigh") return "#38bdf8"; // sky-400
+  if (key === "prevLow") return "#c084fc"; // purple-400
   if (key.startsWith("r")) return "#4ade80"; // green-400
   return "#f87171"; // red-400
 }
