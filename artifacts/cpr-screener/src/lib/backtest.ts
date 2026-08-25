@@ -174,6 +174,20 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "L2 (today's S2)",
     getTarget: (r) => r.todayCPR.s2,
   },
+  // NEW: "RHLB-RRHHGap" — added only so it can be listed as its own entry
+  // in the Backtest dropdown (not exposed in Screener/left-nav/legend).
+  // Same condition and target as its 9AM:RHLB-RRHH:5AM sibling, plus
+  // SSRRCategory RRSS-C + SSLLCategory SSLL-C + prevCPR.HLSwitch HL-A with
+  // hlGapWinner "prev" (pHLGap-A) + todayCPR.HLSwitch HL-A — see
+  // ScreenerUtils.tsx. Bearish, same target as its sibling: today's own
+  // S2 (L2).
+  {
+    key: "RHLB-RRHHGap",
+    label: "RHLB-RRHHGap",
+    direction: "bearish",
+    targetLabel: "L2 (today's S2)",
+    getTarget: (r) => r.todayCPR.s2,
+  },
   // RENAMED from "eXHrL3U3-AU4": all previous conditions removed and moved
   // from "Outside CPR" into "EXPANDED". "6A:SLE-RRHH:R2-6A" — sub-pattern
   // under "EXPANDED". Condition: expanded + RRSSGapCategory RRGap +
@@ -566,7 +580,10 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
   {
     key: "compressed",
     label: "COMPRESSED",
-    subPatternKeys: ["8A:HLC-SSHH:S4-1P", "9AM:RHLB-RRHH:5AM"],
+    // NEW: "RHLB-RRHHGap" added alongside its "9AM:RHLB-RRHH:5AM" sibling
+    // — same style as the "RRHH-BB:SSLL-AA:SSLLGap" Pattern arrow below
+    // (a dropdown-only entry, not surfaced in Screener/left-nav/legend).
+    subPatternKeys: ["8A:HLC-SSHH:S4-1P", "9AM:RHLB-RRHH:5AM", "RHLB-RRHHGap"],
     patterns: [
       {
         key: "RRHH-BB:SSLL-AA:SSLLGap",

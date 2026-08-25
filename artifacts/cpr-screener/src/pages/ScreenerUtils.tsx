@@ -863,6 +863,28 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.HHLLCategory === "HHLL-B" &&
         r.PDHPDLGapCategory === "HHGap"
       );
+    // NEW: "RHLB-RRHHGap" — sibling of "9AM:RHLB-RRHH:5AM", added only so
+    // the Backtest dropdown can list it as its own entry under
+    // "COMPRESSED" (not exposed in Screener/left-nav/legend). Same base
+    // condition as its 9AM:RHLB-RRHH:5AM sibling (compressed +
+    // RRSSGapCategory RRGap + RRHHCategory RRHH-BB + HHLLCategory HHLL-B +
+    // PDHPDLGapCategory HHGap) PLUS: SSRRCategory RRSS-C + SSLLCategory
+    // SSLL-C + prevCPR.HLSwitch HL-A with hlGapWinner "prev" (pHLGap-A) +
+    // todayCPR.HLSwitch HL-A. Bearish, same target as its sibling: today's
+    // own S2 (L2).
+    case "RHLB-RRHHGap":
+      return (
+        r.compressed &&
+        r.RRSSGapCategory === "RRGap" &&
+        r.RRHHCategory === "RRHH-BB" &&
+        r.HHLLCategory === "HHLL-B" &&
+        r.PDHPDLGapCategory === "HHGap" &&
+        r.SSRRCategory === "RRSS-C" &&
+        r.SSLLCategory === "SSLL-C" &&
+        r.prevCPR.HLSwitch === "HL-A" &&
+        r.hlGapWinner === "prev" &&
+        r.todayCPR.HLSwitch === "HL-A"
+      );
     case  "LAT-PU12CU23":
       return r.overlapHigher && r.PU12CU23 && r.PL12CL23 && r.todayCPR.prevHigh > r.prevCPR.prevHigh;
     case "overlapping-lower":
