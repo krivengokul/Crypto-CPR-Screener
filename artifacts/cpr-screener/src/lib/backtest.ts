@@ -174,19 +174,21 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "L2 (today's S2)",
     getTarget: (r) => r.todayCPR.s2,
   },
-  // NEW: "RHLB-RRHHpGap" — added only so it can be listed as its own entry
-  // in the Backtest dropdown (not exposed in Screener/left-nav/legend).
-  // Same condition and target as its 9AM:RHLB-RRHH:5AM sibling, plus
-  // SSRRCategory RRSS-C + SSLLCategory SSLL-C + prevCPR.HLSwitch HL-A with
-  // hlGapWinner "prev" (pHLGap-A) + todayCPR.HLSwitch HL-A — see
-  // ScreenerUtils.tsx. Bearish, same target as its sibling: today's own
-  // S2 (L2).
+  // RENAMED from "RHLB-RRHHpGap": View nested under the "RHLB-RRHHpGap"
+  // Pattern arrow in COMPRESSED (not exposed in Screener/left-nav/legend).
+  // Condition: same base as its "9AM:RHLB-RRHH:5AM" cousin (compressed +
+  // RRGap + RRHH-BB + HHLL-B + HHGap) PLUS SSRRCategory RRSS-C +
+  // SSLLCategory SSLL-C + prevCPR.HLSwitch HL-A with hlGapWinner "prev"
+  // (pHLGap-A) + todayCPR.HLSwitch HL-A PLUS prev day's PDL above today's
+  // pivot + prev day's own pivot above today's PDH — see
+  // ScreenerUtils.tsx. Bullish, entry ~8AM, targets today's own R4 (U4)
+  // by ~5PM.
   {
-    key: "RHLB-RRHHpGap",
-    label: "RHLB-RRHHpGap",
-    direction: "bearish",
-    targetLabel: "L2 (today's S2)",
-    getTarget: (r) => r.todayCPR.s2,
+    key: "8A:pLAPpPAH:R4-5P",
+    label: "8A:pLAPpPAH:R4-5P",
+    direction: "bullish",
+    targetLabel: "U4 (today's R4)",
+    getTarget: (r) => r.todayCPR.r4,
   },
   // RENAMED from "eXHrL3U3-AU4": all previous conditions removed and moved
   // from "Outside CPR" into "EXPANDED". "6A:SLE-RRHH:R2-6A" — sub-pattern
@@ -590,15 +592,16 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       // NEW: "RHLB-RRHHpGap" Pattern (arrow) — same shape as its
       // "RRHH-BB:SSLL-AA:SSLLGap" sibling above: base condition = parent
       // "compressed" category's condition AND the raw RHLB-RRHHpGap flag
-      // (see matchesPatternFlag in ScreenerUtils.tsx). Nests its own
-      // "RHLB-RRHHpGap" View (the full graded pattern, incl. r.compressed
-      // — see passesPattern in ScreenerUtils.tsx / BACKTEST_TARGETS
-      // above), so it shows an arrow with a single dot inside, not a bare
-      // dot on the category itself.
+      // (see matchesPatternFlag in ScreenerUtils.tsx). Nests its
+      // "8A:pLAPpPAH:R4-5P" View (RENAMED from "RHLB-RRHHpGap" — the full
+      // graded pattern, incl. r.compressed — see passesPattern in
+      // ScreenerUtils.tsx / BACKTEST_TARGETS above), so it shows an arrow
+      // with a single (green, bullish) dot inside, not a bare dot on the
+      // category itself.
       {
         key: "RHLB-RRHHpGap",
         label: "RHLB-RRHHpGap",
-        subPatternKeys: ["RHLB-RRHHpGap"],
+        subPatternKeys: ["8A:pLAPpPAH:R4-5P"],
       },
     ],
   },
