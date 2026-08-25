@@ -111,7 +111,7 @@ export function SRLadder({
     if (key === "PL")
       return "text-sky-400 font-medium bg-sky-500/5";
     if (key.startsWith("R")) return "text-green-400";
-    return "text-destructive bg-destructive/5";
+    return "text-red-400";
   };
 
   return (
