@@ -422,10 +422,10 @@ export default function SignalDesk({
                 <article
                   key={item.key}
                   className={[
-                    "rounded-xl border border-l-4 bg-card p-5 transition hover:-translate-y-0.5",
+                    "rounded-xl border bg-card p-5 transition hover:-translate-y-0.5",
                     isLong
-                      ? "border-border border-l-emerald-400/70 hover:border-emerald-400/50"
-                      : "border-border border-l-rose-400/70 hover:border-rose-400/50",
+                      ? "border-emerald-400/70 hover:border-emerald-400/50"
+                      : "border-rose-400/70 hover:border-rose-400/50",
                   ].join(" ")}
                 >
                   <div className="mb-6 flex items-center justify-between gap-4">
