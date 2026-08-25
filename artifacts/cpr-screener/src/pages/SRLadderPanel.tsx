@@ -190,7 +190,7 @@ function CPRLevelChart({
 }) {
   const width = 900;
   const height = 340;
-  const leftMargin = 4;
+  const leftMargin = 96;
   const rightMargin = 96;
   const plotWidth = width - leftMargin - rightMargin;
   const prevSegmentEnd = leftMargin + plotWidth * 0.45;
@@ -230,12 +230,13 @@ function CPRLevelChart({
                 strokeWidth={0.5}
               />
               <text
-                x={prevSegmentEnd + 4}
+                x={leftMargin - 4}
                 y={y + 3}
                 fontSize={8}
                 fontFamily="monospace"
                 fill={color}
                 opacity={0.75}
+                textAnchor="end"
               >
                 P-{levelLabel(k)} {fmt(pv)}
               </text>
