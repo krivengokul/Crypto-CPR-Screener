@@ -172,6 +172,38 @@ function levelColor(key: (typeof LEVEL_KEYS)[number]): string {
 }
 
 /**
+ * Nudges vertically-overlapping SVG text labels apart while preserving
+ * their top-to-bottom order, using minimal movement.
+ *
+ * Two-pass relaxation: a forward pass pushes each label down until it's
+ * at least `minGap` below the previous one, then a backward pass pulls
+ * labels back up wherever the forward pass over-corrected (e.g. a single
+ * crowded cluster shouldn't drag every label below it downward). Returns
+ * a Map from each entry's key to its adjusted y — the line/tick itself
+ * should still be drawn at the true (un-adjusted) y; only the text uses
+ * the adjusted value.
+ */
+function declutterLabelPositions(
+  entries: { key: string; y: number }[],
+  minGap: number
+): Map<string, number> {
+  const sorted = [...entries].sort((a, b) => a.y - b.y);
+  const n = sorted.length;
+  const adjusted = sorted.map((e) => e.y);
+
+  for (let i = 1; i < n; i++) {
+    adjusted[i] = Math.max(adjusted[i], adjusted[i - 1] + minGap);
+  }
+  for (let i = n - 2; i >= 0; i--) {
+    adjusted[i] = Math.min(adjusted[i], adjusted[i + 1] - minGap);
+  }
+
+  const result = new Map<string, number>();
+  sorted.forEach((e, i) => result.set(e.key, adjusted[i]));
+  return result;
+}
+
+/**
  * Line chart replacing the old PDay-1/Prev/Today CPR mini-cards.
  *
  * Plots the Prev Day and Today CPR ladders as horizontal lines on a shared
@@ -207,6 +239,17 @@ function CPRLevelChart({
   const yFor = (v: number) =>
     height - ((v - domainMin) / (domainMax - domainMin)) * height;
 
+  // Text at fontSize 8/9 needs roughly 9-10px of vertical room to avoid
+  // clashing (see the overlapping P-TC/P-BC/etc. labels this fixes).
+  const prevLabelY = declutterLabelPositions(
+    LEVEL_KEYS.map((k) => ({ key: k, y: yFor(prevCPR[k as keyof CPRLevels] as number) })),
+    9
+  );
+  const todayLabelY = declutterLabelPositions(
+    LEVEL_KEYS.map((k) => ({ key: k, y: yFor(todayCPR[k as keyof CPRLevels] as number) })),
+    10
+  );
+
   return (
     <div className="min-w-0">
       <div className="mb-1.5 flex flex-wrap items-center gap-3 pl-2 text-left">
@@ -231,7 +274,7 @@ function CPRLevelChart({
               />
               <text
                 x={leftMargin - 4}
-                y={y + 3}
+                y={(prevLabelY.get(k) as number) + 3}
                 fontSize={8}
                 fontFamily="monospace"
                 fill={color}
@@ -259,7 +302,7 @@ function CPRLevelChart({
               />
               <text
                 x={leftMargin + plotWidth + 4}
-                y={y + 3}
+                y={(todayLabelY.get(k) as number) + 3}
                 fontSize={9}
                 fontFamily="monospace"
                 fill={color}
