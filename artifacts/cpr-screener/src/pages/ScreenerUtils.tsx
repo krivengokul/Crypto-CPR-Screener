@@ -1442,6 +1442,26 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
         r.hlGapWinner === "prev" &&
         r.todayCPR.HLSwitch === "HL-A"
       );
+    // NEW: 2P:RHSLB-SSLLpGap:2A — Pattern raw flag for the Backtest
+    // dropdown's Pattern-level (arrow) selection nested under
+    // "LEVELs BELOW", same shape as its RHLB-RRHHpGap sibling above
+    // (the parent "levelsbelow" category's own passesPattern
+    // ("levelsbelow") already ANDs in r.LevelsBelow, so it's
+    // intentionally omitted here). Condition: RRSS-B + HHLL-B +
+    // RRHH-BB + SSLL-BB + SSGap + LLGap + prevCPR.HLSwitch HL-A with
+    // hlGapWinner "prev" (pHLGap-A) + todayCPR.HLSwitch HL-B.
+    case "2P:RHSLB-SSLLpGap:2A":
+      return (
+        r.SSRRCategory === "RRSS-B" &&
+        r.HHLLCategory === "HHLL-B" &&
+        r.RRHHCategory === "RRHH-BB" &&
+        r.SSLLCategory === "SSLL-BB" &&
+        r.RRSSGapCategory === "SSGap" &&
+        r.PDHPDLGapCategory === "LLGap" &&
+        r.prevCPR.HLSwitch === "HL-A" &&
+        r.hlGapWinner === "prev" &&
+        r.todayCPR.HLSwitch === "HL-B"
+      );
     default: return getPatternInfo(r)?.label === label;
   }
 }

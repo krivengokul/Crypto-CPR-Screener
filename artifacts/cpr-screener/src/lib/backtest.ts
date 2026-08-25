@@ -571,6 +571,18 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
         label: "CL4U2",
         subPatternKeys: [],
       },
+      // NEW: "2P:RHSLB-SSLLpGap:2A" — Pattern (arrow), same shape as its
+      // CL4U3/L3U3/L4U3/CL4U2 siblings above: base condition = this
+      // category's LevelsBelow condition AND the raw
+      // "2P:RHSLB-SSLLpGap:2A" flag (see matchesPatternFlag in
+      // ScreenerUtils.tsx). No specific target-graded sub-pattern nested
+      // under it yet — selecting it in the Backtest dropdown runs a
+      // symbol-list-only category scan.
+      {
+        key: "2P:RHSLB-SSLLpGap:2A",
+        label: "2P:RHSLB-SSLLpGap:2A",
+        subPatternKeys: [],
+      },
     ],
   },
   // NEW: "COMPRESSED" left-nav section (first item). CHANGED:
