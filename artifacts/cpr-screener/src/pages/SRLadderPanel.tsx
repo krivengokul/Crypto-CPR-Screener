@@ -159,7 +159,7 @@ const LEVEL_KEYS = [
 function levelLabel(key: (typeof LEVEL_KEYS)[number]): string {
   if (key === "prevHigh") return "PH";
   if (key === "prevLow") return "PL";
-  if (key === "pivot") return "Pivot";
+  if (key === "pivot") return "PV";
   return key.toUpperCase();
 }
 
@@ -226,18 +226,30 @@ function CPRLevelChart({
           const pv = prevCPR[k as keyof CPRLevels] as number;
           const y = yFor(pv);
           const color = levelColor(k);
+          const prevLineEnd = leftMargin + plotWidth * 0.55;
           return (
-            <line
-              key={`prev-${k}`}
-              x1={leftMargin}
-              x2={leftMargin + plotWidth * 0.55}
-              y1={y}
-              y2={y}
-              stroke={color}
-              strokeWidth={1}
-              strokeDasharray="3,2"
-              opacity={0.65}
-            />
+            <g key={`prev-${k}`}>
+              <line
+                x1={leftMargin}
+                x2={prevLineEnd}
+                y1={y}
+                y2={y}
+                stroke={color}
+                strokeWidth={0.5}
+                strokeDasharray="3,2"
+                opacity={0.65}
+              />
+              <text
+                x={prevLineEnd + 4}
+                y={y + 3}
+                fontSize={8}
+                fontFamily="monospace"
+                fill={color}
+                opacity={0.75}
+              >
+                P-{levelLabel(k)} {fmt(pv)}
+              </text>
+            </g>
           );
         })}
         {LEVEL_KEYS.map((k) => {
@@ -252,7 +264,7 @@ function CPRLevelChart({
                 y1={y}
                 y2={y}
                 stroke={color}
-                strokeWidth={1.5}
+                strokeWidth={1}
               />
               <text
                 x={leftMargin + plotWidth + 4}
@@ -342,4 +354,3 @@ export function SRLadderRow({
     </tr>
   );
 }
-
