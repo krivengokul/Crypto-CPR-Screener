@@ -188,11 +188,12 @@ function CPRLevelChart({
   prevCPR: CPRLevels;
   todayCPR: CPRLevels;
 }) {
-  const width = 300;
-  const height = 380;
+  const width = 900;
+  const height = 340;
   const leftMargin = 4;
   const rightMargin = 96;
   const plotWidth = width - leftMargin - rightMargin;
+  const prevSegmentEnd = leftMargin + plotWidth * 0.45;
 
   const allValues = LEVEL_KEYS.flatMap((k) => [
     prevCPR[k as keyof CPRLevels] as number,
@@ -210,37 +211,26 @@ function CPRLevelChart({
     <div className="min-w-0">
       <div className="mb-1.5 flex flex-wrap items-center gap-3 pl-2 text-left">
         <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-          Levels Chart
+          Levels VIEW
         </p>
-        <span className="flex items-center gap-1 text-[9px] text-muted-foreground">
-          <span className="inline-block w-3 border-t border-dashed border-muted-foreground" />
-          Prev
-        </span>
-        <span className="flex items-center gap-1 text-[9px] text-muted-foreground">
-          <span className="inline-block w-3 border-t-2 border-muted-foreground" />
-          Today
-        </span>
       </div>
-      <svg viewBox={`0 0 ${width} ${height}`} className="h-[380px] w-full">
+      <svg viewBox={`0 0 ${width} ${height}`} className="h-[340px] w-full">
         {LEVEL_KEYS.map((k) => {
           const pv = prevCPR[k as keyof CPRLevels] as number;
           const y = yFor(pv);
           const color = levelColor(k);
-          const prevLineEnd = leftMargin + plotWidth * 0.55;
           return (
             <g key={`prev-${k}`}>
               <line
                 x1={leftMargin}
-                x2={prevLineEnd}
+                x2={prevSegmentEnd}
                 y1={y}
                 y2={y}
                 stroke={color}
                 strokeWidth={0.5}
-                strokeDasharray="3,2"
-                opacity={0.65}
               />
               <text
-                x={prevLineEnd + 4}
+                x={prevSegmentEnd + 4}
                 y={y + 3}
                 fontSize={8}
                 fontFamily="monospace"
@@ -259,12 +249,12 @@ function CPRLevelChart({
           return (
             <g key={`today-${k}`}>
               <line
-                x1={leftMargin}
+                x1={prevSegmentEnd}
                 x2={leftMargin + plotWidth}
                 y1={y}
                 y2={y}
                 stroke={color}
-                strokeWidth={1}
+                strokeWidth={0.5}
               />
               <text
                 x={leftMargin + plotWidth + 4}
@@ -304,17 +294,17 @@ export function SRLadderPanel({
   pDay1PatternBadge?: ReactNode;
 }) {
   return (
-    <div className="grid min-w-[920px] grid-cols-[minmax(260px,300px)_repeat(3,180px)] items-start gap-5">
-      <div className="min-w-0 border-r border-border/50 pr-5">
+    <div className="flex min-w-[920px] flex-col gap-4">
+      <div className="border-b border-border/50 pb-4">
         <CPRLevelChart prevCPR={r.prevCPR} todayCPR={r.todayCPR} />
       </div>
-      <SRLadder cpr={r.todayCPR} currentPrice={r.currentPrice} label="Today S/R" badge={todayPatternBadge} />
-      <SRLadder cpr={r.prevCPR} currentPrice={r.currentPrice} label="PrevDay S/R" badge={prevPatternBadge} />
-      {r.ppCPR ? (
-        <SRLadder cpr={r.ppCPR} currentPrice={r.currentPrice} label="PDay-1 S/R" badge={pDay1PatternBadge} />
-      ) : (
-        <div aria-hidden="true" />
-      )}
+      <div className="flex flex-wrap items-start gap-5">
+        <SRLadder cpr={r.todayCPR} currentPrice={r.currentPrice} label="Today S/R" badge={todayPatternBadge} />
+        <SRLadder cpr={r.prevCPR} currentPrice={r.currentPrice} label="PrevDay S/R" badge={prevPatternBadge} />
+        {r.ppCPR && (
+          <SRLadder cpr={r.ppCPR} currentPrice={r.currentPrice} label="PDay-1 S/R" badge={pDay1PatternBadge} />
+        )}
+      </div>
     </div>
   );
 }
