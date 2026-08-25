@@ -879,7 +879,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return (
         r.compressed &&
         matchesPatternFlag(r, "RHLB-RRHHpGap") &&
-        r.todayCPR.tc >= r.prevCPR.prevLow &&
+        r.prevCPR.prevLow >= r.todayCPR.pivot && r.prevCPR.prevLow <= r.todayCPR.tc &&
         r.todayCPR.prevHigh > r.prevCPR.bc && r.prevCPR.tc > r.todayCPR.r2
       );
     case  "LAT-PU12CU23":
