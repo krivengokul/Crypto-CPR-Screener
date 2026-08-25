@@ -762,6 +762,18 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return r.LevelsBelow && r.L4U3 && r.HHLLCategory === "HHLL-B" &&
         r.prevCPR.HLSwitch === "HL-B" && r.todayCPR.HLSwitch === "HL-A" &&
         r.todayCPR.r1 > r.prevCPR.bc;
+    // NEW: "2P:L4U4-pLAP:R4-2A" — View nested under the "RHSLB-SSLLpGap"
+    // Pattern arrow in "LEVELs BELOW" (renamed from "2P:RHSLB-SSLLpGap:2A").
+    // Condition: the shared "RHSLB-SSLLpGap" base (see matchesPatternFlag)
+    // PLUS the raw L4U4 flag (today's R4 inside prev's R3/R4 AND prev's S4
+    // inside today's S3/S4) PLUS prev day's own PDL above today's Pivot.
+    // Bullish, entry ~2PM, targets today's own R4 (U4) by ~2AM.
+    case "2P:L4U4-pLAP:R4-2A":
+      return (
+        matchesPatternFlag(r, "RHSLB-SSLLpGap") &&
+        r.L4U4 &&
+        r.prevCPR.prevLow > r.todayCPR.pivot
+      );
     case "compressed":
       return r.compressed ; 
     // NEW: "6A:SLE-RRHH:R2-6A" — sub-pattern under "EXPANDED". Condition:
@@ -1082,6 +1094,10 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     // BELOW" in backtest.ts. Bullish (Compressed, same LevelsBelow base
     // condition) → "up".
     { key: "CL4U2", direction: "up" },
+    // NEW: "2P:L4U4-pLAP:R4-2A" — View nested under the "RHSLB-SSLLpGap"
+    // Pattern arrow (also under "LEVELs BELOW"). Bullish, targets today's
+    // own R4 (U4) → "up".
+    { key: "2P:L4U4-pLAP:R4-2A", direction: "up" },
   ],
   "levelsabove": [
     { key: "6PM:HHLLA-RRHHGap:6AM", direction: "up" },
@@ -1442,15 +1458,17 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
         r.hlGapWinner === "prev" &&
         r.todayCPR.HLSwitch === "HL-A"
       );
-    // NEW: 2P:RHSLB-SSLLpGap:2A — Pattern raw flag for the Backtest
-    // dropdown's Pattern-level (arrow) selection nested under
-    // "LEVELs BELOW", same shape as its RHLB-RRHHpGap sibling above
-    // (the parent "levelsbelow" category's own passesPattern
+    // RENAMED from "2P:RHSLB-SSLLpGap:2A" to "RHSLB-SSLLpGap" — Pattern raw
+    // flag for the Backtest dropdown's Pattern-level (arrow) selection
+    // nested under "LEVELs BELOW", same shape as its RHLB-RRHHpGap sibling
+    // above (the parent "levelsbelow" category's own passesPattern
     // ("levelsbelow") already ANDs in r.LevelsBelow, so it's
     // intentionally omitted here). Condition: RRSS-B + HHLL-B +
     // RRHH-BB + SSLL-BB + SSGap + LLGap + prevCPR.HLSwitch HL-A with
-    // hlGapWinner "prev" (pHLGap-A) + todayCPR.HLSwitch HL-B.
-    case "2P:RHSLB-SSLLpGap:2A":
+    // hlGapWinner "prev" (pHLGap-A) + todayCPR.HLSwitch HL-B. Now nests
+    // "2P:L4U4-pLAP:R4-2A" (see BacktestPanel's "LEVELs BELOW" →
+    // "RHSLB-SSLLpGap" nesting in backtest.ts).
+    case "RHSLB-SSLLpGap":
       return (
         r.SSRRCategory === "RRSS-B" &&
         r.HHLLCategory === "HHLL-B" &&

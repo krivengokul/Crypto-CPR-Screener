@@ -313,6 +313,11 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             <div className="text-xs font-semibold text-green-400 mb-1">Pattern: L4U3&nbsp;&nbsp;PDH/PDL: HHLLBelow&nbsp;&nbsp;p-PDHL-B / PDHL-A</div>
             <div className="text-xs text-muted-foreground">LEVELs BELOW base, plus L4U3 (today&apos;s R4 in prev R2/R3 band), today&apos;s PDH at/below prev PDH and today&apos;s PDL below prev PDL, prev day&apos;s own PDH below prev day&apos;s R1 (p-PDHL-B), today&apos;s PDH above today&apos;s R1 (PDHL-A), and today&apos;s R1 at/above prev day&apos;s BC</div>
           </>
+        ) : activeView === "2P:L4U4-pLAP:R4-2A" ? (
+          <>
+            <div className="text-xs font-semibold text-green-400 mb-1">Pattern: RHSLB-SSLLpGap&nbsp;&nbsp;L4U4</div>
+            <div className="text-xs text-muted-foreground">LEVELs BELOW base, plus the shared RHSLB-SSLLpGap Pattern (RRSS-B + HHLL-B + RRHH-BB + SSLL-BB + SSGap + LLGap + prev day&apos;s PDH/U1 relation HL-A with the gap the wider of the two (pHLGap-A) + today&apos;s PDH/U1 relation HL-B), plus L4U4 (today&apos;s R4 inside prev&apos;s R3/R4 AND prev&apos;s S4 inside today&apos;s S3/S4), plus prev day&apos;s own PDL above today&apos;s Pivot</div>
+          </>
         ) : activeView === "6A:HLC-SSLL:R4-6P" ? (
           <>
             <div className="text-xs font-semibold text-green-400 mb-1">HHLL-C&nbsp;&nbsp;SSLL-AA&nbsp;&nbsp;RRHH-BB&nbsp;&nbsp;SSGap&nbsp;&nbsp;LLGap</div>
@@ -514,6 +519,11 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
           <>
             <div className="text-xs font-semibold text-green-400 mb-1">Target: FApU4&nbsp;&nbsp;Time: 1PM</div>
             <div className="text-xs text-emerald-400/80">L4U3 base plus HHLLBelow (today&apos;s highs/lows stepping down vs prev day), prev day&apos;s own PDH below R1, today&apos;s PDH above R1, and today&apos;s R1 at/above prev BC — expected move far above prev day&apos;s U4 by ~1PM</div>
+          </>
+        ) : activeView === "2P:L4U4-pLAP:R4-2A" ? (
+          <>
+            <div className="text-xs font-semibold text-green-400 mb-1">Target: U4&nbsp;&nbsp;&nbsp;Entry: 2PM&nbsp;&nbsp;&nbsp;Time: 2AM</div>
+            <div className="text-xs text-emerald-400/80">RHSLB-SSLLpGap base plus L4U4 (today&apos;s R4 inside prev&apos;s R3/R4, prev&apos;s S4 inside today&apos;s S3/S4) plus prev day&apos;s own PDL above today&apos;s Pivot — expected move toward today&apos;s own U4 (R4) by ~2AM</div>
           </>
         ) : activeView === "6A:HLC-SSLL:R4-6P" ? (
           <>

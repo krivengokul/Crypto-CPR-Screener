@@ -276,6 +276,19 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "FApU4 (prev day's R4)",
     getTarget: (r) => r.prevCPR.r4,
   },
+  // NEW: "2P:L4U4-pLAP:R4-2A" — View nested under "LEVELs BELOW"
+  // (levelsbelow) category's "RHSLB-SSLLpGap" Pattern (renamed from
+  // "2P:RHSLB-SSLLpGap:2A" — see BACKTEST_CATEGORIES below). Base
+  // condition: the shared "RHSLB-SSLLpGap" flag AND the raw L4U4 flag AND
+  // prev day's own PDL above today's Pivot — see ScreenerUtils.tsx.
+  // Bullish, entry ~2PM, targets today's own R4 (U4) by ~2AM.
+  {
+    key: "2P:L4U4-pLAP:R4-2A",
+    label: "2P:L4U4-pLAP:R4-2A",
+    direction: "bullish",
+    targetLabel: "U4 (today's R4)",
+    getTarget: (r) => r.todayCPR.r4,
+  },
   // NEW: "TiMe-EUTL3-AU4:2PM" — nested directly under "U1 > pU4"
   // (R1AbovePR4), alongside 9AM:APHS1A-FAU4:4AM. Bullish, Pattern EUTL3 +
   // pTiny/Mega width combo, targets AU4 (prev day's R4) by ~2PM.
@@ -571,17 +584,17 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
         label: "CL4U2",
         subPatternKeys: [],
       },
-      // NEW: "2P:RHSLB-SSLLpGap:2A" — Pattern (arrow), same shape as its
-      // CL4U3/L3U3/L4U3/CL4U2 siblings above: base condition = this
-      // category's LevelsBelow condition AND the raw
-      // "2P:RHSLB-SSLLpGap:2A" flag (see matchesPatternFlag in
-      // ScreenerUtils.tsx). No specific target-graded sub-pattern nested
-      // under it yet — selecting it in the Backtest dropdown runs a
-      // symbol-list-only category scan.
+      // RENAMED from "2P:RHSLB-SSLLpGap:2A" to "RHSLB-SSLLpGap" — Pattern
+      // (arrow), same shape as its CL4U3/L3U3/L4U3/CL4U2 siblings above:
+      // base condition = this category's LevelsBelow condition AND the raw
+      // "RHSLB-SSLLpGap" flag (see matchesPatternFlag in
+      // ScreenerUtils.tsx). Nests "2P:L4U4-pLAP:R4-2A" (exposed in
+      // Backtest/legend/screener/left-nav, unlike its symbol-list-only
+      // CL4U2 sibling).
       {
-        key: "2P:RHSLB-SSLLpGap:2A",
-        label: "2P:RHSLB-SSLLpGap:2A",
-        subPatternKeys: [],
+        key: "RHSLB-SSLLpGap",
+        label: "RHSLB-SSLLpGap",
+        subPatternKeys: ["2P:L4U4-pLAP:R4-2A"],
       },
     ],
   },

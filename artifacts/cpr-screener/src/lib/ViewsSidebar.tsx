@@ -205,6 +205,20 @@ export const Views: Record<string, SubPattern[]> = {
       activeText:  "#4ade80",              // green-400 text
       activeBg:    "rgba(34, 197, 94, 0.14)",
     },
+    // NEW: 2P:L4U4-pLAP:R4-2A — View nested under the "RHSLB-SSLLpGap"
+    // Pattern arrow (renamed from "2P:RHSLB-SSLLpGap:2A" — see
+    // matchesPatternFlag in ScreenerUtils.tsx). LEVELs BELOW + the shared
+    // RHSLB-SSLLpGap base + the raw L4U4 flag (today's R4 inside prev's
+    // R3/R4 AND prev's S4 inside today's S3/S4) + prev day's own PDL above
+    // today's Pivot. Bullish, entry ~2PM, targets today's own R4 (U4) by
+    // ~2AM. Same green color family as its bullish LEVELs BELOW siblings.
+    {
+      id: "2P:L4U4-pLAP:R4-2A",
+      label: "2P:L4U4-pLAP:R4-2A",
+      activeColor: "#22c55e",              // green-500 border
+      activeText:  "#4ade80",              // green-400 text
+      activeBg:    "rgba(34, 197, 94, 0.14)",
+    },
   ],
   "compressed": [
     // RENAMED from "SMi-L1pU1>-APU4:11PM": all previous conditions removed.
