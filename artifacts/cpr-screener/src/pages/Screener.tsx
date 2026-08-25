@@ -973,8 +973,8 @@ export default function Screener({
           showExpU4PU4={showExpU4PU4}
           showExpU3PU3={showExpU3PU3}
           showOBLoRRHHLLA={showOBLoRRHHLLA}
-          showOBNLoQU4L4{showOBNLoU4L4}
-          showOBWLoQU4L4{showOBWLoU4L4}
+          showOBNLoU4L4={showOBNLoU4L4}
+          showOBWLoU4L4={showOBWLoU4L4}
         />
         )}
 
