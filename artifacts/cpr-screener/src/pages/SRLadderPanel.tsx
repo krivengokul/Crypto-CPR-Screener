@@ -139,10 +139,143 @@ export function SRLadder({
   );
 }
 
+/** Ordered level keys, matching the ADK ladder order (top/highest to bottom/lowest). */
+const LEVEL_KEYS = [
+  "r4",
+  "r3",
+  "r2",
+  "prevHigh",
+  "r1",
+  "tc",
+  "pivot",
+  "bc",
+  "prevLow",
+  "s1",
+  "s2",
+  "s3",
+  "s4",
+] as const;
+
+function levelLabel(key: (typeof LEVEL_KEYS)[number]): string {
+  if (key === "prevHigh") return "PH";
+  if (key === "prevLow") return "PL";
+  if (key === "pivot") return "Pivot";
+  return key.toUpperCase();
+}
+
+/** Same color coding as SRLadder's rowColor, expressed as hex for SVG stroke/fill. */
+function levelColor(key: (typeof LEVEL_KEYS)[number]): string {
+  if (key === "tc" || key === "bc" || key === "pivot") return "#eab308"; // yellow-500
+  if (key === "prevHigh" || key === "prevLow") return "#fb923c"; // orange-400
+  if (key.startsWith("r")) return "#4ade80"; // green-400
+  return "#f87171"; // red-400
+}
+
+/**
+ * Line chart replacing the old PDay-1/Prev/Today CPR mini-cards.
+ *
+ * Plots the Prev Day and Today CPR ladders as horizontal lines on a shared
+ * price axis (no live price, no candles) so the two days' R/S/PH/PL/CPR
+ * levels can be compared at a glance, using the same color coding as the
+ * S/R ladders. Today's levels are solid + labeled; Prev Day's levels are
+ * dashed reference lines (exact Prev Day values are already in the
+ * "PrevDay S/R" ladder alongside this chart).
+ */
+function CPRLevelChart({
+  prevCPR,
+  todayCPR,
+}: {
+  prevCPR: CPRLevels;
+  todayCPR: CPRLevels;
+}) {
+  const width = 300;
+  const height = 380;
+  const leftMargin = 4;
+  const rightMargin = 96;
+  const plotWidth = width - leftMargin - rightMargin;
+
+  const allValues = LEVEL_KEYS.flatMap((k) => [
+    prevCPR[k as keyof CPRLevels] as number,
+    todayCPR[k as keyof CPRLevels] as number,
+  ]);
+  const min = Math.min(...allValues);
+  const max = Math.max(...allValues);
+  const pad = (max - min) * 0.08 || Math.abs(max) * 0.01 || 1;
+  const domainMin = min - pad;
+  const domainMax = max + pad;
+  const yFor = (v: number) =>
+    height - ((v - domainMin) / (domainMax - domainMin)) * height;
+
+  return (
+    <div className="min-w-0">
+      <div className="mb-1.5 flex flex-wrap items-center gap-3 pl-2 text-left">
+        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+          Levels Chart
+        </p>
+        <span className="flex items-center gap-1 text-[9px] text-muted-foreground">
+          <span className="inline-block w-3 border-t border-dashed border-muted-foreground" />
+          Prev
+        </span>
+        <span className="flex items-center gap-1 text-[9px] text-muted-foreground">
+          <span className="inline-block w-3 border-t-2 border-muted-foreground" />
+          Today
+        </span>
+      </div>
+      <svg viewBox={`0 0 ${width} ${height}`} className="h-[380px] w-full">
+        {LEVEL_KEYS.map((k) => {
+          const pv = prevCPR[k as keyof CPRLevels] as number;
+          const y = yFor(pv);
+          const color = levelColor(k);
+          return (
+            <line
+              key={`prev-${k}`}
+              x1={leftMargin}
+              x2={leftMargin + plotWidth * 0.55}
+              y1={y}
+              y2={y}
+              stroke={color}
+              strokeWidth={1}
+              strokeDasharray="3,2"
+              opacity={0.65}
+            />
+          );
+        })}
+        {LEVEL_KEYS.map((k) => {
+          const tv = todayCPR[k as keyof CPRLevels] as number;
+          const y = yFor(tv);
+          const color = levelColor(k);
+          return (
+            <g key={`today-${k}`}>
+              <line
+                x1={leftMargin}
+                x2={leftMargin + plotWidth}
+                y1={y}
+                y2={y}
+                stroke={color}
+                strokeWidth={1.5}
+              />
+              <text
+                x={leftMargin + plotWidth + 4}
+                y={y + 3}
+                fontSize={9}
+                fontFamily="monospace"
+                fill={color}
+              >
+                {levelLabel(k)} {fmt(tv)}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
 /**
  * The full expanded panel shown when a symbol row is clicked:
- * PDay-1 / Prev / Today CPR mini-cards, the U4/L4 gap card, and the three
- * S/R ladders. Reused by Screener and BacktestPanel.
+ * a Prev-Day-vs-Today levels chart and the three S/R ladders (Today,
+ * PrevDay, PDay-1 — pushed to the right where the chart frees up space).
+ * Reused by Screener and BacktestPanel.
  */
 export function SRLadderPanel({
   r,
@@ -159,113 +292,17 @@ export function SRLadderPanel({
   pDay1PatternBadge?: ReactNode;
 }) {
   return (
-    <div className="grid min-w-[920px] grid-cols-[minmax(300px,340px)_repeat(3,180px)] items-start gap-5">
-      <div className="flex min-w-0 flex-col gap-4 border-r border-border/50 pr-5">
-        <div className="flex flex-nowrap gap-3 items-start">
-          {r.ppCPR && (
-            <div className="min-w-[130px]">
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">PDay-1 CPR</p>
-              <div className="rounded-lg border border-border bg-card/40 px-3 py-2 font-mono space-y-1.5">
-                <div className="flex justify-between gap-4 text-xs">
-                  <span style={{ color: "#6b7280" }}>TC:</span>
-                  <span style={{ color: "#9ca3af" }}>{fmt(r.ppCPR.tc)}</span>
-                </div>
-                <div className="flex justify-between gap-4">
-                  <span className="text-xs" style={{ color: "#6b7280" }}>Pivot</span>
-                  <span className="font-bold text-sm" style={{ color: "#d1d5db" }}>{fmt(r.ppCPR.pivot)}</span>
-                </div>
-                <div className="flex justify-between gap-4 text-xs">
-                  <span style={{ color: "#6b7280" }}>BC:</span>
-                  <span style={{ color: "#9ca3af" }}>{fmt(r.ppCPR.bc)}</span>
-                </div>
-              </div>
-            </div>
-          )}
-          <div className="min-w-[130px]">
-            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">Prev Day CPR</p>
-            <div className="rounded-lg border border-border bg-card/60 px-3 py-2 font-mono space-y-1.5">
-              <div className="flex justify-between gap-4 text-xs">
-                <span style={{ color: "#6b7280" }}>TC:</span>
-                <span style={{ color: "#9ca3af" }}>{fmt(r.prevCPR.tc)}</span>
-              </div>
-              <div className="flex justify-between gap-4">
-                <span className="text-xs" style={{ color: "#6b7280" }}>Pivot</span>
-                <span className="font-bold text-sm" style={{ color: "#d1d5db" }}>{fmt(r.prevCPR.pivot)}</span>
-              </div>
-              <div className="flex justify-between gap-4 text-xs">
-                <span style={{ color: "#6b7280" }}>BC:</span>
-                <span style={{ color: "#9ca3af" }}>{fmt(r.prevCPR.bc)}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="flex flex-nowrap gap-3 items-start">
-          <div className="min-w-[130px]">
-            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">Today CPR</p>
-            <div className="rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 font-mono space-y-1.5">
-              <div className="flex justify-between gap-4 text-xs">
-                <span style={{ color: "#6b7280" }}>TC:</span>
-                <span style={{ color: "#9ca3af" }}>{fmt(r.todayCPR.tc)}</span>
-              </div>
-              <div className="flex justify-between gap-4">
-                <span className="text-xs" style={{ color: "#6b7280" }}>Pivot</span>
-                <span className="font-bold text-sm" style={{ color: "#ffffff" }}>{fmt(r.todayCPR.pivot)}</span>
-              </div>
-              <div className="flex justify-between gap-4 text-xs">
-                <span style={{ color: "#6b7280" }}>BC:</span>
-                <span style={{ color: "#9ca3af" }}>{fmt(r.todayCPR.bc)}</span>
-              </div>
-            </div>
-          </div>
-          {(() => {
-            const r4Gap = Math.abs(r.todayCPR.r4 - r.prevCPR.r4);
-            const s4Gap = Math.abs(r.todayCPR.s4 - r.prevCPR.s4);
-            const r4d = (r as any).r4Distance as number | undefined;
-            const s4d = (r as any).s4Distance as number | undefined;
-            if (r4d == null || s4d == null || !isFinite(r4d) || !isFinite(s4d)) return null;
-            const maxD = Math.max(r4d, s4d);
-            const diffPct = maxD > 0 ? ((r4d - s4d) / maxD) * 100 : 0;
-            const diffColor =
-              diffPct > 0 ? "text-green-400" : diffPct < 0 ? "text-orange-400" : "text-muted-foreground";
-            return (
-              <div className="min-w-[130px]">
-                <div
-                  className="rounded-lg border border-border bg-card/60 px-3 py-2 font-mono space-y-1"
-                  title={`Normalized: U4Δ ${r4d.toFixed(2)}× vs L4Δ ${s4d.toFixed(2)}× of prev CPR width`}
-                >
-                  <div className="flex items-center gap-1 text-xs text-chart-3">
-                    <span className="text-muted-foreground">U4Gap:</span>
-                    <span>{fmt(r4Gap)}</span>
-                  </div>
-                  <div className={`text-xs font-semibold ${diffColor}`}>
-                    {diffPct >= 0 ? "+" : ""}
-                    {diffPct.toFixed(2)}%
-                    <div className="w-full bg-muted rounded-full h-1 mt-0.5">
-                      <div
-                        className={`h-1 rounded-full transition-all ${
-                          diffPct > 0 ? "bg-green-400" : diffPct < 0 ? "bg-orange-400" : "bg-muted-foreground"
-                        }`}
-                        style={{ width: `${Math.min(Math.abs(diffPct), 100)}%` }}
-                      />
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1 text-xs text-chart-3/70">
-                    <span className="text-muted-foreground">L4Gap:</span>
-                    <span>{fmt(s4Gap)}</span>
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
-        </div>
+    <div className="grid min-w-[920px] grid-cols-[minmax(260px,300px)_repeat(3,180px)] items-start gap-5">
+      <div className="min-w-0 border-r border-border/50 pr-5">
+        <CPRLevelChart prevCPR={r.prevCPR} todayCPR={r.todayCPR} />
       </div>
+      <SRLadder cpr={r.todayCPR} currentPrice={r.currentPrice} label="Today S/R" badge={todayPatternBadge} />
+      <SRLadder cpr={r.prevCPR} currentPrice={r.currentPrice} label="PrevDay S/R" badge={prevPatternBadge} />
       {r.ppCPR ? (
         <SRLadder cpr={r.ppCPR} currentPrice={r.currentPrice} label="PDay-1 S/R" badge={pDay1PatternBadge} />
       ) : (
         <div aria-hidden="true" />
       )}
-      <SRLadder cpr={r.prevCPR} currentPrice={r.currentPrice} label="PrevDay S/R" badge={prevPatternBadge} />
-      <SRLadder cpr={r.todayCPR} currentPrice={r.currentPrice} label="Today S/R" badge={todayPatternBadge} />
     </div>
   );
 }
@@ -305,3 +342,4 @@ export function SRLadderRow({
     </tr>
   );
 }
+
