@@ -174,7 +174,7 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "L2 (today's S2)",
     getTarget: (r) => r.todayCPR.s2,
   },
-  // NEW: "RHLB-RRHHGap" — added only so it can be listed as its own entry
+  // NEW: "RHLB-RRHHpGap" — added only so it can be listed as its own entry
   // in the Backtest dropdown (not exposed in Screener/left-nav/legend).
   // Same condition and target as its 9AM:RHLB-RRHH:5AM sibling, plus
   // SSRRCategory RRSS-C + SSLLCategory SSLL-C + prevCPR.HLSwitch HL-A with
@@ -182,8 +182,8 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
   // ScreenerUtils.tsx. Bearish, same target as its sibling: today's own
   // S2 (L2).
   {
-    key: "RHLB-RRHHGap",
-    label: "RHLB-RRHHGap",
+    key: "RHLB-RRHHpGap",
+    label: "RHLB-RRHHpGap",
     direction: "bearish",
     targetLabel: "L2 (today's S2)",
     getTarget: (r) => r.todayCPR.s2,
@@ -580,15 +580,25 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
   {
     key: "compressed",
     label: "COMPRESSED",
-    // NEW: "RHLB-RRHHGap" added alongside its "9AM:RHLB-RRHH:5AM" sibling
-    // — same style as the "RRHH-BB:SSLL-AA:SSLLGap" Pattern arrow below
-    // (a dropdown-only entry, not surfaced in Screener/left-nav/legend).
-    subPatternKeys: ["8A:HLC-SSHH:S4-1P", "9AM:RHLB-RRHH:5AM", "RHLB-RRHHGap"],
+    subPatternKeys: ["8A:HLC-SSHH:S4-1P", "9AM:RHLB-RRHH:5AM"],
     patterns: [
       {
         key: "RRHH-BB:SSLL-AA:SSLLGap",
         label: "RRHH-BB:SSLL-AA:SSLLGap",
         subPatternKeys: ["6A:HLC-SSLL:R4-6P"],
+      },
+      // NEW: "RHLB-RRHHpGap" Pattern (arrow) — same shape as its
+      // "RRHH-BB:SSLL-AA:SSLLGap" sibling above: base condition = parent
+      // "compressed" category's condition AND the raw RHLB-RRHHpGap flag
+      // (see matchesPatternFlag in ScreenerUtils.tsx). Nests its own
+      // "RHLB-RRHHpGap" View (the full graded pattern, incl. r.compressed
+      // — see passesPattern in ScreenerUtils.tsx / BACKTEST_TARGETS
+      // above), so it shows an arrow with a single dot inside, not a bare
+      // dot on the category itself.
+      {
+        key: "RHLB-RRHHpGap",
+        label: "RHLB-RRHHpGap",
+        subPatternKeys: ["RHLB-RRHHpGap"],
       },
     ],
   },

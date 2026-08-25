@@ -863,16 +863,17 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.HHLLCategory === "HHLL-B" &&
         r.PDHPDLGapCategory === "HHGap"
       );
-    // NEW: "RHLB-RRHHGap" — sibling of "9AM:RHLB-RRHH:5AM", added only so
-    // the Backtest dropdown can list it as its own entry under
-    // "COMPRESSED" (not exposed in Screener/left-nav/legend). Same base
-    // condition as its 9AM:RHLB-RRHH:5AM sibling (compressed +
+    // NEW: "RHLB-RRHHpGap" — View nested under the "RHLB-RRHHpGap"
+    // Pattern arrow (see BACKTEST_CATEGORIES in backtest.ts and its
+    // matchesPatternFlag raw-flag case below), not a bare dot on
+    // "COMPRESSED" itself and not exposed in Screener/left-nav/legend.
+    // Same base condition as the "9AM:RHLB-RRHH:5AM" View (compressed +
     // RRSSGapCategory RRGap + RRHHCategory RRHH-BB + HHLLCategory HHLL-B +
     // PDHPDLGapCategory HHGap) PLUS: SSRRCategory RRSS-C + SSLLCategory
     // SSLL-C + prevCPR.HLSwitch HL-A with hlGapWinner "prev" (pHLGap-A) +
-    // todayCPR.HLSwitch HL-A. Bearish, same target as its sibling: today's
+    // todayCPR.HLSwitch HL-A. Bearish, same target as that sibling: today's
     // own S2 (L2).
-    case "RHLB-RRHHGap":
+    case "RHLB-RRHHpGap":
       return (
         r.compressed &&
         r.RRSSGapCategory === "RRGap" &&
@@ -1424,6 +1425,26 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
         r.RRHHCategory === "RRHH-BB" &&
         r.RRSSGapCategory === "SSGap" &&
         r.PDHPDLGapCategory === "LLGap"
+      );
+    // NEW: RHLB-RRHHpGap — Pattern raw flag for the Backtest dropdown's
+    // Pattern-level (arrow) selection nested under "COMPRESSED", same
+    // shape as its RRHH-BB:SSLL-AA:SSLLGap sibling above. Same compound
+    // condition as its View-level case in passesPattern above, minus
+    // r.compressed (the parent "compressed" category condition already
+    // covers that): RRGap + RRHH-BB + HHLL-B + HHGap + RRSS-C + SSLL-C +
+    // prevCPR.HLSwitch HL-A with hlGapWinner "prev" (pHLGap-A) +
+    // todayCPR.HLSwitch HL-A.
+    case "RHLB-RRHHpGap":
+      return (
+        r.RRSSGapCategory === "RRGap" &&
+        r.RRHHCategory === "RRHH-BB" &&
+        r.HHLLCategory === "HHLL-B" &&
+        r.PDHPDLGapCategory === "HHGap" &&
+        r.SSRRCategory === "RRSS-C" &&
+        r.SSLLCategory === "SSLL-C" &&
+        r.prevCPR.HLSwitch === "HL-A" &&
+        r.hlGapWinner === "prev" &&
+        r.todayCPR.HLSwitch === "HL-A"
       );
     default: return getPatternInfo(r)?.label === label;
   }
