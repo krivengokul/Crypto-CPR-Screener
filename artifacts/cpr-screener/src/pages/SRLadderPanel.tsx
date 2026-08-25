@@ -101,7 +101,7 @@ export function SRLadder({
 
   const rowColor = (key: string) => {
     if (key === "TC")
-      return "text-amber-400 font-semibold bg-amber-500/5";
+      return "text-[#FF5F1F] font-semibold bg-[#FF5F1F]/5";
     if (key === "Pivot")
       return "text-yellow-300 font-semibold bg-yellow-500/5";
     if (key === "BC")
@@ -171,7 +171,7 @@ function levelLabel(key: (typeof LEVEL_KEYS)[number]): string {
 
 /** Same color coding as SRLadder's rowColor, expressed as hex for SVG stroke/fill. */
 function levelColor(key: (typeof LEVEL_KEYS)[number]): string {
-  if (key === "tc") return "#f97316"; // orange-500
+  if (key === "tc") return "#FF5F1F";
   if (key === "pivot") return "#fde047"; // yellow-300
   if (key === "bc") return "#FF00FF"; // fuchsia
   if (key === "prevHigh") return "#38bdf8"; // sky-400
