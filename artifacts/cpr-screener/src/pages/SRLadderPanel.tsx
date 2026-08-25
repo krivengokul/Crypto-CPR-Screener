@@ -209,9 +209,9 @@ function declutterLabelPositions(
  * Plots the Prev Day and Today CPR ladders as horizontal lines on a shared
  * price axis (no live price, no candles) so the two days' R/S/PH/PL/CPR
  * levels can be compared at a glance, using the same color coding as the
- * S/R ladders. Today's levels are solid + labeled; Prev Day's levels are
- * dashed reference lines (exact Prev Day values are already in the
- * "PrevDay S/R" ladder alongside this chart).
+ * S/R ladders. The middle band (PH through S1) is expanded vertically
+ * because those levels are usually tightly clustered; the outer R/S levels
+ * retain their own compact bands so their ordering remains visible too.
  */
 function CPRLevelChart({
   prevCPR,
@@ -238,18 +238,54 @@ function CPRLevelChart({
   const pad = (max - min) * 0.08 || Math.abs(max) * 0.01 || 1;
   const domainMin = min - pad;
   const domainMax = max + pad;
-  const yFor = (v: number) =>
-    height - ((v - domainMin) / (domainMax - domainMin)) * height;
+  // A linear scale makes the important middle levels nearly indistinguishable
+  // when R2-R4 and S2-S4 are far away. Allocate most of the chart height to
+  // PH, R1, TC, Pivot, BC, PL and S1, while keeping the outer levels visible.
+  const focusKeys = LEVEL_KEYS.slice(3, 10);
+  const focusValues = focusKeys.flatMap((k) => [
+    prevCPR[k as keyof CPRLevels] as number,
+    todayCPR[k as keyof CPRLevels] as number,
+  ]);
+  const focusMin = Math.min(...focusValues);
+  const focusMax = Math.max(...focusValues);
+  const focusPad =
+    (focusMax - focusMin) * 0.12 ||
+    (max - min) * 0.02 ||
+    Math.abs(focusMax) * 0.01 ||
+    1;
+  const focusDomainMin = focusMin - focusPad;
+  const focusDomainMax = focusMax + focusPad;
+  const topBand = height * 0.22;
+  const middleBand = height * 0.56;
+  const bottomBand = height - topBand - middleBand;
+
+  const yFor = (v: number) => {
+    if (v >= focusDomainMax) {
+      const ratio =
+        (v - focusDomainMax) / (domainMax - focusDomainMax || 1);
+      return Math.max(0, topBand * (1 - ratio));
+    }
+    if (v <= focusDomainMin) {
+      const ratio =
+        (focusDomainMin - v) / (focusDomainMin - domainMin || 1);
+      return Math.min(height, topBand + middleBand + bottomBand * ratio);
+    }
+    return (
+      topBand +
+      ((focusDomainMax - v) / (focusDomainMax - focusDomainMin || 1)) *
+        middleBand
+    );
+  };
 
   // Text at fontSize 8/9 needs roughly 9-10px of vertical room to avoid
   // clashing (see the overlapping P-TC/P-BC/etc. labels this fixes).
   const prevLabelY = declutterLabelPositions(
     LEVEL_KEYS.map((k) => ({ key: k, y: yFor(prevCPR[k as keyof CPRLevels] as number) })),
-     9
+    10
   );
   const todayLabelY = declutterLabelPositions(
     LEVEL_KEYS.map((k) => ({ key: k, y: yFor(todayCPR[k as keyof CPRLevels] as number) })),
-     10
+    11
   );
 
   return (
