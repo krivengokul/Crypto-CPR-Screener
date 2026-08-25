@@ -51,8 +51,8 @@ export const Views: Record<string, SubPattern[]> = {
       activeText:  "#4ade80",      // green-400 text
       activeBg:    "rgba(34, 197, 94, 0.14)",
     },
-    { id: "OBN-LoU4L4-U4",           label: "OBN-LoU4L4-U4" },
-    { id: "OBW-LoU4L4-L4",           label: "OBW-LoU4L4-L4" },
+    { id: "OBN-L4U4-U4",           label: "OBN-L4U4-U4" },
+    { id: "OBW-L4U4-L4",           label: "OBW-L4U4-L4" },
     // NEW: 2PM:SSLLpRRHHA-ApU4:5PM — Overlap Below + SSLLAbove (today's S1
     // AND today's PDL both above the higher of prev's S1/PDL) + HHRRBelow
     // (today's R1 AND today's PDH both below the lower of prev's R1/PDH)
@@ -92,7 +92,7 @@ export const Views: Record<string, SubPattern[]> = {
       activeBg: "rgba(34, 197, 94, 0.14)",
     },
     // NEW: 7PM:MoMi->U4:2AM — LEVELS ABOVE + prev day's own pivot sub-label
-    // p-cOL1U1 + today's Pattern eXL4U2 + prev CPR pMicro + today CPR Mini
+    // p-CU1L1 + today's Pattern EU2L4 + prev CPR pMicro + today CPR Mini
     // + both prev and today PDL below their respective L1s. Cyan color
     // family to visually distinguish it from its 6PM:HHLLA-RRHHGap:6AM sibling.
     {
@@ -103,7 +103,7 @@ export const Views: Record<string, SubPattern[]> = {
       activeBg:    "rgba(6, 182, 212, 0.14)",
     },
     // NEW: 7PM:MoMi-<L4:2AM — bearish sibling of 7PM:MoMi->U4:2AM, same
-    // p-cOL1U1 + eXL4U2 + pMicro/Mini base, but splits on todayCPR.PDL <
+    // p-CU1L1 + EU2L4 + pMicro/Mini base, but splits on todayCPR.PDL <
     // prevCPR.pivot instead. Targets today's own L4 (S4) by ~2AM. Rose
     // color family to visually flag it as the downtrend/bearish sibling.
     {
@@ -113,9 +113,9 @@ export const Views: Record<string, SubPattern[]> = {
       activeText:  "#fda4af",      // rose-300 text
       activeBg:    "rgba(244, 63, 94, 0.14)",
     },
-    // NEW: 6PM:APHS1A-FAU4:9PM — LEVELS ABOVE + Pattern eXL4U2 + the PREVIOUS
-    // day's own pivot sub-label (prevCPR vs ppCPR) being eXL4U3
-    // ("p-eXL4U3" badge) + today's BC above prev day's own PDH
+    // NEW: 6PM:APHS1A-FAU4:9PM — LEVELS ABOVE + Pattern EU2L4 + the PREVIOUS
+    // day's own pivot sub-label (prevCPR vs ppCPR) being EU3L4
+    // ("p-EU3L4" badge) + today's BC above prev day's own PDH
     // (todayCPR.bc > prevCPR.prevHigh) + today's S1 above prev day's TC
     // (todayCPR.s1 > prevCPR.tc). Bullish, entry ~6PM, targets Far Above
     // U4 by ~9PM. Green color family, same as its 6PM:HHLLA-RRHHGap:6AM
@@ -127,7 +127,7 @@ export const Views: Record<string, SubPattern[]> = {
       activeText:  "#4ade80",      // green-400 text
       activeBg:    "rgba(34, 197, 94, 0.14)",
     },
-    // NEW: 9AM:pPALPApH-FAU4:2PM — LEVELS ABOVE + Pattern HiL3U4 + prev day's
+    // NEW: 9AM:pPALPApH-FAU4:2PM — LEVELS ABOVE + Pattern U4L3 + prev day's
     // own Pivot above today's PDL (prevCPR.pivot > todayCPR.prevLow) +
     // today's own Pivot above today's own PDH (todayCPR.pivot >
     // todayCPR.prevHigh). Bullish, entry ~9AM, targets Far Above U4 by
@@ -193,7 +193,7 @@ export const Views: Record<string, SubPattern[]> = {
       activeText:  "#4ade80",              // green-400 text
       activeBg:    "rgba(34, 197, 94, 0.14)",
     },
-    // NEW: 11AM:pCPR1AHi-FApU4:1PM — LEVELs BELOW + LoU3L4 + HHLLBelow
+    // NEW: 11AM:pCPR1AHi-FApU4:1PM — LEVELs BELOW + L4U3 + HHLLBelow
     // (today's PDH at/below prev day's PDH AND today's PDL below prev
     // day's PDL). Bullish, targets Far Above pU4 (prev day's R4) by ~1PM.
     // Same green color family as its BC>pPDL-U3:5AM / PDH>pTC-U4:5AM
@@ -273,7 +273,7 @@ export const Views: Record<string, SubPattern[]> = {
       activeText:  "#4ade80",              // green-400 text
       activeBg:    "rgba(34, 197, 94, 0.14)",
     },
-    // NEW: 8AM:SRBHHLLA-pU4+1:8AM — Inside CPR + cOL3U3 + prev CPR width
+    // NEW: 8AM:SRBHHLLA-pU4+1:8AM — Inside CPR + CU3L3 + prev CPR width
     // category pLarge (2.00%-5.00%) + today CPR width category Medium
     // (1.10%-2.00%) + prev day's own PDL below prev S1 (p-PDL<L1) + today's
     // PDH above today's R1 (PDH>U1) + prev R1 above today R1 + prev S1
@@ -288,7 +288,7 @@ export const Views: Record<string, SubPattern[]> = {
       activeText:  "#4ade80",              // green-400 text
       activeBg:    "rgba(34, 197, 94, 0.14)",
     },
-    // NEW: 2PM:pPDHLA-SRA-U4:7PM — Inside CPR + cOL4U4 + prev CPR width
+    // NEW: 2PM:pPDHLA-SRA-U4:7PM — Inside CPR + CU4L4 + prev CPR width
     // category pLarge (2.00%-5.00%) + today CPR width category Large
     // (2.00%-5.00%) + prev day's PDH above prev R1 (p-PDH>U1) + today's PDL
     // below today's S1 (PDL<L1) + today R1 above prev R1 + today S1 above
@@ -302,7 +302,7 @@ export const Views: Record<string, SubPattern[]> = {
       activeText:  "#4ade80",              // green-400 text
       activeBg:    "rgba(34, 197, 94, 0.14)",
     },
-    // NEW: 8AM:pPDHA-SRA-U4+2:2AM — Inside CPR + raw eXL4U4 flag (prev R4
+    // NEW: 8AM:pPDHA-SRA-U4+2:2AM — Inside CPR + raw EU4L4 flag (prev R4
     // inside today's R3/R4, prev S4 inside today's S3/S4) + today's
     // SSRRAbove (today's R1 above prev R1 AND today's S1 held at/above prev
     // S1) + prev day's PDH above today's PDH + prev day's PDL above
@@ -322,7 +322,7 @@ export const Views: Record<string, SubPattern[]> = {
     { id: "9AM:APHS1A-FAU4:4AM", label: "9AM:APHS1A-FAU4:4AM",
       activeColor: "#22c55e", activeText: "#4ade80", activeBg: "rgba(34,197,94,0.18)" },
     // NEW: 6AM:pX-APHS1A-pL4:4AM — same condition as 9AM:APHS1A-FAU4:4AM plus
-    // the prev day's own pattern being p-eXL4U3. Bearish, targets pL4
+    // the prev day's own pattern being p-EU3L4. Bearish, targets pL4
     // (prev day's S4) by ~4AM. Red color family.
     {
       id: "6AM:pX-APHS1A-pL4:4AM",
@@ -331,7 +331,7 @@ export const Views: Record<string, SubPattern[]> = {
       activeText:  "#fca5a5",              // red-300 text
       activeBg:    "rgba(239, 68, 68, 0.14)",
     },
-    // NEW: 8AM:APHS1A-FAU4:4AM — U1>pU4 + Pattern eXL3U1 (same "eXL3U1"
+    // NEW: 8AM:APHS1A-FAU4:4AM — U1>pU4 + Pattern EU1L3 (same "EU1L3"
     // Pattern sub-category as 9AM:APHS1A-FAU4:4AM above) + today's BC above
     // prev day's own PDH + today's S1 above prev day's TC. Bullish,
     // targets Far Above U4 (today's R4) by ~4AM. Same green color family
@@ -343,17 +343,17 @@ export const Views: Record<string, SubPattern[]> = {
       activeText:  "#4ade80",              // green-400 text
       activeBg:    "rgba(34, 197, 94, 0.14)",
     },
-    // NEW: TiMe-eXL3TC-AU4:2PM — pTiny prev CPR + Mega today CPR +
-    // Pattern eXL3TC. Violet color family to visually distinguish it
+    // NEW: TiMe-EUTL3-AU4:2PM — pTiny prev CPR + Mega today CPR +
+    // Pattern EUTL3. Violet color family to visually distinguish it
     // from its U1>pU4 sibling.
     {
-      id: "TiMe-eXL3TC-AU4:2PM",
-      label: "TiMe-eXL3TC-AU4:2PM",
+      id: "TiMe-EUTL3-AU4:2PM",
+      label: "TiMe-EUTL3-AU4:2PM",
       activeColor: "#a78bfa",              // violet-400 border
       activeText:  "#c4b5fd",              // violet-300 text
       activeBg:    "rgba(139, 92, 246, 0.14)", // violet-500 tint
     },
-    // NEW: SMg-exHiL2L1-U4:3AM — U1>pU4 + Pattern eXHiL2L1. Target U4 @ 3AM.
+    // NEW: SMg-exHiL2L1-U4:3AM — U1>pU4 + Pattern EL1L2. Target U4 @ 3AM.
     {
       id: "SMg-exHiL2L1-U4:3AM",
       label: "SMg-exHiL2L1-U4:3AM",
@@ -361,7 +361,7 @@ export const Views: Record<string, SubPattern[]> = {
       activeText:  "#7dd3fc",              // sky-300 text
       activeBg:    "rgba(56, 189, 248, 0.14)",
     },
-    // NEW: 6AM:MegMeg-L3:8PM — U1>pU4 + Pattern eXL4U1 + pMega (prev CPR
+    // NEW: 6AM:MegMeg-L3:8PM — U1>pU4 + Pattern EU1L4 + pMega (prev CPR
     // width Mega, 5.00%-10.00%) + Mega (today's CPR width Mega,
     // 5.00%-10.00%). Bearish, targets L3 (today's S3) by ~8PM. Red color
     // family, same as its 6AM:pX-APHS1A-pL4:4AM sibling.
@@ -375,8 +375,8 @@ export const Views: Record<string, SubPattern[]> = {
   ],
   "S1BelowPS4": [
     {
-      id: "ss-eXU4L1-U4:10PM",
-      label: "ss-eXU4L1-U4:10PM",
+      id: "ss-EL1U4-U4:10PM",
+      label: "ss-EL1U4-U4:10PM",
       activeColor: "#22c55e",              // green-500 border
       activeText:  "#4ade80",              // green-400 text
       activeBg:    "rgba(34, 197, 94, 0.14)",

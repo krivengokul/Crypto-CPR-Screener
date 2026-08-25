@@ -684,8 +684,8 @@ export default function Screener({
       // of EU4L4 gated on srExpandedLower instead of srExpandedHigher
       // (see doc-comments in cpr.ts / ScreenerUtils.tsx).
       if (PatternFilter === "EL4U4") return r.EL4U4;
-      // NEW: U4L4= — today R4 == prev R4 AND today S4 == prev S4 (cpr.ts).
-      if (PatternFilter === "U4L4=") return r.U4L4=;
+      // NEW: QU4L4 — today R4 == prev R4 AND today S4 == prev S4 (cpr.ts).
+      if (PatternFilter === "QU4L4") return r.QU4L4;
       if (PatternFilter === "EU3L3") return r.EU3L3;
       if (PatternFilter === "EL3U3") return r.EL3U3;
       // NEW: U4L4 — independent, section-agnostic Pattern flag,
@@ -973,8 +973,8 @@ export default function Screener({
           showExpU4PU4={showExpU4PU4}
           showExpU3PU3={showExpU3PU3}
           showOBLoRRHHLLA={showOBLoRRHHLLA}
-          showOBNLoU4L4={showOBNLoU4L4}
-          showOBWLoU4L4={showOBWLoU4L4}
+          showOBNLoQU4L4{showOBNLoU4L4}
+          showOBWLoQU4L4{showOBWLoU4L4}
         />
         )}
 
@@ -1323,7 +1323,7 @@ export default function Screener({
                   { label: "L4U4", active: "border-lime-400 text-lime-400" },
                   { label: "EU4L4", active: "border-pink-400 text-pink-400" },
                   { label: "EL4U4", active: "border-red-400 text-red-400" },
-                  { label: "U4L4=", active: "border-slate-400 text-slate-300" },
+                  { label: "QU4L4", active: "border-slate-400 text-slate-300" },
                   { label: "U4L2", active: "border-cyan-400 text-cyan-400" },
                   { label: "U3L2", active: "border-blue-400 text-blue-400" },
                   { label: "U4L3", active: "border-lime-400 text-lime-400" },

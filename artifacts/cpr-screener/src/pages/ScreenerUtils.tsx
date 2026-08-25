@@ -1232,7 +1232,7 @@ export function getRowDirection(r: CPRResult, activeView: string): "up" | "down"
  * its own second-row badge, checking the raw flag directly.
  */
 export interface PatternInfo {
-  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "CL4U3" | "L4U4" | "EU3L4" | "EU4L4" | "EL4U4" | "U4L4=" | "U4L4" | "U3L4" | "U2L4" | "U1L4" | "U3L2" | "CU3L2" | "CU3L3" | "EL2U4" | "EL3U4" | "CU4L2" | "EU3L3" | "EU1L2" | "EU1L3" | "EU1L4" | "EUBL1" | "EUPL1" | "EUTL1" | "EUBL2" | "EUBL3" | "EUPL3" | "EUTL3" | "EU2L4" | "EU2L2" | "EUTL2" | "EU1L1" | "EL1U1" | "EL1U2" | "CL2UT" | "EL1U3" | "EL2U3" | "ELTU2" | "ELBU2" | "ELTU3" | "ELPU2" | "ELPU3" | "ELBU3" | "EL1U4" | "ELBU4" | "CL1U1" | "CU1L1" | "CL2U2" | "CU2L2" | "CL2U1" | "CL4U4" | "EU2L3" | "L3CP" | "L2CP" | "L3TC" | "EL1L2" | "EL2L1" | "EUPL2" | "EUTL4" | "L2U3" | "CU2L1" | "CU3L1" | "U2L3" | "Lower";
+  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "CL4U3" | "L4U4" | "EU3L4" | "EU4L4" | "EL4U4" | "QU4L4" | "U4L4" | "U3L4" | "U2L4" | "U1L4" | "U3L2" | "CU3L2" | "CU3L3" | "EL2U4" | "EL3U4" | "CU4L2" | "EU3L3" | "EU1L2" | "EU1L3" | "EU1L4" | "EUBL1" | "EUPL1" | "EUTL1" | "EUBL2" | "EUBL3" | "EUPL3" | "EUTL3" | "EU2L4" | "EU2L2" | "EUTL2" | "EU1L1" | "EL1U1" | "EL1U2" | "CL2UT" | "EL1U3" | "EL2U3" | "ELTU2" | "ELBU2" | "ELTU3" | "ELPU2" | "ELPU3" | "ELBU3" | "EL1U4" | "ELBU4" | "CL1U1" | "CU1L1" | "CL2U2" | "CU2L2" | "CL2U1" | "CL4U4" | "EU2L3" | "L3CP" | "L2CP" | "L3TC" | "EL1L2" | "EL2L1" | "EUPL2" | "EUTL4" | "L2U3" | "CU2L1" | "CU3L1" | "U2L3" | "Lower";
   classes: string;
 }
 
@@ -1322,7 +1322,7 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     // srExpandedLower instead of srExpandedHigher). Screener.tsx renders
     // it as its own Pattern-flag filter chip, same as EU4L4.
     case "EL4U4": return r.EL4U4;
-    case "U4L4=": return r.U4L4=;
+    case "QU4L4": return r.QU4L4;
     case "U4L4": return r.U4L4;
     case "U3L4": return r.U3L4;
     case "U2L4": return r.U2L4;

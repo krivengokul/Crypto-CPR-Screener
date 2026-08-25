@@ -71,8 +71,8 @@ export interface CPRPairFlags {
   CU3L3: boolean;
   EU4L4: boolean;
   EL4U4: boolean;
-  /** U4L4= — today's R4 equals prev's R4 AND today's S4 equals prev's S4 (within eqTol). */
-  U4L4=: boolean;
+  /** QU4L4 — today's R4 equals prev's R4 AND today's S4 equals prev's S4 (within eqTol). */
+  QU4L4: boolean;
   /** InsideCPR — today's CPR band sits strictly inside prev day's CPR band. */
   InsideCPR: boolean;
   U3L4: boolean;
@@ -320,8 +320,8 @@ export interface CPRResult {
   CU3L3: boolean;
   EU4L4: boolean;
   EL4U4: boolean;
-  /** U4L4= — today's R4 equals prev's R4 AND today's S4 equals prev's S4 (within eqTol). */
-  U4L4=: boolean;
+  /** QU4L4 — today's R4 equals prev's R4 AND today's S4 equals prev's S4 (within eqTol). */
+  QU4L4: boolean;
   /** InsideCPR — today's CPR band sits strictly inside prev day's CPR band. */
   InsideCPR: boolean;
   U4L2: boolean;
@@ -670,9 +670,9 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
   const CL3U3   = (today.s4 >= prev.s3 && today.s4 < prev.s2) &&
                    (today.r4 > prev.r2 && today.r4 < prev.r3) && srCompressedLower;
 
-  // U4L4= — exact (within eqTol) day-over-day tie on BOTH outer levels:
+  // QU4L4 — exact (within eqTol) day-over-day tie on BOTH outer levels:
   // today's R4 == prev's R4 and today's S4 == prev's S4.
-  const U4L4= = eqTol(today.r4, prev.r4) && eqTol(today.s4, prev.s4);
+  const QU4L4 = eqTol(today.r4, prev.r4) && eqTol(today.s4, prev.s4);
 
   // InsideCPR — today's CPR band is contained inside prev day's CPR band
   // (single source of truth; ScreenerUtils reuses r.InsideCPR).
@@ -1038,7 +1038,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
     srHigher, srLower, srExpanded, srCompressed,
     srCompressedHigher, srCompressedLower, srExpandedHigher, srExpandedLower,
     r1DirVsPrev, s1DirVsPrev,
-    CL4U3, CU3L2, CU3L3, EU4L4, EL4U4, U4L4=, InsideCPR, U3L4, U2L4, U4L2, U3L2, U4L3, U4L4, U1L4,
+    CL4U3, CU3L2, CU3L3, EU4L4, EL4U4, QU4L4, InsideCPR, U3L4, U2L4, U4L2, U3L2, U4L3, U4L4, U1L4,
     L4U4, EU3L4, EL2U4, EL3U4, CU4L2, CU4L4, CL4U4, EU2L3,
     CU4L3, CL3U3, L4U3, L3U3, CL3U2, L4U2, L3U2, L3U4, L2U4,
     L1U4, CL2U1, CL4U2, EU3L3, EL3U3,
@@ -1060,7 +1060,7 @@ export function pickPattern(f: CPRPairFlags): string | null {
   if (f.CL4U3)    return "CL4U3";
   if (f.CU3L2)  return "CU3L2";
   if (f.CU3L3)  return "CU3L3";
-  if (f.U4L4=)    return "U4L4=";
+  if (f.QU4L4)    return "QU4L4";
   if (f.EU4L4)    return "EU4L4";
   if (f.EL4U4)    return "EL4U4";
   if (f.U3L4)   return "U3L4";
@@ -1176,13 +1176,17 @@ export type PatternCategory = "cOHigher" | "cOLower" | "eXHigher" | "eXLower" | 
  *  - `EL1L2` and `EL2L1` start with "eX", not "Hi"/"Lo" — the
  *    Hi/Lo in their names refers to the PDL-vs-prev-Pivot split described
  *    in cpr.ts, not the Higher/Lower category. Neither starts with "eXU",
- *    so both are categorized here as "eXHigher".
+ *    but both are categorized here as "eXLower" as a deliberate override
+ *    of the name-prefix rule.
+ *  - `CL2UT` doesn't start with "cOU" (it's a `cOTCL2`-derived name), but
+ *    is categorized here as "cOLower" as a deliberate override of the
+ *    name-prefix rule.
  *
  * Flags that don't carry a cO/eX/Hi/Lo prefix (srHigher/srLower/srExpanded/
  * srCompressed and their *Higher/*Lower variants, r4Distance, s4Distance,
- * L1pU1Above (now compressed), expanded, pCPR1Above (now LevelsBelow), LevelsAbove) are intentionally excluded — they're
- * aggregate/directional signals, not named band-classification patterns,
- * so they don't belong in a prefix-based category map.
+ * L1pU1Above (now compressed), expanded, pCPR1Above (now LevelsBelow), LevelsAbove,
+ * QU4L4) are intentionally excluded — they're aggregate/directional signals
+ * or otherwise don't belong in a prefix-based category map.
  */
 export const PATTERN_CATEGORY: Record<string, PatternCategory> = {
   // ---- Compressed: cOLower (name starts with "cOU") ----
@@ -1195,6 +1199,7 @@ export const PATTERN_CATEGORY: Record<string, PatternCategory> = {
   CL1U1: "cOLower",
   CL2U2: "cOLower",
   CL3U1: "cOLower",
+  CL2UT: "cOLower",
 
   // ---- Compressed: cOHigher (remaining cO...) ----
   CU3L2: "cOHigher",
@@ -1204,7 +1209,6 @@ export const PATTERN_CATEGORY: Record<string, PatternCategory> = {
   CU4L3: "cOHigher",
   CU1L1: "cOHigher",
   CU2L2: "cOHigher",
-  CL2UT: "cOHigher",
   CU2L1: "cOHigher",
   CU3L1: "cOHigher",
 
@@ -1225,6 +1229,8 @@ export const PATTERN_CATEGORY: Record<string, PatternCategory> = {
   ELBU3: "eXLower",
   EL1U4: "eXLower",
   ELBU4: "eXLower",
+  EL1L2: "eXLower", // name contains "Hi" but prefix is "eX" — see note above
+  EL2L1: "eXLower", // name contains "Lo" but prefix is "eX" — see note above
 
   // ---- Expanded: eXHigher (remaining eX... / legacy EU2L3) ----
   EU4L4: "eXHigher",
@@ -1245,8 +1251,6 @@ export const PATTERN_CATEGORY: Record<string, PatternCategory> = {
   EU2L2: "eXHigher",
   EUTL2: "eXHigher",
   EU1L1: "eXHigher",
-  EL1L2: "eXHigher", // name contains "Hi" but prefix is "eX" — see note above
-  EL2L1: "eXHigher", // name contains "Lo" but prefix is "eX" — see note above
   EUPL2: "eXHigher",
   EUTL4: "eXHigher",
 
@@ -1260,7 +1264,6 @@ export const PATTERN_CATEGORY: Record<string, PatternCategory> = {
   U4L4: "Higher",
   U3L3: "Higher",
   U2L3: "Higher",
-  U4L4=: "Higher", // exact R4/S4 tie — lands in srHigher (see classifyCPRPair)
 
   // ---- Lower (Lo...) ----
   L4U4: "Lower",
