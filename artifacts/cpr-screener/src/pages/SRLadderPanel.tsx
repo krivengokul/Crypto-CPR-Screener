@@ -105,7 +105,7 @@ export function SRLadder({
     if (key === "Pivot")
       return "text-yellow-300 font-semibold bg-yellow-500/5";
     if (key === "BC")
-      return "text-pink-400 font-semibold bg-pink-500/5";
+      return "text-fuchsia-500 font-semibold bg-fuchsia-500/5";
     if (key === "PH")
       return "text-sky-400 font-medium bg-sky-500/5";
     if (key === "PL")
@@ -173,11 +173,11 @@ function levelLabel(key: (typeof LEVEL_KEYS)[number]): string {
 function levelColor(key: (typeof LEVEL_KEYS)[number]): string {
   if (key === "tc") return "#f97316"; // orange-500
   if (key === "pivot") return "#fde047"; // yellow-300
-  if (key === "bc") return "#f472b6"; // pink-400
+  if (key === "bc") return "#FF00FF"; // fuchsia
   if (key === "prevHigh") return "#38bdf8"; // sky-400
   if (key === "prevLow") return "#38bdf8"; // sky-400
   if (key.startsWith("r")) return "#4ade80"; // green-400
-  return "#ef4444"; // destructive / red-500
+  return "#ff2e2e"; // S1-S4, brighter red
 }
 
 /**
