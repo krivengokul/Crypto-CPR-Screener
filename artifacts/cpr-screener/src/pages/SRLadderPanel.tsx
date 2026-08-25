@@ -220,10 +220,11 @@ function CPRLevelChart({
   prevCPR: CPRLevels;
   todayCPR: CPRLevels;
 }) {
-  const width = 900;
-  const height = 340;
-  const leftMargin = 96;
-  const rightMargin = 96;
+  // Compact chart so the three S/R ladders can sit inline to its right.
+  const width = 760;
+  const height = 300;
+  const leftMargin = 86;
+  const rightMargin = 86;
   const plotWidth = width - leftMargin - rightMargin;
   const prevSegmentEnd = leftMargin + plotWidth * 0.45;
 
@@ -257,7 +258,7 @@ function CPRLevelChart({
           Levels VIEW
         </p>
       </div>
-      <svg viewBox={`0 0 ${width} ${height}`} className="h-[340px] w-full">
+      <svg viewBox={`0 0 ${width} ${height}`} className="h-[300px] w-full">
         {LEVEL_KEYS.map((k) => {
           const pv = prevCPR[k as keyof CPRLevels] as number;
           const y = yFor(pv);
@@ -270,7 +271,7 @@ function CPRLevelChart({
                 y1={y}
                 y2={y}
                 stroke={color}
-                strokeWidth={0.5}
+                strokeWidth={0.75}
               />
               <text
                 x={leftMargin - 4}
@@ -278,7 +279,6 @@ function CPRLevelChart({
                 fontSize={8}
                 fontFamily="monospace"
                 fill={color}
-                opacity={0.75}
                 textAnchor="end"
               >
                 P-{levelLabel(k)} {fmt(pv)}
@@ -298,7 +298,7 @@ function CPRLevelChart({
                 y1={y}
                 y2={y}
                 stroke={color}
-                strokeWidth={0.5}
+                strokeWidth={0.75}
               />
               <text
                 x={leftMargin + plotWidth + 4}
@@ -319,8 +319,8 @@ function CPRLevelChart({
 
 /**
  * The full expanded panel shown when a symbol row is clicked:
- * a Prev-Day-vs-Today levels chart and the three S/R ladders (Today,
- * PrevDay, PDay-1 — pushed to the right where the chart frees up space).
+ * a compact Prev-Day-vs-Today levels chart with the three S/R ladders
+ * (Today, PrevDay, PDay-1) arranged inline to its right.
  * Reused by Screener and BacktestPanel.
  */
 export function SRLadderPanel({
@@ -338,11 +338,11 @@ export function SRLadderPanel({
   pDay1PatternBadge?: ReactNode;
 }) {
   return (
-    <div className="flex min-w-[920px] flex-col gap-4">
-      <div className="border-b border-border/50 pb-4">
+    <div className="flex min-w-[1240px] items-start gap-4">
+      <div className="min-w-[640px] flex-1 border-r border-border/50 pr-4">
         <CPRLevelChart prevCPR={r.prevCPR} todayCPR={r.todayCPR} />
       </div>
-      <div className="flex flex-wrap items-start gap-5">
+      <div className="flex shrink-0 items-start gap-4 pt-0.5">
         <SRLadder cpr={r.todayCPR} currentPrice={r.currentPrice} label="Today S/R" badge={todayPatternBadge} />
         <SRLadder cpr={r.prevCPR} currentPrice={r.currentPrice} label="PrevDay S/R" badge={prevPatternBadge} />
         {r.ppCPR && (
