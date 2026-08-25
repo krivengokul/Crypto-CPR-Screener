@@ -113,7 +113,7 @@ const EXTRA_VIEW_COUNT_IDS = ["eXLo-L4U4-U4"];
  * Flat id → label lookup covering every view in the tree — both the
  * top-level `pivotcategories` entries and every nested `Views` sub-item.
  * Used by the header's "Active view" stat card so it can show a readable
- * label instead of the raw activePattern id (mirrors SignalDesk's
+ * label instead of the raw activeView id (mirrors SignalDesk's
  * VIEW_LABEL_BY_ID).
  */
 const VIEW_LABEL_BY_ID: Record<string, string> = {
@@ -124,12 +124,12 @@ const VIEW_LABEL_BY_ID: Record<string, string> = {
 };
 
 export default function Screener({
-  activePattern = "levelsabove",
+  activeView = "levelsabove",
   scanKey = 0,
   onCounts,
   onSignalSymbols,
 }: {
-  activePattern?: string;
+  activeView?: string;
   scanKey?: number;
   onCounts?: (counts: Record<string, number>) => void;
   onSignalSymbols?: (
@@ -201,7 +201,7 @@ export default function Screener({
   // hour shows only rows that satisfy at least one Views (sub-pattern)
   // whose id/label ends with that hour, e.g. clicking "6PM" matches every
   // sub-pattern id ending in ":6PM" (T1-U4:6AM, MeMi-eXHiL4U3-U4:6PM, etc.)
-  // across ALL parent patterns — independent of activePattern.
+  // across ALL parent patterns — independent of activeView.
   const [exitTimeFilter, setExitTimeFilter] = useState<string | null>(null);
 
   // NEW: full 24hr cycle starting at 5AM through 4AM the next day, split
@@ -232,7 +232,7 @@ export default function Screener({
   // (today's CPR width) can be active at the same time.
   const [prevWidthFilter, setPrevWidthFilter] = useState<WidthCategoryKey | null>(null);
   const [todayWidthFilter, setTodayWidthFilter] = useState<WidthCategoryKey | null>(null);
-  // NEW: PDH/PDL filter — independent of activePattern, mutually exclusive (like pivot/width filters).
+  // NEW: PDH/PDL filter — independent of activeView, mutually exclusive (like pivot/width filters).
   const [pdhPdlFilter, setPdhPdlFilter] = useState<"above" | "below" | "abovepu4" | "belowpl4" | "pdhgtu1" | "pdlltl1" | "s1r1in" | null>(null);
   const [error, setError] = useState("");
   const [countdown, setCountdown] = useState("");
@@ -261,15 +261,15 @@ export default function Screener({
 
   const allResultsRef = useRef<CPRResult[]>([]);
   const deltaAllResultsRef = useRef<CPRResult[]>([]);
-  const activePatternRef = useRef(activePattern);
+  const activePatternRef = useRef(activeView);
   useEffect(() => { allResultsRef.current = allResults; }, [allResults]);
   useEffect(() => { deltaAllResultsRef.current = deltaAllResults; }, [deltaAllResults]);
-  useEffect(() => { activePatternRef.current = activePattern; }, [activePattern]);
+  useEffect(() => { activePatternRef.current = activeView; }, [activeView]);
 
   // NEW: auto-hide "Show All" whenever a left-nav view/category is clicked.
   // ViewsSidebar's onSelect (both handlePatternClick for top-level categories
-  // and handleSubClick for their Views/sub-patterns) updates activePattern,
-  // so any change to activePattern after the initial mount means the user
+  // and handleSubClick for their Views/sub-patterns) updates activeView,
+  // so any change to activeView after the initial mount means the user
   // just picked something in the left nav — at that point showAll should be
   // turned off so the screener actually reflects the selected filter instead
   // of continuing to show every scanned result. The isFirstPatternRef guard
@@ -282,28 +282,28 @@ export default function Screener({
       return;
     }
     setShowAll(false);
-  }, [activePattern]);
+  }, [activeView]);
 
-  // NEW: resolve activePattern to its parent left-nav category ("section").
-  // Clicking a top-level category in the left-nav sets activePattern to the
+  // NEW: resolve activeView to its parent left-nav category ("section").
+  // Clicking a top-level category in the left-nav sets activeView to the
   // category id directly (e.g. "compressed"), but clicking one of its
   // Views/sub-patterns instead (e.g. "6A:HLC-SSLL:R4-6P") sets
-  // activePattern to that LEAF id — ViewsSidebar's handleSubClick calls
+  // activeView to that LEAF id — ViewsSidebar's handleSubClick calls
   // onSelect(subId), not onSelect(parentId). Row filtering already handles
   // both cases fine (passesPattern resolves leaf ids directly), but
   // anything keyed off the *category* — the Views button row and the
   // per-row green/red direction dot (getViewDirection) — was comparing
-  // against the raw activePattern and so went blank whenever a leaf was
+  // against the raw activeView and so went blank whenever a leaf was
   // selected via the left-nav. activeSectionKey resolves either case back
   // to the owning category so those two stay populated regardless of
   // whether the category or one of its leaves triggered the selection.
   const activeSectionKey = useMemo(() => {
-    if (Views[activePattern]) return activePattern; // already a category id
+    if (Views[activeView]) return activeView; // already a category id
     for (const [section, subs] of Object.entries(Views)) {
-      if (subs.some((s) => s.id === activePattern)) return section;
+      if (subs.some((s) => s.id === activeView)) return section;
     }
-    return activePattern; // not a known category or leaf — leave as-is
-  }, [activePattern]);
+    return activeView; // not a known category or leaf — leave as-is
+  }, [activeView]);
 
   const doScan = useCallback(async (switchTab: boolean = true) => {
     if (scanRef.current) return;
@@ -319,7 +319,7 @@ export default function Screener({
         setProgress({ done, total, symbol });
       });
       setAllResults(results);
-      setFiltered(results.filter((r) => passesPattern(r, activePattern)));
+      setFiltered(results.filter((r) => passesPattern(r, activeView)));
       setStatus("done");
       markScannedToday();
       setNextScanUtc(getNextScanIST());
@@ -329,7 +329,7 @@ export default function Screener({
     } finally {
       scanRef.current = false;
     }
-  }, [activePattern]);
+  }, [activeView]);
 
   const doDeltaScan = useCallback(async (switchTab: boolean = true) => {
     if (deltaScanRef.current) return;
@@ -345,7 +345,7 @@ export default function Screener({
         setDeltaProgress({ done, total, symbol });
       });
       setDeltaAllResults(results);
-      setDeltaFiltered(results.filter((r) => passesPattern(r, activePattern)));
+      setDeltaFiltered(results.filter((r) => passesPattern(r, activeView)));
       setDeltaStatus("done");
     } catch (e) {
       setDeltaError(e instanceof Error ? e.message : "Unknown error");
@@ -353,7 +353,7 @@ export default function Screener({
     } finally {
       deltaScanRef.current = false;
     }
-  }, [activePattern]);
+  }, [activeView]);
 
   useEffect(() => {
     if (shouldAutoScan()) doScan();
@@ -377,10 +377,10 @@ export default function Screener({
   useDeltaLiveRefresh(deltaStatus, deltaAllResultsRef, setDeltaAllResults, setDeltaFiltered);
 
   useEffect(() => {
-    if (allResults.length > 0) setFiltered(allResults.filter((r) => passesPattern(r, activePattern)));
-    if (deltaAllResults.length > 0) setDeltaFiltered(deltaAllResults.filter((r) => passesPattern(r, activePattern)));
-    if (activePattern !== "overlapping-lower") { setShowExpU4PU4(false); setShowExpU3PU3(false); setShowOBLoRRHHLLA(false); setShowOBNLoU4L4(false); setShowOBWLoU4L4(false); setShowOBLoSSLLRRHH(false); setShowOBLoSSLLRRHHDown(false); }
-  }, [activePattern, allResults, deltaAllResults]);
+    if (allResults.length > 0) setFiltered(allResults.filter((r) => passesPattern(r, activeView)));
+    if (deltaAllResults.length > 0) setDeltaFiltered(deltaAllResults.filter((r) => passesPattern(r, activeView)));
+    if (activeView !== "overlapping-lower") { setShowExpU4PU4(false); setShowExpU3PU3(false); setShowOBLoRRHHLLA(false); setShowOBNLoU4L4(false); setShowOBWLoU4L4(false); setShowOBLoSSLLRRHH(false); setShowOBLoSSLLRRHHDown(false); }
+  }, [activeView, allResults, deltaAllResults]);
 
   // ─── Two-way sync between the left-nav Views and the Screener's own
   //     Views filter buttons ────────────────────────────────────────────────
@@ -413,63 +413,63 @@ export default function Screener({
     "8AM:SSLLpRRHHA-L4:1PM": showOBLoSSLLRRHHDown,
   };
 
-  // Is activePattern a Views leaf (a sub-pattern) rather than a category?
+  // Is activeView a Views leaf (a sub-pattern) rather than a category?
   const isLeafView = useMemo(
-    () => Object.values(Views).some((subs) => subs.some((s) => s.id === activePattern)),
-    [activePattern],
+    () => Object.values(Views).some((subs) => subs.some((s) => s.id === activeView)),
+    [activeView],
   );
 
   // Sidebar → Screener: whenever the left-nav selects a View leaf, switch the
   // matching Screener filter button on. Runs after the reset effect above
-  // (which clears every button on each activePattern / results change), so the
+  // (which clears every button on each activeView / results change), so the
   // selected one survives while the rest stay off.
   /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     if (!isLeafView) return;
-    const setter = VIEW_SETTERS[activePattern];
+    const setter = VIEW_SETTERS[activeView];
     if (setter) {
-      Object.entries(VIEW_SETTERS).forEach(([id, set]) => set(id === activePattern));
+      Object.entries(VIEW_SETTERS).forEach(([id, set]) => set(id === activeView));
       setActiveGenericSubView(null);
     } else {
       // generic (data-driven) Views button
-      setActiveGenericSubView(activePattern);
+      setActiveGenericSubView(activeView);
     }
-  }, [activePattern, isLeafView, allResults, deltaAllResults]);
+  }, [activeView, isLeafView, allResults, deltaAllResults]);
   /* eslint-enable react-hooks/exhaustive-deps */
 
   // Sidebar → Screener (deselect): clicking the "✕" on an active View chip in
-  // the left nav falls back to its parent category, so activePattern goes from
+  // the left nav falls back to its parent category, so activeView goes from
   // a leaf to a non-leaf. The category-level reset above only clears buttons
   // when leaving the category entirely, so clear every View filter button here
   // too — both surfaces show the same filter and must switch off together.
-  const prevPatternRef = useRef(activePattern);
+  const prevPatternRef = useRef(activeView);
   useEffect(() => {
     const prev = prevPatternRef.current;
-    prevPatternRef.current = activePattern;
-    if (prev === activePattern) return;
+    prevPatternRef.current = activeView;
+    if (prev === activeView) return;
     const prevWasLeaf = Object.values(Views).some((subs) => subs.some((s) => s.id === prev));
     if (prevWasLeaf && !isLeafView) {
       Object.values(VIEW_SETTERS).forEach((set) => set(false));
       setActiveGenericSubView(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activePattern, isLeafView]);
+  }, [activeView, isLeafView]);
 
   // Screener → Sidebar: when the currently-selected View's Screener button is
   // closed with its ✕, tell the left-nav to deselect the same View (falls back
   // to its parent category). Only fires on a true → false transition so the
   // sync effect above never triggers it.
-  const activeViewOn = VIEW_SETTERS[activePattern]
-    ? !!VIEW_STATES[activePattern]
-    : activeGenericSubView === activePattern;
+  const activeViewOn = VIEW_SETTERS[activeView]
+    ? !!VIEW_STATES[activeView]
+    : activeGenericSubView === activeView;
   const prevActiveViewOnRef = useRef(false);
   useEffect(() => {
     const wasOn = prevActiveViewOnRef.current;
     prevActiveViewOnRef.current = activeViewOn;
-    if (isLeafView && wasOn && !activeViewOn) requestViewDeselect(activePattern);
-  }, [activeViewOn, isLeafView, activePattern]);
+    if (isLeafView && wasOn && !activeViewOn) requestViewDeselect(activeView);
+  }, [activeViewOn, isLeafView, activeView]);
   // NEW: reset the generic Views toggle whenever it no longer belongs to
-  // the current activePattern — either because we've left every generic
+  // the current activeView — either because we've left every generic
   // category entirely, or because we've switched from one generic category
   // to another (e.g. "levelsabove" -> "compressed") and the previously
   // selected sub-pattern id doesn't exist under the new one.
@@ -479,7 +479,7 @@ export default function Screener({
       GENERIC_VIEW_CATEGORIES.has(activeSectionKey) &&
       (Views[activeSectionKey] ?? []).some((s) => s.id === activeGenericSubView);
     if (!stillValid) setActiveGenericSubView(null);
-  }, [activePattern, activeSectionKey]);
+  }, [activeView, activeSectionKey]);
   // NEW: report per-pattern (top-level nav) matching counts up to App so
   // the left sidebar can show "Little ABOVE (41)" etc. Computed off the
   // currently active tab's full unfiltered result set, so the counts
@@ -542,7 +542,7 @@ export default function Screener({
   ];
 
   const getActivePool = (): CPRResultWithSource[] => {
-    if (showExpU4PU4 && activePattern === "overlapping-lower") {
+    if (showExpU4PU4 && activeView === "overlapping-lower") {
       const binanceIntersect = allResults
         .filter((r) => passesPattern(r, "eXLo-L4U4-U4"))
         .map((r) => ({ ...r, source: "binance" as const }));
@@ -556,7 +556,7 @@ export default function Screener({
       return binanceIntersect;
     }
     // RENAMED from "Exp-U3>U3": 9AM:SSRRBHHLLA-U4:9PM pool
-    if (showExpU3PU3 && activePattern === "overlapping-lower") {
+    if (showExpU3PU3 && activeView === "overlapping-lower") {
       const binanceIntersect = allResults
         .filter((r) => passesPattern(r, "9AM:SSRRBHHLLA-U4:9PM"))
         .map((r) => ({ ...r, source: "binance" as const }));
@@ -571,7 +571,7 @@ export default function Screener({
     }
     // NEW: 9AM:pRRHHLLA-U4:9PM pool — Overlapping Lower, HHRRBelow +
     // HHLLAbove variant, placed next to 9AM:SSRRBHHLLA-U4:9PM.
-    if (showOBLoRRHHLLA && activePattern === "overlapping-lower") {
+    if (showOBLoRRHHLLA && activeView === "overlapping-lower") {
       const binanceIntersect = allResults
         .filter((r) => passesPattern(r, "9AM:pRRHHLLA-U4:9PM"))
         .map((r) => ({ ...r, source: "binance" as const }));
@@ -585,7 +585,7 @@ export default function Screener({
       return binanceIntersect;
     }
     // NEW: OBN-LoU4L4-U4 pool — Overlapping Lower, Narrow variant
-    if (showOBNLoU4L4 && activePattern === "overlapping-lower") {
+    if (showOBNLoU4L4 && activeView === "overlapping-lower") {
       const binanceIntersect = allResults
         .filter((r) => passesPattern(r, "OBN-LoU4L4-U4"))
         .map((r) => ({ ...r, source: "binance" as const }));
@@ -599,7 +599,7 @@ export default function Screener({
       return binanceIntersect;
     }
     // NEW: OBW-LoU4L4-L4 pool — Overlapping Lower, Wide variant
-    if (showOBWLoU4L4 && activePattern === "overlapping-lower") {
+    if (showOBWLoU4L4 && activeView === "overlapping-lower") {
       const binanceIntersect = allResults
         .filter((r) => passesPattern(r, "OBW-LoU4L4-L4"))
         .map((r) => ({ ...r, source: "binance" as const }));
@@ -614,7 +614,7 @@ export default function Screener({
     }
     // NEW: 2PM:SSLLpRRHHA-ApU4:5PM pool — Overlapping Lower, SSLLAbove +
     // HHRRBelow variant, placed next to OBW-LoU4L4-L4.
-    if (showOBLoSSLLRRHH && activePattern === "overlapping-lower") {
+    if (showOBLoSSLLRRHH && activeView === "overlapping-lower") {
       const binanceIntersect = allResults
         .filter((r) => passesPattern(r, "2PM:SSLLpRRHHA-ApU4:5PM"))
         .map((r) => ({ ...r, source: "binance" as const }));
@@ -629,7 +629,7 @@ export default function Screener({
     }
     // NEW: 8AM:SSLLpRRHHA-L4:1PM pool — bearish sibling of
     // 2PM:SSLLpRRHHA-ApU4:5PM, placed next to it.
-    if (showOBLoSSLLRRHHDown && activePattern === "overlapping-lower") {
+    if (showOBLoSSLLRRHHDown && activeView === "overlapping-lower") {
       const binanceIntersect = allResults
         .filter((r) => passesPattern(r, "8AM:SSLLpRRHHA-L4:1PM"))
         .map((r) => ({ ...r, source: "binance" as const }));
@@ -698,16 +698,16 @@ export default function Screener({
       if (PatternFilter === "eXL4U3") return r.eXL4U3;
       // NEW: HiL4U3 / cOL2U3 — same treatment: independent,
       // section-agnostic Pattern flags, always shown regardless of
-      // activePattern/left-nav.
+      // activeView/left-nav.
       if (PatternFilter === "HiL4U3") return r.HiL4U3;
       // NEW: HiL4U2 — same treatment as HiL4U3: independent,
       // section-agnostic Pattern flag, always shown regardless of
-      // activePattern/left-nav.
+      // activeView/left-nav.
       if (PatternFilter === "HiL4U2") return r.HiL4U2;
       if (PatternFilter === "HiL4U1") return r.HiL4U1;
       // NEW: LoTCL3 — same treatment as HiL4U3/HiL4U2: independent,
       // section-agnostic Pattern flag, always shown regardless of
-      // activePattern/left-nav.
+      // activeView/left-nav.
       if (PatternFilter === "LoTCL3") return r.LoTCL3;
       if (PatternFilter === "eXHiL2L1") return r.eXHiL2L1;
       if (PatternFilter === "eXLoL2L1") return r.eXLoL2L1;
@@ -819,7 +819,7 @@ export default function Screener({
     })
     // NEW: TIME filter — when an hour is selected, keep only rows that
     // satisfy at least one Views (sub-pattern) targeting that hour, across
-    // every parent pattern (independent of activePattern/PatternFilter).
+    // every parent pattern (independent of activeView/PatternFilter).
     .filter((r) => {
       if (!exitTimeFilter) return true;
       return exitTimeMatchedSubIds.some((id) => passesPattern(r, id));
@@ -845,7 +845,7 @@ export default function Screener({
     source: r.source,
     currentPrice: r.currentPrice,
     change24h: r.change24h,
-    direction: getRowDirection(r, activePattern),
+    direction: getRowDirection(r, activeView),
     s4: r.todayCPR.s4,
     s3: r.todayCPR.s3,
     s2: r.todayCPR.s2,
@@ -953,7 +953,7 @@ export default function Screener({
                   Active view
                 </p>
                 <p className="mt-0.5 truncate text-sm font-semibold">
-                  {!showAll ? (VIEW_LABEL_BY_ID[activePattern] || activePattern) : "All scanned"}
+                  {!showAll ? (VIEW_LABEL_BY_ID[activeView] || activeView) : "All scanned"}
                 </p>
               </div>
             </div>
@@ -969,7 +969,7 @@ export default function Screener({
             render with nothing to show. */}
         {currentStatus === "done" && !showAll && (
         <ScreenerLegend
-          activePattern={activePattern}
+          activeView={activeView}
           showExpU4PU4={showExpU4PU4}
           showExpU3PU3={showExpU3PU3}
           showOBLoRRHHLLA={showOBLoRRHHLLA}
@@ -1168,7 +1168,7 @@ export default function Screener({
               (Views[activeSectionKey] ?? []).map((sub) => {
                 const isActive = activeGenericSubView
                   ? activeGenericSubView === sub.id
-                  : activePattern === sub.id; // left-nav navigated straight to this leaf
+                  : activeView === sub.id; // left-nav navigated straight to this leaf
                 const borderColor = sub.activeColor ?? "var(--foreground)";
                 const textColor = sub.activeText ?? "var(--foreground)";
                 const bg = sub.activeBg;
@@ -1303,7 +1303,7 @@ export default function Screener({
             )}
           </div>
 
-          {/* Pattern filter buttons — own line, independent of activePattern
+          {/* Pattern filter buttons — own line, independent of activeView
               AND independent of showAll. These always render, regardless of Show All state, and
               are mutually exclusive within their own group. */}
           <div className="flex items-center gap-1.5 flex-wrap">
@@ -1440,7 +1440,7 @@ export default function Screener({
               pMicro-pTiny-pMini-pSmall-pMedium-pLarge-pMega-pUltra, then
               Micro-Tiny-Mini-Small-Medium-Large-Mega-Ultra. Mutually exclusive
               within the whole row (single widthFilter state), independent of
-              activePattern and showAll. */}
+              activeView and showAll. */}
           {/* CPR Size — prev day's width (pMicro..pUltra). Own row, own state
               (prevWidthFilter) — independent of the today's-width row below. */}
           {showSizeList && (
@@ -1565,7 +1565,7 @@ export default function Screener({
               (5AM..4PM). Clicking an hour (e.g. "6PM") shows only rows that
               satisfy at least one Views/sub-pattern targeting that hour,
               across every parent pattern. Mutually exclusive (single
-              exitTimeFilter state), independent of activePattern,
+              exitTimeFilter state), independent of activeView,
               PatternFilter, and showAll. Whole section hidden until
               "XTime +" is toggled on. */}
           {showExitTimeList && (
@@ -1619,7 +1619,7 @@ export default function Screener({
 
           {/* Price Level filter buttons — own row, below CPR Size. Mutually
               exclusive with each other via the single pdhPdlFilter state,
-              independent of activePattern and showAll. */}
+              independent of activeView and showAll. */}
           <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-[10px] text-emerald-400/90 uppercase tracking-wider mr-0.5 font-semibold">Price Level:</span>
 
@@ -1738,7 +1738,7 @@ export default function Screener({
                         toggleExpand={toggleExpand}
                         canShowCombined={canShowCombined}
                         activeTab={activeTab}
-                        activePattern={activeSectionKey}
+                        activeView={activeSectionKey}
                       />
                     );
                   })}

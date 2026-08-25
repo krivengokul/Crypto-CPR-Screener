@@ -476,7 +476,7 @@ function getParentId(patternId: string): string | null {
 }
 
 interface ViewsSidebarProps {
-  activePattern: string;
+  activeView: string;
   onSelect: (id: string) => void;
   collapsed: boolean;
   onToggle: () => void;
@@ -491,7 +491,7 @@ interface ViewsSidebarProps {
 }
 
 export default function ViewsSidebar({
-  activePattern,
+  activeView,
   onSelect,
   collapsed,
   onToggle,
@@ -503,19 +503,19 @@ export default function ViewsSidebar({
 }: ViewsSidebarProps) {
   // Which parent pattern is currently open in the tree
   const [expandedId, setExpandedId] = useState<string | null>(() => {
-    const parent = getParentId(activePattern);
-    return parent ?? activePattern;
+    const parent = getParentId(activeView);
+    return parent ?? activeView;
   });
 
-  // Keep tree in sync when activePattern is changed from outside
+  // Keep tree in sync when activeView is changed from outside
   useEffect(() => {
-    const parent = getParentId(activePattern);
+    const parent = getParentId(activeView);
     if (parent) {
       setExpandedId(parent);
-    } else if (pivotcategories.some((p) => p.id === activePattern)) {
-      setExpandedId(activePattern);
+    } else if (pivotcategories.some((p) => p.id === activeView)) {
+      setExpandedId(activeView);
     }
-  }, [activePattern]);
+  }, [activeView]);
 
   function handleParentClick(patternId: string) {
     setExpandedId(patternId);
@@ -526,7 +526,7 @@ export default function ViewsSidebar({
     setExpandedId(parentId);
     // Clicking an already-selected sub-view (its "✕") deselects it and falls
     // back to the parent category — mirroring the Screener's ✕ filter buttons.
-    onSelect(activePattern === subId ? parentId : subId);
+    onSelect(activeView === subId ? parentId : subId);
   }
 
   // Screener → sidebar: closing the matching ✕ filter button in the Screener
@@ -534,11 +534,11 @@ export default function ViewsSidebar({
   useEffect(
     () =>
       subscribeViewDeselect((viewId) => {
-        if (viewId !== activePattern) return;
+        if (viewId !== activeView) return;
         const parent = getParentId(viewId);
         if (parent) onSelect(parent);
       }),
-    [activePattern, onSelect],
+    [activeView, onSelect],
   );
 
   // ─── Shared style helpers ─────────────────────────────────────────────────
@@ -670,8 +670,8 @@ export default function ViewsSidebar({
           {pivotcategories.map((pattern) => {
             const Icon = pattern.icon;
             const children = Views[pattern.id] ?? [];
-            const isActiveParent = activePattern === pattern.id;
-            const hasActiveChild = children.some((c) => c.id === activePattern);
+            const isActiveParent = activeView === pattern.id;
+            const hasActiveChild = children.some((c) => c.id === activeView);
             const isHighlighted = isActiveParent || hasActiveChild;
             const isExpanded = expandedId === pattern.id;
 
@@ -836,7 +836,7 @@ export default function ViewsSidebar({
                     }}
                   >
                     {children.map((sub) => {
-                      const isActiveSub = activePattern === sub.id;
+                      const isActiveSub = activeView === sub.id;
                       const subActiveColor = sub.activeColor ?? ACTIVE_BLUE;
                       const subActiveText  = sub.activeText  ?? ACTIVE_TEXT;
                       const subActiveBg    = sub.activeBg    ?? "rgba(59,130,246,0.18)";
@@ -935,8 +935,8 @@ export default function ViewsSidebar({
           const Icon = pattern.icon;
           const children = Views[pattern.id] ?? [];
           const isHighlighted =
-            activePattern === pattern.id ||
-            children.some((c) => c.id === activePattern);
+            activeView === pattern.id ||
+            children.some((c) => c.id === activeView);
           return (
             <button
               key={pattern.id}

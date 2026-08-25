@@ -47,7 +47,7 @@ export interface SignalDeskSymbol {
 
 interface SignalDeskProps {
   symbols: SignalDeskSymbol[];
-  activePattern: string;
+  activeView: string;
   activeLabel: string;
   /** Pattern id → matching-symbol count, e.g. App's patternCounts. Drives the chip strip — only views with a count > 0 get a chip. Omit to hide the strip. */
   counts?: Record<string, number>;
@@ -244,17 +244,17 @@ function LevelRangeBar({
  * nested View (not top-level categories) that currently has ≥1 matching
  * symbol (per `counts`). Clicking a chip fires `onSelect` with that view's
  * id, mirroring what clicking the same view in the left ViewsSidebar does.
- * The active view (matching `activePattern`) gets the filled emerald
+ * The active view (matching `activeView`) gets the filled emerald
  * treatment; the rest are outlined/muted. Renders nothing when there are
  * no active (count > 0) views to show.
  */
 function ViewChipStrip({
   counts,
-  activePattern,
+  activeView,
   onSelect,
 }: {
   counts: Record<string, number>;
-  activePattern: string;
+  activeView: string;
   onSelect?: (id: string) => void;
 }) {
   const chips = useMemo(
@@ -271,7 +271,7 @@ function ViewChipStrip({
   return (
     <div className="mb-6 flex flex-wrap gap-2">
       {chips.map((chip) => {
-        const isActive = chip.id === activePattern;
+        const isActive = chip.id === activeView;
         return (
           <button
             key={chip.id}
@@ -302,7 +302,7 @@ function ViewChipStrip({
 
 export default function SignalDesk({
   symbols,
-  activePattern,
+  activeView,
   activeLabel,
   counts,
   onSelectPattern,
@@ -363,7 +363,7 @@ export default function SignalDesk({
                   Active view
                 </p>
                 <p className="mt-1 truncate text-sm font-semibold">
-                  {activePattern ? activeLabel || activePattern : "All scanned"}
+                  {activeView ? activeLabel || activeView : "All scanned"}
                 </p>
               </div>
             </div>
@@ -381,7 +381,7 @@ export default function SignalDesk({
         </header>
 
         {counts && (
-          <ViewChipStrip counts={counts} activePattern={activePattern} onSelect={onSelectPattern} />
+          <ViewChipStrip counts={counts} activeView={activeView} onSelect={onSelectPattern} />
         )}
 
         <div className="mb-6 flex flex-col gap-4 border-b border-border pb-4 sm:flex-row sm:items-center sm:justify-between">
@@ -497,10 +497,10 @@ export default function SignalDesk({
 
                   <div className="mt-4 flex items-center justify-between text-xs">
                     <span className="font-medium text-muted-foreground">
-                      {SUBVIEW_IDS.has(activePattern) ? "View" : "Category"}
+                      {SUBVIEW_IDS.has(activeView) ? "View" : "Category"}
                     </span>
                     <span className="max-w-[65%] truncate font-medium text-foreground">
-                      {activeLabel || activePattern || "All scanned"}
+                      {activeLabel || activeView || "All scanned"}
                     </span>
                   </div>
                 </article>

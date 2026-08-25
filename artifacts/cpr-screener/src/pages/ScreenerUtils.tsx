@@ -1017,7 +1017,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
 }
 
 /**
- * Sub-filter direction map, grouped by top-level section (activePattern).
+ * Sub-filter direction map, grouped by top-level section (activeView).
  * Used purely to color the row dot in the Symbol column — NOT tied to
  * whether the sub-filter's toggle button is currently pressed. A row gets
  * a dot the moment its data satisfies ANY sub-filter condition belonging
@@ -1117,8 +1117,8 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
  * given section, or null if it matches none (or the section has no
  * sub-filters defined, e.g. "falling"/"inside-value").
  */
-export function getViewDirection(r: CPRResult, activePattern: string): ViewDirection | null {
-  const defs = SUBFILTERS_BY_SECTION[activePattern];
+export function getViewDirection(r: CPRResult, activeView: string): ViewDirection | null {
+  const defs = SUBFILTERS_BY_SECTION[activeView];
   if (!defs) return null;
   for (const def of defs) {
     if (passesPattern(r, def.key)) return def.direction;
@@ -1130,14 +1130,14 @@ export function getViewDirection(r: CPRResult, activePattern: string): ViewDirec
  * getRowDirection — single up/down call for a row, for consumers (e.g.
  * SignalDesk's long/short arrow) that need one answer regardless of
  * whether the active section has per-sub-pattern directions defined.
- * Tries getViewDirection(r, activePattern) first — the specific
+ * Tries getViewDirection(r, activeView) first — the specific
  * sub-pattern's own bullish/bearish call when the row matches one — and
  * falls back to the row's own 24h change (change24h >= 0 → up, else
  * down) when it doesn't (e.g. no sub-pattern selected, or the section
  * has none defined).
  */
-export function getRowDirection(r: CPRResult, activePattern: string): "up" | "down" {
-  const subDir = getViewDirection(r, activePattern);
+export function getRowDirection(r: CPRResult, activeView: string): "up" | "down" {
+  const subDir = getViewDirection(r, activeView);
   if (subDir) return subDir;
   return r.change24h >= 0 ? "up" : "down";
 }
@@ -1180,7 +1180,7 @@ export function getRowDirection(r: CPRResult, activePattern: string): "up" | "do
  * co-occur with any of eX-Higher/eX-Lower/cO-Higher/cO-Lower/Higher/Lower
  * and isn't mutually exclusive with them). Screener.tsx renders it as its
  * own second-row badge and its own Pattern filter button, checking
- * r.eXL4U4 directly — independent of activePattern/section, unlike the
+ * r.eXL4U4 directly — independent of activeView/section, unlike the
  * "eXLo-L4U4-U4" *pattern*, which gates the same boolean behind
  * overlapLower for its own section.
  *
@@ -1189,7 +1189,7 @@ export function getRowDirection(r: CPRResult, activePattern: string): "up" | "do
  * S4 inside today's S1/S2). Not returned as the primary label here for the
  * same reason as eXL4U4/HiL4U4/etc — Screener.tsx renders it as its own
  * second-row badge and its own Pattern filter button, checking
- * r.eXU4L2 directly, regardless of activePattern/left-nav section. The
+ * r.eXU4L2 directly, regardless of activeView/left-nav section. The
  * "eXU4L2-AU4" *pattern* (Big Below) additionally requires strWideCPR +
  * cprFalling + extra R3/pivot/width conditions on top of this raw flag.
  *
@@ -1261,7 +1261,6 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     // it's intentionally omitted here.
     case "HALB-SSLLGap":
       return (
-        r.LevelsBelow &&
         r.HHLLCategory === "HHLL-E" &&
         r.RRHHCategory === "RRHH-HA" &&
         r.SSLLCategory === "SSLL-BB" &&
