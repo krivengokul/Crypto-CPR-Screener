@@ -100,16 +100,11 @@ export function SRLadder({
   if (!priceInserted) rows.push({ type: "price" });
 
   const rowColor = (key: string) => {
-    if (key === "TC")
-      return "text-[#FF5F1F] font-semibold bg-[#FF5F1F]/5";
-    if (key === "Pivot")
-      return "text-yellow-300 font-semibold bg-yellow-500/5";
-    if (key === "BC")
-      return "text-fuchsia-500 font-semibold bg-fuchsia-500/5";
-    if (key === "PH")
-      return "text-sky-400 font-medium bg-sky-500/5";
-    if (key === "PL")
-      return "text-sky-400 font-medium bg-sky-500/5";
+    if (key === "TC") return "text-[#FF5F1F]";
+    if (key === "Pivot") return "text-yellow-300";
+    if (key === "BC") return "text-fuchsia-500";
+    if (key === "PH") return "text-sky-400";
+    if (key === "PL") return "text-sky-400";
     if (key.startsWith("R")) return "text-green-400";
     return "text-red-400";
   };
@@ -229,14 +224,23 @@ function CPRLevelChart({
   prevCPR: CPRLevels;
   todayCPR: CPRLevels;
 }) {
-  const width = 900;
   // Keep the chart compact when it sits beside the ladders. The ladders
   // remain the readable, full-size value reference next to it.
   const height = 300;
   const leftMargin = 96;
   const rightMargin = 96;
-  const plotWidth = width - leftMargin - rightMargin;
-  const prevSegmentEnd = leftMargin + plotWidth * 0.45;
+  // Original (pre-shrink) proportions: prev-day lines took 45% of the
+  // plot width, today's lines took the remaining 55%, against a 900-wide
+  // viewBox. Shrink prev-day lines to 70% of that length and today's
+  // lines to 60% of that length, then size the viewBox tightly around
+  // the shorter lines (no left-over blank space) so the ladders can
+  // shift left into the room this frees up.
+  const basePlotWidth = 900 - leftMargin - rightMargin;
+  const prevLineLength = basePlotWidth * 0.45 * 0.7;
+  const todayLineLength = basePlotWidth * 0.55 * 0.6;
+  const prevSegmentEnd = leftMargin + prevLineLength;
+  const todayLineEnd = prevSegmentEnd + todayLineLength;
+  const width = todayLineEnd + rightMargin;
 
   const allValues = LEVEL_KEYS.flatMap((k) => [
     prevCPR[k as keyof CPRLevels] as number,
@@ -298,7 +302,7 @@ function CPRLevelChart({
   );
 
   return (
-    <div className="min-w-0">
+    <div className="min-w-0 shrink-0" style={{ width }}>
       <div className="mb-1.5 flex flex-wrap items-center gap-3 pl-2 text-left">
         <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
           Levels VIEW
@@ -306,7 +310,8 @@ function CPRLevelChart({
       </div>
       <svg
         viewBox={`0 0 ${width} ${height}`}
-        className="h-[300px] w-full"
+        className="h-[300px]"
+        style={{ width }}
         preserveAspectRatio="none"
         aria-label="Previous day and today support and resistance levels"
       >
@@ -346,14 +351,14 @@ function CPRLevelChart({
             <g key={`today-${k}`}>
               <line
                 x1={prevSegmentEnd}
-                x2={leftMargin + plotWidth}
+                x2={todayLineEnd}
                 y1={y}
                 y2={y}
                 stroke={color}
                 strokeWidth={0.5}
               />
               <text
-                x={leftMargin + plotWidth + 4}
+                x={todayLineEnd + 4}
                 y={(todayLabelY.get(k) as number) + 3}
                 fontSize={9}
                 fontFamily="monospace"
