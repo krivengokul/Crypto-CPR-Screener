@@ -100,16 +100,11 @@ export function SRLadder({
   if (!priceInserted) rows.push({ type: "price" });
 
   const rowColor = (key: string) => {
-    if (key === "TC")
-      return "text-[#FF5F1F] font-semibold bg-[#FF5F1F]/5";
-    if (key === "Pivot")
-      return "text-yellow-300 font-semibold bg-yellow-500/5";
-    if (key === "BC")
-      return "text-fuchsia-500 font-semibold bg-fuchsia-500/5";
-    if (key === "PH")
-      return "text-sky-400 font-medium bg-sky-500/5";
-    if (key === "PL")
-      return "text-sky-400 font-medium bg-sky-500/5";
+    if (key === "TC") return "text-[#FF5F1F]";
+    if (key === "Pivot") return "text-yellow-300";
+    if (key === "BC") return "text-fuchsia-500";
+    if (key === "PH") return "text-sky-400";
+    if (key === "PL") return "text-sky-400";
     if (key.startsWith("R")) return "text-green-400";
     return "text-red-400";
   };
