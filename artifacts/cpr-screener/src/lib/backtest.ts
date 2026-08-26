@@ -668,6 +668,32 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
         label: "RHLB-RRHHpGap",
         subPatternKeys: ["8A:pLAPpPAH:R4-5P"],
       },
+      // RRSSC-{Level}{Gap} — 8 Patterns (arrows), the COMPRESSED mirror of
+      // levelsabove's RRSSA-*/levelsbelow's RRSSB-* siblings: base
+      // condition = this category's r.compressed condition AND the raw
+      // RRSSC-* flag (see matchesPatternFlag in ScreenerUtils.tsx). Unlike
+      // RRSSA-*/RRSSB-* (which reach 8 of 16 via LevelsAbove/LevelsBelow
+      // fixing ΔR1/ΔS1 to the same sign), "compressed" fixes ΔR1<0 AND
+      // ΔS1>0 (opposite signs), so only the HHLLCategory x
+      // PDHPDLGapCategory half is resolved by the ΔR1-ΔS1=ΔPDH-ΔPDL
+      // identity: HHLL-A permits only LLGap, HHLL-B permits only HHGap,
+      // HHLL-C permits both, and HHLL-E is impossible entirely (see the
+      // proof in matchesPatternFlag's comment in ScreenerUtils.tsx). RRGap
+      // vs SSGap isn't pinned down by the identity in this sign regime, so
+      // both remain reachable wherever the HHLL/PDHPDLGap pair is,
+      // yielding exactly 8 of the naive 16: ALR/ALS/BHR/BHS/CHR/CHS/CLR/CLS
+      // (EHR/EHS/ELR/ELS all impossible). No target-graded sub-patterns
+      // nested under any of them yet, so each shows up as a
+      // symbol-list-only scan in the Backtest dropdown until specific
+      // targets are defined.
+      { key: "RRSSC-ALR", label: "RRSSC-ALR", subPatternKeys: [] },
+      { key: "RRSSC-ALS", label: "RRSSC-ALS", subPatternKeys: [] },
+      { key: "RRSSC-BHR", label: "RRSSC-BHR", subPatternKeys: [] },
+      { key: "RRSSC-BHS", label: "RRSSC-BHS", subPatternKeys: [] },
+      { key: "RRSSC-CHR", label: "RRSSC-CHR", subPatternKeys: [] },
+      { key: "RRSSC-CHS", label: "RRSSC-CHS", subPatternKeys: [] },
+      { key: "RRSSC-CLR", label: "RRSSC-CLR", subPatternKeys: [] },
+      { key: "RRSSC-CLS", label: "RRSSC-CLS", subPatternKeys: [] },
     ],
   },
   // NEW: "EXPANDED" left-nav section, mirroring "COMPRESSED" above but for

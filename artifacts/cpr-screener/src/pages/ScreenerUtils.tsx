@@ -1537,6 +1537,39 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     case "RRSSB-CLR": return r.HHLLCategory === "HHLL-C" && r.PDHPDLGapCategory === "LLGap" && r.RRSSGapCategory === "RRGap";
     case "RRSSB-EHS": return r.HHLLCategory === "HHLL-E" && r.PDHPDLGapCategory === "HHGap" && r.RRSSGapCategory === "SSGap";
     case "RRSSB-ELS": return r.HHLLCategory === "HHLL-E" && r.PDHPDLGapCategory === "LLGap" && r.RRSSGapCategory === "SSGap";
+    // RRSSC-{Level}{Gap} — the COMPRESSED mirror of RRSSA-*/RRSSB-* above,
+    // nested under the existing "compressed" category (today's R1 down vs
+    // prev AND today's S1 up vs prev — see cpr.ts's r.compressed / the
+    // "RRSS-C" SSRRCategory). Same Level/Gap naming as RRSSA-*/RRSSB-*
+    // (HHLLCategory A/B/C/E × combined PDHPDLGapCategory×RRSSGapCategory
+    // HR/HS/LR/LS), but the reachable set is derived differently: unlike
+    // LevelsAbove/LevelsBelow (which fix ΔR1 and ΔS1 to the SAME sign, so
+    // the ΔR1-ΔS1=ΔPDH-ΔPDL identity directly resolves RRGap vs SSGap),
+    // "compressed" fixes ΔR1<0 AND ΔS1>0 (OPPOSITE signs), so ΔR1-ΔS1 is
+    // always trivially negative and the identity only resolves the
+    // HHLLCategory x PDHPDLGapCategory half, not RRGap/SSGap:
+    //   ΔR1<0, ΔS1>0  =>  ΔR1-ΔS1<0 always  =>  ΔPDH-ΔPDL<0 always
+    //     HHLL-A (ΔPDH>0, ΔPDL>=0): needs ΔPDL>ΔPDH -> LLGap only, HHGap impossible
+    //     HHLL-B (ΔPDH<=0, ΔPDL<0): needs ΔPDH more negative than ΔPDL -> HHGap only, LLGap impossible
+    //     HHLL-C (ΔPDH<0, ΔPDL>0): ΔPDH-ΔPDL<0 always holds -> both HHGap and LLGap reachable
+    //     HHLL-E (ΔPDH>0, ΔPDL<0): ΔPDH-ΔPDL>0 always -> contradicts the <0 requirement, IMPOSSIBLE entirely
+    //   RRGap vs SSGap isn't pinned by this identity in this sign regime
+    //   (opposite-sign ΔR1/ΔS1 make |ΔR1| vs |ΔS1| independent of it), so
+    //   both remain reachable wherever the HHLL/PDHPDLGap pair above is
+    //   reachable, giving exactly 8 of the naive 16: ALR/ALS (HHLL-A),
+    //   BHR/BHS (HHLL-B), CHR/CHS/CLR/CLS (HHLL-C); HHLL-E is dropped
+    //   entirely (EHR/EHS/ELR/ELS all impossible), same treatment as the
+    //   RRHH-X / RRSSA-* / RRSSB-* impossible combos being left out. The
+    //   parent "compressed" category's own passesPattern("compressed")
+    //   already ANDs in r.compressed, so it's intentionally omitted here.
+    case "RRSSC-ALR": return r.HHLLCategory === "HHLL-A" && r.PDHPDLGapCategory === "LLGap" && r.RRSSGapCategory === "RRGap";
+    case "RRSSC-ALS": return r.HHLLCategory === "HHLL-A" && r.PDHPDLGapCategory === "LLGap" && r.RRSSGapCategory === "SSGap";
+    case "RRSSC-BHR": return r.HHLLCategory === "HHLL-B" && r.PDHPDLGapCategory === "HHGap" && r.RRSSGapCategory === "RRGap";
+    case "RRSSC-BHS": return r.HHLLCategory === "HHLL-B" && r.PDHPDLGapCategory === "HHGap" && r.RRSSGapCategory === "SSGap";
+    case "RRSSC-CHR": return r.HHLLCategory === "HHLL-C" && r.PDHPDLGapCategory === "HHGap" && r.RRSSGapCategory === "RRGap";
+    case "RRSSC-CHS": return r.HHLLCategory === "HHLL-C" && r.PDHPDLGapCategory === "HHGap" && r.RRSSGapCategory === "SSGap";
+    case "RRSSC-CLR": return r.HHLLCategory === "HHLL-C" && r.PDHPDLGapCategory === "LLGap" && r.RRSSGapCategory === "RRGap";
+    case "RRSSC-CLS": return r.HHLLCategory === "HHLL-C" && r.PDHPDLGapCategory === "LLGap" && r.RRSSGapCategory === "SSGap";
     default: return getPatternInfo(r)?.label === label;
   }
 }
