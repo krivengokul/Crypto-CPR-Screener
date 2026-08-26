@@ -1540,44 +1540,28 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     // RRSSC-{Level}{SSLL} — nested under the existing "compressed" category
     // (today's R1 down vs prev AND today's S1 up vs prev — see cpr.ts's
     // r.compressed / the "RRSS-C" SSRRCategory), built by crossing
-    // HHLLCategory (A/B/C — HHLL-E stays impossible under compressed, see
-    // the ΔPDH-ΔPDL proof further below) with SSLLCategory, mirroring the
-    // treatment applied to expanded's RRSSE-* above but flipped:
-    //   - "compressed" fixes ΔS1>0 always, so SSLLSameFieldAgreesDown
-    //     (needs ΔS1<=0) never holds -> SSLL-BB/SSLL-OB are IMPOSSIBLE
-    //     for every HHLL branch below (mirrors expanded's AA/OA being
-    //     impossible there).
-    //   - HHLL-A forces ΔPDL>=0 always (agreeing with S1's direction,
-    //     unlike expanded's HHLL-A which straddled the threshold) ->
-    //     fields always agree-up -> SSLL-AA/OA reachable, SB/LB never
-    //     occur -> AA/OA/C/E (4 values).
-    //   - HHLL-C likewise forces ΔPDL>=0 always -> same as HHLL-A ->
-    //     AA/OA/C/E (4 values).
-    //   - HHLL-B forces ΔPDL<0 always (disagreeing with S1's direction)
-    //     -> fields always disagree -> AA/OA impossible (gate fails),
-    //     only the ambiguous SB/LB survive alongside width-only C/E ->
-    //     SB/LB/C/E (4 values).
-    //   Total: 4+4+4 = 12 (down from the naive 3 HHLL x 8 SSLL = 24), with
-    //   no "mixed" branch this time since each HHLL branch's ΔPDL range
-    //   sits entirely on one side of the agreement threshold (unlike
-    //   expanded's HHLL-A). As with expanded, confirming which of these
-    //   12 are actually populated (vs. just theoretically open) needs the
-    //   Close-vs-Pivot (δ) sign case or empirical testing against real
-    //   data. The parent "compressed" category's own
-    //   passesPattern("compressed") already ANDs in r.compressed, so it's
-    //   intentionally omitted here.
+    // HHLLCategory (A/B/C — HHLL-E stays impossible under compressed) with
+    // SSLLCategory. The sign proof alone bounds this at 12 combos
+    // (HHLL-A and HHLL-C each x 4 — ΔPDL>=0 always there, agreeing with
+    // S1's direction, giving AA/OA/C/E; HHLL-B x 4 — ΔPDL<0 always,
+    // disagreeing with S1, giving the ambiguous SB/LB/C/E instead).
+    // Confirming which of those 12 were actually populated needed the
+    // Close-vs-Pivot (δ) sign case, which isn't resolvable from
+    // ΔR1/ΔS1/ΔPDH/ΔPDL signs alone — checked empirically instead:
+    // AC/AE/BSB/CE came back EMPTY against real data and were left out
+    // entirely (not just empty by chance, same treatment as expanded's
+    // ABB/ALB/BC/BE/EC/EE elsewhere in this file), leaving these 8:
+    // AAA/AOA (HHLL-A) + BLB/BC/BE (HHLL-B) + CAA/COA/CC (HHLL-C). The
+    // parent "compressed" category's own passesPattern("compressed")
+    // already ANDs in r.compressed, so it's intentionally omitted here.
     case "RRSSC-AAA": return r.HHLLCategory === "HHLL-A" && r.SSLLCategory === "SSLL-AA";
     case "RRSSC-AOA": return r.HHLLCategory === "HHLL-A" && r.SSLLCategory === "SSLL-OA";
-    case "RRSSC-AC":  return r.HHLLCategory === "HHLL-A" && r.SSLLCategory === "SSLL-C";
-    case "RRSSC-AE":  return r.HHLLCategory === "HHLL-A" && r.SSLLCategory === "SSLL-E";
-    case "RRSSC-BSB": return r.HHLLCategory === "HHLL-B" && r.SSLLCategory === "SSLL-SB";
     case "RRSSC-BLB": return r.HHLLCategory === "HHLL-B" && r.SSLLCategory === "SSLL-LB";
     case "RRSSC-BC":  return r.HHLLCategory === "HHLL-B" && r.SSLLCategory === "SSLL-C";
     case "RRSSC-BE":  return r.HHLLCategory === "HHLL-B" && r.SSLLCategory === "SSLL-E";
     case "RRSSC-CAA": return r.HHLLCategory === "HHLL-C" && r.SSLLCategory === "SSLL-AA";
     case "RRSSC-COA": return r.HHLLCategory === "HHLL-C" && r.SSLLCategory === "SSLL-OA";
     case "RRSSC-CC":  return r.HHLLCategory === "HHLL-C" && r.SSLLCategory === "SSLL-C";
-    case "RRSSC-CE":  return r.HHLLCategory === "HHLL-C" && r.SSLLCategory === "SSLL-E";
     // RRSSE-{Level}{SSLL} — nested under the existing "expanded" category
     // (today's R1 up vs prev AND today's S1 down vs prev — see cpr.ts's
     // r.expanded / the "RRSS-E" SSRRCategory), built by crossing

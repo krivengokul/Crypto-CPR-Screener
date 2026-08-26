@@ -668,29 +668,28 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
         label: "RHLB-RRHHpGap",
         subPatternKeys: ["8A:pLAPpPAH:R4-5P"],
       },
-      // RRSSC-{Level}{SSLL} — 12 Patterns (arrows), nested under
+      // RRSSC-{Level}{SSLL} — 8 Patterns (arrows), nested under
       // "compressed" (today's R1 down vs prev AND today's S1 up vs prev —
       // see cpr.ts's r.compressed / the "RRSS-C" SSRRCategory), built by
       // crossing HHLLCategory (A/B/C — HHLL-E stays impossible under
-      // compressed) with SSLLCategory, same mirrored treatment as
-      // expanded's RRSSE-* (see matchesPatternFlag in ScreenerUtils.tsx
-      // for the full proof). "compressed" fixes ΔS1>0 always, so
-      // SSLL-BB/SSLL-OB are impossible everywhere; HHLL-A and HHLL-C both
-      // force ΔPDL>=0 (agreeing with S1's direction), giving SSLL-AA/OA/
-      // C/E for each; HHLL-B forces ΔPDL<0 (disagreeing with S1), giving
-      // the ambiguous SSLL-SB/LB/C/E instead. Total: 4+4+4 = 12.
+      // compressed) with SSLLCategory. The theoretical bound from the
+      // sign proof was 12 (HHLL-A x 4, HHLL-B x 4, HHLL-C x 4 — see the
+      // full derivation in matchesPatternFlag's comment in
+      // ScreenerUtils.tsx), but AC/AE/BSB/CE were confirmed EMPTY against
+      // real data and left out entirely (not just empty by chance, same
+      // treatment as expanded's ABB/ALB/BC/BE/EC/EE above), leaving these
+      // 8: AAA/AOA (HHLL-A) + BLB/BC/BE (HHLL-B) + CAA/COA/CC (HHLL-C). No
+      // target-graded sub-patterns nested under any of them yet, so each
+      // shows up as a symbol-list-only scan in the Backtest dropdown
+      // until specific targets are defined.
       { key: "RRSSC-AAA", label: "RRSSC-AAA", subPatternKeys: [] },
       { key: "RRSSC-AOA", label: "RRSSC-AOA", subPatternKeys: [] },
-      { key: "RRSSC-AC", label: "RRSSC-AC", subPatternKeys: [] },
-      { key: "RRSSC-AE", label: "RRSSC-AE", subPatternKeys: [] },
-      { key: "RRSSC-BSB", label: "RRSSC-BSB", subPatternKeys: [] },
       { key: "RRSSC-BLB", label: "RRSSC-BLB", subPatternKeys: [] },
       { key: "RRSSC-BC", label: "RRSSC-BC", subPatternKeys: [] },
       { key: "RRSSC-BE", label: "RRSSC-BE", subPatternKeys: [] },
       { key: "RRSSC-CAA", label: "RRSSC-CAA", subPatternKeys: [] },
       { key: "RRSSC-COA", label: "RRSSC-COA", subPatternKeys: [] },
       { key: "RRSSC-CC", label: "RRSSC-CC", subPatternKeys: [] },
-      { key: "RRSSC-CE", label: "RRSSC-CE", subPatternKeys: [] },
     ],
   },
   // NEW: "EXPANDED" left-nav section, mirroring "COMPRESSED" above but for
