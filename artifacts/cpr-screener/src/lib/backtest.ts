@@ -704,6 +704,33 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
     key: "expanded",
     label: "EXPANDED",
     subPatternKeys: ["6A:SLE-RRHH:R2-6A"],
+    // RRSSE-{Level}{Gap} — 8 Patterns (arrows), the EXPANDED mirror of
+    // compressed's RRSSC-* siblings (and levelsabove/levelsbelow's
+    // RRSSA-*/RRSSB-*): base condition = this category's r.expanded
+    // condition AND the raw RRSSE-* flag (see matchesPatternFlag in
+    // ScreenerUtils.tsx). "expanded" fixes ΔR1>0 AND ΔS1<0 (opposite
+    // signs, same shape as "compressed" but flipped), so the
+    // ΔR1-ΔS1=ΔPDH-ΔPDL identity resolves HHLLCategory x
+    // PDHPDLGapCategory only: HHLL-A permits only HHGap, HHLL-B permits
+    // only LLGap, HHLL-E permits both, and HHLL-C is impossible entirely
+    // (see the proof in matchesPatternFlag's comment in ScreenerUtils.tsx).
+    // RRGap vs SSGap isn't pinned down in this sign regime either, so both
+    // remain reachable wherever the HHLL/PDHPDLGap pair is, yielding
+    // exactly 8 of the naive 16: AHR/AHS/BLR/BLS/EHR/EHS/ELR/ELS
+    // (CHR/CHS/CLR/CLS all impossible). No target-graded sub-patterns
+    // nested under any of them yet, so each shows up as a
+    // symbol-list-only scan in the Backtest dropdown until specific
+    // targets are defined.
+    patterns: [
+      { key: "RRSSE-AHR", label: "RRSSE-AHR", subPatternKeys: [] },
+      { key: "RRSSE-AHS", label: "RRSSE-AHS", subPatternKeys: [] },
+      { key: "RRSSE-BLR", label: "RRSSE-BLR", subPatternKeys: [] },
+      { key: "RRSSE-BLS", label: "RRSSE-BLS", subPatternKeys: [] },
+      { key: "RRSSE-EHR", label: "RRSSE-EHR", subPatternKeys: [] },
+      { key: "RRSSE-EHS", label: "RRSSE-EHS", subPatternKeys: [] },
+      { key: "RRSSE-ELR", label: "RRSSE-ELR", subPatternKeys: [] },
+      { key: "RRSSE-ELS", label: "RRSSE-ELS", subPatternKeys: [] },
+    ],
   },
   // NEW: left-nav sections exposed in the Backtest dropdown as
   // symbol-list-only categories (no target grading). Each `key` matches an
