@@ -1513,6 +1513,30 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     case "RRSSA-CLS": return r.HHLLCategory === "HHLL-C" && r.PDHPDLGapCategory === "LLGap" && r.RRSSGapCategory === "SSGap";
     case "RRSSA-EHR": return r.HHLLCategory === "HHLL-E" && r.PDHPDLGapCategory === "HHGap" && r.RRSSGapCategory === "RRGap";
     case "RRSSA-ELR": return r.HHLLCategory === "HHLL-E" && r.PDHPDLGapCategory === "LLGap" && r.RRSSGapCategory === "RRGap";
+    // RRSSB-{Level}{Gap} — the LevelsBelow mirror of RRSSA-* above, 8
+    // Patterns nested under the existing "levelsbelow" category (today's
+    // R1 down vs prev AND today's S1 not up vs prev, minus the
+    // S1BelowPS4 slice carved out to "BELOW LEVEL4" — see cpr.ts's
+    // LevelsBelow). Same Level/Gap naming as RRSSA-* (HHLLCategory A/B/C/E
+    // × combined PDHPDLGapCategory×RRSSGapCategory HR/HS/LR/LS), but the
+    // reachable half is exactly the OTHER 8 of the naive 16: LevelsBelow
+    // fixes ΔR1<=0, ΔS1<=0 (both non-positive) instead of LevelsAbove's
+    // ΔR1>0, ΔS1>=0, which flips every forced pairing from the RRSSA-*
+    // proof (same ΔR1-ΔS1=ΔPDH-ΔPDL identity, opposite sign regime):
+    //   HHLL-A: HHGap forces SSGap, LLGap forces RRGap  -> AHS, ALR
+    //   HHLL-B: HHGap forces RRGap, LLGap forces SSGap  -> BHR, BLS
+    //   HHLL-C: RRGap always (SSGap impossible)          -> CHR, CLR
+    //   HHLL-E: SSGap always (RRGap impossible)           -> EHS, ELS
+    // The parent "levelsbelow" category's own passesPattern("levelsbelow")
+    // already ANDs in r.LevelsBelow, so it's intentionally omitted here.
+    case "RRSSB-AHS": return r.HHLLCategory === "HHLL-A" && r.PDHPDLGapCategory === "HHGap" && r.RRSSGapCategory === "SSGap";
+    case "RRSSB-ALR": return r.HHLLCategory === "HHLL-A" && r.PDHPDLGapCategory === "LLGap" && r.RRSSGapCategory === "RRGap";
+    case "RRSSB-BHR": return r.HHLLCategory === "HHLL-B" && r.PDHPDLGapCategory === "HHGap" && r.RRSSGapCategory === "RRGap";
+    case "RRSSB-BLS": return r.HHLLCategory === "HHLL-B" && r.PDHPDLGapCategory === "LLGap" && r.RRSSGapCategory === "SSGap";
+    case "RRSSB-CHR": return r.HHLLCategory === "HHLL-C" && r.PDHPDLGapCategory === "HHGap" && r.RRSSGapCategory === "RRGap";
+    case "RRSSB-CLR": return r.HHLLCategory === "HHLL-C" && r.PDHPDLGapCategory === "LLGap" && r.RRSSGapCategory === "RRGap";
+    case "RRSSB-EHS": return r.HHLLCategory === "HHLL-E" && r.PDHPDLGapCategory === "HHGap" && r.RRSSGapCategory === "SSGap";
+    case "RRSSB-ELS": return r.HHLLCategory === "HHLL-E" && r.PDHPDLGapCategory === "LLGap" && r.RRSSGapCategory === "SSGap";
     default: return getPatternInfo(r)?.label === label;
   }
 }

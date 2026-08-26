@@ -617,6 +617,25 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
         label: "RHSLB-SSLLpGap",
         subPatternKeys: ["2P:L4U4-pLAP:R4-2A"],
       },
+      // RRSSB-{Level}{Gap} — 8 Patterns (arrows), the LevelsBelow mirror
+      // of levelsabove's RRSSA-* siblings: base condition = this
+      // category's r.LevelsBelow condition AND the raw RRSSB-* flag (see
+      // matchesPatternFlag in ScreenerUtils.tsx). Only these 8 of the
+      // naive 4×4=16 combinations are reachable under LevelsBelow — and
+      // they're exactly the other half of the naive 16 from RRSSA-*
+      // (AHS, ALR, BHR, BLS, CHR, CLR, EHS, ELS), since LevelsBelow flips
+      // the sign regime the impossibility proof runs on (see
+      // ScreenerUtils.tsx). No target-graded sub-patterns nested under
+      // any of them yet, so each shows up as a symbol-list-only scan in
+      // the Backtest dropdown until specific targets are defined.
+      { key: "RRSSB-AHS", label: "RRSSB-AHS", subPatternKeys: [] },
+      { key: "RRSSB-ALR", label: "RRSSB-ALR", subPatternKeys: [] },
+      { key: "RRSSB-BHR", label: "RRSSB-BHR", subPatternKeys: [] },
+      { key: "RRSSB-BLS", label: "RRSSB-BLS", subPatternKeys: [] },
+      { key: "RRSSB-CHR", label: "RRSSB-CHR", subPatternKeys: [] },
+      { key: "RRSSB-CLR", label: "RRSSB-CLR", subPatternKeys: [] },
+      { key: "RRSSB-EHS", label: "RRSSB-EHS", subPatternKeys: [] },
+      { key: "RRSSB-ELS", label: "RRSSB-ELS", subPatternKeys: [] },
     ],
   },
   // NEW: "COMPRESSED" left-nav section (first item). CHANGED:
