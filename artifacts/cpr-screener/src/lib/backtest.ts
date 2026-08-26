@@ -668,32 +668,29 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
         label: "RHLB-RRHHpGap",
         subPatternKeys: ["8A:pLAPpPAH:R4-5P"],
       },
-      // RRSSC-{Level}{Gap} — 8 Patterns (arrows), the COMPRESSED mirror of
-      // levelsabove's RRSSA-*/levelsbelow's RRSSB-* siblings: base
-      // condition = this category's r.compressed condition AND the raw
-      // RRSSC-* flag (see matchesPatternFlag in ScreenerUtils.tsx). Unlike
-      // RRSSA-*/RRSSB-* (which reach 8 of 16 via LevelsAbove/LevelsBelow
-      // fixing ΔR1/ΔS1 to the same sign), "compressed" fixes ΔR1<0 AND
-      // ΔS1>0 (opposite signs), so only the HHLLCategory x
-      // PDHPDLGapCategory half is resolved by the ΔR1-ΔS1=ΔPDH-ΔPDL
-      // identity: HHLL-A permits only LLGap, HHLL-B permits only HHGap,
-      // HHLL-C permits both, and HHLL-E is impossible entirely (see the
-      // proof in matchesPatternFlag's comment in ScreenerUtils.tsx). RRGap
-      // vs SSGap isn't pinned down by the identity in this sign regime, so
-      // both remain reachable wherever the HHLL/PDHPDLGap pair is,
-      // yielding exactly 8 of the naive 16: ALR/ALS/BHR/BHS/CHR/CHS/CLR/CLS
-      // (EHR/EHS/ELR/ELS all impossible). No target-graded sub-patterns
-      // nested under any of them yet, so each shows up as a
-      // symbol-list-only scan in the Backtest dropdown until specific
-      // targets are defined.
-      { key: "RRSSC-ALR", label: "RRSSC-ALR", subPatternKeys: [] },
-      { key: "RRSSC-ALS", label: "RRSSC-ALS", subPatternKeys: [] },
-      { key: "RRSSC-BHR", label: "RRSSC-BHR", subPatternKeys: [] },
-      { key: "RRSSC-BHS", label: "RRSSC-BHS", subPatternKeys: [] },
-      { key: "RRSSC-CHR", label: "RRSSC-CHR", subPatternKeys: [] },
-      { key: "RRSSC-CHS", label: "RRSSC-CHS", subPatternKeys: [] },
-      { key: "RRSSC-CLR", label: "RRSSC-CLR", subPatternKeys: [] },
-      { key: "RRSSC-CLS", label: "RRSSC-CLS", subPatternKeys: [] },
+      // RRSSC-{Level}{SSLL} — 12 Patterns (arrows), nested under
+      // "compressed" (today's R1 down vs prev AND today's S1 up vs prev —
+      // see cpr.ts's r.compressed / the "RRSS-C" SSRRCategory), built by
+      // crossing HHLLCategory (A/B/C — HHLL-E stays impossible under
+      // compressed) with SSLLCategory, same mirrored treatment as
+      // expanded's RRSSE-* (see matchesPatternFlag in ScreenerUtils.tsx
+      // for the full proof). "compressed" fixes ΔS1>0 always, so
+      // SSLL-BB/SSLL-OB are impossible everywhere; HHLL-A and HHLL-C both
+      // force ΔPDL>=0 (agreeing with S1's direction), giving SSLL-AA/OA/
+      // C/E for each; HHLL-B forces ΔPDL<0 (disagreeing with S1), giving
+      // the ambiguous SSLL-SB/LB/C/E instead. Total: 4+4+4 = 12.
+      { key: "RRSSC-AAA", label: "RRSSC-AAA", subPatternKeys: [] },
+      { key: "RRSSC-AOA", label: "RRSSC-AOA", subPatternKeys: [] },
+      { key: "RRSSC-AC", label: "RRSSC-AC", subPatternKeys: [] },
+      { key: "RRSSC-AE", label: "RRSSC-AE", subPatternKeys: [] },
+      { key: "RRSSC-BSB", label: "RRSSC-BSB", subPatternKeys: [] },
+      { key: "RRSSC-BLB", label: "RRSSC-BLB", subPatternKeys: [] },
+      { key: "RRSSC-BC", label: "RRSSC-BC", subPatternKeys: [] },
+      { key: "RRSSC-BE", label: "RRSSC-BE", subPatternKeys: [] },
+      { key: "RRSSC-CAA", label: "RRSSC-CAA", subPatternKeys: [] },
+      { key: "RRSSC-COA", label: "RRSSC-COA", subPatternKeys: [] },
+      { key: "RRSSC-CC", label: "RRSSC-CC", subPatternKeys: [] },
+      { key: "RRSSC-CE", label: "RRSSC-CE", subPatternKeys: [] },
     ],
   },
   // NEW: "EXPANDED" left-nav section, mirroring "COMPRESSED" above but for
