@@ -1570,62 +1570,38 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     case "RRSSC-CHS": return r.HHLLCategory === "HHLL-C" && r.PDHPDLGapCategory === "HHGap" && r.RRSSGapCategory === "SSGap";
     case "RRSSC-CLR": return r.HHLLCategory === "HHLL-C" && r.PDHPDLGapCategory === "LLGap" && r.RRSSGapCategory === "RRGap";
     case "RRSSC-CLS": return r.HHLLCategory === "HHLL-C" && r.PDHPDLGapCategory === "LLGap" && r.RRSSGapCategory === "SSGap";
-    // RRSSE-{Level}{SSLL} — REPLACES the earlier Gap-based RRSSE-AHR/AHS/
-    // BLR/BLS/EHR/EHS/ELR/ELS set (dropped per request — Gap badges are no
-    // longer part of this grouping). Now nested under the existing
-    // "expanded" category (today's R1 up vs prev AND today's S1 down vs
-    // prev — see cpr.ts's r.expanded / the "RRSS-E" SSRRCategory), and
-    // built by crossing just HHLLCategory (A/B/E — HHLL-C stays impossible
-    // under expanded, see the ΔPDH-ΔPDL proof retained below) with
-    // SSLLCategory, instead of HHLLCategory x PDHPDLGapCategory x
-    // RRSSGapCategory as before.
-    //
-    // HHLLCategory reachability under expanded (unchanged from before):
-    //   ΔR1>0, ΔS1<0  =>  ΔR1-ΔS1>0 always  =>  ΔPDH-ΔPDL>0 always
-    //     HHLL-A (ΔPDH>0, ΔPDL>=0): consistent with ΔPDH>ΔPDL -> reachable
-    //     HHLL-B (ΔPDH<=0, ΔPDL<0): consistent with ΔPDH less negative than ΔPDL -> reachable
-    //     HHLL-C (ΔPDH<0, ΔPDL>0): ΔPDH-ΔPDL<0 always -> contradicts the >0 requirement, IMPOSSIBLE
-    //     HHLL-E (ΔPDH>0, ΔPDL<0): ΔPDH-ΔPDL>0 always holds -> reachable
-    //
-    // SSLLCategory reachability, crossed with each surviving HHLL branch
-    // (see the SSLLCategory formula in cpr.ts: R1=PDH+δ, S1=PDL+δ where
-    // δ=Close-Pivot, and the SSLLSameFieldAgreesUp/Down gates that decide
-    // AA/OA vs BB/OB vs the ambiguous SB/LB labels):
-    //   - "expanded" fixes ΔS1<0 always, so SSLLSameFieldAgreesUp
-    //     (needs ΔS1>=0) never holds -> SSLL-AA/SSLL-OA are IMPOSSIBLE
-    //     for every HHLL branch below.
-    //   - HHLL-A only constrains ΔPDL to "not falling" (flat or up), so
-    //     both agree-down (PDL flat) and disagree (PDL up) rows occur ->
-    //     SSLL-BB/OB (agree-down) AND SSLL-SB/LB (disagree) both stay
-    //     reachable, alongside width-only SSLL-C/SSLL-E -> 6 values.
-    //   - HHLL-B and HHLL-E both force ΔPDL<0 (strictly falling),
-    //     matching ΔS1's direction -> fields always agree-down ->
-    //     SSLL-SB/LB (the disagreement labels) are IMPOSSIBLE here ->
-    //     only SSLL-BB/OB/C/E remain -> 4 values each.
-    //   Total: 6 + 4 + 4 = 14 (down from the naive 3 HHLL x 8 SSLL = 24).
-    //   Confirming SSLL-C/SSLL-E/BB/OB are each actually populated (vs.
-    //   just theoretically open) needs the Close-vs-Pivot (δ) sign case,
-    //   which isn't resolvable from ΔR1/ΔS1/ΔPDH/ΔPDL signs alone — best
-    //   checked empirically. The parent "expanded" category's own
-    //   passesPattern("expanded") already ANDs in r.expanded, so it's
-    //   intentionally omitted here.
-    case "RRSSE-ABB": return r.HHLLCategory === "HHLL-A" && r.SSLLCategory === "SSLL-BB";
+    // RRSSE-{Level}{SSLL} — nested under the existing "expanded" category
+    // (today's R1 up vs prev AND today's S1 down vs prev — see cpr.ts's
+    // r.expanded / the "RRSS-E" SSRRCategory), built by crossing
+    // HHLLCategory (A/B/E — HHLL-C stays impossible under expanded) with
+    // SSLLCategory. The sign proof alone bounds this at 14 combos
+    // (HHLL-A x 6 SSLL values since PDL isn't pinned to one direction
+    // there, so both agree-down BB/OB and disagree SB/LB survive,
+    // plus width-only C/E; HHLL-B and HHLL-E each x 4, since both force
+    // PDL strictly down — agreeing with S1 — ruling out the ambiguous
+    // SB/LB there): ABB/AOB/ASB/ALB/AC/AE (HHLL-A) + BBB/BOB/BC/BE
+    // (HHLL-B) + EBB/EOB/EC/EE (HHLL-E). Confirming which of those were
+    // actually populated needed the Close-vs-Pivot (δ) sign case, which
+    // isn't resolvable from ΔR1/ΔS1/ΔPDH/ΔPDL signs alone — checked
+    // empirically instead: ABB/ALB/BC/BE/EC/EE came back EMPTY against
+    // real data and were left out entirely (not just empty by chance,
+    // same treatment as the RRHH-X / HHLL-E-under-compressed impossible
+    // combos elsewhere in this file), leaving these 8: AOB/ASB/AC/AE
+    // (HHLL-A) + BBB/BOB (HHLL-B) + EBB/EOB (HHLL-E). The parent
+    // "expanded" category's own passesPattern("expanded") already ANDs
+    // in r.expanded, so it's intentionally omitted here.
     case "RRSSE-AOB": return r.HHLLCategory === "HHLL-A" && r.SSLLCategory === "SSLL-OB";
     case "RRSSE-ASB": return r.HHLLCategory === "HHLL-A" && r.SSLLCategory === "SSLL-SB";
-    case "RRSSE-ALB": return r.HHLLCategory === "HHLL-A" && r.SSLLCategory === "SSLL-LB";
     case "RRSSE-AC":  return r.HHLLCategory === "HHLL-A" && r.SSLLCategory === "SSLL-C";
     case "RRSSE-AE":  return r.HHLLCategory === "HHLL-A" && r.SSLLCategory === "SSLL-E";
     case "RRSSE-BBB": return r.HHLLCategory === "HHLL-B" && r.SSLLCategory === "SSLL-BB";
     case "RRSSE-BOB": return r.HHLLCategory === "HHLL-B" && r.SSLLCategory === "SSLL-OB";
-    case "RRSSE-BC":  return r.HHLLCategory === "HHLL-B" && r.SSLLCategory === "SSLL-C";
-    case "RRSSE-BE":  return r.HHLLCategory === "HHLL-B" && r.SSLLCategory === "SSLL-E";
     case "RRSSE-EBB": return r.HHLLCategory === "HHLL-E" && r.SSLLCategory === "SSLL-BB";
     case "RRSSE-EOB": return r.HHLLCategory === "HHLL-E" && r.SSLLCategory === "SSLL-OB";
-    case "RRSSE-EC":  return r.HHLLCategory === "HHLL-E" && r.SSLLCategory === "SSLL-C";
-    case "RRSSE-EE":  return r.HHLLCategory === "HHLL-E" && r.SSLLCategory === "SSLL-E";
     default: return getPatternInfo(r)?.label === label;
   }
 }
+
 
 
 /**

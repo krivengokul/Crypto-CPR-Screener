@@ -704,39 +704,28 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
     key: "expanded",
     label: "EXPANDED",
     subPatternKeys: ["6A:SLE-RRHH:R2-6A"],
-    // RRSSE-{Level}{SSLL} — 14 Patterns (arrows), REPLACES the earlier
-    // Gap-based 8-item RRSSE-AHR/AHS/BLR/BLS/EHR/EHS/ELR/ELS set (dropped
-    // per request — no more Gap-badge checks in this grouping). Base
-    // condition = this category's r.expanded condition AND the raw
-    // RRSSE-* flag (see matchesPatternFlag in ScreenerUtils.tsx), now
-    // built by crossing HHLLCategory (A/B/E — HHLL-C stays impossible
-    // under expanded) with SSLLCategory instead of with the Gap
-    // categories. "expanded" fixes ΔS1<0 always, so SSLL-AA/SSLL-OA are
-    // impossible everywhere; HHLL-A additionally allows the ambiguous
-    // SSLL-SB/SSLL-LB labels (PDL isn't pinned to a single direction
-    // there), while HHLL-B/HHLL-E force PDL strictly down (agreeing with
-    // S1's direction), ruling SB/LB out for those two. Net: HHLL-A pairs
-    // with 6 SSLL values (BB/OB/SB/LB/C/E), HHLL-B and HHLL-E each pair
-    // with 4 (BB/OB/C/E) — 6+4+4 = 14 total (see the full proof in
-    // matchesPatternFlag's comment in ScreenerUtils.tsx). No
+    // RRSSE-{Level}{SSLL} — 8 Patterns (arrows), nested under "expanded"
+    // (today's R1 up vs prev AND today's S1 down vs prev — see cpr.ts's
+    // r.expanded / the "RRSS-E" SSRRCategory), built by crossing
+    // HHLLCategory (A/B/E — HHLL-C stays impossible under expanded) with
+    // SSLLCategory. The theoretical bound from the sign proof was 14
+    // (HHLL-A x 6 SSLL values, HHLL-B and HHLL-E x 4 each — see the full
+    // derivation in matchesPatternFlag's comment in ScreenerUtils.tsx),
+    // but ABB/ALB/BC/BE/EC/EE were confirmed EMPTY against real data and
+    // left out entirely (not just empty by chance), leaving these 8:
+    // AOB/ASB/AC/AE (HHLL-A) + BBB/BOB (HHLL-B) + EBB/EOB (HHLL-E). No
     // target-graded sub-patterns nested under any of them yet, so each
     // shows up as a symbol-list-only scan in the Backtest dropdown until
     // specific targets are defined.
     patterns: [
-      { key: "RRSSE-ABB", label: "RRSSE-ABB", subPatternKeys: [] },
       { key: "RRSSE-AOB", label: "RRSSE-AOB", subPatternKeys: [] },
       { key: "RRSSE-ASB", label: "RRSSE-ASB", subPatternKeys: [] },
-      { key: "RRSSE-ALB", label: "RRSSE-ALB", subPatternKeys: [] },
       { key: "RRSSE-AC", label: "RRSSE-AC", subPatternKeys: [] },
       { key: "RRSSE-AE", label: "RRSSE-AE", subPatternKeys: [] },
       { key: "RRSSE-BBB", label: "RRSSE-BBB", subPatternKeys: [] },
       { key: "RRSSE-BOB", label: "RRSSE-BOB", subPatternKeys: [] },
-      { key: "RRSSE-BC", label: "RRSSE-BC", subPatternKeys: [] },
-      { key: "RRSSE-BE", label: "RRSSE-BE", subPatternKeys: [] },
       { key: "RRSSE-EBB", label: "RRSSE-EBB", subPatternKeys: [] },
       { key: "RRSSE-EOB", label: "RRSSE-EOB", subPatternKeys: [] },
-      { key: "RRSSE-EC", label: "RRSSE-EC", subPatternKeys: [] },
-      { key: "RRSSE-EE", label: "RRSSE-EE", subPatternKeys: [] },
     ],
   },
   // NEW: left-nav sections exposed in the Backtest dropdown as
