@@ -532,6 +532,31 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
         label: "U4L3",
         subPatternKeys: ["9AM:pPALPApH-FAU4:2PM"],
       },
+      // NEW: RRSSA-{Level}{Gap} — 16 Patterns (arrows), same shape as
+      // EU2L4/U4L3 siblings above: base condition = this category's
+      // r.LevelsAbove condition AND the raw RRSSA-* flag (see
+      // matchesPatternFlag in ScreenerUtils.tsx). Level = HHLLCategory
+      // (A/B/C/E) crossed with Gap = combined PDHPDLGapCategory ×
+      // RRSSGapCategory (HR/HS/LR/LS) = 4×4 = 16 combinations. No
+      // target-graded sub-patterns nested under any of them yet, so each
+      // shows up as a symbol-list-only scan in the Backtest dropdown
+      // until specific targets are defined.
+      { key: "RRSSA-AHR", label: "RRSSA-AHR", subPatternKeys: [] },
+      { key: "RRSSA-AHS", label: "RRSSA-AHS", subPatternKeys: [] },
+      { key: "RRSSA-ALR", label: "RRSSA-ALR", subPatternKeys: [] },
+      { key: "RRSSA-ALS", label: "RRSSA-ALS", subPatternKeys: [] },
+      { key: "RRSSA-BHR", label: "RRSSA-BHR", subPatternKeys: [] },
+      { key: "RRSSA-BHS", label: "RRSSA-BHS", subPatternKeys: [] },
+      { key: "RRSSA-BLR", label: "RRSSA-BLR", subPatternKeys: [] },
+      { key: "RRSSA-BLS", label: "RRSSA-BLS", subPatternKeys: [] },
+      { key: "RRSSA-CHR", label: "RRSSA-CHR", subPatternKeys: [] },
+      { key: "RRSSA-CHS", label: "RRSSA-CHS", subPatternKeys: [] },
+      { key: "RRSSA-CLR", label: "RRSSA-CLR", subPatternKeys: [] },
+      { key: "RRSSA-CLS", label: "RRSSA-CLS", subPatternKeys: [] },
+      { key: "RRSSA-EHR", label: "RRSSA-EHR", subPatternKeys: [] },
+      { key: "RRSSA-EHS", label: "RRSSA-EHS", subPatternKeys: [] },
+      { key: "RRSSA-ELR", label: "RRSSA-ELR", subPatternKeys: [] },
+      { key: "RRSSA-ELS", label: "RRSSA-ELS", subPatternKeys: [] },
     ],
   },
   // NEW: "LEVELs BELOW" left-nav section (top of the pattern tree in
