@@ -704,32 +704,39 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
     key: "expanded",
     label: "EXPANDED",
     subPatternKeys: ["6A:SLE-RRHH:R2-6A"],
-    // RRSSE-{Level}{Gap} — 8 Patterns (arrows), the EXPANDED mirror of
-    // compressed's RRSSC-* siblings (and levelsabove/levelsbelow's
-    // RRSSA-*/RRSSB-*): base condition = this category's r.expanded
-    // condition AND the raw RRSSE-* flag (see matchesPatternFlag in
-    // ScreenerUtils.tsx). "expanded" fixes ΔR1>0 AND ΔS1<0 (opposite
-    // signs, same shape as "compressed" but flipped), so the
-    // ΔR1-ΔS1=ΔPDH-ΔPDL identity resolves HHLLCategory x
-    // PDHPDLGapCategory only: HHLL-A permits only HHGap, HHLL-B permits
-    // only LLGap, HHLL-E permits both, and HHLL-C is impossible entirely
-    // (see the proof in matchesPatternFlag's comment in ScreenerUtils.tsx).
-    // RRGap vs SSGap isn't pinned down in this sign regime either, so both
-    // remain reachable wherever the HHLL/PDHPDLGap pair is, yielding
-    // exactly 8 of the naive 16: AHR/AHS/BLR/BLS/EHR/EHS/ELR/ELS
-    // (CHR/CHS/CLR/CLS all impossible). No target-graded sub-patterns
-    // nested under any of them yet, so each shows up as a
-    // symbol-list-only scan in the Backtest dropdown until specific
-    // targets are defined.
+    // RRSSE-{Level}{SSLL} — 14 Patterns (arrows), REPLACES the earlier
+    // Gap-based 8-item RRSSE-AHR/AHS/BLR/BLS/EHR/EHS/ELR/ELS set (dropped
+    // per request — no more Gap-badge checks in this grouping). Base
+    // condition = this category's r.expanded condition AND the raw
+    // RRSSE-* flag (see matchesPatternFlag in ScreenerUtils.tsx), now
+    // built by crossing HHLLCategory (A/B/E — HHLL-C stays impossible
+    // under expanded) with SSLLCategory instead of with the Gap
+    // categories. "expanded" fixes ΔS1<0 always, so SSLL-AA/SSLL-OA are
+    // impossible everywhere; HHLL-A additionally allows the ambiguous
+    // SSLL-SB/SSLL-LB labels (PDL isn't pinned to a single direction
+    // there), while HHLL-B/HHLL-E force PDL strictly down (agreeing with
+    // S1's direction), ruling SB/LB out for those two. Net: HHLL-A pairs
+    // with 6 SSLL values (BB/OB/SB/LB/C/E), HHLL-B and HHLL-E each pair
+    // with 4 (BB/OB/C/E) — 6+4+4 = 14 total (see the full proof in
+    // matchesPatternFlag's comment in ScreenerUtils.tsx). No
+    // target-graded sub-patterns nested under any of them yet, so each
+    // shows up as a symbol-list-only scan in the Backtest dropdown until
+    // specific targets are defined.
     patterns: [
-      { key: "RRSSE-AHR", label: "RRSSE-AHR", subPatternKeys: [] },
-      { key: "RRSSE-AHS", label: "RRSSE-AHS", subPatternKeys: [] },
-      { key: "RRSSE-BLR", label: "RRSSE-BLR", subPatternKeys: [] },
-      { key: "RRSSE-BLS", label: "RRSSE-BLS", subPatternKeys: [] },
-      { key: "RRSSE-EHR", label: "RRSSE-EHR", subPatternKeys: [] },
-      { key: "RRSSE-EHS", label: "RRSSE-EHS", subPatternKeys: [] },
-      { key: "RRSSE-ELR", label: "RRSSE-ELR", subPatternKeys: [] },
-      { key: "RRSSE-ELS", label: "RRSSE-ELS", subPatternKeys: [] },
+      { key: "RRSSE-ABB", label: "RRSSE-ABB", subPatternKeys: [] },
+      { key: "RRSSE-AOB", label: "RRSSE-AOB", subPatternKeys: [] },
+      { key: "RRSSE-ASB", label: "RRSSE-ASB", subPatternKeys: [] },
+      { key: "RRSSE-ALB", label: "RRSSE-ALB", subPatternKeys: [] },
+      { key: "RRSSE-AC", label: "RRSSE-AC", subPatternKeys: [] },
+      { key: "RRSSE-AE", label: "RRSSE-AE", subPatternKeys: [] },
+      { key: "RRSSE-BBB", label: "RRSSE-BBB", subPatternKeys: [] },
+      { key: "RRSSE-BOB", label: "RRSSE-BOB", subPatternKeys: [] },
+      { key: "RRSSE-BC", label: "RRSSE-BC", subPatternKeys: [] },
+      { key: "RRSSE-BE", label: "RRSSE-BE", subPatternKeys: [] },
+      { key: "RRSSE-EBB", label: "RRSSE-EBB", subPatternKeys: [] },
+      { key: "RRSSE-EOB", label: "RRSSE-EOB", subPatternKeys: [] },
+      { key: "RRSSE-EC", label: "RRSSE-EC", subPatternKeys: [] },
+      { key: "RRSSE-EE", label: "RRSSE-EE", subPatternKeys: [] },
     ],
   },
   // NEW: left-nav sections exposed in the Backtest dropdown as
