@@ -4,7 +4,7 @@ import {
   runPatternCensus,
   BacktestSource,
   PatternCensusRow,
-} from "./backtest";
+} from "@/lib/backtest";
 
 /**
  * Pattern Stats — a standalone page (not nested inside BacktestPanel) that
