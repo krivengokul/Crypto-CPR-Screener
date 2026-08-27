@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Screener from "@/pages/Screener";
 import BacktestPanel from "@/pages/BacktestPanel";
 import SignalDesk, { type SignalDeskSymbol } from "@/pages/SignalDesk";
+import PatternStats from "@/pages/PatternStats";
 import ViewsSidebar, { pivotcategories, SCREENER_PATTERN_IDS, type SidebarMode } from "@/lib/ViewsSidebar";
 import { Menu } from "lucide-react";
 
@@ -27,7 +28,9 @@ function getSavedMode(): SidebarMode {
       ? "backtest"
       : stored === "signals"
         ? "signals"
-        : "scanner";
+        : stored === "stats"
+          ? "stats"
+          : "scanner";
   } catch {
     return "scanner";
   }
@@ -151,6 +154,8 @@ function App() {
                 onSelectPattern={handlePatternSelect}
               />
             )}
+
+            {mode === "stats" && <PatternStats />}
           </main>
         </div>
         <Toaster />

@@ -447,7 +447,7 @@ export const SCREENER_PATTERN_IDS: ReadonlySet<string> = new Set<string>([
   ...LEGACY_SCREENER_PATTERN_IDS,
 ]);
 
-export type SidebarMode = "scanner" | "backtest" | "signals";
+export type SidebarMode = "scanner" | "backtest" | "signals" | "stats";
 
 /**
  * Flat id → label lookup covering every view in the tree — both the
@@ -636,7 +636,7 @@ export default function ViewsSidebar({
               border: `1px solid ${BORDER_COLOR}`,
             }}
           >
-            {(["scanner", "signals", "backtest"] as SidebarMode[]).map((m) => (
+            {(["scanner", "signals", "backtest", "stats"] as SidebarMode[]).map((m) => (
               <button
                 key={m}
                 onClick={() => onModeChange(m)}
@@ -660,12 +660,16 @@ export default function ViewsSidebar({
                     gap: 4,
                   }}
                 >
-                  <FlaskConical style={{ width: 11, height: 11 }} />
+                  {m === "stats"
+                    ? <BarChart style={{ width: 11, height: 11 }} />
+                    : <FlaskConical style={{ width: 11, height: 11 }} />}
                   {m === "scanner"
                     ? "Live"
                     : m === "backtest"
                       ? "Backtest"
-                      : "Signals"}
+                      : m === "signals"
+                        ? "Signals"
+                        : "Stats"}
                 </span>
               </button>
             ))}

@@ -1960,6 +1960,100 @@ export async function runCategoryScan(
  * U4, bullish) for a category's Pattern sub-bucket (e.g. "CPR Inside"
  * → "CU4L4-R4"), same shape as runBacktest's output.
  */
+/**
+ * NEW: Pattern Stats page support. One row per dropdown pattern entry
+ * (every `sub.key` nested under a BACKTEST_CATEGORIES category's
+ * `patterns` list — e.g. "RRSSA-AAA-AA", "RRSSB-CC") plus how many real
+ * historical (symbol, date) rows actually matched it.
+ */
+export interface PatternCensusRow {
+  categoryKey: string;
+  categoryLabel: string;
+  patternKey: string; // matches matchesPatternFlag's `label` param
+  patternLabel: string;
+  count: number;
+}
+
+/**
+ * Counts live matches for EVERY dropdown pattern across a date range in a
+ * single sweep, instead of re-running runPivotLevelBacktest once per
+ * pattern (which would reconstruct the same symbol/date CPR dozens of
+ * times over — one pass per pattern instead of one pass total). For each
+ * (symbol, date) in range, reconstructCPRForDate runs ONCE (cached candle
+ * history, so no extra network calls after the initial prefetch), and the
+ * resulting CPRResult is checked against every (categoryKey, patternKey)
+ * pair — same passesPatternFn/matchesPatternFn used everywhere else in
+ * this file (see passesPattern/matchesPatternFlag in ScreenerUtils.tsx).
+ *
+ * The symbol universe is resolved once, as of endDateISO (the most recent
+ * date in range) — same "current exchange universe, walked backward"
+ * caveat as getSymbolUniverse's other callers; see its KNOWN LIMITATION
+ * comment above for what that means for delisted symbols.
+ */
+export async function runPatternCensus(
+  startDateISO: string,
+  endDateISO: string,
+  source: BacktestSource,
+  passesPatternFn: (r: CPRResult, pattern: string) => boolean,
+  matchesPatternFn: (r: CPRResult, label: string) => boolean,
+  onProgress?: (done: number, total: number, symbol: string) => void
+): Promise<PatternCensusRow[]> {
+  if (!isValidUTCDateISO(startDateISO) || !isValidUTCDateISO(endDateISO)) {
+    throw new Error("Invalid date range " + startDateISO + " .. " + endDateISO + ". Expected YYYY-MM-DD.");
+  }
+  if (startDateISO > endDateISO) {
+    throw new Error("startDateISO must be <= endDateISO.");
+  }
+
+  // Flatten every (category, pattern) pair once up front.
+  const pairs: { categoryKey: string; categoryLabel: string; patternKey: string; patternLabel: string }[] = [];
+  for (const cat of BACKTEST_CATEGORIES) {
+    for (const sub of cat.patterns ?? []) {
+      pairs.push({ categoryKey: cat.key, categoryLabel: cat.label, patternKey: sub.key, patternLabel: sub.label });
+    }
+  }
+
+  const counts = new Map<string, number>();
+  const pairKey = (categoryKey: string, patternKey: string) => `${categoryKey}::${patternKey}`;
+  pairs.forEach((p) => counts.set(pairKey(p.categoryKey, p.patternKey), 0));
+
+  const dates: string[] = [];
+  for (let d = startDateISO; d <= endDateISO; d = addDaysISO(d, 1)) dates.push(d);
+
+  const symbols: string[] = await getSymbolUniverse(source, endDateISO);
+  await prefetchHistories(symbols, source, onProgress);
+
+  const batchSize = 50;
+  let done = 0;
+  const total = symbols.length;
+
+  for (let i = 0; i < symbols.length; i += batchSize) {
+    const batch = symbols.slice(i, i + batchSize);
+    await Promise.all(
+      batch.map(async (symbol) => {
+        for (const dateISO of dates) {
+          const reconstructed = await reconstructCPRForDate(symbol, source, dateISO);
+          if (!reconstructed) continue;
+          const { result } = reconstructed;
+          for (const p of pairs) {
+            if (!passesPatternFn(result, p.categoryKey)) continue; // base category condition
+            if (!matchesPatternFn(result, p.patternKey)) continue; // this pattern's raw flag
+            const k = pairKey(p.categoryKey, p.patternKey);
+            counts.set(k, (counts.get(k) ?? 0) + 1);
+          }
+        }
+      })
+    );
+    done = Math.min(i + batchSize, symbols.length);
+    onProgress?.(done, total, batch[batch.length - 1]);
+    await yieldToBrowser();
+  }
+
+  return pairs
+    .map((p) => ({ ...p, count: counts.get(pairKey(p.categoryKey, p.patternKey)) ?? 0 }))
+    .sort((a, b) => b.count - a.count);
+}
+
 export async function runPivotLevelBacktest(
   categoryKey: string,
   pivotLevelKey: string,
