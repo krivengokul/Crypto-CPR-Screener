@@ -533,11 +533,6 @@ export default function BacktestPanel() {
             );
           }
           setCategoryRows(allRows);
-          console.log(
-            "HHLL-none leak:",
-            allRows.filter((r) => r.raw.HHLLCategory === "none").length,
-            allRows.filter((r) => r.raw.HHLLCategory === "none")
-          );
         }
       } else if (isPatternOnly && activePatternInfo) {
         // CHANGED: Pattern selections now grade against today's R4 / U4
