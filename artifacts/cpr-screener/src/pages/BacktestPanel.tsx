@@ -534,9 +534,9 @@ export default function BacktestPanel() {
           }
           setCategoryRows(allRows);
           console.log(
-            "HHLL-Q leak:",
-            allRows.filter((r) => r.raw.HHLLCategory === "HHLL-Q").length,
-            allRows.filter((r) => r.raw.HHLLCategory === "HHLL-Q")
+            "HHLL-none leak:",
+            allRows.filter((r) => r.raw.HHLLCategory === "none").length,
+            allRows.filter((r) => r.raw.HHLLCategory === "none")
           );
         }
       } else if (isPatternOnly && activePatternInfo) {
