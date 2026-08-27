@@ -1668,7 +1668,7 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     case "RRSSC-CAA": return r.HHLLCategory === "HHLL-C" && r.SSLLCategory === "SSLL-AA";
     case "RRSSC-COA": return r.HHLLCategory === "HHLL-C" && r.SSLLCategory === "SSLL-OA";
     case "RRSSC-CC":  return r.HHLLCategory === "HHLL-C" && r.SSLLCategory === "SSLL-C";
-    // RRSSE-{Level}-{RRHH}-{SSLL} — nested under the existing "expanded"
+    // E-{Level}-{RRHH}-{SSLL} — nested under the existing "expanded"
     // category (today's R1 up vs prev AND today's S1 down vs prev — see
     // cpr.ts's r.expanded / the "RRSS-E" SSRRCategory), built by crossing
     // HHLLCategory (A/B/E — HHLL-C stays impossible under expanded) with
@@ -1690,22 +1690,22 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     // giving 16 reachable Level+RRHH+SSLL combos in total. The parent
     // "expanded" category's own passesPattern("expanded") already ANDs
     // in r.expanded, so it's intentionally omitted here.
-    case "RRSSE-A-AA-OB": return r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-OB";
-    case "RRSSE-A-OA-OB": return r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-OB";
-    case "RRSSE-A-AA-SB": return r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-SB";
-    case "RRSSE-A-AA-C":  return r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-C";
-    case "RRSSE-A-OA-C":  return r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-C";
-    case "RRSSE-A-AA-E":  return r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-E";
-    case "RRSSE-A-OA-E":  return r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-E";
-    case "RRSSE-B-RA-BB": return r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-RA" && r.SSLLCategory === "SSLL-BB";
-    case "RRSSE-B-C-BB":  return r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-C"  && r.SSLLCategory === "SSLL-BB";
-    case "RRSSE-B-E-BB":  return r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-E"  && r.SSLLCategory === "SSLL-BB";
-    case "RRSSE-B-C-OB":  return r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-C"  && r.SSLLCategory === "SSLL-OB";
-    case "RRSSE-B-E-OB":  return r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-E"  && r.SSLLCategory === "SSLL-OB";
-    case "RRSSE-E-AA-BB": return r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-BB";
-    case "RRSSE-E-OA-BB": return r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-BB";
-    case "RRSSE-E-AA-OB": return r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-OB";
-    case "RRSSE-E-OA-OB": return r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-OB";
+    case "E-A-AA-OB": return r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-OB";
+    case "E-A-OA-OB": return r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-OB";
+    case "E-A-AA-SB": return r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-SB";
+    case "E-A-AA-C":  return r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-C";
+    case "E-A-OA-C":  return r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-C";
+    case "E-A-AA-E":  return r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-E";
+    case "E-A-OA-E":  return r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-E";
+    case "E-B-RA-BB": return r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-RA" && r.SSLLCategory === "SSLL-BB";
+    case "E-B-C-BB":  return r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-C"  && r.SSLLCategory === "SSLL-BB";
+    case "E-B-E-BB":  return r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-E"  && r.SSLLCategory === "SSLL-BB";
+    case "E-B-C-OB":  return r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-C"  && r.SSLLCategory === "SSLL-OB";
+    case "E-B-E-OB":  return r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-E"  && r.SSLLCategory === "SSLL-OB";
+    case "E-E-AA-BB": return r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-BB";
+    case "E-E-OA-BB": return r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-BB";
+    case "E-E-AA-OB": return r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-OB";
+    case "E-E-OA-OB": return r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-OB";
     default: return getPatternInfo(r)?.label === label;
   }
 }

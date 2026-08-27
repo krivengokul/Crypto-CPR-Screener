@@ -835,7 +835,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
     key: "expanded",
     label: "EXPANDED",
     subPatternKeys: ["6A:SLE-RRHH:R2-6A"],
-    // RRSSE-{Level}-{RRHH}-{SSLL} — 16 Patterns (arrows), nested under
+    // E-{Level}-{RRHH}-{SSLL} — 16 Patterns (arrows), nested under
     // "expanded" (today's R1 up vs prev AND today's S1 down vs prev — see
     // cpr.ts's r.expanded / the "RRSS-E" SSRRCategory), built by crossing
     // HHLLCategory (A/B/E — HHLL-C stays impossible under expanded) with
@@ -849,22 +849,22 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
     // shows up as a symbol-list-only scan in the Backtest dropdown until
     // specific targets are defined.
     patterns: [
-      { key: "RRSSE-A-AA-OB", label: "RRSSE-A-AA-OB", subPatternKeys: [] },
-      { key: "RRSSE-A-OA-OB", label: "RRSSE-A-OA-OB", subPatternKeys: [] },
-      { key: "RRSSE-A-AA-SB", label: "RRSSE-A-AA-SB", subPatternKeys: [] },
-      { key: "RRSSE-A-AA-C", label: "RRSSE-A-AA-C", subPatternKeys: [] },
-      { key: "RRSSE-A-OA-C", label: "RRSSE-A-OA-C", subPatternKeys: [] },
-      { key: "RRSSE-A-AA-E", label: "RRSSE-A-AA-E", subPatternKeys: [] },
-      { key: "RRSSE-A-OA-E", label: "RRSSE-A-OA-E", subPatternKeys: [] },
-      { key: "RRSSE-B-RA-BB", label: "RRSSE-B-RA-BB", subPatternKeys: [] },
-      { key: "RRSSE-B-C-BB", label: "RRSSE-B-C-BB", subPatternKeys: [] },
-      { key: "RRSSE-B-E-BB", label: "RRSSE-B-E-BB", subPatternKeys: [] },
-      { key: "RRSSE-B-C-OB", label: "RRSSE-B-C-OB", subPatternKeys: [] },
-      { key: "RRSSE-B-E-OB", label: "RRSSE-B-E-OB", subPatternKeys: [] },
-      { key: "RRSSE-E-AA-BB", label: "RRSSE-E-AA-BB", subPatternKeys: [] },
-      { key: "RRSSE-E-OA-BB", label: "RRSSE-E-OA-BB", subPatternKeys: [] },
-      { key: "RRSSE-E-AA-OB", label: "RRSSE-E-AA-OB", subPatternKeys: [] },
-      { key: "RRSSE-E-OA-OB", label: "RRSSE-E-OA-OB", subPatternKeys: [] },
+      { key: "E-A-AA-OB", label: "E-A-AA-OB", subPatternKeys: [] },
+      { key: "E-A-OA-OB", label: "E-A-OA-OB", subPatternKeys: [] },
+      { key: "E-A-AA-SB", label: "E-A-AA-SB", subPatternKeys: [] },
+      { key: "E-A-AA-C", label: "E-A-AA-C", subPatternKeys: [] },
+      { key: "E-A-OA-C", label: "E-A-OA-C", subPatternKeys: [] },
+      { key: "E-A-AA-E", label: "E-A-AA-E", subPatternKeys: [] },
+      { key: "E-A-OA-E", label: "E-A-OA-E", subPatternKeys: [] },
+      { key: "E-B-RA-BB", label: "E-B-RA-BB", subPatternKeys: [] },
+      { key: "E-B-C-BB", label: "E-B-C-BB", subPatternKeys: [] },
+      { key: "E-B-E-BB", label: "E-B-E-BB", subPatternKeys: [] },
+      { key: "E-B-C-OB", label: "E-B-C-OB", subPatternKeys: [] },
+      { key: "E-B-E-OB", label: "E-B-E-OB", subPatternKeys: [] },
+      { key: "E-E-AA-BB", label: "E-E-AA-BB", subPatternKeys: [] },
+      { key: "E-E-OA-BB", label: "E-E-OA-BB", subPatternKeys: [] },
+      { key: "E-E-AA-OB", label: "E-E-AA-OB", subPatternKeys: [] },
+      { key: "E-E-OA-OB", label: "E-E-OA-OB", subPatternKeys: [] },
     ],
   },
   // NEW: left-nav sections exposed in the Backtest dropdown as
