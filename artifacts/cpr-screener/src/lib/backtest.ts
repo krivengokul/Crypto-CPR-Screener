@@ -532,13 +532,13 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
         label: "U4L3",
         subPatternKeys: ["9AM:pPALPApH-FAU4:2PM"],
       },
-      // RRSSA-{Level}{Gap} — 6 Patterns (arrows), same shape as
+      // RRSSA-{Level}{Gap} — 4 Patterns (arrows), same shape as
       // EU2L4/U4L3 siblings above: base condition = this category's
       // r.LevelsAbove condition AND the raw RRSSA-* flag (see
       // matchesPatternFlag in ScreenerUtils.tsx). Level = HHLLCategory
-      // (A/B/E) crossed with Gap = combined PDHPDLGapCategory ×
-      // RRSSGapCategory (HR/HS/LR). Only these 6 of the naive 4×4=16
-      // combinations are reachable — the other 10 are mathematically
+      // (A/B) crossed with Gap = combined PDHPDLGapCategory ×
+      // RRSSGapCategory (HR/HS/LR). Only these 4 of the naive 4×4=16
+      // combinations are reachable here — the rest are mathematically
       // impossible under LevelsAbove (see the proof in
       // matchesPatternFlag's comment in ScreenerUtils.tsx) and were left
       // out entirely, same treatment as RRHH-X. No target-graded
@@ -549,8 +549,6 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       { key: "RRSSA-ALS", label: "RRSSA-ALS", subPatternKeys: [] },
       { key: "RRSSA-BHS", label: "RRSSA-BHS", subPatternKeys: [] },
       { key: "RRSSA-BLR", label: "RRSSA-BLR", subPatternKeys: [] },
-      { key: "RRSSA-EHR", label: "RRSSA-EHR", subPatternKeys: [] },
-      { key: "RRSSA-ELR", label: "RRSSA-ELR", subPatternKeys: [] },
       // RRSSA-C{RRHH} — 4 Patterns (arrows), REPLACES the old
       // RRSSA-CHS/RRSSA-CLS pair. Base condition = this category's
       // r.LevelsAbove condition AND the raw RRSSA-C* flag (see
@@ -571,6 +569,24 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       { key: "RRSSA-CC", label: "RRSSA-CC", subPatternKeys: [] },
       { key: "RRSSA-CE", label: "RRSSA-CE", subPatternKeys: [] },
       { key: "RRSSA-CRA", label: "RRSSA-CRA", subPatternKeys: [] },
+      // RRSSA-E{RRHH} — 5 Patterns (arrows), REPLACES the old
+      // RRSSA-EHR/RRSSA-ELR pair, same treatment as RRSSA-C{RRHH} above.
+      // HHLL-E's gap is always RRGap (the old EHR/ELR distinction was
+      // PDHPDLGapCategory alone), so the merged HHLL-E condition is
+      // instead re-split by crossing against RRHHCategory. Same
+      // reachable/impossible split as RRSSA-C{RRHH} — RRHH-BB/OB/HA
+      // impossible, RRHH= negligible, leaving AA/OA/C/E/RA reachable
+      // (see the proof in matchesPatternFlag's comment in
+      // ScreenerUtils.tsx) — but which of the 5 have real records is
+      // still TBD pending a data check, so all 5 are kept for now. No
+      // target-graded sub-patterns nested under any of them yet, so each
+      // shows up as a symbol-list-only scan in the Backtest dropdown
+      // until specific targets are defined.
+      { key: "RRSSA-EAA", label: "RRSSA-EAA", subPatternKeys: [] },
+      { key: "RRSSA-EOA", label: "RRSSA-EOA", subPatternKeys: [] },
+      { key: "RRSSA-EC", label: "RRSSA-EC", subPatternKeys: [] },
+      { key: "RRSSA-EE", label: "RRSSA-EE", subPatternKeys: [] },
+      { key: "RRSSA-ERA", label: "RRSSA-ERA", subPatternKeys: [] },
     ],
   },
   // NEW: "LEVELs BELOW" left-nav section (top of the pattern tree in
