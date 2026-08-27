@@ -1668,34 +1668,44 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     case "RRSSC-CAA": return r.HHLLCategory === "HHLL-C" && r.SSLLCategory === "SSLL-AA";
     case "RRSSC-COA": return r.HHLLCategory === "HHLL-C" && r.SSLLCategory === "SSLL-OA";
     case "RRSSC-CC":  return r.HHLLCategory === "HHLL-C" && r.SSLLCategory === "SSLL-C";
-    // RRSSE-{Level}{SSLL} — nested under the existing "expanded" category
-    // (today's R1 up vs prev AND today's S1 down vs prev — see cpr.ts's
-    // r.expanded / the "RRSS-E" SSRRCategory), built by crossing
+    // RRSSE-{Level}-{RRHH}-{SSLL} — nested under the existing "expanded"
+    // category (today's R1 up vs prev AND today's S1 down vs prev — see
+    // cpr.ts's r.expanded / the "RRSS-E" SSRRCategory), built by crossing
     // HHLLCategory (A/B/E — HHLL-C stays impossible under expanded) with
-    // SSLLCategory. The sign proof alone bounds this at 14 combos
-    // (HHLL-A x 6 SSLL values since PDL isn't pinned to one direction
-    // there, so both agree-down BB/OB and disagree SB/LB survive,
-    // plus width-only C/E; HHLL-B and HHLL-E each x 4, since both force
-    // PDL strictly down — agreeing with S1 — ruling out the ambiguous
-    // SB/LB there): ABB/AOB/ASB/ALB/AC/AE (HHLL-A) + BBB/BOB/BC/BE
-    // (HHLL-B) + EBB/EOB/EC/EE (HHLL-E). Confirming which of those were
-    // actually populated needed the Close-vs-Pivot (δ) sign case, which
-    // isn't resolvable from ΔR1/ΔS1/ΔPDH/ΔPDL signs alone — checked
-    // empirically instead: ABB/ALB/BC/BE/EC/EE came back EMPTY against
-    // real data and were left out entirely (not just empty by chance,
-    // same treatment as the RRHH-X / HHLL-E-under-compressed impossible
-    // combos elsewhere in this file), leaving these 8: AOB/ASB/AC/AE
-    // (HHLL-A) + BBB/BOB (HHLL-B) + EBB/EOB (HHLL-E). The parent
+    // SSLLCategory, same as before — but now RRHHCategory is checked
+    // *before* SSLLCategory (and folded into the key/label between the
+    // Level and the SSLL suffix) instead of being ignored, since each of
+    // the 8 original HHLL+SSLL combos below turned out to span more than
+    // one RRHHCategory value empirically. Each original combo's reachable
+    // RRHHCategory set (confirmed against real data, same treatment as
+    // the rest of this file):
+    //   HHLL-A + SSLL-OB -> RRHH-AA, RRHH-OA
+    //   HHLL-A + SSLL-SB -> RRHH-AA
+    //   HHLL-A + SSLL-C  -> RRHH-AA, RRHH-OA
+    //   HHLL-A + SSLL-E  -> RRHH-AA, RRHH-OA
+    //   HHLL-B + SSLL-BB -> RRHH-RA, RRHH-C, RRHH-E
+    //   HHLL-B + SSLL-OB -> RRHH-C, RRHH-E
+    //   HHLL-E + SSLL-BB -> RRHH-AA, RRHH-OA
+    //   HHLL-E + SSLL-OB -> RRHH-AA, RRHH-OA
+    // giving 16 reachable Level+RRHH+SSLL combos in total. The parent
     // "expanded" category's own passesPattern("expanded") already ANDs
     // in r.expanded, so it's intentionally omitted here.
-    case "RRSSE-AOB": return r.HHLLCategory === "HHLL-A" && r.SSLLCategory === "SSLL-OB";
-    case "RRSSE-ASB": return r.HHLLCategory === "HHLL-A" && r.SSLLCategory === "SSLL-SB";
-    case "RRSSE-AC":  return r.HHLLCategory === "HHLL-A" && r.SSLLCategory === "SSLL-C";
-    case "RRSSE-AE":  return r.HHLLCategory === "HHLL-A" && r.SSLLCategory === "SSLL-E";
-    case "RRSSE-BBB": return r.HHLLCategory === "HHLL-B" && r.SSLLCategory === "SSLL-BB";
-    case "RRSSE-BOB": return r.HHLLCategory === "HHLL-B" && r.SSLLCategory === "SSLL-OB";
-    case "RRSSE-EBB": return r.HHLLCategory === "HHLL-E" && r.SSLLCategory === "SSLL-BB";
-    case "RRSSE-EOB": return r.HHLLCategory === "HHLL-E" && r.SSLLCategory === "SSLL-OB";
+    case "RRSSE-A-AA-OB": return r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-OB";
+    case "RRSSE-A-OA-OB": return r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-OB";
+    case "RRSSE-A-AA-SB": return r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-SB";
+    case "RRSSE-A-AA-C":  return r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-C";
+    case "RRSSE-A-OA-C":  return r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-C";
+    case "RRSSE-A-AA-E":  return r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-E";
+    case "RRSSE-A-OA-E":  return r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-E";
+    case "RRSSE-B-RA-BB": return r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-RA" && r.SSLLCategory === "SSLL-BB";
+    case "RRSSE-B-C-BB":  return r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-C"  && r.SSLLCategory === "SSLL-BB";
+    case "RRSSE-B-E-BB":  return r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-E"  && r.SSLLCategory === "SSLL-BB";
+    case "RRSSE-B-C-OB":  return r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-C"  && r.SSLLCategory === "SSLL-OB";
+    case "RRSSE-B-E-OB":  return r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-E"  && r.SSLLCategory === "SSLL-OB";
+    case "RRSSE-E-AA-BB": return r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-BB";
+    case "RRSSE-E-OA-BB": return r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-BB";
+    case "RRSSE-E-AA-OB": return r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-OB";
+    case "RRSSE-E-OA-OB": return r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-OB";
     default: return getPatternInfo(r)?.label === label;
   }
 }

@@ -835,28 +835,36 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
     key: "expanded",
     label: "EXPANDED",
     subPatternKeys: ["6A:SLE-RRHH:R2-6A"],
-    // RRSSE-{Level}{SSLL} — 8 Patterns (arrows), nested under "expanded"
-    // (today's R1 up vs prev AND today's S1 down vs prev — see cpr.ts's
-    // r.expanded / the "RRSS-E" SSRRCategory), built by crossing
+    // RRSSE-{Level}-{RRHH}-{SSLL} — 16 Patterns (arrows), nested under
+    // "expanded" (today's R1 up vs prev AND today's S1 down vs prev — see
+    // cpr.ts's r.expanded / the "RRSS-E" SSRRCategory), built by crossing
     // HHLLCategory (A/B/E — HHLL-C stays impossible under expanded) with
-    // SSLLCategory. The theoretical bound from the sign proof was 14
-    // (HHLL-A x 6 SSLL values, HHLL-B and HHLL-E x 4 each — see the full
-    // derivation in matchesPatternFlag's comment in ScreenerUtils.tsx),
-    // but ABB/ALB/BC/BE/EC/EE were confirmed EMPTY against real data and
-    // left out entirely (not just empty by chance), leaving these 8:
-    // AOB/ASB/AC/AE (HHLL-A) + BBB/BOB (HHLL-B) + EBB/EOB (HHLL-E). No
+    // RRHHCategory (checked before SSLLCategory) with SSLLCategory — see
+    // the full derivation, including each combo's empirically-confirmed
+    // reachable RRHHCategory set, in matchesPatternFlag's comment in
+    // ScreenerUtils.tsx. The original 8 HHLL+SSLL combos (AOB/ASB/AC/AE
+    // under HHLL-A, BBB/BOB under HHLL-B, EBB/EOB under HHLL-E) each
+    // split into 1-3 of these by RRHHCategory, giving 16 total. No
     // target-graded sub-patterns nested under any of them yet, so each
     // shows up as a symbol-list-only scan in the Backtest dropdown until
     // specific targets are defined.
     patterns: [
-      { key: "RRSSE-AOB", label: "RRSSE-AOB", subPatternKeys: [] },
-      { key: "RRSSE-ASB", label: "RRSSE-ASB", subPatternKeys: [] },
-      { key: "RRSSE-AC", label: "RRSSE-AC", subPatternKeys: [] },
-      { key: "RRSSE-AE", label: "RRSSE-AE", subPatternKeys: [] },
-      { key: "RRSSE-BBB", label: "RRSSE-BBB", subPatternKeys: [] },
-      { key: "RRSSE-BOB", label: "RRSSE-BOB", subPatternKeys: [] },
-      { key: "RRSSE-EBB", label: "RRSSE-EBB", subPatternKeys: [] },
-      { key: "RRSSE-EOB", label: "RRSSE-EOB", subPatternKeys: [] },
+      { key: "RRSSE-A-AA-OB", label: "RRSSE-A-AA-OB", subPatternKeys: [] },
+      { key: "RRSSE-A-OA-OB", label: "RRSSE-A-OA-OB", subPatternKeys: [] },
+      { key: "RRSSE-A-AA-SB", label: "RRSSE-A-AA-SB", subPatternKeys: [] },
+      { key: "RRSSE-A-AA-C", label: "RRSSE-A-AA-C", subPatternKeys: [] },
+      { key: "RRSSE-A-OA-C", label: "RRSSE-A-OA-C", subPatternKeys: [] },
+      { key: "RRSSE-A-AA-E", label: "RRSSE-A-AA-E", subPatternKeys: [] },
+      { key: "RRSSE-A-OA-E", label: "RRSSE-A-OA-E", subPatternKeys: [] },
+      { key: "RRSSE-B-RA-BB", label: "RRSSE-B-RA-BB", subPatternKeys: [] },
+      { key: "RRSSE-B-C-BB", label: "RRSSE-B-C-BB", subPatternKeys: [] },
+      { key: "RRSSE-B-E-BB", label: "RRSSE-B-E-BB", subPatternKeys: [] },
+      { key: "RRSSE-B-C-OB", label: "RRSSE-B-C-OB", subPatternKeys: [] },
+      { key: "RRSSE-B-E-OB", label: "RRSSE-B-E-OB", subPatternKeys: [] },
+      { key: "RRSSE-E-AA-BB", label: "RRSSE-E-AA-BB", subPatternKeys: [] },
+      { key: "RRSSE-E-OA-BB", label: "RRSSE-E-OA-BB", subPatternKeys: [] },
+      { key: "RRSSE-E-AA-OB", label: "RRSSE-E-AA-OB", subPatternKeys: [] },
+      { key: "RRSSE-E-OA-OB", label: "RRSSE-E-OA-OB", subPatternKeys: [] },
     ],
   },
   // NEW: left-nav sections exposed in the Backtest dropdown as
