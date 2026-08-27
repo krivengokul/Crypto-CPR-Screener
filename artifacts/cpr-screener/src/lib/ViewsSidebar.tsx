@@ -636,7 +636,14 @@ export default function ViewsSidebar({
               border: `1px solid ${BORDER_COLOR}`,
             }}
           >
-            {(["scanner", "signals", "backtest", "stats"] as SidebarMode[]).map((m) => (
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                width: "100%",
+              }}
+            >
+            {(["scanner", "signals", "stats", "backtest"] as SidebarMode[]).map((m) => (
               <button
                 key={m}
                 onClick={() => onModeChange(m)}
@@ -673,6 +680,7 @@ export default function ViewsSidebar({
                 </span>
               </button>
             ))}
+            </div>
           </div>
         </div>
 
