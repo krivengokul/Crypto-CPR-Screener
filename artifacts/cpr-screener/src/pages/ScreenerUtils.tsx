@@ -1506,35 +1506,21 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     case "RRSSA-ALS": return r.HHLLCategory === "HHLL-A" && r.PDHPDLGapCategory === "LLGap" && r.RRSSGapCategory === "SSGap";
     case "RRSSA-BHS": return r.HHLLCategory === "HHLL-B" && r.PDHPDLGapCategory === "HHGap" && r.RRSSGapCategory === "SSGap";
     case "RRSSA-BLR": return r.HHLLCategory === "HHLL-B" && r.PDHPDLGapCategory === "LLGap" && r.RRSSGapCategory === "RRGap";
-    // RRSSA-E{RRHH} — 5 Patterns, REPLACES the old RRSSA-EHR/RRSSA-ELR
-    // pair, same treatment as RRSSA-C{RRHH} above. Under HHLL-E,
-    // RRSSGapCategory is always RRGap (proof above), so
-    // PDHPDLGapCategory (HHGap vs LLGap) was the only thing EHR/ELR ever
-    // distinguished — merged here into a single gap-agnostic HHLL-E
-    // condition, then re-split by crossing against RRHHCategory instead.
-    // HHLL-E fixes ΔPDH > 0 strictly (unlike HHLL-C's ΔPDH <= 0), which
-    // combined with LevelsAbove's ΔR1 > 0 makes RRHHSameFieldAgreesUp
-    // ALWAYS true (both raw fields are strictly positive) — so the same
-    // 5-of-9 reachable set falls out, just via the "Above"-shaped branch
-    // instead of the "Below"-shaped one:
-    //   RRHH-BB/RRHH-OB still require RRHHSameFieldAgreesDown (ΔR1<=0
-    //     AND ΔPDH<=0) — impossible since both are >0 always here.
-    //   RRHH-HA still requires ΔR1 < ΔPDH in the RA/HA split — here both
-    //     are exactly +1 (strictly positive dir), so ΔR1>=ΔPDH always
-    //     holds and that split can only resolve to RA, never HA.
-    //   RRHH= is reachable only via an exact-tie order-crossing
-    //     coincidence — negligible, same treatment as elsewhere.
-    //   Leaving RRHH-AA/RRHH-OA (R1 vs PDH same order both days — either
-    //   R1 above PDH throughout or below throughout, the plain
-    //   non-crossing case), RRHH-C and RRHH-RA (order-crossing days,
-    //   opposite sub-branches), and RRHH-E (order-crossing days) as the
-    //   5 mathematically reachable; which of these have real records is
-    //   TBD pending a data check, same as RRSSA-C{RRHH}'s CAA/COA split.
-    case "RRSSA-EAA": return r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-AA";
-    case "RRSSA-EOA": return r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-OA";
-    case "RRSSA-EC": return r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-C";
-    case "RRSSA-EE": return r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-E";
-    case "RRSSA-ERA": return r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-RA";
+    // RRSSA-E — merged LevelsAbove sub-category for RRSSA-EAA and
+    // RRSSA-EOA. These two RRHH branches are treated as one selection.
+    // SSLLCategory is deliberately not folded into the filter: it remains
+    // an independent classification and is rendered by the existing
+    // SSLL-* badge in the result row.
+    case "RRSSA-EOA": return r.HHLLCategory === "HHLL-E" && r.SSLLCategory === "SSLL-OA";
+    
+    case "RRSSA-EC": return r.HHLLCategory === "HHLL-E" && r.SSLLCategory === "SSLL-C";
+    case "RRSSA-EE": return r.HHLLCategory === "HHLL-E" && r.SSLLCategory === "SSLL-E";
+    case "RRSSA-ELB": return r.HHLLCategory === "HHLL-E" && r.SSLLCategory === "SSLL-LB";
+
+    case "RRSSA-EOB": return r.HHLLCategory === "HHLL-E" && r.SSLLCategory === "SSLL-OB";
+    case "RRSSA-ESB": return r.HHLLCategory === "HHLL-E" && r.SSLLCategory === "SSLL-SB";
+    case "RRSSA-EBB": return r.HHLLCategory === "HHLL-E" && r.SSLLCategory === "SSLL-BB";
+    case "RRSSA-EAA": return r.HHLLCategory === "HHLL-E" && r.SSLLCategory === "SSLL-AA";
     // RRSSA-C{RRHH} — 4 Patterns, REPLACES the old RRSSA-CHS/RRSSA-CLS
     // pair. Under HHLL-C, RRSSGapCategory is always SSGap (proof above),
     // so PDHPDLGapCategory (HHGap vs LLGap) was the only thing CHS/CLS

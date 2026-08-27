@@ -569,24 +569,18 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       { key: "RRSSA-CC", label: "RRSSA-CC", subPatternKeys: [] },
       { key: "RRSSA-CE", label: "RRSSA-CE", subPatternKeys: [] },
       { key: "RRSSA-CRA", label: "RRSSA-CRA", subPatternKeys: [] },
-      // RRSSA-E{RRHH} — 5 Patterns (arrows), REPLACES the old
-      // RRSSA-EHR/RRSSA-ELR pair, same treatment as RRSSA-C{RRHH} above.
-      // HHLL-E's gap is always RRGap (the old EHR/ELR distinction was
-      // PDHPDLGapCategory alone), so the merged HHLL-E condition is
-      // instead re-split by crossing against RRHHCategory. Same
-      // reachable/impossible split as RRSSA-C{RRHH} — RRHH-BB/OB/HA
-      // impossible, RRHH= negligible, leaving AA/OA/C/E/RA reachable
-      // (see the proof in matchesPatternFlag's comment in
-      // ScreenerUtils.tsx) — but which of the 5 have real records is
-      // still TBD pending a data check, so all 5 are kept for now. No
-      // target-graded sub-patterns nested under any of them yet, so each
-      // shows up as a symbol-list-only scan in the Backtest dropdown
-      // until specific targets are defined.
+      // RRSSA-E + SSLL — 8 combinations.
+      // RRSSA-E is the merged LevelsAbove RRSS-E condition (HHLL-E with
+      // RRHH-AA or RRHH-OA), crossed with each SSLLCategory. Each entry is
+      // a symbol-list-only scan and keeps the corresponding SSLL-* badge.
       { key: "RRSSA-EAA", label: "RRSSA-EAA", subPatternKeys: [] },
       { key: "RRSSA-EOA", label: "RRSSA-EOA", subPatternKeys: [] },
-      { key: "RRSSA-EC", label: "RRSSA-EC", subPatternKeys: [] },
-      { key: "RRSSA-EE", label: "RRSSA-EE", subPatternKeys: [] },
-      { key: "RRSSA-ERA", label: "RRSSA-ERA", subPatternKeys: [] },
+      { key: "RRSSA-EBB", label: "RRSSA-EBB", subPatternKeys: [] },
+      { key: "RRSSA-EOB", label: "RRSSA-EOB", subPatternKeys: [] },
+      { key: "RRSSA-EC",  label: "RRSSA-EC",  subPatternKeys: [] },
+      { key: "RRSSA-EE",  label: "RRSSA-EE",  subPatternKeys: [] },
+      { key: "RRSSA-ESB", label: "RRSSA-ESB", subPatternKeys: [] },
+      { key: "RRSSA-ELB", label: "RRSSA-ELB", subPatternKeys: [] },
     ],
   },
   // NEW: "LEVELs BELOW" left-nav section (top of the pattern tree in
