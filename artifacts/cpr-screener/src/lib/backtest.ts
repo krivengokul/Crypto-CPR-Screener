@@ -641,14 +641,13 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
         label: "RHSLB-SSLLpGap",
         subPatternKeys: ["2P:L4U4-pLAP:R4-2A"],
       },
-      // RRSSB-{Level}{Gap} — 8 Patterns (arrows), the LevelsBelow mirror
-      // of levelsabove's RRSSA-* siblings: base condition = this
-      // category's r.LevelsBelow condition AND the raw RRSSB-* flag (see
-      // matchesPatternFlag in ScreenerUtils.tsx). Only these 8 of the
-      // naive 4×4=16 combinations are reachable under LevelsBelow — and
-      // they're exactly the other half of the naive 16 from RRSSA-*
-      // (AHS, ALR, BHR, BLS, CHR, CLR, EHS, ELS), since LevelsBelow flips
-      // the sign regime the impossibility proof runs on (see
+      // RRSSB-{Level}{Gap} — 6 Patterns (arrows) for HHLL-A/B/C, the
+      // LevelsBelow mirror of levelsabove's RRSSA-* siblings: base
+      // condition = this category's r.LevelsBelow condition AND the raw
+      // RRSSB-* flag (see matchesPatternFlag in ScreenerUtils.tsx). These
+      // 6 are reachable under LevelsBelow the same way RRSSA-*'s AHR/
+      // ALS/BHS/BLR are under LevelsAbove, since LevelsBelow flips the
+      // sign regime the impossibility proof runs on (see
       // ScreenerUtils.tsx). No target-graded sub-patterns nested under
       // any of them yet, so each shows up as a symbol-list-only scan in
       // the Backtest dropdown until specific targets are defined.
@@ -658,8 +657,26 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       { key: "RRSSB-BLS", label: "RRSSB-BLS", subPatternKeys: [] },
       { key: "RRSSB-CHR", label: "RRSSB-CHR", subPatternKeys: [] },
       { key: "RRSSB-CLR", label: "RRSSB-CLR", subPatternKeys: [] },
-      { key: "RRSSB-EHS", label: "RRSSB-EHS", subPatternKeys: [] },
-      { key: "RRSSB-ELS", label: "RRSSB-ELS", subPatternKeys: [] },
+      // RRSSB-E{RRHH} — 5 Patterns (arrows), REPLACES the old
+      // RRSSB-EHS/RRSSB-ELS pair. Base condition = this category's
+      // r.LevelsBelow condition AND the raw RRSSB-E* flag (see
+      // matchesPatternFlag in ScreenerUtils.tsx). HHLL-E's gap is always
+      // SSGap (the old EHS/ELS distinction was PDHPDLGapCategory alone),
+      // so the merged HHLL-E condition is instead re-split by crossing
+      // against RRHHCategory — mirrors RRSSA-C{RRHH}'s treatment of
+      // HHLL-C above. Of the 9 non-"none" RRHHCategory values, RRHH-AA/
+      // RRHH-OA/RRHH-RA are mathematically impossible under LevelsBelow
+      // and RRHH= is negligible (see the proof in matchesPatternFlag's
+      // comment in ScreenerUtils.tsx), leaving 5 reachable (BB/OB/C/E/HA)
+      // — NOT yet checked against real data. RRSSA-C{RRHH}'s own mirror
+      // slot (RRHH-AA) came back CONFIRMED EMPTY there, so RRSSB-EBB is
+      // the prime suspect to verify and possibly drop the same way once
+      // backtested.
+      { key: "RRSSB-EBB", label: "RRSSB-EBB", subPatternKeys: [] },
+      { key: "RRSSB-EOB", label: "RRSSB-EOB", subPatternKeys: [] },
+      { key: "RRSSB-EC", label: "RRSSB-EC", subPatternKeys: [] },
+      { key: "RRSSB-EE", label: "RRSSB-EE", subPatternKeys: [] },
+      { key: "RRSSB-EHA", label: "RRSSB-EHA", subPatternKeys: [] },
     ],
   },
   // NEW: "COMPRESSED" left-nav section (first item). CHANGED:

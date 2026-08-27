@@ -1554,6 +1554,8 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     //   HHLL-B: HHGap forces RRGap, LLGap forces SSGap  -> BHR, BLS
     //   HHLL-C: RRGap always (SSGap impossible)          -> CHR, CLR
     //   HHLL-E: SSGap always (RRGap impossible)           -> EHS, ELS
+    //           (EHS/ELS since replaced by RRSSB-E{RRHH} below — see
+    //           that case block for the RRHHCategory-based re-split)
     // The parent "levelsbelow" category's own passesPattern("levelsbelow")
     // already ANDs in r.LevelsBelow, so it's intentionally omitted here.
     case "RRSSB-AHS": return r.HHLLCategory === "HHLL-A" && r.PDHPDLGapCategory === "HHGap" && r.RRSSGapCategory === "SSGap";
@@ -1562,8 +1564,29 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     case "RRSSB-BLS": return r.HHLLCategory === "HHLL-B" && r.PDHPDLGapCategory === "LLGap" && r.RRSSGapCategory === "SSGap";
     case "RRSSB-CHR": return r.HHLLCategory === "HHLL-C" && r.PDHPDLGapCategory === "HHGap" && r.RRSSGapCategory === "RRGap";
     case "RRSSB-CLR": return r.HHLLCategory === "HHLL-C" && r.PDHPDLGapCategory === "LLGap" && r.RRSSGapCategory === "RRGap";
-    case "RRSSB-EHS": return r.HHLLCategory === "HHLL-E" && r.PDHPDLGapCategory === "HHGap" && r.RRSSGapCategory === "SSGap";
-    case "RRSSB-ELS": return r.HHLLCategory === "HHLL-E" && r.PDHPDLGapCategory === "LLGap" && r.RRSSGapCategory === "SSGap";
+    // RRSSB-E{RRHH} — 5 Patterns, REPLACES the old RRSSB-EHS/RRSSB-ELS
+    // pair. Under HHLL-E, RRSSGapCategory is always SSGap (proof above:
+    // "HHLL-E: SSGap always (RRGap impossible) -> EHS, ELS"), so
+    // PDHPDLGapCategory (HHGap vs LLGap) was the only thing EHS/ELS ever
+    // distinguished — merged here into a single gap-agnostic HHLL-E
+    // condition, then re-split by crossing against RRHHCategory instead
+    // (mirrors RRSSA-C{RRHH} crossing HHLL-C against RRHHCategory above).
+    // Under LevelsBelow, ΔR1<=0 always, so the RRHHCategory values that
+    // require ΔR1>0 (RRHH-AA/RRHH-OA/RRHH-RA — the "both up"/ambiguous-
+    // above family) are mathematically impossible here, and RRHH= is
+    // negligible (same treatment as elsewhere), leaving 5 reachable
+    // (BB/OB/C/E/HA) — the mirror image of RRSSA-C{RRHH}'s reachable set
+    // (OA/C/E/RA), swapping the "above" family for the "below" family.
+    // NOT yet checked against real data: RRSSA-C's own mirror case
+    // (RRHH-AA, the clean full-separation "both up" member) came back
+    // CONFIRMED EMPTY there, so RRSSB-EBB — its direct mirror (clean
+    // full-separation "both down") — is the prime suspect to verify and
+    // possibly drop the same way.
+    case "RRSSB-EBB": return r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-BB";
+    case "RRSSB-EOB": return r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-OB";
+    case "RRSSB-EC":  return r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-C";
+    case "RRSSB-EE":  return r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-E";
+    case "RRSSB-EHA": return r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-HA";
     // RRSSC-{Level}{SSLL} — nested under the existing "compressed" category
     // (today's R1 down vs prev AND today's S1 up vs prev — see cpr.ts's
     // r.compressed / the "RRSS-C" SSRRCategory), built by crossing
