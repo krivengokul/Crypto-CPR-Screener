@@ -573,13 +573,9 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       // RRSSA-E is the merged LevelsAbove RRSS-E condition (HHLL-E with
       // RRHH-AA or RRHH-OA), crossed with each SSLLCategory. Each entry is
       // a symbol-list-only scan and keeps the corresponding SSLL-* badge.
-      { key: "RRSSA-EAA", label: "RRSSA-EAA", subPatternKeys: [] },
-      { key: "RRSSA-EOA", label: "RRSSA-EOA", subPatternKeys: [] },
-      { key: "RRSSA-EBB", label: "RRSSA-EBB", subPatternKeys: [] },
       { key: "RRSSA-EOB", label: "RRSSA-EOB", subPatternKeys: [] },
       { key: "RRSSA-EC",  label: "RRSSA-EC",  subPatternKeys: [] },
       { key: "RRSSA-EE",  label: "RRSSA-EE",  subPatternKeys: [] },
-      { key: "RRSSA-ESB", label: "RRSSA-ESB", subPatternKeys: [] },
       { key: "RRSSA-ELB", label: "RRSSA-ELB", subPatternKeys: [] },
     ],
   },
