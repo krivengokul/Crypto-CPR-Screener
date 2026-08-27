@@ -1525,8 +1525,29 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     //   and RRHH-OA (overlapping) as possible outcomes — together they
     //   partition 100% of HHLL-A/LevelsAbove rows (barring the negligible
     //   exact-tie RRHH-Q case, same treatment as boundary ties elsewhere).
-    case "RRSSA-AAA": return r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-AA";
-    case "RRSSA-AOA": return r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OA";
+    //
+    // RRSSA-A{RRHH}-{SSLL} — 4 Patterns, further re-splits RRSSA-AAA and
+    // RRSSA-AOA each by crossing against SSLLCategory. Same proof shape
+    // as above but run over the S1/PDL band instead of the R1/PDH one:
+    // ΔS1 >= 0 (LevelsAbove) and ΔPDL >= 0 (HHLL-A) are both non-negative,
+    // so by the identical max/min monotonicity argument, SSLLCategory is
+    // ALSO exhaustively pinned to just SSLL-AA/SSLL-OA here (barring the
+    // negligible exact-tie SSLL-Q case) — no empirical trimming needed on
+    // that axis either. But RRHHCategory (R1/PDH) and SSLLCategory
+    // (S1/PDL) are driven by different level pairs with no identity
+    // forcing them to move together, so crossing the two provably-binary
+    // splits gives 4 independent combinations rather than a further-
+    // pruned subset — unlike RRSSA-AAA/RRSSA-AOA's OWN split, nothing
+    // rules any of the 4 out mathematically. All 4 were CONFIRMED to have
+    // records against real data, so all 4 are kept. Keys keep the RRHH
+    // and SSLL halves visually separated (RRSSA-A{RRHH}-{SSLL}) rather
+    // than concatenating into one run, since both axes already use "A"
+    // suffixes and RRSSA-AAAAA/RRSSA-AAAOA-style concatenation would be
+    // unreadable.
+    case "RRSSA-AAA-AA": return r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-AA";
+    case "RRSSA-AAA-OA": return r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-OA";
+    case "RRSSA-AOA-AA": return r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-AA";
+    case "RRSSA-AOA-OA": return r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-OA";
     // RRSSA-E — merged LevelsAbove sub-category 
     // SSLL-* badge in the result row.
     case "RRSSA-EC": return r.HHLLCategory === "HHLL-E" && r.SSLLCategory === "SSLL-C";

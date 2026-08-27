@@ -561,8 +561,22 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       // provably always either RRHH-AA or RRHH-OA (see the max/min
       // monotonicity proof in ScreenerUtils.tsx) — no other RRHHCategory
       // value is reachable, so nothing here needed backtesting to drop.
-      { key: "RRSSA-AAA", label: "RRSSA-AAA", subPatternKeys: [] },
-      { key: "RRSSA-AOA", label: "RRSSA-AOA", subPatternKeys: [] },
+      //
+      // RRSSA-A{RRHH}-{SSLL} — 4 Patterns (arrows), further re-splits
+      // RRSSA-AAA and RRSSA-AOA each by crossing against SSLLCategory.
+      // Same max/min monotonicity proof, run over the S1/PDL band this
+      // time, ALSO exhaustively pins SSLLCategory to just SSLL-AA/SSLL-OA
+      // under HHLL-A + LevelsAbove — but RRHHCategory and SSLLCategory
+      // are driven by different level pairs with nothing forcing them to
+      // move together, so the cross gives 4 independent combinations,
+      // none ruled out mathematically. All 4 were CONFIRMED to have
+      // records against real data and are kept. Keys keep the RRHH and
+      // SSLL halves visually separated (RRSSA-A{RRHH}-{SSLL}) since both
+      // axes already use "A" suffixes.
+      { key: "RRSSA-AAA-AA", label: "RRSSA-AAA-AA", subPatternKeys: [] },
+      { key: "RRSSA-AAA-OA", label: "RRSSA-AAA-OA", subPatternKeys: [] },
+      { key: "RRSSA-AOA-AA", label: "RRSSA-AOA-AA", subPatternKeys: [] },
+      { key: "RRSSA-AOA-OA", label: "RRSSA-AOA-OA", subPatternKeys: [] },
       // RRSSA-C{RRHH} — 3 Patterns (arrows), REPLACES the old
       // RRSSA-CHS/RRSSA-CLS pair. Base condition = this category's
       // r.LevelsAbove condition AND the raw RRSSA-C* flag (see
