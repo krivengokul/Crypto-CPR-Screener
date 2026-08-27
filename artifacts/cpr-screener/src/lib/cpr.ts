@@ -445,17 +445,19 @@ export interface CPRResult {
   // HHLLCategory — 6-way mutually exclusive partition classifying today's
   // PDH/PDL (prevHigh/prevLow) move against prev's PDH/PDL:
   //   HHLL-A (Above)      — today.prevHigh >= prev.prevHigh AND today.prevLow >= prev.prevLow (excluding the both-equal case, which is HHLL=)
-  //   HHLL-B (Below)      — today.prevHigh <= prev.prevHigh AND today.prevLow < prev.prevLow
+  //   HHLL-B (Below)      — today.prevHigh < prev.prevHigh AND today.prevLow < prev.prevLow
   //   HHLL-C (Compressed) — today.prevHigh < prev.prevHigh AND today.prevLow >= prev.prevLow
-  //   HHLL-E (Expanded)   — today.prevHigh > prev.prevHigh AND today.prevLow < prev.prevLow
+  //   HHLL-E (Expanded)   — today.prevHigh >= prev.prevHigh AND today.prevLow < prev.prevLow
   //   HHLL-Q (Equal)      — today.prevHigh == prev.prevHigh AND today.prevLow == prev.prevLow (eqTol)
   // Mutually exclusive AND exhaustive: comparisons use a tolerance-aware
-  // direction (eqTol). CHANGED: the one-sided "PDH flat + PDL up" case now
+  // direction (eqTol). CHANGED: the one-sided "PDH flat + PDL up" case
   // resolves to HHLL-A (a flat top with the bottom rising still counts as
-  // the range moving up), not HHLL-C — mirroring "PDH flat + PDL down"
-  // already resolving to HHLL-B. Only "PDH down + PDL flat" remains a
-  // one-sided case that resolves to HHLL-C. "none" is unreachable for
-  // finite inputs. HHLL-A/HHLL-B carry the same conditions the removed
+  // the range moving up). CHANGED (Aug 2026): the one-sided "PDH flat +
+  // PDL down" case now resolves to HHLL-E instead of HHLL-B (a flat top
+  // with a falling bottom still counts as the range expanding). Only
+  // "PDH down + PDL flat" remains a one-sided case that resolves to
+  // HHLL-C. "none" is unreachable for finite inputs. HHLL-A/HHLL-B carry
+  // conditions similar to the removed
   // HHLLAbove/HHLLBelow booleans used to hold; this field is now the only
   // source for that classification (see ScreenerUtils.renderHHLLCategoryBadge),
   // also covering the Compressed/Expanded/Equal cases those two booleans
@@ -1444,16 +1446,17 @@ export function analyzeCPR(
     "none";
 
   // HHLLCategory — today's PDH/PDL vs prev's PDH/PDL. Exhaustive: "Above"
-  // now also absorbs the old "PDH flat + PDL up" gap (mirroring "PDH flat
-  // + PDL down" already being "Below"), leaving only "PDH down + PDL flat"
-  // as the one-sided gap that resolves to HHLL-C.
+  // absorbs "PDH flat + PDL up", and "Expanded" now also absorbs "PDH flat
+  // + PDL down" (flat top with a falling bottom still counts as the range
+  // expanding), leaving only "PDH down + PDL flat" as the one-sided gap
+  // that resolves to HHLL-C, and "PDH down + PDL down" as HHLL-B.
   const HHDir = dirTol(todayCPR.prevHigh, prevCPR.prevHigh);
   const LLDir = dirTol(todayCPR.prevLow, prevCPR.prevLow);
   const HHLLCategory: HHLLCategory =
     (HHDir === 0 && LLDir === 0) ? "HHLL-Q" :
     (HHDir >= 0 && LLDir >= 0) ? "HHLL-A" :
-    (HHDir > 0 && LLDir < 0) ? "HHLL-E" :
-    (HHDir <= 0 && LLDir < 0) ? "HHLL-B" :
+    (HHDir >= 0 && LLDir < 0) ? "HHLL-E" :
+    (HHDir < 0 && LLDir < 0) ? "HHLL-B" :
     (HHDir < 0 && LLDir >= 0) ? "HHLL-C" :
     "none";
 
