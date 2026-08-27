@@ -551,20 +551,22 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       { key: "RRSSA-BLR", label: "RRSSA-BLR", subPatternKeys: [] },
       { key: "RRSSA-EHR", label: "RRSSA-EHR", subPatternKeys: [] },
       { key: "RRSSA-ELR", label: "RRSSA-ELR", subPatternKeys: [] },
-      // RRSSA-C{RRHH} — 5 Patterns (arrows), REPLACES the old
+      // RRSSA-C{RRHH} — 4 Patterns (arrows), REPLACES the old
       // RRSSA-CHS/RRSSA-CLS pair. Base condition = this category's
       // r.LevelsAbove condition AND the raw RRSSA-C* flag (see
       // matchesPatternFlag in ScreenerUtils.tsx). HHLL-C's gap is always
       // SSGap (the old CHS/CLS distinction was PDHPDLGapCategory alone),
       // so the merged HHLL-C condition is instead re-split by crossing
-      // against RRHHCategory. Only 5 of the 9 non-"none" RRHHCategory
-      // values are reachable (AA/OA/C/E/RA) — RRHH-BB/RRHH-OB/RRHH-HA
-      // are mathematically impossible under LevelsAbove and RRHH= is
-      // negligible (see the proof in matchesPatternFlag's comment in
-      // ScreenerUtils.tsx). No target-graded sub-patterns nested under
-      // any of them yet, so each shows up as a symbol-list-only scan in
-      // the Backtest dropdown until specific targets are defined.
-      { key: "RRSSA-CAA", label: "RRSSA-CAA", subPatternKeys: [] },
+      // against RRHHCategory. Of the 9 non-"none" RRHHCategory values,
+      // RRHH-BB/RRHH-OB/RRHH-HA are mathematically impossible under
+      // LevelsAbove and RRHH= is negligible (see the proof in
+      // matchesPatternFlag's comment in ScreenerUtils.tsx), leaving 5
+      // reachable (AA/OA/C/E/RA) — of those, RRHH-AA was CONFIRMED EMPTY
+      // against real data and dropped, while RRHH-OA has records and is
+      // kept, leaving COA/CC/CE/CRA. No target-graded sub-patterns
+      // nested under any of them yet, so each shows up as a
+      // symbol-list-only scan in the Backtest dropdown until specific
+      // targets are defined.
       { key: "RRSSA-COA", label: "RRSSA-COA", subPatternKeys: [] },
       { key: "RRSSA-CC", label: "RRSSA-CC", subPatternKeys: [] },
       { key: "RRSSA-CE", label: "RRSSA-CE", subPatternKeys: [] },

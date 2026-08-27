@@ -1508,16 +1508,16 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     case "RRSSA-BLR": return r.HHLLCategory === "HHLL-B" && r.PDHPDLGapCategory === "LLGap" && r.RRSSGapCategory === "RRGap";
     case "RRSSA-EHR": return r.HHLLCategory === "HHLL-E" && r.PDHPDLGapCategory === "HHGap" && r.RRSSGapCategory === "RRGap";
     case "RRSSA-ELR": return r.HHLLCategory === "HHLL-E" && r.PDHPDLGapCategory === "LLGap" && r.RRSSGapCategory === "RRGap";
-    // RRSSA-C{RRHH} — 5 Patterns, REPLACES the old RRSSA-CHS/RRSSA-CLS
+    // RRSSA-C{RRHH} — 4 Patterns, REPLACES the old RRSSA-CHS/RRSSA-CLS
     // pair. Under HHLL-C, RRSSGapCategory is always SSGap (proof above),
     // so PDHPDLGapCategory (HHGap vs LLGap) was the only thing CHS/CLS
     // ever distinguished — merged here into a single gap-agnostic
     // HHLL-C condition, then re-split by crossing against RRHHCategory
     // instead (mirrors RRSSC-{Level}{SSLL} crossing HHLL against SSLL
     // under "compressed" below). Of the 9 non-"none" RRHHCategory
-    // values, only these 5 are reachable under LevelsAbove's ΔR1 > 0 +
-    // HHLL-C's ΔPDH <= 0 constraints — the other 4 are PROVEN
-    // MATHEMATICALLY IMPOSSIBLE, not just empty by chance:
+    // values, only 5 are reachable under LevelsAbove's ΔR1 > 0 + HHLL-C's
+    // ΔPDH <= 0 constraints — the other 4 are PROVEN MATHEMATICALLY
+    // IMPOSSIBLE, not just empty by chance:
     //   RRHH-BB/RRHH-OB require RRHHSameFieldAgreesDown (ΔR1<=0 AND
     //     ΔPDH<=0) — impossible since ΔR1>0 always under LevelsAbove.
     //   RRHH-HA requires ΔR1 < ΔPDH in the RA/HA split — impossible
@@ -1526,12 +1526,12 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     //   RRHH= is reachable only via an exact-tie order-crossing
     //     coincidence — treated as negligible/unreachable in practice,
     //     same treatment as boundary ties elsewhere.
-    //   Leaving RRHH-AA/RRHH-OA (R1 above PDH both days, PDH exactly
-    //   flat — the old CLS half), RRHH-E (R1 above PDH both days, PDH
-    //   strictly falling — the old CHS half), RRHH-C (R1 below PDH both
-    //   days, either HHDir sub-case), and RRHH-RA (order-crossing days,
-    //   either HHDir sub-case) as the only 5 reachable.
-    case "RRSSA-CAA": return r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-AA";
+    //   Of the remaining 5 (RRHH-AA/RRHH-OA — R1 above PDH both days, PDH
+    //   exactly flat, the old CLS half; RRHH-E — R1 above PDH both days,
+    //   PDH strictly falling, the old CHS half; RRHH-C — R1 below PDH
+    //   both days; RRHH-RA — order-crossing days), RRHH-AA was CONFIRMED
+    //   EMPTY against real data and dropped, while RRHH-OA does have
+    //   records and is kept — leaving COA/CC/CE/CRA.
     case "RRSSA-COA": return r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-OA";
     case "RRSSA-CC": return r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-C";
     case "RRSSA-CE": return r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-E";
