@@ -549,7 +549,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       { key: "RRSSA-ALS", label: "RRSSA-ALS", subPatternKeys: [] },
       { key: "RRSSA-BHS", label: "RRSSA-BHS", subPatternKeys: [] },
       { key: "RRSSA-BLR", label: "RRSSA-BLR", subPatternKeys: [] },
-      // RRSSA-C{RRHH} — 4 Patterns (arrows), REPLACES the old
+      // RRSSA-C{RRHH} — 3 Patterns (arrows), REPLACES the old
       // RRSSA-CHS/RRSSA-CLS pair. Base condition = this category's
       // r.LevelsAbove condition AND the raw RRSSA-C* flag (see
       // matchesPatternFlag in ScreenerUtils.tsx). HHLL-C's gap is always
@@ -559,13 +559,12 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       // RRHH-BB/RRHH-OB/RRHH-HA are mathematically impossible under
       // LevelsAbove and RRHH= is negligible (see the proof in
       // matchesPatternFlag's comment in ScreenerUtils.tsx), leaving 5
-      // reachable (AA/OA/C/E/RA) — of those, RRHH-AA was CONFIRMED EMPTY
-      // against real data and dropped, while RRHH-OA has records and is
-      // kept, leaving COA/CC/CE/CRA. No target-graded sub-patterns
+      // mathematically reachable (AA/OA/C/E/RA) — of those, RRHH-AA and
+      // RRHH-OA both came back CONFIRMED EMPTY against real data and
+      // were dropped, leaving CC/CE/CRA. No target-graded sub-patterns
       // nested under any of them yet, so each shows up as a
       // symbol-list-only scan in the Backtest dropdown until specific
       // targets are defined.
-      { key: "RRSSA-COA", label: "RRSSA-COA", subPatternKeys: [] },
       { key: "RRSSA-CC", label: "RRSSA-CC", subPatternKeys: [] },
       { key: "RRSSA-CE", label: "RRSSA-CE", subPatternKeys: [] },
       { key: "RRSSA-CRA", label: "RRSSA-CRA", subPatternKeys: [] },
@@ -680,10 +679,10 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       // RRHH-OA/RRHH-RA are mathematically impossible under LevelsBelow
       // and RRHH= is negligible (see the proof in matchesPatternFlag's
       // comment in ScreenerUtils.tsx), leaving 5 mathematically reachable
-      // (BB/OB/C/E/HA). RRSSA-C{RRHH}'s own mirror slot (RRHH-AA) came
-      // back CONFIRMED EMPTY there, and its direct mirror pair here —
-      // RRSSB-EBB and RRSSB-EOB — likewise came back CONFIRMED EMPTY
-      // against real data and were dropped, leaving 3.
+      // (BB/OB/C/E/HA). RRSSA-C{RRHH}'s own "both up" pair (RRHH-AA,
+      // RRHH-OA) both came back CONFIRMED EMPTY there, and their direct
+      // mirror pair here — RRSSB-EBB and RRSSB-EOB — likewise came back
+      // CONFIRMED EMPTY against real data and were dropped, leaving 3.
       { key: "RRSSB-EC", label: "RRSSB-EC", subPatternKeys: [] },
       { key: "RRSSB-EE", label: "RRSSB-EE", subPatternKeys: [] },
       { key: "RRSSB-EHA", label: "RRSSB-EHA", subPatternKeys: [] },

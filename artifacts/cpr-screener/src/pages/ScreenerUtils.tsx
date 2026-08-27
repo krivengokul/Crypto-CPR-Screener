@@ -1512,7 +1512,7 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     case "RRSSA-EE": return r.HHLLCategory === "HHLL-E" && r.SSLLCategory === "SSLL-E";
     case "RRSSA-ELB": return r.HHLLCategory === "HHLL-E" && r.SSLLCategory === "SSLL-LB";
     case "RRSSA-EOB": return r.HHLLCategory === "HHLL-E" && r.SSLLCategory === "SSLL-OB";
-    // RRSSA-C{RRHH} — 4 Patterns, REPLACES the old RRSSA-CHS/RRSSA-CLS
+    // RRSSA-C{RRHH} — 3 Patterns, REPLACES the old RRSSA-CHS/RRSSA-CLS
     // pair. Under HHLL-C, RRSSGapCategory is always SSGap (proof above),
     // so PDHPDLGapCategory (HHGap vs LLGap) was the only thing CHS/CLS
     // ever distinguished — merged here into a single gap-agnostic
@@ -1533,10 +1533,9 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     //   Of the remaining 5 (RRHH-AA/RRHH-OA — R1 above PDH both days, PDH
     //   exactly flat, the old CLS half; RRHH-E — R1 above PDH both days,
     //   PDH strictly falling, the old CHS half; RRHH-C — R1 below PDH
-    //   both days; RRHH-RA — order-crossing days), RRHH-AA was CONFIRMED
-    //   EMPTY against real data and dropped, while RRHH-OA does have
-    //   records and is kept — leaving COA/CC/CE/CRA.
-    case "RRSSA-COA": return r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-OA";
+    //   both days; RRHH-RA — order-crossing days), RRHH-AA and RRHH-OA
+    //   both came back CONFIRMED EMPTY against real data and were
+    //   dropped — leaving CC/CE/CRA.
     case "RRSSA-CC": return r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-C";
     case "RRSSA-CE": return r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-E";
     case "RRSSA-CRA": return r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-RA";
@@ -1592,12 +1591,13 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     // above family) are mathematically impossible here, and RRHH= is
     // negligible (same treatment as elsewhere), leaving 5 mathematically
     // reachable (BB/OB/C/E/HA) — the mirror image of RRSSA-C{RRHH}'s
-    // reachable set (OA/C/E/RA), swapping the "above" family for the
-    // "below" family. RRSSA-C{RRHH}'s own mirror case (RRHH-AA, the clean
-    // full-separation "both up" member) came back CONFIRMED EMPTY there,
-    // and its direct mirror pair here — RRSSB-EBB (clean full-separation
-    // "both down") and RRSSB-EOB (overlapping "both down") — likewise came
-    // back CONFIRMED EMPTY against real data and were dropped, leaving 3.
+    // mathematically-reachable set (AA/OA/C/E/RA), swapping the "above"
+    // family for the "below" family. RRSSA-C{RRHH}'s own "both up" pair
+    // (RRHH-AA clean full-separation, RRHH-OA overlapping) both came back
+    // CONFIRMED EMPTY there, and their direct mirror pair here — RRSSB-EBB
+    // (clean full-separation "both down") and RRSSB-EOB (overlapping
+    // "both down") — likewise came back CONFIRMED EMPTY against real data
+    // and were dropped, leaving 3.
     case "RRSSB-EC":  return r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-C";
     case "RRSSB-EE":  return r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-E";
     case "RRSSB-EHA": return r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-HA";
