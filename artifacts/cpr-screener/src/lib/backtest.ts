@@ -541,12 +541,40 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       // combinations are reachable here — the rest are mathematically
       // impossible under LevelsAbove (see the proof in
       // matchesPatternFlag's comment in ScreenerUtils.tsx) and were left
-      // out entirely, same treatment as RRHH-X. No target-graded
-      // sub-patterns nested under any of them yet, so each shows up as a
-      // symbol-list-only scan in the Backtest dropdown until specific
-      // targets are defined.
-      { key: "RRSSA-BHS", label: "RRSSA-BHS", subPatternKeys: [] },
-      { key: "RRSSA-BLR", label: "RRSSA-BLR", subPatternKeys: [] },
+      // out entirely, same treatment as RRHH-X. Both remaining Gap-based
+      // entries (BHS, BLR) are REPLACED below by RRSSA-B{RRHH}-{SSLL} —
+      // see that block for the RRHHCategory-then-SSLLCategory re-split —
+      // leaving zero Gap-based RRSSA-* entries.
+      //
+      // RRSSA-B{RRHH}-{SSLL} — 9 Patterns (arrows), REPLACES the old
+      // RRSSA-BHS/RRSSA-BLR pair. Base condition = this category's
+      // r.LevelsAbove condition AND the raw RRSSA-B* flag (see
+      // matchesPatternFlag in ScreenerUtils.tsx). Under HHLL-B,
+      // RRSSGapCategory is fully determined by PDHPDLGapCategory, so
+      // BHS/BLR were relabeling the same HHLL-B condition twice — merged
+      // and re-split by crossing RRHHCategory first, then SSLLCategory
+      // on top (same two-axis treatment as RRSSA-A{RRHH}-{SSLL} below,
+      // since HHLL-B has both its R1/PDH and S1/PDL relationships in
+      // play). Of the 9x9 naive RRHHCategory×SSLLCategory combinations,
+      // RRHHCategory is pinned to RRHH-C/RRHH-E/RRHH-RA and SSLLCategory
+      // to SSLL-C/SSLL-E/SSLL-LB (see the full proof in
+      // matchesPatternFlag's comment in ScreenerUtils.tsx), giving 9
+      // independent combinations — not yet checked against real data, so
+      // some may come back empty and need trimming later, the same way
+      // RRSSA-C{RRHH}/RRSSB-E{RRHH} each trimmed their own reachable set
+      // after an empirical check. No target-graded sub-patterns nested
+      // under any of them yet, so each shows up as a symbol-list-only
+      // scan in the Backtest dropdown until specific targets are
+      // defined.
+      { key: "RRSSA-BC-C",   label: "RRSSA-BC-C",   subPatternKeys: [] },
+      { key: "RRSSA-BC-E",   label: "RRSSA-BC-E",   subPatternKeys: [] },
+      { key: "RRSSA-BC-LB",  label: "RRSSA-BC-LB",  subPatternKeys: [] },
+      { key: "RRSSA-BE-C",   label: "RRSSA-BE-C",   subPatternKeys: [] },
+      { key: "RRSSA-BE-E",   label: "RRSSA-BE-E",   subPatternKeys: [] },
+      { key: "RRSSA-BE-LB",  label: "RRSSA-BE-LB",  subPatternKeys: [] },
+      { key: "RRSSA-BRA-C",  label: "RRSSA-BRA-C",  subPatternKeys: [] },
+      { key: "RRSSA-BRA-E",  label: "RRSSA-BRA-E",  subPatternKeys: [] },
+      { key: "RRSSA-BRA-LB", label: "RRSSA-BRA-LB", subPatternKeys: [] },
       // RRSSA-A{RRHH} — 2 Patterns (arrows), REPLACES the old
       // RRSSA-AHR/RRSSA-ALS pair. Base condition = this category's
       // r.LevelsAbove condition AND the raw RRSSA-A* flag (see
@@ -668,20 +696,49 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
         label: "RHSLB-SSLLpGap",
         subPatternKeys: ["2P:L4U4-pLAP:R4-2A"],
       },
-      // RRSSB-{Level}{Gap} — Patterns (arrows) for HHLL-A/B, the
-      // LevelsBelow mirror of levelsabove's RRSSA-* siblings: base
-      // condition = this category's r.LevelsBelow condition AND the raw
-      // RRSSB-* flag (see matchesPatternFlag in ScreenerUtils.tsx). These
-      // are reachable under LevelsBelow the same way RRSSA-*'s AHR/
-      // ALS/BHS/BLR are under LevelsAbove, since LevelsBelow flips the
-      // sign regime the impossibility proof runs on (see
-      // ScreenerUtils.tsx). No target-graded sub-patterns nested under
-      // any of them yet, so each shows up as a symbol-list-only scan in
-      // the Backtest dropdown until specific targets are defined.
-      { key: "RRSSB-AHS", label: "RRSSB-AHS", subPatternKeys: [] },
-      { key: "RRSSB-ALR", label: "RRSSB-ALR", subPatternKeys: [] },
-      { key: "RRSSB-BHR", label: "RRSSB-BHR", subPatternKeys: [] },
-      { key: "RRSSB-BLS", label: "RRSSB-BLS", subPatternKeys: [] },
+      // RRSSB-{Level}{Gap} — the LevelsBelow mirror of levelsabove's
+      // RRSSA-* siblings: base condition = this category's
+      // r.LevelsBelow condition AND the raw RRSSB-* flag (see
+      // matchesPatternFlag in ScreenerUtils.tsx). All four Gap-based
+      // entries (AHS/ALR/BHR/BLS) are REPLACED below by
+      // RRSSB-A{RRHH}-{SSLL} and RRSSB-B{RRHH}-{SSLL} — see those blocks
+      // for the RRHHCategory-then-SSLLCategory re-splits — leaving zero
+      // Gap-based RRSSB-* entries, same end state as RRSSA-* above.
+      //
+      // RRSSB-A{RRHH}-{SSLL} — 9 Patterns (arrows), REPLACES the old
+      // RRSSB-AHS/RRSSB-ALR pair. Mirrors RRSSA-B{RRHH}-{SSLL} above
+      // exactly, with LevelsBelow's flipped sign regime run through
+      // HHLL-A instead of HHLL-B (the direct mirror pairing of
+      // RRSSA-B/RRSSB-A, same as RRSSA-A/RRSSB-B mirror each other
+      // below). RRHHCategory is pinned to RRHH-C/RRHH-E/RRHH-HA and
+      // SSLLCategory to SSLL-C/SSLL-E/SSLL-SB (see the full proof in
+      // matchesPatternFlag's comment in ScreenerUtils.tsx), giving 9
+      // independent combinations — same "not yet checked against real
+      // data" caveat as RRSSA-B{RRHH}-{SSLL}.
+      { key: "RRSSB-AC-C",   label: "RRSSB-AC-C",   subPatternKeys: [] },
+      { key: "RRSSB-AC-E",   label: "RRSSB-AC-E",   subPatternKeys: [] },
+      { key: "RRSSB-AC-SB",  label: "RRSSB-AC-SB",  subPatternKeys: [] },
+      { key: "RRSSB-AE-C",   label: "RRSSB-AE-C",   subPatternKeys: [] },
+      { key: "RRSSB-AE-E",   label: "RRSSB-AE-E",   subPatternKeys: [] },
+      { key: "RRSSB-AE-SB",  label: "RRSSB-AE-SB",  subPatternKeys: [] },
+      { key: "RRSSB-AHA-C",  label: "RRSSB-AHA-C",  subPatternKeys: [] },
+      { key: "RRSSB-AHA-E",  label: "RRSSB-AHA-E",  subPatternKeys: [] },
+      { key: "RRSSB-AHA-SB", label: "RRSSB-AHA-SB", subPatternKeys: [] },
+      // RRSSB-B{RRHH}-{SSLL} — 4 Patterns (arrows), REPLACES the old
+      // RRSSB-BHR/RRSSB-BLS pair. Unlike RRSSB-A{RRHH}-{SSLL} above,
+      // this is the CLEAN mirror of RRSSA-A{RRHH}-{SSLL} — not of
+      // RRSSA-B{RRHH}-{SSLL} — since LevelsBelow's ΔR1<=0 and HHLL-B's
+      // ΔPDH<=0 both agree (non-positive), the mirror image of
+      // LevelsAbove's ΔR1>0 + HHLL-A's ΔPDH>=0 both agreeing
+      // (non-negative). RRHHCategory is EXHAUSTIVELY pinned to
+      // RRHH-BB/RRHH-OB and SSLLCategory to SSLL-BB/SSLL-OB — no
+      // empirical trimming needed on either axis, same as
+      // RRSSA-A{RRHH}-{SSLL}. Crossing gives 4 combinations,
+      // mathematically exhaustive the same way.
+      { key: "RRSSB-BBB-BB", label: "RRSSB-BBB-BB", subPatternKeys: [] },
+      { key: "RRSSB-BBB-OB", label: "RRSSB-BBB-OB", subPatternKeys: [] },
+      { key: "RRSSB-BOB-BB", label: "RRSSB-BOB-BB", subPatternKeys: [] },
+      { key: "RRSSB-BOB-OB", label: "RRSSB-BOB-OB", subPatternKeys: [] },
       // RRSSB-C{SSLL} — 3 Patterns (arrows), REPLACES the old
       // RRSSB-CHR/RRSSB-CLR pair. Base condition = this category's
       // r.LevelsBelow condition AND the raw RRSSB-C* flag (see

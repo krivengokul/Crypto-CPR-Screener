@@ -1499,12 +1499,65 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     //     HHLL-B: HHGap forces SSGap, LLGap forces RRGap
     //     HHLL-C: SSGap always (RRGap impossible) — see RRSSA-C{RRHH} below
     //     HHLL-E: RRGap always (SSGap impossible) — see RRSSA-E{RRHH} below
-    //   leaving BHS/BLR reachable here. The parent "levelsabove" category's
-    //   own passesPattern("levelsabove") already ANDs in r.LevelsAbove, so
-    //   it's intentionally omitted here — same treatment as HALB-SSLLGap
-    //   omitting LevelsBelow.
-    case "RRSSA-BHS": return r.HHLLCategory === "HHLL-B" && r.PDHPDLGapCategory === "HHGap" && r.RRSSGapCategory === "SSGap";
-    case "RRSSA-BLR": return r.HHLLCategory === "HHLL-B" && r.PDHPDLGapCategory === "LLGap" && r.RRSSGapCategory === "RRGap";
+    //   The parent "levelsabove" category's own passesPattern("levelsabove")
+    //   already ANDs in r.LevelsAbove, so it's intentionally omitted from
+    //   every case below — same treatment as HALB-SSLLGap omitting
+    //   LevelsBelow.
+    //
+    // RRSSA-B{RRHH}-{SSLL} — 9 Patterns, REPLACES the old RRSSA-BHS/
+    // RRSSA-BLR pair — the last remaining Gap-based RRSSA-* pair (AHR/ALS
+    // and CHS/CLS/EHR/ELR were already replaced above by RRSSA-A{RRHH}-
+    // {SSLL} and RRSSA-C{RRHH}/RRSSA-E{SSLL} respectively, so after this
+    // RRSSA-* has zero PDHPDLGapCategory/RRSSGapCategory-based cases
+    // left). Under HHLL-B, RRSSGapCategory is fully determined by
+    // PDHPDLGapCategory (proof above), so BHS/BLR were really just
+    // relabeling the same HHLL-B condition twice — merged here into a
+    // single gap-agnostic HHLL-B condition, then re-split by crossing
+    // RRHHCategory FIRST, then SSLLCategory ON TOP (same two-axis
+    // treatment as RRSSA-A{RRHH}-{SSLL}, since HHLL-B — like HHLL-A — has
+    // BOTH its R1/PDH relationship AND its S1/PDL relationship in play,
+    // unlike HHLL-C/HHLL-E which only ever needed one axis).
+    //
+    // Unlike HHLL-A though, HHLL-B puts ΔR1 (LevelsAbove: always > 0) and
+    // ΔPDH (HHLL-B: always <= 0) in DISAGREEMENT rather than agreement —
+    // the same shape as RRSSA-C{RRHH}'s proof, not RRSSA-A{RRHH}'s. That
+    // proof (see RRSSA-C{RRHH} above) showed RRHH-BB/RRHH-OB are
+    // impossible (need ΔR1<=0, impossible under LevelsAbove) and RRHH-HA
+    // is impossible (ΔR1>0 >= ΔPDH<=0 always resolves the RA/HA split to
+    // RA, never HA), leaving RRHH-AA/RRHH-OA (only reachable via the
+    // ΔPDH===0 exact-flat edge, which HHLL-C's strict ΔHHDir<0 ruled out
+    // but HHLL-B's non-strict ΔHHDir<=0 technically allows) plus RRHH-C/
+    // RRHH-E/RRHH-RA as the "main" (ΔPDH<0 strict) branch. Mirroring
+    // RRSSA-C{RRHH}'s own AA/OA finding (CONFIRMED EMPTY there under the
+    // identical edge condition), RRHH-AA/RRHH-OA are dropped here too,
+    // leaving RRHH-C/RRHH-E/RRHH-RA as the first-axis split.
+    //
+    // Same shape again for the second axis: ΔS1 (LevelsAbove: >= 0) and
+    // ΔPDL (HHLL-B: always < 0, strict) disagree the same way — ΔS1 >=
+    // ΔPDL always holds (ΔS1>=0>ΔPDL), so the SB/LB-style split always
+    // resolves to LB, never SB, leaving SSLL-C/SSLL-E/SSLL-LB as the
+    // second-axis split (SSLL-BB/SSLL-OB dropped as the mirror edge case,
+    // same treatment as the RRHH-AA/RRHH-OA drop above).
+    //
+    // RRHHCategory and SSLLCategory are driven by different level pairs
+    // (R1/PDH vs S1/PDL) with nothing forcing them to move together, so
+    // crossing the two 3-value splits gives 9 independent combinations —
+    // same "independent axes, full cross" treatment as RRSSA-A{RRHH}-
+    // {SSLL}. NOTE: unlike that 2×2 cross (exhaustively proven, all 4
+    // CONFIRMED non-empty against real data), this 3×3 cross hasn't been
+    // checked against real data yet — some of these 9 may come back
+    // empty and need trimming later, the same way RRSSA-C{RRHH} and
+    // RRSSB-E{RRHH} each trimmed 2 of their own reachable set after an
+    // empirical check.
+    case "RRSSA-BC-C":   return r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-C"  && r.SSLLCategory === "SSLL-C";
+    case "RRSSA-BC-E":   return r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-C"  && r.SSLLCategory === "SSLL-E";
+    case "RRSSA-BC-LB":  return r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-C"  && r.SSLLCategory === "SSLL-LB";
+    case "RRSSA-BE-C":   return r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-E"  && r.SSLLCategory === "SSLL-C";
+    case "RRSSA-BE-E":   return r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-E"  && r.SSLLCategory === "SSLL-E";
+    case "RRSSA-BE-LB":  return r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-E"  && r.SSLLCategory === "SSLL-LB";
+    case "RRSSA-BRA-C":  return r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-RA" && r.SSLLCategory === "SSLL-C";
+    case "RRSSA-BRA-E":  return r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-RA" && r.SSLLCategory === "SSLL-E";
+    case "RRSSA-BRA-LB": return r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-RA" && r.SSLLCategory === "SSLL-LB";
     // RRSSA-A{RRHH} — 2 Patterns, REPLACES the old RRSSA-AHR/RRSSA-ALS
     // pair. Under HHLL-A, RRSSGapCategory is fully determined by
     // PDHPDLGapCategory (proof above), so AHR/ALS were really just
@@ -1592,19 +1645,67 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     // every forced pairing from the RRSSA-* proof (same
     // ΔR1-ΔS1=ΔPDH-ΔPDL identity, opposite sign regime):
     //   HHLL-A: HHGap forces SSGap, LLGap forces RRGap  -> AHS, ALR
+    //           (AHS/ALR since replaced by RRSSB-A{RRHH}-{SSLL} below —
+    //           see that case block for the RRHHCategory-then-
+    //           SSLLCategory re-split)
     //   HHLL-B: HHGap forces RRGap, LLGap forces SSGap  -> BHR, BLS
+    //           (BHR/BLS since replaced by RRSSB-B{RRHH}-{SSLL} below —
+    //           see that case block for the RRHHCategory-then-
+    //           SSLLCategory re-split)
     //   HHLL-C: RRGap always (SSGap impossible)          -> CHR, CLR
     //           (CHR/CLR since replaced by RRSSB-C{SSLL} below — see
     //           that case block for the SSLLCategory-based re-split)
     //   HHLL-E: SSGap always (RRGap impossible)           -> EHS, ELS
     //           (EHS/ELS since replaced by RRSSB-E{RRHH} below — see
     //           that case block for the RRHHCategory-based re-split)
-    // The parent "levelsbelow" category's own passesPattern("levelsbelow")
+    // After the two replacements below, RRSSB-* — like RRSSA-* above —
+    // has zero PDHPDLGapCategory/RRSSGapCategory-based cases left. The
+    // parent "levelsbelow" category's own passesPattern("levelsbelow")
     // already ANDs in r.LevelsBelow, so it's intentionally omitted here.
-    case "RRSSB-AHS": return r.HHLLCategory === "HHLL-A" && r.PDHPDLGapCategory === "HHGap" && r.RRSSGapCategory === "SSGap";
-    case "RRSSB-ALR": return r.HHLLCategory === "HHLL-A" && r.PDHPDLGapCategory === "LLGap" && r.RRSSGapCategory === "RRGap";
-    case "RRSSB-BHR": return r.HHLLCategory === "HHLL-B" && r.PDHPDLGapCategory === "HHGap" && r.RRSSGapCategory === "RRGap";
-    case "RRSSB-BLS": return r.HHLLCategory === "HHLL-B" && r.PDHPDLGapCategory === "LLGap" && r.RRSSGapCategory === "SSGap";
+    //
+    // RRSSB-A{RRHH}-{SSLL} — 9 Patterns, REPLACES the old RRSSB-AHS/
+    // RRSSB-ALR pair. Mirrors RRSSA-B{RRHH}-{SSLL} above exactly, with
+    // LevelsBelow's flipped sign regime (ΔR1<=0, ΔS1<=0) run through
+    // the same HHLL-A condition (ΔPDH>=0, ΔPDL>=0) instead of HHLL-B —
+    // the direct mirror pairing of RRSSA-B/RRSSB-A, same as RRSSA-A/
+    // RRSSB-B mirror each other below. ΔR1<=0 and ΔPDH>=0 disagree
+    // (mirrors RRSSB-E{RRHH}'s proof shape above), and since
+    // ΔR1<=0<=ΔPDH the RA/HA split always resolves to HA (never RA) —
+    // RRHH-AA/RRHH-OA dropped as the mirror edge case (same treatment as
+    // RRSSA-B{RRHH}-{SSLL}'s own RRHH-AA/RRHH-OA drop), leaving RRHH-C/
+    // RRHH-E/RRHH-HA. Same shape for ΔS1<=0 vs ΔPDL>=0 (disagree,
+    // always resolves SB never LB), leaving SSLL-C/SSLL-E/SSLL-SB.
+    // Crossing the two independent 3-value splits gives 9 combinations,
+    // same caveat as RRSSA-B{RRHH}-{SSLL}: not yet checked against real
+    // data, some may come back empty and need trimming later.
+    case "RRSSB-AC-C":   return r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-C"  && r.SSLLCategory === "SSLL-C";
+    case "RRSSB-AC-E":   return r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-C"  && r.SSLLCategory === "SSLL-E";
+    case "RRSSB-AC-SB":  return r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-C"  && r.SSLLCategory === "SSLL-SB";
+    case "RRSSB-AE-C":   return r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-E"  && r.SSLLCategory === "SSLL-C";
+    case "RRSSB-AE-E":   return r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-E"  && r.SSLLCategory === "SSLL-E";
+    case "RRSSB-AE-SB":  return r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-E"  && r.SSLLCategory === "SSLL-SB";
+    case "RRSSB-AHA-C":  return r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-HA" && r.SSLLCategory === "SSLL-C";
+    case "RRSSB-AHA-E":  return r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-HA" && r.SSLLCategory === "SSLL-E";
+    case "RRSSB-AHA-SB": return r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-HA" && r.SSLLCategory === "SSLL-SB";
+    //
+    // RRSSB-B{RRHH}-{SSLL} — 4 Patterns, REPLACES the old RRSSB-BHR/
+    // RRSSB-BLS pair. Unlike RRSSB-A{RRHH}-{SSLL} above, this is the
+    // CLEAN mirror of RRSSA-A{RRHH}-{SSLL} — not of RRSSA-B{RRHH}-
+    // {SSLL} — since LevelsBelow's ΔR1<=0 and HHLL-B's ΔPDH<=0 are both
+    // non-positive and AGREE (same shape as LevelsAbove's ΔR1>0 +
+    // HHLL-A's ΔPDH>=0 both non-negative agreeing), rather than
+    // disagreeing. Same max/min monotonicity proof as RRSSA-A{RRHH}-
+    // {SSLL} (sign-flipped): RRHHCategory is EXHAUSTIVELY pinned to
+    // RRHH-BB/RRHH-OB, and SSLLCategory to SSLL-BB/SSLL-OB — no
+    // empirical trimming needed on either axis, same as RRSSA-A{RRHH}-
+    // {SSLL}. Crossing the two independent binary splits gives 4
+    // combinations, mathematically exhaustive the same way (though this
+    // specific 2×2 hasn't itself been checked against real data yet —
+    // that check was only run for RRSSA-A{RRHH}-{SSLL}'s own 4).
+    case "RRSSB-BBB-BB": return r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-BB";
+    case "RRSSB-BBB-OB": return r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-OB";
+    case "RRSSB-BOB-BB": return r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-BB";
+    case "RRSSB-BOB-OB": return r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-OB";
     // RRSSB-C{SSLL} — 3 Patterns, REPLACES the old RRSSB-CHR/RRSSB-CLR
     // pair. Under HHLL-C, RRSSGapCategory is always RRGap (proof above:
     // "HHLL-C: RRGap always (SSGap impossible) -> CHR, CLR"), so
