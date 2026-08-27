@@ -1480,39 +1480,62 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
         r.hlGapWinner === "prev" &&
         r.todayCPR.HLSwitch === "HL-B"
       );
-    // RRSSA-{Level}{Gap} — 8 Patterns nested under the existing
+    // RRSSA-{Level}{Gap} — 6 Patterns nested under the existing
     // "levelsabove" category (today's R1 up vs prev AND today's S1 not
     // down vs prev, minus the R1AbovePR4 slice carved out to "ABOVE
-    // LEVEL4" — see cpr.ts's LevelsAbove). Level is HHLLCategory (A/B/C/E
-    // — today's PDH/PDL vs prev's: Above/Below/Compressed/Expanded) and
-    // Gap is the combined PDHPDLGapCategory × RRSSGapCategory reading
-    // (HR = HHGap+RRGap, HS = HHGap+SSGap, LR = LLGap+RRGap,
-    // LS = LLGap+SSGap). Only 8 of the naive 4×4=16 combinations are
-    // reachable — the other 8 (AHS, ALR, BHR, BLS, CHR, CLR, EHS, ELS)
-    // are PROVEN MATHEMATICALLY IMPOSSIBLE and were removed, not just
-    // empty by chance:
+    // LEVEL4" — see cpr.ts's LevelsAbove). Level is HHLLCategory (A/B/E
+    // — today's PDH/PDL vs prev's: Above/Below/Expanded) and Gap is the
+    // combined PDHPDLGapCategory × RRSSGapCategory reading (HR =
+    // HHGap+RRGap, HS = HHGap+SSGap, LR = LLGap+RRGap). Only these 6 of
+    // the naive 4×4=16 combinations are reachable — the other 10 are
+    // PROVEN MATHEMATICALLY IMPOSSIBLE and were removed, not just empty
+    // by chance:
     //   r1 = 2*pivot - L, s1 = 2*pivot - H  =>  ΔR1 - ΔS1 = ΔPDH - ΔPDL
     //   (exact identity), and LevelsAbove itself fixes ΔR1 > 0, ΔS1 >= 0
     //   for every row. Working that identity through each HHLLCategory's
     //   own PDH/PDL sign constraints pins the Gap combo exactly:
     //     HHLL-A: HHGap forces RRGap, LLGap forces SSGap
     //     HHLL-B: HHGap forces SSGap, LLGap forces RRGap
-    //     HHLL-C: SSGap always (RRGap impossible)
+    //     HHLL-C: SSGap always (RRGap impossible) — see RRSSA-C{RRHH} below
     //     HHLL-E: RRGap always (SSGap impossible)
-    //   leaving exactly AHR/ALS/BHS/BLR/CHS/CLS/EHR/ELR reachable. Same
-    //   treatment as the RRHH-X case being proven impossible and left out
-    //   of RRHHCategory's type entirely. The parent "levelsabove"
-    //   category's own passesPattern("levelsabove") already ANDs in
-    //   r.LevelsAbove, so it's intentionally omitted here — same
+    //   leaving AHR/ALS/BHS/BLR/EHR/ELR reachable here. The parent
+    //   "levelsabove" category's own passesPattern("levelsabove") already
+    //   ANDs in r.LevelsAbove, so it's intentionally omitted here — same
     //   treatment as HALB-SSLLGap omitting LevelsBelow.
     case "RRSSA-AHR": return r.HHLLCategory === "HHLL-A" && r.PDHPDLGapCategory === "HHGap" && r.RRSSGapCategory === "RRGap";
     case "RRSSA-ALS": return r.HHLLCategory === "HHLL-A" && r.PDHPDLGapCategory === "LLGap" && r.RRSSGapCategory === "SSGap";
     case "RRSSA-BHS": return r.HHLLCategory === "HHLL-B" && r.PDHPDLGapCategory === "HHGap" && r.RRSSGapCategory === "SSGap";
     case "RRSSA-BLR": return r.HHLLCategory === "HHLL-B" && r.PDHPDLGapCategory === "LLGap" && r.RRSSGapCategory === "RRGap";
-    case "RRSSA-CHS": return r.HHLLCategory === "HHLL-C" && r.PDHPDLGapCategory === "HHGap" && r.RRSSGapCategory === "SSGap";
-    case "RRSSA-CLS": return r.HHLLCategory === "HHLL-C" && r.PDHPDLGapCategory === "LLGap" && r.RRSSGapCategory === "SSGap";
     case "RRSSA-EHR": return r.HHLLCategory === "HHLL-E" && r.PDHPDLGapCategory === "HHGap" && r.RRSSGapCategory === "RRGap";
     case "RRSSA-ELR": return r.HHLLCategory === "HHLL-E" && r.PDHPDLGapCategory === "LLGap" && r.RRSSGapCategory === "RRGap";
+    // RRSSA-C{RRHH} — 5 Patterns, REPLACES the old RRSSA-CHS/RRSSA-CLS
+    // pair. Under HHLL-C, RRSSGapCategory is always SSGap (proof above),
+    // so PDHPDLGapCategory (HHGap vs LLGap) was the only thing CHS/CLS
+    // ever distinguished — merged here into a single gap-agnostic
+    // HHLL-C condition, then re-split by crossing against RRHHCategory
+    // instead (mirrors RRSSC-{Level}{SSLL} crossing HHLL against SSLL
+    // under "compressed" below). Of the 9 non-"none" RRHHCategory
+    // values, only these 5 are reachable under LevelsAbove's ΔR1 > 0 +
+    // HHLL-C's ΔPDH <= 0 constraints — the other 4 are PROVEN
+    // MATHEMATICALLY IMPOSSIBLE, not just empty by chance:
+    //   RRHH-BB/RRHH-OB require RRHHSameFieldAgreesDown (ΔR1<=0 AND
+    //     ΔPDH<=0) — impossible since ΔR1>0 always under LevelsAbove.
+    //   RRHH-HA requires ΔR1 < ΔPDH in the RA/HA split — impossible
+    //     since ΔR1>0 and ΔPDH<=0 always makes ΔR1>=ΔPDH, so that split
+    //     can only ever resolve to RA, never HA.
+    //   RRHH= is reachable only via an exact-tie order-crossing
+    //     coincidence — treated as negligible/unreachable in practice,
+    //     same treatment as boundary ties elsewhere.
+    //   Leaving RRHH-AA/RRHH-OA (R1 above PDH both days, PDH exactly
+    //   flat — the old CLS half), RRHH-E (R1 above PDH both days, PDH
+    //   strictly falling — the old CHS half), RRHH-C (R1 below PDH both
+    //   days, either HHDir sub-case), and RRHH-RA (order-crossing days,
+    //   either HHDir sub-case) as the only 5 reachable.
+    case "RRSSA-CAA": return r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-AA";
+    case "RRSSA-COA": return r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-OA";
+    case "RRSSA-CC": return r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-C";
+    case "RRSSA-CE": return r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-E";
+    case "RRSSA-CRA": return r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-RA";
     // RRSSB-{Level}{Gap} — the LevelsBelow mirror of RRSSA-* above, 8
     // Patterns nested under the existing "levelsbelow" category (today's
     // R1 down vs prev AND today's S1 not up vs prev, minus the
