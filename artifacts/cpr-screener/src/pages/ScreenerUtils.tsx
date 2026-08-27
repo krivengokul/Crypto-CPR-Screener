@@ -1710,6 +1710,39 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
   }
 }
 
+/**
+ * LEVEL_PATTERN_KEYS — the 16 "E-{Level}-{RRHH}-{SSLL}" keys handled by
+ * the passesPattern cases above (see that block's comment for the full
+ * HHLLCategory x RRHHCategory x SSLLCategory derivation). Exported so
+ * computeLevelPattern below can iterate them without duplicating the
+ * list, and so other views/legends can reuse the same set.
+ */
+export const LEVEL_PATTERN_KEYS = [
+  "E-A-AA-OB", "E-A-OA-OB", "E-A-AA-SB", "E-A-AA-C", "E-A-OA-C",
+  "E-A-AA-E", "E-A-OA-E", "E-B-RA-BB", "E-B-C-BB", "E-B-E-BB",
+  "E-B-C-OB", "E-B-E-OB", "E-E-AA-BB", "E-E-OA-BB", "E-E-AA-OB",
+  "E-E-OA-OB",
+] as const;
+
+export type LevelPatternKey = (typeof LEVEL_PATTERN_KEYS)[number];
+
+/**
+ * computeLevelPattern — the single LEVEL_PATTERN_KEYS entry this row's
+ * HHLLCategory/RRHHCategory/SSLLCategory combo matches (see
+ * passesPattern's "E-..." cases for the derivation), or null when none
+ * match — either r.expanded is false, or the specific combo was
+ * confirmed empty against real data and was never added as a key.
+ * HHLLCategory/RRHHCategory/SSLLCategory are each mutually-exclusive
+ * partitions, so at most one LEVEL_PATTERN_KEYS entry can match a given
+ * row; this is what LevelPattern badges (see ScreenerTableRow) render.
+ */
+export function computeLevelPattern(r: CPRResult): LevelPatternKey | null {
+  for (const key of LEVEL_PATTERN_KEYS) {
+    if (passesPattern(r, key)) return key;
+  }
+  return null;
+}
+
 
 
 /**

@@ -86,6 +86,26 @@ export const PATTERN_BADGE_CLASSES: Record<string, string> = {
   L3TC: "bg-sky-600/10 text-sky-300 border border-sky-600/20",
   EL1L2: "bg-teal-500/10 text-teal-400 border border-teal-500/20",
   EL2L1: "bg-rose-500/10 text-rose-400 border border-rose-500/20",
+  // LevelPattern badges — "E-{Level}-{RRHH}-{SSLL}" (see
+  // ScreenerUtils.computeLevelPattern / LEVEL_PATTERN_KEYS). Grouped by
+  // Level (A: green family, B: amber/orange family, E: purple/pink
+  // family) so the three Levels stay visually distinct at a glance.
+  "E-A-AA-OB": "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
+  "E-A-OA-OB": "bg-green-500/10 text-green-400 border border-green-500/20",
+  "E-A-AA-SB": "bg-teal-500/10 text-teal-400 border border-teal-500/20",
+  "E-A-AA-C": "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20",
+  "E-A-OA-C": "bg-sky-500/10 text-sky-400 border border-sky-500/20",
+  "E-A-AA-E": "bg-blue-500/10 text-blue-400 border border-blue-500/20",
+  "E-A-OA-E": "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20",
+  "E-B-RA-BB": "bg-amber-500/10 text-amber-400 border border-amber-500/20",
+  "E-B-C-BB": "bg-orange-500/10 text-orange-400 border border-orange-500/20",
+  "E-B-E-BB": "bg-yellow-500/10 text-yellow-400 border border-yellow-500/20",
+  "E-B-C-OB": "bg-lime-500/10 text-lime-400 border border-lime-500/20",
+  "E-B-E-OB": "bg-rose-500/10 text-rose-400 border border-rose-500/20",
+  "E-E-AA-BB": "bg-violet-500/10 text-violet-400 border border-violet-500/20",
+  "E-E-OA-BB": "bg-purple-500/10 text-purple-400 border border-purple-500/20",
+  "E-E-AA-OB": "bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/20",
+  "E-E-OA-OB": "bg-pink-500/10 text-pink-400 border border-pink-500/20",
 };
 
 export function getBadgeClasses(label: string): string {
@@ -214,6 +234,31 @@ export function renderPrevPatternBadge(r: CPRResult) {
 }
 
 /**
+ * LevelPattern badge — "E-{Level}-{RRHH}-{SSLL}" (see
+ * ScreenerUtils.computeLevelPattern / LEVEL_PATTERN_KEYS for the
+ * HHLLCategory x RRHHCategory x SSLLCategory derivation), colour-coded
+ * via the same PATTERN_BADGE_CLASSES palette as every other pattern
+ * badge. Replaces the previous-day "p-xxxx" badge (renderPrevPatternBadge
+ * above) in the Pattern column's second row. Returns null when the row's
+ * category combo doesn't match any of the 16 LEVEL_PATTERN_KEYS (most
+ * commonly because r.expanded is false).
+ */
+export function renderLevelPatternBadge(r: CPRResult) {
+  const levelPattern = computeLevelPattern(r);
+  if (!levelPattern) return null;
+  return (
+    <div className="flex flex-wrap gap-1 mt-1">
+      <span
+        className={`text-[10px] px-1 py-0.5 rounded border font-medium ${getBadgeClasses(levelPattern)}`}
+        title="LevelPattern — HHLL x RRHH x SSLL category combo"
+      >
+        {levelPattern}
+      </span>
+    </div>
+  );
+}
+
+/**
  * "LEVEL" column body — row 1: Above/Below/Inside/Outside/Skip, then
  * oV-B/oV-A, then Narrow/Wide (merged into a single badge wherever
  * Above/Below/oV-B/oV-A pairs with Narrow/Wide — see
@@ -275,15 +320,15 @@ export function renderPatternColumnBadges(r: CPRResult) {
     !isOutsideCPR;
   const statusBadge = renderLevelStatusBadge(r, isInsideCPR, isOutsideCPR, showWide, nothingMatched);
   const todayBadges = renderTodayPatternBadges(r);
-  const prevBadge = renderPrevPatternBadge(r);
-  if (!statusBadge && !todayBadges && !prevBadge) return null;
+  const levelPatternBadge = renderLevelPatternBadge(r);
+  if (!statusBadge && !todayBadges && !levelPatternBadge) return null;
   return (
     <div className="flex flex-col gap-1 max-w-[228px]">
       <div className="flex flex-nowrap items-center gap-1">
         {statusBadge}
         {todayBadges}
       </div>
-      {prevBadge}
+      {levelPatternBadge}
     </div>
   );
 }
@@ -326,6 +371,7 @@ import {
   distanceFromCPR,
   pdhPdlStatus,
   computePrevPattern,
+  computeLevelPattern,
   getViewDirection,
   cprDistancePct,
   levelsInDistanceRange,
@@ -549,7 +595,7 @@ export default function ScreenerTableRow({
               {renderLevelStatusBadge(r, isInsideCPR, isOutsideCPR, showWide, nothingMatchedMain)}
               {renderTodayPatternBadges(r)}
             </div>
-            {renderPrevPatternBadge(r)}
+            {renderLevelPatternBadge(r)}
           </div>
         </td>
         <td className="px-3 py-3 font-mono whitespace-nowrap">
@@ -608,7 +654,7 @@ export default function ScreenerTableRow({
           rowKey={rowKey}
           colSpan={20}
           todayPatternBadge={renderTodayPatternBadges(r)}
-          prevPatternBadge={renderPrevPatternBadge(r)}
+          prevPatternBadge={renderLevelPatternBadge(r)}
         />
       )}
     </Fragment>
