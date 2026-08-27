@@ -435,7 +435,7 @@ export interface CPRResult {
   //                         OR today.r1 == prev.r1 AND today.s1 < prev.s1
   //   RRSS-C (Compressed) — today.r1 <= prev.r1 AND today.s1 >  prev.s1
   //   RRSS-E (Expanded)   — today.r1 >  prev.r1 AND today.s1 <  prev.s1
-  //   RRSS=  (Equal)      — today.r1 == prev.r1 AND today.s1 == prev.s1 (eqTol)
+  //   RRSS-Q (Equal)      — today.r1 == prev.r1 AND today.s1 == prev.s1 (eqTol)
   // Note: r1 down + s1 flat lands in RRSS-B (not RRSS-C) — a narrowing R1
   // with an unmoved S1 reads as the range shifting down, not compressing.
   // "none" when none of the five conditions match. This field is the ONLY
@@ -444,19 +444,22 @@ export interface CPRResult {
   SSRRCategory: SSRRCategory;
   // HHLLCategory — 6-way mutually exclusive partition classifying today's
   // PDH/PDL (prevHigh/prevLow) move against prev's PDH/PDL:
-  //   HHLL-A (Above)      — today.prevHigh > prev.prevHigh AND today.prevLow >= prev.prevLow
+  //   HHLL-A (Above)      — today.prevHigh >= prev.prevHigh AND today.prevLow >= prev.prevLow (excluding the both-equal case, which is HHLL=)
   //   HHLL-B (Below)      — today.prevHigh <= prev.prevHigh AND today.prevLow < prev.prevLow
-  //   HHLL-C (Compressed) — today.prevHigh < prev.prevHigh AND today.prevLow > prev.prevLow
+  //   HHLL-C (Compressed) — today.prevHigh < prev.prevHigh AND today.prevLow >= prev.prevLow
   //   HHLL-E (Expanded)   — today.prevHigh > prev.prevHigh AND today.prevLow < prev.prevLow
-  //   HHLL=  (Equal)      — today.prevHigh == prev.prevHigh AND today.prevLow == prev.prevLow (eqTol)
+  //   HHLL-Q (Equal)      — today.prevHigh == prev.prevHigh AND today.prevLow == prev.prevLow (eqTol)
   // Mutually exclusive AND exhaustive: comparisons use a tolerance-aware
-  // direction (eqTol), and the one-sided cases (PDH flat + PDL up, PDH down
-  // + PDL flat) resolve to HHLL-C instead of falling through to "none".
-  // "none" is now unreachable for finite inputs. HHLL-A/HHLL-B carry the same
-  // conditions the removed HHLLAbove/HHLLBelow booleans used to hold; this
-  // field is now the only source for that classification (see
-  // ScreenerUtils.renderHHLLCategoryBadge), also covering the
-  // Compressed/Expanded/Equal cases those two booleans never captured.
+  // direction (eqTol). CHANGED: the one-sided "PDH flat + PDL up" case now
+  // resolves to HHLL-A (a flat top with the bottom rising still counts as
+  // the range moving up), not HHLL-C — mirroring "PDH flat + PDL down"
+  // already resolving to HHLL-B. Only "PDH down + PDL flat" remains a
+  // one-sided case that resolves to HHLL-C. "none" is unreachable for
+  // finite inputs. HHLL-A/HHLL-B carry the same conditions the removed
+  // HHLLAbove/HHLLBelow booleans used to hold; this field is now the only
+  // source for that classification (see ScreenerUtils.renderHHLLCategoryBadge),
+  // also covering the Compressed/Expanded/Equal cases those two booleans
+  // never captured.
   HHLLCategory: HHLLCategory;
   // SSLLCategory — single-badge 6-way partition comparing the band formed
   // by today's [S1, PDL] (sorted low→high) against the band formed by
@@ -465,17 +468,20 @@ export interface CPRResult {
   // comparison:
   //   todayLo/todayHi = min/max(today.s1, today.prevLow)
   //   prevLo/prevHi   = min/max(prev.s1, prev.prevLow)
-  //   SSLL-A (Above)      — todayHi >  prevHi AND todayLo >= prevLo (band shifted up)
+  //   SSLL-A (Above)      — todayHi >= prevHi AND todayLo >= prevLo (excluding the both-equal case, which is SSLL=)
   //   SSLL-B (Below)      — todayHi <= prevHi AND todayLo <  prevLo (band shifted down)
-  //   SSLL-C (Compressed) — todayHi <  prevHi AND todayLo >  prevLo (band narrowed)
+  //   SSLL-C (Compressed) — todayHi <  prevHi AND todayLo >= prevLo (band narrowed)
   //   SSLL-E (Expanded)   — todayHi >  prevHi AND todayLo <  prevLo (band widened)
-  //   SSLL=  (Equal)      — todayHi == prevHi AND todayLo == prevLo (eqTol)
-  // A/B are additionally gated on S1 keeping the same top/bottom role on
-  // both days (S1 is the band's hi level on both days, or its lo level on
-  // both days). If S1 was on top yesterday but PDL is on top today (or
-  // vice versa), the "shift" claim isn't comparing the same identities, so
-  // this resolves to "none" instead of a misleading A/B. X/C don't need
-  // this gate since band-width change stays meaningful under a role swap.
+  //   SSLL-Q (Equal)      — todayHi == prevHi AND todayLo == prevLo (eqTol)
+  // CHANGED: the one-sided "todayHi flat, todayLo rose" case now resolves
+  // to Above (AA/OA), not Compressed — mirroring "todayHi flat, todayLo
+  // fell" already resolving to Below. A/B are additionally gated on S1
+  // keeping the same top/bottom role on both days (S1 is the band's hi
+  // level on both days, or its lo level on both days). If S1 was on top
+  // yesterday but PDL is on top today (or vice versa), the "shift" claim
+  // isn't comparing the same identities, so this resolves to SSLL-SB/
+  // SSLL-LB instead of a misleading A/B. C/E don't need this gate since
+  // band-width change stays meaningful under a role swap.
   // "none" is otherwise a defensive fallback for non-finite inputs only.
   SSLLCategory: SSLLCategory;
   // RRHHCategory — 7-way partition over the ceiling band formed by
@@ -509,12 +515,12 @@ export interface CPRResult {
 }
 
 export type PDHPDLGapCategory = "HHGap" | "LLGap" | "HHLL=";
-export type RRSSGapCategory = "RRGap" | "SSGap" | "SSRR=";
+export type RRSSGapCategory = "RRGap" | "SSGap" | "SSRR-Q";
 export type HLSwitch = "HL-A" | "HL-B" | "HL=";
-export type SSRRCategory = "RRSS-A" | "RRSS-B" | "RRSS-C" | "RRSS-E" | "RRSS=" | "none";
-export type HHLLCategory = "HHLL-A" | "HHLL-B" | "HHLL-C" | "HHLL-E" | "HHLL=" | "none";
-export type SSLLCategory = "SSLL-AA" | "SSLL-OA" | "SSLL-BB" | "SSLL-OB" | "SSLL-C" | "SSLL-E" | "SSLL-SB" | "SSLL-LB" | "SSLL=" | "none";
-export type RRHHCategory = "RRHH-AA" | "RRHH-OA" | "RRHH-BB" | "RRHH-OB" | "RRHH-C" | "RRHH-E" | "RRHH-RA" | "RRHH-HA" | "RRHH=" | "none";
+export type SSRRCategory = "RRSS-A" | "RRSS-B" | "RRSS-C" | "RRSS-E" | "RRSS-Q" | "none";
+export type HHLLCategory = "HHLL-A" | "HHLL-B" | "HHLL-C" | "HHLL-E" | "HHLL-Q" | "none";
+export type SSLLCategory = "SSLL-AA" | "SSLL-OA" | "SSLL-BB" | "SSLL-OB" | "SSLL-C" | "SSLL-E" | "SSLL-SB" | "SSLL-LB" | "SSLL-Q" | "none";
+export type RRHHCategory = "RRHH-AA" | "RRHH-OA" | "RRHH-BB" | "RRHH-OB" | "RRHH-C" | "RRHH-E" | "RRHH-RA" | "RRHH-HA" | "RRHH-Q" | "none";
 
 function isValidCandle(c: OHLC): boolean {
   return (
@@ -1400,13 +1406,13 @@ export function analyzeCPR(
 
   // RRSSGapCategory — mirrors PDHPDLGapCategory over R1/S1: RRGap =
   // |today's R1 - prev's R1|, SSGap = |today's S1 - prev's S1|. Whichever
-  // gap is larger wins; equal gaps fall back to "SSRR=".
+  // gap is larger wins; equal gaps fall back to "SSRR-Q".
   const RRGapVal = Math.abs(todayCPR.r1 - prevCPR.r1);
   const SSGapVal = Math.abs(todayCPR.s1 - prevCPR.s1);
   const RRSSGapCategory: RRSSGapCategory =
     RRGapVal > SSGapVal ? "RRGap" :
     SSGapVal > RRGapVal ? "SSGap" :
-    "SSRR=";
+    "SSRR-Q";
 
   // SSRRCategory / HHLLCategory / SSLLCategory / RRHHCategory
   //
@@ -1429,7 +1435,7 @@ export function analyzeCPR(
   const SSRRDirR1 = flags.r1DirVsPrev;
   const SSRRDirS1 = flags.s1DirVsPrev;
   const SSRRCategory: SSRRCategory =
-    (SSRRDirR1 === 0 && SSRRDirS1 === 0) ? "RRSS=" :
+    (SSRRDirR1 === 0 && SSRRDirS1 === 0) ? "RRSS-Q" :
     (SSRRDirR1 > 0 && SSRRDirS1 >= 0) ? "RRSS-A" :
     (SSRRDirR1 > 0 && SSRRDirS1 < 0) ? "RRSS-E" :
     (SSRRDirR1 <= 0 && SSRRDirS1 > 0) ? "RRSS-C" :
@@ -1437,18 +1443,18 @@ export function analyzeCPR(
     (SSRRDirR1 === 0 && SSRRDirS1 < 0) ? "RRSS-B" :
     "none";
 
-  // HHLLCategory — today's PDH/PDL vs prev's PDH/PDL. Now exhaustive: the
-  // old "PDH down + PDL flat" and "PDH flat + PDL up" gaps both resolve to
-  // HHLL-C (the range narrowed on one side and held on the other).
+  // HHLLCategory — today's PDH/PDL vs prev's PDH/PDL. Exhaustive: "Above"
+  // now also absorbs the old "PDH flat + PDL up" gap (mirroring "PDH flat
+  // + PDL down" already being "Below"), leaving only "PDH down + PDL flat"
+  // as the one-sided gap that resolves to HHLL-C.
   const HHDir = dirTol(todayCPR.prevHigh, prevCPR.prevHigh);
   const LLDir = dirTol(todayCPR.prevLow, prevCPR.prevLow);
   const HHLLCategory: HHLLCategory =
-    (HHDir === 0 && LLDir === 0) ? "HHLL=" :
-    (HHDir > 0 && LLDir >= 0) ? "HHLL-A" :
+    (HHDir === 0 && LLDir === 0) ? "HHLL-Q" :
+    (HHDir >= 0 && LLDir >= 0) ? "HHLL-A" :
     (HHDir > 0 && LLDir < 0) ? "HHLL-E" :
     (HHDir <= 0 && LLDir < 0) ? "HHLL-B" :
     (HHDir < 0 && LLDir >= 0) ? "HHLL-C" :
-    (HHDir === 0 && LLDir > 0) ? "HHLL-C" :
     "none";
 
   // SSLLCategory — S1 and PDL don't have a fixed top/bottom relationship
@@ -1520,15 +1526,25 @@ export function analyzeCPR(
   // using SSLLAbove/SSLLBelow (single source of truth — see those flags
   // above): the "A" shape -> SSLL-AA (SSLLAbove) or SSLL-OA (overlapping);
   // the "B" shape -> SSLL-BB (SSLLBelow) or SSLL-OB (overlapping).
+  //
+  // CHANGED: the "A" shape's Hi test is now >=0 (was >0), so a flat top
+  // with a rising bottom (SSLLDirHi===0, SSLLDirLo>0) now qualifies for
+  // Above instead of falling through to Compressed — mirroring the "B"
+  // shape, whose Hi test was already <=0 (inclusive) rather than <0. The
+  // SB/LB disagreement gate above it is broadened the same way, so a
+  // newly-included flat-top+rising-bottom row still correctly falls to
+  // SB/LB (not a false-confidence OA) when S1 and PDL's raw trends
+  // disagree — same principle as every other SB/LB row. The old standalone
+  // "SSLLDirHi === 0 && SSLLDirLo > 0 -> SSLL-C" branch is now dead (the
+  // broadened Above branch above it catches it first) and has been removed.
   const SSLLCategory: SSLLCategory =
-    (SSLLDirHi === 0 && SSLLDirLo === 0) ? "SSLL=" :
-    (SSLLDirHi > 0 && SSLLDirLo >= 0 && !SSLLSameFieldAgreesUp) ? (SSLLDirS1 >= SSLLDirPL ? "SSLL-LB" : "SSLL-SB") :
-    (SSLLDirHi > 0 && SSLLDirLo >= 0) ? (SSLLAbove ? "SSLL-AA" : "SSLL-OA") :
+    (SSLLDirHi === 0 && SSLLDirLo === 0) ? "SSLL-Q" :
+    (SSLLDirHi >= 0 && SSLLDirLo >= 0 && !SSLLSameFieldAgreesUp) ? (SSLLDirS1 >= SSLLDirPL ? "SSLL-LB" : "SSLL-SB") :
+    (SSLLDirHi >= 0 && SSLLDirLo >= 0) ? (SSLLAbove ? "SSLL-AA" : "SSLL-OA") :
     (SSLLDirHi > 0 && SSLLDirLo < 0) ? "SSLL-E" :
     (SSLLDirHi <= 0 && SSLLDirLo < 0 && !SSLLSameFieldAgreesDown) ? (SSLLDirS1 >= SSLLDirPL ? "SSLL-LB" : "SSLL-SB") :
     (SSLLDirHi <= 0 && SSLLDirLo < 0) ? (SSLLBelow ? "SSLL-BB" : "SSLL-OB") :
     (SSLLDirHi < 0 && SSLLDirLo >= 0) ? "SSLL-C" :
-    (SSLLDirHi === 0 && SSLLDirLo > 0) ? "SSLL-C" :
     "none";
 
   // RRHHCategory — mirror SSLLCategory over the resistance-side ceiling band
@@ -1578,16 +1594,22 @@ export function analyzeCPR(
   // using RRHHAbove/RRHHBelow (single source of truth — see those flags
   // above): the "A" shape -> RRHH-AA (RRHHAbove) or RRHH-OA (overlapping);
   // the "B" shape -> RRHH-BB (RRHHBelow) or RRHH-OB (overlapping).
+  //
+  // CHANGED: same broadening as SSLLCategory — the "A" shape's Hi test is
+  // now >=0 (was >0), so a flat top with a rising bottom now qualifies for
+  // Above instead of Compressed, mirroring the "B" shape's already-
+  // inclusive <=0 Hi test. The RA/HA disagreement gate is broadened the
+  // same way for the same reason. The old standalone "RRHHDirHi === 0 &&
+  // RRHHDirLo > 0 -> RRHH-C" branch is now dead and has been removed.
   const RRHHCategory: RRHHCategory =
     !RRHHValid ? "none" :
-    (RRHHDirHi === 0 && RRHHDirLo === 0) ? "RRHH=" :
-    (RRHHDirHi > 0 && RRHHDirLo >= 0 && !RRHHSameFieldAgreesUp) ? (RRHHDirR1 >= RRHHDirPDH ? "RRHH-RA" : "RRHH-HA") :
-    (RRHHDirHi > 0 && RRHHDirLo >= 0) ? (RRHHAbove ? "RRHH-AA" : "RRHH-OA") :
+    (RRHHDirHi === 0 && RRHHDirLo === 0) ? "RRHH-Q" :
+    (RRHHDirHi >= 0 && RRHHDirLo >= 0 && !RRHHSameFieldAgreesUp) ? (RRHHDirR1 >= RRHHDirPDH ? "RRHH-RA" : "RRHH-HA") :
+    (RRHHDirHi >= 0 && RRHHDirLo >= 0) ? (RRHHAbove ? "RRHH-AA" : "RRHH-OA") :
     (RRHHDirHi > 0 && RRHHDirLo < 0) ? "RRHH-E" :
     (RRHHDirHi <= 0 && RRHHDirLo < 0 && !RRHHSameFieldAgreesDown) ? (RRHHDirR1 >= RRHHDirPDH ? "RRHH-RA" : "RRHH-HA") :
     (RRHHDirHi <= 0 && RRHHDirLo < 0) ? (RRHHBelow ? "RRHH-BB" : "RRHH-OB") :
     (RRHHDirHi < 0 && RRHHDirLo >= 0) ? "RRHH-C" :
-    (RRHHDirHi === 0 && RRHHDirLo > 0) ? "RRHH-C" :
     "none";
 
   // hlGapWinner — see CPRResult.hlGapWinner doc comment above.
