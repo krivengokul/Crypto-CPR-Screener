@@ -1506,21 +1506,12 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     case "RRSSA-ALS": return r.HHLLCategory === "HHLL-A" && r.PDHPDLGapCategory === "LLGap" && r.RRSSGapCategory === "SSGap";
     case "RRSSA-BHS": return r.HHLLCategory === "HHLL-B" && r.PDHPDLGapCategory === "HHGap" && r.RRSSGapCategory === "SSGap";
     case "RRSSA-BLR": return r.HHLLCategory === "HHLL-B" && r.PDHPDLGapCategory === "LLGap" && r.RRSSGapCategory === "RRGap";
-    // RRSSA-E — merged LevelsAbove sub-category for RRSSA-EAA and
-    // RRSSA-EOA. These two RRHH branches are treated as one selection.
-    // SSLLCategory is deliberately not folded into the filter: it remains
-    // an independent classification and is rendered by the existing
+    // RRSSA-E — merged LevelsAbove sub-category 
     // SSLL-* badge in the result row.
-    case "RRSSA-EOA": return r.HHLLCategory === "HHLL-E" && r.SSLLCategory === "SSLL-OA";
-    
     case "RRSSA-EC": return r.HHLLCategory === "HHLL-E" && r.SSLLCategory === "SSLL-C";
     case "RRSSA-EE": return r.HHLLCategory === "HHLL-E" && r.SSLLCategory === "SSLL-E";
     case "RRSSA-ELB": return r.HHLLCategory === "HHLL-E" && r.SSLLCategory === "SSLL-LB";
-
     case "RRSSA-EOB": return r.HHLLCategory === "HHLL-E" && r.SSLLCategory === "SSLL-OB";
-    case "RRSSA-ESB": return r.HHLLCategory === "HHLL-E" && r.SSLLCategory === "SSLL-SB";
-    case "RRSSA-EBB": return r.HHLLCategory === "HHLL-E" && r.SSLLCategory === "SSLL-BB";
-    case "RRSSA-EAA": return r.HHLLCategory === "HHLL-E" && r.SSLLCategory === "SSLL-AA";
     // RRSSA-C{RRHH} — 4 Patterns, REPLACES the old RRSSA-CHS/RRSSA-CLS
     // pair. Under HHLL-C, RRSSGapCategory is always SSGap (proof above),
     // so PDHPDLGapCategory (HHGap vs LLGap) was the only thing CHS/CLS

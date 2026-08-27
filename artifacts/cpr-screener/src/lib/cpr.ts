@@ -1493,8 +1493,19 @@ export function analyzeCPR(
   // that one price level, so it resolves to the overlapping variant
   // (SSLL-OA/SSLL-OB), not the clean AA/BB one. Switching either to >=/<=
   // would fold that touch case into AA/BB instead.
-  const SSLLAbove = todayCPR.s1 > prevSSLLHi && todayCPR.prevLow > prevSSLLHi;
-  const SSLLBelow = todayCPR.s1 < prevSSLLLo && todayCPR.prevLow < prevSSLLLo;
+  //
+  // FIXED: "strict" is enforced via dirTol, not raw >/<. today.s1 and
+  // prev.s1 (or today.prevLow and prev.prevLow) are independently computed
+  // floats from two different days' OHLC that can land on the same real
+  // price — raw floating-point arithmetic on different inputs converging
+  // to the "same" number is essentially never bit-for-bit equal, so a
+  // sub-cent noise difference was enough to satisfy raw `<`/`>` and
+  // silently promote a true boundary touch (e.g. today.s1 == prev.s1 to
+  // every decimal that matters) from the overlapping variant into AA/BB.
+  // dirTol's eqTol tolerance treats that noise as equal (returns 0),
+  // keeping boundary touches in the overlapping bucket as intended.
+  const SSLLAbove = dirTol(todayCPR.s1, prevSSLLHi) > 0 && dirTol(todayCPR.prevLow, prevSSLLHi) > 0;
+  const SSLLBelow = dirTol(todayCPR.s1, prevSSLLLo) < 0 && dirTol(todayCPR.prevLow, prevSSLLLo) < 0;
   const SSLLDirHi = dirTol(todaySSLLHi, prevSSLLHi);
   const SSLLDirLo = dirTol(todaySSLLLo, prevSSLLLo);
   const SSLLDirS1 = dirTol(todayCPR.s1, prevCPR.s1);
@@ -1549,8 +1560,15 @@ export function analyzeCPR(
   // prevRRHHHi/prevRRHHLo) does NOT count as "full separation" — it
   // resolves to the overlapping variant (RRHH-OA/RRHH-OB), not the clean
   // AA/BB one.
-  const RRHHAbove = todayCPR.r1 > prevRRHHHi && todayCPR.prevHigh > prevRRHHHi;
-  const RRHHBelow = todayCPR.r1 < prevRRHHLo && todayCPR.prevHigh < prevRRHHLo;
+  //
+  // FIXED: same floating-point bug as SSLLAbove/SSLLBelow — "strict" is
+  // now enforced via dirTol, not raw >/<, so a boundary touch between two
+  // independently-computed floats (today.r1/prev.r1 or
+  // today.prevHigh/prev.prevHigh) stays in the overlapping bucket instead
+  // of getting silently promoted to AA/BB by floating-point noise. See
+  // the SSLLAbove/SSLLBelow comment above for the full explanation.
+  const RRHHAbove = dirTol(todayCPR.r1, prevRRHHHi) > 0 && dirTol(todayCPR.prevHigh, prevRRHHHi) > 0;
+  const RRHHBelow = dirTol(todayCPR.r1, prevRRHHLo) < 0 && dirTol(todayCPR.prevHigh, prevRRHHLo) < 0;
 
   // Which field (R1 vs PDH) actually drove the divergence decides RA vs HA —
   // not merely which shape (A vs B) the band matched, since either shape
