@@ -1480,32 +1480,53 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
         r.hlGapWinner === "prev" &&
         r.todayCPR.HLSwitch === "HL-B"
       );
-    // RRSSA-{Level}{Gap} — 4 Patterns nested under the existing
-    // "levelsabove" category (today's R1 up vs prev AND today's S1 not
-    // down vs prev, minus the R1AbovePR4 slice carved out to "ABOVE
-    // LEVEL4" — see cpr.ts's LevelsAbove). Level is HHLLCategory (A/B)
-    // — today's PDH/PDL vs prev's: Above/Below — and Gap is the combined
+    // RRSSA-{Level}{Gap} — nested under the existing "levelsabove"
+    // category (today's R1 up vs prev AND today's S1 not down vs prev,
+    // minus the R1AbovePR4 slice carved out to "ABOVE LEVEL4" — see
+    // cpr.ts's LevelsAbove). Level is HHLLCategory (A/B) — today's
+    // PDH/PDL vs prev's: Above/Below — and Gap is the combined
     // PDHPDLGapCategory × RRSSGapCategory reading (HR = HHGap+RRGap,
-    // HS = HHGap+SSGap, LR = LLGap+RRGap). Only these 4 of the naive
-    // 4×4=16 combinations are reachable here — the rest are PROVEN
+    // HS = HHGap+SSGap, LR = LLGap+RRGap). Only these of the naive 4×4=16
+    // combinations are reachable here — the rest are PROVEN
     // MATHEMATICALLY IMPOSSIBLE and were removed, not just empty by
     // chance:
     //   r1 = 2*pivot - L, s1 = 2*pivot - H  =>  ΔR1 - ΔS1 = ΔPDH - ΔPDL
     //   (exact identity), and LevelsAbove itself fixes ΔR1 > 0, ΔS1 >= 0
     //   for every row. Working that identity through each HHLLCategory's
     //   own PDH/PDL sign constraints pins the Gap combo exactly:
-    //     HHLL-A: HHGap forces RRGap, LLGap forces SSGap
+    //     HHLL-A: HHGap forces RRGap, LLGap forces SSGap — see
+    //       RRSSA-A{RRHH} below
     //     HHLL-B: HHGap forces SSGap, LLGap forces RRGap
     //     HHLL-C: SSGap always (RRGap impossible) — see RRSSA-C{RRHH} below
     //     HHLL-E: RRGap always (SSGap impossible) — see RRSSA-E{RRHH} below
-    //   leaving AHR/ALS/BHS/BLR reachable here. The parent "levelsabove"
-    //   category's own passesPattern("levelsabove") already ANDs in
-    //   r.LevelsAbove, so it's intentionally omitted here — same
-    //   treatment as HALB-SSLLGap omitting LevelsBelow.
-    case "RRSSA-AHR": return r.HHLLCategory === "HHLL-A" && r.PDHPDLGapCategory === "HHGap" && r.RRSSGapCategory === "RRGap";
-    case "RRSSA-ALS": return r.HHLLCategory === "HHLL-A" && r.PDHPDLGapCategory === "LLGap" && r.RRSSGapCategory === "SSGap";
+    //   leaving BHS/BLR reachable here. The parent "levelsabove" category's
+    //   own passesPattern("levelsabove") already ANDs in r.LevelsAbove, so
+    //   it's intentionally omitted here — same treatment as HALB-SSLLGap
+    //   omitting LevelsBelow.
     case "RRSSA-BHS": return r.HHLLCategory === "HHLL-B" && r.PDHPDLGapCategory === "HHGap" && r.RRSSGapCategory === "SSGap";
     case "RRSSA-BLR": return r.HHLLCategory === "HHLL-B" && r.PDHPDLGapCategory === "LLGap" && r.RRSSGapCategory === "RRGap";
+    // RRSSA-A{RRHH} — 2 Patterns, REPLACES the old RRSSA-AHR/RRSSA-ALS
+    // pair. Under HHLL-A, RRSSGapCategory is fully determined by
+    // PDHPDLGapCategory (proof above), so AHR/ALS were really just
+    // relabeling the same HHLL-A condition twice — merged here into a
+    // single gap-agnostic HHLL-A condition, then re-split by crossing
+    // against RRHHCategory instead (same treatment as RRSSA-C{RRHH}/
+    // RRSSB-E{RRHH} below). Unlike those, this split doesn't need any
+    // empirical trimming — it's EXHAUSTIVELY PROVEN, not just reachable:
+    //   ΔR1 > 0 (LevelsAbove) and ΔPDH >= 0 (HHLL-A) are both
+    //   non-negative, with ΔR1 strictly positive. For any two values
+    //   where both day-over-day deltas are non-negative, the sorted
+    //   band's max(R1,PDH) and min(R1,PDH) are each individually
+    //   non-decreasing too (standard max/min monotonicity) — so
+    //   RRHHDirHi >= 0 and RRHHDirLo >= 0 ALWAYS hold here, which rules
+    //   out every branch of RRHHCategory except the agrees-up one
+    //   (RRHHSameFieldAgreesUp is also always true, since it's exactly
+    //   ΔR1>=0 && ΔPDH>=0). That leaves only RRHH-AA (full separation)
+    //   and RRHH-OA (overlapping) as possible outcomes — together they
+    //   partition 100% of HHLL-A/LevelsAbove rows (barring the negligible
+    //   exact-tie RRHH-Q case, same treatment as boundary ties elsewhere).
+    case "RRSSA-AAA": return r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-AA";
+    case "RRSSA-AOA": return r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OA";
     // RRSSA-E — merged LevelsAbove sub-category 
     // SSLL-* badge in the result row.
     case "RRSSA-EC": return r.HHLLCategory === "HHLL-E" && r.SSLLCategory === "SSLL-C";

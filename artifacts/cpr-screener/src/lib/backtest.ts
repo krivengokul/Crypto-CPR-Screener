@@ -532,12 +532,12 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
         label: "U4L3",
         subPatternKeys: ["9AM:pPALPApH-FAU4:2PM"],
       },
-      // RRSSA-{Level}{Gap} — 4 Patterns (arrows), same shape as
+      // RRSSA-{Level}{Gap} — Patterns (arrows), same shape as
       // EU2L4/U4L3 siblings above: base condition = this category's
       // r.LevelsAbove condition AND the raw RRSSA-* flag (see
       // matchesPatternFlag in ScreenerUtils.tsx). Level = HHLLCategory
       // (A/B) crossed with Gap = combined PDHPDLGapCategory ×
-      // RRSSGapCategory (HR/HS/LR). Only these 4 of the naive 4×4=16
+      // RRSSGapCategory (HR/HS/LR). Only these of the naive 4×4=16
       // combinations are reachable here — the rest are mathematically
       // impossible under LevelsAbove (see the proof in
       // matchesPatternFlag's comment in ScreenerUtils.tsx) and were left
@@ -545,10 +545,24 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       // sub-patterns nested under any of them yet, so each shows up as a
       // symbol-list-only scan in the Backtest dropdown until specific
       // targets are defined.
-      { key: "RRSSA-AHR", label: "RRSSA-AHR", subPatternKeys: [] },
-      { key: "RRSSA-ALS", label: "RRSSA-ALS", subPatternKeys: [] },
       { key: "RRSSA-BHS", label: "RRSSA-BHS", subPatternKeys: [] },
       { key: "RRSSA-BLR", label: "RRSSA-BLR", subPatternKeys: [] },
+      // RRSSA-A{RRHH} — 2 Patterns (arrows), REPLACES the old
+      // RRSSA-AHR/RRSSA-ALS pair. Base condition = this category's
+      // r.LevelsAbove condition AND the raw RRSSA-A* flag (see
+      // matchesPatternFlag in ScreenerUtils.tsx). Under HHLL-A,
+      // RRSSGapCategory is fully determined by PDHPDLGapCategory (proof
+      // in ScreenerUtils.tsx), so AHR/ALS were relabeling the same
+      // HHLL-A condition twice — merged into a single gap-agnostic
+      // HHLL-A condition, then re-split by crossing against RRHHCategory
+      // instead (same treatment as RRSSA-C{RRHH}/RRSSB-E{RRHH} below).
+      // Unlike those, this split is EXHAUSTIVELY PROVEN rather than
+      // empirically trimmed: under HHLL-A + LevelsAbove, RRHHCategory is
+      // provably always either RRHH-AA or RRHH-OA (see the max/min
+      // monotonicity proof in ScreenerUtils.tsx) — no other RRHHCategory
+      // value is reachable, so nothing here needed backtesting to drop.
+      { key: "RRSSA-AAA", label: "RRSSA-AAA", subPatternKeys: [] },
+      { key: "RRSSA-AOA", label: "RRSSA-AOA", subPatternKeys: [] },
       // RRSSA-C{RRHH} — 3 Patterns (arrows), REPLACES the old
       // RRSSA-CHS/RRSSA-CLS pair. Base condition = this category's
       // r.LevelsAbove condition AND the raw RRSSA-C* flag (see
