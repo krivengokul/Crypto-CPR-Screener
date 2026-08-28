@@ -643,17 +643,21 @@ export default function ViewsSidebar({
                 width: "100%",
               }}
             >
-            {(["scanner", "signals", "stats", "backtest"] as SidebarMode[]).map((m) => (
+           {(["scanner", "signals", "stats", "backtest"] as SidebarMode[]).map((m, index) => (
               <button
                 key={m}
                 onClick={() => onModeChange(m)}
                 style={{
-                  flex: 1,
+                  minWidth: 0,
                   padding: "5px 0",
                   fontSize: 11,
                   fontWeight: 600,
                   cursor: "pointer",
                   border: "none",
+                  borderRight:
+                    index % 2 === 0 ? `1px solid ${BORDER_COLOR}` : "none",
+                  borderBottom:
+                    index < 2 ? `1px solid ${BORDER_COLOR}` : "none",
                   background: mode === m ? "rgba(59,130,246,0.2)" : "transparent",
                   color: mode === m ? ACTIVE_TEXT : DIM_TEXT,
                   transition: "background 0.15s, color 0.15s",
