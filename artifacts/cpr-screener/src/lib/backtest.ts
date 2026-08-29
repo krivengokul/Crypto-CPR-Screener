@@ -843,25 +843,31 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       // RRHHCategory, same treatment as "expanded"'s E-{Level}-{RRHH}-
       // {SSLL} set — condition is RRSS-C (r.compressed) + HHLL + RRHH +
       // SSLL only, with NO GapCategory check of any kind (see
-      // PIVOT_PATTERNS in ScreenerUtils.tsx).
+      // PIVOT_PATTERNS in ScreenerUtils.tsx). RRSSC-CC (HHLL-C + SSLL-C)
+      // is CONFIRMED mathematically impossible under r.compressed (proven
+      // via the ΔR1-ΔS1 = ΔPDH-ΔPDL identity + a 20M-pair brute-force
+      // sweep: 0 hits) — stays dropped.
       //
-      // CORRECTED: RRSSC-CC (HHLL-C + SSLL-C) was previously marked
-      // CONFIRMED EMPTY across every RRHH split and dropped, leaving only
-      // 17 keys here. That was wrong — PatternStats (2026-07-01..07-31,
-      // 31-day census) showed the base "compressed" scan matching 3566
-      // (symbol, date) rows against only 3550 summed across these 17
-      // patterns, a gap of exactly 16: real rows that were r.compressed +
-      // HHLL-C + SSLL-C, with nowhere to land since no C-C-*-C key
-      // existed. Re-added below (C-C-BB-C/C-C-OB-C), bringing this back
-      // to 19:
-      // AAA -> C-A-C-AA/C-A-HA-AA/C-A-E-AA/C-A-OA-AA (HHLL-A + SSLL-AA),
+      // CORRECTED: PatternStats (2026-07-01..07-31) showed the base
+      // "compressed" scan matching 3566 (symbol, date) rows against only
+      // 3550 summed across the original 17 C-* patterns — a gap of 16.
+      // An earlier attempt attributed this to the dropped CC combo and
+      // re-added it; that was wrong (0 real matches, confirmed above).
+      // The brute-force sweep found the actual two gaps instead — combos
+      // that are reachable but had no key: HHLL-A + RRHH-OB + SSLL-AA,
+      // and HHLL-C + RRHH-C + SSLL-AA. Added below (C-A-OB-AA,
+      // C-C-C-AA), bringing this back to 19:
+      // AAA -> C-A-C-AA/C-A-HA-AA/C-A-E-AA/C-A-OA-AA/C-A-OB-AA (HHLL-A + SSLL-AA),
       // AOA -> C-A-E-OA/C-A-C-OA/C-A-OA-OA (HHLL-A + SSLL-OA),
       // BLB -> C-B-BB-LB/C-B-OB-LB (HHLL-B + SSLL-LB),
       // BC  -> C-B-BB-C/C-B-OB-C (HHLL-B + SSLL-C),
       // BE  -> C-B-BB-E/C-B-OB-E (HHLL-B + SSLL-E),
-      // CAA -> C-C-BB-AA/C-C-OB-AA (HHLL-C + SSLL-AA),
-      // COA -> C-C-BB-OA/C-C-OB-OA (HHLL-C + SSLL-OA),
-      // CC  -> C-C-BB-C/C-C-OB-C (HHLL-C + SSLL-C).
+      // CAA -> C-C-BB-AA/C-C-OB-AA/C-C-C-AA (HHLL-C + SSLL-AA),
+      // COA -> C-C-BB-OA/C-C-OB-OA (HHLL-C + SSLL-OA).
+      // A few other combos (HHLL-B+RRHH-C+SSLL-C, HHLL-A+RRHH-OB+SSLL-OA,
+      // HHLL-C+RRHH-C+SSLL-OA) surfaced at ~1-in-20M frequency in the
+      // sweep — negligible boundary-tolerance ties, same treatment as the
+      // existing "RRHH= is negligible" precedent; not worth a key.
       // No target-graded sub-patterns nested under any of them yet, so
       // each shows up as a symbol-list-only scan in the Backtest dropdown
       // until specific targets are defined.
@@ -869,6 +875,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       { key: "C-A-HA-AA", label: "C-A-HA-AA", subPatternKeys: [] },
       { key: "C-A-E-AA", label: "C-A-E-AA", subPatternKeys: [] },
       { key: "C-A-OA-AA", label: "C-A-OA-AA", subPatternKeys: [] },
+      { key: "C-A-OB-AA", label: "C-A-OB-AA", subPatternKeys: [] },
       { key: "C-A-E-OA", label: "C-A-E-OA", subPatternKeys: [] },
       { key: "C-A-C-OA", label: "C-A-C-OA", subPatternKeys: [] },
       { key: "C-A-OA-OA", label: "C-A-OA-OA", subPatternKeys: [] },
@@ -880,10 +887,9 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       { key: "C-B-OB-E", label: "C-B-OB-E", subPatternKeys: [] },
       { key: "C-C-BB-AA", label: "C-C-BB-AA", subPatternKeys: [] },
       { key: "C-C-OB-AA", label: "C-C-OB-AA", subPatternKeys: [] },
+      { key: "C-C-C-AA", label: "C-C-C-AA", subPatternKeys: [] },
       { key: "C-C-BB-OA", label: "C-C-BB-OA", subPatternKeys: [] },
       { key: "C-C-OB-OA", label: "C-C-OB-OA", subPatternKeys: [] },
-      { key: "C-C-BB-C", label: "C-C-BB-C", subPatternKeys: [] },
-      { key: "C-C-OB-C", label: "C-C-OB-C", subPatternKeys: [] },
     ],
   },
   // NEW: "EXPANDED" left-nav section, mirroring "COMPRESSED" above but for

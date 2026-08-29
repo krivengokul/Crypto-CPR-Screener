@@ -578,20 +578,39 @@ export const PIVOT_PATTERNS: Record<string, (r: CPRResult) => boolean> = {
   // HHLL x SSLL combo is re-split by crossing in RRHHCategory, with NO
   // Gap-category check of any kind (RRSSGapCategory / PDHPDLGapCategory) —
   // condition is RRSS-C (r.compressed, applied by the caller) + HHLL +
-  // RRHH + SSLL only, mirroring "expanded"'s treatment exactly.
+  // RRHH + SSLL only, mirroring "expanded"'s treatment exactly. RRSSC-CC
+  // (HHLL-C + SSLL-C) is CONFIRMED mathematically impossible under
+  // r.compressed — proven via the r1/s1/prevHigh/prevLow identity
+  // (ΔR1-ΔS1 = ΔPDH-ΔPDL, since r1=2P-L/s1=2P-H and prevHigh/prevLow
+  // store that same L/H) and confirmed by 20M+ simulated (today, prev)
+  // pairs: 0 hits. Stays dropped.
   //
-  // CORRECTED: RRSSC-CC (HHLL-C + SSLL-C) was previously marked CONFIRMED
-  // EMPTY and dropped entirely. That was wrong — PatternStats (Jul 2026,
-  // 31-day census) found 16 real (symbol, date) rows matching r.compressed
-  // that fell through every one of the other 17 C-* keys, all landing in
-  // this HHLL-C + SSLL-C combo, which had no key to match. Re-added below
-  // as C-C-BB-C / C-C-OB-C, same two-way RRHH split as CAA/COA.
+  // CORRECTED (superseding an earlier, wrong fix that added C-C-BB-C /
+  // C-C-OB-C — those are dead, 0 real matches, exactly as SSLL-C+HHLL-C
+  // predicts): the same brute-force sweep found the *actual* two gaps
+  // behind PatternStats' compressed-category undercount (3550 of 3566,
+  // Jul 2026) — two reachable-but-previously-unlisted combos:
+  //   HHLL-A + RRHH-OB + SSLL-AA  (rare: R1/PDH both drift down as a
+  //     "compressed" RRHH shape even while PDH/PDL trend counts as
+  //     HHLL-A "Above" — a legitimate divergence, not a boundary glitch)
+  //   HHLL-C + RRHH-C  + SSLL-AA  (RRHH itself lands in its own
+  //     "Compressed" state C, not just BB/OB, while still under HHLL-C)
+  // Added below as C-A-OB-AA / C-C-C-AA. A handful of other combos
+  // (HHLL-B+RRHH-C+SSLL-C, HHLL-A+RRHH-OB+SSLL-OA, HHLL-C+RRHH-C+SSLL-OA)
+  // turned up at ~1-in-20M frequency — negligible boundary-tolerance
+  // ties, same treatment as the existing "RRHH= is negligible" precedent
+  // elsewhere in this file; not worth a dedicated key.
   //
   // RRSSC-AAA (HHLL-A + SSLL-AA) -> 4 RRHH splits:
   "C-A-C-AA": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-AA",
   "C-A-HA-AA": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-HA" && r.SSLLCategory === "SSLL-AA",
   "C-A-E-AA": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-AA",
   "C-A-OA-AA": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-AA",
+  // C-A-OB-AA — 5th RRHH split under HHLL-A + SSLL-AA, added per the
+  // brute-force reachability sweep above (rare: ~0.006% of compressed
+  // rows) — R1/PDH drift down together (RRHH-OB) even though PDH/PDL
+  // themselves still classify as HHLL-A "Above":
+  "C-A-OB-AA": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-AA",
   // RRSSC-AOA (HHLL-A + SSLL-OA) -> 3 RRHH splits:
   "C-A-E-OA": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-OA",
   "C-A-C-OA": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-OA",
@@ -611,9 +630,11 @@ export const PIVOT_PATTERNS: Record<string, (r: CPRResult) => boolean> = {
   // RRSSC-COA (HHLL-C + SSLL-OA) -> 2 RRHH splits:
   "C-C-BB-OA": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-OA",
   "C-C-OB-OA": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-OA",
-  // RRSSC-CC (HHLL-C + SSLL-C) -> 2 RRHH splits — re-added, see comment above:
-  "C-C-BB-C": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-C",
-  "C-C-OB-C": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-C",
+  // C-C-C-AA — 3rd RRHH split under HHLL-C + SSLL-AA, added per the
+  // brute-force reachability sweep above: RRHH itself can land in its
+  // own "Compressed" state (RRHH-C), not just BB/OB, while still under
+  // HHLL-C:
+  "C-C-C-AA": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-AA",
 
   // E-{Level}-{RRHH}-{SSLL} — nested under "expanded" (r.expanded). See
   // PIVOT_PATTERN_KEYS below for the exported list of these 16 keys.
@@ -1753,14 +1774,13 @@ export const PIVOT_PATTERN_KEYS = [
   "A-B-RA-C", "A-B-RA-E", "A-B-RA-LB",
   "A-C-C-AA", "A-C-C-OA", "A-C-E-AA", "A-C-E-OA",
   "A-C-RA-AA", "A-C-RA-OA",
-  "C-A-C-AA", "C-A-HA-AA", "C-A-E-AA", "C-A-OA-AA",
+  "C-A-C-AA", "C-A-HA-AA", "C-A-E-AA", "C-A-OA-AA", "C-A-OB-AA",
   "C-A-E-OA", "C-A-C-OA", "C-A-OA-OA",
   "C-B-BB-LB", "C-B-OB-LB",
   "C-B-BB-C", "C-B-OB-C",
   "C-B-BB-E", "C-B-OB-E",
-  "C-C-BB-AA", "C-C-OB-AA",
+  "C-C-BB-AA", "C-C-OB-AA", "C-C-C-AA",
   "C-C-BB-OA", "C-C-OB-OA",
-  "C-C-BB-C", "C-C-OB-C",
 ] as const;
 
 export type PivotPatternKey = (typeof PIVOT_PATTERN_KEYS)[number];
