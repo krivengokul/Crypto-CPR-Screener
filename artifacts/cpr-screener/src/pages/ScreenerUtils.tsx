@@ -565,12 +565,28 @@ export const PIVOT_PATTERNS: Record<string, (r: CPRResult) => boolean> = {
   "RRSSB-ALR": (r) => r.HHLLCategory === "HHLL-A" && r.PDHPDLGapCategory === "LLGap" && r.RRSSGapCategory === "RRGap",
   "RRSSB-BHR": (r) => r.HHLLCategory === "HHLL-B" && r.PDHPDLGapCategory === "HHGap" && r.RRSSGapCategory === "RRGap",
   "RRSSB-BLS": (r) => r.HHLLCategory === "HHLL-B" && r.PDHPDLGapCategory === "LLGap" && r.RRSSGapCategory === "SSGap",
-  "RRSSB-CC": (r) => r.HHLLCategory === "HHLL-C" && r.SSLLCategory === "SSLL-C",
-  "RRSSB-CE": (r) => r.HHLLCategory === "HHLL-C" && r.SSLLCategory === "SSLL-E",
-  "RRSSB-CSB": (r) => r.HHLLCategory === "HHLL-C" && r.SSLLCategory === "SSLL-SB",
-  "RRSSB-EC": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-C",
-  "RRSSB-EE": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-E",
-  "RRSSB-EHA": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-HA",
+  // RENAMED: RRSSB-CC/RRSSB-CE/RRSSB-CSB -> B-C-{RRHH}-{SSLL}, each
+  // further re-split by crossing against RRHHCategory (RRHH-BB/RRHH-OB),
+  // same B-{Level}-{RRHH}-{SSLL} naming convention as C-*/E-*/A-* above.
+  // RRSSB-CSB only got a BB split (no "B-C-OB-SB" requested); add it the
+  // same way if it's needed later. Conditions otherwise unchanged (still
+  // HHLL-C + SSLLCategory, nested under "levelsbelow" / r.LevelsBelow).
+  "B-C-BB-C": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-C",
+  "B-C-OB-C": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-C",
+  "B-C-BB-E": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-E",
+  "B-C-OB-E": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-E",
+  "B-C-BB-SB": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-SB",
+  // RENAMED: RRSSB-EC/RRSSB-EE/RRSSB-EHA -> B-E-{RRHH}-{SSLL}, each
+  // further re-split by crossing against SSLLCategory (SSLL-BB/SSLL-OB),
+  // same convention. RRSSB-EHA only got a BB split (no "B-E-HA-OB"
+  // requested); add it the same way if it's needed later. Conditions
+  // otherwise unchanged (still HHLL-E + RRHHCategory, nested under
+  // "levelsbelow" / r.LevelsBelow).
+  "B-E-C-BB": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-BB",
+  "B-E-C-OB": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-OB",
+  "B-E-E-BB": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-BB",
+  "B-E-E-OB": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-OB",
+  "B-E-HA-BB": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-HA" && r.SSLLCategory === "SSLL-BB",
 
   // C-{Level}-{RRHH}-{SSLL} — nested under "compressed" (r.compressed),
   // REPLACES the old RRSSC-{Level}{SSLL} set (RRSSC-AAA/AOA/BLB/BC/BE/

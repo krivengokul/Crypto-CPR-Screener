@@ -773,7 +773,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       { key: "RRSSB-BOB-OB", label: "RRSSB-BOB-OB", subPatternKeys: [] },
       // RRSSB-C{SSLL} — 3 Patterns (arrows), REPLACES the old
       // RRSSB-CHR/RRSSB-CLR pair. Base condition = this category's
-      // r.LevelsBelow condition AND the raw RRSSB-C* flag (see
+      // r.LevelsBelow condition AND the raw B-C-* flag (see
       // matchesPatternFlag in ScreenerUtils.tsx). HHLL-C's gap is always
       // RRGap (the old CHR/CLR distinction was PDHPDLGapCategory alone),
       // so the merged HHLL-C condition is instead re-split by crossing
@@ -782,12 +782,19 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       // non-strict ΔPDL>=0 doesn't cleanly rule AA/OA/BB/OB in or out —
       // checked against real data instead, leaving 3 reachable:
       // SSLL-C, SSLL-E, SSLL-SB.
-      { key: "RRSSB-CC", label: "RRSSB-CC", subPatternKeys: [] },
-      { key: "RRSSB-CE", label: "RRSSB-CE", subPatternKeys: [] },
-      { key: "RRSSB-CSB", label: "RRSSB-CSB", subPatternKeys: [] },
+      //
+      // RENAMED: RRSSB-CC/RRSSB-CE/RRSSB-CSB -> B-C-{RRHH}-{SSLL}, each
+      // further re-split by crossing against RRHHCategory (RRHH-BB/
+      // RRHH-OB) — CC and CE both got the full BB/OB split; CSB only got
+      // BB (no "B-C-OB-SB" requested).
+      { key: "B-C-BB-C", label: "B-C-BB-C", subPatternKeys: [] },
+      { key: "B-C-OB-C", label: "B-C-OB-C", subPatternKeys: [] },
+      { key: "B-C-BB-E", label: "B-C-BB-E", subPatternKeys: [] },
+      { key: "B-C-OB-E", label: "B-C-OB-E", subPatternKeys: [] },
+      { key: "B-C-BB-SB", label: "B-C-BB-SB", subPatternKeys: [] },
       // RRSSB-E{RRHH} — 3 Patterns (arrows), REPLACES the old
       // RRSSB-EHS/RRSSB-ELS pair. Base condition = this category's
-      // r.LevelsBelow condition AND the raw RRSSB-E* flag (see
+      // r.LevelsBelow condition AND the raw B-E-* flag (see
       // matchesPatternFlag in ScreenerUtils.tsx). HHLL-E's gap is always
       // SSGap (the old EHS/ELS distinction was PDHPDLGapCategory alone),
       // so the merged HHLL-E condition is instead re-split by crossing
@@ -800,9 +807,16 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       // RRHH-OA) both came back CONFIRMED EMPTY there, and their direct
       // mirror pair here — RRSSB-EBB and RRSSB-EOB — likewise came back
       // CONFIRMED EMPTY against real data and were dropped, leaving 3.
-      { key: "RRSSB-EC", label: "RRSSB-EC", subPatternKeys: [] },
-      { key: "RRSSB-EE", label: "RRSSB-EE", subPatternKeys: [] },
-      { key: "RRSSB-EHA", label: "RRSSB-EHA", subPatternKeys: [] },
+      //
+      // RENAMED: RRSSB-EC/RRSSB-EE/RRSSB-EHA -> B-E-{RRHH}-{SSLL}, each
+      // further re-split by crossing against SSLLCategory (SSLL-BB/
+      // SSLL-OB) — EC and EE both got the full BB/OB split; EHA only got
+      // BB (no "B-E-HA-OB" requested).
+      { key: "B-E-C-BB", label: "B-E-C-BB", subPatternKeys: [] },
+      { key: "B-E-C-OB", label: "B-E-C-OB", subPatternKeys: [] },
+      { key: "B-E-E-BB", label: "B-E-E-BB", subPatternKeys: [] },
+      { key: "B-E-E-OB", label: "B-E-E-OB", subPatternKeys: [] },
+      { key: "B-E-HA-BB", label: "B-E-HA-BB", subPatternKeys: [] },
     ],
   },
   // NEW: "COMPRESSED" left-nav section (first item). CHANGED:
@@ -2036,7 +2050,7 @@ export async function runCategoryScan(
 /**
  * NEW: Pattern Stats page support. One row per dropdown pattern entry
  * (every `sub.key` nested under a BACKTEST_CATEGORIES category's
- * `patterns` list — e.g. "A-A-AA-AA", "RRSSB-CC") plus how many real
+ * `patterns` list — e.g. "A-A-AA-AA", "B-C-BB-C") plus how many real
  * historical (symbol, date) rows actually matched it.
  */
 export interface PatternCensusRow {
