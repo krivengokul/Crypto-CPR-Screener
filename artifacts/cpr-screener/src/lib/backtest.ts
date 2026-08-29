@@ -756,6 +756,18 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       { key: "B-A-HA-C",  label: "B-A-HA-C",  subPatternKeys: [] },
       { key: "B-A-HA-E",  label: "B-A-HA-E",  subPatternKeys: [] },
       { key: "B-A-HA-SB", label: "B-A-HA-SB", subPatternKeys: [] },
+      // PatternStats HHLL/RRHH/SSLL combo census (temporary debug
+      // addition) found 8 more reachable combos under HHLL-A — see the
+      // matching comment block in ScreenerUtils.tsx's PIVOT_PATTERNS.
+      { key: "B-A-OB-SB", label: "B-A-OB-SB", subPatternKeys: [] },
+      { key: "B-A-OB-E",  label: "B-A-OB-E",  subPatternKeys: [] },
+      { key: "B-A-OB-C",  label: "B-A-OB-C",  subPatternKeys: [] },
+      { key: "B-A-HA-OB", label: "B-A-HA-OB", subPatternKeys: [] },
+      { key: "B-A-HA-OA", label: "B-A-HA-OA", subPatternKeys: [] },
+      { key: "B-A-E-OA",  label: "B-A-E-OA",  subPatternKeys: [] },
+      { key: "B-A-E-OB",  label: "B-A-E-OB",  subPatternKeys: [] },
+      { key: "B-A-C-OA",  label: "B-A-C-OA",  subPatternKeys: [] },
+      { key: "B-A-OA-E",  label: "B-A-OA-E",  subPatternKeys: [] },
       // B-B-{RRHH}-{SSLL} — 4 Patterns (arrows), REPLACES the old
       // RRSSB-BHR/RRSSB-BLS pair (RENAMED from the intermediate
       // RRSSB-B{RRHH}-{SSLL} naming to the B-{Level}-{RRHH}-{SSLL}
@@ -773,6 +785,12 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       { key: "B-B-BB-OB", label: "B-B-BB-OB", subPatternKeys: [] },
       { key: "B-B-OB-BB", label: "B-B-OB-BB", subPatternKeys: [] },
       { key: "B-B-OB-OB", label: "B-B-OB-OB", subPatternKeys: [] },
+      // PatternStats HHLL/RRHH/SSLL combo census (temporary debug
+      // addition) found 3 more reachable combos under HHLL-B — see the
+      // matching comment block in ScreenerUtils.tsx's PIVOT_PATTERNS.
+      { key: "B-B-C-BB",  label: "B-B-C-BB",  subPatternKeys: [] },
+      { key: "B-B-C-OB",  label: "B-B-C-OB",  subPatternKeys: [] },
+      { key: "B-B-BB-C",  label: "B-B-BB-C",  subPatternKeys: [] },
       // RRSSB-C{SSLL} — 3 Patterns (arrows), REPLACES the old
       // RRSSB-CHR/RRSSB-CLR pair. Base condition = this category's
       // r.LevelsBelow condition AND the raw B-C-* flag (see
@@ -794,6 +812,13 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       { key: "B-C-BB-E", label: "B-C-BB-E", subPatternKeys: [] },
       { key: "B-C-OB-E", label: "B-C-OB-E", subPatternKeys: [] },
       { key: "B-C-BB-SB", label: "B-C-BB-SB", subPatternKeys: [] },
+      // PatternStats HHLL/RRHH/SSLL combo census (temporary debug
+      // addition) found 3 more reachable combos under HHLL-C, including
+      // the largest single gap found (B-C-BB-OB, 19 rows) — see the
+      // matching comment block in ScreenerUtils.tsx's PIVOT_PATTERNS.
+      { key: "B-C-BB-OB", label: "B-C-BB-OB", subPatternKeys: [] },
+      { key: "B-C-BB-OA", label: "B-C-BB-OA", subPatternKeys: [] },
+      { key: "B-C-OB-OB", label: "B-C-OB-OB", subPatternKeys: [] },
       // RRSSB-E{RRHH} — 3 Patterns (arrows), REPLACES the old
       // RRSSB-EHS/RRSSB-ELS pair. Base condition = this category's
       // r.LevelsBelow condition AND the raw B-E-* flag (see
@@ -823,6 +848,10 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       { key: "B-E-OB-BB", label: "B-E-OB-BB", subPatternKeys: [] },
       { key: "B-E-OB-OB", label: "B-E-OB-OB", subPatternKeys: [] },
       { key: "B-E-HA-BB", label: "B-E-HA-BB", subPatternKeys: [] },
+      // PatternStats HHLL/RRHH/SSLL combo census (temporary debug
+      // addition) found 1 more reachable combo under HHLL-E — see the
+      // matching comment block in ScreenerUtils.tsx's PIVOT_PATTERNS.
+      { key: "B-E-OA-BB", label: "B-E-OA-BB", subPatternKeys: [] },
     ],
   },
   // NEW: "COMPRESSED" left-nav section (first item). CHANGED:

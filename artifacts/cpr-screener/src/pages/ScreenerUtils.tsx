@@ -591,6 +591,24 @@ export const PIVOT_PATTERNS: Record<string, (r: CPRResult) => boolean> = {
   "B-A-HA-C": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-HA" && r.SSLLCategory === "SSLL-C",
   "B-A-HA-E": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-HA" && r.SSLLCategory === "SSLL-E",
   "B-A-HA-SB": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-HA" && r.SSLLCategory === "SSLL-SB",
+  // PatternStats HHLL/RRHH/SSLL combo census (temporary debug addition,
+  // see PatternStats.tsx / runPatternCensus's CategoryComboRow output)
+  // found 6 previously-unlisted-but-reachable combos under HHLL-A here:
+  // RRHH-OB paired with SSLL-SB/E/C (RRHH-OB wasn't in the RRHH-C/E/HA
+  // set this block was pinned to), and RRHH-C/E/HA each also pairing
+  // with SSLL-OA/OB (SSLL-OA/OB weren't in the SSLL-C/E/SB set either).
+  // Added below, same B-{Level}-{RRHH}-{SSLL} convention — not yet
+  // proven exhaustive/impossible on the remaining grid, just confirmed
+  // present against real data:
+  "B-A-OB-SB": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-SB",
+  "B-A-OB-E": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-E",
+  "B-A-OB-C": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-C",
+  "B-A-HA-OB": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-HA" && r.SSLLCategory === "SSLL-OB",
+  "B-A-HA-OA": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-HA" && r.SSLLCategory === "SSLL-OA",
+  "B-A-E-OA": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-OA",
+  "B-A-E-OB": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-OB",
+  "B-A-C-OA": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-OA",
+  "B-A-OA-E": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-E",
   // RENAMED: RRSSB-BHR/RRSSB-BLS -> RRSSB-B{RRHH}-{SSLL} -> B-B-{RRHH}-{SSLL},
   // the 4-key set REPLACING the old pair (see backtest.ts's comment above
   // the "B-B-BB-BB" etc. entries). Re-split by crossing RRHHCategory
@@ -603,6 +621,15 @@ export const PIVOT_PATTERNS: Record<string, (r: CPRResult) => boolean> = {
   "B-B-BB-OB": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-OB",
   "B-B-OB-BB": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-BB",
   "B-B-OB-OB": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-OB",
+  // PatternStats HHLL/RRHH/SSLL combo census (temporary debug addition)
+  // found RRHH-C also reachable under HHLL-B here (this block was
+  // otherwise pinned exhaustively to RRHH-BB/RRHH-OB), paired with both
+  // SSLL-BB and SSLL-OB:
+  "B-B-C-BB": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-BB",
+  "B-B-C-OB": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-OB",
+  // Also found SSLL-C reachable alongside RRHH-BB (this block's SSLL side
+  // was otherwise pinned to SSLL-BB/SSLL-OB):
+  "B-B-BB-C": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-C",
   // RENAMED: RRSSB-CC/RRSSB-CE/RRSSB-CSB -> B-C-{RRHH}-{SSLL}, each
   // further re-split by crossing against RRHHCategory (RRHH-BB/RRHH-OB),
   // same B-{Level}-{RRHH}-{SSLL} naming convention as C-*/E-*/A-* above.
@@ -614,6 +641,14 @@ export const PIVOT_PATTERNS: Record<string, (r: CPRResult) => boolean> = {
   "B-C-BB-E": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-E",
   "B-C-OB-E": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-E",
   "B-C-BB-SB": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-SB",
+  // PatternStats HHLL/RRHH/SSLL combo census (temporary debug addition)
+  // found SSLL-OB (the largest single gap found, 19 rows) and SSLL-OA
+  // both also reachable alongside RRHH-BB here (this block's RRSSB-C{SSLL}
+  // comment above claimed only 3 reachable — SSLL-C/E/SB — under HHLL-C;
+  // that trim needs revisiting). Also one HHLL-C + RRHH-OB + SSLL-OB row:
+  "B-C-BB-OB": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-OB",
+  "B-C-BB-OA": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-OA",
+  "B-C-OB-OB": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-OB",
   // RENAMED: RRSSB-EC/RRSSB-EE/RRSSB-EHA -> B-E-{RRHH}-{SSLL}, each
   // further re-split by crossing against SSLLCategory (SSLL-BB/SSLL-OB),
   // same convention. RRSSB-EHA only got a BB split (no "B-E-HA-OB"
@@ -628,6 +663,12 @@ export const PIVOT_PATTERNS: Record<string, (r: CPRResult) => boolean> = {
   "B-E-OB-BB": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-BB",
   "B-E-OB-OB": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-OB",
   "B-E-HA-BB": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-HA" && r.SSLLCategory === "SSLL-BB",
+  // PatternStats HHLL/RRHH/SSLL combo census (temporary debug addition)
+  // found RRHH-OA also reachable under HHLL-E here (this block's
+  // RRSSB-E{RRHH} comment above claimed 5 reachable — BB/OB/C/E/HA —
+  // with the "both up" RRHH-AA/RRHH-OA pair confirmed empty; RRHH-OA
+  // alone, paired with SSLL-BB, is not actually empty):
+  "B-E-OA-BB": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-BB",
 
   // C-{Level}-{RRHH}-{SSLL} — nested under "compressed" (r.compressed),
   // REPLACES the old RRSSC-{Level}{SSLL} set (RRSSC-AAA/AOA/BLB/BC/BE/
