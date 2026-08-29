@@ -794,9 +794,6 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       { key: "B-C-BB-E", label: "B-C-BB-E", subPatternKeys: [] },
       { key: "B-C-OB-E", label: "B-C-OB-E", subPatternKeys: [] },
       { key: "B-C-BB-SB", label: "B-C-BB-SB", subPatternKeys: [] },
-      // NEW: B-C-OB-SB — HHLL-C + RRHH-OB + SSLL-SB, completing the
-      // BB/OB split for SB that CC/CE already had.
-      { key: "B-C-OB-SB", label: "B-C-OB-SB", subPatternKeys: [] },
       // RRSSB-E{RRHH} — 3 Patterns (arrows), REPLACES the old
       // RRSSB-EHS/RRSSB-ELS pair. Base condition = this category's
       // r.LevelsBelow condition AND the raw B-E-* flag (see
@@ -824,10 +821,8 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       // NEW: B-E-OB-BB — HHLL-E + RRHH-OB + SSLL-BB, same
       // B-{Level}-{RRHH}-{SSLL} convention as its B-E-* siblings above.
       { key: "B-E-OB-BB", label: "B-E-OB-BB", subPatternKeys: [] },
+      { key: "B-E-OB-OB", label: "B-E-OB-OB", subPatternKeys: [] },
       { key: "B-E-HA-BB", label: "B-E-HA-BB", subPatternKeys: [] },
-      // NEW: B-E-HA-OB — HHLL-E + RRHH-HA + SSLL-OB, completing the
-      // BB/OB split for HA that C/E already had.
-      { key: "B-E-HA-OB", label: "B-E-HA-OB", subPatternKeys: [] },
     ],
   },
   // NEW: "COMPRESSED" left-nav section (first item). CHANGED:
