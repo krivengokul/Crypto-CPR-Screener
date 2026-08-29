@@ -578,10 +578,14 @@ export const PIVOT_PATTERNS: Record<string, (r: CPRResult) => boolean> = {
   // HHLL x SSLL combo is re-split by crossing in RRHHCategory, with NO
   // Gap-category check of any kind (RRSSGapCategory / PDHPDLGapCategory) —
   // condition is RRSS-C (r.compressed, applied by the caller) + HHLL +
-  // RRHH + SSLL only, mirroring "expanded"'s treatment exactly. RRSSC-CC
-  // (HHLL-C + SSLL-C) came back CONFIRMED EMPTY against real data (no
-  // reachable RRHH split found) and was dropped entirely, same treatment
-  // as RRSSB-AC/AE/BSB/CE above.
+  // RRHH + SSLL only, mirroring "expanded"'s treatment exactly.
+  //
+  // CORRECTED: RRSSC-CC (HHLL-C + SSLL-C) was previously marked CONFIRMED
+  // EMPTY and dropped entirely. That was wrong — PatternStats (Jul 2026,
+  // 31-day census) found 16 real (symbol, date) rows matching r.compressed
+  // that fell through every one of the other 17 C-* keys, all landing in
+  // this HHLL-C + SSLL-C combo, which had no key to match. Re-added below
+  // as C-C-BB-C / C-C-OB-C, same two-way RRHH split as CAA/COA.
   //
   // RRSSC-AAA (HHLL-A + SSLL-AA) -> 4 RRHH splits:
   "C-A-C-AA": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-AA",
@@ -607,6 +611,9 @@ export const PIVOT_PATTERNS: Record<string, (r: CPRResult) => boolean> = {
   // RRSSC-COA (HHLL-C + SSLL-OA) -> 2 RRHH splits:
   "C-C-BB-OA": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-OA",
   "C-C-OB-OA": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-OA",
+  // RRSSC-CC (HHLL-C + SSLL-C) -> 2 RRHH splits — re-added, see comment above:
+  "C-C-BB-C": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-C",
+  "C-C-OB-C": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-C",
 
   // E-{Level}-{RRHH}-{SSLL} — nested under "expanded" (r.expanded). See
   // PIVOT_PATTERN_KEYS below for the exported list of these 16 keys.
@@ -1685,8 +1692,8 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
 }
 
 /**
- * PIVOT_PATTERN_KEYS — the 54 "E-{Level}-{RRHH}-{SSLL}" (16, "expanded"),
- * "C-{Level}-{RRHH}-{SSLL}" (17, "compressed"), "A-E-{RRHH}-{SSLL}" (6,
+ * PIVOT_PATTERN_KEYS — the 56 "E-{Level}-{RRHH}-{SSLL}" (16, "expanded"),
+ * "C-{Level}-{RRHH}-{SSLL}" (19, "compressed"), "A-E-{RRHH}-{SSLL}" (6,
  * "LevelsAbove" HHLL-E, renamed from RRSSA-EC/EE/ELB/EOB — "A-E-AA-OB" is
  * defined but deliberately excluded from this list, see below), and
  * "A-{Level}-{RRHH}-{SSLL}" (15, "LevelsAbove" HHLL-A/B/C, renamed from
@@ -1753,6 +1760,7 @@ export const PIVOT_PATTERN_KEYS = [
   "C-B-BB-E", "C-B-OB-E",
   "C-C-BB-AA", "C-C-OB-AA",
   "C-C-BB-OA", "C-C-OB-OA",
+  "C-C-BB-C", "C-C-OB-C",
 ] as const;
 
 export type PivotPatternKey = (typeof PIVOT_PATTERN_KEYS)[number];
@@ -1761,9 +1769,8 @@ export type PivotPatternKey = (typeof PIVOT_PATTERN_KEYS)[number];
  * computePivotPattern — the single PIVOT_PATTERN_KEYS entry this row's
  * HHLLCategory/RRHHCategory/SSLLCategory combo matches (see
  * passesPattern's "E-..."/"C-..." cases for the derivation), or null when
- * none match — either r.expanded and r.compressed are both false, or the
- * specific combo was confirmed empty against real data and was never
- * added as a key (e.g. the old RRSSC-CC / HHLL-C+SSLL-C combo).
+ * none match — either r.expanded and r.compressed are both false, or (rare)
+ * the specific combo has no key defined for it.
  * HHLLCategory/RRHHCategory/SSLLCategory are each mutually-exclusive
  * partitions, and r.expanded/r.compressed are themselves mutually
  * exclusive, so at most one PIVOT_PATTERN_KEYS entry can match a given

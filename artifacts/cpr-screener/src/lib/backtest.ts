@@ -835,7 +835,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
         label: "RHLB-RRHHpGap",
         subPatternKeys: ["8A:pLAPpPAH:R4-5P"],
       },
-      // C-{Level}-{RRHH}-{SSLL} — 17 Patterns (arrows), nested under
+      // C-{Level}-{RRHH}-{SSLL} — 19 Patterns (arrows), nested under
       // "compressed" (today's R1 down vs prev AND today's S1 up vs prev —
       // see cpr.ts's r.compressed / the "RRSS-C" SSRRCategory). REPLACES
       // the old RRSSC-{Level}{SSLL} set (RRSSC-AAA/AOA/BLB/BC/BE/CAA/COA/
@@ -843,16 +843,25 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       // RRHHCategory, same treatment as "expanded"'s E-{Level}-{RRHH}-
       // {SSLL} set — condition is RRSS-C (r.compressed) + HHLL + RRHH +
       // SSLL only, with NO GapCategory check of any kind (see
-      // PIVOT_PATTERNS in ScreenerUtils.tsx). RRSSC-CC (HHLL-C +
-      // SSLL-C) came back CONFIRMED EMPTY against real data across every
-      // RRHH split and was dropped entirely, leaving these 17:
+      // PIVOT_PATTERNS in ScreenerUtils.tsx).
+      //
+      // CORRECTED: RRSSC-CC (HHLL-C + SSLL-C) was previously marked
+      // CONFIRMED EMPTY across every RRHH split and dropped, leaving only
+      // 17 keys here. That was wrong — PatternStats (2026-07-01..07-31,
+      // 31-day census) showed the base "compressed" scan matching 3566
+      // (symbol, date) rows against only 3550 summed across these 17
+      // patterns, a gap of exactly 16: real rows that were r.compressed +
+      // HHLL-C + SSLL-C, with nowhere to land since no C-C-*-C key
+      // existed. Re-added below (C-C-BB-C/C-C-OB-C), bringing this back
+      // to 19:
       // AAA -> C-A-C-AA/C-A-HA-AA/C-A-E-AA/C-A-OA-AA (HHLL-A + SSLL-AA),
       // AOA -> C-A-E-OA/C-A-C-OA/C-A-OA-OA (HHLL-A + SSLL-OA),
       // BLB -> C-B-BB-LB/C-B-OB-LB (HHLL-B + SSLL-LB),
       // BC  -> C-B-BB-C/C-B-OB-C (HHLL-B + SSLL-C),
       // BE  -> C-B-BB-E/C-B-OB-E (HHLL-B + SSLL-E),
       // CAA -> C-C-BB-AA/C-C-OB-AA (HHLL-C + SSLL-AA),
-      // COA -> C-C-BB-OA/C-C-OB-OA (HHLL-C + SSLL-OA).
+      // COA -> C-C-BB-OA/C-C-OB-OA (HHLL-C + SSLL-OA),
+      // CC  -> C-C-BB-C/C-C-OB-C (HHLL-C + SSLL-C).
       // No target-graded sub-patterns nested under any of them yet, so
       // each shows up as a symbol-list-only scan in the Backtest dropdown
       // until specific targets are defined.
@@ -873,6 +882,8 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       { key: "C-C-OB-AA", label: "C-C-OB-AA", subPatternKeys: [] },
       { key: "C-C-BB-OA", label: "C-C-BB-OA", subPatternKeys: [] },
       { key: "C-C-OB-OA", label: "C-C-OB-OA", subPatternKeys: [] },
+      { key: "C-C-BB-C", label: "C-C-BB-C", subPatternKeys: [] },
+      { key: "C-C-OB-C", label: "C-C-OB-C", subPatternKeys: [] },
     ],
   },
   // NEW: "EXPANDED" left-nav section, mirroring "COMPRESSED" above but for
