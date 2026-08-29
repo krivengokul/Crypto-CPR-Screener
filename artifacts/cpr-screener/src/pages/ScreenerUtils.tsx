@@ -614,6 +614,9 @@ export const PIVOT_PATTERNS: Record<string, (r: CPRResult) => boolean> = {
   "B-C-BB-E": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-E",
   "B-C-OB-E": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-E",
   "B-C-BB-SB": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-SB",
+  // NEW: B-C-OB-SB — HHLL-C + RRHH-OB + SSLL-SB, completing the BB/OB
+  // split for SB that CC/CE already had.
+  "B-C-OB-SB": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-SB",
   // RENAMED: RRSSB-EC/RRSSB-EE/RRSSB-EHA -> B-E-{RRHH}-{SSLL}, each
   // further re-split by crossing against SSLLCategory (SSLL-BB/SSLL-OB),
   // same convention. RRSSB-EHA only got a BB split (no "B-E-HA-OB"
@@ -627,6 +630,9 @@ export const PIVOT_PATTERNS: Record<string, (r: CPRResult) => boolean> = {
   // NEW: B-E-OB-BB — HHLL-E + RRHH-OB + SSLL-BB, same B-E-* convention.
   "B-E-OB-BB": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-BB",
   "B-E-HA-BB": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-HA" && r.SSLLCategory === "SSLL-BB",
+  // NEW: B-E-HA-OB — HHLL-E + RRHH-HA + SSLL-OB, completing the BB/OB
+  // split for HA that C/E already had.
+  "B-E-HA-OB": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-HA" && r.SSLLCategory === "SSLL-OB",
 
   // C-{Level}-{RRHH}-{SSLL} — nested under "compressed" (r.compressed),
   // REPLACES the old RRSSC-{Level}{SSLL} set (RRSSC-AAA/AOA/BLB/BC/BE/
@@ -1769,14 +1775,14 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
 }
 
 /**
- * PIVOT_PATTERN_KEYS — the 78 "E-{Level}-{RRHH}-{SSLL}" (16, "expanded"),
+ * PIVOT_PATTERN_KEYS — the 80 "E-{Level}-{RRHH}-{SSLL}" (16, "expanded"),
  * "C-{Level}-{RRHH}-{SSLL}" (19, "compressed"), "A-E-{RRHH}-{SSLL}" (6,
  * "LevelsAbove" HHLL-E, renamed from RRSSA-EC/EE/ELB/EOB — "A-E-AA-OB" is
  * defined but deliberately excluded from this list, see below),
  * "A-{Level}-{RRHH}-{SSLL}" (15, "LevelsAbove" HHLL-A/B/C, renamed from
  * RRSSA-AAA-AA/AAA-OA/AOA-AA/AOA-OA/CC/CE/CRA/BC-C/BC-LB/BE-E/BE-LB/
  * BRA-C/BRA-E/BRA-LB — "A-A-OA-AA"/"A-A-OA-OA" are defined but
- * deliberately excluded, see below), and "B-{Level}-{RRHH}-{SSLL}" (22,
+ * deliberately excluded, see below), and "B-{Level}-{RRHH}-{SSLL}" (24,
  * "LevelsBelow" HHLL-A/B/C/E, renamed from RRSSB-A{RRHH}-{SSLL}/
  * B{RRHH}-{SSLL}/C{SSLL}/E{RRHH} — no duplicates to exclude here) keys
  * handled by the passesPattern cases / PIVOT_PATTERNS entries above (see
@@ -1853,8 +1859,8 @@ export const PIVOT_PATTERN_KEYS = [
   "B-A-C-C", "B-A-C-SB", "B-A-E-E", "B-A-E-SB",
   "B-A-HA-C", "B-A-HA-E", "B-A-HA-SB",
   "B-B-BB-BB", "B-B-BB-OB", "B-B-OB-BB", "B-B-OB-OB",
-  "B-C-BB-C", "B-C-OB-C", "B-C-BB-E", "B-C-OB-E", "B-C-BB-SB",
-  "B-E-C-BB", "B-E-C-OB", "B-E-E-BB", "B-E-E-OB", "B-E-OB-BB", "B-E-HA-BB",
+  "B-C-BB-C", "B-C-OB-C", "B-C-BB-E", "B-C-OB-E", "B-C-BB-SB", "B-C-OB-SB",
+  "B-E-C-BB", "B-E-C-OB", "B-E-E-BB", "B-E-E-OB", "B-E-OB-BB", "B-E-HA-BB", "B-E-HA-OB",
 ] as const;
 
 export type PivotPatternKey = (typeof PIVOT_PATTERN_KEYS)[number];

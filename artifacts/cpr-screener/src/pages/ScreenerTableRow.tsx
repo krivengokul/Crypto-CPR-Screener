@@ -195,12 +195,14 @@ export const PATTERN_BADGE_CLASSES: Record<string, string> = {
   "B-C-BB-E": "bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/20",
   "B-C-OB-E": "bg-purple-500/10 text-purple-400 border border-purple-500/20",
   "B-C-BB-SB": "bg-red-500/10 text-red-400 border border-red-500/20",
+  "B-C-OB-SB": "bg-rose-600/10 text-rose-300 border border-rose-600/20",
   "B-E-C-BB": "bg-green-500/10 text-green-400 border border-green-500/20",
   "B-E-C-OB": "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
   "B-E-E-BB": "bg-teal-500/10 text-teal-400 border border-teal-500/20",
   "B-E-E-OB": "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20",
   "B-E-OB-BB": "bg-blue-500/10 text-blue-400 border border-blue-500/20",
   "B-E-HA-BB": "bg-sky-500/10 text-sky-400 border border-sky-500/20",
+  "B-E-HA-OB": "bg-indigo-600/10 text-indigo-300 border border-indigo-600/20",
 };
 
 export function getBadgeClasses(label: string): string {
