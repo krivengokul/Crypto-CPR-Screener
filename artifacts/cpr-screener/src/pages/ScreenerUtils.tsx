@@ -577,15 +577,20 @@ export const PIVOT_PATTERNS: Record<string, (r: CPRResult) => boolean> = {
   // BACKTEST_CATEGORIES dropdown with no matching entry here, so every
   // scan against them silently fell through matchesPatternFlag's default
   // and came back with 0 records.
-  "RRSSB-AC-C": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-C",
-  "RRSSB-AC-E": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-E",
-  "RRSSB-AC-SB": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-SB",
-  "RRSSB-AE-C": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-C",
-  "RRSSB-AE-E": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-E",
-  "RRSSB-AE-SB": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-SB",
-  "RRSSB-AHA-C": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-HA" && r.SSLLCategory === "SSLL-C",
-  "RRSSB-AHA-E": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-HA" && r.SSLLCategory === "SSLL-E",
-  "RRSSB-AHA-SB": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-HA" && r.SSLLCategory === "SSLL-SB",
+  // RENAMED to the B-{Level}-{RRHH}-{SSLL} convention (matching
+  // B-B-*/B-C-*/A-B-* elsewhere): RRSSB-AC-C -> B-A-C-C, RRSSB-AC-SB ->
+  // B-A-C-SB, RRSSB-AE-E -> B-A-E-E, RRSSB-AE-SB -> B-A-E-SB, RRSSB-AHA-C
+  // -> B-A-HA-C, RRSSB-AHA-E -> B-A-HA-E, RRSSB-AHA-SB -> B-A-HA-SB.
+  // RRSSB-AC-E and RRSSB-AE-C were REMOVED (confirmed empty against real
+  // data), leaving 7 of the original 9 — same trimming outcome as
+  // A-B-C-E/A-B-E-C above.
+  "B-A-C-C": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-C",
+  "B-A-C-SB": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-SB",
+  "B-A-E-E": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-E",
+  "B-A-E-SB": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-SB",
+  "B-A-HA-C": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-HA" && r.SSLLCategory === "SSLL-C",
+  "B-A-HA-E": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-HA" && r.SSLLCategory === "SSLL-E",
+  "B-A-HA-SB": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-HA" && r.SSLLCategory === "SSLL-SB",
   // RENAMED: RRSSB-BHR/RRSSB-BLS -> RRSSB-B{RRHH}-{SSLL} -> B-B-{RRHH}-{SSLL},
   // the 4-key set REPLACING the old pair (see backtest.ts's comment above
   // the "B-B-BB-BB" etc. entries). Re-split by crossing RRHHCategory

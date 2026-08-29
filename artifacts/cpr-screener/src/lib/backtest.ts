@@ -737,25 +737,25 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       // for the RRHHCategory-then-SSLLCategory re-splits — leaving zero
       // Gap-based RRSSB-* entries, same end state as RRSSA-* above.
       //
-      // RRSSB-A{RRHH}-{SSLL} — 9 Patterns (arrows), REPLACES the old
-      // RRSSB-AHS/RRSSB-ALR pair. Mirrors RRSSA-B{RRHH}-{SSLL} above
-      // exactly, with LevelsBelow's flipped sign regime run through
+      // B-A-{RRHH}-{SSLL} — 7 Patterns (arrows) (RENAMED from the
+      // intermediate RRSSB-A{RRHH}-{SSLL} naming to the
+      // B-{Level}-{RRHH}-{SSLL} convention used by B-B-*/B-C-*/A-B-*
+      // elsewhere; RRSSB-AC-E and RRSSB-AE-C were REMOVED, confirmed
+      // empty against real data, leaving 7 of the original 9 — same
+      // trimming outcome as A-B-C-E/A-B-E-C). Mirrors B-B-{RRHH}-{SSLL}
+      // above exactly, with LevelsBelow's flipped sign regime run through
       // HHLL-A instead of HHLL-B (the direct mirror pairing of
       // RRSSA-B/RRSSB-A, same as RRSSA-A/RRSSB-B mirror each other
       // below). RRHHCategory is pinned to RRHH-C/RRHH-E/RRHH-HA and
       // SSLLCategory to SSLL-C/SSLL-E/SSLL-SB (see the full proof in
-      // matchesPatternFlag's comment in ScreenerUtils.tsx), giving 9
-      // independent combinations — same "not yet checked against real
-      // data" caveat as RRSSA-B{RRHH}-{SSLL}.
-      { key: "RRSSB-AC-C",   label: "RRSSB-AC-C",   subPatternKeys: [] },
-      { key: "RRSSB-AC-E",   label: "RRSSB-AC-E",   subPatternKeys: [] },
-      { key: "RRSSB-AC-SB",  label: "RRSSB-AC-SB",  subPatternKeys: [] },
-      { key: "RRSSB-AE-C",   label: "RRSSB-AE-C",   subPatternKeys: [] },
-      { key: "RRSSB-AE-E",   label: "RRSSB-AE-E",   subPatternKeys: [] },
-      { key: "RRSSB-AE-SB",  label: "RRSSB-AE-SB",  subPatternKeys: [] },
-      { key: "RRSSB-AHA-C",  label: "RRSSB-AHA-C",  subPatternKeys: [] },
-      { key: "RRSSB-AHA-E",  label: "RRSSB-AHA-E",  subPatternKeys: [] },
-      { key: "RRSSB-AHA-SB", label: "RRSSB-AHA-SB", subPatternKeys: [] },
+      // matchesPatternFlag's comment in ScreenerUtils.tsx).
+      { key: "B-A-C-C",   label: "B-A-C-C",   subPatternKeys: [] },
+      { key: "B-A-C-SB",  label: "B-A-C-SB",  subPatternKeys: [] },
+      { key: "B-A-E-E",   label: "B-A-E-E",   subPatternKeys: [] },
+      { key: "B-A-E-SB",  label: "B-A-E-SB",  subPatternKeys: [] },
+      { key: "B-A-HA-C",  label: "B-A-HA-C",  subPatternKeys: [] },
+      { key: "B-A-HA-E",  label: "B-A-HA-E",  subPatternKeys: [] },
+      { key: "B-A-HA-SB", label: "B-A-HA-SB", subPatternKeys: [] },
       // B-B-{RRHH}-{SSLL} — 4 Patterns (arrows), REPLACES the old
       // RRSSB-BHR/RRSSB-BLS pair (RENAMED from the intermediate
       // RRSSB-B{RRHH}-{SSLL} naming to the B-{Level}-{RRHH}-{SSLL}
