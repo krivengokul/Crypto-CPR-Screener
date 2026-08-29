@@ -121,6 +121,31 @@ export const PATTERN_BADGE_CLASSES: Record<string, string> = {
   "A-E-OA-E": "bg-green-500/10 text-green-400 border border-green-500/20",
   "A-E-AA-LB": "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
   "A-E-OA-LB": "bg-teal-500/10 text-teal-400 border border-teal-500/20",
+  // PivotPattern badges, "LevelsAbove" half continued — "A-{Level}-
+  // {RRHH}-{SSLL}" for HHLL-A/B/C (renamed from RRSSA-AAA-*/AOA-*/CC/CE/
+  // CRA/BC-*/BE-*/BRA-* — see ScreenerUtils.PIVOT_PATTERNS /
+  // PIVOT_PATTERN_KEYS). Continues the same orange->yellow->lime->green->
+  // emerald->teal LevelsAbove palette started by A-E-* above so the whole
+  // "LevelsAbove" super-family reads as one continuous colour band,
+  // distinct from the E-*/C-* families. "A-A-OA-AA"/"A-A-OA-OA" are
+  // excluded from PIVOT_PATTERN_KEYS (exact duplicates of "C-A-OA-AA"/
+  // "C-A-OA-OA" — see that comment in ScreenerUtils.tsx), so they have no
+  // entry here either.
+  "A-A-AA-AA": "bg-orange-500/10 text-orange-400 border border-orange-500/20",
+  "A-A-AA-OA": "bg-yellow-500/10 text-yellow-400 border border-yellow-500/20",
+  "A-B-C-C": "bg-lime-500/10 text-lime-400 border border-lime-500/20",
+  "A-B-C-LB": "bg-green-500/10 text-green-400 border border-green-500/20",
+  "A-B-E-E": "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
+  "A-B-E-LB": "bg-teal-500/10 text-teal-400 border border-teal-500/20",
+  "A-B-RA-C": "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20",
+  "A-B-RA-E": "bg-sky-500/10 text-sky-400 border border-sky-500/20",
+  "A-B-RA-LB": "bg-blue-500/10 text-blue-400 border border-blue-500/20",
+  "A-C-C-AA": "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20",
+  "A-C-C-OA": "bg-violet-500/10 text-violet-400 border border-violet-500/20",
+  "A-C-E-AA": "bg-purple-500/10 text-purple-400 border border-purple-500/20",
+  "A-C-E-OA": "bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/20",
+  "A-C-RA-AA": "bg-pink-500/10 text-pink-400 border border-pink-500/20",
+  "A-C-RA-OA": "bg-rose-500/10 text-rose-400 border border-rose-500/20",
   // PivotPattern badges, "compressed" half — "C-{Level}-{RRHH}-{SSLL}"
   // (see ScreenerUtils.computePivotPattern / PIVOT_PATTERN_KEYS — merged
   // with the E-* "expanded" half above into one combined key list/badge,
