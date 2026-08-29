@@ -503,9 +503,17 @@ export const RAW_LEVEL_PATTERNS: Record<string, (r: CPRResult) => boolean> = {
   "RRSSA-EE": (r) => r.HHLLCategory === "HHLL-E" && r.SSLLCategory === "SSLL-E",
   "RRSSA-ELB": (r) => r.HHLLCategory === "HHLL-E" && r.SSLLCategory === "SSLL-LB",
   "RRSSA-EOB": (r) => r.HHLLCategory === "HHLL-E" && r.SSLLCategory === "SSLL-OB",
-  "RRSSA-CC": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-C",
-  "RRSSA-CE": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-E",
-  "RRSSA-CRA": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-RA",
+  // RENAMED: RRSSA-CC/RRSSA-CE/RRSSA-CRA -> A-C-{RRHH}-{SSLL}, each
+  // further re-split by crossing against SSLLCategory (SSLL-AA/SSLL-OA),
+  // same A-{Level}-{RRHH}-{SSLL} naming convention as A-A-{RRHH}-{SSLL}
+  // above. Conditions otherwise unchanged (still HHLL-C + RRHHCategory,
+  // nested under "levelsabove" / r.LevelsAbove).
+  "A-C-C-AA": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-AA",
+  "A-C-C-OA": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-OA",
+  "A-C-E-AA": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-AA",
+  "A-C-E-OA": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-OA",
+  "A-C-RA-AA": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-RA" && r.SSLLCategory === "SSLL-AA",
+  "A-C-RA-OA": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-RA" && r.SSLLCategory === "SSLL-OA",
 
   // RRSSB-{Level}{Gap} / RRSSB-C{SSLL} / RRSSB-E{RRHH} — the LevelsBelow
   // (r.LevelsBelow) mirror of RRSSA-* above; same derivation, opposite

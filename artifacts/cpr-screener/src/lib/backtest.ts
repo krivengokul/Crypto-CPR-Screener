@@ -625,9 +625,16 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       // nested under any of them yet, so each shows up as a
       // symbol-list-only scan in the Backtest dropdown until specific
       // targets are defined.
-      { key: "RRSSA-CC", label: "RRSSA-CC", subPatternKeys: [] },
-      { key: "RRSSA-CE", label: "RRSSA-CE", subPatternKeys: [] },
-      { key: "RRSSA-CRA", label: "RRSSA-CRA", subPatternKeys: [] },
+      // RENAMED to A-C-{RRHH}-{SSLL}, each further re-split by crossing
+      // against SSLLCategory (SSLL-AA/SSLL-OA), same convention as
+      // A-A-{RRHH}-{SSLL} above: RRSSA-CC -> A-C-C-AA/A-C-C-OA,
+      // RRSSA-CE -> A-C-E-AA/A-C-E-OA, RRSSA-CRA -> A-C-RA-AA/A-C-RA-OA.
+      { key: "A-C-C-AA", label: "A-C-C-AA", subPatternKeys: [] },
+      { key: "A-C-C-OA", label: "A-C-C-OA", subPatternKeys: [] },
+      { key: "A-C-E-AA", label: "A-C-E-AA", subPatternKeys: [] },
+      { key: "A-C-E-OA", label: "A-C-E-OA", subPatternKeys: [] },
+      { key: "A-C-RA-AA", label: "A-C-RA-AA", subPatternKeys: [] },
+      { key: "A-C-RA-OA", label: "A-C-RA-OA", subPatternKeys: [] },
       // RRSSA-E + SSLL — 8 combinations.
       // RRSSA-E is the merged LevelsAbove RRSS-E condition (HHLL-E with
       // RRHH-AA or RRHH-OA), crossed with each SSLLCategory. Each entry is
