@@ -87,7 +87,7 @@ export const PATTERN_BADGE_CLASSES: Record<string, string> = {
   EL1L2: "bg-teal-500/10 text-teal-400 border border-teal-500/20",
   EL2L1: "bg-rose-500/10 text-rose-400 border border-rose-500/20",
   // LevelPattern badges — "E-{Level}-{RRHH}-{SSLL}" (see
-  // ScreenerUtils.computeLevelPattern / LEVEL_PATTERN_KEYS). Grouped by
+  // ScreenerUtils.computePivotPattern / PIVOT_PATTERN_KEYS). Grouped by
   // Level (A: green family, B: amber/orange family, E: purple/pink
   // family) so the three Levels stay visually distinct at a glance.
   "E-A-AA-OB": "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
@@ -107,8 +107,8 @@ export const PATTERN_BADGE_CLASSES: Record<string, string> = {
   "E-E-AA-OB": "bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/20",
   "E-E-OA-OB": "bg-pink-500/10 text-pink-400 border border-pink-500/20",
   // LevelPattern badges, "LevelsAbove" half — "A-E-{RRHH}-{SSLL}"
-  // (renamed from RRSSA-EC/EE/ELB/EOB — see ScreenerUtils.RAW_LEVEL_PATTERNS
-  // / LEVEL_PATTERN_KEYS). Own amber/yellow/lime/green/emerald/teal family
+  // (renamed from RRSSA-EC/EE/ELB/EOB — see ScreenerUtils.PIVOT_PATTERNS
+  // / PIVOT_PATTERN_KEYS). Own amber/yellow/lime/green/emerald/teal family
   // so this LevelsAbove group reads distinctly from the E-*/C-* families
   // above/below even though it shares the HHLL-E condition space with them.
   "A-E-AA-OB": "bg-amber-500/10 text-amber-400 border border-amber-500/20",
@@ -119,7 +119,7 @@ export const PATTERN_BADGE_CLASSES: Record<string, string> = {
   "A-E-AA-LB": "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
   "A-E-OA-LB": "bg-teal-500/10 text-teal-400 border border-teal-500/20",
   // LevelPattern badges, "compressed" half — "C-{Level}-{RRHH}-{SSLL}"
-  // (see ScreenerUtils.computeLevelPattern / LEVEL_PATTERN_KEYS — merged
+  // (see ScreenerUtils.computePivotPattern / PIVOT_PATTERN_KEYS — merged
   // with the E-* "expanded" half above into one combined key list/badge,
   // since r.expanded/r.compressed are mutually exclusive). Same grouping
   // idea as the E-* badges above but with a distinct palette per Level
@@ -273,28 +273,28 @@ export function renderPrevPatternBadge(r: CPRResult) {
 /**
  * LevelPattern badge — "E-{Level}-{RRHH}-{SSLL}" ("expanded") or
  * "C-{Level}-{RRHH}-{SSLL}" ("compressed") (see
- * ScreenerUtils.computeLevelPattern / LEVEL_PATTERN_KEYS for the
+ * ScreenerUtils.computePivotPattern / PIVOT_PATTERN_KEYS for the
  * HHLLCategory x RRHHCategory x SSLLCategory derivation of both sets),
  * colour-coded via the same PATTERN_BADGE_CLASSES palette as every other
  * pattern badge. Replaces the previous-day "p-xxxx" badge
  * (renderPrevPatternBadge above) in the Pattern column's second row.
- * MERGED from what used to be two separate badges (renderLevelPatternBadge
+ * MERGED from what used to be two separate badges (renderPivotPatternBadge
  * for E-*, renderCompressedPatternBadge for C-*) into one, since
  * r.expanded/r.compressed are mutually exclusive so a row can never match
  * both families. Returns null when the row's category combo doesn't match
- * any of the 33 LEVEL_PATTERN_KEYS (most commonly because r.expanded and
+ * any of the 33 PIVOT_PATTERN_KEYS (most commonly because r.expanded and
  * r.compressed are both false).
  */
-export function renderLevelPatternBadge(r: CPRResult) {
-  const levelPattern = computeLevelPattern(r);
-  if (!levelPattern) return null;
+export function renderPivotPatternBadge(r: CPRResult) {
+  const pivotPattern = computePivotPattern(r);
+  if (!pivotPattern) return null;
   return (
     <div className="flex flex-wrap gap-1 mt-1">
       <span
-        className={`text-[10px] px-1 py-0.5 rounded border font-medium ${getBadgeClasses(levelPattern)}`}
+        className={`text-[10px] px-1 py-0.5 rounded border font-medium ${getBadgeClasses(pivotPattern)}`}
         title="LevelPattern — HHLL x RRHH x SSLL category combo"
       >
-        {levelPattern}
+        {pivotPattern}
       </span>
     </div>
   );
@@ -362,15 +362,15 @@ export function renderPatternColumnBadges(r: CPRResult) {
     !isOutsideCPR;
   const statusBadge = renderLevelStatusBadge(r, isInsideCPR, isOutsideCPR, showWide, nothingMatched);
   const todayBadges = renderTodayPatternBadges(r);
-  const levelPatternBadge = renderLevelPatternBadge(r);
-  if (!statusBadge && !todayBadges && !levelPatternBadge) return null;
+  const pivotPatternBadge = renderPivotPatternBadge(r);
+  if (!statusBadge && !todayBadges && !pivotPatternBadge) return null;
   return (
     <div className="flex flex-col gap-1 max-w-[228px]">
       <div className="flex flex-nowrap items-center gap-1">
         {statusBadge}
         {todayBadges}
       </div>
-      {levelPatternBadge}
+      {pivotPatternBadge}
     </div>
   );
 }
@@ -413,7 +413,7 @@ import {
   distanceFromCPR,
   pdhPdlStatus,
   computePrevPattern,
-  computeLevelPattern,
+  computePivotPattern,
   getViewDirection,
   cprDistancePct,
   levelsInDistanceRange,
@@ -637,7 +637,7 @@ export default function ScreenerTableRow({
               {renderLevelStatusBadge(r, isInsideCPR, isOutsideCPR, showWide, nothingMatchedMain)}
               {renderTodayPatternBadges(r)}
             </div>
-            {renderLevelPatternBadge(r)}
+            {renderPivotPatternBadge(r)}
           </div>
         </td>
         <td className="px-3 py-3 font-mono whitespace-nowrap">
@@ -696,7 +696,7 @@ export default function ScreenerTableRow({
           rowKey={rowKey}
           colSpan={20}
           todayPatternBadge={renderTodayPatternBadges(r)}
-          prevPatternBadge={renderLevelPatternBadge(r)}
+          prevPatternBadge={renderPivotPatternBadge(r)}
         />
       )}
     </Fragment>

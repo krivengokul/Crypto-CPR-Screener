@@ -651,7 +651,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       // RRHHCategory (RRHH-AA/RRHH-OA), the same free axis noted above.
       // RRSSA-EOB -> A-E-AA-OB only; the RRHH-OA half (A-E-OA-OB) wasn't
       // requested and isn't added yet. Also now shown as a LevelPattern
-      // badge in ScreenerTableRow (see LEVEL_PATTERN_KEYS), not just here.
+      // badge in ScreenerTableRow (see PIVOT_PATTERN_KEYS), not just here.
       { key: "A-E-AA-OB", label: "A-E-AA-OB", subPatternKeys: [] },
       { key: "A-E-AA-C",  label: "A-E-AA-C",  subPatternKeys: [] },
       { key: "A-E-OA-C",  label: "A-E-OA-C",  subPatternKeys: [] },
@@ -838,7 +838,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       // RRHHCategory, same treatment as "expanded"'s E-{Level}-{RRHH}-
       // {SSLL} set — condition is RRSS-C (r.compressed) + HHLL + RRHH +
       // SSLL only, with NO GapCategory check of any kind (see
-      // RAW_LEVEL_PATTERNS in ScreenerUtils.tsx). RRSSC-CC (HHLL-C +
+      // PIVOT_PATTERNS in ScreenerUtils.tsx). RRSSC-CC (HHLL-C +
       // SSLL-C) came back CONFIRMED EMPTY against real data across every
       // RRHH split and was dropped entirely, leaving these 17:
       // AAA -> C-A-C-AA/C-A-HA-AA/C-A-E-AA/C-A-OA-AA (HHLL-A + SSLL-AA),

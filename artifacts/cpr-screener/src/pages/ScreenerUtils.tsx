@@ -454,7 +454,7 @@ export function formatWidthFilterLabel(widthFilter: WidthFilter): string {
 }
 
 /**
- * RAW_LEVEL_PATTERNS — single source of truth for every compound
+ * PIVOT_PATTERNS — single source of truth for every compound
  * HHLLCategory x RRHHCategory x SSLLCategory (x PDHPDLGapCategory x
  * RRSSGapCategory) "raw pattern" condition: RRSSA-*, RRSSB-*,
  * C-{Level}-{RRHH}-{SSLL} (nested under "compressed" — REPLACES the old
@@ -464,7 +464,7 @@ export function formatWidthFilterLabel(widthFilter: WidthFilter): string {
  * passesPattern's switch, and matchesPatternFlag's switch separately —
  * two copies of the same logic that could (and did) drift apart. The
  * E-{Level}-{RRHH}-{SSLL} cases were moved out of matchesPatternFlag into
- * passesPattern at one point (since that's what computeLevelPattern and
+ * passesPattern at one point (since that's what computePivotPattern and
  * the Backtest/legend paths actually call), which silently left
  * matchesPatternFlag with NO case for any "E-..." key — every Pattern
  * Stats / pivotLevelBacktestSymbolOnDate check against those keys fell
@@ -481,7 +481,7 @@ export function formatWidthFilterLabel(widthFilter: WidthFilter): string {
  * passesPatternFn(result, categoryKey) check, etc.), same as before this
  * refactor.
  */
-export const RAW_LEVEL_PATTERNS: Record<string, (r: CPRResult) => boolean> = {
+export const PIVOT_PATTERNS: Record<string, (r: CPRResult) => boolean> = {
   // RRSSA-{Level}{Gap} / RRSSA-A{RRHH} / RRSSA-A{RRHH}-{SSLL} / RRSSA-E /
   // RRSSA-C{RRHH} — nested under "levelsabove" (r.LevelsAbove). See the
   // in-repo derivation notes (pre-refactor comment block, same math)
@@ -604,7 +604,7 @@ export const RAW_LEVEL_PATTERNS: Record<string, (r: CPRResult) => boolean> = {
   "C-C-OB-OA": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-OA",
 
   // E-{Level}-{RRHH}-{SSLL} — nested under "expanded" (r.expanded). See
-  // LEVEL_PATTERN_KEYS below for the exported list of these 16 keys.
+  // PIVOT_PATTERN_KEYS below for the exported list of these 16 keys.
   "E-A-AA-OB": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-OB",
   "E-A-OA-OB": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-OB",
   "E-A-AA-SB": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-SB",
@@ -625,11 +625,11 @@ export const RAW_LEVEL_PATTERNS: Record<string, (r: CPRResult) => boolean> = {
 
 export function passesPattern(r: CPRResult, pattern: string): boolean {
   // Every compound HHLL/RRHH/SSLL raw pattern (RRSSA-*/RRSSB-*/RRSSC-*/
-  // E-*) is now defined exactly once, in RAW_LEVEL_PATTERNS above — see
+  // E-*) is now defined exactly once, in PIVOT_PATTERNS above — see
   // that map's comment for why. Checked first so nothing below needs its
   // own case for these keys.
   {
-    const rawCheck = RAW_LEVEL_PATTERNS[pattern];
+    const rawCheck = PIVOT_PATTERNS[pattern];
     if (rawCheck) return rawCheck(r);
   }
   switch (pattern) {
@@ -1221,7 +1221,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     case "top15losers":
       return true;
     // E-{Level}-{RRHH}-{SSLL} (16 keys, nested under "expanded") is now
-    // defined in RAW_LEVEL_PATTERNS above and checked at the top of this
+    // defined in PIVOT_PATTERNS above and checked at the top of this
     // function — see that map's comment for the full derivation and for
     // why it isn't duplicated here anymore.
     default:
@@ -1461,12 +1461,12 @@ export function getPatternInfo(r: CPRResult): PatternInfo {
  */
 export function matchesPatternFlag(r: CPRResult, label: string): boolean {
   // Every compound HHLL/RRHH/SSLL raw pattern (RRSSA-*/RRSSB-*/RRSSC-*/
-  // E-*) is now defined exactly once, in RAW_LEVEL_PATTERNS above passesPattern
+  // E-*) is now defined exactly once, in PIVOT_PATTERNS above passesPattern
   // — see that map's comment for why. Checked first so nothing below
   // needs its own case for these keys, and so this function and
   // passesPattern can never drift apart on them again.
   {
-    const rawCheck = RAW_LEVEL_PATTERNS[label];
+    const rawCheck = PIVOT_PATTERNS[label];
     if (rawCheck) return rawCheck(r);
   }
   switch (label) {
@@ -1673,41 +1673,41 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
       );
     // RRSSA-*/RRSSB-*/RRSSC-* (all nested under levelsabove/
     // levelsbelow/compressed) are now defined exactly once, in
-    // RAW_LEVEL_PATTERNS above passesPattern, and checked at the top of
+    // PIVOT_PATTERNS above passesPattern, and checked at the top of
     // this function — see that map's comment for the full derivation.
     default: return getPatternInfo(r)?.label === label;
   }
 }
 
 /**
- * LEVEL_PATTERN_KEYS — the 40 "E-{Level}-{RRHH}-{SSLL}" (16, "expanded"),
+ * PIVOT_PATTERN_KEYS — the 40 "E-{Level}-{RRHH}-{SSLL}" (16, "expanded"),
  * "C-{Level}-{RRHH}-{SSLL}" (17, "compressed"), and "A-E-{RRHH}-{SSLL}"
  * (7, "LevelsAbove", renamed from RRSSA-EC/EE/ELB/EOB) keys handled by
- * the passesPattern cases / RAW_LEVEL_PATTERNS entries above (see those
+ * the passesPattern cases / PIVOT_PATTERNS entries above (see those
  * blocks' comments for the full HHLLCategory x RRHHCategory x
  * SSLLCategory derivation of each set; the C-* set REPLACES the old
  * RRSSC-{Level}{SSLL} keys). MERGED from what used to be two separate
- * lists (LEVEL_PATTERN_KEYS for E-*, COMPRESSED_PATTERN_KEYS for C-*)
+ * lists (PIVOT_PATTERN_KEYS for E-*, COMPRESSED_PATTERN_KEYS for C-*)
  * into one: r.expanded and r.compressed are mutually exclusive states, so
  * a row can never match both an E-* and a C-* key, making a single
  * combined list/function safe. The A-E-* keys added on top are NOT
  * guaranteed mutually exclusive with the E-* keys (see the note above
  * "A-E-AA-OB" in the list below) — unlike expanded/compressed,
  * LevelsAbove can coincide with "expanded" for the same row. Exported so
- * computeLevelPattern below can iterate them without duplicating the
+ * computePivotPattern below can iterate them without duplicating the
  * list, and so other views/legends can reuse the same set.
  */
-export const LEVEL_PATTERN_KEYS = [
+export const PIVOT_PATTERN_KEYS = [
   "E-A-AA-OB", "E-A-OA-OB", "E-A-AA-SB", "E-A-AA-C", "E-A-OA-C",
   "E-A-AA-E", "E-A-OA-E", "E-B-RA-BB", "E-B-C-BB", "E-B-E-BB",
   "E-B-C-OB", "E-B-E-OB", "E-E-AA-BB", "E-E-OA-BB", "E-E-AA-OB",
   "E-E-OA-OB",
   // A-E-{RRHH}-{SSLL} — the renamed RRSSA-EC/EE/ELB/EOB set (LevelsAbove,
-  // HHLL-E), added here so they render via the LevelPatternBadge too, not
+  // HHLL-E), added here so they render via the PivotPatternBadge too, not
   // just the Backtest dropdown. NOTE: "A-E-AA-OB" has the exact same
   // HHLLCategory/RRHHCategory/SSLLCategory condition as "E-E-AA-OB" above
-  // (both HHLL-E + RRHH-AA + SSLL-OB) — since computeLevelPattern returns
-  // the first LEVEL_PATTERN_KEYS entry that matches, "E-E-AA-OB" (earlier
+  // (both HHLL-E + RRHH-AA + SSLL-OB) — since computePivotPattern returns
+  // the first PIVOT_PATTERN_KEYS entry that matches, "E-E-AA-OB" (earlier
   // in this list) will always win for any row where both would match, so
   // "A-E-AA-OB" can never actually be the one displayed. Left in for
   // completeness/parity with the other A-E-* keys; flag for review if the
@@ -1723,10 +1723,10 @@ export const LEVEL_PATTERN_KEYS = [
   "C-C-BB-OA", "C-C-OB-OA",
 ] as const;
 
-export type LevelPatternKey = (typeof LEVEL_PATTERN_KEYS)[number];
+export type PivotPatternKey = (typeof PIVOT_PATTERN_KEYS)[number];
 
 /**
- * computeLevelPattern — the single LEVEL_PATTERN_KEYS entry this row's
+ * computePivotPattern — the single PIVOT_PATTERN_KEYS entry this row's
  * HHLLCategory/RRHHCategory/SSLLCategory combo matches (see
  * passesPattern's "E-..."/"C-..." cases for the derivation), or null when
  * none match — either r.expanded and r.compressed are both false, or the
@@ -1734,12 +1734,12 @@ export type LevelPatternKey = (typeof LEVEL_PATTERN_KEYS)[number];
  * added as a key (e.g. the old RRSSC-CC / HHLL-C+SSLL-C combo).
  * HHLLCategory/RRHHCategory/SSLLCategory are each mutually-exclusive
  * partitions, and r.expanded/r.compressed are themselves mutually
- * exclusive, so at most one LEVEL_PATTERN_KEYS entry can match a given
+ * exclusive, so at most one PIVOT_PATTERN_KEYS entry can match a given
  * row; this is what the LevelPattern badge (see ScreenerTableRow)
  * renders.
  */
-export function computeLevelPattern(r: CPRResult): LevelPatternKey | null {
-  for (const key of LEVEL_PATTERN_KEYS) {
+export function computePivotPattern(r: CPRResult): PivotPatternKey | null {
+  for (const key of PIVOT_PATTERN_KEYS) {
     if (passesPattern(r, key)) return key;
   }
   return null;
