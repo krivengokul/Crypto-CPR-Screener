@@ -803,28 +803,44 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
         label: "RHLB-RRHHpGap",
         subPatternKeys: ["8A:pLAPpPAH:R4-5P"],
       },
-      // RRSSC-{Level}{SSLL} — 8 Patterns (arrows), nested under
+      // C-{Level}-{RRHH}-{SSLL} — 17 Patterns (arrows), nested under
       // "compressed" (today's R1 down vs prev AND today's S1 up vs prev —
-      // see cpr.ts's r.compressed / the "RRSS-C" SSRRCategory), built by
-      // crossing HHLLCategory (A/B/C — HHLL-E stays impossible under
-      // compressed) with SSLLCategory. The theoretical bound from the
-      // sign proof was 12 (HHLL-A x 4, HHLL-B x 4, HHLL-C x 4 — see the
-      // full derivation in matchesPatternFlag's comment in
-      // ScreenerUtils.tsx), but AC/AE/BSB/CE were confirmed EMPTY against
-      // real data and left out entirely (not just empty by chance, same
-      // treatment as expanded's ABB/ALB/BC/BE/EC/EE above), leaving these
-      // 8: AAA/AOA (HHLL-A) + BLB/BC/BE (HHLL-B) + CAA/COA/CC (HHLL-C). No
-      // target-graded sub-patterns nested under any of them yet, so each
-      // shows up as a symbol-list-only scan in the Backtest dropdown
+      // see cpr.ts's r.compressed / the "RRSS-C" SSRRCategory). REPLACES
+      // the old RRSSC-{Level}{SSLL} set (RRSSC-AAA/AOA/BLB/BC/BE/CAA/COA/
+      // CC): each surviving HHLL x SSLL combo is re-split by crossing in
+      // RRHHCategory, same treatment as "expanded"'s E-{Level}-{RRHH}-
+      // {SSLL} set — condition is RRSS-C (r.compressed) + HHLL + RRHH +
+      // SSLL only, with NO GapCategory check of any kind (see
+      // RAW_LEVEL_PATTERNS in ScreenerUtils.tsx). RRSSC-CC (HHLL-C +
+      // SSLL-C) came back CONFIRMED EMPTY against real data across every
+      // RRHH split and was dropped entirely, leaving these 17:
+      // AAA -> C-A-C-AA/C-A-HA-AA/C-A-E-AA/C-A-OA-AA (HHLL-A + SSLL-AA),
+      // AOA -> C-A-E-OA/C-A-C-OA/C-A-OA-OA (HHLL-A + SSLL-OA),
+      // BLB -> C-B-BB-LB/C-B-OB-LB (HHLL-B + SSLL-LB),
+      // BC  -> C-B-BB-C/C-B-OB-C (HHLL-B + SSLL-C),
+      // BE  -> C-B-BB-E/C-B-OB-E (HHLL-B + SSLL-E),
+      // CAA -> C-C-BB-AA/C-C-OB-AA (HHLL-C + SSLL-AA),
+      // COA -> C-C-BB-OA/C-C-OB-OA (HHLL-C + SSLL-OA).
+      // No target-graded sub-patterns nested under any of them yet, so
+      // each shows up as a symbol-list-only scan in the Backtest dropdown
       // until specific targets are defined.
-      { key: "RRSSC-AAA", label: "RRSSC-AAA", subPatternKeys: [] },
-      { key: "RRSSC-AOA", label: "RRSSC-AOA", subPatternKeys: [] },
-      { key: "RRSSC-BLB", label: "RRSSC-BLB", subPatternKeys: [] },
-      { key: "RRSSC-BC", label: "RRSSC-BC", subPatternKeys: [] },
-      { key: "RRSSC-BE", label: "RRSSC-BE", subPatternKeys: [] },
-      { key: "RRSSC-CAA", label: "RRSSC-CAA", subPatternKeys: [] },
-      { key: "RRSSC-COA", label: "RRSSC-COA", subPatternKeys: [] },
-      { key: "RRSSC-CC", label: "RRSSC-CC", subPatternKeys: [] },
+      { key: "C-A-C-AA", label: "C-A-C-AA", subPatternKeys: [] },
+      { key: "C-A-HA-AA", label: "C-A-HA-AA", subPatternKeys: [] },
+      { key: "C-A-E-AA", label: "C-A-E-AA", subPatternKeys: [] },
+      { key: "C-A-OA-AA", label: "C-A-OA-AA", subPatternKeys: [] },
+      { key: "C-A-E-OA", label: "C-A-E-OA", subPatternKeys: [] },
+      { key: "C-A-C-OA", label: "C-A-C-OA", subPatternKeys: [] },
+      { key: "C-A-OA-OA", label: "C-A-OA-OA", subPatternKeys: [] },
+      { key: "C-B-BB-LB", label: "C-B-BB-LB", subPatternKeys: [] },
+      { key: "C-B-OB-LB", label: "C-B-OB-LB", subPatternKeys: [] },
+      { key: "C-B-BB-C", label: "C-B-BB-C", subPatternKeys: [] },
+      { key: "C-B-OB-C", label: "C-B-OB-C", subPatternKeys: [] },
+      { key: "C-B-BB-E", label: "C-B-BB-E", subPatternKeys: [] },
+      { key: "C-B-OB-E", label: "C-B-OB-E", subPatternKeys: [] },
+      { key: "C-C-BB-AA", label: "C-C-BB-AA", subPatternKeys: [] },
+      { key: "C-C-OB-AA", label: "C-C-OB-AA", subPatternKeys: [] },
+      { key: "C-C-BB-OA", label: "C-C-BB-OA", subPatternKeys: [] },
+      { key: "C-C-OB-OA", label: "C-C-OB-OA", subPatternKeys: [] },
     ],
   },
   // NEW: "EXPANDED" left-nav section, mirroring "COMPRESSED" above but for

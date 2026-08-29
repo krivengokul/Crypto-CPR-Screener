@@ -456,8 +456,9 @@ export function formatWidthFilterLabel(widthFilter: WidthFilter): string {
 /**
  * RAW_LEVEL_PATTERNS — single source of truth for every compound
  * HHLLCategory x RRHHCategory x SSLLCategory (x PDHPDLGapCategory x
- * RRSSGapCategory) "raw pattern" condition: RRSSA-*, RRSSB-*, RRSSC-*, and
- * E-{Level}-{RRHH}-{SSLL}.
+ * RRSSGapCategory) "raw pattern" condition: RRSSA-*, RRSSB-*,
+ * C-{Level}-{RRHH}-{SSLL} (nested under "compressed" — REPLACES the old
+ * RRSSC-{Level}{SSLL} set), and E-{Level}-{RRHH}-{SSLL}.
  *
  * WHY THIS EXISTS: these conditions used to be written directly inside
  * passesPattern's switch, and matchesPatternFlag's switch separately —
@@ -516,15 +517,41 @@ export const RAW_LEVEL_PATTERNS: Record<string, (r: CPRResult) => boolean> = {
   "RRSSB-EE": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-E",
   "RRSSB-EHA": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-HA",
 
-  // RRSSC-{Level}{SSLL} — nested under "compressed" (r.compressed).
-  "RRSSC-AAA": (r) => r.HHLLCategory === "HHLL-A" && r.SSLLCategory === "SSLL-AA",
-  "RRSSC-AOA": (r) => r.HHLLCategory === "HHLL-A" && r.SSLLCategory === "SSLL-OA",
-  "RRSSC-BLB": (r) => r.HHLLCategory === "HHLL-B" && r.SSLLCategory === "SSLL-LB",
-  "RRSSC-BC": (r) => r.HHLLCategory === "HHLL-B" && r.SSLLCategory === "SSLL-C",
-  "RRSSC-BE": (r) => r.HHLLCategory === "HHLL-B" && r.SSLLCategory === "SSLL-E",
-  "RRSSC-CAA": (r) => r.HHLLCategory === "HHLL-C" && r.SSLLCategory === "SSLL-AA",
-  "RRSSC-COA": (r) => r.HHLLCategory === "HHLL-C" && r.SSLLCategory === "SSLL-OA",
-  "RRSSC-CC": (r) => r.HHLLCategory === "HHLL-C" && r.SSLLCategory === "SSLL-C",
+  // C-{Level}-{RRHH}-{SSLL} — nested under "compressed" (r.compressed),
+  // REPLACES the old RRSSC-{Level}{SSLL} set (RRSSC-AAA/AOA/BLB/BC/BE/
+  // CAA/COA/CC). Same treatment as E-{Level}-{RRHH}-{SSLL} below: each old
+  // HHLL x SSLL combo is re-split by crossing in RRHHCategory, with NO
+  // Gap-category check of any kind (RRSSGapCategory / PDHPDLGapCategory) —
+  // condition is RRSS-C (r.compressed, applied by the caller) + HHLL +
+  // RRHH + SSLL only, mirroring "expanded"'s treatment exactly. RRSSC-CC
+  // (HHLL-C + SSLL-C) came back CONFIRMED EMPTY against real data (no
+  // reachable RRHH split found) and was dropped entirely, same treatment
+  // as RRSSB-AC/AE/BSB/CE above.
+  //
+  // RRSSC-AAA (HHLL-A + SSLL-AA) -> 4 RRHH splits:
+  "C-A-C-AA": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-AA",
+  "C-A-HA-AA": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-HA" && r.SSLLCategory === "SSLL-AA",
+  "C-A-E-AA": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-AA",
+  "C-A-OA-AA": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-AA",
+  // RRSSC-AOA (HHLL-A + SSLL-OA) -> 3 RRHH splits:
+  "C-A-E-OA": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-OA",
+  "C-A-C-OA": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-OA",
+  "C-A-OA-OA": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-OA",
+  // RRSSC-BLB (HHLL-B + SSLL-LB) -> 2 RRHH splits:
+  "C-B-BB-LB": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-LB",
+  "C-B-OB-LB": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-LB",
+  // RRSSC-BC (HHLL-B + SSLL-C) -> 2 RRHH splits:
+  "C-B-BB-C": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-C",
+  "C-B-OB-C": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-C",
+  // RRSSC-BE (HHLL-B + SSLL-E) -> 2 RRHH splits:
+  "C-B-BB-E": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-E",
+  "C-B-OB-E": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-E",
+  // RRSSC-CAA (HHLL-C + SSLL-AA) -> 2 RRHH splits:
+  "C-C-BB-AA": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-AA",
+  "C-C-OB-AA": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-AA",
+  // RRSSC-COA (HHLL-C + SSLL-OA) -> 2 RRHH splits:
+  "C-C-BB-OA": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-OA",
+  "C-C-OB-OA": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-OA",
 
   // E-{Level}-{RRHH}-{SSLL} — nested under "expanded" (r.expanded). See
   // LEVEL_PATTERN_KEYS below for the exported list of these 16 keys.
@@ -1630,6 +1657,42 @@ export type LevelPatternKey = (typeof LEVEL_PATTERN_KEYS)[number];
  */
 export function computeLevelPattern(r: CPRResult): LevelPatternKey | null {
   for (const key of LEVEL_PATTERN_KEYS) {
+    if (passesPattern(r, key)) return key;
+  }
+  return null;
+}
+
+/**
+ * COMPRESSED_PATTERN_KEYS — the 17 "C-{Level}-{RRHH}-{SSLL}" keys handled
+ * by the RAW_LEVEL_PATTERNS entries above (see that map's comment for the
+ * HHLLCategory x RRHHCategory x SSLLCategory derivation, replacing the old
+ * RRSSC-{Level}{SSLL} set). Exported so computeCompressedPattern below can
+ * iterate them without duplicating the list, mirroring LEVEL_PATTERN_KEYS'
+ * role for "expanded".
+ */
+export const COMPRESSED_PATTERN_KEYS = [
+  "C-A-C-AA", "C-A-HA-AA", "C-A-E-AA", "C-A-OA-AA",
+  "C-A-E-OA", "C-A-C-OA", "C-A-OA-OA",
+  "C-B-BB-LB", "C-B-OB-LB",
+  "C-B-BB-C", "C-B-OB-C",
+  "C-B-BB-E", "C-B-OB-E",
+  "C-C-BB-AA", "C-C-OB-AA",
+  "C-C-BB-OA", "C-C-OB-OA",
+] as const;
+
+export type CompressedPatternKey = (typeof COMPRESSED_PATTERN_KEYS)[number];
+
+/**
+ * computeCompressedPattern — the single COMPRESSED_PATTERN_KEYS entry this
+ * row's HHLLCategory/RRHHCategory/SSLLCategory combo matches, or null when
+ * none match — either r.compressed is false, or the specific combo was
+ * confirmed empty against real data and was never added as a key (e.g. the
+ * old RRSSC-CC / HHLL-C+SSLL-C combo). Mirrors computeLevelPattern above
+ * exactly; this is what the CompressedPattern badge (see
+ * ScreenerTableRow) renders.
+ */
+export function computeCompressedPattern(r: CPRResult): CompressedPatternKey | null {
+  for (const key of COMPRESSED_PATTERN_KEYS) {
     if (passesPattern(r, key)) return key;
   }
   return null;
