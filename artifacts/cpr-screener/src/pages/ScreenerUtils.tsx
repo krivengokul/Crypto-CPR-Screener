@@ -491,6 +491,24 @@ export const RAW_LEVEL_PATTERNS: Record<string, (r: CPRResult) => boolean> = {
   // real data, and were never added as keys at all.
   "RRSSA-BHS": (r) => r.HHLLCategory === "HHLL-B" && r.PDHPDLGapCategory === "HHGap" && r.RRSSGapCategory === "SSGap",
   "RRSSA-BLR": (r) => r.HHLLCategory === "HHLL-B" && r.PDHPDLGapCategory === "LLGap" && r.RRSSGapCategory === "RRGap",
+  // RRSSA-B{RRHH}-{SSLL} — 9 Patterns (arrows), the previously-missing
+  // conditions for the keys already listed in backtest.ts's "levelsabove"
+  // category (see that file's comment above these keys). HHLL-B re-split
+  // by crossing RRHHCategory (C/E/RA) then SSLLCategory (C/E/LB) on top —
+  // these 9 keys existed in the Backtest dropdown but had no matching
+  // entry here, so passesPattern/matchesPatternFlag fell through to
+  // default and every scan silently came back empty ("no data"). Not yet
+  // checked against real data — some may come back empty and need
+  // trimming later, same as RRSSA-C{RRHH}/RRSSB-E{RRHH} each did.
+  "RRSSA-BC-C": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-C",
+  "RRSSA-BC-E": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-E",
+  "RRSSA-BC-LB": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-LB",
+  "RRSSA-BE-C": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-C",
+  "RRSSA-BE-E": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-E",
+  "RRSSA-BE-LB": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-LB",
+  "RRSSA-BRA-C": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-RA" && r.SSLLCategory === "SSLL-C",
+  "RRSSA-BRA-E": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-RA" && r.SSLLCategory === "SSLL-E",
+  "RRSSA-BRA-LB": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-RA" && r.SSLLCategory === "SSLL-LB",
   // RENAMED: RRSSA-AAA-AA -> A-A-AA-AA, RRSSA-AAA-OA -> A-A-AA-OA,
   // RRSSA-AOA-AA -> A-A-OA-AA, RRSSA-AOA-OA -> A-A-OA-OA. Same
   // A-{Level}-{RRHH}-{SSLL} naming convention as the "compressed" (C-*)
