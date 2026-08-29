@@ -601,10 +601,14 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       // records against real data and are kept. Keys keep the RRHH and
       // SSLL halves visually separated (RRSSA-A{RRHH}-{SSLL}) since both
       // axes already use "A" suffixes.
-      { key: "RRSSA-AAA-AA", label: "RRSSA-AAA-AA", subPatternKeys: [] },
-      { key: "RRSSA-AAA-OA", label: "RRSSA-AAA-OA", subPatternKeys: [] },
-      { key: "RRSSA-AOA-AA", label: "RRSSA-AOA-AA", subPatternKeys: [] },
-      { key: "RRSSA-AOA-OA", label: "RRSSA-AOA-OA", subPatternKeys: [] },
+      // RENAMED to the A-{Level}-{RRHH}-{SSLL} convention (same shape as
+      // the "compressed"/C-* and "expanded"/E-* sets): RRSSA-AAA-AA ->
+      // A-A-AA-AA, RRSSA-AAA-OA -> A-A-AA-OA, RRSSA-AOA-AA -> A-A-OA-AA,
+      // RRSSA-AOA-OA -> A-A-OA-OA. Conditions unchanged.
+      { key: "A-A-AA-AA", label: "A-A-AA-AA", subPatternKeys: [] },
+      { key: "A-A-AA-OA", label: "A-A-AA-OA", subPatternKeys: [] },
+      { key: "A-A-OA-AA", label: "A-A-OA-AA", subPatternKeys: [] },
+      { key: "A-A-OA-OA", label: "A-A-OA-OA", subPatternKeys: [] },
       // RRSSA-C{RRHH} — 3 Patterns (arrows), REPLACES the old
       // RRSSA-CHS/RRSSA-CLS pair. Base condition = this category's
       // r.LevelsAbove condition AND the raw RRSSA-C* flag (see
@@ -1987,7 +1991,7 @@ export async function runCategoryScan(
 /**
  * NEW: Pattern Stats page support. One row per dropdown pattern entry
  * (every `sub.key` nested under a BACKTEST_CATEGORIES category's
- * `patterns` list — e.g. "RRSSA-AAA-AA", "RRSSB-CC") plus how many real
+ * `patterns` list — e.g. "A-A-AA-AA", "RRSSB-CC") plus how many real
  * historical (symbol, date) rows actually matched it.
  */
 export interface PatternCensusRow {

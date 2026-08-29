@@ -491,10 +491,14 @@ export const RAW_LEVEL_PATTERNS: Record<string, (r: CPRResult) => boolean> = {
   // real data, and were never added as keys at all.
   "RRSSA-BHS": (r) => r.HHLLCategory === "HHLL-B" && r.PDHPDLGapCategory === "HHGap" && r.RRSSGapCategory === "SSGap",
   "RRSSA-BLR": (r) => r.HHLLCategory === "HHLL-B" && r.PDHPDLGapCategory === "LLGap" && r.RRSSGapCategory === "RRGap",
-  "RRSSA-AAA-AA": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-AA",
-  "RRSSA-AAA-OA": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-OA",
-  "RRSSA-AOA-AA": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-AA",
-  "RRSSA-AOA-OA": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-OA",
+  // RENAMED: RRSSA-AAA-AA -> A-A-AA-AA, RRSSA-AAA-OA -> A-A-AA-OA,
+  // RRSSA-AOA-AA -> A-A-OA-AA, RRSSA-AOA-OA -> A-A-OA-OA. Same
+  // A-{Level}-{RRHH}-{SSLL} naming convention as the "compressed" (C-*)
+  // and "expanded" (E-*) sets above/below — conditions unchanged.
+  "A-A-AA-AA": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-AA",
+  "A-A-AA-OA": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-OA",
+  "A-A-OA-AA": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-AA",
+  "A-A-OA-OA": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-OA",
   "RRSSA-EC": (r) => r.HHLLCategory === "HHLL-E" && r.SSLLCategory === "SSLL-C",
   "RRSSA-EE": (r) => r.HHLLCategory === "HHLL-E" && r.SSLLCategory === "SSLL-E",
   "RRSSA-ELB": (r) => r.HHLLCategory === "HHLL-E" && r.SSLLCategory === "SSLL-LB",
