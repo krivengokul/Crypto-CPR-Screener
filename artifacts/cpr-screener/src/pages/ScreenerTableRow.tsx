@@ -106,13 +106,14 @@ export const PATTERN_BADGE_CLASSES: Record<string, string> = {
   "E-E-OA-BB": "bg-purple-500/10 text-purple-400 border border-purple-500/20",
   "E-E-AA-OB": "bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/20",
   "E-E-OA-OB": "bg-pink-500/10 text-pink-400 border border-pink-500/20",
-  // CompressedPattern badges — "C-{Level}-{RRHH}-{SSLL}" (see
-  // ScreenerUtils.computeCompressedPattern / COMPRESSED_PATTERN_KEYS).
-  // Same grouping idea as the LevelPattern (E-*) badges above but with a
-  // distinct palette per Level (A: teal/cyan/sky/blue/indigo/emerald/
-  // green family, B: amber/orange/yellow/lime/red/rose family, C:
-  // violet/purple/fuchsia/pink family) so the two badge sets never look
-  // alike at a glance.
+  // LevelPattern badges, "compressed" half — "C-{Level}-{RRHH}-{SSLL}"
+  // (see ScreenerUtils.computeLevelPattern / LEVEL_PATTERN_KEYS — merged
+  // with the E-* "expanded" half above into one combined key list/badge,
+  // since r.expanded/r.compressed are mutually exclusive). Same grouping
+  // idea as the E-* badges above but with a distinct palette per Level
+  // (A: teal/cyan/sky/blue/indigo/emerald/green family, B: amber/orange/
+  // yellow/lime/red/rose family, C: violet/purple/fuchsia/pink family) so
+  // the two families never look alike at a glance.
   "C-A-C-AA": "bg-teal-500/10 text-teal-400 border border-teal-500/20",
   "C-A-HA-AA": "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20",
   "C-A-E-AA": "bg-sky-500/10 text-sky-400 border border-sky-500/20",
@@ -258,14 +259,19 @@ export function renderPrevPatternBadge(r: CPRResult) {
 }
 
 /**
- * LevelPattern badge — "E-{Level}-{RRHH}-{SSLL}" (see
+ * LevelPattern badge — "E-{Level}-{RRHH}-{SSLL}" ("expanded") or
+ * "C-{Level}-{RRHH}-{SSLL}" ("compressed") (see
  * ScreenerUtils.computeLevelPattern / LEVEL_PATTERN_KEYS for the
- * HHLLCategory x RRHHCategory x SSLLCategory derivation), colour-coded
- * via the same PATTERN_BADGE_CLASSES palette as every other pattern
- * badge. Replaces the previous-day "p-xxxx" badge (renderPrevPatternBadge
- * above) in the Pattern column's second row. Returns null when the row's
- * category combo doesn't match any of the 16 LEVEL_PATTERN_KEYS (most
- * commonly because r.expanded is false).
+ * HHLLCategory x RRHHCategory x SSLLCategory derivation of both sets),
+ * colour-coded via the same PATTERN_BADGE_CLASSES palette as every other
+ * pattern badge. Replaces the previous-day "p-xxxx" badge
+ * (renderPrevPatternBadge above) in the Pattern column's second row.
+ * MERGED from what used to be two separate badges (renderLevelPatternBadge
+ * for E-*, renderCompressedPatternBadge for C-*) into one, since
+ * r.expanded/r.compressed are mutually exclusive so a row can never match
+ * both families. Returns null when the row's category combo doesn't match
+ * any of the 33 LEVEL_PATTERN_KEYS (most commonly because r.expanded and
+ * r.compressed are both false).
  */
 export function renderLevelPatternBadge(r: CPRResult) {
   const levelPattern = computeLevelPattern(r);
@@ -277,31 +283,6 @@ export function renderLevelPatternBadge(r: CPRResult) {
         title="LevelPattern — HHLL x RRHH x SSLL category combo"
       >
         {levelPattern}
-      </span>
-    </div>
-  );
-}
-
-/**
- * CompressedPattern badge — "C-{Level}-{RRHH}-{SSLL}" (see
- * ScreenerUtils.computeCompressedPattern / COMPRESSED_PATTERN_KEYS for the
- * HHLLCategory x RRHHCategory x SSLLCategory derivation), colour-coded via
- * the same PATTERN_BADGE_CLASSES palette as every other pattern badge.
- * Mirrors renderLevelPatternBadge above exactly, but for "compressed"
- * instead of "expanded". Returns null when the row's category combo
- * doesn't match any of the 17 COMPRESSED_PATTERN_KEYS (most commonly
- * because r.compressed is false).
- */
-export function renderCompressedPatternBadge(r: CPRResult) {
-  const compressedPattern = computeCompressedPattern(r);
-  if (!compressedPattern) return null;
-  return (
-    <div className="flex flex-wrap gap-1 mt-1">
-      <span
-        className={`text-[10px] px-1 py-0.5 rounded border font-medium ${getBadgeClasses(compressedPattern)}`}
-        title="CompressedPattern — HHLL x RRHH x SSLL category combo"
-      >
-        {compressedPattern}
       </span>
     </div>
   );
@@ -421,7 +402,6 @@ import {
   pdhPdlStatus,
   computePrevPattern,
   computeLevelPattern,
-  computeCompressedPattern,
   getViewDirection,
   cprDistancePct,
   levelsInDistanceRange,
@@ -646,7 +626,6 @@ export default function ScreenerTableRow({
               {renderTodayPatternBadges(r)}
             </div>
             {renderLevelPatternBadge(r)}
-            {renderCompressedPatternBadge(r)}
           </div>
         </td>
         <td className="px-3 py-3 font-mono whitespace-nowrap">
@@ -705,12 +684,7 @@ export default function ScreenerTableRow({
           rowKey={rowKey}
           colSpan={20}
           todayPatternBadge={renderTodayPatternBadges(r)}
-          prevPatternBadge={
-            <>
-              {renderLevelPatternBadge(r)}
-              {renderCompressedPatternBadge(r)}
-            </>
-          }
+          prevPatternBadge={renderLevelPatternBadge(r)}
         />
       )}
     </Fragment>

@@ -1667,47 +1667,24 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
 }
 
 /**
- * LEVEL_PATTERN_KEYS — the 16 "E-{Level}-{RRHH}-{SSLL}" keys handled by
- * the passesPattern cases above (see that block's comment for the full
- * HHLLCategory x RRHHCategory x SSLLCategory derivation). Exported so
- * computeLevelPattern below can iterate them without duplicating the
- * list, and so other views/legends can reuse the same set.
+ * LEVEL_PATTERN_KEYS — the 33 "E-{Level}-{RRHH}-{SSLL}" (16, "expanded")
+ * and "C-{Level}-{RRHH}-{SSLL}" (17, "compressed") keys handled by the
+ * passesPattern cases / RAW_LEVEL_PATTERNS entries above (see those
+ * blocks' comments for the full HHLLCategory x RRHHCategory x
+ * SSLLCategory derivation of each set; the C-* set REPLACES the old
+ * RRSSC-{Level}{SSLL} keys). MERGED from what used to be two separate
+ * lists (LEVEL_PATTERN_KEYS for E-*, COMPRESSED_PATTERN_KEYS for C-*)
+ * into one: r.expanded and r.compressed are mutually exclusive states, so
+ * a row can never match both an E-* and a C-* key, making a single
+ * combined list/function safe. Exported so computeLevelPattern below can
+ * iterate them without duplicating the list, and so other views/legends
+ * can reuse the same set.
  */
 export const LEVEL_PATTERN_KEYS = [
   "E-A-AA-OB", "E-A-OA-OB", "E-A-AA-SB", "E-A-AA-C", "E-A-OA-C",
   "E-A-AA-E", "E-A-OA-E", "E-B-RA-BB", "E-B-C-BB", "E-B-E-BB",
   "E-B-C-OB", "E-B-E-OB", "E-E-AA-BB", "E-E-OA-BB", "E-E-AA-OB",
   "E-E-OA-OB",
-] as const;
-
-export type LevelPatternKey = (typeof LEVEL_PATTERN_KEYS)[number];
-
-/**
- * computeLevelPattern — the single LEVEL_PATTERN_KEYS entry this row's
- * HHLLCategory/RRHHCategory/SSLLCategory combo matches (see
- * passesPattern's "E-..." cases for the derivation), or null when none
- * match — either r.expanded is false, or the specific combo was
- * confirmed empty against real data and was never added as a key.
- * HHLLCategory/RRHHCategory/SSLLCategory are each mutually-exclusive
- * partitions, so at most one LEVEL_PATTERN_KEYS entry can match a given
- * row; this is what LevelPattern badges (see ScreenerTableRow) render.
- */
-export function computeLevelPattern(r: CPRResult): LevelPatternKey | null {
-  for (const key of LEVEL_PATTERN_KEYS) {
-    if (passesPattern(r, key)) return key;
-  }
-  return null;
-}
-
-/**
- * COMPRESSED_PATTERN_KEYS — the 17 "C-{Level}-{RRHH}-{SSLL}" keys handled
- * by the RAW_LEVEL_PATTERNS entries above (see that map's comment for the
- * HHLLCategory x RRHHCategory x SSLLCategory derivation, replacing the old
- * RRSSC-{Level}{SSLL} set). Exported so computeCompressedPattern below can
- * iterate them without duplicating the list, mirroring LEVEL_PATTERN_KEYS'
- * role for "expanded".
- */
-export const COMPRESSED_PATTERN_KEYS = [
   "C-A-C-AA", "C-A-HA-AA", "C-A-E-AA", "C-A-OA-AA",
   "C-A-E-OA", "C-A-C-OA", "C-A-OA-OA",
   "C-B-BB-LB", "C-B-OB-LB",
@@ -1717,19 +1694,23 @@ export const COMPRESSED_PATTERN_KEYS = [
   "C-C-BB-OA", "C-C-OB-OA",
 ] as const;
 
-export type CompressedPatternKey = (typeof COMPRESSED_PATTERN_KEYS)[number];
+export type LevelPatternKey = (typeof LEVEL_PATTERN_KEYS)[number];
 
 /**
- * computeCompressedPattern — the single COMPRESSED_PATTERN_KEYS entry this
- * row's HHLLCategory/RRHHCategory/SSLLCategory combo matches, or null when
- * none match — either r.compressed is false, or the specific combo was
- * confirmed empty against real data and was never added as a key (e.g. the
- * old RRSSC-CC / HHLL-C+SSLL-C combo). Mirrors computeLevelPattern above
- * exactly; this is what the CompressedPattern badge (see
- * ScreenerTableRow) renders.
+ * computeLevelPattern — the single LEVEL_PATTERN_KEYS entry this row's
+ * HHLLCategory/RRHHCategory/SSLLCategory combo matches (see
+ * passesPattern's "E-..."/"C-..." cases for the derivation), or null when
+ * none match — either r.expanded and r.compressed are both false, or the
+ * specific combo was confirmed empty against real data and was never
+ * added as a key (e.g. the old RRSSC-CC / HHLL-C+SSLL-C combo).
+ * HHLLCategory/RRHHCategory/SSLLCategory are each mutually-exclusive
+ * partitions, and r.expanded/r.compressed are themselves mutually
+ * exclusive, so at most one LEVEL_PATTERN_KEYS entry can match a given
+ * row; this is what the LevelPattern badge (see ScreenerTableRow)
+ * renders.
  */
-export function computeCompressedPattern(r: CPRResult): CompressedPatternKey | null {
-  for (const key of COMPRESSED_PATTERN_KEYS) {
+export function computeLevelPattern(r: CPRResult): LevelPatternKey | null {
+  for (const key of LEVEL_PATTERN_KEYS) {
     if (passesPattern(r, key)) return key;
   }
   return null;
