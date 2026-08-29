@@ -489,8 +489,11 @@ export const RAW_LEVEL_PATTERNS: Record<string, (r: CPRResult) => boolean> = {
   // RRHHCategory x SSLLCategory x Gap grid are reachable — several were
   // proven mathematically impossible, a few more confirmed empty against
   // real data, and were never added as keys at all.
-  "RRSSA-BHS": (r) => r.HHLLCategory === "HHLL-B" && r.PDHPDLGapCategory === "HHGap" && r.RRSSGapCategory === "SSGap",
-  "RRSSA-BLR": (r) => r.HHLLCategory === "HHLL-B" && r.PDHPDLGapCategory === "LLGap" && r.RRSSGapCategory === "RRGap",
+  // RRSSA-BHS/RRSSA-BLR removed — dead code. Both were REPLACED by the
+  // RRSSA-B{RRHH}-{SSLL} set below (see backtest.ts's comment above that
+  // block); no `{ key: ... }` entry has referenced these two since, so
+  // nothing ever called passesPattern/matchesPatternFlag with these
+  // labels.
   // RRSSA-B{RRHH}-{SSLL} — 9 Patterns (arrows), the previously-missing
   // conditions for the keys already listed in backtest.ts's "levelsabove"
   // category (see that file's comment above these keys). HHLL-B re-split
@@ -500,15 +503,19 @@ export const RAW_LEVEL_PATTERNS: Record<string, (r: CPRResult) => boolean> = {
   // default and every scan silently came back empty ("no data"). Not yet
   // checked against real data — some may come back empty and need
   // trimming later, same as RRSSA-C{RRHH}/RRSSB-E{RRHH} each did.
-  "RRSSA-BC-C": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-C",
-  "RRSSA-BC-E": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-E",
-  "RRSSA-BC-LB": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-LB",
-  "RRSSA-BE-C": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-C",
-  "RRSSA-BE-E": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-E",
-  "RRSSA-BE-LB": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-LB",
-  "RRSSA-BRA-C": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-RA" && r.SSLLCategory === "SSLL-C",
-  "RRSSA-BRA-E": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-RA" && r.SSLLCategory === "SSLL-E",
-  "RRSSA-BRA-LB": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-RA" && r.SSLLCategory === "SSLL-LB",
+  // RENAMED to the A-{Level}-{RRHH}-{SSLL} convention (matching
+  // A-A-{RRHH}-{SSLL}/A-C-{RRHH}-{SSLL} above): RRSSA-BC-C -> A-B-C-C,
+  // RRSSA-BC-LB -> A-B-C-LB, RRSSA-BE-E -> A-B-E-E, RRSSA-BE-LB ->
+  // A-B-E-LB, RRSSA-BRA-C -> A-B-RA-C, RRSSA-BRA-E -> A-B-RA-E,
+  // RRSSA-BRA-LB -> A-B-RA-LB. RRSSA-BC-E and RRSSA-BE-C were REMOVED
+  // (confirmed empty against real data), leaving 7 of the original 9.
+  "A-B-C-C": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-C",
+  "A-B-C-LB": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-LB",
+  "A-B-E-E": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-E",
+  "A-B-E-LB": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-LB",
+  "A-B-RA-C": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-RA" && r.SSLLCategory === "SSLL-C",
+  "A-B-RA-E": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-RA" && r.SSLLCategory === "SSLL-E",
+  "A-B-RA-LB": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-RA" && r.SSLLCategory === "SSLL-LB",
   // RENAMED: RRSSA-AAA-AA -> A-A-AA-AA, RRSSA-AAA-OA -> A-A-AA-OA,
   // RRSSA-AOA-AA -> A-A-OA-AA, RRSSA-AOA-OA -> A-A-OA-OA. Same
   // A-{Level}-{RRHH}-{SSLL} naming convention as the "compressed" (C-*)

@@ -566,15 +566,20 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       // under any of them yet, so each shows up as a symbol-list-only
       // scan in the Backtest dropdown until specific targets are
       // defined.
-      { key: "RRSSA-BC-C",   label: "RRSSA-BC-C",   subPatternKeys: [] },
-      { key: "RRSSA-BC-E",   label: "RRSSA-BC-E",   subPatternKeys: [] },
-      { key: "RRSSA-BC-LB",  label: "RRSSA-BC-LB",  subPatternKeys: [] },
-      { key: "RRSSA-BE-C",   label: "RRSSA-BE-C",   subPatternKeys: [] },
-      { key: "RRSSA-BE-E",   label: "RRSSA-BE-E",   subPatternKeys: [] },
-      { key: "RRSSA-BE-LB",  label: "RRSSA-BE-LB",  subPatternKeys: [] },
-      { key: "RRSSA-BRA-C",  label: "RRSSA-BRA-C",  subPatternKeys: [] },
-      { key: "RRSSA-BRA-E",  label: "RRSSA-BRA-E",  subPatternKeys: [] },
-      { key: "RRSSA-BRA-LB", label: "RRSSA-BRA-LB", subPatternKeys: [] },
+      // RENAMED to the A-{Level}-{RRHH}-{SSLL} convention, same as
+      // A-A-{RRHH}-{SSLL} / A-C-{RRHH}-{SSLL} above: RRSSA-BC-C ->
+      // A-B-C-C, RRSSA-BC-LB -> A-B-C-LB, RRSSA-BE-E -> A-B-E-E,
+      // RRSSA-BE-LB -> A-B-E-LB, RRSSA-BRA-C -> A-B-RA-C, RRSSA-BRA-E ->
+      // A-B-RA-E, RRSSA-BRA-LB -> A-B-RA-LB. RRSSA-BC-E and RRSSA-BE-C
+      // were REMOVED (confirmed empty against real data), leaving 7 of
+      // the original 9.
+      { key: "A-B-C-C",     label: "A-B-C-C",     subPatternKeys: [] },
+      { key: "A-B-C-LB",    label: "A-B-C-LB",    subPatternKeys: [] },
+      { key: "A-B-E-E",     label: "A-B-E-E",     subPatternKeys: [] },
+      { key: "A-B-E-LB",    label: "A-B-E-LB",    subPatternKeys: [] },
+      { key: "A-B-RA-C",    label: "A-B-RA-C",    subPatternKeys: [] },
+      { key: "A-B-RA-E",    label: "A-B-RA-E",    subPatternKeys: [] },
+      { key: "A-B-RA-LB",   label: "A-B-RA-LB",   subPatternKeys: [] },
       // RRSSA-A{RRHH} — 2 Patterns (arrows), REPLACES the old
       // RRSSA-AHR/RRSSA-ALS pair. Base condition = this category's
       // r.LevelsAbove condition AND the raw RRSSA-A* flag (see
