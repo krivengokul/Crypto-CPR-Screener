@@ -524,10 +524,23 @@ export const RAW_LEVEL_PATTERNS: Record<string, (r: CPRResult) => boolean> = {
   "A-A-AA-OA": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-OA",
   "A-A-OA-AA": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-AA",
   "A-A-OA-OA": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-OA",
-  "RRSSA-EC": (r) => r.HHLLCategory === "HHLL-E" && r.SSLLCategory === "SSLL-C",
-  "RRSSA-EE": (r) => r.HHLLCategory === "HHLL-E" && r.SSLLCategory === "SSLL-E",
-  "RRSSA-ELB": (r) => r.HHLLCategory === "HHLL-E" && r.SSLLCategory === "SSLL-LB",
-  "RRSSA-EOB": (r) => r.HHLLCategory === "HHLL-E" && r.SSLLCategory === "SSLL-OB",
+  // RENAMED to the A-{Level}-{RRHH}-{SSLL} convention, same shape as
+  // A-A-{RRHH}-{SSLL}/A-C-{RRHH}-{SSLL} above: RRSSA-EC -> A-E-AA-C /
+  // A-E-OA-C, RRSSA-EE -> A-E-AA-E / A-E-OA-E, RRSSA-ELB -> A-E-AA-LB /
+  // A-E-OA-LB. Each is re-split by crossing the old HHLL-E + SSLL-*
+  // condition against RRHHCategory (HHLL-E + LevelsAbove is always
+  // RRHH-AA or RRHH-OA — see the comment above these keys in
+  // backtest.ts), same treatment as A-A-{RRHH}-{SSLL}'s RRHH cross.
+  // RRSSA-EOB -> A-E-AA-OB only (SSLL-OB, preserving the original
+  // condition) — the RRHH-OA half wasn't requested, so it's left out for
+  // now; add "A-E-OA-OB" the same way if it's needed later.
+  "A-E-AA-OB": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-OB",
+  "A-E-AA-C": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-C",
+  "A-E-OA-C": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-C",
+  "A-E-AA-E": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-E",
+  "A-E-OA-E": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-E",
+  "A-E-AA-LB": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-LB",
+  "A-E-OA-LB": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-LB",
   // RENAMED: RRSSA-CC/RRSSA-CE/RRSSA-CRA -> A-C-{RRHH}-{SSLL}, each
   // further re-split by crossing against SSLLCategory (SSLL-AA/SSLL-OA),
   // same A-{Level}-{RRHH}-{SSLL} naming convention as A-A-{RRHH}-{SSLL}
@@ -1667,24 +1680,40 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
 }
 
 /**
- * LEVEL_PATTERN_KEYS — the 33 "E-{Level}-{RRHH}-{SSLL}" (16, "expanded")
- * and "C-{Level}-{RRHH}-{SSLL}" (17, "compressed") keys handled by the
- * passesPattern cases / RAW_LEVEL_PATTERNS entries above (see those
+ * LEVEL_PATTERN_KEYS — the 40 "E-{Level}-{RRHH}-{SSLL}" (16, "expanded"),
+ * "C-{Level}-{RRHH}-{SSLL}" (17, "compressed"), and "A-E-{RRHH}-{SSLL}"
+ * (7, "LevelsAbove", renamed from RRSSA-EC/EE/ELB/EOB) keys handled by
+ * the passesPattern cases / RAW_LEVEL_PATTERNS entries above (see those
  * blocks' comments for the full HHLLCategory x RRHHCategory x
  * SSLLCategory derivation of each set; the C-* set REPLACES the old
  * RRSSC-{Level}{SSLL} keys). MERGED from what used to be two separate
  * lists (LEVEL_PATTERN_KEYS for E-*, COMPRESSED_PATTERN_KEYS for C-*)
  * into one: r.expanded and r.compressed are mutually exclusive states, so
  * a row can never match both an E-* and a C-* key, making a single
- * combined list/function safe. Exported so computeLevelPattern below can
- * iterate them without duplicating the list, and so other views/legends
- * can reuse the same set.
+ * combined list/function safe. The A-E-* keys added on top are NOT
+ * guaranteed mutually exclusive with the E-* keys (see the note above
+ * "A-E-AA-OB" in the list below) — unlike expanded/compressed,
+ * LevelsAbove can coincide with "expanded" for the same row. Exported so
+ * computeLevelPattern below can iterate them without duplicating the
+ * list, and so other views/legends can reuse the same set.
  */
 export const LEVEL_PATTERN_KEYS = [
   "E-A-AA-OB", "E-A-OA-OB", "E-A-AA-SB", "E-A-AA-C", "E-A-OA-C",
   "E-A-AA-E", "E-A-OA-E", "E-B-RA-BB", "E-B-C-BB", "E-B-E-BB",
   "E-B-C-OB", "E-B-E-OB", "E-E-AA-BB", "E-E-OA-BB", "E-E-AA-OB",
   "E-E-OA-OB",
+  // A-E-{RRHH}-{SSLL} — the renamed RRSSA-EC/EE/ELB/EOB set (LevelsAbove,
+  // HHLL-E), added here so they render via the LevelPatternBadge too, not
+  // just the Backtest dropdown. NOTE: "A-E-AA-OB" has the exact same
+  // HHLLCategory/RRHHCategory/SSLLCategory condition as "E-E-AA-OB" above
+  // (both HHLL-E + RRHH-AA + SSLL-OB) — since computeLevelPattern returns
+  // the first LEVEL_PATTERN_KEYS entry that matches, "E-E-AA-OB" (earlier
+  // in this list) will always win for any row where both would match, so
+  // "A-E-AA-OB" can never actually be the one displayed. Left in for
+  // completeness/parity with the other A-E-* keys; flag for review if the
+  // two are meant to be visually distinguishable.
+  "A-E-AA-OB", "A-E-AA-C", "A-E-OA-C", "A-E-AA-E", "A-E-OA-E",
+  "A-E-AA-LB", "A-E-OA-LB",
   "C-A-C-AA", "C-A-HA-AA", "C-A-E-AA", "C-A-OA-AA",
   "C-A-E-OA", "C-A-C-OA", "C-A-OA-OA",
   "C-B-BB-LB", "C-B-OB-LB",

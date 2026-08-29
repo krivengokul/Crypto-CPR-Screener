@@ -644,10 +644,21 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       // RRSSA-E is the merged LevelsAbove RRSS-E condition (HHLL-E with
       // RRHH-AA or RRHH-OA), crossed with each SSLLCategory. Each entry is
       // a symbol-list-only scan and keeps the corresponding SSLL-* badge.
-      { key: "RRSSA-EOB", label: "RRSSA-EOB", subPatternKeys: [] },
-      { key: "RRSSA-EC",  label: "RRSSA-EC",  subPatternKeys: [] },
-      { key: "RRSSA-EE",  label: "RRSSA-EE",  subPatternKeys: [] },
-      { key: "RRSSA-ELB", label: "RRSSA-ELB", subPatternKeys: [] },
+      // RENAMED to the A-E-{RRHH}-{SSLL} convention, same shape as
+      // A-A-{RRHH}-{SSLL}/A-C-{RRHH}-{SSLL} above: RRSSA-EC ->
+      // A-E-AA-C/A-E-OA-C, RRSSA-EE -> A-E-AA-E/A-E-OA-E, RRSSA-ELB ->
+      // A-E-AA-LB/A-E-OA-LB — each re-split by crossing against
+      // RRHHCategory (RRHH-AA/RRHH-OA), the same free axis noted above.
+      // RRSSA-EOB -> A-E-AA-OB only; the RRHH-OA half (A-E-OA-OB) wasn't
+      // requested and isn't added yet. Also now shown as a LevelPattern
+      // badge in ScreenerTableRow (see LEVEL_PATTERN_KEYS), not just here.
+      { key: "A-E-AA-OB", label: "A-E-AA-OB", subPatternKeys: [] },
+      { key: "A-E-AA-C",  label: "A-E-AA-C",  subPatternKeys: [] },
+      { key: "A-E-OA-C",  label: "A-E-OA-C",  subPatternKeys: [] },
+      { key: "A-E-AA-E",  label: "A-E-AA-E",  subPatternKeys: [] },
+      { key: "A-E-OA-E",  label: "A-E-OA-E",  subPatternKeys: [] },
+      { key: "A-E-AA-LB", label: "A-E-AA-LB", subPatternKeys: [] },
+      { key: "A-E-OA-LB", label: "A-E-OA-LB", subPatternKeys: [] },
     ],
   },
   // NEW: "LEVELs BELOW" left-nav section (top of the pattern tree in

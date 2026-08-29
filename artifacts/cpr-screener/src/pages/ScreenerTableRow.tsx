@@ -106,6 +106,18 @@ export const PATTERN_BADGE_CLASSES: Record<string, string> = {
   "E-E-OA-BB": "bg-purple-500/10 text-purple-400 border border-purple-500/20",
   "E-E-AA-OB": "bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/20",
   "E-E-OA-OB": "bg-pink-500/10 text-pink-400 border border-pink-500/20",
+  // LevelPattern badges, "LevelsAbove" half — "A-E-{RRHH}-{SSLL}"
+  // (renamed from RRSSA-EC/EE/ELB/EOB — see ScreenerUtils.RAW_LEVEL_PATTERNS
+  // / LEVEL_PATTERN_KEYS). Own amber/yellow/lime/green/emerald/teal family
+  // so this LevelsAbove group reads distinctly from the E-*/C-* families
+  // above/below even though it shares the HHLL-E condition space with them.
+  "A-E-AA-OB": "bg-amber-500/10 text-amber-400 border border-amber-500/20",
+  "A-E-AA-C": "bg-orange-500/10 text-orange-400 border border-orange-500/20",
+  "A-E-OA-C": "bg-yellow-500/10 text-yellow-400 border border-yellow-500/20",
+  "A-E-AA-E": "bg-lime-500/10 text-lime-400 border border-lime-500/20",
+  "A-E-OA-E": "bg-green-500/10 text-green-400 border border-green-500/20",
+  "A-E-AA-LB": "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
+  "A-E-OA-LB": "bg-teal-500/10 text-teal-400 border border-teal-500/20",
   // LevelPattern badges, "compressed" half — "C-{Level}-{RRHH}-{SSLL}"
   // (see ScreenerUtils.computeLevelPattern / LEVEL_PATTERN_KEYS — merged
   // with the E-* "expanded" half above into one combined key list/badge,
