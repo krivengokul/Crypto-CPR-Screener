@@ -2068,6 +2068,27 @@ export interface PatternCensusRow {
 }
 
 /**
+ * TEMPORARY DEBUG ADDITION — one row per distinct raw
+ * (HHLLCategory, RRHHCategory, SSLLCategory) combination actually observed
+ * among the real historical rows that pass a category's base condition
+ * (passesPatternFn(result, categoryKey)). This is the same raw-flag triple
+ * the comments throughout BACKTEST_PATTERN_MATCHERS reason about ("of the
+ * 9x9 naive HHLLCategory x RRHHCategory x SSLLCategory combinations, only
+ * N are reachable") — surfaced directly from live data instead of by
+ * proof, so those claims can be sanity-checked per category. Remove this
+ * (and its plumbing in runPatternCensus/PatternStats) once no longer needed.
+ */
+export interface CategoryComboRow {
+  categoryKey: string;
+  categoryLabel: string;
+  combo: string; // e.g. "HHLL-A / RRHH-AA / SSLL-AA"
+  hhll: string;
+  rrhh: string;
+  ssll: string;
+  count: number;
+}
+
+/**
  * Counts live matches for EVERY dropdown pattern across a date range in a
  * single sweep, instead of re-running runPivotLevelBacktest once per
  * pattern (which would reconstruct the same symbol/date CPR dozens of
@@ -2090,7 +2111,7 @@ export async function runPatternCensus(
   passesPatternFn: (r: CPRResult, pattern: string) => boolean,
   matchesPatternFn: (r: CPRResult, label: string) => boolean,
   onProgress?: (done: number, total: number, symbol: string) => void
-): Promise<PatternCensusRow[]> {
+): Promise<{ rows: PatternCensusRow[]; combos: CategoryComboRow[] }> {
   if (!isValidUTCDateISO(startDateISO) || !isValidUTCDateISO(endDateISO)) {
     throw new Error("Invalid date range " + startDateISO + " .. " + endDateISO + ". Expected YYYY-MM-DD.");
   }
@@ -2110,6 +2131,14 @@ export async function runPatternCensus(
   const pairKey = (categoryKey: string, patternKey: string) => `${categoryKey}::${patternKey}`;
   pairs.forEach((p) => counts.set(pairKey(p.categoryKey, p.patternKey), 0));
 
+  // TEMPORARY DEBUG ADDITION — see CategoryComboRow above. One counter per
+  // (category, raw HHLL/RRHH/SSLL combo) observed among rows that pass
+  // that category's base condition. Every category is covered here (not
+  // just categories with a `patterns` list), since the combo is a property
+  // of the base condition itself, not of any nested pattern.
+  const comboCounts = new Map<string, number>();
+  const comboKey = (categoryKey: string, combo: string) => `${categoryKey}::${combo}`;
+
   const dates: string[] = [];
   for (let d = startDateISO; d <= endDateISO; d = addDaysISO(d, 1)) dates.push(d);
 
@@ -2128,6 +2157,20 @@ export async function runPatternCensus(
           const reconstructed = await reconstructCPRForDate(symbol, source, dateISO);
           if (!reconstructed) continue;
           const { result } = reconstructed;
+
+          // TEMPORARY DEBUG ADDITION — tally the raw HHLL/RRHH/SSLL combo
+          // once per category (independent of any nested pattern loop
+          // below), for every category, not only ones with `patterns`.
+          const hhll = result.HHLLCategory ?? "none";
+          const rrhh = result.RRHHCategory ?? "none";
+          const ssll = result.SSLLCategory ?? "none";
+          const combo = `${hhll} / ${rrhh} / ${ssll}`;
+          for (const cat of BACKTEST_CATEGORIES) {
+            if (!passesPatternFn(result, cat.key)) continue; // base category condition
+            const k = comboKey(cat.key, combo);
+            comboCounts.set(k, (comboCounts.get(k) ?? 0) + 1);
+          }
+
           for (const p of pairs) {
             if (!passesPatternFn(result, p.categoryKey)) continue; // base category condition
             if (!matchesPatternFn(result, p.patternKey)) continue; // this pattern's raw flag
@@ -2142,9 +2185,26 @@ export async function runPatternCensus(
     await yieldToBrowser();
   }
 
-  return pairs
+  const rows = pairs
     .map((p) => ({ ...p, count: counts.get(pairKey(p.categoryKey, p.patternKey)) ?? 0 }))
     .sort((a, b) => b.count - a.count);
+
+  // TEMPORARY DEBUG ADDITION — flatten comboCounts into CategoryComboRow[],
+  // sorted highest-count-first within each category (PatternStats groups
+  // these back up by categoryKey).
+  const combos: CategoryComboRow[] = [];
+  for (const cat of BACKTEST_CATEGORIES) {
+    const prefix = `${cat.key}::`;
+    for (const [k, count] of comboCounts.entries()) {
+      if (!k.startsWith(prefix)) continue;
+      const combo = k.slice(prefix.length);
+      const [hhll, rrhh, ssll] = combo.split(" / ");
+      combos.push({ categoryKey: cat.key, categoryLabel: cat.label, combo, hhll, rrhh, ssll, count });
+    }
+  }
+  combos.sort((a, b) => b.count - a.count);
+
+  return { rows, combos };
 }
 
 export async function runPivotLevelBacktest(

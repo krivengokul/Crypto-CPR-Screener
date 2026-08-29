@@ -5,6 +5,7 @@ import {
   runPatternCensus,
   BacktestSource,
   PatternCensusRow,
+  CategoryComboRow,
 } from "@/lib/backtest";
 
 // --- Small UTC date helpers (all dates here are UTC ISO strings) ---
@@ -182,6 +183,10 @@ interface CategoryGroup {
   categoryLabel: string;
   total: number;
   patterns: PatternCensusRow[];
+  // TEMPORARY DEBUG ADDITION — every distinct raw HHLL/RRHH/SSLL combo
+  // observed among rows that passed this category's base condition,
+  // highest-count-first. See CategoryComboRow in backtest.ts.
+  combos: CategoryComboRow[];
 }
 
 /**
@@ -251,6 +256,29 @@ function CategoryBox({ group }: { group: CategoryGroup }) {
           </div>
         ))}
       </div>
+
+      {/* TEMPORARY DEBUG ADDITION — every raw HHLL/RRHH/SSLL combo actually
+          observed under this category's base condition, so the "of the NxN
+          naive combinations only these are reachable" claims scattered
+          through ScreenerUtils.tsx's BACKTEST_PATTERN_MATCHERS comments can
+          be checked directly against live data. Remove this block (and
+          CategoryGroup.combos / runPatternCensus's combos output) once no
+          longer needed. */}
+      {group.combos.length > 0 && (
+        <div className="mt-3 space-y-0.5 border-t border-dashed border-border/70 pt-2">
+          <p className="mb-1 text-[9px] uppercase tracking-wider text-muted-foreground">
+            HHLL / RRHH / SSLL combos ({group.combos.length})
+          </p>
+          {group.combos.map((c) => (
+            <div key={c.combo} className="flex items-center justify-between gap-3 rounded-md px-1.5 py-0.5 text-xs">
+              <span className="truncate font-mono text-[11px] text-muted-foreground">{c.combo}</span>
+              <span className="shrink-0 rounded-full bg-background/60 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-muted-foreground">
+                {c.count}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </article>
   );
 }
@@ -278,6 +306,8 @@ export default function PatternStats() {
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [rows, setRows] = useState<PatternCensusRow[] | null>(null);
+  // TEMPORARY DEBUG ADDITION — see CategoryComboRow in backtest.ts.
+  const [combos, setCombos] = useState<CategoryComboRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Total across every pattern, regardless of category — the single
@@ -300,22 +330,47 @@ export default function PatternStats() {
           categoryLabel: r.categoryLabel,
           total: r.count,
           patterns: [r],
+          combos: [],
         });
       }
     }
+    // TEMPORARY DEBUG ADDITION — attach each category's HHLL/RRHH/SSLL
+    // combo breakdown. A category can have combos even with zero matched
+    // patterns (or no `patterns` list at all), so this may add new groups
+    // that the `rows` loop above never created.
+    if (combos) {
+      for (const c of combos) {
+        const existing = byKey.get(c.categoryKey);
+        if (existing) {
+          existing.combos.push(c);
+        } else {
+          byKey.set(c.categoryKey, {
+            categoryKey: c.categoryKey,
+            categoryLabel: c.categoryLabel,
+            total: 0,
+            patterns: [],
+            combos: [c],
+          });
+        }
+      }
+    }
     const groups = Array.from(byKey.values());
-    for (const g of groups) g.patterns.sort((a, b) => b.count - a.count);
+    for (const g of groups) {
+      g.patterns.sort((a, b) => b.count - a.count);
+      g.combos.sort((a, b) => b.count - a.count);
+    }
     groups.sort((a, b) => b.total - a.total);
     return groups;
-  }, [rows]);
+  }, [rows, combos]);
 
   async function handleRun() {
     setRunning(true);
     setError(null);
     setRows(null);
+    setCombos(null);
     setProgress(null);
     try {
-      const result = await runPatternCensus(
+      const { rows: result, combos: comboResult } = await runPatternCensus(
         startDate,
         endDate,
         source,
@@ -324,6 +379,7 @@ export default function PatternStats() {
         (done, total) => setProgress({ done, total })
       );
       setRows(result);
+      setCombos(comboResult);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
