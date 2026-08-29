@@ -531,10 +531,16 @@ export const PIVOT_PATTERNS: Record<string, (r: CPRResult) => boolean> = {
   // condition against RRHHCategory (HHLL-E + LevelsAbove is always
   // RRHH-AA or RRHH-OA — see the comment above these keys in
   // backtest.ts), same treatment as A-A-{RRHH}-{SSLL}'s RRHH cross.
-  // RRSSA-EOB -> A-E-AA-OB only (SSLL-OB, preserving the original
-  // condition) — the RRHH-OA half wasn't requested, so it's left out for
-  // now; add "A-E-OA-OB" the same way if it's needed later.
-  "A-E-AA-OB": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-OB",
+  // RRSSA-EOB -> A-E-AA-OB, using SSLL-LB (not SSLL-OB) — the label keeps
+  // the "OB" suffix from the original RRSSA-EOB name, but the condition
+  // itself intentionally uses SSLL-LB, per confirmation. This no longer
+  // collides with E-E-AA-OB (see LEVEL_PATTERN_KEYS below), since it no
+  // longer shares that condition — but it now exactly duplicates
+  // "A-E-AA-LB" below instead (same HHLL-E + RRHH-AA + SSLL-LB check) —
+  // see the note on that collision in PIVOT_PATTERN_KEYS below. The
+  // RRHH-OA half wasn't requested, so it's left out for now; add
+  // "A-E-OA-OB" the same way if it's needed later.
+  "A-E-AA-OB": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-LB",
   "A-E-AA-C": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-C",
   "A-E-OA-C": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-C",
   "A-E-AA-E": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-E",
@@ -1691,11 +1697,14 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
  * into one: r.expanded and r.compressed are mutually exclusive states, so
  * a row can never match both an E-* and a C-* key, making a single
  * combined list/function safe. The A-E-* keys added on top are NOT
- * guaranteed mutually exclusive with the E-* keys (see the note above
- * "A-E-AA-OB" in the list below) — unlike expanded/compressed,
- * LevelsAbove can coincide with "expanded" for the same row. Exported so
- * computePivotPattern below can iterate them without duplicating the
- * list, and so other views/legends can reuse the same set.
+ * guaranteed mutually exclusive with the E-* keys in general — LevelsAbove
+ * can coincide with "expanded" for the same row — though as of the
+ * SSLL-LB change to "A-E-AA-OB" below, none of the current A-E-* HHLL/
+ * RRHH/SSLL combos happen to duplicate an E-* one any more. "A-E-AA-OB"
+ * now instead duplicates "A-E-AA-LB" within this same A-E-* group (see
+ * the note there). Exported so computePivotPattern below can iterate them
+ * without duplicating the list, and so other views/legends can reuse the
+ * same set.
  */
 export const PIVOT_PATTERN_KEYS = [
   "E-A-AA-OB", "E-A-OA-OB", "E-A-AA-SB", "E-A-AA-C", "E-A-OA-C",
@@ -1704,14 +1713,16 @@ export const PIVOT_PATTERN_KEYS = [
   "E-E-OA-OB",
   // A-E-{RRHH}-{SSLL} — the renamed RRSSA-EC/EE/ELB/EOB set (LevelsAbove,
   // HHLL-E), added here so they render via the PivotPatternBadge too, not
-  // just the Backtest dropdown. NOTE: "A-E-AA-OB" has the exact same
-  // HHLLCategory/RRHHCategory/SSLLCategory condition as "E-E-AA-OB" above
-  // (both HHLL-E + RRHH-AA + SSLL-OB) — since computePivotPattern returns
-  // the first PIVOT_PATTERN_KEYS entry that matches, "E-E-AA-OB" (earlier
-  // in this list) will always win for any row where both would match, so
-  // "A-E-AA-OB" can never actually be the one displayed. Left in for
-  // completeness/parity with the other A-E-* keys; flag for review if the
-  // two are meant to be visually distinguishable.
+  // just the Backtest dropdown. "A-E-AA-OB" was changed to check SSLL-LB
+  // instead of SSLL-OB (per confirmation) specifically to stop colliding
+  // with "E-E-AA-OB" above — that resolved. NEW NOTE: "A-E-AA-OB" now has
+  // the exact same HHLLCategory/RRHHCategory/SSLLCategory condition as
+  // "A-E-AA-LB" below instead (both HHLL-E + RRHH-AA + SSLL-LB) — since
+  // computePivotPattern returns the first PIVOT_PATTERN_KEYS entry that
+  // matches, "A-E-AA-OB" (earlier in this list) will now always win over
+  // "A-E-AA-LB" for any row where both would match, making "A-E-AA-LB"
+  // the one that can never actually be displayed. Flag for review — see
+  // the "still ways?" discussion this rename came out of.
   "A-E-AA-OB", "A-E-AA-C", "A-E-OA-C", "A-E-AA-E", "A-E-OA-E",
   "A-E-AA-LB", "A-E-OA-LB",
   "C-A-C-AA", "C-A-HA-AA", "C-A-E-AA", "C-A-OA-AA",
@@ -1735,7 +1746,7 @@ export type PivotPatternKey = (typeof PIVOT_PATTERN_KEYS)[number];
  * HHLLCategory/RRHHCategory/SSLLCategory are each mutually-exclusive
  * partitions, and r.expanded/r.compressed are themselves mutually
  * exclusive, so at most one PIVOT_PATTERN_KEYS entry can match a given
- * row; this is what the LevelPattern badge (see ScreenerTableRow)
+ * row; this is what the PivotPattern badge (see ScreenerTableRow)
  * renders.
  */
 export function computePivotPattern(r: CPRResult): PivotPatternKey | null {

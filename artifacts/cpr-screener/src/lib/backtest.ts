@@ -650,8 +650,13 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       // A-E-AA-LB/A-E-OA-LB — each re-split by crossing against
       // RRHHCategory (RRHH-AA/RRHH-OA), the same free axis noted above.
       // RRSSA-EOB -> A-E-AA-OB only; the RRHH-OA half (A-E-OA-OB) wasn't
-      // requested and isn't added yet. Also now shown as a LevelPattern
+      // requested and isn't added yet. Also now shown as a PivotPattern
       // badge in ScreenerTableRow (see PIVOT_PATTERN_KEYS), not just here.
+      // NOTE: A-E-AA-OB's underlying condition uses SSLL-LB, not SSLL-OB
+      // (see ScreenerUtils.PIVOT_PATTERNS) — kept as a symbol-list-only
+      // scan here regardless, but it now duplicates A-E-AA-LB's condition
+      // exactly, which shadows it in the badge (see the note in
+      // PIVOT_PATTERN_KEYS in ScreenerUtils.tsx).
       { key: "A-E-AA-OB", label: "A-E-AA-OB", subPatternKeys: [] },
       { key: "A-E-AA-C",  label: "A-E-AA-C",  subPatternKeys: [] },
       { key: "A-E-OA-C",  label: "A-E-OA-C",  subPatternKeys: [] },

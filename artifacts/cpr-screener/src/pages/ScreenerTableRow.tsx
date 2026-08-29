@@ -86,7 +86,7 @@ export const PATTERN_BADGE_CLASSES: Record<string, string> = {
   L3TC: "bg-sky-600/10 text-sky-300 border border-sky-600/20",
   EL1L2: "bg-teal-500/10 text-teal-400 border border-teal-500/20",
   EL2L1: "bg-rose-500/10 text-rose-400 border border-rose-500/20",
-  // LevelPattern badges — "E-{Level}-{RRHH}-{SSLL}" (see
+  // PivotPattern badges — "E-{Level}-{RRHH}-{SSLL}" (see
   // ScreenerUtils.computePivotPattern / PIVOT_PATTERN_KEYS). Grouped by
   // Level (A: green family, B: amber/orange family, E: purple/pink
   // family) so the three Levels stay visually distinct at a glance.
@@ -106,7 +106,7 @@ export const PATTERN_BADGE_CLASSES: Record<string, string> = {
   "E-E-OA-BB": "bg-purple-500/10 text-purple-400 border border-purple-500/20",
   "E-E-AA-OB": "bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/20",
   "E-E-OA-OB": "bg-pink-500/10 text-pink-400 border border-pink-500/20",
-  // LevelPattern badges, "LevelsAbove" half — "A-E-{RRHH}-{SSLL}"
+  // PivotPattern badges, "LevelsAbove" half — "A-E-{RRHH}-{SSLL}"
   // (renamed from RRSSA-EC/EE/ELB/EOB — see ScreenerUtils.PIVOT_PATTERNS
   // / PIVOT_PATTERN_KEYS). Own amber/yellow/lime/green/emerald/teal family
   // so this LevelsAbove group reads distinctly from the E-*/C-* families
@@ -118,7 +118,7 @@ export const PATTERN_BADGE_CLASSES: Record<string, string> = {
   "A-E-OA-E": "bg-green-500/10 text-green-400 border border-green-500/20",
   "A-E-AA-LB": "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
   "A-E-OA-LB": "bg-teal-500/10 text-teal-400 border border-teal-500/20",
-  // LevelPattern badges, "compressed" half — "C-{Level}-{RRHH}-{SSLL}"
+  // PivotPattern badges, "compressed" half — "C-{Level}-{RRHH}-{SSLL}"
   // (see ScreenerUtils.computePivotPattern / PIVOT_PATTERN_KEYS — merged
   // with the E-* "expanded" half above into one combined key list/badge,
   // since r.expanded/r.compressed are mutually exclusive). Same grouping
@@ -271,7 +271,7 @@ export function renderPrevPatternBadge(r: CPRResult) {
 }
 
 /**
- * LevelPattern badge — "E-{Level}-{RRHH}-{SSLL}" ("expanded") or
+ * PivotPattern badge — "E-{Level}-{RRHH}-{SSLL}" ("expanded") or
  * "C-{Level}-{RRHH}-{SSLL}" ("compressed") (see
  * ScreenerUtils.computePivotPattern / PIVOT_PATTERN_KEYS for the
  * HHLLCategory x RRHHCategory x SSLLCategory derivation of both sets),
@@ -292,7 +292,7 @@ export function renderPivotPatternBadge(r: CPRResult) {
     <div className="flex flex-wrap gap-1 mt-1">
       <span
         className={`text-[10px] px-1 py-0.5 rounded border font-medium ${getBadgeClasses(pivotPattern)}`}
-        title="LevelPattern — HHLL x RRHH x SSLL category combo"
+        title="PivotPattern — HHLL x RRHH x SSLL category combo"
       >
         {pivotPattern}
       </span>
