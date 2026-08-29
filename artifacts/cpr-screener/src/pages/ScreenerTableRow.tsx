@@ -171,6 +171,35 @@ export const PATTERN_BADGE_CLASSES: Record<string, string> = {
   "C-C-OB-AA": "bg-purple-500/10 text-purple-400 border border-purple-500/20",
   "C-C-BB-OA": "bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/20",
   "C-C-OB-OA": "bg-pink-500/10 text-pink-400 border border-pink-500/20",
+  // PivotPattern badges, "LevelsBelow" half — "B-{Level}-{RRHH}-{SSLL}"
+  // for HHLL-A/B/C/E (renamed from RRSSB-A{RRHH}-{SSLL}/B{RRHH}-{SSLL}/
+  // C{SSLL}/E{RRHH} — see ScreenerUtils.PIVOT_PATTERNS / PIVOT_PATTERN_KEYS).
+  // Own palette per Level so the four LevelsBelow sub-groups stay visually
+  // distinct at a glance, same idea as the LevelsAbove/compressed/expanded
+  // families above (colour reuse across unrelated top-level families,
+  // e.g. teal/cyan/sky reappearing here, is the established convention —
+  // see C-A-*/A-B-* both already sharing that same run).
+  "B-A-C-C": "bg-teal-500/10 text-teal-400 border border-teal-500/20",
+  "B-A-C-SB": "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20",
+  "B-A-E-E": "bg-sky-500/10 text-sky-400 border border-sky-500/20",
+  "B-A-E-SB": "bg-blue-500/10 text-blue-400 border border-blue-500/20",
+  "B-A-HA-C": "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20",
+  "B-A-HA-E": "bg-violet-500/10 text-violet-400 border border-violet-500/20",
+  "B-A-HA-SB": "bg-purple-500/10 text-purple-400 border border-purple-500/20",
+  "B-B-BB-BB": "bg-amber-500/10 text-amber-400 border border-amber-500/20",
+  "B-B-BB-OB": "bg-orange-500/10 text-orange-400 border border-orange-500/20",
+  "B-B-OB-BB": "bg-yellow-500/10 text-yellow-400 border border-yellow-500/20",
+  "B-B-OB-OB": "bg-lime-500/10 text-lime-400 border border-lime-500/20",
+  "B-C-BB-C": "bg-rose-500/10 text-rose-400 border border-rose-500/20",
+  "B-C-OB-C": "bg-pink-500/10 text-pink-400 border border-pink-500/20",
+  "B-C-BB-E": "bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/20",
+  "B-C-OB-E": "bg-purple-500/10 text-purple-400 border border-purple-500/20",
+  "B-C-BB-SB": "bg-red-500/10 text-red-400 border border-red-500/20",
+  "B-E-C-BB": "bg-green-500/10 text-green-400 border border-green-500/20",
+  "B-E-C-OB": "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
+  "B-E-E-BB": "bg-teal-500/10 text-teal-400 border border-teal-500/20",
+  "B-E-E-OB": "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20",
+  "B-E-HA-BB": "bg-sky-500/10 text-sky-400 border border-sky-500/20",
 };
 
 export function getBadgeClasses(label: string): string {

@@ -1767,17 +1767,19 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
 }
 
 /**
- * PIVOT_PATTERN_KEYS — the 56 "E-{Level}-{RRHH}-{SSLL}" (16, "expanded"),
+ * PIVOT_PATTERN_KEYS — the 77 "E-{Level}-{RRHH}-{SSLL}" (16, "expanded"),
  * "C-{Level}-{RRHH}-{SSLL}" (19, "compressed"), "A-E-{RRHH}-{SSLL}" (6,
  * "LevelsAbove" HHLL-E, renamed from RRSSA-EC/EE/ELB/EOB — "A-E-AA-OB" is
- * defined but deliberately excluded from this list, see below), and
+ * defined but deliberately excluded from this list, see below),
  * "A-{Level}-{RRHH}-{SSLL}" (15, "LevelsAbove" HHLL-A/B/C, renamed from
  * RRSSA-AAA-AA/AAA-OA/AOA-AA/AOA-OA/CC/CE/CRA/BC-C/BC-LB/BE-E/BE-LB/
  * BRA-C/BRA-E/BRA-LB — "A-A-OA-AA"/"A-A-OA-OA" are defined but
- * deliberately excluded, see below) keys handled by the passesPattern
- * cases / PIVOT_PATTERNS entries above (see those blocks' comments for
- * the full HHLLCategory x RRHHCategory x SSLLCategory derivation of each
- * set; the C-* set REPLACES the old
+ * deliberately excluded, see below), and "B-{Level}-{RRHH}-{SSLL}" (21,
+ * "LevelsBelow" HHLL-A/B/C/E, renamed from RRSSB-A{RRHH}-{SSLL}/
+ * B{RRHH}-{SSLL}/C{SSLL}/E{RRHH} — no duplicates to exclude here) keys
+ * handled by the passesPattern cases / PIVOT_PATTERNS entries above (see
+ * those blocks' comments for the full HHLLCategory x RRHHCategory x
+ * SSLLCategory derivation of each set; the C-* set REPLACES the old
  * RRSSC-{Level}{SSLL} keys). MERGED from what used to be two separate
  * lists (PIVOT_PATTERN_KEYS for E-*, COMPRESSED_PATTERN_KEYS for C-*)
  * into one: r.expanded and r.compressed are mutually exclusive states, so
@@ -1835,6 +1837,22 @@ export const PIVOT_PATTERN_KEYS = [
   "C-B-BB-E", "C-B-OB-E",
   "C-C-BB-AA", "C-C-OB-AA", "C-C-C-AA",
   "C-C-BB-OA", "C-C-OB-OA",
+  // B-{Level}-{RRHH}-{SSLL} — "LevelsBelow" (r.LevelsBelow), all four
+  // Level sub-groups (A/B/C/E). Same gap as the A-* family had before it
+  // was added above: these 21 keys were already defined in PIVOT_PATTERNS
+  // and already listed in backtest.ts's dropdown (all matching key
+  // strings — the Backtest scans for them work fine), but were never
+  // added to this array, so computePivotPattern/renderPivotPatternBadge
+  // never tried them — rows matching these HHLL-A/B/C/E + LevelsBelow
+  // combos got no badge at all in the Pattern column. No duplicates to
+  // omit here (unlike A-A-OA-AA/A-A-OA-OA and A-E-AA-OB above) — none of
+  // these 21 conditions collide with each other or with any A-*/C-*/E-*
+  // key already in this list.
+  "B-A-C-C", "B-A-C-SB", "B-A-E-E", "B-A-E-SB",
+  "B-A-HA-C", "B-A-HA-E", "B-A-HA-SB",
+  "B-B-BB-BB", "B-B-BB-OB", "B-B-OB-BB", "B-B-OB-OB",
+  "B-C-BB-C", "B-C-OB-C", "B-C-BB-E", "B-C-OB-E", "B-C-BB-SB",
+  "B-E-C-BB", "B-E-C-OB", "B-E-E-BB", "B-E-E-OB", "B-E-HA-BB",
 ] as const;
 
 export type PivotPatternKey = (typeof PIVOT_PATTERN_KEYS)[number];
