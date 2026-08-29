@@ -818,6 +818,9 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       { key: "B-E-C-OB", label: "B-E-C-OB", subPatternKeys: [] },
       { key: "B-E-E-BB", label: "B-E-E-BB", subPatternKeys: [] },
       { key: "B-E-E-OB", label: "B-E-E-OB", subPatternKeys: [] },
+      // NEW: B-E-OB-BB — HHLL-E + RRHH-OB + SSLL-BB, same
+      // B-{Level}-{RRHH}-{SSLL} convention as its B-E-* siblings above.
+      { key: "B-E-OB-BB", label: "B-E-OB-BB", subPatternKeys: [] },
       { key: "B-E-HA-BB", label: "B-E-HA-BB", subPatternKeys: [] },
     ],
   },

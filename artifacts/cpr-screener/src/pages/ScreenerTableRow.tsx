@@ -199,6 +199,7 @@ export const PATTERN_BADGE_CLASSES: Record<string, string> = {
   "B-E-C-OB": "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
   "B-E-E-BB": "bg-teal-500/10 text-teal-400 border border-teal-500/20",
   "B-E-E-OB": "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20",
+  "B-E-OB-BB": "bg-blue-500/10 text-blue-400 border border-blue-500/20",
   "B-E-HA-BB": "bg-sky-500/10 text-sky-400 border border-sky-500/20",
 };
 

@@ -624,6 +624,8 @@ export const PIVOT_PATTERNS: Record<string, (r: CPRResult) => boolean> = {
   "B-E-C-OB": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-OB",
   "B-E-E-BB": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-BB",
   "B-E-E-OB": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-OB",
+  // NEW: B-E-OB-BB — HHLL-E + RRHH-OB + SSLL-BB, same B-E-* convention.
+  "B-E-OB-BB": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-BB",
   "B-E-HA-BB": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-HA" && r.SSLLCategory === "SSLL-BB",
 
   // C-{Level}-{RRHH}-{SSLL} — nested under "compressed" (r.compressed),
@@ -1767,14 +1769,14 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
 }
 
 /**
- * PIVOT_PATTERN_KEYS — the 77 "E-{Level}-{RRHH}-{SSLL}" (16, "expanded"),
+ * PIVOT_PATTERN_KEYS — the 78 "E-{Level}-{RRHH}-{SSLL}" (16, "expanded"),
  * "C-{Level}-{RRHH}-{SSLL}" (19, "compressed"), "A-E-{RRHH}-{SSLL}" (6,
  * "LevelsAbove" HHLL-E, renamed from RRSSA-EC/EE/ELB/EOB — "A-E-AA-OB" is
  * defined but deliberately excluded from this list, see below),
  * "A-{Level}-{RRHH}-{SSLL}" (15, "LevelsAbove" HHLL-A/B/C, renamed from
  * RRSSA-AAA-AA/AAA-OA/AOA-AA/AOA-OA/CC/CE/CRA/BC-C/BC-LB/BE-E/BE-LB/
  * BRA-C/BRA-E/BRA-LB — "A-A-OA-AA"/"A-A-OA-OA" are defined but
- * deliberately excluded, see below), and "B-{Level}-{RRHH}-{SSLL}" (21,
+ * deliberately excluded, see below), and "B-{Level}-{RRHH}-{SSLL}" (22,
  * "LevelsBelow" HHLL-A/B/C/E, renamed from RRSSB-A{RRHH}-{SSLL}/
  * B{RRHH}-{SSLL}/C{SSLL}/E{RRHH} — no duplicates to exclude here) keys
  * handled by the passesPattern cases / PIVOT_PATTERNS entries above (see
@@ -1852,7 +1854,7 @@ export const PIVOT_PATTERN_KEYS = [
   "B-A-HA-C", "B-A-HA-E", "B-A-HA-SB",
   "B-B-BB-BB", "B-B-BB-OB", "B-B-OB-BB", "B-B-OB-OB",
   "B-C-BB-C", "B-C-OB-C", "B-C-BB-E", "B-C-OB-E", "B-C-BB-SB",
-  "B-E-C-BB", "B-E-C-OB", "B-E-E-BB", "B-E-E-OB", "B-E-HA-BB",
+  "B-E-C-BB", "B-E-C-OB", "B-E-E-BB", "B-E-E-OB", "B-E-OB-BB", "B-E-HA-BB",
 ] as const;
 
 export type PivotPatternKey = (typeof PIVOT_PATTERN_KEYS)[number];
