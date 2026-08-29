@@ -756,21 +756,23 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       { key: "RRSSB-AHA-C",  label: "RRSSB-AHA-C",  subPatternKeys: [] },
       { key: "RRSSB-AHA-E",  label: "RRSSB-AHA-E",  subPatternKeys: [] },
       { key: "RRSSB-AHA-SB", label: "RRSSB-AHA-SB", subPatternKeys: [] },
-      // RRSSB-B{RRHH}-{SSLL} — 4 Patterns (arrows), REPLACES the old
-      // RRSSB-BHR/RRSSB-BLS pair. Unlike RRSSB-A{RRHH}-{SSLL} above,
-      // this is the CLEAN mirror of RRSSA-A{RRHH}-{SSLL} — not of
-      // RRSSA-B{RRHH}-{SSLL} — since LevelsBelow's ΔR1<=0 and HHLL-B's
-      // ΔPDH<=0 both agree (non-positive), the mirror image of
-      // LevelsAbove's ΔR1>0 + HHLL-A's ΔPDH>=0 both agreeing
-      // (non-negative). RRHHCategory is EXHAUSTIVELY pinned to
-      // RRHH-BB/RRHH-OB and SSLLCategory to SSLL-BB/SSLL-OB — no
-      // empirical trimming needed on either axis, same as
-      // RRSSA-A{RRHH}-{SSLL}. Crossing gives 4 combinations,
+      // B-B-{RRHH}-{SSLL} — 4 Patterns (arrows), REPLACES the old
+      // RRSSB-BHR/RRSSB-BLS pair (RENAMED from the intermediate
+      // RRSSB-B{RRHH}-{SSLL} naming to the B-{Level}-{RRHH}-{SSLL}
+      // convention used by B-C-*/A-B-* elsewhere). Unlike
+      // RRSSB-A{RRHH}-{SSLL} above, this is the CLEAN mirror of
+      // RRSSA-A{RRHH}-{SSLL} — not of RRSSA-B{RRHH}-{SSLL} — since
+      // LevelsBelow's ΔR1<=0 and HHLL-B's ΔPDH<=0 both agree
+      // (non-positive), the mirror image of LevelsAbove's ΔR1>0 +
+      // HHLL-A's ΔPDH>=0 both agreeing (non-negative). RRHHCategory is
+      // EXHAUSTIVELY pinned to RRHH-BB/RRHH-OB and SSLLCategory to
+      // SSLL-BB/SSLL-OB — no empirical trimming needed on either axis,
+      // same as RRSSA-A{RRHH}-{SSLL}. Crossing gives 4 combinations,
       // mathematically exhaustive the same way.
-      { key: "RRSSB-BBB-BB", label: "RRSSB-BBB-BB", subPatternKeys: [] },
-      { key: "RRSSB-BBB-OB", label: "RRSSB-BBB-OB", subPatternKeys: [] },
-      { key: "RRSSB-BOB-BB", label: "RRSSB-BOB-BB", subPatternKeys: [] },
-      { key: "RRSSB-BOB-OB", label: "RRSSB-BOB-OB", subPatternKeys: [] },
+      { key: "B-B-BB-BB", label: "B-B-BB-BB", subPatternKeys: [] },
+      { key: "B-B-BB-OB", label: "B-B-BB-OB", subPatternKeys: [] },
+      { key: "B-B-OB-BB", label: "B-B-OB-BB", subPatternKeys: [] },
+      { key: "B-B-OB-OB", label: "B-B-OB-OB", subPatternKeys: [] },
       // RRSSB-C{SSLL} — 3 Patterns (arrows), REPLACES the old
       // RRSSB-CHR/RRSSB-CLR pair. Base condition = this category's
       // r.LevelsBelow condition AND the raw B-C-* flag (see

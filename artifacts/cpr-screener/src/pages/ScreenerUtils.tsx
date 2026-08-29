@@ -563,18 +563,18 @@ export const PIVOT_PATTERNS: Record<string, (r: CPRResult) => boolean> = {
   // sign regime.
   "RRSSB-AHS": (r) => r.HHLLCategory === "HHLL-A" && r.PDHPDLGapCategory === "HHGap" && r.RRSSGapCategory === "SSGap",
   "RRSSB-ALR": (r) => r.HHLLCategory === "HHLL-A" && r.PDHPDLGapCategory === "LLGap" && r.RRSSGapCategory === "RRGap",
-  // RENAMED: RRSSB-BHR/RRSSB-BLS -> RRSSB-B{RRHH}-{SSLL}, the 4-key set
-  // REPLACING the old pair (see backtest.ts's comment above the
-  // "RRSSB-BBB-BB" etc. entries). Re-split by crossing RRHHCategory
+  // RENAMED: RRSSB-BHR/RRSSB-BLS -> RRSSB-B{RRHH}-{SSLL} -> B-B-{RRHH}-{SSLL},
+  // the 4-key set REPLACING the old pair (see backtest.ts's comment above
+  // the "B-B-BB-BB" etc. entries). Re-split by crossing RRHHCategory
   // (RRHH-BB/RRHH-OB) x SSLLCategory (SSLL-BB/SSLL-OB), same
   // B-{Level}-{RRHH}-{SSLL} convention as B-C-*/A-B-* above. These keys
   // were already live in backtest.ts's BACKTEST_CATEGORIES dropdown with
   // no matching entry here, so every scan against them silently fell
   // through matchesPatternFlag's default and came back with 0 records.
-  "RRSSB-BBB-BB": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-BB",
-  "RRSSB-BBB-OB": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-OB",
-  "RRSSB-BOB-BB": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-BB",
-  "RRSSB-BOB-OB": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-OB",
+  "B-B-BB-BB": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-BB",
+  "B-B-BB-OB": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-OB",
+  "B-B-OB-BB": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-BB",
+  "B-B-OB-OB": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-OB",
   // RENAMED: RRSSB-CC/RRSSB-CE/RRSSB-CSB -> B-C-{RRHH}-{SSLL}, each
   // further re-split by crossing against RRHHCategory (RRHH-BB/RRHH-OB),
   // same B-{Level}-{RRHH}-{SSLL} naming convention as C-*/E-*/A-* above.
