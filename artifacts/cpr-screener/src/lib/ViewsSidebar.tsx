@@ -151,8 +151,8 @@ export const Views: Record<string, SubPattern[]> = {
       activeBg: "rgba(96, 165, 250, 0.14)",
     },
     {
-      id: "A-A-AA-AA:Candidate-Favorable",
-      label: "A-A-AA-AA · Candidate Favorable (TodayGap + Wide)",
+      id: "A-A-AA-AA-U4L3",
+      label: "A-A-AA-AA · U4L3",
       activeColor: "#22c55e",
       activeText: "#4ade80",
       activeBg: "rgba(34, 197, 94, 0.14)",
