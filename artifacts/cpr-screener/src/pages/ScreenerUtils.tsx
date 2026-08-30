@@ -754,6 +754,9 @@ export const PIVOT_PATTERNS: Record<string, (r: CPRResult) => boolean> = {
   "E-E-OA-OB": (r) => r.SSRRCategory === "RRSS-E" && r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-OB",
 };
 
+const isAaaaDiagnosticBase = (r: CPRResult): boolean =>
+  PIVOT_PATTERNS["A-A-AA-AA"]?.(r) === true;
+
 export function passesPattern(r: CPRResult, pattern: string): boolean {
   // Every compound HHLL/RRHH/SSLL raw pattern (RRSSA-*/RRSSB-*/RRSSC-*/
   // E-*) is now defined exactly once, in PIVOT_PATTERNS above — see
@@ -928,6 +931,30 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // inside prev's BC/R1 band. Sits above "LEVELs BELOW" in the left-nav.
     case "levelsabove":
       return r.LevelsAbove;
+    // Diagnostic split under A-A-AA-AA. Both branches preserve the
+    // screenshot's RRGap + HHGap arrangement and HL-B/HL-B state; they differ
+    // only in which HL gap wins and whether today's CPR widens or narrows.
+    case "A-A-AA-AA:Candidate-Favorable":
+      return (
+        isAaaaDiagnosticBase(r) &&
+        r.RRSSGapCategory === "RRGap" &&
+        r.PDHPDLGapCategory === "HHGap" &&
+        r.prevCPR.HLSwitch === "HL-B" &&
+        r.todayCPR.HLSwitch === "HL-B" &&
+        r.hlGapWinner === "today" &&
+        r.strWideCPR
+      );
+    case "A-A-AA-AA:Candidate-Unfavorable":
+      return (
+        isAaaaDiagnosticBase(r) &&
+        r.RRSSGapCategory === "RRGap" &&
+        r.PDHPDLGapCategory === "HHGap" &&
+        r.prevCPR.HLSwitch === "HL-B" &&
+        r.todayCPR.HLSwitch === "HL-B" &&
+        r.hlGapWinner === "prev" &&
+        r.narrowCPR
+      );
+
     // RENAMED from "9AM:MegL-U4+1:3PM": all previous conditions removed.
     // 6PM:HHLLA-RRHHGap:6AM — LEVELS ABOVE + RRSSGapCategory RRGap (today's
     // R1 gap vs prev's R1 larger than the S1 gap) + RRHHCategory RRHH-AA
@@ -1806,6 +1833,28 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     // levelsbelow/compressed) are now defined exactly once, in
     // PIVOT_PATTERNS above passesPattern, and checked at the top of
     // this function — see that map's comment for the full derivation.
+    // Same diagnostic predicates as passesPattern, without relying on the
+    // cosmetic badge text. This lets Pattern Stats/backtest count the branches.
+    case "A-A-AA-AA:Candidate-Favorable":
+      return (
+        isAaaaDiagnosticBase(r) &&
+        r.RRSSGapCategory === "RRGap" &&
+        r.PDHPDLGapCategory === "HHGap" &&
+        r.prevCPR.HLSwitch === "HL-B" &&
+        r.todayCPR.HLSwitch === "HL-B" &&
+        r.hlGapWinner === "today" &&
+        r.strWideCPR
+      );
+    case "A-A-AA-AA:Candidate-Unfavorable":
+      return (
+        isAaaaDiagnosticBase(r) &&
+        r.RRSSGapCategory === "RRGap" &&
+        r.PDHPDLGapCategory === "HHGap" &&
+        r.prevCPR.HLSwitch === "HL-B" &&
+        r.todayCPR.HLSwitch === "HL-B" &&
+        r.hlGapWinner === "prev" &&
+        r.narrowCPR
+      );
     default: return getPatternInfo(r)?.label === label;
   }
 }
