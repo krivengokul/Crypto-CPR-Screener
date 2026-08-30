@@ -50,7 +50,7 @@ import {
 } from "./ScreenerUtils";
 import LiveClock from "./LiveClock";
 import ScreenerLegend from "./ScreenerLegend";
-import ScreenerTableRow, { ScreenerTableHeader } from "./ScreenerTableRow";
+import ScreenerTableRow, { ScreenerTableHeader, getBadgeClasses } from "./ScreenerTableRow";
 import { useBinanceLiveRefresh, useDeltaLiveRefresh } from "@/hooks/useLivePriceRefresh";
 
 /**
@@ -1355,104 +1355,104 @@ export default function Screener({
                   { label: "cO-Lower", active: "border-teal-400 text-teal-400" },
                   { label: "Higher", active: "border-green-400 text-green-400" },
                   { label: "Lower", active: "border-destructive text-destructive" },
-                  { label: "CL4U3", active: "border-indigo-500 text-indigo-500" },
-                  { label: "L4U4", active: "border-lime-400 text-lime-400" },
-                  { label: "EU4L4", active: "border-orange-400 text-orange-400" },
-                  { label: "EL4U4", active: "border-yellow-400 text-yellow-400" },
-                  { label: "QU4L4", active: "border-slate-400 text-slate-300" },
-                  { label: "U4L2", active: "border-green-500 text-green-500" },
-                  { label: "U3L2", active: "border-emerald-500 text-emerald-500" },
-                  { label: "U4L3", active: "border-lime-500 text-lime-500" },
-                  { label: "U4L4", active: "border-green-600 text-green-600" },
-                  { label: "U3L4", active: "border-lime-600 text-lime-600" },
-                  { label: "U2L4", active: "border-green-400 text-green-400" },
-                  { label: "U1L4", active: "border-emerald-600 text-emerald-600" },
-                  { label: "EU3L4", active: "border-amber-400 text-amber-400" },
-                  { label: "L3TC", active: "border-sky-600 text-sky-300" },
-                  { label: "EL1L2", active: "border-amber-400 text-amber-400" },
-                  { label: "EL2L1", active: "border-orange-400 text-orange-400" },
-                  { label: "CU3L2", active: "border-blue-500 text-blue-500" },
-                  { label: "CU3L3", active: "border-blue-600 text-blue-600" },
-                  { label: "EL2U4", active: "border-amber-400 text-amber-400" },
-                  { label: "EL3U4", active: "border-orange-400 text-orange-400" },
-                  { label: "CU4L2", active: "border-purple-500 text-purple-500" },
-                  { label: "EU3L3", active: "border-yellow-400 text-yellow-400" },
-                  { label: "EL3U3", active: "border-amber-400 text-amber-400" },
-                  { label: "CU4L4",   active: "border-blue-400 text-blue-400" },
-                  { label: "CU4L3",   active: "border-indigo-600 text-indigo-600" },
-                  { label: "CL3U3",   active: "border-blue-700 text-blue-700" },
-                  { label: "L4U3",   active: "border-indigo-400 text-indigo-400" },
-                  { label: "L3U3",  active: "border-purple-400 text-purple-400" },
-                  { label: "L4U2",   active: "border-pink-400 text-pink-400" },
-                  { label: "L3U2",   active: "border-rose-400 text-rose-400" },
-                  { label: "L3U4",  active: "border-amber-400 text-amber-400" },
-                  { label: "L2U4",  active: "border-violet-400 text-violet-400" },
-                  { label: "CL3U2",  active: "border-violet-600 text-violet-600" },
-                  { label: "L1U4", active: "border-orange-400 text-orange-400" },
-                  { label: "CL4U2",  active: "border-indigo-700 text-indigo-700" },
+                  { label: "CL4U3", active: getBadgeClasses("CL4U3") },
+                  { label: "L4U4", active: getBadgeClasses("L4U4") },
+                  { label: "EU4L4", active: getBadgeClasses("EU4L4") },
+                  { label: "EL4U4", active: getBadgeClasses("EL4U4") },
+                  { label: "QU4L4", active: getBadgeClasses("QU4L4") },
+                  { label: "U4L2", active: getBadgeClasses("U4L2") },
+                  { label: "U3L2", active: getBadgeClasses("U3L2") },
+                  { label: "U4L3", active: getBadgeClasses("U4L3") },
+                  { label: "U4L4", active: getBadgeClasses("U4L4") },
+                  { label: "U3L4", active: getBadgeClasses("U3L4") },
+                  { label: "U2L4", active: getBadgeClasses("U2L4") },
+                  { label: "U1L4", active: getBadgeClasses("U1L4") },
+                  { label: "EU3L4", active: getBadgeClasses("EU3L4") },
+                  { label: "L3TC", active: getBadgeClasses("L3TC") },
+                  { label: "EL1L2", active: getBadgeClasses("EL1L2") },
+                  { label: "EL2L1", active: getBadgeClasses("EL2L1") },
+                  { label: "CU3L2", active: getBadgeClasses("CU3L2") },
+                  { label: "CU3L3", active: getBadgeClasses("CU3L3") },
+                  { label: "EL2U4", active: getBadgeClasses("EL2U4") },
+                  { label: "EL3U4", active: getBadgeClasses("EL3U4") },
+                  { label: "CU4L2", active: getBadgeClasses("CU4L2") },
+                  { label: "EU3L3", active: getBadgeClasses("EU3L3") },
+                  { label: "EL3U3", active: getBadgeClasses("EL3U3") },
+                  { label: "CU4L4", active: getBadgeClasses("CU4L4") },
+                  { label: "CU4L3", active: getBadgeClasses("CU4L3") },
+                  { label: "CL3U3", active: getBadgeClasses("CL3U3") },
+                  { label: "L4U3", active: getBadgeClasses("L4U3") },
+                  { label: "L3U3", active: getBadgeClasses("L3U3") },
+                  { label: "L4U2", active: getBadgeClasses("L4U2") },
+                  { label: "L3U2", active: getBadgeClasses("L3U2") },
+                  { label: "L3U4", active: getBadgeClasses("L3U4") },
+                  { label: "L2U4", active: getBadgeClasses("L2U4") },
+                  { label: "CL3U2", active: getBadgeClasses("CL3U2") },
+                  { label: "L1U4", active: getBadgeClasses("L1U4") },
+                  { label: "CL4U2", active: getBadgeClasses("CL4U2") },
                   // NEW: eXL*U1 / eXL*CPR sub-type badges (unconditional, all sections)
-                  { label: "EU1L2",   active: "border-amber-400 text-amber-400" },
-                  { label: "EU1L3",   active: "border-orange-400 text-orange-400" },
-                  { label: "EU1L4",   active: "border-yellow-400 text-yellow-400" },
-                  { label: "EUBL1",  active: "border-amber-400 text-amber-400" },
-                  { label: "EUPL1",  active: "border-orange-400 text-orange-400" },
-                  { label: "EUTL1",  active: "border-yellow-400 text-yellow-400" },
-                  { label: "EUBL2",  active: "border-amber-400 text-amber-400" },
-                  { label: "EUBL3",  active: "border-orange-400 text-orange-400" },
-                  { label: "EUPL3",  active: "border-yellow-400 text-yellow-400" },
+                  { label: "EU1L2", active: getBadgeClasses("EU1L2") },
+                  { label: "EU1L3", active: getBadgeClasses("EU1L3") },
+                  { label: "EU1L4", active: getBadgeClasses("EU1L4") },
+                  { label: "EUBL1", active: getBadgeClasses("EUBL1") },
+                  { label: "EUPL1", active: getBadgeClasses("EUPL1") },
+                  { label: "EUTL1", active: getBadgeClasses("EUTL1") },
+                  { label: "EUBL2", active: getBadgeClasses("EUBL2") },
+                  { label: "EUBL3", active: getBadgeClasses("EUBL3") },
+                  { label: "EUPL3", active: getBadgeClasses("EUPL3") },
                   // NEW: CL1U1 / CU1L1 / CL2U2 / CU2L2 badges (unconditional, all sections)
-                  { label: "CL1U1",   active: "border-blue-800 text-blue-800" },
-                  { label: "CU1L1",   active: "border-violet-700 text-violet-700" },
-                  { label: "CL2U2",   active: "border-purple-700 text-purple-700" },
-                  { label: "CU2L2",   active: "border-indigo-400 text-indigo-400" },
+                  { label: "CL1U1", active: getBadgeClasses("CL1U1") },
+                  { label: "CU1L1", active: getBadgeClasses("CU1L1") },
+                  { label: "CL2U2", active: getBadgeClasses("CL2U2") },
+                  { label: "CU2L2", active: getBadgeClasses("CU2L2") },
                   // NEW: CL2U1 — independent, section-agnostic Pattern flag (see cpr.ts).
-                  { label: "CL2U1",   active: "border-purple-600 text-purple-600" },
+                  { label: "CL2U1", active: getBadgeClasses("CL2U1") },
                   // NEW: CL4U4 — independent, section-agnostic Pattern flag (see cpr.ts).
-                  { label: "CL4U4",   active: "border-violet-400 text-violet-400" },
+                  { label: "CL4U4", active: getBadgeClasses("CL4U4") },
                   // NEW: EU2L3 — prev S4 inside today S2/S3 AND prev R4 inside today R1/R2
-                  { label: "EU2L3",   active: "border-orange-400 text-orange-400" },
+                  { label: "EU2L3", active: getBadgeClasses("EU2L3") },
                   // NEW: expanded family — today's outer S-level broke below prev S4
                   // AND today's outer R-level/TC broke above prev R4 (see cpr.ts).
-                  { label: "EU2L4",  active: "border-yellow-400 text-yellow-400" },
-                  { label: "EU2L2",   active: "border-amber-400 text-amber-400" },
-                  { label: "EUTL2",   active: "border-orange-400 text-orange-400" },
-                  { label: "EUTL3",   active: "border-yellow-400 text-yellow-400" },
-                  { label: "EU1L1",   active: "border-amber-400 text-amber-400" },
+                  { label: "EU2L4", active: getBadgeClasses("EU2L4") },
+                  { label: "EU2L2", active: getBadgeClasses("EU2L2") },
+                  { label: "EUTL2", active: getBadgeClasses("EUTL2") },
+                  { label: "EUTL3", active: getBadgeClasses("EUTL3") },
+                  { label: "EU1L1", active: getBadgeClasses("EU1L1") },
                   // NEW: EL1U1 — same band shape as EU1L1, fires when the R1/R4 gap is larger.
-                  { label: "EL1U1",   active: "border-orange-400 text-orange-400" },
+                  { label: "EL1U1", active: getBadgeClasses("EL1U1") },
                   // NEW: EL1U2 — prev R4 inside today R1/R2 (U2) AND prev S4 inside today BC/S1 (L1).
-                  { label: "EL1U2",   active: "border-yellow-400 text-yellow-400" },
+                  { label: "EL1U2", active: getBadgeClasses("EL1U2") },
                   // NEW: EL1U3 — prev R4 inside today R2/R3 (U3) AND prev S4 inside today BC/S1 (L1).
-                  { label: "EL1U3",   active: "border-amber-400 text-amber-400" },
-                  { label: "EL2U3",   active: "border-orange-400 text-orange-400" },
+                  { label: "EL1U3", active: getBadgeClasses("EL1U3") },
+                  { label: "EL2U3", active: getBadgeClasses("EL2U3") },
                   // NEW: ELTU2 — prev R4 inside today R1/R2 (U2) AND prev S4 inside today TC/R1.
-                  { label: "ELTU2",   active: "border-yellow-400 text-yellow-400" },
+                  { label: "ELTU2", active: getBadgeClasses("ELTU2") },
                   // NEW: ELBU2 — prev R4 inside today R1/R2 (U2) AND prev S4 inside today BC/Pivot.
-                  { label: "ELBU2",   active: "border-amber-400 text-amber-400" },
+                  { label: "ELBU2", active: getBadgeClasses("ELBU2") },
                   // NEW: ELTU3 — prev R4 inside today R2/R3 (U3) AND prev S4 inside today TC/R1.
-                  { label: "ELTU3",   active: "border-orange-400 text-orange-400" },
+                  { label: "ELTU3", active: getBadgeClasses("ELTU3") },
                   // NEW: ELPU2 — prev R4 inside today R1/R2 (U2) AND prev S4 inside today Pivot/TC.
-                  { label: "ELPU2",   active: "border-yellow-400 text-yellow-400" },
+                  { label: "ELPU2", active: getBadgeClasses("ELPU2") },
                   // NEW: ELPU3 — prev R4 inside today R2/R3 (U3) AND prev S4 inside today Pivot/TC.
-                  { label: "ELPU3",   active: "border-amber-400 text-amber-400" },
+                  { label: "ELPU3", active: getBadgeClasses("ELPU3") },
                   // NEW: ELBU3 — prev R4 inside today R2/R3 (U3) AND prev S4 inside today BC/Pivot.
-                  { label: "ELBU3",   active: "border-orange-400 text-orange-400" },
+                  { label: "ELBU3", active: getBadgeClasses("ELBU3") },
                   // NEW: EUPL2 — prev S4 inside today S2/S1 (L2) AND prev R4 inside today BC/Pivot.
-                  { label: "EUPL2",   active: "border-yellow-400 text-yellow-400" },
+                  { label: "EUPL2", active: getBadgeClasses("EUPL2") },
                   // NEW: EUTL4 — prev S4 inside today S4/S3 (L4) AND prev R4 inside today Pivot/TC.
-                  { label: "EUTL4",   active: "border-amber-400 text-amber-400" },
+                  { label: "EUTL4", active: getBadgeClasses("EUTL4") },
                   // NEW: L2U3 — today R4 inside prev R2/R3 (U3) AND prev S4 inside today S2/S1 (L2).
-                  { label: "L2U3",   active: "border-amber-400 text-amber-400" },
+                  { label: "L2U3", active: getBadgeClasses("L2U3") },
                   // NEW: CU2L1 — today S4 inside prev S1/BC (L1) AND today R4 inside prev R1/R2 (U2).
-                  { label: "CU2L1",   active: "border-indigo-800 text-indigo-800" },
+                  { label: "CU2L1", active: getBadgeClasses("CU2L1") },
                   // NEW: CU3L1 — today S4 inside prev S1/BC (L1) AND today R4 inside prev R2/R3 (U3).
-                  { label: "CU3L1",   active: "border-blue-300 text-blue-300" },
+                  { label: "CU3L1", active: getBadgeClasses("CU3L1") },
                   // NEW: U2L3 — today S4 inside prev S3/S2 (L3) AND prev R4 inside prev's own R1/R2 (U2).
-                  { label: "U2L3",   active: "border-lime-400 text-lime-400" },
+                  { label: "U2L3", active: getBadgeClasses("U2L3") },
                   // NEW: EL1U4 — prev R4 inside today R3/R4 (U4) AND prev S4 inside today BC/S1 (L1).
-                  { label: "EL1U4",   active: "border-orange-400 text-orange-400" },
+                  { label: "EL1U4", active: getBadgeClasses("EL1U4") },
                   // NEW: ELBU4 — prev R4 inside today R3/R4 (U4) AND prev S4 inside today BC/Pivot.
-                  { label: "ELBU4",   active: "border-yellow-400 text-yellow-400" },
+                  { label: "ELBU4", active: getBadgeClasses("ELBU4") },
                 ] as { label: PatternInfo["label"]; active: string }[]
               ).map(({ label, active }) => (
                 <button
