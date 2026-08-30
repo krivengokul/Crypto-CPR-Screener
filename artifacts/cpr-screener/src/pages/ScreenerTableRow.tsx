@@ -159,9 +159,14 @@ export const PATTERN_BADGE_CLASSES: Record<string, string> = {
   // with the E-* "expanded" half above into one combined key list/badge,
   // since r.expanded/r.compressed are mutually exclusive). Same grouping
   // idea as the E-* badges above but with a distinct palette per Level
-  // (A: teal/cyan/sky/blue/indigo/emerald/green family, B: amber/orange/
-  // yellow/lime/red/rose family, C: violet/purple/fuchsia/pink family) so
-  // the two families never look alike at a glance.
+  // (A: teal/cyan/sky/blue/indigo/emerald/green family, B: was amber/
+  // orange/yellow/lime/red/rose — CHANGED: the amber/orange/yellow/lime
+  // quartet (C-B-BB-LB/C-B-OB-LB/C-B-BB-C/C-B-OB-C) is now
+  // indigo/blue/violet/purple instead, so the whole "compressed" C-*
+  // super-family reads as blue/violet/purple at a glance, distinct from
+  // the all-green A-* and all-red B-* families; C-B-BB-E/C-B-OB-E stay
+  // red/rose — those were never "orange", C: violet/purple/fuchsia/pink
+  // family) so the families never look alike.
   "C-A-C-AA": "bg-teal-500/10 text-teal-400 border border-teal-500/20",
   "C-A-HA-AA": "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20",
   "C-A-E-AA": "bg-sky-500/10 text-sky-400 border border-sky-500/20",
@@ -169,10 +174,10 @@ export const PATTERN_BADGE_CLASSES: Record<string, string> = {
   "C-A-E-OA": "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20",
   "C-A-C-OA": "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
   "C-A-OA-OA": "bg-green-500/10 text-green-400 border border-green-500/20",
-  "C-B-BB-LB": "bg-amber-500/10 text-amber-400 border border-amber-500/20",
-  "C-B-OB-LB": "bg-orange-500/10 text-orange-400 border border-orange-500/20",
-  "C-B-BB-C": "bg-yellow-500/10 text-yellow-400 border border-yellow-500/20",
-  "C-B-OB-C": "bg-lime-500/10 text-lime-400 border border-lime-500/20",
+  "C-B-BB-LB": "bg-indigo-600/10 text-indigo-300 border border-indigo-600/20",
+  "C-B-OB-LB": "bg-blue-600/10 text-blue-300 border border-blue-600/20",
+  "C-B-BB-C": "bg-violet-600/10 text-violet-300 border border-violet-600/20",
+  "C-B-OB-C": "bg-purple-600/10 text-purple-300 border border-purple-600/20",
   "C-B-BB-E": "bg-red-500/10 text-red-400 border border-red-500/20",
   "C-B-OB-E": "bg-rose-500/10 text-rose-400 border border-rose-500/20",
   "C-C-BB-AA": "bg-violet-500/10 text-violet-400 border border-violet-500/20",
