@@ -115,37 +115,45 @@ export const PATTERN_BADGE_CLASSES: Record<string, string> = {
   // ScreenerUtils.tsx), so getBadgeClasses is never actually called with
   // it via the PivotPatternBadge — left here harmlessly in case it's ever
   // used as a badge label from another call site.
-  "A-E-AA-C": "bg-orange-500/10 text-orange-400 border border-orange-500/20",
-  "A-E-OA-C": "bg-yellow-500/10 text-yellow-400 border border-yellow-500/20",
+  "A-E-AA-C": "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
+  "A-E-OA-C": "bg-teal-500/10 text-teal-400 border border-teal-500/20",
   "A-E-AA-E": "bg-lime-500/10 text-lime-400 border border-lime-500/20",
-  "A-E-OA-E": "bg-green-500/10 text-green-400 border border-green-500/20",
-  "A-E-AA-LB": "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
-  "A-E-OA-LB": "bg-teal-500/10 text-teal-400 border border-teal-500/20",
+  "A-E-OA-E": "bg-green-600/10 text-green-300 border border-green-600/20",
+  "A-E-AA-LB": "bg-emerald-600/10 text-emerald-300 border border-emerald-600/20",
+  "A-E-OA-LB": "bg-teal-600/10 text-teal-300 border border-teal-600/20",
   // PivotPattern badges, "LevelsAbove" half continued — "A-{Level}-
   // {RRHH}-{SSLL}" for HHLL-A/B/C (renamed from RRSSA-AAA-*/AOA-*/CC/CE/
   // CRA/BC-*/BE-*/BRA-* — see ScreenerUtils.PIVOT_PATTERNS /
-  // PIVOT_PATTERN_KEYS). Continues the same orange->yellow->lime->green->
-  // emerald->teal LevelsAbove palette started by A-E-* above so the whole
-  // "LevelsAbove" super-family reads as one continuous colour band,
-  // distinct from the E-*/C-* families. "A-A-OA-AA"/"A-A-OA-OA" are
-  // excluded from PIVOT_PATTERN_KEYS (exact duplicates of "C-A-OA-AA"/
-  // "C-A-OA-OA" — see that comment in ScreenerUtils.tsx), so they have no
-  // entry here either.
-  "A-A-AA-AA": "bg-orange-500/10 text-orange-400 border border-orange-500/20",
-  "A-A-AA-OA": "bg-yellow-500/10 text-yellow-400 border border-yellow-500/20",
-  "A-B-C-C": "bg-lime-500/10 text-lime-400 border border-lime-500/20",
-  "A-B-C-LB": "bg-green-500/10 text-green-400 border border-green-500/20",
-  "A-B-E-E": "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
-  "A-B-E-LB": "bg-teal-500/10 text-teal-400 border border-teal-500/20",
-  "A-B-RA-C": "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20",
-  "A-B-RA-E": "bg-sky-500/10 text-sky-400 border border-sky-500/20",
-  "A-B-RA-LB": "bg-blue-500/10 text-blue-400 border border-blue-500/20",
-  "A-C-C-AA": "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20",
-  "A-C-C-OA": "bg-violet-500/10 text-violet-400 border border-violet-500/20",
-  "A-C-E-AA": "bg-purple-500/10 text-purple-400 border border-purple-500/20",
-  "A-C-E-OA": "bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/20",
-  "A-C-RA-AA": "bg-pink-500/10 text-pink-400 border border-pink-500/20",
-  "A-C-RA-OA": "bg-rose-500/10 text-rose-400 border border-rose-500/20",
+  // PIVOT_PATTERN_KEYS). CHANGED: every A-* key is now a shade of
+  // green/emerald/teal/lime (the "green family") instead of the old
+  // orange->yellow->lime->green->emerald->teal ramp, so the whole
+  // "LevelsAbove" super-family reads as green at a glance — mirroring the
+  // B-* ("LevelsBelow") family now being all red (see below).
+  // "A-A-AA-AA" is pinned to canonical green-500 specifically so it reads
+  // as "the" green badge; every other A-* key uses a different
+  // green-family hue/shade so they're still distinguishable from each
+  // other. "A-A-OA-AA"/"A-A-OA-OA" USED TO BE excluded here as exact
+  // duplicates of "C-A-OA-AA"/"C-A-OA-OA" — now that PIVOT_PATTERNS
+  // disambiguates families via r.SSRRCategory (see ScreenerUtils.tsx),
+  // they're independently reachable, so they get their own entries below
+  // like any other key.
+  "A-A-AA-AA": "bg-green-500/10 text-green-400 border border-green-500/20",
+  "A-A-AA-OA": "bg-lime-600/10 text-lime-300 border border-lime-600/20",
+  "A-A-OA-AA": "bg-green-400/10 text-green-300 border border-green-400/20",
+  "A-A-OA-OA": "bg-emerald-400/10 text-emerald-300 border border-emerald-400/20",
+  "A-B-C-C": "bg-teal-400/10 text-teal-300 border border-teal-400/20",
+  "A-B-C-LB": "bg-lime-400/10 text-lime-300 border border-lime-400/20",
+  "A-B-E-E": "bg-green-700/10 text-green-300 border border-green-700/20",
+  "A-B-E-LB": "bg-emerald-700/10 text-emerald-300 border border-emerald-700/20",
+  "A-B-RA-C": "bg-teal-700/10 text-teal-300 border border-teal-700/20",
+  "A-B-RA-E": "bg-lime-700/10 text-lime-300 border border-lime-700/20",
+  "A-B-RA-LB": "bg-green-300/10 text-green-200 border border-green-300/20",
+  "A-C-C-AA": "bg-emerald-300/10 text-emerald-200 border border-emerald-300/20",
+  "A-C-C-OA": "bg-teal-300/10 text-teal-200 border border-teal-300/20",
+  "A-C-E-AA": "bg-lime-300/10 text-lime-200 border border-lime-300/20",
+  "A-C-E-OA": "bg-green-800/10 text-green-300 border border-green-800/20",
+  "A-C-RA-AA": "bg-emerald-800/10 text-emerald-300 border border-emerald-800/20",
+  "A-C-RA-OA": "bg-teal-800/10 text-teal-300 border border-teal-800/20",
   // PivotPattern badges, "compressed" half — "C-{Level}-{RRHH}-{SSLL}"
   // (see ScreenerUtils.computePivotPattern / PIVOT_PATTERN_KEYS — merged
   // with the E-* "expanded" half above into one combined key list/badge,
@@ -174,41 +182,63 @@ export const PATTERN_BADGE_CLASSES: Record<string, string> = {
   // PivotPattern badges, "LevelsBelow" half — "B-{Level}-{RRHH}-{SSLL}"
   // for HHLL-A/B/C/E (renamed from RRSSB-A{RRHH}-{SSLL}/B{RRHH}-{SSLL}/
   // C{SSLL}/E{RRHH} — see ScreenerUtils.PIVOT_PATTERNS / PIVOT_PATTERN_KEYS).
-  // Own palette per Level so the four LevelsBelow sub-groups stay visually
-  // distinct at a glance, same idea as the LevelsAbove/compressed/expanded
-  // families above (colour reuse across unrelated top-level families,
-  // e.g. teal/cyan/sky reappearing here, is the established convention —
-  // see C-A-*/A-B-* both already sharing that same run).
-  "B-A-C-C": "bg-teal-500/10 text-teal-400 border border-teal-500/20",
-  "B-A-C-SB": "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20",
-  "B-A-E-E": "bg-sky-500/10 text-sky-400 border border-sky-500/20",
-  "B-A-E-SB": "bg-blue-500/10 text-blue-400 border border-blue-500/20",
-  "B-A-HA-C": "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20",
-  "B-A-HA-E": "bg-violet-500/10 text-violet-400 border border-violet-500/20",
-  "B-A-HA-SB": "bg-purple-500/10 text-purple-400 border border-purple-500/20",
-  "B-B-BB-BB": "bg-amber-500/10 text-amber-400 border border-amber-500/20",
-  "B-B-BB-OB": "bg-orange-500/10 text-orange-400 border border-orange-500/20",
-  "B-B-OB-BB": "bg-yellow-500/10 text-yellow-400 border border-yellow-500/20",
-  "B-B-OB-OB": "bg-lime-500/10 text-lime-400 border border-lime-500/20",
-  "B-C-BB-C": "bg-rose-500/10 text-rose-400 border border-rose-500/20",
-  "B-C-OB-C": "bg-pink-500/10 text-pink-400 border border-pink-500/20",
-  "B-C-BB-E": "bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/20",
-  "B-C-OB-E": "bg-purple-500/10 text-purple-400 border border-purple-500/20",
-  "B-C-BB-SB": "bg-red-500/10 text-red-400 border border-red-500/20",
-  "B-E-C-BB": "bg-green-500/10 text-green-400 border border-green-500/20",
-  "B-E-C-OB": "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
-  "B-E-E-BB": "bg-teal-500/10 text-teal-400 border border-teal-500/20",
-  "B-E-E-OB": "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20",
-  "B-E-OB-BB": "bg-blue-500/10 text-blue-400 border border-blue-500/20",
-  "B-E-OB-OB": "bg-indigo-600/10 text-indigo-300 border border-indigo-600/20",
-  "B-E-HA-BB": "bg-sky-500/10 text-sky-400 border border-sky-500/20",
+  // CHANGED: every B-* key is now a shade of red (the "red family",
+  // cycling through red-300/400/500/600/700/800/900) instead of the old
+  // per-Level rainbow palette, so the whole "LevelsBelow" super-family
+  // reads as red at a glance — mirroring the A-* ("LevelsAbove") family
+  // now being all green (see above). "B-B-BB-BB" is pinned to canonical
+  // red-500 specifically so it reads as "the" red badge; the rest cycle
+  // through the other red shades (repeating once the 7-shade cycle is
+  // exhausted, since there are more B-* keys than distinct red shades —
+  // shade reuse across far-apart keys is the same established convention
+  // used elsewhere in this palette).
+  "B-A-C-C": "bg-red-500/10 text-red-400 border border-red-500/20",
+  "B-A-C-SB": "bg-red-600/10 text-red-300 border border-red-600/20",
+  "B-A-E-E": "bg-red-400/10 text-red-300 border border-red-400/20",
+  "B-A-E-SB": "bg-red-700/10 text-red-300 border border-red-700/20",
+  "B-A-HA-C": "bg-red-300/10 text-red-200 border border-red-300/20",
+  "B-A-HA-E": "bg-red-800/10 text-red-300 border border-red-800/20",
+  "B-A-HA-SB": "bg-red-900/10 text-red-300 border border-red-900/20",
+  "B-B-BB-BB": "bg-red-500/10 text-red-400 border border-red-500/20",
+  "B-B-BB-OB": "bg-red-600/10 text-red-300 border border-red-600/20",
+  "B-B-OB-BB": "bg-red-400/10 text-red-300 border border-red-400/20",
+  "B-B-OB-OB": "bg-red-700/10 text-red-300 border border-red-700/20",
+  "B-C-BB-C": "bg-red-300/10 text-red-200 border border-red-300/20",
+  "B-C-OB-C": "bg-red-800/10 text-red-300 border border-red-800/20",
+  "B-C-BB-E": "bg-red-900/10 text-red-300 border border-red-900/20",
+  "B-C-OB-E": "bg-red-500/10 text-red-400 border border-red-500/20",
+  "B-C-BB-SB": "bg-red-600/10 text-red-300 border border-red-600/20",
+  "B-E-C-BB": "bg-red-400/10 text-red-300 border border-red-400/20",
+  "B-E-C-OB": "bg-red-700/10 text-red-300 border border-red-700/20",
+  "B-E-E-BB": "bg-red-300/10 text-red-200 border border-red-300/20",
+  "B-E-E-OB": "bg-red-800/10 text-red-300 border border-red-800/20",
+  "B-E-OB-BB": "bg-red-900/10 text-red-300 border border-red-900/20",
+  "B-E-OB-OB": "bg-red-500/10 text-red-400 border border-red-500/20",
+  "B-E-HA-BB": "bg-red-600/10 text-red-300 border border-red-600/20",
 };
 
+/**
+ * Fallback badge style for when a PivotPattern label has no entry in
+ * PATTERN_BADGE_CLASSES (a genuine "unknown label" bug case, distinct
+ * from "no pattern matched" — see MISSING_PATTERN_CLASSES below for
+ * that). Kept as the getBadgeClasses default, unchanged.
+ */
+const UNKNOWN_LABEL_CLASSES = "bg-muted text-muted-foreground border border-border";
+
+/**
+ * "No pattern matched" badge style — used by renderPivotPatternBadge /
+ * renderPrevPatternBadge instead of returning null, so a row that legitimately
+ * has no PivotPattern combo (r.expanded/r.compressed/r.LevelsAbove/
+ * r.LevelsBelow all false, or no ppCPR history yet) still shows a
+ * clearly "missing" badge rather than leaving a blank gap next to the
+ * "Levels VIEW" / "PDay S/R" labels. Dashed border + muted slate colour
+ * so it reads as "absence", never mistaken for a real green/red/etc.
+ * pattern family.
+ */
+const MISSING_PATTERN_CLASSES = "bg-slate-500/5 text-slate-500 border border-dashed border-slate-500/30";
+
 export function getBadgeClasses(label: string): string {
-  return (
-    PATTERN_BADGE_CLASSES[label] ??
-    "bg-muted text-muted-foreground border border-border"
-  );
+  return PATTERN_BADGE_CLASSES[label] ?? UNKNOWN_LABEL_CLASSES;
 }
 
 /**
@@ -312,11 +342,29 @@ export function renderTodayPatternBadges(r: CPRResult) {
  * Previous day's pattern badge (prevCPR vs ppCPR), rendered as "p-xxxx" and
  * colour-coded with the same palette as today's pattern badges. Extracted
  * for reuse outside ScreenerTableRow (see renderTodayPatternBadges above).
- * Returns null when there isn't enough history (no ppCPR) to compute it.
+ * CHANGED: no longer returns null when there isn't enough history (no
+ * ppCPR) — renders the MISSING_PATTERN_CLASSES placeholder badge instead,
+ * so callers that always want a badge slot filled (e.g. SRLadder's
+ * "PDay S/R" header) don't get a layout gap. Pass showMissing={false} to
+ * restore the old null-when-absent behaviour for callers that don't want
+ * the placeholder (e.g. dense table cells where a blank is preferable to
+ * a dashed placeholder on every row).
  */
-export function renderPrevPatternBadge(r: CPRResult) {
+export function renderPrevPatternBadge(r: CPRResult, showMissing: boolean = true) {
   const prevSubLabel = computePrevPattern(r.prevCPR, r.ppCPR);
-  if (!prevSubLabel) return null;
+  if (!prevSubLabel) {
+    if (!showMissing) return null;
+    return (
+      <div className="flex flex-wrap gap-1 mt-1">
+        <span
+          className={`text-[10px] px-1 py-0.5 rounded font-medium ${MISSING_PATTERN_CLASSES}`}
+          title="No previous-day pattern (not enough CPR history)"
+        >
+          p-—
+        </span>
+      </div>
+    );
+  }
   return (
     <div className="flex flex-wrap gap-1 mt-1">
       <span
@@ -340,13 +388,29 @@ export function renderPrevPatternBadge(r: CPRResult) {
  * MERGED from what used to be two separate badges (renderPivotPatternBadge
  * for E-*, renderCompressedPatternBadge for C-*) into one, since
  * r.expanded/r.compressed are mutually exclusive so a row can never match
- * both families. Returns null when the row's category combo doesn't match
- * any of the 33 PIVOT_PATTERN_KEYS (most commonly because r.expanded and
- * r.compressed are both false).
+ * both families. CHANGED: no longer returns null when the row's category
+ * combo doesn't match any PIVOT_PATTERN_KEYS entry (most commonly because
+ * r.expanded/r.compressed/r.LevelsAbove/r.LevelsBelow are all false) —
+ * renders the MISSING_PATTERN_CLASSES placeholder badge instead, so
+ * callers that always want a badge slot filled (e.g. SRLadder's
+ * "Levels VIEW" header) don't get a layout gap. Pass showMissing={false}
+ * to restore the old null-when-absent behaviour.
  */
-export function renderPivotPatternBadge(r: CPRResult) {
+export function renderPivotPatternBadge(r: CPRResult, showMissing: boolean = true) {
   const pivotPattern = computePivotPattern(r);
-  if (!pivotPattern) return null;
+  if (!pivotPattern) {
+    if (!showMissing) return null;
+    return (
+      <div className="flex flex-wrap gap-1 mt-1">
+        <span
+          className={`text-[10px] px-1 py-0.5 rounded font-medium ${MISSING_PATTERN_CLASSES}`}
+          title="No PivotPattern match for this row's HHLL x RRHH x SSLL combo"
+        >
+          —
+        </span>
+      </div>
+    );
+  }
   return (
     <div className="flex flex-wrap gap-1 mt-1">
       <span
@@ -421,7 +485,11 @@ export function renderPatternColumnBadges(r: CPRResult) {
     !isOutsideCPR;
   const statusBadge = renderLevelStatusBadge(r, isInsideCPR, isOutsideCPR, showWide, nothingMatched);
   const todayBadges = renderTodayPatternBadges(r);
-  const pivotPatternBadge = renderPivotPatternBadge(r);
+  // showMissing={false} — keep the dense table cell blank (not a dashed
+  // placeholder) when there's no PivotPattern match, same as before; the
+  // MISSING_PATTERN_CLASSES placeholder is only for the SRLadder panel's
+  // always-visible badge slots (see SRLadderPanel.tsx).
+  const pivotPatternBadge = renderPivotPatternBadge(r, false);
   if (!statusBadge && !todayBadges && !pivotPatternBadge) return null;
   return (
     <div className="flex flex-col gap-1 max-w-[228px]">
@@ -696,7 +764,7 @@ export default function ScreenerTableRow({
               {renderLevelStatusBadge(r, isInsideCPR, isOutsideCPR, showWide, nothingMatchedMain)}
               {renderTodayPatternBadges(r)}
             </div>
-            {renderPivotPatternBadge(r)}
+            {renderPivotPatternBadge(r, false)}
           </div>
         </td>
         <td className="px-3 py-3 font-mono whitespace-nowrap">
@@ -755,7 +823,12 @@ export default function ScreenerTableRow({
           rowKey={rowKey}
           colSpan={20}
           todayPatternBadge={renderTodayPatternBadges(r)}
-          prevPatternBadge={renderPivotPatternBadge(r)}
+          // CHANGED: "PDay S/R" now shows prev day's own "p-xxxx" pattern
+          // (prevCPR vs ppCPR) instead of today's PivotPattern combo —
+          // the PivotPattern badge moved to "Levels VIEW" below, where it
+          // more accurately belongs (it's today-vs-prev, not prev's own).
+          prevPatternBadge={renderPrevPatternBadge(r)}
+          pivotPatternBadge={renderPivotPatternBadge(r)}
         />
       )}
     </Fragment>

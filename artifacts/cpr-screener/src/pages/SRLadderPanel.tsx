@@ -224,9 +224,12 @@ function declutterLabelPositions(
 function CPRLevelChart({
   prevCPR,
   todayCPR,
+  pivotPatternBadge,
 }: {
   prevCPR: CPRLevels;
   todayCPR: CPRLevels;
+  /** PivotPattern badge (e.g. renderPivotPatternBadge(r)) — shown inline next to the "Levels VIEW" label. */
+  pivotPatternBadge?: ReactNode;
 }) {
   const width = 900;
   // Keep the chart compact when it sits beside the ladders. The ladders
@@ -300,10 +303,15 @@ function CPRLevelChart({
 
   return (
     <div className="min-w-0">
-      <div className="mb-1.5 flex flex-wrap items-center gap-3 pl-2 text-left">
+      <div className="mb-1.5 flex flex-nowrap items-center gap-1.5 pl-2 text-left">
         <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
           Levels VIEW
         </p>
+        {pivotPatternBadge && (
+          <span className="inline-flex shrink-0 translate-y-[-1px] items-center">
+            {pivotPatternBadge}
+          </span>
+        )}
       </div>
       <svg
         viewBox={`0 0 ${width} ${height}`}
@@ -381,20 +389,23 @@ export function SRLadderPanel({
   todayPatternBadge,
   prevPatternBadge,
   pDay1PatternBadge,
+  pivotPatternBadge,
 }: {
   r: SRLadderData;
   /** Today's pattern badge(s) — e.g. renderTodayPatternBadges(r) — shown on the "Today S/R" ladder. */
   todayPatternBadge?: ReactNode;
-  /** Prev day's pattern badge — e.g. renderPrevPatternBadge(r) — shown on the "PrevDay S/R" ladder. */
+  /** Prev day's own "p-xxxx" pattern badge — e.g. renderPrevPatternBadge(r) — shown on the "PDay S/R" ladder. */
   prevPatternBadge?: ReactNode;
   /** PDay-1's pattern badge, shown on the "PDay-1 S/R" ladder. Not currently computable (no ppp CPR to compare against) — reserved for future use. */
   pDay1PatternBadge?: ReactNode;
+  /** PivotPattern badge (today vs prev HHLL x RRHH x SSLL combo) — e.g. renderPivotPatternBadge(r) — shown next to the "Levels VIEW" label. */
+  pivotPatternBadge?: ReactNode;
 }) {
   return (
     <div className="flex w-full min-w-0 flex-col gap-3">
       <div className="flex flex-wrap items-start gap-3 border-b border-border/50 pb-3">
         <div className="min-w-[440px] flex-1">
-          <CPRLevelChart prevCPR={r.prevCPR} todayCPR={r.todayCPR} />
+          <CPRLevelChart prevCPR={r.prevCPR} todayCPR={r.todayCPR} pivotPatternBadge={pivotPatternBadge} />
         </div>
         <div className="flex min-w-0 flex-1 items-start justify-between gap-2 pt-0.5">
           <SRLadder cpr={r.todayCPR} currentPrice={r.currentPrice} label="Today S/R" badge={todayPatternBadge} />
@@ -419,16 +430,19 @@ export function SRLadderRow({
   todayPatternBadge,
   prevPatternBadge,
   pDay1PatternBadge,
+  pivotPatternBadge,
 }: {
   r: SRLadderData;
   colSpan?: number;
   rowKey?: string;
   /** Today's pattern badge(s) — e.g. renderTodayPatternBadges(r) — shown on the "Today S/R" ladder. */
   todayPatternBadge?: ReactNode;
-  /** Prev day's pattern badge — e.g. renderPrevPatternBadge(r) — shown on the "PrevDay S/R" ladder. */
+  /** Prev day's own "p-xxxx" pattern badge — e.g. renderPrevPatternBadge(r) — shown on the "PDay S/R" ladder. */
   prevPatternBadge?: ReactNode;
   /** PDay-1's pattern badge, shown on the "PDay-1 S/R" ladder. Not currently computable (no ppp CPR to compare against) — reserved for future use. */
   pDay1PatternBadge?: ReactNode;
+  /** PivotPattern badge (today vs prev HHLL x RRHH x SSLL combo) — e.g. renderPivotPatternBadge(r) — shown next to the "Levels VIEW" label. */
+  pivotPatternBadge?: ReactNode;
 }) {
   return (
     <tr key={rowKey ? `${rowKey}-sr` : undefined} className="bg-muted/20 border-b border-border">
@@ -438,6 +452,7 @@ export function SRLadderRow({
           todayPatternBadge={todayPatternBadge}
           prevPatternBadge={prevPatternBadge}
           pDay1PatternBadge={pDay1PatternBadge}
+          pivotPatternBadge={pivotPatternBadge}
         />
       </td>
     </tr>
