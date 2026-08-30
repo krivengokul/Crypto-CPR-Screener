@@ -259,89 +259,105 @@ export function getBadgeClasses(label: string): string {
  */
 export function renderTodayPatternBadges(r: CPRResult) {
   const hasAny =
-    r.CL4U3 || r.L4U4 || r.EU3L4 || r.EU4L4 || r.EL4U4 || r.QU4L4 || r.U4L4 || r.U3L4 || r.U2L4 || r.U1L4 || r.CU3L2 || r.CU3L3 || r.EL2U4 || r.EL3U4 || r.CU4L2 || r.EU3L3 || r.EL3U3 || r.CU4L4 || r.CU4L3 || r.CL3U3 || r.L4U3 || r.L3U3 || r.L4U2 || r.L3U2 || r.L3U4 || r.L2U4 || r.U4L2 || r.U3L2 || r.U4L3 || r.CL3U2 || r.L1U4 || r.CL2U1 || r.CL4U2 || r.EU1L2 || r.EU1L3 || r.EU1L4 || r.EUBL1 || r.EUPL1 || r.EUTL1 || r.EUBL2 || r.EUBL3 || r.EUPL3 || r.CL1U1 || r.CU1L1 || r.CL2U2 || r.CU2L2 || r.CL4U4 || r.EU2L3 || r.EUTL3 || r.EU2L4 || r.EU2L2 || r.EUTL2 || r.EU1L1 || r.EL1U1 || r.EL1U2 || r.CL2UT || r.EL1U3 || r.EL2U3 || r.ELTU2 || r.ELBU2 || r.ELTU3 || r.ELPU2 || r.ELPU3 || r.ELBU3 || r.EL1U4 || r.ELBU4 || r.U3L3 || r.CL3U1 || r.L3CP || r.L2CP || r.L3TC || r.EL1L2 || r.EL2L1 || r.EUPL2 || r.EUTL4 || r.L2U3 || r.CU2L1 || r.CU3L1 || r.U2L3;
+    r.CL4U3 || r.L4U4 || r.EU3L4 || r.EU4L4 || r.EL4U4 || r.QU4L4 || r.U4L2 || r.U3L2 || r.U4L3 || r.U1L4 || r.U4L4 || r.U3L4 || r.U2L4 || r.CU3L2 || r.CU3L3 || r.EL2U4 || r.EL3U4 || r.CU4L2 || r.EU3L3 || r.EL3U3 || r.CU4L4 || r.CU4L3 || r.CL3U3 || r.L4U3 || r.L3U3 || r.L4U2 || r.L3U2 || r.L3U4 || r.L2U4 || r.CL3U2 || r.L1U4 || r.CL2U1 || r.CL4U2 || r.CL1U1 || r.CU1L1 || r.CL2U2 || r.CU2L2 || r.CL4U4 || r.EU2L3 || r.EU2L4 || r.EU2L2 || r.EUTL2 || r.EUTL3 || r.EU1L1 || r.EL1U1 || r.EL1U2 || r.CL2UT || r.EL1U3 || r.EL2U3 || r.ELTU2 || r.ELBU2 || r.ELTU3 || r.ELPU2 || r.ELPU3 || r.ELBU3 || r.EUPL2 || r.EUTL4 || r.L2U3 || r.CU2L1 || r.CU3L1 || r.U2L3 || r.EL1U4 || r.ELBU4 || r.U3L3 || r.CL3U1 || r.EU1L2 || r.EU1L3 || r.EU1L4 || r.EUBL1 || r.EUPL1 || r.EUTL1 || r.EUBL2 || r.EUBL3 || r.EUPL3 || r.L3CP || r.L2CP || r.L3TC || r.EL1L2 || r.EL2L1;
   if (!hasAny) return null;
+  // Colour-coded via the same PATTERN_BADGE_CLASSES palette (getBadgeClasses)
+  // as every other pattern badge — CHANGED from a hardcoded per-key className
+  // list to reading the shared map directly, so this badge set can never
+  // drift out of sync with PATTERN_BADGE_CLASSES again.
+  const todayPatternKeys: (keyof CPRResult)[] = [
+    "CL4U3",
+    "L4U4",
+    "EU3L4",
+    "EU4L4",
+    "EL4U4",
+    "QU4L4",
+    "U4L2",
+    "U3L2",
+    "U4L3",
+    "U1L4",
+    "U4L4",
+    "U3L4",
+    "U2L4",
+    "CU3L2",
+    "CU3L3",
+    "EL2U4",
+    "EL3U4",
+    "CU4L2",
+    "EU3L3",
+    "EL3U3",
+    "CU4L4",
+    "CU4L3",
+    "CL3U3",
+    "L4U3",
+    "L3U3",
+    "L4U2",
+    "L3U2",
+    "L3U4",
+    "L2U4",
+    "CL3U2",
+    "L1U4",
+    "CL2U1",
+    "CL4U2",
+    "CL1U1",
+    "CU1L1",
+    "CL2U2",
+    "CU2L2",
+    "CL4U4",
+    "EU2L3",
+    "EU2L4",
+    "EU2L2",
+    "EUTL2",
+    "EUTL3",
+    "EU1L1",
+    "EL1U1",
+    "EL1U2",
+    "CL2UT",
+    "EL1U3",
+    "EL2U3",
+    "ELTU2",
+    "ELBU2",
+    "ELTU3",
+    "ELPU2",
+    "ELPU3",
+    "ELBU3",
+    "EUPL2",
+    "EUTL4",
+    "L2U3",
+    "CU2L1",
+    "CU3L1",
+    "U2L3",
+    "EL1U4",
+    "ELBU4",
+    "U3L3",
+    "CL3U1",
+    "EU1L2",
+    "EU1L3",
+    "EU1L4",
+    "EUBL1",
+    "EUPL1",
+    "EUTL1",
+    "EUBL2",
+    "EUBL3",
+    "EUPL3",
+    "L3CP",
+    "L2CP",
+    "L3TC",
+    "EL1L2",
+    "EL2L1",
+  ];
   return (
     <div className="flex flex-wrap gap-1">
-      {r.CL4U3 && <span className="text-[10px] px-1 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium">CL4U3</span>}
-      {r.L4U4 && <span className="text-[10px] px-1 py-0.5 rounded bg-lime-500/10 text-lime-400 border border-lime-500/20 font-medium">L4U4</span>}
-      {r.EU3L4 && <span className="text-[10px] px-1 py-0.5 rounded bg-green-500/10 text-green-400 border border-green-500/20 font-medium">EU3L4</span>}
-      {r.EU4L4 && <span className="text-[10px] px-1 py-0.5 rounded bg-pink-500/10 text-pink-400 border border-pink-500/20 font-medium">EU4L4</span>}
-      {r.EL4U4 && <span className="text-[10px] px-1 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/20 font-medium">EL4U4</span>}
-      {r.QU4L4 && <span className="text-[10px] px-1 py-0.5 rounded bg-slate-500/10 text-slate-300 border border-slate-500/20 font-medium">QU4L4</span>}
-      {r.U4L2 && <span className="text-[10px] px-1 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-medium">U4L2</span>}
-      {r.U3L2 && <span className="text-[10px] px-1 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">U3L2</span>}
-      {r.U4L3 && <span className="text-[10px] px-1 py-0.5 rounded bg-lime-500/10 text-lime-400 border border-lime-500/20 font-medium">U4L3</span>}
-      {r.U1L4 && <span className="text-[10px] px-1 py-0.5 rounded bg-fuchsia-500/10 text-fuchsia-300 border border-fuchsia-500/20 font-medium">U1L4</span>}
-      {r.U4L4 && <span className="text-[10px] px-1 py-0.5 rounded bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/20 font-medium">U4L4</span>}
-      {r.U3L4 && <span className="text-[10px] px-1 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-medium">U3L4</span>}
-      {r.U2L4 && <span className="text-[10px] px-1 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20 font-medium">U2L4</span>}
-      {r.CU3L2 && <span className="text-[10px] px-1 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-medium">CU3L2</span>}
-      {r.CU3L3 && <span className="text-[10px] px-1 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-medium">CU3L3</span>}
-      {r.EL2U4 && <span className="text-[10px] px-1 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium">EL2U4</span>}
-      {r.EL3U4 && <span className="text-[10px] px-1 py-0.5 rounded bg-blue-600/10 text-blue-400 border border-blue-600/20 font-medium">EL3U4</span>}
-      {r.CU4L2 && <span className="text-[10px] px-1 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">CU4L2</span>}
-      {r.EU3L3 && <span className="text-[10px] px-1 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 font-medium">EU3L3</span>}
-      {r.EL3U3 && <span className="text-[10px] px-1 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/20 font-medium">EL3U3</span>}
-      {r.CU4L4 && <span className="text-[10px] px-1 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 font-medium">CU4L4</span>}
-      {r.CU4L3 && <span className="text-[10px] px-1 py-0.5 rounded bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 font-medium">CU4L3</span>}
-      {r.CL3U3 && <span className="text-[10px] px-1 py-0.5 rounded bg-teal-500/10 text-teal-400 border border-teal-500/20 font-medium">CL3U3</span>}
-      {r.L4U3 && <span className="text-[10px] px-1 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-medium">L4U3</span>}
-      {r.L3U3 && <span className="text-[10px] px-1 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20 font-medium">L3U3</span>}
-      {r.L4U2 && <span className="text-[10px] px-1 py-0.5 rounded bg-pink-500/10 text-pink-400 border border-pink-500/20 font-medium">L4U2</span>}
-      {r.L3U2 && <span className="text-[10px] px-1 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 font-medium">L3U2</span>}
-      {r.L3U4 && <span className="text-[10px] px-1 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium">L3U4</span>}
-      {r.L2U4 && <span className="text-[10px] px-1 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20 font-medium">L2U4</span>}
-      {r.CL3U2 && <span className="text-[10px] px-1 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">CL3U2</span>}
-      {r.L1U4 && <span className="text-[10px] px-1 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 font-medium">L1U4</span>}
-      {r.CL2U1 && <span className="text-[10px] px-1 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 font-medium">CL2U1</span>}
-      {r.CL4U2 && <span className="text-[10px] px-1 py-0.5 rounded bg-lime-500/10 text-lime-400 border border-lime-500/20 font-medium">CL4U2</span>}
-      {r.CL1U1 && <span className="text-[10px] px-1 py-0.5 rounded bg-teal-500/10 text-teal-400 border border-teal-500/20 font-medium">CL1U1</span>}
-      {r.CU1L1 && <span className="text-[10px] px-1 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-medium">CU1L1</span>}
-      {r.CL2U2 && <span className="text-[10px] px-1 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">CL2U2</span>}
-      {r.CU2L2 && <span className="text-[10px] px-1 py-0.5 rounded bg-lime-500/10 text-lime-400 border border-lime-500/20 font-medium">CU2L2</span>}
-      {r.CL4U4 && <span className="text-[10px] px-1 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 font-medium">CL4U4</span>}
-      {r.EU2L3 && <span className="text-[10px] px-1 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium">EU2L3</span>}
-      {r.EU2L4 && <span className="text-[10px] px-1 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20 font-medium">EU2L4</span>}
-      {r.EU2L2 && <span className="text-[10px] px-1 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">EU2L2</span>}
-      {r.EUTL2 && <span className="text-[10px] px-1 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-medium">EUTL2</span>}
-      {r.EUTL3 && <span className="text-[10px] px-1 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-medium">EUTL3</span>}
-      {r.EU1L1 && <span className="text-[10px] px-1 py-0.5 rounded bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/20 font-medium">EU1L1</span>}
-      {r.EL1U1 && <span className="text-[10px] px-1 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-medium">EL1U1</span>}
-      {r.EL1U2 && <span className="text-[10px] px-1 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20 font-medium">EL1U2</span>}
-      {r.CL2UT && <span className="text-[10px] px-1 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-medium">CL2UT</span>}
-      {r.EL1U3 && <span className="text-[10px] px-1 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/20 font-medium">EL1U3</span>}
-      {r.EL2U3 && <span className="text-[10px] px-1 py-0.5 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 font-medium">EL2U3</span>}
-      {r.ELTU2 && <span className="text-[10px] px-1 py-0.5 rounded bg-teal-500/10 text-teal-400 border border-teal-500/20 font-medium">ELTU2</span>}
-      {r.ELBU2 && <span className="text-[10px] px-1 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-medium">ELBU2</span>}
-      {r.ELTU3 && <span className="text-[10px] px-1 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 font-medium">ELTU3</span>}
-      {r.ELPU2 && <span className="text-[10px] px-1 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-medium">ELPU2</span>}
-      {r.ELPU3 && <span className="text-[10px] px-1 py-0.5 rounded bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 font-medium">ELPU3</span>}
-      {r.ELBU3 && <span className="text-[10px] px-1 py-0.5 rounded bg-pink-500/10 text-pink-400 border border-pink-500/20 font-medium">ELBU3</span>}
-      {r.EUPL2 && <span className="text-[10px] px-1 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">EUPL2</span>}
-      {r.EUTL4 && <span className="text-[10px] px-1 py-0.5 rounded bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 font-medium">EUTL4</span>}
-      {r.L2U3 && <span className="text-[10px] px-1 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium">L2U3</span>}
-      {r.CU2L1 && <span className="text-[10px] px-1 py-0.5 rounded bg-teal-500/10 text-teal-400 border border-teal-500/20 font-medium">CU2L1</span>}
-      {r.CU3L1 && <span className="text-[10px] px-1 py-0.5 rounded bg-cyan-600/10 text-cyan-300 border border-cyan-600/20 font-medium">CU3L1</span>}
-      {r.U2L3 && <span className="text-[10px] px-1 py-0.5 rounded bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/20 font-medium">U2L3</span>}
-      {r.EL1U4 && <span className="text-[10px] px-1 py-0.5 rounded bg-green-500/10 text-green-400 border border-green-500/20 font-medium">EL1U4</span>}
-      {r.ELBU4 && <span className="text-[10px] px-1 py-0.5 rounded bg-lime-500/10 text-lime-400 border border-lime-500/20 font-medium">ELBU4</span>}
-      {r.U3L3 && <span className="text-[10px] px-1 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">U3L3</span>}
-      {r.CL3U1 && <span className="text-[10px] px-1 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 font-medium">CL3U1</span>}
-      {r.EU1L2 && <span className="text-[10px] px-1 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20 font-medium">EU1L2</span>}
-      {r.EU1L3 && <span className="text-[10px] px-1 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20 font-medium">EU1L3</span>}
-      {r.EU1L4 && <span className="text-[10px] px-1 py-0.5 rounded bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/20 font-medium">EU1L4</span>}
-      {r.EUBL1 && <span className="text-[10px] px-1 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-medium">EUBL1</span>}
-      {r.EUPL1 && <span className="text-[10px] px-1 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-medium">EUPL1</span>}
-      {r.EUTL1 && <span className="text-[10px] px-1 py-0.5 rounded bg-teal-500/10 text-teal-400 border border-teal-500/20 font-medium">EUTL1</span>}
-      {r.EUBL2 && <span className="text-[10px] px-1 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">EUBL2</span>}
-      {r.EUBL3 && <span className="text-[10px] px-1 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-medium">EUBL3</span>}
-      {r.EUPL3 && <span className="text-[10px] px-1 py-0.5 rounded bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/20 font-medium">EUPL3</span>}
-      {r.L3CP && <span className="text-[10px] px-1 py-0.5 rounded bg-teal-500/10 text-teal-400 border border-teal-500/20 font-medium">L3CP</span>}
-      {r.L2CP && <span className="text-[10px] px-1 py-0.5 rounded bg-teal-600/10 text-teal-300 border border-teal-600/20 font-medium">L2CP</span>}
-      {r.L3TC && <span className="text-[10px] px-1 py-0.5 rounded bg-sky-600/10 text-sky-300 border border-sky-600/20 font-medium">L3TC</span>}
-      {r.EL1L2 && <span className="text-[10px] px-1 py-0.5 rounded bg-teal-500/10 text-teal-400 border border-teal-500/20 font-medium">EL1L2</span>}
-      {r.EL2L1 && <span className="text-[10px] px-1 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 font-medium">EL2L1</span>}
+      {todayPatternKeys
+        .filter((key) => r[key])
+        .map((key) => (
+          <span
+            key={key}
+            className={`text-[10px] px-1 py-0.5 rounded border font-medium ${getBadgeClasses(key)}`}
+          >
+            {key}
+          </span>
+        ))}
     </div>
   );
 }
