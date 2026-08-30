@@ -911,7 +911,15 @@ export default function Screener({
             <div className="flex flex-col gap-0">
               <h1 className="text-2xl font-extrabold tracking-wide leading-none whitespace-nowrap flex items-center gap-1.5">
                 <span className="bg-gradient-to-r from-primary to-sky-400 bg-clip-text text-transparent">
-                  PIVOT LEVEL Views
+                  PIVOT LEVEL
+                </span>
+                <span className="relative inline-flex items-center text-emerald-400 italic">
+                  V
+                  <span className="relative inline-block">
+                    ı
+                    <span className="absolute -top-1 left-1/2 -translate-x-[5%] h-1 w-1 rounded-full bg-emerald-400 animate-pulse" />
+                  </span>
+                  ews
                 </span>
                 <span className="relative inline-flex items-center text-emerald-400 italic">
                   L
