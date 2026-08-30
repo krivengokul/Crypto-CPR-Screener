@@ -926,7 +926,7 @@ export default function Screener({
                   <span className="relative inline-block">
                     ı
                     <span
-                      className="absolute -top-1 left-[60%] h-1.5 w-1.5 rounded-full bg-cyan-300 animate-pulse"
+                      className="absolute -top-1 left-[60%] h-1.5 w-1.5 rounded-full bg-cyan-200 animate-pulse"
                       style={{
                         WebkitTextFillColor: "initial",
                         boxShadow: "0 0 6px #22d3ee",
@@ -948,7 +948,7 @@ export default function Screener({
                   <span className="relative inline-block">
                     ı
                     <span
-                      className="absolute -top-1 left-[60%] h-1.5 w-1.5 rounded-full bg-cyan-300 animate-pulse"
+                      className="absolute -top-1 left-[60%] h-1.5 w-1.5 rounded-full bg-cyan-200 animate-pulse"
                       style={{
                         WebkitTextFillColor: "initial",
                         boxShadow: "0 0 6px #22d3ee",
