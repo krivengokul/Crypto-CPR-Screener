@@ -319,6 +319,24 @@ export default function BacktestPanel() {
   const [resultChangeSortDir, setResultChangeSortDir] = useState<"asc" | "desc" | null>(null);
   const [error, setError] = useState("");
 
+  // FIX (stale-results bug): the "Target: ... Pattern <label>" header and
+  // the dropdown's trigger label are derived live from `selectedKey`, but
+  // `rows`/`categoryRows` only get refreshed when `run()` is clicked. Without
+  // this, changing the selection after a run finished (without re-running)
+  // left the OLD pattern's results on screen underneath the NEW pattern's
+  // label/description — e.g. run "A-A-OA-AA", then merely select
+  // "C-A-OA-AA" in the picker: the header/trigger instantly say
+  // "C-A-OA-AA" while the table still shows the correct "A-A-OA-AA" rows,
+  // which looks exactly like "correct records, wrong badge". Reset results
+  // back to idle whenever the selection changes so stale rows can never be
+  // displayed under a mismatched label.
+  useEffect(() => {
+    setStatus("idle");
+    setRows([]);
+    setCategoryRows([]);
+    setError("");
+  }, [selectedKey]);
+
   const [dateMode, setDateMode] = useState<"single" | "range">("single");
   const [fromDate, setFromDate] = useState<string>(() => {
     const d = new Date();
