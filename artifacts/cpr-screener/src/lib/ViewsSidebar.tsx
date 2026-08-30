@@ -140,6 +140,30 @@ export const Views: Record<string, SubPattern[]> = {
       activeText:  "#4ade80",      // green-400 text
       activeBg:    "rgba(34, 197, 94, 0.14)",
     },
+    // A-A-AA-AA diagnostic branch: the structural base is HHLL-A / RRHH-AA / SSLL-AA.
+    // These are deliberately labeled as candidate views until the historical
+    // backtest confirms that either branch has positive risk-adjusted expectancy.
+    {
+      id: "A-A-AA-AA",
+      label: "A-A-AA-AA · HHLL-A/RRHH-AA/SSLL-AA",
+      activeColor: "#60a5fa",
+      activeText: "#93c5fd",
+      activeBg: "rgba(96, 165, 250, 0.14)",
+    },
+    {
+      id: "A-A-AA-AA:Candidate-Favorable",
+      label: "A-A-AA-AA · Candidate Favorable (TodayGap + Wide)",
+      activeColor: "#22c55e",
+      activeText: "#4ade80",
+      activeBg: "rgba(34, 197, 94, 0.14)",
+    },
+    {
+      id: "A-A-AA-AA:Candidate-Unfavorable",
+      label: "A-A-AA-AA · Candidate Unfavorable (PrevGap + Narrow)",
+      activeColor: "#fb7185",
+      activeText: "#fda4af",
+      activeBg: "rgba(244, 63, 94, 0.14)",
+    },
   ],
   "levelsbelow": [
     // RENAMED from "BC>pPDL-U3:5AM", then from "3P:HA-pABOVE:pR4-3A".
