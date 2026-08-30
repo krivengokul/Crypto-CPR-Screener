@@ -509,21 +509,21 @@ export const PIVOT_PATTERNS: Record<string, (r: CPRResult) => boolean> = {
   // A-B-E-LB, RRSSA-BRA-C -> A-B-RA-C, RRSSA-BRA-E -> A-B-RA-E,
   // RRSSA-BRA-LB -> A-B-RA-LB. RRSSA-BC-E and RRSSA-BE-C were REMOVED
   // (confirmed empty against real data), leaving 7 of the original 9.
-  "A-B-C-C": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-C",
-  "A-B-C-LB": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-LB",
-  "A-B-E-E": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-E",
-  "A-B-E-LB": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-LB",
-  "A-B-RA-C": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-RA" && r.SSLLCategory === "SSLL-C",
-  "A-B-RA-E": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-RA" && r.SSLLCategory === "SSLL-E",
-  "A-B-RA-LB": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-RA" && r.SSLLCategory === "SSLL-LB",
+  "A-B-C-C": (r) => r.SSRRCategory === "RRSS-A" && r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-C",
+  "A-B-C-LB": (r) => r.SSRRCategory === "RRSS-A" && r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-LB",
+  "A-B-E-E": (r) => r.SSRRCategory === "RRSS-A" && r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-E",
+  "A-B-E-LB": (r) => r.SSRRCategory === "RRSS-A" && r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-LB",
+  "A-B-RA-C": (r) => r.SSRRCategory === "RRSS-A" && r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-RA" && r.SSLLCategory === "SSLL-C",
+  "A-B-RA-E": (r) => r.SSRRCategory === "RRSS-A" && r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-RA" && r.SSLLCategory === "SSLL-E",
+  "A-B-RA-LB": (r) => r.SSRRCategory === "RRSS-A" && r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-RA" && r.SSLLCategory === "SSLL-LB",
   // RENAMED: RRSSA-AAA-AA -> A-A-AA-AA, RRSSA-AAA-OA -> A-A-AA-OA,
   // RRSSA-AOA-AA -> A-A-OA-AA, RRSSA-AOA-OA -> A-A-OA-OA. Same
   // A-{Level}-{RRHH}-{SSLL} naming convention as the "compressed" (C-*)
   // and "expanded" (E-*) sets above/below — conditions unchanged.
-  "A-A-AA-AA": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-AA",
-  "A-A-AA-OA": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-OA",
-  "A-A-OA-AA": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-AA",
-  "A-A-OA-OA": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-OA",
+  "A-A-AA-AA": (r) => r.SSRRCategory === "RRSS-A" && r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-AA",
+  "A-A-AA-OA": (r) => r.SSRRCategory === "RRSS-A" && r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-OA",
+  "A-A-OA-AA": (r) => r.SSRRCategory === "RRSS-A" && r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-AA",
+  "A-A-OA-OA": (r) => r.SSRRCategory === "RRSS-A" && r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-OA",
   // RENAMED to the A-{Level}-{RRHH}-{SSLL} convention, same shape as
   // A-A-{RRHH}-{SSLL}/A-C-{RRHH}-{SSLL} above: RRSSA-EC -> A-E-AA-C /
   // A-E-OA-C, RRSSA-EE -> A-E-AA-E / A-E-OA-E, RRSSA-ELB -> A-E-AA-LB /
@@ -540,23 +540,23 @@ export const PIVOT_PATTERNS: Record<string, (r: CPRResult) => boolean> = {
   // see the note on that collision in PIVOT_PATTERN_KEYS below. The
   // RRHH-OA half wasn't requested, so it's left out for now; add
   // "A-E-OA-OB" the same way if it's needed later.
-  "A-E-AA-C": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-C",
-  "A-E-OA-C": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-C",
-  "A-E-AA-E": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-E",
-  "A-E-OA-E": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-E",
-  "A-E-AA-LB": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-LB",
-  "A-E-OA-LB": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-LB",
+  "A-E-AA-C": (r) => r.SSRRCategory === "RRSS-A" && r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-C",
+  "A-E-OA-C": (r) => r.SSRRCategory === "RRSS-A" && r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-C",
+  "A-E-AA-E": (r) => r.SSRRCategory === "RRSS-A" && r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-E",
+  "A-E-OA-E": (r) => r.SSRRCategory === "RRSS-A" && r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-E",
+  "A-E-AA-LB": (r) => r.SSRRCategory === "RRSS-A" && r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-LB",
+  "A-E-OA-LB": (r) => r.SSRRCategory === "RRSS-A" && r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-LB",
   // RENAMED: RRSSA-CC/RRSSA-CE/RRSSA-CRA -> A-C-{RRHH}-{SSLL}, each
   // further re-split by crossing against SSLLCategory (SSLL-AA/SSLL-OA),
   // same A-{Level}-{RRHH}-{SSLL} naming convention as A-A-{RRHH}-{SSLL}
   // above. Conditions otherwise unchanged (still HHLL-C + RRHHCategory,
   // nested under "levelsabove" / r.LevelsAbove).
-  "A-C-C-AA": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-AA",
-  "A-C-C-OA": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-OA",
-  "A-C-E-AA": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-AA",
-  "A-C-E-OA": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-OA",
-  "A-C-RA-AA": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-RA" && r.SSLLCategory === "SSLL-AA",
-  "A-C-RA-OA": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-RA" && r.SSLLCategory === "SSLL-OA",
+  "A-C-C-AA": (r) => r.SSRRCategory === "RRSS-A" && r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-AA",
+  "A-C-C-OA": (r) => r.SSRRCategory === "RRSS-A" && r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-OA",
+  "A-C-E-AA": (r) => r.SSRRCategory === "RRSS-A" && r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-AA",
+  "A-C-E-OA": (r) => r.SSRRCategory === "RRSS-A" && r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-OA",
+  "A-C-RA-AA": (r) => r.SSRRCategory === "RRSS-A" && r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-RA" && r.SSLLCategory === "SSLL-AA",
+  "A-C-RA-OA": (r) => r.SSRRCategory === "RRSS-A" && r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-RA" && r.SSLLCategory === "SSLL-OA",
 
   // RRSSB-{Level}{Gap} / RRSSB-C{SSLL} / RRSSB-E{RRHH} — the LevelsBelow
   // (r.LevelsBelow) mirror of RRSSA-* above; same derivation, opposite
@@ -584,13 +584,13 @@ export const PIVOT_PATTERNS: Record<string, (r: CPRResult) => boolean> = {
   // RRSSB-AC-E and RRSSB-AE-C were REMOVED (confirmed empty against real
   // data), leaving 7 of the original 9 — same trimming outcome as
   // A-B-C-E/A-B-E-C above.
-  "B-A-C-C": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-C",
-  "B-A-C-SB": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-SB",
-  "B-A-E-E": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-E",
-  "B-A-E-SB": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-SB",
-  "B-A-HA-C": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-HA" && r.SSLLCategory === "SSLL-C",
-  "B-A-HA-E": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-HA" && r.SSLLCategory === "SSLL-E",
-  "B-A-HA-SB": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-HA" && r.SSLLCategory === "SSLL-SB",
+  "B-A-C-C": (r) => r.SSRRCategory === "RRSS-B" && r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-C",
+  "B-A-C-SB": (r) => r.SSRRCategory === "RRSS-B" && r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-SB",
+  "B-A-E-E": (r) => r.SSRRCategory === "RRSS-B" && r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-E",
+  "B-A-E-SB": (r) => r.SSRRCategory === "RRSS-B" && r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-SB",
+  "B-A-HA-C": (r) => r.SSRRCategory === "RRSS-B" && r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-HA" && r.SSLLCategory === "SSLL-C",
+  "B-A-HA-E": (r) => r.SSRRCategory === "RRSS-B" && r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-HA" && r.SSLLCategory === "SSLL-E",
+  "B-A-HA-SB": (r) => r.SSRRCategory === "RRSS-B" && r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-HA" && r.SSLLCategory === "SSLL-SB",
   // PatternStats HHLL/RRHH/SSLL combo census (temporary debug addition,
   // see PatternStats.tsx / runPatternCensus's CategoryComboRow output)
   // found 6 previously-unlisted-but-reachable combos under HHLL-A here:
@@ -600,15 +600,15 @@ export const PIVOT_PATTERNS: Record<string, (r: CPRResult) => boolean> = {
   // Added below, same B-{Level}-{RRHH}-{SSLL} convention — not yet
   // proven exhaustive/impossible on the remaining grid, just confirmed
   // present against real data:
-  "B-A-OB-SB": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-SB",
-  "B-A-OB-E": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-E",
-  "B-A-OB-C": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-C",
-  "B-A-HA-OB": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-HA" && r.SSLLCategory === "SSLL-OB",
-  "B-A-HA-OA": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-HA" && r.SSLLCategory === "SSLL-OA",
-  "B-A-E-OA": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-OA",
-  "B-A-E-OB": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-OB",
-  "B-A-C-OA": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-OA",
-  "B-A-OA-E": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-E",
+  "B-A-OB-SB": (r) => r.SSRRCategory === "RRSS-B" && r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-SB",
+  "B-A-OB-E": (r) => r.SSRRCategory === "RRSS-B" && r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-E",
+  "B-A-OB-C": (r) => r.SSRRCategory === "RRSS-B" && r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-C",
+  "B-A-HA-OB": (r) => r.SSRRCategory === "RRSS-B" && r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-HA" && r.SSLLCategory === "SSLL-OB",
+  "B-A-HA-OA": (r) => r.SSRRCategory === "RRSS-B" && r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-HA" && r.SSLLCategory === "SSLL-OA",
+  "B-A-E-OA": (r) => r.SSRRCategory === "RRSS-B" && r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-OA",
+  "B-A-E-OB": (r) => r.SSRRCategory === "RRSS-B" && r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-OB",
+  "B-A-C-OA": (r) => r.SSRRCategory === "RRSS-B" && r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-OA",
+  "B-A-OA-E": (r) => r.SSRRCategory === "RRSS-B" && r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-E",
   // RENAMED: RRSSB-BHR/RRSSB-BLS -> RRSSB-B{RRHH}-{SSLL} -> B-B-{RRHH}-{SSLL},
   // the 4-key set REPLACING the old pair (see backtest.ts's comment above
   // the "B-B-BB-BB" etc. entries). Re-split by crossing RRHHCategory
@@ -617,58 +617,58 @@ export const PIVOT_PATTERNS: Record<string, (r: CPRResult) => boolean> = {
   // were already live in backtest.ts's BACKTEST_CATEGORIES dropdown with
   // no matching entry here, so every scan against them silently fell
   // through matchesPatternFlag's default and came back with 0 records.
-  "B-B-BB-BB": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-BB",
-  "B-B-BB-OB": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-OB",
-  "B-B-OB-BB": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-BB",
-  "B-B-OB-OB": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-OB",
+  "B-B-BB-BB": (r) => r.SSRRCategory === "RRSS-B" && r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-BB",
+  "B-B-BB-OB": (r) => r.SSRRCategory === "RRSS-B" && r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-OB",
+  "B-B-OB-BB": (r) => r.SSRRCategory === "RRSS-B" && r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-BB",
+  "B-B-OB-OB": (r) => r.SSRRCategory === "RRSS-B" && r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-OB",
   // PatternStats HHLL/RRHH/SSLL combo census (temporary debug addition)
   // found RRHH-C also reachable under HHLL-B here (this block was
   // otherwise pinned exhaustively to RRHH-BB/RRHH-OB), paired with both
   // SSLL-BB and SSLL-OB:
-  "B-B-C-BB": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-BB",
-  "B-B-C-OB": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-OB",
+  "B-B-C-BB": (r) => r.SSRRCategory === "RRSS-B" && r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-BB",
+  "B-B-C-OB": (r) => r.SSRRCategory === "RRSS-B" && r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-OB",
   // Also found SSLL-C reachable alongside RRHH-BB (this block's SSLL side
   // was otherwise pinned to SSLL-BB/SSLL-OB):
-  "B-B-BB-C": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-C",
+  "B-B-BB-C": (r) => r.SSRRCategory === "RRSS-B" && r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-C",
   // RENAMED: RRSSB-CC/RRSSB-CE/RRSSB-CSB -> B-C-{RRHH}-{SSLL}, each
   // further re-split by crossing against RRHHCategory (RRHH-BB/RRHH-OB),
   // same B-{Level}-{RRHH}-{SSLL} naming convention as C-*/E-*/A-* above.
   // RRSSB-CSB only got a BB split (no "B-C-OB-SB" requested); add it the
   // same way if it's needed later. Conditions otherwise unchanged (still
   // HHLL-C + SSLLCategory, nested under "levelsbelow" / r.LevelsBelow).
-  "B-C-BB-C": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-C",
-  "B-C-OB-C": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-C",
-  "B-C-BB-E": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-E",
-  "B-C-OB-E": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-E",
-  "B-C-BB-SB": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-SB",
+  "B-C-BB-C": (r) => r.SSRRCategory === "RRSS-B" && r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-C",
+  "B-C-OB-C": (r) => r.SSRRCategory === "RRSS-B" && r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-C",
+  "B-C-BB-E": (r) => r.SSRRCategory === "RRSS-B" && r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-E",
+  "B-C-OB-E": (r) => r.SSRRCategory === "RRSS-B" && r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-E",
+  "B-C-BB-SB": (r) => r.SSRRCategory === "RRSS-B" && r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-SB",
   // PatternStats HHLL/RRHH/SSLL combo census (temporary debug addition)
   // found SSLL-OB (the largest single gap found, 19 rows) and SSLL-OA
   // both also reachable alongside RRHH-BB here (this block's RRSSB-C{SSLL}
   // comment above claimed only 3 reachable — SSLL-C/E/SB — under HHLL-C;
   // that trim needs revisiting). Also one HHLL-C + RRHH-OB + SSLL-OB row:
-  "B-C-BB-OB": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-OB",
-  "B-C-BB-OA": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-OA",
-  "B-C-OB-OB": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-OB",
+  "B-C-BB-OB": (r) => r.SSRRCategory === "RRSS-B" && r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-OB",
+  "B-C-BB-OA": (r) => r.SSRRCategory === "RRSS-B" && r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-OA",
+  "B-C-OB-OB": (r) => r.SSRRCategory === "RRSS-B" && r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-OB",
   // RENAMED: RRSSB-EC/RRSSB-EE/RRSSB-EHA -> B-E-{RRHH}-{SSLL}, each
   // further re-split by crossing against SSLLCategory (SSLL-BB/SSLL-OB),
   // same convention. RRSSB-EHA only got a BB split (no "B-E-HA-OB"
   // requested); add it the same way if it's needed later. Conditions
   // otherwise unchanged (still HHLL-E + RRHHCategory, nested under
   // "levelsbelow" / r.LevelsBelow).
-  "B-E-C-BB": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-BB",
-  "B-E-C-OB": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-OB",
-  "B-E-E-BB": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-BB",
-  "B-E-E-OB": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-OB",
+  "B-E-C-BB": (r) => r.SSRRCategory === "RRSS-B" && r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-BB",
+  "B-E-C-OB": (r) => r.SSRRCategory === "RRSS-B" && r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-OB",
+  "B-E-E-BB": (r) => r.SSRRCategory === "RRSS-B" && r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-BB",
+  "B-E-E-OB": (r) => r.SSRRCategory === "RRSS-B" && r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-OB",
   // NEW: B-E-OB-BB — HHLL-E + RRHH-OB + SSLL-BB, same B-E-* convention.
-  "B-E-OB-BB": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-BB",
-  "B-E-OB-OB": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-OB",
-  "B-E-HA-BB": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-HA" && r.SSLLCategory === "SSLL-BB",
+  "B-E-OB-BB": (r) => r.SSRRCategory === "RRSS-B" && r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-BB",
+  "B-E-OB-OB": (r) => r.SSRRCategory === "RRSS-B" && r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-OB",
+  "B-E-HA-BB": (r) => r.SSRRCategory === "RRSS-B" && r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-HA" && r.SSLLCategory === "SSLL-BB",
   // PatternStats HHLL/RRHH/SSLL combo census (temporary debug addition)
   // found RRHH-OA also reachable under HHLL-E here (this block's
   // RRSSB-E{RRHH} comment above claimed 5 reachable — BB/OB/C/E/HA —
   // with the "both up" RRHH-AA/RRHH-OA pair confirmed empty; RRHH-OA
   // alone, paired with SSLL-BB, is not actually empty):
-  "B-E-OA-BB": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-BB",
+  "B-E-OA-BB": (r) => r.SSRRCategory === "RRSS-B" && r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-BB",
 
   // C-{Level}-{RRHH}-{SSLL} — nested under "compressed" (r.compressed),
   // REPLACES the old RRSSC-{Level}{SSLL} set (RRSSC-AAA/AOA/BLB/BC/BE/
@@ -700,58 +700,58 @@ export const PIVOT_PATTERNS: Record<string, (r: CPRResult) => boolean> = {
   // elsewhere in this file; not worth a dedicated key.
   //
   // RRSSC-AAA (HHLL-A + SSLL-AA) -> 4 RRHH splits:
-  "C-A-C-AA": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-AA",
-  "C-A-HA-AA": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-HA" && r.SSLLCategory === "SSLL-AA",
-  "C-A-E-AA": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-AA",
-  "C-A-OA-AA": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-AA",
+  "C-A-C-AA": (r) => r.SSRRCategory === "RRSS-C" && r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-AA",
+  "C-A-HA-AA": (r) => r.SSRRCategory === "RRSS-C" && r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-HA" && r.SSLLCategory === "SSLL-AA",
+  "C-A-E-AA": (r) => r.SSRRCategory === "RRSS-C" && r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-AA",
+  "C-A-OA-AA": (r) => r.SSRRCategory === "RRSS-C" && r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-AA",
   // C-A-OB-AA — 5th RRHH split under HHLL-A + SSLL-AA, added per the
   // brute-force reachability sweep above (rare: ~0.006% of compressed
   // rows) — R1/PDH drift down together (RRHH-OB) even though PDH/PDL
   // themselves still classify as HHLL-A "Above":
-  "C-A-OB-AA": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-AA",
+  "C-A-OB-AA": (r) => r.SSRRCategory === "RRSS-C" && r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-AA",
   // RRSSC-AOA (HHLL-A + SSLL-OA) -> 3 RRHH splits:
-  "C-A-E-OA": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-OA",
-  "C-A-C-OA": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-OA",
-  "C-A-OA-OA": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-OA",
+  "C-A-E-OA": (r) => r.SSRRCategory === "RRSS-C" && r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-OA",
+  "C-A-C-OA": (r) => r.SSRRCategory === "RRSS-C" && r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-OA",
+  "C-A-OA-OA": (r) => r.SSRRCategory === "RRSS-C" && r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-OA",
   // RRSSC-BLB (HHLL-B + SSLL-LB) -> 2 RRHH splits:
-  "C-B-BB-LB": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-LB",
-  "C-B-OB-LB": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-LB",
+  "C-B-BB-LB": (r) => r.SSRRCategory === "RRSS-C" && r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-LB",
+  "C-B-OB-LB": (r) => r.SSRRCategory === "RRSS-C" && r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-LB",
   // RRSSC-BC (HHLL-B + SSLL-C) -> 2 RRHH splits:
-  "C-B-BB-C": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-C",
-  "C-B-OB-C": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-C",
+  "C-B-BB-C": (r) => r.SSRRCategory === "RRSS-C" && r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-C",
+  "C-B-OB-C": (r) => r.SSRRCategory === "RRSS-C" && r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-C",
   // RRSSC-BE (HHLL-B + SSLL-E) -> 2 RRHH splits:
-  "C-B-BB-E": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-E",
-  "C-B-OB-E": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-E",
+  "C-B-BB-E": (r) => r.SSRRCategory === "RRSS-C" && r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-E",
+  "C-B-OB-E": (r) => r.SSRRCategory === "RRSS-C" && r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-E",
   // RRSSC-CAA (HHLL-C + SSLL-AA) -> 2 RRHH splits:
-  "C-C-BB-AA": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-AA",
-  "C-C-OB-AA": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-AA",
+  "C-C-BB-AA": (r) => r.SSRRCategory === "RRSS-C" && r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-AA",
+  "C-C-OB-AA": (r) => r.SSRRCategory === "RRSS-C" && r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-AA",
   // RRSSC-COA (HHLL-C + SSLL-OA) -> 2 RRHH splits:
-  "C-C-BB-OA": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-OA",
-  "C-C-OB-OA": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-OA",
+  "C-C-BB-OA": (r) => r.SSRRCategory === "RRSS-C" && r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-BB" && r.SSLLCategory === "SSLL-OA",
+  "C-C-OB-OA": (r) => r.SSRRCategory === "RRSS-C" && r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-OB" && r.SSLLCategory === "SSLL-OA",
   // C-C-C-AA — 3rd RRHH split under HHLL-C + SSLL-AA, added per the
   // brute-force reachability sweep above: RRHH itself can land in its
   // own "Compressed" state (RRHH-C), not just BB/OB, while still under
   // HHLL-C:
-  "C-C-C-AA": (r) => r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-AA",
+  "C-C-C-AA": (r) => r.SSRRCategory === "RRSS-C" && r.HHLLCategory === "HHLL-C" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-AA",
 
   // E-{Level}-{RRHH}-{SSLL} — nested under "expanded" (r.expanded). See
   // PIVOT_PATTERN_KEYS below for the exported list of these 16 keys.
-  "E-A-AA-OB": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-OB",
-  "E-A-OA-OB": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-OB",
-  "E-A-AA-SB": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-SB",
-  "E-A-AA-C": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-C",
-  "E-A-OA-C": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-C",
-  "E-A-AA-E": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-E",
-  "E-A-OA-E": (r) => r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-E",
-  "E-B-RA-BB": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-RA" && r.SSLLCategory === "SSLL-BB",
-  "E-B-C-BB": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-BB",
-  "E-B-E-BB": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-BB",
-  "E-B-C-OB": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-OB",
-  "E-B-E-OB": (r) => r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-OB",
-  "E-E-AA-BB": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-BB",
-  "E-E-OA-BB": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-BB",
-  "E-E-AA-OB": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-OB",
-  "E-E-OA-OB": (r) => r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-OB",
+  "E-A-AA-OB": (r) => r.SSRRCategory === "RRSS-E" && r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-OB",
+  "E-A-OA-OB": (r) => r.SSRRCategory === "RRSS-E" && r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-OB",
+  "E-A-AA-SB": (r) => r.SSRRCategory === "RRSS-E" && r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-SB",
+  "E-A-AA-C": (r) => r.SSRRCategory === "RRSS-E" && r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-C",
+  "E-A-OA-C": (r) => r.SSRRCategory === "RRSS-E" && r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-C",
+  "E-A-AA-E": (r) => r.SSRRCategory === "RRSS-E" && r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-E",
+  "E-A-OA-E": (r) => r.SSRRCategory === "RRSS-E" && r.HHLLCategory === "HHLL-A" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-E",
+  "E-B-RA-BB": (r) => r.SSRRCategory === "RRSS-E" && r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-RA" && r.SSLLCategory === "SSLL-BB",
+  "E-B-C-BB": (r) => r.SSRRCategory === "RRSS-E" && r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-BB",
+  "E-B-E-BB": (r) => r.SSRRCategory === "RRSS-E" && r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-BB",
+  "E-B-C-OB": (r) => r.SSRRCategory === "RRSS-E" && r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-C" && r.SSLLCategory === "SSLL-OB",
+  "E-B-E-OB": (r) => r.SSRRCategory === "RRSS-E" && r.HHLLCategory === "HHLL-B" && r.RRHHCategory === "RRHH-E" && r.SSLLCategory === "SSLL-OB",
+  "E-E-AA-BB": (r) => r.SSRRCategory === "RRSS-E" && r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-BB",
+  "E-E-OA-BB": (r) => r.SSRRCategory === "RRSS-E" && r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-BB",
+  "E-E-AA-OB": (r) => r.SSRRCategory === "RRSS-E" && r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-OB",
+  "E-E-OA-OB": (r) => r.SSRRCategory === "RRSS-E" && r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-OB",
 };
 
 export function passesPattern(r: CPRResult, pattern: string): boolean {
@@ -1811,31 +1811,38 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
 }
 
 /**
- * PIVOT_PATTERN_KEYS — the 78 "E-{Level}-{RRHH}-{SSLL}" (16, "expanded"),
+ * PIVOT_PATTERN_KEYS — the 80 "E-{Level}-{RRHH}-{SSLL}" (16, "expanded"),
  * "C-{Level}-{RRHH}-{SSLL}" (19, "compressed"), "A-E-{RRHH}-{SSLL}" (6,
  * "LevelsAbove" HHLL-E, renamed from RRSSA-EC/EE/ELB/EOB — "A-E-AA-OB" is
  * defined but deliberately excluded from this list, see below),
- * "A-{Level}-{RRHH}-{SSLL}" (15, "LevelsAbove" HHLL-A/B/C, renamed from
+ * "A-{Level}-{RRHH}-{SSLL}" (17, "LevelsAbove" HHLL-A/B/C, renamed from
  * RRSSA-AAA-AA/AAA-OA/AOA-AA/AOA-OA/CC/CE/CRA/BC-C/BC-LB/BE-E/BE-LB/
- * BRA-C/BRA-E/BRA-LB — "A-A-OA-AA"/"A-A-OA-OA" are defined but
- * deliberately excluded, see below), and "B-{Level}-{RRHH}-{SSLL}" (22,
- * "LevelsBelow" HHLL-A/B/C/E, renamed from RRSSB-A{RRHH}-{SSLL}/
- * B{RRHH}-{SSLL}/C{SSLL}/E{RRHH} — no duplicates to exclude here) keys
- * handled by the passesPattern cases / PIVOT_PATTERNS entries above (see
- * those blocks' comments for the full HHLLCategory x RRHHCategory x
- * SSLLCategory derivation of each set; the C-* set REPLACES the old
- * RRSSC-{Level}{SSLL} keys). MERGED from what used to be two separate
- * lists (PIVOT_PATTERN_KEYS for E-*, COMPRESSED_PATTERN_KEYS for C-*)
- * into one: r.expanded and r.compressed are mutually exclusive states, so
- * a row can never match both an E-* and a C-* key, making a single
- * combined list/function safe. The A-E-* keys added on top are NOT
- * guaranteed mutually exclusive with the E-* keys in general — LevelsAbove
- * can coincide with "expanded" for the same row — but none of the six
- * A-E-* keys actually included below duplicate an E-* condition or each
- * other; "A-E-AA-OB" is intentionally left out of this list (see the note
- * below) precisely because it would have. Exported so computePivotPattern
- * below can iterate them without duplicating the list, and so other
- * views/legends can reuse the same set.
+ * BRA-C/BRA-E/BRA-LB — "A-A-OA-AA"/"A-A-OA-OA" now included too, see
+ * below), and "B-{Level}-{RRHH}-{SSLL}" (22, "LevelsBelow" HHLL-A/B/C/E,
+ * renamed from RRSSB-A{RRHH}-{SSLL}/B{RRHH}-{SSLL}/C{SSLL}/E{RRHH} — no
+ * duplicates to exclude here) keys handled by the passesPattern cases /
+ * PIVOT_PATTERNS entries above (see those blocks' comments for the full
+ * HHLLCategory x RRHHCategory x SSLLCategory derivation of each set; the
+ * C-* set REPLACES the old RRSSC-{Level}{SSLL} keys). Every PIVOT_PATTERNS
+ * predicate leads with an explicit r.SSRRCategory === "RRSS-{Level}" check
+ * (Level = A/B/C/E matching the key's own prefix letter) before the
+ * HHLLCategory/RRHHCategory/SSLLCategory checks, so keys from different
+ * families can no longer collide on an identical condition even when their
+ * HHLL/RRHH/SSLL combo happens to match — see "A-E-AA-OB" below for the
+ * one remaining case where two keys share the same family AND the same
+ * HHLL/RRHH/SSLL combo (a same-family duplicate, unaffected by the
+ * SSRRCategory check). MERGED from what used to be two separate lists
+ * (PIVOT_PATTERN_KEYS for E-*, COMPRESSED_PATTERN_KEYS for C-*) into one:
+ * r.expanded and r.compressed are mutually exclusive states, so a row can
+ * never match both an E-* and a C-* key, making a single combined
+ * list/function safe. The A-E-* keys added on top are NOT guaranteed
+ * mutually exclusive with the E-* keys in general — LevelsAbove can
+ * coincide with "expanded" for the same row — but none of the six A-E-*
+ * keys actually included below duplicate an E-* condition or each other;
+ * "A-E-AA-OB" is intentionally left out of this list (see the note below)
+ * precisely because it would have. Exported so computePivotPattern below
+ * can iterate them without duplicating the list, and so other views/legends
+ * can reuse the same set.
  */
 export const PIVOT_PATTERN_KEYS = [
   "E-A-AA-OB", "E-A-OA-OB", "E-A-AA-SB", "E-A-AA-C", "E-A-OA-C",
@@ -1861,15 +1868,16 @@ export const PIVOT_PATTERN_KEYS = [
   // never added to this array, so computePivotPattern/renderPivotPatternBadge
   // never tried them — rows matching these HHLL-A/B/C combos (e.g. HHLL-A +
   // RRHH-AA + SSLL-AA) got no badge at all, even though the Backtest scan
-  // for the same key worked fine. "A-A-OA-AA" and "A-A-OA-OA" are
-  // DELIBERATELY OMITTED from this list: their conditions (HHLL-A +
-  // RRHH-OA + SSLL-AA / SSLL-OA, see PIVOT_PATTERNS above) are exact
-  // duplicates of "C-A-OA-AA" / "C-A-OA-OA" already in this list, so they
-  // could never be the one computePivotPattern actually returns for a
-  // matching row anyway — same treatment as "A-E-AA-OB" above. Both stay
-  // defined in PIVOT_PATTERNS and still work as their own symbol-list
-  // scans in the Backtest dropdown (see backtest.ts).
-  "A-A-AA-AA", "A-A-AA-OA",
+  // for the same key worked fine. "A-A-OA-AA" and "A-A-OA-OA" USED TO BE
+  // omitted here as exact duplicates of "C-A-OA-AA" / "C-A-OA-OA" (both
+  // pairs shared the same HHLL-A + RRHH-OA + SSLL-AA/OA condition with no
+  // way to tell the A-* row from the C-* row). Now that every
+  // PIVOT_PATTERNS predicate leads with an explicit r.SSRRCategory check
+  // (r.SSRRCategory === "RRSS-A" for A-* keys, "RRSS-C" for C-* keys —
+  // see PIVOT_PATTERNS above), "A-A-OA-AA"/"A-A-OA-OA" and
+  // "C-A-OA-AA"/"C-A-OA-OA" are independently reachable (RRSS-A vs
+  // RRSS-C), so they're included below like any other key.
+  "A-A-AA-AA", "A-A-AA-OA", "A-A-OA-AA", "A-A-OA-OA",
   "A-B-C-C", "A-B-C-LB", "A-B-E-E", "A-B-E-LB",
   "A-B-RA-C", "A-B-RA-E", "A-B-RA-LB",
   "A-C-C-AA", "A-C-C-OA", "A-C-E-AA", "A-C-E-OA",
