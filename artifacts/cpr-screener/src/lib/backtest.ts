@@ -46,11 +46,11 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
   },
-  // NEW: A-A-AA-AA-U4L3-ApR2 — nested as a View under the A-A-AA-AA
+  // NEW: A-A-AA-AA-EU2L4-ApR2 — nested as a View under the A-A-AA-AA
   // Pattern. Bullish U4 target, using the existing backtest time horizon.
   {
-    key: "A-A-AA-AA-U4L3-ApR2",
-    label: "A-A-AA-AA-U4L3-ApR2",
+    key: "A-A-AA-AA-EU2L4-ApR2",
+    label: "A-A-AA-AA-EU2L4-ApR2",
     direction: "bullish",
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
@@ -628,7 +628,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       // the "compressed"/C-* and "expanded"/E-* sets): RRSSA-AAA-AA ->
       // A-A-AA-AA, RRSSA-AAA-OA -> A-A-AA-OA, RRSSA-AOA-AA -> A-A-OA-AA,
       // RRSSA-AOA-OA -> A-A-OA-OA. Conditions unchanged.
-      { key: "A-A-AA-AA", label: "A-A-AA-AA", subPatternKeys: ["A-A-AA-AA-U4L3", "A-A-AA-AA-U4L3-ApR2"] },
+      { key: "A-A-AA-AA", label: "A-A-AA-AA", subPatternKeys: ["A-A-AA-AA-U4L3", "A-A-AA-AA-EU2L4-ApR2"] },
       { key: "A-A-AA-AA:Candidate-Unfavorable", label: "A-A-AA-AA · Candidate Unfavorable (PrevGap + Narrow)", subPatternKeys: [] },
       { key: "A-A-AA-OA", label: "A-A-AA-OA", subPatternKeys: [] },
       { key: "A-A-OA-AA", label: "A-A-OA-AA", subPatternKeys: [] },

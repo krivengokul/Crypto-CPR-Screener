@@ -938,10 +938,10 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.U4L3
       );
     // A-A-AA-AA + U4L3 diagnostic View.
-    case "A-A-AA-AA-U4L3-ApR2":
+    case "A-A-AA-AA-EU2L4-ApR2":
       return (
         isAaaaDiagnosticBase(r) &&
-        r.U4L3 && r.todayCPR.HLSwitch === "HL-B" && 
+        r.EU2L4 && r.todayCPR.HLSwitch === "HL-B" && 
         r.todayCPR.prevLow > r.prevCPR.tc &&  r.todayCPR.bc > r.prevCPR.r2
       );
     case "A-A-AA-AA:Candidate-Unfavorable":
