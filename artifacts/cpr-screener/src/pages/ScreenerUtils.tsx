@@ -931,18 +931,11 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // inside prev's BC/R1 band. Sits above "LEVELs BELOW" in the left-nav.
     case "levelsabove":
       return r.LevelsAbove;
-    // Diagnostic split under A-A-AA-AA. Both branches preserve the
-    // screenshot's RRGap + HHGap arrangement and HL-B/HL-B state; they differ
-    // only in which HL gap wins and whether today's CPR widens or narrows.
-    case "A-A-AA-AA:Candidate-Favorable":
+    // A-A-AA-AA + U4L3 diagnostic View.
+    case "A-A-AA-AA-U4L3":
       return (
         isAaaaDiagnosticBase(r) &&
-        r.RRSSGapCategory === "RRGap" &&
-        r.PDHPDLGapCategory === "HHGap" &&
-        r.prevCPR.HLSwitch === "HL-B" &&
-        r.todayCPR.HLSwitch === "HL-B" &&
-        r.hlGapWinner === "today" &&
-        r.strWideCPR
+        r.U4L3
       );
     case "A-A-AA-AA:Candidate-Unfavorable":
       return (
@@ -1833,17 +1826,12 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     // levelsbelow/compressed) are now defined exactly once, in
     // PIVOT_PATTERNS above passesPattern, and checked at the top of
     // this function — see that map's comment for the full derivation.
-    // Same diagnostic predicates as passesPattern, without relying on the
-    // cosmetic badge text. This lets Pattern Stats/backtest count the branches.
-    case "A-A-AA-AA:Candidate-Favorable":
+    // A-A-AA-AA + U4L3 diagnostic View. Keep the raw flag filterable
+    // independently from the cosmetic U4L3 badge rendering.
+    case "A-A-AA-AA-U4L3":
       return (
         isAaaaDiagnosticBase(r) &&
-        r.RRSSGapCategory === "RRGap" &&
-        r.PDHPDLGapCategory === "HHGap" &&
-        r.prevCPR.HLSwitch === "HL-B" &&
-        r.todayCPR.HLSwitch === "HL-B" &&
-        r.hlGapWinner === "today" &&
-        r.strWideCPR
+        r.U4L3
       );
     case "A-A-AA-AA:Candidate-Unfavorable":
       return (
