@@ -913,6 +913,7 @@ export default function Screener({
                 <span className="bg-gradient-to-r from-primary to-sky-400 bg-clip-text text-transparent">
                   PIVOT LEVEL
                 </span>
+                {/* Views */}
                 <span
                   className="relative inline-flex items-center italic font-semibold"
                   style={{
@@ -934,11 +935,25 @@ export default function Screener({
                   </span>
                   ews
                 </span>
-                <span className="relative inline-flex items-center text-emerald-400 italic">
+                {/* Live */}
+                <span
+                  className="relative inline-flex items-center italic font-semibold"
+                  style={{
+                    background: "linear-gradient(90deg, #22c55e, #14b8a6, #06b6d4)",
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                  }}
+                >
                   L
                   <span className="relative inline-block">
                     ı
-                    <span className="absolute -top-1 left-1/2 -translate-x-[5%] h-1 w-1 rounded-full bg-emerald-400 animate-pulse" />
+                    <span
+                      className="absolute -top-1 left-[60%] h-1.5 w-1.5 rounded-full bg-cyan-300 animate-pulse"
+                      style={{
+                        WebkitTextFillColor: "initial",
+                        boxShadow: "0 0 6px #22d3ee",
+                      }}
+                    />
                   </span>
                   ve
                 </span>
