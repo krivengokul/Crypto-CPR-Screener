@@ -1357,8 +1357,8 @@ export default function Screener({
                   { label: "Lower", active: "border-destructive text-destructive" },
                   { label: "CL4U3", active: "border-indigo-500 text-indigo-500" },
                   { label: "L4U4", active: "border-lime-400 text-lime-400" },
-                  { label: "EU4L4", active: "border-pink-400 text-pink-400" },
-                  { label: "EL4U4", active: "border-red-400 text-red-400" },
+                  { label: "EU4L4", active: "border-orange-400 text-orange-400" },
+                  { label: "EL4U4", active: "border-yellow-400 text-yellow-400" },
                   { label: "QU4L4", active: "border-slate-400 text-slate-300" },
                   { label: "U4L2", active: "border-green-500 text-green-500" },
                   { label: "U3L2", active: "border-emerald-500 text-emerald-500" },
@@ -1367,17 +1367,17 @@ export default function Screener({
                   { label: "U3L4", active: "border-lime-600 text-lime-600" },
                   { label: "U2L4", active: "border-green-400 text-green-400" },
                   { label: "U1L4", active: "border-emerald-600 text-emerald-600" },
-                  { label: "EU3L4", active: "border-green-400 text-green-400" },
+                  { label: "EU3L4", active: "border-amber-400 text-amber-400" },
                   { label: "L3TC", active: "border-sky-600 text-sky-300" },
-                  { label: "EL1L2", active: "border-teal-400 text-teal-400" },
-                  { label: "EL2L1", active: "border-rose-400 text-rose-400" },
+                  { label: "EL1L2", active: "border-amber-400 text-amber-400" },
+                  { label: "EL2L1", active: "border-orange-400 text-orange-400" },
                   { label: "CU3L2", active: "border-blue-500 text-blue-500" },
                   { label: "CU3L3", active: "border-blue-600 text-blue-600" },
                   { label: "EL2U4", active: "border-amber-400 text-amber-400" },
-                  { label: "EL3U4", active: "border-blue-400 text-blue-400" },
+                  { label: "EL3U4", active: "border-orange-400 text-orange-400" },
                   { label: "CU4L2", active: "border-purple-500 text-purple-500" },
-                  { label: "EU3L3", active: "border-orange-400 text-orange-400" },
-                  { label: "EL3U3", active: "border-red-400 text-red-400" },
+                  { label: "EU3L3", active: "border-yellow-400 text-yellow-400" },
+                  { label: "EL3U3", active: "border-amber-400 text-amber-400" },
                   { label: "CU4L4",   active: "border-blue-400 text-blue-400" },
                   { label: "CU4L3",   active: "border-indigo-600 text-indigo-600" },
                   { label: "CL3U3",   active: "border-blue-700 text-blue-700" },
@@ -1391,15 +1391,15 @@ export default function Screener({
                   { label: "L1U4", active: "border-orange-400 text-orange-400" },
                   { label: "CL4U2",  active: "border-indigo-700 text-indigo-700" },
                   // NEW: eXL*U1 / eXL*CPR sub-type badges (unconditional, all sections)
-                  { label: "EU1L2",   active: "border-purple-400 text-purple-400" },
-                  { label: "EU1L3",   active: "border-violet-400 text-violet-400" },
-                  { label: "EU1L4",   active: "border-fuchsia-400 text-fuchsia-400" },
-                  { label: "EUBL1",  active: "border-sky-400 text-sky-400" },
-                  { label: "EUPL1",  active: "border-cyan-400 text-cyan-400" },
-                  { label: "EUTL1",  active: "border-teal-400 text-teal-400" },
-                  { label: "EUBL2",  active: "border-blue-400 text-blue-400" },
-                  { label: "EUBL3",  active: "border-indigo-400 text-indigo-400" },
-                  { label: "EUPL3",  active: "border-fuchsia-400 text-fuchsia-400" },
+                  { label: "EU1L2",   active: "border-amber-400 text-amber-400" },
+                  { label: "EU1L3",   active: "border-orange-400 text-orange-400" },
+                  { label: "EU1L4",   active: "border-yellow-400 text-yellow-400" },
+                  { label: "EUBL1",  active: "border-amber-400 text-amber-400" },
+                  { label: "EUPL1",  active: "border-orange-400 text-orange-400" },
+                  { label: "EUTL1",  active: "border-yellow-400 text-yellow-400" },
+                  { label: "EUBL2",  active: "border-amber-400 text-amber-400" },
+                  { label: "EUBL3",  active: "border-orange-400 text-orange-400" },
+                  { label: "EUPL3",  active: "border-yellow-400 text-yellow-400" },
                   // NEW: CL1U1 / CU1L1 / CL2U2 / CU2L2 badges (unconditional, all sections)
                   { label: "CL1U1",   active: "border-blue-800 text-blue-800" },
                   { label: "CU1L1",   active: "border-violet-700 text-violet-700" },
@@ -1410,37 +1410,37 @@ export default function Screener({
                   // NEW: CL4U4 — independent, section-agnostic Pattern flag (see cpr.ts).
                   { label: "CL4U4",   active: "border-violet-400 text-violet-400" },
                   // NEW: EU2L3 — prev S4 inside today S2/S3 AND prev R4 inside today R1/R2
-                  { label: "EU2L3",   active: "border-amber-400 text-amber-400" },
+                  { label: "EU2L3",   active: "border-orange-400 text-orange-400" },
                   // NEW: expanded family — today's outer S-level broke below prev S4
                   // AND today's outer R-level/TC broke above prev R4 (see cpr.ts).
-                  { label: "EU2L4",  active: "border-purple-400 text-purple-400" },
-                  { label: "EU2L2",   active: "border-blue-400 text-blue-400" },
-                  { label: "EUTL2",   active: "border-sky-400 text-sky-400" },
-                  { label: "EUTL3",   active: "border-indigo-400 text-indigo-400" },
-                  { label: "EU1L1",   active: "border-fuchsia-400 text-fuchsia-400" },
+                  { label: "EU2L4",  active: "border-yellow-400 text-yellow-400" },
+                  { label: "EU2L2",   active: "border-amber-400 text-amber-400" },
+                  { label: "EUTL2",   active: "border-orange-400 text-orange-400" },
+                  { label: "EUTL3",   active: "border-yellow-400 text-yellow-400" },
+                  { label: "EU1L1",   active: "border-amber-400 text-amber-400" },
                   // NEW: EL1U1 — same band shape as EU1L1, fires when the R1/R4 gap is larger.
-                  { label: "EL1U1",   active: "border-cyan-400 text-cyan-400" },
+                  { label: "EL1U1",   active: "border-orange-400 text-orange-400" },
                   // NEW: EL1U2 — prev R4 inside today R1/R2 (U2) AND prev S4 inside today BC/S1 (L1).
-                  { label: "EL1U2",   active: "border-violet-400 text-violet-400" },
+                  { label: "EL1U2",   active: "border-yellow-400 text-yellow-400" },
                   // NEW: EL1U3 — prev R4 inside today R2/R3 (U3) AND prev S4 inside today BC/S1 (L1).
-                  { label: "EL1U3",   active: "border-red-400 text-red-400" },
+                  { label: "EL1U3",   active: "border-amber-400 text-amber-400" },
                   { label: "EL2U3",   active: "border-orange-400 text-orange-400" },
                   // NEW: ELTU2 — prev R4 inside today R1/R2 (U2) AND prev S4 inside today TC/R1.
-                  { label: "ELTU2",   active: "border-teal-400 text-teal-400" },
+                  { label: "ELTU2",   active: "border-yellow-400 text-yellow-400" },
                   // NEW: ELBU2 — prev R4 inside today R1/R2 (U2) AND prev S4 inside today BC/Pivot.
-                  { label: "ELBU2",   active: "border-indigo-400 text-indigo-400" },
+                  { label: "ELBU2",   active: "border-amber-400 text-amber-400" },
                   // NEW: ELTU3 — prev R4 inside today R2/R3 (U3) AND prev S4 inside today TC/R1.
-                  { label: "ELTU3",   active: "border-rose-400 text-rose-400" },
+                  { label: "ELTU3",   active: "border-orange-400 text-orange-400" },
                   // NEW: ELPU2 — prev R4 inside today R1/R2 (U2) AND prev S4 inside today Pivot/TC.
-                  { label: "ELPU2",   active: "border-sky-400 text-sky-400" },
+                  { label: "ELPU2",   active: "border-yellow-400 text-yellow-400" },
                   // NEW: ELPU3 — prev R4 inside today R2/R3 (U3) AND prev S4 inside today Pivot/TC.
-                  { label: "ELPU3",   active: "border-yellow-400 text-yellow-400" },
+                  { label: "ELPU3",   active: "border-amber-400 text-amber-400" },
                   // NEW: ELBU3 — prev R4 inside today R2/R3 (U3) AND prev S4 inside today BC/Pivot.
-                  { label: "ELBU3",   active: "border-pink-400 text-pink-400" },
+                  { label: "ELBU3",   active: "border-orange-400 text-orange-400" },
                   // NEW: EUPL2 — prev S4 inside today S2/S1 (L2) AND prev R4 inside today BC/Pivot.
-                  { label: "EUPL2",   active: "border-emerald-400 text-emerald-400" },
+                  { label: "EUPL2",   active: "border-yellow-400 text-yellow-400" },
                   // NEW: EUTL4 — prev S4 inside today S4/S3 (L4) AND prev R4 inside today Pivot/TC.
-                  { label: "EUTL4",   active: "border-indigo-300 text-indigo-300" },
+                  { label: "EUTL4",   active: "border-amber-400 text-amber-400" },
                   // NEW: L2U3 — today R4 inside prev R2/R3 (U3) AND prev S4 inside today S2/S1 (L2).
                   { label: "L2U3",   active: "border-amber-400 text-amber-400" },
                   // NEW: CU2L1 — today S4 inside prev S1/BC (L1) AND today R4 inside prev R1/R2 (U2).
@@ -1450,9 +1450,9 @@ export default function Screener({
                   // NEW: U2L3 — today S4 inside prev S3/S2 (L3) AND prev R4 inside prev's own R1/R2 (U2).
                   { label: "U2L3",   active: "border-lime-400 text-lime-400" },
                   // NEW: EL1U4 — prev R4 inside today R3/R4 (U4) AND prev S4 inside today BC/S1 (L1).
-                  { label: "EL1U4",   active: "border-green-400 text-green-400" },
+                  { label: "EL1U4",   active: "border-orange-400 text-orange-400" },
                   // NEW: ELBU4 — prev R4 inside today R3/R4 (U4) AND prev S4 inside today BC/Pivot.
-                  { label: "ELBU4",   active: "border-lime-400 text-lime-400" },
+                  { label: "ELBU4",   active: "border-yellow-400 text-yellow-400" },
                 ] as { label: PatternInfo["label"]; active: string }[]
               ).map(({ label, active }) => (
                 <button
