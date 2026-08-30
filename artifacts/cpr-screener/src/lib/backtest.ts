@@ -611,6 +611,8 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       // A-A-AA-AA, RRSSA-AAA-OA -> A-A-AA-OA, RRSSA-AOA-AA -> A-A-OA-AA,
       // RRSSA-AOA-OA -> A-A-OA-OA. Conditions unchanged.
       { key: "A-A-AA-AA", label: "A-A-AA-AA", subPatternKeys: [] },
+      { key: "A-A-AA-AA:Candidate-Favorable", label: "A-A-AA-AA · Candidate Favorable (TodayGap + Wide)", subPatternKeys: [] },
+      { key: "A-A-AA-AA:Candidate-Unfavorable", label: "A-A-AA-AA · Candidate Unfavorable (PrevGap + Narrow)", subPatternKeys: [] },
       { key: "A-A-AA-OA", label: "A-A-AA-OA", subPatternKeys: [] },
       { key: "A-A-OA-AA", label: "A-A-OA-AA", subPatternKeys: [] },
       { key: "A-A-OA-OA", label: "A-A-OA-OA", subPatternKeys: [] },
