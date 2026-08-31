@@ -177,6 +177,31 @@ function DateField({
   );
 }
 
+/**
+ * Groups a category's combo rows by their RRSS segment (the part of
+ * c.combo before the first "/", e.g. "RRSS_X" in
+ * "RRSS_X/HHLL_Y/RRHH_Z/SSLL_W"), with a subtotal count per RRSS value
+ * (sum of that group's combo counts). Highest-subtotal-first, and within
+ * each group, highest-count-first.
+ */
+function groupCombosByRRSS(combos: CategoryComboRow[]): { rrss: string; total: number; combos: CategoryComboRow[] }[] {
+  const byRRSS = new Map<string, { rrss: string; total: number; combos: CategoryComboRow[] }>();
+  for (const c of combos) {
+    const rrss = c.combo.split("/")[0] || "—";
+    const existing = byRRSS.get(rrss);
+    if (existing) {
+      existing.total += c.count;
+      existing.combos.push(c);
+    } else {
+      byRRSS.set(rrss, { rrss, total: c.count, combos: [c] });
+    }
+  }
+  const groups = Array.from(byRRSS.values());
+  for (const g of groups) g.combos.sort((a, b) => b.count - a.count);
+  groups.sort((a, b) => b.total - a.total);
+  return groups;
+}
+
 /** One category's patterns grouped together, with the category's own total (sum of its patterns' counts). */
 interface CategoryGroup {
   categoryKey: string;
@@ -265,16 +290,26 @@ function CategoryBox({ group }: { group: CategoryGroup }) {
           CategoryGroup.combos / runPatternCensus's combos output) once no
           longer needed. */}
       {group.combos.length > 0 && (
-        <div className="mt-3 space-y-0.5 border-t border-dashed border-border/70 pt-2">
+        <div className="mt-3 space-y-2 border-t border-dashed border-border/70 pt-2">
           <p className="mb-1 text-[9px] uppercase tracking-wider text-muted-foreground">
-            HHLL / RRHH / SSLL combos ({group.combos.length})
+            RRSS / HHLL / RRHH / SSLL combos ({group.combos.length})
           </p>
-          {group.combos.map((c) => (
-            <div key={c.combo} className="flex items-center justify-between gap-3 rounded-md px-1.5 py-0.5 text-xs">
-              <span className="truncate font-mono text-[11px] text-muted-foreground">{c.combo}</span>
-              <span className="shrink-0 rounded-full bg-background/60 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-muted-foreground">
-                {c.count}
-              </span>
+          {groupCombosByRRSS(group.combos).map((rg) => (
+            <div key={rg.rrss} className="space-y-0.5">
+              <div className="flex items-center justify-between gap-3 rounded-md bg-muted/20 px-1.5 py-0.5">
+                <span className="truncate font-mono text-[10px] font-semibold text-foreground/80">{rg.rrss}</span>
+                <span className="shrink-0 rounded-full bg-background/60 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-muted-foreground">
+                  {rg.total}
+                </span>
+              </div>
+              {rg.combos.map((c) => (
+                <div key={c.combo} className="flex items-center justify-between gap-3 rounded-md px-1.5 py-0.5 pl-3 text-xs">
+                  <span className="truncate font-mono text-[11px] text-muted-foreground">{c.combo}</span>
+                  <span className="shrink-0 rounded-full bg-background/60 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-muted-foreground">
+                    {c.count}
+                  </span>
+                </div>
+              ))}
             </div>
           ))}
         </div>
