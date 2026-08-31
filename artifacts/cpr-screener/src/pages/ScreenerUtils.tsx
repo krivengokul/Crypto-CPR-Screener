@@ -968,6 +968,8 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return isAaaaDiagnosticBase(r) && r.U2L4;
     case "A-A-AA-AA-U3L4":
       return isAaaaDiagnosticBase(r) && r.U3L4;
+    case "A-A-AA-AA-EU3L4":
+      return isAaaaDiagnosticBase(r) && r.EU3L4;
     // A-A-AA-AA + today's EU2L4/HL-B state + previous day's p-EU2L4.
     case "A-A-AA-AA-EU2L4-ApR2":
       return (
@@ -988,23 +990,17 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.narrowCPR
       );
 
-    // RENAMED from "9AM:MegL-U4+1:3PM": all previous conditions removed.
-    // 6PM:HHLLA-RRHHGap:6AM — LEVELS ABOVE + RRSSGapCategory RRGap (today's
-    // R1 gap vs prev's R1 larger than the S1 gap) + RRHHCategory RRHH-AA
-    // (today's R1 AND today's PDH both fully above prev's R1/PDH) +
-    // SSLLCategory SSLL-AA (today's S1 AND today's PDL both fully above
-    // prev's S1/PDL) + HHLLCategory HHLL-A (today's PDH/PDL both above
-    // prev's) + PDHPDLGapCategory HHGap (today's PDH gap vs prev's PDH
-    // larger than the PDL gap). Bullish, entry ~6PM, targets today's own
-    // U4 by ~6AM.
-    case "6PM:HHLLA-RRHHGap:6AM":
+    // NEW: A-A-AA-AA-EU3L4-GapB — leaf View nested under the
+    // A-A-AA-AA-EU3L4 Pattern. The parent Pattern contributes
+    // A-A-AA-AA + EU3L4; this leaf adds HLGap-B (today's HLSwitch HL-B and
+    // today's HL gap is the wider gap), replacing the former RRGap + HHGap
+    // condition.
+    case "A-A-AA-AA-EU3L4-GapB":
       return (
-        r.LevelsAbove &&
-        r.RRSSGapCategory === "RRGap" &&
-        r.RRHHCategory === "RRHH-AA" &&
-        r.SSLLCategory === "SSLL-AA" &&
-        r.HHLLCategory === "HHLL-A" &&
-        r.PDHPDLGapCategory === "HHGap"
+        isAaaaDiagnosticBase(r) &&
+        r.EU3L4 &&
+        r.todayCPR.HLSwitch === "HL-B" &&
+        r.hlGapWinner === "today"
       );
     // NEW: 7PM:MoMi->U4:2AM — LEVELS ABOVE + the PREVIOUS day's own pivot
     // sub-label (prevCPR vs ppCPR) being CU1L1 ("p-CU1L1" badge) +
@@ -1038,7 +1034,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // ("p-EU3L4" badge) + today's BC above prev day's own PDH
     // (todayCPR.bc > prevCPR.prevHigh) + today's S1 above prev day's TC
     // (todayCPR.s1 > prevCPR.tc). Bullish, entry ~6PM, targets Far Above
-    // U4 by ~9PM. Green color family, same as its 6PM:HHLLA-RRHHGap:6AM
+    // U4 by ~9PM. Green color family, same as the A-A-AA-AA-EU3L4-GapB
     // sibling.
     case "6PM:APHS1A-FAU4:9PM":
       return (
@@ -1055,7 +1051,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // PLUS prev day's Pivot above today's PDL ("pPivot > PDL") PLUS
     // today's own Pivot above today's PDH ("Pivot > PAH"). Bullish, entry
     // ~9AM, targets Far Above U4 by ~2PM. Green color family, same as its
-    // 6PM:HHLLA-RRHHGap:6AM / 6PM:APHS1A-FAU4:9PM siblings.
+    // A-A-AA-AA-EU3L4-GapB / 6PM:APHS1A-FAU4:9PM siblings.
     case "9AM:pPALPApH-FAU4:2PM":
       return (
         r.LevelsAbove &&
@@ -1488,7 +1484,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     { key: "2P:L4U4-pLAP:R4-2A", direction: "up" },
   ],
   "levelsabove": [
-    { key: "6PM:HHLLA-RRHHGap:6AM", direction: "up" },
+    { key: "A-A-AA-AA-EU3L4-GapB", direction: "up" },
     { key: "7PM:MoMi->U4:2AM", direction: "up" },
     { key: "7PM:MoMi-<L4:2AM", direction: "down" },
     { key: "6PM:APHS1A-FAU4:9PM", direction: "up" },
@@ -1938,6 +1934,8 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
       return PIVOT_PATTERNS["A-A-AA-AA"](r) && r.U2L4;
     case "A-A-AA-AA-U3L4":
       return PIVOT_PATTERNS["A-A-AA-AA"](r) && r.U3L4;
+    case "A-A-AA-AA-EU3L4":
+      return PIVOT_PATTERNS["A-A-AA-AA"](r) && r.EU3L4;
     case "A-A-AA-AA-U3L4-pGapB":
       return (
         PIVOT_PATTERNS["A-A-AA-AA"](r) &&
@@ -1948,6 +1946,13 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
         r.todayCPR.HLSwitch === "HL-B" &&
         r.hlGapWinner === "prev" &&
         r.narrowCPR
+      );
+    case "A-A-AA-AA-EU3L4-GapB":
+      return (
+        PIVOT_PATTERNS["A-A-AA-AA"](r) &&
+        r.EU3L4 &&
+        r.todayCPR.HLSwitch === "HL-B" &&
+        r.hlGapWinner === "today"
       );
     default: return getPatternInfo(r)?.label === label;
   }

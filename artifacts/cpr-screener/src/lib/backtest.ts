@@ -24,15 +24,14 @@ export interface BacktestTargetDef {
 }
 
 export const BACKTEST_TARGETS: BacktestTargetDef[] = [
-  // RENAMED from "9AM:MegL-U4+1:3PM": all previous conditions removed.
-  // "6PM:HHLLA-RRHHGap:6AM" — nested directly under "LEVELS ABOVE" (no
-  // longer gated on the "EU2L4" Pattern flag). Condition: LevelsAbove +
-  // RRSSGapCategory RRGap + RRHHCategory RRHH-AA + SSLLCategory SSLL-AA +
-  // HHLLCategory HHLL-A + PDHPDLGapCategory HHGap — see ScreenerUtils.tsx.
-  // Bullish, entry ~6PM, targets today's own R4 / U4 by ~6AM.
+  // Renamed from the former 6PM HHLLA/RRHH-Gap View. This View is now nested
+  // under the A-A-AA-AA-EU3L4 Pattern. Its effective condition is the
+  // A-A-AA-AA structural base + EU3L4 (the parent Pattern) + HLGap-B,
+  // replacing the old RRGap + HHGap conditions. Bullish, targets today's
+  // own R4 / U4.
   {
-    key: "6PM:HHLLA-RRHHGap:6AM",
-    label: "6PM:HHLLA-RRHHGap:6AM",
+    key: "A-A-AA-AA-EU3L4-GapB",
+    label: "A-A-AA-AA-EU3L4-GapB",
     direction: "bullish",
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
@@ -78,9 +77,8 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
   },
-  // NEW: "7PM:MoMi->U4:2AM" — nested under "LEVELS ABOVE" → Pattern "EU2L4",
-  // alongside its sibling "6PM:HHLLA-RRHHGap:6AM". Bullish, targets today's
-  // own R4 / U4 by ~2AM.
+  // NEW: "7PM:MoMi->U4:2AM" — nested under "LEVELS ABOVE" → Pattern "EU2L4".
+  // Bullish, targets today's own R4 / U4 by ~2AM.
   {
     key: "7PM:MoMi->U4:2AM",
     label: "7PM:MoMi->U4:2AM",
@@ -602,12 +600,10 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
     key: "levelsabove",
     label: "LEVELs ABOVE",
     // RENAMED from "9AM:MegL-U4+1:3PM": all previous conditions removed,
-    // so "6PM:HHLLA-RRHHGap:6AM" is no longer gated on the "EU2L4"
-    // Pattern flag — it now sits directly on this category's own
-    // subPatternKeys again (base condition = parent levelsabove's
-    // condition AND RRGap/RRHH-AA/SSLL-AA/HHLL-A/HHGap — see
-    // ScreenerUtils.tsx).
-    subPatternKeys: ["6PM:HHLLA-RRHHGap:6AM", "LA-BCpPDH-TopClose-U2"],
+    // "LA-BCpPDH-TopClose-U2" remains a direct View under this category.
+    // The former 6PM View now lives under the A-A-AA-AA-EU3L4 Pattern
+    // below, so the complete A-A-AA-AA branch can stay together at the top.
+    subPatternKeys: ["LA-BCpPDH-TopClose-U2"],
     // NEW: "EU2L4" Pattern (arrow) — same shape as
     // CL4U3/L3U3/U3L4 elsewhere. Base condition = parent
     // levelsabove's condition AND the raw EU2L4 flag (see
@@ -731,6 +727,9 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       { key: "A-A-AA-AA-EU2L4", label: "A-A-AA-AA-EU2L4", subPatternKeys: ["A-A-AA-AA-EU2L4-ApR2"] },
       { key: "A-A-AA-AA-U2L4", label: "A-A-AA-AA-U2L4", subPatternKeys: ["A-A-AA-AA-S1pPDH-U3"] },
       { key: "A-A-AA-AA-U3L4", label: "A-A-AA-AA-U3L4", subPatternKeys: ["A-A-AA-AA-U3L4-pGapB"] },
+      // NEW: A-A-AA-AA-EU3L4 — structural A-A-AA-AA + raw EU3L4 flag.
+      // Nests the renamed former 6PM View, whose leaf adds HLGap-B.
+      { key: "A-A-AA-AA-EU3L4", label: "A-A-AA-AA-EU3L4", subPatternKeys: ["A-A-AA-AA-EU3L4-GapB"] },
       { key: "A-A-AA-OA", label: "A-A-AA-OA", subPatternKeys: [] },
       { key: "A-A-OA-AA", label: "A-A-OA-AA", subPatternKeys: [] },
       { key: "A-A-OA-OA", label: "A-A-OA-OA", subPatternKeys: [] },
@@ -785,18 +784,17 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       { key: "A-E-AA-LB", label: "A-E-AA-LB", subPatternKeys: [] },
       { key: "A-E-OA-LB", label: "A-E-OA-LB", subPatternKeys: [] },
     ],
-    // Keep the A-A-AA-AA diagnostic branch at the top of this category's
-    // dropdown tree, before the existing 6PM View. The remaining direct
-    // Views and Patterns are appended in their existing order below these
-    // entries by buildBacktestOptions().
+    // Keep the complete A-A-AA-AA diagnostic branch at the top of this
+    // category's dropdown tree. Direct Views and other Patterns are appended
+    // in their existing order below these entries by buildBacktestOptions().
     orderedEntries: [
       { kind: "pattern", key: "A-A-AA-AA" },
-      { kind: "subPattern", key: "6PM:HHLLA-RRHHGap:6AM" },
       { kind: "pattern", key: "A-A-AA-AA-U3L3" },
       { kind: "pattern", key: "A-A-AA-AA-U4L3" },
       { kind: "pattern", key: "A-A-AA-AA-EU2L4" },
       { kind: "pattern", key: "A-A-AA-AA-U2L4" },
       { kind: "pattern", key: "A-A-AA-AA-U3L4" },
+      { kind: "pattern", key: "A-A-AA-AA-EU3L4" },
     ],
   },
   // NEW: "LEVELs BELOW" left-nav section (top of the pattern tree in

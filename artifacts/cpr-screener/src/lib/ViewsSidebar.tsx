@@ -81,20 +81,47 @@ export const Views: Record<string, SubPattern[]> = {
     },
   ],
   "levelsabove": [
-    // RENAMED from "9AM:MegL-U4+1:3PM": all existing conditions removed.
-    // New conditions: LevelsAbove + RRGap + RRHH-AA + SSLL-AA + HHLL-A +
-    // HHGap (see ScreenerUtils.tsx / cpr.ts for the category definitions).
+    // A-A-AA-AA diagnostic Views are kept together at the top of LEVELs ABOVE.
     {
-      id: "6PM:HHLLA-RRHHGap:6AM",
-      label: "6PM:HHLLA-RRHHGap:6AM",
+      id: "A-A-AA-AA",
+      label: "A-A-AA-AA · HHLL-A/RRHH-AA/SSLL-AA",
+      activeColor: "#60a5fa",
+      activeText: "#93c5fd",
+      activeBg: "rgba(96, 165, 250, 0.14)",
+    },
+    {
+      id: "A-A-AA-AA-EU3L4-GapB",
+      label: "A-A-AA-AA-EU3L4-GapB",
       activeColor: "#22c55e",
       activeText: "#4ade80",
       activeBg: "rgba(34, 197, 94, 0.14)",
     },
+    {
+      id: "A-A-AA-AA-S1pPDH-U3",
+      label: "A-A-AA-AA · S1>pPDH(U3)",
+      activeColor: "#22c55e",
+      activeText: "#4ade80",
+      activeBg: "rgba(34, 197, 94, 0.14)",
+    },
+    {
+      id: "A-A-AA-AA-EU2L4-ApR2",
+      label: "A-A-AA-AA-EU2L4-ApR2",
+      activeColor: "#22c55e",
+      activeText: "#4ade80",
+      activeBg: "rgba(34, 197, 94, 0.14)",
+    },
+    {
+      id: "A-A-AA-AA-U3L4-pGapB",
+      label: "A-A-AA-AA-U3L4-pGapB",
+      activeColor: "#fb7185",
+      activeText: "#fda4af",
+      activeBg: "rgba(244, 63, 94, 0.14)",
+    },
+    // RENAMED from "9AM:MegL-U4+1:3PM": all existing conditions removed.
     // NEW: 7PM:MoMi->U4:2AM — LEVELS ABOVE + prev day's own pivot sub-label
     // p-CU1L1 + today's Pattern EU2L4 + prev CPR pMicro + today CPR Mini
     // + both prev and today PDL below their respective L1s. Cyan color
-    // family to visually distinguish it from its 6PM:HHLLA-RRHHGap:6AM sibling.
+    // family to visually distinguish it from its A-A-AA-AA-EU3L4-GapB sibling.
     {
       id: "7PM:MoMi->U4:2AM",
       label: "7PM:MoMi->U4:2AM",
@@ -118,7 +145,7 @@ export const Views: Record<string, SubPattern[]> = {
     // ("p-EU3L4" badge) + today's BC above prev day's own PDH
     // (todayCPR.bc > prevCPR.prevHigh) + today's S1 above prev day's TC
     // (todayCPR.s1 > prevCPR.tc). Bullish, entry ~6PM, targets Far Above
-    // U4 by ~9PM. Green color family, same as its 6PM:HHLLA-RRHHGap:6AM
+    // U4 by ~9PM. Green color family, same as its A-A-AA-AA-EU3L4-GapB
     // sibling, to flag it as bullish.
     {
       id: "6PM:APHS1A-FAU4:9PM",
@@ -149,7 +176,7 @@ export const Views: Record<string, SubPattern[]> = {
     // own Pivot above today's PDL (prevCPR.pivot > todayCPR.prevLow) +
     // today's own Pivot above today's own PDH (todayCPR.pivot >
     // todayCPR.prevHigh). Bullish, entry ~9AM, targets Far Above U4 by
-    // ~2PM. Green color family, same as its 6PM:HHLLA-RRHHGap:6AM /
+    // ~2PM. Green color family, same as its A-A-AA-AA-EU3L4-GapB /
     // 6PM:APHS1A-FAU4:9PM siblings.
     {
       id: "9AM:pPALPApH-FAU4:2PM",
@@ -157,25 +184,6 @@ export const Views: Record<string, SubPattern[]> = {
       activeColor: "#22c55e",      // green-500 border
       activeText:  "#4ade80",      // green-400 text
       activeBg:    "rgba(34, 197, 94, 0.14)",
-    },
-    // A-A-AA-AA diagnostic branch: the structural base is HHLL-A / RRHH-AA / SSLL-AA.
-    // These are deliberately labeled as candidate views until the historical
-    // backtest confirms that either branch has positive risk-adjusted expectancy.
-    {
-      id: "A-A-AA-AA-S1pPDH-U3",
-      label: "A-A-AA-AA · S1>pPDH(U3)",
-      activeColor: "#22c55e",
-      activeText: "#4ade80",
-      activeBg: "rgba(34, 197, 94, 0.14)",
-    },
-    // View nested under the A-A-AA-AA-EU2L4 Pattern in the Backtest
-    // dropdown. It remains a direct View in this flat sidebar.
-    {
-      id: "A-A-AA-AA-EU2L4-ApR2",
-      label: "A-A-AA-AA-EU2L4-ApR2",
-      activeColor: "#22c55e",
-      activeText: "#4ade80",
-      activeBg: "rgba(34, 197, 94, 0.14)",
     },
     // NEW: LA-BCpPDH-TopClose-U2 — LEVELs ABOVE + today's BC > prev PDH +
     // prev candle closed in top 25% of its daily range. Targets today's R2 (U2).
@@ -187,21 +195,6 @@ export const Views: Record<string, SubPattern[]> = {
       activeColor: "#f59e0b",              // amber-500 border
       activeText:  "#fcd34d",              // amber-300 text
       activeBg:    "rgba(245, 158, 11, 0.14)",
-    },
-    {
-      id: "A-A-AA-AA",
-      label: "A-A-AA-AA · HHLL-A/RRHH-AA/SSLL-AA",
-      activeColor: "#60a5fa",
-      activeText: "#93c5fd",
-      activeBg: "rgba(96, 165, 250, 0.14)",
-    },
-    // U4L3 is now a Pattern in the Backtest dropdown, not a View here.
-    {
-      id: "A-A-AA-AA-U3L4-pGapB",
-      label: "A-A-AA-AA-U3L4-pGapB",
-      activeColor: "#fb7185",
-      activeText: "#fda4af",
-      activeBg: "rgba(244, 63, 94, 0.14)",
     },
   ],
   "levelsbelow": [
