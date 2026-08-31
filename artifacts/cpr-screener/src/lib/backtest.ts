@@ -494,6 +494,56 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
   },
+  // NEW: "B-B-BB-BB-L4U4-pLTC-U2" — View nested under the "B-B-BB-BB-L4U4"
+  // Pattern in "LEVELs BELOW" (see its subPatternKeys entry in
+  // BACKTEST_CATEGORIES below, and the matching case in passesPattern in
+  // ScreenerUtils.tsx). Bullish, targets today's own R2 (U2).
+  {
+    key: "B-B-BB-BB-L4U4-pLTC-U2",
+    label: "B-B-BB-BB-L4U4-pLTC-U2",
+    direction: "bullish",
+    targetLabel: "U2 (today's R2)",
+    getTarget: (r) => r.todayCPR.r2,
+  },
+  // NEW: target definitions for "B-B-BB-BB" and its four L4U4/L3U4/L4U3/
+  // L3U3 children in "LEVELs BELOW" (previously symbol-list-only scans
+  // with no defined target — see BACKTEST_CATEGORIES below). All five
+  // graded bearish against today's own S2 (L2) per user request.
+  {
+    key: "B-B-BB-BB",
+    label: "B-B-BB-BB",
+    direction: "bearish",
+    targetLabel: "L2 (today's S2)",
+    getTarget: (r) => r.todayCPR.s2,
+  },
+  {
+    key: "B-B-BB-BB-L4U4",
+    label: "B-B-BB-BB-L4U4",
+    direction: "bearish",
+    targetLabel: "L2 (today's S2)",
+    getTarget: (r) => r.todayCPR.s2,
+  },
+  {
+    key: "B-B-BB-BB-L3U4",
+    label: "B-B-BB-BB-L3U4",
+    direction: "bearish",
+    targetLabel: "L2 (today's S2)",
+    getTarget: (r) => r.todayCPR.s2,
+  },
+  {
+    key: "B-B-BB-BB-L4U3",
+    label: "B-B-BB-BB-L4U3",
+    direction: "bearish",
+    targetLabel: "L2 (today's S2)",
+    getTarget: (r) => r.todayCPR.s2,
+  },
+  {
+    key: "B-B-BB-BB-L3U3",
+    label: "B-B-BB-BB-L3U3",
+    direction: "bearish",
+    targetLabel: "L2 (today's S2)",
+    getTarget: (r) => r.todayCPR.s2,
+  },
 ];
 
 /**
@@ -759,7 +809,10 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       {
         key: "B-B-BB-BB-L4U4",
         label: "B-B-BB-BB-L4U4",
-        subPatternKeys: [],
+        // NEW: nests "B-B-BB-BB-L4U4-pLTC-U2" — parent's raw B-B-BB-BB-L4U4
+        // flag PLUS pHLGap-A PLUS "Prev PrevLow > today.tc" (see
+        // passesPattern in ScreenerUtils.tsx). Targets today's R2 (U2).
+        subPatternKeys: ["B-B-BB-BB-L4U4-pLTC-U2"],
       },
       {
         key: "B-B-BB-BB-L3U4",

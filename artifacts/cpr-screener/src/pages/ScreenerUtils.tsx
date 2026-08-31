@@ -1132,6 +1132,21 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.L4U4 &&
         r.prevCPR.prevLow > r.todayCPR.pivot
       );
+    // NEW: "B-B-BB-BB-L4U4-pLTC-U2" — View nested under the
+    // "B-B-BB-BB-L4U4" Pattern (arrow) in "LEVELs BELOW" (see
+    // matchesPatternFlag in this file, and its subPatternKeys entry in
+    // BACKTEST_CATEGORIES in backtest.ts). Condition: the parent's raw
+    // "B-B-BB-BB-L4U4" flag (PIVOT_PATTERNS["B-B-BB-BB"] AND L4U4) PLUS
+    // prevCPR.HLSwitch HL-A with hlGapWinner "prev" (pHLGap-A) PLUS prev
+    // day's own PDL above today's TC ("Prev PrevLow > today.tc"). Targets
+    // today's own R2 (U2) — see BACKTEST_TARGETS in backtest.ts.
+    case "B-B-BB-BB-L4U4-pLTC-U2":
+      return (
+        matchesPatternFlag(r, "B-B-BB-BB-L4U4") &&
+        r.prevCPR.HLSwitch === "HL-A" &&
+        r.hlGapWinner === "prev" &&
+        r.prevCPR.prevLow > r.todayCPR.tc
+      );
     case "compressed":
       return r.compressed ; 
     // NEW: "6A:SLE-RRHH:R2-6A" — sub-pattern under "EXPANDED". Condition:
