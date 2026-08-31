@@ -37,6 +37,16 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
   },
+  // NEW: A-A-AA-AA-S1pPDH-pU3 — nested as a View under the A-A-AA-AA
+  // Pattern. High hit-rate (95.13%) bullish pU3 target. Condition:
+  // isAaaaDiagnosticBase + today's S1 above prev day's PDH.
+  {
+    key: "A-A-AA-AA-S1pPDH-pU3",
+    label: "A-A-AA-AA-S1pPDH-pU3",
+    direction: "bullish",
+    targetLabel: "pU3 (prev day's R3)",
+    getTarget: (r) => r.prevCPR.r3,
+  },
   // NEW: A-A-AA-AA-U4L3 — nested as a View under the A-A-AA-AA
   // Pattern. Bullish U4 target, using the existing backtest time horizon.
   {
@@ -628,7 +638,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       // the "compressed"/C-* and "expanded"/E-* sets): RRSSA-AAA-AA ->
       // A-A-AA-AA, RRSSA-AAA-OA -> A-A-AA-OA, RRSSA-AOA-AA -> A-A-OA-AA,
       // RRSSA-AOA-OA -> A-A-OA-OA. Conditions unchanged.
-      { key: "A-A-AA-AA", label: "A-A-AA-AA", subPatternKeys: ["A-A-AA-AA-U4L3", "A-A-AA-AA-EU2L4-ApR2"] },
+      { key: "A-A-AA-AA", label: "A-A-AA-AA", subPatternKeys: ["A-A-AA-AA-S1pPDH-pU3", "A-A-AA-AA-U4L3", "A-A-AA-AA-EU2L4-ApR2"] },
       { key: "A-A-AA-AA:Candidate-Unfavorable", label: "A-A-AA-AA · Candidate Unfavorable (PrevGap + Narrow)", subPatternKeys: [] },
       { key: "A-A-AA-OA", label: "A-A-AA-OA", subPatternKeys: [] },
       { key: "A-A-OA-AA", label: "A-A-OA-AA", subPatternKeys: [] },
