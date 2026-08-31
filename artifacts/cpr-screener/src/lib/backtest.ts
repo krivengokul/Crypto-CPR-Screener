@@ -690,15 +690,15 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       // A-E-AA-C/A-E-OA-C, RRSSA-EE -> A-E-AA-E/A-E-OA-E, RRSSA-ELB ->
       // A-E-AA-LB/A-E-OA-LB — each re-split by crossing against
       // RRHHCategory (RRHH-AA/RRHH-OA), the same free axis noted above.
-      // RRSSA-EOB -> A-E-AA-OB only; the RRHH-OA half (A-E-OA-OB) wasn't
-      // requested and isn't added yet. Also now shown as a PivotPattern
-      // badge in ScreenerTableRow (see PIVOT_PATTERN_KEYS), not just here.
-      // NOTE: A-E-AA-OB's underlying condition uses SSLL-LB, not SSLL-OB
-      // (see ScreenerUtils.PIVOT_PATTERNS) — kept as a symbol-list-only
-      // scan here regardless, but it now duplicates A-E-AA-LB's condition
-      // exactly, which shadows it in the badge (see the note in
-      // PIVOT_PATTERN_KEYS in ScreenerUtils.tsx).
-      { key: "A-E-AA-OB", label: "A-E-AA-OB", subPatternKeys: [] },
+      // REMOVED: "A-E-AA-OB" — despite the comments in
+      // ScreenerUtils.PIVOT_PATTERNS claiming it was "defined, using
+      // SSLL-LB", no "A-E-AA-OB" key was ever actually added to that
+      // object (only "A-E-AA-LB" was) — so matchesPatternFlag/passesPattern
+      // fell through to the default case for this key and it ALWAYS
+      // returned zero records. Confirmed empty (no records available) and
+      // dropped from the dropdown entirely — its real condition (HHLL-E +
+      // RRHH-AA + SSLL-LB) already lives under "A-E-AA-LB" above, so no
+      // combination is lost.
       { key: "A-E-AA-C",  label: "A-E-AA-C",  subPatternKeys: [] },
       { key: "A-E-OA-C",  label: "A-E-OA-C",  subPatternKeys: [] },
       { key: "A-E-AA-E",  label: "A-E-AA-E",  subPatternKeys: [] },

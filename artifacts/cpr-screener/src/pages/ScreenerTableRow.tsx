@@ -111,10 +111,10 @@ export const PATTERN_BADGE_CLASSES: Record<string, string> = {
   // / PIVOT_PATTERN_KEYS). Own amber/yellow/lime/green/emerald/teal family
   // so this LevelsAbove group reads distinctly from the E-*/C-* families
   // above/below even though it shares the HHLL-E condition space with them.
-  // "A-E-AA-OB" is excluded from PIVOT_PATTERN_KEYS (see that comment in
-  // ScreenerUtils.tsx), so getBadgeClasses is never actually called with
-  // it via the PivotPatternBadge — left here harmlessly in case it's ever
-  // used as a badge label from another call site.
+  // REMOVED: "A-E-AA-OB" never had its own PIVOT_PATTERNS condition (see
+  // that comment in ScreenerUtils.tsx) and always returned zero records,
+  // so it's been dropped from backtest.ts's dropdown entirely — no badge
+  // class entry needed for it here.
   "A-E-AA-C": "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
   "A-E-OA-C": "bg-teal-500/10 text-teal-400 border border-teal-500/20",
   "A-E-AA-E": "bg-lime-500/10 text-lime-400 border border-lime-500/20",

@@ -531,15 +531,13 @@ export const PIVOT_PATTERNS: Record<string, (r: CPRResult) => boolean> = {
   // condition against RRHHCategory (HHLL-E + LevelsAbove is always
   // RRHH-AA or RRHH-OA — see the comment above these keys in
   // backtest.ts), same treatment as A-A-{RRHH}-{SSLL}'s RRHH cross.
-  // RRSSA-EOB -> A-E-AA-OB, using SSLL-LB (not SSLL-OB) — the label keeps
-  // the "OB" suffix from the original RRSSA-EOB name, but the condition
-  // itself intentionally uses SSLL-LB, per confirmation. This no longer
-  // collides with E-E-AA-OB (see LEVEL_PATTERN_KEYS below), since it no
-  // longer shares that condition — but it now exactly duplicates
-  // "A-E-AA-LB" below instead (same HHLL-E + RRHH-AA + SSLL-LB check) —
-  // see the note on that collision in PIVOT_PATTERN_KEYS below. The
-  // RRHH-OA half wasn't requested, so it's left out for now; add
-  // "A-E-OA-OB" the same way if it's needed later.
+  // RRSSA-EOB was going to become "A-E-AA-OB" using SSLL-LB (not SSLL-OB),
+  // but that key was never actually added below — it would have exactly
+  // duplicated "A-E-AA-LB" (same HHLL-E + RRHH-AA + SSLL-LB check), so
+  // there was no distinct condition for it to own. REMOVED from
+  // backtest.ts's dropdown entirely (confirmed empty — see that file's
+  // comment). The RRHH-OA half wasn't requested either; add "A-E-OA-OB"
+  // the same way as its siblings if it's ever needed.
   "A-E-AA-C": (r) => r.SSRRCategory === "RRSS-A" && r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-C",
   "A-E-OA-C": (r) => r.SSRRCategory === "RRSS-A" && r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-OA" && r.SSLLCategory === "SSLL-C",
   "A-E-AA-E": (r) => r.SSRRCategory === "RRSS-A" && r.HHLLCategory === "HHLL-E" && r.RRHHCategory === "RRHH-AA" && r.SSLLCategory === "SSLL-E",
@@ -1896,8 +1894,8 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
 /**
  * PIVOT_PATTERN_KEYS — the 80 "E-{Level}-{RRHH}-{SSLL}" (16, "expanded"),
  * "C-{Level}-{RRHH}-{SSLL}" (19, "compressed"), "A-E-{RRHH}-{SSLL}" (6,
- * "LevelsAbove" HHLL-E, renamed from RRSSA-EC/EE/ELB/EOB — "A-E-AA-OB" is
- * defined but deliberately excluded from this list, see below),
+ * "LevelsAbove" HHLL-E, renamed from RRSSA-EC/EE/ELB/EOB — the would-be
+ * 7th, "A-E-AA-OB", was REMOVED entirely, see below),
  * "A-{Level}-{RRHH}-{SSLL}" (17, "LevelsAbove" HHLL-A/B/C, renamed from
  * RRSSA-AAA-AA/AAA-OA/AOA-AA/AOA-OA/CC/CE/CRA/BC-C/BC-LB/BE-E/BE-LB/
  * BRA-C/BRA-E/BRA-LB — "A-A-OA-AA"/"A-A-OA-OA" now included too, see
@@ -1911,21 +1909,16 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
  * (Level = A/B/C/E matching the key's own prefix letter) before the
  * HHLLCategory/RRHHCategory/SSLLCategory checks, so keys from different
  * families can no longer collide on an identical condition even when their
- * HHLL/RRHH/SSLL combo happens to match — see "A-E-AA-OB" below for the
- * one remaining case where two keys share the same family AND the same
- * HHLL/RRHH/SSLL combo (a same-family duplicate, unaffected by the
- * SSRRCategory check). MERGED from what used to be two separate lists
- * (PIVOT_PATTERN_KEYS for E-*, COMPRESSED_PATTERN_KEYS for C-*) into one:
- * r.expanded and r.compressed are mutually exclusive states, so a row can
- * never match both an E-* and a C-* key, making a single combined
- * list/function safe. The A-E-* keys added on top are NOT guaranteed
- * mutually exclusive with the E-* keys in general — LevelsAbove can
- * coincide with "expanded" for the same row — but none of the six A-E-*
- * keys actually included below duplicate an E-* condition or each other;
- * "A-E-AA-OB" is intentionally left out of this list (see the note below)
- * precisely because it would have. Exported so computePivotPattern below
- * can iterate them without duplicating the list, and so other views/legends
- * can reuse the same set.
+ * HHLL/RRHH/SSLL combo happens to match. MERGED from what used to be two
+ * separate lists (PIVOT_PATTERN_KEYS for E-*, COMPRESSED_PATTERN_KEYS for
+ * C-*) into one: r.expanded and r.compressed are mutually exclusive states,
+ * so a row can never match both an E-* and a C-* key, making a single
+ * combined list/function safe. The A-E-* keys added on top are NOT
+ * guaranteed mutually exclusive with the E-* keys in general — LevelsAbove
+ * can coincide with "expanded" for the same row — but none of the six A-E-*
+ * keys included below duplicate an E-* condition or each other. Exported so
+ * computePivotPattern below can iterate them without duplicating the list,
+ * and so other views/legends can reuse the same set.
  */
 export const PIVOT_PATTERN_KEYS = [
   "E-A-AA-OB", "E-A-OA-OB", "E-A-AA-SB", "E-A-AA-C", "E-A-OA-C",
@@ -1934,13 +1927,13 @@ export const PIVOT_PATTERN_KEYS = [
   "E-E-OA-OB",
   // A-E-{RRHH}-{SSLL} — the renamed RRSSA-EC/EE/ELB/EOB set (LevelsAbove,
   // HHLL-E), added here so they render via the PivotPatternBadge too, not
-  // just the Backtest dropdown. "A-E-AA-OB" is DELIBERATELY OMITTED from
-  // this list: its condition (HHLL-E + RRHH-AA + SSLL-LB, see
-  // PIVOT_PATTERNS above) is an exact duplicate of "A-E-AA-LB" below, so
-  // it could never be the one computePivotPattern actually returns for a
-  // matching row anyway — it stays defined in PIVOT_PATTERNS and still
-  // works as its own symbol-list scan in the Backtest dropdown (see
-  // backtest.ts), it just doesn't render as a badge here.
+  // just the Backtest dropdown. REMOVED: "A-E-AA-OB" was never given its
+  // own PIVOT_PATTERNS entry (its intended condition, HHLL-E + RRHH-AA +
+  // SSLL-LB, was an exact duplicate of "A-E-AA-LB" below anyway) — it
+  // always fell through to the default case and returned zero records in
+  // both the badge and the Backtest dropdown, so it's been dropped from
+  // backtest.ts's category list entirely (confirmed empty, not just
+  // shadowed).
   "A-E-AA-C", "A-E-OA-C", "A-E-AA-E", "A-E-OA-E",
   "A-E-AA-LB", "A-E-OA-LB",
   // A-{Level}-{RRHH}-{SSLL} — the renamed RRSSA-AAA-AA/AAA-OA/AOA-AA/AOA-OA
