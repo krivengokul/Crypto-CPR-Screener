@@ -932,10 +932,13 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // inside prev's BC/R1 band. Sits above "LEVELs BELOW" in the left-nav.
     case "levelsabove":
       return r.LevelsAbove;
-    // NEW: A-A-AA-AA + LevelsAbove (R1 <= pR4) + S1 > pPDH (pU3 Target).
+    // NEW: A-A-AA-AA + U2L4 + LevelsAbove (R1 <= pR4) + S1 > pPDH
+    // (pU3 Target). It is nested under the A-A-AA-AA-U2L4 Pattern, so
+    // include that raw flag in the View predicate as well.
     case "A-A-AA-AA-S1pPDH-U3":
       return (
         isAaaaDiagnosticBase(r) &&
+        r.U2L4 &&
         r.LevelsAbove &&
         r.todayCPR.s1 > r.prevCPR.prevHigh
       );
@@ -952,12 +955,19 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         prevCloseInTop25
       );
     }
-    // A-A-AA-AA + U4L3 diagnostic View.
+    // A-A-AA-AA diagnostic Pattern branches. These are intentionally
+    // section-independent here; the Backtest category adds LevelsAbove as
+    // its parent condition.
+    case "A-A-AA-AA-U3L3":
+      return isAaaaDiagnosticBase(r) && r.U3L3;
     case "A-A-AA-AA-U4L3":
-      return (
-        isAaaaDiagnosticBase(r) &&
-        r.U4L3
-      );
+      return isAaaaDiagnosticBase(r) && r.U4L3;
+    case "A-A-AA-AA-EU2L4":
+      return isAaaaDiagnosticBase(r) && r.EU2L4;
+    case "A-A-AA-AA-U2L4":
+      return isAaaaDiagnosticBase(r) && r.U2L4;
+    case "A-A-AA-AA-U3L4":
+      return isAaaaDiagnosticBase(r) && r.U3L4;
     // A-A-AA-AA + today's EU2L4/HL-B state + previous day's p-EU2L4.
     case "A-A-AA-AA-EU2L4-ApR2":
       return (
@@ -966,11 +976,12 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.todayCPR.r1 > r.prevCPR.r3 &&
         r.prevCPR.prevLow > r.todayCPR.s2 &&  r.prevCPR.s3 > r.todayCPR.s3
       );
-    case "A-A-AA-AA:Candidate-Unfavorable":
+    case "A-A-AA-AA-U3L4-pGapB":
       return (
         isAaaaDiagnosticBase(r) &&
         r.RRSSGapCategory === "RRGap" &&
         r.PDHPDLGapCategory === "HHGap" &&
+        r.U3L4 &&
         r.prevCPR.HLSwitch === "HL-B" &&
         r.todayCPR.HLSwitch === "HL-B" &&
         r.hlGapWinner === "prev" &&
@@ -1895,10 +1906,11 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     // levelsbelow/compressed) are now defined exactly once, in
     // PIVOT_PATTERNS above passesPattern, and checked at the top of
     // this function — see that map's comment for the full derivation.
-    // A-A-AA-AA + LevelsAbove (R1 <= pR4) + S1 > pPDH (pU3 Target).
+    // A-A-AA-AA + U2L4 + LevelsAbove (R1 <= pR4) + S1 > pPDH (pU3 Target).
     case "A-A-AA-AA-S1pPDH-U3":
       return (
         isAaaaDiagnosticBase(r) &&
+        r.U2L4 &&
         r.LevelsAbove &&
         r.todayCPR.s1 > r.prevCPR.prevHigh
       );
@@ -1913,18 +1925,25 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
         prevCloseInTop25
       );
     }
-    // A-A-AA-AA + U4L3 diagnostic View. Keep the raw flag filterable
-    // independently from the cosmetic U4L3 badge rendering.
+    // A-A-AA-AA diagnostic Pattern branches. Each branch combines the
+    // structural PIVOT_PATTERNS entry with its raw CPR flag so it can be
+    // selected as a Pattern under LEVELs ABOVE.
+    case "A-A-AA-AA-U3L3":
+      return PIVOT_PATTERNS["A-A-AA-AA"](r) && r.U3L3;
     case "A-A-AA-AA-U4L3":
+      return PIVOT_PATTERNS["A-A-AA-AA"](r) && r.U4L3;
+    case "A-A-AA-AA-EU2L4":
+      return PIVOT_PATTERNS["A-A-AA-AA"](r) && r.EU2L4;
+    case "A-A-AA-AA-U2L4":
+      return PIVOT_PATTERNS["A-A-AA-AA"](r) && r.U2L4;
+    case "A-A-AA-AA-U3L4":
+      return PIVOT_PATTERNS["A-A-AA-AA"](r) && r.U3L4;
+    case "A-A-AA-AA-U3L4-pGapB":
       return (
-        isAaaaDiagnosticBase(r) &&
-        r.U4L3
-      );
-    case "A-A-AA-AA:Candidate-Unfavorable":
-      return (
-        isAaaaDiagnosticBase(r) &&
+        PIVOT_PATTERNS["A-A-AA-AA"](r) &&
         r.RRSSGapCategory === "RRGap" &&
         r.PDHPDLGapCategory === "HHGap" &&
+        r.U3L4 &&
         r.prevCPR.HLSwitch === "HL-B" &&
         r.todayCPR.HLSwitch === "HL-B" &&
         r.hlGapWinner === "prev" &&

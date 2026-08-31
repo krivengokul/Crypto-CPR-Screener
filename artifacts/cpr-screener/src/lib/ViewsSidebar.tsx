@@ -168,6 +168,15 @@ export const Views: Record<string, SubPattern[]> = {
       activeText: "#4ade80",
       activeBg: "rgba(34, 197, 94, 0.14)",
     },
+    // View nested under the A-A-AA-AA-EU2L4 Pattern in the Backtest
+    // dropdown. It remains a direct View in this flat sidebar.
+    {
+      id: "A-A-AA-AA-EU2L4-ApR2",
+      label: "A-A-AA-AA-EU2L4-ApR2",
+      activeColor: "#22c55e",
+      activeText: "#4ade80",
+      activeBg: "rgba(34, 197, 94, 0.14)",
+    },
     // NEW: LA-BCpPDH-TopClose-U2 — LEVELs ABOVE + today's BC > prev PDH +
     // prev candle closed in top 25% of its daily range. Targets today's R2 (U2).
     // 42.34% hit rate across 3,125 samples over 180 days. Amber color to
@@ -186,16 +195,10 @@ export const Views: Record<string, SubPattern[]> = {
       activeText: "#93c5fd",
       activeBg: "rgba(96, 165, 250, 0.14)",
     },
+    // U4L3 is now a Pattern in the Backtest dropdown, not a View here.
     {
-      id: "A-A-AA-AA-U4L3",
-      label: "A-A-AA-AA · U4L3",
-      activeColor: "#22c55e",
-      activeText: "#4ade80",
-      activeBg: "rgba(34, 197, 94, 0.14)",
-    },
-    {
-      id: "A-A-AA-AA:Candidate-Unfavorable",
-      label: "A-A-AA-AA · Candidate Unfavorable (PrevGap + Narrow)",
+      id: "A-A-AA-AA-U3L4-pGapB",
+      label: "A-A-AA-AA-U3L4-pGapB",
       activeColor: "#fb7185",
       activeText: "#fda4af",
       activeBg: "rgba(244, 63, 94, 0.14)",

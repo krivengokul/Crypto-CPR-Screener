@@ -48,9 +48,9 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "U2 (today's R2)",
     getTarget: (r) => r.todayCPR.r2,
   },
-  // NEW: A-A-AA-AA-S1pPDH-U3 — nested as a View under the A-A-AA-AA
-  // Pattern. Bullish U3 target (today's R3). Condition: isAaaaDiagnosticBase +
-  // LevelsAbove (R1 <= pR4) + today's S1 above prev day's PDH.
+  // NEW: A-A-AA-AA-S1pPDH-U3 — nested as a View under the
+  // A-A-AA-AA-U2L4 Pattern. Bullish U3 target (today's R3). Condition:
+  // A-A-AA-AA + U2L4 + LevelsAbove + today's S1 above prev day's PDH.
   // Target changed from prev day's R3 to TODAY'S R3 per user request.
   {
     key: "A-A-AA-AA-S1pPDH-U3",
@@ -59,20 +59,21 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "U3 (today's R3)",
     getTarget: (r) => r.todayCPR.r3,
   },
-  // NEW: A-A-AA-AA-U4L3 — nested as a View under the A-A-AA-AA
-  // Pattern. Bullish U4 target, using the existing backtest time horizon.
+  // NEW: A-A-AA-AA-EU2L4-ApR2 — nested as a View under the
+  // A-A-AA-AA-EU2L4 Pattern. Bullish U4 target, using the existing
+  // backtest time horizon.
   {
-    key: "A-A-AA-AA-U4L3",
-    label: "A-A-AA-AA-U4L3",
+    key: "A-A-AA-AA-EU2L4-ApR2",
+    label: "A-A-AA-AA-EU2L4-ApR2",
     direction: "bullish",
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
   },
-  // NEW: A-A-AA-AA-EU2L4-ApR2 — nested as a View under the A-A-AA-AA
-  // Pattern. Bullish U4 target, using the existing backtest time horizon.
+  // RENAMED from "A-A-AA-AA:Candidate-Unfavorable". This remains a
+  // target-graded View, now nested under the A-A-AA-AA-U3L4 Pattern.
   {
-    key: "A-A-AA-AA-EU2L4-ApR2",
-    label: "A-A-AA-AA-EU2L4-ApR2",
+    key: "A-A-AA-AA-U3L4-pGapB",
+    label: "A-A-AA-AA-U3L4-pGapB",
     direction: "bullish",
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
@@ -581,6 +582,8 @@ export interface BacktestCategoryDef {
   label: string;                        // display name, e.g. "LittleCPR Above"
   subPatternKeys?: string[];            // BACKTEST_TARGETS keys nested directly under this category
   patterns?: BacktestSubCategoryDef[]; // NEW: Pattern sub-categories nested under this category
+  /** Optional explicit ordering for mixed direct Views and Pattern entries. */
+  orderedEntries?: { kind: "subPattern" | "pattern"; key: string }[];
 }
 
 export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
@@ -717,8 +720,17 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       // the "compressed"/C-* and "expanded"/E-* sets): RRSSA-AAA-AA ->
       // A-A-AA-AA, RRSSA-AAA-OA -> A-A-AA-OA, RRSSA-AOA-AA -> A-A-OA-AA,
       // RRSSA-AOA-OA -> A-A-OA-OA. Conditions unchanged.
-      { key: "A-A-AA-AA", label: "A-A-AA-AA", subPatternKeys: ["A-A-AA-AA-S1pPDH-U3", "A-A-AA-AA-U4L3", "A-A-AA-AA-EU2L4-ApR2"] },
-      { key: "A-A-AA-AA:Candidate-Unfavorable", label: "A-A-AA-AA · Candidate Unfavorable (PrevGap + Narrow)", subPatternKeys: [] },
+      //
+      // The diagnostic branches below are Pattern entries (not Views).
+      // Their predicates are the structural A-A-AA-AA condition AND the
+      // branch's raw CPR flag; target-graded Views remain nested beneath the
+      // relevant branch.
+      { key: "A-A-AA-AA", label: "A-A-AA-AA", subPatternKeys: [] },
+      { key: "A-A-AA-AA-U3L3", label: "A-A-AA-AA-U3L3", subPatternKeys: [] },
+      { key: "A-A-AA-AA-U4L3", label: "A-A-AA-AA-U4L3", subPatternKeys: [] },
+      { key: "A-A-AA-AA-EU2L4", label: "A-A-AA-AA-EU2L4", subPatternKeys: ["A-A-AA-AA-EU2L4-ApR2"] },
+      { key: "A-A-AA-AA-U2L4", label: "A-A-AA-AA-U2L4", subPatternKeys: ["A-A-AA-AA-S1pPDH-U3"] },
+      { key: "A-A-AA-AA-U3L4", label: "A-A-AA-AA-U3L4", subPatternKeys: ["A-A-AA-AA-U3L4-pGapB"] },
       { key: "A-A-AA-OA", label: "A-A-AA-OA", subPatternKeys: [] },
       { key: "A-A-OA-AA", label: "A-A-OA-AA", subPatternKeys: [] },
       { key: "A-A-OA-OA", label: "A-A-OA-OA", subPatternKeys: [] },
@@ -772,6 +784,19 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       { key: "A-E-OA-E",  label: "A-E-OA-E",  subPatternKeys: [] },
       { key: "A-E-AA-LB", label: "A-E-AA-LB", subPatternKeys: [] },
       { key: "A-E-OA-LB", label: "A-E-OA-LB", subPatternKeys: [] },
+    ],
+    // Keep the A-A-AA-AA diagnostic branch at the top of this category's
+    // dropdown tree, before the existing 6PM View. The remaining direct
+    // Views and Patterns are appended in their existing order below these
+    // entries by buildBacktestOptions().
+    orderedEntries: [
+      { kind: "pattern", key: "A-A-AA-AA" },
+      { kind: "subPattern", key: "6PM:HHLLA-RRHHGap:6AM" },
+      { kind: "pattern", key: "A-A-AA-AA-U3L3" },
+      { kind: "pattern", key: "A-A-AA-AA-U4L3" },
+      { kind: "pattern", key: "A-A-AA-AA-EU2L4" },
+      { kind: "pattern", key: "A-A-AA-AA-U2L4" },
+      { kind: "pattern", key: "A-A-AA-AA-U3L4" },
     ],
   },
   // NEW: "LEVELs BELOW" left-nav section (top of the pattern tree in
@@ -1370,7 +1395,10 @@ export function buildBacktestOptions(): BacktestOption[] {
       symbolListOnly: true,
     });
 
-    for (const key of cat.subPatternKeys ?? []) {
+    const directViews = new Map((cat.subPatternKeys ?? []).map((key) => [key, key]));
+    const patterns = new Map((cat.patterns ?? []).map((sub) => [sub.key, sub]));
+
+    const pushDirectView = (key: string) => {
       opts.push({
         value: key,
         kind: "pattern",
@@ -1382,9 +1410,9 @@ export function buildBacktestOptions(): BacktestOption[] {
         patternKey: key,
         symbolListOnly: false,
       });
-    }
+    };
 
-    for (const sub of cat.patterns ?? []) {
+    const pushPattern = (sub: BacktestSubCategoryDef) => {
       // CHANGED: Pattern-level selections are no longer symbol-list-only —
       // they now grade against today's R4 / U4 (bullish) — but the label
       // itself stays plain (no "-R4" suffix); the target is still shown
@@ -1414,6 +1442,32 @@ export function buildBacktestOptions(): BacktestOption[] {
           symbolListOnly: false,
         });
       }
+    };
+
+    if (cat.orderedEntries) {
+      const emittedDirectViews = new Set<string>();
+      const emittedPatterns = new Set<string>();
+      for (const entry of cat.orderedEntries) {
+        if (entry.kind === "subPattern" && directViews.has(entry.key)) {
+          pushDirectView(entry.key);
+          emittedDirectViews.add(entry.key);
+        } else if (entry.kind === "pattern") {
+          const sub = patterns.get(entry.key);
+          if (sub) {
+            pushPattern(sub);
+            emittedPatterns.add(entry.key);
+          }
+        }
+      }
+      for (const key of cat.subPatternKeys ?? []) {
+        if (!emittedDirectViews.has(key)) pushDirectView(key);
+      }
+      for (const sub of cat.patterns ?? []) {
+        if (!emittedPatterns.has(sub.key)) pushPattern(sub);
+      }
+    } else {
+      for (const key of cat.subPatternKeys ?? []) pushDirectView(key);
+      for (const sub of cat.patterns ?? []) pushPattern(sub);
     }
   }
 
