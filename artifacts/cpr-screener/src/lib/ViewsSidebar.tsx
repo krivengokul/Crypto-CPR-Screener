@@ -144,8 +144,8 @@ export const Views: Record<string, SubPattern[]> = {
     // These are deliberately labeled as candidate views until the historical
     // backtest confirms that either branch has positive risk-adjusted expectancy.
     {
-      id: "A-A-AA-AA-S1pPDH-pU3",
-      label: "A-A-AA-AA · S1>pPDH (U3 today)",
+      id: "A-A-AA-AA-S1pPDH-U3",
+      label: "A-A-AA-AA · S1>pPDH(U3)",
       activeColor: "#22c55e",
       activeText: "#4ade80",
       activeBg: "rgba(34, 197, 94, 0.14)",
