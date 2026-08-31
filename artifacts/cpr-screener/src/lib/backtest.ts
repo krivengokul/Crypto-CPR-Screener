@@ -2151,12 +2151,23 @@ export interface PatternCensusRow {
 export interface CategoryComboRow {
   categoryKey: string;
   categoryLabel: string;
-  combo: string; // e.g. "HHLL-A / RRHH-AA / SSLL-AA"
+  combo: string; // e.g. "HHLL-A / RRHH-AA / SSLL-AA", or, for
+                 // "top15gainers"/"top15losers" only,
+                 // "RRSS-A / HHLL-A / RRHH-AA / SSLL-OA" (see
+                 // RRSS_COMBO_CATEGORIES below).
   hhll: string;
   rrhh: string;
   ssll: string;
+  rrss?: string; // only set for RRSS_COMBO_CATEGORIES ("top15gainers"/"top15losers")
   count: number;
 }
+
+// TEMPORARY DEBUG ADDITION — categories whose combo tally gets the raw
+// SSRRCategory (RRSS-A/RRSS-B/RRSS-C/RRSS-E/RRSS=) prepended as a 4th
+// segment, ahead of HHLL/RRHH/SSLL. Requested for "TOP 15 GAINERS"/
+// "TOP 15 LOSERS" only — every other category keeps the plain
+// HHLL/RRHH/SSLL combo.
+const RRSS_COMBO_CATEGORIES = new Set(["top15gainers", "top15losers"]);
 
 /**
  * Counts live matches for EVERY dropdown pattern across a date range in a
@@ -2231,12 +2242,16 @@ export async function runPatternCensus(
           // TEMPORARY DEBUG ADDITION — tally the raw HHLL/RRHH/SSLL combo
           // once per category (independent of any nested pattern loop
           // below), for every category, not only ones with `patterns`.
+          // For RRSS_COMBO_CATEGORIES ("top15gainers"/"top15losers") the
+          // raw SSRRCategory (RRSS-X) is prepended as a 4th segment.
           const hhll = result.HHLLCategory ?? "none";
           const rrhh = result.RRHHCategory ?? "none";
           const ssll = result.SSLLCategory ?? "none";
-          const combo = `${hhll} / ${rrhh} / ${ssll}`;
+          const rrss = result.SSRRCategory ?? "none";
+          const baseCombo = `${hhll} / ${rrhh} / ${ssll}`;
           for (const cat of BACKTEST_CATEGORIES) {
             if (!passesPatternFn(result, cat.key)) continue; // base category condition
+            const combo = RRSS_COMBO_CATEGORIES.has(cat.key) ? `${rrss} / ${baseCombo}` : baseCombo;
             const k = comboKey(cat.key, combo);
             comboCounts.set(k, (comboCounts.get(k) ?? 0) + 1);
           }
@@ -2261,15 +2276,21 @@ export async function runPatternCensus(
 
   // TEMPORARY DEBUG ADDITION — flatten comboCounts into CategoryComboRow[],
   // sorted highest-count-first within each category (PatternStats groups
-  // these back up by categoryKey).
+  // these back up by categoryKey). RRSS_COMBO_CATEGORIES combos carry an
+  // extra leading RRSS-X segment, so they're split into 4 parts instead of 3.
   const combos: CategoryComboRow[] = [];
   for (const cat of BACKTEST_CATEGORIES) {
     const prefix = `${cat.key}::`;
     for (const [k, count] of comboCounts.entries()) {
       if (!k.startsWith(prefix)) continue;
       const combo = k.slice(prefix.length);
-      const [hhll, rrhh, ssll] = combo.split(" / ");
-      combos.push({ categoryKey: cat.key, categoryLabel: cat.label, combo, hhll, rrhh, ssll, count });
+      if (RRSS_COMBO_CATEGORIES.has(cat.key)) {
+        const [rrss, hhll, rrhh, ssll] = combo.split(" / ");
+        combos.push({ categoryKey: cat.key, categoryLabel: cat.label, combo, hhll, rrhh, ssll, rrss, count });
+      } else {
+        const [hhll, rrhh, ssll] = combo.split(" / ");
+        combos.push({ categoryKey: cat.key, categoryLabel: cat.label, combo, hhll, rrhh, ssll, count });
+      }
     }
   }
   combos.sort((a, b) => b.count - a.count);
