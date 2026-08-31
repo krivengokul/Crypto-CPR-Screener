@@ -49,14 +49,15 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     getTarget: (r) => r.todayCPR.r2,
   },
   // NEW: A-A-AA-AA-S1pPDH-pU3 — nested as a View under the A-A-AA-AA
-  // Pattern. Bullish pU3 target. Condition: isAaaaDiagnosticBase +
+  // Pattern. Bullish U3 target (today's R3). Condition: isAaaaDiagnosticBase +
   // LevelsAbove (R1 <= pR4) + today's S1 above prev day's PDH.
+  // Target changed from prev day's R3 to TODAY'S R3 per user request.
   {
     key: "A-A-AA-AA-S1pPDH-pU3",
     label: "A-A-AA-AA-S1pPDH-pU3",
     direction: "bullish",
-    targetLabel: "pU3 (prev day's R3)",
-    getTarget: (r) => r.prevCPR.r3,
+    targetLabel: "U3 (today's R3)",
+    getTarget: (r) => r.todayCPR.r3,
   },
   // NEW: A-A-AA-AA-U4L3 — nested as a View under the A-A-AA-AA
   // Pattern. Bullish U4 target, using the existing backtest time horizon.
