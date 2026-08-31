@@ -1680,6 +1680,18 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
         r.todayCPR.HLSwitch === "HL-A" &&
         r.hlGapWinner === "today"
       );
+    // NEW: B-B-BB-BB-L4U4/L3U4/L4U3/L3U3 — four Patterns nested under
+    // "B-B-BB-BB" (itself a leaf Pattern under "levelsbelow", now moved to
+    // the top of that category's list in backtest.ts's
+    // BACKTEST_CATEGORIES, above "HALB-SSLLGap"). Each base condition =
+    // PIVOT_PATTERNS["B-B-BB-BB"] (HHLL-B + RRHH-BB + SSLL-BB, nested
+    // under r.LevelsBelow via the parent "levelsbelow" category key) AND
+    // its own raw target-window flag — same shape as "A-B-C-C-EU4L4"
+    // above.
+    case "B-B-BB-BB-L4U4": return PIVOT_PATTERNS["B-B-BB-BB"](r) && r.L4U4;
+    case "B-B-BB-BB-L3U4": return PIVOT_PATTERNS["B-B-BB-BB"](r) && r.L3U4;
+    case "B-B-BB-BB-L4U3": return PIVOT_PATTERNS["B-B-BB-BB"](r) && r.L4U3;
+    case "B-B-BB-BB-L3U3": return PIVOT_PATTERNS["B-B-BB-BB"](r) && r.L3U3;
     // NEW: L3U3 — Pattern raw flag (see BacktestPanel's
     // "LEVELs BELOW" → "L3U3" nesting in backtest.ts).
     case "L3U3": return r.L3U3;

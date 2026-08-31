@@ -740,6 +740,42 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
     //  below (not directly on the category), since it also
     // requires the raw L3U3 flag — see ScreenerUtils.tsx.
     patterns: [
+      // MOVED: "B-B-BB-BB" to the very top of this list (above
+      // "HALB-SSLLGap") — was previously grouped with its B-B-BB-OB/
+      // B-B-OB-BB/B-B-OB-OB siblings further down (see the comment there).
+      // Base condition unchanged: this category's r.LevelsBelow condition
+      // AND PIVOT_PATTERNS["B-B-BB-BB"] (HHLL-B + RRHH-BB + SSLL-BB).
+      { key: "B-B-BB-BB", label: "B-B-BB-BB", subPatternKeys: [] },
+      // NEW: four Patterns nested under "B-B-BB-BB" directly above (same
+      // array level — "B-B-BB-BB" has no `patterns` field of its own, so
+      // these sibling entries convey the nesting via naming, same
+      // convention as "A-B-C-C-EU4L4" under "A-B-C-C" or
+      // "CU3L3"/"CU4L4"/"EU4L4" under "inside-cpr"). Each base condition =
+      // PIVOT_PATTERNS["B-B-BB-BB"] AND its own raw target-window flag
+      // (see matchesPatternFlag in ScreenerUtils.tsx, which already has
+      // L4U4/L3U4/L4U3/L3U3 cases). No specific target-graded sub-pattern
+      // nested under any of them yet — selecting one in the Backtest
+      // dropdown runs a symbol-list-only scan.
+      {
+        key: "B-B-BB-BB-L4U4",
+        label: "B-B-BB-BB-L4U4",
+        subPatternKeys: [],
+      },
+      {
+        key: "B-B-BB-BB-L3U4",
+        label: "B-B-BB-BB-L3U4",
+        subPatternKeys: [],
+      },
+      {
+        key: "B-B-BB-BB-L4U3",
+        label: "B-B-BB-BB-L4U3",
+        subPatternKeys: [],
+      },
+      {
+        key: "B-B-BB-BB-L3U3",
+        label: "B-B-BB-BB-L3U3",
+        subPatternKeys: [],
+      },
       {
         key: "HALB-SSLLGap",
         label: "HALB-SSLLGap",
@@ -838,8 +874,10 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       // EXHAUSTIVELY pinned to RRHH-BB/RRHH-OB and SSLLCategory to
       // SSLL-BB/SSLL-OB — no empirical trimming needed on either axis,
       // same as RRSSA-A{RRHH}-{SSLL}. Crossing gives 4 combinations,
-      // mathematically exhaustive the same way.
-      { key: "B-B-BB-BB", label: "B-B-BB-BB", subPatternKeys: [] },
+      // mathematically exhaustive the same way. MOVED: the first of the
+      // 4, "B-B-BB-BB", now sits at the very top of this category's
+      // patterns array instead (above "HALB-SSLLGap") — see there for why
+      // — leaving the remaining 3 (B-B-BB-OB/B-B-OB-BB/B-B-OB-OB) here.
       { key: "B-B-BB-OB", label: "B-B-BB-OB", subPatternKeys: [] },
       { key: "B-B-OB-BB", label: "B-B-OB-BB", subPatternKeys: [] },
       { key: "B-B-OB-OB", label: "B-B-OB-OB", subPatternKeys: [] },
