@@ -38,8 +38,8 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     getTarget: (r) => r.todayCPR.r4,
   },
   // NEW: A-A-AA-AA-S1pPDH-pU3 — nested as a View under the A-A-AA-AA
-  // Pattern. High hit-rate (95.13%) bullish pU3 target. Condition:
-  // isAaaaDiagnosticBase + today's S1 above prev day's PDH.
+  // Pattern. Bullish pU3 target. Condition: isAaaaDiagnosticBase +
+  // LevelsAbove (R1 <= pR4) + today's S1 above prev day's PDH.
   {
     key: "A-A-AA-AA-S1pPDH-pU3",
     label: "A-A-AA-AA-S1pPDH-pU3",
