@@ -901,21 +901,24 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.prevCPR.prevHigh > r.todayCPR.prevHigh &&
         r.prevCPR.prevLow > r.todayCPR.prevLow
       );
-    // NEW: 8AM:pPDHA-SRA-U4+2:2AM — Inside CPR + raw EU4L4 flag (prev R4
-    // inside today's R3/R4, prev S4 inside today's S3/S4) + today's
-    // SSRRAbove (today's R1 above prev R1 AND today's S1 held at/above prev
-    // S1) + prev day's PDH above today's PDH ("prev prevHigh > today
-    // prevHigh") + prev day's PDL above today's PDL ("prev prevLow > today
-    // prevLow") + IF today's own PDH is below today's own R1 (HLSwitch ===
-    // "HL-B"),
-    // additionally require BOTH prev day's PDH above today's R1 ("p-PDHA",
-    // i.e. prev's high still cleared today's R1 even though today hasn't
-    // broken out yet) AND today's PDL above prev day's S1. Bullish, entry
-    // ~8AM, targets today's U4 two days out (+2), by ~2AM. Green color
-    // family.
+    // MOVED: 8AM:pPDHA-SRA-U4+2:2AM — was nested under "Inside CPR" →
+    // "EU4L4" (gated on r.InsideCPR); now nested under "levelsabove" →
+    // "A-B-C-C" → "A-B-C-C-EU4L4" instead (see BACKTEST_CATEGORIES in
+    // backtest.ts). The (r.InsideCPR) gate is REPLACED with
+    // PIVOT_PATTERNS["A-B-C-C"](r) (HHLL-B + RRHH-C + SSLL-C) — everything
+    // else is unchanged: raw EU4L4 flag (prev R4 inside today's R3/R4,
+    // prev S4 inside today's S3/S4) + today's SSRRAbove (today's R1 above
+    // prev R1 AND today's S1 held at/above prev S1) + prev day's PDH above
+    // today's PDH ("prev prevHigh > today prevHigh") + prev day's PDL
+    // above today's PDL ("prev prevLow > today prevLow") + IF today's own
+    // PDH is below today's own R1 (HLSwitch === "HL-B"), additionally
+    // require BOTH prev day's PDH above today's R1 ("p-PDHA", i.e. prev's
+    // high still cleared today's R1 even though today hasn't broken out
+    // yet) AND today's PDL above prev day's S1. Bullish, entry ~8AM,
+    // targets today's U4 two days out (+2), by ~2AM. Green color family.
     case "8AM:pPDHA-SRA-U4+2:2AM":
       return (
-        (r.InsideCPR) &&
+        PIVOT_PATTERNS["A-B-C-C"](r) &&
         r.EU4L4 &&
         r.SSRRCategory === "RRSS-A" &&
         r.prevCPR.prevHigh > r.todayCPR.prevHigh &&
@@ -1463,6 +1466,11 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     { key: "7PM:MoMi->U4:2AM", direction: "up" },
     { key: "7PM:MoMi-<L4:2AM", direction: "down" },
     { key: "6PM:APHS1A-FAU4:9PM", direction: "up" },
+    // MOVED: "8AM:pPDHA-SRA-U4+2:2AM" — was under "inside-cpr" (nested
+    // behind "EU4L4"), now under "levelsabove" (nested behind
+    // "A-B-C-C" → "A-B-C-C-EU4L4") — see that case's comment in
+    // passesPattern above. Bullish → "up".
+    { key: "8AM:pPDHA-SRA-U4+2:2AM", direction: "up" },
   ],
   "compressed": [
     { key: "6A:HLC-SSLL:R4-6P", direction: "up" },
@@ -1476,7 +1484,6 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     { key: "8AM:CoLApHA-U4+1:8AM", direction: "up" },
     { key: "8AM:SRBHHLLA-pU4+1:8AM", direction: "up" },
     { key: "2PM:pPDHLA-SRA-U4:7PM", direction: "up" },
-    { key: "8AM:pPDHA-SRA-U4+2:2AM", direction: "up" },
   ],
   "R1AbovePR4": [
     { key: "9AM:APHS1A-FAU4:4AM", direction: "up" },
@@ -1692,6 +1699,15 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     case "pRRHHLLA": return (r.RRHHCategory === "RRHH-BB" || r.RRHHCategory === "RRHH-OB") && r.HHLLCategory === "HHLL-B";
     case "EU3L4": return r.EU3L4;
     case "EU4L4": return r.EU4L4;
+    // NEW: A-B-C-C-EU4L4 — Pattern nested under "A-B-C-C" (itself a leaf
+    // Pattern under "levelsabove", see backtest.ts's BACKTEST_CATEGORIES):
+    // base condition = PIVOT_PATTERNS["A-B-C-C"] (HHLL-B + RRHH-C + SSLL-C,
+    // nested under r.LevelsAbove via the parent "levelsabove" category key)
+    // AND the raw EU4L4 flag. Nests the bullish "8AM:pPDHA-SRA-U4+2:2AM"
+    // View (moved here from "Inside CPR" → "EU4L4" — see that case's
+    // comment below for why its own InsideCPR check was swapped for this
+    // same PIVOT_PATTERNS["A-B-C-C"] check).
+    case "A-B-C-C-EU4L4": return PIVOT_PATTERNS["A-B-C-C"](r) && r.EU4L4;
     // NEW: EL4U4 — same treatment as EU4L4 above: an independent,
     // section-agnostic boolean (r.EL4U4 from cpr.ts — prev R4 inside
     // today's R3/R4 AND prev S4 inside today's S4/S3, gated on

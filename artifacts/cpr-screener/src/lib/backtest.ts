@@ -394,9 +394,11 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
   // width combo + p-PDH>U1 + PDL<L1 + today R1>prev R1 + today S1>prev S1
   // + prev day's PDH/PDL above today's PDH/PDL. Bullish, entry ~2PM,
   // targets U4 (today's R4) by ~7PM.
-  // NEW: "8AM:pPDHA-SRA-U4+2:2AM" — nested under "CPR Inside" (inside-cpr)
-  // via the new "EU4L4" Pattern (see BACKTEST_CATEGORIES
-  // below). Base inside-cpr condition + raw EU4L4 flag + today's SSRRAbove
+  // MOVED: "8AM:pPDHA-SRA-U4+2:2AM" — was nested under "CPR Inside"
+  // (inside-cpr) via the "EU4L4" Pattern; now nested under "LEVELS ABOVE"
+  // (levelsabove) via "A-B-C-C" → "A-B-C-C-EU4L4" instead (see
+  // BACKTEST_CATEGORIES below). Base condition = PIVOT_PATTERNS["A-B-C-C"]
+  // (replaces the old InsideCPR gate) + raw EU4L4 flag + today's SSRRAbove
   // + prev day's PDH above today's PDH + prev day's PDL above today's PDL
   // + (if today's own PDH is below today's own R1, additionally require
   // prev day's PDH above today's R1). Bullish, entry ~8AM, targets today's
@@ -614,6 +616,21 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       // were REMOVED (confirmed empty against real data), leaving 7 of
       // the original 9.
       { key: "A-B-C-C",     label: "A-B-C-C",     subPatternKeys: [] },
+      // NEW: "A-B-C-C-EU4L4" — nested under "A-B-C-C" directly above
+      // (same array level — "A-B-C-C" has no `patterns` field of its own,
+      // so this sibling entry conveys the nesting via naming, same
+      // convention as "EU1L3"/"EUTL3"/"EL1L2" siblings under "R1AbovePR4"
+      // or "CU3L3"/"CU4L4"/"EU4L4" siblings under "inside-cpr"). Base
+      // condition = PIVOT_PATTERNS["A-B-C-C"] AND the raw EU4L4 flag (see
+      // matchesPatternFlag in ScreenerUtils.tsx, which already has an
+      // "EU4L4" case). MOVED: "8AM:pPDHA-SRA-U4+2:2AM" now nests here
+      // (was under "Inside CPR" → "EU4L4" — see that case's comment in
+      // ScreenerUtils.tsx for what changed in its own condition).
+      {
+        key: "A-B-C-C-EU4L4",
+        label: "A-B-C-C-EU4L4",
+        subPatternKeys: ["8AM:pPDHA-SRA-U4+2:2AM"],
+      },
       { key: "A-B-C-LB",    label: "A-B-C-LB",    subPatternKeys: [] },
       { key: "A-B-E-E",     label: "A-B-E-E",     subPatternKeys: [] },
       { key: "A-B-E-LB",    label: "A-B-E-LB",    subPatternKeys: [] },
@@ -1161,12 +1178,15 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       },
       // NEW: EU4L4 Pattern — base condition = the inside-cpr
       // condition AND the raw EU4L4 flag (see matchesPatternFlag in
-      // ScreenerUtils.tsx, which already has an "EU4L4" case). Nests the
-      // bullish "8AM:pPDHA-SRA-U4+2:2AM" View (target: today's R4 / U4).
+      // ScreenerUtils.tsx, which already has an "EU4L4" case). MOVED:
+      // its "8AM:pPDHA-SRA-U4+2:2AM" View now nests under "levelsabove" →
+      // "A-B-C-C" → "A-B-C-C-EU4L4" instead (see that pattern's comment
+      // above), so this Pattern has no View of its own left — it still
+      // shows up as a symbol-list-only scan in the Backtest dropdown.
       {
         key: "EU4L4",
         label: "EU4L4",
-        subPatternKeys: ["8AM:pPDHA-SRA-U4+2:2AM"],
+        subPatternKeys: [],
       },
     ],
   },

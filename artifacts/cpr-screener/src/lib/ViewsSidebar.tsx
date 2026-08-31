@@ -127,6 +127,24 @@ export const Views: Record<string, SubPattern[]> = {
       activeText:  "#4ade80",      // green-400 text
       activeBg:    "rgba(34, 197, 94, 0.14)",
     },
+    // MOVED: 8AM:pPDHA-SRA-U4+2:2AM — was nested under "Inside CPR" →
+    // "EU4L4" (gated on InsideCPR); now nested under "levelsabove" →
+    // "A-B-C-C" → "A-B-C-C-EU4L4" instead (PIVOT_PATTERNS["A-B-C-C"] +
+    // raw EU4L4 flag — see that case's comment in ScreenerUtils.tsx).
+    // Condition otherwise unchanged: prev R4 inside today's R3/R4, prev S4
+    // inside today's S3/S4 (EU4L4) + today's SSRRAbove (today's R1 above
+    // prev R1 AND today's S1 held at/above prev S1) + prev day's PDH above
+    // today's PDH + prev day's PDL above today's PDL + IF today's own PDH
+    // is below today's own R1 (PDHLBelow), additionally require prev day's
+    // PDH above today's R1 ("p-PDHA"). Bullish, entry ~8AM, targets
+    // today's U4 two days out (+2), by ~2AM. Green color family.
+    {
+      id: "8AM:pPDHA-SRA-U4+2:2AM",
+      label: "8AM:pPDHA-SRA-U4+2:2AM",
+      activeColor: "#22c55e",              // green-500 border
+      activeText:  "#4ade80",              // green-400 text
+      activeBg:    "rgba(34, 197, 94, 0.14)",
+    },
     // NEW: 9AM:pPALPApH-FAU4:2PM — LEVELS ABOVE + Pattern U4L3 + prev day's
     // own Pivot above today's PDL (prevCPR.pivot > todayCPR.prevLow) +
     // today's own Pivot above today's own PDH (todayCPR.pivot >
@@ -354,21 +372,6 @@ export const Views: Record<string, SubPattern[]> = {
     {
       id: "2PM:pPDHLA-SRA-U4:7PM",
       label: "2PM:pPDHLA-SRA-U4:7PM",
-      activeColor: "#22c55e",              // green-500 border
-      activeText:  "#4ade80",              // green-400 text
-      activeBg:    "rgba(34, 197, 94, 0.14)",
-    },
-    // NEW: 8AM:pPDHA-SRA-U4+2:2AM — Inside CPR + raw EU4L4 flag (prev R4
-    // inside today's R3/R4, prev S4 inside today's S3/S4) + today's
-    // SSRRAbove (today's R1 above prev R1 AND today's S1 held at/above prev
-    // S1) + prev day's PDH above today's PDH + prev day's PDL above
-    // today's PDL + IF today's own PDH is below today's own R1
-    // (PDHLBelow), additionally require prev day's PDH above today's R1
-    // ("p-PDHA"). Bullish, entry ~8AM, targets today's U4 two days out
-    // (+2), by ~2AM. Green color family.
-    {
-      id: "8AM:pPDHA-SRA-U4+2:2AM",
-      label: "8AM:pPDHA-SRA-U4+2:2AM",
       activeColor: "#22c55e",              // green-500 border
       activeText:  "#4ade80",              // green-400 text
       activeBg:    "rgba(34, 197, 94, 0.14)",
