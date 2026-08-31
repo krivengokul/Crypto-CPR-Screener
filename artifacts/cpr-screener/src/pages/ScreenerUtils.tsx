@@ -1954,6 +1954,21 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
         r.todayCPR.HLSwitch === "HL-B" &&
         r.hlGapWinner === "today"
       );
+    // NEW: "E-E-AA-BB" diagnostic Pattern branches, same shape as the
+    // A-A-AA-AA branches above — each combines the structural
+    // PIVOT_PATTERNS["E-E-AA-BB"] base condition with its own raw CPR
+    // flag so it can be selected as a Pattern under EXPANDED. All five
+    // graded bullish against today's own R2 (U2) in BACKTEST_TARGETS.
+    case "E-E-AA-BB-EL1U2":
+      return PIVOT_PATTERNS["E-E-AA-BB"](r) && r.EL1U2;
+    case "E-E-AA-BB-EU1L2":
+      return PIVOT_PATTERNS["E-E-AA-BB"](r) && r.EU1L2;
+    case "E-E-AA-BB-EU2L2":
+      return PIVOT_PATTERNS["E-E-AA-BB"](r) && r.EU2L2;
+    case "E-E-AA-BB-EU1L3":
+      return PIVOT_PATTERNS["E-E-AA-BB"](r) && r.EU1L3;
+    case "E-E-AA-BB-EL1U1":
+      return PIVOT_PATTERNS["E-E-AA-BB"](r) && r.EL1U1;
     default: return getPatternInfo(r)?.label === label;
   }
 }

@@ -543,6 +543,45 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "L2 (today's S2)",
     getTarget: (r) => r.todayCPR.s2,
   },
+  // NEW: target definitions for "E-E-AA-BB"'s five EL1U2/EU1L2/EU2L2/
+  // EU1L3/EL1U1 children in "EXPANDED" (previously symbol-list-only scans
+  // with no defined target — see BACKTEST_CATEGORIES below). All five
+  // graded bullish against today's own R2 (U2) per user request.
+  {
+    key: "E-E-AA-BB-EL1U2",
+    label: "E-E-AA-BB-EL1U2",
+    direction: "bullish",
+    targetLabel: "U2 (today's R2)",
+    getTarget: (r) => r.todayCPR.r2,
+  },
+  {
+    key: "E-E-AA-BB-EU1L2",
+    label: "E-E-AA-BB-EU1L2",
+    direction: "bullish",
+    targetLabel: "U2 (today's R2)",
+    getTarget: (r) => r.todayCPR.r2,
+  },
+  {
+    key: "E-E-AA-BB-EU2L2",
+    label: "E-E-AA-BB-EU2L2",
+    direction: "bullish",
+    targetLabel: "U2 (today's R2)",
+    getTarget: (r) => r.todayCPR.r2,
+  },
+  {
+    key: "E-E-AA-BB-EU1L3",
+    label: "E-E-AA-BB-EU1L3",
+    direction: "bullish",
+    targetLabel: "U2 (today's R2)",
+    getTarget: (r) => r.todayCPR.r2,
+  },
+  {
+    key: "E-E-AA-BB-EL1U1",
+    label: "E-E-AA-BB-EL1U1",
+    direction: "bullish",
+    targetLabel: "U2 (today's R2)",
+    getTarget: (r) => r.todayCPR.r2,
+  },
 ];
 
 /**
@@ -1147,7 +1186,22 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       { key: "E-B-E-BB", label: "E-B-E-BB", subPatternKeys: [] },
       { key: "E-B-C-OB", label: "E-B-C-OB", subPatternKeys: [] },
       { key: "E-B-E-OB", label: "E-B-E-OB", subPatternKeys: [] },
-      { key: "E-E-AA-BB", label: "E-E-AA-BB", subPatternKeys: [] },
+      // NEW: "E-E-AA-BB" now nests five target-graded sub-patterns
+      // (previously subPatternKeys: [] — a symbol-list-only scan). Each
+      // combines this base condition with its own raw CPR flag — see
+      // matchesPatternFlag/passesPattern's "E-E-AA-BB-*" cases in
+      // ScreenerUtils.tsx. All graded bullish, targeting today's own R2.
+      {
+        key: "E-E-AA-BB",
+        label: "E-E-AA-BB",
+        subPatternKeys: [
+          "E-E-AA-BB-EL1U2",
+          "E-E-AA-BB-EU1L2",
+          "E-E-AA-BB-EU2L2",
+          "E-E-AA-BB-EU1L3",
+          "E-E-AA-BB-EL1U1",
+        ],
+      },
       { key: "E-E-OA-BB", label: "E-E-OA-BB", subPatternKeys: [] },
       { key: "E-E-AA-OB", label: "E-E-AA-OB", subPatternKeys: [] },
       { key: "E-E-OA-OB", label: "E-E-OA-OB", subPatternKeys: [] },
