@@ -932,7 +932,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     case "levelsabove":
       return r.LevelsAbove;
     // NEW: A-A-AA-AA + LevelsAbove (R1 <= pR4) + S1 > pPDH (pU3 Target).
-    case "A-A-AA-AA-S1pPDH-pU3":
+    case "A-A-AA-AA-S1pPDH-U3":
       return (
         isAaaaDiagnosticBase(r) &&
         r.LevelsAbove &&
@@ -1855,7 +1855,7 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     // PIVOT_PATTERNS above passesPattern, and checked at the top of
     // this function — see that map's comment for the full derivation.
     // A-A-AA-AA + LevelsAbove (R1 <= pR4) + S1 > pPDH (pU3 Target).
-    case "A-A-AA-AA-S1pPDH-pU3":
+    case "A-A-AA-AA-S1pPDH-U3":
       return (
         isAaaaDiagnosticBase(r) &&
         r.LevelsAbove &&
