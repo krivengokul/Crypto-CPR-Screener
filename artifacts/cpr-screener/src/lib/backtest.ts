@@ -37,6 +37,17 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
   },
+  // NEW: LA-BCpPDH-TopClose-U2 — nested under LEVELs ABOVE.
+  // Bullish U2 target (42.34% hit rate across 3,125 samples).
+  // Condition: LevelsAbove (R1 <= pR4) + today's BC > prev day's PDH +
+  // previous candle closed in top 25% of its range.
+  {
+    key: "LA-BCpPDH-TopClose-U2",
+    label: "BC>pPDH · Top 25% Close (U2)",
+    direction: "bullish",
+    targetLabel: "U2 (today's R2)",
+    getTarget: (r) => r.todayCPR.r2,
+  },
   // NEW: A-A-AA-AA-S1pPDH-pU3 — nested as a View under the A-A-AA-AA
   // Pattern. Bullish pU3 target. Condition: isAaaaDiagnosticBase +
   // LevelsAbove (R1 <= pR4) + today's S1 above prev day's PDH.
@@ -540,7 +551,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
     // subPatternKeys again (base condition = parent levelsabove's
     // condition AND RRGap/RRHH-AA/SSLL-AA/HHLL-A/HHGap — see
     // ScreenerUtils.tsx).
-    subPatternKeys: ["6PM:HHLLA-RRHHGap:6AM"],
+    subPatternKeys: ["6PM:HHLLA-RRHHGap:6AM", "LA-BCpPDH-TopClose-U2"],
     // NEW: "EU2L4" Pattern (arrow) — same shape as
     // CL4U3/L3U3/U3L4 elsewhere. Base condition = parent
     // levelsabove's condition AND the raw EU2L4 flag (see

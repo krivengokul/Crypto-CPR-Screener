@@ -938,6 +938,19 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.LevelsAbove &&
         r.todayCPR.s1 > r.prevCPR.prevHigh
       );
+    // NEW: LA-BCpPDH-TopClose-U2 — LEVELs ABOVE + today's BC > prev day's PDH
+    // + prev candle closed in top 25% of its daily range. Target: today's R2 (U2).
+    // 42.34% hit rate, 3,125 samples over 180 days.
+    case "LA-BCpPDH-TopClose-U2": {
+      const prevRange = r.prevCPR.prevHigh - r.prevCPR.prevLow;
+      const prevCloseInTop25 = prevRange > 0 &&
+        (r.prevCPR.prevHigh - (3 * r.prevCPR.pivot - 2 * r.prevCPR.bc)) / prevRange <= 0.25;
+      return (
+        r.LevelsAbove &&
+        r.todayCPR.bc > r.prevCPR.prevHigh &&
+        prevCloseInTop25
+      );
+    }
     // A-A-AA-AA + U4L3 diagnostic View.
     case "A-A-AA-AA-U4L3":
       return (
@@ -1848,6 +1861,17 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
         r.LevelsAbove &&
         r.todayCPR.s1 > r.prevCPR.prevHigh
       );
+    // LA-BCpPDH-TopClose-U2 — LEVELs ABOVE + BC > pPDH + prev close in top 25%.
+    case "LA-BCpPDH-TopClose-U2": {
+      const prevRange = r.prevCPR.prevHigh - r.prevCPR.prevLow;
+      const prevCloseInTop25 = prevRange > 0 &&
+        (r.prevCPR.prevHigh - (3 * r.prevCPR.pivot - 2 * r.prevCPR.bc)) / prevRange <= 0.25;
+      return (
+        r.LevelsAbove &&
+        r.todayCPR.bc > r.prevCPR.prevHigh &&
+        prevCloseInTop25
+      );
+    }
     // A-A-AA-AA + U4L3 diagnostic View. Keep the raw flag filterable
     // independently from the cosmetic U4L3 badge rendering.
     case "A-A-AA-AA-U4L3":
