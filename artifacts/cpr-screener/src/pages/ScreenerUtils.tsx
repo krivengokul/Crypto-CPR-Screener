@@ -1293,21 +1293,27 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // lands here and the two categories partition cleanly.
     case "R1AbovePR4":
       return r.R1AbovePR4;
-    // NEW: 9AM:APHS1A-FAU4:4AM — U1>pU4 sub-pattern.
-    // Condition: today R1 above prev R4 (parent U1>pU4) + Pattern EU1L3 +
-    // compressionRatio > 300.
-    // Legend labels: Pattern EU1L3, PCPR Small, CPR Large. Target FAU4 @ 3PM.
-    case "9AM:APHS1A-FAU4:4AM":
+    // RENAMED from "9AM:APHS1A-FAU4:4AM" — U1>pU4 sub-pattern, now nested
+    // under the new "A-A-AA-AA-EUTL3" Subpattern (moved out from directly
+    // under "EUTL3"). Condition: today R1 above prev R4 (parent U1>pU4) +
+    // the structural A-A-AA-AA check (see PIVOT_PATTERNS above) + Pattern
+    // EUTL3 + today's BC above prev day's PDH + today's S1 above prev
+    // day's TC.
+    // Legend labels: Pattern EUTL3, A-A-AA-AA. Target FAU4 @ 4AM.
+    case "9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A":
       return (
         r.R1AbovePR4 &&   // U1 > pU4
+        PIVOT_PATTERNS["A-A-AA-AA"](r) &&
         r.EUTL3 &&
         r.todayCPR.bc > r.prevCPR.prevHigh &&
         r.todayCPR.s1 > r.prevCPR.tc
       );
-    // NEW: 6AM:pX-APHS1A-pL4:4AM — U1>pU4 sub-pattern, same "EU1L3" Pattern
-    //  and identical base condition as 9AM:APHS1A-FAU4:4AM
-    // (today R1 above prev R4 + EUTL3 + today's BC above prev day's PDH
-    // + today's S1 above prev day's TC), PLUS one
+    // NEW: 6AM:pX-APHS1A-pL4:4AM — U1>pU4 sub-pattern, same "EUTL3" Pattern
+    // and identical PRE-RENAME base condition as
+    // "9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A" (today R1 above prev R4 + EUTL3 +
+    // today's BC above prev day's PDH + today's S1 above prev day's TC —
+    // this View does NOT get that sibling's newer A-A-AA-AA check), PLUS
+    // one
     // extra check: the PREVIOUS day's own pivot sub-label (prevCPR vs
     // ppCPR) is EU3L4 ("p-EU3L4" badge). Bearish, targets pL4 (prev
     // day's S4) by ~4AM. Red color family.
@@ -1320,7 +1326,8 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         computePrevPattern(r.prevCPR, r.ppCPR) === "EU3L4"
       );
     // NEW: 8AM:APHS1A-FAU4:4AM — U1>pU4 sub-pattern, nested under the same
-    // "EU1L3" Pattern as 9AM:APHS1A-FAU4:4AM.
+    // "EU1L3" Pattern as (the now-renamed) "9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A"
+    // (formerly "9AM:APHS1A-FAU4:4AM").
     // Condition: today R1 above prev R4 (parent U1>pU4) + Pattern EU1L3 +
     // today's BC above prev day's PDH (todayCPR.bc > prevCPR.prevHigh) +
     // today's S1 above
@@ -1526,9 +1533,10 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     { key: "2PM:pPDHLA-SRA-U4:7PM", direction: "up" },
   ],
   "R1AbovePR4": [
-    { key: "9AM:APHS1A-FAU4:4AM", direction: "up" },
+    { key: "9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A", direction: "up" },
     // FIX: "8AM:APHS1A-FAU4:4AM" (nested under the same "EU1L3" Pattern
-    //  as 9AM:APHS1A-FAU4:4AM above) was missing here, so
+    //  as "9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A" above, formerly
+    // "9AM:APHS1A-FAU4:4AM") was missing here, so
     // rows matching it never got the per-row green direction dot even
     // though the Views button itself filtered correctly. Bullish → "up".
     { key: "8AM:APHS1A-FAU4:4AM", direction: "up" },
@@ -1954,6 +1962,13 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
       return PIVOT_PATTERNS["A-A-AA-AA"](r) && r.U3L4;
     case "A-A-AA-AA-EU3L4":
       return PIVOT_PATTERNS["A-A-AA-AA"](r) && r.EU3L4;
+    // NEW: "A-A-AA-AA-EUTL3" Subpattern, nested under "U1 > pU4"
+    // (R1AbovePR4) rather than "levelsabove" like its EU3L4 sibling
+    // above. Base condition = structural A-A-AA-AA AND the raw EUTL3
+    // flag. Nests the renamed "9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A" View (see
+    // passesPattern above).
+    case "A-A-AA-AA-EUTL3":
+      return PIVOT_PATTERNS["A-A-AA-AA"](r) && r.EUTL3;
     case "A-A-AA-AA-U3L4-pGapB":
       return (
         PIVOT_PATTERNS["A-A-AA-AA"](r) &&

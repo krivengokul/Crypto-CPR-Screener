@@ -130,21 +130,27 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
   // parent category's own base condition, so it was just a duplicate
   // "dot" in the Backtest dropdown. Use the "U1 > pU4" category's own
   // symbol-list scan instead.
-  // NEW: nested under the "U1 > pU4" category. Bullish, same PU4 target
-  // style as the (now-removed) HA-U1>PU4 (matches ViewsSidebar's
-  // R1AbovePR4 sub-pattern).
+  // RENAMED from "9AM:APHS1A-FAU4:4AM". Nested under the "U1 > pU4"
+  // category's new "A-A-AA-AA-EUTL3" Subpattern (moved out from directly
+  // under "EUTL3"): the structural A-A-AA-AA check (see PIVOT_PATTERNS in
+  // ScreenerUtils.tsx) was added on top of the existing EUTL3 + BC>pPDH +
+  // S1>pTC condition. Bullish, same PU4 target style as the (now-removed)
+  // HA-U1>PU4 (matches ViewsSidebar's R1AbovePR4 sub-pattern).
   {
-    key: "9AM:APHS1A-FAU4:4AM",
-    label: "9AM:APHS1A-FAU4:4AM",
+    key: "9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A",
+    label: "9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A",
     direction: "bullish",
     targetLabel: "FAU4 (Far Above today's R4)",
     getTarget: (r) => r.todayCPR.r4,
   },
   // NEW: "6AM:pX-APHS1A-pL4:4AM" — nested under the "U1 > pU4" (R1AbovePR4)
   // category's "EUTL3" Pattern, alongside
-  // "9AM:APHS1A-FAU4:4AM". Same base condition as that sibling plus the
-  // prev day's own pivot sub-label being EU3L4 (see ScreenerUtils.tsx).
-  // Bearish, targets pL4 (prev day's S4) by ~4AM.
+  // "9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A" (renamed from
+  // "9AM:APHS1A-FAU4:4AM"). Same base condition as that sibling's
+  // pre-rename EUTL3 + BC>pPDH + S1>pTC condition (this View does NOT get
+  // the A-A-AA-AA check) plus the prev day's own pivot sub-label being
+  // EU3L4 (see ScreenerUtils.tsx). Bearish, targets pL4 (prev day's S4)
+  // by ~4AM.
   {
     key: "6AM:pX-APHS1A-pL4:4AM",
     label: "6AM:pX-APHS1A-pL4:4AM",
@@ -329,7 +335,9 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     getTarget: (r) => r.todayCPR.r4,
   },
   // NEW: "TiMe-EUTL3-AU4:2PM" — nested directly under "U1 > pU4"
-  // (R1AbovePR4), alongside 9AM:APHS1A-FAU4:4AM. Bullish, Pattern EUTL3 +
+  // (R1AbovePR4), alongside "A-A-AA-AA-EUTL3" (which nests
+  // "9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A", renamed from
+  // "9AM:APHS1A-FAU4:4AM"). Bullish, Pattern EUTL3 +
   // pTiny/Mega width combo, targets AU4 (prev day's R4) by ~2PM.
   {
     key: "TiMe-EUTL3-AU4:2PM",
@@ -1258,8 +1266,24 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       {
         key: "EUTL3",
         label: "EUTL3",
-        // "9AM:APHS1A-FAU4:4AM" now nests here (moved from "EU1L3").
-        subPatternKeys: ["TiMe-EUTL3-AU4:2PM", "9AM:APHS1A-FAU4:4AM", "6AM:pX-APHS1A-pL4:4AM"],
+        // "9AM:APHS1A-FAU4:4AM" moved out from here into the new
+        // "A-A-AA-AA-EUTL3" Subpattern below (its condition now ANDs in
+        // the structural A-A-AA-AA check, so it's no longer a bare EUTL3
+        // View).
+        subPatternKeys: ["TiMe-EUTL3-AU4:2PM", "6AM:pX-APHS1A-pL4:4AM"],
+      },
+      // NEW: "A-A-AA-AA-EUTL3" Subpattern — structural A-A-AA-AA (see
+      // PIVOT_PATTERNS in ScreenerUtils.tsx) crossed with the parent
+      // EUTL3 flag, same naming/nesting convention as the
+      // "A-A-AA-AA-EU3L4" Subpattern under "levelsabove". Nests the
+      // renamed "9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A" View (was
+      // "9AM:APHS1A-FAU4:4AM"), whose own condition now additionally
+      // requires the A-A-AA-AA check on top of its existing EUTL3 +
+      // BC>pPDH + S1>pTC condition.
+      {
+        key: "A-A-AA-AA-EUTL3",
+        label: "A-A-AA-AA-EUTL3",
+        subPatternKeys: ["9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A"],
       },
       {
         key: "EL1L2",
