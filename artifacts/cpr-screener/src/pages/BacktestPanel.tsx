@@ -280,19 +280,19 @@ function DateField({
  *   - a CATEGORY (e.g. "LittleCPR Above", "Overlap Above") — symbol list
  *     matching the category's base condition only, no Target/Result/Hit
  *     Date, since a category has no single well-defined target;
- *   - a Pattern  nested under a category (e.g. "Overlap
- *     Above" → "HiL4U34") — same symbol-list-only treatment as a category,
- *     just additionally filtered by that Pattern's raw flag; or
- *   - a specific PATTERN nested under a category, under a pattern, or
- *     standalone (e.g. "U1 > Previous U4") — the full backtest.
+ *   - a Pattern nested under a category (e.g. "Overlap Above" → "HiL4U34"),
+ *     or a Subpattern nested under another Pattern — both run the
+ *     target-graded backtest for that node; or
+ *   - a specific View nested under a Pattern — the full backtest using the
+ *     View's target definition.
  *
  * Dropdown layout: the category/pattern label is no longer rendered
  * as a separate bold <optgroup> header (that duplicated the "— all
  * (symbol list only)" option below it). Instead the category is a single
  * selectable row "<Category>", with its patterns
- * and Pivot-Level sub-categories indented directly beneath. Native <option>
- * elements can't render partial bold, so the category name is shown in
- * plain text; the visual grouping comes from indentation only.
+ * and recursively nested Patterns/Views indented beneath them. Native
+ * <option> elements can't render partial bold, so the category name is shown
+ * in plain text; the visual grouping comes from indentation and arrows.
  */
 export default function BacktestPanel() {
   const [selectedKey, setSelectedKey] = useState<string>(BACKTEST_CATEGORIES[0].key);
@@ -362,32 +362,45 @@ export default function BacktestPanel() {
 
   const isCategory = BACKTEST_CATEGORIES.some((c) => c.key === selectedKey);
 
-  let activePatternInfo: { category: BacktestCategoryDef; sub: BacktestSubCategoryDef } | undefined;
+  let activePatternInfo: {
+    category: BacktestCategoryDef;
+    sub: BacktestSubCategoryDef;
+    path: BacktestSubCategoryDef[];
+  } | undefined;
   for (const cat of BACKTEST_CATEGORIES) {
-    const sub = cat.patterns?.find((s) => `${cat.key}${SUBCATEGORY_SEP}${s.key}` === selectedKey);
-    if (sub) {
-      activePatternInfo = { category: cat, sub };
-      break;
-    }
+    const findPattern = (
+      patterns: BacktestSubCategoryDef[] | undefined,
+      ancestors: BacktestSubCategoryDef[] = []
+    ): typeof activePatternInfo => {
+      for (const sub of patterns ?? []) {
+        const path = [...ancestors, sub];
+        if ([cat.key, ...path.map((p) => p.key)].join(SUBCATEGORY_SEP) === selectedKey) {
+          return { category: cat, sub, path };
+        }
+        const nested = findPattern(sub.patterns, path);
+        if (nested) return nested;
+      }
+      return undefined;
+    };
+    activePatternInfo = findPattern(cat.patterns);
+    if (activePatternInfo) break;
   }
   const isPatternOnly = !!activePatternInfo;
 
   const isViewOnly = !isCategory && !isPatternOnly;
 
   const activeTarget = isViewOnly ? BACKTEST_TARGETS.find((t) => t.key === selectedKey) : undefined;
+  const activePatternTarget = isPatternOnly && activePatternInfo
+    ? BACKTEST_TARGETS.find((t) => t.key === activePatternInfo.sub.key)
+    : undefined;
   const activeCategory = isCategory ? BACKTEST_CATEGORIES.find((c) => c.key === selectedKey) : undefined;
 
   const symbolListLabel = isCategory
     ? activeCategory?.label
     : isPatternOnly && activePatternInfo
-    ? `${activePatternInfo.category.label} → Pattern ${activePatternInfo.sub.label}`
+    ? `${activePatternInfo.category.label} → ${activePatternInfo.path.map((p) => `Pattern ${p.label}`).join(" → ")}`
     : undefined;
 
-  const nestedPatternKeys = new Set<string>();
-  BACKTEST_CATEGORIES.forEach((cat) => {
-    cat.subPatternKeys?.forEach((k) => nestedPatternKeys.add(k));
-    cat.patterns?.forEach((sub) => sub.subPatternKeys.forEach((k) => nestedPatternKeys.add(k)));
-  });
   // Ungrouped patterns intentionally omitted from the dropdown: the ones
   // that were showing up at the bottom ("LittleCPR Above", "U1 > Previous U4
   // (BigCPR Above)") duplicated options already rendered inside their
@@ -408,25 +421,41 @@ export default function BacktestPanel() {
     return list;
   })();
 
-  // Resolve each category's nested keys into full BacktestTargetDef objects
-  // once, so the picker can filter/render without re-searching
+  // Resolve the recursive category → Pattern → Subpattern → View tree once,
+  // so the picker can render every level without re-searching
   // BACKTEST_TARGETS on every keystroke.
-  type ResolvedSub = { sub: BacktestSubCategoryDef; Views: BacktestTargetDef[] };
+  type ResolvedSub = {
+    sub: BacktestSubCategoryDef;
+    path: BacktestSubCategoryDef[];
+    Views: BacktestTargetDef[];
+    children: ResolvedSub[];
+  };
   type ResolvedCat = { cat: BacktestCategoryDef; directPatterns: BacktestTargetDef[]; subCats: ResolvedSub[] };
   const categoryTree: ResolvedCat[] = useMemo(
-    () =>
-      orderedCategories.map((cat) => ({
+    () => {
+      const resolvePattern = (
+        sub: BacktestSubCategoryDef,
+        ancestors: BacktestSubCategoryDef[] = []
+      ): ResolvedSub => {
+        const path = [...ancestors, sub];
+        return {
+          sub,
+          path,
+          Views: sub.subPatternKeys
+            .map((pk) => BACKTEST_TARGETS.find((t) => t.key === pk))
+            .filter((t): t is BacktestTargetDef => !!t),
+          children: (sub.patterns ?? []).map((child) => resolvePattern(child, path)),
+        };
+      };
+
+      return orderedCategories.map((cat) => ({
         cat,
         directPatterns: (cat.subPatternKeys ?? [])
           .map((pk) => BACKTEST_TARGETS.find((t) => t.key === pk))
           .filter((t): t is BacktestTargetDef => !!t),
-        subCats: (cat.patterns ?? []).map((sub) => ({
-          sub,
-          Views: sub.subPatternKeys
-            .map((pk) => BACKTEST_TARGETS.find((t) => t.key === pk))
-            .filter((t): t is BacktestTargetDef => !!t),
-        })),
-      })),
+        subCats: (cat.patterns ?? []).map((sub) => resolvePattern(sub)),
+      }));
+    },
     [orderedCategories]
   );
 
@@ -455,12 +484,17 @@ export default function BacktestPanel() {
   // On open, expand whichever group contains the current selection and
   // clear any leftover search text.
   useEffect(() => {
+    const containsSelection = (node: ResolvedSub, catKey: string): boolean =>
+      [catKey, ...node.path.map((p) => p.key)].join(SUBCATEGORY_SEP) === selectedKey ||
+      node.Views.some((t) => t.key === selectedKey) ||
+      node.children.some((child) => containsSelection(child, catKey));
+
     if (!pickerOpen) return;
     const cat = categoryTree.find(
       ({ cat, directPatterns, subCats }) =>
         cat.key === selectedKey ||
         directPatterns.some((t) => t.key === selectedKey) ||
-        subCats.some((s) => `${cat.key}${SUBCATEGORY_SEP}${s.sub.key}` === selectedKey || s.Views.some((t) => t.key === selectedKey))
+        subCats.some((s) => containsSelection(s, cat.key))
     );
     setExpandedCats(cat ? new Set([cat.cat.key]) : new Set());
     setPickerQuery("");
@@ -711,17 +745,67 @@ export default function BacktestPanel() {
                     .map(({ cat, directPatterns, subCats }) => {
                       const catLabelHit = hit(cat.label);
                       const directHits = directPatterns.filter((t) => !q || catLabelHit || hit(t.label));
-                      const subCatHits = subCats
-                        .map((s) => ({
-                          sub: s.sub,
-                          patternHits: s.Views.filter((t) => !q || catLabelHit || hit(s.sub.label) || hit(t.label)),
-                          subLabelHit: hit(s.sub.label),
-                        }))
-                        .filter((s) => !q || catLabelHit || s.subLabelHit || s.patternHits.length > 0);
-                      const visible = !q || catLabelHit || directHits.length > 0 || subCatHits.length > 0;
+                      const patternSelectionKey = (path: BacktestSubCategoryDef[]) =>
+                        [cat.key, ...path.map((p) => p.key)].join(SUBCATEGORY_SEP);
+                      const patternIsVisible = (node: ResolvedSub): boolean =>
+                        !q ||
+                        catLabelHit ||
+                        hit(node.sub.label) ||
+                        node.Views.some((t) => hit(t.label)) ||
+                        node.children.some(patternIsVisible);
+
+                      const viewButton = (t: BacktestTargetDef) => (
+                        <button
+                          key={t.key}
+                          type="button"
+                          role="option"
+                          aria-selected={selectedKey === t.key}
+                          onClick={() => selectAndClose(t.key, cat.key)}
+                          className={`w-full flex items-center gap-2 text-left px-2 py-1 rounded-md text-xs font-mono truncate ${
+                            selectedKey === t.key ? "bg-blue-500/20 text-blue-300" : "text-foreground/80 hover:bg-muted/40"
+                          }`}
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-teal-500 shrink-0" />
+                          <span className="truncate">{t.label}</span>
+                        </button>
+                      );
+
+                      const renderPattern = (node: ResolvedSub) => {
+                        if (!patternIsVisible(node)) return null;
+                        const nodeLabelHit = hit(node.sub.label);
+                        const visibleViews = node.Views.filter(
+                          (t) => !q || catLabelHit || nodeLabelHit || hit(t.label)
+                        );
+                        const visibleChildren = node.children.filter(patternIsVisible);
+                        const value = patternSelectionKey(node.path);
+                        return (
+                          <div key={value}>
+                            <button
+                              type="button"
+                              role="option"
+                              aria-selected={selectedKey === value}
+                              onClick={() => selectAndClose(value, cat.key)}
+                              className={`w-full flex items-center gap-1.5 text-left px-2 py-1 rounded-md text-xs truncate ${
+                                selectedKey === value ? "bg-blue-500/20 text-blue-300" : "text-foreground/90 hover:bg-muted/40"
+                              }`}
+                            >
+                              <span className="text-muted-foreground shrink-0">{"\u21B3"}</span>
+                              <span className="truncate">{node.sub.label}</span>
+                            </button>
+                            {(visibleChildren.length > 0 || visibleViews.length > 0) && (
+                              <div className="ml-3 pl-2 border-l border-border/60 mt-0.5 space-y-0.5">
+                                {visibleChildren.map((child) => renderPattern(child))}
+                                {visibleViews.map(viewButton)}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      };
+
+                      const visiblePatterns = subCats.filter(patternIsVisible);
+                      const visible = !q || catLabelHit || directHits.length > 0 || visiblePatterns.length > 0;
                       if (!visible) return null;
                       const isExpanded = !!q || expandedCats.has(cat.key);
-                      const subKeyFor = (subKey: string) => `${cat.key}${SUBCATEGORY_SEP}${subKey}`;
 
                       return (
                         <div key={cat.key} className="mb-0.5">
@@ -753,60 +837,8 @@ export default function BacktestPanel() {
 
                           {isExpanded && (
                             <div className="ml-3 pl-2 border-l border-border/60 mt-0.5 space-y-0.5">
-                              {directHits.map((t) => (
-                                <button
-                                  key={t.key}
-                                  type="button"
-                                  role="option"
-                                  aria-selected={selectedKey === t.key}
-                                  onClick={() => selectAndClose(t.key, cat.key)}
-                                  className={`w-full flex items-center gap-2 text-left px-2 py-1 rounded-md text-xs font-mono truncate ${
-                                    selectedKey === t.key ? "bg-blue-500/20 text-blue-300" : "text-foreground/80 hover:bg-muted/40"
-                                  }`}
-                                >
-                                  <span className="w-1.5 h-1.5 rounded-full bg-teal-500 shrink-0" />
-                                  <span className="truncate">{t.label}</span>
-                                </button>
-                              ))}
-
-                              {subCatHits.map(({ sub, patternHits }) => {
-                                const subKey = subKeyFor(sub.key);
-                                return (
-                                  <div key={sub.key}>
-                                    <button
-                                      type="button"
-                                      role="option"
-                                      aria-selected={selectedKey === subKey}
-                                      onClick={() => selectAndClose(subKey, cat.key)}
-                                      className={`w-full flex items-center gap-1.5 text-left px-2 py-1 rounded-md text-xs truncate ${
-                                        selectedKey === subKey ? "bg-blue-500/20 text-blue-300" : "text-foreground/90 hover:bg-muted/40"
-                                      }`}
-                                    >
-                                      <span className="text-muted-foreground shrink-0">{"\u21B3"}</span>
-                                      <span className="truncate">{sub.label}</span>
-                                    </button>
-                                    {patternHits.length > 0 && (
-                                      <div className="ml-3 pl-2 border-l border-border/60 mt-0.5 space-y-0.5">
-                                        {patternHits.map((t) => (
-                                          <button
-                                            key={t.key}
-                                            type="button"
-                                            role="option"
-                                            aria-selected={selectedKey === t.key}
-                                            onClick={() => selectAndClose(t.key, cat.key)}
-                                            className={`w-full flex items-center gap-2 text-left px-2 py-1 rounded-md text-xs font-mono truncate ${
-                                              selectedKey === t.key ? "bg-blue-500/20 text-blue-300" : "text-foreground/80 hover:bg-muted/40"
-                                            }`}
-                                          >
-                                            <span className="w-1.5 h-1.5 rounded-full bg-teal-500 shrink-0" />
-                                            <span className="truncate">{t.label}</span>
-                                          </button>
-                                        ))}
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })}
+                              {directHits.map(viewButton)}
+                              {visiblePatterns.map((pattern) => renderPattern(pattern))}
                             </div>
                           )}
                         </div>
@@ -907,11 +939,16 @@ export default function BacktestPanel() {
       )}
       {isPatternOnly && activePatternInfo && (
         <div className="text-xs text-muted-foreground mb-3">
-          Target: <span className="text-foreground font-medium">U4 (today's R4)</span> (price must
-          reach or exceed it) — every symbol matching{" "}
+          Target: <span className="text-foreground font-medium">
+            {activePatternTarget?.targetLabel ?? "U4 (today's R4)"}
+          </span>{" "}
+          (price must {activePatternTarget?.direction === "bearish" ? "reach or fall below it" : "reach or exceed it"}) — every symbol matching{" "}
           <span className="text-foreground font-medium">{activePatternInfo.category.label}</span>&apos;s
           base condition AND Pattern{" "}
-          <span className="text-foreground font-medium">{activePatternInfo.sub.label}</span> on{" "}
+          <span className="text-foreground font-medium">
+            {activePatternInfo.path.map((p) => p.label).join(" → ")}
+          </span>{" "}
+          on{" "}
           {dateMode === "range" ? "each date in the range" : "the entry date"} is graded against it.
         </div>
       )}

@@ -543,10 +543,14 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "L2 (today's S2)",
     getTarget: (r) => r.todayCPR.s2,
   },
-  // NEW: target definitions for "E-E-AA-BB"'s five EL1U2/EU1L2/EU2L2/
-  // EU1L3/EL1U1 children in "EXPANDED" (previously symbol-list-only scans
-  // with no defined target — see BACKTEST_CATEGORIES below). All five
-  // graded bullish against today's own R2 (U2) per user request.
+  // NEW: target definitions for "E-E-AA-BB"'s five nested Subpatterns
+  // (EL1U2/EU1L2/EU2L2/EU1L3/EL1U1 — see BacktestSubCategoryDef.patterns
+  // in the interfaces above and BACKTEST_CATEGORIES below). Selecting one
+  // of these Subpatterns (arrow ↳, nested under the "E-E-AA-BB" Pattern)
+  // now grades against the specific target defined here instead of
+  // pivotLevelBacktestSymbolOnDate's hardcoded bullish U4/R4 default — see
+  // that function's BACKTEST_TARGETS lookup. All five bullish against
+  // today's own R2 (U2) per user request.
   {
     key: "E-E-AA-BB-EL1U2",
     label: "E-E-AA-BB-EL1U2",
@@ -611,7 +615,17 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
 export interface BacktestSubCategoryDef {
   key: string;              // Pattern label (matches matchesPatternFlag's `label` param, e.g. "U3L4")
   label: string;            // display name, e.g. "U3L4"
-  subPatternKeys: string[]; // BACKTEST_TARGETS keys nested under this Pattern
+  subPatternKeys: string[]; // BACKTEST_TARGETS keys (Views, leaf/graded) nested directly under this Pattern
+  // NEW: patterns — a Pattern can itself nest one or more "Subpattern"
+  // children (e.g. "E-E-AA-BB" → Subpattern "E-E-AA-BB-EL1U2"), rendered
+  // with the same arrow (↳) treatment as a top-level Pattern rather than
+  // as a flat View bullet. Same recursive shape as
+  // BacktestCategoryDef.patterns: a Subpattern's base condition is the
+  // PARENT Pattern's condition AND the named Subpattern's own raw flag
+  // (see matchesPatternFlag/passesPattern in ScreenerUtils.tsx), and it
+  // can in turn nest its own subPatternKeys (Views) once specific
+  // targets are defined for it.
+  patterns?: BacktestSubCategoryDef[];
 }
 
 export interface BacktestCategoryDef {
@@ -1192,20 +1206,23 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       { key: "E-B-E-BB", label: "E-B-E-BB", subPatternKeys: [] },
       { key: "E-B-C-OB", label: "E-B-C-OB", subPatternKeys: [] },
       { key: "E-B-E-OB", label: "E-B-E-OB", subPatternKeys: [] },
-      // NEW: "E-E-AA-BB" now nests five target-graded sub-patterns
-      // (previously subPatternKeys: [] — a symbol-list-only scan). Each
-      // combines this base condition with its own raw CPR flag — see
-      // matchesPatternFlag/passesPattern's "E-E-AA-BB-*" cases in
-      // ScreenerUtils.tsx. All graded bullish, targeting today's own R2.
+      // "E-E-AA-BB" nests five Subpatterns (EL1U2/EU1L2/EU2L2/EU1L3/EL1U1)
+      // — these are Patterns themselves (arrow ↳), not Views (green dot),
+      // per user correction. Each combines this Pattern's base condition
+      // with its own raw CPR flag — see matchesPatternFlag/passesPattern's
+      // "E-E-AA-BB-*" cases in ScreenerUtils.tsx. No Views defined under
+      // any of them yet, so each is currently a symbol-list-only scan,
+      // same as any other freshly-added Pattern with empty subPatternKeys.
       {
         key: "E-E-AA-BB",
         label: "E-E-AA-BB",
-        subPatternKeys: [
-          "E-E-AA-BB-EL1U2",
-          "E-E-AA-BB-EU1L2",
-          "E-E-AA-BB-EU2L2",
-          "E-E-AA-BB-EU1L3",
-          "E-E-AA-BB-EL1U1",
+        subPatternKeys: [],
+        patterns: [
+          { key: "E-E-AA-BB-EL1U2", label: "E-E-AA-BB-EL1U2", subPatternKeys: [] },
+          { key: "E-E-AA-BB-EU1L2", label: "E-E-AA-BB-EU1L2", subPatternKeys: [] },
+          { key: "E-E-AA-BB-EU2L2", label: "E-E-AA-BB-EU2L2", subPatternKeys: [] },
+          { key: "E-E-AA-BB-EU1L3", label: "E-E-AA-BB-EU1L3", subPatternKeys: [] },
+          { key: "E-E-AA-BB-EL1U1", label: "E-E-AA-BB-EL1U1", subPatternKeys: [] },
         ],
       },
       { key: "E-E-OA-BB", label: "E-E-OA-BB", subPatternKeys: [] },
@@ -1417,18 +1434,18 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
  *   <span className="font-semibold">{opt.boldLabel}</span>
  *   <span className="font-normal opacity-70">{opt.suffix}</span>
  *
- * Sub-patterns follow their parent with depth = 1 (or 2 under a Pivot
- * Level) and no bold part.
+ * Nested Pattern nodes follow their parent at any depth. Views remain leaf
+ * entries beneath the Pattern node that owns them and have no bold part.
  */
 export type BacktestOptionKind = "category" | "pivotLevel" | "pattern";
 
 export interface BacktestOption {
-  value: string;              // "<categoryKey>" | "<categoryKey>::<pivotLevelKey>" | "<patternKey>"
+  value: string;              // category key, or category + full Pattern path, or a View key
   kind: BacktestOptionKind;
   boldLabel: string;          // bold part, e.g. "LittleCPR Above" ("" for patterns)
   suffix: string;             // normal-weight part, e.g. " — all (symbol list only)"
   plainLabel: string;         // boldLabel + suffix, for the collapsed/selected value
-  depth: 0 | 1 | 2;           // indentation level
+  depth: number;              // indentation level
   categoryKey: string;
   pivotLevelKey?: string;
   patternKey?: string;
@@ -1470,18 +1487,19 @@ export function buildBacktestOptions(): BacktestOption[] {
       });
     };
 
-    const pushPattern = (sub: BacktestSubCategoryDef) => {
-      // CHANGED: Pattern-level selections are no longer symbol-list-only —
-      // they now grade against today's R4 / U4 (bullish) — but the label
-      // itself stays plain (no "-R4" suffix); the target is still shown
-      // separately wherever Result/Hit Date/pass-fail is displayed.
+    const pushPattern = (sub: BacktestSubCategoryDef, path: BacktestSubCategoryDef[], depth: number) => {
+      // A Pattern node is selectable independently from its Views. Its
+      // selection value carries the category and full ancestor path so a
+      // nested Subpattern cannot be confused with a direct View that happens
+      // to have the same raw key.
+      const selectionValue = [cat.key, ...path.map((p) => p.key)].join("::");
       opts.push({
-        value: `${cat.key}::${sub.key}`,
+        value: selectionValue,
         kind: "pivotLevel",
         boldLabel: sub.label,
         suffix: "",
         plainLabel: sub.label,
-        depth: 1,
+        depth,
         categoryKey: cat.key,
         pivotLevelKey: sub.key,
         symbolListOnly: false,
@@ -1493,12 +1511,15 @@ export function buildBacktestOptions(): BacktestOption[] {
           boldLabel: "",
           suffix: patternLabel(key),
           plainLabel: patternLabel(key),
-          depth: 2,
+          depth: depth + 1,
           categoryKey: cat.key,
           pivotLevelKey: sub.key,
           patternKey: key,
           symbolListOnly: false,
         });
+      }
+      for (const child of sub.patterns ?? []) {
+        pushPattern(child, [...path, child], depth + 1);
       }
     };
 
@@ -1512,7 +1533,7 @@ export function buildBacktestOptions(): BacktestOption[] {
         } else if (entry.kind === "pattern") {
           const sub = patterns.get(entry.key);
           if (sub) {
-            pushPattern(sub);
+            pushPattern(sub, [sub], 1);
             emittedPatterns.add(entry.key);
           }
         }
@@ -1521,11 +1542,11 @@ export function buildBacktestOptions(): BacktestOption[] {
         if (!emittedDirectViews.has(key)) pushDirectView(key);
       }
       for (const sub of cat.patterns ?? []) {
-        if (!emittedPatterns.has(sub.key)) pushPattern(sub);
+        if (!emittedPatterns.has(sub.key)) pushPattern(sub, [sub], 1);
       }
     } else {
       for (const key of cat.subPatternKeys ?? []) pushDirectView(key);
-      for (const sub of cat.patterns ?? []) pushPattern(sub);
+      for (const sub of cat.patterns ?? []) pushPattern(sub, [sub], 1);
     }
   }
 
@@ -2197,8 +2218,18 @@ export async function pivotLevelBacktestSymbolOnDate(
   if (!passesPatternFn(result, categoryKey)) return null; // didn't match the parent category's base condition
   if (!matchesPatternFn(result, pivotLevelKey)) return null; // didn't match this Pattern's raw flag
 
-  const targetLevel = result.todayCPR.r4;
-  const targetLabel = "U4 (today's R4)";
+  // NEW: if this Pattern (or a nested Subpattern under it — see
+  // BacktestSubCategoryDef.patterns in the interfaces above) has its own
+  // BACKTEST_TARGETS entry keyed by its exact pivotLevelKey (e.g.
+  // "E-E-AA-BB-EL1U2" graded against today's own R2), grade against THAT
+  // specific target/direction instead. Falls back to the original
+  // hardcoded bullish U4/R4 target below for every Pattern that has no
+  // defined target of its own, so existing Pattern-only selections are
+  // unaffected.
+  const definedTarget = BACKTEST_TARGETS.find((t) => t.key === pivotLevelKey);
+  const bullish = definedTarget ? definedTarget.direction === "bullish" : true;
+  const targetLevel = definedTarget ? definedTarget.getTarget(result) : result.todayCPR.r4;
+  const targetLabel = definedTarget ? definedTarget.targetLabel : "U4 (today's R4)";
   const entryDayCandle = window.get(entryDateISO) ?? null;
   const nextDayCandle = window.get(dPlus1) ?? null;
 
@@ -2206,8 +2237,8 @@ export async function pivotLevelBacktestSymbolOnDate(
   // comment for why this is "invalid-target" rather than a silent "fail".
   if (!Number.isFinite(targetLevel)) {
     console.warn(
-      `[backtest] ${symbol} on ${entryDateISO}: Pattern "${pivotLevelKey}-R4" matched but its R4 ` +
-        `target came back non-finite (${targetLevel}) — marking invalid-target.`
+      `[backtest] ${symbol} on ${entryDateISO}: Pattern "${pivotLevelKey}" matched but its ` +
+        `target (${targetLabel}) came back non-finite (${targetLevel}) — marking invalid-target.`
     );
     return {
       symbol,
@@ -2226,7 +2257,7 @@ export async function pivotLevelBacktestSymbolOnDate(
     };
   }
 
-  const hits = (c: OHLC | null) => !!c && c.high >= targetLevel; // bullish only — R4/U4 target
+  const hits = (c: OHLC | null) => !!c && (bullish ? c.high >= targetLevel : c.low <= targetLevel);
 
   let hitDate: string | null = null;
   let daysToHit: 0 | 1 | null = null;
