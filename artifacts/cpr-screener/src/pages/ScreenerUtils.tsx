@@ -1156,12 +1156,15 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       );
     case "compressed":
       return r.compressed ; 
-    // NEW: "6A:SLE-RRHH:R2-6A" — sub-pattern under "EXPANDED". Condition:
-    // expanded + RRSSGapCategory RRGap + RRHHCategory RRHH-AA +
-    // SSLLCategory SSLL-E + HHLLCategory HHLL-A + PDHPDLGapCategory
-    // HHGap + prevCPR.HLSwitch HL-B (pHL-B) + todayCPR.HLSwitch HL-A with
-    // hlGapWinner "today" (HLGap-A) — see cpr.ts. Bullish, entry ~6AM,
-    // targets today's own R2 (U2) by ~6AM. Green color family.
+    // "6A:SLE-RRHH:R2-6A" — sub-pattern nested under the "E-A-AA-E"
+    // Pattern (moved off "EXPANDED" category's own subPatternKeys — see
+    // BACKTEST_CATEGORIES in backtest.ts). Condition: expanded +
+    // RRSSGapCategory RRGap + RRHHCategory RRHH-AA + SSLLCategory SSLL-E
+    // + HHLLCategory HHLL-A (same base as PIVOT_PATTERNS["E-A-AA-E"]) +
+    // PDHPDLGapCategory HHGap + prevCPR.HLSwitch HL-B (pHL-B) +
+    // todayCPR.HLSwitch HL-A with hlGapWinner "today" (HLGap-A) — see
+    // cpr.ts. Bullish, entry ~6AM, targets today's own R2 (U2) by ~6AM.
+    // Green color family.
     case "6A:SLE-RRHH:R2-6A": {
       return (
         r.expanded &&

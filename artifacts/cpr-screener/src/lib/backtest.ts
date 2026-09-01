@@ -1154,12 +1154,15 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
   },
   // NEW: "EXPANDED" left-nav section, mirroring "COMPRESSED" above but for
   // RRSS-E (today's R1 up AND today's S1 down vs prev — levels widening
-  // outward). RENAMED from "eXHrL3U3-AU4" (moved out of "Outside CPR"):
-  // "6A:SLE-RRHH:R2-6A" nests directly under this category.
+  // outward). "6A:SLE-RRHH:R2-6A" moved off this category's own
+  // subPatternKeys and now nests under the "E-A-AA-E" Pattern below —
+  // its base condition (HHLL-A + RRHH-AA + SSLL-E) is exactly that
+  // Pattern's condition, same as "6A:HLC-SSLL:R4-6P" nesting under
+  // "RRHH-BB:SSLL-AA:SSLLGap" elsewhere.
   {
     key: "expanded",
     label: "EXPANDED",
-    subPatternKeys: ["6A:SLE-RRHH:R2-6A"],
+    subPatternKeys: [],
     // E-{Level}-{RRHH}-{SSLL} — 16 Patterns (arrows), nested under
     // "expanded" (today's R1 up vs prev AND today's S1 down vs prev — see
     // cpr.ts's r.expanded / the "RRSS-E" SSRRCategory), built by crossing
@@ -1179,7 +1182,10 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       { key: "E-A-AA-SB", label: "E-A-AA-SB", subPatternKeys: [] },
       { key: "E-A-AA-C", label: "E-A-AA-C", subPatternKeys: [] },
       { key: "E-A-OA-C", label: "E-A-OA-C", subPatternKeys: [] },
-      { key: "E-A-AA-E", label: "E-A-AA-E", subPatternKeys: [] },
+      // "6A:SLE-RRHH:R2-6A" now nests here — its base condition (HHLL-A +
+      // RRHH-AA + SSLL-E) is exactly this Pattern's condition (moved off
+      // "expanded" category's own subPatternKeys above).
+      { key: "E-A-AA-E", label: "E-A-AA-E", subPatternKeys: ["6A:SLE-RRHH:R2-6A"] },
       { key: "E-A-OA-E", label: "E-A-OA-E", subPatternKeys: [] },
       { key: "E-B-RA-BB", label: "E-B-RA-BB", subPatternKeys: [] },
       { key: "E-B-C-BB", label: "E-B-C-BB", subPatternKeys: [] },
