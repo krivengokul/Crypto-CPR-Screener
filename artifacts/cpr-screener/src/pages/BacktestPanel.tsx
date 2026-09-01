@@ -695,9 +695,10 @@ export default function BacktestPanel() {
       </div>
       <p className="text-xs text-muted-foreground mb-4">
         Pick a date (or a date range) and either a category, a Pattern
-         nested under a category, or a specific pattern.
-        Category and Pivot Level selections give a symbol list only, with
-        an optional date-range sweep; a pattern gives the full
+         nested under a category, a Subpattern nested under a Pattern, or a
+         specific View.
+        Category and Pattern/Subpattern selections give a symbol list only,
+        with an optional date-range sweep; a View gives the full
         Target/Result/Hit Date backtest, also with an optional date-range
         sweep. This reconstructs the CPR that would have been active on
         that date (same candle logic as the live scanner).
@@ -706,7 +707,7 @@ export default function BacktestPanel() {
       <div className="flex flex-wrap items-end gap-3 mb-4">
         <div ref={pickerRef} className="relative">
           <label className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1">
-            Pivot Level / Pattern / View
+             Category / Pattern / Subpattern / View
           </label>
           <button
             type="button"
@@ -731,7 +732,7 @@ export default function BacktestPanel() {
                     autoFocus
                     value={pickerQuery}
                     onChange={(e) => setPickerQuery(e.target.value)}
-                    placeholder="Search levels, patterns…"
+                     placeholder="Search categories, patterns, subpatterns, Views…"
                     className="bg-transparent text-xs outline-none w-full text-foreground placeholder:text-muted-foreground"
                   />
                 </div>

@@ -1422,7 +1422,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
 ];
 
 /**
- * NEW: flat option list for the "Pivot Level / Pattern / View"
+ * NEW: flat option list for the "Category / Pattern / Subpattern / View"
  * dropdown in the Backtest panel.
  *
  * The dropdown no longer renders bold, non-selectable group headings
@@ -1437,7 +1437,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
  * Nested Pattern nodes follow their parent at any depth. Views remain leaf
  * entries beneath the Pattern node that owns them and have no bold part.
  */
-export type BacktestOptionKind = "category" | "pivotLevel" | "pattern";
+export type BacktestOptionKind = "category" | "pattern" | "view";
 
 export interface BacktestOption {
   value: string;              // category key, or category + full Pattern path, or a View key
@@ -1447,8 +1447,8 @@ export interface BacktestOption {
   plainLabel: string;         // boldLabel + suffix, for the collapsed/selected value
   depth: number;              // indentation level
   categoryKey: string;
-  pivotLevelKey?: string;
-  patternKey?: string;
+  patternKey?: string;           // Pattern or Subpattern node key
+  viewKey?: string;              // View leaf key
   symbolListOnly: boolean;    // true => runCategoryScan / runPivotLevelScan (Close + % Change columns)
 }
 
@@ -1476,13 +1476,13 @@ export function buildBacktestOptions(): BacktestOption[] {
     const pushDirectView = (key: string) => {
       opts.push({
         value: key,
-        kind: "pattern",
+        kind: "view",
         boldLabel: "",
         suffix: patternLabel(key),
         plainLabel: patternLabel(key),
         depth: 1,
         categoryKey: cat.key,
-        patternKey: key,
+        viewKey: key,
         symbolListOnly: false,
       });
     };
@@ -1495,26 +1495,26 @@ export function buildBacktestOptions(): BacktestOption[] {
       const selectionValue = [cat.key, ...path.map((p) => p.key)].join("::");
       opts.push({
         value: selectionValue,
-        kind: "pivotLevel",
+        kind: "pattern",
         boldLabel: sub.label,
         suffix: "",
         plainLabel: sub.label,
         depth,
         categoryKey: cat.key,
-        pivotLevelKey: sub.key,
+        patternKey: sub.key,
         symbolListOnly: false,
       });
       for (const key of sub.subPatternKeys) {
         opts.push({
           value: key,
-          kind: "pattern",
+          kind: "view",
           boldLabel: "",
           suffix: patternLabel(key),
           plainLabel: patternLabel(key),
           depth: depth + 1,
           categoryKey: cat.key,
-          pivotLevelKey: sub.key,
-          patternKey: key,
+          patternKey: sub.key,
+          viewKey: key,
           symbolListOnly: false,
         });
       }
