@@ -1308,18 +1308,20 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.todayCPR.bc > r.prevCPR.prevHigh &&
         r.todayCPR.s1 > r.prevCPR.tc
       );
-    // NEW: 6AM:pX-APHS1A-pL4:4AM — U1>pU4 sub-pattern, same "EUTL3" Pattern
-    // and identical PRE-RENAME base condition as
-    // "9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A" (today R1 above prev R4 + EUTL3 +
-    // today's BC above prev day's PDH + today's S1 above prev day's TC —
-    // this View does NOT get that sibling's newer A-A-AA-AA check), PLUS
-    // one
-    // extra check: the PREVIOUS day's own pivot sub-label (prevCPR vs
-    // ppCPR) is EU3L4 ("p-EU3L4" badge). Bearish, targets pL4 (prev
-    // day's S4) by ~4AM. Red color family.
-    case "6AM:pX-APHS1A-pL4:4AM":
+    // RENAMED from "6AM:pX-APHS1A-pL4:4AM" — U1>pU4 sub-pattern, now
+    // nested under the "A-A-AA-AA-EUTL3" Subpattern (which itself now
+    // nests under the new "A-A-AA-AA" Pattern), right after its
+    // "9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A" sibling — moved out from directly
+    // under "EUTL3". Condition: today R1 above prev R4 (parent U1>pU4) +
+    // the structural A-A-AA-AA check (see PIVOT_PATTERNS above, newly
+    // added here) + Pattern EUTL3 + today's BC above prev day's PDH +
+    // today's S1 above prev day's TC + the PREVIOUS day's own pivot
+    // sub-label (prevCPR vs ppCPR) being EU3L4 ("p-EU3L4" badge).
+    // Bearish, targets pL4 (prev day's S4) by ~4AM. Red color family.
+    case "6A:A-A-AA-AA-EUTL3-S1ATCpE-pL4:4A":
       return (
         r.R1AbovePR4 &&   // U1 > pU4
+        PIVOT_PATTERNS["A-A-AA-AA"](r) &&
         r.EUTL3 &&
         r.todayCPR.bc > r.prevCPR.prevHigh &&
         r.todayCPR.s1 > r.prevCPR.tc &&
@@ -1540,7 +1542,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     // rows matching it never got the per-row green direction dot even
     // though the Views button itself filtered correctly. Bullish → "up".
     { key: "8AM:APHS1A-FAU4:4AM", direction: "up" },
-    { key: "6AM:pX-APHS1A-pL4:4AM", direction: "down" },
+    { key: "6A:A-A-AA-AA-EUTL3-S1ATCpE-pL4:4A", direction: "down" },
     { key: "TiMe-EUTL3-AU4:2PM", direction: "up" },
     { key: "SMg-exHiL2L1-U4:3AM", direction: "up" },
     // NEW: "6AM:MegMeg-L3:8PM" (nested under the new "EU1L4" Pattern

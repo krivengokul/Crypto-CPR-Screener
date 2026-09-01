@@ -143,17 +143,18 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "FAU4 (Far Above today's R4)",
     getTarget: (r) => r.todayCPR.r4,
   },
-  // NEW: "6AM:pX-APHS1A-pL4:4AM" — nested under the "U1 > pU4" (R1AbovePR4)
-  // category's "EUTL3" Pattern, alongside
-  // "9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A" (renamed from
-  // "9AM:APHS1A-FAU4:4AM"). Same base condition as that sibling's
-  // pre-rename EUTL3 + BC>pPDH + S1>pTC condition (this View does NOT get
-  // the A-A-AA-AA check) plus the prev day's own pivot sub-label being
-  // EU3L4 (see ScreenerUtils.tsx). Bearish, targets pL4 (prev day's S4)
-  // by ~4AM.
+  // RENAMED from "6AM:pX-APHS1A-pL4:4AM". Nested under the "U1 > pU4"
+  // (R1AbovePR4) category's "A-A-AA-AA-EUTL3" Subpattern (moved out from
+  // directly under "EUTL3"), right after its
+  // "9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A" sibling. Condition: this category's
+  // U1>pU4 condition + the structural A-A-AA-AA check (see PIVOT_PATTERNS
+  // in ScreenerUtils.tsx, newly added here) + Pattern EUTL3 + today's BC
+  // above prev day's PDH + today's S1 above prev day's TC + the prev
+  // day's own pivot sub-label being EU3L4. Bearish, targets pL4 (prev
+  // day's S4) by ~4AM.
   {
-    key: "6AM:pX-APHS1A-pL4:4AM",
-    label: "6AM:pX-APHS1A-pL4:4AM",
+    key: "6A:A-A-AA-AA-EUTL3-S1ATCpE-pL4:4A",
+    label: "6A:A-A-AA-AA-EUTL3-S1ATCpE-pL4:4A",
     direction: "bearish",
     targetLabel: "pL4 (prev day's S4)",
     getTarget: (r) => r.prevCPR.s4,
@@ -1266,24 +1267,43 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       {
         key: "EUTL3",
         label: "EUTL3",
-        // "9AM:APHS1A-FAU4:4AM" moved out from here into the new
-        // "A-A-AA-AA-EUTL3" Subpattern below (its condition now ANDs in
-        // the structural A-A-AA-AA check, so it's no longer a bare EUTL3
-        // View).
-        subPatternKeys: ["TiMe-EUTL3-AU4:2PM", "6AM:pX-APHS1A-pL4:4AM"],
+        // Both "9AM:APHS1A-FAU4:4AM" and "6AM:pX-APHS1A-pL4:4AM" moved out
+        // from here into the new "A-A-AA-AA-EUTL3" Subpattern below
+        // (nested under the new "A-A-AA-AA" Pattern) — both renamed, and
+        // both conditions now AND in the structural A-A-AA-AA check, so
+        // neither is a bare EUTL3 View anymore.
+        subPatternKeys: ["TiMe-EUTL3-AU4:2PM"],
       },
-      // NEW: "A-A-AA-AA-EUTL3" Subpattern — structural A-A-AA-AA (see
-      // PIVOT_PATTERNS in ScreenerUtils.tsx) crossed with the parent
-      // EUTL3 flag, same naming/nesting convention as the
-      // "A-A-AA-AA-EU3L4" Subpattern under "levelsabove". Nests the
-      // renamed "9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A" View (was
-      // "9AM:APHS1A-FAU4:4AM"), whose own condition now additionally
-      // requires the A-A-AA-AA check on top of its existing EUTL3 +
-      // BC>pPDH + S1>pTC condition.
+      // NEW: "A-A-AA-AA" Pattern — structural A-A-AA-AA raw flag (see
+      // PIVOT_PATTERNS in ScreenerUtils.tsx), nested directly under
+      // "U1 > pU4" (R1AbovePR4) alongside its EU1L3/EUTL3/etc. Pattern
+      // siblings. True nested parent (via its own `patterns` field,
+      // same recursive shape as "E-E-AA-BB" above) of the
+      // "A-A-AA-AA-EUTL3" Subpattern, which used to sit as a flat
+      // sibling directly in this array.
       {
-        key: "A-A-AA-AA-EUTL3",
-        label: "A-A-AA-AA-EUTL3",
-        subPatternKeys: ["9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A"],
+        key: "A-A-AA-AA",
+        label: "A-A-AA-AA",
+        subPatternKeys: [],
+        patterns: [
+          // "A-A-AA-AA-EUTL3" Subpattern — structural A-A-AA-AA (parent
+          // Pattern's own condition) crossed with the raw EUTL3 flag,
+          // same naming/nesting convention as the "A-A-AA-AA-EU3L4"
+          // Subpattern under "levelsabove". Nests the renamed
+          // "9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A" View (was
+          // "9AM:APHS1A-FAU4:4AM") followed by the renamed
+          // "6A:A-A-AA-AA-EUTL3-S1ATCpE-pL4:4A" View (was
+          // "6AM:pX-APHS1A-pL4:4AM", moved here from "EUTL3" and now
+          // also ANDing in the A-A-AA-AA check).
+          {
+            key: "A-A-AA-AA-EUTL3",
+            label: "A-A-AA-AA-EUTL3",
+            subPatternKeys: [
+              "9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A",
+              "6A:A-A-AA-AA-EUTL3-S1ATCpE-pL4:4A",
+            ],
+          },
+        ],
       },
       {
         key: "EL1L2",
