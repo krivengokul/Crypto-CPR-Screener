@@ -928,8 +928,8 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       );
     // NEW: pCPR>U1 CPR>pL1 — prev Pivot inside today's R1/R2 band and
     // today's BC inside prev's S1/BC band.
-    // NEW: LEVELS ABOVE — today's TC inside prev's R1/R2 band AND today's S1
-    // inside prev's BC/R1 band. Sits above "LEVELs BELOW" in the left-nav.
+    // NEW: LEVEL ABOVE — today's TC inside prev's R1/R2 band AND today's S1
+    // inside prev's BC/R1 band. Sits above "LEVEL BELOW" in the left-nav.
     case "levelsabove":
       return r.LevelsAbove;
     // NEW: A-A-AA-AA + U2L4 + LevelsAbove (R1 <= pR4) + S1 > pPDH
@@ -942,7 +942,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.LevelsAbove &&
         r.todayCPR.s1 > r.prevCPR.prevHigh
       );
-    // NEW: LA-BCpPDH-TopClose-U2 — LEVELs ABOVE + today's BC > prev day's PDH
+    // NEW: LA-BCpPDH-TopClose-U2 — LEVEL ABOVE + today's BC > prev day's PDH
     // + prev candle closed in top 25% of its daily range. Target: today's R2 (U2).
     // 42.34% hit rate, 3,125 samples over 180 days.
     case "LA-BCpPDH-TopClose-U2": {
@@ -1002,7 +1002,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.todayCPR.HLSwitch === "HL-B" &&
         r.hlGapWinner === "today"
       );
-    // NEW: 7PM:MoMi->U4:2AM — LEVELS ABOVE + the PREVIOUS day's own pivot
+    // NEW: 7PM:MoMi->U4:2AM — LEVEL ABOVE + the PREVIOUS day's own pivot
     // sub-label (prevCPR vs ppCPR) being CU1L1 ("p-CU1L1" badge) +
     // today's Pattern EU2L4 + prev CPR width category pMicro (<=0.10%)
     // + today CPR width category Mini (0.22%-0.60%) + both prev and
@@ -1029,7 +1029,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       r.todayCPR.prevLow < r.todayCPR.s1  &&                       // PDL<L1
       r.todayCPR.prevLow < r.prevCPR.pivot
     );
-    // NEW: 6PM:APHS1A-FAU4:9PM — LEVELS ABOVE + Pattern EU2L4 + the
+    // NEW: 6PM:APHS1A-FAU4:9PM — LEVEL ABOVE + Pattern EU2L4 + the
     // PREVIOUS day's own pivot sub-label (prevCPR vs ppCPR) being EU3L4
     // ("p-EU3L4" badge) + today's BC above prev day's own PDH
     // (todayCPR.bc > prevCPR.prevHigh) + today's S1 above prev day's TC
@@ -1045,7 +1045,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         (computePrevPattern(r.prevCPR, r.ppCPR) === "EU3L4" &&
         r.prevCPR.pivot > r.todayCPR.prevLow && r.todayCPR.s3 > r.prevCPR.s3 ))
       );
-    // NEW: 9AM:pPALPApH-FAU4:2PM — sub-filter under "LEVELS ABOVE" → Pattern
+    // NEW: 9AM:pPALPApH-FAU4:2PM — sub-filter under "LEVEL ABOVE" → Pattern
     // "U4L3" (today's S4 in prev's S3/S2 band L3, prev's R4 in today's
     // R3/R4 band U4). Base LevelsAbove condition PLUS the raw U4L3 flag
     // PLUS prev day's Pivot above today's PDL ("pPivot > PDL") PLUS
@@ -1062,7 +1062,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     case "levelsbelow":
       return r.LevelsBelow;
     // RENAMED from "BC>pPDL-U3:5AM", then from "3P:HA-pABOVE:pR4-3A".
-    // "3P:HA-pBELOWR1:R2-3A" — sub-filter under "LEVELs BELOW". Condition:
+    // "3P:HA-pBELOWR1:R2-3A" — sub-filter under "LEVEL BELOW". Condition:
     // the shared "HALB-SSLLGap" base (LevelsBelow + RRSSGapCategory SSGap
     // + RRHHCategory RRHH-HA + SSLLCategory SSLL-BB + HHLLCategory
     // HHLL-E + PDHPDLGapCategory LLGap + prevCPR.HLSwitch HL-B (pHL-B) +
@@ -1100,7 +1100,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         dirTol(r.prevCPR.s3, r.todayCPR.s1) > 0 &&  dirTol(r.todayCPR.r1, r.prevCPR.prevHigh) > 0 &&
         dirTol(r.todayCPR.pivot, r.prevCPR.prevLow) > 0 && dirTol(r.todayCPR.r3, r.prevCPR.r3) > 0 
       );
-    // NEW: PDH>pTC-U4:5AM — sub-filter under "LEVELs BELOW" → "L3U3"
+    // NEW: PDH>pTC-U4:5AM — sub-filter under "LEVEL BELOW" → "L3U3"
     // Pattern: base LevelsBelow condition PLUS the parent's raw
     // L3U3 flag PLUS today's PDH (todayCPR.prevHigh) above prev day's TC
     // (prevCPR.tc) — today already traded above the top of prev's CPR.
@@ -1115,7 +1115,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return r.LevelsBelow && r.L3U3 && r.todayCPR.prevHigh > r.prevCPR.tc &&
         ((pMini && small) || (pSmall && large));
     }
-    // NEW: 11AM:pCPR1AHi-FApU4:1PM — sub-filter under "LEVELs BELOW" →
+    // NEW: 11AM:pCPR1AHi-FApU4:1PM — sub-filter under "LEVEL BELOW" →
     // "L4U3" Pattern: base LevelsBelow condition PLUS the
     // parent's raw L4U3 flag PLUS HHLLBelow (today's PDH at/below prev
     // day's PDH AND today's PDL below prev day's PDL) PLUS prev day's own
@@ -1128,7 +1128,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.prevCPR.HLSwitch === "HL-B" && r.todayCPR.HLSwitch === "HL-A" &&
         r.todayCPR.r1 > r.prevCPR.bc;
     // NEW: "2P:L4U4-pLAP:R4-2A" — View nested under the "RHSLB-SSLLpGap"
-    // Pattern arrow in "LEVELs BELOW" (renamed from "2P:RHSLB-SSLLpGap:2A").
+    // Pattern arrow in "LEVEL BELOW" (renamed from "2P:RHSLB-SSLLpGap:2A").
     // Condition: the shared "RHSLB-SSLLpGap" base (see matchesPatternFlag)
     // PLUS the raw L4U4 flag (today's R4 inside prev's R3/R4 AND prev's S4
     // inside today's S3/S4) PLUS prev day's own PDL above today's Pivot.
@@ -1140,7 +1140,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.prevCPR.prevLow > r.todayCPR.pivot
       );
     // NEW: "B-B-BB-BB-L4U4-pLTC-U2" — View nested under the
-    // "B-B-BB-BB-L4U4" Pattern (arrow) in "LEVELs BELOW" (see
+    // "B-B-BB-BB-L4U4" Pattern (arrow) in "LEVEL BELOW" (see
     // matchesPatternFlag in this file, and its subPatternKeys entry in
     // BACKTEST_CATEGORIES in backtest.ts). Condition: the parent's raw
     // "B-B-BB-BB-L4U4" flag (PIVOT_PATTERNS["B-B-BB-BB"] AND L4U4) PLUS
@@ -1287,9 +1287,9 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return (r.currentPrice > r.todayCPR.prevHigh);
     case "Price-BelowPDL":
       return (r.currentPrice < r.todayCPR.prevLow);
-    // Standalone top-level category: true complement of LEVELS ABOVE
+    // Standalone top-level category: true complement of LEVEL ABOVE
     // (r.LevelsAbove). Gate is exactly R1AbovePR4 -- the cprRising +
-    // strWideCPR gate was dropped so every symbol leaving LEVELS ABOVE
+    // strWideCPR gate was dropped so every symbol leaving LEVEL ABOVE
     // lands here and the two categories partition cleanly.
     case "R1AbovePR4":
       return r.R1AbovePR4;
@@ -1403,10 +1403,10 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.prevCPR.widthPct > 0.60 && r.prevCPR.widthPct <= 1.10 && //pSmall
         r.todayCPR.widthPct > 0.60 && r.todayCPR.widthPct <= 1.10 //Small
       );
-    // Standalone top-level category: true complement of LEVELs BELOW
+    // Standalone top-level category: true complement of LEVEL BELOW
     // (r.LevelsBelow). Gate is exactly S1BelowPS4 -- the cprFalling +
     // strWideCPR gate was dropped (mirroring R1AbovePR4's treatment of
-    // R1AbovePR4 above) so every symbol leaving LEVELs BELOW lands here
+    // R1AbovePR4 above) so every symbol leaving LEVEL BELOW lands here
     // and the two categories partition cleanly.
     case "S1BelowPS4":
       return r.S1BelowPS4;
@@ -1506,7 +1506,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     // condition) → "up".
     { key: "CL4U2", direction: "up" },
     // NEW: "2P:L4U4-pLAP:R4-2A" — View nested under the "RHSLB-SSLLpGap"
-    // Pattern arrow (also under "LEVELs BELOW"). Bullish, targets today's
+    // Pattern arrow (also under "LEVEL BELOW"). Bullish, targets today's
     // own R4 (U4) → "up".
     { key: "2P:L4U4-pLAP:R4-2A", direction: "up" },
   ],
@@ -1706,7 +1706,7 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
   switch (label) {
     case "CL4U3": return r.CL4U3;
     // NEW: HALB-SSLLGap — replaces CL4U3 as the Pattern node nested
-    // under "LEVELs BELOW" in backtest.ts's BACKTEST_CATEGORIES (the
+    // under "LEVEL BELOW" in backtest.ts's BACKTEST_CATEGORIES (the
     // CL4U3 case above is left intact in case it's still referenced as
     // an independent Pattern-flag filter chip elsewhere, e.g.
     // Screener.tsx). Compound flag (not a single raw boolean field, same
@@ -1743,10 +1743,10 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     case "B-B-BB-BB-L4U3": return PIVOT_PATTERNS["B-B-BB-BB"](r) && r.L4U3;
     case "B-B-BB-BB-L3U3": return PIVOT_PATTERNS["B-B-BB-BB"](r) && r.L3U3;
     // NEW: L3U3 — Pattern raw flag (see BacktestPanel's
-    // "LEVELs BELOW" → "L3U3" nesting in backtest.ts).
+    // "LEVEL BELOW" → "L3U3" nesting in backtest.ts).
     case "L3U3": return r.L3U3;
     // NEW: L4U3 — Pattern raw flag, same shape as its
-    // L3U3 sibling (see BacktestPanel's "LEVELs BELOW" → "L4U3"
+    // L3U3 sibling (see BacktestPanel's "LEVEL BELOW" → "L4U3"
     // nesting in backtest.ts).
     case "L4U3": return r.L4U3;
     case "L4U4": return r.L4U4;
@@ -1836,7 +1836,7 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     // NEW: U2L3 (today S4 in prev S3/S2, prev R4 in prev R1/R2)
     case "U2L3": return r.U2L3;
     // NEW: U4L3 — Pattern raw flag (see BacktestPanel's
-    // "LEVELS ABOVE" → "U4L3" nesting in backtest.ts).
+    // "LEVEL ABOVE" → "U4L3" nesting in backtest.ts).
     case "U4L3": return r.U4L3;
     // NEW: EL1U4 — prev R4 inside today R3/R4 (U4) AND prev S4 inside today BC/S1 (L1).
     case "EL1U4": return r.EL1U4;
@@ -1850,7 +1850,7 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     // NEW: CL2U1 — independent, section-agnostic Pattern flag (see cpr.ts).
     case "CL2U1": return r.CL2U1;
     // NEW: CL4U2 — Pattern raw flag (see BacktestPanel's
-    // "LEVELs BELOW" nesting in backtest.ts).
+    // "LEVEL BELOW" nesting in backtest.ts).
     case "CL4U2": return r.CL4U2;
     case "CL4U4": return r.CL4U4;
     case "EU2L3": return r.EU2L3;
@@ -1906,13 +1906,13 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
       );
     // RENAMED from "2P:RHSLB-SSLLpGap:2A" to "RHSLB-SSLLpGap" — Pattern raw
     // flag for the Backtest dropdown's Pattern-level (arrow) selection
-    // nested under "LEVELs BELOW", same shape as its RHLB-RRHHpGap sibling
+    // nested under "LEVEL BELOW", same shape as its RHLB-RRHHpGap sibling
     // above (the parent "levelsbelow" category's own passesPattern
     // ("levelsbelow") already ANDs in r.LevelsBelow, so it's
     // intentionally omitted here). Condition: RRSS-B + HHLL-B +
     // RRHH-BB + SSLL-BB + SSGap + LLGap + prevCPR.HLSwitch HL-A with
     // hlGapWinner "prev" (pHLGap-A) + todayCPR.HLSwitch HL-B. Now nests
-    // "2P:L4U4-pLAP:R4-2A" (see BacktestPanel's "LEVELs BELOW" →
+    // "2P:L4U4-pLAP:R4-2A" (see BacktestPanel's "LEVEL BELOW" →
     // "RHSLB-SSLLpGap" nesting in backtest.ts).
     case "RHSLB-SSLLpGap":
       return (
@@ -1938,7 +1938,7 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
         r.LevelsAbove &&
         r.todayCPR.s1 > r.prevCPR.prevHigh
       );
-    // LA-BCpPDH-TopClose-U2 — LEVELs ABOVE + BC > pPDH + prev close in top 25%.
+    // LA-BCpPDH-TopClose-U2 — LEVEL ABOVE + BC > pPDH + prev close in top 25%.
     case "LA-BCpPDH-TopClose-U2": {
       const prevRange = r.prevCPR.prevHigh - r.prevCPR.prevLow;
       const prevCloseInTop25 = prevRange > 0 &&
@@ -1951,7 +1951,7 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     }
     // A-A-AA-AA diagnostic Pattern branches. Each branch combines the
     // structural PIVOT_PATTERNS entry with its raw CPR flag so it can be
-    // selected as a Pattern under LEVELs ABOVE.
+    // selected as a Pattern under LEVEL ABOVE.
     case "A-A-AA-AA-U3L3":
       return PIVOT_PATTERNS["A-A-AA-AA"](r) && r.U3L3;
     case "A-A-AA-AA-U4L3":

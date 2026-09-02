@@ -152,13 +152,13 @@ export interface CPRPairFlags {
   // exact tolerance-aware R1/S1 test, mirroring SSRRCategory === "RRSS-E").
   // Mirrors compressed above.
   expanded: boolean;
-  // LevelsBelow — "LEVELs BELOW": RRSS-B only (today's R1 down AND today's
+  // LevelsBelow — "LEVEL BELOW": RRSS-B only (today's R1 down AND today's
   // S1 not up vs prev — this includes r1 down + s1 flat — OR today's R1
   // flat AND today's S1 down, i.e. same tolerance-aware test as
   // SSRRCategory === "RRSS-B"). Formerly a two-clause CPR-band test named
   // pCPR1Above; simplified.
   LevelsBelow: boolean;
-  // LevelsAbove — "LEVELS ABOVE": RRSS-A only (today's R1 up AND today's S1
+  // LevelsAbove — "LEVEL ABOVE": RRSS-A only (today's R1 up AND today's S1
   // not down vs prev, i.e. same tolerance-aware test as SSRRCategory ===
   // "RRSS-A"), AND NOT R1AbovePR4 (see below) — that carve-out belongs to
   // "ABOVE LEVEL4" instead. Formerly a two-clause CPR-band test named
@@ -963,7 +963,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
   // prev's R1 AND today's S1 down vs prev's S1. Mirrors compressed above.
   const expanded = r1DirVsPrev > 0 && s1DirVsPrev < 0;
 
-  // LevelsBelow — "LEVELs BELOW": RRSS-B only. Replaces the old two-clause
+  // LevelsBelow — "LEVEL BELOW": RRSS-B only. Replaces the old two-clause
   // CPR-band condition (formerly named pCPR1Above) with the same
   // tolerance-aware R1/S1 direction test used for SSRRCategory ===
   // "RRSS-B": today's R1 down vs prev's R1 AND today's S1 not up vs
@@ -977,13 +977,13 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
                        (r1DirVsPrev === 0 && s1DirVsPrev < 0)) &&
                        !(today.s1 < prev.s4);
 
-  // LevelsAbove — "LEVELS ABOVE": RRSS-A only. Replaces the old two-clause
+  // LevelsAbove — "LEVEL ABOVE": RRSS-A only. Replaces the old two-clause
   // CPR-band condition (formerly named CPRs1Above) with the same
   // tolerance-aware R1/S1 direction test used for SSRRCategory ===
   // "RRSS-A": today's R1 up vs prev's R1, AND today's S1 not down vs
   // prev's S1. Excludes R1AbovePR4 (see below) — a symbol whose today's
   // R1 has already cleared prev's R4 belongs exclusively to the "ABOVE
-  // LEVEL4" (R1AbovePR4) section, not LEVELS ABOVE, so it's carved out
+  // LEVEL4" (R1AbovePR4) section, not LEVEL ABOVE, so it's carved out
   // here at the source rather than in each caller.
   const R1AbovePR4 = today.r1 > prev.r4;
   const LevelsAbove = r1DirVsPrev > 0 && s1DirVsPrev >= 0 && !R1AbovePR4;

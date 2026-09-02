@@ -84,7 +84,7 @@ export const Views: Record<string, SubPattern[]> = {
     },
   ],
   "levelsabove": [
-    // A-A-AA-AA diagnostic Views are kept together at the top of LEVELs ABOVE.
+    // A-A-AA-AA diagnostic Views are kept together at the top of LEVEL ABOVE.
     {
       id: "A-A-AA-AA",
       label: "A-A-AA-AA · HHLL-A/RRHH-AA/SSLL-AA",
@@ -121,7 +121,7 @@ export const Views: Record<string, SubPattern[]> = {
       activeBg: "rgba(244, 63, 94, 0.14)",
     },
     // RENAMED from "9AM:MegL-U4+1:3PM": all existing conditions removed.
-    // NEW: 7PM:MoMi->U4:2AM — LEVELS ABOVE + prev day's own pivot sub-label
+    // NEW: 7PM:MoMi->U4:2AM — LEVEL ABOVE + prev day's own pivot sub-label
     // p-CU1L1 + today's Pattern EU2L4 + prev CPR pMicro + today CPR Mini
     // + both prev and today PDL below their respective L1s. Cyan color
     // family to visually distinguish it from its A-A-AA-AA-EU3L4-GapB sibling.
@@ -143,7 +143,7 @@ export const Views: Record<string, SubPattern[]> = {
       activeText:  "#fda4af",      // rose-300 text
       activeBg:    "rgba(244, 63, 94, 0.14)",
     },
-    // NEW: 6PM:APHS1A-FAU4:9PM — LEVELS ABOVE + Pattern EU2L4 + the PREVIOUS
+    // NEW: 6PM:APHS1A-FAU4:9PM — LEVEL ABOVE + Pattern EU2L4 + the PREVIOUS
     // day's own pivot sub-label (prevCPR vs ppCPR) being EU3L4
     // ("p-EU3L4" badge) + today's BC above prev day's own PDH
     // (todayCPR.bc > prevCPR.prevHigh) + today's S1 above prev day's TC
@@ -175,7 +175,7 @@ export const Views: Record<string, SubPattern[]> = {
       activeText:  "#4ade80",              // green-400 text
       activeBg:    "rgba(34, 197, 94, 0.14)",
     },
-    // NEW: 9AM:pPALPApH-FAU4:2PM — LEVELS ABOVE + Pattern U4L3 + prev day's
+    // NEW: 9AM:pPALPApH-FAU4:2PM — LEVEL ABOVE + Pattern U4L3 + prev day's
     // own Pivot above today's PDL (prevCPR.pivot > todayCPR.prevLow) +
     // today's own Pivot above today's own PDH (todayCPR.pivot >
     // todayCPR.prevHigh). Bullish, entry ~9AM, targets Far Above U4 by
@@ -188,7 +188,7 @@ export const Views: Record<string, SubPattern[]> = {
       activeText:  "#4ade80",      // green-400 text
       activeBg:    "rgba(34, 197, 94, 0.14)",
     },
-    // NEW: LA-BCpPDH-TopClose-U2 — LEVELs ABOVE + today's BC > prev PDH +
+    // NEW: LA-BCpPDH-TopClose-U2 — LEVEL ABOVE + today's BC > prev PDH +
     // prev candle closed in top 25% of its daily range. Targets today's R2 (U2).
     // 42.34% hit rate across 3,125 samples over 180 days. Amber color to
     // visually distinguish from the A-A-AA-AA sibling above.
@@ -202,7 +202,7 @@ export const Views: Record<string, SubPattern[]> = {
   ],
   "levelsbelow": [
     // RENAMED from "BC>pPDL-U3:5AM", then from "3P:HA-pABOVE:pR4-3A".
-    // "3P:HA-pBELOWR1:R2-3A" — LEVELs BELOW + RRSSGapCategory SSGap +
+    // "3P:HA-pBELOWR1:R2-3A" — LEVEL BELOW + RRSSGapCategory SSGap +
     // RRHHCategory RRHH-HA + SSLLCategory SSLL-BB + HHLLCategory HHLL-E +
     // PDHPDLGapCategory LLGap + prevCPR.HLSwitch HL-B (pHL-B) +
     // todayCPR.HLSwitch HL-A with hlGapWinner "today" (HLGap-A) + prev
@@ -242,7 +242,7 @@ export const Views: Record<string, SubPattern[]> = {
       activeText:  "#4ade80",              // green-400 text
       activeBg:    "rgba(34, 197, 94, 0.14)",
     },
-    // NEW: PDH>pTC-U4:5AM — LEVELs BELOW + today's PDH (todayCPR.prevHigh)
+    // NEW: PDH>pTC-U4:5AM — LEVEL BELOW + today's PDH (todayCPR.prevHigh)
     // above prev day's TC (prevCPR.tc). Bullish, targets U4 (today's R4) by
     // ~5AM. Same green color family as its sibling BC>pPDL-U3:5AM.
     {
@@ -252,7 +252,7 @@ export const Views: Record<string, SubPattern[]> = {
       activeText:  "#4ade80",              // green-400 text
       activeBg:    "rgba(34, 197, 94, 0.14)",
     },
-    // NEW: 11AM:pCPR1AHi-FApU4:1PM — LEVELs BELOW + L4U3 + HHLLBelow
+    // NEW: 11AM:pCPR1AHi-FApU4:1PM — LEVEL BELOW + L4U3 + HHLLBelow
     // (today's PDH at/below prev day's PDH AND today's PDL below prev
     // day's PDL). Bullish, targets Far Above pU4 (prev day's R4) by ~1PM.
     // Same green color family as its BC>pPDL-U3:5AM / PDH>pTC-U4:5AM
@@ -266,11 +266,11 @@ export const Views: Record<string, SubPattern[]> = {
     },
     // NEW: 2P:L4U4-pLAP:R4-2A — View nested under the "RHSLB-SSLLpGap"
     // Pattern arrow (renamed from "2P:RHSLB-SSLLpGap:2A" — see
-    // matchesPatternFlag in ScreenerUtils.tsx). LEVELs BELOW + the shared
+    // matchesPatternFlag in ScreenerUtils.tsx). LEVEL BELOW + the shared
     // RHSLB-SSLLpGap base + the raw L4U4 flag (today's R4 inside prev's
     // R3/R4 AND prev's S4 inside today's S3/S4) + prev day's own PDL above
     // today's Pivot. Bullish, entry ~2PM, targets today's own R4 (U4) by
-    // ~2AM. Same green color family as its bullish LEVELs BELOW siblings.
+    // ~2AM. Same green color family as its bullish LEVEL BELOW siblings.
     {
       id: "2P:L4U4-pLAP:R4-2A",
       label: "2P:L4U4-pLAP:R4-2A",
@@ -446,9 +446,9 @@ export const Views: Record<string, SubPattern[]> = {
 };
 
 export const pivotcategories: Category[] = [
-  { id: "levelsabove",        label: "LEVELs ABOVE",    subtitle: "RRSS-A only (today's R1 up, S1 not down vs prev), excludes ABOVE LEVEL4", icon: TrendingUp },
+  { id: "levelsabove",        label: "LEVEL ABOVE",    subtitle: "RRSS-A only (today's R1 up, S1 not down vs prev), excludes ABOVE LEVEL4", icon: TrendingUp },
   { id: "R1AbovePR4",          label: "ABOVE LEVEL4",  subtitle: "Today R1 above Prev R4",   icon: TrendingUp },
-  { id: "levelsbelow",    label: "LEVELs BELOW", subtitle: "RRSS-B only (today's R1 not up, S1 down vs prev)", icon: TrendingUp },
+  { id: "levelsbelow",    label: "LEVEL BELOW", subtitle: "RRSS-B only (today's R1 not up, S1 down vs prev)", icon: TrendingUp },
   { id: "compressed",        label: "COMPRESSED",   subtitle: "RRSS-C only (today's R1 down, S1 up vs prev)",   icon: TrendingUp },
   { id: "expanded",          label: "EXPANDED",     subtitle: "RRSS-E only (today's R1 up, S1 down vs prev)",   icon: TrendingUp },
   { id: "S1BelowPS4",          label: "BELOW LEVEL4",  subtitle: "Today S1 below Prev S4",   icon: TrendingDown },

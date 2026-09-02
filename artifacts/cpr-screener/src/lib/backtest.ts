@@ -36,7 +36,7 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
   },
-  // NEW: LA-BCpPDH-TopClose-U2 — nested under LEVELs ABOVE.
+  // NEW: LA-BCpPDH-TopClose-U2 — nested under LEVEL ABOVE.
   // Bullish U2 target (42.34% hit rate across 3,125 samples).
   // Condition: LevelsAbove (R1 <= pR4) + today's BC > prev day's PDH +
   // previous candle closed in top 25% of its range.
@@ -77,7 +77,7 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
   },
-  // NEW: "7PM:MoMi->U4:2AM" — nested under "LEVELS ABOVE" → Pattern "EU2L4".
+  // NEW: "7PM:MoMi->U4:2AM" — nested under "LEVEL ABOVE" → Pattern "EU2L4".
   // Bullish, targets today's own R4 / U4 by ~2AM.
   {
     key: "7PM:MoMi->U4:2AM",
@@ -87,7 +87,7 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     getTarget: (r) => r.todayCPR.r4,
   },
   // NEW: "7PM:MoMi-<L4:2AM" — bearish sibling of "7PM:MoMi->U4:2AM", same
-  // nesting ("LEVELS ABOVE" → Pattern "EU2L4") and same base condition
+  // nesting ("LEVEL ABOVE" → Pattern "EU2L4") and same base condition
   // (p-CU1L1, pMicro/Mini widths, both PDLs below L1), but split on
   // today's PDL vs prev day's pivot: this variant fires when
   // todayCPR.PDL < prevCPR.pivot, targeting today's own S4 / L4 by ~2AM.
@@ -98,7 +98,7 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "L4 (today's S4)",
     getTarget: (r) => r.todayCPR.s4,
   },
-  // NEW: "6PM:APHS1A-FAU4:9PM" — nested under "LEVELS ABOVE" → Pattern
+  // NEW: "6PM:APHS1A-FAU4:9PM" — nested under "LEVEL ABOVE" → Pattern
   // "EU2L4", alongside its "7PM:MoMi->U4:2AM" /
   // "7PM:MoMi-<L4:2AM" siblings. Condition: LevelsAbove + EU2L4 + the
   // prev day's own pivot sub-label being EU3L4 (p-EU3L4) + today's BC
@@ -112,7 +112,7 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "FAU4 (Far Above today's R4)",
     getTarget: (r) => r.todayCPR.r4,
   },
-  // NEW: "9AM:pPALPApH-FAU4:2PM" — nested under "LEVELS ABOVE" → Pattern
+  // NEW: "9AM:pPALPApH-FAU4:2PM" — nested under "LEVEL ABOVE" → Pattern
   // "U4L3" (see BACKTEST_CATEGORIES below), alongside its "EU2L4"
   // siblings. Condition: LevelsAbove + raw U4L3 flag + prev day's Pivot
   // above today's PDL + today's own Pivot above today's PDH — see
@@ -262,7 +262,7 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     getTarget: (r) => r.todayCPR.r4,
   },
   // RENAMED from "BC>pPDL-U3:5AM", then from "3P:HA-pABOVE:pR4-3A".
-  // "3P:HA-pBELOWR1:R2-3A" — nested under "LEVELs BELOW" (levelsbelow)
+  // "3P:HA-pBELOWR1:R2-3A" — nested under "LEVEL BELOW" (levelsbelow)
   // category. Bullish — per ScreenerUtils.tsx's condition (LevelsBelow +
   // SSGap + RRHH-HA + SSLL-BB + HHLL-E + LLGap + pHL-B + HLGap-A + prev
   // day's S3 above today's S1 + prev day's own Pivot above today's R1) —
@@ -296,7 +296,7 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
   },
-  // NEW: "PDH>pTC-U4:5AM" — nested directly under "LEVELs BELOW" (levelsbelow)
+  // NEW: "PDH>pTC-U4:5AM" — nested directly under "LEVEL BELOW" (levelsbelow)
   // category, alongside the "HALB-SSLLGap" Pattern. Base condition:
   // this category's LevelsBelow condition AND today's PDH (todayCPR.prevHigh)
   // above prev day's TC (prevCPR.tc) — see ScreenerUtils.tsx. Bullish,
@@ -309,7 +309,7 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
   },
-  // NEW: "11AM:pCPR1AHi-FApU4:1PM" — nested under "LEVELs BELOW"
+  // NEW: "11AM:pCPR1AHi-FApU4:1PM" — nested under "LEVEL BELOW"
   // (levelsbelow) category's new "L4U3" Pattern (see
   // BACKTEST_CATEGORIES below), alongside its "HALB-SSLLGap"/"L3U3" siblings.
   // Base condition: this category's LevelsBelow condition AND the raw
@@ -322,7 +322,7 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "FApU4 (prev day's R4)",
     getTarget: (r) => r.prevCPR.r4,
   },
-  // NEW: "2P:L4U4-pLAP:R4-2A" — View nested under "LEVELs BELOW"
+  // NEW: "2P:L4U4-pLAP:R4-2A" — View nested under "LEVEL BELOW"
   // (levelsbelow) category's "RHSLB-SSLLpGap" Pattern (renamed from
   // "2P:RHSLB-SSLLpGap:2A" — see BACKTEST_CATEGORIES below). Base
   // condition: the shared "RHSLB-SSLLpGap" flag AND the raw L4U4 flag AND
@@ -403,7 +403,7 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
   // + prev day's PDH/PDL above today's PDH/PDL. Bullish, entry ~2PM,
   // targets U4 (today's R4) by ~7PM.
   // MOVED: "8AM:pPDHA-SRA-U4+2:2AM" — was nested under "CPR Inside"
-  // (inside-cpr) via the "EU4L4" Pattern; now nested under "LEVELS ABOVE"
+  // (inside-cpr) via the "EU4L4" Pattern; now nested under "LEVEL ABOVE"
   // (levelsabove) via "A-B-C-C" → "A-B-C-C-EU4L4" instead (see
   // BACKTEST_CATEGORIES below). Base condition = PIVOT_PATTERNS["A-B-C-C"]
   // (replaces the old InsideCPR gate) + raw EU4L4 flag + today's SSRRAbove
@@ -503,7 +503,7 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     getTarget: (r) => r.todayCPR.r4,
   },
   // NEW: "B-B-BB-BB-L4U4-pLTC-U2" — View nested under the "B-B-BB-BB-L4U4"
-  // Pattern in "LEVELs BELOW" (see its subPatternKeys entry in
+  // Pattern in "LEVEL BELOW" (see its subPatternKeys entry in
   // BACKTEST_CATEGORIES below, and the matching case in passesPattern in
   // ScreenerUtils.tsx). Bullish, targets today's own R2 (U2).
   {
@@ -514,7 +514,7 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     getTarget: (r) => r.todayCPR.r2,
   },
   // NEW: target definitions for "B-B-BB-BB" and its four L4U4/L3U4/L4U3/
-  // L3U3 children in "LEVELs BELOW" (previously symbol-list-only scans
+  // L3U3 children in "LEVEL BELOW" (previously symbol-list-only scans
   // with no defined target — see BACKTEST_CATEGORIES below). All five
   // graded bearish against today's own S2 (L2) per user request.
   {
@@ -660,7 +660,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
   { key: "top15losers", label: "TOP 15 LOSERS" },
   {
     key: "levelsabove",
-    label: "LEVELs ABOVE",
+    label: "LEVEL ABOVE",
     // RENAMED from "9AM:MegL-U4+1:3PM": all previous conditions removed,
     // "LA-BCpPDH-TopClose-U2" remains a direct View under this category.
     // The former 6PM View now lives under the A-A-AA-AA-EU3L4 Pattern
@@ -859,7 +859,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       { kind: "pattern", key: "A-A-AA-AA-EU3L4" },
     ],
   },
-  // NEW: "LEVELs BELOW" left-nav section (top of the pattern tree in
+  // NEW: "LEVEL BELOW" left-nav section (top of the pattern tree in
   // ViewsSidebar.tsx) — nests the "HALB-SSLLGap" Pattern (REPLACES
   // "CL4U3" here — see matchesPatternFlag in ScreenerUtils.tsx), which
   // in turn nests "3P:HA-pBELOWR1:R2-3A" (RENAMED from "BC>pPDL-U3:5AM",
@@ -870,7 +870,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
   // grouping, matching the sidebar/legend structure).
   {
     key: "levelsbelow",
-    label: "LEVELs BELOW",
+    label: "LEVEL BELOW",
     // NEW: "PDH>pTC-U4:5AM" now nests under the "L3U3" Pattern
     //  below (not directly on the category), since it also
     // requires the raw L3U3 flag — see ScreenerUtils.tsx.
