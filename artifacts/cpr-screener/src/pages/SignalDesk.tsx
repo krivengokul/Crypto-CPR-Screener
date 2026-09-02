@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { CPRResultWithSource, fmt, fmtPct, passesPattern } from "./ScreenerUtils";
+import { fmt, fmtPct } from "./ScreenerUtils";
 import { autoSaveQualifiedSignals } from "@/lib/signalTracker";
 import { Views } from "@/lib/ViewsSidebar";
 import SignalProgressBar from "@/lib/SignalProgressBar";
@@ -20,9 +20,36 @@ import {
   X,
 } from "lucide-react";
 
+// Lightweight projection of a matching row that Screener hands up via
+// onSignalSymbols — this is the post-filter `displayed` pool (already
+// scoped to whatever left-nav pattern/Views is active), not the full
+// CPRResultWithSource. It intentionally does NOT carry tc/bc or the
+// SSRR/HHLL pattern-category flags, so SignalDesk no longer re-derives
+// "which pattern matched" itself — it trusts Screener's activeView/
+// activeLabel for that and just projects each symbol into a card.
+export interface SignalDeskSymbol {
+  key: string;
+  symbol: string;
+  source: "binance" | "delta";
+  currentPrice: number;
+  change24h?: number;
+  direction: "up" | "down";
+  s4: number;
+  s3?: number;
+  s2: number;
+  s1: number;
+  pivot: number;
+  r1: number;
+  r2: number;
+  r3?: number;
+  r4: number;
+}
+
 interface SignalDeskProps {
-  results: CPRResultWithSource[];
+  symbols: SignalDeskSymbol[];
   activeView?: string;
+  activeLabel?: string;
+  counts?: Record<string, number>;
   onSelectPattern?: (patternId: string) => void;
 }
 
@@ -43,8 +70,6 @@ export interface SignalItem {
   confidence: "HIGH" | "MEDIUM" | "WATCH";
   cprStatus: string;
   pivot: number;
-  tc: number;
-  bc: number;
   r1: number;
   s1: number;
   r2: number;
@@ -57,7 +82,13 @@ export interface SignalItem {
   timestamp: string;
 }
 
-export default function SignalDesk({ results, activeView, onSelectPattern }: SignalDeskProps) {
+export default function SignalDesk({
+  symbols,
+  activeView,
+  activeLabel,
+  counts = {},
+  onSelectPattern,
+}: SignalDeskProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [sourceFilter, setSourceFilter] = useState<"all" | "binance" | "delta">("all");
   const [directionFilter, setDirectionFilter] = useState<"all" | "LONG" | "SHORT">("all");
@@ -71,11 +102,14 @@ export default function SignalDesk({ results, activeView, onSelectPattern }: Sig
     }
   }, [activeView]);
 
-  // Compute all sidebar views (subpatterns) with counts > 0, sorted descending
+  // Compute all sidebar views (subpatterns) with counts > 0, sorted
+  // descending. Counts now come straight from Screener's `counts` prop
+  // (computed there off the full unfiltered pool) instead of being
+  // recomputed here via passesPattern — SignalDesk no longer has access
+  // to the full CPRResultWithSource rows needed for that.
   const viewPills = useMemo(() => {
     const pillMap = new Map<string, { id: string; label: string }>();
 
-    // All subpatterns from Views
     for (const subList of Object.values(Views)) {
       for (const sub of subList) {
         if (!pillMap.has(sub.id)) {
@@ -87,272 +121,100 @@ export default function SignalDesk({ results, activeView, onSelectPattern }: Sig
     const list: { id: string; label: string; count: number }[] = [];
 
     for (const [id, item] of pillMap.entries()) {
-      const count = results.filter((r) => passesPattern(r, id)).length;
+      const count = counts[id] ?? 0;
       if (count > 0) {
         list.push({ id, label: item.label, count });
       }
     }
 
-    // Sort descending by count
     return list.sort((a, b) => b.count - a.count);
-  }, [results]);
+  }, [counts]);
 
-  // Filter raw results by the selected pattern chip if any
-  const patternFilteredResults = useMemo(() => {
-    if (!selectedViewPattern) return results;
-    return results.filter((r) => passesPattern(r, selectedViewPattern));
-  }, [results, selectedViewPattern]);
+  // Resolve a human label for whatever pattern context is currently active:
+  // the locally-selected pill if one is picked, otherwise whatever
+  // Screener says is active (activeLabel), falling back to "All Patterns".
+  const activePatternLabel = useMemo(() => {
+    if (selectedViewPattern) {
+      return viewPills.find((p) => p.id === selectedViewPattern)?.label ?? selectedViewPattern;
+    }
+    return activeLabel || "All Patterns";
+  }, [selectedViewPattern, viewPills, activeLabel]);
 
-  // Generate actionable live signals from CPR & Pivot breakouts
+  // Generate live signal cards directly from the symbols Screener hands up.
+  // `symbols` is already scoped to whichever left-nav pattern/Views filter
+  // is active (that filtering happens in Screener, off the full CPR data),
+  // so SignalDesk's job here is just to pick a sensible target/stop for
+  // each row based on its direction and current price relative to its own
+  // pivot levels — it no longer re-derives *which* pattern matched.
   const signals = useMemo<SignalItem[]>(() => {
     const list: SignalItem[] = [];
 
-    for (const r of patternFilteredResults) {
-      const price = r.currentPrice || r.todayCPR.pivot;
-      const pivot = r.todayCPR.pivot;
-      const tc = r.todayCPR.tc;
-      const bc = r.todayCPR.bc;
-      const r1 = r.todayCPR.r1;
-      const s1 = r.todayCPR.s1;
-      const r2 = r.todayCPR.r2;
-      const s2 = r.todayCPR.s2;
-      const r3 = r.todayCPR.r3;
-      const s3 = r.todayCPR.s3;
-      const r4 = r.todayCPR.r4;
-      const s4 = r.todayCPR.s4;
-      const prevR1 = r.prevCPR.r1;
-      const prevS1 = r.prevCPR.s1;
+    for (const sym of symbols) {
+      // Local pill filter (if the user picked a Views chip inside Signal
+      // Desk itself) is informational only for the label here — the
+      // symbol pool itself is already pattern-scoped by Screener.
+      const direction: "LONG" | "SHORT" = sym.direction === "up" ? "LONG" : "SHORT";
+      const price = sym.currentPrice;
+      const { pivot, r1, r2, s1, s2, r3, s3, r4, s4 } = sym;
 
-      let matched = false;
+      let targetPrice: number;
+      let stopPrice: number;
+      let targetLevel: string;
+      let confidence: SignalItem["confidence"];
+      let cprStatus: string;
 
-      // 1. Level 4 Super Breakout Long (Target R4, Entry today's TC, SL today's S1)
-      if (price > r4 || r1 > (r.prevCPR.r4 || r4)) {
-        matched = true;
-        const entryPrice = tc;
-        const targetPrice = r4;
-        const stopPrice = s1;
-        const risk = Math.max(0.0000001, Math.abs(entryPrice - stopPrice));
-        const reward = Math.abs(targetPrice - entryPrice);
-        const rrRatio = (reward / risk).toFixed(1);
-
-        list.push({
-          id: `${r.symbol}-lvl4-long`,
-          symbol: r.symbol,
-          source: r.source,
-          timeframe: "Daily / 1D",
-          direction: "LONG",
-          type: "R4 Level Breakout",
-          patternName: "ABOVE LEVEL4",
-          triggerPrice: entryPrice,
-          currentPrice: price,
-          change24h: r.change24h,
-          targetPrice: targetPrice,
-          stopPrice: stopPrice,
-          targetLevel: "R4",
-          riskReward: `1 : ${rrRatio}`,
-          confidence: "HIGH",
-          cprStatus: "Super Bullish Breakout (Target R4)",
-          pivot, tc, bc, r1, s1, r2, s2, r3, s3, r4, s4,
-          timestamp: "Active",
-        });
+      if (direction === "LONG") {
+        if (price >= r1) {
+          targetPrice = r2;
+          targetLevel = "R2";
+        } else {
+          targetPrice = r1;
+          targetLevel = "R1";
+        }
+        stopPrice = s1;
+        confidence = price > r2 ? "HIGH" : price >= pivot ? "MEDIUM" : "WATCH";
+        cprStatus = price >= pivot ? "Above CPR Pivot" : "Below Pivot, Watching for Reversal";
+      } else {
+        if (price <= s1) {
+          targetPrice = s2;
+          targetLevel = "S2";
+        } else {
+          targetPrice = s1;
+          targetLevel = "S1";
+        }
+        stopPrice = r1;
+        confidence = price < s2 ? "HIGH" : price <= pivot ? "MEDIUM" : "WATCH";
+        cprStatus = price <= pivot ? "Below CPR Pivot" : "Above Pivot, Watching for Reversal";
       }
 
-      // 2. Levels Above Long (Target R2, Entry today's TC, SL today's S1)
-      else if (r.SSRRCategory === "RRSS-A" || (r1 > prevR1 && s1 >= prevS1)) {
-        matched = true;
-        const entryPrice = tc;
-        const targetPrice = r2;
-        const stopPrice = s1;
-        const risk = Math.max(0.0000001, Math.abs(entryPrice - stopPrice));
-        const reward = Math.abs(targetPrice - entryPrice);
-        const rrRatio = (reward / risk).toFixed(1);
+      const risk = Math.max(0.0000001, Math.abs(price - stopPrice));
+      const reward = Math.abs(targetPrice - price);
+      const rrRatio = (reward / risk).toFixed(1);
 
-        list.push({
-          id: `${r.symbol}-la-long`,
-          symbol: r.symbol,
-          source: r.source,
-          timeframe: "Daily / 1D",
-          direction: "LONG",
-          type: "Ascending Pivot Extension",
-          patternName: "LEVELs ABOVE",
-          triggerPrice: entryPrice,
-          currentPrice: price,
-          change24h: r.change24h,
-          targetPrice: targetPrice,
-          stopPrice: stopPrice,
-          targetLevel: "R2",
-          riskReward: `1 : ${rrRatio}`,
-          confidence: price > tc ? "HIGH" : "MEDIUM",
-          cprStatus: price > tc ? "Above CPR Range (Target R2)" : "Testing CPR Top",
-          pivot, tc, bc, r1, s1, r2, s2, r3, s3, r4, s4,
-          timestamp: "Active",
-        });
-      }
-
-      // 3. Level 4 Breakdown Short (Target S4, Entry today's BC, SL today's R1)
-      if (price < s4 || s1 < (r.prevCPR.s4 || s4)) {
-        matched = true;
-        const entryPrice = bc;
-        const targetPrice = s4;
-        const stopPrice = r1;
-        const risk = Math.max(0.0000001, Math.abs(stopPrice - entryPrice));
-        const reward = Math.abs(entryPrice - targetPrice);
-        const rrRatio = (reward / risk).toFixed(1);
-
-        list.push({
-          id: `${r.symbol}-lvl4-short`,
-          symbol: r.symbol,
-          source: r.source,
-          timeframe: "Daily / 1D",
-          direction: "SHORT",
-          type: "S4 Breakdown Extreme",
-          patternName: "BELOW LEVEL4",
-          triggerPrice: entryPrice,
-          currentPrice: price,
-          change24h: r.change24h,
-          targetPrice: targetPrice,
-          stopPrice: stopPrice,
-          targetLevel: "S4",
-          riskReward: `1 : ${rrRatio}`,
-          confidence: "HIGH",
-          cprStatus: "Super Bearish Breakdown (Target S4)",
-          pivot, tc, bc, r1, s1, r2, s2, r3, s3, r4, s4,
-          timestamp: "Active",
-        });
-      }
-
-      // 4. Levels Below Short (Target S2, Entry today's BC, SL today's R1)
-      else if (r.SSRRCategory === "RRSS-B" || (s1 < prevS1 && r1 <= prevR1)) {
-        matched = true;
-        const entryPrice = bc;
-        const targetPrice = s2;
-        const stopPrice = r1;
-        const risk = Math.max(0.0000001, Math.abs(stopPrice - entryPrice));
-        const reward = Math.abs(entryPrice - targetPrice);
-        const rrRatio = (reward / risk).toFixed(1);
-
-        list.push({
-          id: `${r.symbol}-lb-short`,
-          symbol: r.symbol,
-          source: r.source,
-          timeframe: "Daily / 1D",
-          direction: "SHORT",
-          type: "Descending Pivot Shift",
-          patternName: "LEVELs BELOW",
-          triggerPrice: entryPrice,
-          currentPrice: price,
-          change24h: r.change24h,
-          targetPrice: targetPrice,
-          stopPrice: stopPrice,
-          targetLevel: "S2",
-          riskReward: `1 : ${rrRatio}`,
-          confidence: price < bc ? "HIGH" : "MEDIUM",
-          cprStatus: price < bc ? "Below CPR Range (Target S2)" : "Testing CPR Base",
-          pivot, tc, bc, r1, s1, r2, s2, r3, s3, r4, s4,
-          timestamp: "Active",
-        });
-      }
-
-      // 5. E-E-AA-BB Expanded Target R2 (Entry today's TC, SL today's S1)
-      if (r.SSRRCategory === "RRSS-E" && r.HHLLCategory === "HHLL-E") {
-        matched = true;
-        const entryPrice = tc;
-        const targetPrice = r2;
-        const stopPrice = s1;
-        const risk = Math.max(0.0000001, Math.abs(entryPrice - stopPrice));
-        const reward = Math.abs(targetPrice - entryPrice);
-        const rrRatio = (reward / risk).toFixed(1);
-
-        list.push({
-          id: `${r.symbol}-expanded`,
-          symbol: r.symbol,
-          source: r.source,
-          timeframe: "Daily / 1D",
-          direction: "LONG",
-          type: "E-E-AA-BB Volatility Expansion",
-          patternName: "EXPANDED",
-          triggerPrice: entryPrice,
-          currentPrice: price,
-          change24h: r.change24h,
-          targetPrice: targetPrice,
-          stopPrice: stopPrice,
-          targetLevel: "R2",
-          riskReward: `1 : ${rrRatio}`,
-          confidence: "HIGH",
-          cprStatus: "Expanded CPR Bands (Target R2)",
-          pivot, tc, bc, r1, s1, r2, s2, r3, s3, r4, s4,
-          timestamp: "Active",
-        });
-      }
-
-      // 6. Inside CPR Range Squeeze
-      if (r.InsideCPR || (price >= Math.min(tc, bc) && price <= Math.max(tc, bc))) {
-        matched = true;
-        const isBullishBias = price >= r.todayCPR.pivot;
-        const entryPrice = isBullishBias ? tc : bc;
-        const targetPrice = isBullishBias ? r1 : s1;
-        const stopPrice = isBullishBias ? s1 : r1;
-        const risk = Math.max(0.0000001, Math.abs(entryPrice - stopPrice));
-        const reward = Math.abs(targetPrice - entryPrice);
-        const rrRatio = (reward / risk).toFixed(1);
-
-        list.push({
-          id: `${r.symbol}-inside-cpr`,
-          symbol: r.symbol,
-          source: r.source,
-          timeframe: "Daily / 1D",
-          direction: isBullishBias ? "LONG" : "SHORT",
-          type: "CPR Range Compression / Squeeze",
-          patternName: "Inside CPR",
-          triggerPrice: entryPrice,
-          currentPrice: price,
-          change24h: r.change24h,
-          targetPrice: targetPrice,
-          stopPrice: stopPrice,
-          targetLevel: isBullishBias ? "R1" : "S1",
-          riskReward: `1 : ${rrRatio}`,
-          confidence: "WATCH",
-          cprStatus: "Inside Tight CPR Zone",
-          pivot, tc, bc, r1, s1, r2, s2, r3, s3, r4, s4,
-          timestamp: "Active",
-        });
-      }
-
-      // 7. If filtered by specific pattern and not yet captured by rules above, provide pattern setup
-      if (!matched && selectedViewPattern) {
-        const isBullish = price >= r.todayCPR.pivot;
-        const entryPrice = isBullish ? tc : bc;
-        const targetPrice = isBullish ? r2 : s2;
-        const stopPrice = isBullish ? s1 : r1;
-        const risk = Math.max(0.0000001, Math.abs(entryPrice - stopPrice));
-        const reward = Math.abs(targetPrice - entryPrice);
-        const rrRatio = (reward / risk).toFixed(1);
-
-        list.push({
-          id: `${r.symbol}-pattern-signal`,
-          symbol: r.symbol,
-          source: r.source,
-          timeframe: "Daily / 1D",
-          direction: isBullish ? "LONG" : "SHORT",
-          type: `${selectedViewPattern} Pattern Trigger`,
-          patternName: selectedViewPattern,
-          triggerPrice: entryPrice,
-          currentPrice: price,
-          change24h: r.change24h,
-          targetPrice: targetPrice,
-          stopPrice: stopPrice,
-          targetLevel: isBullish ? "R2" : "S2",
-          riskReward: `1 : ${rrRatio}`,
-          confidence: "MEDIUM",
-          cprStatus: isBullish ? "Above CPR Pivot" : "Below CPR Pivot",
-          pivot, tc, bc, r1, s1, r2, s2, r3, s3, r4, s4,
-          timestamp: "Active",
-        });
-      }
+      list.push({
+        id: sym.key,
+        symbol: sym.symbol,
+        source: sym.source,
+        timeframe: "Daily / 1D",
+        direction,
+        type: `${activePatternLabel} Setup`,
+        patternName: activePatternLabel,
+        triggerPrice: price,
+        currentPrice: price,
+        change24h: sym.change24h,
+        targetPrice,
+        stopPrice,
+        targetLevel,
+        riskReward: `1 : ${rrRatio}`,
+        confidence,
+        cprStatus,
+        pivot, r1, s1, r2, s2, r3, s3, r4, s4,
+        timestamp: "Active",
+      });
     }
 
     return list;
-  }, [patternFilteredResults, selectedViewPattern]);
+  }, [symbols, activePatternLabel]);
 
   const filteredSignals = useMemo(() => {
     return signals.filter((s) => {
