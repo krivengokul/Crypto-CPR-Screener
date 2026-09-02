@@ -1,8 +1,8 @@
 import { useMemo, useState, useEffect, useRef } from "react";
 import { ArrowDownRight, ArrowUpRight, Radio, Search, CheckCircle2 } from "lucide-react";
-import { pivotcategories, Views } from "./ViewsSidebar";
-import { autoSaveQualifiedSignals, LoggedSignal } from "../lib/signalTracker";
-import { CPRResultWithSource, getRowDirection, passesPattern } from "../lib/ScreenerUtils";
+import { pivotcategories, Views } from "@/lib/ViewsSidebar";
+import { autoSaveQualifiedSignals, LoggedSignal } from "@/lib/signalTracker";
+import { CPRResultWithSource, getRowDirection, passesPattern } from "./ScreenerUtils";
 
 /**
  * Flat id → label lookup covering every view in the tree — both the
