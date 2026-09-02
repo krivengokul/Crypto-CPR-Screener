@@ -1,13 +1,4 @@
-import {
-  collection,
-  doc,
-  setDoc,
-  getDocs,
-  deleteDoc,
-  query,
-  orderBy,
-} from "firebase/firestore";
-import { db } from "./firebase";
+// src/lib/signalTracker.ts
 
 export interface LoggedSignal {
   id: string;
@@ -34,87 +25,103 @@ export interface LoggedSignal {
   exitPrice?: number;
 }
 
-const COLLECTION_NAME = "saved_signals";
+const STORAGE_KEY = "cpr_saved_signals";
 
-export async function saveSignalToCloud(signal: Omit<LoggedSignal, "id">, customId?: string): Promise<string> {
-  const signalId = customId || `${signal.symbol}-${signal.direction}-${Date.now()}`;
-  const docRef = doc(db, COLLECTION_NAME, signalId);
-  const data: LoggedSignal = {
-    ...signal,
-    id: signalId,
-  };
-  await setDoc(docRef, data, { merge: true });
-  return signalId;
-}
-
-export async function autoSaveQualifiedSignals(signals: Omit<LoggedSignal, "id">[]): Promise<number> {
-  let savedCount = 0;
-  const todayKey = new Date().toISOString().slice(0, 10);
-
-  for (const sig of signals) {
-    const patternSlug = sig.patternName.replace(/[^a-zA-Z0-9]/g, "_").toUpperCase();
-    const deterministicId = `${sig.symbol}-${sig.direction}-${patternSlug}-${todayKey}`;
-
-    try {
-      const docRef = doc(db, COLLECTION_NAME, deterministicId);
-      const data: LoggedSignal = {
-        ...sig,
-        id: deterministicId,
-        dateStr: new Date(sig.timestamp).toLocaleString(),
-        status: sig.status || "ACTIVE",
-        outcomeNotes: `Auto-saved setup (${todayKey}). Awaiting TP (${sig.target}) or SL (${sig.sl}) outcome.`,
-      };
-      await setDoc(docRef, data, { merge: true });
-      savedCount++;
-    } catch (err) {
-      console.warn("Auto-save failed for", deterministicId, err);
-    }
-  }
-  return savedCount;
-}
-
-export async function clearAllSignalsFromCloud(signalIds: string[]): Promise<void> {
-  await Promise.all(signalIds.map((id) => deleteSavedSignalFromCloud(id)));
-}
-
-export async function fetchSavedSignalsFromCloud(): Promise<LoggedSignal[]> {
+function getLocalSignals(): LoggedSignal[] {
   try {
-    const colRef = collection(db, COLLECTION_NAME);
-    const q = query(colRef, orderBy("timestamp", "desc"));
-    const snapshot = await getDocs(q);
-    const list: LoggedSignal[] = [];
-    snapshot.forEach((d) => {
-      list.push(d.data() as LoggedSignal);
-    });
-    return list;
-  } catch (err) {
-    console.error("Error fetching signals from Firestore:", err);
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
     return [];
   }
 }
 
-export async function deleteSavedSignalFromCloud(id: string): Promise<void> {
+function saveLocalSignals(list: LoggedSignal[]): void {
   try {
-    const docRef = doc(db, COLLECTION_NAME, id);
-    await deleteDoc(docRef);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
   } catch (err) {
-    console.error("Error deleting signal:", err);
+    console.error("Failed to save signals to localStorage:", err);
   }
+}
+
+export async function saveSignalToCloud(
+  signal: Omit<LoggedSignal, "id">,
+  customId?: string
+): Promise<string> {
+  const signalId = customId || `${signal.symbol}-${signal.direction}-${Date.now()}`;
+  const list = getLocalSignals();
+  const existingIdx = list.findIndex((s) => s.id === signalId);
+  const data: LoggedSignal = { ...signal, id: signalId };
+
+  if (existingIdx >= 0) {
+    list[existingIdx] = { ...list[existingIdx], ...data };
+  } else {
+    list.unshift(data);
+  }
+  saveLocalSignals(list);
+  return signalId;
+}
+
+export async function autoSaveQualifiedSignals(
+  signals: Omit<LoggedSignal, "id">[]
+): Promise<number> {
+  let savedCount = 0;
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const list = getLocalSignals();
+
+  for (const sig of signals) {
+    const patternSlug = sig.patternName.replace(/[^a-zA-Z0-9]/g, "_").toUpperCase();
+    const deterministicId = `${sig.symbol}-${sig.direction}-${patternSlug}-${todayKey}`;
+    const data: LoggedSignal = {
+      ...sig,
+      id: deterministicId,
+      dateStr: new Date(sig.timestamp).toLocaleString(),
+      status: sig.status || "ACTIVE",
+      outcomeNotes: `Auto-saved setup (${todayKey}). Awaiting TP (${sig.target}) or SL (${sig.sl}) outcome.`,
+    };
+
+    const existingIdx = list.findIndex((s) => s.id === deterministicId);
+    if (existingIdx >= 0) {
+      list[existingIdx] = { ...list[existingIdx], ...data };
+    } else {
+      list.unshift(data);
+    }
+    savedCount++;
+  }
+  saveLocalSignals(list);
+  return savedCount;
+}
+
+export async function fetchSavedSignalsFromCloud(): Promise<LoggedSignal[]> {
+  return getLocalSignals().sort((a, b) => b.timestamp - a.timestamp);
+}
+
+export async function deleteSavedSignalFromCloud(id: string): Promise<void> {
+  const list = getLocalSignals().filter((s) => s.id !== id);
+  saveLocalSignals(list);
+}
+
+export async function clearAllSignalsFromCloud(signalIds: string[]): Promise<void> {
+  const idsSet = new Set(signalIds);
+  const list = getLocalSignals().filter((s) => !idsSet.has(s.id));
+  saveLocalSignals(list);
 }
 
 export async function updateSignalOutcomeInCloud(
   id: string,
   update: Partial<LoggedSignal>
 ): Promise<void> {
-  try {
-    const docRef = doc(db, COLLECTION_NAME, id);
-    await setDoc(docRef, update, { merge: true });
-  } catch (err) {
-    console.error("Error updating signal outcome:", err);
+  const list = getLocalSignals();
+  const idx = list.findIndex((s) => s.id === id);
+  if (idx >= 0) {
+    list[idx] = { ...list[idx], ...update };
+    saveLocalSignals(list);
   }
 }
 
-export async function evaluateSignalOutcome(signal: LoggedSignal): Promise<Partial<LoggedSignal> | null> {
+export async function evaluateSignalOutcome(
+  signal: LoggedSignal
+): Promise<Partial<LoggedSignal> | null> {
   if (signal.status !== "ACTIVE") return null;
 
   try {
