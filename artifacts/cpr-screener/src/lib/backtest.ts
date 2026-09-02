@@ -36,17 +36,6 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
   },
-  // NEW: LA-BCpPDH-TopClose-U2 — nested under LEVEL ABOVE.
-  // Bullish U2 target (42.34% hit rate across 3,125 samples).
-  // Condition: LevelsAbove (R1 <= pR4) + today's BC > prev day's PDH +
-  // previous candle closed in top 25% of its range.
-  {
-    key: "LA-BCpPDH-TopClose-U2",
-    label: "BC>pPDH · Top 25% Close (U2)",
-    direction: "bullish",
-    targetLabel: "U2 (today's R2)",
-    getTarget: (r) => r.todayCPR.r2,
-  },
   // NEW: A-A-AA-AA-S1pPDH-U3 — nested as a View under the
   // A-A-AA-AA-U2L4 Pattern. Bullish U3 target (today's R3). Condition:
   // A-A-AA-AA + U2L4 + LevelsAbove + today's S1 above prev day's PDH.
@@ -661,11 +650,10 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
   {
     key: "levelsabove",
     label: "LEVEL ABOVE",
-    // RENAMED from "9AM:MegL-U4+1:3PM": all previous conditions removed,
-    // "LA-BCpPDH-TopClose-U2" remains a direct View under this category.
+    // RENAMED from "9AM:MegL-U4+1:3PM": all previous conditions removed.
     // The former 6PM View now lives under the A-A-AA-AA-EU3L4 Pattern
-    // below, so the complete A-A-AA-AA branch can stay together at the top.
-    subPatternKeys: ["LA-BCpPDH-TopClose-U2"],
+    // below.
+    subPatternKeys: [],
     // NEW: "EU2L4" Pattern (arrow) — same shape as
     // CL4U3/L3U3/U3L4 elsewhere. Base condition = parent
     // levelsabove's condition AND the raw EU2L4 flag (see

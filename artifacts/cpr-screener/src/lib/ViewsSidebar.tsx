@@ -84,14 +84,6 @@ export const Views: Record<string, SubPattern[]> = {
     },
   ],
   "levelsabove": [
-    // A-A-AA-AA diagnostic Views are kept together at the top of LEVEL ABOVE.
-    {
-      id: "A-A-AA-AA",
-      label: "A-A-AA-AA · HHLL-A/RRHH-AA/SSLL-AA",
-      activeColor: "#60a5fa",
-      activeText: "#93c5fd",
-      activeBg: "rgba(96, 165, 250, 0.14)",
-    },
     {
       id: "A-A-AA-AA-EU3L4-GapB",
       label: "A-A-AA-AA-EU3L4-GapB",
@@ -187,17 +179,6 @@ export const Views: Record<string, SubPattern[]> = {
       activeColor: "#22c55e",      // green-500 border
       activeText:  "#4ade80",      // green-400 text
       activeBg:    "rgba(34, 197, 94, 0.14)",
-    },
-    // NEW: LA-BCpPDH-TopClose-U2 — LEVEL ABOVE + today's BC > prev PDH +
-    // prev candle closed in top 25% of its daily range. Targets today's R2 (U2).
-    // 42.34% hit rate across 3,125 samples over 180 days. Amber color to
-    // visually distinguish from the A-A-AA-AA sibling above.
-    {
-      id: "LA-BCpPDH-TopClose-U2",
-      label: "BC>pPDH · Top 25% Close (U2 42%)",
-      activeColor: "#f59e0b",              // amber-500 border
-      activeText:  "#fcd34d",              // amber-300 text
-      activeBg:    "rgba(245, 158, 11, 0.14)",
     },
   ],
   "levelsbelow": [
