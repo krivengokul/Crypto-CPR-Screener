@@ -62,7 +62,10 @@ export async function saveSignalToCloud(
 
 /**
  * Smart Auto-Save:
- * Uses deterministic ID per symbol/direction/pattern/day.
+ * Uses a deterministic ID per SYMBOL/DAY only — one Journal entry per symbol
+ * per day, full stop. The matching pattern, view, or direction that first
+ * surfaced the symbol must NOT factor into the id: a symbol that qualifies
+ * under several Active Views on the same day is still just one entry.
  * CRITICAL: If a signal already exists with status 'PASS', 'FAIL', or 'EXPIRED',
  * DO NOT overwrite it or reset its status back to 'ACTIVE'!
  */
@@ -76,12 +79,14 @@ export async function autoSaveQualifiedSignals(
   for (const sig of signals) {
     if (sig.confidence === "WATCH") continue;
 
-    const patternSlug = sig.patternName.replace(/[^a-zA-Z0-9]/g, "_").toUpperCase();
-    const deterministicId = `${sig.symbol}-${sig.direction}-${patternSlug}-${todayKey}`;
+    const deterministicId = `${sig.symbol.toUpperCase()}-${todayKey}`;
 
     const existingIdx = list.findIndex((s) => s.id === deterministicId);
     if (existingIdx >= 0) {
-      // Already recorded! Never reset a PASS / FAIL / EXPIRED status back to ACTIVE.
+      // Already recorded today under some view/pattern! Never reset a
+      // PASS / FAIL / EXPIRED status back to ACTIVE, and never add a
+      // second row for the same symbol just because a different view
+      // matched it later.
       continue;
     }
 

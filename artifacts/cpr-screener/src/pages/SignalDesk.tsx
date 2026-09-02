@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { CPRResultWithSource, fmt, fmtPct, passesPattern } from "./ScreenerUtils";
 import { autoSaveQualifiedSignals } from "@/lib/signalTracker";
 import { Views } from "@/lib/ViewsSidebar";
@@ -360,12 +360,33 @@ export default function SignalDesk({
     return { total, saved, longs, shorts, watch, highConf };
   }, [filteredSignals]);
 
-  // Automatically save ONLY qualified signals from Active Views directly to Firestore & Journal
+  // Automatically save ONLY qualified signals from Active Views directly to the Journal.
+  // Tracks which symbols were already submitted TODAY so re-renders triggered by
+  // price ticks or switching between Active Views don't keep re-submitting the
+  // same symbols over and over — the Journal enforces one row per symbol/day,
+  // but there's no reason to spam it with redundant writes on every tick either.
+  const submittedTodayRef = useRef<{ day: string; symbols: Set<string> }>({
+    day: "",
+    symbols: new Set(),
+  });
+
   useEffect(() => {
     const qualifiedSignals = signals.filter((item) => item.isSaved);
     if (qualifiedSignals.length === 0) return;
 
-    const candidateSignals = qualifiedSignals.map((item) => ({
+    const todayKey = new Date().toISOString().slice(0, 10);
+    if (submittedTodayRef.current.day !== todayKey) {
+      // New day — reset the in-memory "already submitted" tracker.
+      submittedTodayRef.current = { day: todayKey, symbols: new Set() };
+    }
+
+    const alreadySubmitted = submittedTodayRef.current.symbols;
+    const newSignals = qualifiedSignals.filter(
+      (item) => !alreadySubmitted.has(item.symbol.toUpperCase())
+    );
+    if (newSignals.length === 0) return;
+
+    const candidateSignals = newSignals.map((item) => ({
       symbol: item.symbol,
       source: item.source,
       timeframe: item.timeframe,
@@ -384,9 +405,11 @@ export default function SignalDesk({
       status: "ACTIVE" as const,
     }));
 
-    if (candidateSignals.length > 0) {
-      autoSaveQualifiedSignals(candidateSignals);
-    }
+    autoSaveQualifiedSignals(candidateSignals).then(() => {
+      for (const item of newSignals) {
+        alreadySubmitted.add(item.symbol.toUpperCase());
+      }
+    });
   }, [signals]);
 
   const handleCopy = (item: SignalItem) => {
