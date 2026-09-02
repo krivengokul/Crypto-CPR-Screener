@@ -1,5 +1,5 @@
 import React from "react";
-import { fmt } from "../lib/ScreenerUtils";
+import { fmt } from "@/pages/ScreenerUtils";
 
 interface SignalProgressBarProps {
   price: number;
