@@ -80,6 +80,7 @@ export interface SignalItem {
   s4: number;
   change24h?: number;
   timestamp: string;
+  isSaved: boolean;
 }
 
 export default function SignalDesk({
@@ -142,10 +143,11 @@ export default function SignalDesk({
     return list.sort((a, b) => b.count - a.count);
   }, [effectiveCounts]);
 
-  // Generate live signal cards strictly from active views available in SignalDesk
+  // Generate live signal cards
   const signals = useMemo<SignalItem[]>(() => {
     // If external symbols were passed explicitly, map them
     if (symbols && symbols.length > 0) {
+      const isAvailableInActiveView = viewPills.length > 0;
       const label = selectedViewPattern
         ? viewPills.find((p) => p.id === selectedViewPattern)?.label ?? selectedViewPattern
         : activeLabel || "Active View";
@@ -210,122 +212,116 @@ export default function SignalDesk({
           r4,
           s4,
           timestamp: "Active",
+          isSaved: isAvailableInActiveView,
         };
       });
     }
 
     if (!results || results.length === 0) return [];
 
-    // Determine which active views are targeted:
-    // If a view pill is selected, only that view; otherwise ALL active views available in SignalDesk (viewPills with count > 0)
-    const targetViews = selectedViewPattern
-      ? viewPills.filter((p) => p.id === selectedViewPattern)
-      : viewPills;
-
-    // If a specific selected view was requested but not yet in viewPills, construct it
-    const activeViewsToProcess =
-      targetViews.length > 0
-        ? targetViews
-        : selectedViewPattern
-        ? [{ id: selectedViewPattern, label: selectedViewPattern, count: 0 }]
-        : [];
-
-    if (activeViewsToProcess.length === 0) return [];
+    let pool = results;
+    if (selectedViewPattern) {
+      pool = results.filter((r) => passesPattern(r, selectedViewPattern));
+    }
 
     const list: SignalItem[] = [];
-    const seenMap = new Set<string>();
 
-    for (const view of activeViewsToProcess) {
-      const matchingResults = results.filter((r) => passesPattern(r, view.id));
+    for (const r of pool) {
+      // Check which Active Views in viewPills this symbol qualifies under
+      const matchedActiveViews = viewPills.filter((v) => passesPattern(r, v.id));
+      const isEligibleInActiveViews = matchedActiveViews.length > 0;
 
-      for (const r of matchingResults) {
-        const itemKey = `${r.source}-${r.symbol}-${view.id}`;
-        if (seenMap.has(itemKey)) continue;
-        seenMap.add(itemKey);
+      // Identify the primary active view label
+      const primaryView = selectedViewPattern
+        ? viewPills.find((v) => v.id === selectedViewPattern) || { id: selectedViewPattern, label: selectedViewPattern }
+        : matchedActiveViews[0];
 
-        const price = r.currentPrice || r.todayCPR.pivot;
-        const pivot = r.todayCPR.pivot;
-        const { r1, r2, r3, r4, s1, s2, s3, s4 } = r.todayCPR;
+      const patternLabel = primaryView ? primaryView.label : "Standard CPR";
 
-        // Determine direction:
-        // Overlap-lower / falling / below patterns favor SHORT; overlap-higher / rising / above favor LONG
-        const isBearishPattern =
-          r.cprFalling ||
-          r.overlapLower ||
-          view.id.toLowerCase().includes("lower") ||
-          view.id.toLowerCase().includes("below") ||
-          view.id.toLowerCase().includes("l4") ||
-          price < pivot;
+      const price = r.currentPrice || r.todayCPR.pivot;
+      const pivot = r.todayCPR.pivot;
+      const { r1, r2, r3, r4, s1, s2, s3, s4 } = r.todayCPR;
 
-        const direction: "LONG" | "SHORT" = isBearishPattern ? "SHORT" : "LONG";
+      // Determine direction based on patterns and price action
+      const isBearishPattern =
+        r.cprFalling ||
+        r.overlapLower ||
+        (primaryView && (
+          primaryView.id.toLowerCase().includes("lower") ||
+          primaryView.id.toLowerCase().includes("below") ||
+          primaryView.id.toLowerCase().includes("l4")
+        )) ||
+        price < pivot;
 
-        let targetPrice: number;
-        let stopPrice: number;
-        let targetLevel: string;
+      const direction: "LONG" | "SHORT" = isBearishPattern ? "SHORT" : "LONG";
 
-        if (direction === "LONG") {
-          if (price >= r2) {
-            targetPrice = r4;
-            targetLevel = "R4";
-            stopPrice = r1;
-          } else if (price >= r1) {
-            targetPrice = r2;
-            targetLevel = "R2";
-            stopPrice = s1;
-          } else {
-            targetPrice = r1;
-            targetLevel = "R1";
-            stopPrice = s1;
-          }
+      let targetPrice: number;
+      let stopPrice: number;
+      let targetLevel: string;
+
+      if (direction === "LONG") {
+        if (price >= r2) {
+          targetPrice = r4;
+          targetLevel = "R4";
+          stopPrice = r1;
+        } else if (price >= r1) {
+          targetPrice = r2;
+          targetLevel = "R2";
+          stopPrice = s1;
         } else {
-          if (price <= s2) {
-            targetPrice = s4;
-            targetLevel = "S4";
-            stopPrice = s1;
-          } else if (price <= s1) {
-            targetPrice = s2;
-            targetLevel = "S2";
-            stopPrice = r1;
-          } else {
-            targetPrice = s1;
-            targetLevel = "S1";
-            stopPrice = r1;
-          }
+          targetPrice = r1;
+          targetLevel = "R1";
+          stopPrice = s1;
         }
-
-        const risk = Math.max(0.0000001, Math.abs(price - stopPrice));
-        const reward = Math.abs(targetPrice - price);
-        const rrRatio = (reward / risk).toFixed(1);
-
-        list.push({
-          id: itemKey,
-          symbol: r.symbol,
-          source: r.source,
-          timeframe: "Daily / 1D",
-          direction,
-          type: `${view.label} Setup`,
-          patternName: view.label,
-          triggerPrice: price,
-          currentPrice: price,
-          change24h: r.change24h,
-          targetPrice,
-          stopPrice,
-          targetLevel,
-          riskReward: `1 : ${rrRatio}`,
-          confidence: "HIGH",
-          cprStatus: `${view.label} (Target ${targetLevel})`,
-          pivot,
-          r1,
-          s1,
-          r2,
-          s2,
-          r3,
-          s3,
-          r4,
-          s4,
-          timestamp: "Active",
-        });
+      } else {
+        if (price <= s2) {
+          targetPrice = s4;
+          targetLevel = "S4";
+          stopPrice = s1;
+        } else if (price <= s1) {
+          targetPrice = s2;
+          targetLevel = "S2";
+          stopPrice = r1;
+        } else {
+          targetPrice = s1;
+          targetLevel = "S1";
+          stopPrice = r1;
+        }
       }
+
+      const risk = Math.max(0.0000001, Math.abs(price - stopPrice));
+      const reward = Math.abs(targetPrice - price);
+      const rrRatio = (reward / risk).toFixed(1);
+
+      list.push({
+        id: `${r.source}-${r.symbol}-${selectedViewPattern || (primaryView ? primaryView.id : "std")}`,
+        symbol: r.symbol,
+        source: r.source,
+        timeframe: "Daily / 1D",
+        direction,
+        type: `${patternLabel} Setup`,
+        patternName: patternLabel,
+        triggerPrice: price,
+        currentPrice: price,
+        change24h: r.change24h,
+        targetPrice,
+        stopPrice,
+        targetLevel,
+        riskReward: `1 : ${rrRatio}`,
+        confidence: isEligibleInActiveViews ? "HIGH" : "WATCH",
+        cprStatus: isEligibleInActiveViews ? `${patternLabel} (Target ${targetLevel})` : "General CPR Setup",
+        pivot,
+        r1,
+        s1,
+        r2,
+        s2,
+        r3,
+        s3,
+        r4,
+        s4,
+        timestamp: "Active",
+        isSaved: isEligibleInActiveViews,
+      });
     }
 
     return list;
@@ -349,18 +345,20 @@ export default function SignalDesk({
 
   const stats = useMemo(() => {
     const total = filteredSignals.length;
+    const saved = filteredSignals.filter((s) => s.isSaved).length;
     const longs = filteredSignals.filter((s) => s.direction === "LONG").length;
     const shorts = filteredSignals.filter((s) => s.direction === "SHORT").length;
     const watch = filteredSignals.filter((s) => s.direction === "NEUTRAL").length;
     const highConf = filteredSignals.filter((s) => s.confidence === "HIGH").length;
-    return { total, longs, shorts, watch, highConf };
+    return { total, saved, longs, shorts, watch, highConf };
   }, [filteredSignals]);
 
-  // Automatically save ALL generated signals directly to Firestore & Journal
+  // Automatically save ONLY qualified signals from Active Views directly to Firestore & Journal
   useEffect(() => {
-    if (signals.length === 0) return;
+    const qualifiedSignals = signals.filter((item) => item.isSaved);
+    if (qualifiedSignals.length === 0) return;
 
-    const candidateSignals = signals.map((item) => ({
+    const candidateSignals = qualifiedSignals.map((item) => ({
       symbol: item.symbol,
       source: item.source,
       timeframe: item.timeframe,
@@ -432,7 +430,9 @@ R:R: ${item.riskReward} | Confidence: ${item.confidence}`;
         <div className="flex items-center gap-2 flex-wrap">
           <div className="bg-[#131b26] border border-[#1e2d3d] rounded-lg px-3 py-1.5 flex items-center gap-2 text-xs text-emerald-400">
             <Cloud className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="font-medium text-slate-300">Auto-Saved to Journal & Cloud</span>
+            <span className="font-medium text-slate-300">
+              Auto-Saved to Journal: <strong className="text-emerald-400 font-mono font-bold">{stats.saved}</strong>
+            </span>
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
           </div>
 
@@ -720,10 +720,12 @@ R:R: ${item.riskReward} | Confidence: ${item.confidence}`;
                     </button>
 
                     <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-1 text-[11px] text-emerald-400 font-mono">
-                        <Cloud className="w-3 h-3 text-emerald-400" />
-                        <span>Saved</span>
-                      </div>
+                      {item.isSaved && (
+                        <div className="flex items-center gap-1 text-[11px] text-emerald-400 font-mono">
+                          <Cloud className="w-3 h-3 text-emerald-400" />
+                          <span>Saved</span>
+                        </div>
+                      )}
 
                       <button
                         onClick={() => handleCopy(item)}
