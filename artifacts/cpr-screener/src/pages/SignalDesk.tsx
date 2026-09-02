@@ -147,7 +147,14 @@ export default function SignalDesk({
   const signals = useMemo<SignalItem[]>(() => {
     // If external symbols were passed explicitly, map them
     if (symbols && symbols.length > 0) {
-      const isAvailableInActiveView = viewPills.length > 0;
+      // A symbol is only eligible to be saved when the View currently
+      // producing these cards is itself one of the sidebar "Active Views"
+      // (i.e. a View with a count > 0). Previously this checked
+      // `viewPills.length > 0` — "does ANY active view exist anywhere" —
+      // which incorrectly marked every card here as saved as soon as any
+      // view (not necessarily this one) had a count > 0.
+      const currentViewId = selectedViewPattern || activeView || "";
+      const isCurrentViewActive = viewPills.some((p) => p.id === currentViewId);
       const label = selectedViewPattern
         ? viewPills.find((p) => p.id === selectedViewPattern)?.label ?? selectedViewPattern
         : activeLabel || "Active View";
@@ -212,7 +219,7 @@ export default function SignalDesk({
           r4,
           s4,
           timestamp: "Active",
-          isSaved: isAvailableInActiveView,
+          isSaved: isCurrentViewActive,
         };
       });
     }
