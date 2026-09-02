@@ -167,6 +167,6 @@ function App() {
       </TooltipProvider>
     </QueryClientProvider>
   );
-}
+} 
 
 export default App;
