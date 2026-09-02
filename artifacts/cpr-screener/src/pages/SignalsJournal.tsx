@@ -26,6 +26,7 @@ export default function SignalsJournal() {
   const [signals, setSignals] = useState<LoggedSignal[]>([]);
   const [loading, setLoading] = useState(true);
   const [evaluating, setEvaluating] = useState(false);
+  const [evalProgress, setEvalProgress] = useState<{ done: number; total: number } | null>(null);
   const [filterStatus, setFilterStatus] = useState<"ALL" | "ACTIVE" | "PASS" | "FAIL">("ALL");
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -52,19 +53,48 @@ export default function SignalsJournal() {
     await loadSignals();
   };
 
+  // High-speed parallel evaluation with live progress and immediate state updates
   const handleEvaluateAll = async () => {
+    const activeSignals = signals.filter((s) => s.status === "ACTIVE");
+    if (activeSignals.length === 0) return;
+
     setEvaluating(true);
+    setEvalProgress({ done: 0, total: activeSignals.length });
+
     try {
-      const activeSignals = signals.filter((s) => s.status === "ACTIVE");
-      for (const sig of activeSignals) {
-        const update = await evaluateSignalOutcome(sig);
-        if (update && update.status !== sig.status) {
-          await updateSignalOutcomeInCloud(sig.id, update);
-        }
+      const CONCURRENCY = 6;
+      let completedCount = 0;
+
+      for (let i = 0; i < activeSignals.length; i += CONCURRENCY) {
+        const batch = activeSignals.slice(i, i + CONCURRENCY);
+        const batchResults = await Promise.all(
+          batch.map(async (sig) => {
+            const update = await evaluateSignalOutcome(sig);
+            if (update && update.status !== sig.status) {
+              await updateSignalOutcomeInCloud(sig.id, update);
+              return { id: sig.id, update };
+            }
+            return null;
+          })
+        );
+
+        // Update local React state immediately for this batch
+        setSignals((prev) =>
+          prev.map((item) => {
+            const match = batchResults.find((r) => r && r.id === item.id);
+            if (match && match.update) {
+              return { ...item, ...match.update };
+            }
+            return item;
+          })
+        );
+
+        completedCount += batch.length;
+        setEvalProgress({ done: Math.min(completedCount, activeSignals.length), total: activeSignals.length });
       }
-      await loadSignals();
     } finally {
       setEvaluating(false);
+      setEvalProgress(null);
     }
   };
 
@@ -165,16 +195,20 @@ export default function SignalsJournal() {
           <button
             onClick={handleEvaluateAll}
             disabled={evaluating || signals.length === 0}
-            className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-semibold flex items-center gap-1.5 shadow transition"
+            className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-semibold flex items-center gap-1.5 shadow transition cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${evaluating ? "animate-spin" : ""}`} />
-            <span>{evaluating ? "Evaluating Candles..." : "Auto-Check Pass / Fail"}</span>
+            <span>
+              {evalProgress
+                ? `Checking (${evalProgress.done}/${evalProgress.total})...`
+                : "Auto-Check Pass / Fail"}
+            </span>
           </button>
 
           <button
             onClick={handleClearAll}
             disabled={loading || signals.length === 0}
-            className="px-2.5 py-1.5 rounded-lg bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/40 disabled:opacity-50 text-rose-300 text-xs font-medium flex items-center gap-1.5 transition"
+            className="px-2.5 py-1.5 rounded-lg bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/40 disabled:opacity-50 text-rose-300 text-xs font-medium flex items-center gap-1.5 transition cursor-pointer"
             title="Clear all saved signals"
           >
             <Trash2 className="w-3.5 h-3.5" />
@@ -184,7 +218,7 @@ export default function SignalsJournal() {
           <button
             onClick={handleExportCSV}
             disabled={signals.length === 0}
-            className="px-3 py-1.5 rounded-lg bg-[#162130] hover:bg-[#1e2f47] border border-[#22354a] disabled:opacity-50 text-slate-200 text-xs font-medium flex items-center gap-1.5 transition"
+            className="px-3 py-1.5 rounded-lg bg-[#162130] hover:bg-[#1e2f47] border border-[#22354a] disabled:opacity-50 text-slate-200 text-xs font-medium flex items-center gap-1.5 transition cursor-pointer"
           >
             <Download className="w-3.5 h-3.5 text-slate-400" />
             <span>Export CSV</span>
@@ -244,7 +278,7 @@ export default function SignalsJournal() {
             <button
               key={status}
               onClick={() => setFilterStatus(status)}
-              className={`px-3 py-1 text-xs font-semibold transition ${
+              className={`px-3 py-1 text-xs font-semibold transition cursor-pointer ${
                 filterStatus === status
                   ? "bg-blue-600 text-white"
                   : "text-slate-400 hover:text-slate-200"
@@ -362,7 +396,7 @@ export default function SignalsJournal() {
                       <td className="py-2.5 px-3 text-right">
                         <button
                           onClick={() => handleDelete(item.id)}
-                          className="p-1 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 rounded transition"
+                          className="p-1 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 rounded transition cursor-pointer"
                           title="Delete signal"
                         >
                           <Trash2 className="w-3.5 h-3.5" />

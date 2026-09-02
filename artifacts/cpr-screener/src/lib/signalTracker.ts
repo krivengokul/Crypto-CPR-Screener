@@ -1,5 +1,3 @@
-// src/lib/signalTracker.ts
-
 export interface LoggedSignal {
   id: string;
   symbol: string;
@@ -62,6 +60,12 @@ export async function saveSignalToCloud(
   return signalId;
 }
 
+/**
+ * Smart Auto-Save:
+ * Uses deterministic ID per symbol/direction/pattern/day.
+ * CRITICAL: If a signal already exists with status 'PASS', 'FAIL', or 'EXPIRED',
+ * DO NOT overwrite it or reset its status back to 'ACTIVE'!
+ */
 export async function autoSaveQualifiedSignals(
   signals: Omit<LoggedSignal, "id">[]
 ): Promise<number> {
@@ -70,24 +74,29 @@ export async function autoSaveQualifiedSignals(
   const list = getLocalSignals();
 
   for (const sig of signals) {
+    if (sig.confidence === "WATCH") continue;
+
     const patternSlug = sig.patternName.replace(/[^a-zA-Z0-9]/g, "_").toUpperCase();
     const deterministicId = `${sig.symbol}-${sig.direction}-${patternSlug}-${todayKey}`;
+
+    const existingIdx = list.findIndex((s) => s.id === deterministicId);
+    if (existingIdx >= 0) {
+      // Already recorded! Never reset a PASS / FAIL / EXPIRED status back to ACTIVE.
+      continue;
+    }
+
     const data: LoggedSignal = {
       ...sig,
       id: deterministicId,
       dateStr: new Date(sig.timestamp).toLocaleString(),
       status: sig.status || "ACTIVE",
-      outcomeNotes: `Auto-saved setup (${todayKey}). Awaiting TP (${sig.target}) or SL (${sig.sl}) outcome.`,
+      outcomeNotes: `Auto-saved setup (${todayKey}). Awaiting TP ($${sig.target.toFixed(4)}) or SL ($${sig.sl.toFixed(4)}) outcome.`,
     };
 
-    const existingIdx = list.findIndex((s) => s.id === deterministicId);
-    if (existingIdx >= 0) {
-      list[existingIdx] = { ...list[existingIdx], ...data };
-    } else {
-      list.unshift(data);
-    }
+    list.unshift(data);
     savedCount++;
   }
+
   saveLocalSignals(list);
   return savedCount;
 }
@@ -119,39 +128,46 @@ export async function updateSignalOutcomeInCloud(
   }
 }
 
+/**
+ * Fast direct kline fetcher with fast timeout & Futures priority
+ */
+async function fetchKlinesFast(symbol: string, startTime: number): Promise<any[] | null> {
+  const cleanSymbol = symbol.replace(/[\/_\-]/g, "").toUpperCase();
+  const binanceSymbol = cleanSymbol.endsWith("USDT") ? cleanSymbol : `${cleanSymbol}USDT`;
+
+  const endpoints = [
+    `https://fapi.binance.com/fapi/v1/klines?symbol=${binanceSymbol}&interval=1h&startTime=${startTime}&limit=168`,
+    `https://data-api.binance.vision/api/v3/klines?symbol=${binanceSymbol}&interval=1h&startTime=${startTime}&limit=168`,
+    `https://api.binance.com/api/v3/klines?symbol=${binanceSymbol}&interval=1h&startTime=${startTime}&limit=168`,
+  ];
+
+  for (const url of endpoints) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
+      const resp = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      if (resp.ok) {
+        const data = await resp.json();
+        if (Array.isArray(data) && data.length > 0) {
+          return data;
+        }
+      }
+    } catch {
+      continue;
+    }
+  }
+  return null;
+}
+
 export async function evaluateSignalOutcome(
   signal: LoggedSignal
 ): Promise<Partial<LoggedSignal> | null> {
   if (signal.status !== "ACTIVE") return null;
 
   try {
-    const cleanSymbol = signal.symbol.replace("/", "").replace("-", "").toUpperCase();
-    const binanceSymbol = cleanSymbol.endsWith("USDT") ? cleanSymbol : `${cleanSymbol}USDT`;
-    const startTime = signal.timestamp;
-    const bases = [
-      "https://data-api.binance.vision",
-      "https://api.binance.com",
-      "https://api1.binance.com",
-      "https://api3.binance.com",
-    ];
-    let klines: any[] | null = null;
-    for (const base of bases) {
-      try {
-        const resp = await fetch(
-          `${base}/api/v3/klines?symbol=${binanceSymbol}&interval=1h&startTime=${startTime}&limit=100`
-        );
-        if (resp.ok) {
-          const data = await resp.json();
-          if (Array.isArray(data) && data.length > 0) {
-            klines = data;
-            break;
-          }
-        }
-      } catch {
-        continue;
-      }
-    }
-    if (!klines) return null;
+    const klines = await fetchKlinesFast(signal.symbol, signal.timestamp);
+    if (!klines || klines.length === 0) return null;
 
     let highest = signal.entry;
     let lowest = signal.entry;
@@ -173,24 +189,24 @@ export async function evaluateSignalOutcome(
         if (low <= signal.sl) {
           finalStatus = "FAIL";
           exitPrice = signal.sl;
-          notes = `Stopped out at ${signal.sl}`;
+          notes = `Stopped out at $${signal.sl.toFixed(4)}`;
           break;
         } else if (high >= signal.target) {
           finalStatus = "PASS";
           exitPrice = signal.target;
-          notes = `Target achieved at ${signal.target}`;
+          notes = `Target achieved at $${signal.target.toFixed(4)}`;
           break;
         }
       } else if (isShort) {
         if (high >= signal.sl) {
           finalStatus = "FAIL";
           exitPrice = signal.sl;
-          notes = `Stopped out at ${signal.sl}`;
+          notes = `Stopped out at $${signal.sl.toFixed(4)}`;
           break;
         } else if (low <= signal.target) {
           finalStatus = "PASS";
           exitPrice = signal.target;
-          notes = `Target achieved at ${signal.target}`;
+          notes = `Target achieved at $${signal.target.toFixed(4)}`;
           break;
         }
       }
@@ -211,7 +227,7 @@ export async function evaluateSignalOutcome(
       exitPrice: finalStatus !== "ACTIVE" ? exitPrice : undefined,
     };
   } catch (err) {
-    console.error("Evaluation error for", signal.symbol, err);
+    console.warn("Evaluation error for", signal.symbol, err);
     return null;
   }
 }
