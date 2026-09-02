@@ -7,7 +7,7 @@ import {
   updateSignalOutcomeInCloud,
   clearAllSignalsFromCloud,
 } from "../lib/signalTracker";
-import { fmt } from "../lib/ScreenerUtils";
+import { fmt } from "../pages/ScreenerUtils";
 import {
   CheckCircle2,
   XCircle,
