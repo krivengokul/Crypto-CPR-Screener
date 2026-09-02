@@ -6,7 +6,7 @@ import Screener from "@/pages/Screener";
 import BacktestPanel from "@/pages/BacktestPanel";
 import SignalDesk, { type SignalDeskSymbol } from "@/pages/SignalDesk";
 import PatternStats from "@/pages/PatternStats";
-import SignalsJournal from "./components/SignalsJournal";
+import SignalsJournal from "./pages/SignalsJournal";
 import ViewsSidebar, { pivotcategories, SCREENER_PATTERN_IDS, type SidebarMode } from "@/lib/ViewsSidebar";
 import { Menu } from "lucide-react";
 
