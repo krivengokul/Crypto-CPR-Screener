@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { fmt, fmtPct } from "./ScreenerUtils";
+import { CPRResultWithSource, fmt, fmtPct, passesPattern } from "./ScreenerUtils";
 import { autoSaveQualifiedSignals } from "@/lib/signalTracker";
 import { Views } from "@/lib/ViewsSidebar";
 import SignalProgressBar from "@/lib/SignalProgressBar";
@@ -10,7 +10,6 @@ import {
   Search,
   Copy,
   Check,
-  Filter,
   ArrowUpRight,
   ArrowDownRight,
   ShieldAlert,
@@ -46,7 +45,8 @@ export interface SignalDeskSymbol {
 }
 
 interface SignalDeskProps {
-  symbols: SignalDeskSymbol[];
+  symbols?: SignalDeskSymbol[];
+  results?: CPRResultWithSource[];
   activeView?: string;
   activeLabel?: string;
   counts?: Record<string, number>;
@@ -84,9 +84,10 @@ export interface SignalItem {
 
 export default function SignalDesk({
   symbols,
+  results,
   activeView,
   activeLabel,
-  counts = {},
+  counts,
   onSelectPattern,
 }: SignalDeskProps) {
   const [searchTerm, setSearchTerm] = useState("");
@@ -102,11 +103,22 @@ export default function SignalDesk({
     }
   }, [activeView]);
 
-  // Compute all sidebar views (subpatterns) with counts > 0, sorted
-  // descending. Counts now come straight from Screener's `counts` prop
-  // (computed there off the full unfiltered pool) instead of being
-  // recomputed here via passesPattern — SignalDesk no longer has access
-  // to the full CPRResultWithSource rows needed for that.
+  // Compute counts for all sidebar views if not provided directly
+  const effectiveCounts = useMemo<Record<string, number>>(() => {
+    if (counts && Object.keys(counts).length > 0) return counts;
+    if (!results) return {};
+    const res: Record<string, number> = {};
+    for (const subList of Object.values(Views)) {
+      for (const sub of subList) {
+        if (res[sub.id] === undefined) {
+          res[sub.id] = results.filter((r) => passesPattern(r, sub.id)).length;
+        }
+      }
+    }
+    return res;
+  }, [counts, results]);
+
+  // Compute all sidebar views (subpatterns) with counts > 0, sorted descending
   const viewPills = useMemo(() => {
     const pillMap = new Map<string, { id: string; label: string }>();
 
@@ -121,100 +133,203 @@ export default function SignalDesk({
     const list: { id: string; label: string; count: number }[] = [];
 
     for (const [id, item] of pillMap.entries()) {
-      const count = counts[id] ?? 0;
+      const count = effectiveCounts[id] ?? 0;
       if (count > 0) {
         list.push({ id, label: item.label, count });
       }
     }
 
     return list.sort((a, b) => b.count - a.count);
-  }, [counts]);
+  }, [effectiveCounts]);
 
-  // Resolve a human label for whatever pattern context is currently active:
-  // the locally-selected pill if one is picked, otherwise whatever
-  // Screener says is active (activeLabel), falling back to "All Patterns".
-  const activePatternLabel = useMemo(() => {
-    if (selectedViewPattern) {
-      return viewPills.find((p) => p.id === selectedViewPattern)?.label ?? selectedViewPattern;
-    }
-    return activeLabel || "All Patterns";
-  }, [selectedViewPattern, viewPills, activeLabel]);
-
-  // Generate live signal cards directly from the symbols Screener hands up.
-  // `symbols` is already scoped to whichever left-nav pattern/Views filter
-  // is active (that filtering happens in Screener, off the full CPR data),
-  // so SignalDesk's job here is just to pick a sensible target/stop for
-  // each row based on its direction and current price relative to its own
-  // pivot levels — it no longer re-derives *which* pattern matched.
+  // Generate live signal cards strictly from active views available in SignalDesk
   const signals = useMemo<SignalItem[]>(() => {
-    const list: SignalItem[] = [];
+    // If external symbols were passed explicitly, map them
+    if (symbols && symbols.length > 0) {
+      const label = selectedViewPattern
+        ? viewPills.find((p) => p.id === selectedViewPattern)?.label ?? selectedViewPattern
+        : activeLabel || "Active View";
 
-    for (const sym of symbols) {
-      // Local pill filter (if the user picked a Views chip inside Signal
-      // Desk itself) is informational only for the label here — the
-      // symbol pool itself is already pattern-scoped by Screener.
-      const direction: "LONG" | "SHORT" = sym.direction === "up" ? "LONG" : "SHORT";
-      const price = sym.currentPrice;
-      const { pivot, r1, r2, s1, s2, r3, s3, r4, s4 } = sym;
+      return symbols.map((sym) => {
+        const direction: "LONG" | "SHORT" = sym.direction === "up" ? "LONG" : "SHORT";
+        const price = sym.currentPrice;
+        const { pivot, r1, r2, s1, s2, r3, s3, r4, s4 } = sym;
 
-      let targetPrice: number;
-      let stopPrice: number;
-      let targetLevel: string;
-      let confidence: SignalItem["confidence"];
-      let cprStatus: string;
+        let targetPrice: number;
+        let stopPrice: number;
+        let targetLevel: string;
 
-      if (direction === "LONG") {
-        if (price >= r1) {
-          targetPrice = r2;
-          targetLevel = "R2";
+        if (direction === "LONG") {
+          if (price >= r1) {
+            targetPrice = r2;
+            targetLevel = "R2";
+          } else {
+            targetPrice = r1;
+            targetLevel = "R1";
+          }
+          stopPrice = s1;
         } else {
-          targetPrice = r1;
-          targetLevel = "R1";
+          if (price <= s1) {
+            targetPrice = s2;
+            targetLevel = "S2";
+          } else {
+            targetPrice = s1;
+            targetLevel = "S1";
+          }
+          stopPrice = r1;
         }
-        stopPrice = s1;
-        confidence = price > r2 ? "HIGH" : price >= pivot ? "MEDIUM" : "WATCH";
-        cprStatus = price >= pivot ? "Above CPR Pivot" : "Below Pivot, Watching for Reversal";
-      } else {
-        if (price <= s1) {
-          targetPrice = s2;
-          targetLevel = "S2";
-        } else {
-          targetPrice = s1;
-          targetLevel = "S1";
-        }
-        stopPrice = r1;
-        confidence = price < s2 ? "HIGH" : price <= pivot ? "MEDIUM" : "WATCH";
-        cprStatus = price <= pivot ? "Below CPR Pivot" : "Above Pivot, Watching for Reversal";
-      }
 
-      const risk = Math.max(0.0000001, Math.abs(price - stopPrice));
-      const reward = Math.abs(targetPrice - price);
-      const rrRatio = (reward / risk).toFixed(1);
+        const risk = Math.max(0.0000001, Math.abs(price - stopPrice));
+        const reward = Math.abs(targetPrice - price);
+        const rrRatio = (reward / risk).toFixed(1);
 
-      list.push({
-        id: sym.key,
-        symbol: sym.symbol,
-        source: sym.source,
-        timeframe: "Daily / 1D",
-        direction,
-        type: `${activePatternLabel} Setup`,
-        patternName: activePatternLabel,
-        triggerPrice: price,
-        currentPrice: price,
-        change24h: sym.change24h,
-        targetPrice,
-        stopPrice,
-        targetLevel,
-        riskReward: `1 : ${rrRatio}`,
-        confidence,
-        cprStatus,
-        pivot, r1, s1, r2, s2, r3, s3, r4, s4,
-        timestamp: "Active",
+        return {
+          id: sym.key,
+          symbol: sym.symbol,
+          source: sym.source,
+          timeframe: "Daily / 1D",
+          direction,
+          type: `${label} Setup`,
+          patternName: label,
+          triggerPrice: price,
+          currentPrice: price,
+          change24h: sym.change24h,
+          targetPrice,
+          stopPrice,
+          targetLevel,
+          riskReward: `1 : ${rrRatio}`,
+          confidence: "HIGH",
+          cprStatus: direction === "LONG" ? "Above CPR Pivot" : "Below CPR Pivot",
+          pivot,
+          r1,
+          s1,
+          r2,
+          s2,
+          r3,
+          s3,
+          r4,
+          s4,
+          timestamp: "Active",
+        };
       });
     }
 
+    if (!results || results.length === 0) return [];
+
+    // Determine which active views are targeted:
+    // If a view pill is selected, only that view; otherwise ALL active views available in SignalDesk (viewPills with count > 0)
+    const targetViews = selectedViewPattern
+      ? viewPills.filter((p) => p.id === selectedViewPattern)
+      : viewPills;
+
+    // If a specific selected view was requested but not yet in viewPills, construct it
+    const activeViewsToProcess =
+      targetViews.length > 0
+        ? targetViews
+        : selectedViewPattern
+        ? [{ id: selectedViewPattern, label: selectedViewPattern, count: 0 }]
+        : [];
+
+    if (activeViewsToProcess.length === 0) return [];
+
+    const list: SignalItem[] = [];
+    const seenMap = new Set<string>();
+
+    for (const view of activeViewsToProcess) {
+      const matchingResults = results.filter((r) => passesPattern(r, view.id));
+
+      for (const r of matchingResults) {
+        const itemKey = `${r.source}-${r.symbol}-${view.id}`;
+        if (seenMap.has(itemKey)) continue;
+        seenMap.add(itemKey);
+
+        const price = r.currentPrice || r.todayCPR.pivot;
+        const pivot = r.todayCPR.pivot;
+        const { r1, r2, r3, r4, s1, s2, s3, s4 } = r.todayCPR;
+
+        // Determine direction:
+        // Overlap-lower / falling / below patterns favor SHORT; overlap-higher / rising / above favor LONG
+        const isBearishPattern =
+          r.cprFalling ||
+          r.overlapLower ||
+          view.id.toLowerCase().includes("lower") ||
+          view.id.toLowerCase().includes("below") ||
+          view.id.toLowerCase().includes("l4") ||
+          price < pivot;
+
+        const direction: "LONG" | "SHORT" = isBearishPattern ? "SHORT" : "LONG";
+
+        let targetPrice: number;
+        let stopPrice: number;
+        let targetLevel: string;
+
+        if (direction === "LONG") {
+          if (price >= r2) {
+            targetPrice = r4;
+            targetLevel = "R4";
+            stopPrice = r1;
+          } else if (price >= r1) {
+            targetPrice = r2;
+            targetLevel = "R2";
+            stopPrice = s1;
+          } else {
+            targetPrice = r1;
+            targetLevel = "R1";
+            stopPrice = s1;
+          }
+        } else {
+          if (price <= s2) {
+            targetPrice = s4;
+            targetLevel = "S4";
+            stopPrice = s1;
+          } else if (price <= s1) {
+            targetPrice = s2;
+            targetLevel = "S2";
+            stopPrice = r1;
+          } else {
+            targetPrice = s1;
+            targetLevel = "S1";
+            stopPrice = r1;
+          }
+        }
+
+        const risk = Math.max(0.0000001, Math.abs(price - stopPrice));
+        const reward = Math.abs(targetPrice - price);
+        const rrRatio = (reward / risk).toFixed(1);
+
+        list.push({
+          id: itemKey,
+          symbol: r.symbol,
+          source: r.source,
+          timeframe: "Daily / 1D",
+          direction,
+          type: `${view.label} Setup`,
+          patternName: view.label,
+          triggerPrice: price,
+          currentPrice: price,
+          change24h: r.change24h,
+          targetPrice,
+          stopPrice,
+          targetLevel,
+          riskReward: `1 : ${rrRatio}`,
+          confidence: "HIGH",
+          cprStatus: `${view.label} (Target ${targetLevel})`,
+          pivot,
+          r1,
+          s1,
+          r2,
+          s2,
+          r3,
+          s3,
+          r4,
+          s4,
+          timestamp: "Active",
+        });
+      }
+    }
+
     return list;
-  }, [symbols, activePatternLabel]);
+  }, [symbols, results, viewPills, selectedViewPattern, activeLabel]);
 
   const filteredSignals = useMemo(() => {
     return signals.filter((s) => {
@@ -505,7 +620,7 @@ R:R: ${item.riskReward} | Confidence: ${item.confidence}`;
                   {/* Card Top */}
                   <div>
                     <div className="flex items-start justify-between mb-3">
-                      {/* Left: Symbol & Exchange + Live Price & 24h % change (Matching Image 1) */}
+                      {/* Left: Symbol & Exchange + Live Price & 24h % change */}
                       <div className="flex items-start gap-4 sm:gap-6">
                         <div>
                           <div className="text-base sm:text-lg font-extrabold text-white font-mono tracking-tight leading-tight">
