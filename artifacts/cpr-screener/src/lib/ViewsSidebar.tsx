@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   TrendingUp,
   TrendingDown,
@@ -10,6 +10,9 @@ import {
   ChevronRight,
   X,
   FlaskConical,
+  Zap,
+  Activity,
+  BookmarkCheck,
 } from "lucide-react";
 
 export interface Category {
@@ -488,7 +491,7 @@ export const SCREENER_PATTERN_IDS: ReadonlySet<string> = new Set<string>([
   ...LEGACY_SCREENER_PATTERN_IDS,
 ]);
 
-export type SidebarMode = "scanner" | "backtest" | "signals" | "stats";
+export type SidebarMode = "scanner" | "signals" | "stats" | "backtest" | "journal";
 
 /**
  * Flat id → label lookup covering every view in the tree — both the
@@ -684,47 +687,49 @@ export default function ViewsSidebar({
                 width: "100%",
               }}
             >
-           {(["scanner", "signals", "stats", "backtest"] as SidebarMode[]).map((m, index) => (
-              <button
-                key={m}
-                onClick={() => onModeChange(m)}
-                style={{
-                  minWidth: 0,
-                  padding: "5px 0",
-                  fontSize: 11,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  border: "none",
-                  borderRight:
-                    index % 2 === 0 ? `1px solid ${BORDER_COLOR}` : "none",
-                  borderBottom:
-                    index < 2 ? `1px solid ${BORDER_COLOR}` : "none",
-                  background: mode === m ? "rgba(59,130,246,0.2)" : "transparent",
-                  color: mode === m ? ACTIVE_TEXT : DIM_TEXT,
-                  transition: "background 0.15s, color 0.15s",
-                }}
-              >
-                <span
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 4,
-                  }}
-                >
-                  {m === "stats"
-                    ? <BarChart style={{ width: 11, height: 11 }} />
-                    : <FlaskConical style={{ width: 11, height: 11 }} />}
-                  {m === "scanner"
-                    ? "Live"
-                    : m === "backtest"
-                      ? "Backtest"
-                      : m === "signals"
-                        ? "Signals"
-                        : "Stats"}
-                </span>
-              </button>
-            ))}
+              {([
+                { id: "scanner", label: "Live", icon: BarChart },
+                { id: "signals", label: "Signals", icon: Zap },
+                { id: "stats", label: "Stats", icon: Activity },
+                { id: "backtest", label: "Backtest", icon: FlaskConical },
+                { id: "journal", label: "Journal", icon: BookmarkCheck },
+              ] as { id: SidebarMode; label: string; icon: React.ElementType }[]).map((tab, index) => {
+                const TabIcon = tab.icon;
+                const isSelected = mode === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => onModeChange(tab.id)}
+                    style={{
+                      minWidth: 0,
+                      padding: "6px 0",
+                      fontSize: 11,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      border: "none",
+                      borderRight:
+                        index % 2 === 0 ? `1px solid ${BORDER_COLOR}` : "none",
+                      borderBottom:
+                        index < 4 ? `1px solid ${BORDER_COLOR}` : "none",
+                      background: isSelected ? "rgba(59,130,246,0.2)" : "transparent",
+                      color: isSelected ? ACTIVE_TEXT : DIM_TEXT,
+                      transition: "background 0.15s, color 0.15s",
+                    }}
+                  >
+                    <span
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 4,
+                      }}
+                    >
+                      <TabIcon style={{ width: 12, height: 12 }} />
+                      {tab.label}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -760,7 +765,6 @@ export default function ViewsSidebar({
                     gap: 10,
                     padding: "9px 10px 9px 14px",
                     background: isHighlighted ? "rgba(59,130,246,0.10)" : "transparent",
-                    // border shorthand reset, then set left border via outline trick
                     outline: "none",
                     borderTop: "none",
                     borderRight: "none",
@@ -909,8 +913,8 @@ export default function ViewsSidebar({
                     {children.map((sub) => {
                       const isActiveSub = activeView === sub.id;
                       const subActiveColor = sub.activeColor ?? ACTIVE_BLUE;
-                      const subActiveText  = sub.activeText  ?? ACTIVE_TEXT;
-                      const subActiveBg    = sub.activeBg    ?? "rgba(59,130,246,0.18)";
+                      const subActiveText  = subActiveText  ?? ACTIVE_TEXT;
+                      const subActiveBg    = subActiveBg    ?? "rgba(59,130,246,0.18)";
                       return (
                         <button
                           key={sub.id}
@@ -1000,6 +1004,61 @@ export default function ViewsSidebar({
         >
           <ChevronRight style={{ width: 15, height: 15 }} />
         </button>
+
+        {/* Mode Icons Rail */}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 3,
+            marginBottom: 8,
+            width: "100%",
+            alignItems: "center",
+          }}
+        >
+          {([
+            { id: "scanner", label: "Live", icon: BarChart },
+            { id: "signals", label: "Signals", icon: Zap },
+            { id: "stats", label: "Stats", icon: Activity },
+            { id: "backtest", label: "Test", icon: FlaskConical },
+            { id: "journal", label: "Journal", icon: BookmarkCheck },
+          ] as { id: SidebarMode; label: string; icon: React.ElementType }[]).map((tab) => {
+            const TabIcon = tab.icon;
+            const isSelected = mode === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => onModeChange(tab.id)}
+                title={tab.label}
+                style={{
+                  width: 36,
+                  height: 32,
+                  borderRadius: 6,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  border: "none",
+                  background: isSelected
+                    ? "rgba(59,130,246,0.25)"
+                    : "transparent",
+                  color: isSelected ? ACTIVE_TEXT : DIM_TEXT,
+                  transition: "all 0.12s",
+                }}
+              >
+                <TabIcon style={{ width: 14, height: 14 }} />
+              </button>
+            );
+          })}
+        </div>
+        <div
+          style={{
+            width: 32,
+            height: 1,
+            background: BORDER_COLOR,
+            marginBottom: 6,
+          }}
+        />
 
         {/* One icon per pattern */}
         {pivotcategories.map((pattern) => {

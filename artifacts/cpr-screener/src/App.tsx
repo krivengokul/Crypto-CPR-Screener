@@ -6,6 +6,7 @@ import Screener from "@/pages/Screener";
 import BacktestPanel from "@/pages/BacktestPanel";
 import SignalDesk, { type SignalDeskSymbol } from "@/pages/SignalDesk";
 import PatternStats from "@/pages/PatternStats";
+import SignalsJournal from "./components/SignalsJournal";
 import ViewsSidebar, { pivotcategories, SCREENER_PATTERN_IDS, type SidebarMode } from "@/lib/ViewsSidebar";
 import { Menu } from "lucide-react";
 
@@ -30,7 +31,9 @@ function getSavedMode(): SidebarMode {
         ? "signals"
         : stored === "stats"
           ? "stats"
-          : "scanner";
+          : stored === "journal"
+            ? "journal"
+            : "scanner";
   } catch {
     return "scanner";
   }
@@ -156,6 +159,8 @@ function App() {
             )}
 
             {mode === "stats" && <PatternStats />}
+
+            {mode === "journal" && <SignalsJournal />}
           </main>
         </div>
         <Toaster />
