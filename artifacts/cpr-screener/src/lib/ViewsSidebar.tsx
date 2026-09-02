@@ -913,8 +913,8 @@ export default function ViewsSidebar({
                     {children.map((sub) => {
                       const isActiveSub = activeView === sub.id;
                       const subActiveColor = sub.activeColor ?? ACTIVE_BLUE;
-                      const subActiveText  = subActiveText  ?? ACTIVE_TEXT;
-                      const subActiveBg    = subActiveBg    ?? "rgba(59,130,246,0.18)";
+                      const subActiveText  = sub.activeText  ?? ACTIVE_TEXT;
+                      const subActiveBg    = sub.activeBg    ?? "rgba(59,130,246,0.18)";
                       return (
                         <button
                           key={sub.id}
