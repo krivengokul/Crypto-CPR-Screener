@@ -6,8 +6,8 @@ import {
   evaluateSignalOutcome,
   updateSignalOutcomeInCloud,
   clearAllSignalsFromCloud,
-} from "../lib/signalTracker";
-import { fmt } from "../pages/ScreenerUtils";
+} from "@/lib/signalTracker";
+import { fmt } from "@/pages/ScreenerUtils";
 import {
   CheckCircle2,
   XCircle,
@@ -45,7 +45,7 @@ export default function SignalsJournal() {
 
   const handleClearAll = async () => {
     if (signals.length === 0) return;
-    const confirm = window.confirm("Are you sure you want to clear all saved signals in your cloud journal?");
+    const confirm = window.confirm("Are you sure you want to clear all saved signals in your journal?");
     if (!confirm) return;
     setLoading(true);
     await clearAllSignalsFromCloud(signals.map((s) => s.id));
@@ -151,7 +151,7 @@ export default function SignalsJournal() {
               </h1>
               <span className="text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                Firebase Cloud Synced
+                Auto-Synced Journal
               </span>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
@@ -261,14 +261,14 @@ export default function SignalsJournal() {
         {loading ? (
           <div className="h-48 flex flex-col items-center justify-center text-slate-400 gap-2">
             <RefreshCw className="w-6 h-6 animate-spin text-blue-500" />
-            <span className="text-xs">Loading saved signals from Firestore...</span>
+            <span className="text-xs">Loading signals journal...</span>
           </div>
         ) : filtered.length === 0 ? (
           <div className="h-64 flex flex-col items-center justify-center border border-dashed border-[#1e2d3d] rounded-xl text-slate-400 text-center p-6">
             <AlertCircle className="w-8 h-8 text-slate-500 mb-2" />
             <p className="text-sm font-semibold text-slate-300">No saved signals in journal</p>
             <p className="text-xs text-slate-500 mt-1 max-w-sm">
-              All live market signals generated from the <strong>Signals</strong> desk are automatically saved to this cloud journal!
+              All live market signals generated from the <strong>Signals</strong> desk are automatically saved to this journal!
             </p>
           </div>
         ) : (
@@ -363,7 +363,7 @@ export default function SignalsJournal() {
                         <button
                           onClick={() => handleDelete(item.id)}
                           className="p-1 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 rounded transition"
-                          title="Delete from Firestore"
+                          title="Delete signal"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>

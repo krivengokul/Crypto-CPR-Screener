@@ -1,12 +1,12 @@
-import { useMemo, useState } from "react";
-import { ArrowDownRight, ArrowUpRight, Radio, Search } from "lucide-react";
-import { pivotcategories, Views } from "@/lib/ViewsSidebar";
+import { useMemo, useState, useEffect, useRef } from "react";
+import { ArrowDownRight, ArrowUpRight, Radio, Search, CheckCircle2 } from "lucide-react";
+import { pivotcategories, Views } from "./ViewsSidebar";
+import { autoSaveQualifiedSignals, LoggedSignal } from "../lib/signalTracker";
+import { CPRResultWithSource, getRowDirection, passesPattern } from "../lib/ScreenerUtils";
 
 /**
  * Flat id → label lookup covering every view in the tree — both the
  * top-level `pivotcategories` entries and every nested `Views` sub-item.
- * Built locally from ViewsSidebar's existing exports so no changes are
- * needed there.
  */
 const VIEW_LABEL_BY_ID: Record<string, string> = {
   ...Object.fromEntries(pivotcategories.map((p) => [p.id, p.label])),
@@ -15,11 +15,6 @@ const VIEW_LABEL_BY_ID: Record<string, string> = {
   ),
 };
 
-/**
- * Ids of nested `Views` sub-items only — excludes the top-level
- * `pivotcategories` (parent section) ids. Used by the chip strip so it
- * surfaces individual views, not their parent category.
- */
 const SUBVIEW_IDS: ReadonlySet<string> = new Set<string>(
   Object.values(Views).flatMap((subs) => subs.map((s) => s.id)),
 );
@@ -46,9 +41,10 @@ export interface SignalDeskSymbol {
 }
 
 interface SignalDeskProps {
-  symbols: SignalDeskSymbol[];
-  activeView: string;
-  activeLabel: string;
+  results?: CPRResultWithSource[];
+  symbols?: SignalDeskSymbol[];
+  activeView?: string;
+  activeLabel?: string;
   /** Pattern id → matching-symbol count, e.g. App's patternCounts. Drives the chip strip — only views with a count > 0 get a chip. Omit to hide the strip. */
   counts?: Record<string, number>;
   /** Called with a view id when its chip is clicked — wire to the same handler passed to ViewsSidebar's onSelect so both surfaces stay in sync. */
@@ -71,25 +67,7 @@ function displaySymbol(symbol: string): string {
 /**
  * LevelRangeBar — S4 → R4 horizontal band with tick marks at every CPR
  * level (S4/S3/S2/S1/PIVOT/R1/R2/R3/R4) and an orange "NOW" marker at the
- * current price, mirroring the drishtisignals.in TP2/TP1/ENTRY/SL bar but
- * built from CPR levels instead of a trade setup. CHANGED: support side
- * (S4→PIVOT) now reads rose, resistance side (PIVOT→R4) now reads green —
- * inverted from the green/rose-by-S/R convention used elsewhere in the
- * app, per request.
- *
- * Tick marks on the bar itself always show every available level (they're
- * just 1px lines, so they cost no layout space). The text labels below the
- * bar are what actually compete for room, so they adapt to the card's
- * width: the full ladder (S4/S3/S2/S1/PIVOT/R1/R2/R3/R4) shows on wider
- * cards (below the xl 3-column breakpoint, where cards have the most
- * room), and a reduced ladder — S1/S3/R1/R3 dropped, S2/R2 kept as the
- * inner anchors — shows at xl+ where 3-per-row cards get tight. S2/S3 are
- * only rendered as labels when the caller actually supplied them.
- *
- * Below the labels, an "X% to next level" line shows the gap to the
- * nearest tick above and below the live price, in either direction —
- * quick context on how much room is left before the price crosses the
- * next level.
+ * current price.
  */
 function LevelRangeBar({
   s4,
@@ -135,9 +113,6 @@ function LevelRangeBar({
     { label: "R4", value: r4 },
   ];
 
-  // Reduced ladder for narrow (xl 3-column) cards: drop S1/S3/R1/R3, keep
-  // S2/R2 in their place alongside the S4/PIVOT/R4 anchors. Falls back to
-  // S1/R1 when S2/R2 weren't supplied, so the bar never goes anchor-only.
   const reducedTicks: Tick[] = [
     { label: "S4", value: s4 },
     s2 != null ? { label: "S2", value: s2 } : { label: "S1", value: s1 },
@@ -149,9 +124,6 @@ function LevelRangeBar({
   const nowPct = pct(current);
   const pivotPct = pct(pivot);
 
-  // Nearest tick above/below the live price, for the "X% to next level"
-  // microcopy under the bar — tells someone at a glance how much room is
-  // left before the next level, in either direction.
   const nextAbove = allTicks
     .filter((t) => t.value > current)
     .sort((a, b) => a.value - b.value)[0];
@@ -238,16 +210,6 @@ function LevelRangeBar({
   );
 }
 
-/**
- * ViewChipStrip — a wrapping row of pill buttons (no horizontal scroll —
- * it flows onto additional lines once it runs out of width), one per
- * nested View (not top-level categories) that currently has ≥1 matching
- * symbol (per `counts`). Clicking a chip fires `onSelect` with that view's
- * id, mirroring what clicking the same view in the left ViewsSidebar does.
- * The active view (matching `activeView`) gets the filled emerald
- * treatment; the rest are outlined/muted. Renders nothing when there are
- * no active (count > 0) views to show.
- */
 function ViewChipStrip({
   counts,
   activeView,
@@ -301,24 +263,111 @@ function ViewChipStrip({
 }
 
 export default function SignalDesk({
+  results = [],
   symbols,
-  activeView,
-  activeLabel,
+  activeView = "",
+  activeLabel = "",
   counts,
   onSelectPattern,
 }: SignalDeskProps) {
   const [search, setSearch] = useState("");
+  const [savedCount, setSavedCount] = useState<number>(0);
+
+  // Compute symbols from results if not provided directly
+  const derivedSymbols: SignalDeskSymbol[] = useMemo(() => {
+    if (symbols && symbols.length > 0) return symbols;
+    if (!results || results.length === 0) return [];
+
+    let filtered = results;
+    if (activeView) {
+      filtered = results.filter((r) => passesPattern(r, activeView));
+    }
+
+    return filtered.map((r) => ({
+      key: `${r.source}-${r.symbol}`,
+      symbol: r.symbol,
+      source: r.source,
+      currentPrice: r.currentPrice,
+      change24h: r.change24h,
+      direction: getRowDirection(r, activeView),
+      s4: r.todayCPR.s4,
+      s3: r.todayCPR.s3,
+      s2: r.todayCPR.s2,
+      s1: r.todayCPR.s1,
+      pivot: r.todayCPR.pivot,
+      r1: r.todayCPR.r1,
+      r2: r.todayCPR.r2,
+      r3: r.todayCPR.r3,
+      r4: r.todayCPR.r4,
+    }));
+  }, [symbols, results, activeView]);
+
+  const activeSymbols = symbols ?? derivedSymbols;
+
+  // Automatically save all captured symbols to SignalsJournal
+  const lastSavedRef = useRef<string>("");
+  useEffect(() => {
+    if (activeSymbols.length === 0) return;
+    const saveKey = `${activeView}_${activeSymbols.map((s) => `${s.symbol}_${s.currentPrice}`).join(",")}`;
+    if (lastSavedRef.current === saveKey) return;
+    lastSavedRef.current = saveKey;
+
+    const signalsToSave: Omit<LoggedSignal, "id">[] = activeSymbols.map((item) => {
+      const isLong = item.direction ? item.direction === "up" : true;
+      const target = isLong
+        ? (item.r4 ?? item.r2 ?? item.r1 ?? item.currentPrice * 1.05)
+        : (item.s4 ?? item.s2 ?? item.s1 ?? item.currentPrice * 0.95);
+      const sl = isLong
+        ? (item.s1 ?? item.pivot ?? item.currentPrice * 0.98)
+        : (item.r1 ?? item.pivot ?? item.currentPrice * 1.02);
+
+      const risk = Math.abs(item.currentPrice - sl);
+      const reward = Math.abs(target - item.currentPrice);
+      const rrRatio = risk > 0 ? (reward / risk).toFixed(1) : "2.0";
+
+      return {
+        symbol: item.symbol,
+        source: item.source,
+        timeframe: "Daily",
+        direction: isLong ? "LONG" : "SHORT",
+        type: "CPR Setup",
+        patternName: activeLabel || activeView || "CPR Setup",
+        entry: item.currentPrice,
+        currentPrice: item.currentPrice,
+        target,
+        sl,
+        rr: `1:${rrRatio}`,
+        confidence: "HIGH",
+        cprStatus: item.pivot
+          ? item.currentPrice > item.pivot
+            ? "Above Pivot"
+            : "Below Pivot"
+          : "Active",
+        timestamp: Date.now(),
+        dateStr: new Date().toLocaleString(),
+        status: "ACTIVE",
+      };
+    });
+
+    autoSaveQualifiedSignals(signalsToSave)
+      .then((count) => {
+        setSavedCount(count);
+      })
+      .catch((err) => {
+        console.warn("Auto-save to SignalsJournal error:", err);
+      });
+  }, [activeSymbols, activeView, activeLabel]);
 
   const visibleSymbols = useMemo(() => {
     const needle = search.trim().toLowerCase();
-    if (!needle) return symbols;
-    return symbols.filter((item) =>
+    if (!needle) return activeSymbols;
+    return activeSymbols.filter((item) =>
       item.symbol.toLowerCase().includes(needle),
     );
-  }, [search, symbols]);
+  }, [search, activeSymbols]);
 
-  const binanceCount = symbols.filter((item) => item.source === "binance").length;
-  const deltaCount = symbols.filter((item) => item.source === "delta").length;
+  const binanceCount = activeSymbols.filter((item) => item.source === "binance").length;
+  const deltaCount = activeSymbols.filter((item) => item.source === "delta").length;
 
   return (
     <div className="min-h-screen bg-background px-4 py-8 text-foreground sm:px-6 lg:px-8">
@@ -340,7 +389,7 @@ export default function SignalDesk({
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
                   Matching symbols
                 </p>
-                <p className="mt-1 text-lg font-semibold">{symbols.length}</p>
+                <p className="mt-1 text-lg font-semibold">{activeSymbols.length}</p>
               </div>
               <div className="rounded-lg border border-border bg-card px-3 py-2">
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
@@ -369,14 +418,26 @@ export default function SignalDesk({
             </div>
           </div>
 
-          <div className="rounded-lg border border-emerald-500/25 bg-emerald-500/5 px-4 py-3">
-            <div className="flex items-center gap-2 text-sm font-medium text-emerald-300">
-              <span className="h-2 w-2 rounded-full bg-emerald-400" />
-              Scanner results connected
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <div className="rounded-lg border border-emerald-500/25 bg-emerald-500/5 px-4 py-3">
+              <div className="flex items-center gap-2 text-sm font-medium text-emerald-300">
+                <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                Scanner results connected
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Symbols update with the active view
+              </p>
             </div>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Symbols update with the active view
-            </p>
+
+            <div className="rounded-lg border border-emerald-500/25 bg-emerald-500/5 px-4 py-3">
+              <div className="flex items-center gap-2 text-sm font-medium text-emerald-300">
+                <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                Journal Auto-Sync Active
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {savedCount > 0 ? `${savedCount} signals recorded in Journal` : "Symbols auto-saved to Journal"}
+              </p>
+            </div>
           </div>
         </header>
 
@@ -413,9 +474,6 @@ export default function SignalDesk({
         ) : (
           <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {visibleSymbols.map((item, index) => {
-              // Bullish/bearish call for this row — see getRowDirection in
-              // ScreenerUtils.tsx. Falls back to the old alternating
-              // placeholder only if a caller doesn't supply direction.
               const isLong = item.direction ? item.direction === "up" : index % 2 === 0;
 
               return (
