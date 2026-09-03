@@ -28,6 +28,10 @@ export default function SignalsJournal() {
   const [evaluating, setEvaluating] = useState(false);
   const [evalProgress, setEvalProgress] = useState<{ done: number; total: number } | null>(null);
   const [filterStatus, setFilterStatus] = useState<"ALL" | "ACTIVE" | "PASS" | "FAIL">("ALL");
+  // Default to Binance — mirrors the Live Screener, Backtest panel, and
+  // Signals desk, which all default to Binance rather than showing every
+  // exchange's rows at once.
+  const [sourceFilter, setSourceFilter] = useState<"all" | "binance" | "delta">("binance");
   const [searchTerm, setSearchTerm] = useState("");
 
   const loadSignals = async () => {
@@ -109,6 +113,7 @@ export default function SignalsJournal() {
       "ID",
       "Date",
       "Symbol",
+      "Source",
       "Direction",
       "Pattern",
       "Entry",
@@ -122,6 +127,7 @@ export default function SignalsJournal() {
       s.id,
       s.dateStr,
       s.symbol,
+      s.source,
       s.direction,
       s.patternName,
       s.entry,
@@ -144,6 +150,7 @@ export default function SignalsJournal() {
   const filtered = useMemo(() => {
     return signals.filter((s) => {
       if (filterStatus !== "ALL" && s.status !== filterStatus) return false;
+      if (sourceFilter !== "all" && s.source !== sourceFilter) return false;
       if (searchTerm) {
         const q = searchTerm.toLowerCase();
         return (
@@ -154,7 +161,7 @@ export default function SignalsJournal() {
       }
       return true;
     });
-  }, [signals, filterStatus, searchTerm]);
+  }, [signals, filterStatus, sourceFilter, searchTerm]);
 
   const stats = useMemo(() => {
     const total = signals.length;
@@ -273,20 +280,42 @@ export default function SignalsJournal() {
           />
         </div>
 
-        <div className="flex rounded-md overflow-hidden border border-[#22354a] bg-[#151e2c]">
-          {(["ALL", "ACTIVE", "PASS", "FAIL"] as const).map((status) => (
-            <button
-              key={status}
-              onClick={() => setFilterStatus(status)}
-              className={`px-3 py-1 text-xs font-semibold transition cursor-pointer ${
-                filterStatus === status
-                  ? "bg-blue-600 text-white"
-                  : "text-slate-400 hover:text-slate-200"
-              }`}
-            >
-              {status}
-            </button>
-          ))}
+        <div className="flex items-center gap-3">
+          <div className="flex rounded-md overflow-hidden border border-[#22354a] bg-[#151e2c]">
+            {(["all", "binance", "delta"] as const).map((src) => (
+              <button
+                key={src}
+                onClick={() => setSourceFilter(src)}
+                className={`px-3 py-1 text-xs font-semibold capitalize transition cursor-pointer ${
+                  sourceFilter === src
+                    ? src === "delta"
+                      ? "bg-cyan-500/20 text-cyan-400"
+                      : src === "binance"
+                      ? "bg-yellow-500/20 text-yellow-400"
+                      : "bg-amber-500/20 text-amber-400"
+                    : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                {src}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex rounded-md overflow-hidden border border-[#22354a] bg-[#151e2c]">
+            {(["ALL", "ACTIVE", "PASS", "FAIL"] as const).map((status) => (
+              <button
+                key={status}
+                onClick={() => setFilterStatus(status)}
+                className={`px-3 py-1 text-xs font-semibold transition cursor-pointer ${
+                  filterStatus === status
+                    ? "bg-blue-600 text-white"
+                    : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                {status}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -312,6 +341,7 @@ export default function SignalsJournal() {
                 <tr>
                   <th className="py-2.5 px-3">Date / Time</th>
                   <th className="py-2.5 px-3">Symbol</th>
+                  <th className="py-2.5 px-3">Source</th>
                   <th className="py-2.5 px-3">Direction</th>
                   <th className="py-2.5 px-3">Pattern</th>
                   <th className="py-2.5 px-3">Entry</th>
@@ -338,6 +368,17 @@ export default function SignalsJournal() {
                       </td>
                       <td className="py-2.5 px-3 font-bold text-white whitespace-nowrap">
                         {item.symbol}
+                      </td>
+                      <td className="py-2.5 px-3 whitespace-nowrap">
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full capitalize w-fit ${
+                            item.source === "delta"
+                              ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/40"
+                              : "bg-yellow-500/20 text-yellow-400 border border-yellow-500/40"
+                          }`}
+                        >
+                          {item.source}
+                        </span>
                       </td>
                       <td className="py-2.5 px-3 whitespace-nowrap">
                         <span

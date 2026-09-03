@@ -137,7 +137,9 @@ export default function SignalDesk({
   onSelectPattern,
 }: SignalDeskProps) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [sourceFilter, setSourceFilter] = useState<"all" | "binance" | "delta">("all");
+  // Default to Binance (not "All") — mirrors the Live Screener and Backtest
+  // panel, which both open on Binance by default.
+  const [sourceFilter, setSourceFilter] = useState<"all" | "binance" | "delta">("binance");
   const [directionFilter, setDirectionFilter] = useState<"all" | "LONG" | "SHORT">("all");
   const [selectedViewPattern, setSelectedViewPattern] = useState<string>(activeView || "");
   const [copiedId, setCopiedId] = useState<string | null>(null);
