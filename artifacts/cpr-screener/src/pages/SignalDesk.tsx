@@ -242,19 +242,24 @@ export default function SignalDesk({
         ? viewPills.find((p) => p.id === selectedViewPattern)?.label ?? selectedViewPattern
         : activeLabel || "Active View";
 
-      // BUG FIX: this branch used to map every incoming `symbol` with no
-      // filtering step at all, so clicking an Active View pill never
-      // narrowed the card grid down when SignalDesk was fed via the
-      // lightweight `symbols` prop. Filter down to symbols whose full CPR
-      // row (from `results`, when available) actually passes the selected
-      // View's own passesPattern() condition — same check the sidebar pill
-      // counts and activeViewSymbols use.
-      const filteredSymbols = selectedViewPattern
-        ? symbols.filter((sym) => {
-            const row = resultsBySymbol.get(sym.symbol);
-            return row ? passesPattern(row, selectedViewPattern) : false;
-          })
-        : symbols;
+      // Filter down to symbols whose full CPR row (from `results`, when the
+      // parent also provides it) actually passes the selected View's own
+      // passesPattern() condition — same check the sidebar pill counts and
+      // activeViewSymbols use. IMPORTANT: only apply this when we actually
+      // have CPR rows to check against (`results` populated). When the
+      // parent supplies ONLY the lightweight `symbols` projection (no
+      // `results`), there's nothing to test locally — per this file's own
+      // doc comment, `symbols` is already the parent's pre-filtered,
+      // active-View-scoped pool (see handlePillClick's onSelectPattern call
+      // above, which is what actually re-scopes it), so trust it as-is
+      // instead of filtering everything down to zero.
+      const filteredSymbols =
+        selectedViewPattern && resultsBySymbol.size > 0
+          ? symbols.filter((sym) => {
+              const row = resultsBySymbol.get(sym.symbol);
+              return row ? passesPattern(row, selectedViewPattern) : false;
+            })
+          : symbols;
 
       return filteredSymbols.map((sym) => {
         const matchedRow = activeViewSymbols.get(sym.symbol);
@@ -547,11 +552,16 @@ R:R: ${item.riskReward} | Confidence: ${item.confidence}`;
   };
 
   const handlePillClick = (pillId: string) => {
-    if (selectedViewPattern === pillId) {
-      setSelectedViewPattern("");
-    } else {
-      setSelectedViewPattern(pillId);
-    }
+    const next = selectedViewPattern === pillId ? "" : pillId;
+    setSelectedViewPattern(next);
+    // Tell the parent (same callback ViewsSidebar's onSelect wires up to) so
+    // it can re-scope/re-fetch its own filtered pool and hand a freshly
+    // pre-filtered `symbols` array back down — this is the actual filtering
+    // step per this file's own "already scoped to whatever left-nav
+    // pattern/Views is active" contract at the top of the file. Without this
+    // call, the parent never learns the View changed and keeps sending the
+    // exact same `symbols` it always was.
+    onSelectPattern?.(next);
   };
 
   return (
@@ -659,7 +669,10 @@ R:R: ${item.riskReward} | Confidence: ${item.confidence}`;
 
             {selectedViewPattern && (
               <button
-                onClick={() => setSelectedViewPattern("")}
+                onClick={() => {
+                  setSelectedViewPattern("");
+                  onSelectPattern?.("");
+                }}
                 className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 transition cursor-pointer"
                 title="Clear selected pattern filter"
               >
