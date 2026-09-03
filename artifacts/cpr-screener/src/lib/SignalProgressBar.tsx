@@ -1,6 +1,11 @@
 import React from "react";
 import { fmt } from "@/pages/ScreenerUtils";
 
+// Progress-bar values (price, pivot, S1-4, R1-4) are shown small and dense
+// next to each other, so thousands separators just add visual noise here —
+// strip them while keeping fmt()'s existing decimal-precision logic intact.
+const fmtNoCommas = (val: number) => fmt(val).replace(/,/g, "");
+
 interface SignalProgressBarProps {
   price: number;
   pivot: number;
@@ -104,7 +109,7 @@ export default function SignalProgressBar({
           }}
         >
           <span className="font-mono text-[11px] font-bold text-[#f59e0b] tracking-tight whitespace-nowrap drop-shadow-sm">
-            {fmt(price)}
+            {fmtNoCommas(price)}
           </span>
         </div>
       </div>
@@ -117,7 +122,7 @@ export default function SignalProgressBar({
             className="absolute top-0 -translate-x-1/2 text-center"
             style={{ left: `${s3Pct}%` }}
           >
-            <div className="text-[8.5px] text-slate-300">{fmt(s3 as number)}</div>
+            <div className="text-[8.5px] text-slate-300">{fmtNoCommas(s3 as number)}</div>
             <div className="font-semibold text-slate-400 text-[9px]">S3</div>
           </div>
         )}
@@ -126,7 +131,7 @@ export default function SignalProgressBar({
           className="absolute top-0 -translate-x-1/2 text-center"
           style={{ left: `${s1Pct}%` }}
         >
-          <div className="text-[8.5px] text-slate-300">{fmt(s1)}</div>
+          <div className="text-[8.5px] text-slate-300">{fmtNoCommas(s1)}</div>
           <div className="font-semibold text-slate-400 text-[9px]">S1</div>
         </div>
 
@@ -134,7 +139,7 @@ export default function SignalProgressBar({
           className="absolute top-0 -translate-x-1/2 text-center"
           style={{ left: `${r1Pct}%` }}
         >
-          <div className="text-[8.5px] text-slate-300">{fmt(r1)}</div>
+          <div className="text-[8.5px] text-slate-300">{fmtNoCommas(r1)}</div>
           <div className="font-semibold text-slate-400 text-[9px]">R1</div>
         </div>
 
@@ -143,7 +148,7 @@ export default function SignalProgressBar({
             className="absolute top-0 -translate-x-1/2 text-center"
             style={{ left: `${r3Pct}%` }}
           >
-            <div className="text-[8.5px] text-slate-300">{fmt(r3 as number)}</div>
+            <div className="text-[8.5px] text-slate-300">{fmtNoCommas(r3 as number)}</div>
             <div className="font-semibold text-slate-400 text-[9px]">R3</div>
           </div>
         )}
@@ -203,7 +208,7 @@ export default function SignalProgressBar({
         {/* S4 Label */}
         <div className="absolute left-0 top-0 text-left">
           <div className="font-semibold text-slate-400 text-[9px]">S4</div>
-          <div className="text-[8.5px] text-slate-300">{fmt(s4)}</div>
+          <div className="text-[8.5px] text-slate-300">{fmtNoCommas(s4)}</div>
         </div>
 
         {/* S2 Label */}
@@ -212,7 +217,7 @@ export default function SignalProgressBar({
           style={{ left: `${s2Pct}%` }}
         >
           <div className="font-semibold text-slate-400 text-[9px]">S2</div>
-          <div className="text-[8.5px] text-slate-300">{fmt(s2)}</div>
+          <div className="text-[8.5px] text-slate-300">{fmtNoCommas(s2)}</div>
         </div>
 
         {/* PIVOT Label */}
@@ -221,7 +226,7 @@ export default function SignalProgressBar({
           style={{ left: `${pivotPct}%` }}
         >
           <div className="font-bold text-slate-300 text-[9px]">PIVOT</div>
-          <div className="text-[8.5px] text-slate-200">{fmt(pivot)}</div>
+          <div className="text-[8.5px] text-slate-200">{fmtNoCommas(pivot)}</div>
         </div>
 
         {/* R2 Label */}
@@ -230,13 +235,13 @@ export default function SignalProgressBar({
           style={{ left: `${r2Pct}%` }}
         >
           <div className="font-semibold text-slate-400 text-[9px]">R2</div>
-          <div className="text-[8.5px] text-slate-300">{fmt(r2)}</div>
+          <div className="text-[8.5px] text-slate-300">{fmtNoCommas(r2)}</div>
         </div>
 
         {/* R4 Label */}
         <div className="absolute right-0 top-0 text-right">
           <div className="font-semibold text-slate-400 text-[9px]">R4</div>
-          <div className="text-[8.5px] text-slate-300">{fmt(r4)}</div>
+          <div className="text-[8.5px] text-slate-300">{fmtNoCommas(r4)}</div>
         </div>
       </div>
 
