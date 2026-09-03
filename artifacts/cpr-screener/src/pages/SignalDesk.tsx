@@ -339,7 +339,13 @@ export default function SignalDesk({
           patternName: patternLabel,
           patternId,
           triggerPrice: price,
-          currentPrice: price,
+          // Always the live-refreshed price, never the static BC/TC entry
+          // level `price` resolves to when `levels` is set — see
+          // computeSignalLevels' doc comment. Using `price` here froze the
+          // header price and SignalProgressBar needle for any symbol whose
+          // View has a BACKTEST_TARGETS entry, since todayCPR.bc/tc never
+          // change between live-refresh ticks.
+          currentPrice: sym.currentPrice,
           change24h: sym.change24h,
           targetPrice,
           stopPrice,
@@ -416,7 +422,10 @@ export default function SignalDesk({
         patternName: patternLabel,
         patternId,
         triggerPrice: price,
-        currentPrice: price,
+        // Same fix as the `symbols` branch above: keep the live-refreshed
+        // r.currentPrice for display, don't collapse it into the static
+        // BC/TC entry level that `price` resolves to when `levels` is set.
+        currentPrice: r.currentPrice,
         change24h: r.change24h,
         targetPrice,
         stopPrice,
