@@ -441,12 +441,20 @@ export default function SignalDesk({
     });
   }, [signals, sourceFilter, directionFilter, searchTerm]);
 
+  // Header stats are scoped to symbols that actually belong to an Active
+  // View (item.isSaved — despite the name, this flags Active View
+  // membership, the same eligibility check the auto-save effect uses) —
+  // NOT the full scanned/displayed symbol universe. Previously this counted
+  // every card in filteredSignals regardless of whether it matched any
+  // Active View, which is why "Signals" showed the full scan size (e.g.
+  // 516) instead of the actual Active View total (e.g. ~114).
   const stats = useMemo(() => {
-    const total = filteredSignals.length;
-    const saved = filteredSignals.filter((s) => s.isSaved).length;
-    const longs = filteredSignals.filter((s) => s.direction === "LONG").length;
-    const shorts = filteredSignals.filter((s) => s.direction === "SHORT").length;
-    const watch = filteredSignals.filter((s) => s.direction === "NEUTRAL").length;
+    const activeViewOnly = filteredSignals.filter((s) => s.isSaved);
+    const total = activeViewOnly.length;
+    const saved = activeViewOnly.length;
+    const longs = activeViewOnly.filter((s) => s.direction === "LONG").length;
+    const shorts = activeViewOnly.filter((s) => s.direction === "SHORT").length;
+    const watch = activeViewOnly.filter((s) => s.direction === "NEUTRAL").length;
     return { total, saved, longs, shorts, watch };
   }, [filteredSignals]);
 
