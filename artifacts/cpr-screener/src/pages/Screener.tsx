@@ -842,13 +842,19 @@ export default function Screener({
       return sortDir === "asc" ? (av as number) - (bv as number) : (bv as number) - (av as number);
     });
 
-  // Signal Desk consumes this exact post-filter pool. Keeping the projection
-  // here means it automatically follows all existing sidebar Views and
-  // hand-written Screener filters without duplicating their logic.
+  // Signal Desk consumes this pool directly, NOT `displayed`. `displayed`
+  // is scoped to whichever tab (Binance/Delta/Combined) happens to be
+  // active on the Live Screener right now, via getActivePool()'s
+  // activeTab checks — that's the right pool for the Screener table, but
+  // Signal Desk has its own independent Binance/Delta/All source toggle,
+  // and needs the FULL combined universe available at all times so that
+  // toggle actually has data to filter into. Using `displayed` here meant
+  // the Delta tab in Signal Desk showed nothing whenever the Live
+  // Screener's own tab happened to be sitting on "binance".
   // change24h is passed straight through so SignalDeskSymbol's optional
   // 24h-change badge has data to render. direction drives SignalDesk's
   // long/short header icon — see getRowDirection in ScreenerUtils.tsx.
-  const signalSymbols = displayed.map((r) => ({
+  const signalSymbols = combinedAllResults.map((r) => ({
     key: `${r.source}-${r.symbol}`,
     symbol: r.symbol,
     source: r.source,
