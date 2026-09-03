@@ -7,7 +7,7 @@ import {
   updateSignalOutcomeInCloud,
   clearAllSignalsFromCloud,
 } from "@/lib/signalTracker";
-import { fmt } from "@/pages/ScreenerUtils";
+import { fmt, getChartUrl, hasKnownChartMapping } from "@/pages/ScreenerUtils";
 import {
   CheckCircle2,
   XCircle,
@@ -20,6 +20,7 @@ import {
   AlertCircle,
   Database,
   Search,
+  ExternalLink,
 } from "lucide-react";
 
 export default function SignalsJournal() {
@@ -367,7 +368,28 @@ export default function SignalsJournal() {
                         {item.dateStr}
                       </td>
                       <td className="py-2.5 px-3 font-bold text-white whitespace-nowrap">
-                        {item.symbol}
+                        <div className="flex items-center gap-1">
+                          <span>{item.symbol}</span>
+                          {hasKnownChartMapping(item.symbol, item.source) ? (
+                            <a
+                              href={getChartUrl(item.symbol, item.source)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-muted-foreground hover:text-primary transition-colors shrink-0"
+                              title="Open on TradingView"
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                            </a>
+                          ) : (
+                            <span
+                              className="text-muted-foreground/30 cursor-not-allowed inline-flex shrink-0"
+                              title="Not available on TradingView"
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="py-2.5 px-3 whitespace-nowrap">
                         <span
