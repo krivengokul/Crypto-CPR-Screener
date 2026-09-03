@@ -128,10 +128,19 @@ export default function Screener({
   scanKey = 0,
   onCounts,
   onSignalSymbols,
+  onResults,
 }: {
   activeView?: string;
   scanKey?: number;
   onCounts?: (counts: Record<string, number>) => void;
+  // Full unfiltered scan pool (both Binance + Delta, every symbol) — NOT
+  // scoped to the current tab/showAll/pattern filter, unlike `displayed`/
+  // `signalSymbols` below. SignalDesk's auto-save-to-Journal effect needs
+  // this to check every symbol against every left-nav View's
+  // passesPattern(), independent of whichever single view happens to be
+  // on screen. Without this prop, SignalDesk's activeViewSymbols stays
+  // permanently empty and it silently never writes to the Journal.
+  onResults?: (results: CPRResultWithSource[]) => void;
   onSignalSymbols?: (
     symbols: Array<{
       key: string;
@@ -867,6 +876,16 @@ export default function Screener({
     // effect on every Screener render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onSignalSymbols, signalSymbolsKey]);
+
+  useEffect(() => {
+    onResults?.(combinedAllResults);
+    // Depend on allResults/deltaAllResults themselves (not combinedAllResults,
+    // which is a brand-new array literal every render) — those state values
+    // only get a new identity when a scan actually completes (setAllResults /
+    // setDeltaAllResults), so this only fires on real new data, not on every
+    // tab switch or filter click.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onResults, allResults, deltaAllResults]);
 
   const currentStatus =
     activeTab === "binance" ? status

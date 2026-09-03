@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Screener from "@/pages/Screener";
 import BacktestPanel from "@/pages/BacktestPanel";
 import SignalDesk, { type SignalDeskSymbol } from "@/pages/SignalDesk";
+import type { CPRResultWithSource } from "@/pages/ScreenerUtils";
 import PatternStats from "@/pages/PatternStats";
 import SignalsJournal from "./pages/SignalsJournal";
 import ViewsSidebar, { pivotcategories, SCREENER_PATTERN_IDS, type SidebarMode } from "@/lib/ViewsSidebar";
@@ -71,6 +72,14 @@ function App() {
   // passed down into ViewsSidebar for the "(41)" labels.
   const [patternCounts, setPatternCounts] = useState<Record<string, number>>({});
   const [signalSymbols, setSignalSymbols] = useState<SignalDeskSymbol[]>([]);
+  // Full CPR rows (with tc/bc/pattern flags) for whatever Screener just
+  // scanned — this is what SignalDesk's auto-save-to-Journal effect needs
+  // to build activeViewSymbols. Without this, SignalDesk only ever gets
+  // `symbols` (the lightweight card projection), activeViewSymbols stays
+  // permanently empty, and the real autoSaveQualifiedSignals() call never
+  // fires even though the cards still render fine via the symbols-only
+  // fallback path.
+  const [signalResults, setSignalResults] = useState<CPRResultWithSource[]>([]);
 
   // Auto-scan on first page load
   useEffect(() => {
@@ -136,6 +145,7 @@ function App() {
                   scanKey={scanKey}
                   onCounts={setPatternCounts}
                   onSignalSymbols={setSignalSymbols}
+                  onResults={setSignalResults}
                 />
               ) : (
                 <ComingSoon label={activeLabel} />
@@ -151,6 +161,7 @@ function App() {
             {mode === "signals" && (
               <SignalDesk
                 symbols={signalSymbols}
+                results={signalResults}
                 activeView={activeView}
                 activeLabel={activeLabel}
                 counts={patternCounts}
