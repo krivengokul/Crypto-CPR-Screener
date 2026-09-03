@@ -426,7 +426,7 @@ export default function SignalsJournal() {
                           {item.direction}
                         </span>
                       </td>
-                      <td className="py-2.5 px-3 text-amber-300 font-medium whitespace-nowrap">
+                      <td className="py-2.5 px-3 text-violet-300 font-medium whitespace-nowrap">
                         {item.patternName}
                       </td>
                       <td className="py-2.5 px-3 text-slate-200">${fmt(item.entry)}</td>
