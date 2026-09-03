@@ -1363,9 +1363,20 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       { key: "C-A-E-OA", label: "C-A-E-OA", subPatternKeys: [] },
       { key: "C-A-C-OA", label: "C-A-C-OA", subPatternKeys: [] },
       { key: "C-A-OA-OA", label: "C-A-OA-OA", subPatternKeys: [] },
-      // NEW: nests "C-B-BB-LB-CL3U2" (see BACKTEST_TARGETS above) — same
-      // shape as "B-B-BB-BB-L4U4" nesting under "B-B-BB-BB" elsewhere.
-      { key: "C-B-BB-LB", label: "C-B-BB-LB", subPatternKeys: ["C-B-BB-LB-CL3U2"] },
+      // NEW: nests "C-B-BB-LB-CL3U2" as a Subpattern (arrow ↳, not a View)
+      // — same shape as "E-E-AA-BB" nesting its five Subpatterns above.
+      // Combines this Pattern's base condition (PIVOT_PATTERNS["C-B-BB-LB"])
+      // with the raw CL3U2 flag — see matchesPatternFlag's
+      // "C-B-BB-LB-CL3U2" case in ScreenerUtils.tsx. No Views defined
+      // under it yet, so it's currently a symbol-list-only scan.
+      {
+        key: "C-B-BB-LB",
+        label: "C-B-BB-LB",
+        subPatternKeys: [],
+        patterns: [
+          { key: "C-B-BB-LB-CL3U2", label: "C-B-BB-LB-CL3U2", subPatternKeys: [] },
+        ],
+      },
       { key: "C-B-OB-LB", label: "C-B-OB-LB", subPatternKeys: [] },
       { key: "C-B-BB-C", label: "C-B-BB-C", subPatternKeys: [] },
       { key: "C-B-OB-C", label: "C-B-OB-C", subPatternKeys: [] },
