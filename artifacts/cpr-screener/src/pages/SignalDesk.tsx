@@ -15,7 +15,6 @@ import {
   ArrowDownRight,
   ShieldAlert,
   Target,
-  Sparkles,
   Cloud,
   X,
 } from "lucide-react";
@@ -76,7 +75,6 @@ export interface SignalItem {
   stopPrice: number;
   targetLevel: string;
   riskReward: string;
-  confidence: "HIGH" | "MEDIUM" | "WATCH";
   cprStatus: string;
   pivot: number;
   r1: number;
@@ -330,7 +328,6 @@ export default function SignalDesk({
           stopPrice,
           targetLevel,
           riskReward: `1 : ${rrRatio}`,
-          confidence: isEligible ? "HIGH" : "WATCH",
           cprStatus: isEligible
             ? `${patternLabel} (Target ${targetLevel})`
             : direction === "LONG" ? "Above CPR Pivot" : "Below CPR Pivot",
@@ -408,7 +405,6 @@ export default function SignalDesk({
         stopPrice,
         targetLevel,
         riskReward: `1 : ${rrRatio}`,
-        confidence: isActiveViewSymbol ? "HIGH" : "WATCH",
         cprStatus: isActiveViewSymbol ? `${patternLabel} (Target ${targetLevel})` : "General CPR Setup",
         pivot,
         r1,
@@ -449,8 +445,7 @@ export default function SignalDesk({
     const longs = filteredSignals.filter((s) => s.direction === "LONG").length;
     const shorts = filteredSignals.filter((s) => s.direction === "SHORT").length;
     const watch = filteredSignals.filter((s) => s.direction === "NEUTRAL").length;
-    const highConf = filteredSignals.filter((s) => s.confidence === "HIGH").length;
-    return { total, saved, longs, shorts, watch, highConf };
+    return { total, saved, longs, shorts, watch };
   }, [filteredSignals]);
 
   // Automatically save ONLY qualified signals from Active Views directly to the Journal.
@@ -460,8 +455,7 @@ export default function SignalDesk({
   // SignalDesk's own rendered `signals` card list. That keeps Journal
   // membership tied exactly to "which symbols select into Active Views",
   // regardless of which single View happens to be on screen, which pool
-  // branch rendered the cards, or how the cards' own labels/confidence are
-  // derived. Tracks which symbols were already submitted TODAY so re-renders
+  // branch rendered the cards, or how the cards' own labels are derived. Tracks which symbols were already submitted TODAY so re-renders
   // triggered by price ticks or switching between Active Views don't keep
   // re-submitting the same symbols over and over — the Journal enforces one
   // row per symbol/day, but there's no reason to spam it with redundant
@@ -494,7 +488,6 @@ export default function SignalDesk({
       target: number;
       sl: number;
       rr: string;
-      confidence: "HIGH" | "MEDIUM" | "WATCH";
       cprStatus: string;
       timestamp: number;
       dateStr: string;
@@ -521,7 +514,6 @@ export default function SignalDesk({
         target: levels.targetPrice,
         sl: levels.stopPrice,
         rr: `1 : ${levels.rrRatio}`,
-        confidence: "HIGH",
         cprStatus: `${levels.patternLabel} (Target ${levels.targetLevel})`,
         timestamp: Date.now(),
         dateStr: new Date().toLocaleString(),
@@ -545,7 +537,7 @@ Source: ${item.source.toUpperCase()}
 Entry / Trigger: ${fmt(item.triggerPrice)}
 Target Level: ${fmt(item.targetPrice)}
 Stop Level: ${fmt(item.stopPrice)}
-R:R: ${item.riskReward} | Confidence: ${item.confidence}`;
+R:R: ${item.riskReward}`;
     navigator.clipboard.writeText(text);
     setCopiedId(item.id);
     setTimeout(() => setCopiedId(null), 2000);
@@ -610,11 +602,6 @@ R:R: ${item.riskReward} | Confidence: ${item.confidence}`;
             <TrendingDown className="w-3.5 h-3.5 text-rose-400" />
             <span className="text-[11px] text-rose-400 font-medium">Short:</span>
             <span className="text-sm font-bold text-rose-400 font-mono">{stats.shorts}</span>
-          </div>
-          <div className="bg-[#131b26] border border-amber-500/30 rounded-lg px-3 py-1.5 flex items-center gap-2">
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <span className="text-[11px] text-amber-400 font-medium">High Conviction:</span>
-            <span className="text-sm font-bold text-amber-400 font-mono">{stats.highConf}</span>
           </div>
         </div>
       </div>
