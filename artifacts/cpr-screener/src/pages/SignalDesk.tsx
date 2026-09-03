@@ -231,17 +231,30 @@ export default function SignalDesk({
       pool = results.filter((r) => passesPattern(r, selectedViewPattern));
     }
 
+    // A symbol is only eligible to be saved when the View currently being
+    // displayed here is itself a qualifying sidebar Active View (count > 0).
+    // This mirrors the `symbols` branch above. Checking a symbol against the
+    // ENTIRE list of Active View patterns — rather than just the one View
+    // actually selected/displayed — is what caused hundreds of extra,
+    // unrelated symbols to get auto-saved any time no specific View was
+    // selected (pool falls back to the full unfiltered `results` set, and
+    // literally any symbol matching literally any of the sidebar's Views
+    // was being marked saved all at once).
+    const currentViewId = selectedViewPattern || activeView || "";
+    const isCurrentViewQualified = viewPills.some((p) => p.id === currentViewId);
+
     const list: SignalItem[] = [];
 
     for (const r of pool) {
-      // Check which Active Views in viewPills this symbol qualifies under
-      const matchedActiveViews = viewPills.filter((v) => passesPattern(r, v.id));
-      const isEligibleInActiveViews = matchedActiveViews.length > 0;
+      // Whether THIS row belongs to the specific View currently being shown
+      // (not "any Active View anywhere") — this, and only this, drives isSaved.
+      const matchesCurrentView = isCurrentViewQualified && passesPattern(r, currentViewId);
 
-      // Identify the primary active view label
+      // Identify the primary active view label (display purposes only — has
+      // no bearing on save-eligibility above).
       const primaryView = selectedViewPattern
         ? viewPills.find((v) => v.id === selectedViewPattern) || { id: selectedViewPattern, label: selectedViewPattern }
-        : matchedActiveViews[0];
+        : viewPills.find((v) => passesPattern(r, v.id));
 
       const patternLabel = primaryView ? primaryView.label : "Standard CPR";
 
@@ -315,8 +328,8 @@ export default function SignalDesk({
         stopPrice,
         targetLevel,
         riskReward: `1 : ${rrRatio}`,
-        confidence: isEligibleInActiveViews ? "HIGH" : "WATCH",
-        cprStatus: isEligibleInActiveViews ? `${patternLabel} (Target ${targetLevel})` : "General CPR Setup",
+        confidence: matchesCurrentView ? "HIGH" : "WATCH",
+        cprStatus: matchesCurrentView ? `${patternLabel} (Target ${targetLevel})` : "General CPR Setup",
         pivot,
         r1,
         s1,
@@ -327,12 +340,12 @@ export default function SignalDesk({
         r4,
         s4,
         timestamp: "Active",
-        isSaved: isEligibleInActiveViews,
+        isSaved: matchesCurrentView,
       });
     }
 
     return list;
-  }, [symbols, results, viewPills, selectedViewPattern, activeLabel]);
+  }, [symbols, results, viewPills, selectedViewPattern, activeView, activeLabel]);
 
   const filteredSignals = useMemo(() => {
     return signals.filter((s) => {
