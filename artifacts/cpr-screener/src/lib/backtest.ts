@@ -33,6 +33,22 @@ export interface BacktestTargetDef {
 }
 
 export const BACKTEST_TARGETS: BacktestTargetDef[] = [
+  // NEW: C-B-BB-LB-CL3U2 — nested as a Pattern under the "C-B-BB-LB" leaf
+  // Pattern (itself under the "compressed" category). Condition =
+  // PIVOT_PATTERNS["C-B-BB-LB"] (RRSS-C + HHLL-B + RRHH-BB + SSLL-LB) AND
+  // the existing raw CL3U2 flag from cpr.ts (see matchesPatternFlag in
+  // ScreenerUtils.tsx). Bullish, targets today's own R4 / U4.
+  {
+    key: "C-B-BB-LB-CL3U2",
+    label: "C-B-BB-LB-CL3U2",
+    direction: "bullish",
+    targetLabel: "U4 (today's R4)",
+    getTarget: (r) => r.todayCPR.r4,
+    getEntry: (r) => r.todayCPR.tc,
+    entryLabel: "TC (today's TC)",
+    getStoploss: (r) => r.todayCPR.s1,
+    stoplossLabel: "S1 (today's S1)",
+  },
   // Renamed from the former 6PM HHLLA/RRHH-Gap View. This View is now nested
   // under the A-A-AA-AA-EU3L4 Pattern. Its effective condition is the
   // A-A-AA-AA structural base + EU3L4 (the parent Pattern) + HLGap-B,
@@ -1347,7 +1363,9 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       { key: "C-A-E-OA", label: "C-A-E-OA", subPatternKeys: [] },
       { key: "C-A-C-OA", label: "C-A-C-OA", subPatternKeys: [] },
       { key: "C-A-OA-OA", label: "C-A-OA-OA", subPatternKeys: [] },
-      { key: "C-B-BB-LB", label: "C-B-BB-LB", subPatternKeys: [] },
+      // NEW: nests "C-B-BB-LB-CL3U2" (see BACKTEST_TARGETS above) — same
+      // shape as "B-B-BB-BB-L4U4" nesting under "B-B-BB-BB" elsewhere.
+      { key: "C-B-BB-LB", label: "C-B-BB-LB", subPatternKeys: ["C-B-BB-LB-CL3U2"] },
       { key: "C-B-OB-LB", label: "C-B-OB-LB", subPatternKeys: [] },
       { key: "C-B-BB-C", label: "C-B-BB-C", subPatternKeys: [] },
       { key: "C-B-OB-C", label: "C-B-OB-C", subPatternKeys: [] },

@@ -1725,6 +1725,12 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     // under r.LevelsBelow via the parent "levelsbelow" category key) AND
     // its own raw target-window flag — same shape as "A-B-C-C-EU4L4"
     // above.
+    // NEW: C-B-BB-LB-CL3U2 — Pattern nested under "C-B-BB-LB" (itself a
+    // leaf Pattern under "compressed", see backtest.ts's
+    // BACKTEST_CATEGORIES): base condition = PIVOT_PATTERNS["C-B-BB-LB"]
+    // (RRSS-C + HHLL-B + RRHH-BB + SSLL-LB) AND the existing raw CL3U2
+    // flag from cpr.ts — same shape as "B-B-BB-BB-L4U4" below.
+    case "C-B-BB-LB-CL3U2": return PIVOT_PATTERNS["C-B-BB-LB"](r) && r.CL3U2;
     case "B-B-BB-BB-L4U4": return PIVOT_PATTERNS["B-B-BB-BB"](r) && r.L4U4;
     case "B-B-BB-BB-L3U4": return PIVOT_PATTERNS["B-B-BB-BB"](r) && r.L3U4;
     case "B-B-BB-BB-L4U3": return PIVOT_PATTERNS["B-B-BB-BB"](r) && r.L4U3;
