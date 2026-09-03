@@ -165,14 +165,20 @@ export default function SignalsJournal() {
   }, [signals, filterStatus, sourceFilter, searchTerm]);
 
   const stats = useMemo(() => {
-    const total = signals.length;
-    const pass = signals.filter((s) => s.status === "PASS").length;
-    const fail = signals.filter((s) => s.status === "FAIL").length;
-    const active = signals.filter((s) => s.status === "ACTIVE").length;
+    // Scoped to sourceFilter (binance/delta/all) so the summary strip
+    // matches whichever tab is selected — same pool the table below uses,
+    // minus filterStatus/searchTerm since stats itself is a status
+    // breakdown across all four buckets, not just the currently filtered one.
+    const scoped =
+      sourceFilter === "all" ? signals : signals.filter((s) => s.source === sourceFilter);
+    const total = scoped.length;
+    const pass = scoped.filter((s) => s.status === "PASS").length;
+    const fail = scoped.filter((s) => s.status === "FAIL").length;
+    const active = scoped.filter((s) => s.status === "ACTIVE").length;
     const resolved = pass + fail;
     const winRate = resolved > 0 ? ((pass / resolved) * 100).toFixed(1) : "100.0";
     return { total, pass, fail, active, winRate };
-  }, [signals]);
+  }, [signals, sourceFilter]);
 
   return (
     <div className="flex-1 flex flex-col h-full bg-[#080d15] text-slate-100 overflow-hidden select-none">
