@@ -37,8 +37,12 @@ export default function SignalProgressBar({
 
   const pricePct = getPercent(price);
   const pivotPct = getPercent(pivot);
+  const s1Pct = getPercent(s1);
   const s2Pct = getPercent(s2);
+  const s3Pct = s3 !== undefined ? getPercent(s3) : null;
+  const r1Pct = getPercent(r1);
   const r2Pct = getPercent(r2);
+  const r3Pct = r3 !== undefined ? getPercent(r3) : null;
 
   // Dynamic context calculations below the bar (matching image: e.g. "1.42% above S1   0.23% to PIVOT")
   let leftText = "";
@@ -103,6 +107,46 @@ export default function SignalProgressBar({
             {fmt(price)}
           </span>
         </div>
+      </div>
+
+      {/* S3 / S1 / R1 / R3 context labels, sitting between the live price
+          callout above and the progress track below */}
+      <div className="relative w-full h-7 mb-0.5 font-mono text-[9px] text-slate-400">
+        {s3Pct !== null && (
+          <div
+            className="absolute top-0 -translate-x-1/2 text-center"
+            style={{ left: `${s3Pct}%` }}
+          >
+            <div className="text-[8.5px] text-slate-300">{fmt(s3 as number)}</div>
+            <div className="font-semibold text-slate-400 text-[9px]">S3</div>
+          </div>
+        )}
+
+        <div
+          className="absolute top-0 -translate-x-1/2 text-center"
+          style={{ left: `${s1Pct}%` }}
+        >
+          <div className="text-[8.5px] text-slate-300">{fmt(s1)}</div>
+          <div className="font-semibold text-slate-400 text-[9px]">S1</div>
+        </div>
+
+        <div
+          className="absolute top-0 -translate-x-1/2 text-center"
+          style={{ left: `${r1Pct}%` }}
+        >
+          <div className="text-[8.5px] text-slate-300">{fmt(r1)}</div>
+          <div className="font-semibold text-slate-400 text-[9px]">R1</div>
+        </div>
+
+        {r3Pct !== null && (
+          <div
+            className="absolute top-0 -translate-x-1/2 text-center"
+            style={{ left: `${r3Pct}%` }}
+          >
+            <div className="text-[8.5px] text-slate-300">{fmt(r3 as number)}</div>
+            <div className="font-semibold text-slate-400 text-[9px]">R3</div>
+          </div>
+        )}
       </div>
 
       {/* Progress Track: S4 -> PIVOT (Red Family) & PIVOT -> R4 (Green Family) */}
