@@ -62,6 +62,14 @@ export interface SignalItem {
   direction: "LONG" | "SHORT" | "NEUTRAL";
   type: string;
   patternName: string;
+  // NEW: the canonical View id (matches ViewsSidebar's sub.id / a
+  // BACKTEST_TARGETS key) — distinct from patternName, which is the
+  // human-readable display label and can differ from the id (e.g.
+  // "A-A-AA-AA-S1pPDH-U3" displays as "A-A-AA-AA · S1>pPDH(U3)"). Anything
+  // that needs to re-select this View in the left nav / filter pool must
+  // use patternId, never patternName — passing the label instead of the id
+  // is exactly what broke the left-nav highlight and card filtering before.
+  patternId: string;
   triggerPrice: number;
   currentPrice: number;
   targetPrice: number;
@@ -113,12 +121,13 @@ function computeSignalLevels(
   const targetPrice = targetDef.getTarget(r);
   const targetLevel = targetDef.targetLabel;
   const patternLabel = primaryView.label;
+  const patternId = primaryView.id;
 
   const risk = Math.max(0.0000001, Math.abs(price - stopPrice));
   const reward = Math.abs(targetPrice - price);
   const rrRatio = (reward / risk).toFixed(1);
 
-  return { patternLabel, price, direction, targetPrice, stopPrice, targetLevel, rrRatio };
+  return { patternLabel, patternId, price, direction, targetPrice, stopPrice, targetLevel, rrRatio };
 }
 
 export default function SignalDesk({
@@ -295,6 +304,10 @@ export default function SignalDesk({
           : (Math.abs(targetPrice - price) / Math.max(0.0000001, Math.abs(price - stopPrice))).toFixed(1);
 
         const patternLabel = levels ? levels.patternLabel : label;
+        // Fall back to the actual selected/active View id (never a label)
+        // so "View in Screener" always re-selects something ViewsSidebar
+        // can match against sub.id.
+        const patternId = levels ? levels.patternId : (selectedViewPattern || activeView || "");
 
         return {
           id: sym.key,
@@ -304,6 +317,7 @@ export default function SignalDesk({
           direction,
           type: `${patternLabel} Setup`,
           patternName: patternLabel,
+          patternId,
           triggerPrice: price,
           currentPrice: price,
           change24h: sym.change24h,
@@ -361,6 +375,9 @@ export default function SignalDesk({
       const fallbackDirection: "LONG" | "SHORT" = fallbackPrice < pivot ? "SHORT" : "LONG";
 
       const patternLabel = levels?.patternLabel ?? "Standard CPR";
+      // Same rule as branch A above: never fall back to a display label
+      // for the id that "View in Screener" hands back to the left nav.
+      const patternId = levels?.patternId ?? (selectedViewPattern || "");
       const direction: "LONG" | "SHORT" = levels ? levels.direction : fallbackDirection;
       const price = levels ? levels.price : fallbackPrice;
       const targetPrice = levels ? levels.targetPrice : (direction === "LONG" ? r1 : s1);
@@ -378,6 +395,7 @@ export default function SignalDesk({
         direction,
         type: `${patternLabel} Setup`,
         patternName: patternLabel,
+        patternId,
         triggerPrice: price,
         currentPrice: price,
         change24h: r.change24h,
@@ -846,7 +864,7 @@ R:R: ${item.riskReward} | Confidence: ${item.confidence}`;
                   {/* Card Action Footer */}
                   <div className="pt-2 border-t border-[#1e2d3d] flex items-center justify-between gap-2">
                     <button
-                      onClick={() => onSelectPattern?.(item.patternName)}
+                      onClick={() => onSelectPattern?.(item.patternId || item.patternName)}
                       className="text-xs text-blue-400 hover:text-blue-300 font-semibold transition flex items-center gap-1"
                     >
                       View in Screener &rarr;
