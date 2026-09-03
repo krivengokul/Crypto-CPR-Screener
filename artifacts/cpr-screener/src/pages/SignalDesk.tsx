@@ -204,6 +204,19 @@ export default function SignalDesk({
     return map;
   }, [results, viewPills]);
 
+  // symbol -> its full CPRResultWithSource row, for filtering the
+  // lightweight `symbols` prop against a specific selected View. Kept
+  // separate from activeViewSymbols (which only tells you a symbol
+  // belongs to SOME Active View, not which one).
+  const resultsBySymbol = useMemo(() => {
+    const map = new Map<string, CPRResultWithSource>();
+    if (!results) return map;
+    for (const r of results) {
+      if (!map.has(r.symbol)) map.set(r.symbol, r);
+    }
+    return map;
+  }, [results]);
+
   // Generate live signal cards
   const signals = useMemo<SignalItem[]>(() => {
     // If external symbols were passed explicitly, map them
@@ -220,7 +233,21 @@ export default function SignalDesk({
         ? viewPills.find((p) => p.id === selectedViewPattern)?.label ?? selectedViewPattern
         : activeLabel || "Active View";
 
-      return symbols.map((sym) => {
+      // BUG FIX: this branch used to map every incoming `symbol` with no
+      // filtering step at all, so clicking an Active View pill never
+      // narrowed the card grid down when SignalDesk was fed via the
+      // lightweight `symbols` prop. Filter down to symbols whose full CPR
+      // row (from `results`, when available) actually passes the selected
+      // View's own passesPattern() condition — same check the sidebar pill
+      // counts and activeViewSymbols use.
+      const filteredSymbols = selectedViewPattern
+        ? symbols.filter((sym) => {
+            const row = resultsBySymbol.get(sym.symbol);
+            return row ? passesPattern(row, selectedViewPattern) : false;
+          })
+        : symbols;
+
+      return filteredSymbols.map((sym) => {
         const matchedRow = activeViewSymbols.get(sym.symbol);
         const levels = matchedRow ? computeSignalLevels(matchedRow, viewPills) : null;
         const isEligible = activeViewSymbols.size > 0 ? levels !== null : isCurrentViewActive;
@@ -375,7 +402,7 @@ export default function SignalDesk({
     }
 
     return list;
-  }, [symbols, results, viewPills, activeViewSymbols, selectedViewPattern, activeView, activeLabel]);
+  }, [symbols, results, viewPills, activeViewSymbols, resultsBySymbol, selectedViewPattern, activeView, activeLabel]);
 
   const filteredSignals = useMemo(() => {
     return signals.filter((s) => {
@@ -574,7 +601,7 @@ R:R: ${item.riskReward} | Confidence: ${item.confidence}`;
               </span>
               {selectedViewPattern && (
                 <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-teal-500/20 text-teal-300 border border-teal-500/30">
-                  Filtered: {selectedViewPattern}
+                  {selectedViewPattern}
                 </span>
               )}
             </div>
