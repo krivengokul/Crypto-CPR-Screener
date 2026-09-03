@@ -5,7 +5,7 @@ import { Views } from "@/lib/ViewsSidebar";
 import { BACKTEST_TARGETS } from "@/lib/backtest";
 import SignalProgressBar from "@/lib/SignalProgressBar";
 import {
-  Zap,
+  Radio,
   TrendingUp,
   TrendingDown,
   Search,
@@ -515,8 +515,8 @@ R:R: ${item.riskReward} | Confidence: ${item.confidence}`;
       <div className="p-4 border-b border-[#1e2d3d] bg-[#0c131f] flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0">
         <div>
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-500/40 flex items-center justify-center">
-              <Zap className="w-4 h-4 text-amber-400" />
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center">
+              <Radio className="w-4 h-4 text-emerald-400 animate-pulse" />
             </div>
             <div>
               <h1 className="text-base font-bold text-white tracking-wide flex items-center gap-2">
