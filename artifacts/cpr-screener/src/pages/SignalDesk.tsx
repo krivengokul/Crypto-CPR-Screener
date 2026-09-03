@@ -1,5 +1,12 @@
 import { useState, useMemo, useEffect, useRef } from "react";
-import { CPRResultWithSource, fmt, fmtPct, passesPattern } from "./ScreenerUtils";
+import {
+  CPRResultWithSource,
+  fmt,
+  fmtPct,
+  passesPattern,
+  getChartUrl,
+  hasKnownChartMapping,
+} from "./ScreenerUtils";
 import { autoSaveQualifiedSignals } from "@/lib/signalTracker";
 import { Views } from "@/lib/ViewsSidebar";
 import { BACKTEST_TARGETS } from "@/lib/backtest";
@@ -17,6 +24,7 @@ import {
   Target,
   Cloud,
   X,
+  ExternalLink,
 } from "lucide-react";
 
 // Lightweight projection of a matching row that Screener hands up via
@@ -791,20 +799,41 @@ R:R: ${item.riskReward}`;
                       {/* Left: Symbol & Exchange + Live Price & 24h % change */}
                       <div className="flex items-start gap-4 sm:gap-6">
                         <div>
-                          <div className="text-base sm:text-lg font-extrabold text-white font-mono tracking-tight leading-tight">
-                            {item.symbol}
+                          <div className="flex items-center gap-1">
+                            <span className="text-base sm:text-lg font-extrabold text-white font-mono tracking-tight leading-tight">
+                              {item.symbol}
+                            </span>
+                            {hasKnownChartMapping(item.symbol, item.source) ? (
+                              <a
+                                href={getChartUrl(item.symbol, item.source)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="text-muted-foreground hover:text-primary transition-colors shrink-0"
+                                title="Open on TradingView"
+                              >
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
+                            ) : (
+                              <span
+                                className="text-muted-foreground/30 cursor-not-allowed inline-flex shrink-0"
+                                title="Not available on TradingView"
+                              >
+                                <ExternalLink className="w-3 h-3" />
+                              </span>
+                            )}
                           </div>
                           <div className="text-[11px] font-semibold text-slate-400 font-mono uppercase tracking-wider mt-0.5">
                             {item.source}
                           </div>
                         </div>
 
-                        <div>
+                        <div className="flex flex-col items-end">
                           <div className="text-sm sm:text-base font-bold text-white font-mono leading-tight">
-                            {fmt(item.currentPrice)}
+                            {fmt(item.currentPrice).replace(/,/g, "")}
                           </div>
                           <div
-                            className={`text-xs font-mono font-bold leading-tight mt-0.5 ${
+                            className={`text-xs font-mono font-bold leading-tight mt-0.5 text-right ${
                               (item.change24h ?? 0) >= 0 ? "text-emerald-400" : "text-rose-400"
                             }`}
                           >
