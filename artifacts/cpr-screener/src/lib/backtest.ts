@@ -21,6 +21,15 @@ export interface BacktestTargetDef {
   direction: "bullish" | "bearish";
   getTarget: (r: CPRResult) => number;
   targetLabel: string;  // e.g. "U4 (today's R4)"
+  // NEW: Entry/Stoploss for every View. Rule: if the View's target is one of
+  // today's/prev's R-levels (r1-r4, i.e. direction "bullish"), Entry is
+  // today's TC and Stoploss is today's S1. If the target is one of
+  // today's/prev's S-levels (s1-s4, i.e. direction "bearish"), Entry is
+  // today's BC and Stoploss is today's R1.
+  getEntry: (r: CPRResult) => number;
+  entryLabel: string;    // e.g. "TC (today's TC)"
+  getStoploss: (r: CPRResult) => number;
+  stoplossLabel: string; // e.g. "S1 (today's S1)"
 }
 
 export const BACKTEST_TARGETS: BacktestTargetDef[] = [
@@ -35,6 +44,10 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     direction: "bullish",
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
+    getEntry: (r) => r.todayCPR.tc,
+    entryLabel: "TC (today's TC)",
+    getStoploss: (r) => r.todayCPR.s1,
+    stoplossLabel: "S1 (today's S1)",
   },
   // NEW: A-A-AA-AA-S1pPDH-U3 — nested as a View under the
   // A-A-AA-AA-U2L4 Pattern. Bullish U3 target (today's R3). Condition:
@@ -46,6 +59,10 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     direction: "bullish",
     targetLabel: "U3 (today's R3)",
     getTarget: (r) => r.todayCPR.r3,
+    getEntry: (r) => r.todayCPR.tc,
+    entryLabel: "TC (today's TC)",
+    getStoploss: (r) => r.todayCPR.s1,
+    stoplossLabel: "S1 (today's S1)",
   },
   // NEW: A-A-AA-AA-EU2L4-ApR2 — nested as a View under the
   // A-A-AA-AA-EU2L4 Pattern. Bullish U4 target, using the existing
@@ -56,6 +73,10 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     direction: "bullish",
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
+    getEntry: (r) => r.todayCPR.tc,
+    entryLabel: "TC (today's TC)",
+    getStoploss: (r) => r.todayCPR.s1,
+    stoplossLabel: "S1 (today's S1)",
   },
   // RENAMED from "A-A-AA-AA:Candidate-Unfavorable". This remains a
   // target-graded View, now nested under the A-A-AA-AA-U3L4 Pattern.
@@ -65,6 +86,10 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     direction: "bullish",
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
+    getEntry: (r) => r.todayCPR.tc,
+    entryLabel: "TC (today's TC)",
+    getStoploss: (r) => r.todayCPR.s1,
+    stoplossLabel: "S1 (today's S1)",
   },
   // NEW: "7PM:MoMi->U4:2AM" — nested under "LEVEL ABOVE" → Pattern "EU2L4".
   // Bullish, targets today's own R4 / U4 by ~2AM.
@@ -74,6 +99,10 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     direction: "bullish",
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
+    getEntry: (r) => r.todayCPR.tc,
+    entryLabel: "TC (today's TC)",
+    getStoploss: (r) => r.todayCPR.s1,
+    stoplossLabel: "S1 (today's S1)",
   },
   // NEW: "7PM:MoMi-<L4:2AM" — bearish sibling of "7PM:MoMi->U4:2AM", same
   // nesting ("LEVEL ABOVE" → Pattern "EU2L4") and same base condition
@@ -86,6 +115,10 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     direction: "bearish",
     targetLabel: "L4 (today's S4)",
     getTarget: (r) => r.todayCPR.s4,
+    getEntry: (r) => r.todayCPR.bc,
+    entryLabel: "BC (today's BC)",
+    getStoploss: (r) => r.todayCPR.r1,
+    stoplossLabel: "R1 (today's R1)",
   },
   // NEW: "6PM:APHS1A-FAU4:9PM" — nested under "LEVEL ABOVE" → Pattern
   // "EU2L4", alongside its "7PM:MoMi->U4:2AM" /
@@ -100,6 +133,10 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     direction: "bullish",
     targetLabel: "FAU4 (Far Above today's R4)",
     getTarget: (r) => r.todayCPR.r4,
+    getEntry: (r) => r.todayCPR.tc,
+    entryLabel: "TC (today's TC)",
+    getStoploss: (r) => r.todayCPR.s1,
+    stoplossLabel: "S1 (today's S1)",
   },
   // NEW: "9AM:pPALPApH-FAU4:2PM" — nested under "LEVEL ABOVE" → Pattern
   // "U4L3" (see BACKTEST_CATEGORIES below), alongside its "EU2L4"
@@ -113,6 +150,10 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     direction: "bullish",
     targetLabel: "FAU4 (Far Above today's R4)",
     getTarget: (r) => r.todayCPR.r4,
+    getEntry: (r) => r.todayCPR.tc,
+    entryLabel: "TC (today's TC)",
+    getStoploss: (r) => r.todayCPR.s1,
+    stoplossLabel: "S1 (today's S1)",
   },
   // REMOVED: "HA-U1>PU4" — its condition (cprRising && strWideCPR &&
   // todayCPR.r1 > prevCPR.r4) is identical to the "U1 > pU4" (R1AbovePR4)
@@ -131,6 +172,10 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     direction: "bullish",
     targetLabel: "FAU4 (Far Above today's R4)",
     getTarget: (r) => r.todayCPR.r4,
+    getEntry: (r) => r.todayCPR.tc,
+    entryLabel: "TC (today's TC)",
+    getStoploss: (r) => r.todayCPR.s1,
+    stoplossLabel: "S1 (today's S1)",
   },
   // RENAMED from "6AM:pX-APHS1A-pL4:4AM". Nested under the "U1 > pU4"
   // (R1AbovePR4) category's "A-A-AA-AA-EUTL3" Subpattern (moved out from
@@ -147,6 +192,10 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     direction: "bearish",
     targetLabel: "pL4 (prev day's S4)",
     getTarget: (r) => r.prevCPR.s4,
+    getEntry: (r) => r.todayCPR.bc,
+    entryLabel: "BC (today's BC)",
+    getStoploss: (r) => r.todayCPR.r1,
+    stoplossLabel: "R1 (today's R1)",
   },
   // NEW: "8AM:APHS1A-FAU4:4AM" — nested under the "U1 > pU4" (R1AbovePR4)
   // category's "EU1L3" Pattern, alongside its
@@ -160,6 +209,10 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     direction: "bullish",
     targetLabel: "FAU4 (Far Above today's R4)",
     getTarget: (r) => r.todayCPR.r4,
+    getEntry: (r) => r.todayCPR.tc,
+    entryLabel: "TC (today's TC)",
+    getStoploss: (r) => r.todayCPR.s1,
+    stoplossLabel: "S1 (today's S1)",
   },
   // NEW: "RRHH-BB:SSLL-AA:SSLLGap" — duplicate of "6A:HLC-SSLL:R4-6P", added only
   // for the Backtest dropdown (not exposed in Screener/left-nav/legend).
@@ -170,6 +223,10 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     direction: "bullish",
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
+    getEntry: (r) => r.todayCPR.tc,
+    entryLabel: "TC (today's TC)",
+    getStoploss: (r) => r.todayCPR.s1,
+    stoplossLabel: "S1 (today's S1)",
   },
   // RENAMED from "SMi-L1pU1>-APU4:11PM": all previous conditions removed.
   // "6A:HLC-SSLL:R4-6P" — nested under "COMPRESSED". Condition:
@@ -182,6 +239,10 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     direction: "bullish",
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
+    getEntry: (r) => r.todayCPR.tc,
+    entryLabel: "TC (today's TC)",
+    getStoploss: (r) => r.todayCPR.s1,
+    stoplossLabel: "S1 (today's S1)",
   },
   // RENAMED from "S0-L1pU1>-AU4:7PM": all previous conditions removed.
   // "8A:HLC-SSHH:S4-1P" — second sub-pattern under "COMPRESSED". Condition:
@@ -196,6 +257,10 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     direction: "bearish",
     targetLabel: "L4 (today's S4)",
     getTarget: (r) => r.todayCPR.s4,
+    getEntry: (r) => r.todayCPR.bc,
+    entryLabel: "BC (today's BC)",
+    getStoploss: (r) => r.todayCPR.r1,
+    stoplossLabel: "R1 (today's R1)",
   },
   // RENAMED from "T0-L1pU1>-BPL4:5AM": all previous conditions removed.
   // "9AM:RHLB-RRHH:5AM" — third sub-pattern under "COMPRESSED".
@@ -208,6 +273,10 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     direction: "bearish",
     targetLabel: "L2 (today's S2)",
     getTarget: (r) => r.todayCPR.s2,
+    getEntry: (r) => r.todayCPR.bc,
+    entryLabel: "BC (today's BC)",
+    getStoploss: (r) => r.todayCPR.r1,
+    stoplossLabel: "R1 (today's R1)",
   },
   // RENAMED from "RHLB-RRHHpGap": View nested under the "RHLB-RRHHpGap"
   // Pattern arrow in COMPRESSED (not exposed in Screener/left-nav/legend).
@@ -224,6 +293,10 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     direction: "bullish",
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
+    getEntry: (r) => r.todayCPR.tc,
+    entryLabel: "TC (today's TC)",
+    getStoploss: (r) => r.todayCPR.s1,
+    stoplossLabel: "S1 (today's S1)",
   },
   // RENAMED from "eXHrL3U3-AU4": all previous conditions removed and moved
   // from "Outside CPR" into "EXPANDED". "6A:SLE-RRHH:R2-6A" — sub-pattern
@@ -239,6 +312,10 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     direction: "bullish",
     targetLabel: "U2 (today's R2)",
     getTarget: (r) => r.todayCPR.r2,
+    getEntry: (r) => r.todayCPR.tc,
+    entryLabel: "TC (today's TC)",
+    getStoploss: (r) => r.todayCPR.s1,
+    stoplossLabel: "S1 (today's S1)",
   },
   // NEW: "ss-EL1U4-U4:10PM" — nested under the "BELOW LEVEL4"
   // (S1BelowPS4) category's "EL1U4" Pattern. Bullish, targets U4
@@ -249,6 +326,10 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     direction: "bullish",
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
+    getEntry: (r) => r.todayCPR.tc,
+    entryLabel: "TC (today's TC)",
+    getStoploss: (r) => r.todayCPR.s1,
+    stoplossLabel: "S1 (today's S1)",
   },
   // RENAMED from "BC>pPDL-U3:5AM", then from "3P:HA-pABOVE:pR4-3A".
   // "3P:HA-pBELOWR1:R2-3A" — nested under "LEVEL BELOW" (levelsbelow)
@@ -262,6 +343,10 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     direction: "bullish",
     targetLabel: "U2 (today's R2)",
     getTarget: (r) => r.todayCPR.r2,
+    getEntry: (r) => r.todayCPR.tc,
+    entryLabel: "TC (today's TC)",
+    getStoploss: (r) => r.todayCPR.s1,
+    stoplossLabel: "S1 (today's S1)",
   },
   // NEW: "3P:HA-pABOVER1:S2-6P" — replica of "3P:HA-pBELOWR1:R2-3A" with
   // the same base conditions, but prev day's own Pivot BELOW today's R1
@@ -272,6 +357,10 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     direction: "bearish",
     targetLabel: "L2 (today's S2)",
     getTarget: (r) => r.todayCPR.s2,
+    getEntry: (r) => r.todayCPR.bc,
+    entryLabel: "BC (today's BC)",
+    getStoploss: (r) => r.todayCPR.r1,
+    stoplossLabel: "R1 (today's R1)",
   },
   // NEW: "2P:HA-HABOVEpR1:R4-4P" — replica of "3P:HA-pBELOWR1:R2-3A" with
   // the same base conditions, but today's own R1 above prev day's PDH
@@ -284,6 +373,10 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     direction: "bullish",
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
+    getEntry: (r) => r.todayCPR.tc,
+    entryLabel: "TC (today's TC)",
+    getStoploss: (r) => r.todayCPR.s1,
+    stoplossLabel: "S1 (today's S1)",
   },
   // NEW: "PDH>pTC-U4:5AM" — nested directly under "LEVEL BELOW" (levelsbelow)
   // category, alongside the "HALB-SSLLGap" Pattern. Base condition:
@@ -297,6 +390,10 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     direction: "bullish",
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
+    getEntry: (r) => r.todayCPR.tc,
+    entryLabel: "TC (today's TC)",
+    getStoploss: (r) => r.todayCPR.s1,
+    stoplossLabel: "S1 (today's S1)",
   },
   // NEW: "11AM:pCPR1AHi-FApU4:1PM" — nested under "LEVEL BELOW"
   // (levelsbelow) category's new "L4U3" Pattern (see
@@ -310,6 +407,10 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     direction: "bullish",
     targetLabel: "FApU4 (prev day's R4)",
     getTarget: (r) => r.prevCPR.r4,
+    getEntry: (r) => r.todayCPR.tc,
+    entryLabel: "TC (today's TC)",
+    getStoploss: (r) => r.todayCPR.s1,
+    stoplossLabel: "S1 (today's S1)",
   },
   // NEW: "2P:L4U4-pLAP:R4-2A" — View nested under "LEVEL BELOW"
   // (levelsbelow) category's "RHSLB-SSLLpGap" Pattern (renamed from
@@ -323,6 +424,10 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     direction: "bullish",
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
+    getEntry: (r) => r.todayCPR.tc,
+    entryLabel: "TC (today's TC)",
+    getStoploss: (r) => r.todayCPR.s1,
+    stoplossLabel: "S1 (today's S1)",
   },
   // NEW: "TiMe-EUTL3-AU4:2PM" — nested directly under "U1 > pU4"
   // (R1AbovePR4), alongside "A-A-AA-AA-EUTL3" (which nests
@@ -335,6 +440,10 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     direction: "bullish",
     targetLabel: "AU4 (prev day's R4)",
     getTarget: (r) => r.prevCPR.r4,
+    getEntry: (r) => r.todayCPR.tc,
+    entryLabel: "TC (today's TC)",
+    getStoploss: (r) => r.todayCPR.s1,
+    stoplossLabel: "S1 (today's S1)",
   },
   // NEW: "SMg-exHiL2L1-U4:3AM" — nested under "U1 > pU4" via the
   // "EL1L2" Pattern. Bullish, targets U4 (today's R4) @ 3AM.
@@ -344,6 +453,10 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     direction: "bullish",
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
+    getEntry: (r) => r.todayCPR.tc,
+    entryLabel: "TC (today's TC)",
+    getStoploss: (r) => r.todayCPR.s1,
+    stoplossLabel: "S1 (today's S1)",
   },
   // NEW: "6AM:MegMeg-L3:8PM" — nested under "U1 > pU4" (R1AbovePR4) via
   // the new "EU1L4" Pattern. Base R1AbovePR4 condition +
@@ -355,6 +468,10 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     direction: "bearish",
     targetLabel: "L3 (today's S3)",
     getTarget: (r) => r.todayCPR.s3,
+    getEntry: (r) => r.todayCPR.bc,
+    entryLabel: "BC (today's BC)",
+    getStoploss: (r) => r.todayCPR.r1,
+    stoplossLabel: "R1 (today's R1)",
   },
   // NEW: "8AM:CoLApHA-U4+1:8AM" — Direct View, sits directly on the
   // "inside-cpr" category's own subPatternKeys in BACKTEST_CATEGORIES
@@ -371,6 +488,10 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     direction: "bullish",
     targetLabel: "Far Above U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
+    getEntry: (r) => r.todayCPR.tc,
+    entryLabel: "TC (today's TC)",
+    getStoploss: (r) => r.todayCPR.s1,
+    stoplossLabel: "S1 (today's S1)",
   },
   // NEW: "8AM:SRBHHLLA-pU4+1:8AM" — nested under "CPR Inside" (inside-cpr)
   // via the new "CU3L3" Pattern (see BACKTEST_CATEGORIES
@@ -384,6 +505,10 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     direction: "bullish",
     targetLabel: "PU4 (prev day's R4)",
     getTarget: (r) => r.prevCPR.r4,
+    getEntry: (r) => r.todayCPR.tc,
+    entryLabel: "TC (today's TC)",
+    getStoploss: (r) => r.todayCPR.s1,
+    stoplossLabel: "S1 (today's S1)",
   },
   // NEW: "2PM:pPDHLA-SRA-U4:7PM" — nested under "CPR Inside" (inside-cpr)
   // via the new "CU4L4" Pattern (see BACKTEST_CATEGORIES
@@ -406,6 +531,10 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     direction: "bullish",
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
+    getEntry: (r) => r.todayCPR.tc,
+    entryLabel: "TC (today's TC)",
+    getStoploss: (r) => r.todayCPR.s1,
+    stoplossLabel: "S1 (today's S1)",
   },
   {
     key: "2PM:pPDHLA-SRA-U4:7PM",
@@ -413,6 +542,10 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     direction: "bullish",
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
+    getEntry: (r) => r.todayCPR.tc,
+    entryLabel: "TC (today's TC)",
+    getStoploss: (r) => r.todayCPR.s1,
+    stoplossLabel: "S1 (today's S1)",
   },
   // NEW: "2PM:SSLLpRRHHA-ApU4:5PM" — nested directly under "Overlap Below"
   // (overlapping-lower, see BACKTEST_CATEGORIES below), same shape as
@@ -430,6 +563,10 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     direction: "bullish",
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
+    getEntry: (r) => r.todayCPR.tc,
+    entryLabel: "TC (today's TC)",
+    getStoploss: (r) => r.todayCPR.s1,
+    stoplossLabel: "S1 (today's S1)",
   },
   // NEW: "8AM:SSLLpRRHHA-L4:1PM" — bearish sibling of
   // "2PM:SSLLpRRHHA-ApU4:5PM", nested directly under "Overlap Below"
@@ -444,6 +581,10 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     direction: "bearish",
     targetLabel: "L4 (today's S4)",
     getTarget: (r) => r.todayCPR.s4,
+    getEntry: (r) => r.todayCPR.bc,
+    entryLabel: "BC (today's BC)",
+    getStoploss: (r) => r.todayCPR.r1,
+    stoplossLabel: "R1 (today's R1)",
   },
   // NEW: "9AM:SSRRBHHLLA-U4:9PM" — RENAMED from "Exp-U3>U3", nested
   // directly under "Overlap Below" (overlapping-lower, see
@@ -459,6 +600,10 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     direction: "bullish",
     targetLabel: "U4 (today's R2)",
     getTarget: (r) => r.todayCPR.r2,
+    getEntry: (r) => r.todayCPR.tc,
+    entryLabel: "TC (today's TC)",
+    getStoploss: (r) => r.todayCPR.s1,
+    stoplossLabel: "S1 (today's S1)",
   },
   // MOVED: "9AM:pRRHHLLA-U4:9PM" — nested under the "pRRHHLLA" Pattern
   // (arrow), which itself sits under "Overlap Below" (overlapping-lower,
@@ -476,6 +621,10 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     direction: "bullish",
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
+    getEntry: (r) => r.todayCPR.tc,
+    entryLabel: "TC (today's TC)",
+    getStoploss: (r) => r.todayCPR.s1,
+    stoplossLabel: "S1 (today's S1)",
   },
   // NEW: "pRRHHLLA" — exposed as its own direct View (subPattern) on
   // "Overlap Below" (overlapping-lower, see BACKTEST_CATEGORIES below),
@@ -490,6 +639,10 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     direction: "bullish",
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
+    getEntry: (r) => r.todayCPR.tc,
+    entryLabel: "TC (today's TC)",
+    getStoploss: (r) => r.todayCPR.s1,
+    stoplossLabel: "S1 (today's S1)",
   },
   // NEW: "B-B-BB-BB-L4U4-pLTC-U2" — View nested under the "B-B-BB-BB-L4U4"
   // Pattern in "LEVEL BELOW" (see its subPatternKeys entry in
@@ -501,6 +654,10 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     direction: "bullish",
     targetLabel: "U2 (today's R2)",
     getTarget: (r) => r.todayCPR.r2,
+    getEntry: (r) => r.todayCPR.tc,
+    entryLabel: "TC (today's TC)",
+    getStoploss: (r) => r.todayCPR.s1,
+    stoplossLabel: "S1 (today's S1)",
   },
   // NEW: target definitions for "B-B-BB-BB" and its four L4U4/L3U4/L4U3/
   // L3U3 children in "LEVEL BELOW" (previously symbol-list-only scans
@@ -512,6 +669,10 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     direction: "bearish",
     targetLabel: "L2 (today's S2)",
     getTarget: (r) => r.todayCPR.s2,
+    getEntry: (r) => r.todayCPR.bc,
+    entryLabel: "BC (today's BC)",
+    getStoploss: (r) => r.todayCPR.r1,
+    stoplossLabel: "R1 (today's R1)",
   },
   {
     key: "B-B-BB-BB-L4U4",
@@ -519,6 +680,10 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     direction: "bearish",
     targetLabel: "L2 (today's S2)",
     getTarget: (r) => r.todayCPR.s2,
+    getEntry: (r) => r.todayCPR.bc,
+    entryLabel: "BC (today's BC)",
+    getStoploss: (r) => r.todayCPR.r1,
+    stoplossLabel: "R1 (today's R1)",
   },
   {
     key: "B-B-BB-BB-L3U4",
@@ -526,6 +691,10 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     direction: "bearish",
     targetLabel: "L2 (today's S2)",
     getTarget: (r) => r.todayCPR.s2,
+    getEntry: (r) => r.todayCPR.bc,
+    entryLabel: "BC (today's BC)",
+    getStoploss: (r) => r.todayCPR.r1,
+    stoplossLabel: "R1 (today's R1)",
   },
   {
     key: "B-B-BB-BB-L4U3",
@@ -533,6 +702,10 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     direction: "bearish",
     targetLabel: "L2 (today's S2)",
     getTarget: (r) => r.todayCPR.s2,
+    getEntry: (r) => r.todayCPR.bc,
+    entryLabel: "BC (today's BC)",
+    getStoploss: (r) => r.todayCPR.r1,
+    stoplossLabel: "R1 (today's R1)",
   },
   {
     key: "B-B-BB-BB-L3U3",
@@ -540,6 +713,10 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     direction: "bearish",
     targetLabel: "L2 (today's S2)",
     getTarget: (r) => r.todayCPR.s2,
+    getEntry: (r) => r.todayCPR.bc,
+    entryLabel: "BC (today's BC)",
+    getStoploss: (r) => r.todayCPR.r1,
+    stoplossLabel: "R1 (today's R1)",
   },
   // NEW: target definitions for "E-E-AA-BB"'s five nested Subpatterns
   // (EL1U2/EU1L2/EU2L2/EU1L3/EL1U1 — see BacktestSubCategoryDef.patterns
@@ -555,6 +732,10 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     direction: "bullish",
     targetLabel: "U2 (today's R2)",
     getTarget: (r) => r.todayCPR.r2,
+    getEntry: (r) => r.todayCPR.tc,
+    entryLabel: "TC (today's TC)",
+    getStoploss: (r) => r.todayCPR.s1,
+    stoplossLabel: "S1 (today's S1)",
   },
   {
     key: "E-E-AA-BB-EU1L2",
@@ -562,6 +743,10 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     direction: "bullish",
     targetLabel: "U2 (today's R2)",
     getTarget: (r) => r.todayCPR.r2,
+    getEntry: (r) => r.todayCPR.tc,
+    entryLabel: "TC (today's TC)",
+    getStoploss: (r) => r.todayCPR.s1,
+    stoplossLabel: "S1 (today's S1)",
   },
   {
     key: "E-E-AA-BB-EU2L2",
@@ -569,6 +754,10 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     direction: "bullish",
     targetLabel: "U2 (today's R2)",
     getTarget: (r) => r.todayCPR.r2,
+    getEntry: (r) => r.todayCPR.tc,
+    entryLabel: "TC (today's TC)",
+    getStoploss: (r) => r.todayCPR.s1,
+    stoplossLabel: "S1 (today's S1)",
   },
   {
     key: "E-E-AA-BB-EU1L3",
@@ -576,6 +765,10 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     direction: "bullish",
     targetLabel: "U2 (today's R2)",
     getTarget: (r) => r.todayCPR.r2,
+    getEntry: (r) => r.todayCPR.tc,
+    entryLabel: "TC (today's TC)",
+    getStoploss: (r) => r.todayCPR.s1,
+    stoplossLabel: "S1 (today's S1)",
   },
   {
     key: "E-E-AA-BB-EL1U1",
@@ -583,6 +776,10 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     direction: "bullish",
     targetLabel: "U2 (today's R2)",
     getTarget: (r) => r.todayCPR.r2,
+    getEntry: (r) => r.todayCPR.tc,
+    entryLabel: "TC (today's TC)",
+    getStoploss: (r) => r.todayCPR.s1,
+    stoplossLabel: "S1 (today's S1)",
   },
 ];
 
@@ -1600,6 +1797,13 @@ export interface BacktestRow {
   compressionRatio: number;         // NEW: shown as a ratio in BacktestPanel's results table
   targetLevel: number;
   targetLabel: string;
+  // NEW: Entry/Stoploss levels for the View, per BacktestTargetDef's
+  // getEntry/getStoploss (today's TC/S1 for bullish R-level targets,
+  // today's BC/R1 for bearish S-level targets).
+  entryLevel: number;
+  entryLabel: string;
+  stoplossLevel: number;
+  stoplossLabel: string;
   // NEW: "invalid-target" — the pattern matched on this date, but the CPR
   // level getTarget() reads off (e.g. todayCPR.r4) came back NaN/undefined
   // for this reconstruction, so there's no real price to grade the outcome
@@ -2122,6 +2326,8 @@ export async function backtestSymbolOnDate(
   if (!passesPatternFn(result, target.key)) return null; // didn't match the pattern on this date
 
   const targetLevel = target.getTarget(result);
+  const entryLevel = target.getEntry(result);
+  const stoplossLevel = target.getStoploss(result);
   const entryDayCandle = window.get(entryDateISO) ?? null;
   const nextDayCandle = window.get(dPlus1) ?? null;
 
@@ -2145,6 +2351,10 @@ export async function backtestSymbolOnDate(
       compressionRatio: result.compressionRatio,
       targetLevel,
       targetLabel: target.targetLabel,
+      entryLevel,
+      entryLabel: target.entryLabel,
+      stoplossLevel,
+      stoplossLabel: target.stoplossLabel,
       result: "invalid-target",
       hitDate: null,
       daysToHit: null,
@@ -2178,6 +2388,10 @@ export async function backtestSymbolOnDate(
     compressionRatio: result.compressionRatio,
     targetLevel,
     targetLabel: target.targetLabel,
+    entryLevel,
+    entryLabel: target.entryLabel,
+    stoplossLevel,
+    stoplossLabel: target.stoplossLabel,
     result: outcome,
     hitDate,
     daysToHit,
@@ -2262,6 +2476,15 @@ export async function pivotLevelBacktestSymbolOnDate(
   const bullish = definedTarget ? definedTarget.direction === "bullish" : true;
   const targetLevel = definedTarget ? definedTarget.getTarget(result) : result.todayCPR.r4;
   const targetLabel = definedTarget ? definedTarget.targetLabel : "U4 (today's R4)";
+  // Entry/Stoploss follow the same bullish/bearish rule as every View:
+  // bullish (R-level target) -> Entry = today's TC, Stoploss = today's S1;
+  // bearish (S-level target) -> Entry = today's BC, Stoploss = today's R1.
+  // The hardcoded U4/R4 fallback above is bullish, so its fallback
+  // Entry/Stoploss follow the same "bullish" rule.
+  const entryLevel = definedTarget ? definedTarget.getEntry(result) : result.todayCPR.tc;
+  const entryLabel = definedTarget ? definedTarget.entryLabel : "TC (today's TC)";
+  const stoplossLevel = definedTarget ? definedTarget.getStoploss(result) : result.todayCPR.s1;
+  const stoplossLabel = definedTarget ? definedTarget.stoplossLabel : "S1 (today's S1)";
   const entryDayCandle = window.get(entryDateISO) ?? null;
   const nextDayCandle = window.get(dPlus1) ?? null;
 
@@ -2281,6 +2504,10 @@ export async function pivotLevelBacktestSymbolOnDate(
       compressionRatio: result.compressionRatio,
       targetLevel,
       targetLabel,
+      entryLevel,
+      entryLabel,
+      stoplossLevel,
+      stoplossLabel,
       result: "invalid-target",
       hitDate: null,
       daysToHit: null,
@@ -2313,6 +2540,10 @@ export async function pivotLevelBacktestSymbolOnDate(
     compressionRatio: result.compressionRatio,
     targetLevel,
     targetLabel,
+    entryLevel,
+    entryLabel,
+    stoplossLevel,
+    stoplossLabel,
     result: outcome,
     hitDate,
     daysToHit,
