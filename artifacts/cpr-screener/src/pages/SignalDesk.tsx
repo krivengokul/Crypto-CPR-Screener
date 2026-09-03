@@ -151,25 +151,23 @@ export default function SignalDesk({
     }
   }, [activeView]);
 
-  // Compute counts for all sidebar views if not provided directly
-  const effectiveCounts = useMemo<Record<string, number>>(() => {
-    if (counts && Object.keys(counts).length > 0) return counts;
-    if (!results) return {};
-    const res: Record<string, number> = {};
-    for (const subList of Object.values(Views)) {
-      for (const sub of subList) {
-        if (res[sub.id] === undefined) {
-          res[sub.id] = results.filter((r) => passesPattern(r, sub.id)).length;
-        }
-      }
-    }
-    return res;
-  }, [counts, results]);
-
-  // Compute all sidebar views (subpatterns) with counts > 0, sorted descending
-  const viewPills = useMemo(() => {
+  // Single source of truth for turning a pool of CPRResultWithSource rows
+  // into `{id, label, count}` pills — every id/label in the tree, counted
+  // against whichever pool is passed in, zero-count ids dropped, sorted
+  // descending. Both pill lists below call this same function so there's
+  // exactly one place that defines "how a pool becomes pills" — no risk of
+  // the two lists' id/label enumeration drifting apart from each other.
+  //
+  // NOTE: this deliberately ignores the `counts` prop. `counts` is
+  // populated by the Live Screener's own onCounts effect, scoped to
+  // whichever tab (Binance/Delta/Combined) is active THERE — that's a
+  // different toggle than Signal Desk's own sourceFilter, and trusting it
+  // here is exactly what caused the Active Views strip to silently follow
+  // the wrong tab. Now that `results` (the full combined pool) is always
+  // available via the onResults wiring, there's no reason to prefer a
+  // second, externally-scoped source of the same numbers.
+  const buildPills = (pool: CPRResultWithSource[]) => {
     const pillMap = new Map<string, { id: string; label: string }>();
-
     for (const subList of Object.values(Views)) {
       for (const sub of subList) {
         if (!pillMap.has(sub.id)) {
@@ -177,18 +175,27 @@ export default function SignalDesk({
         }
       }
     }
-
     const list: { id: string; label: string; count: number }[] = [];
-
     for (const [id, item] of pillMap.entries()) {
-      const count = effectiveCounts[id] ?? 0;
-      if (count > 0) {
-        list.push({ id, label: item.label, count });
-      }
+      const count = pool.filter((r) => passesPattern(r, id)).length;
+      if (count > 0) list.push({ id, label: item.label, count });
     }
-
     return list.sort((a, b) => b.count - a.count);
-  }, [effectiveCounts]);
+  };
+
+  // Comprehensive pill set — ALWAYS both exchanges, independent of
+  // sourceFilter. Feeds activeViewSymbols, computeSignalLevels, and the
+  // auto-save-to-Journal effect below, all of which must stay complete
+  // regardless of which source tab happens to be on screen right now.
+  const viewPills = useMemo(() => buildPills(results ?? []), [results]);
+
+  // Source-scoped pill set — same function, filtered pool. Display only:
+  // this is what the "Active Views" strip actually renders, so it's the
+  // one that responds to the Binance/Delta/All toggle.
+  const displayViewPills = useMemo(() => {
+    if (sourceFilter === "all") return viewPills;
+    return buildPills((results ?? []).filter((r) => r.source === sourceFilter));
+  }, [results, sourceFilter, viewPills]);
 
   // ─────────────────────────────────────────────────────────────────────
   // SOURCE OF TRUTH for "does this symbol belong to an Active View" — the
@@ -460,8 +467,8 @@ export default function SignalDesk({
 
   // Automatically save ONLY qualified signals from Active Views directly to the Journal.
   // Candidates now come straight from activeViewSymbols — the same
-  // passesPattern()-against-every-pill computation ScreenerUtils/
-  // effectiveCounts uses to produce the sidebar's View counts — NOT from
+  // passesPattern()-against-every-pill computation buildPills() above uses
+  // to produce the sidebar's View counts — NOT from
   // SignalDesk's own rendered `signals` card list. That keeps Journal
   // membership tied exactly to "which symbols select into Active Views",
   // regardless of which single View happens to be on screen, which pool
@@ -617,12 +624,12 @@ R:R: ${item.riskReward}`;
       </div>
 
       {/* Available Views with Counts Strip (Wrapping chips from sidebar with count > 0) */}
-      {viewPills.length > 0 && (
+      {displayViewPills.length > 0 && (
         <div className="px-4 py-2.5 border-b border-[#1a2736] bg-[#09101a] shrink-0">
           <div className="flex items-center justify-between gap-2 mb-2">
             <div className="flex items-center gap-2">
               <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider font-mono">
-                Active Views ({viewPills.length})
+                Active Views ({displayViewPills.length})
               </span>
               {selectedViewPattern && (
                 <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-teal-500/20 text-teal-300 border border-teal-500/30">
@@ -636,7 +643,7 @@ R:R: ${item.riskReward}`;
           </div>
 
           <div className="flex flex-wrap gap-1.5 items-center max-h-36 overflow-y-auto">
-            {viewPills.map((pill) => {
+            {displayViewPills.map((pill) => {
               const isSelected = selectedViewPattern === pill.id;
 
               return (
