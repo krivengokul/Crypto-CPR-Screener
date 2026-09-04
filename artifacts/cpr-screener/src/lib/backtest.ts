@@ -1080,76 +1080,83 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
     // PIVOT_PATTERNS["B-B-BB-BB"] AND the raw L3U3 flag — see
     // ScreenerUtils.tsx.
     patterns: [
-      // MOVED: "B-B-BB-BB" to the very top of this list (above
-      // "HALB-SSLLGap") — was previously grouped with its B-B-BB-OB/
-      // B-B-OB-BB/B-B-OB-OB siblings further down (see the comment there).
-      // Base condition unchanged: this category's r.LevelsBelow condition
-      // AND PIVOT_PATTERNS["B-B-BB-BB"] (HHLL-B + RRHH-BB + SSLL-BB).
-      { key: "B-B-BB-BB", label: "B-B-BB-BB", subPatternKeys: [] },
-      // Six Patterns nested under "B-B-BB-BB" directly above (same array
-      // level — "B-B-BB-BB" has no `patterns` field of its own, so these
-      // sibling entries convey the nesting via naming, same convention as
-      // "A-B-C-C-EU4L4" under "A-B-C-C" or "CU3L3"/"CU4L4"/"EU4L4" under
-      // "inside-cpr"). Each base condition = PIVOT_PATTERNS["B-B-BB-BB"]
-      // AND its own raw target-window flag (see matchesPatternFlag in
+      // CHANGED: "B-B-BB-BB" is now a real parent Pattern (arrow) with its
+      // own `patterns` array — same shape as "C-B-BB-LB" nesting
+      // "C-B-BB-LB-CL3U2", or "E-E-AA-BB" nesting its five Subpatterns
+      // (see those blocks). Previously these five were flat siblings that
+      // conveyed the B-B-BB-BB-* nesting via naming only (no real
+      // parent/child relationship in the tree, so the dropdown/legend
+      // showed them all at the same indent level instead of under an
+      // expandable "B-B-BB-BB" arrow). Base condition unchanged: this
+      // category's r.LevelsBelow condition AND PIVOT_PATTERNS["B-B-BB-BB"]
+      // (HHLL-B + RRHH-BB + SSLL-BB) for the parent; each child adds its
+      // own raw target-window flag on top (see matchesPatternFlag in
       // ScreenerUtils.tsx, which has L4U4/L3U4/L4U3/L3U3/CL4U2 cases).
-      // L4U3, L3U3, and CL4U2 were RENAMED here (from the old bare
-      // "L4U3"/"L3U3"/"CL4U2" Patterns that used to sit further down this
-      // list, ungated by PIVOT_PATTERNS["B-B-BB-BB"]) to join this group,
-      // carrying their existing nested Views along with them. L4U4 and
-      // L3U4 have no specific target-graded sub-pattern yet — selecting
-      // one of those in the Backtest dropdown runs a symbol-list-only
-      // scan.
+      // L4U3, L3U3, and CL4U2 carry over the nested Views they already
+      // had ("11AM:pCPR1AHi-FApU4:1PM" and "PDH>pTC-U4:5AM"); L4U4 keeps
+      // its two nested Views; L3U4 has no specific target-graded
+      // sub-pattern yet — selecting it in the Backtest dropdown runs a
+      // symbol-list-only scan.
       {
-        key: "B-B-BB-BB-L4U4",
-        label: "B-B-BB-BB-L4U4",
-        // NEW: nests "B-B-BB-BB-L4U4-pLTC-U2" — parent's raw B-B-BB-BB-L4U4
-        // flag PLUS pHLGap-A PLUS "Prev PrevLow > today.tc" (see
-        // passesPattern in ScreenerUtils.tsx). Targets today's R2 (U2).
-        // Also nests "B-B-BB-BB-L4U4-pLAP:R4" (renamed from
-        // "2P:L4U4-pLAP:R4-2A", moved here from the now-removed
-        // "RHSLB-SSLLpGap" Pattern below) — parent's raw B-B-BB-BB-L4U4
-        // flag PLUS pHLGap-A PLUS "Prev PrevLow > today.pivot" PLUS
-        // SSGap + LLGap PLUS todayCPR.HLSwitch HL-B. Targets today's R4
-        // (U4).
-        subPatternKeys: ["B-B-BB-BB-L4U4-pLTC-U2", "B-B-BB-BB-L4U4-pLAP:R4"],
-      },
-      {
-        key: "B-B-BB-BB-L3U4",
-        label: "B-B-BB-BB-L3U4",
+        key: "B-B-BB-BB",
+        label: "B-B-BB-BB",
         subPatternKeys: [],
-      },
-      // RENAMED (was the bare "L4U3" Pattern further down, with its
-      // "11AM:pCPR1AHi-FApU4:1PM" View) into this "B-B-BB-BB-L4U3" slot,
-      // so it's now gated by PIVOT_PATTERNS["B-B-BB-BB"] AND the raw L4U3
-      // flag (see matchesPatternFlag in ScreenerUtils.tsx) instead of the
-      // raw L4U3 flag alone.
-      {
-        key: "B-B-BB-BB-L4U3",
-        label: "B-B-BB-BB-L4U3",
-        subPatternKeys: ["11AM:pCPR1AHi-FApU4:1PM"],
-      },
-      // RENAMED (was the bare "L3U3" Pattern further down, with its
-      // "PDH>pTC-U4:5AM" View) into this "B-B-BB-BB-L3U3" slot, so it's
-      // now gated by PIVOT_PATTERNS["B-B-BB-BB"] AND the raw L3U3 flag
-      // (see matchesPatternFlag in ScreenerUtils.tsx) instead of the raw
-      // L3U3 flag alone.
-      {
-        key: "B-B-BB-BB-L3U3",
-        label: "B-B-BB-BB-L3U3",
-        subPatternKeys: ["PDH>pTC-U4:5AM"],
-      },
-      // RENAMED (was the bare "CL4U2" Pattern further down) into this
-      // "B-B-BB-BB-CL4U2" slot, same convention as its L4U4/L3U4/L4U3/
-      // L3U3 B-B-BB-BB-* siblings above: base condition =
-      // PIVOT_PATTERNS["B-B-BB-BB"] AND the raw CL4U2 flag (see
-      // matchesPatternFlag in ScreenerUtils.tsx). No specific
-      // target-graded sub-pattern nested under it yet — selecting it in
-      // the Backtest dropdown runs a symbol-list-only category scan.
-      {
-        key: "B-B-BB-BB-CL4U2",
-        label: "B-B-BB-BB-CL4U2",
-        subPatternKeys: [],
+        patterns: [
+          {
+            key: "B-B-BB-BB-L4U4",
+            label: "B-B-BB-BB-L4U4",
+            // NEW: nests "B-B-BB-BB-L4U4-pLTC-U2" — parent's raw
+            // B-B-BB-BB-L4U4 flag PLUS pHLGap-A PLUS "Prev PrevLow >
+            // today.tc" (see passesPattern in ScreenerUtils.tsx). Targets
+            // today's R2 (U2). Also nests "B-B-BB-BB-L4U4-pLAP:R4"
+            // (renamed from "2P:L4U4-pLAP:R4-2A", moved here from the
+            // now-removed "RHSLB-SSLLpGap" Pattern below) — parent's raw
+            // B-B-BB-BB-L4U4 flag PLUS pHLGap-A PLUS "Prev PrevLow >
+            // today.pivot" PLUS SSGap + LLGap PLUS todayCPR.HLSwitch HL-B.
+            // Targets today's R4 (U4).
+            subPatternKeys: ["B-B-BB-BB-L4U4-pLTC-U2", "B-B-BB-BB-L4U4-pLAP:R4"],
+          },
+          {
+            key: "B-B-BB-BB-L3U4",
+            label: "B-B-BB-BB-L3U4",
+            subPatternKeys: [],
+          },
+          // RENAMED (was the bare "L4U3" Pattern that used to sit
+          // further down this category's own list, with its
+          // "11AM:pCPR1AHi-FApU4:1PM" View) — now gated by
+          // PIVOT_PATTERNS["B-B-BB-BB"] AND the raw L4U3 flag (see
+          // matchesPatternFlag in ScreenerUtils.tsx) instead of the raw
+          // L4U3 flag alone.
+          {
+            key: "B-B-BB-BB-L4U3",
+            label: "B-B-BB-BB-L4U3",
+            subPatternKeys: ["11AM:pCPR1AHi-FApU4:1PM"],
+          },
+          // RENAMED (was the bare "L3U3" Pattern that used to sit
+          // further down this category's own list, with its
+          // "PDH>pTC-U4:5AM" View) — now gated by
+          // PIVOT_PATTERNS["B-B-BB-BB"] AND the raw L3U3 flag (see
+          // matchesPatternFlag in ScreenerUtils.tsx) instead of the raw
+          // L3U3 flag alone.
+          {
+            key: "B-B-BB-BB-L3U3",
+            label: "B-B-BB-BB-L3U3",
+            subPatternKeys: ["PDH>pTC-U4:5AM"],
+          },
+          // RENAMED (was the bare "CL4U2" Pattern that used to sit
+          // further down this category's own list) — same convention as
+          // its L4U4/L3U4/L4U3/L3U3 siblings above: base condition =
+          // PIVOT_PATTERNS["B-B-BB-BB"] AND the raw CL4U2 flag (see
+          // matchesPatternFlag in ScreenerUtils.tsx). No specific
+          // target-graded sub-pattern nested under it yet — selecting it
+          // in the Backtest dropdown runs a symbol-list-only category
+          // scan.
+          {
+            key: "B-B-BB-BB-CL4U2",
+            label: "B-B-BB-BB-CL4U2",
+            subPatternKeys: [],
+          },
+        ],
       },
       {
         key: "HALB-SSLLGap",
