@@ -343,7 +343,7 @@ export default function SignalsJournal() {
           </div>
         ) : (
           <div className="border border-[#1e2d3d] rounded-xl overflow-hidden bg-[#0d1422]">
-            <table className="w-full text-left text-xs border-collapse font-sans">
+            <table className="w-full text-left text-xs border-collapse font-sans select-text">
               <thead className="bg-[#121b2b] text-slate-400 border-b border-[#1e2d3d] font-mono uppercase text-[10px]">
                 <tr>
                   <th className="py-2.5 px-3">Date / Time</th>
