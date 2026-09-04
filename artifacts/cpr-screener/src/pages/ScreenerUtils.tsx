@@ -1296,9 +1296,11 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // (PIVOT_PATTERNS["C-B-BB-LB"] = RRSS-C + HHLL-B + RRHH-BB + SSLL-LB,
     // AND the raw CL3U2 flag — reused via matchesPatternFlag, same shape
     // as "8A:pLAPpPAH:R4-5P" above) PLUS RRSSGapCategory RRGap +
-    // PDHPDLGapCategory HHGap + prevCPR.HLSwitch HL-A with hlGapWinner
-    // "prev" (pHLGap-A) + todayCPR.HLSwitch HL-B. Bullish, entry at
-    // today's TC, targets today's own R4 (U4), stoploss today's S1.
+    // PDHPDLGapCategory HHGap + prevCPR.HLSwitch HL-A (pHL-A) +
+    // todayCPR.HLSwitch HL-B + today's prevHigh above prev day's pivot
+    // + today's R1 above prev day's TC. (hlGapWinner removed from this
+    // View's filter.) Bullish, entry at today's TC, targets today's own
+    // R4 (U4), stoploss today's S1.
     case "C-B-BB-LB-CL3U2-RRHHGap:R4":
       return (
         r.compressed &&
@@ -1306,8 +1308,9 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.RRSSGapCategory === "RRGap" &&
         r.PDHPDLGapCategory === "HHGap" &&
         r.prevCPR.HLSwitch === "HL-A" &&
-        r.hlGapWinner === "prev" &&
-        r.todayCPR.HLSwitch === "HL-B"
+        r.todayCPR.HLSwitch === "HL-B" &&
+        r.todayCPR.prevHigh > r.prevCPR.pivot &&
+        r.todayCPR.r1 > r.prevCPR.tc
       );
     case  "LAT-PU12CU23":
       return r.overlapHigher && r.PU12CU23 && r.PL12CL23 && r.todayCPR.prevHigh > r.prevCPR.prevHigh;
