@@ -428,6 +428,24 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     getStoploss: (r) => r.todayCPR.s1,
     stoplossLabel: "S1 (today's S1)",
   },
+  // NEW: "B-B-BB-BB-EL4U4-SSLLGap:S4" — View nested under "LEVEL BELOW"
+  // (levelsbelow) category's new "B-B-BB-BB-EL4U4" Pattern (see
+  // BACKTEST_CATEGORIES below). Base condition: the parent's raw
+  // "B-B-BB-BB-EL4U4" flag AND SSGap + LLGap AND prevCPR.HLSwitch
+  // HL-B (pHL-B) AND todayCPR.HLSwitch HL-A with hlGapWinner "today"
+  // (HLGap-A) — see ScreenerUtils.tsx. Bearish, entry BC (today's BC),
+  // targets today's own S4 (L4), stoploss R1 (today's R1).
+  {
+    key: "B-B-BB-BB-EL4U4-SSLLGap:S4",
+    label: "B-B-BB-BB-EL4U4-SSLLGap:S4",
+    direction: "bearish",
+    targetLabel: "L4 (today's S4)",
+    getTarget: (r) => r.todayCPR.s4,
+    getEntry: (r) => r.todayCPR.bc,
+    entryLabel: "BC (today's BC)",
+    getStoploss: (r) => r.todayCPR.r1,
+    stoplossLabel: "R1 (today's R1)",
+  },
   // NEW: "B-B-BB-BB-L4U4-pLAP:R4" — View nested under "LEVEL BELOW"
   // (levelsbelow) category's "B-B-BB-BB-L4U4" Pattern (renamed from
   // "2P:L4U4-pLAP:R4-2A", which nested under the now-removed
@@ -1134,6 +1152,15 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
             // today.pivot" PLUS SSGap + LLGap PLUS todayCPR.HLSwitch HL-B.
             // Targets today's R4 (U4).
             subPatternKeys: ["B-B-BB-BB-L4U4-pLTC-U2", "B-B-BB-BB-L4U4-pLAP:R4"],
+          },
+          {
+            key: "B-B-BB-BB-EL4U4",
+            label: "B-B-BB-BB-EL4U4",
+            // NEW: nests "B-B-BB-BB-EL4U4-SSLLGap:S4" — parent's raw
+            // B-B-BB-BB-EL4U4 flag PLUS SSGap + LLGap PLUS pHL-B PLUS
+            // HLGap-A (today HL-A, hlGapWinner "today"). Bearish, targets
+            // today's S4 (L4), entry BC, stoploss R1.
+            subPatternKeys: ["B-B-BB-BB-EL4U4-SSLLGap:S4"],
           },
           {
             key: "B-B-BB-BB-L3U4",

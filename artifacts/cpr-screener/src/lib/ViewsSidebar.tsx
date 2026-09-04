@@ -261,6 +261,19 @@ export const Views: Record<string, SubPattern[]> = {
       activeText:  "#4ade80",              // green-400 text
       activeBg:    "rgba(34, 197, 94, 0.14)",
     },
+    // NEW: B-B-BB-BB-EL4U4-SSLLGap:S4 — View nested under the new
+    // "B-B-BB-BB-EL4U4" Pattern arrow (LEVEL BELOW). Condition:
+    // parent's raw B-B-BB-BB-EL4U4 flag + SSGap + LLGap + pHL-B +
+    // HLGap-A (today HL-A with hlGapWinner "today"). Bearish, entry BC
+    // (today's BC), targets today's own S4 (L4), stoploss R1. Rose color
+    // family to visually mark it bearish.
+    {
+      id: "B-B-BB-BB-EL4U4-SSLLGap:S4",
+      label: "B-B-BB-BB-EL4U4-SSLLGap:S4",
+      activeColor: "#fb7185",              // rose-400 border
+      activeText:  "#fda4af",              // rose-300 text
+      activeBg:    "rgba(244, 63, 94, 0.14)", // rose-500 tint
+    },
   ],
   "compressed": [
     // RENAMED from "SMi-L1pU1>-APU4:11PM": all previous conditions removed.

@@ -1114,6 +1114,22 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return r.LevelsBelow && r.L4U3 && r.HHLLCategory === "HHLL-B" &&
         r.prevCPR.HLSwitch === "HL-B" && r.todayCPR.HLSwitch === "HL-A" &&
         r.todayCPR.r1 > r.prevCPR.bc;
+    // NEW: "B-B-BB-BB-EL4U4-SSLLGap:S4" — View nested under the new
+    // "B-B-BB-BB-EL4U4" Pattern arrow in "LEVEL BELOW".
+    // Condition: the parent's raw "B-B-BB-BB-EL4U4" flag
+    // (PIVOT_PATTERNS["B-B-BB-BB"] AND EL4U4) PLUS SSGap + LLGap PLUS
+    // prevCPR.HLSwitch HL-B (pHL-B) PLUS todayCPR.HLSwitch HL-A with
+    // hlGapWinner "today" (HLGap-A). Bearish, entry BC (today's BC),
+    // targets today's own S4 (L4), stoploss R1 (today's R1).
+    case "B-B-BB-BB-EL4U4-SSLLGap:S4":
+      return (
+        matchesPatternFlag(r, "B-B-BB-BB-EL4U4") &&
+        r.RRSSGapCategory === "SSGap" &&
+        r.PDHPDLGapCategory === "LLGap" &&
+        r.prevCPR.HLSwitch === "HL-B" &&
+        r.todayCPR.HLSwitch === "HL-A" &&
+        r.hlGapWinner === "today"
+      );
     // NEW: "B-B-BB-BB-L4U4-pLAP:R4" — View nested under the
     // "B-B-BB-BB-L4U4" Pattern arrow in "LEVEL BELOW" (renamed from
     // "2P:L4U4-pLAP:R4-2A", which nested under the now-removed
@@ -1505,6 +1521,10 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     // "B-B-BB-BB-L4U4" Pattern arrow (also under "LEVEL BELOW"). Bullish,
     // targets today's own R4 (U4) → "up".
     { key: "B-B-BB-BB-L4U4-pLAP:R4", direction: "up" },
+    // NEW: "B-B-BB-BB-EL4U4-SSLLGap:S4" — View nested under the
+    // "B-B-BB-BB-EL4U4" Pattern arrow (also under "LEVEL BELOW").
+    // Bearish, targets today's own S4 (L4) → "down".
+    { key: "B-B-BB-BB-EL4U4-SSLLGap:S4", direction: "down" },
   ],
   "levelsabove": [
     { key: "A-A-AA-AA-EU3L4-GapB", direction: "up" },
@@ -1741,6 +1761,10 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     // flag from cpr.ts — same shape as "B-B-BB-BB-L4U4" below.
     case "C-B-BB-LB-CL3U2": return PIVOT_PATTERNS["C-B-BB-LB"](r) && r.CL3U2;
     case "B-B-BB-BB-L4U4": return PIVOT_PATTERNS["B-B-BB-BB"](r) && r.L4U4;
+    // NEW: B-B-BB-BB-EL4U4 — Pattern nested under "B-B-BB-BB",
+    // same shape as its L4U4 sibling above but gated by the raw EL4U4
+    // flag from cpr.ts. Nests the "B-B-BB-BB-EL4U4-SSLLGap:S4" View.
+    case "B-B-BB-BB-EL4U4": return PIVOT_PATTERNS["B-B-BB-BB"](r) && r.EL4U4;
     case "B-B-BB-BB-L3U4": return PIVOT_PATTERNS["B-B-BB-BB"](r) && r.L3U4;
     case "B-B-BB-BB-L4U3": return PIVOT_PATTERNS["B-B-BB-BB"](r) && r.L4U3;
     case "B-B-BB-BB-L3U3": return PIVOT_PATTERNS["B-B-BB-BB"](r) && r.L3U3;
