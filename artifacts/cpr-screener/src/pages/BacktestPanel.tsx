@@ -318,6 +318,10 @@ export default function BacktestPanel() {
   const [changeSortDir, setChangeSortDir] = useState<"asc" | "desc" | null>(null);
   const [resultChangeSortDir, setResultChangeSortDir] = useState<"asc" | "desc" | null>(null);
   const [error, setError] = useState("");
+  // Search box for the results tables (category scan + graded backtest) —
+  // mirrors the SignalsJournal search bar. Filters by symbol or entry date
+  // (the two fields present on both CategoryScanRow and BacktestRow).
+  const [resultSearch, setResultSearch] = useState("");
 
   // FIX (stale-results bug): the "Target: ... Pattern <label>" header and
   // the dropdown's trigger label are derived live from `selectedKey`, but
@@ -335,6 +339,7 @@ export default function BacktestPanel() {
     setRows([]);
     setCategoryRows([]);
     setError("");
+    setResultSearch("");
   }, [selectedKey]);
 
   const [dateMode, setDateMode] = useState<"single" | "range">("single");
@@ -542,6 +547,7 @@ export default function BacktestPanel() {
     setCategoryRows([]);
       setChangeSortDir(null);
       setResultChangeSortDir(null);
+      setResultSearch("");
     setProgress({ done: 0, total: 0, symbol: "" });
     setDateProgress({ current: 0, total: 0, date: "" });
     try {
@@ -653,6 +659,26 @@ export default function BacktestPanel() {
       setStatus("error");
     }
   };
+
+  // Search-filtered views of the two result sets. Kept separate from
+  // categoryRows/rows (rather than filtering in place) so the summary
+  // counts above the table (symbols matched / pass / fail / hit rate)
+  // keep reporting the full run, not just what's currently visible.
+  const filteredCategoryRows = useMemo(() => {
+    const q = resultSearch.trim().toLowerCase();
+    if (!q) return categoryRows;
+    return categoryRows.filter(
+      (r) => r.symbol.toLowerCase().includes(q) || r.entryDate.toLowerCase().includes(q)
+    );
+  }, [categoryRows, resultSearch]);
+
+  const filteredRows = useMemo(() => {
+    const q = resultSearch.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter(
+      (r) => r.symbol.toLowerCase().includes(q) || r.entryDate.toLowerCase().includes(q)
+    );
+  }, [rows, resultSearch]);
 
   const passCount = rows.filter((r) => r.result === "pass").length;
   const failCount = rows.filter((r) => r.result === "fail").length;
@@ -996,11 +1022,28 @@ export default function BacktestPanel() {
             </span>
           </div>
 
+          {categoryRows.length > 0 && (
+            <div className="relative max-w-xs mb-3">
+              <Search className="w-3.5 h-3.5 text-muted-foreground absolute left-2.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search symbol or entry date…"
+                value={resultSearch}
+                onChange={(e) => setResultSearch(e.target.value)}
+                className="w-full bg-background border border-border rounded-md pl-8 pr-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+            </div>
+          )}
+
           {categoryRows.length === 0 ? (
             <div className="text-xs text-muted-foreground text-center py-8">
               {dateMode === "range"
                 ? `No symbols matched ${symbolListLabel} between ${fromDate} and ${toDate}.`
                 : `No symbols matched ${symbolListLabel} on ${entryDate}.`}
+            </div>
+          ) : filteredCategoryRows.length === 0 ? (
+            <div className="text-xs text-muted-foreground text-center py-8">
+              No results match &quot;{resultSearch}&quot;.
             </div>
           ) : (
             <div className="overflow-x-auto rounded-lg border border-border">
@@ -1048,8 +1091,8 @@ export default function BacktestPanel() {
                 </thead>
                 <tbody className="divide-y divide-border">
                   {(changeSortDir === null
-                    ? categoryRows
-                    : [...categoryRows].sort((a, b) => {
+                    ? filteredCategoryRows
+                    : [...filteredCategoryRows].sort((a, b) => {
                         const av = a.changePct;
                         const bv = b.changePct;
                         const aNull = av === null || av === undefined;
@@ -1168,11 +1211,28 @@ export default function BacktestPanel() {
             )}
           </div>
 
+          {rows.length > 0 && (
+            <div className="relative max-w-xs mb-3">
+              <Search className="w-3.5 h-3.5 text-muted-foreground absolute left-2.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search symbol or entry date…"
+                value={resultSearch}
+                onChange={(e) => setResultSearch(e.target.value)}
+                className="w-full bg-background border border-border rounded-md pl-8 pr-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+            </div>
+          )}
+
           {rows.length === 0 ? (
             <div className="text-xs text-muted-foreground text-center py-8">
               {dateMode === "range"
                 ? `No symbols matched this pattern between ${fromDate} and ${toDate}.`
                 : `No symbols matched this pattern on ${entryDate}.`}
+            </div>
+          ) : filteredRows.length === 0 ? (
+            <div className="text-xs text-muted-foreground text-center py-8">
+              No results match &quot;{resultSearch}&quot;.
             </div>
           ) : (
             <div className="overflow-x-auto rounded-lg border border-border">
@@ -1226,8 +1286,8 @@ export default function BacktestPanel() {
                 </thead>
                 <tbody className="divide-y divide-border">
                   {(resultChangeSortDir === null
-                    ? rows
-                    : [...rows].sort((a, b) => {
+                    ? filteredRows
+                    : [...filteredRows].sort((a, b) => {
                         const av = a.changePct;
                         const bv = b.changePct;
                         const aNull = av === null || av === undefined;
