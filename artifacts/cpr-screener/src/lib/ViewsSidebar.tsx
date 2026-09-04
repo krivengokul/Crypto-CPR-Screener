@@ -245,16 +245,18 @@ export const Views: Record<string, SubPattern[]> = {
       activeText:  "#4ade80",              // green-400 text
       activeBg:    "rgba(34, 197, 94, 0.14)",
     },
-    // NEW: 2P:L4U4-pLAP:R4-2A — View nested under the "RHSLB-SSLLpGap"
-    // Pattern arrow (renamed from "2P:RHSLB-SSLLpGap:2A" — see
-    // matchesPatternFlag in ScreenerUtils.tsx). LEVEL BELOW + the shared
-    // RHSLB-SSLLpGap base + the raw L4U4 flag (today's R4 inside prev's
-    // R3/R4 AND prev's S4 inside today's S3/S4) + prev day's own PDL above
-    // today's Pivot. Bullish, entry ~2PM, targets today's own R4 (U4) by
-    // ~2AM. Same green color family as its bullish LEVEL BELOW siblings.
+    // NEW: B-B-BB-BB-L4U4-pLAP:R4 — View nested under the
+    // "B-B-BB-BB-L4U4" Pattern arrow (renamed from "2P:L4U4-pLAP:R4-2A",
+    // which nested under the now-removed "RHSLB-SSLLpGap" Pattern — see
+    // matchesPatternFlag in ScreenerUtils.tsx). LEVEL BELOW + the parent's
+    // raw B-B-BB-BB-L4U4 flag + prevCPR.HLSwitch HL-A with hlGapWinner
+    // "prev" + prev day's own PDL above today's Pivot + SSGap + LLGap +
+    // todayCPR.HLSwitch HL-B. Bullish, entry ~2PM, targets today's own R4
+    // (U4) by ~2AM. Same green color family as its bullish LEVEL BELOW
+    // siblings.
     {
-      id: "2P:L4U4-pLAP:R4-2A",
-      label: "2P:L4U4-pLAP:R4-2A",
+      id: "B-B-BB-BB-L4U4-pLAP:R4",
+      label: "B-B-BB-BB-L4U4-pLAP:R4",
       activeColor: "#22c55e",              // green-500 border
       activeText:  "#4ade80",              // green-400 text
       activeBg:    "rgba(34, 197, 94, 0.14)",

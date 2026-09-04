@@ -428,15 +428,18 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     getStoploss: (r) => r.todayCPR.s1,
     stoplossLabel: "S1 (today's S1)",
   },
-  // NEW: "2P:L4U4-pLAP:R4-2A" — View nested under "LEVEL BELOW"
-  // (levelsbelow) category's "RHSLB-SSLLpGap" Pattern (renamed from
-  // "2P:RHSLB-SSLLpGap:2A" — see BACKTEST_CATEGORIES below). Base
-  // condition: the shared "RHSLB-SSLLpGap" flag AND the raw L4U4 flag AND
-  // prev day's own PDL above today's Pivot — see ScreenerUtils.tsx.
-  // Bullish, entry ~2PM, targets today's own R4 (U4) by ~2AM.
+  // NEW: "B-B-BB-BB-L4U4-pLAP:R4" — View nested under "LEVEL BELOW"
+  // (levelsbelow) category's "B-B-BB-BB-L4U4" Pattern (renamed from
+  // "2P:L4U4-pLAP:R4-2A", which nested under the now-removed
+  // "RHSLB-SSLLpGap" Pattern — see BACKTEST_CATEGORIES below). Base
+  // condition: the parent's raw "B-B-BB-BB-L4U4" flag AND prevCPR.HLSwitch
+  // HL-A with hlGapWinner "prev" AND prev day's own PDL above today's
+  // Pivot AND SSGap + LLGap AND todayCPR.HLSwitch HL-B — see
+  // ScreenerUtils.tsx. Bullish, entry ~2PM, targets today's own R4 (U4)
+  // by ~2AM.
   {
-    key: "2P:L4U4-pLAP:R4-2A",
-    label: "2P:L4U4-pLAP:R4-2A",
+    key: "B-B-BB-BB-L4U4-pLAP:R4",
+    label: "B-B-BB-BB-L4U4-pLAP:R4",
     direction: "bullish",
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
@@ -1098,7 +1101,13 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
         // NEW: nests "B-B-BB-BB-L4U4-pLTC-U2" — parent's raw B-B-BB-BB-L4U4
         // flag PLUS pHLGap-A PLUS "Prev PrevLow > today.tc" (see
         // passesPattern in ScreenerUtils.tsx). Targets today's R2 (U2).
-        subPatternKeys: ["B-B-BB-BB-L4U4-pLTC-U2"],
+        // Also nests "B-B-BB-BB-L4U4-pLAP:R4" (renamed from
+        // "2P:L4U4-pLAP:R4-2A", moved here from the now-removed
+        // "RHSLB-SSLLpGap" Pattern below) — parent's raw B-B-BB-BB-L4U4
+        // flag PLUS pHLGap-A PLUS "Prev PrevLow > today.pivot" PLUS
+        // SSGap + LLGap PLUS todayCPR.HLSwitch HL-B. Targets today's R4
+        // (U4).
+        subPatternKeys: ["B-B-BB-BB-L4U4-pLTC-U2", "B-B-BB-BB-L4U4-pLAP:R4"],
       },
       {
         key: "B-B-BB-BB-L3U4",
@@ -1148,18 +1157,6 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
         key: "CL4U2",
         label: "CL4U2",
         subPatternKeys: [],
-      },
-      // RENAMED from "2P:RHSLB-SSLLpGap:2A" to "RHSLB-SSLLpGap" — Pattern
-      // (arrow), same shape as its CL4U3/L3U3/L4U3/CL4U2 siblings above:
-      // base condition = this category's LevelsBelow condition AND the raw
-      // "RHSLB-SSLLpGap" flag (see matchesPatternFlag in
-      // ScreenerUtils.tsx). Nests "2P:L4U4-pLAP:R4-2A" (exposed in
-      // Backtest/legend/screener/left-nav, unlike its symbol-list-only
-      // CL4U2 sibling).
-      {
-        key: "RHSLB-SSLLpGap",
-        label: "RHSLB-SSLLpGap",
-        subPatternKeys: ["2P:L4U4-pLAP:R4-2A"],
       },
       // RRSSB-{Level}{Gap} — the LevelsBelow mirror of levelsabove's
       // RRSSA-* siblings: base condition = this category's

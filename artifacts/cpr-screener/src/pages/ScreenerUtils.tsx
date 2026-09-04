@@ -1114,17 +1114,26 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return r.LevelsBelow && r.L4U3 && r.HHLLCategory === "HHLL-B" &&
         r.prevCPR.HLSwitch === "HL-B" && r.todayCPR.HLSwitch === "HL-A" &&
         r.todayCPR.r1 > r.prevCPR.bc;
-    // NEW: "2P:L4U4-pLAP:R4-2A" — View nested under the "RHSLB-SSLLpGap"
-    // Pattern arrow in "LEVEL BELOW" (renamed from "2P:RHSLB-SSLLpGap:2A").
-    // Condition: the shared "RHSLB-SSLLpGap" base (see matchesPatternFlag)
-    // PLUS the raw L4U4 flag (today's R4 inside prev's R3/R4 AND prev's S4
-    // inside today's S3/S4) PLUS prev day's own PDL above today's Pivot.
-    // Bullish, entry ~2PM, targets today's own R4 (U4) by ~2AM.
-    case "2P:L4U4-pLAP:R4-2A":
+    // NEW: "B-B-BB-BB-L4U4-pLAP:R4" — View nested under the
+    // "B-B-BB-BB-L4U4" Pattern arrow in "LEVEL BELOW" (renamed from
+    // "2P:L4U4-pLAP:R4-2A", which nested under the now-removed
+    // "RHSLB-SSLLpGap" Pattern). Condition: the parent's raw
+    // "B-B-BB-BB-L4U4" flag (PIVOT_PATTERNS["B-B-BB-BB"] AND L4U4) PLUS
+    // prevCPR.HLSwitch HL-A with hlGapWinner "prev" (pHLGap-A) PLUS prev
+    // day's own PDL above today's Pivot PLUS SSGap + LLGap PLUS
+    // todayCPR.HLSwitch HL-B — same overall condition set as the old
+    // "RHSLB-SSLLpGap"-based version, just regrouped under
+    // B-B-BB-BB-L4U4 instead. Bullish, entry ~2PM, targets today's own R4
+    // (U4) by ~2AM.
+    case "B-B-BB-BB-L4U4-pLAP:R4":
       return (
-        matchesPatternFlag(r, "RHSLB-SSLLpGap") &&
-        r.L4U4 &&
-        r.prevCPR.prevLow > r.todayCPR.pivot
+        matchesPatternFlag(r, "B-B-BB-BB-L4U4") &&
+        r.prevCPR.HLSwitch === "HL-A" &&
+        r.hlGapWinner === "prev" &&
+        r.prevCPR.prevLow > r.todayCPR.pivot &&
+        r.RRSSGapCategory === "SSGap" &&
+        r.PDHPDLGapCategory === "LLGap" &&
+        r.todayCPR.HLSwitch === "HL-B"
       );
     // NEW: "B-B-BB-BB-L4U4-pLTC-U2" — View nested under the
     // "B-B-BB-BB-L4U4" Pattern (arrow) in "LEVEL BELOW" (see
@@ -1492,10 +1501,10 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     // BELOW" in backtest.ts. Bullish (Compressed, same LevelsBelow base
     // condition) → "up".
     { key: "CL4U2", direction: "up" },
-    // NEW: "2P:L4U4-pLAP:R4-2A" — View nested under the "RHSLB-SSLLpGap"
-    // Pattern arrow (also under "LEVEL BELOW"). Bullish, targets today's
-    // own R4 (U4) → "up".
-    { key: "2P:L4U4-pLAP:R4-2A", direction: "up" },
+    // NEW: "B-B-BB-BB-L4U4-pLAP:R4" — View nested under the
+    // "B-B-BB-BB-L4U4" Pattern arrow (also under "LEVEL BELOW"). Bullish,
+    // targets today's own R4 (U4) → "up".
+    { key: "B-B-BB-BB-L4U4-pLAP:R4", direction: "up" },
   ],
   "levelsabove": [
     { key: "A-A-AA-AA-EU3L4-GapB", direction: "up" },
@@ -1896,28 +1905,6 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
         r.prevCPR.HLSwitch === "HL-A" &&
         r.hlGapWinner === "prev" &&
         r.todayCPR.HLSwitch === "HL-A"
-      );
-    // RENAMED from "2P:RHSLB-SSLLpGap:2A" to "RHSLB-SSLLpGap" — Pattern raw
-    // flag for the Backtest dropdown's Pattern-level (arrow) selection
-    // nested under "LEVEL BELOW", same shape as its RHLB-RRHHpGap sibling
-    // above (the parent "levelsbelow" category's own passesPattern
-    // ("levelsbelow") already ANDs in r.LevelsBelow, so it's
-    // intentionally omitted here). Condition: RRSS-B + HHLL-B +
-    // RRHH-BB + SSLL-BB + SSGap + LLGap + prevCPR.HLSwitch HL-A with
-    // hlGapWinner "prev" (pHLGap-A) + todayCPR.HLSwitch HL-B. Now nests
-    // "2P:L4U4-pLAP:R4-2A" (see BacktestPanel's "LEVEL BELOW" →
-    // "RHSLB-SSLLpGap" nesting in backtest.ts).
-    case "RHSLB-SSLLpGap":
-      return (
-        r.SSRRCategory === "RRSS-B" &&
-        r.HHLLCategory === "HHLL-B" &&
-        r.RRHHCategory === "RRHH-BB" &&
-        r.SSLLCategory === "SSLL-BB" &&
-        r.RRSSGapCategory === "SSGap" &&
-        r.PDHPDLGapCategory === "LLGap" &&
-        r.prevCPR.HLSwitch === "HL-A" &&
-        r.hlGapWinner === "prev" &&
-        r.todayCPR.HLSwitch === "HL-B"
       );
     // RRSSA-*/RRSSB-*/RRSSC-* (all nested under levelsabove/
     // levelsbelow/compressed) are now defined exactly once, in
