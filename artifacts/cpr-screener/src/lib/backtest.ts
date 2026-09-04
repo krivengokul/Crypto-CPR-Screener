@@ -987,19 +987,42 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       // Their predicates are the structural A-A-AA-AA condition AND the
       // branch's raw CPR flag; target-graded Views remain nested beneath the
       // relevant branch.
-      { key: "A-A-AA-AA", label: "A-A-AA-AA", subPatternKeys: [] },
-      { key: "A-A-AA-AA-U3L3", label: "A-A-AA-AA-U3L3", subPatternKeys: [] },
-      { key: "A-A-AA-AA-U4L3", label: "A-A-AA-AA-U4L3", subPatternKeys: [] },
-      { key: "A-A-AA-AA-EU2L4", label: "A-A-AA-AA-EU2L4", subPatternKeys: ["A-A-AA-AA-EU2L4-ApR2"] },
-      { key: "A-A-AA-AA-U2L4", label: "A-A-AA-AA-U2L4", subPatternKeys: ["A-A-AA-AA-S1pPDH-U3"] },
-      { key: "A-A-AA-AA-U3L4", label: "A-A-AA-AA-U3L4", subPatternKeys: ["A-A-AA-AA-U3L4-pGapB"] },
-      // NEW: A-A-AA-AA-EU3L4 — structural A-A-AA-AA + raw EU3L4 flag.
-      // Nests the renamed former 6PM View, whose leaf adds HLGap-B.
-      { key: "A-A-AA-AA-EU3L4", label: "A-A-AA-AA-EU3L4", subPatternKeys: ["A-A-AA-AA-EU3L4-GapB"] },
+      // CHANGED: "A-A-AA-AA" is now a real parent Pattern (arrow) with its
+      // own `patterns` array — same shape as "C-B-BB-LB"/"E-E-AA-BB"/
+      // "B-B-BB-BB" elsewhere, and matching the OTHER "A-A-AA-AA" entry
+      // nested under "R1AbovePR4" further below (which already used this
+      // real-nesting shape). Previously these six diagnostic branches were
+      // flat siblings that conveyed the A-A-AA-AA-* nesting via naming
+      // only. Base condition unchanged: this category's r.LevelsAbove
+      // condition AND PIVOT_PATTERNS["A-A-AA-AA"] for the parent; each
+      // child adds its own raw CPR flag on top (see matchesPatternFlag in
+      // ScreenerUtils.tsx). orderedEntries below was simplified to just
+      // this one "A-A-AA-AA" entry, since pushPattern() already recurses
+      // into a matched Pattern's own `patterns` array and pushes its
+      // children in array order — the six separate orderedEntries lines
+      // that used to point at them directly are no longer needed (and
+      // would now be no-ops, since they're not top-level entries in this
+      // category's own `patterns` array anymore).
+      {
+        key: "A-A-AA-AA",
+        label: "A-A-AA-AA",
+        subPatternKeys: [],
+        patterns: [
+          { key: "A-A-AA-AA-U3L3", label: "A-A-AA-AA-U3L3", subPatternKeys: [] },
+          { key: "A-A-AA-AA-U4L3", label: "A-A-AA-AA-U4L3", subPatternKeys: [] },
+          { key: "A-A-AA-AA-EU2L4", label: "A-A-AA-AA-EU2L4", subPatternKeys: ["A-A-AA-AA-EU2L4-ApR2"] },
+          { key: "A-A-AA-AA-U2L4", label: "A-A-AA-AA-U2L4", subPatternKeys: ["A-A-AA-AA-S1pPDH-U3"] },
+          { key: "A-A-AA-AA-U3L4", label: "A-A-AA-AA-U3L4", subPatternKeys: ["A-A-AA-AA-U3L4-pGapB"] },
+          // A-A-AA-AA-EU3L4 — structural A-A-AA-AA + raw EU3L4 flag.
+          // Nests the renamed former 6PM View, whose leaf adds HLGap-B.
+          { key: "A-A-AA-AA-EU3L4", label: "A-A-AA-AA-EU3L4", subPatternKeys: ["A-A-AA-AA-EU3L4-GapB"] },
+        ],
+      },
       { key: "A-A-AA-OA", label: "A-A-AA-OA", subPatternKeys: [] },
       { key: "A-A-OA-AA", label: "A-A-OA-AA", subPatternKeys: [] },
       { key: "A-A-OA-OA", label: "A-A-OA-OA", subPatternKeys: [] },
       // RRSSA-C{RRHH} — 3 Patterns (arrows), REPLACES the old
+
       // RRSSA-CHS/RRSSA-CLS pair. Base condition = this category's
       // r.LevelsAbove condition AND the raw RRSSA-C* flag (see
       // matchesPatternFlag in ScreenerUtils.tsx). HHLL-C's gap is always
@@ -1053,15 +1076,11 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
     // Keep the complete A-A-AA-AA diagnostic branch at the top of this
     // category's dropdown tree. Direct Views and other Patterns are appended
     // in their existing order below these entries by buildBacktestOptions().
-    orderedEntries: [
-      { kind: "pattern", key: "A-A-AA-AA" },
-      { kind: "pattern", key: "A-A-AA-AA-U3L3" },
-      { kind: "pattern", key: "A-A-AA-AA-U4L3" },
-      { kind: "pattern", key: "A-A-AA-AA-EU2L4" },
-      { kind: "pattern", key: "A-A-AA-AA-U2L4" },
-      { kind: "pattern", key: "A-A-AA-AA-U3L4" },
-      { kind: "pattern", key: "A-A-AA-AA-EU3L4" },
-    ],
+    // SIMPLIFIED: now that "A-A-AA-AA" is a real nested parent (see its
+    // `patterns` array above), pushPattern() automatically recurses into
+    // its six children in order — so a single entry here reproduces the
+    // same dropdown order the six individual entries used to.
+    orderedEntries: [{ kind: "pattern", key: "A-A-AA-AA" }],
   },
   // NEW: "LEVEL BELOW" left-nav section (top of the pattern tree in
   // ViewsSidebar.tsx) — nests the "HALB-SSLLGap" Pattern (REPLACES
