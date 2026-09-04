@@ -1497,10 +1497,10 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     // per-row green direction dot even though the Views button itself
     // filtered correctly. Bullish → "up".
     { key: "11AM:pCPR1AHi-FApU4:1PM", direction: "up" },
-    // NEW: "CL4U2" Pattern (arrow), nested under "LEVELs
-    // BELOW" in backtest.ts. Bullish (Compressed, same LevelsBelow base
-    // condition) → "up".
-    { key: "CL4U2", direction: "up" },
+    // RENAMED (was "CL4U2") to match its new key under "B-B-BB-BB" in
+    // backtest.ts. Bullish (Compressed, same LevelsBelow base condition)
+    // → "up".
+    { key: "B-B-BB-BB-CL4U2", direction: "up" },
     // NEW: "B-B-BB-BB-L4U4-pLAP:R4" — View nested under the
     // "B-B-BB-BB-L4U4" Pattern arrow (also under "LEVEL BELOW"). Bullish,
     // targets today's own R4 (U4) → "up".
@@ -1744,13 +1744,11 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     case "B-B-BB-BB-L3U4": return PIVOT_PATTERNS["B-B-BB-BB"](r) && r.L3U4;
     case "B-B-BB-BB-L4U3": return PIVOT_PATTERNS["B-B-BB-BB"](r) && r.L4U3;
     case "B-B-BB-BB-L3U3": return PIVOT_PATTERNS["B-B-BB-BB"](r) && r.L3U3;
-    // NEW: L3U3 — Pattern raw flag (see BacktestPanel's
-    // "LEVEL BELOW" → "L3U3" nesting in backtest.ts).
-    case "L3U3": return r.L3U3;
-    // NEW: L4U3 — Pattern raw flag, same shape as its
-    // L3U3 sibling (see BacktestPanel's "LEVEL BELOW" → "L4U3"
-    // nesting in backtest.ts).
-    case "L4U3": return r.L4U3;
+    // RENAMED (was the bare "CL4U2" case below) to sit alongside its
+    // L4U4/L3U4/L4U3/L3U3 B-B-BB-BB-* siblings above — same shape:
+    // PIVOT_PATTERNS["B-B-BB-BB"] AND the raw CL4U2 flag (see backtest.ts's
+    // "LEVEL BELOW" → "B-B-BB-BB" nesting).
+    case "B-B-BB-BB-CL4U2": return PIVOT_PATTERNS["B-B-BB-BB"](r) && r.CL4U2;
     case "L4U4": return r.L4U4;
     // NEW: pRRHHLLA — Pattern compound flag for Overlap
     // Below's "9AM:pRRHHLLA-U4:9PM" family: today's R1/PDH both below
@@ -1851,9 +1849,8 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     case "CU2L2": return r.CU2L2;
     // NEW: CL2U1 — independent, section-agnostic Pattern flag (see cpr.ts).
     case "CL2U1": return r.CL2U1;
-    // NEW: CL4U2 — Pattern raw flag (see BacktestPanel's
-    // "LEVEL BELOW" nesting in backtest.ts).
-    case "CL4U2": return r.CL4U2;
+    // (bare "CL4U2" case removed — backtest.ts's "LEVEL BELOW" nesting now
+    // uses "B-B-BB-BB-CL4U2" above, gated by PIVOT_PATTERNS["B-B-BB-BB"])
     case "CL4U4": return r.CL4U4;
     case "EU2L3": return r.EU2L3;
     // NEW: CL2UT — independent, section-agnostic Pattern flag (see cpr.ts).
