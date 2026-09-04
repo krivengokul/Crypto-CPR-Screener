@@ -1320,7 +1320,8 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
     // EUPL3 flag (reused via matchesPatternFlag, same shape as
     // "9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A" below) PLUS RRSSGapCategory
     // RRGap + PDHPDLGapCategory HHGap + prevCPR.HLSwitch HL-A (pHL-A) +
-    // todayCPR.HLSwitch HL-B with hlGapWinner "today" (HLGap-B).
+    // todayCPR.HLSwitch HL-B with hlGapWinner "today" (HLGap-B) +
+    // extra filter: previous day's R1 must be above today's S1.
     // Bullish, entry at today's TC, targets today's own R4 (U4),
     // stoploss today's S1.
     case "A-A-AA-AA-EUPL3-RRHHGap:R4":
@@ -1331,7 +1332,8 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.PDHPDLGapCategory === "HHGap" &&
         r.prevCPR.HLSwitch === "HL-A" &&
         r.todayCPR.HLSwitch === "HL-B" &&
-        r.hlGapWinner === "today"
+        r.hlGapWinner === "today" &&
+        r.prevCPR.r1 > r.todayCPR.s1
       );
     case  "LAT-PU12CU23":
       return r.overlapHigher && r.PU12CU23 && r.PL12CL23 && r.todayCPR.prevHigh > r.prevCPR.prevHigh;
