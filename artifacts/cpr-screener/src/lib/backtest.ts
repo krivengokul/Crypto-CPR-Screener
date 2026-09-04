@@ -33,6 +33,23 @@ export interface BacktestTargetDef {
 }
 
 export const BACKTEST_TARGETS: BacktestTargetDef[] = [
+  // NEW: A-A-AA-AA-EUPL3-RRHHGap:R4 — View nested under the
+  // "A-A-AA-AA-EUPL3" Subpattern (itself under the "A-A-AA-AA" Pattern
+  // in "U1 > pU4" / R1AbovePR4). Condition = R1AbovePR4 base + A-A-AA-AA
+  // + the raw EUPL3 flag PLUS RRGap + HHGap + pHL-A + HLGap-B — see
+  // passesPattern in ScreenerUtils.tsx. Bullish, targets today's own
+  // R4 / U4, entry at today's TC, stoploss today's S1.
+  {
+    key: "A-A-AA-AA-EUPL3-RRHHGap:R4",
+    label: "A-A-AA-AA-EUPL3-RRHHGap:R4",
+    direction: "bullish",
+    targetLabel: "U4 (today's R4)",
+    getTarget: (r) => r.todayCPR.r4,
+    getEntry: (r) => r.todayCPR.tc,
+    entryLabel: "TC (today's TC)",
+    getStoploss: (r) => r.todayCPR.s1,
+    stoplossLabel: "S1 (today's S1)",
+  },
   // NEW: C-B-BB-LB-CL3U2-RRHHGap:R4 — View nested under the
   // "C-B-BB-LB-CL3U2" Pattern (itself under the "C-B-BB-LB" leaf Pattern
   // in "COMPRESSED"). Condition = that Pattern's base (C-B-BB-LB + the raw
@@ -1582,6 +1599,17 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
               "9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A",
               "6A:A-A-AA-AA-EUTL3-S1ATCpE-pL4:4A",
             ],
+          },
+          // NEW: "A-A-AA-AA-EUPL3" Subpattern — structural A-A-AA-AA
+          // (parent Pattern's own condition) crossed with the raw EUPL3
+          // flag, same naming/nesting convention as the
+          // "A-A-AA-AA-EUTL3" sibling above. Nests the bullish
+          // "A-A-AA-AA-EUPL3-RRHHGap:R4" View (RRGap + HHGap + pHL-A +
+          // HLGap-B; entry TC, target today's R4, stoploss today's S1).
+          {
+            key: "A-A-AA-AA-EUPL3",
+            label: "A-A-AA-AA-EUPL3",
+            subPatternKeys: ["A-A-AA-AA-EUPL3-RRHHGap:R4"],
           },
         ],
       },

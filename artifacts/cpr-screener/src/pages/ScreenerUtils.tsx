@@ -1312,6 +1312,27 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.todayCPR.prevHigh > r.prevCPR.pivot &&
         r.todayCPR.r1 > r.prevCPR.tc
       );
+    // NEW: "A-A-AA-AA-EUPL3-RRHHGap:R4" — View nested under the
+    // "A-A-AA-AA-EUPL3" Subpattern (itself under the "A-A-AA-AA" Pattern
+    // in "U1 > pU4" / R1AbovePR4 — see BACKTEST_CATEGORIES in
+    // backtest.ts). Condition = the parent R1AbovePR4 base (today's R1
+    // above prev day's R4) + the structural A-A-AA-AA check AND the raw
+    // EUPL3 flag (reused via matchesPatternFlag, same shape as
+    // "9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A" below) PLUS RRSSGapCategory
+    // RRGap + PDHPDLGapCategory HHGap + prevCPR.HLSwitch HL-A (pHL-A) +
+    // todayCPR.HLSwitch HL-B with hlGapWinner "today" (HLGap-B).
+    // Bullish, entry at today's TC, targets today's own R4 (U4),
+    // stoploss today's S1.
+    case "A-A-AA-AA-EUPL3-RRHHGap:R4":
+      return (
+        r.R1AbovePR4 &&
+        matchesPatternFlag(r, "A-A-AA-AA-EUPL3") &&
+        r.RRSSGapCategory === "RRGap" &&
+        r.PDHPDLGapCategory === "HHGap" &&
+        r.prevCPR.HLSwitch === "HL-A" &&
+        r.todayCPR.HLSwitch === "HL-B" &&
+        r.hlGapWinner === "today"
+      );
     case  "LAT-PU12CU23":
       return r.overlapHigher && r.PU12CU23 && r.PL12CL23 && r.todayCPR.prevHigh > r.prevCPR.prevHigh;
     case "overlapping-lower":
@@ -1574,6 +1595,10 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     { key: "2PM:pPDHLA-SRA-U4:7PM", direction: "up" },
   ],
   "R1AbovePR4": [
+    // NEW: "A-A-AA-AA-EUPL3-RRHHGap:R4" (nested under the new
+    // "A-A-AA-AA-EUPL3" Subpattern, under the "A-A-AA-AA" Pattern).
+    // Bullish → "up".
+    { key: "A-A-AA-AA-EUPL3-RRHHGap:R4", direction: "up" },
     { key: "9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A", direction: "up" },
     // FIX: "8AM:APHS1A-FAU4:4AM" (nested under the same "EU1L3" Pattern
     //  as "9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A" above, formerly
@@ -1984,6 +2009,13 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     // passesPattern above).
     case "A-A-AA-AA-EUTL3":
       return PIVOT_PATTERNS["A-A-AA-AA"](r) && r.EUTL3;
+    // NEW: "A-A-AA-AA-EUPL3" Subpattern, nested under the same
+    // "A-A-AA-AA" Pattern in "U1 > pU4" (R1AbovePR4) as its EUTL3
+    // sibling above. Base condition = structural A-A-AA-AA AND the raw
+    // EUPL3 flag. Nests the "A-A-AA-AA-EUPL3-RRHHGap:R4" View (see
+    // passesPattern above).
+    case "A-A-AA-AA-EUPL3":
+      return PIVOT_PATTERNS["A-A-AA-AA"](r) && r.EUPL3;
     case "A-A-AA-AA-U3L4-pGapB":
       return (
         PIVOT_PATTERNS["A-A-AA-AA"](r) &&

@@ -386,6 +386,19 @@ export const Views: Record<string, SubPattern[]> = {
     },
   ],
   "R1AbovePR4": [
+    // NEW: "A-A-AA-AA-EUPL3-RRHHGap:R4" — View under the
+    // "A-A-AA-AA-EUPL3" Subpattern (under the "A-A-AA-AA" Pattern) in
+    // "U1 > pU4". Condition is A-A-AA-AA + EUPL3 + RRGap + HHGap +
+    // pHL-A + HLGap-B (see ScreenerUtils.tsx / cpr.ts). Bullish, entry
+    // at today's TC, targets today's own R4 (U4), stoploss today's S1.
+    // Green color family, matching its bullish siblings below.
+    {
+      id: "A-A-AA-AA-EUPL3-RRHHGap:R4",
+      label: "A-A-AA-AA-EUPL3-RRHHGap:R4",
+      activeColor: "#22c55e",              // green-500 border
+      activeText:  "#4ade80",              // green-400 text
+      activeBg:    "rgba(34, 197, 94, 0.14)",
+    },
     { id: "9AM:APHS1A-FAU4:4AM", label: "9AM:APHS1A-FAU4:4AM",
       activeColor: "#22c55e", activeText: "#4ade80", activeBg: "rgba(34,197,94,0.18)" },
     // NEW: 6AM:pX-APHS1A-pL4:4AM — same condition as 9AM:APHS1A-FAU4:4AM plus
