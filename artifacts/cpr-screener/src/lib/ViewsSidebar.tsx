@@ -313,6 +313,19 @@ export const Views: Record<string, SubPattern[]> = {
       activeText:  "#fda4af",              // rose-300 text
       activeBg:    "rgba(244, 63, 94, 0.14)", // rose-500 tint
     },
+    // NEW: "C-B-BB-LB-CL3U2-RRHHGap:R4" — View under the
+    // "C-B-BB-LB-CL3U2" Pattern in "COMPRESSED". Condition is
+    // C-B-BB-LB + CL3U2 + RRGap + HHGap + pHLGap-A + HL-B (see
+    // ScreenerUtils.tsx / cpr.ts). Bullish, entry at today's TC, targets
+    // today's own R4 (U4), stoploss today's S1. Green color family,
+    // matching its bullish 6A:HLC-SSLL:R4-6P sibling.
+    {
+      id: "C-B-BB-LB-CL3U2-RRHHGap:R4",
+      label: "C-B-BB-LB-CL3U2-RRHHGap:R4",
+      activeColor: "#22c55e",              // green-500 border
+      activeText:  "#4ade80",              // green-400 text
+      activeBg:    "rgba(34, 197, 94, 0.14)",
+    },
   ],
   // "expanded" — "EXPANDED": RRSS-E only, mirroring "compressed" above.
   // "6A:SLE-RRHH:R2-6A" — expanded + RRGap + RRHH-AA + SSLL-E + HHLL-A +

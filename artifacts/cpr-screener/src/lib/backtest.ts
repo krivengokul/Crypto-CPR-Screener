@@ -33,6 +33,23 @@ export interface BacktestTargetDef {
 }
 
 export const BACKTEST_TARGETS: BacktestTargetDef[] = [
+  // NEW: C-B-BB-LB-CL3U2-RRHHGap:R4 — View nested under the
+  // "C-B-BB-LB-CL3U2" Pattern (itself under the "C-B-BB-LB" leaf Pattern
+  // in "COMPRESSED"). Condition = that Pattern's base (C-B-BB-LB + the raw
+  // CL3U2 flag) PLUS RRGap + HHGap + pHLGap-A + today's HL-B — see
+  // passesPattern in ScreenerUtils.tsx. Bullish, targets today's own
+  // R4 / U4, entry at today's TC, stoploss today's S1.
+  {
+    key: "C-B-BB-LB-CL3U2-RRHHGap:R4",
+    label: "C-B-BB-LB-CL3U2-RRHHGap:R4",
+    direction: "bullish",
+    targetLabel: "U4 (today's R4)",
+    getTarget: (r) => r.todayCPR.r4,
+    getEntry: (r) => r.todayCPR.tc,
+    entryLabel: "TC (today's TC)",
+    getStoploss: (r) => r.todayCPR.s1,
+    stoplossLabel: "S1 (today's S1)",
+  },
   // NEW: C-B-BB-LB-CL3U2 — nested as a Pattern under the "C-B-BB-LB" leaf
   // Pattern (itself under the "compressed" category). Condition =
   // PIVOT_PATTERNS["C-B-BB-LB"] (RRSS-C + HHLL-B + RRHH-BB + SSLL-LB) AND
@@ -1415,14 +1432,15 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       // — same shape as "E-E-AA-BB" nesting its five Subpatterns above.
       // Combines this Pattern's base condition (PIVOT_PATTERNS["C-B-BB-LB"])
       // with the raw CL3U2 flag — see matchesPatternFlag's
-      // "C-B-BB-LB-CL3U2" case in ScreenerUtils.tsx. No Views defined
-      // under it yet, so it's currently a symbol-list-only scan.
+      // "C-B-BB-LB-CL3U2" case in ScreenerUtils.tsx. Nests the bullish
+      // "C-B-BB-LB-CL3U2-RRHHGap:R4" View (RRGap + HHGap + pHLGap-A +
+      // today's HL-B; entry TC, target today's R4, stoploss today's S1).
       {
         key: "C-B-BB-LB",
         label: "C-B-BB-LB",
         subPatternKeys: [],
         patterns: [
-          { key: "C-B-BB-LB-CL3U2", label: "C-B-BB-LB-CL3U2", subPatternKeys: [] },
+          { key: "C-B-BB-LB-CL3U2", label: "C-B-BB-LB-CL3U2", subPatternKeys: ["C-B-BB-LB-CL3U2-RRHHGap:R4"] },
         ],
       },
       { key: "C-B-OB-LB", label: "C-B-OB-LB", subPatternKeys: [] },

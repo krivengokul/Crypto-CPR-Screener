@@ -516,6 +516,11 @@ export interface CPRResult {
   hlGapWinner: "today" | "prev" | "none";
 }
 
+// NOTE: PDHPDLGapCategory ("HHGap") and RRSSGapCategory ("RRGap") below,
+// together with prevCPR.HLSwitch "HL-A" + hlGapWinner "prev" (pHLGap-A),
+// todayCPR.HLSwitch "HL-B" and the CL3U2 flag, form the badge set of the
+// "C-B-BB-LB-CL3U2-RRHHGap:R4" View (see ScreenerUtils.tsx /
+// backtest.ts). No behavior change here — the View reuses these values.
 export type PDHPDLGapCategory = "HHGap" | "LLGap" | "HHLL=";
 export type RRSSGapCategory = "RRGap" | "SSGap" | "SSRR-Q";
 export type HLSwitch = "HL-A" | "HL-B" | "HL=";
