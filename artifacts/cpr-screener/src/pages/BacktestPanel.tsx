@@ -32,7 +32,6 @@ import {
   renderTodayPatternBadges,
   renderPrevPatternBadge,
   renderPatternColumnBadges,
-  renderLevelColumnRestBadges,
   renderPivotPatternBadge,
 } from "./ScreenerTableRow";
 import { SRLadderRow, toSRLadderData } from "./SRLadderPanel";
@@ -1116,9 +1115,6 @@ export default function BacktestPanel() {
                     <th className="px-2 py-2 w-20 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Symbol
                     </th>
-                    <th className="px-2 py-3 w-32 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      LEVEL
-                    </th>
                     <th className="pl-8 pr-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       GAP
                     </th>
@@ -1200,9 +1196,6 @@ export default function BacktestPanel() {
                             </div>
                           </div>
                         </td>
-                        <td className="px-2 py-3 w-32">
-                          {renderLevelColumnRestBadges(r.raw)}
-                        </td>
                         <td className="pl-8 pr-4 py-3 whitespace-nowrap text-xs font-medium">
                           {renderGapColumnBadges(r.raw)}
                         </td>
@@ -1247,7 +1240,7 @@ export default function BacktestPanel() {
       {/* Pattern backtest results — symbol list + Target/Result/Hit Date.
           CHANGED: also shown for isPatternOnly ("-R4" Pattern selections),
           which now grade identically to a View backtest — same columns
-          (Symbol/LEVEL/GAP/Pattern/Pivot Size/Entry Date/Result/Hit
+          (Symbol/GAP/Pattern/Pivot Size/Entry Date/Result/Hit
           Date/Change). */}
       {status === "done" && (isViewOnly || isPatternOnly) && (
         <>
@@ -1318,9 +1311,6 @@ export default function BacktestPanel() {
                   <tr className="border-b border-border bg-muted/30">
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Symbol
-                    </th>
-                    <th className="px-2 py-3 w-32 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      LEVEL
                     </th>
                     <th className="pl-8 pr-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       GAP
@@ -1440,9 +1430,6 @@ export default function BacktestPanel() {
                             })()}
                           </div>
                         </div>
-                      </td>
-                      <td className="px-2 py-3 w-32">
-                        {renderLevelColumnRestBadges(r.raw)}
                       </td>
                       <td className="pl-8 pr-4 py-3 whitespace-nowrap text-xs font-medium">
                         {renderGapColumnBadges(r.raw)}
