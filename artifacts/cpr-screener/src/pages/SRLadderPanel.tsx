@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import type { CPRLevels, CPRResult } from "@/lib/cpr";
 import { fmt } from "./ScreenerUtils";
-import { SRLadderDiffPanel } from "./SRLadderDiff";
+import { SRLadderDiffPanel, type LevelCheckCondition } from "./SRLadderDiff";
 
 /**
  * Shared S/R Ladder building blocks.
@@ -418,6 +418,7 @@ export function SRLadderPanel({
   pDay1PatternBadge,
   pivotPatternBadge,
   showLevelCheck = false,
+  levelCheckConditions,
   viewBaselinePanel,
 }: {
   r: SRLadderData;
@@ -437,6 +438,14 @@ export function SRLadderPanel({
    * surface it.
    */
   showLevelCheck?: boolean;
+  /**
+   * The current View's 13 Level Check conditions (BACKTEST_TARGETS'
+   * levelCheckDefs), passed straight through to SRLadderDiffPanel. Omit
+   * to fall back to the generic sorted-neighbor check — see
+   * compareSRLadders in SRLadderDiff.tsx. No effect unless showLevelCheck
+   * is also true.
+   */
+  levelCheckConditions?: LevelCheckCondition[];
   /**
    * BacktestPanel-only: a pre-built <ViewBaselineLadderPanel /> (or any
    * ReactNode) rendered after Level Check, at the very end of the row.
@@ -458,7 +467,9 @@ export function SRLadderPanel({
         {r.ppCPR && (
           <SRLadder cpr={r.ppCPR} currentPrice={r.ppClose} label="PDay-1 S/R" badge={pDay1PatternBadge} pricePlain />
         )}
-        {showLevelCheck && <SRLadderDiffPanel prevCPR={r.prevCPR} todayCPR={r.todayCPR} />}
+        {showLevelCheck && (
+          <SRLadderDiffPanel prevCPR={r.prevCPR} todayCPR={r.todayCPR} conditions={levelCheckConditions} />
+        )}
         {viewBaselinePanel}
       </div>
     </div>
@@ -478,6 +489,7 @@ export function SRLadderRow({
   pDay1PatternBadge,
   pivotPatternBadge,
   showLevelCheck = false,
+  levelCheckConditions,
   viewBaselinePanel,
 }: {
   r: SRLadderData;
@@ -493,6 +505,8 @@ export function SRLadderRow({
   pivotPatternBadge?: ReactNode;
   /** Show the "Level Check" section, rendered after PDay-1 S/R. Defaults to false — pass true only from BacktestPanel. See SRLadderPanel for details. */
   showLevelCheck?: boolean;
+  /** The current View's 13 Level Check conditions. See SRLadderPanel for details. */
+  levelCheckConditions?: LevelCheckCondition[];
   /** BacktestPanel-only "Vs. View Pass Baseline" panel, rendered after Level Check. See SRLadderPanel for details. */
   viewBaselinePanel?: ReactNode;
 }) {
@@ -506,6 +520,7 @@ export function SRLadderRow({
           pDay1PatternBadge={pDay1PatternBadge}
           pivotPatternBadge={pivotPatternBadge}
           showLevelCheck={showLevelCheck}
+          levelCheckConditions={levelCheckConditions}
           viewBaselinePanel={viewBaselinePanel}
         />
       </td>

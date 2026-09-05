@@ -410,6 +410,13 @@ export default function BacktestPanel() {
     ? BACKTEST_TARGETS.find((t) => t.key === activePatternInfo.sub.key)
     : undefined;
   const activeCategory = isCategory ? BACKTEST_CATEGORIES.find((c) => c.key === selectedKey) : undefined;
+  // This View's Level Check conditions (13 lines), for the graded results
+  // table below — isViewOnly and isPatternOnly are mutually exclusive, so
+  // exactly one of activeTarget/activePatternTarget is ever set here.
+  // Undefined for either (a category, or a View with no levelCheckDefs
+  // yet) falls back to the generic sorted-neighbor check everywhere this
+  // is used, same as before this field existed.
+  const activeLevelCheckDefs = (activeTarget ?? activePatternTarget)?.levelCheckDefs;
 
   const symbolListLabel = isCategory
     ? activeCategory?.label
@@ -707,11 +714,13 @@ export default function BacktestPanel() {
   // selectedKey change and every run()). This is what keeps the
   // full-match-vs-mismatch comparison below from ever mixing symbols
   // across different Views, whose "pass" conditions aren't comparable.
+  // activeLevelCheckDefs is that same View's 13 Level Check conditions
+  // (undefined falls back to the generic sorted-neighbor check).
   const ladderByRow = useMemo(() => {
     const map = new Map<BacktestRow, ReturnType<typeof getLadderMatchSummary>>();
-    rows.forEach((r) => map.set(r, getLadderMatchSummary(r.prevCPR, r.todayCPR)));
+    rows.forEach((r) => map.set(r, getLadderMatchSummary(r.prevCPR, r.todayCPR, activeLevelCheckDefs)));
     return map;
-  }, [rows]);
+  }, [rows, activeLevelCheckDefs]);
 
   const gradedRows = rows.filter((r) => r.result === "pass" || r.result === "fail");
   const fullMatchGraded = gradedRows.filter((r) => ladderByRow.get(r)?.fullMatch);
@@ -731,13 +740,15 @@ export default function BacktestPanel() {
   // symbols could be mostly Matching. Every Fail row is then measured
   // against ITS OWN View's baseline, never another View's — `rows` is
   // reset on every selectedKey change / run(), same guarantee ladderByRow
-  // already relies on above.
+  // already relies on above. Built from the same activeLevelCheckDefs as
+  // ladderByRow, so the baseline and Level Check agree on what "Matching"
+  // means for this View.
   const passBaseline = useMemo(() => {
     const passRows = rows
       .filter((r) => r.result === "pass")
       .map((r) => ({ prevCPR: r.prevCPR, todayCPR: r.todayCPR }));
-    return buildViewLadderBaseline(passRows);
-  }, [rows]);
+    return buildViewLadderBaseline(passRows, activeLevelCheckDefs);
+  }, [rows, activeLevelCheckDefs]);
 
   // Scored against passBaseline. Meaningful for Fail rows; Pass rows are
   // what BUILT the baseline, so scoring them against it is circular and
@@ -747,10 +758,13 @@ export default function BacktestPanel() {
     const map = new Map<BacktestRow, FailVsBaselineResult>();
     if (!passBaseline) return map;
     rows.forEach((r) =>
-      map.set(r, scoreAgainstViewBaseline({ prevCPR: r.prevCPR, todayCPR: r.todayCPR }, passBaseline))
+      map.set(
+        r,
+        scoreAgainstViewBaseline({ prevCPR: r.prevCPR, todayCPR: r.todayCPR }, passBaseline, activeLevelCheckDefs)
+      )
     );
     return map;
-  }, [rows, passBaseline]);
+  }, [rows, passBaseline, activeLevelCheckDefs]);
 
   const ChartLink = ({ symbol, source }: { symbol: string; source: BacktestSource }) =>
     hasKnownChartMapping(symbol, source) ? (
@@ -1581,6 +1595,7 @@ export default function BacktestPanel() {
                         prevPatternBadge={renderPrevPatternBadge(r.raw)}
                         pivotPatternBadge={renderPivotPatternBadge(r.raw)}
                         showLevelCheck
+                        levelCheckConditions={activeLevelCheckDefs}
                         // View-baseline breakdown — only meaningful for a Fail row
                         // measured against its own View's Pass rows (see
                         // baselineByRow above). Pass rows built the baseline, so

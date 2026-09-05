@@ -15,6 +15,29 @@ export type BacktestSource = "binance" | "delta";
  * day's CPR level". Add more entries here once this is validated; each one
  * needs its target level worked out from that pattern's legend/condition.
  */
+/**
+ * A single View's Level Check rule for one of the 13 ADK ladder lines
+ * (R4, R3, R2, PH, R1, TC, Pivot, BC, PL, S1, S2, S3, S4).
+ *
+ * `subject` picks which day's value at `key` is being tested: "today" is
+ * the common case — does today's own level sit inside a band drawn from
+ * yesterday's levels. "previous" runs the check the other way — did
+ * YESTERDAY's level get absorbed into a band drawn from TODAY's new
+ * structure; this is for a View's target/breakout rungs, where the
+ * meaningful question is whether the old resistance/support zone is now
+ * inside the new range, not whether today's own rung held its old spot.
+ * Either way, `bandKeys` is always read from the day `subject` is NOT.
+ */
+export type LevelCheckKey =
+  | "r4" | "r3" | "r2" | "prevHigh" | "r1" | "tc" | "pivot" | "bc"
+  | "prevLow" | "s1" | "s2" | "s3" | "s4";
+
+export interface LevelCheckCondition {
+  key: LevelCheckKey;
+  subject: "today" | "previous";
+  bandKeys: [LevelCheckKey, LevelCheckKey];
+}
+
 export interface BacktestTargetDef {
   key: string;          // matches passesPattern's pattern-key string exactly
   label: string;        // display name
@@ -30,6 +53,12 @@ export interface BacktestTargetDef {
   entryLabel: string;    // e.g. "TC (today's TC)"
   getStoploss: (r: CPRResult) => number;
   stoplossLabel: string; // e.g. "S1 (today's S1)"
+  // NEW: Level Check's 13 line-by-line conditions for this View. Omit to
+  // fall back to the generic sorted-neighbor check (compareSRLadders in
+  // SRLadderDiff.tsx) — same behavior as before this field existed. Only
+  // fill this in once you've worked out the View's actual expected
+  // per-line relationship; don't guess a plausible-looking default.
+  levelCheckDefs?: LevelCheckCondition[];
 }
 
 export const BACKTEST_TARGETS: BacktestTargetDef[] = [
@@ -49,6 +78,30 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     entryLabel: "TC (today's TC)",
     getStoploss: (r) => r.todayCPR.s1,
     stoplossLabel: "S1 (today's S1)",
+    // Level Check — this View's 13 line conditions (verified against a
+    // real Pass case: all 13 matching). Top two rungs (R4, R3) check the
+    // OTHER way around — did yesterday's R4/R3 get absorbed into today's
+    // new R3-R2 band — since this View's target IS today's own R4, so
+    // "today's R4 vs its own prev neighbor" isn't the meaningful test.
+    // PH and the TC/Pivot/BC trio each check against a shared two-rung
+    // band (prev R2-R1, prev PH-TC) rather than an individual one-rung
+    // neighbor, reflecting this View's characteristic multi-rung upward
+    // shift. S1 downward matches the generic one-rung-neighbor check.
+    levelCheckDefs: [
+      { key: "r4", subject: "previous", bandKeys: ["r3", "r2"] },
+      { key: "r3", subject: "previous", bandKeys: ["r3", "r2"] },
+      { key: "r2", subject: "today", bandKeys: ["r3", "r2"] },
+      { key: "r1", subject: "today", bandKeys: ["r2", "r1"] },
+      { key: "prevHigh", subject: "today", bandKeys: ["r2", "r1"] },
+      { key: "tc", subject: "today", bandKeys: ["prevHigh", "tc"] },
+      { key: "pivot", subject: "today", bandKeys: ["prevHigh", "tc"] },
+      { key: "bc", subject: "today", bandKeys: ["prevHigh", "tc"] },
+      { key: "s1", subject: "today", bandKeys: ["bc", "s1"] },
+      { key: "prevLow", subject: "today", bandKeys: ["s1", "prevLow"] },
+      { key: "s2", subject: "today", bandKeys: ["prevLow", "s2"] },
+      { key: "s3", subject: "today", bandKeys: ["s2", "s3"] },
+      { key: "s4", subject: "today", bandKeys: ["s3", "s4"] },
+    ],
   },
   // NEW: A-A-AA-AA-EUPL3-RRHHGap:R4 — View nested under the
   // "A-A-AA-AA-EUPL3" Subpattern (itself under the "A-A-AA-AA" Pattern
