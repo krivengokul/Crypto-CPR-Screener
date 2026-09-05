@@ -18,6 +18,10 @@ export interface SRLadderData {
   ppCPR?: CPRLevels;
   /** Live/entry-day price. Omit to render the ladder without the price row. */
   currentPrice?: number;
+  /** Previous-day close price — shown as the "Price" row in the PDay S/R ladder. */
+  prevClose?: number;
+  /** PDay-1 close price — shown as the "Price" row in the PDay-1 S/R ladder. */
+  ppClose?: number;
   r4Distance?: number;
   s4Distance?: number;
 }
@@ -29,13 +33,17 @@ export function toSRLadderData(
     prevCPR: CPRLevels;
     ppCPR?: CPRLevels;
   },
-  currentPriceOverride?: number
+  currentPriceOverride?: number,
+  prevCloseOverride?: number,
+  ppCloseOverride?: number
 ): SRLadderData {
   return {
     todayCPR: r.todayCPR,
     prevCPR: r.prevCPR,
     ppCPR: r.ppCPR,
     currentPrice: currentPriceOverride ?? (r as { currentPrice?: number }).currentPrice,
+    prevClose: prevCloseOverride ?? (r as { prevClose?: number }).prevClose,
+    ppClose: ppCloseOverride ?? (r as { ppClose?: number }).ppClose,
     r4Distance: (r as { r4Distance?: number }).r4Distance,
     s4Distance: (r as { s4Distance?: number }).s4Distance,
   };
@@ -384,6 +392,10 @@ function CPRLevelChart({
  * Today S/R (and PDay-1 S/R if available). This order keeps each day's
  * ladder close to its own lines in the chart so the overlapping level
  * values are easier to read. Reused by Screener and BacktestPanel.
+ *
+ * The "Price" row inside each day-specific ladder shows that day's own
+ * closing price: previous-day close for PDay S/R, PDay-1 close for
+ * PDay-1 S/R, and the live/entry-day price for Today S/R.
  */
 export function SRLadderPanel({
   r,
@@ -405,13 +417,13 @@ export function SRLadderPanel({
   return (
     <div className="flex w-full min-w-0 flex-col gap-3">
       <div className="flex flex-wrap items-start gap-3 border-b border-border/50 pb-3">
-        <SRLadder cpr={r.prevCPR} currentPrice={r.currentPrice} label="PDay S/R" badge={prevPatternBadge} />
+        <SRLadder cpr={r.prevCPR} currentPrice={r.prevClose} label="PDay S/R" badge={prevPatternBadge} />
         <div className="min-w-[440px] flex-1">
           <CPRLevelChart prevCPR={r.prevCPR} todayCPR={r.todayCPR} pivotPatternBadge={pivotPatternBadge} />
         </div>
         <SRLadder cpr={r.todayCPR} currentPrice={r.currentPrice} label="Today S/R" badge={todayPatternBadge} />
         {r.ppCPR && (
-          <SRLadder cpr={r.ppCPR} currentPrice={r.currentPrice} label="PDay-1 S/R" badge={pDay1PatternBadge} />
+          <SRLadder cpr={r.ppCPR} currentPrice={r.ppClose} label="PDay-1 S/R" badge={pDay1PatternBadge} />
         )}
       </div>
     </div>
