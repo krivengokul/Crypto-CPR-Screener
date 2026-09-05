@@ -36,13 +36,7 @@ import {
   renderPivotPatternBadge,
 } from "./ScreenerTableRow";
 import { SRLadderRow, toSRLadderData } from "./SRLadderPanel";
-import {
-  getLadderMatchSummary,
-  buildViewLadderBaseline,
-  scoreAgainstViewBaseline,
-  ViewBaselineLadderPanel,
-  type FailVsBaselineResult,
-} from "./SRLadderDiff";
+import { getLadderMatchSummary } from "./SRLadderDiff";
 
 // --- Small UTC date helpers (all dates in this panel are UTC ISO strings) ---
 function toISO(d: Date): string {
@@ -724,34 +718,6 @@ export default function BacktestPanel() {
     ? Math.round((mismatchGraded.filter((r) => r.result === "pass").length / mismatchGraded.length) * 100)
     : null;
 
-  // View-scoped Pass baseline: this View's own Pass rows define what a
-  // "healthy" ladder looks like FOR THIS VIEW (rank-order of the 13 levels
-  // + where price sits among them) — a bullish R4-breakout View's Pass
-  // symbols and a bearish S4-breakdown View's Pass symbols will produce
-  // completely different baselines, which is the point. Every Fail row is
-  // then measured against ITS OWN View's baseline, never another View's —
-  // `rows` is reset on every selectedKey change / run(), same guarantee
-  // ladderByRow already relies on above.
-  const passBaseline = useMemo(() => {
-    const passRows = rows
-      .filter((r) => r.result === "pass")
-      .map((r) => ({ todayCPR: r.todayCPR, currentPrice: r.closePrice }));
-    return buildViewLadderBaseline(passRows);
-  }, [rows]);
-
-  // Scored against passBaseline. Meaningful for Fail rows; Pass rows are
-  // what BUILT the baseline, so scoring them against it is circular and
-  // the UI below treats Pass rows as "Baseline" rather than showing a
-  // match count for them.
-  const baselineByRow = useMemo(() => {
-    const map = new Map<BacktestRow, FailVsBaselineResult>();
-    if (!passBaseline) return map;
-    rows.forEach((r) =>
-      map.set(r, scoreAgainstViewBaseline({ todayCPR: r.todayCPR, currentPrice: r.closePrice }, passBaseline))
-    );
-    return map;
-  }, [rows, passBaseline]);
-
   const ChartLink = ({ symbol, source }: { symbol: string; source: BacktestSource }) =>
     hasKnownChartMapping(symbol, source) ? (
       <a
@@ -1356,12 +1322,6 @@ export default function BacktestPanel() {
                         </span>
                       </button>
                     </th>
-                    <th
-                      className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider"
-                      title="Fail rows scored against this View's own Pass rows — the ladder shape this View's winners actually had"
-                    >
-                      Vs Pass Baseline
-                    </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Hit Date
                     </th>
@@ -1513,49 +1473,6 @@ export default function BacktestPanel() {
                           );
                         })()}
                       </td>
-                      <td className="px-3 py-2">
-                        {(() => {
-                          if (r.result === "pass") {
-                            return (
-                              <span
-                                className="inline-flex items-center gap-1 text-xs font-mono font-medium text-blue-300"
-                                title="This Pass symbol is part of the View's baseline — not scored against itself"
-                              >
-                                Baseline
-                              </span>
-                            );
-                          }
-                          const b = baselineByRow.get(r);
-                          if (!b) return <span className="text-xs text-muted-foreground">—</span>;
-                          const matchingCount = b.levelDeviations.length - b.deviationCount;
-                          const total = b.levelDeviations.length;
-                          const fullMatch = b.deviationCount === 0 && !b.priceDeviates;
-                          const color = fullMatch
-                            ? "text-green-400"
-                            : matchingCount >= total - 2 && !b.priceDeviates
-                            ? "text-amber-400"
-                            : "text-destructive";
-                          const brokenLabels = b.levelDeviations.filter((d) => d.deviates).map((d) => d.label);
-                          if (b.priceDeviates) brokenLabels.unshift("Price");
-                          return (
-                            <span
-                              className={`inline-flex items-center gap-1 text-xs font-mono font-medium ${color}`}
-                              title={
-                                fullMatch
-                                  ? `Matches this View's Pass baseline (n=${b.sampleSize})`
-                                  : `Deviates from Pass baseline on: ${brokenLabels.join(", ")}`
-                              }
-                            >
-                              {fullMatch ? (
-                                <CheckCircle2 className="w-3.5 h-3.5" />
-                              ) : (
-                                <XCircle className="w-3.5 h-3.5" />
-                              )}
-                              {matchingCount}/{total}
-                            </span>
-                          );
-                        })()}
-                      </td>
                       <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">
                         {r.hitDate ? (
                           <div className="flex flex-col leading-tight">
@@ -1589,25 +1506,13 @@ export default function BacktestPanel() {
                       <SRLadderRow
                         r={toSRLadderData(r.raw, r.closePrice ?? undefined, r.prevClose ?? undefined, r.ppClose ?? undefined)}
                         rowKey={`${r.source}-${r.symbol}-${r.entryDate}`}
-                        colSpan={11}
+                        colSpan={10}
                         todayPatternBadge={renderTodayPatternBadges(r.raw)}
                         prevPatternBadge={renderPrevPatternBadge(r.raw)}
                         pivotPatternBadge={renderPivotPatternBadge(r.raw)}
                         showLevelCheck
                       />
                     )}
-                    {/* View-baseline breakdown — only meaningful for a Fail row measured
-                        against its own View's Pass rows (see baselineByRow above). Pass
-                        rows built the baseline, so there's nothing to show for them here. */}
-                    {expandedSymbols.has(`${r.source}-${r.symbol}-${r.entryDate}`) &&
-                      r.result === "fail" &&
-                      baselineByRow.get(r) && (
-                        <tr className="bg-muted/20 border-b border-border">
-                          <td colSpan={11} className="px-3 py-4 sm:px-4">
-                            <ViewBaselineLadderPanel result={baselineByRow.get(r)!} />
-                          </td>
-                        </tr>
-                      )}
                     </Fragment>
                   ))}
                 </tbody>
