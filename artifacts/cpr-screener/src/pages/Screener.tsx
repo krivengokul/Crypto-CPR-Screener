@@ -1077,24 +1077,6 @@ export default function Screener({
             {deltaStatus === "scanning" ? "Scanning Delta…" : "Scan Delta"}
           </button>
 
-          {canShowCombined && (
-            <div className="flex rounded-lg border border-border overflow-hidden text-xs shrink-0">
-              {(["binance", "delta", "combined"] as ActiveTab[]).map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className="px-2.5 py-1 transition-colors capitalize"
-                  style={{
-                    background: activeTab === tab ? "#3b82f6" : "transparent",
-                    color: activeTab === tab ? "#fff" : "#8ba3bc",
-                  }}
-                >
-                  {tab}
-                </button>
-              ))}
-            </div>
-          )}
-
           {currentStatus === "done" && (
             <div className="flex items-center gap-1.5 text-xs shrink-0">
               <span className="text-foreground font-medium">
@@ -1179,17 +1161,6 @@ export default function Screener({
               </button>
             </div>
           )}
-
-          <div className="relative ml-auto shrink-0">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-            <input
-              type="search"
-              placeholder="Search symbol…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-8 pr-2 py-1 text-xs rounded-lg border border-border bg-card text-foreground w-36 focus:outline-none focus:ring-1 focus:ring-primary"
-            />
-          </div>
         </div>
 
         {/* Status bar */}
@@ -1787,6 +1758,49 @@ export default function Screener({
           </div>
           </div>
 
+        )}
+
+        {/* Search + Source Filter bar — same look and feel as Signal
+            Desk's filter bar (search left, source toggle right, same
+            colors/borders/pill shapes). Sits directly above the grid.
+            "Combined" is relabeled "All" here to match Signal Desk's own
+            wording, though the underlying activeTab value is unchanged
+            ("combined") — see ActiveTab in ScreenerUtils.tsx. */}
+        {currentStatus === "done" && (
+          <div className="px-4 py-2 border-b border-[#1b263b] bg-[#0d1422] flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0 mb-3 rounded-lg border">
+            <div className="relative flex-1 w-full sm:max-w-xs">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="search"
+                placeholder="Search symbol…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full bg-[#151e2c] border border-[#22354a] rounded-md pl-8 pr-3 py-1 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-teal-500/50"
+              />
+            </div>
+
+            {canShowCombined && (
+              <div className="flex items-center gap-1 w-full sm:w-auto justify-end">
+                {(["combined", "binance", "delta"] as ActiveTab[]).map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`px-2 py-1 rounded text-xs font-semibold transition cursor-pointer ${
+                      activeTab === tab
+                        ? tab === "combined"
+                          ? "bg-amber-500/20 text-amber-400 border border-amber-500/40"
+                          : tab === "binance"
+                          ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/40"
+                          : "bg-cyan-500/20 text-cyan-400 border border-cyan-500/40"
+                        : "text-slate-400 hover:text-white bg-[#151e2c]"
+                    }`}
+                  >
+                    {tab === "combined" ? "All" : tab === "binance" ? "Binance" : "Delta"}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         )}
 
         {/* Table */}
