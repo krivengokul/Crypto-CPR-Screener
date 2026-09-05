@@ -33,6 +33,7 @@ import {
   renderPrevPatternBadge,
   renderPatternColumnBadges,
   renderLevelColumnRestBadges,
+  renderPivotPatternBadge,
 } from "./ScreenerTableRow";
 import { SRLadderRow, toSRLadderData } from "./SRLadderPanel";
 
@@ -1167,6 +1168,7 @@ export default function BacktestPanel() {
                           colSpan={7}
                           todayPatternBadge={renderTodayPatternBadges(r.raw)}
                           prevPatternBadge={renderPrevPatternBadge(r.raw)}
+                          pivotPatternBadge={renderPivotPatternBadge(r.raw)}
                         />
                       )}
                       </Fragment>
@@ -1414,6 +1416,7 @@ export default function BacktestPanel() {
                         colSpan={9}
                         todayPatternBadge={renderTodayPatternBadges(r.raw)}
                         prevPatternBadge={renderPrevPatternBadge(r.raw)}
+                        pivotPatternBadge={renderPivotPatternBadge(r.raw)}
                       />
                     )}
                     </Fragment>

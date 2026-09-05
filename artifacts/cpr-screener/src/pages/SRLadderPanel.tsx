@@ -380,9 +380,8 @@ function CPRLevelChart({
 
 /**
  * The full expanded panel shown when a symbol row is clicked:
- * a Prev-Day-vs-Today levels chart and the three S/R ladders (Today,
- * PrevDay, PDay-1 — pushed to the right where the chart frees up space).
- * Reused by Screener and BacktestPanel.
+ * the three S/R ladders (Today, PrevDay, PDay-1) first, followed by the
+ * Prev-Day-vs-Today levels chart. Reused by Screener and BacktestPanel.
  */
 export function SRLadderPanel({
   r,
@@ -404,15 +403,15 @@ export function SRLadderPanel({
   return (
     <div className="flex w-full min-w-0 flex-col gap-3">
       <div className="flex flex-wrap items-start gap-3 border-b border-border/50 pb-3">
-        <div className="min-w-[440px] flex-1">
-          <CPRLevelChart prevCPR={r.prevCPR} todayCPR={r.todayCPR} pivotPatternBadge={pivotPatternBadge} />
-        </div>
         <div className="flex min-w-0 flex-1 items-start justify-between gap-2 pt-0.5">
           <SRLadder cpr={r.todayCPR} currentPrice={r.currentPrice} label="Today S/R" badge={todayPatternBadge} />
           <SRLadder cpr={r.prevCPR} currentPrice={r.currentPrice} label="PDay S/R" badge={prevPatternBadge} />
           {r.ppCPR && (
             <SRLadder cpr={r.ppCPR} currentPrice={r.currentPrice} label="PDay-1 S/R" badge={pDay1PatternBadge} />
           )}
+        </div>
+        <div className="min-w-[440px] flex-1">
+          <CPRLevelChart prevCPR={r.prevCPR} todayCPR={r.todayCPR} pivotPatternBadge={pivotPatternBadge} />
         </div>
       </div>
     </div>
