@@ -597,6 +597,24 @@ export default function ViewsSidebar({
     }
   }, [activeView]);
 
+  // NEW: outside the Live Screener (mode === "scanner"), only show
+  // categories/patterns that currently have a nonzero match count —
+  // mirrors Signal Desk's own Active Views strip (buildPills drops
+  // zero-count entries the same way). The Live Screener itself keeps
+  // showing the full, unfiltered tree, since that's still the place to
+  // discover/select a pattern that hasn't matched anything yet.
+  const showOnlyWithCounts = mode !== "scanner";
+  const visiblePivotCategories = showOnlyWithCounts
+    ? pivotcategories.filter((pattern) => {
+        const children = Views[pattern.id] ?? [];
+        return !!counts?.[pattern.id] || children.some((c) => !!counts?.[c.id]);
+      })
+    : pivotcategories;
+  function visibleChildren(patternId: string) {
+    const children = Views[patternId] ?? [];
+    return showOnlyWithCounts ? children.filter((c) => !!counts?.[c.id]) : children;
+  }
+
   function handleParentClick(patternId: string) {
     setExpandedId(patternId);
     onSelect(patternId);
@@ -765,9 +783,9 @@ export default function ViewsSidebar({
             paddingBottom: 16,
           }}
         >
-          {pivotcategories.map((pattern) => {
+          {visiblePivotCategories.map((pattern) => {
             const Icon = pattern.icon;
-            const children = Views[pattern.id] ?? [];
+            const children = visibleChildren(pattern.id);
             const isActiveParent = activeView === pattern.id;
             const hasActiveChild = children.some((c) => c.id === activeView);
             const isHighlighted = isActiveParent || hasActiveChild;
@@ -1083,9 +1101,9 @@ export default function ViewsSidebar({
         />
 
         {/* One icon per pattern */}
-        {pivotcategories.map((pattern) => {
+        {visiblePivotCategories.map((pattern) => {
           const Icon = pattern.icon;
-          const children = Views[pattern.id] ?? [];
+          const children = visibleChildren(pattern.id);
           const isHighlighted =
             activeView === pattern.id ||
             children.some((c) => c.id === activeView);
