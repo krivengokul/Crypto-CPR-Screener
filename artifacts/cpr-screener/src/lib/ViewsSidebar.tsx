@@ -597,13 +597,14 @@ export default function ViewsSidebar({
     }
   }, [activeView]);
 
-  // NEW: outside the Live Screener (mode === "scanner"), only show
-  // categories/patterns that currently have a nonzero match count —
+  // CHANGED: now applies in every mode, including the Live Screener —
   // mirrors Signal Desk's own Active Views strip (buildPills drops
-  // zero-count entries the same way). The Live Screener itself keeps
-  // showing the full, unfiltered tree, since that's still the place to
-  // discover/select a pattern that hasn't matched anything yet.
-  const showOnlyWithCounts = mode !== "scanner";
+  // zero-count entries the same way). This only affects this left-nav
+  // tree; it's separate from the "VIEWS:" button row Screener.tsx renders
+  // in its own main panel when a category is selected (see the pink
+  // "VIEWS:" label there) — that row intentionally keeps showing every
+  // View regardless of count, unaffected by this change.
+  const showOnlyWithCounts = true;
   const visiblePivotCategories = showOnlyWithCounts
     ? pivotcategories.filter((pattern) => {
         const children = Views[pattern.id] ?? [];
