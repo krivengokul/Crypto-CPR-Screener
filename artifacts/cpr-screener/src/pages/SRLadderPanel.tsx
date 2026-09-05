@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { CPRLevels, CPRResult } from "@/lib/cpr";
 import { fmt } from "./ScreenerUtils";
+import { SRLadderDiffPanel } from "./SRLadderDiff";
 
 /**
  * Shared S/R Ladder building blocks.
@@ -432,6 +433,7 @@ export function SRLadderPanel({
         <div className="min-w-[440px] flex-1">
           <CPRLevelChart prevCPR={r.prevCPR} todayCPR={r.todayCPR} pivotPatternBadge={pivotPatternBadge} />
         </div>
+        <SRLadderDiffPanel prevCPR={r.prevCPR} todayCPR={r.todayCPR} />
         <SRLadder cpr={r.todayCPR} currentPrice={r.currentPrice} label="Today S/R" badge={todayPatternBadge} />
         {r.ppCPR && (
           <SRLadder cpr={r.ppCPR} currentPrice={r.ppClose} label="PDay-1 S/R" badge={pDay1PatternBadge} pricePlain />
