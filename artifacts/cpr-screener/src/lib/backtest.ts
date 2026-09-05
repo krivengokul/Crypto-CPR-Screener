@@ -1936,9 +1936,10 @@ export interface BacktestRow {
   result: "pass" | "fail" | "insufficient-data" | "invalid-target";
   hitDate: string | null;          // which day (entryDate, entryDate+1, or entryDate+2) hit target, if any
   daysToHit: 0 | 1 | null;
-  /** Entry-day close / prev close / day-over-day % change (same as CategoryScanRow). */
+  /** Entry-day close / prev close / day-before-prev close / day-over-day % change (same as CategoryScanRow). */
   closePrice: number | null;
   prevClose: number | null;
+  ppClose: number | null;
   changePct: number | null;
   /**
    * The full reconstructed CPRResult (all pattern-flag booleans,
@@ -1977,6 +1978,7 @@ export interface CategoryScanRow {
    */
   closePrice: number | null;
   prevClose: number | null;
+  ppClose: number | null;
   changePct: number | null;
   /**
    * NEW: the full reconstructed CPRResult (all pattern-flag booleans,
@@ -1997,14 +1999,19 @@ export interface CategoryScanRow {
 function closeAndChange(
   window: Map<string, OHLC>,
   entryDateISO: string
-): { closePrice: number | null; prevClose: number | null; changePct: number | null } {
+): { closePrice: number | null; prevClose: number | null; ppClose: number | null; changePct: number | null } {
   const candle = window.get(entryDateISO) ?? window.get(addDaysISO(entryDateISO, -1)) ?? null;
-  if (!candle) return { closePrice: null, prevClose: null, changePct: null };
+  if (!candle) return { closePrice: null, prevClose: null, ppClose: null, changePct: null };
   const baseDate = window.get(entryDateISO) ? entryDateISO : addDaysISO(entryDateISO, -1);
   const prevCandle = window.get(addDaysISO(baseDate, -1)) ?? null;
   const prevClose = prevCandle ? prevCandle.close : candle.open;
+  // Close from two days before the entry/base date — feeds the SR Ladder's
+  // ppClose row (the close that built ppCPR). Null when that candle isn't in
+  // the reconstruction window.
+  const ppCandle = window.get(addDaysISO(baseDate, -2)) ?? null;
+  const ppClose = ppCandle ? ppCandle.close : null;
   const changePct = prevClose ? ((candle.close - prevClose) / prevClose) * 100 : null;
-  return { closePrice: candle.close, prevClose, changePct };
+  return { closePrice: candle.close, prevClose, ppClose, changePct };
 }
 
 function utcDateKey(ms: number): string {

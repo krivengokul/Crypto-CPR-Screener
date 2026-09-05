@@ -1163,7 +1163,7 @@ export default function BacktestPanel() {
                       </tr>
                       {expandedSymbols.has(`${r.source}-${r.symbol}-${r.entryDate}`) && (
                         <SRLadderRow
-                          r={toSRLadderData(r.raw, r.closePrice ?? undefined)}
+                          r={toSRLadderData(r.raw, r.closePrice ?? undefined, r.prevClose ?? undefined, r.ppClose ?? undefined)}
                           rowKey={`${r.source}-${r.symbol}-${r.entryDate}`}
                           colSpan={7}
                           todayPatternBadge={renderTodayPatternBadges(r.raw)}
@@ -1411,7 +1411,7 @@ export default function BacktestPanel() {
                     </tr>
                     {expandedSymbols.has(`${r.source}-${r.symbol}-${r.entryDate}`) && (
                       <SRLadderRow
-                        r={toSRLadderData(r.raw, r.closePrice ?? undefined)}
+                        r={toSRLadderData(r.raw, r.closePrice ?? undefined, r.prevClose ?? undefined, r.ppClose ?? undefined)}
                         rowKey={`${r.source}-${r.symbol}-${r.entryDate}`}
                         colSpan={9}
                         todayPatternBadge={renderTodayPatternBadges(r.raw)}
