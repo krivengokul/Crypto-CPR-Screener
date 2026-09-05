@@ -117,6 +117,28 @@ export function summarizeSRLadderDiff(checks: SRLevelCheck[]) {
 }
 
 /**
+ * Row-level rollup for table columns / aggregate stats (no JSX): given a
+ * single symbol's prev/today CPR, returns the match count plus which
+ * levels broke, and whether all 13 held (fullMatch).
+ *
+ * Always call this scoped to ONE View/Pattern's result set at a time
+ * (e.g. BacktestPanel's `rows` for the currently selected dropdown
+ * entry). Different Views have different base conditions and targets,
+ * so "pass" means something different per View — pooling ladder-match
+ * stats across multiple Views' symbols would compare apples to oranges.
+ */
+export function getLadderMatchSummary(prevCPR: CPRLevels, todayCPR: CPRLevels) {
+  const checks = compareSRLadders(prevCPR, todayCPR);
+  const mismatches = checks.filter((c) => !c.matching);
+  return {
+    matchingCount: checks.length - mismatches.length,
+    total: checks.length,
+    mismatchLabels: mismatches.map((c) => c.label),
+    fullMatch: mismatches.length === 0,
+  };
+}
+
+/**
  * Compact list, styled to sit alongside SRLadder / CPRLevelChart inside
  * SRLadderPanel. Shows all 13 lines by default; pass showMatching={false}
  * to only surface the mismatches, which is usually what you're scanning for.

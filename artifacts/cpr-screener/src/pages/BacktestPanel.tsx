@@ -36,6 +36,7 @@ import {
   renderPivotPatternBadge,
 } from "./ScreenerTableRow";
 import { SRLadderRow, toSRLadderData } from "./SRLadderPanel";
+import { getLadderMatchSummary } from "./SRLadderDiff";
 
 // --- Small UTC date helpers (all dates in this panel are UTC ISO strings) ---
 function toISO(d: Date): string {
@@ -318,6 +319,10 @@ export default function BacktestPanel() {
   const [categoryRows, setCategoryRows] = useState<(CategoryScanRow & { entryDate: string })[]>([]);
   const [changeSortDir, setChangeSortDir] = useState<"asc" | "desc" | null>(null);
   const [resultChangeSortDir, setResultChangeSortDir] = useState<"asc" | "desc" | null>(null);
+  // Ladder Check column sort — mutually exclusive with resultChangeSortDir
+  // (clicking one clears the other) so there's always exactly one active
+  // sort on the pattern/View results table.
+  const [ladderSortDir, setLadderSortDir] = useState<"asc" | "desc" | null>(null);
   const [error, setError] = useState("");
   // Search box for the results tables (category scan + graded backtest) —
   // mirrors the SignalsJournal search bar. Filters by symbol or entry date
@@ -548,6 +553,7 @@ export default function BacktestPanel() {
     setCategoryRows([]);
       setChangeSortDir(null);
       setResultChangeSortDir(null);
+      setLadderSortDir(null);
       setResultSearch("");
     setProgress({ done: 0, total: 0, symbol: "" });
     setDateProgress({ current: 0, total: 0, date: "" });
@@ -690,6 +696,27 @@ export default function BacktestPanel() {
   const invalidTargetCount = rows.filter((r) => r.result === "invalid-target").length;
   const gradedCount = rows.length - insufficientCount - invalidTargetCount;
   const progressPct = progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0;
+
+  // Ladder Check: one summary per row, scoped to `rows` — which only ever
+  // holds the currently selected View/Pattern's results (reset on every
+  // selectedKey change and every run()). This is what keeps the
+  // full-match-vs-mismatch comparison below from ever mixing symbols
+  // across different Views, whose "pass" conditions aren't comparable.
+  const ladderByRow = useMemo(() => {
+    const map = new Map<BacktestRow, ReturnType<typeof getLadderMatchSummary>>();
+    rows.forEach((r) => map.set(r, getLadderMatchSummary(r.prevCPR, r.todayCPR)));
+    return map;
+  }, [rows]);
+
+  const gradedRows = rows.filter((r) => r.result === "pass" || r.result === "fail");
+  const fullMatchGraded = gradedRows.filter((r) => ladderByRow.get(r)?.fullMatch);
+  const mismatchGraded = gradedRows.filter((r) => !ladderByRow.get(r)?.fullMatch);
+  const fullMatchHitRate = fullMatchGraded.length
+    ? Math.round((fullMatchGraded.filter((r) => r.result === "pass").length / fullMatchGraded.length) * 100)
+    : null;
+  const mismatchHitRate = mismatchGraded.length
+    ? Math.round((mismatchGraded.filter((r) => r.result === "pass").length / mismatchGraded.length) * 100)
+    : null;
 
   const ChartLink = ({ symbol, source }: { symbol: string; source: BacktestSource }) =>
     hasKnownChartMapping(symbol, source) ? (
@@ -1210,6 +1237,18 @@ export default function BacktestPanel() {
                     {Math.round((passCount / gradedCount) * 100)}% hit rate
                   </span>
                 )}
+                {(fullMatchHitRate !== null || mismatchHitRate !== null) && (
+                  <span className="text-muted-foreground border-l border-border pl-4">
+                    Ladder check —{" "}
+                    {fullMatchHitRate !== null && (
+                      <>Full match (13/13): <span className="text-foreground font-medium">{fullMatchHitRate}%</span> (n={fullMatchGraded.length})</>
+                    )}
+                    {fullMatchHitRate !== null && mismatchHitRate !== null && "  ·  "}
+                    {mismatchHitRate !== null && (
+                      <>Any mismatch: <span className="text-foreground font-medium">{mismatchHitRate}%</span> (n={mismatchGraded.length})</>
+                    )}
+                  </span>
+                )}
               </>
             )}
           </div>
@@ -1266,15 +1305,34 @@ export default function BacktestPanel() {
                       Result
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setLadderSortDir((d) => {
+                            setResultChangeSortDir(null);
+                            return d === null ? "asc" : d === "asc" ? "desc" : null;
+                          })
+                        }
+                        className="inline-flex items-center gap-1 uppercase tracking-wider hover:text-foreground transition-colors"
+                        title="Sort by Ladder Check (levels still matching prev day)"
+                      >
+                        Ladder Check
+                        <span className="text-[10px]">
+                          {ladderSortDir === "asc" ? "▲" : ladderSortDir === "desc" ? "▼" : "↕"}
+                        </span>
+                      </button>
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Hit Date
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       <button
                         type="button"
                         onClick={() =>
-                          setResultChangeSortDir((d) =>
-                            d === null ? "desc" : d === "desc" ? "asc" : null
-                          )
+                          setResultChangeSortDir((d) => {
+                            setLadderSortDir(null);
+                            return d === null ? "desc" : d === "desc" ? "asc" : null;
+                          })
                         }
                         className="inline-flex items-center gap-1 uppercase tracking-wider hover:text-foreground transition-colors"
                         title="Sort by Change"
@@ -1288,7 +1346,13 @@ export default function BacktestPanel() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {(resultChangeSortDir === null
+                  {(ladderSortDir !== null
+                    ? [...filteredRows].sort((a, b) => {
+                        const av = ladderByRow.get(a)?.matchingCount ?? 0;
+                        const bv = ladderByRow.get(b)?.matchingCount ?? 0;
+                        return ladderSortDir === "asc" ? av - bv : bv - av;
+                      })
+                    : resultChangeSortDir === null
                     ? filteredRows
                     : [...filteredRows].sort((a, b) => {
                         const av = a.changePct;
@@ -1381,6 +1445,34 @@ export default function BacktestPanel() {
                           </span>
                         </div>
                       </td>
+                      <td className="px-3 py-2">
+                        {(() => {
+                          const ladder = ladderByRow.get(r);
+                          if (!ladder) return <span className="text-xs text-muted-foreground">—</span>;
+                          const color = ladder.fullMatch
+                            ? "text-green-400"
+                            : ladder.matchingCount >= ladder.total - 2
+                            ? "text-amber-400"
+                            : "text-destructive";
+                          return (
+                            <span
+                              className={`inline-flex items-center gap-1 text-xs font-mono font-medium ${color}`}
+                              title={
+                                ladder.fullMatch
+                                  ? "All 13 levels matched their previous-day zone"
+                                  : `Broke through: ${ladder.mismatchLabels.join(", ")}`
+                              }
+                            >
+                              {ladder.fullMatch ? (
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                              ) : (
+                                <XCircle className="w-3.5 h-3.5" />
+                              )}
+                              {ladder.matchingCount}/{ladder.total}
+                            </span>
+                          );
+                        })()}
+                      </td>
                       <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">
                         {r.hitDate ? (
                           <div className="flex flex-col leading-tight">
@@ -1414,7 +1506,7 @@ export default function BacktestPanel() {
                       <SRLadderRow
                         r={toSRLadderData(r.raw, r.closePrice ?? undefined, r.prevClose ?? undefined, r.ppClose ?? undefined)}
                         rowKey={`${r.source}-${r.symbol}-${r.entryDate}`}
-                        colSpan={9}
+                        colSpan={10}
                         todayPatternBadge={renderTodayPatternBadges(r.raw)}
                         prevPatternBadge={renderPrevPatternBadge(r.raw)}
                         pivotPatternBadge={renderPivotPatternBadge(r.raw)}
