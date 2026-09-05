@@ -129,6 +129,8 @@ export default function Screener({
   onCounts,
   onSignalSymbols,
   onResults,
+  activeTab: activeTabProp,
+  onActiveTabChange,
 }: {
   activeView?: string;
   scanKey?: number;
@@ -160,6 +162,14 @@ export default function Screener({
       r4: number;
     }>,
   ) => void;
+  // NEW: lift activeTab (Binance/Delta/Combined) to be controllable from
+  // outside — App.tsx now owns this as shared app-level state so
+  // SignalDesk's own Binance/Delta toggle can drive the SAME source that
+  // feeds Screener's onCounts (and therefore the left-nav sidebar counts),
+  // instead of the two staying out of sync. Falls back to Screener's own
+  // local state when unset, so Screener still works standalone.
+  activeTab?: ActiveTab;
+  onActiveTabChange?: (tab: ActiveTab) => void;
 }) {
   const [status, setStatus] = useState<"idle" | "scanning" | "done" | "error">("idle");
   const [progress, setProgress] = useState({ done: 0, total: 0, symbol: "" });
@@ -255,7 +265,13 @@ export default function Screener({
   const [deltaAllResults, setDeltaAllResults] = useState<CPRResult[]>([]);
   const [deltaFiltered, setDeltaFiltered] = useState<CPRResult[]>([]);
   const [deltaError, setDeltaError] = useState("");
-  const [activeTab, setActiveTab] = useState<ActiveTab>("binance");
+  const [activeTabState, setActiveTabState] = useState<ActiveTab>("binance");
+  // Controlled when App.tsx passes activeTab/onActiveTabChange (the normal
+  // case now); falls back to local state otherwise. setActiveTab below is
+  // used everywhere else in this file exactly as before — only its source
+  // changed.
+  const activeTab = activeTabProp ?? activeTabState;
+  const setActiveTab = onActiveTabChange ?? setActiveTabState;
   const deltaScanRef = useRef(false);
 
   const [expandedSymbols, setExpandedSymbols] = useState<Set<string>>(new Set());

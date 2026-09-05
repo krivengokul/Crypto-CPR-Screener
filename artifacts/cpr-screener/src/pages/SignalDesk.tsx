@@ -59,6 +59,14 @@ interface SignalDeskProps {
   activeLabel?: string;
   counts?: Record<string, number>;
   onSelectPattern?: (patternId: string) => void;
+  // NEW: lift sourceFilter (Binance/Delta/All) to be controllable from
+  // outside — App.tsx now owns this as shared app-level state so this
+  // toggle drives the SAME source Screener uses for its onCounts effect
+  // (and therefore the left-nav sidebar's per-pattern counts), instead of
+  // the two staying independently out of sync. Falls back to SignalDesk's
+  // own local state when unset, so this component still works standalone.
+  sourceFilter?: "all" | "binance" | "delta";
+  onSourceFilterChange?: (next: "all" | "binance" | "delta") => void;
 }
 
 export interface SignalItem {
@@ -143,11 +151,19 @@ export default function SignalDesk({
   activeLabel,
   counts,
   onSelectPattern,
+  sourceFilter: sourceFilterProp,
+  onSourceFilterChange,
 }: SignalDeskProps) {
   const [searchTerm, setSearchTerm] = useState("");
   // Default to Binance (not "All") — mirrors the Live Screener and Backtest
   // panel, which both open on Binance by default.
-  const [sourceFilter, setSourceFilter] = useState<"all" | "binance" | "delta">("binance");
+  const [sourceFilterState, setSourceFilterState] = useState<"all" | "binance" | "delta">("binance");
+  // Controlled when App.tsx passes sourceFilter/onSourceFilterChange (the
+  // normal case now); falls back to local state otherwise. sourceFilter/
+  // setSourceFilter below are used everywhere else in this file exactly as
+  // before — only their source changed.
+  const sourceFilter = sourceFilterProp ?? sourceFilterState;
+  const setSourceFilter = onSourceFilterChange ?? setSourceFilterState;
   const [directionFilter, setDirectionFilter] = useState<"all" | "LONG" | "SHORT">("all");
   const [selectedViewPattern, setSelectedViewPattern] = useState<string>(activeView || "");
   const [copiedId, setCopiedId] = useState<string | null>(null);

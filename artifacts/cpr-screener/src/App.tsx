@@ -5,7 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Screener from "@/pages/Screener";
 import BacktestPanel from "@/pages/BacktestPanel";
 import SignalDesk, { type SignalDeskSymbol } from "@/pages/SignalDesk";
-import type { CPRResultWithSource } from "@/pages/ScreenerUtils";
+import type { CPRResultWithSource, ActiveTab } from "@/pages/ScreenerUtils";
 import PatternStats from "@/pages/PatternStats";
 import SignalsJournal from "./pages/SignalsJournal";
 import ViewsSidebar, { pivotcategories, SCREENER_PATTERN_IDS, type SidebarMode } from "@/lib/ViewsSidebar";
@@ -80,6 +80,15 @@ function App() {
   // fires even though the cards still render fine via the symbols-only
   // fallback path.
   const [signalResults, setSignalResults] = useState<CPRResultWithSource[]>([]);
+  // NEW: single shared Binance/Delta/Combined source, now driving BOTH the
+  // Live Screener's own tab AND Signal Desk's Binance/Delta/All toggle —
+  // they used to be two independent pieces of state, which is why
+  // switching sources in Signal Desk never updated the left-nav sidebar's
+  // per-pattern counts (those come from Screener's onCounts, scoped to
+  // whichever tab Screener itself had active). "combined" <-> "all" is
+  // just a naming difference between the two components' own toggles —
+  // mapped at the two call sites below, not renamed in either file.
+  const [dataSource, setDataSource] = useState<ActiveTab>("binance");
 
   // Auto-scan on first page load
   useEffect(() => {
@@ -146,6 +155,8 @@ function App() {
                   onCounts={setPatternCounts}
                   onSignalSymbols={setSignalSymbols}
                   onResults={setSignalResults}
+                  activeTab={dataSource}
+                  onActiveTabChange={setDataSource}
                 />
               ) : (
                 <ComingSoon label={activeLabel} />
@@ -166,6 +177,8 @@ function App() {
                 activeLabel={activeLabel}
                 counts={patternCounts}
                 onSelectPattern={handlePatternSelect}
+                sourceFilter={dataSource === "combined" ? "all" : dataSource}
+                onSourceFilterChange={(next) => setDataSource(next === "all" ? "combined" : next)}
               />
             )}
 
