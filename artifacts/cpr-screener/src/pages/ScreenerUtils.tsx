@@ -1312,6 +1312,26 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.todayCPR.prevHigh > r.prevCPR.pivot &&
         r.todayCPR.r1 > r.prevCPR.tc
       );
+    // NEW: "A-A-AA-OA-U3L4-RRHHGap:R4" — View nested under the
+    // "A-A-AA-OA-U3L4" Subpattern (itself under the "A-A-AA-OA" Pattern
+    // in "LEVEL ABOVE" / levelsabove — see BACKTEST_CATEGORIES in
+    // backtest.ts). Badge set: A-A-AA-OA + U3L4 + RRGap + HHGap +
+    // pHL-B + HLGap-B. "HLGap-B" is todayCPR.HLSwitch HL-B with
+    // hlGapWinner "today" (the gap winner swaps the today-side badge to
+    // the Gap form); "pHL-B" is prevCPR.HLSwitch HL-B left in its plain
+    // form (which requires hlGapWinner !== "prev" — satisfied here).
+    // Bullish, entry at today's TC, targets today's own R4 (U4),
+    // stoploss today's S1.
+    case "A-A-AA-OA-U3L4-RRHHGap:R4":
+      return (
+        r.LevelsAbove &&
+        matchesPatternFlag(r, "A-A-AA-OA-U3L4") &&
+        r.RRSSGapCategory === "RRGap" &&
+        r.PDHPDLGapCategory === "HHGap" &&
+        r.prevCPR.HLSwitch === "HL-B" &&
+        r.todayCPR.HLSwitch === "HL-B" &&
+        r.hlGapWinner === "today"
+      );
     // NEW: "A-A-AA-AA-EUPL3-RRHHGap:R4" — View nested under the
     // "A-A-AA-AA-EUPL3" Subpattern (itself under the "A-A-AA-AA" Pattern
     // in "U1 > pU4" / R1AbovePR4 — see BACKTEST_CATEGORIES in
@@ -1574,6 +1594,10 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
   ],
   "levelsabove": [
     { key: "A-A-AA-AA-EU3L4-GapB", direction: "up" },
+    // NEW: "A-A-AA-OA-U3L4-RRHHGap:R4" (nested under the new
+    // "A-A-AA-OA-U3L4" Subpattern, under the "A-A-AA-OA" Pattern).
+    // Bullish → "up".
+    { key: "A-A-AA-OA-U3L4-RRHHGap:R4", direction: "up" },
     { key: "7PM:MoMi->U4:2AM", direction: "up" },
     { key: "7PM:MoMi-<L4:2AM", direction: "down" },
     { key: "6PM:APHS1A-FAU4:9PM", direction: "up" },
@@ -2004,6 +2028,12 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
       return PIVOT_PATTERNS["A-A-AA-AA"](r) && r.U3L4;
     case "A-A-AA-AA-EU3L4":
       return PIVOT_PATTERNS["A-A-AA-AA"](r) && r.EU3L4;
+    // NEW: "A-A-AA-OA-U3L4" Subpattern — structural A-A-AA-OA (parent
+    // Pattern) crossed with the raw U3L4 flag, same naming/nesting
+    // convention as the "A-A-AA-AA-U3L4" sibling above. Nests the
+    // "A-A-AA-OA-U3L4-RRHHGap:R4" View (see passesPattern above).
+    case "A-A-AA-OA-U3L4":
+      return PIVOT_PATTERNS["A-A-AA-OA"](r) && r.U3L4;
     // NEW: "A-A-AA-AA-EUTL3" Subpattern, nested under "U1 > pU4"
     // (R1AbovePR4) rather than "levelsabove" like its EU3L4 sibling
     // above. Base condition = structural A-A-AA-AA AND the raw EUTL3
@@ -2307,7 +2337,7 @@ const SSRR_BADGE: Record<Exclude<SSRRCategory, "none">, { label: string; classNa
     className: "bg-orange-500/10 text-orange-400 border-orange-500/30",
     title: "Expanded: Today's R1 > Prev R1 and Today's S1 < Prev S1",
   },
-  "RRSS=": {
+  "RRSS-Q": {
     label: "RRSS=",
     className: "bg-amber-500/10 text-amber-400 border-amber-500/30",
     title: "Equal: Today's R1 == Prev R1 and Today's S1 == Prev S1",
@@ -2380,7 +2410,7 @@ const SSLL_BADGE: Record<Exclude<SSLLCategory, "none">, { label: string; classNa
     className: "bg-yellow-500/10 text-yellow-400 border-yellow-500/30",
     title: "Ambiguous Below: band top and bottom both fell vs prev, but S1 and PDL disagree in direction, so the Below verdict isn't safe",
   },
-  "SSLL=": {
+  "SSLL-Q": {
     label: "SSLL=",
     className: "bg-slate-500/10 text-slate-300 border-slate-500/30",
     title: "Equal: today's S1/PDL band unchanged vs prev",
@@ -2457,7 +2487,7 @@ const RRHH_BADGE: Record<Exclude<RRHHCategory, "none">, { label: string; classNa
     className: "bg-yellow-500/10 text-yellow-400 border-yellow-500/30",
     title: "Ambiguous Below: Today's R1 and PDH both fell, but their top/bottom roles differ between the two days",
   },
-  "RRHH=": {
+  "RRHH-Q": {
     label: "RRHH=",
     className: "bg-slate-500/10 text-slate-300 border-slate-500/30",
     title: "Equal: today's R1/PDH pair is unchanged from the previous day's R1/PDH pair",
@@ -2788,12 +2818,12 @@ export function renderRRSSGapCategoryBadge(r: CPRResult) {
   const styles: Record<RRSSGapCategory, string> = {
     RRGap: "bg-green-500/10 text-green-400 border-green-500/30",
     SSGap: "bg-red-500/10 text-red-400 border-red-500/30",
-    "SSRR=": "bg-yellow-500/10 text-yellow-400 border-yellow-500/30",
+    "SSRR-Q": "bg-yellow-500/10 text-yellow-400 border-yellow-500/30",
   };
   const titles: Record<RRSSGapCategory, string> = {
     RRGap: "Gap between today's R1 and prev's R1 is larger than the S1 gap",
     SSGap: "Gap between today's S1 and prev's S1 is larger than the R1 gap",
-    "SSRR=": "R1 gap and S1 gap are equal",
+    "SSRR-Q": "R1 gap and S1 gap are equal",
   };
   return (
     <span
@@ -2832,7 +2862,7 @@ const HHLL_CATEGORY_BADGE: Record<Exclude<HHLLCategory, "none">, { label: string
     className: "bg-pink-500/10 text-pink-400 border-pink-500/30",
     title: "Today's PDH > Prev PDH and Today's PDL < Prev PDL (Expanded)",
   },
-  "HHLL=": {
+  "HHLL-Q": {
     label: "HHLL=",
     className: "bg-amber-500/10 text-amber-400 border-amber-500/30",
     title: "Today's PDH == Prev PDH and Today's PDL == Prev PDL (Equal)",

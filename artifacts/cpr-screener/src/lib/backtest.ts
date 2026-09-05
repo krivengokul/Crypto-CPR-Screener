@@ -33,6 +33,23 @@ export interface BacktestTargetDef {
 }
 
 export const BACKTEST_TARGETS: BacktestTargetDef[] = [
+  // NEW: A-A-AA-OA-U3L4-RRHHGap:R4 — View nested under the
+  // "A-A-AA-OA-U3L4" Subpattern (itself under the "A-A-AA-OA" Pattern in
+  // "LEVEL ABOVE" / levelsabove). Badge set: A-A-AA-OA + U3L4 + RRGap +
+  // HHGap + pHL-B + HLGap-B — see passesPattern in ScreenerUtils.tsx.
+  // Bullish: entry today's TC, target today's own R4 (U4), stoploss
+  // today's S1.
+  {
+    key: "A-A-AA-OA-U3L4-RRHHGap:R4",
+    label: "A-A-AA-OA-U3L4-RRHHGap:R4",
+    direction: "bullish",
+    targetLabel: "U4 (today's R4)",
+    getTarget: (r) => r.todayCPR.r4,
+    getEntry: (r) => r.todayCPR.tc,
+    entryLabel: "TC (today's TC)",
+    getStoploss: (r) => r.todayCPR.s1,
+    stoplossLabel: "S1 (today's S1)",
+  },
   // NEW: A-A-AA-AA-EUPL3-RRHHGap:R4 — View nested under the
   // "A-A-AA-AA-EUPL3" Subpattern (itself under the "A-A-AA-AA" Pattern
   // in "U1 > pU4" / R1AbovePR4). Condition = R1AbovePR4 base + A-A-AA-AA
@@ -1070,7 +1087,23 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
           { key: "A-A-AA-AA-EU3L4", label: "A-A-AA-AA-EU3L4", subPatternKeys: ["A-A-AA-AA-EU3L4-GapB"] },
         ],
       },
-      { key: "A-A-AA-OA", label: "A-A-AA-OA", subPatternKeys: [] },
+      // CHANGED: "A-A-AA-OA" is now a real parent Pattern (arrow) with
+      // its own `patterns` array — same shape as its "A-A-AA-AA" sibling
+      // above. Base condition unchanged (this category's r.LevelsAbove
+      // AND PIVOT_PATTERNS["A-A-AA-OA"]); the child Subpattern adds the
+      // raw U3L4 flag, and its View adds RRGap + HHGap + pHL-B + HLGap-B.
+      {
+        key: "A-A-AA-OA",
+        label: "A-A-AA-OA",
+        subPatternKeys: [],
+        patterns: [
+          {
+            key: "A-A-AA-OA-U3L4",
+            label: "A-A-AA-OA-U3L4",
+            subPatternKeys: ["A-A-AA-OA-U3L4-RRHHGap:R4"],
+          },
+        ],
+      },
       { key: "A-A-OA-AA", label: "A-A-OA-AA", subPatternKeys: [] },
       { key: "A-A-OA-OA", label: "A-A-OA-OA", subPatternKeys: [] },
       // RRSSA-C{RRHH} — 3 Patterns (arrows), REPLACES the old

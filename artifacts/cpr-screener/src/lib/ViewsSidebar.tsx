@@ -84,6 +84,16 @@ export const Views: Record<string, SubPattern[]> = {
     },
   ],
   "levelsabove": [
+    // NEW: "A-A-AA-OA-U3L4-RRHHGap:R4" — badges A-A-AA-OA + U3L4 +
+    // RRGap + HHGap + pHL-B + HLGap-B (see ScreenerUtils.tsx / cpr.ts).
+    // Bullish: entry today's TC, target today's R4, stoploss today's S1.
+    {
+      id: "A-A-AA-OA-U3L4-RRHHGap:R4",
+      label: "A-A-AA-OA-U3L4-RRHHGap:R4",
+      activeColor: "#22c55e",
+      activeText: "#4ade80",
+      activeBg: "rgba(34, 197, 94, 0.14)",
+    },
     {
       id: "A-A-AA-AA-EU3L4-GapB",
       label: "A-A-AA-AA-EU3L4-GapB",
