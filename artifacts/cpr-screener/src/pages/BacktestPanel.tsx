@@ -1169,6 +1169,7 @@ export default function BacktestPanel() {
                           todayPatternBadge={renderTodayPatternBadges(r.raw)}
                           prevPatternBadge={renderPrevPatternBadge(r.raw)}
                           pivotPatternBadge={renderPivotPatternBadge(r.raw)}
+                          showLevelCheck
                         />
                       )}
                       </Fragment>
@@ -1417,6 +1418,7 @@ export default function BacktestPanel() {
                         todayPatternBadge={renderTodayPatternBadges(r.raw)}
                         prevPatternBadge={renderPrevPatternBadge(r.raw)}
                         pivotPatternBadge={renderPivotPatternBadge(r.raw)}
+                        showLevelCheck
                       />
                     )}
                     </Fragment>

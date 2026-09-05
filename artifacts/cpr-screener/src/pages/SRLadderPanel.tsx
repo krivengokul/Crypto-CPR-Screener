@@ -415,6 +415,7 @@ export function SRLadderPanel({
   prevPatternBadge,
   pDay1PatternBadge,
   pivotPatternBadge,
+  showLevelCheck = false,
 }: {
   r: SRLadderData;
   /** Today's pattern badge(s) — e.g. renderTodayPatternBadges(r) — shown on the "Today S/R" ladder. */
@@ -425,6 +426,13 @@ export function SRLadderPanel({
   pDay1PatternBadge?: ReactNode;
   /** PivotPattern badge (today vs prev HHLL x RRHH x SSLL combo) — e.g. renderPivotPatternBadge(r) — shown next to the "Levels VIEW" label. */
   pivotPatternBadge?: ReactNode;
+  /**
+   * Show the day-over-day "Level Check" column (compareSRLadders /
+   * SRLadderDiffPanel). Opt-in and defaulted to false: the Screener's
+   * expanded ladder should stay exactly as it was, while BacktestPanel's
+   * expanded ladder explicitly passes true to surface it.
+   */
+  showLevelCheck?: boolean;
 }) {
   return (
     <div className="flex w-full min-w-0 flex-col gap-3">
@@ -433,7 +441,7 @@ export function SRLadderPanel({
         <div className="min-w-[440px] flex-1">
           <CPRLevelChart prevCPR={r.prevCPR} todayCPR={r.todayCPR} pivotPatternBadge={pivotPatternBadge} />
         </div>
-        <SRLadderDiffPanel prevCPR={r.prevCPR} todayCPR={r.todayCPR} />
+        {showLevelCheck && <SRLadderDiffPanel prevCPR={r.prevCPR} todayCPR={r.todayCPR} />}
         <SRLadder cpr={r.todayCPR} currentPrice={r.currentPrice} label="Today S/R" badge={todayPatternBadge} />
         {r.ppCPR && (
           <SRLadder cpr={r.ppCPR} currentPrice={r.ppClose} label="PDay-1 S/R" badge={pDay1PatternBadge} pricePlain />
@@ -455,6 +463,7 @@ export function SRLadderRow({
   prevPatternBadge,
   pDay1PatternBadge,
   pivotPatternBadge,
+  showLevelCheck = false,
 }: {
   r: SRLadderData;
   colSpan?: number;
@@ -467,6 +476,8 @@ export function SRLadderRow({
   pDay1PatternBadge?: ReactNode;
   /** PivotPattern badge (today vs prev HHLL x RRHH x SSLL combo) — e.g. renderPivotPatternBadge(r) — shown next to the "Levels VIEW" label. */
   pivotPatternBadge?: ReactNode;
+  /** Show the "Level Check" column. Defaults to false — pass true only from BacktestPanel. See SRLadderPanel for details. */
+  showLevelCheck?: boolean;
 }) {
   return (
     <tr key={rowKey ? `${rowKey}-sr` : undefined} className="bg-muted/20 border-b border-border">
@@ -477,6 +488,7 @@ export function SRLadderRow({
           prevPatternBadge={prevPatternBadge}
           pDay1PatternBadge={pDay1PatternBadge}
           pivotPatternBadge={pivotPatternBadge}
+          showLevelCheck={showLevelCheck}
         />
       </td>
     </tr>
