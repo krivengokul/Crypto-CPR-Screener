@@ -18,9 +18,9 @@ export interface SRLadderData {
   ppCPR?: CPRLevels;
   /** Live/entry-day price. Omit to render the ladder without the price row. */
   currentPrice?: number;
-  /** Previous-day close price — shown as the "Price" row in the PDay S/R ladder. */
+  /** Previous-day close price — shown as the "Close" row in the PDay S/R ladder. */
   prevClose?: number;
-  /** PDay-1 close price — shown as the "Price" row in the PDay-1 S/R ladder. */
+  /** PDay-1 close price — shown as the "Close" row in the PDay-1 S/R ladder. */
   ppClose?: number;
   r4Distance?: number;
   s4Distance?: number;
@@ -76,9 +76,10 @@ export function SRLadder({
    */
   badge?: ReactNode;
   /**
-   * When true, the "Price" row is rendered without the emerald background
-   * and arrow indicator. Used for PDay S/R and PDay-1 S/R so the live
-   * Today S/R price row keeps the highlighted styling.
+   * When true, the row is rendered as "Close" (not "Price"), without the
+   * emerald background, bold weight, or arrow indicator — plain white text
+   * matching the other rows. Used for PDay S/R and PDay-1 S/R so the live
+   * Today S/R price row keeps its own highlighted styling.
    */
   pricePlain?: boolean;
 }) {
@@ -140,11 +141,11 @@ export function SRLadder({
         row.type === "price" ? (
           <div
             key={`price-${i}`}
-            className={`grid grid-cols-[3.5rem_auto] justify-start gap-1 w-fit text-white text-xs px-2 py-0.5 rounded font-bold my-0.5 ${
-              pricePlain ? "" : "bg-emerald-700/70"
+            className={`grid grid-cols-[3.5rem_auto] justify-start gap-1 w-fit text-white text-xs px-2 py-0.5 rounded my-0.5 ${
+              pricePlain ? "" : "bg-emerald-700/70 font-bold"
             }`}
           >
-            <span>{pricePlain ? "Price" : "▶ Price"}</span>
+            <span>{pricePlain ? "Close" : "▶ Price"}</span>
             <span className="font-mono">{fmt(currentPrice as number)}</span>
           </div>
         ) : (
@@ -402,9 +403,10 @@ function CPRLevelChart({
  * ladder close to its own lines in the chart so the overlapping level
  * values are easier to read. Reused by Screener and BacktestPanel.
  *
- * The "Price" row inside each day-specific ladder shows that day's own
- * closing price: previous-day close for PDay S/R, PDay-1 close for
- * PDay-1 S/R, and the live/entry-day price for Today S/R.
+ * Each day-specific ladder shows that day's own closing price as its
+ * bottom row: labeled "Close" (plain white text) for PDay S/R's
+ * previous-day close and PDay-1 S/R's PDay-1 close, and labeled "▶ Price"
+ * (bold, highlighted) for Today S/R's live/entry-day price.
  */
 export function SRLadderPanel({
   r,
