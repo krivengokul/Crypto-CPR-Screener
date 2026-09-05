@@ -414,8 +414,9 @@ export default function BacktestPanel() {
   // table below — isViewOnly and isPatternOnly are mutually exclusive, so
   // exactly one of activeTarget/activePatternTarget is ever set here.
   // Undefined for either (a category, or a View with no levelCheckDefs
-  // yet) falls back to the generic sorted-neighbor check everywhere this
-  // is used, same as before this field existed.
+  // yet) means there's no Level Check to run — Level Check, Ladder
+  // Check, and Vs. View Pass Baseline all show "No levelCheckDefs"
+  // rather than falling back to any generic rule.
   const activeLevelCheckDefs = (activeTarget ?? activePatternTarget)?.levelCheckDefs;
 
   const symbolListLabel = isCategory
@@ -715,7 +716,7 @@ export default function BacktestPanel() {
   // full-match-vs-mismatch comparison below from ever mixing symbols
   // across different Views, whose "pass" conditions aren't comparable.
   // activeLevelCheckDefs is that same View's 13 Level Check conditions
-  // (undefined falls back to the generic sorted-neighbor check).
+  // (undefined means no Level Check — no generic fallback).
   const ladderByRow = useMemo(() => {
     const map = new Map<BacktestRow, ReturnType<typeof getLadderMatchSummary>>();
     rows.forEach((r) => map.set(r, getLadderMatchSummary(r.prevCPR, r.todayCPR, activeLevelCheckDefs)));
@@ -1491,6 +1492,9 @@ export default function BacktestPanel() {
                         {(() => {
                           const ladder = ladderByRow.get(r);
                           if (!ladder) return <span className="text-xs text-muted-foreground">—</span>;
+                          if (!ladder.hasConditions) {
+                            return <span className="text-xs text-muted-foreground">No levelCheckDefs</span>;
+                          }
                           const color = ladder.fullMatch
                             ? "text-green-400"
                             : ladder.matchingCount >= ladder.total - 2
@@ -1517,6 +1521,9 @@ export default function BacktestPanel() {
                       </td>
                       <td className="px-3 py-2">
                         {(() => {
+                          if (!activeLevelCheckDefs || activeLevelCheckDefs.length === 0) {
+                            return <span className="text-xs text-muted-foreground">No levelCheckDefs</span>;
+                          }
                           if (r.result === "pass") {
                             return (
                               <span

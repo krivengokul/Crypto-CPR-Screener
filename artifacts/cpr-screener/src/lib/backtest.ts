@@ -53,11 +53,12 @@ export interface BacktestTargetDef {
   entryLabel: string;    // e.g. "TC (today's TC)"
   getStoploss: (r: CPRResult) => number;
   stoplossLabel: string; // e.g. "S1 (today's S1)"
-  // NEW: Level Check's 13 line-by-line conditions for this View. Omit to
-  // fall back to the generic sorted-neighbor check (compareSRLadders in
-  // SRLadderDiff.tsx) — same behavior as before this field existed. Only
-  // fill this in once you've worked out the View's actual expected
-  // per-line relationship; don't guess a plausible-looking default.
+  // NEW: Level Check's 13 line-by-line conditions for this View. Omit
+  // and there's simply no Level Check for this View — compareSRLadders
+  // (SRLadderDiff.tsx) has no generic fallback, so Level Check, Ladder
+  // Check, and Vs. View Pass Baseline all show "No levelCheckDefs"
+  // rather than guessing at a rule. Only fill this in once you've worked
+  // out the View's actual expected per-line relationship.
   levelCheckDefs?: LevelCheckCondition[];
 }
 

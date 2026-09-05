@@ -2,20 +2,18 @@
 
 /**
  * SRLadderDiff — compares prevCPR vs todayCPR (same CPRLevels shape used
- * throughout SRLadderPanel.tsx) and flags whether each level held its
- * expected "slot" relative to yesterday, or crossed into a neighboring
- * level's previous territory.
+ * throughout SRLadderPanel.tsx) against a View's own 13 Level Check
+ * conditions (BACKTEST_TARGETS' levelCheckDefs in backtest.ts), flagging
+ * whether each of the 13 lines held its expected relationship to the
+ * other day, or crossed it.
  *
- * Example output (matches your spec):
+ * There is no generic/default check: a View with no levelCheckDefs has
+ * no Level Check to run, and every function here reports that plainly
+ * ("No levelCheckDefs") rather than falling back to a guessed rule.
+ *
+ * Example output for a line whose condition is satisfied/not:
  *   S4 between prev S4 and prev S3 — Matching
  *   TC between prev TC and prev PH — Not Matching (TC above prev PH)
- *
- * Design note: the "neighbor" for each level is derived by *sorting
- * yesterday's own 13 values*, not from a hardcoded name order (e.g.
- * "TC's neighbor is always PH"). BC/TC/Pivot can swap relative position
- * depending on the CPR type (your "A-A-AA-OA" label), so a fixed name
- * order would silently mis-check on those days. Sorting yesterday's
- * actual values is self-correcting for that.
  */
 
 import { CheckCircle2, XCircle } from "lucide-react";
@@ -85,125 +83,71 @@ export type SRLevelCheck = {
 };
 
 /**
- * Compares prevCPR vs todayCPR, line by line.
+ * Compares prevCPR vs todayCPR, line by line, against a View's own 13
+ * Level Check conditions (that View's levelCheckDefs from
+ * BACKTEST_TARGETS in backtest.ts — see LevelCheckCondition above).
  *
- * Default (no `conditions` passed): the generic check — each level's
- * "neighbor" is derived by sorting yesterday's own 13 values (not a
- * hardcoded name order, since BC/TC/Pivot can swap relative position),
- * and today's value at that level must fall within yesterday's
- * self-neighbor band.
- *
- * When `conditions` is passed (a View's levelCheckDefs from
- * BACKTEST_TARGETS), that View's own per-line rules are used instead —
- * see LevelCheckCondition above. Both paths feed the same SRLevelCheck
- * shape, so Level Check, Vs. View Pass Baseline, and the match-summary
- * helpers below all work unchanged either way.
+ * There is no generic fallback: when `conditions` is omitted or empty
+ * (the View has no levelCheckDefs yet), this returns an empty array —
+ * callers (getLadderMatchSummary, SRLadderDiffPanel, buildViewLadderBaseline)
+ * all treat that as "no Level Check to show" rather than guessing at a rule.
  */
 export function compareSRLadders(
   prevCPR: CPRLevels,
   todayCPR: CPRLevels,
   conditions?: LevelCheckCondition[]
 ): SRLevelCheck[] {
-  if (conditions && conditions.length > 0) {
-    return conditions.map((cond) => {
-      const subjectIsToday = cond.subject === "today";
-      const subjectVal = (subjectIsToday ? todayCPR : prevCPR)[cond.key] as number;
-      // The band always comes from the day `subject` is NOT.
-      const bandCPR = subjectIsToday ? prevCPR : todayCPR;
-      const bandA = bandCPR[cond.bandKeys[0]] as number;
-      const bandB = bandCPR[cond.bandKeys[1]] as number;
-      const lower = Math.min(bandA, bandB);
-      const upper = Math.max(bandA, bandB);
-      const matching = subjectVal >= lower && subjectVal <= upper;
+  if (!conditions || conditions.length === 0) return [];
 
-      const selfLabel = levelLabel(cond.key);
-      const subjectPrefix = subjectIsToday ? "" : "Previous ";
-      const bandPrefix = subjectIsToday ? "prev " : "";
-      const [lowKey, highKey] =
-        bandA <= bandB ? [cond.bandKeys[0], cond.bandKeys[1]] : [cond.bandKeys[1], cond.bandKeys[0]];
-      const lowLabel = levelLabel(lowKey);
-      const highLabel = levelLabel(highKey);
+  return conditions.map((cond) => {
+    const subjectIsToday = cond.subject === "today";
+    const subjectVal = (subjectIsToday ? todayCPR : prevCPR)[cond.key] as number;
+    // The band always comes from the day `subject` is NOT.
+    const bandCPR = subjectIsToday ? prevCPR : todayCPR;
+    const bandA = bandCPR[cond.bandKeys[0]] as number;
+    const bandB = bandCPR[cond.bandKeys[1]] as number;
+    const lower = Math.min(bandA, bandB);
+    const upper = Math.max(bandA, bandB);
+    const matching = subjectVal >= lower && subjectVal <= upper;
 
-      let direction: "above" | "below" | undefined;
-      let basicText: string;
-      let text: string;
-
-      if (matching) {
-        basicText = `${subjectPrefix}${selfLabel} between ${bandPrefix}${lowLabel} and ${bandPrefix}${highLabel} — Matching`;
-        text = basicText;
-      } else {
-        direction = subjectVal > upper ? "above" : "below";
-        const crossed = direction === "above" ? highLabel : lowLabel;
-        basicText = `${subjectPrefix}${selfLabel} between ${bandPrefix}${lowLabel} and ${bandPrefix}${highLabel} — Not Matching`;
-        text = `${basicText} (${selfLabel} ${direction} ${bandPrefix}${crossed})`;
-      }
-
-      // neighborKey/neighborLabel/prevSelf/prevNeighbor aren't read by any
-      // caller outside this file (only key/label/matching/text/basicText
-      // are) — filled in with well-defined, if not perfectly "neighbor-
-      // shaped", values for a "previous"-subject condition.
-      return {
-        key: cond.key,
-        label: selfLabel,
-        neighborKey: lowKey === cond.key ? highKey : lowKey,
-        neighborLabel: lowKey === cond.key ? highLabel : lowLabel,
-        prevSelf: prevCPR[cond.key] as number,
-        prevNeighbor: bandA,
-        today: todayCPR[cond.key] as number,
-        matching,
-        direction,
-        text,
-        basicText,
-      };
-    });
-  }
-
-  // Sort yesterday's 13 levels by actual value (low -> high) so each
-  // level's "neighbor" reflects that specific day, not an assumed order.
-  const sortedPrev = LEVEL_KEYS
-    .map((key) => ({ key, value: prevCPR[key] as number }))
-    .sort((a, b) => a.value - b.value);
-
-  const indexOf = new Map(sortedPrev.map((e, i) => [e.key, i]));
-
-  return LEVEL_KEYS.map((key) => {
-    const i = indexOf.get(key)!;
-    // Prefer the neighbor one rung above; the highest level that day
-    // (usually r4) has nothing above it, so it borrows the rung below.
-    const isTop = i === sortedPrev.length - 1;
-    const neighborKey = (isTop ? sortedPrev[i - 1] : sortedPrev[i + 1]).key;
-
-    const prevSelf = prevCPR[key] as number;
-    const prevNeighbor = prevCPR[neighborKey] as number;
-    const todayVal = todayCPR[key] as number;
-
-    const lower = Math.min(prevSelf, prevNeighbor);
-    const upper = Math.max(prevSelf, prevNeighbor);
-    const matching = todayVal >= lower && todayVal <= upper;
-
-    const selfLabel = levelLabel(key);
-    const neighborLabel = levelLabel(neighborKey);
-    // Phrase boundaries low-to-high regardless of which is self/neighbor.
-    const [lowLabel, highLabel] =
-      prevSelf <= prevNeighbor ? [selfLabel, neighborLabel] : [neighborLabel, selfLabel];
+    const selfLabel = levelLabel(cond.key);
+    const subjectPrefix = subjectIsToday ? "" : "Previous ";
+    const bandPrefix = subjectIsToday ? "prev " : "";
+    const [lowKey, highKey] =
+      bandA <= bandB ? [cond.bandKeys[0], cond.bandKeys[1]] : [cond.bandKeys[1], cond.bandKeys[0]];
+    const lowLabel = levelLabel(lowKey);
+    const highLabel = levelLabel(highKey);
 
     let direction: "above" | "below" | undefined;
-    let text: string;
     let basicText: string;
+    let text: string;
 
     if (matching) {
-      basicText = `${selfLabel} between prev ${lowLabel} and prev ${highLabel} — Matching`;
+      basicText = `${subjectPrefix}${selfLabel} between ${bandPrefix}${lowLabel} and ${bandPrefix}${highLabel} — Matching`;
       text = basicText;
     } else {
-      direction = todayVal > upper ? "above" : "below";
+      direction = subjectVal > upper ? "above" : "below";
       const crossed = direction === "above" ? highLabel : lowLabel;
-      basicText = `${selfLabel} between prev ${lowLabel} and prev ${highLabel} — Not Matching`;
-      text = `${basicText} (${selfLabel} ${direction} prev ${crossed})`;
+      basicText = `${subjectPrefix}${selfLabel} between ${bandPrefix}${lowLabel} and ${bandPrefix}${highLabel} — Not Matching`;
+      text = `${basicText} (${selfLabel} ${direction} ${bandPrefix}${crossed})`;
     }
 
+    // neighborKey/neighborLabel/prevSelf/prevNeighbor aren't read by any
+    // caller outside this file (only key/label/matching/text/basicText
+    // are) — filled in with well-defined, if not perfectly "neighbor-
+    // shaped", values for a "previous"-subject condition.
     return {
-      key, label: selfLabel, neighborKey, neighborLabel,
-      prevSelf, prevNeighbor, today: todayVal, matching, direction, text, basicText,
+      key: cond.key,
+      label: selfLabel,
+      neighborKey: lowKey === cond.key ? highKey : lowKey,
+      neighborLabel: lowKey === cond.key ? highLabel : lowLabel,
+      prevSelf: prevCPR[cond.key] as number,
+      prevNeighbor: bandA,
+      today: todayCPR[cond.key] as number,
+      matching,
+      direction,
+      text,
+      basicText,
     };
   });
 }
@@ -230,12 +174,14 @@ export function getLadderMatchSummary(
   conditions?: LevelCheckCondition[]
 ) {
   const checks = compareSRLadders(prevCPR, todayCPR, conditions);
+  const hasConditions = checks.length > 0;
   const mismatches = checks.filter((c) => !c.matching);
   return {
+    hasConditions,
     matchingCount: checks.length - mismatches.length,
     total: checks.length,
     mismatchLabels: mismatches.map((c) => c.label),
-    fullMatch: mismatches.length === 0,
+    fullMatch: hasConditions && mismatches.length === 0,
   };
 }
 
@@ -244,9 +190,9 @@ export function getLadderMatchSummary(
  * SRLadderPanel. Shows all 13 lines by default; pass showMatching={false}
  * to only surface the mismatches, which is usually what you're scanning for.
  *
- * Pass `conditions` (a View's levelCheckDefs from BACKTEST_TARGETS) to
- * use that View's own per-line rules instead of the generic sorted-
- * neighbor check — see compareSRLadders.
+ * Pass `conditions` (a View's levelCheckDefs from BACKTEST_TARGETS) —
+ * there's no generic fallback, so omitting it (or a View with no
+ * levelCheckDefs yet) renders "No levelCheckDefs" instead of a checklist.
  */
 export function SRLadderDiffPanel({
   prevCPR,
@@ -262,6 +208,19 @@ export function SRLadderDiffPanel({
   const checks = compareSRLadders(prevCPR, todayCPR, conditions);
   const { matchingCount, total } = summarizeSRLadderDiff(checks);
   const visible = showMatching ? checks : checks.filter((c) => !c.matching);
+
+  if (total === 0) {
+    return (
+      <div className="min-w-[220px]">
+        <div className="mb-1.5 pl-2 text-left">
+          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+            Level Check
+          </p>
+        </div>
+        <p className="text-[10px] text-muted-foreground px-2">No levelCheckDefs</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-w-[220px]">
@@ -285,7 +244,7 @@ export function SRLadderDiffPanel({
               style={{ color: c.matching ? undefined : levelColor(c.key) }}
               className={c.matching ? "text-muted-foreground" : ""}
             >
-              {c.text}
+              {c.basicText}
             </span>
           </div>
         ))}
@@ -342,15 +301,17 @@ export type ViewLadderBaseline = {
 
 /**
  * Builds a View's Pass baseline from that View's own Pass rows' ladderdiff.
- * Null when there are no Pass rows. Pass `conditions` (that View's
- * levelCheckDefs) so the baseline is built from the same per-line rules
- * Level Check uses for this View — see compareSRLadders.
+ * Null when there are no Pass rows, or when the View has no
+ * levelCheckDefs (there's no Level Check to build a baseline from — see
+ * compareSRLadders). Pass `conditions` (that View's levelCheckDefs) so
+ * the baseline is built from the same per-line rules Level Check uses
+ * for this View.
  */
 export function buildViewLadderBaseline(
   passRows: { prevCPR: CPRLevels; todayCPR: CPRLevels }[],
   conditions?: LevelCheckCondition[]
 ): ViewLadderBaseline | null {
-  if (passRows.length === 0) return null;
+  if (passRows.length === 0 || !conditions || conditions.length === 0) return null;
 
   const counts = new Map<LevelKey, { matching: number; notMatching: number }>();
   LEVEL_KEYS.forEach((k) => counts.set(k, { matching: 0, notMatching: 0 }));

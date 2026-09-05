@@ -441,9 +441,9 @@ export function SRLadderPanel({
   /**
    * The current View's 13 Level Check conditions (BACKTEST_TARGETS'
    * levelCheckDefs), passed straight through to SRLadderDiffPanel. Omit
-   * to fall back to the generic sorted-neighbor check — see
-   * compareSRLadders in SRLadderDiff.tsx. No effect unless showLevelCheck
-   * is also true.
+   * (or a View with none defined yet) and SRLadderDiffPanel shows "No
+   * levelCheckDefs" instead of a checklist — see compareSRLadders in
+   * SRLadderDiff.tsx. No effect unless showLevelCheck is also true.
    */
   levelCheckConditions?: LevelCheckCondition[];
   /**
