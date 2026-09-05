@@ -189,3 +189,253 @@ export function SRLadderDiffPanel({
     </div>
   );
 }
+// ---------------------------------------------------------------------------
+// View-baseline ladder check
+//
+// compareSRLadders / getLadderMatchSummary above answer a different
+// question: "did this symbol hold its OWN slot vs yesterday" — a fixed
+// geometric rule applied the same way to every symbol, every View.
+//
+// What's needed for backtest review is: within ONE View, use that View's
+// own Pass rows to learn what a "healthy" ladder looks like for THAT View
+// specifically, then measure each Fail row against that learned shape —
+// not against a universal rule. A bullish R4-breakout View's Pass symbols
+// will typically show price already through/near R4 with one TC/Pivot/BC
+// ordering; a bearish S4-breakdown View's Pass symbols will look nothing
+// like that. The functions below build the baseline from a View's Pass
+// rows, then score any other row (typically a Fail row) against it.
+//
+// Always scope buildViewLadderBaseline()'s input to ONE View's Pass rows
+// (e.g. BacktestPanel's `rows`, filtered to result === "pass", for the
+// currently selected dropdown entry — `rows` is already reset on every
+// selectedKey change / run()). Pooling Pass rows across different Views
+// would blend unrelated "healthy" shapes together and defeat the point.
+// ---------------------------------------------------------------------------
+
+/** One of the 13 CPR levels ranked by value within a single day's own CPR (0 = lowest, 12 = highest). */
+export type RankedLevel = { key: LevelKey; label: string; value: number; rank: number };
+
+/** Ranks a single day's 13 CPR levels by value — this permutation is what shifts when TC/Pivot/BC swap relative position across CPR types. */
+export function rankLevelsByValue(cpr: CPRLevels): RankedLevel[] {
+  return LEVEL_KEYS
+    .map((key) => ({ key, label: levelLabel(key), value: cpr[key] as number }))
+    .sort((a, b) => a.value - b.value)
+    .map((e, i) => ({ ...e, rank: i }));
+}
+
+/**
+ * Where price sits relative to that same day's 13 levels, expressed as the
+ * nearest level ABOVE price (ceiling) and nearest level BELOW price
+ * (floor) by that day's own values — so it's comparable across symbols
+ * even though raw prices/levels aren't. A null floor means price is above
+ * every level (e.g. above R4); a null ceiling means it's below every level.
+ */
+export type PricePosition = { floor: LevelKey | null; ceiling: LevelKey | null; label: string };
+
+export function pricePosition(cpr: CPRLevels, price: number): PricePosition {
+  const ranked = rankLevelsByValue(cpr); // low -> high
+  let floor: RankedLevel | null = null;
+  let ceiling: RankedLevel | null = null;
+  for (const lvl of ranked) {
+    if (lvl.value <= price) floor = lvl;
+    else {
+      ceiling = lvl;
+      break;
+    }
+  }
+  const label = !floor
+    ? `below ${ceiling!.label}`
+    : !ceiling
+    ? `above ${floor.label}`
+    : `between ${floor.label} and ${ceiling.label}`;
+  return { floor: floor?.key ?? null, ceiling: ceiling?.key ?? null, label };
+}
+
+function priceZoneKey(p: PricePosition): string {
+  return `${p.floor ?? "-"}|${p.ceiling ?? "-"}`;
+}
+
+/** A View's learned "healthy" ladder shape, built from that View's own Pass rows only. */
+export type ViewLadderBaseline = {
+  sampleSize: number;
+  /** For each level key, the rank it most often held across Pass rows, and how many Pass rows agreed. */
+  levelRank: Record<LevelKey, { modalRank: number; agree: number }>;
+  /** The price zone (relative to that day's own levels) most Pass rows shared — null if no Pass row had price data. */
+  priceZone: { floor: LevelKey | null; ceiling: LevelKey | null; label: string; agree: number; total: number } | null;
+};
+
+/** Builds a View's Pass baseline. Returns null when there are no Pass rows to learn from. */
+export function buildViewLadderBaseline(
+  passRows: { todayCPR: CPRLevels; currentPrice?: number | null }[]
+): ViewLadderBaseline | null {
+  if (passRows.length === 0) return null;
+
+  const rankCounts = new Map<LevelKey, Map<number, number>>();
+  LEVEL_KEYS.forEach((k) => rankCounts.set(k, new Map()));
+  const zoneCounts = new Map<string, { count: number; sample: PricePosition }>();
+  let priceSampleCount = 0;
+
+  for (const row of passRows) {
+    for (const { key, rank } of rankLevelsByValue(row.todayCPR)) {
+      const m = rankCounts.get(key)!;
+      m.set(rank, (m.get(rank) ?? 0) + 1);
+    }
+    if (typeof row.currentPrice === "number" && isFinite(row.currentPrice)) {
+      priceSampleCount++;
+      const zone = pricePosition(row.todayCPR, row.currentPrice);
+      const zk = priceZoneKey(zone);
+      const existing = zoneCounts.get(zk);
+      zoneCounts.set(zk, { count: (existing?.count ?? 0) + 1, sample: zone });
+    }
+  }
+
+  const levelRank = {} as ViewLadderBaseline["levelRank"];
+  for (const key of LEVEL_KEYS) {
+    const m = rankCounts.get(key)!;
+    let modalRank = 0;
+    let agree = -1;
+    for (const [rank, count] of m) {
+      if (count > agree) {
+        agree = count;
+        modalRank = rank;
+      }
+    }
+    levelRank[key] = { modalRank, agree };
+  }
+
+  let priceZone: ViewLadderBaseline["priceZone"] = null;
+  if (priceSampleCount > 0) {
+    let best: { count: number; sample: PricePosition } | undefined;
+    for (const entry of zoneCounts.values()) {
+      if (!best || entry.count > best.count) best = entry;
+    }
+    if (best) {
+      priceZone = {
+        floor: best.sample.floor,
+        ceiling: best.sample.ceiling,
+        label: best.sample.label,
+        agree: best.count,
+        total: priceSampleCount,
+      };
+    }
+  }
+
+  return { sampleSize: passRows.length, levelRank, priceZone };
+}
+
+/** One level's deviation from the View's Pass baseline, for a single scored row. */
+export type BaselineLevelDeviation = {
+  key: LevelKey;
+  label: string;
+  baselineRank: number;
+  baselineAgree: number; // how many Pass rows shared that rank
+  actualRank: number;
+  deviates: boolean;
+};
+
+export type FailVsBaselineResult = {
+  sampleSize: number;
+  levelDeviations: BaselineLevelDeviation[];
+  deviationCount: number;
+  priceZone?: PricePosition;
+  priceDeviates?: boolean;
+  priceBaselineLabel?: string;
+  priceBaselineAgree?: number;
+  priceBaselineTotal?: number;
+};
+
+/**
+ * Scores a single row's ladder against a View's Pass baseline (built by
+ * buildViewLadderBaseline from that same View's Pass rows). Intended for
+ * Fail rows — Pass rows compared against a baseline built from themselves
+ * would trivially "match", which isn't a meaningful check.
+ */
+export function scoreAgainstViewBaseline(
+  row: { todayCPR: CPRLevels; currentPrice?: number | null },
+  baseline: ViewLadderBaseline
+): FailVsBaselineResult {
+  const ranked = rankLevelsByValue(row.todayCPR);
+  const rankByKey = new Map(ranked.map((r) => [r.key, r.rank]));
+
+  const levelDeviations: BaselineLevelDeviation[] = LEVEL_KEYS.map((key) => {
+    const actualRank = rankByKey.get(key)!;
+    const base = baseline.levelRank[key];
+    return {
+      key,
+      label: levelLabel(key),
+      baselineRank: base.modalRank,
+      baselineAgree: base.agree,
+      actualRank,
+      deviates: actualRank !== base.modalRank,
+    };
+  });
+
+  const result: FailVsBaselineResult = {
+    sampleSize: baseline.sampleSize,
+    levelDeviations,
+    deviationCount: levelDeviations.filter((d) => d.deviates).length,
+  };
+
+  if (baseline.priceZone && typeof row.currentPrice === "number" && isFinite(row.currentPrice)) {
+    const zone = pricePosition(row.todayCPR, row.currentPrice);
+    result.priceZone = zone;
+    result.priceDeviates = priceZoneKey(zone) !== `${baseline.priceZone.floor ?? "-"}|${baseline.priceZone.ceiling ?? "-"}`;
+    result.priceBaselineLabel = baseline.priceZone.label;
+    result.priceBaselineAgree = baseline.priceZone.agree;
+    result.priceBaselineTotal = baseline.priceZone.total;
+  }
+
+  return result;
+}
+
+/**
+ * Renders one row's ladder against its View's Pass baseline. Sits
+ * alongside SRLadderDiffPanel in the expanded row, but answers a
+ * different question: not "did this move vs yesterday", but "does this
+ * ladder look like the shape this View's own winners had, or not".
+ */
+export function ViewBaselineLadderPanel({ result }: { result: FailVsBaselineResult }) {
+  const deviating = result.levelDeviations.filter((d) => d.deviates);
+  const total = result.levelDeviations.length;
+  const matchingCount = total - result.deviationCount;
+
+  return (
+    <div className="min-w-[240px]">
+      <div className="mb-1.5 flex flex-nowrap items-center justify-between gap-1.5 pl-2 text-left">
+        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+          Vs. View Pass Baseline (n={result.sampleSize})
+        </p>
+        <span className="text-[9px] text-muted-foreground pr-1">
+          {matchingCount}/{total} matching
+        </span>
+      </div>
+      <div className="space-y-0.5 px-2">
+        {typeof result.priceDeviates === "boolean" && (
+          <div className="flex items-start gap-1.5 text-[10px] font-mono leading-tight">
+            {result.priceDeviates ? (
+              <XCircle className="w-3 h-3 text-red-400 shrink-0 mt-[1px]" />
+            ) : (
+              <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0 mt-[1px]" />
+            )}
+            <span className={result.priceDeviates ? "" : "text-muted-foreground"}>
+              Price — Pass baseline: {result.priceBaselineLabel} ({result.priceBaselineAgree}/{result.priceBaselineTotal})
+              {result.priceDeviates ? ` — this symbol: ${result.priceZone?.label}` : ""}
+            </span>
+          </div>
+        )}
+        {deviating.length === 0 ? (
+          <p className="text-[10px] text-muted-foreground px-1">All 13 levels match this View's Pass baseline order.</p>
+        ) : (
+          deviating.map((d) => (
+            <div key={d.key} className="flex items-start gap-1.5 text-[10px] font-mono leading-tight">
+              <XCircle className="w-3 h-3 text-red-400 shrink-0 mt-[1px]" />
+              <span style={{ color: levelColor(d.key) }}>
+                {d.label} — Pass baseline rank {d.baselineRank + 1}/13 ({d.baselineAgree}/{result.sampleSize}), this symbol rank {d.actualRank + 1}/13
+              </span>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
