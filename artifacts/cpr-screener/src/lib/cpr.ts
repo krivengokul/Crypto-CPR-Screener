@@ -410,6 +410,10 @@ export interface CPRResult {
   U2L3: boolean;
   passes: boolean;
   currentPrice: number;
+  /** Previous-day candle's close — the "Price" row in the PDay S/R ladder. */
+  prevClose: number;
+  /** PDay-1 candle's close — the "Price" row in the PDay-1 S/R ladder. Only present when a pp candle exists (mirrors ppCPR). */
+  ppClose?: number;
   openPrice: number;
   change24h: number;
   quoteVolume: number;
@@ -1329,7 +1333,10 @@ export function analyzeCPR(
 
   const ppCandle = candles.length >= 3 ? candles[candles.length - 3] : null;
   const ppCPR = ppCandle && isValidCandle(ppCandle) ? calcCPR(ppCandle) : undefined;
-  const ppCPRField = ppCPR ? { ppCPR } : {};
+  // ppClose mirrors ppCPR's own guard (ppCandle present + valid) so the two
+  // stay in lockstep — the PDay-1 S/R ladder's "Price" row and its levels
+  // either both exist or both don't.
+  const ppCPRField = ppCPR ? { ppCPR, ppClose: ppCandle!.close } : {};
 
   // Single source of truth for the (today, prev) band classification. Every
   // pivot-band flag on CPRResult comes from here via spread; ScreenerUtils
@@ -1665,6 +1672,7 @@ export function analyzeCPR(
     ...flags,
     passes: cprRising && cprNarrowing,
     currentPrice,
+    prevClose: prevCandle.close,
     openPrice: openPrice ?? todayCandle.open,
     change24h,
     quoteVolume,
