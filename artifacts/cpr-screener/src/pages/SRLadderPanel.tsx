@@ -62,6 +62,7 @@ export function SRLadder({
   currentPrice,
   label,
   badge,
+  pricePlain = false,
 }: {
   cpr: CPRLevels;
   /** Omit when no price is known (e.g. historical backtest rows). */
@@ -74,6 +75,12 @@ export function SRLadder({
    * S/R" has no earlier CPR to compare against).
    */
   badge?: ReactNode;
+  /**
+   * When true, the "Price" row is rendered without the emerald background
+   * and arrow indicator. Used for PDay S/R and PDay-1 S/R so the live
+   * Today S/R price row keeps the highlighted styling.
+   */
+  pricePlain?: boolean;
 }) {
   const levels = [
     { key: "R4",    value: cpr.r4 },
@@ -133,9 +140,11 @@ export function SRLadder({
         row.type === "price" ? (
           <div
             key={`price-${i}`}
-            className="grid grid-cols-[3.5rem_auto] justify-start gap-1 w-fit bg-emerald-700/70 text-white text-xs px-2 py-0.5 rounded font-bold my-0.5"
+            className={`grid grid-cols-[3.5rem_auto] justify-start gap-1 w-fit text-white text-xs px-2 py-0.5 rounded font-bold my-0.5 ${
+              pricePlain ? "" : "bg-emerald-700/70"
+            }`}
           >
-            <span>▶ Price</span>
+            <span>{pricePlain ? "Price" : "▶ Price"}</span>
             <span className="font-mono">{fmt(currentPrice as number)}</span>
           </div>
         ) : (
@@ -417,13 +426,13 @@ export function SRLadderPanel({
   return (
     <div className="flex w-full min-w-0 flex-col gap-3">
       <div className="flex flex-wrap items-start gap-3 border-b border-border/50 pb-3">
-        <SRLadder cpr={r.prevCPR} currentPrice={r.prevClose} label="PDay S/R" badge={prevPatternBadge} />
+        <SRLadder cpr={r.prevCPR} currentPrice={r.prevClose} label="PDay S/R" badge={prevPatternBadge} pricePlain />
         <div className="min-w-[440px] flex-1">
           <CPRLevelChart prevCPR={r.prevCPR} todayCPR={r.todayCPR} pivotPatternBadge={pivotPatternBadge} />
         </div>
         <SRLadder cpr={r.todayCPR} currentPrice={r.currentPrice} label="Today S/R" badge={todayPatternBadge} />
         {r.ppCPR && (
-          <SRLadder cpr={r.ppCPR} currentPrice={r.ppClose} label="PDay-1 S/R" badge={pDay1PatternBadge} />
+          <SRLadder cpr={r.ppCPR} currentPrice={r.ppClose} label="PDay-1 S/R" badge={pDay1PatternBadge} pricePlain />
         )}
       </div>
     </div>
