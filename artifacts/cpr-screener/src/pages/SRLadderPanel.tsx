@@ -400,9 +400,11 @@ function CPRLevelChart({
 /**
  * The full expanded panel shown when a symbol row is clicked:
  * PDay S/R first, then the Prev-Day-vs-Today Levels VIEW chart, then
- * Today S/R (and PDay-1 S/R if available). This order keeps each day's
+ * Today S/R, then PDay-1 S/R (if available), then — BacktestPanel only —
+ * Level Check and Vs. View Pass Baseline. This order keeps each day's
  * ladder close to its own lines in the chart so the overlapping level
- * values are easier to read. Reused by Screener and BacktestPanel.
+ * values are easier to read, while the two backtest-only diagnostics sit
+ * together at the end. Reused by Screener and BacktestPanel.
  *
  * Each day-specific ladder shows that day's own closing price as its
  * bottom row: labeled "Close" (plain white text) for PDay S/R's
@@ -416,6 +418,7 @@ export function SRLadderPanel({
   pDay1PatternBadge,
   pivotPatternBadge,
   showLevelCheck = false,
+  viewBaselinePanel,
 }: {
   r: SRLadderData;
   /** Today's pattern badge(s) — e.g. renderTodayPatternBadges(r) — shown on the "Today S/R" ladder. */
@@ -428,11 +431,21 @@ export function SRLadderPanel({
   pivotPatternBadge?: ReactNode;
   /**
    * Show the day-over-day "Level Check" column (compareSRLadders /
-   * SRLadderDiffPanel). Opt-in and defaulted to false: the Screener's
-   * expanded ladder should stay exactly as it was, while BacktestPanel's
-   * expanded ladder explicitly passes true to surface it.
+   * SRLadderDiffPanel), rendered after PDay-1 S/R. Opt-in and defaulted
+   * to false: the Screener's expanded ladder should stay exactly as it
+   * was, while BacktestPanel's expanded ladder explicitly passes true to
+   * surface it.
    */
   showLevelCheck?: boolean;
+  /**
+   * BacktestPanel-only: a pre-built <ViewBaselineLadderPanel /> (or any
+   * ReactNode) rendered after Level Check, at the very end of the row.
+   * Passed as a node rather than raw data so this file stays decoupled
+   * from FailVsBaselineResult / BacktestPanel's grading logic. Omit
+   * (the default) for Screener and for backtest rows with no baseline
+   * to show against (e.g. Pass rows, which built the baseline).
+   */
+  viewBaselinePanel?: ReactNode;
 }) {
   return (
     <div className="flex w-full min-w-0 flex-col gap-3">
@@ -441,11 +454,12 @@ export function SRLadderPanel({
         <div className="min-w-[440px] flex-1">
           <CPRLevelChart prevCPR={r.prevCPR} todayCPR={r.todayCPR} pivotPatternBadge={pivotPatternBadge} />
         </div>
-        {showLevelCheck && <SRLadderDiffPanel prevCPR={r.prevCPR} todayCPR={r.todayCPR} />}
         <SRLadder cpr={r.todayCPR} currentPrice={r.currentPrice} label="Today S/R" badge={todayPatternBadge} />
         {r.ppCPR && (
           <SRLadder cpr={r.ppCPR} currentPrice={r.ppClose} label="PDay-1 S/R" badge={pDay1PatternBadge} pricePlain />
         )}
+        {showLevelCheck && <SRLadderDiffPanel prevCPR={r.prevCPR} todayCPR={r.todayCPR} />}
+        {viewBaselinePanel}
       </div>
     </div>
   );
@@ -464,6 +478,7 @@ export function SRLadderRow({
   pDay1PatternBadge,
   pivotPatternBadge,
   showLevelCheck = false,
+  viewBaselinePanel,
 }: {
   r: SRLadderData;
   colSpan?: number;
@@ -476,8 +491,10 @@ export function SRLadderRow({
   pDay1PatternBadge?: ReactNode;
   /** PivotPattern badge (today vs prev HHLL x RRHH x SSLL combo) — e.g. renderPivotPatternBadge(r) — shown next to the "Levels VIEW" label. */
   pivotPatternBadge?: ReactNode;
-  /** Show the "Level Check" column. Defaults to false — pass true only from BacktestPanel. See SRLadderPanel for details. */
+  /** Show the "Level Check" section, rendered after PDay-1 S/R. Defaults to false — pass true only from BacktestPanel. See SRLadderPanel for details. */
   showLevelCheck?: boolean;
+  /** BacktestPanel-only "Vs. View Pass Baseline" panel, rendered after Level Check. See SRLadderPanel for details. */
+  viewBaselinePanel?: ReactNode;
 }) {
   return (
     <tr key={rowKey ? `${rowKey}-sr` : undefined} className="bg-muted/20 border-b border-border">
@@ -489,6 +506,7 @@ export function SRLadderRow({
           pDay1PatternBadge={pDay1PatternBadge}
           pivotPatternBadge={pivotPatternBadge}
           showLevelCheck={showLevelCheck}
+          viewBaselinePanel={viewBaselinePanel}
         />
       </td>
     </tr>

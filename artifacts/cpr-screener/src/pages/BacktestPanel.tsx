@@ -1581,20 +1581,17 @@ export default function BacktestPanel() {
                         prevPatternBadge={renderPrevPatternBadge(r.raw)}
                         pivotPatternBadge={renderPivotPatternBadge(r.raw)}
                         showLevelCheck
+                        // View-baseline breakdown — only meaningful for a Fail row
+                        // measured against its own View's Pass rows (see
+                        // baselineByRow above). Pass rows built the baseline, so
+                        // there's nothing to show for them here.
+                        viewBaselinePanel={
+                          r.result === "fail" && baselineByRow.get(r) ? (
+                            <ViewBaselineLadderPanel result={baselineByRow.get(r)!} />
+                          ) : undefined
+                        }
                       />
                     )}
-                    {/* View-baseline breakdown — only meaningful for a Fail row measured
-                        against its own View's Pass rows (see baselineByRow above). Pass
-                        rows built the baseline, so there's nothing to show for them here. */}
-                    {expandedSymbols.has(`${r.source}-${r.symbol}-${r.entryDate}`) &&
-                      r.result === "fail" &&
-                      baselineByRow.get(r) && (
-                        <tr className="bg-muted/20 border-b border-border">
-                          <td colSpan={11} className="px-3 py-4 sm:px-4">
-                            <ViewBaselineLadderPanel result={baselineByRow.get(r)!} />
-                          </td>
-                        </tr>
-                      )}
                     </Fragment>
                   ))}
                 </tbody>
