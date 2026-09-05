@@ -1665,97 +1665,6 @@ export default function Screener({
           </div>
           )}
 
-          {/* Price Level filter buttons — own row, below CPR Size. Mutually
-              exclusive with each other via the single pdhPdlFilter state,
-              independent of activeView and showAll. */}
-          <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[10px] text-emerald-400/90 uppercase tracking-wider mr-0.5 font-semibold">Price Level:</span>
-
-              <button
-                onClick={() => setPdhPdlFilter((v) => (v === "above" ? null : "above"))}
-                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                  pdhPdlFilter === "above"
-                    ? "border-green-400 text-green-400"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-                title="Show only rows where price is currently above yesterday's High (PDH)"
-              >
-                {pdhPdlFilter === "above" ? "✕ >PDH" : ">PDH"}
-              </button>
-              <button
-                onClick={() => setPdhPdlFilter((v) => (v === "below" ? null : "below"))}
-                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                  pdhPdlFilter === "below"
-                    ? "border-destructive text-destructive"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-                title="Show only rows where price is currently below yesterday's Low (PDL)"
-              >
-                {pdhPdlFilter === "below" ? "✕ <PDL" : "<PDL"}
-              </button>
-              {/* NEW: >PU4 — price currently above previous day's R4 (Pivot U4) */}
-              <button
-                onClick={() => setPdhPdlFilter((v) => (v === "abovepu4" ? null : "abovepu4"))}
-                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                  pdhPdlFilter === "abovepu4"
-                    ? "border-emerald-400 text-emerald-400"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-                title="Show only rows where price is currently above previous day's R4 (PU4)"
-              >
-                {pdhPdlFilter === "abovepu4" ? "✕ >PU4" : ">PU4"}
-              </button>
-              {/* NEW: <PL4 — price currently below previous day's S4 (Pivot L4) */}
-              <button
-                onClick={() => setPdhPdlFilter((v) => (v === "belowpl4" ? null : "belowpl4"))}
-                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                  pdhPdlFilter === "belowpl4"
-                    ? "border-red-400 text-red-400"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-                title="Show only rows where price is currently below previous day's S4 (PL4)"
-              >
-                {pdhPdlFilter === "belowpl4" ? "✕ <PL4" : "<PL4"}
-              </button>
-              {/* PDH/PDL: subgroup — S1-R1 IN, PDH>U1, PDL<L1 (same row, separator label) */}
-              <span className="text-[10px] text-rose-400/90 uppercase tracking-wider ml-2 mr-0.5 font-semibold">PDH/PDL:</span>
-              {/* S1R1 IN — S1/R1 (today or prev) sits inside/touching today's or prev's CPR band. */}
-              <button
-                onClick={() => setPdhPdlFilter((v) => (v === "s1r1in" ? null : "s1r1in"))}
-                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                  pdhPdlFilter === "s1r1in"
-                    ? "border-amber-400 text-amber-400"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-                title="Inside/Outside/Overlap rows where S1, R1, prev S1, or prev R1 sits inside or touches today's or previous CPR band"
-              >
-                {pdhPdlFilter === "s1r1in" ? "✕ S1-R1 IN" : "S1-R1 IN"}
-              </button>
-              {/* PDH>U1 — today's Previous Day High is above today's R1 (U1) */}
-              <button
-                onClick={() => setPdhPdlFilter((v) => (v === "pdhgtu1" ? null : "pdhgtu1"))}
-                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                  pdhPdlFilter === "pdhgtu1"
-                    ? "border-cyan-400 text-cyan-400"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-                title="Show only rows where today's Previous Day High (PDH) is above today's R1 (U1)"
-              >
-                {pdhPdlFilter === "pdhgtu1" ? "✕ PDHL-A" : "PDHL-A"}
-              </button>
-              {/* NEW: PDL<L1 — today's Previous Day Low is below today's S1 (L1) */}
-              <button
-                onClick={() => setPdhPdlFilter((v) => (v === "pdlltl1" ? null : "pdlltl1"))}
-                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                  pdhPdlFilter === "pdlltl1"
-                    ? "border-rose-400 text-rose-400"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-                title="Show only rows where today's Previous Day Low (PDL) is below today's S1 (L1)"
-              >
-                {pdhPdlFilter === "pdlltl1" ? "✕ PDHL-B" : "PDHL-B"}
-              </button>
-          </div>
           </div>
 
         )}
@@ -1779,27 +1688,115 @@ export default function Screener({
               />
             </div>
 
-            {canShowCombined && (
-              <div className="flex items-center gap-1 w-full sm:w-auto justify-end">
-                {(["combined", "binance", "delta"] as ActiveTab[]).map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className={`px-2 py-1 rounded text-xs font-semibold transition cursor-pointer ${
-                      activeTab === tab
-                        ? tab === "combined"
-                          ? "bg-amber-500/20 text-amber-400 border border-amber-500/40"
-                          : tab === "binance"
-                          ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/40"
-                          : "bg-cyan-500/20 text-cyan-400 border border-cyan-500/40"
-                        : "text-slate-400 hover:text-white bg-[#151e2c]"
-                    }`}
-                  >
-                    {tab === "combined" ? "All" : tab === "binance" ? "Binance" : "Delta"}
-                  </button>
-                ))}
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end flex-wrap">
+              {/* Price Level filter buttons — moved inline here (was its own
+                  labeled row further down, under "Price Level:"/"PDH/PDL:"
+                  headings). Labels dropped, same as Signal Desk's own
+                  Direction/Source Filter groups, which have no text prefix
+                  either — the button colors alone carry the meaning. Same
+                  pdhPdlFilter state and mutual-exclusivity as before. */}
+              <div className="flex items-center gap-1 flex-wrap">
+                <button
+                  onClick={() => setPdhPdlFilter((v) => (v === "above" ? null : "above"))}
+                  className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                    pdhPdlFilter === "above"
+                      ? "border-green-400 text-green-400"
+                      : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
+                  }`}
+                  title="Show only rows where price is currently above yesterday's High (PDH)"
+                >
+                  {pdhPdlFilter === "above" ? "✕ >PDH" : ">PDH"}
+                </button>
+                <button
+                  onClick={() => setPdhPdlFilter((v) => (v === "below" ? null : "below"))}
+                  className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                    pdhPdlFilter === "below"
+                      ? "border-destructive text-destructive"
+                      : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
+                  }`}
+                  title="Show only rows where price is currently below yesterday's Low (PDL)"
+                >
+                  {pdhPdlFilter === "below" ? "✕ <PDL" : "<PDL"}
+                </button>
+                <button
+                  onClick={() => setPdhPdlFilter((v) => (v === "abovepu4" ? null : "abovepu4"))}
+                  className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                    pdhPdlFilter === "abovepu4"
+                      ? "border-emerald-400 text-emerald-400"
+                      : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
+                  }`}
+                  title="Show only rows where price is currently above previous day's R4 (PU4)"
+                >
+                  {pdhPdlFilter === "abovepu4" ? "✕ >PU4" : ">PU4"}
+                </button>
+                <button
+                  onClick={() => setPdhPdlFilter((v) => (v === "belowpl4" ? null : "belowpl4"))}
+                  className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                    pdhPdlFilter === "belowpl4"
+                      ? "border-red-400 text-red-400"
+                      : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
+                  }`}
+                  title="Show only rows where price is currently below previous day's S4 (PL4)"
+                >
+                  {pdhPdlFilter === "belowpl4" ? "✕ <PL4" : "<PL4"}
+                </button>
+                <button
+                  onClick={() => setPdhPdlFilter((v) => (v === "s1r1in" ? null : "s1r1in"))}
+                  className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                    pdhPdlFilter === "s1r1in"
+                      ? "border-amber-400 text-amber-400"
+                      : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
+                  }`}
+                  title="Inside/Outside/Overlap rows where S1, R1, prev S1, or prev R1 sits inside or touches today's or previous CPR band"
+                >
+                  {pdhPdlFilter === "s1r1in" ? "✕ S1-R1 IN" : "S1-R1 IN"}
+                </button>
+                <button
+                  onClick={() => setPdhPdlFilter((v) => (v === "pdhgtu1" ? null : "pdhgtu1"))}
+                  className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                    pdhPdlFilter === "pdhgtu1"
+                      ? "border-cyan-400 text-cyan-400"
+                      : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
+                  }`}
+                  title="Show only rows where today's Previous Day High (PDH) is above today's R1 (U1)"
+                >
+                  {pdhPdlFilter === "pdhgtu1" ? "✕ PDHL-A" : "PDHL-A"}
+                </button>
+                <button
+                  onClick={() => setPdhPdlFilter((v) => (v === "pdlltl1" ? null : "pdlltl1"))}
+                  className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                    pdhPdlFilter === "pdlltl1"
+                      ? "border-rose-400 text-rose-400"
+                      : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
+                  }`}
+                  title="Show only rows where today's Previous Day Low (PDL) is below today's S1 (L1)"
+                >
+                  {pdhPdlFilter === "pdlltl1" ? "✕ PDHL-B" : "PDHL-B"}
+                </button>
               </div>
-            )}
+
+              {canShowCombined && (
+                <div className="flex items-center gap-1">
+                  {(["combined", "binance", "delta"] as ActiveTab[]).map((tab) => (
+                    <button
+                      key={tab}
+                      onClick={() => setActiveTab(tab)}
+                      className={`px-2 py-1 rounded text-xs font-semibold transition cursor-pointer ${
+                        activeTab === tab
+                          ? tab === "combined"
+                            ? "bg-amber-500/20 text-amber-400 border border-amber-500/40"
+                            : tab === "binance"
+                            ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/40"
+                            : "bg-cyan-500/20 text-cyan-400 border border-cyan-500/40"
+                          : "text-slate-400 hover:text-white bg-[#151e2c]"
+                      }`}
+                    >
+                      {tab === "combined" ? "All" : tab === "binance" ? "Binance" : "Delta"}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
