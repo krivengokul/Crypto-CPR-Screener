@@ -1,0 +1,9 @@
+{
+  "name": "copy-view-patch-script",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "ts-morph": "^23.0.0"
+  }
+}
