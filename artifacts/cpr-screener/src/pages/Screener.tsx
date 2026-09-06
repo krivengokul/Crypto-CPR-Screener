@@ -1208,7 +1208,7 @@ export default function Screener({
           </div>
         )}
 
-        {(status === "scanning" || deltaStatus === "scanning") && (
+        {currentStatus === "scanning" && displayed.length === 0 && (
           <NoSignalsPanel
             title="Scanning for signals…"
             subtitle="Results will appear here as soon as the scan completes"
