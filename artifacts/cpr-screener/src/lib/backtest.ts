@@ -211,6 +211,29 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     entryLabel: "TC (today's TC)",
     getStoploss: (r) => r.todayCPR.s1,
     stoplossLabel: "S1 (today's S1)",
+    // Level Check — this View's 13 line conditions (verified against a
+    // real Pass case: all 13 matching). S4-S1 match the plain one-rung
+    // neighbor check; PL is pushed one notch up to share S1's band; the
+    // BC/Pivot/TC trio shares one band, and PH/R1 share the next band
+    // up; R2 gets its own band. R3 and R4 flip to the reversed check —
+    // yesterday's own top rungs absorbed into two *different*, adjacent
+    // bands of today's new structure (unlike A-A-AA-OA-U3L4-RRHHGap:R4,
+    // where R3 and R4 shared one band — here they don't).
+    levelCheckDefs: [
+      { key: "s4", subject: "today", bandKeys: ["s4", "s3"] },
+      { key: "s3", subject: "today", bandKeys: ["s3", "s2"] },
+      { key: "s2", subject: "today", bandKeys: ["s2", "prevLow"] },
+      { key: "prevLow", subject: "today", bandKeys: ["s1", "bc"] },
+      { key: "s1", subject: "today", bandKeys: ["s1", "bc"] },
+      { key: "bc", subject: "today", bandKeys: ["prevHigh", "r1"] },
+      { key: "pivot", subject: "today", bandKeys: ["prevHigh", "r1"] },
+      { key: "tc", subject: "today", bandKeys: ["prevHigh", "r1"] },
+      { key: "prevHigh", subject: "today", bandKeys: ["r2", "r3"] },
+      { key: "r1", subject: "today", bandKeys: ["r2", "r3"] },
+      { key: "r2", subject: "today", bandKeys: ["r3", "r4"] },
+      { key: "r3", subject: "previous", bandKeys: ["r1", "r2"] },
+      { key: "r4", subject: "previous", bandKeys: ["r2", "r3"] },
+    ],
   },
   // NEW: "7PM:MoMi->U4:2AM" — nested under "LEVEL ABOVE" → Pattern "EU2L4".
   // Bullish, targets today's own R4 / U4 by ~2AM.
