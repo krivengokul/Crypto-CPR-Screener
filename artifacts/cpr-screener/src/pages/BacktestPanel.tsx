@@ -160,34 +160,72 @@ function CopyViewControl({
   const [newKey, setNewKey] = useState("");
   const [newLabel, setNewLabel] = useState("");
   const [error, setError] = useState("");
+  // Persisting to backtest.ts via /api/backtest/copy-view (GitHub Contents
+  // API commit to main) is separate from the in-memory copyBacktestView
+  // call below: the latter updates the dropdown instantly, but without the
+  // API call the copy vanishes on refresh. "failed" keeps the popover open
+  // with a retry, since the in-memory copy already exists and shouldn't be
+  // silently lost.
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "failed">("idle");
 
   function openForm() {
     setNewKey(`${sourceKey}:copy`);
     setNewLabel(`${sourceLabel} (copy)`);
     setError("");
+    setSaveState("idle");
     setOpen(true);
   }
 
-  function confirm() {
+  async function confirm() {
     const trimmedKey = newKey.trim();
     const trimmedLabel = newLabel.trim() || trimmedKey;
     if (!trimmedKey) {
       setError("Enter a key for the new View.");
       return;
     }
-    const result = copyBacktestView(sourceKey, trimmedKey, trimmedLabel);
-    if (!result.ok) {
-      setError(
-        result.reason === "duplicate-key"
-          ? `"${trimmedKey}" already exists — pick a different key.`
-          : result.reason === "source-not-in-tree"
-          ? "Couldn't find this View's place in the dropdown tree."
-          : "Couldn't find the source View."
-      );
-      return;
+
+    // Only run the in-memory clone once, on the first attempt — a retry
+    // after a failed persist should not clone a second time.
+    if (saveState !== "failed") {
+      const result = copyBacktestView(sourceKey, trimmedKey, trimmedLabel);
+      if (!result.ok) {
+        setError(
+          result.reason === "duplicate-key"
+            ? `"${trimmedKey}" already exists — pick a different key.`
+            : result.reason === "source-not-in-tree"
+            ? "Couldn't find this View's place in the dropdown tree."
+            : "Couldn't find the source View."
+        );
+        return;
+      }
+      onCopied(trimmedKey);
     }
-    setOpen(false);
-    onCopied(trimmedKey);
+
+    setError("");
+    setSaveState("saving");
+    try {
+      const res = await fetch("/api/backtest/copy-view", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sourceKey, newKey: trimmedKey, newLabel: trimmedLabel }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error ?? `Request failed with status ${res.status}`);
+      }
+      setSaveState("idle");
+      setOpen(false);
+    } catch (err) {
+      // The dropdown copy is already live (onCopied fired above) — it just
+      // won't survive a refresh until this succeeds, so surface that
+      // plainly rather than pretending nothing happened.
+      setSaveState("failed");
+      setError(
+        err instanceof Error
+          ? `Showing in the dropdown now, but not saved: ${err.message}`
+          : "Showing in the dropdown now, but the save to GitHub failed."
+      );
+    }
   }
 
   if (!open) {
@@ -212,29 +250,33 @@ function CopyViewControl({
         value={newKey}
         onChange={(e) => setNewKey(e.target.value)}
         placeholder="New View key"
-        className="w-full bg-background border border-border rounded-md px-2 py-1 text-[11px] font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+        disabled={saveState === "saving"}
+        className="w-full bg-background border border-border rounded-md px-2 py-1 text-[11px] font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
       />
       <input
         value={newLabel}
         onChange={(e) => setNewLabel(e.target.value)}
         placeholder="Display label"
-        className="w-full bg-background border border-border rounded-md px-2 py-1 text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+        disabled={saveState === "saving"}
+        className="w-full bg-background border border-border rounded-md px-2 py-1 text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
       />
       {error && <span className="text-[10px] text-destructive">{error}</span>}
       <div className="flex justify-end gap-1.5 pt-0.5">
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="rounded-md px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+          disabled={saveState === "saving"}
+          className="rounded-md px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted/40 hover:text-foreground disabled:opacity-50"
         >
-          Cancel
+          {saveState === "failed" ? "Discard" : "Cancel"}
         </button>
         <button
           type="button"
           onClick={confirm}
-          className="rounded-md bg-blue-500/20 px-2 py-1 text-[11px] font-medium text-blue-300 hover:bg-blue-500/30"
+          disabled={saveState === "saving"}
+          className="rounded-md bg-blue-500/20 px-2 py-1 text-[11px] font-medium text-blue-300 hover:bg-blue-500/30 disabled:opacity-50"
         >
-          Create copy
+          {saveState === "saving" ? "Saving…" : saveState === "failed" ? "Retry save" : "Create copy"}
         </button>
       </div>
     </div>
