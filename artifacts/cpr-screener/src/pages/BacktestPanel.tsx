@@ -205,12 +205,19 @@ function CopyViewControl({
     }
     setError("");
 
-    // shell-quote each value defensively — labels in particular may
-    // contain spaces, quotes, or other characters that would otherwise
-    // break out of the -f argument.
-    const q = (s: string) => `'${s.replace(/'/g, `'\\''`)}'`;
+    // Double quotes, not single quotes — cmd.exe (Windows) doesn't treat
+    // single quotes as string delimiters at all; it passes them through
+    // literally, corrupting the value (this is exactly what happened:
+    // the key came through as 'A-A-AA-AA-U3L3-SSLLGap:R4' quotes-and-all).
+    // Double quotes are treated as real delimiters by cmd.exe, PowerShell,
+    // and bash/zsh alike, so this is portable across all three. Stripping
+    // rather than escaping any embedded " keeps it correct everywhere,
+    // since backslash-escaping a quote means different things in cmd.exe
+    // vs POSIX shells — not worth the complexity for values that are
+    // just backtest key/label strings.
+    const q = (s: string) => `"${s.replace(/"/g, "")}"`;
     setCommand(
-      `gh workflow run copy-view.yml -f sourceKey=${q(sourceKey)} -f newKey=${q(trimmedKey)} -f newLabel=${q(trimmedLabel)}`
+      `gh workflow run copy-view.yml --repo krivengokul/Crypto-CPR-Screener -f sourceKey=${q(sourceKey)} -f newKey=${q(trimmedKey)} -f newLabel=${q(trimmedLabel)}`
     );
     setCreatedKey(trimmedKey);
     // Deliberately NOT calling onCopied here. It switches the dropdown's
