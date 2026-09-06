@@ -99,7 +99,7 @@ export function compareSRLadders(
 ): SRLevelCheck[] {
   if (!conditions || conditions.length === 0) return [];
 
-  return conditions.map((cond) => {
+  const results = conditions.map((cond) => {
     const subjectIsToday = cond.subject === "today";
     const subjectVal = (subjectIsToday ? todayCPR : prevCPR)[cond.key] as number;
     // The band always comes from the day `subject` is NOT.
@@ -150,6 +150,15 @@ export function compareSRLadders(
       basicText,
     };
   });
+
+  // Match SRLadder's own ordering exactly: sort by that day's actual
+  // value, high to low — not a fixed name order (SRLadder itself doesn't
+  // use one either, since PH/R1 or S1/PL can swap position depending on
+  // the day's real numbers). Today's value at each key is what's on
+  // screen in the "Today S/R" ladder these lines sit beside, so that's
+  // what this sorts on — regardless of which day (`subject`) the
+  // condition actually tests.
+  return results.sort((a, b) => b.today - a.today);
 }
 
 export function summarizeSRLadderDiff(checks: SRLevelCheck[]) {
