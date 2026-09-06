@@ -138,29 +138,35 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     entryLabel: "TC (today's TC)",
     getStoploss: (r) => r.todayCPR.s1,
     stoplossLabel: "S1 (today's S1)",
-    // Level Check — this View's 13 line conditions. Same shape as its
-    // bullish siblings that target today's own R4: the top two rungs
-    // (R4, R3) check the OTHER way around — did yesterday's R4/R3 get
-    // absorbed into today's new R3-R2 band — since this View's target
-    // IS today's own R4, so "today's R4 vs its own prev neighbor"
-    // isn't the meaningful test. PH and the TC/Pivot/BC trio each check
-    // against a shared two-rung band (prev R2-R1, prev PH-TC),
-    // reflecting this View's characteristic multi-rung upward shift.
-    // S1 downward matches the generic one-rung-neighbor check.
+    // Level Check — this View's 13 line conditions, worked out from a
+    // real Pass case (p-EU1L4 -> U3L3, LEVELS VIEW A-A-AA-AA): R4=.00223->
+    // .00230, R3=.00216->.00225, R2=.00206->.00214, R1=.00199->.00209,
+    // PH=.00195->.00204, TC=.00190->.00201, Pivot=.00188->.00199,
+    // BC=.00187->.00196, S1=.00181->.00193, PL=.00178->.00188,
+    // S2=.00171->.00183, S3=.00164->.00177, S4=.00154->.00167 (prev ->
+    // today). Same top-two-reversed idea as its bullish siblings (did
+    // yesterday's R4/R3 get absorbed into today's new R3-R2 band), but
+    // the rest of the ladder shifts up by roughly ONE MORE rung than
+    // those siblings, not just at the top: R2/R1 both land in prev's
+    // R3-R2 band, PH/TC both in prev's R2-R1 band, Pivot/BC both in
+    // prev's R1-PH band, then S1, PL, S2, S3, S4 each take the next
+    // rung down in turn (prev PH-TC, prev TC-Pivot, prev BC-S1, prev
+    // PL-S2, prev S2-S3) — reflecting this View's stronger SSGap+LLGap
+    // upward displacement compared to the OA/EUPL3 siblings.
     levelCheckDefs: [
       { key: "r4", subject: "previous", bandKeys: ["r3", "r2"] },
       { key: "r3", subject: "previous", bandKeys: ["r3", "r2"] },
       { key: "r2", subject: "today", bandKeys: ["r3", "r2"] },
-      { key: "r1", subject: "today", bandKeys: ["r2", "r1"] },
+      { key: "r1", subject: "today", bandKeys: ["r3", "r2"] },
       { key: "prevHigh", subject: "today", bandKeys: ["r2", "r1"] },
-      { key: "tc", subject: "today", bandKeys: ["prevHigh", "tc"] },
-      { key: "pivot", subject: "today", bandKeys: ["prevHigh", "tc"] },
-      { key: "bc", subject: "today", bandKeys: ["prevHigh", "tc"] },
-      { key: "s1", subject: "today", bandKeys: ["bc", "s1"] },
-      { key: "prevLow", subject: "today", bandKeys: ["s1", "prevLow"] },
-      { key: "s2", subject: "today", bandKeys: ["prevLow", "s2"] },
-      { key: "s3", subject: "today", bandKeys: ["s2", "s3"] },
-      { key: "s4", subject: "today", bandKeys: ["s3", "s4"] },
+      { key: "tc", subject: "today", bandKeys: ["r2", "r1"] },
+      { key: "pivot", subject: "today", bandKeys: ["r1", "prevHigh"] },
+      { key: "bc", subject: "today", bandKeys: ["r1", "prevHigh"] },
+      { key: "s1", subject: "today", bandKeys: ["prevHigh", "tc"] },
+      { key: "prevLow", subject: "today", bandKeys: ["tc", "pivot"] },
+      { key: "s2", subject: "today", bandKeys: ["bc", "s1"] },
+      { key: "s3", subject: "today", bandKeys: ["prevLow", "s2"] },
+      { key: "s4", subject: "today", bandKeys: ["s2", "s3"] },
     ],
   },
   // NEW: C-B-BB-LB-CL3U2-RRHHGap:R4 — View nested under the
