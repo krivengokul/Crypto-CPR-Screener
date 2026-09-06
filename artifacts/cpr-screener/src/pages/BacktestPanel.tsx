@@ -171,6 +171,7 @@ function CopyViewControl({
   // terminal (Cloud Shell, Replit's shell, or a local machine with `gh`
   // installed and logged in) to make it permanent.
   const [command, setCommand] = useState<string | null>(null);
+  const [createdKey, setCreatedKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
   function openForm() {
@@ -178,6 +179,7 @@ function CopyViewControl({
     setNewLabel(`${sourceLabel} (copy)`);
     setError("");
     setCommand(null);
+    setCreatedKey(null);
     setCopied(false);
     setOpen(true);
   }
@@ -201,7 +203,6 @@ function CopyViewControl({
       );
       return;
     }
-    onCopied(trimmedKey);
     setError("");
 
     // shell-quote each value defensively — labels in particular may
@@ -211,6 +212,13 @@ function CopyViewControl({
     setCommand(
       `gh workflow run copy-view.yml -f sourceKey=${q(sourceKey)} -f newKey=${q(trimmedKey)} -f newLabel=${q(trimmedLabel)}`
     );
+    setCreatedKey(trimmedKey);
+    // Deliberately NOT calling onCopied here. It switches the dropdown's
+    // selected View, which changes activeTarget — and since this control
+    // lives inside that View's own expanded row detail, switching away
+    // unmounts this popover before the command above is even visible.
+    // onCopied fires from the "Done" button instead, once the person has
+    // actually seen/copied the command.
   }
 
   async function copyCommand() {
@@ -279,7 +287,12 @@ function CopyViewControl({
       <div className="flex justify-end gap-1.5 pt-0.5">
         <button
           type="button"
-          onClick={() => setOpen(false)}
+          onClick={() => {
+            setOpen(false);
+            // Switch the dropdown to the new View now that the person has
+            // had a chance to see/copy the command — not before.
+            if (createdKey) onCopied(createdKey);
+          }}
           className="rounded-md px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted/40 hover:text-foreground"
         >
           {command ? "Done" : "Cancel"}
