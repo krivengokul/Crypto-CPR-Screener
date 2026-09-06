@@ -7,6 +7,7 @@ import {
   ExternalLink,
   Bell,
   BellOff,
+  ShieldAlert,
 } from "lucide-react";
 import { runScreener } from "@/lib/binance";
 import { runDeltaScreener } from "@/lib/delta";
@@ -63,6 +64,30 @@ function ViewCount({ id, counts }: { id: string; counts: Record<string, number> 
   const n = counts[id];
   if (typeof n !== "number" || n === 0) return null;
   return <span className="ml-1 text-white">({n})</span>;
+}
+
+/**
+ * NoSignalsPanel — SignalDesk-style empty-state card: dashed border,
+ * shield-alert icon, bold title, muted subtitle. Used both while a scan
+ * is actively running (nothing to show yet) and once a completed scan
+ * has zero results, so the Scanner screen is never a blank gap.
+ */
+function NoSignalsPanel({
+  title,
+  subtitle,
+}: {
+  title: string;
+  subtitle: string;
+}) {
+  return (
+    <div className="rounded-xl border border-dashed border-border bg-card/40 p-12 text-center">
+      <div className="w-12 h-12 rounded-full border border-border flex items-center justify-center mx-auto mb-4">
+        <ShieldAlert className="w-5 h-5 text-muted-foreground" />
+      </div>
+      <div className="text-sm font-semibold text-foreground mb-1">{title}</div>
+      <div className="text-xs text-muted-foreground">{subtitle}</div>
+    </div>
+  );
 }
 
 /**
@@ -1183,6 +1208,13 @@ export default function Screener({
           </div>
         )}
 
+        {(status === "scanning" || deltaStatus === "scanning") && (
+          <NoSignalsPanel
+            title="Scanning for signals…"
+            subtitle="Results will appear here as soon as the scan completes"
+          />
+        )}
+
         {alreadyScannedToday && status === "idle" && (
           <div className="mb-4 rounded-lg border border-border bg-card/50 p-3 text-xs text-muted-foreground">
             Last scan: {lastScanDate} · Next auto-scan: {formatISTTime(nextScanUtc)} IST · Countdown: {countdown}
@@ -1837,10 +1869,10 @@ export default function Screener({
         )}
 
         {currentStatus === "done" && displayed.length === 0 && (
-          <div className="rounded-xl border border-border bg-card p-12 text-center">
-            <TrendingUp className="w-10 h-10 text-muted-foreground mx-auto mb-3 opacity-30" />
-            <div className="text-muted-foreground text-sm">No coins match the CPR filter criteria today.</div>
-          </div>
+          <NoSignalsPanel
+            title="No active signals found matching current filters"
+            subtitle="Try clearing filters or switching source exchanges"
+          />
         )}
 
         {/* Footer legend — same idle/scanning hide as the Legend cards above,
