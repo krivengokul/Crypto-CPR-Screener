@@ -312,13 +312,57 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
       { key: "s4", subject: "today", bandKeys: ["s2", "s3"] },
     ],
   },
-  // NEW: C-B-BB-LB-CL3U2-RRHHGap:R4 — View nested under the
-  // "C-B-BB-LB-CL3U2" Pattern (itself under the "C-B-BB-LB" leaf Pattern
-  // in "COMPRESSED"). Condition = that Pattern's base (C-B-BB-LB + the raw
-  // CL3U2 flag) PLUS RRGap + HHGap + pHLGap-A + today's HL-B — see
-  // passesPattern in ScreenerUtils.tsx. Bullish, targets today's own
-  // R4 / U4, entry at today's TC, stoploss today's S1.
-  {
+    {
+        key: "A-A-AA-AA-U3L3-SL-PAR1:R4",
+        conditionKey: "A-A-AA-AA-U3L3-SSLLGap:R4", // Copy View — grades against the original
+        label: "A-A-AA-AA-U3L3-SL-PAR1:R4",
+        direction: "bullish",
+        targetLabel: "U4 (today's R4)",
+        getTarget: (r) => r.todayCPR.r4,
+        getEntry: (r) => r.todayCPR.tc,
+        entryLabel: "TC (today's TC)",
+        getStoploss: (r) => r.todayCPR.s1,
+        stoplossLabel: "S1 (today's S1)",
+        // Level Check — this View's 13 line conditions, worked out from a
+        // real Pass case (p-EU1L4 -> U3L3, LEVELS VIEW A-A-AA-AA): R4=.00223->
+        // .00230, R3=.00216->.00225, R2=.00206->.00214, R1=.00199->.00209,
+        // PH=.00195->.00204, TC=.00190->.00201, Pivot=.00188->.00199,
+        // BC=.00187->.00196, S1=.00181->.00193, PL=.00178->.00188,
+        // S2=.00171->.00183, S3=.00164->.00177, S4=.00154->.00167 (prev ->
+        // today). Same top-two-reversed idea as its bullish siblings (did
+        // yesterday's R4/R3 get absorbed into today's new R3-R2 band), but
+        // the rest of the ladder shifts up by roughly ONE MORE rung than
+        // those siblings, not just at the top: R2/R1 both land in prev's
+        // R3-R2 band, PH/TC both in prev's R2-R1 band, BC in prev's R1-PH
+        // band, then S1, S2, S3, S4 each take the next rung down in turn
+        // (prev PH-TC, prev BC-S1, prev PL-S2, prev S2-S3) — reflecting
+        // this View's stronger SSGap+LLGap upward displacement compared to
+        // the OA/EUPL3 siblings.
+        // Pivot and PL are each SKIP-banded (spanning two rungs instead of
+        // one, e.g. prev R2-PH instead of prev R1-PH) rather than following
+        // that same one-rung-down cadence: in this real case today's Pivot
+        // (.00199) lands exactly ON prev R1, and today's PL (.00188) lands
+        // exactly ON prev Pivot — landing exactly on a boundary value rather
+        // than strictly inside a band, which compareSRLadders (SRLadderDiff.tsx)
+        // does not count as a match. Widening each of those two checks by one
+        // extra rung keeps the value strictly inside the band's interior.
+        levelCheckDefs: [
+          { key: "r4", subject: "previous", bandKeys: ["r3", "r2"] },
+          { key: "r3", subject: "previous", bandKeys: ["r3", "r2"] },
+          { key: "r2", subject: "today", bandKeys: ["r3", "r2"] },
+          { key: "r1", subject: "today", bandKeys: ["r3", "r2"] },
+          { key: "prevHigh", subject: "today", bandKeys: ["r2", "r1"] },
+          { key: "tc", subject: "today", bandKeys: ["r2", "r1"] },
+          { key: "pivot", subject: "today", bandKeys: ["r2", "prevHigh"] },
+          { key: "bc", subject: "today", bandKeys: ["r1", "prevHigh"] },
+          { key: "s1", subject: "today", bandKeys: ["prevHigh", "tc"] },
+          { key: "prevLow", subject: "today", bandKeys: ["pivot", "bc"] },
+          { key: "s2", subject: "today", bandKeys: ["bc", "s1"] },
+          { key: "s3", subject: "today", bandKeys: ["prevLow", "s2"] },
+          { key: "s4", subject: "today", bandKeys: ["s2", "s3"] },
+        ],
+      },
+    {
     key: "C-B-BB-LB-CL3U2-RRHHGap:R4",
     label: "C-B-BB-LB-CL3U2-RRHHGap:R4",
     direction: "bullish",
@@ -1350,7 +1394,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
           // crossed with the raw U3L3 flag. Nests the bullish
           // "A-A-AA-AA-U3L3-SSLLGap:R4" View (SSGap + LLGap + pHL-B +
           // HLGap-B; entry TC, target today's R4, stoploss today's S1).
-          { key: "A-A-AA-AA-U3L3", label: "A-A-AA-AA-U3L3", subPatternKeys: ["A-A-AA-AA-U3L3-SSLLGap:R4"] },
+          { key: "A-A-AA-AA-U3L3", label: "A-A-AA-AA-U3L3", subPatternKeys: ["A-A-AA-AA-U3L3-SSLLGap:R4", "A-A-AA-AA-U3L3-SL-PAR1:R4"] },
           { key: "A-A-AA-AA-U4L3", label: "A-A-AA-AA-U4L3", subPatternKeys: [] },
           { key: "A-A-AA-AA-EU2L4", label: "A-A-AA-AA-EU2L4", subPatternKeys: ["A-A-AA-AA-EU2L4-ApR2"] },
           { key: "A-A-AA-AA-U2L4", label: "A-A-AA-AA-U2L4", subPatternKeys: ["A-A-AA-AA-S1pPDH-U3"] },
