@@ -420,6 +420,7 @@ export function SRLadderPanel({
   showLevelCheck = false,
   levelCheckConditions,
   viewBaselinePanel,
+  copyViewControl,
 }: {
   r: SRLadderData;
   /** Today's pattern badge(s) — e.g. renderTodayPatternBadges(r) — shown on the "Today S/R" ladder. */
@@ -455,6 +456,17 @@ export function SRLadderPanel({
    * to show against (e.g. Pass rows, which built the baseline).
    */
   viewBaselinePanel?: ReactNode;
+  /**
+   * NEW: BacktestPanel-only "Copy View" control, rendered directly under
+   * the Level Check panel (same decoupling convention as
+   * viewBaselinePanel — a pre-built ReactNode rather than raw
+   * BacktestTargetDef data, so this file stays independent of
+   * lib/backtest.ts's copyBacktestView / BACKTEST_TARGETS). Omit (the
+   * default) for Screener and for any row where copying the current View
+   * doesn't make sense (no active View selected). No effect unless
+   * showLevelCheck is also true.
+   */
+  copyViewControl?: ReactNode;
 }) {
   return (
     <div className="flex w-full min-w-0 flex-col gap-3">
@@ -468,7 +480,10 @@ export function SRLadderPanel({
           <SRLadder cpr={r.ppCPR} currentPrice={r.ppClose} label="PDay-1 S/R" badge={pDay1PatternBadge} pricePlain />
         )}
         {showLevelCheck && (
-          <SRLadderDiffPanel prevCPR={r.prevCPR} todayCPR={r.todayCPR} conditions={levelCheckConditions} />
+          <div className="flex flex-col gap-2">
+            <SRLadderDiffPanel prevCPR={r.prevCPR} todayCPR={r.todayCPR} conditions={levelCheckConditions} />
+            {copyViewControl}
+          </div>
         )}
         {viewBaselinePanel}
       </div>
@@ -491,6 +506,7 @@ export function SRLadderRow({
   showLevelCheck = false,
   levelCheckConditions,
   viewBaselinePanel,
+  copyViewControl,
 }: {
   r: SRLadderData;
   colSpan?: number;
@@ -509,6 +525,8 @@ export function SRLadderRow({
   levelCheckConditions?: LevelCheckCondition[];
   /** BacktestPanel-only "Vs. View Pass Baseline" panel, rendered after Level Check. See SRLadderPanel for details. */
   viewBaselinePanel?: ReactNode;
+  /** NEW: BacktestPanel-only "Copy View" control, rendered under Level Check. See SRLadderPanel for details. */
+  copyViewControl?: ReactNode;
 }) {
   return (
     <tr key={rowKey ? `${rowKey}-sr` : undefined} className="bg-muted/20 border-b border-border">
@@ -522,6 +540,7 @@ export function SRLadderRow({
           showLevelCheck={showLevelCheck}
           levelCheckConditions={levelCheckConditions}
           viewBaselinePanel={viewBaselinePanel}
+          copyViewControl={copyViewControl}
         />
       </td>
     </tr>

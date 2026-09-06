@@ -62,6 +62,126 @@ export interface BacktestTargetDef {
   levelCheckDefs?: LevelCheckCondition[];
 }
 
+/**
+ * NEW: auto-derivation for levelCheckDefs — this is what a "Create View"
+ * button in the SR Ladder panel would call instead of a human eyeballing
+ * two ladders and writing 13 lines by hand (see the worked example this
+ * replaces: A-A-AA-AA-U3L3-SSLLGap:R4's levelCheckDefs above).
+ *
+ * The rule, per rung:
+ *   1. Find the TIGHTEST band from the OTHER day's 13 rungs that
+ *      STRICTLY brackets this rung's value (upper > value > lower).
+ *      "Strictly" is the important part — any other-day rung whose
+ *      value happens to exactly equal this one is skipped over rather
+ *      than used as a bound, which is what fixes the Pivot/PL
+ *      boundary-exact misses we hit by hand (today's Pivot landed
+ *      exactly on prev R1; today's PL landed exactly on prev Pivot).
+ *   2. If no such band exists because the value breaks out beyond the
+ *      OTHER day's entire range (e.g. today's own R4/R3 sitting above
+ *      every prev level in a strong bullish shift), flip it: check
+ *      whether YESTERDAY's rung at this key fits inside a band drawn
+ *      from TODAY's structure instead (subject: "previous"). This is
+ *      exactly the "did yesterday's R4/R3 get absorbed into today's
+ *      new R3-R2 band" check we wrote by hand for the top two rungs —
+ *      here it falls out automatically instead of being hardcoded to
+ *      "the top two rungs", so it also works for a bearish View whose
+ *      breakout happens at the bottom (S4/S3) instead of the top.
+ *
+ * No `direction` parameter is needed: the function just reacts to
+ * whichever side of the ladder actually broke out in the reconstructed
+ * CPRResult, so it self-adapts to bullish and bearish Views alike.
+ */
+const LEVEL_CHECK_KEYS: LevelCheckKey[] = [
+  "r4", "r3", "r2", "prevHigh", "r1", "tc", "pivot", "bc",
+  "prevLow", "s1", "s2", "s3", "s4",
+];
+
+interface RungEntry {
+  key: LevelCheckKey;
+  value: number;
+}
+
+/** Closest value strictly greater than `target`, or null if none. */
+function closestGreater(entries: RungEntry[], target: number): RungEntry | null {
+  let best: RungEntry | null = null;
+  for (const e of entries) {
+    if (Number.isFinite(e.value) && e.value > target && (!best || e.value < best.value)) best = e;
+  }
+  return best;
+}
+
+/** Closest value strictly less than `target`, or null if none. */
+function closestLesser(entries: RungEntry[], target: number): RungEntry | null {
+  let best: RungEntry | null = null;
+  for (const e of entries) {
+    if (Number.isFinite(e.value) && e.value < target && (!best || e.value > best.value)) best = e;
+  }
+  return best;
+}
+
+/**
+ * Tightest strict band from `entries` bracketing `value`, as
+ * [higherKey, lowerKey] — or null if `value` breaks out beyond the
+ * entire range covered by `entries` (nothing in `entries` is greater,
+ * or nothing is lesser).
+ */
+function tightestStrictBand(entries: RungEntry[], value: number): [LevelCheckKey, LevelCheckKey] | null {
+  const upper = closestGreater(entries, value);
+  const lower = closestLesser(entries, value);
+  if (!upper || !lower) return null;
+  return [upper.key, lower.key];
+}
+
+/**
+ * Derives all 13 LevelCheckCondition rows for a View from a single real
+ * reconstructed CPRResult (e.g. whatever's currently on screen in the SR
+ * Ladder panel when "Create View" is clicked) — see the algorithm
+ * comment above. `CPRResult["todayCPR"]`/`["prevCPR"]` are assumed to
+ * expose a property per LevelCheckKey (r4, r3, ..., prevHigh, ...,
+ * prevLow, ..., s4), matching how getTarget/getEntry/getStoploss above
+ * already read them (e.g. `r.todayCPR.r4`).
+ */
+export function deriveLevelCheckDefs(r: CPRResult): LevelCheckCondition[] {
+  const today = r.todayCPR as unknown as Record<LevelCheckKey, number>;
+  const prev = r.prevCPR as unknown as Record<LevelCheckKey, number>;
+
+  const todayEntries: RungEntry[] = LEVEL_CHECK_KEYS.map((key) => ({ key, value: today[key] }));
+  const prevEntries: RungEntry[] = LEVEL_CHECK_KEYS.map((key) => ({ key, value: prev[key] }));
+
+  const defs: LevelCheckCondition[] = [];
+
+  for (const key of LEVEL_CHECK_KEYS) {
+    const todayVal = today[key];
+    const prevVal = prev[key];
+    if (!Number.isFinite(todayVal) || !Number.isFinite(prevVal)) {
+      console.warn(`[levelCheck] "${key}" missing today/prev value — skipping`);
+      continue;
+    }
+
+    // 1. Natural check: does today's rung sit inside a band from prev's ladder?
+    const forwardBand = tightestStrictBand(prevEntries, todayVal);
+    if (forwardBand) {
+      defs.push({ key, subject: "today", bandKeys: forwardBand });
+      continue;
+    }
+
+    // 2. Breakout: today's value is outside prev's entire range. Flip the
+    // check — did YESTERDAY's rung get absorbed into TODAY's new structure?
+    const reversedBand = tightestStrictBand(todayEntries, prevVal);
+    if (reversedBand) {
+      defs.push({ key, subject: "previous", bandKeys: reversedBand });
+      continue;
+    }
+
+    // 3. Neither direction found a strict band — surface it rather than
+    // silently emitting a bad rule (e.g. all 13 today/prev values equal,
+    // or a genuinely broken reconstruction).
+    console.warn(`[levelCheck] could not derive a band for "${key}" from either direction — skipping`);
+  }
+
+  return defs;
+}
+
 export const BACKTEST_TARGETS: BacktestTargetDef[] = [
   // NEW: A-A-AA-OA-U3L4-RRHHGap:R4 — View nested under the
   // "A-A-AA-OA-U3L4" Subpattern (itself under the "A-A-AA-OA" Pattern in
@@ -168,7 +288,7 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
       { key: "r1", subject: "today", bandKeys: ["r3", "r2"] },
       { key: "prevHigh", subject: "today", bandKeys: ["r2", "r1"] },
       { key: "tc", subject: "today", bandKeys: ["r2", "r1"] },
-      { key: "pivot", subject: "today", bandKeys: ["r1", "prevHigh"] },
+      { key: "pivot", subject: "today", bandKeys: ["r2", "prevHigh"] },
       { key: "bc", subject: "today", bandKeys: ["r1", "prevHigh"] },
       { key: "s1", subject: "today", bandKeys: ["prevHigh", "tc"] },
       { key: "prevLow", subject: "today", bandKeys: ["pivot", "bc"] },
@@ -1946,6 +2066,99 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
   },
   { key: "equal-cpr", label: "Equal CPR" },
 ];
+
+/**
+ * NEW: "Copy View" — clones an existing BacktestTargetDef (including its
+ * levelCheckDefs) under a new key/label, and drops the new key into the
+ * BACKTEST_CATEGORIES tree right next to the original, so it shows up as
+ * a sibling in the Backtest dropdown. Unlike deriveLevelCheckDefs (used
+ * by "Create View"), nothing is recomputed here — this is a straight
+ * duplicate, for cases like "same target/entry/stoploss/levelCheckDefs,
+ * but as a separately named View so its backtest stats don't get mixed
+ * in with the original's."
+ *
+ * NOTE: pushing into BACKTEST_TARGETS / the sibling subPatternKeys array
+ * only updates the running process's in-memory arrays, which is enough
+ * for the clone to show up immediately in the app. It does NOT touch
+ * backtest.ts on disk — persisting the clone (the "check in to git" part)
+ * needs a text-level patch: serialize `cloned` into a formatted object
+ * literal and insert it into the BACKTEST_TARGETS array literal in this
+ * file's source text (right after the source entry), and insert
+ * `"newKey"` into the matching subPatternKeys: [...] literal — then
+ * commit/push (or open a PR) from a backend endpoint, same as discussed
+ * for "Create View".
+ */
+
+// Finds whichever subPatternKeys array (top-level category, or nested
+// under a Pattern/Subpattern at any depth) currently contains `key`, so a
+// clone can be inserted right beside its source in the dropdown tree.
+function findSubPatternKeysArray(
+  key: string,
+  categories: BacktestCategoryDef[] = BACKTEST_CATEGORIES
+): string[] | null {
+  for (const cat of categories) {
+    if (cat.subPatternKeys?.includes(key)) return cat.subPatternKeys;
+    if (cat.patterns) {
+      const found = findInPatterns(key, cat.patterns);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+function findInPatterns(key: string, patterns: BacktestSubCategoryDef[]): string[] | null {
+  for (const p of patterns) {
+    if (p.subPatternKeys.includes(key)) return p.subPatternKeys;
+    if (p.patterns) {
+      const found = findInPatterns(key, p.patterns);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+export interface CopyViewResult {
+  ok: boolean;
+  reason?: "source-not-found" | "duplicate-key" | "source-not-in-tree";
+  cloned?: BacktestTargetDef;
+}
+
+/**
+ * Clones `sourceKey`'s View (levelCheckDefs deep-copied) as `newKey`/
+ * `newLabel`, pushes it into BACKTEST_TARGETS, and inserts `newKey` into
+ * the same subPatternKeys array the source lives in.
+ */
+export function copyBacktestView(
+  sourceKey: string,
+  newKey: string,
+  newLabel: string = newKey
+): CopyViewResult {
+  const source = BACKTEST_TARGETS.find((t) => t.key === sourceKey);
+  if (!source) return { ok: false, reason: "source-not-found" };
+  if (BACKTEST_TARGETS.some((t) => t.key === newKey)) return { ok: false, reason: "duplicate-key" };
+
+  const siblingArray = findSubPatternKeysArray(sourceKey);
+  if (!siblingArray) return { ok: false, reason: "source-not-in-tree" };
+
+  const cloned: BacktestTargetDef = {
+    ...source,
+    key: newKey,
+    label: newLabel,
+    // getTarget/getEntry/getStoploss are pure fns of CPRResult, not tied
+    // to key/label — carry over unchanged. Only levelCheckDefs needs an
+    // actual deep copy since it's an array of objects (a shallow spread
+    // would leave the clone sharing the same nested objects/arrays as
+    // the original, so editing one's bands would silently edit both).
+    levelCheckDefs: source.levelCheckDefs?.map((c) => ({
+      ...c,
+      bandKeys: [...c.bandKeys] as [LevelCheckKey, LevelCheckKey],
+    })),
+  };
+
+  BACKTEST_TARGETS.push(cloned);
+  siblingArray.push(newKey);
+  return { ok: true, cloned };
+}
 
 /**
  * NEW: flat option list for the "Category / Pattern / Subpattern / View"

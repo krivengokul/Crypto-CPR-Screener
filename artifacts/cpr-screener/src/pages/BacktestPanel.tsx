@@ -20,6 +20,7 @@ import {
   runBacktest,
   runCategoryScan,
   runPivotLevelBacktest,
+  copyBacktestView,
   type BacktestRow,
   type CategoryScanRow,
   type BacktestSource,
@@ -132,6 +133,111 @@ function PivotSizeInfo() {
         </span>
       </span>
     </span>
+  );
+}
+
+/**
+ * NEW: "Copy View" — clones the current View's BacktestTargetDef
+ * (including its levelCheckDefs) under a new key/label via
+ * lib/backtest.ts's copyBacktestView, and drops it into the same spot in
+ * the Backtest dropdown as the source. Collapsed to a single small
+ * button by default; clicking it reveals the key/label fields inline
+ * (no modal — matches this panel's existing inline-popover conventions,
+ * e.g. DateField/PivotSizeInfo above) rather than opening automatically,
+ * since it's an occasional action, not something to surface unprompted
+ * on every expanded row.
+ */
+function CopyViewControl({
+  sourceKey,
+  sourceLabel,
+  onCopied,
+}: {
+  sourceKey: string;
+  sourceLabel: string;
+  onCopied: (newKey: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [newKey, setNewKey] = useState("");
+  const [newLabel, setNewLabel] = useState("");
+  const [error, setError] = useState("");
+
+  function openForm() {
+    setNewKey(`${sourceKey}:copy`);
+    setNewLabel(`${sourceLabel} (copy)`);
+    setError("");
+    setOpen(true);
+  }
+
+  function confirm() {
+    const trimmedKey = newKey.trim();
+    const trimmedLabel = newLabel.trim() || trimmedKey;
+    if (!trimmedKey) {
+      setError("Enter a key for the new View.");
+      return;
+    }
+    const result = copyBacktestView(sourceKey, trimmedKey, trimmedLabel);
+    if (!result.ok) {
+      setError(
+        result.reason === "duplicate-key"
+          ? `"${trimmedKey}" already exists — pick a different key.`
+          : result.reason === "source-not-in-tree"
+          ? "Couldn't find this View's place in the dropdown tree."
+          : "Couldn't find the source View."
+      );
+      return;
+    }
+    setOpen(false);
+    onCopied(trimmedKey);
+  }
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={openForm}
+        className="w-fit rounded-md border border-border px-2 py-1 text-[11px] font-medium text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+        title={`Duplicate "${sourceLabel}" (with its Level Check rules) as a new View`}
+      >
+        + Copy View
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex w-fit min-w-[220px] flex-col gap-1.5 rounded-md border border-border bg-popover p-2">
+      <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+        Copy &quot;{sourceLabel}&quot;
+      </span>
+      <input
+        value={newKey}
+        onChange={(e) => setNewKey(e.target.value)}
+        placeholder="New View key"
+        className="w-full bg-background border border-border rounded-md px-2 py-1 text-[11px] font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+      />
+      <input
+        value={newLabel}
+        onChange={(e) => setNewLabel(e.target.value)}
+        placeholder="Display label"
+        className="w-full bg-background border border-border rounded-md px-2 py-1 text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+      />
+      {error && <span className="text-[10px] text-destructive">{error}</span>}
+      <div className="flex justify-end gap-1.5 pt-0.5">
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="rounded-md px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={confirm}
+          className="rounded-md bg-blue-500/20 px-2 py-1 text-[11px] font-medium text-blue-300 hover:bg-blue-500/30"
+        >
+          Create copy
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -1610,6 +1716,20 @@ export default function BacktestPanel() {
                         viewBaselinePanel={
                           r.result === "fail" && baselineByRow.get(r) ? (
                             <ViewBaselineLadderPanel result={baselineByRow.get(r)!} />
+                          ) : undefined
+                        }
+                        // NEW: "Copy View" — only meaningful when this row is
+                        // graded against an actual View/Pattern target (always
+                        // true here, since this table only renders for
+                        // isViewOnly || isPatternOnly), so the source is
+                        // whichever of the two is currently active.
+                        copyViewControl={
+                          (activeTarget ?? activePatternTarget) ? (
+                            <CopyViewControl
+                              sourceKey={(activeTarget ?? activePatternTarget)!.key}
+                              sourceLabel={(activeTarget ?? activePatternTarget)!.label}
+                              onCopied={(newKey) => setSelectedKey(newKey)}
+                            />
                           ) : undefined
                         }
                       />
