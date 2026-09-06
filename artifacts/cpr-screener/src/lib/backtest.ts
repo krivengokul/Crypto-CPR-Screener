@@ -121,6 +121,48 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     getStoploss: (r) => r.todayCPR.s1,
     stoplossLabel: "S1 (today's S1)",
   },
+  // MOVED to "levelsabove": A-A-AA-AA-U3L3-SSLLGap:R4 — View nested
+  // under the "A-A-AA-AA-U3L3" Subpattern (itself under the
+  // "A-A-AA-AA" Pattern in LEVEL ABOVE / LevelsAbove). Condition =
+  // LevelsAbove base + A-A-AA-AA + the raw U3L3 flag PLUS SSGap +
+  // LLGap + pHL-B + HLGap-B — see passesPattern in ScreenerUtils.tsx.
+  // Bullish, targets today's own R4 / U4, entry at today's TC,
+  // stoploss today's S1.
+  {
+    key: "A-A-AA-AA-U3L3-SSLLGap:R4",
+    label: "A-A-AA-AA-U3L3-SSLLGap:R4",
+    direction: "bullish",
+    targetLabel: "U4 (today's R4)",
+    getTarget: (r) => r.todayCPR.r4,
+    getEntry: (r) => r.todayCPR.tc,
+    entryLabel: "TC (today's TC)",
+    getStoploss: (r) => r.todayCPR.s1,
+    stoplossLabel: "S1 (today's S1)",
+    // Level Check — this View's 13 line conditions. Same shape as its
+    // bullish siblings that target today's own R4: the top two rungs
+    // (R4, R3) check the OTHER way around — did yesterday's R4/R3 get
+    // absorbed into today's new R3-R2 band — since this View's target
+    // IS today's own R4, so "today's R4 vs its own prev neighbor"
+    // isn't the meaningful test. PH and the TC/Pivot/BC trio each check
+    // against a shared two-rung band (prev R2-R1, prev PH-TC),
+    // reflecting this View's characteristic multi-rung upward shift.
+    // S1 downward matches the generic one-rung-neighbor check.
+    levelCheckDefs: [
+      { key: "r4", subject: "previous", bandKeys: ["r3", "r2"] },
+      { key: "r3", subject: "previous", bandKeys: ["r3", "r2"] },
+      { key: "r2", subject: "today", bandKeys: ["r3", "r2"] },
+      { key: "r1", subject: "today", bandKeys: ["r2", "r1"] },
+      { key: "prevHigh", subject: "today", bandKeys: ["r2", "r1"] },
+      { key: "tc", subject: "today", bandKeys: ["prevHigh", "tc"] },
+      { key: "pivot", subject: "today", bandKeys: ["prevHigh", "tc"] },
+      { key: "bc", subject: "today", bandKeys: ["prevHigh", "tc"] },
+      { key: "s1", subject: "today", bandKeys: ["bc", "s1"] },
+      { key: "prevLow", subject: "today", bandKeys: ["s1", "prevLow"] },
+      { key: "s2", subject: "today", bandKeys: ["prevLow", "s2"] },
+      { key: "s3", subject: "today", bandKeys: ["s2", "s3"] },
+      { key: "s4", subject: "today", bandKeys: ["s3", "s4"] },
+    ],
+  },
   // NEW: C-B-BB-LB-CL3U2-RRHHGap:R4 — View nested under the
   // "C-B-BB-LB-CL3U2" Pattern (itself under the "C-B-BB-LB" leaf Pattern
   // in "COMPRESSED"). Condition = that Pattern's base (C-B-BB-LB + the raw
@@ -1154,7 +1196,12 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
         label: "A-A-AA-AA",
         subPatternKeys: [],
         patterns: [
-          { key: "A-A-AA-AA-U3L3", label: "A-A-AA-AA-U3L3", subPatternKeys: [] },
+          // MOVED from "R1AbovePR4": "A-A-AA-AA-U3L3" Subpattern —
+          // structural A-A-AA-AA (parent Pattern's own condition)
+          // crossed with the raw U3L3 flag. Nests the bullish
+          // "A-A-AA-AA-U3L3-SSLLGap:R4" View (SSGap + LLGap + pHL-B +
+          // HLGap-B; entry TC, target today's R4, stoploss today's S1).
+          { key: "A-A-AA-AA-U3L3", label: "A-A-AA-AA-U3L3", subPatternKeys: ["A-A-AA-AA-U3L3-SSLLGap:R4"] },
           { key: "A-A-AA-AA-U4L3", label: "A-A-AA-AA-U4L3", subPatternKeys: [] },
           { key: "A-A-AA-AA-EU2L4", label: "A-A-AA-AA-EU2L4", subPatternKeys: ["A-A-AA-AA-EU2L4-ApR2"] },
           { key: "A-A-AA-AA-U2L4", label: "A-A-AA-AA-U2L4", subPatternKeys: ["A-A-AA-AA-S1pPDH-U3"] },
@@ -1721,6 +1768,9 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
             label: "A-A-AA-AA-EUPL3",
             subPatternKeys: ["A-A-AA-AA-EUPL3-RRHHGap:R4"],
           },
+          // MOVED: "A-A-AA-AA-U3L3" Subpattern now lives under the
+          // "levelsabove" category's own "A-A-AA-AA" Pattern (its
+          // condition is LevelsAbove-based, not R1AbovePR4-based).
         ],
       },
       {

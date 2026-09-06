@@ -190,6 +190,20 @@ export const Views: Record<string, SubPattern[]> = {
       activeText:  "#4ade80",      // green-400 text
       activeBg:    "rgba(34, 197, 94, 0.14)",
     },
+    // MOVED from "R1AbovePR4" — "A-A-AA-AA-U3L3-SSLLGap:R4" — View under
+    // the "A-A-AA-AA-U3L3" Subpattern (under the "A-A-AA-AA" Pattern),
+    // now in LEVEL ABOVE (LevelsAbove). Condition is A-A-AA-AA + U3L3 +
+    // SSGap + LLGap + pHL-B + HLGap-B (see ScreenerUtils.tsx / cpr.ts).
+    // Bullish, entry at today's TC, targets today's own R4 (U4),
+    // stoploss today's S1. Green color family, matching its bullish
+    // siblings.
+    {
+      id: "A-A-AA-AA-U3L3-SSLLGap:R4",
+      label: "A-A-AA-AA-U3L3-SSLLGap:R4",
+      activeColor: "#22c55e",              // green-500 border
+      activeText:  "#4ade80",              // green-400 text
+      activeBg:    "rgba(34, 197, 94, 0.14)",
+    },
   ],
   "levelsbelow": [
     // RENAMED from "BC>pPDL-U3:5AM", then from "3P:HA-pABOVE:pR4-3A".

@@ -1355,6 +1355,27 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.hlGapWinner === "today" &&
         r.prevCPR.r1 > r.todayCPR.s1
       );
+    // MOVED to "levelsabove" — "A-A-AA-AA-U3L3-SSLLGap:R4" — View nested
+    // under the "A-A-AA-AA-U3L3" Subpattern (itself under the
+    // "A-A-AA-AA" Pattern in LEVEL ABOVE / LevelsAbove — see
+    // BACKTEST_CATEGORIES in backtest.ts). Condition = the parent
+    // LevelsAbove base + the structural A-A-AA-AA check AND the raw
+    // U3L3 flag (reused via matchesPatternFlag, same shape as the
+    // "A-A-AA-AA-EUPL3-RRHHGap:R4" View above) PLUS RRSSGapCategory
+    // SSGap + PDHPDLGapCategory LLGap + prevCPR.HLSwitch HL-B (pHL-B) +
+    // todayCPR.HLSwitch HL-B with hlGapWinner "today" (HLGap-B).
+    // Bullish, entry at today's TC, targets today's own R4 (U4),
+    // stoploss today's S1.
+    case "A-A-AA-AA-U3L3-SSLLGap:R4":
+      return (
+        r.LevelsAbove &&
+        matchesPatternFlag(r, "A-A-AA-AA-U3L3") &&
+        r.RRSSGapCategory === "SSGap" &&
+        r.PDHPDLGapCategory === "LLGap" &&
+        r.prevCPR.HLSwitch === "HL-B" &&
+        r.todayCPR.HLSwitch === "HL-B" &&
+        r.hlGapWinner === "today"
+      );
     case  "LAT-PU12CU23":
       return r.overlapHigher && r.PU12CU23 && r.PL12CL23 && r.todayCPR.prevHigh > r.prevCPR.prevHigh;
     case "overlapping-lower":
@@ -1606,6 +1627,10 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     // "A-B-C-C" → "A-B-C-C-EU4L4") — see that case's comment in
     // passesPattern above. Bullish → "up".
     { key: "8AM:pPDHA-SRA-U4+2:2AM", direction: "up" },
+    // MOVED from "R1AbovePR4": "A-A-AA-AA-U3L3-SSLLGap:R4" (nested under
+    // the "A-A-AA-AA-U3L3" Subpattern, under the "A-A-AA-AA" Pattern,
+    // now in LEVEL ABOVE). Bullish → "up".
+    { key: "A-A-AA-AA-U3L3-SSLLGap:R4", direction: "up" },
   ],
   "compressed": [
     { key: "6A:HLC-SSLL:R4-6P", direction: "up" },
