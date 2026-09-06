@@ -60,7 +60,22 @@ export interface BacktestTargetDef {
   // rather than guessing at a rule. Only fill this in once you've worked
   // out the View's actual expected per-line relationship.
   levelCheckDefs?: LevelCheckCondition[];
+  // NEW: only needed for a "Copy View" clone (see copyBacktestView below).
+  // `key` doubles as BOTH this entry's dropdown identity (looked up via
+  // BACKTEST_TARGETS.find/BACKTEST_CATEGORIES nesting) AND, everywhere a
+  // View gets graded (backtestSymbolOnDate), the literal pattern-string
+  // handed to passesPattern in ScreenerUtils.tsx — which only recognizes
+  // a fixed set of hardcoded strings. A clone's `key` has to be unique
+  // for the dropdown (so it can't reuse the original's key), but its
+  // CONDITION is still the original's — passesPattern has no case for
+  // the new key and would silently match nothing. `conditionKey` breaks
+  // that coupling: when set, grading uses `conditionKey` instead of
+  // `key` to ask passesPattern "does this row match?", while `key` keeps
+  // doing dropdown-identity duty. Omit for every hand-written View (falls
+  // back to `key`, today's behavior, unchanged).
+  conditionKey?: string;
 }
+
 
 /**
  * NEW: auto-derivation for levelCheckDefs — this is what a "Create View"
@@ -2144,6 +2159,11 @@ export function copyBacktestView(
     ...source,
     key: newKey,
     label: newLabel,
+    // Grading must still resolve to the ORIGINAL condition passesPattern
+    // recognizes — chain through source.conditionKey first so copying a
+    // copy still points at the true original, not an intermediate clone's
+    // key (which passesPattern wouldn't recognize either).
+    conditionKey: source.conditionKey ?? source.key,
     // getTarget/getEntry/getStoploss are pure fns of CPRResult, not tied
     // to key/label — carry over unchanged. Only levelCheckDefs needs an
     // actual deep copy since it's an array of objects (a shallow spread
@@ -2840,7 +2860,7 @@ export async function backtestSymbolOnDate(
   if (!reconstructed) return null;
   const { result, window } = reconstructed;
 
-  if (!passesPatternFn(result, target.key)) return null; // didn't match the pattern on this date
+  if (!passesPatternFn(result, target.conditionKey ?? target.key)) return null; // didn't match the pattern on this date
 
   const targetLevel = target.getTarget(result);
   const entryLevel = target.getEntry(result);
