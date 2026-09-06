@@ -1,0 +1,64 @@
+name: Create Copy View
+
+# Manually triggered only — via the Actions tab "Run workflow" button, or
+# `gh workflow run copy-view.yml -f sourceKey=... -f newKey=... -f newLabel=...`
+# from any terminal with `gh` installed and logged in. A static GitHub
+# Pages site can't trigger this automatically without embedding a
+# credential in browser JS, which we're deliberately avoiding — so this
+# is a one-command manual step instead of a fully automatic button.
+on:
+  workflow_dispatch:
+    inputs:
+      sourceKey:
+        description: "Key of the existing BACKTEST_TARGETS entry to copy"
+        required: true
+        type: string
+      newKey:
+        description: "Key for the new copy"
+        required: true
+        type: string
+      newLabel:
+        description: "Display label for the new copy"
+        required: true
+        type: string
+
+# Needed so the auto-generated GITHUB_TOKEN can push a commit back to
+# this repo — by default Actions tokens are often read-only.
+permissions:
+  contents: write
+
+jobs:
+  copy-view:
+    runs-on: ubuntu-latest
+    env:
+      # Repo layout is artifacts/cpr-screener/src/... (not repo-root).
+      BACKTEST_FILE_PATH: artifacts/cpr-screener/src/lib/backtest.ts
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install patch script dependencies
+        working-directory: .github/scripts/copy-view
+        run: npm install
+
+      - name: Apply the copy
+        working-directory: .github/scripts/copy-view
+        run: node patch.mjs
+        env:
+          SOURCE_KEY: ${{ inputs.sourceKey }}
+          NEW_KEY: ${{ inputs.newKey }}
+          NEW_LABEL: ${{ inputs.newLabel }}
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "$BACKTEST_FILE_PATH"
+          git diff --cached --quiet && echo "No changes to commit" && exit 0
+          git commit -m "Copy View: \"${{ inputs.sourceKey }}\" -> \"${{ inputs.newKey }}\""
+          git push
