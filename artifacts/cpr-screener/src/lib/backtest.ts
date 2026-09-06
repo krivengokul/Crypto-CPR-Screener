@@ -148,11 +148,19 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     // yesterday's R4/R3 get absorbed into today's new R3-R2 band), but
     // the rest of the ladder shifts up by roughly ONE MORE rung than
     // those siblings, not just at the top: R2/R1 both land in prev's
-    // R3-R2 band, PH/TC both in prev's R2-R1 band, Pivot/BC both in
-    // prev's R1-PH band, then S1, PL, S2, S3, S4 each take the next
-    // rung down in turn (prev PH-TC, prev TC-Pivot, prev BC-S1, prev
-    // PL-S2, prev S2-S3) — reflecting this View's stronger SSGap+LLGap
-    // upward displacement compared to the OA/EUPL3 siblings.
+    // R3-R2 band, PH/TC both in prev's R2-R1 band, BC in prev's R1-PH
+    // band, then S1, S2, S3, S4 each take the next rung down in turn
+    // (prev PH-TC, prev BC-S1, prev PL-S2, prev S2-S3) — reflecting
+    // this View's stronger SSGap+LLGap upward displacement compared to
+    // the OA/EUPL3 siblings.
+    // Pivot and PL are each SKIP-banded (spanning two rungs instead of
+    // one, e.g. prev R2-PH instead of prev R1-PH) rather than following
+    // that same one-rung-down cadence: in this real case today's Pivot
+    // (.00199) lands exactly ON prev R1, and today's PL (.00188) lands
+    // exactly ON prev Pivot — landing exactly on a boundary value rather
+    // than strictly inside a band, which compareSRLadders (SRLadderDiff.tsx)
+    // does not count as a match. Widening each of those two checks by one
+    // extra rung keeps the value strictly inside the band's interior.
     levelCheckDefs: [
       { key: "r4", subject: "previous", bandKeys: ["r3", "r2"] },
       { key: "r3", subject: "previous", bandKeys: ["r3", "r2"] },
@@ -163,7 +171,7 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
       { key: "pivot", subject: "today", bandKeys: ["r1", "prevHigh"] },
       { key: "bc", subject: "today", bandKeys: ["r1", "prevHigh"] },
       { key: "s1", subject: "today", bandKeys: ["prevHigh", "tc"] },
-      { key: "prevLow", subject: "today", bandKeys: ["tc", "pivot"] },
+      { key: "prevLow", subject: "today", bandKeys: ["pivot", "bc"] },
       { key: "s2", subject: "today", bandKeys: ["bc", "s1"] },
       { key: "s3", subject: "today", bandKeys: ["prevLow", "s2"] },
       { key: "s4", subject: "today", bandKeys: ["s2", "s3"] },
