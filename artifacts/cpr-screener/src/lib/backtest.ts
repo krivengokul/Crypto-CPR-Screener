@@ -554,6 +554,19 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     stoplossLabel: "S1 (today's S1)",
   },
     {
+        key: "6PM:APHS1A-FAU4:99PM",
+        conditionKey: "6PM:APHS1A-FAU4:9PM", // Copy View — grades against the original
+        label: "6PM:APHS1A-FAU4:99PM",
+        direction: "bullish",
+        targetLabel: "FAU4 (Far Above today's R4)",
+        getTarget: (r) => r.todayCPR.r4,
+        getEntry: (r) => r.todayCPR.tc,
+        entryLabel: "TC (today's TC)",
+        getStoploss: (r) => r.todayCPR.s1,
+        stoplossLabel: "S1 (today's S1)",
+        levelCheckDefs: [{"key":"r4","subject":"previous","bandKeys":["r1","r2"]},{"key":"r3","subject":"previous","bandKeys":["tc","prevHigh"]},{"key":"r2","subject":"previous","bandKeys":["tc","prevHigh"]},{"key":"prevHigh","subject":"today","bandKeys":["r3","r4"]},{"key":"r1","subject":"today","bandKeys":["r3","r4"]},{"key":"tc","subject":"today","bandKeys":["prevHigh","r2"]},{"key":"pivot","subject":"today","bandKeys":["prevHigh","r2"]},{"key":"bc","subject":"today","bandKeys":["prevHigh","r2"]},{"key":"prevLow","subject":"today","bandKeys":["s1","bc"]},{"key":"s1","subject":"today","bandKeys":["tc","r1"]},{"key":"s2","subject":"today","bandKeys":["s3","s1"]},{"key":"s3","subject":"today","bandKeys":["s4","s2"]}]
+    },
+    {
         key: "6PM:APHS1A-FAU4:9PMM",
         conditionKey: "6PM:APHS1A-FAU4:9PM", // Copy View — grades against the original
         label: "6PM:APHS1A-FAU4:9PMM",
@@ -1301,7 +1314,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       {
         key: "EU2L4",
         label: "EU2L4",
-        subPatternKeys: ["7PM:MoMi->U4:2AM", "7PM:MoMi-<L4:2AM", "6PM:APHS1A-FAU4:9PM", "6PM:APHS1A-FAU4:9PMM"],
+        subPatternKeys: ["7PM:MoMi->U4:2AM", "7PM:MoMi-<L4:2AM", "6PM:APHS1A-FAU4:9PM", "6PM:APHS1A-FAU4:99PM", "6PM:APHS1A-FAU4:9PMM"],
       },
       // NEW: "U4L3" Pattern (arrow) — same shape as its
       // "EU2L4" sibling above. Base condition = parent levelsabove's
