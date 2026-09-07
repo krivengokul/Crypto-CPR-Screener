@@ -36,13 +36,7 @@ import {
   renderPivotPatternBadge,
 } from "./ScreenerTableRow";
 import { SRLadderRow, toSRLadderData } from "./SRLadderPanel";
-import {
-  getLadderMatchSummary,
-  buildViewLadderBaseline,
-  scoreAgainstViewBaseline,
-  ViewBaselineLadderPanel,
-  type FailVsBaselineResult,
-} from "./SRLadderDiff";
+import { getLadderMatchSummary } from "./SRLadderDiff";
 
 // --- Small UTC date helpers (all dates in this panel are UTC ISO strings) ---
 function toISO(d: Date): string {
@@ -597,9 +591,9 @@ export default function BacktestPanel() {
   // table below — isViewOnly and isPatternOnly are mutually exclusive, so
   // exactly one of activeTarget/activePatternTarget is ever set here.
   // Undefined for either (a category, or a View with no levelCheckDefs
-  // yet) means there's no Level Check to run — Level Check, Ladder
-  // Check, and Vs. View Pass Baseline all show "No levelCheckDefs"
-  // rather than falling back to any generic rule.
+  // yet) means there's no Level Check to run — Level Check and Ladder
+  // Check both show "No levelCheckDefs" rather than falling back to any
+  // generic rule.
   const activeLevelCheckDefs = (activeTarget ?? activePatternTarget)?.levelCheckDefs;
 
   const symbolListLabel = isCategory
@@ -915,40 +909,6 @@ export default function BacktestPanel() {
   const mismatchHitRate = mismatchGraded.length
     ? Math.round((mismatchGraded.filter((r) => r.result === "pass").length / mismatchGraded.length) * 100)
     : null;
-
-  // View-scoped Pass baseline: this View's own Pass rows define, per
-  // level, whether "Matching" or "Not Matching" (from the existing
-  // ladderdiff above) is the NORMAL outcome for a healthy symbol in THIS
-  // View — a bullish R4-breakout View's Pass symbols may typically be Not
-  // Matching (broken through) on most levels, while another View's Pass
-  // symbols could be mostly Matching. Every Fail row is then measured
-  // against ITS OWN View's baseline, never another View's — `rows` is
-  // reset on every selectedKey change / run(), same guarantee ladderByRow
-  // already relies on above. Built from the same activeLevelCheckDefs as
-  // ladderByRow, so the baseline and Level Check agree on what "Matching"
-  // means for this View.
-  const passBaseline = useMemo(() => {
-    const passRows = rows
-      .filter((r) => r.result === "pass")
-      .map((r) => ({ prevCPR: r.prevCPR, todayCPR: r.todayCPR }));
-    return buildViewLadderBaseline(passRows, activeLevelCheckDefs);
-  }, [rows, activeLevelCheckDefs]);
-
-  // Scored against passBaseline. Meaningful for Fail rows; Pass rows are
-  // what BUILT the baseline, so scoring them against it is circular and
-  // the UI below treats Pass rows as "Baseline" rather than showing a
-  // match count for them.
-  const baselineByRow = useMemo(() => {
-    const map = new Map<BacktestRow, FailVsBaselineResult>();
-    if (!passBaseline) return map;
-    rows.forEach((r) =>
-      map.set(
-        r,
-        scoreAgainstViewBaseline({ prevCPR: r.prevCPR, todayCPR: r.todayCPR }, passBaseline, activeLevelCheckDefs)
-      )
-    );
-    return map;
-  }, [rows, passBaseline, activeLevelCheckDefs]);
 
   const ChartLink = ({ symbol, source }: { symbol: string; source: BacktestSource }) =>
     hasKnownChartMapping(symbol, source) ? (
@@ -1545,12 +1505,6 @@ export default function BacktestPanel() {
                         </span>
                       </button>
                     </th>
-                    <th
-                      className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider"
-                      title="Fail rows scored against this View's own Pass rows — per level, does this row's Matching/Not-Matching outcome match what this View's Pass rows typically show"
-                    >
-                      Vs Pass Baseline
-                    </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Hit Date
                     </th>
@@ -1702,51 +1656,6 @@ export default function BacktestPanel() {
                           );
                         })()}
                       </td>
-                      <td className="px-3 py-2">
-                        {(() => {
-                          if (!activeLevelCheckDefs || activeLevelCheckDefs.length === 0) {
-                            return <span className="text-xs text-muted-foreground">No levelCheckDefs</span>;
-                          }
-                          if (r.result === "pass") {
-                            return (
-                              <span
-                                className="inline-flex items-center gap-1 text-xs font-mono font-medium text-blue-300"
-                                title="This Pass symbol is part of the View's baseline — not scored against itself"
-                              >
-                                Baseline
-                              </span>
-                            );
-                          }
-                          const b = baselineByRow.get(r);
-                          if (!b) return <span className="text-xs text-muted-foreground">—</span>;
-                          const matchingCount = b.levelResults.length - b.deviationCount;
-                          const total = b.levelResults.length;
-                          const fullMatch = b.deviationCount === 0;
-                          const color = fullMatch
-                            ? "text-green-400"
-                            : matchingCount >= total - 2
-                            ? "text-amber-400"
-                            : "text-destructive";
-                          const deviatingLabels = b.levelResults.filter((d) => d.deviates).map((d) => d.label);
-                          return (
-                            <span
-                              className={`inline-flex items-center gap-1 text-xs font-mono font-medium ${color}`}
-                              title={
-                                fullMatch
-                                  ? `Matches this View's Pass baseline (n=${b.sampleSize})`
-                                  : `Deviates from Pass baseline on: ${deviatingLabels.join(", ")}`
-                              }
-                            >
-                              {fullMatch ? (
-                                <CheckCircle2 className="w-3.5 h-3.5" />
-                              ) : (
-                                <XCircle className="w-3.5 h-3.5" />
-                              )}
-                              {matchingCount}/{total}
-                            </span>
-                          );
-                        })()}
-                      </td>
                       <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">
                         {r.hitDate ? (
                           <div className="flex flex-col leading-tight">
@@ -1780,21 +1689,12 @@ export default function BacktestPanel() {
                       <SRLadderRow
                         r={toSRLadderData(r.raw, r.closePrice ?? undefined, r.prevClose ?? undefined, r.ppClose ?? undefined)}
                         rowKey={`${r.source}-${r.symbol}-${r.entryDate}`}
-                        colSpan={11}
+                        colSpan={10}
                         todayPatternBadge={renderTodayPatternBadges(r.raw)}
                         prevPatternBadge={renderPrevPatternBadge(r.raw)}
                         pivotPatternBadge={renderPivotPatternBadge(r.raw)}
                         showLevelCheck
                         levelCheckConditions={activeLevelCheckDefs}
-                        // View-baseline breakdown — only meaningful for a Fail row
-                        // measured against its own View's Pass rows (see
-                        // baselineByRow above). Pass rows built the baseline, so
-                        // there's nothing to show for them here.
-                        viewBaselinePanel={
-                          r.result === "fail" && baselineByRow.get(r) ? (
-                            <ViewBaselineLadderPanel result={baselineByRow.get(r)!} />
-                          ) : undefined
-                        }
                         // NEW: "Copy View" — only meaningful when this row is
                         // graded against an actual View/Pattern target (always
                         // true here, since this table only renders for

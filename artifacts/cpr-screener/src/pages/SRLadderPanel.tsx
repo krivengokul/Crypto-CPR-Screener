@@ -401,10 +401,10 @@ function CPRLevelChart({
  * The full expanded panel shown when a symbol row is clicked:
  * PDay S/R first, then the Prev-Day-vs-Today Levels VIEW chart, then
  * Today S/R, then PDay-1 S/R (if available), then — BacktestPanel only —
- * Level Check and Vs. View Pass Baseline. This order keeps each day's
- * ladder close to its own lines in the chart so the overlapping level
- * values are easier to read, while the two backtest-only diagnostics sit
- * together at the end. Reused by Screener and BacktestPanel.
+ * Level Check. This order keeps each day's ladder close to its own lines
+ * in the chart so the overlapping level values are easier to read, while
+ * the backtest-only diagnostic sits at the end. Reused by Screener and
+ * BacktestPanel.
  *
  * Each day-specific ladder shows that day's own closing price as its
  * bottom row: labeled "Close" (plain white text) for PDay S/R's
@@ -419,7 +419,6 @@ export function SRLadderPanel({
   pivotPatternBadge,
   showLevelCheck = false,
   levelCheckConditions,
-  viewBaselinePanel,
   copyViewControl,
 }: {
   r: SRLadderData;
@@ -448,23 +447,10 @@ export function SRLadderPanel({
    */
   levelCheckConditions?: LevelCheckCondition[];
   /**
-   * BacktestPanel-only: a pre-built <ViewBaselineLadderPanel /> (or any
-   * ReactNode) rendered after Level Check, at the very end of the row.
-   * Passed as a node rather than raw data so this file stays decoupled
-   * from FailVsBaselineResult / BacktestPanel's grading logic. Omit
-   * (the default) for Screener and for backtest rows with no baseline
-   * to show against (e.g. Pass rows, which built the baseline).
-   */
-  viewBaselinePanel?: ReactNode;
-  /**
-   * NEW: BacktestPanel-only "Copy View" control, rendered directly under
-   * the Level Check panel (same decoupling convention as
-   * viewBaselinePanel — a pre-built ReactNode rather than raw
-   * BacktestTargetDef data, so this file stays independent of
-   * lib/backtest.ts's copyBacktestView / BACKTEST_TARGETS). Omit (the
-   * default) for Screener and for any row where copying the current View
-   * doesn't make sense (no active View selected). No effect unless
-   * showLevelCheck is also true.
+   * BacktestPanel-only "Copy View" control, rendered directly under
+   * the Level Check panel. Omit (the default) for Screener and for any
+   * row where copying the current View doesn't make sense (no active
+   * View selected). No effect unless showLevelCheck is also true.
    */
   copyViewControl?: ReactNode;
 }) {
@@ -485,7 +471,6 @@ export function SRLadderPanel({
             {copyViewControl}
           </div>
         )}
-        {viewBaselinePanel}
       </div>
     </div>
   );
@@ -505,7 +490,6 @@ export function SRLadderRow({
   pivotPatternBadge,
   showLevelCheck = false,
   levelCheckConditions,
-  viewBaselinePanel,
   copyViewControl,
 }: {
   r: SRLadderData;
@@ -523,9 +507,7 @@ export function SRLadderRow({
   showLevelCheck?: boolean;
   /** The current View's 13 Level Check conditions. See SRLadderPanel for details. */
   levelCheckConditions?: LevelCheckCondition[];
-  /** BacktestPanel-only "Vs. View Pass Baseline" panel, rendered after Level Check. See SRLadderPanel for details. */
-  viewBaselinePanel?: ReactNode;
-  /** NEW: BacktestPanel-only "Copy View" control, rendered under Level Check. See SRLadderPanel for details. */
+  /** BacktestPanel-only "Copy View" control, rendered under Level Check. See SRLadderPanel for details. */
   copyViewControl?: ReactNode;
 }) {
   return (
@@ -539,7 +521,6 @@ export function SRLadderRow({
           pivotPatternBadge={pivotPatternBadge}
           showLevelCheck={showLevelCheck}
           levelCheckConditions={levelCheckConditions}
-          viewBaselinePanel={viewBaselinePanel}
           copyViewControl={copyViewControl}
         />
       </td>
