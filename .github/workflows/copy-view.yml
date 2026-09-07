@@ -26,10 +26,12 @@ on:
         required: false
         type: string
 
-# Needed so the auto-generated GITHUB_TOKEN can push a commit back to
-# this repo — by default Actions tokens are often read-only.
+# contents: write — lets the auto-generated GITHUB_TOKEN push the commit.
+# actions: write — lets it also trigger deploy.yml via `gh workflow run`
+# (see "Trigger the deploy workflow" step below).
 permissions:
   contents: write
+  actions: write
 
 jobs:
   copy-view:
@@ -67,3 +69,16 @@ jobs:
           git diff --cached --quiet && echo "No changes to commit" && exit 0
           git commit -m "Copy View: \"${{ inputs.sourceKey }}\" -> \"${{ inputs.newKey }}\""
           git push
+
+      - name: Trigger the deploy workflow
+        # Pushes made with the default GITHUB_TOKEN don't trigger other
+        # workflows' `on: push` (GitHub's anti-recursion rule — prevents
+        # workflow A's push from firing workflow B, which could in turn
+        # fire A again, forever). deploy.yml never actually saw this
+        # commit's push as an event. workflow_dispatch is a direct API
+        # call instead of a push event, so it isn't subject to that rule
+        # — this explicitly kicks off the same deploy.yml a normal push
+        # would have triggered.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run deploy.yml --repo "${{ github.repository }}" --ref "${{ github.ref_name }}"
