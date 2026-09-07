@@ -240,23 +240,44 @@ function deriveLevelCheckDefsForSymbol(
 
   // No source levelCheckDefs — build a from-scratch set over all 13
   // LEVEL_KEYS, picking whichever subject direction actually works.
-  return LEVEL_KEYS.map((key) => {
+  // Unlike the sourceConditions branch above, there's no prior
+  // guarantee a bracket exists here (that guarantee comes from the
+  // symbol already satisfying an established View's pattern condition —
+  // there's no such View here yet). Extreme levels (r4, s4) are the most
+  // likely to have no valid bracket in either direction on a given real
+  // symbol/day. Rather than failing the whole copy over one such key,
+  // skip it — the copy proceeds with whichever conditions could
+  // genuinely be derived, same "report plainly, don't guess" spirit as
+  // SRLadderDiffPanel's own "No levelCheckDefs" fallback.
+  const derived: LevelCheckCondition[] = [];
+  const skipped: LevelKey[] = [];
+
+  for (const key of LEVEL_KEYS) {
     const candidates = LEVEL_KEYS.filter((k) => k !== key);
 
     const todayBracket = findBracket(todayCPR[key] as number, candidates, prevCPR);
     if (todayBracket) {
-      return { key, subject: "today" as const, bandKeys: todayBracket };
+      derived.push({ key, subject: "today", bandKeys: todayBracket });
+      continue;
     }
 
     const previousBracket = findBracket(prevCPR[key] as number, candidates, todayCPR);
     if (previousBracket) {
-      return { key, subject: "previous" as const, bandKeys: previousBracket };
+      derived.push({ key, subject: "previous", bandKeys: previousBracket });
+      continue;
     }
 
-    throw new Error(
-      `Couldn't find a valid Level Check bracket for "${key}" in either direction for this symbol.`
+    skipped.push(key);
+  }
+
+  if (skipped.length > 0) {
+    console.warn(
+      `Level Check: no valid bracket for ${skipped.join(", ")} on this symbol in either direction — ` +
+        `derived ${derived.length}/${LEVEL_KEYS.length} conditions.`
     );
-  });
+  }
+
+  return derived;
 }
 
 function CopyViewControl({
@@ -291,6 +312,7 @@ function CopyViewControl({
   const [command, setCommand] = useState<string | null>(null);
   const [createdKey, setCreatedKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [levelCheckNote, setLevelCheckNote] = useState<string | null>(null);
 
   function openForm() {
     setNewKey(`${sourceKey}:copy`);
@@ -299,6 +321,7 @@ function CopyViewControl({
     setCommand(null);
     setCreatedKey(null);
     setCopied(false);
+    setLevelCheckNote(null);
     setOpen(true);
   }
 
@@ -342,6 +365,18 @@ function CopyViewControl({
     let levelCheckDefsArg = "";
     try {
       const derived = deriveLevelCheckDefsForSymbol(sourceConditions, prevCPR, todayCPR);
+
+      const expectedCount =
+        sourceConditions && sourceConditions.length > 0 ? sourceConditions.length : LEVEL_KEYS.length;
+      if (derived.length < expectedCount) {
+        setLevelCheckNote(
+          `Derived ${derived.length}/${expectedCount} Level Check conditions — ` +
+            `the rest had no valid bracket for this symbol in either direction.`
+        );
+      } else {
+        setLevelCheckNote(null);
+      }
+
       // Base64, not double-quoted JSON — JSON is full of literal " characters,
       // which would collide with the double-quote wrapping used for the other
       // three arguments (stripping embedded " would corrupt the JSON itself).
@@ -421,6 +456,7 @@ function CopyViewControl({
         className="w-full bg-background border border-border rounded-md px-2 py-1 text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
       />
       {error && <span className="text-[10px] text-destructive">{error}</span>}
+      {levelCheckNote && <span className="text-[10px] text-amber-400">{levelCheckNote}</span>}
       {command && (
         <div className="flex flex-col gap-1">
           <span className="text-[10px] text-muted-foreground">
