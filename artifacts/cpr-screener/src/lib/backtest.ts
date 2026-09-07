@@ -1238,6 +1238,7 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
   },
     {
         key: "A-A-AA-AA-EU2L4-TC>pR2:R4",
+        conditionKey: "EU2L4",
         label: "A-A-AA-AA-EU2L4-TC>pR2:R4",
         direction: "bullish",
         targetLabel: "U4 (today's R4)",
@@ -1246,7 +1247,6 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
         getEntry: (r) => r.todayCPR.tc,
         stoplossLabel: "S1 (today's S1)",
         getStoploss: (r) => r.todayCPR.s1,
-        conditionKey: "EU2L4",
         levelCheckDefs: [{"key":"r4","subject":"previous","bandKeys":["r2","r1"]},{"key":"r3","subject":"previous","bandKeys":["r1","prevHigh"]},{"key":"r2","subject":"previous","bandKeys":["tc","pivot"]},{"key":"prevHigh","subject":"today","bandKeys":["r3","r2"]},{"key":"r1","subject":"today","bandKeys":["r4","r3"]},{"key":"tc","subject":"today","bandKeys":["r3","r2"]},{"key":"pivot","subject":"today","bandKeys":["r2","r1"]},{"key":"bc","subject":"today","bandKeys":["r2","r1"]},{"key":"prevLow","subject":"today","bandKeys":["pivot","bc"]},{"key":"s1","subject":"today","bandKeys":["prevHigh","tc"]},{"key":"s2","subject":"today","bandKeys":["prevLow","s2"]},{"key":"s3","subject":"today","bandKeys":["s3","s4"]},{"key":"s4","subject":"previous","bandKeys":["s3","s4"]}],
       }
 ];
