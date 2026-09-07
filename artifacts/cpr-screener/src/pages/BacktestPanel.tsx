@@ -36,7 +36,7 @@ import {
   renderPivotPatternBadge,
 } from "./ScreenerTableRow";
 import { SRLadderRow, toSRLadderData } from "./SRLadderPanel";
-import { getLadderMatchSummary, type LevelCheckCondition, type LevelKey } from "./SRLadderDiff";
+import { getLadderMatchSummary, LEVEL_KEYS, type LevelCheckCondition, type LevelKey } from "./SRLadderDiff";
 import type { CPRLevels } from "@/lib/cpr";
 
 // --- Small UTC date helpers (all dates in this panel are UTC ISO strings) ---
@@ -166,47 +166,96 @@ function PivotSizeInfo() {
  * loudly rather than papering over with a wrong condition — so this
  * throws instead of guessing.
  */
+/**
+ * Finds the pair of level keys (from `candidates`, evaluated on
+ * `bandCPR`) that bracket `subjectVal` — i.e. sorts candidates by their
+ * value on that day, high to low, and returns the adjacent pair
+ * subjectVal falls between. Returns null if no such pair exists (subject
+ * is more extreme than every candidate).
+ */
+function findBracket(
+  subjectVal: number,
+  candidates: LevelKey[],
+  bandCPR: CPRLevels
+): [LevelKey, LevelKey] | null {
+  const sorted = [...candidates].sort((a, b) => (bandCPR[b] as number) - (bandCPR[a] as number));
+  for (let i = 0; i < sorted.length - 1; i++) {
+    const upperKey = sorted[i];
+    const lowerKey = sorted[i + 1];
+    const upperVal = bandCPR[upperKey] as number;
+    const lowerVal = bandCPR[lowerKey] as number;
+    if (subjectVal <= upperVal && subjectVal >= lowerVal) {
+      return [lowerKey, upperKey];
+    }
+  }
+  return null;
+}
+
+/**
+ * Derives a fresh set of Level Check conditions for a specific symbol.
+ *
+ * With sourceConditions (the source View already has levelCheckDefs):
+ * `key`/`subject` per condition are kept as-is — they encode the View's
+ * actual intent (e.g. "today's TC checked against a band drawn from
+ * yesterday's structure"), not something derived from any one symbol's
+ * numbers. Only `bandKeys` gets recomputed, via findBracket, so the new
+ * condition evaluates true for the symbol the copy was made from.
+ *
+ * Without sourceConditions (the source View has none yet): there's no
+ * existing `subject` to preserve, so one is chosen per key — try
+ * "today" first (the more common convention: does today's level sit in
+ * a band drawn from yesterday), falling back to "previous" if "today"
+ * has no valid bracket for this symbol. Only if neither direction finds
+ * one does this throw — genuinely unusual for a real market day, since
+ * across 12 candidate levels at least one bracket in one direction is
+ * almost always findable.
+ */
 function deriveLevelCheckDefsForSymbol(
-  sourceConditions: LevelCheckCondition[],
+  sourceConditions: LevelCheckCondition[] | undefined,
   prevCPR: CPRLevels,
   todayCPR: CPRLevels
 ): LevelCheckCondition[] {
-  const allKeys = sourceConditions.map((c) => c.key);
+  if (sourceConditions && sourceConditions.length > 0) {
+    const allKeys = sourceConditions.map((c) => c.key);
 
-  return sourceConditions.map((cond) => {
-    const subjectIsToday = cond.subject === "today";
-    const subjectVal = (subjectIsToday ? todayCPR : prevCPR)[cond.key] as number;
-    // The band always comes from the day `subject` is NOT — same
-    // convention as compareSRLadders in SRLadderDiff.tsx.
-    const bandCPR = subjectIsToday ? prevCPR : todayCPR;
+    return sourceConditions.map((cond) => {
+      const subjectIsToday = cond.subject === "today";
+      const subjectVal = (subjectIsToday ? todayCPR : prevCPR)[cond.key] as number;
+      // The band always comes from the day `subject` is NOT — same
+      // convention as compareSRLadders in SRLadderDiff.tsx.
+      const bandCPR = subjectIsToday ? prevCPR : todayCPR;
+      const candidates = allKeys.filter((k) => k !== cond.key);
+      const bandKeys = findBracket(subjectVal, candidates, bandCPR);
 
-    // Every other level this View checks is a candidate band edge —
-    // sorted by that day's actual value, high to low (same convention
-    // compareSRLadders' own sort uses), then walk adjacent pairs looking
-    // for the one that brackets subjectVal.
-    const candidates = allKeys.filter((k) => k !== cond.key);
-    const sorted = [...candidates].sort((a, b) => (bandCPR[b] as number) - (bandCPR[a] as number));
-
-    let bandKeys: [LevelKey, LevelKey] | null = null;
-    for (let i = 0; i < sorted.length - 1; i++) {
-      const upperKey = sorted[i];
-      const lowerKey = sorted[i + 1];
-      const upperVal = bandCPR[upperKey] as number;
-      const lowerVal = bandCPR[lowerKey] as number;
-      if (subjectVal <= upperVal && subjectVal >= lowerVal) {
-        bandKeys = [lowerKey, upperKey];
-        break;
+      if (!bandKeys) {
+        throw new Error(
+          `Couldn't find a bracketing pair for "${cond.key}" (subject: ${cond.subject}) on this symbol — ` +
+            `it may not actually satisfy this View's underlying pattern condition.`
+        );
       }
+
+      return { key: cond.key, subject: cond.subject, bandKeys };
+    });
+  }
+
+  // No source levelCheckDefs — build a from-scratch set over all 13
+  // LEVEL_KEYS, picking whichever subject direction actually works.
+  return LEVEL_KEYS.map((key) => {
+    const candidates = LEVEL_KEYS.filter((k) => k !== key);
+
+    const todayBracket = findBracket(todayCPR[key] as number, candidates, prevCPR);
+    if (todayBracket) {
+      return { key, subject: "today" as const, bandKeys: todayBracket };
     }
 
-    if (!bandKeys) {
-      throw new Error(
-        `Couldn't find a bracketing pair for "${cond.key}" (subject: ${cond.subject}) on this symbol — ` +
-          `it may not actually satisfy this View's underlying pattern condition.`
-      );
+    const previousBracket = findBracket(prevCPR[key] as number, candidates, todayCPR);
+    if (previousBracket) {
+      return { key, subject: "previous" as const, bandKeys: previousBracket };
     }
 
-    return { key: cond.key, subject: cond.subject, bandKeys };
+    throw new Error(
+      `Couldn't find a valid Level Check bracket for "${key}" in either direction for this symbol.`
+    );
   });
 }
 
@@ -286,34 +335,33 @@ function CopyViewControl({
     // just backtest key/label strings.
     const q = (s: string) => `"${s.replace(/"/g, "")}"`;
 
+    // Always derive levelCheckDefs now — even when the source View has
+    // none yet, deriveLevelCheckDefsForSymbol builds a from-scratch set
+    // over all 13 LEVEL_KEYS for this symbol (picking a working subject
+    // per key) rather than leaving the copy without one.
     let levelCheckDefsArg = "";
-    if (sourceConditions && sourceConditions.length > 0) {
-      try {
-        const derived = deriveLevelCheckDefsForSymbol(sourceConditions, prevCPR, todayCPR);
-        // Base64, not double-quoted JSON — JSON is full of literal " characters,
-        // which would collide with the double-quote wrapping used for the other
-        // three arguments (stripping embedded " would corrupt the JSON itself).
-        // Base64 has no quotes, spaces, or braces to escape across cmd.exe /
-        // PowerShell / bash, so it sidesteps the whole cross-shell quoting
-        // problem — patch.mjs just base64-decodes and JSON.parses it back.
-        const json = JSON.stringify(derived);
-        const jsonBytes = new TextEncoder().encode(json);
-        let binary = "";
-        jsonBytes.forEach((b) => (binary += String.fromCharCode(b)));
-        const b64 = btoa(binary);
-        levelCheckDefsArg = ` -f levelCheckDefs=${b64}`;
-      } catch (err) {
-        setError(
-          err instanceof Error
-            ? `Couldn't derive Level Check conditions for this symbol: ${err.message}`
-            : "Couldn't derive Level Check conditions for this symbol."
-        );
-        return;
-      }
+    try {
+      const derived = deriveLevelCheckDefsForSymbol(sourceConditions, prevCPR, todayCPR);
+      // Base64, not double-quoted JSON — JSON is full of literal " characters,
+      // which would collide with the double-quote wrapping used for the other
+      // three arguments (stripping embedded " would corrupt the JSON itself).
+      // Base64 has no quotes, spaces, or braces to escape across cmd.exe /
+      // PowerShell / bash, so it sidesteps the whole cross-shell quoting
+      // problem — patch.mjs just base64-decodes and JSON.parses it back.
+      const json = JSON.stringify(derived);
+      const jsonBytes = new TextEncoder().encode(json);
+      let binary = "";
+      jsonBytes.forEach((b) => (binary += String.fromCharCode(b)));
+      const b64 = btoa(binary);
+      levelCheckDefsArg = ` -f levelCheckDefs=${b64}`;
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? `Couldn't derive Level Check conditions for this symbol: ${err.message}`
+          : "Couldn't derive Level Check conditions for this symbol."
+      );
+      return;
     }
-    // Views with no levelCheckDefs at all (sourceConditions empty/undefined)
-    // intentionally get no levelCheckDefs argument — the clone should stay
-    // without one too, not have one invented for it.
 
     setCommand(
       `gh workflow run copy-view.yml --repo krivengokul/Crypto-CPR-Screener -f sourceKey=${q(sourceKey)} -f newKey=${q(trimmedKey)} -f newLabel=${q(trimmedLabel)}${levelCheckDefsArg}`

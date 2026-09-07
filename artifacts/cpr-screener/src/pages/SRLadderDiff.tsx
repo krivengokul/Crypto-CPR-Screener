@@ -20,7 +20,10 @@ import { CheckCircle2, XCircle } from "lucide-react";
 import type { CPRLevels } from "@/lib/cpr";
 
 // Same 13 keys / order SRLadderPanel.tsx already uses (LEVEL_KEYS).
-const LEVEL_KEYS = [
+// Exported so BacktestPanel.tsx can build a from-scratch levelCheckDefs
+// set for a View that doesn't have one yet — see
+// deriveLevelCheckDefsForSymbol's "no sourceConditions" branch.
+export const LEVEL_KEYS = [
   "r4", "r3", "r2", "prevHigh", "r1", "tc", "pivot", "bc", "prevLow", "s1", "s2", "s3", "s4",
 ] as const;
 
