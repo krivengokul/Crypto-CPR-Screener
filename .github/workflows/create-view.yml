@@ -1,0 +1,76 @@
+name: Create View
+
+# Manually triggered only — same reasoning as copy-view.yml: a static
+# GitHub Pages site can't trigger this automatically without embedding a
+# credential in browser JS. Run via:
+#   gh workflow run create-view.yml -f patternKey=... -f newKey=... -f newLabel=... -f levelCheckDefs=...
+on:
+  workflow_dispatch:
+    inputs:
+      patternKey:
+        description: "Key of the Pattern/Subpattern node (in BACKTEST_CATEGORIES) to attach the new View to"
+        required: true
+        type: string
+      newKey:
+        description: "Key for the new View"
+        required: true
+        type: string
+      newLabel:
+        description: "Display label for the new View"
+        required: true
+        type: string
+      levelCheckDefs:
+        description: "Base64 JSON array of {key, subject, bandKeys} — derived client-side (deriveLevelCheckDefs) for the specific symbol this was created from"
+        required: true
+        type: string
+
+# contents: write — lets the auto-generated GITHUB_TOKEN push the commit.
+# actions: write — lets it also trigger deploy.yml via `gh workflow run`
+# (pushes made with GITHUB_TOKEN don't trigger other workflows' `on:
+# push` — GitHub's anti-recursion rule — so this explicitly dispatches it
+# instead of relying on the push event).
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  create-view:
+    runs-on: ubuntu-latest
+    env:
+      # Repo layout is artifacts/cpr-screener/src/... (not repo-root).
+      BACKTEST_FILE_PATH: artifacts/cpr-screener/src/lib/backtest.ts
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install patch script dependencies
+        working-directory: .github/scripts/create-view
+        run: npm install
+
+      - name: Apply the create
+        working-directory: .github/scripts/create-view
+        run: node patch.mjs
+        env:
+          PATTERN_KEY: ${{ inputs.patternKey }}
+          NEW_KEY: ${{ inputs.newKey }}
+          NEW_LABEL: ${{ inputs.newLabel }}
+          LEVEL_CHECK_DEFS_B64: ${{ inputs.levelCheckDefs }}
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "$BACKTEST_FILE_PATH"
+          git diff --cached --quiet && echo "No changes to commit" && exit 0
+          git commit -m "Create View: \"${{ inputs.newKey }}\" under \"${{ inputs.patternKey }}\""
+          git push
+
+      - name: Trigger the deploy workflow
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run deploy.yml --repo "${{ github.repository }}" --ref "${{ github.ref_name }}"
