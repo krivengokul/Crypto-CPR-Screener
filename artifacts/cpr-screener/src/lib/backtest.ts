@@ -553,13 +553,19 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     getStoploss: (r) => r.todayCPR.s1,
     stoplossLabel: "S1 (today's S1)",
   },
-  // NEW: "9AM:pPALPApH-FAU4:2PM" — nested under "LEVEL ABOVE" → Pattern
-  // "U4L3" (see BACKTEST_CATEGORIES below), alongside its "EU2L4"
-  // siblings. Condition: LevelsAbove + raw U4L3 flag + prev day's Pivot
-  // above today's PDL + today's own Pivot above today's PDH — see
-  // ScreenerUtils.tsx. Bullish, entry ~9AM, targets Far Above today's R4
-  // by ~2PM.
-  {
+    {
+        key: "6PM:APHS1A-FAU4:9PMM",
+        conditionKey: "6PM:APHS1A-FAU4:9PM", // Copy View — grades against the original
+        label: "6PM:APHS1A-FAU4:9PMM",
+        direction: "bullish",
+        targetLabel: "FAU4 (Far Above today's R4)",
+        getTarget: (r) => r.todayCPR.r4,
+        getEntry: (r) => r.todayCPR.tc,
+        entryLabel: "TC (today's TC)",
+        getStoploss: (r) => r.todayCPR.s1,
+        stoplossLabel: "S1 (today's S1)",
+      },
+    {
     key: "9AM:pPALPApH-FAU4:2PM",
     label: "9AM:pPALPApH-FAU4:2PM",
     direction: "bullish",
@@ -1295,7 +1301,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       {
         key: "EU2L4",
         label: "EU2L4",
-        subPatternKeys: ["7PM:MoMi->U4:2AM", "7PM:MoMi-<L4:2AM", "6PM:APHS1A-FAU4:9PM"],
+        subPatternKeys: ["7PM:MoMi->U4:2AM", "7PM:MoMi-<L4:2AM", "6PM:APHS1A-FAU4:9PM", "6PM:APHS1A-FAU4:9PMM"],
       },
       // NEW: "U4L3" Pattern (arrow) — same shape as its
       // "EU2L4" sibling above. Base condition = parent levelsabove's
