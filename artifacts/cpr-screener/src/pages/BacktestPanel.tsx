@@ -21,6 +21,8 @@ import {
   runCategoryScan,
   runPivotLevelBacktest,
   copyBacktestView,
+  createBacktestView,
+  deriveLevelCheckDefs,
   type BacktestRow,
   type CategoryScanRow,
   type BacktestSource,
@@ -37,7 +39,7 @@ import {
 } from "./ScreenerTableRow";
 import { SRLadderRow, toSRLadderData } from "./SRLadderPanel";
 import { getLadderMatchSummary, LEVEL_KEYS, type LevelCheckCondition, type LevelKey } from "./SRLadderDiff";
-import type { CPRLevels } from "@/lib/cpr";
+import type { CPRLevels, CPRResult } from "@/lib/cpr";
 
 // --- Small UTC date helpers (all dates in this panel are UTC ISO strings) ---
 function toISO(d: Date): string {
@@ -494,6 +496,182 @@ function CopyViewControl({
             className="rounded-md bg-blue-500/20 px-2 py-1 text-[11px] font-medium text-blue-300 hover:bg-blue-500/30"
           >
             Create copy
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * "Create View" — for a Pattern/Subpattern that has no BACKTEST_TARGETS
+ * entry of its own yet (BacktestPanel's activePatternTarget undefined,
+ * showing the "U4 (today's R4)" fallback description instead of a real
+ * graded View). Unlike CopyViewControl, there's no existing entry to
+ * clone — this attaches the fixed default recipe (target R4, entry TC,
+ * stoploss S1) to the Pattern/Subpattern's own condition (via
+ * conditionKey), with levelCheckDefs derived fresh from whichever
+ * symbol's row this was opened from (backtest.ts's deriveLevelCheckDefs
+ * — the canonical algorithm, not a re-implementation of it).
+ */
+function CreateViewControl({
+  patternKey,
+  patternLabel,
+  prevCPR,
+  todayCPR,
+  onCreated,
+}: {
+  patternKey: string;
+  patternLabel: string;
+  prevCPR: CPRLevels;
+  todayCPR: CPRLevels;
+  onCreated: (newKey: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [newKey, setNewKey] = useState("");
+  const [newLabel, setNewLabel] = useState("");
+  const [error, setError] = useState("");
+  const [command, setCommand] = useState<string | null>(null);
+  const [createdKey, setCreatedKey] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  function openForm() {
+    setNewKey(patternKey);
+    setNewLabel(patternLabel);
+    setError("");
+    setCommand(null);
+    setCreatedKey(null);
+    setCopied(false);
+    setOpen(true);
+  }
+
+  function confirm() {
+    const trimmedKey = newKey.trim();
+    const trimmedLabel = newLabel.trim() || trimmedKey;
+    if (!trimmedKey) {
+      setError("Enter a key for the new View.");
+      return;
+    }
+
+    // deriveLevelCheckDefs only reads r.todayCPR/r.prevCPR — the cast
+    // below is safe even though this isn't a full CPRResult.
+    const derived = deriveLevelCheckDefs({ prevCPR, todayCPR } as unknown as CPRResult);
+
+    const result = createBacktestView(patternKey, trimmedKey, trimmedLabel, derived);
+    if (!result.ok) {
+      setError(
+        result.reason === "duplicate-key"
+          ? `"${trimmedKey}" already exists — pick a different key.`
+          : "Couldn't find this Pattern/Subpattern in the dropdown tree."
+      );
+      return;
+    }
+    setError("");
+    // Deliberately NOT calling onCreated here — same reason as
+    // CopyViewControl.confirm(): switching the dropdown's selected View
+    // changes activeTarget/activePatternTarget, which would unmount this
+    // popover before the command below is even visible. onCreated fires
+    // from the "Done" button instead.
+
+    // Same double-quote / base64 approach as CopyViewControl — see its
+    // confirm() for why (cmd.exe doesn't treat single quotes as
+    // delimiters; JSON's own " characters collide with double-quote
+    // wrapping, so the payload goes through as base64 instead).
+    const q = (s: string) => `"${s.replace(/"/g, "")}"`;
+    const json = JSON.stringify(derived);
+    const jsonBytes = new TextEncoder().encode(json);
+    let binary = "";
+    jsonBytes.forEach((b) => (binary += String.fromCharCode(b)));
+    const b64 = btoa(binary);
+
+    setCommand(
+      `gh workflow run create-view.yml --repo krivengokul/Crypto-CPR-Screener -f patternKey=${q(patternKey)} -f newKey=${q(trimmedKey)} -f newLabel=${q(trimmedLabel)} -f levelCheckDefs=${b64}`
+    );
+    setCreatedKey(trimmedKey);
+  }
+
+  async function copyCommand() {
+    if (!command) return;
+    try {
+      await navigator.clipboard.writeText(command);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Command is still visible/selectable by hand if this fails.
+    }
+  }
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={openForm}
+        className="w-fit rounded-md border border-border px-2 py-1 text-[11px] font-medium text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+        title={`Create a graded View for "${patternLabel}" using this symbol`}
+      >
+        + Create View
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex w-fit min-w-[260px] flex-col gap-1.5 rounded-md border border-border bg-popover p-2">
+      <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+        Create View for &quot;{patternLabel}&quot;
+      </span>
+      <span className="text-[10px] text-muted-foreground">
+        Target R4 · Entry TC · Stoploss S1 (fixed) — Level Check derived from this symbol
+      </span>
+      <input
+        value={newKey}
+        onChange={(e) => setNewKey(e.target.value)}
+        placeholder="View key"
+        disabled={!!command}
+        className="w-full bg-background border border-border rounded-md px-2 py-1 text-[11px] font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
+      />
+      <input
+        value={newLabel}
+        onChange={(e) => setNewLabel(e.target.value)}
+        placeholder="Display label"
+        disabled={!!command}
+        className="w-full bg-background border border-border rounded-md px-2 py-1 text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
+      />
+      {error && <span className="text-[10px] text-destructive">{error}</span>}
+      {command && (
+        <div className="flex flex-col gap-1">
+          <span className="text-[10px] text-muted-foreground">
+            Showing in the dropdown now. Run this in a terminal with <code>gh</code> installed to save it for real:
+          </span>
+          <code className="w-full whitespace-pre-wrap break-all rounded-md bg-muted/40 px-2 py-1 text-[10px] text-foreground">
+            {command}
+          </code>
+          <button
+            type="button"
+            onClick={copyCommand}
+            className="self-end rounded-md border border-border px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+          >
+            {copied ? "Copied!" : "Copy command"}
+          </button>
+        </div>
+      )}
+      <div className="flex justify-end gap-1.5 pt-0.5">
+        <button
+          type="button"
+          onClick={() => {
+            setOpen(false);
+            if (createdKey) onCreated(createdKey);
+          }}
+          className="rounded-md px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+        >
+          {command ? "Done" : "Cancel"}
+        </button>
+        {!command && (
+          <button
+            type="button"
+            onClick={confirm}
+            className="rounded-md bg-blue-500/20 px-2 py-1 text-[11px] font-medium text-blue-300 hover:bg-blue-500/30"
+          >
+            Create View
           </button>
         )}
       </div>
@@ -1884,11 +2062,15 @@ export default function BacktestPanel() {
                         pivotPatternBadge={renderPivotPatternBadge(r.raw)}
                         showLevelCheck
                         levelCheckConditions={activeLevelCheckDefs}
-                        // NEW: "Copy View" — only meaningful when this row is
-                        // graded against an actual View/Pattern target (always
-                        // true here, since this table only renders for
-                        // isViewOnly || isPatternOnly), so the source is
-                        // whichever of the two is currently active.
+                        // "Copy View" when this row is graded against a
+                        // real View/Pattern target (activeTarget for a
+                        // leaf View, activePatternTarget when a Pattern/
+                        // Subpattern happens to already have one of its
+                        // own). "Create View" instead when a Pattern/
+                        // Subpattern is selected but has no View of its
+                        // own yet (activePatternTarget undefined) — see
+                        // CreateViewControl. Never both; Category-level
+                        // selections get neither.
                         copyViewControl={
                           (activeTarget ?? activePatternTarget) ? (
                             <CopyViewControl
@@ -1898,6 +2080,14 @@ export default function BacktestPanel() {
                               todayCPR={r.todayCPR}
                               sourceConditions={activeLevelCheckDefs}
                               onCopied={(newKey) => setSelectedKey(newKey)}
+                            />
+                          ) : isPatternOnly && activePatternInfo ? (
+                            <CreateViewControl
+                              patternKey={activePatternInfo.sub.key}
+                              patternLabel={activePatternInfo.sub.label}
+                              prevCPR={r.prevCPR}
+                              todayCPR={r.todayCPR}
+                              onCreated={(newKey) => setSelectedKey(newKey)}
                             />
                           ) : undefined
                         }

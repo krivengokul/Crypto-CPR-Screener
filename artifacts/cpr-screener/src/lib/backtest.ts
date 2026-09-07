@@ -2279,6 +2279,91 @@ export function copyBacktestView(
   return { ok: true, cloned };
 }
 
+// Finds the Pattern/Subpattern node (at any depth, under a category's
+// `patterns` tree) whose OWN key matches `patternKey`, returning its
+// subPatternKeys array (creating an empty one if the node doesn't have
+// one yet). Distinct from findSubPatternKeysArray above, which searches
+// for a node CONTAINING a given key — this searches for a node's own
+// identity, since createBacktestView (below) has no existing View to
+// search for; it's given the Pattern/Subpattern's own key directly.
+function findOwnSubPatternKeysArray(
+  patternKey: string,
+  patterns: BacktestSubCategoryDef[] | undefined
+): string[] | null {
+  for (const p of patterns ?? []) {
+    if (p.key === patternKey) {
+      if (!p.subPatternKeys) p.subPatternKeys = [];
+      return p.subPatternKeys;
+    }
+    const nested = findOwnSubPatternKeysArray(patternKey, p.patterns);
+    if (nested) return nested;
+  }
+  return null;
+}
+
+export interface CreateViewResult {
+  ok: boolean;
+  reason?: "pattern-not-found" | "duplicate-key";
+  created?: BacktestTargetDef;
+}
+
+/**
+ * Creates a brand-new View directly under a Pattern/Subpattern that
+ * doesn't have one of its own yet (BacktestPanel.tsx's activePatternTarget
+ * undefined for it — the case that currently shows the fallback "U4
+ * (today's R4)" description instead of a real graded View).
+ *
+ * Uses the fixed default recipe that fallback description already
+ * implies — target R4, entry TC, stoploss S1, bullish — same as the vast
+ * majority of hand-written entries in BACKTEST_TARGETS. Grades against
+ * `patternKey` itself via conditionKey: a Pattern/Subpattern node's own
+ * key is already a real passesPattern condition (same id namespace the
+ * Screener nav / ViewsSidebar.tsx Views use), so no new pattern-matching
+ * logic is needed — this View just attaches a gradeable target/entry/
+ * stoploss recipe (plus a symbol-derived levelCheckDefs) to a condition
+ * that already exists.
+ *
+ * `levelCheckDefs` is the caller's responsibility to derive (see
+ * deriveLevelCheckDefs above) — typically from whichever symbol's row
+ * was on screen in the SR Ladder panel when "Create View" was clicked.
+ */
+export function createBacktestView(
+  patternKey: string,
+  newKey: string,
+  newLabel: string,
+  levelCheckDefs: LevelCheckCondition[]
+): CreateViewResult {
+  if (BACKTEST_TARGETS.some((t) => t.key === newKey)) return { ok: false, reason: "duplicate-key" };
+
+  let siblingArray: string[] | null = null;
+  for (const cat of BACKTEST_CATEGORIES) {
+    siblingArray = findOwnSubPatternKeysArray(patternKey, cat.patterns);
+    if (siblingArray) break;
+  }
+  if (!siblingArray) return { ok: false, reason: "pattern-not-found" };
+
+  const created: BacktestTargetDef = {
+    key: newKey,
+    label: newLabel,
+    direction: "bullish",
+    targetLabel: "U4 (today's R4)",
+    getTarget: (r) => r.todayCPR.r4,
+    entryLabel: "TC (today's TC)",
+    getEntry: (r) => r.todayCPR.tc,
+    stoplossLabel: "S1 (today's S1)",
+    getStoploss: (r) => r.todayCPR.s1,
+    conditionKey: patternKey,
+    levelCheckDefs: levelCheckDefs.map((c) => ({
+      ...c,
+      bandKeys: [...c.bandKeys] as [LevelCheckKey, LevelCheckKey],
+    })),
+  };
+
+  BACKTEST_TARGETS.push(created);
+  siblingArray.push(newKey);
+  return { ok: true, created };
+}
+
 /**
  * NEW: flat option list for the "Category / Pattern / Subpattern / View"
  * dropdown in the Backtest panel.
