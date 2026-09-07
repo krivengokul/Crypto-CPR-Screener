@@ -36,7 +36,8 @@ import {
   renderPivotPatternBadge,
 } from "./ScreenerTableRow";
 import { SRLadderRow, toSRLadderData } from "./SRLadderPanel";
-import { getLadderMatchSummary } from "./SRLadderDiff";
+import { getLadderMatchSummary, type LevelCheckCondition, type LevelKey } from "./SRLadderDiff";
+import type { CPRLevels } from "@/lib/cpr";
 
 // --- Small UTC date helpers (all dates in this panel are UTC ISO strings) ---
 function toISO(d: Date): string {
@@ -141,13 +142,87 @@ function PivotSizeInfo() {
  * since it's an occasional action, not something to surface unprompted
  * on every expanded row.
  */
+/**
+ * Derives a fresh set of Level Check conditions for a specific symbol,
+ * from a source View's existing levelCheckDefs (see LevelCheckCondition
+ * in SRLadderDiff.tsx — {key, subject, bandKeys}).
+ *
+ * The source View's `key`/`subject` per condition are kept as-is — they
+ * encode the View's actual intent (e.g. "today's TC checked against a
+ * band drawn from yesterday's structure"), not something derived from
+ * any one symbol's numbers. What gets recomputed is `bandKeys`: for this
+ * symbol's real prevCPR/todayCPR, find which two OTHER levels (on the
+ * day `subject` is NOT) genuinely bracket the subject's value, so the
+ * new condition evaluates true for the symbol the copy was made from —
+ * the same "13/13 matching" signature this symbol showed when you
+ * expanded its row, just re-expressed as portable {key, subject,
+ * bandKeys} data instead of pinned to this one day's literal numbers.
+ *
+ * There's no generic/fallback bracket: a symbol only reaches this flow
+ * by already having passed the View's underlying pattern condition, and
+ * `subject` was chosen by the View's author specifically so a valid
+ * bracket always exists for a symbol satisfying that condition. If one
+ * genuinely can't be found, that's a real inconsistency worth surfacing
+ * loudly rather than papering over with a wrong condition — so this
+ * throws instead of guessing.
+ */
+function deriveLevelCheckDefsForSymbol(
+  sourceConditions: LevelCheckCondition[],
+  prevCPR: CPRLevels,
+  todayCPR: CPRLevels
+): LevelCheckCondition[] {
+  const allKeys = sourceConditions.map((c) => c.key);
+
+  return sourceConditions.map((cond) => {
+    const subjectIsToday = cond.subject === "today";
+    const subjectVal = (subjectIsToday ? todayCPR : prevCPR)[cond.key] as number;
+    // The band always comes from the day `subject` is NOT — same
+    // convention as compareSRLadders in SRLadderDiff.tsx.
+    const bandCPR = subjectIsToday ? prevCPR : todayCPR;
+
+    // Every other level this View checks is a candidate band edge —
+    // sorted by that day's actual value, high to low (same convention
+    // compareSRLadders' own sort uses), then walk adjacent pairs looking
+    // for the one that brackets subjectVal.
+    const candidates = allKeys.filter((k) => k !== cond.key);
+    const sorted = [...candidates].sort((a, b) => (bandCPR[b] as number) - (bandCPR[a] as number));
+
+    let bandKeys: [LevelKey, LevelKey] | null = null;
+    for (let i = 0; i < sorted.length - 1; i++) {
+      const upperKey = sorted[i];
+      const lowerKey = sorted[i + 1];
+      const upperVal = bandCPR[upperKey] as number;
+      const lowerVal = bandCPR[lowerKey] as number;
+      if (subjectVal <= upperVal && subjectVal >= lowerVal) {
+        bandKeys = [lowerKey, upperKey];
+        break;
+      }
+    }
+
+    if (!bandKeys) {
+      throw new Error(
+        `Couldn't find a bracketing pair for "${cond.key}" (subject: ${cond.subject}) on this symbol — ` +
+          `it may not actually satisfy this View's underlying pattern condition.`
+      );
+    }
+
+    return { key: cond.key, subject: cond.subject, bandKeys };
+  });
+}
+
 function CopyViewControl({
   sourceKey,
   sourceLabel,
+  prevCPR,
+  todayCPR,
+  sourceConditions,
   onCopied,
 }: {
   sourceKey: string;
   sourceLabel: string;
+  prevCPR: CPRLevels;
+  todayCPR: CPRLevels;
+  sourceConditions?: LevelCheckCondition[];
   onCopied: (newKey: string) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -210,8 +285,38 @@ function CopyViewControl({
     // vs POSIX shells — not worth the complexity for values that are
     // just backtest key/label strings.
     const q = (s: string) => `"${s.replace(/"/g, "")}"`;
+
+    let levelCheckDefsArg = "";
+    if (sourceConditions && sourceConditions.length > 0) {
+      try {
+        const derived = deriveLevelCheckDefsForSymbol(sourceConditions, prevCPR, todayCPR);
+        // Base64, not double-quoted JSON — JSON is full of literal " characters,
+        // which would collide with the double-quote wrapping used for the other
+        // three arguments (stripping embedded " would corrupt the JSON itself).
+        // Base64 has no quotes, spaces, or braces to escape across cmd.exe /
+        // PowerShell / bash, so it sidesteps the whole cross-shell quoting
+        // problem — patch.mjs just base64-decodes and JSON.parses it back.
+        const json = JSON.stringify(derived);
+        const jsonBytes = new TextEncoder().encode(json);
+        let binary = "";
+        jsonBytes.forEach((b) => (binary += String.fromCharCode(b)));
+        const b64 = btoa(binary);
+        levelCheckDefsArg = ` -f levelCheckDefs=${b64}`;
+      } catch (err) {
+        setError(
+          err instanceof Error
+            ? `Couldn't derive Level Check conditions for this symbol: ${err.message}`
+            : "Couldn't derive Level Check conditions for this symbol."
+        );
+        return;
+      }
+    }
+    // Views with no levelCheckDefs at all (sourceConditions empty/undefined)
+    // intentionally get no levelCheckDefs argument — the clone should stay
+    // without one too, not have one invented for it.
+
     setCommand(
-      `gh workflow run copy-view.yml --repo krivengokul/Crypto-CPR-Screener -f sourceKey=${q(sourceKey)} -f newKey=${q(trimmedKey)} -f newLabel=${q(trimmedLabel)}`
+      `gh workflow run copy-view.yml --repo krivengokul/Crypto-CPR-Screener -f sourceKey=${q(sourceKey)} -f newKey=${q(trimmedKey)} -f newLabel=${q(trimmedLabel)}${levelCheckDefsArg}`
     );
     setCreatedKey(trimmedKey);
     // Deliberately NOT calling onCopied here. It switches the dropdown's
@@ -1705,6 +1810,9 @@ export default function BacktestPanel() {
                             <CopyViewControl
                               sourceKey={(activeTarget ?? activePatternTarget)!.key}
                               sourceLabel={(activeTarget ?? activePatternTarget)!.label}
+                              prevCPR={r.prevCPR}
+                              todayCPR={r.todayCPR}
+                              sourceConditions={activeLevelCheckDefs}
                               onCopied={(newKey) => setSelectedKey(newKey)}
                             />
                           ) : undefined

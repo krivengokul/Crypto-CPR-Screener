@@ -28,7 +28,7 @@ function getStringPropertyValue(obj, name) {
   return initializer.getLiteralText();
 }
 
-function applyCopyViewPatch(sourceText, sourceKey, newKey, newLabel) {
+function applyCopyViewPatch(sourceText, sourceKey, newKey, newLabel, levelCheckDefs) {
   const project = new Project({ useInMemoryFileSystem: true });
   const sourceFile = project.createSourceFile("backtest.ts", sourceText);
 
@@ -67,7 +67,33 @@ function applyCopyViewPatch(sourceText, sourceKey, newKey, newLabel) {
     );
   }
 
-  targetsArray.insertElement(sourceIndex + 1, clonedText);
+  const insertedElement = targetsArray.insertElement(sourceIndex + 1, clonedText);
+
+  // --- 1b. Override levelCheckDefs with the symbol-specific derived set ---
+  // (only when the browser actually sent one — a View with no
+  // levelCheckDefs at all gets no override, staying without one too).
+  //
+  // Done via ts-morph's node API (replaceWithText / addPropertyAssignment)
+  // on the ALREADY-INSERTED clone, not regex over its text — the clone's
+  // levelCheckDefs is itself an array of objects (nested brackets), which
+  // is exactly the kind of structure naive brace-matching gets wrong. The
+  // clone was just inserted as text and re-parsed by ts-morph, so it's now
+  // a real AST node we can query precisely.
+  if (levelCheckDefs !== null) {
+    const insertedObj = insertedElement.asKindOrThrow(SyntaxKind.ObjectLiteralExpression);
+    const newValueText = JSON.stringify(levelCheckDefs);
+    const levelCheckDefsProp = insertedObj.getProperty("levelCheckDefs");
+
+    if (levelCheckDefsProp && levelCheckDefsProp.isKind(SyntaxKind.PropertyAssignment)) {
+      const initializer = levelCheckDefsProp.getInitializer();
+      if (initializer) {
+        initializer.replaceWithText(newValueText);
+      }
+    } else {
+      // Source object had no levelCheckDefs property at all — add one.
+      insertedObj.addPropertyAssignment({ name: "levelCheckDefs", initializer: newValueText });
+    }
+  }
 
   // --- 2. Insert newKey into BACKTEST_CATEGORIES' matching subPatternKeys --
   const categoriesDecl = sourceFile.getVariableDeclarationOrThrow("BACKTEST_CATEGORIES");
@@ -102,11 +128,41 @@ function applyCopyViewPatch(sourceText, sourceKey, newKey, newLabel) {
 const sourceKey = process.env.SOURCE_KEY;
 const newKey = process.env.NEW_KEY;
 const newLabel = process.env.NEW_LABEL;
+const levelCheckDefsB64 = process.env.LEVEL_CHECK_DEFS_B64;
 const backtestFilePath = process.env.BACKTEST_FILE_PATH ?? "artifacts/cpr-screener/src/lib/backtest.ts";
 
 if (!sourceKey || !newKey || !newLabel) {
   console.error("SOURCE_KEY, NEW_KEY, and NEW_LABEL must all be set.");
   process.exit(1);
+}
+
+// null means "no override" (View has no levelCheckDefs, or the person's
+// browser genuinely sent nothing) — distinct from "[]", a real empty array,
+// which would be a legitimate (if unusual) override.
+let levelCheckDefs = null;
+if (levelCheckDefsB64 && levelCheckDefsB64.trim() !== "") {
+  try {
+    const json = Buffer.from(levelCheckDefsB64, "base64").toString("utf-8");
+    levelCheckDefs = JSON.parse(json);
+    if (!Array.isArray(levelCheckDefs)) {
+      throw new Error("Decoded levelCheckDefs is not an array.");
+    }
+    for (const cond of levelCheckDefs) {
+      if (
+        typeof cond !== "object" ||
+        cond === null ||
+        typeof cond.key !== "string" ||
+        (cond.subject !== "today" && cond.subject !== "previous") ||
+        !Array.isArray(cond.bandKeys) ||
+        cond.bandKeys.length !== 2
+      ) {
+        throw new Error(`Malformed levelCheckDefs entry: ${JSON.stringify(cond)}`);
+      }
+    }
+  } catch (err) {
+    console.error(`Couldn't decode LEVEL_CHECK_DEFS_B64: ${err.message}`);
+    process.exit(1);
+  }
 }
 
 // Resolve relative to the repo root (this script runs from
@@ -122,9 +178,18 @@ try {
 }
 
 try {
-  const { patchedText, originalConditionKey } = applyCopyViewPatch(currentText, sourceKey, newKey, newLabel);
+  const { patchedText, originalConditionKey } = applyCopyViewPatch(
+    currentText,
+    sourceKey,
+    newKey,
+    newLabel,
+    levelCheckDefs
+  );
   writeFileSync(filePath, patchedText, "utf-8");
-  console.log(`Patched ${backtestFilePath}: "${sourceKey}" -> "${newKey}" (grades against "${originalConditionKey}")`);
+  const levelCheckNote = levelCheckDefs ? ` with ${levelCheckDefs.length} symbol-derived levelCheckDefs` : "";
+  console.log(
+    `Patched ${backtestFilePath}: "${sourceKey}" -> "${newKey}" (grades against "${originalConditionKey}")${levelCheckNote}`
+  );
 } catch (err) {
   console.error(err.message);
   process.exit(1);

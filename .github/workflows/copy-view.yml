@@ -21,6 +21,10 @@ on:
         description: "Display label for the new copy"
         required: true
         type: string
+      levelCheckDefs:
+        description: "Base64 JSON array of {key, subject, bandKeys} — derived client-side for the specific symbol copied from. Omit/leave blank for a View with no levelCheckDefs."
+        required: false
+        type: string
 
 # Needed so the auto-generated GITHUB_TOKEN can push a commit back to
 # this repo — by default Actions tokens are often read-only.
@@ -53,6 +57,7 @@ jobs:
           SOURCE_KEY: ${{ inputs.sourceKey }}
           NEW_KEY: ${{ inputs.newKey }}
           NEW_LABEL: ${{ inputs.newLabel }}
+          LEVEL_CHECK_DEFS_B64: ${{ inputs.levelCheckDefs }}
 
       - name: Commit and push
         run: |
