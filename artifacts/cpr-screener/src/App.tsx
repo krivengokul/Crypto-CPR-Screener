@@ -225,6 +225,10 @@ function App() {
                 activeLabel={activeLabel}
                 counts={patternCounts}
                 onSelectPattern={handlePatternSelect}
+                onNavigateToScreener={(patternId) => {
+                  setActiveView(patternId);
+                  handleModeChange("scanner");
+                }}
                 sourceFilter={dataSource === "combined" ? "all" : dataSource}
                 onSourceFilterChange={(next) => setDataSource(next === "all" ? "combined" : next)}
               />

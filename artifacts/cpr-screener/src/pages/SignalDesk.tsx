@@ -59,6 +59,7 @@ interface SignalDeskProps {
   activeLabel?: string;
   counts?: Record<string, number>;
   onSelectPattern?: (patternId: string) => void;
+  onNavigateToScreener?: (patternId: string) => void;
   // NEW: lift sourceFilter (Binance/Delta/All) to be controllable from
   // outside — App.tsx now owns this as shared app-level state so this
   // toggle drives the SAME source Screener uses for its onCounts effect
@@ -173,6 +174,7 @@ export default function SignalDesk({
   activeLabel,
   counts,
   onSelectPattern,
+  onNavigateToScreener,
   sourceFilter: sourceFilterProp,
   onSourceFilterChange,
 }: SignalDeskProps) {
@@ -914,8 +916,15 @@ R:R: ${item.riskReward}`;
                   {/* Card Action Footer */}
                   <div className="pt-2 border-t border-[#1e2d3d] flex items-center justify-between gap-2">
                     <button
-                      onClick={() => onSelectPattern?.(item.patternId || item.patternName)}
-                      className="text-xs text-blue-400 hover:text-blue-300 font-semibold transition flex items-center gap-1"
+                      onClick={() => {
+                        const targetId = item.patternId || item.patternName;
+                        if (onNavigateToScreener) {
+                          onNavigateToScreener(targetId);
+                        } else {
+                          onSelectPattern?.(targetId);
+                        }
+                      }}
+                      className="text-xs text-blue-400 hover:text-blue-300 font-semibold transition flex items-center gap-1 cursor-pointer"
                     >
                       View in Screener &rarr;
                     </button>
