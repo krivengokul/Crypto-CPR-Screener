@@ -1,7 +1,127 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import { Link2 } from "lucide-react";
 import type { CPRLevels, CPRResult } from "@/lib/cpr";
 import { fmt } from "./ScreenerUtils";
 import { SRLadderDiffPanel, type LevelCheckCondition } from "./SRLadderDiff";
+import { getChartLink, setChartLink, removeChartLink, type StoredChartLink } from "@/lib/chartLinks";
+
+/**
+ * Small inline control for attaching a TradingView snapshot link to a
+ * specific View's read of a specific row (rowKey), rendered inside
+ * SRLadderPanel/SRLadderRow so it's automatically available anywhere
+ * that panel is used (BacktestPanel today, Screener once wired up
+ * later). viewKey scopes the link to whichever Category/Pattern/View is
+ * currently selected, so the same symbol/day can carry a different
+ * chart link per View instead of one global link per symbol.
+ */
+function ChartLinkControl({ viewKey, rowKey }: { viewKey: string; rowKey: string }) {
+  const [open, setOpen] = useState(false);
+  const [url, setUrl] = useState("");
+  const [error, setError] = useState("");
+  const [saved, setSaved] = useState<StoredChartLink | null>(() => getChartLink(viewKey, rowKey));
+
+  function openForm() {
+    setUrl(saved?.url ?? "");
+    setError("");
+    setOpen(true);
+  }
+
+  function confirm() {
+    const trimmed = url.trim();
+    if (!trimmed) {
+      setError("Paste a TradingView snapshot link first.");
+      return;
+    }
+    if (!setChartLink(viewKey, rowKey, trimmed)) {
+      setError("Couldn't save — browser storage may be disabled or full.");
+      return;
+    }
+    setSaved(getChartLink(viewKey, rowKey));
+    setOpen(false);
+  }
+
+  function clear() {
+    removeChartLink(viewKey, rowKey);
+    setSaved(null);
+    setOpen(false);
+  }
+
+  if (!open) {
+    if (saved) {
+      return (
+        <div className="flex w-fit items-center gap-1">
+          <a
+            href={saved.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 rounded-md border border-blue-500/40 bg-blue-500/10 px-2 py-1 text-[11px] font-medium text-blue-300 hover:bg-blue-500/20"
+            title={saved.url}
+          >
+            <Link2 className="w-3 h-3" />
+            Chart
+          </a>
+          <button
+            type="button"
+            onClick={openForm}
+            className="rounded-md border border-border px-1.5 py-1 text-[11px] text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+            title="Change chart link"
+          >
+            Edit
+          </button>
+        </div>
+      );
+    }
+    return (
+      <button
+        type="button"
+        onClick={openForm}
+        className="inline-flex w-fit items-center gap-1 rounded-md border border-border px-2 py-1 text-[11px] font-medium text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+        title="Attach a TradingView chart link to this View's read of this signal"
+      >
+        <Link2 className="w-3 h-3" />
+        Attach chart
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex w-fit min-w-[260px] flex-col gap-1.5 rounded-md border border-border bg-popover p-2">
+      <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Chart link</span>
+      <input
+        value={url}
+        onChange={(e) => setUrl(e.target.value)}
+        placeholder="Paste TradingView snapshot URL"
+        className="w-full bg-background border border-border rounded-md px-2 py-1 text-[11px] font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+      />
+      {error && <span className="text-[10px] text-destructive">{error}</span>}
+      <div className="flex justify-end gap-1.5 pt-0.5">
+        {saved && (
+          <button
+            type="button"
+            onClick={clear}
+            className="mr-auto rounded-md px-2 py-1 text-[11px] text-destructive hover:bg-destructive/10"
+          >
+            Remove
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="rounded-md px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={confirm}
+          className="rounded-md bg-blue-500/20 px-2 py-1 text-[11px] font-medium text-blue-300 hover:bg-blue-500/30"
+        >
+          Save
+        </button>
+      </div>
+    </div>
+  );
+}
 
 /**
  * Shared S/R Ladder building blocks.
@@ -413,6 +533,8 @@ function CPRLevelChart({
  */
 export function SRLadderPanel({
   r,
+  rowKey,
+  viewKey,
   todayPatternBadge,
   prevPatternBadge,
   pDay1PatternBadge,
@@ -422,6 +544,19 @@ export function SRLadderPanel({
   copyViewControl,
 }: {
   r: SRLadderData;
+  /**
+   * Identifies this specific row (e.g. `${source}-${symbol}-${entryDate}`)
+   * for chart-link storage. Omit to skip rendering the chart-link control
+   * entirely (e.g. no stable row identity to key off of).
+   */
+  rowKey?: string;
+  /**
+   * Identifies the currently active Category/Pattern/View (BacktestPanel's
+   * `selectedKey`), so a chart link is scoped to whichever View it was
+   * attached under rather than shared globally per symbol/day. Falls back
+   * to an empty-string scope if omitted.
+   */
+  viewKey?: string;
   /** Today's pattern badge(s) — e.g. renderTodayPatternBadges(r) — shown on the "Today S/R" ladder. */
   todayPatternBadge?: ReactNode;
   /** Prev day's own "p-xxxx" pattern badge — e.g. renderPrevPatternBadge(r) — shown on the "PDay S/R" ladder. */
@@ -472,6 +607,11 @@ export function SRLadderPanel({
           </div>
         )}
       </div>
+      {rowKey && (
+        <div className="flex items-center gap-2">
+          <ChartLinkControl viewKey={viewKey ?? ""} rowKey={rowKey} />
+        </div>
+      )}
     </div>
   );
 }
@@ -484,6 +624,7 @@ export function SRLadderRow({
   r,
   colSpan = 20,
   rowKey,
+  viewKey,
   todayPatternBadge,
   prevPatternBadge,
   pDay1PatternBadge,
@@ -495,6 +636,8 @@ export function SRLadderRow({
   r: SRLadderData;
   colSpan?: number;
   rowKey?: string;
+  /** Same viewKey as SRLadderPanel — passed straight through. */
+  viewKey?: string;
   /** Today's pattern badge(s) — e.g. renderTodayPatternBadges(r) — shown on the "Today S/R" ladder. */
   todayPatternBadge?: ReactNode;
   /** Prev day's own "p-xxxx" pattern badge — e.g. renderPrevPatternBadge(r) — shown on the "PDay S/R" ladder. */
@@ -515,6 +658,8 @@ export function SRLadderRow({
       <td colSpan={colSpan} className="px-3 py-4 sm:px-4">
         <SRLadderPanel
           r={r}
+          rowKey={rowKey}
+          viewKey={viewKey}
           todayPatternBadge={todayPatternBadge}
           prevPatternBadge={prevPatternBadge}
           pDay1PatternBadge={pDay1PatternBadge}
