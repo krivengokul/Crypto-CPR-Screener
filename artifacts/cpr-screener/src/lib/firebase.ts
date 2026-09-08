@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Firebase app/auth/Firestore bootstrap — single shared instance for the
  * whole app. Config values below are public-safe (they identify the
@@ -10,6 +8,10 @@
  * Anonymous Auth (not a real login/sign-up flow) is what gives each
  * browser a stable uid to scope chartLinks documents by, with no
  * sign-in UI needed. Runs on the free Spark plan — no linked card.
+ *
+ * Vite (not Next.js) builds this project, so config comes from
+ * import.meta.env.VITE_* — only vars prefixed VITE_ are exposed to
+ * browser code — rather than process.env.NEXT_PUBLIC_*.
  */
 
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
@@ -17,12 +19,12 @@ import { getAuth, signInAnonymously, onAuthStateChanged, type Auth } from "fireb
 import { getFirestore, type Firestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
 let app: FirebaseApp | undefined;
