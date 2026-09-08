@@ -55,20 +55,24 @@ function findPatternNode(patternsArray, patternKey) {
  * Views.copyViews array — same as copy-view's patch.mjs. See that
  * script's own copy of this function for the full doc comment.
  */
-function addToScreenerNav(sourceText, newKey, newLabel) {
+function addToScreenerNav(sourceText, categoryKey, newKey, newLabel) {
   const project = new Project({ useInMemoryFileSystem: true });
   const sourceFile = project.createSourceFile("ViewsSidebar.tsx", sourceText);
 
   const viewsDecl = sourceFile.getVariableDeclarationOrThrow("Views");
   const viewsObj = viewsDecl.getInitializerIfKindOrThrow(SyntaxKind.ObjectLiteralExpression);
 
-  const copyViewsProp = viewsObj.getProperty("copyViews");
-  if (!copyViewsProp || !copyViewsProp.isKind(SyntaxKind.PropertyAssignment)) {
-    throw new Error("Views.copyViews not found in ViewsSidebar.tsx — has it been removed or renamed?");
-  }
-  const arr = copyViewsProp.getInitializer();
-  if (!arr || !arr.isKind(SyntaxKind.ArrayLiteralExpression)) {
-    throw new Error("Views.copyViews isn't an array literal — can't insert into it.");
+  const categoryProp = viewsObj.getProperty(categoryKey);
+  let arr;
+  if (categoryProp && categoryProp.isKind(SyntaxKind.PropertyAssignment)) {
+    const initializer = categoryProp.getInitializer();
+    if (!initializer || !initializer.isKind(SyntaxKind.ArrayLiteralExpression)) {
+      throw new Error(`Views["${categoryKey}"] isn't an array literal — can't insert into it.`);
+    }
+    arr = initializer;
+  } else {
+    const added = viewsObj.addPropertyAssignment({ name: `"${categoryKey}"`, initializer: "[]" });
+    arr = added.getInitializerIfKindOrThrow(SyntaxKind.ArrayLiteralExpression);
   }
 
   const alreadyExists = arr
@@ -85,9 +89,25 @@ function addToScreenerNav(sourceText, newKey, newLabel) {
   return sourceFile.getFullText();
 }
 
-function applyCreateViewPatch(sourceText, patternKey, newKey, newLabel, levelCheckDefs) {
+const BULLISH_TARGETS = {
+  R2: { label: "U2 (today's R2)", key: "r2" },
+  R3: { label: "U3 (today's R3)", key: "r3" },
+  R4: { label: "U4 (today's R4)", key: "r4" },
+};
+const BEARISH_TARGETS = {
+  S2: { label: "L2 (today's S2)", key: "s2" },
+  S3: { label: "L3 (today's S3)", key: "s3" },
+  S4: { label: "L4 (today's S4)", key: "s4" },
+};
+
+function applyCreateViewPatch(sourceText, patternKey, newKey, newLabel, direction, target, levelCheckDefs) {
   const project = new Project({ useInMemoryFileSystem: true });
   const sourceFile = project.createSourceFile("backtest.ts", sourceText);
+
+  const targetDef = direction === "bullish" ? BULLISH_TARGETS[target] : BEARISH_TARGETS[target];
+  if (!targetDef) {
+    throw new Error(`"${target}" isn't a valid target for direction "${direction}".`);
+  }
 
   // --- 1. Guard against a duplicate key --------------------------------
   const targetsDecl = sourceFile.getVariableDeclarationOrThrow("BACKTEST_TARGETS");
@@ -122,16 +142,21 @@ function applyCreateViewPatch(sourceText, patternKey, newKey, newLabel, levelChe
   }
 
   // --- 3. Build and insert the new BACKTEST_TARGETS entry --------------
+  // direction: bullish -> entry TC, stoploss S1; bearish -> entry BC,
+  // stoploss R1 — this codebase's own convention (see e.g.
+  // "7PM:MoMi-<L4:2AM" for a real bearish example of this exact shape).
+  const entryText =
+    direction === "bullish"
+      ? `entryLabel: "TC (today's TC)",\n    getEntry: (r) => r.todayCPR.tc,\n    stoplossLabel: "S1 (today's S1)",\n    getStoploss: (r) => r.todayCPR.s1,`
+      : `entryLabel: "BC (today's BC)",\n    getEntry: (r) => r.todayCPR.bc,\n    stoplossLabel: "R1 (today's R1)",\n    getStoploss: (r) => r.todayCPR.r1,`;
+
   const newEntryText = `{
     key: "${escapeForDoubleQuotedString(newKey)}",
     label: "${escapeForDoubleQuotedString(newLabel)}",
-    direction: "bullish",
-    targetLabel: "U4 (today's R4)",
-    getTarget: (r) => r.todayCPR.r4,
-    entryLabel: "TC (today's TC)",
-    getEntry: (r) => r.todayCPR.tc,
-    stoplossLabel: "S1 (today's S1)",
-    getStoploss: (r) => r.todayCPR.s1,
+    direction: "${direction}",
+    targetLabel: "${targetDef.label}",
+    getTarget: (r) => r.todayCPR.${targetDef.key},
+    ${entryText}
     conditionKey: "${escapeForDoubleQuotedString(patternKey)}",
     levelCheckDefs: ${JSON.stringify(levelCheckDefs)},
   }`;
@@ -162,6 +187,11 @@ const patternKey = process.env.PATTERN_KEY;
 const newKey = process.env.NEW_KEY;
 const newLabel = process.env.NEW_LABEL;
 const levelCheckDefsB64 = process.env.LEVEL_CHECK_DEFS_B64;
+const targetCategory = process.env.TARGET_CATEGORY && process.env.TARGET_CATEGORY.trim() !== ""
+  ? process.env.TARGET_CATEGORY
+  : "copyViews";
+const direction = process.env.DIRECTION === "bearish" ? "bearish" : "bullish";
+const target = process.env.TARGET && process.env.TARGET.trim() !== "" ? process.env.TARGET : direction === "bullish" ? "R4" : "S4";
 const backtestFilePath = process.env.BACKTEST_FILE_PATH ?? "artifacts/cpr-screener/src/lib/backtest.ts";
 const VIEWS_SIDEBAR_FILE_PATH = process.env.VIEWS_SIDEBAR_FILE_PATH ?? "artifacts/cpr-screener/src/lib/ViewsSidebar.tsx";
 
@@ -207,20 +237,20 @@ try {
 }
 
 try {
-  const { patchedText } = applyCreateViewPatch(currentText, patternKey, newKey, newLabel, levelCheckDefs);
+  const { patchedText } = applyCreateViewPatch(currentText, patternKey, newKey, newLabel, direction, target, levelCheckDefs);
   writeFileSync(filePath, patchedText, "utf-8");
 
   // Also add the new key to ViewsSidebar.tsx's Views.copyViews — see
   // addToScreenerNav's doc comment above.
   const viewsSidebarFilePath = resolve(process.cwd(), "../../../", VIEWS_SIDEBAR_FILE_PATH);
   const viewsSidebarText = readFileSync(viewsSidebarFilePath, "utf-8");
-  const patchedViewsSidebarText = addToScreenerNav(viewsSidebarText, newKey, newLabel);
+  const patchedViewsSidebarText = addToScreenerNav(viewsSidebarText, targetCategory, newKey, newLabel);
   writeFileSync(viewsSidebarFilePath, patchedViewsSidebarText, "utf-8");
 
   console.log(
     `Created "${newKey}" under Pattern/Subpattern "${patternKey}" with ${levelCheckDefs.length} symbol-derived levelCheckDefs`
   );
-  console.log(`Added "${newKey}" to ${VIEWS_SIDEBAR_FILE_PATH}'s Views.copyViews`);
+  console.log(`Added "${newKey}" to ${VIEWS_SIDEBAR_FILE_PATH}'s Views["${targetCategory}"]`);
 } catch (err) {
   console.error(err.message);
   process.exit(1);

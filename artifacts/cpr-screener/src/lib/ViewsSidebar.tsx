@@ -511,7 +511,7 @@ export const pivotcategories: Category[] = [
   { id: "equal-cpr",          label: "Equal CPR",     subtitle: "Prev & Today CPR Equal",   icon: Equal },
   // NEW: home for every auto-generated Copy View / Create View — see
   // Views.copyViews above.
-  { id: "copyViews", label: "COPY/CREATED VIEWS", subtitle: "Auto-generated from Backtest's Copy View / Create View", icon: BookmarkCheck },
+  { id: "copyViews", label: "CREATED VIEWS", subtitle: "Auto-generated from Backtest's Copy View / Create View", icon: BookmarkCheck },
 ];
 
 /**

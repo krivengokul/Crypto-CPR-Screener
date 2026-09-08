@@ -40,6 +40,7 @@ import {
 import { SRLadderRow, toSRLadderData } from "./SRLadderPanel";
 import { getLadderMatchSummary, LEVEL_KEYS, type LevelCheckCondition, type LevelKey } from "./SRLadderDiff";
 import type { CPRLevels, CPRResult } from "@/lib/cpr";
+import { pivotcategories } from "@/lib/ViewsSidebar";
 
 // --- Small UTC date helpers (all dates in this panel are UTC ISO strings) ---
 function toISO(d: Date): string {
@@ -315,6 +316,12 @@ function CopyViewControl({
   const [createdKey, setCreatedKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [levelCheckNote, setLevelCheckNote] = useState<string | null>(null);
+  // Which Screener/left-nav category the auto-added entry lands under
+  // (see addToScreenerNav in copy-view.yml's patch.mjs). "copyViews" is
+  // the dedicated, safe default; any existing pivotcategories id can be
+  // picked instead if you already know where this View semantically
+  // belongs — nothing here tries to guess that automatically.
+  const [targetCategory, setTargetCategory] = useState("copyViews");
 
   function openForm() {
     setNewKey(`${sourceKey}:copy`);
@@ -324,6 +331,7 @@ function CopyViewControl({
     setCreatedKey(null);
     setCopied(false);
     setLevelCheckNote(null);
+    setTargetCategory("copyViews");
     setOpen(true);
   }
 
@@ -401,7 +409,7 @@ function CopyViewControl({
     }
 
     setCommand(
-      `gh workflow run copy-view.yml --repo krivengokul/Crypto-CPR-Screener -f sourceKey=${q(sourceKey)} -f newKey=${q(trimmedKey)} -f newLabel=${q(trimmedLabel)}${levelCheckDefsArg}`
+      `gh workflow run copy-view.yml --repo krivengokul/Crypto-CPR-Screener -f sourceKey=${q(sourceKey)} -f newKey=${q(trimmedKey)} -f newLabel=${q(trimmedLabel)} -f targetCategory=${q(targetCategory)}${levelCheckDefsArg}`
     );
     setCreatedKey(trimmedKey);
     // Deliberately NOT calling onCopied here. It switches the dropdown's
@@ -457,6 +465,19 @@ function CopyViewControl({
         disabled={!!command}
         className="w-full bg-background border border-border rounded-md px-2 py-1 text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
       />
+      <select
+        value={targetCategory}
+        onChange={(e) => setTargetCategory(e.target.value)}
+        disabled={!!command}
+        title="Which Screener/left-nav category this shows up under. Defaults to the safe Copy/Created Views bucket — only pick an existing category if you already know this belongs there."
+        className="w-full bg-background border border-border rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
+      >
+        {pivotcategories.map((c) => (
+          <option key={c.id} value={c.id}>
+            {c.id === "copyViews" ? "Created Views (default)" : c.label}
+          </option>
+        ))}
+      </select>
       {error && <span className="text-[10px] text-destructive">{error}</span>}
       {levelCheckNote && <span className="text-[10px] text-amber-400">{levelCheckNote}</span>}
       {command && (
@@ -534,8 +555,18 @@ function CreateViewControl({
   const [command, setCommand] = useState<string | null>(null);
   const [createdKey, setCreatedKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [targetCategory, setTargetCategory] = useState("copyViews");
+  // Up -> entry TC / stoploss S1 (bullish), target one of R2/R3/R4.
+  // Down -> entry BC / stoploss R1 (bearish), target one of S2/S3/S4.
+  // Matches this codebase's own convention exactly (see e.g.
+  // "7PM:MoMi-<L4:2AM" for a real bearish TC/BC/R1 example).
+  const [direction, setDirection] = useState<"bullish" | "bearish">("bullish");
+  const [target, setTarget] = useState("R4");
 
   function openForm() {
+    setTargetCategory("copyViews");
+    setDirection("bullish");
+    setTarget("R4");
     setNewKey(patternKey);
     setNewLabel(patternLabel);
     setError("");
@@ -557,11 +588,13 @@ function CreateViewControl({
     // below is safe even though this isn't a full CPRResult.
     const derived = deriveLevelCheckDefs({ prevCPR, todayCPR } as unknown as CPRResult);
 
-    const result = createBacktestView(patternKey, trimmedKey, trimmedLabel, derived);
+    const result = createBacktestView(patternKey, trimmedKey, trimmedLabel, direction, target, derived);
     if (!result.ok) {
       setError(
         result.reason === "duplicate-key"
           ? `"${trimmedKey}" already exists — pick a different key.`
+          : result.reason === "invalid-target"
+          ? `"${target}" isn't a valid target for ${direction === "bullish" ? "an Up" : "a Down"} View.`
           : "Couldn't find this Pattern/Subpattern in the dropdown tree."
       );
       return;
@@ -585,7 +618,7 @@ function CreateViewControl({
     const b64 = btoa(binary);
 
     setCommand(
-      `gh workflow run create-view.yml --repo krivengokul/Crypto-CPR-Screener -f patternKey=${q(patternKey)} -f newKey=${q(trimmedKey)} -f newLabel=${q(trimmedLabel)} -f levelCheckDefs=${b64}`
+      `gh workflow run create-view.yml --repo krivengokul/Crypto-CPR-Screener -f patternKey=${q(patternKey)} -f newKey=${q(trimmedKey)} -f newLabel=${q(trimmedLabel)} -f direction=${q(direction)} -f target=${q(target)} -f targetCategory=${q(targetCategory)} -f levelCheckDefs=${b64}`
     );
     setCreatedKey(trimmedKey);
   }
@@ -620,8 +653,35 @@ function CreateViewControl({
         Create View for &quot;{patternLabel}&quot;
       </span>
       <span className="text-[10px] text-muted-foreground">
-        Target R4 · Entry TC · Stoploss S1 (fixed) — Level Check derived from this symbol
+        {direction === "bullish" ? "Entry TC · Stoploss S1" : "Entry BC · Stoploss R1"} — Level Check derived from this symbol
       </span>
+      <div className="flex gap-1.5">
+        <select
+          value={direction}
+          onChange={(e) => {
+            const next = e.target.value as "bullish" | "bearish";
+            setDirection(next);
+            setTarget(next === "bullish" ? "R4" : "S4");
+          }}
+          disabled={!!command}
+          className="flex-1 bg-background border border-border rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
+        >
+          <option value="bullish">Up</option>
+          <option value="bearish">Down</option>
+        </select>
+        <select
+          value={target}
+          onChange={(e) => setTarget(e.target.value)}
+          disabled={!!command}
+          className="flex-1 bg-background border border-border rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
+        >
+          {(direction === "bullish" ? ["R2", "R3", "R4"] : ["S2", "S3", "S4"]).map((t) => (
+            <option key={t} value={t}>
+              Target {t}
+            </option>
+          ))}
+        </select>
+      </div>
       <input
         value={newKey}
         onChange={(e) => setNewKey(e.target.value)}
@@ -636,6 +696,19 @@ function CreateViewControl({
         disabled={!!command}
         className="w-full bg-background border border-border rounded-md px-2 py-1 text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
       />
+      <select
+        value={targetCategory}
+        onChange={(e) => setTargetCategory(e.target.value)}
+        disabled={!!command}
+        title="Which Screener/left-nav category this shows up under. Defaults to the safe Copy/Created Views bucket — only pick an existing category if you already know this belongs there."
+        className="w-full bg-background border border-border rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
+      >
+        {pivotcategories.map((c) => (
+          <option key={c.id} value={c.id}>
+            {c.id === "copyViews" ? "Created Views (default)" : c.label}
+          </option>
+        ))}
+      </select>
       {error && <span className="text-[10px] text-destructive">{error}</span>}
       {command && (
         <div className="flex flex-col gap-1">

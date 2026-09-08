@@ -2358,25 +2358,35 @@ function findOwnSubPatternKeysArray(
 
 export interface CreateViewResult {
   ok: boolean;
-  reason?: "pattern-not-found" | "duplicate-key";
+  reason?: "pattern-not-found" | "duplicate-key" | "invalid-target";
   created?: BacktestTargetDef;
 }
+
+const BULLISH_TARGETS: Record<string, { label: string; key: "r2" | "r3" | "r4" }> = {
+  R2: { label: "U2 (today's R2)", key: "r2" },
+  R3: { label: "U3 (today's R3)", key: "r3" },
+  R4: { label: "U4 (today's R4)", key: "r4" },
+};
+const BEARISH_TARGETS: Record<string, { label: string; key: "s2" | "s3" | "s4" }> = {
+  S2: { label: "L2 (today's S2)", key: "s2" },
+  S3: { label: "L3 (today's S3)", key: "s3" },
+  S4: { label: "L4 (today's S4)", key: "s4" },
+};
 
 /**
  * Creates a brand-new View directly under a Pattern/Subpattern that
  * doesn't have one of its own yet (BacktestPanel.tsx's activePatternTarget
- * undefined for it — the case that currently shows the fallback "U4
- * (today's R4)" description instead of a real graded View).
+ * undefined for it — the case that currently shows a fallback "U4
+ * (today's R4)"-style description instead of a real graded View).
  *
- * Uses the fixed default recipe that fallback description already
- * implies — target R4, entry TC, stoploss S1, bullish — same as the vast
- * majority of hand-written entries in BACKTEST_TARGETS. Grades against
- * `patternKey` itself via conditionKey: a Pattern/Subpattern node's own
- * key is already a real passesPattern condition (same id namespace the
- * Screener nav / ViewsSidebar.tsx Views use), so no new pattern-matching
- * logic is needed — this View just attaches a gradeable target/entry/
- * stoploss recipe (plus a symbol-derived levelCheckDefs) to a condition
- * that already exists.
+ * `direction` fixes entry/stoploss to this codebase's own convention —
+ * bullish: entry TC, stoploss S1; bearish: entry BC, stoploss R1 (see
+ * e.g. "7PM:MoMi-<L4:2AM" for a real bearish example of this exact
+ * shape) — `target` picks which of that direction's three rungs
+ * (R2/R3/R4 bullish, S2/S3/S4 bearish) actually grades the View.
+ * Grades against `patternKey` itself via conditionKey — a
+ * Pattern/Subpattern node's own key is already a real passesPattern
+ * condition, so no new pattern-matching logic is needed.
  *
  * `levelCheckDefs` is the caller's responsibility to derive (see
  * deriveLevelCheckDefs above) — typically from whichever symbol's row
@@ -2386,9 +2396,14 @@ export function createBacktestView(
   patternKey: string,
   newKey: string,
   newLabel: string,
+  direction: "bullish" | "bearish",
+  target: string,
   levelCheckDefs: LevelCheckCondition[]
 ): CreateViewResult {
   if (BACKTEST_TARGETS.some((t) => t.key === newKey)) return { ok: false, reason: "duplicate-key" };
+
+  const targetDef = direction === "bullish" ? BULLISH_TARGETS[target] : BEARISH_TARGETS[target];
+  if (!targetDef) return { ok: false, reason: "invalid-target" };
 
   let siblingArray: string[] | null = null;
   for (const cat of BACKTEST_CATEGORIES) {
@@ -2397,22 +2412,40 @@ export function createBacktestView(
   }
   if (!siblingArray) return { ok: false, reason: "pattern-not-found" };
 
-  const created: BacktestTargetDef = {
-    key: newKey,
-    label: newLabel,
-    direction: "bullish",
-    targetLabel: "U4 (today's R4)",
-    getTarget: (r) => r.todayCPR.r4,
-    entryLabel: "TC (today's TC)",
-    getEntry: (r) => r.todayCPR.tc,
-    stoplossLabel: "S1 (today's S1)",
-    getStoploss: (r) => r.todayCPR.s1,
-    conditionKey: patternKey,
-    levelCheckDefs: levelCheckDefs.map((c) => ({
-      ...c,
-      bandKeys: [...c.bandKeys] as [LevelCheckKey, LevelCheckKey],
-    })),
-  };
+  const created: BacktestTargetDef =
+    direction === "bullish"
+      ? {
+          key: newKey,
+          label: newLabel,
+          direction: "bullish",
+          targetLabel: targetDef.label,
+          getTarget: (r) => r.todayCPR[targetDef.key as "r2" | "r3" | "r4"],
+          entryLabel: "TC (today's TC)",
+          getEntry: (r) => r.todayCPR.tc,
+          stoplossLabel: "S1 (today's S1)",
+          getStoploss: (r) => r.todayCPR.s1,
+          conditionKey: patternKey,
+          levelCheckDefs: levelCheckDefs.map((c) => ({
+            ...c,
+            bandKeys: [...c.bandKeys] as [LevelCheckKey, LevelCheckKey],
+          })),
+        }
+      : {
+          key: newKey,
+          label: newLabel,
+          direction: "bearish",
+          targetLabel: targetDef.label,
+          getTarget: (r) => r.todayCPR[targetDef.key as "s2" | "s3" | "s4"],
+          entryLabel: "BC (today's BC)",
+          getEntry: (r) => r.todayCPR.bc,
+          stoplossLabel: "R1 (today's R1)",
+          getStoploss: (r) => r.todayCPR.r1,
+          conditionKey: patternKey,
+          levelCheckDefs: levelCheckDefs.map((c) => ({
+            ...c,
+            bandKeys: [...c.bandKeys] as [LevelCheckKey, LevelCheckKey],
+          })),
+        };
 
   BACKTEST_TARGETS.push(created);
   siblingArray.push(newKey);

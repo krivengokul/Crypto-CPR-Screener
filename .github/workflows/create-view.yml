@@ -19,9 +19,24 @@ on:
         description: "Display label for the new View"
         required: true
         type: string
+      direction:
+        description: "'bullish' (Up: entry TC, stoploss S1) or 'bearish' (Down: entry BC, stoploss R1)"
+        required: true
+        type: choice
+        options:
+          - bullish
+          - bearish
+      target:
+        description: "Which rung to grade against — R2/R3/R4 for bullish, S2/S3/S4 for bearish"
+        required: true
+        type: string
       levelCheckDefs:
         description: "Base64 JSON array of {key, subject, bandKeys} — derived client-side (deriveLevelCheckDefs) for the specific symbol this was created from"
         required: true
+        type: string
+      targetCategory:
+        description: "Which ViewsSidebar.tsx pivotcategories id to add the nav entry under. Defaults to the safe 'copyViews' bucket if left blank."
+        required: false
         type: string
 
 # contents: write — lets the auto-generated GITHUB_TOKEN push the commit.
@@ -60,7 +75,10 @@ jobs:
           PATTERN_KEY: ${{ inputs.patternKey }}
           NEW_KEY: ${{ inputs.newKey }}
           NEW_LABEL: ${{ inputs.newLabel }}
+          DIRECTION: ${{ inputs.direction }}
+          TARGET: ${{ inputs.target }}
           LEVEL_CHECK_DEFS_B64: ${{ inputs.levelCheckDefs }}
+          TARGET_CATEGORY: ${{ inputs.targetCategory }}
 
       - name: Commit and push
         run: |
