@@ -1236,19 +1236,6 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     getStoploss: (r) => r.todayCPR.s1,
     stoplossLabel: "S1 (today's S1)",
   },
-    {
-        key: "A-A-AA-AA-EU2L4-TC>pR2:R4",
-        conditionKey: "EU2L4",
-        label: "A-A-AA-AA-EU2L4-TC>pR2:R4",
-        direction: "bullish",
-        targetLabel: "U4 (today's R4)",
-        getTarget: (r) => r.todayCPR.r4,
-        entryLabel: "TC (today's TC)",
-        getEntry: (r) => r.todayCPR.tc,
-        stoplossLabel: "S1 (today's S1)",
-        getStoploss: (r) => r.todayCPR.s1,
-        levelCheckDefs: [{"key":"r4","subject":"previous","bandKeys":["r2","r1"]},{"key":"r3","subject":"previous","bandKeys":["r1","prevHigh"]},{"key":"r2","subject":"previous","bandKeys":["tc","pivot"]},{"key":"prevHigh","subject":"today","bandKeys":["r3","r2"]},{"key":"r1","subject":"today","bandKeys":["r4","r3"]},{"key":"tc","subject":"today","bandKeys":["r3","r2"]},{"key":"pivot","subject":"today","bandKeys":["r2","r1"]},{"key":"bc","subject":"today","bandKeys":["r2","r1"]},{"key":"prevLow","subject":"today","bandKeys":["pivot","bc"]},{"key":"s1","subject":"today","bandKeys":["prevHigh","tc"]},{"key":"s2","subject":"today","bandKeys":["prevLow","s2"]},{"key":"s3","subject":"today","bandKeys":["s3","s4"]},{"key":"s4","subject":"previous","bandKeys":["s3","s4"]}],
-      }
 ];
 
 /**
@@ -1327,7 +1314,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       {
         key: "EU2L4",
         label: "EU2L4",
-        subPatternKeys: ["7PM:MoMi->U4:2AM", "7PM:MoMi-<L4:2AM", "6PM:APHS1A-FAU4:9PM", "6PM:APHS1A-FAU4:99PM", "6PM:APHS1A-FAU4:9PMM", "A-A-AA-AA-EU2L4-TC>pR2:R4"],
+        subPatternKeys: ["7PM:MoMi->U4:2AM", "7PM:MoMi-<L4:2AM", "6PM:APHS1A-FAU4:9PM", "6PM:APHS1A-FAU4:99PM", "6PM:APHS1A-FAU4:9PMM"],
       },
       // NEW: "U4L3" Pattern (arrow) — same shape as its
       // "EU2L4" sibling above. Base condition = parent levelsabove's
@@ -2235,6 +2222,14 @@ function findSubPatternKeysArray(
 
 function findInPatterns(key: string, patterns: BacktestSubCategoryDef[]): string[] | null {
   for (const p of patterns) {
+    // A Pattern/Subpattern node whose OWN key equals `key` (its
+    // activePatternTarget resolves directly, not via some ancestor's
+    // subPatternKeys) — a clone of "itself" was never a contained
+    // element anywhere, so it belongs among ITS OWN children instead.
+    if (p.key === key) {
+      if (!p.subPatternKeys) p.subPatternKeys = [];
+      return p.subPatternKeys;
+    }
     if (p.subPatternKeys.includes(key)) return p.subPatternKeys;
     if (p.patterns) {
       const found = findInPatterns(key, p.patterns);
