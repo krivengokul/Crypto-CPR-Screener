@@ -33,6 +33,7 @@ export default defineConfig(async ({ command }) => {
 
   return {
     base: basePath,
+    envDir: path.resolve(import.meta.dirname, "..", ".."), // repo root, where .env.local lives
     plugins: [
       react(),
       tailwindcss(),
