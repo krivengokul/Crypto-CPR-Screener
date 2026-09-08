@@ -1192,7 +1192,20 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     getStoploss: (r) => r.todayCPR.s1,
     stoplossLabel: "S1 (today's S1)",
   },
-  {
+    {
+        key: "E-E-AA-BB-EL1U2-R1ApR2:R4",
+        conditionKey: "E-E-AA-BB-EL1U2", // Copy View — grades against the original
+        label: "E-E-AA-BB-EL1U2-R1ApR2:R4",
+        direction: "bullish",
+        targetLabel: "U2 (today's R2)",
+        getTarget: (r) => r.todayCPR.r2,
+        getEntry: (r) => r.todayCPR.tc,
+        entryLabel: "TC (today's TC)",
+        getStoploss: (r) => r.todayCPR.s1,
+        stoplossLabel: "S1 (today's S1)",
+        levelCheckDefs: [{"key":"r4","subject":"previous","bandKeys":["prevHigh","r2"]},{"key":"r3","subject":"previous","bandKeys":["r1","prevHigh"]},{"key":"r2","subject":"previous","bandKeys":["tc","r1"]},{"key":"prevHigh","subject":"today","bandKeys":["r3","r4"]},{"key":"r1","subject":"today","bandKeys":["r2","r3"]},{"key":"tc","subject":"today","bandKeys":["bc","pivot"]},{"key":"pivot","subject":"today","bandKeys":["prevLow","s1"]},{"key":"bc","subject":"today","bandKeys":["s2","prevLow"]},{"key":"prevLow","subject":"today","bandKeys":["s4","s3"]},{"key":"s1","subject":"previous","bandKeys":["pivot","tc"]},{"key":"s2","subject":"previous","bandKeys":["prevLow","bc"]},{"key":"s3","subject":"previous","bandKeys":["prevLow","bc"]},{"key":"s4","subject":"previous","bandKeys":["s1","prevLow"]}]
+    },
+    {
     key: "E-E-AA-BB-EU1L2",
     label: "E-E-AA-BB-EU1L2",
     direction: "bullish",
@@ -1929,7 +1942,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
         label: "E-E-AA-BB",
         subPatternKeys: [],
         patterns: [
-          { key: "E-E-AA-BB-EL1U2", label: "E-E-AA-BB-EL1U2", subPatternKeys: [] },
+          { key: "E-E-AA-BB-EL1U2", label: "E-E-AA-BB-EL1U2", subPatternKeys: ["E-E-AA-BB-EL1U2-R1ApR2:R4"] },
           { key: "E-E-AA-BB-EU1L2", label: "E-E-AA-BB-EU1L2", subPatternKeys: [] },
           { key: "E-E-AA-BB-EU2L2", label: "E-E-AA-BB-EU2L2", subPatternKeys: [] },
           { key: "E-E-AA-BB-EU1L3", label: "E-E-AA-BB-EU1L3", subPatternKeys: [] },
