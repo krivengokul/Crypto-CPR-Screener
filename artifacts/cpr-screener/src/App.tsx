@@ -4,8 +4,10 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Screener from "@/pages/Screener";
 import BacktestPanel from "@/pages/BacktestPanel";
-import SignalDesk, { type SignalDeskSymbol } from "@/pages/SignalDesk";
+import SignalDesk, { type SignalDeskSymbol, buildPills, computeSignalLevels } from "@/pages/SignalDesk";
 import type { CPRResultWithSource, ActiveTab } from "@/pages/ScreenerUtils";
+import { passesPattern } from "@/pages/ScreenerUtils";
+import { autoSaveQualifiedSignals } from "@/lib/signalTracker";
 import PatternStats from "@/pages/PatternStats";
 import SignalsJournal from "./pages/SignalsJournal";
 import ViewsSidebar, { pivotcategories, SCREENER_PATTERN_IDS, type SidebarMode } from "@/lib/ViewsSidebar";
@@ -94,6 +96,52 @@ function App() {
   useEffect(() => {
     setScanKey((k) => k + 1);
   }, []);
+
+  // Global background auto-save to Firestore Journal: whenever Screener
+  // scans live market data and updates signalResults, all qualified signals
+  // across Active Views are saved directly to Firestore without requiring
+  // the user to manually visit the Signals Desk tab first.
+  useEffect(() => {
+    if (signalResults.length === 0) return;
+    const pills = buildPills(signalResults);
+    if (pills.length === 0) return;
+
+    const activeMap = new Map<string, CPRResultWithSource>();
+    for (const v of pills) {
+      for (const r of signalResults) {
+        if (!activeMap.has(r.symbol) && passesPattern(r, v.id)) {
+          activeMap.set(r.symbol, r);
+        }
+      }
+    }
+
+    const candidateSignals = [];
+    for (const [, r] of activeMap.entries()) {
+      const levels = computeSignalLevels(r, pills);
+      if (!levels) continue;
+      candidateSignals.push({
+        symbol: r.symbol,
+        source: r.source,
+        timeframe: "Daily / 1D",
+        direction: levels.direction,
+        type: `${levels.patternLabel} Setup`,
+        patternName: levels.patternLabel,
+        entry: levels.price,
+        currentPrice: levels.price,
+        target: levels.targetPrice,
+        sl: levels.stopPrice,
+        rr: `1 : ${levels.rrRatio}`,
+        cprStatus: `${levels.patternLabel} (Target ${levels.targetLevel})`,
+        timestamp: Date.now(),
+        dateStr: new Date().toLocaleString(),
+        status: "ACTIVE" as const,
+      });
+    }
+
+    if (candidateSignals.length > 0) {
+      autoSaveQualifiedSignals(candidateSignals);
+    }
+  }, [signalResults]);
 
   const handleToggle = () => {
     setSidebarCollapsed((v) => {

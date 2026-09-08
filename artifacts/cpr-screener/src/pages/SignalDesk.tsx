@@ -107,6 +107,7 @@ export interface SignalItem {
 }
 
 // Entry/target/stop for a single CPR result row — sourced ENTIRELY from
+// Entry/target/stop for a single CPR result row — sourced ENTIRELY from
 // backtest.ts's own BACKTEST_TARGETS (the exact same lookup runBacktest /
 // pivotLevelBacktestSymbolOnDate use: `BACKTEST_TARGETS.find(t => t.key ===
 // <View id>)`), never invented here. Returns null when the row's matched
@@ -115,7 +116,7 @@ export interface SignalItem {
 // R/S thresholds.
 //   • target is an S-level (bearish)  → entry = today's TC, stop = today's R1
 //   • target is an R-level (bullish)  → entry = today's BC, stop = today's S1
-function computeSignalLevels(
+export function computeSignalLevels(
   r: CPRResultWithSource,
   viewPills: { id: string; label: string }[],
   preferredViewId?: string
@@ -144,6 +145,27 @@ function computeSignalLevels(
   return { patternLabel, patternId, price, direction, targetPrice, stopPrice, targetLevel, rrRatio };
 }
 
+// Single source of truth for turning a pool of CPRResultWithSource rows
+// into `{id, label, count}` pills — every id/label in the tree, counted
+// against whichever pool is passed in, zero-count ids dropped, sorted
+// descending.
+export function buildPills(pool: CPRResultWithSource[]) {
+  const pillMap = new Map<string, { id: string; label: string }>();
+  for (const subList of Object.values(Views)) {
+    for (const sub of subList) {
+      if (!pillMap.has(sub.id)) {
+        pillMap.set(sub.id, { id: sub.id, label: sub.label || sub.id });
+      }
+    }
+  }
+  const list: { id: string; label: string; count: number }[] = [];
+  for (const [id, item] of pillMap.entries()) {
+    const count = pool.filter((r) => passesPattern(r, id)).length;
+    if (count > 0) list.push({ id, label: item.label, count });
+  }
+  return list.sort((a, b) => b.count - a.count);
+}
+
 export default function SignalDesk({
   symbols,
   results,
@@ -155,62 +177,19 @@ export default function SignalDesk({
   onSourceFilterChange,
 }: SignalDeskProps) {
   const [searchTerm, setSearchTerm] = useState("");
-  // Default to Binance (not "All") — mirrors the Live Screener and Backtest
-  // panel, which both open on Binance by default.
   const [sourceFilterState, setSourceFilterState] = useState<"all" | "binance" | "delta">("binance");
-  // Controlled when App.tsx passes sourceFilter/onSourceFilterChange (the
-  // normal case now); falls back to local state otherwise. sourceFilter/
-  // setSourceFilter below are used everywhere else in this file exactly as
-  // before — only their source changed.
   const sourceFilter = sourceFilterProp ?? sourceFilterState;
   const setSourceFilter = onSourceFilterChange ?? setSourceFilterState;
   const [directionFilter, setDirectionFilter] = useState<"all" | "LONG" | "SHORT">("all");
   const [selectedViewPattern, setSelectedViewPattern] = useState<string>(activeView || "");
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  // Sync if activeView changes externally
   useEffect(() => {
     if (activeView !== undefined) {
       setSelectedViewPattern(activeView);
     }
   }, [activeView]);
 
-  // Single source of truth for turning a pool of CPRResultWithSource rows
-  // into `{id, label, count}` pills — every id/label in the tree, counted
-  // against whichever pool is passed in, zero-count ids dropped, sorted
-  // descending. Both pill lists below call this same function so there's
-  // exactly one place that defines "how a pool becomes pills" — no risk of
-  // the two lists' id/label enumeration drifting apart from each other.
-  //
-  // NOTE: this deliberately ignores the `counts` prop. `counts` is
-  // populated by the Live Screener's own onCounts effect, scoped to
-  // whichever tab (Binance/Delta/Combined) is active THERE — that's a
-  // different toggle than Signal Desk's own sourceFilter, and trusting it
-  // here is exactly what caused the Active Views strip to silently follow
-  // the wrong tab. Now that `results` (the full combined pool) is always
-  // available via the onResults wiring, there's no reason to prefer a
-  // second, externally-scoped source of the same numbers.
-  const buildPills = (pool: CPRResultWithSource[]) => {
-    const pillMap = new Map<string, { id: string; label: string }>();
-    for (const subList of Object.values(Views)) {
-      for (const sub of subList) {
-        if (!pillMap.has(sub.id)) {
-          pillMap.set(sub.id, { id: sub.id, label: sub.label || sub.id });
-        }
-      }
-    }
-    const list: { id: string; label: string; count: number }[] = [];
-    for (const [id, item] of pillMap.entries()) {
-      const count = pool.filter((r) => passesPattern(r, id)).length;
-      if (count > 0) list.push({ id, label: item.label, count });
-    }
-    return list.sort((a, b) => b.count - a.count);
-  };
-
-  // Comprehensive pill set — ALWAYS both exchanges, independent of
-  // sourceFilter. Feeds activeViewSymbols, computeSignalLevels, and the
-  // auto-save-to-Journal effect below, all of which must stay complete
-  // regardless of which source tab happens to be on screen right now.
   const viewPills = useMemo(() => buildPills(results ?? []), [results]);
 
   // Source-scoped pill set — same function, filtered pool. Display only:

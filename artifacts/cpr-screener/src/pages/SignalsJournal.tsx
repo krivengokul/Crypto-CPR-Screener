@@ -32,7 +32,7 @@ export default function SignalsJournal() {
   // Default to Binance — mirrors the Live Screener, Backtest panel, and
   // Signals desk, which all default to Binance rather than showing every
   // exchange's rows at once.
-  const [sourceFilter, setSourceFilter] = useState<"all" | "binance" | "delta">("binance");
+  const [sourceFilter, setSourceFilter] = useState<"all" | "binance" | "delta">("all");
   const [searchTerm, setSearchTerm] = useState("");
 
   const loadSignals = async () => {
@@ -206,6 +206,16 @@ export default function SignalsJournal() {
 
         {/* Action Buttons */}
         <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={loadSignals}
+            disabled={loading}
+            className="px-3 py-1.5 rounded-lg bg-[#162130] hover:bg-[#1e2f47] border border-[#22354a] disabled:opacity-50 text-slate-200 text-xs font-medium flex items-center gap-1.5 transition cursor-pointer"
+            title="Reload signals from Firestore"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+            <span>Refresh</span>
+          </button>
+
           <button
             onClick={handleEvaluateAll}
             disabled={evaluating || signals.length === 0}
