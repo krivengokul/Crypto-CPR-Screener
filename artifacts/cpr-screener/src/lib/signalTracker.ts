@@ -82,8 +82,7 @@ export async function saveSignalToCloud(
 /**
  * Smart Auto-Save:
  * Uses deterministic ID per symbol/direction/pattern/day.
- * CRITICAL: If a signal already exists with status 'PASS', 'FAIL', or 'EXPIRED',
- * DO NOT overwrite it or reset its status back to 'ACTIVE'!
+ * CRITICAL: If a signal already exists, DO NOT overwrite it or reset its status!
  */
 export async function autoSaveQualifiedSignals(
   signals: Omit<LoggedSignal, "id">[]
@@ -94,47 +93,48 @@ export async function autoSaveQualifiedSignals(
     const uid = await ensureSignedIn();
     const db = getDb();
     const todayKey = new Date().toISOString().slice(0, 10);
-    let savedCount = 0;
 
+    // Fetch existing docs for this user with a single fast query
+    const q = query(
+      collection(db, SIGNALS_COLLECTION),
+      where("uid", "==", uid)
+    );
+    const existingSnap = await getDocs(q);
+    const existingIds = new Set<string>();
+    existingSnap.forEach((d) => existingIds.add(d.id));
+
+    let savedCount = 0;
     const BATCH_SIZE = 400;
+
     for (let i = 0; i < signals.length; i += BATCH_SIZE) {
       const chunk = signals.slice(i, i + BATCH_SIZE);
       const batch = writeBatch(db);
       let hasWrites = false;
 
-      const checks = await Promise.all(
-        chunk.map(async (sig) => {
-          const patternSlug = sig.patternName.replace(/[^a-zA-Z0-9]/g, "_").toUpperCase();
-          const deterministicId = `${sig.symbol}-${sig.direction}-${patternSlug}-${todayKey}`;
-          const docRef = doc(db, SIGNALS_COLLECTION, signalDocId(uid, deterministicId));
-          const snap = await getDoc(docRef);
-          return {
-            sig,
-            deterministicId,
-            docRef,
-            exists: snap.exists(),
-          };
-        })
-      );
+      for (const sig of chunk) {
+        const patternSlug = sig.patternName.replace(/[^a-zA-Z0-9]/g, "_").toUpperCase();
+        const deterministicId = `${sig.symbol}-${sig.direction}-${patternSlug}-${todayKey}`;
+        const fullDocId = signalDocId(uid, deterministicId);
 
-      for (const item of checks) {
-        if (item.exists) {
-          // Already recorded for today! Never overwrite resolved outcome or duplicate.
+        if (existingIds.has(fullDocId)) {
+          // Already recorded for today!
           continue;
         }
 
+        const docRef = doc(db, SIGNALS_COLLECTION, fullDocId);
         const data: LoggedSignal & { createdAt: any; updatedAt: any } = {
-          ...item.sig,
-          id: item.deterministicId,
+          ...sig,
+          id: deterministicId,
           uid,
-          dateStr: new Date(item.sig.timestamp).toLocaleString(),
-          status: item.sig.status || "ACTIVE",
-          outcomeNotes: `Auto-saved setup (${todayKey}). Awaiting TP ($${item.sig.target.toFixed(4)}) or SL ($${item.sig.sl.toFixed(4)}) outcome.`,
+          dateStr: new Date(sig.timestamp).toLocaleString(),
+          status: sig.status || "ACTIVE",
+          outcomeNotes: `Auto-saved setup (${todayKey}). Awaiting TP ($${sig.target.toFixed(4)}) or SL ($${sig.sl.toFixed(4)}) outcome.`,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         };
 
-        batch.set(item.docRef, data);
+        batch.set(docRef, data);
+        existingIds.add(fullDocId);
         hasWrites = true;
         savedCount++;
       }
