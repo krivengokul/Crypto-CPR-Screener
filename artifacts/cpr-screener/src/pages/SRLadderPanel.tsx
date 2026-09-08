@@ -1,5 +1,5 @@
-import { useState, type ReactNode } from "react";
-import { Link2 } from "lucide-react";
+import { useState, useEffect, type ReactNode } from "react";
+import { Link2, Loader2 } from "lucide-react";
 import type { CPRLevels, CPRResult } from "@/lib/cpr";
 import { fmt } from "./ScreenerUtils";
 import { SRLadderDiffPanel, type LevelCheckCondition } from "./SRLadderDiff";
@@ -13,12 +13,32 @@ import { getChartLink, setChartLink, removeChartLink, type StoredChartLink } fro
  * later). viewKey scopes the link to whichever Category/Pattern/View is
  * currently selected, so the same symbol/day can carry a different
  * chart link per View instead of one global link per symbol.
+ *
+ * Backed by Firestore (chartLinks.ts) — reads/writes are async, so this
+ * tracks its own loading state rather than resolving the saved link
+ * synchronously on first render.
  */
 function ChartLinkControl({ viewKey, rowKey }: { viewKey: string; rowKey: string }) {
   const [open, setOpen] = useState(false);
   const [url, setUrl] = useState("");
   const [error, setError] = useState("");
-  const [saved, setSaved] = useState<StoredChartLink | null>(() => getChartLink(viewKey, rowKey));
+  const [saved, setSaved] = useState<StoredChartLink | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    getChartLink(viewKey, rowKey).then((link) => {
+      if (!cancelled) {
+        setSaved(link);
+        setLoading(false);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [viewKey, rowKey]);
 
   function openForm() {
     setUrl(saved?.url ?? "");
@@ -26,24 +46,39 @@ function ChartLinkControl({ viewKey, rowKey }: { viewKey: string; rowKey: string
     setOpen(true);
   }
 
-  function confirm() {
+  async function confirm() {
     const trimmed = url.trim();
     if (!trimmed) {
       setError("Paste a TradingView snapshot link first.");
       return;
     }
-    if (!setChartLink(viewKey, rowKey, trimmed)) {
-      setError("Couldn't save — browser storage may be disabled or full.");
+    setSaving(true);
+    const ok = await setChartLink(viewKey, rowKey, trimmed);
+    setSaving(false);
+    if (!ok) {
+      setError("Couldn't save — check your connection and try again.");
       return;
     }
-    setSaved(getChartLink(viewKey, rowKey));
+    const fresh = await getChartLink(viewKey, rowKey);
+    setSaved(fresh);
     setOpen(false);
   }
 
-  function clear() {
-    removeChartLink(viewKey, rowKey);
+  async function clear() {
+    setSaving(true);
+    await removeChartLink(viewKey, rowKey);
+    setSaving(false);
     setSaved(null);
     setOpen(false);
+  }
+
+  if (loading) {
+    return (
+      <div className="inline-flex w-fit items-center gap-1 rounded-md border border-border px-2 py-1 text-[11px] text-muted-foreground">
+        <Loader2 className="w-3 h-3 animate-spin" />
+        Chart link
+      </div>
+    );
   }
 
   if (!open) {
@@ -91,7 +126,8 @@ function ChartLinkControl({ viewKey, rowKey }: { viewKey: string; rowKey: string
         value={url}
         onChange={(e) => setUrl(e.target.value)}
         placeholder="Paste TradingView snapshot URL"
-        className="w-full bg-background border border-border rounded-md px-2 py-1 text-[11px] font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+        disabled={saving}
+        className="w-full bg-background border border-border rounded-md px-2 py-1 text-[11px] font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
       />
       {error && <span className="text-[10px] text-destructive">{error}</span>}
       <div className="flex justify-end gap-1.5 pt-0.5">
@@ -99,7 +135,8 @@ function ChartLinkControl({ viewKey, rowKey }: { viewKey: string; rowKey: string
           <button
             type="button"
             onClick={clear}
-            className="mr-auto rounded-md px-2 py-1 text-[11px] text-destructive hover:bg-destructive/10"
+            disabled={saving}
+            className="mr-auto rounded-md px-2 py-1 text-[11px] text-destructive hover:bg-destructive/10 disabled:opacity-50"
           >
             Remove
           </button>
@@ -107,16 +144,18 @@ function ChartLinkControl({ viewKey, rowKey }: { viewKey: string; rowKey: string
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="rounded-md px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+          disabled={saving}
+          className="rounded-md px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted/40 hover:text-foreground disabled:opacity-50"
         >
           Cancel
         </button>
         <button
           type="button"
           onClick={confirm}
-          className="rounded-md bg-blue-500/20 px-2 py-1 text-[11px] font-medium text-blue-300 hover:bg-blue-500/30"
+          disabled={saving}
+          className="rounded-md bg-blue-500/20 px-2 py-1 text-[11px] font-medium text-blue-300 hover:bg-blue-500/30 disabled:opacity-50"
         >
-          Save
+          {saving ? "Saving…" : "Save"}
         </button>
       </div>
     </div>
