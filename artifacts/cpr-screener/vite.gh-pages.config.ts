@@ -5,6 +5,7 @@ import path from "path";
 
 export default defineConfig({
   base: "/Crypto-CPR-Screener/",
+  envDir: path.resolve(import.meta.dirname, "..", ".."),
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
