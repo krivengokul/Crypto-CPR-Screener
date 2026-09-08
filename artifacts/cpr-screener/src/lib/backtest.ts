@@ -1282,6 +1282,19 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
         getStoploss: (r) => r.todayCPR.s1,
         conditionKey: "A-A-AA-AA",
         levelCheckDefs: [{"key":"r4","subject":"previous","bandKeys":["bc","s1"]},{"key":"r3","subject":"previous","bandKeys":["bc","s1"]},{"key":"r2","subject":"previous","bandKeys":["s1","prevLow"]},{"key":"prevHigh","subject":"previous","bandKeys":["s1","prevLow"]},{"key":"r1","subject":"previous","bandKeys":["s1","prevLow"]},{"key":"tc","subject":"previous","bandKeys":["s1","prevLow"]},{"key":"pivot","subject":"previous","bandKeys":["s1","prevLow"]},{"key":"bc","subject":"previous","bandKeys":["s1","prevLow"]},{"key":"prevLow","subject":"today","bandKeys":["bc","s1"]},{"key":"s1","subject":"today","bandKeys":["r3","r2"]},{"key":"s2","subject":"previous","bandKeys":["prevLow","s2"]},{"key":"s3","subject":"previous","bandKeys":["prevLow","s2"]},{"key":"s4","subject":"previous","bandKeys":["prevLow","s2"]}],
+      },
+    {
+        key: "B-B-BB-BB-L4U4-Ladder:R4",
+        label: "B-B-BB-BB-L4U4-Ladder:R4",
+        direction: "bullish",
+        targetLabel: "U4 (today's R4)",
+        getTarget: (r) => r.todayCPR.r4,
+        entryLabel: "TC (today's TC)",
+        getEntry: (r) => r.todayCPR.tc,
+        stoplossLabel: "S1 (today's S1)",
+        getStoploss: (r) => r.todayCPR.s1,
+        conditionKey: "top15gainers",
+        levelCheckDefs: [{"key":"r4","subject":"today","bandKeys":["r4","r3"]},{"key":"r3","subject":"today","bandKeys":["r3","r2"]},{"key":"r2","subject":"today","bandKeys":["r2","prevHigh"]},{"key":"prevHigh","subject":"today","bandKeys":["r1","tc"]},{"key":"r1","subject":"today","bandKeys":["r1","tc"]},{"key":"tc","subject":"today","bandKeys":["bc","prevLow"]},{"key":"pivot","subject":"today","bandKeys":["bc","prevLow"]},{"key":"bc","subject":"today","bandKeys":["bc","prevLow"]},{"key":"prevLow","subject":"today","bandKeys":["s1","s2"]},{"key":"s1","subject":"today","bandKeys":["s1","s2"]},{"key":"s2","subject":"today","bandKeys":["s2","s3"]},{"key":"s3","subject":"today","bandKeys":["s3","s4"]},{"key":"s4","subject":"previous","bandKeys":["s3","s4"]}],
       }
 ];
 
@@ -1344,7 +1357,9 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
   // each direction before rendering. No subPatternKeys/patterns, same
   // shape as "Equal CPR" below — symbol-list-only, no single target to
   // grade.
-  { key: "top15gainers", label: "TOP 15 GAINERS" },
+  { key: "top15gainers", label: "TOP 15 GAINERS",
+      subPatternKeys: ["B-B-BB-BB-L4U4-Ladder:R4"]
+},
   { key: "top15losers", label: "TOP 15 LOSERS" },
   {
     key: "levelsabove",
