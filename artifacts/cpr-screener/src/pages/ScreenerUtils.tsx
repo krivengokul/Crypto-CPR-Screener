@@ -14,6 +14,7 @@ import {
   type SSLLCategory,
   type RRHHCategory,
 } from "@/lib/cpr";
+import { BACKTEST_TARGETS, levelCheckFullyMatches } from "@/lib/backtest";
 
 export type SortKey = "symbol" | "compressionRatio" | "currentPrice" | "change24h" | "quoteVolume" | "priceVsCpr" | "cprDistance" | "pdhPdlPct";
 export type SortDir = "asc" | "desc";
@@ -756,6 +757,30 @@ const isAaaaDiagnosticBase = (r: CPRResult): boolean =>
   PIVOT_PATTERNS["A-A-AA-AA"]?.(r) === true;
 
 export function passesPattern(r: CPRResult, pattern: string): boolean {
+  // NEW: Copy View / Create View auto-nav entries (BACKTEST_TARGETS keys
+  // pushed into ViewsSidebar.tsx's Views automatically — see
+  // copy-view.yml / create-view.yml). These aren't real passesPattern
+  // cases themselves; their conditionKey points at the actual case
+  // (chained through, possibly several copies deep), and their
+  // levelCheckDefs adds a stricter "full 13/13 signature" gate on top of
+  // that condition — same rule already enforced in backtest.ts's
+  // backtestSymbolOnDate for Backtest scans. Checked first so these keys
+  // don't fall through to the switch below, which has no case for them.
+  //
+  // Guarded to only redirect when conditionKey is explicitly set AND
+  // differs from `pattern` itself — a normal hand-authored View (its own
+  // key IS a real case, no conditionKey needed) must fall through to the
+  // switch as before; without this guard it would recurse into itself.
+  {
+    const backtestTarget = BACKTEST_TARGETS.find((t) => t.key === pattern);
+    if (backtestTarget && backtestTarget.conditionKey && backtestTarget.conditionKey !== pattern) {
+      return (
+        passesPattern(r, backtestTarget.conditionKey) &&
+        levelCheckFullyMatches(r, backtestTarget.levelCheckDefs)
+      );
+    }
+  }
+
   // Every compound HHLL/RRHH/SSLL raw pattern (RRSSA-*/RRSSB-*/RRSSC-*/
   // E-*) is now defined exactly once, in PIVOT_PATTERNS above — see
   // that map's comment for why. Checked first so nothing below needs its

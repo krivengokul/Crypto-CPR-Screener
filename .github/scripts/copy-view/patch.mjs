@@ -28,6 +28,49 @@ function getStringPropertyValue(obj, name) {
   return initializer.getLiteralText();
 }
 
+/**
+ * Pushes {id: newKey, label: newLabel} into ViewsSidebar.tsx's
+ * Views.copyViews array — the dedicated home for every auto-generated
+ * Copy View / Create View (see ViewsSidebar.tsx's own comment on
+ * Views.copyViews). SCREENER_PATTERN_IDS derives from Views
+ * automatically, so this alone is what makes the new key selectable in
+ * the Screener/left-nav/SignalDesk — passesPattern's own new
+ * BACKTEST_TARGETS lookup (in ScreenerUtils.tsx) handles the actual
+ * matching once it's selectable.
+ */
+function addToScreenerNav(sourceText, newKey, newLabel) {
+  const project = new Project({ useInMemoryFileSystem: true });
+  const sourceFile = project.createSourceFile("ViewsSidebar.tsx", sourceText);
+
+  const viewsDecl = sourceFile.getVariableDeclarationOrThrow("Views");
+  const viewsObj = viewsDecl.getInitializerIfKindOrThrow(SyntaxKind.ObjectLiteralExpression);
+
+  const copyViewsProp = viewsObj.getProperty("copyViews");
+  if (!copyViewsProp || !copyViewsProp.isKind(SyntaxKind.PropertyAssignment)) {
+    throw new Error("Views.copyViews not found in ViewsSidebar.tsx — has it been removed or renamed?");
+  }
+  const arr = copyViewsProp.getInitializer();
+  if (!arr || !arr.isKind(SyntaxKind.ArrayLiteralExpression)) {
+    throw new Error("Views.copyViews isn't an array literal — can't insert into it.");
+  }
+
+  const alreadyExists = arr
+    .getElements()
+    .some((el) => el.isKind(SyntaxKind.ObjectLiteralExpression) && getStringPropertyValue(el, "id") === newKey);
+  if (alreadyExists) {
+    // Shouldn't normally happen — BACKTEST_TARGETS' own duplicate-key
+    // guard already fired earlier in this same run — but don't
+    // double-insert if it somehow does.
+    return sourceFile.getFullText();
+  }
+
+  arr.addElement(
+    `{ id: "${escapeForDoubleQuotedString(newKey)}", label: "${escapeForDoubleQuotedString(newLabel)}" }`
+  );
+
+  return sourceFile.getFullText();
+}
+
 function applyCopyViewPatch(sourceText, sourceKey, newKey, newLabel, levelCheckDefs) {
   const project = new Project({ useInMemoryFileSystem: true });
   const sourceFile = project.createSourceFile("backtest.ts", sourceText);
@@ -157,6 +200,7 @@ const newKey = process.env.NEW_KEY;
 const newLabel = process.env.NEW_LABEL;
 const levelCheckDefsB64 = process.env.LEVEL_CHECK_DEFS_B64;
 const backtestFilePath = process.env.BACKTEST_FILE_PATH ?? "artifacts/cpr-screener/src/lib/backtest.ts";
+const VIEWS_SIDEBAR_FILE_PATH = process.env.VIEWS_SIDEBAR_FILE_PATH ?? "artifacts/cpr-screener/src/lib/ViewsSidebar.tsx";
 
 if (!sourceKey || !newKey || !newLabel) {
   console.error("SOURCE_KEY, NEW_KEY, and NEW_LABEL must all be set.");
@@ -213,10 +257,20 @@ try {
     levelCheckDefs
   );
   writeFileSync(filePath, patchedText, "utf-8");
+
+  // Also add the new key to ViewsSidebar.tsx's Views.copyViews, so it's
+  // selectable in the Screener/left-nav/SignalDesk automatically — see
+  // addToScreenerNav's doc comment above.
+  const viewsSidebarFilePath = resolve(process.cwd(), "../../../", VIEWS_SIDEBAR_FILE_PATH);
+  const viewsSidebarText = readFileSync(viewsSidebarFilePath, "utf-8");
+  const patchedViewsSidebarText = addToScreenerNav(viewsSidebarText, newKey, newLabel);
+  writeFileSync(viewsSidebarFilePath, patchedViewsSidebarText, "utf-8");
+
   const levelCheckNote = levelCheckDefs ? ` with ${levelCheckDefs.length} symbol-derived levelCheckDefs` : "";
   console.log(
     `Patched ${backtestFilePath}: "${sourceKey}" -> "${newKey}" (grades against "${originalConditionKey}")${levelCheckNote}`
   );
+  console.log(`Added "${newKey}" to ${VIEWS_SIDEBAR_FILE_PATH}'s Views.copyViews`);
 } catch (err) {
   console.error(err.message);
   process.exit(1);

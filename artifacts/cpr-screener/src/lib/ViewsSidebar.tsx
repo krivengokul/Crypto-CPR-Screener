@@ -39,6 +39,14 @@ export interface SubPattern {
  * existing Screener filtering logic works with no changes.
  */
 export const Views: Record<string, SubPattern[]> = {
+  // Auto-generated Views land here — every "Copy View" / "Create View"
+  // in the Backtest panel now automatically pushes {id: newKey, label}
+  // into this array (see copy-view.yml / create-view.yml's "Add to
+  // Screener nav" step), rather than requiring a curated category
+  // choice per View. passesPattern(r, newKey) resolves these via their
+  // conditionKey + levelCheckDefs — see the new block at the top of
+  // passesPattern in ScreenerUtils.tsx.
+  copyViews: [],
   "overlapping-lower": [
     { id: "eXLo-L4U4-U4",            label: "Exp-U3>pU4" },
     { id: "9AM:SSRRBHHLLA-U4:9PM",   label: "9AM:SSRRBHHLLA-U4:9PM" },
@@ -501,6 +509,9 @@ export const pivotcategories: Category[] = [
   { id: "inside-cpr",         label: "Inside CPR",     subtitle: "Inside CPR range",         icon: Crosshair },
   { id: "overlapping-lower",  label: "Overlap Below", subtitle: "CPR zones stacking down",  icon: LayersIcon },
   { id: "equal-cpr",          label: "Equal CPR",     subtitle: "Prev & Today CPR Equal",   icon: Equal },
+  // NEW: home for every auto-generated Copy View / Create View — see
+  // Views.copyViews above.
+  { id: "copyViews", label: "COPY/CREATED VIEWS", subtitle: "Auto-generated from Backtest's Copy View / Create View", icon: BookmarkCheck },
 ];
 
 /**

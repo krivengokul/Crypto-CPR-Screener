@@ -50,6 +50,41 @@ function findPatternNode(patternsArray, patternKey) {
   return null;
 }
 
+/**
+ * Pushes {id: newKey, label: newLabel} into ViewsSidebar.tsx's
+ * Views.copyViews array — same as copy-view's patch.mjs. See that
+ * script's own copy of this function for the full doc comment.
+ */
+function addToScreenerNav(sourceText, newKey, newLabel) {
+  const project = new Project({ useInMemoryFileSystem: true });
+  const sourceFile = project.createSourceFile("ViewsSidebar.tsx", sourceText);
+
+  const viewsDecl = sourceFile.getVariableDeclarationOrThrow("Views");
+  const viewsObj = viewsDecl.getInitializerIfKindOrThrow(SyntaxKind.ObjectLiteralExpression);
+
+  const copyViewsProp = viewsObj.getProperty("copyViews");
+  if (!copyViewsProp || !copyViewsProp.isKind(SyntaxKind.PropertyAssignment)) {
+    throw new Error("Views.copyViews not found in ViewsSidebar.tsx — has it been removed or renamed?");
+  }
+  const arr = copyViewsProp.getInitializer();
+  if (!arr || !arr.isKind(SyntaxKind.ArrayLiteralExpression)) {
+    throw new Error("Views.copyViews isn't an array literal — can't insert into it.");
+  }
+
+  const alreadyExists = arr
+    .getElements()
+    .some((el) => el.isKind(SyntaxKind.ObjectLiteralExpression) && getStringPropertyValue(el, "id") === newKey);
+  if (alreadyExists) {
+    return sourceFile.getFullText();
+  }
+
+  arr.addElement(
+    `{ id: "${escapeForDoubleQuotedString(newKey)}", label: "${escapeForDoubleQuotedString(newLabel)}" }`
+  );
+
+  return sourceFile.getFullText();
+}
+
 function applyCreateViewPatch(sourceText, patternKey, newKey, newLabel, levelCheckDefs) {
   const project = new Project({ useInMemoryFileSystem: true });
   const sourceFile = project.createSourceFile("backtest.ts", sourceText);
@@ -128,6 +163,7 @@ const newKey = process.env.NEW_KEY;
 const newLabel = process.env.NEW_LABEL;
 const levelCheckDefsB64 = process.env.LEVEL_CHECK_DEFS_B64;
 const backtestFilePath = process.env.BACKTEST_FILE_PATH ?? "artifacts/cpr-screener/src/lib/backtest.ts";
+const VIEWS_SIDEBAR_FILE_PATH = process.env.VIEWS_SIDEBAR_FILE_PATH ?? "artifacts/cpr-screener/src/lib/ViewsSidebar.tsx";
 
 if (!patternKey || !newKey || !newLabel || !levelCheckDefsB64) {
   console.error("PATTERN_KEY, NEW_KEY, NEW_LABEL, and LEVEL_CHECK_DEFS_B64 must all be set.");
@@ -173,9 +209,18 @@ try {
 try {
   const { patchedText } = applyCreateViewPatch(currentText, patternKey, newKey, newLabel, levelCheckDefs);
   writeFileSync(filePath, patchedText, "utf-8");
+
+  // Also add the new key to ViewsSidebar.tsx's Views.copyViews — see
+  // addToScreenerNav's doc comment above.
+  const viewsSidebarFilePath = resolve(process.cwd(), "../../../", VIEWS_SIDEBAR_FILE_PATH);
+  const viewsSidebarText = readFileSync(viewsSidebarFilePath, "utf-8");
+  const patchedViewsSidebarText = addToScreenerNav(viewsSidebarText, newKey, newLabel);
+  writeFileSync(viewsSidebarFilePath, patchedViewsSidebarText, "utf-8");
+
   console.log(
     `Created "${newKey}" under Pattern/Subpattern "${patternKey}" with ${levelCheckDefs.length} symbol-derived levelCheckDefs`
   );
+  console.log(`Added "${newKey}" to ${VIEWS_SIDEBAR_FILE_PATH}'s Views.copyViews`);
 } catch (err) {
   console.error(err.message);
   process.exit(1);

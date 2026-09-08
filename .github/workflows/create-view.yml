@@ -39,6 +39,7 @@ jobs:
     env:
       # Repo layout is artifacts/cpr-screener/src/... (not repo-root).
       BACKTEST_FILE_PATH: artifacts/cpr-screener/src/lib/backtest.ts
+      VIEWS_SIDEBAR_FILE_PATH: artifacts/cpr-screener/src/lib/ViewsSidebar.tsx
     steps:
       - name: Check out repo
         uses: actions/checkout@v4
@@ -65,9 +66,9 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add "$BACKTEST_FILE_PATH"
+          git add "$BACKTEST_FILE_PATH" "$VIEWS_SIDEBAR_FILE_PATH"
           git diff --cached --quiet && echo "No changes to commit" && exit 0
-          git commit -m "Create View: \"${{ inputs.newKey }}\" under \"${{ inputs.patternKey }}\""
+          git commit -m "Create View: \"${{ inputs.newKey }}\" under \"${{ inputs.patternKey }}\" (+ Screener nav)"
           git push
 
       - name: Trigger the deploy workflow
