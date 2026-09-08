@@ -1270,6 +1270,19 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     getStoploss: (r) => r.todayCPR.s1,
     stoplossLabel: "S1 (today's S1)",
   },
+    {
+        key: "A-A-AA-AA-EUBL2-pS4S2:R2",
+        label: "A-A-AA-AA-EUBL2-pS4S2:R2",
+        direction: "bullish",
+        targetLabel: "U4 (today's R4)",
+        getTarget: (r) => r.todayCPR.r4,
+        entryLabel: "TC (today's TC)",
+        getEntry: (r) => r.todayCPR.tc,
+        stoplossLabel: "S1 (today's S1)",
+        getStoploss: (r) => r.todayCPR.s1,
+        conditionKey: "A-A-AA-AA",
+        levelCheckDefs: [{"key":"r4","subject":"previous","bandKeys":["bc","s1"]},{"key":"r3","subject":"previous","bandKeys":["bc","s1"]},{"key":"r2","subject":"previous","bandKeys":["s1","prevLow"]},{"key":"prevHigh","subject":"previous","bandKeys":["s1","prevLow"]},{"key":"r1","subject":"previous","bandKeys":["s1","prevLow"]},{"key":"tc","subject":"previous","bandKeys":["s1","prevLow"]},{"key":"pivot","subject":"previous","bandKeys":["s1","prevLow"]},{"key":"bc","subject":"previous","bandKeys":["s1","prevLow"]},{"key":"prevLow","subject":"today","bandKeys":["bc","s1"]},{"key":"s1","subject":"today","bandKeys":["r3","r2"]},{"key":"s2","subject":"previous","bandKeys":["prevLow","s2"]},{"key":"s3","subject":"previous","bandKeys":["prevLow","s2"]},{"key":"s4","subject":"previous","bandKeys":["prevLow","s2"]}],
+      }
 ];
 
 /**
@@ -1476,7 +1489,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       {
         key: "A-A-AA-AA",
         label: "A-A-AA-AA",
-        subPatternKeys: [],
+        subPatternKeys: ["A-A-AA-AA-EUBL2-pS4S2:R2"],
         patterns: [
           // MOVED from "R1AbovePR4": "A-A-AA-AA-U3L3" Subpattern —
           // structural A-A-AA-AA (parent Pattern's own condition)
