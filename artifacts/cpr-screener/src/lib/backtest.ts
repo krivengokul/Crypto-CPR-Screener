@@ -2407,6 +2407,15 @@ export function createBacktestView(
 
   let siblingArray: string[] | null = null;
   for (const cat of BACKTEST_CATEGORIES) {
+    // A bare Category can itself be the attach point now (Create View is
+    // available whenever the selected dropdown item isn't a leaf View —
+    // Category, Pattern, or Subpattern all qualify) — checked first,
+    // since a category's own key never nests inside its own `patterns`.
+    if (cat.key === patternKey) {
+      if (!cat.subPatternKeys) cat.subPatternKeys = [];
+      siblingArray = cat.subPatternKeys;
+      break;
+    }
     siblingArray = findOwnSubPatternKeysArray(patternKey, cat.patterns);
     if (siblingArray) break;
   }

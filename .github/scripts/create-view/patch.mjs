@@ -126,6 +126,12 @@ function applyCreateViewPatch(sourceText, patternKey, newKey, newLabel, directio
   let patternNode = null;
   for (const cat of categoriesArray.getElements()) {
     if (!cat.isKind(SyntaxKind.ObjectLiteralExpression)) continue;
+    // A bare Category can itself be the attach point now — checked
+    // first, same reasoning as backtest.ts's in-memory createBacktestView.
+    if (getStringPropertyValue(cat, "key") === patternKey) {
+      patternNode = cat;
+      break;
+    }
     const patternsProp = cat.getProperty("patterns");
     if (patternsProp && patternsProp.isKind(SyntaxKind.PropertyAssignment)) {
       const patternsArray = patternsProp.getInitializer();

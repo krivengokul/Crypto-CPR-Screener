@@ -1824,6 +1824,34 @@ export default function BacktestPanel() {
                           prevPatternBadge={renderPrevPatternBadge(r.raw)}
                           pivotPatternBadge={renderPivotPatternBadge(r.raw)}
                           showLevelCheck
+                          copyViewControl={
+                            isViewOnly && activeTarget ? (
+                              <CopyViewControl
+                                sourceKey={activeTarget.key}
+                                sourceLabel={activeTarget.label}
+                                prevCPR={r.prevCPR}
+                                todayCPR={r.todayCPR}
+                                sourceConditions={activeLevelCheckDefs}
+                                onCopied={(newKey) => setSelectedKey(newKey)}
+                              />
+                            ) : isPatternOnly && activePatternInfo ? (
+                              <CreateViewControl
+                                patternKey={activePatternInfo.sub.key}
+                                patternLabel={activePatternInfo.sub.label}
+                                prevCPR={r.prevCPR}
+                                todayCPR={r.todayCPR}
+                                onCreated={(newKey) => setSelectedKey(newKey)}
+                              />
+                            ) : isCategory && activeCategory ? (
+                              <CreateViewControl
+                                patternKey={activeCategory.key}
+                                patternLabel={activeCategory.label}
+                                prevCPR={r.prevCPR}
+                                todayCPR={r.todayCPR}
+                                onCreated={(newKey) => setSelectedKey(newKey)}
+                              />
+                            ) : undefined
+                          }
                         />
                       )}
                       </Fragment>
@@ -2137,20 +2165,24 @@ export default function BacktestPanel() {
                         pivotPatternBadge={renderPivotPatternBadge(r.raw)}
                         showLevelCheck
                         levelCheckConditions={activeLevelCheckDefs}
-                        // "Copy View" when this row is graded against a
-                        // real View/Pattern target (activeTarget for a
-                        // leaf View, activePatternTarget when a Pattern/
-                        // Subpattern happens to already have one of its
-                        // own). "Create View" instead when a Pattern/
-                        // Subpattern is selected but has no View of its
-                        // own yet (activePatternTarget undefined) — see
-                        // CreateViewControl. Never both; Category-level
-                        // selections get neither.
+                        // Simplified rule: "Copy View" only when the
+                        // selected dropdown item IS a leaf View
+                        // (isViewOnly / activeTarget). Anything else —
+                        // Category, Pattern, or Subpattern, even one that
+                        // happens to already have its own View via
+                        // activePatternTarget — gets "Create View"
+                        // instead, attaching under whatever's currently
+                        // selected. This also resolves the earlier "a
+                        // Pattern's own key equals an existing View's
+                        // key" ambiguity: it's no longer routed through
+                        // Copy's sibling-array-search logic at all — it's
+                        // just another Create View attach point, adding
+                        // a sibling under the same subPatternKeys.
                         copyViewControl={
-                          (activeTarget ?? activePatternTarget) ? (
+                          isViewOnly && activeTarget ? (
                             <CopyViewControl
-                              sourceKey={(activeTarget ?? activePatternTarget)!.key}
-                              sourceLabel={(activeTarget ?? activePatternTarget)!.label}
+                              sourceKey={activeTarget.key}
+                              sourceLabel={activeTarget.label}
                               prevCPR={r.prevCPR}
                               todayCPR={r.todayCPR}
                               sourceConditions={activeLevelCheckDefs}
@@ -2160,6 +2192,14 @@ export default function BacktestPanel() {
                             <CreateViewControl
                               patternKey={activePatternInfo.sub.key}
                               patternLabel={activePatternInfo.sub.label}
+                              prevCPR={r.prevCPR}
+                              todayCPR={r.todayCPR}
+                              onCreated={(newKey) => setSelectedKey(newKey)}
+                            />
+                          ) : isCategory && activeCategory ? (
+                            <CreateViewControl
+                              patternKey={activeCategory.key}
+                              patternLabel={activeCategory.label}
                               prevCPR={r.prevCPR}
                               todayCPR={r.todayCPR}
                               onCreated={(newKey) => setSelectedKey(newKey)}
