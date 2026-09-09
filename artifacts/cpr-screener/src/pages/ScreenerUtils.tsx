@@ -1633,6 +1633,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     // "B-B-BB-BB-L4U4" Pattern arrow (also under "LEVEL BELOW"). Bullish,
     // targets today's own R4 (U4) → "up".
     { key: "B-B-BB-BB-L4U4-pLAP:R4", direction: "up" },
+    { key: "B-B-BB-BB-L4U4-Ladder:R4", direction: "up" },
     // NEW: "B-B-BB-BB-EL4U4-SSLLGap:S4" — View nested under the
     // "B-B-BB-BB-EL4U4" Pattern arrow (also under "LEVEL BELOW").
     // Bearish, targets today's own S4 (L4) → "down".
@@ -2572,9 +2573,13 @@ export function renderRRHHCategoryBadge(r: CPRResult) {
 export function renderSSRRHHLLBadges(r: CPRResult) {
   const ssllBadge = renderSSLLCategoryBadge(r);
   const rrhhBadge = renderRRHHCategoryBadge(r);
-  const badges = [rrhhBadge, ssllBadge].filter((b): b is React.JSX.Element => b !== null);
-  if (badges.length === 0) return null;
-  return <div className="flex flex-nowrap items-center gap-1">{badges}</div>;
+  if (!rrhhBadge && !ssllBadge) return null;
+  return (
+    <div className="flex flex-nowrap items-center gap-1">
+      {rrhhBadge}
+      {ssllBadge}
+    </div>
+  );
 }
 
 /**
