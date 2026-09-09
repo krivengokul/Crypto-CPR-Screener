@@ -1,4 +1,8 @@
 const STORAGE_KEY = "cpr_last_scan_date";
+const STORAGE_KEY_BINANCE = "cpr_scan_results_binance";
+const STORAGE_KEY_DELTA = "cpr_scan_results_delta";
+
+export { STORAGE_KEY_BINANCE, STORAGE_KEY_DELTA };
 
 function getNowIST(): Date {
   const now = new Date();
@@ -31,7 +35,7 @@ export function isPastScheduledTime(): boolean {
   const ist = getNowIST();
   const h = ist.getHours();
   const m = ist.getMinutes();
-  return h > 5 || (h === 5 && m >= 31);
+  return h > 5 || (h === 5 && m >= 30);
 }
 
 export function shouldAutoScan(): boolean {
@@ -46,7 +50,7 @@ export function getNextScanIST(): Date {
     next.setDate(next.getDate() + 1);
   }
 
-  next.setHours(5, 31, 0, 0);
+  next.setHours(5, 30, 0, 0);
 
   const utcMs = next.getTime() - 5.5 * 60 * 60_000;
   return new Date(utcMs);
@@ -62,6 +66,39 @@ export function formatISTTime(utcDate: Date): string {
     minute: "2-digit",
     hour12: true,
   });
+}
+
+export function loadCachedResults<T>(key: string): { data: T[]; date: string } | null {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && Array.isArray(parsed.data) && typeof parsed.date === "string") {
+      return parsed;
+    }
+    if (Array.isArray(parsed)) {
+      return { data: parsed, date: getLastScanDate() ?? getTodayISTDate() };
+    }
+  } catch {
+    // Ignore corrupted cache
+  }
+  return null;
+}
+
+export function saveCachedResults<T>(key: string, data: T[]): void {
+  try {
+    const today = getTodayISTDate();
+    localStorage.setItem(
+      key,
+      JSON.stringify({
+        data,
+        date: today,
+        savedAt: Date.now(),
+      })
+    );
+  } catch {
+    // Ignore quota errors
+  }
 }
 
 export function formatCountdown(targetUtc: Date): string {

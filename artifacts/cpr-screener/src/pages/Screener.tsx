@@ -20,6 +20,10 @@ import {
   getNextScanIST,
   formatCountdown,
   formatISTTime,
+  loadCachedResults,
+  saveCachedResults,
+  STORAGE_KEY_BINANCE,
+  STORAGE_KEY_DELTA,
 } from "@/lib/scheduler";
 import {
   type SortKey,
@@ -196,10 +200,19 @@ export default function Screener({
   activeTab?: ActiveTab;
   onActiveTabChange?: (tab: ActiveTab) => void;
 }) {
-  const [status, setStatus] = useState<"idle" | "scanning" | "done" | "error">("idle");
+  const cachedBinance = useMemo(() => loadCachedResults<CPRResult>(STORAGE_KEY_BINANCE), []);
+  const cachedDelta = useMemo(() => loadCachedResults<CPRResult>(STORAGE_KEY_DELTA), []);
+
+  const [status, setStatus] = useState<"idle" | "scanning" | "done" | "error">(() => {
+    return cachedBinance?.data && cachedBinance.data.length > 0 && hasScannedToday() ? "done" : "idle";
+  });
   const [progress, setProgress] = useState({ done: 0, total: 0, symbol: "" });
-  const [allResults, setAllResults] = useState<CPRResult[]>([]);
-  const [filtered, setFiltered] = useState<CPRResult[]>([]);
+  const [allResults, setAllResults] = useState<CPRResult[]>(() => {
+    return cachedBinance?.data && hasScannedToday() ? cachedBinance.data : [];
+  });
+  const [filtered, setFiltered] = useState<CPRResult[]>(() => {
+    return cachedBinance?.data && hasScannedToday() ? cachedBinance.data : [];
+  });
   const [sortKey, setSortKey] = useState<SortKey>("compressionRatio");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [search, setSearch] = useState("");
@@ -232,7 +245,7 @@ export default function Screener({
   // of a bespoke useState per sub-pattern. Holds the currently-selected
   // sub-pattern id (e.g. "7PM:MoMi->U4:2AM"), or null when none selected.
   const [activeGenericSubView, setActiveGenericSubView] = useState<string | null>(null);
-  const [PatternFilter, setPatternFilter] = useState<PatternInfo["label"] | null>(null);
+  const [PatternFilter, setPatternFilter] = useState<string | null>(null);
   const [showPatternList, setShowPatternList] = useState(false);
   const [showSizeList, setShowSizeList] = useState(false);
   const [showExitTimeList, setShowExitTimeList] = useState(false);
@@ -285,10 +298,16 @@ export default function Screener({
   const [lastScanDate] = useState(() => getLastScanDate());
   const scanRef = useRef(false);
 
-  const [deltaStatus, setDeltaStatus] = useState<"idle" | "scanning" | "done" | "error">("idle");
+  const [deltaStatus, setDeltaStatus] = useState<"idle" | "scanning" | "done" | "error">(() => {
+    return cachedDelta?.data && cachedDelta.data.length > 0 && hasScannedToday() ? "done" : "idle";
+  });
   const [deltaProgress, setDeltaProgress] = useState({ done: 0, total: 0, symbol: "" });
-  const [deltaAllResults, setDeltaAllResults] = useState<CPRResult[]>([]);
-  const [deltaFiltered, setDeltaFiltered] = useState<CPRResult[]>([]);
+  const [deltaAllResults, setDeltaAllResults] = useState<CPRResult[]>(() => {
+    return cachedDelta?.data && hasScannedToday() ? cachedDelta.data : [];
+  });
+  const [deltaFiltered, setDeltaFiltered] = useState<CPRResult[]>(() => {
+    return cachedDelta?.data && hasScannedToday() ? cachedDelta.data : [];
+  });
   const [deltaError, setDeltaError] = useState("");
   const [activeTabState, setActiveTabState] = useState<ActiveTab>("binance");
   // Controlled when App.tsx passes activeTab/onActiveTabChange (the normal
@@ -372,6 +391,7 @@ export default function Screener({
       setFiltered(results.filter((r) => passesPattern(r, activeView)));
       setStatus("done");
       markScannedToday();
+      saveCachedResults(STORAGE_KEY_BINANCE, results);
       setNextScanUtc(getNextScanIST());
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unknown error");
@@ -397,6 +417,7 @@ export default function Screener({
       setDeltaAllResults(results);
       setDeltaFiltered(results.filter((r) => passesPattern(r, activeView)));
       setDeltaStatus("done");
+      saveCachedResults(STORAGE_KEY_DELTA, results);
     } catch (e) {
       setDeltaError(e instanceof Error ? e.message : "Unknown error");
       setDeltaStatus("error");
@@ -409,10 +430,21 @@ export default function Screener({
     if (shouldAutoScan()) doScan();
   }, [doScan]);
 
+  const isFirstMountRef = useRef(true);
   useEffect(() => {
-  if (scanKey > 0) {
-    doScan();
-    doDeltaScan(false); // don't let the auto Delta scan steal the active tab away from Binance
+    if (scanKey > 0) {
+      if (isFirstMountRef.current) {
+        isFirstMountRef.current = false;
+        // On refresh or initial mount, only scan if today's scan hasn't run yet or we have no data
+        if (!hasScannedToday() || allResults.length === 0) {
+          doScan();
+          doDeltaScan(false);
+        }
+        return;
+      }
+      // Explicit click from Header "Scan Now" button
+      doScan();
+      doDeltaScan(false);
     }
   }, [scanKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -438,7 +470,7 @@ export default function Screener({
   // state setter of the hand-written button that implements the same filter,
   // so selecting a View in the sidebar also switches its Screener button on
   // (and the effect below turns every other one off).
-  const VIEW_SETTERS: Record<string, (v: boolean) => void> = {
+  const VIEW_SETTERS: Partial<Record<string, (v: boolean) => void>> = {
     // overlapping-lower
     "eXLo-L4U4-U4": setShowExpU4PU4,
     // NEW: wire renamed "9AM:SSRRBHHLLA-U4:9PM" (was "Exp-U3>U3") into
@@ -477,8 +509,8 @@ export default function Screener({
   useEffect(() => {
     if (!isLeafView) return;
     const setter = VIEW_SETTERS[activeView];
-    if (setter) {
-      Object.entries(VIEW_SETTERS).forEach(([id, set]) => set(id === activeView));
+    if (setter !== undefined) {
+      Object.entries(VIEW_SETTERS).forEach(([id, set]) => set?.(id === activeView));
       setActiveGenericSubView(null);
     } else {
       // generic (data-driven) Views button
@@ -499,7 +531,7 @@ export default function Screener({
     if (prev === activeView) return;
     const prevWasLeaf = Object.values(Views).some((subs) => subs.some((s) => s.id === prev));
     if (prevWasLeaf && !isLeafView) {
-      Object.values(VIEW_SETTERS).forEach((set) => set(false));
+      Object.values(VIEW_SETTERS).forEach((set) => set?.(false));
       setActiveGenericSubView(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1075,15 +1107,15 @@ export default function Screener({
           showExpU4PU4={showExpU4PU4}
           showExpU3PU3={showExpU3PU3}
           showOBLoRRHHLLA={showOBLoRRHHLLA}
-          showOBNLoU4L4={showOBNLoU4L4}
-          showOBWLoU4L4={showOBWLoU4L4}
+          showOBNLoL4U4={showOBNLoU4L4}
+          showOBWLoL4U4={showOBWLoU4L4}
         />
         )}
 
         {/* Controls */}
         <div className="flex flex-wrap items-center gap-2 mb-4">
           <button
-            onClick={doScan}
+            onClick={() => { void doScan(); }}
             disabled={status === "scanning"}
             className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-all disabled:opacity-50 shrink-0"
             style={{ background: "linear-gradient(135deg,#3b82f6,#6366f1)", color: "#fff" }}
@@ -1093,7 +1125,7 @@ export default function Screener({
           </button>
 
           <button
-            onClick={doDeltaScan}
+            onClick={() => { void doDeltaScan(); }}
             disabled={deltaStatus === "scanning"}
             className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-all disabled:opacity-50 shrink-0"
             style={{ background: "linear-gradient(135deg,#8b5cf6,#6d28d9)", color: "#fff" }}
@@ -1881,7 +1913,7 @@ export default function Screener({
         <div className="mt-auto pt-8 text-xs text-muted-foreground text-center">
           Binance: top 500 USDT pairs · Delta Exchange: 195 perpetual futures · CPR from completed UTC daily candles
           <br />
-          Auto-scans once daily at 5:31 AM IST · PH/PL = Previous Day High/Low · Not financial advice · by Kriven Gokul
+          Auto-scans once daily at 5:30 AM IST · PH/PL = Previous Day High/Low · Not financial advice · by Kriven Gokul
         </div>
         )}
       </div>
