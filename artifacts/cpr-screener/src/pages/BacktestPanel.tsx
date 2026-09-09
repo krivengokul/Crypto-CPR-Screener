@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, useEffect, useRef, useMemo, Fragment } from "react";
 import {
   RefreshCw,

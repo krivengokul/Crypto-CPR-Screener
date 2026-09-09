@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * SRLadderDiff — compares prevCPR vs todayCPR (same CPRLevels shape used
  * throughout SRLadderPanel.tsx) against a View's own 13 Level Check
