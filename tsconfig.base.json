@@ -20,6 +20,7 @@
     "alwaysStrict": true,
     "skipLibCheck": true,
     "target": "es2022",
+    "jsx": "react-jsx",
     "types": [],
     "customConditions": ["workspace"]
   }

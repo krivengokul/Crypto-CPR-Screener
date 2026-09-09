@@ -2,14 +2,28 @@
   "name": "workspace",
   "version": "0.0.0",
   "license": "MIT",
-  "scripts": {
-    "preinstall": "sh -c 'rm -f package-lock.json yarn.lock; case \"$npm_config_user_agent\" in pnpm/*) ;; *) echo \"Use pnpm instead\" >&2; exit 1 ;; esac'",
-    "build": "pnpm --filter @workspace/cpr-screener run build",
-    "typecheck": "pnpm --filter @workspace/cpr-screener run typecheck"
-  },
   "private": true,
+  "workspaces": [
+    "artifacts/cpr-screener"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=@workspace/cpr-screener",
+    "build": "npm run build --workspace=@workspace/cpr-screener && rm -rf dist && cp -r artifacts/cpr-screener/dist dist",
+    "typecheck": "npm run typecheck --workspace=@workspace/cpr-screener",
+    "lint": "npm run typecheck --workspace=@workspace/cpr-screener"
+  },
   "devDependencies": {
+    "@types/node": "^25.3.3",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
     "prettier": "^3.8.3",
+    "ts-morph": "^23.0.0",
     "typescript": "~5.9.3"
+  },
+  "dependencies": {
+    "firebase": "^12.18.0",
+    "lucide-react": "^0.545.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
   }
 }
