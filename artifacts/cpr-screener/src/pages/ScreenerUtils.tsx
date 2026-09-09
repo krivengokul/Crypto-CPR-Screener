@@ -1191,6 +1191,20 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
         r.hlGapWinner === "prev" &&
         r.prevCPR.prevLow > r.todayCPR.tc
       );
+    // "B-B-BB-BB" Pattern branches — allow backtesting directly against
+    // the B-B-BB-BB-L4U4 base condition or Views referencing conditionKey "B-B-BB-BB-L4U4"
+    case "B-B-BB-BB-L4U4":
+      return matchesPatternFlag(r, "B-B-BB-BB-L4U4");
+    case "B-B-BB-BB-EL4U4":
+      return matchesPatternFlag(r, "B-B-BB-BB-EL4U4");
+    case "B-B-BB-BB-L3U4":
+      return matchesPatternFlag(r, "B-B-BB-BB-L3U4");
+    case "B-B-BB-BB-L4U3":
+      return matchesPatternFlag(r, "B-B-BB-BB-L4U3");
+    case "B-B-BB-BB-L3U3":
+      return matchesPatternFlag(r, "B-B-BB-BB-L3U3");
+    case "B-B-BB-BB-CL4U2":
+      return matchesPatternFlag(r, "B-B-BB-BB-CL4U2");
     case "compressed":
       return r.compressed ; 
     // "6A:SLE-RRHH:R2-6A" — sub-pattern nested under the "E-A-AA-E"
