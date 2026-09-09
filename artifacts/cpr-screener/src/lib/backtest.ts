@@ -1930,7 +1930,27 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
       { key: "C-B-OB-C", label: "C-B-OB-C", subPatternKeys: [] },
       { key: "C-B-BB-E", label: "C-B-BB-E", subPatternKeys: [] },
       { key: "C-B-OB-E", label: "C-B-OB-E", subPatternKeys: [] },
-      { key: "C-C-BB-AA", label: "C-C-BB-AA", subPatternKeys: [] },
+      {
+        key: "C-C-BB-AA",
+        label: "C-C-BB-AA",
+        subPatternKeys: [],
+        patterns: [
+          { key: "C-C-BB-AA-CU4L4", label: "C-C-BB-AA-CU4L4", subPatternKeys: [] },
+          { key: "C-C-BB-AA-CL4U4", label: "C-C-BB-AA-CL4U4", subPatternKeys: [] },
+          { key: "C-C-BB-AA-CU4L3", label: "C-C-BB-AA-CU4L3", subPatternKeys: [] },
+          { key: "C-C-BB-AA-CL4U3", label: "C-C-BB-AA-CL4U3", subPatternKeys: [] },
+          { key: "C-C-BB-AA-CU3L3", label: "C-C-BB-AA-CU3L3", subPatternKeys: [] },
+          { key: "C-C-BB-AA-CL3U3", label: "C-C-BB-AA-CL3U3", subPatternKeys: [] },
+          { key: "C-C-BB-AA-CU3L2", label: "C-C-BB-AA-CU3L2", subPatternKeys: [] },
+          { key: "C-C-BB-AA-CL3U2", label: "C-C-BB-AA-CL3U2", subPatternKeys: [] },
+          { key: "C-C-BB-AA-CU2L2", label: "C-C-BB-AA-CU2L2", subPatternKeys: [] },
+          { key: "C-C-BB-AA-CL2U2", label: "C-C-BB-AA-CL2U2", subPatternKeys: [] },
+          { key: "C-C-BB-AA-CU2L1", label: "C-C-BB-AA-CU2L1", subPatternKeys: [] },
+          { key: "C-C-BB-AA-CL2U1", label: "C-C-BB-AA-CL2U1", subPatternKeys: [] },
+          { key: "C-C-BB-AA-CU1L1", label: "C-C-BB-AA-CU1L1", subPatternKeys: [] },
+          { key: "C-C-BB-AA-CL1U1", label: "C-C-BB-AA-CL1U1", subPatternKeys: [] },
+        ],
+      },
       { key: "C-C-OB-AA", label: "C-C-OB-AA", subPatternKeys: [] },
       { key: "C-C-C-AA", label: "C-C-C-AA", subPatternKeys: [] },
       { key: "C-C-BB-OA", label: "C-C-BB-OA", subPatternKeys: [] },
@@ -3552,9 +3572,13 @@ export async function runPatternCensus(
   // Flatten every (category, pattern) pair once up front.
   const pairs: { categoryKey: string; categoryLabel: string; patternKey: string; patternLabel: string }[] = [];
   for (const cat of BACKTEST_CATEGORIES) {
-    for (const sub of cat.patterns ?? []) {
-      pairs.push({ categoryKey: cat.key, categoryLabel: cat.label, patternKey: sub.key, patternLabel: sub.label });
-    }
+    const collectPatterns = (patterns: BacktestSubCategoryDef[] | undefined) => {
+      for (const sub of patterns ?? []) {
+        pairs.push({ categoryKey: cat.key, categoryLabel: cat.label, patternKey: sub.key, patternLabel: sub.label });
+        if (sub.patterns) collectPatterns(sub.patterns);
+      }
+    };
+    collectPatterns(cat.patterns);
   }
 
   const counts = new Map<string, number>();

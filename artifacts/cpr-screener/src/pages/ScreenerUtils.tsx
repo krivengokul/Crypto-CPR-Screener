@@ -1591,6 +1591,38 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return PIVOT_PATTERNS["E-E-AA-BB"](r) && r.EU1L3;
     case "E-E-AA-BB-EL1U1":
       return PIVOT_PATTERNS["E-E-AA-BB"](r) && r.EL1U1;
+    // NEW: "C-C-BB-AA" Subpattern branches (nested under the "C-C-BB-AA"
+    // Pattern in COMPRESSED, rendered with their own arrow ↳ — see
+    // BACKTEST_CATEGORIES in backtest.ts). Each combines the structural
+    // PIVOT_PATTERNS["C-C-BB-AA"] base condition with its own raw CPR flag.
+    case "C-C-BB-AA-CU4L4":
+      return PIVOT_PATTERNS["C-C-BB-AA"](r) && r.CU4L4;
+    case "C-C-BB-AA-CL4U4":
+      return PIVOT_PATTERNS["C-C-BB-AA"](r) && r.CL4U4;
+    case "C-C-BB-AA-CU4L3":
+      return PIVOT_PATTERNS["C-C-BB-AA"](r) && r.CU4L3;
+    case "C-C-BB-AA-CL4U3":
+      return PIVOT_PATTERNS["C-C-BB-AA"](r) && r.CL4U3;
+    case "C-C-BB-AA-CU3L3":
+      return PIVOT_PATTERNS["C-C-BB-AA"](r) && r.CU3L3;
+    case "C-C-BB-AA-CL3U3":
+      return PIVOT_PATTERNS["C-C-BB-AA"](r) && r.CL3U3;
+    case "C-C-BB-AA-CU3L2":
+      return PIVOT_PATTERNS["C-C-BB-AA"](r) && r.CU3L2;
+    case "C-C-BB-AA-CL3U2":
+      return PIVOT_PATTERNS["C-C-BB-AA"](r) && r.CL3U2;
+    case "C-C-BB-AA-CU2L2":
+      return PIVOT_PATTERNS["C-C-BB-AA"](r) && r.CU2L2;
+    case "C-C-BB-AA-CL2U2":
+      return PIVOT_PATTERNS["C-C-BB-AA"](r) && r.CL2U2;
+    case "C-C-BB-AA-CU2L1":
+      return PIVOT_PATTERNS["C-C-BB-AA"](r) && r.CU2L1;
+    case "C-C-BB-AA-CL2U1":
+      return PIVOT_PATTERNS["C-C-BB-AA"](r) && r.CL2U1;
+    case "C-C-BB-AA-CU1L1":
+      return PIVOT_PATTERNS["C-C-BB-AA"](r) && r.CU1L1;
+    case "C-C-BB-AA-CL1U1":
+      return PIVOT_PATTERNS["C-C-BB-AA"](r) && r.CL1U1;
     default:
       return false;
   }
@@ -2148,6 +2180,21 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
       return PIVOT_PATTERNS["E-E-AA-BB"](r) && r.EU1L3;
     case "E-E-AA-BB-EL1U1":
       return PIVOT_PATTERNS["E-E-AA-BB"](r) && r.EL1U1;
+    // NEW: "C-C-BB-AA" Subpattern branches (nested under "C-C-BB-AA" in COMPRESSED).
+    case "C-C-BB-AA-CU4L4": return PIVOT_PATTERNS["C-C-BB-AA"](r) && r.CU4L4;
+    case "C-C-BB-AA-CL4U4": return PIVOT_PATTERNS["C-C-BB-AA"](r) && r.CL4U4;
+    case "C-C-BB-AA-CU4L3": return PIVOT_PATTERNS["C-C-BB-AA"](r) && r.CU4L3;
+    case "C-C-BB-AA-CL4U3": return PIVOT_PATTERNS["C-C-BB-AA"](r) && r.CL4U3;
+    case "C-C-BB-AA-CU3L3": return PIVOT_PATTERNS["C-C-BB-AA"](r) && r.CU3L3;
+    case "C-C-BB-AA-CL3U3": return PIVOT_PATTERNS["C-C-BB-AA"](r) && r.CL3U3;
+    case "C-C-BB-AA-CU3L2": return PIVOT_PATTERNS["C-C-BB-AA"](r) && r.CU3L2;
+    case "C-C-BB-AA-CL3U2": return PIVOT_PATTERNS["C-C-BB-AA"](r) && r.CL3U2;
+    case "C-C-BB-AA-CU2L2": return PIVOT_PATTERNS["C-C-BB-AA"](r) && r.CU2L2;
+    case "C-C-BB-AA-CL2U2": return PIVOT_PATTERNS["C-C-BB-AA"](r) && r.CL2U2;
+    case "C-C-BB-AA-CU2L1": return PIVOT_PATTERNS["C-C-BB-AA"](r) && r.CU2L1;
+    case "C-C-BB-AA-CL2U1": return PIVOT_PATTERNS["C-C-BB-AA"](r) && r.CL2U1;
+    case "C-C-BB-AA-CU1L1": return PIVOT_PATTERNS["C-C-BB-AA"](r) && r.CU1L1;
+    case "C-C-BB-AA-CL1U1": return PIVOT_PATTERNS["C-C-BB-AA"](r) && r.CL1U1;
     default: return getPatternInfo(r)?.label === label;
   }
 }
