@@ -1,5 +1,32 @@
 import { Fragment } from "react";
 import { ExternalLink } from "lucide-react";
+import type { CPRResult } from "@/lib/cpr";
+import {
+  type CPRResultWithSource,
+  type ActiveTab,
+  type SortKey,
+  type SortDir,
+  fmt,
+  fmtPct,
+  splitSymbol,
+  getChartUrl,
+  hasKnownChartMapping,
+  passesPattern,
+  distanceFromCPR,
+  pdhPdlStatus,
+  computePrevPattern,
+  computePivotPattern,
+  getViewDirection,
+  cprDistancePct,
+  levelsInDistanceRange,
+  renderSSRRHHLLBadges,
+  renderLevelStatusRow1Badges,
+  renderLevelStatusBadge,
+  renderLevelStatusRestBadges,
+  renderGapColumnBadges,
+  renderPivotSizeCell,
+} from "./ScreenerUtils";
+import { SRLadderRow, toSRLadderData } from "./SRLadderPanel";
 
 /**
  * PATTERN_BADGE_CLASSES — single source of truth for pattern badge colours.
@@ -7,11 +34,69 @@ import { ExternalLink } from "lucide-react";
  * and for the previous-day "p-xxxx" badge so both share the same palette.
  */
 export const PATTERN_BADGE_CLASSES: Record<string, string> = {
-  CL4U3: "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20",
+  // --- Pattern Badges starting with C (Image 1: Rose / Azalea / Burgundy / Pink / Magenta / Fuchsia) ---
+  CL4U3: "bg-rose-500/10 text-rose-400 border border-rose-500/20",
+  CU3L2: "bg-pink-500/10 text-pink-400 border border-pink-500/20",
+  CU3L3: "bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/20",
+  CL3U1: "bg-rose-400/10 text-rose-300 border border-rose-400/20",
+  CU4L2: "bg-pink-600/10 text-pink-300 border border-pink-600/20",
+  CU4L4: "bg-rose-800/10 text-rose-300 border border-rose-800/20",
+  CU4L3: "bg-rose-600/10 text-rose-300 border border-rose-600/20",
+  CL3U3: "bg-pink-700/10 text-pink-300 border border-pink-700/20",
+  CL3U2: "bg-fuchsia-600/10 text-fuchsia-300 border border-fuchsia-600/20",
+  CL2U1: "bg-rose-700/10 text-rose-300 border border-rose-700/20",
+  CL4U2: "bg-rose-300/10 text-rose-200 border border-rose-300/20",
+  CL1U1: "bg-pink-400/10 text-pink-300 border border-pink-400/20",
+  CU1L1: "bg-rose-500/10 text-rose-300 border border-rose-500/20",
+  CL2U2: "bg-pink-600/10 text-pink-300 border border-pink-600/20",
+  CU2L2: "bg-fuchsia-500/10 text-fuchsia-300 border border-fuchsia-500/20",
+  CL4U4: "bg-rose-800/10 text-rose-300 border border-rose-800/20",
+  CL2UT: "bg-pink-500/10 text-pink-300 border border-pink-500/20",
+  CU2L1: "bg-rose-600/10 text-rose-300 border border-rose-600/20",
+  CU3L1: "bg-pink-300/10 text-pink-200 border border-pink-300/20",
+
+  // --- Pattern Badges starting with E (Image 2: Royal Purple / Amethyst / Violet / Lavender / Mauve / Lilac / Orchid / Grape / Plum / Mulberry) ---
+  EU3L4: "bg-purple-400/10 text-purple-300 border border-purple-400/20",
+  EU4L4: "bg-violet-400/10 text-violet-300 border border-violet-400/20",
+  EL4U4: "bg-purple-500/10 text-purple-300 border border-purple-500/20",
+  EL2U4: "bg-violet-500/10 text-violet-300 border border-violet-500/20",
+  EL3U4: "bg-purple-600/10 text-purple-300 border border-purple-600/20",
+  EU3L3: "bg-violet-600/10 text-violet-300 border border-violet-600/20",
+  EL3U3: "bg-purple-700/10 text-purple-300 border border-purple-700/20",
+  EU2L3: "bg-violet-700/10 text-violet-300 border border-violet-700/20",
+  EU2L4: "bg-purple-300/10 text-purple-200 border border-purple-300/20",
+  EU2L2: "bg-violet-300/10 text-violet-200 border border-violet-300/20",
+  EUTL2: "bg-purple-500/10 text-purple-400 border border-purple-500/20",
+  EUTL3: "bg-violet-500/10 text-violet-400 border border-violet-500/20",
+  EU1L1: "bg-purple-600/10 text-purple-300 border border-purple-600/20",
+  EL1U1: "bg-violet-600/10 text-violet-300 border border-violet-600/20",
+  EL1U2: "bg-purple-700/10 text-purple-300 border border-purple-700/20",
+  EL1U3: "bg-violet-700/10 text-violet-300 border border-violet-700/20",
+  EL2U3: "bg-purple-800/10 text-purple-300 border border-purple-800/20",
+  ELTU2: "bg-violet-800/10 text-violet-300 border border-violet-800/20",
+  ELBU2: "bg-purple-900/10 text-purple-300 border border-purple-900/20",
+  ELTU3: "bg-violet-900/10 text-violet-300 border border-violet-900/20",
+  ELPU2: "bg-purple-400/10 text-purple-300 border border-purple-400/20",
+  ELPU3: "bg-violet-400/10 text-violet-300 border border-violet-400/20",
+  ELBU3: "bg-purple-500/10 text-purple-300 border border-purple-500/20",
+  EUPL2: "bg-violet-500/10 text-violet-300 border border-violet-500/20",
+  EUTL4: "bg-purple-600/10 text-purple-300 border border-purple-600/20",
+  EL1U4: "bg-violet-600/10 text-violet-300 border border-violet-600/20",
+  ELBU4: "bg-purple-700/10 text-purple-300 border border-purple-700/20",
+  EU1L2: "bg-violet-700/10 text-violet-300 border border-violet-700/20",
+  EU1L3: "bg-purple-300/10 text-purple-200 border border-purple-300/20",
+  EU1L4: "bg-violet-300/10 text-violet-200 border border-violet-300/20",
+  EUBL1: "bg-purple-500/10 text-purple-400 border border-purple-500/20",
+  EUPL1: "bg-violet-500/10 text-violet-400 border border-violet-500/20",
+  EUTL1: "bg-purple-600/10 text-purple-300 border border-purple-600/20",
+  EUBL2: "bg-violet-600/10 text-violet-300 border border-violet-600/20",
+  EUBL3: "bg-purple-700/10 text-purple-300 border border-purple-700/20",
+  EUPL3: "bg-violet-700/10 text-violet-300 border border-violet-700/20",
+  EL1L2: "bg-purple-800/10 text-purple-300 border border-purple-800/20",
+  EL2L1: "bg-violet-800/10 text-violet-300 border border-violet-800/20",
+
+  // --- Other Pattern Badges ---
   L4U4: "bg-lime-500/10 text-lime-400 border border-lime-500/20",
-  EU3L4: "bg-amber-300/10 text-amber-200 border border-amber-300/20",
-  EU4L4: "bg-orange-300/10 text-orange-200 border border-orange-300/20",
-  EL4U4: "bg-yellow-300/10 text-yellow-200 border border-yellow-300/20",
   QU4L4: "bg-slate-500/10 text-slate-300 border border-slate-500/20",
   U4L2: "bg-green-500/10 text-green-400 border border-green-500/20",
   U3L2: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
@@ -20,123 +105,47 @@ export const PATTERN_BADGE_CLASSES: Record<string, string> = {
   U1L4: "bg-emerald-600/10 text-emerald-300 border border-emerald-600/20",
   U3L4: "bg-lime-600/10 text-lime-300 border border-lime-600/20",
   U2L4: "bg-green-400/10 text-green-300 border border-green-400/20",
-  CU3L2: "bg-blue-500/10 text-blue-400 border border-blue-500/20",
-  CU3L3: "bg-blue-600/10 text-blue-300 border border-blue-600/20",
   U3L3: "bg-emerald-400/10 text-emerald-300 border border-emerald-400/20",
-  CL3U1: "bg-violet-500/10 text-violet-400 border border-violet-500/20",
-  EL2U4: "bg-amber-400/10 text-amber-300 border border-amber-400/20",
-  EL3U4: "bg-orange-400/10 text-orange-300 border border-orange-400/20",
-  CU4L2: "bg-purple-500/10 text-purple-400 border border-purple-500/20",
-  EU3L3: "bg-yellow-400/10 text-yellow-300 border border-yellow-400/20",
-  EL3U3: "bg-amber-500/10 text-amber-400 border border-amber-500/20",
-  CU4L4: "bg-blue-400/10 text-blue-300 border border-blue-400/20",
-  CU4L3: "bg-indigo-600/10 text-indigo-300 border border-indigo-600/20",
-  CL3U3: "bg-blue-700/10 text-blue-300 border border-blue-700/20",
   L4U3: "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20",
   L3U3: "bg-purple-500/10 text-purple-400 border border-purple-500/20",
   L4U2: "bg-pink-500/10 text-pink-400 border border-pink-500/20",
   L3U2: "bg-rose-500/10 text-rose-400 border border-rose-500/20",
   L3U4: "bg-amber-500/10 text-amber-400 border border-amber-500/20",
   L2U4: "bg-violet-500/10 text-violet-400 border border-violet-500/20",
-  CL3U2: "bg-violet-600/10 text-violet-300 border border-violet-600/20",
   L1U4: "bg-orange-500/10 text-orange-400 border border-orange-500/20",
-  CL2U1: "bg-purple-600/10 text-purple-300 border border-purple-600/20",
-  CL4U2: "bg-indigo-700/10 text-indigo-300 border border-indigo-700/20",
-  CL1U1: "bg-blue-800/10 text-blue-300 border border-blue-800/20",
-  CU1L1: "bg-violet-700/10 text-violet-300 border border-violet-700/20",
-  CL2U2: "bg-purple-700/10 text-purple-300 border border-purple-700/20",
-  CU2L2: "bg-indigo-400/10 text-indigo-300 border border-indigo-400/20",
-  CL4U4: "bg-violet-400/10 text-violet-300 border border-violet-400/20",
-  EU2L3: "bg-orange-500/10 text-orange-400 border border-orange-500/20",
-  EU2L4: "bg-yellow-500/10 text-yellow-400 border border-yellow-500/20",
-  EU2L2: "bg-amber-600/10 text-amber-300 border border-amber-600/20",
-  EUTL2: "bg-orange-600/10 text-orange-300 border border-orange-600/20",
-  EUTL3: "bg-yellow-600/10 text-yellow-300 border border-yellow-600/20",
-  EU1L1: "bg-amber-700/10 text-amber-300 border border-amber-700/20",
-  EL1U1: "bg-orange-700/10 text-orange-300 border border-orange-700/20",
-  EL1U2: "bg-yellow-700/10 text-yellow-300 border border-yellow-700/20",
-  CL2UT: "bg-purple-400/10 text-purple-300 border border-purple-400/20",
-  EL1U3: "bg-amber-800/10 text-amber-300 border border-amber-800/20",
-  EL2U3: "bg-orange-800/10 text-orange-300 border border-orange-800/20",
-  ELTU2: "bg-yellow-800/10 text-yellow-300 border border-yellow-800/20",
-  ELBU2: "bg-amber-900/10 text-amber-300 border border-amber-900/20",
-  ELTU3: "bg-orange-900/10 text-orange-300 border border-orange-900/20",
-  ELPU2: "bg-yellow-900/10 text-yellow-300 border border-yellow-900/20",
-  ELPU3: "bg-amber-300/10 text-amber-200 border border-amber-300/20",
-  ELBU3: "bg-orange-300/10 text-orange-200 border border-orange-300/20",
-  EUPL2: "bg-yellow-300/10 text-yellow-200 border border-yellow-300/20",
-  EUTL4: "bg-amber-400/10 text-amber-300 border border-amber-400/20",
   L2U3: "bg-amber-500/10 text-amber-400 border border-amber-500/20",
-  CU2L1: "bg-indigo-800/10 text-indigo-300 border border-indigo-800/20",
-  CU3L1: "bg-blue-300/10 text-blue-200 border border-blue-300/20",
   U2L3: "bg-lime-400/10 text-lime-300 border border-lime-400/20",
-  EL1U4: "bg-orange-400/10 text-orange-300 border border-orange-400/20",
-  ELBU4: "bg-yellow-400/10 text-yellow-300 border border-yellow-400/20",
-  EU1L2: "bg-amber-500/10 text-amber-400 border border-amber-500/20",
-  EU1L3: "bg-orange-500/10 text-orange-400 border border-orange-500/20",
-  EU1L4: "bg-yellow-500/10 text-yellow-400 border border-yellow-500/20",
-  EUBL1: "bg-amber-600/10 text-amber-300 border border-amber-600/20",
-  EUPL1: "bg-orange-600/10 text-orange-300 border border-orange-600/20",
-  EUTL1: "bg-yellow-600/10 text-yellow-300 border border-yellow-600/20",
-  EUBL2: "bg-amber-700/10 text-amber-300 border border-amber-700/20",
-  EUBL3: "bg-orange-700/10 text-orange-300 border border-orange-700/20",
-  EUPL3: "bg-yellow-700/10 text-yellow-300 border border-yellow-700/20",
   L3CP: "bg-teal-500/10 text-teal-400 border border-teal-500/20",
   L2CP: "bg-teal-600/10 text-teal-300 border border-teal-600/20",
   L3TC: "bg-sky-600/10 text-sky-300 border border-sky-600/20",
-  EL1L2: "bg-amber-800/10 text-amber-300 border border-amber-800/20",
-  EL2L1: "bg-orange-800/10 text-orange-300 border border-orange-800/20",
-  // PivotPattern badges — "E-{Level}-{RRHH}-{SSLL}" (see
-  // ScreenerUtils.computePivotPattern / PIVOT_PATTERN_KEYS). Grouped by
-  // Level (A: green family, B: amber/orange family, E: purple/pink
-  // family) so the three Levels stay visually distinct at a glance.
-  "E-A-AA-OB": "bg-amber-300/10 text-amber-200 border border-amber-300/20",
-  "E-A-OA-OB": "bg-orange-300/10 text-orange-200 border border-orange-300/20",
-  "E-A-AA-SB": "bg-yellow-300/10 text-yellow-200 border border-yellow-300/20",
-  "E-A-AA-C": "bg-amber-400/10 text-amber-300 border border-amber-400/20",
-  "E-A-OA-C": "bg-orange-400/10 text-orange-300 border border-orange-400/20",
-  "E-A-AA-E": "bg-yellow-400/10 text-yellow-300 border border-yellow-400/20",
-  "E-A-OA-E": "bg-amber-500/10 text-amber-400 border border-amber-500/20",
-  "E-B-RA-BB": "bg-orange-500/10 text-orange-400 border border-orange-500/20",
-  "E-B-C-BB": "bg-yellow-500/10 text-yellow-400 border border-yellow-500/20",
-  "E-B-E-BB": "bg-amber-600/10 text-amber-300 border border-amber-600/20",
-  "E-B-C-OB": "bg-orange-600/10 text-orange-300 border border-orange-600/20",
-  "E-B-E-OB": "bg-yellow-600/10 text-yellow-300 border border-yellow-600/20",
-  "E-E-AA-BB": "bg-amber-700/10 text-amber-300 border border-amber-700/20",
-  "E-E-OA-BB": "bg-orange-700/10 text-orange-300 border border-orange-700/20",
-  "E-E-AA-OB": "bg-yellow-700/10 text-yellow-300 border border-yellow-700/20",
-  "E-E-OA-OB": "bg-amber-800/10 text-amber-300 border border-amber-800/20",
+
+  // --- PivotPattern badges starting with E (Expanded - Image 2: Purple / Violet / Grape / Plum / Mulberry) ---
+  "E-A-AA-OB": "bg-purple-400/10 text-purple-300 border border-purple-400/20",
+  "E-A-OA-OB": "bg-violet-400/10 text-violet-300 border border-violet-400/20",
+  "E-A-AA-SB": "bg-purple-300/10 text-purple-200 border border-purple-300/20",
+  "E-A-AA-C": "bg-violet-500/10 text-violet-300 border border-violet-500/20",
+  "E-A-OA-C": "bg-purple-500/10 text-purple-300 border border-purple-500/20",
+  "E-A-AA-E": "bg-violet-600/10 text-violet-300 border border-violet-600/20",
+  "E-A-OA-E": "bg-purple-600/10 text-purple-300 border border-purple-600/20",
+  "E-B-RA-BB": "bg-violet-700/10 text-violet-300 border border-violet-700/20",
+  "E-B-C-BB": "bg-purple-700/10 text-purple-300 border border-purple-700/20",
+  "E-B-E-BB": "bg-violet-800/10 text-violet-300 border border-violet-800/20",
+  "E-B-C-OB": "bg-purple-800/10 text-purple-300 border border-purple-800/20",
+  "E-B-E-OB": "bg-purple-500/10 text-purple-400 border border-purple-500/20",
+  "E-E-AA-BB": "bg-purple-500/10 text-purple-300 border border-purple-500/20",
+  "E-E-OA-BB": "bg-violet-500/10 text-violet-300 border border-violet-500/20",
+  "E-E-AA-OB": "bg-purple-600/10 text-purple-300 border border-purple-600/20",
+  "E-E-OA-OB": "bg-violet-700/10 text-violet-300 border border-violet-700/20",
+
   // PivotPattern badges, "LevelsAbove" half — "A-E-{RRHH}-{SSLL}"
-  // (renamed from RRSSA-EC/EE/ELB/EOB — see ScreenerUtils.PIVOT_PATTERNS
-  // / PIVOT_PATTERN_KEYS). Own amber/yellow/lime/green/emerald/teal family
-  // so this LevelsAbove group reads distinctly from the E-*/C-* families
-  // above/below even though it shares the HHLL-E condition space with them.
-  // REMOVED: "A-E-AA-OB" never had its own PIVOT_PATTERNS condition (see
-  // that comment in ScreenerUtils.tsx) and always returned zero records,
-  // so it's been dropped from backtest.ts's dropdown entirely — no badge
-  // class entry needed for it here.
   "A-E-AA-C": "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
   "A-E-OA-C": "bg-teal-500/10 text-teal-400 border border-teal-500/20",
   "A-E-AA-E": "bg-lime-500/10 text-lime-400 border border-lime-500/20",
   "A-E-OA-E": "bg-green-600/10 text-green-300 border border-green-600/20",
   "A-E-AA-LB": "bg-emerald-600/10 text-emerald-300 border border-emerald-600/20",
   "A-E-OA-LB": "bg-teal-600/10 text-teal-300 border border-teal-600/20",
-  // PivotPattern badges, "LevelsAbove" half continued — "A-{Level}-
-  // {RRHH}-{SSLL}" for HHLL-A/B/C (renamed from RRSSA-AAA-*/AOA-*/CC/CE/
-  // CRA/BC-*/BE-*/BRA-* — see ScreenerUtils.PIVOT_PATTERNS /
-  // PIVOT_PATTERN_KEYS). CHANGED: every A-* key is now a shade of
-  // green/emerald/teal/lime (the "green family") instead of the old
-  // orange->yellow->lime->green->emerald->teal ramp, so the whole
-  // "LevelsAbove" super-family reads as green at a glance — mirroring the
-  // B-* ("LevelsBelow") family now being all red (see below).
-  // "A-A-AA-AA" is pinned to canonical green-500 specifically so it reads
-  // as "the" green badge; every other A-* key uses a different
-  // green-family hue/shade so they're still distinguishable from each
-  // other. "A-A-OA-AA"/"A-A-OA-OA" USED TO BE excluded here as exact
-  // duplicates of "C-A-OA-AA"/"C-A-OA-OA" — now that PIVOT_PATTERNS
-  // disambiguates families via r.SSRRCategory (see ScreenerUtils.tsx),
-  // they're independently reachable, so they get their own entries below
-  // like any other key.
+
+  // PivotPattern badges, "LevelsAbove" half continued — "A-{Level}-{RRHH}-{SSLL}"
   "A-A-AA-AA": "bg-green-500/10 text-green-400 border border-green-500/20",
   "A-A-AA-OA": "bg-lime-600/10 text-lime-300 border border-lime-600/20",
   "A-A-OA-AA": "bg-green-400/10 text-green-300 border border-green-400/20",
@@ -154,52 +163,29 @@ export const PATTERN_BADGE_CLASSES: Record<string, string> = {
   "A-C-E-OA": "bg-green-800/10 text-green-300 border border-green-800/20",
   "A-C-RA-AA": "bg-emerald-800/10 text-emerald-300 border border-emerald-800/20",
   "A-C-RA-OA": "bg-teal-800/10 text-teal-300 border border-teal-800/20",
-  // PivotPattern badges, "compressed" half — "C-{Level}-{RRHH}-{SSLL}"
-  // (see ScreenerUtils.computePivotPattern / PIVOT_PATTERN_KEYS — merged
-  // with the E-* "expanded" half above into one combined key list/badge,
-  // since r.expanded/r.compressed are mutually exclusive). Same grouping
-  // idea as the E-* badges above but with a distinct palette per Level
-  // (A: teal/cyan/sky/blue/indigo/emerald/green family, B: was amber/
-  // orange/yellow/lime/red/rose — CHANGED: the amber/orange/yellow/lime
-  // quartet (C-B-BB-LB/C-B-OB-LB/C-B-BB-C/C-B-OB-C) is now
-  // indigo/blue/violet/purple instead, so the whole "compressed" C-*
-  // super-family reads as blue/violet/purple at a glance, distinct from
-  // the all-green A-* and all-red B-* families; C-B-BB-E/C-B-OB-E were
-  // red/rose but are now indigo/blue too, so no red survives in the C-*
-  // family, C: violet/purple/fuchsia/pink family) so the families never
-  // look alike.
-  "C-A-C-AA": "bg-teal-500/10 text-teal-400 border border-teal-500/20",
-  "C-A-HA-AA": "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20",
-  "C-A-E-AA": "bg-sky-500/10 text-sky-400 border border-sky-500/20",
-  "C-A-OA-AA": "bg-blue-500/10 text-blue-400 border border-blue-500/20",
-  "C-A-OB-AA": "bg-indigo-600/10 text-indigo-300 border border-indigo-600/20",
-  "C-A-E-OA": "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20",
-  "C-A-C-OA": "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
-  "C-A-OA-OA": "bg-green-500/10 text-green-400 border border-green-500/20",
-  "C-B-BB-LB": "bg-indigo-600/10 text-indigo-300 border border-indigo-600/20",
-  "C-B-OB-LB": "bg-blue-600/10 text-blue-300 border border-blue-600/20",
-  "C-B-BB-C": "bg-violet-600/10 text-violet-300 border border-violet-600/20",
-  "C-B-OB-C": "bg-purple-600/10 text-purple-300 border border-purple-600/20",
-  "C-B-BB-E": "bg-blue-700/10 text-blue-300 border border-blue-700/20",
-  "C-B-OB-E": "bg-violet-700/10 text-violet-300 border border-violet-700/20",
-  "C-C-BB-AA": "bg-violet-500/10 text-violet-400 border border-violet-500/20",
-  "C-C-OB-AA": "bg-purple-500/10 text-purple-400 border border-purple-500/20",
+
+  // --- PivotPattern badges starting with C (Compressed - Image 1: Rose / Azalea / Burgundy / Pink / Magenta / Fuchsia) ---
+  "C-A-C-AA": "bg-rose-400/10 text-rose-300 border border-rose-400/20",
+  "C-A-HA-AA": "bg-pink-400/10 text-pink-300 border border-pink-400/20",
+  "C-A-E-AA": "bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/20",
+  "C-A-OA-AA": "bg-rose-500/10 text-rose-400 border border-rose-500/20",
+  "C-A-OB-AA": "bg-pink-600/10 text-pink-300 border border-pink-600/20",
+  "C-A-E-OA": "bg-rose-800/10 text-rose-300 border border-rose-800/20",
+  "C-A-C-OA": "bg-fuchsia-600/10 text-fuchsia-300 border border-fuchsia-600/20",
+  "C-A-OA-OA": "bg-rose-600/10 text-rose-300 border border-rose-600/20",
+  "C-B-BB-LB": "bg-pink-500/10 text-pink-400 border border-pink-500/20",
+  "C-B-OB-LB": "bg-rose-700/10 text-rose-300 border border-rose-700/20",
+  "C-B-BB-C": "bg-pink-700/10 text-pink-300 border border-pink-700/20",
+  "C-B-OB-C": "bg-fuchsia-500/10 text-fuchsia-300 border border-fuchsia-500/20",
+  "C-B-BB-E": "bg-rose-500/10 text-rose-300 border border-rose-500/20",
+  "C-B-OB-E": "bg-rose-900/10 text-rose-300 border border-rose-900/20",
+  "C-C-BB-AA": "bg-rose-500/10 text-rose-400 border border-rose-500/20",
+  "C-C-OB-AA": "bg-pink-600/10 text-pink-300 border border-pink-600/20",
   "C-C-BB-OA": "bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/20",
-  "C-C-OB-OA": "bg-pink-500/10 text-pink-400 border border-pink-500/20",
-  "C-C-C-AA": "bg-violet-700/10 text-violet-300 border border-violet-700/20",
-  // PivotPattern badges, "LevelsBelow" half — "B-{Level}-{RRHH}-{SSLL}"
-  // for HHLL-A/B/C/E (renamed from RRSSB-A{RRHH}-{SSLL}/B{RRHH}-{SSLL}/
-  // C{SSLL}/E{RRHH} — see ScreenerUtils.PIVOT_PATTERNS / PIVOT_PATTERN_KEYS).
-  // CHANGED: every B-* key is now a shade of red (the "red family",
-  // cycling through red-300/400/500/600/700/800/900) instead of the old
-  // per-Level rainbow palette, so the whole "LevelsBelow" super-family
-  // reads as red at a glance — mirroring the A-* ("LevelsAbove") family
-  // now being all green (see above). "B-B-BB-BB" is pinned to canonical
-  // red-500 specifically so it reads as "the" red badge; the rest cycle
-  // through the other red shades (repeating once the 7-shade cycle is
-  // exhausted, since there are more B-* keys than distinct red shades —
-  // shade reuse across far-apart keys is the same established convention
-  // used elsewhere in this palette).
+  "C-C-OB-OA": "bg-pink-400/10 text-pink-300 border border-pink-400/20",
+  "C-C-C-AA": "bg-rose-800/10 text-rose-300 border border-rose-800/20",
+
+  // PivotPattern badges, "LevelsBelow" half — "B-{Level}-{RRHH}-{SSLL}" (All Red family)
   "B-A-C-C": "bg-red-500/10 text-red-400 border border-red-500/20",
   "B-A-C-SB": "bg-red-600/10 text-red-300 border border-red-600/20",
   "B-A-E-E": "bg-red-400/10 text-red-300 border border-red-400/20",
@@ -246,7 +232,18 @@ const UNKNOWN_LABEL_CLASSES = "bg-muted text-muted-foreground border border-bord
 const MISSING_PATTERN_CLASSES = "bg-slate-500/5 text-slate-500 border border-dashed border-slate-500/30";
 
 export function getBadgeClasses(label: string): string {
-  return PATTERN_BADGE_CLASSES[label] ?? UNKNOWN_LABEL_CLASSES;
+  if (PATTERN_BADGE_CLASSES[label]) {
+    return PATTERN_BADGE_CLASSES[label];
+  }
+  // Dynamic fallback for any pattern/subpattern/pivot-pattern starting with E (Purple/Violet/Grape/Plum/Mulberry - Image 2)
+  if (label.startsWith("E")) {
+    return "bg-purple-500/10 text-purple-300 border border-purple-500/20";
+  }
+  // Dynamic fallback for any pattern/subpattern/pivot-pattern starting with C (Rose/Azalea/Burgundy/Pink/Magenta/Fuchsia - Image 1)
+  if (label.startsWith("C")) {
+    return "bg-rose-500/10 text-rose-400 border border-rose-500/20";
+  }
+  return UNKNOWN_LABEL_CLASSES;
 }
 
 /**
@@ -549,34 +546,6 @@ export function renderLevelColumnRestBadges(r: CPRResult) {
   );
 }
 
-import type { CPRResult } from "@/lib/cpr";
-import {
-  type CPRResultWithSource,
-  type ActiveTab,
-  type SortKey,
-  type SortDir,
-  fmt,
-  fmtPct,
-  splitSymbol,
-  getChartUrl,
-  hasKnownChartMapping,
-  passesPattern,
-  distanceFromCPR,
-  pdhPdlStatus,
-  computePrevPattern,
-  computePivotPattern,
-  getViewDirection,
-  cprDistancePct,
-  levelsInDistanceRange,
-  renderSSRRHHLLBadges,
-  renderLevelStatusRow1Badges,
-  renderLevelStatusBadge,
-  renderLevelStatusRestBadges,
-  renderGapColumnBadges,
-  renderPivotSizeCell,
-} from "./ScreenerUtils";
-import { SRLadderRow, toSRLadderData } from "./SRLadderPanel";
-
 export interface ScreenerTableHeaderProps {
   canShowCombined: boolean;
   activeTab: ActiveTab;
@@ -657,7 +626,8 @@ export interface ScreenerTableRowProps {
   toggleExpand: (key: string) => void;
   canShowCombined: boolean;
   activeTab: ActiveTab;
-  activePattern: string;
+  activePattern?: string;
+  activeView?: string;
 }
 
 /**
@@ -673,8 +643,10 @@ export default function ScreenerTableRow({
   toggleExpand,
   canShowCombined,
   activeTab,
-  activePattern,
+  activePattern: rawActivePattern,
+  activeView,
 }: ScreenerTableRowProps) {
+  const activePattern = rawActivePattern ?? activeView ?? "";
   const sym = splitSymbol(r.symbol, r.source);
 
   const isInsideCPR = passesPattern(r, "inside-cpr");
