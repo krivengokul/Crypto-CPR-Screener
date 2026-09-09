@@ -22,21 +22,37 @@ export function useBinanceLiveRefresh(
       }
       try {
         const priceMap = new Map<string, { price: number; change: number }>();
-        const [spotRes, futuresRes] = await Promise.all([
-          fetch("https://api.binance.com/api/v3/ticker/24hr?type=MINI"),
-          fetch("https://fapi.binance.com/fapi/v1/ticker/24hr"),
+
+        type LiveTicker = { symbol: string; lastPrice: string; openPrice: string };
+
+        // Helper to safely fetch tickers with a timeout without throwing unhandled exceptions
+        const safeFetchTickers = async (url: string): Promise<LiveTicker[]> => {
+          try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 6000);
+            const res = await fetch(url, { signal: controller.signal });
+            clearTimeout(timeoutId);
+            if (!res.ok) return [];
+            return (await res.json()) as LiveTicker[];
+          } catch {
+            return [];
+          }
+        };
+
+        // Attempt futures ticker first (aligned with BINANCE:<SYMBOL>.P perps),
+        // with spot and backup mirrors as fallbacks
+        const [futuresTickers, spotTickers] = await Promise.all([
+          safeFetchTickers("https://fapi.binance.com/fapi/v1/ticker/24hr"),
+          safeFetchTickers("https://api.binance.com/api/v3/ticker/24hr?type=MINI").then(async (list) => {
+            if (list.length > 0) return list;
+            return safeFetchTickers("https://data-api.binance.vision/api/v3/ticker/24hr?type=MINI");
+          }),
         ]);
-        if (!spotRes.ok && !futuresRes.ok) {
-          console.error(
-            `[binance-live-refresh] ticker/24hr failed: spot ${spotRes.status}, futures ${futuresRes.status}`
-          );
+
+        if (spotTickers.length === 0 && futuresTickers.length === 0) {
+          // Both endpoints were unreachable or timed out this cycle; skip quietly and retry next tick
           return;
         }
-        type LiveTicker = { symbol: string; lastPrice: string; openPrice: string };
-        const [spotTickers, futuresTickers]: [LiveTicker[], LiveTicker[]] = await Promise.all([
-          spotRes.ok ? spotRes.json() : Promise.resolve([]),
-          futuresRes.ok ? futuresRes.json() : Promise.resolve([]),
-        ]);
         // Only keep symbols we actually need — the response covers every
         // Binance symbol, not just the ones currently in `results`.
         const wanted = new Set(results.map((r) => r.symbol));
@@ -63,7 +79,7 @@ export function useBinanceLiveRefresh(
         setAllResults((p) => apply(p));
         setFiltered((p) => apply(p));
       } catch (err) {
-        console.error("[binance-live-refresh] refresh cycle threw", err);
+        console.warn("[binance-live-refresh] refresh cycle skipped:", err);
       }
     };
     const id = setInterval(refresh, 15_000);
@@ -117,7 +133,7 @@ export function useDeltaLiveRefresh(
         setDeltaAllResults((p) => apply(p));
         setDeltaFiltered((p) => apply(p));
       } catch (err) {
-        console.error("[delta-live-refresh] refresh cycle threw", err);
+        console.warn("[delta-live-refresh] refresh cycle skipped:", err);
       }
     };
     const id = setInterval(refresh, 15_000);
