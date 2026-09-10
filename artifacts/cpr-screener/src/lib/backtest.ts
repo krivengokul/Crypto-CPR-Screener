@@ -1,5 +1,5 @@
 import { OHLC, CPRResult, analyzeCPR } from "./cpr";
-import { fetchTopUSDTSymbols, fetchDailyKlines } from "./binance";
+import { fetchTopUSDTSymbols, fetchDailyKlines, isLiveDailyCandle } from "./binance";
 import { fetchDeltaPerps } from "./delta";
 
 export type BacktestSource = "binance" | "delta";
@@ -2904,8 +2904,21 @@ async function getHistory(symbol: string, source: BacktestSource): Promise<Map<s
   const cache = source === "binance" ? binanceHistoryCache : deltaHistoryCache;
   const today = utcDateKey(Date.now());
   const cached = cache.get(symbol);
-  if (cached !== undefined && (cached === null || cached.fetchedOnUTCDate === today)) {
-    return cached ? cached.map : null;
+
+  // FIX (stale live price on repeated same-day runs): a cache entry from
+  // earlier today is only safe to reuse once TODAY's own daily candle has
+  // actually closed. While it's still forming, its close/high/low keep
+  // moving (that's the whole point of isLiveDailyCandle — see binance.ts),
+  // so a snapshot fetched once mid-day and reused for every later run
+  // this session would keep showing an old close/price long after the
+  // live Screener has moved on. Only short-circuit here once today's
+  // candle (if present in the cached map) is no longer live; otherwise
+  // fall through and refetch so intraday price moves are picked up.
+  if (cached === null) return null; // cached failure — still "resolved", don't re-hammer it
+  if (cached !== undefined && cached.fetchedOnUTCDate === today) {
+    const todaysCandle = cached.map.get(today);
+    const stillLive = !!todaysCandle && isLiveDailyCandle(todaysCandle.openTime);
+    if (!stillLive) return cached.map;
   }
 
   const key = `${source}:${symbol}`;
