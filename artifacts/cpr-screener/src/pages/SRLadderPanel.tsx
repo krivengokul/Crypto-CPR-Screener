@@ -276,11 +276,11 @@ export function SRLadder({
   if (!priceInserted) rows.push({ type: "price" });
 
   const rowColor = (key: string) => {
-    if (key === "TC") return "text-[#FF5F1F]";
+    if (key === "TC") return "text-sky-400";
     if (key === "Pivot") return "text-yellow-300";
-    if (key === "BC") return "text-fuchsia-500";
-    if (key === "PH") return "text-sky-400";
-    if (key === "PL") return "text-sky-400";
+    if (key === "BC") return "text-sky-400";
+    if (key === "PH") return "text-fuchsia-500";
+    if (key === "PL") return "text-fuchsia-500";
     if (key.startsWith("R")) return "text-green-400";
     return "text-red-400";
   };
@@ -348,11 +348,11 @@ function levelLabel(key: (typeof LEVEL_KEYS)[number]): string {
 
 /** Same color coding as SRLadder's rowColor, expressed as hex for SVG stroke/fill. */
 function levelColor(key: (typeof LEVEL_KEYS)[number]): string {
-  if (key === "tc") return "#FF5F1F";
+  if (key === "tc") return "#38bdf8"; // sky-400 (swapped with PH/PL)
   if (key === "pivot") return "#fde047"; // yellow-300
-  if (key === "bc") return "#FF00FF"; // fuchsia
-  if (key === "prevHigh") return "#38bdf8"; // sky-400
-  if (key === "prevLow") return "#38bdf8"; // sky-400
+  if (key === "bc") return "#38bdf8"; // sky-400 (swapped with PH/PL)
+  if (key === "prevHigh") return "#FF00FF"; // fuchsia (swapped with BC)
+  if (key === "prevLow") return "#FF00FF"; // fuchsia (swapped with BC)
   if (key.startsWith("r")) return "#4ade80"; // green-400
   return "#ff2e2e"; // S1-S4, brighter red
 }
@@ -419,11 +419,12 @@ function CPRLevelChart({
   // Keep the chart compact when it sits beside the ladders. The ladders
   // remain the readable, full-size value reference next to it.
   const height = 300;
-  // Wider margins than a plain "fill the width" layout so the prev/today
-  // lines stay short and centered, leaving clear space for the P-xxx /
-  // xxx labels on either side instead of the lines running edge to edge.
-  const leftMargin = 170;
-  const rightMargin = 170;
+  // Left-aligned rather than centered: the "Levels VIEW" header hugs the
+  // left edge and there's more free space on the left of this panel than
+  // the right, so keep leftMargin small and let the lines stay short by
+  // pushing the extra margin to the right instead of splitting it evenly.
+  const leftMargin = 50;
+  const rightMargin = 290;
   const plotWidth = width - leftMargin - rightMargin;
   const prevSegmentEnd = leftMargin + plotWidth * 0.5;
 
@@ -488,7 +489,7 @@ function CPRLevelChart({
 
   return (
     <div className="min-w-0">
-      <div className="mb-1.5 flex flex-nowrap items-center gap-1.5 pl-2 text-left">
+      <div className="mb-1.5 flex flex-wrap items-center gap-1.5 pl-2 text-left">
         <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
           Levels VIEW
         </p>
@@ -525,7 +526,6 @@ function CPRLevelChart({
                 fontSize={8}
                 fontFamily="monospace"
                 fill={color}
-                opacity={0.94}
                 textAnchor="end"
               >
                 P-{levelLabel(k)} {fmt(pv)}
