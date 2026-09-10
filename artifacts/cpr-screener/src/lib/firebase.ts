@@ -15,8 +15,22 @@
  */
 
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
-import { getAuth, signInAnonymously, onAuthStateChanged, type Auth } from "firebase/auth";
-import { getFirestore, type Firestore } from "firebase/firestore";
+import {
+  getAuth,
+  initializeAuth,
+  browserLocalPersistence,
+  browserSessionPersistence,
+  inMemoryPersistence,
+  signInAnonymously,
+  onAuthStateChanged,
+  type Auth,
+} from "firebase/auth";
+import {
+  getFirestore,
+  initializeFirestore,
+  memoryLocalCache,
+  type Firestore,
+} from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -38,17 +52,41 @@ function getFirebaseApp(): FirebaseApp {
   return app;
 }
 
-/** Shared Firestore instance. Lazily created on first use. */
+/**
+ * Shared Firestore instance.
+ * Uses memoryLocalCache to prevent IndexedDB lockups, "Database is closing" errors,
+ * and multi-tab/iframe persistence collisions.
+ */
 export function getDb(): Firestore {
   if (!dbInstance) {
-    dbInstance = getFirestore(getFirebaseApp());
+    const fbApp = getFirebaseApp();
+    try {
+      dbInstance = initializeFirestore(fbApp, {
+        localCache: memoryLocalCache(),
+      });
+    } catch {
+      dbInstance = getFirestore(fbApp);
+    }
   }
   return dbInstance;
 }
 
+/**
+ * Auth instance configured with browserLocalPersistence (localStorage),
+ * session, and memory persistence.
+ * Avoids indexedDBLocalPersistence which throws "Database is closing"
+ * when pagehide or tab visibility events fire in iframes/background tabs.
+ */
 function getAuthInstance(): Auth {
   if (!authInstance) {
-    authInstance = getAuth(getFirebaseApp());
+    const fbApp = getFirebaseApp();
+    try {
+      authInstance = initializeAuth(fbApp, {
+        persistence: [browserLocalPersistence, browserSessionPersistence, inMemoryPersistence],
+      });
+    } catch {
+      authInstance = getAuth(fbApp);
+    }
   }
   return authInstance;
 }
@@ -58,38 +96,68 @@ let signInPromise: Promise<string> | null = null;
 /**
  * Ensures the current browser has a signed-in (anonymous) Firebase user
  * and resolves with its uid. Safe to call repeatedly — concurrent/
- * repeated calls reuse the same in-flight or completed sign-in rather
- * than re-authenticating each time.
+ * repeated calls reuse the same in-flight or completed sign-in.
+ * Re-attempts cleanly if a transient error occurred previously.
  */
 export function ensureSignedIn(): Promise<string> {
   if (typeof window === "undefined") {
     return Promise.reject(new Error("ensureSignedIn can only run in the browser"));
   }
-  if (signInPromise) return signInPromise;
 
   const auth = getAuthInstance();
+  if (auth.currentUser?.uid) {
+    return Promise.resolve(auth.currentUser.uid);
+  }
+
+  if (signInPromise) return signInPromise;
+
   signInPromise = new Promise<string>((resolve, reject) => {
-    if (auth.currentUser) {
+    if (auth.currentUser?.uid) {
       resolve(auth.currentUser.uid);
       return;
     }
+
+    let settled = false;
     const unsubscribe = onAuthStateChanged(
       auth,
       (user) => {
-        if (user) {
+        if (user?.uid) {
+          settled = true;
           unsubscribe();
           resolve(user.uid);
         }
       },
       (err) => {
-        unsubscribe();
-        reject(err);
+        if (!settled) {
+          settled = true;
+          unsubscribe();
+          signInPromise = null;
+          reject(err);
+        }
       }
     );
-    signInAnonymously(auth).catch((err) => {
-      unsubscribe();
-      reject(err);
-    });
+
+    signInAnonymously(auth)
+      .then((cred) => {
+        if (!settled && cred.user?.uid) {
+          settled = true;
+          unsubscribe();
+          resolve(cred.user.uid);
+        }
+      })
+      .catch((err) => {
+        if (!settled) {
+          settled = true;
+          unsubscribe();
+          signInPromise = null;
+          reject(err);
+        }
+      });
+  }).catch((err) => {
+    // Reset so subsequent operations can retry cleanly instead of sticking to the rejected promise
+    signInPromise = null;
+    throw err;
   });
+
   return signInPromise;
 }

@@ -79,6 +79,66 @@ export async function saveSignalToCloud(
   }
 }
 
+async function performAutoSave(
+  signals: Omit<LoggedSignal, "id">[]
+): Promise<number> {
+  const uid = await ensureSignedIn();
+  const db = getDb();
+  const todayKey = new Date().toISOString().slice(0, 10);
+
+  // Fetch existing docs for this user with a single fast query
+  const q = query(
+    collection(db, SIGNALS_COLLECTION),
+    where("uid", "==", uid)
+  );
+  const existingSnap = await getDocs(q);
+  const existingIds = new Set<string>();
+  existingSnap.forEach((d) => existingIds.add(d.id));
+
+  let savedCount = 0;
+  const BATCH_SIZE = 400;
+
+  for (let i = 0; i < signals.length; i += BATCH_SIZE) {
+    const chunk = signals.slice(i, i + BATCH_SIZE);
+    const batch = writeBatch(db);
+    let hasWrites = false;
+
+    for (const sig of chunk) {
+      const patternSlug = sig.patternName.replace(/[^a-zA-Z0-9]/g, "_").toUpperCase();
+      const deterministicId = `${sig.symbol}-${sig.direction}-${patternSlug}-${todayKey}`;
+      const fullDocId = signalDocId(uid, deterministicId);
+
+      if (existingIds.has(fullDocId)) {
+        // Already recorded for today!
+        continue;
+      }
+
+      const docRef = doc(db, SIGNALS_COLLECTION, fullDocId);
+      const data: LoggedSignal & { createdAt: any; updatedAt: any } = {
+        ...sig,
+        id: deterministicId,
+        uid,
+        dateStr: new Date(sig.timestamp).toLocaleString(),
+        status: sig.status || "ACTIVE",
+        outcomeNotes: `Auto-saved setup (${todayKey}). Awaiting TP ($${sig.target.toFixed(4)}) or SL ($${sig.sl.toFixed(4)}) outcome.`,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      };
+
+      batch.set(docRef, data);
+      existingIds.add(fullDocId);
+      hasWrites = true;
+      savedCount++;
+    }
+
+    if (hasWrites) {
+      await batch.commit();
+    }
+  }
+
+  return savedCount;
+}
+
 /**
  * Smart Auto-Save:
  * Uses deterministic ID per symbol/direction/pattern/day.
@@ -90,62 +150,21 @@ export async function autoSaveQualifiedSignals(
   if (!signals || signals.length === 0) return 0;
 
   try {
-    const uid = await ensureSignedIn();
-    const db = getDb();
-    const todayKey = new Date().toISOString().slice(0, 10);
-
-    // Fetch existing docs for this user with a single fast query
-    const q = query(
-      collection(db, SIGNALS_COLLECTION),
-      where("uid", "==", uid)
-    );
-    const existingSnap = await getDocs(q);
-    const existingIds = new Set<string>();
-    existingSnap.forEach((d) => existingIds.add(d.id));
-
-    let savedCount = 0;
-    const BATCH_SIZE = 400;
-
-    for (let i = 0; i < signals.length; i += BATCH_SIZE) {
-      const chunk = signals.slice(i, i + BATCH_SIZE);
-      const batch = writeBatch(db);
-      let hasWrites = false;
-
-      for (const sig of chunk) {
-        const patternSlug = sig.patternName.replace(/[^a-zA-Z0-9]/g, "_").toUpperCase();
-        const deterministicId = `${sig.symbol}-${sig.direction}-${patternSlug}-${todayKey}`;
-        const fullDocId = signalDocId(uid, deterministicId);
-
-        if (existingIds.has(fullDocId)) {
-          // Already recorded for today!
-          continue;
+    return await performAutoSave(signals);
+  } catch (err: any) {
+    const msg = err?.message || String(err);
+    if (msg.includes("closing") || msg.includes("Closing")) {
+      try {
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new Event("pageshow"));
         }
-
-        const docRef = doc(db, SIGNALS_COLLECTION, fullDocId);
-        const data: LoggedSignal & { createdAt: any; updatedAt: any } = {
-          ...sig,
-          id: deterministicId,
-          uid,
-          dateStr: new Date(sig.timestamp).toLocaleString(),
-          status: sig.status || "ACTIVE",
-          outcomeNotes: `Auto-saved setup (${todayKey}). Awaiting TP ($${sig.target.toFixed(4)}) or SL ($${sig.sl.toFixed(4)}) outcome.`,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        };
-
-        batch.set(docRef, data);
-        existingIds.add(fullDocId);
-        hasWrites = true;
-        savedCount++;
-      }
-
-      if (hasWrites) {
-        await batch.commit();
+        await new Promise((r) => setTimeout(r, 600));
+        return await performAutoSave(signals);
+      } catch (retryErr) {
+        console.warn("Auto-save deferred (transient connection state):", retryErr);
+        return 0;
       }
     }
-
-    return savedCount;
-  } catch (err) {
     console.error("Failed to auto-save signals to Firestore:", err);
     return 0;
   }
@@ -168,7 +187,12 @@ export async function fetchSavedSignalsFromCloud(): Promise<LoggedSignal[]> {
     });
 
     return list.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-  } catch (err) {
+  } catch (err: any) {
+    const msg = err?.message || String(err);
+    if (msg.includes("closing") || msg.includes("Closing")) {
+      console.warn("Deferred signal fetch (database reconnecting)");
+      return [];
+    }
     console.error("Failed to fetch signals from Firestore:", err);
     return [];
   }
