@@ -7,12 +7,11 @@ import { getChartLink, setChartLink, removeChartLink, type StoredChartLink } fro
 
 /**
  * Small inline control for attaching a TradingView snapshot link to a
- * specific View's read of a specific row (rowKey), rendered inside
- * SRLadderPanel/SRLadderRow so it's automatically available anywhere
- * that panel is used (BacktestPanel today, Screener once wired up
- * later). viewKey scopes the link to whichever Category/Pattern/View is
- * currently selected, so the same symbol/day can carry a different
- * chart link per View instead of one global link per symbol.
+ * specific row (rowKey), rendered inside SRLadderPanel/SRLadderRow so
+ * it's automatically available anywhere that panel is used (BacktestPanel
+ * today, Screener once wired up later). Chart links are stored at the
+ * symbol-date level (${rowKey}) so saving a chart under Top 15 Gainers
+ * or any other pattern makes it immediately visible across all patterns.
  *
  * Backed by Firestore (chartLinks.ts) — reads/writes are async, so this
  * tracks its own loading state rather than resolving the saved link
