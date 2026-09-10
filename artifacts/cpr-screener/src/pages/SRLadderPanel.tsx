@@ -403,22 +403,29 @@ function CPRLevelChart({
   prevCPR,
   todayCPR,
   pivotPatternBadge,
+  rowKey,
+  viewKey,
 }: {
   prevCPR: CPRLevels;
   todayCPR: CPRLevels;
   /** PivotPattern badge (e.g. renderPivotPatternBadge(r)) — shown inline next to the "Levels VIEW" label. */
   pivotPatternBadge?: ReactNode;
+  /** Identifies this row for chart-link storage. Omit to skip the "Attach chart" control. */
+  rowKey?: string;
+  /** Scopes the chart link to the currently active View. Falls back to "" if omitted. */
+  viewKey?: string;
 }) {
   const width = 900;
   // Keep the chart compact when it sits beside the ladders. The ladders
   // remain the readable, full-size value reference next to it.
   const height = 300;
-  // Keep labels readable while reducing the total chart footprint so the
-  // chart and three ladders can fit without a page-level horizontal scrollbar.
-  const leftMargin = 76;
-  const rightMargin = 76;
+  // Wider margins than a plain "fill the width" layout so the prev/today
+  // lines stay short and centered, leaving clear space for the P-xxx /
+  // xxx labels on either side instead of the lines running edge to edge.
+  const leftMargin = 170;
+  const rightMargin = 170;
   const plotWidth = width - leftMargin - rightMargin;
-  const prevSegmentEnd = leftMargin + plotWidth * 0.43;
+  const prevSegmentEnd = leftMargin + plotWidth * 0.5;
 
   const allValues = LEVEL_KEYS.flatMap((k) => [
     prevCPR[k as keyof CPRLevels] as number,
@@ -490,6 +497,7 @@ function CPRLevelChart({
             {pivotPatternBadge}
           </span>
         )}
+        {rowKey && <ChartLinkControl viewKey={viewKey ?? ""} rowKey={rowKey} />}
       </div>
       <svg
         viewBox={`0 0 ${width} ${height}`}
@@ -559,16 +567,22 @@ function CPRLevelChart({
 /**
  * The full expanded panel shown when a symbol row is clicked:
  * PDay S/R first, then the Prev-Day-vs-Today Levels VIEW chart, then
- * Today S/R, then PDay-1 S/R (if available), then — BacktestPanel only —
- * Level Check. This order keeps each day's ladder close to its own lines
- * in the chart so the overlapping level values are easier to read, while
- * the backtest-only diagnostic sits at the end. Reused by Screener and
+ * Today S/R, then — BacktestPanel only — Level Check right after it. This
+ * order keeps each day's ladder close to its own lines in the chart so the
+ * overlapping level values are easier to read. Reused by Screener and
  * BacktestPanel.
+ *
+ * The PDay-1 S/R ladder is currently hidden (not rendered), though
+ * ppCPR/ppClose/pDay1PatternBadge are still accepted so it can be
+ * reintroduced without re-threading data through callers.
+ *
+ * The "Attach chart" control lives inline in the Levels VIEW header, right
+ * after the pivot pattern badge, rather than below the ladders.
  *
  * Each day-specific ladder shows that day's own closing price as its
  * bottom row: labeled "Close" (plain white text) for PDay S/R's
- * previous-day close and PDay-1 S/R's PDay-1 close, and labeled "▶ Price"
- * (bold, highlighted) for Today S/R's live/entry-day price.
+ * previous-day close, and labeled "▶ Price" (bold, highlighted) for
+ * Today S/R's live/entry-day price.
  */
 export function SRLadderPanel({
   r,
@@ -606,10 +620,10 @@ export function SRLadderPanel({
   pivotPatternBadge?: ReactNode;
   /**
    * Show the day-over-day "Level Check" column (compareSRLadders /
-   * SRLadderDiffPanel), rendered after PDay-1 S/R. Opt-in and defaulted
-   * to false: the Screener's expanded ladder should stay exactly as it
-   * was, while BacktestPanel's expanded ladder explicitly passes true to
-   * surface it.
+   * SRLadderDiffPanel), rendered right after Today S/R. Opt-in and
+   * defaulted to false: the Screener's expanded ladder should stay
+   * exactly as it was, while BacktestPanel's expanded ladder explicitly
+   * passes true to surface it.
    */
   showLevelCheck?: boolean;
   /**
@@ -629,26 +643,24 @@ export function SRLadderPanel({
   copyViewControl?: ReactNode;
 }) {
   return (
-    <div className="flex w-full min-w-0 flex-col gap-3">
-      <div className="flex flex-wrap items-start gap-3 border-b border-border/50 pb-3">
-        <SRLadder cpr={r.prevCPR} currentPrice={r.prevClose} label="PDay S/R" badge={prevPatternBadge} pricePlain />
-        <div className="min-w-[440px] flex-1">
-          <CPRLevelChart prevCPR={r.prevCPR} todayCPR={r.todayCPR} pivotPatternBadge={pivotPatternBadge} />
-        </div>
-        <SRLadder cpr={r.todayCPR} currentPrice={r.currentPrice} label="Today S/R" badge={todayPatternBadge} />
-        {r.ppCPR && (
-          <SRLadder cpr={r.ppCPR} currentPrice={r.ppClose} label="PDay-1 S/R" badge={pDay1PatternBadge} pricePlain />
-        )}
-        {showLevelCheck && (
-          <div className="flex flex-col gap-2">
-            <SRLadderDiffPanel prevCPR={r.prevCPR} todayCPR={r.todayCPR} conditions={levelCheckConditions} />
-            {copyViewControl}
-          </div>
-        )}
+    <div className="flex w-full min-w-0 flex-wrap items-start gap-3 border-b border-border/50 pb-3">
+      <SRLadder cpr={r.prevCPR} currentPrice={r.prevClose} label="PDay S/R" badge={prevPatternBadge} pricePlain />
+      <div className="min-w-[440px] flex-1">
+        <CPRLevelChart
+          prevCPR={r.prevCPR}
+          todayCPR={r.todayCPR}
+          pivotPatternBadge={pivotPatternBadge}
+          rowKey={rowKey}
+          viewKey={viewKey}
+        />
       </div>
-      {rowKey && (
-        <div className="flex items-center gap-2">
-          <ChartLinkControl viewKey={viewKey ?? ""} rowKey={rowKey} />
+      <SRLadder cpr={r.todayCPR} currentPrice={r.currentPrice} label="Today S/R" badge={todayPatternBadge} />
+      {/* PDay-1 S/R ladder is hidden for now — kept in SRLadderData/props so it can
+          be re-enabled later without threading data through again. */}
+      {showLevelCheck && (
+        <div className="flex flex-col gap-2">
+          <SRLadderDiffPanel prevCPR={r.prevCPR} todayCPR={r.todayCPR} conditions={levelCheckConditions} />
+          {copyViewControl}
         </div>
       )}
     </div>
@@ -685,7 +697,7 @@ export function SRLadderRow({
   pDay1PatternBadge?: ReactNode;
   /** PivotPattern badge (today vs prev HHLL x RRHH x SSLL combo) — e.g. renderPivotPatternBadge(r) — shown next to the "Levels VIEW" label. */
   pivotPatternBadge?: ReactNode;
-  /** Show the "Level Check" section, rendered after PDay-1 S/R. Defaults to false — pass true only from BacktestPanel. See SRLadderPanel for details. */
+  /** Show the "Level Check" section, rendered right after Today S/R. Defaults to false — pass true only from BacktestPanel. See SRLadderPanel for details. */
   showLevelCheck?: boolean;
   /** The current View's 13 Level Check conditions. See SRLadderPanel for details. */
   levelCheckConditions?: LevelCheckCondition[];
