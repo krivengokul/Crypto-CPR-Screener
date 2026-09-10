@@ -403,28 +403,24 @@ function CPRLevelChart({
   prevCPR,
   todayCPR,
   pivotPatternBadge,
-  rowKey,
-  viewKey,
 }: {
   prevCPR: CPRLevels;
   todayCPR: CPRLevels;
   /** PivotPattern badge (e.g. renderPivotPatternBadge(r)) — shown inline next to the "Levels VIEW" label. */
   pivotPatternBadge?: ReactNode;
-  /** Identifies this row for chart-link storage. Omit to skip the "Attach chart" control. */
-  rowKey?: string;
-  /** Scopes the chart link to the currently active View. Falls back to "" if omitted. */
-  viewKey?: string;
 }) {
-  const width = 900;
+  const width = 480;
   // Keep the chart compact when it sits beside the ladders. The ladders
   // remain the readable, full-size value reference next to it.
   const height = 300;
-  // Left-aligned rather than centered: the "Levels VIEW" header hugs the
-  // left edge and there's more free space on the left of this panel than
-  // the right, so keep leftMargin small and let the lines stay short by
-  // pushing the extra margin to the right instead of splitting it evenly.
-  const leftMargin = 50;
-  const rightMargin = 290;
+  // Fixed, fairly tight canvas (paired with a matching fixed-width wrapper
+  // below) instead of letting the chart stretch via flex-grow — that's what
+  // was pushing "Today S/R" far to the right with a dead gap in between.
+  // Left-aligned: the "Levels VIEW" header hugs the left edge, so keep
+  // leftMargin small and reserve just enough rightMargin for the "today"
+  // labels, rather than splitting the leftover space evenly.
+  const leftMargin = 30;
+  const rightMargin = 110;
   const plotWidth = width - leftMargin - rightMargin;
   const prevSegmentEnd = leftMargin + plotWidth * 0.5;
 
@@ -489,7 +485,7 @@ function CPRLevelChart({
 
   return (
     <div className="min-w-0">
-      <div className="mb-1.5 flex flex-wrap items-center gap-1.5 pl-2 text-left">
+      <div className="mb-1.5 flex flex-nowrap items-center gap-1.5 pl-2 text-left">
         <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
           Levels VIEW
         </p>
@@ -498,7 +494,6 @@ function CPRLevelChart({
             {pivotPatternBadge}
           </span>
         )}
-        {rowKey && <ChartLinkControl viewKey={viewKey ?? ""} rowKey={rowKey} />}
       </div>
       <svg
         viewBox={`0 0 ${width} ${height}`}
@@ -576,8 +571,9 @@ function CPRLevelChart({
  * ppCPR/ppClose/pDay1PatternBadge are still accepted so it can be
  * reintroduced without re-threading data through callers.
  *
- * The "Attach chart" control lives inline in the Levels VIEW header, right
- * after the pivot pattern badge, rather than below the ladders.
+ * The "Attach chart" control sits right after the "Today S/R" ladder,
+ * vertically nudged down to line up with the ladders' first data row
+ * rather than their header text.
  *
  * Each day-specific ladder shows that day's own closing price as its
  * bottom row: labeled "Close" (plain white text) for PDay S/R's
@@ -645,16 +641,15 @@ export function SRLadderPanel({
   return (
     <div className="flex w-full min-w-0 flex-wrap items-start gap-3 border-b border-border/50 pb-3">
       <SRLadder cpr={r.prevCPR} currentPrice={r.prevClose} label="PDay S/R" badge={prevPatternBadge} pricePlain />
-      <div className="min-w-[440px] flex-1">
-        <CPRLevelChart
-          prevCPR={r.prevCPR}
-          todayCPR={r.todayCPR}
-          pivotPatternBadge={pivotPatternBadge}
-          rowKey={rowKey}
-          viewKey={viewKey}
-        />
+      <div className="w-[480px] shrink-0">
+        <CPRLevelChart prevCPR={r.prevCPR} todayCPR={r.todayCPR} pivotPatternBadge={pivotPatternBadge} />
       </div>
       <SRLadder cpr={r.todayCPR} currentPrice={r.currentPrice} label="Today S/R" badge={todayPatternBadge} />
+      {rowKey && (
+        <div className="flex flex-col gap-1.5 pt-5">
+          <ChartLinkControl viewKey={viewKey ?? ""} rowKey={rowKey} />
+        </div>
+      )}
       {/* PDay-1 S/R ladder is hidden for now — kept in SRLadderData/props so it can
           be re-enabled later without threading data through again. */}
       {showLevelCheck && (
