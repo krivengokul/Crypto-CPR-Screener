@@ -1822,6 +1822,7 @@ export default function BacktestPanel() {
                           prevPatternBadge={renderPrevPatternBadge(r.raw)}
                           pivotPatternBadge={renderPivotPatternBadge(r.raw)}
                           showLevelCheck
+                          levelCheckConditions={activeLevelCheckDefs}
                           copyViewControl={
                             isViewOnly && activeTarget ? (
                               <CopyViewControl

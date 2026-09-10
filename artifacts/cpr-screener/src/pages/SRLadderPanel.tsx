@@ -119,7 +119,7 @@ function ChartLinkControl({ viewKey, rowKey }: { viewKey: string; rowKey: string
   }
 
   return (
-    <div className="flex w-fit min-w-[260px] flex-col gap-1.5 rounded-md border border-border bg-popover p-2">
+    <div className="flex w-full min-w-[260px] max-w-[320px] flex-col gap-1.5 rounded-md border border-border bg-popover p-2 shadow-sm">
       <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Chart link</span>
       <input
         value={url}
@@ -637,24 +637,36 @@ export function SRLadderPanel({
    */
   copyViewControl?: ReactNode;
 }) {
+  const hasRightSection = Boolean(rowKey || showLevelCheck || copyViewControl);
+
   return (
-    <div className="flex w-full min-w-0 flex-wrap items-start gap-3 border-b border-border/50 pb-3">
+    <div className="flex w-full min-w-0 items-start gap-3.5 overflow-x-auto border-b border-border/50 pb-3">
+      {/* 1. Previous Day S/R */}
       <SRLadder cpr={r.prevCPR} currentPrice={r.prevClose} label="PDay S/R" badge={prevPatternBadge} pricePlain />
+
+      {/* 2. CPR Level Chart */}
       <div className="w-[480px] shrink-0">
         <CPRLevelChart prevCPR={r.prevCPR} todayCPR={r.todayCPR} pivotPatternBadge={pivotPatternBadge} />
       </div>
+
+      {/* 3. Today S/R */}
       <SRLadder cpr={r.todayCPR} currentPrice={r.currentPrice} label="Today S/R" badge={todayPatternBadge} />
-      {rowKey && (
-        <div className="flex flex-col gap-1.5 pt-5">
-          <ChartLinkControl viewKey={viewKey ?? ""} rowKey={rowKey} />
-        </div>
-      )}
-      {/* PDay-1 S/R ladder is hidden for now — kept in SRLadderData/props so it can
-          be re-enabled later without threading data through again. */}
-      {showLevelCheck && (
-        <div className="flex flex-col gap-2">
-          <SRLadderDiffPanel prevCPR={r.prevCPR} todayCPR={r.todayCPR} conditions={levelCheckConditions} />
-          {copyViewControl}
+
+      {/* 4. Top Right Section: Actions (Attach Chart, Create/Copy View) & Level Check */}
+      {hasRightSection && (
+        <div className="flex min-w-[260px] max-w-[320px] shrink-0 flex-col gap-2.5 border-l border-border/40 pl-3">
+          {/* Action buttons toolbar: Attach chart & Create/Copy View */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            {rowKey && <ChartLinkControl viewKey={viewKey ?? ""} rowKey={rowKey} />}
+            {copyViewControl}
+          </div>
+
+          {/* Level Check */}
+          {showLevelCheck && (
+            <div className="w-full pt-1 border-t border-border/30">
+              <SRLadderDiffPanel prevCPR={r.prevCPR} todayCPR={r.todayCPR} conditions={levelCheckConditions} />
+            </div>
+          )}
         </div>
       )}
     </div>
