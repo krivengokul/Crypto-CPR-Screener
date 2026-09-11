@@ -1186,6 +1186,17 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
     stoplossLabel: "R1 (today's R1)",
   },
   {
+    key: "B-B-BB-BB-L2U4",
+    label: "B-B-BB-BB-L2U4",
+    direction: "bearish",
+    targetLabel: "L2 (today's S2)",
+    getTarget: (r) => r.todayCPR.s2,
+    getEntry: (r) => r.todayCPR.bc,
+    entryLabel: "BC (today's BC)",
+    getStoploss: (r) => r.todayCPR.r1,
+    stoplossLabel: "R1 (today's R1)",
+  },
+  {
     key: "B-B-BB-BB-L4U3",
     label: "B-B-BB-BB-L4U3",
     direction: "bearish",
@@ -1690,6 +1701,11 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
           {
             key: "B-B-BB-BB-L3U4",
             label: "B-B-BB-BB-L3U4",
+            subPatternKeys: [],
+          },
+          {
+            key: "B-B-BB-BB-L2U4",
+            label: "B-B-BB-BB-L2U4",
             subPatternKeys: [],
           },
           // RENAMED (was the bare "L4U3" Pattern that used to sit

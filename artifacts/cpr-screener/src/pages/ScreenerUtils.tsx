@@ -1199,6 +1199,8 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return matchesPatternFlag(r, "B-B-BB-BB-EL4U4");
     case "B-B-BB-BB-L3U4":
       return matchesPatternFlag(r, "B-B-BB-BB-L3U4");
+    case "B-B-BB-BB-L2U4":
+      return matchesPatternFlag(r, "B-B-BB-BB-L2U4");
     case "B-B-BB-BB-L4U3":
       return matchesPatternFlag(r, "B-B-BB-BB-L4U3");
     case "B-B-BB-BB-L3U3":
@@ -1937,6 +1939,7 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     // flag from cpr.ts. Nests the "B-B-BB-BB-EL4U4-SSLLGap:S4" View.
     case "B-B-BB-BB-EL4U4": return PIVOT_PATTERNS["B-B-BB-BB"](r) && r.EL4U4;
     case "B-B-BB-BB-L3U4": return PIVOT_PATTERNS["B-B-BB-BB"](r) && r.L3U4;
+    case "B-B-BB-BB-L2U4": return PIVOT_PATTERNS["B-B-BB-BB"](r) && r.L2U4;
     case "B-B-BB-BB-L4U3": return PIVOT_PATTERNS["B-B-BB-BB"](r) && r.L4U3;
     case "B-B-BB-BB-L3U3": return PIVOT_PATTERNS["B-B-BB-BB"](r) && r.L3U3;
     // RENAMED (was the bare "CL4U2" case below) to sit alongside its
