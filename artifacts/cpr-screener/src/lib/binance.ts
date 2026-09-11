@@ -134,6 +134,38 @@ export function isLiveDailyCandle(openTimeMs: number): boolean {
   return openTimeMs >= utcMidnightToday;
 }
 
+// FIX (wrong Price/OPrice/Move — e.g. LIT, XMR showing impossible ~-80%
+// moves): runScreener used to assume klines[length-1], [length-2], etc. were
+// simply "today", "yesterday", "2 days ago" with no check that those array
+// entries were actually consecutive calendar days. Binance's /klines
+// endpoint still returns whatever daily candles it has on file even across
+// a delisting/relisting gap or a trading halt for a symbol — so "yesterday"
+// and "today" could silently be months apart. That pairs a months-old
+// candle open (shown as OPrice) with today's real currentPrice, producing
+// a huge fake "Move" percentage with no error anywhere.
+//
+// A daily candle's openTime should be exactly 86,400,000ms after the
+// previous one's. ONE_DAY_MS is that expected gap; DAY_GAP_TOLERANCE_MS
+// allows a small amount of clock drift without allowing a real multi-day
+// gap through.
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+const DAY_GAP_TOLERANCE_MS = 60 * 1000; // 1 minute of drift tolerance
+
+/**
+ * Returns true only if every candle in `candles` is exactly one day after
+ * the previous one (within DAY_GAP_TOLERANCE_MS). Used to reject candle
+ * sets that span a delisting/relisting or trading-halt gap before they're
+ * ever used to compute OPrice/Move/CPR — see the FIX comment above
+ * isLiveDailyCandle.
+ */
+export function candlesAreContiguous(candles: OHLC[]): boolean {
+  for (let i = 1; i < candles.length; i++) {
+    const gap = candles[i].openTime - candles[i - 1].openTime;
+    if (Math.abs(gap - ONE_DAY_MS) > DAY_GAP_TOLERANCE_MS) return false;
+  }
+  return true;
+}
+
 // FIX (intermittent "network error" abort — universe list only): a single
 // transient blip on exchangeInfo used to throw and abort the *entire* scan
 // (the "Refusing to scan a partial symbol universe" error). exchangeInfo
@@ -394,6 +426,24 @@ export async function runScreener(
       todayCandle = klines[klines.length - 1];
       liveCandle  = null;
       if (klines.length >= 3) ppCandle = klines[klines.length - 3];
+    }
+
+    // FIX (wrong Price/OPrice/Move): reject candle sets with a gap — see
+    // candlesAreContiguous above. Checked on prevCandle→todayCandle (and
+    // ppCandle→prevCandle when present) BEFORE anything derives OPrice/Move
+    // from them, so a delisting/relisting or trading-halt gap drops the
+    // symbol from this scan instead of producing an impossible % move.
+    const candleChain: OHLC[] = ppCandle
+      ? [ppCandle, prevCandle, todayCandle]
+      : [prevCandle, todayCandle];
+    if (!candlesAreContiguous(candleChain)) {
+      console.warn(
+        `[binance] ${t.symbol} — daily candles are not contiguous ` +
+          `(likely a delisting/relisting or trading-halt gap); skipped to ` +
+          `avoid a false OPrice/Move.`
+      );
+      skipped.push(t.symbol);
+      return null;
     }
 
     const currentPrice = parseFloat(t.lastPrice);
