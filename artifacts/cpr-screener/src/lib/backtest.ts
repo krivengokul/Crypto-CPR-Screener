@@ -3009,6 +3009,26 @@ async function getCurrentSymbolCandidates(source: BacktestSource): Promise<strin
   return [...new Set(symbols)];
 }
 
+// PERF/CONSISTENCY FIX: a date-range sweep used to call getCurrentSymbolCandidates
+// (a live exchange fetch) once per date -- 10 dates meant 10 live fetches in quick
+// succession, which both slowed the sweep down and made it more likely to get
+// rate-limited partway through, silently shrinking the candidate universe for
+// whichever dates lost that race. The live top-symbols list also doesn't change
+// meaningfully within the few seconds/minutes a sweep takes, so there's nothing
+// gained by refetching it per date. This short-TTL cache makes every date in one
+// sweep share a single fetch; a genuinely new run later (past the TTL) still gets
+// a fresh live list.
+const CANDIDATE_CACHE_TTL_MS = 5 * 60 * 1000;
+const candidateCache = new Map<BacktestSource, { symbols: string[]; fetchedAt: number }>();
+
+async function getCurrentSymbolCandidatesCached(source: BacktestSource): Promise<string[]> {
+  const cached = candidateCache.get(source);
+  if (cached && Date.now() - cached.fetchedAt < CANDIDATE_CACHE_TTL_MS) return cached.symbols;
+  const symbols = await getCurrentSymbolCandidates(source);
+  candidateCache.set(source, { symbols, fetchedAt: Date.now() });
+  return symbols;
+}
+
 async function getSymbolUniverse(
   source: BacktestSource,
   entryDateISO: string,
@@ -3021,7 +3041,9 @@ async function getSymbolUniverse(
   const saved = readStoredUniverse(source, entryDateISO);
   if (saved && saved.length > 0) return saved;
 
-  const currentCandidates = await getCurrentSymbolCandidates(source);
+  // PERF/CONSISTENCY FIX: shared across every date in a sweep (see cache above)
+  // instead of a fresh live fetch per date.
+  const currentCandidates = await getCurrentSymbolCandidatesCached(source);
   if (!currentCandidates.length) {
     throw new Error("No current " + source + " symbols were returned by the exchange.");
   }
@@ -3054,6 +3076,16 @@ async function getSymbolUniverse(
     historicalSymbols.length + "/" + currentCandidates.length + " current symbols had a candle on that date. " +
     "Delisted symbols cannot be recovered from the exchange's current universe endpoint; treat this as approximate unless a saved snapshot exists."
   );
+
+  // CONSISTENCY FIX: previously only "today's" universe was ever persisted, so
+  // every run against a past date -- single-date or range -- re-derived its
+  // universe from scratch against whatever the live top-symbols list happened
+  // to be at that moment. That's what let a single-date run and a range run
+  // disagree on the very same historical date. Persisting it here means the
+  // FIRST run for a given (source, date) pins the snapshot, and every later
+  // run -- either mode -- reuses that exact list via readStoredUniverse above
+  // instead of re-deriving a possibly-different one.
+  writeStoredUniverse(source, entryDateISO, historicalSymbols);
 
   return historicalSymbols;
 }
