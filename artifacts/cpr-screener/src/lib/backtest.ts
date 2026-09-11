@@ -1321,8 +1321,20 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
         levelCheckDefs: [{"key":"r4","subject":"today","bandKeys":["r4","r3"]},{"key":"r3","subject":"today","bandKeys":["r3","r2"]},{"key":"r2","subject":"today","bandKeys":["r2","prevHigh"]},{"key":"prevHigh","subject":"today","bandKeys":["tc","pivot"]},{"key":"r1","subject":"today","bandKeys":["r1","tc"]},{"key":"tc","subject":"today","bandKeys":["prevLow","s1"]},{"key":"pivot","subject":"today","bandKeys":["prevLow","s1"]},{"key":"bc","subject":"today","bandKeys":["prevLow","s1"]},{"key":"prevLow","subject":"today","bandKeys":["s1","s2"]},{"key":"s1","subject":"today","bandKeys":["s1","s2"]},{"key":"s2","subject":"today","bandKeys":["s2","s3"]},{"key":"s3","subject":"today","bandKeys":["s3","s4"]},{"key":"s4","subject":"previous","bandKeys":["s3","s4"]}],
       },
     {
-        key: "AL4-EUTL3-S1ATC",
-        label: "AL4-EUTL3-S1ATC",
+        // RENAMED from "AL4-EUTL3-S1ATC". Was silently gated by
+        // conditionKey: "top15gainers" — a no-op pass-through (see its
+        // passesPattern case in ScreenerUtils.tsx), so despite sitting
+        // under the "A-A-AA-AA-EUTL3" Subpattern alongside two real
+        // EUTL3-conditioned Views, this one wasn't actually requiring the
+        // structural A-A-AA-AA-EUTL3 condition — only this View's own
+        // levelCheckDefs signature gated it. FIXED: conditionKey dropped
+        // in favor of a real passesPattern case matching this View's own
+        // key directly (same convention as its "9A:..." / "6A:..."
+        // siblings), which now ANDs in structural A-A-AA-AA + EUTL3 +
+        // the new pHL-A (prev day's HLSwitch HL-A) check — see
+        // ScreenerUtils.tsx.
+        key: "A5-EUTL3-pA-S1ATC",
+        label: "A5-EUTL3-pA-S1ATC",
         direction: "bullish",
         targetLabel: "U2 (today's R2)",
         getTarget: (r) => r.todayCPR.r2,
@@ -1330,7 +1342,6 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
         getEntry: (r) => r.todayCPR.tc,
         stoplossLabel: "S1 (today's S1)",
         getStoploss: (r) => r.todayCPR.s1,
-        conditionKey: "top15gainers",
         levelCheckDefs: [{"key":"r4","subject":"previous","bandKeys":["tc","pivot"]},{"key":"r3","subject":"previous","bandKeys":["pivot","bc"]},{"key":"r2","subject":"previous","bandKeys":["bc","s1"]},{"key":"prevHigh","subject":"previous","bandKeys":["s1","prevLow"]},{"key":"r1","subject":"previous","bandKeys":["s1","prevLow"]},{"key":"tc","subject":"previous","bandKeys":["s1","prevLow"]},{"key":"pivot","subject":"today","bandKeys":["r4","r3"]},{"key":"bc","subject":"today","bandKeys":["r3","r2"]},{"key":"prevLow","subject":"today","bandKeys":["bc","prevLow"]},{"key":"s1","subject":"today","bandKeys":["r2","prevHigh"]},{"key":"s2","subject":"today","bandKeys":["s2","s3"]},{"key":"s3","subject":"previous","bandKeys":["s2","s3"]},{"key":"s4","subject":"previous","bandKeys":["s2","s3"]}],
       },
     {
@@ -2138,7 +2149,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
             subPatternKeys: [
               "9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A",
               "6A:A-A-AA-AA-EUTL3-S1ATCpE-pL4:4A",
-                "AL4-EUTL3-S1ATC"
+                "A5-EUTL3-pA-S1ATC"
             ],
           },
           // NEW: "A-A-AA-AA-EUPL3" Subpattern — structural A-A-AA-AA

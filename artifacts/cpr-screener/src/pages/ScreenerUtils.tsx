@@ -2141,6 +2141,18 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     // passesPattern above).
     case "A-A-AA-AA-EUTL3":
       return PIVOT_PATTERNS["A-A-AA-AA"](r) && r.EUTL3;
+    // NEW: "A5-EUTL3-pA-S1ATC" View (RENAMED from "AL4-EUTL3-S1ATC"),
+    // nested under the "A-A-AA-AA-EUTL3" Subpattern above. Its own key
+    // now doubles as its conditionKey (no conditionKey field set in
+    // backtest.ts, same convention as its "9A:..."/"6A:..." siblings) —
+    // previously it graded via conditionKey: "top15gainers", which is a
+    // no-op pass-through and so wasn't actually enforcing the parent
+    // Subpattern's structural A-A-AA-AA-EUTL3 condition at all. FIXED:
+    // this case ANDs in the same structural A-A-AA-AA + EUTL3 base as
+    // "A-A-AA-AA-EUTL3" above, PLUS the new pHL-A check — prev day's own
+    // HLSwitch is HL-A (r.prevCPR.HLSwitch === "HL-A").
+    case "A5-EUTL3-pA-S1ATC":
+      return PIVOT_PATTERNS["A-A-AA-AA"](r) && r.EUTL3 && r.prevCPR.HLSwitch === "HL-A";
     // NEW: "A-A-AA-AA-EUPL3" Subpattern, nested under the same
     // "A-A-AA-AA" Pattern in "U1 > pU4" (R1AbovePR4) as its EUTL3
     // sibling above. Base condition = structural A-A-AA-AA AND the raw
