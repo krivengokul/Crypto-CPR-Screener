@@ -1,22 +1,5 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import type { CPRResult } from "@/lib/cpr";
-
-// FIX (Price silently going stale — e.g. LIT, XMR showing prices far off
-// TradingView): a symbol that stops appearing in the ticker response (brief
-// listing-status change, delisting, rate limiting) used to just keep
-// whatever currentPrice it had from the last successful tick, forever,
-// with nothing visible beyond a console.debug. MAX_MISSED_TICKS controls
-// how many consecutive 15s cycles a symbol is allowed to go unmatched
-// before we log a loud, symbol-specific warning so this is actually
-// diagnosable instead of silently drifting further from the real price.
-const MAX_MISSED_TICKS = 3; // ~45s of no update before warning
-
-// FIX (bad single-tick data corrupting the table): if a symbol's live price
-// jumps more than SANITY_JUMP_RATIO against its own last-known price in a
-// single 15s tick, that's far more likely to be bad/misrouted ticker data
-// than a real move, so we log it and skip applying that one update rather
-// than let a bogus price overwrite a good one.
-const SANITY_JUMP_RATIO = 0.5; // reject a >50% single-tick jump
 
 /**
  * Refreshes Binance live prices every 15s while status === "done".
@@ -29,8 +12,6 @@ export function useBinanceLiveRefresh(
   setAllResults: React.Dispatch<React.SetStateAction<CPRResult[]>>,
   setFiltered: React.Dispatch<React.SetStateAction<CPRResult[]>>
 ) {
-  const missedTicksRef = useRef<Map<string, number>>(new Map());
-
   useEffect(() => {
     if (status !== "done") return;
     const refresh = async () => {
@@ -86,46 +67,10 @@ export function useBinanceLiveRefresh(
         addTickers(spotTickers);
         addTickers(futuresTickers);
         // Use r.openPrice (the 5:30 AM IST baseline) for % calc
-        const missedTicks = missedTicksRef.current;
         const apply = (prev: CPRResult[]): CPRResult[] =>
           prev.map((r) => {
             const live = priceMap.get(r.symbol);
-            if (!live) {
-              // FIX: symbol didn't come back in this tick's ticker response —
-              // count consecutive misses and warn loudly once it's gone
-              // stale for a while, instead of silently freezing forever.
-              const misses = (missedTicks.get(r.symbol) ?? 0) + 1;
-              missedTicks.set(r.symbol, misses);
-              if (misses === MAX_MISSED_TICKS) {
-                console.warn(
-                  `[binance-live-refresh] ${r.symbol} missing from spot+futures ` +
-                    `ticker responses for ${misses} consecutive ticks (~` +
-                    `${misses * 15}s) — currentPrice is now stale (last known: ` +
-                    `${r.currentPrice}). Check whether it's still TRADING on ` +
-                    `USDⓈ-M futures.`
-                );
-              }
-              return r;
-            }
-            missedTicks.delete(r.symbol);
-
-            // REVERTED to log-only: rejecting the jump and keeping the old
-            // price meant that IF currentPrice was ever wrong (stale/bad),
-            // a real correction from the ticker would get silently blocked
-            // forever instead of fixing it — worse than the original bug.
-            // Still worth knowing about, so it's logged, but always applied.
-            if (
-              r.currentPrice > 0 &&
-              Math.abs(live.price - r.currentPrice) / r.currentPrice > SANITY_JUMP_RATIO
-            ) {
-              console.warn(
-                `[binance-live-refresh] ${r.symbol} — large single-tick price ` +
-                  `jump (${r.currentPrice} → ${live.price}, >` +
-                  `${SANITY_JUMP_RATIO * 100}% in one 15s tick). Applying it ` +
-                  `anyway; worth spot-checking against TradingView.`
-              );
-            }
-
+            if (!live) return r;
             const change24h = r.openPrice > 0
               ? ((live.price - r.openPrice) / r.openPrice) * 100
               : live.change; // fallback
