@@ -2873,7 +2873,22 @@ function addDaysISO(dateISO: string, days: number): string {
  * more than enough for the date ranges the UI offers. Longer sweeps can
  * opt in via setBacktestHistoryLimit().
  */
-let HISTORY_LIMIT = 500;
+// Start with the smallest useful window. Before each run, the requested date
+// expands this only as far as needed (D-3 through D+1 plus a small safety
+// margin). Recent single-date scans therefore transfer ~10-15 candles per
+// symbol instead of 500, cutting both payload and Binance request weight.
+let HISTORY_LIMIT = 10;
+
+function ensureHistoryCoverage(entryDateISO: string): void {
+  const entryMs = Date.parse(entryDateISO + "T00:00:00.000Z");
+  if (!Number.isFinite(entryMs)) return;
+  const todayMs = Date.parse(utcTodayISO() + "T00:00:00.000Z");
+  const daysAgo = Math.max(0, Math.ceil((todayMs - entryMs) / 86_400_000));
+  const required = Math.max(10, Math.min(1500, daysAgo + 6));
+  if (required <= HISTORY_LIMIT) return;
+  HISTORY_LIMIT = required;
+  clearBacktestHistoryCache();
+}
 
 /** Opt-in for very long sweeps (max 1500). Clears the cache when changed. */
 export function setBacktestHistoryLimit(limit: number): void {
@@ -3160,6 +3175,11 @@ async function getSymbolUniverse(
     throw new Error("Invalid backtest date " + entryDateISO + ". Expected YYYY-MM-DD.");
   }
 
+  // Size the exchange response for this date before any history is fetched.
+  // The limit only grows during a range sweep, so an older date warms enough
+  // data for every newer date without repeatedly clearing the cache.
+  ensureHistoryCoverage(entryDateISO);
+
   const saved = readStoredUniverse(source, entryDateISO);
   if (saved && saved.length > 0) return saved;
 
@@ -3178,7 +3198,7 @@ async function getSymbolUniverse(
 
   // Warm history once. The run functions prefetch the filtered list again,
   // but those entries are already cached here.
-  await prefetchHistories(currentCandidates, source, onProgress, 20);
+  await prefetchHistories(currentCandidates, source, onProgress);
 
   // PERF FIX: this used to await getHistory() one symbol at a time. With the
   // cache warmed above that is cheap, but any symbol the prefetch missed
@@ -3242,24 +3262,36 @@ export async function prefetchHistories(
   symbols: string[],
   source: BacktestSource,
   onProgress?: (done: number, total: number, symbol: string) => void,
-  // Bumped from 10 to 20 for faster prefetch; still chunked per pass so a
-  // 429 burst is retried after a cool-off rather than lost.
-  concurrency = 20
+  // Small recent-date requests cost less exchange weight, so they can use a
+  // wider pool. Long-history pages stay conservative to avoid 429/418 waits.
+  concurrency = HISTORY_LIMIT <= 100 ? 40 : HISTORY_LIMIT <= 500 ? 20 : 5
 ): Promise<void> {
   lastRunSkipped = [];
 
   // Up to 3 passes: anything that failed (almost always a 429 burst) is
   // retried after a short cool-off instead of vanishing from the results.
+  // A worker pool replaces fixed Promise.all chunks: when one request finishes,
+  // the next starts immediately instead of waiting for the slowest request in
+  // its chunk. This matters on first-run single-date scans with 500+ symbols.
   let pending = symbols.filter((s) => !hasCachedHistory(s, source));
   for (let pass = 0; pass < 3 && pending.length; pass++) {
     if (pass > 0) await new Promise((r) => setTimeout(r, 2000 * pass));
-    for (let i = 0; i < pending.length; i += concurrency) {
-      const chunk = pending.slice(i, i + concurrency);
-      await Promise.all(chunk.map((s) => getHistory(s, source)));
-      const done = symbols.length - pending.length + Math.min(i + concurrency, pending.length);
-      onProgress?.(done, symbols.length, chunk[chunk.length - 1]);
-      await yieldToBrowser();
-    }
+    let nextIndex = 0;
+    let completed = symbols.length - pending.length;
+    const runWorker = async () => {
+      while (true) {
+        const index = nextIndex++;
+        if (index >= pending.length) return;
+        const symbol = pending[index];
+        await getHistory(symbol, source);
+        completed++;
+        onProgress?.(completed, symbols.length, symbol);
+        if (completed % 25 === 0) await yieldToBrowser();
+      }
+    };
+    await Promise.all(
+      Array.from({ length: Math.min(concurrency, pending.length) }, () => runWorker())
+    );
     pending = pending.filter((s) => !hasCachedHistory(s, source));
   }
 
