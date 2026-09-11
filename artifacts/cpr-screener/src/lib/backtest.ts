@@ -1295,6 +1295,19 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
         getStoploss: (r) => r.todayCPR.s1,
         conditionKey: "B-B-BB-BB-L4U4",
         levelCheckDefs: [{"key":"r4","subject":"today","bandKeys":["r4","r3"]},{"key":"r3","subject":"today","bandKeys":["r3","r2"]},{"key":"r2","subject":"today","bandKeys":["r2","prevHigh"]},{"key":"prevHigh","subject":"today","bandKeys":["r1","tc"]},{"key":"r1","subject":"today","bandKeys":["r1","tc"]},{"key":"tc","subject":"today","bandKeys":["bc","prevLow"]},{"key":"pivot","subject":"today","bandKeys":["bc","prevLow"]},{"key":"bc","subject":"today","bandKeys":["bc","prevLow"]},{"key":"prevLow","subject":"today","bandKeys":["s1","s2"]},{"key":"s1","subject":"today","bandKeys":["s1","s2"]},{"key":"s2","subject":"today","bandKeys":["s2","s3"]},{"key":"s3","subject":"today","bandKeys":["s3","s4"]},{"key":"s4","subject":"previous","bandKeys":["s3","s4"]}],
+      },
+    {
+        key: "B-B-BB-BB-L4U4-pGapA",
+        label: "B-B-BB-BB-L4U4-pGapA",
+        direction: "bullish",
+        targetLabel: "U4 (today's R4)",
+        getTarget: (r) => r.todayCPR.r4,
+        entryLabel: "TC (today's TC)",
+        getEntry: (r) => r.todayCPR.tc,
+        stoplossLabel: "S1 (today's S1)",
+        getStoploss: (r) => r.todayCPR.s1,
+        conditionKey: "B-B-BB-BB-L4U4",
+        levelCheckDefs: [{"key":"r4","subject":"today","bandKeys":["r4","r3"]},{"key":"r3","subject":"today","bandKeys":["r3","r2"]},{"key":"r2","subject":"today","bandKeys":["r2","prevHigh"]},{"key":"prevHigh","subject":"today","bandKeys":["tc","pivot"]},{"key":"r1","subject":"today","bandKeys":["r1","tc"]},{"key":"tc","subject":"today","bandKeys":["prevLow","s1"]},{"key":"pivot","subject":"today","bandKeys":["prevLow","s1"]},{"key":"bc","subject":"today","bandKeys":["prevLow","s1"]},{"key":"prevLow","subject":"today","bandKeys":["s1","s2"]},{"key":"s1","subject":"today","bandKeys":["s1","s2"]},{"key":"s2","subject":"today","bandKeys":["s2","s3"]},{"key":"s3","subject":"today","bandKeys":["s3","s4"]},{"key":"s4","subject":"previous","bandKeys":["s3","s4"]}],
       }
 ];
 
@@ -1650,7 +1663,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
             // B-B-BB-BB-L4U4 flag PLUS pHLGap-A PLUS "Prev PrevLow >
             // today.pivot" PLUS SSGap + LLGap PLUS todayCPR.HLSwitch HL-B.
             // Targets today's R4 (U4).
-            subPatternKeys: ["B-B-BB-BB-L4U4-pLTC-U2", "B-B-BB-BB-L4U4-pLAP:R4", "B-B-BB-BB-L4U4-Ladder:R4"],
+            subPatternKeys: ["B-B-BB-BB-L4U4-pLTC-U2", "B-B-BB-BB-L4U4-pLAP:R4", "B-B-BB-BB-L4U4-Ladder:R4", "B-B-BB-BB-L4U4-pGapA"],
           },
           {
             key: "B-B-BB-BB-EL4U4",
