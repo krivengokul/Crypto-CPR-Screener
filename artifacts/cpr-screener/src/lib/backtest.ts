@@ -3448,18 +3448,48 @@ export async function runBacktest(
   await prefetchHistories(symbols, source, onProgress);
 
   const rows: BacktestRow[] = [];
-  const batchSize = 25;
+  // PERF FIX: this was dropped from 50 to 25 in a recent change, which
+  // doubled the number of batch iterations (and doubled the number of
+  // yieldToBrowser() macrotask hops + onPartialRows/setRows re-renders)
+  // for the same symbol universe -- the direct cause of Run Backtest
+  // feeling slower. Raised to 100: by this point prefetchHistories has
+  // already warmed the whole universe into cache, so backtestSymbolOnDate
+  // is pure in-memory CPR reconstruction + pattern matching here, not
+  // network I/O -- a bigger batch costs nothing in lost parallelism and
+  // buys fewer round-trips through the loop below.
+  const batchSize = 100;
+
+  // PERF FIX: streamed rows are now buffered and flushed to onPartialRows
+  // at most every FLUSH_INTERVAL_MS, instead of once per batch. Flushing
+  // less often directly cuts total work: BacktestPanel's onPartialRows
+  // handler does setRows((prev) => [...prev, ...streamed]), which
+  // re-copies the WHOLE accumulated rows array on every call -- so total
+  // copy + re-render cost scales with the NUMBER of flushes, not just the
+  // number of rows. Time-based throttling keeps the UI live on slow scans
+  // (network-bound, real waiting) while collapsing many small flushes
+  // into a few large ones on fast scans (cache-warm, CPU-bound), where
+  // the old per-batch flush was pure overhead.
+  const FLUSH_INTERVAL_MS = 200;
+  let pendingFlush: BacktestRow[] = [];
+  let lastFlushAt = Date.now();
+  const maybeFlush = (force: boolean) => {
+    if (!pendingFlush.length) return;
+    if (!force && Date.now() - lastFlushAt < FLUSH_INTERVAL_MS) return;
+    onPartialRows?.(pendingFlush);
+    pendingFlush = [];
+    lastFlushAt = Date.now();
+  };
 
   for (let i = 0; i < symbols.length; i += batchSize) {
     const batch = symbols.slice(i, i + batchSize);
     const batchResults = await Promise.all(
       batch.map((sym) => backtestSymbolOnDate(sym, source, entryDateISO, target, passesPatternFn))
     );
-    const newRows: BacktestRow[] = [];
+    const isLastBatch = i + batchSize >= symbols.length;
     batchResults.forEach((r) => {
-      if (r) { rows.push(r); newRows.push(r); }
+      if (r) { rows.push(r); pendingFlush.push(r); }
     });
-    if (newRows.length) onPartialRows?.(newRows);
+    maybeFlush(isLastBatch);
     onProgress?.(Math.min(i + batchSize, symbols.length), symbols.length, batch[batch.length - 1]);
     await yieldToBrowser();
   }
