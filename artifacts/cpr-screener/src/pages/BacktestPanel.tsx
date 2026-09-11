@@ -21,12 +21,15 @@ import {
   copyBacktestView,
   createBacktestView,
   deriveLevelCheckDefs,
+  getAttachPointOptions,
+  findContainingNodeKey,
   type BacktestRow,
   type CategoryScanRow,
   type BacktestSource,
   type BacktestCategoryDef,
   type BacktestSubCategoryDef,
   type BacktestTargetDef,
+  type AttachPointOption,
 } from "@/lib/backtest";
 import { passesPattern, matchesPatternFlag, fmt, getChartUrl, hasKnownChartMapping, getWidthCategory, renderGapColumnBadges, renderPivotSizeCell } from "./ScreenerUtils";
 import {
@@ -38,7 +41,6 @@ import {
 import { SRLadderRow, toSRLadderData } from "./SRLadderPanel";
 import { getLadderMatchSummary, LEVEL_KEYS, type LevelCheckCondition, type LevelKey } from "./SRLadderDiff";
 import type { CPRLevels, CPRResult } from "@/lib/cpr";
-import { pivotcategories } from "@/lib/ViewsSidebar";
 
 // --- Small UTC date helpers (all dates in this panel are UTC ISO strings) ---
 function toISO(d: Date): string {
@@ -281,6 +283,55 @@ function deriveLevelCheckDefsForSymbol(
   return derived;
 }
 
+// Shared "attach under" dropdown for the Create/Copy View popovers.
+// Renders every Category/Pattern/Subpattern node in BACKTEST_CATEGORIES
+// (getAttachPointOptions — Views excluded, they're leaves) grouped by
+// category via <optgroup>, with nested Patterns/Subpatterns indented
+// beneath their category using the same "\u21B3" arrow treatment as the
+// "Category / Pattern / Subpattern / View" picker above, so a person can
+// file the new/copied View under any node in that same tree instead of
+// the flat, unrelated Screener-sidebar bucket list this replaced.
+function AttachPointSelect({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: string;
+  onChange: (key: string) => void;
+  disabled?: boolean;
+}) {
+  const options = useMemo(() => getAttachPointOptions(), []);
+  const byCategory = useMemo(() => {
+    const map = new Map<string, AttachPointOption[]>();
+    for (const opt of options) {
+      const list = map.get(opt.categoryLabel) ?? [];
+      list.push(opt);
+      map.set(opt.categoryLabel, list);
+    }
+    return map;
+  }, [options]);
+
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      disabled={disabled}
+      title="Which Category, Pattern, or Subpattern this View should be nested under in the dropdown tree above — defaults to where it was created from."
+      className="w-full bg-background border border-border rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
+    >
+      {[...byCategory.entries()].map(([categoryLabel, nodes]) => (
+        <optgroup key={categoryLabel} label={categoryLabel}>
+          {nodes.map((n) => (
+            <option key={n.key} value={n.key}>
+              {n.depth === 0 ? n.label : `${"\u2007\u2007".repeat(n.depth - 1)}\u21B3 ${n.label}`}
+            </option>
+          ))}
+        </optgroup>
+      ))}
+    </select>
+  );
+}
+
 function CopyViewControl({
   sourceKey,
   sourceLabel,
@@ -314,12 +365,13 @@ function CopyViewControl({
   const [createdKey, setCreatedKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [levelCheckNote, setLevelCheckNote] = useState<string | null>(null);
-  // Which Screener/left-nav category the auto-added entry lands under
-  // (see addToScreenerNav in copy-view.yml's patch.mjs). "copyViews" is
-  // the dedicated, safe default; any existing pivotcategories id can be
-  // picked instead if you already know where this View semantically
-  // belongs — nothing here tries to guess that automatically.
-  const [targetCategory, setTargetCategory] = useState("copyViews");
+  // Which Category/Pattern/Subpattern node (from the same tree as the
+  // "Category / Pattern / Subpattern / View" picker above) the copy is
+  // nested under. Defaults to wherever sourceKey (a View, i.e. a leaf)
+  // already lives — findContainingNodeKey resolves that owning node —
+  // so leaving it untouched reproduces the original behavior; picking a
+  // different node files the copy there instead.
+  const [attachKey, setAttachKey] = useState(() => findContainingNodeKey(sourceKey) ?? sourceKey);
 
   function openForm() {
     setNewKey(`${sourceKey}:copy`);
@@ -327,9 +379,9 @@ function CopyViewControl({
     setError("");
     setCommand(null);
     setCreatedKey(null);
+    setAttachKey(findContainingNodeKey(sourceKey) ?? sourceKey);
     setCopied(false);
     setLevelCheckNote(null);
-    setTargetCategory("copyViews");
     setOpen(true);
   }
 
@@ -341,7 +393,7 @@ function CopyViewControl({
       return;
     }
 
-    const result = copyBacktestView(sourceKey, trimmedKey, trimmedLabel);
+    const result = copyBacktestView(sourceKey, trimmedKey, trimmedLabel, attachKey);
     if (!result.ok) {
       setError(
         result.reason === "duplicate-key"
@@ -407,7 +459,7 @@ function CopyViewControl({
     }
 
     setCommand(
-      `gh workflow run copy-view.yml --repo krivengokul/Crypto-CPR-Screener -f sourceKey=${q(sourceKey)} -f newKey=${q(trimmedKey)} -f newLabel=${q(trimmedLabel)} -f targetCategory=${q(targetCategory)}${levelCheckDefsArg}`
+      `gh workflow run copy-view.yml --repo krivengokul/Crypto-CPR-Screener -f sourceKey=${q(sourceKey)} -f newKey=${q(trimmedKey)} -f newLabel=${q(trimmedLabel)} -f attachKey=${q(attachKey)}${levelCheckDefsArg}`
     );
     setCreatedKey(trimmedKey);
     // Deliberately NOT calling onCopied here. It switches the dropdown's
@@ -463,19 +515,7 @@ function CopyViewControl({
         disabled={!!command}
         className="w-full bg-background border border-border rounded-md px-2 py-1 text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
       />
-      <select
-        value={targetCategory}
-        onChange={(e) => setTargetCategory(e.target.value)}
-        disabled={!!command}
-        title="Which Screener/left-nav category this shows up under. Defaults to the safe Copy/Created Views bucket — only pick an existing category if you already know this belongs there."
-        className="w-full bg-background border border-border rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
-      >
-        {pivotcategories.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.id === "copyViews" ? "Created Views (default)" : c.label}
-          </option>
-        ))}
-      </select>
+      <AttachPointSelect value={attachKey} onChange={setAttachKey} disabled={!!command} />
       {error && <span className="text-[10px] text-destructive">{error}</span>}
       {levelCheckNote && <span className="text-[10px] text-amber-400">{levelCheckNote}</span>}
       {command && (
@@ -553,7 +593,13 @@ function CreateViewControl({
   const [command, setCommand] = useState<string | null>(null);
   const [createdKey, setCreatedKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [targetCategory, setTargetCategory] = useState("copyViews");
+  // Which Category/Pattern/Subpattern node (from the same tree as the
+  // "Category / Pattern / Subpattern / View" picker above) the new View
+  // is nested under. Defaults to patternKey — the node "Create View" was
+  // opened from — so leaving it untouched reproduces the original
+  // behavior; picking a different node files the View there instead
+  // while it still grades against patternKey's own condition.
+  const [attachKey, setAttachKey] = useState(patternKey);
   // Up -> entry TC / stoploss S1 (bullish), target one of R2/R3/R4.
   // Down -> entry BC / stoploss R1 (bearish), target one of S2/S3/S4.
   // Matches this codebase's own convention exactly (see e.g.
@@ -562,7 +608,7 @@ function CreateViewControl({
   const [target, setTarget] = useState("R4");
 
   function openForm() {
-    setTargetCategory("copyViews");
+    setAttachKey(patternKey);
     setDirection("bullish");
     setTarget("R4");
     setNewKey(patternKey);
@@ -586,7 +632,7 @@ function CreateViewControl({
     // below is safe even though this isn't a full CPRResult.
     const derived = deriveLevelCheckDefs({ prevCPR, todayCPR } as unknown as CPRResult);
 
-    const result = createBacktestView(patternKey, trimmedKey, trimmedLabel, direction, target, derived);
+    const result = createBacktestView(patternKey, trimmedKey, trimmedLabel, direction, target, derived, attachKey);
     if (!result.ok) {
       setError(
         result.reason === "duplicate-key"
@@ -616,7 +662,7 @@ function CreateViewControl({
     const b64 = btoa(binary);
 
     setCommand(
-      `gh workflow run create-view.yml --repo krivengokul/Crypto-CPR-Screener -f patternKey=${q(patternKey)} -f newKey=${q(trimmedKey)} -f newLabel=${q(trimmedLabel)} -f direction=${q(direction)} -f target=${q(target)} -f targetCategory=${q(targetCategory)} -f levelCheckDefs=${b64}`
+      `gh workflow run create-view.yml --repo krivengokul/Crypto-CPR-Screener -f patternKey=${q(patternKey)} -f newKey=${q(trimmedKey)} -f newLabel=${q(trimmedLabel)} -f direction=${q(direction)} -f target=${q(target)} -f attachKey=${q(attachKey)} -f levelCheckDefs=${b64}`
     );
     setCreatedKey(trimmedKey);
   }
@@ -694,19 +740,7 @@ function CreateViewControl({
         disabled={!!command}
         className="w-full bg-background border border-border rounded-md px-2 py-1 text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
       />
-      <select
-        value={targetCategory}
-        onChange={(e) => setTargetCategory(e.target.value)}
-        disabled={!!command}
-        title="Which Screener/left-nav category this shows up under. Defaults to the safe Copy/Created Views bucket — only pick an existing category if you already know this belongs there."
-        className="w-full bg-background border border-border rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
-      >
-        {pivotcategories.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.id === "copyViews" ? "Created Views (default)" : c.label}
-          </option>
-        ))}
-      </select>
+      <AttachPointSelect value={attachKey} onChange={setAttachKey} disabled={!!command} />
       {error && <span className="text-[10px] text-destructive">{error}</span>}
       {command && (
         <div className="flex flex-col gap-1">

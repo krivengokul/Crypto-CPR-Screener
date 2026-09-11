@@ -25,6 +25,10 @@ on:
         description: "Base64 JSON array of {key, subject, bandKeys} — derived client-side for the specific symbol copied from. Omit/leave blank for a View with no levelCheckDefs."
         required: false
         type: string
+      attachKey:
+        description: "Key of the Category/Pattern/Subpattern node (in BACKTEST_CATEGORIES) to nest the copy under. Defaults to wherever sourceKey already lives if left blank. The copy still grades against the same original condition regardless of where it's attached."
+        required: false
+        type: string
 
 # contents: write — lets the auto-generated GITHUB_TOKEN push the commit.
 # actions: write — lets it also trigger deploy.yml via `gh workflow run`
@@ -61,6 +65,7 @@ jobs:
           NEW_KEY: ${{ inputs.newKey }}
           NEW_LABEL: ${{ inputs.newLabel }}
           LEVEL_CHECK_DEFS_B64: ${{ inputs.levelCheckDefs }}
+          ATTACH_KEY: ${{ inputs.attachKey }}
 
       - name: Commit and push
         run: |

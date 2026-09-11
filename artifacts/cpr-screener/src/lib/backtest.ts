@@ -2326,20 +2326,111 @@ export interface CopyViewResult {
 }
 
 /**
+ * Resolves ANY Category/Pattern/Subpattern node's own `subPatternKeys`
+ * array by that node's own key — a bare Category checked first (its own
+ * key never nests inside its own `patterns`), then any depth of nested
+ * Pattern/Subpattern via findOwnSubPatternKeysArray. Shared by
+ * createBacktestView and copyBacktestView so both can accept an explicit
+ * `attachKey` — the node the person picked in the Create/Copy View
+ * "attach under" dropdown — independent of the pattern the popover was
+ * opened from.
+ */
+function findAttachArrayByKey(key: string): string[] | null {
+  for (const cat of BACKTEST_CATEGORIES) {
+    if (cat.key === key) {
+      if (!cat.subPatternKeys) cat.subPatternKeys = [];
+      return cat.subPatternKeys;
+    }
+    const found = findOwnSubPatternKeysArray(key, cat.patterns);
+    if (found) return found;
+  }
+  return null;
+}
+
+/**
+ * NEW: flat, indented list of every Category/Pattern/Subpattern node in
+ * BACKTEST_CATEGORIES (Views excluded — they're leaves and can't host
+ * children), for the Create/Copy View popovers' "attach under" dropdown.
+ * Mirrors the same tree the "Category / Pattern / Subpattern / View"
+ * picker at the top of BacktestPanel renders, so a person copying/
+ * creating a View can file it under any node in that tree, not just a
+ * flat, unrelated Screener-sidebar bucket.
+ */
+export interface AttachPointOption {
+  key: string;
+  label: string;
+  depth: number; // 0 = category, 1 = Pattern, 2+ = nested Subpattern
+  categoryLabel: string;
+}
+
+/**
+ * Given a View's own key, returns the key of the Category/Pattern/
+ * Subpattern node that currently contains it (i.e. whose subPatternKeys
+ * includes it) — the counterpart to findSubPatternKeysArray that returns
+ * the owning node's KEY rather than its array, so callers like
+ * CopyViewControl can default their "attach under" dropdown (which
+ * offers Category/Pattern/Subpattern keys, not View keys) to wherever
+ * the View already lives.
+ */
+export function findContainingNodeKey(key: string): string | null {
+  const searchPatterns = (patterns: BacktestSubCategoryDef[] | undefined): string | null => {
+    for (const p of patterns ?? []) {
+      if (p.subPatternKeys.includes(key)) return p.key;
+      const nested = searchPatterns(p.patterns);
+      if (nested) return nested;
+    }
+    return null;
+  };
+
+  for (const cat of BACKTEST_CATEGORIES) {
+    if (cat.subPatternKeys?.includes(key)) return cat.key;
+    const found = searchPatterns(cat.patterns);
+    if (found) return found;
+  }
+  return null;
+}
+
+export function getAttachPointOptions(): AttachPointOption[] {
+  const opts: AttachPointOption[] = [];
+
+  const walk = (nodes: BacktestSubCategoryDef[] | undefined, depth: number, categoryLabel: string) => {
+    for (const n of nodes ?? []) {
+      opts.push({ key: n.key, label: n.label, depth, categoryLabel });
+      walk(n.patterns, depth + 1, categoryLabel);
+    }
+  };
+
+  for (const cat of BACKTEST_CATEGORIES) {
+    opts.push({ key: cat.key, label: cat.label, depth: 0, categoryLabel: cat.label });
+    walk(cat.patterns, 1, cat.label);
+  }
+
+  return opts;
+}
+
+/**
  * Clones `sourceKey`'s View (levelCheckDefs deep-copied) as `newKey`/
  * `newLabel`, pushes it into BACKTEST_TARGETS, and inserts `newKey` into
- * the same subPatternKeys array the source lives in.
+ * a subPatternKeys array.
+ *
+ * By default (`attachKey` omitted) that's the same array the source
+ * lives in — the original behavior. Pass `attachKey` (a Category/
+ * Pattern/Subpattern key from getAttachPointOptions) to file the copy
+ * under a DIFFERENT node instead; the clone still grades via the
+ * original condition (conditionKey), so attach location never changes
+ * what the View matches, only where it appears in the dropdown tree.
  */
 export function copyBacktestView(
   sourceKey: string,
   newKey: string,
-  newLabel: string = newKey
+  newLabel: string = newKey,
+  attachKey?: string
 ): CopyViewResult {
   const source = BACKTEST_TARGETS.find((t) => t.key === sourceKey);
   if (!source) return { ok: false, reason: "source-not-found" };
   if (BACKTEST_TARGETS.some((t) => t.key === newKey)) return { ok: false, reason: "duplicate-key" };
 
-  const siblingArray = findSubPatternKeysArray(sourceKey);
+  const siblingArray = attachKey ? findAttachArrayByKey(attachKey) : findSubPatternKeysArray(sourceKey);
   if (!siblingArray) return { ok: false, reason: "source-not-in-tree" };
 
   const cloned: BacktestTargetDef = {
@@ -2424,6 +2515,14 @@ const BEARISH_TARGETS: Record<string, { label: string; key: "s2" | "s3" | "s4" }
  * `levelCheckDefs` is the caller's responsibility to derive (see
  * deriveLevelCheckDefs above) — typically from whichever symbol's row
  * was on screen in the SR Ladder panel when "Create View" was clicked.
+ *
+ * `attachKey` (a Category/Pattern/Subpattern key from
+ * getAttachPointOptions) picks where in the dropdown tree the new View
+ * is filed. Defaults to `patternKey` itself — the node "Create View" was
+ * opened from — so omitting it keeps the original behavior. `patternKey`
+ * always stays the View's conditionKey (what it grades against);
+ * `attachKey` only changes where it's nested, so a View can be created
+ * from one Pattern's row but filed under a different Subpattern.
  */
 export function createBacktestView(
   patternKey: string,
@@ -2431,27 +2530,15 @@ export function createBacktestView(
   newLabel: string,
   direction: "bullish" | "bearish",
   target: string,
-  levelCheckDefs: LevelCheckCondition[]
+  levelCheckDefs: LevelCheckCondition[],
+  attachKey?: string
 ): CreateViewResult {
   if (BACKTEST_TARGETS.some((t) => t.key === newKey)) return { ok: false, reason: "duplicate-key" };
 
   const targetDef = direction === "bullish" ? BULLISH_TARGETS[target] : BEARISH_TARGETS[target];
   if (!targetDef) return { ok: false, reason: "invalid-target" };
 
-  let siblingArray: string[] | null = null;
-  for (const cat of BACKTEST_CATEGORIES) {
-    // A bare Category can itself be the attach point now (Create View is
-    // available whenever the selected dropdown item isn't a leaf View —
-    // Category, Pattern, or Subpattern all qualify) — checked first,
-    // since a category's own key never nests inside its own `patterns`.
-    if (cat.key === patternKey) {
-      if (!cat.subPatternKeys) cat.subPatternKeys = [];
-      siblingArray = cat.subPatternKeys;
-      break;
-    }
-    siblingArray = findOwnSubPatternKeysArray(patternKey, cat.patterns);
-    if (siblingArray) break;
-  }
+  const siblingArray = findAttachArrayByKey(attachKey ?? patternKey);
   if (!siblingArray) return { ok: false, reason: "pattern-not-found" };
 
   const created: BacktestTargetDef =

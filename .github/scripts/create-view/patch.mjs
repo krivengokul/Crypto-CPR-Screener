@@ -100,7 +100,7 @@ const BEARISH_TARGETS = {
   S4: { label: "L4 (today's S4)", key: "s4" },
 };
 
-function applyCreateViewPatch(sourceText, patternKey, newKey, newLabel, direction, target, levelCheckDefs) {
+function applyCreateViewPatch(sourceText, patternKey, newKey, newLabel, direction, target, levelCheckDefs, attachKey) {
   const project = new Project({ useInMemoryFileSystem: true });
   const sourceFile = project.createSourceFile("backtest.ts", sourceText);
 
@@ -120,15 +120,20 @@ function applyCreateViewPatch(sourceText, patternKey, newKey, newLabel, directio
   }
 
   // --- 2. Locate the Pattern/Subpattern node this View attaches to -----
+  // attachKey (defaulting to patternKey) picks WHERE in the tree the new
+  // View is nested; patternKey always stays the View's conditionKey
+  // below (what it grades against), so a View can be created from one
+  // Pattern's row but filed under a different Subpattern.
   const categoriesDecl = sourceFile.getVariableDeclarationOrThrow("BACKTEST_CATEGORIES");
   const categoriesArray = categoriesDecl.getInitializerIfKindOrThrow(SyntaxKind.ArrayLiteralExpression);
+  const effectiveAttachKey = attachKey && attachKey.trim() !== "" ? attachKey : patternKey;
 
   let patternNode = null;
   for (const cat of categoriesArray.getElements()) {
     if (!cat.isKind(SyntaxKind.ObjectLiteralExpression)) continue;
     // A bare Category can itself be the attach point now — checked
     // first, same reasoning as backtest.ts's in-memory createBacktestView.
-    if (getStringPropertyValue(cat, "key") === patternKey) {
+    if (getStringPropertyValue(cat, "key") === effectiveAttachKey) {
       patternNode = cat;
       break;
     }
@@ -136,14 +141,14 @@ function applyCreateViewPatch(sourceText, patternKey, newKey, newLabel, directio
     if (patternsProp && patternsProp.isKind(SyntaxKind.PropertyAssignment)) {
       const patternsArray = patternsProp.getInitializer();
       if (patternsArray && patternsArray.isKind(SyntaxKind.ArrayLiteralExpression)) {
-        patternNode = findPatternNode(patternsArray, patternKey);
+        patternNode = findPatternNode(patternsArray, effectiveAttachKey);
         if (patternNode) break;
       }
     }
   }
   if (!patternNode) {
     throw new Error(
-      `Couldn't find a Pattern/Subpattern with key "${patternKey}" in BACKTEST_CATEGORIES — can't attach the new View.`
+      `Couldn't find a Category/Pattern/Subpattern with key "${effectiveAttachKey}" in BACKTEST_CATEGORIES — can't attach the new View.`
     );
   }
 
@@ -193,9 +198,15 @@ const patternKey = process.env.PATTERN_KEY;
 const newKey = process.env.NEW_KEY;
 const newLabel = process.env.NEW_LABEL;
 const levelCheckDefsB64 = process.env.LEVEL_CHECK_DEFS_B64;
-const targetCategory = process.env.TARGET_CATEGORY && process.env.TARGET_CATEGORY.trim() !== ""
-  ? process.env.TARGET_CATEGORY
-  : "copyViews";
+// Where in BACKTEST_CATEGORIES the new View is nested — defaults to
+// patternKey (the node "Create View" was opened from) when left blank,
+// which is the original behavior. patternKey itself always stays the
+// View's conditionKey (what it grades against) regardless of attachKey.
+const attachKey = process.env.ATTACH_KEY && process.env.ATTACH_KEY.trim() !== "" ? process.env.ATTACH_KEY : patternKey;
+// Always files the Screener-sidebar nav entry under the safe default
+// bucket — the UI no longer exposes a picker for this (it now picks
+// where the View nests in BACKTEST_CATEGORIES via attachKey instead).
+const targetCategory = "copyViews";
 const direction = process.env.DIRECTION === "bearish" ? "bearish" : "bullish";
 const target = process.env.TARGET && process.env.TARGET.trim() !== "" ? process.env.TARGET : direction === "bullish" ? "R4" : "S4";
 const backtestFilePath = process.env.BACKTEST_FILE_PATH ?? "artifacts/cpr-screener/src/lib/backtest.ts";
@@ -243,7 +254,16 @@ try {
 }
 
 try {
-  const { patchedText } = applyCreateViewPatch(currentText, patternKey, newKey, newLabel, direction, target, levelCheckDefs);
+  const { patchedText } = applyCreateViewPatch(
+    currentText,
+    patternKey,
+    newKey,
+    newLabel,
+    direction,
+    target,
+    levelCheckDefs,
+    attachKey
+  );
   writeFileSync(filePath, patchedText, "utf-8");
 
   // Also add the new key to ViewsSidebar.tsx's Views.copyViews — see
@@ -254,7 +274,7 @@ try {
   writeFileSync(viewsSidebarFilePath, patchedViewsSidebarText, "utf-8");
 
   console.log(
-    `Created "${newKey}" under Pattern/Subpattern "${patternKey}" with ${levelCheckDefs.length} symbol-derived levelCheckDefs`
+    `Created "${newKey}" (grades against "${patternKey}") under Category/Pattern/Subpattern "${attachKey}" with ${levelCheckDefs.length} symbol-derived levelCheckDefs`
   );
   console.log(`Added "${newKey}" to ${VIEWS_SIDEBAR_FILE_PATH}'s Views["${targetCategory}"]`);
 } catch (err) {

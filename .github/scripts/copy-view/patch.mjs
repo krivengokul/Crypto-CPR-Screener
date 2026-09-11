@@ -71,7 +71,7 @@ function addToScreenerNav(sourceText, newKey, newLabel) {
   return sourceFile.getFullText();
 }
 
-function applyCopyViewPatch(sourceText, sourceKey, newKey, newLabel, levelCheckDefs) {
+function applyCopyViewPatch(sourceText, sourceKey, newKey, newLabel, levelCheckDefs, attachKey) {
   const project = new Project({ useInMemoryFileSystem: true });
   const sourceFile = project.createSourceFile("backtest.ts", sourceText);
 
@@ -139,6 +139,12 @@ function applyCopyViewPatch(sourceText, sourceKey, newKey, newLabel, levelCheckD
   }
 
   // --- 2. Insert newKey into BACKTEST_CATEGORIES' matching subPatternKeys --
+  // attachKey (defaulting to sourceKey) picks WHERE in the tree the copy
+  // is nested — independent of originalConditionKey above, which is what
+  // the copy actually grades against. This lets a copy be filed under a
+  // different Category/Pattern/Subpattern than the one it was made from.
+  const effectiveAttachKey = attachKey && attachKey.trim() !== "" ? attachKey : sourceKey;
+
   const categoriesDecl = sourceFile.getVariableDeclarationOrThrow("BACKTEST_CATEGORIES");
   const categoriesArray = categoriesDecl.getInitializerIfKindOrThrow(SyntaxKind.ArrayLiteralExpression);
 
@@ -149,29 +155,35 @@ function applyCopyViewPatch(sourceText, sourceKey, newKey, newLabel, levelCheckD
     .filter((a) => !!a);
 
   const siblingArray = subPatternArrays.find((arr) =>
-    arr.getElements().some((el) => el.isKind(SyntaxKind.StringLiteral) && el.getLiteralText() === sourceKey)
+    arr.getElements().some((el) => el.isKind(SyntaxKind.StringLiteral) && el.getLiteralText() === effectiveAttachKey)
   );
 
   if (siblingArray) {
     const siblingIndex = siblingArray
       .getElements()
-      .findIndex((el) => el.isKind(SyntaxKind.StringLiteral) && el.getLiteralText() === sourceKey);
+      .findIndex((el) => el.isKind(SyntaxKind.StringLiteral) && el.getLiteralText() === effectiveAttachKey);
     siblingArray.insertElement(siblingIndex + 1, `"${escapeForDoubleQuotedString(newKey)}"`);
   } else {
-    // sourceKey wasn't found as a CONTAINED element of any subPatternKeys
-    // array — check whether it's instead a Pattern/Subpattern node's OWN
-    // key (that node's activePatternTarget resolves directly, since it
-    // has a BACKTEST_TARGETS entry matching its own identity, not via a
-    // parent's list). A clone of "itself" was never a contained element
-    // anywhere, so it belongs among ITS OWN children instead.
-    const ownNode = categoriesArray
-      .getDescendantsOfKind(SyntaxKind.ObjectLiteralExpression)
-      .find((el) => getStringPropertyValue(el, "key") === sourceKey);
+    // effectiveAttachKey wasn't found as a CONTAINED element of any
+    // subPatternKeys array — check whether it's instead a Category or a
+    // Pattern/Subpattern node's OWN key (that node's activePatternTarget
+    // resolves directly, since it has a BACKTEST_TARGETS entry matching
+    // its own identity, not via a parent's list, or it's a bare Category
+    // with no View of its own at all). Either way it belongs among ITS
+    // OWN children instead.
+    const ownCategory = categoriesArray
+      .getElements()
+      .find((el) => el.isKind(SyntaxKind.ObjectLiteralExpression) && getStringPropertyValue(el, "key") === effectiveAttachKey);
+    const ownNode =
+      ownCategory ??
+      categoriesArray
+        .getDescendantsOfKind(SyntaxKind.ObjectLiteralExpression)
+        .find((el) => getStringPropertyValue(el, "key") === effectiveAttachKey);
 
     if (!ownNode) {
       throw new Error(
-        `Found "${sourceKey}" in BACKTEST_TARGETS but it isn't nested under any subPatternKeys in BACKTEST_CATEGORIES, ` +
-          `and no Pattern/Subpattern node has that key either — can't place the copy in the dropdown tree.`
+        `"${effectiveAttachKey}" isn't nested under any subPatternKeys in BACKTEST_CATEGORIES, and no Category/` +
+          `Pattern/Subpattern node has that key either — can't place the copy in the dropdown tree.`
       );
     }
 
@@ -181,7 +193,7 @@ function applyCopyViewPatch(sourceText, sourceKey, newKey, newLabel, levelCheckD
       if (arr && arr.isKind(SyntaxKind.ArrayLiteralExpression)) {
         arr.addElement(`"${escapeForDoubleQuotedString(newKey)}"`);
       } else {
-        throw new Error(`"${sourceKey}"'s subPatternKeys isn't an array literal — can't insert into it.`);
+        throw new Error(`"${effectiveAttachKey}"'s subPatternKeys isn't an array literal — can't insert into it.`);
       }
     } else {
       ownNode.addPropertyAssignment({
@@ -199,6 +211,11 @@ const sourceKey = process.env.SOURCE_KEY;
 const newKey = process.env.NEW_KEY;
 const newLabel = process.env.NEW_LABEL;
 const levelCheckDefsB64 = process.env.LEVEL_CHECK_DEFS_B64;
+// Where in BACKTEST_CATEGORIES the copy is nested — defaults to
+// sourceKey's own location when left blank (the original behavior).
+// The copy always keeps grading against originalConditionKey regardless
+// of where attachKey files it.
+const attachKey = process.env.ATTACH_KEY && process.env.ATTACH_KEY.trim() !== "" ? process.env.ATTACH_KEY : sourceKey;
 const backtestFilePath = process.env.BACKTEST_FILE_PATH ?? "artifacts/cpr-screener/src/lib/backtest.ts";
 const VIEWS_SIDEBAR_FILE_PATH = process.env.VIEWS_SIDEBAR_FILE_PATH ?? "artifacts/cpr-screener/src/lib/ViewsSidebar.tsx";
 
@@ -254,7 +271,8 @@ try {
     sourceKey,
     newKey,
     newLabel,
-    levelCheckDefs
+    levelCheckDefs,
+    attachKey
   );
   writeFileSync(filePath, patchedText, "utf-8");
 
@@ -268,7 +286,7 @@ try {
 
   const levelCheckNote = levelCheckDefs ? ` with ${levelCheckDefs.length} symbol-derived levelCheckDefs` : "";
   console.log(
-    `Patched ${backtestFilePath}: "${sourceKey}" -> "${newKey}" (grades against "${originalConditionKey}")${levelCheckNote}`
+    `Patched ${backtestFilePath}: "${sourceKey}" -> "${newKey}" under "${attachKey}" (grades against "${originalConditionKey}")${levelCheckNote}`
   );
   console.log(`Added "${newKey}" to ${VIEWS_SIDEBAR_FILE_PATH}'s Views.copyViews`);
 } catch (err) {

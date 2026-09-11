@@ -34,8 +34,8 @@ on:
         description: "Base64 JSON array of {key, subject, bandKeys} — derived client-side (deriveLevelCheckDefs) for the specific symbol this was created from"
         required: true
         type: string
-      targetCategory:
-        description: "Which ViewsSidebar.tsx pivotcategories id to add the nav entry under. Defaults to the safe 'copyViews' bucket if left blank."
+      attachKey:
+        description: "Key of the Category/Pattern/Subpattern node (in BACKTEST_CATEGORIES) to nest the new View under in the dropdown tree. Defaults to patternKey if left blank — the new View still grades against patternKey's condition regardless of where it's attached."
         required: false
         type: string
 
@@ -78,7 +78,7 @@ jobs:
           DIRECTION: ${{ inputs.direction }}
           TARGET: ${{ inputs.target }}
           LEVEL_CHECK_DEFS_B64: ${{ inputs.levelCheckDefs }}
-          TARGET_CATEGORY: ${{ inputs.targetCategory }}
+          ATTACH_KEY: ${{ inputs.attachKey }}
 
       - name: Commit and push
         run: |
