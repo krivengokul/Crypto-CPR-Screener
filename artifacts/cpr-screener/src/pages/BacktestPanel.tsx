@@ -936,6 +936,9 @@ export default function BacktestPanel() {
   }
   const [progress, setProgress] = useState({ done: 0, total: 0, symbol: "" });
   const [rows, setRows] = useState<BacktestRow[]>([]);
+  // Results-table pagination (50 rows/page) — keeps large result sets from
+  // locking the DOM on a big multi-date run.
+  const [resultPage, setResultPage] = useState(0);
   const [categoryRows, setCategoryRows] = useState<(CategoryScanRow & { entryDate: string })[]>([]);
   const [changeSortDir, setChangeSortDir] = useState<"asc" | "desc" | null>(null);
   const [resultChangeSortDir, setResultChangeSortDir] = useState<"asc" | "desc" | null>(null);
@@ -1183,6 +1186,7 @@ export default function BacktestPanel() {
       setResultChangeSortDir(null);
       setLadderSortDir(null);
       setResultSearch("");
+      setResultPage(0);
     setProgress({ done: 0, total: 0, symbol: "" });
     setDateProgress({ current: 0, total: 0, date: "" });
     try {
@@ -1268,7 +1272,9 @@ export default function BacktestPanel() {
           entryDate,
           source,
           passesPattern,
-          (done, total, symbol) => setProgress({ done, total, symbol })
+          (done, total, symbol) => setProgress({ done, total, symbol }),
+          // Stream matched rows into the table as each batch resolves.
+          (streamed) => setRows((prev) => [...prev, ...streamed])
         );
         setRows(result);
       } else {
@@ -1282,7 +1288,9 @@ export default function BacktestPanel() {
             d,
             source,
             passesPattern,
-            (done, total, symbol) => setProgress({ done, total, symbol })
+            (done, total, symbol) => setProgress({ done, total, symbol }),
+            // Stream matched rows into the table as each batch resolves.
+            (streamed) => setRows((prev) => [...prev, ...streamed])
           );
           allRows.push(...dayResult);
         }
@@ -1337,6 +1345,41 @@ export default function BacktestPanel() {
     rows.forEach((r) => map.set(r, getLadderMatchSummary(r.prevCPR, r.todayCPR, activeLevelCheckDefs)));
     return map;
   }, [rows, activeLevelCheckDefs]);
+
+  // Pagination: sorting runs over the full filtered set, then only the
+  // current page (50 rows) is rendered so the DOM stays small.
+  const RESULTS_PAGE_SIZE = 50;
+  const sortedRows = useMemo(() => {
+    if (ladderSortDir !== null) {
+      return [...filteredRows].sort((a, b) => {
+        const av = ladderByRow.get(a)?.matchingCount ?? 0;
+        const bv = ladderByRow.get(b)?.matchingCount ?? 0;
+        return ladderSortDir === "asc" ? av - bv : bv - av;
+      });
+    }
+    if (resultChangeSortDir === null) return filteredRows;
+    return [...filteredRows].sort((a, b) => {
+      const av = a.changePct;
+      const bv = b.changePct;
+      const aNull = av === null || av === undefined;
+      const bNull = bv === null || bv === undefined;
+      if (aNull && bNull) return 0;
+      if (aNull) return 1;
+      if (bNull) return -1;
+      return resultChangeSortDir === "asc" ? av - bv : bv - av;
+    });
+  }, [filteredRows, ladderSortDir, resultChangeSortDir, ladderByRow]);
+
+  useEffect(() => {
+    setResultPage(0);
+  }, [resultSearch, ladderSortDir, resultChangeSortDir]);
+
+  const resultPageCount = Math.max(1, Math.ceil(sortedRows.length / RESULTS_PAGE_SIZE));
+  const currentPage = Math.min(resultPage, resultPageCount - 1);
+  const paginatedRows = useMemo(
+    () => sortedRows.slice(currentPage * RESULTS_PAGE_SIZE, (currentPage + 1) * RESULTS_PAGE_SIZE),
+    [sortedRows, currentPage]
+  );
 
   const gradedRows = rows.filter((r) => r.result === "pass" || r.result === "fail");
   const fullMatchGraded = gradedRows.filter((r) => ladderByRow.get(r)?.fullMatch);
@@ -1997,25 +2040,7 @@ export default function BacktestPanel() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {(ladderSortDir !== null
-                    ? [...filteredRows].sort((a, b) => {
-                        const av = ladderByRow.get(a)?.matchingCount ?? 0;
-                        const bv = ladderByRow.get(b)?.matchingCount ?? 0;
-                        return ladderSortDir === "asc" ? av - bv : bv - av;
-                      })
-                    : resultChangeSortDir === null
-                    ? filteredRows
-                    : [...filteredRows].sort((a, b) => {
-                        const av = a.changePct;
-                        const bv = b.changePct;
-                        const aNull = av === null || av === undefined;
-                        const bNull = bv === null || bv === undefined;
-                        if (aNull && bNull) return 0;
-                        if (aNull) return 1;
-                        if (bNull) return -1;
-                        return resultChangeSortDir === "asc" ? av - bv : bv - av;
-                      })
-                  ).map((r) => (
+                  {paginatedRows.map((r) => (
                     <Fragment key={`${r.source}-${r.symbol}-${r.entryDate}`}>
                     <tr className="hover:bg-muted/20">
                       <td
@@ -2211,6 +2236,31 @@ export default function BacktestPanel() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+          {filteredRows.length > 0 && resultPageCount > 1 && (
+            <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
+              <span>
+                Page {currentPage + 1} of {resultPageCount} · {sortedRows.length} results
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={currentPage === 0}
+                  onClick={() => setResultPage((p) => Math.max(0, p - 1))}
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded border border-border hover:bg-muted/40 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" /> Previous
+                </button>
+                <button
+                  type="button"
+                  disabled={currentPage >= resultPageCount - 1}
+                  onClick={() => setResultPage((p) => Math.min(resultPageCount - 1, p + 1))}
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded border border-border hover:bg-muted/40 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Next <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
           )}
         </>

@@ -3012,6 +3012,7 @@ async function getCurrentSymbolCandidates(source: BacktestSource): Promise<strin
 async function getSymbolUniverse(
   source: BacktestSource,
   entryDateISO: string,
+  onProgress?: (done: number, total: number, symbol: string) => void,
 ): Promise<string[]> {
   if (!isValidUTCDateISO(entryDateISO)) {
     throw new Error("Invalid backtest date " + entryDateISO + ". Expected YYYY-MM-DD.");
@@ -3033,7 +3034,7 @@ async function getSymbolUniverse(
 
   // Warm history once. The run functions prefetch the filtered list again,
   // but those entries are already cached here.
-  await prefetchHistories(currentCandidates, source);
+  await prefetchHistories(currentCandidates, source, onProgress, 20);
 
   const historicalSymbols: string[] = [];
   for (const symbol of currentCandidates) {
@@ -3079,9 +3080,9 @@ export async function prefetchHistories(
   symbols: string[],
   source: BacktestSource,
   onProgress?: (done: number, total: number, symbol: string) => void,
-  // Matches the Live Scanner's CONCURRENCY of 10 so both put the same
-  // pressure on Binance's rate limiter and see the same symbol universe.
-  concurrency = 10
+  // Bumped from 10 to 20 for faster prefetch; still chunked per pass so a
+  // 429 burst is retried after a cool-off rather than lost.
+  concurrency = 20
 ): Promise<void> {
   lastRunSkipped = [];
 
@@ -3430,29 +3431,35 @@ export async function runBacktest(
   entryDateISO: string,
   source: BacktestSource,
   passesPatternFn: (r: CPRResult, pattern: string) => boolean,
-  onProgress?: (done: number, total: number, symbol: string) => void
+  onProgress?: (done: number, total: number, symbol: string) => void,
+  // NEW: streams matched rows to the UI as each batch resolves, instead of
+  // waiting for the full scan to finish before showing anything.
+  onPartialRows?: (newRows: BacktestRow[]) => void
 ): Promise<BacktestRow[]> {
   const target = BACKTEST_TARGETS.find((t) => t.key === patternKey);
   if (!target) throw new Error(`No backtest target defined yet for pattern "${patternKey}"`);
 
   // Single source of truth — see getSymbolUniverse above. No per-call
-  // duplication of the fetch/filter/sort logic.
-  const symbols: string[] = await getSymbolUniverse(source, entryDateISO);
+  // duplication of the fetch/filter/sort logic. onProgress is forwarded so
+  // the initial universe prefetch reports progress instead of going silent.
+  const symbols: string[] = await getSymbolUniverse(source, entryDateISO, onProgress);
 
   // Warm the candle cache once; subsequent dates in a sweep hit memory only.
   await prefetchHistories(symbols, source, onProgress);
 
   const rows: BacktestRow[] = [];
-  const batchSize = 50;
+  const batchSize = 25;
 
   for (let i = 0; i < symbols.length; i += batchSize) {
     const batch = symbols.slice(i, i + batchSize);
     const batchResults = await Promise.all(
       batch.map((sym) => backtestSymbolOnDate(sym, source, entryDateISO, target, passesPatternFn))
     );
+    const newRows: BacktestRow[] = [];
     batchResults.forEach((r) => {
-      if (r) rows.push(r);
+      if (r) { rows.push(r); newRows.push(r); }
     });
+    if (newRows.length) onPartialRows?.(newRows);
     onProgress?.(Math.min(i + batchSize, symbols.length), symbols.length, batch[batch.length - 1]);
     await yieldToBrowser();
   }
