@@ -9,9 +9,19 @@
  * no Level Check to run, and every function here reports that plainly
  * ("No levelCheckDefs") rather than falling back to a guessed rule.
  *
+ * A condition's two named band lines (bandKeys) are meant to be an
+ * unbroken, adjacent pair on the band day. If some other one of the 13
+ * lines has moved in between them since the View's levelCheckDefs was
+ * written, the band no longer means what the condition intended — so a
+ * line only reports "Matching" when BOTH its value falls inside the
+ * band AND no other band-day line intrudes between the two named
+ * boundaries. An intruding line fails the check even if the subject
+ * value is still numerically inside [low, high].
+ *
  * Example output for a line whose condition is satisfied/not:
  *   S4 between prev S4 and prev S3 — Matching
  *   TC between prev TC and prev PH — Not Matching (TC above prev PH)
+ *   PL between prev PL and prev BC — Not Matching (prev S1 between prev PL and prev BC)
  */
 
 import { CheckCircle2, XCircle } from "lucide-react";
@@ -109,7 +119,7 @@ export function compareSRLadders(
     const bandB = bandCPR[cond.bandKeys[1]] as number;
     const lower = Math.min(bandA, bandB);
     const upper = Math.max(bandA, bandB);
-    const matching = subjectVal >= lower && subjectVal <= upper;
+    const valueInBand = subjectVal >= lower && subjectVal <= upper;
 
     const selfLabel = levelLabel(cond.key);
     const subjectPrefix = subjectIsToday ? "" : "Previous ";
@@ -119,6 +129,23 @@ export function compareSRLadders(
     const lowLabel = levelLabel(lowKey);
     const highLabel = levelLabel(highKey);
 
+    // The condition's two named band lines only mean what they're
+    // supposed to (an unbroken run from lowKey to highKey) if no OTHER
+    // of the 13 lines from that same band day has moved in between
+    // them. If one has — e.g. prev S1 sliding between prev PL and prev
+    // BC — the band is no longer the adjacent pair the condition was
+    // written against, so the check must fail even though subjectVal
+    // still lands numerically inside [lower, upper].
+    const bandKeySet = new Set<LevelKey>(cond.bandKeys);
+    const interveningKeys = LEVEL_KEYS.filter((k) => {
+      if (bandKeySet.has(k)) return false;
+      const v = bandCPR[k] as number;
+      return v > lower && v < upper;
+    });
+    const bandIntact = interveningKeys.length === 0;
+
+    const matching = valueInBand && bandIntact;
+
     let direction: "above" | "below" | undefined;
     let basicText: string;
     let text: string;
@@ -126,11 +153,23 @@ export function compareSRLadders(
     if (matching) {
       basicText = `${subjectPrefix}${selfLabel} between ${bandPrefix}${lowLabel} and ${bandPrefix}${highLabel} — Matching`;
       text = basicText;
-    } else {
+    } else if (!valueInBand) {
       direction = subjectVal > upper ? "above" : "below";
       const crossed = direction === "above" ? highLabel : lowLabel;
       basicText = `${subjectPrefix}${selfLabel} between ${bandPrefix}${lowLabel} and ${bandPrefix}${highLabel} — Not Matching`;
       text = `${basicText} (${selfLabel} ${direction} ${bandPrefix}${crossed})`;
+    } else {
+      // subjectVal is inside [lower, upper], but another band-day line
+      // now sits between lowKey and highKey too — they're not adjacent
+      // anymore, so this isn't a real match. List the intruder(s),
+      // highest value first.
+      const intruderLabels = interveningKeys
+        .slice()
+        .sort((a, b) => (bandCPR[b] as number) - (bandCPR[a] as number))
+        .map((k) => `${bandPrefix}${levelLabel(k)}`)
+        .join(", ");
+      basicText = `${subjectPrefix}${selfLabel} between ${bandPrefix}${lowLabel} and ${bandPrefix}${highLabel} — Not Matching`;
+      text = `${basicText} (${intruderLabels} between ${bandPrefix}${lowLabel} and ${bandPrefix}${highLabel})`;
     }
 
     // neighborKey/neighborLabel/prevSelf/prevNeighbor aren't read by any
