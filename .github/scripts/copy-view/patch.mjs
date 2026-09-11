@@ -30,28 +30,30 @@ function getStringPropertyValue(obj, name) {
 
 /**
  * Pushes {id: newKey, label: newLabel} into ViewsSidebar.tsx's
- * Views.copyViews array — the dedicated home for every auto-generated
- * Copy View / Create View (see ViewsSidebar.tsx's own comment on
- * Views.copyViews). SCREENER_PATTERN_IDS derives from Views
- * automatically, so this alone is what makes the new key selectable in
- * the Screener/left-nav/SignalDesk — passesPattern's own new
- * BACKTEST_TARGETS lookup (in ScreenerUtils.tsx) handles the actual
- * matching once it's selectable.
+ * Views[categoryKey] array (creating it if it doesn't exist yet).
+ * SCREENER_PATTERN_IDS derives from Views automatically, so this alone
+ * is what makes the new key selectable in the Screener/left-nav/
+ * SignalDesk — passesPattern's own BACKTEST_TARGETS lookup (in
+ * ScreenerUtils.tsx) handles the actual matching once it's selectable.
  */
-function addToScreenerNav(sourceText, newKey, newLabel) {
+function addToScreenerNav(sourceText, categoryKey, newKey, newLabel) {
   const project = new Project({ useInMemoryFileSystem: true });
   const sourceFile = project.createSourceFile("ViewsSidebar.tsx", sourceText);
 
   const viewsDecl = sourceFile.getVariableDeclarationOrThrow("Views");
   const viewsObj = viewsDecl.getInitializerIfKindOrThrow(SyntaxKind.ObjectLiteralExpression);
 
-  const copyViewsProp = viewsObj.getProperty("copyViews");
-  if (!copyViewsProp || !copyViewsProp.isKind(SyntaxKind.PropertyAssignment)) {
-    throw new Error("Views.copyViews not found in ViewsSidebar.tsx — has it been removed or renamed?");
-  }
-  const arr = copyViewsProp.getInitializer();
-  if (!arr || !arr.isKind(SyntaxKind.ArrayLiteralExpression)) {
-    throw new Error("Views.copyViews isn't an array literal — can't insert into it.");
+  const categoryProp = viewsObj.getProperty(categoryKey);
+  let arr;
+  if (categoryProp && categoryProp.isKind(SyntaxKind.PropertyAssignment)) {
+    const initializer = categoryProp.getInitializer();
+    if (!initializer || !initializer.isKind(SyntaxKind.ArrayLiteralExpression)) {
+      throw new Error(`Views["${categoryKey}"] isn't an array literal — can't insert into it.`);
+    }
+    arr = initializer;
+  } else {
+    const added = viewsObj.addPropertyAssignment({ name: `"${categoryKey}"`, initializer: "[]" });
+    arr = added.getInitializerIfKindOrThrow(SyntaxKind.ArrayLiteralExpression);
   }
 
   const alreadyExists = arr
@@ -69,6 +71,53 @@ function addToScreenerNav(sourceText, newKey, newLabel) {
   );
 
   return sourceFile.getFullText();
+}
+
+/**
+ * ViewsSidebar.tsx's `Views` record only has ONE level of nesting
+ * (top-level Category key -> flat array of leaf View entries) — it
+ * flattens away the Pattern/Subpattern layers BACKTEST_CATEGORIES has.
+ * So "file this under the Subpattern picked in the attach dropdown" can
+ * only mean: find that Subpattern's TOP-LEVEL ancestor Category in
+ * BACKTEST_CATEGORIES, and use THAT category's key as the Views[...]
+ * bucket — the same bucket every other View already nested anywhere
+ * under that category lands in. Returns null if attachKey isn't found
+ * anywhere in BACKTEST_CATEGORIES (caller falls back to "copyViews").
+ */
+function resolveTopLevelCategoryKey(backtestSourceText, attachKey) {
+  const project = new Project({ useInMemoryFileSystem: true });
+  const sourceFile = project.createSourceFile("backtest.ts", backtestSourceText);
+  const categoriesDecl = sourceFile.getVariableDeclarationOrThrow("BACKTEST_CATEGORIES");
+  const categoriesArray = categoriesDecl.getInitializerIfKindOrThrow(SyntaxKind.ArrayLiteralExpression);
+
+  const containsKeyRecursively = (patternsArray, key) => {
+    for (const p of patternsArray.getElements()) {
+      if (!p.isKind(SyntaxKind.ObjectLiteralExpression)) continue;
+      if (getStringPropertyValue(p, "key") === key) return true;
+      const nestedProp = p.getProperty("patterns");
+      if (nestedProp && nestedProp.isKind(SyntaxKind.PropertyAssignment)) {
+        const nestedArray = nestedProp.getInitializer();
+        if (nestedArray && nestedArray.isKind(SyntaxKind.ArrayLiteralExpression)) {
+          if (containsKeyRecursively(nestedArray, key)) return true;
+        }
+      }
+    }
+    return false;
+  };
+
+  for (const cat of categoriesArray.getElements()) {
+    if (!cat.isKind(SyntaxKind.ObjectLiteralExpression)) continue;
+    const catKey = getStringPropertyValue(cat, "key");
+    if (catKey === attachKey) return catKey;
+    const patternsProp = cat.getProperty("patterns");
+    if (patternsProp && patternsProp.isKind(SyntaxKind.PropertyAssignment)) {
+      const patternsArray = patternsProp.getInitializer();
+      if (patternsArray && patternsArray.isKind(SyntaxKind.ArrayLiteralExpression)) {
+        if (containsKeyRecursively(patternsArray, attachKey)) return catKey;
+      }
+    }
+  }
+  return null;
 }
 
 function applyCopyViewPatch(sourceText, sourceKey, newKey, newLabel, levelCheckDefs, attachKey) {
@@ -276,19 +325,24 @@ try {
   );
   writeFileSync(filePath, patchedText, "utf-8");
 
-  // Also add the new key to ViewsSidebar.tsx's Views.copyViews, so it's
-  // selectable in the Screener/left-nav/SignalDesk automatically — see
-  // addToScreenerNav's doc comment above.
+  // File the ViewsSidebar nav entry under the TOP-LEVEL Category that
+  // owns attachKey (ViewsSidebar's Views record only nests one level
+  // deep, so this is the closest real match to "the Subpattern picked
+  // in the attach dropdown" — see resolveTopLevelCategoryKey's doc
+  // comment above). Falls back to "copyViews" only if attachKey somehow
+  // can't be resolved (shouldn't happen — applyCopyViewPatch already
+  // validated it exists in this same tree).
+  const screenerCategoryKey = resolveTopLevelCategoryKey(currentText, attachKey) ?? "copyViews";
   const viewsSidebarFilePath = resolve(process.cwd(), "../../../", VIEWS_SIDEBAR_FILE_PATH);
   const viewsSidebarText = readFileSync(viewsSidebarFilePath, "utf-8");
-  const patchedViewsSidebarText = addToScreenerNav(viewsSidebarText, newKey, newLabel);
+  const patchedViewsSidebarText = addToScreenerNav(viewsSidebarText, screenerCategoryKey, newKey, newLabel);
   writeFileSync(viewsSidebarFilePath, patchedViewsSidebarText, "utf-8");
 
   const levelCheckNote = levelCheckDefs ? ` with ${levelCheckDefs.length} symbol-derived levelCheckDefs` : "";
   console.log(
     `Patched ${backtestFilePath}: "${sourceKey}" -> "${newKey}" under "${attachKey}" (grades against "${originalConditionKey}")${levelCheckNote}`
   );
-  console.log(`Added "${newKey}" to ${VIEWS_SIDEBAR_FILE_PATH}'s Views.copyViews`);
+  console.log(`Added "${newKey}" to ${VIEWS_SIDEBAR_FILE_PATH}'s Views["${screenerCategoryKey}"]`);
 } catch (err) {
   console.error(err.message);
   process.exit(1);

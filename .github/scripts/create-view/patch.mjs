@@ -89,6 +89,53 @@ function addToScreenerNav(sourceText, categoryKey, newKey, newLabel) {
   return sourceFile.getFullText();
 }
 
+/**
+ * ViewsSidebar.tsx's `Views` record only has ONE level of nesting
+ * (top-level Category key -> flat array of leaf View entries) — it
+ * flattens away the Pattern/Subpattern layers BACKTEST_CATEGORIES has.
+ * So "file this under the Subpattern picked in the attach dropdown" can
+ * only mean: find that Subpattern's TOP-LEVEL ancestor Category in
+ * BACKTEST_CATEGORIES, and use THAT category's key as the Views[...]
+ * bucket — the same bucket every other View already nested anywhere
+ * under that category lands in. Returns null if attachKey isn't found
+ * anywhere in BACKTEST_CATEGORIES (caller falls back to "copyViews").
+ */
+function resolveTopLevelCategoryKey(backtestSourceText, attachKey) {
+  const project = new Project({ useInMemoryFileSystem: true });
+  const sourceFile = project.createSourceFile("backtest.ts", backtestSourceText);
+  const categoriesDecl = sourceFile.getVariableDeclarationOrThrow("BACKTEST_CATEGORIES");
+  const categoriesArray = categoriesDecl.getInitializerIfKindOrThrow(SyntaxKind.ArrayLiteralExpression);
+
+  const containsKeyRecursively = (patternsArray, key) => {
+    for (const p of patternsArray.getElements()) {
+      if (!p.isKind(SyntaxKind.ObjectLiteralExpression)) continue;
+      if (getStringPropertyValue(p, "key") === key) return true;
+      const nestedProp = p.getProperty("patterns");
+      if (nestedProp && nestedProp.isKind(SyntaxKind.PropertyAssignment)) {
+        const nestedArray = nestedProp.getInitializer();
+        if (nestedArray && nestedArray.isKind(SyntaxKind.ArrayLiteralExpression)) {
+          if (containsKeyRecursively(nestedArray, key)) return true;
+        }
+      }
+    }
+    return false;
+  };
+
+  for (const cat of categoriesArray.getElements()) {
+    if (!cat.isKind(SyntaxKind.ObjectLiteralExpression)) continue;
+    const catKey = getStringPropertyValue(cat, "key");
+    if (catKey === attachKey) return catKey;
+    const patternsProp = cat.getProperty("patterns");
+    if (patternsProp && patternsProp.isKind(SyntaxKind.PropertyAssignment)) {
+      const patternsArray = patternsProp.getInitializer();
+      if (patternsArray && patternsArray.isKind(SyntaxKind.ArrayLiteralExpression)) {
+        if (containsKeyRecursively(patternsArray, attachKey)) return catKey;
+      }
+    }
+  }
+  return null;
+}
+
 const BULLISH_TARGETS = {
   R2: { label: "U2 (today's R2)", key: "r2" },
   R3: { label: "U3 (today's R3)", key: "r3" },
@@ -203,10 +250,6 @@ const levelCheckDefsB64 = process.env.LEVEL_CHECK_DEFS_B64;
 // which is the original behavior. patternKey itself always stays the
 // View's conditionKey (what it grades against) regardless of attachKey.
 const attachKey = process.env.ATTACH_KEY && process.env.ATTACH_KEY.trim() !== "" ? process.env.ATTACH_KEY : patternKey;
-// Always files the Screener-sidebar nav entry under the safe default
-// bucket — the UI no longer exposes a picker for this (it now picks
-// where the View nests in BACKTEST_CATEGORIES via attachKey instead).
-const targetCategory = "copyViews";
 const direction = process.env.DIRECTION === "bearish" ? "bearish" : "bullish";
 const target = process.env.TARGET && process.env.TARGET.trim() !== "" ? process.env.TARGET : direction === "bullish" ? "R4" : "S4";
 const backtestFilePath = process.env.BACKTEST_FILE_PATH ?? "artifacts/cpr-screener/src/lib/backtest.ts";
@@ -266,17 +309,23 @@ try {
   );
   writeFileSync(filePath, patchedText, "utf-8");
 
-  // Also add the new key to ViewsSidebar.tsx's Views.copyViews — see
-  // addToScreenerNav's doc comment above.
+  // File the ViewsSidebar nav entry under the TOP-LEVEL Category that
+  // owns attachKey (ViewsSidebar's Views record only nests one level
+  // deep, so this is the closest real match to "the Subpattern picked
+  // in the attach dropdown" — see resolveTopLevelCategoryKey's doc
+  // comment above). Falls back to "copyViews" only if attachKey somehow
+  // can't be resolved (shouldn't happen — applyCreateViewPatch already
+  // validated it exists in this same tree).
+  const screenerCategoryKey = resolveTopLevelCategoryKey(currentText, attachKey) ?? "copyViews";
   const viewsSidebarFilePath = resolve(process.cwd(), "../../../", VIEWS_SIDEBAR_FILE_PATH);
   const viewsSidebarText = readFileSync(viewsSidebarFilePath, "utf-8");
-  const patchedViewsSidebarText = addToScreenerNav(viewsSidebarText, targetCategory, newKey, newLabel);
+  const patchedViewsSidebarText = addToScreenerNav(viewsSidebarText, screenerCategoryKey, newKey, newLabel);
   writeFileSync(viewsSidebarFilePath, patchedViewsSidebarText, "utf-8");
 
   console.log(
     `Created "${newKey}" (grades against "${patternKey}") under Category/Pattern/Subpattern "${attachKey}" with ${levelCheckDefs.length} symbol-derived levelCheckDefs`
   );
-  console.log(`Added "${newKey}" to ${VIEWS_SIDEBAR_FILE_PATH}'s Views["${targetCategory}"]`);
+  console.log(`Added "${newKey}" to ${VIEWS_SIDEBAR_FILE_PATH}'s Views["${screenerCategoryKey}"]`);
 } catch (err) {
   console.error(err.message);
   process.exit(1);
