@@ -73,13 +73,13 @@ export async function fetchDeltaPerps(): Promise<DeltaTicker[]> {
   let pageNum = 0;
 
   while (true) {
-    const url =
+    const url: string =
       `${BASE}/tickers?contract_types=perpetual_futures&page_size=500` +
       (after ? `&after=${encodeURIComponent(after)}` : "");
 
-    const res = await fetch(url, { cache: "no-store" });
+    const res: Response = await fetch(url, { cache: "no-store" });
     if (!res.ok) throw new Error(`Delta ticker error: ${res.status}`);
-    const data = await res.json();
+    const data: any = await res.json();
 
     if (pageNum === 0) {
       console.log(

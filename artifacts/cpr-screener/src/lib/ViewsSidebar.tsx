@@ -306,6 +306,13 @@ export const Views: Record<string, SubPattern[]> = {
       activeText:  "#fda4af",              // rose-300 text
       activeBg:    "rgba(244, 63, 94, 0.14)", // rose-500 tint
     },
+    {
+      id: "B-B-BB-BB-L4U4-Ladder:R4",
+      label: "B-B-BB-BB-L4U4-Ladder:R4",
+      activeColor: "#22c55e",              // green-500 border
+      activeText:  "#4ade80",              // green-400 text
+      activeBg:    "rgba(34, 197, 94, 0.14)",
+    },
   ],
   "compressed": [
     // RENAMED from "SMi-L1pU1>-APU4:11PM": all previous conditions removed.
@@ -496,8 +503,7 @@ export const Views: Record<string, SubPattern[]> = {
   ],
   "equal-cpr": [
     { id: "eXLoL3U3-L3", label: "eXLoL3U3-L3" },
-  ],
-    "levelsbelow": [{ id: "B-B-BB-BB-L4U4-Ladder:R4", label: "B-B-BB-BB-L4U4-Ladder:R4" }]
+  ]
 };
 
 export const pivotcategories: Category[] = [
