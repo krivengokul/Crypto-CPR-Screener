@@ -1308,6 +1308,19 @@ export const BACKTEST_TARGETS: BacktestTargetDef[] = [
         getStoploss: (r) => r.todayCPR.s1,
         conditionKey: "B-B-BB-BB-L4U4",
         levelCheckDefs: [{"key":"r4","subject":"today","bandKeys":["r4","r3"]},{"key":"r3","subject":"today","bandKeys":["r3","r2"]},{"key":"r2","subject":"today","bandKeys":["r2","prevHigh"]},{"key":"prevHigh","subject":"today","bandKeys":["tc","pivot"]},{"key":"r1","subject":"today","bandKeys":["r1","tc"]},{"key":"tc","subject":"today","bandKeys":["prevLow","s1"]},{"key":"pivot","subject":"today","bandKeys":["prevLow","s1"]},{"key":"bc","subject":"today","bandKeys":["prevLow","s1"]},{"key":"prevLow","subject":"today","bandKeys":["s1","s2"]},{"key":"s1","subject":"today","bandKeys":["s1","s2"]},{"key":"s2","subject":"today","bandKeys":["s2","s3"]},{"key":"s3","subject":"today","bandKeys":["s3","s4"]},{"key":"s4","subject":"previous","bandKeys":["s3","s4"]}],
+      },
+    {
+        key: "AL4-EUTL3-S1ATC",
+        label: "AL4-EUTL3-S1ATC",
+        direction: "bullish",
+        targetLabel: "U2 (today's R2)",
+        getTarget: (r) => r.todayCPR.r2,
+        entryLabel: "TC (today's TC)",
+        getEntry: (r) => r.todayCPR.tc,
+        stoplossLabel: "S1 (today's S1)",
+        getStoploss: (r) => r.todayCPR.s1,
+        conditionKey: "top15gainers",
+        levelCheckDefs: [{"key":"r4","subject":"previous","bandKeys":["tc","pivot"]},{"key":"r3","subject":"previous","bandKeys":["pivot","bc"]},{"key":"r2","subject":"previous","bandKeys":["bc","s1"]},{"key":"prevHigh","subject":"previous","bandKeys":["s1","prevLow"]},{"key":"r1","subject":"previous","bandKeys":["s1","prevLow"]},{"key":"tc","subject":"previous","bandKeys":["s1","prevLow"]},{"key":"pivot","subject":"today","bandKeys":["r4","r3"]},{"key":"bc","subject":"today","bandKeys":["r3","r2"]},{"key":"prevLow","subject":"today","bandKeys":["bc","prevLow"]},{"key":"s1","subject":"today","bandKeys":["r2","prevHigh"]},{"key":"s2","subject":"today","bandKeys":["s2","s3"]},{"key":"s3","subject":"previous","bandKeys":["s2","s3"]},{"key":"s4","subject":"previous","bandKeys":["s2","s3"]}],
       }
 ];
 
@@ -2096,6 +2109,7 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
             subPatternKeys: [
               "9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A",
               "6A:A-A-AA-AA-EUTL3-S1ATCpE-pL4:4A",
+                "AL4-EUTL3-S1ATC"
             ],
           },
           // NEW: "A-A-AA-AA-EUPL3" Subpattern — structural A-A-AA-AA

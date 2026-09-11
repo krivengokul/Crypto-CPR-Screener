@@ -46,7 +46,7 @@ export const Views: Record<string, SubPattern[]> = {
   // choice per View. passesPattern(r, newKey) resolves these via their
   // conditionKey + levelCheckDefs — see the new block at the top of
   // passesPattern in ScreenerUtils.tsx.
-  copyViews: [{ id: "A-A-AA-AA-EUBL2-pS4S2:R2", label: "A-A-AA-AA-EUBL2-pS4S2:R2" }, { id: "B-B-BB-BB-L4U4-pGapA", label: "B-B-BB-BB-L4U4-pGapA" }],
+  copyViews: [{ id: "A-A-AA-AA-EUBL2-pS4S2:R2", label: "A-A-AA-AA-EUBL2-pS4S2:R2" }, { id: "B-B-BB-BB-L4U4-pGapA", label: "B-B-BB-BB-L4U4-pGapA" }, { id: "AL4-EUTL3-S1ATC", label: "AL4-EUTL3-S1ATC" }],
   "overlapping-lower": [
     { id: "eXLo-L4U4-U4",            label: "Exp-U3>pU4" },
     { id: "9AM:SSRRBHHLLA-U4:9PM",   label: "9AM:SSRRBHHLLA-U4:9PM" },
