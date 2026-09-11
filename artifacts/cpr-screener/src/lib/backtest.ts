@@ -2894,6 +2894,30 @@ export function getLastRunSkippedSymbols(): string[] {
 interface CachedHistory {
   map: Map<string, OHLC>;
   fetchedOnUTCDate: string;
+  fetchedAt: number;
+}
+
+/**
+ * PERF FIX (the real cause of "Run Backtest is slow"): while TODAY's daily
+ * candle is still forming, the freshness check below refused to reuse ANY
+ * cached history, so every getHistory() call re-hit the network — once per
+ * symbol, per date, per scan. prefetchHistories couldn't help either,
+ * because hasCachedHistory() used a *different* (date-only) rule and
+ * reported those symbols as already cached, so the parallel prefetch
+ * skipped them and the refetching happened one-at-a-time inside the scan
+ * loop instead. A short TTL keeps the intraday-freshness intent (a run a
+ * minute later still picks up new prices) while letting a single run reuse
+ * memory, and both call sites now share one freshness rule.
+ */
+const LIVE_CANDLE_TTL_MS = 60 * 1000;
+
+function isHistoryFresh(cached: CachedHistory): boolean {
+  const today = utcDateKey(Date.now());
+  if (cached.fetchedOnUTCDate !== today) return false; // may hold yesterday's live candle
+  const todaysCandle = cached.map.get(today);
+  const stillLive = !!todaysCandle && isLiveDailyCandle(todaysCandle.openTime);
+  if (!stillLive) return true; // day closed — snapshot is final
+  return Date.now() - cached.fetchedAt < LIVE_CANDLE_TTL_MS;
 }
 const binanceHistoryCache = new Map<string, CachedHistory | null>();
 const deltaHistoryCache = new Map<string, CachedHistory | null>();
@@ -2908,7 +2932,9 @@ export function hasCachedHistory(symbol: string, source: BacktestSource): boolea
   const cached = cache.get(symbol);
   if (cached === undefined) return false;
   if (cached === null) return true; // cached failure — still "resolved", don't re-hammer it
-  return cached.fetchedOnUTCDate === utcDateKey(Date.now());
+  // Must use the SAME rule as getHistory, or the prefetch skips symbols that
+  // getHistory then refetches serially inside the scan loop.
+  return isHistoryFresh(cached);
 }
 
 /** Drop all cached candle history (e.g. to pick up a newly closed day). */
@@ -3015,11 +3041,7 @@ async function getHistory(symbol: string, source: BacktestSource): Promise<Map<s
   // candle (if present in the cached map) is no longer live; otherwise
   // fall through and refetch so intraday price moves are picked up.
   if (cached === null) return null; // cached failure — still "resolved", don't re-hammer it
-  if (cached !== undefined && cached.fetchedOnUTCDate === today) {
-    const todaysCandle = cached.map.get(today);
-    const stillLive = !!todaysCandle && isLiveDailyCandle(todaysCandle.openTime);
-    if (!stillLive) return cached.map;
-  }
+  if (cached !== undefined && isHistoryFresh(cached)) return cached.map;
 
   const key = `${source}:${symbol}`;
   const existing = inFlight.get(key);
@@ -3030,7 +3052,7 @@ async function getHistory(symbol: string, source: BacktestSource): Promise<Map<s
       // Only cache SUCCESS. A null here almost always means "rate-limited
       // / transient network failure", and caching it used to permanently
       // amputate that symbol from every later scan in the session.
-      if (hist) cache.set(symbol, { map: hist, fetchedOnUTCDate: today });
+      if (hist) cache.set(symbol, { map: hist, fetchedOnUTCDate: today, fetchedAt: Date.now() });
       inFlight.delete(key);
       return hist;
     })
@@ -3158,10 +3180,18 @@ async function getSymbolUniverse(
   // but those entries are already cached here.
   await prefetchHistories(currentCandidates, source, onProgress, 20);
 
+  // PERF FIX: this used to await getHistory() one symbol at a time. With the
+  // cache warmed above that is cheap, but any symbol the prefetch missed
+  // turned into a serial network round-trip per symbol. Resolve in parallel
+  // chunks instead, preserving the original ordering.
   const historicalSymbols: string[] = [];
-  for (const symbol of currentCandidates) {
-    const history = await getHistory(symbol, source);
-    if (history?.has(entryDateISO)) historicalSymbols.push(symbol);
+  const COVERAGE_CHUNK = 20;
+  for (let i = 0; i < currentCandidates.length; i += COVERAGE_CHUNK) {
+    const chunk = currentCandidates.slice(i, i + COVERAGE_CHUNK);
+    const histories = await Promise.all(chunk.map((s) => getHistory(s, source)));
+    histories.forEach((history, idx) => {
+      if (history?.has(entryDateISO)) historicalSymbols.push(chunk[idx]);
+    });
   }
 
   if (!historicalSymbols.length) {
