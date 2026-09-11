@@ -428,22 +428,20 @@ export async function runScreener(
       if (klines.length >= 3) ppCandle = klines[klines.length - 3];
     }
 
-    // FIX (wrong Price/OPrice/Move): reject candle sets with a gap — see
-    // candlesAreContiguous above. Checked on prevCandle→todayCandle (and
-    // ppCandle→prevCandle when present) BEFORE anything derives OPrice/Move
-    // from them, so a delisting/relisting or trading-halt gap drops the
-    // symbol from this scan instead of producing an impossible % move.
+    // REVERTED (was dropping ~40 legit symbols per scan for no benefit —
+    // the actual LIT/XMR price bug turned out to be in currentPrice, not
+    // candle continuity; OPrice was identical before and after the fix).
+    // Left as a non-blocking diagnostic: still logs if a real gap shows up,
+    // but no longer excludes the symbol from the scan.
     const candleChain: OHLC[] = ppCandle
       ? [ppCandle, prevCandle, todayCandle]
       : [prevCandle, todayCandle];
     if (!candlesAreContiguous(candleChain)) {
       console.warn(
         `[binance] ${t.symbol} — daily candles are not contiguous ` +
-          `(likely a delisting/relisting or trading-halt gap); skipped to ` +
-          `avoid a false OPrice/Move.`
+          `(likely a delisting/relisting or trading-halt gap); keeping the ` +
+          `symbol, but its OPrice/Move may be unreliable — worth spot-checking.`
       );
-      skipped.push(t.symbol);
-      return null;
     }
 
     const currentPrice = parseFloat(t.lastPrice);

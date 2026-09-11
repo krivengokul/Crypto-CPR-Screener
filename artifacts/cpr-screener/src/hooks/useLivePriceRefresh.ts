@@ -109,19 +109,21 @@ export function useBinanceLiveRefresh(
             }
             missedTicks.delete(r.symbol);
 
-            // FIX: reject an implausible single-tick jump instead of
-            // applying it — see SANITY_JUMP_RATIO comment above.
+            // REVERTED to log-only: rejecting the jump and keeping the old
+            // price meant that IF currentPrice was ever wrong (stale/bad),
+            // a real correction from the ticker would get silently blocked
+            // forever instead of fixing it — worse than the original bug.
+            // Still worth knowing about, so it's logged, but always applied.
             if (
               r.currentPrice > 0 &&
               Math.abs(live.price - r.currentPrice) / r.currentPrice > SANITY_JUMP_RATIO
             ) {
               console.warn(
-                `[binance-live-refresh] ${r.symbol} — rejected implausible ` +
-                  `single-tick price jump (${r.currentPrice} → ${live.price}, ` +
-                  `>${SANITY_JUMP_RATIO * 100}% in one 15s tick). Keeping last ` +
-                  `known price; investigate ticker data for this symbol.`
+                `[binance-live-refresh] ${r.symbol} — large single-tick price ` +
+                  `jump (${r.currentPrice} → ${live.price}, >` +
+                  `${SANITY_JUMP_RATIO * 100}% in one 15s tick). Applying it ` +
+                  `anyway; worth spot-checking against TradingView.`
               );
-              return r;
             }
 
             const change24h = r.openPrice > 0
