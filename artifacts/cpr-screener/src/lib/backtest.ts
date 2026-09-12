@@ -1767,6 +1767,34 @@ export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
             label: "B-B-BB-BB-CL4U2",
             subPatternKeys: [],
           },
+          // NEW: B-B-BB-BB-EL3U4/EL2U3/EL2U4/EL1U3 — four more Patterns
+          // nested under "B-B-BB-BB", same shape as their L4U4/EL4U4/
+          // L3U4/L2U4/L4U3/L3U3/CL4U2 siblings above: base condition =
+          // PIVOT_PATTERNS["B-B-BB-BB"] AND the raw EL3U4/EL2U3/EL2U4/
+          // EL1U3 flag from cpr.ts (see matchesPatternFlag in
+          // ScreenerUtils.tsx). No target-graded View nested under any of
+          // them yet — each shows up as a symbol-list-only scan in the
+          // Backtest dropdown.
+          {
+            key: "B-B-BB-BB-EL3U4",
+            label: "B-B-BB-BB-EL3U4",
+            subPatternKeys: [],
+          },
+          {
+            key: "B-B-BB-BB-EL2U3",
+            label: "B-B-BB-BB-EL2U3",
+            subPatternKeys: [],
+          },
+          {
+            key: "B-B-BB-BB-EL2U4",
+            label: "B-B-BB-BB-EL2U4",
+            subPatternKeys: [],
+          },
+          {
+            key: "B-B-BB-BB-EL1U3",
+            label: "B-B-BB-BB-EL1U3",
+            subPatternKeys: [],
+          },
         ],
       },
       {

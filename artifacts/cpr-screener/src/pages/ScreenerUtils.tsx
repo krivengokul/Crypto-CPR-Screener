@@ -1207,6 +1207,14 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       return matchesPatternFlag(r, "B-B-BB-BB-L3U3");
     case "B-B-BB-BB-CL4U2":
       return matchesPatternFlag(r, "B-B-BB-BB-CL4U2");
+    case "B-B-BB-BB-EL3U4":
+      return matchesPatternFlag(r, "B-B-BB-BB-EL3U4");
+    case "B-B-BB-BB-EL2U3":
+      return matchesPatternFlag(r, "B-B-BB-BB-EL2U3");
+    case "B-B-BB-BB-EL2U4":
+      return matchesPatternFlag(r, "B-B-BB-BB-EL2U4");
+    case "B-B-BB-BB-EL1U3":
+      return matchesPatternFlag(r, "B-B-BB-BB-EL1U3");
     case "compressed":
       return r.compressed ; 
     // "6A:SLE-RRHH:R2-6A" — sub-pattern nested under the "E-A-AA-E"
@@ -1947,6 +1955,15 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
     // PIVOT_PATTERNS["B-B-BB-BB"] AND the raw CL4U2 flag (see backtest.ts's
     // "LEVEL BELOW" → "B-B-BB-BB" nesting).
     case "B-B-BB-BB-CL4U2": return PIVOT_PATTERNS["B-B-BB-BB"](r) && r.CL4U2;
+    // NEW: B-B-BB-BB-EL3U4/EL2U3/EL2U4/EL1U3 — four more Patterns nested
+    // under "B-B-BB-BB", same shape as their L4U4/EL4U4/L3U4/L2U4/L4U3/
+    // L3U3/CL4U2 siblings above: PIVOT_PATTERNS["B-B-BB-BB"] AND the raw
+    // EL3U4/EL2U3/EL2U4/EL1U3 flag from cpr.ts (see backtest.ts's
+    // "LEVEL BELOW" → "B-B-BB-BB" nesting).
+    case "B-B-BB-BB-EL3U4": return PIVOT_PATTERNS["B-B-BB-BB"](r) && r.EL3U4;
+    case "B-B-BB-BB-EL2U3": return PIVOT_PATTERNS["B-B-BB-BB"](r) && r.EL2U3;
+    case "B-B-BB-BB-EL2U4": return PIVOT_PATTERNS["B-B-BB-BB"](r) && r.EL2U4;
+    case "B-B-BB-BB-EL1U3": return PIVOT_PATTERNS["B-B-BB-BB"](r) && r.EL1U3;
     case "L4U4": return r.L4U4;
     // NEW: pRRHHLLA — Pattern compound flag for Overlap
     // Below's "9AM:pRRHHLLA-U4:9PM" family: today's R1/PDH both below
