@@ -874,3 +874,256 @@ VIEWS.push(...LEVELSABOVE_VIEWS, ...LEVELSBELOW_VIEWS);
     bbbb.getStoploss = (r) => r.todayCPR.r1;
   }
 }
+
+// ---------------------------------------------------------------------
+// Step 3, batch 2 — "compressed" and "expanded"'s NESTED Views/Patterns
+// only (the four top-level category conditions and the 97 compound
+// HHLL x RRHH x SSLL Patterns nested directly under them, including all
+// 19 C-* and 16 E-* combos, are already covered by CATEGORY_VIEWS /
+// COMPOUND_VIEWS above — nothing new needed there).
+//
+// Transcribed directly from the uploaded ScreenerUtils.tsx (passesPattern
+// lines 1218-1340, 1594-1635; matchesPatternFlag lines 2093-2120,
+// 2205-2229) and backtest.ts (BACKTEST_TARGETS lines 685-787, 1229-1283;
+// BACKTEST_CATEGORIES lines 1939-2052, 2061-2117).
+// ---------------------------------------------------------------------
+
+const COMPRESSED_VIEWS: ViewDef[] = [
+  // --- direct View children of "compressed" ---
+  {
+    key: "8A:HLC-SSHH:S4-1P",
+    label: "8A:HLC-SSHH:S4-1P",
+    parentKey: "compressed",
+    kind: "view",
+    direction: "bearish",
+    condition: (r) =>
+      r.RRSSGapCategory === "SSGap" &&
+      r.RRHHCategory === "RRHH-BB" &&
+      r.SSLLCategory === "SSLL-AA" &&
+      r.HHLLCategory === "HHLL-C" &&
+      r.PDHPDLGapCategory === "HHGap" &&
+      r.prevCPR.HLSwitch === "HL-A" &&
+      r.todayCPR.HLSwitch === "HL-B" &&
+      r.hlGapWinner === "today",
+    targetLabel: "L4 (today's S4)",
+    getTarget: (r) => r.todayCPR.s4,
+    entryLabel: "BC (today's BC)",
+    getEntry: (r) => r.todayCPR.bc,
+    stoplossLabel: "R1 (today's R1)",
+    getStoploss: (r) => r.todayCPR.r1,
+  },
+  {
+    key: "9AM:RHLB-RRHH:5AM",
+    label: "9AM:RHLB-RRHH:5AM",
+    parentKey: "compressed",
+    kind: "view",
+    direction: "bearish",
+    condition: (r) =>
+      r.RRSSGapCategory === "RRGap" &&
+      r.RRHHCategory === "RRHH-BB" &&
+      r.HHLLCategory === "HHLL-B" &&
+      r.PDHPDLGapCategory === "HHGap",
+    targetLabel: "L2 (today's S2)",
+    getTarget: (r) => r.todayCPR.s2,
+    entryLabel: "BC (today's BC)",
+    getEntry: (r) => r.todayCPR.bc,
+    stoplossLabel: "R1 (today's R1)",
+    getStoploss: (r) => r.todayCPR.r1,
+  },
+
+  // --- "RRHH-BB:SSLL-AA:SSLLGap" Pattern (arrow), itself target-graded,
+  // nesting the "6A:HLC-SSLL:R4-6P" View ---
+  {
+    key: "RRHH-BB:SSLL-AA:SSLLGap",
+    label: "RRHH-BB:SSLL-AA:SSLLGap",
+    parentKey: "compressed",
+    kind: "pattern",
+    condition: (r) =>
+      r.HHLLCategory === "HHLL-C" &&
+      r.SSLLCategory === "SSLL-AA" &&
+      r.RRHHCategory === "RRHH-BB" &&
+      r.RRSSGapCategory === "SSGap" &&
+      r.PDHPDLGapCategory === "LLGap",
+    direction: "bullish",
+    targetLabel: "U4 (today's R4)",
+    getTarget: (r) => r.todayCPR.r4,
+    entryLabel: "TC (today's TC)",
+    getEntry: (r) => r.todayCPR.tc,
+    stoplossLabel: "S1 (today's S1)",
+    getStoploss: (r) => r.todayCPR.s1,
+  },
+  {
+    key: "6A:HLC-SSLL:R4-6P",
+    label: "6A:HLC-SSLL:R4-6P",
+    parentKey: "RRHH-BB:SSLL-AA:SSLLGap",
+    kind: "view",
+    direction: "bullish",
+    condition: (r) =>
+      (dirTol(r.todayCPR.r2, r.prevCPR.r1) === 1 ||
+        dirTol(r.todayCPR.s3, r.prevCPR.s1) === 1) &&
+      dirTol(r.todayCPR.s2, r.prevCPR.s1) === 1,
+    targetLabel: "U4 (today's R4)",
+    getTarget: (r) => r.todayCPR.r4,
+    entryLabel: "TC (today's TC)",
+    getEntry: (r) => r.todayCPR.tc,
+    stoplossLabel: "S1 (today's S1)",
+    getStoploss: (r) => r.todayCPR.s1,
+  },
+
+  // --- "RHLB-RRHHpGap" Pattern (arrow) — NOT itself target-graded (no
+  // BACKTEST_TARGETS entry of its own), nesting the target-graded
+  // "8A:pLAPpPAH:R4-5P" View ---
+  {
+    key: "RHLB-RRHHpGap",
+    label: "RHLB-RRHHpGap",
+    parentKey: "compressed",
+    kind: "pattern",
+    condition: (r) =>
+      r.RRSSGapCategory === "RRGap" &&
+      r.RRHHCategory === "RRHH-BB" &&
+      r.HHLLCategory === "HHLL-B" &&
+      r.PDHPDLGapCategory === "HHGap" &&
+      r.SSRRCategory === "RRSS-C" &&
+      r.SSLLCategory === "SSLL-C" &&
+      r.prevCPR.HLSwitch === "HL-A" &&
+      r.hlGapWinner === "prev" &&
+      r.todayCPR.HLSwitch === "HL-A",
+  },
+  {
+    key: "8A:pLAPpPAH:R4-5P",
+    label: "8A:pLAPpPAH:R4-5P",
+    parentKey: "RHLB-RRHHpGap",
+    kind: "view",
+    direction: "bullish",
+    condition: (r) =>
+      r.prevCPR.prevLow >= r.todayCPR.pivot &&
+      r.prevCPR.prevLow <= r.todayCPR.tc &&
+      r.todayCPR.prevHigh > r.prevCPR.bc &&
+      r.prevCPR.tc > r.todayCPR.r2,
+    targetLabel: "U4 (today's R4)",
+    getTarget: (r) => r.todayCPR.r4,
+    entryLabel: "TC (today's TC)",
+    getEntry: (r) => r.todayCPR.tc,
+    stoplossLabel: "S1 (today's S1)",
+    getStoploss: (r) => r.todayCPR.s1,
+  },
+
+  // --- "C-B-BB-LB-CL3U2" Pattern, nested under the existing "C-B-BB-LB"
+  // compound Pattern (already in COMPOUND_VIEWS) — itself target-graded,
+  // nesting the "C-B-BB-LB-CL3U2-RRHHGap:R4" View ---
+  {
+    key: "C-B-BB-LB-CL3U2",
+    label: "C-B-BB-LB-CL3U2",
+    parentKey: "C-B-BB-LB",
+    kind: "pattern",
+    condition: (r) => r.CL3U2,
+    direction: "bullish",
+    targetLabel: "U4 (today's R4)",
+    getTarget: (r) => r.todayCPR.r4,
+    entryLabel: "TC (today's TC)",
+    getEntry: (r) => r.todayCPR.tc,
+    stoplossLabel: "S1 (today's S1)",
+    getStoploss: (r) => r.todayCPR.s1,
+  },
+  {
+    key: "C-B-BB-LB-CL3U2-RRHHGap:R4",
+    label: "C-B-BB-LB-CL3U2-RRHHGap:R4",
+    parentKey: "C-B-BB-LB-CL3U2",
+    kind: "view",
+    direction: "bullish",
+    condition: (r) =>
+      r.RRSSGapCategory === "RRGap" &&
+      r.PDHPDLGapCategory === "HHGap" &&
+      r.prevCPR.HLSwitch === "HL-A" &&
+      r.todayCPR.HLSwitch === "HL-B" &&
+      r.todayCPR.prevHigh > r.prevCPR.pivot &&
+      r.todayCPR.r1 > r.prevCPR.tc,
+    targetLabel: "U4 (today's R4)",
+    getTarget: (r) => r.todayCPR.r4,
+    entryLabel: "TC (today's TC)",
+    getEntry: (r) => r.todayCPR.tc,
+    stoplossLabel: "S1 (today's S1)",
+    getStoploss: (r) => r.todayCPR.s1,
+  },
+
+  // --- "C-C-BB-AA"'s 14 nested Subpattern children (raw flag AND'd onto
+  // the parent compound condition via parentKey) — none target-graded
+  // yet (no BACKTEST_TARGETS entries for these 14), so each is currently
+  // a symbol-list-only scan, same as any freshly-added Pattern. ---
+  { key: "C-C-BB-AA-CU4L4", label: "C-C-BB-AA-CU4L4", parentKey: "C-C-BB-AA", kind: "pattern", condition: (r) => r.CU4L4 },
+  { key: "C-C-BB-AA-CL4U4", label: "C-C-BB-AA-CL4U4", parentKey: "C-C-BB-AA", kind: "pattern", condition: (r) => r.CL4U4 },
+  { key: "C-C-BB-AA-CU4L3", label: "C-C-BB-AA-CU4L3", parentKey: "C-C-BB-AA", kind: "pattern", condition: (r) => r.CU4L3 },
+  { key: "C-C-BB-AA-CL4U3", label: "C-C-BB-AA-CL4U3", parentKey: "C-C-BB-AA", kind: "pattern", condition: (r) => r.CL4U3 },
+  { key: "C-C-BB-AA-CU3L3", label: "C-C-BB-AA-CU3L3", parentKey: "C-C-BB-AA", kind: "pattern", condition: (r) => r.CU3L3 },
+  { key: "C-C-BB-AA-CL3U3", label: "C-C-BB-AA-CL3U3", parentKey: "C-C-BB-AA", kind: "pattern", condition: (r) => r.CL3U3 },
+  { key: "C-C-BB-AA-CU3L2", label: "C-C-BB-AA-CU3L2", parentKey: "C-C-BB-AA", kind: "pattern", condition: (r) => r.CU3L2 },
+  { key: "C-C-BB-AA-CL3U2", label: "C-C-BB-AA-CL3U2", parentKey: "C-C-BB-AA", kind: "pattern", condition: (r) => r.CL3U2 },
+  { key: "C-C-BB-AA-CU2L2", label: "C-C-BB-AA-CU2L2", parentKey: "C-C-BB-AA", kind: "pattern", condition: (r) => r.CU2L2 },
+  { key: "C-C-BB-AA-CL2U2", label: "C-C-BB-AA-CL2U2", parentKey: "C-C-BB-AA", kind: "pattern", condition: (r) => r.CL2U2 },
+  { key: "C-C-BB-AA-CU2L1", label: "C-C-BB-AA-CU2L1", parentKey: "C-C-BB-AA", kind: "pattern", condition: (r) => r.CU2L1 },
+  { key: "C-C-BB-AA-CL2U1", label: "C-C-BB-AA-CL2U1", parentKey: "C-C-BB-AA", kind: "pattern", condition: (r) => r.CL2U1 },
+  { key: "C-C-BB-AA-CU1L1", label: "C-C-BB-AA-CU1L1", parentKey: "C-C-BB-AA", kind: "pattern", condition: (r) => r.CU1L1 },
+  { key: "C-C-BB-AA-CL1U1", label: "C-C-BB-AA-CL1U1", parentKey: "C-C-BB-AA", kind: "pattern", condition: (r) => r.CL1U1 },
+];
+
+const EXPANDED_VIEWS: ViewDef[] = [
+  // --- "E-A-AA-E"'s one nested View ---
+  {
+    key: "6A:SLE-RRHH:R2-6A",
+    label: "6A:SLE-RRHH:R2-6A",
+    parentKey: "E-A-AA-E",
+    kind: "view",
+    direction: "bullish",
+    condition: (r) =>
+      r.PDHPDLGapCategory === "HHGap" &&
+      r.prevCPR.HLSwitch === "HL-B" &&
+      r.todayCPR.HLSwitch === "HL-A" &&
+      r.hlGapWinner === "today",
+    targetLabel: "U2 (today's R2)",
+    getTarget: (r) => r.todayCPR.r2,
+    entryLabel: "TC (today's TC)",
+    getEntry: (r) => r.todayCPR.tc,
+    stoplossLabel: "S1 (today's S1)",
+    getStoploss: (r) => r.todayCPR.s1,
+  },
+
+  // --- "E-E-AA-BB"'s five nested Subpattern children — all target-graded
+  // bullish against today's own R2 (U2), per user request. ---
+  {
+    key: "E-E-AA-BB-EL1U2", label: "E-E-AA-BB-EL1U2", parentKey: "E-E-AA-BB", kind: "pattern",
+    condition: (r) => r.EL1U2,
+    direction: "bullish", targetLabel: "U2 (today's R2)", getTarget: (r) => r.todayCPR.r2,
+    entryLabel: "TC (today's TC)", getEntry: (r) => r.todayCPR.tc,
+    stoplossLabel: "S1 (today's S1)", getStoploss: (r) => r.todayCPR.s1,
+  },
+  {
+    key: "E-E-AA-BB-EU1L2", label: "E-E-AA-BB-EU1L2", parentKey: "E-E-AA-BB", kind: "pattern",
+    condition: (r) => r.EU1L2,
+    direction: "bullish", targetLabel: "U2 (today's R2)", getTarget: (r) => r.todayCPR.r2,
+    entryLabel: "TC (today's TC)", getEntry: (r) => r.todayCPR.tc,
+    stoplossLabel: "S1 (today's S1)", getStoploss: (r) => r.todayCPR.s1,
+  },
+  {
+    key: "E-E-AA-BB-EU2L2", label: "E-E-AA-BB-EU2L2", parentKey: "E-E-AA-BB", kind: "pattern",
+    condition: (r) => r.EU2L2,
+    direction: "bullish", targetLabel: "U2 (today's R2)", getTarget: (r) => r.todayCPR.r2,
+    entryLabel: "TC (today's TC)", getEntry: (r) => r.todayCPR.tc,
+    stoplossLabel: "S1 (today's S1)", getStoploss: (r) => r.todayCPR.s1,
+  },
+  {
+    key: "E-E-AA-BB-EU1L3", label: "E-E-AA-BB-EU1L3", parentKey: "E-E-AA-BB", kind: "pattern",
+    condition: (r) => r.EU1L3,
+    direction: "bullish", targetLabel: "U2 (today's R2)", getTarget: (r) => r.todayCPR.r2,
+    entryLabel: "TC (today's TC)", getEntry: (r) => r.todayCPR.tc,
+    stoplossLabel: "S1 (today's S1)", getStoploss: (r) => r.todayCPR.s1,
+  },
+  {
+    key: "E-E-AA-BB-EL1U1", label: "E-E-AA-BB-EL1U1", parentKey: "E-E-AA-BB", kind: "pattern",
+    condition: (r) => r.EL1U1,
+    direction: "bullish", targetLabel: "U2 (today's R2)", getTarget: (r) => r.todayCPR.r2,
+    entryLabel: "TC (today's TC)", getEntry: (r) => r.todayCPR.tc,
+    stoplossLabel: "S1 (today's S1)", getStoploss: (r) => r.todayCPR.s1,
+  },
+];
+
+VIEWS.push(...COMPRESSED_VIEWS, ...EXPANDED_VIEWS);
