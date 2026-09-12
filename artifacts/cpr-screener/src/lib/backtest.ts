@@ -3183,7 +3183,7 @@ function writeStoredUniverse(source: BacktestSource, dateISO: string, symbols: s
   }
 }
 
-function utcTodayISO(): string {
+export function utcTodayISO(): string {
   return new Date().toISOString().slice(0, 10);
 }
 

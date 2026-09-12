@@ -12,6 +12,7 @@ import {
 import { runScreener } from "@/lib/binance";
 import { runDeltaScreener } from "@/lib/delta";
 import type { CPRResult } from "@/lib/cpr";
+import { utcTodayISO } from "@/lib/backtest";
 import {
   shouldAutoScan,
   markScannedToday,
@@ -1879,7 +1880,15 @@ export default function Screener({
                 <tbody className="divide-y divide-border">
                   {displayed.map((r) => {
                     const sym = splitSymbol(r.symbol, r.source);
-                    const rowKey = `${r.source}-${r.symbol}`;
+                    // Include today's date so this rowKey lines up exactly
+                    // with BacktestPanel's `${r.source}-${r.symbol}-${r.entryDate}`
+                    // for today's row — otherwise a chart link attached
+                    // here (Screener has no date dimension of its own, it's
+                    // always "today") gets stored under a different
+                    // Firestore doc than the one Backtest/SR Ladder looks
+                    // up for that same symbol+date, and shows up as
+                    // missing over there.
+                    const rowKey = `${r.source}-${r.symbol}-${utcTodayISO()}`;
                     const isExpanded = expandedSymbols.has(rowKey);
                     return (
                       <ScreenerTableRow
