@@ -254,7 +254,7 @@ function deriveLevelCheckDefsForSymbol(
   // symbol/day. Rather than failing the whole copy over one such key,
   // skip it — the copy proceeds with whichever conditions could
   // genuinely be derived, same "report plainly, don't guess" spirit as
-  // SRLadderDiffPanel's own "No levelCheckDefs" fallback.
+  // SRLadderDiffPanel's own "LevelCheck UnDefined" fallback.
   const derived: LevelCheckCondition[] = [];
   const skipped: LevelKey[] = [];
 
@@ -2134,7 +2134,7 @@ export default function BacktestPanel() {
                           const ladder = ladderByRow.get(r);
                           if (!ladder) return <span className="text-xs text-muted-foreground">—</span>;
                           if (!ladder.hasConditions) {
-                            return <span className="text-xs text-muted-foreground">No levelCheckDefs</span>;
+                            return <span className="text-xs text-muted-foreground">LevelCheck UnDefined</span>;
                           }
                           const color = ladder.fullMatch
                             ? "text-green-400"

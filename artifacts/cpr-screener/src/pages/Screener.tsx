@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo, Fragment } from "react";
 import { pivotcategories, Views, requestViewDeselect } from "@/lib/ViewsSidebar";
+import { getView } from "@/lib/views";
 import {
   TrendingUp,
   RefreshCw,
@@ -513,6 +514,18 @@ export default function Screener({
   // no badge is shown for that row.
   const activeViewName = activeGenericSubView
     ? VIEW_LABEL_BY_ID[activeGenericSubView] ?? activeGenericSubView
+    : undefined;
+
+  // The active View's own 13 Level Check conditions (its levelCheckDefs
+  // from views.ts/BACKTEST_TARGETS — see passesPattern's v.levelCheckDefs
+  // usage above and SRLadderDiff.tsx's compareSRLadders). Only defined
+  // when a specific View is active AND that View actually has
+  // levelCheckDefs — a category like "Levels Above" with nothing pinned,
+  // or a View authored without them, has no Level Check to show, and
+  // SRLadderDiffPanel already renders "No levelCheckDefs" plainly for
+  // that case rather than needing a guessed fallback here.
+  const activeViewLevelCheckDefs = activeGenericSubView
+    ? getView(activeGenericSubView)?.levelCheckDefs
     : undefined;
 
   // Sidebar → Screener: whenever the left-nav selects a View leaf, switch the
@@ -1914,6 +1927,7 @@ export default function Screener({
                         activeTab={activeTab}
                         activeView={activeSectionKey}
                         viewName={activeViewName}
+                        levelCheckConditions={activeViewLevelCheckDefs}
                       />
                     );
                   })}

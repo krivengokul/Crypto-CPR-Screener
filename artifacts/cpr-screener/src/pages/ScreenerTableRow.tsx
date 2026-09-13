@@ -27,6 +27,7 @@ import {
   renderPivotSizeCell,
 } from "./ScreenerUtils";
 import { SRLadderRow, toSRLadderData } from "./SRLadderPanel";
+import type { LevelCheckCondition } from "./SRLadderDiff";
 
 /**
  * PATTERN_BADGE_CLASSES — single source of truth for pattern badge colours.
@@ -646,6 +647,8 @@ export interface ScreenerTableRowProps {
   activeView?: string;
   /** Display name of the currently active View (the highlighted "VIEWS:" pill), e.g. "A-A-AA-AA-EU3L4-GapB". Shown as a badge next to "Levels VIEW" in the expanded S/R ladder. Omit to hide it. */
   viewName?: string;
+  /** The active View's own 13 Level Check conditions (its levelCheckDefs), passed straight through to SRLadderRow/SRLadderDiffPanel. Undefined (no View active, or that View has no levelCheckDefs) renders "No levelCheckDefs" rather than a checklist — see SRLadderDiff.tsx. */
+  levelCheckConditions?: LevelCheckCondition[];
 }
 
 /**
@@ -664,6 +667,7 @@ export default function ScreenerTableRow({
   activePattern: rawActivePattern,
   activeView,
   viewName,
+  levelCheckConditions,
 }: ScreenerTableRowProps) {
   const activePattern = rawActivePattern ?? activeView ?? "";
   // Hoisted so the same up/down call drives both the per-row dot in the
@@ -849,6 +853,8 @@ export default function ScreenerTableRow({
           pivotPatternBadge={renderPivotPatternBadge(r)}
           viewName={viewName}
           viewDirection={dir ?? undefined}
+          showLevelCheck
+          levelCheckConditions={levelCheckConditions}
         />
       )}
     </Fragment>

@@ -7,7 +7,7 @@
  *
  * There is no generic/default check: a View with no levelCheckDefs has
  * no Level Check to run, and every function here reports that plainly
- * ("No levelCheckDefs") rather than falling back to a guessed rule.
+ * ("LevelCheck UnDefined") rather than falling back to a guessed rule.
  *
  * A condition's two named band lines (bandKeys) are meant to be an
  * unbroken, adjacent pair on the band day. If some other one of the 13
@@ -241,7 +241,7 @@ export function getLadderMatchSummary(
  *
  * Pass `conditions` (a View's levelCheckDefs from BACKTEST_TARGETS) —
  * there's no generic fallback, so omitting it (or a View with no
- * levelCheckDefs yet) renders "No levelCheckDefs" instead of a checklist.
+ * levelCheckDefs yet) renders "LevelCheck UnDefined" instead of a checklist.
  */
 export function SRLadderDiffPanel({
   prevCPR,
@@ -266,7 +266,7 @@ export function SRLadderDiffPanel({
             Level Check
           </p>
         </div>
-        <p className="text-[10px] text-muted-foreground px-2">No levelCheckDefs</p>
+        <p className="text-[10px] text-muted-foreground px-2">LevelCheck UnDefined</p>
       </div>
     );
   }
