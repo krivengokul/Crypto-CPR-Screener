@@ -2,8 +2,6 @@ import React, { useState, useEffect } from "react";
 import {
   TrendingUp,
   TrendingDown,
-  LayersIcon,
-  Crosshair,
   BarChart,
   Equal,
   ChevronLeft,
@@ -47,50 +45,6 @@ export const Views: Record<string, SubPattern[]> = {
   // conditionKey + levelCheckDefs — see the new block at the top of
   // passesPattern in ScreenerUtils.tsx.
   copyViews: [{ id: "A-A-AA-AA-EUBL2-pS4S2:R2", label: "A-A-AA-AA-EUBL2-pS4S2:R2" }, { id: "B-B-BB-BB-L4U4-pGapA", label: "B-B-BB-BB-L4U4-pGapA" }, { id: "A5-EUTL3-pA-S1ATC", label: "A5-EUTL3-pA-S1ATC" }],
-  "overlapping-lower": [
-    { id: "eXLo-L4U4-U4",            label: "Exp-U3>pU4" },
-    { id: "9AM:SSRRBHHLLA-U4:9PM",   label: "9AM:SSRRBHHLLA-U4:9PM" },
-    // NEW: 9AM:pRRHHLLA-U4:9PM — Overlap Below + HHRRBelow (today's R1 AND
-    // today's PDH both below the lower of prev's R1/PDH) + HHLLAbove
-    // (today's PDH above prev's PDH AND today's PDL >= prev's PDL).
-    // Bullish, entry ~9AM, targets today's own U4 by ~9PM. Green color
-    // family, sibling of 9AM:SSRRBHHLLA-U4:9PM.
-    {
-      id: "9AM:pRRHHLLA-U4:9PM",
-      label: "9AM:pRRHHLLA-U4:9PM",
-      activeColor: "#22c55e",      // green-500 border
-      activeText:  "#4ade80",      // green-400 text
-      activeBg:    "rgba(34, 197, 94, 0.14)",
-    },
-    { id: "OBN-L4U4-U4",           label: "OBN-L4U4-U4" },
-    { id: "OBW-L4U4-L4",           label: "OBW-L4U4-L4" },
-    // NEW: 2PM:SSLLpRRHHA-ApU4:5PM — Overlap Below + SSLLAbove (today's S1
-    // AND today's PDL both above the higher of prev's S1/PDL) + HHRRBelow
-    // (today's R1 AND today's PDH both below the lower of prev's R1/PDH)
-    // + (prev day's R1 above today's R2 OR today's S3 above prev day's S2).
-    // Bullish, entry ~2PM, targets ApU4 (prev day's R4) by ~5PM. Green
-    // color family to flag it as bullish, matching the other ApU4/AU4
-    // bullish siblings elsewhere (e.g. 6A:HLC-SSLL:R4-6P).
-    {
-      id: "2PM:SSLLpRRHHA-ApU4:5PM",
-      label: "2PM:SSLLpRRHHA-ApU4:5PM",
-      activeColor: "#22c55e",      // green-500 border
-      activeText:  "#4ade80",      // green-400 text
-      activeBg:    "rgba(34, 197, 94, 0.14)",
-    },
-    // NEW: 8AM:SSLLpRRHHA-L4:1PM — bearish sibling of 2PM:SSLLpRRHHA-ApU4:5PM,
-    // same overlapLower + SSLLAbove + HHRRBelow base, but with the
-    // comparison direction reversed (prev day's R1 below today's R2 OR
-    // today's S3 below prev day's S2). Bearish, entry ~8AM, targets today's
-    // own L4/S4 by ~1PM. Red color family to flag it as the bearish sibling.
-    {
-      id: "8AM:SSLLpRRHHA-L4:1PM",
-      label: "8AM:SSLLpRRHHA-L4:1PM",
-      activeColor: "#ef4444",      // red-500 border
-      activeText:  "#f87171",      // red-400 text
-      activeBg:    "rgba(239, 68, 68, 0.14)",
-    },
-  ],
   "levelsabove": [
     // NEW: "A-A-AA-OA-U3L4-RRHHGap:R4" — badges A-A-AA-OA + U3L4 +
     // RRGap + HHGap + pHL-B + HLGap-B (see ScreenerUtils.tsx / cpr.ts).
@@ -381,49 +335,6 @@ export const Views: Record<string, SubPattern[]> = {
       activeBg:    "rgba(34, 197, 94, 0.14)",
     },
   ],
-  "inside-cpr": [
-    // NEW: 8AM:CoLApHA-U4+1:8AM — Inside CPR + today's PDL above prev
-    // day's S1 ("PDL>pS1") + EITHER today's PDH above prev day's R1
-    // ("PDH>pR1") OR prev day's PDH above today's R1 ("pPDH>R1"). Bullish,
-    // entry ~8AM, targets pU4 (prev day's R4) by ~8AM the next day. Green
-    // color family, same as its Inside CPR siblings below.
-    {
-      id: "8AM:CoLApHA-U4+1:8AM",
-      label: "8AM:CoLApHA-U4+1:8AM",
-      activeColor: "#22c55e",              // green-500 border
-      activeText:  "#4ade80",              // green-400 text
-      activeBg:    "rgba(34, 197, 94, 0.14)",
-    },
-    // NEW: 8AM:SRBHHLLA-pU4+1:8AM — Inside CPR + CU3L3 + prev CPR width
-    // category pLarge (2.00%-5.00%) + today CPR width category Medium
-    // (1.10%-2.00%) + prev day's own PDL below prev S1 (p-PDL<L1) + today's
-    // PDH above today's R1 (PDH>U1) + prev R1 above today R1 + prev S1
-    // above today S1 (today's pivots contracted inside prev day's) +
-    // today's PDH above prev PDH + today's PDL above prev PDL. Bullish,
-    // entry ~8AM, targets pU4 (prev day's R4) by ~8AM the next day. Green
-    // color family.
-    {
-      id: "8AM:SRBHHLLA-pU4+1:8AM",
-      label: "8AM:SRBHHLLA-pU4+1:8AM",
-      activeColor: "#22c55e",              // green-500 border
-      activeText:  "#4ade80",              // green-400 text
-      activeBg:    "rgba(34, 197, 94, 0.14)",
-    },
-    // NEW: 2PM:pPDHLA-SRA-U4:7PM — Inside CPR + CU4L4 + prev CPR width
-    // category pLarge (2.00%-5.00%) + today CPR width category Large
-    // (2.00%-5.00%) + prev day's PDH above prev R1 (p-PDH>U1) + today's PDL
-    // below today's S1 (PDL<L1) + today R1 above prev R1 + today S1 above
-    // prev S1 (today's pivots stepped up) + prev day's PDH above today's PDH
-    // + prev day's PDL above today's PDL. Bullish, entry ~2PM, targets U4
-    // (today's R4) by ~7PM. Green color family.
-    {
-      id: "2PM:pPDHLA-SRA-U4:7PM",
-      label: "2PM:pPDHLA-SRA-U4:7PM",
-      activeColor: "#22c55e",              // green-500 border
-      activeText:  "#4ade80",              // green-400 text
-      activeBg:    "rgba(34, 197, 94, 0.14)",
-    },
-  ],
   "R1AbovePR4": [
     // NEW: "A-A-AA-AA-EUPL3-RRHHGap:R4" — View under the
     // "A-A-AA-AA-EUPL3" Subpattern (under the "A-A-AA-AA" Pattern) in
@@ -514,8 +425,6 @@ export const pivotcategories: Category[] = [
   { id: "compressed",        label: "COMPRESSED",   subtitle: "RRSS-C only (today's R1 down, S1 up vs prev)",   icon: TrendingUp },
   { id: "expanded",          label: "EXPANDED",     subtitle: "RRSS-E only (today's R1 up, S1 down vs prev)",   icon: TrendingUp },
   { id: "S1BelowPS4",          label: "BELOW LEVEL4",  subtitle: "Today S1 below Prev S4",   icon: TrendingDown },
-  { id: "inside-cpr",         label: "Inside CPR",     subtitle: "Inside CPR range",         icon: Crosshair },
-  { id: "overlapping-lower",  label: "Overlap Below", subtitle: "CPR zones stacking down",  icon: LayersIcon },
   { id: "equal-cpr",          label: "Equal CPR",     subtitle: "Prev & Today CPR Equal",   icon: Equal },
   // NEW: home for every auto-generated Copy View / Create View — see
   // Views.copyViews above.
