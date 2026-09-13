@@ -352,7 +352,7 @@ VIEWS.push(...CATEGORY_VIEWS, ...COMPOUND_VIEWS);
  * exactly as passesPattern("levelsabove") + PIVOT_PATTERNS[key] used to.
  */
 export const PIVOT_PATTERNS: Record<string, (r: CPRResult) => boolean> =
-  Object.fromEntries(COMPOUND_VIEWS.map((v) => [v.key, v.condition]));
+  Object.fromEntries(COMPOUND_VIEWS.map((v) => [v.key, v.condition!]));
 
 // ---------------------------------------------------------------------
 // Step 3, batch 1 — "levelsabove" and "levelsbelow" only (their sibling
