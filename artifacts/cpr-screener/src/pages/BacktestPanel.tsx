@@ -13,8 +13,6 @@ import {
   Calendar as CalendarIcon,
 } from "lucide-react";
 import {
-  BACKTEST_TARGETS,
-  BACKTEST_CATEGORIES,
   runBacktest,
   runCategoryScan,
   runPivotLevelBacktest,
@@ -26,11 +24,16 @@ import {
   type BacktestRow,
   type CategoryScanRow,
   type BacktestSource,
-  type BacktestCategoryDef,
-  type BacktestSubCategoryDef,
-  type BacktestTargetDef,
   type AttachPointOption,
 } from "@/lib/backtest";
+import {
+  buildViewTree,
+  childrenOf,
+  getView,
+  VIEWS,
+  type ViewTreeNode,
+  type ViewDef,
+} from "@/lib/views";
 import { passesPattern, matchesPatternFlag, fmt, getChartUrl, hasKnownChartMapping, getWidthCategory, renderGapColumnBadges, renderPivotSizeCell } from "./ScreenerUtils";
 import {
   renderTodayPatternBadges,
@@ -951,7 +954,8 @@ function DateField({
  * in plain text; the visual grouping comes from indentation and arrows.
  */
 export default function BacktestPanel() {
-  const [selectedKey, setSelectedKey] = useState<string>(BACKTEST_CATEGORIES[0].key);
+  const defaultKey = VIEWS.find((v) => v.kind === "category")?.key ?? "levelsabove";
+  const [selectedKey, setSelectedKey] = useState<string>(defaultKey);
   const [entryDate, setEntryDate] = useState<string>(() => {
     const d = new Date();
     d.setUTCDate(d.getUTCDate() - 7);
@@ -1028,47 +1032,43 @@ export default function BacktestPanel() {
 
   const SUBCATEGORY_SEP = "::";
 
-  const isCategory = BACKTEST_CATEGORIES.some((c) => c.key === selectedKey);
+  const viewTree = useMemo(() => buildViewTree(), []);
+
+  const isCategory = viewTree.some((c) => c.key === selectedKey);
 
   let activePatternInfo: {
-    category: BacktestCategoryDef;
-    sub: BacktestSubCategoryDef;
-    path: BacktestSubCategoryDef[];
+    category: ViewTreeNode;
+    sub: ViewTreeNode;
+    path: ViewTreeNode[];
   } | undefined;
-  for (const cat of BACKTEST_CATEGORIES) {
+  for (const cat of viewTree) {
     const findPattern = (
-      patterns: BacktestSubCategoryDef[] | undefined,
-      ancestors: BacktestSubCategoryDef[] = []
+      patterns: ViewTreeNode[] | undefined,
+      ancestors: ViewTreeNode[] = []
     ): typeof activePatternInfo => {
       for (const sub of patterns ?? []) {
+        if (sub.kind !== "pattern") continue;
         const path = [...ancestors, sub];
         if ([cat.key, ...path.map((p) => p.key)].join(SUBCATEGORY_SEP) === selectedKey) {
           return { category: cat, sub, path };
         }
-        const nested = findPattern(sub.patterns, path);
+        const nested = findPattern(sub.children, path);
         if (nested) return nested;
       }
       return undefined;
     };
-    activePatternInfo = findPattern(cat.patterns);
+    activePatternInfo = findPattern(cat.children);
     if (activePatternInfo) break;
   }
   const isPatternOnly = !!activePatternInfo;
 
   const isViewOnly = !isCategory && !isPatternOnly;
 
-  const activeTarget = isViewOnly ? BACKTEST_TARGETS.find((t) => t.key === selectedKey) : undefined;
+  const activeTarget = isViewOnly ? getView(selectedKey) : undefined;
   const activePatternTarget = isPatternOnly && activePatternInfo
-    ? BACKTEST_TARGETS.find((t) => t.key === activePatternInfo.sub.key)
+    ? getView(activePatternInfo.sub.key)
     : undefined;
-  const activeCategory = isCategory ? BACKTEST_CATEGORIES.find((c) => c.key === selectedKey) : undefined;
-  // This View's Level Check conditions (13 lines), for the graded results
-  // table below — isViewOnly and isPatternOnly are mutually exclusive, so
-  // exactly one of activeTarget/activePatternTarget is ever set here.
-  // Undefined for either (a category, or a View with no levelCheckDefs
-  // yet) means there's no Level Check to run — Level Check and Ladder
-  // Check both show "No levelCheckDefs" rather than falling back to any
-  // generic rule.
+  const activeCategory = isCategory ? getView(selectedKey) : undefined;
   const activeLevelCheckDefs = (activeTarget ?? activePatternTarget)?.levelCheckDefs;
 
   const symbolListLabel = isCategory
@@ -1077,62 +1077,39 @@ export default function BacktestPanel() {
     ? `${activePatternInfo.category.label} → ${activePatternInfo.path.map((p) => `Pattern ${p.label}`).join(" → ")}`
     : undefined;
 
-  // Ungrouped patterns intentionally omitted from the dropdown: the ones
-  // that were showing up at the bottom ("LittleCPR Above", "U1 > Previous U4
-  // (BigCPR Above)") duplicated options already rendered inside their
-  // categories above, so we no longer render this trailing list.
-
-  // Display order for the dropdown: place "Overlap Above" immediately after
-  // "CPR Outside" (per request), keeping every other category in its
-  // original position. Falls back to the original order if either key is
-  // missing.
-  const orderedCategories = (() => {
-    const list = [...BACKTEST_CATEGORIES];
-    const overlapIdx = list.findIndex((c) => /overlap\s*above/i.test(c.label));
-    const cprOutsideIdx = list.findIndex((c) => /cpr\s*outside/i.test(c.label));
-    if (overlapIdx === -1 || cprOutsideIdx === -1) return list;
-    const [overlap] = list.splice(overlapIdx, 1);
-    const insertAt = list.findIndex((c) => /cpr\s*outside/i.test(c.label)) + 1;
-    list.splice(insertAt, 0, overlap);
-    return list;
-  })();
-
-  // Resolve the recursive category → Pattern → Subpattern → View tree once,
-  // so the picker can render every level without re-searching
-  // BACKTEST_TARGETS on every keystroke.
   type ResolvedSub = {
-    sub: BacktestSubCategoryDef;
-    path: BacktestSubCategoryDef[];
-    Views: BacktestTargetDef[];
+    sub: ViewTreeNode;
+    path: ViewTreeNode[];
+    Views: ViewTreeNode[];
     children: ResolvedSub[];
   };
-  type ResolvedCat = { cat: BacktestCategoryDef; directPatterns: BacktestTargetDef[]; subCats: ResolvedSub[] };
+  type ResolvedCat = { cat: ViewTreeNode; directPatterns: ViewTreeNode[]; subCats: ResolvedSub[] };
   const categoryTree: ResolvedCat[] = useMemo(
     () => {
       const resolvePattern = (
-        sub: BacktestSubCategoryDef,
-        ancestors: BacktestSubCategoryDef[] = []
+        sub: ViewTreeNode,
+        ancestors: ViewTreeNode[] = []
       ): ResolvedSub => {
         const path = [...ancestors, sub];
         return {
           sub,
           path,
-          Views: sub.subPatternKeys
-            .map((pk) => BACKTEST_TARGETS.find((t) => t.key === pk))
-            .filter((t): t is BacktestTargetDef => !!t),
-          children: (sub.patterns ?? []).map((child) => resolvePattern(child, path)),
+          Views: sub.children.filter((c) => c.kind === "view"),
+          children: sub.children
+            .filter((c) => c.kind === "pattern")
+            .map((child) => resolvePattern(child, path)),
         };
       };
 
-      return orderedCategories.map((cat) => ({
+      return viewTree.map((cat) => ({
         cat,
-        directPatterns: (cat.subPatternKeys ?? [])
-          .map((pk) => BACKTEST_TARGETS.find((t) => t.key === pk))
-          .filter((t): t is BacktestTargetDef => !!t),
-        subCats: (cat.patterns ?? []).map((sub) => resolvePattern(sub)),
+        directPatterns: cat.children.filter((c) => c.kind === "view"),
+        subCats: cat.children
+          .filter((c) => c.kind === "pattern")
+          .map((sub) => resolvePattern(sub)),
       }));
     },
-    [orderedCategories]
+    [viewTree]
   );
 
   const triggerLabel = isCategory
@@ -1507,7 +1484,7 @@ export default function BacktestPanel() {
                     .map(({ cat, directPatterns, subCats }) => {
                       const catLabelHit = hit(cat.label);
                       const directHits = directPatterns.filter((t) => !q || catLabelHit || hit(t.label));
-                      const patternSelectionKey = (path: BacktestSubCategoryDef[]) =>
+                      const patternSelectionKey = (path: ViewTreeNode[]) =>
                         [cat.key, ...path.map((p) => p.key)].join(SUBCATEGORY_SEP);
                       const patternIsVisible = (node: ResolvedSub): boolean =>
                         !q ||
@@ -1516,7 +1493,7 @@ export default function BacktestPanel() {
                         node.Views.some((t) => hit(t.label)) ||
                         node.children.some(patternIsVisible);
 
-                      const viewButton = (t: BacktestTargetDef) => (
+                      const viewButton = (t: ViewTreeNode | ViewDef) => (
                         <button
                           key={t.key}
                           type="button"

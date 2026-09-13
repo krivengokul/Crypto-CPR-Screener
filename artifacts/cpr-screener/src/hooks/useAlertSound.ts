@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import type { CPRResult } from "@/lib/cpr";
-import { passesPattern, isRisingAboveTC } from "../ScreenerUtils";
+import { passesPattern, isRisingAboveTC } from "../pages/ScreenerUtils";
 
 /**
  * Sound-alert logic scoped to the pMini-L34C4/U3>4 sub-filter under

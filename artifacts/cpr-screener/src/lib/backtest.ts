@@ -40,45 +40,6 @@ export interface LevelCheckCondition {
   bandKeys: [LevelCheckKey, LevelCheckKey];
 }
 
-export interface BacktestTargetDef {
-  key: string;          // matches passesPattern's pattern-key string exactly
-  label: string;        // display name
-  direction: "bullish" | "bearish";
-  getTarget: (r: CPRResult) => number;
-  targetLabel: string;  // e.g. "U4 (today's R4)"
-  // NEW: Entry/Stoploss for every View. Rule: if the View's target is one of
-  // today's/prev's R-levels (r1-r4, i.e. direction "bullish"), Entry is
-  // today's TC and Stoploss is today's S1. If the target is one of
-  // today's/prev's S-levels (s1-s4, i.e. direction "bearish"), Entry is
-  // today's BC and Stoploss is today's R1.
-  getEntry: (r: CPRResult) => number;
-  entryLabel: string;    // e.g. "TC (today's TC)"
-  getStoploss: (r: CPRResult) => number;
-  stoplossLabel: string; // e.g. "S1 (today's S1)"
-  // NEW: Level Check's 13 line-by-line conditions for this View. Omit
-  // and there's simply no Level Check for this View — compareSRLadders
-  // (SRLadderDiff.tsx) has no generic fallback, so Level Check, Ladder
-  // Check, and Vs. View Pass Baseline all show "No levelCheckDefs"
-  // rather than guessing at a rule. Only fill this in once you've worked
-  // out the View's actual expected per-line relationship.
-  levelCheckDefs?: LevelCheckCondition[];
-  // NEW: only needed for a "Copy View" clone (see copyBacktestView below).
-  // `key` doubles as BOTH this entry's dropdown identity (looked up via
-  // BACKTEST_TARGETS.find/BACKTEST_CATEGORIES nesting) AND, everywhere a
-  // View gets graded (backtestSymbolOnDate), the literal pattern-string
-  // handed to passesPattern in ScreenerUtils.tsx — which only recognizes
-  // a fixed set of hardcoded strings. A clone's `key` has to be unique
-  // for the dropdown (so it can't reuse the original's key), but its
-  // CONDITION is still the original's — passesPattern has no case for
-  // the new key and would silently match nothing. `conditionKey` breaks
-  // that coupling: when set, grading uses `conditionKey` instead of
-  // `key` to ask passesPattern "does this row match?", while `key` keeps
-  // doing dropdown-identity duty. Omit for every hand-written View (falls
-  // back to `key`, today's behavior, unchanged).
-  conditionKey?: string;
-}
-
-
 /**
  * NEW: auto-derivation for levelCheckDefs — this is what a "Create View"
  * button in the SR Ladder panel would call instead of a human eyeballing
@@ -233,1985 +194,10 @@ export function deriveLevelCheckDefs(r: CPRResult): LevelCheckCondition[] {
   return defs;
 }
 
-export const BACKTEST_TARGETS: BacktestTargetDef[] = [
-  // NEW: A-A-AA-OA-U3L4-RRHHGap:R4 — View nested under the
-  // "A-A-AA-OA-U3L4" Subpattern (itself under the "A-A-AA-OA" Pattern in
-  // "LEVEL ABOVE" / levelsabove). Badge set: A-A-AA-OA + U3L4 + RRGap +
-  // HHGap + pHL-B + HLGap-B — see passesPattern in ScreenerUtils.tsx.
-  // Bullish: entry today's TC, target today's own R4 (U4), stoploss
-  // today's S1.
-  {
-    key: "A-A-AA-OA-U3L4-RRHHGap:R4",
-    label: "A-A-AA-OA-U3L4-RRHHGap:R4",
-    direction: "bullish",
-    targetLabel: "U4 (today's R4)",
-    getTarget: (r) => r.todayCPR.r4,
-    getEntry: (r) => r.todayCPR.tc,
-    entryLabel: "TC (today's TC)",
-    getStoploss: (r) => r.todayCPR.s1,
-    stoplossLabel: "S1 (today's S1)",
-    // Level Check — this View's 13 line conditions (verified against a
-    // real Pass case: all 13 matching). Top two rungs (R4, R3) check the
-    // OTHER way around — did yesterday's R4/R3 get absorbed into today's
-    // new R3-R2 band — since this View's target IS today's own R4, so
-    // "today's R4 vs its own prev neighbor" isn't the meaningful test.
-    // PH and the TC/Pivot/BC trio each check against a shared two-rung
-    // band (prev R2-R1, prev PH-TC) rather than an individual one-rung
-    // neighbor, reflecting this View's characteristic multi-rung upward
-    // shift. S1 downward matches the generic one-rung-neighbor check.
-    levelCheckDefs: [
-      { key: "r4", subject: "previous", bandKeys: ["r3", "r2"] },
-      { key: "r3", subject: "previous", bandKeys: ["r3", "r2"] },
-      { key: "r2", subject: "today", bandKeys: ["r3", "r2"] },
-      { key: "r1", subject: "today", bandKeys: ["r2", "r1"] },
-      { key: "prevHigh", subject: "today", bandKeys: ["r2", "r1"] },
-      { key: "tc", subject: "today", bandKeys: ["prevHigh", "tc"] },
-      { key: "pivot", subject: "today", bandKeys: ["prevHigh", "tc"] },
-      { key: "bc", subject: "today", bandKeys: ["prevHigh", "tc"] },
-      { key: "s1", subject: "today", bandKeys: ["bc", "s1"] },
-      { key: "prevLow", subject: "today", bandKeys: ["s1", "prevLow"] },
-      { key: "s2", subject: "today", bandKeys: ["prevLow", "s2"] },
-      { key: "s3", subject: "today", bandKeys: ["s2", "s3"] },
-      { key: "s4", subject: "today", bandKeys: ["s3", "s4"] },
-    ],
-  },
-  // NEW: A-A-AA-AA-EUPL3-RRHHGap:R4 — View nested under the
-  // "A-A-AA-AA-EUPL3" Subpattern (itself under the "A-A-AA-AA" Pattern
-  // in "U1 > pU4" / R1AbovePR4). Condition = R1AbovePR4 base + A-A-AA-AA
-  // + the raw EUPL3 flag PLUS RRGap + HHGap + pHL-A + HLGap-B — see
-  // passesPattern in ScreenerUtils.tsx. Bullish, targets today's own
-  // R4 / U4, entry at today's TC, stoploss today's S1.
-  {
-    key: "A-A-AA-AA-EUPL3-RRHHGap:R4",
-    label: "A-A-AA-AA-EUPL3-RRHHGap:R4",
-    direction: "bullish",
-    targetLabel: "U4 (today's R4)",
-    getTarget: (r) => r.todayCPR.r4,
-    getEntry: (r) => r.todayCPR.tc,
-    entryLabel: "TC (today's TC)",
-    getStoploss: (r) => r.todayCPR.s1,
-    stoplossLabel: "S1 (today's S1)",
-  },
-  // MOVED to "levelsabove": A-A-AA-AA-U3L3-SSLLGap:R4 — View nested
-  // under the "A-A-AA-AA-U3L3" Subpattern (itself under the
-  // "A-A-AA-AA" Pattern in LEVEL ABOVE / LevelsAbove). Condition =
-  // LevelsAbove base + A-A-AA-AA + the raw U3L3 flag PLUS SSGap +
-  // LLGap + pHL-B + HLGap-B — see passesPattern in ScreenerUtils.tsx.
-  // Bullish, targets today's own R4 / U4, entry at today's TC,
-  // stoploss today's S1.
-  {
-    key: "A-A-AA-AA-U3L3-SSLLGap:R4",
-    label: "A-A-AA-AA-U3L3-SSLLGap:R4",
-    direction: "bullish",
-    targetLabel: "U4 (today's R4)",
-    getTarget: (r) => r.todayCPR.r4,
-    getEntry: (r) => r.todayCPR.tc,
-    entryLabel: "TC (today's TC)",
-    getStoploss: (r) => r.todayCPR.s1,
-    stoplossLabel: "S1 (today's S1)",
-    // Level Check — this View's 13 line conditions, worked out from a
-    // real Pass case (p-EU1L4 -> U3L3, LEVELS VIEW A-A-AA-AA): R4=.00223->
-    // .00230, R3=.00216->.00225, R2=.00206->.00214, R1=.00199->.00209,
-    // PH=.00195->.00204, TC=.00190->.00201, Pivot=.00188->.00199,
-    // BC=.00187->.00196, S1=.00181->.00193, PL=.00178->.00188,
-    // S2=.00171->.00183, S3=.00164->.00177, S4=.00154->.00167 (prev ->
-    // today). Same top-two-reversed idea as its bullish siblings (did
-    // yesterday's R4/R3 get absorbed into today's new R3-R2 band), but
-    // the rest of the ladder shifts up by roughly ONE MORE rung than
-    // those siblings, not just at the top: R2/R1 both land in prev's
-    // R3-R2 band, PH/TC both in prev's R2-R1 band, BC in prev's R1-PH
-    // band, then S1, S2, S3, S4 each take the next rung down in turn
-    // (prev PH-TC, prev BC-S1, prev PL-S2, prev S2-S3) — reflecting
-    // this View's stronger SSGap+LLGap upward displacement compared to
-    // the OA/EUPL3 siblings.
-    // Pivot and PL are each SKIP-banded (spanning two rungs instead of
-    // one, e.g. prev R2-PH instead of prev R1-PH) rather than following
-    // that same one-rung-down cadence: in this real case today's Pivot
-    // (.00199) lands exactly ON prev R1, and today's PL (.00188) lands
-    // exactly ON prev Pivot — landing exactly on a boundary value rather
-    // than strictly inside a band, which compareSRLadders (SRLadderDiff.tsx)
-    // does not count as a match. Widening each of those two checks by one
-    // extra rung keeps the value strictly inside the band's interior.
-    levelCheckDefs: [
-      { key: "r4", subject: "previous", bandKeys: ["r3", "r2"] },
-      { key: "r3", subject: "previous", bandKeys: ["r3", "r2"] },
-      { key: "r2", subject: "today", bandKeys: ["r3", "r2"] },
-      { key: "r1", subject: "today", bandKeys: ["r3", "r2"] },
-      { key: "prevHigh", subject: "today", bandKeys: ["r2", "r1"] },
-      { key: "tc", subject: "today", bandKeys: ["r2", "r1"] },
-      { key: "pivot", subject: "today", bandKeys: ["r2", "prevHigh"] },
-      { key: "bc", subject: "today", bandKeys: ["r1", "prevHigh"] },
-      { key: "s1", subject: "today", bandKeys: ["prevHigh", "tc"] },
-      { key: "prevLow", subject: "today", bandKeys: ["pivot", "bc"] },
-      { key: "s2", subject: "today", bandKeys: ["bc", "s1"] },
-      { key: "s3", subject: "today", bandKeys: ["prevLow", "s2"] },
-      { key: "s4", subject: "today", bandKeys: ["s2", "s3"] },
-    ],
-  },
-    {
-        key: "A-A-AA-AA-U3L3-SSLLGap:R4+1",
-        conditionKey: "A-A-AA-AA-U3L3-SSLLGap:R4", // Copy View — grades against the original
-        label: "A-A-AA-AA-U3L3-SSLLGap:R4 +1",
-        direction: "bullish",
-        targetLabel: "U4 (today's R4)",
-        getTarget: (r) => r.todayCPR.r4,
-        getEntry: (r) => r.todayCPR.tc,
-        entryLabel: "TC (today's TC)",
-        getStoploss: (r) => r.todayCPR.s1,
-        stoplossLabel: "S1 (today's S1)",
-        // Level Check — this View's 13 line conditions, worked out from a
-        // real Pass case (p-EU1L4 -> U3L3, LEVELS VIEW A-A-AA-AA): R4=.00223->
-        // .00230, R3=.00216->.00225, R2=.00206->.00214, R1=.00199->.00209,
-        // PH=.00195->.00204, TC=.00190->.00201, Pivot=.00188->.00199,
-        // BC=.00187->.00196, S1=.00181->.00193, PL=.00178->.00188,
-        // S2=.00171->.00183, S3=.00164->.00177, S4=.00154->.00167 (prev ->
-        // today). Same top-two-reversed idea as its bullish siblings (did
-        // yesterday's R4/R3 get absorbed into today's new R3-R2 band), but
-        // the rest of the ladder shifts up by roughly ONE MORE rung than
-        // those siblings, not just at the top: R2/R1 both land in prev's
-        // R3-R2 band, PH/TC both in prev's R2-R1 band, BC in prev's R1-PH
-        // band, then S1, S2, S3, S4 each take the next rung down in turn
-        // (prev PH-TC, prev BC-S1, prev PL-S2, prev S2-S3) — reflecting
-        // this View's stronger SSGap+LLGap upward displacement compared to
-        // the OA/EUPL3 siblings.
-        // Pivot and PL are each SKIP-banded (spanning two rungs instead of
-        // one, e.g. prev R2-PH instead of prev R1-PH) rather than following
-        // that same one-rung-down cadence: in this real case today's Pivot
-        // (.00199) lands exactly ON prev R1, and today's PL (.00188) lands
-        // exactly ON prev Pivot — landing exactly on a boundary value rather
-        // than strictly inside a band, which compareSRLadders (SRLadderDiff.tsx)
-        // does not count as a match. Widening each of those two checks by one
-        // extra rung keeps the value strictly inside the band's interior.
-        levelCheckDefs: [{"key":"r4","subject":"previous","bandKeys":["r2","r3"]},{"key":"r3","subject":"previous","bandKeys":["r1","r2"]},{"key":"r2","subject":"today","bandKeys":["r3","r4"]},{"key":"r1","subject":"today","bandKeys":["r2","r3"]},{"key":"prevHigh","subject":"today","bandKeys":["r2","r3"]},{"key":"tc","subject":"today","bandKeys":["r1","r2"]},{"key":"pivot","subject":"today","bandKeys":["r1","r2"]},{"key":"bc","subject":"today","bandKeys":["r1","r2"]},{"key":"s1","subject":"today","bandKeys":["tc","prevHigh"]},{"key":"prevLow","subject":"today","bandKeys":["tc","prevHigh"]},{"key":"s2","subject":"today","bandKeys":["s1","bc"]},{"key":"s3","subject":"today","bandKeys":["prevLow","s1"]},{"key":"s4","subject":"today","bandKeys":["s3","s2"]}],
-      },
-    {
-        key: "A-A-AA-AA-U3L3-SL-PAR1:R4",
-        conditionKey: "A-A-AA-AA-U3L3-SSLLGap:R4", // Copy View — grades against the original
-        label: "A-A-AA-AA-U3L3-SL-PAR1:R4",
-        direction: "bullish",
-        targetLabel: "U4 (today's R4)",
-        getTarget: (r) => r.todayCPR.r4,
-        getEntry: (r) => r.todayCPR.tc,
-        entryLabel: "TC (today's TC)",
-        getStoploss: (r) => r.todayCPR.s1,
-        stoplossLabel: "S1 (today's S1)",
-        // Level Check — this View's 13 line conditions, worked out from a
-        // real Pass case (p-EU1L4 -> U3L3, LEVELS VIEW A-A-AA-AA): R4=.00223->
-        // .00230, R3=.00216->.00225, R2=.00206->.00214, R1=.00199->.00209,
-        // PH=.00195->.00204, TC=.00190->.00201, Pivot=.00188->.00199,
-        // BC=.00187->.00196, S1=.00181->.00193, PL=.00178->.00188,
-        // S2=.00171->.00183, S3=.00164->.00177, S4=.00154->.00167 (prev ->
-        // today). Same top-two-reversed idea as its bullish siblings (did
-        // yesterday's R4/R3 get absorbed into today's new R3-R2 band), but
-        // the rest of the ladder shifts up by roughly ONE MORE rung than
-        // those siblings, not just at the top: R2/R1 both land in prev's
-        // R3-R2 band, PH/TC both in prev's R2-R1 band, BC in prev's R1-PH
-        // band, then S1, S2, S3, S4 each take the next rung down in turn
-        // (prev PH-TC, prev BC-S1, prev PL-S2, prev S2-S3) — reflecting
-        // this View's stronger SSGap+LLGap upward displacement compared to
-        // the OA/EUPL3 siblings.
-        // Pivot and PL are each SKIP-banded (spanning two rungs instead of
-        // one, e.g. prev R2-PH instead of prev R1-PH) rather than following
-        // that same one-rung-down cadence: in this real case today's Pivot
-        // (.00199) lands exactly ON prev R1, and today's PL (.00188) lands
-        // exactly ON prev Pivot — landing exactly on a boundary value rather
-        // than strictly inside a band, which compareSRLadders (SRLadderDiff.tsx)
-        // does not count as a match. Widening each of those two checks by one
-        // extra rung keeps the value strictly inside the band's interior.
-        levelCheckDefs: [
-          { key: "r4", subject: "previous", bandKeys: ["r3", "r2"] },
-          { key: "r3", subject: "previous", bandKeys: ["r3", "r2"] },
-          { key: "r2", subject: "today", bandKeys: ["r3", "r2"] },
-          { key: "r1", subject: "today", bandKeys: ["r3", "r2"] },
-          { key: "prevHigh", subject: "today", bandKeys: ["r2", "r1"] },
-          { key: "tc", subject: "today", bandKeys: ["r2", "r1"] },
-          { key: "pivot", subject: "today", bandKeys: ["r2", "prevHigh"] },
-          { key: "bc", subject: "today", bandKeys: ["r1", "prevHigh"] },
-          { key: "s1", subject: "today", bandKeys: ["prevHigh", "tc"] },
-          { key: "prevLow", subject: "today", bandKeys: ["pivot", "bc"] },
-          { key: "s2", subject: "today", bandKeys: ["bc", "s1"] },
-          { key: "s3", subject: "today", bandKeys: ["prevLow", "s2"] },
-          { key: "s4", subject: "today", bandKeys: ["s2", "s3"] },
-        ],
-      },
-    {
-    key: "C-B-BB-LB-CL3U2-RRHHGap:R4",
-    label: "C-B-BB-LB-CL3U2-RRHHGap:R4",
-    direction: "bullish",
-    targetLabel: "U4 (today's R4)",
-    getTarget: (r) => r.todayCPR.r4,
-    getEntry: (r) => r.todayCPR.tc,
-    entryLabel: "TC (today's TC)",
-    getStoploss: (r) => r.todayCPR.s1,
-    stoplossLabel: "S1 (today's S1)",
-  },
-  // NEW: C-B-BB-LB-CL3U2 — nested as a Pattern under the "C-B-BB-LB" leaf
-  // Pattern (itself under the "compressed" category). Condition =
-  // PIVOT_PATTERNS["C-B-BB-LB"] (RRSS-C + HHLL-B + RRHH-BB + SSLL-LB) AND
-  // the existing raw CL3U2 flag from cpr.ts (see matchesPatternFlag in
-  // ScreenerUtils.tsx). Bullish, targets today's own R4 / U4.
-  {
-    key: "C-B-BB-LB-CL3U2",
-    label: "C-B-BB-LB-CL3U2",
-    direction: "bullish",
-    targetLabel: "U4 (today's R4)",
-    getTarget: (r) => r.todayCPR.r4,
-    getEntry: (r) => r.todayCPR.tc,
-    entryLabel: "TC (today's TC)",
-    getStoploss: (r) => r.todayCPR.s1,
-    stoplossLabel: "S1 (today's S1)",
-  },
-  // Renamed from the former 6PM HHLLA/RRHH-Gap View. This View is now nested
-  // under the A-A-AA-AA-EU3L4 Pattern. Its effective condition is the
-  // A-A-AA-AA structural base + EU3L4 (the parent Pattern) + HLGap-B,
-  // replacing the old RRGap + HHGap conditions. Bullish, targets today's
-  // own R4 / U4.
-  {
-    key: "A-A-AA-AA-EU3L4-GapB",
-    label: "A-A-AA-AA-EU3L4-GapB",
-    direction: "bullish",
-    targetLabel: "U4 (today's R4)",
-    getTarget: (r) => r.todayCPR.r4,
-    getEntry: (r) => r.todayCPR.tc,
-    entryLabel: "TC (today's TC)",
-    getStoploss: (r) => r.todayCPR.s1,
-    stoplossLabel: "S1 (today's S1)",
-  },
-  // NEW: A-A-AA-AA-S1pPDH-U3 — nested as a View under the
-  // A-A-AA-AA-U2L4 Pattern. Bullish U3 target (today's R3). Condition:
-  // A-A-AA-AA + U2L4 + LevelsAbove + today's S1 above prev day's PDH.
-  // Target changed from prev day's R3 to TODAY'S R3 per user request.
-  {
-    key: "A-A-AA-AA-S1pPDH-U3",
-    label: "A-A-AA-AA-S1pPDH-U3",
-    direction: "bullish",
-    targetLabel: "U3 (today's R3)",
-    getTarget: (r) => r.todayCPR.r3,
-    getEntry: (r) => r.todayCPR.tc,
-    entryLabel: "TC (today's TC)",
-    getStoploss: (r) => r.todayCPR.s1,
-    stoplossLabel: "S1 (today's S1)",
-  },
-  // NEW: A-A-AA-AA-EU2L4-ApR2 — nested as a View under the
-  // A-A-AA-AA-EU2L4 Pattern. Bullish U4 target, using the existing
-  // backtest time horizon.
-  {
-    key: "A-A-AA-AA-EU2L4-ApR2",
-    label: "A-A-AA-AA-EU2L4-ApR2",
-    direction: "bullish",
-    targetLabel: "U4 (today's R4)",
-    getTarget: (r) => r.todayCPR.r4,
-    getEntry: (r) => r.todayCPR.tc,
-    entryLabel: "TC (today's TC)",
-    getStoploss: (r) => r.todayCPR.s1,
-    stoplossLabel: "S1 (today's S1)",
-  },
-  // RENAMED from "A-A-AA-AA:Candidate-Unfavorable". This remains a
-  // target-graded View, now nested under the A-A-AA-AA-U3L4 Pattern.
-  {
-    key: "A-A-AA-AA-U3L4-pGapB",
-    label: "A-A-AA-AA-U3L4-pGapB",
-    direction: "bullish",
-    targetLabel: "U4 (today's R4)",
-    getTarget: (r) => r.todayCPR.r4,
-    getEntry: (r) => r.todayCPR.tc,
-    entryLabel: "TC (today's TC)",
-    getStoploss: (r) => r.todayCPR.s1,
-    stoplossLabel: "S1 (today's S1)",
-    // Level Check — this View's 13 line conditions (verified against a
-    // real Pass case: all 13 matching). S4-S1 match the plain one-rung
-    // neighbor check; PL is pushed one notch up to share S1's band; the
-    // BC/Pivot/TC trio shares one band, and PH/R1 share the next band
-    // up; R2 gets its own band. R3 and R4 flip to the reversed check —
-    // yesterday's own top rungs absorbed into two *different*, adjacent
-    // bands of today's new structure (unlike A-A-AA-OA-U3L4-RRHHGap:R4,
-    // where R3 and R4 shared one band — here they don't).
-    levelCheckDefs: [
-      { key: "s4", subject: "today", bandKeys: ["s4", "s3"] },
-      { key: "s3", subject: "today", bandKeys: ["s3", "s2"] },
-      { key: "s2", subject: "today", bandKeys: ["s2", "prevLow"] },
-      { key: "prevLow", subject: "today", bandKeys: ["s1", "bc"] },
-      { key: "s1", subject: "today", bandKeys: ["s1", "bc"] },
-      { key: "bc", subject: "today", bandKeys: ["prevHigh", "r1"] },
-      { key: "pivot", subject: "today", bandKeys: ["prevHigh", "r1"] },
-      { key: "tc", subject: "today", bandKeys: ["prevHigh", "r1"] },
-      { key: "prevHigh", subject: "today", bandKeys: ["r2", "r3"] },
-      { key: "r1", subject: "today", bandKeys: ["r2", "r3"] },
-      { key: "r2", subject: "today", bandKeys: ["r3", "r4"] },
-      { key: "r3", subject: "previous", bandKeys: ["r1", "r2"] },
-      { key: "r4", subject: "previous", bandKeys: ["r2", "r3"] },
-    ],
-  },
-  // NEW: "7PM:MoMi->U4:2AM" — nested under "LEVEL ABOVE" → Pattern "EU2L4".
-  // Bullish, targets today's own R4 / U4 by ~2AM.
-  {
-    key: "7PM:MoMi->U4:2AM",
-    label: "7PM:MoMi->U4:2AM",
-    direction: "bullish",
-    targetLabel: "U4 (today's R4)",
-    getTarget: (r) => r.todayCPR.r4,
-    getEntry: (r) => r.todayCPR.tc,
-    entryLabel: "TC (today's TC)",
-    getStoploss: (r) => r.todayCPR.s1,
-    stoplossLabel: "S1 (today's S1)",
-  },
-  // NEW: "7PM:MoMi-<L4:2AM" — bearish sibling of "7PM:MoMi->U4:2AM", same
-  // nesting ("LEVEL ABOVE" → Pattern "EU2L4") and same base condition
-  // (p-CU1L1, pMicro/Mini widths, both PDLs below L1), but split on
-  // today's PDL vs prev day's pivot: this variant fires when
-  // todayCPR.PDL < prevCPR.pivot, targeting today's own S4 / L4 by ~2AM.
-  {
-    key: "7PM:MoMi-<L4:2AM",
-    label: "7PM:MoMi-<L4:2AM",
-    direction: "bearish",
-    targetLabel: "L4 (today's S4)",
-    getTarget: (r) => r.todayCPR.s4,
-    getEntry: (r) => r.todayCPR.bc,
-    entryLabel: "BC (today's BC)",
-    getStoploss: (r) => r.todayCPR.r1,
-    stoplossLabel: "R1 (today's R1)",
-  },
-  // NEW: "6PM:APHS1A-FAU4:9PM" — nested under "LEVEL ABOVE" → Pattern
-  // "EU2L4", alongside its "7PM:MoMi->U4:2AM" /
-  // "7PM:MoMi-<L4:2AM" siblings. Condition: LevelsAbove + EU2L4 + the
-  // prev day's own pivot sub-label being EU3L4 (p-EU3L4) + today's BC
-  // above prev day's own PDH + today's S1 above prev day's TC — see
-  // ScreenerUtils.tsx. Bullish, entry ~6PM, targets Far Above today's R4
-  // by ~9PM.
-  {
-    key: "6PM:APHS1A-FAU4:9PM",
-    label: "6PM:APHS1A-FAU4:9PM",
-    direction: "bullish",
-    targetLabel: "FAU4 (Far Above today's R4)",
-    getTarget: (r) => r.todayCPR.r4,
-    getEntry: (r) => r.todayCPR.tc,
-    entryLabel: "TC (today's TC)",
-    getStoploss: (r) => r.todayCPR.s1,
-    stoplossLabel: "S1 (today's S1)",
-  },
-    {
-        key: "6PM:APHS1A-FAU4:99PM",
-        conditionKey: "6PM:APHS1A-FAU4:9PM", // Copy View — grades against the original
-        label: "6PM:APHS1A-FAU4:99PM",
-        direction: "bullish",
-        targetLabel: "FAU4 (Far Above today's R4)",
-        getTarget: (r) => r.todayCPR.r4,
-        getEntry: (r) => r.todayCPR.tc,
-        entryLabel: "TC (today's TC)",
-        getStoploss: (r) => r.todayCPR.s1,
-        stoplossLabel: "S1 (today's S1)",
-        levelCheckDefs: [{"key":"r4","subject":"previous","bandKeys":["r1","r2"]},{"key":"r3","subject":"previous","bandKeys":["tc","prevHigh"]},{"key":"r2","subject":"previous","bandKeys":["tc","prevHigh"]},{"key":"prevHigh","subject":"today","bandKeys":["r3","r4"]},{"key":"r1","subject":"today","bandKeys":["r3","r4"]},{"key":"tc","subject":"today","bandKeys":["prevHigh","r2"]},{"key":"pivot","subject":"today","bandKeys":["prevHigh","r2"]},{"key":"bc","subject":"today","bandKeys":["prevHigh","r2"]},{"key":"prevLow","subject":"today","bandKeys":["s1","bc"]},{"key":"s1","subject":"today","bandKeys":["tc","r1"]},{"key":"s2","subject":"today","bandKeys":["s3","s1"]},{"key":"s3","subject":"today","bandKeys":["s4","s2"]}]
-    },
-    {
-        key: "6PM:APHS1A-FAU4:9PMM",
-        conditionKey: "6PM:APHS1A-FAU4:9PM", // Copy View — grades against the original
-        label: "6PM:APHS1A-FAU4:9PMM",
-        direction: "bullish",
-        targetLabel: "FAU4 (Far Above today's R4)",
-        getTarget: (r) => r.todayCPR.r4,
-        getEntry: (r) => r.todayCPR.tc,
-        entryLabel: "TC (today's TC)",
-        getStoploss: (r) => r.todayCPR.s1,
-        stoplossLabel: "S1 (today's S1)",
-      },
-    {
-    key: "9AM:pPALPApH-FAU4:2PM",
-    label: "9AM:pPALPApH-FAU4:2PM",
-    direction: "bullish",
-    targetLabel: "FAU4 (Far Above today's R4)",
-    getTarget: (r) => r.todayCPR.r4,
-    getEntry: (r) => r.todayCPR.tc,
-    entryLabel: "TC (today's TC)",
-    getStoploss: (r) => r.todayCPR.s1,
-    stoplossLabel: "S1 (today's S1)",
-  },
-  // REMOVED: "HA-U1>PU4" — its condition (cprRising && strWideCPR &&
-  // todayCPR.r1 > prevCPR.r4) is identical to the "U1 > pU4" (R1AbovePR4)
-  // parent category's own base condition, so it was just a duplicate
-  // "dot" in the Backtest dropdown. Use the "U1 > pU4" category's own
-  // symbol-list scan instead.
-  // RENAMED from "9AM:APHS1A-FAU4:4AM". Nested under the "U1 > pU4"
-  // category's new "A-A-AA-AA-EUTL3" Subpattern (moved out from directly
-  // under "EUTL3"): the structural A-A-AA-AA check (see PIVOT_PATTERNS in
-  // ScreenerUtils.tsx) was added on top of the existing EUTL3 + BC>pPDH +
-  // S1>pTC condition. Bullish, same PU4 target style as the (now-removed)
-  // HA-U1>PU4 (matches ViewsSidebar's R1AbovePR4 sub-pattern).
-  {
-    key: "9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A",
-    label: "9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A",
-    direction: "bullish",
-    targetLabel: "FAU4 (Far Above today's R4)",
-    getTarget: (r) => r.todayCPR.r4,
-    getEntry: (r) => r.todayCPR.tc,
-    entryLabel: "TC (today's TC)",
-    getStoploss: (r) => r.todayCPR.s1,
-    stoplossLabel: "S1 (today's S1)",
-  },
-  // RENAMED from "6AM:pX-APHS1A-pL4:4AM". Nested under the "U1 > pU4"
-  // (R1AbovePR4) category's "A-A-AA-AA-EUTL3" Subpattern (moved out from
-  // directly under "EUTL3"), right after its
-  // "9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A" sibling. Condition: this category's
-  // U1>pU4 condition + the structural A-A-AA-AA check (see PIVOT_PATTERNS
-  // in ScreenerUtils.tsx, newly added here) + Pattern EUTL3 + today's BC
-  // above prev day's PDH + today's S1 above prev day's TC + the prev
-  // day's own pivot sub-label being EU3L4. Bearish, targets pL4 (prev
-  // day's S4) by ~4AM.
-  {
-    key: "6A:A-A-AA-AA-EUTL3-S1ATCpE-pL4:4A",
-    label: "6A:A-A-AA-AA-EUTL3-S1ATCpE-pL4:4A",
-    direction: "bearish",
-    targetLabel: "pL4 (prev day's S4)",
-    getTarget: (r) => r.prevCPR.s4,
-    getEntry: (r) => r.todayCPR.bc,
-    entryLabel: "BC (today's BC)",
-    getStoploss: (r) => r.todayCPR.r1,
-    stoplossLabel: "R1 (today's R1)",
-  },
-  // NEW: "8AM:APHS1A-FAU4:4AM" — nested under the "U1 > pU4" (R1AbovePR4)
-  // category's "EU1L3" Pattern, alongside its
-  // "9AM:APHS1A-FAU4:4AM" sibling. Base condition: this category's
-  // U1>pU4 condition AND the raw EU1L3 flag AND today's BC above prev
-  // day's own PDH AND today's S1 above prev day's TC — see
-  // ScreenerUtils.tsx. Bullish, targets Far Above U4 (today's R4) by ~4AM.
-  {
-    key: "8AM:APHS1A-FAU4:4AM",
-    label: "8AM:APHS1A-FAU4:4AM",
-    direction: "bullish",
-    targetLabel: "FAU4 (Far Above today's R4)",
-    getTarget: (r) => r.todayCPR.r4,
-    getEntry: (r) => r.todayCPR.tc,
-    entryLabel: "TC (today's TC)",
-    getStoploss: (r) => r.todayCPR.s1,
-    stoplossLabel: "S1 (today's S1)",
-  },
-  // NEW: "RRHH-BB:SSLL-AA:SSLLGap" — duplicate of "6A:HLC-SSLL:R4-6P", added only
-  // for the Backtest dropdown (not exposed in Screener/left-nav/legend).
-  // Same condition and target as its 6A:HLC-SSLL:R4-6P sibling.
-  {
-    key: "RRHH-BB:SSLL-AA:SSLLGap",
-    label: "RRHH-BB:SSLL-AA:SSLLGap",
-    direction: "bullish",
-    targetLabel: "U4 (today's R4)",
-    getTarget: (r) => r.todayCPR.r4,
-    getEntry: (r) => r.todayCPR.tc,
-    entryLabel: "TC (today's TC)",
-    getStoploss: (r) => r.todayCPR.s1,
-    stoplossLabel: "S1 (today's S1)",
-  },
-  // RENAMED from "SMi-L1pU1>-APU4:11PM": all previous conditions removed.
-  // "6A:HLC-SSLL:R4-6P" — nested under "COMPRESSED". Condition:
-  // compressed + HHLL-C + SSLL-AA + RRHH-BB + SSGap + LLGap — see
-  // ScreenerUtils.tsx. Bullish, entry ~6AM, targets today's own R4 (U4)
-  // by ~6PM.
-  {
-    key: "6A:HLC-SSLL:R4-6P",
-    label: "6A:HLC-SSLL:R4-6P",
-    direction: "bullish",
-    targetLabel: "U4 (today's R4)",
-    getTarget: (r) => r.todayCPR.r4,
-    getEntry: (r) => r.todayCPR.tc,
-    entryLabel: "TC (today's TC)",
-    getStoploss: (r) => r.todayCPR.s1,
-    stoplossLabel: "S1 (today's S1)",
-  },
-  // RENAMED from "S0-L1pU1>-AU4:7PM": all previous conditions removed.
-  // "8A:HLC-SSHH:S4-1P" — second sub-pattern under "COMPRESSED". Condition:
-  // compressed + RRSSGapCategory SSGap + RRHHCategory RRHH-BB +
-  // SSLLCategory SSLL-AA + HHLLCategory HHLL-C + PDHPDLGapCategory HHGap +
-  // prevCPR.HLSwitch HL-A + todayCPR.HLSwitch HL-B with hlGapWinner
-  // "today" (HLGap-B) — see ScreenerUtils.tsx. Bearish, entry ~8AM,
-  // targets today's own S4 (L4) by ~1PM.
-  {
-    key: "8A:HLC-SSHH:S4-1P",
-    label: "8A:HLC-SSHH:S4-1P",
-    direction: "bearish",
-    targetLabel: "L4 (today's S4)",
-    getTarget: (r) => r.todayCPR.s4,
-    getEntry: (r) => r.todayCPR.bc,
-    entryLabel: "BC (today's BC)",
-    getStoploss: (r) => r.todayCPR.r1,
-    stoplossLabel: "R1 (today's R1)",
-  },
-  // RENAMED from "T0-L1pU1>-BPL4:5AM": all previous conditions removed.
-  // "9AM:RHLB-RRHH:5AM" — third sub-pattern under "COMPRESSED".
-  // Condition: compressed + RRSSGapCategory RRGap + RRHHCategory RRHH-BB +
-  // HHLLCategory HHLL-B + PDHPDLGapCategory HHGap — see ScreenerUtils.tsx.
-  // Bearish, targets today's own S2 (L2) by ~5AM.
-  {
-    key: "9AM:RHLB-RRHH:5AM",
-    label: "9AM:RHLB-RRHH:5AM",
-    direction: "bearish",
-    targetLabel: "L2 (today's S2)",
-    getTarget: (r) => r.todayCPR.s2,
-    getEntry: (r) => r.todayCPR.bc,
-    entryLabel: "BC (today's BC)",
-    getStoploss: (r) => r.todayCPR.r1,
-    stoplossLabel: "R1 (today's R1)",
-  },
-  // RENAMED from "RHLB-RRHHpGap": View nested under the "RHLB-RRHHpGap"
-  // Pattern arrow in COMPRESSED (not exposed in Screener/left-nav/legend).
-  // Condition: same base as its "9AM:RHLB-RRHH:5AM" cousin (compressed +
-  // RRGap + RRHH-BB + HHLL-B + HHGap) PLUS SSRRCategory RRSS-C +
-  // SSLLCategory SSLL-C + prevCPR.HLSwitch HL-A with hlGapWinner "prev"
-  // (pHLGap-A) + todayCPR.HLSwitch HL-A PLUS prev day's PDL above today's
-  // pivot + prev day's own pivot above today's PDH — see
-  // ScreenerUtils.tsx. Bullish, entry ~8AM, targets today's own R4 (U4)
-  // by ~5PM.
-  {
-    key: "8A:pLAPpPAH:R4-5P",
-    label: "8A:pLAPpPAH:R4-5P",
-    direction: "bullish",
-    targetLabel: "U4 (today's R4)",
-    getTarget: (r) => r.todayCPR.r4,
-    getEntry: (r) => r.todayCPR.tc,
-    entryLabel: "TC (today's TC)",
-    getStoploss: (r) => r.todayCPR.s1,
-    stoplossLabel: "S1 (today's S1)",
-  },
-  // RENAMED from "eXHrL3U3-AU4": all previous conditions removed and moved
-  // from "Outside CPR" into "EXPANDED". "6A:SLE-RRHH:R2-6A" — sub-pattern
-  // under "EXPANDED". Condition: expanded + RRSSGapCategory RRGap +
-  // RRHHCategory RRHH-AA + SSLLCategory SSLL-E + HHLLCategory HHLL-A +
-  // PDHPDLGapCategory HHGap + prevCPR.HLSwitch HL-B (pHL-B) +
-  // todayCPR.HLSwitch HL-A with hlGapWinner "today" (HLGap-A) — see
-  // cpr.ts / ScreenerUtils.tsx. Bullish, entry ~6AM, targets today's own
-  // R2 (U2) by ~6AM.
-  {
-    key: "6A:SLE-RRHH:R2-6A",
-    label: "6A:SLE-RRHH:R2-6A",
-    direction: "bullish",
-    targetLabel: "U2 (today's R2)",
-    getTarget: (r) => r.todayCPR.r2,
-    getEntry: (r) => r.todayCPR.tc,
-    entryLabel: "TC (today's TC)",
-    getStoploss: (r) => r.todayCPR.s1,
-    stoplossLabel: "S1 (today's S1)",
-  },
-  // NEW: "ss-EL1U4-U4:10PM" — nested under the "BELOW LEVEL4"
-  // (S1BelowPS4) category's "EL1U4" Pattern. Bullish, targets U4
-  // (today's R4) by ~10PM.
-  {
-    key: "ss-EL1U4-U4:10PM",
-    label: "ss-EL1U4-U4:10PM",
-    direction: "bullish",
-    targetLabel: "U4 (today's R4)",
-    getTarget: (r) => r.todayCPR.r4,
-    getEntry: (r) => r.todayCPR.tc,
-    entryLabel: "TC (today's TC)",
-    getStoploss: (r) => r.todayCPR.s1,
-    stoplossLabel: "S1 (today's S1)",
-  },
-  // RENAMED from "BC>pPDL-U3:5AM", then from "3P:HA-pABOVE:pR4-3A".
-  // "3P:HA-pBELOWR1:R2-3A" — nested under "LEVEL BELOW" (levelsbelow)
-  // category. Bullish — per ScreenerUtils.tsx's condition (LevelsBelow +
-  // SSGap + RRHH-HA + SSLL-BB + HHLL-E + LLGap + pHL-B + HLGap-A + prev
-  // day's S3 above today's S1 + prev day's own Pivot above today's R1) —
-  // targets today's own R2 (U2) by ~3AM (+1).
-  {
-    key: "3P:HA-pBELOWR1:R2-3A",
-    label: "3P:HA-pBELOWR1:R2-3A",
-    direction: "bullish",
-    targetLabel: "U2 (today's R2)",
-    getTarget: (r) => r.todayCPR.r2,
-    getEntry: (r) => r.todayCPR.tc,
-    entryLabel: "TC (today's TC)",
-    getStoploss: (r) => r.todayCPR.s1,
-    stoplossLabel: "S1 (today's S1)",
-  },
-  // NEW: "3P:HA-pABOVER1:S2-6P" — replica of "3P:HA-pBELOWR1:R2-3A" with
-  // the same base conditions, but prev day's own Pivot BELOW today's R1
-  // (instead of above). Bearish, targets today's own S2 (L2) by ~6PM.
-  {
-    key: "3P:HA-pABOVER1:S2-6P",
-    label: "3P:HA-pABOVER1:S2-6P",
-    direction: "bearish",
-    targetLabel: "L2 (today's S2)",
-    getTarget: (r) => r.todayCPR.s2,
-    getEntry: (r) => r.todayCPR.bc,
-    entryLabel: "BC (today's BC)",
-    getStoploss: (r) => r.todayCPR.r1,
-    stoplossLabel: "R1 (today's R1)",
-  },
-  // NEW: "2P:HA-HABOVEpR1:R4-4P" — replica of "3P:HA-pBELOWR1:R2-3A" with
-  // the same base conditions, but today's own R1 above prev day's PDH
-  // (instead of prev day's own Pivot above today's R1) and today's R3
-  // above prev day's R4 (instead of prev day's R3). Bullish, targets
-  // today's own R4 (U4) by ~4PM.
-  {
-    key: "2P:HA-HABOVEpR1:R4-4P",
-    label: "2P:HA-HABOVEpR1:R4-4P",
-    direction: "bullish",
-    targetLabel: "U4 (today's R4)",
-    getTarget: (r) => r.todayCPR.r4,
-    getEntry: (r) => r.todayCPR.tc,
-    entryLabel: "TC (today's TC)",
-    getStoploss: (r) => r.todayCPR.s1,
-    stoplossLabel: "S1 (today's S1)",
-  },
-  // NEW: "PDH>pTC-U4:5AM" — nested directly under "LEVEL BELOW" (levelsbelow)
-  // category, alongside the "HALB-SSLLGap" Pattern. Base condition:
-  // this category's LevelsBelow condition AND today's PDH (todayCPR.prevHigh)
-  // above prev day's TC (prevCPR.tc) — see ScreenerUtils.tsx. Bullish,
-  // targets U4 (today's R4), same target style as its sibling
-  // BC>pPDL-U3:5AM.
-  {
-    key: "PDH>pTC-U4:5AM",
-    label: "PDH>pTC-U4:5AM",
-    direction: "bullish",
-    targetLabel: "U4 (today's R4)",
-    getTarget: (r) => r.todayCPR.r4,
-    getEntry: (r) => r.todayCPR.tc,
-    entryLabel: "TC (today's TC)",
-    getStoploss: (r) => r.todayCPR.s1,
-    stoplossLabel: "S1 (today's S1)",
-  },
-  // NEW: "11AM:pCPR1AHi-FApU4:1PM" — nested under "LEVEL BELOW"
-  // (levelsbelow) category's new "L4U3" Pattern (see
-  // BACKTEST_CATEGORIES below), alongside its "HALB-SSLLGap"/"L3U3" siblings.
-  // Base condition: this category's LevelsBelow condition AND the raw
-  // L4U3 flag AND HHLLBelow — see ScreenerUtils.tsx. Bullish, targets
-  // Far Above pU4 (prev day's R4) by ~1PM.
-  {
-    key: "11AM:pCPR1AHi-FApU4:1PM",
-    label: "11AM:pCPR1AHi-FApU4:1PM",
-    direction: "bullish",
-    targetLabel: "FApU4 (prev day's R4)",
-    getTarget: (r) => r.prevCPR.r4,
-    getEntry: (r) => r.todayCPR.tc,
-    entryLabel: "TC (today's TC)",
-    getStoploss: (r) => r.todayCPR.s1,
-    stoplossLabel: "S1 (today's S1)",
-  },
-  // NEW: "B-B-BB-BB-EL4U4-SSLLGap:S4" — View nested under "LEVEL BELOW"
-  // (levelsbelow) category's new "B-B-BB-BB-EL4U4" Pattern (see
-  // BACKTEST_CATEGORIES below). Base condition: the parent's raw
-  // "B-B-BB-BB-EL4U4" flag AND SSGap + LLGap AND prevCPR.HLSwitch
-  // HL-B (pHL-B) AND todayCPR.HLSwitch HL-A with hlGapWinner "today"
-  // (HLGap-A) — see ScreenerUtils.tsx. Bearish, entry BC (today's BC),
-  // targets today's own S4 (L4), stoploss R1 (today's R1).
-  {
-    key: "B-B-BB-BB-EL4U4-SSLLGap:S4",
-    label: "B-B-BB-BB-EL4U4-SSLLGap:S4",
-    direction: "bearish",
-    targetLabel: "L4 (today's S4)",
-    getTarget: (r) => r.todayCPR.s4,
-    getEntry: (r) => r.todayCPR.bc,
-    entryLabel: "BC (today's BC)",
-    getStoploss: (r) => r.todayCPR.r1,
-    stoplossLabel: "R1 (today's R1)",
-  },
-  // NEW: "B-B-BB-BB-L4U4-pLAP:R4" — View nested under "LEVEL BELOW"
-  // (levelsbelow) category's "B-B-BB-BB-L4U4" Pattern (renamed from
-  // "2P:L4U4-pLAP:R4-2A", which nested under the now-removed
-  // "RHSLB-SSLLpGap" Pattern — see BACKTEST_CATEGORIES below). Base
-  // condition: the parent's raw "B-B-BB-BB-L4U4" flag AND prevCPR.HLSwitch
-  // HL-A with hlGapWinner "prev" AND prev day's own PDL above today's
-  // Pivot AND SSGap + LLGap AND todayCPR.HLSwitch HL-B — see
-  // ScreenerUtils.tsx. Bullish, entry ~2PM, targets today's own R4 (U4)
-  // by ~2AM.
-  {
-    key: "B-B-BB-BB-L4U4-pLAP:R4",
-    label: "B-B-BB-BB-L4U4-pLAP:R4",
-    direction: "bullish",
-    targetLabel: "U4 (today's R4)",
-    getTarget: (r) => r.todayCPR.r4,
-    getEntry: (r) => r.todayCPR.tc,
-    entryLabel: "TC (today's TC)",
-    getStoploss: (r) => r.todayCPR.s1,
-    stoplossLabel: "S1 (today's S1)",
-  },
-  // NEW: "TiMe-EUTL3-AU4:2PM" — nested directly under "U1 > pU4"
-  // (R1AbovePR4), alongside "A-A-AA-AA-EUTL3" (which nests
-  // "9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A", renamed from
-  // "9AM:APHS1A-FAU4:4AM"). Bullish, Pattern EUTL3 +
-  // pTiny/Mega width combo, targets AU4 (prev day's R4) by ~2PM.
-  {
-    key: "TiMe-EUTL3-AU4:2PM",
-    label: "TiMe-EUTL3-AU4:2PM",
-    direction: "bullish",
-    targetLabel: "AU4 (prev day's R4)",
-    getTarget: (r) => r.prevCPR.r4,
-    getEntry: (r) => r.todayCPR.tc,
-    entryLabel: "TC (today's TC)",
-    getStoploss: (r) => r.todayCPR.s1,
-    stoplossLabel: "S1 (today's S1)",
-  },
-  // NEW: "SMg-exHiL2L1-U4:3AM" — nested under "U1 > pU4" via the
-  // "EL1L2" Pattern. Bullish, targets U4 (today's R4) @ 3AM.
-  {
-    key: "SMg-exHiL2L1-U4:3AM",
-    label: "SMg-exHiL2L1-U4:3AM",
-    direction: "bullish",
-    targetLabel: "U4 (today's R4)",
-    getTarget: (r) => r.todayCPR.r4,
-    getEntry: (r) => r.todayCPR.tc,
-    entryLabel: "TC (today's TC)",
-    getStoploss: (r) => r.todayCPR.s1,
-    stoplossLabel: "S1 (today's S1)",
-  },
-  // NEW: "6AM:MegMeg-L3:8PM" — nested under "U1 > pU4" (R1AbovePR4) via
-  // the new "EU1L4" Pattern. Base R1AbovePR4 condition +
-  // raw EU1L4 flag + prev/today CPR both width category Mega
-  // (5.00%-10.00%). Bearish, targets L3 (today's S3) by ~8PM.
-  {
-    key: "6AM:MegMeg-L3:8PM",
-    label: "6AM:MegMeg-L3:8PM",
-    direction: "bearish",
-    targetLabel: "L3 (today's S3)",
-    getTarget: (r) => r.todayCPR.s3,
-    getEntry: (r) => r.todayCPR.bc,
-    entryLabel: "BC (today's BC)",
-    getStoploss: (r) => r.todayCPR.r1,
-    stoplossLabel: "R1 (today's R1)",
-  },
-  // MOVED: "8AM:pPDHA-SRA-U4+2:2AM" — was nested under "CPR Inside"
-  // (inside-cpr) via the "EU4L4" Pattern; now nested under "LEVEL ABOVE"
-  // (levelsabove) via "A-B-C-C" → "A-B-C-C-EU4L4" instead (see
-  // BACKTEST_CATEGORIES below). Base condition = PIVOT_PATTERNS["A-B-C-C"]
-  // (replaces the old InsideCPR gate) + raw EU4L4 flag + today's SSRRAbove
-  // + prev day's PDH above today's PDH + prev day's PDL above today's PDL
-  // + (if today's own PDH is below today's own R1, additionally require
-  // prev day's PDH above today's R1). Bullish, entry ~8AM, targets today's
-  // own R4 / U4 two days out (+2), by ~2AM.
-  {
-    key: "8AM:pPDHA-SRA-U4+2:2AM",
-    label: "8AM:pPDHA-SRA-U4+2:2AM",
-    direction: "bullish",
-    targetLabel: "U4 (today's R4)",
-    getTarget: (r) => r.todayCPR.r4,
-    getEntry: (r) => r.todayCPR.tc,
-    entryLabel: "TC (today's TC)",
-    getStoploss: (r) => r.todayCPR.s1,
-    stoplossLabel: "S1 (today's S1)",
-  },
-  // NEW: "B-B-BB-BB-L4U4-pLTC-U2" — View nested under the "B-B-BB-BB-L4U4"
-  // Pattern in "LEVEL BELOW" (see its subPatternKeys entry in
-  // BACKTEST_CATEGORIES below, and the matching case in passesPattern in
-  // ScreenerUtils.tsx). Bullish, targets today's own R2 (U2).
-  {
-    key: "B-B-BB-BB-L4U4-pLTC-U2",
-    label: "B-B-BB-BB-L4U4-pLTC-U2",
-    direction: "bullish",
-    targetLabel: "U2 (today's R2)",
-    getTarget: (r) => r.todayCPR.r2,
-    getEntry: (r) => r.todayCPR.tc,
-    entryLabel: "TC (today's TC)",
-    getStoploss: (r) => r.todayCPR.s1,
-    stoplossLabel: "S1 (today's S1)",
-  },
-  // NEW: target definitions for "B-B-BB-BB" and its four L4U4/L3U4/L4U3/
-  // L3U3 children in "LEVEL BELOW" (previously symbol-list-only scans
-  // with no defined target — see BACKTEST_CATEGORIES below). All five
-  // graded bearish against today's own S2 (L2) per user request.
-  {
-    key: "B-B-BB-BB",
-    label: "B-B-BB-BB",
-    direction: "bearish",
-    targetLabel: "L2 (today's S2)",
-    getTarget: (r) => r.todayCPR.s2,
-    getEntry: (r) => r.todayCPR.bc,
-    entryLabel: "BC (today's BC)",
-    getStoploss: (r) => r.todayCPR.r1,
-    stoplossLabel: "R1 (today's R1)",
-  },
-  {
-    key: "B-B-BB-BB-L4U4",
-    label: "B-B-BB-BB-L4U4",
-    direction: "bearish",
-    targetLabel: "L2 (today's S2)",
-    getTarget: (r) => r.todayCPR.s2,
-    getEntry: (r) => r.todayCPR.bc,
-    entryLabel: "BC (today's BC)",
-    getStoploss: (r) => r.todayCPR.r1,
-    stoplossLabel: "R1 (today's R1)",
-  },
-  {
-    key: "B-B-BB-BB-L3U4",
-    label: "B-B-BB-BB-L3U4",
-    direction: "bearish",
-    targetLabel: "L2 (today's S2)",
-    getTarget: (r) => r.todayCPR.s2,
-    getEntry: (r) => r.todayCPR.bc,
-    entryLabel: "BC (today's BC)",
-    getStoploss: (r) => r.todayCPR.r1,
-    stoplossLabel: "R1 (today's R1)",
-  },
-  {
-    key: "B-B-BB-BB-L2U4",
-    label: "B-B-BB-BB-L2U4",
-    direction: "bearish",
-    targetLabel: "L2 (today's S2)",
-    getTarget: (r) => r.todayCPR.s2,
-    getEntry: (r) => r.todayCPR.bc,
-    entryLabel: "BC (today's BC)",
-    getStoploss: (r) => r.todayCPR.r1,
-    stoplossLabel: "R1 (today's R1)",
-  },
-  {
-    key: "B-B-BB-BB-L4U3",
-    label: "B-B-BB-BB-L4U3",
-    direction: "bearish",
-    targetLabel: "L2 (today's S2)",
-    getTarget: (r) => r.todayCPR.s2,
-    getEntry: (r) => r.todayCPR.bc,
-    entryLabel: "BC (today's BC)",
-    getStoploss: (r) => r.todayCPR.r1,
-    stoplossLabel: "R1 (today's R1)",
-  },
-  {
-    key: "B-B-BB-BB-L3U3",
-    label: "B-B-BB-BB-L3U3",
-    direction: "bearish",
-    targetLabel: "L2 (today's S2)",
-    getTarget: (r) => r.todayCPR.s2,
-    getEntry: (r) => r.todayCPR.bc,
-    entryLabel: "BC (today's BC)",
-    getStoploss: (r) => r.todayCPR.r1,
-    stoplossLabel: "R1 (today's R1)",
-  },
-  // NEW: target definitions for "E-E-AA-BB"'s five nested Subpatterns
-  // (EL1U2/EU1L2/EU2L2/EU1L3/EL1U1 — see BacktestSubCategoryDef.patterns
-  // in the interfaces above and BACKTEST_CATEGORIES below). Selecting one
-  // of these Subpatterns (arrow ↳, nested under the "E-E-AA-BB" Pattern)
-  // now grades against the specific target defined here instead of
-  // pivotLevelBacktestSymbolOnDate's hardcoded bullish U4/R4 default — see
-  // that function's BACKTEST_TARGETS lookup. All five bullish against
-  // today's own R2 (U2) per user request.
-  {
-    key: "E-E-AA-BB-EL1U2",
-    label: "E-E-AA-BB-EL1U2",
-    direction: "bullish",
-    targetLabel: "U2 (today's R2)",
-    getTarget: (r) => r.todayCPR.r2,
-    getEntry: (r) => r.todayCPR.tc,
-    entryLabel: "TC (today's TC)",
-    getStoploss: (r) => r.todayCPR.s1,
-    stoplossLabel: "S1 (today's S1)",
-  },
-  {
-    key: "E-E-AA-BB-EU1L2",
-    label: "E-E-AA-BB-EU1L2",
-    direction: "bullish",
-    targetLabel: "U2 (today's R2)",
-    getTarget: (r) => r.todayCPR.r2,
-    getEntry: (r) => r.todayCPR.tc,
-    entryLabel: "TC (today's TC)",
-    getStoploss: (r) => r.todayCPR.s1,
-    stoplossLabel: "S1 (today's S1)",
-  },
-  {
-    key: "E-E-AA-BB-EU2L2",
-    label: "E-E-AA-BB-EU2L2",
-    direction: "bullish",
-    targetLabel: "U2 (today's R2)",
-    getTarget: (r) => r.todayCPR.r2,
-    getEntry: (r) => r.todayCPR.tc,
-    entryLabel: "TC (today's TC)",
-    getStoploss: (r) => r.todayCPR.s1,
-    stoplossLabel: "S1 (today's S1)",
-  },
-  {
-    key: "E-E-AA-BB-EU1L3",
-    label: "E-E-AA-BB-EU1L3",
-    direction: "bullish",
-    targetLabel: "U2 (today's R2)",
-    getTarget: (r) => r.todayCPR.r2,
-    getEntry: (r) => r.todayCPR.tc,
-    entryLabel: "TC (today's TC)",
-    getStoploss: (r) => r.todayCPR.s1,
-    stoplossLabel: "S1 (today's S1)",
-  },
-  {
-    key: "E-E-AA-BB-EL1U1",
-    label: "E-E-AA-BB-EL1U1",
-    direction: "bullish",
-    targetLabel: "U2 (today's R2)",
-    getTarget: (r) => r.todayCPR.r2,
-    getEntry: (r) => r.todayCPR.tc,
-    entryLabel: "TC (today's TC)",
-    getStoploss: (r) => r.todayCPR.s1,
-    stoplossLabel: "S1 (today's S1)",
-  },
-    {
-        key: "A-A-AA-AA-EUBL2-pS4S2:R2",
-        label: "A-A-AA-AA-EUBL2-pS4S2:R2",
-        direction: "bullish",
-        targetLabel: "U4 (today's R4)",
-        getTarget: (r) => r.todayCPR.r4,
-        entryLabel: "TC (today's TC)",
-        getEntry: (r) => r.todayCPR.tc,
-        stoplossLabel: "S1 (today's S1)",
-        getStoploss: (r) => r.todayCPR.s1,
-        conditionKey: "A-A-AA-AA",
-        levelCheckDefs: [{"key":"r4","subject":"previous","bandKeys":["bc","s1"]},{"key":"r3","subject":"previous","bandKeys":["bc","s1"]},{"key":"r2","subject":"previous","bandKeys":["s1","prevLow"]},{"key":"prevHigh","subject":"previous","bandKeys":["s1","prevLow"]},{"key":"r1","subject":"previous","bandKeys":["s1","prevLow"]},{"key":"tc","subject":"previous","bandKeys":["s1","prevLow"]},{"key":"pivot","subject":"previous","bandKeys":["s1","prevLow"]},{"key":"bc","subject":"previous","bandKeys":["s1","prevLow"]},{"key":"prevLow","subject":"today","bandKeys":["bc","s1"]},{"key":"s1","subject":"today","bandKeys":["r3","r2"]},{"key":"s2","subject":"previous","bandKeys":["prevLow","s2"]},{"key":"s3","subject":"previous","bandKeys":["prevLow","s2"]},{"key":"s4","subject":"previous","bandKeys":["prevLow","s2"]}],
-      },
-    {
-        key: "B-B-BB-BB-L4U4-Ladder:R4",
-        label: "B-B-BB-BB-L4U4-Ladder:R4",
-        direction: "bullish",
-        targetLabel: "U4 (today's R4)",
-        getTarget: (r) => r.todayCPR.r4,
-        entryLabel: "TC (today's TC)",
-        getEntry: (r) => r.todayCPR.tc,
-        stoplossLabel: "S1 (today's S1)",
-        getStoploss: (r) => r.todayCPR.s1,
-        conditionKey: "B-B-BB-BB-L4U4",
-        levelCheckDefs: [{"key":"r4","subject":"today","bandKeys":["r4","r3"]},{"key":"r3","subject":"today","bandKeys":["r3","r2"]},{"key":"r2","subject":"today","bandKeys":["r2","prevHigh"]},{"key":"prevHigh","subject":"today","bandKeys":["r1","tc"]},{"key":"r1","subject":"today","bandKeys":["r1","tc"]},{"key":"tc","subject":"today","bandKeys":["bc","prevLow"]},{"key":"pivot","subject":"today","bandKeys":["bc","prevLow"]},{"key":"bc","subject":"today","bandKeys":["bc","prevLow"]},{"key":"prevLow","subject":"today","bandKeys":["s1","s2"]},{"key":"s1","subject":"today","bandKeys":["s1","s2"]},{"key":"s2","subject":"today","bandKeys":["s2","s3"]},{"key":"s3","subject":"today","bandKeys":["s3","s4"]},{"key":"s4","subject":"previous","bandKeys":["s3","s4"]}],
-      },
-    {
-        key: "B-B-BB-BB-L4U4-pGapA",
-        label: "B-B-BB-BB-L4U4-pGapA",
-        direction: "bullish",
-        targetLabel: "U4 (today's R4)",
-        getTarget: (r) => r.todayCPR.r4,
-        entryLabel: "TC (today's TC)",
-        getEntry: (r) => r.todayCPR.tc,
-        stoplossLabel: "S1 (today's S1)",
-        getStoploss: (r) => r.todayCPR.s1,
-        conditionKey: "B-B-BB-BB-L4U4",
-        levelCheckDefs: [{"key":"r4","subject":"today","bandKeys":["r4","r3"]},{"key":"r3","subject":"today","bandKeys":["r3","r2"]},{"key":"r2","subject":"today","bandKeys":["r2","prevHigh"]},{"key":"prevHigh","subject":"today","bandKeys":["tc","pivot"]},{"key":"r1","subject":"today","bandKeys":["r1","tc"]},{"key":"tc","subject":"today","bandKeys":["prevLow","s1"]},{"key":"pivot","subject":"today","bandKeys":["prevLow","s1"]},{"key":"bc","subject":"today","bandKeys":["prevLow","s1"]},{"key":"prevLow","subject":"today","bandKeys":["s1","s2"]},{"key":"s1","subject":"today","bandKeys":["s1","s2"]},{"key":"s2","subject":"today","bandKeys":["s2","s3"]},{"key":"s3","subject":"today","bandKeys":["s3","s4"]},{"key":"s4","subject":"previous","bandKeys":["s3","s4"]}],
-      },
-    {
-        // RENAMED from "AL4-EUTL3-S1ATC". Was silently gated by
-        // conditionKey: "top15gainers" — a no-op pass-through (see its
-        // passesPattern case in ScreenerUtils.tsx), so despite sitting
-        // under the "A-A-AA-AA-EUTL3" Subpattern alongside two real
-        // EUTL3-conditioned Views, this one wasn't actually requiring the
-        // structural A-A-AA-AA-EUTL3 condition — only this View's own
-        // levelCheckDefs signature gated it. FIXED: conditionKey dropped
-        // in favor of a real passesPattern case matching this View's own
-        // key directly (same convention as its "9A:..." / "6A:..."
-        // siblings), which now ANDs in structural A-A-AA-AA + EUTL3 +
-        // the new pHL-A (prev day's HLSwitch HL-A) check — see
-        // ScreenerUtils.tsx.
-        key: "A5-EUTL3-pA-S1ATC",
-        label: "A5-EUTL3-pA-S1ATC",
-        direction: "bullish",
-        targetLabel: "U2 (today's R2)",
-        getTarget: (r) => r.todayCPR.r2,
-        entryLabel: "TC (today's TC)",
-        getEntry: (r) => r.todayCPR.tc,
-        stoplossLabel: "S1 (today's S1)",
-        getStoploss: (r) => r.todayCPR.s1,
-        levelCheckDefs: [{"key":"r4","subject":"previous","bandKeys":["tc","pivot"]},{"key":"r3","subject":"previous","bandKeys":["pivot","bc"]},{"key":"r2","subject":"previous","bandKeys":["bc","s1"]},{"key":"prevHigh","subject":"previous","bandKeys":["s1","prevLow"]},{"key":"r1","subject":"previous","bandKeys":["s1","prevLow"]},{"key":"tc","subject":"previous","bandKeys":["s1","prevLow"]},{"key":"pivot","subject":"today","bandKeys":["r4","r3"]},{"key":"bc","subject":"today","bandKeys":["r3","r2"]},{"key":"prevLow","subject":"today","bandKeys":["bc","prevLow"]},{"key":"s1","subject":"today","bandKeys":["r2","prevHigh"]},{"key":"s2","subject":"today","bandKeys":["s2","s3"]},{"key":"s3","subject":"previous","bandKeys":["s2","s3"]},{"key":"s4","subject":"previous","bandKeys":["s2","s3"]}],
-      },
-    {
-        key: "B-B-BB-BB-L2U4-pPPHR1",
-        label: "B-B-BB-BB-L2U4-pPPHR1",
-        direction: "bullish",
-        targetLabel: "U4 (today's R4)",
-        getTarget: (r) => r.todayCPR.r4,
-        entryLabel: "TC (today's TC)",
-        getEntry: (r) => r.todayCPR.tc,
-        stoplossLabel: "S1 (today's S1)",
-        getStoploss: (r) => r.todayCPR.s1,
-        conditionKey: "B-B-BB-BB-L2U4",
-        levelCheckDefs: [{"key":"r4","subject":"today","bandKeys":["r4","r3"]},{"key":"r3","subject":"today","bandKeys":["r2","prevHigh"]},{"key":"r2","subject":"today","bandKeys":["prevHigh","r1"]},{"key":"prevHigh","subject":"today","bandKeys":["pivot","bc"]},{"key":"r1","subject":"today","bandKeys":["prevLow","s1"]},{"key":"tc","subject":"today","bandKeys":["s1","s2"]},{"key":"pivot","subject":"today","bandKeys":["s1","s2"]},{"key":"bc","subject":"today","bandKeys":["s2","s3"]},{"key":"prevLow","subject":"today","bandKeys":["s2","s3"]},{"key":"s1","subject":"today","bandKeys":["s3","s4"]},{"key":"s2","subject":"previous","bandKeys":["pivot","bc"]},{"key":"s3","subject":"previous","bandKeys":["prevLow","s1"]},{"key":"s4","subject":"previous","bandKeys":["s1","s2"]}],
-      }
-];
-
-/**
- * NEW: Category groupings — a "category" is a broad, non-specific base
- * condition (e.g. "compressed" = the COMPRESSED base condition) that itself has
- * no single well-defined target, but has one or more specific sub-patterns
- * nested under it that DO have defined targets (see BACKTEST_TARGETS).
- *
- * Selecting a category in the UI runs runCategoryScan (below): it lists
- * every symbol matching the category's base condition on the entry date,
- * with their CPR data, but WITHOUT Target/Result/Hit Date — there's no
- * single target to grade against for the category as a whole. Selecting
- * one of its subPatternKeys instead runs the normal runBacktest flow
- * against that pattern's specific target.
- *
- * NEW: patterns — a category can additionally nest one or more
- * "Pattern" sub-categories (e.g. "CPR Inside" → Pattern
- * "CU4L4"). A Pattern is itself just another
- * symbol-list-only, single-date, no-target scan — same as a category —
- * except its base condition is the PARENT category's condition AND the
- * named Pattern's raw flag (see matchesPatternFlag in
- * ScreenerUtils.tsx), both evaluated together. Selecting one of ITS
- * subPatternKeys runs the normal runBacktest flow (single date or date
- * range) against that pattern's specific target, same as a top-level
- * category's direct sub-patterns.
- */
-export interface BacktestSubCategoryDef {
-  key: string;              // Pattern label (matches matchesPatternFlag's `label` param, e.g. "U3L4")
-  label: string;            // display name, e.g. "U3L4"
-  subPatternKeys: string[]; // BACKTEST_TARGETS keys (Views, leaf/graded) nested directly under this Pattern
-  // NEW: patterns — a Pattern can itself nest one or more "Subpattern"
-  // children (e.g. "E-E-AA-BB" → Subpattern "E-E-AA-BB-EL1U2"), rendered
-  // with the same arrow (↳) treatment as a top-level Pattern rather than
-  // as a flat View bullet. Same recursive shape as
-  // BacktestCategoryDef.patterns: a Subpattern's base condition is the
-  // PARENT Pattern's condition AND the named Subpattern's own raw flag
-  // (see matchesPatternFlag/passesPattern in ScreenerUtils.tsx), and it
-  // can in turn nest its own subPatternKeys (Views) once specific
-  // targets are defined for it.
-  patterns?: BacktestSubCategoryDef[];
-}
-
-export interface BacktestCategoryDef {
-  key: string;                          // matches passesPattern's BASE category key (e.g. "compressed")
-  label: string;                        // display name, e.g. "LittleCPR Above"
-  subPatternKeys?: string[];            // BACKTEST_TARGETS keys nested directly under this category
-  patterns?: BacktestSubCategoryDef[]; // NEW: Pattern sub-categories nested under this category
-  /** Optional explicit ordering for mixed direct Views and Pattern entries. */
-  orderedEntries?: { kind: "subPattern" | "pattern"; key: string }[];
-}
-
-export const BACKTEST_CATEGORIES: BacktestCategoryDef[] = [
-  // NEW: "TOP 15 GAINERS" / "TOP 15 LOSERS" — ranking categories, not
-  // CPR-shape filters. passesPattern's "top15gainers"/"top15losers" cases
-  // (ScreenerUtils.tsx) let every symbol through the base-condition check,
-  // so runCategoryScan returns the full universe with each symbol's
-  // entry-day changePct already attached (see closeAndChange below);
-  // BacktestPanel then sorts by changePct and keeps only the top 15 in
-  // each direction before rendering. No subPatternKeys/patterns, same
-  // shape as "Equal CPR" below — symbol-list-only, no single target to
-  // grade.
-  { key: "top15gainers", label: "TOP 15 GAINERS" },
-  { key: "top15losers", label: "TOP 15 LOSERS" },
-  {
-    key: "levelsabove",
-    label: "LEVEL ABOVE",
-    // RENAMED from "9AM:MegL-U4+1:3PM": all previous conditions removed.
-    // The former 6PM View now lives under the A-A-AA-AA-EU3L4 Pattern
-    // below.
-    subPatternKeys: [],
-    // NEW: "EU2L4" Pattern (arrow) — same shape as
-    // CL4U3/L3U3/U3L4 elsewhere. Base condition = parent
-    // levelsabove's condition AND the raw EU2L4 flag (see
-    // matchesPatternFlag in ScreenerUtils.tsx).
-    patterns: [
-      {
-        key: "EU2L4",
-        label: "EU2L4",
-        subPatternKeys: ["7PM:MoMi->U4:2AM", "7PM:MoMi-<L4:2AM", "6PM:APHS1A-FAU4:9PM", "6PM:APHS1A-FAU4:99PM", "6PM:APHS1A-FAU4:9PMM"],
-      },
-      // NEW: "U4L3" Pattern (arrow) — same shape as its
-      // "EU2L4" sibling above. Base condition = parent levelsabove's
-      // condition AND the raw U4L3 flag (see matchesPatternFlag in
-      // ScreenerUtils.tsx). Nests "9AM:pPALPApH-FAU4:2PM".
-      {
-        key: "U4L3",
-        label: "U4L3",
-        subPatternKeys: ["9AM:pPALPApH-FAU4:2PM"],
-      },
-      // RRSSA-{Level}{Gap} — Patterns (arrows), same shape as
-      // EU2L4/U4L3 siblings above: base condition = this category's
-      // r.LevelsAbove condition AND the raw RRSSA-* flag (see
-      // matchesPatternFlag in ScreenerUtils.tsx). Level = HHLLCategory
-      // (A/B) crossed with Gap = combined PDHPDLGapCategory ×
-      // RRSSGapCategory (HR/HS/LR). Only these of the naive 4×4=16
-      // combinations are reachable here — the rest are mathematically
-      // impossible under LevelsAbove (see the proof in
-      // matchesPatternFlag's comment in ScreenerUtils.tsx) and were left
-      // out entirely, same treatment as RRHH-X. Both remaining Gap-based
-      // entries (BHS, BLR) are REPLACED below by RRSSA-B{RRHH}-{SSLL} —
-      // see that block for the RRHHCategory-then-SSLLCategory re-split —
-      // leaving zero Gap-based RRSSA-* entries.
-      //
-      // RRSSA-B{RRHH}-{SSLL} — 9 Patterns (arrows), REPLACES the old
-      // RRSSA-BHS/RRSSA-BLR pair. Base condition = this category's
-      // r.LevelsAbove condition AND the raw RRSSA-B* flag (see
-      // matchesPatternFlag in ScreenerUtils.tsx). Under HHLL-B,
-      // RRSSGapCategory is fully determined by PDHPDLGapCategory, so
-      // BHS/BLR were relabeling the same HHLL-B condition twice — merged
-      // and re-split by crossing RRHHCategory first, then SSLLCategory
-      // on top (same two-axis treatment as RRSSA-A{RRHH}-{SSLL} below,
-      // since HHLL-B has both its R1/PDH and S1/PDL relationships in
-      // play). Of the 9x9 naive RRHHCategory×SSLLCategory combinations,
-      // RRHHCategory is pinned to RRHH-C/RRHH-E/RRHH-RA and SSLLCategory
-      // to SSLL-C/SSLL-E/SSLL-LB (see the full proof in
-      // matchesPatternFlag's comment in ScreenerUtils.tsx), giving 9
-      // independent combinations — not yet checked against real data, so
-      // some may come back empty and need trimming later, the same way
-      // RRSSA-C{RRHH}/RRSSB-E{RRHH} each trimmed their own reachable set
-      // after an empirical check. No target-graded sub-patterns nested
-      // under any of them yet, so each shows up as a symbol-list-only
-      // scan in the Backtest dropdown until specific targets are
-      // defined.
-      // RENAMED to the A-{Level}-{RRHH}-{SSLL} convention, same as
-      // A-A-{RRHH}-{SSLL} / A-C-{RRHH}-{SSLL} above: RRSSA-BC-C ->
-      // A-B-C-C, RRSSA-BC-LB -> A-B-C-LB, RRSSA-BE-E -> A-B-E-E,
-      // RRSSA-BE-LB -> A-B-E-LB, RRSSA-BRA-C -> A-B-RA-C, RRSSA-BRA-E ->
-      // A-B-RA-E, RRSSA-BRA-LB -> A-B-RA-LB. RRSSA-BC-E and RRSSA-BE-C
-      // were REMOVED (confirmed empty against real data), leaving 7 of
-      // the original 9.
-      { key: "A-B-C-C",     label: "A-B-C-C",     subPatternKeys: [] },
-      // NEW: "A-B-C-C-EU4L4" — nested under "A-B-C-C" directly above
-      // (same array level — "A-B-C-C" has no `patterns` field of its own,
-      // so this sibling entry conveys the nesting via naming, same
-      // convention as "EU1L3"/"EUTL3"/"EL1L2" siblings under "R1AbovePR4"
-      // or "CU3L3"/"CU4L4"/"EU4L4" siblings under "inside-cpr"). Base
-      // condition = PIVOT_PATTERNS["A-B-C-C"] AND the raw EU4L4 flag (see
-      // matchesPatternFlag in ScreenerUtils.tsx, which already has an
-      // "EU4L4" case). MOVED: "8AM:pPDHA-SRA-U4+2:2AM" now nests here
-      // (was under "Inside CPR" → "EU4L4" — see that case's comment in
-      // ScreenerUtils.tsx for what changed in its own condition).
-      {
-        key: "A-B-C-C-EU4L4",
-        label: "A-B-C-C-EU4L4",
-        subPatternKeys: ["8AM:pPDHA-SRA-U4+2:2AM"],
-      },
-      { key: "A-B-C-LB",    label: "A-B-C-LB",    subPatternKeys: [] },
-      { key: "A-B-E-E",     label: "A-B-E-E",     subPatternKeys: [] },
-      { key: "A-B-E-LB",    label: "A-B-E-LB",    subPatternKeys: [] },
-      { key: "A-B-RA-C",    label: "A-B-RA-C",    subPatternKeys: [] },
-      { key: "A-B-RA-E",    label: "A-B-RA-E",    subPatternKeys: [] },
-      { key: "A-B-RA-LB",   label: "A-B-RA-LB",   subPatternKeys: [] },
-      // RRSSA-A{RRHH} — 2 Patterns (arrows), REPLACES the old
-      // RRSSA-AHR/RRSSA-ALS pair. Base condition = this category's
-      // r.LevelsAbove condition AND the raw RRSSA-A* flag (see
-      // matchesPatternFlag in ScreenerUtils.tsx). Under HHLL-A,
-      // RRSSGapCategory is fully determined by PDHPDLGapCategory (proof
-      // in ScreenerUtils.tsx), so AHR/ALS were relabeling the same
-      // HHLL-A condition twice — merged into a single gap-agnostic
-      // HHLL-A condition, then re-split by crossing against RRHHCategory
-      // instead (same treatment as RRSSA-C{RRHH}/RRSSB-E{RRHH} below).
-      // Unlike those, this split is EXHAUSTIVELY PROVEN rather than
-      // empirically trimmed: under HHLL-A + LevelsAbove, RRHHCategory is
-      // provably always either RRHH-AA or RRHH-OA (see the max/min
-      // monotonicity proof in ScreenerUtils.tsx) — no other RRHHCategory
-      // value is reachable, so nothing here needed backtesting to drop.
-      //
-      // RRSSA-A{RRHH}-{SSLL} — 4 Patterns (arrows), further re-splits
-      // RRSSA-AAA and RRSSA-AOA each by crossing against SSLLCategory.
-      // Same max/min monotonicity proof, run over the S1/PDL band this
-      // time, ALSO exhaustively pins SSLLCategory to just SSLL-AA/SSLL-OA
-      // under HHLL-A + LevelsAbove — but RRHHCategory and SSLLCategory
-      // are driven by different level pairs with nothing forcing them to
-      // move together, so the cross gives 4 independent combinations,
-      // none ruled out mathematically. All 4 were CONFIRMED to have
-      // records against real data and are kept. Keys keep the RRHH and
-      // SSLL halves visually separated (RRSSA-A{RRHH}-{SSLL}) since both
-      // axes already use "A" suffixes.
-      // RENAMED to the A-{Level}-{RRHH}-{SSLL} convention (same shape as
-      // the "compressed"/C-* and "expanded"/E-* sets): RRSSA-AAA-AA ->
-      // A-A-AA-AA, RRSSA-AAA-OA -> A-A-AA-OA, RRSSA-AOA-AA -> A-A-OA-AA,
-      // RRSSA-AOA-OA -> A-A-OA-OA. Conditions unchanged.
-      //
-      // The diagnostic branches below are Pattern entries (not Views).
-      // Their predicates are the structural A-A-AA-AA condition AND the
-      // branch's raw CPR flag; target-graded Views remain nested beneath the
-      // relevant branch.
-      // CHANGED: "A-A-AA-AA" is now a real parent Pattern (arrow) with its
-      // own `patterns` array — same shape as "C-B-BB-LB"/"E-E-AA-BB"/
-      // "B-B-BB-BB" elsewhere, and matching the OTHER "A-A-AA-AA" entry
-      // nested under "R1AbovePR4" further below (which already used this
-      // real-nesting shape). Previously these six diagnostic branches were
-      // flat siblings that conveyed the A-A-AA-AA-* nesting via naming
-      // only. Base condition unchanged: this category's r.LevelsAbove
-      // condition AND PIVOT_PATTERNS["A-A-AA-AA"] for the parent; each
-      // child adds its own raw CPR flag on top (see matchesPatternFlag in
-      // ScreenerUtils.tsx). orderedEntries below was simplified to just
-      // this one "A-A-AA-AA" entry, since pushPattern() already recurses
-      // into a matched Pattern's own `patterns` array and pushes its
-      // children in array order — the six separate orderedEntries lines
-      // that used to point at them directly are no longer needed (and
-      // would now be no-ops, since they're not top-level entries in this
-      // category's own `patterns` array anymore).
-      {
-        key: "A-A-AA-AA",
-        label: "A-A-AA-AA",
-        subPatternKeys: ["A-A-AA-AA-EUBL2-pS4S2:R2"],
-        patterns: [
-          // MOVED from "R1AbovePR4": "A-A-AA-AA-U3L3" Subpattern —
-          // structural A-A-AA-AA (parent Pattern's own condition)
-          // crossed with the raw U3L3 flag. Nests the bullish
-          // "A-A-AA-AA-U3L3-SSLLGap:R4" View (SSGap + LLGap + pHL-B +
-          // HLGap-B; entry TC, target today's R4, stoploss today's S1).
-          { key: "A-A-AA-AA-U3L3", label: "A-A-AA-AA-U3L3", subPatternKeys: ["A-A-AA-AA-U3L3-SSLLGap:R4", "A-A-AA-AA-U3L3-SSLLGap:R4+1", "A-A-AA-AA-U3L3-SL-PAR1:R4"] },
-          { key: "A-A-AA-AA-U4L3", label: "A-A-AA-AA-U4L3", subPatternKeys: [] },
-          { key: "A-A-AA-AA-EU2L4", label: "A-A-AA-AA-EU2L4", subPatternKeys: ["A-A-AA-AA-EU2L4-ApR2"] },
-          { key: "A-A-AA-AA-U2L4", label: "A-A-AA-AA-U2L4", subPatternKeys: ["A-A-AA-AA-S1pPDH-U3"] },
-          { key: "A-A-AA-AA-U3L4", label: "A-A-AA-AA-U3L4", subPatternKeys: ["A-A-AA-AA-U3L4-pGapB"] },
-          // A-A-AA-AA-EU3L4 — structural A-A-AA-AA + raw EU3L4 flag.
-          // Nests the renamed former 6PM View, whose leaf adds HLGap-B.
-          { key: "A-A-AA-AA-EU3L4", label: "A-A-AA-AA-EU3L4", subPatternKeys: ["A-A-AA-AA-EU3L4-GapB"] },
-        ],
-      },
-      // CHANGED: "A-A-AA-OA" is now a real parent Pattern (arrow) with
-      // its own `patterns` array — same shape as its "A-A-AA-AA" sibling
-      // above. Base condition unchanged (this category's r.LevelsAbove
-      // AND PIVOT_PATTERNS["A-A-AA-OA"]); the child Subpattern adds the
-      // raw U3L4 flag, and its View adds RRGap + HHGap + pHL-B + HLGap-B.
-      {
-        key: "A-A-AA-OA",
-        label: "A-A-AA-OA",
-        subPatternKeys: [],
-        patterns: [
-          {
-            key: "A-A-AA-OA-U3L4",
-            label: "A-A-AA-OA-U3L4",
-            subPatternKeys: ["A-A-AA-OA-U3L4-RRHHGap:R4"],
-          },
-        ],
-      },
-      { key: "A-A-OA-AA", label: "A-A-OA-AA", subPatternKeys: [] },
-      { key: "A-A-OA-OA", label: "A-A-OA-OA", subPatternKeys: [] },
-      // RRSSA-C{RRHH} — 3 Patterns (arrows), REPLACES the old
-
-      // RRSSA-CHS/RRSSA-CLS pair. Base condition = this category's
-      // r.LevelsAbove condition AND the raw RRSSA-C* flag (see
-      // matchesPatternFlag in ScreenerUtils.tsx). HHLL-C's gap is always
-      // SSGap (the old CHS/CLS distinction was PDHPDLGapCategory alone),
-      // so the merged HHLL-C condition is instead re-split by crossing
-      // against RRHHCategory. Of the 9 non-"none" RRHHCategory values,
-      // RRHH-BB/RRHH-OB/RRHH-HA are mathematically impossible under
-      // LevelsAbove and RRHH= is negligible (see the proof in
-      // matchesPatternFlag's comment in ScreenerUtils.tsx), leaving 5
-      // mathematically reachable (AA/OA/C/E/RA) — of those, RRHH-AA and
-      // RRHH-OA both came back CONFIRMED EMPTY against real data and
-      // were dropped, leaving CC/CE/CRA. No target-graded sub-patterns
-      // nested under any of them yet, so each shows up as a
-      // symbol-list-only scan in the Backtest dropdown until specific
-      // targets are defined.
-      // RENAMED to A-C-{RRHH}-{SSLL}, each further re-split by crossing
-      // against SSLLCategory (SSLL-AA/SSLL-OA), same convention as
-      // A-A-{RRHH}-{SSLL} above: RRSSA-CC -> A-C-C-AA/A-C-C-OA,
-      // RRSSA-CE -> A-C-E-AA/A-C-E-OA, RRSSA-CRA -> A-C-RA-AA/A-C-RA-OA.
-      { key: "A-C-C-AA", label: "A-C-C-AA", subPatternKeys: [] },
-      { key: "A-C-C-OA", label: "A-C-C-OA", subPatternKeys: [] },
-      { key: "A-C-E-AA", label: "A-C-E-AA", subPatternKeys: [] },
-      { key: "A-C-E-OA", label: "A-C-E-OA", subPatternKeys: [] },
-      { key: "A-C-RA-AA", label: "A-C-RA-AA", subPatternKeys: [] },
-      { key: "A-C-RA-OA", label: "A-C-RA-OA", subPatternKeys: [] },
-      // RRSSA-E + SSLL — 8 combinations.
-      // RRSSA-E is the merged LevelsAbove RRSS-E condition (HHLL-E with
-      // RRHH-AA or RRHH-OA), crossed with each SSLLCategory. Each entry is
-      // a symbol-list-only scan and keeps the corresponding SSLL-* badge.
-      // RENAMED to the A-E-{RRHH}-{SSLL} convention, same shape as
-      // A-A-{RRHH}-{SSLL}/A-C-{RRHH}-{SSLL} above: RRSSA-EC ->
-      // A-E-AA-C/A-E-OA-C, RRSSA-EE -> A-E-AA-E/A-E-OA-E, RRSSA-ELB ->
-      // A-E-AA-LB/A-E-OA-LB — each re-split by crossing against
-      // RRHHCategory (RRHH-AA/RRHH-OA), the same free axis noted above.
-      // REMOVED: "A-E-AA-OB" — despite the comments in
-      // ScreenerUtils.PIVOT_PATTERNS claiming it was "defined, using
-      // SSLL-LB", no "A-E-AA-OB" key was ever actually added to that
-      // object (only "A-E-AA-LB" was) — so matchesPatternFlag/passesPattern
-      // fell through to the default case for this key and it ALWAYS
-      // returned zero records. Confirmed empty (no records available) and
-      // dropped from the dropdown entirely — its real condition (HHLL-E +
-      // RRHH-AA + SSLL-LB) already lives under "A-E-AA-LB" above, so no
-      // combination is lost.
-      { key: "A-E-AA-C",  label: "A-E-AA-C",  subPatternKeys: [] },
-      { key: "A-E-OA-C",  label: "A-E-OA-C",  subPatternKeys: [] },
-      { key: "A-E-AA-E",  label: "A-E-AA-E",  subPatternKeys: [] },
-      { key: "A-E-OA-E",  label: "A-E-OA-E",  subPatternKeys: [] },
-      { key: "A-E-AA-LB", label: "A-E-AA-LB", subPatternKeys: [] },
-      { key: "A-E-OA-LB", label: "A-E-OA-LB", subPatternKeys: [] },
-    ],
-    // Keep the complete A-A-AA-AA diagnostic branch at the top of this
-    // category's dropdown tree. Direct Views and other Patterns are appended
-    // in their existing order below these entries by buildBacktestOptions().
-    // SIMPLIFIED: now that "A-A-AA-AA" is a real nested parent (see its
-    // `patterns` array above), pushPattern() automatically recurses into
-    // its six children in order — so a single entry here reproduces the
-    // same dropdown order the six individual entries used to.
-    orderedEntries: [{ kind: "pattern", key: "A-A-AA-AA" }],
-  },
-  // NEW: "LEVEL BELOW" left-nav section (top of the pattern tree in
-  // ViewsSidebar.tsx) — nests the "HALB-SSLLGap" Pattern (REPLACES
-  // "CL4U3" here — see matchesPatternFlag in ScreenerUtils.tsx), which
-  // in turn nests "3P:HA-pBELOWR1:R2-3A" (RENAMED from "BC>pPDL-U3:5AM",
-  // then from "3P:HA-pABOVE:pR4-3A") and its replicas
-  // "3P:HA-pABOVER1:S2-6P" and "2P:HA-HABOVEpR1:R4-4P"; note none of the
-  // leaf conditions include the raw HALB-SSLLGap flag — see
-  // ScreenerUtils.tsx — they're kept nested here only for dropdown
-  // grouping, matching the sidebar/legend structure).
-  {
-    key: "levelsbelow",
-    label: "LEVEL BELOW",
-    // NEW: "PDH>pTC-U4:5AM" now nests under the "B-B-BB-BB-L3U3" Pattern
-    // below (not directly on the category), since it also requires
-    // PIVOT_PATTERNS["B-B-BB-BB"] AND the raw L3U3 flag — see
-    // ScreenerUtils.tsx.
-    patterns: [
-      // CHANGED: "B-B-BB-BB" is now a real parent Pattern (arrow) with its
-      // own `patterns` array — same shape as "C-B-BB-LB" nesting
-      // "C-B-BB-LB-CL3U2", or "E-E-AA-BB" nesting its five Subpatterns
-      // (see those blocks). Previously these five were flat siblings that
-      // conveyed the B-B-BB-BB-* nesting via naming only (no real
-      // parent/child relationship in the tree, so the dropdown/legend
-      // showed them all at the same indent level instead of under an
-      // expandable "B-B-BB-BB" arrow). Base condition unchanged: this
-      // category's r.LevelsBelow condition AND PIVOT_PATTERNS["B-B-BB-BB"]
-      // (HHLL-B + RRHH-BB + SSLL-BB) for the parent; each child adds its
-      // own raw target-window flag on top (see matchesPatternFlag in
-      // ScreenerUtils.tsx, which has L4U4/L3U4/L4U3/L3U3/CL4U2 cases).
-      // L4U3, L3U3, and CL4U2 carry over the nested Views they already
-      // had ("11AM:pCPR1AHi-FApU4:1PM" and "PDH>pTC-U4:5AM"); L4U4 keeps
-      // its two nested Views; L3U4 has no specific target-graded
-      // sub-pattern yet — selecting it in the Backtest dropdown runs a
-      // symbol-list-only scan.
-      {
-        key: "B-B-BB-BB",
-        label: "B-B-BB-BB",
-        subPatternKeys: [],
-        patterns: [
-          {
-            key: "B-B-BB-BB-L4U4",
-            label: "B-B-BB-BB-L4U4",
-            // NEW: nests "B-B-BB-BB-L4U4-pLTC-U2" — parent's raw
-            // B-B-BB-BB-L4U4 flag PLUS pHLGap-A PLUS "Prev PrevLow >
-            // today.tc" (see passesPattern in ScreenerUtils.tsx). Targets
-            // today's R2 (U2). Also nests "B-B-BB-BB-L4U4-pLAP:R4"
-            // (renamed from "2P:L4U4-pLAP:R4-2A", moved here from the
-            // now-removed "RHSLB-SSLLpGap" Pattern below) — parent's raw
-            // B-B-BB-BB-L4U4 flag PLUS pHLGap-A PLUS "Prev PrevLow >
-            // today.pivot" PLUS SSGap + LLGap PLUS todayCPR.HLSwitch HL-B.
-            // Targets today's R4 (U4).
-            subPatternKeys: ["B-B-BB-BB-L4U4-pLTC-U2", "B-B-BB-BB-L4U4-pLAP:R4", "B-B-BB-BB-L4U4-Ladder:R4", "B-B-BB-BB-L4U4-pGapA"],
-          },
-          {
-            key: "B-B-BB-BB-EL4U4",
-            label: "B-B-BB-BB-EL4U4",
-            // NEW: nests "B-B-BB-BB-EL4U4-SSLLGap:S4" — parent's raw
-            // B-B-BB-BB-EL4U4 flag PLUS SSGap + LLGap PLUS pHL-B PLUS
-            // HLGap-A (today HL-A, hlGapWinner "today"). Bearish, targets
-            // today's S4 (L4), entry BC, stoploss R1.
-            subPatternKeys: ["B-B-BB-BB-EL4U4-SSLLGap:S4"],
-          },
-          {
-            key: "B-B-BB-BB-L3U4",
-            label: "B-B-BB-BB-L3U4",
-            subPatternKeys: [],
-          },
-          {
-            key: "B-B-BB-BB-L2U4",
-            label: "B-B-BB-BB-L2U4",
-            subPatternKeys: ["B-B-BB-BB-L2U4-pPPHR1"],
-          },
-          // RENAMED (was the bare "L4U3" Pattern that used to sit
-          // further down this category's own list, with its
-          // "11AM:pCPR1AHi-FApU4:1PM" View) — now gated by
-          // PIVOT_PATTERNS["B-B-BB-BB"] AND the raw L4U3 flag (see
-          // matchesPatternFlag in ScreenerUtils.tsx) instead of the raw
-          // L4U3 flag alone.
-          {
-            key: "B-B-BB-BB-L4U3",
-            label: "B-B-BB-BB-L4U3",
-            subPatternKeys: ["11AM:pCPR1AHi-FApU4:1PM"],
-          },
-          // RENAMED (was the bare "L3U3" Pattern that used to sit
-          // further down this category's own list, with its
-          // "PDH>pTC-U4:5AM" View) — now gated by
-          // PIVOT_PATTERNS["B-B-BB-BB"] AND the raw L3U3 flag (see
-          // matchesPatternFlag in ScreenerUtils.tsx) instead of the raw
-          // L3U3 flag alone.
-          {
-            key: "B-B-BB-BB-L3U3",
-            label: "B-B-BB-BB-L3U3",
-            subPatternKeys: ["PDH>pTC-U4:5AM"],
-          },
-          // RENAMED (was the bare "CL4U2" Pattern that used to sit
-          // further down this category's own list) — same convention as
-          // its L4U4/L3U4/L4U3/L3U3 siblings above: base condition =
-          // PIVOT_PATTERNS["B-B-BB-BB"] AND the raw CL4U2 flag (see
-          // matchesPatternFlag in ScreenerUtils.tsx). No specific
-          // target-graded sub-pattern nested under it yet — selecting it
-          // in the Backtest dropdown runs a symbol-list-only category
-          // scan.
-          {
-            key: "B-B-BB-BB-CL4U2",
-            label: "B-B-BB-BB-CL4U2",
-            subPatternKeys: [],
-          },
-          // NEW: B-B-BB-BB-EL3U4/EL2U3/EL2U4/EL1U3 — four more Patterns
-          // nested under "B-B-BB-BB", same shape as their L4U4/EL4U4/
-          // L3U4/L2U4/L4U3/L3U3/CL4U2 siblings above: base condition =
-          // PIVOT_PATTERNS["B-B-BB-BB"] AND the raw EL3U4/EL2U3/EL2U4/
-          // EL1U3 flag from cpr.ts (see matchesPatternFlag in
-          // ScreenerUtils.tsx). No target-graded View nested under any of
-          // them yet — each shows up as a symbol-list-only scan in the
-          // Backtest dropdown.
-          {
-            key: "B-B-BB-BB-EL3U4",
-            label: "B-B-BB-BB-EL3U4",
-            subPatternKeys: [],
-          },
-          {
-            key: "B-B-BB-BB-EL2U3",
-            label: "B-B-BB-BB-EL2U3",
-            subPatternKeys: [],
-          },
-          {
-            key: "B-B-BB-BB-EL2U4",
-            label: "B-B-BB-BB-EL2U4",
-            subPatternKeys: [],
-          },
-          {
-            key: "B-B-BB-BB-EL1U3",
-            label: "B-B-BB-BB-EL1U3",
-            subPatternKeys: [],
-          },
-        ],
-      },
-      {
-        key: "HALB-SSLLGap",
-        label: "HALB-SSLLGap",
-        subPatternKeys: ["3P:HA-pBELOWR1:R2-3A", "3P:HA-pABOVER1:S2-6P", "2P:HA-HABOVEpR1:R4-4P"],
-      },
-      // RRSSB-{Level}{Gap} — the LevelsBelow mirror of levelsabove's
-      // RRSSA-* siblings: base condition = this category's
-      // r.LevelsBelow condition AND the raw RRSSB-* flag (see
-      // matchesPatternFlag in ScreenerUtils.tsx). All four Gap-based
-      // entries (AHS/ALR/BHR/BLS) are REPLACED below by
-      // RRSSB-A{RRHH}-{SSLL} and RRSSB-B{RRHH}-{SSLL} — see those blocks
-      // for the RRHHCategory-then-SSLLCategory re-splits — leaving zero
-      // Gap-based RRSSB-* entries, same end state as RRSSA-* above.
-      //
-      // B-A-{RRHH}-{SSLL} — 7 Patterns (arrows) (RENAMED from the
-      // intermediate RRSSB-A{RRHH}-{SSLL} naming to the
-      // B-{Level}-{RRHH}-{SSLL} convention used by B-B-*/B-C-*/A-B-*
-      // elsewhere; RRSSB-AC-E and RRSSB-AE-C were REMOVED, confirmed
-      // empty against real data, leaving 7 of the original 9 — same
-      // trimming outcome as A-B-C-E/A-B-E-C). Mirrors B-B-{RRHH}-{SSLL}
-      // above exactly, with LevelsBelow's flipped sign regime run through
-      // HHLL-A instead of HHLL-B (the direct mirror pairing of
-      // RRSSA-B/RRSSB-A, same as RRSSA-A/RRSSB-B mirror each other
-      // below). RRHHCategory is pinned to RRHH-C/RRHH-E/RRHH-HA and
-      // SSLLCategory to SSLL-C/SSLL-E/SSLL-SB (see the full proof in
-      // matchesPatternFlag's comment in ScreenerUtils.tsx).
-      { key: "B-A-C-C",   label: "B-A-C-C",   subPatternKeys: [] },
-      { key: "B-A-C-SB",  label: "B-A-C-SB",  subPatternKeys: [] },
-      { key: "B-A-E-E",   label: "B-A-E-E",   subPatternKeys: [] },
-      { key: "B-A-E-SB",  label: "B-A-E-SB",  subPatternKeys: [] },
-      { key: "B-A-HA-C",  label: "B-A-HA-C",  subPatternKeys: [] },
-      { key: "B-A-HA-E",  label: "B-A-HA-E",  subPatternKeys: [] },
-      { key: "B-A-HA-SB", label: "B-A-HA-SB", subPatternKeys: [] },
-      // PatternStats HHLL/RRHH/SSLL combo census (temporary debug
-      // addition) found 8 more reachable combos under HHLL-A — see the
-      // matching comment block in ScreenerUtils.tsx's PIVOT_PATTERNS.
-      { key: "B-A-OB-SB", label: "B-A-OB-SB", subPatternKeys: [] },
-      { key: "B-A-OB-E",  label: "B-A-OB-E",  subPatternKeys: [] },
-      { key: "B-A-OB-C",  label: "B-A-OB-C",  subPatternKeys: [] },
-      { key: "B-A-HA-OB", label: "B-A-HA-OB", subPatternKeys: [] },
-      { key: "B-A-HA-OA", label: "B-A-HA-OA", subPatternKeys: [] },
-      { key: "B-A-E-OA",  label: "B-A-E-OA",  subPatternKeys: [] },
-      { key: "B-A-E-OB",  label: "B-A-E-OB",  subPatternKeys: [] },
-      { key: "B-A-C-OA",  label: "B-A-C-OA",  subPatternKeys: [] },
-      { key: "B-A-OA-E",  label: "B-A-OA-E",  subPatternKeys: [] },
-      // B-B-{RRHH}-{SSLL} — 4 Patterns (arrows), REPLACES the old
-      // RRSSB-BHR/RRSSB-BLS pair (RENAMED from the intermediate
-      // RRSSB-B{RRHH}-{SSLL} naming to the B-{Level}-{RRHH}-{SSLL}
-      // convention used by B-C-*/A-B-* elsewhere). Unlike
-      // RRSSB-A{RRHH}-{SSLL} above, this is the CLEAN mirror of
-      // RRSSA-A{RRHH}-{SSLL} — not of RRSSA-B{RRHH}-{SSLL} — since
-      // LevelsBelow's ΔR1<=0 and HHLL-B's ΔPDH<=0 both agree
-      // (non-positive), the mirror image of LevelsAbove's ΔR1>0 +
-      // HHLL-A's ΔPDH>=0 both agreeing (non-negative). RRHHCategory is
-      // EXHAUSTIVELY pinned to RRHH-BB/RRHH-OB and SSLLCategory to
-      // SSLL-BB/SSLL-OB — no empirical trimming needed on either axis,
-      // same as RRSSA-A{RRHH}-{SSLL}. Crossing gives 4 combinations,
-      // mathematically exhaustive the same way. MOVED: the first of the
-      // 4, "B-B-BB-BB", now sits at the very top of this category's
-      // patterns array instead (above "HALB-SSLLGap") — see there for why
-      // — leaving the remaining 3 (B-B-BB-OB/B-B-OB-BB/B-B-OB-OB) here.
-      { key: "B-B-BB-OB", label: "B-B-BB-OB", subPatternKeys: [] },
-      { key: "B-B-OB-BB", label: "B-B-OB-BB", subPatternKeys: [] },
-      { key: "B-B-OB-OB", label: "B-B-OB-OB", subPatternKeys: [] },
-      // PatternStats HHLL/RRHH/SSLL combo census (temporary debug
-      // addition) found 3 more reachable combos under HHLL-B — see the
-      // matching comment block in ScreenerUtils.tsx's PIVOT_PATTERNS.
-      { key: "B-B-C-BB",  label: "B-B-C-BB",  subPatternKeys: [] },
-      { key: "B-B-C-OB",  label: "B-B-C-OB",  subPatternKeys: [] },
-      { key: "B-B-BB-C",  label: "B-B-BB-C",  subPatternKeys: [] },
-      // RRSSB-C{SSLL} — 3 Patterns (arrows), REPLACES the old
-      // RRSSB-CHR/RRSSB-CLR pair. Base condition = this category's
-      // r.LevelsBelow condition AND the raw B-C-* flag (see
-      // matchesPatternFlag in ScreenerUtils.tsx). HHLL-C's gap is always
-      // RRGap (the old CHR/CLR distinction was PDHPDLGapCategory alone),
-      // so the merged HHLL-C condition is instead re-split by crossing
-      // against SSLLCategory — mirrors RRSSA-E{SSLL}'s treatment of
-      // HHLL-E above. Unlike that case's clean sign proof, HHLL-C's
-      // non-strict ΔPDL>=0 doesn't cleanly rule AA/OA/BB/OB in or out —
-      // checked against real data instead, leaving 3 reachable:
-      // SSLL-C, SSLL-E, SSLL-SB.
-      //
-      // RENAMED: RRSSB-CC/RRSSB-CE/RRSSB-CSB -> B-C-{RRHH}-{SSLL}, each
-      // further re-split by crossing against RRHHCategory (RRHH-BB/
-      // RRHH-OB) — CC and CE both got the full BB/OB split; CSB only got
-      // BB (no "B-C-OB-SB" requested).
-      { key: "B-C-BB-C", label: "B-C-BB-C", subPatternKeys: [] },
-      { key: "B-C-OB-C", label: "B-C-OB-C", subPatternKeys: [] },
-      { key: "B-C-BB-E", label: "B-C-BB-E", subPatternKeys: [] },
-      { key: "B-C-OB-E", label: "B-C-OB-E", subPatternKeys: [] },
-      { key: "B-C-BB-SB", label: "B-C-BB-SB", subPatternKeys: [] },
-      // PatternStats HHLL/RRHH/SSLL combo census (temporary debug
-      // addition) found 3 more reachable combos under HHLL-C, including
-      // the largest single gap found (B-C-BB-OB, 19 rows) — see the
-      // matching comment block in ScreenerUtils.tsx's PIVOT_PATTERNS.
-      { key: "B-C-BB-OB", label: "B-C-BB-OB", subPatternKeys: [] },
-      { key: "B-C-BB-OA", label: "B-C-BB-OA", subPatternKeys: [] },
-      { key: "B-C-OB-OB", label: "B-C-OB-OB", subPatternKeys: [] },
-      // RRSSB-E{RRHH} — 3 Patterns (arrows), REPLACES the old
-      // RRSSB-EHS/RRSSB-ELS pair. Base condition = this category's
-      // r.LevelsBelow condition AND the raw B-E-* flag (see
-      // matchesPatternFlag in ScreenerUtils.tsx). HHLL-E's gap is always
-      // SSGap (the old EHS/ELS distinction was PDHPDLGapCategory alone),
-      // so the merged HHLL-E condition is instead re-split by crossing
-      // against RRHHCategory — mirrors RRSSA-C{RRHH}'s treatment of
-      // HHLL-C above. Of the 9 non-"none" RRHHCategory values, RRHH-AA/
-      // RRHH-OA/RRHH-RA are mathematically impossible under LevelsBelow
-      // and RRHH= is negligible (see the proof in matchesPatternFlag's
-      // comment in ScreenerUtils.tsx), leaving 5 mathematically reachable
-      // (BB/OB/C/E/HA). RRSSA-C{RRHH}'s own "both up" pair (RRHH-AA,
-      // RRHH-OA) both came back CONFIRMED EMPTY there, and their direct
-      // mirror pair here — RRSSB-EBB and RRSSB-EOB — likewise came back
-      // CONFIRMED EMPTY against real data and were dropped, leaving 3.
-      //
-      // RENAMED: RRSSB-EC/RRSSB-EE/RRSSB-EHA -> B-E-{RRHH}-{SSLL}, each
-      // further re-split by crossing against SSLLCategory (SSLL-BB/
-      // SSLL-OB) — EC and EE both got the full BB/OB split; EHA only got
-      // BB (no "B-E-HA-OB" requested).
-      { key: "B-E-C-BB", label: "B-E-C-BB", subPatternKeys: [] },
-      { key: "B-E-C-OB", label: "B-E-C-OB", subPatternKeys: [] },
-      { key: "B-E-E-BB", label: "B-E-E-BB", subPatternKeys: [] },
-      { key: "B-E-E-OB", label: "B-E-E-OB", subPatternKeys: [] },
-      // NEW: B-E-OB-BB — HHLL-E + RRHH-OB + SSLL-BB, same
-      // B-{Level}-{RRHH}-{SSLL} convention as its B-E-* siblings above.
-      { key: "B-E-OB-BB", label: "B-E-OB-BB", subPatternKeys: [] },
-      { key: "B-E-OB-OB", label: "B-E-OB-OB", subPatternKeys: [] },
-      { key: "B-E-HA-BB", label: "B-E-HA-BB", subPatternKeys: [] },
-      // PatternStats HHLL/RRHH/SSLL combo census (temporary debug
-      // addition) found 1 more reachable combo under HHLL-E — see the
-      // matching comment block in ScreenerUtils.tsx's PIVOT_PATTERNS.
-      { key: "B-E-OA-BB", label: "B-E-OA-BB", subPatternKeys: [] },
-    ],
-  },
-  // NEW: "COMPRESSED" left-nav section (first item). CHANGED:
-  // "6A:HLC-SSLL:R4-6P" moved off this category's own subPatternKeys and
-  // nested under the "RRHH-BB:SSLL-AA:SSLLGap-R4" Pattern arrow instead
-  // (same shape as U3L4/CU3L3 elsewhere); the Pattern arrow no longer
-  // duplicates itself as a nested View, since selecting the bare Pattern
-  // already grades the identical condition via runPivotLevelBacktest.
-  {
-    key: "compressed",
-    label: "COMPRESSED",
-    subPatternKeys: ["8A:HLC-SSHH:S4-1P", "9AM:RHLB-RRHH:5AM"],
-    patterns: [
-      {
-        key: "RRHH-BB:SSLL-AA:SSLLGap",
-        label: "RRHH-BB:SSLL-AA:SSLLGap",
-        subPatternKeys: ["6A:HLC-SSLL:R4-6P"],
-      },
-      // NEW: "RHLB-RRHHpGap" Pattern (arrow) — same shape as its
-      // "RRHH-BB:SSLL-AA:SSLLGap" sibling above: base condition = parent
-      // "compressed" category's condition AND the raw RHLB-RRHHpGap flag
-      // (see matchesPatternFlag in ScreenerUtils.tsx). Nests its
-      // "8A:pLAPpPAH:R4-5P" View (RENAMED from "RHLB-RRHHpGap" — the full
-      // graded pattern, incl. r.compressed — see passesPattern in
-      // ScreenerUtils.tsx / BACKTEST_TARGETS above), so it shows an arrow
-      // with a single (green, bullish) dot inside, not a bare dot on the
-      // category itself.
-      {
-        key: "RHLB-RRHHpGap",
-        label: "RHLB-RRHHpGap",
-        subPatternKeys: ["8A:pLAPpPAH:R4-5P"],
-      },
-      // C-{Level}-{RRHH}-{SSLL} — 19 Patterns (arrows), nested under
-      // "compressed" (today's R1 down vs prev AND today's S1 up vs prev —
-      // see cpr.ts's r.compressed / the "RRSS-C" SSRRCategory). REPLACES
-      // the old RRSSC-{Level}{SSLL} set (RRSSC-AAA/AOA/BLB/BC/BE/CAA/COA/
-      // CC): each surviving HHLL x SSLL combo is re-split by crossing in
-      // RRHHCategory, same treatment as "expanded"'s E-{Level}-{RRHH}-
-      // {SSLL} set — condition is RRSS-C (r.compressed) + HHLL + RRHH +
-      // SSLL only, with NO GapCategory check of any kind (see
-      // PIVOT_PATTERNS in ScreenerUtils.tsx). RRSSC-CC (HHLL-C + SSLL-C)
-      // is CONFIRMED mathematically impossible under r.compressed (proven
-      // via the ΔR1-ΔS1 = ΔPDH-ΔPDL identity + a 20M-pair brute-force
-      // sweep: 0 hits) — stays dropped.
-      //
-      // CORRECTED: PatternStats (2026-07-01..07-31) showed the base
-      // "compressed" scan matching 3566 (symbol, date) rows against only
-      // 3550 summed across the original 17 C-* patterns — a gap of 16.
-      // An earlier attempt attributed this to the dropped CC combo and
-      // re-added it; that was wrong (0 real matches, confirmed above).
-      // The brute-force sweep found the actual two gaps instead — combos
-      // that are reachable but had no key: HHLL-A + RRHH-OB + SSLL-AA,
-      // and HHLL-C + RRHH-C + SSLL-AA. Added below (C-A-OB-AA,
-      // C-C-C-AA), bringing this back to 19:
-      // AAA -> C-A-C-AA/C-A-HA-AA/C-A-E-AA/C-A-OA-AA/C-A-OB-AA (HHLL-A + SSLL-AA),
-      // AOA -> C-A-E-OA/C-A-C-OA/C-A-OA-OA (HHLL-A + SSLL-OA),
-      // BLB -> C-B-BB-LB/C-B-OB-LB (HHLL-B + SSLL-LB),
-      // BC  -> C-B-BB-C/C-B-OB-C (HHLL-B + SSLL-C),
-      // BE  -> C-B-BB-E/C-B-OB-E (HHLL-B + SSLL-E),
-      // CAA -> C-C-BB-AA/C-C-OB-AA/C-C-C-AA (HHLL-C + SSLL-AA),
-      // COA -> C-C-BB-OA/C-C-OB-OA (HHLL-C + SSLL-OA).
-      // A few other combos (HHLL-B+RRHH-C+SSLL-C, HHLL-A+RRHH-OB+SSLL-OA,
-      // HHLL-C+RRHH-C+SSLL-OA) surfaced at ~1-in-20M frequency in the
-      // sweep — negligible boundary-tolerance ties, same treatment as the
-      // existing "RRHH= is negligible" precedent; not worth a key.
-      // No target-graded sub-patterns nested under any of them yet, so
-      // each shows up as a symbol-list-only scan in the Backtest dropdown
-      // until specific targets are defined.
-      { key: "C-A-C-AA", label: "C-A-C-AA", subPatternKeys: [] },
-      { key: "C-A-HA-AA", label: "C-A-HA-AA", subPatternKeys: [] },
-      { key: "C-A-E-AA", label: "C-A-E-AA", subPatternKeys: [] },
-      { key: "C-A-OA-AA", label: "C-A-OA-AA", subPatternKeys: [] },
-      { key: "C-A-OB-AA", label: "C-A-OB-AA", subPatternKeys: [] },
-      { key: "C-A-E-OA", label: "C-A-E-OA", subPatternKeys: [] },
-      { key: "C-A-C-OA", label: "C-A-C-OA", subPatternKeys: [] },
-      { key: "C-A-OA-OA", label: "C-A-OA-OA", subPatternKeys: [] },
-      // NEW: nests "C-B-BB-LB-CL3U2" as a Subpattern (arrow ↳, not a View)
-      // — same shape as "E-E-AA-BB" nesting its five Subpatterns above.
-      // Combines this Pattern's base condition (PIVOT_PATTERNS["C-B-BB-LB"])
-      // with the raw CL3U2 flag — see matchesPatternFlag's
-      // "C-B-BB-LB-CL3U2" case in ScreenerUtils.tsx. Nests the bullish
-      // "C-B-BB-LB-CL3U2-RRHHGap:R4" View (RRGap + HHGap + pHLGap-A +
-      // today's HL-B; entry TC, target today's R4, stoploss today's S1).
-      {
-        key: "C-B-BB-LB",
-        label: "C-B-BB-LB",
-        subPatternKeys: [],
-        patterns: [
-          { key: "C-B-BB-LB-CL3U2", label: "C-B-BB-LB-CL3U2", subPatternKeys: ["C-B-BB-LB-CL3U2-RRHHGap:R4"] },
-        ],
-      },
-      { key: "C-B-OB-LB", label: "C-B-OB-LB", subPatternKeys: [] },
-      { key: "C-B-BB-C", label: "C-B-BB-C", subPatternKeys: [] },
-      { key: "C-B-OB-C", label: "C-B-OB-C", subPatternKeys: [] },
-      { key: "C-B-BB-E", label: "C-B-BB-E", subPatternKeys: [] },
-      { key: "C-B-OB-E", label: "C-B-OB-E", subPatternKeys: [] },
-      {
-        key: "C-C-BB-AA",
-        label: "C-C-BB-AA",
-        subPatternKeys: [],
-        patterns: [
-          { key: "C-C-BB-AA-CU4L4", label: "C-C-BB-AA-CU4L4", subPatternKeys: [] },
-          { key: "C-C-BB-AA-CL4U4", label: "C-C-BB-AA-CL4U4", subPatternKeys: [] },
-          { key: "C-C-BB-AA-CU4L3", label: "C-C-BB-AA-CU4L3", subPatternKeys: [] },
-          { key: "C-C-BB-AA-CL4U3", label: "C-C-BB-AA-CL4U3", subPatternKeys: [] },
-          { key: "C-C-BB-AA-CU3L3", label: "C-C-BB-AA-CU3L3", subPatternKeys: [] },
-          { key: "C-C-BB-AA-CL3U3", label: "C-C-BB-AA-CL3U3", subPatternKeys: [] },
-          { key: "C-C-BB-AA-CU3L2", label: "C-C-BB-AA-CU3L2", subPatternKeys: [] },
-          { key: "C-C-BB-AA-CL3U2", label: "C-C-BB-AA-CL3U2", subPatternKeys: [] },
-          { key: "C-C-BB-AA-CU2L2", label: "C-C-BB-AA-CU2L2", subPatternKeys: [] },
-          { key: "C-C-BB-AA-CL2U2", label: "C-C-BB-AA-CL2U2", subPatternKeys: [] },
-          { key: "C-C-BB-AA-CU2L1", label: "C-C-BB-AA-CU2L1", subPatternKeys: [] },
-          { key: "C-C-BB-AA-CL2U1", label: "C-C-BB-AA-CL2U1", subPatternKeys: [] },
-          { key: "C-C-BB-AA-CU1L1", label: "C-C-BB-AA-CU1L1", subPatternKeys: [] },
-          { key: "C-C-BB-AA-CL1U1", label: "C-C-BB-AA-CL1U1", subPatternKeys: [] },
-        ],
-      },
-      { key: "C-C-OB-AA", label: "C-C-OB-AA", subPatternKeys: [] },
-      { key: "C-C-C-AA", label: "C-C-C-AA", subPatternKeys: [] },
-      { key: "C-C-BB-OA", label: "C-C-BB-OA", subPatternKeys: [] },
-      { key: "C-C-OB-OA", label: "C-C-OB-OA", subPatternKeys: [] },
-    ],
-  },
-  // NEW: "EXPANDED" left-nav section, mirroring "COMPRESSED" above but for
-  // RRSS-E (today's R1 up AND today's S1 down vs prev — levels widening
-  // outward). "6A:SLE-RRHH:R2-6A" moved off this category's own
-  // subPatternKeys and now nests under the "E-A-AA-E" Pattern below —
-  // its base condition (HHLL-A + RRHH-AA + SSLL-E) is exactly that
-  // Pattern's condition, same as "6A:HLC-SSLL:R4-6P" nesting under
-  // "RRHH-BB:SSLL-AA:SSLLGap" elsewhere.
-  {
-    key: "expanded",
-    label: "EXPANDED",
-    subPatternKeys: [],
-    // E-{Level}-{RRHH}-{SSLL} — 16 Patterns (arrows), nested under
-    // "expanded" (today's R1 up vs prev AND today's S1 down vs prev — see
-    // cpr.ts's r.expanded / the "RRSS-E" SSRRCategory), built by crossing
-    // HHLLCategory (A/B/E — HHLL-C stays impossible under expanded) with
-    // RRHHCategory (checked before SSLLCategory) with SSLLCategory — see
-    // the full derivation, including each combo's empirically-confirmed
-    // reachable RRHHCategory set, in matchesPatternFlag's comment in
-    // ScreenerUtils.tsx. The original 8 HHLL+SSLL combos (AOB/ASB/AC/AE
-    // under HHLL-A, BBB/BOB under HHLL-B, EBB/EOB under HHLL-E) each
-    // split into 1-3 of these by RRHHCategory, giving 16 total. No
-    // target-graded sub-patterns nested under any of them yet, so each
-    // shows up as a symbol-list-only scan in the Backtest dropdown until
-    // specific targets are defined.
-    patterns: [
-      { key: "E-A-AA-OB", label: "E-A-AA-OB", subPatternKeys: [] },
-      { key: "E-A-OA-OB", label: "E-A-OA-OB", subPatternKeys: [] },
-      { key: "E-A-AA-SB", label: "E-A-AA-SB", subPatternKeys: [] },
-      { key: "E-A-AA-C", label: "E-A-AA-C", subPatternKeys: [] },
-      { key: "E-A-OA-C", label: "E-A-OA-C", subPatternKeys: [] },
-      // "6A:SLE-RRHH:R2-6A" now nests here — its base condition (HHLL-A +
-      // RRHH-AA + SSLL-E) is exactly this Pattern's condition (moved off
-      // "expanded" category's own subPatternKeys above).
-      { key: "E-A-AA-E", label: "E-A-AA-E", subPatternKeys: ["6A:SLE-RRHH:R2-6A"] },
-      { key: "E-A-OA-E", label: "E-A-OA-E", subPatternKeys: [] },
-      { key: "E-B-RA-BB", label: "E-B-RA-BB", subPatternKeys: [] },
-      { key: "E-B-C-BB", label: "E-B-C-BB", subPatternKeys: [] },
-      { key: "E-B-E-BB", label: "E-B-E-BB", subPatternKeys: [] },
-      { key: "E-B-C-OB", label: "E-B-C-OB", subPatternKeys: [] },
-      { key: "E-B-E-OB", label: "E-B-E-OB", subPatternKeys: [] },
-      // "E-E-AA-BB" nests five Subpatterns (EL1U2/EU1L2/EU2L2/EU1L3/EL1U1)
-      // — these are Patterns themselves (arrow ↳), not Views (green dot),
-      // per user correction. Each combines this Pattern's base condition
-      // with its own raw CPR flag — see matchesPatternFlag/passesPattern's
-      // "E-E-AA-BB-*" cases in ScreenerUtils.tsx. No Views defined under
-      // any of them yet, so each is currently a symbol-list-only scan,
-      // same as any other freshly-added Pattern with empty subPatternKeys.
-      {
-        key: "E-E-AA-BB",
-        label: "E-E-AA-BB",
-        subPatternKeys: [],
-        patterns: [
-          { key: "E-E-AA-BB-EL1U2", label: "E-E-AA-BB-EL1U2", subPatternKeys: [] },
-          { key: "E-E-AA-BB-EU1L2", label: "E-E-AA-BB-EU1L2", subPatternKeys: [] },
-          { key: "E-E-AA-BB-EU2L2", label: "E-E-AA-BB-EU2L2", subPatternKeys: [] },
-          { key: "E-E-AA-BB-EU1L3", label: "E-E-AA-BB-EU1L3", subPatternKeys: [] },
-          { key: "E-E-AA-BB-EL1U1", label: "E-E-AA-BB-EL1U1", subPatternKeys: [] },
-        ],
-      },
-      { key: "E-E-OA-BB", label: "E-E-OA-BB", subPatternKeys: [] },
-      { key: "E-E-AA-OB", label: "E-E-AA-OB", subPatternKeys: [] },
-      { key: "E-E-OA-OB", label: "E-E-OA-OB", subPatternKeys: [] },
-    ],
-  },
-  // NEW: left-nav sections exposed in the Backtest dropdown as
-  // symbol-list-only categories (no target grading). Each `key` matches an
-  // existing passesPattern() case in ScreenerUtils.tsx, so runCategoryScan
-  // works with no further changes.
-  {
-    key: "R1AbovePR4",
-    label: "ABOVE LEVEL4",
-    // NEW: "EU1L3" Pattern (arrow) — same shape as
-    // CL4U3/L3U3/EUTL3/EL1L2 elsewhere. Base condition = parent
-    // R1AbovePR4's condition AND the raw EU1L3 flag (see
-    // matchesPatternFlag in ScreenerUtils.tsx). Nests the existing
-    // "9AM:APHS1A-FAU4:4AM" pattern, which used to sit directly on this
-    // category's own subPatternKeys.
-    patterns: [
-      {
-        key: "EU1L3",
-        label: "EU1L3",
-        // "9AM:APHS1A-FAU4:4AM" moved to the sibling "EUTL3" Pattern.
-        subPatternKeys: ["8AM:APHS1A-FAU4:4AM"],
-      },
-      // NEW: "EUTL3" Pattern — shown above its own
-      // sub-pattern ("TiMe-EUTL3-AU4:2PM") in the Backtest dropdown, same
-      // "Pattern" grouping style as CU3L3 / EL1U4 elsewhere. Base
-      // condition = parent R1AbovePR4's condition AND the raw EUTL3 flag
-      // (see matchesPatternFlag in ScreenerUtils.tsx).
-      {
-        key: "EUTL3",
-        label: "EUTL3",
-        // Both "9AM:APHS1A-FAU4:4AM" and "6AM:pX-APHS1A-pL4:4AM" moved out
-        // from here into the new "A-A-AA-AA-EUTL3" Subpattern below
-        // (nested under the new "A-A-AA-AA" Pattern) — both renamed, and
-        // both conditions now AND in the structural A-A-AA-AA check, so
-        // neither is a bare EUTL3 View anymore.
-        subPatternKeys: ["TiMe-EUTL3-AU4:2PM"],
-      },
-      // NEW: "A-A-AA-AA" Pattern — structural A-A-AA-AA raw flag (see
-      // PIVOT_PATTERNS in ScreenerUtils.tsx), nested directly under
-      // "U1 > pU4" (R1AbovePR4) alongside its EU1L3/EUTL3/etc. Pattern
-      // siblings. True nested parent (via its own `patterns` field,
-      // same recursive shape as "E-E-AA-BB" above) of the
-      // "A-A-AA-AA-EUTL3" Subpattern, which used to sit as a flat
-      // sibling directly in this array.
-      {
-        key: "A-A-AA-AA",
-        label: "A-A-AA-AA",
-        subPatternKeys: [],
-        patterns: [
-          // "A-A-AA-AA-EUTL3" Subpattern — structural A-A-AA-AA (parent
-          // Pattern's own condition) crossed with the raw EUTL3 flag,
-          // same naming/nesting convention as the "A-A-AA-AA-EU3L4"
-          // Subpattern under "levelsabove". Nests the renamed
-          // "9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A" View (was
-          // "9AM:APHS1A-FAU4:4AM") followed by the renamed
-          // "6A:A-A-AA-AA-EUTL3-S1ATCpE-pL4:4A" View (was
-          // "6AM:pX-APHS1A-pL4:4AM", moved here from "EUTL3" and now
-          // also ANDing in the A-A-AA-AA check).
-          {
-            key: "A-A-AA-AA-EUTL3",
-            label: "A-A-AA-AA-EUTL3",
-            subPatternKeys: [
-              "9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A",
-              "6A:A-A-AA-AA-EUTL3-S1ATCpE-pL4:4A",
-                "A5-EUTL3-pA-S1ATC"
-            ],
-          },
-          // NEW: "A-A-AA-AA-EUPL3" Subpattern — structural A-A-AA-AA
-          // (parent Pattern's own condition) crossed with the raw EUPL3
-          // flag, same naming/nesting convention as the
-          // "A-A-AA-AA-EUTL3" sibling above. Nests the bullish
-          // "A-A-AA-AA-EUPL3-RRHHGap:R4" View (RRGap + HHGap + pHL-A +
-          // HLGap-B; entry TC, target today's R4, stoploss today's S1).
-          {
-            key: "A-A-AA-AA-EUPL3",
-            label: "A-A-AA-AA-EUPL3",
-            subPatternKeys: ["A-A-AA-AA-EUPL3-RRHHGap:R4"],
-          },
-          // MOVED: "A-A-AA-AA-U3L3" Subpattern now lives under the
-          // "levelsabove" category's own "A-A-AA-AA" Pattern (its
-          // condition is LevelsAbove-based, not R1AbovePR4-based).
-        ],
-      },
-      {
-        key: "EL1L2",
-        label: "EL1L2",
-        subPatternKeys: ["SMg-exHiL2L1-U4:3AM"],
-      },
-      // NEW: "EU1L4" Pattern (arrow), same shape as its
-      // EU1L3/EUTL3/EL1L2 siblings above. Base condition = parent
-      // R1AbovePR4's condition AND the raw EU1L4 flag (see
-      // matchesPatternFlag in ScreenerUtils.tsx). Nests the new
-      // "6AM:MegMeg-L3:8PM" pattern.
-      {
-        key: "EU1L4",
-        label: "EU1L4",
-        subPatternKeys: ["6AM:MegMeg-L3:8PM"],
-      },
-      // NEW: "EUPL2" Pattern (arrow), same shape as its
-      // EU1L3/EUTL3/EL1L2/EU1L4 siblings above. Base condition =
-      // parent R1AbovePR4's condition AND the raw EUPL2 flag (see
-      // matchesPatternFlag in ScreenerUtils.tsx). No specific
-      // target-graded sub-pattern nested under it yet — selecting it in
-      // the Backtest dropdown runs a symbol-list-only category scan.
-      {
-        key: "EUPL2",
-        label: "EUPL2",
-        subPatternKeys: [],
-      },
-      // NEW: "EL2L1" Pattern (arrow), same shape as its
-      // EL1L2 sibling above (both derive from the same
-      // eXHiLoL2L1Bands base band check in cpr.ts, split on today's PDL
-      // vs prev Pivot). Base condition = parent R1AbovePR4's condition
-      // AND the raw EL2L1 flag (see matchesPatternFlag in
-      // ScreenerUtils.tsx). No specific target-graded sub-pattern
-      // nested under it yet — selecting it in the Backtest dropdown
-      // runs a symbol-list-only category scan.
-      {
-        key: "EL2L1",
-        label: "EL2L1",
-        subPatternKeys: [],
-      },
-      // NEW: "EUBL3" Pattern (arrow), same shape as its
-      // EU1L3/EUTL3/EL1L2/EU1L4/EUPL2/EL2L1 siblings above.
-      // Base condition = parent R1AbovePR4's condition AND the raw
-      // EUBL3 flag (see matchesPatternFlag in ScreenerUtils.tsx). No
-      // specific target-graded sub-pattern nested under it yet —
-      // selecting it in the Backtest dropdown runs a symbol-list-only
-      // category scan.
-      {
-        key: "EUBL3",
-        label: "EUBL3",
-        subPatternKeys: [],
-      },
-      // NEW: "EUBL2" Pattern (arrow), same shape as its EUBL3 sibling
-      // directly above. Base condition = parent R1AbovePR4's condition
-      // AND the raw EUBL2 flag (see matchesPatternFlag in
-      // ScreenerUtils.tsx). No specific target-graded sub-pattern
-      // nested under it yet — selecting it in the Backtest dropdown
-      // runs a symbol-list-only category scan.
-      {
-        key: "EUBL2",
-        label: "EUBL2",
-        subPatternKeys: [],
-      },
-    ],
-  },
-  // RENAMED from "L1 < pL4" to "BELOW LEVEL4" (mirrors "R1AbovePR4"'s
-  // "ABOVE LEVEL4" label). Nests the "EL1U4" Pattern, which in turn
-  // nests the bullish "ss-EL1U4-U4:10PM" pattern.
-  {
-    key: "S1BelowPS4",
-    label: "BELOW LEVEL4",
-    patterns: [
-      {
-        key: "EL1U4",
-        label: "EL1U4",
-        subPatternKeys: ["ss-EL1U4-U4:10PM"],
-      },
-    ],
-  },
-  { key: "equal-cpr", label: "Equal CPR" },
-];
-
-/**
- * NEW: "Copy View" — clones an existing BacktestTargetDef (including its
- * levelCheckDefs) under a new key/label, and drops the new key into the
- * BACKTEST_CATEGORIES tree right next to the original, so it shows up as
- * a sibling in the Backtest dropdown. Unlike deriveLevelCheckDefs (used
- * by "Create View"), nothing is recomputed here — this is a straight
- * duplicate, for cases like "same target/entry/stoploss/levelCheckDefs,
- * but as a separately named View so its backtest stats don't get mixed
- * in with the original's."
- *
- * NOTE: pushing into BACKTEST_TARGETS / the sibling subPatternKeys array
- * only updates the running process's in-memory arrays, which is enough
- * for the clone to show up immediately in the app. It does NOT touch
- * backtest.ts on disk — persisting the clone (the "check in to git" part)
- * needs a text-level patch: serialize `cloned` into a formatted object
- * literal and insert it into the BACKTEST_TARGETS array literal in this
- * file's source text (right after the source entry), and insert
- * `"newKey"` into the matching subPatternKeys: [...] literal — then
- * commit/push (or open a PR) from a backend endpoint, same as discussed
- * for "Create View".
- */
-
-// Finds whichever subPatternKeys array (top-level category, or nested
-// under a Pattern/Subpattern at any depth) currently contains `key`, so a
-// clone can be inserted right beside its source in the dropdown tree.
-function findSubPatternKeysArray(
-  key: string,
-  categories: BacktestCategoryDef[] = BACKTEST_CATEGORIES
-): string[] | null {
-  for (const cat of categories) {
-    if (cat.subPatternKeys?.includes(key)) return cat.subPatternKeys;
-    if (cat.patterns) {
-      const found = findInPatterns(key, cat.patterns);
-      if (found) return found;
-    }
-  }
-  return null;
-}
-
-function findInPatterns(key: string, patterns: BacktestSubCategoryDef[]): string[] | null {
-  for (const p of patterns) {
-    // A Pattern/Subpattern node whose OWN key equals `key` (its
-    // activePatternTarget resolves directly, not via some ancestor's
-    // subPatternKeys) — a clone of "itself" was never a contained
-    // element anywhere, so it belongs among ITS OWN children instead.
-    if (p.key === key) {
-      if (!p.subPatternKeys) p.subPatternKeys = [];
-      return p.subPatternKeys;
-    }
-    if (p.subPatternKeys.includes(key)) return p.subPatternKeys;
-    if (p.patterns) {
-      const found = findInPatterns(key, p.patterns);
-      if (found) return found;
-    }
-  }
-  return null;
-}
-
 export interface CopyViewResult {
   ok: boolean;
   reason?: "source-not-found" | "duplicate-key" | "source-not-in-tree";
-  cloned?: BacktestTargetDef;
-}
-
-/**
- * Resolves ANY Category/Pattern/Subpattern node's own `subPatternKeys`
- * array by that node's own key — a bare Category checked first (its own
- * key never nests inside its own `patterns`), then any depth of nested
- * Pattern/Subpattern via findOwnSubPatternKeysArray. Shared by
- * createBacktestView and copyBacktestView so both can accept an explicit
- * `attachKey` — the node the person picked in the Create/Copy View
- * "attach under" dropdown — independent of the pattern the popover was
- * opened from.
- */
-function findAttachArrayByKey(key: string): string[] | null {
-  for (const cat of BACKTEST_CATEGORIES) {
-    if (cat.key === key) {
-      if (!cat.subPatternKeys) cat.subPatternKeys = [];
-      return cat.subPatternKeys;
-    }
-    const found = findOwnSubPatternKeysArray(key, cat.patterns);
-    if (found) return found;
-  }
-  return null;
+  cloned?: ViewDef;
 }
 
 /**
@@ -2223,38 +209,15 @@ function findAttachArrayByKey(key: string): string[] | null {
  * creating a View can file it under any node in that tree, not just a
  * flat, unrelated Screener-sidebar bucket.
  */
+export function findContainingNodeKey(key: string): string | null {
+  return getView(key)?.parentKey ?? null;
+}
+
 export interface AttachPointOption {
   key: string;
   label: string;
   depth: number; // 0 = category, 1 = Pattern, 2+ = nested Subpattern
   categoryLabel: string;
-}
-
-/**
- * Given a View's own key, returns the key of the Category/Pattern/
- * Subpattern node that currently contains it (i.e. whose subPatternKeys
- * includes it) — the counterpart to findSubPatternKeysArray that returns
- * the owning node's KEY rather than its array, so callers like
- * CopyViewControl can default their "attach under" dropdown (which
- * offers Category/Pattern/Subpattern keys, not View keys) to wherever
- * the View already lives.
- */
-export function findContainingNodeKey(key: string): string | null {
-  const searchPatterns = (patterns: BacktestSubCategoryDef[] | undefined): string | null => {
-    for (const p of patterns ?? []) {
-      if (p.subPatternKeys.includes(key)) return p.key;
-      const nested = searchPatterns(p.patterns);
-      if (nested) return nested;
-    }
-    return null;
-  };
-
-  for (const cat of BACKTEST_CATEGORIES) {
-    if (cat.subPatternKeys?.includes(key)) return cat.key;
-    const found = searchPatterns(cat.patterns);
-    if (found) return found;
-  }
-  return null;
 }
 
 export function getAttachPointOptions(): AttachPointOption[] {
@@ -2280,26 +243,13 @@ export function getAttachPointOptions(): AttachPointOption[] {
   return opts;
 }
 
-
-/**
- * Clones `sourceKey`'s View (levelCheckDefs deep-copied) as `newKey`/
- * `newLabel`, pushes it into BACKTEST_TARGETS, and inserts `newKey` into
- * a subPatternKeys array.
- *
- * By default (`attachKey` omitted) that's the same array the source
- * lives in — the original behavior. Pass `attachKey` (a Category/
- * Pattern/Subpattern key from getAttachPointOptions) to file the copy
- * under a DIFFERENT node instead; the clone still grades via the
- * original condition (conditionKey), so attach location never changes
- * what the View matches, only where it appears in the dropdown tree.
- */
 export function copyBacktestView(
   sourceKey: string,
   newKey: string,
   newLabel: string,
   attachKey?: string
-): { ok: boolean; reason?: string } {
-  if (VIEWS.some(v => v.key === newKey) || BACKTEST_TARGETS.some(t => t.key === newKey)) {
+): CopyViewResult {
+  if (VIEWS.some(v => v.key === newKey)) {
     return { ok: false, reason: "duplicate-key" };
   }
 
@@ -2325,19 +275,7 @@ export function copyBacktestView(
 
   VIEWS.push(newViewDef);
 
-  // Backward compatibility mirror for BACKTEST_TARGETS during migration transition
-  const legacyTarget = BACKTEST_TARGETS.find(t => t.key === sourceKey);
-  if (legacyTarget) {
-    BACKTEST_TARGETS.push({
-      ...legacyTarget,
-      key: newKey,
-      label: newLabel,
-      conditionKey,
-      levelCheckDefs: newViewDef.levelCheckDefs,
-    });
-  }
-
-  return { ok: true };
+  return { ok: true, cloned: newViewDef };
 }
 
 // Finds the Pattern/Subpattern node (at any depth, under a category's
@@ -2347,25 +285,48 @@ export function copyBacktestView(
 // for a node CONTAINING a given key — this searches for a node's own
 // identity, since createBacktestView (below) has no existing View to
 // search for; it's given the Pattern/Subpattern's own key directly.
-function findOwnSubPatternKeysArray(
-  patternKey: string,
-  patterns: BacktestSubCategoryDef[] | undefined
-): string[] | null {
-  for (const p of patterns ?? []) {
-    if (p.key === patternKey) {
-      if (!p.subPatternKeys) p.subPatternKeys = [];
-      return p.subPatternKeys;
-    }
-    const nested = findOwnSubPatternKeysArray(patternKey, p.patterns);
-    if (nested) return nested;
-  }
-  return null;
-}
 
 export interface CreateViewResult {
   ok: boolean;
   reason?: "pattern-not-found" | "duplicate-key" | "invalid-target";
-  created?: BacktestTargetDef;
+  created?: ViewDef;
+}
+
+const BULLISH_TARGETS: Record<string, { label: string; key: "r2" | "r3" | "r4" }> = {
+  R2: { label: "U2 (today's R2)", key: "r2" },
+  R3: { label: "U3 (today's R3)", key: "r3" },
+  R4: { label: "U4 (today's R4)", key: "r4" },
+};
+const BEARISH_TARGETS: Record<string, { label: string; key: "s2" | "s3" | "s4" }> = {
+  S2: { label: "L2 (today's S2)", key: "s2" },
+  S3: { label: "L3 (today's S3)", key: "s3" },
+  S4: { label: "L4 (today's S4)", key: "s4" },
+};
+
+/**
+ * Creates a brand-new View directly under a Pattern/Subpattern that
+ * doesn't have one of its own yet (BacktestPanel.tsx's activePatternTarget
+ * undefined for it — the case that currently shows a fallback "U4
+ * (today's R4)"-style description instead of a real graded View).
+ *
+ * `direction` fixes entry/stoploss to this codebase's own convention —
+ * bullish: entry TC, stoploss S1; bearish: entry BC, stoploss R1 (see
+ * e.g. "7PM:MoMi-<L4:2AM" for a real bearish example of this exact
+ * shape) — `target` picks which of that direction's three rungs
+ * (R2/R3/R4 bullish, S2/S3/S4 bearish) actually grades the View.
+ * Grades against `patternKey` itself via conditionKey — a
+ * Pattern/Subpattern node's own key is already a real passesPattern
+ * condition, so no new pattern-matching logic is needed.
+ *
+ * `levelCheckDefs` is the caller's responsibility to derive (see
+ * deriveLevelCheckDefs above) — typically from whichever symbol's row
+ * was on screen in the SR Ladder panel when "Create View" was clicked.
+ *
+ * `attachKey` (a Category/Pattern/Subpattern key from
+ * getAttachPointOptions) picks where in the dropdown tree the new View
+ * is filed. Defaults to `patternKey` itself — the node "Create View" was
+ * opened from — so omitting it keeps the original behavior. `patternKey`
+ * always stays the View's conditionKey (what it grades against);
 }
 
 const BULLISH_TARGETS: Record<string, { label: string; key: "r2" | "r3" | "r4" }> = {
@@ -2414,8 +375,8 @@ export function createBacktestView(
   target: string,
   levelCheckDefs?: LevelCheckCondition[],
   attachKey?: string
-): { ok: boolean; reason?: string } {
-  if (VIEWS.some(v => v.key === newKey) || BACKTEST_TARGETS.some(t => t.key === newKey)) {
+): CreateViewResult {
+  if (VIEWS.some(v => v.key === newKey)) {
     return { ok: false, reason: "duplicate-key" };
   }
 
@@ -2426,23 +387,7 @@ export function createBacktestView(
   }
 
   const resolvedParentKey = attachKey ?? patternKey;
-
-  // Fixed codebase convention (see doc comment above): bullish targets one
-  // of today's own R-levels, entry TC/stoploss S1; bearish targets one of
-  // today's own S-levels, entry BC/stoploss R1. BULLISH_TARGETS/
-  // BEARISH_TARGETS only carry the target's own {label, key} — the
-  // getTarget/getEntry/getStoploss accessors and their labels are built
-  // here from `targetDef.key` and `direction`, same shape every other
-  // hand-authored ViewDef in views.ts uses.
-  const getTarget = (r: CPRResult) => r.todayCPR[targetDef.key];
-  const entryLabel = direction === "bullish" ? "TC (today's TC)" : "BC (today's BC)";
-  const getEntry = (r: CPRResult) => (direction === "bullish" ? r.todayCPR.tc : r.todayCPR.bc);
-  const stoplossLabel = direction === "bullish" ? "S1 (today's S1)" : "R1 (today's R1)";
-  const getStoploss = (r: CPRResult) => (direction === "bullish" ? r.todayCPR.s1 : r.todayCPR.r1);
-
-  const clonedLevelCheckDefs = levelCheckDefs
-    ? levelCheckDefs.map(d => ({ ...d, bandKeys: [...d.bandKeys] as [LevelCheckKey, LevelCheckKey] }))
-    : undefined;
+  const targetKey = targetDef.key;
 
   const newViewDef: ViewDef = {
     key: newKey,
@@ -2452,38 +397,22 @@ export function createBacktestView(
     kind: "view",
     direction,
     targetLabel: targetDef.label,
-    getTarget,
-    entryLabel,
-    getEntry,
-    stoplossLabel,
-    getStoploss,
-    levelCheckDefs: clonedLevelCheckDefs,
+    getTarget: (r: CPRResult) => r.todayCPR[targetKey],
+    entryLabel: direction === "bullish" ? "TC (today's TC)" : "BC (today's BC)",
+    getEntry: (r: CPRResult) => (direction === "bullish" ? r.todayCPR.tc : r.todayCPR.bc),
+    stoplossLabel: direction === "bullish" ? "S1 (today's S1)" : "R1 (today's R1)",
+    getStoploss: (r: CPRResult) => (direction === "bullish" ? r.todayCPR.s1 : r.todayCPR.r1),
+    levelCheckDefs: levelCheckDefs
+      ? levelCheckDefs.map(d => ({ ...d, bandKeys: [...d.bandKeys] }))
+      : undefined,
   };
 
   VIEWS.push(newViewDef);
 
-  // Backward compatibility mirror for BACKTEST_TARGETS during migration transition
-  BACKTEST_TARGETS.push({
-    key: newKey,
-    label: newLabel,
-    conditionKey: patternKey,
-    direction,
-    targetLabel: targetDef.label,
-    getTarget,
-    entryLabel,
-    getEntry,
-    stoplossLabel,
-    getStoploss,
-    levelCheckDefs: clonedLevelCheckDefs,
-  });
-
-  return { ok: true };
+  return { ok: true, created: newViewDef };
 }
 
 /**
- * NEW: flat option list for the "Category / Pattern / Subpattern / View"
- * dropdown in the Backtest panel.
- *
  * The dropdown no longer renders bold, non-selectable group headings
  * ("LittleCPR Above", "Overlap Below", ...). Instead every group's own
  * "— all (symbol list only)" row IS the heading: the category name is
@@ -3233,7 +1162,7 @@ export async function backtestSymbolOnDate(
   symbol: string,
   source: BacktestSource,
   entryDateISO: string,
-  target: BacktestTargetDef,
+  target: ViewDef,
   passesPatternFn: (r: CPRResult, pattern: string) => boolean
 ): Promise<BacktestRow | null> {
   const dPlus1 = addDaysISO(entryDateISO, 1);
@@ -3245,9 +1174,13 @@ export async function backtestSymbolOnDate(
   if (!passesPatternFn(result, target.conditionKey ?? target.key)) return null; // didn't match the pattern on this date
   if (!levelCheckFullyMatches(result, target.levelCheckDefs)) return null; // didn't hit this View's full Level Check signature
 
-  const targetLevel = target.getTarget(result);
-  const entryLevel = target.getEntry(result);
-  const stoplossLevel = target.getStoploss(result);
+  const getTarget = target.getTarget ?? ((r: CPRResult) => r.todayCPR.r4);
+  const getEntry = target.getEntry ?? ((r: CPRResult) => (target.direction === "bearish" ? r.todayCPR.bc : r.todayCPR.tc));
+  const getStoploss = target.getStoploss ?? ((r: CPRResult) => (target.direction === "bearish" ? r.todayCPR.r1 : r.todayCPR.s1));
+
+  const targetLevel = getTarget(result);
+  const entryLevel = getEntry(result);
+  const stoplossLevel = getStoploss(result);
   const entryDayCandle = window.get(entryDateISO) ?? null;
   const nextDayCandle = window.get(dPlus1) ?? null;
 
@@ -3270,11 +1203,11 @@ export async function backtestSymbolOnDate(
       prevCPR: result.prevCPR,
       compressionRatio: result.compressionRatio,
       targetLevel,
-      targetLabel: target.targetLabel,
+      targetLabel: target.targetLabel ?? "U4 (today's R4)",
       entryLevel,
-      entryLabel: target.entryLabel,
+      entryLabel: target.entryLabel ?? "TC (today's TC)",
       stoplossLevel,
-      stoplossLabel: target.stoplossLabel,
+      stoplossLabel: target.stoplossLabel ?? "S1 (today's S1)",
       result: "invalid-target",
       hitDate: null,
       daysToHit: null,
@@ -3307,11 +1240,11 @@ export async function backtestSymbolOnDate(
     prevCPR: result.prevCPR,
     compressionRatio: result.compressionRatio,
     targetLevel,
-    targetLabel: target.targetLabel,
+    targetLabel: target.targetLabel ?? "U4 (today's R4)",
     entryLevel,
-    entryLabel: target.entryLabel,
+    entryLabel: target.entryLabel ?? "TC (today's TC)",
     stoplossLevel,
-    stoplossLabel: target.stoplossLabel,
+    stoplossLabel: target.stoplossLabel ?? "S1 (today's S1)",
     result: outcome,
     hitDate,
     daysToHit,
@@ -3392,19 +1325,14 @@ export async function pivotLevelBacktestSymbolOnDate(
   // hardcoded bullish U4/R4 target below for every Pattern that has no
   // defined target of its own, so existing Pattern-only selections are
   // unaffected.
-  const definedTarget = BACKTEST_TARGETS.find((t) => t.key === pivotLevelKey);
-  const bullish = definedTarget ? definedTarget.direction === "bullish" : true;
-  const targetLevel = definedTarget ? definedTarget.getTarget(result) : result.todayCPR.r4;
-  const targetLabel = definedTarget ? definedTarget.targetLabel : "U4 (today's R4)";
-  // Entry/Stoploss follow the same bullish/bearish rule as every View:
-  // bullish (R-level target) -> Entry = today's TC, Stoploss = today's S1;
-  // bearish (S-level target) -> Entry = today's BC, Stoploss = today's R1.
-  // The hardcoded U4/R4 fallback above is bullish, so its fallback
-  // Entry/Stoploss follow the same "bullish" rule.
-  const entryLevel = definedTarget ? definedTarget.getEntry(result) : result.todayCPR.tc;
-  const entryLabel = definedTarget ? definedTarget.entryLabel : "TC (today's TC)";
-  const stoplossLevel = definedTarget ? definedTarget.getStoploss(result) : result.todayCPR.s1;
-  const stoplossLabel = definedTarget ? definedTarget.stoplossLabel : "S1 (today's S1)";
+  const definedTarget = getView(pivotLevelKey);
+  const bullish = definedTarget ? definedTarget.direction !== "bearish" : true;
+  const targetLevel = definedTarget?.getTarget ? definedTarget.getTarget(result) : result.todayCPR.r4;
+  const targetLabel = definedTarget?.targetLabel ?? "U4 (today's R4)";
+  const entryLevel = definedTarget?.getEntry ? definedTarget.getEntry(result) : (bullish ? result.todayCPR.tc : result.todayCPR.bc);
+  const entryLabel = definedTarget?.entryLabel ?? (bullish ? "TC (today's TC)" : "BC (today's BC)");
+  const stoplossLevel = definedTarget?.getStoploss ? definedTarget.getStoploss(result) : (bullish ? result.todayCPR.s1 : result.todayCPR.r1);
+  const stoplossLabel = definedTarget?.stoplossLabel ?? (bullish ? "S1 (today's S1)" : "R1 (today's R1)");
   const entryDayCandle = window.get(entryDateISO) ?? null;
   const nextDayCandle = window.get(dPlus1) ?? null;
 
@@ -3490,7 +1418,7 @@ export async function runBacktest(
   // waiting for the full scan to finish before showing anything.
   onPartialRows?: (newRows: BacktestRow[]) => void
 ): Promise<BacktestRow[]> {
-  const target = BACKTEST_TARGETS.find((t) => t.key === patternKey);
+  const target = getView(patternKey);
   if (!target) throw new Error(`No backtest target defined yet for pattern "${patternKey}"`);
 
   // Single source of truth — see getSymbolUniverse above. No per-call
@@ -3674,15 +1602,18 @@ export async function runPatternCensus(
   }
 
   // Flatten every (category, pattern) pair once up front.
+  const rootCategories = buildViewTree();
   const pairs: { categoryKey: string; categoryLabel: string; patternKey: string; patternLabel: string }[] = [];
-  for (const cat of BACKTEST_CATEGORIES) {
-    const collectPatterns = (patterns: BacktestSubCategoryDef[] | undefined) => {
-      for (const sub of patterns ?? []) {
-        pairs.push({ categoryKey: cat.key, categoryLabel: cat.label, patternKey: sub.key, patternLabel: sub.label });
-        if (sub.patterns) collectPatterns(sub.patterns);
+  for (const cat of rootCategories) {
+    const collectPatterns = (nodes: ViewTreeNode[]) => {
+      for (const sub of nodes) {
+        if (sub.kind === "pattern" || sub.kind === "view") {
+          pairs.push({ categoryKey: cat.key, categoryLabel: cat.label, patternKey: sub.key, patternLabel: sub.label });
+        }
+        if (sub.children && sub.children.length > 0) collectPatterns(sub.children);
       }
     };
-    collectPatterns(cat.patterns);
+    collectPatterns(cat.children);
   }
 
   const counts = new Map<string, number>();
@@ -3726,7 +1657,7 @@ export async function runPatternCensus(
           const ssll = result.SSLLCategory ?? "none";
           const rrss = result.SSRRCategory ?? "none";
           const baseCombo = `${hhll} / ${rrhh} / ${ssll}`;
-          for (const cat of BACKTEST_CATEGORIES) {
+          for (const cat of rootCategories) {
             if (!passesPatternFn(result, cat.key)) continue; // base category condition
             const combo = RRSS_COMBO_CATEGORIES.has(cat.key) ? `${rrss} / ${baseCombo}` : baseCombo;
             const k = comboKey(cat.key, combo);
@@ -3756,7 +1687,7 @@ export async function runPatternCensus(
   // these back up by categoryKey). RRSS_COMBO_CATEGORIES combos carry an
   // extra leading RRSS-X segment, so they're split into 4 parts instead of 3.
   const combos: CategoryComboRow[] = [];
-  for (const cat of BACKTEST_CATEGORIES) {
+  for (const cat of rootCategories) {
     const prefix = `${cat.key}::`;
     for (const [k, count] of comboCounts.entries()) {
       if (!k.startsWith(prefix)) continue;

@@ -9,7 +9,7 @@ import {
 } from "./ScreenerUtils";
 import { autoSaveQualifiedSignals } from "@/lib/signalTracker";
 import { Views } from "@/lib/ViewsSidebar";
-import { BACKTEST_TARGETS } from "@/lib/backtest";
+import { getView } from "@/lib/views";
 import SignalProgressBar from "@/lib/SignalProgressBar";
 import {
   Radio,
@@ -127,15 +127,15 @@ export function computeSignalLevels(
     : viewPills.find((v) => passesPattern(r, v.id));
   if (!primaryView) return null;
 
-  const targetDef = BACKTEST_TARGETS.find((t) => t.key === primaryView.id);
-  if (!targetDef) return null;
+  const targetDef = getView(primaryView.id);
+  if (!targetDef || !targetDef.getTarget) return null;
 
   const isBullish = targetDef.direction === "bullish"; // bullish == R-family target
   const direction: "LONG" | "SHORT" = isBullish ? "LONG" : "SHORT";
   const price = isBullish ? r.todayCPR.bc : r.todayCPR.tc; // entry
   const stopPrice = isBullish ? r.todayCPR.s1 : r.todayCPR.r1;
   const targetPrice = targetDef.getTarget(r);
-  const targetLevel = targetDef.targetLabel;
+  const targetLevel = targetDef.targetLabel ?? "";
   const patternLabel = primaryView.label;
   const patternId = primaryView.id;
 
