@@ -251,6 +251,14 @@ export function getBadgeClasses(label: string): string {
   if (label.startsWith("C")) {
     return "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20";
   }
+  // Dynamic fallback for any pattern/subpattern/pivot-pattern starting with A (LevelsAbove: Green)
+  if (label.startsWith("A")) {
+    return "bg-green-500/10 text-green-400 border border-green-500/20";
+  }
+  // Dynamic fallback for any pattern/subpattern/pivot-pattern starting with B (LevelsBelow: Red)
+  if (label.startsWith("B")) {
+    return "bg-red-500/10 text-red-400 border border-red-500/20";
+  }
   return UNKNOWN_LABEL_CLASSES;
 }
 

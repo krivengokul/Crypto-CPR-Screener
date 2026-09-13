@@ -71,6 +71,13 @@ export interface ViewDef {
   parentKey?: string;
   kind: "category" | "pattern" | "view";
   /**
+   * When true, passesView does NOT chain parentKey. Used for compound
+   * patterns whose condition is already complete and self-contained
+   * across the full 4-dimensional category matrix (SSRR x HHLL x RRHH x SSLL),
+   * while retaining parentKey for tree navigation/display in buildViewTree().
+   */
+  standalone?: boolean;
+  /**
    * This ViewDef's OWN condition, NOT including the parent's — passesView
    * chains parentKey for you. (This mirrors PIVOT_PATTERNS' original
    * contract in ScreenerUtils.tsx: "NONE of these conditions AND in their
@@ -132,7 +139,7 @@ export function passesView(r: CPRResult, key: string): boolean {
   // ignoring this ViewDef's own parentKey/condition (see conditionKey's
   // doc on ViewDef above).
   if (v.conditionKey) return passesView(r, v.conditionKey);
-  if (v.parentKey && !passesView(r, v.parentKey)) return false;
+  if (v.parentKey && !v.standalone && !passesView(r, v.parentKey)) return false;
   return v.condition ? v.condition(r) : false;
 }
 
@@ -339,6 +346,7 @@ function makeCompoundView(c: CompoundCombo): ViewDef {
     label: key,
     parentKey,
     kind: "pattern",
+    standalone: true,
     condition: (r) =>
       r.SSRRCategory === ssrrCategory &&
       r.HHLLCategory === hhllCategory &&

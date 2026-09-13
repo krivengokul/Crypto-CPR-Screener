@@ -815,9 +815,17 @@ export const PIVOT_PATTERN_KEYS = [
   "B-B-BB-BB", "B-B-BB-OB", "B-B-OB-BB", "B-B-OB-OB",
   "B-C-BB-C", "B-C-OB-C", "B-C-BB-E", "B-C-OB-E", "B-C-BB-SB",
   "B-E-C-BB", "B-E-C-OB", "B-E-E-BB", "B-E-E-OB", "B-E-OB-BB", "B-E-HA-BB",
+  // Remaining B-* compound combinations from COMPOUND_COMBOS
+  "B-A-OB-SB", "B-A-OB-E", "B-A-OB-C", "B-A-HA-OB", "B-A-HA-OA",
+  "B-A-E-OA", "B-A-E-OB", "B-A-C-OA", "B-A-OA-E",
+  "B-B-C-BB", "B-B-C-OB", "B-B-BB-C",
+  "B-C-BB-OB", "B-C-BB-OA", "B-C-OB-OB",
+  "B-E-OB-OB", "B-E-OA-BB",
 ] as const;
 
 export type PivotPatternKey = (typeof PIVOT_PATTERN_KEYS)[number];
+
+const PIVOT_PATTERN_KEYS_SET = new Set<string>(PIVOT_PATTERN_KEYS);
 
 /**
  * computePivotPattern — the single PIVOT_PATTERN_KEYS entry this row's
@@ -832,6 +840,18 @@ export type PivotPatternKey = (typeof PIVOT_PATTERN_KEYS)[number];
  * renders.
  */
 export function computePivotPattern(r: CPRResult): PivotPatternKey | null {
+  // Fast path: direct derivation from row categories (O(1))
+  const ssrr = r.SSRRCategory?.replace("RRSS-", "");
+  const hhll = r.HHLLCategory?.replace("HHLL-", "");
+  const rrhh = r.RRHHCategory?.replace("RRHH-", "");
+  const ssll = r.SSLLCategory?.replace("SSLL-", "");
+  if (ssrr && hhll && rrhh && ssll) {
+    const candidate = `${ssrr}-${hhll}-${rrhh}-${ssll}`;
+    if (PIVOT_PATTERN_KEYS_SET.has(candidate)) {
+      return candidate as PivotPatternKey;
+    }
+  }
+
   for (const key of PIVOT_PATTERN_KEYS) {
     if (passesPattern(r, key)) return key;
   }
