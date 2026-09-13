@@ -408,7 +408,7 @@ function CPRLevelChart({
   /** PivotPattern badge (e.g. renderPivotPatternBadge(r)) — shown inline next to the "Levels VIEW" label. */
   pivotPatternBadge?: ReactNode;
 }) {
-  const width = 480;
+  const width = 452;
   // Keep the chart compact when it sits beside the ladders. The ladders
   // remain the readable, full-size value reference next to it.
   const height = 300;
@@ -418,8 +418,12 @@ function CPRLevelChart({
   // Left-aligned: the "Levels VIEW" header hugs the left edge, so keep
   // leftMargin small and reserve just enough rightMargin for the "today"
   // labels, rather than splitting the leftover space evenly.
+  // rightMargin is sized to the actual label text ("R4 2,602.77" etc. at
+  // fontSize 9 monospace, ~60-65px) plus a small buffer — not the old
+  // 110px, which left ~50px of dead canvas between the last label and the
+  // "Today S/R" ladder next to it.
   const leftMargin = 30;
-  const rightMargin = 110;
+  const rightMargin = 82;
   const plotWidth = width - leftMargin - rightMargin;
   const prevSegmentEnd = leftMargin + plotWidth * 0.5;
 
@@ -640,12 +644,12 @@ export function SRLadderPanel({
   const hasRightSection = Boolean(rowKey || showLevelCheck || copyViewControl);
 
   return (
-    <div className="flex w-full min-w-0 items-start gap-3.5 overflow-x-auto border-b border-border/50 pb-3">
+    <div className="flex w-full min-w-0 items-start gap-2 overflow-x-auto border-b border-border/50 pb-3">
       {/* 1. Previous Day S/R */}
       <SRLadder cpr={r.prevCPR} currentPrice={r.prevClose} label="PDay S/R" badge={prevPatternBadge} pricePlain />
 
       {/* 2. CPR Level Chart */}
-      <div className="w-[480px] shrink-0">
+      <div className="w-[452px] shrink-0">
         <CPRLevelChart prevCPR={r.prevCPR} todayCPR={r.todayCPR} pivotPatternBadge={pivotPatternBadge} />
       </div>
 
@@ -654,7 +658,7 @@ export function SRLadderPanel({
 
       {/* 4. Top Right Section: Actions (Attach Chart, Create/Copy View) & Level Check */}
       {hasRightSection && (
-        <div className="flex min-w-[260px] max-w-[320px] shrink-0 flex-col gap-2.5 border-l border-border/40 pl-3">
+        <div className="flex min-w-[260px] max-w-[320px] shrink-0 flex-col gap-2.5 border-l border-border/40 pl-2">
           {/* Action buttons toolbar: Attach chart & Create/Copy View */}
           <div className="flex flex-wrap items-center gap-1.5">
             {rowKey && <ChartLinkControl viewKey={viewKey ?? ""} rowKey={rowKey} />}
