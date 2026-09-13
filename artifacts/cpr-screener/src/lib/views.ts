@@ -148,10 +148,18 @@ export function childrenOf(parentKey: string | undefined): ViewDef[] {
 // ---------------------------------------------------------------------
 
 const CATEGORY_VIEWS: ViewDef[] = [
-  { key: "levelsabove", label: "LEVEL ABOVE", kind: "category", condition: (r) => r.LevelsAbove },
-  { key: "levelsbelow", label: "LEVEL BELOW", kind: "category", condition: (r) => r.LevelsBelow },
-  { key: "compressed", label: "COMPRESSED", kind: "category", condition: (r) => r.compressed },
-  { key: "expanded", label: "EXPANDED", kind: "category", condition: (r) => r.expanded },
+  { key: "levelsabove", label: "LEVEL ABOVE", kind: "category", condition: (r) => r.LevelsAbove,
+      order: 2
+},
+  { key: "levelsbelow", label: "LEVEL BELOW", kind: "category", condition: (r) => r.LevelsBelow,
+      order: 3
+},
+  { key: "compressed", label: "COMPRESSED", kind: "category", condition: (r) => r.compressed,
+      order: 4
+},
+  { key: "expanded", label: "EXPANDED", kind: "category", condition: (r) => r.expanded,
+      order: 5
+},
 ];
 
 // ---------------------------------------------------------------------
@@ -341,6 +349,116 @@ function makeCompoundView(c: CompoundCombo): ViewDef {
 
 const COMPOUND_VIEWS: ViewDef[] = COMPOUND_COMBOS.map(makeCompoundView);
 
+// Real sibling order for the 97 compound combos, extracted from
+// backtest.ts's actual BACKTEST_CATEGORIES source (each combo's index
+// within its parent SSRR-letter's patterns array) — COMPOUND_VIEWS is
+// built via .map(), not authored as individual object literals, so it
+// can't carry order the way the hand-authored batches below do; patched
+// on after construction instead.
+const COMPOUND_ORDER: Record<string, number> = {
+  "A-B-C-C": 2,
+  "A-B-C-LB": 4,
+  "A-B-E-E": 5,
+  "A-B-E-LB": 6,
+  "A-B-RA-C": 7,
+  "A-B-RA-E": 8,
+  "A-B-RA-LB": 9,
+  "A-A-AA-AA": 10,
+  "A-A-AA-OA": 11,
+  "A-A-OA-AA": 12,
+  "A-A-OA-OA": 13,
+  "A-E-AA-C": 20,
+  "A-E-OA-C": 21,
+  "A-E-AA-E": 22,
+  "A-E-OA-E": 23,
+  "A-E-AA-LB": 24,
+  "A-E-OA-LB": 25,
+  "A-C-C-AA": 14,
+  "A-C-C-OA": 15,
+  "A-C-E-AA": 16,
+  "A-C-E-OA": 17,
+  "A-C-RA-AA": 18,
+  "A-C-RA-OA": 19,
+  "B-A-C-C": 2,
+  "B-A-C-SB": 3,
+  "B-A-E-E": 4,
+  "B-A-E-SB": 5,
+  "B-A-HA-C": 6,
+  "B-A-HA-E": 7,
+  "B-A-HA-SB": 8,
+  "B-A-OB-SB": 9,
+  "B-A-OB-E": 10,
+  "B-A-OB-C": 11,
+  "B-A-HA-OB": 12,
+  "B-A-HA-OA": 13,
+  "B-A-E-OA": 14,
+  "B-A-E-OB": 15,
+  "B-A-C-OA": 16,
+  "B-A-OA-E": 17,
+  "B-B-BB-BB": 0,
+  "B-B-BB-OB": 18,
+  "B-B-OB-BB": 19,
+  "B-B-OB-OB": 20,
+  "B-B-C-BB": 21,
+  "B-B-C-OB": 22,
+  "B-B-BB-C": 23,
+  "B-C-BB-C": 24,
+  "B-C-OB-C": 25,
+  "B-C-BB-E": 26,
+  "B-C-OB-E": 27,
+  "B-C-BB-SB": 28,
+  "B-C-BB-OB": 29,
+  "B-C-BB-OA": 30,
+  "B-C-OB-OB": 31,
+  "B-E-C-BB": 32,
+  "B-E-C-OB": 33,
+  "B-E-E-BB": 34,
+  "B-E-E-OB": 35,
+  "B-E-OB-BB": 36,
+  "B-E-OB-OB": 37,
+  "B-E-HA-BB": 38,
+  "B-E-OA-BB": 39,
+  "C-A-C-AA": 4,
+  "C-A-HA-AA": 5,
+  "C-A-E-AA": 6,
+  "C-A-OA-AA": 7,
+  "C-A-OB-AA": 8,
+  "C-A-E-OA": 9,
+  "C-A-C-OA": 10,
+  "C-A-OA-OA": 11,
+  "C-B-BB-LB": 12,
+  "C-B-OB-LB": 13,
+  "C-B-BB-C": 14,
+  "C-B-OB-C": 15,
+  "C-B-BB-E": 16,
+  "C-B-OB-E": 17,
+  "C-C-BB-AA": 18,
+  "C-C-OB-AA": 19,
+  "C-C-BB-OA": 21,
+  "C-C-OB-OA": 22,
+  "C-C-C-AA": 20,
+  "E-A-AA-OB": 0,
+  "E-A-OA-OB": 1,
+  "E-A-AA-SB": 2,
+  "E-A-AA-C": 3,
+  "E-A-OA-C": 4,
+  "E-A-AA-E": 5,
+  "E-A-OA-E": 6,
+  "E-B-RA-BB": 7,
+  "E-B-C-BB": 8,
+  "E-B-E-BB": 9,
+  "E-B-C-OB": 10,
+  "E-B-E-OB": 11,
+  "E-E-AA-BB": 12,
+  "E-E-OA-BB": 13,
+  "E-E-AA-OB": 14,
+  "E-E-OA-OB": 15
+};
+for (const v of COMPOUND_VIEWS) {
+  if (v.key in COMPOUND_ORDER) v.order = COMPOUND_ORDER[v.key];
+}
+
+
 VIEWS.push(...CATEGORY_VIEWS, ...COMPOUND_VIEWS);
 
 /**
@@ -397,22 +515,42 @@ function computePrevPattern(today: CPRLevels, prev: CPRLevels | undefined | null
 
 const LEVELSABOVE_VIEWS: ViewDef[] = [
   // --- direct Pattern children of "levelsabove" ---
-  { key: "EU2L4", label: "EU2L4", parentKey: "levelsabove", kind: "pattern", condition: (r) => r.EU2L4 },
-  { key: "U4L3", label: "U4L3", parentKey: "levelsabove", kind: "pattern", condition: (r) => r.U4L3 },
+  { key: "EU2L4", label: "EU2L4", parentKey: "levelsabove", kind: "pattern", condition: (r) => r.EU2L4,
+      order: 0
+},
+  { key: "U4L3", label: "U4L3", parentKey: "levelsabove", kind: "pattern", condition: (r) => r.U4L3,
+      order: 1
+},
 
   // --- A-B-C-C's one nested child ---
-  { key: "A-B-C-C-EU4L4", label: "A-B-C-C-EU4L4", parentKey: "A-B-C-C", kind: "pattern", condition: (r) => r.EU4L4 },
+  { key: "A-B-C-C-EU4L4", label: "A-B-C-C-EU4L4", parentKey: "A-B-C-C", kind: "pattern", condition: (r) => r.EU4L4,
+      order: 3
+},
 
   // --- A-A-AA-AA's six nested Subpattern children ---
-  { key: "A-A-AA-AA-U3L3", label: "A-A-AA-AA-U3L3", parentKey: "A-A-AA-AA", kind: "pattern", condition: (r) => r.U3L3 },
-  { key: "A-A-AA-AA-U4L3", label: "A-A-AA-AA-U4L3", parentKey: "A-A-AA-AA", kind: "pattern", condition: (r) => r.U4L3 },
-  { key: "A-A-AA-AA-EU2L4", label: "A-A-AA-AA-EU2L4", parentKey: "A-A-AA-AA", kind: "pattern", condition: (r) => r.EU2L4 },
-  { key: "A-A-AA-AA-U2L4", label: "A-A-AA-AA-U2L4", parentKey: "A-A-AA-AA", kind: "pattern", condition: (r) => r.U2L4 },
-  { key: "A-A-AA-AA-U3L4", label: "A-A-AA-AA-U3L4", parentKey: "A-A-AA-AA", kind: "pattern", condition: (r) => r.U3L4 },
-  { key: "A-A-AA-AA-EU3L4", label: "A-A-AA-AA-EU3L4", parentKey: "A-A-AA-AA", kind: "pattern", condition: (r) => r.EU3L4 },
+  { key: "A-A-AA-AA-U3L3", label: "A-A-AA-AA-U3L3", parentKey: "A-A-AA-AA", kind: "pattern", condition: (r) => r.U3L3,
+      order: 1
+},
+  { key: "A-A-AA-AA-U4L3", label: "A-A-AA-AA-U4L3", parentKey: "A-A-AA-AA", kind: "pattern", condition: (r) => r.U4L3,
+      order: 2
+},
+  { key: "A-A-AA-AA-EU2L4", label: "A-A-AA-AA-EU2L4", parentKey: "A-A-AA-AA", kind: "pattern", condition: (r) => r.EU2L4,
+      order: 3
+},
+  { key: "A-A-AA-AA-U2L4", label: "A-A-AA-AA-U2L4", parentKey: "A-A-AA-AA", kind: "pattern", condition: (r) => r.U2L4,
+      order: 4
+},
+  { key: "A-A-AA-AA-U3L4", label: "A-A-AA-AA-U3L4", parentKey: "A-A-AA-AA", kind: "pattern", condition: (r) => r.U3L4,
+      order: 5
+},
+  { key: "A-A-AA-AA-EU3L4", label: "A-A-AA-AA-EU3L4", parentKey: "A-A-AA-AA", kind: "pattern", condition: (r) => r.EU3L4,
+      order: 6
+},
 
   // --- A-A-AA-OA's one nested child ---
-  { key: "A-A-AA-OA-U3L4", label: "A-A-AA-OA-U3L4", parentKey: "A-A-AA-OA", kind: "pattern", condition: (r) => r.U3L4 },
+  { key: "A-A-AA-OA-U3L4", label: "A-A-AA-OA-U3L4", parentKey: "A-A-AA-OA", kind: "pattern", condition: (r) => r.U3L4,
+      order: 0
+},
 
   // --- leaf Views (self-contained, target-graded) ---
   {
@@ -434,7 +572,8 @@ const LEVELSABOVE_VIEWS: ViewDef[] = [
     getEntry: (r) => r.todayCPR.tc,
     stoplossLabel: "S1 (today's S1)",
     getStoploss: (r) => r.todayCPR.s1,
-  },
+      order: 0
+},
   {
     key: "7PM:MoMi-<L4:2AM",
     label: "7PM:MoMi-<L4:2AM",
@@ -454,7 +593,8 @@ const LEVELSABOVE_VIEWS: ViewDef[] = [
     getEntry: (r) => r.todayCPR.bc,
     stoplossLabel: "R1 (today's R1)",
     getStoploss: (r) => r.todayCPR.r1,
-  },
+      order: 1
+},
   {
     key: "6PM:APHS1A-FAU4:9PM",
     label: "6PM:APHS1A-FAU4:9PM",
@@ -473,7 +613,8 @@ const LEVELSABOVE_VIEWS: ViewDef[] = [
     getEntry: (r) => r.todayCPR.tc,
     stoplossLabel: "S1 (today's S1)",
     getStoploss: (r) => r.todayCPR.s1,
-  },
+      order: 2
+},
   {
     key: "9AM:pPALPApH-FAU4:2PM",
     label: "9AM:pPALPApH-FAU4:2PM",
@@ -487,7 +628,8 @@ const LEVELSABOVE_VIEWS: ViewDef[] = [
     getEntry: (r) => r.todayCPR.tc,
     stoplossLabel: "S1 (today's S1)",
     getStoploss: (r) => r.todayCPR.s1,
-  },
+      order: 0
+},
   {
     key: "8AM:pPDHA-SRA-U4+2:2AM",
     label: "8AM:pPDHA-SRA-U4+2:2AM",
@@ -506,7 +648,8 @@ const LEVELSABOVE_VIEWS: ViewDef[] = [
     getEntry: (r) => r.todayCPR.tc,
     stoplossLabel: "S1 (today's S1)",
     getStoploss: (r) => r.todayCPR.s1,
-  },
+      order: 0
+},
   {
     key: "A-A-AA-AA-S1pPDH-U3",
     label: "A-A-AA-AA-S1pPDH-U3",
@@ -520,7 +663,8 @@ const LEVELSABOVE_VIEWS: ViewDef[] = [
     getEntry: (r) => r.todayCPR.tc,
     stoplossLabel: "S1 (today's S1)",
     getStoploss: (r) => r.todayCPR.s1,
-  },
+      order: 0
+},
   {
     key: "A-A-AA-AA-EU2L4-ApR2",
     label: "A-A-AA-AA-EU2L4-ApR2",
@@ -537,7 +681,8 @@ const LEVELSABOVE_VIEWS: ViewDef[] = [
     getEntry: (r) => r.todayCPR.tc,
     stoplossLabel: "S1 (today's S1)",
     getStoploss: (r) => r.todayCPR.s1,
-  },
+      order: 0
+},
   {
     key: "A-A-AA-AA-U3L4-pGapB",
     label: "A-A-AA-AA-U3L4-pGapB",
@@ -572,7 +717,8 @@ const LEVELSABOVE_VIEWS: ViewDef[] = [
       { key: "r3", subject: "previous", bandKeys: ["r1", "r2"] },
       { key: "r4", subject: "previous", bandKeys: ["r2", "r3"] },
     ],
-  },
+      order: 0
+},
   {
     key: "A-A-AA-AA-EU3L4-GapB",
     label: "A-A-AA-AA-EU3L4-GapB",
@@ -586,7 +732,8 @@ const LEVELSABOVE_VIEWS: ViewDef[] = [
     getEntry: (r) => r.todayCPR.tc,
     stoplossLabel: "S1 (today's S1)",
     getStoploss: (r) => r.todayCPR.s1,
-  },
+      order: 0
+},
   {
     key: "A-A-AA-OA-U3L4-RRHHGap:R4",
     label: "A-A-AA-OA-U3L4-RRHHGap:R4",
@@ -620,7 +767,8 @@ const LEVELSABOVE_VIEWS: ViewDef[] = [
       { key: "s3", subject: "today", bandKeys: ["s2", "s3"] },
       { key: "s4", subject: "today", bandKeys: ["s3", "s4"] },
     ],
-  },
+      order: 0
+},
   {
     key: "A-A-AA-AA-U3L3-SSLLGap:R4",
     label: "A-A-AA-AA-U3L3-SSLLGap:R4",
@@ -654,7 +802,8 @@ const LEVELSABOVE_VIEWS: ViewDef[] = [
       { key: "s3", subject: "today", bandKeys: ["prevLow", "s2"] },
       { key: "s4", subject: "today", bandKeys: ["s2", "s3"] },
     ],
-  },
+      order: 0
+},
 ];
 
 const LEVELSBELOW_VIEWS: ViewDef[] = [
@@ -675,7 +824,8 @@ const LEVELSBELOW_VIEWS: ViewDef[] = [
       r.prevCPR.HLSwitch === "HL-B" &&
       r.todayCPR.HLSwitch === "HL-A" &&
       r.hlGapWinner === "today",
-  },
+      order: 1
+},
 
   // --- B-B-BB-BB's eleven nested Pattern children ---
   {
@@ -684,41 +834,58 @@ const LEVELSBELOW_VIEWS: ViewDef[] = [
     direction: "bearish", targetLabel: "L2 (today's S2)", getTarget: (r) => r.todayCPR.s2,
     entryLabel: "BC (today's BC)", getEntry: (r) => r.todayCPR.bc,
     stoplossLabel: "R1 (today's R1)", getStoploss: (r) => r.todayCPR.r1,
-  },
-  { key: "B-B-BB-BB-EL4U4", label: "B-B-BB-BB-EL4U4", parentKey: "B-B-BB-BB", kind: "pattern", condition: (r) => r.EL4U4 },
+      order: 0
+},
+  { key: "B-B-BB-BB-EL4U4", label: "B-B-BB-BB-EL4U4", parentKey: "B-B-BB-BB", kind: "pattern", condition: (r) => r.EL4U4,
+      order: 1
+},
   {
     key: "B-B-BB-BB-L3U4", label: "B-B-BB-BB-L3U4", parentKey: "B-B-BB-BB", kind: "pattern",
     condition: (r) => r.L3U4,
     direction: "bearish", targetLabel: "L2 (today's S2)", getTarget: (r) => r.todayCPR.s2,
     entryLabel: "BC (today's BC)", getEntry: (r) => r.todayCPR.bc,
     stoplossLabel: "R1 (today's R1)", getStoploss: (r) => r.todayCPR.r1,
-  },
+      order: 2
+},
   {
     key: "B-B-BB-BB-L2U4", label: "B-B-BB-BB-L2U4", parentKey: "B-B-BB-BB", kind: "pattern",
     condition: (r) => r.L2U4,
     direction: "bearish", targetLabel: "L2 (today's S2)", getTarget: (r) => r.todayCPR.s2,
     entryLabel: "BC (today's BC)", getEntry: (r) => r.todayCPR.bc,
     stoplossLabel: "R1 (today's R1)", getStoploss: (r) => r.todayCPR.r1,
-  },
+      order: 3
+},
   {
     key: "B-B-BB-BB-L4U3", label: "B-B-BB-BB-L4U3", parentKey: "B-B-BB-BB", kind: "pattern",
     condition: (r) => r.L4U3,
     direction: "bearish", targetLabel: "L2 (today's S2)", getTarget: (r) => r.todayCPR.s2,
     entryLabel: "BC (today's BC)", getEntry: (r) => r.todayCPR.bc,
     stoplossLabel: "R1 (today's R1)", getStoploss: (r) => r.todayCPR.r1,
-  },
+      order: 4
+},
   {
     key: "B-B-BB-BB-L3U3", label: "B-B-BB-BB-L3U3", parentKey: "B-B-BB-BB", kind: "pattern",
     condition: (r) => r.L3U3,
     direction: "bearish", targetLabel: "L2 (today's S2)", getTarget: (r) => r.todayCPR.s2,
     entryLabel: "BC (today's BC)", getEntry: (r) => r.todayCPR.bc,
     stoplossLabel: "R1 (today's R1)", getStoploss: (r) => r.todayCPR.r1,
-  },
-  { key: "B-B-BB-BB-CL4U2", label: "B-B-BB-BB-CL4U2", parentKey: "B-B-BB-BB", kind: "pattern", condition: (r) => r.CL4U2 },
-  { key: "B-B-BB-BB-EL3U4", label: "B-B-BB-BB-EL3U4", parentKey: "B-B-BB-BB", kind: "pattern", condition: (r) => r.EL3U4 },
-  { key: "B-B-BB-BB-EL2U3", label: "B-B-BB-BB-EL2U3", parentKey: "B-B-BB-BB", kind: "pattern", condition: (r) => r.EL2U3 },
-  { key: "B-B-BB-BB-EL2U4", label: "B-B-BB-BB-EL2U4", parentKey: "B-B-BB-BB", kind: "pattern", condition: (r) => r.EL2U4 },
-  { key: "B-B-BB-BB-EL1U3", label: "B-B-BB-BB-EL1U3", parentKey: "B-B-BB-BB", kind: "pattern", condition: (r) => r.EL1U3 },
+      order: 5
+},
+  { key: "B-B-BB-BB-CL4U2", label: "B-B-BB-BB-CL4U2", parentKey: "B-B-BB-BB", kind: "pattern", condition: (r) => r.CL4U2,
+      order: 6
+},
+  { key: "B-B-BB-BB-EL3U4", label: "B-B-BB-BB-EL3U4", parentKey: "B-B-BB-BB", kind: "pattern", condition: (r) => r.EL3U4,
+      order: 7
+},
+  { key: "B-B-BB-BB-EL2U3", label: "B-B-BB-BB-EL2U3", parentKey: "B-B-BB-BB", kind: "pattern", condition: (r) => r.EL2U3,
+      order: 8
+},
+  { key: "B-B-BB-BB-EL2U4", label: "B-B-BB-BB-EL2U4", parentKey: "B-B-BB-BB", kind: "pattern", condition: (r) => r.EL2U4,
+      order: 9
+},
+  { key: "B-B-BB-BB-EL1U3", label: "B-B-BB-BB-EL1U3", parentKey: "B-B-BB-BB", kind: "pattern", condition: (r) => r.EL1U3,
+      order: 10
+},
 
   // --- leaf Views ---
   {
@@ -736,7 +903,8 @@ const LEVELSBELOW_VIEWS: ViewDef[] = [
     getEntry: (r) => r.todayCPR.tc,
     stoplossLabel: "S1 (today's S1)",
     getStoploss: (r) => r.todayCPR.s1,
-  },
+      order: 0
+},
   {
     key: "3P:HA-pABOVER1:S2-6P",
     label: "3P:HA-pABOVER1:S2-6P",
@@ -750,7 +918,8 @@ const LEVELSBELOW_VIEWS: ViewDef[] = [
     getEntry: (r) => r.todayCPR.bc,
     stoplossLabel: "R1 (today's R1)",
     getStoploss: (r) => r.todayCPR.r1,
-  },
+      order: 1
+},
   {
     key: "2P:HA-HABOVEpR1:R4-4P",
     label: "2P:HA-HABOVEpR1:R4-4P",
@@ -768,7 +937,8 @@ const LEVELSBELOW_VIEWS: ViewDef[] = [
     getEntry: (r) => r.todayCPR.tc,
     stoplossLabel: "S1 (today's S1)",
     getStoploss: (r) => r.todayCPR.s1,
-  },
+      order: 2
+},
   {
     // FINDING (not fixed here — flagged in chat): the dropdown/legend nest
     // this View under "B-B-BB-BB" → "B-B-BB-BB-L3U3" (implying it also
@@ -795,7 +965,8 @@ const LEVELSBELOW_VIEWS: ViewDef[] = [
     getEntry: (r) => r.todayCPR.tc,
     stoplossLabel: "S1 (today's S1)",
     getStoploss: (r) => r.todayCPR.s1,
-  },
+      order: 0
+},
   {
     // FINDING (not fixed here — flagged in chat): same class of mismatch
     // as "PDH>pTC-U4:5AM" above — nested under "B-B-BB-BB-L4U3" in the
@@ -817,7 +988,8 @@ const LEVELSBELOW_VIEWS: ViewDef[] = [
     getEntry: (r) => r.todayCPR.tc,
     stoplossLabel: "S1 (today's S1)",
     getStoploss: (r) => r.todayCPR.s1,
-  },
+      order: 0
+},
   {
     key: "B-B-BB-BB-EL4U4-SSLLGap:S4",
     label: "B-B-BB-BB-EL4U4-SSLLGap:S4",
@@ -836,7 +1008,8 @@ const LEVELSBELOW_VIEWS: ViewDef[] = [
     getEntry: (r) => r.todayCPR.bc,
     stoplossLabel: "R1 (today's R1)",
     getStoploss: (r) => r.todayCPR.r1,
-  },
+      order: 0
+},
   {
     key: "B-B-BB-BB-L4U4-pLAP:R4",
     label: "B-B-BB-BB-L4U4-pLAP:R4",
@@ -856,7 +1029,8 @@ const LEVELSBELOW_VIEWS: ViewDef[] = [
     getEntry: (r) => r.todayCPR.tc,
     stoplossLabel: "S1 (today's S1)",
     getStoploss: (r) => r.todayCPR.s1,
-  },
+      order: 1
+},
   {
     key: "B-B-BB-BB-L4U4-pLTC-U2",
     label: "B-B-BB-BB-L4U4-pLTC-U2",
@@ -873,7 +1047,8 @@ const LEVELSBELOW_VIEWS: ViewDef[] = [
     getEntry: (r) => r.todayCPR.tc,
     stoplossLabel: "S1 (today's S1)",
     getStoploss: (r) => r.todayCPR.s1,
-  },
+      order: 0
+},
 ];
 
 VIEWS.push(...LEVELSABOVE_VIEWS, ...LEVELSBELOW_VIEWS);
@@ -931,7 +1106,8 @@ const COMPRESSED_VIEWS: ViewDef[] = [
     getEntry: (r) => r.todayCPR.bc,
     stoplossLabel: "R1 (today's R1)",
     getStoploss: (r) => r.todayCPR.r1,
-  },
+      order: 0
+},
   {
     key: "9AM:RHLB-RRHH:5AM",
     label: "9AM:RHLB-RRHH:5AM",
@@ -949,7 +1125,8 @@ const COMPRESSED_VIEWS: ViewDef[] = [
     getEntry: (r) => r.todayCPR.bc,
     stoplossLabel: "R1 (today's R1)",
     getStoploss: (r) => r.todayCPR.r1,
-  },
+      order: 1
+},
 
   // --- "RRHH-BB:SSLL-AA:SSLLGap" Pattern (arrow), itself target-graded,
   // nesting the "6A:HLC-SSLL:R4-6P" View ---
@@ -971,7 +1148,8 @@ const COMPRESSED_VIEWS: ViewDef[] = [
     getEntry: (r) => r.todayCPR.tc,
     stoplossLabel: "S1 (today's S1)",
     getStoploss: (r) => r.todayCPR.s1,
-  },
+      order: 2
+},
   {
     key: "6A:HLC-SSLL:R4-6P",
     label: "6A:HLC-SSLL:R4-6P",
@@ -988,7 +1166,8 @@ const COMPRESSED_VIEWS: ViewDef[] = [
     getEntry: (r) => r.todayCPR.tc,
     stoplossLabel: "S1 (today's S1)",
     getStoploss: (r) => r.todayCPR.s1,
-  },
+      order: 0
+},
 
   // --- "RHLB-RRHHpGap" Pattern (arrow) — NOT itself target-graded (no
   // BACKTEST_TARGETS entry of its own), nesting the target-graded
@@ -1008,7 +1187,8 @@ const COMPRESSED_VIEWS: ViewDef[] = [
       r.prevCPR.HLSwitch === "HL-A" &&
       r.hlGapWinner === "prev" &&
       r.todayCPR.HLSwitch === "HL-A",
-  },
+      order: 3
+},
   {
     key: "8A:pLAPpPAH:R4-5P",
     label: "8A:pLAPpPAH:R4-5P",
@@ -1026,7 +1206,8 @@ const COMPRESSED_VIEWS: ViewDef[] = [
     getEntry: (r) => r.todayCPR.tc,
     stoplossLabel: "S1 (today's S1)",
     getStoploss: (r) => r.todayCPR.s1,
-  },
+      order: 0
+},
 
   // --- "C-B-BB-LB-CL3U2" Pattern, nested under the existing "C-B-BB-LB"
   // compound Pattern (already in COMPOUND_VIEWS) — itself target-graded,
@@ -1044,7 +1225,8 @@ const COMPRESSED_VIEWS: ViewDef[] = [
     getEntry: (r) => r.todayCPR.tc,
     stoplossLabel: "S1 (today's S1)",
     getStoploss: (r) => r.todayCPR.s1,
-  },
+      order: 0
+},
   {
     key: "C-B-BB-LB-CL3U2-RRHHGap:R4",
     label: "C-B-BB-LB-CL3U2-RRHHGap:R4",
@@ -1064,26 +1246,55 @@ const COMPRESSED_VIEWS: ViewDef[] = [
     getEntry: (r) => r.todayCPR.tc,
     stoplossLabel: "S1 (today's S1)",
     getStoploss: (r) => r.todayCPR.s1,
-  },
+      order: 0
+},
 
   // --- "C-C-BB-AA"'s 14 nested Subpattern children (raw flag AND'd onto
   // the parent compound condition via parentKey) — none target-graded
   // yet (no BACKTEST_TARGETS entries for these 14), so each is currently
   // a symbol-list-only scan, same as any freshly-added Pattern. ---
-  { key: "C-C-BB-AA-CU4L4", label: "C-C-BB-AA-CU4L4", parentKey: "C-C-BB-AA", kind: "pattern", condition: (r) => r.CU4L4 },
-  { key: "C-C-BB-AA-CL4U4", label: "C-C-BB-AA-CL4U4", parentKey: "C-C-BB-AA", kind: "pattern", condition: (r) => r.CL4U4 },
-  { key: "C-C-BB-AA-CU4L3", label: "C-C-BB-AA-CU4L3", parentKey: "C-C-BB-AA", kind: "pattern", condition: (r) => r.CU4L3 },
-  { key: "C-C-BB-AA-CL4U3", label: "C-C-BB-AA-CL4U3", parentKey: "C-C-BB-AA", kind: "pattern", condition: (r) => r.CL4U3 },
-  { key: "C-C-BB-AA-CU3L3", label: "C-C-BB-AA-CU3L3", parentKey: "C-C-BB-AA", kind: "pattern", condition: (r) => r.CU3L3 },
-  { key: "C-C-BB-AA-CL3U3", label: "C-C-BB-AA-CL3U3", parentKey: "C-C-BB-AA", kind: "pattern", condition: (r) => r.CL3U3 },
-  { key: "C-C-BB-AA-CU3L2", label: "C-C-BB-AA-CU3L2", parentKey: "C-C-BB-AA", kind: "pattern", condition: (r) => r.CU3L2 },
-  { key: "C-C-BB-AA-CL3U2", label: "C-C-BB-AA-CL3U2", parentKey: "C-C-BB-AA", kind: "pattern", condition: (r) => r.CL3U2 },
-  { key: "C-C-BB-AA-CU2L2", label: "C-C-BB-AA-CU2L2", parentKey: "C-C-BB-AA", kind: "pattern", condition: (r) => r.CU2L2 },
-  { key: "C-C-BB-AA-CL2U2", label: "C-C-BB-AA-CL2U2", parentKey: "C-C-BB-AA", kind: "pattern", condition: (r) => r.CL2U2 },
-  { key: "C-C-BB-AA-CU2L1", label: "C-C-BB-AA-CU2L1", parentKey: "C-C-BB-AA", kind: "pattern", condition: (r) => r.CU2L1 },
-  { key: "C-C-BB-AA-CL2U1", label: "C-C-BB-AA-CL2U1", parentKey: "C-C-BB-AA", kind: "pattern", condition: (r) => r.CL2U1 },
-  { key: "C-C-BB-AA-CU1L1", label: "C-C-BB-AA-CU1L1", parentKey: "C-C-BB-AA", kind: "pattern", condition: (r) => r.CU1L1 },
-  { key: "C-C-BB-AA-CL1U1", label: "C-C-BB-AA-CL1U1", parentKey: "C-C-BB-AA", kind: "pattern", condition: (r) => r.CL1U1 },
+  { key: "C-C-BB-AA-CU4L4", label: "C-C-BB-AA-CU4L4", parentKey: "C-C-BB-AA", kind: "pattern", condition: (r) => r.CU4L4,
+      order: 0
+},
+  { key: "C-C-BB-AA-CL4U4", label: "C-C-BB-AA-CL4U4", parentKey: "C-C-BB-AA", kind: "pattern", condition: (r) => r.CL4U4,
+      order: 1
+},
+  { key: "C-C-BB-AA-CU4L3", label: "C-C-BB-AA-CU4L3", parentKey: "C-C-BB-AA", kind: "pattern", condition: (r) => r.CU4L3,
+      order: 2
+},
+  { key: "C-C-BB-AA-CL4U3", label: "C-C-BB-AA-CL4U3", parentKey: "C-C-BB-AA", kind: "pattern", condition: (r) => r.CL4U3,
+      order: 3
+},
+  { key: "C-C-BB-AA-CU3L3", label: "C-C-BB-AA-CU3L3", parentKey: "C-C-BB-AA", kind: "pattern", condition: (r) => r.CU3L3,
+      order: 4
+},
+  { key: "C-C-BB-AA-CL3U3", label: "C-C-BB-AA-CL3U3", parentKey: "C-C-BB-AA", kind: "pattern", condition: (r) => r.CL3U3,
+      order: 5
+},
+  { key: "C-C-BB-AA-CU3L2", label: "C-C-BB-AA-CU3L2", parentKey: "C-C-BB-AA", kind: "pattern", condition: (r) => r.CU3L2,
+      order: 6
+},
+  { key: "C-C-BB-AA-CL3U2", label: "C-C-BB-AA-CL3U2", parentKey: "C-C-BB-AA", kind: "pattern", condition: (r) => r.CL3U2,
+      order: 7
+},
+  { key: "C-C-BB-AA-CU2L2", label: "C-C-BB-AA-CU2L2", parentKey: "C-C-BB-AA", kind: "pattern", condition: (r) => r.CU2L2,
+      order: 8
+},
+  { key: "C-C-BB-AA-CL2U2", label: "C-C-BB-AA-CL2U2", parentKey: "C-C-BB-AA", kind: "pattern", condition: (r) => r.CL2U2,
+      order: 9
+},
+  { key: "C-C-BB-AA-CU2L1", label: "C-C-BB-AA-CU2L1", parentKey: "C-C-BB-AA", kind: "pattern", condition: (r) => r.CU2L1,
+      order: 10
+},
+  { key: "C-C-BB-AA-CL2U1", label: "C-C-BB-AA-CL2U1", parentKey: "C-C-BB-AA", kind: "pattern", condition: (r) => r.CL2U1,
+      order: 11
+},
+  { key: "C-C-BB-AA-CU1L1", label: "C-C-BB-AA-CU1L1", parentKey: "C-C-BB-AA", kind: "pattern", condition: (r) => r.CU1L1,
+      order: 12
+},
+  { key: "C-C-BB-AA-CL1U1", label: "C-C-BB-AA-CL1U1", parentKey: "C-C-BB-AA", kind: "pattern", condition: (r) => r.CL1U1,
+      order: 13
+},
 ];
 
 const EXPANDED_VIEWS: ViewDef[] = [
@@ -1105,7 +1316,8 @@ const EXPANDED_VIEWS: ViewDef[] = [
     getEntry: (r) => r.todayCPR.tc,
     stoplossLabel: "S1 (today's S1)",
     getStoploss: (r) => r.todayCPR.s1,
-  },
+      order: 0
+},
 
   // --- "E-E-AA-BB"'s five nested Subpattern children — all target-graded
   // bullish against today's own R2 (U2), per user request. ---
@@ -1115,35 +1327,40 @@ const EXPANDED_VIEWS: ViewDef[] = [
     direction: "bullish", targetLabel: "U2 (today's R2)", getTarget: (r) => r.todayCPR.r2,
     entryLabel: "TC (today's TC)", getEntry: (r) => r.todayCPR.tc,
     stoplossLabel: "S1 (today's S1)", getStoploss: (r) => r.todayCPR.s1,
-  },
+      order: 0
+},
   {
     key: "E-E-AA-BB-EU1L2", label: "E-E-AA-BB-EU1L2", parentKey: "E-E-AA-BB", kind: "pattern",
     condition: (r) => r.EU1L2,
     direction: "bullish", targetLabel: "U2 (today's R2)", getTarget: (r) => r.todayCPR.r2,
     entryLabel: "TC (today's TC)", getEntry: (r) => r.todayCPR.tc,
     stoplossLabel: "S1 (today's S1)", getStoploss: (r) => r.todayCPR.s1,
-  },
+      order: 1
+},
   {
     key: "E-E-AA-BB-EU2L2", label: "E-E-AA-BB-EU2L2", parentKey: "E-E-AA-BB", kind: "pattern",
     condition: (r) => r.EU2L2,
     direction: "bullish", targetLabel: "U2 (today's R2)", getTarget: (r) => r.todayCPR.r2,
     entryLabel: "TC (today's TC)", getEntry: (r) => r.todayCPR.tc,
     stoplossLabel: "S1 (today's S1)", getStoploss: (r) => r.todayCPR.s1,
-  },
+      order: 2
+},
   {
     key: "E-E-AA-BB-EU1L3", label: "E-E-AA-BB-EU1L3", parentKey: "E-E-AA-BB", kind: "pattern",
     condition: (r) => r.EU1L3,
     direction: "bullish", targetLabel: "U2 (today's R2)", getTarget: (r) => r.todayCPR.r2,
     entryLabel: "TC (today's TC)", getEntry: (r) => r.todayCPR.tc,
     stoplossLabel: "S1 (today's S1)", getStoploss: (r) => r.todayCPR.s1,
-  },
+      order: 3
+},
   {
     key: "E-E-AA-BB-EL1U1", label: "E-E-AA-BB-EL1U1", parentKey: "E-E-AA-BB", kind: "pattern",
     condition: (r) => r.EL1U1,
     direction: "bullish", targetLabel: "U2 (today's R2)", getTarget: (r) => r.todayCPR.r2,
     entryLabel: "TC (today's TC)", getEntry: (r) => r.todayCPR.tc,
     stoplossLabel: "S1 (today's S1)", getStoploss: (r) => r.todayCPR.s1,
-  },
+      order: 4
+},
 ];
 
 VIEWS.push(...COMPRESSED_VIEWS, ...EXPANDED_VIEWS);
@@ -1177,29 +1394,55 @@ VIEWS.push(...COMPRESSED_VIEWS, ...EXPANDED_VIEWS);
 
 const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
   // --- the two standalone top-level categories ---
-  { key: "R1AbovePR4", label: "ABOVE LEVEL4", kind: "category", condition: (r) => r.R1AbovePR4 },
-  { key: "S1BelowPS4", label: "BELOW LEVEL4", kind: "category", condition: (r) => r.S1BelowPS4 },
+  { key: "R1AbovePR4", label: "ABOVE LEVEL4", kind: "category", condition: (r) => r.R1AbovePR4,
+      order: 6
+},
+  { key: "S1BelowPS4", label: "BELOW LEVEL4", kind: "category", condition: (r) => r.S1BelowPS4,
+      order: 7
+},
 
   // --- direct Pattern children of "R1AbovePR4" ---
-  { key: "EU1L3", label: "EU1L3", parentKey: "R1AbovePR4", kind: "pattern", condition: (r) => r.EU1L3 },
-  { key: "EUTL3", label: "EUTL3", parentKey: "R1AbovePR4", kind: "pattern", condition: (r) => r.EUTL3 },
-  { key: "EL1L2", label: "EL1L2", parentKey: "R1AbovePR4", kind: "pattern", condition: (r) => r.EL1L2 },
-  { key: "EU1L4", label: "EU1L4", parentKey: "R1AbovePR4", kind: "pattern", condition: (r) => r.EU1L4 },
+  { key: "EU1L3", label: "EU1L3", parentKey: "R1AbovePR4", kind: "pattern", condition: (r) => r.EU1L3,
+      order: 0
+},
+  { key: "EUTL3", label: "EUTL3", parentKey: "R1AbovePR4", kind: "pattern", condition: (r) => r.EUTL3,
+      order: 1
+},
+  { key: "EL1L2", label: "EL1L2", parentKey: "R1AbovePR4", kind: "pattern", condition: (r) => r.EL1L2,
+      order: 3
+},
+  { key: "EU1L4", label: "EU1L4", parentKey: "R1AbovePR4", kind: "pattern", condition: (r) => r.EU1L4,
+      order: 4
+},
   // No target-graded sub-patterns nested under these three yet — each is
   // a symbol-list-only scan in the Backtest dropdown.
-  { key: "EUPL2", label: "EUPL2", parentKey: "R1AbovePR4", kind: "pattern", condition: (r) => r.EUPL2 },
-  { key: "EL2L1", label: "EL2L1", parentKey: "R1AbovePR4", kind: "pattern", condition: (r) => r.EL2L1 },
-  { key: "EUBL3", label: "EUBL3", parentKey: "R1AbovePR4", kind: "pattern", condition: (r) => r.EUBL3 },
-  { key: "EUBL2", label: "EUBL2", parentKey: "R1AbovePR4", kind: "pattern", condition: (r) => r.EUBL2 },
+  { key: "EUPL2", label: "EUPL2", parentKey: "R1AbovePR4", kind: "pattern", condition: (r) => r.EUPL2,
+      order: 5
+},
+  { key: "EL2L1", label: "EL2L1", parentKey: "R1AbovePR4", kind: "pattern", condition: (r) => r.EL2L1,
+      order: 6
+},
+  { key: "EUBL3", label: "EUBL3", parentKey: "R1AbovePR4", kind: "pattern", condition: (r) => r.EUBL3,
+      order: 7
+},
+  { key: "EUBL2", label: "EUBL2", parentKey: "R1AbovePR4", kind: "pattern", condition: (r) => r.EUBL2,
+      order: 8
+},
 
   // --- "A-A-AA-AA"'s two further children (nested under R1AbovePR4 in
   // backtest.ts's tree — see note above; "A-A-AA-AA" itself already
   // exists as a COMPOUND_VIEW with parentKey "levelsabove") ---
-  { key: "A-A-AA-AA-EUTL3", label: "A-A-AA-AA-EUTL3", parentKey: "A-A-AA-AA", kind: "pattern", condition: (r) => r.EUTL3 },
-  { key: "A-A-AA-AA-EUPL3", label: "A-A-AA-AA-EUPL3", parentKey: "A-A-AA-AA", kind: "pattern", condition: (r) => r.EUPL3 },
+  { key: "A-A-AA-AA-EUTL3", label: "A-A-AA-AA-EUTL3", parentKey: "A-A-AA-AA", kind: "pattern", condition: (r) => r.EUTL3,
+      order: 7
+},
+  { key: "A-A-AA-AA-EUPL3", label: "A-A-AA-AA-EUPL3", parentKey: "A-A-AA-AA", kind: "pattern", condition: (r) => r.EUPL3,
+      order: 8
+},
 
   // --- "EL1U4" Pattern nested under "S1BelowPS4" ---
-  { key: "EL1U4", label: "EL1U4", parentKey: "S1BelowPS4", kind: "pattern", condition: (r) => r.EL1U4 },
+  { key: "EL1U4", label: "EL1U4", parentKey: "S1BelowPS4", kind: "pattern", condition: (r) => r.EL1U4,
+      order: 0
+},
 
   // --- leaf Views ---
   {
@@ -1215,7 +1458,8 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
     getEntry: (r) => r.todayCPR.tc,
     stoplossLabel: "S1 (today's S1)",
     getStoploss: (r) => r.todayCPR.s1,
-  },
+      order: 0
+},
   {
     key: "TiMe-EUTL3-AU4:2PM",
     label: "TiMe-EUTL3-AU4:2PM",
@@ -1231,7 +1475,8 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
     getEntry: (r) => r.todayCPR.tc,
     stoplossLabel: "S1 (today's S1)",
     getStoploss: (r) => r.todayCPR.s1,
-  },
+      order: 0
+},
   {
     key: "SMg-exHiL2L1-U4:3AM",
     label: "SMg-exHiL2L1-U4:3AM",
@@ -1248,7 +1493,8 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
     getEntry: (r) => r.todayCPR.tc,
     stoplossLabel: "S1 (today's S1)",
     getStoploss: (r) => r.todayCPR.s1,
-  },
+      order: 0
+},
   {
     key: "6AM:MegMeg-L3:8PM",
     label: "6AM:MegMeg-L3:8PM",
@@ -1264,7 +1510,8 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
     getEntry: (r) => r.todayCPR.bc,
     stoplossLabel: "R1 (today's R1)",
     getStoploss: (r) => r.todayCPR.r1,
-  },
+      order: 0
+},
   {
     key: "9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A",
     label: "9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A",
@@ -1278,7 +1525,8 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
     getEntry: (r) => r.todayCPR.tc,
     stoplossLabel: "S1 (today's S1)",
     getStoploss: (r) => r.todayCPR.s1,
-  },
+      order: 0
+},
   {
     key: "6A:A-A-AA-AA-EUTL3-S1ATCpE-pL4:4A",
     label: "6A:A-A-AA-AA-EUTL3-S1ATCpE-pL4:4A",
@@ -1295,7 +1543,8 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
     getEntry: (r) => r.todayCPR.bc,
     stoplossLabel: "R1 (today's R1)",
     getStoploss: (r) => r.todayCPR.r1,
-  },
+      order: 1
+},
   {
     key: "A5-EUTL3-pA-S1ATC",
     label: "A5-EUTL3-pA-S1ATC",
@@ -1324,7 +1573,8 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
       { key: "s3", subject: "previous", bandKeys: ["s2", "s3"] },
       { key: "s4", subject: "previous", bandKeys: ["s2", "s3"] },
     ],
-  },
+      order: 2
+},
   {
     key: "A-A-AA-AA-EUPL3-RRHHGap:R4",
     label: "A-A-AA-AA-EUPL3-RRHHGap:R4",
@@ -1344,7 +1594,8 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
     getEntry: (r) => r.todayCPR.tc,
     stoplossLabel: "S1 (today's S1)",
     getStoploss: (r) => r.todayCPR.s1,
-  },
+      order: 0
+},
   {
     key: "ss-EL1U4-U4:10PM",
     label: "ss-EL1U4-U4:10PM",
@@ -1363,7 +1614,8 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
     getEntry: (r) => r.todayCPR.tc,
     stoplossLabel: "S1 (today's S1)",
     getStoploss: (r) => r.todayCPR.s1,
-  },
+      order: 0
+},
 ];
 
 VIEWS.push(...R1ABOVEPR4_S1BELOWPS4_VIEWS);
@@ -1407,7 +1659,8 @@ const COPY_VIEWS: ViewDef[] = [
       { key: "s3", subject: "today", bandKeys: ["prevLow", "s1"] },
       { key: "s4", subject: "today", bandKeys: ["s3", "s2"] },
     ],
-  },
+      order: 1
+},
   {
     key: "A-A-AA-AA-U3L3-SL-PAR1:R4",
     label: "A-A-AA-AA-U3L3-SL-PAR1:R4",
@@ -1421,7 +1674,8 @@ const COPY_VIEWS: ViewDef[] = [
     getEntry: (r) => r.todayCPR.tc,
     stoplossLabel: "S1 (today's S1)",
     getStoploss: (r) => r.todayCPR.s1,
-  },
+      order: 2
+},
   {
     key: "6PM:APHS1A-FAU4:99PM",
     label: "6PM:APHS1A-FAU4:99PM",
@@ -1449,7 +1703,8 @@ const COPY_VIEWS: ViewDef[] = [
       { key: "s2", subject: "today", bandKeys: ["s3", "s1"] },
       { key: "s3", subject: "today", bandKeys: ["s4", "s2"] },
     ],
-  },
+      order: 3
+},
   {
     key: "6PM:APHS1A-FAU4:9PMM",
     label: "6PM:APHS1A-FAU4:9PMM",
@@ -1463,7 +1718,8 @@ const COPY_VIEWS: ViewDef[] = [
     getEntry: (r) => r.todayCPR.tc,
     stoplossLabel: "S1 (today's S1)",
     getStoploss: (r) => r.todayCPR.s1,
-  },
+      order: 4
+},
   {
     key: "A-A-AA-AA-EUBL2-pS4S2:R2",
     label: "A-A-AA-AA-EUBL2-pS4S2:R2",
@@ -1492,7 +1748,8 @@ const COPY_VIEWS: ViewDef[] = [
       { key: "s3", subject: "previous", bandKeys: ["prevLow", "s2"] },
       { key: "s4", subject: "previous", bandKeys: ["prevLow", "s2"] },
     ],
-  },
+      order: 0
+},
   {
     key: "B-B-BB-BB-L4U4-Ladder:R4",
     label: "B-B-BB-BB-L4U4-Ladder:R4",
@@ -1521,7 +1778,8 @@ const COPY_VIEWS: ViewDef[] = [
       { key: "s3", subject: "today", bandKeys: ["s3", "s4"] },
       { key: "s4", subject: "previous", bandKeys: ["s3", "s4"] },
     ],
-  },
+      order: 2
+},
   {
     key: "B-B-BB-BB-L4U4-pGapA",
     label: "B-B-BB-BB-L4U4-pGapA",
@@ -1550,7 +1808,8 @@ const COPY_VIEWS: ViewDef[] = [
       { key: "s3", subject: "today", bandKeys: ["s3", "s4"] },
       { key: "s4", subject: "previous", bandKeys: ["s3", "s4"] },
     ],
-  },
+      order: 3
+},
   {
     key: "B-B-BB-BB-L2U4-pPPHR1",
     label: "B-B-BB-BB-L2U4-pPPHR1",
@@ -1579,7 +1838,8 @@ const COPY_VIEWS: ViewDef[] = [
       { key: "s3", subject: "previous", bandKeys: ["prevLow", "s1"] },
       { key: "s4", subject: "previous", bandKeys: ["s1", "s2"] },
     ],
-  },
+      order: 0
+},
 ];
 
 VIEWS.push(...COPY_VIEWS);
@@ -1599,7 +1859,9 @@ VIEWS.push(...COPY_VIEWS);
 // ---------------------------------------------------------------------
 
 const MISC_VIEWS: ViewDef[] = [
-  { key: "equal-cpr", label: "Equal CPR", kind: "category", condition: (r) => r.equalCPR },
+  { key: "equal-cpr", label: "Equal CPR", kind: "category", condition: (r) => r.equalCPR,
+      order: 10
+},
   {
     key: "eXLoL3U3-L3",
     label: "eXLoL3U3-L3",
@@ -1607,8 +1869,12 @@ const MISC_VIEWS: ViewDef[] = [
     kind: "view",
     condition: (r) => r.srExpandedLower,
   },
-  { key: "top15gainers", label: "TOP 15 GAINERS", kind: "category", condition: () => true },
-  { key: "top15losers", label: "TOP 15 LOSERS", kind: "category", condition: () => true },
+  { key: "top15gainers", label: "TOP 15 GAINERS", kind: "category", condition: () => true,
+      order: 0
+},
+  { key: "top15losers", label: "TOP 15 LOSERS", kind: "category", condition: () => true,
+      order: 1
+},
   {
     key: "lower-bullish",
     label: "lower-bullish",
@@ -1651,9 +1917,13 @@ VIEWS.push(...MISC_VIEWS);
 
 const RAW_FLAG_VIEWS: ViewDef[] = [
   { key: "CL4U3", label: "CL4U3", kind: "view", condition: (r) => r.CL4U3 },
-  { key: "L4U4", label: "L4U4", kind: "view", condition: (r) => r.L4U4 },
+  { key: "L4U4", label: "L4U4", kind: "view", condition: (r) => r.L4U4,
+      order: 4
+},
   { key: "EU3L4", label: "EU3L4", kind: "view", condition: (r) => r.EU3L4 },
-  { key: "EU4L4", label: "EU4L4", kind: "view", condition: (r) => r.EU4L4 },
+  { key: "EU4L4", label: "EU4L4", kind: "view", condition: (r) => r.EU4L4,
+      order: 3
+},
   { key: "EL4U4", label: "EL4U4", kind: "view", condition: (r) => r.EL4U4 },
   { key: "QU4L4", label: "QU4L4", kind: "view", condition: (r) => r.QU4L4 },
   { key: "U4L4", label: "U4L4", kind: "view", condition: (r) => r.U4L4 },
@@ -1661,8 +1931,12 @@ const RAW_FLAG_VIEWS: ViewDef[] = [
   { key: "U2L4", label: "U2L4", kind: "view", condition: (r) => r.U2L4 },
   { key: "U1L4", label: "U1L4", kind: "view", condition: (r) => r.U1L4 },
   { key: "CU3L2", label: "CU3L2", kind: "view", condition: (r) => r.CU3L2 },
-  { key: "CU3L3", label: "CU3L3", kind: "view", condition: (r) => r.CU3L3 },
-  { key: "CU4L4", label: "CU4L4", kind: "view", condition: (r) => r.CU4L4 },
+  { key: "CU3L3", label: "CU3L3", kind: "view", condition: (r) => r.CU3L3,
+      order: 1
+},
+  { key: "CU4L4", label: "CU4L4", kind: "view", condition: (r) => r.CU4L4,
+      order: 2
+},
   { key: "EL2U4", label: "EL2U4", kind: "view", condition: (r) => r.EL2U4 },
   { key: "EL3U4", label: "EL3U4", kind: "view", condition: (r) => r.EL3U4 },
   { key: "CU4L2", label: "CU4L2", kind: "view", condition: (r) => r.CU4L2 },
@@ -1721,3 +1995,94 @@ VIEWS.push(...RAW_FLAG_VIEWS);
  * getPatternInfo(r)?.label === label; }`, same fallback order as the
  * original switch (explicit cases first, getPatternInfo default last).
  */
+
+// ---------------------------------------------------------------------
+// Deletion pass, step 1 — VIEWS tree reconstruction.
+//
+// backtest.ts's BACKTEST_CATEGORIES is a NESTED tree (BacktestCategoryDef
+// -> BacktestSubCategoryDef[], each of which can itself nest more
+// BacktestSubCategoryDef via `patterns`, plus a flat `subPatternKeys:
+// string[]` of leaf View keys at each level). VIEWS is FLAT, linked only
+// by each ViewDef's own parentKey. Every remaining function that still
+// needs the old nested shape (getAttachPointOptions, buildBacktestOptions,
+// copyBacktestView, createBacktestView, and both patch.mjs scripts'
+// eventual views.ts-targeting rewrite) can be rewritten against this one
+// reconstruction instead of walking BACKTEST_CATEGORIES directly.
+//
+// Root selection: a naive "no parentKey" filter is WRONG here — the ~52
+// standalone raw-flag Views (RAW_FLAG_VIEWS) and the handful of
+// standalone MISC_VIEWS toggles (lower-bullish, Price-AbovePDH, the four
+// HB-L1* patterns, etc.) also have no parentKey, but were NEVER part of
+// BACKTEST_CATEGORIES's tree at all — they're matchesPatternFlag-only
+// badges (see that batch's own comment above). The real signal for "this
+// is a top-level Category, i.e. a BACKTEST_CATEGORIES root" is
+// `kind === "category"`, which every genuine category ("levelsabove",
+// "compressed", "R1AbovePR4", "equal-cpr", "top15gainers", ...) sets and
+// nothing else does.
+//
+// Sibling order: childrenOf() already sorts by `order` (defaulting all
+// undefined to 0) via a STABLE sort, so children come back in the same
+// relative order they were declared in their batch's const array — which
+// is the same order they appeared in BACKTEST_CATEGORIES's own
+// subPatternKeys/patterns, since every batch was transcribed in that
+// original order. No separate `orderedEntries` concept is needed: a
+// ViewDef's `kind` ("pattern" vs "view") already carries the
+// arrow-vs-leaf distinction BacktestCategoryDef used two separate arrays
+// for, so one interleaved `children` array reproduces the same rendering
+// with less structure, not less information.
+// ---------------------------------------------------------------------
+
+export interface ViewTreeNode {
+  key: string;
+  label: string;
+  kind: "category" | "pattern" | "view";
+  children: ViewTreeNode[];
+}
+
+function buildViewTreeNode(v: ViewDef): ViewTreeNode {
+  return {
+    key: v.key,
+    label: v.label,
+    kind: v.kind,
+    children: childrenOf(v.key).map(buildViewTreeNode),
+  };
+}
+
+/** Every root Category, each with its full nested Pattern/Subpattern/View tree. */
+export function buildViewTree(): ViewTreeNode[] {
+  return VIEWS.filter((v) => v.kind === "category").map(buildViewTreeNode);
+}
+
+/**
+ * Root-to-node key chain for `key` (inclusive of `key` itself), e.g.
+ * ["levelsabove", "A-A-AA-AA", "A-A-AA-AA-U2L4", "A-A-AA-AA-S1pPDH-U3"].
+ * Empty array if `key` isn't in VIEWS at all. Mirrors what
+ * resolveTopLevelCategoryKey (copy-view's patch.mjs) and
+ * findAttachArrayByKey (backtest.ts) each partially recomputed by
+ * re-walking BACKTEST_CATEGORIES from scratch — here it's just following
+ * parentKey pointers up, no tree search needed.
+ */
+export function ancestorChain(key: string): string[] {
+  const chain: string[] = [];
+  let cur = getView(key);
+  while (cur) {
+    chain.unshift(cur.key);
+    cur = cur.parentKey ? getView(cur.parentKey) : undefined;
+  }
+  return chain;
+}
+
+/**
+ * The top-level Category key that `key` lives under (walks parentKey up
+ * to the root) — direct replacement for copy-view's patch.mjs
+ * resolveTopLevelCategoryKey, but O(depth) instead of a full
+ * BACKTEST_CATEGORIES re-scan, and without needing separate handling for
+ * "key IS a top-level category" vs "key is nested under one" (the chain's
+ * first element is always the answer either way). Returns undefined for
+ * a key with no ancestor chain at all (not in VIEWS) — callers that need
+ * the old "fall back to a default bucket" behavior should do that at the
+ * call site, same as resolveTopLevelCategoryKey's callers already do.
+ */
+export function topLevelCategoryOf(key: string): string | undefined {
+  return ancestorChain(key)[0];
+}
