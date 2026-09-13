@@ -267,6 +267,10 @@ export const Views: Record<string, SubPattern[]> = {
       activeText:  "#4ade80",              // green-400 text
       activeBg:    "rgba(34, 197, 94, 0.14)",
     },
+    // NEW: B-B-BB-BB-L2U4-pPPHR1 — Copy View nested under the
+    // "B-B-BB-BB-L2U4" Pattern arrow (LEVEL BELOW). Grades against its
+    // conditionKey target, same as its siblings above.
+    { id: "B-B-BB-BB-L2U4-pPPHR1", label: "B-B-BB-BB-L2U4-pPPHR1" },
   ],
   "compressed": [
     // RENAMED from "SMi-L1pU1>-APU4:11PM": all previous conditions removed.
@@ -415,7 +419,6 @@ export const Views: Record<string, SubPattern[]> = {
   "equal-cpr": [
     { id: "eXLoL3U3-L3", label: "eXLoL3U3-L3" },
   ],
-    "levelsbelow": [{ id: "B-B-BB-BB-L2U4-pPPHR1", label: "B-B-BB-BB-L2U4-pPPHR1" }]
 };
 
 export const pivotcategories: Category[] = [

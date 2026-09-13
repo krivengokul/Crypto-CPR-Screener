@@ -2412,7 +2412,7 @@ export function createBacktestView(
   newLabel: string,
   direction: "bullish" | "bearish",
   target: string,
-  levelCheckDefs?: LevelCheckDef[],
+  levelCheckDefs?: LevelCheckCondition[],
   attachKey?: string
 ): { ok: boolean; reason?: string } {
   if (VIEWS.some(v => v.key === newKey) || BACKTEST_TARGETS.some(t => t.key === newKey)) {
@@ -2427,6 +2427,23 @@ export function createBacktestView(
 
   const resolvedParentKey = attachKey ?? patternKey;
 
+  // Fixed codebase convention (see doc comment above): bullish targets one
+  // of today's own R-levels, entry TC/stoploss S1; bearish targets one of
+  // today's own S-levels, entry BC/stoploss R1. BULLISH_TARGETS/
+  // BEARISH_TARGETS only carry the target's own {label, key} — the
+  // getTarget/getEntry/getStoploss accessors and their labels are built
+  // here from `targetDef.key` and `direction`, same shape every other
+  // hand-authored ViewDef in views.ts uses.
+  const getTarget = (r: CPRResult) => r.todayCPR[targetDef.key];
+  const entryLabel = direction === "bullish" ? "TC (today's TC)" : "BC (today's BC)";
+  const getEntry = (r: CPRResult) => (direction === "bullish" ? r.todayCPR.tc : r.todayCPR.bc);
+  const stoplossLabel = direction === "bullish" ? "S1 (today's S1)" : "R1 (today's R1)";
+  const getStoploss = (r: CPRResult) => (direction === "bullish" ? r.todayCPR.s1 : r.todayCPR.r1);
+
+  const clonedLevelCheckDefs = levelCheckDefs
+    ? levelCheckDefs.map(d => ({ ...d, bandKeys: [...d.bandKeys] as [LevelCheckKey, LevelCheckKey] }))
+    : undefined;
+
   const newViewDef: ViewDef = {
     key: newKey,
     label: newLabel,
@@ -2434,12 +2451,13 @@ export function createBacktestView(
     conditionKey: patternKey,
     kind: "view",
     direction,
-    getTarget: targetDef.getTarget,
-    getEntry: targetDef.getEntry,
-    getStoploss: targetDef.getStoploss,
-    levelCheckDefs: levelCheckDefs
-      ? levelCheckDefs.map(d => ({ ...d, bandKeys: [...d.bandKeys] }))
-      : undefined,
+    targetLabel: targetDef.label,
+    getTarget,
+    entryLabel,
+    getEntry,
+    stoplossLabel,
+    getStoploss,
+    levelCheckDefs: clonedLevelCheckDefs,
   };
 
   VIEWS.push(newViewDef);
@@ -2450,10 +2468,13 @@ export function createBacktestView(
     label: newLabel,
     conditionKey: patternKey,
     direction,
-    getTarget: targetDef.getTarget,
-    getEntry: targetDef.getEntry,
-    getStoploss: targetDef.getStoploss,
-    levelCheckDefs: newViewDef.levelCheckDefs,
+    targetLabel: targetDef.label,
+    getTarget,
+    entryLabel,
+    getEntry,
+    stoplossLabel,
+    getStoploss,
+    levelCheckDefs: clonedLevelCheckDefs,
   });
 
   return { ok: true };
