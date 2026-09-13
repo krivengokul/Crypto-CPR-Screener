@@ -15,6 +15,7 @@ import {
   type RRHHCategory,
 } from "@/lib/cpr";
 import { BACKTEST_TARGETS, levelCheckFullyMatches } from "@/lib/backtest";
+import { getView, passesView } from "@/lib/views";
 
 export type SortKey = "symbol" | "compressionRatio" | "currentPrice" | "change24h" | "quoteVolume" | "priceVsCpr" | "cprDistance" | "pdhPdlPct";
 export type SortDir = "asc" | "desc";
@@ -756,7 +757,43 @@ export const PIVOT_PATTERNS: Record<string, (r: CPRResult) => boolean> = {
 const isAaaaDiagnosticBase = (r: CPRResult): boolean =>
   PIVOT_PATTERNS["A-A-AA-AA"]?.(r) === true;
 
+/**
+ * passesPattern — public entry point used by Screener.tsx/BacktestPanel.tsx.
+ * views.ts (see @/lib/views) is now the single source of truth for every
+ * MIGRATED key: the four top-level Categories, every compound HHLL x RRHH
+ * x SSLL combo (former PIVOT_PATTERNS), everything nested under LEVEL
+ * ABOVE/LEVEL BELOW/COMPRESSED/EXPANDED, R1AbovePR4/S1BelowPS4, the
+ * hand-authored Copy View entries, the misc named Views, and the ~52
+ * standalone raw-flag Patterns. If `pattern` has a ViewDef, passesView()
+ * is authoritative and passesPatternLegacy's switch (below) is never
+ * consulted for it. Anything NOT yet migrated (inside-cpr,
+ * overlapping-lower, and their descendants — see views.ts's own status
+ * comment) falls through to passesPatternLegacy unchanged.
+ *
+ * The BACKTEST_TARGETS redirect (Copy View / Create View auto-nav
+ * entries) still lives here rather than in views.ts, because those
+ * entries are written directly into backtest.ts's source by
+ * copy-view.yml/create-view.yml's patch.mjs — a separate, still-live
+ * mechanism until that CI script is itself migrated to patch views.ts
+ * instead (tracked separately). Checked first, same as before, so a
+ * redirect target itself gets the getView() fast path once it's
+ * migrated.
+ */
 export function passesPattern(r: CPRResult, pattern: string): boolean {
+  {
+    const backtestTarget = BACKTEST_TARGETS.find((t) => t.key === pattern);
+    if (backtestTarget && backtestTarget.conditionKey && backtestTarget.conditionKey !== pattern) {
+      return (
+        passesPattern(r, backtestTarget.conditionKey) &&
+        levelCheckFullyMatches(r, backtestTarget.levelCheckDefs)
+      );
+    }
+  }
+  if (getView(pattern)) return passesView(r, pattern);
+  return passesPatternLegacy(r, pattern);
+}
+
+function passesPatternLegacy(r: CPRResult, pattern: string): boolean {
   // NEW: Copy View / Create View auto-nav entries (BACKTEST_TARGETS keys
   // pushed into ViewsSidebar.tsx's Views automatically — see
   // copy-view.yml / create-view.yml). These aren't real passesPattern
@@ -1890,7 +1927,23 @@ export function getPatternInfo(r: CPRResult): PatternInfo {
  * U3L4, U2L4, CU3L2, EL2U4, EL3U4, CL1U1, CU1L1, CL2U2, CU2L2, CL2UT)
  * it reads the raw flag directly — same as Screener.tsx does today.
  */
+/**
+ * matchesPatternFlag — public entry point (Screener.tsx's PatternFilter,
+ * BacktestPanel.tsx's Pattern scans). Same views.ts-first strategy as
+ * passesPattern above: a migrated key (compound combos, the ~52
+ * standalone raw-flag Patterns, everything else now in VIEWS) is graded
+ * via passesView(); anything not yet migrated — including the six
+ * mutually-exclusive primary labels (eX-Higher/eX-Lower/cO-Higher/
+ * cO-Lower/Higher/Lower), which were never real VIEWS keys to begin
+ * with — falls through to matchesPatternFlagLegacy, whose own `default`
+ * case still does the getPatternInfo(r)?.label fallback.
+ */
 export function matchesPatternFlag(r: CPRResult, label: string): boolean {
+  if (getView(label)) return passesView(r, label);
+  return matchesPatternFlagLegacy(r, label);
+}
+
+function matchesPatternFlagLegacy(r: CPRResult, label: string): boolean {
   // Every compound HHLL/RRHH/SSLL raw pattern (RRSSA-*/RRSSB-*/RRSSC-*/
   // E-*) is now defined exactly once, in PIVOT_PATTERNS above passesPattern
   // — see that map's comment for why. Checked first so nothing below
