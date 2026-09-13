@@ -389,6 +389,35 @@ function declutterLabelPositions(
 }
 
 /**
+ * Direction of the currently active View, used only to color the view-name
+ * badge next to "Levels VIEW": green for an Up view, red for a Down view,
+ * and a neutral slate color when the View has no direction set.
+ */
+export type ViewDirection = "up" | "down";
+
+/**
+ * Small pill showing the active View's name, colored by its direction.
+ * Rendered inline next to the "Levels VIEW" header, right after the
+ * pivotPatternBadge (e.g. "L4U4").
+ */
+function ViewNameBadge({ name, direction }: { name: string; direction?: ViewDirection }) {
+  const styles =
+    direction === "up"
+      ? "border-green-500/40 bg-green-500/10 text-green-400"
+      : direction === "down"
+      ? "border-red-500/40 bg-red-500/10 text-red-400"
+      : "border-slate-500/40 bg-slate-500/10 text-slate-300";
+  return (
+    <span
+      className={`inline-flex shrink-0 items-center rounded-md border px-1.5 py-0.5 text-[10px] font-semibold leading-none ${styles}`}
+      title={direction ? `View direction: ${direction === "up" ? "Up" : "Down"}` : "View direction not set"}
+    >
+      {name}
+    </span>
+  );
+}
+
+/**
  * Line chart replacing the old PDay-1/Prev/Today CPR mini-cards.
  *
  * Plots the Prev Day and Today CPR ladders as horizontal lines on a shared
@@ -402,11 +431,17 @@ function CPRLevelChart({
   prevCPR,
   todayCPR,
   pivotPatternBadge,
+  viewName,
+  viewDirection,
 }: {
   prevCPR: CPRLevels;
   todayCPR: CPRLevels;
   /** PivotPattern badge (e.g. renderPivotPatternBadge(r)) — shown inline next to the "Levels VIEW" label. */
   pivotPatternBadge?: ReactNode;
+  /** Name of the currently active View — shown as a badge next to pivotPatternBadge. Omit to hide the badge. */
+  viewName?: string;
+  /** Up → green badge, Down → red badge, omitted/undefined → neutral slate badge. No effect without viewName. */
+  viewDirection?: ViewDirection;
 }) {
   const width = 452;
   // Keep the chart compact when it sits beside the ladders. The ladders
@@ -495,6 +530,11 @@ function CPRLevelChart({
         {pivotPatternBadge && (
           <span className="inline-flex shrink-0 translate-y-[-1px] items-center">
             {pivotPatternBadge}
+          </span>
+        )}
+        {viewName && (
+          <span className="inline-flex shrink-0 translate-y-[-1px] items-center">
+            <ViewNameBadge name={viewName} direction={viewDirection} />
           </span>
         )}
       </div>
@@ -591,6 +631,8 @@ export function SRLadderPanel({
   prevPatternBadge,
   pDay1PatternBadge,
   pivotPatternBadge,
+  viewName,
+  viewDirection,
   showLevelCheck = false,
   levelCheckConditions,
   copyViewControl,
@@ -617,6 +659,10 @@ export function SRLadderPanel({
   pDay1PatternBadge?: ReactNode;
   /** PivotPattern badge (today vs prev HHLL x RRHH x SSLL combo) — e.g. renderPivotPatternBadge(r) — shown next to the "Levels VIEW" label. */
   pivotPatternBadge?: ReactNode;
+  /** Name of the currently active View — shown as a badge next to pivotPatternBadge on "Levels VIEW". Omit to hide it. */
+  viewName?: string;
+  /** The active View's direction: "up" → green badge, "down" → red badge, omitted → neutral slate badge. No effect without viewName. */
+  viewDirection?: ViewDirection;
   /**
    * Show the day-over-day "Level Check" column (compareSRLadders /
    * SRLadderDiffPanel), rendered right after Today S/R. Opt-in and
@@ -650,7 +696,13 @@ export function SRLadderPanel({
 
       {/* 2. CPR Level Chart */}
       <div className="w-[452px] shrink-0">
-        <CPRLevelChart prevCPR={r.prevCPR} todayCPR={r.todayCPR} pivotPatternBadge={pivotPatternBadge} />
+        <CPRLevelChart
+          prevCPR={r.prevCPR}
+          todayCPR={r.todayCPR}
+          pivotPatternBadge={pivotPatternBadge}
+          viewName={viewName}
+          viewDirection={viewDirection}
+        />
       </div>
 
       {/* 3. Today S/R */}
@@ -690,6 +742,8 @@ export function SRLadderRow({
   prevPatternBadge,
   pDay1PatternBadge,
   pivotPatternBadge,
+  viewName,
+  viewDirection,
   showLevelCheck = false,
   levelCheckConditions,
   copyViewControl,
@@ -707,6 +761,10 @@ export function SRLadderRow({
   pDay1PatternBadge?: ReactNode;
   /** PivotPattern badge (today vs prev HHLL x RRHH x SSLL combo) — e.g. renderPivotPatternBadge(r) — shown next to the "Levels VIEW" label. */
   pivotPatternBadge?: ReactNode;
+  /** Name of the currently active View — shown as a badge next to pivotPatternBadge on "Levels VIEW". Omit to hide it. */
+  viewName?: string;
+  /** The active View's direction: "up" → green badge, "down" → red badge, omitted → neutral slate badge. No effect without viewName. */
+  viewDirection?: ViewDirection;
   /** Show the "Level Check" section, rendered right after Today S/R. Defaults to false — pass true only from BacktestPanel. See SRLadderPanel for details. */
   showLevelCheck?: boolean;
   /** The current View's 13 Level Check conditions. See SRLadderPanel for details. */
@@ -725,6 +783,8 @@ export function SRLadderRow({
           prevPatternBadge={prevPatternBadge}
           pDay1PatternBadge={pDay1PatternBadge}
           pivotPatternBadge={pivotPatternBadge}
+          viewName={viewName}
+          viewDirection={viewDirection}
           showLevelCheck={showLevelCheck}
           levelCheckConditions={levelCheckConditions}
           copyViewControl={copyViewControl}
