@@ -2036,7 +2036,9 @@ export interface ViewTreeNode {
   key: string;
   label: string;
   kind: "category" | "pattern" | "view";
+  order?: number;
   children: ViewTreeNode[];
+  viewDef?: ViewDef;
 }
 
 function buildViewTreeNode(v: ViewDef): ViewTreeNode {
@@ -2050,7 +2052,27 @@ function buildViewTreeNode(v: ViewDef): ViewTreeNode {
 
 /** Every root Category, each with its full nested Pattern/Subpattern/View tree. */
 export function buildViewTree(): ViewTreeNode[] {
-  return VIEWS.filter((v) => v.kind === "category").map(buildViewTreeNode);
+  const rootCategories = VIEWS.filter(v => v.kind === "category");
+  
+  const buildNode = (def: ViewDef): ViewTreeNode => {
+    const rawChildren = VIEWS.filter(v => v.parentKey === def.key);
+    const children = rawChildren
+      .sort((a, b) => (a.order ?? 9999) - (b.order ?? 9999))
+      .map(buildNode);
+
+    return {
+      key: def.key,
+      label: def.label,
+      kind: def.kind ?? "view",
+      order: def.order,
+      children,
+      viewDef: def,
+    };
+  };
+
+  return rootCategories
+    .sort((a, b) => (a.order ?? 9999) - (b.order ?? 9999))
+    .map(buildNode);
 }
 
 /**
@@ -2062,12 +2084,14 @@ export function buildViewTree(): ViewTreeNode[] {
  * re-walking BACKTEST_CATEGORIES from scratch — here it's just following
  * parentKey pointers up, no tree search needed.
  */
-export function ancestorChain(key: string): string[] {
-  const chain: string[] = [];
-  let cur = getView(key);
-  while (cur) {
-    chain.unshift(cur.key);
-    cur = cur.parentKey ? getView(cur.parentKey) : undefined;
+export function ancestorChain(key: string): ViewDef[] {
+  const chain: ViewDef[] = [];
+  let curr = getView(key);
+  while (curr?.parentKey) {
+    const parent = getView(curr.parentKey);
+    if (!parent) break;
+    chain.unshift(parent);
+    curr = parent;
   }
   return chain;
 }
@@ -2083,6 +2107,7 @@ export function ancestorChain(key: string): string[] {
  * the old "fall back to a default bucket" behavior should do that at the
  * call site, same as resolveTopLevelCategoryKey's callers already do.
  */
-export function topLevelCategoryOf(key: string): string | undefined {
-  return ancestorChain(key)[0];
+export function topLevelCategoryOf(key: string): ViewDef | undefined {
+  const chain = ancestorChain(key);
+  return chain.find(v => v.kind === "category") ?? (getView(key)?.kind === "category" ? getView(key) : undefined);
 }

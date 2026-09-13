@@ -1,7 +1,8 @@
 import { OHLC, CPRResult, analyzeCPR } from "./cpr";
 import { fetchTopUSDTSymbols, fetchDailyKlines, isLiveDailyCandle } from "./binance";
 import { fetchDeltaPerps } from "./delta";
-import { buildViewTree, type ViewTreeNode } from "./views";
+import { buildViewTree, type ViewTreeNode, VIEWS, getView, type ViewDef } from "./views";
+
 
 export type BacktestSource = "binance" | "delta";
 
@@ -2525,39 +2526,48 @@ export function getAttachPointOptions(): AttachPointOption[] {
 export function copyBacktestView(
   sourceKey: string,
   newKey: string,
-  newLabel: string = newKey,
+  newLabel: string,
   attachKey?: string
-): CopyViewResult {
-  const source = BACKTEST_TARGETS.find((t) => t.key === sourceKey);
-  if (!source) return { ok: false, reason: "source-not-found" };
-  if (BACKTEST_TARGETS.some((t) => t.key === newKey)) return { ok: false, reason: "duplicate-key" };
+): { ok: boolean; reason?: string } {
+  if (VIEWS.some(v => v.key === newKey) || BACKTEST_TARGETS.some(t => t.key === newKey)) {
+    return { ok: false, reason: "duplicate-key" };
+  }
 
-  const siblingArray = attachKey ? findAttachArrayByKey(attachKey) : findSubPatternKeysArray(sourceKey);
-  if (!siblingArray) return { ok: false, reason: "source-not-in-tree" };
+  const sourceView = getView(sourceKey);
+  if (!sourceView) {
+    return { ok: false, reason: "source-not-found" };
+  }
 
-  const cloned: BacktestTargetDef = {
-    ...source,
+  const resolvedParentKey = attachKey ?? sourceView.parentKey ?? sourceKey;
+  const conditionKey = sourceView.conditionKey ?? sourceView.key;
+
+  const newViewDef: ViewDef = {
+    ...sourceView,
     key: newKey,
     label: newLabel,
-    // Grading must still resolve to the ORIGINAL condition passesPattern
-    // recognizes — chain through source.conditionKey first so copying a
-    // copy still points at the true original, not an intermediate clone's
-    // key (which passesPattern wouldn't recognize either).
-    conditionKey: source.conditionKey ?? source.key,
-    // getTarget/getEntry/getStoploss are pure fns of CPRResult, not tied
-    // to key/label — carry over unchanged. Only levelCheckDefs needs an
-    // actual deep copy since it's an array of objects (a shallow spread
-    // would leave the clone sharing the same nested objects/arrays as
-    // the original, so editing one's bands would silently edit both).
-    levelCheckDefs: source.levelCheckDefs?.map((c) => ({
-      ...c,
-      bandKeys: [...c.bandKeys] as [LevelCheckKey, LevelCheckKey],
-    })),
+    parentKey: resolvedParentKey,
+    conditionKey,
+    kind: "view",
+    levelCheckDefs: sourceView.levelCheckDefs
+      ? sourceView.levelCheckDefs.map(d => ({ ...d, bandKeys: [...d.bandKeys] }))
+      : undefined,
   };
 
-  BACKTEST_TARGETS.push(cloned);
-  siblingArray.push(newKey);
-  return { ok: true, cloned };
+  VIEWS.push(newViewDef);
+
+  // Backward compatibility mirror for BACKTEST_TARGETS during migration transition
+  const legacyTarget = BACKTEST_TARGETS.find(t => t.key === sourceKey);
+  if (legacyTarget) {
+    BACKTEST_TARGETS.push({
+      ...legacyTarget,
+      key: newKey,
+      label: newLabel,
+      conditionKey,
+      levelCheckDefs: newViewDef.levelCheckDefs,
+    });
+  }
+
+  return { ok: true };
 }
 
 // Finds the Pattern/Subpattern node (at any depth, under a category's
@@ -2632,55 +2642,51 @@ export function createBacktestView(
   newLabel: string,
   direction: "bullish" | "bearish",
   target: string,
-  levelCheckDefs: LevelCheckCondition[],
+  levelCheckDefs?: LevelCheckDef[],
   attachKey?: string
-): CreateViewResult {
-  if (BACKTEST_TARGETS.some((t) => t.key === newKey)) return { ok: false, reason: "duplicate-key" };
+): { ok: boolean; reason?: string } {
+  if (VIEWS.some(v => v.key === newKey) || BACKTEST_TARGETS.some(t => t.key === newKey)) {
+    return { ok: false, reason: "duplicate-key" };
+  }
 
-  const targetDef = direction === "bullish" ? BULLISH_TARGETS[target] : BEARISH_TARGETS[target];
-  if (!targetDef) return { ok: false, reason: "invalid-target" };
+  const targetDefs = direction === "bullish" ? BULLISH_TARGETS : BEARISH_TARGETS;
+  const targetDef = targetDefs[target];
+  if (!targetDef) {
+    return { ok: false, reason: "invalid-target" };
+  }
 
-  const siblingArray = findAttachArrayByKey(attachKey ?? patternKey);
-  if (!siblingArray) return { ok: false, reason: "pattern-not-found" };
+  const resolvedParentKey = attachKey ?? patternKey;
 
-  const created: BacktestTargetDef =
-    direction === "bullish"
-      ? {
-          key: newKey,
-          label: newLabel,
-          direction: "bullish",
-          targetLabel: targetDef.label,
-          getTarget: (r) => r.todayCPR[targetDef.key as "r2" | "r3" | "r4"],
-          entryLabel: "TC (today's TC)",
-          getEntry: (r) => r.todayCPR.tc,
-          stoplossLabel: "S1 (today's S1)",
-          getStoploss: (r) => r.todayCPR.s1,
-          conditionKey: patternKey,
-          levelCheckDefs: levelCheckDefs.map((c) => ({
-            ...c,
-            bandKeys: [...c.bandKeys] as [LevelCheckKey, LevelCheckKey],
-          })),
-        }
-      : {
-          key: newKey,
-          label: newLabel,
-          direction: "bearish",
-          targetLabel: targetDef.label,
-          getTarget: (r) => r.todayCPR[targetDef.key as "s2" | "s3" | "s4"],
-          entryLabel: "BC (today's BC)",
-          getEntry: (r) => r.todayCPR.bc,
-          stoplossLabel: "R1 (today's R1)",
-          getStoploss: (r) => r.todayCPR.r1,
-          conditionKey: patternKey,
-          levelCheckDefs: levelCheckDefs.map((c) => ({
-            ...c,
-            bandKeys: [...c.bandKeys] as [LevelCheckKey, LevelCheckKey],
-          })),
-        };
+  const newViewDef: ViewDef = {
+    key: newKey,
+    label: newLabel,
+    parentKey: resolvedParentKey,
+    conditionKey: patternKey,
+    kind: "view",
+    direction,
+    getTarget: targetDef.getTarget,
+    getEntry: targetDef.getEntry,
+    getStoploss: targetDef.getStoploss,
+    levelCheckDefs: levelCheckDefs
+      ? levelCheckDefs.map(d => ({ ...d, bandKeys: [...d.bandKeys] }))
+      : undefined,
+  };
 
-  BACKTEST_TARGETS.push(created);
-  siblingArray.push(newKey);
-  return { ok: true, created };
+  VIEWS.push(newViewDef);
+
+  // Backward compatibility mirror for BACKTEST_TARGETS during migration transition
+  BACKTEST_TARGETS.push({
+    key: newKey,
+    label: newLabel,
+    conditionKey: patternKey,
+    direction,
+    getTarget: targetDef.getTarget,
+    getEntry: targetDef.getEntry,
+    getStoploss: targetDef.getStoploss,
+    levelCheckDefs: newViewDef.levelCheckDefs,
+  });
+
+  return { ok: true };
 }
 
 /**
