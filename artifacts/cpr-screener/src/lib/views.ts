@@ -1583,3 +1583,141 @@ const COPY_VIEWS: ViewDef[] = [
 ];
 
 VIEWS.push(...COPY_VIEWS);
+
+// ---------------------------------------------------------------------
+// Step 3, batch 4 — "equal-cpr" (kept; "inside-cpr" and "overlapping-lower"
+// are DELIBERATELY OMITTED per user request, removing them and everything
+// nested under them from the menu — passesView/getView simply won't find
+// their keys, same effect as deleting their cases outright), plus the
+// small set of standalone top-level toggles that don't nest under ANY
+// category in backtest.ts's tree at all (top15gainers/top15losers,
+// Price-AbovePDH/BelowPDL, HAThin-U1>PU4, the four HB-L1* patterns, and
+// lower-bullish) — transcribed from ScreenerUtils.tsx passesPattern lines
+// 1432-1437, 1538-1539, 1561-1568, 1570-1575, 1582-1584 for completeness,
+// since deleting PIVOT_PATTERNS later requires every reachable key to
+// live in VIEWS, not just the ones nested in BACKTEST_CATEGORIES.
+// ---------------------------------------------------------------------
+
+const MISC_VIEWS: ViewDef[] = [
+  { key: "equal-cpr", label: "Equal CPR", kind: "category", condition: (r) => r.equalCPR },
+  {
+    key: "eXLoL3U3-L3",
+    label: "eXLoL3U3-L3",
+    parentKey: "equal-cpr",
+    kind: "view",
+    condition: (r) => r.srExpandedLower,
+  },
+  { key: "top15gainers", label: "TOP 15 GAINERS", kind: "category", condition: () => true },
+  { key: "top15losers", label: "TOP 15 LOSERS", kind: "category", condition: () => true },
+  {
+    key: "lower-bullish",
+    label: "lower-bullish",
+    kind: "view",
+    condition: (r) => r.cprFalling && r.cprNarrowing && r.prevCPR.r1 > r.todayCPR.r4,
+  },
+  { key: "Price-AbovePDH", label: "Price-AbovePDH", kind: "view", condition: (r) => r.currentPrice > r.todayCPR.prevHigh },
+  { key: "Price-BelowPDL", label: "Price-BelowPDL", kind: "view", condition: (r) => r.currentPrice < r.todayCPR.prevLow },
+  {
+    key: "HAThin-U1>PU4",
+    label: "HAThin-U1>PU4",
+    kind: "view",
+    condition: (r) => r.cprRising && r.strWideCPR && r.bothTight && r.R1AbovePR4,
+  },
+  { key: "HB-L1<PL1-PU12CU23", label: "HB-L1<PL1-PU12CU23", kind: "view", condition: (r) => r.cprFalling && r.strWideCPR && r.hbJPattern1 },
+  { key: "HB-L1<PL4-U1>TCPR", label: "HB-L1<PL4-U1>TCPR", kind: "view", condition: (r) => r.cprFalling && r.strWideCPR && r.hbJPattern2 },
+  { key: "HB-L1<PL2-U12CPU12", label: "HB-L1<PL2-U12CPU12", kind: "view", condition: (r) => r.cprFalling && r.strWideCPR && r.hbJPattern3 },
+  { key: "HB-L1>PL1-PU1CU234", label: "HB-L1>PL1-PU1CU234", kind: "view", condition: (r) => r.cprFalling && r.strWideCPR && r.hbJPattern4 },
+];
+
+VIEWS.push(...MISC_VIEWS);
+
+// ---------------------------------------------------------------------
+// Step 3, batch 5 (coverage audit) — the ~25-and-then-some standalone
+// raw-flag Pattern badges from matchesPatternFlag's switch (lines
+// 1904-2086) that were never nested anywhere in BACKTEST_CATEGORIES at
+// all. Per getPatternInfo's own doc comment in ScreenerUtils.tsx: these
+// are "independent, section-agnostic booleans" that Screener.tsx renders
+// as their own second-row badges and Pattern filter buttons, checking
+// the raw r.<FLAG> directly — regardless of activeView/left-nav section.
+// None of these have a parentKey (they're not reachable through any
+// category's tree), but they DO need a VIEWS entry so matchesPatternFlag
+// (once rewritten to call passesView) still resolves them instead of
+// silently returning false. Cross-checked against the full current
+// VIEWS key list first — anything already present (e.g. "EU1L3",
+// "EU1L4", "EUBL2", "EUBL3", "EUTL3", "EU2L4", "EUPL2", "U4L3", "EL1U4",
+// "EL1L2", "EL2L1", already added earlier with a real parentKey) is
+// deliberately NOT duplicated here.
+// ---------------------------------------------------------------------
+
+const RAW_FLAG_VIEWS: ViewDef[] = [
+  { key: "CL4U3", label: "CL4U3", kind: "view", condition: (r) => r.CL4U3 },
+  { key: "L4U4", label: "L4U4", kind: "view", condition: (r) => r.L4U4 },
+  { key: "EU3L4", label: "EU3L4", kind: "view", condition: (r) => r.EU3L4 },
+  { key: "EU4L4", label: "EU4L4", kind: "view", condition: (r) => r.EU4L4 },
+  { key: "EL4U4", label: "EL4U4", kind: "view", condition: (r) => r.EL4U4 },
+  { key: "QU4L4", label: "QU4L4", kind: "view", condition: (r) => r.QU4L4 },
+  { key: "U4L4", label: "U4L4", kind: "view", condition: (r) => r.U4L4 },
+  { key: "U3L4", label: "U3L4", kind: "view", condition: (r) => r.U3L4 },
+  { key: "U2L4", label: "U2L4", kind: "view", condition: (r) => r.U2L4 },
+  { key: "U1L4", label: "U1L4", kind: "view", condition: (r) => r.U1L4 },
+  { key: "CU3L2", label: "CU3L2", kind: "view", condition: (r) => r.CU3L2 },
+  { key: "CU3L3", label: "CU3L3", kind: "view", condition: (r) => r.CU3L3 },
+  { key: "CU4L4", label: "CU4L4", kind: "view", condition: (r) => r.CU4L4 },
+  { key: "EL2U4", label: "EL2U4", kind: "view", condition: (r) => r.EL2U4 },
+  { key: "EL3U4", label: "EL3U4", kind: "view", condition: (r) => r.EL3U4 },
+  { key: "CU4L2", label: "CU4L2", kind: "view", condition: (r) => r.CU4L2 },
+  { key: "EU3L3", label: "EU3L3", kind: "view", condition: (r) => r.EU3L3 },
+  { key: "EU1L2", label: "EU1L2", kind: "view", condition: (r) => r.EU1L2 },
+  { key: "EUBL1", label: "EUBL1", kind: "view", condition: (r) => r.EUBL1 },
+  { key: "EUPL1", label: "EUPL1", kind: "view", condition: (r) => r.EUPL1 },
+  { key: "EUTL1", label: "EUTL1", kind: "view", condition: (r) => r.EUTL1 },
+  { key: "EUPL3", label: "EUPL3", kind: "view", condition: (r) => r.EUPL3 },
+  { key: "EU2L2", label: "EU2L2", kind: "view", condition: (r) => r.EU2L2 },
+  { key: "EUTL2", label: "EUTL2", kind: "view", condition: (r) => r.EUTL2 },
+  { key: "EU1L1", label: "EU1L1", kind: "view", condition: (r) => r.EU1L1 },
+  { key: "EL1U1", label: "EL1U1", kind: "view", condition: (r) => r.EL1U1 },
+  { key: "EL1U2", label: "EL1U2", kind: "view", condition: (r) => r.EL1U2 },
+  { key: "EL1U3", label: "EL1U3", kind: "view", condition: (r) => r.EL1U3 },
+  { key: "EL2U3", label: "EL2U3", kind: "view", condition: (r) => r.EL2U3 },
+  { key: "ELTU2", label: "ELTU2", kind: "view", condition: (r) => r.ELTU2 },
+  { key: "ELBU2", label: "ELBU2", kind: "view", condition: (r) => r.ELBU2 },
+  { key: "ELTU3", label: "ELTU3", kind: "view", condition: (r) => r.ELTU3 },
+  { key: "ELPU2", label: "ELPU2", kind: "view", condition: (r) => r.ELPU2 },
+  { key: "ELPU3", label: "ELPU3", kind: "view", condition: (r) => r.ELPU3 },
+  { key: "ELBU3", label: "ELBU3", kind: "view", condition: (r) => r.ELBU3 },
+  { key: "EUTL4", label: "EUTL4", kind: "view", condition: (r) => r.EUTL4 },
+  { key: "L2U3", label: "L2U3", kind: "view", condition: (r) => r.L2U3 },
+  { key: "CU2L1", label: "CU2L1", kind: "view", condition: (r) => r.CU2L1 },
+  { key: "CU3L1", label: "CU3L1", kind: "view", condition: (r) => r.CU3L1 },
+  { key: "U2L3", label: "U2L3", kind: "view", condition: (r) => r.U2L3 },
+  { key: "ELBU4", label: "ELBU4", kind: "view", condition: (r) => r.ELBU4 },
+  { key: "CL1U1", label: "CL1U1", kind: "view", condition: (r) => r.CL1U1 },
+  { key: "CU1L1", label: "CU1L1", kind: "view", condition: (r) => r.CU1L1 },
+  { key: "CL2U2", label: "CL2U2", kind: "view", condition: (r) => r.CL2U2 },
+  { key: "CU2L2", label: "CU2L2", kind: "view", condition: (r) => r.CU2L2 },
+  { key: "CL2U1", label: "CL2U1", kind: "view", condition: (r) => r.CL2U1 },
+  { key: "CL4U4", label: "CL4U4", kind: "view", condition: (r) => r.CL4U4 },
+  { key: "EU2L3", label: "EU2L3", kind: "view", condition: (r) => r.EU2L3 },
+  { key: "CL2UT", label: "CL2UT", kind: "view", condition: (r) => r.CL2UT },
+  { key: "L3CP", label: "L3CP", kind: "view", condition: (r) => r.L3CP },
+  { key: "L2CP", label: "L2CP", kind: "view", condition: (r) => r.L2CP },
+  { key: "L3TC", label: "L3TC", kind: "view", condition: (r) => r.L3TC },
+];
+
+VIEWS.push(...RAW_FLAG_VIEWS);
+
+/**
+ * NOTE on matchesPatternFlag's ORIGINAL `default` case: it wasn't a raw
+ * flag lookup at all, but a fallback to the row's own single computed
+ * dominant-pattern label (getPatternInfo(r).label) for the six
+ * mutually-exclusive primary labels: "eX-Higher" | "eX-Lower" |
+ * "cO-Higher" | "cO-Lower" | "Higher" | "Lower". getPatternInfo lives in
+ * ScreenerUtils.tsx (not cpr.ts), and importing it here would create a
+ * circular dependency (ScreenerUtils.tsx imports passesView from this
+ * file). So that fallback stays in ScreenerUtils.tsx's own
+ * matchesPatternFlag wrapper instead of being folded into views.ts —
+ * see the ScreenerUtils.tsx diff: `export function matchesPatternFlag(r,
+ * label) { return getView(label) ? passesView(r, label) :
+ * getPatternInfo(r)?.label === label; }`, same fallback order as the
+ * original switch (explicit cases first, getPatternInfo default last).
+ */
