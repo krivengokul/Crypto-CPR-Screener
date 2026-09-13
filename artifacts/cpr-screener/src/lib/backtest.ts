@@ -1,6 +1,7 @@
 import { OHLC, CPRResult, analyzeCPR } from "./cpr";
 import { fetchTopUSDTSymbols, fetchDailyKlines, isLiveDailyCandle } from "./binance";
 import { fetchDeltaPerps } from "./delta";
+import { buildViewTree, type ViewTreeNode } from "./views";
 
 export type BacktestSource = "binance" | "delta";
 
@@ -2486,22 +2487,28 @@ export function findContainingNodeKey(key: string): string | null {
 }
 
 export function getAttachPointOptions(): AttachPointOption[] {
+  const tree = buildViewTree();
   const opts: AttachPointOption[] = [];
 
-  const walk = (nodes: BacktestSubCategoryDef[] | undefined, depth: number, categoryLabel: string) => {
-    for (const n of nodes ?? []) {
-      opts.push({ key: n.key, label: n.label, depth, categoryLabel });
-      walk(n.patterns, depth + 1, categoryLabel);
+  const walk = (nodes: ViewTreeNode[], depth: number, categoryLabel: string) => {
+    for (const n of nodes) {
+      if (n.kind === "pattern") {
+        opts.push({ key: n.key, label: n.label, depth, categoryLabel });
+        walk(n.children, depth + 1, categoryLabel);
+      }
     }
   };
 
-  for (const cat of BACKTEST_CATEGORIES) {
-    opts.push({ key: cat.key, label: cat.label, depth: 0, categoryLabel: cat.label });
-    walk(cat.patterns, 1, cat.label);
+  for (const cat of tree) {
+    if (cat.kind === "category") {
+      opts.push({ key: cat.key, label: cat.label, depth: 0, categoryLabel: cat.label });
+      walk(cat.children, 1, cat.label);
+    }
   }
 
   return opts;
 }
+
 
 /**
  * Clones `sourceKey`'s View (levelCheckDefs deep-copied) as `newKey`/
@@ -2710,10 +2717,44 @@ export interface BacktestOption {
 export const SYMBOL_LIST_ONLY_SUFFIX = " — all (symbol list only)";
 
 export function buildBacktestOptions(): BacktestOption[] {
+  const tree = buildViewTree();
   const opts: BacktestOption[] = [];
-  const patternLabel = (key: string) => BACKTEST_TARGETS.find((t) => t.key === key)?.label ?? key;
 
-  for (const cat of BACKTEST_CATEGORIES) {
+  const walkPattern = (sub: ViewTreeNode, catKey: string, path: string[], depth: number) => {
+    const selectionValue = [catKey, ...path].join("::");
+    opts.push({
+      value: selectionValue,
+      kind: "pattern",
+      boldLabel: sub.label,
+      suffix: "",
+      plainLabel: sub.label,
+      depth,
+      categoryKey: catKey,
+      patternKey: sub.key,
+      symbolListOnly: false,
+    });
+
+    for (const child of sub.children) {
+      if (child.kind === "view") {
+        opts.push({
+          value: child.key,
+          kind: "view",
+          boldLabel: "",
+          suffix: child.label,
+          plainLabel: child.label,
+          depth: depth + 1,
+          categoryKey: catKey,
+          patternKey: sub.key,
+          viewKey: child.key,
+          symbolListOnly: false,
+        });
+      } else if (child.kind === "pattern") {
+        walkPattern(child, catKey, [...path, child.key], depth + 1);
+      }
+    }
+  };
+
+  for (const cat of tree) {
     opts.push({
       value: cat.key,
       kind: "category",
@@ -2725,88 +2766,28 @@ export function buildBacktestOptions(): BacktestOption[] {
       symbolListOnly: true,
     });
 
-    const directViews = new Map((cat.subPatternKeys ?? []).map((key) => [key, key]));
-    const patterns = new Map((cat.patterns ?? []).map((sub) => [sub.key, sub]));
-
-    const pushDirectView = (key: string) => {
-      opts.push({
-        value: key,
-        kind: "view",
-        boldLabel: "",
-        suffix: patternLabel(key),
-        plainLabel: patternLabel(key),
-        depth: 1,
-        categoryKey: cat.key,
-        viewKey: key,
-        symbolListOnly: false,
-      });
-    };
-
-    const pushPattern = (sub: BacktestSubCategoryDef, path: BacktestSubCategoryDef[], depth: number) => {
-      // A Pattern node is selectable independently from its Views. Its
-      // selection value carries the category and full ancestor path so a
-      // nested Subpattern cannot be confused with a direct View that happens
-      // to have the same raw key.
-      const selectionValue = [cat.key, ...path.map((p) => p.key)].join("::");
-      opts.push({
-        value: selectionValue,
-        kind: "pattern",
-        boldLabel: sub.label,
-        suffix: "",
-        plainLabel: sub.label,
-        depth,
-        categoryKey: cat.key,
-        patternKey: sub.key,
-        symbolListOnly: false,
-      });
-      for (const key of sub.subPatternKeys) {
+    for (const child of cat.children) {
+      if (child.kind === "view") {
         opts.push({
-          value: key,
+          value: child.key,
           kind: "view",
           boldLabel: "",
-          suffix: patternLabel(key),
-          plainLabel: patternLabel(key),
-          depth: depth + 1,
+          suffix: child.label,
+          plainLabel: child.label,
+          depth: 1,
           categoryKey: cat.key,
-          patternKey: sub.key,
-          viewKey: key,
+          viewKey: child.key,
           symbolListOnly: false,
         });
+      } else if (child.kind === "pattern") {
+        walkPattern(child, cat.key, [child.key], 1);
       }
-      for (const child of sub.patterns ?? []) {
-        pushPattern(child, [...path, child], depth + 1);
-      }
-    };
-
-    if (cat.orderedEntries) {
-      const emittedDirectViews = new Set<string>();
-      const emittedPatterns = new Set<string>();
-      for (const entry of cat.orderedEntries) {
-        if (entry.kind === "subPattern" && directViews.has(entry.key)) {
-          pushDirectView(entry.key);
-          emittedDirectViews.add(entry.key);
-        } else if (entry.kind === "pattern") {
-          const sub = patterns.get(entry.key);
-          if (sub) {
-            pushPattern(sub, [sub], 1);
-            emittedPatterns.add(entry.key);
-          }
-        }
-      }
-      for (const key of cat.subPatternKeys ?? []) {
-        if (!emittedDirectViews.has(key)) pushDirectView(key);
-      }
-      for (const sub of cat.patterns ?? []) {
-        if (!emittedPatterns.has(sub.key)) pushPattern(sub, [sub], 1);
-      }
-    } else {
-      for (const key of cat.subPatternKeys ?? []) pushDirectView(key);
-      for (const sub of cat.patterns ?? []) pushPattern(sub, [sub], 1);
     }
   }
 
   return opts;
 }
+
 
 export const BACKTEST_OPTIONS: BacktestOption[] = buildBacktestOptions();
 
