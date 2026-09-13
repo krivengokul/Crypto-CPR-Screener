@@ -502,6 +502,19 @@ export default function Screener({
     [activeView],
   );
 
+  // Display name of the currently active View (the highlighted "VIEWS:"
+  // pill) for the "Levels VIEW" badge in each row's expanded S/R ladder.
+  // activeGenericSubView already covers both ways a specific View gets
+  // selected — clicking its pill directly, and navigating straight to it
+  // as a leaf via the left-nav (see the sync effect below, which calls
+  // setActiveGenericSubView(activeView) for the leaf case) — so there's
+  // no separate leaf/category branch needed here. null (no View active,
+  // e.g. a plain category like "Levels Above" with nothing pinned) means
+  // no badge is shown for that row.
+  const activeViewName = activeGenericSubView
+    ? VIEW_LABEL_BY_ID[activeGenericSubView] ?? activeGenericSubView
+    : undefined;
+
   // Sidebar → Screener: whenever the left-nav selects a View leaf, switch the
   // matching Screener filter button on. Runs after the reset effect above
   // (which clears every button on each activeView / results change), so the
@@ -1900,6 +1913,7 @@ export default function Screener({
                         canShowCombined={canShowCombined}
                         activeTab={activeTab}
                         activeView={activeSectionKey}
+                        viewName={activeViewName}
                       />
                     );
                   })}

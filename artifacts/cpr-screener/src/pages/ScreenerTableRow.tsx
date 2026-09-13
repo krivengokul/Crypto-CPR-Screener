@@ -644,6 +644,8 @@ export interface ScreenerTableRowProps {
   activeTab: ActiveTab;
   activePattern?: string;
   activeView?: string;
+  /** Display name of the currently active View (the highlighted "VIEWS:" pill), e.g. "A-A-AA-AA-EU3L4-GapB". Shown as a badge next to "Levels VIEW" in the expanded S/R ladder. Omit to hide it. */
+  viewName?: string;
 }
 
 /**
@@ -661,8 +663,13 @@ export default function ScreenerTableRow({
   activeTab,
   activePattern: rawActivePattern,
   activeView,
+  viewName,
 }: ScreenerTableRowProps) {
   const activePattern = rawActivePattern ?? activeView ?? "";
+  // Hoisted so the same up/down call drives both the per-row dot in the
+  // Symbol column AND the new "Levels VIEW" name badge below — one row
+  // shouldn't ever show a green dot next to a red badge.
+  const dir = getViewDirection(r, activePattern);
   const sym = splitSymbol(r.symbol, r.source);
 
   const isInsideCPR = passesPattern(r, "inside-cpr");
@@ -695,7 +702,7 @@ export default function ScreenerTableRow({
   return (
     <Fragment key={rowKey}>
       <tr
-        className={`hover:bg-muted/20 transition-colors ${getViewDirection(r, activePattern) ? "bg-accent/3" : ""}`}
+        className={`hover:bg-muted/20 transition-colors ${dir ? "bg-accent/3" : ""}`}
       >
         {canShowCombined && activeTab === "combined" && (
           <td className="px-4 py-3 whitespace-nowrap">
@@ -718,7 +725,6 @@ export default function ScreenerTableRow({
           <div className="flex items-start gap-1.5">
             <span className="text-muted-foreground text-xs mt-0.5">{isExpanded ? "▼" : "▶"}</span>
             {(() => {
-              const dir = getViewDirection(r, activePattern);
               if (!dir) return null;
               return (
                 <div
@@ -841,6 +847,8 @@ export default function ScreenerTableRow({
           // more accurately belongs (it's today-vs-prev, not prev's own).
           prevPatternBadge={renderPrevPatternBadge(r)}
           pivotPatternBadge={renderPivotPatternBadge(r)}
+          viewName={viewName}
+          viewDirection={dir ?? undefined}
         />
       )}
     </Fragment>
