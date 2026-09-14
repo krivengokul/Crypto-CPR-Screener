@@ -164,7 +164,7 @@ const CATEGORY_VIEWS: ViewDef[] = [
   { key: "compressed", label: "COMPRESSED", kind: "category", condition: (r) => r.compressed,
       order: 4
 },
-  { key: "expanded", label: "EXPANDED", kind: "category", condition: (r) => r.expanded,
+  { key: "expanded", label: "EXPANDED", kind: "category", condition: (r) => r.expanded && !r.LevelsAbove,
       order: 5
 },
 ];
