@@ -973,7 +973,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
   // expanded — "EXPANDED": RRSS-E only. Same tolerance-aware R1/S1
   // direction test used for SSRRCategory === "RRSS-E": today's R1 up vs
   // prev's R1 AND today's S1 down vs prev's S1. Mirrors compressed above.
-  const expanded = r1DirVsPrev > 0 && s1DirVsPrev < 0;
+  const expanded = r1DirVsPrev > 0 && s1DirVsPrev < 0 && !(today.r1 > prev.r4) && !(today.s1 < prev.s4);
 
   // LevelsBelow — "LEVEL BELOW": RRSS-B only. Replaces the old two-clause
   // CPR-band condition (formerly named pCPR1Above) with the same
