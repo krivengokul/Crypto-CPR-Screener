@@ -623,7 +623,7 @@ const LEVELSABOVE_VIEWS: ViewDef[] = [
   {
     key: "9AM:pPALPApH-FAU4:2PM",
     label: "9AM:pPALPApH-FAU4:2PM",
-    parentKey: "A-A-AA-AA-U3L4",
+    parentKey: "A-A-AA-AA-U4L3",
     kind: "view",
     direction: "bullish",
     condition: (r) => r.prevCPR.pivot > r.todayCPR.prevLow && r.todayCPR.pivot > r.prevCPR.prevHigh,
