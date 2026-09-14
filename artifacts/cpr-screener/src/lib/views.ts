@@ -526,9 +526,6 @@ const LEVELSABOVE_VIEWS: ViewDef[] = [
   { key: "EU2L4", label: "EU2L4", parentKey: "levelsabove", kind: "pattern", condition: (r) => r.EU2L4,
       order: 0
 },
-  { key: "U4L3", label: "U4L3", parentKey: "levelsabove", kind: "pattern", condition: (r) => r.U4L3,
-      order: 1
-},
 
   // --- A-B-C-C's one nested child ---
   { key: "A-B-C-C-EU4L4", label: "A-B-C-C-EU4L4", parentKey: "A-B-C-C", kind: "pattern", condition: (r) => r.EU4L4,
@@ -626,7 +623,7 @@ const LEVELSABOVE_VIEWS: ViewDef[] = [
   {
     key: "9AM:pPALPApH-FAU4:2PM",
     label: "9AM:pPALPApH-FAU4:2PM",
-    parentKey: "U4L3",
+    parentKey: "A-A-AA-AA-U3L4",
     kind: "view",
     direction: "bullish",
     condition: (r) => r.prevCPR.pivot > r.todayCPR.prevLow && r.todayCPR.pivot > r.prevCPR.prevHigh,
