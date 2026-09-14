@@ -44,7 +44,7 @@ export const Views: Record<string, SubPattern[]> = {
   // choice per View. passesPattern(r, newKey) resolves these via their
   // conditionKey + levelCheckDefs — see the new block at the top of
   // passesPattern in ScreenerUtils.tsx.
-  copyViews: [{ id: "A-A-AA-AA-EUBL2-pS4S2:R2", label: "A-A-AA-AA-EUBL2-pS4S2:R2" }, { id: "B-B-BB-BB-L4U4-pGapA", label: "B-B-BB-BB-L4U4-pGapA" }, { id: "A5-EUTL3-pA-S1ATC", label: "A5-EUTL3-pA-S1ATC" }, { id: "MiniTiny-R4", label: "MiniTiny-R4" }],
+  copyViews: [{ id: "A-A-AA-AA-EUBL2-pS4S2:R2", label: "A-A-AA-AA-EUBL2-pS4S2:R2" }, { id: "B-B-BB-BB-L4U4-pGapA", label: "B-B-BB-BB-L4U4-pGapA" }, { id: "A5-EUTL3-pA-S1ATC", label: "A5-EUTL3-pA-S1ATC" }, { id: "MiniTiny-R4", label: "MiniTiny-R4" }, { id: "CU3L2-MedMicro-R4", label: "CU3L2-MedMicro-R4" }],
   "levelsabove": [
     // NEW: "A-A-AA-OA-U3L4-RRHHGap:R4" — badges A-A-AA-OA + U3L4 +
     // RRGap + HHGap + pHL-B + HLGap-B (see ScreenerUtils.tsx / cpr.ts).
