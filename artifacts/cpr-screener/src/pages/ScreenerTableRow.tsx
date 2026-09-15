@@ -597,11 +597,8 @@ export function ScreenerTableHeader({
         >
           Symbol <SortIcon k="symbol" />
         </th>
-        <th
-          className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider"
-          title="Levels still matching prev day (see expanded row for the current View's Level Check)"
-        >
-          Ladder Check
+        <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          Pattern
         </th>
         <th
           className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground min-w-[150px]"
@@ -610,14 +607,17 @@ export function ScreenerTableHeader({
         >
           GAP <SortIcon k="pdhPdlPct" />
         </th>
-        <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          Pattern
-        </th>
         <th
           className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
           onClick={() => toggleSort("compressionRatio")}
         >
             PIVOT SIZE <SortIcon k="compressionRatio" />
+        </th>
+        <th
+          className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider"
+          title="Levels still matching prev day (see expanded row for the current View's Level Check)"
+        >
+          Ladder Check
         </th>
         <th
           className="px-3 py-3 pr-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
@@ -694,7 +694,7 @@ export default function ScreenerTableRow({
   // renderSSRRHHLLBadges helper.
   const ssrrHhllRow = renderSSRRHHLLBadges(r);
   // Formerly the LEVEL column's content — relocated to render underneath
-  // the "PDay S/R" ladder in the expanded row instead. Same badge
+  // the "Today S/R" ladder in the expanded row instead. Same badge
   // components, same colors, just a different home.
   const levelBadges = (
     <>
@@ -784,6 +784,24 @@ export default function ScreenerTableRow({
             </div>
           </div>
         </td>
+        <td className="px-2 py-3 w-56">
+          <div className="flex flex-col gap-1 max-w-[200px]">
+            <div className="flex flex-nowrap items-center gap-1">
+              {renderLevelStatusBadge(r, isInsideCPR, isOutsideCPR, showWide, nothingMatchedMain)}
+              {renderTodayPatternBadges(r)}
+            </div>
+            {renderPivotPatternBadge(r, false)}
+          </div>
+        </td>
+        <td
+          className="px-3 py-3 whitespace-nowrap text-xs font-medium min-w-[150px]"
+          title={`PDH: ${fmt(r.todayCPR.prevHigh)}  |  PDL: ${fmt(r.todayCPR.prevLow)}`}
+        >
+          {renderGapColumnBadges(r)}
+        </td>
+        <td className="px-3 py-3 font-mono whitespace-nowrap">
+          {renderPivotSizeCell(r.prevCPR, r.todayCPR, r.compressionRatio)}
+        </td>
         <td className="px-3 py-3">
           {!ladder.hasConditions ? (
             <span className="text-xs text-muted-foreground">LevelCheck UnDefined</span>
@@ -810,24 +828,6 @@ export default function ScreenerTableRow({
               {ladder.matchingCount}/{ladder.total}
             </span>
           )}
-        </td>
-        <td
-          className="px-3 py-3 whitespace-nowrap text-xs font-medium min-w-[150px]"
-          title={`PDH: ${fmt(r.todayCPR.prevHigh)}  |  PDL: ${fmt(r.todayCPR.prevLow)}`}
-        >
-          {renderGapColumnBadges(r)}
-        </td>
-        <td className="px-2 py-3 w-56">
-          <div className="flex flex-col gap-1 max-w-[200px]">
-            <div className="flex flex-nowrap items-center gap-1">
-              {renderLevelStatusBadge(r, isInsideCPR, isOutsideCPR, showWide, nothingMatchedMain)}
-              {renderTodayPatternBadges(r)}
-            </div>
-            {renderPivotPatternBadge(r, false)}
-          </div>
-        </td>
-        <td className="px-3 py-3 font-mono whitespace-nowrap">
-          {renderPivotSizeCell(r.prevCPR, r.todayCPR, r.compressionRatio)}
         </td>
         <td className="px-3 py-3 pr-3 font-mono whitespace-nowrap">
           <div className="text-sm font-bold text-foreground">
@@ -892,7 +892,7 @@ export default function ScreenerTableRow({
           viewDirection={dir ?? undefined}
           showLevelCheck
           levelCheckConditions={levelCheckConditions}
-          pDayLevelBadges={levelBadges}
+          innerLevelBadges={levelBadges}
         />
       )}
     </Fragment>
