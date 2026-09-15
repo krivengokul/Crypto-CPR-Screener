@@ -1644,7 +1644,7 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
   {
     key: "9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A",
     label: "9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A",
-    parentKey: "R1AbovePR4-A-A-AA-AA-EUTL3",
+    parentKey: "A-A-AA-AA-EUTL3",
     kind: "view",
     direction: "Up",
     condition: (r) => r.todayCPR.bc > r.prevCPR.prevHigh && r.todayCPR.s1 > r.prevCPR.tc,
@@ -1659,7 +1659,7 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
   {
     key: "6A:A-A-AA-AA-EUTL3-S1ATCpE-pL4:4A",
     label: "6A:A-A-AA-AA-EUTL3-S1ATCpE-pL4:4A",
-    parentKey: "R1AbovePR4-A-A-AA-AA-EUTL3",
+    parentKey: "A-A-AA-AA-EUTL3",
     kind: "view",
     direction: "Down",
     condition: (r) =>
@@ -1677,7 +1677,7 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
   {
     key: "A5-EUTL3-pA-S1ATC",
     label: "A5-EUTL3-pA-S1ATC",
-    parentKey: "R1AbovePR4-A-A-AA-AA-EUTL3",
+    parentKey: "A-A-AA-AA-EUTL3",
     kind: "view",
     direction: "Up",
     condition: (r) => r.prevCPR.HLSwitch === "HL-A",
