@@ -524,15 +524,17 @@ function CPRLevelChart({
     11
   );
 
-  // S1 line position(s) — prev's S1 sits in the left half, today's in the
-  // right half, usually at slightly different heights. The SSLL badge
-  // compares the two, so it's centered above whichever of the two sits
-  // higher on the chart (smaller y = higher up), clear of both lines.
-  const s1Y = Math.min(yFor(prevCPR.s1), yFor(todayCPR.s1));
-  const ssllBadgeWidth = 90;
-  const ssllBadgeHeight = 16;
-  const ssllBadgeX = leftMargin + plotWidth / 2 - ssllBadgeWidth / 2;
-  const ssllBadgeY = s1Y - ssllBadgeHeight - 3;
+  // S1 badge position: centered above the "today" (right-hand) S1 line
+  // segment specifically — not the chart's overall midpoint, which sat
+  // right at the prev/today boundary and looked like it belonged to
+  // neither day.
+  const todaySegStart = prevSegmentEnd;
+  const todaySegEnd = leftMargin + plotWidth;
+  const todayS1Y = yFor(todayCPR.s1);
+  const ssllBadgeWidth = 70;
+  const ssllBadgeHeight = 14;
+  const ssllBadgeX = todaySegStart + (todaySegEnd - todaySegStart) / 2 - ssllBadgeWidth / 2;
+  const ssllBadgeY = todayS1Y - ssllBadgeHeight - 3;
 
   return (
     <div className="min-w-0">
@@ -622,6 +624,11 @@ function CPRLevelChart({
               // eslint-disable-next-line react/no-unknown-property
               xmlns="http://www.w3.org/1999/xhtml"
               className="flex items-center justify-center"
+              // Scales the whole pill (text + padding + border) down to
+              // roughly the same visual weight as the chart's own level
+              // labels (fontSize 9, e.g. "PV", "TC") rather than its normal
+              // table-cell size.
+              style={{ transform: "scale(0.9)", transformOrigin: "center" }}
             >
               {ssllBadge}
             </div>
