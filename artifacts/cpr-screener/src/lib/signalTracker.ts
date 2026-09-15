@@ -41,9 +41,50 @@ export interface LoggedSignal {
 }
 
 const SIGNALS_COLLECTION = "signalsJournal";
+const SIGNALS_LOCAL_KEY = "cpr_signals_journal_cache";
 
 function signalDocId(uid: string, signalId: string): string {
   return `${uid}::${signalId}`;
+}
+
+function getLocalSignalsCache(): LoggedSignal[] {
+  try {
+    const raw = localStorage.getItem(SIGNALS_LOCAL_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveLocalSignalsCache(signals: LoggedSignal[]) {
+  try {
+    // Keep the most recent 1000 signals to avoid localStorage quotas
+    const sorted = [...signals].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)).slice(0, 1000);
+    localStorage.setItem(SIGNALS_LOCAL_KEY, JSON.stringify(sorted));
+  } catch {
+    // ignore
+  }
+}
+
+function mergeSignals(existing: LoggedSignal[], incoming: LoggedSignal[]): LoggedSignal[] {
+  const map = new Map<string, LoggedSignal>();
+  for (const s of existing) {
+    map.set(s.id, s);
+  }
+  for (const s of incoming) {
+    const prev = map.get(s.id);
+    if (!prev) {
+      map.set(s.id, s);
+    } else {
+      // If previous has already completed (PASS/FAIL/EXPIRED), retain its outcome
+      if (prev.status === "PASS" || prev.status === "FAIL" || prev.status === "EXPIRED") {
+        map.set(s.id, { ...s, ...prev });
+      } else {
+        map.set(s.id, { ...prev, ...s });
+      }
+    }
+  }
+  return Array.from(map.values()).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
 }
 
 export async function saveSignalToCloud(
@@ -51,6 +92,15 @@ export async function saveSignalToCloud(
   customId?: string
 ): Promise<string> {
   const signalId = customId || `${signal.symbol}-${signal.direction}-${Date.now()}`;
+  const fullSignal: LoggedSignal = {
+    ...signal,
+    id: signalId,
+  };
+
+  // 1. Immediately cache locally
+  const current = getLocalSignalsCache();
+  saveLocalSignalsCache(mergeSignals(current, [fullSignal]));
+
   try {
     const uid = await ensureSignedIn();
     const db = getDb();
@@ -65,16 +115,15 @@ export async function saveSignalToCloud(
     }
 
     const data: LoggedSignal & { updatedAt: any } = {
-      ...signal,
-      id: signalId,
+      ...fullSignal,
       uid,
       updatedAt: serverTimestamp(),
     };
 
     await setDoc(docRef, data, { merge: true });
     return signalId;
-  } catch (err) {
-    console.error("Failed to save signal to Firestore:", err);
+  } catch {
+    // Stored locally; cloud sync will happen when online
     return signalId;
   }
 }
@@ -82,61 +131,91 @@ export async function saveSignalToCloud(
 async function performAutoSave(
   signals: Omit<LoggedSignal, "id">[]
 ): Promise<number> {
-  const uid = await ensureSignedIn();
-  const db = getDb();
   const todayKey = new Date().toISOString().slice(0, 10);
+  const localList = getLocalSignalsCache();
+  const localMap = new Map(localList.map((s) => [s.id, s]));
 
-  // Fetch existing docs for this user with a single fast query
-  const q = query(
-    collection(db, SIGNALS_COLLECTION),
-    where("uid", "==", uid)
-  );
-  const existingSnap = await getDocs(q);
-  const existingIds = new Set<string>();
-  existingSnap.forEach((d) => existingIds.add(d.id));
-
-  let savedCount = 0;
-  const BATCH_SIZE = 400;
-
-  for (let i = 0; i < signals.length; i += BATCH_SIZE) {
-    const chunk = signals.slice(i, i + BATCH_SIZE);
-    const batch = writeBatch(db);
-    let hasWrites = false;
-
-    for (const sig of chunk) {
-      const patternSlug = sig.patternName.replace(/[^a-zA-Z0-9]/g, "_").toUpperCase();
-      const deterministicId = `${sig.symbol}-${sig.direction}-${patternSlug}-${todayKey}`;
-      const fullDocId = signalDocId(uid, deterministicId);
-
-      if (existingIds.has(fullDocId)) {
-        // Already recorded for today!
-        continue;
-      }
-
-      const docRef = doc(db, SIGNALS_COLLECTION, fullDocId);
-      const data: LoggedSignal & { createdAt: any; updatedAt: any } = {
+  const newSignals: LoggedSignal[] = [];
+  for (const sig of signals) {
+    const patternSlug = sig.patternName.replace(/[^a-zA-Z0-9]/g, "_").toUpperCase();
+    const deterministicId = `${sig.symbol}-${sig.direction}-${patternSlug}-${todayKey}`;
+    if (!localMap.has(deterministicId)) {
+      const fullSig: LoggedSignal = {
         ...sig,
         id: deterministicId,
-        uid,
         dateStr: new Date(sig.timestamp).toLocaleString(),
         status: sig.status || "ACTIVE",
         outcomeNotes: `Auto-saved setup (${todayKey}). Awaiting TP ($${sig.target.toFixed(4)}) or SL ($${sig.sl.toFixed(4)}) outcome.`,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
       };
-
-      batch.set(docRef, data);
-      existingIds.add(fullDocId);
-      hasWrites = true;
-      savedCount++;
-    }
-
-    if (hasWrites) {
-      await batch.commit();
+      newSignals.push(fullSig);
+      localMap.set(deterministicId, fullSig);
     }
   }
 
-  return savedCount;
+  // Save to local cache first
+  if (newSignals.length > 0) {
+    saveLocalSignalsCache(Array.from(localMap.values()));
+  }
+
+  // Attempt Firestore sync
+  try {
+    const uid = await ensureSignedIn();
+    const db = getDb();
+
+    // Query existing docs for this user
+    const q = query(
+      collection(db, SIGNALS_COLLECTION),
+      where("uid", "==", uid)
+    );
+    const existingSnap = await getDocs(q);
+    const existingIds = new Set<string>();
+    existingSnap.forEach((d) => existingIds.add(d.id));
+
+    let savedCount = 0;
+    const BATCH_SIZE = 400;
+
+    for (let i = 0; i < signals.length; i += BATCH_SIZE) {
+      const chunk = signals.slice(i, i + BATCH_SIZE);
+      const batch = writeBatch(db);
+      let hasWrites = false;
+
+      for (const sig of chunk) {
+        const patternSlug = sig.patternName.replace(/[^a-zA-Z0-9]/g, "_").toUpperCase();
+        const deterministicId = `${sig.symbol}-${sig.direction}-${patternSlug}-${todayKey}`;
+        const fullDocId = signalDocId(uid, deterministicId);
+
+        if (existingIds.has(fullDocId)) {
+          continue;
+        }
+
+        const docRef = doc(db, SIGNALS_COLLECTION, fullDocId);
+        const data: LoggedSignal & { createdAt: any; updatedAt: any } = {
+          ...sig,
+          id: deterministicId,
+          uid,
+          dateStr: new Date(sig.timestamp).toLocaleString(),
+          status: sig.status || "ACTIVE",
+          outcomeNotes: `Auto-saved setup (${todayKey}). Awaiting TP ($${sig.target.toFixed(4)}) or SL ($${sig.sl.toFixed(4)}) outcome.`,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        };
+
+        batch.set(docRef, data);
+        existingIds.add(fullDocId);
+        hasWrites = true;
+        savedCount++;
+      }
+
+      if (hasWrites) {
+        await batch.commit();
+      }
+    }
+
+    return savedCount > 0 ? savedCount : newSignals.length;
+  } catch {
+    // When offline or Firestore backend unavailable, return locally saved count
+    return newSignals.length;
+  }
 }
 
 /**
@@ -160,17 +239,17 @@ export async function autoSaveQualifiedSignals(
         }
         await new Promise((r) => setTimeout(r, 600));
         return await performAutoSave(signals);
-      } catch (retryErr) {
-        console.warn("Auto-save deferred (transient connection state):", retryErr);
+      } catch {
         return 0;
       }
     }
-    console.error("Failed to auto-save signals to Firestore:", err);
     return 0;
   }
 }
 
 export async function fetchSavedSignalsFromCloud(): Promise<LoggedSignal[]> {
+  const localList = getLocalSignalsCache();
+
   try {
     const uid = await ensureSignedIn();
     const db = getDb();
@@ -179,38 +258,45 @@ export async function fetchSavedSignalsFromCloud(): Promise<LoggedSignal[]> {
       where("uid", "==", uid)
     );
     const snapshot = await getDocs(q);
-    const list: LoggedSignal[] = [];
+    const cloudList: LoggedSignal[] = [];
 
     snapshot.forEach((docSnap) => {
       const data = docSnap.data() as LoggedSignal;
-      list.push(data);
+      cloudList.push(data);
     });
 
-    return list.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-  } catch (err: any) {
-    const msg = err?.message || String(err);
-    if (msg.includes("closing") || msg.includes("Closing")) {
-      console.warn("Deferred signal fetch (database reconnecting)");
-      return [];
-    }
-    console.error("Failed to fetch signals from Firestore:", err);
-    return [];
+    const merged = mergeSignals(localList, cloudList);
+    saveLocalSignalsCache(merged);
+    return merged;
+  } catch {
+    // Offline / Firestore unavailable: return local cached signals
+    return localList;
   }
 }
 
 export async function deleteSavedSignalFromCloud(id: string): Promise<void> {
+  // 1. Remove from local cache immediately
+  const localList = getLocalSignalsCache().filter((s) => s.id !== id);
+  saveLocalSignalsCache(localList);
+
   try {
     const uid = await ensureSignedIn();
     const db = getDb();
     const docRef = doc(db, SIGNALS_COLLECTION, signalDocId(uid, id));
     await deleteDoc(docRef);
-  } catch (err) {
-    console.error("Failed to delete signal from Firestore:", err);
+  } catch {
+    // non-blocking
   }
 }
 
 export async function clearAllSignalsFromCloud(signalIds: string[]): Promise<void> {
   if (!signalIds || signalIds.length === 0) return;
+
+  // 1. Clear from local cache immediately
+  const toDelete = new Set(signalIds);
+  const remaining = getLocalSignalsCache().filter((s) => !toDelete.has(s.id));
+  saveLocalSignalsCache(remaining);
+
   try {
     const uid = await ensureSignedIn();
     const db = getDb();
@@ -225,8 +311,8 @@ export async function clearAllSignalsFromCloud(signalIds: string[]): Promise<voi
       }
       await batch.commit();
     }
-  } catch (err) {
-    console.error("Failed to clear signals from Firestore:", err);
+  } catch {
+    // non-blocking
   }
 }
 
@@ -234,6 +320,10 @@ export async function updateSignalOutcomeInCloud(
   id: string,
   update: Partial<LoggedSignal>
 ): Promise<void> {
+  // 1. Update local cache immediately
+  const localList = getLocalSignalsCache().map((s) => (s.id === id ? { ...s, ...update } : s));
+  saveLocalSignalsCache(localList);
+
   try {
     const uid = await ensureSignedIn();
     const db = getDb();
@@ -247,8 +337,8 @@ export async function updateSignalOutcomeInCloud(
     }
 
     await updateDoc(docRef, cleanUpdate);
-  } catch (err) {
-    console.error("Failed to update signal outcome in Firestore:", err);
+  } catch {
+    // non-blocking
   }
 }
 

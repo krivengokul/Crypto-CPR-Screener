@@ -16,11 +16,35 @@ import { doc, getDoc, setDoc, deleteDoc, serverTimestamp } from "firebase/firest
 import { getDb, ensureSignedIn } from "@/lib/firebase";
 
 const CHART_LINKS_COLLECTION = "chartLinks";
+const LOCAL_CACHE_KEY = "cpr_chart_links_cache";
 
 export type StoredChartLink = {
   url: string;
   savedAt: string; // ISO timestamp, set client-side for easy display
 };
+
+function getLocalCache(): Record<string, StoredChartLink> {
+  try {
+    const raw = localStorage.getItem(LOCAL_CACHE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveToLocalCache(key: string, link: StoredChartLink | null) {
+  try {
+    const cache = getLocalCache();
+    if (link) {
+      cache[key] = link;
+    } else {
+      delete cache[key];
+    }
+    localStorage.setItem(LOCAL_CACHE_KEY, JSON.stringify(cache));
+  } catch {
+    // ignore quota/security errors
+  }
+}
 
 function chartLinkDocId(_viewKey?: string, rowKey?: string): string {
   // If only one argument is provided or rowKey is given as second arg,
@@ -30,52 +54,76 @@ function chartLinkDocId(_viewKey?: string, rowKey?: string): string {
 }
 
 /** Read the chart link saved for this symbol-date row.
- * Checks the shared rowKey document first, and falls back to viewKey::rowKey for existing records.
+ * Checks local cache immediately, and synchronizes with Firestore.
  */
 export async function getChartLink(viewKey: string, rowKey: string): Promise<StoredChartLink | null> {
+  const primaryKey = rowKey || viewKey;
+  const legacyKey = viewKey && rowKey && viewKey !== rowKey ? `${viewKey}::${rowKey}` : null;
+
+  // 1. Immediate local cache check
+  const localCache = getLocalCache();
+  const cached = localCache[primaryKey] || (legacyKey ? localCache[legacyKey] : null);
+
+  // 2. Try Firestore in background/await with fallback
   try {
     await ensureSignedIn();
     const db = getDb();
-    const primaryKey = rowKey || viewKey;
 
-    // 1. Primary lookup at symbol-date level (${rowKey})
+    // Primary lookup at symbol-date level (${rowKey})
     const snap = await getDoc(doc(db, CHART_LINKS_COLLECTION, primaryKey));
     if (snap.exists()) {
       const data = snap.data();
       if (typeof data.url === "string" && data.url) {
-        return { url: data.url, savedAt: typeof data.savedAt === "string" ? data.savedAt : "" };
+        const result: StoredChartLink = {
+          url: data.url,
+          savedAt: typeof data.savedAt === "string" ? data.savedAt : "",
+        };
+        saveToLocalCache(primaryKey, result);
+        return result;
       }
     }
 
-    // 2. Backward compatibility fallback for legacy viewKey::rowKey docs
-    if (viewKey && rowKey && viewKey !== rowKey) {
-      const legacySnap = await getDoc(doc(db, CHART_LINKS_COLLECTION, `${viewKey}::${rowKey}`));
+    // Fallback for legacy viewKey::rowKey docs
+    if (legacyKey) {
+      const legacySnap = await getDoc(doc(db, CHART_LINKS_COLLECTION, legacyKey));
       if (legacySnap.exists()) {
         const legacyData = legacySnap.data();
         if (typeof legacyData.url === "string" && legacyData.url) {
-          return { url: legacyData.url, savedAt: typeof legacyData.savedAt === "string" ? legacyData.savedAt : "" };
+          const result: StoredChartLink = {
+            url: legacyData.url,
+            savedAt: typeof legacyData.savedAt === "string" ? legacyData.savedAt : "",
+          };
+          saveToLocalCache(primaryKey, result);
+          return result;
         }
       }
     }
 
-    return null;
+    return cached ?? null;
   } catch {
-    return null;
+    // Firestore unavailable or offline — cleanly return local cached link
+    return cached ?? null;
   }
 }
 
 /** Save (or overwrite) the chart link at the symbol-date level (${rowKey}).
- * Also updates the legacy viewKey::rowKey document if applicable for backward compatibility.
- * Returns false on failure (offline, permission denied) or an empty url.
+ * Persists locally first for instant feedback, then asynchronously updates Firestore.
+ * Returns true if saved locally or in cloud.
  */
 export async function setChartLink(viewKey: string, rowKey: string, url: string): Promise<boolean> {
   const trimmed = url.trim();
   if (!trimmed) return false;
+
+  const savedAt = new Date().toISOString();
+  const primaryKey = rowKey || viewKey;
+  const storedLink: StoredChartLink = { url: trimmed, savedAt };
+
+  // Always save to local cache first so user changes are never lost even when offline
+  saveToLocalCache(primaryKey, storedLink);
+
   try {
     const uid = await ensureSignedIn();
-    const savedAt = new Date().toISOString();
     const db = getDb();
-    const primaryKey = rowKey || viewKey;
 
     // Save at the symbol-date level (${rowKey})
     await setDoc(doc(db, CHART_LINKS_COLLECTION, primaryKey), {
@@ -103,26 +151,32 @@ export async function setChartLink(viewKey: string, rowKey: string, url: string)
 
     return true;
   } catch {
-    return false;
+    // Firestore sync failed (e.g. offline/network issue) — already saved locally
+    return true;
   }
 }
 
 /** Remove the chart link for this symbol-date row (and legacy viewKey::rowKey if present). */
 export async function removeChartLink(viewKey: string, rowKey: string): Promise<void> {
+  const primaryKey = rowKey || viewKey;
+  const legacyKey = viewKey && rowKey && viewKey !== rowKey ? `${viewKey}::${rowKey}` : null;
+
+  saveToLocalCache(primaryKey, null);
+  if (legacyKey) saveToLocalCache(legacyKey, null);
+
   try {
     await ensureSignedIn();
     const db = getDb();
-    const primaryKey = rowKey || viewKey;
     await deleteDoc(doc(db, CHART_LINKS_COLLECTION, primaryKey));
 
-    if (viewKey && rowKey && viewKey !== rowKey) {
+    if (legacyKey) {
       try {
-        await deleteDoc(doc(db, CHART_LINKS_COLLECTION, `${viewKey}::${rowKey}`));
+        await deleteDoc(doc(db, CHART_LINKS_COLLECTION, legacyKey));
       } catch {
         // non-blocking
       }
     }
   } catch {
-    // ignore — nothing to clean up if the delete didn't go through
+    // non-blocking
   }
 }
