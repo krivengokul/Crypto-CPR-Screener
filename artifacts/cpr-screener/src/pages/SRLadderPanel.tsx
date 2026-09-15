@@ -345,6 +345,16 @@ function levelLabel(key: (typeof LEVEL_KEYS)[number]): string {
   return key.toUpperCase();
 }
 
+/**
+ * The dark/saturated red used for every S1-S4 line-end label in the chart
+ * (levelColor's fallback below). Named so it can be reused as the single
+ * source of truth wherever else something needs to match that exact red —
+ * e.g. the -B/-BB category badges (INNER_LABEL_TEXT_HEX below), which
+ * previously rendered in the much lighter Tailwind red-400 (#f87171)
+ * instead of this one.
+ */
+const S_LEVEL_DARK_RED = "#ff2e2e";
+
 /** Same color coding as SRLadder's rowColor, expressed as hex for SVG stroke/fill. */
 function levelColor(key: (typeof LEVEL_KEYS)[number]): string {
   if (key === "tc") return "#38bdf8"; // sky-400 (swapped with PH/PL)
@@ -353,7 +363,8 @@ function levelColor(key: (typeof LEVEL_KEYS)[number]): string {
   if (key === "prevHigh") return "#FF00FF"; // fuchsia (swapped with BC)
   if (key === "prevLow") return "#FF00FF"; // fuchsia (swapped with BC)
   if (key.startsWith("r")) return "#4ade80"; // green-400
-  return "#ff2e2e"; // S1-S4, brighter red
+  // S1-S4 all share this exact same red — no per-level variation.
+  return S_LEVEL_DARK_RED;
 }
 
 /**
@@ -436,7 +447,11 @@ function ViewNameBadge({ name, direction }: { name: string; direction?: ViewDire
  */
 const INNER_LABEL_TEXT_HEX: Record<string, string> = {
   "green-400": "#4ade80",
-  "red-400": "#f87171",
+  // HHLL-B, RRSS-B, SSLL-BB/OB, RRHH-BB/OB all use text-red-400 — matched
+  // to S_LEVEL_DARK_RED (the exact red used by the S1-S4 line-end labels)
+  // instead of Tailwind's lighter red-400 (#f87171), so every "-B"/"-BB"
+  // category badge reads in the same dark red as the S lines.
+  "red-400": S_LEVEL_DARK_RED,
   "blue-400": "#60a5fa",
   "orange-400": "#fb923c",
   "yellow-400": "#facc15",
