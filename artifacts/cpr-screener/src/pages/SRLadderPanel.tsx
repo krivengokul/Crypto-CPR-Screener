@@ -427,6 +427,32 @@ function ViewNameBadge({ name, direction }: { name: string; direction?: ViewDire
  * because those levels are usually tightly clustered; the outer R/S levels
  * retain their own compact bands so their ordering remains visible too.
  */
+/**
+ * Extract plain text and a matching text color from a badge ReactNode so it
+ * can be rendered as an SVG label directly over a level line, matching the
+ * style of the other level labels (no box, just colored text).
+ */
+const INNER_LABEL_TEXT_HEX: Record<string, string> = {
+  "green-400": "#4ade80",
+  "red-400": "#f87171",
+  "blue-400": "#60a5fa",
+  "orange-400": "#fb923c",
+  "yellow-400": "#facc15",
+  "slate-300": "#cbd5e1",
+};
+
+function extractInnerLabel(badge?: ReactNode): { text: string | null; color: string } {
+  let text: string | null = null;
+  let color = "#e5e7eb";
+  if (isValidElement(badge)) {
+    const badgeProps = badge.props as { children?: ReactNode; className?: string };
+    if (typeof badgeProps.children === "string") text = badgeProps.children;
+    const colorMatch = /text-([a-z]+-\d{3})/.exec(badgeProps.className ?? "");
+    if (colorMatch && INNER_LABEL_TEXT_HEX[colorMatch[1]]) color = INNER_LABEL_TEXT_HEX[colorMatch[1]];
+  }
+  return { text, color };
+}
+
 function CPRLevelChart({
   prevCPR,
   todayCPR,
@@ -434,6 +460,8 @@ function CPRLevelChart({
   viewName,
   viewDirection,
   ssllBadge,
+  hhllBadge,
+  innerLevelLabels,
 }: {
   prevCPR: CPRLevels;
   todayCPR: CPRLevels;
@@ -443,8 +471,16 @@ function CPRLevelChart({
   viewName?: string;
   /** Up → green badge, Down → red badge, omitted/undefined → neutral slate badge. No effect without viewName. */
   viewDirection?: ViewDirection;
-  /** SSLLCategory badge (e.g. renderSSLLCategoryBadge(r)) — rendered directly over the S1 line. Omit to hide it. */
+  /** SSLLCategory badge (e.g. renderSSLLCategoryBadge(r)) — rendered directly over the S1 line. Omit to hide it. Kept for backwards compatibility; prefer innerLevelLabels. */
   ssllBadge?: ReactNode;
+  /** HHLLCategory badge (e.g. renderHHLLCategoryBadge(r)) — rendered directly over the PH (prevHigh) line. Omit to hide it. */
+  hhllBadge?: ReactNode;
+  /**
+   * Generic inner level labels rendered directly over the corresponding
+   * "today" level line. Keys match LEVEL_KEYS (e.g. "s1", "prevHigh").
+   * Takes precedence over ssllBadge/hhllBadge for the same key.
+   */
+  innerLevelLabels?: Record<string, ReactNode>;
 }) {
   const width = 452;
   // Keep the chart compact when it sits beside the ladders. The ladders
@@ -524,36 +560,22 @@ function CPRLevelChart({
     11
   );
 
-  // S1 label position: centered over the "today" (right-hand) S1 line
+  // Inner label position: centered over the "today" (right-hand) line
   // segment specifically — not the chart's overall midpoint, which sat
   // right at the prev/today boundary and looked like it belonged to
   // neither day.
   const todaySegStart = prevSegmentEnd;
   const todaySegEnd = leftMargin + plotWidth;
-  const todayS1Y = yFor(todayCPR.s1);
-  const ssllLabelX = todaySegStart + (todaySegEnd - todaySegStart) / 2;
-  const ssllLabelY = todayS1Y + 3;
-  // renderSSLLCategoryBadge returns a table-cell pill (colored background +
-  // border). On the chart we want it to read exactly like the other level
-  // labels (PV, TC, ...) — plain colored text, no box — so pull the label
-  // text and its color back out of that badge instead of rendering the
-  // badge itself.
-  const SSLL_TEXT_HEX: Record<string, string> = {
-    "green-400": "#4ade80",
-    "red-400": "#f87171",
-    "blue-400": "#60a5fa",
-    "orange-400": "#fb923c",
-    "yellow-400": "#facc15",
-    "slate-300": "#cbd5e1",
+  const todayLabelCenterX = todaySegStart + (todaySegEnd - todaySegStart) / 2;
+  // renderSSLLCategoryBadge / renderHHLLCategoryBadge return table-cell
+  // pills (colored background + border). On the chart we want them to read
+  // exactly like the other level labels (PV, TC, ...) — plain colored text,
+  // no box — so pull the label text and its color back out of each badge.
+  const mergedInnerLabels: Record<string, ReactNode> = {
+    ...(ssllBadge ? { s1: ssllBadge } : {}),
+    ...(hhllBadge ? { prevHigh: hhllBadge } : {}),
+    ...(innerLevelLabels ?? {}),
   };
-  let ssllLabelText: string | null = null;
-  let ssllLabelColor = "#e5e7eb";
-  if (isValidElement(ssllBadge)) {
-    const badgeProps = ssllBadge.props as { children?: ReactNode; className?: string };
-    if (typeof badgeProps.children === "string") ssllLabelText = badgeProps.children;
-    const colorMatch = /text-([a-z]+-\d{3})/.exec(badgeProps.className ?? "");
-    if (colorMatch && SSLL_TEXT_HEX[colorMatch[1]]) ssllLabelColor = SSLL_TEXT_HEX[colorMatch[1]];
-  }
 
   return (
     <div className="min-w-0">
@@ -631,19 +653,28 @@ function CPRLevelChart({
             </g>
           );
         })}
-        {ssllLabelText && (
-          <text
-            x={ssllLabelX}
-            y={ssllLabelY}
-            fontSize={9}
-            fontFamily="monospace"
-            fontWeight="bold"
-            fill={ssllLabelColor}
-            textAnchor="middle"
-          >
-            {ssllLabelText}
-          </text>
-        )}
+        {Object.entries(mergedInnerLabels).map(([key, badge]) => {
+          if (!LEVEL_KEYS.some((k) => k === key)) return null;
+          const value = todayCPR[key as keyof CPRLevels] as number;
+          if (!isFinite(value)) return null;
+          const y = yFor(value);
+          const label = extractInnerLabel(badge);
+          if (!label.text) return null;
+          return (
+            <text
+              key={`inner-label-${key}`}
+              x={todayLabelCenterX}
+              y={y + 3}
+              fontSize={9}
+              fontFamily="monospace"
+              fontWeight="bold"
+              fill={label.color}
+              textAnchor="middle"
+            >
+              {label.text}
+            </text>
+          );
+        })}
       </svg>
     </div>
   );
@@ -747,9 +778,21 @@ export function SRLadderPanel({
   /**
    * SSLLCategory badge (renderSSLLCategoryBadge(r)) — rendered directly
    * above the S1 line in the "Levels VIEW" chart. Omit to hide it (e.g.
-   * BacktestPanel, which never had this badge).
+   * BacktestPanel, which never had this badge). Kept for backwards
+   * compatibility; prefer innerLevelLabels.
    */
   ssllBadge?: ReactNode;
+  /**
+   * HHLLCategory badge (e.g. renderHHLLCategoryBadge(r)) — rendered directly
+   * above the PH line in the "Levels VIEW" chart. Omit to hide it.
+   */
+  hhllBadge?: ReactNode;
+  /**
+   * Generic inner level labels rendered directly over the corresponding
+   * "today" level line in the "Levels VIEW" chart. Keys match LEVEL_KEYS
+   * (e.g. "s1", "prevHigh"). Takes precedence over ssllBadge/hhllBadge.
+   */
+  innerLevelLabels?: Record<string, ReactNode>;
 }) {
   const hasRightSection = Boolean(rowKey || showLevelCheck || copyViewControl);
 
@@ -767,6 +810,8 @@ export function SRLadderPanel({
           viewName={viewName}
           viewDirection={viewDirection}
           ssllBadge={ssllBadge}
+          hhllBadge={hhllBadge}
+          innerLevelLabels={innerLevelLabels}
         />
       </div>
 
@@ -817,6 +862,8 @@ export function SRLadderRow({
   copyViewControl,
   innerLevelBadges,
   ssllBadge,
+  hhllBadge,
+  innerLevelLabels,
 }: {
   r: SRLadderData;
   colSpan?: number;
@@ -845,6 +892,10 @@ export function SRLadderRow({
   innerLevelBadges?: ReactNode;
   /** SSLLCategory badge, rendered over the S1 line in "Levels VIEW". See SRLadderPanel for details. */
   ssllBadge?: ReactNode;
+  /** HHLLCategory badge, rendered over the PH line in "Levels VIEW". See SRLadderPanel for details. */
+  hhllBadge?: ReactNode;
+  /** Generic inner level labels, rendered over the corresponding "today" level line in "Levels VIEW". See SRLadderPanel for details. */
+  innerLevelLabels?: Record<string, ReactNode>;
 }) {
   return (
     <tr key={rowKey ? `${rowKey}-sr` : undefined} className="bg-muted/20 border-b border-border">
@@ -864,6 +915,8 @@ export function SRLadderRow({
           copyViewControl={copyViewControl}
           innerLevelBadges={innerLevelBadges}
           ssllBadge={ssllBadge}
+          hhllBadge={hhllBadge}
+          innerLevelLabels={innerLevelLabels}
         />
       </td>
     </tr>

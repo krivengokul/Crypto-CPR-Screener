@@ -21,6 +21,7 @@ import {
   levelsInDistanceRange,
   renderSSRRHHLLBadges,
   renderSSLLCategoryBadge,
+  renderHHLLCategoryBadge,
   renderLevelStatusRow1Badges,
   renderLevelStatusBadge,
   renderLevelStatusRestBadges,
@@ -712,6 +713,9 @@ export default function ScreenerTableRow({
   // SSLLCategory badge (e.g. "SSLL-AA") — shown above the S1 line in the
   // expanded row's "Levels VIEW" chart.
   const ssllBadge = renderSSLLCategoryBadge(r);
+  // HHLLCategory badge (e.g. "HHLL-AA") — shown above the PH line in the
+  // expanded row's "Levels VIEW" chart.
+  const hhllBadge = renderHHLLCategoryBadge(r);
   // Row 1 keeps every LEVEL-status badge inline on one line (Above/Below/
   // Inside/Outside/Skip, then oV-B/oV-A, then Narrow/Wide, then SSRR, then
   // Equal) so nothing gets pushed down to a second line.
@@ -898,6 +902,7 @@ export default function ScreenerTableRow({
           levelCheckConditions={levelCheckConditions}
           innerLevelBadges={levelBadges}
           ssllBadge={ssllBadge}
+          hhllBadge={hhllBadge}
         />
       )}
     </Fragment>
