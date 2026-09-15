@@ -443,7 +443,7 @@ function CPRLevelChart({
   viewName?: string;
   /** Up → green badge, Down → red badge, omitted/undefined → neutral slate badge. No effect without viewName. */
   viewDirection?: ViewDirection;
-  /** SSLLCategory badge (e.g. renderSSLLCategoryBadge(r)) — rendered directly above the S1 line. Omit to hide it. */
+  /** SSLLCategory badge (e.g. renderSSLLCategoryBadge(r)) — rendered directly over the S1 line. Omit to hide it. */
   ssllBadge?: ReactNode;
 }) {
   const width = 452;
@@ -524,7 +524,7 @@ function CPRLevelChart({
     11
   );
 
-  // S1 label position: centered above the "today" (right-hand) S1 line
+  // S1 label position: centered over the "today" (right-hand) S1 line
   // segment specifically — not the chart's overall midpoint, which sat
   // right at the prev/today boundary and looked like it belonged to
   // neither day.
@@ -532,7 +532,7 @@ function CPRLevelChart({
   const todaySegEnd = leftMargin + plotWidth;
   const todayS1Y = yFor(todayCPR.s1);
   const ssllLabelX = todaySegStart + (todaySegEnd - todaySegStart) / 2;
-  const ssllLabelY = todayS1Y - 6;
+  const ssllLabelY = todayS1Y + 3;
   // renderSSLLCategoryBadge returns a table-cell pill (colored background +
   // border). On the chart we want it to read exactly like the other level
   // labels (PV, TC, ...) — plain colored text, no box — so pull the label
@@ -843,7 +843,7 @@ export function SRLadderRow({
   copyViewControl?: ReactNode;
   /** LEVEL-column badges, rendered under "Today S/R". See SRLadderPanel for details. */
   innerLevelBadges?: ReactNode;
-  /** SSLLCategory badge, rendered above the S1 line in "Levels VIEW". See SRLadderPanel for details. */
+  /** SSLLCategory badge, rendered over the S1 line in "Levels VIEW". See SRLadderPanel for details. */
   ssllBadge?: ReactNode;
 }) {
   return (
