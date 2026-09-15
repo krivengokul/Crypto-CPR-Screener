@@ -23,6 +23,7 @@ import {
   renderSSLLCategoryBadge,
   renderHHLLCategoryBadge,
   renderSSRRCategoryBadge,
+  renderRRHHCategoryBadge,
   renderLevelStatusRow1Badges,
   renderLevelStatusBadge,
   renderLevelStatusRestBadges,
@@ -718,9 +719,12 @@ export default function ScreenerTableRow({
   // expanded row's "Levels VIEW" chart, left side (before ssllBadge).
   const hhllBadge = renderHHLLCategoryBadge(r);
   // SSRRCategory badge (e.g. "RRSS-C") — shown above the R1 line in the
-  // expanded row's "Levels VIEW" chart, pushed left so it stays clear of
-  // the HHLL/SSLL pair on the S1 line.
+  // expanded row's "Levels VIEW" chart, left side (paired with rrhhBadge
+  // on the right).
   const rrssBadge = renderSSRRCategoryBadge(r);
+  // RRHHCategory badge (e.g. "RRHH-AA") — shown above the R1 line in the
+  // expanded row's "Levels VIEW" chart, right side, after rrssBadge.
+  const rrhhBadge = renderRRHHCategoryBadge(r);
   // Row 1 keeps every LEVEL-status badge inline on one line (Above/Below/
   // Inside/Outside/Skip, then oV-B/oV-A, then Narrow/Wide, then SSRR, then
   // Equal) so nothing gets pushed down to a second line.
@@ -910,6 +914,7 @@ export default function ScreenerTableRow({
           ssllBadge={ssllBadge}
           hhllBadge={hhllBadge}
           rrssBadge={rrssBadge}
+          rrhhBadge={rrhhBadge}
         />
       )}
     </Fragment>
