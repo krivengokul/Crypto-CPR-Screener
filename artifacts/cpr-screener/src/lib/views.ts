@@ -551,7 +551,7 @@ const LEVELSABOVE_VIEWS: ViewDef[] = [
   { key: "A-A-AA-AA-EU3L4", label: "A-A-AA-AA-EU3L4", parentKey: "A-A-AA-AA", kind: "pattern", condition: (r) => r.EU3L4,
       order: 6
 },
-  { key: "A-A-AA-AA-EUTL3", label: "A-A-AA-AA-EUTL3", parentKey: "A-A-AA-AA", kind: "pattern", condition: (r) => r.EUTL3,
+  { key: "A-A-AA-AA-EUTL3", label: "A-A-AA-AA-EUTL3", parentKey: "R1AbovePR4-A-A-AA-AA", kind: "pattern", condition: (r) => r.EUTL3,
       order: 7
 },
 
@@ -1388,16 +1388,13 @@ VIEWS.push(...COMPRESSED_VIEWS, ...EXPANDED_VIEWS);
 // 637-667, 788-800, 921-964, 1284-1359; BACKTEST_CATEGORIES lines
 // 1563-1582, 1712-1734, 2122-2276).
 //
-// Note on "A-A-AA-AA": backtest.ts's own tree shows this SAME key
-// ("A-A-AA-AA") as a node nested under BOTH "levelsabove" (with its
-// EU3L4/U2L4/U3L4/etc. children, migrated in batch 1) and "R1AbovePR4"
-// (with its EUTL3/EUPL3 children, added here) — same key, same
-// condition, just displayed twice in backtest.ts's own dropdown tree.
-// Since a key can only have ONE parentKey in this single-source-of-truth
-// model, the existing "A-A-AA-AA" ViewDef (parentKey: "levelsabove",
-// from COMPOUND_VIEWS) is reused as-is — its EUTL3/EUPL3 children below
-// just add more parentKey: "A-A-AA-AA" entries, same as any other
-// sibling. Nothing about "A-A-AA-AA"'s own condition or parent changes.
+// Note on "A-A-AA-AA": backtest.ts's own tree shows this SAME label
+// under both "levelsabove" and "R1AbovePR4". The single-source model
+// represents those two displayed branches with separate keys: the existing
+// "A-A-AA-AA" node remains under "levelsabove", while
+// "R1AbovePR4-A-A-AA-AA" is the corresponding node under "ABOVE LEVEL4".
+// The EUTL3 branch is intentionally attached to the latter, so its pattern
+// and child views appear only under "ABOVE LEVEL4" in the Backtest dropdown.
 // ---------------------------------------------------------------------
 
 const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
@@ -1647,7 +1644,7 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
   {
     key: "9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A",
     label: "9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A",
-    parentKey: "A-A-AA-AA-EUTL3",
+    parentKey: "R1AbovePR4-A-A-AA-AA-EUTL3",
     kind: "view",
     direction: "Up",
     condition: (r) => r.todayCPR.bc > r.prevCPR.prevHigh && r.todayCPR.s1 > r.prevCPR.tc,
@@ -1662,7 +1659,7 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
   {
     key: "6A:A-A-AA-AA-EUTL3-S1ATCpE-pL4:4A",
     label: "6A:A-A-AA-AA-EUTL3-S1ATCpE-pL4:4A",
-    parentKey: "A-A-AA-AA-EUTL3",
+    parentKey: "R1AbovePR4-A-A-AA-AA-EUTL3",
     kind: "view",
     direction: "Down",
     condition: (r) =>
@@ -1680,7 +1677,7 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
   {
     key: "A5-EUTL3-pA-S1ATC",
     label: "A5-EUTL3-pA-S1ATC",
-    parentKey: "A-A-AA-AA-EUTL3",
+    parentKey: "R1AbovePR4-A-A-AA-AA-EUTL3",
     kind: "view",
     direction: "Up",
     condition: (r) => r.prevCPR.HLSwitch === "HL-A",
