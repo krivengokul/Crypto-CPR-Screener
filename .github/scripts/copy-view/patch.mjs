@@ -6,12 +6,54 @@ function escapeForDoubleQuotedString(s) {
   return s.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 }
 
+/**
+ * Property names in these files are written both ways —
+ * `copyViews: [...]` and `"levelsabove": [...]` — and ts-morph's
+ * getProperty(name) matches the raw name text (quotes included), so a
+ * plain getProperty("levelsabove") misses the quoted form and we end up
+ * adding a SECOND "levelsabove" key. Compare on the unquoted name.
+ */
+function getObjectProperty(obj, name) {
+  return obj.getProperties().find((prop) => {
+    if (!prop.isKind(SyntaxKind.PropertyAssignment)) return false;
+    return prop.getName().replace(/^["']|["']$/g, "") === name;
+  });
+}
+
 function getStringPropertyValue(obj, name) {
-  const prop = obj.getProperty(name);
-  if (!prop || !prop.isKind(SyntaxKind.PropertyAssignment)) return undefined;
+  const prop = getObjectProperty(obj, name);
+  if (!prop) return undefined;
   const initializer = prop.getInitializer();
   if (!initializer || !initializer.isKind(SyntaxKind.StringLiteral)) return undefined;
   return initializer.getLiteralText();
+}
+
+function getInitializerText(obj, name) {
+  const prop = getObjectProperty(obj, name);
+  if (!prop) return undefined;
+  return prop.getInitializer()?.getText();
+}
+
+/**
+ * Every id in ViewsSidebar.tsx's `pivotcategories` array — i.e. the
+ * left-nav sections that actually render. A Views[...] bucket keyed on
+ * anything else is dead weight (nothing displays it), so the nav step
+ * checks against this before inserting.
+ */
+function getScreenerNavCategoryIds(sourceText) {
+  const project = new Project({ useInMemoryFileSystem: true });
+  const sourceFile = project.createSourceFile("ViewsSidebar.tsx", sourceText);
+
+  const decl = sourceFile.getVariableDeclaration("pivotcategories");
+  if (!decl) return [];
+  const arr = decl.getInitializerIfKind(SyntaxKind.ArrayLiteralExpression);
+  if (!arr) return [];
+
+  return arr
+    .getElements()
+    .filter((el) => el.isKind(SyntaxKind.ObjectLiteralExpression))
+    .map((el) => getStringPropertyValue(el, "id"))
+    .filter(Boolean);
 }
 
 /**
@@ -25,9 +67,9 @@ function addToScreenerNav(sourceText, categoryKey, newKey, newLabel) {
   const viewsDecl = sourceFile.getVariableDeclarationOrThrow("Views");
   const viewsObj = viewsDecl.getInitializerIfKindOrThrow(SyntaxKind.ObjectLiteralExpression);
 
-  const categoryProp = viewsObj.getProperty(categoryKey);
+  const categoryProp = getObjectProperty(viewsObj, categoryKey);
   let arr;
-  if (categoryProp && categoryProp.isKind(SyntaxKind.PropertyAssignment)) {
+  if (categoryProp) {
     const initializer = categoryProp.getInitializer();
     if (!initializer || !initializer.isKind(SyntaxKind.ArrayLiteralExpression)) {
       throw new Error(`Views["${categoryKey}"] isn't an array literal — can't insert into it.`);
@@ -53,7 +95,23 @@ function addToScreenerNav(sourceText, categoryKey, newKey, newLabel) {
 }
 
 /**
- * Walks parentKey chain in views.ts AST to find the root category key.
+ * The 97 compound Patterns ("B-B-BB-BB", "A-A-AA-OA", "E-E-OA-OB", ...)
+ * are built at runtime by COMPOUND_COMBOS.map(makeCompoundView) — they
+ * have NO object literal in views.ts, so the AST walk below can't find
+ * them and used to give up (returning null → the nav chip fell into the
+ * "CREATED VIEWS" bucket). makeCompoundView reads the parent off
+ * SSRR_INFO keyed on the first letter, so mirror that here.
+ */
+const SSRR_LETTER_TO_CATEGORY = {
+  A: "levelsabove",
+  B: "levelsbelow",
+  C: "compressed",
+  E: "expanded",
+};
+const COMPOUND_KEY_RE = /^([ABCE])-[ABCE]-[A-Za-z]+-[A-Za-z]+$/;
+
+/**
+ * Walks the parentKey chain in views.ts to find the root category key.
  */
 function resolveTopLevelCategoryKey(viewsSourceText, attachKey) {
   const project = new Project({ useInMemoryFileSystem: true });
@@ -70,14 +128,23 @@ function resolveTopLevelCategoryKey(viewsSourceText, attachKey) {
   }
 
   let currKey = attachKey;
-  let visited = new Set();
+  const visited = new Set();
   while (currKey && !visited.has(currKey)) {
     visited.add(currKey);
+
     const obj = objMap.get(currKey);
-    if (!obj) break;
-    const kind = getStringPropertyValue(obj, "kind");
-    if (kind === "category") return currKey;
-    currKey = getStringPropertyValue(obj, "parentKey");
+    if (obj) {
+      const kind = getStringPropertyValue(obj, "kind");
+      if (kind === "category") return currKey;
+      currKey = getStringPropertyValue(obj, "parentKey");
+      continue;
+    }
+
+    // Not a literal — the generated compound Patterns land here.
+    const compound = COMPOUND_KEY_RE.exec(currKey);
+    if (compound) return SSRR_LETTER_TO_CATEGORY[compound[1]] ?? null;
+
+    break;
   }
 
   return null;
@@ -91,6 +158,8 @@ const CATEGORY_ARRAY_MAP = {
   R1AbovePR4: "R1ABOVEPR4_S1BELOWPS4_VIEWS",
   S1BelowPS4: "R1ABOVEPR4_S1BELOWPS4_VIEWS",
   "equal-cpr": "MISC_VIEWS",
+  top15gainers: "MISC_VIEWS",
+  top15losers: "MISC_VIEWS",
 };
 
 function applyCopyViewPatch(sourceText, sourceKey, newKey, newLabel, levelCheckDefs, attachKey) {
@@ -111,39 +180,33 @@ function applyCopyViewPatch(sourceText, sourceKey, newKey, newLabel, levelCheckD
     throw new Error(`"${newKey}" already exists in views.ts — pick a different key.`);
   }
 
-  const effectiveAttachKey = attachKey && attachKey.trim() !== "" ? attachKey : (getStringPropertyValue(sourceObj, "parentKey") ?? sourceKey);
+  const effectiveAttachKey =
+    attachKey && attachKey.trim() !== ""
+      ? attachKey
+      : getStringPropertyValue(sourceObj, "parentKey") ?? sourceKey;
   const originalConditionKey = getStringPropertyValue(sourceObj, "conditionKey") ?? sourceKey;
 
-  // Clone properties from sourceObj
-  const direction = getStringPropertyValue(sourceObj, "direction") ?? "bullish";
+  // Clone properties from sourceObj. ViewDef.direction is "Up" | "Down"
+  // — the old "bullish" fallback here wasn't assignable to it.
+  const rawDirection = getStringPropertyValue(sourceObj, "direction") ?? "Up";
+  const direction = rawDirection === "Down" || rawDirection === "bearish" ? "Down" : "Up";
+  const isUp = direction === "Up";
   const targetLabel = getStringPropertyValue(sourceObj, "targetLabel") ?? "U4 (today's R4)";
-  const entryLabel = getStringPropertyValue(sourceObj, "entryLabel") ?? "TC (today's TC)";
-  const stoplossLabel = getStringPropertyValue(sourceObj, "stoplossLabel") ?? "S1 (today's S1)";
+  const entryLabel = getStringPropertyValue(sourceObj, "entryLabel") ?? (isUp ? "TC (today's TC)" : "BC (today's BC)");
+  const stoplossLabel =
+    getStringPropertyValue(sourceObj, "stoplossLabel") ?? (isUp ? "S1 (today's S1)" : "R1 (today's R1)");
 
-  const getTargetProp = sourceObj.getProperty("getTarget");
-  const getTargetText = getTargetProp && getTargetProp.isKind(SyntaxKind.PropertyAssignment)
-    ? getTargetProp.getInitializer().getText()
-    : "(r) => r.todayCPR.r4";
-
-  const getEntryProp = sourceObj.getProperty("getEntry");
-  const getEntryText = getEntryProp && getEntryProp.isKind(SyntaxKind.PropertyAssignment)
-    ? getEntryProp.getInitializer().getText()
-    : direction === "bullish" ? "(r) => r.todayCPR.tc" : "(r) => r.todayCPR.bc";
-
-  const getStoplossProp = sourceObj.getProperty("getStoploss");
-  const getStoplossText = getStoplossProp && getStoplossProp.isKind(SyntaxKind.PropertyAssignment)
-    ? getStoplossProp.getInitializer().getText()
-    : direction === "bullish" ? "(r) => r.todayCPR.s1" : "(r) => r.todayCPR.r1";
+  const getTargetText = getInitializerText(sourceObj, "getTarget") ?? "(r) => r.todayCPR.r4";
+  const getEntryText = getInitializerText(sourceObj, "getEntry") ?? (isUp ? "(r) => r.todayCPR.tc" : "(r) => r.todayCPR.bc");
+  const getStoplossText =
+    getInitializerText(sourceObj, "getStoploss") ?? (isUp ? "(r) => r.todayCPR.s1" : "(r) => r.todayCPR.r1");
 
   // Level check defs: override if provided, else copy from source if present
   let levelCheckDefsJson = "undefined";
   if (levelCheckDefs !== null) {
     levelCheckDefsJson = JSON.stringify(levelCheckDefs, null, 2);
   } else {
-    const sourceLcd = sourceObj.getProperty("levelCheckDefs");
-    if (sourceLcd && sourceLcd.isKind(SyntaxKind.PropertyAssignment)) {
-      levelCheckDefsJson = sourceLcd.getInitializer().getText();
-    }
+    levelCheckDefsJson = getInitializerText(sourceObj, "levelCheckDefs") ?? "undefined";
   }
 
   const newViewLiteral = `{
@@ -162,18 +225,21 @@ function applyCopyViewPatch(sourceText, sourceKey, newKey, newLabel, levelCheckD
     levelCheckDefs: ${levelCheckDefsJson},
   }`;
 
-  // Find COPY_VIEWS array to append into
-  let targetArrayDecl = sourceFile.getVariableDeclaration("COPY_VIEWS");
-  if (!targetArrayDecl) {
-    const topCat = resolveTopLevelCategoryKey(sourceText, effectiveAttachKey);
-    const arrName = CATEGORY_ARRAY_MAP[topCat] ?? "LEVELSABOVE_VIEWS";
-    targetArrayDecl = sourceFile.getVariableDeclarationOrThrow(arrName);
-  }
+  // File the copy in the array that belongs to the attach point's own
+  // top-level Category, same as create-view's patch.mjs. COPY_VIEWS is
+  // only the fallback now — it used to be the unconditional first choice,
+  // which is why every copy ended up in the flat "CREATED VIEWS" bucket
+  // no matter what was picked in the attach dropdown.
+  const topCat = resolveTopLevelCategoryKey(sourceText, effectiveAttachKey);
+  const arrName = (topCat && CATEGORY_ARRAY_MAP[topCat]) || "COPY_VIEWS";
+
+  const targetArrayDecl =
+    sourceFile.getVariableDeclaration(arrName) ?? sourceFile.getVariableDeclarationOrThrow("COPY_VIEWS");
 
   const targetArray = targetArrayDecl.getInitializerIfKindOrThrow(SyntaxKind.ArrayLiteralExpression);
   targetArray.addElement(newViewLiteral);
 
-  return { patchedText: sourceFile.getFullText(), originalConditionKey };
+  return { patchedText: sourceFile.getFullText(), originalConditionKey, topCat, arrName };
 }
 
 // --- Entry point ------------------------------------------------------
@@ -227,7 +293,7 @@ try {
 }
 
 try {
-  const { patchedText, originalConditionKey } = applyCopyViewPatch(
+  const { patchedText, originalConditionKey, topCat, arrName } = applyCopyViewPatch(
     currentText,
     sourceKey,
     newKey,
@@ -237,15 +303,25 @@ try {
   );
   writeFileSync(filePath, patchedText, "utf-8");
 
-  const screenerCategoryKey = resolveTopLevelCategoryKey(currentText, attachKey) ?? "copyViews";
   const viewsSidebarFilePath = resolve(process.cwd(), "../../../", viewsSidebarFilePathEnv);
   const viewsSidebarText = readFileSync(viewsSidebarFilePath, "utf-8");
+
+  // Only sections that exist in pivotcategories actually render; anything
+  // else would be an invisible bucket, so those fall back to copyViews.
+  const navIds = getScreenerNavCategoryIds(viewsSidebarText);
+  const screenerCategoryKey = topCat && navIds.includes(topCat) ? topCat : "copyViews";
+  if (screenerCategoryKey !== topCat) {
+    console.warn(
+      `"${topCat ?? attachKey}" has no entry in ViewsSidebar.tsx's pivotcategories — putting the nav chip in "copyViews" instead.`
+    );
+  }
+
   const patchedViewsSidebarText = addToScreenerNav(viewsSidebarText, screenerCategoryKey, newKey, newLabel);
   writeFileSync(viewsSidebarFilePath, patchedViewsSidebarText, "utf-8");
 
   const levelCheckNote = levelCheckDefs ? ` with ${levelCheckDefs.length} symbol-derived levelCheckDefs` : "";
   console.log(
-    `Patched ${viewsFilePath}: "${sourceKey}" -> "${newKey}" under "${attachKey}" (grades against "${originalConditionKey}")${levelCheckNote}`
+    `Patched ${viewsFilePath}: "${sourceKey}" -> "${newKey}" under "${attachKey}" in ${arrName} (grades against "${originalConditionKey}")${levelCheckNote}`
   );
   console.log(`Added "${newKey}" to ${viewsSidebarFilePathEnv}'s Views["${screenerCategoryKey}"]`);
 } catch (err) {

@@ -6,12 +6,48 @@ function escapeForDoubleQuotedString(s) {
   return s.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 }
 
+/**
+ * Property names in these files are written both ways —
+ * `copyViews: [...]` and `"levelsabove": [...]` — and ts-morph's
+ * getProperty(name) matches the raw name text (quotes included), so a
+ * plain getProperty("levelsabove") misses the quoted form and we end up
+ * adding a SECOND "levelsabove" key. Compare on the unquoted name.
+ */
+function getObjectProperty(obj, name) {
+  return obj.getProperties().find((prop) => {
+    if (!prop.isKind(SyntaxKind.PropertyAssignment)) return false;
+    return prop.getName().replace(/^["']|["']$/g, "") === name;
+  });
+}
+
 function getStringPropertyValue(obj, name) {
-  const prop = obj.getProperty(name);
-  if (!prop || !prop.isKind(SyntaxKind.PropertyAssignment)) return undefined;
+  const prop = getObjectProperty(obj, name);
+  if (!prop) return undefined;
   const initializer = prop.getInitializer();
   if (!initializer || !initializer.isKind(SyntaxKind.StringLiteral)) return undefined;
   return initializer.getLiteralText();
+}
+
+/**
+ * Every id in ViewsSidebar.tsx's `pivotcategories` array — i.e. the
+ * left-nav sections that actually render. A Views[...] bucket keyed on
+ * anything else is dead weight (nothing displays it), so the nav step
+ * checks against this before inserting.
+ */
+function getScreenerNavCategoryIds(sourceText) {
+  const project = new Project({ useInMemoryFileSystem: true });
+  const sourceFile = project.createSourceFile("ViewsSidebar.tsx", sourceText);
+
+  const decl = sourceFile.getVariableDeclaration("pivotcategories");
+  if (!decl) return [];
+  const arr = decl.getInitializerIfKind(SyntaxKind.ArrayLiteralExpression);
+  if (!arr) return [];
+
+  return arr
+    .getElements()
+    .filter((el) => el.isKind(SyntaxKind.ObjectLiteralExpression))
+    .map((el) => getStringPropertyValue(el, "id"))
+    .filter(Boolean);
 }
 
 /**
@@ -25,9 +61,9 @@ function addToScreenerNav(sourceText, categoryKey, newKey, newLabel) {
   const viewsDecl = sourceFile.getVariableDeclarationOrThrow("Views");
   const viewsObj = viewsDecl.getInitializerIfKindOrThrow(SyntaxKind.ObjectLiteralExpression);
 
-  const categoryProp = viewsObj.getProperty(categoryKey);
+  const categoryProp = getObjectProperty(viewsObj, categoryKey);
   let arr;
-  if (categoryProp && categoryProp.isKind(SyntaxKind.PropertyAssignment)) {
+  if (categoryProp) {
     const initializer = categoryProp.getInitializer();
     if (!initializer || !initializer.isKind(SyntaxKind.ArrayLiteralExpression)) {
       throw new Error(`Views["${categoryKey}"] isn't an array literal — can't insert into it.`);
@@ -53,7 +89,24 @@ function addToScreenerNav(sourceText, categoryKey, newKey, newLabel) {
 }
 
 /**
- * Walks parentKey chain in views.ts AST to find the root category key.
+ * The 97 compound Patterns ("B-B-BB-BB", "A-A-AA-OA", "E-E-OA-OB", ...)
+ * are built at runtime by COMPOUND_COMBOS.map(makeCompoundView) — they
+ * have NO object literal in views.ts, so the AST walk below can't find
+ * them and used to give up (returning null → everything fell into
+ * COPY_VIEWS / the "CREATED VIEWS" nav bucket). makeCompoundView reads
+ * the parent off SSRR_INFO keyed on the first letter, so mirror that
+ * here.
+ */
+const SSRR_LETTER_TO_CATEGORY = {
+  A: "levelsabove",
+  B: "levelsbelow",
+  C: "compressed",
+  E: "expanded",
+};
+const COMPOUND_KEY_RE = /^([ABCE])-[ABCE]-[A-Za-z]+-[A-Za-z]+$/;
+
+/**
+ * Walks the parentKey chain in views.ts to find the root category key.
  */
 function resolveTopLevelCategoryKey(viewsSourceText, attachKey) {
   const project = new Project({ useInMemoryFileSystem: true });
@@ -70,25 +123,36 @@ function resolveTopLevelCategoryKey(viewsSourceText, attachKey) {
   }
 
   let currKey = attachKey;
-  let visited = new Set();
+  const visited = new Set();
   while (currKey && !visited.has(currKey)) {
     visited.add(currKey);
+
     const obj = objMap.get(currKey);
-    if (!obj) break;
-    const kind = getStringPropertyValue(obj, "kind");
-    if (kind === "category") return currKey;
-    currKey = getStringPropertyValue(obj, "parentKey");
+    if (obj) {
+      const kind = getStringPropertyValue(obj, "kind");
+      if (kind === "category") return currKey;
+      currKey = getStringPropertyValue(obj, "parentKey");
+      continue;
+    }
+
+    // Not a literal — the generated compound Patterns land here.
+    const compound = COMPOUND_KEY_RE.exec(currKey);
+    if (compound) return SSRR_LETTER_TO_CATEGORY[compound[1]] ?? null;
+
+    break;
   }
 
   return null;
 }
 
 const BULLISH_TARGETS = {
+  R1: { label: "U1 (today's R1)", key: "r1" },
   R2: { label: "U2 (today's R2)", key: "r2" },
   R3: { label: "U3 (today's R3)", key: "r3" },
   R4: { label: "U4 (today's R4)", key: "r4" },
 };
 const BEARISH_TARGETS = {
+  S1: { label: "L1 (today's S1)", key: "s1" },
   S2: { label: "L2 (today's S2)", key: "s2" },
   S3: { label: "L3 (today's S3)", key: "s3" },
   S4: { label: "L4 (today's S4)", key: "s4" },
@@ -102,13 +166,28 @@ const CATEGORY_ARRAY_MAP = {
   R1AbovePR4: "R1ABOVEPR4_S1BELOWPS4_VIEWS",
   S1BelowPS4: "R1ABOVEPR4_S1BELOWPS4_VIEWS",
   "equal-cpr": "MISC_VIEWS",
+  top15gainers: "MISC_VIEWS",
+  top15losers: "MISC_VIEWS",
 };
+
+/**
+ * The UI's dropdown says Up/Down and ViewDef.direction is typed
+ * "Up" | "Down" — but this workflow's input historically spelled the
+ * same thing bullish/bearish. Accept either spelling, emit the one
+ * views.ts's own type expects.
+ */
+function normalizeDirection(raw) {
+  const v = (raw ?? "").trim().toLowerCase();
+  if (v === "down" || v === "bearish") return "Down";
+  if (v === "up" || v === "bullish") return "Up";
+  return null;
+}
 
 function applyCreateViewPatch(sourceText, patternKey, newKey, newLabel, direction, target, levelCheckDefs, attachKey) {
   const project = new Project({ useInMemoryFileSystem: true });
   const sourceFile = project.createSourceFile("views.ts", sourceText);
 
-  const targetDef = direction === "bullish" ? BULLISH_TARGETS[target] : BEARISH_TARGETS[target];
+  const targetDef = direction === "Up" ? BULLISH_TARGETS[target] : BEARISH_TARGETS[target];
   if (!targetDef) {
     throw new Error(`"${target}" isn't a valid target for direction "${direction}".`);
   }
@@ -124,7 +203,7 @@ function applyCreateViewPatch(sourceText, patternKey, newKey, newLabel, directio
   const effectiveAttachKey = attachKey && attachKey.trim() !== "" ? attachKey : patternKey;
 
   const entryText =
-    direction === "bullish"
+    direction === "Up"
       ? `entryLabel: "TC (today's TC)",\n    getEntry: (r) => r.todayCPR.tc,\n    stoplossLabel: "S1 (today's S1)",\n    getStoploss: (r) => r.todayCPR.s1,`
       : `entryLabel: "BC (today's BC)",\n    getEntry: (r) => r.todayCPR.bc,\n    stoplossLabel: "R1 (today's R1)",\n    getStoploss: (r) => r.todayCPR.r1,`;
 
@@ -142,17 +221,24 @@ function applyCreateViewPatch(sourceText, patternKey, newKey, newLabel, directio
   }`;
 
   const topCat = resolveTopLevelCategoryKey(sourceText, effectiveAttachKey);
-  const arrName = CATEGORY_ARRAY_MAP[topCat] ?? "COPY_VIEWS";
-
-  let targetArrayDecl = sourceFile.getVariableDeclaration(arrName) ?? sourceFile.getVariableDeclaration("COPY_VIEWS");
-  if (!targetArrayDecl) {
-    targetArrayDecl = sourceFile.getVariableDeclarationOrThrow("LEVELSABOVE_VIEWS");
+  if (!topCat) {
+    throw new Error(
+      `Couldn't resolve a top-level category for attach point "${effectiveAttachKey}" — its parentKey chain in views.ts doesn't reach a kind:"category" node. Fix the chain (or add the key to SSRR_LETTER_TO_CATEGORY if it's a generated compound Pattern) rather than letting the View fall into CREATED VIEWS.`
+    );
   }
 
+  const arrName = CATEGORY_ARRAY_MAP[topCat];
+  if (!arrName) {
+    throw new Error(
+      `No views.ts array is mapped for category "${topCat}" — add it to CATEGORY_ARRAY_MAP in patch.mjs.`
+    );
+  }
+
+  const targetArrayDecl = sourceFile.getVariableDeclarationOrThrow(arrName);
   const targetArray = targetArrayDecl.getInitializerIfKindOrThrow(SyntaxKind.ArrayLiteralExpression);
   targetArray.addElement(newViewLiteral);
 
-  return { patchedText: sourceFile.getFullText() };
+  return { patchedText: sourceFile.getFullText(), topCat, arrName };
 }
 
 // --- Entry point ------------------------------------------------------
@@ -161,13 +247,18 @@ const newKey = process.env.NEW_KEY;
 const newLabel = process.env.NEW_LABEL;
 const levelCheckDefsB64 = process.env.LEVEL_CHECK_DEFS_B64;
 const attachKey = process.env.ATTACH_KEY && process.env.ATTACH_KEY.trim() !== "" ? process.env.ATTACH_KEY : patternKey;
-const direction = process.env.DIRECTION === "bearish" ? "bearish" : "bullish";
-const target = process.env.TARGET && process.env.TARGET.trim() !== "" ? process.env.TARGET : direction === "bullish" ? "R4" : "S4";
+const direction = normalizeDirection(process.env.DIRECTION) ?? "Up";
+const target = process.env.TARGET && process.env.TARGET.trim() !== "" ? process.env.TARGET.trim() : direction === "Up" ? "R4" : "S4";
 const viewsFilePath = process.env.VIEWS_FILE_PATH ?? process.env.BACKTEST_FILE_PATH ?? "artifacts/cpr-screener/src/lib/views.ts";
 const viewsSidebarFilePathEnv = process.env.VIEWS_SIDEBAR_FILE_PATH ?? "artifacts/cpr-screener/src/lib/ViewsSidebar.tsx";
 
 if (!patternKey || !newKey || !newLabel || !levelCheckDefsB64) {
   console.error("PATTERN_KEY, NEW_KEY, NEW_LABEL, and LEVEL_CHECK_DEFS_B64 must all be set.");
+  process.exit(1);
+}
+
+if (process.env.DIRECTION && !normalizeDirection(process.env.DIRECTION)) {
+  console.error(`DIRECTION "${process.env.DIRECTION}" isn't one of Up/Down (bullish/bearish also accepted).`);
   process.exit(1);
 }
 
@@ -206,7 +297,7 @@ try {
 }
 
 try {
-  const { patchedText } = applyCreateViewPatch(
+  const { patchedText, topCat, arrName } = applyCreateViewPatch(
     currentText,
     patternKey,
     newKey,
@@ -218,14 +309,24 @@ try {
   );
   writeFileSync(filePath, patchedText, "utf-8");
 
-  const screenerCategoryKey = resolveTopLevelCategoryKey(currentText, attachKey) ?? "copyViews";
   const viewsSidebarFilePath = resolve(process.cwd(), "../../../", viewsSidebarFilePathEnv);
   const viewsSidebarText = readFileSync(viewsSidebarFilePath, "utf-8");
+
+  // Only sections that exist in pivotcategories actually render; anything
+  // else would be an invisible bucket, so those fall back to copyViews.
+  const navIds = getScreenerNavCategoryIds(viewsSidebarText);
+  const screenerCategoryKey = navIds.includes(topCat) ? topCat : "copyViews";
+  if (screenerCategoryKey !== topCat) {
+    console.warn(
+      `"${topCat}" has no entry in ViewsSidebar.tsx's pivotcategories — putting the nav chip in "copyViews" instead.`
+    );
+  }
+
   const patchedViewsSidebarText = addToScreenerNav(viewsSidebarText, screenerCategoryKey, newKey, newLabel);
   writeFileSync(viewsSidebarFilePath, patchedViewsSidebarText, "utf-8");
 
   console.log(
-    `Created "${newKey}" (grades against "${patternKey}") under Category/Pattern/Subpattern "${attachKey}" with ${levelCheckDefs.length} symbol-derived levelCheckDefs`
+    `Created "${newKey}" (direction ${direction}, target ${target}, grades against "${patternKey}") under "${attachKey}" in ${arrName} with ${levelCheckDefs.length} symbol-derived levelCheckDefs`
   );
   console.log(`Added "${newKey}" to ${viewsSidebarFilePathEnv}'s Views["${screenerCategoryKey}"]`);
 } catch (err) {

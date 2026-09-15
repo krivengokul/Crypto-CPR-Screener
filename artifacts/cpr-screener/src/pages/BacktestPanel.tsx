@@ -31,6 +31,7 @@ import {
   buildViewTree,
   childrenOf,
   getView,
+  topLevelCategoryOf,
   VIEWS,
   type ViewTreeNode,
   type ViewDef,
@@ -568,6 +569,19 @@ function CopyViewControl({
 }
 
 /**
+ * "TOP 15 GAINERS" / "TOP 15 LOSERS" are `condition: () => true` buckets
+ * — they only slice the symbol list by % change, they aren't a CPR shape.
+ * A View created straight off one of those rows would carry
+ * conditionKey: "top15gainers", i.e. grade as PASS for everything. So
+ * when Create View is opened from one of them, the View is created for
+ * the top-level Category that the "attach under" dropdown's selection
+ * lives under instead — pick "↳ B-B-BB-BB-L3U3" in that dropdown and
+ * the popover retitles itself "Create View for LEVEL BELOW" and grades
+ * against levelsbelow's own condition.
+ */
+const SYMBOL_LIST_ONLY_CATEGORY_KEYS = new Set(["top15gainers", "top15losers"]);
+
+/**
  * "Create View" — for a Pattern/Subpattern that has no BACKTEST_TARGETS
  * entry of its own yet (BacktestPanel's activePatternTarget undefined,
  * showing the "U4 (today's R4)" fallback description instead of a real
@@ -605,12 +619,41 @@ function CreateViewControl({
   // behavior; picking a different node files the View there instead
   // while it still grades against patternKey's own condition.
   const [attachKey, setAttachKey] = useState(patternKey);
-  // Up -> entry TC / stoploss S1, target one of R2/R3/R4.
-  // Down -> entry BC / stoploss R1, target one of S2/S3/S4.
+  // Up -> entry TC / stoploss S1, target one of R1/R2/R3/R4.
+  // Down -> entry BC / stoploss R1, target one of S1/S2/S3/S4.
   // Matches this codebase's own convention exactly (see e.g.
   // "7PM:MoMi-<L4:2AM" for a real Down TC/BC/R1 example).
   const [direction, setDirection] = useState<"Up" | "Down">("Up");
   const [target, setTarget] = useState("R4");
+  // Whether the person has typed into the key/label boxes yet — until
+  // they do, both track effectivePattern below so switching the attach
+  // point off a TOP 15 bucket doesn't leave "top15gainers" sitting in the
+  // key field (which would only fail as a duplicate key anyway).
+  const [keyEdited, setKeyEdited] = useState(false);
+  const [labelEdited, setLabelEdited] = useState(false);
+
+  // The node this View is actually created FOR — normally the one
+  // "Create View" was opened from, but for the TOP 15 buckets it follows
+  // the attach dropdown's top-level Category instead (see the note
+  // above). Everything downstream — the header, the default key/label,
+  // createBacktestView's conditionKey, and the workflow command's
+  // patternKey — reads this, not patternKey.
+  const effectivePattern = useMemo(() => {
+    if (!SYMBOL_LIST_ONLY_CATEGORY_KEYS.has(patternKey)) {
+      return { key: patternKey, label: patternLabel };
+    }
+    const cat = topLevelCategoryOf(attachKey);
+    if (!cat || SYMBOL_LIST_ONLY_CATEGORY_KEYS.has(cat.key)) {
+      return { key: patternKey, label: patternLabel };
+    }
+    return { key: cat.key, label: cat.label };
+  }, [patternKey, patternLabel, attachKey]);
+
+  useEffect(() => {
+    if (!open || command) return;
+    if (!keyEdited) setNewKey(effectivePattern.key);
+    if (!labelEdited) setNewLabel(effectivePattern.label);
+  }, [open, command, keyEdited, labelEdited, effectivePattern.key, effectivePattern.label]);
 
   function openForm() {
     setAttachKey(patternKey);
@@ -618,6 +661,8 @@ function CreateViewControl({
     setTarget("R4");
     setNewKey(patternKey);
     setNewLabel(patternLabel);
+    setKeyEdited(false);
+    setLabelEdited(false);
     setError("");
     setCommand(null);
     setCreatedKey(null);
@@ -637,7 +682,15 @@ function CreateViewControl({
     // below is safe even though this isn't a full CPRResult.
     const derived = deriveLevelCheckDefs({ prevCPR, todayCPR } as unknown as CPRResult);
 
-    const result = createBacktestView(patternKey, trimmedKey, trimmedLabel, direction, target, derived, attachKey);
+    const result = createBacktestView(
+      effectivePattern.key,
+      trimmedKey,
+      trimmedLabel,
+      direction,
+      target,
+      derived,
+      attachKey
+    );
     if (!result.ok) {
       setError(
         result.reason === "duplicate-key"
@@ -667,7 +720,7 @@ function CreateViewControl({
     const b64 = btoa(binary);
 
     setCommand(
-      `gh workflow run create-view.yml --repo krivengokul/Crypto-CPR-Screener -f patternKey=${q(patternKey)} -f newKey=${q(trimmedKey)} -f newLabel=${q(trimmedLabel)} -f direction=${q(direction)} -f target=${q(target)} -f attachKey=${q(attachKey)} -f levelCheckDefs=${b64}`
+      `gh workflow run create-view.yml --repo krivengokul/Crypto-CPR-Screener -f patternKey=${q(effectivePattern.key)} -f newKey=${q(trimmedKey)} -f newLabel=${q(trimmedLabel)} -f direction=${q(direction)} -f target=${q(target)} -f attachKey=${q(attachKey)} -f levelCheckDefs=${b64}`
     );
     setCreatedKey(trimmedKey);
   }
@@ -689,7 +742,7 @@ function CreateViewControl({
         type="button"
         onClick={openForm}
         className="w-fit rounded-md border border-border px-2 py-1 text-[11px] font-medium text-muted-foreground hover:bg-muted/40 hover:text-foreground"
-        title={`Create a graded View for "${patternLabel}" using this symbol`}
+        title={`Create a graded View for "${effectivePattern.label}" using this symbol`}
       >
         + Create View
       </button>
@@ -699,7 +752,7 @@ function CreateViewControl({
   return (
     <div className="flex w-fit min-w-[260px] flex-col gap-1.5 rounded-md border border-border bg-popover p-2">
       <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-        Create View for &quot;{patternLabel}&quot;
+        Create View for &quot;{effectivePattern.label}&quot;
       </span>
       <span className="text-[10px] text-muted-foreground">
         {direction === "Up" ? "Entry TC · Stoploss S1" : "Entry BC · Stoploss R1"} — Level Check derived from this symbol
@@ -724,7 +777,7 @@ function CreateViewControl({
           disabled={!!command}
           className="flex-1 bg-background border border-border rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
         >
-          {(direction === "Up" ? ["R2", "R3", "R4"] : ["S2", "S3", "S4"]).map((t) => (
+          {(direction === "Up" ? ["R1", "R2", "R3", "R4"] : ["S1", "S2", "S3", "S4"]).map((t) => (
             <option key={t} value={t}>
               Target {t}
             </option>
@@ -733,14 +786,20 @@ function CreateViewControl({
       </div>
       <input
         value={newKey}
-        onChange={(e) => setNewKey(e.target.value)}
+        onChange={(e) => {
+          setKeyEdited(true);
+          setNewKey(e.target.value);
+        }}
         placeholder="View key"
         disabled={!!command}
         className="w-full bg-background border border-border rounded-md px-2 py-1 text-[11px] font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
       />
       <input
         value={newLabel}
-        onChange={(e) => setNewLabel(e.target.value)}
+        onChange={(e) => {
+          setLabelEdited(true);
+          setNewLabel(e.target.value);
+        }}
         placeholder="Display label"
         disabled={!!command}
         className="w-full bg-background border border-border rounded-md px-2 py-1 text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"

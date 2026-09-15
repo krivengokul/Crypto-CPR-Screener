@@ -292,12 +292,17 @@ export interface CreateViewResult {
   created?: ViewDef;
 }
 
-const BULLISH_TARGETS: Record<string, { label: string; key: "r2" | "r3" | "r4" }> = {
+const BULLISH_TARGETS: Record<string, { label: string; key: "r1" | "r2" | "r3" | "r4" }> = {
+  // R1 is the nearest rung above entry (TC) — the quickest-to-hit target,
+  // and the one an Up View's own stoploss (S1) mirrors on the other side.
+  R1: { label: "U1 (today's R1)", key: "r1" },
   R2: { label: "U2 (today's R2)", key: "r2" },
   R3: { label: "U3 (today's R3)", key: "r3" },
   R4: { label: "U4 (today's R4)", key: "r4" },
 };
-const BEARISH_TARGETS: Record<string, { label: string; key: "s2" | "s3" | "s4" }> = {
+const BEARISH_TARGETS: Record<string, { label: string; key: "s1" | "s2" | "s3" | "s4" }> = {
+  // S1 mirrors R1 above: nearest rung below entry (BC), stoploss R1.
+  S1: { label: "L1 (today's S1)", key: "s1" },
   S2: { label: "L2 (today's S2)", key: "s2" },
   S3: { label: "L3 (today's S3)", key: "s3" },
   S4: { label: "L4 (today's S4)", key: "s4" },
@@ -312,45 +317,8 @@ const BEARISH_TARGETS: Record<string, { label: string; key: "s2" | "s3" | "s4" }
  * `direction` fixes entry/stoploss to this codebase's own convention —
  * bullish: entry TC, stoploss S1; bearish: entry BC, stoploss R1 (see
  * e.g. "7PM:MoMi-<L4:2AM" for a real bearish example of this exact
- * shape) — `target` picks which of that direction's three rungs
- * (R2/R3/R4 bullish, S2/S3/S4 bearish) actually grades the View.
- * Grades against `patternKey` itself via conditionKey — a
- * Pattern/Subpattern node's own key is already a real passesPattern
- * condition, so no new pattern-matching logic is needed.
- *
- * `levelCheckDefs` is the caller's responsibility to derive (see
- * deriveLevelCheckDefs above) — typically from whichever symbol's row
- * was on screen in the SR Ladder panel when "Create View" was clicked.
- *
- * `attachKey` (a Category/Pattern/Subpattern key from
- * getAttachPointOptions) picks where in the dropdown tree the new View
- * is filed. Defaults to `patternKey` itself — the node "Create View" was
- * opened from — so omitting it keeps the original behavior. `patternKey`
- * always stays the View's conditionKey (what it grades against);
-}
-
-const BULLISH_TARGETS: Record<string, { label: string; key: "r2" | "r3" | "r4" }> = {
-  R2: { label: "U2 (today's R2)", key: "r2" },
-  R3: { label: "U3 (today's R3)", key: "r3" },
-  R4: { label: "U4 (today's R4)", key: "r4" },
-};
-const BEARISH_TARGETS: Record<string, { label: string; key: "s2" | "s3" | "s4" }> = {
-  S2: { label: "L2 (today's S2)", key: "s2" },
-  S3: { label: "L3 (today's S3)", key: "s3" },
-  S4: { label: "L4 (today's S4)", key: "s4" },
-};
-
-/**
- * Creates a brand-new View directly under a Pattern/Subpattern that
- * doesn't have one of its own yet (BacktestPanel.tsx's activePatternTarget
- * undefined for it — the case that currently shows a fallback "U4
- * (today's R4)"-style description instead of a real graded View).
- *
- * `direction` fixes entry/stoploss to this codebase's own convention —
- * bullish: entry TC, stoploss S1; bearish: entry BC, stoploss R1 (see
- * e.g. "7PM:MoMi-<L4:2AM" for a real bearish example of this exact
- * shape) — `target` picks which of that direction's three rungs
- * (R2/R3/R4 bullish, S2/S3/S4 bearish) actually grades the View.
+ * shape) — `target` picks which of that direction's four rungs
+ * (R1/R2/R3/R4 bullish, S1/S2/S3/S4 bearish) actually grades the View.
  * Grades against `patternKey` itself via conditionKey — a
  * Pattern/Subpattern node's own key is already a real passesPattern
  * condition, so no new pattern-matching logic is needed.
