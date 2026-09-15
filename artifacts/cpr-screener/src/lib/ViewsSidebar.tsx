@@ -44,7 +44,7 @@ export const Views: Record<string, SubPattern[]> = {
   // choice per View. passesPattern(r, newKey) resolves these via their
   // conditionKey + levelCheckDefs — see the new block at the top of
   // passesPattern in ScreenerUtils.tsx.
-  copyViews: [{ id: "A-A-AA-AA-EUBL2-pS4S2:R2", label: "A-A-AA-AA-EUBL2-pS4S2:R2" }, { id: "B-B-BB-BB-L4U4-pGapA", label: "B-B-BB-BB-L4U4-pGapA" }, { id: "A5-EUTL3-pA-S1ATC", label: "A5-EUTL3-pA-S1ATC" }, { id: "MiniTiny-R4", label: "MiniTiny-R4" }, { id: "CU3L2-MedMicro-R4", label: "CU3L2-MedMicro-R4" }],
+  copyViews: [{ id: "A-A-AA-AA-EUBL2-pS4S2:R2", label: "A-A-AA-AA-EUBL2-pS4S2:R2" }, { id: "B-B-BB-BB-L4U4-pGapA", label: "B-B-BB-BB-L4U4-pGapA" }, { id: "A5-EUTL3-pA-S1ATC", label: "A5-EUTL3-pA-S1ATC" }, { id: "CU3L2-MedMicro-R4", label: "CU3L2-MedMicro-R4" }],
   "levelsabove": [
     // NEW: "A-A-AA-OA-U3L4-RRHHGap:R4" — badges A-A-AA-OA + U3L4 +
     // RRGap + HHGap + pHL-B + HLGap-B (see ScreenerUtils.tsx / cpr.ts).
@@ -271,6 +271,16 @@ export const Views: Record<string, SubPattern[]> = {
     // "B-B-BB-BB-L2U4" Pattern arrow (LEVEL BELOW). Grades against its
     // conditionKey target, same as its siblings above.
     { id: "B-B-BB-BB-L2U4-pPPHR1", label: "B-B-BB-BB-L2U4-pPPHR1" },
+    // NEW: B6-L4U4-MiniTiny:R4 — LEVEL BELOW + B-B-BB-BB-L4U4 pattern.
+    // Grades against conditionKey B-B-BB-BB-L4U4. Bullish, entry TC,
+    // targets today's R4 (U4). Moved here from CREATED VIEWS.
+    {
+      id: "B6-L4U4-MiniTiny:R4",
+      label: "B6-L4U4-MiniTiny:R4",
+      activeColor: "#22c55e",
+      activeText:  "#4ade80",
+      activeBg:    "rgba(34, 197, 94, 0.14)",
+    },
   ],
   "compressed": [
     // RENAMED from "SMi-L1pU1>-APU4:11PM": all previous conditions removed.

@@ -134,6 +134,11 @@ const GENERIC_VIEW_CATEGORIES = new Set([
   // path makes ViewsSidebar's Views the single source of truth for
   // both surfaces.
   "inside-cpr",
+  // NEW: copyViews — auto-generated "Create View"/"Copy View" entries.
+  // Adding here ensures every view in this bucket automatically gets a
+  // count (and green dot) in the live screener, without requiring any
+  // per-view wiring. Future created views will Just Work.
+  "copyViews",
 ]);
 
 /** View ids used by hand-written Views filter buttons that aren't listed in

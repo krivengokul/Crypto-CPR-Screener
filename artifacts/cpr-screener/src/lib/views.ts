@@ -2100,8 +2100,8 @@ const COPY_VIEWS: ViewDef[] = [
       order: 0
 },
     {
-        key: "MiniTiny-R4",
-        label: "MiniTiny-R4",
+        key: "B6-L4U4-MiniTiny:R4",
+        label: "B6-L4U4-MiniTiny:R4",
         parentKey: "B-B-BB-BB-L4U4",
         conditionKey: "B-B-BB-BB-L4U4",
         kind: "view",
