@@ -733,7 +733,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
                    (prev.s4 < today.s1 && prev.s4 > today.s2);
   const EL3U4  = (prev.r4 < today.r4 && prev.r4 > today.r3) &&
                    (prev.s4 < today.s2 && prev.s4 >= today.s3);
-  const CU4L2 = (today.s4 < prev.s1 && today.s4 > prev.s2) &&
+  const CU4L2 = (today.s4 < prev.s1 && today.s4 >= prev.s2) &&
                    (today.r4 < prev.r4 && today.r4 > prev.r3);
   const CU4L4   = (today.s4 > prev.s4 && today.s4 < prev.s3) &&
                    (today.r4 > prev.r3 && today.r4 <= prev.r4) && (srCompressedHigher || srHigher);
@@ -779,7 +779,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
   const EL4U4   = (prev.r4 > today.r3 && prev.r4 < today.r4) &&
                    (prev.s4 > today.s4 && prev.s4 < today.s3) && srExpandedLower;
 
-  const EU1L2 = (prev.s4 > today.s2 && prev.s4 < today.s1) &&
+  const EU1L2 = (prev.s4 >= today.s2 && prev.s4 < today.s1) &&
                  (prev.r4 > today.tc  && prev.r4 < today.r1);
   const EU1L3 = (prev.s4 > today.s3 && prev.s4 < today.s2) &&
                  (prev.r4 > today.tc  && prev.r4 < today.r1);

@@ -406,6 +406,49 @@ export const Views: Record<string, SubPattern[]> = {
       activeText:  "#fca5a5",              // red-300 text
       activeBg:    "rgba(239, 68, 68, 0.14)",
     },
+    // MERGED: was accidentally living in a second, duplicate
+    // "R1AbovePR4" key further down this object literal — a duplicate
+    // object key silently wins in JS, so that whole second definition
+    // was clobbering this entire array at runtime and everything below
+    // (TiMe-EUTL3-AU4:2PM, SMg-exHiL2L1-U4:3AM, 6AM:MegMeg-L3:8PM, etc.)
+    // was rendering as if it didn't exist. Folded the one entry that
+    // was in that duplicate back in here instead of losing it.
+    { id: "A-E-AA-E-EUBL2-GapB-S1", label: "A-E-AA-E-EUBL2-GapB-S1" },
+    // NEW: "9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A" — nested under
+    // "A-A-AA-AA-EUTL3" (see views.ts). Bullish (direction: "Up"),
+    // targets FAU4 (Far Above today's R4) by ~4AM. Green color family,
+    // matching its bullish R1AbovePR4 siblings.
+    {
+      id: "9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A",
+      label: "9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A",
+      activeColor: "#22c55e",              // green-500 border
+      activeText:  "#4ade80",              // green-400 text
+      activeBg:    "rgba(34, 197, 94, 0.14)",
+    },
+    // NEW: "6A:A-A-AA-AA-EUTL3-S1ATCpE-pL4:4A" — nested under
+    // "A-A-AA-AA-EUTL3" (see views.ts). Bearish sibling of
+    // 9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A (direction: "Down"), targets pL4
+    // (prev day's S4) by ~4AM. Red color family, matching its bearish
+    // R1AbovePR4 siblings.
+    {
+      id: "6A:A-A-AA-AA-EUTL3-S1ATCpE-pL4:4A",
+      label: "6A:A-A-AA-AA-EUTL3-S1ATCpE-pL4:4A",
+      activeColor: "#f87171",              // red-400 border
+      activeText:  "#fca5a5",              // red-300 text
+      activeBg:    "rgba(239, 68, 68, 0.14)",
+    },
+    // NEW: "A5-EUTL3-pA-S1ATC" — nested under "A-A-AA-AA-EUTL3" (see
+    // views.ts). Bullish (direction: "Up"), targets U2 (today's R2).
+    // Was previously only reachable via the flat "copyViews" bucket
+    // above, not from the actual R1AbovePR4 nav section. Green color
+    // family, matching its bullish siblings.
+    {
+      id: "A5-EUTL3-pA-S1ATC",
+      label: "A5-EUTL3-pA-S1ATC",
+      activeColor: "#22c55e",              // green-500 border
+      activeText:  "#4ade80",              // green-400 text
+      activeBg:    "rgba(34, 197, 94, 0.14)",
+    },
   ],
   "S1BelowPS4": [
     {
@@ -419,7 +462,6 @@ export const Views: Record<string, SubPattern[]> = {
   "equal-cpr": [
     { id: "eXLoL3U3-L3", label: "eXLoL3U3-L3" },
   ],
-    "R1AbovePR4": [{ id: "A-E-AA-E-EUBL2-GapB-S1", label: "A-E-AA-E-EUBL2-GapB-S1" }]
 };
 
 export const pivotcategories: Category[] = [
