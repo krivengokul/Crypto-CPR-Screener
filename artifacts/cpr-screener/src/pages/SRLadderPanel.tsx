@@ -667,6 +667,7 @@ export function SRLadderPanel({
   levelCheckConditions,
   copyViewControl,
   innerLevelBadges,
+  ssllBadge,
 }: {
   r: SRLadderData;
   /**
