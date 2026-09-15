@@ -636,6 +636,7 @@ export function SRLadderPanel({
   showLevelCheck = false,
   levelCheckConditions,
   copyViewControl,
+  pDayLevelBadges,
 }: {
   r: SRLadderData;
   /**
@@ -686,13 +687,25 @@ export function SRLadderPanel({
    * View selected). No effect unless showLevelCheck is also true.
    */
   copyViewControl?: ReactNode;
+  /**
+   * The LEVEL-column badges (renderLevelStatusRestBadges +
+   * renderSSRRHHLLBadges) formerly shown in the Screener table's own
+   * LEVEL column, now rendered underneath the "PDay S/R" ladder instead —
+   * same badge components, same colors, just relocated. Omit to render
+   * nothing extra under PDay S/R (e.g. BacktestPanel, which never had
+   * these badges).
+   */
+  pDayLevelBadges?: ReactNode;
 }) {
   const hasRightSection = Boolean(rowKey || showLevelCheck || copyViewControl);
 
   return (
     <div className="flex w-full min-w-0 items-start gap-2 overflow-x-auto border-b border-border/50 pb-3">
       {/* 1. Previous Day S/R */}
-      <SRLadder cpr={r.prevCPR} currentPrice={r.prevClose} label="PDay S/R" badge={prevPatternBadge} pricePlain />
+      <div className="flex w-[160px] shrink-0 flex-col gap-1.5">
+        <SRLadder cpr={r.prevCPR} currentPrice={r.prevClose} label="PDay S/R" badge={prevPatternBadge} pricePlain />
+        {pDayLevelBadges && <div className="flex flex-col gap-1 pl-2">{pDayLevelBadges}</div>}
+      </div>
 
       {/* 2. CPR Level Chart */}
       <div className="w-[452px] shrink-0">
@@ -747,6 +760,7 @@ export function SRLadderRow({
   showLevelCheck = false,
   levelCheckConditions,
   copyViewControl,
+  pDayLevelBadges,
 }: {
   r: SRLadderData;
   colSpan?: number;
@@ -771,6 +785,8 @@ export function SRLadderRow({
   levelCheckConditions?: LevelCheckCondition[];
   /** BacktestPanel-only "Copy View" control, rendered under Level Check. See SRLadderPanel for details. */
   copyViewControl?: ReactNode;
+  /** LEVEL-column badges, rendered under "PDay S/R". See SRLadderPanel for details. */
+  pDayLevelBadges?: ReactNode;
 }) {
   return (
     <tr key={rowKey ? `${rowKey}-sr` : undefined} className="bg-muted/20 border-b border-border">
@@ -788,6 +804,7 @@ export function SRLadderRow({
           showLevelCheck={showLevelCheck}
           levelCheckConditions={levelCheckConditions}
           copyViewControl={copyViewControl}
+          pDayLevelBadges={pDayLevelBadges}
         />
       </td>
     </tr>

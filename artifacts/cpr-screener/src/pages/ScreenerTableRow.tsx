@@ -1,5 +1,5 @@
 import { Fragment } from "react";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, CheckCircle2, XCircle } from "lucide-react";
 import type { CPRResult } from "@/lib/cpr";
 import {
   type CPRResultWithSource,
@@ -27,7 +27,7 @@ import {
   renderPivotSizeCell,
 } from "./ScreenerUtils";
 import { SRLadderRow, toSRLadderData } from "./SRLadderPanel";
-import type { LevelCheckCondition } from "./SRLadderDiff";
+import { getLadderMatchSummary, type LevelCheckCondition } from "./SRLadderDiff";
 
 /**
  * PATTERN_BADGE_CLASSES — single source of truth for pattern badge colours.
@@ -597,8 +597,11 @@ export function ScreenerTableHeader({
         >
           Symbol <SortIcon k="symbol" />
         </th>
-        <th className="px-2 py-3 w-56 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          LEVEL
+        <th
+          className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider"
+          title="Levels still matching prev day (see expanded row for the current View's Level Check)"
+        >
+          Ladder Check
         </th>
         <th
           className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground min-w-[150px]"
@@ -690,6 +693,21 @@ export default function ScreenerTableRow({
   // regardless of Inside/Outside/narrow state, via the shared
   // renderSSRRHHLLBadges helper.
   const ssrrHhllRow = renderSSRRHHLLBadges(r);
+  // Formerly the LEVEL column's content — relocated to render underneath
+  // the "PDay S/R" ladder in the expanded row instead. Same badge
+  // components, same colors, just a different home.
+  const levelBadges = (
+    <>
+      <div className="flex flex-nowrap items-center gap-1">
+        {renderLevelStatusRestBadges(r, isInsideCPR, showWide)}
+      </div>
+      {ssrrHhllRow}
+    </>
+  );
+  // LEVEL column's replacement: the same Ladder Check summary shown in
+  // BacktestPanel's results table, scoped to this row's own prev/today
+  // CPR and the currently active View's Level Check conditions.
+  const ladder = getLadderMatchSummary(r.prevCPR, r.todayCPR, levelCheckConditions);
   // Row 1 keeps every LEVEL-status badge inline on one line (Above/Below/
   // Inside/Outside/Skip, then oV-B/oV-A, then Narrow/Wide, then SSRR, then
   // Equal) so nothing gets pushed down to a second line.
@@ -766,13 +784,32 @@ export default function ScreenerTableRow({
             </div>
           </div>
         </td>
-        <td className="px-2 py-3 w-56">
-          <div className="flex flex-col gap-1 max-w-[200px]">
-            <div className="flex flex-nowrap items-center gap-1">
-              {renderLevelStatusRestBadges(r, isInsideCPR, showWide)}
-            </div>
-            {ssrrHhllRow}
-          </div>
+        <td className="px-3 py-3">
+          {!ladder.hasConditions ? (
+            <span className="text-xs text-muted-foreground">LevelCheck UnDefined</span>
+          ) : (
+            <span
+              className={`inline-flex items-center gap-1 text-xs font-mono font-medium ${
+                ladder.fullMatch
+                  ? "text-green-400"
+                  : ladder.matchingCount >= ladder.total - 2
+                  ? "text-amber-400"
+                  : "text-destructive"
+              }`}
+              title={
+                ladder.fullMatch
+                  ? "All 13 levels matched their previous-day zone"
+                  : `Broke through: ${ladder.mismatchLabels.join(", ")}`
+              }
+            >
+              {ladder.fullMatch ? (
+                <CheckCircle2 className="w-3.5 h-3.5" />
+              ) : (
+                <XCircle className="w-3.5 h-3.5" />
+              )}
+              {ladder.matchingCount}/{ladder.total}
+            </span>
+          )}
         </td>
         <td
           className="px-3 py-3 whitespace-nowrap text-xs font-medium min-w-[150px]"
@@ -855,6 +892,7 @@ export default function ScreenerTableRow({
           viewDirection={dir ?? undefined}
           showLevelCheck
           levelCheckConditions={levelCheckConditions}
+          pDayLevelBadges={levelBadges}
         />
       )}
     </Fragment>
