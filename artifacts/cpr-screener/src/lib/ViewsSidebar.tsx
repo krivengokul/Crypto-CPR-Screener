@@ -139,7 +139,7 @@ export const Views: Record<string, SubPattern[]> = {
       activeText:  "#4ade80",              // green-400 text
       activeBg:    "rgba(34, 197, 94, 0.14)",
     },
-    // NEW: 9AM:pPALPApH-FAU4:2PM — LEVEL ABOVE + Pattern U4L3 + prev day's
+    // 9AM:pPALPApH-FAU4:2PM — LEVEL ABOVE + Pattern A-A-AA-AA-U4L3 + prev day's
     // own Pivot above today's PDL (prevCPR.pivot > todayCPR.prevLow) +
     // today's own Pivot above today's own PDH (todayCPR.pivot >
     // todayCPR.prevHigh). Bullish, entry ~9AM, targets Far Above U4 by
@@ -365,8 +365,8 @@ export const Views: Record<string, SubPattern[]> = {
       activeText:  "#fca5a5",              // red-300 text
       activeBg:    "rgba(239, 68, 68, 0.14)",
     },
-    // NEW: 8AM:APHS1A-FAU4:4AM — U1>pU4 + Pattern EU1L3 (same "EU1L3"
-    // Pattern sub-category as 9AM:APHS1A-FAU4:4AM above) + today's BC above
+    // NEW: 8AM:APHS1A-FAU4:4AM — U1>pU4 + Pattern A-A-AA-AA-EU1L3 (same
+    // "A-A-AA-AA-EU1L3" Pattern sub-category) + today's BC above
     // prev day's own PDH + today's S1 above prev day's TC. Bullish,
     // targets Far Above U4 (today's R4) by ~4AM. Same green color family
     // as its 9AM:APHS1A-FAU4:4AM sibling.
@@ -395,7 +395,7 @@ export const Views: Record<string, SubPattern[]> = {
       activeText:  "#7dd3fc",              // sky-300 text
       activeBg:    "rgba(56, 189, 248, 0.14)",
     },
-    // NEW: 6AM:MegMeg-L3:8PM — U1>pU4 + Pattern EU1L4 + pMega (prev CPR
+    // NEW: 6AM:MegMeg-L3:8PM — U1>pU4 + Pattern A-A-AA-AA-EU1L4 + pMega (prev CPR
     // width Mega, 5.00%-10.00%) + Mega (today's CPR width Mega,
     // 5.00%-10.00%). Bearish, targets L3 (today's S3) by ~8PM. Red color
     // family, same as its 6AM:pX-APHS1A-pL4:4AM sibling.

@@ -566,17 +566,12 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     // Bullish → "up".
     { key: "A-A-AA-AA-EUPL3-RRHHGap:R4", direction: "up" },
     { key: "9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A", direction: "up" },
-    // FIX: "8AM:APHS1A-FAU4:4AM" (nested under the same "EU1L3" Pattern
-    //  as "9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A" above, formerly
-    // "9AM:APHS1A-FAU4:4AM") was missing here, so
-    // rows matching it never got the per-row green direction dot even
-    // though the Views button itself filtered correctly. Bullish → "up".
+    // "8AM:APHS1A-FAU4:4AM" (nested under "A-A-AA-AA-EU1L3"). Bullish → "up".
     { key: "8AM:APHS1A-FAU4:4AM", direction: "up" },
     { key: "6A:A-A-AA-AA-EUTL3-S1ATCpE-pL4:4A", direction: "down" },
     { key: "TiMe-EUTL3-AU4:2PM", direction: "up" },
     { key: "SMg-exHiL2L1-U4:3AM", direction: "up" },
-    // NEW: "6AM:MegMeg-L3:8PM" (nested under the new "EU1L4" Pattern
-    // ). Bearish → "down".
+    // "6AM:MegMeg-L3:8PM" (nested under "A-A-AA-AA-EU1L4"). Bearish → "down".
     { key: "6AM:MegMeg-L3:8PM", direction: "down" },
   ],
   // FIX: "S1BelowPS4" was left as an empty array while the comment below

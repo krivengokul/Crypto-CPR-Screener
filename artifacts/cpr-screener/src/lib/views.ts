@@ -1410,19 +1410,13 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
 },
 
   // --- direct Pattern children of "R1AbovePR4" ---
-  { key: "EU1L3", label: "EU1L3", parentKey: "R1AbovePR4", kind: "pattern", condition: (r) => r.EU1L3,
-      order: 0
-},
   { key: "EUTL3", label: "EUTL3", parentKey: "R1AbovePR4", kind: "pattern", condition: (r) => r.EUTL3,
       order: 1
 },
   { key: "EL1L2", label: "EL1L2", parentKey: "R1AbovePR4", kind: "pattern", condition: (r) => r.EL1L2,
       order: 3
 },
-  { key: "EU1L4", label: "EU1L4", parentKey: "R1AbovePR4", kind: "pattern", condition: (r) => r.EU1L4,
-      order: 4
-},
-  // No target-graded sub-patterns nested under these three yet — each is
+  // No target-graded sub-patterns nested under these two yet — each is
   // a symbol-list-only scan in the Backtest dropdown.
   { key: "EUPL2", label: "EUPL2", parentKey: "R1AbovePR4", kind: "pattern", condition: (r) => r.EUPL2,
       order: 5
@@ -1432,9 +1426,6 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
 },
   { key: "EUBL3", label: "EUBL3", parentKey: "R1AbovePR4", kind: "pattern", condition: (r) => r.EUBL3,
       order: 7
-},
-  { key: "EUBL2", label: "EUBL2", parentKey: "R1AbovePR4", kind: "pattern", condition: (r) => r.EUBL2,
-      order: 8
 },
 
   // --- Pattern "A-A-AA-AA" inside "ABOVE LEVEL4" and its subpatterns ---
@@ -1455,7 +1446,12 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
     label: "A-A-AA-AA-EU1L4",
     parentKey: "R1AbovePR4-A-A-AA-AA",
     kind: "pattern",
-    condition: (r) => r.EU1L4,
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-A" &&
+      r.HHLLCategory === "HHLL-A" &&
+      r.RRHHCategory === "RRHH-AA" &&
+      r.SSLLCategory === "SSLL-AA" &&
+      r.EU1L4,
     order: 0,
   },
   {
@@ -1471,7 +1467,12 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
     label: "A-A-AA-AA-EU1L3",
     parentKey: "R1AbovePR4-A-A-AA-AA",
     kind: "pattern",
-    condition: (r) => r.EU1L3,
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-A" &&
+      r.HHLLCategory === "HHLL-A" &&
+      r.RRHHCategory === "RRHH-AA" &&
+      r.SSLLCategory === "SSLL-AA" &&
+      r.EU1L3,
     order: 2,
   },
   {
@@ -1543,6 +1544,33 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
     order: 0,
   },
 
+  // --- Pattern "A-E-AA-E" inside "ABOVE LEVEL4" and its subpatterns ---
+  {
+    key: "R1AbovePR4-A-E-AA-E",
+    label: "A-E-AA-E",
+    parentKey: "R1AbovePR4",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-A" &&
+      r.HHLLCategory === "HHLL-E" &&
+      r.RRHHCategory === "RRHH-AA" &&
+      r.SSLLCategory === "SSLL-E",
+    order: 12,
+  },
+  {
+    key: "A-E-AA-E-EUBL2",
+    label: "A-E-AA-E-EUBL2",
+    parentKey: "R1AbovePR4-A-E-AA-E",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-A" &&
+      r.HHLLCategory === "HHLL-E" &&
+      r.RRHHCategory === "RRHH-AA" &&
+      r.SSLLCategory === "SSLL-E" &&
+      r.EUBL2,
+    order: 0,
+  },
+
   // --- "EL1U4" Pattern nested under "S1BelowPS4" ---
   { key: "EL1U4", label: "EL1U4", parentKey: "S1BelowPS4", kind: "pattern", condition: (r) => r.EL1U4,
       order: 0
@@ -1552,7 +1580,7 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
   {
     key: "8AM:APHS1A-FAU4:4AM",
     label: "8AM:APHS1A-FAU4:4AM",
-    parentKey: "EU1L3",
+    parentKey: "A-A-AA-AA-EU1L3",
     kind: "view",
     direction: "bullish",
     condition: (r) => r.todayCPR.bc > r.prevCPR.prevHigh && r.todayCPR.s1 > r.prevCPR.tc,
@@ -1602,7 +1630,7 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
   {
     key: "6AM:MegMeg-L3:8PM",
     label: "6AM:MegMeg-L3:8PM",
-    parentKey: "EU1L4",
+    parentKey: "A-A-AA-AA-EU1L4",
     kind: "view",
     direction: "bearish",
     condition: (r) =>
@@ -2253,13 +2281,15 @@ VIEWS.push(...MISC_VIEWS);
 // category's tree), but they DO need a VIEWS entry so matchesPatternFlag
 // (once rewritten to call passesView) still resolves them instead of
 // silently returning false. Cross-checked against the full current
-// VIEWS key list first — anything already present (e.g. "EU1L3",
-// "EU1L4", "EUBL2", "EUBL3", "EUTL3", "EU2L4", "EUPL2", "U4L3", "EL1U4",
-// "EL1L2", "EL2L1", already added earlier with a real parentKey) is
-// deliberately NOT duplicated here.
+// VIEWS key list first — anything already present (e.g. "EUBL3", "EUTL3",
+// "EU2L4", "EUPL2", "U4L3", "EL1U4", "EL1L2", "EL2L1",
+// already added earlier with a real parentKey) is deliberately NOT duplicated here.
 // ---------------------------------------------------------------------
 
 const RAW_FLAG_VIEWS: ViewDef[] = [
+  { key: "EU1L3", label: "EU1L3", kind: "view", condition: (r) => r.EU1L3 },
+  { key: "EU1L4", label: "EU1L4", kind: "view", condition: (r) => r.EU1L4 },
+  { key: "EUBL2", label: "EUBL2", kind: "view", condition: (r) => r.EUBL2 },
   { key: "CL4U3", label: "CL4U3", kind: "view", condition: (r) => r.CL4U3 },
   { key: "L4U4", label: "L4U4", kind: "view", condition: (r) => r.L4U4,
       order: 4

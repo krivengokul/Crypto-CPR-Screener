@@ -152,8 +152,8 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
           </>
         ) : activeView === "9AM:pPALPApH-FAU4:2PM" ? (
           <>
-            <div className="text-xs font-semibold text-green-400 mb-1">Pattern: U4L3&nbsp;&nbsp;pPivot &gt; PDL&nbsp;&nbsp;Pivot &gt; PDH</div>
-            <div className="text-xs text-muted-foreground">LEVEL ABOVE + Pattern U4L3 (today&apos;s S4 in prev&apos;s S3/S2 band, prev&apos;s R4 in today&apos;s R3/R4 band) + prev day&apos;s own Pivot above today&apos;s PDL + today&apos;s own Pivot above today&apos;s PDH</div>
+            <div className="text-xs font-semibold text-green-400 mb-1">Pattern: A-A-AA-AA-U4L3&nbsp;&nbsp;pPivot &gt; PDL&nbsp;&nbsp;Pivot &gt; PDH</div>
+            <div className="text-xs text-muted-foreground">LEVEL ABOVE + Pattern A-A-AA-AA-U4L3 (today&apos;s S4 in prev&apos;s S3/S2 band, prev&apos;s R4 in today&apos;s R3/R4 band) + prev day&apos;s own Pivot above today&apos;s PDL + today&apos;s own Pivot above today&apos;s PDH</div>
           </>
         ) : activeView === "ss-EL1U4-U4:10PM" ? (
           <>
@@ -172,8 +172,8 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
           </>
         ) : activeView === "8AM:APHS1A-FAU4:4AM" ? (
           <>
-            <div className="text-xs font-semibold text-green-400 mb-1">Pattern: EU1L3&nbsp;&nbsp;BC &gt; pPDH&nbsp;&nbsp;S1 &gt; pTC</div>
-            <div className="text-xs text-muted-foreground">Big CPR Above (Wide + Rising) + Today&apos;s R1 &gt; Prev R4 + Pattern EU1L3 + Today&apos;s BC above prev day&apos;s own PDH + Today&apos;s S1 above prev day&apos;s TC</div>
+            <div className="text-xs font-semibold text-green-400 mb-1">Pattern: A-A-AA-AA-EU1L3&nbsp;&nbsp;BC &gt; pPDH&nbsp;&nbsp;S1 &gt; pTC</div>
+            <div className="text-xs text-muted-foreground">ABOVE LEVEL4 + Pattern A-A-AA-AA-EU1L3 + Today&apos;s BC above prev day&apos;s own PDH + Today&apos;s S1 above prev day&apos;s TC</div>
           </>
         ) : activeView === "SMg-exHiL2L1-U4:3AM" ? (
           <>
@@ -182,8 +182,8 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
           </>
         ) : activeView === "6AM:MegMeg-L3:8PM" ? (
           <>
-            <div className="text-xs font-semibold text-red-400 mb-1">Pattern: EU1L4  PCPR: Mega  CPR: Mega</div>
-            <div className="text-xs text-muted-foreground">Big CPR Above (Wide + Rising) + Today&apos;s R1 &gt; Prev R4 + Pattern EU1L4 + Prev CPR width 5.00%–10.00% (pMega), Today CPR width 5.00%–10.00% (Mega)</div>
+            <div className="text-xs font-semibold text-red-400 mb-1">Pattern: A-A-AA-AA-EU1L4  PCPR: Mega  CPR: Mega</div>
+            <div className="text-xs text-muted-foreground">ABOVE LEVEL4 + Pattern A-A-AA-AA-EU1L4 + Prev CPR width 5.00%–10.00% (pMega), Today CPR width 5.00%–10.00% (Mega)</div>
           </>
         ) : activeView === "TiMe-EUTL3-AU4:2PM" ? (
           <>
@@ -384,7 +384,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
         ) : activeView === "8AM:APHS1A-FAU4:4AM" ? (
           <>
             <div className="text-xs font-semibold text-green-400 mb-1">Target: FAU4&nbsp;&nbsp;Time: 4AM</div>
-            <div className="text-xs text-muted-foreground">EU1L3 base plus today&apos;s BC above prev day&apos;s own PDH and today&apos;s S1 above prev day&apos;s TC — expected upside far above U4 by ~4AM</div>
+            <div className="text-xs text-muted-foreground">A-A-AA-AA-EU1L3 base plus today&apos;s BC above prev day&apos;s own PDH and today&apos;s S1 above prev day&apos;s TC — expected upside far above U4 by ~4AM</div>
           </>
         ) : activeView === "SMg-exHiL2L1-U4:3AM" ? (
           <>
@@ -394,7 +394,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
         ) : activeView === "6AM:MegMeg-L3:8PM" ? (
           <>
             <div className="text-xs font-semibold text-red-400 mb-1">Exp Target: L3 (today&apos;s S3)<br />Time: 8PM</div>
-            <div className="text-xs text-muted-foreground">EU1L4 base plus prev/today CPR both Mega width (5.00%–10.00%) — expected downside target L3 (today&apos;s S3) by ~8PM</div>
+            <div className="text-xs text-muted-foreground">A-A-AA-AA-EU1L4 base plus prev/today CPR both Mega width (5.00%–10.00%) — expected downside target L3 (today&apos;s S3) by ~8PM</div>
           </>
         ) : activeView === "TiMe-EUTL3-AU4:2PM" ? (
           <>
