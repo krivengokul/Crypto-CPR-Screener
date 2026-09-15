@@ -1,4 +1,4 @@
-import { useState, useEffect, cloneElement, isValidElement, type CSSProperties, type ReactElement, type ReactNode } from "react";
+import { useState, useEffect, isValidElement, type ReactNode } from "react";
 import { Link2, Loader2 } from "lucide-react";
 import type { CPRLevels, CPRResult } from "@/lib/cpr";
 import { fmt } from "./ScreenerUtils";
@@ -524,27 +524,36 @@ function CPRLevelChart({
     11
   );
 
-  // S1 badge position: centered above the "today" (right-hand) S1 line
+  // S1 label position: centered above the "today" (right-hand) S1 line
   // segment specifically — not the chart's overall midpoint, which sat
   // right at the prev/today boundary and looked like it belonged to
-  // neither day. Height is sized a bit generous (badge content is ~16-18px
-  // tall before the 0.9 scale) and offset further above the line so the
-  // scaled pill never overlaps the S1 line itself.
+  // neither day.
   const todaySegStart = prevSegmentEnd;
   const todaySegEnd = leftMargin + plotWidth;
   const todayS1Y = yFor(todayCPR.s1);
-  const ssllBadgeWidth = 70;
-  const ssllBadgeHeight = 20;
-  const ssllBadgeX = todaySegStart + (todaySegEnd - todaySegStart) / 2 - ssllBadgeWidth / 2;
-  const ssllBadgeY = todayS1Y - ssllBadgeHeight - 6;
-  // renderSSLLCategoryBadge's pill has a colored border, sized for table
-  // cells — strip it here so the badge reads as a plain small label on the
-  // chart instead of a bordered box crowding the S1 line.
-  const ssllBadgeNoBorder = isValidElement(ssllBadge)
-    ? cloneElement(ssllBadge as ReactElement<{ style?: CSSProperties }>, {
-        style: { border: "none" },
-      })
-    : ssllBadge;
+  const ssllLabelX = todaySegStart + (todaySegEnd - todaySegStart) / 2;
+  const ssllLabelY = todayS1Y - 6;
+  // renderSSLLCategoryBadge returns a table-cell pill (colored background +
+  // border). On the chart we want it to read exactly like the other level
+  // labels (PV, TC, ...) — plain colored text, no box — so pull the label
+  // text and its color back out of that badge instead of rendering the
+  // badge itself.
+  const SSLL_TEXT_HEX: Record<string, string> = {
+    "green-400": "#4ade80",
+    "red-400": "#f87171",
+    "blue-400": "#60a5fa",
+    "orange-400": "#fb923c",
+    "yellow-400": "#facc15",
+    "slate-300": "#cbd5e1",
+  };
+  let ssllLabelText: string | null = null;
+  let ssllLabelColor = "#e5e7eb";
+  if (isValidElement(ssllBadge)) {
+    const badgeProps = ssllBadge.props as { children?: ReactNode; className?: string };
+    if (typeof badgeProps.children === "string") ssllLabelText = badgeProps.children;
+    const colorMatch = /text-([a-z]+-\d{3})/.exec(badgeProps.className ?? "");
+    if (colorMatch && SSLL_TEXT_HEX[colorMatch[1]]) ssllLabelColor = SSLL_TEXT_HEX[colorMatch[1]];
+  }
 
   return (
     <div className="min-w-0">
@@ -622,27 +631,18 @@ function CPRLevelChart({
             </g>
           );
         })}
-        {ssllBadge && (
-          <foreignObject
-            x={ssllBadgeX}
-            y={ssllBadgeY}
-            width={ssllBadgeWidth}
-            height={ssllBadgeHeight}
-            style={{ overflow: "visible" }}
+        {ssllLabelText && (
+          <text
+            x={ssllLabelX}
+            y={ssllLabelY}
+            fontSize={9}
+            fontFamily="monospace"
+            fontWeight="bold"
+            fill={ssllLabelColor}
+            textAnchor="middle"
           >
-            <div
-              // eslint-disable-next-line react/no-unknown-property
-              xmlns="http://www.w3.org/1999/xhtml"
-              className="flex items-center justify-center"
-              // Scales the whole pill (text + padding + border) down to
-              // roughly the same visual weight as the chart's own level
-              // labels (fontSize 9, e.g. "PV", "TC") rather than its normal
-              // table-cell size.
-              style={{ transform: "scale(0.9)", transformOrigin: "center" }}
-            >
-              {ssllBadgeNoBorder}
-            </div>
-          </foreignObject>
+            {ssllLabelText}
+          </text>
         )}
       </svg>
     </div>
