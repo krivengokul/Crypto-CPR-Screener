@@ -496,7 +496,7 @@ export const PIVOT_PATTERNS: Record<string, (r: CPRResult) => boolean> =
 //
 // Deliberately NOT included in this batch (see chat): "6PM:APHS1A-FAU4:99PM",
 // "6PM:APHS1A-FAU4:9PMM", "A-A-AA-AA-EUBL2-pS4S2:R2",
-// "B-B-BB-BB-L4U4-Ladder:R4", "B-B-BB-BB-L4U4-pGapA", and
+// "B6-L4U4-pStepUp:R4", "B-B-BB-BB-L4U4-pGapA", and
 // "B-B-BB-BB-L2U4-pPPHR1" — these are "Copy View" entries (BACKTEST_TARGETS'
 // conditionKey mechanism): they have NO passesPattern case of their own,
 // they're graded via a redirect to a DIFFERENT key's condition plus a
@@ -2003,8 +2003,8 @@ const COPY_VIEWS: ViewDef[] = [
       order: 0
 },
   {
-    key: "B-B-BB-BB-L4U4-Ladder:R4",
-    label: "B-B-BB-BB-L4U4-Ladder:R4",
+    key: "B6-L4U4-pStepUp:R4",
+    label: "B6-L4U4-pStepUp:R4",
     parentKey: "B-B-BB-BB-L4U4",
     conditionKey: "B-B-BB-BB-L4U4",
     kind: "view",

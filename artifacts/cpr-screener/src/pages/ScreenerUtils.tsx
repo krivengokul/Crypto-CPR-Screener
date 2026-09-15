@@ -527,7 +527,7 @@ const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
     // "B-B-BB-BB-L4U4" Pattern arrow (also under "LEVEL BELOW"). Bullish,
     // targets today's own R4 (U4) → "up".
     { key: "B-B-BB-BB-L4U4-pLAP:R4", direction: "up" },
-    { key: "B-B-BB-BB-L4U4-Ladder:R4", direction: "up" },
+    { key: "B6-L4U4-pStepUp:R4", direction: "up" },
     // NEW: "B-B-BB-BB-EL4U4-SSLLGap:S4" — View nested under the
     // "B-B-BB-BB-EL4U4" Pattern arrow (also under "LEVEL BELOW").
     // Bearish, targets today's own S4 (L4) → "down".

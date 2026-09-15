@@ -261,8 +261,8 @@ export const Views: Record<string, SubPattern[]> = {
       activeBg:    "rgba(244, 63, 94, 0.14)", // rose-500 tint
     },
     {
-      id: "B-B-BB-BB-L4U4-Ladder:R4",
-      label: "B-B-BB-BB-L4U4-Ladder:R4",
+      id: "B6-L4U4-pStepUp:R4",
+      label: "B6-L4U4-pStepUp:R4",
       activeColor: "#22c55e",              // green-500 border
       activeText:  "#4ade80",              // green-400 text
       activeBg:    "rgba(34, 197, 94, 0.14)",
