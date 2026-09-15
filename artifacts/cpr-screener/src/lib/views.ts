@@ -164,7 +164,7 @@ const CATEGORY_VIEWS: ViewDef[] = [
   { key: "compressed", label: "COMPRESSED", kind: "category", condition: (r) => r.compressed,
       order: 4
 },
-  { key: "expanded", label: "EXPANDED", kind: "category", condition: (r) => r.expanded && !r.LevelsAbove,
+  { key: "expanded", label: "EXPANDED", kind: "category", condition: (r) => r.expanded,
       order: 5
 },
 ];
@@ -550,6 +550,9 @@ const LEVELSABOVE_VIEWS: ViewDef[] = [
 },
   { key: "A-A-AA-AA-EU3L4", label: "A-A-AA-AA-EU3L4", parentKey: "A-A-AA-AA", kind: "pattern", condition: (r) => r.EU3L4,
       order: 6
+},
+  { key: "A-A-AA-AA-EUTL3", label: "A-A-AA-AA-EUTL3", parentKey: "A-A-AA-AA", kind: "pattern", condition: (r) => r.EUTL3,
+      order: 7
 },
 
   // --- A-A-AA-OA's one nested child ---
@@ -1434,15 +1437,111 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
       order: 8
 },
 
-  // --- "A-A-AA-AA"'s two further children (nested under R1AbovePR4 in
-  // backtest.ts's tree — see note above; "A-A-AA-AA" itself already
-  // exists as a COMPOUND_VIEW with parentKey "levelsabove") ---
-  { key: "A-A-AA-AA-EUTL3", label: "A-A-AA-AA-EUTL3", parentKey: "A-A-AA-AA", kind: "pattern", condition: (r) => r.EUTL3,
-      order: 7
-},
-  { key: "A-A-AA-AA-EUPL3", label: "A-A-AA-AA-EUPL3", parentKey: "A-A-AA-AA", kind: "pattern", condition: (r) => r.EUPL3,
-      order: 8
-},
+  // --- Pattern "A-A-AA-AA" inside "ABOVE LEVEL4" and its subpatterns ---
+  {
+    key: "R1AbovePR4-A-A-AA-AA",
+    label: "A-A-AA-AA",
+    parentKey: "R1AbovePR4",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-A" &&
+      r.HHLLCategory === "HHLL-A" &&
+      r.RRHHCategory === "RRHH-AA" &&
+      r.SSLLCategory === "SSLL-AA",
+    order: 9,
+  },
+  {
+    key: "A-A-AA-AA-EU1L4",
+    label: "A-A-AA-AA-EU1L4",
+    parentKey: "R1AbovePR4-A-A-AA-AA",
+    kind: "pattern",
+    condition: (r) => r.EU1L4,
+    order: 0,
+  },
+  {
+    key: "A-A-AA-AA-EUBL2",
+    label: "A-A-AA-AA-EUBL2",
+    parentKey: "R1AbovePR4-A-A-AA-AA",
+    kind: "pattern",
+    condition: (r) => r.EUBL2,
+    order: 1,
+  },
+  {
+    key: "A-A-AA-AA-EU1L3",
+    label: "A-A-AA-AA-EU1L3",
+    parentKey: "R1AbovePR4-A-A-AA-AA",
+    kind: "pattern",
+    condition: (r) => r.EU1L3,
+    order: 2,
+  },
+  {
+    key: "A-A-AA-AA-EUPL3",
+    label: "A-A-AA-AA-EUPL3",
+    parentKey: "R1AbovePR4-A-A-AA-AA",
+    kind: "pattern",
+    condition: (r) => r.EUPL3,
+    order: 3,
+  },
+  {
+    key: "A-A-AA-AA-EUPL2",
+    label: "A-A-AA-AA-EUPL2",
+    parentKey: "R1AbovePR4-A-A-AA-AA",
+    kind: "pattern",
+    condition: (r) => r.EUPL2,
+    order: 4,
+  },
+
+  // --- Pattern "A-E-AA-LB" inside "ABOVE LEVEL4" and its subpatterns ---
+  {
+    key: "R1AbovePR4-A-E-AA-LB",
+    label: "A-E-AA-LB",
+    parentKey: "R1AbovePR4",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-A" &&
+      r.HHLLCategory === "HHLL-E" &&
+      r.RRHHCategory === "RRHH-AA" &&
+      r.SSLLCategory === "SSLL-LB",
+    order: 10,
+  },
+  {
+    key: "A-E-AA-LB-EUPL2",
+    label: "A-E-AA-LB-EUPL2",
+    parentKey: "R1AbovePR4-A-E-AA-LB",
+    kind: "pattern",
+    condition: (r) => r.EUPL2,
+    order: 0,
+  },
+  {
+    key: "A-E-AA-LB-EUTL2",
+    label: "A-E-AA-LB-EUTL2",
+    parentKey: "R1AbovePR4-A-E-AA-LB",
+    kind: "pattern",
+    condition: (r) => r.EUTL2,
+    order: 1,
+  },
+
+  // --- Pattern "E-E-AA-OB" inside "ABOVE LEVEL4" and its subpatterns ---
+  {
+    key: "R1AbovePR4-E-E-AA-OB",
+    label: "E-E-AA-OB",
+    parentKey: "R1AbovePR4",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-E" &&
+      r.HHLLCategory === "HHLL-E" &&
+      r.RRHHCategory === "RRHH-AA" &&
+      r.SSLLCategory === "SSLL-OB",
+    order: 11,
+  },
+  {
+    key: "E-E-AA-OB-EU1L2",
+    label: "E-E-AA-OB-EU1L2",
+    parentKey: "R1AbovePR4-E-E-AA-OB",
+    kind: "pattern",
+    condition: (r) => r.EU1L2,
+    order: 0,
+  },
 
   // --- "EL1U4" Pattern nested under "S1BelowPS4" ---
   { key: "EL1U4", label: "EL1U4", parentKey: "S1BelowPS4", kind: "pattern", condition: (r) => r.EL1U4,
@@ -1728,7 +1827,7 @@ const COPY_VIEWS: ViewDef[] = [
   {
     key: "A-A-AA-AA-EUBL2-pS4S2:R2",
     label: "A-A-AA-AA-EUBL2-pS4S2:R2",
-    parentKey: "A-A-AA-AA",
+    parentKey: "A-A-AA-AA-EUBL2",
     conditionKey: "A-A-AA-AA",
     kind: "view",
     direction: "bullish",
@@ -2165,6 +2264,7 @@ const RAW_FLAG_VIEWS: ViewDef[] = [
   { key: "L4U4", label: "L4U4", kind: "view", condition: (r) => r.L4U4,
       order: 4
 },
+  { key: "U4L3", label: "U4L3", kind: "view", condition: (r) => r.U4L3 },
   { key: "EU3L4", label: "EU3L4", kind: "view", condition: (r) => r.EU3L4 },
   { key: "EU4L4", label: "EU4L4", kind: "view", condition: (r) => r.EU4L4,
       order: 3
