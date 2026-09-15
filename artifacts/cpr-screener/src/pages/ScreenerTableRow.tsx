@@ -712,14 +712,14 @@ export default function ScreenerTableRow({
   // CPR and the currently active View's Level Check conditions.
   const ladder = getLadderMatchSummary(r.prevCPR, r.todayCPR, levelCheckConditions);
   // SSLLCategory badge (e.g. "SSLL-AA") — shown above the S1 line in the
-  // expanded row's "Levels VIEW" chart.
+  // expanded row's "Levels VIEW" chart, right side.
   const ssllBadge = renderSSLLCategoryBadge(r);
-  // HHLLCategory badge (e.g. "HHLL-AA") — shown above the PH line in the
-  // expanded row's "Levels VIEW" chart.
+  // HHLLCategory badge (e.g. "HHLL-AA") — shown above the S1 line in the
+  // expanded row's "Levels VIEW" chart, left side (before ssllBadge).
   const hhllBadge = renderHHLLCategoryBadge(r);
   // SSRRCategory badge (e.g. "RRSS-C") — shown above the R1 line in the
-  // expanded row's "Levels VIEW" chart, same styling/placement pattern
-  // as hhllBadge.
+  // expanded row's "Levels VIEW" chart, pushed left so it stays clear of
+  // the HHLL/SSLL pair on the S1 line.
   const rrssBadge = renderSSRRCategoryBadge(r);
   // Row 1 keeps every LEVEL-status badge inline on one line (Above/Below/
   // Inside/Outside/Skip, then oV-B/oV-A, then Narrow/Wide, then SSRR, then
