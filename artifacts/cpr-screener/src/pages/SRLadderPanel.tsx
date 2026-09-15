@@ -716,6 +716,8 @@ export function SRLadderPanel({
   copyViewControl,
   innerLevelBadges,
   ssllBadge,
+  hhllBadge,
+  innerLevelLabels,
 }: {
   r: SRLadderData;
   /**
