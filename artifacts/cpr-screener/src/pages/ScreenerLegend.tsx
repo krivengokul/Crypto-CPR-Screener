@@ -349,17 +349,17 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
         {activeView === "6PM:HHLLA-RRHHGap:6AM" ? (
           <>
             <div className="text-xs font-semibold text-green-400 mb-1">Target: U4&nbsp;&nbsp;&nbsp;Entry: 6PM&nbsp;&nbsp;&nbsp;Time: 6AM</div>
-            <div className="text-xs text-emerald-400/80">6PM setup with bullish continuation expected toward today&apos;s U4 by ~6AM</div>
+            <div className="text-xs text-emerald-400/80">6PM setup with Up continuation expected toward today&apos;s U4 by ~6AM</div>
           </>
         ) : activeView === "7PM:MoMi->U4:2AM" ? (
           <>
             <div className="text-xs font-semibold text-cyan-400 mb-1">Target: U4&nbsp;&nbsp;&nbsp;Entry: 7PM&nbsp;&nbsp;&nbsp;Time: 2AM</div>
-            <div className="text-xs text-cyan-400/80">7PM setup with bullish continuation expected toward today&apos;s U4 by ~2AM</div>
+            <div className="text-xs text-cyan-400/80">7PM setup with Up continuation expected toward today&apos;s U4 by ~2AM</div>
           </>
         ) : activeView === "7PM:MoMi-<L4:2AM" ? (
           <>
             <div className="text-xs font-semibold text-rose-400 mb-1">Target: L4&nbsp;&nbsp;&nbsp;Entry: 7PM&nbsp;&nbsp;&nbsp;Time: 2AM</div>
-            <div className="text-xs text-rose-400/80">7PM setup with bearish continuation expected toward today&apos;s L4 by ~2AM</div>
+            <div className="text-xs text-rose-400/80">7PM setup with Down continuation expected toward today&apos;s L4 by ~2AM</div>
           </>
         ) : activeView === "6PM:APHS1A-FAU4:9PM" ? (
           <>
@@ -414,17 +414,17 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
         ) : showOBLoRRHHLLA && activeView === "overlapping-lower" ? (
           <>
             <div className="text-xs font-semibold text-emerald-400 mb-1">Target</div>
-            <div className="text-xs text-muted-foreground">Bullish continuation — these coins have the potential to go up to today&apos;s own U4</div>
+            <div className="text-xs text-muted-foreground">Up continuation — these coins have the potential to go up to today&apos;s own U4</div>
           </>
         ) : showOBNLoL4U4 && activeView === "overlapping-lower" ? (
           <>
             <div className="text-xs font-semibold text-emerald-400 mb-1">Target</div>
-            <div className="text-xs text-muted-foreground">Compressed structure with today&apos;s CPR Narrow — bullish continuation to U4</div>
+            <div className="text-xs text-muted-foreground">Compressed structure with today&apos;s CPR Narrow — Up continuation to U4</div>
           </>
         ) : showOBWLoL4U4 && activeView === "overlapping-lower" ? (
           <>
             <div className="text-xs font-semibold text-emerald-400 mb-1">Target</div>
-            <div className="text-xs text-muted-foreground">Same structure but today&apos;s CPR Wide — bullish continuation to U4</div>
+            <div className="text-xs text-muted-foreground">Same structure but today&apos;s CPR Wide — Up continuation to U4</div>
           </>
         ) : activeView === "2PM:SSLLpRRHHA-ApU4:5PM" ? (
           <>
@@ -432,7 +432,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
               Target: ApU4&nbsp;&nbsp;&nbsp;Entry: 2PM&nbsp;&nbsp;&nbsp;Time: 5PM
             </div>
             <div className="text-xs text-muted-foreground">
-              Bullish continuation from an Overlap-Below setup where today&apos;s S1/PDL both hold above prev day&apos;s tighter floor and today&apos;s R1/PDH both stay under prev day&apos;s tighter ceiling — expected move toward prev day&apos;s U4 by ~5PM IST.
+              Up continuation from an Overlap-Below setup where today&apos;s S1/PDL both hold above prev day&apos;s tighter floor and today&apos;s R1/PDH both stay under prev day&apos;s tighter ceiling — expected move toward prev day&apos;s U4 by ~5PM IST.
             </div>
           </>
         ) : activeView === "8AM:SSLLpRRHHA-L4:1PM" ? (
@@ -441,7 +441,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
               Target: L4&nbsp;&nbsp;&nbsp;Entry: 8AM&nbsp;&nbsp;&nbsp;Time: 1PM
             </div>
             <div className="text-xs text-muted-foreground">
-              Bearish sibling of 2PM:SSLLpRRHHA-ApU4:5PM from the same Overlap-Below setup, but split the opposite way (prev day&apos;s R1 below today&apos;s R2, or today&apos;s S3 below prev day&apos;s S2) — expected move toward today&apos;s own L4 by ~1PM IST.
+              Down sibling of 2PM:SSLLpRRHHA-ApU4:5PM from the same Overlap-Below setup, but split the opposite way (prev day&apos;s R1 below today&apos;s R2, or today&apos;s S3 below prev day&apos;s S2) — expected move toward today&apos;s own L4 by ~1PM IST.
             </div>
           </>
         ) : activeView === "8AM:CoLApHA-U4+1:8AM" ? (
@@ -450,7 +450,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
               Target: PU4&nbsp;&nbsp;&nbsp;Entry: 8AM&nbsp;&nbsp;&nbsp;Time: 8AM (+1)
             </div>
             <div className="text-xs text-muted-foreground">
-              Bullish continuation from an Inside-CPR setup where today&apos;s PDL holds above prev day&apos;s S1 and either today&apos;s PDH clears prev day&apos;s R1 or prev day&apos;s PDH clears today&apos;s R1 — expected move toward prev day&apos;s U4 by ~8AM the next day.
+              Up continuation from an Inside-CPR setup where today&apos;s PDL holds above prev day&apos;s S1 and either today&apos;s PDH clears prev day&apos;s R1 or prev day&apos;s PDH clears today&apos;s R1 — expected move toward prev day&apos;s U4 by ~8AM the next day.
             </div>
           </>
         ) : activeView === "8AM:SRBHHLLA-pU4+1:8AM" ? (
@@ -459,7 +459,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
               Target: PU4&nbsp;&nbsp;&nbsp;Entry: 8AM&nbsp;&nbsp;&nbsp;Time: 8AM (+1)
             </div>
             <div className="text-xs text-muted-foreground">
-              Bullish continuation from an Inside-CPR/CU3L3 setup with contracting pivots — expected move toward prev day&apos;s U4 by ~8AM the next day.
+              Up continuation from an Inside-CPR/CU3L3 setup with contracting pivots — expected move toward prev day&apos;s U4 by ~8AM the next day.
             </div>
           </>
         ) : activeView === "2PM:pPDHLA-SRA-U4:7PM" ? (
@@ -468,7 +468,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
               Target: U4&nbsp;&nbsp;&nbsp;Entry: 2PM&nbsp;&nbsp;&nbsp;Time: 7PM
             </div>
             <div className="text-xs text-muted-foreground">
-              Bullish continuation from an Inside-CPR/CU4L4 setup with pivots stepping up — expected move toward today&apos;s U4 by ~7PM IST.
+              Up continuation from an Inside-CPR/CU4L4 setup with pivots stepping up — expected move toward today&apos;s U4 by ~7PM IST.
             </div>
           </>
         ) : activeView === "8AM:pPDHA-SRA-U4+2:2AM" ? (
@@ -477,38 +477,38 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
               Target: U4&nbsp;&nbsp;&nbsp;Entry: 8AM&nbsp;&nbsp;&nbsp;Time: 2AM (+2)
             </div>
             <div className="text-xs text-muted-foreground">
-              Bullish continuation from an Inside-CPR/EU4L4 setup with today&apos;s SSRRAbove holding — expected move toward today&apos;s U4 by ~2AM, two days out.
+              Up continuation from an Inside-CPR/EU4L4 setup with today&apos;s SSRRAbove holding — expected move toward today&apos;s U4 by ~2AM, two days out.
             </div>
           </>
         ) : activeView === "6A:SLE-RRHH:R2-6A" ? (
           <>
             <div className="text-xs font-semibold text-emerald-400 mb-1">Target: U2&nbsp;&nbsp;&nbsp;Entry: 6AM&nbsp;&nbsp;&nbsp;Time: 6AM</div>
-            <div className="text-xs text-muted-foreground">6AM setup with bullish continuation expected toward today&apos;s U2 (R2) by ~6AM</div>
+            <div className="text-xs text-muted-foreground">6AM setup with Up continuation expected toward today&apos;s U2 (R2) by ~6AM</div>
           </>
         ) : activeView === "levelsabove" ? (
           <>
-            <div className="text-xs font-semibold text-emerald-400 mb-1">Bias: Bullish shift</div>
+            <div className="text-xs font-semibold text-emerald-400 mb-1">Bias: Up shift</div>
             <div className="text-xs text-emerald-400/80">Today&apos;s CPR has stepped one band above yesterday&apos;s — TC inside prev&apos;s U2 zone, S1 still within prev&apos;s wider BC/R1 range</div>
           </>
         ) : activeView === "levelsbelow" ? (
           <>
-            <div className="text-xs font-semibold text-emerald-400 mb-1">Bias: Bullish shift</div>
+            <div className="text-xs font-semibold text-emerald-400 mb-1">Bias: Up shift</div>
             <div className="text-xs text-emerald-400/80">Today&apos;s CPR has stepped above yesterday&apos;s lower band while prev Pivot still caps the U1/U2 zone</div>
           </>
         ) : activeView === "3P:HA-pBELOWR1:R2-3A" ? (
           <>
             <div className="text-xs font-semibold text-green-400 mb-1">Target: U2&nbsp;&nbsp;&nbsp;Entry: 3PM&nbsp;&nbsp;&nbsp;Time: 3AM (+1)</div>
-            <div className="text-xs text-emerald-400/80">3PM setup with bullish continuation expected toward today&apos;s U2 (R2) by ~3AM the next day</div>
+            <div className="text-xs text-emerald-400/80">3PM setup with Up continuation expected toward today&apos;s U2 (R2) by ~3AM the next day</div>
           </>
         ) : activeView === "3P:HA-pABOVER1:S2-6P" ? (
           <>
             <div className="text-xs font-semibold text-rose-400 mb-1">Target: L2&nbsp;&nbsp;&nbsp;Entry: 3PM&nbsp;&nbsp;&nbsp;Time: 6PM</div>
-            <div className="text-xs text-muted-foreground">3PM setup with bearish continuation expected toward today&apos;s S2 (L2) by ~6PM</div>
+            <div className="text-xs text-muted-foreground">3PM setup with Down continuation expected toward today&apos;s S2 (L2) by ~6PM</div>
           </>
         ) : activeView === "2P:HA-HABOVEpR1:R4-4P" ? (
           <>
             <div className="text-xs font-semibold text-green-400 mb-1">Target: U4&nbsp;&nbsp;&nbsp;Entry: 2PM&nbsp;&nbsp;&nbsp;Time: 4PM</div>
-            <div className="text-xs text-emerald-400/80">2PM setup with bullish continuation expected toward today&apos;s U4 (R4) by ~4PM</div>
+            <div className="text-xs text-emerald-400/80">2PM setup with Up continuation expected toward today&apos;s U4 (R4) by ~4PM</div>
           </>
         ) : activeView === "PDH>pTC-U4:5AM" ? (
           <>
@@ -528,12 +528,12 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
         ) : activeView === "6A:HLC-SSLL:R4-6P" ? (
           <>
             <div className="text-xs font-semibold text-green-400 mb-1">Target: U4&nbsp;&nbsp;&nbsp;Entry: 6AM&nbsp;&nbsp;&nbsp;Time: 6PM</div>
-            <div className="text-xs text-emerald-400/80">6AM setup with bullish continuation expected toward today&apos;s U4 (R4) by ~6PM</div>
+            <div className="text-xs text-emerald-400/80">6AM setup with Up continuation expected toward today&apos;s U4 (R4) by ~6PM</div>
           </>
         ) : activeView === "8A:HLC-SSHH:S4-1P" ? (
           <>
             <div className="text-xs font-semibold text-rose-400 mb-1">Target: L4&nbsp;&nbsp;&nbsp;Entry: 8AM&nbsp;&nbsp;&nbsp;Time: 1PM</div>
-            <div className="text-xs text-muted-foreground">8AM setup with bearish continuation expected toward today&apos;s S4 (L4) by ~1PM</div>
+            <div className="text-xs text-muted-foreground">8AM setup with Down continuation expected toward today&apos;s S4 (L4) by ~1PM</div>
           </>
         ) : activeView === "9AM:RHLB-RRHH:5AM" ? (
           <>

@@ -102,7 +102,7 @@ export interface ViewDef {
    * tree position and its graded condition are independent).
    */
   conditionKey?: string;
-  direction?: "bullish" | "bearish";
+  direction?: "Up" | "Down";
   getTarget?: (r: CPRResult) => number;
   targetLabel?: string;
   getEntry?: (r: CPRResult) => number;
@@ -566,7 +566,7 @@ const LEVELSABOVE_VIEWS: ViewDef[] = [
     label: "7PM:MoMi->U4:2AM",
     parentKey: "EU2L4",
     kind: "view",
-    direction: "bullish",
+    direction: "Up",
     condition: (r) =>
       computePrevPattern(r.prevCPR, r.ppCPR) === "CU1L1" &&
       r.prevCPR.widthPct <= 0.10 &&
@@ -587,7 +587,7 @@ const LEVELSABOVE_VIEWS: ViewDef[] = [
     label: "7PM:MoMi-<L4:2AM",
     parentKey: "EU2L4",
     kind: "view",
-    direction: "bearish",
+    direction: "Down",
     condition: (r) =>
       computePrevPattern(r.prevCPR, r.ppCPR) === "CU1L1" &&
       r.prevCPR.widthPct <= 0.10 &&
@@ -608,7 +608,7 @@ const LEVELSABOVE_VIEWS: ViewDef[] = [
     label: "6PM:APHS1A-FAU4:9PM",
     parentKey: "EU2L4",
     kind: "view",
-    direction: "bullish",
+    direction: "Up",
     condition: (r) =>
       r.todayCPR.bc > r.prevCPR.prevHigh && r.todayCPR.s1 > r.prevCPR.tc &&
       (computePrevPattern(r.prevCPR, r.ppCPR) === "EU3L3" ||
@@ -628,7 +628,7 @@ const LEVELSABOVE_VIEWS: ViewDef[] = [
     label: "9AM:pPALPApH-FAU4:2PM",
     parentKey: "A-A-AA-AA-U4L3",
     kind: "view",
-    direction: "bullish",
+    direction: "Up",
     condition: (r) => r.prevCPR.pivot > r.todayCPR.prevLow && r.todayCPR.pivot > r.prevCPR.prevHigh,
     targetLabel: "FAU4 (Far Above today's R4)",
     getTarget: (r) => r.todayCPR.r4,
@@ -643,7 +643,7 @@ const LEVELSABOVE_VIEWS: ViewDef[] = [
     label: "8AM:pPDHA-SRA-U4+2:2AM",
     parentKey: "A-B-C-C-EU4L4",
     kind: "view",
-    direction: "bullish",
+    direction: "Up",
     condition: (r) =>
       r.SSRRCategory === "RRSS-A" &&
       r.prevCPR.prevHigh > r.todayCPR.prevHigh &&
@@ -663,7 +663,7 @@ const LEVELSABOVE_VIEWS: ViewDef[] = [
     label: "A-A-AA-AA-S1pPDH-U3",
     parentKey: "A-A-AA-AA-U2L4",
     kind: "view",
-    direction: "bullish",
+    direction: "Up",
     condition: (r) => r.todayCPR.s1 > r.prevCPR.prevHigh,
     targetLabel: "U3 (today's R3)",
     getTarget: (r) => r.todayCPR.r3,
@@ -678,7 +678,7 @@ const LEVELSABOVE_VIEWS: ViewDef[] = [
     label: "A-A-AA-AA-EU2L4-ApR2",
     parentKey: "A-A-AA-AA-EU2L4",
     kind: "view",
-    direction: "bullish",
+    direction: "Up",
     condition: (r) =>
       r.todayCPR.r1 > r.prevCPR.r3 &&
       r.prevCPR.prevLow > r.todayCPR.s2 &&
@@ -696,7 +696,7 @@ const LEVELSABOVE_VIEWS: ViewDef[] = [
     label: "A-A-AA-AA-U3L4-pGapB",
     parentKey: "A-A-AA-AA-U3L4",
     kind: "view",
-    direction: "bullish",
+    direction: "Up",
     condition: (r) =>
       r.RRSSGapCategory === "RRGap" &&
       r.PDHPDLGapCategory === "HHGap" &&
@@ -732,7 +732,7 @@ const LEVELSABOVE_VIEWS: ViewDef[] = [
     label: "A-A-AA-AA-EU3L4-GapB",
     parentKey: "A-A-AA-AA-EU3L4",
     kind: "view",
-    direction: "bullish",
+    direction: "Up",
     condition: (r) => r.todayCPR.HLSwitch === "HL-B" && r.hlGapWinner === "today",
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
@@ -747,7 +747,7 @@ const LEVELSABOVE_VIEWS: ViewDef[] = [
     label: "A-A-AA-OA-U3L4-RRHHGap:R4",
     parentKey: "A-A-AA-OA-U3L4",
     kind: "view",
-    direction: "bullish",
+    direction: "Up",
     condition: (r) =>
       r.RRSSGapCategory === "RRGap" &&
       r.PDHPDLGapCategory === "HHGap" &&
@@ -782,7 +782,7 @@ const LEVELSABOVE_VIEWS: ViewDef[] = [
     label: "A-A-AA-AA-U3L3-SSLLGap:R4",
     parentKey: "A-A-AA-AA-U3L3",
     kind: "view",
-    direction: "bullish",
+    direction: "Up",
     condition: (r) =>
       r.RRSSGapCategory === "SSGap" &&
       r.PDHPDLGapCategory === "LLGap" &&
@@ -839,7 +839,7 @@ const LEVELSBELOW_VIEWS: ViewDef[] = [
   {
     key: "B-B-BB-BB-L4U4", label: "B-B-BB-BB-L4U4", parentKey: "B-B-BB-BB", kind: "pattern",
     condition: (r) => r.L4U4,
-    direction: "bearish", targetLabel: "L2 (today's S2)", getTarget: (r) => r.todayCPR.s2,
+    direction: "Down", targetLabel: "L2 (today's S2)", getTarget: (r) => r.todayCPR.s2,
     entryLabel: "BC (today's BC)", getEntry: (r) => r.todayCPR.bc,
     stoplossLabel: "R1 (today's R1)", getStoploss: (r) => r.todayCPR.r1,
       order: 0
@@ -850,7 +850,7 @@ const LEVELSBELOW_VIEWS: ViewDef[] = [
   {
     key: "B-B-BB-BB-L3U4", label: "B-B-BB-BB-L3U4", parentKey: "B-B-BB-BB", kind: "pattern",
     condition: (r) => r.L3U4,
-    direction: "bearish", targetLabel: "L2 (today's S2)", getTarget: (r) => r.todayCPR.s2,
+    direction: "Down", targetLabel: "L2 (today's S2)", getTarget: (r) => r.todayCPR.s2,
     entryLabel: "BC (today's BC)", getEntry: (r) => r.todayCPR.bc,
     stoplossLabel: "R1 (today's R1)", getStoploss: (r) => r.todayCPR.r1,
       order: 2
@@ -858,7 +858,7 @@ const LEVELSBELOW_VIEWS: ViewDef[] = [
   {
     key: "B-B-BB-BB-L2U4", label: "B-B-BB-BB-L2U4", parentKey: "B-B-BB-BB", kind: "pattern",
     condition: (r) => r.L2U4,
-    direction: "bearish", targetLabel: "L2 (today's S2)", getTarget: (r) => r.todayCPR.s2,
+    direction: "Down", targetLabel: "L2 (today's S2)", getTarget: (r) => r.todayCPR.s2,
     entryLabel: "BC (today's BC)", getEntry: (r) => r.todayCPR.bc,
     stoplossLabel: "R1 (today's R1)", getStoploss: (r) => r.todayCPR.r1,
       order: 3
@@ -866,7 +866,7 @@ const LEVELSBELOW_VIEWS: ViewDef[] = [
   {
     key: "B-B-BB-BB-L4U3", label: "B-B-BB-BB-L4U3", parentKey: "B-B-BB-BB", kind: "pattern",
     condition: (r) => r.L4U3,
-    direction: "bearish", targetLabel: "L2 (today's S2)", getTarget: (r) => r.todayCPR.s2,
+    direction: "Down", targetLabel: "L2 (today's S2)", getTarget: (r) => r.todayCPR.s2,
     entryLabel: "BC (today's BC)", getEntry: (r) => r.todayCPR.bc,
     stoplossLabel: "R1 (today's R1)", getStoploss: (r) => r.todayCPR.r1,
       order: 4
@@ -874,7 +874,7 @@ const LEVELSBELOW_VIEWS: ViewDef[] = [
   {
     key: "B-B-BB-BB-L3U3", label: "B-B-BB-BB-L3U3", parentKey: "B-B-BB-BB", kind: "pattern",
     condition: (r) => r.L3U3,
-    direction: "bearish", targetLabel: "L2 (today's S2)", getTarget: (r) => r.todayCPR.s2,
+    direction: "Down", targetLabel: "L2 (today's S2)", getTarget: (r) => r.todayCPR.s2,
     entryLabel: "BC (today's BC)", getEntry: (r) => r.todayCPR.bc,
     stoplossLabel: "R1 (today's R1)", getStoploss: (r) => r.todayCPR.r1,
       order: 5
@@ -901,7 +901,7 @@ const LEVELSBELOW_VIEWS: ViewDef[] = [
     label: "3P:HA-pBELOWR1:R2-3A",
     parentKey: "HALB-SSLLGap",
     kind: "view",
-    direction: "bullish",
+    direction: "Up",
     condition: (r) =>
       r.prevCPR.pivot > r.todayCPR.r1 && r.todayCPR.pivot > r.prevCPR.prevLow &&
       r.prevCPR.s3 > r.todayCPR.s1 && r.todayCPR.r3 > r.prevCPR.r3,
@@ -918,7 +918,7 @@ const LEVELSBELOW_VIEWS: ViewDef[] = [
     label: "3P:HA-pABOVER1:S2-6P",
     parentKey: "HALB-SSLLGap",
     kind: "view",
-    direction: "bearish",
+    direction: "Down",
     condition: (r) => r.prevCPR.s3 > r.todayCPR.s1 && r.prevCPR.pivot < r.todayCPR.r1,
     targetLabel: "L2 (today's S2)",
     getTarget: (r) => r.todayCPR.s2,
@@ -933,7 +933,7 @@ const LEVELSBELOW_VIEWS: ViewDef[] = [
     label: "2P:HA-HABOVEpR1:R4-4P",
     parentKey: "HALB-SSLLGap",
     kind: "view",
-    direction: "bullish",
+    direction: "Up",
     condition: (r) =>
       dirTol(r.prevCPR.s3, r.todayCPR.s1) > 0 &&
       dirTol(r.todayCPR.r1, r.prevCPR.prevHigh) > 0 &&
@@ -959,7 +959,7 @@ const LEVELSBELOW_VIEWS: ViewDef[] = [
     label: "PDH>pTC-U4:5AM",
     parentKey: "levelsbelow",
     kind: "view",
-    direction: "bullish",
+    direction: "Up",
     condition: (r) => {
       const pMini = r.prevCPR.widthPct > 0.22 && r.prevCPR.widthPct <= 0.60;
       const small = r.todayCPR.widthPct > 0.60 && r.todayCPR.widthPct <= 1.10;
@@ -985,7 +985,7 @@ const LEVELSBELOW_VIEWS: ViewDef[] = [
     label: "11AM:pCPR1AHi-FApU4:1PM",
     parentKey: "levelsbelow",
     kind: "view",
-    direction: "bullish",
+    direction: "Up",
     condition: (r) =>
       r.L4U3 && r.HHLLCategory === "HHLL-B" &&
       r.prevCPR.HLSwitch === "HL-B" && r.todayCPR.HLSwitch === "HL-A" &&
@@ -1003,7 +1003,7 @@ const LEVELSBELOW_VIEWS: ViewDef[] = [
     label: "B-B-BB-BB-EL4U4-SSLLGap:S4",
     parentKey: "B-B-BB-BB-EL4U4",
     kind: "view",
-    direction: "bearish",
+    direction: "Down",
     condition: (r) =>
       r.RRSSGapCategory === "SSGap" &&
       r.PDHPDLGapCategory === "LLGap" &&
@@ -1023,7 +1023,7 @@ const LEVELSBELOW_VIEWS: ViewDef[] = [
     label: "B-B-BB-BB-L4U4-pLAP:R4",
     parentKey: "B-B-BB-BB-L4U4",
     kind: "view",
-    direction: "bullish",
+    direction: "Up",
     condition: (r) =>
       r.prevCPR.HLSwitch === "HL-A" &&
       r.hlGapWinner === "prev" &&
@@ -1044,7 +1044,7 @@ const LEVELSBELOW_VIEWS: ViewDef[] = [
     label: "B-B-BB-BB-L4U4-pLTC-U2",
     parentKey: "B-B-BB-BB-L4U4",
     kind: "view",
-    direction: "bullish",
+    direction: "Up",
     condition: (r) =>
       r.prevCPR.HLSwitch === "HL-A" &&
       r.hlGapWinner === "prev" &&
@@ -1068,7 +1068,7 @@ VIEWS.push(...LEVELSABOVE_VIEWS, ...LEVELSBELOW_VIEWS);
 {
   const bbbb = VIEWS.find((v) => v.key === "B-B-BB-BB");
   if (bbbb) {
-    bbbb.direction = "bearish";
+    bbbb.direction = "Down";
     bbbb.targetLabel = "L2 (today's S2)";
     bbbb.getTarget = (r) => r.todayCPR.s2;
     bbbb.entryLabel = "BC (today's BC)";
@@ -1098,7 +1098,7 @@ const COMPRESSED_VIEWS: ViewDef[] = [
     label: "8A:HLC-SSHH:S4-1P",
     parentKey: "compressed",
     kind: "view",
-    direction: "bearish",
+    direction: "Down",
     condition: (r) =>
       r.RRSSGapCategory === "SSGap" &&
       r.RRHHCategory === "RRHH-BB" &&
@@ -1121,7 +1121,7 @@ const COMPRESSED_VIEWS: ViewDef[] = [
     label: "9AM:RHLB-RRHH:5AM",
     parentKey: "compressed",
     kind: "view",
-    direction: "bearish",
+    direction: "Down",
     condition: (r) =>
       r.RRSSGapCategory === "RRGap" &&
       r.RRHHCategory === "RRHH-BB" &&
@@ -1149,7 +1149,7 @@ const COMPRESSED_VIEWS: ViewDef[] = [
       r.RRHHCategory === "RRHH-BB" &&
       r.RRSSGapCategory === "SSGap" &&
       r.PDHPDLGapCategory === "LLGap",
-    direction: "bullish",
+    direction: "Up",
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
     entryLabel: "TC (today's TC)",
@@ -1163,7 +1163,7 @@ const COMPRESSED_VIEWS: ViewDef[] = [
     label: "6A:HLC-SSLL:R4-6P",
     parentKey: "RRHH-BB:SSLL-AA:SSLLGap",
     kind: "view",
-    direction: "bullish",
+    direction: "Up",
     condition: (r) =>
       (dirTol(r.todayCPR.r2, r.prevCPR.r1) === 1 ||
         dirTol(r.todayCPR.s3, r.prevCPR.s1) === 1) &&
@@ -1202,7 +1202,7 @@ const COMPRESSED_VIEWS: ViewDef[] = [
     label: "8A:pLAPpPAH:R4-5P",
     parentKey: "RHLB-RRHHpGap",
     kind: "view",
-    direction: "bullish",
+    direction: "Up",
     condition: (r) =>
       r.prevCPR.prevLow >= r.todayCPR.pivot &&
       r.prevCPR.prevLow <= r.todayCPR.tc &&
@@ -1226,7 +1226,7 @@ const COMPRESSED_VIEWS: ViewDef[] = [
     parentKey: "C-B-BB-LB",
     kind: "pattern",
     condition: (r) => r.CL3U2,
-    direction: "bullish",
+    direction: "Up",
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
     entryLabel: "TC (today's TC)",
@@ -1240,7 +1240,7 @@ const COMPRESSED_VIEWS: ViewDef[] = [
     label: "C-B-BB-LB-CL3U2-RRHHGap:R4",
     parentKey: "C-B-BB-LB-CL3U2",
     kind: "view",
-    direction: "bullish",
+    direction: "Up",
     condition: (r) =>
       r.RRSSGapCategory === "RRGap" &&
       r.PDHPDLGapCategory === "HHGap" &&
@@ -1312,7 +1312,7 @@ const EXPANDED_VIEWS: ViewDef[] = [
     label: "6A:SLE-RRHH:R2-6A",
     parentKey: "E-A-AA-E",
     kind: "view",
-    direction: "bullish",
+    direction: "Up",
     condition: (r) =>
       r.PDHPDLGapCategory === "HHGap" &&
       r.prevCPR.HLSwitch === "HL-B" &&
@@ -1332,7 +1332,7 @@ const EXPANDED_VIEWS: ViewDef[] = [
   {
     key: "E-E-AA-BB-EL1U2", label: "E-E-AA-BB-EL1U2", parentKey: "E-E-AA-BB", kind: "pattern",
     condition: (r) => r.EL1U2,
-    direction: "bullish", targetLabel: "U2 (today's R2)", getTarget: (r) => r.todayCPR.r2,
+    direction: "Up", targetLabel: "U2 (today's R2)", getTarget: (r) => r.todayCPR.r2,
     entryLabel: "TC (today's TC)", getEntry: (r) => r.todayCPR.tc,
     stoplossLabel: "S1 (today's S1)", getStoploss: (r) => r.todayCPR.s1,
       order: 0
@@ -1340,7 +1340,7 @@ const EXPANDED_VIEWS: ViewDef[] = [
   {
     key: "E-E-AA-BB-EU1L2", label: "E-E-AA-BB-EU1L2", parentKey: "E-E-AA-BB", kind: "pattern",
     condition: (r) => r.EU1L2,
-    direction: "bullish", targetLabel: "U2 (today's R2)", getTarget: (r) => r.todayCPR.r2,
+    direction: "Up", targetLabel: "U2 (today's R2)", getTarget: (r) => r.todayCPR.r2,
     entryLabel: "TC (today's TC)", getEntry: (r) => r.todayCPR.tc,
     stoplossLabel: "S1 (today's S1)", getStoploss: (r) => r.todayCPR.s1,
       order: 1
@@ -1348,7 +1348,7 @@ const EXPANDED_VIEWS: ViewDef[] = [
   {
     key: "E-E-AA-BB-EU2L2", label: "E-E-AA-BB-EU2L2", parentKey: "E-E-AA-BB", kind: "pattern",
     condition: (r) => r.EU2L2,
-    direction: "bullish", targetLabel: "U2 (today's R2)", getTarget: (r) => r.todayCPR.r2,
+    direction: "Up", targetLabel: "U2 (today's R2)", getTarget: (r) => r.todayCPR.r2,
     entryLabel: "TC (today's TC)", getEntry: (r) => r.todayCPR.tc,
     stoplossLabel: "S1 (today's S1)", getStoploss: (r) => r.todayCPR.s1,
       order: 2
@@ -1356,7 +1356,7 @@ const EXPANDED_VIEWS: ViewDef[] = [
   {
     key: "E-E-AA-BB-EU1L3", label: "E-E-AA-BB-EU1L3", parentKey: "E-E-AA-BB", kind: "pattern",
     condition: (r) => r.EU1L3,
-    direction: "bullish", targetLabel: "U2 (today's R2)", getTarget: (r) => r.todayCPR.r2,
+    direction: "Up", targetLabel: "U2 (today's R2)", getTarget: (r) => r.todayCPR.r2,
     entryLabel: "TC (today's TC)", getEntry: (r) => r.todayCPR.tc,
     stoplossLabel: "S1 (today's S1)", getStoploss: (r) => r.todayCPR.s1,
       order: 3
@@ -1364,7 +1364,7 @@ const EXPANDED_VIEWS: ViewDef[] = [
   {
     key: "E-E-AA-BB-EL1U1", label: "E-E-AA-BB-EL1U1", parentKey: "E-E-AA-BB", kind: "pattern",
     condition: (r) => r.EL1U1,
-    direction: "bullish", targetLabel: "U2 (today's R2)", getTarget: (r) => r.todayCPR.r2,
+    direction: "Up", targetLabel: "U2 (today's R2)", getTarget: (r) => r.todayCPR.r2,
     entryLabel: "TC (today's TC)", getEntry: (r) => r.todayCPR.tc,
     stoplossLabel: "S1 (today's S1)", getStoploss: (r) => r.todayCPR.s1,
       order: 4
@@ -1582,7 +1582,7 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
     label: "8AM:APHS1A-FAU4:4AM",
     parentKey: "A-A-AA-AA-EU1L3",
     kind: "view",
-    direction: "bullish",
+    direction: "Up",
     condition: (r) => r.todayCPR.bc > r.prevCPR.prevHigh && r.todayCPR.s1 > r.prevCPR.tc,
     targetLabel: "FAU4 (Far Above today's R4)",
     getTarget: (r) => r.todayCPR.r4,
@@ -1597,7 +1597,7 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
     label: "TiMe-EUTL3-AU4:2PM",
     parentKey: "EUTL3",
     kind: "view",
-    direction: "bullish",
+    direction: "Up",
     condition: (r) =>
       r.prevCPR.widthPct > 0.10 && r.prevCPR.widthPct <= 0.22 && // Tiny
       r.todayCPR.widthPct > 5.00 && r.todayCPR.widthPct <= 10.00, // Mega
@@ -1614,7 +1614,7 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
     label: "SMg-exHiL2L1-U4:3AM",
     parentKey: "EL1L2",
     kind: "view",
-    direction: "bullish",
+    direction: "Up",
     condition: (r) => {
       const prevCat = getPatternCategory(computePrevPattern(r.prevCPR, r.ppCPR));
       return prevCat === "cOHigher" || prevCat === "cOLower";
@@ -1632,7 +1632,7 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
     label: "6AM:MegMeg-L3:8PM",
     parentKey: "A-A-AA-AA-EU1L4",
     kind: "view",
-    direction: "bearish",
+    direction: "Down",
     condition: (r) =>
       r.prevCPR.widthPct > 5.00 && r.prevCPR.widthPct <= 10.00 && // pMega
       r.todayCPR.widthPct > 5.00 && r.todayCPR.widthPct <= 10.00, // Mega
@@ -1649,7 +1649,7 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
     label: "9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A",
     parentKey: "A-A-AA-AA-EUTL3",
     kind: "view",
-    direction: "bullish",
+    direction: "Up",
     condition: (r) => r.todayCPR.bc > r.prevCPR.prevHigh && r.todayCPR.s1 > r.prevCPR.tc,
     targetLabel: "FAU4 (Far Above today's R4)",
     getTarget: (r) => r.todayCPR.r4,
@@ -1664,7 +1664,7 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
     label: "6A:A-A-AA-AA-EUTL3-S1ATCpE-pL4:4A",
     parentKey: "A-A-AA-AA-EUTL3",
     kind: "view",
-    direction: "bearish",
+    direction: "Down",
     condition: (r) =>
       r.todayCPR.bc > r.prevCPR.prevHigh &&
       r.todayCPR.s1 > r.prevCPR.tc &&
@@ -1682,7 +1682,7 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
     label: "A5-EUTL3-pA-S1ATC",
     parentKey: "A-A-AA-AA-EUTL3",
     kind: "view",
-    direction: "bullish",
+    direction: "Up",
     condition: (r) => r.prevCPR.HLSwitch === "HL-A",
     targetLabel: "U2 (today's R2)",
     getTarget: (r) => r.todayCPR.r2,
@@ -1712,7 +1712,7 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
     label: "A-A-AA-AA-EUPL3-RRHHGap:R4",
     parentKey: "A-A-AA-AA-EUPL3",
     kind: "view",
-    direction: "bullish",
+    direction: "Up",
     condition: (r) =>
       r.RRSSGapCategory === "RRGap" &&
       r.PDHPDLGapCategory === "HHGap" &&
@@ -1733,7 +1733,7 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
     label: "ss-EL1U4-U4:10PM",
     parentKey: "EL1U4",
     kind: "view",
-    direction: "bullish",
+    direction: "Up",
     condition: (r) =>
       r.cprFalling && r.strWideCPR &&
       r.prevCPR.HLSwitch === "HL-A" && r.todayCPR.HLSwitch === "HL-A" &&
@@ -1754,7 +1754,7 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
         parentKey: "A-E-AA-E-EUBL2",
         conditionKey: "A-E-AA-E-EUBL2",
         kind: "view",
-        direction: "bearish",
+        direction: "Down",
         targetLabel: "L2 (today's S2)",
         getTarget: (r) => r.todayCPR.s2,
         entryLabel: "BC (today's BC)",
@@ -1889,7 +1889,7 @@ const COPY_VIEWS: ViewDef[] = [
     parentKey: "A-A-AA-AA-U3L3",
     conditionKey: "A-A-AA-AA-U3L3-SSLLGap:R4",
     kind: "view",
-    direction: "bullish",
+    direction: "Up",
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
     entryLabel: "TC (today's TC)",
@@ -1919,7 +1919,7 @@ const COPY_VIEWS: ViewDef[] = [
     parentKey: "A-A-AA-AA-U3L3",
     conditionKey: "A-A-AA-AA-U3L3-SSLLGap:R4",
     kind: "view",
-    direction: "bullish",
+    direction: "Up",
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
     entryLabel: "TC (today's TC)",
@@ -1934,7 +1934,7 @@ const COPY_VIEWS: ViewDef[] = [
     parentKey: "EU2L4",
     conditionKey: "6PM:APHS1A-FAU4:9PM",
     kind: "view",
-    direction: "bullish",
+    direction: "Up",
     targetLabel: "FAU4 (Far Above today's R4)",
     getTarget: (r) => r.todayCPR.r4,
     entryLabel: "TC (today's TC)",
@@ -1963,7 +1963,7 @@ const COPY_VIEWS: ViewDef[] = [
     parentKey: "EU2L4",
     conditionKey: "6PM:APHS1A-FAU4:9PM",
     kind: "view",
-    direction: "bullish",
+    direction: "Up",
     targetLabel: "FAU4 (Far Above today's R4)",
     getTarget: (r) => r.todayCPR.r4,
     entryLabel: "TC (today's TC)",
@@ -1978,7 +1978,7 @@ const COPY_VIEWS: ViewDef[] = [
     parentKey: "A-A-AA-AA-EUBL2",
     conditionKey: "A-A-AA-AA",
     kind: "view",
-    direction: "bullish",
+    direction: "Up",
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
     entryLabel: "TC (today's TC)",
@@ -2008,7 +2008,7 @@ const COPY_VIEWS: ViewDef[] = [
     parentKey: "B-B-BB-BB-L4U4",
     conditionKey: "B-B-BB-BB-L4U4",
     kind: "view",
-    direction: "bullish",
+    direction: "Up",
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
     entryLabel: "TC (today's TC)",
@@ -2038,7 +2038,7 @@ const COPY_VIEWS: ViewDef[] = [
     parentKey: "B-B-BB-BB-L4U4",
     conditionKey: "B-B-BB-BB-L4U4",
     kind: "view",
-    direction: "bullish",
+    direction: "Up",
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
     entryLabel: "TC (today's TC)",
@@ -2068,7 +2068,7 @@ const COPY_VIEWS: ViewDef[] = [
     parentKey: "B-B-BB-BB-L2U4",
     conditionKey: "B-B-BB-BB-L2U4",
     kind: "view",
-    direction: "bullish",
+    direction: "Up",
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
     entryLabel: "TC (today's TC)",
@@ -2098,7 +2098,7 @@ const COPY_VIEWS: ViewDef[] = [
         parentKey: "B-B-BB-BB-L4U4",
         conditionKey: "B-B-BB-BB-L4U4",
         kind: "view",
-        direction: "bullish",
+        direction: "Up",
         targetLabel: "U4 (today's R4)",
         getTarget: (r) => r.todayCPR.r4,
         entryLabel: "TC (today's TC)",
@@ -2218,7 +2218,7 @@ const COPY_VIEWS: ViewDef[] = [
         parentKey: "C-C-BB-AA-CU3L2",
         conditionKey: "C-C-BB-AA-CU3L2",
         kind: "view",
-        direction: "bullish",
+        direction: "Up",
         targetLabel: "U4 (today's R4)",
         getTarget: (r) => r.todayCPR.r4,
         entryLabel: "TC (today's TC)",
@@ -2359,6 +2359,7 @@ const MISC_VIEWS: ViewDef[] = [
     label: "eXLoL3U3-L3",
     parentKey: "equal-cpr",
     kind: "view",
+    direction: "Down",
     condition: (r) => r.srExpandedLower,
   },
   { key: "top15gainers", label: "TOP 15 GAINERS", kind: "category", condition: () => true,

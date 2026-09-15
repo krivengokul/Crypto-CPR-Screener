@@ -393,7 +393,7 @@ function declutterLabelPositions(
  * badge next to "Levels VIEW": green for an Up view, red for a Down view,
  * and a neutral slate color when the View has no direction set.
  */
-export type ViewDirection = "up" | "down";
+export type ViewDirection = "Up" | "Down";
 
 /**
  * Small pill showing the active View's name, colored by its direction.
@@ -401,16 +401,18 @@ export type ViewDirection = "up" | "down";
  * pivotPatternBadge (e.g. "L4U4").
  */
 function ViewNameBadge({ name, direction }: { name: string; direction?: ViewDirection }) {
+  const isUp = direction === "Up" || (direction as string) === "up";
+  const isDown = direction === "Down" || (direction as string) === "down";
   const styles =
-    direction === "up"
+    isUp
       ? "border-green-500/40 bg-green-500/10 text-green-400"
-      : direction === "down"
+      : isDown
       ? "border-red-500/40 bg-red-500/10 text-red-400"
       : "border-slate-500/40 bg-slate-500/10 text-slate-300";
   return (
     <span
       className={`inline-flex shrink-0 items-center rounded-md border px-1.5 py-0.5 text-[10px] font-semibold leading-none ${styles}`}
-      title={direction ? `View direction: ${direction === "up" ? "Up" : "Down"}` : "View direction not set"}
+      title={direction ? `View direction: ${isUp ? "Up" : "Down"}` : "View direction not set"}
     >
       {name}
     </span>

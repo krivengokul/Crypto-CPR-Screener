@@ -371,7 +371,7 @@ export function createBacktestView(
   patternKey: string,
   newKey: string,
   newLabel: string,
-  direction: "bullish" | "bearish",
+  direction: "Up" | "Down",
   target: string,
   levelCheckDefs?: LevelCheckCondition[],
   attachKey?: string
@@ -380,7 +380,8 @@ export function createBacktestView(
     return { ok: false, reason: "duplicate-key" };
   }
 
-  const targetDefs = direction === "bullish" ? BULLISH_TARGETS : BEARISH_TARGETS;
+  const isUp = direction === "Up" || (direction as string) === "bullish";
+  const targetDefs = isUp ? BULLISH_TARGETS : BEARISH_TARGETS;
   const targetDef = targetDefs[target];
   if (!targetDef) {
     return { ok: false, reason: "invalid-target" };
@@ -395,13 +396,13 @@ export function createBacktestView(
     parentKey: resolvedParentKey,
     conditionKey: patternKey,
     kind: "view",
-    direction,
+    direction: isUp ? "Up" : "Down",
     targetLabel: targetDef.label,
     getTarget: (r: CPRResult) => r.todayCPR[targetKey],
-    entryLabel: direction === "bullish" ? "TC (today's TC)" : "BC (today's BC)",
-    getEntry: (r: CPRResult) => (direction === "bullish" ? r.todayCPR.tc : r.todayCPR.bc),
-    stoplossLabel: direction === "bullish" ? "S1 (today's S1)" : "R1 (today's R1)",
-    getStoploss: (r: CPRResult) => (direction === "bullish" ? r.todayCPR.s1 : r.todayCPR.r1),
+    entryLabel: isUp ? "TC (today's TC)" : "BC (today's BC)",
+    getEntry: (r: CPRResult) => (isUp ? r.todayCPR.tc : r.todayCPR.bc),
+    stoplossLabel: isUp ? "S1 (today's S1)" : "R1 (today's R1)",
+    getStoploss: (r: CPRResult) => (isUp ? r.todayCPR.s1 : r.todayCPR.r1),
     levelCheckDefs: levelCheckDefs
       ? levelCheckDefs.map(d => ({ ...d, bandKeys: [...d.bandKeys] }))
       : undefined,
@@ -1175,8 +1176,10 @@ export async function backtestSymbolOnDate(
   if (!levelCheckFullyMatches(result, target.levelCheckDefs)) return null; // didn't hit this View's full Level Check signature
 
   const getTarget = target.getTarget ?? ((r: CPRResult) => r.todayCPR.r4);
-  const getEntry = target.getEntry ?? ((r: CPRResult) => (target.direction === "bearish" ? r.todayCPR.bc : r.todayCPR.tc));
-  const getStoploss = target.getStoploss ?? ((r: CPRResult) => (target.direction === "bearish" ? r.todayCPR.r1 : r.todayCPR.s1));
+  const isDown = target.direction === "Down" || (target.direction as string) === "bearish";
+  const isUp = target.direction === "Up" || (target.direction as string) === "bullish" || !isDown;
+  const getEntry = target.getEntry ?? ((r: CPRResult) => (isDown ? r.todayCPR.bc : r.todayCPR.tc));
+  const getStoploss = target.getStoploss ?? ((r: CPRResult) => (isDown ? r.todayCPR.r1 : r.todayCPR.s1));
 
   const targetLevel = getTarget(result);
   const entryLevel = getEntry(result);
@@ -1217,7 +1220,7 @@ export async function backtestSymbolOnDate(
   }
 
   const hits = (c: OHLC | null) =>
-    !!c && (target.direction === "bullish" ? c.high >= targetLevel : c.low <= targetLevel);
+    !!c && (isUp ? c.high >= targetLevel : c.low <= targetLevel);
 
   let hitDate: string | null = null;
   let daysToHit: 0 | 1 | null = null;
@@ -1326,13 +1329,15 @@ export async function pivotLevelBacktestSymbolOnDate(
   // defined target of its own, so existing Pattern-only selections are
   // unaffected.
   const definedTarget = getView(pivotLevelKey);
-  const bullish = definedTarget ? definedTarget.direction !== "bearish" : true;
+  const isUpTarget = definedTarget
+    ? definedTarget.direction === "Up" || (definedTarget.direction as string) === "bullish" || (definedTarget.direction as string) !== "Down" && (definedTarget.direction as string) !== "bearish"
+    : true;
   const targetLevel = definedTarget?.getTarget ? definedTarget.getTarget(result) : result.todayCPR.r4;
   const targetLabel = definedTarget?.targetLabel ?? "U4 (today's R4)";
-  const entryLevel = definedTarget?.getEntry ? definedTarget.getEntry(result) : (bullish ? result.todayCPR.tc : result.todayCPR.bc);
-  const entryLabel = definedTarget?.entryLabel ?? (bullish ? "TC (today's TC)" : "BC (today's BC)");
-  const stoplossLevel = definedTarget?.getStoploss ? definedTarget.getStoploss(result) : (bullish ? result.todayCPR.s1 : result.todayCPR.r1);
-  const stoplossLabel = definedTarget?.stoplossLabel ?? (bullish ? "S1 (today's S1)" : "R1 (today's R1)");
+  const entryLevel = definedTarget?.getEntry ? definedTarget.getEntry(result) : (isUpTarget ? result.todayCPR.tc : result.todayCPR.bc);
+  const entryLabel = definedTarget?.entryLabel ?? (isUpTarget ? "TC (today's TC)" : "BC (today's BC)");
+  const stoplossLevel = definedTarget?.getStoploss ? definedTarget.getStoploss(result) : (isUpTarget ? result.todayCPR.s1 : result.todayCPR.r1);
+  const stoplossLabel = definedTarget?.stoplossLabel ?? (isUpTarget ? "S1 (today's S1)" : "R1 (today's R1)");
   const entryDayCandle = window.get(entryDateISO) ?? null;
   const nextDayCandle = window.get(dPlus1) ?? null;
 
@@ -1364,7 +1369,7 @@ export async function pivotLevelBacktestSymbolOnDate(
     };
   }
 
-  const hits = (c: OHLC | null) => !!c && (bullish ? c.high >= targetLevel : c.low <= targetLevel);
+  const hits = (c: OHLC | null) => !!c && (isUpTarget ? c.high >= targetLevel : c.low <= targetLevel);
 
   let hitDate: string | null = null;
   let daysToHit: 0 | 1 | null = null;

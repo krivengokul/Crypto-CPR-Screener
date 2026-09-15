@@ -181,7 +181,7 @@ export default function Screener({
       source: "binance" | "delta";
       currentPrice: number;
       change24h: number;
-      direction: "up" | "down";
+      direction: "Up" | "Down";
       s4: number;
       s3: number;
       s2: number;

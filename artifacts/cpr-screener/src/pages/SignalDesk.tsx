@@ -40,7 +40,7 @@ export interface SignalDeskSymbol {
   source: "binance" | "delta";
   currentPrice: number;
   change24h?: number;
-  direction: "up" | "down";
+  direction: "Up" | "Down";
   s4: number;
   s3?: number;
   s2: number;
@@ -75,7 +75,7 @@ export interface SignalItem {
   symbol: string;
   source: "binance" | "delta";
   timeframe: string;
-  direction: "LONG" | "SHORT" | "NEUTRAL";
+  direction: "Up" | "Down" | "NEUTRAL";
   type: string;
   patternName: string;
   // NEW: the canonical View id (matches ViewsSidebar's sub.id / a
@@ -130,10 +130,10 @@ export function computeSignalLevels(
   const targetDef = getView(primaryView.id);
   if (!targetDef || !targetDef.getTarget) return null;
 
-  const isBullish = targetDef.direction === "bullish"; // bullish == R-family target
-  const direction: "LONG" | "SHORT" = isBullish ? "LONG" : "SHORT";
-  const price = isBullish ? r.todayCPR.bc : r.todayCPR.tc; // entry
-  const stopPrice = isBullish ? r.todayCPR.s1 : r.todayCPR.r1;
+  const isUp = targetDef.direction === "Up" || (targetDef.direction as string) === "bullish";
+  const direction: "Up" | "Down" = isUp ? "Up" : "Down";
+  const price = isUp ? r.todayCPR.bc : r.todayCPR.tc; // entry
+  const stopPrice = isUp ? r.todayCPR.s1 : r.todayCPR.r1;
   const targetPrice = targetDef.getTarget(r);
   const targetLevel = targetDef.targetLabel ?? "";
   const patternLabel = primaryView.label;
@@ -182,7 +182,7 @@ export default function SignalDesk({
   const [sourceFilterState, setSourceFilterState] = useState<"all" | "binance" | "delta">("binance");
   const sourceFilter = sourceFilterProp ?? sourceFilterState;
   const setSourceFilter = onSourceFilterChange ?? setSourceFilterState;
-  const [directionFilter, setDirectionFilter] = useState<"all" | "LONG" | "SHORT">("all");
+  const [directionFilter, setDirectionFilter] = useState<"all" | "Up" | "Down">("all");
   const [selectedViewPattern, setSelectedViewPattern] = useState<string>(activeView || "");
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -284,7 +284,10 @@ export default function SignalDesk({
         // `results` to match against, or its View has no BACKTEST_TARGETS
         // entry) fall back to a simple display-only approximation; this
         // fallback is NEVER what gets saved to the Journal.
-        const direction: "LONG" | "SHORT" = levels ? levels.direction : (sym.direction === "up" ? "LONG" : "SHORT");
+        const isUp = levels
+          ? levels.direction === "Up" || (levels.direction as string) === "LONG"
+          : sym.direction === "Up" || (sym.direction as string) === "up";
+        const direction: "Up" | "Down" = isUp ? "Up" : "Down";
         const price = levels ? levels.price : sym.currentPrice;
         const { pivot, r1, r2, s1, s2, r3, s3, r4, s4 } = sym;
 
@@ -296,7 +299,7 @@ export default function SignalDesk({
           targetPrice = levels.targetPrice;
           stopPrice = levels.stopPrice;
           targetLevel = levels.targetLevel;
-        } else if (direction === "LONG") {
+        } else if (direction === "Up") {
           if (sym.currentPrice >= r1) {
             targetPrice = r2;
             targetLevel = "R2";
@@ -350,7 +353,7 @@ export default function SignalDesk({
           riskReward: `1 : ${rrRatio}`,
           cprStatus: isEligible
             ? `${patternLabel} (Target ${targetLevel})`
-            : direction === "LONG" ? "Above CPR Pivot" : "Below CPR Pivot",
+            : direction === "Up" ? "Above CPR Pivot" : "Below CPR Pivot",
           pivot,
           r1,
           s1,
@@ -394,17 +397,17 @@ export default function SignalDesk({
       // fall back to a simple display-only approximation so the card still
       // has something to show; this fallback is NEVER what gets saved.
       const fallbackPrice = r.currentPrice || pivot;
-      const fallbackDirection: "LONG" | "SHORT" = fallbackPrice < pivot ? "SHORT" : "LONG";
+      const fallbackDirection: "Up" | "Down" = fallbackPrice < pivot ? "Down" : "Up";
 
       const patternLabel = levels?.patternLabel ?? "Standard CPR";
       // Same rule as branch A above: never fall back to a display label
       // for the id that "View in Screener" hands back to the left nav.
       const patternId = levels?.patternId ?? (selectedViewPattern || "");
-      const direction: "LONG" | "SHORT" = levels ? levels.direction : fallbackDirection;
+      const direction: "Up" | "Down" = levels ? levels.direction : fallbackDirection;
       const price = levels ? levels.price : fallbackPrice;
-      const targetPrice = levels ? levels.targetPrice : (direction === "LONG" ? r1 : s1);
-      const stopPrice = levels ? levels.stopPrice : (direction === "LONG" ? s1 : r1);
-      const targetLevel = levels ? levels.targetLevel : (direction === "LONG" ? "R1" : "S1");
+      const targetPrice = levels ? levels.targetPrice : (direction === "Up" ? r1 : s1);
+      const stopPrice = levels ? levels.stopPrice : (direction === "Up" ? s1 : r1);
+      const targetLevel = levels ? levels.targetLevel : (direction === "Up" ? "R1" : "S1");
       const rrRatio = levels
         ? levels.rrRatio
         : (Math.abs(targetPrice - price) / Math.max(0.0000001, Math.abs(price - stopPrice))).toFixed(1);
@@ -449,7 +452,13 @@ export default function SignalDesk({
   const filteredSignals = useMemo(() => {
     return signals.filter((s) => {
       if (sourceFilter !== "all" && s.source !== sourceFilter) return false;
-      if (directionFilter !== "all" && s.direction !== directionFilter) return false;
+      if (directionFilter !== "all") {
+        const isMatch =
+          s.direction === directionFilter ||
+          (directionFilter === "Up" && (s.direction as string) === "LONG") ||
+          (directionFilter === "Down" && (s.direction as string) === "SHORT");
+        if (!isMatch) return false;
+      }
       if (searchTerm) {
         const query = searchTerm.toLowerCase();
         return (
@@ -473,10 +482,10 @@ export default function SignalDesk({
     const activeViewOnly = filteredSignals.filter((s) => s.isSaved);
     const total = activeViewOnly.length;
     const saved = activeViewOnly.length;
-    const longs = activeViewOnly.filter((s) => s.direction === "LONG").length;
-    const shorts = activeViewOnly.filter((s) => s.direction === "SHORT").length;
+    const upCount = activeViewOnly.filter((s) => s.direction === "Up" || (s.direction as string) === "LONG").length;
+    const downCount = activeViewOnly.filter((s) => s.direction === "Down" || (s.direction as string) === "SHORT").length;
     const watch = activeViewOnly.filter((s) => s.direction === "NEUTRAL").length;
-    return { total, saved, longs, shorts, watch };
+    return { total, saved, upCount, downCount, watch, longs: upCount, shorts: downCount };
   }, [filteredSignals]);
 
   // Automatically save ONLY qualified signals from Active Views directly to the Journal.
@@ -511,7 +520,7 @@ export default function SignalDesk({
       symbol: string;
       source: "binance" | "delta";
       timeframe: string;
-      direction: "LONG" | "SHORT" | "NEUTRAL";
+      direction: "Up" | "Down" | "NEUTRAL" | "LONG" | "SHORT";
       type: string;
       patternName: string;
       entry: number;
@@ -626,13 +635,13 @@ R:R: ${item.riskReward}`;
           </div>
           <div className="bg-[#131b26] border border-emerald-500/30 rounded-lg px-3 py-1.5 flex items-center gap-2">
             <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="text-[11px] text-emerald-400 font-medium">Long:</span>
-            <span className="text-sm font-bold text-emerald-400 font-mono">{stats.longs}</span>
+            <span className="text-[11px] text-emerald-400 font-medium">Up:</span>
+            <span className="text-sm font-bold text-emerald-400 font-mono">{stats.upCount}</span>
           </div>
           <div className="bg-[#131b26] border border-rose-500/30 rounded-lg px-3 py-1.5 flex items-center gap-2">
             <TrendingDown className="w-3.5 h-3.5 text-rose-400" />
-            <span className="text-[11px] text-rose-400 font-medium">Short:</span>
-            <span className="text-sm font-bold text-rose-400 font-mono">{stats.shorts}</span>
+            <span className="text-[11px] text-rose-400 font-medium">Down:</span>
+            <span className="text-sm font-bold text-rose-400 font-mono">{stats.downCount}</span>
           </div>
         </div>
       </div>
@@ -727,20 +736,20 @@ R:R: ${item.riskReward}`;
               All
             </button>
             <button
-              onClick={() => setDirectionFilter("LONG")}
+              onClick={() => setDirectionFilter("Up")}
               className={`px-2.5 py-1 text-xs font-semibold cursor-pointer ${
-                directionFilter === "LONG" ? "bg-emerald-600 text-white" : "text-emerald-400 hover:text-emerald-300"
+                directionFilter === "Up" ? "bg-emerald-600 text-white" : "text-emerald-400 hover:text-emerald-300"
               }`}
             >
-              Long
+              Up
             </button>
             <button
-              onClick={() => setDirectionFilter("SHORT")}
+              onClick={() => setDirectionFilter("Down")}
               className={`px-2.5 py-1 text-xs font-semibold cursor-pointer ${
-                directionFilter === "SHORT" ? "bg-rose-600 text-white" : "text-rose-400 hover:text-rose-300"
+                directionFilter === "Down" ? "bg-rose-600 text-white" : "text-rose-400 hover:text-rose-300"
               }`}
             >
-              Short
+              Down
             </button>
           </div>
 
@@ -791,8 +800,8 @@ R:R: ${item.riskReward}`;
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
             {filteredSignals.map((item) => {
-              const isLong = item.direction === "LONG";
-              const isShort = item.direction === "SHORT";
+              const isUp = item.direction === "Up" || (item.direction as string) === "LONG";
+              const isDown = item.direction === "Down" || (item.direction as string) === "SHORT";
 
               return (
                 <div
@@ -851,15 +860,15 @@ R:R: ${item.riskReward}`;
                       {/* Direction Badge on the right */}
                       <span
                         className={`text-xs font-bold px-2 py-0.5 rounded-md flex items-center gap-1 font-mono shrink-0 ${
-                          isLong
+                          isUp
                             ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
-                            : isShort
+                            : isDown
                             ? "bg-rose-500/20 text-rose-400 border border-rose-500/40"
                             : "bg-slate-500/20 text-slate-300 border border-slate-500/40"
                         }`}
                       >
-                        {isLong ? <ArrowUpRight className="w-3.5 h-3.5" /> : isShort ? <ArrowDownRight className="w-3.5 h-3.5" /> : null}
-                        {item.direction}
+                        {isUp ? <ArrowUpRight className="w-3.5 h-3.5" /> : isDown ? <ArrowDownRight className="w-3.5 h-3.5" /> : null}
+                        {isUp ? "Up" : isDown ? "Down" : item.direction}
                       </span>
                     </div>
 

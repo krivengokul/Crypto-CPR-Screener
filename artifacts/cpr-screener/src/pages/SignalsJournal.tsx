@@ -372,8 +372,8 @@ export default function SignalsJournal() {
               </thead>
               <tbody className="divide-y divide-[#1b263b]">
                 {filtered.map((item) => {
-                  const isLong = item.direction === "LONG";
-                  const isShort = item.direction === "SHORT";
+                  const isUp = item.direction === "Up" || (item.direction as string) === "LONG";
+                  const isDown = item.direction === "Down" || (item.direction as string) === "SHORT";
                   const isPass = item.status === "PASS";
                   const isFail = item.status === "FAIL";
                   const isActive = item.status === "ACTIVE";
@@ -421,19 +421,19 @@ export default function SignalsJournal() {
                       <td className="py-2.5 px-3 whitespace-nowrap">
                         <span
                           className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 w-fit ${
-                            isLong
+                            isUp
                               ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
-                              : isShort
+                              : isDown
                               ? "bg-rose-500/20 text-rose-400 border border-rose-500/40"
                               : "bg-slate-500/20 text-slate-300 border border-slate-500/40"
                           }`}
                         >
-                          {isLong ? (
+                          {isUp ? (
                             <TrendingUp className="w-3 h-3" />
-                          ) : isShort ? (
+                          ) : isDown ? (
                             <TrendingDown className="w-3 h-3" />
                           ) : null}
-                          {item.direction}
+                          {isUp ? "Up" : isDown ? "Down" : item.direction}
                         </span>
                       </td>
                       <td className="py-2.5 px-3 text-violet-300 font-medium whitespace-nowrap">

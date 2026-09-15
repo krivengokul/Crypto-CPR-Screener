@@ -20,7 +20,7 @@ export interface LoggedSignal {
   symbol: string;
   source: "binance" | "delta";
   timeframe: string;
-  direction: "LONG" | "SHORT" | "NEUTRAL";
+  direction: "Up" | "Down" | "NEUTRAL" | "LONG" | "SHORT";
   type: string;
   patternName: string;
   entry: number;
@@ -389,8 +389,8 @@ export async function evaluateSignalOutcome(
     let notes = "Trade active and within parameters";
     let exitPrice = signal.entry;
 
-    const isLong = signal.direction === "LONG";
-    const isShort = signal.direction === "SHORT";
+    const isUp = signal.direction === "Up" || signal.direction === "LONG";
+    const isDown = signal.direction === "Down" || signal.direction === "SHORT";
 
     for (const k of klines) {
       const high = parseFloat(k[2]);
@@ -399,7 +399,7 @@ export async function evaluateSignalOutcome(
       if (high > highest) highest = high;
       if (low < lowest) lowest = low;
 
-      if (isLong) {
+      if (isUp) {
         if (low <= signal.sl) {
           finalStatus = "FAIL";
           exitPrice = signal.sl;
@@ -411,7 +411,7 @@ export async function evaluateSignalOutcome(
           notes = `Target achieved at $${signal.target.toFixed(4)}`;
           break;
         }
-      } else if (isShort) {
+      } else if (isDown) {
         if (high >= signal.sl) {
           finalStatus = "FAIL";
           exitPrice = signal.sl;

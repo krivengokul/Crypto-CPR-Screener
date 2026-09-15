@@ -501,121 +501,98 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
  * When a row matches more than one sub-filter in the section, the FIRST
  * match (in array order below) determines the dot's color.
  */
-export type ViewDirection = "up" | "down";
+export type ViewDirection = "Up" | "Down";
 
-interface SubFilterDef {
-  key: string;
-  direction: ViewDirection;
-}
-
-const SUBFILTERS_BY_SECTION: Record<string, SubFilterDef[]> = {
+/**
+ * Sub-filter keys by section. Direction ("Up" or "Down") is derived directly
+ * from views.ts (ViewDef.direction), keeping views.ts as the single source of truth.
+ *
+ * Used purely to color the row dot in the Symbol column — NOT tied to
+ * whether the sub-filter's toggle button is currently pressed. A row gets
+ * a dot the moment its data satisfies ANY sub-filter condition belonging
+ * to the active section, via the same passesPattern() check the toggle
+ * buttons use internally.
+ *
+ * When a row matches more than one sub-filter in the section, the FIRST
+ * match (in array order below) determines the dot's color.
+ */
+const SUBFILTERS_BY_SECTION: Record<string, string[]> = {
   "levelsbelow": [
-    { key: "3P:HA-pBELOWR1:R2-3A", direction: "up" },
-    { key: "3P:HA-pABOVER1:S2-6P", direction: "down" },
-    { key: "2P:HA-HABOVEpR1:R4-4P", direction: "up" },
-    { key: "PDH>pTC-U4:5AM", direction: "up" },
-    // FIX: "11AM:pCPR1AHi-FApU4:1PM" (nested under the "L4U3" Pattern
-    // ) was missing here, so rows matching it never got the
-    // per-row green direction dot even though the Views button itself
-    // filtered correctly. Bullish → "up".
-    { key: "11AM:pCPR1AHi-FApU4:1PM", direction: "up" },
-    // RENAMED (was "CL4U2") to match its new key under "B-B-BB-BB" in
-    // backtest.ts. Bullish (Compressed, same LevelsBelow base condition)
-    // → "up".
-    { key: "B-B-BB-BB-CL4U2", direction: "up" },
-    // NEW: "B-B-BB-BB-L4U4-pLAP:R4" — View nested under the
-    // "B-B-BB-BB-L4U4" Pattern arrow (also under "LEVEL BELOW"). Bullish,
-    // targets today's own R4 (U4) → "up".
-    { key: "B-B-BB-BB-L4U4-pLAP:R4", direction: "up" },
-    { key: "B6-L4U4-pStepUp:R4", direction: "up" },
-    // NEW: "B-B-BB-BB-EL4U4-SSLLGap:S4" — View nested under the
-    // "B-B-BB-BB-EL4U4" Pattern arrow (also under "LEVEL BELOW").
-    // Bearish, targets today's own S4 (L4) → "down".
-    { key: "B-B-BB-BB-EL4U4-SSLLGap:S4", direction: "down" },
+    "3P:HA-pBELOWR1:R2-3A",
+    "3P:HA-pABOVER1:S2-6P",
+    "2P:HA-HABOVEpR1:R4-4P",
+    "PDH>pTC-U4:5AM",
+    "11AM:pCPR1AHi-FApU4:1PM",
+    "B-B-BB-BB-CL4U2",
+    "B-B-BB-BB-L4U4-pLAP:R4",
+    "B6-L4U4-pStepUp:R4",
+    "B-B-BB-BB-EL4U4-SSLLGap:S4",
   ],
   "levelsabove": [
-    { key: "A-A-AA-AA-EU3L4-GapB", direction: "up" },
-    // NEW: "A-A-AA-OA-U3L4-RRHHGap:R4" (nested under the new
-    // "A-A-AA-OA-U3L4" Subpattern, under the "A-A-AA-OA" Pattern).
-    // Bullish → "up".
-    { key: "A-A-AA-OA-U3L4-RRHHGap:R4", direction: "up" },
-    { key: "7PM:MoMi->U4:2AM", direction: "up" },
-    { key: "7PM:MoMi-<L4:2AM", direction: "down" },
-    { key: "6PM:APHS1A-FAU4:9PM", direction: "up" },
-    // MOVED: "8AM:pPDHA-SRA-U4+2:2AM" — was under "inside-cpr" (nested
-    // behind "EU4L4"), now under "levelsabove" (nested behind
-    // "A-B-C-C" → "A-B-C-C-EU4L4") — see that case's comment in
-    // passesPattern above. Bullish → "up".
-    { key: "8AM:pPDHA-SRA-U4+2:2AM", direction: "up" },
-    // MOVED from "R1AbovePR4": "A-A-AA-AA-U3L3-SSLLGap:R4" (nested under
-    // the "A-A-AA-AA-U3L3" Subpattern, under the "A-A-AA-AA" Pattern,
-    // now in LEVEL ABOVE). Bullish → "up".
-    { key: "A-A-AA-AA-U3L3-SSLLGap:R4", direction: "up" },
+    "A-A-AA-AA-EU3L4-GapB",
+    "A-A-AA-OA-U3L4-RRHHGap:R4",
+    "7PM:MoMi->U4:2AM",
+    "7PM:MoMi-<L4:2AM",
+    "6PM:APHS1A-FAU4:9PM",
+    "8AM:pPDHA-SRA-U4+2:2AM",
+    "A-A-AA-AA-U3L3-SSLLGap:R4",
   ],
   "compressed": [
-    { key: "6A:HLC-SSLL:R4-6P", direction: "up" },
-    { key: "8A:HLC-SSHH:S4-1P", direction: "down" },
-    { key: "9AM:RHLB-RRHH:5AM", direction: "down" },
+    "6A:HLC-SSLL:R4-6P",
+    "8A:HLC-SSHH:S4-1P",
+    "9AM:RHLB-RRHH:5AM",
   ],
   "expanded": [
-    { key: "6A:SLE-RRHH:R2-6A", direction: "up" },
+    "6A:SLE-RRHH:R2-6A",
   ],
   "R1AbovePR4": [
-    // NEW: "A-A-AA-AA-EUPL3-RRHHGap:R4" (nested under the new
-    // "A-A-AA-AA-EUPL3" Subpattern, under the "A-A-AA-AA" Pattern).
-    // Bullish → "up".
-    { key: "A-A-AA-AA-EUPL3-RRHHGap:R4", direction: "up" },
-    { key: "9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A", direction: "up" },
-    // "8AM:APHS1A-FAU4:4AM" (nested under "A-A-AA-AA-EU1L3"). Bullish → "up".
-    { key: "8AM:APHS1A-FAU4:4AM", direction: "up" },
-    { key: "6A:A-A-AA-AA-EUTL3-S1ATCpE-pL4:4A", direction: "down" },
-    { key: "TiMe-EUTL3-AU4:2PM", direction: "up" },
-    { key: "SMg-exHiL2L1-U4:3AM", direction: "up" },
-    // "6AM:MegMeg-L3:8PM" (nested under "A-A-AA-AA-EU1L4"). Bearish → "down".
-    { key: "6AM:MegMeg-L3:8PM", direction: "down" },
+    "A-A-AA-AA-EUPL3-RRHHGap:R4",
+    "9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A",
+    "8AM:APHS1A-FAU4:4AM",
+    "6A:A-A-AA-AA-EUTL3-S1ATCpE-pL4:4A",
+    "TiMe-EUTL3-AU4:2PM",
+    "SMg-exHiL2L1-U4:3AM",
+    "6AM:MegMeg-L3:8PM",
   ],
-  // FIX: "S1BelowPS4" was left as an empty array while the comment below
-  // (for "ss-EL1U4-U4:10PM") described it as belonging here — the actual
-  // entry was never added, so every row matching that pattern showed no
-  // per-row direction dot even though the Views button filtered
-  // correctly. Bullish sweep from a deep-below setup back up to U4 by
-  // ~10PM → "up".
   "S1BelowPS4": [
-    { key: "ss-EL1U4-U4:10PM", direction: "up" },
+    "ss-EL1U4-U4:10PM",
   ],
   "equal-cpr": [
-    { key: "eXLoL3U3-L3", direction: "down" },
+    "eXLoL3U3-L3",
   ],
 };
 
 /**
- * Returns "up"/"down" if row r matches any sub-filter condition for the
+ * Returns "Up"/"Down" if row r matches any sub-filter condition for the
  * given section, or null if it matches none (or the section has no
- * sub-filters defined, e.g. "falling"/"inside-value").
+ * sub-filters defined, e.g. "falling"/"inside-value"). Direction is retrieved
+ * directly from views.ts (ViewDef.direction).
  */
 export function getViewDirection(r: CPRResult, activeView: string): ViewDirection | null {
-  const defs = SUBFILTERS_BY_SECTION[activeView];
-  if (!defs) return null;
-  for (const def of defs) {
-    if (passesPattern(r, def.key)) return def.direction;
+  const keys = SUBFILTERS_BY_SECTION[activeView];
+  if (!keys) return null;
+  for (const key of keys) {
+    if (passesPattern(r, key)) {
+      const viewDef = getView(key);
+      if (viewDef?.direction) {
+        const d = viewDef.direction as string;
+        return d === "Up" || d === "up" || d === "bullish" ? "Up" : "Down";
+      }
+    }
   }
   return null;
 }
 
 /**
- * getRowDirection — single up/down call for a row, for consumers (e.g.
- * SignalDesk's long/short arrow) that need one answer regardless of
- * whether the active section has per-sub-pattern directions defined.
- * Tries getViewDirection(r, activeView) first — the specific
- * sub-pattern's own bullish/bearish call when the row matches one — and
- * falls back to the row's own 24h change (change24h >= 0 → up, else
- * down) when it doesn't (e.g. no sub-pattern selected, or the section
- * has none defined).
+ * getRowDirection — single Up/Down call for a row.
+ * Tries getViewDirection(r, activeView) first — looking up the pattern's
+ * direction defined in views.ts — and falls back to 24h change
+ * (change24h >= 0 → Up, else Down) when none is matched.
  */
-export function getRowDirection(r: CPRResult, activeView: string): "up" | "down" {
+export function getRowDirection(r: CPRResult, activeView: string): "Up" | "Down" {
   const subDir = getViewDirection(r, activeView);
   if (subDir) return subDir;
-  return r.change24h >= 0 ? "up" : "down";
+  return r.change24h >= 0 ? "Up" : "Down";
 }
 
 /**

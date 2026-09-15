@@ -603,16 +603,16 @@ function CreateViewControl({
   // behavior; picking a different node files the View there instead
   // while it still grades against patternKey's own condition.
   const [attachKey, setAttachKey] = useState(patternKey);
-  // Up -> entry TC / stoploss S1 (bullish), target one of R2/R3/R4.
-  // Down -> entry BC / stoploss R1 (bearish), target one of S2/S3/S4.
+  // Up -> entry TC / stoploss S1, target one of R2/R3/R4.
+  // Down -> entry BC / stoploss R1, target one of S2/S3/S4.
   // Matches this codebase's own convention exactly (see e.g.
-  // "7PM:MoMi-<L4:2AM" for a real bearish TC/BC/R1 example).
-  const [direction, setDirection] = useState<"bullish" | "bearish">("bullish");
+  // "7PM:MoMi-<L4:2AM" for a real Down TC/BC/R1 example).
+  const [direction, setDirection] = useState<"Up" | "Down">("Up");
   const [target, setTarget] = useState("R4");
 
   function openForm() {
     setAttachKey(patternKey);
-    setDirection("bullish");
+    setDirection("Up");
     setTarget("R4");
     setNewKey(patternKey);
     setNewLabel(patternLabel);
@@ -641,7 +641,7 @@ function CreateViewControl({
         result.reason === "duplicate-key"
           ? `"${trimmedKey}" already exists — pick a different key.`
           : result.reason === "invalid-target"
-          ? `"${target}" isn't a valid target for ${direction === "bullish" ? "an Up" : "a Down"} View.`
+          ? `"${target}" isn't a valid target for ${direction === "Up" ? "an Up" : "a Down"} View.`
           : "Couldn't find this Pattern/Subpattern in the dropdown tree."
       );
       return;
@@ -700,21 +700,21 @@ function CreateViewControl({
         Create View for &quot;{patternLabel}&quot;
       </span>
       <span className="text-[10px] text-muted-foreground">
-        {direction === "bullish" ? "Entry TC · Stoploss S1" : "Entry BC · Stoploss R1"} — Level Check derived from this symbol
+        {direction === "Up" ? "Entry TC · Stoploss S1" : "Entry BC · Stoploss R1"} — Level Check derived from this symbol
       </span>
       <div className="flex gap-1.5">
         <select
           value={direction}
           onChange={(e) => {
-            const next = e.target.value as "bullish" | "bearish";
+            const next = e.target.value as "Up" | "Down";
             setDirection(next);
-            setTarget(next === "bullish" ? "R4" : "S4");
+            setTarget(next === "Up" ? "R4" : "S4");
           }}
           disabled={!!command}
           className="flex-1 bg-background border border-border rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
         >
-          <option value="bullish">Up</option>
-          <option value="bearish">Down</option>
+          <option value="Up">Up</option>
+          <option value="Down">Down</option>
         </select>
         <select
           value={target}
@@ -722,7 +722,7 @@ function CreateViewControl({
           disabled={!!command}
           className="flex-1 bg-background border border-border rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
         >
-          {(direction === "bullish" ? ["R2", "R3", "R4"] : ["S2", "S3", "S4"]).map((t) => (
+          {(direction === "Up" ? ["R2", "R3", "R4"] : ["S2", "S3", "S4"]).map((t) => (
             <option key={t} value={t}>
               Target {t}
             </option>
@@ -1075,11 +1075,13 @@ export default function BacktestPanel() {
   const activeViewName = isViewOnly
     ? activeTarget?.label ?? selectedKey
     : undefined;
+  const isTargetUp = activeTarget?.direction === "Up" || (activeTarget?.direction as string) === "bullish";
+  const isTargetDown = activeTarget?.direction === "Down" || (activeTarget?.direction as string) === "bearish";
   const activeViewDirection: ViewDirection | undefined =
-    activeTarget?.direction === "bullish"
-      ? "up"
-      : activeTarget?.direction === "bearish"
-      ? "down"
+    isTargetUp
+      ? "Up"
+      : isTargetDown
+      ? "Down"
       : undefined;
 
   const symbolListLabel = isCategory
@@ -1675,7 +1677,7 @@ export default function BacktestPanel() {
       {isViewOnly && activeTarget && (
         <div className="text-xs text-muted-foreground mb-3">
           Target: <span className="text-foreground font-medium">{activeTarget.targetLabel}</span>{" "}
-          ({activeTarget.direction === "bullish" ? "price must reach or exceed it" : "price must reach or fall below it"})
+          ({activeTarget.direction === "Up" || (activeTarget.direction as string) === "bullish" ? "price must reach or exceed it" : "price must reach or fall below it"})
         </div>
       )}
       {isCategory && activeCategory && (
@@ -1692,7 +1694,7 @@ export default function BacktestPanel() {
           Target: <span className="text-foreground font-medium">
             {activePatternTarget?.targetLabel ?? "U4 (today's R4)"}
           </span>{" "}
-          (price must {activePatternTarget?.direction === "bearish" ? "reach or fall below it" : "reach or exceed it"}) — every symbol matching{" "}
+          (price must {activePatternTarget?.direction === "Down" || (activePatternTarget?.direction as string) === "bearish" ? "reach or fall below it" : "reach or exceed it"}) — every symbol matching{" "}
           <span className="text-foreground font-medium">{activePatternInfo.category.label}</span>&apos;s
           base condition AND Pattern{" "}
           <span className="text-foreground font-medium">

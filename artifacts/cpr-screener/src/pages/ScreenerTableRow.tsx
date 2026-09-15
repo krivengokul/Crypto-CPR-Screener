@@ -756,12 +756,13 @@ export default function ScreenerTableRow({
             <span className="text-muted-foreground text-xs mt-0.5">{isExpanded ? "▼" : "▶"}</span>
             {(() => {
               if (!dir) return null;
+              const isUp = dir === "Up" || (dir as string) === "up";
               return (
                 <div
                   className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${
-                    dir === "up" ? "bg-green-400" : "bg-red-400"
+                    isUp ? "bg-green-400" : "bg-red-400"
                   }`}
-                  title={dir === "up" ? "Matches a bullish sub-filter" : "Matches a bearish sub-filter"}
+                  title={isUp ? "Matches an Up sub-filter" : "Matches a Down sub-filter"}
                 />
               );
             })()}
