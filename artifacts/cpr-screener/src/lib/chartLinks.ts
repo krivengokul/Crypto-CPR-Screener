@@ -12,6 +12,7 @@
  * how the UI accounts for that (loading state, awaited save/clear).
  */
 
+import { useState, useEffect } from "react";
 import { doc, getDoc, setDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
 import { getDb, ensureSignedIn } from "@/lib/firebase";
 
@@ -22,6 +23,27 @@ export type StoredChartLink = {
   url: string;
   savedAt: string; // ISO timestamp, set client-side for easy display
 };
+
+type Listener = () => void;
+const listeners = new Set<Listener>();
+
+export function subscribeChartLinks(listener: Listener): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+export function notifyChartLinksChanged() {
+  listeners.forEach((fn) => {
+    try {
+      fn();
+    } catch {}
+  });
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("cpr_chart_links_updated"));
+  }
+}
 
 function getLocalCache(): Record<string, StoredChartLink> {
   try {
@@ -43,6 +65,98 @@ function saveToLocalCache(key: string, link: StoredChartLink | null) {
     localStorage.setItem(LOCAL_CACHE_KEY, JSON.stringify(cache));
   } catch {
     // ignore quota/security errors
+  }
+  notifyChartLinksChanged();
+}
+
+/** Get all chart links currently stored in local cache */
+export function getAllChartLinks(): Record<string, StoredChartLink> {
+  return getLocalCache();
+}
+
+/** React hook returning live map of chart links, automatically re-rendering when links are added/removed */
+export function useChartLinks(): Record<string, StoredChartLink> {
+  const [links, setLinks] = useState<Record<string, StoredChartLink>>(() => getLocalCache());
+
+  useEffect(() => {
+    const update = () => {
+      setLinks(getLocalCache());
+    };
+    const unsub = subscribeChartLinks(update);
+    window.addEventListener("cpr_chart_links_updated", update);
+    window.addEventListener("storage", update);
+
+    return () => {
+      unsub();
+      window.removeEventListener("cpr_chart_links_updated", update);
+      window.removeEventListener("storage", update);
+    };
+  }, []);
+
+  return links;
+}
+
+/** Helper to find a stored chart link by rowKey (and legacy viewKey::rowKey fallback) */
+export function findChartLink(
+  links: Record<string, StoredChartLink>,
+  rowKey?: string,
+  viewKey?: string
+): StoredChartLink | null {
+  if (!rowKey && !viewKey) return null;
+  const primaryKey = rowKey || viewKey || "";
+  if (links[primaryKey]) return links[primaryKey];
+  if (viewKey && rowKey && viewKey !== rowKey) {
+    const legacyKey = `${viewKey}::${rowKey}`;
+    if (links[legacyKey]) return links[legacyKey];
+  }
+  return null;
+}
+
+/** Preload chart links from Firestore for a list of row keys if not yet in local cache */
+export async function preloadChartLinks(keys: string[]): Promise<void> {
+  if (!keys || keys.length === 0) return;
+  const local = getLocalCache();
+  const missing = keys.filter((k) => k && !local[k]);
+  if (missing.length === 0) return;
+
+  try {
+    await ensureSignedIn();
+    const db = getDb();
+    let updated = false;
+    const cache = { ...local };
+
+    const chunkSize = 8;
+    for (let i = 0; i < missing.length; i += chunkSize) {
+      const chunk = missing.slice(i, i + chunkSize);
+      await Promise.all(
+        chunk.map(async (key) => {
+          try {
+            const snap = await getDoc(doc(db, CHART_LINKS_COLLECTION, key));
+            if (snap.exists()) {
+              const data = snap.data();
+              if (typeof data.url === "string" && data.url) {
+                cache[key] = {
+                  url: data.url,
+                  savedAt: typeof data.savedAt === "string" ? data.savedAt : "",
+                };
+                updated = true;
+              }
+            }
+          } catch {
+            // non-blocking for individual doc
+          }
+        })
+      );
+    }
+
+    if (updated) {
+      try {
+        localStorage.setItem(LOCAL_CACHE_KEY, JSON.stringify(cache));
+      } catch {}
+      notifyChartLinksChanged();
+    }
+  } catch {
+    // offline or Firestore non-blocking
   }
 }
 

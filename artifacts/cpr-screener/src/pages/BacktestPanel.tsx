@@ -11,6 +11,7 @@ import {
   Search,
   Info,
   Calendar as CalendarIcon,
+  Camera,
 } from "lucide-react";
 import {
   runBacktest,
@@ -43,6 +44,7 @@ import {
 } from "./ScreenerTableRow";
 import { SRLadderRow, toSRLadderData, type ViewDirection } from "./SRLadderPanel";
 import { getLadderMatchSummary, LEVEL_KEYS, type LevelCheckCondition, type LevelKey } from "./SRLadderDiff";
+import { useChartLinks, findChartLink, preloadChartLinks, type StoredChartLink } from "@/lib/chartLinks";
 import type { CPRLevels, CPRResult } from "@/lib/cpr";
 
 // --- Small UTC date helpers (all dates in this panel are UTC ISO strings) ---
@@ -985,6 +987,8 @@ export default function BacktestPanel() {
   // sort on the pattern/View results table.
   const [ladderSortDir, setLadderSortDir] = useState<"asc" | "desc" | null>(null);
   const [error, setError] = useState("");
+  // Live map of chart snapshots attached to symbol-date rows
+  const chartLinks = useChartLinks();
   // Search box for the results tables (category scan + graded backtest) —
   // mirrors the SignalsJournal search bar. Filters by symbol or entry date
   // (the two fields present on both CategoryScanRow and BacktestRow).
@@ -1436,6 +1440,34 @@ export default function BacktestPanel() {
       </span>
     );
 
+  const ChartAttachmentBadge = ({ link }: { link: StoredChartLink }) => {
+    const formattedDate = link.savedAt ? new Date(link.savedAt).toLocaleDateString() : "";
+    return (
+      <a
+        href={link.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={(e) => e.stopPropagation()}
+        className="inline-flex items-center justify-center w-4 h-4 rounded bg-sky-500/20 text-sky-400 hover:bg-sky-500/35 hover:text-sky-200 border border-sky-500/40 hover:border-sky-300 transition-all shrink-0 cursor-pointer shadow-sm shadow-sky-950/40"
+        title={`TradingView Snapshot Attached\n${link.url}${formattedDate ? `\nSaved: ${formattedDate}` : ""}\nClick to open in new tab`}
+      >
+        <Camera className="w-2.5 h-2.5" />
+      </a>
+    );
+  };
+
+  useEffect(() => {
+    const keys: string[] = [];
+    if (isCategory) {
+      filteredCategoryRows.forEach((r) => keys.push(`${r.source}-${r.symbol}-${r.entryDate}`));
+    } else {
+      paginatedRows.forEach((r) => keys.push(`${r.source}-${r.symbol}-${r.entryDate}`));
+    }
+    if (keys.length > 0) {
+      preloadChartLinks(keys);
+    }
+  }, [isCategory, filteredCategoryRows, paginatedRows]);
+
   return (
     <div className="rounded-xl border border-border bg-card p-4">
       <div className="flex items-center gap-2 mb-1">
@@ -1775,7 +1807,7 @@ export default function BacktestPanel() {
               <table className="w-full text-sm border-collapse">
                 <thead>
                   <tr className="border-b border-border bg-muted/30">
-                    <th className="px-2 py-2 w-20 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    <th className="px-2 py-2 w-28 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Symbol
                     </th>
                     <th className="pl-8 pr-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -1838,14 +1870,19 @@ export default function BacktestPanel() {
                       <Fragment key={`${r.source}-${r.symbol}-${r.entryDate}`}>
                       <tr className="hover:bg-muted/20">
                         <td
-                          className="px-2 py-2 w-20 font-mono font-semibold cursor-pointer select-none"
+                          className="px-2 py-2 w-28 font-mono font-semibold cursor-pointer select-none"
                           onClick={() => toggleExpand(`${r.source}-${r.symbol}-${r.entryDate}`)}
                           title="Click to expand ADK S/R ladder"
                         >
                           <div className="flex items-center gap-1.5">
-                            <span className="text-muted-foreground text-xs">
+                            <span className="text-muted-foreground text-xs shrink-0">
                               {expandedSymbols.has(`${r.source}-${r.symbol}-${r.entryDate}`) ? "▼" : "▶"}
                             </span>
+                            {(() => {
+                              const rowKey = `${r.source}-${r.symbol}-${r.entryDate}`;
+                              const attached = findChartLink(chartLinks, rowKey, selectedKey);
+                              return attached ? <ChartAttachmentBadge link={attached} /> : null;
+                            })()}
                             <div className="min-w-0 flex flex-col">
                               <div className="flex items-center gap-1.5">
                                 <span className="truncate">{r.symbol}</span>
@@ -2084,9 +2121,14 @@ export default function BacktestPanel() {
                         title="Click to expand ADK S/R ladder"
                       >
                         <div className="flex items-center gap-1.5">
-                          <span className="text-muted-foreground text-xs">
+                          <span className="text-muted-foreground text-xs shrink-0">
                             {expandedSymbols.has(`${r.source}-${r.symbol}-${r.entryDate}`) ? "▼" : "▶"}
                           </span>
+                          {(() => {
+                            const rowKey = `${r.source}-${r.symbol}-${r.entryDate}`;
+                            const attached = findChartLink(chartLinks, rowKey, selectedKey);
+                            return attached ? <ChartAttachmentBadge link={attached} /> : null;
+                          })()}
                           <div className="min-w-0 flex flex-col">
                             <div className="flex items-center gap-1.5">
                               <span className="truncate">{r.symbol}</span>
