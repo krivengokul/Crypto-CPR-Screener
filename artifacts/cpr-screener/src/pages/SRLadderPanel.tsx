@@ -1,4 +1,4 @@
-import { useState, useEffect, type ReactNode } from "react";
+import { useState, useEffect, cloneElement, isValidElement, type CSSProperties, type ReactElement, type ReactNode } from "react";
 import { Link2, Loader2 } from "lucide-react";
 import type { CPRLevels, CPRResult } from "@/lib/cpr";
 import { fmt } from "./ScreenerUtils";
@@ -527,14 +527,24 @@ function CPRLevelChart({
   // S1 badge position: centered above the "today" (right-hand) S1 line
   // segment specifically — not the chart's overall midpoint, which sat
   // right at the prev/today boundary and looked like it belonged to
-  // neither day.
+  // neither day. Height is sized a bit generous (badge content is ~16-18px
+  // tall before the 0.9 scale) and offset further above the line so the
+  // scaled pill never overlaps the S1 line itself.
   const todaySegStart = prevSegmentEnd;
   const todaySegEnd = leftMargin + plotWidth;
   const todayS1Y = yFor(todayCPR.s1);
   const ssllBadgeWidth = 70;
-  const ssllBadgeHeight = 14;
+  const ssllBadgeHeight = 20;
   const ssllBadgeX = todaySegStart + (todaySegEnd - todaySegStart) / 2 - ssllBadgeWidth / 2;
-  const ssllBadgeY = todayS1Y - ssllBadgeHeight - 3;
+  const ssllBadgeY = todayS1Y - ssllBadgeHeight - 6;
+  // renderSSLLCategoryBadge's pill has a colored border, sized for table
+  // cells — strip it here so the badge reads as a plain small label on the
+  // chart instead of a bordered box crowding the S1 line.
+  const ssllBadgeNoBorder = isValidElement(ssllBadge)
+    ? cloneElement(ssllBadge as ReactElement<{ style?: CSSProperties }>, {
+        style: { border: "none" },
+      })
+    : ssllBadge;
 
   return (
     <div className="min-w-0">
@@ -630,7 +640,7 @@ function CPRLevelChart({
               // table-cell size.
               style={{ transform: "scale(0.9)", transformOrigin: "center" }}
             >
-              {ssllBadge}
+              {ssllBadgeNoBorder}
             </div>
           </foreignObject>
         )}
