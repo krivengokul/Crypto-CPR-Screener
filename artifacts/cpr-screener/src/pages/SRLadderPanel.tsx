@@ -441,6 +441,14 @@ const INNER_LABEL_TEXT_HEX: Record<string, string> = {
   "orange-400": "#fb923c",
   "yellow-400": "#facc15",
   "slate-300": "#cbd5e1",
+  // Added: HHLL-C uses purple-400, HHLL-E uses pink-400, and the "-Q"
+  // (equal) variants of HHLL/RRSS use amber-400 — all three were missing
+  // here, so extractInnerLabel matched the class but found no hex entry
+  // and silently fell back to the default gray (#e5e7eb). That's why
+  // HHLL-C's badge color wasn't showing up on the chart.
+  "purple-400": "#c084fc",
+  "pink-400": "#f472b6",
+  "amber-400": "#fbbf24",
 };
 
 function extractInnerLabel(badge?: ReactNode): { text: string | null; color: string } {
@@ -463,6 +471,7 @@ function CPRLevelChart({
   viewDirection,
   ssllBadge,
   hhllBadge,
+  rrssBadge,
   innerLevelLabels,
 }: {
   prevCPR: CPRLevels;
@@ -477,10 +486,12 @@ function CPRLevelChart({
   ssllBadge?: ReactNode;
   /** HHLLCategory badge (e.g. renderHHLLCategoryBadge(r)) — rendered directly over the PH (prevHigh) line. Omit to hide it. */
   hhllBadge?: ReactNode;
+  /** SSRRCategory ("RRSS-A/B/C/E/=") badge (e.g. renderSSRRCategoryBadge(r)) — rendered directly over the R1 line, same styling as hhllBadge. Omit to hide it. */
+  rrssBadge?: ReactNode;
   /**
    * Generic inner level labels rendered directly over the corresponding
    * "today" level line. Keys match LEVEL_KEYS (e.g. "s1", "prevHigh").
-   * Takes precedence over ssllBadge/hhllBadge for the same key.
+   * Takes precedence over ssllBadge/hhllBadge/rrssBadge for the same key.
    */
   innerLevelLabels?: Record<string, ReactNode>;
 }) {
@@ -569,15 +580,28 @@ function CPRLevelChart({
   const todaySegStart = prevSegmentEnd;
   const todaySegEnd = leftMargin + plotWidth;
   const todayLabelCenterX = todaySegStart + (todaySegEnd - todaySegStart) / 2;
-  // renderSSLLCategoryBadge / renderHHLLCategoryBadge return table-cell
-  // pills (colored background + border). On the chart we want them to read
-  // exactly like the other level labels (PV, TC, ...) — plain colored text,
-  // no box — so pull the label text and its color back out of each badge.
+  // renderSSLLCategoryBadge / renderHHLLCategoryBadge / renderSSRRCategoryBadge
+  // return table-cell pills (colored background + border). On the chart we
+  // want them to read exactly like the other level labels (PV, TC, ...) —
+  // plain colored text, no box — so pull the label text and its color back
+  // out of each badge. rrssBadge (SSRRCategory, "RRSS-A/B/C/E/=") is listed
+  // before hhllBadge here to match the requested RRSS-before-HHLL ordering;
+  // it renders over R1, which sits below PH in the ladder regardless.
   const mergedInnerLabels: Record<string, ReactNode> = {
     ...(ssllBadge ? { s1: ssllBadge } : {}),
+    ...(rrssBadge ? { r1: rrssBadge } : {}),
     ...(hhllBadge ? { prevHigh: hhllBadge } : {}),
     ...(innerLevelLabels ?? {}),
   };
+  // HHLL and RRSS are short, punchy category badges ("HHLL-A", "RRSS-C")
+  // that read fine pushed further right than the other inner labels, which
+  // sit at the shared todayLabelCenterX. Give just these two their own x,
+  // nudged further right (was previously sharing todayLabelCenterX with
+  // everything else). Kept short of todaySegEnd so it doesn't collide with
+  // the today-side value labels (e.g. "PH 2,602.77") starting at x=todaySegEnd+4.
+  const categoryLabelX = todaySegStart + (todaySegEnd - todaySegStart) * 0.78;
+  const innerLabelX = (key: string) =>
+    key === "prevHigh" || key === "r1" ? categoryLabelX : todayLabelCenterX;
 
   return (
     <div className="min-w-0">
@@ -665,7 +689,7 @@ function CPRLevelChart({
           return (
             <text
               key={`inner-label-${key}`}
-              x={todayLabelCenterX}
+              x={innerLabelX(key)}
               y={y + 3}
               fontSize={9}
               fontFamily="monospace"
@@ -719,6 +743,7 @@ export function SRLadderPanel({
   innerLevelBadges,
   ssllBadge,
   hhllBadge,
+  rrssBadge,
   innerLevelLabels,
 }: {
   r: SRLadderData;
@@ -792,9 +817,15 @@ export function SRLadderPanel({
    */
   hhllBadge?: ReactNode;
   /**
+   * SSRRCategory ("RRSS-A/B/C/E/=") badge (e.g. renderSSRRCategoryBadge(r)) —
+   * rendered directly above the R1 line in the "Levels VIEW" chart, same
+   * styling as hhllBadge. Omit to hide it.
+   */
+  rrssBadge?: ReactNode;
+  /**
    * Generic inner level labels rendered directly over the corresponding
    * "today" level line in the "Levels VIEW" chart. Keys match LEVEL_KEYS
-   * (e.g. "s1", "prevHigh"). Takes precedence over ssllBadge/hhllBadge.
+   * (e.g. "s1", "prevHigh"). Takes precedence over ssllBadge/hhllBadge/rrssBadge.
    */
   innerLevelLabels?: Record<string, ReactNode>;
 }) {
@@ -815,6 +846,7 @@ export function SRLadderPanel({
           viewDirection={viewDirection}
           ssllBadge={ssllBadge}
           hhllBadge={hhllBadge}
+          rrssBadge={rrssBadge}
           innerLevelLabels={innerLevelLabels}
         />
       </div>
@@ -867,6 +899,7 @@ export function SRLadderRow({
   innerLevelBadges,
   ssllBadge,
   hhllBadge,
+  rrssBadge,
   innerLevelLabels,
 }: {
   r: SRLadderData;
@@ -898,6 +931,8 @@ export function SRLadderRow({
   ssllBadge?: ReactNode;
   /** HHLLCategory badge, rendered over the PH line in "Levels VIEW". See SRLadderPanel for details. */
   hhllBadge?: ReactNode;
+  /** SSRRCategory ("RRSS-A/B/C/E/=") badge, rendered over the R1 line in "Levels VIEW", same styling as hhllBadge. See SRLadderPanel for details. */
+  rrssBadge?: ReactNode;
   /** Generic inner level labels, rendered over the corresponding "today" level line in "Levels VIEW". See SRLadderPanel for details. */
   innerLevelLabels?: Record<string, ReactNode>;
 }) {
@@ -920,6 +955,7 @@ export function SRLadderRow({
           innerLevelBadges={innerLevelBadges}
           ssllBadge={ssllBadge}
           hhllBadge={hhllBadge}
+          rrssBadge={rrssBadge}
           innerLevelLabels={innerLevelLabels}
         />
       </td>
