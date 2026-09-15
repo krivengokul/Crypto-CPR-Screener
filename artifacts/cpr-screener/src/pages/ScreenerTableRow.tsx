@@ -20,6 +20,7 @@ import {
   cprDistancePct,
   levelsInDistanceRange,
   renderSSRRHHLLBadges,
+  renderSSLLCategoryBadge,
   renderLevelStatusRow1Badges,
   renderLevelStatusBadge,
   renderLevelStatusRestBadges,
@@ -708,6 +709,9 @@ export default function ScreenerTableRow({
   // BacktestPanel's results table, scoped to this row's own prev/today
   // CPR and the currently active View's Level Check conditions.
   const ladder = getLadderMatchSummary(r.prevCPR, r.todayCPR, levelCheckConditions);
+  // SSLLCategory badge (e.g. "SSLL-AA") — shown above the S1 line in the
+  // expanded row's "Levels VIEW" chart.
+  const ssllBadge = renderSSLLCategoryBadge(r);
   // Row 1 keeps every LEVEL-status badge inline on one line (Above/Below/
   // Inside/Outside/Skip, then oV-B/oV-A, then Narrow/Wide, then SSRR, then
   // Equal) so nothing gets pushed down to a second line.
@@ -893,6 +897,7 @@ export default function ScreenerTableRow({
           showLevelCheck
           levelCheckConditions={levelCheckConditions}
           innerLevelBadges={levelBadges}
+          ssllBadge={ssllBadge}
         />
       )}
     </Fragment>

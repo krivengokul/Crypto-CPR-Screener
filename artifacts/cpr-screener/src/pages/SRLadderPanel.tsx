@@ -433,6 +433,7 @@ function CPRLevelChart({
   pivotPatternBadge,
   viewName,
   viewDirection,
+  ssllBadge,
 }: {
   prevCPR: CPRLevels;
   todayCPR: CPRLevels;
@@ -442,6 +443,8 @@ function CPRLevelChart({
   viewName?: string;
   /** Up → green badge, Down → red badge, omitted/undefined → neutral slate badge. No effect without viewName. */
   viewDirection?: ViewDirection;
+  /** SSLLCategory badge (e.g. renderSSLLCategoryBadge(r)) — rendered directly above the S1 line. Omit to hide it. */
+  ssllBadge?: ReactNode;
 }) {
   const width = 452;
   // Keep the chart compact when it sits beside the ladders. The ladders
@@ -521,6 +524,16 @@ function CPRLevelChart({
     11
   );
 
+  // S1 line position(s) — prev's S1 sits in the left half, today's in the
+  // right half, usually at slightly different heights. The SSLL badge
+  // compares the two, so it's centered above whichever of the two sits
+  // higher on the chart (smaller y = higher up), clear of both lines.
+  const s1Y = Math.min(yFor(prevCPR.s1), yFor(todayCPR.s1));
+  const ssllBadgeWidth = 90;
+  const ssllBadgeHeight = 16;
+  const ssllBadgeX = leftMargin + plotWidth / 2 - ssllBadgeWidth / 2;
+  const ssllBadgeY = s1Y - ssllBadgeHeight - 3;
+
   return (
     <div className="min-w-0">
       <div className="mb-1.5 flex flex-nowrap items-center gap-1.5 pl-2 text-left">
@@ -597,6 +610,23 @@ function CPRLevelChart({
             </g>
           );
         })}
+        {ssllBadge && (
+          <foreignObject
+            x={ssllBadgeX}
+            y={ssllBadgeY}
+            width={ssllBadgeWidth}
+            height={ssllBadgeHeight}
+            style={{ overflow: "visible" }}
+          >
+            <div
+              // eslint-disable-next-line react/no-unknown-property
+              xmlns="http://www.w3.org/1999/xhtml"
+              className="flex items-center justify-center"
+            >
+              {ssllBadge}
+            </div>
+          </foreignObject>
+        )}
       </svg>
     </div>
   );
@@ -696,6 +726,12 @@ export function SRLadderPanel({
    * these badges).
    */
   innerLevelBadges?: ReactNode;
+  /**
+   * SSLLCategory badge (renderSSLLCategoryBadge(r)) — rendered directly
+   * above the S1 line in the "Levels VIEW" chart. Omit to hide it (e.g.
+   * BacktestPanel, which never had this badge).
+   */
+  ssllBadge?: ReactNode;
 }) {
   const hasRightSection = Boolean(rowKey || showLevelCheck || copyViewControl);
 
@@ -712,6 +748,7 @@ export function SRLadderPanel({
           pivotPatternBadge={pivotPatternBadge}
           viewName={viewName}
           viewDirection={viewDirection}
+          ssllBadge={ssllBadge}
         />
       </div>
 
@@ -761,6 +798,7 @@ export function SRLadderRow({
   levelCheckConditions,
   copyViewControl,
   innerLevelBadges,
+  ssllBadge,
 }: {
   r: SRLadderData;
   colSpan?: number;
@@ -787,6 +825,8 @@ export function SRLadderRow({
   copyViewControl?: ReactNode;
   /** LEVEL-column badges, rendered under "Today S/R". See SRLadderPanel for details. */
   innerLevelBadges?: ReactNode;
+  /** SSLLCategory badge, rendered above the S1 line in "Levels VIEW". See SRLadderPanel for details. */
+  ssllBadge?: ReactNode;
 }) {
   return (
     <tr key={rowKey ? `${rowKey}-sr` : undefined} className="bg-muted/20 border-b border-border">
@@ -805,6 +845,7 @@ export function SRLadderRow({
           levelCheckConditions={levelCheckConditions}
           copyViewControl={copyViewControl}
           innerLevelBadges={innerLevelBadges}
+          ssllBadge={ssllBadge}
         />
       </td>
     </tr>
