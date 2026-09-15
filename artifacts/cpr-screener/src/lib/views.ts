@@ -1421,9 +1421,6 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
   { key: "EL2L1", label: "EL2L1", parentKey: "R1AbovePR4", kind: "pattern", condition: (r) => r.EL2L1,
       order: 6
 },
-  { key: "EUBL3", label: "EUBL3", parentKey: "R1AbovePR4", kind: "pattern", condition: (r) => r.EUBL3,
-      order: 7
-},
 
   // --- Pattern "A-A-AA-AA" inside "ABOVE LEVEL4" and its subpatterns ---
   {
@@ -1487,6 +1484,19 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
     kind: "pattern",
     condition: (r) => r.EUPL2,
     order: 4,
+  },
+  {
+    // MOVED: previously the flat "EUBL3" pattern directly under
+    // "R1AbovePR4" (no A-A-AA-AA gating at all). Renested here so it
+    // properly ANDs in the A-A-AA-AA-AA compound (SSRR-A + HHLL-A +
+    // RRHH-AA + SSLL-AA) via passesView's parentKey chain, same
+    // treatment as its EUTL3 sibling below.
+    key: "A-A-AA-AA-EUBL3",
+    label: "A-A-AA-AA-EUBL3",
+    parentKey: "R1AbovePR4-A-A-AA-AA",
+    kind: "pattern",
+    condition: (r) => r.EUBL3,
+    order: 5,
   },
 
   // --- Pattern "A-E-AA-LB" inside "ABOVE LEVEL4" and its subpatterns ---
