@@ -41,7 +41,7 @@ import {
   renderPatternColumnBadges,
   renderPivotPatternBadge,
 } from "./ScreenerTableRow";
-import { SRLadderRow, toSRLadderData } from "./SRLadderPanel";
+import { SRLadderRow, toSRLadderData, type ViewDirection } from "./SRLadderPanel";
 import { getLadderMatchSummary, LEVEL_KEYS, type LevelCheckCondition, type LevelKey } from "./SRLadderDiff";
 import type { CPRLevels, CPRResult } from "@/lib/cpr";
 
@@ -1032,7 +1032,8 @@ export default function BacktestPanel() {
 
   const SUBCATEGORY_SEP = "::";
 
-  const viewTree = useMemo(() => buildViewTree(), []);
+  const [treeRevision, setTreeRevision] = useState(0);
+  const viewTree = useMemo(() => buildViewTree(), [treeRevision, VIEWS.length]);
 
   const isCategory = viewTree.some((c) => c.key === selectedKey);
 
@@ -1070,6 +1071,16 @@ export default function BacktestPanel() {
     : undefined;
   const activeCategory = isCategory ? getView(selectedKey) : undefined;
   const activeLevelCheckDefs = (activeTarget ?? activePatternTarget)?.levelCheckDefs;
+
+  const activeViewName = isViewOnly
+    ? activeTarget?.label ?? selectedKey
+    : undefined;
+  const activeViewDirection: ViewDirection | undefined =
+    activeTarget?.direction === "bullish"
+      ? "up"
+      : activeTarget?.direction === "bearish"
+      ? "down"
+      : undefined;
 
   const symbolListLabel = isCategory
     ? activeCategory?.label
@@ -1875,6 +1886,8 @@ export default function BacktestPanel() {
                           todayPatternBadge={renderTodayPatternBadges(r.raw)}
                           prevPatternBadge={renderPrevPatternBadge(r.raw)}
                           pivotPatternBadge={renderPivotPatternBadge(r.raw)}
+                          viewName={activeViewName}
+                          viewDirection={activeViewDirection}
                           showLevelCheck
                           levelCheckConditions={activeLevelCheckDefs}
                           copyViewControl={
@@ -1885,7 +1898,10 @@ export default function BacktestPanel() {
                                 prevCPR={r.prevCPR}
                                 todayCPR={r.todayCPR}
                                 sourceConditions={activeLevelCheckDefs}
-                                onCopied={(newKey) => setSelectedKey(newKey)}
+                                onCopied={(newKey) => {
+                                  setTreeRevision((r) => r + 1);
+                                  setSelectedKey(newKey);
+                                }}
                               />
                             ) : isPatternOnly && activePatternInfo ? (
                               <CreateViewControl
@@ -1893,7 +1909,10 @@ export default function BacktestPanel() {
                                 patternLabel={activePatternInfo.sub.label}
                                 prevCPR={r.prevCPR}
                                 todayCPR={r.todayCPR}
-                                onCreated={(newKey) => setSelectedKey(newKey)}
+                                onCreated={(newKey) => {
+                                  setTreeRevision((r) => r + 1);
+                                  setSelectedKey(newKey);
+                                }}
                               />
                             ) : isCategory && activeCategory ? (
                               <CreateViewControl
@@ -1901,7 +1920,10 @@ export default function BacktestPanel() {
                                 patternLabel={activeCategory.label}
                                 prevCPR={r.prevCPR}
                                 todayCPR={r.todayCPR}
-                                onCreated={(newKey) => setSelectedKey(newKey)}
+                                onCreated={(newKey) => {
+                                  setTreeRevision((r) => r + 1);
+                                  setSelectedKey(newKey);
+                                }}
                               />
                             ) : undefined
                           }
@@ -2198,6 +2220,8 @@ export default function BacktestPanel() {
                         todayPatternBadge={renderTodayPatternBadges(r.raw)}
                         prevPatternBadge={renderPrevPatternBadge(r.raw)}
                         pivotPatternBadge={renderPivotPatternBadge(r.raw)}
+                        viewName={activeViewName}
+                        viewDirection={activeViewDirection}
                         showLevelCheck
                         levelCheckConditions={activeLevelCheckDefs}
                         // Simplified rule: "Copy View" only when the
@@ -2221,7 +2245,10 @@ export default function BacktestPanel() {
                               prevCPR={r.prevCPR}
                               todayCPR={r.todayCPR}
                               sourceConditions={activeLevelCheckDefs}
-                              onCopied={(newKey) => setSelectedKey(newKey)}
+                              onCopied={(newKey) => {
+                                setTreeRevision((r) => r + 1);
+                                setSelectedKey(newKey);
+                              }}
                             />
                           ) : isPatternOnly && activePatternInfo ? (
                             <CreateViewControl
@@ -2229,7 +2256,10 @@ export default function BacktestPanel() {
                               patternLabel={activePatternInfo.sub.label}
                               prevCPR={r.prevCPR}
                               todayCPR={r.todayCPR}
-                              onCreated={(newKey) => setSelectedKey(newKey)}
+                              onCreated={(newKey) => {
+                                setTreeRevision((r) => r + 1);
+                                setSelectedKey(newKey);
+                              }}
                             />
                           ) : isCategory && activeCategory ? (
                             <CreateViewControl
@@ -2237,7 +2267,10 @@ export default function BacktestPanel() {
                               patternLabel={activeCategory.label}
                               prevCPR={r.prevCPR}
                               todayCPR={r.todayCPR}
-                              onCreated={(newKey) => setSelectedKey(newKey)}
+                              onCreated={(newKey) => {
+                                setTreeRevision((r) => r + 1);
+                                setSelectedKey(newKey);
+                              }}
                             />
                           ) : undefined
                         }
