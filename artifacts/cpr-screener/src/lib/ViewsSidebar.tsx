@@ -281,7 +281,8 @@ export const Views: Record<string, SubPattern[]> = {
       activeText:  "#4ade80",
       activeBg:    "rgba(34, 197, 94, 0.14)",
     },
-  ],
+      { id: "B6-L3U3-GapAA:R4", label: "B6-L3U3-GapAA:R4" }
+],
   "compressed": [
     // RENAMED from "SMi-L1pU1>-APU4:11PM": all previous conditions removed.
     // "6A:HLC-SSLL:R4-6P" — compressed + HHLL-C + SSLL-AA + RRHH-BB +

@@ -1057,6 +1057,126 @@ const LEVELSBELOW_VIEWS: ViewDef[] = [
     getStoploss: (r) => r.todayCPR.s1,
       order: 0
 },
+    {
+        key: "B6-L3U3-GapAA:R4",
+        label: "B6-L3U3-GapAA:R4",
+        parentKey: "B-B-BB-BB-L3U3",
+        conditionKey: "levelsbelow",
+        kind: "view",
+        direction: "Up",
+        targetLabel: "U4 (today's R4)",
+        getTarget: (r) => r.todayCPR.r4,
+        entryLabel: "TC (today's TC)",
+        getEntry: (r) => r.todayCPR.tc,
+        stoplossLabel: "S1 (today's S1)",
+        getStoploss: (r) => r.todayCPR.s1,
+        levelCheckDefs: [
+      {
+        "key": "r4",
+        "subject": "today",
+        "bandKeys": [
+          "r3",
+          "r2"
+        ]
+      },
+      {
+        "key": "r3",
+        "subject": "today",
+        "bandKeys": [
+          "prevHigh",
+          "r1"
+        ]
+      },
+      {
+        "key": "r2",
+        "subject": "today",
+        "bandKeys": [
+          "r1",
+          "tc"
+        ]
+      },
+      {
+        "key": "prevHigh",
+        "subject": "today",
+        "bandKeys": [
+          "pivot",
+          "bc"
+        ]
+      },
+      {
+        "key": "r1",
+        "subject": "today",
+        "bandKeys": [
+          "prevLow",
+          "s1"
+        ]
+      },
+      {
+        "key": "tc",
+        "subject": "today",
+        "bandKeys": [
+          "prevLow",
+          "s1"
+        ]
+      },
+      {
+        "key": "pivot",
+        "subject": "today",
+        "bandKeys": [
+          "s1",
+          "s2"
+        ]
+      },
+      {
+        "key": "bc",
+        "subject": "today",
+        "bandKeys": [
+          "s1",
+          "s2"
+        ]
+      },
+      {
+        "key": "prevLow",
+        "subject": "today",
+        "bandKeys": [
+          "s2",
+          "s3"
+        ]
+      },
+      {
+        "key": "s1",
+        "subject": "today",
+        "bandKeys": [
+          "s2",
+          "s3"
+        ]
+      },
+      {
+        "key": "s2",
+        "subject": "today",
+        "bandKeys": [
+          "s2",
+          "s3"
+        ]
+      },
+      {
+        "key": "s3",
+        "subject": "previous",
+        "bandKeys": [
+          "s2",
+          "s3"
+        ]
+      },
+      {
+        "key": "s4",
+        "subject": "previous",
+        "bandKeys": [
+          "s2",
+          "s3"
+        ]
+      }
+    ],
+      }
 ];
 
 VIEWS.push(...LEVELSABOVE_VIEWS, ...LEVELSBELOW_VIEWS);
