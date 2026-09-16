@@ -9,6 +9,7 @@ import {
   Bell,
   BellOff,
   ShieldAlert,
+  Clock,
 } from "lucide-react";
 import { runScreener } from "@/lib/binance";
 import { runDeltaScreener } from "@/lib/delta";
@@ -24,6 +25,7 @@ import {
   formatISTTime,
   loadCachedResults,
   saveCachedResults,
+  formatScanTime,
   STORAGE_KEY_BINANCE,
   STORAGE_KEY_DELTA,
 } from "@/lib/scheduler";
@@ -220,6 +222,14 @@ export default function Screener({
   const [filtered, setFiltered] = useState<CPRResult[]>(() => {
     return cachedBinance?.data && hasScannedToday() ? cachedBinance.data : [];
   });
+  // "Scanned at" badge — wall-clock time of the last completed scan for
+  // each source, seeded from the cached entry's savedAt (undefined for
+  // legacy cache entries saved before that field existed, or when nothing
+  // has been scanned yet today) and refreshed the moment a fresh scan
+  // completes, right alongside saveCachedResults below.
+  const [binanceScannedAt, setBinanceScannedAt] = useState<number | null>(
+    () => (hasScannedToday() ? cachedBinance?.savedAt ?? null : null)
+  );
   const [sortKey, setSortKey] = useState<SortKey>("compressionRatio");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [search, setSearch] = useState("");
@@ -312,6 +322,9 @@ export default function Screener({
   const [deltaAllResults, setDeltaAllResults] = useState<CPRResult[]>(() => {
     return cachedDelta?.data && hasScannedToday() ? cachedDelta.data : [];
   });
+  const [deltaScannedAt, setDeltaScannedAt] = useState<number | null>(
+    () => (hasScannedToday() ? cachedDelta?.savedAt ?? null : null)
+  );
   const [deltaFiltered, setDeltaFiltered] = useState<CPRResult[]>(() => {
     return cachedDelta?.data && hasScannedToday() ? cachedDelta.data : [];
   });
@@ -399,6 +412,7 @@ export default function Screener({
       setStatus("done");
       markScannedToday();
       saveCachedResults(STORAGE_KEY_BINANCE, results);
+      setBinanceScannedAt(Date.now());
       setNextScanUtc(getNextScanIST());
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unknown error");
@@ -425,6 +439,7 @@ export default function Screener({
       setDeltaFiltered(results.filter((r) => passesPattern(r, activeView)));
       setDeltaStatus("done");
       saveCachedResults(STORAGE_KEY_DELTA, results);
+      setDeltaScannedAt(Date.now());
     } catch (e) {
       setDeltaError(e instanceof Error ? e.message : "Unknown error");
       setDeltaStatus("error");
@@ -1005,6 +1020,15 @@ export default function Screener({
     : status === "scanning" || deltaStatus === "scanning" ? "scanning"
     : "idle";
 
+  // "Scanned at" badge time for the active tab — Combined shows whichever
+  // of the two sources scanned most recently, so the badge always reflects
+  // the freshest data actually feeding the table.
+  const activeScannedAt =
+    activeTab === "binance" ? binanceScannedAt
+    : activeTab === "delta" ? deltaScannedAt
+    : binanceScannedAt && deltaScannedAt ? Math.max(binanceScannedAt, deltaScannedAt)
+    : binanceScannedAt ?? deltaScannedAt;
+
   const currentFilteredCount =
     activeTab === "combined" ? combinedResults.length
     : activeTab === "delta" ? deltaFiltered.length
@@ -1125,7 +1149,28 @@ export default function Screener({
             </div>
           )}
 
-          <LiveClock />
+          <div className="flex flex-col items-end gap-1.5">
+            <LiveClock />
+            {currentStatus === "done" && activeScannedAt && (
+              <div
+                className="flex items-center gap-1.5 rounded-full border border-emerald-500/30 px-2.5 py-1 shrink-0"
+                style={{ background: "linear-gradient(135deg, rgba(16,185,129,0.12), rgba(6,182,212,0.10))" }}
+                title="Time of the last completed scan feeding this view"
+              >
+                <span className="relative flex h-1.5 w-1.5 shrink-0">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                </span>
+                <Clock className="w-3 h-3 text-emerald-400 shrink-0" />
+                <span className="text-[11px] leading-none text-emerald-300/90 whitespace-nowrap">
+                  Scanned at{" "}
+                  <span className="font-mono font-semibold text-emerald-200">
+                    {formatScanTime(activeScannedAt)}
+                  </span>
+                </span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Legend — hidden while idle (initial load/refresh, before the

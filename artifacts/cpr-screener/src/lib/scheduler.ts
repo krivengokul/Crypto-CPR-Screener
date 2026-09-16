@@ -68,7 +68,14 @@ export function formatISTTime(utcDate: Date): string {
   });
 }
 
-export function loadCachedResults<T>(key: string): { data: T[]; date: string } | null {
+export interface CachedResults<T> {
+  data: T[];
+  date: string;
+  /** Wall-clock ms (Date.now()) when this cache entry was written by saveCachedResults. Undefined for legacy entries saved before this field existed. */
+  savedAt?: number;
+}
+
+export function loadCachedResults<T>(key: string): CachedResults<T> | null {
   try {
     const raw = localStorage.getItem(key);
     if (!raw) return null;
@@ -83,6 +90,21 @@ export function loadCachedResults<T>(key: string): { data: T[]; date: string } |
     // Ignore corrupted cache
   }
   return null;
+}
+
+/**
+ * formatScanTime — compact time-only IST formatting for a savedAt
+ * timestamp (e.g. "5:32 AM"), for the "Scanned at ..." badge. Mirrors
+ * formatISTTime's locale/timezone but omits the date, since the badge is
+ * only ever shown for today's scan.
+ */
+export function formatScanTime(savedAtMs: number): string {
+  return new Date(savedAtMs).toLocaleTimeString("en-IN", {
+    timeZone: "Asia/Kolkata",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
 }
 
 export function saveCachedResults<T>(key: string, data: T[]): void {
