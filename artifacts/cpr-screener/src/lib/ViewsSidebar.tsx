@@ -335,7 +335,8 @@ export const Views: Record<string, SubPattern[]> = {
       activeText:  "#4ade80",              // green-400 text
       activeBg:    "rgba(34, 197, 94, 0.14)",
     },
-  ],
+      { id: "C-CL3U3-SH-AGapB-S4", label: "C-CL3U3-SH-AGapB-S4" }
+],
   // "expanded" — "EXPANDED": RRSS-E only, mirroring "compressed" above.
   // "6A:SLE-RRHH:R2-6A" — expanded + RRGap + RRHH-AA + SSLL-E + HHLL-A +
   // HHGap + pHL-B + HLGap-A (see ScreenerUtils.tsx / cpr.ts). RENAMED
