@@ -77,6 +77,8 @@ export interface ViewDef {
    * while retaining parentKey for tree navigation/display in buildViewTree().
    */
   standalone?: boolean;
+  /** Human-readable explanation of the condition formula / rules. */
+  description?: string;
   /**
    * This ViewDef's OWN condition, NOT including the parent's — passesView
    * chains parentKey for you. (This mirrors PIVOT_PATTERNS' original
@@ -532,23 +534,40 @@ const LEVELSABOVE_VIEWS: ViewDef[] = [
       order: 3
 },
 
-  // --- A-A-AA-AA's six nested Subpattern children ---
+  // --- A-A-AA-AA's nested Subpattern children ---
   { key: "A-A-AA-AA-U3L3", label: "A-A-AA-AA-U3L3", parentKey: "A-A-AA-AA", kind: "pattern", condition: (r) => r.U3L3,
+      description: "today.s4 in prev.s3..s2 & prev.r4 in today.r2..r3",
       order: 1
 },
   { key: "A-A-AA-AA-U4L3", label: "A-A-AA-AA-U4L3", parentKey: "A-A-AA-AA", kind: "pattern", condition: (r) => r.U4L3,
+      description: "today.s4 in prev.s3..s2 & prev.r4 in today.r3..r4",
       order: 2
 },
+  { key: "A-A-AA-AA-CU4L3", label: "A-A-AA-AA-CU4L3", parentKey: "A-A-AA-AA", kind: "pattern", condition: (r) => r.CU4L3,
+      description: "today.s4 >= prev.s3 && today.s4 < prev.s2 && today.r4 > prev.r3 && today.r4 < prev.r4 (today's S4 in prev S3/S2, today's R4 in prev R3/R4)",
+      direction: "Up",
+      targetLabel: "U4 (today's R4)",
+      getTarget: (r) => r.todayCPR.r4,
+      entryLabel: "TC (today's TC)",
+      getEntry: (r) => r.todayCPR.tc,
+      stoplossLabel: "S1 (today's S1)",
+      getStoploss: (r) => r.todayCPR.s1,
+      order: 7
+},
   { key: "A-A-AA-AA-EU2L4", label: "A-A-AA-AA-EU2L4", parentKey: "A-A-AA-AA", kind: "pattern", condition: (r) => r.EU2L4,
+      description: "prev.s4 in today.s2..s1 & prev.r4 in today.r1..r2",
       order: 3
 },
   { key: "A-A-AA-AA-U2L4", label: "A-A-AA-AA-U2L4", parentKey: "A-A-AA-AA", kind: "pattern", condition: (r) => r.U2L4,
+      description: "today.s4 in prev.s4..s3 & prev.r4 in today.r1..r2",
       order: 4
 },
   { key: "A-A-AA-AA-U3L4", label: "A-A-AA-AA-U3L4", parentKey: "A-A-AA-AA", kind: "pattern", condition: (r) => r.U3L4,
+      description: "today.s4 in prev.s4..s3 & prev.r4 in today.r2..r3",
       order: 5
 },
   { key: "A-A-AA-AA-EU3L4", label: "A-A-AA-AA-EU3L4", parentKey: "A-A-AA-AA", kind: "pattern", condition: (r) => r.EU3L4,
+      description: "prev.s4 in today.s4..s3 & prev.r4 in today.r2..r3",
       order: 6
 },
   { key: "A-A-AA-AA-EUTL3", label: "A-A-AA-AA-EUTL3", parentKey: "R1AbovePR4-A-A-AA-AA", kind: "pattern", condition: (r) => r.EUTL3,
@@ -2660,6 +2679,7 @@ export interface ViewTreeNode {
   label: string;
   kind: "category" | "pattern" | "view";
   order?: number;
+  description?: string;
   children: ViewTreeNode[];
   viewDef?: ViewDef;
 }
@@ -2669,7 +2689,10 @@ function buildViewTreeNode(v: ViewDef): ViewTreeNode {
     key: v.key,
     label: v.label,
     kind: v.kind,
+    order: v.order,
+    description: v.description,
     children: childrenOf(v.key).map(buildViewTreeNode),
+    viewDef: v,
   };
 }
 
@@ -2688,6 +2711,7 @@ export function buildViewTree(): ViewTreeNode[] {
       label: def.label,
       kind: def.kind ?? "view",
       order: def.order,
+      description: def.description,
       children,
       viewDef: def,
     };
