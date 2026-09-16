@@ -767,6 +767,7 @@ export function SRLadderPanel({
   levelCheckConditions,
   copyViewControl,
   innerLevelBadges,
+  gapBadges,
   ssllBadge,
   hhllBadge,
   rrssBadge,
@@ -832,6 +833,14 @@ export function SRLadderPanel({
    */
   innerLevelBadges?: ReactNode;
   /**
+   * The GAP-column badges (renderGapColumnBadges) formerly shown in a
+   * standalone "GAP" table column (Screener + both BacktestPanel result
+   * tables), now rendered underneath the "PDay S/R" ladder instead — same
+   * badge component, same colors, just relocated under its own "GAP"
+   * header. Omit to render nothing extra under PDay S/R.
+   */
+  gapBadges?: ReactNode;
+  /**
    * SSLLCategory badge (renderSSLLCategoryBadge(r)) — rendered directly
    * above the S1 line in the "Levels VIEW" chart, right side (paired with
    * hhllBadge on the left). Omit to hide it (e.g. BacktestPanel, which
@@ -869,7 +878,15 @@ export function SRLadderPanel({
   return (
     <div className="flex w-full min-w-0 items-start gap-2 overflow-x-auto border-b border-border/50 pb-3">
       {/* 1. Previous Day S/R */}
-      <SRLadder cpr={r.prevCPR} currentPrice={r.prevClose} label="PDay S/R" badge={prevPatternBadge} pricePlain />
+      <div className="flex w-[160px] shrink-0 flex-col gap-1.5">
+        <SRLadder cpr={r.prevCPR} currentPrice={r.prevClose} label="PDay S/R" badge={prevPatternBadge} pricePlain />
+        {gapBadges && (
+          <div className="flex flex-col gap-1 pl-2">
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">GAP</p>
+            {gapBadges}
+          </div>
+        )}
+      </div>
 
       {/* 2. CPR Level Chart */}
       <div className="w-[452px] shrink-0">
@@ -890,7 +907,12 @@ export function SRLadderPanel({
       {/* 3. Today S/R */}
       <div className="flex w-[160px] shrink-0 flex-col gap-1.5">
         <SRLadder cpr={r.todayCPR} currentPrice={r.currentPrice} label="Today S/R" badge={todayPatternBadge} />
-        {innerLevelBadges && <div className="flex flex-col gap-1 pl-2">{innerLevelBadges}</div>}
+        {innerLevelBadges && (
+          <div className="flex flex-col gap-1 pl-2">
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">INNER LEVELS</p>
+            {innerLevelBadges}
+          </div>
+        )}
       </div>
 
       {/* 4. Top Right Section: Actions (Attach Chart, Create/Copy View) & Level Check */}
@@ -933,6 +955,7 @@ export function SRLadderRow({
   levelCheckConditions,
   copyViewControl,
   innerLevelBadges,
+  gapBadges,
   ssllBadge,
   hhllBadge,
   rrssBadge,
@@ -964,6 +987,8 @@ export function SRLadderRow({
   copyViewControl?: ReactNode;
   /** LEVEL-column badges, rendered under "Today S/R". See SRLadderPanel for details. */
   innerLevelBadges?: ReactNode;
+  /** GAP-column badges, rendered under "PDay S/R". See SRLadderPanel for details. */
+  gapBadges?: ReactNode;
   /** SSLLCategory badge, rendered over the S1 line in "Levels VIEW", right side. See SRLadderPanel for details. */
   ssllBadge?: ReactNode;
   /** HHLLCategory badge, rendered over the S1 line in "Levels VIEW", left side (before ssllBadge). See SRLadderPanel for details. */
@@ -992,6 +1017,7 @@ export function SRLadderRow({
           levelCheckConditions={levelCheckConditions}
           copyViewControl={copyViewControl}
           innerLevelBadges={innerLevelBadges}
+          gapBadges={gapBadges}
           ssllBadge={ssllBadge}
           hhllBadge={hhllBadge}
           rrssBadge={rrssBadge}

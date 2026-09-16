@@ -1883,10 +1883,7 @@ export default function BacktestPanel() {
                     <th className="px-2 py-2 w-28 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Symbol
                     </th>
-                    <th className="pl-8 pr-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      GAP
-                    </th>
-                    <th className="px-2 py-3 w-32 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    <th className="px-2 py-3 w-40 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Pattern
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[220px]">
@@ -1969,10 +1966,7 @@ export default function BacktestPanel() {
                             </div>
                           </div>
                         </td>
-                        <td className="pl-8 pr-4 py-3 whitespace-nowrap text-xs font-medium">
-                          {renderGapColumnBadges(r.raw)}
-                        </td>
-                        <td className="px-2 py-3 w-32">
+                        <td className="px-2 py-3 w-40">
                           {renderPatternColumnBadges(r.raw) ?? (
                             <span className="text-xs text-muted-foreground">—</span>
                           )}
@@ -1994,11 +1988,12 @@ export default function BacktestPanel() {
                           r={toSRLadderData(r.raw, r.closePrice ?? undefined, r.prevClose ?? undefined, r.ppClose ?? undefined)}
                           rowKey={`${r.source}-${r.symbol}-${r.entryDate}`}
                           viewKey={selectedKey}
-                          colSpan={7}
+                          colSpan={6}
                           todayPatternBadge={renderTodayPatternBadges(r.raw)}
                           prevPatternBadge={renderPrevPatternBadge(r.raw)}
                           pivotPatternBadge={renderPivotPatternBadge(r.raw)}
                           innerLevelBadges={renderLevelColumnRestBadges(r.raw)}
+                          gapBadges={renderGapColumnBadges(r.raw)}
                           ssllBadge={renderSSLLCategoryBadge(r.raw)}
                           hhllBadge={renderHHLLCategoryBadge(r.raw)}
                           rrssBadge={renderSSRRCategoryBadge(r.raw)}
@@ -2059,8 +2054,9 @@ export default function BacktestPanel() {
       {/* Pattern backtest results — symbol list + Target/Result/Hit Date.
           CHANGED: also shown for isPatternOnly ("-R4" Pattern selections),
           which now grade identically to a View backtest — same columns
-          (Symbol/GAP/Pattern/Pivot Size/Entry Date/Result/Hit
-          Date/Change). */}
+          (Symbol/Pattern/Pivot Size/Entry Date/Result/Hit
+          Date/Change). GAP now lives under the expanded row's "PDay S/R"
+          ladder instead of its own column. */}
       {status === "done" && (isViewOnly || isPatternOnly) && (
         <>
           <div className="flex items-center gap-4 mb-3 text-xs flex-wrap">
@@ -2131,10 +2127,7 @@ export default function BacktestPanel() {
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Symbol
                     </th>
-                    <th className="pl-8 pr-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      GAP
-                    </th>
-                    <th className="px-2 py-3 w-32 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    <th className="px-2 py-3 w-40 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Pattern
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[220px]">
@@ -2231,10 +2224,7 @@ export default function BacktestPanel() {
                           </div>
                         </div>
                       </td>
-                      <td className="pl-8 pr-4 py-3 whitespace-nowrap text-xs font-medium">
-                        {renderGapColumnBadges(r.raw)}
-                      </td>
-                      <td className="px-2 py-3 w-32">
+                      <td className="px-2 py-3 w-40">
                         {renderPatternColumnBadges(r.raw) ?? (
                           <span className="text-xs text-muted-foreground">—</span>
                         )}
@@ -2338,11 +2328,12 @@ export default function BacktestPanel() {
                         r={toSRLadderData(r.raw, r.closePrice ?? undefined, r.prevClose ?? undefined, r.ppClose ?? undefined)}
                         rowKey={`${r.source}-${r.symbol}-${r.entryDate}`}
                         viewKey={selectedKey}
-                        colSpan={10}
+                        colSpan={9}
                         todayPatternBadge={renderTodayPatternBadges(r.raw)}
                         prevPatternBadge={renderPrevPatternBadge(r.raw)}
                         pivotPatternBadge={renderPivotPatternBadge(r.raw)}
                         innerLevelBadges={renderLevelColumnRestBadges(r.raw)}
+                        gapBadges={renderGapColumnBadges(r.raw)}
                         ssllBadge={renderSSLLCategoryBadge(r.raw)}
                         hhllBadge={renderHHLLCategoryBadge(r.raw)}
                         rrssBadge={renderSSRRCategoryBadge(r.raw)}

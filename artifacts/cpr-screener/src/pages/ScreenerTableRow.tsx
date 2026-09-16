@@ -666,13 +666,6 @@ export function ScreenerTableHeader({
           Pattern
         </th>
         <th
-          className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground min-w-[150px]"
-          onClick={() => toggleSort("pdhPdlPct")}
-          title="Position vs yesterday's High/Low"
-        >
-          GAP <SortIcon k="pdhPdlPct" />
-        </th>
-        <th
           className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
           onClick={() => toggleSort("compressionRatio")}
         >
@@ -863,20 +856,14 @@ export default function ScreenerTableRow({
             </div>
           </div>
         </td>
-        <td className="px-2 py-3 w-56">
-          <div className="flex flex-col gap-1 max-w-[200px]">
+        <td className="px-2 py-3 w-64">
+          <div className="flex flex-col gap-1 max-w-[240px]">
             <div className="flex flex-nowrap items-center gap-1">
               {renderLevelStatusBadge(r, isInsideCPR, isOutsideCPR, showWide, nothingMatchedMain)}
               {renderTodayPatternBadges(r)}
             </div>
             {renderPivotAndGapBadges(r)}
           </div>
-        </td>
-        <td
-          className="px-3 py-3 whitespace-nowrap text-xs font-medium min-w-[150px]"
-          title={`PDH: ${fmt(r.todayCPR.prevHigh)}  |  PDL: ${fmt(r.todayCPR.prevLow)}`}
-        >
-          {renderGapColumnBadges(r)}
         </td>
         <td className="px-3 py-3 font-mono whitespace-nowrap">
           {renderPivotSizeCell(r.prevCPR, r.todayCPR, r.compressionRatio)}
@@ -959,7 +946,7 @@ export default function ScreenerTableRow({
           key={`${rowKey}-sr`}
           r={toSRLadderData(r)}
           rowKey={rowKey}
-          colSpan={20}
+          colSpan={19}
           todayPatternBadge={renderTodayPatternBadges(r)}
           // CHANGED: "PDay S/R" now shows prev day's own "p-xxxx" pattern
           // (prevCPR vs ppCPR) instead of today's PivotPattern combo —
@@ -972,6 +959,7 @@ export default function ScreenerTableRow({
           showLevelCheck
           levelCheckConditions={levelCheckConditions}
           innerLevelBadges={levelBadges}
+          gapBadges={renderGapColumnBadges(r)}
           ssllBadge={ssllBadge}
           hhllBadge={hhllBadge}
           rrssBadge={rrssBadge}
