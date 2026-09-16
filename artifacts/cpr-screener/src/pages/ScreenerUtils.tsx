@@ -853,12 +853,12 @@ export function computePrevPattern(
 
 /**
  * renderPrevPdhPdlBadge / renderTodayPdhPdlBadge — the individual prev-day
- * (pHL-A/pHL=/pHL-B) and today (HL-A/HL=/HL-B) PDH/PDL sub badges, split
+ * (pHL-A/pHL-Q/pHL-B) and today (HL-A/HL-Q/HL-B) PDH/PDL sub badges, split
  * out so callers that need to place them in different rows (e.g.
  * BacktestPanel's "result section" PDH/PDL column: Gap badge + today
  * badge on row 1, prev "p-xx" badge on row 2) can do so without relying on
  * cloneElement/DOM-order tricks. All comparisons come straight from
- * cpr.ts's calcCPR (HLSwitch: "HL-A"/"HL="/"HL-B" on each CPRLevels set) —
+ * cpr.ts's calcCPR (HLSwitch: "HL-A"/"HL-Q"/"HL-B" on each CPRLevels set) —
  * the three states are mutually exclusive and exhaustive, so every row
  * always has exactly one badge on each side.
  *
@@ -871,15 +871,15 @@ export function computePrevPattern(
  */
 /**
  * HL_SWITCH_BADGE — display config for each HLSwitch value ("HL-A" /
- * "HL=" / "HL-B"), styled to exactly match HHLL_CATEGORY_BADGE: same
+ * "HL-Q" / "HL-B"), styled to exactly match HHLL_CATEGORY_BADGE: same
  * text-[10px] size, font-medium weight, px-1 py-0.5 rounded border shape,
  * and the same /10 (bg) + /30 (border) + solid -400 (text) brightness
- * level. HL-A/HL-B reuse HHLL-A/HHLL-B's green/red; HL= gets the matching
+ * level. HL-A/HL-B reuse HHLL-A/HHLL-B's green/red; HL-Q gets the matching
  * amber at the same brightness.
  */
 const HL_SWITCH_BADGE: Record<HLSwitch, { className: string }> = {
   "HL-A": { className: "bg-green-500/10 text-green-400 border-green-500/30" },
-  "HL=": { className: "bg-amber-500/10 text-amber-400 border-amber-500/30" },
+  "HL-Q": { className: "bg-amber-500/10 text-amber-400 border-amber-500/30" },
   "HL-B": { className: "bg-red-500/10 text-red-400 border-red-500/30" },
 };
 
@@ -887,15 +887,15 @@ export function renderPrevPdhPdlBadge(r: CPRResult): React.JSX.Element | null {
   const sw = r.prevCPR.HLSwitch;
   // CHANGED: when prevCPR's HL gap is the bigger of the two (today vs
   // prev), relabel "pHL-A"/"pHL-B" to "pHLGap-A"/"pHLGap-B". Purely
-  // cosmetic — "HL=" is untouched regardless of hlGapWinner.
-  const gapWins = sw !== "HL=" && r.hlGapWinner === "prev";
+  // cosmetic — "HL-Q" is untouched regardless of hlGapWinner.
+  const gapWins = sw !== "HL-Q" && r.hlGapWinner === "prev";
   const label =
     sw === "HL-A" ? (gapWins ? "pHLGap-A" : "pHL-A") :
-    sw === "HL=" ? "pHL=" :
+    sw === "HL-Q" ? "pHL-Q" :
     (gapWins ? "pHLGap-B" : "pHL-B");
   const title =
     sw === "HL-A" ? `Prev PDH ${fmt(r.prevCPR.prevHigh)} > Prev U1 ${fmt(r.prevCPR.r1)}` :
-    sw === "HL=" ? `PDH ${fmt(r.prevCPR.prevHigh)} = U1 ${fmt(r.prevCPR.r1)}` :
+    sw === "HL-Q" ? `PDH ${fmt(r.prevCPR.prevHigh)} = U1 ${fmt(r.prevCPR.r1)}` :
     `Prev PDH ${fmt(r.prevCPR.prevHigh)} < Prev U1 ${fmt(r.prevCPR.r1)}`;
   return (
     <span
@@ -912,15 +912,15 @@ export function renderTodayPdhPdlBadge(r: CPRResult): React.JSX.Element | null {
   const sw = r.todayCPR.HLSwitch;
   // CHANGED: when todayCPR's HL gap is the bigger of the two (today vs
   // prev), relabel "HL-A"/"HL-B" to "HLGap-A"/"HLGap-B". Purely cosmetic —
-  // "HL=" is untouched regardless of hlGapWinner.
-  const gapWins = sw !== "HL=" && r.hlGapWinner === "today";
+  // "HL-Q" is untouched regardless of hlGapWinner.
+  const gapWins = sw !== "HL-Q" && r.hlGapWinner === "today";
   const label =
     sw === "HL-A" ? (gapWins ? "HLGap-A" : "HL-A") :
-    sw === "HL=" ? "HL=" :
+    sw === "HL-Q" ? "HL-Q" :
     (gapWins ? "HLGap-B" : "HL-B");
   const title =
     sw === "HL-A" ? `PDH ${fmt(r.todayCPR.prevHigh)} > U1 ${fmt(r.todayCPR.r1)}` :
-    sw === "HL=" ? `PDH ${fmt(r.todayCPR.prevHigh)} = U1 ${fmt(r.todayCPR.r1)}` :
+    sw === "HL-Q" ? `PDH ${fmt(r.todayCPR.prevHigh)} = U1 ${fmt(r.todayCPR.r1)}` :
     `PDH ${fmt(r.todayCPR.prevHigh)} < U1 ${fmt(r.todayCPR.r1)}`;
   return (
     <span
@@ -1410,10 +1410,10 @@ export function renderLevelStatusRestBadges(
 
 /**
  * renderPDHPDLGapCategoryBadge — single badge for CPRResult.PDHPDLGapCategory
- * ("HHGap" | "LLGap" | "HHLL="), same solid-badge styling as the
+ * ("HHGap" | "LLGap" | "HHLL-Q"), same solid-badge styling as the
  * SSLL + HHLL-A/HHLL-B badges above (renderSSRRHHLLBadges):
  * green for HHGap (PDH gap bigger), red for LLGap (PDL gap bigger),
- * yellow/neutral for HHLL= (gaps equal) — matching the "IN-CPR"/"IN-PDHL"
+ * yellow/neutral for HHLL-Q (gaps equal) — matching the "IN-CPR"/"IN-PDHL"
  * neutral colour used elsewhere. Always renders exactly one badge, since
  * PDHPDLGapCategory is always exactly one of the three values.
  */
@@ -1422,12 +1422,12 @@ export function renderPDHPDLGapCategoryBadge(r: CPRResult) {
   const styles: Record<PDHPDLGapCategory, string> = {
     HHGap: "bg-green-500/10 text-green-400 border-green-500/30",
     LLGap: "bg-red-500/10 text-red-400 border-red-500/30",
-    "HHLL=": "bg-yellow-500/10 text-yellow-400 border-yellow-500/30",
+    "HHLL-Q": "bg-yellow-500/10 text-yellow-400 border-yellow-500/30",
   };
   const titles: Record<PDHPDLGapCategory, string> = {
     HHGap: "Gap between today's PDH and prev's PDH is larger than the PDL gap",
     LLGap: "Gap between today's PDL and prev's PDL is larger than the PDH gap",
-    "HHLL=": "PDH gap and PDL gap are equal",
+    "HHLL-Q": "PDH gap and PDL gap are equal",
   };
   return (
     <span
@@ -1497,7 +1497,7 @@ const HHLL_CATEGORY_BADGE: Record<Exclude<HHLLCategory, "none">, { label: string
     title: "Today's PDH > Prev PDH and Today's PDL < Prev PDL (Expanded)",
   },
   "HHLL-Q": {
-    label: "HHLL=",
+    label: "HHLL-Q",
     className: "bg-amber-500/10 text-amber-400 border-amber-500/30",
     title: "Today's PDH == Prev PDH and Today's PDL == Prev PDL (Equal)",
   },
@@ -1505,11 +1505,11 @@ const HHLL_CATEGORY_BADGE: Record<Exclude<HHLLCategory, "none">, { label: string
 
 /**
  * renderHHLLCategoryBadge — single badge for CPRResult.HHLLCategory
- * ("HHLL-A" | "HHLL-B" | "HHLL-C" | "HHLL-E" | "HHLL=" | "none"), same
+ * ("HHLL-A" | "HHLL-B" | "HHLL-C" | "HHLL-E" | "HHLL-Q" | "none"), same
  * solid-badge styling as renderPDHPDLGapCategoryBadge /
  * renderSSRRCategoryBadge. MOVED here from the LEVEL column (see
  * renderSSRRHHLLBadges) — HHLL-A/HHLL-B keep their original green/red
- * colours, HHLL-C/HHLL-E/HHLL= are new. Returns null for "none".
+ * colours, HHLL-C/HHLL-E/HHLL-Q are new. Returns null for "none".
  */
 export function renderHHLLCategoryBadge(r: CPRResult) {
   const cat = r.HHLLCategory;

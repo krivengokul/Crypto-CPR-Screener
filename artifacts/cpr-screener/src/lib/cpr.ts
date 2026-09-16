@@ -424,7 +424,7 @@ export interface CPRResult {
   // PDHPDLGapCategory — compares the gap between today's PDH and prev's
   // PDH (HHGap) against the gap between today's PDL and prev's PDL
   // (LLGap). "HHGap" when the PDH gap is larger, "LLGap" when the PDL gap
-  // is larger, "HHLL=" when the two gaps are equal.
+  // is larger, "HHLL-Q" when the two gaps are equal.
   PDHPDLGapCategory: PDHPDLGapCategory;
   // RRSSGapCategory — mirrors PDHPDLGapCategory, but over R1/S1 instead of
   // PDH/PDL: compares the gap between today's R1 and prev's R1 (RRGap)
@@ -448,7 +448,7 @@ export interface CPRResult {
   SSRRCategory: SSRRCategory;
   // HHLLCategory — 6-way mutually exclusive partition classifying today's
   // PDH/PDL (prevHigh/prevLow) move against prev's PDH/PDL:
-  //   HHLL-A (Above)      — today.prevHigh >= prev.prevHigh AND today.prevLow >= prev.prevLow (excluding the both-equal case, which is HHLL=)
+  //   HHLL-A (Above)      — today.prevHigh >= prev.prevHigh AND today.prevLow >= prev.prevLow (excluding the both-equal case, which is HHLL-Q)
   //   HHLL-B (Below)      — today.prevHigh < prev.prevHigh AND today.prevLow < prev.prevLow
   //   HHLL-C (Compressed) — today.prevHigh < prev.prevHigh AND today.prevLow >= prev.prevLow
   //   HHLL-E (Expanded)   — today.prevHigh >= prev.prevHigh AND today.prevLow < prev.prevLow
@@ -528,9 +528,9 @@ export interface CPRResult {
 // hlGapWinner "today" (HLGap-B) and the EUPL3 flag, also form the badge
 // set of the "A-A-AA-AA-EUPL3-RRHHGap:R4" View (see ScreenerUtils.tsx /
 // backtest.ts). No behavior change here — the View reuses these values.
-export type PDHPDLGapCategory = "HHGap" | "LLGap" | "HHLL=";
+export type PDHPDLGapCategory = "HHGap" | "LLGap" | "HHLL-Q";
 export type RRSSGapCategory = "RRGap" | "SSGap" | "SSRR-Q";
-export type HLSwitch = "HL-A" | "HL-B" | "HL=";
+export type HLSwitch = "HL-A" | "HL-B" | "HL-Q";
 export type SSRRCategory = "RRSS-A" | "RRSS-B" | "RRSS-C" | "RRSS-E" | "RRSS-Q" | "none";
 export type HHLLCategory = "HHLL-A" | "HHLL-B" | "HHLL-C" | "HHLL-E" | "HHLL-Q" | "none";
 export type SSLLCategory = "SSLL-AA" | "SSLL-OA" | "SSLL-BB" | "SSLL-OB" | "SSLL-C" | "SSLL-E" | "SSLL-SB" | "SSLL-LB" | "SSLL-Q" | "none";
@@ -554,7 +554,7 @@ function isValidCandle(c: OHLC): boolean {
  * two values that are mathematically equal and display identically when
  * rounded can still differ by a few units in the last binary digit. Strict
  * `===` misses those cases; this catches them within 0.001% of magnitude.
- * Single source of truth — used for both the "HL=" case of HLSwitch
+ * Single source of truth — used for both the "HL-Q" case of HLSwitch
  * (calcCPR) and equalCPR
  * (analyzeCPR) so "equal" means the same thing everywhere in this file.
  */
@@ -617,13 +617,13 @@ export function calcCPR(candle: OHLC): CPRLevels {
   const s4 = s3 + s2 - s1;
 
   // PDH (previous day high, i.e. this level set's candle high) vs R1.
-  // Uses eqTol (not strict ===) for the "HL=" case since h and r1 reach
+  // Uses eqTol (not strict ===) for the "HL-Q" case since h and r1 reach
   // the "same" value through different arithmetic paths and can differ by
   // a float rounding hair even when they display identically. "HL-A" /
   // "HL-B" exclude the equal band so exactly one of the three states is
   // ever picked.
   const HLSwitch: HLSwitch =
-    eqTol(h, r1) ? "HL=" :
+    eqTol(h, r1) ? "HL-Q" :
     h > r1 ? "HL-A" :
     "HL-B";
 
@@ -1413,13 +1413,13 @@ export function analyzeCPR(
 
   // PDHPDLGapCategory — HHGap = |today's PDH - prev's PDH|, LLGap =
   // |today's PDL - prev's PDL|. Whichever gap is larger wins; equal gaps
-  // fall back to "HHLL=".
+  // fall back to "HHLL-Q".
   const HHGapVal = Math.abs(todayCPR.prevHigh - prevCPR.prevHigh);
   const LLGapVal = Math.abs(todayCPR.prevLow - prevCPR.prevLow);
   const PDHPDLGapCategory: PDHPDLGapCategory =
     HHGapVal > LLGapVal ? "HHGap" :
     LLGapVal > HHGapVal ? "LLGap" :
-    "HHLL=";
+    "HHLL-Q";
 
   // RRSSGapCategory — mirrors PDHPDLGapCategory over R1/S1: RRGap =
   // |today's R1 - prev's R1|, SSGap = |today's S1 - prev's S1|. Whichever
