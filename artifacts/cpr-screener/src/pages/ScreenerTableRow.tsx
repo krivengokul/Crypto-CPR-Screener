@@ -16,6 +16,7 @@ import {
   pdhPdlStatus,
   computePrevPattern,
   computePivotPattern,
+  computeGapBadge,
   getViewDirection,
   cprDistancePct,
   levelsInDistanceRange,
@@ -466,6 +467,64 @@ export function renderPivotPatternBadge(r: CPRResult, showMissing: boolean = tru
 }
 
 /**
+ * GAP_BADGE_COLOR — colour keyed by GapBadge's first prefix letter (R/S/Q,
+ * from RRSSGapCategory: RRGap/SSGap/SSRR-Q), mirroring
+ * renderRRSSGapCategoryBadge's own green/red/amber palette so the GapBadge
+ * reads consistently with the category it leads with.
+ */
+const GAP_BADGE_COLOR: Record<"R" | "S" | "Q", string> = {
+  R: "bg-green-500/10 text-green-400 border border-green-500/30",
+  S: "bg-red-500/10 text-red-400 border border-red-500/30",
+  Q: "bg-amber-500/10 text-amber-400 border border-amber-500/30",
+};
+
+/**
+ * GapBadge — composite label combining RRSSGapCategory + PDHPDLGapCategory
+ * + prev/today HLSwitch (Gap-prefixed per hlGapWinner) into one badge, e.g.
+ * "RH-GapAA", "SL-QGapA" (see ScreenerUtils.computeGapBadge for the
+ * derivation). Always renders exactly one badge — computeGapBadge never
+ * returns null, since all four source fields are always present.
+ */
+export function renderGapBadge(r: CPRResult) {
+  const label = computeGapBadge(r);
+  const colorKey = label.charAt(0) as "R" | "S" | "Q";
+  return (
+    <span
+      className={`text-[10px] px-1 py-0.5 rounded font-medium ${GAP_BADGE_COLOR[colorKey]}`}
+      title="GapBadge — RRSSGapCategory x PDHPDLGapCategory x prev/today HLSwitch (Gap-prefixed per hlGapWinner)"
+    >
+      {label}
+    </span>
+  );
+}
+
+/**
+ * renderPivotAndGapBadges — PivotPattern badge + GapBadge together on one
+ * line, for the Pattern column's second row (ScreenerTableRow). Thin
+ * combinator over computePivotPattern/getBadgeClasses (mirroring
+ * renderPivotPatternBadge(r, showMissing=false)'s null-when-absent
+ * behaviour for the pivot half) and renderGapBadge, so the two sit side by
+ * side without nesting renderPivotPatternBadge's own wrapper div (which
+ * would double up on its "mt-1" margin).
+ */
+export function renderPivotAndGapBadges(r: CPRResult) {
+  const pivotPattern = computePivotPattern(r);
+  return (
+    <div className="flex flex-wrap items-center gap-1 mt-1">
+      {pivotPattern && (
+        <span
+          className={`text-[10px] px-1 py-0.5 rounded border font-medium ${getBadgeClasses(pivotPattern)}`}
+          title="PivotPattern — HHLL x RRHH x SSLL category combo"
+        >
+          {pivotPattern}
+        </span>
+      )}
+      {renderGapBadge(r)}
+    </div>
+  );
+}
+
+/**
  * "LEVEL" column body — row 1: Above/Below/Inside/Outside/Skip, then
  * oV-B/oV-A, then Narrow/Wide (merged into a single badge wherever
  * Above/Below/oV-B/oV-A pairs with Narrow/Wide — see
@@ -808,7 +867,7 @@ export default function ScreenerTableRow({
               {renderLevelStatusBadge(r, isInsideCPR, isOutsideCPR, showWide, nothingMatchedMain)}
               {renderTodayPatternBadges(r)}
             </div>
-            {renderPivotPatternBadge(r, false)}
+            {renderPivotAndGapBadges(r)}
           </div>
         </td>
         <td

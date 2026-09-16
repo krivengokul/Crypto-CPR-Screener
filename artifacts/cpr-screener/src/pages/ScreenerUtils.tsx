@@ -830,6 +830,42 @@ export function computePivotPattern(r: CPRResult): PivotPatternKey | null {
   return null;
 }
 
+/**
+ * computeGapBadge — composite "GapBadge" label combining four existing,
+ * already-computed gap/HL categories into a single label for the Pattern
+ * column's second row, next to the PivotPattern badge:
+ *   1. RRSSGapCategory ("RRGap" | "SSGap" | "SSRR-Q")   -> "R" | "S" | "Q"
+ *   2. PDHPDLGapCategory ("HHGap" | "LLGap" | "HHLL-Q") -> "H" | "L" | "Q"
+ *   3. prevCPR.HLSwitch ("HL-A"/"HL-B"/"HL-Q"), "Gap"-prefixed when
+ *      hlGapWinner === "prev" (mirrors renderPrevPdhPdlBadge's pHL-A ->
+ *      pHLGap-A relabel, minus the "p" prefix)
+ *   4. todayCPR.HLSwitch, "Gap"-prefixed when hlGapWinner === "today"
+ *      (mirrors renderTodayPdhPdlBadge's HL-A -> HLGap-A relabel)
+ * Label shape: "{1}{2}-{3}{4}", e.g. RRGap+HHGap+pHLGap-A+HL-A -> "RH-GapAA",
+ * SSGap+LLGap+pHL-Q+HLGap-A -> "SL-QGapA". hlGapWinner is single-valued
+ * ("today" | "prev" | "none"), so at most one of parts 3/4 ever carries the
+ * "Gap" prefix. All four source fields are always present and mutually
+ * exclusive within their own category, so this always returns a definite
+ * label — no null/"missing" case, unlike computePivotPattern.
+ */
+export function computeGapBadge(r: CPRResult): string {
+  const letter1 = r.RRSSGapCategory === "RRGap" ? "R" : r.RRSSGapCategory === "SSGap" ? "S" : "Q";
+  const letter2 = r.PDHPDLGapCategory === "HHGap" ? "H" : r.PDHPDLGapCategory === "LLGap" ? "L" : "Q";
+
+  const prevSW = r.prevCPR.HLSwitch;
+  const todaySW = r.todayCPR.HLSwitch;
+  const letter3 = prevSW === "HL-A" ? "A" : prevSW === "HL-B" ? "B" : "Q";
+  const letter4 = todaySW === "HL-A" ? "A" : todaySW === "HL-B" ? "B" : "Q";
+
+  const gapWinsPrev = prevSW !== "HL-Q" && r.hlGapWinner === "prev";
+  const gapWinsToday = todaySW !== "HL-Q" && r.hlGapWinner === "today";
+
+  const part3 = gapWinsPrev ? `Gap${letter3}` : letter3;
+  const part4 = gapWinsToday ? `Gap${letter4}` : letter4;
+
+  return `${letter1}${letter2}-${part3}${part4}`;
+}
+
 
 
 /**
