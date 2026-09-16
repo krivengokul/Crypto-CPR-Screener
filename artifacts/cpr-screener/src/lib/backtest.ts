@@ -126,6 +126,26 @@ function tightestStrictBand(entries: RungEntry[], value: number): [LevelCheckKey
  * condition — otherwise a copied View would show every row the ORIGINAL
  * condition matches, most of which may only partially resemble the
  * specific setup the copy was made to capture.
+ *
+ * FIX: this used to only check "does the subject value fall inside
+ * [lower, upper]?", which is a WEAKER test than compareSRLadders/
+ * getLadderMatchSummary's own "Matching" rule (SRLadderDiff.tsx) — that
+ * one additionally requires the band to be INTACT: no other one of the
+ * 13 same-day lines may sit strictly between the two named band
+ * boundaries, or the pair is no longer the adjacent band the condition
+ * was written against. Because this function skipped that second half,
+ * a symbol could pass this gate (raw value happens to land inside
+ * [lower, upper]) while the "Ladder Check" column — built from the SAME
+ * levelCheckDefs via getLadderMatchSummary — scored it well under
+ * 13/13, since that column DOES apply the intact-band rule. That
+ * mismatch is exactly how a View like "C-CL3U3-SH-AGapB-S4" could show
+ * rows with a 5/13 Ladder Check: they passed the loose gate here but
+ * fail the strict one everyone actually reads as "matching". Mirroring
+ * the same intact-band check here makes levelCheckFullyMatches(r,
+ * conditions) === true exactly when getLadderMatchSummary(r.prevCPR,
+ * r.todayCPR, conditions).fullMatch === true — i.e. only genuine 13/13
+ * rows pass the View from here on, for both the live Screener
+ * (ScreenerUtils.tsx's passesPattern) and Backtest (below).
  */
 export function levelCheckFullyMatches(r: CPRResult, conditions: LevelCheckCondition[] | undefined): boolean {
   if (!conditions || conditions.length === 0) return true;
@@ -140,7 +160,19 @@ export function levelCheckFullyMatches(r: CPRResult, conditions: LevelCheckCondi
     const bandB = bandCPR[cond.bandKeys[1]];
     const lower = Math.min(bandA, bandB);
     const upper = Math.max(bandA, bandB);
-    return subjectVal >= lower && subjectVal <= upper;
+    if (!(subjectVal >= lower && subjectVal <= upper)) return false;
+
+    // Band-intact check — same rule as compareSRLadders: any OTHER of
+    // the 13 same-day (bandCPR) lines strictly between lower/upper
+    // breaks the band, even though subjectVal itself still numerically
+    // qualifies.
+    const bandKeySet = new Set<LevelCheckKey>(cond.bandKeys);
+    for (const key of LEVEL_CHECK_KEYS) {
+      if (bandKeySet.has(key)) continue;
+      const v = bandCPR[key];
+      if (Number.isFinite(v) && v > lower && v < upper) return false;
+    }
+    return true;
   });
 }
 
