@@ -1594,36 +1594,24 @@ export default function BacktestPanel() {
                         !q ||
                         catLabelHit ||
                         hit(node.sub.label) ||
-                        (!!node.sub.viewDef?.description && hit(node.sub.viewDef.description)) ||
                         node.Views.some((t) => hit(t.label)) ||
                         node.children.some(patternIsVisible);
 
-                      const viewButton = (t: ViewTreeNode | ViewDef) => {
-                        const desc = "viewDef" in t ? (t.viewDef?.description ?? t.description) : t.description;
-                        return (
-                          <button
-                            key={t.key}
-                            type="button"
-                            role="option"
-                            aria-selected={selectedKey === t.key}
-                            onClick={() => selectAndClose(t.key, cat.key)}
-                            title={desc ? `${t.label} — ${desc}` : t.label}
-                            className={`w-full flex items-center justify-between gap-1 text-left px-2 py-1 rounded-md text-xs font-mono truncate ${
-                              selectedKey === t.key ? "bg-blue-500/20 text-blue-300" : "text-foreground/80 hover:bg-muted/40"
-                            }`}
-                          >
-                            <div className="flex items-center gap-2 truncate min-w-0">
-                              <span className="w-1.5 h-1.5 rounded-full bg-teal-500 shrink-0" />
-                              <span className="truncate">{t.label}</span>
-                            </div>
-                            {desc && (
-                              <span className="text-[10px] text-muted-foreground/75 font-mono shrink-0 ml-1 truncate max-w-[120px]">
-                                {desc.includes("(") ? desc.slice(desc.indexOf("(") + 1, desc.lastIndexOf(")")) : desc}
-                              </span>
-                            )}
-                          </button>
-                        );
-                      };
+                      const viewButton = (t: ViewTreeNode | ViewDef) => (
+                        <button
+                          key={t.key}
+                          type="button"
+                          role="option"
+                          aria-selected={selectedKey === t.key}
+                          onClick={() => selectAndClose(t.key, cat.key)}
+                          className={`w-full flex items-center gap-2 text-left px-2 py-1 rounded-md text-xs font-mono truncate ${
+                            selectedKey === t.key ? "bg-blue-500/20 text-blue-300" : "text-foreground/80 hover:bg-muted/40"
+                          }`}
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-teal-500 shrink-0" />
+                          <span className="truncate">{t.label}</span>
+                        </button>
+                      );
 
                       const renderPattern = (node: ResolvedSub) => {
                         if (!patternIsVisible(node)) return null;
@@ -1633,7 +1621,6 @@ export default function BacktestPanel() {
                         );
                         const visibleChildren = node.children.filter(patternIsVisible);
                         const value = patternSelectionKey(node.path);
-                        const desc = node.sub.viewDef?.description;
                         return (
                           <div key={value}>
                             <button
@@ -1641,20 +1628,12 @@ export default function BacktestPanel() {
                               role="option"
                               aria-selected={selectedKey === value}
                               onClick={() => selectAndClose(value, cat.key)}
-                              title={desc ? `${node.sub.label} — ${desc}` : node.sub.label}
-                              className={`w-full flex items-center justify-between gap-1.5 text-left px-2 py-1 rounded-md text-xs truncate ${
+                              className={`w-full flex items-center gap-1.5 text-left px-2 py-1 rounded-md text-xs truncate ${
                                 selectedKey === value ? "bg-blue-500/20 text-blue-300" : "text-foreground/90 hover:bg-muted/40"
                               }`}
                             >
-                              <div className="flex items-center gap-1.5 truncate min-w-0">
-                                <span className="text-muted-foreground shrink-0">{"\u21B3"}</span>
-                                <span className="truncate">{node.sub.label}</span>
-                              </div>
-                              {desc && (
-                                <span className="text-[10px] text-muted-foreground/75 font-mono shrink-0 ml-1 truncate max-w-[140px]">
-                                  {desc.includes("(") ? desc.slice(desc.indexOf("(") + 1, desc.lastIndexOf(")")) : desc}
-                                </span>
-                              )}
+                              <span className="text-muted-foreground shrink-0">{"\u21B3"}</span>
+                              <span className="truncate">{node.sub.label}</span>
                             </button>
                             {(visibleChildren.length > 0 || visibleViews.length > 0) && (
                               <div className="ml-3 pl-2 border-l border-border/60 mt-0.5 space-y-0.5">
@@ -1787,17 +1766,9 @@ export default function BacktestPanel() {
       </div>
 
       {isViewOnly && activeTarget && (
-        <div className="text-xs text-muted-foreground mb-3 space-y-1.5">
-          <div>
-            Target: <span className="text-foreground font-medium">{activeTarget.targetLabel}</span>{" "}
-            ({activeTarget.direction === "Up" || (activeTarget.direction as string) === "bullish" ? "price must reach or exceed it" : "price must reach or fall below it"})
-          </div>
-          {activeTarget.description && (
-            <div className="flex items-center gap-1.5 text-[11px] text-emerald-400 font-mono bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1.5 rounded-md">
-              <span className="font-semibold text-emerald-300 shrink-0">Conditions:</span>
-              <span className="truncate">{activeTarget.description}</span>
-            </div>
-          )}
+        <div className="text-xs text-muted-foreground mb-3">
+          Target: <span className="text-foreground font-medium">{activeTarget.targetLabel}</span>{" "}
+          ({activeTarget.direction === "Up" || (activeTarget.direction as string) === "bullish" ? "price must reach or exceed it" : "price must reach or fall below it"})
         </div>
       )}
       {isCategory && activeCategory && (
@@ -1810,26 +1781,18 @@ export default function BacktestPanel() {
         </div>
       )}
       {isPatternOnly && activePatternInfo && (
-        <div className="text-xs text-muted-foreground mb-3 space-y-1.5">
-          <div>
-            Target: <span className="text-foreground font-medium">
-              {activePatternTarget?.targetLabel ?? "U4 (today's R4)"}
-            </span>{" "}
-            (price must {activePatternTarget?.direction === "Down" || (activePatternTarget?.direction as string) === "bearish" ? "reach or fall below it" : "reach or exceed it"}) — every symbol matching{" "}
-            <span className="text-foreground font-medium">{activePatternInfo.category.label}</span>&apos;s
-            base condition AND Pattern{" "}
-            <span className="text-foreground font-medium">
-              {activePatternInfo.path.map((p) => p.label).join(" → ")}
-            </span>{" "}
-            on{" "}
-            {dateMode === "range" ? "each date in the range" : "the entry date"} is graded against it.
-          </div>
-          {activePatternTarget?.description && (
-            <div className="flex items-center gap-1.5 text-[11px] text-emerald-400 font-mono bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1.5 rounded-md">
-              <span className="font-semibold text-emerald-300 shrink-0">Conditions:</span>
-              <span className="truncate">{activePatternTarget.description}</span>
-            </div>
-          )}
+        <div className="text-xs text-muted-foreground mb-3">
+          Target: <span className="text-foreground font-medium">
+            {activePatternTarget?.targetLabel ?? "U4 (today's R4)"}
+          </span>{" "}
+          (price must {activePatternTarget?.direction === "Down" || (activePatternTarget?.direction as string) === "bearish" ? "reach or fall below it" : "reach or exceed it"}) — every symbol matching{" "}
+          <span className="text-foreground font-medium">{activePatternInfo.category.label}</span>&apos;s
+          base condition AND Pattern{" "}
+          <span className="text-foreground font-medium">
+            {activePatternInfo.path.map((p) => p.label).join(" → ")}
+          </span>{" "}
+          on{" "}
+          {dateMode === "range" ? "each date in the range" : "the entry date"} is graded against it.
         </div>
       )}
 
