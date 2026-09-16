@@ -463,7 +463,8 @@ export const Views: Record<string, SubPattern[]> = {
       activeBg:    "rgba(34, 197, 94, 0.14)",
     },
       { id: "A6-EUTL3-BGapB-Ultra-S1", label: "A6-EUTL3-BGapB-Ultra-S1" },
-      { id: "A5-EU1L2-AGapA-R4", label: "A5-EU1L2-AGapA-R4" }
+      { id: "A5-EU1L2-AGapA-R4", label: "A5-EU1L2-AGapA-R4" },
+      { id: "A5-EU1L2-AGapA-R3", label: "A5-EU1L2-AGapA-R3" }
 ],
   "S1BelowPS4": [
     {
