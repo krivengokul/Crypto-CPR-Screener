@@ -36,12 +36,26 @@ import {
   type ViewTreeNode,
   type ViewDef,
 } from "@/lib/views";
-import { passesPattern, matchesPatternFlag, fmt, getChartUrl, hasKnownChartMapping, getWidthCategory, renderGapColumnBadges, renderPivotSizeCell } from "./ScreenerUtils";
+import {
+  passesPattern,
+  matchesPatternFlag,
+  fmt,
+  getChartUrl,
+  hasKnownChartMapping,
+  getWidthCategory,
+  renderGapColumnBadges,
+  renderPivotSizeCell,
+  renderSSLLCategoryBadge,
+  renderHHLLCategoryBadge,
+  renderSSRRCategoryBadge,
+  renderRRHHCategoryBadge,
+} from "./ScreenerUtils";
 import {
   renderTodayPatternBadges,
   renderPrevPatternBadge,
   renderPatternColumnBadges,
   renderPivotPatternBadge,
+  renderLevelColumnRestBadges,
 } from "./ScreenerTableRow";
 import { SRLadderRow, toSRLadderData, type ViewDirection } from "./SRLadderPanel";
 import { getLadderMatchSummary, LEVEL_KEYS, type LevelCheckCondition, type LevelKey } from "./SRLadderDiff";
@@ -1984,6 +1998,11 @@ export default function BacktestPanel() {
                           todayPatternBadge={renderTodayPatternBadges(r.raw)}
                           prevPatternBadge={renderPrevPatternBadge(r.raw)}
                           pivotPatternBadge={renderPivotPatternBadge(r.raw)}
+                          innerLevelBadges={renderLevelColumnRestBadges(r.raw)}
+                          ssllBadge={renderSSLLCategoryBadge(r.raw)}
+                          hhllBadge={renderHHLLCategoryBadge(r.raw)}
+                          rrssBadge={renderSSRRCategoryBadge(r.raw)}
+                          rrhhBadge={renderRRHHCategoryBadge(r.raw)}
                           viewName={activeViewName}
                           viewDirection={activeViewDirection}
                           showLevelCheck
@@ -2323,6 +2342,11 @@ export default function BacktestPanel() {
                         todayPatternBadge={renderTodayPatternBadges(r.raw)}
                         prevPatternBadge={renderPrevPatternBadge(r.raw)}
                         pivotPatternBadge={renderPivotPatternBadge(r.raw)}
+                        innerLevelBadges={renderLevelColumnRestBadges(r.raw)}
+                        ssllBadge={renderSSLLCategoryBadge(r.raw)}
+                        hhllBadge={renderHHLLCategoryBadge(r.raw)}
+                        rrssBadge={renderSSRRCategoryBadge(r.raw)}
+                        rrhhBadge={renderRRHHCategoryBadge(r.raw)}
                         viewName={activeViewName}
                         viewDirection={activeViewDirection}
                         showLevelCheck

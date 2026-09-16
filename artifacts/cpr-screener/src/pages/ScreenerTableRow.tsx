@@ -567,10 +567,11 @@ export function renderLevelBadges(r: CPRResult) {
  * applied to the Screener's own Pattern column: row 1 is the LEVEL
  * column's leading status badge (Narow-B/Inside/Wide-A/etc, via
  * renderLevelStatusBadge) shown inline with today's pattern badge(s); row
- * 2 is the prev-day "p-xxxx" badge, unchanged. Pairs with
+ * 2 is the PivotPattern badge + GapBadge together (renderPivotAndGapBadges),
+ * same as the Screener's own Pattern column. Pairs with
  * renderLevelColumnRestBadges, which renders what's left of the LEVEL
- * column once the leading badge is pulled out here. Returns null when
- * there's nothing to show in either row.
+ * column once the leading badge is pulled out here. Never returns null —
+ * renderPivotAndGapBadges' GapBadge half is always present.
  */
 export function renderPatternColumnBadges(r: CPRResult) {
   const isInsideCPR = passesPattern(r, "inside-cpr");
@@ -586,19 +587,20 @@ export function renderPatternColumnBadges(r: CPRResult) {
     !isOutsideCPR;
   const statusBadge = renderLevelStatusBadge(r, isInsideCPR, isOutsideCPR, showWide, nothingMatched);
   const todayBadges = renderTodayPatternBadges(r);
-  // showMissing={false} — keep the dense table cell blank (not a dashed
-  // placeholder) when there's no PivotPattern match, same as before; the
-  // MISSING_PATTERN_CLASSES placeholder is only for the SRLadder panel's
-  // always-visible badge slots (see SRLadderPanel.tsx).
-  const pivotPatternBadge = renderPivotPatternBadge(r, false);
-  if (!statusBadge && !todayBadges && !pivotPatternBadge) return null;
+  // CHANGED: now uses renderPivotAndGapBadges (PivotPattern + GapBadge
+  // together) instead of the bare renderPivotPatternBadge(r, false), so
+  // BacktestPanel's PATTERN column shows the same GapBadge the Screener's
+  // own Pattern column shows. Unlike the old pivotPatternBadge-only version,
+  // this never returns null — computeGapBadge always yields a label, so the
+  // "—" fallback at BacktestPanel's call site (renderPatternColumnBadges(r) ??
+  // <span>—</span>) is now effectively dead, same as the Screener's own cell.
   return (
     <div className="flex flex-col gap-1 max-w-[228px]">
       <div className="flex flex-nowrap items-center gap-1">
         {statusBadge}
         {todayBadges}
       </div>
-      {pivotPatternBadge}
+      {renderPivotAndGapBadges(r)}
     </div>
   );
 }
