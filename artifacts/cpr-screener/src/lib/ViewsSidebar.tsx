@@ -166,7 +166,8 @@ export const Views: Record<string, SubPattern[]> = {
       activeText:  "#4ade80",              // green-400 text
       activeBg:    "rgba(34, 197, 94, 0.14)",
     },
-  ],
+      { id: "A-A-AA-AA-CU4L3-GapBB:R4", label: "A-A-AA-AA-CU4L3-GapBB:R4" }
+],
   "levelsbelow": [
     // RENAMED from "BC>pPDL-U3:5AM", then from "3P:HA-pABOVE:pR4-3A".
     // "3P:HA-pBELOWR1:R2-3A" — LEVEL BELOW + RRSSGapCategory SSGap +
