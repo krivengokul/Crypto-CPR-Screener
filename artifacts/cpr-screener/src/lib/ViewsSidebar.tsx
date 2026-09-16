@@ -462,7 +462,8 @@ export const Views: Record<string, SubPattern[]> = {
       activeText:  "#4ade80",              // green-400 text
       activeBg:    "rgba(34, 197, 94, 0.14)",
     },
-  ],
+      { id: "A6-EUTL3-BGapB-Ultra-S1", label: "A6-EUTL3-BGapB-Ultra-S1" }
+],
   "S1BelowPS4": [
     {
       id: "ss-EL1U4-U4:10PM",
