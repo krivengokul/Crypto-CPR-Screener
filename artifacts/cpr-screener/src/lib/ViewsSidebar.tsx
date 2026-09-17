@@ -301,23 +301,10 @@ export const Views: Record<string, SubPattern[]> = {
     // is compressed + SSGap + RRHH-BB + SSLL-AA + HHLL-C + HHGap + pHL-A +
     // HLGap-B (see ScreenerUtils.tsx / cpr.ts). Bearish, entry ~8AM,
     // targets today's own S4 (L4) by ~1PM. Rose color family to visually
-    // distinguish as bearish, matching its 9AM:RHLB-RRHH:5AM sibling.
+    // distinguish as bearish.
     {
       id: "8A:HLC-SSHH:S4-1P",
       label: "8A:HLC-SSHH:S4-1P",
-      activeColor: "#fb7185",              // rose-400 border
-      activeText:  "#fda4af",              // rose-300 text
-      activeBg:    "rgba(244, 63, 94, 0.14)", // rose-500 tint
-    },
-    // RENAMED from "T0-L1pU1>-BPL4:5AM": all previous conditions removed.
-    // "9AM:RHLB-RRHH:5AM" — bearish counterpart, condition is
-    // compressed + RRHH-BB + HHLL-B + RRGap + HHGap (see
-    // ScreenerUtils.tsx), targets today's own S2 (L2) by ~5AM. Rose
-    // color family to visually distinguish from the bullish (green)
-    // 6A:HLC-SSLL:R4-6P sibling.
-    {
-      id: "9AM:RHLB-RRHH:5AM",
-      label: "9AM:RHLB-RRHH:5AM",
       activeColor: "#fb7185",              // rose-400 border
       activeText:  "#fda4af",              // rose-300 text
       activeBg:    "rgba(244, 63, 94, 0.14)", // rose-500 tint

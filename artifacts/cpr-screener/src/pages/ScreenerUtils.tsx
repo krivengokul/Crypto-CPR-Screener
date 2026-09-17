@@ -541,7 +541,6 @@ const SUBFILTERS_BY_SECTION: Record<string, string[]> = {
   "compressed": [
     "6A:HLC-SSLL:R4-6P",
     "8A:HLC-SSHH:S4-1P",
-    "9AM:RHLB-RRHH:5AM",
   ],
   "expanded": [
     "6A:SLE-RRHH:R2-6A",

@@ -1359,25 +1359,6 @@ const COMPRESSED_VIEWS: ViewDef[] = [
     getStoploss: (r) => r.todayCPR.r1,
       order: 0
 },
-  {
-    key: "9AM:RHLB-RRHH:5AM",
-    label: "9AM:RHLB-RRHH:5AM",
-    parentKey: "compressed",
-    kind: "view",
-    direction: "Down",
-    condition: (r) =>
-      r.RRSSGapCategory === "RRGap" &&
-      r.RRHHCategory === "RRHH-BB" &&
-      r.HHLLCategory === "HHLL-B" &&
-      r.PDHPDLGapCategory === "HHGap",
-    targetLabel: "L2 (today's S2)",
-    getTarget: (r) => r.todayCPR.s2,
-    entryLabel: "BC (today's BC)",
-    getEntry: (r) => r.todayCPR.bc,
-    stoplossLabel: "R1 (today's R1)",
-    getStoploss: (r) => r.todayCPR.r1,
-      order: 1
-},
 
   // --- "RRHH-BB:SSLL-AA:SSLLGap" Pattern (arrow), itself target-graded,
   // nesting the "6A:HLC-SSLL:R4-6P" View ---

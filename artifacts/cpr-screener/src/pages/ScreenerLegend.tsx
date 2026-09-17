@@ -328,11 +328,6 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             <div className="text-xs font-semibold text-rose-400 mb-1">HHLL-C&nbsp;&nbsp;SSLL-AA&nbsp;&nbsp;RRHH-BB&nbsp;&nbsp;SSGap&nbsp;&nbsp;HHGap&nbsp;&nbsp;pHL-A&nbsp;&nbsp;HLGap-B</div>
             <div className="text-xs text-muted-foreground">Compressed, today&apos;s PDH/PDL range narrowed on one side and held on the other (HHLL-C), today&apos;s S1/PDL band fully above prev&apos;s (SSLL-AA), today&apos;s R1/PDH band fully below prev&apos;s (RRHH-BB), today&apos;s S1 gap larger than the R1 gap (SSGap), today&apos;s PDH gap larger than the PDL gap (HHGap), prev day&apos;s PDH/U1 relation is HL-A (pHL-A), and today&apos;s PDH/U1 relation is HL-B with today&apos;s HL gap the wider of the two (HLGap-B)</div>
           </>
-        ) : activeView === "9AM:RHLB-RRHH:5AM" ? (
-          <>
-            <div className="text-xs font-semibold text-rose-400 mb-1">RRGap&nbsp;&nbsp;RRHH-BB&nbsp;&nbsp;HHLL-B&nbsp;&nbsp;HHGap</div>
-            <div className="text-xs text-muted-foreground">Compressed, R1 gap larger than S1 gap (RRGap), today&apos;s R1 and PDH both fully below prev&apos;s R1/PDH (RRHH-BB), today&apos;s PDH/PDL both below prev&apos;s (HHLL-B), and today&apos;s PDH gap larger than the PDL gap (HHGap)</div>
-          </>
         ) : activeView === "falling" ? (
           <>
             <div className="text-xs font-semibold mb-1 text-destructive">CPR Falling</div>
@@ -534,11 +529,6 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
           <>
             <div className="text-xs font-semibold text-rose-400 mb-1">Target: L4&nbsp;&nbsp;&nbsp;Entry: 8AM&nbsp;&nbsp;&nbsp;Time: 1PM</div>
             <div className="text-xs text-muted-foreground">8AM setup with Down continuation expected toward today&apos;s S4 (L4) by ~1PM</div>
-          </>
-        ) : activeView === "9AM:RHLB-RRHH:5AM" ? (
-          <>
-            <div className="text-xs font-semibold text-rose-400 mb-1">Target: L2&nbsp;&nbsp;Time: 5AM</div>
-            <div className="text-xs text-muted-foreground">Expected move down to today&apos;s S2 (L2) by ~5AM</div>
           </>
         ) : null}
       </div>
