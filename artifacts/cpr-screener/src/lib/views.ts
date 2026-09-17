@@ -2984,10 +2984,22 @@ const MISC_VIEWS: ViewDef[] = [
   },
   {
     key: "insidecpr",
-    label: "Inside",
+    label: "INCPR",
     parentKey: "touch",
     kind: "pattern",
     condition: (r) => !!(r.InsideCPR || (r as any).insideCPR),
+  },
+  {
+    key: "inside-cpr",
+    label: "INCPR",
+    kind: "pattern",
+    condition: (r) => !!(r.InsideCPR || (r as any).insideCPR),
+  },
+  {
+    key: "outside-cpr",
+    label: "OutCPR",
+    kind: "pattern",
+    condition: (r) => !!r.outCPR,
   },
   {
     key: "outcpr",

@@ -817,7 +817,7 @@ export default function Screener({
     // the filter buttons actually work independent of the primary badge.
     .filter((r) => {
       if (!PatternFilter) return true;
-      if (PatternFilter === "Inside") return !!(r.InsideCPR || (r as any).insideCPR);
+      if (PatternFilter === "INCPR" || PatternFilter === "Inside") return !!(r.InsideCPR || (r as any).insideCPR);
       if (PatternFilter === "OutCPR") return !!r.outCPR;
       if (PatternFilter === "CL4U3") return r.CL4U3;
       if (PatternFilter === "L4U4") return r.L4U4;
@@ -1529,7 +1529,7 @@ export default function Screener({
                   { label: "cO-Lower", active: "border-teal-400 text-teal-400" },
                   { label: "Higher", active: "border-green-400 text-green-400" },
                   { label: "Lower", active: "border-destructive text-destructive" },
-                  { label: "Inside", active: "border-orange-400 text-orange-400" },
+                  { label: "INCPR", active: "border-orange-400 text-orange-400" },
                   { label: "OutCPR", active: "border-purple-400 text-purple-400" },
                   { label: "CL4U3", active: getBadgeClasses("CL4U3") },
                   { label: "L4U4", active: getBadgeClasses("L4U4") },

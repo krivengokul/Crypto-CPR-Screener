@@ -465,7 +465,7 @@ export const Views: Record<string, SubPattern[]> = {
     { id: "eXLoL3U3-L3", label: "eXLoL3U3-L3" },
   ],
   "touch": [
-    { id: "insidecpr", label: "Inside" },
+    { id: "insidecpr", label: "INCPR" },
     { id: "outcpr", label: "OutCPR" },
     { id: "overlapHigher", label: "Overlap Higher" },
     { id: "overlapLower", label: "Overlap Lower" },

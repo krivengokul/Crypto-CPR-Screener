@@ -539,8 +539,8 @@ export function renderPivotAndGapBadges(r: CPRResult) {
  * makes sense inside the Screener's own pattern-filter context.
  */
 export function renderLevelBadges(r: CPRResult) {
-  const isInsideCPR = passesPattern(r, "inside-cpr");
-  const isOutsideCPR = passesPattern(r, "outside-cpr");
+  const isInsideCPR = !!(r.InsideCPR || (r as any).insideCPR);
+  const isOutsideCPR = !!r.outCPR;
   const showWide = r.strWideCPR && !isOutsideCPR;
   const nothingMatched =
     !r.cprRising &&
@@ -576,8 +576,8 @@ export function renderLevelBadges(r: CPRResult) {
  * renderPivotAndGapBadges' GapBadge half is always present.
  */
 export function renderPatternColumnBadges(r: CPRResult) {
-  const isInsideCPR = passesPattern(r, "inside-cpr");
-  const isOutsideCPR = passesPattern(r, "outside-cpr");
+  const isInsideCPR = !!(r.InsideCPR || (r as any).insideCPR);
+  const isOutsideCPR = !!r.outCPR;
   const showWide = r.strWideCPR && !isOutsideCPR;
   const nothingMatched =
     !r.cprRising &&
@@ -616,8 +616,8 @@ export function renderPatternColumnBadges(r: CPRResult) {
  * 2: SSLL + RRHH, unchanged.
  */
 export function renderLevelColumnRestBadges(r: CPRResult) {
-  const isInsideCPR = passesPattern(r, "inside-cpr");
-  const isOutsideCPR = passesPattern(r, "outside-cpr");
+  const isInsideCPR = !!(r.InsideCPR || (r as any).insideCPR);
+  const isOutsideCPR = !!r.outCPR;
   const showWide = r.strWideCPR && !isOutsideCPR;
   const ssrrHhllRow = renderSSRRHHLLBadges(r);
   return (
@@ -783,8 +783,8 @@ export default function ScreenerTableRow({
   const dir = (activePattern ? getViewDirection(r, activePattern) : null) ?? getAnyViewDirection(r);
   const sym = splitSymbol(r.symbol, r.source);
 
-  const isInsideCPR = passesPattern(r, "inside-cpr");
-  const isOutsideCPR = passesPattern(r, "outside-cpr");
+  const isInsideCPR = !!(r.InsideCPR || (r as any).insideCPR);
+  const isOutsideCPR = !!r.outCPR;
   // Outside-CPR rows don't need the "Wide" badge — Outside already implies
   // the CPR bands separated from prev day's, so width-category noise (Wide)
   // is redundant there; only show it for non-Outside rows.
