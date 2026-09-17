@@ -583,17 +583,24 @@ export default function ViewsSidebar({
 }: ViewsSidebarProps) {
   // Which parent pattern is currently open in the tree
   const [expandedId, setExpandedId] = useState<string | null>(() => {
+    if (!activeView) return null;
     const parent = getParentId(activeView);
     return parent ?? activeView;
   });
 
   // Keep tree in sync when activeView is changed from outside
   useEffect(() => {
+    if (!activeView) {
+      setExpandedId(null);
+      return;
+    }
     const parent = getParentId(activeView);
     if (parent) {
       setExpandedId(parent);
     } else if (pivotcategories.some((p) => p.id === activeView)) {
       setExpandedId(activeView);
+    } else {
+      setExpandedId(null);
     }
   }, [activeView]);
 

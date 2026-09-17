@@ -376,7 +376,13 @@ export default function Screener({
       isFirstPatternRef.current = false;
       return;
     }
-    setShowAll(false);
+    // Only turn off showAll when a real category/view was selected in the left nav.
+    // When activeView is cleared back to "" (e.g. via Show All), ensure showAll is true.
+    if (activeView) {
+      setShowAll(false);
+    } else {
+      setShowAll(true);
+    }
   }, [activeView]);
 
   // NEW: resolve activeView to its parent left-nav category ("section").
@@ -1230,7 +1236,7 @@ export default function Screener({
               </span>
               <button
                 onClick={() => {
-                  setShowAll((v) => !v);
+                  setShowAll(true);
                   // NEW: also clear the generic Views (sub-pattern) selection —
                   // covers inside-cpr and every other GENERIC_VIEW_CATEGORIES
                   // category, so "Show All" fully resets state everywhere.
