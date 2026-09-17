@@ -464,6 +464,12 @@ export const Views: Record<string, SubPattern[]> = {
   "equal-cpr": [
     { id: "eXLoL3U3-L3", label: "eXLoL3U3-L3" },
   ],
+  "touch": [
+    { id: "insidecpr", label: "Inside CPR" },
+    { id: "outcpr", label: "Out CPR" },
+    { id: "overlapHigher", label: "Overlap Higher", activeColor: "#22c55e", activeText: "#4ade80", activeBg: "rgba(34, 197, 94, 0.14)" },
+    { id: "overlapLower", label: "Overlap Lower", activeColor: "#fb7185", activeText: "#fda4af", activeBg: "rgba(244, 63, 94, 0.14)" },
+  ],
 };
 
 export const pivotcategories: Category[] = [
@@ -474,6 +480,7 @@ export const pivotcategories: Category[] = [
   { id: "expanded",          label: "EXPANDED",     subtitle: "RRSS-E only (today's R1 up, S1 down vs prev)",   icon: TrendingUp },
   { id: "S1BelowPS4",          label: "BELOW LEVEL4",  subtitle: "Today S1 below Prev S4",   icon: TrendingDown },
   { id: "equal-cpr",          label: "Equal CPR",     subtitle: "Prev & Today CPR Equal",   icon: Equal },
+  { id: "touch",              label: "TOUCH",         subtitle: "Inside, Out, Overlap Higher & Lower CPR", icon: Activity },
   // NEW: home for every auto-generated Copy View / Create View — see
   // Views.copyViews above.
   { id: "copyViews", label: "CREATED VIEWS", subtitle: "Auto-generated from Backtest's Copy View / Create View", icon: BookmarkCheck },

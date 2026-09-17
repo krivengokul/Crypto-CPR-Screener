@@ -111,6 +111,14 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             </div>
             <div className="text-xs text-muted-foreground">Previous &amp; today&apos;s CPR are effectively equal</div>
           </>
+        ) : legendPattern === "touch" ? (
+          <>
+            <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+              <span className="text-xs font-semibold text-primary">TOUCH</span>
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-teal-500 text-white">Touch</span>
+            </div>
+            <div className="text-xs text-muted-foreground">Today&apos;s CPR touches or overlaps yesterday&apos;s CPR range (Inside CPR, Out CPR, Overlap Higher &amp; Overlap Lower)</div>
+          </>
         ) : activeView === "R1AbovePR4" ? (
           <>
             <div className="flex items-center gap-1.5 mb-1 flex-wrap">

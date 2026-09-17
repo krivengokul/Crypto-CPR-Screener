@@ -141,6 +141,7 @@ const GENERIC_VIEW_CATEGORIES = new Set([
   // count (and green dot) in the live screener, without requiring any
   // per-view wiring. Future created views will Just Work.
   "copyViews",
+  "touch",
 ]);
 
 /** View ids used by hand-written Views filter buttons that aren't listed in

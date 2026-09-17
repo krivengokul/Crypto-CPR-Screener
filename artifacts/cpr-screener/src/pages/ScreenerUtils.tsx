@@ -560,6 +560,12 @@ const SUBFILTERS_BY_SECTION: Record<string, string[]> = {
   "equal-cpr": [
     "eXLoL3U3-L3",
   ],
+  "touch": [
+    "insidecpr",
+    "outcpr",
+    "overlapHigher",
+    "overlapLower",
+  ],
 };
 
 /**
