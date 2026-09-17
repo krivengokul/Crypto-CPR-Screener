@@ -169,6 +169,7 @@ export default function Screener({
   onResults,
   activeTab: activeTabProp,
   onActiveTabChange,
+  onActiveViewChange,
 }: {
   activeView?: string;
   scanKey?: number;
@@ -208,6 +209,11 @@ export default function Screener({
   // local state when unset, so Screener still works standalone.
   activeTab?: ActiveTab;
   onActiveTabChange?: (tab: ActiveTab) => void;
+  // NEW: lets the Show All button clear whatever category/View is
+  // currently highlighted in the left nav (App.tsx owns that selection
+  // as activeView/setActiveView — Screener only ever receives it as a
+  // prop, so it needs this callback to reset it back up to "").
+  onActiveViewChange?: (id: string) => void;
 }) {
   const cachedBinance = useMemo(() => loadCachedResults<CPRResult>(STORAGE_KEY_BINANCE), []);
   const cachedDelta = useMemo(() => loadCachedResults<CPRResult>(STORAGE_KEY_DELTA), []);
@@ -1235,6 +1241,12 @@ export default function Screener({
                   setShowOBNLoU4L4(false);
                   setShowOBWLoU4L4(false);
                   setShowOBLoSSLLRRHHDown(false);
+                  // NEW: clear whatever category/View is highlighted in the
+                  // left nav too — without this, App.tsx's activeView state
+                  // (and therefore ViewsSidebar's highlighting) was untouched
+                  // by Show All, so the previously-selected item stayed
+                  // highlighted even though the table was now unfiltered.
+                  onActiveViewChange?.("");
                 }}
                 className={`flex items-center gap-0.5 text-xs font-bold px-2 py-1 rounded border border-border transition-colors shrink-0 ${showAll ? "bg-foreground/15 text-foreground" : "text-muted-foreground hover:text-foreground"}`}
               >

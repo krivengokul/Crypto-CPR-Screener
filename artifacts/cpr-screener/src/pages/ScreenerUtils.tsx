@@ -564,6 +564,18 @@ const SUBFILTERS_BY_SECTION: Record<string, string[]> = {
 };
 
 /**
+ * normalizeViewDirection — shared Up/Down normalization for a ViewDef's
+ * raw `direction` string (which may be "Up"/"up"/"bullish"/"Down"/"down"/
+ * "bearish"/etc across views.ts). Returns null when the view has no
+ * direction set at all, so callers can distinguish "no direction on this
+ * View" from an actual Down.
+ */
+function normalizeViewDirection(direction: string | undefined): ViewDirection | null {
+  if (!direction) return null;
+  return direction === "Up" || direction === "up" || direction === "bullish" ? "Up" : "Down";
+}
+
+/**
  * Returns "Up"/"Down" if row r matches any sub-filter condition for the
  * given section, or null if it matches none (or the section has no
  * sub-filters defined, e.g. "falling"/"inside-value"). Direction is retrieved
@@ -578,10 +590,29 @@ export function getViewDirection(r: CPRResult, activeView: string): ViewDirectio
   if (!keys || keys.length === 0) return null;
   for (const key of keys) {
     if (passesPattern(r, key)) {
-      const viewDef = getView(key);
-      if (viewDef?.direction) {
-        const d = viewDef.direction as string;
-        return d === "Up" || d === "up" || d === "bullish" ? "Up" : "Down";
+      const dir = normalizeViewDirection(getView(key)?.direction as string | undefined);
+      if (dir) return dir;
+    }
+  }
+  return null;
+}
+
+/**
+ * getAnyViewDirection — same idea as getViewDirection, but scans EVERY
+ * View across every category (not just one section), returning the
+ * direction of the first one row `r` matches (Views' own declaration
+ * order). Used for the Symbol column's up/down dot when no left-nav
+ * section is selected (Show All / activeView === "") — getViewDirection
+ * returns null there since there's no section to scope to, which used to
+ * mean the dot never showed at all in Show All. Also null when the row
+ * matches no View, or matches one with no direction set.
+ */
+export function getAnyViewDirection(r: CPRResult): ViewDirection | null {
+  for (const subs of Object.values(Views)) {
+    for (const sub of subs) {
+      if (passesPattern(r, sub.id)) {
+        const dir = normalizeViewDirection(getView(sub.id)?.direction as string | undefined);
+        if (dir) return dir;
       }
     }
   }
@@ -600,6 +631,14 @@ export function getRowDirection(r: CPRResult, activeView: string): "Up" | "Down"
   return r.change24h >= 0 ? "Up" : "Down";
 }
 
+/** One row's worth of "Active Views" info for the VIEW column — see getActiveViewLabels. */
+export interface ActiveViewInfo {
+  id: string;
+  label: string;
+  /** Up -> green text, Down -> red text, null -> the View has no direction set (neutral text). */
+  direction: ViewDirection | null;
+}
+
 /**
  * getActiveViewLabels — every View (left-nav leaf, e.g. "6A:SLE-RRHH:R2-6A")
  * that row `r` currently satisfies, across ALL categories in the Views map
@@ -607,25 +646,31 @@ export function getRowDirection(r: CPRResult, activeView: string): "Up" | "Down"
  * already shown in the Journal's PATTERN column (LoggedSignal.patternName).
  * Used to populate the Live Screener's own VIEW column, independent of
  * whatever section/activePattern the user has selected in the left nav.
+ * Each entry also carries its own Up/Down direction (from views.ts), so the
+ * VIEW column can color each View name independently of the row's dot.
  *
  * Dedupes by id (a View could in principle be listed under more than one
- * category) and returns labels in Views' own declaration order. Returns []
+ * category) and returns entries in Views' own declaration order. Returns []
  * when the row matches no View — callers should render that as a blank
  * cell rather than a placeholder.
  */
-export function getActiveViewLabels(r: CPRResult): string[] {
+export function getActiveViewLabels(r: CPRResult): ActiveViewInfo[] {
   const seen = new Set<string>();
-  const labels: string[] = [];
+  const infos: ActiveViewInfo[] = [];
   for (const subs of Object.values(Views)) {
     for (const sub of subs) {
       if (seen.has(sub.id)) continue;
       seen.add(sub.id);
       if (passesPattern(r, sub.id)) {
-        labels.push(sub.label);
+        infos.push({
+          id: sub.id,
+          label: sub.label,
+          direction: normalizeViewDirection(getView(sub.id)?.direction as string | undefined),
+        });
       }
     }
   }
-  return labels;
+  return infos;
 }
 
 /**

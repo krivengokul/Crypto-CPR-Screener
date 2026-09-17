@@ -18,6 +18,7 @@ import {
   computePivotPattern,
   computeGapBadge,
   getViewDirection,
+  getAnyViewDirection,
   getActiveViewLabels,
   cprDistancePct,
   levelsInDistanceRange,
@@ -632,23 +633,30 @@ export function renderLevelColumnRestBadges(r: CPRResult) {
 /**
  * "VIEW" column body — every View (left-nav leaf) this row currently
  * satisfies, across all categories (see getActiveViewLabels), rendered as
- * plain stacked text lines matching the styling of the Journal's own
- * PATTERN column (violet, medium-weight, small font) — same "Active Views"
- * data, just shown live instead of frozen at save time. Renders nothing
- * (blank cell) when the row matches no View.
+ * plain stacked text lines. Font size matches the "LevelCheck UnDefined"
+ * text (text-xs) elsewhere in this same table. Each View name is colored by
+ * its own direction — green when Up, red when Down — falling back to the
+ * neutral violet the Journal's PATTERN column uses when a View has no
+ * direction set. Renders nothing (blank cell) when the row matches no View.
  */
 export function renderActiveViewLabels(r: CPRResult) {
-  const labels = getActiveViewLabels(r);
-  if (labels.length === 0) return null;
+  const views = getActiveViewLabels(r);
+  if (views.length === 0) return null;
   return (
     <div className="flex flex-col gap-0.5 max-w-[200px]">
-      {labels.map((label) => (
+      {views.map((v) => (
         <span
-          key={label}
-          className="text-[10px] font-medium text-violet-300 font-mono truncate"
-          title={label}
+          key={v.id}
+          className={`text-xs font-medium font-mono truncate ${
+            v.direction === "Up"
+              ? "text-green-400"
+              : v.direction === "Down"
+              ? "text-red-400"
+              : "text-violet-300"
+          }`}
+          title={v.label}
         >
-          {label}
+          {v.label}
         </span>
       ))}
     </div>
@@ -767,7 +775,12 @@ export default function ScreenerTableRow({
   // Hoisted so the same up/down call drives both the per-row dot in the
   // Symbol column AND the new "Levels VIEW" name badge below — one row
   // shouldn't ever show a green dot next to a red badge.
-  const dir = getViewDirection(r, activePattern);
+  // When no left-nav section is selected (Show All, activePattern === ""),
+  // getViewDirection has no section to scope to and always returns null —
+  // which used to mean the dot never showed in Show All at all. Fall back
+  // to getAnyViewDirection there, which checks every View across every
+  // category instead of just one section.
+  const dir = activePattern ? getViewDirection(r, activePattern) : getAnyViewDirection(r);
   const sym = splitSymbol(r.symbol, r.source);
 
   const isInsideCPR = passesPattern(r, "inside-cpr");

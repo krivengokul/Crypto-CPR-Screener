@@ -205,6 +205,7 @@ function App() {
                   onResults={setSignalResults}
                   activeTab={dataSource}
                   onActiveTabChange={setDataSource}
+                  onActiveViewChange={setActiveView}
                 />
               ) : (
                 <ComingSoon label={activeLabel} />
