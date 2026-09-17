@@ -47,13 +47,12 @@ export interface LevelCheckCondition {
  * replaces: A-A-AA-AA-U3L3-SSLLGap:R4's levelCheckDefs above).
  *
  * The rule, per rung:
- *   1. Find the TIGHTEST band from the OTHER day's 13 rungs that
- *      STRICTLY brackets this rung's value (upper > value > lower).
- *      "Strictly" is the important part — any other-day rung whose
- *      value happens to exactly equal this one is skipped over rather
- *      than used as a bound, which is what fixes the Pivot/PL
- *      boundary-exact misses we hit by hand (today's Pivot landed
- *      exactly on prev R1; today's PL landed exactly on prev Pivot).
+ *   1. Find the TIGHTEST adjacent band from the OTHER day's 13 rungs
+ *      containing this rung's value. Equality is treated as a valid
+ *      boundary, using the same tolerance as CPR classification. This is
+ *      important when (for example) today's S2 equals previous S4:
+ *      the generated band must be [today S1, today S2], not [today S1,
+ *      today S3] with today's S2 incorrectly left inside the band.
  *   2. If no such band exists because the value breaks out beyond the
  *      OTHER day's entire range (e.g. today's own R4/R3 sitting above
  *      every prev level in a strong bullish shift), flip it: check
@@ -79,31 +78,61 @@ interface RungEntry {
   value: number;
 }
 
-/** Closest value strictly greater than `target`, or null if none. */
+const LEVEL_EQUALITY_TOLERANCE = 0.00001;
+
+function sameLevel(a: number, b: number): boolean {
+  return Math.abs(a - b) <= Math.max(Math.abs(a), Math.abs(b)) * LEVEL_EQUALITY_TOLERANCE;
+}
+
+/** Closest value meaningfully greater than `target`, or null if none. */
 function closestGreater(entries: RungEntry[], target: number): RungEntry | null {
   let best: RungEntry | null = null;
   for (const e of entries) {
-    if (Number.isFinite(e.value) && e.value > target && (!best || e.value < best.value)) best = e;
+    if (
+      Number.isFinite(e.value) &&
+      e.value > target &&
+      !sameLevel(e.value, target) &&
+      (!best || e.value < best.value)
+    ) best = e;
   }
   return best;
 }
 
-/** Closest value strictly less than `target`, or null if none. */
+/** Closest value meaningfully less than `target`, or null if none. */
 function closestLesser(entries: RungEntry[], target: number): RungEntry | null {
   let best: RungEntry | null = null;
   for (const e of entries) {
-    if (Number.isFinite(e.value) && e.value < target && (!best || e.value > best.value)) best = e;
+    if (
+      Number.isFinite(e.value) &&
+      e.value < target &&
+      !sameLevel(e.value, target) &&
+      (!best || e.value > best.value)
+    ) best = e;
   }
   return best;
 }
 
 /**
- * Tightest strict band from `entries` bracketing `value`, as
- * [higherKey, lowerKey] — or null if `value` breaks out beyond the
- * entire range covered by `entries` (nothing in `entries` is greater,
- * or nothing is lesser).
+ * Tightest adjacent band from `entries` containing `value`, as
+ * [higherKey, lowerKey].
+ *
+ * If value equals a rung within the level tolerance, that rung is used as
+ * the nearest boundary and the next rung above it is preferred. This keeps
+ * an equality such as today's S2 == previous S4 from skipping S2 and
+ * generating the non-adjacent [S1, S3] band.
  */
-function tightestStrictBand(entries: RungEntry[], value: number): [LevelCheckKey, LevelCheckKey] | null {
+function tightestAdjacentBand(entries: RungEntry[], value: number): [LevelCheckKey, LevelCheckKey] | null {
+  const equal = entries.find((e) => Number.isFinite(e.value) && sameLevel(e.value, value));
+  if (equal) {
+    const upper = closestGreater(entries, equal.value);
+    if (upper) return [upper.key, equal.key];
+
+    const lower = closestLesser(entries, equal.value);
+    if (lower) return [equal.key, lower.key];
+
+    return null;
+  }
+
   const upper = closestGreater(entries, value);
   const lower = closestLesser(entries, value);
   if (!upper || !lower) return null;
@@ -203,7 +232,7 @@ export function deriveLevelCheckDefs(r: CPRResult): LevelCheckCondition[] {
     }
 
     // 1. Natural check: does today's rung sit inside a band from prev's ladder?
-    const forwardBand = tightestStrictBand(prevEntries, todayVal);
+    const forwardBand = tightestAdjacentBand(prevEntries, todayVal);
     if (forwardBand) {
       defs.push({ key, subject: "today", bandKeys: forwardBand });
       continue;
@@ -211,7 +240,7 @@ export function deriveLevelCheckDefs(r: CPRResult): LevelCheckCondition[] {
 
     // 2. Breakout: today's value is outside prev's entire range. Flip the
     // check — did YESTERDAY's rung get absorbed into TODAY's new structure?
-    const reversedBand = tightestStrictBand(todayEntries, prevVal);
+    const reversedBand = tightestAdjacentBand(todayEntries, prevVal);
     if (reversedBand) {
       defs.push({ key, subject: "previous", bandKeys: reversedBand });
       continue;

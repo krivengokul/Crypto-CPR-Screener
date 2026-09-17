@@ -2026,17 +2026,6 @@ export default function BacktestPanel() {
                                   setSelectedKey(newKey);
                                 }}
                               />
-                            ) : isCategory && activeCategory ? (
-                              <CreateViewControl
-                                patternKey={activeCategory.key}
-                                patternLabel={activeCategory.label}
-                                prevCPR={r.prevCPR}
-                                todayCPR={r.todayCPR}
-                                onCreated={(newKey) => {
-                                  setTreeRevision((r) => r + 1);
-                                  setSelectedKey(newKey);
-                                }}
-                              />
                             ) : undefined
                           }
                         />
@@ -2372,17 +2361,6 @@ export default function BacktestPanel() {
                             <CreateViewControl
                               patternKey={activePatternInfo.sub.key}
                               patternLabel={activePatternInfo.sub.label}
-                              prevCPR={r.prevCPR}
-                              todayCPR={r.todayCPR}
-                              onCreated={(newKey) => {
-                                setTreeRevision((r) => r + 1);
-                                setSelectedKey(newKey);
-                              }}
-                            />
-                          ) : isCategory && activeCategory ? (
-                            <CreateViewControl
-                              patternKey={activeCategory.key}
-                              patternLabel={activeCategory.label}
                               prevCPR={r.prevCPR}
                               todayCPR={r.todayCPR}
                               onCreated={(newKey) => {
