@@ -16,6 +16,7 @@ import {
 } from "@/lib/cpr";
 import { levelCheckFullyMatches } from "@/lib/backtest";
 import { getView, passesView } from "@/lib/views";
+import { Views } from "@/lib/ViewsSidebar";
 
 export type SortKey = "symbol" | "compressionRatio" | "currentPrice" | "change24h" | "quoteVolume" | "priceVsCpr" | "cprDistance" | "pdhPdlPct";
 export type SortDir = "asc" | "desc";
@@ -569,8 +570,12 @@ const SUBFILTERS_BY_SECTION: Record<string, string[]> = {
  * directly from views.ts (ViewDef.direction).
  */
 export function getViewDirection(r: CPRResult, activeView: string): ViewDirection | null {
-  const keys = SUBFILTERS_BY_SECTION[activeView];
-  if (!keys) return null;
+  // Prefer ViewsSidebar's Views map (single source of truth) over
+  // hardcoded SUBFILTERS_BY_SECTION — any new View added to
+  // ViewsSidebar automatically gets green-dot support.
+  const subs = Views[activeView];
+  const keys = subs ? subs.map((s) => s.id) : SUBFILTERS_BY_SECTION[activeView];
+  if (!keys || keys.length === 0) return null;
   for (const key of keys) {
     if (passesPattern(r, key)) {
       const viewDef = getView(key);
