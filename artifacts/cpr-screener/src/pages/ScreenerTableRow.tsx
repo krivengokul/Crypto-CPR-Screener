@@ -780,7 +780,7 @@ export default function ScreenerTableRow({
   // which used to mean the dot never showed in Show All at all. Fall back
   // to getAnyViewDirection there, which checks every View across every
   // category instead of just one section.
-  const dir = activePattern ? getViewDirection(r, activePattern) : getAnyViewDirection(r);
+  const dir = (activePattern ? getViewDirection(r, activePattern) : null) ?? getAnyViewDirection(r);
   const sym = splitSymbol(r.symbol, r.source);
 
   const isInsideCPR = passesPattern(r, "inside-cpr");

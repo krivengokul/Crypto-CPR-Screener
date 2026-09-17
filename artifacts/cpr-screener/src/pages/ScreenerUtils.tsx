@@ -626,7 +626,7 @@ export function getAnyViewDirection(r: CPRResult): ViewDirection | null {
  * (change24h >= 0 → Up, else Down) when none is matched.
  */
 export function getRowDirection(r: CPRResult, activeView: string): "Up" | "Down" {
-  const subDir = getViewDirection(r, activeView);
+  const subDir = (activeView ? getViewDirection(r, activeView) : null) ?? getAnyViewDirection(r);
   if (subDir) return subDir;
   return r.change24h >= 0 ? "Up" : "Down";
 }
