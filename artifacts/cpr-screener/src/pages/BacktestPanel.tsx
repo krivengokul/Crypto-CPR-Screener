@@ -1611,7 +1611,17 @@ export default function BacktestPanel() {
                         node.Views.some((t) => hit(t.label)) ||
                         node.children.some(patternIsVisible);
 
-                      const viewButton = (t: ViewTreeNode | ViewDef) => (
+                      const viewButton = (t: ViewTreeNode | ViewDef) => {
+                        // Derive direction from ViewDef (direct) or ViewTreeNode.viewDef
+                        const dir = "direction" in t
+                          ? (t as ViewDef).direction
+                          : (t as ViewTreeNode).viewDef?.direction;
+                        const dotColor = dir === "Up"
+                          ? "bg-green-500"
+                          : dir === "Down"
+                          ? "bg-rose-500"
+                          : "bg-teal-500";
+                        return (
                         <button
                           key={t.key}
                           type="button"
@@ -1622,10 +1632,11 @@ export default function BacktestPanel() {
                             selectedKey === t.key ? "bg-blue-500/20 text-blue-300" : "text-foreground/80 hover:bg-muted/40"
                           }`}
                         >
-                          <span className="w-1.5 h-1.5 rounded-full bg-teal-500 shrink-0" />
+                          <span className={`w-1.5 h-1.5 rounded-full ${dotColor} shrink-0`} />
                           <span className="truncate">{t.label}</span>
                         </button>
-                      );
+                        );
+                      };
 
                       const renderPattern = (node: ResolvedSub) => {
                         if (!patternIsVisible(node)) return null;
