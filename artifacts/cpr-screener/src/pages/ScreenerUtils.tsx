@@ -601,6 +601,34 @@ export function getRowDirection(r: CPRResult, activeView: string): "Up" | "Down"
 }
 
 /**
+ * getActiveViewLabels — every View (left-nav leaf, e.g. "6A:SLE-RRHH:R2-6A")
+ * that row `r` currently satisfies, across ALL categories in the Views map
+ * (not just the currently active section) — same "Active Views" concept
+ * already shown in the Journal's PATTERN column (LoggedSignal.patternName).
+ * Used to populate the Live Screener's own VIEW column, independent of
+ * whatever section/activePattern the user has selected in the left nav.
+ *
+ * Dedupes by id (a View could in principle be listed under more than one
+ * category) and returns labels in Views' own declaration order. Returns []
+ * when the row matches no View — callers should render that as a blank
+ * cell rather than a placeholder.
+ */
+export function getActiveViewLabels(r: CPRResult): string[] {
+  const seen = new Set<string>();
+  const labels: string[] = [];
+  for (const subs of Object.values(Views)) {
+    for (const sub of subs) {
+      if (seen.has(sub.id)) continue;
+      seen.add(sub.id);
+      if (passesPattern(r, sub.id)) {
+        labels.push(sub.label);
+      }
+    }
+  }
+  return labels;
+}
+
+/**
  * Pattern — classifies today's CPR range relative to yesterday's using
  * the directional sub-flags computed in cpr.ts:
  *   eX-Higher / eX-Lower:  Expanded (today R4 > prev R4 AND today S4 < prev S4),

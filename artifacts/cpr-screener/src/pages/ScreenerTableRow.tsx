@@ -18,6 +18,7 @@ import {
   computePivotPattern,
   computeGapBadge,
   getViewDirection,
+  getActiveViewLabels,
   cprDistancePct,
   levelsInDistanceRange,
   renderSSRRHHLLBadges,
@@ -628,6 +629,32 @@ export function renderLevelColumnRestBadges(r: CPRResult) {
   );
 }
 
+/**
+ * "VIEW" column body — every View (left-nav leaf) this row currently
+ * satisfies, across all categories (see getActiveViewLabels), rendered as
+ * plain stacked text lines matching the styling of the Journal's own
+ * PATTERN column (violet, medium-weight, small font) — same "Active Views"
+ * data, just shown live instead of frozen at save time. Renders nothing
+ * (blank cell) when the row matches no View.
+ */
+export function renderActiveViewLabels(r: CPRResult) {
+  const labels = getActiveViewLabels(r);
+  if (labels.length === 0) return null;
+  return (
+    <div className="flex flex-col gap-0.5 max-w-[200px]">
+      {labels.map((label) => (
+        <span
+          key={label}
+          className="text-[10px] font-medium text-violet-300 font-mono truncate"
+          title={label}
+        >
+          {label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export interface ScreenerTableHeaderProps {
   canShowCombined: boolean;
   activeTab: ActiveTab;
@@ -664,6 +691,12 @@ export function ScreenerTableHeader({
         </th>
         <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           Pattern
+        </th>
+        <th
+          className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider"
+          title="Every View (left-nav leaf) this row currently satisfies, across all categories"
+        >
+          View
         </th>
         <th
           className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
@@ -864,6 +897,9 @@ export default function ScreenerTableRow({
             </div>
             {renderPivotAndGapBadges(r)}
           </div>
+        </td>
+        <td className="px-3 py-3">
+          {renderActiveViewLabels(r)}
         </td>
         <td className="px-3 py-3 font-mono whitespace-nowrap">
           {renderPivotSizeCell(r.prevCPR, r.todayCPR, r.compressionRatio)}
