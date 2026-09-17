@@ -2384,7 +2384,7 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
         key: "A5-EU1L2-AGapA-R4",
         label: "A5-EU1L2-AGapA-R4",
         parentKey: "A-A-AA-OA-EU1L2",
-        conditionKey: "R1AbovePR4",
+        conditionKey: "A-A-AA-OA-EU1L2",
         kind: "view",
         direction: "Up",
         targetLabel: "U4 (today's R4)",
