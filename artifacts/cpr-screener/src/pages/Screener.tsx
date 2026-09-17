@@ -662,6 +662,7 @@ export default function Screener({
       outcpr: pool.filter((r) => !!r.outCPR).length,
       overlapHigher: pool.filter((r) => !!r.overlapHigher).length,
       overlapLower: pool.filter((r) => !!r.overlapLower).length,
+      equalCPR: pool.filter((r) => !!r.equalCPR).length,
     };
   }, [allResults, deltaAllResults, activeTab]);
 
@@ -835,6 +836,7 @@ export default function Screener({
       if (touchFilter === "outcpr") return !!r.outCPR;
       if (touchFilter === "overlapHigher") return !!r.overlapHigher;
       if (touchFilter === "overlapLower") return !!r.overlapLower;
+      if (touchFilter === "equal-cpr") return !!r.equalCPR;
       return true;
     })
     .filter((r) => {
@@ -1561,6 +1563,7 @@ export default function Screener({
                   { id: "outcpr", label: "OutCPR", count: touchCounts.outcpr },
                   { id: "overlapHigher", label: "Overlap Above", count: touchCounts.overlapHigher },
                   { id: "overlapLower", label: "Overlap Below", count: touchCounts.overlapLower },
+                  { id: "equal-cpr", label: "Equal CPR", count: touchCounts.equalCPR },
                 ]
               ).map(({ id, label, count }) => {
                 const isActive = touchFilter === id;

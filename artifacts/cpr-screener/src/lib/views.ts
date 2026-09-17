@@ -2950,7 +2950,7 @@ const COPY_VIEWS: ViewDef[] = [
 VIEWS.push(...COPY_VIEWS);
 
 // ---------------------------------------------------------------------
-// Step 3, batch 4 — "equal-cpr" (kept; "inside-cpr" and "overlapping-lower"
+// Step 3, batch 4 — "equal-cpr" (kept under TOUCH; "inside-cpr" and "overlapping-lower"
 // are DELIBERATELY OMITTED per user request, removing them and everything
 // nested under them from the menu — passesView/getView simply won't find
 // their keys, same effect as deleting their cases outright), plus the
@@ -2964,8 +2964,8 @@ VIEWS.push(...COPY_VIEWS);
 // ---------------------------------------------------------------------
 
 const MISC_VIEWS: ViewDef[] = [
-  { key: "equal-cpr", label: "Equal CPR", kind: "category", condition: (r) => r.equalCPR,
-      order: 10
+  { key: "equal-cpr", label: "Equal CPR", kind: "pattern", parentKey: "touch", condition: (r) => r.equalCPR,
+      order: 5
 },
   {
     key: "eXLoL3U3-L3",
@@ -2979,7 +2979,7 @@ const MISC_VIEWS: ViewDef[] = [
     key: "touch",
     label: "TOUCH",
     kind: "category",
-    condition: (r) => !!(r.InsideCPR || (r as any).insideCPR || r.outCPR || r.overlapHigher || r.overlapLower),
+    condition: (r) => !!(r.equalCPR || r.InsideCPR || (r as any).insideCPR || r.outCPR || r.overlapHigher || r.overlapLower),
     order: 11,
   },
   {
@@ -3177,7 +3177,7 @@ VIEWS.push(...RAW_FLAG_VIEWS);
 // badges (see that batch's own comment above). The real signal for "this
 // is a top-level Category, i.e. a BACKTEST_CATEGORIES root" is
 // `kind === "category"`, which every genuine category ("levelsabove",
-// "compressed", "R1AbovePR4", "equal-cpr", "top15gainers", ...) sets and
+// "compressed", "R1AbovePR4", "top15gainers", ...) sets and
 // nothing else does.
 //
 // Sibling order: childrenOf() already sorts by `order` (defaulting all
