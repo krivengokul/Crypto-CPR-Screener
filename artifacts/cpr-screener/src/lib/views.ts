@@ -2976,16 +2976,8 @@ const MISC_VIEWS: ViewDef[] = [
     condition: (r) => r.srExpandedLower,
   },
   {
-    key: "touch",
-    label: "TOUCH",
-    kind: "category",
-    condition: (r) => !!(r.InsideCPR || (r as any).insideCPR || r.outCPR || r.overlapHigher || r.overlapLower),
-    order: 11,
-  },
-  {
     key: "insidecpr",
     label: "INCPR",
-    parentKey: "touch",
     kind: "pattern",
     condition: (r) => !!(r.InsideCPR || (r as any).insideCPR),
   },
@@ -3004,21 +2996,18 @@ const MISC_VIEWS: ViewDef[] = [
   {
     key: "outcpr",
     label: "OutCPR",
-    parentKey: "touch",
     kind: "pattern",
     condition: (r) => !!r.outCPR,
   },
   {
     key: "overlapHigher",
     label: "Overlap Higher",
-    parentKey: "touch",
     kind: "pattern",
     condition: (r) => !!r.overlapHigher,
   },
   {
     key: "overlapLower",
     label: "Overlap Lower",
-    parentKey: "touch",
     kind: "pattern",
     condition: (r) => !!r.overlapLower,
   },

@@ -141,7 +141,6 @@ const GENERIC_VIEW_CATEGORIES = new Set([
   // count (and green dot) in the live screener, without requiring any
   // per-view wiring. Future created views will Just Work.
   "copyViews",
-  "touch",
 ]);
 
 /** View ids used by hand-written Views filter buttons that aren't listed in
@@ -271,6 +270,8 @@ export default function Screener({
   const [activeGenericSubView, setActiveGenericSubView] = useState<string | null>(null);
   const [PatternFilter, setPatternFilter] = useState<string | null>(null);
   const [showPatternList, setShowPatternList] = useState(false);
+  const [showTouchList, setShowTouchList] = useState(false);
+  const [touchFilter, setTouchFilter] = useState<string | null>(null);
   const [showSizeList, setShowSizeList] = useState(false);
   const [showExitTimeList, setShowExitTimeList] = useState(false);
   // NEW: ENTRY TIME — mirrors Exit Time's UI (label, 2-row hour grid,
@@ -651,6 +652,19 @@ export default function Screener({
   // NEW: per-view matching counts for the Views filter buttons rendered in
   // this screen ("(41)" suffix), computed off the same unfiltered pool used
   // for the left-nav counts so both always agree.
+  const touchCounts = useMemo(() => {
+    const pool: CPRResult[] =
+      activeTab === "delta" ? deltaAllResults
+      : activeTab === "combined" ? [...allResults, ...deltaAllResults]
+      : allResults;
+    return {
+      insidecpr: pool.filter((r) => !!(r.InsideCPR || (r as any).insideCPR)).length,
+      outcpr: pool.filter((r) => !!r.outCPR).length,
+      overlapHigher: pool.filter((r) => !!r.overlapHigher).length,
+      overlapLower: pool.filter((r) => !!r.overlapLower).length,
+    };
+  }, [allResults, deltaAllResults, activeTab]);
+
   const viewCounts = useMemo(() => {
     const pool: CPRResult[] =
       activeTab === "delta" ? deltaAllResults
@@ -815,6 +829,14 @@ export default function Screener({
     // silently miss rows where CL2U1/CL4U3 is true but shadowed by
     // an earlier bucket. Check the raw flags directly for these two so
     // the filter buttons actually work independent of the primary badge.
+    .filter((r) => {
+      if (!touchFilter) return true;
+      if (touchFilter === "insidecpr") return !!(r.InsideCPR || (r as any).insideCPR);
+      if (touchFilter === "outcpr") return !!r.outCPR;
+      if (touchFilter === "overlapHigher") return !!r.overlapHigher;
+      if (touchFilter === "overlapLower") return !!r.overlapLower;
+      return true;
+    })
     .filter((r) => {
       if (!PatternFilter) return true;
       if (PatternFilter === "INCPR" || PatternFilter === "Inside") return !!(r.InsideCPR || (r as any).insideCPR);
@@ -1061,7 +1083,7 @@ export default function Screener({
   const anySubFilter =
     showExpU4PU4 || showExpU3PU3 || showOBLoRRHHLLA || showOBNLoU4L4 || showOBWLoU4L4 || showOBLoSSLLRRHH ||
     !!activeGenericSubView ||
-    !!PatternFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter || !!exitTimeFilter;
+    !!PatternFilter || !!touchFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter || !!exitTimeFilter;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -1244,6 +1266,7 @@ export default function Screener({
                   // covers inside-cpr and every other GENERIC_VIEW_CATEGORIES
                   // category, so "Show All" fully resets state everywhere.
                   setActiveGenericSubView(null);
+                  setTouchFilter(null);
                   setShowExpU4PU4(false);
                   setShowExpU3PU3(false);
                   setShowOBLoRRHHLLA(false);
@@ -1274,6 +1297,19 @@ export default function Screener({
               >
                 <span className="leading-none">{showPatternList ? "−" : "+"}</span>
                 Patterns
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowTouchList((v) => !v)}
+                className={`flex items-center gap-0.5 text-xs font-bold uppercase tracking-wide px-2 py-1 rounded border border-border transition-colors shrink-0 ${
+                  showTouchList
+                    ? "bg-foreground/15 text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                title={showTouchList ? "Hide touch patterns" : "Show touch patterns"}
+              >
+                <span className="leading-none">{showTouchList ? "−" : "+"}</span>
+                Touch
               </button>
               <button
                 type="button"
@@ -1516,6 +1552,36 @@ export default function Screener({
           {/* Pattern filter buttons — own line, independent of activeView
               AND independent of showAll. These always render, regardless of Show All state, and
               are mutually exclusive within their own group. */}
+          {showTouchList && (
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[10px] text-pink-400/90 uppercase tracking-wider mr-0.5 font-semibold">TOUCH:</span>
+              {(
+                [
+                  { id: "insidecpr", label: "INCPR", count: touchCounts.insidecpr },
+                  { id: "outcpr", label: "OutCPR", count: touchCounts.outcpr },
+                  { id: "overlapHigher", label: "Overlap Higher", count: touchCounts.overlapHigher },
+                  { id: "overlapLower", label: "Overlap Lower", count: touchCounts.overlapLower },
+                ]
+              ).map(({ id, label, count }) => {
+                const isActive = touchFilter === id;
+                return (
+                  <button
+                    key={id}
+                    onClick={() => setTouchFilter((v) => (v === id ? null : id))}
+                    className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                      isActive
+                        ? "bg-foreground/15 text-foreground border-foreground/30"
+                        : "border-border text-muted-foreground hover:text-foreground"
+                    }`}
+                    title={`Show only rows matching ${label}`}
+                  >
+                    {isActive ? `✕ ${label}` : label}
+                    <span className="text-[11px] font-mono text-muted-foreground ml-1">({count})</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
           <div className="flex items-center gap-1.5 flex-wrap">
               {showPatternList && (
               <span className="text-[10px] text-sky-400/90 uppercase tracking-wider mr-0.5 font-semibold">PATTERNS:</span>
