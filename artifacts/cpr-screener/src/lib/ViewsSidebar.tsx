@@ -465,10 +465,10 @@ export const Views: Record<string, SubPattern[]> = {
     { id: "eXLoL3U3-L3", label: "eXLoL3U3-L3" },
   ],
   "touch": [
-    { id: "insidecpr", label: "Inside CPR" },
-    { id: "outcpr", label: "Out CPR" },
-    { id: "overlapHigher", label: "Overlap Higher", activeColor: "#22c55e", activeText: "#4ade80", activeBg: "rgba(34, 197, 94, 0.14)" },
-    { id: "overlapLower", label: "Overlap Lower", activeColor: "#fb7185", activeText: "#fda4af", activeBg: "rgba(244, 63, 94, 0.14)" },
+    { id: "insidecpr", label: "Inside" },
+    { id: "outcpr", label: "OutCPR" },
+    { id: "overlapHigher", label: "Overlap Higher" },
+    { id: "overlapLower", label: "Overlap Lower" },
   ],
 };
 

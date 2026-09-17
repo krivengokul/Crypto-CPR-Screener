@@ -560,12 +560,6 @@ const SUBFILTERS_BY_SECTION: Record<string, string[]> = {
   "equal-cpr": [
     "eXLoL3U3-L3",
   ],
-  "touch": [
-    "insidecpr",
-    "outcpr",
-    "overlapHigher",
-    "overlapLower",
-  ],
 };
 
 /**
@@ -613,7 +607,8 @@ export function getViewDirection(r: CPRResult, activeView: string): ViewDirectio
  * matches no View, or matches one with no direction set.
  */
 export function getAnyViewDirection(r: CPRResult): ViewDirection | null {
-  for (const subs of Object.values(Views)) {
+  for (const [sectionKey, subs] of Object.entries(Views)) {
+    if (sectionKey === "touch") continue;
     for (const sub of subs) {
       if (passesPattern(r, sub.id)) {
         const dir = normalizeViewDirection(getView(sub.id)?.direction as string | undefined);
@@ -662,8 +657,11 @@ export interface ActiveViewInfo {
 export function getActiveViewLabels(r: CPRResult): ActiveViewInfo[] {
   const seen = new Set<string>();
   const infos: ActiveViewInfo[] = [];
-  for (const subs of Object.values(Views)) {
+  const EXCLUDE_TOUCH_IDS = new Set(["insidecpr", "outcpr", "overlapHigher", "overlapLower", "touch"]);
+  for (const [sectionKey, subs] of Object.entries(Views)) {
+    if (sectionKey === "touch") continue;
     for (const sub of subs) {
+      if (EXCLUDE_TOUCH_IDS.has(sub.id)) continue;
       if (seen.has(sub.id)) continue;
       seen.add(sub.id);
       if (passesPattern(r, sub.id)) {
