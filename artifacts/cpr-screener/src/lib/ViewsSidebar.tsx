@@ -475,7 +475,7 @@ export const pivotcategories: Category[] = [
   { id: "expanded",          label: "EXPANDED",     subtitle: "RRSS-E only (today's R1 up, S1 down vs prev)",   icon: TrendingUp },
   { id: "S1BelowPS4",          label: "BELOW LEVEL4",  subtitle: "Today S1 below Prev S4",   icon: TrendingDown },
   { id: "equal-cpr",          label: "Equal CPR",     subtitle: "Prev & Today CPR Equal",   icon: Equal },
-  { id: "touch",              label: "TOUCH",         subtitle: "Inside, Out, Overlap High...", icon: Activity },
+  { id: "touch",              label: "TOUCH",         subtitle: "Inside, Out, Overlap Above/Below...", icon: Activity },
   // NEW: home for every auto-generated Copy View / Create View — see
   // Views.copyViews above.
   { id: "copyViews", label: "CREATED VIEWS", subtitle: "Auto-generated from Backtest's Copy View / Create View", icon: BookmarkCheck },

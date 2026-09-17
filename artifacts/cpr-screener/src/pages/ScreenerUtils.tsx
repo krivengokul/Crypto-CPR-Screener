@@ -1284,18 +1284,18 @@ export function renderSSRRHHLLBadges(r: CPRResult) {
  * sync. Order:
  *   1. Status badge — Above / Below / Inside / Outside / Skip (always
  *      exactly one, mutually exclusive).
- *   2. oV-B / oV-A (overlapLower / overlapHigher).
+ *   2. oV-B / oV-A (Overlap Below / Overlap Above).
  *   3. Narow / Wide — merged into a single badge wherever Above/Below/
- *      oV-B/oV-A pairs with Narow/Wide: oV-ANarow -> Nrow-oVA,
+ *      oV-B/oV-A pairs with Narow/Wide: oV-ANarow -> Ovlap-Nrow-A,
  *      AboveNarow -> Narow-A, BelowNarow -> Narow-B, oV-BNarow ->
- *      Nrow-oVB, oV-AWide -> Wide-AoV, AboveWide -> Wide-A, BelowWide ->
- *      Wide-B, oV-BWide -> Wide-BoV. The merged badge replaces both
+ *      Ovlap-Nrow-B, oV-AWide -> Ovlap-Wide-A, AboveWide -> Wide-A, BelowWide ->
+ *      Wide-B, oV-BWide -> Ovlap-Wide-B. The merged badge replaces both
  *      halves' bare badges (so "Above" becomes "Narow-A" in place, rather
  *      than appearing twice); when nothing merges, the bare
  *      Above/Below/oV-B/oV-A/Narrow/Wide badges render as before (the
  *      standalone "Narrow"/"Wide" fallback badges keep their original
  *      spelling — only the four/four merged combo labels were renamed to
- *      "Nrow-oVA"/"Nrow-oVB"/"Wide-*BoV"). Priority when more than one combo could
+ *      "Ovlap-Nrow-A"/"Ovlap-Nrow-B"/"Ovlap-Wide-*"). Priority when more than one combo could
  *      apply on the same row: for Narow, oV-A > Above > Below > oV-B; for
  *      Wide, oV-A > Above > Below > oV-B (matches the row's own
  *      left-to-right badge order).
@@ -1377,7 +1377,7 @@ export function renderLevelStatusRow1Badges(
         <span className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20 font-medium">oV-A</span>
       )}
       {narrowMerge === "AoV" && (
-        <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>Nrow-oVA</span>
+        <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>Ovlap-Nrow-A</span>
       )}
       {narrowMerge === "A" && (
         <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>Narow-A</span>
@@ -1386,10 +1386,10 @@ export function renderLevelStatusRow1Badges(
         <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>Narow-B</span>
       )}
       {narrowMerge === "BoV" && (
-        <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>Nrow-oVB</span>
+        <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>Ovlap-Nrow-B</span>
       )}
       {wideMerge === "AoV" && (
-        <span className={`${smallBadge} bg-pink-500/10 text-pink-400 border border-pink-500/20`}>Wide-AoV</span>
+        <span className={`${smallBadge} bg-pink-500/10 text-pink-400 border border-pink-500/20`}>Ovlap-Wide-A</span>
       )}
       {wideMerge === "A" && (
         <span className={`${smallBadge} bg-pink-500/10 text-pink-400 border border-pink-500/20`}>Wide-A</span>
@@ -1398,7 +1398,7 @@ export function renderLevelStatusRow1Badges(
         <span className={`${smallBadge} bg-pink-500/10 text-pink-400 border border-pink-500/20`}>Wide-B</span>
       )}
       {wideMerge === "BoV" && (
-        <span className={`${smallBadge} bg-pink-500/10 text-pink-400 border border-pink-500/20`}>Wide-BoV</span>
+        <span className={`${smallBadge} bg-pink-500/10 text-pink-400 border border-pink-500/20`}>Ovlap-Wide-B</span>
       )}
       {isNarrow && !narrowConsumed && (
         <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>Narrow</span>
@@ -1416,8 +1416,8 @@ export function renderLevelStatusRow1Badges(
 /**
  * renderLevelStatusBadge — just the single, mutually-exclusive "first
  * button" out of renderLevelStatusRow1Badges (Above/Below/Inside/Outside/
- * Skip, or its Narow-A/Narow-B/Nrow-oVA/Nrow-oVB/Wide-A/Wide-B/Wide-AoV/
- * Wide-BoV merged form, or the bare Narrow/Wide fallback). Split out so the
+ * Skip, or its Narow-A/Narow-B/Ovlap-Nrow-A/Ovlap-Nrow-B/Wide-A/Wide-B/Ovlap-Wide-A/
+ * Ovlap-Wide-B merged form, or the bare Narrow/Wide fallback). Split out so the
  * Screener's Pattern column can show it as the leading badge alongside
  * today's pattern badge(s), while the LEVEL column keeps the rest (see
  * renderLevelStatusRestBadges). Always returns at most one badge.
@@ -1451,14 +1451,14 @@ export function renderLevelStatusBadge(
 
   const smallBadge = "text-[10px] px-1 py-0.5 rounded font-medium whitespace-nowrap shrink-0";
 
-  if (narrowMerge === "AoV") return <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>Nrow-oVA</span>;
+  if (narrowMerge === "AoV") return <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>Ovlap-Nrow-A</span>;
   if (narrowMerge === "A") return <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>Narow-A</span>;
   if (narrowMerge === "B") return <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>Narow-B</span>;
-  if (narrowMerge === "BoV") return <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>Nrow-oVB</span>;
-  if (wideMerge === "AoV") return <span className={`${smallBadge} bg-pink-500/10 text-pink-400 border border-pink-500/20`}>Wide-AoV</span>;
+  if (narrowMerge === "BoV") return <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>Ovlap-Nrow-B</span>;
+  if (wideMerge === "AoV") return <span className={`${smallBadge} bg-pink-500/10 text-pink-400 border border-pink-500/20`}>Ovlap-Wide-A</span>;
   if (wideMerge === "A") return <span className={`${smallBadge} bg-pink-500/10 text-pink-400 border border-pink-500/20`}>Wide-A</span>;
   if (wideMerge === "B") return <span className={`${smallBadge} bg-pink-500/10 text-pink-400 border border-pink-500/20`}>Wide-B</span>;
-  if (wideMerge === "BoV") return <span className={`${smallBadge} bg-pink-500/10 text-pink-400 border border-pink-500/20`}>Wide-BoV</span>;
+  if (wideMerge === "BoV") return <span className={`${smallBadge} bg-pink-500/10 text-pink-400 border border-pink-500/20`}>Ovlap-Wide-B</span>;
   if (isInsideCPR) return <span className={`${smallBadge} bg-orange-500/10 text-orange-400 border border-orange-500/20`}>INCPR</span>;
   if (isOutsideCPR) return <span className={`${smallBadge} bg-purple-500/10 text-purple-400 border border-purple-500/20`}>OutCPR</span>;
   if (r.cprRising && !aboveConsumed) return <span className={`${smallBadge} bg-blue-500/10 text-blue-400 border border-blue-500/20`}>Above</span>;

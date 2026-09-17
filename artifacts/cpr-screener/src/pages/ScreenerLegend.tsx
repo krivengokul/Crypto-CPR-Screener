@@ -55,9 +55,9 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
         {legendPattern === "overlapping-lower" ? (
           <>
             <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-              <span className="text-xs font-semibold text-primary">Overlapping Lower</span>
+              <span className="text-xs font-semibold text-primary">Overlapping Below</span>
               <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-orange-500 text-white">Overlap</span>
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-500 text-white">Lower</span>
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-500 text-white">Below</span>
             </div>
             <div className="text-xs text-muted-foreground">Today&apos;s CPR overlaps below yesterday&apos;s CPR</div>
           </>
@@ -211,12 +211,12 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
           </>
         ) : showOBNLoL4U4 && activeView === "overlapping-lower" ? (
           <>
-            <div className="text-xs font-semibold text-cyan-400 mb-1">Overlap Lower, Narrow</div>
+            <div className="text-xs font-semibold text-cyan-400 mb-1">Overlap Below, Narrow</div>
             <div className="text-xs text-muted-foreground">Today&apos;s R4 inside Prev R3/R4, Prev S4 inside Today&apos;s S3/S4, today&apos;s CPR Narrow, Compression &gt; 50%</div>
           </>
         ) : showOBWLoL4U4 && activeView === "overlapping-lower" ? (
           <>
-            <div className="text-xs font-semibold text-rose-400 mb-1">Overlap Lower, Wide</div>
+            <div className="text-xs font-semibold text-rose-400 mb-1">Overlap Below, Wide</div>
             <div className="text-xs text-muted-foreground">Today&apos;s R4 inside Prev R3/R4, Prev S4 inside Today&apos;s S3/S4, today&apos;s CPR Wide, Compression &gt; 50%</div>
           </>
         ) : activeView === "2PM:SSLLpRRHHA-ApU4:5PM" ? (

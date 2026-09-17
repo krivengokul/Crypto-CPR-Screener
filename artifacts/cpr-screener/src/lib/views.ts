@@ -3000,7 +3000,7 @@ const MISC_VIEWS: ViewDef[] = [
   },
   {
     key: "overlapHigher",
-    label: "Overlap Higher",
+    label: "Overlap Above",
     parentKey: "touch",
     kind: "pattern",
     order: 3,
@@ -3008,7 +3008,7 @@ const MISC_VIEWS: ViewDef[] = [
   },
   {
     key: "overlapLower",
-    label: "Overlap Lower",
+    label: "Overlap Below",
     parentKey: "touch",
     kind: "pattern",
     order: 4,

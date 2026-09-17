@@ -245,20 +245,20 @@ export default function Screener({
   const [showAll, setShowAll] = useState(true);
   const [showExpU4PU4, setShowExpU4PU4] = useState(false);
   // RENAMED from "Exp-U3>U3": 9AM:SSRRBHHLLA-U4:9PM filter state
-  // (Overlapping Lower). Bullish/uptrend, green color family.
+  // (Overlapping Below). Bullish/uptrend, green color family.
   const [showExpU3PU3, setShowExpU3PU3] = useState(false);
-  // NEW: 9AM:pRRHHLLA-U4:9PM filter state (Overlapping Lower) — sibling of
+  // NEW: 9AM:pRRHHLLA-U4:9PM filter state (Overlapping Below) — sibling of
   // 9AM:SSRRBHHLLA-U4:9PM. Overlap Below + HHRRBelow + HHLLAbove. Bullish,
   // green color family.
   const [showOBLoRRHHLLA, setShowOBLoRRHHLLA] = useState(false);
-  // NEW: OBN-L4U4-U4 / OBW-L4U4-L4 filter state (Overlapping Lower), placed next to Exp-U3>pU4
+  // NEW: OBN-L4U4-U4 / OBW-L4U4-L4 filter state (Overlapping Below), placed next to Exp-U3>pU4
   const [showOBNLoU4L4, setShowOBNLoU4L4] = useState(false);
   const [showOBWLoU4L4, setShowOBWLoU4L4] = useState(false);
-  // NEW: 2PM:SSLLpRRHHA-ApU4:5PM filter state (Overlapping Lower) — placed
+  // NEW: 2PM:SSLLpRRHHA-ApU4:5PM filter state (Overlapping Below) — placed
   // next to OBN-L4U4-U4 / OBW-L4U4-L4. Overlap Below + SSLLAbove +
   // HHRRBelow, bullish, targets ApU4 (prev day's R4) by ~5PM.
   const [showOBLoSSLLRRHH, setShowOBLoSSLLRRHH] = useState(false);
-  // NEW: 8AM:SSLLpRRHHA-L4:1PM filter state (Overlapping Lower) — bearish
+  // NEW: 8AM:SSLLpRRHHA-L4:1PM filter state (Overlapping Below) — bearish
   // sibling of 2PM:SSLLpRRHHA-ApU4:5PM, same Overlap Below + SSLLAbove +
   // HHRRBelow base, split the opposite way, targets today's own L4 by ~1PM.
   const [showOBLoSSLLRRHHDown, setShowOBLoSSLLRRHHDown] = useState(false);
@@ -507,7 +507,7 @@ export default function Screener({
   // so selecting a View in the sidebar also switches its Screener button on
   // (and the effect below turns every other one off).
   const VIEW_SETTERS: Partial<Record<string, (v: boolean) => void>> = {
-    // overlapping-lower
+    // overlapping-below
     "eXLo-L4U4-U4": setShowExpU4PU4,
     // NEW: wire renamed "9AM:SSRRBHHLLA-U4:9PM" (was "Exp-U3>U3") into
     // VIEW_SETTERS — it existed in ViewsSidebar's Views list but had no
@@ -725,7 +725,7 @@ export default function Screener({
       if (activeTab === "delta") return deltaIntersect;
       return binanceIntersect;
     }
-    // NEW: 9AM:pRRHHLLA-U4:9PM pool — Overlapping Lower, HHRRBelow +
+    // NEW: 9AM:pRRHHLLA-U4:9PM pool — Overlapping Below, HHRRBelow +
     // HHLLAbove variant, placed next to 9AM:SSRRBHHLLA-U4:9PM.
     if (showOBLoRRHHLLA && activeView === "overlapping-lower") {
       const binanceIntersect = allResults
@@ -740,7 +740,7 @@ export default function Screener({
       if (activeTab === "delta") return deltaIntersect;
       return binanceIntersect;
     }
-    // NEW: OBN-L4U4-U4 pool — Overlapping Lower, Narrow variant
+    // NEW: OBN-L4U4-U4 pool — Overlapping Below, Narrow variant
     if (showOBNLoU4L4 && activeView === "overlapping-lower") {
       const binanceIntersect = allResults
         .filter((r) => passesPattern(r, "OBN-L4U4-U4"))
@@ -754,7 +754,7 @@ export default function Screener({
       if (activeTab === "delta") return deltaIntersect;
       return binanceIntersect;
     }
-    // NEW: OBW-L4U4-L4 pool — Overlapping Lower, Wide variant
+    // NEW: OBW-L4U4-L4 pool — Overlapping Below, Wide variant
     if (showOBWLoU4L4 && activeView === "overlapping-lower") {
       const binanceIntersect = allResults
         .filter((r) => passesPattern(r, "OBW-L4U4-L4"))
@@ -768,7 +768,7 @@ export default function Screener({
       if (activeTab === "delta") return deltaIntersect;
       return binanceIntersect;
     }
-    // NEW: 2PM:SSLLpRRHHA-ApU4:5PM pool — Overlapping Lower, SSLLAbove +
+    // NEW: 2PM:SSLLpRRHHA-ApU4:5PM pool — Overlapping Below, SSLLAbove +
     // HHRRBelow variant, placed next to OBW-L4U4-L4.
     if (showOBLoSSLLRRHH && activeView === "overlapping-lower") {
       const binanceIntersect = allResults
@@ -1447,7 +1447,7 @@ export default function Screener({
               </button>
             )}
             {/* RENAMED from "Exp-U3>U3" -> "9AM:SSRRBHHLLA-U4:9PM" button —
-                Overlapping Lower, placed right after eXLo-L4U4-U4.
+                Overlapping Below, placed right after eXLo-L4U4-U4.
                 Bullish/uptrend, green color family (was sky-400). */}
             {activeSectionKey === "overlapping-lower" && !showAll && (
               <button
@@ -1462,7 +1462,7 @@ export default function Screener({
                 {showExpU3PU3 ? "✕ 9AM:SSRRBHHLLA-U4:9PM" : "9AM:SSRRBHHLLA-U4:9PM"}<ViewCount id={"9AM:SSRRBHHLLA-U4:9PM"} counts={viewCounts} />
               </button>
             )}
-            {/* NEW: 9AM:pRRHHLLA-U4:9PM button — Overlapping Lower, placed
+            {/* NEW: 9AM:pRRHHLLA-U4:9PM button — Overlapping Below, placed
                 right after 9AM:SSRRBHHLLA-U4:9PM. Overlap Below +
                 HHRRBelow (today's R1 AND today's PDH both below the lower
                 of prev's R1/PDH) + HHLLAbove (today's PDH above prev's
@@ -1481,7 +1481,7 @@ export default function Screener({
                 {showOBLoRRHHLLA ? "✕ 9AM:pRRHHLLA-U4:9PM" : "9AM:pRRHHLLA-U4:9PM"}<ViewCount id={"9AM:pRRHHLLA-U4:9PM"} counts={viewCounts} />
               </button>
             )}
-            {/* NEW: OBN-L4U4-U4 button — Overlapping Lower, placed next to Exp-U3>pU4 */}
+            {/* NEW: OBN-L4U4-U4 button — Overlapping Below, placed next to Exp-U3>pU4 */}
             {activeSectionKey === "overlapping-lower" && !showAll && (
               <button
                 onClick={() => { setShowOBNLoU4L4((v) => !v); setShowExpU4PU4(false); setShowExpU3PU3(false); setShowOBLoRRHHLLA(false); setShowOBWLoU4L4(false); setShowOBLoSSLLRRHH(false); setShowOBLoSSLLRRHHDown(false); }}
@@ -1490,12 +1490,12 @@ export default function Screener({
                     ? "border-cyan-400 text-cyan-400"
                     : "border-border text-muted-foreground hover:text-foreground"
                 }`}
-                title="Overlap Lower + today's CPR Narrow + L4U4 structure, Compression > 50%: Target:U4"
+                title="Overlap Below + today's CPR Narrow + L4U4 structure, Compression > 50%: Target:U4"
               >
                 {showOBNLoU4L4 ? "✕ OBN-L4U4-U4" : "OBN-L4U4-U4"}<ViewCount id={"OBN-L4U4-U4"} counts={viewCounts} />
               </button>
             )}
-            {/* NEW: OBW-L4U4-L4 button — Overlapping Lower, placed next to OBN-L4U4-U4 */}
+            {/* NEW: OBW-L4U4-L4 button — Overlapping Below, placed next to OBN-L4U4-U4 */}
             {activeSectionKey === "overlapping-lower" && !showAll && (
               <button
                 onClick={() => { setShowOBWLoU4L4((v) => !v); setShowExpU4PU4(false); setShowExpU3PU3(false); setShowOBLoRRHHLLA(false); setShowOBNLoU4L4(false); setShowOBLoSSLLRRHH(false); setShowOBLoSSLLRRHHDown(false); }}
@@ -1504,12 +1504,12 @@ export default function Screener({
                     ? "border-rose-400 text-rose-400"
                     : "border-border text-muted-foreground hover:text-foreground"
                 }`}
-                title="Overlap Lower + today's CPR Wide + L4U4 structure, Compression > 50%: Target:U4"
+                title="Overlap Below + today's CPR Wide + L4U4 structure, Compression > 50%: Target:U4"
               >
                 {showOBWLoU4L4 ? "✕ OBW-L4U4-L4" : "OBW-L4U4-L4"}<ViewCount id={"OBW-L4U4-L4"} counts={viewCounts} />
               </button>
             )}
-            {/* NEW: 2PM:SSLLpRRHHA-ApU4:5PM button — Overlapping Lower, placed
+            {/* NEW: 2PM:SSLLpRRHHA-ApU4:5PM button — Overlapping Below, placed
                 next to OBW-L4U4-L4. Overlap Below + SSLLAbove (today's S1
                 AND today's PDL both above the higher of prev's S1/PDL) +
                 HHRRBelow (today's R1 AND today's PDH both below the lower of
@@ -1524,12 +1524,12 @@ export default function Screener({
                     ? "border-green-400 text-green-400"
                     : "border-border text-muted-foreground hover:text-foreground"
                 }`}
-                title="Overlap Lower + SSLLAbove (today's S1 & PDL above the higher of prev S1/PDL) + HHRRBelow (today's R1 & PDH below the lower of prev R1/PDH) + (prev R1 above today's R2 OR today's S3 above prev S2): Target ApU4 (prev day's R4) by ~5PM"
+                title="Overlap Below + SSLLAbove (today's S1 & PDL above the higher of prev S1/PDL) + HHRRBelow (today's R1 & PDH below the lower of prev R1/PDH) + (prev R1 above today's R2 OR today's S3 above prev S2): Target ApU4 (prev day's R4) by ~5PM"
               >
                 {showOBLoSSLLRRHH ? "✕ 2PM:SSLLpRRHHA-ApU4:5PM" : "2PM:SSLLpRRHHA-ApU4:5PM"}<ViewCount id={"2PM:SSLLpRRHHA-ApU4:5PM"} counts={viewCounts} />
               </button>
             )}
-            {/* NEW: 8AM:SSLLpRRHHA-L4:1PM button — Overlapping Lower, placed
+            {/* NEW: 8AM:SSLLpRRHHA-L4:1PM button — Overlapping Below, placed
                 next to 2PM:SSLLpRRHHA-ApU4:5PM. Bearish sibling: same
                 Overlap Below + SSLLAbove + HHRRBelow base, but split the
                 opposite way (prev R1 below today's R2 OR today's S3 below
@@ -1542,7 +1542,7 @@ export default function Screener({
                     ? "border-red-400 text-red-400"
                     : "border-border text-muted-foreground hover:text-foreground"
                 }`}
-                title="Overlap Lower + SSLLAbove (today's S1 & PDL above the higher of prev S1/PDL) + HHRRBelow (today's R1 & PDH below the lower of prev R1/PDH) + (prev R1 below today's R2 OR today's S3 below prev S2): Target today's own L4 by ~1PM"
+                title="Overlap Below + SSLLAbove (today's S1 & PDL above the higher of prev S1/PDL) + HHRRBelow (today's R1 & PDH below the lower of prev R1/PDH) + (prev R1 below today's R2 OR today's S3 below prev S2): Target today's own L4 by ~1PM"
               >
                 {showOBLoSSLLRRHHDown ? "✕ 8AM:SSLLpRRHHA-L4:1PM" : "8AM:SSLLpRRHHA-L4:1PM"}<ViewCount id={"8AM:SSLLpRRHHA-L4:1PM"} counts={viewCounts} />
               </button>
@@ -1559,8 +1559,8 @@ export default function Screener({
                 [
                   { id: "insidecpr", label: "INCPR", count: touchCounts.insidecpr },
                   { id: "outcpr", label: "OutCPR", count: touchCounts.outcpr },
-                  { id: "overlapHigher", label: "Overlap Higher", count: touchCounts.overlapHigher },
-                  { id: "overlapLower", label: "Overlap Lower", count: touchCounts.overlapLower },
+                  { id: "overlapHigher", label: "Overlap Above", count: touchCounts.overlapHigher },
+                  { id: "overlapLower", label: "Overlap Below", count: touchCounts.overlapLower },
                 ]
               ).map(({ id, label, count }) => {
                 const isActive = touchFilter === id;
