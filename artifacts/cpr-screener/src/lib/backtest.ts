@@ -140,6 +140,25 @@ function tightestAdjacentBand(entries: RungEntry[], value: number): [LevelCheckK
 }
 
 /**
+ * Shared bracket lookup for both Backtest and Copy View.
+ *
+ * The band belongs to the opposite day's ladder, so the same-named level is
+ * a valid candidate. For example, EU2L4 explicitly places previous S4
+ * between today's S4 and S3; excluding today's S4 would make that valid
+ * condition impossible to derive.
+ */
+export function findTightestAdjacentBand(
+  bandCPR: CPRResult["todayCPR"],
+  value: number
+): [LevelCheckKey, LevelCheckKey] | null {
+  const entries: RungEntry[] = LEVEL_CHECK_KEYS.map((key) => ({
+    key,
+    value: (bandCPR as unknown as Record<LevelCheckKey, number>)[key],
+  }));
+  return tightestAdjacentBand(entries, value);
+}
+
+/**
  * Evaluates a View's levelCheckDefs against a specific result's
  * prevCPR/todayCPR, returning whether ALL conditions matched. Same
  * subject/band semantics as compareSRLadders in pages/SRLadderDiff.tsx —

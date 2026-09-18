@@ -20,6 +20,7 @@ import {
   copyBacktestView,
   createBacktestView,
   deriveLevelCheckDefs,
+  findTightestAdjacentBand,
   getAttachPointOptions,
   findContainingNodeKey,
   type BacktestRow,
@@ -174,8 +175,9 @@ function PivotSizeInfo() {
  * encode the View's actual intent (e.g. "today's TC checked against a
  * band drawn from yesterday's structure"), not something derived from
  * any one symbol's numbers. What gets recomputed is `bandKeys`: for this
- * symbol's real prevCPR/todayCPR, find which two OTHER levels (on the
- * day `subject` is NOT) genuinely bracket the subject's value, so the
+ * symbol's real prevCPR/todayCPR, find which two levels (on the day
+ * `subject` is NOT) genuinely bracket the subject's value, using the
+ * same equality-aware lookup as Backtest, so the
  * new condition evaluates true for the symbol the copy was made from —
  * the same "13/13 matching" signature this symbol showed when you
  * expanded its row, just re-expressed as portable {key, subject,
@@ -190,38 +192,13 @@ function PivotSizeInfo() {
  * throws instead of guessing.
  */
 /**
- * Finds the pair of level keys (from `candidates`, evaluated on
- * `bandCPR`) that bracket `subjectVal` — i.e. sorts candidates by their
- * value on that day, high to low, and returns the adjacent pair
- * subjectVal falls between. Returns null if no such pair exists (subject
- * is more extreme than every candidate).
- */
-function findBracket(
-  subjectVal: number,
-  candidates: LevelKey[],
-  bandCPR: CPRLevels
-): [LevelKey, LevelKey] | null {
-  const sorted = [...candidates].sort((a, b) => (bandCPR[b] as number) - (bandCPR[a] as number));
-  for (let i = 0; i < sorted.length - 1; i++) {
-    const upperKey = sorted[i];
-    const lowerKey = sorted[i + 1];
-    const upperVal = bandCPR[upperKey] as number;
-    const lowerVal = bandCPR[lowerKey] as number;
-    if (subjectVal <= upperVal && subjectVal >= lowerVal) {
-      return [lowerKey, upperKey];
-    }
-  }
-  return null;
-}
-
-/**
  * Derives a fresh set of Level Check conditions for a specific symbol.
  *
  * With sourceConditions (the source View already has levelCheckDefs):
  * `key`/`subject` per condition are kept as-is — they encode the View's
  * actual intent (e.g. "today's TC checked against a band drawn from
  * yesterday's structure"), not something derived from any one symbol's
- * numbers. Only `bandKeys` gets recomputed, via findBracket, so the new
+ * numbers. Only `bandKeys` gets recomputed, via the shared bracket lookup, so the new
  * condition evaluates true for the symbol the copy was made from.
  *
  * Without sourceConditions (the source View has none yet): there's no
@@ -230,7 +207,7 @@ function findBracket(
  * a band drawn from yesterday), falling back to "previous" if "today"
  * has no valid bracket for this symbol. Only if neither direction finds
  * one does this throw — genuinely unusual for a real market day, since
- * across 12 candidate levels at least one bracket in one direction is
+ * across the 13 candidate levels at least one bracket in one direction is
  * almost always findable.
  */
 function deriveLevelCheckDefsForSymbol(
@@ -238,18 +215,44 @@ function deriveLevelCheckDefsForSymbol(
   prevCPR: CPRLevels,
   todayCPR: CPRLevels
 ): LevelCheckCondition[] {
+  if (sourceConditions && sourceConditions.length > 0) {
+    return sourceConditions.map((cond) => {
+      const subjectIsToday = cond.subject === "today";
+      const subjectVal = (subjectIsToday ? todayCPR : prevCPR)[cond.key] as number;
+      // The band always comes from the day `subject` is NOT — same
+      // convention as compareSRLadders in SRLadderDiff.tsx.
+      const bandCPR = subjectIsToday ? prevCPR : todayCPR;
+      // The band is on the opposite day. Its same-named level is therefore
+      // a distinct, valid candidate (for example today's S4 in EU2L4).
+      const bandKeys = findTightestAdjacentBand(bandCPR, subjectVal);
+
+      if (!bandKeys) {
+        throw new Error(
+          `Couldn't find a bracketing pair for "${cond.key}" (subject: ${cond.subject}) on this symbol — ` +
+            `it may not actually satisfy this View's underlying pattern condition.`
+        );
+      }
+
+      return { key: cond.key, subject: cond.subject, bandKeys };
+    });
+  }
+
   // Expanded pairs (EU2L4/EU3L4/EUTL3/EL2U4/...): today's structure expands on
   // prev's rather than sitting inside it. Grade all 13 ladder rungs uniformly
   // as 'did YESTERDAY's rung get absorbed into TODAY's new structure'
-  // (subject: 'previous') instead of the mixed or forward check.
+  // (subject: 'previous') instead of the mixed per-rung forward/reversed check.
+  //
+  // This branch intentionally comes after sourceConditions: an established
+  // View's subject choices are part of that View's authored signature and
+  // must be preserved when copying it. A View without levelCheckDefs gets
+  // the expanded-pair signature here.
   if (isExpandedPatternPair(todayCPR, prevCPR)) {
     const derived: LevelCheckCondition[] = [];
     const skipped: LevelKey[] = [];
 
     for (const key of LEVEL_KEYS) {
-      const candidates = LEVEL_KEYS.filter((k) => k !== key);
       const prevVal = prevCPR[key] as number;
-      const previousBracket = findBracket(prevVal, candidates, todayCPR);
+      const previousBracket = findTightestAdjacentBand(todayCPR, prevVal);
       if (previousBracket) {
         derived.push({ key, subject: "previous", bandKeys: previousBracket });
       } else {
@@ -265,28 +268,6 @@ function deriveLevelCheckDefsForSymbol(
     }
 
     return derived;
-  }
-  if (sourceConditions && sourceConditions.length > 0) {
-    const allKeys = sourceConditions.map((c) => c.key);
-
-    return sourceConditions.map((cond) => {
-      const subjectIsToday = cond.subject === "today";
-      const subjectVal = (subjectIsToday ? todayCPR : prevCPR)[cond.key] as number;
-      // The band always comes from the day `subject` is NOT — same
-      // convention as compareSRLadders in SRLadderDiff.tsx.
-      const bandCPR = subjectIsToday ? prevCPR : todayCPR;
-      const candidates = allKeys.filter((k) => k !== cond.key);
-      const bandKeys = findBracket(subjectVal, candidates, bandCPR);
-
-      if (!bandKeys) {
-        throw new Error(
-          `Couldn't find a bracketing pair for "${cond.key}" (subject: ${cond.subject}) on this symbol — ` +
-            `it may not actually satisfy this View's underlying pattern condition.`
-        );
-      }
-
-      return { key: cond.key, subject: cond.subject, bandKeys };
-    });
   }
 
   // No source levelCheckDefs — build a from-scratch set over all 13
@@ -304,15 +285,13 @@ function deriveLevelCheckDefsForSymbol(
   const skipped: LevelKey[] = [];
 
   for (const key of LEVEL_KEYS) {
-    const candidates = LEVEL_KEYS.filter((k) => k !== key);
-
-    const todayBracket = findBracket(todayCPR[key] as number, candidates, prevCPR);
+    const todayBracket = findTightestAdjacentBand(prevCPR, todayCPR[key] as number);
     if (todayBracket) {
       derived.push({ key, subject: "today", bandKeys: todayBracket });
       continue;
     }
 
-    const previousBracket = findBracket(prevCPR[key] as number, candidates, todayCPR);
+    const previousBracket = findTightestAdjacentBand(todayCPR, prevCPR[key] as number);
     if (previousBracket) {
       derived.push({ key, subject: "previous", bandKeys: previousBracket });
       continue;
