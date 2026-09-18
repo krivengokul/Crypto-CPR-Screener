@@ -1937,9 +1937,12 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
       order: 6
 },
 
-  // --- Pattern "A-E-AA-E" inside "ABOVE LEVEL4" and its requested subpatterns ---
-  // These entries intentionally live here only; they are not children of the
-  // generated EXPANDED tree.
+  // --- Pattern "A-E-AA-E" inside "ABOVE LEVEL4" ---
+  // Note: this key was previously declared a second time further below
+  // (order: 12, with only the "EUBL2" child) — that second declaration
+  // was a duplicate of this same node and caused "A-E-AA-E" to render
+  // twice in the tree/search. It has been removed and its "EUBL2" child
+  // re-pointed at this single declaration instead.
   {
     key: "R1AbovePR4-A-E-AA-E",
     label: "A-E-AA-E",
@@ -1951,22 +1954,6 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
       r.RRHHCategory === "RRHH-AA" &&
       r.SSLLCategory === "SSLL-E",
     order: 8,
-  },
-  {
-    key: "A-E-AA-E-EU1L3",
-    label: "A-E-AA-E-EU1L3",
-    parentKey: "R1AbovePR4-A-E-AA-E",
-    kind: "pattern",
-    condition: (r) => r.EU1L3,
-    order: 0,
-  },
-  {
-    key: "A-E-AA-E-EU1L2",
-    label: "A-E-AA-E-EU1L2",
-    parentKey: "R1AbovePR4-A-E-AA-E",
-    kind: "pattern",
-    condition: (r) => r.EU1L2,
-    order: 1,
   },
 
   // --- Pattern "A-A-AA-AA" inside "ABOVE LEVEL4" and its subpatterns ---
@@ -2120,19 +2107,9 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
     order: 0,
   },
 
-  // --- Pattern "A-E-AA-E" inside "ABOVE LEVEL4" and its subpatterns ---
-  {
-    key: "R1AbovePR4-A-E-AA-E",
-    label: "A-E-AA-E",
-    parentKey: "R1AbovePR4",
-    kind: "pattern",
-    condition: (r) =>
-      r.SSRRCategory === "RRSS-A" &&
-      r.HHLLCategory === "HHLL-E" &&
-      r.RRHHCategory === "RRHH-AA" &&
-      r.SSLLCategory === "SSLL-E",
-    order: 12,
-  },
+  // --- "A-E-AA-E-EUBL2" subpattern, child of the single "A-E-AA-E" node
+  // declared earlier under "ABOVE LEVEL4" (its duplicate parent-node
+  // declaration, order: 12, was removed from here) ---
   {
     key: "A-E-AA-E-EUBL2",
     label: "A-E-AA-E-EUBL2",
