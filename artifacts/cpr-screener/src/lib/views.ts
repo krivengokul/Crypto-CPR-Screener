@@ -346,7 +346,6 @@ function makeCompoundView(c: CompoundCombo): ViewDef {
     label: key,
     parentKey,
     kind: "pattern",
-    standalone: true,
     condition: (r) =>
       r.SSRRCategory === ssrrCategory &&
       r.HHLLCategory === hhllCategory &&
@@ -3148,7 +3147,10 @@ const MISC_VIEWS: ViewDef[] = [
     key: "touch",
     label: "TOUCH",
     kind: "category",
-    condition: (r) => !!(r.equalCPR || r.InsideCPR || (r as any).insideCPR || r.outCPR || r.overlapHigher || r.overlapLower),
+    // touchCategory already applies the shared precedence rule from cpr.ts:
+    // Level4 crossings stay in ABOVE/BELOW LEVEL4 and do not also appear
+    // under TOUCH.
+    condition: (r) => r.touchCategory,
     order: 11,
   },
   {

@@ -658,11 +658,11 @@ export default function Screener({
       : activeTab === "combined" ? [...allResults, ...deltaAllResults]
       : allResults;
     return {
-      insidecpr: pool.filter((r) => !!(r.InsideCPR || (r as any).insideCPR)).length,
-      outcpr: pool.filter((r) => !!r.outCPR).length,
-      overlapHigher: pool.filter((r) => !!r.overlapHigher).length,
-      overlapLower: pool.filter((r) => !!r.overlapLower).length,
-      equalCPR: pool.filter((r) => !!r.equalCPR).length,
+      insidecpr: pool.filter((r) => r.touchCategory && !!(r.InsideCPR || (r as any).insideCPR)).length,
+      outcpr: pool.filter((r) => r.touchCategory && !!r.outCPR).length,
+      overlapHigher: pool.filter((r) => r.touchCategory && !!r.overlapHigher).length,
+      overlapLower: pool.filter((r) => r.touchCategory && !!r.overlapLower).length,
+      equalCPR: pool.filter((r) => r.touchCategory && !!r.equalCPR).length,
     };
   }, [allResults, deltaAllResults, activeTab]);
 
@@ -832,6 +832,7 @@ export default function Screener({
     // the filter buttons actually work independent of the primary badge.
     .filter((r) => {
       if (!touchFilter) return true;
+      if (!r.touchCategory) return false;
       if (touchFilter === "insidecpr") return !!(r.InsideCPR || (r as any).insideCPR);
       if (touchFilter === "outcpr") return !!r.outCPR;
       if (touchFilter === "overlapHigher") return !!r.overlapHigher;

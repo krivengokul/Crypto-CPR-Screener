@@ -337,6 +337,11 @@ export interface CPRResult {
   EL3U4: boolean;
   CU4L2: boolean;
   equalCPR: boolean;
+  /**
+   * TOUCH category membership after category precedence is applied.
+   * ABOVE LEVEL4 / BELOW LEVEL4 take precedence over TOUCH.
+   */
+  touchCategory: boolean;
   EU3L3: boolean;
   EL3U3: boolean;
   CU4L4: boolean;
@@ -1398,6 +1403,23 @@ export function analyzeCPR(
   const overlapHigher = !equalCPR && (todayCPR.bc >= prevCPR.bc && todayCPR.bc <= prevCPR.tc) && todayCPR.tc > prevCPR.tc;
   const overlapLower  = !equalCPR && (todayCPR.tc <= prevCPR.tc && todayCPR.tc >= prevCPR.bc) && todayCPR.bc < prevCPR.bc;
 
+  // Category precedence:
+  //   ABOVE LEVEL4 / BELOW LEVEL4 > TOUCH > LEVEL ABOVE/BELOW,
+  //   COMPRESSED, and EXPANDED.
+  //
+  // Keep this decision beside the CPR flags rather than re-implementing it
+  // in LiveScanner or BacktestPanel. A CPR pair can satisfy a raw touch
+  // shape and a direction category at the same time; TOUCH owns that pair
+  // unless it has already crossed a previous Level4 boundary.
+  const touchCategory =
+    !flags.R1AbovePR4 &&
+    !flags.S1BelowPS4 &&
+    (equalCPR || flags.InsideCPR || outCPR || overlapHigher || overlapLower);
+  const compressed = !touchCategory && flags.compressed;
+  const expanded = !touchCategory && flags.expanded;
+  const LevelsBelow = !touchCategory && flags.LevelsBelow;
+  const LevelsAbove = !touchCategory && flags.LevelsAbove;
+
   const allupabove = (todayCPR.r1 > prevCPR.r1) && (todayCPR.r1 < prevCPR.r2) &&
                      (todayCPR.r2 > prevCPR.r2) && (todayCPR.r2 < prevCPR.r3) &&
                      (todayCPR.r3 > prevCPR.r3) && (todayCPR.r3 < prevCPR.r4) &&
@@ -1692,6 +1714,11 @@ export function analyzeCPR(
     bothTight,
     equalCPR,
     ...flags,
+    compressed,
+    expanded,
+    LevelsBelow,
+    LevelsAbove,
+    touchCategory,
     passes: cprRising && cprNarrowing,
     currentPrice,
     prevClose: prevCandle.close,
