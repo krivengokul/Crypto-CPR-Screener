@@ -169,7 +169,8 @@ export const Views: Record<string, SubPattern[]> = {
       { id: "A-A-AA-AA-CU4L3-GapBB:R4", label: "A-A-AA-AA-CU4L3-GapBB:R4" },
       { id: "A6-EU2L4-RH-BGapB:R4", label: "A6-EU2L4-RH-BGapB:R4" },
       { id: "A6-EU2L4-RH-BGapB1:R4", label: "A6-EU2L4-RH-BGapB1:R4" },
-      { id: "A6-U4L4-SLBBG-R4", label: "A6-U4L4-SLBBG-R4" }
+      { id: "A6-U4L4-SLBBG-R4", label: "A6-U4L4-SLBBG-R4" },
+      { id: "A6-U2L4-PLpTC-R4", label: "A6-U2L4-PLpTC-R4" }
 ],
   "levelsbelow": [
     // RENAMED from "BC>pPDL-U3:5AM", then from "3P:HA-pABOVE:pR4-3A".
