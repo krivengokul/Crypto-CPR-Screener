@@ -60,7 +60,7 @@ import {
 import { SRLadderRow, toSRLadderData, type ViewDirection } from "./SRLadderPanel";
 import { getLadderMatchSummary, LEVEL_KEYS, type LevelCheckCondition, type LevelKey } from "./SRLadderDiff";
 import { useChartLinks, findChartLink, preloadChartLinks, type StoredChartLink } from "@/lib/chartLinks";
-import type { CPRLevels, CPRResult } from "@/lib/cpr";
+import { isExpandedPatternPair, type CPRLevels, type CPRResult } from "@/lib/cpr";
 
 // --- Small UTC date helpers (all dates in this panel are UTC ISO strings) ---
 function toISO(d: Date): string {
@@ -238,6 +238,34 @@ function deriveLevelCheckDefsForSymbol(
   prevCPR: CPRLevels,
   todayCPR: CPRLevels
 ): LevelCheckCondition[] {
+  // Expanded pairs (EU2L4/EU3L4/EUTL3/EL2U4/...): today's structure expands on
+  // prev's rather than sitting inside it. Grade all 13 ladder rungs uniformly
+  // as 'did YESTERDAY's rung get absorbed into TODAY's new structure'
+  // (subject: 'previous') instead of the mixed or forward check.
+  if (isExpandedPatternPair(todayCPR, prevCPR)) {
+    const derived: LevelCheckCondition[] = [];
+    const skipped: LevelKey[] = [];
+
+    for (const key of LEVEL_KEYS) {
+      const candidates = LEVEL_KEYS.filter((k) => k !== key);
+      const prevVal = prevCPR[key] as number;
+      const previousBracket = findBracket(prevVal, candidates, todayCPR);
+      if (previousBracket) {
+        derived.push({ key, subject: "previous", bandKeys: previousBracket });
+      } else {
+        skipped.push(key);
+      }
+    }
+
+    if (skipped.length > 0) {
+      console.warn(
+        `Level Check (expanded): no valid bracket for ${skipped.join(", ")} on this symbol with subject "previous" — ` +
+          `derived ${derived.length}/${LEVEL_KEYS.length} conditions.`
+      );
+    }
+
+    return derived;
+  }
   if (sourceConditions && sourceConditions.length > 0) {
     const allKeys = sourceConditions.map((c) => c.key);
 

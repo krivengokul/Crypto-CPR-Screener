@@ -695,6 +695,32 @@ const LEVELSABOVE_VIEWS: ViewDef[] = [
       order: 0
 },
   {
+    // Real source condition for the "RH-BGapB" GapBadge signature
+    // (computeGapBadge in ScreenerUtils.tsx): RRGap + HHGap, prev day's
+    // HLSwitch "HL-B" (no Gap prefix -> hlGapWinner !== "prev"), today's
+    // HLSwitch "HL-B" WITH the Gap prefix -> hlGapWinner === "today".
+    // A6-EU2L4-RH-BGapB:R4 below should grade against THIS key, not
+    // A-A-AA-AA-EU2L4-ApR2.
+    key: "A-A-AA-AA-EU2L4-RH-BGapB",
+    label: "A-A-AA-AA-EU2L4-RH-BGapB",
+    parentKey: "A-A-AA-AA-EU2L4",
+    kind: "view",
+    direction: "Up",
+    condition: (r) =>
+      r.RRSSGapCategory === "RRGap" &&
+      r.PDHPDLGapCategory === "HHGap" &&
+      r.prevCPR.HLSwitch === "HL-B" &&
+      r.todayCPR.HLSwitch === "HL-B" &&
+      r.hlGapWinner === "today",
+    targetLabel: "U4 (today's R4)",
+    getTarget: (r) => r.todayCPR.r4,
+    entryLabel: "TC (today's TC)",
+    getEntry: (r) => r.todayCPR.tc,
+    stoplossLabel: "S1 (today's S1)",
+    getStoploss: (r) => r.todayCPR.s1,
+      order: 1
+},
+  {
     key: "A-A-AA-AA-U3L4-pGapB",
     label: "A-A-AA-AA-U3L4-pGapB",
     parentKey: "A-A-AA-AA-U3L4",
@@ -939,7 +965,7 @@ const LEVELSABOVE_VIEWS: ViewDef[] = [
         key: "A6-EU2L4-RH-BGapB:R4",
         label: "A6-EU2L4-RH-BGapB:R4",
         parentKey: "A-A-AA-AA-EU2L4",
-        conditionKey: "A-A-AA-AA-EU2L4-ApR2",
+        conditionKey: "A-A-AA-AA-EU2L4-RH-BGapB",
         kind: "view",
         direction: "Up",
         targetLabel: "U4 (today's R4)",
@@ -948,104 +974,15 @@ const LEVELSABOVE_VIEWS: ViewDef[] = [
         getEntry: (r) => r.todayCPR.tc,
         stoplossLabel: "S1 (today's S1)",
         getStoploss: (r) => r.todayCPR.s1,
-        levelCheckDefs: [
-      {
-        "key": "r4",
-        "subject": "previous",
-        "bandKeys": [
-          "r1",
-          "r2"
-        ]
-      },
-      {
-        "key": "r3",
-        "subject": "previous",
-        "bandKeys": [
-          "prevHigh",
-          "r1"
-        ]
-      },
-      {
-        "key": "r2",
-        "subject": "previous",
-        "bandKeys": [
-          "pivot",
-          "tc"
-        ]
-      },
-      {
-        "key": "prevHigh",
-        "subject": "today",
-        "bandKeys": [
-          "r2",
-          "r3"
-        ]
-      },
-      {
-        "key": "r1",
-        "subject": "today",
-        "bandKeys": [
-          "r3",
-          "r4"
-        ]
-      },
-      {
-        "key": "tc",
-        "subject": "today",
-        "bandKeys": [
-          "r2",
-          "r3"
-        ]
-      },
-      {
-        "key": "pivot",
-        "subject": "today",
-        "bandKeys": [
-          "r1",
-          "r2"
-        ]
-      },
-      {
-        "key": "bc",
-        "subject": "today",
-        "bandKeys": [
-          "r1",
-          "r2"
-        ]
-      },
-      {
-        "key": "prevLow",
-        "subject": "today",
-        "bandKeys": [
-          "bc",
-          "pivot"
-        ]
-      },
-      {
-        "key": "s1",
-        "subject": "today",
-        "bandKeys": [
-          "tc",
-          "prevHigh"
-        ]
-      },
-      {
-        "key": "s2",
-        "subject": "today",
-        "bandKeys": [
-          "s3",
-          "prevLow"
-        ]
-      },
-      {
-        "key": "s3",
-        "subject": "today",
-        "bandKeys": [
-          "s4",
-          "s2"
-        ]
-      }
-    ],
+        // Old 12-rung levelCheckDefs removed: it was missing "s4" (only
+        // 12 of the 13 rungs, so s4 always graded UnDefined) and several
+        // bands (e.g. r2 checked against [pivot, tc], s1 against
+        // [tc, prevHigh]) paired a rung with a band nowhere near it in
+        // ladder order, which would fail nearly every time even after
+        // the conditionKey fix above. Leave this undefined — it imposes
+        // no extra Level Check gate on top of the RH-BGapB condition —
+        // until a real 13-rung signature is derived (e.g. via
+        // deriveLevelCheckDefs from an actual matching symbol/date).
       }
 ];
 

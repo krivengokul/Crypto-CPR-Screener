@@ -1,4 +1,4 @@
-import { OHLC, CPRResult, analyzeCPR } from "./cpr";
+import { OHLC, CPRResult, analyzeCPR, isExpandedPatternPair } from "./cpr";
 import { fetchTopUSDTSymbols, fetchDailyKlines, isLiveDailyCandle } from "./binance";
 import { fetchDeltaPerps } from "./delta";
 import { buildViewTree, type ViewTreeNode, VIEWS, getView, type ViewDef } from "./views";
@@ -220,6 +220,32 @@ export function deriveLevelCheckDefs(r: CPRResult): LevelCheckCondition[] {
 
   const todayEntries: RungEntry[] = LEVEL_CHECK_KEYS.map((key) => ({ key, value: today[key] }));
   const prevEntries: RungEntry[] = LEVEL_CHECK_KEYS.map((key) => ({ key, value: prev[key] }));
+
+  // Expanded pairs (EU2L4/EU3L4/EUTL3/EL2U4/...): today's structure
+  // expands on prev's rather than sitting inside it, so grade the whole
+  // ladder uniformly as "did YESTERDAY's rung get absorbed into TODAY's
+  // new structure" (subject: "previous") instead of the mixed per-rung
+  // forward/reversed check below — that mixed check would otherwise flip
+  // direction rung-by-rung as today's wider range progressively falls
+  // outside prev's narrower one, producing an inconsistent signature.
+  if (isExpandedPatternPair(r.todayCPR, r.prevCPR)) {
+    const defs: LevelCheckCondition[] = [];
+    for (const key of LEVEL_CHECK_KEYS) {
+      const todayVal = today[key];
+      const prevVal = prev[key];
+      if (!Number.isFinite(todayVal) || !Number.isFinite(prevVal)) {
+        console.warn(`[levelCheck] "${key}" missing today/prev value — skipping`);
+        continue;
+      }
+      const band = tightestAdjacentBand(todayEntries, prevVal);
+      if (band) {
+        defs.push({ key, subject: "previous", bandKeys: band });
+      } else {
+        console.warn(`[levelCheck] could not derive a "previous"-subject band for "${key}" — skipping`);
+      }
+    }
+    return defs;
+  }
 
   const defs: LevelCheckCondition[] = [];
 

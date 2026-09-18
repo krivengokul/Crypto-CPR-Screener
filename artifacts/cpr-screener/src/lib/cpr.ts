@@ -1312,6 +1312,28 @@ export function getPatternCategory(name: string | null | undefined): PatternCate
   return PATTERN_CATEGORY[name] ?? null;
 }
 
+/**
+ * isExpandedPatternPair — true when the (today, prev) pair classifies to
+ * an "eXHigher" or "eXLower" pattern (EU2L4, EU3L4, EUTL3, EL2U4, ...),
+ * i.e. today's range structurally EXPANDS on prev's rather than sitting
+ * inside it. Built directly on classifyCPRPair + pickPattern + the same
+ * PATTERN_CATEGORY table getPatternCategory reads, so this stays in sync
+ * with "expanded"/pickPattern priority automatically — do not re-derive
+ * this by checking r.expanded or a name prefix at the call site.
+ *
+ * Used by deriveLevelCheckDefs (backtest.ts): for an expanded pair, all
+ * 13 ladder rungs are graded as "did YESTERDAY's rung get absorbed into
+ * TODAY's new structure" (subject: "previous"), rather than the mixed
+ * per-rung forward/reversed check used for non-expanded pairs — today's
+ * wider range means most/all rungs would otherwise fall outside prev's
+ * narrower range one at a time, producing an inconsistent, mostly-
+ * "previous" signature anyway.
+ */
+export function isExpandedPatternPair(today: CPRLevels, prev: CPRLevels): boolean {
+  const category = getPatternCategory(pickPattern(classifyCPRPair(today, prev)));
+  return category === "eXHigher" || category === "eXLower";
+}
+
 export function analyzeCPR(
     symbol: string,
     candles: OHLC[],
