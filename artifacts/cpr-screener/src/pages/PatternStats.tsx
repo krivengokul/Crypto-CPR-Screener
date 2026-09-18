@@ -6,6 +6,7 @@ import {
   BacktestSource,
   PatternCensusRow,
   CategoryComboRow,
+  CategoryMatchRow,
 } from "@/lib/backtest";
 
 // --- Small UTC date helpers (all dates here are UTC ISO strings) ---
@@ -183,6 +184,12 @@ interface CategoryGroup {
   categoryLabel: string;
   total: number;
   patterns: PatternCensusRow[];
+  // Distinct (symbol, date) rows that passed only this category's own base
+  // condition — comparable directly to the left-nav sidebar's per-category
+  // count. See CategoryMatchRow in backtest.ts for why this differs from
+  // `total` above (which sums every nested pattern/subpattern's count and
+  // so double-counts any symbol matching more than one of them).
+  distinctCount: number;
   // TEMPORARY DEBUG ADDITION — every distinct raw HHLL/RRHH/SSLL combo
   // observed among rows that passed this category's base condition,
   // highest-count-first. See CategoryComboRow in backtest.ts.
@@ -233,6 +240,12 @@ function CategoryBox({ group }: { group: CategoryGroup }) {
             {group.total}
           </p>
           <span className="text-[9px] uppercase tracking-wider text-muted-foreground">matched</span>
+          {/* Distinct-symbol count — the number directly comparable to the
+              left-nav sidebar's per-category count (e.g. "ABOVE LEVEL4
+              (53)"). Shown separately from `total` above, which sums every
+              nested pattern/subpattern's count and so isn't expected to
+              equal the sidebar's number. */}
+          <p className="mt-1 font-mono text-xs text-muted-foreground">{group.distinctCount} distinct</p>
         </div>
       </div>
 
@@ -308,6 +321,8 @@ export default function PatternStats() {
   const [rows, setRows] = useState<PatternCensusRow[] | null>(null);
   // TEMPORARY DEBUG ADDITION — see CategoryComboRow in backtest.ts.
   const [combos, setCombos] = useState<CategoryComboRow[] | null>(null);
+  // Per-category distinct-symbol counts — see CategoryMatchRow in backtest.ts.
+  const [categoryMatches, setCategoryMatches] = useState<CategoryMatchRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Total across every pattern, regardless of category — the single
@@ -330,6 +345,7 @@ export default function PatternStats() {
           categoryLabel: r.categoryLabel,
           total: r.count,
           patterns: [r],
+          distinctCount: 0,
           combos: [],
         });
       }
@@ -349,7 +365,28 @@ export default function PatternStats() {
             categoryLabel: c.categoryLabel,
             total: 0,
             patterns: [],
+            distinctCount: 0,
             combos: [c],
+          });
+        }
+      }
+    }
+    // Attach each category's distinct-symbol count. A category can have a
+    // distinct count even with zero matched patterns (or no `patterns`
+    // list at all), same reasoning as the combos loop above.
+    if (categoryMatches) {
+      for (const m of categoryMatches) {
+        const existing = byKey.get(m.categoryKey);
+        if (existing) {
+          existing.distinctCount = m.count;
+        } else {
+          byKey.set(m.categoryKey, {
+            categoryKey: m.categoryKey,
+            categoryLabel: m.categoryLabel,
+            total: 0,
+            patterns: [],
+            distinctCount: m.count,
+            combos: [],
           });
         }
       }
@@ -361,16 +398,17 @@ export default function PatternStats() {
     }
     groups.sort((a, b) => b.total - a.total);
     return groups;
-  }, [rows, combos]);
+  }, [rows, combos, categoryMatches]);
 
   async function handleRun() {
     setRunning(true);
     setError(null);
     setRows(null);
     setCombos(null);
+    setCategoryMatches(null);
     setProgress(null);
     try {
-      const { rows: result, combos: comboResult } = await runPatternCensus(
+      const { rows: result, combos: comboResult, categoryMatches: categoryMatchResult } = await runPatternCensus(
         startDate,
         endDate,
         source,
@@ -379,6 +417,7 @@ export default function PatternStats() {
       );
       setRows(result);
       setCombos(comboResult);
+      setCategoryMatches(categoryMatchResult);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {

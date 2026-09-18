@@ -1621,6 +1621,22 @@ export interface PatternCensusRow {
 }
 
 /**
+ * One row per category — the count of distinct (symbol, date) rows that
+ * matched ONLY that category's own base condition (passesPatternFn(result,
+ * categoryKey)), with no nested pattern/subpattern layered on top. This is
+ * the same thing the left-nav sidebar counts for "today" (e.g. "ABOVE
+ * LEVEL4 (53)") — unlike PatternCensusRow.count summed per category (which
+ * adds up every nested pattern/subpattern's count and so double- and
+ * triple-counts any symbol that matches more than one of them), this
+ * number can be compared directly against the sidebar's.
+ */
+export interface CategoryMatchRow {
+  categoryKey: string;
+  categoryLabel: string;
+  count: number;
+}
+
+/**
  * TEMPORARY DEBUG ADDITION — one row per distinct raw
  * (HHLLCategory, RRHHCategory, SSLLCategory) combination actually observed
  * among the real historical rows that pass a category's base condition
@@ -1695,7 +1711,7 @@ export async function runPatternCensus(
   source: BacktestSource,
   passesPatternFn: (r: CPRResult, pattern: string) => boolean,
   onProgress?: (done: number, total: number, symbol: string) => void
-): Promise<{ rows: PatternCensusRow[]; combos: CategoryComboRow[] }> {
+): Promise<{ rows: PatternCensusRow[]; combos: CategoryComboRow[]; categoryMatches: CategoryMatchRow[] }> {
   if (!isValidUTCDateISO(startDateISO) || !isValidUTCDateISO(endDateISO)) {
     throw new Error("Invalid date range " + startDateISO + " .. " + endDateISO + ". Expected YYYY-MM-DD.");
   }
@@ -1730,6 +1746,14 @@ export async function runPatternCensus(
   const comboCounts = new Map<string, number>();
   const comboKey = (categoryKey: string, combo: string) => `${categoryKey}::${combo}`;
 
+  // One counter per category — distinct (symbol, date) rows that pass
+  // ONLY the category's own base condition, with no nested pattern
+  // layered on top. This is what makes CategoryMatchRow comparable to the
+  // sidebar's per-category count (see CategoryMatchRow above), unlike the
+  // summed-per-pattern PatternCensusRow.count total.
+  const categoryMatchCounts = new Map<string, number>();
+
+
   const dates: string[] = [];
   for (let d = startDateISO; d <= endDateISO; d = addDaysISO(d, 1)) dates.push(d);
 
@@ -1761,6 +1785,7 @@ export async function runPatternCensus(
           const baseCombo = `${hhll} / ${rrhh} / ${ssll}`;
           for (const cat of rootCategories) {
             if (!passesPatternFn(result, cat.key)) continue; // base category condition
+            categoryMatchCounts.set(cat.key, (categoryMatchCounts.get(cat.key) ?? 0) + 1);
             const combo = RRSS_COMBO_CATEGORIES.has(cat.key) ? `${rrss} / ${baseCombo}` : baseCombo;
             const k = comboKey(cat.key, combo);
             comboCounts.set(k, (comboCounts.get(k) ?? 0) + 1);
@@ -1808,7 +1833,13 @@ export async function runPatternCensus(
   }
   combos.sort((a, b) => b.count - a.count);
 
-  return { rows, combos };
+  const categoryMatches: CategoryMatchRow[] = rootCategories.map((cat) => ({
+    categoryKey: cat.key,
+    categoryLabel: cat.label,
+    count: categoryMatchCounts.get(cat.key) ?? 0,
+  }));
+
+  return { rows, combos, categoryMatches };
 }
 
 export async function runPivotLevelBacktest(
