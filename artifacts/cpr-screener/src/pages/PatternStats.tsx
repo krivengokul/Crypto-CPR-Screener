@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Layers, Calendar as CalendarIcon } from "lucide-react";
-import { passesPattern, matchesPatternFlag } from "./ScreenerUtils";
+import { passesPattern } from "./ScreenerUtils";
 import {
   runPatternCensus,
   BacktestSource,
@@ -375,7 +375,6 @@ export default function PatternStats() {
         endDate,
         source,
         passesPattern,
-        matchesPatternFlag,
         (done, total) => setProgress({ done, total })
       );
       setRows(result);

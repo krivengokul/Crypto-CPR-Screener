@@ -1615,7 +1615,7 @@ export async function runCategoryScan(
 export interface PatternCensusRow {
   categoryKey: string;
   categoryLabel: string;
-  patternKey: string; // matches matchesPatternFlag's `label` param
+  patternKey: string; // matches passesPattern's `pattern` param
   patternLabel: string;
   count: number;
 }
@@ -1660,8 +1660,29 @@ const RRSS_COMBO_CATEGORIES = new Set(["top15gainers", "top15losers"]);
  * (symbol, date) in range, reconstructCPRForDate runs ONCE (cached candle
  * history, so no extra network calls after the initial prefetch), and the
  * resulting CPRResult is checked against every (categoryKey, patternKey)
- * pair — same passesPatternFn/matchesPatternFn used everywhere else in
- * this file (see passesPattern/matchesPatternFlag in ScreenerUtils.tsx).
+ * pair via a single passesPatternFn(result, patternKey) call (see
+ * passesPattern in ScreenerUtils.tsx).
+ *
+ * FIXED: this used to also take a separate matchesPatternFn (typically
+ * matchesPatternFlag), used only for the per-pattern check. That function
+ * calls passesView() directly rather than passesPattern(), so for any
+ * "Copy View" entry (a view with its own `conditionKey`) it skipped that
+ * view's `levelCheckDefs` gate entirely and fell back to the redirected
+ * condition's bare pass/fail — e.g. "A6-EUTL3-BGapB-Ultra-S1" (nested
+ * under "A-A-AA-AA-EUTL3" with its own 13-line Level Check) was silently
+ * counted as a match for every row that merely passed "R1AbovePR4",
+ * making its census count identical to the whole category's. Passing the
+ * SAME passesPatternFn used for the category check into the per-pattern
+ * check too (passesPattern already applies conditionKey redirects AND
+ * levelCheckDefs — see its own doc comment in ScreenerUtils.tsx) fixes
+ * this for all Copy View entries, not just this one.
+ *
+ * The explicit category-level passesPatternFn(result, p.categoryKey)
+ * check that used to run ahead of the per-pattern check is gone too —
+ * passesPatternFn(result, p.patternKey) alone already walks the full
+ * parentKey chain back up to the category (no VIEWS entry currently sets
+ * `standalone: true`, which is the only thing that chain walk skips), so
+ * it was redundant.
  *
  * The symbol universe is resolved once, as of endDateISO (the most recent
  * date in range) — same "current exchange universe, walked backward"
@@ -1673,7 +1694,6 @@ export async function runPatternCensus(
   endDateISO: string,
   source: BacktestSource,
   passesPatternFn: (r: CPRResult, pattern: string) => boolean,
-  matchesPatternFn: (r: CPRResult, label: string) => boolean,
   onProgress?: (done: number, total: number, symbol: string) => void
 ): Promise<{ rows: PatternCensusRow[]; combos: CategoryComboRow[] }> {
   if (!isValidUTCDateISO(startDateISO) || !isValidUTCDateISO(endDateISO)) {
@@ -1747,8 +1767,11 @@ export async function runPatternCensus(
           }
 
           for (const p of pairs) {
-            if (!passesPatternFn(result, p.categoryKey)) continue; // base category condition
-            if (!matchesPatternFn(result, p.patternKey)) continue; // this pattern's raw flag
+            // passesPatternFn already walks the full parentKey chain back
+            // to the category, and (unlike matchesPatternFlag) correctly
+            // applies a Copy View's conditionKey redirect + levelCheckDefs
+            // gate — see the FIXED note on this function above.
+            if (!passesPatternFn(result, p.patternKey)) continue;
             const k = pairKey(p.categoryKey, p.patternKey);
             counts.set(k, (counts.get(k) ?? 0) + 1);
           }
