@@ -550,6 +550,9 @@ const LEVELSABOVE_VIEWS: ViewDef[] = [
   { key: "A-A-AA-AA-U3L4", label: "A-A-AA-AA-U3L4", parentKey: "A-A-AA-AA", kind: "pattern", condition: (r) => r.U3L4,
       order: 5
 },
+  { key: "A-A-AA-AA-U4L4", label: "A-A-AA-AA-U4L4", parentKey: "A-A-AA-AA", kind: "pattern", condition: (r) => r.U4L4,
+      order: 8
+},
   { key: "A-A-AA-AA-EU3L4", label: "A-A-AA-AA-EU3L4", parentKey: "A-A-AA-AA", kind: "pattern", condition: (r) => r.EU3L4,
       order: 6
 },
@@ -1933,6 +1936,38 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
   { key: "EL2L1", label: "EL2L1", parentKey: "R1AbovePR4", kind: "pattern", condition: (r) => r.EL2L1,
       order: 6
 },
+
+  // --- Pattern "A-E-AA-E" inside "ABOVE LEVEL4" and its requested subpatterns ---
+  // These entries intentionally live here only; they are not children of the
+  // generated EXPANDED tree.
+  {
+    key: "R1AbovePR4-A-E-AA-E",
+    label: "A-E-AA-E",
+    parentKey: "R1AbovePR4",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-A" &&
+      r.HHLLCategory === "HHLL-E" &&
+      r.RRHHCategory === "RRHH-AA" &&
+      r.SSLLCategory === "SSLL-E",
+    order: 8,
+  },
+  {
+    key: "A-E-AA-E-EU1L3",
+    label: "A-E-AA-E-EU1L3",
+    parentKey: "R1AbovePR4-A-E-AA-E",
+    kind: "pattern",
+    condition: (r) => r.EU1L3,
+    order: 0,
+  },
+  {
+    key: "A-E-AA-E-EU1L2",
+    label: "A-E-AA-E-EU1L2",
+    parentKey: "R1AbovePR4-A-E-AA-E",
+    kind: "pattern",
+    condition: (r) => r.EU1L2,
+    order: 1,
+  },
 
   // --- Pattern "A-A-AA-AA" inside "ABOVE LEVEL4" and its subpatterns ---
   {
