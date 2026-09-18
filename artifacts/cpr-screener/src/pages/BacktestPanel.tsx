@@ -32,6 +32,7 @@ import {
   buildViewTree,
   childrenOf,
   getView,
+  passesView,
   topLevelCategoryOf,
   VIEWS,
   type ViewTreeNode,
@@ -102,6 +103,38 @@ function selectTopByChange<T extends { changePct: number | null }>(
 }
 function formatDisplay(iso: string): string {
   return fromISO(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+}
+
+/** Return true when viewKey is nested under ancestorKey in the View tree. */
+function isViewDescendant(viewKey: string, ancestorKey: string): boolean {
+  const seen = new Set<string>();
+  let current = getView(viewKey);
+  while (current?.parentKey && !seen.has(current.key)) {
+    if (current.parentKey === ancestorKey) return true;
+    seen.add(current.key);
+    current = getView(current.parentKey);
+  }
+  return false;
+}
+
+/**
+ * Match the first concrete View under the currently selected Backtest node.
+ * Scoping to the selected category/pattern avoids showing unrelated raw flag
+ * names when a row happens to satisfy more than one View globally.
+ */
+function matchingViewName(raw: CPRResult, selectedKey: string): string | null {
+  const selected = getView(selectedKey);
+  if (!selected) return null;
+
+  const match = VIEWS
+    .filter((view) =>
+      view.kind === "view" &&
+      (view.key === selectedKey || isViewDescendant(view.key, selectedKey))
+    )
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+    .find((view) => passesView(raw, view.key));
+
+  return match?.label ?? null;
 }
 
 const CPR_WIDTH_TIERS = [
@@ -1912,6 +1945,9 @@ export default function BacktestPanel() {
                     <th className="px-2 py-3 w-40 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Pattern
                     </th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[180px]">
+                      View
+                    </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[220px]">
                       <span className="inline-flex items-center gap-1">
                         Pivot Size <PivotSizeInfo />
@@ -1997,6 +2033,11 @@ export default function BacktestPanel() {
                             <span className="text-xs text-muted-foreground">—</span>
                           )}
                         </td>
+                        <td className="px-3 py-2 text-xs">
+                          {matchingViewName(r.raw, selectedKey) ?? (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </td>
                         <td className="px-3 py-2 font-mono whitespace-nowrap">
                           {renderPivotSizeCell(r.prevCPR, r.todayCPR, r.compressionRatio)}
                         </td>
@@ -2014,7 +2055,7 @@ export default function BacktestPanel() {
                           r={toSRLadderData(r.raw, r.closePrice ?? undefined, r.prevClose ?? undefined, r.ppClose ?? undefined)}
                           rowKey={`${r.source}-${r.symbol}-${r.entryDate}`}
                           viewKey={selectedKey}
-                          colSpan={6}
+                          colSpan={7}
                           todayPatternBadge={renderTodayPatternBadges(r.raw)}
                           prevPatternBadge={renderPrevPatternBadge(r.raw)}
                           pivotPatternBadge={renderPivotPatternBadge(r.raw)}
@@ -2145,6 +2186,9 @@ export default function BacktestPanel() {
                     <th className="px-2 py-3 w-40 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Pattern
                     </th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[180px]">
+                      View
+                    </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[220px]">
                       <span className="inline-flex items-center gap-1">
                         Pivot Size <PivotSizeInfo />
@@ -2242,6 +2286,11 @@ export default function BacktestPanel() {
                       <td className="px-2 py-3 w-40">
                         {renderPatternColumnBadges(r.raw) ?? (
                           <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2 text-xs">
+                        {matchingViewName(r.raw, selectedKey) ?? (
+                          <span className="text-muted-foreground">—</span>
                         )}
                       </td>
                       <td className="px-3 py-2 font-mono whitespace-nowrap">
@@ -2343,7 +2392,7 @@ export default function BacktestPanel() {
                         r={toSRLadderData(r.raw, r.closePrice ?? undefined, r.prevClose ?? undefined, r.ppClose ?? undefined)}
                         rowKey={`${r.source}-${r.symbol}-${r.entryDate}`}
                         viewKey={selectedKey}
-                        colSpan={9}
+                        colSpan={10}
                         todayPatternBadge={renderTodayPatternBadges(r.raw)}
                         prevPatternBadge={renderPrevPatternBadge(r.raw)}
                         pivotPatternBadge={renderPivotPatternBadge(r.raw)}
