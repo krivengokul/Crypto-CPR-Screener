@@ -420,19 +420,6 @@ function CopyViewControl({
       return;
     }
 
-    const result = copyBacktestView(sourceKey, trimmedKey, trimmedLabel, attachKey);
-    if (!result.ok) {
-      setError(
-        result.reason === "duplicate-key"
-          ? `"${trimmedKey}" already exists — pick a different key.`
-          : result.reason === "source-not-in-tree"
-          ? "Couldn't find this View's place in the dropdown tree."
-          : "Couldn't find the source View."
-      );
-      return;
-    }
-    setError("");
-
     // Double quotes, not single quotes — cmd.exe (Windows) doesn't treat
     // single quotes as string delimiters at all; it passes them through
     // literally, corrupting the value (this is exactly what happened:
@@ -449,9 +436,9 @@ function CopyViewControl({
     // none yet, deriveLevelCheckDefsForSymbol builds a from-scratch set
     // over all 13 LEVEL_KEYS for this symbol (picking a working subject
     // per key) rather than leaving the copy without one.
-    let levelCheckDefsArg = "";
+    let derived: LevelCheckCondition[];
     try {
-      const derived = deriveLevelCheckDefsForSymbol(sourceConditions, prevCPR, todayCPR);
+      derived = deriveLevelCheckDefsForSymbol(sourceConditions, prevCPR, todayCPR);
 
       const expectedCount =
         sourceConditions && sourceConditions.length > 0 ? sourceConditions.length : LEVEL_KEYS.length;
@@ -475,7 +462,33 @@ function CopyViewControl({
       let binary = "";
       jsonBytes.forEach((b) => (binary += String.fromCharCode(b)));
       const b64 = btoa(binary);
-      levelCheckDefsArg = ` -f levelCheckDefs=${b64}`;
+
+      // The workflow receives this same payload below. Keeping the derived
+      // definitions in a local variable also lets the in-memory clone show
+      // the Level Check immediately, before the GitHub workflow is run.
+      const result = copyBacktestView(
+        sourceKey,
+        trimmedKey,
+        trimmedLabel,
+        attachKey,
+        derived
+      );
+      if (!result.ok) {
+        setError(
+          result.reason === "duplicate-key"
+            ? `"${trimmedKey}" already exists — pick a different key.`
+            : result.reason === "source-not-in-tree"
+            ? "Couldn't find this View's place in the dropdown tree."
+            : "Couldn't find the source View."
+        );
+        return;
+      }
+      setError("");
+
+      setCommand(
+        `gh workflow run copy-view.yml --repo krivengokul/Crypto-CPR-Screener -f sourceKey=${q(sourceKey)} -f newKey=${q(trimmedKey)} -f newLabel=${q(trimmedLabel)} -f attachKey=${q(attachKey)} -f levelCheckDefs=${b64}`
+      );
+      setCreatedKey(trimmedKey);
     } catch (err) {
       setError(
         err instanceof Error
@@ -484,11 +497,6 @@ function CopyViewControl({
       );
       return;
     }
-
-    setCommand(
-      `gh workflow run copy-view.yml --repo krivengokul/Crypto-CPR-Screener -f sourceKey=${q(sourceKey)} -f newKey=${q(trimmedKey)} -f newLabel=${q(trimmedLabel)} -f attachKey=${q(attachKey)}${levelCheckDefsArg}`
-    );
-    setCreatedKey(trimmedKey);
     // Deliberately NOT calling onCopied here. It switches the dropdown's
     // selected View, which changes activeTarget — and since this control
     // lives inside that View's own expanded row detail, switching away

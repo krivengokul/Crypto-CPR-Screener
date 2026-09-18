@@ -353,7 +353,8 @@ export function copyBacktestView(
   sourceKey: string,
   newKey: string,
   newLabel: string,
-  attachKey?: string
+  attachKey?: string,
+  levelCheckDefs?: LevelCheckCondition[]
 ): CopyViewResult {
   if (VIEWS.some(v => v.key === newKey)) {
     return { ok: false, reason: "duplicate-key" };
@@ -374,7 +375,9 @@ export function copyBacktestView(
     parentKey: resolvedParentKey,
     conditionKey,
     kind: "view",
-    levelCheckDefs: sourceView.levelCheckDefs
+    levelCheckDefs: levelCheckDefs
+      ? levelCheckDefs.map(d => ({ ...d, bandKeys: [...d.bandKeys] }))
+      : sourceView.levelCheckDefs
       ? sourceView.levelCheckDefs.map(d => ({ ...d, bandKeys: [...d.bandKeys] }))
       : undefined,
   };
