@@ -1937,12 +1937,13 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
       order: 6
 },
 
-  // --- Pattern "A-E-AA-E" inside "ABOVE LEVEL4" ---
+  // --- Pattern "A-E-AA-E" inside "ABOVE LEVEL4" and its subpatterns ---
   // Note: this key was previously declared a second time further below
   // (order: 12, with only the "EUBL2" child) — that second declaration
-  // was a duplicate of this same node and caused "A-E-AA-E" to render
-  // twice in the tree/search. It has been removed and its "EUBL2" child
-  // re-pointed at this single declaration instead.
+  // was a duplicate of this same node and caused "A-E-AA-E" (and its
+  // subpatterns) to render twice in the tree/search. The duplicate
+  // parent declaration has been removed; EU1L3/EU1L2 below now appear
+  // once, and "EUBL2" further down is re-pointed at this declaration.
   {
     key: "R1AbovePR4-A-E-AA-E",
     label: "A-E-AA-E",
@@ -1954,6 +1955,22 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
       r.RRHHCategory === "RRHH-AA" &&
       r.SSLLCategory === "SSLL-E",
     order: 8,
+  },
+  {
+    key: "A-E-AA-E-EU1L3",
+    label: "A-E-AA-E-EU1L3",
+    parentKey: "R1AbovePR4-A-E-AA-E",
+    kind: "pattern",
+    condition: (r) => r.EU1L3,
+    order: 0,
+  },
+  {
+    key: "A-E-AA-E-EU1L2",
+    label: "A-E-AA-E-EU1L2",
+    parentKey: "R1AbovePR4-A-E-AA-E",
+    kind: "pattern",
+    condition: (r) => r.EU1L2,
+    order: 1,
   },
 
   // --- Pattern "A-A-AA-AA" inside "ABOVE LEVEL4" and its subpatterns ---
