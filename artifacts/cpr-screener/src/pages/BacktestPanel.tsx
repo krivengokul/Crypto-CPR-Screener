@@ -1193,6 +1193,12 @@ export default function BacktestPanel() {
     if (activePatternInfo) break;
   }
   const isPatternOnly = !!activePatternInfo;
+  // Pattern selections use a breadcrumb path as selectedKey (for example,
+  // "LEVEL ABOVE → A-A-AA-AA → A-A-AA-AA-EU2L4"). View matching must use
+  // the actual registry key of the selected pattern, not that display path.
+  const viewMatchScopeKey = isPatternOnly && activePatternInfo
+    ? activePatternInfo.sub.key
+    : selectedKey;
 
   const isViewOnly = !isCategory && !isPatternOnly;
 
@@ -2040,7 +2046,7 @@ export default function BacktestPanel() {
                           )}
                         </td>
                         <td className="px-3 py-2 text-xs">
-                          {matchingViewName(r.raw, selectedKey) ?? (
+                          {matchingViewName(r.raw, viewMatchScopeKey) ?? (
                             <span className="text-muted-foreground">—</span>
                           )}
                         </td>
@@ -2295,7 +2301,7 @@ export default function BacktestPanel() {
                         )}
                       </td>
                       <td className="px-3 py-2 text-xs">
-                        {matchingViewName(r.raw, selectedKey) ?? (
+                        {matchingViewName(r.raw, viewMatchScopeKey) ?? (
                           <span className="text-muted-foreground">—</span>
                         )}
                       </td>
