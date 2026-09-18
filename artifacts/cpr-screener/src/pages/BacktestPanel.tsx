@@ -132,7 +132,13 @@ function matchingViewName(raw: CPRResult, selectedKey: string): string | null {
       (view.key === selectedKey || isViewDescendant(view.key, selectedKey))
     )
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-    .find((view) => passesView(raw, view.key));
+    .find((view) => {
+      // Backtest rows have already passed the selected category/subpattern.
+      // Evaluate the child View's own predicate directly so a legacy View
+      // whose parent metadata is incomplete cannot disappear from this column.
+      const ownConditionMatches = view.condition ? view.condition(raw) : false;
+      return ownConditionMatches || passesView(raw, view.key);
+    });
 
   return match?.label ?? null;
 }
