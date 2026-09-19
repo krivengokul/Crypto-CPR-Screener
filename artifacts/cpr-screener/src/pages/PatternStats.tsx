@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Layers, Calendar as CalendarIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, Layers, Calendar as CalendarIcon, Search } from "lucide-react";
 import { passesPattern } from "./ScreenerUtils";
+import { pivotcategories } from "./ViewsSidebar";
 import {
   runPatternCensus,
   BacktestSource,
@@ -8,6 +9,20 @@ import {
   CategoryComboRow,
   CategoryMatchRow,
 } from "@/lib/backtest";
+
+// The Category filter's options come straight from ViewsSidebar's own
+// `pivotcategories` — the same list/labels the left-nav sidebar renders —
+// so this dropdown can never drift out of sync with what the sidebar shows.
+// Two of its entries aren't real top-level categories in views.ts's tree,
+// so they're excluded here (selecting either would just show "No patterns
+// found", since no PatternCensusRow's categoryKey ever equals them):
+//   - "equal-cpr": nested under the "touch" category in views.ts, not a
+//     top-level category of its own (ViewsSidebar surfaces it in the nav
+//     as if it were, as a UI-only convenience).
+//   - "copyViews": ViewsSidebar's own flat nav bucket for auto-generated
+//     Copy View / Create View entries — never existed in views.ts at all.
+const NON_CENSUS_CATEGORY_IDS = new Set(["equal-cpr", "copyViews"]);
+const CATEGORY_FILTER_OPTIONS = pivotcategories.filter((c) => !NON_CENSUS_CATEGORY_IDS.has(c.id));
 
 // --- Small UTC date helpers (all dates here are UTC ISO strings) ---
 // Same helpers/behaviour as BacktestPanel's DateField, so both panels'
@@ -324,12 +339,25 @@ export default function PatternStats() {
   // Per-category distinct-symbol counts — see CategoryMatchRow in backtest.ts.
   const [categoryMatches, setCategoryMatches] = useState<CategoryMatchRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // "" = All categories. Options come from ViewsSidebar's own `pivotcategories`
+  // (see CATEGORY_FILTER_OPTIONS below) so this dropdown always matches the
+  // left-nav sidebar's category list/labels exactly, rather than maintaining
+  // a second copy of it here.
+  const [categoryFilter, setCategoryFilter] = useState<string>("");
+
+  // rows/emptyCount/etc. below narrow to just the selected category when one
+  // is chosen, so the summary bar and boxes reflect the same scope as the
+  // dropdown — "All categories" (categoryFilter === "") keeps everything.
+  const scopedRows = useMemo(
+    () => (categoryFilter ? rows?.filter((r) => r.categoryKey === categoryFilter) ?? null : rows),
+    [rows, categoryFilter]
+  );
 
   // Total across every pattern, regardless of category — the single
   // bottom-of-page number. Per-category totals live in each box's own
   // header instead of being repeated down here.
-  const totalMatches = useMemo(() => rows?.reduce((sum, r) => sum + r.count, 0) ?? 0, [rows]);
-  const emptyCount = useMemo(() => rows?.filter((r) => r.count === 0).length ?? 0, [rows]);
+  const totalMatches = useMemo(() => scopedRows?.reduce((sum, r) => sum + r.count, 0) ?? 0, [scopedRows]);
+  const emptyCount = useMemo(() => scopedRows?.filter((r) => r.count === 0).length ?? 0, [scopedRows]);
 
   const categories = useMemo<CategoryGroup[]>(() => {
     if (!rows) return [];
@@ -400,6 +428,13 @@ export default function PatternStats() {
     return groups;
   }, [rows, combos, categoryMatches]);
 
+  // Boxes actually rendered — narrowed to the selected category, same
+  // scoping as scopedRows above.
+  const visibleCategories = useMemo(
+    () => (categoryFilter ? categories.filter((g) => g.categoryKey === categoryFilter) : categories),
+    [categories, categoryFilter]
+  );
+
   async function handleRun() {
     setRunning(true);
     setError(null);
@@ -434,36 +469,61 @@ export default function PatternStats() {
         </p>
       </div>
 
-      <div className="flex flex-wrap items-end gap-4">
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="block text-[10px] text-muted-foreground uppercase tracking-wider">Source</span>
-          <select
-            className="rounded-lg border border-border bg-background px-2.5 py-1.5 text-sm text-foreground"
-            value={source}
-            onChange={(e) => setSource(e.target.value as BacktestSource)}
-            disabled={running}
-          >
-            <option value="binance">Binance</option>
-            <option value="delta">Delta</option>
-          </select>
-        </label>
+      <div className="rounded-xl border border-border bg-card px-4 py-3">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div className="flex shrink-0 items-center gap-2 pb-1.5 text-sm font-medium text-cyan-400">
+            <Search className="h-4 w-4" />
+            Filter scan
+          </div>
 
-        <DateField label="Start Date (UTC)" value={startDate} onChange={setStartDate} max={endDate} />
-        <DateField
-          label="End Date (UTC)"
-          value={endDate}
-          onChange={setEndDate}
-          min={startDate}
-          max={new Date().toISOString().slice(0, 10)}
-        />
+          <div className="flex flex-wrap items-end gap-4">
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="block text-[10px] text-muted-foreground uppercase tracking-wider">Source</span>
+              <select
+                className="rounded-lg border border-border bg-background px-2.5 py-1.5 text-sm text-foreground"
+                value={source}
+                onChange={(e) => setSource(e.target.value as BacktestSource)}
+                disabled={running}
+              >
+                <option value="binance">Binance</option>
+                <option value="delta">Delta</option>
+              </select>
+            </label>
 
-        <button
-          className="px-4 py-1.5 rounded-lg bg-primary text-primary-foreground font-medium disabled:opacity-50"
-          onClick={handleRun}
-          disabled={running}
-        >
-          {running ? "Running…" : "Run"}
-        </button>
+            <DateField label="Start Date (UTC)" value={startDate} onChange={setStartDate} max={endDate} />
+            <DateField
+              label="End Date (UTC)"
+              value={endDate}
+              onChange={setEndDate}
+              min={startDate}
+              max={new Date().toISOString().slice(0, 10)}
+            />
+
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="block text-[10px] text-muted-foreground uppercase tracking-wider">Category</span>
+              <select
+                className="min-w-[160px] rounded-lg border border-cyan-400/70 bg-background px-2.5 py-1.5 text-sm text-foreground shadow-[0_0_0_1px_rgba(34,211,238,0.25)] focus:outline-none focus:ring-2 focus:ring-cyan-400/50"
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+              >
+                <option value="">All categories</option>
+                {CATEGORY_FILTER_OPTIONS.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <button
+              className="rounded-lg bg-cyan-400 px-4 py-1.5 font-semibold text-black transition hover:bg-cyan-300 disabled:opacity-50"
+              onClick={handleRun}
+              disabled={running}
+            >
+              {running ? "Running…" : "Run scan"}
+            </button>
+          </div>
+        </div>
       </div>
 
       {running && progress && (
@@ -482,7 +542,7 @@ export default function PatternStats() {
         <>
           <div className="flex flex-wrap gap-6 rounded-lg border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
             <span>
-              <span className="font-semibold text-foreground">{rows.length}</span> patterns
+              <span className="font-semibold text-foreground">{scopedRows?.length ?? 0}</span> patterns
             </span>
             <span>
               <span className="font-semibold text-foreground">{totalMatches}</span> total matched rows
@@ -492,14 +552,14 @@ export default function PatternStats() {
             </span>
           </div>
 
-          {categories.length === 0 ? (
+          {visibleCategories.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border bg-card px-6 py-16 text-center">
               <p className="font-medium">No patterns found</p>
-              <p className="mt-2 text-sm text-muted-foreground">Try a different date range or source.</p>
+              <p className="mt-2 text-sm text-muted-foreground">Try a different date range, source, or category.</p>
             </div>
           ) : (
             <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {categories.map((group) => (
+              {visibleCategories.map((group) => (
                 <CategoryBox key={group.categoryKey} group={group} />
               ))}
             </section>
