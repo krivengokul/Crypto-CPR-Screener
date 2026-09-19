@@ -917,12 +917,16 @@ export function computePivotPattern(r: CPRResult): PivotPatternKey | null {
  *   3. prevCPR.HLSwitch ("HL-A"/"HL-B"/"HL-Q"), "Gap"-prefixed when
  *      hlGapWinner === "prev" (mirrors renderPrevPdhPdlBadge's pHL-A ->
  *      pHLGap-A relabel, minus the "p" prefix)
- *   4. todayCPR.HLSwitch, "Gap"-prefixed when hlGapWinner === "today"
+ *   4. todayCPR.HLSwitch, "Gap"-suffixed when hlGapWinner === "today"
  *      (mirrors renderTodayPdhPdlBadge's HL-A -> HLGap-A relabel)
- * Label shape: "{1}{2}-{3}{4}", e.g. RRGap+HHGap+pHLGap-A+HL-A -> "RH-GapAA",
- * SSGap+LLGap+pHL-Q+HLGap-A -> "SL-QGapA". hlGapWinner is single-valued
- * ("today" | "prev" | "none"), so at most one of parts 3/4 ever carries the
- * "Gap" prefix. All four source fields are always present and mutually
+ * Label shape: "{1}{2}-{3}{4}", with the word "Gap" written where the gap
+ * winner's letter is, EXCEPT that it never sits in the middle of the label:
+ *   - prev wins  -> "Gap" stays in front of part 3:  RRGap+HHGap+pHLGap-A+HL-A -> "RH-GapAA"
+ *   - today wins -> "Gap" moves to the very end:     SSGap+LLGap+pHL-Q+HLGap-A -> "SL-QAGap"
+ *     (was "SL-QGapA"; likewise SH-AGapA -> SH-AAGap, RL-AGapB -> RL-ABGap,
+ *     RH-BGapB -> RH-BBGap)
+ * hlGapWinner is single-valued ("today" | "prev" | "none"), so at most one
+ * "Gap" appears. All four source fields are always present and mutually
  * exclusive within their own category, so this always returns a definite
  * label — no null/"missing" case, unlike computePivotPattern.
  */
@@ -938,8 +942,10 @@ export function computeGapBadge(r: CPRResult): string {
   const gapWinsPrev = prevSW !== "HL-Q" && r.hlGapWinner === "prev";
   const gapWinsToday = todaySW !== "HL-Q" && r.hlGapWinner === "today";
 
+  // "Gap" in front (prev wins) stays as-is; "Gap" that would land in the
+  // middle (today wins) is moved to the end instead.
   const part3 = gapWinsPrev ? `Gap${letter3}` : letter3;
-  const part4 = gapWinsToday ? `Gap${letter4}` : letter4;
+  const part4 = gapWinsToday ? `${letter4}Gap` : letter4;
 
   return `${letter1}${letter2}-${part3}${part4}`;
 }
