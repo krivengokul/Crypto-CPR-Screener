@@ -61,51 +61,101 @@ export default function SignalProgressBar({
   const r3Pct = r3 !== undefined ? getPercent(r3) : null;
 
   // Dynamic context calculations below the bar (matching image: e.g. "1.42% above S1   0.23% to PIVOT")
+  // Up signals: left = support-side context (rose), right = progress toward
+  // the R-level target (emerald) — this is the original framing, unchanged.
+  // Down signals: mirrored — left = progress toward the S-level target
+  // (emerald), right = resistance-side context (rose) — matching the
+  // green-left/red-right flip already applied to the track above.
   let leftText = "";
   let rightText = "";
   let leftColor = "text-rose-400";
   let rightColor = "text-emerald-400";
 
-  if (price < pivot) {
-    const toPivotPct = Math.abs(((pivot - price) / price) * 100).toFixed(2);
-    rightText = `${toPivotPct}% to PIVOT`;
-    rightColor = "text-emerald-400";
+  if (!isDown) {
+    if (price < pivot) {
+      const toPivotPct = Math.abs(((pivot - price) / price) * 100).toFixed(2);
+      rightText = `${toPivotPct}% to PIVOT`;
+      rightColor = "text-emerald-400";
 
-    // Determine closest support below or equal to current price
-    if (price >= s1) {
-      const diff = Math.abs(((price - s1) / (s1 || 1)) * 100).toFixed(2);
-      leftText = `${diff}% above S1`;
-    } else if (price >= s2) {
-      const diff = Math.abs(((price - s2) / (s2 || 1)) * 100).toFixed(2);
-      leftText = `${diff}% above S2`;
-    } else if (s3 && price >= s3) {
-      const diff = Math.abs(((price - s3) / (s3 || 1)) * 100).toFixed(2);
-      leftText = `${diff}% above S3`;
+      // Determine closest support below or equal to current price
+      if (price >= s1) {
+        const diff = Math.abs(((price - s1) / (s1 || 1)) * 100).toFixed(2);
+        leftText = `${diff}% above S1`;
+      } else if (price >= s2) {
+        const diff = Math.abs(((price - s2) / (s2 || 1)) * 100).toFixed(2);
+        leftText = `${diff}% above S2`;
+      } else if (s3 && price >= s3) {
+        const diff = Math.abs(((price - s3) / (s3 || 1)) * 100).toFixed(2);
+        leftText = `${diff}% above S3`;
+      } else {
+        const diff = Math.abs(((price - s4) / (s4 || 1)) * 100).toFixed(2);
+        leftText = `${diff}% above S4`;
+      }
+      leftColor = "text-rose-400";
     } else {
-      const diff = Math.abs(((price - s4) / (s4 || 1)) * 100).toFixed(2);
-      leftText = `${diff}% above S4`;
+      const abovePivotPct = Math.abs(((price - pivot) / (pivot || 1)) * 100).toFixed(2);
+      leftText = `${abovePivotPct}% above PIVOT`;
+      leftColor = "text-rose-400";
+
+      // Determine closest resistance above or equal to current price
+      if (price <= r1) {
+        const diff = Math.abs(((r1 - price) / (price || 1)) * 100).toFixed(2);
+        rightText = `${diff}% to R1`;
+      } else if (price <= r2) {
+        const diff = Math.abs(((r2 - price) / (price || 1)) * 100).toFixed(2);
+        rightText = `${diff}% to R2`;
+      } else if (r3 && price <= r3) {
+        const diff = Math.abs(((r3 - price) / (price || 1)) * 100).toFixed(2);
+        rightText = `${diff}% to R3`;
+      } else {
+        const diff = Math.abs(((r4 - price) / (price || 1)) * 100).toFixed(2);
+        rightText = `${diff}% to R4`;
+      }
+      rightColor = "text-emerald-400";
     }
-    leftColor = "text-rose-400";
   } else {
-    const abovePivotPct = Math.abs(((price - pivot) / (pivot || 1)) * 100).toFixed(2);
-    leftText = `${abovePivotPct}% above PIVOT`;
-    leftColor = "text-rose-400";
+    if (price > pivot) {
+      const toPivotPct = Math.abs(((price - pivot) / price) * 100).toFixed(2);
+      leftText = `${toPivotPct}% to PIVOT`;
+      leftColor = "text-emerald-400";
 
-    // Determine closest resistance above or equal to current price
-    if (price <= r1) {
-      const diff = Math.abs(((r1 - price) / (price || 1)) * 100).toFixed(2);
-      rightText = `${diff}% to R1`;
-    } else if (price <= r2) {
-      const diff = Math.abs(((r2 - price) / (price || 1)) * 100).toFixed(2);
-      rightText = `${diff}% to R2`;
-    } else if (r3 && price <= r3) {
-      const diff = Math.abs(((r3 - price) / (price || 1)) * 100).toFixed(2);
-      rightText = `${diff}% to R3`;
+      // Determine closest resistance above or equal to current price
+      if (price <= r1) {
+        const diff = Math.abs(((r1 - price) / (price || 1)) * 100).toFixed(2);
+        rightText = `${diff}% below R1`;
+      } else if (price <= r2) {
+        const diff = Math.abs(((r2 - price) / (price || 1)) * 100).toFixed(2);
+        rightText = `${diff}% below R2`;
+      } else if (r3 && price <= r3) {
+        const diff = Math.abs(((r3 - price) / (price || 1)) * 100).toFixed(2);
+        rightText = `${diff}% below R3`;
+      } else {
+        const diff = Math.abs(((r4 - price) / (price || 1)) * 100).toFixed(2);
+        rightText = `${diff}% below R4`;
+      }
+      rightColor = "text-rose-400";
     } else {
-      const diff = Math.abs(((r4 - price) / (price || 1)) * 100).toFixed(2);
-      rightText = `${diff}% to R4`;
+      const belowPivotPct = Math.abs(((pivot - price) / (pivot || 1)) * 100).toFixed(2);
+      rightText = `${belowPivotPct}% below PIVOT`;
+      rightColor = "text-rose-400";
+
+      // Determine closest support below or equal to current price — the
+      // Down signal's actual target, so this reads "to S1" / "to S2" etc.
+      if (price >= s1) {
+        const diff = Math.abs(((price - s1) / (price || 1)) * 100).toFixed(2);
+        leftText = `${diff}% to S1`;
+      } else if (price >= s2) {
+        const diff = Math.abs(((price - s2) / (price || 1)) * 100).toFixed(2);
+        leftText = `${diff}% to S2`;
+      } else if (s3 && price >= s3) {
+        const diff = Math.abs(((price - s3) / (price || 1)) * 100).toFixed(2);
+        leftText = `${diff}% to S3`;
+      } else {
+        const diff = Math.abs(((price - s4) / (price || 1)) * 100).toFixed(2);
+        leftText = `${diff}% to S4`;
+      }
+      leftColor = "text-emerald-400";
     }
-    rightColor = "text-emerald-400";
   }
 
   return (
