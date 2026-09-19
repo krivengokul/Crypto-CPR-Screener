@@ -697,17 +697,17 @@ export function ScreenerTableHeader({
         >
           Symbol <SortIcon k="symbol" />
         </th>
-        <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+        <th className="px-2 py-3 w-40 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           Pattern
         </th>
         <th
-          className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider"
+          className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[180px]"
           title="Every View (left-nav leaf) this row currently satisfies, across all categories"
         >
           View
         </th>
         <th
-          className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
+          className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[220px] cursor-pointer hover:text-foreground"
           onClick={() => toggleSort("compressionRatio")}
         >
             PIVOT SIZE <SortIcon k="compressionRatio" />
@@ -902,7 +902,7 @@ export default function ScreenerTableRow({
             </div>
           </div>
         </td>
-        <td className="px-2 py-3 w-64">
+        <td className="px-2 py-3 w-40">
           <div className="flex flex-col gap-1 max-w-[240px]">
             <div className="flex flex-nowrap items-center gap-1">
               {renderLevelStatusBadge(r, isInsideCPR, isOutsideCPR, showWide, nothingMatchedMain)}
