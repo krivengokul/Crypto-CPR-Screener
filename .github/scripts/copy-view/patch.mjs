@@ -160,6 +160,7 @@ const CATEGORY_ARRAY_MAP = {
   "equal-cpr": "MISC_VIEWS",
   top15gainers: "MISC_VIEWS",
   top15losers: "MISC_VIEWS",
+  touch: "MISC_VIEWS",
 };
 
 function applyCopyViewPatch(sourceText, sourceKey, newKey, newLabel, levelCheckDefs, attachKey) {
