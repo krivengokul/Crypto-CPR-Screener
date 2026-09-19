@@ -536,7 +536,7 @@ const SUBFILTERS_BY_SECTION: Record<string, string[]> = {
     "7PM:MoMi-<L4:2AM",
     "6PM:APHS1A-FAU4:9PM",
     "8AM:pPDHA-SRA-U4+2:2AM",
-    "A-A-AA-AA-U3L3-SSLLGap:R4",
+    "A6-U3L3-SLBBG-R4",
   ],
   "compressed": [
     "6A:HLC-SSLL:R4-6P",
@@ -547,8 +547,6 @@ const SUBFILTERS_BY_SECTION: Record<string, string[]> = {
   ],
   "R1AbovePR4": [
     "A-A-AA-AA-EUPL3-RRHHGap:R4",
-    "9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A",
-    "8AM:APHS1A-FAU4:4AM",
     "6A:A-A-AA-AA-EUTL3-S1ATCpE-pL4:4A",
     "TiMe-EUTL3-AU4:2PM",
     "SMg-exHiL2L1-U4:3AM",

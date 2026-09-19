@@ -64,20 +64,6 @@ export const Views: Record<string, SubPattern[]> = {
       activeBg: "rgba(34, 197, 94, 0.14)",
     },
     {
-      id: "A-A-AA-AA-S1pPDH-U3",
-      label: "A-A-AA-AA · S1>pPDH(U3)",
-      activeColor: "#22c55e",
-      activeText: "#4ade80",
-      activeBg: "rgba(34, 197, 94, 0.14)",
-    },
-    {
-      id: "A-A-AA-AA-EU2L4-ApR2",
-      label: "A-A-AA-AA-EU2L4-ApR2",
-      activeColor: "#22c55e",
-      activeText: "#4ade80",
-      activeBg: "rgba(34, 197, 94, 0.14)",
-    },
-    {
       id: "A-A-AA-AA-U3L4-pGapB",
       label: "A-A-AA-AA-U3L4-pGapB",
       activeColor: "#fb7185",
@@ -152,16 +138,16 @@ export const Views: Record<string, SubPattern[]> = {
       activeText:  "#4ade80",      // green-400 text
       activeBg:    "rgba(34, 197, 94, 0.14)",
     },
-    // MOVED from "R1AbovePR4" — "A-A-AA-AA-U3L3-SSLLGap:R4" — View under
-    // the "A-A-AA-AA-U3L3" Subpattern (under the "A-A-AA-AA" Pattern),
-    // now in LEVEL ABOVE (LevelsAbove). Condition is A-A-AA-AA + U3L3 +
-    // SSGap + LLGap + pHL-B + HLGap-B (see ScreenerUtils.tsx / cpr.ts).
-    // Bullish, entry at today's TC, targets today's own R4 (U4),
-    // stoploss today's S1. Green color family, matching its bullish
-    // siblings.
+    // MOVED from "R1AbovePR4" — "A6-U3L3-SLBBG-R4" (renamed from
+    // "A-A-AA-AA-U3L3-SSLLGap:R4") — View under the "A-A-AA-AA-U3L3"
+    // Subpattern (under the "A-A-AA-AA" Pattern), now in LEVEL ABOVE
+    // (LevelsAbove). Condition is A-A-AA-AA + U3L3 + SSGap + LLGap +
+    // pHL-B + HLGap-B (see ScreenerUtils.tsx / cpr.ts). Bullish, entry
+    // at today's TC, targets today's own R4 (U4), stoploss today's S1.
+    // Green color family, matching its bullish siblings.
     {
-      id: "A-A-AA-AA-U3L3-SSLLGap:R4",
-      label: "A-A-AA-AA-U3L3-SSLLGap:R4",
+      id: "A6-U3L3-SLBBG-R4",
+      label: "A6-U3L3-SLBBG-R4",
       activeColor: "#22c55e",              // green-500 border
       activeText:  "#4ade80",              // green-400 text
       activeBg:    "rgba(34, 197, 94, 0.14)",
@@ -370,18 +356,6 @@ export const Views: Record<string, SubPattern[]> = {
       activeText:  "#fca5a5",              // red-300 text
       activeBg:    "rgba(239, 68, 68, 0.14)",
     },
-    // NEW: 8AM:APHS1A-FAU4:4AM — U1>pU4 + Pattern A-A-AA-AA-EU1L3 (same
-    // "A-A-AA-AA-EU1L3" Pattern sub-category) + today's BC above
-    // prev day's own PDH + today's S1 above prev day's TC. Bullish,
-    // targets Far Above U4 (today's R4) by ~4AM. Same green color family
-    // as its 9AM:APHS1A-FAU4:4AM sibling.
-    {
-      id: "8AM:APHS1A-FAU4:4AM",
-      label: "8AM:APHS1A-FAU4:4AM",
-      activeColor: "#22c55e",              // green-500 border
-      activeText:  "#4ade80",              // green-400 text
-      activeBg:    "rgba(34, 197, 94, 0.14)",
-    },
     // NEW: TiMe-EUTL3-AU4:2PM — pTiny prev CPR + Mega today CPR +
     // Pattern EUTL3. Violet color family to visually distinguish it
     // from its U1>pU4 sibling.
@@ -419,22 +393,10 @@ export const Views: Record<string, SubPattern[]> = {
     // was rendering as if it didn't exist. Folded the one entry that
     // was in that duplicate back in here instead of losing it.
     { id: "A-E-AA-E-EUBL2-GapB-S1", label: "A-E-AA-E-EUBL2-GapB-S1" },
-    // NEW: "9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A" — nested under
-    // "A-A-AA-AA-EUTL3" (see views.ts). Bullish (direction: "Up"),
-    // targets FAU4 (Far Above today's R4) by ~4AM. Green color family,
-    // matching its bullish R1AbovePR4 siblings.
-    {
-      id: "9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A",
-      label: "9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A",
-      activeColor: "#22c55e",              // green-500 border
-      activeText:  "#4ade80",              // green-400 text
-      activeBg:    "rgba(34, 197, 94, 0.14)",
-    },
     // NEW: "6A:A-A-AA-AA-EUTL3-S1ATCpE-pL4:4A" — nested under
-    // "A-A-AA-AA-EUTL3" (see views.ts). Bearish sibling of
-    // 9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A (direction: "Down"), targets pL4
-    // (prev day's S4) by ~4AM. Red color family, matching its bearish
-    // R1AbovePR4 siblings.
+    // "A-A-AA-AA-EUTL3" (see views.ts). Bearish (direction: "Down"),
+    // targets pL4 (prev day's S4) by ~4AM. Red color family, matching
+    // its bearish R1AbovePR4 siblings.
     {
       id: "6A:A-A-AA-AA-EUTL3-S1ATCpE-pL4:4A",
       label: "6A:A-A-AA-AA-EUTL3-S1ATCpE-pL4:4A",

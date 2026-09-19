@@ -664,45 +664,13 @@ const LEVELSABOVE_VIEWS: ViewDef[] = [
       order: 0
 },
   {
-    key: "A-A-AA-AA-S1pPDH-U3",
-    label: "A-A-AA-AA-S1pPDH-U3",
-    parentKey: "A-A-AA-AA-U2L4",
-    kind: "view",
-    direction: "Up",
-    condition: (r) => r.todayCPR.s1 > r.prevCPR.prevHigh,
-    targetLabel: "U3 (today's R3)",
-    getTarget: (r) => r.todayCPR.r3,
-    entryLabel: "TC (today's TC)",
-    getEntry: (r) => r.todayCPR.tc,
-    stoplossLabel: "S1 (today's S1)",
-    getStoploss: (r) => r.todayCPR.s1,
-      order: 0
-},
-  {
-    key: "A-A-AA-AA-EU2L4-ApR2",
-    label: "A-A-AA-AA-EU2L4-ApR2",
-    parentKey: "A-A-AA-AA-EU2L4",
-    kind: "view",
-    direction: "Up",
-    condition: (r) =>
-      r.todayCPR.r1 > r.prevCPR.r3 &&
-      r.prevCPR.prevLow > r.todayCPR.s2 &&
-      r.prevCPR.s3 > r.todayCPR.s3,
-    targetLabel: "U4 (today's R4)",
-    getTarget: (r) => r.todayCPR.r4,
-    entryLabel: "TC (today's TC)",
-    getEntry: (r) => r.todayCPR.tc,
-    stoplossLabel: "S1 (today's S1)",
-    getStoploss: (r) => r.todayCPR.s1,
-      order: 0
-},
-  {
     // Real source condition for the "RH-BGapB" GapBadge signature
     // (computeGapBadge in ScreenerUtils.tsx): RRGap + HHGap, prev day's
     // HLSwitch "HL-B" (no Gap prefix -> hlGapWinner !== "prev"), today's
     // HLSwitch "HL-B" WITH the Gap prefix -> hlGapWinner === "today".
-    // A6-EU2L4-RH-BGapB:R4 below should grade against THIS key, not
-    // A-A-AA-AA-EU2L4-ApR2.
+    // A6-EU2L4-RH-BGapB:R4 below should grade against THIS key. (The
+    // "A-A-AA-AA-EU2L4-ApR2" key this comment used to contrast against
+    // has been deleted.)
     key: "A-A-AA-AA-EU2L4-RH-BGapB",
     label: "A-A-AA-AA-EU2L4-RH-BGapB",
     parentKey: "A-A-AA-AA-EU2L4",
@@ -809,8 +777,8 @@ const LEVELSABOVE_VIEWS: ViewDef[] = [
       order: 0
 },
   {
-    key: "A-A-AA-AA-U3L3-SSLLGap:R4",
-    label: "A-A-AA-AA-U3L3-SSLLGap:R4",
+    key: "A6-U3L3-SLBBG-R4",
+    label: "A6-U3L3-SLBBG-R4",
     parentKey: "A-A-AA-AA-U3L3",
     kind: "view",
     direction: "Up",
@@ -2508,21 +2476,6 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
 
   // --- leaf Views ---
   {
-    key: "8AM:APHS1A-FAU4:4AM",
-    label: "8AM:APHS1A-FAU4:4AM",
-    parentKey: "A-A-AA-AA-EU1L3",
-    kind: "view",
-    direction: "Up",
-    condition: (r) => r.todayCPR.bc > r.prevCPR.prevHigh && r.todayCPR.s1 > r.prevCPR.tc,
-    targetLabel: "FAU4 (Far Above today's R4)",
-    getTarget: (r) => r.todayCPR.r4,
-    entryLabel: "TC (today's TC)",
-    getEntry: (r) => r.todayCPR.tc,
-    stoplossLabel: "S1 (today's S1)",
-    getStoploss: (r) => r.todayCPR.s1,
-      order: 0
-},
-  {
     key: "TiMe-EUTL3-AU4:2PM",
     label: "TiMe-EUTL3-AU4:2PM",
     parentKey: "EUTL3",
@@ -2572,21 +2525,6 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
     getEntry: (r) => r.todayCPR.bc,
     stoplossLabel: "R1 (today's R1)",
     getStoploss: (r) => r.todayCPR.r1,
-      order: 0
-},
-  {
-    key: "9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A",
-    label: "9A:A-A-AA-AA-EUTL3-S1ATC-U4:4A",
-    parentKey: "A-A-AA-AA-EUTL3",
-    kind: "view",
-    direction: "Up",
-    condition: (r) => r.todayCPR.bc > r.prevCPR.prevHigh && r.todayCPR.s1 > r.prevCPR.tc,
-    targetLabel: "FAU4 (Far Above today's R4)",
-    getTarget: (r) => r.todayCPR.r4,
-    entryLabel: "TC (today's TC)",
-    getEntry: (r) => r.todayCPR.tc,
-    stoplossLabel: "S1 (today's S1)",
-    getStoploss: (r) => r.todayCPR.s1,
       order: 0
 },
   {
@@ -3177,7 +3115,7 @@ const COPY_VIEWS: ViewDef[] = [
     key: "A-A-AA-AA-U3L3-SSLLGap:R4+1",
     label: "A-A-AA-AA-U3L3-SSLLGap:R4 +1",
     parentKey: "A-A-AA-AA-U3L3",
-    conditionKey: "A-A-AA-AA-U3L3-SSLLGap:R4",
+    conditionKey: "A6-U3L3-SLBBG-R4",
     kind: "view",
     direction: "Up",
     targetLabel: "U4 (today's R4)",
@@ -3207,7 +3145,7 @@ const COPY_VIEWS: ViewDef[] = [
     key: "A-A-AA-AA-U3L3-SL-PAR1:R4",
     label: "A-A-AA-AA-U3L3-SL-PAR1:R4",
     parentKey: "A-A-AA-AA-U3L3",
-    conditionKey: "A-A-AA-AA-U3L3-SSLLGap:R4",
+    conditionKey: "A6-U3L3-SLBBG-R4",
     kind: "view",
     direction: "Up",
     targetLabel: "U4 (today's R4)",
@@ -4259,7 +4197,7 @@ export function buildViewTree(): ViewTreeNode[] {
 
 /**
  * Root-to-node key chain for `key` (inclusive of `key` itself), e.g.
- * ["levelsabove", "A-A-AA-AA", "A-A-AA-AA-U2L4", "A-A-AA-AA-S1pPDH-U3"].
+ * ["levelsabove", "A-A-AA-AA", "A-A-AA-AA-U3L3", "A6-U3L3-SLBBG-R4"].
  * Empty array if `key` isn't in VIEWS at all. Mirrors what
  * resolveTopLevelCategoryKey (copy-view's patch.mjs) and
  * findAttachArrayByKey (backtest.ts) each partially recomputed by
