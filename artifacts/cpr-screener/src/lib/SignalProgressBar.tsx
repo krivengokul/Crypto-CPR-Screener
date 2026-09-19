@@ -60,7 +60,7 @@ export default function SignalProgressBar({
   const r2Pct = getPercent(r2);
   const r3Pct = r3 !== undefined ? getPercent(r3) : null;
 
-  // Dynamic context calculations below the bar (matching image: e.g. "1.42% above S1   0.23% to PIVOT")
+  // Dynamic context calculations below the bar (matching image: e.g. "1.42% from S1   0.23% to PIVOT")
   // Up signals: left = support-side context (rose), right = progress toward
   // the R-level target (emerald) — this is the original framing, unchanged.
   // Down signals: mirrored — left = progress toward the S-level target
@@ -80,21 +80,21 @@ export default function SignalProgressBar({
       // Determine closest support below or equal to current price
       if (price >= s1) {
         const diff = Math.abs(((price - s1) / (s1 || 1)) * 100).toFixed(2);
-        leftText = `${diff}% above S1`;
+        leftText = `${diff}% from S1`;
       } else if (price >= s2) {
         const diff = Math.abs(((price - s2) / (s2 || 1)) * 100).toFixed(2);
-        leftText = `${diff}% above S2`;
+        leftText = `${diff}% from S2`;
       } else if (s3 && price >= s3) {
         const diff = Math.abs(((price - s3) / (s3 || 1)) * 100).toFixed(2);
-        leftText = `${diff}% above S3`;
+        leftText = `${diff}% from S3`;
       } else {
         const diff = Math.abs(((price - s4) / (s4 || 1)) * 100).toFixed(2);
-        leftText = `${diff}% above S4`;
+        leftText = `${diff}% from S4`;
       }
       leftColor = "text-rose-400";
     } else {
       const abovePivotPct = Math.abs(((price - pivot) / (pivot || 1)) * 100).toFixed(2);
-      leftText = `${abovePivotPct}% above PIVOT`;
+      leftText = `${abovePivotPct}% from PIVOT`;
       leftColor = "text-rose-400";
 
       // Determine closest resistance above or equal to current price
@@ -122,21 +122,21 @@ export default function SignalProgressBar({
       // Determine closest resistance above or equal to current price
       if (price <= r1) {
         const diff = Math.abs(((r1 - price) / (price || 1)) * 100).toFixed(2);
-        rightText = `${diff}% below R1`;
+        rightText = `${diff}% from R1`;
       } else if (price <= r2) {
         const diff = Math.abs(((r2 - price) / (price || 1)) * 100).toFixed(2);
-        rightText = `${diff}% below R2`;
+        rightText = `${diff}% from R2`;
       } else if (r3 && price <= r3) {
         const diff = Math.abs(((r3 - price) / (price || 1)) * 100).toFixed(2);
-        rightText = `${diff}% below R3`;
+        rightText = `${diff}% from R3`;
       } else {
         const diff = Math.abs(((r4 - price) / (price || 1)) * 100).toFixed(2);
-        rightText = `${diff}% below R4`;
+        rightText = `${diff}% from R4`;
       }
       rightColor = "text-rose-400";
     } else {
       const belowPivotPct = Math.abs(((pivot - price) / (pivot || 1)) * 100).toFixed(2);
-      rightText = `${belowPivotPct}% below PIVOT`;
+      rightText = `${belowPivotPct}% from PIVOT`;
       rightColor = "text-rose-400";
 
       // Determine closest support below or equal to current price — the
@@ -307,7 +307,7 @@ export default function SignalProgressBar({
         </div>
       </div>
 
-      {/* Bottom context summary (e.g. 1.42% above S1   0.23% to PIVOT) */}
+      {/* Bottom context summary (e.g. 1.42% from S1   0.23% to PIVOT) */}
       <div className="flex items-center justify-center gap-3 text-[11px] font-mono mt-0.5">
         <span className={leftColor}>{leftText}</span>
         <span className={rightColor}>{rightText}</span>
