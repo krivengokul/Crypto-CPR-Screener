@@ -114,11 +114,11 @@ function isViewDescendant(viewKey: string, ancestorKey: string): boolean {
  * (getActiveViewLabels/renderActiveViewLabels in ScreenerUtils.tsx /
  * ScreenerTableRow.tsx) — rather than re-deriving Up/Down here.
  */
-function matchingView(raw: CPRResult, selectedKey: string): { label: string; direction: ViewDirection | null } | null {
+function matchingViewDef(raw: CPRResult, selectedKey: string): ViewDef | null {
   const selected = getView(selectedKey);
   if (!selected) return null;
 
-  const match = VIEWS
+  return VIEWS
     .filter((view) =>
       view.kind === "view" &&
       (view.key === selectedKey || isViewDescendant(view.key, selectedKey))
@@ -137,8 +137,11 @@ function matchingView(raw: CPRResult, selectedKey: string): { label: string; dir
       // conditionKey just redirects to its parent pattern) matched every
       // row under that pattern and its name showed on all of them.
       return levelCheckFullyMatches(raw, view.levelCheckDefs);
-    });
+    }) ?? null;
+}
 
+function matchingView(raw: CPRResult, selectedKey: string): { label: string; direction: ViewDirection | null } | null {
+  const match = matchingViewDef(raw, selectedKey);
   if (!match) return null;
   return {
     label: match.label,
@@ -1517,11 +1520,29 @@ export default function BacktestPanel() {
   // across different Views, whose "pass" conditions aren't comparable.
   // activeLevelCheckDefs is that same View's 13 Level Check conditions
   // (undefined means no Level Check — no generic fallback).
+  //
+  // On a Pattern/Subpattern selection there is no single active View, so
+  // each row is matched against the Views nested under it (pattern +
+  // full 13/13 signature) and graded with THAT View's levelCheckDefs.
+  // Rows that match no View keep the selection's own defs (undefined at
+  // Pattern level -> "LevelCheck UnDefined").
+  const rowViewDefByRow = useMemo(() => {
+    const map = new Map<BacktestRow, ViewDef | null>();
+    if (isPatternOnly) {
+      rows.forEach((r) => map.set(r, matchingViewDef(r.raw, viewMatchScopeKey)));
+    }
+    return map;
+  }, [rows, isPatternOnly, viewMatchScopeKey, treeRevision, VIEWS.length]);
+  const levelCheckDefsFor = (r: BacktestRow) =>
+    rowViewDefByRow.get(r)?.levelCheckDefs ?? activeLevelCheckDefs;
+
   const ladderByRow = useMemo(() => {
     const map = new Map<BacktestRow, ReturnType<typeof getLadderMatchSummary>>();
-    rows.forEach((r) => map.set(r, getLadderMatchSummary(r.prevCPR, r.todayCPR, activeLevelCheckDefs)));
+    rows.forEach((r) =>
+      map.set(r, getLadderMatchSummary(r.prevCPR, r.todayCPR, rowViewDefByRow.get(r)?.levelCheckDefs ?? activeLevelCheckDefs))
+    );
     return map;
-  }, [rows, activeLevelCheckDefs]);
+  }, [rows, rowViewDefByRow, activeLevelCheckDefs]);
 
   // Pagination: sorting runs over the full filtered set, then only the
   // current page (50 rows) is rendered so the DOM stays small.
@@ -1559,8 +1580,13 @@ export default function BacktestPanel() {
   );
 
   const gradedRows = rows.filter((r) => r.result === "pass" || r.result === "fail");
+  // Rows with no Level Check defined are excluded from both groups —
+  // "undefined" is not a "mismatch".
   const fullMatchGraded = gradedRows.filter((r) => ladderByRow.get(r)?.fullMatch);
-  const mismatchGraded = gradedRows.filter((r) => !ladderByRow.get(r)?.fullMatch);
+  const mismatchGraded = gradedRows.filter((r) => {
+    const l = ladderByRow.get(r);
+    return !!l && l.hasConditions && !l.fullMatch;
+  });
   const fullMatchHitRate = fullMatchGraded.length
     ? Math.round((fullMatchGraded.filter((r) => r.result === "pass").length / fullMatchGraded.length) * 100)
     : null;
@@ -2429,7 +2455,7 @@ export default function BacktestPanel() {
                         viewName={activeViewName}
                         viewDirection={activeViewDirection}
                         showLevelCheck
-                        levelCheckConditions={activeLevelCheckDefs}
+                        levelCheckConditions={levelCheckDefsFor(r)}
                         // Simplified rule: "Copy View" only when the
                         // selected dropdown item IS a leaf View
                         // (isViewOnly / activeTarget). Anything else —
@@ -2456,6 +2482,10 @@ export default function BacktestPanel() {
                                 setSelectedKey(newKey);
                               }}
                             />
+                          ) : isPatternOnly && rowViewDefByRow.get(r) ? (
+                            <span className="text-[10px] text-muted-foreground" title="This symbol already satisfies this View's pattern and full Level Check signature, so creating another View from it would duplicate it.">
+                              Already in View: {rowViewDefByRow.get(r)?.label}
+                            </span>
                           ) : isPatternOnly && activePatternInfo ? (
                             <CreateViewControl
                               patternKey={activePatternInfo.sub.key}
