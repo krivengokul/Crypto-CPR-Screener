@@ -3730,6 +3730,126 @@ const MISC_VIEWS: ViewDef[] = [
   { key: "HB-L1<PL4-U1>TCPR", label: "HB-L1<PL4-U1>TCPR", kind: "view", condition: (r) => r.cprFalling && r.strWideCPR && r.hbJPattern2 },
   { key: "HB-L1<PL2-U12CPU12", label: "HB-L1<PL2-U12CPU12", kind: "view", condition: (r) => r.cprFalling && r.strWideCPR && r.hbJPattern3 },
   { key: "HB-L1>PL1-PU1CU234", label: "HB-L1>PL1-PU1CU234", kind: "view", condition: (r) => r.cprFalling && r.strWideCPR && r.hbJPattern4 },
+    {
+        key: "A5-CU3L3-SLGapBB-R4",
+        label: "A5-CU3L3-SLGapBB-R4",
+        parentKey: "A-A-OA-AA-CU3L3",
+        conditionKey: "A-A-OA-AA-CU3L3",
+        kind: "view",
+        direction: "Up",
+        targetLabel: "U4 (today's R4)",
+        getTarget: (r) => r.todayCPR.r4,
+        entryLabel: "TC (today's TC)",
+        getEntry: (r) => r.todayCPR.tc,
+        stoplossLabel: "S1 (today's S1)",
+        getStoploss: (r) => r.todayCPR.s1,
+        levelCheckDefs: [
+      {
+        "key": "r4",
+        "subject": "today",
+        "bandKeys": [
+          "r3",
+          "r2"
+        ]
+      },
+      {
+        "key": "r3",
+        "subject": "today",
+        "bandKeys": [
+          "r3",
+          "r2"
+        ]
+      },
+      {
+        "key": "r2",
+        "subject": "today",
+        "bandKeys": [
+          "r2",
+          "r1"
+        ]
+      },
+      {
+        "key": "prevHigh",
+        "subject": "today",
+        "bandKeys": [
+          "r1",
+          "prevHigh"
+        ]
+      },
+      {
+        "key": "r1",
+        "subject": "today",
+        "bandKeys": [
+          "r2",
+          "r1"
+        ]
+      },
+      {
+        "key": "tc",
+        "subject": "today",
+        "bandKeys": [
+          "prevHigh",
+          "tc"
+        ]
+      },
+      {
+        "key": "pivot",
+        "subject": "today",
+        "bandKeys": [
+          "prevHigh",
+          "tc"
+        ]
+      },
+      {
+        "key": "bc",
+        "subject": "today",
+        "bandKeys": [
+          "tc",
+          "pivot"
+        ]
+      },
+      {
+        "key": "prevLow",
+        "subject": "today",
+        "bandKeys": [
+          "bc",
+          "s1"
+        ]
+      },
+      {
+        "key": "s1",
+        "subject": "today",
+        "bandKeys": [
+          "pivot",
+          "bc"
+        ]
+      },
+      {
+        "key": "s2",
+        "subject": "today",
+        "bandKeys": [
+          "s1",
+          "prevLow"
+        ]
+      },
+      {
+        "key": "s3",
+        "subject": "today",
+        "bandKeys": [
+          "prevLow",
+          "s2"
+        ]
+      },
+      {
+        "key": "s4",
+        "subject": "today",
+        "bandKeys": [
+          "s2",
+          "s3"
+        ]
+      }
+    ],
+      }
 ];
 
 VIEWS.push(...MISC_VIEWS);

@@ -470,7 +470,7 @@ export const Views: Record<string, SubPattern[]> = {
   "equal-cpr": [
     { id: "eXLoL3U3-L3", label: "eXLoL3U3-L3" },
   ],
-  "touch": [],
+  "touch": [{ id: "A5-CU3L3-SLGapBB-R4", label: "A5-CU3L3-SLGapBB-R4" }],
 };
 
 export const pivotcategories: Category[] = [
