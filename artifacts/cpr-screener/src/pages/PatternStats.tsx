@@ -469,10 +469,16 @@ export default function PatternStats() {
   // Sum of each visible category's distinct count — the same total you get
   // by adding up the sidebar's category numbers. (The old figure summed
   // every pattern row, so a symbol matching several patterns was counted
-  // several times.)
+  // several times.) TOP 15 GAINERS / LOSERS are left out: they're rankings
+  // of symbols that also sit in the other categories, so adding them would
+  // count the same symbol twice.
   const totalMatches = useMemo(
-    () => visibleCategories.reduce((sum, g) => sum + g.distinctCount, 0),
-    [visibleCategories]
+    () =>
+      visibleCategories.reduce(
+        (sum, g) => sum + (TOP_MOVER_IDS.has(g.categoryKey) && !TOP_MOVER_IDS.has(categoryFilter) ? 0 : g.distinctCount),
+        0
+      ),
+    [visibleCategories, categoryFilter]
   );
 
   async function handleRun() {
@@ -592,16 +598,7 @@ export default function PatternStats() {
             </span>
           </div>
 
-          {visibleCategories.length === 0 && TOP_MOVER_IDS.has(categoryFilter) ? (
-            <div className="rounded-xl border border-dashed border-border bg-card px-6 py-16 text-center">
-              <p className="font-medium">
-                {CATEGORY_FILTER_OPTIONS.find((o) => o.id === categoryFilter)?.label} isn&apos;t in the scan results yet
-              </p>
-              <p className="mt-2 text-sm text-muted-foreground">
-                runPatternCensus doesn&apos;t rank top movers, so there is nothing to show for this category.
-              </p>
-            </div>
-          ) : visibleCategories.length === 0 ? (
+          {visibleCategories.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border bg-card px-6 py-16 text-center">
               <p className="font-medium">No patterns found</p>
               <p className="mt-2 text-sm text-muted-foreground">Try a different date range, source, or category.</p>

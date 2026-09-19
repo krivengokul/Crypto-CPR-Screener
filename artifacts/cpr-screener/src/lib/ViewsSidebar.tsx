@@ -366,14 +366,6 @@ export const Views: Record<string, SubPattern[]> = {
       activeText:  "#c4b5fd",              // violet-300 text
       activeBg:    "rgba(139, 92, 246, 0.14)", // violet-500 tint
     },
-    // NEW: SMg-exHiL2L1-U4:3AM — U1>pU4 + Pattern EL1L2. Target U4 @ 3AM.
-    {
-      id: "SMg-exHiL2L1-U4:3AM",
-      label: "SMg-exHiL2L1-U4:3AM",
-      activeColor: "#38bdf8",              // sky-400 border
-      activeText:  "#7dd3fc",              // sky-300 text
-      activeBg:    "rgba(56, 189, 248, 0.14)",
-    },
     // NEW: 6AM:MegMeg-L3:8PM — U1>pU4 + Pattern A-A-AA-AA-EU1L4 + pMega (prev CPR
     // width Mega, 5.00%-10.00%) + Mega (today's CPR width Mega,
     // 5.00%-10.00%). Bearish, targets L3 (today's S3) by ~8PM. Red color
@@ -389,7 +381,7 @@ export const Views: Record<string, SubPattern[]> = {
     // "R1AbovePR4" key further down this object literal — a duplicate
     // object key silently wins in JS, so that whole second definition
     // was clobbering this entire array at runtime and everything below
-    // (TiMe-EUTL3-AU4:2PM, SMg-exHiL2L1-U4:3AM, 6AM:MegMeg-L3:8PM, etc.)
+    // (TiMe-EUTL3-AU4:2PM, 6AM:MegMeg-L3:8PM, etc.)
     // was rendering as if it didn't exist. Folded the one entry that
     // was in that duplicate back in here instead of losing it.
     { id: "A-E-AA-E-EUBL2-GapB-S1", label: "A-E-AA-E-EUBL2-GapB-S1" },

@@ -1668,6 +1668,18 @@ export interface CategoryComboRow {
 // HHLL/RRHH/SSLL combo.
 const RRSS_COMBO_CATEGORIES = new Set(["top15gainers", "top15losers"]);
 
+// TOP 15 GAINERS / LOSERS are ranked categories, not condition categories:
+// their ViewDef condition is `() => true`, so passesPatternFn(result, key)
+// alone matches EVERY symbol. runPatternCensus therefore ranks them itself —
+// for each date, the TOP_MOVER_LIMIT symbols with the highest ("desc") /
+// lowest ("asc") day-over-day % change (closeAndChange, same figure the
+// "% Change" column in the category scan tables uses).
+const TOP_MOVER_LIMIT = 15;
+const TOP_MOVER_CATEGORIES = new Map<string, "desc" | "asc">([
+  ["top15gainers", "desc"],
+  ["top15losers", "asc"],
+]);
+
 /**
  * Counts live matches for EVERY dropdown pattern across a date range in a
  * single sweep, instead of re-running runPivotLevelBacktest once per
@@ -1699,6 +1711,11 @@ const RRSS_COMBO_CATEGORIES = new Set(["top15gainers", "top15losers"]);
  * parentKey chain back up to the category (no VIEWS entry currently sets
  * `standalone: true`, which is the only thing that chain walk skips), so
  * it was redundant.
+ *
+ * TOP 15 GAINERS / LOSERS are the exception to "check every pair against
+ * passesPatternFn": their base condition is `() => true`, so they're ranked
+ * per date instead (TOP_MOVER_CATEGORIES above) — each date contributes at
+ * most 15 rows to each of the two categories.
  *
  * The symbol universe is resolved once, as of endDateISO (the most recent
  * date in range) — same "current exchange universe, walked backward"
@@ -1753,6 +1770,22 @@ export async function runPatternCensus(
   // summed-per-pattern PatternCensusRow.count total.
   const categoryMatchCounts = new Map<string, number>();
 
+  // TOP 15 GAINERS / LOSERS can only be decided once EVERY symbol's change
+  // for a date is known, so their candidates are collected during the sweep
+  // and ranked afterwards (see the block after the sweep). Everything the
+  // ranked rows need is captured here so the CPRResult isn't kept alive.
+  interface MoverCandidate {
+    dateISO: string;
+    changePct: number;
+    combo: string; // "RRSS-X / HHLL-X / RRHH-XX / SSLL-XX"
+    pairKeys: string[]; // pairKey()s (under this category) that this row also passes
+  }
+  const moverCategories = rootCategories.filter((c) => TOP_MOVER_CATEGORIES.has(c.key));
+  const moverCandidates = new Map<string, MoverCandidate[]>();
+  moverCategories.forEach((c) => moverCandidates.set(c.key, []));
+  const regularPairs = pairs.filter((p) => !TOP_MOVER_CATEGORIES.has(p.categoryKey));
+  const moverPairs = pairs.filter((p) => TOP_MOVER_CATEGORIES.has(p.categoryKey));
+
 
   const dates: string[] = [];
   for (let d = startDateISO; d <= endDateISO; d = addDaysISO(d, 1)) dates.push(d);
@@ -1784,6 +1817,7 @@ export async function runPatternCensus(
           const rrss = result.SSRRCategory ?? "none";
           const baseCombo = `${hhll} / ${rrhh} / ${ssll}`;
           for (const cat of rootCategories) {
+            if (TOP_MOVER_CATEGORIES.has(cat.key)) continue; // ranked after the sweep
             if (!passesPatternFn(result, cat.key)) continue; // base category condition
             categoryMatchCounts.set(cat.key, (categoryMatchCounts.get(cat.key) ?? 0) + 1);
             const combo = RRSS_COMBO_CATEGORIES.has(cat.key) ? `${rrss} / ${baseCombo}` : baseCombo;
@@ -1791,7 +1825,7 @@ export async function runPatternCensus(
             comboCounts.set(k, (comboCounts.get(k) ?? 0) + 1);
           }
 
-          for (const p of pairs) {
+          for (const p of regularPairs) {
             // passesPatternFn already walks the full parentKey chain back
             // to the category, and (unlike matchesPatternFlag) correctly
             // applies a Copy View's conditionKey redirect + levelCheckDefs
@@ -1800,12 +1834,52 @@ export async function runPatternCensus(
             const k = pairKey(p.categoryKey, p.patternKey);
             counts.set(k, (counts.get(k) ?? 0) + 1);
           }
+
+          // TOP 15 GAINERS / LOSERS — just record this row's day-over-day
+          // change; the top 15 per date is picked after the sweep.
+          if (moverCategories.length > 0) {
+            const { changePct } = closeAndChange(window, dateISO);
+            if (changePct !== null && Number.isFinite(changePct)) {
+              for (const cat of moverCategories) {
+                if (!passesPatternFn(result, cat.key)) continue;
+                moverCandidates.get(cat.key)!.push({
+                  dateISO,
+                  changePct,
+                  combo: `${rrss} / ${baseCombo}`,
+                  pairKeys: moverPairs
+                    .filter((p) => p.categoryKey === cat.key && passesPatternFn(result, p.patternKey))
+                    .map((p) => pairKey(p.categoryKey, p.patternKey)),
+                });
+              }
+            }
+          }
         }
       })
     );
     done = Math.min(i + batchSize, symbols.length);
     onProgress?.(done, total, batch[batch.length - 1]);
     await yieldToBrowser();
+  }
+
+  // Rank TOP 15 GAINERS / LOSERS per date, then tally only the winners into
+  // the same category / combo / pattern counters everything else uses.
+  for (const cat of moverCategories) {
+    const direction = TOP_MOVER_CATEGORIES.get(cat.key)!;
+    const byDate = new Map<string, MoverCandidate[]>();
+    for (const c of moverCandidates.get(cat.key) ?? []) {
+      const list = byDate.get(c.dateISO);
+      if (list) list.push(c);
+      else byDate.set(c.dateISO, [c]);
+    }
+    for (const list of byDate.values()) {
+      list.sort((a, b) => (direction === "desc" ? b.changePct - a.changePct : a.changePct - b.changePct));
+      for (const c of list.slice(0, TOP_MOVER_LIMIT)) {
+        categoryMatchCounts.set(cat.key, (categoryMatchCounts.get(cat.key) ?? 0) + 1);
+        const ck = comboKey(cat.key, c.combo);
+        comboCounts.set(ck, (comboCounts.get(ck) ?? 0) + 1);
+        for (const pk of c.pairKeys) counts.set(pk, (counts.get(pk) ?? 0) + 1);
+      }
+    }
   }
 
   const rows = pairs

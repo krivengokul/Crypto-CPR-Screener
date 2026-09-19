@@ -549,7 +549,6 @@ const SUBFILTERS_BY_SECTION: Record<string, string[]> = {
     "A-A-AA-AA-EUPL3-RRHHGap:R4",
     "6A:A-A-AA-AA-EUTL3-S1ATCpE-pL4:4A",
     "TiMe-EUTL3-AU4:2PM",
-    "SMg-exHiL2L1-U4:3AM",
     "6AM:MegMeg-L3:8PM",
   ],
   "S1BelowPS4": [

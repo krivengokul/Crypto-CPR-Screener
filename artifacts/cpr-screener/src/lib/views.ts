@@ -2253,16 +2253,12 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
   { key: "EUTL3", label: "EUTL3", parentKey: "R1AbovePR4", kind: "pattern", condition: (r) => r.EUTL3,
       order: 1
 },
-  { key: "EL1L2", label: "EL1L2", parentKey: "R1AbovePR4", kind: "pattern", condition: (r) => r.EL1L2,
-      order: 3
-},
-  // No target-graded sub-patterns nested under these two yet — each is
-  // a symbol-list-only scan in the Backtest dropdown.
+  // No target-graded sub-patterns nested under EUPL2 yet — it's a
+  // symbol-list-only scan in the Backtest dropdown.
+  // (EL1L2 / EL2L1 used to be direct children of "R1AbovePR4" here; they now
+  // live under "A-A-AA-AA" as A-A-AA-AA-EL1L2 / A-A-AA-AA-EL2L1 below.)
   { key: "EUPL2", label: "EUPL2", parentKey: "R1AbovePR4", kind: "pattern", condition: (r) => r.EUPL2,
       order: 5
-},
-  { key: "EL2L1", label: "EL2L1", parentKey: "R1AbovePR4", kind: "pattern", condition: (r) => r.EL2L1,
-      order: 6
 },
 
   // --- Pattern "A-E-AA-E" inside "ABOVE LEVEL4" and its subpatterns ---
@@ -2378,6 +2374,17 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
     order: 5,
   },
 
+  // MOVED from direct children of "R1AbovePR4" (was "EL1L2" / "EL2L1"):
+  // now nested under the A-A-AA-AA Pattern in ABOVE LEVEL4. passesView
+  // chains the parent, so each ANDs A-A-AA-AA (SSRR-A + HHLL-A + RRHH-AA +
+  // SSLL-AA) and R1AbovePR4 with the raw flag.
+  { key: "A-A-AA-AA-EL1L2", label: "A-A-AA-AA-EL1L2", parentKey: "R1AbovePR4-A-A-AA-AA", kind: "pattern", condition: (r) => r.EL1L2,
+      order: 8
+},
+  { key: "A-A-AA-AA-EL2L1", label: "A-A-AA-AA-EL2L1", parentKey: "R1AbovePR4-A-A-AA-AA", kind: "pattern", condition: (r) => r.EL2L1,
+      order: 9
+},
+
   // --- Pattern "A-A-AA-OA" inside "ABOVE LEVEL4" and its subpatterns ---
   {
     key: "R1AbovePR4-A-A-AA-OA",
@@ -2486,24 +2493,6 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
       r.todayCPR.widthPct > 5.00 && r.todayCPR.widthPct <= 10.00, // Mega
     targetLabel: "AU4 (prev day's R4)",
     getTarget: (r) => r.prevCPR.r4,
-    entryLabel: "TC (today's TC)",
-    getEntry: (r) => r.todayCPR.tc,
-    stoplossLabel: "S1 (today's S1)",
-    getStoploss: (r) => r.todayCPR.s1,
-      order: 0
-},
-  {
-    key: "SMg-exHiL2L1-U4:3AM",
-    label: "SMg-exHiL2L1-U4:3AM",
-    parentKey: "EL1L2",
-    kind: "view",
-    direction: "Up",
-    condition: (r) => {
-      const prevCat = getPatternCategory(computePrevPattern(r.prevCPR, r.ppCPR));
-      return prevCat === "cOHigher" || prevCat === "cOLower";
-    },
-    targetLabel: "U4 (today's R4)",
-    getTarget: (r) => r.todayCPR.r4,
     entryLabel: "TC (today's TC)",
     getEntry: (r) => r.todayCPR.tc,
     stoplossLabel: "S1 (today's S1)",
