@@ -20,6 +20,7 @@ import {
   copyBacktestView,
   createBacktestView,
   deriveLevelCheckDefs,
+  levelCheckFullyMatches,
   findTightestAdjacentBand,
   getAttachPointOptions,
   findContainingNodeKey,
@@ -128,7 +129,14 @@ function matchingView(raw: CPRResult, selectedKey: string): { label: string; dir
       // Evaluate the child View's own predicate directly so a legacy View
       // whose parent metadata is incomplete cannot disappear from this column.
       const ownConditionMatches = view.condition ? view.condition(raw) : false;
-      return ownConditionMatches || passesView(raw, view.key);
+      const patternMatches = ownConditionMatches || passesView(raw, view.key);
+      if (!patternMatches) return false;
+      // Same two-step grading as runBacktest: after the base pattern
+      // condition, a View with levelCheckDefs also requires its full
+      // 13/13 Level Check signature. Without this, a Copy View (whose
+      // conditionKey just redirects to its parent pattern) matched every
+      // row under that pattern and its name showed on all of them.
+      return levelCheckFullyMatches(raw, view.levelCheckDefs);
     });
 
   if (!match) return null;
