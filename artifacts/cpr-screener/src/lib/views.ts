@@ -2406,6 +2406,14 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
     condition: (r) => r.EU1L2,
     order: 0,
   },
+  {
+    key: "A-A-AA-OA-EU1L3",
+    label: "A-A-AA-OA-EU1L3",
+    parentKey: "R1AbovePR4-A-A-AA-OA",
+    kind: "pattern",
+    condition: (r) => r.EU1L3,
+    order: 1,
+  },
 
   // --- Pattern "A-E-AA-LB" inside "ABOVE LEVEL4" and its subpatterns ---
   {
