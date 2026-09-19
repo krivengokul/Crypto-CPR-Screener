@@ -3735,6 +3735,226 @@ const MISC_VIEWS: ViewDef[] = [
 VIEWS.push(...MISC_VIEWS);
 
 // ---------------------------------------------------------------------
+// "Include in Overlap Above" — duplicate branch, added per user request.
+//
+// Same treatment as the existing R1AbovePR4/S1BelowPS4 duplicate-branch
+// precedent above ("A-A-AA-AA" appears under BOTH "levelsabove" AND
+// "ABOVE LEVEL4" via two separate ViewDef keys sharing one label): each
+// of the 7 compound categories listed below gets a SECOND node, nested
+// under "overlapHigher" ("Overlap Above") instead of its original
+// levelsabove/compressed parent, with the identical 4-way SSRR/HHLL/
+// RRHH/SSLL identity condition. Because these duplicate nodes are NOT
+// standalone, passesView also ANDs in "overlapHigher"'s own condition
+// (r.overlapHigher) via the parentKey chain — so a row must satisfy both
+// the compound shape AND the overlap condition to show up here. The
+// ORIGINAL nodes (under levelsabove/compressed) are untouched and keep
+// showing every row that matches the shape regardless of overlap.
+//
+// Duplicate top-node keys are prefixed "overlapHigher-<compound-key>" to
+// stay unique. Subpattern children keep the plain "<compound-key>-<FLAG>"
+// naming UNLESS that exact key is already taken by an existing sibling
+// under the original branch (only true for C-C-BB-AA's three listed
+// flags, which already exist as children of the original "C-C-BB-AA"
+// node) — those three get the same "overlapHigher-" prefix to avoid a
+// key collision, since a duplicate `key` would silently shadow the
+// original in getView()'s .find().
+// ---------------------------------------------------------------------
+
+const OVERLAP_ABOVE_DUPLICATE_VIEWS: ViewDef[] = [
+  // --- A-A-OA-AA (order 1) ---
+  {
+    key: "overlapHigher-A-A-OA-AA",
+    label: "A-A-OA-AA",
+    parentKey: "overlapHigher",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-A" &&
+      r.HHLLCategory === "HHLL-A" &&
+      r.RRHHCategory === "RRHH-OA" &&
+      r.SSLLCategory === "SSLL-AA",
+    order: 1,
+  },
+  {
+    key: "A-A-OA-AA-CU3L3",
+    label: "A-A-OA-AA-CU3L3",
+    parentKey: "overlapHigher-A-A-OA-AA",
+    kind: "pattern",
+    condition: (r) => r.CU3L3,
+    order: 0,
+  },
+
+  // --- A-C-RA-AA (order 2) ---
+  {
+    key: "overlapHigher-A-C-RA-AA",
+    label: "A-C-RA-AA",
+    parentKey: "overlapHigher",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-A" &&
+      r.HHLLCategory === "HHLL-C" &&
+      r.RRHHCategory === "RRHH-RA" &&
+      r.SSLLCategory === "SSLL-AA",
+    order: 2,
+  },
+  {
+    key: "A-C-RA-AA-CU4L3",
+    label: "A-C-RA-AA-CU4L3",
+    parentKey: "overlapHigher-A-C-RA-AA",
+    kind: "pattern",
+    condition: (r) => r.CU4L3,
+    order: 0,
+  },
+  {
+    key: "A-C-RA-AA-CU3L3",
+    label: "A-C-RA-AA-CU3L3",
+    parentKey: "overlapHigher-A-C-RA-AA",
+    kind: "pattern",
+    condition: (r) => r.CU3L3,
+    order: 1,
+  },
+
+  // --- A-E-OA-E (order 3) ---
+  {
+    key: "overlapHigher-A-E-OA-E",
+    label: "A-E-OA-E",
+    parentKey: "overlapHigher",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-A" &&
+      r.HHLLCategory === "HHLL-E" &&
+      r.RRHHCategory === "RRHH-OA" &&
+      r.SSLLCategory === "SSLL-E",
+    order: 3,
+  },
+  {
+    key: "A-E-OA-E-U4L4",
+    label: "A-E-OA-E-U4L4",
+    parentKey: "overlapHigher-A-E-OA-E",
+    kind: "pattern",
+    condition: (r) => r.U4L4,
+    order: 0,
+  },
+
+  // --- C-A-C-AA (order 4) ---
+  {
+    key: "overlapHigher-C-A-C-AA",
+    label: "C-A-C-AA",
+    parentKey: "overlapHigher",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-C" &&
+      r.HHLLCategory === "HHLL-A" &&
+      r.RRHHCategory === "RRHH-C" &&
+      r.SSLLCategory === "SSLL-AA",
+    order: 4,
+  },
+  {
+    key: "C-A-C-AA-CL4U3",
+    label: "C-A-C-AA-CL4U3",
+    parentKey: "overlapHigher-C-A-C-AA",
+    kind: "pattern",
+    condition: (r) => r.CL4U3,
+    order: 0,
+  },
+  {
+    key: "C-A-C-AA-CU3L2",
+    label: "C-A-C-AA-CU3L2",
+    parentKey: "overlapHigher-C-A-C-AA",
+    kind: "pattern",
+    condition: (r) => r.CU3L2,
+    order: 1,
+  },
+
+  // --- C-A-E-AA (order 5) ---
+  {
+    key: "overlapHigher-C-A-E-AA",
+    label: "C-A-E-AA",
+    parentKey: "overlapHigher",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-C" &&
+      r.HHLLCategory === "HHLL-A" &&
+      r.RRHHCategory === "RRHH-E" &&
+      r.SSLLCategory === "SSLL-AA",
+    order: 5,
+  },
+  {
+    key: "C-A-E-AA-CU4L4",
+    label: "C-A-E-AA-CU4L4",
+    parentKey: "overlapHigher-C-A-E-AA",
+    kind: "pattern",
+    condition: (r) => r.CU4L4,
+    order: 0,
+  },
+
+  // --- C-C-BB-AA (order 6) ---
+  {
+    key: "overlapHigher-C-C-BB-AA",
+    label: "C-C-BB-AA",
+    parentKey: "overlapHigher",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-C" &&
+      r.HHLLCategory === "HHLL-C" &&
+      r.RRHHCategory === "RRHH-BB" &&
+      r.SSLLCategory === "SSLL-AA",
+    order: 6,
+  },
+  // Keys prefixed "overlapHigher-" here (not the plain "C-C-BB-AA-CU3L3"
+  // style) because the plain key is already taken by the existing child
+  // of the ORIGINAL "C-C-BB-AA" node (under "compressed") — see the
+  // batch comment above.
+  {
+    key: "overlapHigher-C-C-BB-AA-CU3L3",
+    label: "C-C-BB-AA-CU3L3",
+    parentKey: "overlapHigher-C-C-BB-AA",
+    kind: "pattern",
+    condition: (r) => r.CU3L3,
+    order: 0,
+  },
+  {
+    key: "overlapHigher-C-C-BB-AA-CU3L2",
+    label: "C-C-BB-AA-CU3L2",
+    parentKey: "overlapHigher-C-C-BB-AA",
+    kind: "pattern",
+    condition: (r) => r.CU3L2,
+    order: 1,
+  },
+  {
+    key: "overlapHigher-C-C-BB-AA-CU2L2",
+    label: "C-C-BB-AA-CU2L2",
+    parentKey: "overlapHigher-C-C-BB-AA",
+    kind: "pattern",
+    condition: (r) => r.CU2L2,
+    order: 2,
+  },
+
+  // --- C-C-OB-AA (order 7) ---
+  {
+    key: "overlapHigher-C-C-OB-AA",
+    label: "C-C-OB-AA",
+    parentKey: "overlapHigher",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-C" &&
+      r.HHLLCategory === "HHLL-C" &&
+      r.RRHHCategory === "RRHH-OB" &&
+      r.SSLLCategory === "SSLL-AA",
+    order: 7,
+  },
+  {
+    key: "C-C-OB-AA-CU3L2",
+    label: "C-C-OB-AA-CU3L2",
+    parentKey: "overlapHigher-C-C-OB-AA",
+    kind: "pattern",
+    condition: (r) => r.CU3L2,
+    order: 0,
+  },
+];
+
+VIEWS.push(...OVERLAP_ABOVE_DUPLICATE_VIEWS);
+
+// ---------------------------------------------------------------------
 // Step 3, batch 5 (coverage audit) — the ~25-and-then-some standalone
 // raw-flag Pattern badges from matchesPatternFlag's switch (lines
 // 1904-2086) that were never nested anywhere in BACKTEST_CATEGORIES at
