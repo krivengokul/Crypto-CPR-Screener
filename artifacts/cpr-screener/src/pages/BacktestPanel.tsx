@@ -51,6 +51,7 @@ import {
   renderHHLLCategoryBadge,
   renderSSRRCategoryBadge,
   renderRRHHCategoryBadge,
+  normalizeViewDirection,
 } from "./ScreenerUtils";
 import {
   renderTodayPatternBadges,
@@ -120,9 +121,13 @@ function isViewDescendant(viewKey: string, ancestorKey: string): boolean {
 /**
  * Match the first concrete View under the currently selected Backtest node.
  * Scoping to the selected category/pattern avoids showing unrelated raw flag
- * names when a row happens to satisfy more than one View globally.
+ * names when a row happens to satisfy more than one View globally. Direction
+ * is normalized via ScreenerUtils.tsx's own normalizeViewDirection — same
+ * Up/Down source the Screener's VIEW column already colors by
+ * (getActiveViewLabels/renderActiveViewLabels in ScreenerUtils.tsx /
+ * ScreenerTableRow.tsx) — rather than re-deriving Up/Down here.
  */
-function matchingViewName(raw: CPRResult, selectedKey: string): string | null {
+function matchingView(raw: CPRResult, selectedKey: string): { label: string; direction: ViewDirection | null } | null {
   const selected = getView(selectedKey);
   if (!selected) return null;
 
@@ -140,7 +145,24 @@ function matchingViewName(raw: CPRResult, selectedKey: string): string | null {
       return ownConditionMatches || passesView(raw, view.key);
     });
 
-  return match?.label ?? null;
+  if (!match) return null;
+  return {
+    label: match.label,
+    direction: normalizeViewDirection(match.direction as string | undefined),
+  };
+}
+
+/**
+ * "View" column cell — matched View name colored by direction: green for
+ * Up, rose for Down, plain text when the matched View has no direction set
+ * (or no View matches at all, rendered as the usual muted em dash).
+ */
+function renderMatchingViewName(raw: CPRResult, selectedKey: string) {
+  const match = matchingView(raw, selectedKey);
+  if (!match) return <span className="text-muted-foreground">—</span>;
+  const colorClass =
+    match.direction === "Up" ? "text-green-400" : match.direction === "Down" ? "text-rose-400" : undefined;
+  return <span className={colorClass}>{match.label}</span>;
 }
 
 const CPR_WIDTH_TIERS = [
@@ -2046,9 +2068,7 @@ export default function BacktestPanel() {
                           )}
                         </td>
                         <td className="px-3 py-2 text-xs">
-                          {matchingViewName(r.raw, viewMatchScopeKey) ?? (
-                            <span className="text-muted-foreground">—</span>
-                          )}
+                          {renderMatchingViewName(r.raw, viewMatchScopeKey)}
                         </td>
                         <td className="px-3 py-2 font-mono whitespace-nowrap">
                           {renderPivotSizeCell(r.prevCPR, r.todayCPR, r.compressionRatio)}
@@ -2301,9 +2321,7 @@ export default function BacktestPanel() {
                         )}
                       </td>
                       <td className="px-3 py-2 text-xs">
-                        {matchingViewName(r.raw, viewMatchScopeKey) ?? (
-                          <span className="text-muted-foreground">—</span>
-                        )}
+                        {renderMatchingViewName(r.raw, viewMatchScopeKey)}
                       </td>
                       <td className="px-3 py-2 font-mono whitespace-nowrap">
                         {renderPivotSizeCell(r.prevCPR, r.todayCPR, r.compressionRatio)}

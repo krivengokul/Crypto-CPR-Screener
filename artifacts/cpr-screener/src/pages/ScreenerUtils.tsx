@@ -569,7 +569,7 @@ const SUBFILTERS_BY_SECTION: Record<string, string[]> = {
  * direction set at all, so callers can distinguish "no direction on this
  * View" from an actual Down.
  */
-function normalizeViewDirection(direction: string | undefined): ViewDirection | null {
+export function normalizeViewDirection(direction: string | undefined): ViewDirection | null {
   if (!direction) return null;
   return direction === "Up" || direction === "up" || direction === "bullish" ? "Up" : "Down";
 }
