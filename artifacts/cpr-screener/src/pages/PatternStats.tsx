@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Layers, Calendar as CalendarIcon, Search } from "lucide-react";
 import { passesPattern } from "./ScreenerUtils";
-import { pivotcategories } from "./ViewsSidebar";
+import { pivotcategories } from "@/lib/ViewsSidebar";
 import {
   runPatternCensus,
   BacktestSource,
