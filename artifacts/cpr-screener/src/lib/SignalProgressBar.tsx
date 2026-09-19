@@ -17,6 +17,10 @@ interface SignalProgressBarProps {
   r2: number;
   r3?: number;
   r4: number;
+  /** True for Down/bearish signals. Flips the track colors so the target
+   *  side (below pivot) reads green and the stop side (above pivot) reads
+   *  red — mirroring the Up/bullish default of red-left, green-right. */
+  isDown?: boolean;
 }
 
 export default function SignalProgressBar({
@@ -30,7 +34,14 @@ export default function SignalProgressBar({
   r2,
   r3,
   r4,
+  isDown = false,
 }: SignalProgressBarProps) {
+  // Track segment colors flip for Down signals: green (target side) on the
+  // left, red/crimson (stop side) on the right. Up signals keep the
+  // original red-left, green-right layout.
+  const leftTrackColor = isDown ? "#065f46" : "#881337";
+  const rightTrackColor = isDown ? "#881337" : "#065f46";
+
   // Ensure valid min/max boundaries
   const minVal = s4 || pivot * 0.95;
   const maxVal = r4 || pivot * 1.05;
@@ -156,10 +167,10 @@ export default function SignalProgressBar({
 
       {/* Progress Track: S4 -> PIVOT (Red Family) & PIVOT -> R4 (Green Family) */}
       <div className="relative w-full h-2 rounded-full overflow-visible flex items-center">
-        {/* Left Side: S4 to PIVOT (Red / Crimson family) */}
+        {/* Left Side: S4 to PIVOT — red/crimson for Up, green for Down */}
         <div
-          className="h-full bg-[#881337] rounded-l-full relative"
-          style={{ width: `${pivotPct}%` }}
+          className="h-full rounded-l-full relative"
+          style={{ width: `${pivotPct}%`, backgroundColor: leftTrackColor }}
         >
           {/* S2 tick notch */}
           <div
@@ -168,9 +179,10 @@ export default function SignalProgressBar({
           />
         </div>
 
-        {/* Right Side: PIVOT to R4 (Green / Emerald family) */}
+        {/* Right Side: PIVOT to R4 — green/emerald for Up, red for Down */}
         <div
-          className="h-full bg-[#065f46] rounded-r-full relative flex-1"
+          className="h-full rounded-r-full relative flex-1"
+          style={{ backgroundColor: rightTrackColor }}
         >
           {/* R2 tick notch */}
           <div

@@ -872,7 +872,8 @@ R:R: ${item.riskReward}`;
                       </span>
                     </div>
 
-                    {/* S4-PIVOT (Red family) & PIVOT-R4 (Green family) Live Price Progress Bar */}
+                    {/* Live Price Progress Bar — red-left/green-right for Up,
+                        flipped to green-left/red-right for Down (via isDown) */}
                     <SignalProgressBar
                       price={item.currentPrice}
                       pivot={item.pivot}
@@ -884,24 +885,44 @@ R:R: ${item.riskReward}`;
                       r2={item.r2}
                       r3={item.r3}
                       r4={item.r4}
+                      isDown={isDown}
                     />
 
-                    {/* Pricing Level Metrics */}
+                    {/* Pricing Level Metrics — order flips with direction:
+                        Up: Stop Loss (left) · Trigger/Entry (middle) · Target (right)
+                        Down: Target (left) · Trigger/Entry (middle) · Stop Loss (right) */}
                     <div className="grid grid-cols-3 gap-2 bg-[#090f19] border border-[#1b2636] rounded-lg p-2.5 mb-3 font-mono">
+                      {isDown && (
+                        <div>
+                          <div className="text-[10px] text-emerald-400 font-sans flex items-center gap-0.5">
+                            <Target className="w-2.5 h-2.5" /> Target
+                          </div>
+                          <div className="text-xs font-bold text-emerald-400 mt-0.5">{fmt(item.targetPrice)}</div>
+                        </div>
+                      )}
+                      {!isDown && (
+                        <div>
+                          <div className="text-[10px] text-rose-400 font-sans">Stop Loss</div>
+                          <div className="text-xs font-bold text-rose-400 mt-0.5">{fmt(item.stopPrice)}</div>
+                        </div>
+                      )}
                       <div>
                         <div className="text-[10px] text-slate-400 font-sans">Trigger / Entry</div>
                         <div className="text-xs font-bold text-white mt-0.5">{fmt(item.triggerPrice)}</div>
                       </div>
-                      <div>
-                        <div className="text-[10px] text-emerald-400 font-sans flex items-center gap-0.5">
-                          <Target className="w-2.5 h-2.5" /> Target
+                      {isDown ? (
+                        <div>
+                          <div className="text-[10px] text-rose-400 font-sans">Stop Loss</div>
+                          <div className="text-xs font-bold text-rose-400 mt-0.5">{fmt(item.stopPrice)}</div>
                         </div>
-                        <div className="text-xs font-bold text-emerald-400 mt-0.5">{fmt(item.targetPrice)}</div>
-                      </div>
-                      <div>
-                        <div className="text-[10px] text-rose-400 font-sans">Stop Loss</div>
-                        <div className="text-xs font-bold text-rose-400 mt-0.5">{fmt(item.stopPrice)}</div>
-                      </div>
+                      ) : (
+                        <div>
+                          <div className="text-[10px] text-emerald-400 font-sans flex items-center gap-0.5">
+                            <Target className="w-2.5 h-2.5" /> Target
+                          </div>
+                          <div className="text-xs font-bold text-emerald-400 mt-0.5">{fmt(item.targetPrice)}</div>
+                        </div>
+                      )}
                     </div>
 
                     {/* View and Target Details */}
