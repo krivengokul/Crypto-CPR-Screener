@@ -22,7 +22,24 @@ import {
 //   - "copyViews": ViewsSidebar's own flat nav bucket for auto-generated
 //     Copy View / Create View entries — never existed in views.ts at all.
 const NON_CENSUS_CATEGORY_IDS = new Set(["equal-cpr", "copyViews"]);
-const CATEGORY_FILTER_OPTIONS = pivotcategories.filter((c) => !NON_CENSUS_CATEGORY_IDS.has(c.id));
+
+// TOP 15 GAINERS / LOSERS are top-level categories in views.ts (order 0 and 1,
+// i.e. ahead of LEVEL ABOVE) but aren't in ViewsSidebar's `pivotcategories`,
+// so they're added here by hand and placed first, matching views.ts.
+const TOP_MOVER_OPTIONS = [
+  { id: "top15gainers", label: "TOP 15 GAINERS" },
+  { id: "top15losers", label: "TOP 15 LOSERS" },
+];
+const TOP_MOVER_IDS = new Set(TOP_MOVER_OPTIONS.map((o) => o.id));
+
+const CATEGORY_FILTER_OPTIONS: { id: string; label: string }[] = [
+  ...TOP_MOVER_OPTIONS,
+  ...pivotcategories.filter((c) => !NON_CENSUS_CATEGORY_IDS.has(c.id)),
+];
+
+// Panel order = dropdown order = sidebar order. Any category key the census
+// returns that isn't listed above sorts after these.
+const CATEGORY_ORDER = new Map(CATEGORY_FILTER_OPTIONS.map((c, i) => [c.id, i] as const));
 
 // --- Small UTC date helpers (all dates here are UTC ISO strings) ---
 // Same helpers/behaviour as BacktestPanel's DateField, so both panels'
@@ -214,14 +231,18 @@ interface CategoryGroup {
 /**
  * CategoryBox — one category's card, styled to match SignalDesk's signal
  * boxes: rounded-xl bordered card, icon + title header with the count at
- * the end, hover lift, and a colored border (emerald once something has
- * matched, dashed/muted while every pattern in the category is still at
- * zero — the same "candidate for CONFIRMED EMPTY" signal PatternStats was
- * built to surface). The body lists every pattern in the category with its
+ * the end, hover lift, and a colored border (emerald once the category has
+ * matched anything, dashed/muted only when the category itself matched
+ * nothing — the same "candidate for CONFIRMED EMPTY" signal PatternStats
+ * was built to surface). The body lists every pattern in the category with its
  * own live count, highest-first.
  */
 function CategoryBox({ group }: { group: CategoryGroup }) {
-  const isEmpty = group.total === 0;
+  // "Empty" means the category itself matched nothing. It used to key off
+  // `group.total` (the sum of nested pattern counts), so a category like
+  // BELOW LEVEL4 — which does have matching symbols, but none that land in
+  // one of its listed patterns — got the dashed grey "empty" styling.
+  const isEmpty = group.distinctCount === 0 && group.total === 0;
 
   return (
     <article
@@ -251,16 +272,24 @@ function CategoryBox({ group }: { group: CategoryGroup }) {
         </div>
 
         <div className="flex shrink-0 flex-col items-end">
+          {/* Headline = distinct (symbol, date) rows that pass the category's
+              own base condition — the same number the left-nav sidebar shows
+              (e.g. "LEVEL ABOVE (169)"). */}
           <p className={["font-mono text-xl font-semibold", isEmpty ? "text-muted-foreground" : "text-foreground"].join(" ")}>
-            {group.total}
+            {group.distinctCount}
           </p>
           <span className="text-[9px] uppercase tracking-wider text-muted-foreground">matched</span>
-          {/* Distinct-symbol count — the number directly comparable to the
-              left-nav sidebar's per-category count (e.g. "ABOVE LEVEL4
-              (53)"). Shown separately from `total` above, which sums every
-              nested pattern/subpattern's count and so isn't expected to
-              equal the sidebar's number. */}
-          <p className="mt-1 font-mono text-xs text-muted-foreground">{group.distinctCount} distinct</p>
+          {/* Sum of every nested pattern's count. A symbol that fits several
+              patterns is counted once per pattern here, so this can exceed
+              the headline; kept as a secondary number for reference. */}
+          {group.total > 0 && (
+            <p
+              className="mt-1 font-mono text-xs text-muted-foreground"
+              title="Sum of the pattern counts below. A symbol matching several patterns is counted once per pattern."
+            >
+              {group.total} pattern hits
+            </p>
+          )}
         </div>
       </div>
 
@@ -353,10 +382,6 @@ export default function PatternStats() {
     [rows, categoryFilter]
   );
 
-  // Total across every pattern, regardless of category — the single
-  // bottom-of-page number. Per-category totals live in each box's own
-  // header instead of being repeated down here.
-  const totalMatches = useMemo(() => scopedRows?.reduce((sum, r) => sum + r.count, 0) ?? 0, [scopedRows]);
   const emptyCount = useMemo(() => scopedRows?.filter((r) => r.count === 0).length ?? 0, [scopedRows]);
 
   const categories = useMemo<CategoryGroup[]>(() => {
@@ -424,7 +449,13 @@ export default function PatternStats() {
       g.patterns.sort((a, b) => b.count - a.count);
       g.combos.sort((a, b) => b.count - a.count);
     }
-    groups.sort((a, b) => b.total - a.total);
+    // Same order as the left-nav sidebar (LEVEL ABOVE, ABOVE LEVEL4, LEVEL
+    // BELOW, COMPRESSED, EXPANDED, BELOW LEVEL4, TOUCH). Unknown keys go last.
+    groups.sort(
+      (a, b) =>
+        (CATEGORY_ORDER.get(a.categoryKey) ?? Number.MAX_SAFE_INTEGER) -
+          (CATEGORY_ORDER.get(b.categoryKey) ?? Number.MAX_SAFE_INTEGER) || b.distinctCount - a.distinctCount
+    );
     return groups;
   }, [rows, combos, categoryMatches]);
 
@@ -433,6 +464,15 @@ export default function PatternStats() {
   const visibleCategories = useMemo(
     () => (categoryFilter ? categories.filter((g) => g.categoryKey === categoryFilter) : categories),
     [categories, categoryFilter]
+  );
+
+  // Sum of each visible category's distinct count — the same total you get
+  // by adding up the sidebar's category numbers. (The old figure summed
+  // every pattern row, so a symbol matching several patterns was counted
+  // several times.)
+  const totalMatches = useMemo(
+    () => visibleCategories.reduce((sum, g) => sum + g.distinctCount, 0),
+    [visibleCategories]
   );
 
   async function handleRun() {
@@ -545,14 +585,23 @@ export default function PatternStats() {
               <span className="font-semibold text-foreground">{scopedRows?.length ?? 0}</span> patterns
             </span>
             <span>
-              <span className="font-semibold text-foreground">{totalMatches}</span> total matched rows
+              <span className="font-semibold text-foreground">{totalMatches}</span> distinct matches
             </span>
             <span>
               <span className="font-semibold text-foreground">{emptyCount}</span> came back empty
             </span>
           </div>
 
-          {visibleCategories.length === 0 ? (
+          {visibleCategories.length === 0 && TOP_MOVER_IDS.has(categoryFilter) ? (
+            <div className="rounded-xl border border-dashed border-border bg-card px-6 py-16 text-center">
+              <p className="font-medium">
+                {CATEGORY_FILTER_OPTIONS.find((o) => o.id === categoryFilter)?.label} isn&apos;t in the scan results yet
+              </p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                runPatternCensus doesn&apos;t rank top movers, so there is nothing to show for this category.
+              </p>
+            </div>
+          ) : visibleCategories.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border bg-card px-6 py-16 text-center">
               <p className="font-medium">No patterns found</p>
               <p className="mt-2 text-sm text-muted-foreground">Try a different date range, source, or category.</p>
