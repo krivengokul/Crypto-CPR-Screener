@@ -1804,7 +1804,9 @@ export async function runPatternCensus(
         for (const dateISO of dates) {
           const reconstructed = await reconstructCPRForDate(symbol, source, dateISO);
           if (!reconstructed) continue;
-          const { result } = reconstructed;
+          // NOTE: named candleWindow (not `window`) so it can never be
+          // confused with the browser global.
+          const { result, window: candleWindow } = reconstructed;
 
           // TEMPORARY DEBUG ADDITION — tally the raw HHLL/RRHH/SSLL combo
           // once per category (independent of any nested pattern loop
@@ -1838,7 +1840,7 @@ export async function runPatternCensus(
           // TOP 15 GAINERS / LOSERS — just record this row's day-over-day
           // change; the top 15 per date is picked after the sweep.
           if (moverCategories.length > 0) {
-            const { changePct } = closeAndChange(window, dateISO);
+            const { changePct } = closeAndChange(candleWindow, dateISO);
             if (changePct !== null && Number.isFinite(changePct)) {
               for (const cat of moverCategories) {
                 if (!passesPatternFn(result, cat.key)) continue;
