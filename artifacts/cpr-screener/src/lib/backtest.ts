@@ -1670,14 +1670,30 @@ const RRSS_COMBO_CATEGORIES = new Set(["top15gainers", "top15losers"]);
 
 // TOP 15 GAINERS / LOSERS are ranked categories, not condition categories:
 // their ViewDef condition is `() => true`, so passesPatternFn(result, key)
-// alone matches EVERY symbol. runPatternCensus therefore ranks them itself —
-// for each date, the TOP_MOVER_LIMIT symbols with the highest ("desc") /
-// lowest ("asc") day-over-day % change (closeAndChange, same figure the
-// "% Change" column in the category scan tables uses).
-const TOP_MOVER_LIMIT = 15;
-const TOP_MOVER_CATEGORIES = new Map<string, "desc" | "asc">([
-  ["top15gainers", "desc"],
-  ["top15losers", "asc"],
+// alone matches EVERY symbol.
+//
+// selectTopByChange is THE single ranking rule for them — BacktestPanel's
+// category scan and runPatternCensus below both call it, so the two can't
+// drift apart. Sorts by CategoryScanRow.changePct (entry-day % change, from
+// closeAndChange) and keeps `limit` rows in the requested direction; rows
+// with a null changePct (no entry-day candle yet) are excluded — there's
+// nothing to rank them by. Callers apply it once per entry date.
+export const TOP_MOVER_LIMIT = 15;
+export function selectTopByChange<T extends { changePct: number | null }>(
+  rows: T[],
+  direction: "gainers" | "losers",
+  limit = TOP_MOVER_LIMIT
+): T[] {
+  return rows
+    .filter((r): r is T & { changePct: number } => r.changePct !== null && r.changePct !== undefined)
+    .sort((a, b) => (direction === "gainers" ? b.changePct - a.changePct : a.changePct - b.changePct))
+    .slice(0, limit);
+}
+
+// Which census categories are ranked (and in which direction).
+const TOP_MOVER_CATEGORIES = new Map<string, "gainers" | "losers">([
+  ["top15gainers", "gainers"],
+  ["top15losers", "losers"],
 ]);
 
 /**
@@ -1714,8 +1730,9 @@ const TOP_MOVER_CATEGORIES = new Map<string, "desc" | "asc">([
  *
  * TOP 15 GAINERS / LOSERS are the exception to "check every pair against
  * passesPatternFn": their base condition is `() => true`, so they're ranked
- * per date instead (TOP_MOVER_CATEGORIES above) — each date contributes at
- * most 15 rows to each of the two categories.
+ * per date instead via selectTopByChange (the same helper BacktestPanel
+ * uses) — each date contributes at most 15 rows to each of the two
+ * categories.
  *
  * The symbol universe is resolved once, as of endDateISO (the most recent
  * date in range) — same "current exchange universe, walked backward"
@@ -1874,8 +1891,7 @@ export async function runPatternCensus(
       else byDate.set(c.dateISO, [c]);
     }
     for (const list of byDate.values()) {
-      list.sort((a, b) => (direction === "desc" ? b.changePct - a.changePct : a.changePct - b.changePct));
-      for (const c of list.slice(0, TOP_MOVER_LIMIT)) {
+      for (const c of selectTopByChange(list, direction)) {
         categoryMatchCounts.set(cat.key, (categoryMatchCounts.get(cat.key) ?? 0) + 1);
         const ck = comboKey(cat.key, c.combo);
         comboCounts.set(ck, (comboCounts.get(ck) ?? 0) + 1);

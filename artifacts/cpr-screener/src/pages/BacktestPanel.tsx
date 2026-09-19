@@ -23,6 +23,7 @@ import {
   findTightestAdjacentBand,
   getAttachPointOptions,
   findContainingNodeKey,
+  selectTopByChange,
   type BacktestRow,
   type CategoryScanRow,
   type BacktestSource,
@@ -84,24 +85,9 @@ function daysInMonthUTC(d: Date): number {
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
 }
 
-// NEW: ranking helper for the "TOP 15 GAINERS" / "TOP 15 LOSERS"
-// categories (lib/backtest.ts's BACKTEST_CATEGORIES). Those categories let
-// every symbol through the base-condition check (see passesPattern's
-// "top15gainers"/"top15losers" cases in ScreenerUtils.tsx), so
-// runCategoryScan returns the full universe for that entry date; this
-// sorts by CategoryScanRow.changePct (entry-day % change) and keeps only
-// the top 15 in the requested direction. Rows with a null changePct (no
-// entry-day candle yet) are excluded — there's nothing to rank them by.
-function selectTopByChange<T extends { changePct: number | null }>(
-  rows: T[],
-  direction: "gainers" | "losers",
-  limit = 15
-): T[] {
-  return rows
-    .filter((r): r is T & { changePct: number } => r.changePct !== null && r.changePct !== undefined)
-    .sort((a, b) => (direction === "gainers" ? b.changePct - a.changePct : a.changePct - b.changePct))
-    .slice(0, limit);
-}
+// NOTE: the "TOP 15 GAINERS" / "TOP 15 LOSERS" ranking helper
+// (selectTopByChange) now lives in lib/backtest.ts so Pattern Stats' census
+// ranks them with the exact same rule. See its doc comment there.
 function formatDisplay(iso: string): string {
   return fromISO(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
 }
@@ -1376,7 +1362,7 @@ export default function BacktestPanel() {
       if (isCategory) {
         // NEW: "TOP 15 GAINERS" / "TOP 15 LOSERS" rank the whole scanned
         // pool by entry-day % change instead of showing every match — see
-        // selectTopByChange above. Applied per entry date, so a date-range
+        // selectTopByChange (lib/backtest). Applied per entry date, so a date-range
         // scan shows each day's own top 15, not a cross-day aggregate.
         const topByChangeDirection =
           selectedKey === "top15gainers" ? "gainers" :
