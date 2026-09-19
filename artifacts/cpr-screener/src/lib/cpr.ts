@@ -238,8 +238,10 @@ export interface CPRPairFlags {
   L3TC: boolean;
   // EL1L2 / EL2L1 — prev's R4 AND prev's S4 both land inside today's
   // S1/S2 band (an unusually collapsed range — prev's whole R4-to-S4 span
-  // squeezed into one of today's support bands). Split into Hi/Lo variants
-  // by whether today's PDL sits above (Hi) or below (Lo) prev's Pivot.
+  // squeezed into one of today's support bands). Split by which edge of
+  // that band prev's squeeze sits closer to: EL1L2 (Higher) when prev's
+  // R4 is farther from today's S1 (top edge) than prev's S4 is from
+  // today's S2 (bottom edge); EL2L1 (Lower) the other way around.
   EL1L2: boolean;
   EL2L1: boolean;
   // EUPL2 — prev's S4 lands inside today's S2/S1 band (L2), AND prev's R4
@@ -947,12 +949,18 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
 
   // EL1L2 / EL2L1 — prev's R4 AND prev's S4 both land inside today's
   // S1/S2 band (an unusually collapsed range where prev's entire R4-to-S4
-  // span squeezed into a single today support band). Split by whether
-  // today's PDL (today.prevLow) sits above (Hi) or below (Lo) prev's Pivot.
+  // span squeezed into a single today support band). Split by which edge
+  // of that band prev's squeeze sits closer to: pR4S1Dist is how far
+  // prev's R4 sits below today's S1 (the band's top edge); pS4S2Dist is
+  // how far prev's S4 sits above today's S2 (the band's bottom edge).
+  // EL1L2 (Expanded Higher) fires when pR4S1Dist > pS4S2Dist; EL2L1
+  // (Expanded Lower) fires when pR4S1Dist < pS4S2Dist.
   const eXHiLoL2L1Bands = (prev.r4 > today.s2 && prev.r4 < today.s1) &&
                           (prev.s4 > today.s2 && prev.s4 < today.s1);
-  const EL1L2 = eXHiLoL2L1Bands && (today.prevLow > prev.pivot);
-  const EL2L1 = eXHiLoL2L1Bands && (today.prevLow < prev.pivot);
+  const pR4S1Dist = today.s1 - prev.r4;
+  const pS4S2Dist = prev.s4 - today.s2;
+  const EL1L2 = eXHiLoL2L1Bands && (pR4S1Dist > pS4S2Dist);
+  const EL2L1 = eXHiLoL2L1Bands && (pR4S1Dist < pS4S2Dist);
 
   // CL2UT — today's R4 lands inside the previous day's Pivot/TC band,
   // AND today's S4 lands inside the previous day's S1/S2 band. Same
@@ -1198,11 +1206,13 @@ export type PatternCategory = "cOHigher" | "cOLower" | "eXHigher" | "eXLower" | 
  *    an Expanded-family flag; it's included here under its actual key.
  *    It does not start with "eXU" (case-sensitive), so it lands in
  *    "eXHigher".
- *  - `EL1L2` and `EL2L1` start with "eX", not "Hi"/"Lo" — the
- *    Hi/Lo in their names refers to the PDL-vs-prev-Pivot split described
- *    in cpr.ts, not the Higher/Lower category. Neither starts with "eXU",
- *    but both are categorized here as "eXLower" as a deliberate override
- *    of the name-prefix rule.
+ *  - `EL1L2` and `EL2L1` start with "eX", not "Hi"/"Lo" — the Hi/Lo in
+ *    their names refers to which edge of the collapsed band prev's R4/S4
+ *    squeeze sits closer to (see cpr.ts), not the Higher/Lower category.
+ *    Neither starts with "eXU", so by the name-prefix rule both would
+ *    land in "eXLower"; EL1L2 is a deliberate override to "eXHigher"
+ *    since its condition is genuinely the Higher-side split, while EL2L1
+ *    keeps the "eXLower" default.
  *  - `CL2UT` doesn't start with "cOU" (it's a `cOTCL2`-derived name), but
  *    is categorized here as "cOLower" as a deliberate override of the
  *    name-prefix rule.
@@ -1254,7 +1264,6 @@ export const PATTERN_CATEGORY: Record<string, PatternCategory> = {
   ELBU3: "eXLower",
   EL1U4: "eXLower",
   ELBU4: "eXLower",
-  EL1L2: "eXLower", // name contains "Hi" but prefix is "eX" — see note above
   EL2L1: "eXLower", // name contains "Lo" but prefix is "eX" — see note above
 
   // ---- Expanded: eXHigher (remaining eX... / legacy EU2L3) ----
@@ -1278,6 +1287,7 @@ export const PATTERN_CATEGORY: Record<string, PatternCategory> = {
   EU1L1: "eXHigher",
   EUPL2: "eXHigher",
   EUTL4: "eXHigher",
+  EL1L2: "eXHigher", // name contains "Hi" but prefix is "eX" — see note above
 
   // ---- Higher (Hi...) ----
   U3L4: "Higher",
