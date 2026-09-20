@@ -1,0 +1,1706 @@
+import type React from "react";
+import {
+  classifyCPRPair,
+  pickOuterLevelPattern,
+  getPatternCategory,
+  dirTol,
+  type CPRLevels,
+  type CPRResult,
+  type PDHPDLGapCategory,
+  type RRSSGapCategory,
+  type HLSwitch,
+  type SSRRCategory,
+  type HHLLCategory,
+  type SSLLCategory,
+  type RRHHCategory,
+} from "@/lib/cpr";
+import { levelCheckFullyMatches } from "@/lib/backtest";
+import { getView, passesView } from "@/lib/views";
+import { Views } from "@/lib/ViewsSidebar";
+
+export type SortKey = "symbol" | "compressionRatio" | "currentPrice" | "change24h" | "quoteVolume" | "priceVsCpr" | "cprDistance" | "pdhPdlPct";
+export type SortDir = "asc" | "desc";
+export type ActiveTab = "binance" | "delta" | "combined";
+
+export interface CPRResultWithSource extends CPRResult {
+  source: "binance" | "delta";
+}
+
+export function fmt(v: number): string {
+  if (v === 0) return "0";
+  if (Math.abs(v) >= 1000) return v.toLocaleString("en-US", { maximumFractionDigits: 2 });
+  if (Math.abs(v) >= 1) return v.toFixed(4);
+  if (Math.abs(v) >= 0.001) return v.toFixed(5);
+  return v.toFixed(8);
+}
+
+export function fmtPct(v: number): string {
+  return `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
+}
+
+export function fmtVol(v: number): string {
+  if (v >= 1e9) return `$${(v / 1e9).toFixed(1)}B`;
+  if (v >= 1e6) return `$${(v / 1e6).toFixed(1)}M`;
+  if (v >= 1e3) return `$${(v / 1e3).toFixed(1)}K`;
+  return `$${v.toFixed(0)}`;
+}
+
+export function priceVsCprValue(r: CPRResultWithSource): number {
+  const { currentPrice: price, todayCPR } = r;
+  const { tc, bc } = todayCPR;
+  if (price > tc) return ((price - tc) / tc) * 100;
+  if (price < bc) return -((bc - price) / bc) * 100;
+  return 0;
+}
+
+/**
+ * PDH/PDL % — how far current price sits beyond yesterday's High/Low
+ * (r.todayCPR.prevHigh / r.todayCPR.prevLow — the "PH"/"PL" levels used
+ * to build today's CPR). Positive when price has broken above PDH,
+ * negative when it's broken below PDL, 0 when it's still inside the
+ * PDH–PDL range. Used for the PDH/PDL table column and its sort.
+ */
+export function pdhPdlValue(r: CPRResult): number {
+  const { currentPrice: price, todayCPR } = r;
+  const { prevHigh: pdh, prevLow: pdl } = todayCPR;
+  if (price > pdh) return ((price - pdh) / pdh) * 100;
+  if (price < pdl) return -((pdl - price) / pdl) * 100;
+  return 0;
+}
+
+export function pdhPdlStatus(r: CPRResult): { main: string; sub: string; color: string } {
+  const { currentPrice: price, todayCPR } = r;
+  const { prevHigh: pdh, prevLow: pdl } = todayCPR;
+  if (price > pdh) {
+    const pct = ((price - pdh) / pdh) * 100;
+    return { main: `+${pct.toFixed(2)}%`, sub: "> PDH", color: "text-green-400" };
+  }
+  if (price < pdl) {
+    const pct = ((pdl - price) / pdl) * 100;
+    return { main: `−${pct.toFixed(2)}%`, sub: "< PDL", color: "text-destructive" };
+  }
+  // RENAMED: "IN-PDH/PDL" -> "IN-PDHL", moved from `sub` into `main` so it
+  // renders with the same font-size/weight/brightness as distanceFromCPR's
+  // "IN-CPR" (main-only, text-xs font-medium, no muted opacity-80 "sub"
+  // treatment) — same {main, sub, color} shape as distanceFromCPR itself.
+  return { main: "IN-PDHL", sub: "", color: "text-yellow-400" };
+}
+
+/**
+ * DISTANCE% — gap between today's and previous day's CPR bands, as a
+ * percentage, only when the CPR has clearly shifted (Above/Below):
+ *   CPR Above (cprRising):  gap between prevCPR.tc and todayCPR.bc,
+ *                            expressed as % of prevCPR.tc
+ *   CPR Below (cprFalling): gap between todayCPR.tc and prevCPR.bc,
+ *                            expressed as % of todayCPR.tc
+ * Returns null for all other conditions (overlapping/inside/outside CPR etc).
+ */
+export function cprDistancePct(r: CPRResult): number | null {
+  if (r.cprRising) {
+    const prevTc = r.prevCPR.tc;
+    const todayBc = r.todayCPR.bc;
+    return ((todayBc - prevTc) / prevTc) * 100;
+  }
+  if (r.cprFalling) {
+    const todayTc = r.todayCPR.tc;
+    const prevBc = r.prevCPR.bc;
+    return ((prevBc - todayTc) / todayTc) * 100;
+  }
+  return null;
+}
+
+export interface DistanceLevel {
+  label: string;
+  value: number;
+}
+
+/**
+ * Returns which R/S levels (today's and previous day's) fall inside the
+ * DIST gap computed by cprDistancePct — i.e. between prevCPR.tc and
+ * todayCPR.bc (CPR Above) or between todayCPR.tc and prevCPR.bc (CPR Below).
+ * Naming follows the ADK ladder convention: R1→U1, R2→U2, R3→U3, S1→L1,
+ * S2→L2, S3→L3; previous-day levels get a "P" prefix (PU1, PL1, etc).
+ * Sorted low → high. Empty when the CPR isn't clearly Above/Below.
+ */
+export function levelsInDistanceRange(r: CPRResult): DistanceLevel[] {
+  const dist = cprDistancePct(r);
+  if (dist === null) return [];
+
+  let low: number, high: number;
+  if (r.cprRising) {
+    low = r.prevCPR.tc;
+    high = r.todayCPR.bc;
+  } else {
+    low = r.todayCPR.tc;
+    high = r.prevCPR.bc;
+  }
+  if (low > high) [low, high] = [high, low];
+
+  const candidates: DistanceLevel[] = [
+    { label: "U1",  value: r.todayCPR.r1 },
+    { label: "U2",  value: r.todayCPR.r2 },
+    { label: "U3",  value: r.todayCPR.r3 },
+    { label: "L1",  value: r.todayCPR.s1 },
+    { label: "L2",  value: r.todayCPR.s2 },
+    { label: "L3",  value: r.todayCPR.s3 },
+    { label: "PU1", value: r.prevCPR.r1 },
+    { label: "PU2", value: r.prevCPR.r2 },
+    { label: "PU3", value: r.prevCPR.r3 },
+    { label: "PL1", value: r.prevCPR.s1 },
+    { label: "PL2", value: r.prevCPR.s2 },
+    { label: "PL3", value: r.prevCPR.s3 },
+  ];
+
+  return candidates
+    .filter((c) => c.value >= low && c.value <= high)
+    .sort((a, b) => a.value - b.value);
+}
+
+export function getVal(r: CPRResultWithSource, key: SortKey): number | string {
+  switch (key) {
+    case "symbol":          return r.symbol;
+    case "compressionRatio": return r.compressionRatio;
+    case "currentPrice":    return r.currentPrice;
+    case "change24h":       return r.change24h;
+    case "quoteVolume":     return r.quoteVolume;
+    case "priceVsCpr":      return priceVsCprValue(r);
+    case "cprDistance":     return cprDistancePct(r) ?? -Infinity;
+    case "pdhPdlPct":       return pdhPdlValue(r);
+  }
+}
+
+/**
+ * Splits a raw exchange symbol into { base, quote } for display.
+ *
+ * Delta symbols are normally underscore-delimited (e.g. "BTC_USDT"). A
+ * handful of Delta products — notably tokenized-stock instruments like
+ * "INTCBUSD" — don't follow that convention and have no underscore at
+ * all. Previously those fell straight through to { base: symbol, quote:
+ * "" }, showing the whole raw ticker with a blank quote in the UI (e.g.
+ * "INTCBUSD /"). Added a fallback: if there's no underscore, try
+ * stripping a known quote suffix off the end instead. Longest/most-
+ * specific suffixes are checked first ("BUSD" before "USD") so e.g.
+ * "INTCBUSD" correctly splits to base "INTC" / quote "BUSD" rather than
+ * base "INTCB" / quote "USD".
+ */
+const DELTA_QUOTE_SUFFIXES = ["USDT", "BUSD", "USDC", "USD", "INR"];
+
+export function splitSymbol(symbol: string, source: "binance" | "delta") {
+  if (source === "binance") {
+    if (symbol.endsWith("USDT")) return { base: symbol.slice(0, -4), quote: "USDT" };
+    return { base: symbol, quote: "" };
+  }
+  const parts = symbol.split("_");
+  if (parts.length === 2) return { base: parts[0], quote: parts[1] };
+  // Fallback for non-underscore Delta symbols (e.g. stock-token tickers).
+  for (const q of DELTA_QUOTE_SUFFIXES) {
+    if (symbol.length > q.length && symbol.endsWith(q)) {
+      return { base: symbol.slice(0, -q.length), quote: q };
+    }
+  }
+  return { base: symbol, quote: "" };
+}
+
+/**
+ * Whether we have a reliable TradingView chart mapping for this symbol.
+ * Binance symbols always map cleanly (BINANCE:<symbol>).
+ *
+ * FIX (scoped to /BUSD only): Delta's TradingView (DELTAIN:) integration
+ * doesn't carry Delta's BUSD-quoted tokenized-stock instruments (e.g.
+ * "INTCBUSD") — those are the only Delta symbols known to be missing.
+ * Previously this also excluded every non-underscore Delta symbol (i.e.
+ * anything not shaped like "BTC_USDT"), which was too broad and hid the
+ * chart link for perfectly valid Delta symbols that just don't happen to
+ * use an underscore. Now the check is specific: only symbols whose quote
+ * (per splitSymbol) is "BUSD" are treated as unmapped; every other Delta
+ * symbol — underscore-delimited or not — gets a chart link as normal.
+ */
+export function hasKnownChartMapping(symbol: string, source: "binance" | "delta"): boolean {
+  if (source === "binance") return true;
+  return splitSymbol(symbol, "delta").quote !== "BUSD";
+}
+
+/**
+ * Returns the TradingView chart URL for the market scanned by this screener.
+ * Binance results use USDⓈ-M perpetual candles, so always request TradingView's
+ * perpetual symbol (`BINANCE:<SYMBOL>.P`). This also fixes futures-only listings
+ * such as UAIUSDT and IDOLUSDT when older call sites only pass symbol + source.
+ */
+export type BinanceVenue = "spot" | "futures";
+
+export function getChartUrl(
+  symbol: string,
+  source: "binance" | "delta",
+  _venue?: BinanceVenue,
+): string {
+  const normalizedSymbol = symbol.trim().toUpperCase().replace(/\.P$/i, "");
+
+  if (source === "delta") {
+    // Delta Exchange India symbols on TradingView: DELTAIN: prefix, in.tradingview.com, .p suffix
+    // e.g. AAPLXUSD → https://in.tradingview.com/chart/?symbol=DELTAIN:AAPLXUSD.p
+    const tvSymbol = encodeURIComponent(`DELTAIN:${normalizedSymbol}.P`);
+    return `https://in.tradingview.com/chart/?symbol=${tvSymbol}`;
+  }
+
+  const tvSymbol = encodeURIComponent(`BINANCE:${normalizedSymbol}.P`);
+  return `https://www.tradingview.com/chart/?symbol=${tvSymbol}`;
+}
+
+/**
+ * CPR>PU4 — sub-toggle condition for the "U1>PU4" filter (BigCPR Above):
+ * today's BC sits above previous day's R4.
+ */
+export function isCprAbovePU4(r: CPRResult): boolean {
+  return r.todayCPR.bc > r.prevCPR.r4;
+}
+
+/**
+ * L1>PU4 — nested sub-toggle condition, applied on top of CPR>PU4
+ * (BigCPR Above → U1>PU4 → CPR>PU4 → L1>PU4): today's S1 sits above
+ * previous day's R4.
+ */
+export function isL1AbovePU4(r: CPRResult): boolean {
+  return r.todayCPR.s1 > r.prevCPR.r4;
+}
+
+/**
+ * pWideAbove — sub-toggle condition nested under "U1>PU4" (BigCPR Above):
+ * Previous day's CPR is wider than pp-CPR (the day before previous) AND
+ * Previous day's CPR sits above pp-CPR (mirrors the cprRising check, but
+ * one day back). Returns false when ppCPR isn't available (not enough
+ * candle history).
+ */
+export function isPWideAbove(r: CPRResult): boolean {
+  if (!r.ppCPR) return false;
+  const minGap = r.ppCPR.pivot * 0.001;
+  const prevAbovePP = (r.prevCPR.bc - r.ppCPR.tc) >= minGap;
+  const prevWiderThanPP = r.prevCPR.widthPct > r.ppCPR.widthPct;
+  return prevAbovePP && prevWiderThanPP;
+}
+
+/**
+ * CPR Width Category ladder — replaces the old 3-tier Tiny/Mini/Small scheme
+ * with 8 tiers, ordered tightest → widest:
+ *
+ *   Width %          Category
+ *   ≤ 0.10%          Micro
+ *   0.10 – 0.22%     Tiny
+ *   0.22 – 0.50%     Mini
+ *   0.60 – 1.10%     Small
+ *   1.10 – 2.00%     Medium
+ *   2.00 – 5.00%     Large
+ *   5.00 – 10.00%    Mega
+ *   > 10.00%         Ultra
+ *
+ * Each tier has a badge color (today's CPR) and a slightly muted "p"
+ * variant used for previous day's CPR (pMicro, pTiny, pMini, pSmall,
+ * pMedium, pLarge, pMega, pUltra). Colors run cool→warm as width grows,
+ * mirroring "tight/coiled" → "blown-out/volatile".
+ */
+export type WidthCategoryKey =
+  | "micro" | "tiny" | "mini" | "small" | "medium" | "large" | "mega" | "ultra";
+
+export interface WidthCategoryInfo {
+  key: WidthCategoryKey;
+  label: string;
+  max: number; // inclusive upper bound of this tier (Infinity for Ultra)
+  classes: string;  // today's CPR badge
+  pClasses: string; // previous day's CPR badge (muted variant)
+}
+
+export const WIDTH_CATEGORIES: WidthCategoryInfo[] = [
+  { key: "micro",  label: "Micro",  max: 0.10,     classes: "bg-violet-500/10 text-violet-400 border-violet-500/20", pClasses: "bg-violet-500/10 text-violet-300 border-violet-400/20" },
+  { key: "tiny",   label: "Tiny",   max: 0.22,     classes: "bg-purple-500/10 text-purple-400 border-purple-500/20", pClasses: "bg-purple-500/10 text-purple-300 border-purple-400/20" },
+  { key: "mini",   label: "Mini",   max: 0.60,     classes: "bg-teal-500/10 text-teal-400 border-teal-500/20",       pClasses: "bg-teal-500/10 text-teal-300 border-teal-400/20" },
+  { key: "small",  label: "Small",  max: 1.10,     classes: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20", pClasses: "bg-indigo-500/10 text-indigo-300 border-indigo-400/20" },
+  { key: "medium", label: "Medium", max: 2.00,     classes: "bg-blue-500/10 text-blue-400 border-blue-500/20",       pClasses: "bg-blue-500/10 text-blue-300 border-blue-400/20" },
+  { key: "large",  label: "Large",  max: 5.00,     classes: "bg-amber-500/10 text-amber-400 border-amber-500/20",    pClasses: "bg-amber-500/10 text-amber-300 border-amber-400/20" },
+  { key: "mega",   label: "Mega",   max: 10.00,    classes: "bg-orange-500/10 text-orange-400 border-orange-500/20", pClasses: "bg-orange-500/10 text-orange-300 border-orange-400/20" },
+  { key: "ultra",  label: "Ultra",  max: Infinity, classes: "bg-rose-500/10 text-rose-400 border-rose-500/20",       pClasses: "bg-rose-500/10 text-rose-300 border-rose-400/20" },
+];
+
+/**
+ * Classifies a CPR width% into its tier. ≤0.10% → Micro, then each
+ * successive tier's upper bound is exclusive-open/inclusive-close on the
+ * previous one (e.g. Tiny is >0.10% and ≤0.25%), matching the table above.
+ */
+export function getWidthCategory(widthPct: number): WidthCategoryInfo {
+  for (const cat of WIDTH_CATEGORIES) {
+    if (widthPct <= cat.max) return cat;
+  }
+  return WIDTH_CATEGORIES[WIDTH_CATEGORIES.length - 1] ?? {
+    key: "ultra",
+    label: "Ultra",
+    max: Infinity,
+    classes: "bg-rose-500/10 text-rose-400 border-rose-500/20",
+    pClasses: "bg-rose-500/10 text-rose-300 border-rose-400/20",
+  };
+}
+
+/**
+ * renderPivotSizeCell — the PIVOT SIZE column's contents: the prev/today
+ * width-category badges (pMedium/Medium etc, via getWidthCategory) with
+ * the compressionRatio value shown plain between them (no pill/badge/
+ * border — just a small colored number, matching the CPR-GAP column's
+ * plain "x.xx%" style). Shared by the Screener table (ScreenerTableRow)
+ * and BacktestPanel's results tables so the column looks identical
+ * everywhere, and rounds compressionRatio to a whole number, capped at
+ * "999%" display for anything larger.
+ */
+export function renderPivotSizeCell(
+  prevCPR: { widthPct: number },
+  todayCPR: { widthPct: number },
+  compressionRatio: number
+) {
+  const prevCat = getWidthCategory(prevCPR.widthPct);
+  const todayCat = getWidthCategory(todayCPR.widthPct);
+  return (
+    <div className="flex flex-nowrap items-center justify-start gap-2">
+      <span
+        className={`font-sans text-xs px-1.5 py-0.5 rounded border font-medium flex flex-col items-center leading-tight ${prevCat.pClasses}`}
+        title={`Prev day CPR width: ${prevCPR.widthPct.toFixed(4)}%`}
+      >
+        <span className="text-[10px]">p{prevCat.label}</span>
+        <span className="text-[10px] font-mono">{prevCPR.widthPct.toFixed(2)}%</span>
+      </span>
+      <span className="font-sans text-[10px] font-semibold text-muted-foreground shrink-0">
+        {compressionRatio > 999 ? "999%" : `${Math.round(compressionRatio)}%`}
+      </span>
+      <span
+        className={`font-sans text-xs px-1.5 py-0.5 rounded border font-medium flex flex-col items-center leading-tight ${todayCat.classes}`}
+        title={`Today's CPR width: ${todayCPR.widthPct.toFixed(4)}%`}
+      >
+        <span className="text-[10px]">{todayCat.label}</span>
+        <span className="text-[10px] font-mono">{todayCPR.widthPct.toFixed(2)}%</span>
+      </span>
+    </div>
+  );
+}
+
+/**
+ * Width filter — used by the "CPR:" filter row. Unprefixed keys
+ * (micro/tiny/mini/small/medium/large/mega/ultra) look at TODAY's CPR
+ * width; "p"-prefixed keys (pmicro/ptiny/pmini/psmall/pmedium/plarge/
+ * pmega/pultra) look at PREVIOUS day's CPR width. `null` (no filter
+ * selected) always passes. Moved here from Screener.tsx so the filtering
+ * logic lives alongside the rest of the pattern/condition helpers and
+ * isn't duplicated inline.
+ */
+export type WidthFilter =
+  | "micro" | "tiny" | "mini" | "small" | "medium" | "large" | "mega" | "ultra"
+  | "pmicro" | "ptiny" | "pmini" | "psmall" | "pmedium" | "plarge" | "pmega" | "pultra"
+  | null;
+
+function widthMatchesTier(width: number, key: WidthCategoryKey): boolean {
+  switch (key) {
+    case "micro":  return width <= 0.10;
+    case "tiny":   return width > 0.10 && width <= 0.22;
+    case "mini":   return width > 0.22 && width <= 0.60;
+    case "small":  return width > 0.60 && width <= 1.10;
+    case "medium": return width > 1.10 && width <= 2.00;
+    case "large":  return width > 2.00 && width <= 5.00;
+    case "mega":   return width > 5.00 && width <= 10.00;
+    case "ultra":  return width > 10.00;
+    default: return true;
+  }
+}
+
+/**
+ * CHANGED: split into two independent filters — one for prev day's CPR
+ * width (the "p"-prefixed pMicro..pUltra buttons), one for today's CPR
+ * width (the plain Micro..Ultra buttons). Previously both groups shared a
+ * single WidthFilter value, so picking one from either group always
+ * cleared the other. Now each group has its own state (see Screener.tsx:
+ * prevWidthFilter / todayWidthFilter) and both are ANDed together here —
+ * a row must satisfy whichever ones are actually selected (either, both,
+ * or neither).
+ */
+export function matchesWidthFilter(
+  r: CPRResult,
+  prevWidthFilter: WidthCategoryKey | null,
+  todayWidthFilter: WidthCategoryKey | null
+): boolean {
+  if (prevWidthFilter && !widthMatchesTier(r.prevCPR.widthPct, prevWidthFilter)) return false;
+  if (todayWidthFilter && !widthMatchesTier(r.todayCPR.widthPct, todayWidthFilter)) return false;
+  return true;
+}
+
+/**
+ * Human-readable label for the active CPR Width filter, e.g. "psmall" ->
+ * "pSmall (0.60%-1.20%)". Used by the result-count summary line in
+ * Screener.tsx. Was previously called but never defined/exported — calling
+ * it with any width filter active threw a ReferenceError and crashed the
+ * component. Fixed by adding it here alongside the other width-filter helpers.
+ */
+const WIDTH_FILTER_LABELS: Record<NonNullable<WidthFilter>, string> = {
+  micro:  "Micro (\u22640.10%)",
+  tiny:   "Tiny (0.10%-0.22%)",
+  mini:   "Mini (0.22%-0.60%)",
+  small:  "Small (0.60%-1.10%)",
+  medium: "Medium (1.10%-2.00%)",
+  large:  "Large (2.00%-5.00%)",
+  mega:   "Mega (5.00%-10.00%)",
+  ultra:  "Ultra (>10.00%)",
+  pmicro:  "pMicro (\u22640.10%)",
+  ptiny:   "pTiny (0.10%-0.22%)",
+  pmini:   "pMini (0.22%-0.60%)",
+  psmall:  "pSmall (0.60%-1.10%)",
+  pmedium: "pMedium (1.10%-2.00%)",
+  plarge:  "pLarge (2.00%-5.00%)",
+  pmega:   "pMega (5.00%-10.00%)",
+  pultra:  "pUltra (>10.00%)",
+};
+
+export function formatWidthFilterLabel(widthFilter: WidthFilter): string {
+  if (!widthFilter) return "";
+  return WIDTH_FILTER_LABELS[widthFilter];
+}
+
+/**
+ * passesPattern — public entry point used by Screener.tsx/BacktestPanel.tsx.
+ * views.ts (see @/lib/views) is the single source of truth for every
+ * key: the four top-level Categories, every compound HHLL x RRHH x SSLL
+ * combo, everything nested under LEVEL ABOVE/LEVEL BELOW/COMPRESSED/
+ * EXPANDED, R1AbovePR4/S1BelowPS4, the hand-authored Copy View entries,
+ * the misc named Views, and the standalone raw-flag Patterns.
+ *
+ * The Copy View / Create View "conditionKey" redirect (auto-nav entries
+ * written directly into views.ts's source by copy-view.yml/
+ * create-view.yml's patch.mjs) is handled here rather than inside
+ * passesView() itself, because it additionally gates on the View's own
+ * levelCheckDefs — a Copy View only counts as a pass when BOTH the
+ * referenced condition passes AND the full 13-line Level Check signature
+ * matches (see backtestSymbolOnDate for the equivalent Backtest-side
+ * gate).
+ */
+export function passesPattern(r: CPRResult, pattern: string): boolean {
+  const v = getView(pattern);
+  if (!v) return false;
+  if (v.conditionKey && v.conditionKey !== pattern) {
+    return (
+      passesPattern(r, v.conditionKey) &&
+      levelCheckFullyMatches(r, v.levelCheckDefs)
+    );
+  }
+  return passesView(r, pattern);
+}
+
+
+/**
+ * Sub-filter direction map, grouped by top-level section (activeView).
+ * Used purely to color the row dot in the Symbol column — NOT tied to
+ * whether the sub-filter's toggle button is currently pressed. A row gets
+ * a dot the moment its data satisfies ANY sub-filter condition belonging
+ * to the active section, via the same passesPattern() check the toggle
+ * buttons use internally. Direction ("up" = bullish target = green, "down"
+ * = bearish target = red) is taken from each pattern's own "Target"
+ * description already shown in the Screener legend/tooltips — e.g.
+ * pMini-L34C4/U3>4 lives under "Big Below" but its own title says
+ * "Target-APU4", so it's green; LA-PL12CL23 lives under "Little ABOVE" but
+ * its own title says "Bearish Target: 2PL4", so it's red.
+ *
+ * When a row matches more than one sub-filter in the section, the FIRST
+ * match (in array order below) determines the dot's color.
+ */
+export type ViewDirection = "Up" | "Down";
+
+/**
+ * Sub-filter keys by section. Direction ("Up" or "Down") is derived directly
+ * from views.ts (ViewDef.direction), keeping views.ts as the single source of truth.
+ *
+ * Used purely to color the row dot in the Symbol column — NOT tied to
+ * whether the sub-filter's toggle button is currently pressed. A row gets
+ * a dot the moment its data satisfies ANY sub-filter condition belonging
+ * to the active section, via the same passesPattern() check the toggle
+ * buttons use internally.
+ *
+ * When a row matches more than one sub-filter in the section, the FIRST
+ * match (in array order below) determines the dot's color.
+ */
+const SUBFILTERS_BY_SECTION: Record<string, string[]> = {
+  "levelsbelow": [
+    "3P:HA-pBELOWR1:R2-3A",
+    "3P:HA-pABOVER1:S2-6P",
+    "2P:HA-HABOVEpR1:R4-4P",
+    "PDH>pTC-U4:5AM",
+    "11AM:pCPR1AHi-FApU4:1PM",
+    "B-B-BB-BB-CL4U2",
+    "B-B-BB-BB-L4U4-pLAP:R4",
+    "B6-L4U4-pStepUp:R4",
+    "B-B-BB-BB-EL4U4-SSLLGap:S4",
+  ],
+  "levelsabove": [
+    "A-A-AA-AA-EU3L4-GapB",
+    "A-A-AA-OA-U3L4-RRHHGap:R4",
+    "7PM:MoMi->U4:2AM",
+    "7PM:MoMi-<L4:2AM",
+    "6PM:APHS1A-FAU4:9PM",
+    "8AM:pPDHA-SRA-U4+2:2AM",
+    "A6-U3L3-SLBBG-R4",
+  ],
+  "compressed": [
+    "6A:HLC-SSLL:R4-6P",
+    "8A:HLC-SSHH:S4-1P",
+  ],
+  "expanded": [
+    "6A:SLE-RRHH:R2-6A",
+  ],
+  "R1AbovePR4": [
+    "A-A-AA-AA-EUPL3-RRHHGap:R4",
+    "6A:A-A-AA-AA-EUTL3-S1ATCpE-pL4:4A",
+    "TiMe-EUTL3-AU4:2PM",
+    "6AM:MegMeg-L3:8PM",
+  ],
+  "S1BelowPS4": [
+    "ss-EL1U4-U4:10PM",
+  ],
+  "equal-cpr": [
+    "eXLoL3U3-L3",
+  ],
+};
+
+/**
+ * normalizeViewDirection — shared Up/Down normalization for a ViewDef's
+ * raw `direction` string (which may be "Up"/"up"/"bullish"/"Down"/"down"/
+ * "bearish"/etc across views.ts). Returns null when the view has no
+ * direction set at all, so callers can distinguish "no direction on this
+ * View" from an actual Down.
+ */
+export function normalizeViewDirection(direction: string | undefined): ViewDirection | null {
+  if (!direction) return null;
+  return direction === "Up" || direction === "up" || direction === "bullish" ? "Up" : "Down";
+}
+
+/**
+ * Returns "Up"/"Down" if row r matches any sub-filter condition for the
+ * given section, or null if it matches none (or the section has no
+ * sub-filters defined, e.g. "falling"/"inside-value"). Direction is retrieved
+ * directly from views.ts (ViewDef.direction).
+ */
+export function getViewDirection(r: CPRResult, activeView: string): ViewDirection | null {
+  // Prefer ViewsSidebar's Views map (single source of truth) over
+  // hardcoded SUBFILTERS_BY_SECTION — any new View added to
+  // ViewsSidebar automatically gets green-dot support.
+  const subs = Views[activeView];
+  const keys = subs ? subs.map((s) => s.id) : SUBFILTERS_BY_SECTION[activeView];
+  if (!keys || keys.length === 0) return null;
+  for (const key of keys) {
+    if (passesPattern(r, key)) {
+      const dir = normalizeViewDirection(getView(key)?.direction as string | undefined);
+      if (dir) return dir;
+    }
+  }
+  return null;
+}
+
+/**
+ * getAnyViewDirection — same idea as getViewDirection, but scans EVERY
+ * View across every category (not just one section), returning the
+ * direction of the first one row `r` matches (Views' own declaration
+ * order). Used for the Symbol column's up/down dot when no left-nav
+ * section is selected (Show All / activeView === "") — getViewDirection
+ * returns null there since there's no section to scope to, which used to
+ * mean the dot never showed at all in Show All. Also null when the row
+ * matches no View, or matches one with no direction set.
+ */
+export function getAnyViewDirection(r: CPRResult): ViewDirection | null {
+  for (const [sectionKey, subs] of Object.entries(Views)) {
+    if (sectionKey === "touch") continue;
+    for (const sub of subs) {
+      if (passesPattern(r, sub.id)) {
+        const dir = normalizeViewDirection(getView(sub.id)?.direction as string | undefined);
+        if (dir) return dir;
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * getRowDirection — single Up/Down call for a row.
+ * Tries getViewDirection(r, activeView) first — looking up the pattern's
+ * direction defined in views.ts — and falls back to 24h change
+ * (change24h >= 0 → Up, else Down) when none is matched.
+ */
+export function getRowDirection(r: CPRResult, activeView: string): "Up" | "Down" {
+  const subDir = (activeView ? getViewDirection(r, activeView) : null) ?? getAnyViewDirection(r);
+  if (subDir) return subDir;
+  return r.change24h >= 0 ? "Up" : "Down";
+}
+
+/** One row's worth of "Active Views" info for the VIEW column — see getActiveViewLabels. */
+export interface ActiveViewInfo {
+  id: string;
+  label: string;
+  /** Up -> green text, Down -> red text, null -> the View has no direction set (neutral text). */
+  direction: ViewDirection | null;
+}
+
+/**
+ * getActiveViewLabels — every View (left-nav leaf, e.g. "6A:SLE-RRHH:R2-6A")
+ * that row `r` currently satisfies, across ALL categories in the Views map
+ * (not just the currently active section) — same "Active Views" concept
+ * already shown in the Journal's PATTERN column (LoggedSignal.patternName).
+ * Used to populate the Live Screener's own VIEW column, independent of
+ * whatever section/activePattern the user has selected in the left nav.
+ * Each entry also carries its own Up/Down direction (from views.ts), so the
+ * VIEW column can color each View name independently of the row's dot.
+ *
+ * Dedupes by id (a View could in principle be listed under more than one
+ * category) and returns entries in Views' own declaration order. Returns []
+ * when the row matches no View — callers should render that as a blank
+ * cell rather than a placeholder.
+ */
+export function getActiveViewLabels(r: CPRResult): ActiveViewInfo[] {
+  const seen = new Set<string>();
+  const infos: ActiveViewInfo[] = [];
+  const EXCLUDE_TOUCH_IDS = new Set(["insidecpr", "outcpr", "overlapHigher", "overlapLower", "touch"]);
+  for (const [sectionKey, subs] of Object.entries(Views)) {
+    if (sectionKey === "touch") continue;
+    for (const sub of subs) {
+      if (EXCLUDE_TOUCH_IDS.has(sub.id)) continue;
+      if (seen.has(sub.id)) continue;
+      seen.add(sub.id);
+      if (passesPattern(r, sub.id)) {
+        infos.push({
+          id: sub.id,
+          label: sub.label,
+          direction: normalizeViewDirection(getView(sub.id)?.direction as string | undefined),
+        });
+      }
+    }
+  }
+  return infos;
+}
+
+/**
+ * Pattern — classifies today's CPR range relative to yesterday's using
+ * the directional sub-flags computed in cpr.ts:
+ *   eX-Higher / eX-Lower:  Expanded (today R4 > prev R4 AND today S4 < prev S4),
+ *                          split by which side expanded more (srExpandedHigher/Lower)
+ *   cO-Higher / cO-Lower:  Compressed (today R4 < prev R4 AND today S4 > prev S4),
+ *                          split by which side squeezed harder (srCompressedHigher/Lower)
+ *   Higher:     today R4 >= prev R4  AND today S4 >= prev S4  (range shifted up, ties included)
+ *   Lower:      everything else not covered above (range shifted down)
+ *
+ * All six original buckets are mutually exclusive and exhaustive by
+ * construction — cpr.ts guarantees exactly one of srExpanded / srCompressed /
+ * srHigher / srLower is true for every row, and within srExpanded/srCompressed
+ * exactly one of the High/Low sub-flags is true (ties are folded into the
+ * Higher variant in cpr.ts). getOuterLevelPatternInfo here just reads those flags in
+ * order — no re-derivation, no ties, no null/unclassified rows.
+ *
+ * FIX (duplicate badge bug): CL2U1 / CL4U3 / L4U4 are intentionally
+ * NOT checked here anymore. They're independent booleans (not mutually
+ * exclusive sub-buckets of "Lower" the way eX-Higher/eX-Lower or
+ * cO-Higher/cO-Lower are) and Screener.tsx already renders them as their
+ * OWN separate second-row badges alongside the primary Pattern badge.
+ * Having getOuterLevelPatternInfo() also return them as the PRIMARY label caused the
+ * same badge (e.g. "L4U4") to show twice on a row — once as the primary
+ * badge instead of "Lower", and once again in the second row. The pivot
+ * level filter buttons for CL2U1/CL4U3/L4U4 in Screener.tsx already
+ * check the raw r.CL2U1/r.CL4U3/r.L4U4 flags directly rather than
+ * relying on this function's return value, so removing them here does not
+ * affect filtering — only the primary badge, which now correctly falls
+ * through to "Lower" for these rows.
+ *
+ * NEW: EU4L4 — same treatment as CL2U1/CL4U3/L4U4
+ * above: an independent, section-agnostic boolean (r.EU4L4 from cpr.ts —
+ * prev R4 inside today's R3/R4 AND prev S4 inside today's S3/S4). It is
+ * NOT returned as the primary label here (same reasoning as above — it can
+ * co-occur with any of eX-Higher/eX-Lower/cO-Higher/cO-Lower/Higher/Lower
+ * and isn't mutually exclusive with them). Screener.tsx renders it as its
+ * own second-row badge and its own Pattern filter button, checking
+ * r.EU4L4 directly — independent of activeView/section, unlike the
+ * "eXLo-L4U4-U4" *pattern*, which gates the same boolean behind
+ * overlapLower for its own section.
+ *
+ * NEW: EL2U4 — same treatment again: an independent, section-agnostic
+ * boolean (r.EL2U4 from cpr.ts — prev R4 inside today's R3/R4 AND prev
+ * S4 inside today's S1/S2). Not returned as the primary label here for the
+ * same reason as EU4L4/U4L4/etc — Screener.tsx renders it as its own
+ * second-row badge and its own Pattern filter button, checking
+ * r.EL2U4 directly, regardless of activeView/left-nav section. The
+ * "EL2U4-AU4" *pattern* (Big Below) additionally requires strWideCPR +
+ * cprFalling + extra R3/pivot/width conditions on top of this raw flag.
+ *
+ * NEW: CL1U1 / CU1L1 / CL2U2 / CU2L2 — same treatment again:
+ * independent, section-agnostic booleans (from cpr.ts). Not returned as the
+ * primary label here; Screener.tsx renders them as their own second-row
+ * badges and Pattern filter buttons, checking the raw flags directly.
+ *
+ * NEW: CL2UT — same treatment again: an independent, section-agnostic
+ * boolean (r.CL2UT from cpr.ts — today's R4 inside prev day's Pivot/TC
+ * band AND today's S4 inside prev day's S1/S2 band). Not returned as the
+ * primary label here; Screener.tsx (ScreenerTableRow.tsx) renders it as
+ * its own second-row badge, checking the raw flag directly.
+ */
+export interface PatternInfo {
+  label: "eX-Higher" | "eX-Lower" | "cO-Higher" | "cO-Lower" | "Higher" | "CL4U3" | "L4U4" | "EU3L4" | "EU4L4" | "EL4U4" | "QU4L4" | "U4L4" | "U3L4" | "U2L4" | "U1L4" | "U3L2" | "CU3L2" | "CU3L3" | "EL2U4" | "EL3U4" | "CU4L2" | "EU3L3" | "EU1L2" | "EU1L3" | "EU1L4" | "EUBL1" | "EUPL1" | "EUTL1" | "EUBL2" | "EUBL3" | "EUPL3" | "EUTL3" | "EU2L4" | "EU2L2" | "EUTL2" | "EU1L1" | "EL1U1" | "EL1U2" | "CL2UT" | "EL1U3" | "EL2U3" | "ELTU2" | "ELBU2" | "ELTU3" | "ELPU2" | "ELPU3" | "ELBU3" | "EL1U4" | "ELBU4" | "CL1U1" | "CU1L1" | "CL2U2" | "CU2L2" | "CL2U1" | "CL4U4" | "EU2L3" | "L3CP" | "L2CP" | "L3TC" | "EL1L2" | "EL2L1" | "EUPL2" | "EUTL4" | "L2U3" | "CU2L1" | "CU2BC" | "CU3L1" | "U2L3" | "Lower";
+  classes: string;
+}
+
+
+
+export function getOuterLevelPatternInfo(r: CPRResult): PatternInfo {
+  if (r.srExpandedHigher) {
+    return { label: "eX-Higher", classes: "bg-purple-500/10 text-purple-400 border-purple-500/20" };
+  }
+  if (r.srExpandedLower) {
+    return { label: "eX-Lower", classes: "bg-fuchsia-500/10 text-fuchsia-400 border-fuchsia-500/20" };
+  }
+  if (r.srCompressedHigher) {
+    return { label: "cO-Higher", classes: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20" };
+  }
+  if (r.srCompressedLower) {
+    return { label: "cO-Lower", classes: "bg-teal-500/10 text-teal-400 border-teal-500/20" };
+  }
+  if (r.srHigher) {
+    return { label: "Higher", classes: "bg-green-500/10 text-green-400 border-green-500/20" };
+  }
+  return { label: "Lower", classes: "bg-destructive/10 text-destructive border-destructive/20" };
+}
+
+/**
+ * matchesPatternFlag — public entry point used by Screener.tsx/
+ * BacktestPanel.tsx. views.ts (@/lib/views) is the single source of
+ * truth for every migrated key via passesView(); the six
+ * mutually-exclusive primary labels (eX-Higher/eX-Lower/cO-Higher/
+ * cO-Lower/Higher/Lower) were never real VIEWS keys to begin with, so
+ * they fall back to getOuterLevelPatternInfo(r)?.label, same fallback the
+ * original switch's `default` case used.
+ */
+export function matchesPatternFlag(r: CPRResult, label: string): boolean {
+  if (getView(label)) return passesView(r, label);
+  return getOuterLevelPatternInfo(r)?.label === label;
+}
+
+/**
+ * INNER_LEVEL_PATTERN_KEYS — the 80 "E-{Level}-{RRHH}-{SSLL}" (16, "expanded"),
+ * "C-{Level}-{RRHH}-{SSLL}" (19, "compressed"), "A-E-{RRHH}-{SSLL}" (6,
+ * "LevelsAbove" HHLL-E, renamed from RRSSA-EC/EE/ELB/EOB — the would-be
+ * 7th, "A-E-AA-OB", was REMOVED entirely, see below),
+ * "A-{Level}-{RRHH}-{SSLL}" (17, "LevelsAbove" HHLL-A/B/C, renamed from
+ * RRSSA-AAA-AA/AAA-OA/AOA-AA/AOA-OA/CC/CE/CRA/BC-C/BC-LB/BE-E/BE-LB/
+ * BRA-C/BRA-E/BRA-LB — "A-A-OA-AA"/"A-A-OA-OA" now included too, see
+ * below), and "B-{Level}-{RRHH}-{SSLL}" (22, "LevelsBelow" HHLL-A/B/C/E,
+ * renamed from RRSSB-A{RRHH}-{SSLL}/B{RRHH}-{SSLL}/C{SSLL}/E{RRHH} — no
+ * duplicates to exclude here) keys handled by the passesPattern cases /
+ * PIVOT_PATTERNS entries above (see those blocks' comments for the full
+ * HHLLCategory x RRHHCategory x SSLLCategory derivation of each set; the
+ * C-* set REPLACES the old RRSSC-{Level}{SSLL} keys). Every PIVOT_PATTERNS
+ * predicate leads with an explicit r.SSRRCategory === "RRSS-{Level}" check
+ * (Level = A/B/C/E matching the key's own prefix letter) before the
+ * HHLLCategory/RRHHCategory/SSLLCategory checks, so keys from different
+ * families can no longer collide on an identical condition even when their
+ * HHLL/RRHH/SSLL combo happens to match. MERGED from what used to be two
+ * separate lists (INNER_LEVEL_PATTERN_KEYS for E-*, COMPRESSED_PATTERN_KEYS for
+ * C-*) into one: r.expanded and r.compressed are mutually exclusive states,
+ * so a row can never match both an E-* and a C-* key, making a single
+ * combined list/function safe. The A-E-* keys added on top are NOT
+ * guaranteed mutually exclusive with the E-* keys in general — LevelsAbove
+ * can coincide with "expanded" for the same row — but none of the six A-E-*
+ * keys included below duplicate an E-* condition or each other. Exported so
+ * computeInnerLevelPattern below can iterate them without duplicating the list,
+ * and so other views/legends can reuse the same set.
+ */
+export const INNER_LEVEL_PATTERN_KEYS = [
+  "E-A-AA-OB", "E-A-OA-OB", "E-A-AA-SB", "E-A-AA-C", "E-A-OA-C",
+  "E-A-AA-E", "E-A-OA-E", "E-B-RA-BB", "E-B-C-BB", "E-B-E-BB",
+  "E-B-C-OB", "E-B-E-OB", "E-E-AA-BB", "E-E-OA-BB", "E-E-AA-OB",
+  "E-E-OA-OB",
+  // A-E-{RRHH}-{SSLL} — the renamed RRSSA-EC/EE/ELB/EOB set (LevelsAbove,
+  // HHLL-E), added here so they render via the PivotPatternBadge too, not
+  // just the Backtest dropdown. REMOVED: "A-E-AA-OB" was never given its
+  // own PIVOT_PATTERNS entry (its intended condition, HHLL-E + RRHH-AA +
+  // SSLL-LB, was an exact duplicate of "A-E-AA-LB" below anyway) — it
+  // always fell through to the default case and returned zero records in
+  // both the badge and the Backtest dropdown, so it's been dropped from
+  // backtest.ts's category list entirely (confirmed empty, not just
+  // shadowed).
+  "A-E-AA-C", "A-E-OA-C", "A-E-AA-E", "A-E-OA-E",
+  "A-E-AA-LB", "A-E-OA-LB",
+  // A-{Level}-{RRHH}-{SSLL} — the renamed RRSSA-AAA-AA/AAA-OA/AOA-AA/AOA-OA
+  // (HHLL-A), RRSSA-CC/CE/CRA (HHLL-C), and RRSSA-BC-*/BE-*/BRA-* (HHLL-B)
+  // sets (all "levelsabove" / r.LevelsAbove), added here for the same
+  // reason as the A-E-* block above: they were already defined in
+  // PIVOT_PATTERNS and already listed in backtest.ts's dropdown, but were
+  // never added to this array, so computeInnerLevelPattern/renderPivotPatternBadge
+  // never tried them — rows matching these HHLL-A/B/C combos (e.g. HHLL-A +
+  // RRHH-AA + SSLL-AA) got no badge at all, even though the Backtest scan
+  // for the same key worked fine. "A-A-OA-AA" and "A-A-OA-OA" USED TO BE
+  // omitted here as exact duplicates of "C-A-OA-AA" / "C-A-OA-OA" (both
+  // pairs shared the same HHLL-A + RRHH-OA + SSLL-AA/OA condition with no
+  // way to tell the A-* row from the C-* row). Now that every
+  // PIVOT_PATTERNS predicate leads with an explicit r.SSRRCategory check
+  // (r.SSRRCategory === "RRSS-A" for A-* keys, "RRSS-C" for C-* keys —
+  // see PIVOT_PATTERNS above), "A-A-OA-AA"/"A-A-OA-OA" and
+  // "C-A-OA-AA"/"C-A-OA-OA" are independently reachable (RRSS-A vs
+  // RRSS-C), so they're included below like any other key.
+  "A-A-AA-AA", "A-A-AA-OA", "A-A-OA-AA", "A-A-OA-OA",
+  "A-B-C-C", "A-B-C-LB", "A-B-E-E", "A-B-E-LB",
+  "A-B-RA-C", "A-B-RA-E", "A-B-RA-LB",
+  "A-C-C-AA", "A-C-C-OA", "A-C-E-AA", "A-C-E-OA",
+  "A-C-RA-AA", "A-C-RA-OA",
+  "C-A-C-AA", "C-A-HA-AA", "C-A-E-AA", "C-A-OA-AA", "C-A-OB-AA",
+  "C-A-E-OA", "C-A-C-OA", "C-A-OA-OA",
+  "C-B-BB-LB", "C-B-OB-LB",
+  "C-B-BB-C", "C-B-OB-C",
+  "C-B-BB-E", "C-B-OB-E",
+  "C-C-BB-AA", "C-C-OB-AA", "C-C-C-AA",
+  "C-C-BB-OA", "C-C-OB-OA",
+  // B-{Level}-{RRHH}-{SSLL} — "LevelsBelow" (r.LevelsBelow), all four
+  // Level sub-groups (A/B/C/E). Same gap as the A-* family had before it
+  // was added above: these 21 keys were already defined in PIVOT_PATTERNS
+  // and already listed in backtest.ts's dropdown (all matching key
+  // strings — the Backtest scans for them work fine), but were never
+  // added to this array, so computeInnerLevelPattern/renderPivotPatternBadge
+  // never tried them — rows matching these HHLL-A/B/C/E + LevelsBelow
+  // combos got no badge at all in the Pattern column. No duplicates to
+  // omit here (unlike A-A-OA-AA/A-A-OA-OA and A-E-AA-OB above) — none of
+  // these 21 conditions collide with each other or with any A-*/C-*/E-*
+  // key already in this list.
+  "B-A-C-C", "B-A-C-SB", "B-A-E-E", "B-A-E-SB",
+  "B-A-HA-C", "B-A-HA-E", "B-A-HA-SB",
+  "B-B-BB-BB", "B-B-BB-OB", "B-B-OB-BB", "B-B-OB-OB",
+  "B-C-BB-C", "B-C-OB-C", "B-C-BB-E", "B-C-OB-E", "B-C-BB-SB",
+  "B-E-C-BB", "B-E-C-OB", "B-E-E-BB", "B-E-E-OB", "B-E-OB-BB", "B-E-HA-BB",
+  // Remaining B-* compound combinations from COMPOUND_COMBOS
+  "B-A-OB-SB", "B-A-OB-E", "B-A-OB-C", "B-A-HA-OB", "B-A-HA-OA",
+  "B-A-E-OA", "B-A-E-OB", "B-A-C-OA", "B-A-OA-E",
+  "B-B-C-BB", "B-B-C-OB", "B-B-BB-C",
+  "B-C-BB-OB", "B-C-BB-OA", "B-C-OB-OB",
+  "B-E-OB-OB", "B-E-OA-BB",
+] as const;
+
+export type PivotPatternKey = (typeof INNER_LEVEL_PATTERN_KEYS)[number];
+
+const INNER_LEVEL_PATTERN_KEYS_SET = new Set<string>(INNER_LEVEL_PATTERN_KEYS);
+
+/**
+ * computeInnerLevelPattern — the single INNER_LEVEL_PATTERN_KEYS entry this row's
+ * HHLLCategory/RRHHCategory/SSLLCategory combo matches (see
+ * passesPattern's "E-..."/"C-..." cases for the derivation), or null when
+ * none match — either r.expanded and r.compressed are both false, or (rare)
+ * the specific combo has no key defined for it.
+ * HHLLCategory/RRHHCategory/SSLLCategory are each mutually-exclusive
+ * partitions, and r.expanded/r.compressed are themselves mutually
+ * exclusive, so at most one INNER_LEVEL_PATTERN_KEYS entry can match a given
+ * row; this is what the PivotPattern badge (see ScreenerTableRow)
+ * renders.
+ */
+export function computeInnerLevelPattern(r: CPRResult): PivotPatternKey | null {
+  // Fast path: direct derivation from row categories (O(1))
+  const ssrr = r.SSRRCategory?.replace("RRSS-", "");
+  const hhll = r.HHLLCategory?.replace("HHLL-", "");
+  const rrhh = r.RRHHCategory?.replace("RRHH-", "");
+  const ssll = r.SSLLCategory?.replace("SSLL-", "");
+  if (ssrr && hhll && rrhh && ssll) {
+    const candidate = `${ssrr}-${hhll}-${rrhh}-${ssll}`;
+    if (INNER_LEVEL_PATTERN_KEYS_SET.has(candidate)) {
+      return candidate as PivotPatternKey;
+    }
+  }
+
+  for (const key of INNER_LEVEL_PATTERN_KEYS) {
+    if (passesPattern(r, key)) return key;
+  }
+  return null;
+}
+
+/**
+ * computeGapBadge — composite "GapBadge" label combining four existing,
+ * already-computed gap/HL categories into a single label for the Pattern
+ * column's second row, next to the PivotPattern badge:
+ *   1. RRSSGapCategory ("RRGap" | "SSGap" | "SSRR-Q")   -> "R" | "S" | "Q"
+ *   2. PDHPDLGapCategory ("HHGap" | "LLGap" | "HHLL-Q") -> "H" | "L" | "Q"
+ *   3. prevCPR.HLSwitch ("HL-A"/"HL-B"/"HL-Q"), "Gap"-prefixed when
+ *      hlGapWinner === "prev" (mirrors renderPrevPdhPdlBadge's pHL-A ->
+ *      pHLGap-A relabel, minus the "p" prefix)
+ *   4. todayCPR.HLSwitch, "Gap"-suffixed when hlGapWinner === "today"
+ *      (mirrors renderTodayPdhPdlBadge's HL-A -> HLGap-A relabel)
+ * Label shape: "{1}{2}-{3}{4}", with the word "Gap" written where the gap
+ * winner's letter is, EXCEPT that it never sits in the middle of the label:
+ *   - prev wins  -> "Gap" stays in front of part 3:  RRGap+HHGap+pHLGap-A+HL-A -> "RH-GapAA"
+ *   - today wins -> "Gap" moves to the very end:     SSGap+LLGap+pHL-Q+HLGap-A -> "SL-QAGap"
+ *     (was "SL-QGapA"; likewise SH-AGapA -> SH-AAGap, RL-AGapB -> RL-ABGap,
+ *     RH-BGapB -> RH-BBGap)
+ * hlGapWinner is single-valued ("today" | "prev" | "none"), so at most one
+ * "Gap" appears. All four source fields are always present and mutually
+ * exclusive within their own category, so this always returns a definite
+ * label — no null/"missing" case, unlike computeInnerLevelPattern.
+ */
+export function computeGapBadge(r: CPRResult): string {
+  const letter1 = r.RRSSGapCategory === "RRGap" ? "R" : r.RRSSGapCategory === "SSGap" ? "S" : "Q";
+  const letter2 = r.PDHPDLGapCategory === "HHGap" ? "H" : r.PDHPDLGapCategory === "LLGap" ? "L" : "Q";
+
+  const prevSW = r.prevCPR.HLSwitch;
+  const todaySW = r.todayCPR.HLSwitch;
+  const letter3 = prevSW === "HL-A" ? "A" : prevSW === "HL-B" ? "B" : "Q";
+  const letter4 = todaySW === "HL-A" ? "A" : todaySW === "HL-B" ? "B" : "Q";
+
+  const gapWinsPrev = prevSW !== "HL-Q" && r.hlGapWinner === "prev";
+  const gapWinsToday = todaySW !== "HL-Q" && r.hlGapWinner === "today";
+
+  // "Gap" in front (prev wins) stays as-is; "Gap" that would land in the
+  // middle (today wins) is moved to the end instead.
+  const part3 = gapWinsPrev ? `Gap${letter3}` : letter3;
+  const part4 = gapWinsToday ? `${letter4}Gap` : letter4;
+
+  return `${letter1}${letter2}-${part3}${part4}`;
+}
+
+
+
+/**
+ * computePrevPattern — given two CPR-level objects, computes which
+ * Pattern pivot label applies to the (today, prev) pair. Delegates
+ * entirely to classifyCPRPair + pickOuterLevelPattern in cpr.ts, which is
+ * the single source of truth for the band conditions and label priority.
+ *
+ * Used in the U1>pU4 section to find the PREVIOUS day's Pattern:
+ * call with (prevCPR, ppCPR). Returns null when prev is undefined/null or
+ * no known Pattern matches. The "p" prefix is added by the caller.
+ */
+export function computePrevPattern(
+  today: CPRLevels,
+  prev: CPRLevels | undefined | null,
+): string | null {
+  if (!prev) return null;
+  return pickOuterLevelPattern(classifyCPRPair(today, prev));
+}
+
+
+/**
+ * renderPrevPdhPdlBadge / renderTodayPdhPdlBadge — the individual prev-day
+ * (pHL-A/pHL-Q/pHL-B) and today (HL-A/HL-Q/HL-B) PDH/PDL sub badges, split
+ * out so callers that need to place them in different rows (e.g.
+ * BacktestPanel's "result section" PDH/PDL column: Gap badge + today
+ * badge on row 1, prev "p-xx" badge on row 2) can do so without relying on
+ * cloneElement/DOM-order tricks. All comparisons come straight from
+ * cpr.ts's calcCPR (HLSwitch: "HL-A"/"HL-Q"/"HL-B" on each CPRLevels set) —
+ * the three states are mutually exclusive and exhaustive, so every row
+ * always has exactly one badge on each side.
+ *
+ * renderPdhPdlSubBadges — the original combined "2nd row" PDH/PDL badges
+ * (both prev + today in one inline row), now a thin wrapper around the two
+ * functions above for existing call sites (ScreenerTableRow's PDH/PDL
+ * column, BacktestPanel's category-scan table) that still want both
+ * badges together on one line. Returns null when neither side has any
+ * badge to show.
+ */
+/**
+ * HL_SWITCH_BADGE — display config for each HLSwitch value ("HL-A" /
+ * "HL-Q" / "HL-B"), styled to exactly match HHLL_CATEGORY_BADGE: same
+ * text-[10px] size, font-medium weight, px-1 py-0.5 rounded border shape,
+ * and the same /10 (bg) + /30 (border) + solid -400 (text) brightness
+ * level. HL-A/HL-B reuse HHLL-A/HHLL-B's green/red; HL-Q gets the matching
+ * amber at the same brightness.
+ */
+const HL_SWITCH_BADGE: Record<HLSwitch, { className: string }> = {
+  "HL-A": { className: "bg-green-500/10 text-green-400 border-green-500/30" },
+  "HL-Q": { className: "bg-amber-500/10 text-amber-400 border-amber-500/30" },
+  "HL-B": { className: "bg-red-500/10 text-red-400 border-red-500/30" },
+};
+
+export function renderPrevPdhPdlBadge(r: CPRResult): React.JSX.Element | null {
+  const sw = r.prevCPR.HLSwitch;
+  // CHANGED: when prevCPR's HL gap is the bigger of the two (today vs
+  // prev), relabel "pHL-A"/"pHL-B" to "pHLGap-A"/"pHLGap-B". Purely
+  // cosmetic — "HL-Q" is untouched regardless of hlGapWinner.
+  const gapWins = sw !== "HL-Q" && r.hlGapWinner === "prev";
+  const label =
+    sw === "HL-A" ? (gapWins ? "pHLGap-A" : "pHL-A") :
+    sw === "HL-Q" ? "pHL-Q" :
+    (gapWins ? "pHLGap-B" : "pHL-B");
+  const title =
+    sw === "HL-A" ? `Prev PDH ${fmt(r.prevCPR.prevHigh)} > Prev U1 ${fmt(r.prevCPR.r1)}` :
+    sw === "HL-Q" ? `PDH ${fmt(r.prevCPR.prevHigh)} = U1 ${fmt(r.prevCPR.r1)}` :
+    `Prev PDH ${fmt(r.prevCPR.prevHigh)} < Prev U1 ${fmt(r.prevCPR.r1)}`;
+  return (
+    <span
+      key="p-hl-switch"
+      className={`text-[10px] whitespace-nowrap px-1 py-0.5 rounded border font-medium ${HL_SWITCH_BADGE[sw].className}`}
+      title={gapWins ? `${title} (prev's PDH/U1 gap is wider than today's)` : title}
+    >
+      {label}
+    </span>
+  );
+}
+
+export function renderTodayPdhPdlBadge(r: CPRResult): React.JSX.Element | null {
+  const sw = r.todayCPR.HLSwitch;
+  // CHANGED: when todayCPR's HL gap is the bigger of the two (today vs
+  // prev), relabel "HL-A"/"HL-B" to "HLGap-A"/"HLGap-B". Purely cosmetic —
+  // "HL-Q" is untouched regardless of hlGapWinner.
+  const gapWins = sw !== "HL-Q" && r.hlGapWinner === "today";
+  const label =
+    sw === "HL-A" ? (gapWins ? "HLGap-A" : "HL-A") :
+    sw === "HL-Q" ? "HL-Q" :
+    (gapWins ? "HLGap-B" : "HL-B");
+  const title =
+    sw === "HL-A" ? `PDH ${fmt(r.todayCPR.prevHigh)} > U1 ${fmt(r.todayCPR.r1)}` :
+    sw === "HL-Q" ? `PDH ${fmt(r.todayCPR.prevHigh)} = U1 ${fmt(r.todayCPR.r1)}` :
+    `PDH ${fmt(r.todayCPR.prevHigh)} < U1 ${fmt(r.todayCPR.r1)}`;
+  return (
+    <span
+      key="hl-switch"
+      className={`text-[10px] whitespace-nowrap px-1 py-0.5 rounded border font-medium ${HL_SWITCH_BADGE[sw].className}`}
+      title={gapWins ? `${title} (today's PDH/U1 gap is wider than prev's)` : title}
+    >
+      {label}
+    </span>
+  );
+}
+
+export function renderPdhPdlSubBadges(r: CPRResult) {
+  const prevBadge = renderPrevPdhPdlBadge(r);
+  const todayBadge = renderTodayPdhPdlBadge(r);
+  const badges = [prevBadge, todayBadge].filter((b): b is React.JSX.Element => b !== null);
+  if (badges.length === 0) return null;
+  return <div className="flex flex-nowrap items-center gap-1">{badges}</div>;
+}
+
+/**
+ * SSRR_BADGE — display config for each CPRResult.SSRRCategory value, keyed
+ * by category so renderSSRRHHLLBadges/renderSSRRCategoryBadge stay in sync.
+ * "none" renders nothing.
+ */
+const SSRR_BADGE: Record<Exclude<SSRRCategory, "none">, { label: string; className: string; title: string }> = {
+  "RRSS-A": {
+    label: "RRSS-A",
+    className: "bg-green-500/10 text-green-400 border-green-500/30",
+    title: "Today's R1 > Prev R1 and Today's S1 >= Prev S1",
+  },
+  "RRSS-B": {
+    label: "RRSS-B",
+    className: "bg-red-500/10 text-red-400 border-red-500/30",
+    title: "Today's R1 <= Prev R1 and Today's S1 < Prev S1",
+  },
+  "RRSS-C": {
+    label: "RRSS-C",
+    className: "bg-blue-500/10 text-blue-400 border-blue-500/30",
+    title: "Compressed: Today's R1 < Prev R1 and Today's S1 > Prev S1",
+  },
+  "RRSS-E": {
+    label: "RRSS-E",
+    className: "bg-orange-500/10 text-orange-400 border-orange-500/30",
+    title: "Expanded: Today's R1 > Prev R1 and Today's S1 < Prev S1",
+  },
+  "RRSS-Q": {
+    label: "RRSS=",
+    className: "bg-amber-500/10 text-amber-400 border-amber-500/30",
+    title: "Equal: Today's R1 == Prev R1 and Today's S1 == Prev S1",
+  },
+};
+
+/**
+ * renderSSRRCategoryBadge — single badge for CPRResult.SSRRCategory
+ * ("RRSS-A" | "RRSS-B" | "RRSS-C" | "RRSS-E" | "RRSS=" | "none"), same
+ * solid-badge styling used elsewhere (renderPDHPDLGapCategoryBadge). Always
+ * renders at most one badge, since SSRRCategory is a mutually exclusive
+ * partition. Returns null for "none".
+ */
+export function renderSSRRCategoryBadge(r: CPRResult) {
+  const cat = r.SSRRCategory;
+  if (cat === "none") return null;
+  const cfg = SSRR_BADGE[cat];
+  return (
+    <span
+      className={`text-[10px] whitespace-nowrap px-1 py-0.5 rounded border font-medium ${cfg.className}`}
+      title={cfg.title}
+    >
+      {cfg.label}
+    </span>
+  );
+}
+
+/**
+ * SSLL_BADGE — display config for each CPRResult.SSLLCategory value, keyed
+ * by category so renderSSRRHHLLBadges/renderSSLLCategoryBadge stay in sync.
+ */
+const SSLL_BADGE: Record<Exclude<SSLLCategory, "none">, { label: string; className: string; title: string }> = {
+  "SSLL-AA": {
+    label: "SSLL-AA",
+    className: "bg-green-500/10 text-green-400 border-green-500/30",
+    title: "Today's whole S1/PDL band sits strictly above prev's whole band (full separation, no overlap)",
+  },
+  "SSLL-OA": {
+    label: "SSLL-OA",
+    className: "bg-green-500/10 text-green-400 border-green-500/30",
+    title: "Today's S1/PDL band shifted up (band top and bottom both rose vs prev), but today's band overlaps prev's band",
+  },
+  "SSLL-BB": {
+    label: "SSLL-BB",
+    className: "bg-red-500/10 text-red-400 border-red-500/30",
+    title: "Today's whole S1/PDL band sits strictly below prev's whole band (full separation, no overlap)",
+  },
+  "SSLL-OB": {
+    label: "SSLL-OB",
+    className: "bg-red-500/10 text-red-400 border-red-500/30",
+    title: "Today's S1/PDL band shifted down (band top and bottom both fell vs prev), but today's band overlaps prev's band",
+  },
+  "SSLL-C": {
+    label: "SSLL-C",
+    className: "bg-blue-500/10 text-blue-400 border-blue-500/30",
+    title: "Compressed: today's S1/PDL band narrowed vs prev (top fell, bottom rose)",
+  },
+  "SSLL-E": {
+    label: "SSLL-E",
+    className: "bg-orange-500/10 text-orange-400 border-orange-500/30",
+    title: "Expanded: today's S1/PDL band widened vs prev (top rose, bottom fell)",
+  },
+  "SSLL-SB": {
+    label: "SSLL-SB",
+    className: "bg-yellow-500/10 text-yellow-400 border-yellow-500/30",
+    title: "Ambiguous Above: band top and bottom both rose vs prev, but S1 and PDL disagree in direction, so the Above verdict isn't safe",
+  },
+  "SSLL-LB": {
+    label: "SSLL-LB",
+    className: "bg-yellow-500/10 text-yellow-400 border-yellow-500/30",
+    title: "Ambiguous Below: band top and bottom both fell vs prev, but S1 and PDL disagree in direction, so the Below verdict isn't safe",
+  },
+  "SSLL-Q": {
+    label: "SSLL=",
+    className: "bg-slate-500/10 text-slate-300 border-slate-500/30",
+    title: "Equal: today's S1/PDL band unchanged vs prev",
+  },
+};
+
+/**
+ * renderSSLLCategoryBadge — single badge for CPRResult.SSLLCategory
+ * ("SSLL-AA" | "SSLL-OA" | "SSLL-BB" | "SSLL-OB" | "SSLL-C" | "SSLL-E" |
+ * "SSLL-SB" | "SSLL-LB" | "SSLL=" | "none"), same solid-badge styling used
+ * elsewhere (renderSSRRCategoryBadge). Always renders at most one badge,
+ * since SSLLCategory is a mutually exclusive partition. Returns null for
+ * "none". SSLL-AA/SSLL-OA (full separation vs overlap, both "up") and
+ * SSLL-BB/SSLL-OB (full separation vs overlap, both "down") are computed
+ * directly in cpr.ts's SSLLCategory — this is a plain lookup, no
+ * SSLLAbove/SSLLBelow branching needed here anymore.
+ */
+export function renderSSLLCategoryBadge(r: CPRResult) {
+  const cat = r.SSLLCategory;
+  if (cat === "none") return null;
+  const cfg = SSLL_BADGE[cat];
+  return (
+    <span
+      className={`text-[10px] whitespace-nowrap px-1 py-0.5 rounded border font-medium ${cfg.className}`}
+      title={cfg.title}
+    >
+      {cfg.label}
+    </span>
+  );
+}
+
+/**
+ * RRHH_BADGE — display config for each mirrored RRHH category, keyed by
+ * category so renderSSRRHHLLBadges/renderRRHHCategoryBadge stay in sync.
+ */
+const RRHH_BADGE: Record<Exclude<RRHHCategory, "none">, { label: string; className: string; title: string }> = {
+  "RRHH-AA": {
+    label: "RRHH-AA",
+    className: "bg-green-500/10 text-green-400 border-green-500/30",
+    title: "Today's whole R1/PDH band sits strictly above prev's whole band (full separation, no overlap)",
+  },
+  "RRHH-OA": {
+    label: "RRHH-OA",
+    className: "bg-green-500/10 text-green-400 border-green-500/30",
+    title: "Today's R1/PDH band shifted up (band top and bottom both rose vs prev), but today's band overlaps prev's band",
+  },
+  "RRHH-BB": {
+    label: "RRHH-BB",
+    className: "bg-red-500/10 text-red-400 border-red-500/30",
+    title: "Today's whole R1/PDH band sits strictly below prev's whole band (full separation, no overlap)",
+  },
+  "RRHH-OB": {
+    label: "RRHH-OB",
+    className: "bg-red-500/10 text-red-400 border-red-500/30",
+    title: "Today's R1/PDH band shifted down (band top and bottom both fell vs prev), but today's band overlaps prev's band",
+  },
+  "RRHH-C": {
+    label: "RRHH-C",
+    className: "bg-blue-500/10 text-blue-400 border-blue-500/30",
+    title: "Compressed: Today's R1 < Prev R1 while Today's PDH > Prev PDH",
+  },
+  "RRHH-E": {
+    label: "RRHH-E",
+    className: "bg-orange-500/10 text-orange-400 border-orange-500/30",
+    title: "Expanded: Today's R1 > Prev R1 while Today's PDH < Prev PDH",
+  },
+  "RRHH-RA": {
+    label: "RRHH-RA",
+    className: "bg-yellow-500/10 text-yellow-400 border-yellow-500/30",
+    title: "Ambiguous Above: Today's R1 and PDH both rose, but their top/bottom roles differ between the two days",
+  },
+  "RRHH-HA": {
+    label: "RRHH-HA",
+    className: "bg-yellow-500/10 text-yellow-400 border-yellow-500/30",
+    title: "Ambiguous Below: Today's R1 and PDH both fell, but their top/bottom roles differ between the two days",
+  },
+  "RRHH-Q": {
+    label: "RRHH=",
+    className: "bg-slate-500/10 text-slate-300 border-slate-500/30",
+    title: "Equal: today's R1/PDH pair is unchanged from the previous day's R1/PDH pair",
+  },
+};
+
+/**
+ * renderRRHHCategoryBadge — single badge for the mirrored R1/PDH RRHH pair,
+ * using the same solid-badge styling and mutually-exclusive categories as
+ * renderSSLLCategoryBadge.
+ */
+export function renderRRHHCategoryBadge(r: CPRResult) {
+  const cat = r.RRHHCategory;
+  if (cat === "none") return null;
+  const cfg = RRHH_BADGE[cat];
+  return (
+    <span
+      className={`text-[10px] whitespace-nowrap px-1 py-0.5 rounded border font-medium ${cfg.className}`}
+      title={cfg.title}
+    >
+      {cfg.label}
+    </span>
+  );
+}
+
+/**
+ * renderSSRRHHLLBadges — the LEVEL column's second-row badges. Renders the
+ * RRHH badge and the mirrored SSLL badge in that order. SSRR
+ * (CPRResult.SSRRCategory) no longer appears here — it now renders on row 1
+ * instead (see renderLevelStatusRow1Badges). Returns null when both are absent.
+ */
+export function renderSSRRHHLLBadges(r: CPRResult) {
+  const ssllBadge = renderSSLLCategoryBadge(r);
+  const rrhhBadge = renderRRHHCategoryBadge(r);
+  if (!rrhhBadge && !ssllBadge) return null;
+  return (
+    <div className="flex flex-nowrap items-center gap-1">
+      {rrhhBadge}
+      {ssllBadge}
+    </div>
+  );
+}
+
+/**
+ * renderLevelStatusRow1Badges — the LEVEL column's row-1 badges, shared by
+ * renderLevelBadges and ScreenerTableRow's own LEVEL cell so both stay in
+ * sync. Order:
+ *   1. Status badge — Above / Below / Inside / Outside / Skip (always
+ *      exactly one, mutually exclusive).
+ *   2. oV-B / oV-A (Overlap Below / Overlap Above).
+ *   3. Narow / Wide — merged into a single badge wherever Above/Below/
+ *      oV-B/oV-A pairs with Narow/Wide: oV-ANarow -> Ovlap-Nrow-A,
+ *      AboveNarow -> Narow-A, BelowNarow -> Narow-B, oV-BNarow ->
+ *      Ovlap-Nrow-B, oV-AWide -> Ovlap-Wide-A, AboveWide -> Wide-A, BelowWide ->
+ *      Wide-B, oV-BWide -> Ovlap-Wide-B. The merged badge replaces both
+ *      halves' bare badges (so "Above" becomes "Narow-A" in place, rather
+ *      than appearing twice); when nothing merges, the bare
+ *      Above/Below/oV-B/oV-A/Narrow/Wide badges render as before (the
+ *      standalone "Narrow"/"Wide" fallback badges keep their original
+ *      spelling — only the four/four merged combo labels were renamed to
+ *      "Ovlap-Nrow-A"/"Ovlap-Nrow-B"/"Ovlap-Wide-*"). Priority when more than one combo could
+ *      apply on the same row: for Narow, oV-A > Above > Below > oV-B; for
+ *      Wide, oV-A > Above > Below > oV-B (matches the row's own
+ *      left-to-right badge order).
+ *   4. SSRR badge — CPRResult.SSRRCategory (RRSS-A/RRSS-B/RRSS-C/RRSS-E/RRSS=),
+ *      pulled out of row 2 to sit here, right after the Narow/Wide badges
+ *      (row 2 now only carries SSLL + RRHH — see renderSSRRHHLLBadges).
+ *   5. Equal.
+ *
+ * Two unconditional badges now sit right after the mutually-exclusive
+ * status badge (Above/Below/Inside/Outside/Skip), before oV-B/oV-A, in
+ * this order:
+ *   1. SSRR badge — CPRResult.SSRRCategory (RRSS-A/RRSS-B/RRSS-C/RRSS-E/
+ *      RRSS=, via renderSSRRCategoryBadge/SSRR_BADGE) — moved up from its
+ *      old slot after Narow/Wide (see point 4 above, now superseded).
+ *   2. RRSSGapCategory badge (RRGap/SSGap/SSRR=, via
+ *      renderRRSSGapCategoryBadge), right after the SSRR badge.
+ * Both are unconditional (always exactly one of their possible values,
+ * like PDHPDLGapCategory), so neither needs a "none" guard here.
+ */
+export function renderLevelStatusRow1Badges(
+  r: CPRResult,
+  isInsideCPR: boolean,
+  isOutsideCPR: boolean,
+  showWide: boolean,
+  nothingMatched: boolean
+) {
+  const isNarrow = r.narrowCPR && !isInsideCPR;
+
+  const narrowMerge: "AoV" | "A" | "B" | "BoV" | null =
+    isNarrow && r.overlapHigher ? "AoV" :
+    isNarrow && r.cprRising ? "A" :
+    isNarrow && r.cprFalling ? "B" :
+    isNarrow && r.overlapLower ? "BoV" :
+    null;
+  const wideMerge: "AoV" | "A" | "B" | "BoV" | null =
+    showWide && r.overlapHigher ? "AoV" :
+    showWide && r.cprRising ? "A" :
+    showWide && r.cprFalling ? "B" :
+    showWide && r.overlapLower ? "BoV" :
+    null;
+
+  const aboveConsumed = narrowMerge === "A" || wideMerge === "A";
+  const belowConsumed = narrowMerge === "B" || wideMerge === "B";
+  const ovLowerConsumed = narrowMerge === "BoV" || wideMerge === "BoV";
+  const ovHigherConsumed = narrowMerge === "AoV" || wideMerge === "AoV";
+  const narrowConsumed = narrowMerge !== null;
+  const wideConsumed = wideMerge !== null;
+
+  const smallBadge = "text-[10px] px-1 py-0.5 rounded font-medium whitespace-nowrap shrink-0";
+
+  return (
+    <>
+      {r.cprRising && !aboveConsumed && (
+        <span className={`${smallBadge} bg-blue-500/10 text-blue-400 border border-blue-500/20`}>Above</span>
+      )}
+      {r.cprFalling && !belowConsumed && (
+        <span className={`${smallBadge} bg-orange-500/10 text-orange-400 border border-orange-500/20`}>Below</span>
+      )}
+      {isInsideCPR && (
+        <span className={`${smallBadge} bg-orange-500/10 text-orange-400 border border-orange-500/20`}>INCPR</span>
+      )}
+      {isOutsideCPR && (
+        <span className={`${smallBadge} bg-purple-500/10 text-purple-400 border border-purple-500/20`}>OutCPR</span>
+      )}
+      {nothingMatched && <span className={`${smallBadge} bg-muted text-muted-foreground`}>Skip</span>}
+      {r.SSRRCategory !== "none" && (
+        <span
+          className={`text-[10px] whitespace-nowrap px-1 py-0.5 rounded border font-medium ${SSRR_BADGE[r.SSRRCategory].className}`}
+          title={SSRR_BADGE[r.SSRRCategory].title}
+        >
+          {SSRR_BADGE[r.SSRRCategory].label}
+        </span>
+      )}
+      {renderHHLLCategoryBadge(r)}
+      {r.overlapLower && !ovLowerConsumed && (
+        <span className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-medium">oV-B</span>
+      )}
+      {r.overlapHigher && !ovHigherConsumed && (
+        <span className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20 font-medium">oV-A</span>
+      )}
+      {narrowMerge === "AoV" && (
+        <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>Ovlap-Nrow-A</span>
+      )}
+      {narrowMerge === "A" && (
+        <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>Narow-A</span>
+      )}
+      {narrowMerge === "B" && (
+        <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>Narow-B</span>
+      )}
+      {narrowMerge === "BoV" && (
+        <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>Ovlap-Nrow-B</span>
+      )}
+      {wideMerge === "AoV" && (
+        <span className={`${smallBadge} bg-pink-500/10 text-pink-400 border border-pink-500/20`}>Ovlap-Wide-A</span>
+      )}
+      {wideMerge === "A" && (
+        <span className={`${smallBadge} bg-pink-500/10 text-pink-400 border border-pink-500/20`}>Wide-A</span>
+      )}
+      {wideMerge === "B" && (
+        <span className={`${smallBadge} bg-pink-500/10 text-pink-400 border border-pink-500/20`}>Wide-B</span>
+      )}
+      {wideMerge === "BoV" && (
+        <span className={`${smallBadge} bg-pink-500/10 text-pink-400 border border-pink-500/20`}>Ovlap-Wide-B</span>
+      )}
+      {isNarrow && !narrowConsumed && (
+        <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>Narrow</span>
+      )}
+      {showWide && !wideConsumed && (
+        <span className={`${smallBadge} bg-pink-500/10 text-pink-400 border border-pink-500/20`}>Wide</span>
+      )}
+      {r.equalCPR && (
+        <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">Equal</span>
+      )}
+    </>
+  );
+}
+
+/**
+ * renderLevelStatusBadge — just the single, mutually-exclusive "first
+ * button" out of renderLevelStatusRow1Badges (Above/Below/Inside/Outside/
+ * Skip, or its Narow-A/Narow-B/Ovlap-Nrow-A/Ovlap-Nrow-B/Wide-A/Wide-B/Ovlap-Wide-A/
+ * Ovlap-Wide-B merged form, or the bare Narrow/Wide fallback). Split out so the
+ * Screener's Pattern column can show it as the leading badge alongside
+ * today's pattern badge(s), while the LEVEL column keeps the rest (see
+ * renderLevelStatusRestBadges). Always returns at most one badge.
+ */
+export function renderLevelStatusBadge(
+  r: CPRResult,
+  isInsideCPR: boolean,
+  isOutsideCPR: boolean,
+  showWide: boolean,
+  nothingMatched: boolean
+) {
+  const isNarrow = r.narrowCPR && !isInsideCPR;
+
+  const narrowMerge: "AoV" | "A" | "B" | "BoV" | null =
+    isNarrow && r.overlapHigher ? "AoV" :
+    isNarrow && r.cprRising ? "A" :
+    isNarrow && r.cprFalling ? "B" :
+    isNarrow && r.overlapLower ? "BoV" :
+    null;
+  const wideMerge: "AoV" | "A" | "B" | "BoV" | null =
+    showWide && r.overlapHigher ? "AoV" :
+    showWide && r.cprRising ? "A" :
+    showWide && r.cprFalling ? "B" :
+    showWide && r.overlapLower ? "BoV" :
+    null;
+
+  const aboveConsumed = narrowMerge === "A" || wideMerge === "A";
+  const belowConsumed = narrowMerge === "B" || wideMerge === "B";
+  const narrowConsumed = narrowMerge !== null;
+  const wideConsumed = wideMerge !== null;
+
+  const smallBadge = "text-[10px] px-1 py-0.5 rounded font-medium whitespace-nowrap shrink-0";
+
+  if (narrowMerge === "AoV") return <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>Ovlap-Nrow-A</span>;
+  if (narrowMerge === "A") return <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>Narow-A</span>;
+  if (narrowMerge === "B") return <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>Narow-B</span>;
+  if (narrowMerge === "BoV") return <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>Ovlap-Nrow-B</span>;
+  if (wideMerge === "AoV") return <span className={`${smallBadge} bg-pink-500/10 text-pink-400 border border-pink-500/20`}>Ovlap-Wide-A</span>;
+  if (wideMerge === "A") return <span className={`${smallBadge} bg-pink-500/10 text-pink-400 border border-pink-500/20`}>Wide-A</span>;
+  if (wideMerge === "B") return <span className={`${smallBadge} bg-pink-500/10 text-pink-400 border border-pink-500/20`}>Wide-B</span>;
+  if (wideMerge === "BoV") return <span className={`${smallBadge} bg-pink-500/10 text-pink-400 border border-pink-500/20`}>Ovlap-Wide-B</span>;
+  if (isInsideCPR) return <span className={`${smallBadge} bg-orange-500/10 text-orange-400 border border-orange-500/20`}>INCPR</span>;
+  if (isOutsideCPR) return <span className={`${smallBadge} bg-purple-500/10 text-purple-400 border border-purple-500/20`}>OutCPR</span>;
+  if (r.cprRising && !aboveConsumed) return <span className={`${smallBadge} bg-blue-500/10 text-blue-400 border border-blue-500/20`}>Above</span>;
+  if (r.cprFalling && !belowConsumed) return <span className={`${smallBadge} bg-orange-500/10 text-orange-400 border border-orange-500/20`}>Below</span>;
+  if (nothingMatched) return <span className={`${smallBadge} bg-muted text-muted-foreground`}>Skip</span>;
+  if (isNarrow && !narrowConsumed) return <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>Narrow</span>;
+  if (showWide && !wideConsumed) return <span className={`${smallBadge} bg-pink-500/10 text-pink-400 border border-pink-500/20`}>Wide</span>;
+  return null;
+}
+
+/**
+ * renderLevelStatusRestBadges — everything renderLevelStatusRow1Badges
+ * renders MINUS the single leading status badge (see
+ * renderLevelStatusBadge): the SSRR category badge (RRSS-A/RRSS-B/RRSS-C/
+ * RRSS-E/RRSS=), the RRSSGapCategory badge (RRGap/SSGap/SSRR=, right after
+ * it), oV-B/oV-A (only when not absorbed into a Narrow/Wide merge), and
+ * Equal. Used by the Screener's own LEVEL column now that the leading
+ * status badge has moved to the Pattern column.
+ */
+export function renderLevelStatusRestBadges(
+  r: CPRResult,
+  isInsideCPR: boolean,
+  showWide: boolean
+) {
+  const isNarrow = r.narrowCPR && !isInsideCPR;
+
+  const narrowMerge: "AoV" | "A" | "B" | "BoV" | null =
+    isNarrow && r.overlapHigher ? "AoV" :
+    isNarrow && r.cprRising ? "A" :
+    isNarrow && r.cprFalling ? "B" :
+    isNarrow && r.overlapLower ? "BoV" :
+    null;
+  const wideMerge: "AoV" | "A" | "B" | "BoV" | null =
+    showWide && r.overlapHigher ? "AoV" :
+    showWide && r.cprRising ? "A" :
+    showWide && r.cprFalling ? "B" :
+    showWide && r.overlapLower ? "BoV" :
+    null;
+
+  const ovLowerConsumed = narrowMerge === "BoV" || wideMerge === "BoV";
+  const ovHigherConsumed = narrowMerge === "AoV" || wideMerge === "AoV";
+
+  return (
+    <>
+      {r.SSRRCategory !== "none" && (
+        <span
+          className={`text-[10px] whitespace-nowrap px-1 py-0.5 rounded border font-medium ${SSRR_BADGE[r.SSRRCategory].className}`}
+          title={SSRR_BADGE[r.SSRRCategory].title}
+        >
+          {SSRR_BADGE[r.SSRRCategory].label}
+        </span>
+      )}
+      {renderHHLLCategoryBadge(r)}
+      {r.overlapLower && !ovLowerConsumed && (
+        <span className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-medium">oV-B</span>
+      )}
+      {r.overlapHigher && !ovHigherConsumed && (
+        <span className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20 font-medium">oV-A</span>
+      )}
+      {r.equalCPR && (
+        <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">Equal</span>
+      )}
+    </>
+  );
+}
+
+/**
+ * renderPDHPDLGapCategoryBadge — single badge for CPRResult.PDHPDLGapCategory
+ * ("HHGap" | "LLGap" | "HHLL-Q"), same solid-badge styling as the
+ * SSLL + HHLL-A/HHLL-B badges above (renderSSRRHHLLBadges):
+ * green for HHGap (PDH gap bigger), red for LLGap (PDL gap bigger),
+ * yellow/neutral for HHLL-Q (gaps equal) — matching the "IN-CPR"/"IN-PDHL"
+ * neutral colour used elsewhere. Always renders exactly one badge, since
+ * PDHPDLGapCategory is always exactly one of the three values.
+ */
+export function renderPDHPDLGapCategoryBadge(r: CPRResult) {
+  const cat = r.PDHPDLGapCategory;
+  const styles: Record<PDHPDLGapCategory, string> = {
+    HHGap: "bg-green-500/10 text-green-400 border-green-500/30",
+    LLGap: "bg-red-500/10 text-red-400 border-red-500/30",
+    "HHLL-Q": "bg-yellow-500/10 text-yellow-400 border-yellow-500/30",
+  };
+  const titles: Record<PDHPDLGapCategory, string> = {
+    HHGap: "Gap between today's PDH and prev's PDH is larger than the PDL gap",
+    LLGap: "Gap between today's PDL and prev's PDL is larger than the PDH gap",
+    "HHLL-Q": "PDH gap and PDL gap are equal",
+  };
+  return (
+    <span
+      className={`text-[10px] whitespace-nowrap px-1 py-0.5 rounded border font-medium ${styles[cat]}`}
+      title={titles[cat]}
+    >
+      {cat}
+    </span>
+  );
+}
+
+/**
+ * renderRRSSGapCategoryBadge — single badge for CPRResult.RRSSGapCategory
+ * ("RRGap" | "SSGap" | "SSRR="), mirrors renderPDHPDLGapCategoryBadge but
+ * over R1/S1 instead of PDH/PDL: green for RRGap (R1 gap bigger), red for
+ * SSGap (S1 gap bigger), yellow/neutral for SSRR= (gaps equal). Always
+ * renders exactly one badge, since RRSSGapCategory is always exactly one
+ * of the three values.
+ */
+export function renderRRSSGapCategoryBadge(r: CPRResult) {
+  const cat = r.RRSSGapCategory;
+  const styles: Record<RRSSGapCategory, string> = {
+    RRGap: "bg-green-500/10 text-green-400 border-green-500/30",
+    SSGap: "bg-red-500/10 text-red-400 border-red-500/30",
+    "SSRR-Q": "bg-yellow-500/10 text-yellow-400 border-yellow-500/30",
+  };
+  const titles: Record<RRSSGapCategory, string> = {
+    RRGap: "Gap between today's R1 and prev's R1 is larger than the S1 gap",
+    SSGap: "Gap between today's S1 and prev's S1 is larger than the R1 gap",
+    "SSRR-Q": "R1 gap and S1 gap are equal",
+  };
+  return (
+    <span
+      className={`text-[10px] whitespace-nowrap px-1 py-0.5 rounded border font-medium ${styles[cat]}`}
+      title={titles[cat]}
+    >
+      {cat}
+    </span>
+  );
+}
+
+/**
+ * HHLL_CATEGORY_BADGE — display config for each CPRResult.HHLLCategory
+ * value (Above/Below reuse the same green/red the removed HHLLAbove/
+ * HHLLBelow booleans used to render with; Compressed/Expanded/Equal are
+ * new). Keyed by category so renderHHLLCategoryBadge stays easy to extend.
+ */
+const HHLL_CATEGORY_BADGE: Record<Exclude<HHLLCategory, "none">, { label: string; className: string; title: string }> = {
+  "HHLL-A": {
+    label: "HHLL-A",
+    className: "bg-green-500/10 text-green-400 border-green-500/30",
+    title: "Today's PDH > Prev PDH and Today's PDL >= Prev PDL (Above)",
+  },
+  "HHLL-B": {
+    label: "HHLL-B",
+    className: "bg-red-500/10 text-red-400 border-red-500/30",
+    title: "Today's PDH <= Prev PDH and Today's PDL < Prev PDL (Below)",
+  },
+  "HHLL-C": {
+    label: "HHLL-C",
+    className: "bg-purple-500/10 text-purple-400 border-purple-500/30",
+    title: "Today's PDH < Prev PDH and Today's PDL > Prev PDL (Compressed)",
+  },
+  "HHLL-E": {
+    label: "HHLL-E",
+    className: "bg-pink-500/10 text-pink-400 border-pink-500/30",
+    title: "Today's PDH > Prev PDH and Today's PDL < Prev PDL (Expanded)",
+  },
+  "HHLL-Q": {
+    label: "HHLL-Q",
+    className: "bg-amber-500/10 text-amber-400 border-amber-500/30",
+    title: "Today's PDH == Prev PDH and Today's PDL == Prev PDL (Equal)",
+  },
+};
+
+/**
+ * renderHHLLCategoryBadge — single badge for CPRResult.HHLLCategory
+ * ("HHLL-A" | "HHLL-B" | "HHLL-C" | "HHLL-E" | "HHLL-Q" | "none"), same
+ * solid-badge styling as renderPDHPDLGapCategoryBadge /
+ * renderSSRRCategoryBadge. MOVED here from the LEVEL column (see
+ * renderSSRRHHLLBadges) — HHLL-A/HHLL-B keep their original green/red
+ * colours, HHLL-C/HHLL-E/HHLL-Q are new. Returns null for "none".
+ */
+export function renderHHLLCategoryBadge(r: CPRResult) {
+  const cat = r.HHLLCategory;
+  if (cat === "none") return null;
+  const cfg = HHLL_CATEGORY_BADGE[cat];
+  return (
+    <span
+      className={`text-[10px] whitespace-nowrap px-1 py-0.5 rounded border font-medium ${cfg.className}`}
+      title={cfg.title}
+    >
+      {cfg.label}
+    </span>
+  );
+}
+
+/**
+ * renderGapColumnBadges — the full PDH/PDL table column body, shared by
+ * ScreenerTableRow and BacktestPanel's two result tables so all three call
+ * sites stay in sync. Layout (updated):
+ *   Row 1: HHLLCategory badge (HHLL-A/B/C/X/=) first, then the Gap badge
+ *          (HHGap/LLGap/EqGap) — kept on a single non-wrapping line so the
+ *          pair stays inline instead of stacking.
+ *   Row 2: prev day's "p-xx" PDH/PDL badge first, then today's own "xx"
+ *          PDH/PDL badge second — also kept non-wrapping so the pair never
+ *          spills onto a 3rd row.
+ * (Previously Row 1 was Gap badge + today badge, Row 2 was prev badge
+ * alone — the HHLLCategory badge now takes the first slot on Row 1, and
+ * today's own-PDH-vs-own-R1 badge shifted down to join prev's equivalent
+ * badge on Row 2, since those two are a matched pair.)
+ * Returns a "—" placeholder span when none of the four badges apply.
+ */
+export function renderGapColumnBadges(r: CPRResult) {
+  const hhllBadge = renderRRSSGapCategoryBadge(r);
+  const gapBadge = renderPDHPDLGapCategoryBadge(r);
+  const prevBadge = renderPrevPdhPdlBadge(r);
+  const todayBadge = renderTodayPdhPdlBadge(r);
+  if (!hhllBadge && !gapBadge && !prevBadge && !todayBadge) {
+    return <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">—</span>;
+  }
+  return (
+    <div className="flex flex-col items-start gap-1.5">
+      <div className="flex flex-nowrap items-center gap-2">
+        {hhllBadge}
+        {gapBadge}
+      </div>
+      {(prevBadge || todayBadge) && (
+        <div className="flex flex-nowrap items-center gap-2">
+          {prevBadge}
+          {todayBadge}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function isRisingAboveTC(r: CPRResult): boolean {
+  return r.currentPrice > r.todayCPR.tc;
+}
+
+export function distanceFromCPR(
+  price: number,
+  tc: number,
+  bc: number
+): { main: string; sub: string; color: string } {
+  if (price > tc) {
+    const pct = ((price - tc) / tc) * 100;
+    return { main: `+${pct.toFixed(2)}%`, sub: ">TC", color: "text-green-400" };
+  }
+  if (price < bc) {
+    const pct = ((bc - price) / bc) * 100;
+    return { main: `−${pct.toFixed(2)}%`, sub: "<BC", color: "text-destructive" };
+  }
+  return { main: "IN-CPR", sub: "", color: "text-yellow-400" };
+}
