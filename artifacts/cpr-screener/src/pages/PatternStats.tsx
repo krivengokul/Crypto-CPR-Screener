@@ -8,6 +8,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Database,
+  Eye,
   Filter,
   Flame,
   Layers,
@@ -18,7 +19,7 @@ import {
   Target,
   Crosshair,
 } from "lucide-react";
-import { passesPattern, computePivotPattern, PIVOT_PATTERN_KEYS } from "./ScreenerUtils";
+import { passesPattern, computePivotPattern, PIVOT_PATTERN_KEYS, normalizeViewDirection, type ViewDirection } from "./ScreenerUtils";
 import { pivotcategories } from "@/lib/ViewsSidebar";
 import { buildViewTree, type ViewTreeNode } from "@/lib/views";
 import {
@@ -27,6 +28,8 @@ import {
   OUTER_PATTERNS_CATEGORY_LABEL,
   INNER_PATTERNS_CATEGORY_KEY,
   INNER_PATTERNS_CATEGORY_LABEL,
+  VIEWS_CATEGORY_KEY,
+  VIEWS_CATEGORY_LABEL,
   BacktestSource,
   PatternCensusRow,
   CategoryComboRow,
@@ -87,7 +90,22 @@ const INNER_PATTERNS_OPTION: CategoryOption = {
   icon: Crosshair,
 };
 
-// The two synthetic panels are flat lists of short keys with no nesting.
+// VIEWS — a third synthetic panel: EVERY kind:"view" leaf in views.ts's
+// tree, flattened into one flat list regardless of which real category
+// it's nested under (see VIEWS_CATEGORY_KEY in backtest.ts). Each view's
+// own count is the same one it contributes to its real category, so this
+// panel is a different lens on the same data, not new matches — kept out
+// of the summed total below via OVERLAPPING_CATEGORY_IDS, same reasoning
+// as OUTER PATTERNS/TOP 15 GAINERS/LOSERS.
+const VIEWS_OPTION: CategoryOption = {
+  id: VIEWS_CATEGORY_KEY,
+  label: VIEWS_CATEGORY_LABEL,
+  subtitle:
+    "Every named View across every category, in one flat list (8AM:APHS1A-FAU4:4AM, 9AM:pPALPApH-FAU4:2PM, …). Bullish views in green, bearish in rose.",
+  icon: Eye,
+};
+
+// The three synthetic panels are flat lists with no nesting.
 const FLAT_LIST_IDS = new Set([OUTER_PATTERNS_CATEGORY_KEY, INNER_PATTERNS_CATEGORY_KEY]);
 
 // Handed to runPatternCensus so it can count INNER PATTERNS (backtest.ts
@@ -99,13 +117,14 @@ const CATEGORY_FILTER_OPTIONS: CategoryOption[] = [
   ...pivotcategories.filter((c) => !NON_CENSUS_CATEGORY_IDS.has(c.id)),
   OUTER_PATTERNS_OPTION,
   INNER_PATTERNS_OPTION,
+  VIEWS_OPTION,
 ];
 
-// Categories whose matches OVERLAP the others (a TOP 15 mover, or a row with
-// an outer / inner pattern, also sits in LEVEL ABOVE / TOUCH / …), so they're
-// left out of the summed "distinct matches" total unless one is selected on
-// its own.
-const OVERLAPPING_CATEGORY_IDS = new Set([...TOP_MOVER_IDS, ...FLAT_LIST_IDS]);
+// Categories whose matches OVERLAP the others (a TOP 15 mover, a row with
+// an outer / inner pattern, or a view — also sits in LEVEL ABOVE / TOUCH /
+// …), so they're left out of the summed "distinct matches" total unless
+// one is selected on its own.
+const OVERLAPPING_CATEGORY_IDS = new Set([...TOP_MOVER_IDS, ...FLAT_LIST_IDS, VIEWS_CATEGORY_KEY]);
 
 // Panel order = dropdown order = sidebar order. Any category key the census
 // returns that isn't listed above sorts after these.
@@ -125,22 +144,33 @@ interface TreeMeta {
   index: number; // depth-first position, i.e. dropdown order
 }
 
-function buildTreeMeta(): Map<string, TreeMeta> {
-  const meta = new Map<string, TreeMeta>();
+function buildTreeMeta(): { scoped: Map<string, TreeMeta>; byKey: Map<string, TreeMeta> } {
+  const scoped = new Map<string, TreeMeta>();
+  // Same info, keyed by the bare pattern key alone (ViewDef.key is unique
+  // across the whole tree — see its doc comment in views.ts). Used as a
+  // fallback for the VIEWS synthetic category's rows, which are re-parented
+  // under VIEWS_CATEGORY_KEY rather than their real category, so `scoped`
+  // (built from each real category's own walk) never has an entry keyed
+  // under VIEWS_CATEGORY_KEY.
+  const byKey = new Map<string, TreeMeta>();
   let index = 0;
   for (const cat of buildViewTree()) {
     const walk = (nodes: ViewTreeNode[], depth: number) => {
       for (const n of nodes) {
         if (n.kind === "pattern" || n.kind === "view") {
           const k = `${cat.key}::${n.key}`;
-          if (!meta.has(k)) meta.set(k, { depth, kind: n.kind, index: index++ });
+          if (!scoped.has(k)) {
+            const m = { depth, kind: n.kind, index: index++ };
+            scoped.set(k, m);
+            if (!byKey.has(n.key)) byKey.set(n.key, m);
+          }
         }
         if (n.children && n.children.length > 0) walk(n.children, depth + 1);
       }
     };
     walk(cat.children, 1);
   }
-  return meta;
+  return { scoped, byKey };
 }
 
 // --- Small UTC date helpers (all dates here are UTC ISO strings) ---
@@ -328,6 +358,10 @@ interface StatRow {
   depth: number; // 1 = pattern, 2 = subpattern, 3+ = view (and deeper)
   kind: "pattern" | "view";
   order: number; // dropdown (depth-first) order
+  // Only ever set for kind:"view" rows — see PatternCensusRow.direction in
+  // backtest.ts. Passed through normalizeViewDirection (ScreenerUtils.tsx)
+  // before use, same normalization the rest of the app applies.
+  direction?: "Up" | "Down";
 }
 
 /** One category's patterns grouped together, with the category's own total (sum of its patterns' counts). */
@@ -363,6 +397,15 @@ const INDENT_PX = 18;
  * same order as the Backtest dropdown, indented by depth, each with its own
  * live count and a faint bar showing its share of the category's busiest row.
  */
+/** Text color for a matched row with a direction set — light green for
+    bullish Views, rose for bearish. Falls back to the depth-based styling
+    below when the row has no direction (patterns/subpatterns never do). */
+function directionTextClass(direction: ViewDirection | null): string | null {
+  if (direction === "Up") return "text-green-300";
+  if (direction === "Down") return "text-rose-300";
+  return null;
+}
+
 function CategoryBox({ group }: { group: CategoryGroup }) {
   // "Empty" means the category itself matched nothing. It used to key off
   // `group.total` (the sum of nested pattern counts), so a category like
@@ -484,6 +527,7 @@ function CategoryBox({ group }: { group: CategoryGroup }) {
           {group.patterns.map((p, i) => {
             const pct = maxCount > 0 ? Math.max(p.count > 0 ? 4 : 0, Math.round((p.count / maxCount) * 100)) : 0;
             const isTop = p.depth === 1;
+            const dirClass = p.count > 0 ? directionTextClass(normalizeViewDirection(p.direction)) : null;
             return (
               <div
                 key={`${i}-${p.patternKey}`}
@@ -503,6 +547,8 @@ function CategoryBox({ group }: { group: CategoryGroup }) {
                     "relative truncate font-mono text-xs",
                     p.count === 0
                       ? "text-slate-600"
+                      : dirClass
+                      ? [dirClass, isTop ? "font-semibold" : "font-medium"].join(" ")
                       : isTop
                       ? "font-semibold text-slate-100"
                       : p.kind === "view"
@@ -628,7 +674,6 @@ export default function PatternStats() {
   // Depth + dropdown order for every (category, pattern) pair. Built once —
   // views.ts's tree doesn't change while the page is open.
   const treeMeta = useMemo(() => buildTreeMeta(), []);
-
   // rows/emptyCount/etc. below narrow to just the selected category when one
   // is chosen, so the summary chips and boxes reflect the same scope as the
   // dropdown — "All categories" (categoryFilter === "") keeps everything.
@@ -646,14 +691,22 @@ export default function PatternStats() {
     // OUTER_PATTERN_KEYS priority order — via a running sequence number.
     let seq = 0;
     const toStatRow = (categoryKey: string, r: PatternCensusRow): StatRow => {
-      const m = treeMeta.get(`${categoryKey}::${r.patternKey}`);
+      // VIEWS rows are re-parented under VIEWS_CATEGORY_KEY, which never
+      // appears in the scoped map (see buildTreeMeta's doc comment) — fall
+      // back to the bare-key map, which still finds the view's real kind/
+      // order from wherever it actually lives in the tree. Depth is forced
+      // to 1 for this one category only, so the flat cross-category list
+      // doesn't inherit each view's real (and here meaningless) nesting
+      // depth from its actual parent pattern/subpattern.
+      const m = treeMeta.scoped.get(`${categoryKey}::${r.patternKey}`) ?? treeMeta.byKey.get(r.patternKey);
       return {
         patternKey: r.patternKey,
         patternLabel: r.patternLabel,
         count: r.count,
-        depth: m?.depth ?? 1,
+        depth: categoryKey === VIEWS_CATEGORY_KEY ? 1 : m?.depth ?? 1,
         kind: m?.kind ?? "pattern",
         order: m?.index ?? 1_000_000 + seq++,
+        direction: r.direction,
       };
     };
     const byKey = new Map<string, CategoryGroup>();

@@ -1618,6 +1618,10 @@ export interface PatternCensusRow {
   patternKey: string; // matches passesPattern's `pattern` param
   patternLabel: string;
   count: number;
+  // Only ever set for kind:"view" entries (ViewDef.direction is documented
+  // as view-only metadata — see the "Copy View" doc comment on ViewDef in
+  // views.ts). Patterns/subpatterns/categories leave this undefined.
+  direction?: "Up" | "Down";
 }
 
 /**
@@ -1721,6 +1725,20 @@ export interface InnerPatternsConfig {
   compute: (r: CPRResult) => string | null;
 }
 
+// VIEWS — a third synthetic census category, same idea as OUTER/INNER
+// PATTERNS above: flattens EVERY kind:"view" ViewDef in views.ts's tree
+// into one flat list, regardless of which real top-level category it's
+// actually nested under (a view under "R1AbovePR4" and one under
+// "compressed" both land here side by side). Unlike OUTER/INNER PATTERNS,
+// this doesn't read a separate raw flag — a view is graded exactly like
+// any other pairs entry (passesPatternFn(result, patternKey) already
+// walks its real parentKey chain), so each view just gets a SECOND
+// (categoryKey, patternKey) pair alongside its normal one, under this key
+// instead of its real category. See the "VIEWS" duplication in
+// runPatternCensus's collectPatterns below.
+export const VIEWS_CATEGORY_KEY = "allViews";
+export const VIEWS_CATEGORY_LABEL = "VIEWS";
+
 /**
  * Counts live matches for EVERY dropdown pattern across a date range in a
  * single sweep, instead of re-running runPivotLevelBacktest once per
@@ -1787,12 +1805,37 @@ export async function runPatternCensus(
 
   // Flatten every (category, pattern) pair once up front.
   const rootCategories = buildViewTree();
-  const pairs: { categoryKey: string; categoryLabel: string; patternKey: string; patternLabel: string }[] = [];
+  const pairs: {
+    categoryKey: string;
+    categoryLabel: string;
+    patternKey: string;
+    patternLabel: string;
+    direction?: "Up" | "Down";
+  }[] = [];
   for (const cat of rootCategories) {
     const collectPatterns = (nodes: ViewTreeNode[]) => {
       for (const sub of nodes) {
         if (sub.kind === "pattern" || sub.kind === "view") {
-          pairs.push({ categoryKey: cat.key, categoryLabel: cat.label, patternKey: sub.key, patternLabel: sub.label });
+          pairs.push({
+            categoryKey: cat.key,
+            categoryLabel: cat.label,
+            patternKey: sub.key,
+            patternLabel: sub.label,
+            direction: sub.viewDef?.direction,
+          });
+          if (sub.kind === "view") {
+            // Also list under the synthetic VIEWS category — see
+            // VIEWS_CATEGORY_KEY above. Same patternKey, so
+            // passesPatternFn grades it identically either way; only
+            // the categoryKey differs, so it's a distinct counter.
+            pairs.push({
+              categoryKey: VIEWS_CATEGORY_KEY,
+              categoryLabel: VIEWS_CATEGORY_LABEL,
+              patternKey: sub.key,
+              patternLabel: sub.label,
+              direction: sub.viewDef?.direction,
+            });
+          }
         }
         if (sub.children && sub.children.length > 0) collectPatterns(sub.children);
       }
@@ -1898,14 +1941,19 @@ export async function runPatternCensus(
             comboCounts.set(k, (comboCounts.get(k) ?? 0) + 1);
           }
 
+          let hitAnyView = false;
           for (const p of regularPairs) {
             // passesPatternFn already walks the full parentKey chain back
             // to the category, and (unlike matchesPatternFlag) correctly
             // applies a Copy View's conditionKey redirect + levelCheckDefs
             // gate — see the FIXED note on this function above.
             if (!passesPatternFn(result, p.patternKey)) continue;
+            if (p.categoryKey === VIEWS_CATEGORY_KEY) hitAnyView = true;
             const k = pairKey(p.categoryKey, p.patternKey);
             counts.set(k, (counts.get(k) ?? 0) + 1);
+          }
+          if (hitAnyView) {
+            categoryMatchCounts.set(VIEWS_CATEGORY_KEY, (categoryMatchCounts.get(VIEWS_CATEGORY_KEY) ?? 0) + 1);
           }
 
           // OUTER PATTERNS — count every band-classification flag that holds
@@ -2013,6 +2061,11 @@ export async function runPatternCensus(
       categoryKey: OUTER_PATTERNS_CATEGORY_KEY,
       categoryLabel: OUTER_PATTERNS_CATEGORY_LABEL,
       count: categoryMatchCounts.get(OUTER_PATTERNS_CATEGORY_KEY) ?? 0,
+    },
+    {
+      categoryKey: VIEWS_CATEGORY_KEY,
+      categoryLabel: VIEWS_CATEGORY_LABEL,
+      count: categoryMatchCounts.get(VIEWS_CATEGORY_KEY) ?? 0,
     },
     ...(innerPatterns
       ? [
