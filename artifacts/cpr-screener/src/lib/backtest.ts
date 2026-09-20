@@ -1705,6 +1705,22 @@ const TOP_MOVER_CATEGORIES = new Map<string, "gainers" | "losers">([
 export const OUTER_PATTERNS_CATEGORY_KEY = "outerPatterns";
 export const OUTER_PATTERNS_CATEGORY_LABEL = "OUTER PATTERNS";
 
+// INNER PATTERNS — the other synthetic census category: the PivotPattern
+// badge shown in row 2 of the Screener's Pattern column ("C-A-C-AA",
+// "A-A-AA-AA", ...), i.e. today's RRSS-HHLL-RRHH-SSLL combo written as one
+// key. ScreenerUtils owns that list (PIVOT_PATTERN_KEYS) and the per-row
+// derivation (computePivotPattern), and ScreenerUtils can't be imported
+// from here, so PatternStats hands both in through runPatternCensus's
+// optional `innerPatterns` argument — same injection idea as
+// passesPatternFn. Omit the argument and the category is left out.
+// Unlike OUTER PATTERNS, a row matches AT MOST one entry.
+export const INNER_PATTERNS_CATEGORY_KEY = "innerPatterns";
+export const INNER_PATTERNS_CATEGORY_LABEL = "INNER PATTERNS";
+export interface InnerPatternsConfig {
+  keys: readonly string[];
+  compute: (r: CPRResult) => string | null;
+}
+
 /**
  * Counts live matches for EVERY dropdown pattern across a date range in a
  * single sweep, instead of re-running runPivotLevelBacktest once per
@@ -1745,7 +1761,9 @@ export const OUTER_PATTERNS_CATEGORY_LABEL = "OUTER PATTERNS";
  *
  * OUTER PATTERNS is a synthetic extra category (OUTER_PATTERNS_CATEGORY_KEY):
  * one flat entry per OUTER_PATTERN_KEYS name, counted from the raw CPRResult
- * flags — see the constants above.
+ * flags — see the constants above. INNER PATTERNS (INNER_PATTERNS_CATEGORY_KEY)
+ * is the same idea for the PivotPattern badge, driven by the optional
+ * `innerPatterns` argument.
  *
  * The symbol universe is resolved once, as of endDateISO (the most recent
  * date in range) — same "current exchange universe, walked backward"
@@ -1757,7 +1775,8 @@ export async function runPatternCensus(
   endDateISO: string,
   source: BacktestSource,
   passesPatternFn: (r: CPRResult, pattern: string) => boolean,
-  onProgress?: (done: number, total: number, symbol: string) => void
+  onProgress?: (done: number, total: number, symbol: string) => void,
+  innerPatterns?: InnerPatternsConfig
 ): Promise<{ rows: PatternCensusRow[]; combos: CategoryComboRow[]; categoryMatches: CategoryMatchRow[] }> {
   if (!isValidUTCDateISO(startDateISO) || !isValidUTCDateISO(endDateISO)) {
     throw new Error("Invalid date range " + startDateISO + " .. " + endDateISO + ". Expected YYYY-MM-DD.");
@@ -1795,6 +1814,17 @@ export async function runPatternCensus(
     patternLabel: key as string,
   }));
   outerPairs.forEach((p) => counts.set(pairKey(p.categoryKey, p.patternKey), 0));
+
+  // INNER PATTERNS entries — same reasoning as outerPairs above: kept out of
+  // `pairs` so passesPatternFn never sees them; each row's key comes from
+  // innerPatterns.compute instead.
+  const innerPairs = (innerPatterns?.keys ?? []).map((key) => ({
+    categoryKey: INNER_PATTERNS_CATEGORY_KEY,
+    categoryLabel: INNER_PATTERNS_CATEGORY_LABEL,
+    patternKey: key,
+    patternLabel: key,
+  }));
+  innerPairs.forEach((p) => counts.set(pairKey(p.categoryKey, p.patternKey), 0));
 
   // TEMPORARY DEBUG ADDITION — see CategoryComboRow above. One counter per
   // (category, raw HHLL/RRHH/SSLL combo) observed among rows that pass
@@ -1892,6 +1922,16 @@ export async function runPatternCensus(
             categoryMatchCounts.set(OUTER_PATTERNS_CATEGORY_KEY, (categoryMatchCounts.get(OUTER_PATTERNS_CATEGORY_KEY) ?? 0) + 1);
           }
 
+          // INNER PATTERNS — the row's single PivotPattern key (or none).
+          if (innerPatterns) {
+            const innerKey = innerPatterns.compute(result);
+            if (innerKey) {
+              const k = pairKey(INNER_PATTERNS_CATEGORY_KEY, innerKey);
+              counts.set(k, (counts.get(k) ?? 0) + 1);
+              categoryMatchCounts.set(INNER_PATTERNS_CATEGORY_KEY, (categoryMatchCounts.get(INNER_PATTERNS_CATEGORY_KEY) ?? 0) + 1);
+            }
+          }
+
           // TOP 15 GAINERS / LOSERS — just record this row's day-over-day
           // change; the top 15 per date is picked after the sweep.
           if (moverCategories.length > 0) {
@@ -1938,7 +1978,7 @@ export async function runPatternCensus(
     }
   }
 
-  const rows = [...pairs, ...outerPairs]
+  const rows = [...pairs, ...outerPairs, ...innerPairs]
     .map((p) => ({ ...p, count: counts.get(pairKey(p.categoryKey, p.patternKey)) ?? 0 }))
     .sort((a, b) => b.count - a.count);
 
@@ -1974,6 +2014,15 @@ export async function runPatternCensus(
       categoryLabel: OUTER_PATTERNS_CATEGORY_LABEL,
       count: categoryMatchCounts.get(OUTER_PATTERNS_CATEGORY_KEY) ?? 0,
     },
+    ...(innerPatterns
+      ? [
+          {
+            categoryKey: INNER_PATTERNS_CATEGORY_KEY,
+            categoryLabel: INNER_PATTERNS_CATEGORY_LABEL,
+            count: categoryMatchCounts.get(INNER_PATTERNS_CATEGORY_KEY) ?? 0,
+          },
+        ]
+      : []),
   ];
 
   return { rows, combos, categoryMatches };

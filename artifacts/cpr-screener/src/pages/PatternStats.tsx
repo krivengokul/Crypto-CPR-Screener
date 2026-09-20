@@ -16,14 +16,17 @@ import {
   Sigma,
   Snowflake,
   Target,
+  Crosshair,
 } from "lucide-react";
-import { passesPattern } from "./ScreenerUtils";
+import { passesPattern, computePivotPattern, PIVOT_PATTERN_KEYS } from "./ScreenerUtils";
 import { pivotcategories } from "@/lib/ViewsSidebar";
 import { buildViewTree, type ViewTreeNode } from "@/lib/views";
 import {
   runPatternCensus,
   OUTER_PATTERNS_CATEGORY_KEY,
   OUTER_PATTERNS_CATEGORY_LABEL,
+  INNER_PATTERNS_CATEGORY_KEY,
+  INNER_PATTERNS_CATEGORY_LABEL,
   BacktestSource,
   PatternCensusRow,
   CategoryComboRow,
@@ -72,16 +75,37 @@ const OUTER_PATTERNS_OPTION: CategoryOption = {
   icon: Target,
 };
 
+// INNER PATTERNS — the other synthetic panel: the PivotPattern badge in row 2
+// of the Pattern column (C-A-C-AA, A-A-AA-AA, ...), i.e. today's
+// RRSS-HHLL-RRHH-SSLL combo as a single key. Counted with ScreenerUtils'
+// own computePivotPattern, so it always agrees with the badge.
+const INNER_PATTERNS_OPTION: CategoryOption = {
+  id: INNER_PATTERNS_CATEGORY_KEY,
+  label: INNER_PATTERNS_CATEGORY_LABEL,
+  subtitle:
+    "RRSS-HHLL-RRHH-SSLL combos shown as the 2nd-row PivotPattern badge in the Pattern column (C-A-C-AA, A-A-AA-AA, …). A row matches at most one.",
+  icon: Crosshair,
+};
+
+// The two synthetic panels are flat lists of short keys with no nesting.
+const FLAT_LIST_IDS = new Set([OUTER_PATTERNS_CATEGORY_KEY, INNER_PATTERNS_CATEGORY_KEY]);
+
+// Handed to runPatternCensus so it can count INNER PATTERNS (backtest.ts
+// can't import ScreenerUtils itself).
+const INNER_PATTERNS_CONFIG = { keys: PIVOT_PATTERN_KEYS as readonly string[], compute: computePivotPattern };
+
 const CATEGORY_FILTER_OPTIONS: CategoryOption[] = [
   ...TOP_MOVER_OPTIONS,
   ...pivotcategories.filter((c) => !NON_CENSUS_CATEGORY_IDS.has(c.id)),
   OUTER_PATTERNS_OPTION,
+  INNER_PATTERNS_OPTION,
 ];
 
 // Categories whose matches OVERLAP the others (a TOP 15 mover, or a row with
-// an outer pattern, also sits in LEVEL ABOVE / TOUCH / …), so they're left
-// out of the summed "distinct matches" total unless one is selected on its own.
-const OVERLAPPING_CATEGORY_IDS = new Set([...TOP_MOVER_IDS, OUTER_PATTERNS_CATEGORY_KEY]);
+// an outer / inner pattern, also sits in LEVEL ABOVE / TOUCH / …), so they're
+// left out of the summed "distinct matches" total unless one is selected on
+// its own.
+const OVERLAPPING_CATEGORY_IDS = new Set([...TOP_MOVER_IDS, ...FLAT_LIST_IDS]);
 
 // Panel order = dropdown order = sidebar order. Any category key the census
 // returns that isn't listed above sorts after these.
@@ -349,16 +373,16 @@ function CategoryBox({ group }: { group: CategoryGroup }) {
   const Icon = meta?.icon ?? Layers;
   const maxCount = group.patterns.reduce((m, p) => Math.max(m, p.count), 0);
   const matchedPatterns = group.patterns.filter((p) => p.count > 0).length;
-  // OUTER PATTERNS is a flat list of ~80 short names with no nesting, so it's
-  // laid out as a grid of compact tiles (and the card is made wider) instead
-  // of one very tall column.
-  const isFlat = group.categoryKey === OUTER_PATTERNS_CATEGORY_KEY;
+  // OUTER / INNER PATTERNS are flat lists of short keys with no nesting, so
+  // they're laid out as a grid of compact tiles (in a full-width card)
+  // instead of one very tall column.
+  const isFlat = FLAT_LIST_IDS.has(group.categoryKey);
 
   return (
     <article
       className={[
         "relative flex flex-col overflow-hidden rounded-xl border bg-[#0f1724] p-4 shadow-lg transition-all hover:-translate-y-0.5",
-        isFlat ? "md:col-span-2" : "",
+        isFlat ? "md:col-span-2 xl:col-span-3" : "",
         isEmpty
           ? "border-dashed border-[#2a3a4f] hover:border-slate-500"
           : "border-emerald-500/40 hover:border-emerald-400/70 hover:shadow-emerald-950/40",
@@ -406,7 +430,7 @@ function CategoryBox({ group }: { group: CategoryGroup }) {
           {/* Sum of every nested pattern's count. A symbol that fits several
               patterns is counted once per pattern here, so this can exceed
               the headline; kept as a secondary number for reference. */}
-          {group.total > 0 && (
+          {group.total > 0 && group.total !== group.distinctCount && (
             <p
               className="mt-1 font-mono text-[11px] text-slate-500"
               title="Sum of the pattern counts below. A symbol matching several patterns is counted once per pattern."
@@ -424,7 +448,7 @@ function CategoryBox({ group }: { group: CategoryGroup }) {
       )}
 
       {group.patterns.length > 0 && isFlat ? (
-        <div className="grid max-h-[30rem] grid-cols-3 gap-1.5 overflow-y-auto border-t border-[#1e2d3d] pt-3 sm:grid-cols-4 xl:grid-cols-6 [scrollbar-color:#2a3a4f_transparent] [scrollbar-width:thin]">
+        <div className="grid grid-cols-3 gap-1.5 border-t border-[#1e2d3d] pt-3 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
           {group.patterns.map((p) => (
             <div
               key={p.patternKey}
@@ -744,7 +768,8 @@ export default function PatternStats() {
         endDate,
         source,
         passesPattern,
-        (done, total) => setProgress({ done, total })
+        (done, total) => setProgress({ done, total }),
+        INNER_PATTERNS_CONFIG
       );
       setRows(result);
       setCombos(comboResult);
