@@ -521,11 +521,6 @@ function computePrevPattern(today: CPRLevels, prev: CPRLevels | undefined | null
 }
 
 const LEVELSABOVE_VIEWS: ViewDef[] = [
-  // --- direct Pattern children of "levelsabove" ---
-  { key: "EU2L4", label: "EU2L4", parentKey: "levelsabove", kind: "pattern", condition: (r) => r.EU2L4,
-      order: 0
-},
-
   // --- A-B-C-C's one nested child ---
   { key: "A-B-C-C-EU4L4", label: "A-B-C-C-EU4L4", parentKey: "A-B-C-C", kind: "pattern", condition: (r) => r.EU4L4,
       order: 3
@@ -567,51 +562,9 @@ const LEVELSABOVE_VIEWS: ViewDef[] = [
 
   // --- leaf Views (self-contained, target-graded) ---
   {
-    key: "7PM:MoMi->U4:2AM",
-    label: "7PM:MoMi->U4:2AM",
-    parentKey: "EU2L4",
-    kind: "view",
-    direction: "Up",
-    condition: (r) =>
-      computePrevPattern(r.prevCPR, r.ppCPR) === "CU1L1" &&
-      r.prevCPR.widthPct <= 0.10 &&
-      r.todayCPR.widthPct > 0.22 && r.todayCPR.widthPct <= 0.60 &&
-      r.prevCPR.prevLow < r.prevCPR.s1 &&
-      r.todayCPR.prevLow < r.todayCPR.s1 &&
-      r.todayCPR.prevLow > r.prevCPR.pivot,
-    targetLabel: "U4 (today's R4)",
-    getTarget: (r) => r.todayCPR.r4,
-    entryLabel: "TC (today's TC)",
-    getEntry: (r) => r.todayCPR.tc,
-    stoplossLabel: "S1 (today's S1)",
-    getStoploss: (r) => r.todayCPR.s1,
-      order: 0
-},
-  {
-    key: "7PM:MoMi-<L4:2AM",
-    label: "7PM:MoMi-<L4:2AM",
-    parentKey: "EU2L4",
-    kind: "view",
-    direction: "Down",
-    condition: (r) =>
-      computePrevPattern(r.prevCPR, r.ppCPR) === "CU1L1" &&
-      r.prevCPR.widthPct <= 0.10 &&
-      r.todayCPR.widthPct > 0.22 && r.todayCPR.widthPct <= 0.60 &&
-      r.prevCPR.prevLow < r.prevCPR.s1 &&
-      r.todayCPR.prevLow < r.todayCPR.s1 &&
-      r.todayCPR.prevLow < r.prevCPR.pivot,
-    targetLabel: "L4 (today's S4)",
-    getTarget: (r) => r.todayCPR.s4,
-    entryLabel: "BC (today's BC)",
-    getEntry: (r) => r.todayCPR.bc,
-    stoplossLabel: "R1 (today's R1)",
-    getStoploss: (r) => r.todayCPR.r1,
-      order: 1
-},
-  {
     key: "6PM:APHS1A-FAU4:9PM",
     label: "6PM:APHS1A-FAU4:9PM",
-    parentKey: "EU2L4",
+    parentKey: "A-A-AA-AA-EU2L4",
     kind: "view",
     direction: "Up",
     condition: (r) =>
@@ -3276,7 +3229,7 @@ const COPY_VIEWS: ViewDef[] = [
   {
     key: "6PM:APHS1A-FAU4:99PM",
     label: "6PM:APHS1A-FAU4:99PM",
-    parentKey: "EU2L4",
+    parentKey: "A-A-AA-AA-EU2L4",
     conditionKey: "6PM:APHS1A-FAU4:9PM",
     kind: "view",
     direction: "Up",
@@ -3305,7 +3258,7 @@ const COPY_VIEWS: ViewDef[] = [
   {
     key: "6PM:APHS1A-FAU4:9PMM",
     label: "6PM:APHS1A-FAU4:9PMM",
-    parentKey: "EU2L4",
+    parentKey: "A-A-AA-AA-EU2L4",
     conditionKey: "6PM:APHS1A-FAU4:9PM",
     kind: "view",
     direction: "Up",
