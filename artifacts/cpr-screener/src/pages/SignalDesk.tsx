@@ -857,19 +857,24 @@ R:R: ${item.riskReward}`;
                         </div>
                       </div>
 
-                      {/* Direction Badge on the right */}
-                      <span
-                        className={`text-xs font-bold px-2 py-0.5 rounded-md flex items-center gap-1 font-mono shrink-0 ${
-                          isUp
-                            ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
-                            : isDown
-                            ? "bg-rose-500/20 text-rose-400 border border-rose-500/40"
-                            : "bg-slate-500/20 text-slate-300 border border-slate-500/40"
-                        }`}
-                      >
-                        {isUp ? <ArrowUpRight className="w-3.5 h-3.5" /> : isDown ? <ArrowDownRight className="w-3.5 h-3.5" /> : null}
-                        {isUp ? "Up" : isDown ? "Down" : item.direction}
-                      </span>
+                      {/* Direction Badge on the right — only for symbols
+                          with a real signal (Active View match). item.isSaved
+                          flags that same eligibility, see the stats useMemo
+                          comment above for why. */}
+                      {item.isSaved && (
+                        <span
+                          className={`text-xs font-bold px-2 py-0.5 rounded-md flex items-center gap-1 font-mono shrink-0 ${
+                            isUp
+                              ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
+                              : isDown
+                              ? "bg-rose-500/20 text-rose-400 border border-rose-500/40"
+                              : "bg-slate-500/20 text-slate-300 border border-slate-500/40"
+                          }`}
+                        >
+                          {isUp ? <ArrowUpRight className="w-3.5 h-3.5" /> : isDown ? <ArrowDownRight className="w-3.5 h-3.5" /> : null}
+                          {isUp ? "Up" : isDown ? "Down" : item.direction}
+                        </span>
+                      )}
                     </div>
 
                     {/* Live Price Progress Bar — red-left/green-right for Up,
