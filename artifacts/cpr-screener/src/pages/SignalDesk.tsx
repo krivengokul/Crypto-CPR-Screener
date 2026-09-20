@@ -86,6 +86,10 @@ export interface SignalItem {
   // use patternId, never patternName — passing the label instead of the id
   // is exactly what broke the left-nav highlight and card filtering before.
   patternId: string;
+  // Which top-level Views bucket (e.g. "compressed", "levelsabove",
+  // "R1AbovePR4") the matched View lives under — see getCategoryForViewId.
+  // Empty string when the card has no real signal (isSaved is false).
+  category: string;
   triggerPrice: number;
   currentPrice: number;
   targetPrice: number;
@@ -105,6 +109,19 @@ export interface SignalItem {
   change24h?: number;
   timestamp: string;
   isSaved: boolean;
+}
+
+// Which top-level Views bucket a View id lives under — e.g. "compressed",
+// "expanded", "levelsabove", "levelsbelow", "R1AbovePR4", "S1BelowPS4",
+// "touch", "copyViews". This is literally just which key of the Views
+// object (ViewsSidebar.tsx) the id's SubPattern was declared under, so it
+// stays in sync automatically as Views categories are added/renamed —
+// nothing about this needs to be hand-maintained here.
+function getCategoryForViewId(id: string): string {
+  for (const [category, subList] of Object.entries(Views)) {
+    if (subList.some((sub) => sub.id === id)) return category;
+  }
+  return "";
 }
 
 // Entry/target/stop for a single CPR result row — sourced ENTIRELY from
@@ -138,12 +155,13 @@ export function computeSignalLevels(
   const targetLevel = targetDef.targetLabel ?? "";
   const patternLabel = primaryView.label;
   const patternId = primaryView.id;
+  const category = getCategoryForViewId(patternId);
 
   const risk = Math.max(0.0000001, Math.abs(price - stopPrice));
   const reward = Math.abs(targetPrice - price);
   const rrRatio = (reward / risk).toFixed(1);
 
-  return { patternLabel, patternId, price, direction, targetPrice, stopPrice, targetLevel, rrRatio };
+  return { patternLabel, patternId, category, price, direction, targetPrice, stopPrice, targetLevel, rrRatio };
 }
 
 // Single source of truth for turning a pool of CPRResultWithSource rows
@@ -338,6 +356,7 @@ export default function SignalDesk({
           type: `${patternLabel} Setup`,
           patternName: patternLabel,
           patternId,
+          category: levels ? levels.category : "",
           triggerPrice: price,
           // Always the live-refreshed price, never the static BC/TC entry
           // level `price` resolves to when `levels` is set — see
@@ -421,6 +440,7 @@ export default function SignalDesk({
         type: `${patternLabel} Setup`,
         patternName: patternLabel,
         patternId,
+        category: levels?.category ?? "",
         triggerPrice: price,
         // Same fix as the `symbols` branch above: keep the live-refreshed
         // r.currentPrice for display, don't collapse it into the static
@@ -943,7 +963,9 @@ R:R: ${item.riskReward}`;
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1">
                           <span>View:</span>
-                          <strong className="text-slate-200 font-semibold">{selectedViewPattern || item.patternName}</strong>
+                          <strong className="text-slate-200 font-semibold">
+                            {item.isSaved ? selectedViewPattern || item.patternName : ""}
+                          </strong>
                         </div>
                         <span className="font-mono text-slate-300">
                           R:R <strong className="text-amber-400">{item.riskReward}</strong>
@@ -952,6 +974,10 @@ R:R: ${item.riskReward}`;
                       <div className="flex items-center gap-1">
                         <span>Target:</span>
                         <strong className="text-slate-200 font-semibold font-mono">{item.targetLevel || "S2"}</strong>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span>Category:</span>
+                        <strong className="text-slate-200 font-semibold">{item.isSaved ? item.category : ""}</strong>
                       </div>
                     </div>
                   </div>
