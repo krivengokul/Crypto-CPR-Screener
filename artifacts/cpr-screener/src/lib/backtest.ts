@@ -1,4 +1,4 @@
-import { OHLC, CPRResult, analyzeCPR, isExpandedPatternPair } from "./cpr";
+import { OHLC, CPRResult, analyzeCPR, isExpandedPatternPair, OUTER_PATTERN_KEYS } from "./cpr";
 import { fetchTopUSDTSymbols, fetchDailyKlines, isLiveDailyCandle } from "./binance";
 import { fetchDeltaPerps } from "./delta";
 import { buildViewTree, type ViewTreeNode, VIEWS, getView, type ViewDef } from "./views";
@@ -1696,6 +1696,15 @@ const TOP_MOVER_CATEGORIES = new Map<string, "gainers" | "losers">([
   ["top15losers", "losers"],
 ]);
 
+// OUTER PATTERNS — a synthetic census category (it isn't in views.ts's tree)
+// with one flat entry per OUTER_PATTERN_KEYS name (L2U4, EU2L4, CU3L3, ...):
+// the band-classification flags the Screener's Pattern column shows as
+// second-row badges. Each is an independent boolean on CPRResult, so unlike
+// the tree categories it's counted straight from result[key] rather than via
+// passesPatternFn, and a row can hit several entries at once.
+export const OUTER_PATTERNS_CATEGORY_KEY = "outerPatterns";
+export const OUTER_PATTERNS_CATEGORY_LABEL = "OUTER PATTERNS";
+
 /**
  * Counts live matches for EVERY dropdown pattern across a date range in a
  * single sweep, instead of re-running runPivotLevelBacktest once per
@@ -1734,6 +1743,10 @@ const TOP_MOVER_CATEGORIES = new Map<string, "gainers" | "losers">([
  * uses) — each date contributes at most 15 rows to each of the two
  * categories.
  *
+ * OUTER PATTERNS is a synthetic extra category (OUTER_PATTERNS_CATEGORY_KEY):
+ * one flat entry per OUTER_PATTERN_KEYS name, counted from the raw CPRResult
+ * flags — see the constants above.
+ *
  * The symbol universe is resolved once, as of endDateISO (the most recent
  * date in range) — same "current exchange universe, walked backward"
  * caveat as getSymbolUniverse's other callers; see its KNOWN LIMITATION
@@ -1771,6 +1784,17 @@ export async function runPatternCensus(
   const counts = new Map<string, number>();
   const pairKey = (categoryKey: string, patternKey: string) => `${categoryKey}::${patternKey}`;
   pairs.forEach((p) => counts.set(pairKey(p.categoryKey, p.patternKey), 0));
+
+  // OUTER PATTERNS entries live OUTSIDE `pairs` on purpose: everything that
+  // loops `pairs` feeds passesPatternFn(result, patternKey), which only
+  // understands views.ts keys. These are read off the raw flags instead.
+  const outerPairs = OUTER_PATTERN_KEYS.map((key) => ({
+    categoryKey: OUTER_PATTERNS_CATEGORY_KEY,
+    categoryLabel: OUTER_PATTERNS_CATEGORY_LABEL,
+    patternKey: key as string,
+    patternLabel: key as string,
+  }));
+  outerPairs.forEach((p) => counts.set(pairKey(p.categoryKey, p.patternKey), 0));
 
   // TEMPORARY DEBUG ADDITION — see CategoryComboRow above. One counter per
   // (category, raw HHLL/RRHH/SSLL combo) observed among rows that pass
@@ -1854,6 +1878,20 @@ export async function runPatternCensus(
             counts.set(k, (counts.get(k) ?? 0) + 1);
           }
 
+          // OUTER PATTERNS — count every band-classification flag that holds
+          // for this row. A row can hit several, so the category's "matched"
+          // number (rows with at least one) is <= the sum of its entries.
+          let hitAnyOuter = false;
+          for (const key of OUTER_PATTERN_KEYS) {
+            if (!result[key]) continue;
+            hitAnyOuter = true;
+            const k = pairKey(OUTER_PATTERNS_CATEGORY_KEY, key);
+            counts.set(k, (counts.get(k) ?? 0) + 1);
+          }
+          if (hitAnyOuter) {
+            categoryMatchCounts.set(OUTER_PATTERNS_CATEGORY_KEY, (categoryMatchCounts.get(OUTER_PATTERNS_CATEGORY_KEY) ?? 0) + 1);
+          }
+
           // TOP 15 GAINERS / LOSERS — just record this row's day-over-day
           // change; the top 15 per date is picked after the sweep.
           if (moverCategories.length > 0) {
@@ -1900,7 +1938,7 @@ export async function runPatternCensus(
     }
   }
 
-  const rows = pairs
+  const rows = [...pairs, ...outerPairs]
     .map((p) => ({ ...p, count: counts.get(pairKey(p.categoryKey, p.patternKey)) ?? 0 }))
     .sort((a, b) => b.count - a.count);
 
@@ -1925,11 +1963,18 @@ export async function runPatternCensus(
   }
   combos.sort((a, b) => b.count - a.count);
 
-  const categoryMatches: CategoryMatchRow[] = rootCategories.map((cat) => ({
-    categoryKey: cat.key,
-    categoryLabel: cat.label,
-    count: categoryMatchCounts.get(cat.key) ?? 0,
-  }));
+  const categoryMatches: CategoryMatchRow[] = [
+    ...rootCategories.map((cat) => ({
+      categoryKey: cat.key,
+      categoryLabel: cat.label,
+      count: categoryMatchCounts.get(cat.key) ?? 0,
+    })),
+    {
+      categoryKey: OUTER_PATTERNS_CATEGORY_KEY,
+      categoryLabel: OUTER_PATTERNS_CATEGORY_LABEL,
+      count: categoryMatchCounts.get(OUTER_PATTERNS_CATEGORY_KEY) ?? 0,
+    },
+  ];
 
   return { rows, combos, categoryMatches };
 }

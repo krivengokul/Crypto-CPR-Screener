@@ -1085,91 +1085,51 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
 }
 
 /**
- * pickPattern — priority-ordered label lookup. This is the ONLY
- * place the label strings and their tie-break order live. The order below
+ * OuterPatternKey — every CPRPairFlags key that is one of the named
+ * (today vs prev) band-classification patterns, e.g. "L2U4", "EU2L4",
+ * "CU3L3". Restricted to boolean flags so a typo (or a numeric flag like
+ * r4Distance) fails to compile.
+ */
+export type OuterPatternKey = {
+  [K in keyof CPRPairFlags]: CPRPairFlags[K] extends boolean ? K : never;
+}[keyof CPRPairFlags];
+
+/**
+ * OUTER_PATTERN_KEYS — the named band-classification patterns, IN
+ * pickPattern's priority order (first true flag wins). This array is the ONLY
+ * place the label strings and their tie-break order live; pickPattern below
+ * just walks it. Every entry is also an independent boolean on CPRResult
+ * (spread in from classifyCPRPair), so anything that needs "which of these
+ * hold for this row" — e.g. Pattern Statistics' OUTER PATTERNS panel — can
+ * loop this list and read result[key] directly instead of keeping its own
+ * copy of the names.
+ *
+ * CL3U2 is deliberately checked before the other U2-band entries so its
+ * badge wins ties. Adding a pattern = add its flag to CPRPairFlags/CPRResult
+ * + classifyCPRPair, then insert its name here at the right priority.
+ */
+export const OUTER_PATTERN_KEYS: readonly OuterPatternKey[] = [
+  "CL4U3", "CU3L2", "CU3L3", "QU4L4", "EU4L4", "EL4U4", "U3L4", "U2L4",
+  "U1L4", "U4L2", "U3L2", "U4L3", "U4L4", "L4U4", "EU3L4", "EL2U4",
+  "EL3U4", "CU4L2", "CU4L4", "CL4U4", "EU2L3", "CU4L3", "CL3U3", "L4U3",
+  "L3U3", "CL3U2", "L4U2", "L3U2", "L3U4", "L2U4", "CU2L2", "L1U4",
+  "CL2U1", "CL4U2", "EU3L3", "EL3U3", "CL1U1", "CU1L1", "CL2U2", "U3L3",
+  "CL3U1", "EU1L2", "EU1L3", "EU1L4", "EUBL1", "EUPL1", "EUTL1", "EUBL2",
+  "EUBL3", "EUPL3", "EUTL3", "EU2L4", "EU2L2", "EUTL2", "EU1L1", "EL1U1",
+  "EL1U2", "CL2UT", "EL1U3", "EL2U3", "ELTU2", "ELBU2", "ELTU3", "ELPU2",
+  "ELPU3", "ELBU3", "EL1U4", "ELBU4", "L3CP", "L2CP", "L3TC", "EL1L2",
+  "EL2L1", "EUPL2", "EUTL4", "L2U3", "CU2L1", "CU3L1", "U2L3",
+];
+
+/**
+ * pickPattern — priority-ordered label lookup: the first entry of
+ * OUTER_PATTERN_KEYS whose flag is true, or null. The order in that array
  * must match the if-chain that historically lived in ScreenerUtils.
  */
 export function pickPattern(f: CPRPairFlags): string | null {
-  if (f.CL4U3)    return "CL4U3";
-  if (f.CU3L2)  return "CU3L2";
-  if (f.CU3L3)  return "CU3L3";
-  if (f.QU4L4)    return "QU4L4";
-  if (f.EU4L4)    return "EU4L4";
-  if (f.EL4U4)    return "EL4U4";
-  if (f.U3L4)   return "U3L4";
-  if (f.U2L4)   return "U2L4";
-  if (f.U1L4)   return "U1L4";
-  if (f.U4L2)    return "U4L2";
-  if (f.U3L2)    return "U3L2";
-  if (f.U4L3)    return "U4L3";
-  if (f.U4L4)    return "U4L4";
-  if (f.L4U4)    return "L4U4";
-  if (f.EU3L4)  return "EU3L4";
-  if (f.EL2U4)  return "EL2U4";
-  if (f.EL3U4)   return "EL3U4";
-  if (f.CU4L2)  return "CU4L2";
-  if (f.CU4L4)    return "CU4L4";
-  if (f.CL4U4)    return "CL4U4";
-  if (f.EU2L3)    return "EU2L3";
-  if (f.CU4L3)    return "CU4L3";
-  if (f.CL3U3)    return "CL3U3";
-  if (f.L4U3)    return "L4U3";
-  if (f.L3U3)   return "L3U3";
-  // CL3U2 checked before other U2-band branches so its badge wins ties.
-  if (f.CL3U2)  return "CL3U2";
-  if (f.L4U2)    return "L4U2";
-  if (f.L3U2)    return "L3U2";
-  if (f.L3U4)   return "L3U4";
-  if (f.L2U4)  return "L2U4";
-  if (f.CU2L2)    return "CU2L2";
-  if (f.L1U4) return "L1U4";
-  if (f.CL2U1)    return "CL2U1";
-  if (f.CL4U2)  return "CL4U2";
-  if (f.EU3L3)    return "EU3L3";
-  if (f.EL3U3)    return "EL3U3";
-  if (f.CL1U1)    return "CL1U1";
-  if (f.CU1L1)    return "CU1L1";
-  if (f.CL2U2)    return "CL2U2";
-  if (f.U3L3)    return "U3L3";
-  if (f.CL3U1)    return "CL3U1";
-  if (f.EU1L2)    return "EU1L2";
-  if (f.EU1L3)    return "EU1L3";
-  if (f.EU1L4)    return "EU1L4";
-  if (f.EUBL1)   return "EUBL1";
-  if (f.EUPL1)   return "EUPL1";
-  if (f.EUTL1)   return "EUTL1";
-  if (f.EUBL2)   return "EUBL2";
-  if (f.EUBL3)   return "EUBL3";
-  if (f.EUPL3)   return "EUPL3";
-  if (f.EUTL3)    return "EUTL3";
-  if (f.EU2L4)    return "EU2L4";
-  if (f.EU2L2)    return "EU2L2";
-  if (f.EUTL2)    return "EUTL2";
-  if (f.EU1L1)    return "EU1L1";
-  if (f.EL1U1)    return "EL1U1";
-  if (f.EL1U2)    return "EL1U2";
-  if (f.CL2UT)    return "CL2UT";
-  if (f.EL1U3)    return "EL1U3";
-  if (f.EL2U3)    return "EL2U3";
-  if (f.ELTU2)    return "ELTU2";
-  if (f.ELBU2)    return "ELBU2";
-  if (f.ELTU3)    return "ELTU3";
-  if (f.ELPU2)    return "ELPU2";
-  if (f.ELPU3)    return "ELPU3";
-  if (f.ELBU3)    return "ELBU3";
-  if (f.EL1U4)    return "EL1U4";
-  if (f.ELBU4)    return "ELBU4";
-  if (f.L3CP)    return "L3CP";
-  if (f.L2CP)    return "L2CP";
-  if (f.L3TC)    return "L3TC";
-  if (f.EL1L2)  return "EL1L2";
-  if (f.EL2L1)  return "EL2L1";
-  if (f.EUPL2)    return "EUPL2";
-  if (f.EUTL4)    return "EUTL4";
-  if (f.L2U3)    return "L2U3";
-  if (f.CU2L1)    return "CU2L1";
-  if (f.CU3L1)    return "CU3L1";
-  if (f.U2L3)    return "U2L3";
+  for (const key of OUTER_PATTERN_KEYS) {
+    if (f[key]) return key;
+  }
   return null;
 }
 

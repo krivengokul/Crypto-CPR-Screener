@@ -15,12 +15,15 @@ import {
   Play,
   Sigma,
   Snowflake,
+  Target,
 } from "lucide-react";
 import { passesPattern } from "./ScreenerUtils";
 import { pivotcategories } from "@/lib/ViewsSidebar";
 import { buildViewTree, type ViewTreeNode } from "@/lib/views";
 import {
   runPatternCensus,
+  OUTER_PATTERNS_CATEGORY_KEY,
+  OUTER_PATTERNS_CATEGORY_LABEL,
   BacktestSource,
   PatternCensusRow,
   CategoryComboRow,
@@ -56,10 +59,29 @@ const TOP_MOVER_OPTIONS: CategoryOption[] = [
 ];
 const TOP_MOVER_IDS = new Set(TOP_MOVER_OPTIONS.map((o) => o.id));
 
+// OUTER PATTERNS — not a category in views.ts or the sidebar: a synthetic
+// panel (see OUTER_PATTERNS_CATEGORY_KEY in backtest.ts) listing the band
+// patterns the Screener's Pattern column shows as second-row badges
+// (L2U4, EU2L4, CU3L3, ...), each counted straight from its CPRResult flag.
+// Placed last, after the sidebar's own categories.
+const OUTER_PATTERNS_OPTION: CategoryOption = {
+  id: OUTER_PATTERNS_CATEGORY_KEY,
+  label: OUTER_PATTERNS_CATEGORY_LABEL,
+  subtitle:
+    "Today-vs-prev band patterns shown as the 2nd badge in the Pattern column (L2U4, EU2L4, CU3L3, …). A row can match several.",
+  icon: Target,
+};
+
 const CATEGORY_FILTER_OPTIONS: CategoryOption[] = [
   ...TOP_MOVER_OPTIONS,
   ...pivotcategories.filter((c) => !NON_CENSUS_CATEGORY_IDS.has(c.id)),
+  OUTER_PATTERNS_OPTION,
 ];
+
+// Categories whose matches OVERLAP the others (a TOP 15 mover, or a row with
+// an outer pattern, also sits in LEVEL ABOVE / TOUCH / …), so they're left
+// out of the summed "distinct matches" total unless one is selected on its own.
+const OVERLAPPING_CATEGORY_IDS = new Set([...TOP_MOVER_IDS, OUTER_PATTERNS_CATEGORY_KEY]);
 
 // Panel order = dropdown order = sidebar order. Any category key the census
 // returns that isn't listed above sorts after these.
@@ -327,11 +349,16 @@ function CategoryBox({ group }: { group: CategoryGroup }) {
   const Icon = meta?.icon ?? Layers;
   const maxCount = group.patterns.reduce((m, p) => Math.max(m, p.count), 0);
   const matchedPatterns = group.patterns.filter((p) => p.count > 0).length;
+  // OUTER PATTERNS is a flat list of ~80 short names with no nesting, so it's
+  // laid out as a grid of compact tiles (and the card is made wider) instead
+  // of one very tall column.
+  const isFlat = group.categoryKey === OUTER_PATTERNS_CATEGORY_KEY;
 
   return (
     <article
       className={[
         "relative flex flex-col overflow-hidden rounded-xl border bg-[#0f1724] p-4 shadow-lg transition-all hover:-translate-y-0.5",
+        isFlat ? "md:col-span-2" : "",
         isEmpty
           ? "border-dashed border-[#2a3a4f] hover:border-slate-500"
           : "border-emerald-500/40 hover:border-emerald-400/70 hover:shadow-emerald-950/40",
@@ -396,7 +423,39 @@ function CategoryBox({ group }: { group: CategoryGroup }) {
         </p>
       )}
 
-      {group.patterns.length > 0 ? (
+      {group.patterns.length > 0 && isFlat ? (
+        <div className="grid max-h-[30rem] grid-cols-3 gap-1.5 overflow-y-auto border-t border-[#1e2d3d] pt-3 sm:grid-cols-4 xl:grid-cols-6 [scrollbar-color:#2a3a4f_transparent] [scrollbar-width:thin]">
+          {group.patterns.map((p) => (
+            <div
+              key={p.patternKey}
+              className={[
+                "flex items-center justify-between gap-2 rounded-md border px-2 py-1",
+                p.count > 0
+                  ? "border-emerald-500/30 bg-emerald-500/10"
+                  : "border-[#1e2d3d] bg-[#0c131f]",
+              ].join(" ")}
+              title={`${p.patternLabel}: ${p.count}`}
+            >
+              <span
+                className={[
+                  "truncate font-mono text-xs",
+                  p.count > 0 ? "font-semibold text-slate-100" : "text-slate-600",
+                ].join(" ")}
+              >
+                {p.patternLabel}
+              </span>
+              <span
+                className={[
+                  "shrink-0 font-mono text-[10px] font-bold",
+                  p.count > 0 ? "text-emerald-300" : "text-slate-600",
+                ].join(" ")}
+              >
+                {p.count}
+              </span>
+            </div>
+          ))}
+        </div>
+      ) : group.patterns.length > 0 ? (
         <div className="max-h-[30rem] space-y-px overflow-y-auto border-t border-[#1e2d3d] pt-2 [scrollbar-color:#2a3a4f_transparent] [scrollbar-width:thin]">
           {group.patterns.map((p, i) => {
             const pct = maxCount > 0 ? Math.max(p.count > 0 ? 4 : 0, Math.round((p.count / maxCount) * 100)) : 0;
@@ -558,6 +617,10 @@ export default function PatternStats() {
 
   const categories = useMemo<CategoryGroup[]>(() => {
     if (!rows) return [];
+    // Rows with no entry in views.ts's tree (i.e. OUTER PATTERNS' flat list)
+    // keep the census's own order — highest count first, ties in
+    // OUTER_PATTERN_KEYS priority order — via a running sequence number.
+    let seq = 0;
     const toStatRow = (categoryKey: string, r: PatternCensusRow): StatRow => {
       const m = treeMeta.get(`${categoryKey}::${r.patternKey}`);
       return {
@@ -566,7 +629,7 @@ export default function PatternStats() {
         count: r.count,
         depth: m?.depth ?? 1,
         kind: m?.kind ?? "pattern",
-        order: m?.index ?? Number.MAX_SAFE_INTEGER,
+        order: m?.index ?? 1_000_000 + seq++,
       };
     };
     const byKey = new Map<string, CategoryGroup>();
@@ -654,13 +717,15 @@ export default function PatternStats() {
   // Sum of each visible category's distinct count — the same total you get
   // by adding up the sidebar's category numbers. (The old figure summed
   // every pattern row, so a symbol matching several patterns was counted
-  // several times.) TOP 15 GAINERS / LOSERS are left out: they're rankings
-  // of symbols that also sit in the other categories, so adding them would
-  // count the same symbol twice.
+  // several times.) TOP 15 GAINERS / LOSERS and OUTER PATTERNS are left out:
+  // their symbols also sit in the other categories, so adding them would
+  // count the same symbol twice. (Selecting one of them on its own still
+  // shows its own total.)
   const totalMatches = useMemo(
     () =>
       visibleCategories.reduce(
-        (sum, g) => sum + (TOP_MOVER_IDS.has(g.categoryKey) && !TOP_MOVER_IDS.has(categoryFilter) ? 0 : g.distinctCount),
+        (sum, g) =>
+          sum + (OVERLAPPING_CATEGORY_IDS.has(g.categoryKey) && !OVERLAPPING_CATEGORY_IDS.has(categoryFilter) ? 0 : g.distinctCount),
         0
       ),
     [visibleCategories, categoryFilter]
