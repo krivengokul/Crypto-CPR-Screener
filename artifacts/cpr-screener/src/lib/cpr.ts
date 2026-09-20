@@ -65,7 +65,7 @@ export interface CPRPairFlags {
   r1DirVsPrev: -1 | 0 | 1;
   s1DirVsPrev: -1 | 0 | 1;
 
-  // Band-classification flags (order below matches pickPattern priority)
+  // Band-classification flags (order below matches pickOuterLevelPattern priority)
   CL4U3: boolean;
   CU3L2: boolean;
   CU3L3: boolean;
@@ -674,7 +674,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
   // of the four is always true, so an exact R4/S4 tie (e.g. COOKIEUSDT:
   // both r4 and s4 unchanged day-over-day) now correctly lands in
   // srHigher instead of silently falling through every strict inequality
-  // and defaulting to "Lower" in getPatternInfo.
+  // and defaulting to "Lower" in getOuterLevelPatternInfo.
   const r4Fell = today.r4 < prev.r4 && !eqTol(today.r4, prev.r4);
   const s4Fell = today.s4 < prev.s4 && !eqTol(today.s4, prev.s4);
 
@@ -1096,8 +1096,8 @@ export type OuterPatternKey = {
 
 /**
  * OUTER_PATTERN_KEYS — the named band-classification patterns, IN
- * pickPattern's priority order (first true flag wins). This array is the ONLY
- * place the label strings and their tie-break order live; pickPattern below
+ * pickOuterLevelPattern's priority order (first true flag wins). This array is the ONLY
+ * place the label strings and their tie-break order live; pickOuterLevelPattern below
  * just walks it. Every entry is also an independent boolean on CPRResult
  * (spread in from classifyCPRPair), so anything that needs "which of these
  * hold for this row" — e.g. Pattern Statistics' OUTER PATTERNS panel — can
@@ -1122,11 +1122,11 @@ export const OUTER_PATTERN_KEYS: readonly OuterPatternKey[] = [
 ];
 
 /**
- * pickPattern — priority-ordered label lookup: the first entry of
+ * pickOuterLevelPattern — priority-ordered label lookup: the first entry of
  * OUTER_PATTERN_KEYS whose flag is true, or null. The order in that array
  * must match the if-chain that historically lived in ScreenerUtils.
  */
-export function pickPattern(f: CPRPairFlags): string | null {
+export function pickOuterLevelPattern(f: CPRPairFlags): string | null {
   for (const key of OUTER_PATTERN_KEYS) {
     if (f[key]) return key;
   }
@@ -1277,7 +1277,7 @@ export const PATTERN_CATEGORY: Record<string, PatternCategory> = {
 
 /**
  * getPatternCategory — look up a pattern flag's category by name (e.g.
- * the string returned by pickPattern / computePrevPattern). Returns
+ * the string returned by pickOuterLevelPattern / computePrevPattern). Returns
  * null for names outside PATTERN_CATEGORY (unprefixed aggregate flags,
  * or an unrecognized string) instead of throwing, since sub-label strings
  * may originate from user-facing filter config.
@@ -1291,9 +1291,9 @@ export function getPatternCategory(name: string | null | undefined): PatternCate
  * isExpandedPatternPair — true when the (today, prev) pair classifies to
  * an "eXHigher" or "eXLower" pattern (EU2L4, EU3L4, EUTL3, EL2U4, ...),
  * i.e. today's range structurally EXPANDS on prev's rather than sitting
- * inside it. Built directly on classifyCPRPair + pickPattern + the same
+ * inside it. Built directly on classifyCPRPair + pickOuterLevelPattern + the same
  * PATTERN_CATEGORY table getPatternCategory reads, so this stays in sync
- * with "expanded"/pickPattern priority automatically — do not re-derive
+ * with "expanded"/pickOuterLevelPattern priority automatically — do not re-derive
  * this by checking r.expanded or a name prefix at the call site.
  *
  * Used by deriveLevelCheckDefs (backtest.ts): for an expanded pair, all
@@ -1305,7 +1305,7 @@ export function getPatternCategory(name: string | null | undefined): PatternCate
  * "previous" signature anyway.
  */
 export function isExpandedPatternPair(today: CPRLevels, prev: CPRLevels): boolean {
-  const category = getPatternCategory(pickPattern(classifyCPRPair(today, prev)));
+  const category = getPatternCategory(pickOuterLevelPattern(classifyCPRPair(today, prev)));
   return category === "eXHigher" || category === "eXLower";
 }
 

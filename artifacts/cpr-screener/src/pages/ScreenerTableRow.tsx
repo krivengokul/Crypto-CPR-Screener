@@ -15,7 +15,7 @@ import {
   distanceFromCPR,
   pdhPdlStatus,
   computePrevPattern,
-  computePivotPattern,
+  computeInnerLevelPattern,
   computeGapBadge,
   getViewDirection,
   getAnyViewDirection,
@@ -425,7 +425,7 @@ export function renderPrevPatternBadge(r: CPRResult, showMissing: boolean = true
 /**
  * PivotPattern badge — "E-{Level}-{RRHH}-{SSLL}" ("expanded") or
  * "C-{Level}-{RRHH}-{SSLL}" ("compressed") (see
- * ScreenerUtils.computePivotPattern / PIVOT_PATTERN_KEYS for the
+ * ScreenerUtils.computeInnerLevelPattern / INNER_LEVEL_PATTERN_KEYS for the
  * HHLLCategory x RRHHCategory x SSLLCategory derivation of both sets),
  * colour-coded via the same PATTERN_BADGE_CLASSES palette as every other
  * pattern badge. Replaces the previous-day "p-xxxx" badge
@@ -434,7 +434,7 @@ export function renderPrevPatternBadge(r: CPRResult, showMissing: boolean = true
  * for E-*, renderCompressedPatternBadge for C-*) into one, since
  * r.expanded/r.compressed are mutually exclusive so a row can never match
  * both families. CHANGED: no longer returns null when the row's category
- * combo doesn't match any PIVOT_PATTERN_KEYS entry (most commonly because
+ * combo doesn't match any INNER_LEVEL_PATTERN_KEYS entry (most commonly because
  * r.expanded/r.compressed/r.LevelsAbove/r.LevelsBelow are all false) —
  * renders the MISSING_PATTERN_CLASSES placeholder badge instead, so
  * callers that always want a badge slot filled (e.g. SRLadder's
@@ -442,7 +442,7 @@ export function renderPrevPatternBadge(r: CPRResult, showMissing: boolean = true
  * to restore the old null-when-absent behaviour.
  */
 export function renderPivotPatternBadge(r: CPRResult, showMissing: boolean = true) {
-  const pivotPattern = computePivotPattern(r);
+  const pivotPattern = computeInnerLevelPattern(r);
   if (!pivotPattern) {
     if (!showMissing) return null;
     return (
@@ -503,14 +503,14 @@ export function renderGapBadge(r: CPRResult) {
 /**
  * renderPivotAndGapBadges — PivotPattern badge + GapBadge together on one
  * line, for the Pattern column's second row (ScreenerTableRow). Thin
- * combinator over computePivotPattern/getBadgeClasses (mirroring
+ * combinator over computeInnerLevelPattern/getBadgeClasses (mirroring
  * renderPivotPatternBadge(r, showMissing=false)'s null-when-absent
  * behaviour for the pivot half) and renderGapBadge, so the two sit side by
  * side without nesting renderPivotPatternBadge's own wrapper div (which
  * would double up on its "mt-1" margin).
  */
 export function renderPivotAndGapBadges(r: CPRResult) {
-  const pivotPattern = computePivotPattern(r);
+  const pivotPattern = computeInnerLevelPattern(r);
   return (
     <div className="flex flex-wrap items-center gap-1 mt-1">
       {pivotPattern && (

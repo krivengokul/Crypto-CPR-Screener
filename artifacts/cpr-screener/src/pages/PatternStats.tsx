@@ -19,7 +19,7 @@ import {
   Target,
   Crosshair,
 } from "lucide-react";
-import { passesPattern, computePivotPattern, PIVOT_PATTERN_KEYS, normalizeViewDirection, type ViewDirection } from "./ScreenerUtils";
+import { passesPattern, computeInnerLevelPattern, INNER_LEVEL_PATTERN_KEYS, normalizeViewDirection, type ViewDirection } from "./ScreenerUtils";
 import { pivotcategories } from "@/lib/ViewsSidebar";
 import { buildViewTree, type ViewTreeNode } from "@/lib/views";
 import {
@@ -81,7 +81,7 @@ const OUTER_PATTERNS_OPTION: CategoryOption = {
 // INNER PATTERNS — the other synthetic panel: the PivotPattern badge in row 2
 // of the Pattern column (C-A-C-AA, A-A-AA-AA, ...), i.e. today's
 // RRSS-HHLL-RRHH-SSLL combo as a single key. Counted with ScreenerUtils'
-// own computePivotPattern, so it always agrees with the badge.
+// own computeInnerLevelPattern, so it always agrees with the badge.
 const INNER_PATTERNS_OPTION: CategoryOption = {
   id: INNER_PATTERNS_CATEGORY_KEY,
   label: INNER_PATTERNS_CATEGORY_LABEL,
@@ -110,7 +110,7 @@ const FLAT_LIST_IDS = new Set([OUTER_PATTERNS_CATEGORY_KEY, INNER_PATTERNS_CATEG
 
 // Handed to runPatternCensus so it can count INNER PATTERNS (backtest.ts
 // can't import ScreenerUtils itself).
-const INNER_PATTERNS_CONFIG = { keys: PIVOT_PATTERN_KEYS as readonly string[], compute: computePivotPattern };
+const INNER_PATTERNS_CONFIG = { keys: INNER_LEVEL_PATTERN_KEYS as readonly string[], compute: computeInnerLevelPattern };
 
 const CATEGORY_FILTER_OPTIONS: CategoryOption[] = [
   ...TOP_MOVER_OPTIONS,

@@ -1,7 +1,7 @@
 import type React from "react";
 import {
   classifyCPRPair,
-  pickPattern,
+  pickOuterLevelPattern,
   getPatternCategory,
   dirTol,
   type CPRLevels,
@@ -687,7 +687,7 @@ export function getActiveViewLabels(r: CPRResult): ActiveViewInfo[] {
  * construction — cpr.ts guarantees exactly one of srExpanded / srCompressed /
  * srHigher / srLower is true for every row, and within srExpanded/srCompressed
  * exactly one of the High/Low sub-flags is true (ties are folded into the
- * Higher variant in cpr.ts). getPatternInfo here just reads those flags in
+ * Higher variant in cpr.ts). getOuterLevelPatternInfo here just reads those flags in
  * order — no re-derivation, no ties, no null/unclassified rows.
  *
  * FIX (duplicate badge bug): CL2U1 / CL4U3 / L4U4 are intentionally
@@ -695,7 +695,7 @@ export function getActiveViewLabels(r: CPRResult): ActiveViewInfo[] {
  * exclusive sub-buckets of "Lower" the way eX-Higher/eX-Lower or
  * cO-Higher/cO-Lower are) and Screener.tsx already renders them as their
  * OWN separate second-row badges alongside the primary Pattern badge.
- * Having getPatternInfo() also return them as the PRIMARY label caused the
+ * Having getOuterLevelPatternInfo() also return them as the PRIMARY label caused the
  * same badge (e.g. "L4U4") to show twice on a row — once as the primary
  * badge instead of "Lower", and once again in the second row. The pivot
  * level filter buttons for CL2U1/CL4U3/L4U4 in Screener.tsx already
@@ -742,7 +742,7 @@ export interface PatternInfo {
 
 
 
-export function getPatternInfo(r: CPRResult): PatternInfo {
+export function getOuterLevelPatternInfo(r: CPRResult): PatternInfo {
   if (r.srExpandedHigher) {
     return { label: "eX-Higher", classes: "bg-purple-500/10 text-purple-400 border-purple-500/20" };
   }
@@ -767,16 +767,16 @@ export function getPatternInfo(r: CPRResult): PatternInfo {
  * truth for every migrated key via passesView(); the six
  * mutually-exclusive primary labels (eX-Higher/eX-Lower/cO-Higher/
  * cO-Lower/Higher/Lower) were never real VIEWS keys to begin with, so
- * they fall back to getPatternInfo(r)?.label, same fallback the
+ * they fall back to getOuterLevelPatternInfo(r)?.label, same fallback the
  * original switch's `default` case used.
  */
 export function matchesPatternFlag(r: CPRResult, label: string): boolean {
   if (getView(label)) return passesView(r, label);
-  return getPatternInfo(r)?.label === label;
+  return getOuterLevelPatternInfo(r)?.label === label;
 }
 
 /**
- * PIVOT_PATTERN_KEYS — the 80 "E-{Level}-{RRHH}-{SSLL}" (16, "expanded"),
+ * INNER_LEVEL_PATTERN_KEYS — the 80 "E-{Level}-{RRHH}-{SSLL}" (16, "expanded"),
  * "C-{Level}-{RRHH}-{SSLL}" (19, "compressed"), "A-E-{RRHH}-{SSLL}" (6,
  * "LevelsAbove" HHLL-E, renamed from RRSSA-EC/EE/ELB/EOB — the would-be
  * 7th, "A-E-AA-OB", was REMOVED entirely, see below),
@@ -794,17 +794,17 @@ export function matchesPatternFlag(r: CPRResult, label: string): boolean {
  * HHLLCategory/RRHHCategory/SSLLCategory checks, so keys from different
  * families can no longer collide on an identical condition even when their
  * HHLL/RRHH/SSLL combo happens to match. MERGED from what used to be two
- * separate lists (PIVOT_PATTERN_KEYS for E-*, COMPRESSED_PATTERN_KEYS for
+ * separate lists (INNER_LEVEL_PATTERN_KEYS for E-*, COMPRESSED_PATTERN_KEYS for
  * C-*) into one: r.expanded and r.compressed are mutually exclusive states,
  * so a row can never match both an E-* and a C-* key, making a single
  * combined list/function safe. The A-E-* keys added on top are NOT
  * guaranteed mutually exclusive with the E-* keys in general — LevelsAbove
  * can coincide with "expanded" for the same row — but none of the six A-E-*
  * keys included below duplicate an E-* condition or each other. Exported so
- * computePivotPattern below can iterate them without duplicating the list,
+ * computeInnerLevelPattern below can iterate them without duplicating the list,
  * and so other views/legends can reuse the same set.
  */
-export const PIVOT_PATTERN_KEYS = [
+export const INNER_LEVEL_PATTERN_KEYS = [
   "E-A-AA-OB", "E-A-OA-OB", "E-A-AA-SB", "E-A-AA-C", "E-A-OA-C",
   "E-A-AA-E", "E-A-OA-E", "E-B-RA-BB", "E-B-C-BB", "E-B-E-BB",
   "E-B-C-OB", "E-B-E-OB", "E-E-AA-BB", "E-E-OA-BB", "E-E-AA-OB",
@@ -825,7 +825,7 @@ export const PIVOT_PATTERN_KEYS = [
   // sets (all "levelsabove" / r.LevelsAbove), added here for the same
   // reason as the A-E-* block above: they were already defined in
   // PIVOT_PATTERNS and already listed in backtest.ts's dropdown, but were
-  // never added to this array, so computePivotPattern/renderPivotPatternBadge
+  // never added to this array, so computeInnerLevelPattern/renderPivotPatternBadge
   // never tried them — rows matching these HHLL-A/B/C combos (e.g. HHLL-A +
   // RRHH-AA + SSLL-AA) got no badge at all, even though the Backtest scan
   // for the same key worked fine. "A-A-OA-AA" and "A-A-OA-OA" USED TO BE
@@ -854,7 +854,7 @@ export const PIVOT_PATTERN_KEYS = [
   // was added above: these 21 keys were already defined in PIVOT_PATTERNS
   // and already listed in backtest.ts's dropdown (all matching key
   // strings — the Backtest scans for them work fine), but were never
-  // added to this array, so computePivotPattern/renderPivotPatternBadge
+  // added to this array, so computeInnerLevelPattern/renderPivotPatternBadge
   // never tried them — rows matching these HHLL-A/B/C/E + LevelsBelow
   // combos got no badge at all in the Pattern column. No duplicates to
   // omit here (unlike A-A-OA-AA/A-A-OA-OA and A-E-AA-OB above) — none of
@@ -873,23 +873,23 @@ export const PIVOT_PATTERN_KEYS = [
   "B-E-OB-OB", "B-E-OA-BB",
 ] as const;
 
-export type PivotPatternKey = (typeof PIVOT_PATTERN_KEYS)[number];
+export type PivotPatternKey = (typeof INNER_LEVEL_PATTERN_KEYS)[number];
 
-const PIVOT_PATTERN_KEYS_SET = new Set<string>(PIVOT_PATTERN_KEYS);
+const INNER_LEVEL_PATTERN_KEYS_SET = new Set<string>(INNER_LEVEL_PATTERN_KEYS);
 
 /**
- * computePivotPattern — the single PIVOT_PATTERN_KEYS entry this row's
+ * computeInnerLevelPattern — the single INNER_LEVEL_PATTERN_KEYS entry this row's
  * HHLLCategory/RRHHCategory/SSLLCategory combo matches (see
  * passesPattern's "E-..."/"C-..." cases for the derivation), or null when
  * none match — either r.expanded and r.compressed are both false, or (rare)
  * the specific combo has no key defined for it.
  * HHLLCategory/RRHHCategory/SSLLCategory are each mutually-exclusive
  * partitions, and r.expanded/r.compressed are themselves mutually
- * exclusive, so at most one PIVOT_PATTERN_KEYS entry can match a given
+ * exclusive, so at most one INNER_LEVEL_PATTERN_KEYS entry can match a given
  * row; this is what the PivotPattern badge (see ScreenerTableRow)
  * renders.
  */
-export function computePivotPattern(r: CPRResult): PivotPatternKey | null {
+export function computeInnerLevelPattern(r: CPRResult): PivotPatternKey | null {
   // Fast path: direct derivation from row categories (O(1))
   const ssrr = r.SSRRCategory?.replace("RRSS-", "");
   const hhll = r.HHLLCategory?.replace("HHLL-", "");
@@ -897,12 +897,12 @@ export function computePivotPattern(r: CPRResult): PivotPatternKey | null {
   const ssll = r.SSLLCategory?.replace("SSLL-", "");
   if (ssrr && hhll && rrhh && ssll) {
     const candidate = `${ssrr}-${hhll}-${rrhh}-${ssll}`;
-    if (PIVOT_PATTERN_KEYS_SET.has(candidate)) {
+    if (INNER_LEVEL_PATTERN_KEYS_SET.has(candidate)) {
       return candidate as PivotPatternKey;
     }
   }
 
-  for (const key of PIVOT_PATTERN_KEYS) {
+  for (const key of INNER_LEVEL_PATTERN_KEYS) {
     if (passesPattern(r, key)) return key;
   }
   return null;
@@ -928,7 +928,7 @@ export function computePivotPattern(r: CPRResult): PivotPatternKey | null {
  * hlGapWinner is single-valued ("today" | "prev" | "none"), so at most one
  * "Gap" appears. All four source fields are always present and mutually
  * exclusive within their own category, so this always returns a definite
- * label — no null/"missing" case, unlike computePivotPattern.
+ * label — no null/"missing" case, unlike computeInnerLevelPattern.
  */
 export function computeGapBadge(r: CPRResult): string {
   const letter1 = r.RRSSGapCategory === "RRGap" ? "R" : r.RRSSGapCategory === "SSGap" ? "S" : "Q";
@@ -955,7 +955,7 @@ export function computeGapBadge(r: CPRResult): string {
 /**
  * computePrevPattern — given two CPR-level objects, computes which
  * Pattern pivot label applies to the (today, prev) pair. Delegates
- * entirely to classifyCPRPair + pickPattern in cpr.ts, which is
+ * entirely to classifyCPRPair + pickOuterLevelPattern in cpr.ts, which is
  * the single source of truth for the band conditions and label priority.
  *
  * Used in the U1>pU4 section to find the PREVIOUS day's Pattern:
@@ -967,7 +967,7 @@ export function computePrevPattern(
   prev: CPRLevels | undefined | null,
 ): string | null {
   if (!prev) return null;
-  return pickPattern(classifyCPRPair(today, prev));
+  return pickOuterLevelPattern(classifyCPRPair(today, prev));
 }
 
 

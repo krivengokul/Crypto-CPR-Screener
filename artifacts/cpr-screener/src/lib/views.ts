@@ -6,7 +6,7 @@ import type {
   SSLLCategory,
   RRHHCategory,
 } from "./cpr";
-import { dirTol, classifyCPRPair, pickPattern, getPatternCategory } from "./cpr";
+import { dirTol, classifyCPRPair, pickOuterLevelPattern, getPatternCategory } from "./cpr";
 
 /**
  * views.ts — SINGLE SOURCE OF TRUTH for every Category / Pattern / View key
@@ -517,7 +517,7 @@ export const PIVOT_PATTERNS: Record<string, (r: CPRResult) => boolean> =
  */
 function computePrevPattern(today: CPRLevels, prev: CPRLevels | undefined | null): string | null {
   if (!prev) return null;
-  return pickPattern(classifyCPRPair(today, prev));
+  return pickOuterLevelPattern(classifyCPRPair(today, prev));
 }
 
 const LEVELSABOVE_VIEWS: ViewDef[] = [
@@ -4086,7 +4086,7 @@ VIEWS.push(...OVERLAP_ABOVE_DUPLICATE_VIEWS);
 // Step 3, batch 5 (coverage audit) — the ~25-and-then-some standalone
 // raw-flag Pattern badges from matchesPatternFlag's switch (lines
 // 1904-2086) that were never nested anywhere in BACKTEST_CATEGORIES at
-// all. Per getPatternInfo's own doc comment in ScreenerUtils.tsx: these
+// all. Per getOuterLevelPatternInfo's own doc comment in ScreenerUtils.tsx: these
 // are "independent, section-agnostic booleans" that Screener.tsx renders
 // as their own second-row badges and Pattern filter buttons, checking
 // the raw r.<FLAG> directly — regardless of activeView/left-nav section.
@@ -4171,17 +4171,17 @@ VIEWS.push(...RAW_FLAG_VIEWS);
 /**
  * NOTE on matchesPatternFlag's ORIGINAL `default` case: it wasn't a raw
  * flag lookup at all, but a fallback to the row's own single computed
- * dominant-pattern label (getPatternInfo(r).label) for the six
+ * dominant-pattern label (getOuterLevelPatternInfo(r).label) for the six
  * mutually-exclusive primary labels: "eX-Higher" | "eX-Lower" |
- * "cO-Higher" | "cO-Lower" | "Higher" | "Lower". getPatternInfo lives in
+ * "cO-Higher" | "cO-Lower" | "Higher" | "Lower". getOuterLevelPatternInfo lives in
  * ScreenerUtils.tsx (not cpr.ts), and importing it here would create a
  * circular dependency (ScreenerUtils.tsx imports passesView from this
  * file). So that fallback stays in ScreenerUtils.tsx's own
  * matchesPatternFlag wrapper instead of being folded into views.ts —
  * see the ScreenerUtils.tsx diff: `export function matchesPatternFlag(r,
  * label) { return getView(label) ? passesView(r, label) :
- * getPatternInfo(r)?.label === label; }`, same fallback order as the
- * original switch (explicit cases first, getPatternInfo default last).
+ * getOuterLevelPatternInfo(r)?.label === label; }`, same fallback order as the
+ * original switch (explicit cases first, getOuterLevelPatternInfo default last).
  */
 
 // ---------------------------------------------------------------------

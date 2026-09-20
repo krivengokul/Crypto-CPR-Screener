@@ -1712,8 +1712,8 @@ export const OUTER_PATTERNS_CATEGORY_LABEL = "OUTER PATTERNS";
 // INNER PATTERNS — the other synthetic census category: the PivotPattern
 // badge shown in row 2 of the Screener's Pattern column ("C-A-C-AA",
 // "A-A-AA-AA", ...), i.e. today's RRSS-HHLL-RRHH-SSLL combo written as one
-// key. ScreenerUtils owns that list (PIVOT_PATTERN_KEYS) and the per-row
-// derivation (computePivotPattern), and ScreenerUtils can't be imported
+// key. ScreenerUtils owns that list (INNER_LEVEL_PATTERN_KEYS) and the per-row
+// derivation (computeInnerLevelPattern), and ScreenerUtils can't be imported
 // from here, so PatternStats hands both in through runPatternCensus's
 // optional `innerPatterns` argument — same injection idea as
 // passesPatternFn. Omit the argument and the category is left out.

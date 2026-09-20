@@ -51,7 +51,7 @@ import {
   pdhPdlStatus,
   cprDistancePct,
   levelsInDistanceRange,
-  getPatternInfo,
+  getOuterLevelPatternInfo,
   computePrevPattern,
   type PatternInfo,
   getViewDirection,
@@ -825,8 +825,8 @@ export default function Screener({
     // NEW: CL2U1 / CL4U3 are independent booleans in cpr.ts (not
     // actually gated behind srLower), so a row can satisfy one of them
     // AND a higher-priority bucket (e.g. srHigher) at the same time.
-    // getPatternInfo() only ever returns ONE label per row and checks the
-    // other buckets first, so matching on getPatternInfo(r)?.label would
+    // getOuterLevelPatternInfo() only ever returns ONE label per row and checks the
+    // other buckets first, so matching on getOuterLevelPatternInfo(r)?.label would
     // silently miss rows where CL2U1/CL4U3 is true but shadowed by
     // an earlier bucket. Check the raw flags directly for these two so
     // the filter buttons actually work independent of the primary badge.
@@ -847,7 +847,7 @@ export default function Screener({
       if (PatternFilter === "CL4U3") return r.CL4U3;
       if (PatternFilter === "L4U4") return r.L4U4;
       // NEW: EU4L4 — independent, section-agnostic Pattern flag (see
-      // doc-comment on PatternInfo/getPatternInfo in ScreenerUtils.tsx).
+      // doc-comment on PatternInfo/getOuterLevelPatternInfo in ScreenerUtils.tsx).
       if (PatternFilter === "EU4L4") return r.EU4L4;
       // NEW: EL4U4 — independent, section-agnostic Pattern flag, mirror
       // of EU4L4 gated on srExpandedLower instead of srExpandedHigher
@@ -957,7 +957,7 @@ export default function Screener({
       if (PatternFilter === "CU3L1") return r.CU3L1;
       // NEW: U2L3 (today S4 in prev S3/S2, prev R4 in prev R1/R2)
       if (PatternFilter === "U2L3") return r.U2L3;
-      return getPatternInfo(r)?.label === PatternFilter;
+      return getOuterLevelPatternInfo(r)?.label === PatternFilter;
     })
     .filter((r) => matchesWidthFilter(r, prevWidthFilter, todayWidthFilter))
     // NEW: Price Level filter — price above PDH, below PDL, above prev day's
