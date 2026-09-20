@@ -953,6 +953,8 @@ export default function Screener({
       if (PatternFilter === "L2U3") return r.L2U3;
       // NEW: CU2L1 (today S4 in prev S1/BC, today R4 in prev R1/R2)
       if (PatternFilter === "CU2L1") return r.CU2L1;
+      // NEW: CU2BC (today S4 in prev BC/Pivot, today R4 in prev R1/R2)
+      if (PatternFilter === "CU2BC") return r.CU2BC;
       // NEW: CU3L1 (today S4 in prev S1/BC, today R4 in prev R2/R3)
       if (PatternFilter === "CU3L1") return r.CU3L1;
       // NEW: U2L3 (today S4 in prev S3/S2, prev R4 in prev R1/R2)
@@ -1691,6 +1693,8 @@ export default function Screener({
                   { label: "L2U3", active: getBadgeClasses("L2U3") },
                   // NEW: CU2L1 — today S4 inside prev S1/BC (L1) AND today R4 inside prev R1/R2 (U2).
                   { label: "CU2L1", active: getBadgeClasses("CU2L1") },
+                   // NEW: CU2BC — today S4 inside prev BC/Pivot AND today R4 inside prev R1/R2 (U2).
+                   { label: "CU2BC", active: getBadgeClasses("CU2BC") },
                   // NEW: CU3L1 — today S4 inside prev S1/BC (L1) AND today R4 inside prev R2/R3 (U3).
                   { label: "CU3L1", active: getBadgeClasses("CU3L1") },
                   // NEW: U2L3 — today S4 inside prev S3/S2 (L3) AND prev R4 inside prev's own R1/R2 (U2).

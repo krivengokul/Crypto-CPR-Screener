@@ -108,6 +108,9 @@ export interface CPRPairFlags {
   CU1L1: boolean;
   CL2U2: boolean;
   CU2L2: boolean;
+  // CU2BC — today's S4 lands inside prev's BC/Pivot band, AND today's R4
+  // lands inside prev's R1/R2 band.
+  CU2BC: boolean;
   U3L3: boolean;
   CL3U1: boolean;
 
@@ -402,6 +405,7 @@ export interface CPRResult {
   CU1L1: boolean;
   CL2U2: boolean;
   CU2L2: boolean;
+  CU2BC: boolean;
   U3L3: boolean;
   CL3U1: boolean;
   L3CP: boolean;
@@ -1060,6 +1064,11 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
   const CU2L1 = (today.s4 >= prev.s1 && today.s4 < prev.bc) &&
                  (today.r4 > prev.r1 && today.r4 < prev.r2);
 
+  // CU2BC — today's S4 lands inside prev's BC/Pivot band (strictly) AND
+  // today's R4 lands inside prev's R1/R2 band (strictly).
+  const CU2BC = (today.s4 > prev.bc && today.s4 < prev.pivot) &&
+                (today.r4 > prev.r1 && today.r4 < prev.r2);
+
   // CU3L1 — today's S4 lands inside prev's S1/BC band (L1, same support
   // band as CU2L1) AND today's R4 lands inside prev's R2/R3 band (U3,
   // same resistance band as CU3L2/CU3L3).
@@ -1075,7 +1084,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
     L4U4, EU3L4, EL2U4, EL3U4, CU4L2, CU4L4, CL4U4, EU2L3,
     CU4L3, CL3U3, L4U3, L3U3, CL3U2, L4U2, L3U2, L3U4, L2U4,
     L1U4, CL2U1, CL4U2, EU3L3, EL3U3,
-    CL1U1, CU1L1, CL2U2, CU2L2,
+    CL1U1, CU1L1, CL2U2, CU2L2, CU2BC,
     U3L3, CL3U1,
     EU1L2, EU1L3, EU1L4, EUBL1, EUPL1, EUTL1, EUBL2, EUBL3, EUPL3,
     EUTL3, EU2L4, EU2L2, EUTL2, EU1L1, EL1U1, EL1U2, CL2UT, compressed, expanded, LevelsBelow, LevelsAbove, R1AbovePR4, S1BelowPS4,
@@ -1118,7 +1127,7 @@ export const OUTER_PATTERN_KEYS: readonly OuterPatternKey[] = [
   "EUBL3", "EUPL3", "EUTL3", "EU2L4", "EU2L2", "EUTL2", "EU1L1", "EL1U1",
   "EL1U2", "CL2UT", "EL1U3", "EL2U3", "ELTU2", "ELBU2", "ELTU3", "ELPU2",
   "ELPU3", "ELBU3", "EL1U4", "ELBU4", "L3CP", "L2CP", "L3TC", "EL1L2",
-  "EL2L1", "EUPL2", "EUTL4", "L2U3", "CU2L1", "CU3L1", "U2L3",
+  "EL2L1", "EUPL2", "EUTL4", "L2U3", "CU2L1", "CU2BC", "CU3L1", "U2L3",
 ];
 
 /**

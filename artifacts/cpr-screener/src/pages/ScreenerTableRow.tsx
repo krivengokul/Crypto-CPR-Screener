@@ -62,6 +62,7 @@ export const PATTERN_BADGE_CLASSES: Record<string, string> = {
   CU2L2: "bg-cyan-600/10 text-cyan-300 border border-cyan-600/20",
   CL2U1: "bg-sky-500/10 text-sky-300 border border-sky-500/20",
   CU2L1: "bg-sky-500/10 text-sky-300 border border-sky-500/20",
+  CU2BC: "bg-sky-500/10 text-sky-300 border border-sky-500/20",
   CL1U1: "bg-cyan-600/10 text-cyan-400 border border-cyan-600/20",
   CU1L1: "bg-cyan-600/10 text-cyan-400 border border-cyan-600/20",
   CL2UT: "bg-sky-500/10 text-sky-400 border border-sky-500/20",
@@ -280,7 +281,7 @@ export function getBadgeClasses(label: string): string {
  */
 export function renderTodayPatternBadges(r: CPRResult) {
   const hasAny =
-    r.CL4U3 || r.L4U4 || r.EU3L4 || r.EU4L4 || r.EL4U4 || r.QU4L4 || r.U4L2 || r.U3L2 || r.U4L3 || r.U1L4 || r.U4L4 || r.U3L4 || r.U2L4 || r.CU3L2 || r.CU3L3 || r.EL2U4 || r.EL3U4 || r.CU4L2 || r.EU3L3 || r.EL3U3 || r.CU4L4 || r.CU4L3 || r.CL3U3 || r.L4U3 || r.L3U3 || r.L4U2 || r.L3U2 || r.L3U4 || r.L2U4 || r.CL3U2 || r.L1U4 || r.CL2U1 || r.CL4U2 || r.CL1U1 || r.CU1L1 || r.CL2U2 || r.CU2L2 || r.CL4U4 || r.EU2L3 || r.EU2L4 || r.EU2L2 || r.EUTL2 || r.EUTL3 || r.EU1L1 || r.EL1U1 || r.EL1U2 || r.CL2UT || r.EL1U3 || r.EL2U3 || r.ELTU2 || r.ELBU2 || r.ELTU3 || r.ELPU2 || r.ELPU3 || r.ELBU3 || r.EUPL2 || r.EUTL4 || r.L2U3 || r.CU2L1 || r.CU3L1 || r.U2L3 || r.EL1U4 || r.ELBU4 || r.U3L3 || r.CL3U1 || r.EU1L2 || r.EU1L3 || r.EU1L4 || r.EUBL1 || r.EUPL1 || r.EUTL1 || r.EUBL2 || r.EUBL3 || r.EUPL3 || r.L3CP || r.L2CP || r.L3TC || r.EL1L2 || r.EL2L1;
+    r.CL4U3 || r.L4U4 || r.EU3L4 || r.EU4L4 || r.EL4U4 || r.QU4L4 || r.U4L2 || r.U3L2 || r.U4L3 || r.U1L4 || r.U4L4 || r.U3L4 || r.U2L4 || r.CU3L2 || r.CU3L3 || r.EL2U4 || r.EL3U4 || r.CU4L2 || r.EU3L3 || r.EL3U3 || r.CU4L4 || r.CU4L3 || r.CL3U3 || r.L4U3 || r.L3U3 || r.L4U2 || r.L3U2 || r.L3U4 || r.L2U4 || r.CL3U2 || r.L1U4 || r.CL2U1 || r.CL4U2 || r.CL1U1 || r.CU1L1 || r.CL2U2 || r.CU2L2 || r.CU2BC || r.CL4U4 || r.EU2L3 || r.EU2L4 || r.EU2L2 || r.EUTL2 || r.EUTL3 || r.EU1L1 || r.EL1U1 || r.EL1U2 || r.CL2UT || r.EL1U3 || r.EL2U3 || r.ELTU2 || r.ELBU2 || r.ELTU3 || r.ELPU2 || r.ELPU3 || r.ELBU3 || r.EUPL2 || r.EUTL4 || r.L2U3 || r.CU2L1 || r.CU3L1 || r.U2L3 || r.EL1U4 || r.ELBU4 || r.U3L3 || r.CL3U1 || r.EU1L2 || r.EU1L3 || r.EU1L4 || r.EUBL1 || r.EUPL1 || r.EUTL1 || r.EUBL2 || r.EUBL3 || r.EUPL3 || r.L3CP || r.L2CP || r.L3TC || r.EL1L2 || r.EL2L1;
   if (!hasAny) return null;
   // Colour-coded via the same PATTERN_BADGE_CLASSES palette (getBadgeClasses)
   // as every other pattern badge — CHANGED from a hardcoded per-key className
@@ -324,6 +325,7 @@ export function renderTodayPatternBadges(r: CPRResult) {
     "CU1L1",
     "CL2U2",
     "CU2L2",
+    "CU2BC",
     "CL4U4",
     "EU2L3",
     "EU2L4",
