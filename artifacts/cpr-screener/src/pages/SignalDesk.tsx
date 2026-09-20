@@ -148,11 +148,12 @@ function getCategoryLabel(rawCategory: string): string {
   return CATEGORY_LABELS[rawCategory] ?? rawCategory;
 }
 
-// Which View (if any) a row matches — same lookup computeSignalLevels
-// uses for its primaryView, pulled out standalone so category can be
-// resolved even when computeSignalLevels itself returns null (a row can
-// match a real View pattern — and therefore have a real category — while
-// that View has no BACKTEST_TARGETS entry to compute a target/stop from).
+// Which View (if any) a row matches, testing preferredViewId first if
+// given, else every declared View's own passesPattern condition. Used by
+// computeSignalLevels to find the specific curated View/signal a row
+// qualifies for (distinct from getRowCategory below, which reads the row's
+// own broad top-level classification flags directly and works whether or
+// not any specific View matches).
 function findPrimaryView(
   r: CPRResultWithSource,
   viewPills: { id: string; label: string }[],
@@ -163,23 +164,39 @@ function findPrimaryView(
     : viewPills.find((v) => passesPattern(r, v.id));
 }
 
+// Which top-level category a row itself belongs to, read directly off its
+// own classification flags — the SAME flags views.ts's top-level "category"
+// kind nodes gate on (r.LevelsAbove, r.LevelsBelow, r.compressed,
+// r.expanded, r.R1AbovePR4, r.S1BelowPS4, r.touchCategory). These are
+// mutually-exclusive partitions computed upstream in cpr.ts (confirmed by
+// views.ts's own doc comment: R1AbovePR4/S1BelowPS4 are "true complements
+// of levelsabove/levelsbelow", and touchCategory "already applies the
+// shared precedence rule ... Level4 crossings ... do not also appear under
+// TOUCH") — so this works for EVERY row, whether or not it happens to also
+// qualify for any specific curated View/signal.
+function getRowCategory(r: CPRResultWithSource): string {
+  if (r.LevelsAbove) return "levelsabove";
+  if (r.R1AbovePR4) return "R1AbovePR4";
+  if (r.LevelsBelow) return "levelsbelow";
+  if (r.compressed) return "compressed";
+  if (r.expanded) return "expanded";
+  if (r.S1BelowPS4) return "S1BelowPS4";
+  if (r.touchCategory) return "touch";
+  return "";
+}
+
 // Resolves a card's Category independent of whether it has a full computed
 // signal (levels/isSaved) — this is what makes Category display for every
-// symbol, not just ones belonging to an Active View. Prefers testing the
-// row directly against every declared View pattern (passesPattern) when a
-// full CPRResultWithSource is available; falls back to whatever patternId
-// the card already resolved to (e.g. the currently selected/active View)
-// when only the lightweight `symbols` projection is available and no row
-// can be tested.
-function resolveCategory(
-  row: CPRResultWithSource | undefined,
-  viewPills: { id: string; label: string }[],
-  fallbackPatternId: string,
-  preferredViewId?: string
-): string {
+// symbol, not just ones belonging to an Active View. Prefers the row's own
+// classification flags (getRowCategory) whenever a full CPRResultWithSource
+// is available; falls back to whatever patternId the card already resolved
+// to (e.g. the currently selected/active View) only when no row at all is
+// available to read flags from (the lightweight `symbols`-only path with no
+// `results` supplied).
+function resolveCategory(row: CPRResultWithSource | undefined, fallbackPatternId: string): string {
   if (row) {
-    const primaryView = findPrimaryView(row, viewPills, preferredViewId);
-    if (primaryView) return getCategoryForViewId(primaryView.id);
+    const category = getRowCategory(row);
+    if (category) return category;
   }
   return fallbackPatternId ? getCategoryForViewId(fallbackPatternId) : "";
 }
@@ -414,7 +431,7 @@ export default function SignalDesk({
           type: `${patternLabel} Setup`,
           patternName: patternLabel,
           patternId,
-          category: resolveCategory(matchedRow, viewPills, patternId),
+          category: resolveCategory(resultsBySymbol.get(sym.symbol), patternId),
           triggerPrice: price,
           // Always the live-refreshed price, never the static BC/TC entry
           // level `price` resolves to when `levels` is set — see
@@ -498,7 +515,7 @@ export default function SignalDesk({
         type: `${patternLabel} Setup`,
         patternName: patternLabel,
         patternId,
-        category: resolveCategory(r, viewPills, patternId, selectedViewPattern || undefined),
+        category: resolveCategory(r, patternId),
         triggerPrice: price,
         // Same fix as the `symbols` branch above: keep the live-refreshed
         // r.currentPrice for display, don't collapse it into the static
