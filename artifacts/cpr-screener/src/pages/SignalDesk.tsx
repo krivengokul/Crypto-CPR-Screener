@@ -803,6 +803,24 @@ R:R: ${item.riskReward}`;
               const isUp = item.direction === "Up" || (item.direction as string) === "LONG";
               const isDown = item.direction === "Down" || (item.direction as string) === "SHORT";
 
+              // Direction badge — only for symbols with a real signal
+              // (Active View match, item.isSaved). Placed top-right for Up,
+              // top-left for Down (see the two render spots below).
+              const directionBadge = item.isSaved && (
+                <span
+                  className={`text-xs font-bold px-2 py-0.5 rounded-md flex items-center gap-1 font-mono shrink-0 ${
+                    isUp
+                      ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
+                      : isDown
+                      ? "bg-rose-500/20 text-rose-400 border border-rose-500/40"
+                      : "bg-slate-500/20 text-slate-300 border border-slate-500/40"
+                  }`}
+                >
+                  {isUp ? <ArrowUpRight className="w-3.5 h-3.5" /> : isDown ? <ArrowDownRight className="w-3.5 h-3.5" /> : null}
+                  {isUp ? "Up" : isDown ? "Down" : item.direction}
+                </span>
+              );
+
               return (
                 <div
                   key={item.id}
@@ -811,6 +829,11 @@ R:R: ${item.riskReward}`;
                   {/* Card Top */}
                   <div>
                     <div className="flex items-start justify-between mb-3">
+                      {/* Down signals get the badge on the top-left, ahead
+                          of the symbol block; Up (and no-signal) keep the
+                          symbol block alone on the left. */}
+                      {isDown && directionBadge}
+
                       {/* Left: Symbol & Exchange + Live Price & 24h % change */}
                       <div className="flex items-start gap-4 sm:gap-6">
                         <div>
@@ -857,24 +880,9 @@ R:R: ${item.riskReward}`;
                         </div>
                       </div>
 
-                      {/* Direction Badge on the right — only for symbols
-                          with a real signal (Active View match). item.isSaved
-                          flags that same eligibility, see the stats useMemo
-                          comment above for why. */}
-                      {item.isSaved && (
-                        <span
-                          className={`text-xs font-bold px-2 py-0.5 rounded-md flex items-center gap-1 font-mono shrink-0 ${
-                            isUp
-                              ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
-                              : isDown
-                              ? "bg-rose-500/20 text-rose-400 border border-rose-500/40"
-                              : "bg-slate-500/20 text-slate-300 border border-slate-500/40"
-                          }`}
-                        >
-                          {isUp ? <ArrowUpRight className="w-3.5 h-3.5" /> : isDown ? <ArrowDownRight className="w-3.5 h-3.5" /> : null}
-                          {isUp ? "Up" : isDown ? "Down" : item.direction}
-                        </span>
-                      )}
+                      {/* Up (and no-signal) signals keep the badge on the
+                          top-right, as before. */}
+                      {!isDown && directionBadge}
                     </div>
 
                     {/* Live Price Progress Bar — red-left/green-right for Up,
