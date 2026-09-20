@@ -691,7 +691,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
   const CL4U3 = (today.s4 > prev.s4 && today.s4 < prev.s3) &&
                  (today.r4 > prev.r2 && today.r4 < prev.r3);
   const CU3L2 = (today.s4 >= prev.s2 && today.s4 < prev.s1) &&
-                   (today.r4 > prev.r2 && today.r4 < prev.r3);
+                   (today.r4 > prev.r2 && today.r4 <= prev.r3);
   const CU3L3 = (today.s4 > prev.s3 && today.s4 < prev.s2) &&
                    (today.r4 > prev.r2 && today.r4 < prev.r3) && srCompressedHigher;
   const CL3U3   = (today.s4 >= prev.s3 && today.s4 < prev.s2) &&
