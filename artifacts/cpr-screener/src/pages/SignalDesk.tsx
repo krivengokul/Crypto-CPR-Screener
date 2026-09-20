@@ -124,6 +124,66 @@ function getCategoryForViewId(id: string): string {
   return "";
 }
 
+// Friendly display names for the Views object's top-level category keys
+// (raw keys, exactly as declared in ViewsSidebar.tsx). This is the ONLY
+// place these need updating if a category is renamed/added there — every
+// other reference goes through getCategoryLabel below, never the raw key.
+const CATEGORY_LABELS: Record<string, string> = {
+  levelsabove: "Level Above",
+  levelsbelow: "Level Below",
+  compressed: "Compressed",
+  expanded: "Expanded",
+  R1AbovePR4: "Above Level4",
+  S1BelowPS4: "Below Level4",
+  touch: "Touch",
+  copyViews: "Created Views",
+};
+
+// Prettify a raw category key for display — falls back to the raw key
+// itself for any bucket not yet in CATEGORY_LABELS (e.g. a brand-new
+// category added to Views before this map is updated), so nothing ever
+// silently disappears.
+function getCategoryLabel(rawCategory: string): string {
+  if (!rawCategory) return "";
+  return CATEGORY_LABELS[rawCategory] ?? rawCategory;
+}
+
+// Which View (if any) a row matches — same lookup computeSignalLevels
+// uses for its primaryView, pulled out standalone so category can be
+// resolved even when computeSignalLevels itself returns null (a row can
+// match a real View pattern — and therefore have a real category — while
+// that View has no BACKTEST_TARGETS entry to compute a target/stop from).
+function findPrimaryView(
+  r: CPRResultWithSource,
+  viewPills: { id: string; label: string }[],
+  preferredViewId?: string
+) {
+  return preferredViewId
+    ? viewPills.find((v) => v.id === preferredViewId)
+    : viewPills.find((v) => passesPattern(r, v.id));
+}
+
+// Resolves a card's Category independent of whether it has a full computed
+// signal (levels/isSaved) — this is what makes Category display for every
+// symbol, not just ones belonging to an Active View. Prefers testing the
+// row directly against every declared View pattern (passesPattern) when a
+// full CPRResultWithSource is available; falls back to whatever patternId
+// the card already resolved to (e.g. the currently selected/active View)
+// when only the lightweight `symbols` projection is available and no row
+// can be tested.
+function resolveCategory(
+  row: CPRResultWithSource | undefined,
+  viewPills: { id: string; label: string }[],
+  fallbackPatternId: string,
+  preferredViewId?: string
+): string {
+  if (row) {
+    const primaryView = findPrimaryView(row, viewPills, preferredViewId);
+    if (primaryView) return getCategoryForViewId(primaryView.id);
+  }
+  return fallbackPatternId ? getCategoryForViewId(fallbackPatternId) : "";
+}
+
 // Entry/target/stop for a single CPR result row — sourced ENTIRELY from
 // Entry/target/stop for a single CPR result row — sourced ENTIRELY from
 // backtest.ts's own BACKTEST_TARGETS (the exact same lookup runBacktest /
@@ -139,9 +199,7 @@ export function computeSignalLevels(
   viewPills: { id: string; label: string }[],
   preferredViewId?: string
 ) {
-  const primaryView = preferredViewId
-    ? viewPills.find((v) => v.id === preferredViewId)
-    : viewPills.find((v) => passesPattern(r, v.id));
+  const primaryView = findPrimaryView(r, viewPills, preferredViewId);
   if (!primaryView) return null;
 
   const targetDef = getView(primaryView.id);
@@ -356,7 +414,7 @@ export default function SignalDesk({
           type: `${patternLabel} Setup`,
           patternName: patternLabel,
           patternId,
-          category: levels ? levels.category : "",
+          category: resolveCategory(matchedRow, viewPills, patternId),
           triggerPrice: price,
           // Always the live-refreshed price, never the static BC/TC entry
           // level `price` resolves to when `levels` is set — see
@@ -440,7 +498,7 @@ export default function SignalDesk({
         type: `${patternLabel} Setup`,
         patternName: patternLabel,
         patternId,
-        category: levels?.category ?? "",
+        category: resolveCategory(r, viewPills, patternId, selectedViewPattern || undefined),
         triggerPrice: price,
         // Same fix as the `symbols` branch above: keep the live-refreshed
         // r.currentPrice for display, don't collapse it into the static
@@ -977,7 +1035,7 @@ R:R: ${item.riskReward}`;
                       </div>
                       <div className="flex items-center gap-1">
                         <span>Category:</span>
-                        <strong className="text-slate-200 font-semibold">{item.isSaved ? item.category : ""}</strong>
+                        <strong className="text-slate-200 font-semibold">{getCategoryLabel(item.category)}</strong>
                       </div>
                     </div>
                   </div>
