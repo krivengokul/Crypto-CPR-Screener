@@ -197,11 +197,19 @@ async function fetchActiveSymbols(): Promise<string[]> {
 }
 
 interface PriceRow {
-  ls?: number | string; // last price
-  pc?: number | string; // 24h change %
-  v?: number | string;  // 24h volume
-  mp?: number | string; // mark price
+  ls?: number | string;   // last price
+  pc?: number | string;   // 24h change %
+  v?: number | string;    // 24h volume
+  mp?: number | string;   // mark price
+  btST?: number | string; // time (ms) of the last tick behind this row
 }
+
+// A snapshot row whose last tick is older than this (relative to the
+// snapshot's own timestamp) is a dead/halted instrument still listed with an
+// old price (seen in practice: months-old rows). Using it would pair an old
+// price with today's fresh open and fake a huge "change %", so such rows are
+// ignored and the scan falls back to the latest candle close instead.
+const MAX_TICK_AGE_MS = 60 * 60 * 1000;
 
 /**
  * Last traded price per symbol from the futures real-time price snapshot.
@@ -226,10 +234,28 @@ export async function fetchCoinDCXLastPrices(attempts = 4): Promise<Map<string, 
   try {
     const body = await res.json();
     const rows: Record<string, PriceRow> = body?.prices ?? body ?? {};
+    const snapshotTs = Number(body?.ts);
+    const stale: string[] = [];
     for (const [pair, row] of Object.entries(rows)) {
       const sym = fromCoinDCXPair(pair);
       const last = Number(row?.ls);
-      if (sym && Number.isFinite(last) && last > 0) out.set(sym, last);
+      if (!sym || !Number.isFinite(last) || last <= 0) continue;
+      const tickTs = Number(row?.btST);
+      if (
+        Number.isFinite(snapshotTs) &&
+        Number.isFinite(tickTs) &&
+        snapshotTs - tickTs > MAX_TICK_AGE_MS
+      ) {
+        stale.push(sym);
+        continue;
+      }
+      out.set(sym, last);
+    }
+    if (stale.length) {
+      console.warn(
+        `[coindcx] ignored ${stale.length} stale price row(s) (last tick > 1h before snapshot):`,
+        stale
+      );
     }
   } catch {
     console.warn("[coindcx] current prices payload could not be parsed.");
