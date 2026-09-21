@@ -547,8 +547,24 @@ export default function Screener({
   // no separate leaf/category branch needed here. null (no View active,
   // e.g. a plain category like "Levels Above" with nothing pinned) means
   // no badge is shown for that row.
-  const activeViewName = activeGenericSubView
-    ? VIEW_LABEL_BY_ID[activeGenericSubView] ?? activeGenericSubView
+  // The Screener's hand-written Views buttons (overlapping-lower's
+  // eXLo-L4U4-U4, 9AM:..., OBN/OBW, 2PM/8AM:...) don't go through
+  // activeGenericSubView, so resolve which one (if any) is on here too —
+  // otherwise "a View is active" would read false for them and the
+  // Ladder Check column would stay blank instead of showing
+  // "LevelCheck UnDefined".
+  const activeLegacyViewId: string | null =
+    showExpU4PU4 ? "eXLo-L4U4-U4"
+    : showExpU3PU3 ? "9AM:SSRRBHHLLA-U4:9PM"
+    : showOBLoRRHHLLA ? "9AM:pRRHHLLA-U4:9PM"
+    : showOBNLoU4L4 ? "OBN-L4U4-U4"
+    : showOBWLoU4L4 ? "OBW-L4U4-L4"
+    : showOBLoSSLLRRHH ? "2PM:SSLLpRRHHA-ApU4:5PM"
+    : showOBLoSSLLRRHHDown ? "8AM:SSLLpRRHHA-L4:1PM"
+    : null;
+  const activeViewId = activeGenericSubView ?? activeLegacyViewId;
+  const activeViewName = activeViewId
+    ? VIEW_LABEL_BY_ID[activeViewId] ?? activeViewId
     : undefined;
 
   // The active View's own 13 Level Check conditions (its levelCheckDefs
@@ -559,8 +575,8 @@ export default function Screener({
   // or a View authored without them, has no Level Check to show, and
   // SRLadderDiffPanel already renders "No levelCheckDefs" plainly for
   // that case rather than needing a guessed fallback here.
-  const activeViewLevelCheckDefs = activeGenericSubView
-    ? getView(activeGenericSubView)?.levelCheckDefs
+  const activeViewLevelCheckDefs = activeViewId
+    ? getView(activeViewId)?.levelCheckDefs
     : undefined;
 
   // Sidebar → Screener: whenever the left-nav selects a View leaf, switch the

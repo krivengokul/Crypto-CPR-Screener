@@ -709,16 +709,16 @@ export function ScreenerTableHeader({
           View
         </th>
         <th
-          className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[220px] cursor-pointer hover:text-foreground"
-          onClick={() => toggleSort("compressionRatio")}
-        >
-            PIVOT SIZE <SortIcon k="compressionRatio" />
-        </th>
-        <th
           className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider"
           title="Levels still matching prev day (see expanded row for the current View's Level Check)"
         >
           Ladder Check
+        </th>
+        <th
+          className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[220px] cursor-pointer hover:text-foreground"
+          onClick={() => toggleSort("compressionRatio")}
+        >
+            PIVOT SIZE <SortIcon k="compressionRatio" />
         </th>
         <th
           className="px-3 py-3 pr-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
@@ -916,11 +916,12 @@ export default function ScreenerTableRow({
         <td className="px-3 py-3">
           {renderActiveViewLabels(r)}
         </td>
-        <td className="px-3 py-3 font-mono whitespace-nowrap">
-          {renderPivotSizeCell(r.prevCPR, r.todayCPR, r.compressionRatio)}
-        </td>
+        {/* Ladder Check — sits right after VIEW, before PIVOT SIZE.
+            • no View active in the Screener  -> blank cell
+            • View active, has levelCheckDefs -> "n/13" (green/amber/red)
+            • View active, no levelCheckDefs  -> "LevelCheck UnDefined" */}
         <td className="px-3 py-3">
-          {!ladder.hasConditions ? (
+          {!viewName ? null : !ladder.hasConditions ? (
             <span className="text-xs text-muted-foreground">LevelCheck UnDefined</span>
           ) : (
             <span
@@ -945,6 +946,9 @@ export default function ScreenerTableRow({
               {ladder.matchingCount}/{ladder.total}
             </span>
           )}
+        </td>
+        <td className="px-3 py-3 font-mono whitespace-nowrap">
+          {renderPivotSizeCell(r.prevCPR, r.todayCPR, r.compressionRatio)}
         </td>
         <td className="px-3 py-3 pr-3 font-mono whitespace-nowrap">
           <div className="text-sm font-bold text-foreground">
