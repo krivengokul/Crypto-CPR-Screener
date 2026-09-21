@@ -71,28 +71,6 @@ export const Views: Record<string, SubPattern[]> = {
       activeBg: "rgba(244, 63, 94, 0.14)",
     },
     // RENAMED from "9AM:MegL-U4+1:3PM": all existing conditions removed.
-    // NEW: 7PM:MoMi->U4:2AM — LEVEL ABOVE + prev day's own pivot sub-label
-    // p-CU1L1 + today's Pattern EU2L4 + prev CPR pMicro + today CPR Mini
-    // + both prev and today PDL below their respective L1s. Cyan color
-    // family to visually distinguish it from its A-A-AA-AA-EU3L4-GapB sibling.
-    {
-      id: "7PM:MoMi->U4:2AM",
-      label: "7PM:MoMi->U4:2AM",
-      activeColor: "#22d3ee",      // cyan-400 border
-      activeText:  "#67e8f9",      // cyan-300 text
-      activeBg:    "rgba(6, 182, 212, 0.14)",
-    },
-    // NEW: 7PM:MoMi-<L4:2AM — bearish sibling of 7PM:MoMi->U4:2AM, same
-    // p-CU1L1 + EU2L4 + pMicro/Mini base, but splits on todayCPR.PDL <
-    // prevCPR.pivot instead. Targets today's own L4 (S4) by ~2AM. Rose
-    // color family to visually flag it as the downtrend/bearish sibling.
-    {
-      id: "7PM:MoMi-<L4:2AM",
-      label: "7PM:MoMi-<L4:2AM",
-      activeColor: "#fb7185",      // rose-400 border
-      activeText:  "#fda4af",      // rose-300 text
-      activeBg:    "rgba(244, 63, 94, 0.14)",
-    },
     // NEW: 6PM:APHS1A-FAU4:9PM — LEVEL ABOVE + Pattern EU2L4 + the PREVIOUS
     // day's own pivot sub-label (prevCPR vs ppCPR) being EU3L4
     // ("p-EU3L4" badge) + today's BC above prev day's own PDH
@@ -317,20 +295,7 @@ export const Views: Record<string, SubPattern[]> = {
       { id: "CBA-CL3U2-RH-GapAB-R4", label: "CBA-CL3U2-RH-GapAB-R4" }
 ],
   // "expanded" — "EXPANDED": RRSS-E only, mirroring "compressed" above.
-  // "6A:SLE-RRHH:R2-6A" — expanded + RRGap + RRHH-AA + SSLL-E + HHLL-A +
-  // HHGap + pHL-B + HLGap-A (see ScreenerUtils.tsx / cpr.ts). RENAMED
-  // from "eXHrL3U3-AU4" and moved here from "Outside CPR" (all previous
-  // conditions removed). Bullish, entry ~6AM, targets today's own R2
-  // (U2) by ~6AM. Green color family.
-  "expanded": [
-    {
-      id: "6A:SLE-RRHH:R2-6A",
-      label: "6A:SLE-RRHH:R2-6A",
-      activeColor: "#22c55e",              // green-500 border
-      activeText:  "#4ade80",              // green-400 text
-      activeBg:    "rgba(34, 197, 94, 0.14)",
-    },
-  ],
+  "expanded": [],
   "R1AbovePR4": [
     // NEW: "A-A-AA-AA-EUPL3-RRHHGap:R4" — View under the
     // "A-A-AA-AA-EUPL3" Subpattern (under the "A-A-AA-AA" Pattern) in

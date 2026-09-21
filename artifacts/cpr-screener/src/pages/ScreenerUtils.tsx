@@ -542,9 +542,7 @@ const SUBFILTERS_BY_SECTION: Record<string, string[]> = {
     "6A:HLC-SSLL:R4-6P",
     "8A:HLC-SSHH:S4-1P",
   ],
-  "expanded": [
-    "6A:SLE-RRHH:R2-6A",
-  ],
+  "expanded": [],
   "R1AbovePR4": [
     "A-A-AA-AA-EUPL3-RRHHGap:R4",
     "6A:A-A-AA-AA-EUTL3-S1ATCpE-pL4:4A",
@@ -637,7 +635,8 @@ export interface ActiveViewInfo {
 }
 
 /**
- * getActiveViewLabels — every View (left-nav leaf, e.g. "6A:SLE-RRHH:R2-6A")
+ * getActiveViewLabels — every View (left-nav leaf, e.g. a compound pattern
+ * or a leaf View key from views.ts)
  * that row `r` currently satisfies, across ALL categories in the Views map
  * (not just the currently active section) — same "Active Views" concept
  * already shown in the Journal's PATTERN column (LoggedSignal.patternName).

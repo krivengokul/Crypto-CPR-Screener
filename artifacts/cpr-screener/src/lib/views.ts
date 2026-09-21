@@ -2222,27 +2222,6 @@ const COMPRESSED_VIEWS: ViewDef[] = [
 ];
 
 const EXPANDED_VIEWS: ViewDef[] = [
-  // --- "E-A-AA-E"'s one nested View ---
-  {
-    key: "6A:SLE-RRHH:R2-6A",
-    label: "6A:SLE-RRHH:R2-6A",
-    parentKey: "E-A-AA-E",
-    kind: "view",
-    direction: "Up",
-    condition: (r) =>
-      r.PDHPDLGapCategory === "HHGap" &&
-      r.prevCPR.HLSwitch === "HL-B" &&
-      r.todayCPR.HLSwitch === "HL-A" &&
-      r.hlGapWinner === "today",
-    targetLabel: "U2 (today's R2)",
-    getTarget: (r) => r.todayCPR.r2,
-    entryLabel: "TC (today's TC)",
-    getEntry: (r) => r.todayCPR.tc,
-    stoplossLabel: "S1 (today's S1)",
-    getStoploss: (r) => r.todayCPR.s1,
-      order: 0
-},
-
   // --- "E-E-AA-BB"'s five nested Subpattern children — all target-graded
   // bullish against today's own R2 (U2), per user request. ---
   {
