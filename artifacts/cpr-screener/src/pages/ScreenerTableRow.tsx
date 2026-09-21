@@ -1,6 +1,7 @@
 import { Fragment } from "react";
 import { ExternalLink, CheckCircle2, XCircle } from "lucide-react";
 import type { CPRResult } from "@/lib/cpr";
+import { getView } from "@/lib/views";
 import {
   type CPRResultWithSource,
   type ActiveTab,
@@ -641,8 +642,10 @@ export function renderLevelColumnRestBadges(r: CPRResult) {
  * neutral violet the Journal's PATTERN column uses when a View has no
  * direction set. Renders nothing (blank cell) when the row matches no View.
  */
-export function renderActiveViewLabels(r: CPRResult) {
-  const views = getActiveViewLabels(r);
+export function renderActiveViewLabels(
+  r: CPRResult,
+  views: ReturnType<typeof getActiveViewLabels> = getActiveViewLabels(r),
+) {
   if (views.length === 0) return null;
   return (
     <div className="flex flex-col gap-0.5 max-w-[200px]">
@@ -710,7 +713,7 @@ export function ScreenerTableHeader({
         </th>
         <th
           className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider"
-          title="Levels still matching prev day (see expanded row for the current View's Level Check)"
+          title="Level Check (matching/13) for each View in the VIEW column, one line per View, graded with that View's own levelCheckDefs"
         >
           Ladder Check
         </th>
@@ -810,10 +813,17 @@ export default function ScreenerTableRow({
       {ssrrHhllRow}
     </>
   );
-  // LEVEL column's replacement: the same Ladder Check summary shown in
-  // BacktestPanel's results table, scoped to this row's own prev/today
-  // CPR and the currently active View's Level Check conditions.
-  const ladder = getLadderMatchSummary(r.prevCPR, r.todayCPR, levelCheckConditions);
+  // Every View this row satisfies (same list the VIEW column renders), each
+  // graded with THAT View's own levelCheckDefs — same per-row approach
+  // BacktestPanel uses (rowViewDefByRow). Computed once here and shared with
+  // the VIEW and Ladder Check cells so their lines stay 1:1 and in order.
+  const activeViews = getActiveViewLabels(r);
+  const viewLadders = activeViews.map((v) => ({
+    id: v.id,
+    label: v.label,
+    ladder: getLadderMatchSummary(r.prevCPR, r.todayCPR, getView(v.id)?.levelCheckDefs),
+  }));
+  const anyLadderDefined = viewLadders.some((v) => v.ladder.hasConditions);
   // SSLLCategory badge (e.g. "SSLL-AA") — shown above the S1 line in the
   // expanded row's "Levels VIEW" chart, right side.
   const ssllBadge = renderSSLLCategoryBadge(r);
@@ -914,37 +924,53 @@ export default function ScreenerTableRow({
           </div>
         </td>
         <td className="px-3 py-3">
-          {renderActiveViewLabels(r)}
+          {renderActiveViewLabels(r, activeViews)}
         </td>
-        {/* Ladder Check — sits right after VIEW, before PIVOT SIZE.
-            • no View active in the Screener  -> blank cell
-            • View active, has levelCheckDefs -> "n/13" (green/amber/red)
-            • View active, no levelCheckDefs  -> "LevelCheck UnDefined" */}
+        {/* Ladder Check — right after VIEW, before PIVOT SIZE. One line per
+            View in the VIEW column (same order), each graded with that
+            View's own levelCheckDefs:
+            • View has levelCheckDefs                   -> "n/13" (green/amber/red)
+            • View has none, and a View is active in the
+              Screener (viewName set)                   -> "LevelCheck UnDefined"
+            • View has none, no View active             -> blank line
+            Row matches no View                         -> blank cell */}
         <td className="px-3 py-3">
-          {!viewName ? null : !ladder.hasConditions ? (
-            <span className="text-xs text-muted-foreground">LevelCheck UnDefined</span>
-          ) : (
-            <span
-              className={`inline-flex items-center gap-1 text-xs font-mono font-medium ${
-                ladder.fullMatch
-                  ? "text-green-400"
-                  : ladder.matchingCount >= ladder.total - 2
-                  ? "text-amber-400"
-                  : "text-destructive"
-              }`}
-              title={
-                ladder.fullMatch
-                  ? "All 13 levels matched their previous-day zone"
-                  : `Broke through: ${ladder.mismatchLabels.join(", ")}`
-              }
-            >
-              {ladder.fullMatch ? (
-                <CheckCircle2 className="w-3.5 h-3.5" />
-              ) : (
-                <XCircle className="w-3.5 h-3.5" />
-              )}
-              {ladder.matchingCount}/{ladder.total}
-            </span>
+          {viewLadders.length > 0 && (anyLadderDefined || !!viewName) && (
+            <div className="flex flex-col gap-0.5">
+              {viewLadders.map(({ id, label, ladder }) => (
+                <div key={id} className="h-4 flex items-center whitespace-nowrap">
+                  {!ladder.hasConditions ? (
+                    viewName ? (
+                      <span className="text-xs text-muted-foreground" title={label}>
+                        LevelCheck UnDefined
+                      </span>
+                    ) : null
+                  ) : (
+                    <span
+                      className={`inline-flex items-center gap-1 text-xs font-mono font-medium ${
+                        ladder.fullMatch
+                          ? "text-green-400"
+                          : ladder.matchingCount >= ladder.total - 2
+                          ? "text-amber-400"
+                          : "text-destructive"
+                      }`}
+                      title={
+                        ladder.fullMatch
+                          ? `${label}: all ${ladder.total} levels matched their previous-day zone`
+                          : `${label} — broke through: ${ladder.mismatchLabels.join(", ")}`
+                      }
+                    >
+                      {ladder.fullMatch ? (
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                      ) : (
+                        <XCircle className="w-3.5 h-3.5" />
+                      )}
+                      {ladder.matchingCount}/{ladder.total}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
           )}
         </td>
         <td className="px-3 py-3 font-mono whitespace-nowrap">
