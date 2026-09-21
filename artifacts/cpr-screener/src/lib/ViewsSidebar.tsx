@@ -292,7 +292,8 @@ export const Views: Record<string, SubPattern[]> = {
     },
       { id: "C-CL3U3-SH-AGapB-S4", label: "C-CL3U3-SH-AGapB-S4" },
       { id: "CBA-CL2U2-RHGapAB-R4", label: "CBA-CL2U2-RHGapAB-R4" },
-      { id: "CBA-CL3U2-RH-GapAB-R4", label: "CBA-CL3U2-RH-GapAB-R4" }
+      { id: "CBA-CL3U2-RH-GapAB-R4", label: "CBA-CL3U2-RH-GapAB-R4" },
+      { id: "CBA-CL2U1-RH-AAGap-R4", label: "CBA-CL2U1-RH-AAGap-R4" }
 ],
   // "expanded" — "EXPANDED": RRSS-E only, mirroring "compressed" above.
   "expanded": [],
