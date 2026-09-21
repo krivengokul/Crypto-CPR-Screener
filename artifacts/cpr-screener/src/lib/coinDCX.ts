@@ -13,13 +13,19 @@ import { isLiveDailyCandle, candlesAreContiguous } from "./binance";
 //   GET public.coindcx.com/market_data/candlesticks   (pcode=f, resolution=1D)
 //   GET public.coindcx.com/market_data/v3/current_prices/futures/rt
 //
-// BROWSER / CORS: if the app is served from a static host (GitHub Pages) and
-// CoinDCX does not send CORS headers, every request below fails as a network
-// error. Point these two constants at a same-origin proxy path (e.g. a Vite
-// dev-server proxy or a tiny serverless relay) instead of the real hosts —
-// nothing else in this file needs to change.
-const API_BASE = "https://api.coindcx.com";
-const PUBLIC_BASE = "https://public.coindcx.com";
+// BROWSER / CORS: CoinDCX's public endpoints do not send CORS headers, so a
+// browser app (e.g. on GitHub Pages) cannot call them directly. Set
+// VITE_COINDCX_PROXY (build-time, no trailing slash) to a relay that maps
+//   <proxy>/api/...    -> https://api.coindcx.com/...
+//   <proxy>/public/... -> https://public.coindcx.com/...
+// (see coindcx-proxy-worker.js). Unset = call CoinDCX directly, which is
+// fine for server-side use or a browser with CORS disabled.
+const PROXY = (
+  (import.meta as unknown as { env?: Record<string, string | undefined> }).env
+    ?.VITE_COINDCX_PROXY ?? ""
+).replace(/\/+$/, "");
+const API_BASE = PROXY ? `${PROXY}/api` : "https://api.coindcx.com";
+const PUBLIC_BASE = PROXY ? `${PROXY}/public` : "https://public.coindcx.com";
 
 const QUOTE = "USDT";
 const PAIR_PREFIX = "B-";
