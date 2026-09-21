@@ -2470,7 +2470,10 @@ export default function BacktestPanel() {
                         // just another Create View attach point, adding
                         // a sibling under the same subPatternKeys.
                         copyViewControl={
-                          isViewOnly && activeTarget ? (
+                          // Hide "Copy View" when the selected View's Level
+                          // Check is already a full 13/13 match for this row:
+                          // copying it would just duplicate an identical View.
+                          isViewOnly && activeTarget && !ladderByRow.get(r)?.fullMatch ? (
                             <CopyViewControl
                               sourceKey={activeTarget.key}
                               sourceLabel={activeTarget.label}
