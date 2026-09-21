@@ -12,6 +12,7 @@ import {
   Info,
   Calendar as CalendarIcon,
   Camera,
+  FlaskConical,
 } from "lucide-react";
 import {
   runBacktest,
@@ -645,7 +646,7 @@ function CopyViewControl({
           <button
             type="button"
             onClick={confirm}
-            className="rounded-md bg-blue-500/20 px-2 py-1 text-[11px] font-medium text-blue-300 hover:bg-blue-500/30"
+            className="rounded-md bg-fuchsia-500/20 px-2 py-1 text-[11px] font-medium text-fuchsia-300 hover:bg-fuchsia-500/30"
           >
             Create copy
           </button>
@@ -925,7 +926,7 @@ function CreateViewControl({
           <button
             type="button"
             onClick={confirm}
-            className="rounded-md bg-blue-500/20 px-2 py-1 text-[11px] font-medium text-blue-300 hover:bg-blue-500/30"
+            className="rounded-md bg-fuchsia-500/20 px-2 py-1 text-[11px] font-medium text-fuchsia-300 hover:bg-fuchsia-500/30"
           >
             Create View
           </button>
@@ -1009,7 +1010,7 @@ function DateField({
                     setOpen(false);
                   }}
                   className={`text-[11px] px-2 py-1 rounded-full ${
-                    value === q.iso ? "bg-blue-500/20 text-blue-300" : "bg-muted/40 text-muted-foreground hover:text-foreground"
+                    value === q.iso ? "bg-fuchsia-500/20 text-fuchsia-300" : "bg-muted/40 text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   {q.label}
@@ -1060,11 +1061,11 @@ function DateField({
                   }}
                   className={`text-[11px] rounded-full w-6 h-6 flex items-center justify-center mx-auto ${
                     isSelected
-                      ? "bg-blue-500 text-white font-medium"
+                      ? "bg-fuchsia-500 text-white font-medium"
                       : disabled
                       ? "text-muted-foreground/30 cursor-not-allowed"
                       : isToday
-                      ? "text-blue-300 border border-blue-500/40 hover:bg-muted/40"
+                      ? "text-fuchsia-300 border border-fuchsia-500/40 hover:bg-muted/40"
                       : "text-foreground/80 hover:bg-muted/40"
                   }`}
                 >
@@ -1645,11 +1646,16 @@ export default function BacktestPanel() {
 
   return (
     <div className="rounded-xl border border-border bg-card p-4">
-      <div className="flex items-center gap-2 mb-1">
-        <h2 className="text-lg font-bold">Pattern Backtest</h2>
-        <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium">
-          v1 — a few patterns only
-        </span>
+      <div className="flex items-center gap-2.5 mb-1">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-fuchsia-500/40 bg-fuchsia-500/20">
+          <FlaskConical className="h-4 w-4 text-fuchsia-400" />
+        </div>
+        <h2 className="flex items-center gap-2 text-lg font-bold">
+          Pattern Backtest
+          <span className="rounded-full border border-fuchsia-500/30 bg-fuchsia-500/15 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-fuchsia-300">
+            v1 — a few patterns only
+          </span>
+        </h2>
       </div>
       <p className="text-xs text-muted-foreground mb-4">
         Pick a date (or a date range) and either a category, a Pattern
@@ -1731,7 +1737,7 @@ export default function BacktestPanel() {
                           aria-selected={selectedKey === t.key}
                           onClick={() => selectAndClose(t.key, cat.key)}
                           className={`w-full flex items-center gap-2 text-left px-2 py-1 rounded-md text-xs font-mono truncate ${
-                            selectedKey === t.key ? "bg-blue-500/20 text-blue-300" : "text-foreground/80 hover:bg-muted/40"
+                            selectedKey === t.key ? "bg-fuchsia-500/20 text-fuchsia-300" : "text-foreground/80 hover:bg-muted/40"
                           }`}
                         >
                           <span className={`w-1.5 h-1.5 rounded-full ${dotColor} shrink-0`} />
@@ -1756,7 +1762,7 @@ export default function BacktestPanel() {
                               aria-selected={selectedKey === value}
                               onClick={() => selectAndClose(value, cat.key)}
                               className={`w-full flex items-center gap-1.5 text-left px-2 py-1 rounded-md text-xs truncate ${
-                                selectedKey === value ? "bg-blue-500/20 text-blue-300" : "text-foreground/90 hover:bg-muted/40"
+                                selectedKey === value ? "bg-fuchsia-500/20 text-fuchsia-300" : "text-foreground/90 hover:bg-muted/40"
                               }`}
                             >
                               <span className="text-muted-foreground shrink-0">{"\u21B3"}</span>
@@ -1797,7 +1803,7 @@ export default function BacktestPanel() {
                               onClick={() => selectAndClose(cat.key, cat.key)}
                               className={`flex-1 text-left px-2 py-1.5 rounded-md text-xs font-medium tracking-wide truncate ${
                                 selectedKey === cat.key
-                                  ? "bg-blue-500/20 text-blue-300"
+                                  ? "bg-fuchsia-500/20 text-fuchsia-300"
                                   : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
                               } ${q ? "ml-1" : ""}`}
                             >
@@ -1827,16 +1833,16 @@ export default function BacktestPanel() {
         </div>
         <div>
           <label className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Date Mode</label>
-          <div className="flex rounded-lg border border-border overflow-hidden text-xs">
+          <div className="flex items-center gap-1">
             {(["single", "range"] as const).map((m) => (
               <button
                 key={m}
                 onClick={() => setDateMode(m)}
-                className="px-3 py-1.5 transition-colors capitalize"
-                style={{
-                  background: dateMode === m ? "#3b82f6" : "transparent",
-                  color: dateMode === m ? "#fff" : "#8ba3bc",
-                }}
+                className={`px-2.5 py-1 rounded text-xs font-semibold capitalize transition cursor-pointer ${
+                  dateMode === m
+                    ? "bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/40"
+                    : "text-muted-foreground hover:text-foreground bg-muted/30 border border-transparent"
+                }`}
               >
                 {m === "single" ? "Single Date" : "Date Range"}
               </button>
@@ -1865,16 +1871,16 @@ export default function BacktestPanel() {
         )}
         <div>
           <label className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Exchange</label>
-          <div className="flex rounded-lg border border-border overflow-hidden text-xs">
+          <div className="flex items-center gap-1">
             {(["binance", "delta", "coindcx"] as BacktestSource[]).map((s) => (
               <button
                 key={s}
                 onClick={() => setSource(s)}
-                className="px-3 py-1.5 transition-colors capitalize"
-                style={{
-                  background: source === s ? "#3b82f6" : "transparent",
-                  color: source === s ? "#fff" : "#8ba3bc",
-                }}
+                className={`px-2.5 py-1 rounded text-xs font-semibold capitalize transition cursor-pointer ${
+                  source === s
+                    ? "bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/40"
+                    : "text-muted-foreground hover:text-foreground bg-muted/30 border border-transparent"
+                }`}
               >
                 {s === "coindcx" ? "CoinDCX" : s}
               </button>
@@ -1884,8 +1890,7 @@ export default function BacktestPanel() {
         <button
           onClick={run}
           disabled={status === "running"}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-50"
-          style={{ background: "linear-gradient(135deg,#3b82f6,#6366f1)", color: "#fff" }}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold text-white shadow-md shadow-fuchsia-900/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-gradient-to-r from-fuchsia-500 to-pink-500 hover:from-fuchsia-400 hover:to-pink-400"
         >
           <RefreshCw className={`w-4 h-4 ${status === "running" ? "animate-spin" : ""}`} />
           {status === "running" ? "Running…" : "Run Backtest"}

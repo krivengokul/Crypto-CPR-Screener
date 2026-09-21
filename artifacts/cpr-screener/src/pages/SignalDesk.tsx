@@ -821,28 +821,36 @@ R:R: ${item.riskReward}`;
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end flex-wrap">
-          {/* Direction Filter */}
-          <div className="flex rounded-md overflow-hidden border border-[#22354a] bg-[#151e2c]">
+          {/* Direction Filter — small individual pill tabs, matching the
+              Source filter's look: muted when inactive, a translucent
+              color tint (not a big solid fill) when active. */}
+          <div className="flex items-center gap-1">
             <button
               onClick={() => setDirectionFilter("all")}
-              className={`px-2.5 py-1 text-xs font-semibold cursor-pointer ${
-                directionFilter === "all" ? "bg-blue-600 text-white" : "text-slate-400 hover:text-white"
+              className={`px-2 py-1 rounded text-xs font-semibold transition cursor-pointer ${
+                directionFilter === "all"
+                  ? "bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/40"
+                  : "text-slate-400 hover:text-white bg-[#151e2c] border border-transparent"
               }`}
             >
               All
             </button>
             <button
               onClick={() => setDirectionFilter("Up")}
-              className={`px-2.5 py-1 text-xs font-semibold cursor-pointer ${
-                directionFilter === "Up" ? "bg-emerald-600 text-white" : "text-emerald-400 hover:text-emerald-300"
+              className={`px-2 py-1 rounded text-xs font-semibold transition cursor-pointer ${
+                directionFilter === "Up"
+                  ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
+                  : "text-emerald-400/70 hover:text-emerald-300 bg-[#151e2c] border border-transparent"
               }`}
             >
               Up
             </button>
             <button
               onClick={() => setDirectionFilter("Down")}
-              className={`px-2.5 py-1 text-xs font-semibold cursor-pointer ${
-                directionFilter === "Down" ? "bg-rose-600 text-white" : "text-rose-400 hover:text-rose-300"
+              className={`px-2 py-1 rounded text-xs font-semibold transition cursor-pointer ${
+                directionFilter === "Down"
+                  ? "bg-rose-500/20 text-rose-400 border border-rose-500/40"
+                  : "text-rose-400/70 hover:text-rose-300 bg-[#151e2c] border border-transparent"
               }`}
             >
               Down
@@ -855,7 +863,7 @@ R:R: ${item.riskReward}`;
               onClick={() => setSourceFilter("all")}
               className={`px-2 py-1 rounded text-xs font-semibold transition cursor-pointer ${
                 sourceFilter === "all"
-                  ? "bg-amber-500/20 text-amber-400 border border-amber-500/40"
+                  ? "bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/40"
                   : "text-slate-400 hover:text-white bg-[#151e2c]"
               }`}
             >
