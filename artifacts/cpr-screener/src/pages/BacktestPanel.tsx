@@ -646,7 +646,7 @@ function CopyViewControl({
           <button
             type="button"
             onClick={confirm}
-            className="rounded-md bg-fuchsia-500/20 px-2 py-1 text-[11px] font-medium text-fuchsia-300 hover:bg-fuchsia-500/30"
+            className="rounded-md bg-cyan-500/20 px-2 py-1 text-[11px] font-medium text-cyan-300 hover:bg-cyan-500/30"
           >
             Create copy
           </button>
@@ -926,7 +926,7 @@ function CreateViewControl({
           <button
             type="button"
             onClick={confirm}
-            className="rounded-md bg-fuchsia-500/20 px-2 py-1 text-[11px] font-medium text-fuchsia-300 hover:bg-fuchsia-500/30"
+            className="rounded-md bg-cyan-500/20 px-2 py-1 text-[11px] font-medium text-cyan-300 hover:bg-cyan-500/30"
           >
             Create View
           </button>
@@ -1010,7 +1010,7 @@ function DateField({
                     setOpen(false);
                   }}
                   className={`text-[11px] px-2 py-1 rounded-full ${
-                    value === q.iso ? "bg-fuchsia-500/20 text-fuchsia-300" : "bg-muted/40 text-muted-foreground hover:text-foreground"
+                    value === q.iso ? "bg-cyan-500/20 text-cyan-300" : "bg-muted/40 text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   {q.label}
@@ -1061,11 +1061,11 @@ function DateField({
                   }}
                   className={`text-[11px] rounded-full w-6 h-6 flex items-center justify-center mx-auto ${
                     isSelected
-                      ? "bg-fuchsia-500 text-white font-medium"
+                      ? "bg-cyan-500 text-white font-medium"
                       : disabled
                       ? "text-muted-foreground/30 cursor-not-allowed"
                       : isToday
-                      ? "text-fuchsia-300 border border-fuchsia-500/40 hover:bg-muted/40"
+                      ? "text-cyan-300 border border-cyan-500/40 hover:bg-muted/40"
                       : "text-foreground/80 hover:bg-muted/40"
                   }`}
                 >
@@ -1647,12 +1647,12 @@ export default function BacktestPanel() {
   return (
     <div className="rounded-xl border border-border bg-card p-4">
       <div className="flex items-center gap-2.5 mb-1">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-fuchsia-500/40 bg-fuchsia-500/20">
-          <FlaskConical className="h-4 w-4 text-fuchsia-400" />
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-cyan-500/40 bg-cyan-500/20">
+          <FlaskConical className="h-4 w-4 text-cyan-400" />
         </div>
         <h2 className="flex items-center gap-2 text-lg font-bold">
           Pattern Backtest
-          <span className="rounded-full border border-fuchsia-500/30 bg-fuchsia-500/15 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-fuchsia-300">
+          <span className="rounded-full border border-cyan-500/30 bg-cyan-500/15 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-cyan-300">
             v1 — a few patterns only
           </span>
         </h2>
@@ -1737,7 +1737,7 @@ export default function BacktestPanel() {
                           aria-selected={selectedKey === t.key}
                           onClick={() => selectAndClose(t.key, cat.key)}
                           className={`w-full flex items-center gap-2 text-left px-2 py-1 rounded-md text-xs font-mono truncate ${
-                            selectedKey === t.key ? "bg-fuchsia-500/20 text-fuchsia-300" : "text-foreground/80 hover:bg-muted/40"
+                            selectedKey === t.key ? "bg-cyan-500/20 text-cyan-300" : "text-foreground/80 hover:bg-muted/40"
                           }`}
                         >
                           <span className={`w-1.5 h-1.5 rounded-full ${dotColor} shrink-0`} />
@@ -1762,7 +1762,7 @@ export default function BacktestPanel() {
                               aria-selected={selectedKey === value}
                               onClick={() => selectAndClose(value, cat.key)}
                               className={`w-full flex items-center gap-1.5 text-left px-2 py-1 rounded-md text-xs truncate ${
-                                selectedKey === value ? "bg-fuchsia-500/20 text-fuchsia-300" : "text-foreground/90 hover:bg-muted/40"
+                                selectedKey === value ? "bg-cyan-500/20 text-cyan-300" : "text-foreground/90 hover:bg-muted/40"
                               }`}
                             >
                               <span className="text-muted-foreground shrink-0">{"\u21B3"}</span>
@@ -1803,7 +1803,7 @@ export default function BacktestPanel() {
                               onClick={() => selectAndClose(cat.key, cat.key)}
                               className={`flex-1 text-left px-2 py-1.5 rounded-md text-xs font-medium tracking-wide truncate ${
                                 selectedKey === cat.key
-                                  ? "bg-fuchsia-500/20 text-fuchsia-300"
+                                  ? "bg-cyan-500/20 text-cyan-300"
                                   : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
                               } ${q ? "ml-1" : ""}`}
                             >
@@ -1833,15 +1833,15 @@ export default function BacktestPanel() {
         </div>
         <div>
           <label className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Date Mode</label>
-          <div className="flex items-center gap-1">
+          <div className="flex rounded-md overflow-hidden border border-[#22354a] bg-[#151e2c]">
             {(["single", "range"] as const).map((m) => (
               <button
                 key={m}
                 onClick={() => setDateMode(m)}
-                className={`px-2.5 py-1 rounded text-xs font-semibold capitalize transition cursor-pointer ${
+                className={`px-3 py-1 text-xs font-semibold capitalize transition cursor-pointer ${
                   dateMode === m
-                    ? "bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/40"
-                    : "text-muted-foreground hover:text-foreground bg-muted/30 border border-transparent"
+                    ? "bg-cyan-500/20 text-cyan-400"
+                    : "text-slate-400 hover:text-slate-200"
                 }`}
               >
                 {m === "single" ? "Single Date" : "Date Range"}
@@ -1871,15 +1871,19 @@ export default function BacktestPanel() {
         )}
         <div>
           <label className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Exchange</label>
-          <div className="flex items-center gap-1">
+          <div className="flex rounded-md overflow-hidden border border-[#22354a] bg-[#151e2c]">
             {(["binance", "delta", "coindcx"] as BacktestSource[]).map((s) => (
               <button
                 key={s}
                 onClick={() => setSource(s)}
-                className={`px-2.5 py-1 rounded text-xs font-semibold capitalize transition cursor-pointer ${
+                className={`px-3 py-1 text-xs font-semibold capitalize transition cursor-pointer ${
                   source === s
-                    ? "bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/40"
-                    : "text-muted-foreground hover:text-foreground bg-muted/30 border border-transparent"
+                    ? s === "delta"
+                      ? "bg-cyan-500/20 text-cyan-400"
+                      : s === "binance"
+                      ? "bg-yellow-500/20 text-yellow-400"
+                      : "bg-amber-500/20 text-amber-400"
+                    : "text-slate-400 hover:text-slate-200"
                 }`}
               >
                 {s === "coindcx" ? "CoinDCX" : s}
@@ -1890,7 +1894,7 @@ export default function BacktestPanel() {
         <button
           onClick={run}
           disabled={status === "running"}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold text-white shadow-md shadow-fuchsia-900/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-gradient-to-r from-fuchsia-500 to-pink-500 hover:from-fuchsia-400 hover:to-pink-400"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold text-white shadow-md shadow-cyan-900/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-gradient-to-r from-cyan-500 to-cyan-400 hover:from-cyan-400 hover:to-cyan-300"
         >
           <RefreshCw className={`w-4 h-4 ${status === "running" ? "animate-spin" : ""}`} />
           {status === "running" ? "Running…" : "Run Backtest"}
