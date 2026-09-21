@@ -1,10 +1,11 @@
 import { OHLC, CPRResult, analyzeCPR, isExpandedPatternPair, OUTER_PATTERN_KEYS } from "./cpr";
 import { fetchTopUSDTSymbols, fetchDailyKlines, isLiveDailyCandle } from "./binance";
 import { fetchDeltaPerps } from "./delta";
+import { fetchCoinDCXDailyKlines, fetchCoinDCXActiveSymbols } from "./coinDCX";
 import { buildViewTree, type ViewTreeNode, VIEWS, getView, type ViewDef } from "./views";
 
 
-export type BacktestSource = "binance" | "delta";
+export type BacktestSource = "binance" | "delta" | "coindcx";
 
 /**
  * A backtestable pattern needs a machine-readable target level, not just
@@ -803,6 +804,13 @@ function isHistoryFresh(cached: CachedHistory): boolean {
 }
 const binanceHistoryCache = new Map<string, CachedHistory | null>();
 const deltaHistoryCache = new Map<string, CachedHistory | null>();
+const coindcxHistoryCache = new Map<string, CachedHistory | null>();
+
+function historyCacheFor(source: BacktestSource): Map<string, CachedHistory | null> {
+  return source === "binance" ? binanceHistoryCache
+    : source === "coindcx" ? coindcxHistoryCache
+    : deltaHistoryCache;
+}
 /** In-flight de-dupe so parallel dates/symbols never double-fetch. */
 const inFlight = new Map<string, Promise<Map<string, OHLC> | null>>();
 
@@ -810,7 +818,7 @@ const inFlight = new Map<string, Promise<Map<string, OHLC> | null>>();
  *  needed) — a cache entry from a previous UTC day doesn't count, since it
  *  may still be holding yesterday's live/incomplete candle (see getHistory). */
 export function hasCachedHistory(symbol: string, source: BacktestSource): boolean {
-  const cache = source === "binance" ? binanceHistoryCache : deltaHistoryCache;
+  const cache = historyCacheFor(source);
   const cached = cache.get(symbol);
   if (cached === undefined) return false;
   if (cached === null) return true; // cached failure — still "resolved", don't re-hammer it
@@ -823,6 +831,7 @@ export function hasCachedHistory(symbol: string, source: BacktestSource): boolea
 export function clearBacktestHistoryCache(): void {
   binanceHistoryCache.clear();
   deltaHistoryCache.clear();
+  coindcxHistoryCache.clear();
   inFlight.clear();
 }
 
@@ -849,6 +858,22 @@ async function fetchBinanceHistory(symbol: string): Promise<Map<string, OHLC> | 
   for (const c of candles) map.set(utcDateKey(c.openTime), c);
   return map;
 }
+/**
+ * Full CoinDCX futures daily history for a symbol (pair `B-<BASE>_USDT`,
+ * scanned as `<BASE>USDT`). Delegates to coinDCX.ts so retry/backoff, the
+ * optional CORS proxy and candle parsing are shared with the live scanner.
+ * NOTE: CoinDCX doesn't document how far back its daily candles go, so very
+ * long sweeps may find no coverage for older dates (they're skipped, like a
+ * symbol that didn't exist yet).
+ */
+async function fetchCoinDCXHistory(symbol: string): Promise<Map<string, OHLC> | null> {
+  const candles = await fetchCoinDCXDailyKlines(symbol, HISTORY_LIMIT);
+  if (!candles || !candles.length) return null;
+  const map = new Map<string, OHLC>();
+  for (const c of candles) map.set(utcDateKey(c.openTime), c);
+  return map;
+}
+
 /**
  * Full Delta Exchange India daily history for a symbol. Delta's candles
  * endpoint requires an explicit start/end, so we ask for the last
@@ -909,7 +934,7 @@ async function fetchDeltaHistory(symbol: string): Promise<Map<string, OHLC> | nu
  * closed. Still only one network call per symbol per day, not per request.
  */
 async function getHistory(symbol: string, source: BacktestSource): Promise<Map<string, OHLC> | null> {
-  const cache = source === "binance" ? binanceHistoryCache : deltaHistoryCache;
+  const cache = historyCacheFor(source);
   const today = utcDateKey(Date.now());
   const cached = cache.get(symbol);
 
@@ -929,7 +954,11 @@ async function getHistory(symbol: string, source: BacktestSource): Promise<Map<s
   const existing = inFlight.get(key);
   if (existing) return existing;
 
-  const p = (source === "binance" ? fetchBinanceHistory(symbol) : fetchDeltaHistory(symbol))
+  const fetcher =
+    source === "binance" ? fetchBinanceHistory
+    : source === "coindcx" ? fetchCoinDCXHistory
+    : fetchDeltaHistory;
+  const p = fetcher(symbol)
     .then((hist) => {
       // Only cache SUCCESS. A null here almost always means "rate-limited
       // / transient network failure", and caching it used to permanently
@@ -1009,6 +1038,8 @@ function isValidUTCDateISO(dateISO: string): boolean {
 async function getCurrentSymbolCandidates(source: BacktestSource): Promise<string[]> {
   const symbols = source === "binance"
     ? (await fetchTopUSDTSymbols()).map((ticker) => ticker.symbol)
+    : source === "coindcx"
+    ? await fetchCoinDCXActiveSymbols()
     : (await fetchDeltaPerps()).map((ticker) => ticker.symbol);
   return [...new Set(symbols)];
 }
@@ -1131,7 +1162,11 @@ export async function prefetchHistories(
   onProgress?: (done: number, total: number, symbol: string) => void,
   // Small recent-date requests cost less exchange weight, so they can use a
   // wider pool. Long-history pages stay conservative to avoid 429/418 waits.
-  concurrency = HISTORY_LIMIT <= 100 ? 40 : HISTORY_LIMIT <= 500 ? 20 : 5
+  // CoinDCX publishes no market-data rate limits and every call goes through
+  // a small relay, so it gets a gentler pool than Binance/Delta.
+  concurrency = source === "coindcx"
+    ? 12
+    : HISTORY_LIMIT <= 100 ? 40 : HISTORY_LIMIT <= 500 ? 20 : 5
 ): Promise<void> {
   lastRunSkipped = [];
 
@@ -1165,7 +1200,7 @@ export async function prefetchHistories(
   lastRunSkipped = pending;
   if (pending.length) {
     console.warn(
-      `[backtest] ${pending.length}/${symbols.length} symbols had no Binance candles after 3 passes:`,
+      `[backtest] ${pending.length}/${symbols.length} symbols had no ${source} candles after 3 passes:`,
       pending
     );
   }

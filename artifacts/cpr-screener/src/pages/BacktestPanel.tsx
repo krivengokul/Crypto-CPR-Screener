@@ -1866,7 +1866,7 @@ export default function BacktestPanel() {
         <div>
           <label className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Exchange</label>
           <div className="flex rounded-lg border border-border overflow-hidden text-xs">
-            {(["binance", "delta"] as BacktestSource[]).map((s) => (
+            {(["binance", "delta", "coindcx"] as BacktestSource[]).map((s) => (
               <button
                 key={s}
                 onClick={() => setSource(s)}
@@ -1876,7 +1876,7 @@ export default function BacktestPanel() {
                   color: source === s ? "#fff" : "#8ba3bc",
                 }}
               >
-                {s}
+                {s === "coindcx" ? "CoinDCX" : s}
               </button>
             ))}
           </div>

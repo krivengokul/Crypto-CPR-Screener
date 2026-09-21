@@ -159,7 +159,7 @@ let cachedActiveSymbols: string[] | null = null;
 /**
  * Tradable USDT-margined futures universe, as screener symbols (`BTCUSDT`).
  */
-async function fetchActiveSymbols(): Promise<string[]> {
+export async function fetchCoinDCXActiveSymbols(): Promise<string[]> {
   const url =
     `${API_BASE}/exchange/v1/derivatives/futures/data/active_instruments` +
     `?margin_currency_short_name%5B%5D=${QUOTE}`;
@@ -335,7 +335,7 @@ export async function runCoinDCXScreener(
   onProgress: (done: number, total: number, symbol: string) => void
 ): Promise<CPRResult[]> {
   const [activeSymbols, lastPrices] = await Promise.all([
-    fetchActiveSymbols(),
+    fetchCoinDCXActiveSymbols(),
     fetchCoinDCXLastPrices(),
   ]);
 
