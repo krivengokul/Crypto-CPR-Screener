@@ -1,8 +1,9 @@
 const STORAGE_KEY = "cpr_last_scan_date";
 const STORAGE_KEY_BINANCE = "cpr_scan_results_binance";
 const STORAGE_KEY_DELTA = "cpr_scan_results_delta";
+const STORAGE_KEY_COINDCX = "cpr_scan_results_coindcx";
 
-export { STORAGE_KEY_BINANCE, STORAGE_KEY_DELTA };
+export { STORAGE_KEY_BINANCE, STORAGE_KEY_DELTA, STORAGE_KEY_COINDCX };
 
 function getNowIST(): Date {
   const now = new Date();

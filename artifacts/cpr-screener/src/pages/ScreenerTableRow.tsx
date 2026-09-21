@@ -885,10 +885,12 @@ export default function ScreenerTableRow({
               className={`text-xs px-1.5 py-0.5 rounded border font-medium ${
                 r.source === "binance"
                   ? "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
+                  : r.source === "coindcx"
+                  ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
                   : "bg-blue-500/10 text-blue-400 border-blue-500/20"
               }`}
             >
-              {r.source === "binance" ? "Binance" : "Delta"}
+              {r.source === "binance" ? "Binance" : r.source === "coindcx" ? "CoinDCX" : "Delta"}
             </span>
           </td>
         )}

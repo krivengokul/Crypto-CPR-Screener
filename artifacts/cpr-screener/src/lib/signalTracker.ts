@@ -18,7 +18,7 @@ import { getDb, ensureSignedIn } from "@/lib/firebase";
 export interface LoggedSignal {
   id: string;
   symbol: string;
-  source: "binance" | "delta";
+  source: "binance" | "delta" | "coindcx";
   timeframe: string;
   direction: "Up" | "Down" | "NEUTRAL" | "LONG" | "SHORT";
   type: string;

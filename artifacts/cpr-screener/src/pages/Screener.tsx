@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { runScreener } from "@/lib/binance";
 import { runDeltaScreener } from "@/lib/delta";
+import { runCoinDCXScreener } from "@/lib/coinDCX";
 import type { CPRResult } from "@/lib/cpr";
 import { utcTodayISO } from "@/lib/backtest";
 import {
@@ -28,11 +29,13 @@ import {
   formatScanTime,
   STORAGE_KEY_BINANCE,
   STORAGE_KEY_DELTA,
+  STORAGE_KEY_COINDCX,
 } from "@/lib/scheduler";
 import {
   type SortKey,
   type SortDir,
   type ActiveTab,
+  type SourceId,
   type CPRResultWithSource,
   type WidthFilter,
   type WidthCategoryKey,
@@ -61,7 +64,7 @@ import {
 import LiveClock from "./LiveClock";
 import ScreenerLegend from "./ScreenerLegend";
 import ScreenerTableRow, { ScreenerTableHeader, getBadgeClasses } from "./ScreenerTableRow";
-import { useBinanceLiveRefresh, useDeltaLiveRefresh } from "@/hooks/useLivePriceRefresh";
+import { useBinanceLiveRefresh, useDeltaLiveRefresh, useCoinDCXLiveRefresh } from "@/hooks/useLivePriceRefresh";
 
 /**
  * ViewCount — "(n)" badge shown at the end of every Views filter button,
@@ -187,7 +190,7 @@ export default function Screener({
     symbols: Array<{
       key: string;
       symbol: string;
-      source: "binance" | "delta";
+      source: SourceId;
       currentPrice: number;
       change24h: number;
       direction: "Up" | "Down";
@@ -218,6 +221,7 @@ export default function Screener({
 }) {
   const cachedBinance = useMemo(() => loadCachedResults<CPRResult>(STORAGE_KEY_BINANCE), []);
   const cachedDelta = useMemo(() => loadCachedResults<CPRResult>(STORAGE_KEY_DELTA), []);
+  const cachedCoinDCX = useMemo(() => loadCachedResults<CPRResult>(STORAGE_KEY_COINDCX), []);
 
   const [status, setStatus] = useState<"idle" | "scanning" | "done" | "error">(() => {
     return cachedBinance?.data && cachedBinance.data.length > 0 && hasScannedToday() ? "done" : "idle";
@@ -338,6 +342,21 @@ export default function Screener({
     return cachedDelta?.data && hasScannedToday() ? cachedDelta.data : [];
   });
   const [deltaError, setDeltaError] = useState("");
+
+  const [coindcxStatus, setCoinDCXStatus] = useState<"idle" | "scanning" | "done" | "error">(() => {
+    return cachedCoinDCX?.data && cachedCoinDCX.data.length > 0 && hasScannedToday() ? "done" : "idle";
+  });
+  const [coindcxProgress, setCoinDCXProgress] = useState({ done: 0, total: 0, symbol: "" });
+  const [coindcxAllResults, setCoinDCXAllResults] = useState<CPRResult[]>(() => {
+    return cachedCoinDCX?.data && hasScannedToday() ? cachedCoinDCX.data : [];
+  });
+  const [coindcxScannedAt, setCoinDCXScannedAt] = useState<number | null>(
+    () => (hasScannedToday() ? cachedCoinDCX?.savedAt ?? null : null)
+  );
+  const [coindcxFiltered, setCoinDCXFiltered] = useState<CPRResult[]>(() => {
+    return cachedCoinDCX?.data && hasScannedToday() ? cachedCoinDCX.data : [];
+  });
+  const [coindcxError, setCoinDCXError] = useState("");
   const [activeTabState, setActiveTabState] = useState<ActiveTab>("binance");
   // Controlled when App.tsx passes activeTab/onActiveTabChange (the normal
   // case now); falls back to local state otherwise. setActiveTab below is
@@ -346,6 +365,7 @@ export default function Screener({
   const activeTab = activeTabProp ?? activeTabState;
   const setActiveTab = onActiveTabChange ?? setActiveTabState;
   const deltaScanRef = useRef(false);
+  const coindcxScanRef = useRef(false);
 
   const [expandedSymbols, setExpandedSymbols] = useState<Set<string>>(new Set());
 
@@ -359,9 +379,11 @@ export default function Screener({
 
   const allResultsRef = useRef<CPRResult[]>([]);
   const deltaAllResultsRef = useRef<CPRResult[]>([]);
+  const coindcxAllResultsRef = useRef<CPRResult[]>([]);
   const activePatternRef = useRef(activeView);
   useEffect(() => { allResultsRef.current = allResults; }, [allResults]);
   useEffect(() => { deltaAllResultsRef.current = deltaAllResults; }, [deltaAllResults]);
+  useEffect(() => { coindcxAllResultsRef.current = coindcxAllResults; }, [coindcxAllResults]);
   useEffect(() => { activePatternRef.current = activeView; }, [activeView]);
 
   // NEW: auto-hide "Show All" whenever a left-nav view/category is clicked.
@@ -463,6 +485,32 @@ export default function Screener({
     }
   }, [activeView]);
 
+  const doCoinDCXScan = useCallback(async (switchTab: boolean = true) => {
+    if (coindcxScanRef.current) return;
+    coindcxScanRef.current = true;
+    setCoinDCXStatus("scanning");
+    if (switchTab) setActiveTab("coindcx");
+    setCoinDCXAllResults([]);
+    setCoinDCXFiltered([]);
+    setCoinDCXError("");
+    setCoinDCXProgress({ done: 0, total: 0, symbol: "" });
+    try {
+      const results = await runCoinDCXScreener((done, total, symbol) => {
+        setCoinDCXProgress({ done, total, symbol });
+      });
+      setCoinDCXAllResults(results);
+      setCoinDCXFiltered(results.filter((r) => passesPattern(r, activeView)));
+      setCoinDCXStatus("done");
+      saveCachedResults(STORAGE_KEY_COINDCX, results);
+      setCoinDCXScannedAt(Date.now());
+    } catch (e) {
+      setCoinDCXError(e instanceof Error ? e.message : "Unknown error");
+      setCoinDCXStatus("error");
+    } finally {
+      coindcxScanRef.current = false;
+    }
+  }, [activeView]);
+
   useEffect(() => {
     if (shouldAutoScan()) doScan();
   }, [doScan]);
@@ -476,12 +524,14 @@ export default function Screener({
         if (!hasScannedToday() || allResults.length === 0) {
           doScan();
           doDeltaScan(false);
+          doCoinDCXScan(false);
         }
         return;
       }
       // Explicit click from Header "Scan Now" button
       doScan();
       doDeltaScan(false);
+      doCoinDCXScan(false);
     }
   }, [scanKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -494,12 +544,14 @@ export default function Screener({
 
   useBinanceLiveRefresh(status, allResultsRef, setAllResults, setFiltered);
   useDeltaLiveRefresh(deltaStatus, deltaAllResultsRef, setDeltaAllResults, setDeltaFiltered);
+  useCoinDCXLiveRefresh(coindcxStatus, coindcxAllResultsRef, setCoinDCXAllResults, setCoinDCXFiltered);
 
   useEffect(() => {
     if (allResults.length > 0) setFiltered(allResults.filter((r) => passesPattern(r, activeView)));
     if (deltaAllResults.length > 0) setDeltaFiltered(deltaAllResults.filter((r) => passesPattern(r, activeView)));
+    if (coindcxAllResults.length > 0) setCoinDCXFiltered(coindcxAllResults.filter((r) => passesPattern(r, activeView)));
     if (activeView !== "overlapping-lower") { setShowExpU4PU4(false); setShowExpU3PU3(false); setShowOBLoRRHHLLA(false); setShowOBNLoU4L4(false); setShowOBWLoU4L4(false); setShowOBLoSSLLRRHH(false); setShowOBLoSSLLRRHHDown(false); }
-  }, [activeView, allResults, deltaAllResults]);
+  }, [activeView, allResults, deltaAllResults, coindcxAllResults]);
 
   // ─── Two-way sync between the left-nav Views and the Screener's own
   //     Views filter buttons ────────────────────────────────────────────────
@@ -649,7 +701,8 @@ export default function Screener({
     if (!onCounts) return;
     const pool: CPRResult[] =
       activeTab === "delta" ? deltaAllResults
-      : activeTab === "combined" ? [...allResults, ...deltaAllResults]
+      : activeTab === "coindcx" ? coindcxAllResults
+      : activeTab === "combined" ? [...allResults, ...deltaAllResults, ...coindcxAllResults]
       : allResults;
     if (pool.length === 0) return;
     const counts: Record<string, number> = {};
@@ -664,7 +717,7 @@ export default function Screener({
       }
     }
     onCounts(counts);
-  }, [allResults, deltaAllResults, activeTab, onCounts]);
+  }, [allResults, deltaAllResults, coindcxAllResults, activeTab, onCounts]);
 
   // NEW: per-view matching counts for the Views filter buttons rendered in
   // this screen ("(41)" suffix), computed off the same unfiltered pool used
@@ -672,7 +725,8 @@ export default function Screener({
   const touchCounts = useMemo(() => {
     const pool: CPRResult[] =
       activeTab === "delta" ? deltaAllResults
-      : activeTab === "combined" ? [...allResults, ...deltaAllResults]
+      : activeTab === "coindcx" ? coindcxAllResults
+      : activeTab === "combined" ? [...allResults, ...deltaAllResults, ...coindcxAllResults]
       : allResults;
     return {
       insidecpr: pool.filter((r) => r.touchCategory && !!(r.InsideCPR || (r as any).insideCPR)).length,
@@ -681,12 +735,13 @@ export default function Screener({
       overlapLower: pool.filter((r) => r.touchCategory && !!r.overlapLower).length,
       equalCPR: pool.filter((r) => r.touchCategory && !!r.equalCPR).length,
     };
-  }, [allResults, deltaAllResults, activeTab]);
+  }, [allResults, deltaAllResults, coindcxAllResults, activeTab]);
 
   const viewCounts = useMemo(() => {
     const pool: CPRResult[] =
       activeTab === "delta" ? deltaAllResults
-      : activeTab === "combined" ? [...allResults, ...deltaAllResults]
+      : activeTab === "coindcx" ? coindcxAllResults
+      : activeTab === "combined" ? [...allResults, ...deltaAllResults, ...coindcxAllResults]
       : allResults;
     const map: Record<string, number> = {};
     if (pool.length === 0) return map;
@@ -696,125 +751,74 @@ export default function Screener({
     for (const extra of EXTRA_VIEW_COUNT_IDS) ids.add(extra);
     for (const id of ids) map[id] = pool.filter((r) => passesPattern(r, id)).length;
     return map;
-  }, [allResults, deltaAllResults, activeTab]);
+  }, [allResults, deltaAllResults, coindcxAllResults, activeTab]);
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     else { setSortKey(key); setSortDir("asc"); }
   };
 
-  const activeProgress = activeTab === "delta" ? deltaProgress : progress;
+  const activeProgress =
+    activeTab === "delta" ? deltaProgress
+    : activeTab === "coindcx" ? coindcxProgress
+    : progress;
   const progressPct = activeProgress.total > 0 ? Math.round((activeProgress.done / activeProgress.total) * 100) : 0;
 
   const combinedResults: CPRResultWithSource[] = [
     ...filtered.map((r) => ({ ...r, source: "binance" as const })),
     ...deltaFiltered.map((r) => ({ ...r, source: "delta" as const })),
+    ...coindcxFiltered.map((r) => ({ ...r, source: "coindcx" as const })),
   ];
   const combinedAllResults: CPRResultWithSource[] = [
     ...allResults.map((r) => ({ ...r, source: "binance" as const })),
     ...deltaAllResults.map((r) => ({ ...r, source: "delta" as const })),
+    ...coindcxAllResults.map((r) => ({ ...r, source: "coindcx" as const })),
   ];
+
+  // Shared "pattern ∩ source" pool used by every sub-filter branch in
+  // getActivePool below (previously copy-pasted per branch for Binance/Delta).
+  const intersectPool = (patternId: string): CPRResultWithSource[] => {
+    const pick = (rows: CPRResult[], source: SourceId): CPRResultWithSource[] =>
+      rows.filter((r) => passesPattern(r, patternId)).map((r) => ({ ...r, source }));
+    const b = pick(allResults, "binance");
+    const d = pick(deltaAllResults, "delta");
+    const c = pick(coindcxAllResults, "coindcx");
+    if (activeTab === "combined") return [...b, ...d, ...c];
+    if (activeTab === "delta") return d;
+    if (activeTab === "coindcx") return c;
+    return b;
+  };
 
   const getActivePool = (): CPRResultWithSource[] => {
     if (showExpU4PU4 && activeView === "overlapping-lower") {
-      const binanceIntersect = allResults
-        .filter((r) => passesPattern(r, "eXLo-L4U4-U4"))
-        .map((r) => ({ ...r, source: "binance" as const }));
-
-      const deltaIntersect = deltaAllResults
-        .filter((r) => passesPattern(r, "eXLo-L4U4-U4"))
-        .map((r) => ({ ...r, source: "delta" as const }));
-
-      if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
-      if (activeTab === "delta") return deltaIntersect;
-      return binanceIntersect;
+      return intersectPool("eXLo-L4U4-U4");
     }
     // RENAMED from "Exp-U3>U3": 9AM:SSRRBHHLLA-U4:9PM pool
     if (showExpU3PU3 && activeView === "overlapping-lower") {
-      const binanceIntersect = allResults
-        .filter((r) => passesPattern(r, "9AM:SSRRBHHLLA-U4:9PM"))
-        .map((r) => ({ ...r, source: "binance" as const }));
-
-      const deltaIntersect = deltaAllResults
-        .filter((r) => passesPattern(r, "9AM:SSRRBHHLLA-U4:9PM"))
-        .map((r) => ({ ...r, source: "delta" as const }));
-
-      if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
-      if (activeTab === "delta") return deltaIntersect;
-      return binanceIntersect;
+      return intersectPool("9AM:SSRRBHHLLA-U4:9PM");
     }
     // NEW: 9AM:pRRHHLLA-U4:9PM pool — Overlapping Below, HHRRBelow +
     // HHLLAbove variant, placed next to 9AM:SSRRBHHLLA-U4:9PM.
     if (showOBLoRRHHLLA && activeView === "overlapping-lower") {
-      const binanceIntersect = allResults
-        .filter((r) => passesPattern(r, "9AM:pRRHHLLA-U4:9PM"))
-        .map((r) => ({ ...r, source: "binance" as const }));
-
-      const deltaIntersect = deltaAllResults
-        .filter((r) => passesPattern(r, "9AM:pRRHHLLA-U4:9PM"))
-        .map((r) => ({ ...r, source: "delta" as const }));
-
-      if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
-      if (activeTab === "delta") return deltaIntersect;
-      return binanceIntersect;
+      return intersectPool("9AM:pRRHHLLA-U4:9PM");
     }
     // NEW: OBN-L4U4-U4 pool — Overlapping Below, Narrow variant
     if (showOBNLoU4L4 && activeView === "overlapping-lower") {
-      const binanceIntersect = allResults
-        .filter((r) => passesPattern(r, "OBN-L4U4-U4"))
-        .map((r) => ({ ...r, source: "binance" as const }));
-
-      const deltaIntersect = deltaAllResults
-        .filter((r) => passesPattern(r, "OBN-L4U4-U4"))
-        .map((r) => ({ ...r, source: "delta" as const }));
-
-      if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
-      if (activeTab === "delta") return deltaIntersect;
-      return binanceIntersect;
+      return intersectPool("OBN-L4U4-U4");
     }
     // NEW: OBW-L4U4-L4 pool — Overlapping Below, Wide variant
     if (showOBWLoU4L4 && activeView === "overlapping-lower") {
-      const binanceIntersect = allResults
-        .filter((r) => passesPattern(r, "OBW-L4U4-L4"))
-        .map((r) => ({ ...r, source: "binance" as const }));
-
-      const deltaIntersect = deltaAllResults
-        .filter((r) => passesPattern(r, "OBW-L4U4-L4"))
-        .map((r) => ({ ...r, source: "delta" as const }));
-
-      if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
-      if (activeTab === "delta") return deltaIntersect;
-      return binanceIntersect;
+      return intersectPool("OBW-L4U4-L4");
     }
     // NEW: 2PM:SSLLpRRHHA-ApU4:5PM pool — Overlapping Below, SSLLAbove +
     // HHRRBelow variant, placed next to OBW-L4U4-L4.
     if (showOBLoSSLLRRHH && activeView === "overlapping-lower") {
-      const binanceIntersect = allResults
-        .filter((r) => passesPattern(r, "2PM:SSLLpRRHHA-ApU4:5PM"))
-        .map((r) => ({ ...r, source: "binance" as const }));
-
-      const deltaIntersect = deltaAllResults
-        .filter((r) => passesPattern(r, "2PM:SSLLpRRHHA-ApU4:5PM"))
-        .map((r) => ({ ...r, source: "delta" as const }));
-
-      if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
-      if (activeTab === "delta") return deltaIntersect;
-      return binanceIntersect;
+      return intersectPool("2PM:SSLLpRRHHA-ApU4:5PM");
     }
     // NEW: 8AM:SSLLpRRHHA-L4:1PM pool — bearish sibling of
     // 2PM:SSLLpRRHHA-ApU4:5PM, placed next to it.
     if (showOBLoSSLLRRHHDown && activeView === "overlapping-lower") {
-      const binanceIntersect = allResults
-        .filter((r) => passesPattern(r, "8AM:SSLLpRRHHA-L4:1PM"))
-        .map((r) => ({ ...r, source: "binance" as const }));
-
-      const deltaIntersect = deltaAllResults
-        .filter((r) => passesPattern(r, "8AM:SSLLpRRHHA-L4:1PM"))
-        .map((r) => ({ ...r, source: "delta" as const }));
-
-      if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
-      if (activeTab === "delta") return deltaIntersect;
-      return binanceIntersect;
+      return intersectPool("8AM:SSLLpRRHHA-L4:1PM");
     }
     // NEW: generic Views (sub-pattern) pool — covers every category in
     // GENERIC_VIEW_CATEGORIES. passesPattern(r, id) already resolves any
@@ -822,18 +826,11 @@ export default function Screener({
     // above), so this one branch replaces what would otherwise be a
     // separate hand-written pool block per sub-pattern.
     if (activeGenericSubView && GENERIC_VIEW_CATEGORIES.has(activeSectionKey)) {
-      const binanceIntersect = allResults
-        .filter((r) => passesPattern(r, activeGenericSubView))
-        .map((r) => ({ ...r, source: "binance" as const }));
-      const deltaIntersect = deltaAllResults
-        .filter((r) => passesPattern(r, activeGenericSubView))
-        .map((r) => ({ ...r, source: "delta" as const }));
-      if (activeTab === "combined") return [...binanceIntersect, ...deltaIntersect];
-      if (activeTab === "delta") return deltaIntersect;
-      return binanceIntersect;
+      return intersectPool(activeGenericSubView);
     }
     if (activeTab === "combined") return showAll ? combinedAllResults : combinedResults;
     if (activeTab === "delta") return (showAll ? deltaAllResults : deltaFiltered).map((r) => ({ ...r, source: "delta" as const }));
+    if (activeTab === "coindcx") return (showAll ? coindcxAllResults : coindcxFiltered).map((r) => ({ ...r, source: "coindcx" as const }));
     return (showAll ? allResults : filtered).map((r) => ({ ...r, source: "binance" as const }));
   };
 
@@ -1085,13 +1082,14 @@ export default function Screener({
     // setDeltaAllResults), so this only fires on real new data, not on every
     // tab switch or filter click.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onResults, allResults, deltaAllResults]);
+  }, [onResults, allResults, deltaAllResults, coindcxAllResults]);
 
   const currentStatus =
     activeTab === "binance" ? status
     : activeTab === "delta" ? deltaStatus
-    : status === "done" || deltaStatus === "done" ? "done"
-    : status === "scanning" || deltaStatus === "scanning" ? "scanning"
+    : activeTab === "coindcx" ? coindcxStatus
+    : status === "done" || deltaStatus === "done" || coindcxStatus === "done" ? "done"
+    : status === "scanning" || deltaStatus === "scanning" || coindcxStatus === "scanning" ? "scanning"
     : "idle";
 
   // "Scanned at" badge time for the active tab — Combined shows whichever
@@ -1100,21 +1098,31 @@ export default function Screener({
   const activeScannedAt =
     activeTab === "binance" ? binanceScannedAt
     : activeTab === "delta" ? deltaScannedAt
-    : binanceScannedAt && deltaScannedAt ? Math.max(binanceScannedAt, deltaScannedAt)
-    : binanceScannedAt ?? deltaScannedAt;
+    : activeTab === "coindcx" ? coindcxScannedAt
+    : (() => {
+        const times = [binanceScannedAt, deltaScannedAt, coindcxScannedAt].filter(
+          (t): t is number => t !== null,
+        );
+        return times.length > 0 ? Math.max(...times) : null;
+      })();
 
   const currentFilteredCount =
     activeTab === "combined" ? combinedResults.length
     : activeTab === "delta" ? deltaFiltered.length
+    : activeTab === "coindcx" ? coindcxFiltered.length
     : filtered.length;
 
   const currentAllCount =
     activeTab === "combined" ? combinedAllResults.length
     : activeTab === "delta" ? deltaAllResults.length
+    : activeTab === "coindcx" ? coindcxAllResults.length
     : allResults.length;
 
-  const currentError = activeTab === "delta" ? deltaError : error;
-  const canShowCombined = status === "done" || deltaStatus === "done";
+  const currentError =
+    activeTab === "delta" ? deltaError
+    : activeTab === "coindcx" ? coindcxError
+    : error;
+  const canShowCombined = status === "done" || deltaStatus === "done" || coindcxStatus === "done";
 
   // Helper: is any sub-filter active (to decide the result count label)
   const anySubFilter =
@@ -1193,7 +1201,7 @@ export default function Screener({
           </div>
 
           {currentStatus === "done" && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 flex-1 min-w-[220px] max-w-md">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 flex-1 min-w-[220px] max-w-xl">
               <div className="rounded-lg border border-border bg-card px-3 py-1">
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
                   Symbols
@@ -1211,6 +1219,12 @@ export default function Screener({
                   Delta
                 </p>
                 <p className="mt-0.5 text-lg font-semibold text-violet-300">{deltaAllResults.length}</p>
+              </div>
+              <div className="rounded-lg border border-border bg-card px-3 py-1">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  CoinDCX
+                </p>
+                <p className="mt-0.5 text-lg font-semibold text-emerald-300">{coindcxAllResults.length}</p>
               </div>
               <div className="rounded-lg border border-border bg-card px-3 py-1">
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
@@ -1283,6 +1297,16 @@ export default function Screener({
           >
             <RefreshCw className={`w-3 h-3 ${deltaStatus === "scanning" ? "animate-spin" : ""}`} />
             {deltaStatus === "scanning" ? "Scanning Delta…" : "Scan Delta"}
+          </button>
+
+          <button
+            onClick={() => { void doCoinDCXScan(); }}
+            disabled={coindcxStatus === "scanning"}
+            className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-all disabled:opacity-50 shrink-0"
+            style={{ background: "linear-gradient(135deg,#10b981,#047857)", color: "#fff" }}
+          >
+            <RefreshCw className={`w-3 h-3 ${coindcxStatus === "scanning" ? "animate-spin" : ""}`} />
+            {coindcxStatus === "scanning" ? "Scanning CoinDCX…" : "Scan CoinDCX"}
           </button>
 
           {currentStatus === "done" && (
@@ -1392,12 +1416,14 @@ export default function Screener({
         </div>
 
         {/* Status bar */}
-        {(status === "scanning" || deltaStatus === "scanning") && (
+        {(status === "scanning" || deltaStatus === "scanning" || coindcxStatus === "scanning") && (
           <div className="mb-4 rounded-lg border border-border bg-card p-3">
             <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
               <span>
                 {activeTab === "delta"
                   ? `Scanning Delta Exchange… ${deltaProgress.symbol}`
+                  : activeTab === "coindcx"
+                  ? `Scanning CoinDCX Futures… ${coindcxProgress.symbol}`
                   : `Scanning Binance… ${progress.symbol}`}
               </span>
               <span>{progressPct}%</span>
@@ -2047,7 +2073,7 @@ export default function Screener({
 
               {canShowCombined && (
                 <div className="flex items-center gap-1">
-                  {(["combined", "binance", "delta"] as ActiveTab[]).map((tab) => (
+                  {(["combined", "binance", "delta", "coindcx"] as ActiveTab[]).map((tab) => (
                     <button
                       key={tab}
                       onClick={() => setActiveTab(tab)}
@@ -2057,11 +2083,13 @@ export default function Screener({
                             ? "bg-amber-500/20 text-amber-400 border border-amber-500/40"
                             : tab === "binance"
                             ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/40"
+                            : tab === "coindcx"
+                            ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
                             : "bg-cyan-500/20 text-cyan-400 border border-cyan-500/40"
                           : "text-slate-400 hover:text-white bg-[#151e2c]"
                       }`}
                     >
-                      {tab === "combined" ? "All" : tab === "binance" ? "Binance" : "Delta"}
+                      {tab === "combined" ? "All" : tab === "binance" ? "Binance" : tab === "coindcx" ? "CoinDCX" : "Delta"}
                     </button>
                   ))}
                 </div>
@@ -2127,7 +2155,7 @@ export default function Screener({
             so it doesn't flash before the first scan resolves. */}
         {currentStatus === "done" && (
         <div className="mt-auto pt-8 text-xs text-muted-foreground text-center">
-          Binance: top 500 USDT pairs · Delta Exchange: 195 perpetual futures · CPR from completed UTC daily candles
+          Binance: top 500 USDT pairs · Delta Exchange: 195 perpetual futures · CoinDCX: USDT perpetual futures · CPR from completed UTC daily candles
           <br />
           Auto-scans once daily at 5:30 AM IST · PH/PL = Previous Day High/Low · Not financial advice · by Kriven Gokul
         </div>

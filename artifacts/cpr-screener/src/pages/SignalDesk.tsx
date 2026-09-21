@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import {
   CPRResultWithSource,
+  SourceId,
   fmt,
   fmtPct,
   passesPattern,
@@ -37,7 +38,7 @@ import {
 export interface SignalDeskSymbol {
   key: string;
   symbol: string;
-  source: "binance" | "delta";
+  source: SourceId;
   currentPrice: number;
   change24h?: number;
   direction: "Up" | "Down";
@@ -66,14 +67,14 @@ interface SignalDeskProps {
   // (and therefore the left-nav sidebar's per-pattern counts), instead of
   // the two staying independently out of sync. Falls back to SignalDesk's
   // own local state when unset, so this component still works standalone.
-  sourceFilter?: "all" | "binance" | "delta";
-  onSourceFilterChange?: (next: "all" | "binance" | "delta") => void;
+  sourceFilter?: "all" | SourceId;
+  onSourceFilterChange?: (next: "all" | SourceId) => void;
 }
 
 export interface SignalItem {
   id: string;
   symbol: string;
-  source: "binance" | "delta";
+  source: SourceId;
   timeframe: string;
   direction: "Up" | "Down" | "NEUTRAL";
   type: string;
@@ -272,7 +273,7 @@ export default function SignalDesk({
   onSourceFilterChange,
 }: SignalDeskProps) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [sourceFilterState, setSourceFilterState] = useState<"all" | "binance" | "delta">("binance");
+  const [sourceFilterState, setSourceFilterState] = useState<"all" | SourceId>("binance");
   const sourceFilter = sourceFilterProp ?? sourceFilterState;
   const setSourceFilter = onSourceFilterChange ?? setSourceFilterState;
   const [directionFilter, setDirectionFilter] = useState<"all" | "Up" | "Down">("all");
@@ -613,7 +614,7 @@ export default function SignalDesk({
     const newlySubmitted: string[] = [];
     const candidateSignals: Array<{
       symbol: string;
-      source: "binance" | "delta";
+      source: SourceId;
       timeframe: string;
       direction: "Up" | "Down" | "NEUTRAL" | "LONG" | "SHORT";
       type: string;
@@ -879,6 +880,16 @@ R:R: ${item.riskReward}`;
               }`}
             >
               Delta
+            </button>
+            <button
+              onClick={() => setSourceFilter("coindcx")}
+              className={`px-2 py-1 rounded text-xs font-semibold transition cursor-pointer ${
+                sourceFilter === "coindcx"
+                  ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
+                  : "text-slate-400 hover:text-white bg-[#151e2c]"
+              }`}
+            >
+              CoinDCX
             </button>
           </div>
         </div>

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { CPRResult } from "@/lib/cpr";
+import { fetchCoinDCXLastPrices } from "@/lib/coinDCX";
 
 // FIX (Price silently going stale — e.g. LIT, XMR showing prices far off
 // TradingView): a symbol that stops appearing in the ticker response (brief
@@ -194,4 +195,48 @@ export function useDeltaLiveRefresh(
     const id = setInterval(refresh, 15_000);
     return () => clearInterval(id);
   }, [deltaStatus, deltaAllResultsRef, setDeltaAllResults, setDeltaFiltered]);
+}
+
+/**
+ * Refreshes CoinDCX futures live prices every 15s while status === "done".
+ * Mirrors useDeltaLiveRefresh: one snapshot request per tick, matched by
+ * symbol (`BTCUSDT`). If the snapshot is unavailable the tick is skipped and
+ * existing prices are left untouched — the next tick simply tries again.
+ */
+export function useCoinDCXLiveRefresh(
+  status: "idle" | "scanning" | "done" | "error",
+  coindcxAllResultsRef: React.MutableRefObject<CPRResult[]>,
+  setCoinDCXAllResults: React.Dispatch<React.SetStateAction<CPRResult[]>>,
+  setCoinDCXFiltered: React.Dispatch<React.SetStateAction<CPRResult[]>>
+) {
+  useEffect(() => {
+    if (status !== "done") return;
+    const refresh = async () => {
+      const results = coindcxAllResultsRef.current;
+      if (!results.length) {
+        console.debug("[coindcx-live-refresh] tick — no results in ref yet, skipping");
+        return;
+      }
+      try {
+        // Single attempt: the next 15s tick is the retry.
+        const priceMap = await fetchCoinDCXLastPrices(1);
+        if (priceMap.size === 0) return;
+        const apply = (prev: CPRResult[]): CPRResult[] =>
+          prev.map((r) => {
+            const price = priceMap.get(r.symbol);
+            if (!price || price <= 0) return r;
+            const change24h = r.openPrice > 0
+              ? ((price - r.openPrice) / r.openPrice) * 100
+              : r.change24h;
+            return { ...r, currentPrice: price, change24h };
+          });
+        setCoinDCXAllResults((p) => apply(p));
+        setCoinDCXFiltered((p) => apply(p));
+      } catch (err) {
+        console.warn("[coindcx-live-refresh] refresh cycle skipped:", err);
+      }
+    };
+    const id = setInterval(refresh, 15_000);
+    return () => clearInterval(id);
+  }, [status, coindcxAllResultsRef, setCoinDCXAllResults, setCoinDCXFiltered]);
 }

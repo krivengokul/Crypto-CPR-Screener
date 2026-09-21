@@ -20,10 +20,13 @@ import { Views } from "@/lib/ViewsSidebar";
 
 export type SortKey = "symbol" | "compressionRatio" | "currentPrice" | "change24h" | "quoteVolume" | "priceVsCpr" | "cprDistance" | "pdhPdlPct";
 export type SortDir = "asc" | "desc";
-export type ActiveTab = "binance" | "delta" | "combined";
+// Scan venues. CoinDCX futures (`B-<BASE>_USDT`) are scanned as `<BASE>USDT`,
+// the same symbol shape as Binance — see coinDCX.ts.
+export type SourceId = "binance" | "delta" | "coindcx";
+export type ActiveTab = SourceId | "combined";
 
 export interface CPRResultWithSource extends CPRResult {
-  source: "binance" | "delta";
+  source: SourceId;
 }
 
 export function fmt(v: number): string {
@@ -185,8 +188,8 @@ export function getVal(r: CPRResultWithSource, key: SortKey): number | string {
  */
 const DELTA_QUOTE_SUFFIXES = ["USDT", "BUSD", "USDC", "USD", "INR"];
 
-export function splitSymbol(symbol: string, source: "binance" | "delta") {
-  if (source === "binance") {
+export function splitSymbol(symbol: string, source: SourceId) {
+  if (source === "binance" || source === "coindcx") {
     if (symbol.endsWith("USDT")) return { base: symbol.slice(0, -4), quote: "USDT" };
     return { base: symbol, quote: "" };
   }
@@ -215,8 +218,9 @@ export function splitSymbol(symbol: string, source: "binance" | "delta") {
  * (per splitSymbol) is "BUSD" are treated as unmapped; every other Delta
  * symbol — underscore-delimited or not — gets a chart link as normal.
  */
-export function hasKnownChartMapping(symbol: string, source: "binance" | "delta"): boolean {
-  if (source === "binance") return true;
+export function hasKnownChartMapping(symbol: string, source: SourceId): boolean {
+  // Binance and CoinDCX (Binance-routed `B-` instruments) both map cleanly.
+  if (source !== "delta") return true;
   return splitSymbol(symbol, "delta").quote !== "BUSD";
 }
 
@@ -230,7 +234,7 @@ export type BinanceVenue = "spot" | "futures";
 
 export function getChartUrl(
   symbol: string,
-  source: "binance" | "delta",
+  source: SourceId,
   _venue?: BinanceVenue,
 ): string {
   const normalizedSymbol = symbol.trim().toUpperCase().replace(/\.P$/i, "");
@@ -242,6 +246,9 @@ export function getChartUrl(
     return `https://in.tradingview.com/chart/?symbol=${tvSymbol}`;
   }
 
+  // Binance AND CoinDCX: CoinDCX has no TradingView feed of its own, but its
+  // `B-` futures instruments are Binance USDⓈ-M perpetuals, so both link to
+  // the same BINANCE:<SYMBOL>.P chart.
   const tvSymbol = encodeURIComponent(`BINANCE:${normalizedSymbol}.P`);
   return `https://www.tradingview.com/chart/?symbol=${tvSymbol}`;
 }
