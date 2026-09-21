@@ -56,6 +56,7 @@ import {
   type PatternInfo,
   getViewDirection,
   getRowDirection,
+  getActiveViewLabels,
 } from "./ScreenerUtils";
 import LiveClock from "./LiveClock";
 import ScreenerLegend from "./ScreenerLegend";
@@ -820,8 +821,23 @@ export default function Screener({
     return (showAll ? allResults : filtered).map((r) => ({ ...r, source: "binance" as const }));
   };
 
+  // Search box matches EITHER the symbol OR the name of any View the row
+  // currently satisfies (the same names shown in the table's VIEW column,
+  // via getActiveViewLabels). Typing part of a View name — e.g. "EU3L4" —
+  // keeps only the rows that match a View whose label/id contains it.
+  const searchQuery = search.trim().toLowerCase();
+  const matchesSearch = (r: CPRResultWithSource): boolean => {
+    if (!searchQuery) return true;
+    if (r.symbol.toLowerCase().includes(searchQuery)) return true;
+    return getActiveViewLabels(r).some(
+      (v) =>
+        v.label.toLowerCase().includes(searchQuery) ||
+        v.id.toLowerCase().includes(searchQuery),
+    );
+  };
+
   const displayed = getActivePool()
-    .filter((r) => r.symbol.toLowerCase().includes(search.toLowerCase()))
+    .filter(matchesSearch)
     // NEW: CL2U1 / CL4U3 are independent booleans in cpr.ts (not
     // actually gated behind srLower), so a row can satisfy one of them
     // AND a higher-priority bucket (e.g. srHigher) at the same time.
@@ -1919,7 +1935,7 @@ export default function Screener({
               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
               <input
                 type="search"
-                placeholder="Search symbol…"
+                placeholder="Search symbol or view…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full bg-[#151e2c] border border-[#22354a] rounded-md pl-8 pr-3 py-1 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-teal-500/50"
