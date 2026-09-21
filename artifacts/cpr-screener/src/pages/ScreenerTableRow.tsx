@@ -829,18 +829,25 @@ export default function ScreenerTableRow({
     };
   });
   const anyLadderDefined = viewLadders.some((v) => v.ladder.hasConditions);
-  // Expanded row's LEVEL CHECK panel (SRLadderRow shows a single one). With a
-  // View selected in the Screener it keeps using that View's defs (so it
-  // agrees with the "LevelCheck UnDefined" text in the column). With none
-  // selected (Show All), `levelCheckConditions` is undefined — which used to
-  // make the panel say "LevelCheck UnDefined" even while the Ladder Check
-  // column showed e.g. 13/13. Fall back to the first View in the VIEW column
-  // that has levelCheckDefs, and pass its name/direction so the "Levels VIEW"
-  // badge says which View the panel is checking.
-  const fallbackView = !viewName ? viewLadders.find((v) => v.ladder.hasConditions) : undefined;
-  const expandedViewName = viewName ?? fallbackView?.label;
-  const expandedLevelCheckDefs = levelCheckConditions ?? fallbackView?.defs;
-  const expandedViewDirection = fallbackView ? fallbackView.direction ?? undefined : dir ?? undefined;
+  // Inputs: `viewName` / `levelCheckConditions` are the View SELECTED in the
+  // Screener (from Screener.tsx); `viewLadders` are the Views THIS ROW matches.
+  // They're resolved once, here, into a single `primaryView` — the one View
+  // the expanded row's Levels VIEW badge + LEVEL CHECK panel (SRLadderRow
+  // takes exactly one) are about:
+  //   • a View is selected  -> that View (name, direction, defs as passed in;
+  //     if it has no defs the panel says "LevelCheck UnDefined", matching the
+  //     column)
+  //   • none selected       -> the first View in the VIEW column that has
+  //     levelCheckDefs (previously the panel got nothing here and said
+  //     "LevelCheck UnDefined" while the column showed e.g. 13/13)
+  //   • nothing to show     -> undefined
+  const hasSelectedView = !!viewName;
+  const firstDefinedView = viewLadders.find((v) => v.ladder.hasConditions);
+  const primaryView = hasSelectedView
+    ? { name: viewName, direction: dir ?? undefined, defs: levelCheckConditions }
+    : firstDefinedView
+    ? { name: firstDefinedView.label, direction: firstDefinedView.direction ?? undefined, defs: firstDefinedView.defs }
+    : undefined;
   // SSLLCategory badge (e.g. "SSLL-AA") — shown above the S1 line in the
   // expanded row's "Levels VIEW" chart, right side.
   const ssllBadge = renderSSLLCategoryBadge(r);
@@ -948,16 +955,16 @@ export default function ScreenerTableRow({
             View's own levelCheckDefs:
             • View has levelCheckDefs                   -> "n/13" (green/amber/red)
             • View has none, and a View is active in the
-              Screener (viewName set)                   -> "LevelCheck UnDefined"
+              Screener (hasSelectedView)                -> "LevelCheck UnDefined"
             • View has none, no View active             -> blank line
             Row matches no View                         -> blank cell */}
         <td className="px-3 py-3">
-          {viewLadders.length > 0 && (anyLadderDefined || !!viewName) && (
+          {viewLadders.length > 0 && (anyLadderDefined || hasSelectedView) && (
             <div className="flex flex-col gap-0.5">
               {viewLadders.map(({ id, label, ladder }) => (
                 <div key={id} className="h-4 flex items-center whitespace-nowrap">
                   {!ladder.hasConditions ? (
-                    viewName ? (
+                    hasSelectedView ? (
                       <span className="text-xs text-muted-foreground" title={label}>
                         LevelCheck UnDefined
                       </span>
@@ -1052,10 +1059,10 @@ export default function ScreenerTableRow({
           // more accurately belongs (it's today-vs-prev, not prev's own).
           prevPatternBadge={renderPrevPatternBadge(r)}
           pivotPatternBadge={renderPivotPatternBadge(r)}
-          viewName={expandedViewName}
-          viewDirection={expandedViewDirection}
+          viewName={primaryView?.name}
+          viewDirection={primaryView?.direction}
           showLevelCheck
-          levelCheckConditions={expandedLevelCheckDefs}
+          levelCheckConditions={primaryView?.defs}
           innerLevelBadges={levelBadges}
           gapBadges={renderGapColumnBadges(r)}
           ssllBadge={ssllBadge}
