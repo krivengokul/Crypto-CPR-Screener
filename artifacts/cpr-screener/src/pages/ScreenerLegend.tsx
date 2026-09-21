@@ -2,11 +2,6 @@ import { Views } from "@/lib/ViewsSidebar"
 
 export interface ScreenerLegendProps {
   activeView: string;
-  showExpU4PU4: boolean;
-  showExpU3PU3: boolean;
-  showOBLoRRHHLLA: boolean;
-  showOBNLoL4U4: boolean;
-  showOBWLoL4U4: boolean;
   /** @deprecated CPR Inside sub-filters removed; kept optional for callers. */
   showInsideCPRTiCOLo?: boolean;
 }
@@ -20,14 +15,9 @@ export interface ScreenerLegendProps {
 export default function ScreenerLegend(props: ScreenerLegendProps) {
   const {
     activeView,
-    showExpU4PU4,
-    showExpU3PU3,
-    showOBLoRRHHLLA,
-    showOBNLoL4U4,
-    showOBWLoL4U4,
   } = props;
   
-  // Map a sub-pattern id (selected via the sidebar tree, e.g. "eXLo-L4U4-U4")
+  // Map a sub-pattern id (selected via the sidebar tree, e.g. "A-A-AA-AA-EU3L4-GapB")
   // back to its parent category id (e.g. "overlapping-lower"), so Legend Card 1
   // still shows the parent's overview card instead of going blank when a
   // child pattern is the active one. Parent ids and standalone patterns
@@ -190,53 +180,6 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             <div className="text-xs font-semibold text-violet-400 mb-1">Pattern: EUTL3  PCPR: Tiny  CPR: Mega</div>
             <div className="text-xs text-muted-foreground">Big CPR Above (Wide + Rising) + Today&apos;s R1 &gt; Prev R4 + Pattern EUTL3 (Prev S4 inside Today&apos;s S2/S3, Prev R4 inside Today&apos;s Pivot/TC) + Prev CPR width 0.10%–0.22% (Tiny), Today CPR width 5.00%–10.00% (Mega)</div>
           </>
-        ) : showExpU4PU4 && activeView === "overlapping-lower" ? (
-          <>
-            <div className="text-xs font-semibold text-sky-400 mb-1">Expanded</div>
-            <div className="text-xs text-muted-foreground">Prev R4 between today&apos;s R3/R4 and Prev S4 between today&apos;s S3/S4 with today&apos;s CPR Mini</div>
-          </>
-        ) : showExpU3PU3 && activeView === "overlapping-lower" ? (
-          <>
-            <div className="text-xs font-semibold text-sky-400 mb-1">Expanded</div>
-            <div className="text-xs text-muted-foreground">Todays U3 &gt; Prev U4/Todays L3 &lt; Prev L4 , today&apos;s CPR is Narrow</div>
-          </>
-        ) : showOBLoRRHHLLA && activeView === "overlapping-lower" ? (
-          <>
-            <div className="text-xs font-semibold text-green-400 mb-1">
-              Pattern: HHRRBelow&nbsp;&nbsp;HHLLAbove
-            </div>
-            <div className="text-xs text-muted-foreground">
-              Overlap Below + HHRRBelow (today&apos;s R1 AND today&apos;s PDH both below the lower of prev day&apos;s R1/PDH) + HHLLAbove (today&apos;s PDH strictly above prev day&apos;s PDH AND today&apos;s PDL &gt;= prev day&apos;s PDL).
-            </div>
-          </>
-        ) : showOBNLoL4U4 && activeView === "overlapping-lower" ? (
-          <>
-            <div className="text-xs font-semibold text-cyan-400 mb-1">Overlap Below, Narrow</div>
-            <div className="text-xs text-muted-foreground">Today&apos;s R4 inside Prev R3/R4, Prev S4 inside Today&apos;s S3/S4, today&apos;s CPR Narrow, Compression &gt; 50%</div>
-          </>
-        ) : showOBWLoL4U4 && activeView === "overlapping-lower" ? (
-          <>
-            <div className="text-xs font-semibold text-rose-400 mb-1">Overlap Below, Wide</div>
-            <div className="text-xs text-muted-foreground">Today&apos;s R4 inside Prev R3/R4, Prev S4 inside Today&apos;s S3/S4, today&apos;s CPR Wide, Compression &gt; 50%</div>
-          </>
-        ) : activeView === "2PM:SSLLpRRHHA-ApU4:5PM" ? (
-          <>
-            <div className="text-xs font-semibold text-green-400 mb-1">
-              Pattern: SSLLAbove&nbsp;&nbsp;HHRRBelow
-            </div>
-            <div className="text-xs text-muted-foreground">
-              Overlap Below + SSLLAbove (today&apos;s S1 AND today&apos;s PDL both above the higher of prev day&apos;s S1/PDL) + HHRRBelow (today&apos;s R1 AND today&apos;s PDH both below the lower of prev day&apos;s R1/PDH) + EITHER prev day&apos;s R1 above today&apos;s R2 OR today&apos;s S3 above prev day&apos;s S2.
-            </div>
-          </>
-        ) : activeView === "8AM:SSLLpRRHHA-L4:1PM" ? (
-          <>
-            <div className="text-xs font-semibold text-red-400 mb-1">
-              Pattern: SSLLAbove&nbsp;&nbsp;HHRRBelow
-            </div>
-            <div className="text-xs text-muted-foreground">
-              Overlap Below + SSLLAbove (today&apos;s S1 AND today&apos;s PDL both above the higher of prev day&apos;s S1/PDL) + HHRRBelow (today&apos;s R1 AND today&apos;s PDH both below the lower of prev day&apos;s R1/PDH) + EITHER prev day&apos;s R1 below today&apos;s R2 OR today&apos;s S3 below prev day&apos;s S2. Bearish sibling of 2PM:SSLLpRRHHA-ApU4:5PM, targets today&apos;s own L4/S4 by ~1PM.
-            </div>
-          </>
         ) : activeView === "8AM:CoLApHA-U4+1:8AM" ? (
           <>
             <div className="text-xs font-semibold text-green-400 mb-1">
@@ -395,49 +338,6 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
           <>
             <div className="text-xs font-semibold text-violet-400 mb-1">Exp Target: AU4 (prev day&apos;s R4)<br />Time: 2PM</div>
             <div className="text-xs text-muted-foreground">Expected upside target AU4 (prev day&apos;s R4) by ~2PM</div>
-          </>
-        ) : showExpU4PU4 && activeView === "overlapping-lower" ? (
-          <>
-            <div className="text-xs font-semibold text-emerald-400 mb-1">Target</div>
-            <div className="text-xs text-muted-foreground">These coins have the potential to go up to U4</div>
-          </>
-        ) : showExpU3PU3 && activeView === "overlapping-lower" ? (
-          <>
-            <div className="text-xs font-semibold text-emerald-400 mb-1">Target</div>
-            <div className="text-xs text-muted-foreground">These coins have the potential to go farAbove U4</div>
-          </>
-        ) : showOBLoRRHHLLA && activeView === "overlapping-lower" ? (
-          <>
-            <div className="text-xs font-semibold text-emerald-400 mb-1">Target</div>
-            <div className="text-xs text-muted-foreground">Up continuation — these coins have the potential to go up to today&apos;s own U4</div>
-          </>
-        ) : showOBNLoL4U4 && activeView === "overlapping-lower" ? (
-          <>
-            <div className="text-xs font-semibold text-emerald-400 mb-1">Target</div>
-            <div className="text-xs text-muted-foreground">Compressed structure with today&apos;s CPR Narrow — Up continuation to U4</div>
-          </>
-        ) : showOBWLoL4U4 && activeView === "overlapping-lower" ? (
-          <>
-            <div className="text-xs font-semibold text-emerald-400 mb-1">Target</div>
-            <div className="text-xs text-muted-foreground">Same structure but today&apos;s CPR Wide — Up continuation to U4</div>
-          </>
-        ) : activeView === "2PM:SSLLpRRHHA-ApU4:5PM" ? (
-          <>
-            <div className="text-xs font-semibold text-green-400 mb-1">
-              Target: ApU4&nbsp;&nbsp;&nbsp;Entry: 2PM&nbsp;&nbsp;&nbsp;Time: 5PM
-            </div>
-            <div className="text-xs text-muted-foreground">
-              Up continuation from an Overlap-Below setup where today&apos;s S1/PDL both hold above prev day&apos;s tighter floor and today&apos;s R1/PDH both stay under prev day&apos;s tighter ceiling — expected move toward prev day&apos;s U4 by ~5PM IST.
-            </div>
-          </>
-        ) : activeView === "8AM:SSLLpRRHHA-L4:1PM" ? (
-          <>
-            <div className="text-xs font-semibold text-red-400 mb-1">
-              Target: L4&nbsp;&nbsp;&nbsp;Entry: 8AM&nbsp;&nbsp;&nbsp;Time: 1PM
-            </div>
-            <div className="text-xs text-muted-foreground">
-              Down sibling of 2PM:SSLLpRRHHA-ApU4:5PM from the same Overlap-Below setup, but split the opposite way (prev day&apos;s R1 below today&apos;s R2, or today&apos;s S3 below prev day&apos;s S2) — expected move toward today&apos;s own L4 by ~1PM IST.
-            </div>
           </>
         ) : activeView === "8AM:CoLApHA-U4+1:8AM" ? (
           <>
