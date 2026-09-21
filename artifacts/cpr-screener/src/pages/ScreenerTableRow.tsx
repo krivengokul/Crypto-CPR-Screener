@@ -818,12 +818,29 @@ export default function ScreenerTableRow({
   // BacktestPanel uses (rowViewDefByRow). Computed once here and shared with
   // the VIEW and Ladder Check cells so their lines stay 1:1 and in order.
   const activeViews = getActiveViewLabels(r);
-  const viewLadders = activeViews.map((v) => ({
-    id: v.id,
-    label: v.label,
-    ladder: getLadderMatchSummary(r.prevCPR, r.todayCPR, getView(v.id)?.levelCheckDefs),
-  }));
+  const viewLadders = activeViews.map((v) => {
+    const defs = getView(v.id)?.levelCheckDefs;
+    return {
+      id: v.id,
+      label: v.label,
+      direction: v.direction,
+      defs,
+      ladder: getLadderMatchSummary(r.prevCPR, r.todayCPR, defs),
+    };
+  });
   const anyLadderDefined = viewLadders.some((v) => v.ladder.hasConditions);
+  // Expanded row's LEVEL CHECK panel (SRLadderRow shows a single one). With a
+  // View selected in the Screener it keeps using that View's defs (so it
+  // agrees with the "LevelCheck UnDefined" text in the column). With none
+  // selected (Show All), `levelCheckConditions` is undefined — which used to
+  // make the panel say "LevelCheck UnDefined" even while the Ladder Check
+  // column showed e.g. 13/13. Fall back to the first View in the VIEW column
+  // that has levelCheckDefs, and pass its name/direction so the "Levels VIEW"
+  // badge says which View the panel is checking.
+  const fallbackView = !viewName ? viewLadders.find((v) => v.ladder.hasConditions) : undefined;
+  const expandedViewName = viewName ?? fallbackView?.label;
+  const expandedLevelCheckDefs = levelCheckConditions ?? fallbackView?.defs;
+  const expandedViewDirection = fallbackView ? fallbackView.direction ?? undefined : dir ?? undefined;
   // SSLLCategory badge (e.g. "SSLL-AA") — shown above the S1 line in the
   // expanded row's "Levels VIEW" chart, right side.
   const ssllBadge = renderSSLLCategoryBadge(r);
@@ -1035,10 +1052,10 @@ export default function ScreenerTableRow({
           // more accurately belongs (it's today-vs-prev, not prev's own).
           prevPatternBadge={renderPrevPatternBadge(r)}
           pivotPatternBadge={renderPivotPatternBadge(r)}
-          viewName={viewName}
-          viewDirection={dir ?? undefined}
+          viewName={expandedViewName}
+          viewDirection={expandedViewDirection}
           showLevelCheck
-          levelCheckConditions={levelCheckConditions}
+          levelCheckConditions={expandedLevelCheckDefs}
           innerLevelBadges={levelBadges}
           gapBadges={renderGapColumnBadges(r)}
           ssllBadge={ssllBadge}
