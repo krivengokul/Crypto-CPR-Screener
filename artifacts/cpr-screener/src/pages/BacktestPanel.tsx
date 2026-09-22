@@ -844,6 +844,10 @@ function EditViewControl({
   const [error, setError] = useState("");
   const [command, setCommand] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  // Set once handleSave succeeds, holding the (possibly renamed) key so
+  // the "Done" button can pass it to onUpdated — see handleSave's note
+  // on why onUpdated isn't called from there directly.
+  const [savedKey, setSavedKey] = useState<string | null>(null);
 
   // Fully derived, not typed — same composition CreateViewControl's
   // `viewKey` uses ("{Entry}-{Pattern key}[-{Gap Badge}]-{Target}"),
@@ -875,6 +879,7 @@ function EditViewControl({
     setError("");
     setCommand(null);
     setCopied(false);
+    setSavedKey(null);
     setOpen(true);
   }
 
@@ -908,9 +913,19 @@ function EditViewControl({
     const q = (s: string) => `"${s.replace(/"/g, "")}"`;
     const cmd = `gh workflow run copy-view.yml --repo krivengokul/Crypto-CPR-Screener -f sourceKey=${q(activeTarget.key)} -f newKey=${q(viewKey)} -f newLabel=${q(trimmedLabel)} -f isEdit=true -f direction=${q(direction)} -f entry=${q(entry)} -f target=${q(target)} -f attachKey=${q(attachKey)}${gapBadge ? ` -f gapBadge=${q(gapBadge)}` : ""}`;
     setCommand(cmd);
-    // Pass the *new* key — the View may have just been renamed, so the
-    // old activeTarget.key may no longer exist in VIEWS.
-    if (onUpdated) onUpdated(viewKey);
+    // Deliberately NOT calling onUpdated here, same reasoning as
+    // CreateViewControl/CopyViewControl's confirm(): onUpdated moves the
+    // dropdown's selection to the (possibly renamed) new key, and this
+    // control is only ever rendered because a condition matched the
+    // CURRENTLY selected key — isViewOnly / activeTarget for the
+    // ViewActionsRow case, isPatternOnly for the "Already in View" case.
+    // editBacktestView above has already renamed the View in the live
+    // VIEWS array, so switching selectedKey to it right now would flip
+    // that condition on this same render pass — e.g. isPatternOnly goes
+    // false the instant selectedKey stops matching the old breadcrumb —
+    // unmounting this popover and losing the command before "Done" is
+    // even clickable. Stash the key instead; onUpdated fires from Done.
+    setSavedKey(viewKey);
   }
 
   async function copyCommand() {
@@ -1047,6 +1062,10 @@ function EditViewControl({
           type="button"
           onClick={() => {
             setOpen(false);
+            // Switch the dropdown to the (possibly renamed) key now that
+            // the person has had a chance to see/copy the command — not
+            // before. See handleSave's note above.
+            if (savedKey) onUpdated?.(savedKey);
             onClose?.();
           }}
           className="rounded-md px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted/40 hover:text-foreground"
