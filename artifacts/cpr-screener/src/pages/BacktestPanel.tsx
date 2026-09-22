@@ -2841,25 +2841,38 @@ export default function BacktestPanel() {
                         // just another Create View attach point, adding
                         // a sibling under the same subPatternKeys.
                         copyViewControl={
-                          // Hide "Copy View" when the selected View's Level
-                          // Check is already a full 13/13 match for this row:
-                          // copying it would just duplicate an identical View.
-                          isViewOnly && activeTarget && !ladderByRow.get(r)?.fullMatch ? (
-                            <CopyViewControl
-                              sourceKey={activeTarget.key}
-                              sourceLabel={activeTarget.label}
-                              prevCPR={r.prevCPR}
-                              todayCPR={r.todayCPR}
-                              sourceConditions={activeLevelCheckDefs}
-                              onCopied={(newKey) => {
-                                setTreeRevision((r) => r + 1);
-                                setSelectedKey(newKey);
-                              }}
-                            />
+                          isViewOnly && activeTarget ? (
+                            <div className="flex items-center gap-1">
+                              <EditViewControl
+                                activeTarget={activeTarget}
+                                prevCPR={r.prevCPR}
+                                todayCPR={r.todayCPR}
+                              />
+                              {!ladderByRow.get(r)?.fullMatch && (
+                                <CopyViewControl
+                                  sourceKey={activeTarget.key}
+                                  sourceLabel={activeTarget.label}
+                                  prevCPR={r.prevCPR}
+                                  todayCPR={r.todayCPR}
+                                  sourceConditions={activeLevelCheckDefs}
+                                  onCopied={(newKey) => {
+                                    setTreeRevision((r) => r + 1);
+                                    setSelectedKey(newKey);
+                                  }}
+                                />
+                              )}
+                            </div>
                           ) : isPatternOnly && rowViewDefByRow.get(r) && !pendingCreateViewRows.has(`${r.source}-${r.symbol}-${r.entryDate}`) ? (
-                            <span className="text-[10px] text-muted-foreground" title="This symbol already satisfies this View's pattern and full Level Check signature, so creating another View from it would duplicate it.">
-                              Already in View: {rowViewDefByRow.get(r)?.label}
-                            </span>
+                            <div className="flex items-center gap-1">
+                              <EditViewControl
+                                activeTarget={rowViewDefByRow.get(r)!}
+                                prevCPR={r.prevCPR}
+                                todayCPR={r.todayCPR}
+                              />
+                              <span className="text-[10px] text-muted-foreground" title="This symbol already satisfies this View's pattern and full Level Check signature, so creating another View from it would duplicate it.">
+                                Already in View: {rowViewDefByRow.get(r)?.label}
+                              </span>
+                            </div>
                           ) : isPatternOnly && activePatternInfo ? (
                             (() => {
                               const rowPattern = deepestMatchingPattern(r.raw, activePatternInfo.sub.key);
