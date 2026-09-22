@@ -719,17 +719,21 @@ const TARGET_OPTIONS = ["R1", "R2", "R3", "R4", "S1", "S2", "S3", "S4"];
  * composition back apart for an *existing* View: strip a known Entry
  * off the front, a known Target off the back, then a known Gap Badge
  * off whatever's left, in that order (the only order consistent with
- * how the pieces were joined). What remains in the middle is the
- * Pattern/Subpattern key the View grades against — the same thing
- * CreateViewControl calls `effectivePattern.key`.
+ * how the pieces were joined).
  *
- * Used by EditViewControl so its View Key field can recompose live
- * from the dropdowns exactly like Create View's does, and so its Gap
- * Badge dropdown can start preselected to whatever this View already
- * encodes instead of always resetting to "Any Gap Badge". Returns
- * entry/target as undefined when the key doesn't follow this
- * convention (e.g. a hand-edited legacy key) so callers can detect
- * that and leave the key untouched rather than risk corrupting it.
+ * EditViewControl uses only the `gapBadge` result of this, to preselect
+ * its Gap Badge dropdown to whatever this View's key already seems to
+ * encode instead of always resetting to "Any Gap Badge" — there's no
+ * field on ViewDef that stores a Gap Badge filter directly (it only
+ * lives baked into the View's `condition` closure), so this string-match
+ * is the only way to guess it, and a miss just leaves the dropdown at
+ * "Any Gap Badge". The `patternKey` this returns is deliberately NOT
+ * used for the View Key field itself — a hand-created or otherwise
+ * non-hyphenated key (e.g. one using ":" instead of "-") won't parse
+ * cleanly here, and EditViewControl instead reads `conditionKey` off the
+ * ViewDef directly (see its own `patternKey` — the same value
+ * editBacktestView itself uses), which needs no parsing and never
+ * misses.
  */
 function parseComposedViewKey(
   key: string
@@ -781,8 +785,9 @@ function parseComposedViewKey(
 /**
  * "Edit View" — allows editing an existing ViewDef (Direction, Entry, Target,
  * View Name, Attach Point, and Gap Badge). Like Create View, the View Key
- * is fully derived from the dropdowns (via parseComposedViewKey +
- * recomposition below) rather than typed, and — unlike Create View — that
+ * is fully derived from the dropdowns (Entry/Pattern/Gap Badge/Target,
+ * with the Pattern piece read off the ViewDef's own conditionKey — see
+ * `patternKey` below) rather than typed, and — unlike Create View — that
  * derived key can differ from the View's current key, which renames/moves
  * it to the new key on save (see viewKey below and handleSave's newKey).
  * Reuses the copyviewpatch.mjs AST patcher via copy-view.yml with isEdit=true,
@@ -805,15 +810,24 @@ function EditViewControl({
   onClose?: () => void;
   onUpdated?: (newKey: string) => void;
 }) {
-  // Parsed once per activeTarget (not per keystroke) — see
-  // parseComposedViewKey's doc comment above for why this is safe to
-  // treat as the View's Pattern/Subpattern key + its original Gap Badge.
+  // parseComposedViewKey is still used below, but only for a best-effort
+  // guess at an already-applied Gap Badge (see gapBadge's useState) — see
+  // its doc comment for why that one field stays a guess.
   const parsedKey = useMemo(() => parseComposedViewKey(activeTarget.key), [activeTarget.key]);
-  // Only recompose the key live when it actually follows the standard
-  // Entry-Pattern-[GapBadge]-Target convention — a hand-edited or
-  // legacy key that doesn't parse cleanly is left exactly as-is rather
-  // than risk mangling it into something that no longer means anything.
-  const keyIsComposable = !!parsedKey.entry && !!parsedKey.target && parsedKey.patternKey.length > 0;
+  // The Pattern/Subpattern key this View actually grades against.
+  // Deliberately NOT derived by parsing activeTarget.key apart (that's
+  // what the keyIsComposable gate used to do, and why the View Key field
+  // could freeze on the old key and stop responding to the dropdowns
+  // entirely): plenty of real Views — hand-created, colon-separated, or
+  // otherwise not in the "{Entry}-{Pattern}-{Target}" hyphenated shape
+  // this control itself produces — don't parse cleanly, and string-
+  // parsing has no way to tell "doesn't parse" apart from "parsed
+  // wrong". `conditionKey` is what passesView() (views.ts) actually
+  // reads to grade the View, and it's exactly what editBacktestView
+  // computes server-side too (`old.conditionKey ?? oldKey`), so this is
+  // the true Pattern key regardless of how the View's own key happens
+  // to be spelled — no parsing, no guessing.
+  const patternKey = activeTarget.conditionKey ?? activeTarget.key;
 
   const [open, setOpen] = useState(initialOpen);
   const [direction, setDirection] = useState<"Up" | "Down">(activeTarget.direction ?? "Up");
@@ -839,7 +853,13 @@ function EditViewControl({
   // Gap Badge" regardless of the View's actual filter, which both
   // misrepresented the current View and, combined with the key
   // previously never changing, meant a Gap-Badge View's badge could
-  // never be edited at all.
+  // never be edited at all. This is still a string-parsed guess — there's
+  // no field on ViewDef that stores the badge directly, since a Gap-Badge
+  // View's filter only lives baked into its `condition` closure — and can
+  // miss on a key that doesn't follow the usual convention, same as
+  // patternKey used to; unlike patternKey, there's no closure-free way to
+  // recover it, so a miss here just starts the dropdown at "Any Gap
+  // Badge" rather than corrupting anything.
   const [gapBadge, setGapBadge] = useState(() => parsedKey.gapBadge ?? "");
   const [error, setError] = useState("");
   const [command, setCommand] = useState<string | null>(null);
@@ -851,16 +871,13 @@ function EditViewControl({
 
   // Fully derived, not typed — same composition CreateViewControl's
   // `viewKey` uses ("{Entry}-{Pattern key}[-{Gap Badge}]-{Target}"),
-  // recomputed live as Entry/Target/Gap Badge change so saving files
-  // the View under its new, correctly-composed key instead of leaving
-  // it stuck on the key it had before editing. Falls back to the
-  // untouched original key when it isn't in the standard composed
-  // format (keyIsComposable false).
+  // recomputed live as Entry/Target/Gap Badge change. Unconditional now
+  // — no "doesn't parse, leave it alone" fallback — since patternKey
+  // above no longer depends on the old key parsing cleanly.
   const viewKey = useMemo(() => {
-    if (!keyIsComposable) return activeTarget.key;
     const trimmedGapBadge = gapBadge.trim();
-    return [entry, parsedKey.patternKey, trimmedGapBadge || undefined, target].filter(Boolean).join("-");
-  }, [keyIsComposable, entry, parsedKey.patternKey, gapBadge, target, activeTarget.key]);
+    return [entry, patternKey, trimmedGapBadge || undefined, target].filter(Boolean).join("-");
+  }, [entry, patternKey, gapBadge, target]);
 
   function openForm() {
     setDirection(activeTarget.direction ?? "Up");
@@ -905,7 +922,13 @@ function EditViewControl({
       setError(
         res.reason === "duplicate-key"
           ? `"${viewKey}" already exists — change the Entry, Gap Badge, or Target to make it unique.`
-          : res.reason ?? "Failed to update view."
+          : res.reason === "invalid-target"
+          ? `"${target}" isn't a valid target for ${direction === "Up" ? "an Up" : "a Down"} View.`
+          : res.reason === "invalid-gap-badge"
+          ? `"${gapBadge.trim()}" isn't a known Gap Badge.`
+          : res.reason === "invalid-entry"
+          ? `"${entry}" isn't a valid Entry.`
+          : "Couldn't find this View anymore — it may have been renamed or removed elsewhere."
       );
       return;
     }
@@ -1004,14 +1027,10 @@ function EditViewControl({
       <input
         value={viewKey}
         readOnly
-        title={
-          keyIsComposable
-            ? "View key — auto-generated from Entry, Pattern/Subpattern, Gap Badge (if any), and Target, same as Create View. Not editable directly; changing any of those above will rename/move this View to the new key when saved."
-            : "This View's key doesn't follow the standard Entry-Pattern-Target format, so it's kept unchanged. Not editable."
-        }
+        title="View key — auto-generated from Entry, Pattern/Subpattern (this View's own grading key), Gap Badge (if any), and Target, same as Create View. Not editable directly; changing any of those above will rename/move this View to the new key when saved."
         className="w-full cursor-default bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] font-mono text-muted-foreground placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
       />
-      {keyIsComposable && viewKey !== activeTarget.key && (
+      {viewKey !== activeTarget.key && (
         <span className="text-[10px] text-amber-400">
           Renaming &quot;{activeTarget.key}&quot; → &quot;{viewKey}&quot; on save.
         </span>
