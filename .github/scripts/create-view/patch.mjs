@@ -145,6 +145,45 @@ function resolveTopLevelCategoryKey(viewsSourceText, attachKey) {
   return null;
 }
 
+/**
+ * Mirrors views.ts's buildGapBadgeLabel/ALL_GAP_BADGES exactly (same 5
+ * source dimensions, same label shape) so this script can validate a
+ * GAP_BADGE input without executing TypeScript. Keep in sync with
+ * views.ts if that logic ever changes.
+ */
+function buildGapBadgeLabel(letter1, letter2, letter3, letter4, gapWinsPrev, gapWinsToday) {
+  const part3 = gapWinsPrev ? `Gap${letter3}` : letter3;
+  const part4 = gapWinsToday ? `${letter4}Gap` : letter4;
+  return `${letter1}${letter2}-${part3}${part4}`;
+}
+
+const ALL_GAP_BADGES = (() => {
+  const letter1s = ["R", "S", "Q"];
+  const letter2s = ["H", "L", "Q"];
+  const abqs = ["A", "B", "Q"];
+  const winners = ["prev", "today", "none"];
+  const seen = new Set();
+  const out = [];
+  for (const letter1 of letter1s) {
+    for (const letter2 of letter2s) {
+      for (const letter3 of abqs) {
+        for (const letter4 of abqs) {
+          for (const winner of winners) {
+            const gapWinsPrev = letter3 !== "Q" && winner === "prev";
+            const gapWinsToday = letter4 !== "Q" && winner === "today";
+            const label = buildGapBadgeLabel(letter1, letter2, letter3, letter4, gapWinsPrev, gapWinsToday);
+            if (!seen.has(label)) {
+              seen.add(label);
+              out.push(label);
+            }
+          }
+        }
+      }
+    }
+  }
+  return out.sort();
+})();
+
 const BULLISH_TARGETS = {
   R1: { label: "U1 (today's R1)", key: "r1" },
   R2: { label: "U2 (today's R2)", key: "r2" },
@@ -184,13 +223,17 @@ function normalizeDirection(raw) {
   return null;
 }
 
-function applyCreateViewPatch(sourceText, patternKey, newKey, newLabel, direction, target, levelCheckDefs, attachKey) {
+function applyCreateViewPatch(sourceText, patternKey, newKey, newLabel, direction, target, levelCheckDefs, attachKey, gapBadge) {
   const project = new Project({ useInMemoryFileSystem: true });
   const sourceFile = project.createSourceFile("views.ts", sourceText);
 
   const targetDef = direction === "Up" ? BULLISH_TARGETS[target] : BEARISH_TARGETS[target];
   if (!targetDef) {
     throw new Error(`"${target}" isn't a valid target for direction "${direction}".`);
+  }
+
+  if (gapBadge && !ALL_GAP_BADGES.includes(gapBadge)) {
+    throw new Error(`"${gapBadge}" isn't a known Gap Badge (see views.ts's ALL_GAP_BADGES).`);
   }
 
   const allViewObjs = sourceFile
@@ -208,11 +251,24 @@ function applyCreateViewPatch(sourceText, patternKey, newKey, newLabel, directio
       ? `entryLabel: "TC (today's TC)",\n    getEntry: (r) => r.todayCPR.tc,\n    stoplossLabel: "S1 (today's S1)",\n    getStoploss: (r) => r.todayCPR.s1,`
       : `entryLabel: "BC (today's BC)",\n    getEntry: (r) => r.todayCPR.bc,\n    stoplossLabel: "R1 (today's R1)",\n    getStoploss: (r) => r.todayCPR.r1,`;
 
+  // Plain redirect (no Gap Badge picked): grade entirely via
+  // conditionKey, same as before. With a Gap Badge picked: grade via an
+  // explicit condition ANDing patternKey's own condition (passesView)
+  // with this exact composite Gap Badge label (matchesGapBadge) —
+  // standalone: true so passesView doesn't ALSO chain parentKey (the
+  // attach point, which is display-only and may differ from patternKey).
+  // Both matchesGapBadge and passesView are defined in this same
+  // views.ts file, so no new import is needed in the generated code.
+  const conditionText = gapBadge
+    ? `condition: (r) => passesView(r, "${escapeForDoubleQuotedString(patternKey)}") && matchesGapBadge(r, "${escapeForDoubleQuotedString(gapBadge)}"),
+    standalone: true,`
+    : `conditionKey: "${escapeForDoubleQuotedString(patternKey)}",`;
+
   const newViewLiteral = `{
     key: "${escapeForDoubleQuotedString(newKey)}",
     label: "${escapeForDoubleQuotedString(newLabel)}",
     parentKey: "${escapeForDoubleQuotedString(effectiveAttachKey)}",
-    conditionKey: "${escapeForDoubleQuotedString(patternKey)}",
+    ${conditionText}
     kind: "view",
     direction: "${direction}",
     targetLabel: "${targetDef.label}",
@@ -250,6 +306,7 @@ const levelCheckDefsB64 = process.env.LEVEL_CHECK_DEFS_B64;
 const attachKey = process.env.ATTACH_KEY && process.env.ATTACH_KEY.trim() !== "" ? process.env.ATTACH_KEY : patternKey;
 const direction = normalizeDirection(process.env.DIRECTION) ?? "Up";
 const target = process.env.TARGET && process.env.TARGET.trim() !== "" ? process.env.TARGET.trim() : direction === "Up" ? "R4" : "S4";
+const gapBadge = process.env.GAP_BADGE && process.env.GAP_BADGE.trim() !== "" ? process.env.GAP_BADGE.trim() : undefined;
 const viewsFilePath = process.env.VIEWS_FILE_PATH ?? process.env.BACKTEST_FILE_PATH ?? "artifacts/cpr-screener/src/lib/views.ts";
 const viewsSidebarFilePathEnv = process.env.VIEWS_SIDEBAR_FILE_PATH ?? "artifacts/cpr-screener/src/lib/ViewsSidebar.tsx";
 
@@ -306,7 +363,8 @@ try {
     direction,
     target,
     levelCheckDefs,
-    attachKey
+    attachKey,
+    gapBadge
   );
   writeFileSync(filePath, patchedText, "utf-8");
 
@@ -327,7 +385,9 @@ try {
   writeFileSync(viewsSidebarFilePath, patchedViewsSidebarText, "utf-8");
 
   console.log(
-    `Created "${newKey}" (direction ${direction}, target ${target}, grades against "${patternKey}") under "${attachKey}" in ${arrName} with ${levelCheckDefs.length} symbol-derived levelCheckDefs`
+    `Created "${newKey}" (direction ${direction}, target ${target}, grades against "${patternKey}"${
+      gapBadge ? ` AND Gap Badge "${gapBadge}"` : ""
+    }) under "${attachKey}" in ${arrName} with ${levelCheckDefs.length} symbol-derived levelCheckDefs`
   );
   console.log(`Added "${newKey}" to ${viewsSidebarFilePathEnv}'s Views["${screenerCategoryKey}"]`);
 } catch (err) {

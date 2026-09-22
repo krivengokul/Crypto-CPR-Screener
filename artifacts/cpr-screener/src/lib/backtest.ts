@@ -2,7 +2,7 @@ import { OHLC, CPRResult, analyzeCPR, isExpandedPatternPair, OUTER_PATTERN_KEYS 
 import { fetchTopUSDTSymbols, fetchDailyKlines, isLiveDailyCandle } from "./binance";
 import { fetchDeltaPerps } from "./delta";
 import { fetchCoinDCXDailyKlines, fetchCoinDCXActiveSymbols } from "./coinDCX";
-import { buildViewTree, type ViewTreeNode, VIEWS, getView, type ViewDef } from "./views";
+import { buildViewTree, type ViewTreeNode, VIEWS, getView, type ViewDef, passesView, matchesGapBadge, ALL_GAP_BADGES } from "./views";
 
 
 export type BacktestSource = "binance" | "delta" | "coindcx";
@@ -398,7 +398,7 @@ export function copyBacktestView(
 
 export interface CreateViewResult {
   ok: boolean;
-  reason?: "pattern-not-found" | "duplicate-key" | "invalid-target";
+  reason?: "pattern-not-found" | "duplicate-key" | "invalid-target" | "invalid-gap-badge";
   created?: ViewDef;
 }
 
@@ -441,9 +441,21 @@ const BEARISH_TARGETS: Record<string, { label: string; key: "s1" | "s2" | "s3" |
  * getAttachPointOptions) picks where in the dropdown tree the new View
  * is filed. Defaults to `patternKey` itself — the node "Create View" was
  * opened from — so omitting it keeps the original behavior. `patternKey`
- * always stays the View's conditionKey (what it grades against);
- * `attachKey` only changes where it's nested, so a View can be created
- * from one Pattern's row but filed under a different Subpattern.
+ * always stays what the View grades against (directly, or as the first
+ * half of an AND when `gapBadge` is set below); `attachKey` only changes
+ * where it's nested, so a View can be created from one Pattern's row but
+ * filed under a different Subpattern.
+ *
+ * `gapBadge` (optional, one of views.ts's ALL_GAP_BADGES, e.g.
+ * "RH-GapAB", "SL-GapBB") narrows the View further: instead of the plain
+ * `conditionKey: patternKey` redirect, the created View gets its own
+ * `condition` requiring BOTH patternKey's condition (via passesView) AND
+ * this exact composite Gap Badge label (via matchesGapBadge — the same
+ * label ScreenerUtils.tsx's Pattern-column badge would show for that
+ * row). `standalone: true` so passesView doesn't also chain
+ * resolvedParentKey/attachKey, which is only where the View is filed for
+ * display and may differ from patternKey. Omit/leave blank to skip this
+ * filter and keep the original conditionKey-redirect behavior.
  */
 export function createBacktestView(
   patternKey: string,
@@ -452,7 +464,8 @@ export function createBacktestView(
   direction: "Up" | "Down",
   target: string,
   levelCheckDefs?: LevelCheckCondition[],
-  attachKey?: string
+  attachKey?: string,
+  gapBadge?: string
 ): CreateViewResult {
   if (VIEWS.some(v => v.key === newKey)) {
     return { ok: false, reason: "duplicate-key" };
@@ -465,6 +478,11 @@ export function createBacktestView(
     return { ok: false, reason: "invalid-target" };
   }
 
+  const trimmedGapBadge = gapBadge?.trim();
+  if (trimmedGapBadge && !ALL_GAP_BADGES.includes(trimmedGapBadge)) {
+    return { ok: false, reason: "invalid-gap-badge" };
+  }
+
   const resolvedParentKey = attachKey ?? patternKey;
   const targetKey = targetDef.key;
 
@@ -472,7 +490,6 @@ export function createBacktestView(
     key: newKey,
     label: newLabel,
     parentKey: resolvedParentKey,
-    conditionKey: patternKey,
     kind: "view",
     direction: isUp ? "Up" : "Down",
     targetLabel: targetDef.label,
@@ -484,6 +501,12 @@ export function createBacktestView(
     levelCheckDefs: levelCheckDefs
       ? levelCheckDefs.map(d => ({ ...d, bandKeys: [...d.bandKeys] }))
       : undefined,
+    ...(trimmedGapBadge
+      ? {
+          condition: (r: CPRResult) => passesView(r, patternKey) && matchesGapBadge(r, trimmedGapBadge),
+          standalone: true,
+        }
+      : { conditionKey: patternKey }),
   };
 
   VIEWS.push(newViewDef);

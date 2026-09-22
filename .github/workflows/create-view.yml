@@ -35,6 +35,10 @@ on:
         description: "Which rung to grade against — R1/R2/R3/R4 for Up, S1/S2/S3/S4 for Down"
         required: true
         type: string
+      gapBadge:
+        description: "Optional composite Gap Badge label from views.ts's ALL_GAP_BADGES (e.g. RH-GapAB, SL-GapBB). When set, the new View also requires the row's Gap Badge to equal exactly this label, on top of patternKey's own condition. Leave blank to skip this filter."
+        required: false
+        type: string
       levelCheckDefs:
         description: "Base64 JSON array of {key, subject, bandKeys} — derived client-side (deriveLevelCheckDefs) for the specific symbol this was created from"
         required: true
@@ -83,6 +87,7 @@ jobs:
           NEW_LABEL: ${{ inputs.newLabel }}
           DIRECTION: ${{ inputs.direction }}
           TARGET: ${{ inputs.target }}
+          GAP_BADGE: ${{ inputs.gapBadge }}
           LEVEL_CHECK_DEFS_B64: ${{ inputs.levelCheckDefs }}
           ATTACH_KEY: ${{ inputs.attachKey }}
 

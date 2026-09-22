@@ -151,6 +151,118 @@ export function childrenOf(parentKey: string | undefined): ViewDef[] {
 }
 
 // ---------------------------------------------------------------------
+// Gap Badge — composite label used by ScreenerUtils.tsx's Pattern-column
+// badge (computeGapBadge there) and, here, by "Create View"'s optional
+// Gap Badge dropdown (BacktestPanel.tsx's CreateViewControl). Kept here
+// rather than in ScreenerUtils.tsx so createBacktestView (backtest.ts,
+// lib/) can grade a View against a specific badge without lib/ importing
+// from pages/ — same duplication convention already used for
+// LevelCheckCondition/computePrevPattern elsewhere in this codebase.
+// ScreenerUtils.tsx's own computeGapBadge must stay in sync with
+// buildGapBadgeLabel below if either ever changes.
+// ---------------------------------------------------------------------
+
+export type GapBadgeLetter1 = "R" | "S" | "Q";
+export type GapBadgeLetter2 = "H" | "L" | "Q";
+export type GapBadgeLetterAB = "A" | "B" | "Q";
+
+/**
+ * buildGapBadgeLabel — pure assembly of the "{1}{2}-{3}{4}" composite
+ * label, "Gap" written wherever the gap winner's letter is, except it
+ * never sits in the middle: prev winning keeps "Gap" up front (part 3),
+ * today winning moves it to the very end (part 4). Mirrors
+ * ScreenerUtils.tsx's computeGapBadge exactly — see its own doc comment
+ * for the full label-shape rationale and examples.
+ */
+export function buildGapBadgeLabel(
+  letter1: GapBadgeLetter1,
+  letter2: GapBadgeLetter2,
+  letter3: GapBadgeLetterAB,
+  letter4: GapBadgeLetterAB,
+  gapWinsPrev: boolean,
+  gapWinsToday: boolean
+): string {
+  const part3 = gapWinsPrev ? `Gap${letter3}` : letter3;
+  const part4 = gapWinsToday ? `${letter4}Gap` : letter4;
+  return `${letter1}${letter2}-${part3}${part4}`;
+}
+
+/**
+ * computeGapBadge — derives the 4 letters + 2 "did the gap win" flags
+ * off a CPRResult and hands them to buildGapBadgeLabel. Duplicate of
+ * ScreenerUtils.tsx's function of the same name (see the section note
+ * above for why); the two must keep producing identical labels.
+ */
+export function computeGapBadge(r: CPRResult): string {
+  const letter1: GapBadgeLetter1 =
+    r.RRSSGapCategory === "RRGap" ? "R" : r.RRSSGapCategory === "SSGap" ? "S" : "Q";
+  const letter2: GapBadgeLetter2 =
+    r.PDHPDLGapCategory === "HHGap" ? "H" : r.PDHPDLGapCategory === "LLGap" ? "L" : "Q";
+
+  const prevSW = r.prevCPR.HLSwitch;
+  const todaySW = r.todayCPR.HLSwitch;
+  const letter3: GapBadgeLetterAB = prevSW === "HL-A" ? "A" : prevSW === "HL-B" ? "B" : "Q";
+  const letter4: GapBadgeLetterAB = todaySW === "HL-A" ? "A" : todaySW === "HL-B" ? "B" : "Q";
+
+  const gapWinsPrev = prevSW !== "HL-Q" && r.hlGapWinner === "prev";
+  const gapWinsToday = todaySW !== "HL-Q" && r.hlGapWinner === "today";
+
+  return buildGapBadgeLabel(letter1, letter2, letter3, letter4, gapWinsPrev, gapWinsToday);
+}
+
+/**
+ * ALL_GAP_BADGES — every label buildGapBadgeLabel can ever produce,
+ * walked mechanically off the same 5 source dimensions computeGapBadge
+ * itself reads (RRSSGapCategory x PDHPDLGapCategory x prevCPR.HLSwitch x
+ * todayCPR.HLSwitch x hlGapWinner), rather than hand-listed — so this
+ * list can never drift out of sync with what a real row can actually
+ * show. Powers the "Gap Badge" dropdown in Create View; sorted for a
+ * stable, scannable menu.
+ */
+export const ALL_GAP_BADGES: string[] = (() => {
+  const letter1s: GapBadgeLetter1[] = ["R", "S", "Q"];
+  const letter2s: GapBadgeLetter2[] = ["H", "L", "Q"];
+  const abqs: GapBadgeLetterAB[] = ["A", "B", "Q"];
+  const winners: Array<"prev" | "today" | "none"> = ["prev", "today", "none"];
+
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const letter1 of letter1s) {
+    for (const letter2 of letter2s) {
+      for (const letter3 of abqs) {
+        for (const letter4 of abqs) {
+          for (const winner of winners) {
+            // A "Gap" prefix/suffix only ever applies to a non-"Q"
+            // letter — matches computeGapBadge's own gapWinsPrev/
+            // gapWinsToday guards.
+            const gapWinsPrev = letter3 !== "Q" && winner === "prev";
+            const gapWinsToday = letter4 !== "Q" && winner === "today";
+            const label = buildGapBadgeLabel(letter1, letter2, letter3, letter4, gapWinsPrev, gapWinsToday);
+            if (!seen.has(label)) {
+              seen.add(label);
+              out.push(label);
+            }
+          }
+        }
+      }
+    }
+  }
+  return out.sort();
+})();
+
+/**
+ * matchesGapBadge — predicate form of computeGapBadge, for grading a
+ * View against one specific composite Gap Badge label (e.g. one picked
+ * from ALL_GAP_BADGES in Create View). Picking "RH-GapAB" in the
+ * dropdown and a row's Pattern-column Gap Badge reading "RH-GapAB" are
+ * guaranteed to mean the same thing, since both go through
+ * computeGapBadge.
+ */
+export function matchesGapBadge(r: CPRResult, badge: string): boolean {
+  return computeGapBadge(r) === badge;
+}
+
+// ---------------------------------------------------------------------
 // Step 2 — the four top-level Categories
 // ---------------------------------------------------------------------
 

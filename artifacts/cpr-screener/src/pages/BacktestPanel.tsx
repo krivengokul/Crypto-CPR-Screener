@@ -38,6 +38,7 @@ import {
   passesView,
   topLevelCategoryOf,
   VIEWS,
+  ALL_GAP_BADGES,
   type ViewTreeNode,
   type ViewDef,
 } from "@/lib/views";
@@ -713,6 +714,11 @@ function CreateViewControl({
   // "7PM:MoMi-<L4:2AM" for a real Down TC/BC/R1 example).
   const [direction, setDirection] = useState<"Up" | "Down">("Up");
   const [target, setTarget] = useState("R4");
+  // Optional composite Gap Badge label (e.g. "RH-GapAB", "SL-GapBB" —
+  // views.ts's ALL_GAP_BADGES) to additionally require on top of
+  // patternKey's own condition. "" means no Gap Badge filter — the
+  // original conditionKey-redirect behavior.
+  const [gapBadge, setGapBadge] = useState("");
   // Whether the person has typed into the key/label boxes yet — until
   // they do, both track effectivePattern below so switching the attach
   // point off a TOP 15 bucket doesn't leave "top15gainers" sitting in the
@@ -747,6 +753,7 @@ function CreateViewControl({
     setAttachKey(patternKey);
     setDirection("Up");
     setTarget("R4");
+    setGapBadge("");
     setNewKey(patternKey);
     setNewLabel(patternLabel);
     setKeyEdited(false);
@@ -770,6 +777,8 @@ function CreateViewControl({
     // below is safe even though this isn't a full CPRResult.
     const derived = deriveLevelCheckDefs({ prevCPR, todayCPR } as unknown as CPRResult);
 
+    const trimmedGapBadge = gapBadge.trim();
+
     const result = createBacktestView(
       effectivePattern.key,
       trimmedKey,
@@ -777,7 +786,8 @@ function CreateViewControl({
       direction,
       target,
       derived,
-      attachKey
+      attachKey,
+      trimmedGapBadge || undefined
     );
     if (!result.ok) {
       setError(
@@ -785,6 +795,8 @@ function CreateViewControl({
           ? `"${trimmedKey}" already exists — pick a different key.`
           : result.reason === "invalid-target"
           ? `"${target}" isn't a valid target for ${direction === "Up" ? "an Up" : "a Down"} View.`
+          : result.reason === "invalid-gap-badge"
+          ? `"${trimmedGapBadge}" isn't a known Gap Badge.`
           : "Couldn't find this Pattern/Subpattern in the dropdown tree."
       );
       return;
@@ -808,7 +820,7 @@ function CreateViewControl({
     const b64 = btoa(binary);
 
     setCommand(
-      `gh workflow run create-view.yml --repo krivengokul/Crypto-CPR-Screener -f patternKey=${q(effectivePattern.key)} -f newKey=${q(trimmedKey)} -f newLabel=${q(trimmedLabel)} -f direction=${q(direction)} -f target=${q(target)} -f attachKey=${q(attachKey)} -f levelCheckDefs=${b64}`
+      `gh workflow run create-view.yml --repo krivengokul/Crypto-CPR-Screener -f patternKey=${q(effectivePattern.key)} -f newKey=${q(trimmedKey)} -f newLabel=${q(trimmedLabel)} -f direction=${q(direction)} -f target=${q(target)} -f attachKey=${q(attachKey)}${trimmedGapBadge ? ` -f gapBadge=${q(trimmedGapBadge)}` : ""} -f levelCheckDefs=${b64}`
     );
     setCreatedKey(trimmedKey);
   }
@@ -872,6 +884,20 @@ function CreateViewControl({
           ))}
         </select>
       </div>
+      <select
+        value={gapBadge}
+        onChange={(e) => setGapBadge(e.target.value)}
+        disabled={!!command}
+        title="Optionally also require this exact composite Gap Badge (RRSSGapCategory + PDHPDLGapCategory + HL-switch), on top of the Pattern's own condition — same label shown in the Pattern column's Gap Badge (e.g. RH-GapAB, SL-GapBB)."
+        className="w-full bg-background border border-border rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
+      >
+        <option value="">Any Gap Badge</option>
+        {ALL_GAP_BADGES.map((badge) => (
+          <option key={badge} value={badge}>
+            Gap Badge {badge}
+          </option>
+        ))}
+      </select>
       <input
         value={newKey}
         onChange={(e) => {
