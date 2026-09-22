@@ -728,21 +728,25 @@ function EditViewControl({
   activeTarget,
   prevCPR,
   todayCPR,
+  initialOpen = false,
+  onClose,
   onUpdated,
 }: {
   activeTarget: ViewDef;
   prevCPR: CPRLevels;
   todayCPR: CPRLevels;
+  initialOpen?: boolean;
+  onClose?: () => void;
   onUpdated?: (newKey: string) => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(initialOpen);
   const [direction, setDirection] = useState<"Up" | "Down">(activeTarget.direction ?? "Up");
   const [entry, setEntry] = useState(() => {
     const raw = activeTarget.entryLabel?.split(" ")[0];
     return ENTRY_OPTIONS.includes(raw ?? "") ? raw! : (activeTarget.direction === "Down" ? "BC" : "TC");
   });
   const [target, setTarget] = useState(() => {
-    const m = activeTarget.targetLabel?.match(/[RL]\d/)?.[0];
+    const m = activeTarget.targetLabel?.match(/[RLS]\d/)?.[0];
     if (m) {
       if (m.startsWith("U")) return m.replace("U", "R");
       if (m.startsWith("L")) return m.replace("L", "S");
@@ -756,9 +760,6 @@ function EditViewControl({
   const [error, setError] = useState("");
   const [command, setCommand] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-
-  const attachOptions = useMemo(() => getAttachPointOptions(), []);
-  const targetOptions = direction === "Up" ? ["R1", "R2", "R3", "R4"] : ["S1", "S2", "S3", "S4"];
 
   function openForm() {
     setDirection(activeTarget.direction ?? "Up");
@@ -793,156 +794,224 @@ function EditViewControl({
       return;
     }
 
-    const q = (s: string) => `"${s.replace(/"/g, '\\"')}"`;
+    const q = (s: string) => `"${s.replace(/"/g, "")}"`;
     const cmd = `gh workflow run copy-view.yml --repo krivengokul/Crypto-CPR-Screener -f sourceKey=${q(activeTarget.key)} -f newKey=${q(activeTarget.key)} -f newLabel=${q(trimmedLabel)} -f isEdit=true -f direction=${q(direction)} -f entry=${q(entry)} -f target=${q(target)} -f attachKey=${q(attachKey)}${gapBadge ? ` -f gapBadge=${q(gapBadge)}` : ""}`;
     setCommand(cmd);
     if (onUpdated) onUpdated(activeTarget.key);
   }
 
-  return (
-    <div className="relative inline-block text-left">
+  async function copyCommand() {
+    if (!command) return;
+    try {
+      await navigator.clipboard.writeText(command);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // command remains visible
+    }
+  }
+
+  if (!open) {
+    return (
       <button
         type="button"
         onClick={openForm}
-        className="inline-flex items-center gap-1 rounded border border-cyan-500/40 bg-cyan-500/10 px-2 py-0.5 text-[11px] font-medium text-cyan-400 hover:bg-cyan-500/20"
+        className="w-fit rounded-md border border-border px-2 py-1 text-[11px] font-medium text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+        title={`Edit View "${activeTarget.label}"`}
       >
         Edit View
       </button>
+    );
+  }
 
-      {open && (
-        <div className="absolute right-0 z-50 mt-1 w-80 rounded-lg border border-border bg-popover p-3 shadow-2xl text-left">
-          <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Edit View: <span className="text-foreground">{activeTarget.key}</span>
-          </div>
-
-          <div className="mt-2 space-y-2 text-xs">
-            <div className="grid grid-cols-3 gap-1">
-              <div>
-                <label className="text-[10px] text-muted-foreground block mb-0.5">Direction</label>
-                <select
-                  value={direction}
-                  onChange={(e) => {
-                    const d = e.target.value as "Up" | "Down";
-                    setDirection(d);
-                    setTarget(d === "Up" ? "R4" : "S4");
-                  }}
-                  className="w-full rounded border border-border bg-background p-1 text-xs text-foreground"
-                >
-                  <option value="Up">Up</option>
-                  <option value="Down">Down</option>
-                </select>
-              </div>
-              <div>
-                <label className="text-[10px] text-muted-foreground block mb-0.5">Entry</label>
-                <select
-                  value={entry}
-                  onChange={(e) => setEntry(e.target.value)}
-                  className="w-full rounded border border-border bg-background p-1 text-xs text-foreground"
-                >
-                  {ENTRY_OPTIONS.map((opt) => (
-                    <option key={opt} value={opt}>{opt}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="text-[10px] text-muted-foreground block mb-0.5">Target</label>
-                <select
-                  value={target}
-                  onChange={(e) => setTarget(e.target.value)}
-                  className="w-full rounded border border-border bg-background p-1 text-xs text-foreground"
-                >
-                  {targetOptions.map((opt) => (
-                    <option key={opt} value={opt}>{opt}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div>
-              <label className="text-[10px] text-muted-foreground block mb-0.5">View Name / Label</label>
-              <input
-                type="text"
-                value={label}
-                onChange={(e) => setLabel(e.target.value)}
-                className="w-full rounded border border-border bg-background p-1 text-xs text-foreground"
-              />
-            </div>
-
-            <div>
-              <label className="text-[10px] text-muted-foreground block mb-0.5">Attach under</label>
-              <select
-                value={attachKey}
-                onChange={(e) => setAttachKey(e.target.value)}
-                className="w-full rounded border border-border bg-background p-1 text-xs text-foreground"
-              >
-                {attachOptions.map((opt) => (
-                  <option key={opt.key} value={opt.key}>{opt.label}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="text-[10px] text-muted-foreground block mb-0.5">Gap Badge (Optional)</label>
-              <select
-                value={gapBadge}
-                onChange={(e) => setGapBadge(e.target.value)}
-                className="w-full rounded border border-border bg-background p-1 text-xs text-foreground"
-              >
-                <option value="">(None)</option>
-                {ALL_GAP_BADGES.map((b) => (
-                  <option key={b} value={b}>{b}</option>
-                ))}
-              </select>
-            </div>
-
-            {error && <div className="text-[11px] text-destructive">{error}</div>}
-
-            {command ? (
-              <div className="space-y-1.5 rounded border border-border bg-muted/60 p-2">
-                <div className="text-[10px] text-muted-foreground">Persist changes to repo:</div>
-                <div className="max-h-20 overflow-y-auto break-all font-mono text-[10px] text-foreground select-all bg-background p-1 rounded">
-                  {command}
-                </div>
-                <div className="flex gap-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      navigator.clipboard.writeText(command);
-                      setCopied(true);
-                    }}
-                    className="flex-1 rounded bg-primary py-1 text-xs font-medium text-primary-foreground"
-                  >
-                    {copied ? "Copied!" : "Copy Command"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setOpen(false)}
-                    className="rounded border border-border px-2 py-1 text-xs text-muted-foreground hover:bg-muted"
-                  >
-                    Done
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex justify-end gap-2 pt-1 border-t border-border">
-                <button
-                  type="button"
-                  onClick={() => setOpen(false)}
-                  className="rounded px-2 py-1 text-xs text-muted-foreground hover:bg-muted"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSave}
-                  className="rounded bg-cyan-600 hover:bg-cyan-500 px-3 py-1 text-xs font-medium text-white shadow-sm"
-                >
-                  Save View
-                </button>
-              </div>
-            )}
-          </div>
+  return (
+    <div className="flex w-fit min-w-[300px] flex-col gap-1.5 rounded-md border border-border bg-popover p-2 text-left">
+      <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+        EDIT VIEW FOR &quot;{activeTarget.label}&quot;
+      </span>
+      <span className="text-[10px] text-muted-foreground">
+        Entry {entry} · Stoploss {direction === "Up" ? "S1" : "R1"} — Level Check for this View
+      </span>
+      <div className="flex gap-1.5">
+        <select
+          value={direction}
+          onChange={(e) => {
+            const next = e.target.value as "Up" | "Down";
+            setDirection(next);
+            setEntry(next === "Up" ? "TC" : "BC");
+            setTarget(next === "Up" ? "R4" : "S4");
+          }}
+          disabled={!!command}
+          className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+        >
+          <option value="Up">Up</option>
+          <option value="Down">Down</option>
+        </select>
+        <select
+          value={entry}
+          onChange={(e) => setEntry(e.target.value)}
+          disabled={!!command}
+          title="Which rung this View's entry reads off today's CPR."
+          className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+        >
+          {ENTRY_OPTIONS.map((opt) => (
+            <option key={opt} value={opt}>
+              Entry {opt}
+            </option>
+          ))}
+        </select>
+        <select
+          value={target}
+          onChange={(e) => setTarget(e.target.value)}
+          disabled={!!command}
+          className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+        >
+          {(direction === "Up" ? ["R1", "R2", "R3", "R4"] : ["S1", "S2", "S3", "S4"]).map((t) => (
+            <option key={t} value={t}>
+              Target {t}
+            </option>
+          ))}
+        </select>
+      </div>
+      <input
+        value={activeTarget.key}
+        readOnly
+        title="View key — not editable."
+        className="w-full cursor-default bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] font-mono text-muted-foreground placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
+      />
+      <input
+        value={label}
+        onChange={(e) => setLabel(e.target.value)}
+        placeholder="View name"
+        disabled={!!command}
+        title="User-friendly display name for this View — shown in the dropdown tree, editable."
+        className="w-full bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+      />
+      <AttachPointSelect value={attachKey} onChange={setAttachKey} disabled={!!command} />
+      <select
+        value={gapBadge}
+        onChange={(e) => setGapBadge(e.target.value)}
+        disabled={!!command}
+        title="Optionally also require this exact composite Gap Badge."
+        className="w-full bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+      >
+        <option value="">Any Gap Badge</option>
+        {ALL_GAP_BADGES.map((badge) => (
+          <option key={badge} value={badge}>
+            {badge}
+          </option>
+        ))}
+      </select>
+      {error && <span className="text-[10px] text-destructive">{error}</span>}
+      {command && (
+        <div className="flex flex-col gap-1">
+          <span className="text-[10px] text-muted-foreground">
+            Updated in memory. Run this in a terminal with <code>gh</code> installed to save it:
+          </span>
+          <code className="w-full whitespace-pre-wrap break-all rounded-md bg-muted/40 px-2 py-1 text-[10px] text-foreground">
+            {command}
+          </code>
+          <button
+            type="button"
+            onClick={copyCommand}
+            className="self-end rounded-md border border-border px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+          >
+            {copied ? "Copied!" : "Copy command"}
+          </button>
         </div>
+      )}
+      <div className="flex justify-end gap-1.5 pt-0.5">
+        <button
+          type="button"
+          onClick={() => {
+            setOpen(false);
+            onClose?.();
+          }}
+          className="rounded-md px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+        >
+          {command ? "Done" : "Cancel"}
+        </button>
+        {!command && (
+          <button
+            type="button"
+            onClick={handleSave}
+            className="rounded-md bg-cyan-500/20 px-2 py-1 text-[11px] font-medium text-cyan-300 hover:bg-cyan-500/30"
+          >
+            Save View
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ViewActionsRow({
+  activeTarget,
+  prevCPR,
+  todayCPR,
+  activeLevelCheckDefs,
+  isFullMatch,
+  onCopied,
+  onUpdated,
+}: {
+  activeTarget: ViewDef;
+  prevCPR: CPRLevels;
+  todayCPR: CPRLevels;
+  activeLevelCheckDefs?: LevelCheckCondition[];
+  isFullMatch?: boolean;
+  onCopied: (newKey: string) => void;
+  onUpdated?: (newKey: string) => void;
+}) {
+  const [mode, setMode] = useState<"none" | "edit" | "copy">("none");
+
+  if (mode === "edit") {
+    return (
+      <EditViewControl
+        activeTarget={activeTarget}
+        prevCPR={prevCPR}
+        todayCPR={todayCPR}
+        initialOpen={true}
+        onClose={() => setMode("none")}
+        onUpdated={onUpdated}
+      />
+    );
+  }
+
+  if (mode === "copy") {
+    return (
+      <CopyViewControl
+        sourceKey={activeTarget.key}
+        sourceLabel={activeTarget.label}
+        prevCPR={prevCPR}
+        todayCPR={todayCPR}
+        sourceConditions={activeLevelCheckDefs}
+        onCopied={(newKey) => {
+          setMode("none");
+          onCopied(newKey);
+        }}
+      />
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <button
+        type="button"
+        onClick={() => setMode("edit")}
+        className="w-fit rounded-md border border-border px-2 py-1 text-[11px] font-medium text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+        title={`Edit View "${activeTarget.label}"`}
+      >
+        Edit View
+      </button>
+      {!isFullMatch && (
+        <button
+          type="button"
+          onClick={() => setMode("copy")}
+          className="w-fit rounded-md border border-border px-2 py-1 text-[11px] font-medium text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+          title={`Duplicate "${activeTarget.label}" (with its Level Check rules) as a new View`}
+        >
+          + Copy View
+        </button>
       )}
     </div>
   );
@@ -2481,24 +2550,20 @@ export default function BacktestPanel() {
                           levelCheckConditions={activeLevelCheckDefs}
                           copyViewControl={
                             isViewOnly && activeTarget ? (
-                              <div className="flex items-center gap-1">
-                                <EditViewControl
-                                  activeTarget={activeTarget}
-                                  prevCPR={r.prevCPR}
-                                  todayCPR={r.todayCPR}
-                                />
-                                <CopyViewControl
-                                  sourceKey={activeTarget.key}
-                                  sourceLabel={activeTarget.label}
-                                  prevCPR={r.prevCPR}
-                                  todayCPR={r.todayCPR}
-                                  sourceConditions={activeLevelCheckDefs}
-                                  onCopied={(newKey) => {
-                                    setTreeRevision((r) => r + 1);
-                                    setSelectedKey(newKey);
-                                  }}
-                                />
-                              </div>
+                              <ViewActionsRow
+                                activeTarget={activeTarget}
+                                prevCPR={r.prevCPR}
+                                todayCPR={r.todayCPR}
+                                activeLevelCheckDefs={activeLevelCheckDefs}
+                                onCopied={(newKey) => {
+                                  setTreeRevision((r) => r + 1);
+                                  setSelectedKey(newKey);
+                                }}
+                                onUpdated={(key) => {
+                                  setTreeRevision((r) => r + 1);
+                                  setSelectedKey(key);
+                                }}
+                              />
                             ) : isPatternOnly && activePatternInfo ? (
                               (() => {
                                 const rowPattern = deepestMatchingPattern(r.raw, activePatternInfo.sub.key);
@@ -2842,32 +2907,31 @@ export default function BacktestPanel() {
                         // a sibling under the same subPatternKeys.
                         copyViewControl={
                           isViewOnly && activeTarget ? (
-                            <div className="flex items-center gap-1">
-                              <EditViewControl
-                                activeTarget={activeTarget}
-                                prevCPR={r.prevCPR}
-                                todayCPR={r.todayCPR}
-                              />
-                              {!ladderByRow.get(r)?.fullMatch && (
-                                <CopyViewControl
-                                  sourceKey={activeTarget.key}
-                                  sourceLabel={activeTarget.label}
-                                  prevCPR={r.prevCPR}
-                                  todayCPR={r.todayCPR}
-                                  sourceConditions={activeLevelCheckDefs}
-                                  onCopied={(newKey) => {
-                                    setTreeRevision((r) => r + 1);
-                                    setSelectedKey(newKey);
-                                  }}
-                                />
-                              )}
-                            </div>
+                            <ViewActionsRow
+                              activeTarget={activeTarget}
+                              prevCPR={r.prevCPR}
+                              todayCPR={r.todayCPR}
+                              activeLevelCheckDefs={activeLevelCheckDefs}
+                              isFullMatch={ladderByRow.get(r)?.fullMatch}
+                              onCopied={(newKey) => {
+                                setTreeRevision((r) => r + 1);
+                                setSelectedKey(newKey);
+                              }}
+                              onUpdated={(key) => {
+                                setTreeRevision((r) => r + 1);
+                                setSelectedKey(key);
+                              }}
+                            />
                           ) : isPatternOnly && rowViewDefByRow.get(r) && !pendingCreateViewRows.has(`${r.source}-${r.symbol}-${r.entryDate}`) ? (
-                            <div className="flex items-center gap-1">
+                            <div className="flex flex-wrap items-center gap-1.5">
                               <EditViewControl
                                 activeTarget={rowViewDefByRow.get(r)!}
                                 prevCPR={r.prevCPR}
                                 todayCPR={r.todayCPR}
+                                onUpdated={(key) => {
+                                  setTreeRevision((r) => r + 1);
+                                  setSelectedKey(key);
+                                }}
                               />
                               <span className="text-[10px] text-muted-foreground" title="This symbol already satisfies this View's pattern and full Level Check signature, so creating another View from it would duplicate it.">
                                 Already in View: {rowViewDefByRow.get(r)?.label}
