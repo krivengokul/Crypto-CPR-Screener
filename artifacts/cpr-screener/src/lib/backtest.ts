@@ -398,7 +398,7 @@ export function copyBacktestView(
 
 export interface CreateViewResult {
   ok: boolean;
-  reason?: "pattern-not-found" | "duplicate-key" | "invalid-target" | "invalid-gap-badge";
+  reason?: "pattern-not-found" | "duplicate-key" | "invalid-target" | "invalid-gap-badge" | "invalid-entry";
   created?: ViewDef;
 }
 
@@ -419,16 +419,43 @@ const BEARISH_TARGETS: Record<string, { label: string; key: "s1" | "s2" | "s3" |
 };
 
 /**
+ * Every rung a View's entry can be set to — the full R4..S4 ladder
+ * (BacktestPanel.tsx's new Entry dropdown, sat between Direction and
+ * Target). Keyed by the same label the dropdown shows ("R1", "TC",
+ * "Pivot", ...) so createBacktestView can look a selection up directly.
+ * Previously entry was hardcoded off direction alone (Up -> TC, Down ->
+ * BC) — ENTRY_DEFS.TC/BC are still exactly that pair, just now one
+ * option among the rest rather than the only ones available.
+ */
+export const ENTRY_DEFS: Record<
+  string,
+  { label: string; key: "r4" | "r3" | "r2" | "r1" | "tc" | "pivot" | "bc" | "s1" | "s2" | "s3" | "s4" }
+> = {
+  R4: { label: "R4 (today's R4)", key: "r4" },
+  R3: { label: "R3 (today's R3)", key: "r3" },
+  R2: { label: "R2 (today's R2)", key: "r2" },
+  R1: { label: "R1 (today's R1)", key: "r1" },
+  TC: { label: "TC (today's TC)", key: "tc" },
+  Pivot: { label: "Pivot (today's Pivot)", key: "pivot" },
+  BC: { label: "BC (today's BC)", key: "bc" },
+  S1: { label: "S1 (today's S1)", key: "s1" },
+  S2: { label: "S2 (today's S2)", key: "s2" },
+  S3: { label: "S3 (today's S3)", key: "s3" },
+  S4: { label: "S4 (today's S4)", key: "s4" },
+};
+
+/**
  * Creates a brand-new View directly under a Pattern/Subpattern that
  * doesn't have one of its own yet (BacktestPanel.tsx's activePatternTarget
  * undefined for it — the case that currently shows a fallback "U4
  * (today's R4)"-style description instead of a real graded View).
  *
- * `direction` fixes entry/stoploss to this codebase's own convention —
- * bullish: entry TC, stoploss S1; bearish: entry BC, stoploss R1 (see
- * e.g. "7PM:MoMi-<L4:2AM" for a real bearish example of this exact
- * shape) — `target` picks which of that direction's four rungs
- * (R1/R2/R3/R4 bullish, S1/S2/S3/S4 bearish) actually grades the View.
+ * `direction` fixes stoploss to this codebase's own convention — bullish:
+ * stoploss S1; bearish: stoploss R1 (see e.g. "7PM:MoMi-<L4:2AM" for a
+ * real bearish example of this exact shape) — `target` picks which of
+ * that direction's four rungs (R1/R2/R3/R4 bullish, S1/S2/S3/S4 bearish)
+ * actually grades the View. Entry is independently selectable — see
+ * `entry` below.
  * Grades against `patternKey` itself via conditionKey — a
  * Pattern/Subpattern node's own key is already a real passesPattern
  * condition, so no new pattern-matching logic is needed.
@@ -436,6 +463,14 @@ const BEARISH_TARGETS: Record<string, { label: string; key: "s1" | "s2" | "s3" |
  * `levelCheckDefs` is the caller's responsibility to derive (see
  * deriveLevelCheckDefs above) — typically from whichever symbol's row
  * was on screen in the SR Ladder panel when "Create View" was clicked.
+ *
+ * `entry` (one of ENTRY_DEFS' keys — "R4".."R1"/"TC"/"Pivot"/"BC"/
+ * "S1".."S4", from BacktestPanel.tsx's Entry dropdown) picks which rung
+ * getEntry reads off today's CPR. Defaults to direction's own TC/BC rung
+ * (ENTRY_DEFS.TC for Up, ENTRY_DEFS.BC for Down) when omitted, matching
+ * the original hardcoded behavior for any caller that predates this
+ * param. stoploss is unaffected — still fixed by direction alone (Up:
+ * S1, Down: R1).
  *
  * `attachKey` (a Category/Pattern/Subpattern key from
  * getAttachPointOptions) picks where in the dropdown tree the new View
@@ -465,7 +500,8 @@ export function createBacktestView(
   target: string,
   levelCheckDefs?: LevelCheckCondition[],
   attachKey?: string,
-  gapBadge?: string
+  gapBadge?: string,
+  entry?: string
 ): CreateViewResult {
   if (VIEWS.some(v => v.key === newKey)) {
     return { ok: false, reason: "duplicate-key" };
@@ -478,6 +514,11 @@ export function createBacktestView(
     return { ok: false, reason: "invalid-target" };
   }
 
+  const entryDef = ENTRY_DEFS[entry ?? (isUp ? "TC" : "BC")];
+  if (!entryDef) {
+    return { ok: false, reason: "invalid-entry" };
+  }
+
   const trimmedGapBadge = gapBadge?.trim();
   if (trimmedGapBadge && !ALL_GAP_BADGES.includes(trimmedGapBadge)) {
     return { ok: false, reason: "invalid-gap-badge" };
@@ -485,6 +526,7 @@ export function createBacktestView(
 
   const resolvedParentKey = attachKey ?? patternKey;
   const targetKey = targetDef.key;
+  const entryKey = entryDef.key;
 
   const newViewDef: ViewDef = {
     key: newKey,
@@ -494,8 +536,8 @@ export function createBacktestView(
     direction: isUp ? "Up" : "Down",
     targetLabel: targetDef.label,
     getTarget: (r: CPRResult) => r.todayCPR[targetKey],
-    entryLabel: isUp ? "TC (today's TC)" : "BC (today's BC)",
-    getEntry: (r: CPRResult) => (isUp ? r.todayCPR.tc : r.todayCPR.bc),
+    entryLabel: entryDef.label,
+    getEntry: (r: CPRResult) => r.todayCPR[entryKey],
     stoplossLabel: isUp ? "S1 (today's S1)" : "R1 (today's R1)",
     getStoploss: (r: CPRResult) => (isUp ? r.todayCPR.s1 : r.todayCPR.r1),
     levelCheckDefs: levelCheckDefs

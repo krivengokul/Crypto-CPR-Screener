@@ -197,6 +197,23 @@ const BEARISH_TARGETS = {
   S4: { label: "L4 (today's S4)", key: "s4" },
 };
 
+// Mirrors backtest.ts's ENTRY_DEFS — every rung a View's entry can be set
+// to (BacktestPanel.tsx's Entry dropdown, between Direction and Target).
+// Keep in sync if either side ever changes.
+const ENTRY_DEFS = {
+  R4: { label: "R4 (today's R4)", key: "r4" },
+  R3: { label: "R3 (today's R3)", key: "r3" },
+  R2: { label: "R2 (today's R2)", key: "r2" },
+  R1: { label: "R1 (today's R1)", key: "r1" },
+  TC: { label: "TC (today's TC)", key: "tc" },
+  Pivot: { label: "Pivot (today's Pivot)", key: "pivot" },
+  BC: { label: "BC (today's BC)", key: "bc" },
+  S1: { label: "S1 (today's S1)", key: "s1" },
+  S2: { label: "S2 (today's S2)", key: "s2" },
+  S3: { label: "S3 (today's S3)", key: "s3" },
+  S4: { label: "S4 (today's S4)", key: "s4" },
+};
+
 const CATEGORY_ARRAY_MAP = {
   levelsabove: "LEVELSABOVE_VIEWS",
   levelsbelow: "LEVELSBELOW_VIEWS",
@@ -223,13 +240,18 @@ function normalizeDirection(raw) {
   return null;
 }
 
-function applyCreateViewPatch(sourceText, patternKey, newKey, newLabel, direction, target, levelCheckDefs, attachKey, gapBadge) {
+function applyCreateViewPatch(sourceText, patternKey, newKey, newLabel, direction, target, levelCheckDefs, attachKey, gapBadge, entry) {
   const project = new Project({ useInMemoryFileSystem: true });
   const sourceFile = project.createSourceFile("views.ts", sourceText);
 
   const targetDef = direction === "Up" ? BULLISH_TARGETS[target] : BEARISH_TARGETS[target];
   if (!targetDef) {
     throw new Error(`"${target}" isn't a valid target for direction "${direction}".`);
+  }
+
+  const entryDef = ENTRY_DEFS[entry ?? (direction === "Up" ? "TC" : "BC")];
+  if (!entryDef) {
+    throw new Error(`"${entry}" isn't a valid Entry (see patch.mjs's ENTRY_DEFS).`);
   }
 
   if (gapBadge && !ALL_GAP_BADGES.includes(gapBadge)) {
@@ -246,10 +268,11 @@ function applyCreateViewPatch(sourceText, patternKey, newKey, newLabel, directio
 
   const effectiveAttachKey = attachKey && attachKey.trim() !== "" ? attachKey : patternKey;
 
-  const entryText =
-    direction === "Up"
-      ? `entryLabel: "TC (today's TC)",\n    getEntry: (r) => r.todayCPR.tc,\n    stoplossLabel: "S1 (today's S1)",\n    getStoploss: (r) => r.todayCPR.s1,`
-      : `entryLabel: "BC (today's BC)",\n    getEntry: (r) => r.todayCPR.bc,\n    stoplossLabel: "R1 (today's R1)",\n    getStoploss: (r) => r.todayCPR.r1,`;
+  // Stoploss stays fixed by direction alone (Up: S1, Down: R1) — only
+  // entry (now independently selectable) reads off entryDef.
+  const entryText = `entryLabel: "${entryDef.label}",\n    getEntry: (r) => r.todayCPR.${entryDef.key},\n    stoplossLabel: "${
+    direction === "Up" ? "S1 (today's S1)" : "R1 (today's R1)"
+  }",\n    getStoploss: (r) => r.todayCPR.${direction === "Up" ? "s1" : "r1"},`;
 
   // Plain redirect (no Gap Badge picked): grade entirely via
   // conditionKey, same as before. With a Gap Badge picked: grade via an
@@ -307,6 +330,7 @@ const attachKey = process.env.ATTACH_KEY && process.env.ATTACH_KEY.trim() !== ""
 const direction = normalizeDirection(process.env.DIRECTION) ?? "Up";
 const target = process.env.TARGET && process.env.TARGET.trim() !== "" ? process.env.TARGET.trim() : direction === "Up" ? "R4" : "S4";
 const gapBadge = process.env.GAP_BADGE && process.env.GAP_BADGE.trim() !== "" ? process.env.GAP_BADGE.trim() : undefined;
+const entry = process.env.ENTRY && process.env.ENTRY.trim() !== "" ? process.env.ENTRY.trim() : direction === "Up" ? "TC" : "BC";
 const viewsFilePath = process.env.VIEWS_FILE_PATH ?? process.env.BACKTEST_FILE_PATH ?? "artifacts/cpr-screener/src/lib/views.ts";
 const viewsSidebarFilePathEnv = process.env.VIEWS_SIDEBAR_FILE_PATH ?? "artifacts/cpr-screener/src/lib/ViewsSidebar.tsx";
 
@@ -364,7 +388,8 @@ try {
     target,
     levelCheckDefs,
     attachKey,
-    gapBadge
+    gapBadge,
+    entry
   );
   writeFileSync(filePath, patchedText, "utf-8");
 
@@ -385,7 +410,7 @@ try {
   writeFileSync(viewsSidebarFilePath, patchedViewsSidebarText, "utf-8");
 
   console.log(
-    `Created "${newKey}" (direction ${direction}, target ${target}, grades against "${patternKey}"${
+    `Created "${newKey}" (direction ${direction}, entry ${entry}, target ${target}, grades against "${patternKey}"${
       gapBadge ? ` AND Gap Badge "${gapBadge}"` : ""
     }) under "${attachKey}" in ${arrName} with ${levelCheckDefs.length} symbol-derived levelCheckDefs`
   );

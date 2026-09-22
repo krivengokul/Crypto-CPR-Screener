@@ -31,6 +31,15 @@ on:
         options:
           - Up
           - Down
+      entry:
+        # Which rung getEntry reads off today's CPR — independently
+        # selectable from Direction (the Backtest panel's Entry dropdown,
+        # between Direction and Target). Leave blank to fall back to
+        # direction's own TC/BC rung, matching the original hardcoded
+        # behavior for any saved command from before this input existed.
+        description: "Entry rung: one of R4/R3/R2/R1/TC/Pivot/BC/S1/S2/S3/S4. Leave blank for direction's default (TC for Up, BC for Down)."
+        required: false
+        type: string
       target:
         description: "Which rung to grade against — R1/R2/R3/R4 for Up, S1/S2/S3/S4 for Down"
         required: true
@@ -86,6 +95,7 @@ jobs:
           NEW_KEY: ${{ inputs.newKey }}
           NEW_LABEL: ${{ inputs.newLabel }}
           DIRECTION: ${{ inputs.direction }}
+          ENTRY: ${{ inputs.entry }}
           TARGET: ${{ inputs.target }}
           GAP_BADGE: ${{ inputs.gapBadge }}
           LEVEL_CHECK_DEFS_B64: ${{ inputs.levelCheckDefs }}

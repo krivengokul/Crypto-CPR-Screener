@@ -602,14 +602,14 @@ function CopyViewControl({
         onChange={(e) => setNewKey(e.target.value)}
         placeholder="New View key"
         disabled={!!command}
-        className="w-full bg-background border border-border rounded-md px-2 py-1 text-[11px] font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
+        className="w-full bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
       />
       <input
         value={newLabel}
         onChange={(e) => setNewLabel(e.target.value)}
         placeholder="Display label"
         disabled={!!command}
-        className="w-full bg-background border border-border rounded-md px-2 py-1 text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
+        className="w-full bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
       />
       <AttachPointSelect value={attachKey} onChange={setAttachKey} disabled={!!command} />
       {error && <span className="text-[10px] text-destructive">{error}</span>}
@@ -672,6 +672,14 @@ function CopyViewControl({
 const SYMBOL_LIST_ONLY_CATEGORY_KEYS = new Set(["top15gainers", "top15losers"]);
 
 /**
+ * Every rung selectable in CreateViewControl's Entry dropdown (between
+ * Direction and Target), top-to-bottom same as the CPR ladder itself.
+ * Matches backtest.ts's ENTRY_DEFS keys exactly — the label here IS the
+ * key createBacktestView/the workflow command look up by.
+ */
+const ENTRY_OPTIONS = ["R4", "R3", "R2", "R1", "TC", "Pivot", "BC", "S1", "S2", "S3", "S4"];
+
+/**
  * "Create View" — for a Pattern/Subpattern that has no BACKTEST_TARGETS
  * entry of its own yet (BacktestPanel's activePatternTarget undefined,
  * showing the "U4 (today's R4)" fallback description instead of a real
@@ -703,7 +711,6 @@ function CreateViewControl({
   onCreated: (newKey: string) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [newKey, setNewKey] = useState("");
   const [newLabel, setNewLabel] = useState("");
   const [error, setError] = useState("");
   const [command, setCommand] = useState<string | null>(null);
@@ -716,11 +723,13 @@ function CreateViewControl({
   // behavior; picking a different node files the View there instead
   // while it still grades against patternKey's own condition.
   const [attachKey, setAttachKey] = useState(patternKey);
-  // Up -> entry TC / stoploss S1, target one of R1/R2/R3/R4.
-  // Down -> entry BC / stoploss R1, target one of S1/S2/S3/S4.
-  // Matches this codebase's own convention exactly (see e.g.
-  // "7PM:MoMi-<L4:2AM" for a real Down TC/BC/R1 example).
+  // Stoploss always follows direction alone (Up: S1, Down: R1) — see
+  // e.g. "7PM:MoMi-<L4:2AM" for a real Down TC/BC/R1 example. Entry is
+  // independently selectable via the Entry dropdown below (defaults to
+  // TC/BC for Up/Down, same as the original hardcoded behavior, but any
+  // rung on the ladder can be picked).
   const [direction, setDirection] = useState<"Up" | "Down">("Up");
+  const [entry, setEntry] = useState("TC");
   const [target, setTarget] = useState("R4");
   // Optional composite Gap Badge label (e.g. "RH-GapAB", "SL-GapBB" —
   // views.ts's ALL_GAP_BADGES) to additionally require on top of
@@ -731,19 +740,19 @@ function CreateViewControl({
   const [gapBadge, setGapBadge] = useState(
     existingGapBadge && ALL_GAP_BADGES.includes(existingGapBadge) ? existingGapBadge : ""
   );
-  // Whether the person has typed into the key/label boxes yet — until
-  // they do, both track effectivePattern below so switching the attach
-  // point off a TOP 15 bucket doesn't leave "top15gainers" sitting in the
-  // key field (which would only fail as a duplicate key anyway).
-  const [keyEdited, setKeyEdited] = useState(false);
+  // Whether the person has typed into the View name box yet — until they
+  // do, it tracks effectivePattern below so switching the attach point
+  // off a TOP 15 bucket doesn't leave "top15gainers" sitting in the name
+  // field. The View key is no longer a free-text field at all — see
+  // viewKey below — so there's nothing to track "edited" for there.
   const [labelEdited, setLabelEdited] = useState(false);
 
   // The node this View is actually created FOR — normally the one
   // "Create View" was opened from, but for the TOP 15 buckets it follows
   // the attach dropdown's top-level Category instead (see the note
-  // above). Everything downstream — the header, the default key/label,
-  // createBacktestView's conditionKey, and the workflow command's
-  // patternKey — reads this, not patternKey.
+  // above). Everything downstream — the header, the default View name,
+  // createBacktestView's conditionKey, the composed View key, and the
+  // workflow command's patternKey — reads this, not patternKey.
   const effectivePattern = useMemo(() => {
     if (!SYMBOL_LIST_ONLY_CATEGORY_KEYS.has(patternKey)) {
       return { key: patternKey, label: patternLabel };
@@ -755,20 +764,28 @@ function CreateViewControl({
     return { key: cat.key, label: cat.label };
   }, [patternKey, patternLabel, attachKey]);
 
+  // The View key is fully derived, not typed — "{Entry}-{Pattern key}
+  // [-{Gap Badge}]-{Target}" (e.g. "R1-B-B-BB-BB-EL3U4-SL-GapBA-R4"),
+  // omitting the Gap Badge segment entirely when none is selected. No
+  // "edited" tracking needed since there's no free-text box to diverge
+  // from it — it just recomputes whenever any of its ingredients change.
+  const viewKey = useMemo(() => {
+    const trimmedGapBadge = gapBadge.trim();
+    return [entry, effectivePattern.key, trimmedGapBadge || undefined, target].filter(Boolean).join("-");
+  }, [entry, effectivePattern.key, gapBadge, target]);
+
   useEffect(() => {
     if (!open || command) return;
-    if (!keyEdited) setNewKey(effectivePattern.key);
     if (!labelEdited) setNewLabel(effectivePattern.label);
-  }, [open, command, keyEdited, labelEdited, effectivePattern.key, effectivePattern.label]);
+  }, [open, command, labelEdited, effectivePattern.label]);
 
   function openForm() {
     setAttachKey(patternKey);
     setDirection("Up");
+    setEntry("TC");
     setTarget("R4");
     setGapBadge(existingGapBadge && ALL_GAP_BADGES.includes(existingGapBadge) ? existingGapBadge : "");
-    setNewKey(patternKey);
     setNewLabel(patternLabel);
-    setKeyEdited(false);
     setLabelEdited(false);
     setError("");
     setCommand(null);
@@ -778,12 +795,7 @@ function CreateViewControl({
   }
 
   function confirm() {
-    const trimmedKey = newKey.trim();
-    const trimmedLabel = newLabel.trim() || trimmedKey;
-    if (!trimmedKey) {
-      setError("Enter a key for the new View.");
-      return;
-    }
+    const trimmedLabel = newLabel.trim() || viewKey;
 
     // deriveLevelCheckDefs only reads r.todayCPR/r.prevCPR — the cast
     // below is safe even though this isn't a full CPRResult.
@@ -793,22 +805,25 @@ function CreateViewControl({
 
     const result = createBacktestView(
       effectivePattern.key,
-      trimmedKey,
+      viewKey,
       trimmedLabel,
       direction,
       target,
       derived,
       attachKey,
-      trimmedGapBadge || undefined
+      trimmedGapBadge || undefined,
+      entry
     );
     if (!result.ok) {
       setError(
         result.reason === "duplicate-key"
-          ? `"${trimmedKey}" already exists — pick a different key.`
+          ? `"${viewKey}" already exists — change the Entry, Gap Badge, or Target to make it unique.`
           : result.reason === "invalid-target"
           ? `"${target}" isn't a valid target for ${direction === "Up" ? "an Up" : "a Down"} View.`
           : result.reason === "invalid-gap-badge"
           ? `"${trimmedGapBadge}" isn't a known Gap Badge.`
+          : result.reason === "invalid-entry"
+          ? `"${entry}" isn't a valid Entry.`
           : "Couldn't find this Pattern/Subpattern in the dropdown tree."
       );
       return;
@@ -832,9 +847,9 @@ function CreateViewControl({
     const b64 = btoa(binary);
 
     setCommand(
-      `gh workflow run create-view.yml --repo krivengokul/Crypto-CPR-Screener -f patternKey=${q(effectivePattern.key)} -f newKey=${q(trimmedKey)} -f newLabel=${q(trimmedLabel)} -f direction=${q(direction)} -f target=${q(target)} -f attachKey=${q(attachKey)}${trimmedGapBadge ? ` -f gapBadge=${q(trimmedGapBadge)}` : ""} -f levelCheckDefs=${b64}`
+      `gh workflow run create-view.yml --repo krivengokul/Crypto-CPR-Screener -f patternKey=${q(effectivePattern.key)} -f newKey=${q(viewKey)} -f newLabel=${q(trimmedLabel)} -f direction=${q(direction)} -f entry=${q(entry)} -f target=${q(target)} -f attachKey=${q(attachKey)}${trimmedGapBadge ? ` -f gapBadge=${q(trimmedGapBadge)}` : ""} -f levelCheckDefs=${b64}`
     );
-    setCreatedKey(trimmedKey);
+    setCreatedKey(viewKey);
   }
 
   async function copyCommand() {
@@ -862,12 +877,12 @@ function CreateViewControl({
   }
 
   return (
-    <div className="flex w-fit min-w-[260px] flex-col gap-1.5 rounded-md border border-border bg-popover p-2">
+    <div className="flex w-fit min-w-[300px] flex-col gap-1.5 rounded-md border border-border bg-popover p-2">
       <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
         Create View for &quot;{effectivePattern.label}&quot;
       </span>
       <span className="text-[10px] text-muted-foreground">
-        {direction === "Up" ? "Entry TC · Stoploss S1" : "Entry BC · Stoploss R1"} — Level Check derived from this symbol
+        Entry {entry} · Stoploss {direction === "Up" ? "S1" : "R1"} — Level Check derived from this symbol
       </span>
       <div className="flex gap-1.5">
         <select
@@ -875,19 +890,33 @@ function CreateViewControl({
           onChange={(e) => {
             const next = e.target.value as "Up" | "Down";
             setDirection(next);
+            setEntry(next === "Up" ? "TC" : "BC");
             setTarget(next === "Up" ? "R4" : "S4");
           }}
           disabled={!!command}
-          className="flex-1 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+          className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
         >
           <option value="Up">Up</option>
           <option value="Down">Down</option>
         </select>
         <select
+          value={entry}
+          onChange={(e) => setEntry(e.target.value)}
+          disabled={!!command}
+          title="Which rung this View's entry reads off today's CPR — sets the created View's getEntry."
+          className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+        >
+          {ENTRY_OPTIONS.map((opt) => (
+            <option key={opt} value={opt}>
+              Entry {opt}
+            </option>
+          ))}
+        </select>
+        <select
           value={target}
           onChange={(e) => setTarget(e.target.value)}
           disabled={!!command}
-          className="flex-1 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+          className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
         >
           {(direction === "Up" ? ["R1", "R2", "R3", "R4"] : ["S1", "S2", "S3", "S4"]).map((t) => (
             <option key={t} value={t}>
@@ -897,14 +926,10 @@ function CreateViewControl({
         </select>
       </div>
       <input
-        value={newKey}
-        onChange={(e) => {
-          setKeyEdited(true);
-          setNewKey(e.target.value);
-        }}
-        placeholder="View key"
-        disabled={!!command}
-        className="w-full bg-background border border-border rounded-md px-2 py-1 text-[11px] font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
+        value={viewKey}
+        readOnly
+        title="View key — auto-generated from Entry, Pattern/Subpattern, Gap Badge (if any), and Target. Not editable."
+        className="w-full cursor-default bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] font-mono text-muted-foreground placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
       />
       <input
         value={newLabel}
@@ -912,9 +937,10 @@ function CreateViewControl({
           setLabelEdited(true);
           setNewLabel(e.target.value);
         }}
-        placeholder="Display label"
+        placeholder="View name"
         disabled={!!command}
-        className="w-full bg-background border border-border rounded-md px-2 py-1 text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
+        title="User-friendly display name for this View — shown in the dropdown tree, editable."
+        className="w-full bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
       />
       <AttachPointSelect value={attachKey} onChange={setAttachKey} disabled={!!command} />
       <select
