@@ -2488,16 +2488,17 @@ export default function BacktestPanel() {
                                   todayCPR={r.todayCPR}
                                 />
                                 <CopyViewControl
-                                sourceKey={activeTarget.key}
-                                sourceLabel={activeTarget.label}
-                                prevCPR={r.prevCPR}
-                                todayCPR={r.todayCPR}
-                                sourceConditions={activeLevelCheckDefs}
-                                onCopied={(newKey) => {
-                                  setTreeRevision((r) => r + 1);
-                                  setSelectedKey(newKey);
-                                }}
-                              />
+                                  sourceKey={activeTarget.key}
+                                  sourceLabel={activeTarget.label}
+                                  prevCPR={r.prevCPR}
+                                  todayCPR={r.todayCPR}
+                                  sourceConditions={activeLevelCheckDefs}
+                                  onCopied={(newKey) => {
+                                    setTreeRevision((r) => r + 1);
+                                    setSelectedKey(newKey);
+                                  }}
+                                />
+                              </div>
                             ) : isPatternOnly && activePatternInfo ? (
                               (() => {
                                 const rowPattern = deepestMatchingPattern(r.raw, activePatternInfo.sub.key);
