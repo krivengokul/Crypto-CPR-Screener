@@ -844,9 +844,9 @@ export default function ScreenerTableRow({
   const hasSelectedView = !!viewName;
   const firstDefinedView = viewLadders.find((v) => v.ladder.hasConditions);
   const primaryView = hasSelectedView
-    ? { name: viewName, direction: dir ?? undefined, defs: levelCheckConditions }
+    ? { name: viewName, direction: dir ?? undefined, defs: levelCheckConditions, key: activeView }
     : firstDefinedView
-    ? { name: firstDefinedView.label, direction: firstDefinedView.direction ?? undefined, defs: firstDefinedView.defs }
+    ? { name: firstDefinedView.label, direction: firstDefinedView.direction ?? undefined, defs: firstDefinedView.defs, key: firstDefinedView.id }
     : undefined;
   // SSLLCategory badge (e.g. "SSLL-AA") — shown above the S1 line in the
   // expanded row's "Levels VIEW" chart, right side.
@@ -1062,6 +1062,7 @@ export default function ScreenerTableRow({
           prevPatternBadge={renderPrevPatternBadge(r)}
           pivotPatternBadge={renderPivotPatternBadge(r)}
           viewName={primaryView?.name}
+          viewKey={primaryView?.key}
           viewDirection={primaryView?.direction}
           showLevelCheck
           levelCheckConditions={primaryView?.defs}

@@ -1117,7 +1117,7 @@ export default function Screener({
           </div>
 
           {currentStatus === "done" && (
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 flex-1 min-w-[220px] max-w-xl">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 flex-1 min-w-[220px] max-w-xl">
               <div className="rounded-lg border border-border bg-card px-3 py-1">
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
                   Symbols
@@ -1141,14 +1141,6 @@ export default function Screener({
                   CoinDCX
                 </p>
                 <p className="mt-0.5 text-lg font-semibold text-emerald-300">{coindcxAllResults.length}</p>
-              </div>
-              <div className="rounded-lg border border-border bg-card px-3 py-1">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                  Active view
-                </p>
-                <p className="mt-0.5 truncate text-sm font-semibold">
-                  {!showAll ? (VIEW_LABEL_BY_ID[activeView] || activeView) : "All scanned"}
-                </p>
               </div>
             </div>
           )}
@@ -1339,10 +1331,11 @@ export default function Screener({
               </span>
               <span>{progressPct}%</span>
             </div>
-            <div className="w-full bg-muted rounded-full h-1.5">
+            {/* Thin purple progress bar (was bg-primary/gold, h-1.5) */}
+            <div className="w-full bg-muted rounded-full h-1">
               <div
-                className="h-1.5 rounded-full bg-primary transition-all"
-                style={{ width: `${progressPct}%` }}
+                className="h-1 rounded-full transition-all"
+                style={{ width: `${progressPct}%`, backgroundColor: "#8b5cf6" }}
               />
             </div>
           </div>
