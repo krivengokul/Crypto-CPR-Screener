@@ -311,7 +311,16 @@ function applyCopyViewPatch(sourceText, sourceKey, newKey, newLabel, levelCheckD
     if (parentArr && parentArr === targetArray) {
       sourceObj.replaceWithText(newViewLiteral);
     } else {
-      sourceObj.remove();
+      // sourceObj here is an ObjectLiteralExpression sitting as an
+      // element of parentArr — ts-morph doesn't implement a generic
+      // .remove() for that node kind (only for statements, class
+      // members, etc.), so sourceObj.remove() throws "is not a
+      // function". ArrayLiteralExpression.removeElement() accepts the
+      // element node directly and is the correct way to drop it.
+      if (!parentArr) {
+        throw new Error(`Couldn't find the array literal containing "${sourceKey}" in views.ts.`);
+      }
+      parentArr.removeElement(sourceObj);
       targetArray.addElement(newViewLiteral);
     }
   } else {
