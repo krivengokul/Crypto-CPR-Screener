@@ -493,7 +493,12 @@ function CPRLevelChart({
 }: {
   prevCPR: CPRLevels;
   todayCPR: CPRLevels;
-  /** PivotPattern badge (e.g. renderPivotPatternBadge(r)) — shown inline next to the "Levels VIEW" label. */
+  /**
+   * PivotPattern badge (e.g. renderPivotPatternBadge(r)) — previously shown
+   * next to "Levels VIEW" (e.g. "B-B-BB-BB"). No longer rendered here per
+   * request; still accepted so callers (SRLadderPanel) don't need to stop
+   * passing it.
+   */
   pivotPatternBadge?: ReactNode;
   /** Name of the currently active View — shown as a badge next to pivotPatternBadge. Omit to hide the badge. */
   viewName?: string;
@@ -657,11 +662,6 @@ function CPRLevelChart({
           <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
             Levels VIEW
           </p>
-          {pivotPatternBadge && (
-            <span className="inline-flex shrink-0 translate-y-[-1px] items-center">
-              {pivotPatternBadge}
-            </span>
-          )}
           {viewName && (
             <span className="inline-flex shrink-0 translate-y-[-1px] items-center">
               <ViewNameBadge name={viewName} direction={viewDirection} />
