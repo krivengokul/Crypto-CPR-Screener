@@ -250,7 +250,8 @@ export const Views: Record<string, SubPattern[]> = {
       activeText:  "#4ade80",
       activeBg:    "rgba(34, 197, 94, 0.14)",
     },
-      { id: "B6-L3U3-GapAA:R4", label: "B6-L3U3-GapAA:R4" }
+      { id: "B6-L3U3-GapAA:R4", label: "B6-L3U3-GapAA:R4" },
+      { id: "R1-B-B-BB-BB-EL3U4-SL-GapBA-R4", label: "B6-EL3U4-MiniMicro" }
 ],
   "compressed": [
     // RENAMED from "SMi-L1pU1>-APU4:11PM": all previous conditions removed.
