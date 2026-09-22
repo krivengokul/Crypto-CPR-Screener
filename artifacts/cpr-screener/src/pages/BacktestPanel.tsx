@@ -884,20 +884,6 @@ function CreateViewControl({
           ))}
         </select>
       </div>
-      <select
-        value={gapBadge}
-        onChange={(e) => setGapBadge(e.target.value)}
-        disabled={!!command}
-        title="Optionally also require this exact composite Gap Badge (RRSSGapCategory + PDHPDLGapCategory + HL-switch), on top of the Pattern's own condition — same label shown in the Pattern column's Gap Badge (e.g. RH-GapAB, SL-GapBB)."
-        className="w-full bg-background border border-border rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
-      >
-        <option value="">Any Gap Badge</option>
-        {ALL_GAP_BADGES.map((badge) => (
-          <option key={badge} value={badge}>
-            Gap Badge {badge}
-          </option>
-        ))}
-      </select>
       <input
         value={newKey}
         onChange={(e) => {
@@ -919,6 +905,20 @@ function CreateViewControl({
         className="w-full bg-background border border-border rounded-md px-2 py-1 text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
       />
       <AttachPointSelect value={attachKey} onChange={setAttachKey} disabled={!!command} />
+      <select
+        value={gapBadge}
+        onChange={(e) => setGapBadge(e.target.value)}
+        disabled={!!command}
+        title="Optionally also require this exact composite Gap Badge (RRSSGapCategory + PDHPDLGapCategory + HL-switch), on top of the Pattern's own condition — same label shown in the Pattern column's Gap Badge (e.g. RH-GapAB, SL-GapBB)."
+        className="w-full bg-background border border-border rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
+      >
+        <option value="">Any Gap Badge</option>
+        {ALL_GAP_BADGES.map((badge) => (
+          <option key={badge} value={badge}>
+            {badge}
+          </option>
+        ))}
+      </select>
       {error && <span className="text-[10px] text-destructive">{error}</span>}
       {command && (
         <div className="flex flex-col gap-1">
@@ -1968,8 +1968,8 @@ export default function BacktestPanel() {
             <span>Scanning… {progress.symbol}</span>
             <span>{progressPct}%</span>
           </div>
-          <div className="w-full bg-muted rounded-full h-1.5">
-            <div className="h-1.5 rounded-full bg-primary transition-all" style={{ width: `${progressPct}%` }} />
+          <div className="w-full bg-muted rounded-full h-1">
+            <div className="h-1 rounded-full bg-cyan-500 transition-all" style={{ width: `${progressPct}%` }} />
           </div>
         </div>
       )}
