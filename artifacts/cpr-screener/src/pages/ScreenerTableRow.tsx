@@ -640,7 +640,11 @@ export function renderLevelColumnRestBadges(r: CPRResult) {
  * text (text-xs) elsewhere in this same table. Each View name is colored by
  * its own direction — green when Up, red when Down — falling back to the
  * neutral violet the Journal's PATTERN column uses when a View has no
- * direction set. Renders nothing (blank cell) when the row matches no View.
+ * direction set. Directly under each View name, its Viewcode (v.id) is
+ * shown as a second, quieter line — same font-mono text-xs
+ * text-muted-foreground styling as the Viewcode line under the expanded
+ * row's "LEVELS VIEW" ladder, so the same identifier reads the same way in
+ * both places. Renders nothing (blank cell) when the row matches no View.
  */
 export function renderActiveViewLabels(
   r: CPRResult,
@@ -648,21 +652,25 @@ export function renderActiveViewLabels(
 ) {
   if (views.length === 0) return null;
   return (
-    <div className="flex flex-col gap-0.5 max-w-[200px]">
+    <div className="flex flex-col gap-1 max-w-[200px]">
       {views.map((v) => (
-        <span
-          key={v.id}
-          className={`text-xs font-medium font-mono truncate ${
-            v.direction === "Up"
-              ? "text-green-400"
-              : v.direction === "Down"
-              ? "text-red-400"
-              : "text-violet-300"
-          }`}
-          title={v.label}
-        >
-          {v.label}
-        </span>
+        <div key={v.id} className="flex flex-col gap-0">
+          <span
+            className={`text-xs font-medium font-mono truncate ${
+              v.direction === "Up"
+                ? "text-green-400"
+                : v.direction === "Down"
+                ? "text-red-400"
+                : "text-violet-300"
+            }`}
+            title={v.label}
+          >
+            {v.label}
+          </span>
+          <span className="truncate font-mono text-xs text-muted-foreground" title={v.id}>
+            {v.id}
+          </span>
+        </div>
       ))}
     </div>
   );

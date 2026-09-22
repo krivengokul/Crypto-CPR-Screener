@@ -657,24 +657,31 @@ function CPRLevelChart({
 
   return (
     <div className="min-w-0">
-      <div className="mb-1.5 text-left">
-        <div className="flex flex-nowrap items-center gap-1.5 pl-2">
-          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-            Levels VIEW
-          </p>
-          {viewName && (
+      <div className="mb-1.5 flex flex-nowrap items-start gap-1.5 pl-2 text-left">
+        <p className="pt-px text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+          Levels VIEW
+        </p>
+        {viewName ? (
+          // ViewNameBadge and its Viewcode stack in their own column so the
+          // Viewcode lands directly under the badge (wherever the badge
+          // ends up sitting after "Levels VIEW" + gap) rather than under
+          // the "Levels VIEW" label itself.
+          <div className="flex min-w-0 flex-col gap-0.5">
             <span className="inline-flex shrink-0 translate-y-[-1px] items-center">
               <ViewNameBadge name={viewName} direction={viewDirection} />
             </span>
-          )}
-        </div>
-        {viewKey && (
-          <p
-            className="mt-0.5 truncate pl-2 font-mono text-xs text-muted-foreground"
-            title={viewKey}
-          >
-            {viewKey}
-          </p>
+            {viewKey && (
+              <p className="truncate font-mono text-xs text-muted-foreground" title={viewKey}>
+                {viewKey}
+              </p>
+            )}
+          </div>
+        ) : (
+          viewKey && (
+            <p className="truncate font-mono text-xs text-muted-foreground" title={viewKey}>
+              {viewKey}
+            </p>
+          )
         )}
       </div>
       <svg
