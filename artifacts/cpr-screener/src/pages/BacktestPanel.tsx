@@ -707,6 +707,65 @@ const SYMBOL_LIST_ONLY_CATEGORY_KEYS = new Set(["top15gainers", "top15losers"]);
  */
 const ENTRY_OPTIONS = ["R4", "R3", "R2", "R1", "TC", "Pivot", "BC", "S1", "S2", "S3", "S4"];
 
+/** Every valid Target rung — union of BULLISH_TARGETS/BEARISH_TARGETS keys
+ * on the workflow-patch side (copyviewpatch.mjs), used here only to parse
+ * an existing View's key back into its parts (see parseComposedViewKey). */
+const TARGET_OPTIONS = ["R1", "R2", "R3", "R4", "S1", "S2", "S3", "S4"];
+
+/**
+ * "Create" View's key is fully derived (never typed) as
+ * "{Entry}-{Pattern/Subpattern key}[-{Gap Badge}]-{Target}" — see
+ * CreateViewControl's own `viewKey` below. This walks that same
+ * composition back apart for an *existing* View: strip a known Entry
+ * off the front, a known Target off the back, then a known Gap Badge
+ * off whatever's left, in that order (the only order consistent with
+ * how the pieces were joined). What remains in the middle is the
+ * Pattern/Subpattern key the View grades against — the same thing
+ * CreateViewControl calls `effectivePattern.key`.
+ *
+ * Used by EditViewControl so its View Key field can recompose live
+ * from the dropdowns exactly like Create View's does, and so its Gap
+ * Badge dropdown can start preselected to whatever this View already
+ * encodes instead of always resetting to "Any Gap Badge". Returns
+ * entry/target as undefined when the key doesn't follow this
+ * convention (e.g. a hand-edited legacy key) so callers can detect
+ * that and leave the key untouched rather than risk corrupting it.
+ */
+function parseComposedViewKey(
+  key: string
+): { patternKey: string; entry?: string; target?: string; gapBadge?: string } {
+  let rest = key;
+
+  let entry: string | undefined;
+  for (const opt of ENTRY_OPTIONS) {
+    if (rest.startsWith(`${opt}-`)) {
+      entry = opt;
+      rest = rest.slice(opt.length + 1);
+      break;
+    }
+  }
+
+  let target: string | undefined;
+  for (const opt of TARGET_OPTIONS) {
+    if (rest.endsWith(`-${opt}`)) {
+      target = opt;
+      rest = rest.slice(0, -(opt.length + 1));
+      break;
+    }
+  }
+
+  let gapBadge: string | undefined;
+  for (const badge of ALL_GAP_BADGES) {
+    if (rest.endsWith(`-${badge}`)) {
+      gapBadge = badge;
+      rest = rest.slice(0, -(badge.length + 1));
+      break;
+    }
+  }
+
+  return { patternKey: rest, entry, target, gapBadge };
+}
+
 /**
  * "Create View" — for a Pattern/Subpattern that has no BACKTEST_TARGETS
  * entry of its own yet (BacktestPanel's activePatternTarget undefined,
@@ -721,8 +780,15 @@ const ENTRY_OPTIONS = ["R4", "R3", "R2", "R1", "TC", "Pivot", "BC", "S1", "S2", 
 
 /**
  * "Edit View" — allows editing an existing ViewDef (Direction, Entry, Target,
- * View Name, Attach Point, Gap Badge, and Level Checks).
- * Reuses the copyviewpatch.mjs AST patcher via copy-view.yml with isEdit=true.
+ * View Name, Attach Point, and Gap Badge). Like Create View, the View Key
+ * is fully derived from the dropdowns (via parseComposedViewKey +
+ * recomposition below) rather than typed, and — unlike Create View — that
+ * derived key can differ from the View's current key, which renames/moves
+ * it to the new key on save (see viewKey below and handleSave's newKey).
+ * Reuses the copyviewpatch.mjs AST patcher via copy-view.yml with isEdit=true,
+ * which already supports sourceKey !== newKey (renaming/moving an existing
+ * entry, including across category arrays) — see applyCopyViewPatch's
+ * `if (isEdit)` branch there.
  */
 function EditViewControl({
   activeTarget,
@@ -739,6 +805,16 @@ function EditViewControl({
   onClose?: () => void;
   onUpdated?: (newKey: string) => void;
 }) {
+  // Parsed once per activeTarget (not per keystroke) — see
+  // parseComposedViewKey's doc comment above for why this is safe to
+  // treat as the View's Pattern/Subpattern key + its original Gap Badge.
+  const parsedKey = useMemo(() => parseComposedViewKey(activeTarget.key), [activeTarget.key]);
+  // Only recompose the key live when it actually follows the standard
+  // Entry-Pattern-[GapBadge]-Target convention — a hand-edited or
+  // legacy key that doesn't parse cleanly is left exactly as-is rather
+  // than risk mangling it into something that no longer means anything.
+  const keyIsComposable = !!parsedKey.entry && !!parsedKey.target && parsedKey.patternKey.length > 0;
+
   const [open, setOpen] = useState(initialOpen);
   const [direction, setDirection] = useState<"Up" | "Down">(activeTarget.direction ?? "Up");
   const [entry, setEntry] = useState(() => {
@@ -746,25 +822,56 @@ function EditViewControl({
     return ENTRY_OPTIONS.includes(raw ?? "") ? raw! : (activeTarget.direction === "Down" ? "BC" : "TC");
   });
   const [target, setTarget] = useState(() => {
+    // The regex can only ever match an R/S rung directly (bullish
+    // labels read "U1 (today's R1)") or an L-prefixed one that stands
+    // in for the matching S rung (bearish labels read "L1 (today's
+    // S1)", and "L…" sorts before "S…" in the string so it's what the
+    // regex finds first) — never a literal "U…" match, since U isn't
+    // in the character class.
     const m = activeTarget.targetLabel?.match(/[RLS]\d/)?.[0];
-    if (m) {
-      if (m.startsWith("U")) return m.replace("U", "R");
-      if (m.startsWith("L")) return m.replace("L", "S");
-      return m;
-    }
+    if (m) return m.startsWith("L") ? m.replace("L", "S") : m;
     return activeTarget.direction === "Down" ? "S4" : "R4";
   });
   const [label, setLabel] = useState(activeTarget.label);
   const [attachKey, setAttachKey] = useState(() => activeTarget.parentKey ?? findContainingNodeKey(activeTarget.key) ?? activeTarget.key);
-  const [gapBadge, setGapBadge] = useState("");
+  // Preselected to whatever Gap Badge this View's own key already
+  // encodes (via parsedKey) — previously this always started at "Any
+  // Gap Badge" regardless of the View's actual filter, which both
+  // misrepresented the current View and, combined with the key
+  // previously never changing, meant a Gap-Badge View's badge could
+  // never be edited at all.
+  const [gapBadge, setGapBadge] = useState(() => parsedKey.gapBadge ?? "");
   const [error, setError] = useState("");
   const [command, setCommand] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
+  // Fully derived, not typed — same composition CreateViewControl's
+  // `viewKey` uses ("{Entry}-{Pattern key}[-{Gap Badge}]-{Target}"),
+  // recomputed live as Entry/Target/Gap Badge change so saving files
+  // the View under its new, correctly-composed key instead of leaving
+  // it stuck on the key it had before editing. Falls back to the
+  // untouched original key when it isn't in the standard composed
+  // format (keyIsComposable false).
+  const viewKey = useMemo(() => {
+    if (!keyIsComposable) return activeTarget.key;
+    const trimmedGapBadge = gapBadge.trim();
+    return [entry, parsedKey.patternKey, trimmedGapBadge || undefined, target].filter(Boolean).join("-");
+  }, [keyIsComposable, entry, parsedKey.patternKey, gapBadge, target, activeTarget.key]);
+
   function openForm() {
     setDirection(activeTarget.direction ?? "Up");
+    setEntry(() => {
+      const raw = activeTarget.entryLabel?.split(" ")[0];
+      return ENTRY_OPTIONS.includes(raw ?? "") ? raw! : (activeTarget.direction === "Down" ? "BC" : "TC");
+    });
+    setTarget(() => {
+      const m = activeTarget.targetLabel?.match(/[RLS]\d/)?.[0];
+      if (m) return m.startsWith("L") ? m.replace("L", "S") : m;
+      return activeTarget.direction === "Down" ? "S4" : "R4";
+    });
     setLabel(activeTarget.label);
     setAttachKey(activeTarget.parentKey ?? findContainingNodeKey(activeTarget.key) ?? activeTarget.key);
+    setGapBadge(parsedKey.gapBadge ?? "");
     setError("");
     setCommand(null);
     setCopied(false);
@@ -780,7 +887,7 @@ function EditViewControl({
 
     const res = editBacktestView(
       activeTarget.key,
-      activeTarget.key,
+      viewKey,
       trimmedLabel,
       direction,
       target,
@@ -790,14 +897,20 @@ function EditViewControl({
     );
 
     if (!res.ok) {
-      setError(res.reason ?? "Failed to update view.");
+      setError(
+        res.reason === "duplicate-key"
+          ? `"${viewKey}" already exists — change the Entry, Gap Badge, or Target to make it unique.`
+          : res.reason ?? "Failed to update view."
+      );
       return;
     }
 
     const q = (s: string) => `"${s.replace(/"/g, "")}"`;
-    const cmd = `gh workflow run copy-view.yml --repo krivengokul/Crypto-CPR-Screener -f sourceKey=${q(activeTarget.key)} -f newKey=${q(activeTarget.key)} -f newLabel=${q(trimmedLabel)} -f isEdit=true -f direction=${q(direction)} -f entry=${q(entry)} -f target=${q(target)} -f attachKey=${q(attachKey)}${gapBadge ? ` -f gapBadge=${q(gapBadge)}` : ""}`;
+    const cmd = `gh workflow run copy-view.yml --repo krivengokul/Crypto-CPR-Screener -f sourceKey=${q(activeTarget.key)} -f newKey=${q(viewKey)} -f newLabel=${q(trimmedLabel)} -f isEdit=true -f direction=${q(direction)} -f entry=${q(entry)} -f target=${q(target)} -f attachKey=${q(attachKey)}${gapBadge ? ` -f gapBadge=${q(gapBadge)}` : ""}`;
     setCommand(cmd);
-    if (onUpdated) onUpdated(activeTarget.key);
+    // Pass the *new* key — the View may have just been renamed, so the
+    // old activeTarget.key may no longer exist in VIEWS.
+    if (onUpdated) onUpdated(viewKey);
   }
 
   async function copyCommand() {
@@ -874,11 +987,20 @@ function EditViewControl({
         </select>
       </div>
       <input
-        value={activeTarget.key}
+        value={viewKey}
         readOnly
-        title="View key — not editable."
+        title={
+          keyIsComposable
+            ? "View key — auto-generated from Entry, Pattern/Subpattern, Gap Badge (if any), and Target, same as Create View. Not editable directly; changing any of those above will rename/move this View to the new key when saved."
+            : "This View's key doesn't follow the standard Entry-Pattern-Target format, so it's kept unchanged. Not editable."
+        }
         className="w-full cursor-default bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] font-mono text-muted-foreground placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
       />
+      {keyIsComposable && viewKey !== activeTarget.key && (
+        <span className="text-[10px] text-amber-400">
+          Renaming &quot;{activeTarget.key}&quot; → &quot;{viewKey}&quot; on save.
+        </span>
+      )}
       <input
         value={label}
         onChange={(e) => setLabel(e.target.value)}
