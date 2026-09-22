@@ -39,6 +39,7 @@ import {
   topLevelCategoryOf,
   VIEWS,
   ALL_GAP_BADGES,
+  computeGapBadge,
   type ViewTreeNode,
   type ViewDef,
 } from "@/lib/views";
@@ -404,7 +405,7 @@ function AttachPointSelect({
       onChange={(e) => onChange(e.target.value)}
       disabled={disabled}
       title="Which Category, Pattern, or Subpattern this View should be nested under in the dropdown tree above — defaults to where it was created from."
-      className="w-full bg-background border border-border rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
+      className="w-full bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
     >
       {[...byCategory.entries()].map(([categoryLabel, nodes]) => (
         <optgroup key={categoryLabel} label={categoryLabel}>
@@ -686,12 +687,19 @@ function CreateViewControl({
   patternLabel,
   prevCPR,
   todayCPR,
+  existingGapBadge,
   onCreated,
 }: {
   patternKey: string;
   patternLabel: string;
   prevCPR: CPRLevels;
   todayCPR: CPRLevels;
+  // The composite Gap Badge (views.ts's computeGapBadge) already computed
+  // for the row "Create View" was opened from — same source as the badge
+  // shown in that row's own Gap Badge column via renderGapColumnBadges.
+  // Used to preselect the Gap Badge dropdown below, the same way attachKey
+  // preselects to patternKey.
+  existingGapBadge?: string;
   onCreated: (newKey: string) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -717,8 +725,12 @@ function CreateViewControl({
   // Optional composite Gap Badge label (e.g. "RH-GapAB", "SL-GapBB" —
   // views.ts's ALL_GAP_BADGES) to additionally require on top of
   // patternKey's own condition. "" means no Gap Badge filter — the
-  // original conditionKey-redirect behavior.
-  const [gapBadge, setGapBadge] = useState("");
+  // original conditionKey-redirect behavior. Preselected to the row's own
+  // existingGapBadge (same idea as attachKey defaulting to patternKey);
+  // falls back to "" (Any Gap Badge) if that's somehow not a known badge.
+  const [gapBadge, setGapBadge] = useState(
+    existingGapBadge && ALL_GAP_BADGES.includes(existingGapBadge) ? existingGapBadge : ""
+  );
   // Whether the person has typed into the key/label boxes yet — until
   // they do, both track effectivePattern below so switching the attach
   // point off a TOP 15 bucket doesn't leave "top15gainers" sitting in the
@@ -753,7 +765,7 @@ function CreateViewControl({
     setAttachKey(patternKey);
     setDirection("Up");
     setTarget("R4");
-    setGapBadge("");
+    setGapBadge(existingGapBadge && ALL_GAP_BADGES.includes(existingGapBadge) ? existingGapBadge : "");
     setNewKey(patternKey);
     setNewLabel(patternLabel);
     setKeyEdited(false);
@@ -866,7 +878,7 @@ function CreateViewControl({
             setTarget(next === "Up" ? "R4" : "S4");
           }}
           disabled={!!command}
-          className="flex-1 bg-background border border-border rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
+          className="flex-1 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
         >
           <option value="Up">Up</option>
           <option value="Down">Down</option>
@@ -875,7 +887,7 @@ function CreateViewControl({
           value={target}
           onChange={(e) => setTarget(e.target.value)}
           disabled={!!command}
-          className="flex-1 bg-background border border-border rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
+          className="flex-1 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
         >
           {(direction === "Up" ? ["R1", "R2", "R3", "R4"] : ["S1", "S2", "S3", "S4"]).map((t) => (
             <option key={t} value={t}>
@@ -910,7 +922,7 @@ function CreateViewControl({
         onChange={(e) => setGapBadge(e.target.value)}
         disabled={!!command}
         title="Optionally also require this exact composite Gap Badge (RRSSGapCategory + PDHPDLGapCategory + HL-switch), on top of the Pattern's own condition — same label shown in the Pattern column's Gap Badge (e.g. RH-GapAB, SL-GapBB)."
-        className="w-full bg-background border border-border rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
+        className="w-full bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
       >
         <option value="">Any Gap Badge</option>
         {ALL_GAP_BADGES.map((badge) => (
@@ -2171,6 +2183,7 @@ export default function BacktestPanel() {
                                 patternLabel={activePatternInfo.sub.label}
                                 prevCPR={r.prevCPR}
                                 todayCPR={r.todayCPR}
+                                existingGapBadge={computeGapBadge(r.raw)}
                                 onCreated={(newKey) => {
                                   setTreeRevision((r) => r + 1);
                                   setSelectedKey(newKey);
@@ -2526,6 +2539,7 @@ export default function BacktestPanel() {
                               patternLabel={activePatternInfo.sub.label}
                               prevCPR={r.prevCPR}
                               todayCPR={r.todayCPR}
+                              existingGapBadge={computeGapBadge(r.raw)}
                               onCreated={(newKey) => {
                                 setTreeRevision((r) => r + 1);
                                 setSelectedKey(newKey);
