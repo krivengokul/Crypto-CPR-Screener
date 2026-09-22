@@ -23,8 +23,9 @@ on:
         # Up/Down — same spelling as the Backtest panel's own dropdown and
         # as ViewDef.direction in views.ts ("Up" | "Down"). The old
         # bullish/bearish options were rejected at dispatch time (HTTP 422)
-        # because the UI-generated command passes "Up"/"Down"; patch.mjs
-        # still accepts the legacy spellings for any saved commands.
+        # because the UI-generated command passes "Up"/"Down";
+        # createviewpatch.mjs still accepts the legacy spellings for any
+        # saved commands.
         description: "'Up' (entry TC, stoploss S1) or 'Down' (entry BC, stoploss R1)"
         required: true
         type: choice
@@ -89,7 +90,7 @@ jobs:
 
       - name: Apply the create
         working-directory: .github/scripts/create-view
-        run: node patch.mjs
+        run: node createviewpatch.mjs
         env:
           PATTERN_KEY: ${{ inputs.patternKey }}
           NEW_KEY: ${{ inputs.newKey }}

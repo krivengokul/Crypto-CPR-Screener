@@ -60,7 +60,7 @@ jobs:
 
       - name: Apply the copy
         working-directory: .github/scripts/copy-view
-        run: node patch.mjs
+        run: node copyviewpatch.mjs
         env:
           SOURCE_KEY: ${{ inputs.sourceKey }}
           NEW_KEY: ${{ inputs.newKey }}
