@@ -60,12 +60,36 @@ function getScreenerNavCategoryIds(sourceText) {
  * Pushes {id: newKey, label: newLabel} into ViewsSidebar.tsx's
  * Views[categoryKey] array (creating it if it doesn't exist yet).
  */
-function addToScreenerNav(sourceText, categoryKey, newKey, newLabel) {
+function updateScreenerNav(sourceText, categoryKey, sourceKey, newKey, newLabel, isEdit) {
   const project = new Project({ useInMemoryFileSystem: true });
   const sourceFile = project.createSourceFile("ViewsSidebar.tsx", sourceText);
 
   const viewsDecl = sourceFile.getVariableDeclarationOrThrow("Views");
   const viewsObj = viewsDecl.getInitializerIfKindOrThrow(SyntaxKind.ObjectLiteralExpression);
+
+  if (isEdit) {
+    for (const prop of viewsObj.getProperties()) {
+      if (!prop.isKind(SyntaxKind.PropertyAssignment)) continue;
+      const arr = prop.getInitializerIfKind(SyntaxKind.ArrayLiteralExpression);
+      if (!arr) continue;
+      const elements = arr.getElements();
+      for (let i = 0; i < elements.length; i++) {
+        const el = elements[i];
+        if (el.isKind(SyntaxKind.ObjectLiteralExpression) && getStringPropertyValue(el, "id") === sourceKey) {
+          const propName = prop.getName().replace(/^["']|["']$/g, "");
+          if (propName === categoryKey) {
+            el.replaceWithText(
+              `{ id: "${escapeForDoubleQuotedString(newKey)}", label: "${escapeForDoubleQuotedString(newLabel)}" }`
+            );
+            return sourceFile.getFullText();
+          } else {
+            arr.removeElement(i);
+            break;
+          }
+        }
+      }
+    }
+  }
 
   const categoryProp = getObjectProperty(viewsObj, categoryKey);
   let arr;
@@ -150,6 +174,32 @@ function resolveTopLevelCategoryKey(viewsSourceText, attachKey) {
   return null;
 }
 
+const BULLISH_TARGETS = {
+  R1: { label: "U1 (today's R1)", prop: "r1" },
+  R2: { label: "U2 (today's R2)", prop: "r2" },
+  R3: { label: "U3 (today's R3)", prop: "r3" },
+  R4: { label: "U4 (today's R4)", prop: "r4" },
+};
+const BEARISH_TARGETS = {
+  S1: { label: "L1 (today's S1)", prop: "s1" },
+  S2: { label: "L2 (today's S2)", prop: "s2" },
+  S3: { label: "L3 (today's S3)", prop: "s3" },
+  S4: { label: "L4 (today's S4)", prop: "s4" },
+};
+const ENTRY_MAP = {
+  R4: { label: "R4 (today's R4)", prop: "r4" },
+  R3: { label: "R3 (today's R3)", prop: "r3" },
+  R2: { label: "R2 (today's R2)", prop: "r2" },
+  R1: { label: "R1 (today's R1)", prop: "r1" },
+  TC: { label: "TC (today's TC)", prop: "tc" },
+  Pivot: { label: "Pivot (today's Pivot)", prop: "pivot" },
+  BC: { label: "BC (today's BC)", prop: "bc" },
+  S1: { label: "S1 (today's S1)", prop: "s1" },
+  S2: { label: "S2 (today's S2)", prop: "s2" },
+  S3: { label: "S3 (today's S3)", prop: "s3" },
+  S4: { label: "S4 (today's S4)", prop: "s4" },
+};
+
 const CATEGORY_ARRAY_MAP = {
   levelsabove: "LEVELSABOVE_VIEWS",
   levelsbelow: "LEVELSBELOW_VIEWS",
@@ -163,7 +213,7 @@ const CATEGORY_ARRAY_MAP = {
   touch: "MISC_VIEWS",
 };
 
-function applyCopyViewPatch(sourceText, sourceKey, newKey, newLabel, levelCheckDefs, attachKey) {
+function applyCopyViewPatch(sourceText, sourceKey, newKey, newLabel, levelCheckDefs, attachKey, overrides = {}, isEdit = false) {
   const project = new Project({ useInMemoryFileSystem: true });
   const sourceFile = project.createSourceFile("views.ts", sourceText);
 
@@ -177,8 +227,14 @@ function applyCopyViewPatch(sourceText, sourceKey, newKey, newLabel, levelCheckD
     throw new Error(`No ViewDef entry with key "${sourceKey}" found in views.ts.`);
   }
 
-  if (allViewObjs.some((el) => getStringPropertyValue(el, "key") === newKey)) {
-    throw new Error(`"${newKey}" already exists in views.ts — pick a different key.`);
+  if (isEdit) {
+    if (newKey !== sourceKey && allViewObjs.some((el) => el !== sourceObj && getStringPropertyValue(el, "key") === newKey)) {
+      throw new Error(`"${newKey}" already exists in views.ts — pick a different key.`);
+    }
+  } else {
+    if (allViewObjs.some((el) => getStringPropertyValue(el, "key") === newKey)) {
+      throw new Error(`"${newKey}" already exists in views.ts — pick a different key.`);
+    }
   }
 
   const effectiveAttachKey =
@@ -187,20 +243,32 @@ function applyCopyViewPatch(sourceText, sourceKey, newKey, newLabel, levelCheckD
       : getStringPropertyValue(sourceObj, "parentKey") ?? sourceKey;
   const originalConditionKey = getStringPropertyValue(sourceObj, "conditionKey") ?? sourceKey;
 
-  // Clone properties from sourceObj. ViewDef.direction is "Up" | "Down"
-  // — the old "bullish" fallback here wasn't assignable to it.
-  const rawDirection = getStringPropertyValue(sourceObj, "direction") ?? "Up";
+  const rawDirection = overrides.direction ?? getStringPropertyValue(sourceObj, "direction") ?? "Up";
   const direction = rawDirection === "Down" || rawDirection === "bearish" ? "Down" : "Up";
   const isUp = direction === "Up";
-  const targetLabel = getStringPropertyValue(sourceObj, "targetLabel") ?? "U4 (today's R4)";
-  const entryLabel = getStringPropertyValue(sourceObj, "entryLabel") ?? (isUp ? "TC (today's TC)" : "BC (today's BC)");
-  const stoplossLabel =
-    getStringPropertyValue(sourceObj, "stoplossLabel") ?? (isUp ? "S1 (today's S1)" : "R1 (today's R1)");
 
-  const getTargetText = getInitializerText(sourceObj, "getTarget") ?? "(r) => r.todayCPR.r4";
-  const getEntryText = getInitializerText(sourceObj, "getEntry") ?? (isUp ? "(r) => r.todayCPR.tc" : "(r) => r.todayCPR.bc");
-  const getStoplossText =
-    getInitializerText(sourceObj, "getStoploss") ?? (isUp ? "(r) => r.todayCPR.s1" : "(r) => r.todayCPR.r1");
+  let targetLabel, getTargetText;
+  if (overrides.target) {
+    const tDef = (isUp ? BULLISH_TARGETS : BEARISH_TARGETS)[overrides.target];
+    targetLabel = tDef ? tDef.label : (isUp ? "U4 (today's R4)" : "L4 (today's S4)");
+    getTargetText = tDef ? `(r) => r.todayCPR.${tDef.prop}` : (isUp ? "(r) => r.todayCPR.r4" : "(r) => r.todayCPR.s4");
+  } else {
+    targetLabel = getStringPropertyValue(sourceObj, "targetLabel") ?? (isUp ? "U4 (today's R4)" : "L4 (today's S4)");
+    getTargetText = getInitializerText(sourceObj, "getTarget") ?? (isUp ? "(r) => r.todayCPR.r4" : "(r) => r.todayCPR.s4");
+  }
+
+  let entryLabel, getEntryText;
+  if (overrides.entry && ENTRY_MAP[overrides.entry]) {
+    const eDef = ENTRY_MAP[overrides.entry];
+    entryLabel = eDef.label;
+    getEntryText = `(r) => r.todayCPR.${eDef.prop}`;
+  } else {
+    entryLabel = getStringPropertyValue(sourceObj, "entryLabel") ?? (isUp ? "TC (today's TC)" : "BC (today's BC)");
+    getEntryText = getInitializerText(sourceObj, "getEntry") ?? (isUp ? "(r) => r.todayCPR.tc" : "(r) => r.todayCPR.bc");
+  }
+
+  const stoplossLabel = isUp ? "S1 (today's S1)" : "R1 (today's R1)";
+  const getStoplossText = isUp ? "(r) => r.todayCPR.s1" : "(r) => r.todayCPR.r1";
 
   // Level check defs: override if provided, else copy from source if present
   let levelCheckDefsJson = "undefined";
@@ -210,11 +278,16 @@ function applyCopyViewPatch(sourceText, sourceKey, newKey, newLabel, levelCheckD
     levelCheckDefsJson = getInitializerText(sourceObj, "levelCheckDefs") ?? "undefined";
   }
 
+  const gapBadge = overrides.gapBadge?.trim();
+  const conditionField = gapBadge
+    ? `condition: (r) => passesView(r, "${escapeForDoubleQuotedString(originalConditionKey)}") && matchesGapBadge(r, "${escapeForDoubleQuotedString(gapBadge)}"),\n    standalone: true,`
+    : `conditionKey: "${escapeForDoubleQuotedString(originalConditionKey)}",`;
+
   const newViewLiteral = `{
     key: "${escapeForDoubleQuotedString(newKey)}",
     label: "${escapeForDoubleQuotedString(newLabel)}",
     parentKey: "${escapeForDoubleQuotedString(effectiveAttachKey)}",
-    conditionKey: "${escapeForDoubleQuotedString(originalConditionKey)}",
+    ${conditionField}
     kind: "view",
     direction: "${direction}",
     targetLabel: "${escapeForDoubleQuotedString(targetLabel)}",
@@ -226,32 +299,44 @@ function applyCopyViewPatch(sourceText, sourceKey, newKey, newLabel, levelCheckD
     levelCheckDefs: ${levelCheckDefsJson},
   }`;
 
-  // File the copy in the array that belongs to the attach point's own
-  // top-level Category, same as create-view's createviewpatch.mjs.
-  // COPY_VIEWS is only the fallback now — it used to be the
-  // unconditional first choice, which is why every copy ended up in the
-  // flat "CREATED VIEWS" bucket no matter what was picked in the attach
-  // dropdown.
   const topCat = resolveTopLevelCategoryKey(sourceText, effectiveAttachKey);
   const arrName = (topCat && CATEGORY_ARRAY_MAP[topCat]) || "COPY_VIEWS";
 
   const targetArrayDecl =
     sourceFile.getVariableDeclaration(arrName) ?? sourceFile.getVariableDeclarationOrThrow("COPY_VIEWS");
-
   const targetArray = targetArrayDecl.getInitializerIfKindOrThrow(SyntaxKind.ArrayLiteralExpression);
-  targetArray.addElement(newViewLiteral);
+
+  if (isEdit) {
+    const parentArr = sourceObj.getFirstAncestorByKind(SyntaxKind.ArrayLiteralExpression);
+    if (parentArr && parentArr === targetArray) {
+      sourceObj.replaceWithText(newViewLiteral);
+    } else {
+      sourceObj.remove();
+      targetArray.addElement(newViewLiteral);
+    }
+  } else {
+    targetArray.addElement(newViewLiteral);
+  }
 
   return { patchedText: sourceFile.getFullText(), originalConditionKey, topCat, arrName };
 }
 
 // --- Entry point ------------------------------------------------------
+const isEdit = process.env.IS_EDIT === "true";
 const sourceKey = process.env.SOURCE_KEY;
-const newKey = process.env.NEW_KEY;
+const newKey = process.env.NEW_KEY ?? sourceKey;
 const newLabel = process.env.NEW_LABEL;
 const levelCheckDefsB64 = process.env.LEVEL_CHECK_DEFS_B64;
 const attachKey = process.env.ATTACH_KEY && process.env.ATTACH_KEY.trim() !== "" ? process.env.ATTACH_KEY : sourceKey;
 const viewsFilePath = process.env.VIEWS_FILE_PATH ?? process.env.BACKTEST_FILE_PATH ?? "artifacts/cpr-screener/src/lib/views.ts";
 const viewsSidebarFilePathEnv = process.env.VIEWS_SIDEBAR_FILE_PATH ?? "artifacts/cpr-screener/src/lib/ViewsSidebar.tsx";
+
+const overrides = {
+  direction: process.env.DIRECTION,
+  entry: process.env.ENTRY,
+  target: process.env.TARGET,
+  gapBadge: process.env.GAP_BADGE,
+};
 
 if (!sourceKey || !newKey || !newLabel) {
   console.error("SOURCE_KEY, NEW_KEY, and NEW_LABEL must all be set.");
@@ -295,14 +380,7 @@ try {
 }
 
 try {
-  const { patchedText, originalConditionKey, topCat, arrName } = applyCopyViewPatch(
-    currentText,
-    sourceKey,
-    newKey,
-    newLabel,
-    levelCheckDefs,
-    attachKey
-  );
+  const { patchedText, originalConditionKey, topCat, arrName } = applyCopyViewPatch(currentText, sourceKey, newKey, newLabel, levelCheckDefs, attachKey, overrides, isEdit);
   writeFileSync(filePath, patchedText, "utf-8");
 
   const viewsSidebarFilePath = resolve(process.cwd(), "../../../", viewsSidebarFilePathEnv);
@@ -318,7 +396,7 @@ try {
     );
   }
 
-  const patchedViewsSidebarText = addToScreenerNav(viewsSidebarText, screenerCategoryKey, newKey, newLabel);
+  const patchedViewsSidebarText = updateScreenerNav(viewsSidebarText, screenerCategoryKey, sourceKey, newKey, newLabel, isEdit);
   writeFileSync(viewsSidebarFilePath, patchedViewsSidebarText, "utf-8");
 
   const levelCheckNote = levelCheckDefs ? ` with ${levelCheckDefs.length} symbol-derived levelCheckDefs` : "";

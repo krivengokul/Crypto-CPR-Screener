@@ -492,6 +492,72 @@ export const ENTRY_DEFS: Record<
  * display and may differ from patternKey. Omit/leave blank to skip this
  * filter and keep the original conditionKey-redirect behavior.
  */
+
+/**
+ * Edits an existing View in the in-memory VIEWS array.
+ * Supports updating direction, target, entry, label, attach point, gapBadge filter,
+ * and level check conditions.
+ */
+export function editBacktestView(
+  oldKey: string,
+  newKey: string,
+  newLabel: string,
+  direction: "Up" | "Down",
+  target: string,
+  entry: string,
+  attachKey?: string,
+  gapBadge?: string,
+  levelCheckDefs?: LevelCheckCondition[]
+): { ok: boolean; reason?: string; updated?: ViewDef } {
+  const idx = VIEWS.findIndex((v) => v.key === oldKey);
+  if (idx === -1) return { ok: false, reason: "pattern-not-found" };
+  if (newKey !== oldKey && VIEWS.some((v) => v.key === newKey)) {
+    return { ok: false, reason: "duplicate-key" };
+  }
+
+  const isUp = direction === "Up" || (direction as string) === "bullish";
+  const targetDefs = isUp ? BULLISH_TARGETS : BEARISH_TARGETS;
+  const targetDef = targetDefs[target];
+  if (!targetDef) return { ok: false, reason: "invalid-target" };
+
+  const entryDef = ENTRY_DEFS[entry ?? (isUp ? "TC" : "BC")];
+  if (!entryDef) return { ok: false, reason: "invalid-entry" };
+
+  const trimmedGapBadge = gapBadge?.trim();
+  if (trimmedGapBadge && !ALL_GAP_BADGES.includes(trimmedGapBadge)) {
+    return { ok: false, reason: "invalid-gap-badge" };
+  }
+
+  const old = VIEWS[idx];
+  const targetKey = targetDef.key;
+  const entryKey = entryDef.key;
+  const patternKey = old.conditionKey ?? oldKey;
+
+  const updatedDef: ViewDef = {
+    ...old,
+    key: newKey,
+    label: newLabel,
+    parentKey: attachKey ?? old.parentKey,
+    direction: isUp ? "Up" : "Down",
+    targetLabel: targetDef.label,
+    getTarget: (r: CPRResult) => r.todayCPR[targetKey],
+    entryLabel: entryDef.label,
+    getEntry: (r: CPRResult) => r.todayCPR[entryKey],
+    stoplossLabel: isUp ? "S1 (today's S1)" : "R1 (today's R1)",
+    getStoploss: (r: CPRResult) => (isUp ? r.todayCPR.s1 : r.todayCPR.r1),
+    levelCheckDefs: levelCheckDefs ?? old.levelCheckDefs,
+    ...(trimmedGapBadge
+      ? {
+          condition: (r: CPRResult) => passesView(r, patternKey) && matchesGapBadge(r, trimmedGapBadge),
+          standalone: true,
+        }
+      : { conditionKey: patternKey, condition: undefined, standalone: undefined }),
+  };
+
+  VIEWS[idx] = updatedDef;
+  return { ok: true, updated: updatedDef };
+}
+
 export function createBacktestView(
   patternKey: string,
   newKey: string,

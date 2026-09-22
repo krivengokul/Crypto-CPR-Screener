@@ -25,6 +25,27 @@ on:
         description: "Base64 JSON array of {key, subject, bandKeys} — derived client-side for the specific symbol copied from. Omit/leave blank for a View with no levelCheckDefs."
         required: false
         type: string
+      isEdit:
+        description: "Set to true to edit/overwrite sourceKey instead of creating a new copy"
+        required: false
+        type: boolean
+        default: false
+      direction:
+        description: "Direction: Up or Down"
+        required: false
+        type: string
+      entry:
+        description: "Entry level: R4..S4"
+        required: false
+        type: string
+      target:
+        description: "Target level: R1..R4 or S1..S4"
+        required: false
+        type: string
+      gapBadge:
+        description: "Optional gap badge filter"
+        required: false
+        type: string
       attachKey:
         description: "Key of the Category/Pattern/Subpattern node (in BACKTEST_CATEGORIES) to nest the copy under. Defaults to wherever sourceKey already lives if left blank. The copy still grades against the same original condition regardless of where it's attached."
         required: false
@@ -62,6 +83,11 @@ jobs:
         working-directory: .github/scripts/copy-view
         run: node copyviewpatch.mjs
         env:
+          IS_EDIT: ${{ inputs.isEdit }}
+          DIRECTION: ${{ inputs.direction }}
+          ENTRY: ${{ inputs.entry }}
+          TARGET: ${{ inputs.target }}
+          GAP_BADGE: ${{ inputs.gapBadge }}
           SOURCE_KEY: ${{ inputs.sourceKey }}
           NEW_KEY: ${{ inputs.newKey }}
           NEW_LABEL: ${{ inputs.newLabel }}
