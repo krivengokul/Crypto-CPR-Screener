@@ -82,13 +82,19 @@ function ChartLinkControl({ viewKey, rowKey }: { viewKey: string; rowKey: string
 
   if (!open) {
     if (saved) {
+      // Borderless joined pill — same visual grouping as the Date Mode
+      // segmented toggle (BacktestPanel's "Single Date"/"Date Range"
+      // control), just without its border: overflow-hidden rounds both
+      // outer corners while the two segments butt up against each other
+      // with no divider. Colors are unchanged from before (blue for the
+      // link, muted for the edit action, now labeled "Edit Chart").
       return (
-        <div className="flex w-fit items-center gap-1">
+        <div className="flex w-fit items-center overflow-hidden rounded-md">
           <a
             href={saved.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 rounded-md border border-blue-500/40 bg-blue-500/10 px-2 py-1 text-[11px] font-medium text-blue-300 hover:bg-blue-500/20"
+            className="inline-flex items-center gap-1 bg-blue-500/10 px-2 py-1 text-[11px] font-medium text-blue-300 hover:bg-blue-500/20"
             title={saved.url}
           >
             <Link2 className="w-3 h-3" />
@@ -97,10 +103,10 @@ function ChartLinkControl({ viewKey, rowKey }: { viewKey: string; rowKey: string
           <button
             type="button"
             onClick={openForm}
-            className="rounded-md border border-border px-1.5 py-1 text-[11px] text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+            className="px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted/40 hover:text-foreground"
             title="Change chart link"
           >
-            Edit
+            Edit Chart
           </button>
         </div>
       );
@@ -965,7 +971,11 @@ export function SRLadderPanel({
           {/* Action buttons toolbar: Attach chart & Create/Copy View */}
           <div className="flex flex-wrap items-center gap-1.5">
             {rowKey && <ChartLinkControl viewKey={viewKey ?? ""} rowKey={rowKey} />}
-            {copyViewControl}
+            {/* Extra ml-2 on top of the row's own gap-1.5, specifically
+                between the Chart/Edit Chart pill and Edit View/Copy View —
+                nudges the latter a bit further right without widening the
+                gap between every other item in this toolbar. */}
+            {copyViewControl && <div className="ml-2">{copyViewControl}</div>}
           </div>
 
           {/* Level Check */}
