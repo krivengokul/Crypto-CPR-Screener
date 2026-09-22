@@ -724,6 +724,7 @@ function CreateViewControl({
   todayCPR,
   existingGapBadge,
   onCreated,
+  onCommandGenerated,
 }: {
   patternKey: string;
   patternLabel: string;
@@ -736,6 +737,17 @@ function CreateViewControl({
   // preselects to patternKey.
   existingGapBadge?: string;
   onCreated: (newKey: string) => void;
+  // Fired the instant confirm() pushes the new ViewDef into the live
+  // VIEWS array — i.e. as soon as the command below becomes visible —
+  // NOT when "Done" is clicked. createBacktestView mutates VIEWS
+  // synchronously (see its call in confirm() below), so any unrelated
+  // re-render between now and "Done" would otherwise recompute
+  // rowViewDefByRow (it depends on VIEWS.length), match this row against
+  // the View that was just created FROM this row, and flip the parent's
+  // ternary to "Already in View" — unmounting this popover and losing
+  // the command before it's been copied. The parent uses this callback
+  // to hold this row's slot open regardless of that match until Done.
+  onCommandGenerated?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [newLabel, setNewLabel] = useState("");
@@ -861,6 +873,13 @@ function CreateViewControl({
     // changes activeTarget/activePatternTarget, which would unmount this
     // popover before the command below is even visible. onCreated fires
     // from the "Done" button instead.
+    //
+    // onCommandGenerated, however, fires right now — createBacktestView
+    // above already pushed this View into the live VIEWS array, so the
+    // "Already in View" check one render away is looking at a fait
+    // accompli. This tells the parent to keep this row's CreateViewControl
+    // mounted (instead of swapping in "Already in View") until Done.
+    onCommandGenerated?.();
 
     // Same double-quote / base64 approach as CopyViewControl — see its
     // confirm() for why (cmd.exe doesn't treat single quotes as
@@ -1205,6 +1224,18 @@ export default function BacktestPanel() {
   const [status, setStatus] = useState<"idle" | "running" | "done" | "error">("idle");
   // Symbol-click → ADK S/R ladder, same behaviour as the Screener table.
   const [expandedSymbols, setExpandedSymbols] = useState<Set<string>>(new Set());
+  // Rows (by the same `${source}-${symbol}-${entryDate}` key used for
+  // expandedSymbols/chart links) whose CreateViewControl has generated a
+  // command that hasn't been dismissed with "Done" yet. createBacktestView
+  // pushes the new ViewDef into the live VIEWS array the instant "Create
+  // View" is clicked — before anything is actually persisted — so the very
+  // next unrelated re-render (a price poll, any state change) recomputes
+  // rowViewDefByRow (it depends on VIEWS.length) and can match this row
+  // against the View it was just used to derive, flipping the render below
+  // to "Already in View" and unmounting the popover mid-copy. Holding a
+  // row's key here keeps its CreateViewControl rendered regardless of that
+  // match until Done actually closes it.
+  const [pendingCreateViewRows, setPendingCreateViewRows] = useState<Set<string>>(new Set());
   function toggleExpand(key: string) {
     setExpandedSymbols((prev) => {
       const next = new Set(prev);
@@ -2202,7 +2233,7 @@ export default function BacktestPanel() {
                         <SRLadderRow
                           r={toSRLadderData(r.raw, r.closePrice ?? undefined, r.prevClose ?? undefined, r.ppClose ?? undefined)}
                           rowKey={`${r.source}-${r.symbol}-${r.entryDate}`}
-                          viewKey={selectedKey}
+                          viewKey={isViewOnly ? selectedKey : undefined}
                           colSpan={7}
                           todayPatternBadge={renderTodayPatternBadges(r.raw)}
                           prevPatternBadge={renderPrevPatternBadge(r.raw)}
@@ -2543,7 +2574,7 @@ export default function BacktestPanel() {
                       <SRLadderRow
                         r={toSRLadderData(r.raw, r.closePrice ?? undefined, r.prevClose ?? undefined, r.ppClose ?? undefined)}
                         rowKey={`${r.source}-${r.symbol}-${r.entryDate}`}
-                        viewKey={selectedKey}
+                        viewKey={isViewOnly ? selectedKey : undefined}
                         colSpan={10}
                         todayPatternBadge={renderTodayPatternBadges(r.raw)}
                         prevPatternBadge={renderPrevPatternBadge(r.raw)}
@@ -2587,13 +2618,14 @@ export default function BacktestPanel() {
                                 setSelectedKey(newKey);
                               }}
                             />
-                          ) : isPatternOnly && rowViewDefByRow.get(r) ? (
+                          ) : isPatternOnly && rowViewDefByRow.get(r) && !pendingCreateViewRows.has(`${r.source}-${r.symbol}-${r.entryDate}`) ? (
                             <span className="text-[10px] text-muted-foreground" title="This symbol already satisfies this View's pattern and full Level Check signature, so creating another View from it would duplicate it.">
                               Already in View: {rowViewDefByRow.get(r)?.label}
                             </span>
                           ) : isPatternOnly && activePatternInfo ? (
                             (() => {
                               const rowPattern = deepestMatchingPattern(r.raw, activePatternInfo.sub.key);
+                              const rowKey = `${r.source}-${r.symbol}-${r.entryDate}`;
                               return (
                                 <CreateViewControl
                                   patternKey={rowPattern.key}
@@ -2601,7 +2633,21 @@ export default function BacktestPanel() {
                                   prevCPR={r.prevCPR}
                                   todayCPR={r.todayCPR}
                                   existingGapBadge={computeGapBadge(r.raw)}
+                                  onCommandGenerated={() => {
+                                    setPendingCreateViewRows((prev) => {
+                                      if (prev.has(rowKey)) return prev;
+                                      const next = new Set(prev);
+                                      next.add(rowKey);
+                                      return next;
+                                    });
+                                  }}
                                   onCreated={(newKey) => {
+                                    setPendingCreateViewRows((prev) => {
+                                      if (!prev.has(rowKey)) return prev;
+                                      const next = new Set(prev);
+                                      next.delete(rowKey);
+                                      return next;
+                                    });
                                     setTreeRevision((r) => r + 1);
                                     setSelectedKey(newKey);
                                   }}
