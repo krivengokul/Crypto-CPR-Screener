@@ -514,13 +514,9 @@ function CPRLevelChart({
    */
   innerLevelLabels?: Record<string, ReactNode>;
 }) {
-  const width = 452;
   // Keep the chart compact when it sits beside the ladders. The ladders
   // remain the readable, full-size value reference next to it.
   const height = 300;
-  // Fixed, fairly tight canvas (paired with a matching fixed-width wrapper
-  // below) instead of letting the chart stretch via flex-grow — that's what
-  // was pushing "Today S/R" far to the right with a dead gap in between.
   // Left-aligned: the "Levels VIEW" header hugs the left edge, so keep
   // leftMargin small and reserve just enough rightMargin for the "today"
   // labels, rather than splitting the leftover space evenly.
@@ -530,7 +526,22 @@ function CPRLevelChart({
   // "Today S/R" ladder next to it.
   const leftMargin = 30;
   const rightMargin = 82;
-  const plotWidth = width - leftMargin - rightMargin;
+  // Both the "prev" (left half) and "today" (right half) ladder lines are
+  // drawn 25% shorter than the old 340px-wide plot area (170px per side ->
+  // 127.5px per side) — the lines only need to be long enough to read the
+  // R4-S4 spread; the freed 25% comes off the plot area, not off
+  // rightMargin, so the "today" value labels keep the same clearance they
+  // always had. `width` is derived from the shrunk plot area (instead of
+  // being the fixed 452 the plot area used to be carved out of), which
+  // shrinks the whole chart's footprint by that same freed amount — that's
+  // what lets "Today S/R" and the Chart/Create View column shift left to
+  // close the gap (see the wrapper's w-[367px] in SRLadderPanel) instead of
+  // just leaving dead space and still overflowing into a horizontal
+  // scrollbar.
+  const LINE_LENGTH_SCALE = 0.75;
+  const fullPlotWidth = 452 - leftMargin - rightMargin; // original 340px plot area
+  const plotWidth = fullPlotWidth * LINE_LENGTH_SCALE; // 255px
+  const width = leftMargin + plotWidth + rightMargin; // 367px (was 452px)
   const prevSegmentEnd = leftMargin + plotWidth * 0.5;
 
   const allValues = LEVEL_KEYS.flatMap((k) => [
@@ -889,7 +900,12 @@ export function SRLadderPanel({
       </div>
 
       {/* 2. CPR Level Chart */}
-      <div className="w-[452px] shrink-0">
+      {/* Width matches CPRLevelChart's own shrunk `width` (367px, was 452px
+          — see the LINE_LENGTH_SCALE comment there): shrinking this wrapper
+          by the same 85px is what actually shifts "Today S/R" and the
+          Chart/Create View column left, rather than leaving the freed
+          space as a dead gap and still overflowing horizontally. */}
+      <div className="w-[367px] shrink-0">
         <CPRLevelChart
           prevCPR={r.prevCPR}
           todayCPR={r.todayCPR}
