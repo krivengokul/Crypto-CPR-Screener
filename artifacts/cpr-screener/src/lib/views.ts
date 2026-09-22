@@ -574,7 +574,8 @@ const COMPOUND_ORDER: Record<string, number> = {
   "E-E-OA-OB": 15
 };
 for (const v of COMPOUND_VIEWS) {
-  if (v.key in COMPOUND_ORDER) v.order = COMPOUND_ORDER[v.key];
+  const o = COMPOUND_ORDER[v.key];
+  if (o !== undefined) v.order = o;
 }
 
 
@@ -4540,16 +4541,16 @@ VIEWS.push(...OVERLAP_ABOVE_DUPLICATE_VIEWS);
 //
 // These definitions mirror the existing compound patterns under InsideCPR
 // without moving or changing their original branches. Internal keys use an
-// "insideCPR-" prefix to remain unique; labels preserve the requested names.
+// "INCPR-" prefix to remain unique; labels preserve the requested names.
 // The parentKey chain makes every branch require r.InsideCPR as well as
 // its own compound and outer-level conditions.
 // ---------------------------------------------------------------------
 
 const INSIDE_CPR_DUPLICATE_VIEWS: ViewDef[] = [
   {
-    key: "insideCPR-C-C-BB-AA",
+    key: "INCPR-C-C-BB-AA",
     label: "C-C-BB-AA",
-    parentKey: "inside-cpr",
+    parentKey: "insidecpr",
     kind: "pattern",
     condition: (r) =>
       r.SSRRCategory === "RRSS-C" &&
@@ -4558,17 +4559,17 @@ const INSIDE_CPR_DUPLICATE_VIEWS: ViewDef[] = [
       r.SSLLCategory === "SSLL-AA",
     order: 0,
   },
-  { key: "insideCPR-C-C-BB-AA-CU4L4", label: "C-C-BB-AA-CU4L4", parentKey: "insideCPR-C-C-BB-AA", kind: "pattern", condition: (r) => r.CU4L4, order: 0 },
-  { key: "insideCPR-C-C-BB-AA-CL4U3", label: "C-C-BB-AA-CL4U3", parentKey: "insideCPR-C-C-BB-AA", kind: "pattern", condition: (r) => r.CL4U3, order: 1 },
-  { key: "insideCPR-C-C-BB-AA-CU3L3", label: "C-C-BB-AA-CU3L3", parentKey: "insideCPR-C-C-BB-AA", kind: "pattern", condition: (r) => r.CU3L3, order: 2 },
-  { key: "insideCPR-C-C-BB-AA-CL3U3", label: "C-C-BB-AA-CL3U3", parentKey: "insideCPR-C-C-BB-AA", kind: "pattern", condition: (r) => r.CL3U3, order: 3 },
-  { key: "insideCPR-C-C-BB-AA-CU2L2", label: "C-C-BB-AA-CU2L2", parentKey: "insideCPR-C-C-BB-AA", kind: "pattern", condition: (r) => r.CU2L2, order: 4 },
-  { key: "insideCPR-C-C-BB-AA-CL2U2", label: "C-C-BB-AA-CL2U2", parentKey: "insideCPR-C-C-BB-AA", kind: "pattern", condition: (r) => r.CL2U2, order: 5 },
+  { key: "INCPR-C-C-BB-AA-CU4L4", label: "C-C-BB-AA-CU4L4", parentKey: "INCPR-C-C-BB-AA", kind: "pattern", condition: (r) => r.CU4L4, order: 0 },
+  { key: "INCPR-C-C-BB-AA-CL4U3", label: "C-C-BB-AA-CL4U3", parentKey: "INCPR-C-C-BB-AA", kind: "pattern", condition: (r) => r.CL4U3, order: 1 },
+  { key: "INCPR-C-C-BB-AA-CU3L3", label: "C-C-BB-AA-CU3L3", parentKey: "INCPR-C-C-BB-AA", kind: "pattern", condition: (r) => r.CU3L3, order: 2 },
+  { key: "INCPR-C-C-BB-AA-CL3U3", label: "C-C-BB-AA-CL3U3", parentKey: "INCPR-C-C-BB-AA", kind: "pattern", condition: (r) => r.CL3U3, order: 3 },
+  { key: "INCPR-C-C-BB-AA-CU2L2", label: "C-C-BB-AA-CU2L2", parentKey: "INCPR-C-C-BB-AA", kind: "pattern", condition: (r) => r.CU2L2, order: 4 },
+  { key: "INCPR-C-C-BB-AA-CL2U2", label: "C-C-BB-AA-CL2U2", parentKey: "INCPR-C-C-BB-AA", kind: "pattern", condition: (r) => r.CL2U2, order: 5 },
 
   {
-    key: "insideCPR-C-B-BB-LB",
+    key: "INCPR-C-B-BB-LB",
     label: "C-B-BB-LB",
-    parentKey: "inside-cpr",
+    parentKey: "insidecpr",
     kind: "pattern",
     condition: (r) =>
       r.SSRRCategory === "RRSS-C" &&
@@ -4577,12 +4578,12 @@ const INSIDE_CPR_DUPLICATE_VIEWS: ViewDef[] = [
       r.SSLLCategory === "SSLL-LB",
     order: 1,
   },
-  { key: "insideCPR-C-B-BB-LB-CL3U3", label: "C-B-BB-LB-CL3U3", parentKey: "insideCPR-C-B-BB-LB", kind: "pattern", condition: (r) => r.CL3U3, order: 0 },
+  { key: "INCPR-C-B-BB-LB-CL3U3", label: "C-B-BB-LB-CL3U3", parentKey: "INCPR-C-B-BB-LB", kind: "pattern", condition: (r) => r.CL3U3, order: 0 },
 
   {
-    key: "insideCPR-B-A-C-SB",
+    key: "INCPR-B-A-C-SB",
     label: "B-A-C-SB",
-    parentKey: "inside-cpr",
+    parentKey: "insidecpr",
     kind: "pattern",
     condition: (r) =>
       r.SSRRCategory === "RRSS-B" &&
@@ -4591,12 +4592,12 @@ const INSIDE_CPR_DUPLICATE_VIEWS: ViewDef[] = [
       r.SSLLCategory === "SSLL-SB",
     order: 2,
   },
-  { key: "insideCPR-B-A-C-SB-CU4L4", label: "B-A-C-SB-CU4L4", parentKey: "insideCPR-B-A-C-SB", kind: "pattern", condition: (r) => r.CU4L4, order: 0 },
+  { key: "INCPR-B-A-C-SB-CU4L4", label: "B-A-C-SB-CU4L4", parentKey: "INCPR-B-A-C-SB", kind: "pattern", condition: (r) => r.CU4L4, order: 0 },
 
   {
-    key: "insideCPR-B-A-C-C",
+    key: "INCPR-B-A-C-C",
     label: "B-A-C-C",
-    parentKey: "inside-cpr",
+    parentKey: "insidecpr",
     kind: "pattern",
     condition: (r) =>
       r.SSRRCategory === "RRSS-B" &&
@@ -4605,15 +4606,15 @@ const INSIDE_CPR_DUPLICATE_VIEWS: ViewDef[] = [
       r.SSLLCategory === "SSLL-C",
     order: 3,
   },
-  { key: "insideCPR-B-A-C-C-U4L4", label: "B-A-C-C-U4L4", parentKey: "insideCPR-B-A-C-C", kind: "pattern", condition: (r) => r.U4L4, order: 0 },
-  { key: "insideCPR-B-A-C-C-L4U4", label: "B-A-C-C-L4U4", parentKey: "insideCPR-B-A-C-C", kind: "pattern", condition: (r) => r.L4U4, order: 1 },
-  { key: "insideCPR-B-A-C-C-EU4L4", label: "B-A-C-C-EU4L4", parentKey: "insideCPR-B-A-C-C", kind: "pattern", condition: (r) => r.EU4L4, order: 2 },
-  { key: "insideCPR-B-A-C-C-EL4U4", label: "B-A-C-C-EL4U4", parentKey: "insideCPR-B-A-C-C", kind: "pattern", condition: (r) => r.EL4U4, order: 3 },
+  { key: "INCPR-B-A-C-C-U4L4", label: "B-A-C-C-U4L4", parentKey: "INCPR-B-A-C-C", kind: "pattern", condition: (r) => r.U4L4, order: 0 },
+  { key: "INCPR-B-A-C-C-L4U4", label: "B-A-C-C-L4U4", parentKey: "INCPR-B-A-C-C", kind: "pattern", condition: (r) => r.L4U4, order: 1 },
+  { key: "INCPR-B-A-C-C-EU4L4", label: "B-A-C-C-EU4L4", parentKey: "INCPR-B-A-C-C", kind: "pattern", condition: (r) => r.EU4L4, order: 2 },
+  { key: "INCPR-B-A-C-C-EL4U4", label: "B-A-C-C-EL4U4", parentKey: "INCPR-B-A-C-C", kind: "pattern", condition: (r) => r.EL4U4, order: 3 },
 
   {
-    key: "insideCPR-B-C-OB-C",
+    key: "INCPR-B-C-OB-C",
     label: "B-C-OB-C",
-    parentKey: "inside-cpr",
+    parentKey: "insidecpr",
     kind: "pattern",
     condition: (r) =>
       r.SSRRCategory === "RRSS-B" &&
@@ -4622,12 +4623,12 @@ const INSIDE_CPR_DUPLICATE_VIEWS: ViewDef[] = [
       r.SSLLCategory === "SSLL-C",
     order: 4,
   },
-  { key: "insideCPR-B-C-OB-C-CL4U4", label: "B-C-OB-C-CL4U4", parentKey: "insideCPR-B-C-OB-C", kind: "pattern", condition: (r) => r.CL4U4, order: 0 },
+  { key: "INCPR-B-C-OB-C-CL4U4", label: "B-C-OB-C-CL4U4", parentKey: "INCPR-B-C-OB-C", kind: "pattern", condition: (r) => r.CL4U4, order: 0 },
 
   {
-    key: "insideCPR-E-E-AA-BB",
+    key: "INCPR-E-E-AA-BB",
     label: "E-E-AA-BB",
-    parentKey: "inside-cpr",
+    parentKey: "insidecpr",
     kind: "pattern",
     condition: (r) =>
       r.SSRRCategory === "RRSS-E" &&
@@ -4636,12 +4637,12 @@ const INSIDE_CPR_DUPLICATE_VIEWS: ViewDef[] = [
       r.SSLLCategory === "SSLL-BB",
     order: 5,
   },
-  { key: "insideCPR-E-E-AA-BB-EU3L3", label: "E-E-AA-BB-EU3L3", parentKey: "insideCPR-E-E-AA-BB", kind: "pattern", condition: (r) => r.EU3L3, order: 0 },
+  { key: "INCPR-E-E-AA-BB-EU3L3", label: "E-E-AA-BB-EU3L3", parentKey: "INCPR-E-E-AA-BB", kind: "pattern", condition: (r) => r.EU3L3, order: 0 },
 
   {
-    key: "insideCPR-C-C-OB-AA",
+    key: "INCPR-C-C-OB-AA",
     label: "C-C-OB-AA",
-    parentKey: "inside-cpr",
+    parentKey: "insidecpr",
     kind: "pattern",
     condition: (r) =>
       r.SSRRCategory === "RRSS-C" &&
@@ -4650,13 +4651,13 @@ const INSIDE_CPR_DUPLICATE_VIEWS: ViewDef[] = [
       r.SSLLCategory === "SSLL-AA",
     order: 6,
   },
-  { key: "insideCPR-C-C-OB-AA-CU4L4", label: "C-C-OB-AA-CU4L4", parentKey: "insideCPR-C-C-OB-AA", kind: "pattern", condition: (r) => r.CU4L4, order: 0 },
-  { key: "insideCPR-C-C-OB-AA-CL4U3", label: "C-C-OB-AA-CL4U3", parentKey: "insideCPR-C-C-OB-AA", kind: "pattern", condition: (r) => r.CL4U3, order: 1 },
+  { key: "INCPR-C-C-OB-AA-CU4L4", label: "C-C-OB-AA-CU4L4", parentKey: "INCPR-C-C-OB-AA", kind: "pattern", condition: (r) => r.CU4L4, order: 0 },
+  { key: "INCPR-C-C-OB-AA-CL4U3", label: "C-C-OB-AA-CL4U3", parentKey: "INCPR-C-C-OB-AA", kind: "pattern", condition: (r) => r.CL4U3, order: 1 },
 
   {
-    key: "insideCPR-C-A-C-OA",
+    key: "INCPR-C-A-C-OA",
     label: "C-A-C-OA",
-    parentKey: "inside-cpr",
+    parentKey: "insidecpr",
     kind: "pattern",
     condition: (r) =>
       r.SSRRCategory === "RRSS-C" &&
@@ -4665,7 +4666,7 @@ const INSIDE_CPR_DUPLICATE_VIEWS: ViewDef[] = [
       r.SSLLCategory === "SSLL-OA",
     order: 7,
   },
-  { key: "insideCPR-C-A-C-OA-CU4L4", label: "C-A-C-OA-CU4L4", parentKey: "insideCPR-C-A-C-OA", kind: "pattern", condition: (r) => r.CU4L4, order: 0 },
+  { key: "INCPR-C-A-C-OA-CU4L4", label: "C-A-C-OA-CU4L4", parentKey: "INCPR-C-A-C-OA", kind: "pattern", condition: (r) => r.CU4L4, order: 0 },
 ];
 
 VIEWS.push(...INSIDE_CPR_DUPLICATE_VIEWS);
@@ -4813,7 +4814,7 @@ export interface ViewTreeNode {
   key: string;
   label: string;
   kind: "category" | "pattern" | "view";
-  order?: number;
+  order?: number | undefined;
   children: ViewTreeNode[];
   viewDef?: ViewDef;
 }
