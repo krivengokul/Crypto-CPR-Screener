@@ -143,6 +143,33 @@ function matchingViewDef(raw: CPRResult, selectedKey: string): ViewDef | null {
     }) ?? null;
 }
 
+/**
+ * Walk the View tree DOWN from `rootKey` (the Category/Pattern/Subpattern
+ * currently selected in the picker) to the deepest Pattern/Subpattern that
+ * still matches this specific row — e.g. rootKey "insidecpr" (INCPR) with a
+ * row that's also B-A-C-C / U4L4 resolves to "INCPR-B-A-C-C-U4L4", not
+ * "insidecpr" itself. Without this, "Create View" opened from a row always
+ * attached to whatever coarse node happened to be selected, producing a
+ * View key like "TC-insidecpr-...-R4" instead of
+ * "TC-INCPR-B-A-C-C-U4L4-...-R4", and left the attach-point dropdown
+ * pointing at that same coarse node instead of the row's real subpattern.
+ * Assumes rootKey itself already matches raw (true for any row visible
+ * under a Pattern-scoped selection) — only descends into finer matches,
+ * never validates rootKey itself, and stops at the first level with no
+ * matching child (kind: "view" leaves are never descended into here).
+ */
+function deepestMatchingPattern(raw: CPRResult, rootKey: string): ViewDef {
+  let current = getView(rootKey);
+  if (!current) throw new Error(`deepestMatchingPattern: unknown key "${rootKey}"`);
+  for (;;) {
+    const child = childrenOf(current.key).find(
+      (c) => c.kind !== "view" && passesView(raw, c.key)
+    );
+    if (!child) return current;
+    current = child;
+  }
+}
+
 function matchingView(raw: CPRResult, selectedKey: string): { label: string; direction: ViewDirection | null } | null {
   const match = matchingViewDef(raw, selectedKey);
   if (!match) return null;
@@ -2204,17 +2231,22 @@ export default function BacktestPanel() {
                                 }}
                               />
                             ) : isPatternOnly && activePatternInfo ? (
-                              <CreateViewControl
-                                patternKey={activePatternInfo.sub.key}
-                                patternLabel={activePatternInfo.sub.label}
-                                prevCPR={r.prevCPR}
-                                todayCPR={r.todayCPR}
-                                existingGapBadge={computeGapBadge(r.raw)}
-                                onCreated={(newKey) => {
-                                  setTreeRevision((r) => r + 1);
-                                  setSelectedKey(newKey);
-                                }}
-                              />
+                              (() => {
+                                const rowPattern = deepestMatchingPattern(r.raw, activePatternInfo.sub.key);
+                                return (
+                                  <CreateViewControl
+                                    patternKey={rowPattern.key}
+                                    patternLabel={rowPattern.label}
+                                    prevCPR={r.prevCPR}
+                                    todayCPR={r.todayCPR}
+                                    existingGapBadge={computeGapBadge(r.raw)}
+                                    onCreated={(newKey) => {
+                                      setTreeRevision((r) => r + 1);
+                                      setSelectedKey(newKey);
+                                    }}
+                                  />
+                                );
+                              })()
                             ) : undefined
                           }
                         />
@@ -2560,17 +2592,22 @@ export default function BacktestPanel() {
                               Already in View: {rowViewDefByRow.get(r)?.label}
                             </span>
                           ) : isPatternOnly && activePatternInfo ? (
-                            <CreateViewControl
-                              patternKey={activePatternInfo.sub.key}
-                              patternLabel={activePatternInfo.sub.label}
-                              prevCPR={r.prevCPR}
-                              todayCPR={r.todayCPR}
-                              existingGapBadge={computeGapBadge(r.raw)}
-                              onCreated={(newKey) => {
-                                setTreeRevision((r) => r + 1);
-                                setSelectedKey(newKey);
-                              }}
-                            />
+                            (() => {
+                              const rowPattern = deepestMatchingPattern(r.raw, activePatternInfo.sub.key);
+                              return (
+                                <CreateViewControl
+                                  patternKey={rowPattern.key}
+                                  patternLabel={rowPattern.label}
+                                  prevCPR={r.prevCPR}
+                                  todayCPR={r.todayCPR}
+                                  existingGapBadge={computeGapBadge(r.raw)}
+                                  onCreated={(newKey) => {
+                                    setTreeRevision((r) => r + 1);
+                                    setSelectedKey(newKey);
+                                  }}
+                                />
+                              );
+                            })()
                           ) : undefined
                         }
                       />
