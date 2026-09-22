@@ -483,6 +483,7 @@ function CPRLevelChart({
   todayCPR,
   pivotPatternBadge,
   viewName,
+  viewKey,
   viewDirection,
   ssllBadge,
   hhllBadge,
@@ -496,6 +497,15 @@ function CPRLevelChart({
   pivotPatternBadge?: ReactNode;
   /** Name of the currently active View — shown as a badge next to pivotPatternBadge. Omit to hide the badge. */
   viewName?: string;
+  /**
+   * The View's key/id string (SRLadderPanel's own `viewKey` prop, e.g.
+   * "R1-B-B-BB-BB-EL3U4-SL-GapBA-R4") — rendered as a second line directly
+   * under the ViewNameBadge, styled the same as BacktestPanel's "Entry
+   * Date" column cell (font-mono text-xs text-muted-foreground) so it
+   * reads as a quiet identifier rather than competing with the badge.
+   * Omit to hide it (e.g. when there's no active View to key against).
+   */
+  viewKey?: string;
   /** Up → green badge, Down → red badge, omitted/undefined → neutral slate badge. No effect without viewName. */
   viewDirection?: ViewDirection;
   /** SSLLCategory badge (e.g. renderSSLLCategoryBadge(r)) — rendered directly over the S1 line, right side (paired with hhllBadge on the left). Omit to hide it. */
@@ -642,19 +652,29 @@ function CPRLevelChart({
 
   return (
     <div className="min-w-0">
-      <div className="mb-1.5 flex flex-nowrap items-center gap-1.5 pl-2 text-left">
-        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-          Levels VIEW
-        </p>
-        {pivotPatternBadge && (
-          <span className="inline-flex shrink-0 translate-y-[-1px] items-center">
-            {pivotPatternBadge}
-          </span>
-        )}
-        {viewName && (
-          <span className="inline-flex shrink-0 translate-y-[-1px] items-center">
-            <ViewNameBadge name={viewName} direction={viewDirection} />
-          </span>
+      <div className="mb-1.5 text-left">
+        <div className="flex flex-nowrap items-center gap-1.5 pl-2">
+          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+            Levels VIEW
+          </p>
+          {pivotPatternBadge && (
+            <span className="inline-flex shrink-0 translate-y-[-1px] items-center">
+              {pivotPatternBadge}
+            </span>
+          )}
+          {viewName && (
+            <span className="inline-flex shrink-0 translate-y-[-1px] items-center">
+              <ViewNameBadge name={viewName} direction={viewDirection} />
+            </span>
+          )}
+        </div>
+        {viewKey && (
+          <p
+            className="mt-0.5 truncate pl-2 font-mono text-xs text-muted-foreground"
+            title={viewKey}
+          >
+            {viewKey}
+          </p>
         )}
       </div>
       <svg
@@ -911,6 +931,7 @@ export function SRLadderPanel({
           todayCPR={r.todayCPR}
           pivotPatternBadge={pivotPatternBadge}
           viewName={viewName}
+          viewKey={viewKey}
           viewDirection={viewDirection}
           ssllBadge={ssllBadge}
           hhllBadge={hhllBadge}
