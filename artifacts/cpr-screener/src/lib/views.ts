@@ -1858,10 +1858,10 @@ const LEVELSBELOW_VIEWS: ViewDef[] = [
       order: 1
 },
   {
-      key: "R1-B-B-BB-BB-L4U4-SH-GapAB-R4",
+      key: "R1-B-B-BB-BB-L4U4-SL-GapAB-R4",
       label: "B6-L4U4-Micro",
       parentKey: "B-B-BB-BB-L4U4",
-      condition: (r) => passesView(r, "B-B-BB-BB-L4U4") && matchesGapBadge(r, "SH-GapAB"),
+      condition: (r) => passesView(r, "B-B-BB-BB-L4U4") && matchesGapBadge(r, "SL-GapAB"),
       standalone: true,
       kind: "view",
       direction: "Up",
