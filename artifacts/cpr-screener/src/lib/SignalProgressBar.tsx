@@ -36,11 +36,10 @@ export default function SignalProgressBar({
   r4,
   isDown = false,
 }: SignalProgressBarProps) {
-  // Track segment colors flip for Down signals: green (target side) on the
-  // left, red/crimson (stop side) on the right. Up signals keep the
-  // original red-left, green-right layout.
-  const leftTrackColor = isDown ? "#065f46" : "#881337";
-  const rightTrackColor = isDown ? "#881337" : "#065f46";
+  // Track segment colors: S4->PIVOT is always red/crimson, PIVOT->R4 is
+  // always green/emerald, regardless of signal direction.
+  const leftTrackColor = "#881337";
+  const rightTrackColor = "#065f46";
 
   // Ensure valid min/max boundaries
   const minVal = s4 || pivot * 0.95;

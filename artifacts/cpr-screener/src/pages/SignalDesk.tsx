@@ -20,7 +20,7 @@ import {
   Copy,
   Check,
   ArrowUpRight,
-  ArrowDownRight,
+  ArrowDownLeft,
   ShieldAlert,
   Target,
   Cloud,
@@ -930,7 +930,7 @@ R:R: ${item.riskReward}`;
                       : "bg-slate-500/20 text-slate-300 border border-slate-500/40"
                   }`}
                 >
-                  {isUp ? <ArrowUpRight className="w-3.5 h-3.5" /> : isDown ? <ArrowDownRight className="w-3.5 h-3.5" /> : null}
+                  {isUp ? <ArrowUpRight className="w-3.5 h-3.5" /> : isDown ? <ArrowDownLeft className="w-3.5 h-3.5" /> : null}
                   {isUp ? "Up" : isDown ? "Down" : item.direction}
                 </span>
               );
