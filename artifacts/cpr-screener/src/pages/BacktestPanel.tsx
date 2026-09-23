@@ -926,6 +926,25 @@ function EditViewControl({
       return;
     }
 
+    // Same derivation as CopyViewControl's confirm(): re-derive this
+    // symbol's Level Check conditions from the View's existing defs —
+    // falling back to a from-scratch set over all 13 LEVEL_KEYS when it
+    // has none — so editBacktestView's levelCheckDefs parameter actually
+    // receives a fresh value for this symbol instead of silently keeping
+    // the old (possibly empty) ones. prevCPR/todayCPR are already in
+    // scope via this control's own props.
+    let derived: LevelCheckCondition[];
+    try {
+      derived = deriveLevelCheckDefsForSymbol(activeTarget.levelCheckDefs, prevCPR, todayCPR);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? `Couldn't derive Level Check conditions for this symbol: ${err.message}`
+          : "Couldn't derive Level Check conditions for this symbol."
+      );
+      return;
+    }
+
     const res = editBacktestView(
       activeTarget.key,
       viewKey,
@@ -934,7 +953,8 @@ function EditViewControl({
       target,
       entry,
       attachKey,
-      gapBadge
+      gapBadge,
+      derived
     );
 
     if (!res.ok) {
@@ -952,8 +972,20 @@ function EditViewControl({
       return;
     }
 
+    // Base64, not double-quoted JSON — same reasoning as CopyViewControl's
+    // confirm(): the derived defs are JSON full of literal " characters,
+    // which would collide with the double-quote wrapping used for the other
+    // arguments. The workflow's patcher base64-decodes and JSON.parses it
+    // back, so the persisted View keeps the same derived conditions the
+    // in-memory editBacktestView call above just applied.
+    const json = JSON.stringify(derived);
+    const jsonBytes = new TextEncoder().encode(json);
+    let binary = "";
+    jsonBytes.forEach((b) => (binary += String.fromCharCode(b)));
+    const b64 = btoa(binary);
+
     const q = (s: string) => `"${s.replace(/"/g, "")}"`;
-    const cmd = `gh workflow run copy-view.yml --repo krivengokul/Crypto-CPR-Screener -f sourceKey=${q(activeTarget.key)} -f newKey=${q(viewKey)} -f newLabel=${q(trimmedLabel)} -f isEdit=true -f direction=${q(direction)} -f entry=${q(entry)} -f target=${q(target)} -f attachKey=${q(attachKey)}${gapBadge ? ` -f gapBadge=${q(gapBadge)}` : ""}`;
+    const cmd = `gh workflow run copy-view.yml --repo krivengokul/Crypto-CPR-Screener -f sourceKey=${q(activeTarget.key)} -f newKey=${q(viewKey)} -f newLabel=${q(trimmedLabel)} -f isEdit=true -f direction=${q(direction)} -f entry=${q(entry)} -f target=${q(target)} -f attachKey=${q(attachKey)}${gapBadge ? ` -f gapBadge=${q(gapBadge)}` : ""} -f levelCheckDefs=${b64}`;
     setCommand(cmd);
     // Deliberately NOT calling onUpdated here, same reasoning as
     // CreateViewControl/CopyViewControl's confirm(): onUpdated moves the
