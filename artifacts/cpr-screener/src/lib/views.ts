@@ -132,14 +132,16 @@ export function getView(key: string): ViewDef | undefined {
  * migration is complete. Walks the parentKey chain so each ViewDef only
  * has to state what IT adds on top of its parent.
  */
-export function passesView(r: CPRResult, key: string): boolean {
+export function passesView(r: CPRResult, key: string, visited: Set<string> = new Set()): boolean {
+  if (visited.has(key)) return false;
+  visited.add(key);
   const v = getView(key);
   if (!v) return false;
   // "Copy View" redirect — grades entirely against the referenced key,
   // ignoring this ViewDef's own parentKey/condition (see conditionKey's
   // doc on ViewDef above).
-  if (v.conditionKey) return passesView(r, v.conditionKey);
-  if (v.parentKey && !v.standalone && !passesView(r, v.parentKey)) return false;
+  if (v.conditionKey && v.conditionKey !== key) return passesView(r, v.conditionKey, visited);
+  if (v.parentKey && !v.standalone && v.parentKey !== key && !passesView(r, v.parentKey, visited)) return false;
   return v.condition ? v.condition(r) : false;
 }
 
@@ -4678,7 +4680,7 @@ const MISC_VIEWS: ViewDef[] = [
         key: "S1-INCPR-C-C-BB-AA-CL3U3-RL-GapBB-S4",
         label: "CL3U3-MicroFall",
         parentKey: "INCPR-C-C-BB-AA-CL3U3",
-        condition: (r) => passesView(r, "S1-INCPR-C-C-BB-AA-CL3U3-RL-GapBB-S4") && matchesGapBadge(r, "RL-GapBB"),
+        condition: (r) => passesView(r, "INCPR-C-C-BB-AA-CL3U3") && matchesGapBadge(r, "RL-GapBB"),
         standalone: true,
         kind: "view",
         direction: "Down",

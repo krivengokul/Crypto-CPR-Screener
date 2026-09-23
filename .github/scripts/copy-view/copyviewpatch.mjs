@@ -241,7 +241,22 @@ function applyCopyViewPatch(sourceText, sourceKey, newKey, newLabel, levelCheckD
     attachKey && attachKey.trim() !== ""
       ? attachKey
       : getStringPropertyValue(sourceObj, "parentKey") ?? sourceKey;
-  const originalConditionKey = getStringPropertyValue(sourceObj, "conditionKey") ?? sourceKey;
+
+  // Derive condition key: check explicit conditionKey, or parse passesView call in condition, or fallback to parentKey
+  let originalConditionKey = getStringPropertyValue(sourceObj, "conditionKey");
+  if (!originalConditionKey || originalConditionKey === sourceKey) {
+    const condProp = getObjectProperty(sourceObj, "condition");
+    if (condProp) {
+      const condText = condProp.getInitializer()?.getText() ?? "";
+      const match = condText.match(/passesView\(r,\s*[\"\']([^\"\']+)[\"\']\)/);
+      if (match && match[1] && match[1] !== sourceKey) {
+        originalConditionKey = match[1];
+      }
+    }
+  }
+  if (!originalConditionKey || originalConditionKey === sourceKey) {
+    originalConditionKey = getStringPropertyValue(sourceObj, "parentKey") ?? effectiveAttachKey;
+  }
 
   const rawDirection = overrides.direction ?? getStringPropertyValue(sourceObj, "direction") ?? "Up";
   const direction = rawDirection === "Down" || rawDirection === "bearish" ? "Down" : "Up";
