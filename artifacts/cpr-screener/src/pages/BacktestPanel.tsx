@@ -454,6 +454,8 @@ function CopyViewControl({
   prevCPR,
   todayCPR,
   sourceConditions,
+  initialOpen = false,
+  onClose,
   onCopied,
 }: {
   sourceKey: string;
@@ -461,9 +463,16 @@ function CopyViewControl({
   prevCPR: CPRLevels;
   todayCPR: CPRLevels;
   sourceConditions?: LevelCheckCondition[];
+  // Mirrors EditViewControl's initialOpen/onClose: lets a caller like
+  // ViewActionsRow mount this already expanded (skipping its own
+  // collapsed "+ Copy View" trigger below) and get notified on Cancel
+  // as well as Done, so it can swap back to showing both action
+  // buttons either way — not just after a successful copy.
+  initialOpen?: boolean;
+  onClose?: () => void;
   onCopied: (newKey: string) => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(initialOpen);
   const [newKey, setNewKey] = useState("");
   const [newLabel, setNewLabel] = useState("");
   const [error, setError] = useState("");
@@ -664,6 +673,12 @@ function CopyViewControl({
           type="button"
           onClick={() => {
             setOpen(false);
+            // Same as EditViewControl's Cancel/Done button: fire onClose
+            // regardless of whether a copy was actually created, so a
+            // caller mounting this with initialOpen (ViewActionsRow) can
+            // swap back to its two-button row on Cancel too, not only
+            // after Done.
+            onClose?.();
             // Switch the dropdown to the new View now that the person has
             // had a chance to see/copy the command — not before.
             if (createdKey) onCopied(createdKey);
@@ -1145,6 +1160,8 @@ function ViewActionsRow({
         prevCPR={prevCPR}
         todayCPR={todayCPR}
         sourceConditions={activeLevelCheckDefs}
+        initialOpen={true}
+        onClose={() => setMode("none")}
         onCopied={(newKey) => {
           setMode("none");
           onCopied(newKey);
@@ -3083,20 +3100,15 @@ export default function BacktestPanel() {
                               }}
                             />
                           ) : isPatternOnly && rowViewDefByRow.get(r) && !pendingCreateViewRows.has(`${r.source}-${r.symbol}-${r.entryDate}`) ? (
-                            <div className="flex flex-wrap items-center gap-1.5">
-                              <EditViewControl
-                                activeTarget={rowViewDefByRow.get(r)!}
-                                prevCPR={r.prevCPR}
-                                todayCPR={r.todayCPR}
-                                onUpdated={(key) => {
-                                  setTreeRevision((r) => r + 1);
-                                  setSelectedKey(key);
-                                }}
-                              />
-                              <span className="text-[10px] text-muted-foreground" title="This symbol already satisfies this View's pattern and full Level Check signature, so creating another View from it would duplicate it.">
-                                Already in View: {rowViewDefByRow.get(r)?.label}
-                              </span>
-                            </div>
+                            <EditViewControl
+                              activeTarget={rowViewDefByRow.get(r)!}
+                              prevCPR={r.prevCPR}
+                              todayCPR={r.todayCPR}
+                              onUpdated={(key) => {
+                                setTreeRevision((r) => r + 1);
+                                setSelectedKey(key);
+                              }}
+                            />
                           ) : isPatternOnly && activePatternInfo ? (
                             (() => {
                               const rowPattern = deepestMatchingPattern(r.raw, activePatternInfo.sub.key);
