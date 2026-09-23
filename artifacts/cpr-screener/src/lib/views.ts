@@ -1858,23 +1858,21 @@ const LEVELSBELOW_VIEWS: ViewDef[] = [
       order: 1
 },
   {
-    key: "B-B-BB-BB-L4U4-pLTC-U2",
-    label: "B-B-BB-BB-L4U4-pLTC-U2",
-    parentKey: "B-B-BB-BB-L4U4",
-    kind: "view",
-    direction: "Up",
-    condition: (r) =>
-      r.prevCPR.HLSwitch === "HL-A" &&
-      r.hlGapWinner === "prev" &&
-      r.prevCPR.prevLow > r.todayCPR.tc,
-    targetLabel: "U2 (today's R2)",
-    getTarget: (r) => r.todayCPR.r2,
-    entryLabel: "TC (today's TC)",
-    getEntry: (r) => r.todayCPR.tc,
-    stoplossLabel: "S1 (today's S1)",
-    getStoploss: (r) => r.todayCPR.s1,
-      order: 0
-},
+      key: "R1-B-B-BB-BB-L4U4-SH-GapAB-R4",
+      label: "B6-L4U4-Micro",
+      parentKey: "B-B-BB-BB-L4U4",
+      condition: (r) => passesView(r, "B-B-BB-BB-L4U4") && matchesGapBadge(r, "SH-GapAB"),
+      standalone: true,
+      kind: "view",
+      direction: "Up",
+      targetLabel: "U4 (today's R4)",
+      getTarget: (r) => r.todayCPR.r4,
+      entryLabel: "R1 (today's R1)",
+      getEntry: (r) => r.todayCPR.r1,
+      stoplossLabel: "S1 (today's S1)",
+      getStoploss: (r) => r.todayCPR.s1,
+      levelCheckDefs: undefined,
+    },
     {
         key: "B6-L3U3-GapAA:R4",
         label: "B6-L3U3-GapAA:R4",
