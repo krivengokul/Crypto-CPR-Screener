@@ -132,17 +132,23 @@ export function getView(key: string): ViewDef | undefined {
  * migration is complete. Walks the parentKey chain so each ViewDef only
  * has to state what IT adds on top of its parent.
  */
-export function passesView(r: CPRResult, key: string, visited: Set<string> = new Set()): boolean {
-  if (visited.has(key)) return false;
-  visited.add(key);
-  const v = getView(key);
-  if (!v) return false;
-  // "Copy View" redirect — grades entirely against the referenced key,
-  // ignoring this ViewDef's own parentKey/condition (see conditionKey's
-  // doc on ViewDef above).
-  if (v.conditionKey && v.conditionKey !== key) return passesView(r, v.conditionKey, visited);
-  if (v.parentKey && !v.standalone && v.parentKey !== key && !passesView(r, v.parentKey, visited)) return false;
-  return v.condition ? v.condition(r) : false;
+const activeEvaluationKeys = new Set<string>();
+
+export function passesView(r: CPRResult, key: string): boolean {
+  if (activeEvaluationKeys.has(key)) return false;
+  activeEvaluationKeys.add(key);
+  try {
+    const v = getView(key);
+    if (!v) return false;
+    // "Copy View" redirect — grades entirely against the referenced key,
+    // ignoring this ViewDef's own parentKey/condition (see conditionKey's
+    // doc on ViewDef above).
+    if (v.conditionKey && v.conditionKey !== key) return passesView(r, v.conditionKey);
+    if (v.parentKey && !v.standalone && v.parentKey !== key && !passesView(r, v.parentKey)) return false;
+    return v.condition ? v.condition(r) : false;
+  } finally {
+    activeEvaluationKeys.delete(key);
+  }
 }
 
 /** All direct children of a Category/Pattern key, in display order. */
