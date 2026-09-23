@@ -829,20 +829,9 @@ function EditViewControl({
   // guess at an already-applied Gap Badge (see gapBadge's useState) — see
   // its doc comment for why that one field stays a guess.
   const parsedKey = useMemo(() => parseComposedViewKey(activeTarget.key), [activeTarget.key]);
-  // The Pattern/Subpattern key this View actually grades against.
-  // Deliberately NOT derived by parsing activeTarget.key apart (that's
-  // what the keyIsComposable gate used to do, and why the View Key field
-  // could freeze on the old key and stop responding to the dropdowns
-  // entirely): plenty of real Views — hand-created, colon-separated, or
-  // otherwise not in the "{Entry}-{Pattern}-{Target}" hyphenated shape
-  // this control itself produces — don't parse cleanly, and string-
-  // parsing has no way to tell "doesn't parse" apart from "parsed
-  // wrong". `conditionKey` is what passesView() (views.ts) actually
-  // reads to grade the View, and it's exactly what editBacktestView
-  // computes server-side too (`old.conditionKey ?? oldKey`), so this is
-  // the true Pattern key regardless of how the View's own key happens
-  // to be spelled — no parsing, no guessing.
-  const patternKey = activeTarget.conditionKey ?? activeTarget.key;
+  // (patternKey removed — viewKey now derives from the attach-point
+  // dropdown's value (attachKey) instead of conditionKey, so the key is
+  // always a fresh composition of the selected dropdowns.)
 
   const [open, setOpen] = useState(initialOpen);
   const [direction, setDirection] = useState<"Up" | "Down">(activeTarget.direction ?? "Up");
@@ -884,15 +873,16 @@ function EditViewControl({
   // on why onUpdated isn't called from there directly.
   const [savedKey, setSavedKey] = useState<string | null>(null);
 
-  // Fully derived, not typed — same composition CreateViewControl's
-  // `viewKey` uses ("{Entry}-{Pattern key}[-{Gap Badge}]-{Target}"),
-  // recomputed live as Entry/Target/Gap Badge change. Unconditional now
-  // — no "doesn't parse, leave it alone" fallback — since patternKey
-  // above no longer depends on the old key parsing cleanly.
+  // Fully derived from the CURRENT dropdown selections — never pulled
+  // from stored keys or conditionKey. Composes as
+  // "{Entry}-{Pattern}[-{Gap Badge}]-{Target}" where "Pattern" is the
+  // attach-point dropdown's value (attachKey), so the View Key always
+  // reflects what's selected on-screen and old keys get renamed to
+  // the new format on save.
   const viewKey = useMemo(() => {
     const trimmedGapBadge = gapBadge.trim();
-    return [entry, patternKey, trimmedGapBadge || undefined, target].filter(Boolean).join("-");
-  }, [entry, patternKey, gapBadge, target]);
+    return [entry, attachKey, trimmedGapBadge || undefined, target].filter(Boolean).join("-");
+  }, [entry, attachKey, gapBadge, target]);
 
   function openForm() {
     setDirection(activeTarget.direction ?? "Up");
