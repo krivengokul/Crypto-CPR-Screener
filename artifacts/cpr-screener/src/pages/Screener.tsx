@@ -1587,7 +1587,7 @@ export default function Screener({
                   { key: "mini",   label: "pMini",   range: "0.22–0.60%",     active: "border-teal-400 text-teal-400" },
                   { key: "small",  label: "pSmall",  range: "0.60–1.10%",     active: "border-indigo-400 text-indigo-400" },
                   { key: "medium", label: "pMedium", range: "1.10–2.00%",     active: "border-blue-400 text-blue-400" },
-                  { key: "large",  label: "pLarge",  range: "2.00–5.00%",     active: "border-[#321A6B] text-[#321A6B]" },
+                  { key: "large",  label: "pLarge",  range: "2.00–5.00%",     active: "border-[#991DC9] text-[#991DC9]" },
                   { key: "mega",   label: "pMega",   range: "5.00–10.00%",    active: "border-pink-400 text-pink-400" },
                   { key: "ultra",  label: "pUltra",  range: ">10.00%",        active: "border-rose-400 text-rose-400" },
                 ] as { key: WidthCategoryKey; label: string; range: string; active: string }[]
@@ -1618,7 +1618,7 @@ export default function Screener({
                   { key: "mini",    label: "Mini",    range: "0.22–0.60%",     active: "border-teal-400 text-teal-400" },
                   { key: "small",   label: "Small",   range: "0.60–1.10%",     active: "border-indigo-400 text-indigo-400" },
                   { key: "medium",  label: "Medium",  range: "1.10–2.00%",     active: "border-blue-400 text-blue-400" },
-                  { key: "large",   label: "Large",   range: "2.00–5.00%",     active: "border-[#321A6B] text-[#321A6B]" },
+                  { key: "large",   label: "Large",   range: "2.00–5.00%",     active: "border-[#991DC9] text-[#991DC9]" },
                   { key: "mega",    label: "Mega",    range: "5.00–10.00%",    active: "border-pink-400 text-pink-400" },
                   { key: "ultra",   label: "Ultra",   range: ">10.00%",        active: "border-rose-400 text-rose-400" },
                 ] as { key: WidthCategoryKey; label: string; range: string; active: string }[]
