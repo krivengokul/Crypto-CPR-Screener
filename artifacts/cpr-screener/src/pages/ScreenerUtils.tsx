@@ -316,13 +316,13 @@ export interface WidthCategoryInfo {
 }
 
 export const WIDTH_CATEGORIES: WidthCategoryInfo[] = [
-  { key: "micro",  label: "Micro",  max: 0.10,     classes: "bg-[#7FFF00]/10 text-[#7FFF00] border-[#7FFF00]/20", pClasses: "bg-[#7FFF00]/10 text-[#7FFF00]/80 border-[#7FFF00]/20" },
-  { key: "tiny",   label: "Tiny",   max: 0.22,     classes: "bg-[#39FF14]/10 text-[#39FF14] border-[#39FF14]/20", pClasses: "bg-[#39FF14]/10 text-[#39FF14]/80 border-[#39FF14]/20" },
+  { key: "micro",  label: "Micro",  max: 0.10,     classes: "bg-lime-500/10 text-lime-400 border-lime-500/20", pClasses: "bg-lime-500/10 text-lime-300 border-lime-400/20" },
+  { key: "tiny",   label: "Tiny",   max: 0.22,     classes: "bg-green-500/10 text-green-400 border-green-500/20", pClasses: "bg-green-500/10 text-green-300 border-green-400/20" },
   { key: "mini",   label: "Mini",   max: 0.60,     classes: "bg-teal-500/10 text-teal-400 border-teal-500/20",       pClasses: "bg-teal-500/10 text-teal-300 border-teal-400/20" },
   { key: "small",  label: "Small",  max: 1.10,     classes: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20", pClasses: "bg-indigo-500/10 text-indigo-300 border-indigo-400/20" },
   { key: "medium", label: "Medium", max: 2.00,     classes: "bg-blue-500/10 text-blue-400 border-blue-500/20",       pClasses: "bg-blue-500/10 text-blue-300 border-blue-400/20" },
   { key: "large",  label: "Large",  max: 5.00,     classes: "bg-amber-500/10 text-amber-400 border-amber-500/20",    pClasses: "bg-amber-500/10 text-amber-300 border-amber-400/20" },
-  { key: "mega",   label: "Mega",   max: 10.00,    classes: "bg-[#FC0FC0]/10 text-[#FC0FC0] border-[#FC0FC0]/20", pClasses: "bg-[#FC0FC0]/10 text-[#FC0FC0]/80 border-[#FC0FC0]/20" },
+  { key: "mega",   label: "Mega",   max: 10.00,    classes: "bg-pink-500/10 text-pink-400 border-pink-500/20", pClasses: "bg-pink-500/10 text-pink-300 border-pink-400/20" },
   { key: "ultra",  label: "Ultra",  max: Infinity, classes: "bg-rose-500/10 text-rose-400 border-rose-500/20",       pClasses: "bg-rose-500/10 text-rose-300 border-rose-400/20" },
 ];
 
