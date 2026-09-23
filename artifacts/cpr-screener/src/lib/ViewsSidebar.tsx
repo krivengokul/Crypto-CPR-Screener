@@ -229,13 +229,7 @@ export const Views: Record<string, SubPattern[]> = {
       activeText:  "#fda4af",              // rose-300 text
       activeBg:    "rgba(244, 63, 94, 0.14)", // rose-500 tint
     },
-    {
-      id: "B6-L4U4-pStepUp:R4",
-      label: "B6-L4U4-pStepUp:R4",
-      activeColor: "#22c55e",              // green-500 border
-      activeText:  "#4ade80",              // green-400 text
-      activeBg:    "rgba(34, 197, 94, 0.14)",
-    },
+    { id: "R1-B-B-BB-BB-L4U4-RH-GapAA-R4", label: "B6-L4U4-pStepUp" },
     // NEW: B-B-BB-BB-L2U4-pPPHR1 — Copy View nested under the
     // "B-B-BB-BB-L2U4" Pattern arrow (LEVEL BELOW). Grades against its
     // conditionKey target, same as its siblings above.
