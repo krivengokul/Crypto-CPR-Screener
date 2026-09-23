@@ -1065,6 +1065,12 @@ R:R: ${item.riskReward}`;
                           R:R <strong className="text-amber-400">{item.riskReward}</strong>
                         </span>
                       </div>
+                      {item.isSaved && item.patternId && (
+                        <div className="flex items-center gap-1">
+                          <span>Code:</span>
+                          <strong className="text-slate-500 font-mono text-[10px]">{item.patternId}</strong>
+                        </div>
+                      )}
                       <div className="flex items-center gap-1">
                         <span>Target:</span>
                         <strong className="text-slate-200 font-semibold font-mono">{item.targetLevel || "S2"}</strong>
