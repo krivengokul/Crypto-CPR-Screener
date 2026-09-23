@@ -1871,7 +1871,112 @@ const LEVELSBELOW_VIEWS: ViewDef[] = [
       getEntry: (r) => r.todayCPR.r1,
       stoplossLabel: "S1 (today's S1)",
       getStoploss: (r) => r.todayCPR.s1,
-      levelCheckDefs: undefined,
+      levelCheckDefs: [
+    {
+      "key": "r4",
+      "subject": "today",
+      "bandKeys": [
+        "r4",
+        "r3"
+      ]
+    },
+    {
+      "key": "r3",
+      "subject": "today",
+      "bandKeys": [
+        "r3",
+        "r2"
+      ]
+    },
+    {
+      "key": "r2",
+      "subject": "today",
+      "bandKeys": [
+        "prevHigh",
+        "r1"
+      ]
+    },
+    {
+      "key": "prevHigh",
+      "subject": "today",
+      "bandKeys": [
+        "tc",
+        "pivot"
+      ]
+    },
+    {
+      "key": "r1",
+      "subject": "today",
+      "bandKeys": [
+        "tc",
+        "pivot"
+      ]
+    },
+    {
+      "key": "tc",
+      "subject": "today",
+      "bandKeys": [
+        "prevLow",
+        "s1"
+      ]
+    },
+    {
+      "key": "pivot",
+      "subject": "today",
+      "bandKeys": [
+        "prevLow",
+        "s1"
+      ]
+    },
+    {
+      "key": "bc",
+      "subject": "today",
+      "bandKeys": [
+        "prevLow",
+        "s1"
+      ]
+    },
+    {
+      "key": "prevLow",
+      "subject": "today",
+      "bandKeys": [
+        "s1",
+        "s2"
+      ]
+    },
+    {
+      "key": "s1",
+      "subject": "today",
+      "bandKeys": [
+        "s1",
+        "s2"
+      ]
+    },
+    {
+      "key": "s2",
+      "subject": "today",
+      "bandKeys": [
+        "s2",
+        "s3"
+      ]
+    },
+    {
+      "key": "s3",
+      "subject": "today",
+      "bandKeys": [
+        "s3",
+        "s4"
+      ]
+    },
+    {
+      "key": "s4",
+      "subject": "previous",
+      "bandKeys": [
+        "s3",
+        "s4"
+      ]
+    }
+  ],
     },
     {
         key: "B6-L3U3-GapAA:R4",

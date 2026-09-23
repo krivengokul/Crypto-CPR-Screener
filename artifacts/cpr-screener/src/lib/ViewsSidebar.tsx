@@ -248,7 +248,8 @@ export const Views: Record<string, SubPattern[]> = {
     },
       { id: "B6-L3U3-GapAA:R4", label: "B6-L3U3-GapAA:R4" },
       { id: "R1-B-B-BB-BB-EL3U4-SL-GapBA-R4", label: "B6-EL3U4-MiniMicro" },
-      { id: "R1-B-B-BB-BB-L4U4-SH-GapAB-R4", label: "B6-L4U4-Micro" }
+      { id: "R1-B-B-BB-BB-L4U4-SH-GapAB-R4", label: "B6-L4U4-Micro" },
+      { id: "R1-B-B-BB-BB-L4U4-SL-GapAB-R4", label: "B6-L4U4-Micro" }
 ],
   "compressed": [
     // RENAMED from "SMi-L1pU1>-APU4:11PM": all previous conditions removed.
