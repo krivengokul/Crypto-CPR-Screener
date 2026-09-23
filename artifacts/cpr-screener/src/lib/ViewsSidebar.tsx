@@ -388,7 +388,7 @@ export const Views: Record<string, SubPattern[]> = {
   "equal-cpr": [
     { id: "eXLoL3U3-L3", label: "eXLoL3U3-L3" },
   ],
-  "touch": [{ id: "A5-CU3L3-SLGapBB-R4", label: "A5-CU3L3-SLGapBB-R4" }, { id: "TC-INCPR-B-A-C-C-U4L4-RL-GapBB-R4", label: "InnerRocket" }, { id: "R1-INCPR-C-C-BB-AA-CL2U2-SH-GapAB-R4", label: "PR4ContinueR4Nxt" }],
+  "touch": [{ id: "A5-CU3L3-SLGapBB-R4", label: "A5-CU3L3-SLGapBB-R4" }, { id: "TC-INCPR-B-A-C-C-U4L4-RL-GapBB-R4", label: "InnerRocket" }, { id: "R1-INCPR-C-C-BB-AA-CL2U2-SH-GapAB-R4", label: "PR4ContinueR4Nxt" }, { id: "S1-INCPR-C-C-BB-AA-CL3U3-RL-GapBB-S4", label: "C-C-BB-AA-CL3U3" }],
 };
 
 export const pivotcategories: Category[] = [
