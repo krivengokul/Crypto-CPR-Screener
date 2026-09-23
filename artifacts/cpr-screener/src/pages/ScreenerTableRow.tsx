@@ -1021,20 +1021,25 @@ export default function ScreenerTableRow({
           </div>
           <div className="text-xs text-muted-foreground">OPrice: {fmt(r.openPrice)}</div>
         </td>
-        <td className={`pl-3 pr-2 py-3 whitespace-nowrap text-xs font-medium ${distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).color}`}>
-          <div>
-            {distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).main}
-            {distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).sub && (
-              <span className="text-[10px] ml-1">{distanceFromCPR(r.currentPrice, r.todayCPR.tc, r.todayCPR.bc).sub}</span>
-            )}
-          </div>
-          <div className={`mt-0.5 ${pdhPdlStatus(r).color}`} title={`PDH: ${fmt(r.todayCPR.prevHigh)}  |  PDL: ${fmt(r.todayCPR.prevLow)}`}>
-            {pdhPdlStatus(r).main}
-            {pdhPdlStatus(r).sub && (
-              <span className="text-[10px] ml-1">{pdhPdlStatus(r).sub}</span>
-            )}
-          </div>
-        </td>
+        {(() => {
+          const move = distanceFromCPR(r.currentPrice, r.todayCPR);
+          return (
+            <td className={`pl-3 pr-2 py-3 whitespace-nowrap text-xs font-medium ${move.color}`}>
+              <div>
+                {move.main}
+                {move.sub && (
+                  <span className="text-[10px] ml-1">{move.sub}</span>
+                )}
+              </div>
+              <div className={`mt-0.5 ${pdhPdlStatus(r).color}`} title={`PDH: ${fmt(r.todayCPR.prevHigh)}  |  PDL: ${fmt(r.todayCPR.prevLow)}`}>
+                {pdhPdlStatus(r).main}
+                {pdhPdlStatus(r).sub && (
+                  <span className="text-[10px] ml-1">{pdhPdlStatus(r).sub}</span>
+                )}
+              </div>
+            </td>
+          );
+        })()}
         <td className="px-4 py-3 whitespace-nowrap text-xs font-mono font-medium">
           {(() => {
             const dist = cprDistancePct(r);

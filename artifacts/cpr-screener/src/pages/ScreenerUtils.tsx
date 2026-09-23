@@ -1695,18 +1695,40 @@ export function isRisingAboveTC(r: CPRResult): boolean {
   return r.currentPrice > r.todayCPR.tc;
 }
 
+/**
+ * Previously stopped at TC/BC: anything above TC just said "%>TC", anything
+ * below BC just said "%<BC", no matter how far price had actually run past
+ * the outer R1-R4/S1-S4 rungs. Now walks outward from R4 down to R1 (Up
+ * side) or S4 down to S1 (Down side) and labels/measures against the
+ * farthest rung price has actually cleared, falling back to TC/BC only
+ * when price hasn't reached R1/S1 yet. Takes the full CPRLevels object
+ * (not just tc/bc) so it has R1-R4/S1-S4 to check — update any call site
+ * accordingly, e.g. `distanceFromCPR(r.currentPrice, r.todayCPR)`.
+ */
 export function distanceFromCPR(
   price: number,
-  tc: number,
-  bc: number
+  levels: CPRLevels
 ): { main: string; sub: string; color: string } {
+  const { tc, bc, r1, r2, r3, r4, s1, s2, s3, s4 } = levels;
   if (price > tc) {
-    const pct = ((price - tc) / tc) * 100;
-    return { main: `+${pct.toFixed(2)}%`, sub: ">TC", color: "text-green-400" };
+    const rung =
+      price > r4 ? { label: "R4", level: r4 } :
+      price > r3 ? { label: "R3", level: r3 } :
+      price > r2 ? { label: "R2", level: r2 } :
+      price > r1 ? { label: "R1", level: r1 } :
+      { label: "TC", level: tc };
+    const pct = ((price - rung.level) / rung.level) * 100;
+    return { main: `+${pct.toFixed(2)}%`, sub: `>${rung.label}`, color: "text-green-400" };
   }
   if (price < bc) {
-    const pct = ((bc - price) / bc) * 100;
-    return { main: `−${pct.toFixed(2)}%`, sub: "<BC", color: "text-destructive" };
+    const rung =
+      price < s4 ? { label: "S4", level: s4 } :
+      price < s3 ? { label: "S3", level: s3 } :
+      price < s2 ? { label: "S2", level: s2 } :
+      price < s1 ? { label: "S1", level: s1 } :
+      { label: "BC", level: bc };
+    const pct = ((rung.level - price) / rung.level) * 100;
+    return { main: `−${pct.toFixed(2)}%`, sub: `<${rung.label}`, color: "text-destructive" };
   }
   return { main: "IN-CPR", sub: "", color: "text-yellow-400" };
 }
