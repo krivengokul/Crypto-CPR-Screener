@@ -171,11 +171,12 @@ function deepestMatchingPattern(raw: CPRResult, rootKey: string): ViewDef {
   }
 }
 
-function matchingView(raw: CPRResult, selectedKey: string): { label: string; direction: ViewDirection | null } | null {
+function matchingView(raw: CPRResult, selectedKey: string): { label: string; key: string; direction: ViewDirection | null } | null {
   const match = matchingViewDef(raw, selectedKey);
   if (!match) return null;
   return {
     label: match.label,
+    key: match.key,
     direction: normalizeViewDirection(match.direction as string | undefined),
   };
 }
@@ -183,14 +184,27 @@ function matchingView(raw: CPRResult, selectedKey: string): { label: string; dir
 /**
  * "View" column cell — matched View name colored by direction: green for
  * Up, rose for Down, plain text when the matched View has no direction set
- * (or no View matches at all, rendered as the usual muted em dash).
+ * (or no View matches at all, rendered as the usual muted em dash). Directly
+ * under the View name, its Viewcode (match.key) is shown as a second,
+ * quieter line — same font-mono text-xs text-muted-foreground styling as
+ * the Viewcode line under the Screener's own VIEW column
+ * (renderActiveViewLabels in ScreenerTableRow.tsx) and under the expanded
+ * row's "Levels VIEW" ladder (SRLadderPanel.tsx), so the same identifier
+ * reads the same way everywhere it appears.
  */
 function renderMatchingViewName(raw: CPRResult, selectedKey: string) {
   const match = matchingView(raw, selectedKey);
   if (!match) return <span className="text-muted-foreground">—</span>;
   const colorClass =
     match.direction === "Up" ? "text-green-400" : match.direction === "Down" ? "text-rose-400" : undefined;
-  return <span className={colorClass}>{match.label}</span>;
+  return (
+    <div className="flex flex-col gap-0">
+      <span className={colorClass}>{match.label}</span>
+      <span className="truncate font-mono text-xs text-muted-foreground" title={match.key}>
+        {match.key}
+      </span>
+    </div>
+  );
 }
 
 const CPR_WIDTH_TIERS = [
