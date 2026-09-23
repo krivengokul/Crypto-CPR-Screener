@@ -2642,7 +2642,7 @@ export default function BacktestPanel() {
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[180px]">
                       View
                     </th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[220px]">
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[190px]">
                       <span className="inline-flex items-center gap-1">
                         Pivot Size <PivotSizeInfo />
                       </span>
@@ -2811,7 +2811,7 @@ export default function BacktestPanel() {
       {/* Pattern backtest results — symbol list + Target/Result/Hit Date.
           CHANGED: also shown for isPatternOnly ("-R4" Pattern selections),
           which now grade identically to a View backtest — same columns
-          (Symbol/Pattern/Pivot Size/Entry Date/Result/Hit
+          (Symbol/Pattern/View/Ladder Check/Pivot Size/Entry Date/Result/Hit
           Date/Change). GAP now lives under the expanded row's "PDay S/R"
           ladder instead of its own column. */}
       {status === "done" && (isViewOnly || isPatternOnly) && (
@@ -2890,17 +2890,6 @@ export default function BacktestPanel() {
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[180px]">
                       View
                     </th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[220px]">
-                      <span className="inline-flex items-center gap-1">
-                        Pivot Size <PivotSizeInfo />
-                      </span>
-                    </th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Entry Date
-                    </th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Result
-                    </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       <button
                         type="button"
@@ -2918,6 +2907,17 @@ export default function BacktestPanel() {
                           {ladderSortDir === "asc" ? "▲" : ladderSortDir === "desc" ? "▼" : "↕"}
                         </span>
                       </button>
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[190px]">
+                      <span className="inline-flex items-center gap-1">
+                        Pivot Size <PivotSizeInfo />
+                      </span>
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Entry Date
+                    </th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Result
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Hit Date
@@ -2992,6 +2992,37 @@ export default function BacktestPanel() {
                       <td className="px-3 py-2 text-xs">
                         {renderMatchingViewName(r.raw, viewMatchScopeKey)}
                       </td>
+                      <td className="px-3 py-2">
+                        {(() => {
+                          const ladder = ladderByRow.get(r);
+                          if (!ladder) return <span className="text-xs text-muted-foreground">—</span>;
+                          if (!ladder.hasConditions) {
+                            return <span className="text-xs text-muted-foreground">LevelCheck UnDefined</span>;
+                          }
+                          const color = ladder.fullMatch
+                            ? "text-green-400"
+                            : ladder.matchingCount >= ladder.total - 2
+                            ? "text-amber-400"
+                            : "text-destructive";
+                          return (
+                            <span
+                              className={`inline-flex items-center gap-1 text-xs font-mono font-medium ${color}`}
+                              title={
+                                ladder.fullMatch
+                                  ? "All 13 levels matched their previous-day zone"
+                                  : `Broke through: ${ladder.mismatchLabels.join(", ")}`
+                              }
+                            >
+                              {ladder.fullMatch ? (
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                              ) : (
+                                <XCircle className="w-3.5 h-3.5" />
+                              )}
+                              {ladder.matchingCount}/{ladder.total}
+                            </span>
+                          );
+                        })()}
+                      </td>
                       <td className="px-3 py-2 font-mono whitespace-nowrap">
                         {renderPivotSizeCell(r.prevCPR, r.todayCPR, r.compressionRatio)}
                       </td>
@@ -3025,37 +3056,6 @@ export default function BacktestPanel() {
                             Target: {fmt(r.targetLevel)}
                           </span>
                         </div>
-                      </td>
-                      <td className="px-3 py-2">
-                        {(() => {
-                          const ladder = ladderByRow.get(r);
-                          if (!ladder) return <span className="text-xs text-muted-foreground">—</span>;
-                          if (!ladder.hasConditions) {
-                            return <span className="text-xs text-muted-foreground">LevelCheck UnDefined</span>;
-                          }
-                          const color = ladder.fullMatch
-                            ? "text-green-400"
-                            : ladder.matchingCount >= ladder.total - 2
-                            ? "text-amber-400"
-                            : "text-destructive";
-                          return (
-                            <span
-                              className={`inline-flex items-center gap-1 text-xs font-mono font-medium ${color}`}
-                              title={
-                                ladder.fullMatch
-                                  ? "All 13 levels matched their previous-day zone"
-                                  : `Broke through: ${ladder.mismatchLabels.join(", ")}`
-                              }
-                            >
-                              {ladder.fullMatch ? (
-                                <CheckCircle2 className="w-3.5 h-3.5" />
-                              ) : (
-                                <XCircle className="w-3.5 h-3.5" />
-                              )}
-                              {ladder.matchingCount}/{ladder.total}
-                            </span>
-                          );
-                        })()}
                       </td>
                       <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">
                         {r.hitDate ? (
