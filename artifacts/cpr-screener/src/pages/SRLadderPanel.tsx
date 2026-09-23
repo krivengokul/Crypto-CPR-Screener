@@ -132,7 +132,7 @@ function ChartLinkControl({ viewKey, rowKey }: { viewKey: string; rowKey: string
         onChange={(e) => setUrl(e.target.value)}
         placeholder="Paste TradingView snapshot URL"
         disabled={saving}
-        className="w-full bg-background border border-border rounded-md px-2 py-1 text-[11px] font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
+        className="w-full bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
       />
       {error && <span className="text-[10px] text-destructive">{error}</span>}
       <div className="flex justify-end gap-1.5 pt-0.5">
