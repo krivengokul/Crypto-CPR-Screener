@@ -1068,7 +1068,7 @@ R:R: ${item.riskReward}`;
                       {item.isSaved && item.patternId && (
                         <div className="flex items-center gap-1">
                           <span>Code:</span>
-                          <strong className="text-slate-500 font-mono text-[10px]">{item.patternId}</strong>
+                          <strong className="text-slate-500 font-mono text-[11px]">{item.patternId}</strong>
                         </div>
                       )}
                       <div className="flex items-center gap-1">
