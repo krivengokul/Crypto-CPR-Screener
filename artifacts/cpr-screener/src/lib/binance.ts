@@ -404,29 +404,28 @@ export async function runScreener(
 
     const lastKline = klines[klines.length - 1];
 
-    // FIX: use UTC midnight boundary — matches TradingView high[1] lookahead_off
+    // FIX: use UTC midnight boundary — matches TradingView high[1] lookahead_off.
+    // Kept only as a diagnostic flag now (see liveCandle below) — it no longer
+    // shifts which candle is "today". The UTC-midnight (5:30 AM IST) boundary
+    // is already the moment a new daily candle opens, so the last kline is
+    // "today" from that instant on, live or not — its H/L/C-so-far IS today's
+    // real (still-updating) data, not something to avoid.
+    //
+    // FIX (off-by-one — every row showed pp/prev instead of prev/today):
+    // this used to shift prevCandle/todayCandle back one extra day whenever
+    // the last kline was still live, on the mistaken assumption that a
+    // still-forming candle couldn't be used. Since the live candle is present
+    // on almost every scan, that shift silently applied to ~all symbols,
+    // every time: todayCandle ended up holding yesterday's completed data
+    // (labeled "today"), and prevCandle held the day before that (labeled
+    // "prev"). Today's candle — live or freshly closed — is always just
+    // klines[length-1].
     const lastKlineIsLive = isLiveDailyCandle(lastKline.openTime);
 
-    let prevCandle: OHLC;
-    let todayCandle: OHLC;
-    let liveCandle: OHLC | null = null;
-    let ppCandle: OHLC | null = null;
-
-    if (lastKlineIsLive) {
-      if (klines.length < 3) {
-        skipped.push(t.symbol);
-        return null;
-      }
-      prevCandle  = klines[klines.length - 3]; // 2 days ago (completed)
-      todayCandle = klines[klines.length - 2]; // yesterday (completed) → today's CPR
-      liveCandle  = lastKline;                  // today's forming candle (not used for CPR)
-      if (klines.length >= 4) ppCandle = klines[klines.length - 4];
-    } else {
-      prevCandle  = klines[klines.length - 2];
-      todayCandle = klines[klines.length - 1];
-      liveCandle  = null;
-      if (klines.length >= 3) ppCandle = klines[klines.length - 3];
-    }
+    const todayCandle: OHLC = klines[klines.length - 1];
+    const prevCandle: OHLC = klines[klines.length - 2];
+    const liveCandle: OHLC | null = lastKlineIsLive ? lastKline : null;
+    const ppCandle: OHLC | null = klines.length >= 3 ? klines[klines.length - 3] : null;
 
     // REVERTED (was dropping ~40 legit symbols per scan for no benefit —
     // the actual LIT/XMR price bug turned out to be in currentPrice, not
