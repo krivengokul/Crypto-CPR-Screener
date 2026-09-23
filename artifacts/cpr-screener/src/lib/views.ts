@@ -4676,9 +4676,9 @@ const MISC_VIEWS: ViewDef[] = [
       },
     {
         key: "S1-INCPR-C-C-BB-AA-CL3U3-RL-GapBB-S4",
-        label: "C-C-BB-AA-CL3U3",
+        label: "CL3U3-MicroFall",
         parentKey: "INCPR-C-C-BB-AA-CL3U3",
-        condition: (r) => passesView(r, "INCPR-C-C-BB-AA-CL3U3") && matchesGapBadge(r, "RL-GapBB"),
+        condition: (r) => passesView(r, "S1-INCPR-C-C-BB-AA-CL3U3-RL-GapBB-S4") && matchesGapBadge(r, "RL-GapBB"),
         standalone: true,
         kind: "view",
         direction: "Down",
@@ -4689,111 +4689,111 @@ const MISC_VIEWS: ViewDef[] = [
         stoplossLabel: "R1 (today's R1)",
         getStoploss: (r) => r.todayCPR.r1,
         levelCheckDefs: [
-      {
-        "key": "r4",
-        "subject": "today",
-        "bandKeys": [
-          "r3",
-          "r2"
-        ]
-      },
-      {
-        "key": "r3",
-        "subject": "today",
-        "bandKeys": [
-          "r2",
-          "r1"
-        ]
-      },
-      {
-        "key": "r2",
-        "subject": "today",
-        "bandKeys": [
-          "r2",
-          "r1"
-        ]
-      },
-      {
-        "key": "prevHigh",
-        "subject": "today",
-        "bandKeys": [
-          "prevHigh",
-          "tc"
-        ]
-      },
-      {
-        "key": "r1",
-        "subject": "today",
-        "bandKeys": [
-          "prevHigh",
-          "tc"
-        ]
-      },
-      {
-        "key": "tc",
-        "subject": "today",
-        "bandKeys": [
-          "pivot",
-          "bc"
-        ]
-      },
-      {
-        "key": "pivot",
-        "subject": "today",
-        "bandKeys": [
-          "pivot",
-          "bc"
-        ]
-      },
-      {
-        "key": "bc",
-        "subject": "today",
-        "bandKeys": [
-          "pivot",
-          "bc"
-        ]
-      },
-      {
-        "key": "prevLow",
-        "subject": "today",
-        "bandKeys": [
-          "bc",
-          "s1"
-        ]
-      },
-      {
-        "key": "s1",
-        "subject": "today",
-        "bandKeys": [
-          "bc",
-          "s1"
-        ]
-      },
-      {
-        "key": "s2",
-        "subject": "today",
-        "bandKeys": [
-          "prevLow",
-          "s2"
-        ]
-      },
-      {
-        "key": "s3",
-        "subject": "today",
-        "bandKeys": [
-          "s2",
-          "s3"
-        ]
-      },
-      {
-        "key": "s4",
-        "subject": "today",
-        "bandKeys": [
-          "s2",
-          "s3"
-        ]
-      }
-    ],
+          {
+            "key": "r4",
+            "subject": "today",
+            "bandKeys": [
+              "r3",
+              "r2"
+            ]
+          },
+          {
+            "key": "r3",
+            "subject": "today",
+            "bandKeys": [
+              "r2",
+              "r1"
+            ]
+          },
+          {
+            "key": "r2",
+            "subject": "today",
+            "bandKeys": [
+              "r2",
+              "r1"
+            ]
+          },
+          {
+            "key": "prevHigh",
+            "subject": "today",
+            "bandKeys": [
+              "prevHigh",
+              "tc"
+            ]
+          },
+          {
+            "key": "r1",
+            "subject": "today",
+            "bandKeys": [
+              "prevHigh",
+              "tc"
+            ]
+          },
+          {
+            "key": "tc",
+            "subject": "today",
+            "bandKeys": [
+              "pivot",
+              "bc"
+            ]
+          },
+          {
+            "key": "pivot",
+            "subject": "today",
+            "bandKeys": [
+              "pivot",
+              "bc"
+            ]
+          },
+          {
+            "key": "bc",
+            "subject": "today",
+            "bandKeys": [
+              "pivot",
+              "bc"
+            ]
+          },
+          {
+            "key": "prevLow",
+            "subject": "today",
+            "bandKeys": [
+              "bc",
+              "s1"
+            ]
+          },
+          {
+            "key": "s1",
+            "subject": "today",
+            "bandKeys": [
+              "bc",
+              "s1"
+            ]
+          },
+          {
+            "key": "s2",
+            "subject": "today",
+            "bandKeys": [
+              "prevLow",
+              "s2"
+            ]
+          },
+          {
+            "key": "s3",
+            "subject": "today",
+            "bandKeys": [
+              "s2",
+              "s3"
+            ]
+          },
+          {
+            "key": "s4",
+            "subject": "today",
+            "bandKeys": [
+              "s2",
+              "s3"
+            ]
+          }
+        ],
       }
 ];
 
