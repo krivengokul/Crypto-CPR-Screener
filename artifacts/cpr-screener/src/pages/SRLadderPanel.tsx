@@ -488,9 +488,8 @@ function CPRLevelChart({
   prevCPR,
   todayCPR,
   pivotPatternBadge,
-  viewName,
   viewKey,
-  viewDirection,
+  rowKey,
   ssllBadge,
   hhllBadge,
   rrssBadge,
@@ -506,19 +505,20 @@ function CPRLevelChart({
    * passing it.
    */
   pivotPatternBadge?: ReactNode;
-  /** Name of the currently active View — shown as a badge next to pivotPatternBadge. Omit to hide the badge. */
-  viewName?: string;
   /**
-   * The View's key/id string (SRLadderPanel's own `viewKey` prop, e.g.
-   * "R1-B-B-BB-BB-EL3U4-SL-GapBA-R4") — rendered as a second line directly
-   * under the ViewNameBadge, styled the same as BacktestPanel's "Entry
-   * Date" column cell (font-mono text-xs text-muted-foreground) so it
-   * reads as a quiet identifier rather than competing with the badge.
-   * Omit to hide it (e.g. when there's no active View to key against).
+   * The View's key/id string (SRLadderPanel's own `viewKey` prop) — passed
+   * straight through to ChartLinkControl so the chart-link is stored per
+   * View. The ViewNameBadge/viewKey text display itself now lives in
+   * SRLadderPanel's right-side toolbar instead of here; see the "Levels
+   * VIEW" header below, which now shows ChartLinkControl in that spot.
    */
   viewKey?: string;
-  /** Up → green badge, Down → red badge, omitted/undefined → neutral slate badge. No effect without viewName. */
-  viewDirection?: ViewDirection;
+  /**
+   * Row identity (symbol+date) ChartLinkControl needs to load/save its
+   * saved chart link. Same `rowKey` SRLadderPanel/SRLadderRow already
+   * receive. Omit to hide "Attach chart" (e.g. no row context yet).
+   */
+  rowKey?: string;
   /** SSLLCategory badge (e.g. renderSSLLCategoryBadge(r)) — rendered directly over the S1 line, right side (paired with hhllBadge on the left). Omit to hide it. */
   ssllBadge?: ReactNode;
   /** HHLLCategory badge (e.g. renderHHLLCategoryBadge(r)) — rendered directly over the S1 line, left side, before ssllBadge. Omit to hide it. */
@@ -667,28 +667,12 @@ function CPRLevelChart({
         <p className="pt-px text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
           Levels VIEW
         </p>
-        {viewName ? (
-          // ViewNameBadge and its Viewcode stack in their own column so the
-          // Viewcode lands directly under the badge (wherever the badge
-          // ends up sitting after "Levels VIEW" + gap) rather than under
-          // the "Levels VIEW" label itself.
-          <div className="flex min-w-0 flex-col gap-0.5">
-            <span className="inline-flex shrink-0 translate-y-[-1px] items-center">
-              <ViewNameBadge name={viewName} direction={viewDirection} />
-            </span>
-            {viewKey && (
-              <p className="truncate font-mono text-xs text-muted-foreground" title={viewKey}>
-                {viewKey}
-              </p>
-            )}
-          </div>
-        ) : (
-          viewKey && (
-            <p className="truncate font-mono text-xs text-muted-foreground" title={viewKey}>
-              {viewKey}
-            </p>
-          )
-        )}
+        {/* Attach Chart moved here from the right-side toolbar — same
+            ChartLinkControl, just relocated next to "Levels VIEW" so it
+            sits where the ViewNameBadge/Viewcode used to. The
+            ViewNameBadge/Viewcode text now lives in that toolbar instead
+            (see SRLadderPanel's "Top Right Section"). */}
+        {rowKey && <ChartLinkControl viewKey={viewKey ?? ""} rowKey={rowKey} />}
       </div>
       <svg
         viewBox={`0 0 ${width} ${height}`}
@@ -917,7 +901,7 @@ export function SRLadderPanel({
    */
   innerLevelLabels?: Record<string, ReactNode>;
 }) {
-  const hasRightSection = Boolean(rowKey || showLevelCheck || copyViewControl);
+  const hasRightSection = Boolean(rowKey || showLevelCheck || copyViewControl || viewName);
 
   return (
     <div className="flex w-full min-w-0 items-start gap-2 overflow-x-auto border-b border-border/50 pb-3">
@@ -943,9 +927,8 @@ export function SRLadderPanel({
           prevCPR={r.prevCPR}
           todayCPR={r.todayCPR}
           pivotPatternBadge={pivotPatternBadge}
-          viewName={viewName}
           viewKey={viewKey}
-          viewDirection={viewDirection}
+          rowKey={rowKey}
           ssllBadge={ssllBadge}
           hhllBadge={hhllBadge}
           rrssBadge={rrssBadge}
@@ -968,11 +951,33 @@ export function SRLadderPanel({
       {/* 4. Top Right Section: Actions (Attach Chart, Create/Copy View) & Level Check */}
       {hasRightSection && (
         <div className="flex min-w-[260px] max-w-[320px] shrink-0 flex-col gap-2.5 border-l border-border/40 pl-2">
-          {/* Action buttons toolbar: Attach chart & Create/Copy View */}
+          {/* Action buttons toolbar: View name/code & Create/Copy View.
+              ChartLinkControl (Attach Chart) moved out of here and into
+              CPRLevelChart, next to "Levels VIEW" — this toolbar now shows
+              the ViewNameBadge/Viewcode that used to sit there instead. */}
           <div className="flex flex-wrap items-center gap-1.5">
-            {rowKey && <ChartLinkControl viewKey={viewKey ?? ""} rowKey={rowKey} />}
+            {viewName ? (
+              // ViewNameBadge and its Viewcode stack in their own column so
+              // the Viewcode lands directly under the badge.
+              <div className="flex min-w-0 flex-col gap-0.5">
+                <span className="inline-flex shrink-0 translate-y-[-1px] items-center">
+                  <ViewNameBadge name={viewName} direction={viewDirection} />
+                </span>
+                {viewKey && (
+                  <p className="truncate font-mono text-xs text-muted-foreground" title={viewKey}>
+                    {viewKey}
+                  </p>
+                )}
+              </div>
+            ) : (
+              viewKey && (
+                <p className="truncate font-mono text-xs text-muted-foreground" title={viewKey}>
+                  {viewKey}
+                </p>
+              )
+            )}
             {/* Extra ml-2 on top of the row's own gap-1.5, specifically
-                between the Chart/Edit Chart pill and Edit View/Copy View —
+                between the view name/code and Edit View/Copy View —
                 nudges the latter a bit further right without widening the
                 gap between every other item in this toolbar. */}
             {copyViewControl && <div className="ml-2">{copyViewControl}</div>}
