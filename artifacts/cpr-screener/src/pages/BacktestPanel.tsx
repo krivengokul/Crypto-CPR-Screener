@@ -777,17 +777,6 @@ function CopyViewControl({
         </select>
       </div>
       <input
-        value={viewKey}
-        readOnly
-        title="View code — generated from Entry, Pattern/Subpattern, Gap Badge, and Target. Change the dropdowns to make a unique code."
-        className="w-full cursor-default bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] font-mono text-muted-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500"
-      />
-      {viewKey === sourceKey && (
-        <span className="text-[10px] text-amber-400">
-          This View code already exists. Change the Entry, Pattern/Subpattern, Gap Badge, or Target before copying.
-        </span>
-      )}
-      <input
         value={label}
         onChange={(e) => setLabel(e.target.value)}
         placeholder="View name"
@@ -806,6 +795,17 @@ function CopyViewControl({
         <option value="">Any Gap Badge</option>
         {ALL_GAP_BADGES.map((badge) => <option key={badge} value={badge}>{badge}</option>)}
       </select>
+      <input
+        value={viewKey}
+        readOnly
+        title="View code — generated from Entry, Pattern/Subpattern, Gap Badge, and Target. Change the dropdowns to make a unique code."
+        className="w-full cursor-default bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] font-mono text-muted-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500"
+      />
+      {viewKey === sourceKey && (
+        <span className="text-[10px] text-amber-400">
+          This View code already exists. Change the Entry, Pattern/Subpattern, Gap Badge, or Target before copying.
+        </span>
+      )}
       {error && <span className="text-[10px] text-destructive">{error}</span>}
       {levelCheckNote && <span className="text-[10px] text-amber-400">{levelCheckNote}</span>}
       {command && (
@@ -1104,17 +1104,6 @@ function EditViewControl({
         </select>
       </div>
       <input
-        value={viewKey}
-        readOnly
-        title="View key — auto-generated from Entry, Pattern/Subpattern (this View's own grading key), Gap Badge (if any), and Target, same as Create View. Not editable directly; changing any of those above will rename/move this View to the new key when saved."
-        className="w-full cursor-default bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] font-mono text-muted-foreground placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
-      />
-      {viewKey !== activeTarget.key && (
-        <span className="text-[10px] text-amber-400">
-          Renaming &quot;{activeTarget.key}&quot; → &quot;{viewKey}&quot; on save.
-        </span>
-      )}
-      <input
         value={label}
         onChange={(e) => setLabel(e.target.value)}
         placeholder="View name"
@@ -1137,6 +1126,17 @@ function EditViewControl({
           </option>
         ))}
       </select>
+      <input
+        value={viewKey}
+        readOnly
+        title="View key — auto-generated from Entry, Pattern/Subpattern (this View's own grading key), Gap Badge (if any), and Target, same as Create View. Not editable directly; changing any of those above will rename/move this View to the new key when saved."
+        className="w-full cursor-default bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] font-mono text-muted-foreground placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
+      />
+      {viewKey !== activeTarget.key && (
+        <span className="text-[10px] text-amber-400">
+          Renaming &quot;{activeTarget.key}&quot; → &quot;{viewKey}&quot; on save.
+        </span>
+      )}
       {error && <span className="text-[10px] text-destructive">{error}</span>}
       {command && (
         <div className="flex flex-col gap-1">
@@ -1514,12 +1514,6 @@ function CreateViewControl({
         </select>
       </div>
       <input
-        value={viewKey}
-        readOnly
-        title="View key — auto-generated from Entry, Pattern/Subpattern, Gap Badge (if any), and Target. Not editable."
-        className="w-full cursor-default bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] font-mono text-muted-foreground placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
-      />
-      <input
         value={newLabel}
         onChange={(e) => {
           setLabelEdited(true);
@@ -1545,6 +1539,12 @@ function CreateViewControl({
           </option>
         ))}
       </select>
+      <input
+        value={viewKey}
+        readOnly
+        title="View key — auto-generated from Entry, Pattern/Subpattern, Gap Badge (if any), and Target. Not editable."
+        className="w-full cursor-default bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] font-mono text-muted-foreground placeholder:text-muted-foreground focus:outline-none disabled:opacity-50"
+      />
       {error && <span className="text-[10px] text-destructive">{error}</span>}
       {command && (
         <div className="flex flex-col gap-1">
