@@ -1195,7 +1195,43 @@ async function getCurrentSymbolCandidatesCached(source: BacktestSource): Promise
   return symbols;
 }
 
+// NEW: Single-symbol backtest. When set, every run (View / Category /
+// Pattern) scans ONLY this symbol instead of the full universe.
+let symbolOverride: string | null = null;
+export function setBacktestSymbolOverride(symbol: string | null): void {
+  const s = symbol?.trim().toUpperCase();
+  symbolOverride = s ? s : null;
+}
+
 async function getSymbolUniverse(
+  source: BacktestSource,
+  entryDateISO: string,
+  onProgress?: (done: number, total: number, symbol: string) => void,
+): Promise<string[]> {
+  if (!symbolOverride) return getFullSymbolUniverse(source, entryDateISO, onProgress);
+  if (!isValidUTCDateISO(entryDateISO)) {
+    throw new Error("Invalid backtest date " + entryDateISO + ". Expected YYYY-MM-DD.");
+  }
+  ensureHistoryCoverage(entryDateISO);
+  const wanted = symbolOverride;
+  const candidates = await getCurrentSymbolCandidatesCached(source);
+  const norm = (x: string) => x.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const w = norm(wanted);
+  const match =
+    candidates.find((c) => norm(c) === w) ??
+    candidates.find((c) => norm(c) === w + "USDT") ??
+    candidates.find((c) => norm(c) === w + "USD") ??
+    candidates.find((c) => norm(c) === w + "INR");
+  if (!match) throw new Error('Symbol "' + wanted + '" was not found on ' + source + ".");
+  onProgress?.(0, 1, match);
+  const history = await getHistory(match, source);
+  if (!history?.has(entryDateISO)) {
+    throw new Error("No candle data for " + match + " on " + entryDateISO + " (" + source + ").");
+  }
+  return [match];
+}
+
+async function getFullSymbolUniverse(
   source: BacktestSource,
   entryDateISO: string,
   onProgress?: (done: number, total: number, symbol: string) => void,

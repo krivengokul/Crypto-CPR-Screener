@@ -18,6 +18,7 @@ import {
   runBacktest,
   runCategoryScan,
   runPivotLevelBacktest,
+  setBacktestSymbolOverride,
   copyBacktestView,
   createBacktestView,
   editBacktestView,
@@ -1825,6 +1826,9 @@ export default function BacktestPanel() {
   }, [selectedKey]);
 
   const [dateMode, setDateMode] = useState<"single" | "range">("single");
+  // NEW: optional single-symbol search. Only allowed with Single Date.
+  const [symbolQuery, setSymbolQuery] = useState("");
+  const symbolMode = symbolQuery.trim().length > 0;
   const [fromDate, setFromDate] = useState<string>(() => {
     const d = new Date();
     d.setUTCDate(d.getUTCDate() - 7);
@@ -2028,6 +2032,12 @@ export default function BacktestPanel() {
   }
 
   const run = async () => {
+    if (symbolMode && dateMode === "range") {
+      setError("Symbol search only works with Single Date.");
+      setStatus("error");
+      return;
+    }
+    setBacktestSymbolOverride(symbolMode ? symbolQuery : null);
     if (dateMode === "range") {
       if (fromDate > toDate) {
         setError("From date must be on or before To date.");
@@ -2158,6 +2168,8 @@ export default function BacktestPanel() {
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unknown error");
       setStatus("error");
+    } finally {
+      setBacktestSymbolOverride(null);
     }
   };
 
@@ -2509,13 +2521,43 @@ export default function BacktestPanel() {
           )}
         </div>
         <div>
+          <label className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Symbol (optional)</label>
+          <div className="relative">
+            <Search className="w-3.5 h-3.5 absolute left-2 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+            <input
+              type="text"
+              value={symbolQuery}
+              onChange={(e) => {
+                const v = e.target.value.toUpperCase();
+                setSymbolQuery(v);
+                if (v.trim()) setDateMode("single");
+              }}
+              onKeyDown={(e) => { if (e.key === "Enter" && status !== "running") run(); }}
+              placeholder="All symbols (e.g. BTCUSDT)"
+              className="w-44 pl-7 pr-6 py-1 text-xs rounded-md border border-[#22354a] bg-[#151e2c] text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-cyan-500/60"
+            />
+            {symbolMode && (
+              <button
+                type="button"
+                onClick={() => setSymbolQuery("")}
+                aria-label="Clear symbol"
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-200 text-xs"
+              >
+                {"\u00D7"}
+              </button>
+            )}
+          </div>
+        </div>
+        <div>
           <label className="block text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Date Mode</label>
           <div className="flex rounded-md overflow-hidden border border-[#22354a] bg-[#151e2c]">
             {(["single", "range"] as const).map((m) => (
               <button
                 key={m}
                 onClick={() => setDateMode(m)}
-                className={`px-3 py-1 text-xs font-semibold capitalize transition cursor-pointer ${
+                disabled={m === "range" && symbolMode}
+                title={m === "range" && symbolMode ? "Clear the symbol to use Date Range" : undefined}
+                className={`px-3 py-1 text-xs font-semibold capitalize transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
                   dateMode === m
                     ? "bg-cyan-500/20 text-cyan-400"
                     : "text-slate-400 hover:text-slate-200"
@@ -2574,6 +2616,11 @@ export default function BacktestPanel() {
         </button>
       </div>
 
+      {symbolMode && status === "done" && rows.length === 0 && categoryRows.length === 0 && (
+        <div className="text-xs text-amber-300 mb-3">
+          {symbolQuery.trim()} did not match the selected View / Pattern on {entryDate}.
+        </div>
+      )}
       {isViewOnly && activeTarget && (
         <div className="text-xs text-muted-foreground mb-3">
           Target: <span className="text-foreground font-medium">{activeTarget.targetLabel}</span>{" "}
