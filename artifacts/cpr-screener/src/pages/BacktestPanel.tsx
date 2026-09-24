@@ -831,6 +831,7 @@ function EditViewControl({
   initialOpen = false,
   onClose,
   onUpdated,
+  onSaved,
 }: {
   activeTarget: ViewDef;
   prevCPR: CPRLevels;
@@ -838,6 +839,7 @@ function EditViewControl({
   initialOpen?: boolean;
   onClose?: () => void;
   onUpdated?: (newKey: string) => void;
+  onSaved?: (oldKey: string, updated: ViewDef) => void;
 }) {
   // parseComposedViewKey is still used below, but only for a best-effort
   // guess at an already-applied Gap Badge (see gapBadge's useState) — see
@@ -1000,6 +1002,7 @@ function EditViewControl({
     // unmounting this popover and losing the command before "Done" is
     // even clickable. Stash the key instead; onUpdated fires from Done.
     setSavedKey(viewKey);
+    if (res.updated) onSaved?.(activeTarget.key, res.updated);
   }
 
   async function copyCommand() {
@@ -1164,6 +1167,7 @@ function ViewActionsRow({
   isFullMatch,
   onCopied,
   onUpdated,
+  onSaved,
 }: {
   activeTarget: ViewDef;
   prevCPR: CPRLevels;
@@ -1172,6 +1176,7 @@ function ViewActionsRow({
   isFullMatch?: boolean;
   onCopied: (newKey: string) => void;
   onUpdated?: (newKey: string) => void;
+  onSaved?: (oldKey: string, updated: ViewDef) => void;
 }) {
   const [mode, setMode] = useState<"none" | "edit" | "copy">("none");
 
@@ -1184,6 +1189,7 @@ function ViewActionsRow({
         initialOpen={true}
         onClose={() => setMode("none")}
         onUpdated={onUpdated}
+        onSaved={onSaved}
       />
     );
   }
@@ -1819,6 +1825,15 @@ export default function BacktestPanel() {
   const SUBCATEGORY_SEP = "::";
 
   const [treeRevision, setTreeRevision] = useState(0);
+  // A renamed View is replaced in VIEWS immediately so the live Level Check
+  // panel can use its newly derived conditions. Keep that updated definition
+  // as the selected row's temporary target until the user clicks Done;
+  // otherwise getView(selectedKey) returns undefined and React unmounts the
+  // edit form before its command can be copied.
+  const [pendingEditedView, setPendingEditedView] = useState<{
+    oldKey: string;
+    view: ViewDef;
+  } | null>(null);
   const viewTree = useMemo(() => buildViewTree(), [treeRevision, VIEWS.length]);
 
   const isCategory = viewTree.some((c) => c.key === selectedKey);
@@ -1857,7 +1872,11 @@ export default function BacktestPanel() {
 
   const isViewOnly = !isCategory && !isPatternOnly;
 
-  const activeTarget = isViewOnly ? getView(selectedKey) : undefined;
+  const activeTarget = isViewOnly
+    ? pendingEditedView?.oldKey === selectedKey
+      ? pendingEditedView.view
+      : getView(selectedKey)
+    : undefined;
   const activePatternTarget = isPatternOnly && activePatternInfo
     ? getView(activePatternInfo.sub.key)
     : undefined;
@@ -2772,7 +2791,11 @@ export default function BacktestPanel() {
                                   setTreeRevision((r) => r + 1);
                                   setSelectedKey(newKey);
                                 }}
+                                onSaved={(_, updated) => {
+                                  setPendingEditedView({ oldKey: selectedKey, view: updated });
+                                }}
                                 onUpdated={(key) => {
+                                  setPendingEditedView(null);
                                   setTreeRevision((r) => r + 1);
                                   setSelectedKey(key);
                                 }}
@@ -3130,7 +3153,11 @@ export default function BacktestPanel() {
                                 setTreeRevision((r) => r + 1);
                                 setSelectedKey(newKey);
                               }}
+                              onSaved={(_, updated) => {
+                                setPendingEditedView({ oldKey: selectedKey, view: updated });
+                              }}
                               onUpdated={(key) => {
+                                setPendingEditedView(null);
                                 setTreeRevision((r) => r + 1);
                                 setSelectedKey(key);
                               }}
