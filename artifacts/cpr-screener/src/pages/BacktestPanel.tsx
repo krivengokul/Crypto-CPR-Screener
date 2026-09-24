@@ -1155,7 +1155,6 @@ function ViewActionsRow({
         >
           + Copy View
         </button>
-      )}
     </div>
   );
 }
