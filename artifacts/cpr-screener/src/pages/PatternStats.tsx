@@ -560,10 +560,11 @@ function CategoryBox({ group }: { group: CategoryGroup }) {
             const pct = maxCount > 0 ? Math.max(p.count > 0 ? 4 : 0, Math.round((p.count / maxCount) * 100)) : 0;
             const isTop = p.depth === 1;
             const dirClass = p.count > 0 ? directionTextClass(normalizeViewDirection(p.direction)) : null;
-            // Only Pattern (depth 1) and Subpattern (depth 2) rows get a
-            // "missing" count — the amount of their own total not covered
-            // by their immediate children (Subpatterns, or Views) below.
-            const missing = p.depth <= 2 ? missingChildCount(group.patterns, i) : 0;
+            // Only top-level Pattern (depth 1) rows get a "missing" count —
+            // the amount of their own total not covered by their immediate
+            // children (Subpatterns) below. Subpatterns (depth 2) and Views
+            // only show green counts.
+            const missing = isTop ? missingChildCount(group.patterns, i) : 0;
             return (
               <div
                 key={`${i}-${p.patternKey}`}
@@ -608,9 +609,7 @@ function CategoryBox({ group }: { group: CategoryGroup }) {
                   {missing > 0 && (
                     <span
                       className="shrink-0 rounded-full border border-rose-500/30 bg-rose-500/15 px-1.5 py-0.5 font-mono text-[10px] font-bold text-rose-300"
-                      title={`${p.count} total, only ${p.count - missing} accounted for by its ${
-                        p.depth === 1 ? "Subpatterns" : "Views"
-                      } below — ${missing} unclassified`}
+                      title={`${p.count} total, only ${p.count - missing} accounted for by its Subpatterns below — ${missing} unclassified`}
                     >
                       {missing}
                     </span>
