@@ -5974,6 +5974,107 @@ const INSIDE_CPR_DUPLICATE_VIEWS: ViewDef[] = [
     order: 7,
   },
   { key: "INCPR-C-A-C-OA-CU4L4", label: "C-A-C-OA-CU4L4", parentKey: "INCPR-C-A-C-OA", kind: "pattern", condition: (r) => r.CU4L4, order: 0 },
+
+  // Added from PatternStats "Missing Subpatterns" (INCPR unclassified rows).
+  {
+    key: "INCPR-C-A-C-AA",
+    label: "C-A-C-AA",
+    parentKey: "insidecpr",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-C" &&
+      r.HHLLCategory === "HHLL-A" &&
+      r.RRHHCategory === "RRHH-C" &&
+      r.SSLLCategory === "SSLL-AA",
+    order: 8,
+  },
+  { key: "INCPR-C-A-C-AA-CU3L3", label: "C-A-C-AA-CU3L3", parentKey: "INCPR-C-A-C-AA", kind: "pattern", condition: (r) => r.CU3L3, order: 0 },
+  { key: "INCPR-C-A-C-AA-CU3L2", label: "C-A-C-AA-CU3L2", parentKey: "INCPR-C-A-C-AA", kind: "pattern", condition: (r) => r.CU3L2, order: 1 },
+
+  {
+    key: "INCPR-B-A-OA-C",
+    label: "B-A-OA-C",
+    parentKey: "insidecpr",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-B" &&
+      r.HHLLCategory === "HHLL-A" &&
+      r.RRHHCategory === "RRHH-OA" &&
+      r.SSLLCategory === "SSLL-C",
+    order: 9,
+  },
+  { key: "INCPR-B-A-OA-C-EU4L4", label: "B-A-OA-C-EU4L4", parentKey: "INCPR-B-A-OA-C", kind: "pattern", condition: (r) => r.EU4L4, order: 0 },
+
+  {
+    key: "INCPR-B-A-HA-SB",
+    label: "B-A-HA-SB",
+    parentKey: "insidecpr",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-B" &&
+      r.HHLLCategory === "HHLL-A" &&
+      r.RRHHCategory === "RRHH-HA" &&
+      r.SSLLCategory === "SSLL-SB",
+    order: 10,
+  },
+  { key: "INCPR-B-A-HA-SB-CL4U3", label: "B-A-HA-SB-CL4U3", parentKey: "INCPR-B-A-HA-SB", kind: "pattern", condition: (r) => r.CL4U3, order: 0 },
+  { key: "INCPR-B-A-HA-SB-EU4L4", label: "B-A-HA-SB-EU4L4", parentKey: "INCPR-B-A-HA-SB", kind: "pattern", condition: (r) => r.EU4L4, order: 1 },
+
+  {
+    key: "INCPR-B-A-HA-C",
+    label: "B-A-HA-C",
+    parentKey: "insidecpr",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-B" &&
+      r.HHLLCategory === "HHLL-A" &&
+      r.RRHHCategory === "RRHH-HA" &&
+      r.SSLLCategory === "SSLL-C",
+    order: 11,
+  },
+  { key: "INCPR-B-A-HA-C-EU4L4", label: "B-A-HA-C-EU4L4", parentKey: "INCPR-B-A-HA-C", kind: "pattern", condition: (r) => r.EU4L4, order: 0 },
+
+  {
+    key: "INCPR-E-A-AA-C",
+    label: "E-A-AA-C",
+    parentKey: "insidecpr",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-E" &&
+      r.HHLLCategory === "HHLL-A" &&
+      r.RRHHCategory === "RRHH-AA" &&
+      r.SSLLCategory === "SSLL-C",
+    order: 12,
+  },
+  { key: "INCPR-E-A-AA-C-EU3L4", label: "E-A-AA-C-EU3L4", parentKey: "INCPR-E-A-AA-C", kind: "pattern", condition: (r) => r.EU3L4, order: 0 },
+
+  {
+    key: "INCPR-C-C-OB-OA",
+    label: "C-C-OB-OA",
+    parentKey: "insidecpr",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-C" &&
+      r.HHLLCategory === "HHLL-C" &&
+      r.RRHHCategory === "RRHH-OB" &&
+      r.SSLLCategory === "SSLL-OA",
+    order: 13,
+  },
+  { key: "INCPR-C-C-OB-OA-CU4L4", label: "C-C-OB-OA-CU4L4", parentKey: "INCPR-C-C-OB-OA", kind: "pattern", condition: (r) => r.CU4L4, order: 0 },
+
+  {
+    key: "INCPR-E-A-OA-C",
+    label: "E-A-OA-C",
+    parentKey: "insidecpr",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-E" &&
+      r.HHLLCategory === "HHLL-A" &&
+      r.RRHHCategory === "RRHH-OA" &&
+      r.SSLLCategory === "SSLL-C",
+    order: 14,
+  },
+  { key: "INCPR-E-A-OA-C-EU4L4", label: "E-A-OA-C-EU4L4", parentKey: "INCPR-E-A-OA-C", kind: "pattern", condition: (r) => r.EU4L4, order: 0 },
 ];
 
 VIEWS.push(...INSIDE_CPR_DUPLICATE_VIEWS);
