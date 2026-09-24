@@ -406,6 +406,38 @@ function directionTextClass(direction: ViewDirection | null): string | null {
   return null;
 }
 
+/**
+ * How many of a Pattern's (or Subpattern's) own matches aren't accounted for
+ * by any of its immediate children in the tree — e.g. Pattern "A-A-AA-AA"
+ * matched 228 rows, but its 8 Subpatterns below it only add up to 196, so
+ * 32 rows matched the Pattern yet don't fall under any of its listed
+ * Subpatterns. Same idea one level down: a Subpattern's count vs. the sum
+ * of the named Views nested under it.
+ *
+ * `patterns` is a single category's rows in dropdown (depth-first) order —
+ * see CategoryGroup.patterns — so a row's immediate children are exactly
+ * the contiguous run of rows right after it whose depth is exactly one
+ * more than its own, stopping at the first row back at (or above) its own
+ * depth. Returns 0 when the row has no children at all in the tree (there's
+ * nothing to compare against) or when its children already add up to its
+ * full count.
+ */
+function missingChildCount(patterns: StatRow[], index: number): number {
+  const row = patterns[index];
+  const childDepth = row.depth + 1;
+  let sum = 0;
+  let hasChildren = false;
+  for (let j = index + 1; j < patterns.length; j++) {
+    const next = patterns[j];
+    if (next.depth <= row.depth) break;
+    if (next.depth === childDepth) {
+      sum += next.count;
+      hasChildren = true;
+    }
+  }
+  return hasChildren ? Math.max(0, row.count - sum) : 0;
+}
+
 function CategoryBox({ group }: { group: CategoryGroup }) {
   // "Empty" means the category itself matched nothing. It used to key off
   // `group.total` (the sum of nested pattern counts), so a category like
@@ -528,6 +560,10 @@ function CategoryBox({ group }: { group: CategoryGroup }) {
             const pct = maxCount > 0 ? Math.max(p.count > 0 ? 4 : 0, Math.round((p.count / maxCount) * 100)) : 0;
             const isTop = p.depth === 1;
             const dirClass = p.count > 0 ? directionTextClass(normalizeViewDirection(p.direction)) : null;
+            // Only Pattern (depth 1) and Subpattern (depth 2) rows get a
+            // "missing" count — the amount of their own total not covered
+            // by their immediate children (Subpatterns, or Views) below.
+            const missing = p.depth <= 2 ? missingChildCount(group.patterns, i) : 0;
             return (
               <div
                 key={`${i}-${p.patternKey}`}
@@ -558,15 +594,27 @@ function CategoryBox({ group }: { group: CategoryGroup }) {
                 >
                   {p.patternLabel}
                 </span>
-                <span
-                  className={[
-                    "relative shrink-0 rounded-full border px-1.5 py-0.5 font-mono text-[10px] font-bold",
-                    p.count > 0
-                      ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-300"
-                      : "border-[#223347] bg-[#182333] text-slate-500",
-                  ].join(" ")}
-                >
-                  {p.count}
+                <span className="relative flex shrink-0 items-center gap-1">
+                  <span
+                    className={[
+                      "shrink-0 rounded-full border px-1.5 py-0.5 font-mono text-[10px] font-bold",
+                      p.count > 0
+                        ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-300"
+                        : "border-[#223347] bg-[#182333] text-slate-500",
+                    ].join(" ")}
+                  >
+                    {p.count}
+                  </span>
+                  {missing > 0 && (
+                    <span
+                      className="shrink-0 rounded-full border border-rose-500/30 bg-rose-500/15 px-1.5 py-0.5 font-mono text-[10px] font-bold text-rose-300"
+                      title={`${p.count} total, only ${p.count - missing} accounted for by its ${
+                        p.depth === 1 ? "Subpatterns" : "Views"
+                      } below — ${missing} unclassified`}
+                    >
+                      {missing}
+                    </span>
+                  )}
                 </span>
               </div>
             );
