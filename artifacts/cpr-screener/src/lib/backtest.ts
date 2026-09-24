@@ -1999,6 +1999,32 @@ export const VIEWS_CATEGORY_LABEL = "VIEWS";
 export interface UnclassifiedPatternMatch {
   flag: string;
   count: number;
+  /**
+   * The row's own RRSS-HHLL-RRHH-SSLL compound written the way views.ts keys
+   * it ("C-C-BB-AA", "B-A-C-C", ...), or null when any of the four category
+   * fields is missing. Together with `flag` it forms the suggested
+   * subpattern key: `${combo}-${flag}` (e.g. "C-C-BB-AA-CL4U3").
+   */
+  combo: string | null;
+}
+
+// "RRSS-C" -> "C", "HHLL-C" -> "C", "RRHH-BB" -> "BB", "SSLL-AA" -> "AA".
+function stripCategoryPrefix(v: string | null | undefined): string | null {
+  if (!v) return null;
+  return v.replace(/^(RRSS|HHLL|RRHH|SSLL)-/, "");
+}
+
+// The compound key views.ts uses for a row ("C-C-BB-AA"), built straight from
+// the row's four raw category fields so it works for rows that match NO known
+// compound pattern too (which is exactly the unclassified case).
+function compoundComboKey(r: CPRResult): string | null {
+  const parts = [
+    stripCategoryPrefix(r.SSRRCategory as string | null | undefined),
+    stripCategoryPrefix(r.HHLLCategory as string | null | undefined),
+    stripCategoryPrefix(r.RRHHCategory as string | null | undefined),
+    stripCategoryPrefix(r.SSLLCategory as string | null | undefined),
+  ];
+  return parts.every((p) => !!p) ? parts.join("-") : null;
 }
 
 export async function runPatternCensus(
@@ -2200,12 +2226,16 @@ export async function runPatternCensus(
               const hitChild = childKeys.some((ck) => matchedKeys.has(`${catKey}::${ck}`));
               if (!hitChild) {
                 const primaryFlag = pickOuterLevelPattern(result) ?? "None";
+                // Bucket by (compound combo, outer flag) so the suggested key
+                // reads like a real subpattern key: "C-C-BB-AA-CL4U3".
+                const combo = compoundComboKey(result);
+                const bucket = `${combo ?? ""}|${primaryFlag}`;
                 let map = unclassifiedCounts.get(scopedKey);
                 if (!map) {
                   map = new Map<string, number>();
                   unclassifiedCounts.set(scopedKey, map);
                 }
-                map.set(primaryFlag, (map.get(primaryFlag) ?? 0) + 1);
+                map.set(bucket, (map.get(bucket) ?? 0) + 1);
               }
             }
           }
@@ -2334,8 +2364,12 @@ export async function runPatternCensus(
 
   const unclassified: Record<string, UnclassifiedPatternMatch[]> = {};
   for (const [scopedKey, flagMap] of unclassifiedCounts.entries()) {
-    const list = Array.from(flagMap.entries())
-      .map(([flag, count]) => ({ flag, count }))
+    const list: UnclassifiedPatternMatch[] = Array.from(flagMap.entries())
+      .map(([bucket, count]) => {
+        const sep = bucket.lastIndexOf("|");
+        const combo = bucket.slice(0, sep);
+        return { flag: bucket.slice(sep + 1), combo: combo || null, count };
+      })
       .sort((a, b) => b.count - a.count);
     if (list.length > 0) {
       unclassified[scopedKey] = list;

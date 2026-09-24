@@ -439,6 +439,16 @@ function missingChildCount(patterns: StatRow[], index: number): number {
   return hasChildren ? Math.max(0, row.count - sum) : 0;
 }
 
+/**
+ * Suggested subpattern key for an unclassified row, in the same shape as the
+ * real keys in views.ts: the row's own RRSS-HHLL-RRHH-SSLL compound plus its
+ * outer band flag — "C-C-BB-AA-CL4U3", "B-A-C-C-EU4L4", ... Falls back to
+ * the old `${patternKey}-${flag}` only if the row had no full compound.
+ */
+function suggestedKeyFor(patternKey: string, u: UnclassifiedPatternMatch): string {
+  return `${u.combo ?? patternKey}-${u.flag}`;
+}
+
 function CategoryBox({
   group,
   unclassified,
@@ -577,7 +587,7 @@ function CategoryBox({
             const unclass = unclassified?.[scopedKey];
             const isExpanded = expandedMissingKey === scopedKey;
             const breakdownTooltip = unclass && unclass.length > 0
-              ? `${p.count} total, only ${p.count - missing} accounted for by subpatterns below.\n\n${missing} unclassified breakdown:\n${unclass.map((u) => `• ${p.patternKey}-${u.flag}: ${u.count}`).join("\n")}\n\nClick to view breakdown & copy suggested keys`
+              ? `${p.count} total, only ${p.count - missing} accounted for by subpatterns below.\n\n${missing} unclassified breakdown:\n${unclass.map((u) => `• ${suggestedKeyFor(p.patternKey, u)}: ${u.count}`).join("\n")}\n\nClick to view breakdown & copy suggested keys`
               : `${p.count} total, only ${p.count - missing} accounted for by its Subpatterns below — ${missing} unclassified`;
 
             return (
@@ -647,10 +657,10 @@ function CategoryBox({
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       {unclass.map((u) => {
-                        const suggestedKey = `${p.patternKey}-${u.flag}`;
+                        const suggestedKey = suggestedKeyFor(p.patternKey, u);
                         return (
                           <button
-                            key={u.flag}
+                            key={suggestedKey}
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
