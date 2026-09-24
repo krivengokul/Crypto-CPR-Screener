@@ -355,13 +355,7 @@ export const Views: Record<string, SubPattern[]> = {
     // "A-A-AA-AA-EUTL3" (see views.ts). Bearish (direction: "Down"),
     // targets pL4 (prev day's S4) by ~4AM. Red color family, matching
     // its bearish R1AbovePR4 siblings.
-    {
-      id: "6A:A-A-AA-AA-EUTL3-S1ATCpE-pL4:4A",
-      label: "6A:A-A-AA-AA-EUTL3-S1ATCpE-pL4:4A",
-      activeColor: "#f87171",              // red-400 border
-      activeText:  "#fca5a5",              // red-300 text
-      activeBg:    "rgba(239, 68, 68, 0.14)",
-    },
+    { id: "BC-A-A-AA-AA-EUTL3-RH-BBGap-S2", label: "A6-EUTL3-MegaUltra" },
     // NEW: "A5-EUTL3-pA-S1ATC" — nested under "A-A-AA-AA-EUTL3" (see
     // views.ts). Bullish (direction: "Up"), targets U2 (today's R2).
     // Was previously only reachable via the flat "copyViews" bucket
