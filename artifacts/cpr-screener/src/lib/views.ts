@@ -1817,25 +1817,126 @@ const LEVELSBELOW_VIEWS: ViewDef[] = [
       order: 0
 },
   {
-    key: "B-B-BB-BB-EL4U4-SSLLGap:S4",
-    label: "B-B-BB-BB-EL4U4-SSLLGap:S4",
-    parentKey: "B-B-BB-BB-EL4U4",
-    kind: "view",
-    direction: "Down",
-    condition: (r) =>
-      r.RRSSGapCategory === "SSGap" &&
-      r.PDHPDLGapCategory === "LLGap" &&
-      r.prevCPR.HLSwitch === "HL-B" &&
-      r.todayCPR.HLSwitch === "HL-A" &&
-      r.hlGapWinner === "today",
-    targetLabel: "L4 (today's S4)",
-    getTarget: (r) => r.todayCPR.s4,
-    entryLabel: "BC (today's BC)",
-    getEntry: (r) => r.todayCPR.bc,
-    stoplossLabel: "R1 (today's R1)",
-    getStoploss: (r) => r.todayCPR.r1,
-      order: 0
-},
+      key: "BC-B-B-BB-BB-EL4U4-SL-BAGap-S4",
+      label: "B6-EL4U4-pMini",
+      parentKey: "B-B-BB-BB-EL4U4",
+      condition: (r) => passesView(r, "B-B-BB-BB-EL4U4") && matchesGapBadge(r, "SL-BAGap"),
+      standalone: true,
+      kind: "view",
+      direction: "Down",
+      targetLabel: "L4 (today's S4)",
+      getTarget: (r) => r.todayCPR.s4,
+      entryLabel: "BC (today's BC)",
+      getEntry: (r) => r.todayCPR.bc,
+      stoplossLabel: "R1 (today's R1)",
+      getStoploss: (r) => r.todayCPR.r1,
+      levelCheckDefs: [
+    {
+      "key": "r4",
+      "subject": "previous",
+      "bandKeys": [
+        "r4",
+        "r3"
+      ]
+    },
+    {
+      "key": "r3",
+      "subject": "previous",
+      "bandKeys": [
+        "r4",
+        "r3"
+      ]
+    },
+    {
+      "key": "r2",
+      "subject": "previous",
+      "bandKeys": [
+        "r3",
+        "r2"
+      ]
+    },
+    {
+      "key": "prevHigh",
+      "subject": "previous",
+      "bandKeys": [
+        "r2",
+        "prevHigh"
+      ]
+    },
+    {
+      "key": "r1",
+      "subject": "previous",
+      "bandKeys": [
+        "r2",
+        "prevHigh"
+      ]
+    },
+    {
+      "key": "tc",
+      "subject": "previous",
+      "bandKeys": [
+        "r1",
+        "tc"
+      ]
+    },
+    {
+      "key": "pivot",
+      "subject": "previous",
+      "bandKeys": [
+        "r1",
+        "tc"
+      ]
+    },
+    {
+      "key": "bc",
+      "subject": "previous",
+      "bandKeys": [
+        "r1",
+        "tc"
+      ]
+    },
+    {
+      "key": "prevLow",
+      "subject": "previous",
+      "bandKeys": [
+        "bc",
+        "prevLow"
+      ]
+    },
+    {
+      "key": "s1",
+      "subject": "previous",
+      "bandKeys": [
+        "bc",
+        "prevLow"
+      ]
+    },
+    {
+      "key": "s2",
+      "subject": "previous",
+      "bandKeys": [
+        "s1",
+        "s2"
+      ]
+    },
+    {
+      "key": "s3",
+      "subject": "previous",
+      "bandKeys": [
+        "s2",
+        "s3"
+      ]
+    },
+    {
+      "key": "s4",
+      "subject": "previous",
+      "bandKeys": [
+        "s3",
+        "s4"
+      ]
+    }
+  ],
+    },
   {
     key: "B-B-BB-BB-L4U4-pLAP:R4",
     label: "B-B-BB-BB-L4U4-pLAP:R4",

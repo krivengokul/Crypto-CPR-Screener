@@ -224,13 +224,7 @@ export const Views: Record<string, SubPattern[]> = {
     // HLGap-A (today HL-A with hlGapWinner "today"). Bearish, entry BC
     // (today's BC), targets today's own S4 (L4), stoploss R1. Rose color
     // family to visually mark it bearish.
-    {
-      id: "B-B-BB-BB-EL4U4-SSLLGap:S4",
-      label: "B-B-BB-BB-EL4U4-SSLLGap:S4",
-      activeColor: "#fb7185",              // rose-400 border
-      activeText:  "#fda4af",              // rose-300 text
-      activeBg:    "rgba(244, 63, 94, 0.14)", // rose-500 tint
-    },
+    { id: "BC-B-B-BB-BB-EL4U4-SL-BAGap-S4", label: "B6-EL4U4-pMini" },
     { id: "R1-B-B-BB-BB-L4U4-RH-GapAA-R4", label: "B6-L4U4-pStepUp" },
     // NEW: B-B-BB-BB-L2U4-pPPHR1 — Copy View nested under the
     // "B-B-BB-BB-L2U4" Pattern arrow (LEVEL BELOW). Grades against its
