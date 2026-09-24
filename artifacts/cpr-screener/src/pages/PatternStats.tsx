@@ -34,6 +34,7 @@ import {
   PatternCensusRow,
   CategoryComboRow,
   CategoryMatchRow,
+  UnclassifiedPatternMatch,
 } from "@/lib/backtest";
 
 // The Category filter's options come straight from ViewsSidebar's own
@@ -438,7 +439,14 @@ function missingChildCount(patterns: StatRow[], index: number): number {
   return hasChildren ? Math.max(0, row.count - sum) : 0;
 }
 
-function CategoryBox({ group }: { group: CategoryGroup }) {
+function CategoryBox({
+  group,
+  unclassified,
+}: {
+  group: CategoryGroup;
+  unclassified: Record<string, UnclassifiedPatternMatch[]> | null;
+}) {
+  const [expandedMissingKey, setExpandedMissingKey] = useState<string | null>(null);
   // "Empty" means the category itself matched nothing. It used to key off
   // `group.total` (the sum of nested pattern counts), so a category like
   // BELOW LEVEL4 — which does have matching symbols, but none that land in
@@ -565,56 +573,102 @@ function CategoryBox({ group }: { group: CategoryGroup }) {
             // children (Subpatterns) below. Subpatterns (depth 2) and Views
             // only show green counts.
             const missing = isTop ? missingChildCount(group.patterns, i) : 0;
+            const scopedKey = `${group.categoryKey}::${p.patternKey}`;
+            const unclass = unclassified?.[scopedKey];
+            const isExpanded = expandedMissingKey === scopedKey;
+            const breakdownTooltip = unclass && unclass.length > 0
+              ? `${p.count} total, only ${p.count - missing} accounted for by subpatterns below.\n\n${missing} unclassified breakdown:\n${unclass.map((u) => `• ${p.patternKey}-${u.flag}: ${u.count}`).join("\n")}\n\nClick to view breakdown & copy suggested keys`
+              : `${p.count} total, only ${p.count - missing} accounted for by its Subpatterns below — ${missing} unclassified`;
+
             return (
-              <div
-                key={`${i}-${p.patternKey}`}
-                className="group/row relative flex items-center justify-between gap-3 rounded-md py-1 pr-1.5 hover:bg-[#151e2c]"
-                style={{ paddingLeft: 6 + (p.depth - 1) * INDENT_PX }}
-                title={p.patternLabel}
-              >
-                {/* Share-of-busiest-row bar, drawn behind the text */}
-                {pct > 0 && (
-                  <div
-                    className="pointer-events-none absolute inset-y-0 left-0 rounded-md bg-emerald-500/[0.07]"
-                    style={{ width: `${pct}%` }}
-                  />
-                )}
-                <span
-                  className={[
-                    "relative truncate font-mono text-xs",
-                    p.count === 0
-                      ? "text-slate-600"
-                      : dirClass
-                      ? [dirClass, isTop ? "font-semibold" : "font-medium"].join(" ")
-                      : isTop
-                      ? "font-semibold text-slate-100"
-                      : p.kind === "view"
-                      ? "text-slate-400"
-                      : "font-medium text-slate-200",
-                  ].join(" ")}
+              <div key={`${i}-${p.patternKey}`}>
+                <div
+                  className="group/row relative flex items-center justify-between gap-3 rounded-md py-1 pr-1.5 hover:bg-[#151e2c]"
+                  style={{ paddingLeft: 6 + (p.depth - 1) * INDENT_PX }}
+                  title={p.patternLabel}
                 >
-                  {p.patternLabel}
-                </span>
-                <span className="relative flex shrink-0 items-center gap-1">
+                  {/* Share-of-busiest-row bar, drawn behind the text */}
+                  {pct > 0 && (
+                    <div
+                      className="pointer-events-none absolute inset-y-0 left-0 rounded-md bg-emerald-500/[0.07]"
+                      style={{ width: `${pct}%` }}
+                    />
+                  )}
                   <span
                     className={[
-                      "shrink-0 rounded-full border px-1.5 py-0.5 font-mono text-[10px] font-bold",
-                      p.count > 0
-                        ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-300"
-                        : "border-[#223347] bg-[#182333] text-slate-500",
+                      "relative truncate font-mono text-xs",
+                      p.count === 0
+                        ? "text-slate-600"
+                        : dirClass
+                        ? [dirClass, isTop ? "font-semibold" : "font-medium"].join(" ")
+                        : isTop
+                        ? "font-semibold text-slate-100"
+                        : p.kind === "view"
+                        ? "text-slate-400"
+                        : "font-medium text-slate-200",
                     ].join(" ")}
                   >
-                    {p.count}
+                    {p.patternLabel}
                   </span>
-                  {missing > 0 && (
+                  <span className="relative flex shrink-0 items-center gap-1">
                     <span
-                      className="shrink-0 rounded-full border border-rose-500/30 bg-rose-500/15 px-1.5 py-0.5 font-mono text-[10px] font-bold text-rose-300"
-                      title={`${p.count} total, only ${p.count - missing} accounted for by its Subpatterns below — ${missing} unclassified`}
+                      className={[
+                        "shrink-0 rounded-full border px-1.5 py-0.5 font-mono text-[10px] font-bold",
+                        p.count > 0
+                          ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-300"
+                          : "border-[#223347] bg-[#182333] text-slate-500",
+                      ].join(" ")}
                     >
-                      {missing}
+                      {p.count}
                     </span>
-                  )}
-                </span>
+                    {missing > 0 && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setExpandedMissingKey(isExpanded ? null : scopedKey);
+                        }}
+                        className={[
+                          "shrink-0 rounded-full border border-rose-500/30 bg-rose-500/15 px-1.5 py-0.5 font-mono text-[10px] font-bold text-rose-300 transition cursor-pointer hover:bg-rose-500/25",
+                          isExpanded ? "ring-1 ring-rose-400" : "",
+                        ].join(" ")}
+                        title={breakdownTooltip}
+                      >
+                        {missing}
+                      </button>
+                    )}
+                  </span>
+                </div>
+                {isExpanded && unclass && unclass.length > 0 && (
+                  <div className="mx-2 my-1.5 rounded-lg border border-rose-500/30 bg-[#121c2b] p-2.5 shadow-md">
+                    <div className="mb-2 flex items-center justify-between text-[11px] font-semibold text-rose-300">
+                      <span>Missing Subpatterns ({missing} unclassified rows):</span>
+                      <span className="text-[10px] text-slate-400 font-normal">Click a chip to copy key</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {unclass.map((u) => {
+                        const suggestedKey = `${p.patternKey}-${u.flag}`;
+                        return (
+                          <button
+                            key={u.flag}
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigator.clipboard.writeText(suggestedKey);
+                            }}
+                            title={`Click to copy "${suggestedKey}"`}
+                            className="group/chip flex items-center gap-1.5 rounded-md border border-[#22354a] bg-[#162234] px-2 py-1 font-mono text-[11px] text-slate-200 transition hover:border-teal-500/60 hover:bg-[#1e2f47]"
+                          >
+                            <span className="font-semibold text-slate-100">{suggestedKey}</span>
+                            <span className="rounded bg-rose-500/20 px-1 py-0.2 text-[10px] font-bold text-rose-300">
+                              {u.count}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -711,6 +765,8 @@ export default function PatternStats() {
   const [combos, setCombos] = useState<CategoryComboRow[] | null>(null);
   // Per-category distinct-symbol counts — see CategoryMatchRow in backtest.ts.
   const [categoryMatches, setCategoryMatches] = useState<CategoryMatchRow[] | null>(null);
+  // Unclassified matches breakdown per top-level pattern
+  const [unclassified, setUnclassified] = useState<Record<string, UnclassifiedPatternMatch[]> | null>(null);
   const [error, setError] = useState<string | null>(null);
   // "" = All categories. Options come from ViewsSidebar's own `pivotcategories`
   // (see CATEGORY_FILTER_OPTIONS above) so this dropdown always matches the
@@ -861,9 +917,10 @@ export default function PatternStats() {
     setRows(null);
     setCombos(null);
     setCategoryMatches(null);
+    setUnclassified(null);
     setProgress(null);
     try {
-      const { rows: result, combos: comboResult, categoryMatches: categoryMatchResult } = await runPatternCensus(
+      const { rows: result, combos: comboResult, categoryMatches: categoryMatchResult, unclassified: unclassResult } = await runPatternCensus(
         startDate,
         endDate,
         source,
@@ -874,6 +931,7 @@ export default function PatternStats() {
       setRows(result);
       setCombos(comboResult);
       setCategoryMatches(categoryMatchResult);
+      setUnclassified(unclassResult);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -1035,7 +1093,7 @@ export default function PatternStats() {
             ) : (
               <section className="grid grid-cols-1 gap-3.5 md:grid-cols-2 xl:grid-cols-3">
                 {visibleCategories.map((group) => (
-                  <CategoryBox key={group.categoryKey} group={group} />
+                  <CategoryBox key={group.categoryKey} group={group} unclassified={unclassified} />
                 ))}
               </section>
             )}

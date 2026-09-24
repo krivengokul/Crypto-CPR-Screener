@@ -1,4 +1,4 @@
-import { OHLC, CPRResult, analyzeCPR, isExpandedPatternPair, OUTER_PATTERN_KEYS } from "./cpr";
+import { OHLC, CPRResult, analyzeCPR, isExpandedPatternPair, OUTER_PATTERN_KEYS, pickOuterLevelPattern } from "./cpr";
 import { fetchTopUSDTSymbols, fetchDailyKlines, isLiveDailyCandle } from "./binance";
 import { fetchDeltaPerps } from "./delta";
 import { fetchCoinDCXDailyKlines, fetchCoinDCXActiveSymbols } from "./coinDCX";
@@ -1960,6 +1960,11 @@ export const VIEWS_CATEGORY_LABEL = "VIEWS";
  * caveat as getSymbolUniverse's other callers; see its KNOWN LIMITATION
  * comment above for what that means for delisted symbols.
  */
+export interface UnclassifiedPatternMatch {
+  flag: string;
+  count: number;
+}
+
 export async function runPatternCensus(
   startDateISO: string,
   endDateISO: string,
@@ -1967,7 +1972,12 @@ export async function runPatternCensus(
   passesPatternFn: (r: CPRResult, pattern: string) => boolean,
   onProgress?: (done: number, total: number, symbol: string) => void,
   innerPatterns?: InnerPatternsConfig
-): Promise<{ rows: PatternCensusRow[]; combos: CategoryComboRow[]; categoryMatches: CategoryMatchRow[] }> {
+): Promise<{
+  rows: PatternCensusRow[];
+  combos: CategoryComboRow[];
+  categoryMatches: CategoryMatchRow[];
+  unclassified: Record<string, UnclassifiedPatternMatch[]>;
+}> {
   if (!isValidUTCDateISO(startDateISO) || !isValidUTCDateISO(endDateISO)) {
     throw new Error("Invalid date range " + startDateISO + " .. " + endDateISO + ". Expected YYYY-MM-DD.");
   }
@@ -2018,6 +2028,22 @@ export async function runPatternCensus(
   const counts = new Map<string, number>();
   const pairKey = (categoryKey: string, patternKey: string) => `${categoryKey}::${patternKey}`;
   pairs.forEach((p) => counts.set(pairKey(p.categoryKey, p.patternKey), 0));
+
+  // Build mapping of top-level Pattern -> its direct Subpattern keys per category
+  const scopedPatternToChildKeys = new Map<string, string[]>();
+  for (const cat of rootCategories) {
+    for (const p of cat.children) {
+      if (p.kind === "pattern") {
+        const subKeys = (p.children ?? [])
+          .filter((c) => c.kind === "pattern")
+          .map((c) => c.key);
+        scopedPatternToChildKeys.set(`${cat.key}::${p.key}`, subKeys);
+      }
+    }
+  }
+
+  // Record unclassified matches: scopedPatternKey -> Map<flag, count>
+  const unclassifiedCounts = new Map<string, Map<string, number>>();
 
   // OUTER PATTERNS entries live OUTSIDE `pairs` on purpose: everything that
   // loops `pairs` feeds passesPatternFn(result, patternKey), which only
@@ -2114,18 +2140,38 @@ export async function runPatternCensus(
           }
 
           let hitAnyView = false;
+          const matchedKeys = new Set<string>();
           for (const p of regularPairs) {
             // passesPatternFn already walks the full parentKey chain back
             // to the category, and (unlike matchesPatternFlag) correctly
             // applies a Copy View's conditionKey redirect + levelCheckDefs
             // gate — see the FIXED note on this function above.
             if (!passesPatternFn(result, p.patternKey)) continue;
+            matchedKeys.add(pairKey(p.categoryKey, p.patternKey));
             if (p.categoryKey === VIEWS_CATEGORY_KEY) hitAnyView = true;
             const k = pairKey(p.categoryKey, p.patternKey);
             counts.set(k, (counts.get(k) ?? 0) + 1);
           }
           if (hitAnyView) {
             categoryMatchCounts.set(VIEWS_CATEGORY_KEY, (categoryMatchCounts.get(VIEWS_CATEGORY_KEY) ?? 0) + 1);
+          }
+
+          // Check for top-level pattern matches that didn't match any child subpatterns
+          for (const [scopedKey, childKeys] of scopedPatternToChildKeys.entries()) {
+            if (childKeys.length === 0) continue;
+            if (matchedKeys.has(scopedKey)) {
+              const [catKey] = scopedKey.split("::");
+              const hitChild = childKeys.some((ck) => matchedKeys.has(`${catKey}::${ck}`));
+              if (!hitChild) {
+                const primaryFlag = pickOuterLevelPattern(result) ?? "None";
+                let map = unclassifiedCounts.get(scopedKey);
+                if (!map) {
+                  map = new Map<string, number>();
+                  unclassifiedCounts.set(scopedKey, map);
+                }
+                map.set(primaryFlag, (map.get(primaryFlag) ?? 0) + 1);
+              }
+            }
           }
 
           // OUTER PATTERNS — count every band-classification flag that holds
@@ -2250,7 +2296,17 @@ export async function runPatternCensus(
       : []),
   ];
 
-  return { rows, combos, categoryMatches };
+  const unclassified: Record<string, UnclassifiedPatternMatch[]> = {};
+  for (const [scopedKey, flagMap] of unclassifiedCounts.entries()) {
+    const list = Array.from(flagMap.entries())
+      .map(([flag, count]) => ({ flag, count }))
+      .sort((a, b) => b.count - a.count);
+    if (list.length > 0) {
+      unclassified[scopedKey] = list;
+    }
+  }
+
+  return { rows, combos, categoryMatches, unclassified };
 }
 
 export async function runPivotLevelBacktest(
