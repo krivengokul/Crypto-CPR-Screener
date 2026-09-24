@@ -367,7 +367,8 @@ export const Views: Record<string, SubPattern[]> = {
       { id: "AE-EUBL2-RH-AGapB-R4", label: "AE-EUBL2-RH-AGapB-R4" },
       { id: "A6-EL2L1-ABGap-R2", label: "A6-EL2L1-ABGap-R2" },
       { id: "BC-A-A-AA-AA-EUPL3-RH-BBGap-S2", label: "A6-EUPL3-Ultra-S2" },
-      { id: "TC-A-A-AA-AA-EUTL3-RH-BBGap-R1", label: "A6-EUTL3-pTiny" }
+      { id: "TC-A-A-AA-AA-EUTL3-RH-BBGap-R1", label: "A6-EUTL3-pTiny" },
+      { id: "TC-A-A-AA-AA-EUBL2-RH-BBGap-R4", label: "A6-EUBL2-Large" }
 ],
   "S1BelowPS4": [
     {
