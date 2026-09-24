@@ -27,6 +27,7 @@ import {
   getAttachPointOptions,
   findContainingNodeKey,
   selectTopByChange,
+  SYMBOL_LIST_ONLY_CATEGORY_KEYS,
   type BacktestRow,
   type CategoryScanRow,
   type BacktestSource,

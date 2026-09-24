@@ -1866,6 +1866,12 @@ const TOP_MOVER_CATEGORIES = new Map<string, "gainers" | "losers">([
   ["top15losers", "losers"],
 ]);
 
+// The TOP 15 GAINERS/LOSERS bucket keys, exposed as a Set for callers (e.g.
+// BacktestPanel's Create View flow) that just need membership checks rather
+// than the gainers/losers direction — kept derived from TOP_MOVER_CATEGORIES
+// so the two lists can't drift apart.
+export const SYMBOL_LIST_ONLY_CATEGORY_KEYS = new Set(TOP_MOVER_CATEGORIES.keys());
+
 // OUTER PATTERNS — a synthetic census category (it isn't in views.ts's tree)
 // with one flat entry per OUTER_PATTERN_KEYS name (L2U4, EU2L4, CU3L3, ...):
 // the band-classification flags the Screener's Pattern column shows as
