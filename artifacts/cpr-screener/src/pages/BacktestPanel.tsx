@@ -477,144 +477,134 @@ function CopyViewControl({
   prevCPR: CPRLevels;
   todayCPR: CPRLevels;
   sourceConditions?: LevelCheckCondition[];
-  // Mirrors EditViewControl's initialOpen/onClose: lets a caller like
-  // ViewActionsRow mount this already expanded (skipping its own
-  // collapsed "+ Copy View" trigger below) and get notified on Cancel
-  // as well as Done, so it can swap back to showing both action
-  // buttons either way — not just after a successful copy.
   initialOpen?: boolean;
   onClose?: () => void;
   onCopied: (newKey: string) => void;
 }) {
+  const sourceView = getView(sourceKey);
+  const initialDirection: "Up" | "Down" = sourceView?.direction === "Down" ? "Down" : "Up";
+  const initialEntry = (() => {
+    const raw = sourceView?.entryLabel?.split(" ")[0];
+    return ENTRY_OPTIONS.includes(raw ?? "") ? raw! : initialDirection === "Down" ? "BC" : "TC";
+  })();
+  const initialTarget = (() => {
+    const m = sourceView?.targetLabel?.match(/[RLS]\d/)?.[0];
+    if (m) return m.startsWith("L") ? m.replace("L", "S") : m;
+    return initialDirection === "Down" ? "S4" : "R4";
+  })();
+  const initialGapBadge = parseComposedViewKey(sourceKey).gapBadge ?? "";
+
   const [open, setOpen] = useState(initialOpen);
-  const [newKey, setNewKey] = useState("");
-  const [newLabel, setNewLabel] = useState("");
+  const [direction, setDirection] = useState<"Up" | "Down">(initialDirection);
+  const [entry, setEntry] = useState(initialEntry);
+  const [target, setTarget] = useState(initialTarget);
+  const [label, setLabel] = useState(sourceLabel);
+  const [attachKey, setAttachKey] = useState(
+    () => sourceView?.parentKey ?? findContainingNodeKey(sourceKey) ?? sourceKey
+  );
+  const [gapBadge, setGapBadge] = useState(initialGapBadge);
   const [error, setError] = useState("");
-  // The in-memory copyBacktestView call below updates the dropdown
-  // instantly, but that's a browser-only change — it won't survive a
-  // refresh. Persisting it into backtest.ts for real requires running
-  // the "Create Copy View" GitHub Actions workflow (.github/workflows/
-  // copy-view.yml), which this component can't trigger automatically —
-  // that would need a credential embedded in browser JS, which we're
-  // deliberately avoiding. Instead, once the in-memory clone succeeds,
-  // this shows the exact `gh workflow run` command to paste into a
-  // terminal (Cloud Shell, Replit's shell, or a local machine with `gh`
-  // installed and logged in) to make it permanent.
   const [command, setCommand] = useState<string | null>(null);
   const [createdKey, setCreatedKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [levelCheckNote, setLevelCheckNote] = useState<string | null>(null);
-  // Which Category/Pattern/Subpattern node (from the same tree as the
-  // "Category / Pattern / Subpattern / View" picker above) the copy is
-  // nested under. Defaults to wherever sourceKey (a View, i.e. a leaf)
-  // already lives — findContainingNodeKey resolves that owning node —
-  // so leaving it untouched reproduces the original behavior; picking a
-  // different node files the copy there instead.
-  const [attachKey, setAttachKey] = useState(() => findContainingNodeKey(sourceKey) ?? sourceKey);
+
+  // Copy uses the same composed, readonly View code as Create/Edit. The
+  // source View's condition remains the grading condition; these controls
+  // choose the copied View's recipe and where it is attached.
+  const viewKey = useMemo(() => {
+    const trimmedGapBadge = gapBadge.trim();
+    return [entry, attachKey, trimmedGapBadge || undefined, target].filter(Boolean).join("-");
+  }, [entry, attachKey, gapBadge, target]);
 
   function openForm() {
-    setNewKey(`${sourceKey}:copy`);
-    setNewLabel(`${sourceLabel} (copy)`);
+    setDirection(initialDirection);
+    setEntry(initialEntry);
+    setTarget(initialTarget);
+    setLabel(sourceLabel);
+    setAttachKey(sourceView?.parentKey ?? findContainingNodeKey(sourceKey) ?? sourceKey);
+    setGapBadge(initialGapBadge);
     setError("");
     setCommand(null);
     setCreatedKey(null);
-    setAttachKey(findContainingNodeKey(sourceKey) ?? sourceKey);
     setCopied(false);
     setLevelCheckNote(null);
     setOpen(true);
   }
 
   function confirm() {
-    const trimmedKey = newKey.trim();
-    const trimmedLabel = newLabel.trim() || trimmedKey;
-    if (!trimmedKey) {
-      setError("Enter a key for the new View.");
-      return;
-    }
+    const trimmedLabel = label.trim() || viewKey;
+    const trimmedGapBadge = gapBadge.trim();
+    const q = (s: string) => '"' + s.replace(/"/g, "") + '"';
 
-    // Double quotes, not single quotes — cmd.exe (Windows) doesn't treat
-    // single quotes as string delimiters at all; it passes them through
-    // literally, corrupting the value (this is exactly what happened:
-    // the key came through as 'A-A-AA-AA-U3L3-SSLLGap:R4' quotes-and-all).
-    // Double quotes are treated as real delimiters by cmd.exe, PowerShell,
-    // and bash/zsh alike, so this is portable across all three. Stripping
-    // rather than escaping any embedded " keeps it correct everywhere,
-    // since backslash-escaping a quote means different things in cmd.exe
-    // vs POSIX shells — not worth the complexity for values that are
-    // just backtest key/label strings.
-    const q = (s: string) => `"${s.replace(/"/g, "")}"`;
-
-    // Always derive levelCheckDefs now — even when the source View has
-    // none yet, deriveLevelCheckDefsForSymbol builds a from-scratch set
-    // over all 13 LEVEL_KEYS for this symbol (picking a working subject
-    // per key) rather than leaving the copy without one.
     let derived: LevelCheckCondition[];
     try {
       derived = deriveLevelCheckDefsForSymbol(sourceConditions, prevCPR, todayCPR);
-
       const expectedCount =
         sourceConditions && sourceConditions.length > 0 ? sourceConditions.length : LEVEL_KEYS.length;
       if (derived.length < expectedCount) {
         setLevelCheckNote(
-          `Derived ${derived.length}/${expectedCount} Level Check conditions — ` +
-            `the rest had no valid bracket for this symbol in either direction.`
+          "Derived " + derived.length + "/" + expectedCount + " Level Check conditions — the rest had no valid bracket for this symbol."
         );
       } else {
         setLevelCheckNote(null);
       }
 
-      // Base64, not double-quoted JSON — JSON is full of literal " characters,
-      // which would collide with the double-quote wrapping used for the other
-      // three arguments (stripping embedded " would corrupt the JSON itself).
-      // Base64 has no quotes, spaces, or braces to escape across cmd.exe /
-      // PowerShell / bash, so it sidesteps the whole cross-shell quoting
-      // problem — patch.mjs just base64-decodes and JSON.parses it back.
-      const json = JSON.stringify(derived);
-      const jsonBytes = new TextEncoder().encode(json);
-      let binary = "";
-      jsonBytes.forEach((b) => (binary += String.fromCharCode(b)));
-      const b64 = btoa(binary);
-
-      // The workflow receives this same payload below. Keeping the derived
-      // definitions in a local variable also lets the in-memory clone show
-      // the Level Check immediately, before the GitHub workflow is run.
-      const result = copyBacktestView(
-        sourceKey,
-        trimmedKey,
-        trimmedLabel,
-        attachKey,
-        derived
-      );
+      // Clone first so the source View's condition is retained, then apply
+      // the same direction/entry/target/gap recipe used by Edit View.
+      const result = copyBacktestView(sourceKey, viewKey, trimmedLabel, attachKey, derived);
       if (!result.ok) {
         setError(
           result.reason === "duplicate-key"
-            ? `"${trimmedKey}" already exists — pick a different key.`
-            : result.reason === "source-not-in-tree"
-            ? "Couldn't find this View's place in the dropdown tree."
-            : "Couldn't find the source View."
+            ? '"' + viewKey + '" already exists — change the Entry, Pattern, Gap Badge, or Target.'
+            : result.reason === "source-not-found"
+            ? "Couldn't find the source View."
+            : "Couldn't copy this View."
         );
         return;
       }
-      setError("");
 
-      setCommand(
-        `gh workflow run copy-view.yml --repo krivengokul/Crypto-CPR-Screener -f sourceKey=${q(sourceKey)} -f newKey=${q(trimmedKey)} -f newLabel=${q(trimmedLabel)} -f attachKey=${q(attachKey)} -f levelCheckDefs=${b64}`
+      const adjusted = editBacktestView(
+        viewKey,
+        viewKey,
+        trimmedLabel,
+        direction,
+        target,
+        entry,
+        attachKey,
+        trimmedGapBadge,
+        derived
       );
-      setCreatedKey(trimmedKey);
+      if (!adjusted.ok) {
+        setError("Couldn't apply the selected Copy View settings.");
+        return;
+      }
+
+      setError("");
+      const commandParts = [
+        "gh workflow run copy-view.yml",
+        "--repo krivengokul/Crypto-CPR-Screener",
+        "-f sourceKey=" + q(sourceKey),
+        "-f newKey=" + q(viewKey),
+        "-f newLabel=" + q(trimmedLabel),
+        "-f direction=" + q(direction),
+        "-f entry=" + q(entry),
+        "-f target=" + q(target),
+        "-f attachKey=" + q(attachKey),
+        ...(trimmedGapBadge ? ["-f gapBadge=" + q(trimmedGapBadge)] : []),
+        "-f levelCheckDefs=" + btoa(
+          Array.from(new TextEncoder().encode(JSON.stringify(derived)), (b) => String.fromCharCode(b)).join("")
+        ),
+      ];
+      setCommand(commandParts.join(" "));
+      setCreatedKey(viewKey);
     } catch (err) {
       setError(
         err instanceof Error
-          ? `Couldn't derive Level Check conditions for this symbol: ${err.message}`
+          ? "Couldn't derive Level Check conditions for this symbol: " + err.message
           : "Couldn't derive Level Check conditions for this symbol."
       );
-      return;
     }
-    // Deliberately NOT calling onCopied here. It switches the dropdown's
-    // selected View, which changes activeTarget — and since this control
-    // lives inside that View's own expanded row detail, switching away
-    // unmounts this popover before the command above is even visible.
-    // onCopied fires from the "Done" button instead, once the person has
-    // actually seen/copied the command.
   }
 
   async function copyCommand() {
@@ -624,9 +614,7 @@ function CopyViewControl({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Clipboard API can fail (permissions, non-HTTPS context, etc.) —
-      // the command is still visible and selectable by hand, so this
-      // isn't fatal, just less convenient.
+      // The command remains visible and selectable if clipboard access fails.
     }
   }
 
@@ -636,7 +624,7 @@ function CopyViewControl({
         type="button"
         onClick={openForm}
         className="w-fit rounded-md border border-border px-2 py-1 text-[11px] font-medium text-muted-foreground hover:bg-muted/40 hover:text-foreground"
-        title={`Duplicate "${sourceLabel}" (with its Level Check rules) as a new View`}
+        title={'Duplicate "' + sourceLabel + '" with editable View settings'}
       >
         + Copy View
       </button>
@@ -644,35 +632,88 @@ function CopyViewControl({
   }
 
   return (
-    <div className="flex w-fit min-w-[260px] flex-col gap-1.5 rounded-md border border-border bg-popover p-2">
+    <div className="flex w-fit min-w-[300px] flex-col gap-1.5 rounded-md border border-border bg-popover p-2 text-left">
       <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-        Copy &quot;{sourceLabel}&quot;
+        COPY VIEW FROM &quot;{sourceLabel}&quot;
       </span>
+      <span className="text-[10px] text-muted-foreground">
+        Entry {entry} · Stoploss {direction === "Up" ? "S1" : "R1"} — Level Check for this View
+      </span>
+      <div className="flex gap-1.5">
+        <select
+          value={direction}
+          onChange={(e) => {
+            const next = e.target.value as "Up" | "Down";
+            setDirection(next);
+            setEntry(next === "Up" ? "TC" : "BC");
+            setTarget(next === "Up" ? "R4" : "S4");
+          }}
+          disabled={!!command}
+          className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+        >
+          <option value="Up">Up</option>
+          <option value="Down">Down</option>
+        </select>
+        <select
+          value={entry}
+          onChange={(e) => setEntry(e.target.value)}
+          disabled={!!command}
+          title="Which rung this copied View's entry reads off today's CPR."
+          className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+        >
+          {ENTRY_OPTIONS.map((opt) => (
+            <option key={opt} value={opt}>Entry {opt}</option>
+          ))}
+        </select>
+        <select
+          value={target}
+          onChange={(e) => setTarget(e.target.value)}
+          disabled={!!command}
+          className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+        >
+          {(direction === "Up" ? ["R1", "R2", "R3", "R4"] : ["S1", "S2", "S3", "S4"]).map((t) => (
+            <option key={t} value={t}>Target {t}</option>
+          ))}
+        </select>
+      </div>
       <input
-        value={newKey}
-        onChange={(e) => setNewKey(e.target.value)}
-        placeholder="New View key"
-        disabled={!!command}
-        className="w-full bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+        value={viewKey}
+        readOnly
+        title="View code — generated from Entry, Pattern/Subpattern, Gap Badge, and Target. Change the dropdowns to make a unique code."
+        className="w-full cursor-default bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] font-mono text-muted-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500"
       />
+      {viewKey === sourceKey && (
+        <span className="text-[10px] text-amber-400">
+          This View code already exists. Change the Entry, Pattern/Subpattern, Gap Badge, or Target before copying.
+        </span>
+      )}
       <input
-        value={newLabel}
-        onChange={(e) => setNewLabel(e.target.value)}
-        placeholder="Display label"
+        value={label}
+        onChange={(e) => setLabel(e.target.value)}
+        placeholder="View name"
         disabled={!!command}
+        title="User-friendly display name for this copied View."
         className="w-full bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
       />
       <AttachPointSelect value={attachKey} onChange={setAttachKey} disabled={!!command} />
+      <select
+        value={gapBadge}
+        onChange={(e) => setGapBadge(e.target.value)}
+        disabled={!!command}
+        title="Optionally require this exact composite Gap Badge in the copied View."
+        className="w-full bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+      >
+        <option value="">Any Gap Badge</option>
+        {ALL_GAP_BADGES.map((badge) => <option key={badge} value={badge}>{badge}</option>)}
+      </select>
       {error && <span className="text-[10px] text-destructive">{error}</span>}
       {levelCheckNote && <span className="text-[10px] text-amber-400">{levelCheckNote}</span>}
       {command && (
         <div className="flex flex-col gap-1">
           <span className="text-[10px] text-muted-foreground">
-            Showing in the dropdown now. Run this in a terminal with <code>gh</code> installed to save it for real:
+            Copied in memory. Run this in a terminal with <code>gh</code> installed to save it for real:
           </span>
-          <code className="w-full whitespace-pre-wrap break-all rounded-md bg-muted/40 px-2 py-1 text-[10px] text-foreground">
-            {command}
-          </code>
+          <code className="w-full whitespace-pre-wrap break-all rounded-md bg-muted/40 px-2 py-1 text-[10px] text-foreground">{command}</code>
           <button
             type="button"
             onClick={copyCommand}
@@ -687,14 +728,7 @@ function CopyViewControl({
           type="button"
           onClick={() => {
             setOpen(false);
-            // Same as EditViewControl's Cancel/Done button: fire onClose
-            // regardless of whether a copy was actually created, so a
-            // caller mounting this with initialOpen (ViewActionsRow) can
-            // swap back to its two-button row on Cancel too, not only
-            // after Done.
             onClose?.();
-            // Switch the dropdown to the new View now that the person has
-            // had a chance to see/copy the command — not before.
             if (createdKey) onCopied(createdKey);
           }}
           className="rounded-md px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted/40 hover:text-foreground"
@@ -707,7 +741,7 @@ function CopyViewControl({
             onClick={confirm}
             className="rounded-md bg-cyan-500/20 px-2 py-1 text-[11px] font-medium text-cyan-300 hover:bg-cyan-500/30"
           >
-            Create copy
+            Copy View
           </button>
         )}
       </div>
@@ -715,115 +749,6 @@ function CopyViewControl({
   );
 }
 
-/**
- * "TOP 15 GAINERS" / "TOP 15 LOSERS" are `condition: () => true` buckets
- * — they only slice the symbol list by % change, they aren't a CPR shape.
- * A View created straight off one of those rows would carry
- * conditionKey: "top15gainers", i.e. grade as PASS for everything. So
- * when Create View is opened from one of them, the View is created for
- * the top-level Category that the "attach under" dropdown's selection
- * lives under instead — pick "↳ B-B-BB-BB-L3U3" in that dropdown and
- * the popover retitles itself "Create View for LEVEL BELOW" and grades
- * against levelsbelow's own condition.
- */
-const SYMBOL_LIST_ONLY_CATEGORY_KEYS = new Set(["top15gainers", "top15losers"]);
-
-/**
- * Every rung selectable in CreateViewControl's Entry dropdown (between
- * Direction and Target), top-to-bottom same as the CPR ladder itself.
- * Matches backtest.ts's ENTRY_DEFS keys exactly — the label here IS the
- * key createBacktestView/the workflow command look up by.
- */
-const ENTRY_OPTIONS = ["R4", "R3", "R2", "R1", "TC", "Pivot", "BC", "S1", "S2", "S3", "S4"];
-
-/** Every valid Target rung — union of BULLISH_TARGETS/BEARISH_TARGETS keys
- * on the workflow-patch side (copyviewpatch.mjs), used here only to parse
- * an existing View's key back into its parts (see parseComposedViewKey). */
-const TARGET_OPTIONS = ["R1", "R2", "R3", "R4", "S1", "S2", "S3", "S4"];
-
-/**
- * "Create" View's key is fully derived (never typed) as
- * "{Entry}-{Pattern/Subpattern key}[-{Gap Badge}]-{Target}" — see
- * CreateViewControl's own `viewKey` below. This walks that same
- * composition back apart for an *existing* View: strip a known Entry
- * off the front, a known Target off the back, then a known Gap Badge
- * off whatever's left, in that order (the only order consistent with
- * how the pieces were joined).
- *
- * EditViewControl uses only the `gapBadge` result of this, to preselect
- * its Gap Badge dropdown to whatever this View's key already seems to
- * encode instead of always resetting to "Any Gap Badge" — there's no
- * field on ViewDef that stores a Gap Badge filter directly (it only
- * lives baked into the View's `condition` closure), so this string-match
- * is the only way to guess it, and a miss just leaves the dropdown at
- * "Any Gap Badge". The `patternKey` this returns is deliberately NOT
- * used for the View Key field itself — a hand-created or otherwise
- * non-hyphenated key (e.g. one using ":" instead of "-") won't parse
- * cleanly here, and EditViewControl instead reads `conditionKey` off the
- * ViewDef directly (see its own `patternKey` — the same value
- * editBacktestView itself uses), which needs no parsing and never
- * misses.
- */
-function parseComposedViewKey(
-  key: string
-): { patternKey: string; entry?: string; target?: string; gapBadge?: string } {
-  let rest = key;
-
-  let entry: string | undefined;
-  for (const opt of ENTRY_OPTIONS) {
-    if (rest.startsWith(`${opt}-`)) {
-      entry = opt;
-      rest = rest.slice(opt.length + 1);
-      break;
-    }
-  }
-
-  let target: string | undefined;
-  for (const opt of TARGET_OPTIONS) {
-    if (rest.endsWith(`-${opt}`)) {
-      target = opt;
-      rest = rest.slice(0, -(opt.length + 1));
-      break;
-    }
-  }
-
-  let gapBadge: string | undefined;
-  for (const badge of ALL_GAP_BADGES) {
-    if (rest.endsWith(`-${badge}`)) {
-      gapBadge = badge;
-      rest = rest.slice(0, -(badge.length + 1));
-      break;
-    }
-  }
-
-  return { patternKey: rest, entry, target, gapBadge };
-}
-
-/**
- * "Create View" — for a Pattern/Subpattern that has no BACKTEST_TARGETS
- * entry of its own yet (BacktestPanel's activePatternTarget undefined,
- * showing the "U4 (today's R4)" fallback description instead of a real
- * graded View). Unlike CopyViewControl, there's no existing entry to
- * clone — this attaches the fixed default recipe (target R4, entry TC,
- * stoploss S1) to the Pattern/Subpattern's own condition (via
- * conditionKey), with levelCheckDefs derived fresh from whichever
- * symbol's row this was opened from (backtest.ts's deriveLevelCheckDefs
- * — the canonical algorithm, not a re-implementation of it).
- */
-
-/**
- * "Edit View" — allows editing an existing ViewDef (Direction, Entry, Target,
- * View Name, Attach Point, and Gap Badge). Like Create View, the View Key
- * is fully derived from the dropdowns (Entry/Pattern/Gap Badge/Target,
- * with the Pattern piece read off the ViewDef's own conditionKey — see
- * `patternKey` below) rather than typed, and — unlike Create View — that
- * derived key can differ from the View's current key, which renames/moves
- * it to the new key on save (see viewKey below and handleSave's newKey).
- * Reuses the copyviewpatch.mjs AST patcher via copy-view.yml with isEdit=true,
- * which already supports sourceKey !== newKey (renaming/moving an existing
- * entry, including across category arrays) — see applyCopyViewPatch's
- * `if (isEdit)` branch there.
- */
 function EditViewControl({
   activeTarget,
   prevCPR,
@@ -1222,8 +1147,7 @@ function ViewActionsRow({
       >
         Edit View
       </button>
-      {!isFullMatch && (
-        <button
+      <button
           type="button"
           onClick={() => setMode("copy")}
           className="w-fit rounded-md border border-border px-2 py-1 text-[11px] font-medium text-muted-foreground hover:bg-muted/40 hover:text-foreground"
