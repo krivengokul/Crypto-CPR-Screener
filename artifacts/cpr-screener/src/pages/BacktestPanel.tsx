@@ -118,15 +118,24 @@ function isViewDescendant(viewKey: string, ancestorKey: string): boolean {
  * Up/Down source the Screener's VIEW column already colors by
  * (getActiveViewLabels/renderActiveViewLabels in ScreenerUtils.tsx /
  * ScreenerTableRow.tsx) — rather than re-deriving Up/Down here.
+ *
+ * EXCEPTION: TOP 15 GAINERS/LOSERS (SYMBOL_LIST_ONLY_CATEGORY_KEYS) are flat
+ * ranked buckets — nothing in views.ts is ever nested under them, so the
+ * normal descendant scoping always comes back empty and the VIEW column
+ * showed "—" for every row. For just these two, search every View in the
+ * tree instead: the whole point of a top-mover list is seeing which
+ * (unrelated) pattern View a mover also happens to satisfy.
  */
 function matchingViewDef(raw: CPRResult, selectedKey: string): ViewDef | null {
   const selected = getView(selectedKey);
   if (!selected) return null;
 
+  const searchGlobally = SYMBOL_LIST_ONLY_CATEGORY_KEYS.has(selectedKey);
+
   return VIEWS
     .filter((view) =>
       view.kind === "view" &&
-      (view.key === selectedKey || isViewDescendant(view.key, selectedKey))
+      (searchGlobally || view.key === selectedKey || isViewDescendant(view.key, selectedKey))
     )
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
     .find((view) => {
