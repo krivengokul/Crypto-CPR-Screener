@@ -660,7 +660,7 @@ export interface ActiveViewInfo {
 export function getActiveViewLabels(r: CPRResult): ActiveViewInfo[] {
   const seen = new Set<string>();
   const infos: ActiveViewInfo[] = [];
-  const EXCLUDE_TOUCH_IDS = new Set(["insidecpr", "outcpr", "overlapHigher", "overlapLower", "touch"]);
+  const EXCLUDE_TOUCH_IDS = new Set(["insidecpr", "outcpr", "OVA", "overlapLower", "touch"]);
   for (const [sectionKey, subs] of Object.entries(Views)) {
     if (sectionKey === "touch") continue;
     for (const sub of subs) {

@@ -678,7 +678,7 @@ export default function Screener({
     return {
       insidecpr: pool.filter((r) => r.touchCategory && !!(r.InsideCPR || (r as any).insideCPR)).length,
       outcpr: pool.filter((r) => r.touchCategory && !!r.outCPR).length,
-      overlapHigher: pool.filter((r) => r.touchCategory && !!r.overlapHigher).length,
+      OVA: pool.filter((r) => r.touchCategory && !!r.overlapHigher).length,
       overlapLower: pool.filter((r) => r.touchCategory && !!r.overlapLower).length,
       equalCPR: pool.filter((r) => r.touchCategory && !!r.equalCPR).length,
     };
@@ -781,7 +781,7 @@ export default function Screener({
       if (!r.touchCategory) return false;
       if (touchFilter === "insidecpr") return !!(r.InsideCPR || (r as any).insideCPR);
       if (touchFilter === "outcpr") return !!r.outCPR;
-      if (touchFilter === "overlapHigher") return !!r.overlapHigher;
+      if (touchFilter === "OVA") return !!r.overlapHigher;
       if (touchFilter === "overlapLower") return !!r.overlapLower;
       if (touchFilter === "equal-cpr") return !!r.equalCPR;
       return true;
@@ -1412,7 +1412,7 @@ export default function Screener({
                 [
                   { id: "insidecpr", label: "INCPR", count: touchCounts.insidecpr },
                   { id: "outcpr", label: "OutCPR", count: touchCounts.outcpr },
-                  { id: "overlapHigher", label: "Overlap Above", count: touchCounts.overlapHigher },
+                  { id: "OVA", label: "Overlap Above", count: touchCounts.OVA },
                   { id: "overlapLower", label: "Overlap Below", count: touchCounts.overlapLower },
                   { id: "equal-cpr", label: "Equal CPR", count: touchCounts.equalCPR },
                 ]

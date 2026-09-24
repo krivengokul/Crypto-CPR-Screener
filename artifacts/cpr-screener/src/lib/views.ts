@@ -5090,7 +5090,7 @@ const MISC_VIEWS: ViewDef[] = [
     condition: (r) => !!r.outCPR,
   },
   {
-    key: "overlapHigher",
+    key: "OVA",
     label: "Overlap Above",
     parentKey: "touch",
     kind: "pattern",
@@ -5629,21 +5629,21 @@ VIEWS.push(...MISC_VIEWS);
 // precedent above ("A-A-AA-AA" appears under BOTH "levelsabove" AND
 // "ABOVE LEVEL4" via two separate ViewDef keys sharing one label): each
 // of the 7 compound categories listed below gets a SECOND node, nested
-// under "overlapHigher" ("Overlap Above") instead of its original
+// under "OVA" ("Overlap Above") instead of its original
 // levelsabove/compressed parent, with the identical 4-way SSRR/HHLL/
 // RRHH/SSLL identity condition. Because these duplicate nodes are NOT
-// standalone, passesView also ANDs in "overlapHigher"'s own condition
+// standalone, passesView also ANDs in "OVA"'s own condition
 // (r.overlapHigher) via the parentKey chain — so a row must satisfy both
 // the compound shape AND the overlap condition to show up here. The
 // ORIGINAL nodes (under levelsabove/compressed) are untouched and keep
 // showing every row that matches the shape regardless of overlap.
 //
-// Duplicate top-node keys are prefixed "overlapHigher-<compound-key>" to
+// Duplicate top-node keys are prefixed "OVA-<compound-key>" to
 // stay unique. Subpattern children keep the plain "<compound-key>-<FLAG>"
 // naming UNLESS that exact key is already taken by an existing sibling
 // under the original branch (only true for C-C-BB-AA's three listed
 // flags, which already exist as children of the original "C-C-BB-AA"
-// node) — those three get the same "overlapHigher-" prefix to avoid a
+// node) — those three get the same "OVA-" prefix to avoid a
 // key collision, since a duplicate `key` would silently shadow the
 // original in getView()'s .find().
 // ---------------------------------------------------------------------
@@ -5651,9 +5651,9 @@ VIEWS.push(...MISC_VIEWS);
 const OVERLAP_ABOVE_DUPLICATE_VIEWS: ViewDef[] = [
   // --- A-A-OA-AA (order 1) ---
   {
-    key: "overlapHigher-A-A-OA-AA",
+    key: "OVA-A-A-OA-AA",
     label: "A-A-OA-AA",
-    parentKey: "overlapHigher",
+    parentKey: "OVA",
     kind: "pattern",
     condition: (r) =>
       r.SSRRCategory === "RRSS-A" &&
@@ -5665,7 +5665,7 @@ const OVERLAP_ABOVE_DUPLICATE_VIEWS: ViewDef[] = [
   {
     key: "A-A-OA-AA-CU3L3",
     label: "A-A-OA-AA-CU3L3",
-    parentKey: "overlapHigher-A-A-OA-AA",
+    parentKey: "OVA-A-A-OA-AA",
     kind: "pattern",
     condition: (r) => r.CU3L3,
     order: 0,
@@ -5673,9 +5673,9 @@ const OVERLAP_ABOVE_DUPLICATE_VIEWS: ViewDef[] = [
 
   // --- A-C-RA-AA (order 2) ---
   {
-    key: "overlapHigher-A-C-RA-AA",
+    key: "OVA-A-C-RA-AA",
     label: "A-C-RA-AA",
-    parentKey: "overlapHigher",
+    parentKey: "OVA",
     kind: "pattern",
     condition: (r) =>
       r.SSRRCategory === "RRSS-A" &&
@@ -5687,7 +5687,7 @@ const OVERLAP_ABOVE_DUPLICATE_VIEWS: ViewDef[] = [
   {
     key: "A-C-RA-AA-CU4L3",
     label: "A-C-RA-AA-CU4L3",
-    parentKey: "overlapHigher-A-C-RA-AA",
+    parentKey: "OVA-A-C-RA-AA",
     kind: "pattern",
     condition: (r) => r.CU4L3,
     order: 0,
@@ -5695,7 +5695,7 @@ const OVERLAP_ABOVE_DUPLICATE_VIEWS: ViewDef[] = [
   {
     key: "A-C-RA-AA-CU3L3",
     label: "A-C-RA-AA-CU3L3",
-    parentKey: "overlapHigher-A-C-RA-AA",
+    parentKey: "OVA-A-C-RA-AA",
     kind: "pattern",
     condition: (r) => r.CU3L3,
     order: 1,
@@ -5703,9 +5703,9 @@ const OVERLAP_ABOVE_DUPLICATE_VIEWS: ViewDef[] = [
 
   // --- A-E-OA-E (order 3) ---
   {
-    key: "overlapHigher-A-E-OA-E",
+    key: "OVA-A-E-OA-E",
     label: "A-E-OA-E",
-    parentKey: "overlapHigher",
+    parentKey: "OVA",
     kind: "pattern",
     condition: (r) =>
       r.SSRRCategory === "RRSS-A" &&
@@ -5717,7 +5717,7 @@ const OVERLAP_ABOVE_DUPLICATE_VIEWS: ViewDef[] = [
   {
     key: "A-E-OA-E-U4L4",
     label: "A-E-OA-E-U4L4",
-    parentKey: "overlapHigher-A-E-OA-E",
+    parentKey: "OVA-A-E-OA-E",
     kind: "pattern",
     condition: (r) => r.U4L4,
     order: 0,
@@ -5725,9 +5725,9 @@ const OVERLAP_ABOVE_DUPLICATE_VIEWS: ViewDef[] = [
 
   // --- C-A-C-AA (order 4) ---
   {
-    key: "overlapHigher-C-A-C-AA",
+    key: "OVA-C-A-C-AA",
     label: "C-A-C-AA",
-    parentKey: "overlapHigher",
+    parentKey: "OVA",
     kind: "pattern",
     condition: (r) =>
       r.SSRRCategory === "RRSS-C" &&
@@ -5739,7 +5739,7 @@ const OVERLAP_ABOVE_DUPLICATE_VIEWS: ViewDef[] = [
   {
     key: "C-A-C-AA-CL4U3",
     label: "C-A-C-AA-CL4U3",
-    parentKey: "overlapHigher-C-A-C-AA",
+    parentKey: "OVA-C-A-C-AA",
     kind: "pattern",
     condition: (r) => r.CL4U3,
     order: 0,
@@ -5747,7 +5747,7 @@ const OVERLAP_ABOVE_DUPLICATE_VIEWS: ViewDef[] = [
   {
     key: "C-A-C-AA-CU3L2",
     label: "C-A-C-AA-CU3L2",
-    parentKey: "overlapHigher-C-A-C-AA",
+    parentKey: "OVA-C-A-C-AA",
     kind: "pattern",
     condition: (r) => r.CU3L2,
     order: 1,
@@ -5755,9 +5755,9 @@ const OVERLAP_ABOVE_DUPLICATE_VIEWS: ViewDef[] = [
 
   // --- C-A-E-AA (order 5) ---
   {
-    key: "overlapHigher-C-A-E-AA",
+    key: "OVA-C-A-E-AA",
     label: "C-A-E-AA",
-    parentKey: "overlapHigher",
+    parentKey: "OVA",
     kind: "pattern",
     condition: (r) =>
       r.SSRRCategory === "RRSS-C" &&
@@ -5769,7 +5769,7 @@ const OVERLAP_ABOVE_DUPLICATE_VIEWS: ViewDef[] = [
   {
     key: "C-A-E-AA-CU4L4",
     label: "C-A-E-AA-CU4L4",
-    parentKey: "overlapHigher-C-A-E-AA",
+    parentKey: "OVA-C-A-E-AA",
     kind: "pattern",
     condition: (r) => r.CU4L4,
     order: 0,
@@ -5777,9 +5777,9 @@ const OVERLAP_ABOVE_DUPLICATE_VIEWS: ViewDef[] = [
 
   // --- C-C-BB-AA (order 6) ---
   {
-    key: "overlapHigher-C-C-BB-AA",
+    key: "OVA-C-C-BB-AA",
     label: "C-C-BB-AA",
-    parentKey: "overlapHigher",
+    parentKey: "OVA",
     kind: "pattern",
     condition: (r) =>
       r.SSRRCategory === "RRSS-C" &&
@@ -5788,30 +5788,30 @@ const OVERLAP_ABOVE_DUPLICATE_VIEWS: ViewDef[] = [
       r.SSLLCategory === "SSLL-AA",
     order: 6,
   },
-  // Keys prefixed "overlapHigher-" here (not the plain "C-C-BB-AA-CU3L3"
+  // Keys prefixed "OVA-" here (not the plain "C-C-BB-AA-CU3L3"
   // style) because the plain key is already taken by the existing child
   // of the ORIGINAL "C-C-BB-AA" node (under "compressed") — see the
   // batch comment above.
   {
-    key: "overlapHigher-C-C-BB-AA-CU3L3",
+    key: "OVA-C-C-BB-AA-CU3L3",
     label: "C-C-BB-AA-CU3L3",
-    parentKey: "overlapHigher-C-C-BB-AA",
+    parentKey: "OVA-C-C-BB-AA",
     kind: "pattern",
     condition: (r) => r.CU3L3,
     order: 0,
   },
   {
-    key: "overlapHigher-C-C-BB-AA-CU3L2",
+    key: "OVA-C-C-BB-AA-CU3L2",
     label: "C-C-BB-AA-CU3L2",
-    parentKey: "overlapHigher-C-C-BB-AA",
+    parentKey: "OVA-C-C-BB-AA",
     kind: "pattern",
     condition: (r) => r.CU3L2,
     order: 1,
   },
   {
-    key: "overlapHigher-C-C-BB-AA-CU2L2",
+    key: "OVA-C-C-BB-AA-CU2L2",
     label: "C-C-BB-AA-CU2L2",
-    parentKey: "overlapHigher-C-C-BB-AA",
+    parentKey: "OVA-C-C-BB-AA",
     kind: "pattern",
     condition: (r) => r.CU2L2,
     order: 2,
@@ -5819,9 +5819,9 @@ const OVERLAP_ABOVE_DUPLICATE_VIEWS: ViewDef[] = [
 
   // --- C-C-OB-AA (order 7) ---
   {
-    key: "overlapHigher-C-C-OB-AA",
+    key: "OVA-C-C-OB-AA",
     label: "C-C-OB-AA",
-    parentKey: "overlapHigher",
+    parentKey: "OVA",
     kind: "pattern",
     condition: (r) =>
       r.SSRRCategory === "RRSS-C" &&
@@ -5833,7 +5833,7 @@ const OVERLAP_ABOVE_DUPLICATE_VIEWS: ViewDef[] = [
   {
     key: "C-C-OB-AA-CU3L2",
     label: "C-C-OB-AA-CU3L2",
-    parentKey: "overlapHigher-C-C-OB-AA",
+    parentKey: "OVA-C-C-OB-AA",
     kind: "pattern",
     condition: (r) => r.CU3L2,
     order: 0,
@@ -5842,17 +5842,17 @@ const OVERLAP_ABOVE_DUPLICATE_VIEWS: ViewDef[] = [
   // -------------------------------------------------------------------
   // Added from PatternStats "Missing Subpatterns" (Overlap Above
   // unclassified rows) — same duplicate-branch treatment as above: each
-  // compound gets a node under "overlapHigher" plus its flag children.
-  // Every key here is "overlapHigher-" prefixed so it can never shadow an
+  // compound gets a node under "OVA" plus its flag children.
+  // Every key here is "OVA-" prefixed so it can never shadow an
   // identically named node on the original levelsabove/compressed branch.
   // -------------------------------------------------------------------
 
 
   // --- A-A-OA-OA (order 8) ---
   {
-    key: "overlapHigher-A-A-OA-OA",
+    key: "OVA-A-A-OA-OA",
     label: "A-A-OA-OA",
-    parentKey: "overlapHigher",
+    parentKey: "OVA",
     kind: "pattern",
     condition: (r) =>
       r.SSRRCategory === "RRSS-A" &&
@@ -5861,15 +5861,15 @@ const OVERLAP_ABOVE_DUPLICATE_VIEWS: ViewDef[] = [
       r.SSLLCategory === "SSLL-OA",
     order: 8,
   },
-  { key: "overlapHigher-A-A-OA-OA-U4L4", label: "A-A-OA-OA-U4L4", parentKey: "overlapHigher-A-A-OA-OA", kind: "pattern", condition: (r) => r.U4L4, order: 0 },
-  { key: "overlapHigher-A-A-OA-OA-EU4L4", label: "A-A-OA-OA-EU4L4", parentKey: "overlapHigher-A-A-OA-OA", kind: "pattern", condition: (r) => r.EU4L4, order: 1 },
-  { key: "overlapHigher-A-A-OA-OA-EU3L4", label: "A-A-OA-OA-EU3L4", parentKey: "overlapHigher-A-A-OA-OA", kind: "pattern", condition: (r) => r.EU3L4, order: 2 },
+  { key: "OVA-A-A-OA-OA-U4L4", label: "A-A-OA-OA-U4L4", parentKey: "OVA-A-A-OA-OA", kind: "pattern", condition: (r) => r.U4L4, order: 0 },
+  { key: "OVA-A-A-OA-OA-EU4L4", label: "A-A-OA-OA-EU4L4", parentKey: "OVA-A-A-OA-OA", kind: "pattern", condition: (r) => r.EU4L4, order: 1 },
+  { key: "OVA-A-A-OA-OA-EU3L4", label: "A-A-OA-OA-EU3L4", parentKey: "OVA-A-A-OA-OA", kind: "pattern", condition: (r) => r.EU3L4, order: 2 },
 
   // --- A-C-E-AA (order 9) ---
   {
-    key: "overlapHigher-A-C-E-AA",
+    key: "OVA-A-C-E-AA",
     label: "A-C-E-AA",
-    parentKey: "overlapHigher",
+    parentKey: "OVA",
     kind: "pattern",
     condition: (r) =>
       r.SSRRCategory === "RRSS-A" &&
@@ -5878,13 +5878,13 @@ const OVERLAP_ABOVE_DUPLICATE_VIEWS: ViewDef[] = [
       r.SSLLCategory === "SSLL-AA",
     order: 9,
   },
-  { key: "overlapHigher-A-C-E-AA-CU4L3", label: "A-C-E-AA-CU4L3", parentKey: "overlapHigher-A-C-E-AA", kind: "pattern", condition: (r) => r.CU4L3, order: 0 },
+  { key: "OVA-A-C-E-AA-CU4L3", label: "A-C-E-AA-CU4L3", parentKey: "OVA-A-C-E-AA", kind: "pattern", condition: (r) => r.CU4L3, order: 0 },
 
   // --- E-E-AA-BB (order 10) ---
   {
-    key: "overlapHigher-E-E-AA-BB",
+    key: "OVA-E-E-AA-BB",
     label: "E-E-AA-BB",
-    parentKey: "overlapHigher",
+    parentKey: "OVA",
     kind: "pattern",
     condition: (r) =>
       r.SSRRCategory === "RRSS-E" &&
@@ -5893,14 +5893,14 @@ const OVERLAP_ABOVE_DUPLICATE_VIEWS: ViewDef[] = [
       r.SSLLCategory === "SSLL-BB",
     order: 10,
   },
-  { key: "overlapHigher-E-E-AA-BB-EU2L2", label: "E-E-AA-BB-EU2L2", parentKey: "overlapHigher-E-E-AA-BB", kind: "pattern", condition: (r) => r.EU2L2, order: 0 },
-  { key: "overlapHigher-E-E-AA-BB-EU2L3", label: "E-E-AA-BB-EU2L3", parentKey: "overlapHigher-E-E-AA-BB", kind: "pattern", condition: (r) => r.EU2L3, order: 1 },
+  { key: "OVA-E-E-AA-BB-EU2L2", label: "E-E-AA-BB-EU2L2", parentKey: "OVA-E-E-AA-BB", kind: "pattern", condition: (r) => r.EU2L2, order: 0 },
+  { key: "OVA-E-E-AA-BB-EU2L3", label: "E-E-AA-BB-EU2L3", parentKey: "OVA-E-E-AA-BB", kind: "pattern", condition: (r) => r.EU2L3, order: 1 },
 
   // --- C-A-HA-AA (order 11) ---
   {
-    key: "overlapHigher-C-A-HA-AA",
+    key: "OVA-C-A-HA-AA",
     label: "C-A-HA-AA",
-    parentKey: "overlapHigher",
+    parentKey: "OVA",
     kind: "pattern",
     condition: (r) =>
       r.SSRRCategory === "RRSS-C" &&
@@ -5909,14 +5909,14 @@ const OVERLAP_ABOVE_DUPLICATE_VIEWS: ViewDef[] = [
       r.SSLLCategory === "SSLL-AA",
     order: 11,
   },
-  { key: "overlapHigher-C-A-HA-AA-CU3L2", label: "C-A-HA-AA-CU3L2", parentKey: "overlapHigher-C-A-HA-AA", kind: "pattern", condition: (r) => r.CU3L2, order: 0 },
-  { key: "overlapHigher-C-A-HA-AA-CU3L3", label: "C-A-HA-AA-CU3L3", parentKey: "overlapHigher-C-A-HA-AA", kind: "pattern", condition: (r) => r.CU3L3, order: 1 },
+  { key: "OVA-C-A-HA-AA-CU3L2", label: "C-A-HA-AA-CU3L2", parentKey: "OVA-C-A-HA-AA", kind: "pattern", condition: (r) => r.CU3L2, order: 0 },
+  { key: "OVA-C-A-HA-AA-CU3L3", label: "C-A-HA-AA-CU3L3", parentKey: "OVA-C-A-HA-AA", kind: "pattern", condition: (r) => r.CU3L3, order: 1 },
 
   // --- E-A-AA-E (order 12) ---
   {
-    key: "overlapHigher-E-A-AA-E",
+    key: "OVA-E-A-AA-E",
     label: "E-A-AA-E",
-    parentKey: "overlapHigher",
+    parentKey: "OVA",
     kind: "pattern",
     condition: (r) =>
       r.SSRRCategory === "RRSS-E" &&
@@ -5925,14 +5925,14 @@ const OVERLAP_ABOVE_DUPLICATE_VIEWS: ViewDef[] = [
       r.SSLLCategory === "SSLL-E",
     order: 12,
   },
-  { key: "overlapHigher-E-A-AA-E-EU4L4", label: "E-A-AA-E-EU4L4", parentKey: "overlapHigher-E-A-AA-E", kind: "pattern", condition: (r) => r.EU4L4, order: 0 },
-  { key: "overlapHigher-E-A-AA-E-EU3L3", label: "E-A-AA-E-EU3L3", parentKey: "overlapHigher-E-A-AA-E", kind: "pattern", condition: (r) => r.EU3L3, order: 1 },
+  { key: "OVA-E-A-AA-E-EU4L4", label: "E-A-AA-E-EU4L4", parentKey: "OVA-E-A-AA-E", kind: "pattern", condition: (r) => r.EU4L4, order: 0 },
+  { key: "OVA-E-A-AA-E-EU3L3", label: "E-A-AA-E-EU3L3", parentKey: "OVA-E-A-AA-E", kind: "pattern", condition: (r) => r.EU3L3, order: 1 },
 
   // --- B-A-HA-SB (order 13) ---
   {
-    key: "overlapHigher-B-A-HA-SB",
+    key: "OVA-B-A-HA-SB",
     label: "B-A-HA-SB",
-    parentKey: "overlapHigher",
+    parentKey: "OVA",
     kind: "pattern",
     condition: (r) =>
       r.SSRRCategory === "RRSS-B" &&
@@ -5941,15 +5941,15 @@ const OVERLAP_ABOVE_DUPLICATE_VIEWS: ViewDef[] = [
       r.SSLLCategory === "SSLL-SB",
     order: 13,
   },
-  { key: "overlapHigher-B-A-HA-SB-EU4L4", label: "B-A-HA-SB-EU4L4", parentKey: "overlapHigher-B-A-HA-SB", kind: "pattern", condition: (r) => r.EU4L4, order: 0 },
-  { key: "overlapHigher-B-A-HA-SB-EL3U4", label: "B-A-HA-SB-EL3U4", parentKey: "overlapHigher-B-A-HA-SB", kind: "pattern", condition: (r) => r.EL3U4, order: 1 },
-  { key: "overlapHigher-B-A-HA-SB-CU4L4", label: "B-A-HA-SB-CU4L4", parentKey: "overlapHigher-B-A-HA-SB", kind: "pattern", condition: (r) => r.CU4L4, order: 2 },
+  { key: "OVA-B-A-HA-SB-EU4L4", label: "B-A-HA-SB-EU4L4", parentKey: "OVA-B-A-HA-SB", kind: "pattern", condition: (r) => r.EU4L4, order: 0 },
+  { key: "OVA-B-A-HA-SB-EL3U4", label: "B-A-HA-SB-EL3U4", parentKey: "OVA-B-A-HA-SB", kind: "pattern", condition: (r) => r.EL3U4, order: 1 },
+  { key: "OVA-B-A-HA-SB-CU4L4", label: "B-A-HA-SB-CU4L4", parentKey: "OVA-B-A-HA-SB", kind: "pattern", condition: (r) => r.CU4L4, order: 2 },
 
   // --- A-B-RA-LB (order 14) ---
   {
-    key: "overlapHigher-A-B-RA-LB",
+    key: "OVA-A-B-RA-LB",
     label: "A-B-RA-LB",
-    parentKey: "overlapHigher",
+    parentKey: "OVA",
     kind: "pattern",
     condition: (r) =>
       r.SSRRCategory === "RRSS-A" &&
@@ -5958,13 +5958,13 @@ const OVERLAP_ABOVE_DUPLICATE_VIEWS: ViewDef[] = [
       r.SSLLCategory === "SSLL-LB",
     order: 14,
   },
-  { key: "overlapHigher-A-B-RA-LB-CU4L3", label: "A-B-RA-LB-CU4L3", parentKey: "overlapHigher-A-B-RA-LB", kind: "pattern", condition: (r) => r.CU4L3, order: 0 },
+  { key: "OVA-A-B-RA-LB-CU4L3", label: "A-B-RA-LB-CU4L3", parentKey: "OVA-A-B-RA-LB", kind: "pattern", condition: (r) => r.CU4L3, order: 0 },
 
   // --- E-A-AA-SB (order 15) ---
   {
-    key: "overlapHigher-E-A-AA-SB",
+    key: "OVA-E-A-AA-SB",
     label: "E-A-AA-SB",
-    parentKey: "overlapHigher",
+    parentKey: "OVA",
     kind: "pattern",
     condition: (r) =>
       r.SSRRCategory === "RRSS-E" &&
@@ -5973,17 +5973,17 @@ const OVERLAP_ABOVE_DUPLICATE_VIEWS: ViewDef[] = [
       r.SSLLCategory === "SSLL-SB",
     order: 15,
   },
-  { key: "overlapHigher-E-A-AA-SB-EU4L4", label: "E-A-AA-SB-EU4L4", parentKey: "overlapHigher-E-A-AA-SB", kind: "pattern", condition: (r) => r.EU4L4, order: 0 },
-  { key: "overlapHigher-E-A-AA-SB-EU2L2", label: "E-A-AA-SB-EU2L2", parentKey: "overlapHigher-E-A-AA-SB", kind: "pattern", condition: (r) => r.EU2L2, order: 1 },
-  { key: "overlapHigher-E-A-AA-SB-U4L4", label: "E-A-AA-SB-U4L4", parentKey: "overlapHigher-E-A-AA-SB", kind: "pattern", condition: (r) => r.U4L4, order: 2 },
-  { key: "overlapHigher-E-A-AA-SB-EU2L3", label: "E-A-AA-SB-EU2L3", parentKey: "overlapHigher-E-A-AA-SB", kind: "pattern", condition: (r) => r.EU2L3, order: 3 },
-  { key: "overlapHigher-E-A-AA-SB-EU3L3", label: "E-A-AA-SB-EU3L3", parentKey: "overlapHigher-E-A-AA-SB", kind: "pattern", condition: (r) => r.EU3L3, order: 4 },
+  { key: "OVA-E-A-AA-SB-EU4L4", label: "E-A-AA-SB-EU4L4", parentKey: "OVA-E-A-AA-SB", kind: "pattern", condition: (r) => r.EU4L4, order: 0 },
+  { key: "OVA-E-A-AA-SB-EU2L2", label: "E-A-AA-SB-EU2L2", parentKey: "OVA-E-A-AA-SB", kind: "pattern", condition: (r) => r.EU2L2, order: 1 },
+  { key: "OVA-E-A-AA-SB-U4L4", label: "E-A-AA-SB-U4L4", parentKey: "OVA-E-A-AA-SB", kind: "pattern", condition: (r) => r.U4L4, order: 2 },
+  { key: "OVA-E-A-AA-SB-EU2L3", label: "E-A-AA-SB-EU2L3", parentKey: "OVA-E-A-AA-SB", kind: "pattern", condition: (r) => r.EU2L3, order: 3 },
+  { key: "OVA-E-A-AA-SB-EU3L3", label: "E-A-AA-SB-EU3L3", parentKey: "OVA-E-A-AA-SB", kind: "pattern", condition: (r) => r.EU3L3, order: 4 },
 
   // --- A-A-AA-OA (order 16) ---
   {
-    key: "overlapHigher-A-A-AA-OA",
+    key: "OVA-A-A-AA-OA",
     label: "A-A-AA-OA",
-    parentKey: "overlapHigher",
+    parentKey: "OVA",
     kind: "pattern",
     condition: (r) =>
       r.SSRRCategory === "RRSS-A" &&
@@ -5992,13 +5992,13 @@ const OVERLAP_ABOVE_DUPLICATE_VIEWS: ViewDef[] = [
       r.SSLLCategory === "SSLL-OA",
     order: 16,
   },
-  { key: "overlapHigher-A-A-AA-OA-EU3L4", label: "A-A-AA-OA-EU3L4", parentKey: "overlapHigher-A-A-AA-OA", kind: "pattern", condition: (r) => r.EU3L4, order: 0 },
+  { key: "OVA-A-A-AA-OA-EU3L4", label: "A-A-AA-OA-EU3L4", parentKey: "OVA-A-A-AA-OA", kind: "pattern", condition: (r) => r.EU3L4, order: 0 },
 
   // --- E-A-AA-C (order 17) ---
   {
-    key: "overlapHigher-E-A-AA-C",
+    key: "OVA-E-A-AA-C",
     label: "E-A-AA-C",
-    parentKey: "overlapHigher",
+    parentKey: "OVA",
     kind: "pattern",
     condition: (r) =>
       r.SSRRCategory === "RRSS-E" &&
@@ -6007,14 +6007,14 @@ const OVERLAP_ABOVE_DUPLICATE_VIEWS: ViewDef[] = [
       r.SSLLCategory === "SSLL-C",
     order: 17,
   },
-  { key: "overlapHigher-E-A-AA-C-EU3L4", label: "E-A-AA-C-EU3L4", parentKey: "overlapHigher-E-A-AA-C", kind: "pattern", condition: (r) => r.EU3L4, order: 0 },
-  { key: "overlapHigher-E-A-AA-C-EU4L4", label: "E-A-AA-C-EU4L4", parentKey: "overlapHigher-E-A-AA-C", kind: "pattern", condition: (r) => r.EU4L4, order: 1 },
+  { key: "OVA-E-A-AA-C-EU3L4", label: "E-A-AA-C-EU3L4", parentKey: "OVA-E-A-AA-C", kind: "pattern", condition: (r) => r.EU3L4, order: 0 },
+  { key: "OVA-E-A-AA-C-EU4L4", label: "E-A-AA-C-EU4L4", parentKey: "OVA-E-A-AA-C", kind: "pattern", condition: (r) => r.EU4L4, order: 1 },
 
   // --- A-E-AA-E (order 18) ---
   {
-    key: "overlapHigher-A-E-AA-E",
+    key: "OVA-A-E-AA-E",
     label: "A-E-AA-E",
-    parentKey: "overlapHigher",
+    parentKey: "OVA",
     kind: "pattern",
     condition: (r) =>
       r.SSRRCategory === "RRSS-A" &&
@@ -6023,13 +6023,13 @@ const OVERLAP_ABOVE_DUPLICATE_VIEWS: ViewDef[] = [
       r.SSLLCategory === "SSLL-E",
     order: 18,
   },
-  { key: "overlapHigher-A-E-AA-E-EU3L4", label: "A-E-AA-E-EU3L4", parentKey: "overlapHigher-A-E-AA-E", kind: "pattern", condition: (r) => r.EU3L4, order: 0 },
+  { key: "OVA-A-E-AA-E-EU3L4", label: "A-E-AA-E-EU3L4", parentKey: "OVA-A-E-AA-E", kind: "pattern", condition: (r) => r.EU3L4, order: 0 },
 
   // --- E-E-AA-OB (order 19) ---
   {
-    key: "overlapHigher-E-E-AA-OB",
+    key: "OVA-E-E-AA-OB",
     label: "E-E-AA-OB",
-    parentKey: "overlapHigher",
+    parentKey: "OVA",
     kind: "pattern",
     condition: (r) =>
       r.SSRRCategory === "RRSS-E" &&
@@ -6038,13 +6038,13 @@ const OVERLAP_ABOVE_DUPLICATE_VIEWS: ViewDef[] = [
       r.SSLLCategory === "SSLL-OB",
     order: 19,
   },
-  { key: "overlapHigher-E-E-AA-OB-EU3L4", label: "E-E-AA-OB-EU3L4", parentKey: "overlapHigher-E-E-AA-OB", kind: "pattern", condition: (r) => r.EU3L4, order: 0 },
+  { key: "OVA-E-E-AA-OB-EU3L4", label: "E-E-AA-OB-EU3L4", parentKey: "OVA-E-E-AA-OB", kind: "pattern", condition: (r) => r.EU3L4, order: 0 },
 
   // --- C-A-OA-AA (order 20) ---
   {
-    key: "overlapHigher-C-A-OA-AA",
+    key: "OVA-C-A-OA-AA",
     label: "C-A-OA-AA",
-    parentKey: "overlapHigher",
+    parentKey: "OVA",
     kind: "pattern",
     condition: (r) =>
       r.SSRRCategory === "RRSS-C" &&
@@ -6053,13 +6053,13 @@ const OVERLAP_ABOVE_DUPLICATE_VIEWS: ViewDef[] = [
       r.SSLLCategory === "SSLL-AA",
     order: 20,
   },
-  { key: "overlapHigher-C-A-OA-AA-CU4L4", label: "C-A-OA-AA-CU4L4", parentKey: "overlapHigher-C-A-OA-AA", kind: "pattern", condition: (r) => r.CU4L4, order: 0 },
+  { key: "OVA-C-A-OA-AA-CU4L4", label: "C-A-OA-AA-CU4L4", parentKey: "OVA-C-A-OA-AA", kind: "pattern", condition: (r) => r.CU4L4, order: 0 },
 
   // --- B-A-C-SB (order 21) ---
   {
-    key: "overlapHigher-B-A-C-SB",
+    key: "OVA-B-A-C-SB",
     label: "B-A-C-SB",
-    parentKey: "overlapHigher",
+    parentKey: "OVA",
     kind: "pattern",
     condition: (r) =>
       r.SSRRCategory === "RRSS-B" &&
@@ -6068,13 +6068,13 @@ const OVERLAP_ABOVE_DUPLICATE_VIEWS: ViewDef[] = [
       r.SSLLCategory === "SSLL-SB",
     order: 21,
   },
-  { key: "overlapHigher-B-A-C-SB-CU4L4", label: "B-A-C-SB-CU4L4", parentKey: "overlapHigher-B-A-C-SB", kind: "pattern", condition: (r) => r.CU4L4, order: 0 },
+  { key: "OVA-B-A-C-SB-CU4L4", label: "B-A-C-SB-CU4L4", parentKey: "OVA-B-A-C-SB", kind: "pattern", condition: (r) => r.CU4L4, order: 0 },
 
   // --- E-E-OA-OB (order 22) ---
   {
-    key: "overlapHigher-E-E-OA-OB",
+    key: "OVA-E-E-OA-OB",
     label: "E-E-OA-OB",
-    parentKey: "overlapHigher",
+    parentKey: "OVA",
     kind: "pattern",
     condition: (r) =>
       r.SSRRCategory === "RRSS-E" &&
@@ -6083,7 +6083,7 @@ const OVERLAP_ABOVE_DUPLICATE_VIEWS: ViewDef[] = [
       r.SSLLCategory === "SSLL-OB",
     order: 22,
   },
-  { key: "overlapHigher-E-E-OA-OB-EU3L4", label: "E-E-OA-OB-EU3L4", parentKey: "overlapHigher-E-E-OA-OB", kind: "pattern", condition: (r) => r.EU3L4, order: 0 },
+  { key: "OVA-E-E-OA-OB-EU3L4", label: "E-E-OA-OB-EU3L4", parentKey: "OVA-E-E-OA-OB", kind: "pattern", condition: (r) => r.EU3L4, order: 0 },
 ];
 
 VIEWS.push(...OVERLAP_ABOVE_DUPLICATE_VIEWS);
