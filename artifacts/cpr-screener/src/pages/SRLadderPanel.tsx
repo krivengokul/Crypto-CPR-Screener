@@ -663,8 +663,8 @@ function CPRLevelChart({
 
   return (
     <div className="min-w-0">
-      <div className="mb-1.5 flex flex-nowrap items-start gap-1.5 pl-2 text-left">
-        <p className="pt-px text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+      <div className="mb-1.5 flex flex-nowrap items-center gap-1.5 pl-2 text-left">
+        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
           Levels VIEW
         </p>
         {/* Attach Chart moved here from the right-side toolbar — same
@@ -954,8 +954,12 @@ export function SRLadderPanel({
           {/* Action buttons toolbar: View name/code & Create/Copy View.
               ChartLinkControl (Attach Chart) moved out of here and into
               CPRLevelChart, next to "Levels VIEW" — this toolbar now shows
-              the ViewNameBadge/Viewcode that used to sit there instead. */}
-          <div className="flex flex-wrap items-center gap-1.5">
+              the ViewNameBadge/Viewcode that used to sit there instead.
+              flex-col + pl-2 (matching SRLadderDiffPanel's own pl-2 on its
+              "Level Check" label below) so the view name/code and the
+              Edit View/Copy View buttons both start at the exact same left
+              edge as "Level Check", regardless of whether they wrap. */}
+          <div className="flex flex-col gap-1.5 pl-2">
             {viewName ? (
               // ViewNameBadge and its Viewcode stack in their own column so
               // the Viewcode lands directly under the badge.
@@ -976,11 +980,7 @@ export function SRLadderPanel({
                 </p>
               )
             )}
-            {/* Extra ml-2 on top of the row's own gap-1.5, specifically
-                between the view name/code and Edit View/Copy View —
-                nudges the latter a bit further right without widening the
-                gap between every other item in this toolbar. */}
-            {copyViewControl && <div className="ml-2">{copyViewControl}</div>}
+            {copyViewControl}
           </div>
 
           {/* Level Check */}
