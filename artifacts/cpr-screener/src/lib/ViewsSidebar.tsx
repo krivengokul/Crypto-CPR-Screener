@@ -411,7 +411,6 @@ export const pivotcategories: Category[] = [
  * LEGACY_SCREENER_PATTERN_IDS so App.tsx no longer has to duplicate the tree.
  */
 export const LEGACY_SCREENER_PATTERN_IDS = [
-  "lower-bullish",
   "Price-AbovePDH",
   "Price-BelowPDL",
   "HB-L1<PL1-PU12CU23",

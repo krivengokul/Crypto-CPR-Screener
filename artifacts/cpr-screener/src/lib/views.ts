@@ -4792,8 +4792,8 @@ VIEWS.push(...COPY_VIEWS);
 // their keys, same effect as deleting their cases outright), plus the
 // small set of standalone top-level toggles that don't nest under ANY
 // category in backtest.ts's tree at all (top15gainers/top15losers,
-// Price-AbovePDH/BelowPDL, HAThin-U1>PU4, the four HB-L1* patterns, and
-// lower-bullish) — transcribed from ScreenerUtils.tsx passesPattern lines
+// Price-AbovePDH/BelowPDL, HAThin-U1>PU4, and the four HB-L1* patterns) —
+// transcribed from ScreenerUtils.tsx passesPattern lines
 // 1432-1437, 1538-1539, 1561-1568, 1570-1575, 1582-1584 for completeness,
 // since deleting PIVOT_PATTERNS later requires every reachable key to
 // live in VIEWS, not just the ones nested in BACKTEST_CATEGORIES.
@@ -4871,12 +4871,6 @@ const MISC_VIEWS: ViewDef[] = [
   { key: "top15losers", label: "TOP 15 LOSERS", kind: "category", condition: () => true,
       order: 1
 },
-  {
-    key: "lower-bullish",
-    label: "lower-bullish",
-    kind: "view",
-    condition: (r) => r.cprFalling && r.cprNarrowing && r.prevCPR.r1 > r.todayCPR.r4,
-  },
   { key: "Price-AbovePDH", label: "Price-AbovePDH", kind: "view", condition: (r) => r.currentPrice > r.todayCPR.prevHigh },
   { key: "Price-BelowPDL", label: "Price-BelowPDL", kind: "view", condition: (r) => r.currentPrice < r.todayCPR.prevLow },
   {
@@ -5850,8 +5844,8 @@ VIEWS.push(...OUTER_LEVEL_PATTERNS);
 //
 // Root selection: a naive "no parentKey" filter is WRONG here — the ~52
 // standalone raw-flag Patterns (OUTER_LEVEL_PATTERNS) and the handful of
-// standalone MISC_VIEWS toggles (lower-bullish, Price-AbovePDH, the four
-// HB-L1* patterns, etc.) also have no parentKey, but were NEVER part of
+// standalone MISC_VIEWS toggles (Price-AbovePDH, the four HB-L1*
+// patterns, etc.) also have no parentKey, but were NEVER part of
 // BACKTEST_CATEGORIES's tree at all — they're matchesPatternFlag-only
 // badges (see that batch's own comment above). The real signal for "this
 // is a top-level Category, i.e. a BACKTEST_CATEGORIES root" is
