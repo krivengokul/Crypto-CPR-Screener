@@ -672,13 +672,43 @@ const LEVELSABOVE_VIEWS: ViewDef[] = [
   { key: "A-A-AA-AA-EU3L4", label: "A-A-AA-AA-EU3L4", parentKey: "A-A-AA-AA", kind: "pattern", condition: (r) => r.EU3L4,
       order: 6
 },
+  { key: "A-A-AA-AA-CU4L2", label: "A-A-AA-AA-CU4L2", parentKey: "A-A-AA-AA", kind: "pattern", condition: (r) => r.CU4L2,
+      order: 9
+},
+  { key: "A-A-AA-AA-CU3L2", label: "A-A-AA-AA-CU3L2", parentKey: "A-A-AA-AA", kind: "pattern", condition: (r) => r.CU3L2,
+      order: 10
+},
+  { key: "A-A-AA-AA-EU2L3", label: "A-A-AA-AA-EU2L3", parentKey: "A-A-AA-AA", kind: "pattern", condition: (r) => r.EU2L3,
+      order: 11
+},
+  { key: "A-A-AA-AA-U4L2", label: "A-A-AA-AA-U4L2", parentKey: "A-A-AA-AA", kind: "pattern", condition: (r) => r.U4L2,
+      order: 12
+},
+  { key: "A-A-AA-AA-CU4L4", label: "A-A-AA-AA-CU4L4", parentKey: "A-A-AA-AA", kind: "pattern", condition: (r) => r.CU4L4,
+      order: 13
+},
+  { key: "A-A-AA-AA-U2L3", label: "A-A-AA-AA-U2L3", parentKey: "A-A-AA-AA", kind: "pattern", condition: (r) => r.U2L3,
+      order: 14
+},
+  { key: "A-A-AA-AA-U3L2", label: "A-A-AA-AA-U3L2", parentKey: "A-A-AA-AA", kind: "pattern", condition: (r) => r.U3L2,
+      order: 15
+},
   { key: "A-A-AA-AA-EUTL3", label: "A-A-AA-AA-EUTL3", parentKey: "R1AbovePR4-A-A-AA-AA", kind: "pattern", condition: (r) => r.EUTL3,
       order: 7
 },
 
-  // --- A-A-AA-OA's one nested child ---
+  // --- A-A-AA-OA's nested Subpattern children ---
   { key: "A-A-AA-OA-U3L4", label: "A-A-AA-OA-U3L4", parentKey: "A-A-AA-OA", kind: "pattern", condition: (r) => r.U3L4,
       order: 0
+},
+  { key: "A-A-AA-OA-EU3L4", label: "A-A-AA-OA-EU3L4", parentKey: "A-A-AA-OA", kind: "pattern", condition: (r) => r.EU3L4,
+      order: 1
+},
+  { key: "A-A-AA-OA-U4L4", label: "A-A-AA-OA-U4L4", parentKey: "A-A-AA-OA", kind: "pattern", condition: (r) => r.U4L4,
+      order: 2
+},
+  { key: "A-A-AA-OA-EU2L4", label: "A-A-AA-OA-EU2L4", parentKey: "A-A-AA-OA", kind: "pattern", condition: (r) => r.EU2L4,
+      order: 3
 },
 
   // --- leaf Views (self-contained, target-graded) ---
