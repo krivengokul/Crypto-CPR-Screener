@@ -462,6 +462,96 @@ function AttachPointSelect({
   );
 }
 
+const ENTRY_OPTIONS = ["R4", "R3", "R2", "R1", "TC", "Pivot", "BC", "S1", "S2", "S3", "S4"];
+
+/** Every valid Target rung — union of BULLISH_TARGETS/BEARISH_TARGETS keys
+ * on the workflow-patch side (copyviewpatch.mjs), used here only to parse
+ * an existing View's key back into its parts (see parseComposedViewKey). */
+const TARGET_OPTIONS = ["R1", "R2", "R3", "R4", "S1", "S2", "S3", "S4"];
+
+/**
+ * "Create" View's key is fully derived (never typed) as
+ * "{Entry}-{Pattern/Subpattern key}[-{Gap Badge}]-{Target}" — see
+ * CreateViewControl's own `viewKey` below. This walks that same
+ * composition back apart for an *existing* View: strip a known Entry
+ * off the front, a known Target off the back, then a known Gap Badge
+ * off whatever's left, in that order (the only order consistent with
+ * how the pieces were joined).
+ *
+ * EditViewControl uses only the `gapBadge` result of this, to preselect
+ * its Gap Badge dropdown to whatever this View's key already seems to
+ * encode instead of always resetting to "Any Gap Badge" — there's no
+ * field on ViewDef that stores a Gap Badge filter directly (it only
+ * lives baked into the View's `condition` closure), so this string-match
+ * is the only way to guess it, and a miss just leaves the dropdown at
+ * "Any Gap Badge". The `patternKey` this returns is deliberately NOT
+ * used for the View Key field itself — a hand-created or otherwise
+ * non-hyphenated key (e.g. one using ":" instead of "-") won't parse
+ * cleanly here, and EditViewControl instead reads `conditionKey` off the
+ * ViewDef directly (see its own `patternKey` — the same value
+ * editBacktestView itself uses), which needs no parsing and never
+ * misses.
+ */
+function parseComposedViewKey(
+  key: string
+): { patternKey: string; entry?: string; target?: string; gapBadge?: string } {
+  let rest = key;
+
+  let entry: string | undefined;
+  for (const opt of ENTRY_OPTIONS) {
+    if (rest.startsWith(`${opt}-`)) {
+      entry = opt;
+      rest = rest.slice(opt.length + 1);
+      break;
+    }
+  }
+
+  let target: string | undefined;
+  for (const opt of TARGET_OPTIONS) {
+    if (rest.endsWith(`-${opt}`)) {
+      target = opt;
+      rest = rest.slice(0, -(opt.length + 1));
+      break;
+    }
+  }
+
+  let gapBadge: string | undefined;
+  for (const badge of ALL_GAP_BADGES) {
+    if (rest.endsWith(`-${badge}`)) {
+      gapBadge = badge;
+      rest = rest.slice(0, -(badge.length + 1));
+      break;
+    }
+  }
+
+  return { patternKey: rest, entry, target, gapBadge };
+}
+
+/**
+ * "Create View" — for a Pattern/Subpattern that has no BACKTEST_TARGETS
+ * entry of its own yet (BacktestPanel's activePatternTarget undefined,
+ * showing the "U4 (today's R4)" fallback description instead of a real
+ * graded View). Unlike CopyViewControl, there's no existing entry to
+ * clone — this attaches the fixed default recipe (target R4, entry TC,
+ * stoploss S1) to the Pattern/Subpattern's own condition (via
+ * conditionKey), with levelCheckDefs derived fresh from whichever
+ * symbol's row this was opened from (backtest.ts's deriveLevelCheckDefs
+ * — the canonical algorithm, not a re-implementation of it).
+ */
+
+/**
+ * "Edit View" — allows editing an existing ViewDef (Direction, Entry, Target,
+ * View Name, Attach Point, and Gap Badge). Like Create View, the View Key
+ * is fully derived from the dropdowns (Entry/Pattern/Gap Badge/Target,
+ * with the Pattern piece read off the ViewDef's own conditionKey — see
+ * `patternKey` below) rather than typed, and — unlike Create View — that
+ * derived key can differ from the View's current key, which renames/moves
+ * it to the new key on save (see viewKey below and handleSave's newKey).
+ * Reuses the copyviewpatch.mjs AST patcher via copy-view.yml with isEdit=true,
+ * which already supports sourceKey !== newKey (renaming/moving an existing
+ * entry, including across category arrays) — see applyCopyViewPatch's
+ * `if (isEdit)` branch there.
+ */
 function CopyViewControl({
   sourceKey,
   sourceLabel,
