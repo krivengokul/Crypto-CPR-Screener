@@ -6457,13 +6457,13 @@ VIEWS.push(...INSIDE_CPR_DUPLICATE_VIEWS);
 // (r.outCPR / r.overlapLower) via the parentKey chain. The ORIGINAL
 // nodes are untouched.
 //
-// Duplicate top-node keys are prefixed "OUTCPR-" / "OVB-" to stay unique.
+// Duplicate top-node keys are prefixed "OUT-" / "OVB-" to stay unique.
 // ---------------------------------------------------------------------
 
 const OUTCPR_DUPLICATE_VIEWS: ViewDef[] = [
   // --- C-C-BB-AA (order 0) ---
   {
-    key: "OUTCPR-C-C-BB-AA",
+    key: "OUT-C-C-BB-AA",
     label: "C-C-BB-AA",
     parentKey: "outcpr",
     kind: "pattern",
@@ -6475,13 +6475,176 @@ const OUTCPR_DUPLICATE_VIEWS: ViewDef[] = [
     order: 0,
   },
   {
-    key: "OUTCPR-C-C-BB-AA-CL3U3",
+    key: "OUT-C-C-BB-AA-CL3U3",
     label: "C-C-BB-AA-CL3U3",
-    parentKey: "OUTCPR-C-C-BB-AA",
+    parentKey: "OUT-C-C-BB-AA",
     kind: "pattern",
     condition: (r) => r.CL3U3,
     order: 0,
   },
+
+  // Added from PatternStats "Missing Subpatterns" (OutCPR 29-row
+  // unclassified breakdown). Child keys reuse the plain "<compound>-<FLAG>"
+  // form UNLESS that exact key already exists elsewhere in the file (true
+  // for E-E-AA-BB-EU2L2, B-E-HA-BB-EL3U3, B-A-HA-SB-EL3U4 — already
+  // children of the ORIGINAL/OVB branches) — those get the "OUT-" prefix
+  // instead, same collision rule used throughout this file's duplicate
+  // sections.
+
+  // --- E-E-AA-BB (order 1) ---
+  {
+    key: "OUT-E-E-AA-BB",
+    label: "E-E-AA-BB",
+    parentKey: "outcpr",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-E" &&
+      r.HHLLCategory === "HHLL-E" &&
+      r.RRHHCategory === "RRHH-AA" &&
+      r.SSLLCategory === "SSLL-BB",
+    order: 1,
+  },
+  { key: "OUT-E-E-AA-BB-EU2L2", label: "E-E-AA-BB-EU2L2", parentKey: "OUT-E-E-AA-BB", kind: "pattern", condition: (r) => r.EU2L2, order: 0 },
+  { key: "E-E-AA-BB-EU3L3", label: "E-E-AA-BB-EU3L3", parentKey: "OUT-E-E-AA-BB", kind: "pattern", condition: (r) => r.EU3L3, order: 1 },
+
+  // --- B-E-HA-BB (order 2) ---
+  {
+    key: "OUT-B-E-HA-BB",
+    label: "B-E-HA-BB",
+    parentKey: "outcpr",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-B" &&
+      r.HHLLCategory === "HHLL-E" &&
+      r.RRHHCategory === "RRHH-HA" &&
+      r.SSLLCategory === "SSLL-BB",
+    order: 2,
+  },
+  { key: "OUT-B-E-HA-BB-EL3U3", label: "B-E-HA-BB-EL3U3", parentKey: "OUT-B-E-HA-BB", kind: "pattern", condition: (r) => r.EL3U3, order: 0 },
+
+  // --- B-A-HA-SB (order 3) ---
+  {
+    key: "OUT-B-A-HA-SB",
+    label: "B-A-HA-SB",
+    parentKey: "outcpr",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-B" &&
+      r.HHLLCategory === "HHLL-A" &&
+      r.RRHHCategory === "RRHH-HA" &&
+      r.SSLLCategory === "SSLL-SB",
+    order: 3,
+  },
+  { key: "B-A-HA-SB-EU3L3", label: "B-A-HA-SB-EU3L3", parentKey: "OUT-B-A-HA-SB", kind: "pattern", condition: (r) => r.EU3L3, order: 0 },
+  { key: "OUT-B-A-HA-SB-EL3U4", label: "B-A-HA-SB-EL3U4", parentKey: "OUT-B-A-HA-SB", kind: "pattern", condition: (r) => r.EL3U4, order: 1 },
+
+  // --- A-B-RA-LB (order 4) ---
+  {
+    key: "OUT-A-B-RA-LB",
+    label: "A-B-RA-LB",
+    parentKey: "outcpr",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-A" &&
+      r.HHLLCategory === "HHLL-B" &&
+      r.RRHHCategory === "RRHH-RA" &&
+      r.SSLLCategory === "SSLL-LB",
+    order: 4,
+  },
+  { key: "A-B-RA-LB-EU4L4", label: "A-B-RA-LB-EU4L4", parentKey: "OUT-A-B-RA-LB", kind: "pattern", condition: (r) => r.EU4L4, order: 0 },
+
+  // --- E-E-OA-OB (order 5) ---
+  {
+    key: "OUT-E-E-OA-OB",
+    label: "E-E-OA-OB",
+    parentKey: "outcpr",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-E" &&
+      r.HHLLCategory === "HHLL-E" &&
+      r.RRHHCategory === "RRHH-OA" &&
+      r.SSLLCategory === "SSLL-OB",
+    order: 5,
+  },
+  { key: "E-E-OA-OB-EU4L4", label: "E-E-OA-OB-EU4L4", parentKey: "OUT-E-E-OA-OB", kind: "pattern", condition: (r) => r.EU4L4, order: 0 },
+
+  // --- E-E-AA-OB (order 6) ---
+  {
+    key: "OUT-E-E-AA-OB",
+    label: "E-E-AA-OB",
+    parentKey: "outcpr",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-E" &&
+      r.HHLLCategory === "HHLL-E" &&
+      r.RRHHCategory === "RRHH-AA" &&
+      r.SSLLCategory === "SSLL-OB",
+    order: 6,
+  },
+  { key: "E-E-AA-OB-EU3L4", label: "E-E-AA-OB-EU3L4", parentKey: "OUT-E-E-AA-OB", kind: "pattern", condition: (r) => r.EU3L4, order: 0 },
+
+  // --- A-B-E-E (order 7) ---
+  {
+    key: "OUT-A-B-E-E",
+    label: "A-B-E-E",
+    parentKey: "outcpr",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-A" &&
+      r.HHLLCategory === "HHLL-B" &&
+      r.RRHHCategory === "RRHH-E" &&
+      r.SSLLCategory === "SSLL-E",
+    order: 7,
+  },
+  { key: "A-B-E-E-EL4U4", label: "A-B-E-E-EL4U4", parentKey: "OUT-A-B-E-E", kind: "pattern", condition: (r) => r.EL4U4, order: 0 },
+  { key: "A-B-E-E-L4U4", label: "A-B-E-E-L4U4", parentKey: "OUT-A-B-E-E", kind: "pattern", condition: (r) => r.L4U4, order: 1 },
+  { key: "A-B-E-E-EU4L4", label: "A-B-E-E-EU4L4", parentKey: "OUT-A-B-E-E", kind: "pattern", condition: (r) => r.EU4L4, order: 2 },
+
+  // --- A-E-OA-E (order 8) ---
+  {
+    key: "OUT-A-E-OA-E",
+    label: "A-E-OA-E",
+    parentKey: "outcpr",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-A" &&
+      r.HHLLCategory === "HHLL-E" &&
+      r.RRHHCategory === "RRHH-OA" &&
+      r.SSLLCategory === "SSLL-E",
+    order: 8,
+  },
+  { key: "A-E-OA-E-EU4L4", label: "A-E-OA-E-EU4L4", parentKey: "OUT-A-E-OA-E", kind: "pattern", condition: (r) => r.EU4L4, order: 0 },
+
+  // --- B-A-E-E (order 9) ---
+  {
+    key: "OUT-B-A-E-E",
+    label: "B-A-E-E",
+    parentKey: "outcpr",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-B" &&
+      r.HHLLCategory === "HHLL-A" &&
+      r.RRHHCategory === "RRHH-E" &&
+      r.SSLLCategory === "SSLL-E",
+    order: 9,
+  },
+  { key: "B-A-E-E-L4U4", label: "B-A-E-E-L4U4", parentKey: "OUT-B-A-E-E", kind: "pattern", condition: (r) => r.L4U4, order: 0 },
+  { key: "B-A-E-E-CL4U4", label: "B-A-E-E-CL4U4", parentKey: "OUT-B-A-E-E", kind: "pattern", condition: (r) => r.CL4U4, order: 1 },
+
+  // --- B-A-E-SB (order 10) ---
+  {
+    key: "OUT-B-A-E-SB",
+    label: "B-A-E-SB",
+    parentKey: "outcpr",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-B" &&
+      r.HHLLCategory === "HHLL-A" &&
+      r.RRHHCategory === "RRHH-E" &&
+      r.SSLLCategory === "SSLL-SB",
+    order: 10,
+  },
+  { key: "B-A-E-SB-EL4U4", label: "B-A-E-SB-EL4U4", parentKey: "OUT-B-A-E-SB", kind: "pattern", condition: (r) => r.EL4U4, order: 0 },
 ];
 
 VIEWS.push(...OUTCPR_DUPLICATE_VIEWS);
