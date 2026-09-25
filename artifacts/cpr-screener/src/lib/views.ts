@@ -6447,6 +6447,72 @@ const INSIDE_CPR_DUPLICATE_VIEWS: ViewDef[] = [
 VIEWS.push(...INSIDE_CPR_DUPLICATE_VIEWS);
 
 // ---------------------------------------------------------------------
+// "Include in OutCPR" / "Include in Overlap Below" — duplicate branches
+// added per user request, same treatment as OVERLAP_ABOVE_DUPLICATE_VIEWS
+// and INSIDE_CPR_DUPLICATE_VIEWS above: each compound node gets a SECOND
+// node nested under "outcpr" / "overlapLower" instead of its original
+// levelsabove/compressed parent, with the identical 4-way SSRR/HHLL/
+// RRHH/SSLL identity condition. Because these duplicate nodes are NOT
+// standalone, passesView also ANDs in the parent's own condition
+// (r.outCPR / r.overlapLower) via the parentKey chain. The ORIGINAL
+// nodes are untouched.
+//
+// Duplicate top-node keys are prefixed "OUTCPR-" / "OVB-" to stay unique.
+// ---------------------------------------------------------------------
+
+const OUTCPR_DUPLICATE_VIEWS: ViewDef[] = [
+  // --- C-C-BB-AA (order 0) ---
+  {
+    key: "OUTCPR-C-C-BB-AA",
+    label: "C-C-BB-AA",
+    parentKey: "outcpr",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-C" &&
+      r.HHLLCategory === "HHLL-C" &&
+      r.RRHHCategory === "RRHH-BB" &&
+      r.SSLLCategory === "SSLL-AA",
+    order: 0,
+  },
+  {
+    key: "OUTCPR-C-C-BB-AA-CL3U3",
+    label: "C-C-BB-AA-CL3U3",
+    parentKey: "OUTCPR-C-C-BB-AA",
+    kind: "pattern",
+    condition: (r) => r.CL3U3,
+    order: 0,
+  },
+];
+
+VIEWS.push(...OUTCPR_DUPLICATE_VIEWS);
+
+const OVERLAP_BELOW_DUPLICATE_VIEWS: ViewDef[] = [
+  // --- C-B-BB-LB (order 0) ---
+  {
+    key: "OVB-C-B-BB-LB",
+    label: "C-B-BB-LB",
+    parentKey: "overlapLower",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-C" &&
+      r.HHLLCategory === "HHLL-B" &&
+      r.RRHHCategory === "RRHH-BB" &&
+      r.SSLLCategory === "SSLL-LB",
+    order: 0,
+  },
+  {
+    key: "OVB-C-B-BB-LB-CL4U4",
+    label: "C-B-BB-LB-CL4U4",
+    parentKey: "OVB-C-B-BB-LB",
+    kind: "pattern",
+    condition: (r) => r.CL4U4,
+    order: 0,
+  },
+];
+
+VIEWS.push(...OVERLAP_BELOW_DUPLICATE_VIEWS);
+
+// ---------------------------------------------------------------------
 // Step 3, batch 5 (coverage audit) — the ~25-and-then-some standalone
 // raw-flag Pattern badges from matchesPatternFlag's switch (lines
 // 1904-2086) that were never nested anywhere in BACKTEST_CATEGORIES at
