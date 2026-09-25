@@ -45,4 +45,29 @@ export const EXPANDED_VIEWS: ViewDef[] = [
     stoplossLabel: "S1 (today's S1)", getStoploss: (r) => r.todayCPR.s1,
       order: 4
 },
+
+  // --- "E-E-AA-BB"'s remaining Subpattern children — the 8 "Missing
+  // Subpatterns" chips (95 previously-unclassified rows) from the Filter
+  // Scan / Pattern Stats breakdown. Plain pattern entries (no target
+  // grading requested), matching the style used for other categories'
+  // Subpatterns (e.g. "B-E-HA-BB-EL2U4" in views.ts). ---
+  { key: "E-E-AA-BB-EL2U3", label: "E-E-AA-BB-EL2U3", parentKey: "E-E-AA-BB", kind: "pattern", condition: (r) => r.EL2U3, order: 5 },
+  { key: "E-E-AA-BB-EU2L3", label: "E-E-AA-BB-EU2L3", parentKey: "E-E-AA-BB", kind: "pattern", condition: (r) => r.EU2L3, order: 6 },
+  { key: "E-E-AA-BB-EL3U3", label: "E-E-AA-BB-EL3U3", parentKey: "E-E-AA-BB", kind: "pattern", condition: (r) => r.EL3U3, order: 7 },
+  { key: "E-E-AA-BB-EU3L3", label: "E-E-AA-BB-EU3L3", parentKey: "E-E-AA-BB", kind: "pattern", condition: (r) => r.EU3L3, order: 8 },
+  { key: "E-E-AA-BB-EL3U4", label: "E-E-AA-BB-EL3U4", parentKey: "E-E-AA-BB", kind: "pattern", condition: (r) => r.EL3U4, order: 9 },
+  { key: "E-E-AA-BB-EL4U4", label: "E-E-AA-BB-EL4U4", parentKey: "E-E-AA-BB", kind: "pattern", condition: (r) => r.EL4U4, order: 10 },
+  { key: "E-E-AA-BB-EU3L4", label: "E-E-AA-BB-EU3L4", parentKey: "E-E-AA-BB", kind: "pattern", condition: (r) => r.EU3L4, order: 11 },
+  { key: "E-E-AA-BB-EU4L4", label: "E-E-AA-BB-EU4L4", parentKey: "E-E-AA-BB", kind: "pattern", condition: (r) => r.EU4L4, order: 12 },
+
+  // --- Additional standalone Subpatterns requested directly (not from a
+  // single shared parent) — one plain pattern entry per compound parent. ---
+  { key: "E-A-AA-E-EU2L3", label: "E-A-AA-E-EU2L3", parentKey: "E-A-AA-E", kind: "pattern", condition: (r) => r.EU2L3, order: 0 },
+  { key: "E-A-AA-SB-EU3L4", label: "E-A-AA-SB-EU3L4", parentKey: "E-A-AA-SB", kind: "pattern", condition: (r) => r.EU3L4, order: 0 },
+  { key: "E-E-OA-BB-EL2U3", label: "E-E-OA-BB-EL2U3", parentKey: "E-E-OA-BB", kind: "pattern", condition: (r) => r.EL2U3, order: 0 },
+  { key: "E-E-AA-OB-EU2L3", label: "E-E-AA-OB-EU2L3", parentKey: "E-E-AA-OB", kind: "pattern", condition: (r) => r.EU2L3, order: 0 },
+  { key: "E-B-E-BB-EL3U4", label: "E-B-E-BB-EL3U4", parentKey: "E-B-E-BB", kind: "pattern", condition: (r) => r.EL3U4, order: 0 },
+  { key: "E-B-C-BB-EL2U3", label: "E-B-C-BB-EL2U3", parentKey: "E-B-C-BB", kind: "pattern", condition: (r) => r.EL2U3, order: 0 },
+  { key: "E-B-RA-BB-EL3U4", label: "E-B-RA-BB-EL3U4", parentKey: "E-B-RA-BB", kind: "pattern", condition: (r) => r.EL3U4, order: 0 },
+  { key: "E-A-AA-OB-EU2L3", label: "E-A-AA-OB-EU2L3", parentKey: "E-A-AA-OB", kind: "pattern", condition: (r) => r.EU2L3, order: 0 },
 ];
