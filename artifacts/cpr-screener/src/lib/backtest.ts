@@ -1203,7 +1203,7 @@ export function setBacktestSymbolOverride(symbol: string | null): void {
   symbolOverride = s ? s : null;
 }
 
-async function getSymbolUniverse(
+export async function getSymbolUniverse(
   source: BacktestSource,
   entryDateISO: string,
   onProgress?: (done: number, total: number, symbol: string) => void,
@@ -2164,7 +2164,29 @@ export async function runPatternCensus(
   const dates: string[] = [];
   for (let d = startDateISO; d <= endDateISO; d = addDaysISO(d, 1)) dates.push(d);
 
-  const symbols: string[] = await getSymbolUniverse(source, endDateISO);
+  // FIXED: this used to resolve ONE universe fixed at endDateISO (today) and
+  // reuse it for every date in the range. That undercounts relative to
+  // BacktestPanel's date-range Pattern scan (runPivotLevelBacktest), which
+  // calls getSymbolUniverse PER DATE — the correct universe for date D is
+  // "symbols that existed/traded on D", not "symbols currently listed
+  // today". A symbol that mattered on an earlier date but has since been
+  // delisted or dropped out of today's top-symbols snapshot was silently
+  // excluded from every day of the census, even the day it actually
+  // matched. Resolving getSymbolUniverse per date (same function
+  // BacktestPanel uses, so results share its persisted per-date snapshot
+  // cache) makes this function's counts agree with BacktestPanel's for the
+  // same date range and pattern.
+  const universeByDate = new Map<string, Set<string>>();
+  for (const dateISO of dates) {
+    const dayUniverse = await getSymbolUniverse(source, dateISO, onProgress);
+    universeByDate.set(dateISO, new Set(dayUniverse));
+  }
+
+  // Union of every day's universe — this is the full set of symbols whose
+  // candle history needs to be warmed before the sweep below.
+  const symbols: string[] = [
+    ...new Set(dates.flatMap((d) => [...(universeByDate.get(d) ?? [])])),
+  ];
   await prefetchHistories(symbols, source, onProgress);
 
   const batchSize = 50;
@@ -2176,6 +2198,9 @@ export async function runPatternCensus(
     await Promise.all(
       batch.map(async (symbol) => {
         for (const dateISO of dates) {
+          // Only grade this (symbol, date) pair if the symbol was actually
+          // in that date's own universe — see the FIXED note above.
+          if (!universeByDate.get(dateISO)?.has(symbol)) continue;
           const reconstructed = await reconstructCPRForDate(symbol, source, dateISO);
           if (!reconstructed) continue;
           // NOTE: named candleWindow (not `window`) so it can never be
