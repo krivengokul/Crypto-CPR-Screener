@@ -3143,17 +3143,10 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
 },
 
   // --- direct Pattern children of "R1AbovePR4" ---
-  { key: "EUTL3", label: "EUTL3", parentKey: "R1AbovePR4", kind: "pattern", condition: (r) => r.EUTL3,
-      order: 1
-},
   // No target-graded sub-patterns nested under EUPL2 yet — it's a
   // symbol-list-only scan in the Backtest dropdown.
   // (EL1L2 / EL2L1 used to be direct children of "R1AbovePR4" here; they now
   // live under "A-A-AA-AA" as A-A-AA-AA-EL1L2 / A-A-AA-AA-EL2L1 below.)
-  { key: "EUPL2", label: "EUPL2", parentKey: "R1AbovePR4", kind: "pattern", condition: (r) => r.EUPL2,
-      order: 5
-},
-
   // --- Pattern "A-E-AA-E" inside "ABOVE LEVEL4" and its subpatterns ---
   // Note: this key was previously declared a second time further below
   // (order: 12, with only the "EUBL2" child) — that second declaration
@@ -3189,6 +3182,8 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
     condition: (r) => r.EU1L2,
     order: 1,
   },
+  { key: "A-E-AA-E-EUTL2", label: "A-E-AA-E-EUTL2", parentKey: "R1AbovePR4-A-E-AA-E", kind: "pattern", condition: (r) => r.EUTL2, order: 2 },
+  { key: "A-E-AA-E-EUPL2", label: "A-E-AA-E-EUPL2", parentKey: "R1AbovePR4-A-E-AA-E", kind: "pattern", condition: (r) => r.EUPL2, order: 3 },
 
   // --- Pattern "A-A-AA-AA" inside "ABOVE LEVEL4" and its subpatterns ---
   {
@@ -3277,6 +3272,10 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
   { key: "A-A-AA-AA-EL2L1", label: "A-A-AA-AA-EL2L1", parentKey: "R1AbovePR4-A-A-AA-AA", kind: "pattern", condition: (r) => r.EL2L1,
       order: 9
 },
+  { key: "A-A-AA-AA-EUTL4", label: "A-A-AA-AA-EUTL4", parentKey: "R1AbovePR4-A-A-AA-AA", kind: "pattern", condition: (r) => r.EUTL4, order: 10 },
+  { key: "A-A-AA-AA-U1L4", label: "A-A-AA-AA-U1L4", parentKey: "R1AbovePR4-A-A-AA-AA", kind: "pattern", condition: (r) => r.U1L4, order: 11 },
+  { key: "A-A-AA-AA-None", label: "A-A-AA-AA-None", parentKey: "R1AbovePR4-A-A-AA-AA", kind: "pattern", condition: (r) => !pickOuterLevelPattern(r), order: 12 },
+  { key: "A-A-AA-AA-EU1L2", label: "A-A-AA-AA-EU1L2", parentKey: "R1AbovePR4-A-A-AA-AA", kind: "pattern", condition: (r) => r.EU1L2, order: 13 },
 
   // --- Pattern "A-A-AA-OA" inside "ABOVE LEVEL4" and its subpatterns ---
   {
@@ -3307,6 +3306,8 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
     condition: (r) => r.EU1L3,
     order: 1,
   },
+  { key: "A-A-AA-OA-EUBL2", label: "A-A-AA-OA-EUBL2", parentKey: "R1AbovePR4-A-A-AA-OA", kind: "pattern", condition: (r) => r.EUBL2, order: 2 },
+  { key: "A-A-AA-OA-EUPL2", label: "A-A-AA-OA-EUPL2", parentKey: "R1AbovePR4-A-A-AA-OA", kind: "pattern", condition: (r) => r.EUPL2, order: 3 },
 
   // --- Pattern "A-E-AA-LB" inside "ABOVE LEVEL4" and its subpatterns ---
   {
@@ -3337,6 +3338,10 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
     condition: (r) => r.EUTL2,
     order: 1,
   },
+  { key: "A-E-AA-LB-EU1L3", label: "A-E-AA-LB-EU1L3", parentKey: "R1AbovePR4-A-E-AA-LB", kind: "pattern", condition: (r) => r.EU1L3, order: 2 },
+  { key: "A-E-AA-LB-EUTL3", label: "A-E-AA-LB-EUTL3", parentKey: "R1AbovePR4-A-E-AA-LB", kind: "pattern", condition: (r) => r.EUTL3, order: 3 },
+  { key: "A-E-AA-LB-EU1L4", label: "A-E-AA-LB-EU1L4", parentKey: "R1AbovePR4-A-E-AA-LB", kind: "pattern", condition: (r) => r.EU1L4, order: 4 },
+  { key: "A-E-AA-LB-EU1L2", label: "A-E-AA-LB-EU1L2", parentKey: "R1AbovePR4-A-E-AA-LB", kind: "pattern", condition: (r) => r.EU1L2, order: 5 },
 
   // --- Pattern "E-E-AA-OB" inside "ABOVE LEVEL4" and its subpatterns ---
   {
@@ -3359,6 +3364,7 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
     condition: (r) => r.EU1L2,
     order: 0,
   },
+  { key: "E-E-AA-OB-EUBL1", label: "E-E-AA-OB-EUBL1", parentKey: "R1AbovePR4-E-E-AA-OB", kind: "pattern", condition: (r) => r.EUBL1, order: 1 },
 
   // --- "A-E-AA-E-EUBL2" subpattern, child of the single "A-E-AA-E" node
   // declared earlier under "ABOVE LEVEL4" (its duplicate parent-node
@@ -3383,23 +3389,6 @@ const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
 },
 
   // --- leaf Views ---
-  {
-    key: "TiMe-EUTL3-AU4:2PM",
-    label: "TiMe-EUTL3-AU4:2PM",
-    parentKey: "EUTL3",
-    kind: "view",
-    direction: "Up",
-    condition: (r) =>
-      r.prevCPR.widthPct > 0.10 && r.prevCPR.widthPct <= 0.22 && // Tiny
-      r.todayCPR.widthPct > 5.00 && r.todayCPR.widthPct <= 10.00, // Mega
-    targetLabel: "AU4 (prev day's R4)",
-    getTarget: (r) => r.prevCPR.r4,
-    entryLabel: "TC (today's TC)",
-    getEntry: (r) => r.todayCPR.tc,
-    stoplossLabel: "S1 (today's S1)",
-    getStoploss: (r) => r.todayCPR.s1,
-      order: 0
-},
   {
     key: "6AM:MegMeg-L3:8PM",
     label: "6AM:MegMeg-L3:8PM",
