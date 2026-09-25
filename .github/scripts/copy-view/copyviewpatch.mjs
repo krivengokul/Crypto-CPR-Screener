@@ -1,18 +1,11 @@
-import { readFileSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { readFileSync, writeFileSync, existsSync, statSync } from "node:fs";
+import { resolve, dirname } from "node:path";
 import { Project, SyntaxKind } from "ts-morph";
 
 function escapeForDoubleQuotedString(s) {
   return s.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 }
 
-/**
- * Property names in these files are written both ways —
- * `copyViews: [...]` and `"levelsabove": [...]` — and ts-morph's
- * getProperty(name) matches the raw name text (quotes included), so a
- * plain getProperty("levelsabove") misses the quoted form and we end up
- * adding a SECOND "levelsabove" key. Compare on the unquoted name.
- */
 function getObjectProperty(obj, name) {
   return obj.getProperties().find((prop) => {
     if (!prop.isKind(SyntaxKind.PropertyAssignment)) return false;
@@ -34,12 +27,6 @@ function getInitializerText(obj, name) {
   return prop.getInitializer()?.getText();
 }
 
-/**
- * Every id in ViewsSidebar.tsx's `pivotcategories` array — i.e. the
- * left-nav sections that actually render. A Views[...] bucket keyed on
- * anything else is dead weight (nothing displays it), so the nav step
- * checks against this before inserting.
- */
 function getScreenerNavCategoryIds(sourceText) {
   const project = new Project({ useInMemoryFileSystem: true });
   const sourceFile = project.createSourceFile("ViewsSidebar.tsx", sourceText);
@@ -56,10 +43,6 @@ function getScreenerNavCategoryIds(sourceText) {
     .filter(Boolean);
 }
 
-/**
- * Pushes {id: newKey, label: newLabel} into ViewsSidebar.tsx's
- * Views[categoryKey] array (creating it if it doesn't exist yet).
- */
 function updateScreenerNav(sourceText, categoryKey, sourceKey, newKey, newLabel, isEdit) {
   const project = new Project({ useInMemoryFileSystem: true });
   const sourceFile = project.createSourceFile("ViewsSidebar.tsx", sourceText);
@@ -118,14 +101,6 @@ function updateScreenerNav(sourceText, categoryKey, sourceKey, newKey, newLabel,
   return sourceFile.getFullText();
 }
 
-/**
- * The 97 compound Patterns ("B-B-BB-BB", "A-A-AA-OA", "E-E-OA-OB", ...)
- * are built at runtime by COMPOUND_COMBOS.map(makeCompoundView) — they
- * have NO object literal in views.ts, so the AST walk below can't find
- * them and used to give up (returning null → the nav chip fell into the
- * "CREATED VIEWS" bucket). makeCompoundView reads the parent off
- * SSRR_INFO keyed on the first letter, so mirror that here.
- */
 const SSRR_LETTER_TO_CATEGORY = {
   A: "levelsabove",
   B: "levelsbelow",
@@ -134,17 +109,7 @@ const SSRR_LETTER_TO_CATEGORY = {
 };
 const COMPOUND_KEY_RE = /^([ABCE])-[ABCE]-[A-Za-z]+-[A-Za-z]+$/;
 
-/**
- * Walks the parentKey chain in views.ts to find the root category key.
- */
-function resolveTopLevelCategoryKey(viewsSourceText, attachKey) {
-  const project = new Project({ useInMemoryFileSystem: true });
-  const sourceFile = project.createSourceFile("views.ts", viewsSourceText);
-
-  const allViewObjs = sourceFile
-    .getDescendantsOfKind(SyntaxKind.ObjectLiteralExpression)
-    .filter((obj) => getStringPropertyValue(obj, "key") !== undefined);
-
+function resolveTopLevelCategoryKey(allViewObjs, attachKey) {
   const objMap = new Map();
   for (const obj of allViewObjs) {
     const k = getStringPropertyValue(obj, "key");
@@ -164,7 +129,6 @@ function resolveTopLevelCategoryKey(viewsSourceText, attachKey) {
       continue;
     }
 
-    // Not a literal — the generated compound Patterns land here.
     const compound = COMPOUND_KEY_RE.exec(currKey);
     if (compound) return SSRR_LETTER_TO_CATEGORY[compound[1]] ?? null;
 
@@ -200,150 +164,19 @@ const ENTRY_MAP = {
   S4: { label: "S4 (today's S4)", prop: "s4" },
 };
 
-const CATEGORY_ARRAY_MAP = {
-  levelsabove: "LEVELSABOVE_VIEWS",
-  levelsbelow: "LEVELSBELOW_VIEWS",
-  compressed: "COMPRESSED_VIEWS",
-  expanded: "EXPANDED_VIEWS",
-  R1AbovePR4: "R1ABOVEPR4_S1BELOWPS4_VIEWS",
-  S1BelowPS4: "R1ABOVEPR4_S1BELOWPS4_VIEWS",
-  "equal-cpr": "MISC_VIEWS",
-  top15gainers: "MISC_VIEWS",
-  top15losers: "MISC_VIEWS",
-  touch: "MISC_VIEWS",
+const CATEGORY_FILE_MAP = {
+  levelsabove: { file: "categories/levelsAbove.ts", arr: "LEVELSABOVE_VIEWS" },
+  levelsbelow: { file: "categories/levelsBelow.ts", arr: "LEVELSBELOW_VIEWS" },
+  compressed: { file: "categories/compressed.ts", arr: "COMPRESSED_VIEWS" },
+  expanded: { file: "categories/expanded.ts", arr: "EXPANDED_VIEWS" },
+  R1AbovePR4: { file: "categories/r1s1.ts", arr: "R1ABOVEPR4_S1BELOWPS4_VIEWS" },
+  S1BelowPS4: { file: "categories/r1s1.ts", arr: "R1ABOVEPR4_S1BELOWPS4_VIEWS" },
+  "equal-cpr": { file: "categories/misc.ts", arr: "MISC_VIEWS" },
+  top15gainers: { file: "categories/misc.ts", arr: "MISC_VIEWS" },
+  top15losers: { file: "categories/misc.ts", arr: "MISC_VIEWS" },
+  touch: { file: "categories/misc.ts", arr: "MISC_VIEWS" },
 };
-
-function applyCopyViewPatch(sourceText, sourceKey, newKey, newLabel, levelCheckDefs, attachKey, overrides = {}, isEdit = false) {
-  const project = new Project({ useInMemoryFileSystem: true });
-  const sourceFile = project.createSourceFile("views.ts", sourceText);
-
-  // Locate the source view across all object literals in views.ts
-  const allViewObjs = sourceFile
-    .getDescendantsOfKind(SyntaxKind.ObjectLiteralExpression)
-    .filter((obj) => getStringPropertyValue(obj, "key") !== undefined);
-
-  const sourceObj = allViewObjs.find((el) => getStringPropertyValue(el, "key") === sourceKey);
-  if (!sourceObj) {
-    throw new Error(`No ViewDef entry with key "${sourceKey}" found in views.ts.`);
-  }
-
-  if (isEdit) {
-    if (newKey !== sourceKey && allViewObjs.some((el) => el !== sourceObj && getStringPropertyValue(el, "key") === newKey)) {
-      throw new Error(`"${newKey}" already exists in views.ts — pick a different key.`);
-    }
-  } else {
-    if (allViewObjs.some((el) => getStringPropertyValue(el, "key") === newKey)) {
-      throw new Error(`"${newKey}" already exists in views.ts — pick a different key.`);
-    }
-  }
-
-  const effectiveAttachKey =
-    attachKey && attachKey.trim() !== ""
-      ? attachKey
-      : getStringPropertyValue(sourceObj, "parentKey") ?? sourceKey;
-
-  // Derive condition key: check explicit conditionKey, or parse passesView call in condition, or fallback to parentKey
-  let originalConditionKey = getStringPropertyValue(sourceObj, "conditionKey");
-  if (!originalConditionKey || originalConditionKey === sourceKey) {
-    const condProp = getObjectProperty(sourceObj, "condition");
-    if (condProp) {
-      const condText = condProp.getInitializer()?.getText() ?? "";
-      const match = condText.match(/passesView\(r,\s*[\"\']([^\"\']+)[\"\']\)/);
-      if (match && match[1] && match[1] !== sourceKey) {
-        originalConditionKey = match[1];
-      }
-    }
-  }
-  if (!originalConditionKey || originalConditionKey === sourceKey) {
-    originalConditionKey = getStringPropertyValue(sourceObj, "parentKey") ?? effectiveAttachKey;
-  }
-
-  const rawDirection = overrides.direction ?? getStringPropertyValue(sourceObj, "direction") ?? "Up";
-  const direction = rawDirection === "Down" || rawDirection === "bearish" ? "Down" : "Up";
-  const isUp = direction === "Up";
-
-  let targetLabel, getTargetText;
-  if (overrides.target) {
-    const tDef = (isUp ? BULLISH_TARGETS : BEARISH_TARGETS)[overrides.target];
-    targetLabel = tDef ? tDef.label : (isUp ? "U4 (today's R4)" : "L4 (today's S4)");
-    getTargetText = tDef ? `(r) => r.todayCPR.${tDef.prop}` : (isUp ? "(r) => r.todayCPR.r4" : "(r) => r.todayCPR.s4");
-  } else {
-    targetLabel = getStringPropertyValue(sourceObj, "targetLabel") ?? (isUp ? "U4 (today's R4)" : "L4 (today's S4)");
-    getTargetText = getInitializerText(sourceObj, "getTarget") ?? (isUp ? "(r) => r.todayCPR.r4" : "(r) => r.todayCPR.s4");
-  }
-
-  let entryLabel, getEntryText;
-  if (overrides.entry && ENTRY_MAP[overrides.entry]) {
-    const eDef = ENTRY_MAP[overrides.entry];
-    entryLabel = eDef.label;
-    getEntryText = `(r) => r.todayCPR.${eDef.prop}`;
-  } else {
-    entryLabel = getStringPropertyValue(sourceObj, "entryLabel") ?? (isUp ? "TC (today's TC)" : "BC (today's BC)");
-    getEntryText = getInitializerText(sourceObj, "getEntry") ?? (isUp ? "(r) => r.todayCPR.tc" : "(r) => r.todayCPR.bc");
-  }
-
-  const stoplossLabel = isUp ? "S1 (today's S1)" : "R1 (today's R1)";
-  const getStoplossText = isUp ? "(r) => r.todayCPR.s1" : "(r) => r.todayCPR.r1";
-
-  // Level check defs: override if provided, else copy from source if present
-  let levelCheckDefsJson = "undefined";
-  if (levelCheckDefs !== null) {
-    levelCheckDefsJson = JSON.stringify(levelCheckDefs, null, 2);
-  } else {
-    levelCheckDefsJson = getInitializerText(sourceObj, "levelCheckDefs") ?? "undefined";
-  }
-
-  const gapBadge = overrides.gapBadge?.trim();
-  const conditionField = gapBadge
-    ? `condition: (r) => passesView(r, "${escapeForDoubleQuotedString(originalConditionKey)}") && matchesGapBadge(r, "${escapeForDoubleQuotedString(gapBadge)}"),\n    standalone: true,`
-    : `conditionKey: "${escapeForDoubleQuotedString(originalConditionKey)}",`;
-
-  const newViewLiteral = `{
-    key: "${escapeForDoubleQuotedString(newKey)}",
-    label: "${escapeForDoubleQuotedString(newLabel)}",
-    parentKey: "${escapeForDoubleQuotedString(effectiveAttachKey)}",
-    ${conditionField}
-    kind: "view",
-    direction: "${direction}",
-    targetLabel: "${escapeForDoubleQuotedString(targetLabel)}",
-    getTarget: ${getTargetText},
-    entryLabel: "${escapeForDoubleQuotedString(entryLabel)}",
-    getEntry: ${getEntryText},
-    stoplossLabel: "${escapeForDoubleQuotedString(stoplossLabel)}",
-    getStoploss: ${getStoplossText},
-    levelCheckDefs: ${levelCheckDefsJson},
-  }`;
-
-  const topCat = resolveTopLevelCategoryKey(sourceText, effectiveAttachKey);
-  const arrName = (topCat && CATEGORY_ARRAY_MAP[topCat]) || "COPY_VIEWS";
-
-  const targetArrayDecl =
-    sourceFile.getVariableDeclaration(arrName) ?? sourceFile.getVariableDeclarationOrThrow("COPY_VIEWS");
-  const targetArray = targetArrayDecl.getInitializerIfKindOrThrow(SyntaxKind.ArrayLiteralExpression);
-
-  if (isEdit) {
-    const parentArr = sourceObj.getFirstAncestorByKind(SyntaxKind.ArrayLiteralExpression);
-    if (parentArr && parentArr === targetArray) {
-      sourceObj.replaceWithText(newViewLiteral);
-    } else {
-      // sourceObj here is an ObjectLiteralExpression sitting as an
-      // element of parentArr — ts-morph doesn't implement a generic
-      // .remove() for that node kind (only for statements, class
-      // members, etc.), so sourceObj.remove() throws "is not a
-      // function". ArrayLiteralExpression.removeElement() accepts the
-      // element node directly and is the correct way to drop it.
-      if (!parentArr) {
-        throw new Error(`Couldn't find the array literal containing "${sourceKey}" in views.ts.`);
-      }
-      parentArr.removeElement(sourceObj);
-      targetArray.addElement(newViewLiteral);
-    }
-  } else {
-    targetArray.addElement(newViewLiteral);
-  }
-
-  return { patchedText: sourceFile.getFullText(), originalConditionKey, topCat, arrName };
-}
+const DEFAULT_TARGET = { file: "categories/copyViews.ts", arr: "COPY_VIEWS" };
 
 // --- Entry point ------------------------------------------------------
 const isEdit = process.env.IS_EDIT === "true";
@@ -393,42 +226,183 @@ if (levelCheckDefsB64 && levelCheckDefsB64.trim() !== "") {
   }
 }
 
-const filePath = resolve(process.cwd(), "../../../", viewsFilePath);
+const baseFilePath = resolve(process.cwd(), "../../../", viewsFilePath);
+const viewsDir = existsSync(baseFilePath) && statSync(baseFilePath).isDirectory()
+  ? baseFilePath
+  : resolve(dirname(baseFilePath), "views");
+const isModular = existsSync(resolve(viewsDir, "categories"));
 
-let currentText;
-try {
-  currentText = readFileSync(filePath, "utf-8");
-} catch (err) {
-  console.error(`Could not read ${filePath}: ${err.message}`);
-  process.exit(1);
-}
+const project = new Project();
+let targetFile, targetArrayDecl, targetArray, allViewObjs, sourceObj, sourceFile;
 
-try {
-  const { patchedText, originalConditionKey, topCat, arrName } = applyCopyViewPatch(currentText, sourceKey, newKey, newLabel, levelCheckDefs, attachKey, overrides, isEdit);
-  writeFileSync(filePath, patchedText, "utf-8");
-
-  const viewsSidebarFilePath = resolve(process.cwd(), "../../../", viewsSidebarFilePathEnv);
-  const viewsSidebarText = readFileSync(viewsSidebarFilePath, "utf-8");
-
-  // Only sections that exist in pivotcategories actually render; anything
-  // else would be an invisible bucket, so those fall back to copyViews.
-  const navIds = getScreenerNavCategoryIds(viewsSidebarText);
-  const screenerCategoryKey = topCat && navIds.includes(topCat) ? topCat : "copyViews";
-  if (screenerCategoryKey !== topCat) {
-    console.warn(
-      `"${topCat ?? attachKey}" has no entry in ViewsSidebar.tsx's pivotcategories — putting the nav chip in "copyViews" instead.`
-    );
-  }
-
-  const patchedViewsSidebarText = updateScreenerNav(viewsSidebarText, screenerCategoryKey, sourceKey, newKey, newLabel, isEdit);
-  writeFileSync(viewsSidebarFilePath, patchedViewsSidebarText, "utf-8");
-
-  const levelCheckNote = levelCheckDefs ? ` with ${levelCheckDefs.length} symbol-derived levelCheckDefs` : "";
-  console.log(
-    `Patched ${viewsFilePath}: "${sourceKey}" -> "${newKey}" under "${attachKey}" in ${arrName} (grades against "${originalConditionKey}")${levelCheckNote}`
+if (isModular) {
+  project.addSourceFilesAtPaths(`${viewsDir}/categories/*.ts`);
+  allViewObjs = project.getSourceFiles().flatMap((sf) =>
+    sf
+      .getDescendantsOfKind(SyntaxKind.ObjectLiteralExpression)
+      .filter((obj) => getStringPropertyValue(obj, "key") !== undefined)
   );
-  console.log(`Added "${newKey}" to ${viewsSidebarFilePathEnv}'s Views["${screenerCategoryKey}"]`);
-} catch (err) {
-  console.error(err.message);
-  process.exit(1);
+
+  for (const sf of project.getSourceFiles()) {
+    const objs = sf
+      .getDescendantsOfKind(SyntaxKind.ObjectLiteralExpression)
+      .filter((el) => getStringPropertyValue(el, "key") === sourceKey);
+    if (objs.length > 0) {
+      sourceObj = objs[0];
+      sourceFile = sf;
+      break;
+    }
+  }
+} else {
+  sourceFile = project.addSourceFileAtPath(baseFilePath);
+  allViewObjs = sourceFile
+    .getDescendantsOfKind(SyntaxKind.ObjectLiteralExpression)
+    .filter((obj) => getStringPropertyValue(obj, "key") !== undefined);
+  sourceObj = allViewObjs.find((el) => getStringPropertyValue(el, "key") === sourceKey);
 }
+
+if (!sourceObj) {
+  throw new Error(`No ViewDef entry with key "${sourceKey}" found.`);
+}
+
+if (isEdit) {
+  if (newKey !== sourceKey && allViewObjs.some((el) => el !== sourceObj && getStringPropertyValue(el, "key") === newKey)) {
+    throw new Error(`"${newKey}" already exists — pick a different key.`);
+  }
+} else {
+  if (allViewObjs.some((el) => getStringPropertyValue(el, "key") === newKey)) {
+    throw new Error(`"${newKey}" already exists — pick a different key.`);
+  }
+}
+
+const effectiveAttachKey =
+  attachKey && attachKey.trim() !== ""
+    ? attachKey
+    : getStringPropertyValue(sourceObj, "parentKey") ?? sourceKey;
+
+let originalConditionKey = getStringPropertyValue(sourceObj, "conditionKey");
+if (!originalConditionKey || originalConditionKey === sourceKey) {
+  const condProp = getObjectProperty(sourceObj, "condition");
+  if (condProp) {
+    const condText = condProp.getInitializer()?.getText() ?? "";
+    const match = condText.match(/passesView\(r,\s*[\"\']([^\"\']+)[\"\']\)/);
+    if (match && match[1] && match[1] !== sourceKey) {
+      originalConditionKey = match[1];
+    }
+  }
+}
+if (!originalConditionKey || originalConditionKey === sourceKey) {
+  originalConditionKey = getStringPropertyValue(sourceObj, "parentKey") ?? effectiveAttachKey;
+}
+
+const rawDirection = overrides.direction ?? getStringPropertyValue(sourceObj, "direction") ?? "Up";
+const direction = rawDirection === "Down" || rawDirection === "bearish" ? "Down" : "Up";
+const isUp = direction === "Up";
+
+let targetLabel, getTargetText;
+if (overrides.target) {
+  const tDef = (isUp ? BULLISH_TARGETS : BEARISH_TARGETS)[overrides.target];
+  targetLabel = tDef ? tDef.label : (isUp ? "U4 (today's R4)" : "L4 (today's S4)");
+  getTargetText = tDef ? `(r) => r.todayCPR.${tDef.prop}` : (isUp ? "(r) => r.todayCPR.r4" : "(r) => r.todayCPR.s4");
+} else {
+  targetLabel = getStringPropertyValue(sourceObj, "targetLabel") ?? (isUp ? "U4 (today's R4)" : "L4 (today's S4)");
+  getTargetText = getInitializerText(sourceObj, "getTarget") ?? (isUp ? "(r) => r.todayCPR.r4" : "(r) => r.todayCPR.s4");
+}
+
+let entryLabel, getEntryText;
+if (overrides.entry && ENTRY_MAP[overrides.entry]) {
+  const eDef = ENTRY_MAP[overrides.entry];
+  entryLabel = eDef.label;
+  getEntryText = `(r) => r.todayCPR.${eDef.prop}`;
+} else {
+  entryLabel = getStringPropertyValue(sourceObj, "entryLabel") ?? (isUp ? "TC (today's TC)" : "BC (today's BC)");
+  getEntryText = getInitializerText(sourceObj, "getEntry") ?? (isUp ? "(r) => r.todayCPR.tc" : "(r) => r.todayCPR.bc");
+}
+
+const stoplossLabel = isUp ? "S1 (today's S1)" : "R1 (today's R1)";
+const getStoplossText = isUp ? "(r) => r.todayCPR.s1" : "(r) => r.todayCPR.r1";
+
+let levelCheckDefsJson = "undefined";
+if (levelCheckDefs !== null) {
+  levelCheckDefsJson = JSON.stringify(levelCheckDefs, null, 2);
+} else {
+  levelCheckDefsJson = getInitializerText(sourceObj, "levelCheckDefs") ?? "undefined";
+}
+
+const gapBadge = overrides.gapBadge?.trim();
+const conditionField = gapBadge
+  ? `condition: (r) => passesView(r, "${escapeForDoubleQuotedString(originalConditionKey)}") && matchesGapBadge(r, "${escapeForDoubleQuotedString(gapBadge)}"),\n    standalone: true,`
+  : `conditionKey: "${escapeForDoubleQuotedString(originalConditionKey)}",`;
+
+const newViewLiteral = `{
+    key: "${escapeForDoubleQuotedString(newKey)}",
+    label: "${escapeForDoubleQuotedString(newLabel)}",
+    parentKey: "${escapeForDoubleQuotedString(effectiveAttachKey)}",
+    ${conditionField}
+    kind: "view",
+    direction: "${direction}",
+    targetLabel: "${escapeForDoubleQuotedString(targetLabel)}",
+    getTarget: ${getTargetText},
+    entryLabel: "${escapeForDoubleQuotedString(entryLabel)}",
+    getEntry: ${getEntryText},
+    stoplossLabel: "${escapeForDoubleQuotedString(stoplossLabel)}",
+    getStoploss: ${getStoplossText},
+    levelCheckDefs: ${levelCheckDefsJson},
+  }`;
+
+const topCat = resolveTopLevelCategoryKey(allViewObjs, effectiveAttachKey);
+let arrName;
+
+if (isModular) {
+  const targetInfo = (topCat && CATEGORY_FILE_MAP[topCat]) || DEFAULT_TARGET;
+  arrName = targetInfo.arr;
+  const targetPath = resolve(viewsDir, targetInfo.file);
+  targetFile = project.getSourceFileOrThrow(targetPath);
+  targetArrayDecl = targetFile.getVariableDeclarationOrThrow(targetInfo.arr);
+  targetArray = targetArrayDecl.getInitializerIfKindOrThrow(SyntaxKind.ArrayLiteralExpression);
+} else {
+  arrName = (topCat && CATEGORY_FILE_MAP[topCat]?.arr) || "COPY_VIEWS";
+  targetFile = sourceFile;
+  targetArrayDecl = sourceFile.getVariableDeclaration(arrName) ?? sourceFile.getVariableDeclarationOrThrow("COPY_VIEWS");
+  targetArray = targetArrayDecl.getInitializerIfKindOrThrow(SyntaxKind.ArrayLiteralExpression);
+}
+
+if (isEdit) {
+  const parentArr = sourceObj.getFirstAncestorByKind(SyntaxKind.ArrayLiteralExpression);
+  if (parentArr && parentArr === targetArray) {
+    sourceObj.replaceWithText(newViewLiteral);
+  } else {
+    if (!parentArr) {
+      throw new Error(`Couldn't find the array literal containing "${sourceKey}".`);
+    }
+    parentArr.removeElement(sourceObj);
+    targetArray.addElement(newViewLiteral);
+  }
+} else {
+  targetArray.addElement(newViewLiteral);
+}
+
+targetFile.saveSync();
+if (isEdit && sourceFile !== targetFile) {
+  sourceFile.saveSync();
+}
+
+const viewsSidebarFilePath = resolve(process.cwd(), "../../../", viewsSidebarFilePathEnv);
+const viewsSidebarText = readFileSync(viewsSidebarFilePath, "utf-8");
+
+const navIds = getScreenerNavCategoryIds(viewsSidebarText);
+const screenerCategoryKey = topCat && navIds.includes(topCat) ? topCat : "copyViews";
+if (screenerCategoryKey !== topCat) {
+  console.warn(
+    `"${topCat ?? attachKey}" has no entry in ViewsSidebar.tsx's pivotcategories — putting the nav chip in "copyViews" instead.`
+  );
+}
+
+const patchedViewsSidebarText = updateScreenerNav(viewsSidebarText, screenerCategoryKey, sourceKey, newKey, newLabel, isEdit);
+writeFileSync(viewsSidebarFilePath, patchedViewsSidebarText, "utf-8");
+
+const levelCheckNote = levelCheckDefs ? ` with ${levelCheckDefs.length} symbol-derived levelCheckDefs` : "";
+console.log(
+  `Patched: "${sourceKey}" -> "${newKey}" under "${attachKey}" in ${arrName} (grades against "${originalConditionKey}")${levelCheckNote}`
+);
+console.log(`Added "${newKey}" to ${viewsSidebarFilePathEnv}'s Views["${screenerCategoryKey}"]`);
