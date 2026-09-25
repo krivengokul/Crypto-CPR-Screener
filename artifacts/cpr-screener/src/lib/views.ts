@@ -6246,6 +6246,65 @@ const OVERLAP_ABOVE_DUPLICATE_VIEWS: ViewDef[] = [
     order: 26,
   },
   { key: "OVA-A-C-RA-OA-CU4L3", label: "A-C-RA-OA-CU4L3", parentKey: "OVA-A-C-RA-OA", kind: "pattern", condition: (r) => r.CU4L3, order: 0 },
+
+  // Added from PatternStats "Missing Subpatterns" (OVA unclassified breakdown, Sep 2026) —
+  // duplicate top nodes + flag leaves, prefixed keys to avoid collisions.
+  // --- A-B-RA-E (order 27) ---
+  {
+    key: "OVA-A-B-RA-E",
+    label: "A-B-RA-E",
+    parentKey: "OVA",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-A" &&
+      r.HHLLCategory === "HHLL-B" &&
+      r.RRHHCategory === "RRHH-RA" &&
+      r.SSLLCategory === "SSLL-E",
+    order: 27,
+  },
+  { key: "OVA-A-B-RA-E-EU4L4", label: "A-B-RA-E-EU4L4", parentKey: "OVA-A-B-RA-E", kind: "pattern", condition: (r) => r.EU4L4, order: 0 },
+  // --- A-B-E-LB (order 28) ---
+  {
+    key: "OVA-A-B-E-LB",
+    label: "A-B-E-LB",
+    parentKey: "OVA",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-A" &&
+      r.HHLLCategory === "HHLL-B" &&
+      r.RRHHCategory === "RRHH-E" &&
+      r.SSLLCategory === "SSLL-LB",
+    order: 28,
+  },
+  { key: "OVA-A-B-E-LB-CU4L4", label: "A-B-E-LB-CU4L4", parentKey: "OVA-A-B-E-LB", kind: "pattern", condition: (r) => r.CU4L4, order: 0 },
+  // --- B-A-HA-E (order 29) ---
+  {
+    key: "OVA-B-A-HA-E",
+    label: "B-A-HA-E",
+    parentKey: "OVA",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-B" &&
+      r.HHLLCategory === "HHLL-A" &&
+      r.RRHHCategory === "RRHH-HA" &&
+      r.SSLLCategory === "SSLL-E",
+    order: 29,
+  },
+  { key: "OVA-B-A-HA-E-EU4L4", label: "B-A-HA-E-EU4L4", parentKey: "OVA-B-A-HA-E", kind: "pattern", condition: (r) => r.EU4L4, order: 0 },
+  // --- E-A-OA-C (order 30) ---
+  {
+    key: "OVA-E-A-OA-C",
+    label: "E-A-OA-C",
+    parentKey: "OVA",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-E" &&
+      r.HHLLCategory === "HHLL-A" &&
+      r.RRHHCategory === "RRHH-OA" &&
+      r.SSLLCategory === "SSLL-C",
+    order: 30,
+  },
+  { key: "OVA-E-A-OA-C-EU4L4", label: "E-A-OA-C-EU4L4", parentKey: "OVA-E-A-OA-C", kind: "pattern", condition: (r) => r.EU4L4, order: 0 },
 ];
 
 VIEWS.push(...OVERLAP_ABOVE_DUPLICATE_VIEWS);
@@ -6631,6 +6690,53 @@ const INSIDE_CPR_DUPLICATE_VIEWS: ViewDef[] = [
     order: 23,
   },
   { key: "INCPR-A-B-RA-C-EU4L4", label: "A-B-RA-C-EU4L4", parentKey: "INCPR-A-B-RA-C", kind: "pattern", condition: (r) => r.EU4L4, order: 0 },
+
+  // Added from PatternStats "Missing Subpatterns" (INCPR unclassified breakdown, Sep 2026) —
+  // duplicate top nodes + flag leaves, prefixed keys to avoid collisions.
+  // --- C-A-HA-AA (order 24) ---
+  {
+    key: "INCPR-C-A-HA-AA",
+    label: "C-A-HA-AA",
+    parentKey: "insidecpr",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-C" &&
+      r.HHLLCategory === "HHLL-A" &&
+      r.RRHHCategory === "RRHH-HA" &&
+      r.SSLLCategory === "SSLL-AA",
+    order: 24,
+  },
+  { key: "INCPR-C-A-HA-AA-CU3L2", label: "C-A-HA-AA-CU3L2", parentKey: "INCPR-C-A-HA-AA", kind: "pattern", condition: (r) => r.CU3L2, order: 0 },
+  // --- B-C-BB-C (order 25) ---
+  {
+    key: "INCPR-B-C-BB-C",
+    label: "B-C-BB-C",
+    parentKey: "insidecpr",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-B" &&
+      r.HHLLCategory === "HHLL-C" &&
+      r.RRHHCategory === "RRHH-BB" &&
+      r.SSLLCategory === "SSLL-C",
+    order: 25,
+  },
+  { key: "INCPR-B-C-BB-C-CL4U3", label: "B-C-BB-C-CL4U3", parentKey: "INCPR-B-C-BB-C", kind: "pattern", condition: (r) => r.CL4U3, order: 0 },
+  { key: "INCPR-B-C-BB-C-CL4U4", label: "B-C-BB-C-CL4U4", parentKey: "INCPR-B-C-BB-C", kind: "pattern", condition: (r) => r.CL4U4, order: 1 },
+  { key: "INCPR-B-C-BB-C-L4U4", label: "B-C-BB-C-L4U4", parentKey: "INCPR-B-C-BB-C", kind: "pattern", condition: (r) => r.L4U4, order: 2 },
+  // --- C-A-OB-AA (order 26) ---
+  {
+    key: "INCPR-C-A-OB-AA",
+    label: "C-A-OB-AA",
+    parentKey: "insidecpr",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-C" &&
+      r.HHLLCategory === "HHLL-A" &&
+      r.RRHHCategory === "RRHH-OB" &&
+      r.SSLLCategory === "SSLL-AA",
+    order: 26,
+  },
+  { key: "INCPR-C-A-OB-AA-CU3L2", label: "C-A-OB-AA-CU3L2", parentKey: "INCPR-C-A-OB-AA", kind: "pattern", condition: (r) => r.CU3L2, order: 0 },
 ];
 
 VIEWS.push(...INSIDE_CPR_DUPLICATE_VIEWS);
@@ -6834,6 +6940,179 @@ const OUTCPR_DUPLICATE_VIEWS: ViewDef[] = [
     order: 10,
   },
   { key: "B-A-E-SB-EL4U4", label: "B-A-E-SB-EL4U4", parentKey: "OUT-B-A-E-SB", kind: "pattern", condition: (r) => r.EL4U4, order: 0 },
+
+  // Added from PatternStats "Missing Subpatterns" (OUT unclassified breakdown, Sep 2026) —
+  // duplicate top nodes + flag leaves, prefixed keys to avoid collisions.
+  // --- E-B-E-BB (order 11) ---
+  {
+    key: "OUT-E-B-E-BB",
+    label: "E-B-E-BB",
+    parentKey: "outcpr",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-E" &&
+      r.HHLLCategory === "HHLL-B" &&
+      r.RRHHCategory === "RRHH-E" &&
+      r.SSLLCategory === "SSLL-BB",
+    order: 11,
+  },
+  { key: "OUT-E-B-E-BB-EU3L4", label: "E-B-E-BB-EU3L4", parentKey: "OUT-E-B-E-BB", kind: "pattern", condition: (r) => r.EU3L4, order: 0 },
+  // --- A-B-E-LB (order 12) ---
+  {
+    key: "OUT-A-B-E-LB",
+    label: "A-B-E-LB",
+    parentKey: "outcpr",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-A" &&
+      r.HHLLCategory === "HHLL-B" &&
+      r.RRHHCategory === "RRHH-E" &&
+      r.SSLLCategory === "SSLL-LB",
+    order: 12,
+  },
+  { key: "OUT-A-B-E-LB-EL4U4", label: "A-B-E-LB-EL4U4", parentKey: "OUT-A-B-E-LB", kind: "pattern", condition: (r) => r.EL4U4, order: 0 },
+  // --- C-C-OB-AA (order 13) ---
+  {
+    key: "OUT-C-C-OB-AA",
+    label: "C-C-OB-AA",
+    parentKey: "outcpr",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-C" &&
+      r.HHLLCategory === "HHLL-C" &&
+      r.RRHHCategory === "RRHH-OB" &&
+      r.SSLLCategory === "SSLL-AA",
+    order: 13,
+  },
+  { key: "OUT-C-C-OB-AA-CU3L3", label: "C-C-OB-AA-CU3L3", parentKey: "OUT-C-C-OB-AA", kind: "pattern", condition: (r) => r.CU3L3, order: 0 },
+  // --- E-E-OA-BB (order 14) ---
+  {
+    key: "OUT-E-E-OA-BB",
+    label: "E-E-OA-BB",
+    parentKey: "outcpr",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-E" &&
+      r.HHLLCategory === "HHLL-E" &&
+      r.RRHHCategory === "RRHH-OA" &&
+      r.SSLLCategory === "SSLL-BB",
+    order: 14,
+  },
+  { key: "OUT-E-E-OA-BB-EL3U3", label: "E-E-OA-BB-EL3U3", parentKey: "OUT-E-E-OA-BB", kind: "pattern", condition: (r) => r.EL3U3, order: 0 },
+  // --- E-B-RA-BB (order 15) ---
+  {
+    key: "OUT-E-B-RA-BB",
+    label: "E-B-RA-BB",
+    parentKey: "outcpr",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-E" &&
+      r.HHLLCategory === "HHLL-B" &&
+      r.RRHHCategory === "RRHH-RA" &&
+      r.SSLLCategory === "SSLL-BB",
+    order: 15,
+  },
+  { key: "OUT-E-B-RA-BB-EL4U4", label: "E-B-RA-BB-EL4U4", parentKey: "OUT-E-B-RA-BB", kind: "pattern", condition: (r) => r.EL4U4, order: 0 },
+  // --- A-C-E-AA (order 16) ---
+  {
+    key: "OUT-A-C-E-AA",
+    label: "A-C-E-AA",
+    parentKey: "outcpr",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-A" &&
+      r.HHLLCategory === "HHLL-C" &&
+      r.RRHHCategory === "RRHH-E" &&
+      r.SSLLCategory === "SSLL-AA",
+    order: 16,
+  },
+  { key: "OUT-A-C-E-AA-CU4L4", label: "A-C-E-AA-CU4L4", parentKey: "OUT-A-C-E-AA", kind: "pattern", condition: (r) => r.CU4L4, order: 0 },
+  // --- C-C-OB-OA (order 17) ---
+  {
+    key: "OUT-C-C-OB-OA",
+    label: "C-C-OB-OA",
+    parentKey: "outcpr",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-C" &&
+      r.HHLLCategory === "HHLL-C" &&
+      r.RRHHCategory === "RRHH-OB" &&
+      r.SSLLCategory === "SSLL-OA",
+    order: 17,
+  },
+  { key: "OUT-C-C-OB-OA-CL4U4", label: "C-C-OB-OA-CL4U4", parentKey: "OUT-C-C-OB-OA", kind: "pattern", condition: (r) => r.CL4U4, order: 0 },
+  { key: "OUT-C-C-OB-OA-CU4L4", label: "C-C-OB-OA-CU4L4", parentKey: "OUT-C-C-OB-OA", kind: "pattern", condition: (r) => r.CU4L4, order: 1 },
+  // --- A-B-RA-E (order 18) ---
+  {
+    key: "OUT-A-B-RA-E",
+    label: "A-B-RA-E",
+    parentKey: "outcpr",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-A" &&
+      r.HHLLCategory === "HHLL-B" &&
+      r.RRHHCategory === "RRHH-RA" &&
+      r.SSLLCategory === "SSLL-E",
+    order: 18,
+  },
+  { key: "OUT-A-B-RA-E-EU3L4", label: "A-B-RA-E-EU3L4", parentKey: "OUT-A-B-RA-E", kind: "pattern", condition: (r) => r.EU3L4, order: 0 },
+  { key: "OUT-A-B-RA-E-CL4U4", label: "A-B-RA-E-CL4U4", parentKey: "OUT-A-B-RA-E", kind: "pattern", condition: (r) => r.CL4U4, order: 1 },
+  // --- E-A-AA-E (order 19) ---
+  {
+    key: "OUT-E-A-AA-E",
+    label: "E-A-AA-E",
+    parentKey: "outcpr",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-E" &&
+      r.HHLLCategory === "HHLL-A" &&
+      r.RRHHCategory === "RRHH-AA" &&
+      r.SSLLCategory === "SSLL-E",
+    order: 19,
+  },
+  { key: "OUT-E-A-AA-E-EU3L3", label: "E-A-AA-E-EU3L3", parentKey: "OUT-E-A-AA-E", kind: "pattern", condition: (r) => r.EU3L3, order: 0 },
+  // --- C-B-BB-E (order 20) ---
+  {
+    key: "OUT-C-B-BB-E",
+    label: "C-B-BB-E",
+    parentKey: "outcpr",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-C" &&
+      r.HHLLCategory === "HHLL-B" &&
+      r.RRHHCategory === "RRHH-BB" &&
+      r.SSLLCategory === "SSLL-E",
+    order: 20,
+  },
+  { key: "OUT-C-B-BB-E-CL4U4", label: "C-B-BB-E-CL4U4", parentKey: "OUT-C-B-BB-E", kind: "pattern", condition: (r) => r.CL4U4, order: 0 },
+  // --- A-E-AA-E (order 21) ---
+  {
+    key: "OUT-A-E-AA-E",
+    label: "A-E-AA-E",
+    parentKey: "outcpr",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-A" &&
+      r.HHLLCategory === "HHLL-E" &&
+      r.RRHHCategory === "RRHH-AA" &&
+      r.SSLLCategory === "SSLL-E",
+    order: 21,
+  },
+  { key: "OUT-A-E-AA-E-EU2L3", label: "A-E-AA-E-EU2L3", parentKey: "OUT-A-E-AA-E", kind: "pattern", condition: (r) => r.EU2L3, order: 0 },
+  // --- E-B-E-OB (order 22) ---
+  {
+    key: "OUT-E-B-E-OB",
+    label: "E-B-E-OB",
+    parentKey: "outcpr",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-E" &&
+      r.HHLLCategory === "HHLL-B" &&
+      r.RRHHCategory === "RRHH-E" &&
+      r.SSLLCategory === "SSLL-OB",
+    order: 22,
+  },
+  { key: "OUT-E-B-E-OB-EL4U4", label: "E-B-E-OB-EL4U4", parentKey: "OUT-E-B-E-OB", kind: "pattern", condition: (r) => r.EL4U4, order: 0 },
 ];
 
 VIEWS.push(...OUTCPR_DUPLICATE_VIEWS);
@@ -7264,6 +7543,107 @@ const OVERLAP_BELOW_DUPLICATE_VIEWS: ViewDef[] = [
     order: 24,
   },
   { key: "OVB-A-B-RA-E-CL4U4", label: "A-B-RA-E-CL4U4", parentKey: "OVB-A-B-RA-E", kind: "pattern", condition: (r) => r.CL4U4, order: 0 },
+
+  // Added from PatternStats "Missing Subpatterns" (OVB unclassified breakdown, Sep 2026) —
+  // duplicate top nodes + flag leaves, prefixed keys to avoid collisions.
+  // --- B-B-BB-OB (order 25) ---
+  {
+    key: "OVB-B-B-BB-OB",
+    label: "B-B-BB-OB",
+    parentKey: "overlapLower",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-B" &&
+      r.HHLLCategory === "HHLL-B" &&
+      r.RRHHCategory === "RRHH-BB" &&
+      r.SSLLCategory === "SSLL-OB",
+    order: 25,
+  },
+  { key: "OVB-B-B-BB-OB-CL4U4", label: "B-B-BB-OB-CL4U4", parentKey: "OVB-B-B-BB-OB", kind: "pattern", condition: (r) => r.CL4U4, order: 0 },
+  // --- B-A-HA-E (order 26) ---
+  {
+    key: "OVB-B-A-HA-E",
+    label: "B-A-HA-E",
+    parentKey: "overlapLower",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-B" &&
+      r.HHLLCategory === "HHLL-A" &&
+      r.RRHHCategory === "RRHH-HA" &&
+      r.SSLLCategory === "SSLL-E",
+    order: 26,
+  },
+  { key: "OVB-B-A-HA-E-CL4U4", label: "B-A-HA-E-CL4U4", parentKey: "OVB-B-A-HA-E", kind: "pattern", condition: (r) => r.CL4U4, order: 0 },
+  // --- A-B-E-LB (order 27) ---
+  {
+    key: "OVB-A-B-E-LB",
+    label: "A-B-E-LB",
+    parentKey: "overlapLower",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-A" &&
+      r.HHLLCategory === "HHLL-B" &&
+      r.RRHHCategory === "RRHH-E" &&
+      r.SSLLCategory === "SSLL-LB",
+    order: 27,
+  },
+  { key: "OVB-A-B-E-LB-EL4U4", label: "A-B-E-LB-EL4U4", parentKey: "OVB-A-B-E-LB", kind: "pattern", condition: (r) => r.EL4U4, order: 0 },
+  // --- C-B-BB-E (order 28) ---
+  {
+    key: "OVB-C-B-BB-E",
+    label: "C-B-BB-E",
+    parentKey: "overlapLower",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-C" &&
+      r.HHLLCategory === "HHLL-B" &&
+      r.RRHHCategory === "RRHH-BB" &&
+      r.SSLLCategory === "SSLL-E",
+    order: 28,
+  },
+  { key: "OVB-C-B-BB-E-CL4U4", label: "C-B-BB-E-CL4U4", parentKey: "OVB-C-B-BB-E", kind: "pattern", condition: (r) => r.CL4U4, order: 0 },
+  // --- B-B-C-OB (order 29) ---
+  {
+    key: "OVB-B-B-C-OB",
+    label: "B-B-C-OB",
+    parentKey: "overlapLower",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-B" &&
+      r.HHLLCategory === "HHLL-B" &&
+      r.RRHHCategory === "RRHH-C" &&
+      r.SSLLCategory === "SSLL-OB",
+    order: 29,
+  },
+  { key: "OVB-B-B-C-OB-EL4U4", label: "B-B-C-OB-EL4U4", parentKey: "OVB-B-B-C-OB", kind: "pattern", condition: (r) => r.EL4U4, order: 0 },
+  // --- B-E-C-OB (order 30) ---
+  {
+    key: "OVB-B-E-C-OB",
+    label: "B-E-C-OB",
+    parentKey: "overlapLower",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-B" &&
+      r.HHLLCategory === "HHLL-E" &&
+      r.RRHHCategory === "RRHH-C" &&
+      r.SSLLCategory === "SSLL-OB",
+    order: 30,
+  },
+  { key: "OVB-B-E-C-OB-EL4U4", label: "B-E-C-OB-EL4U4", parentKey: "OVB-B-E-C-OB", kind: "pattern", condition: (r) => r.EL4U4, order: 0 },
+  // --- E-E-OA-OB (order 31) ---
+  {
+    key: "OVB-E-E-OA-OB",
+    label: "E-E-OA-OB",
+    parentKey: "overlapLower",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-E" &&
+      r.HHLLCategory === "HHLL-E" &&
+      r.RRHHCategory === "RRHH-OA" &&
+      r.SSLLCategory === "SSLL-OB",
+    order: 31,
+  },
+  { key: "OVB-E-E-OA-OB-EL4U4", label: "E-E-OA-OB-EL4U4", parentKey: "OVB-E-E-OA-OB", kind: "pattern", condition: (r) => r.EL4U4, order: 0 },
 ];
 
 VIEWS.push(...OVERLAP_BELOW_DUPLICATE_VIEWS);
