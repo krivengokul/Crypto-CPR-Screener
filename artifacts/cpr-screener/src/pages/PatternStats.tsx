@@ -585,7 +585,7 @@ function CategoryBox({
               <span
                 className={[
                   "truncate font-mono text-xs",
-                  p.count > 0 ? "font-semibold text-slate-100" : "text-slate-600",
+                  p.count > 0 ? "font-semibold text-white" : "text-white",
                 ].join(" ")}
               >
                 {p.patternLabel}
@@ -644,15 +644,11 @@ function CategoryBox({
                   <span
                     className={[
                       "relative truncate font-mono text-xs",
-                      p.count === 0
-                        ? "text-slate-600"
-                        : dirClass
-                        ? [dirClass, isTop ? "font-semibold" : "font-medium"].join(" ")
-                        : isTop
-                        ? "font-semibold text-slate-100"
+                      p.kind === "view" && dirClass
+                        ? [dirClass, "font-medium"].join(" ")
                         : p.kind === "view"
-                        ? "text-slate-400"
-                        : "font-medium text-slate-200",
+                        ? "text-slate-100"
+                        : ["text-white", isTop ? "font-semibold" : "font-medium"].join(" "),
                     ].join(" ")}
                   >
                     {p.patternLabel}
