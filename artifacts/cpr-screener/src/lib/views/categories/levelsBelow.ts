@@ -100,6 +100,11 @@ export const LEVELSBELOW_VIEWS: ViewDef[] = [
   // --- B-E-C-BB's nested Pattern children (LEVEL BELOW) ---
   { key: "B-E-C-BB-EL2U3", label: "B-E-C-BB-EL2U3", parentKey: "B-E-C-BB", kind: "pattern", condition: (r) => r.EL2U3, order: 0 },
 
+  // --- Additional LEVEL BELOW Pattern children ---
+  { key: "B-C-BB-SB-CL3U2", label: "B-C-BB-SB-CL3U2", parentKey: "B-C-BB-SB", kind: "pattern", condition: (r) => r.CL3U2, order: 0 },
+  { key: "B-C-BB-E-CL3U3", label: "B-C-BB-E-CL3U3", parentKey: "B-C-BB-E", kind: "pattern", condition: (r) => r.CL3U3, order: 0 },
+  { key: "B-C-BB-C-CL4U3", label: "B-C-BB-C-CL4U3", parentKey: "B-C-BB-C", kind: "pattern", condition: (r) => r.CL4U3, order: 0 },
+
   // --- leaf Views ---
 
   {
