@@ -6205,6 +6205,75 @@ const OVERLAP_ABOVE_DUPLICATE_VIEWS: ViewDef[] = [
     order: 22,
   },
   { key: "OVA-E-E-OA-OB-EU3L4", label: "E-E-OA-OB-EU3L4", parentKey: "OVA-E-E-OA-OB", kind: "pattern", condition: (r) => r.EU3L4, order: 0 },
+
+  // Added from PatternStats "Missing Subpatterns" (Overlap Above 22-row
+  // unclassified breakdown). "A-C-C-AA-CU4L3", "A-B-C-LB-CU4L3" and
+  // "A-B-C-LB-CU4L4" get the "OVA-" prefix because the plain key is
+  // already claimed by INCPR's duplicate branch above (both categories
+  // happened to pick up the same compound+flag combo from their own
+  // breakdowns) — same first-claim collision rule used throughout.
+
+  // --- A-C-C-AA (order 23) ---
+  {
+    key: "OVA-A-C-C-AA",
+    label: "A-C-C-AA",
+    parentKey: "OVA",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-A" &&
+      r.HHLLCategory === "HHLL-C" &&
+      r.RRHHCategory === "RRHH-C" &&
+      r.SSLLCategory === "SSLL-AA",
+    order: 23,
+  },
+  { key: "OVA-A-C-C-AA-CU4L3", label: "A-C-C-AA-CU4L3", parentKey: "OVA-A-C-C-AA", kind: "pattern", condition: (r) => r.CU4L3, order: 0 },
+  { key: "A-C-C-AA-CU4L4", label: "A-C-C-AA-CU4L4", parentKey: "OVA-A-C-C-AA", kind: "pattern", condition: (r) => r.CU4L4, order: 1 },
+
+  // --- A-B-C-LB (order 24) ---
+  {
+    key: "OVA-A-B-C-LB",
+    label: "A-B-C-LB",
+    parentKey: "OVA",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-A" &&
+      r.HHLLCategory === "HHLL-B" &&
+      r.RRHHCategory === "RRHH-C" &&
+      r.SSLLCategory === "SSLL-LB",
+    order: 24,
+  },
+  { key: "OVA-A-B-C-LB-CU4L3", label: "A-B-C-LB-CU4L3", parentKey: "OVA-A-B-C-LB", kind: "pattern", condition: (r) => r.CU4L3, order: 0 },
+  { key: "OVA-A-B-C-LB-CU4L4", label: "A-B-C-LB-CU4L4", parentKey: "OVA-A-B-C-LB", kind: "pattern", condition: (r) => r.CU4L4, order: 1 },
+
+  // --- A-E-AA-LB (order 25) ---
+  {
+    key: "OVA-A-E-AA-LB",
+    label: "A-E-AA-LB",
+    parentKey: "OVA",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-A" &&
+      r.HHLLCategory === "HHLL-E" &&
+      r.RRHHCategory === "RRHH-AA" &&
+      r.SSLLCategory === "SSLL-LB",
+    order: 25,
+  },
+  { key: "A-E-AA-LB-EU3L4", label: "A-E-AA-LB-EU3L4", parentKey: "OVA-A-E-AA-LB", kind: "pattern", condition: (r) => r.EU3L4, order: 0 },
+
+  // --- A-C-RA-OA (order 26) ---
+  {
+    key: "OVA-A-C-RA-OA",
+    label: "A-C-RA-OA",
+    parentKey: "OVA",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-A" &&
+      r.HHLLCategory === "HHLL-C" &&
+      r.RRHHCategory === "RRHH-RA" &&
+      r.SSLLCategory === "SSLL-OA",
+    order: 26,
+  },
+  { key: "A-C-RA-OA-CU4L3", label: "A-C-RA-OA-CU4L3", parentKey: "OVA-A-C-RA-OA", kind: "pattern", condition: (r) => r.CU4L3, order: 0 },
 ];
 
 VIEWS.push(...OVERLAP_ABOVE_DUPLICATE_VIEWS);
@@ -6442,6 +6511,156 @@ const INSIDE_CPR_DUPLICATE_VIEWS: ViewDef[] = [
     order: 14,
   },
   { key: "INCPR-E-A-OA-C-EU4L4", label: "E-A-OA-C-EU4L4", parentKey: "INCPR-E-A-OA-C", kind: "pattern", condition: (r) => r.EU4L4, order: 0 },
+
+  // Added from PatternStats "Missing Subpatterns" (INCPR 56-row
+  // unclassified breakdown). Child keys reuse the plain
+  // "<compound>-<FLAG>" form UNLESS that exact key already exists
+  // elsewhere in the file (true for A-B-RA-LB-CL4U4, A-C-RA-AA-CU3L3,
+  // A-B-C-C-EU4L4 — already children of ORIGINAL branches) — those get
+  // the "INCPR-" prefix instead, same collision rule used throughout.
+
+  // --- A-B-RA-LB (order 15) ---
+  {
+    key: "INCPR-A-B-RA-LB",
+    label: "A-B-RA-LB",
+    parentKey: "insidecpr",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-A" &&
+      r.HHLLCategory === "HHLL-B" &&
+      r.RRHHCategory === "RRHH-RA" &&
+      r.SSLLCategory === "SSLL-LB",
+    order: 15,
+  },
+  { key: "A-B-RA-LB-CU4L3", label: "A-B-RA-LB-CU4L3", parentKey: "INCPR-A-B-RA-LB", kind: "pattern", condition: (r) => r.CU4L3, order: 0 },
+  { key: "A-B-RA-LB-CL3U3", label: "A-B-RA-LB-CL3U3", parentKey: "INCPR-A-B-RA-LB", kind: "pattern", condition: (r) => r.CL3U3, order: 1 },
+  { key: "A-B-RA-LB-CU3L3", label: "A-B-RA-LB-CU3L3", parentKey: "INCPR-A-B-RA-LB", kind: "pattern", condition: (r) => r.CU3L3, order: 2 },
+  { key: "INCPR-A-B-RA-LB-CL4U4", label: "A-B-RA-LB-CL4U4", parentKey: "INCPR-A-B-RA-LB", kind: "pattern", condition: (r) => r.CL4U4, order: 3 },
+
+  // --- A-C-RA-AA (order 16) ---
+  {
+    key: "INCPR-A-C-RA-AA",
+    label: "A-C-RA-AA",
+    parentKey: "insidecpr",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-A" &&
+      r.HHLLCategory === "HHLL-C" &&
+      r.RRHHCategory === "RRHH-RA" &&
+      r.SSLLCategory === "SSLL-AA",
+    order: 16,
+  },
+  { key: "INCPR-A-C-RA-AA-CU3L3", label: "A-C-RA-AA-CU3L3", parentKey: "INCPR-A-C-RA-AA", kind: "pattern", condition: (r) => r.CU3L3, order: 0 },
+
+  // --- A-C-C-AA (order 17) ---
+  {
+    key: "INCPR-A-C-C-AA",
+    label: "A-C-C-AA",
+    parentKey: "insidecpr",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-A" &&
+      r.HHLLCategory === "HHLL-C" &&
+      r.RRHHCategory === "RRHH-C" &&
+      r.SSLLCategory === "SSLL-AA",
+    order: 17,
+  },
+  { key: "A-C-C-AA-CU4L3", label: "A-C-C-AA-CU4L3", parentKey: "INCPR-A-C-C-AA", kind: "pattern", condition: (r) => r.CU4L3, order: 0 },
+
+  // --- A-B-C-LB (order 18) ---
+  {
+    key: "INCPR-A-B-C-LB",
+    label: "A-B-C-LB",
+    parentKey: "insidecpr",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-A" &&
+      r.HHLLCategory === "HHLL-B" &&
+      r.RRHHCategory === "RRHH-C" &&
+      r.SSLLCategory === "SSLL-LB",
+    order: 18,
+  },
+  { key: "A-B-C-LB-CU4L3", label: "A-B-C-LB-CU4L3", parentKey: "INCPR-A-B-C-LB", kind: "pattern", condition: (r) => r.CU4L3, order: 0 },
+  { key: "A-B-C-LB-CU4L4", label: "A-B-C-LB-CU4L4", parentKey: "INCPR-A-B-C-LB", kind: "pattern", condition: (r) => r.CU4L4, order: 1 },
+
+  // --- C-B-BB-C (order 19) ---
+  {
+    key: "INCPR-C-B-BB-C",
+    label: "C-B-BB-C",
+    parentKey: "insidecpr",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-C" &&
+      r.HHLLCategory === "HHLL-B" &&
+      r.RRHHCategory === "RRHH-BB" &&
+      r.SSLLCategory === "SSLL-C",
+    order: 19,
+  },
+  { key: "C-B-BB-C-CL3U3", label: "C-B-BB-C-CL3U3", parentKey: "INCPR-C-B-BB-C", kind: "pattern", condition: (r) => r.CL3U3, order: 0 },
+  { key: "C-B-BB-C-CL3U2", label: "C-B-BB-C-CL3U2", parentKey: "INCPR-C-B-BB-C", kind: "pattern", condition: (r) => r.CL3U2, order: 1 },
+
+  // --- C-C-BB-OA (order 20) ---
+  {
+    key: "INCPR-C-C-BB-OA",
+    label: "C-C-BB-OA",
+    parentKey: "insidecpr",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-C" &&
+      r.HHLLCategory === "HHLL-C" &&
+      r.RRHHCategory === "RRHH-BB" &&
+      r.SSLLCategory === "SSLL-OA",
+    order: 20,
+  },
+  { key: "C-C-BB-OA-CL3U3", label: "C-C-BB-OA-CL3U3", parentKey: "INCPR-C-C-BB-OA", kind: "pattern", condition: (r) => r.CL3U3, order: 0 },
+
+  // --- A-C-C-OA (order 21) ---
+  {
+    key: "INCPR-A-C-C-OA",
+    label: "A-C-C-OA",
+    parentKey: "insidecpr",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-A" &&
+      r.HHLLCategory === "HHLL-C" &&
+      r.RRHHCategory === "RRHH-C" &&
+      r.SSLLCategory === "SSLL-OA",
+    order: 21,
+  },
+  { key: "A-C-C-OA-CU4L4", label: "A-C-C-OA-CU4L4", parentKey: "INCPR-A-C-C-OA", kind: "pattern", condition: (r) => r.CU4L4, order: 0 },
+  { key: "A-C-C-OA-CU4L3", label: "A-C-C-OA-CU4L3", parentKey: "INCPR-A-C-C-OA", kind: "pattern", condition: (r) => r.CU4L3, order: 1 },
+
+  // --- A-B-C-C (order 22) ---
+  {
+    key: "INCPR-A-B-C-C",
+    label: "A-B-C-C",
+    parentKey: "insidecpr",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-A" &&
+      r.HHLLCategory === "HHLL-B" &&
+      r.RRHHCategory === "RRHH-C" &&
+      r.SSLLCategory === "SSLL-C",
+    order: 22,
+  },
+  { key: "INCPR-A-B-C-C-EU4L4", label: "A-B-C-C-EU4L4", parentKey: "INCPR-A-B-C-C", kind: "pattern", condition: (r) => r.EU4L4, order: 0 },
+  { key: "A-B-C-C-CU4L3", label: "A-B-C-C-CU4L3", parentKey: "INCPR-A-B-C-C", kind: "pattern", condition: (r) => r.CU4L3, order: 1 },
+  { key: "A-B-C-C-EL4U4", label: "A-B-C-C-EL4U4", parentKey: "INCPR-A-B-C-C", kind: "pattern", condition: (r) => r.EL4U4, order: 2 },
+
+  // --- A-B-RA-C (order 23) ---
+  {
+    key: "INCPR-A-B-RA-C",
+    label: "A-B-RA-C",
+    parentKey: "insidecpr",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-A" &&
+      r.HHLLCategory === "HHLL-B" &&
+      r.RRHHCategory === "RRHH-RA" &&
+      r.SSLLCategory === "SSLL-C",
+    order: 23,
+  },
+  { key: "A-B-RA-C-EU4L4", label: "A-B-RA-C-EU4L4", parentKey: "INCPR-A-B-RA-C", kind: "pattern", condition: (r) => r.EU4L4, order: 0 },
 ];
 
 VIEWS.push(...INSIDE_CPR_DUPLICATE_VIEWS);
@@ -7006,6 +7225,75 @@ const OVERLAP_BELOW_DUPLICATE_VIEWS: ViewDef[] = [
     order: 20,
   },
   { key: "C-C-OB-OA-CL4U3", label: "C-C-OB-OA-CL4U3", parentKey: "OVB-C-C-OB-OA", kind: "pattern", condition: (r) => r.CL4U3, order: 0 },
+
+  // Added from PatternStats "Missing Subpatterns" (Overlap Below 17-row
+  // unclassified breakdown). "C-B-BB-C-CL3U3", "C-B-BB-C-CL3U2" and
+  // "C-C-BB-OA-CL3U3" get the "OVB-" prefix because the plain key is
+  // already claimed by INCPR's duplicate branch above — same first-claim
+  // collision rule used throughout.
+
+  // --- C-B-BB-C (order 21) ---
+  {
+    key: "OVB-C-B-BB-C",
+    label: "C-B-BB-C",
+    parentKey: "overlapLower",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-C" &&
+      r.HHLLCategory === "HHLL-B" &&
+      r.RRHHCategory === "RRHH-BB" &&
+      r.SSLLCategory === "SSLL-C",
+    order: 21,
+  },
+  { key: "OVB-C-B-BB-C-CL3U3", label: "C-B-BB-C-CL3U3", parentKey: "OVB-C-B-BB-C", kind: "pattern", condition: (r) => r.CL3U3, order: 0 },
+  { key: "C-B-BB-C-CU4L3", label: "C-B-BB-C-CU4L3", parentKey: "OVB-C-B-BB-C", kind: "pattern", condition: (r) => r.CU4L3, order: 1 },
+  { key: "OVB-C-B-BB-C-CL3U2", label: "C-B-BB-C-CL3U2", parentKey: "OVB-C-B-BB-C", kind: "pattern", condition: (r) => r.CL3U2, order: 2 },
+  { key: "C-B-BB-C-CL4U4", label: "C-B-BB-C-CL4U4", parentKey: "OVB-C-B-BB-C", kind: "pattern", condition: (r) => r.CL4U4, order: 3 },
+
+  // --- C-C-BB-OA (order 22) ---
+  {
+    key: "OVB-C-C-BB-OA",
+    label: "C-C-BB-OA",
+    parentKey: "overlapLower",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-C" &&
+      r.HHLLCategory === "HHLL-C" &&
+      r.RRHHCategory === "RRHH-BB" &&
+      r.SSLLCategory === "SSLL-OA",
+    order: 22,
+  },
+  { key: "OVB-C-C-BB-OA-CL3U3", label: "C-C-BB-OA-CL3U3", parentKey: "OVB-C-C-BB-OA", kind: "pattern", condition: (r) => r.CL3U3, order: 0 },
+
+  // --- A-B-RA-C (order 23) ---
+  {
+    key: "OVB-A-B-RA-C",
+    label: "A-B-RA-C",
+    parentKey: "overlapLower",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-A" &&
+      r.HHLLCategory === "HHLL-B" &&
+      r.RRHHCategory === "RRHH-RA" &&
+      r.SSLLCategory === "SSLL-C",
+    order: 23,
+  },
+  { key: "A-B-RA-C-L4U4", label: "A-B-RA-C-L4U4", parentKey: "OVB-A-B-RA-C", kind: "pattern", condition: (r) => r.L4U4, order: 0 },
+
+  // --- A-B-RA-E (order 24) ---
+  {
+    key: "OVB-A-B-RA-E",
+    label: "A-B-RA-E",
+    parentKey: "overlapLower",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-A" &&
+      r.HHLLCategory === "HHLL-B" &&
+      r.RRHHCategory === "RRHH-RA" &&
+      r.SSLLCategory === "SSLL-E",
+    order: 24,
+  },
+  { key: "A-B-RA-E-CL4U4", label: "A-B-RA-E-CL4U4", parentKey: "OVB-A-B-RA-E", kind: "pattern", condition: (r) => r.CL4U4, order: 0 },
 ];
 
 VIEWS.push(...OVERLAP_BELOW_DUPLICATE_VIEWS);
