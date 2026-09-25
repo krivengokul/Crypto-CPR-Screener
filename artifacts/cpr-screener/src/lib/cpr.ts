@@ -1143,6 +1143,19 @@ export function pickOuterLevelPattern(f: CPRPairFlags): string | null {
 }
 
 /**
+ * computePrevPattern — given two CPR-level objects, computes which
+ * Pattern pivot label applies to the (today, prev) pair. Delegates
+ * entirely to classifyCPRPair + pickOuterLevelPattern in this module.
+ */
+export function computePrevPattern(
+  today: CPRLevels,
+  prev: CPRLevels | undefined | null
+): string | null {
+  if (!prev) return null;
+  return pickOuterLevelPattern(classifyCPRPair(today, prev));
+}
+
+/**
  * PatternCategory — the six structural buckets every band-classification
  * pattern flag (CPRPairFlags key) belongs to, derived from the flag's name
  * prefix (and, for cO/eX, whether the name starts with cOU/eXU):

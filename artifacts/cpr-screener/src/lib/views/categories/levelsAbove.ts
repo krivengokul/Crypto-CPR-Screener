@@ -1,8 +1,8 @@
 import type { CPRResult } from "../../cpr";
+import { computePrevPattern } from "../../cpr";
 import type { ViewDef } from "../types";
 import { passesView } from "../registry";
 import { matchesGapBadge } from "../gapBadges";
-import { computePrevPattern } from "../utils";
 
 export const LEVELSABOVE_VIEWS: ViewDef[] = [
   // --- A-A-AA-AA's nested Subpattern children ---

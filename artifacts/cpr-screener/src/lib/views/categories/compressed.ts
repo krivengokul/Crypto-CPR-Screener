@@ -1,8 +1,7 @@
 import type { CPRResult } from "../../cpr";
 import type { ViewDef } from "../types";
-import { dirTol } from "../../cpr";
+import { dirTol, computePrevPattern } from "../../cpr";
 import { passesView } from "../registry";
-import { computePrevPattern } from "../utils";
 
 export const COMPRESSED_VIEWS: ViewDef[] = [
   // --- direct View children of "compressed" ---

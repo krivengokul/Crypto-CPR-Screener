@@ -2,6 +2,7 @@ import type React from "react";
 import {
   classifyCPRPair,
   pickOuterLevelPattern,
+  computePrevPattern,
   getPatternCategory,
   dirTol,
   type CPRLevels,
@@ -962,13 +963,7 @@ export function computeGapBadge(r: CPRResult): string {
  * call with (prevCPR, ppCPR). Returns null when prev is undefined/null or
  * no known Pattern matches. The "p" prefix is added by the caller.
  */
-export function computePrevPattern(
-  today: CPRLevels,
-  prev: CPRLevels | undefined | null,
-): string | null {
-  if (!prev) return null;
-  return pickOuterLevelPattern(classifyCPRPair(today, prev));
-}
+export { computePrevPattern };
 
 
 /**

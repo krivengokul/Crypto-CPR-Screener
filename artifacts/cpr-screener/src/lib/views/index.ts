@@ -52,7 +52,6 @@ VIEWS.push(
 
 // Re-export everything for backward compatibility
 export * from "./types";
-export * from "./utils";
 export * from "./gapBadges";
 export * from "./registry";
 export * from "./categories/categories";
