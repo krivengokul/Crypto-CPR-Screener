@@ -1231,12 +1231,6 @@ export default function Screener({
                   // category, so "Show All" fully resets state everywhere.
                   setActiveGenericSubView(null);
                   setTouchFilter(null);
-                  setShowExpU4PU4(false);
-                  setShowExpU3PU3(false);
-                  setShowOBLoRRHHLLA(false);
-                  setShowOBNLoU4L4(false);
-                  setShowOBWLoU4L4(false);
-                  setShowOBLoSSLLRRHHDown(false);
                   // NEW: clear whatever category/View is highlighted in the
                   // left nav too — without this, App.tsx's activeView state
                   // (and therefore ViewsSidebar's highlighting) was untouched

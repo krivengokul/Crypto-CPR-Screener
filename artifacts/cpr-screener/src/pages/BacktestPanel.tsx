@@ -171,10 +171,11 @@ function matchingViewDef(raw: CPRResult, selectedKey: string): ViewDef | null {
  * matching child (kind: "view" leaves are never descended into here).
  */
 function deepestMatchingPattern(raw: CPRResult, rootKey: string): ViewDef {
-  let current = getView(rootKey);
-  if (!current) throw new Error(`deepestMatchingPattern: unknown key "${rootKey}"`);
+  const root = getView(rootKey);
+  if (!root) throw new Error(`deepestMatchingPattern: unknown key "${rootKey}"`);
+  let current: ViewDef = root;
   for (;;) {
-    const child = childrenOf(current.key).find(
+    const child: ViewDef | undefined = childrenOf(current.key).find(
       (c) => c.kind !== "view" && passesView(raw, c.key)
     );
     if (!child) return current;
