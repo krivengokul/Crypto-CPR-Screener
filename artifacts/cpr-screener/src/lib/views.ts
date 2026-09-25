@@ -364,23 +364,11 @@ const COMPOUND_COMBOS: CompoundCombo[] = [
   { ssrr: "A", hhll: "C", rrhh: "RA", ssll: "AA" },
   { ssrr: "A", hhll: "C", rrhh: "RA", ssll: "OA" },
 
-  // B-A-*
-  { ssrr: "B", hhll: "A", rrhh: "C", ssll: "C" },
-  { ssrr: "B", hhll: "A", rrhh: "C", ssll: "SB" },
-  { ssrr: "B", hhll: "A", rrhh: "E", ssll: "E" },
-  { ssrr: "B", hhll: "A", rrhh: "E", ssll: "SB" },
-  { ssrr: "B", hhll: "A", rrhh: "HA", ssll: "C" },
-  { ssrr: "B", hhll: "A", rrhh: "HA", ssll: "E" },
-  { ssrr: "B", hhll: "A", rrhh: "HA", ssll: "SB" },
-  { ssrr: "B", hhll: "A", rrhh: "OB", ssll: "SB" },
-  { ssrr: "B", hhll: "A", rrhh: "OB", ssll: "E" },
-  { ssrr: "B", hhll: "A", rrhh: "OB", ssll: "C" },
-  { ssrr: "B", hhll: "A", rrhh: "HA", ssll: "OB" },
-  { ssrr: "B", hhll: "A", rrhh: "HA", ssll: "OA" },
-  { ssrr: "B", hhll: "A", rrhh: "E", ssll: "OA" },
-  { ssrr: "B", hhll: "A", rrhh: "E", ssll: "OB" },
-  { ssrr: "B", hhll: "A", rrhh: "C", ssll: "OA" },
-  { ssrr: "B", hhll: "A", rrhh: "OA", ssll: "E" },
+  // B-A-* — removed per user request: all 16 combos (B-A-C-C, B-A-C-SB,
+  // B-A-E-E, B-A-E-SB, B-A-HA-C, B-A-HA-E, B-A-HA-SB, B-A-OB-SB,
+  // B-A-OB-E, B-A-OB-C, B-A-HA-OB, B-A-HA-OA, B-A-E-OA, B-A-E-OB,
+  // B-A-C-OA, B-A-OA-E) removed from LEVEL BELOW. The same-named patterns
+  // under the OVA/INCPR/OUT/OVB trees are NOT affected.
   // B-B-*
   { ssrr: "B", hhll: "B", rrhh: "BB", ssll: "BB" },
   { ssrr: "B", hhll: "B", rrhh: "BB", ssll: "OB" },
