@@ -175,12 +175,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             <div className="text-xs font-semibold text-red-400 mb-1">Pattern: A-A-AA-AA-EU1L4  PCPR: Mega  CPR: Mega</div>
             <div className="text-xs text-muted-foreground">ABOVE LEVEL4 + Pattern A-A-AA-AA-EU1L4 + Prev CPR width 5.00%–10.00% (pMega), Today CPR width 5.00%–10.00% (Mega)</div>
           </>
-        ) : activeView === "TiMe-EUTL3-AU4:2PM" ? (
-          <>
-            <div className="text-xs font-semibold text-violet-400 mb-1">Pattern: EUTL3  PCPR: Tiny  CPR: Mega</div>
-            <div className="text-xs text-muted-foreground">Big CPR Above (Wide + Rising) + Today&apos;s R1 &gt; Prev R4 + Pattern EUTL3 (Prev S4 inside Today&apos;s S2/S3, Prev R4 inside Today&apos;s Pivot/TC) + Prev CPR width 0.10%–0.22% (Tiny), Today CPR width 5.00%–10.00% (Mega)</div>
-          </>
-        ) : activeView === "8AM:CoLApHA-U4+1:8AM" ? (
+        )) : activeView === "8AM:CoLApHA-U4+1:8AM" ? (
           <>
             <div className="text-xs font-semibold text-green-400 mb-1">
               Pattern: PDL&gt;pS1&nbsp;&nbsp;PDH&gt;pR1 or pPDH&gt;R1
@@ -231,32 +226,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             <div className="text-xs font-semibold text-green-400 mb-1">Pivot Level: pCPR in U1 band</div>
             <div className="text-xs text-muted-foreground">Prev Pivot &gt; today R1 &amp; &lt; today R2 — today BC &gt; prev S1 &amp; &lt; prev BC</div>
           </>
-        ) : activeView === "3P:HA-pBELOWR1:R2-3A" ? (
-          <>
-            <div className="text-xs font-semibold text-green-400 mb-1">RRHH-HA&nbsp;&nbsp;SSLL-BB&nbsp;&nbsp;HHLL-E&nbsp;&nbsp;SSGap&nbsp;&nbsp;LLGap&nbsp;&nbsp;pHL-B&nbsp;&nbsp;HLGap-A</div>
-            <div className="text-xs text-muted-foreground">LEVEL BELOW base, today&apos;s R1/PDH band mixed vs prev&apos;s (RRHH-HA), today&apos;s S1/PDL band fully below prev&apos;s (SSLL-BB), today&apos;s PDH/PDL range widened on both sides (HHLL-E), today&apos;s S1 gap larger than the R1 gap (SSGap), today&apos;s PDL gap larger than the PDH gap (LLGap), prev day&apos;s PDH/U1 relation is HL-B (pHL-B), today&apos;s PDH/U1 relation is HL-A with today&apos;s HL gap the wider of the two (HLGap-A), prev day&apos;s S3 above today&apos;s S1, and prev day&apos;s own Pivot above today&apos;s R1</div>
-          </>
-        ) : activeView === "3P:HA-pABOVER1:S2-6P" ? (
-          <>
-            <div className="text-xs font-semibold text-rose-400 mb-1">RRHH-HA&nbsp;&nbsp;SSLL-BB&nbsp;&nbsp;HHLL-E&nbsp;&nbsp;SSGap&nbsp;&nbsp;LLGap&nbsp;&nbsp;pHL-B&nbsp;&nbsp;HLGap-A</div>
-            <div className="text-xs text-muted-foreground">LEVEL BELOW base, today&apos;s R1/PDH band mixed vs prev&apos;s (RRHH-HA), today&apos;s S1/PDL band fully below prev&apos;s (SSLL-BB), today&apos;s PDH/PDL range widened on both sides (HHLL-E), today&apos;s S1 gap larger than the R1 gap (SSGap), today&apos;s PDL gap larger than the PDH gap (LLGap), prev day&apos;s PDH/U1 relation is HL-B (pHL-B), today&apos;s PDH/U1 relation is HL-A with today&apos;s HL gap the wider of the two (HLGap-A), prev day&apos;s S3 above today&apos;s S1, and prev day&apos;s own Pivot below today&apos;s R1</div>
-          </>
-        ) : activeView === "2P:HA-HABOVEpR1:R4-4P" ? (
-          <>
-            <div className="text-xs font-semibold text-green-400 mb-1">RRHH-HA&nbsp;&nbsp;SSLL-BB&nbsp;&nbsp;HHLL-E&nbsp;&nbsp;SSGap&nbsp;&nbsp;LLGap&nbsp;&nbsp;pHL-B&nbsp;&nbsp;HLGap-A</div>
-            <div className="text-xs text-muted-foreground">LEVEL BELOW base, today&apos;s R1/PDH band mixed vs prev&apos;s (RRHH-HA), today&apos;s S1/PDL band fully below prev&apos;s (SSLL-BB), today&apos;s PDH/PDL range widened on both sides (HHLL-E), today&apos;s S1 gap larger than the R1 gap (SSGap), today&apos;s PDL gap larger than the PDH gap (LLGap), prev day&apos;s PDH/U1 relation is HL-B (pHL-B), today&apos;s PDH/U1 relation is HL-A with today&apos;s HL gap the wider of the two (HLGap-A), prev day&apos;s S3 above today&apos;s S1, today&apos;s own R1 above prev day&apos;s PDH, today&apos;s own Pivot above prev day&apos;s PDL, and today&apos;s R3 above prev day&apos;s R4</div>
-          </>
-        ) : activeView === "PDH>pTC-U4:5AM" ? (
-          <>
-            <div className="text-xs font-semibold text-green-400 mb-1">Pivot Level: pCPR in U1 band</div>
-            <div className="text-xs text-muted-foreground">LEVEL BELOW base, plus today&apos;s PDH above prev day&apos;s TC, plus (pMini &amp; today Small) or (pSmall &amp; today Large)</div>
-          </>
-        ) : activeView === "11AM:pCPR1AHi-FApU4:1PM" ? (
-          <>
-            <div className="text-xs font-semibold text-green-400 mb-1">Pattern: L4U3&nbsp;&nbsp;PDH/PDL: HHLLBelow&nbsp;&nbsp;p-PDHL-B / PDHL-A</div>
-            <div className="text-xs text-muted-foreground">LEVEL BELOW base, plus L4U3 (today&apos;s R4 in prev R2/R3 band), today&apos;s PDH at/below prev PDH and today&apos;s PDL below prev PDL, prev day&apos;s own PDH below prev day&apos;s R1 (p-PDHL-B), today&apos;s PDH above today&apos;s R1 (PDHL-A), and today&apos;s R1 at/above prev day&apos;s BC</div>
-          </>
-        ) : activeView === "2P:L4U4-pLAP:R4-2A" ? (
+        )))))) : activeView === "2P:L4U4-pLAP:R4-2A" ? (
           <>
             <div className="text-xs font-semibold text-green-400 mb-1">Pattern: RHSLB-SSLLpGap&nbsp;&nbsp;L4U4</div>
             <div className="text-xs text-muted-foreground">LEVEL BELOW base, plus the shared RHSLB-SSLLpGap Pattern (RRSS-B + HHLL-B + RRHH-BB + SSLL-BB + SSGap + LLGap + prev day&apos;s PDH/U1 relation HL-A with the gap the wider of the two (pHLGap-A) + today&apos;s PDH/U1 relation HL-B), plus L4U4 (today&apos;s R4 inside prev&apos;s R3/R4 AND prev&apos;s S4 inside today&apos;s S3/S4), plus prev day&apos;s own PDL above today&apos;s Pivot</div>
@@ -334,12 +304,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             <div className="text-xs font-semibold text-red-400 mb-1">Exp Target: L3 (today&apos;s S3)<br />Time: 8PM</div>
             <div className="text-xs text-muted-foreground">A-A-AA-AA-EU1L4 base plus prev/today CPR both Mega width (5.00%–10.00%) — expected downside target L3 (today&apos;s S3) by ~8PM</div>
           </>
-        ) : activeView === "TiMe-EUTL3-AU4:2PM" ? (
-          <>
-            <div className="text-xs font-semibold text-violet-400 mb-1">Exp Target: AU4 (prev day&apos;s R4)<br />Time: 2PM</div>
-            <div className="text-xs text-muted-foreground">Expected upside target AU4 (prev day&apos;s R4) by ~2PM</div>
-          </>
-        ) : activeView === "8AM:CoLApHA-U4+1:8AM" ? (
+        )) : activeView === "8AM:CoLApHA-U4+1:8AM" ? (
           <>
             <div className="text-xs font-semibold text-green-400 mb-1">
               Target: PU4&nbsp;&nbsp;&nbsp;Entry: 8AM&nbsp;&nbsp;&nbsp;Time: 8AM (+1)
@@ -390,32 +355,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             <div className="text-xs font-semibold text-emerald-400 mb-1">Bias: Up shift</div>
             <div className="text-xs text-emerald-400/80">Today&apos;s CPR has stepped above yesterday&apos;s lower band while prev Pivot still caps the U1/U2 zone</div>
           </>
-        ) : activeView === "3P:HA-pBELOWR1:R2-3A" ? (
-          <>
-            <div className="text-xs font-semibold text-green-400 mb-1">Target: U2&nbsp;&nbsp;&nbsp;Entry: 3PM&nbsp;&nbsp;&nbsp;Time: 3AM (+1)</div>
-            <div className="text-xs text-emerald-400/80">3PM setup with Up continuation expected toward today&apos;s U2 (R2) by ~3AM the next day</div>
-          </>
-        ) : activeView === "3P:HA-pABOVER1:S2-6P" ? (
-          <>
-            <div className="text-xs font-semibold text-rose-400 mb-1">Target: L2&nbsp;&nbsp;&nbsp;Entry: 3PM&nbsp;&nbsp;&nbsp;Time: 6PM</div>
-            <div className="text-xs text-muted-foreground">3PM setup with Down continuation expected toward today&apos;s S2 (L2) by ~6PM</div>
-          </>
-        ) : activeView === "2P:HA-HABOVEpR1:R4-4P" ? (
-          <>
-            <div className="text-xs font-semibold text-green-400 mb-1">Target: U4&nbsp;&nbsp;&nbsp;Entry: 2PM&nbsp;&nbsp;&nbsp;Time: 4PM</div>
-            <div className="text-xs text-emerald-400/80">2PM setup with Up continuation expected toward today&apos;s U4 (R4) by ~4PM</div>
-          </>
-        ) : activeView === "PDH>pTC-U4:5AM" ? (
-          <>
-            <div className="text-xs font-semibold text-green-400 mb-1">Target: U4&nbsp;&nbsp;Time: 5AM</div>
-            <div className="text-xs text-emerald-400/80">Today already trading above prev day&apos;s TC, with a pMini→Small or pSmall→Large width expansion — expected continuation toward today&apos;s U4 by ~5AM</div>
-          </>
-        ) : activeView === "11AM:pCPR1AHi-FApU4:1PM" ? (
-          <>
-            <div className="text-xs font-semibold text-green-400 mb-1">Target: FApU4&nbsp;&nbsp;Time: 1PM</div>
-            <div className="text-xs text-emerald-400/80">L4U3 base plus HHLLBelow (today&apos;s highs/lows stepping down vs prev day), prev day&apos;s own PDH below R1, today&apos;s PDH above R1, and today&apos;s R1 at/above prev BC — expected move far above prev day&apos;s U4 by ~1PM</div>
-          </>
-        ) : activeView === "2P:L4U4-pLAP:R4-2A" ? (
+        )))))) : activeView === "2P:L4U4-pLAP:R4-2A" ? (
           <>
             <div className="text-xs font-semibold text-green-400 mb-1">Target: U4&nbsp;&nbsp;&nbsp;Entry: 2PM&nbsp;&nbsp;&nbsp;Time: 2AM</div>
             <div className="text-xs text-emerald-400/80">RHSLB-SSLLpGap base plus L4U4 (today&apos;s R4 inside prev&apos;s R3/R4, prev&apos;s S4 inside today&apos;s S3/S4) plus prev day&apos;s own PDL above today&apos;s Pivot — expected move toward today&apos;s own U4 (R4) by ~2AM</div>

@@ -124,69 +124,6 @@ export const Views: Record<string, SubPattern[]> = {
       { id: "BC-A-A-AA-AA-EU2L4-RH-GapBB-S2", label: "A6-EU2L4-pUltra-S2" }
 ],
   "levelsbelow": [
-    // RENAMED from "BC>pPDL-U3:5AM", then from "3P:HA-pABOVE:pR4-3A".
-    // "3P:HA-pBELOWR1:R2-3A" — LEVEL BELOW + RRSSGapCategory SSGap +
-    // RRHHCategory RRHH-HA + SSLLCategory SSLL-BB + HHLLCategory HHLL-E +
-    // PDHPDLGapCategory LLGap + prevCPR.HLSwitch HL-B (pHL-B) +
-    // todayCPR.HLSwitch HL-A with hlGapWinner "today" (HLGap-A) + prev
-    // day's S3 above today's S1 + prev day's own Pivot above today's R1
-    // (see ScreenerUtils.tsx / cpr.ts). Bullish, entry ~3PM, targets
-    // today's own R2 (U2) by ~3AM (+1). Green color family to visually
-    // flag this as the bullish sub-pattern.
-    {
-      id: "3P:HA-pBELOWR1:R2-3A",
-      label: "3P:HA-pBELOWR1:R2-3A",
-      activeColor: "#22c55e",              // green-500 border
-      activeText:  "#4ade80",              // green-400 text
-      activeBg:    "rgba(34, 197, 94, 0.14)",
-    },
-    // NEW: "3P:HA-pABOVER1:S2-6P" — replica of "3P:HA-pBELOWR1:R2-3A"
-    // with the same base conditions, but prev day's own Pivot BELOW
-    // today's R1 (instead of above). Bearish, entry ~3PM, targets
-    // today's own S2 (L2) by ~6PM. Rose color family to visually flag
-    // this as the bearish sub-pattern.
-    {
-      id: "3P:HA-pABOVER1:S2-6P",
-      label: "3P:HA-pABOVER1:S2-6P",
-      activeColor: "#fb7185",              // rose-400 border
-      activeText:  "#fda4af",              // rose-300 text
-      activeBg:    "rgba(244, 63, 94, 0.14)", // rose-500 tint
-    },
-    // NEW: "2P:HA-HABOVEpR1:R4-4P" — replica of "3P:HA-pBELOWR1:R2-3A"
-    // with the same base conditions, but today's own R1 above prev day's
-    // PDH (instead of prev day's own Pivot above today's R1) and today's
-    // R3 above prev day's R4 (instead of prev day's R3). Bullish, entry
-    // ~2PM, targets today's own R4 (U4) by ~4PM. Green color family to
-    // visually flag this as the bullish sub-pattern.
-    {
-      id: "2P:HA-HABOVEpR1:R4-4P",
-      label: "2P:HA-HABOVEpR1:R4-4P",
-      activeColor: "#22c55e",              // green-500 border
-      activeText:  "#4ade80",              // green-400 text
-      activeBg:    "rgba(34, 197, 94, 0.14)",
-    },
-    // NEW: PDH>pTC-U4:5AM — LEVEL BELOW + today's PDH (todayCPR.prevHigh)
-    // above prev day's TC (prevCPR.tc). Bullish, targets U4 (today's R4) by
-    // ~5AM. Same green color family as its sibling BC>pPDL-U3:5AM.
-    {
-      id: "PDH>pTC-U4:5AM",
-      label: "PDH>pTC-U4:5AM",
-      activeColor: "#22c55e",              // green-500 border
-      activeText:  "#4ade80",              // green-400 text
-      activeBg:    "rgba(34, 197, 94, 0.14)",
-    },
-    // NEW: 11AM:pCPR1AHi-FApU4:1PM — LEVEL BELOW + L4U3 + HHLLBelow
-    // (today's PDH at/below prev day's PDH AND today's PDL below prev
-    // day's PDL). Bullish, targets Far Above pU4 (prev day's R4) by ~1PM.
-    // Same green color family as its BC>pPDL-U3:5AM / PDH>pTC-U4:5AM
-    // siblings.
-    {
-      id: "11AM:pCPR1AHi-FApU4:1PM",
-      label: "11AM:pCPR1AHi-FApU4:1PM",
-      activeColor: "#22c55e",              // green-500 border
-      activeText:  "#4ade80",              // green-400 text
-      activeBg:    "rgba(34, 197, 94, 0.14)",
-    },
     // NEW: B-B-BB-BB-L4U4-pLAP:R4 — View nested under the
     // "B-B-BB-BB-L4U4" Pattern arrow (renamed from "2P:L4U4-pLAP:R4-2A",
     // which nested under the now-removed "RHSLB-SSLLpGap" Pattern — see
@@ -300,18 +237,7 @@ export const Views: Record<string, SubPattern[]> = {
       activeColor: "#f87171",              // red-400 border
       activeText:  "#fca5a5",              // red-300 text
       activeBg:    "rgba(239, 68, 68, 0.14)",
-    },
-    // NEW: TiMe-EUTL3-AU4:2PM — pTiny prev CPR + Mega today CPR +
-    // Pattern EUTL3. Violet color family to visually distinguish it
-    // from its U1>pU4 sibling.
-    {
-      id: "TiMe-EUTL3-AU4:2PM",
-      label: "TiMe-EUTL3-AU4:2PM",
-      activeColor: "#a78bfa",              // violet-400 border
-      activeText:  "#c4b5fd",              // violet-300 text
-      activeBg:    "rgba(139, 92, 246, 0.14)", // violet-500 tint
-    },
-    // NEW: 6AM:MegMeg-L3:8PM — U1>pU4 + Pattern A-A-AA-AA-EU1L4 + pMega (prev CPR
+    },    // NEW: 6AM:MegMeg-L3:8PM — U1>pU4 + Pattern A-A-AA-AA-EU1L4 + pMega (prev CPR
     // width Mega, 5.00%-10.00%) + Mega (today's CPR width Mega,
     // 5.00%-10.00%). Bearish, targets L3 (today's S3) by ~8PM. Red color
     // family, same as its 6AM:pX-APHS1A-pL4:4AM sibling.
@@ -326,7 +252,7 @@ export const Views: Record<string, SubPattern[]> = {
     // "R1AbovePR4" key further down this object literal — a duplicate
     // object key silently wins in JS, so that whole second definition
     // was clobbering this entire array at runtime and everything below
-    // (TiMe-EUTL3-AU4:2PM, 6AM:MegMeg-L3:8PM, etc.)
+    // (6AM:MegMeg-L3:8PM, etc.)
     // was rendering as if it didn't exist. Folded the one entry that
     // was in that duplicate back in here instead of losing it.
     { id: "A-E-AA-E-EUBL2-GapB-S1", label: "A-E-AA-E-EUBL2-GapB-S1" },

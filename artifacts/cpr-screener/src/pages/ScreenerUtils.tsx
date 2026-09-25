@@ -526,11 +526,6 @@ export type ViewDirection = "Up" | "Down";
  */
 const SUBFILTERS_BY_SECTION: Record<string, string[]> = {
   "levelsbelow": [
-    "3P:HA-pBELOWR1:R2-3A",
-    "3P:HA-pABOVER1:S2-6P",
-    "2P:HA-HABOVEpR1:R4-4P",
-    "PDH>pTC-U4:5AM",
-    "11AM:pCPR1AHi-FApU4:1PM",
     "B-B-BB-BB-CL4U2",
     "B-B-BB-BB-L4U4-pLAP:R4",
     "B6-L4U4-pStepUp:R4",
@@ -553,7 +548,6 @@ const SUBFILTERS_BY_SECTION: Record<string, string[]> = {
   "R1AbovePR4": [
     "A-A-AA-AA-EUPL3-RRHHGap:R4",
     "6A:A-A-AA-AA-EUTL3-S1ATCpE-pL4:4A",
-    "TiMe-EUTL3-AU4:2PM",
     "6AM:MegMeg-L3:8PM",
   ],
   "S1BelowPS4": [

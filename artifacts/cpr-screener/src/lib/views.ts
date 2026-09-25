@@ -600,9 +600,6 @@ export const PIVOT_PATTERNS: Record<string, (r: CPRResult) => boolean> =
 // lines 759-1217, matchesPatternFlag's matching cases) and backtest.ts
 // (BACKTEST_CATEGORIES lines 1424-2117, BACKTEST_TARGETS). Two real
 // findings surfaced while doing this faithfully — see the comments on
-// "PDH>pTC-U4:5AM" and "11AM:pCPR1AHi-FApU4:1PM" below — NOT fixed here,
-// only preserved and flagged, per the "don't silently fix, just migrate"
-// rule for this pass.
 //
 // Deliberately NOT included in this batch (see chat): "6PM:APHS1A-FAU4:99PM",
 // "6PM:APHS1A-FAU4:9PMM", "A-A-AA-AA-EUBL2-pS4S2:R2",
@@ -1636,25 +1633,6 @@ const LEVELSABOVE_VIEWS: ViewDef[] = [
 ];
 
 const LEVELSBELOW_VIEWS: ViewDef[] = [
-  // --- HALB-SSLLGap: compound Pattern child of "levelsbelow" (not in
-  // PIVOT_PATTERNS/COMPOUND_COMBOS since it's a one-off, not part of the
-  // HHLL x RRHH x SSLL cross) ---
-  {
-    key: "HALB-SSLLGap",
-    label: "HALB-SSLLGap",
-    parentKey: "levelsbelow",
-    kind: "pattern",
-    condition: (r) =>
-      r.HHLLCategory === "HHLL-E" &&
-      r.RRHHCategory === "RRHH-HA" &&
-      r.SSLLCategory === "SSLL-BB" &&
-      r.RRSSGapCategory === "SSGap" &&
-      r.PDHPDLGapCategory === "LLGap" &&
-      r.prevCPR.HLSwitch === "HL-B" &&
-      r.todayCPR.HLSwitch === "HL-A" &&
-      r.hlGapWinner === "today",
-      order: 1
-},
 
   // --- B-B-BB-BB's eleven nested Pattern children ---
   {
@@ -1715,110 +1693,17 @@ const LEVELSBELOW_VIEWS: ViewDef[] = [
   { key: "B-B-BB-BB-EL1U3", label: "B-B-BB-BB-EL1U3", parentKey: "B-B-BB-BB", kind: "pattern", condition: (r) => r.EL1U3,
       order: 10
 },
+  // Missing Subpatterns added from PatternStats (B-B-BB-BB, 71 unclassified rows)
+  { key: "B-B-BB-BB-CL4U3", label: "B-B-BB-BB-CL4U3", parentKey: "B-B-BB-BB", kind: "pattern", condition: (r) => r.CL4U3, order: 11 },
+  { key: "B-B-BB-BB-CL3U2", label: "B-B-BB-BB-CL3U2", parentKey: "B-B-BB-BB", kind: "pattern", condition: (r) => r.CL3U2, order: 12 },
+  { key: "B-B-BB-BB-CL4U4", label: "B-B-BB-BB-CL4U4", parentKey: "B-B-BB-BB", kind: "pattern", condition: (r) => r.CL4U4, order: 13 },
+  { key: "B-B-BB-BB-L4U2", label: "B-B-BB-BB-L4U2", parentKey: "B-B-BB-BB", kind: "pattern", condition: (r) => r.L4U2, order: 14 },
+
+  // --- B-E-HA-BB's nested Pattern children (LEVEL BELOW) ---
+  { key: "B-E-HA-BB-EL3U4", label: "B-E-HA-BB-EL3U4", parentKey: "B-E-HA-BB", kind: "pattern", condition: (r) => r.EL3U4, order: 0 },
 
   // --- leaf Views ---
-  {
-    key: "3P:HA-pBELOWR1:R2-3A",
-    label: "3P:HA-pBELOWR1:R2-3A",
-    parentKey: "HALB-SSLLGap",
-    kind: "view",
-    direction: "Up",
-    condition: (r) =>
-      r.prevCPR.pivot > r.todayCPR.r1 && r.todayCPR.pivot > r.prevCPR.prevLow &&
-      r.prevCPR.s3 > r.todayCPR.s1 && r.todayCPR.r3 > r.prevCPR.r3,
-    targetLabel: "U2 (today's R2)",
-    getTarget: (r) => r.todayCPR.r2,
-    entryLabel: "TC (today's TC)",
-    getEntry: (r) => r.todayCPR.tc,
-    stoplossLabel: "S1 (today's S1)",
-    getStoploss: (r) => r.todayCPR.s1,
-      order: 0
-},
-  {
-    key: "3P:HA-pABOVER1:S2-6P",
-    label: "3P:HA-pABOVER1:S2-6P",
-    parentKey: "HALB-SSLLGap",
-    kind: "view",
-    direction: "Down",
-    condition: (r) => r.prevCPR.s3 > r.todayCPR.s1 && r.prevCPR.pivot < r.todayCPR.r1,
-    targetLabel: "L2 (today's S2)",
-    getTarget: (r) => r.todayCPR.s2,
-    entryLabel: "BC (today's BC)",
-    getEntry: (r) => r.todayCPR.bc,
-    stoplossLabel: "R1 (today's R1)",
-    getStoploss: (r) => r.todayCPR.r1,
-      order: 1
-},
-  {
-    key: "2P:HA-HABOVEpR1:R4-4P",
-    label: "2P:HA-HABOVEpR1:R4-4P",
-    parentKey: "HALB-SSLLGap",
-    kind: "view",
-    direction: "Up",
-    condition: (r) =>
-      dirTol(r.prevCPR.s3, r.todayCPR.s1) > 0 &&
-      dirTol(r.todayCPR.r1, r.prevCPR.prevHigh) > 0 &&
-      dirTol(r.todayCPR.pivot, r.prevCPR.prevLow) > 0 &&
-      dirTol(r.todayCPR.r3, r.prevCPR.r3) > 0,
-    targetLabel: "U4 (today's R4)",
-    getTarget: (r) => r.todayCPR.r4,
-    entryLabel: "TC (today's TC)",
-    getEntry: (r) => r.todayCPR.tc,
-    stoplossLabel: "S1 (today's S1)",
-    getStoploss: (r) => r.todayCPR.s1,
-      order: 2
-},
-  {
-    // FINDING (not fixed here — flagged in chat): the dropdown/legend nest
-    // this View under "B-B-BB-BB" → "B-B-BB-BB-L3U3" (implying it also
-    // requires the B-B-BB-BB compound: HHLL-B + RRHH-BB + SSLL-BB), but
-    // its actual passesPattern condition only ever checked r.LevelsBelow +
-    // r.L3U3 — no compound gate. parentKey below is "levelsbelow" (not
-    // "B-B-BB-BB-L3U3") to faithfully match what the code has always
-    // graded, not what the tree nesting implies.
-    key: "PDH>pTC-U4:5AM",
-    label: "PDH>pTC-U4:5AM",
-    parentKey: "levelsbelow",
-    kind: "view",
-    direction: "Up",
-    condition: (r) => {
-      const pMini = r.prevCPR.widthPct > 0.22 && r.prevCPR.widthPct <= 0.60;
-      const small = r.todayCPR.widthPct > 0.60 && r.todayCPR.widthPct <= 1.10;
-      const pSmall = r.prevCPR.widthPct > 0.60 && r.prevCPR.widthPct <= 1.10;
-      const large = r.todayCPR.widthPct > 2.00 && r.todayCPR.widthPct <= 5.00;
-      return r.L3U3 && r.todayCPR.prevHigh > r.prevCPR.tc && ((pMini && small) || (pSmall && large));
-    },
-    targetLabel: "U4 (today's R4)",
-    getTarget: (r) => r.todayCPR.r4,
-    entryLabel: "TC (today's TC)",
-    getEntry: (r) => r.todayCPR.tc,
-    stoplossLabel: "S1 (today's S1)",
-    getStoploss: (r) => r.todayCPR.s1,
-      order: 0
-},
-  {
-    // FINDING (not fixed here — flagged in chat): same class of mismatch
-    // as "PDH>pTC-U4:5AM" above — nested under "B-B-BB-BB-L4U3" in the
-    // dropdown tree, but the actual condition only ever checked
-    // r.LevelsBelow + r.L4U3 + HHLLCategory, no B-B-BB-BB compound gate.
-    // parentKey is "levelsbelow" to match actual behavior.
-    key: "11AM:pCPR1AHi-FApU4:1PM",
-    label: "11AM:pCPR1AHi-FApU4:1PM",
-    parentKey: "levelsbelow",
-    kind: "view",
-    direction: "Up",
-    condition: (r) =>
-      r.L4U3 && r.HHLLCategory === "HHLL-B" &&
-      r.prevCPR.HLSwitch === "HL-B" && r.todayCPR.HLSwitch === "HL-A" &&
-      r.todayCPR.r1 > r.prevCPR.bc,
-    targetLabel: "FApU4 (prev day's R4)",
-    getTarget: (r) => r.prevCPR.r4,
-    entryLabel: "TC (today's TC)",
-    getEntry: (r) => r.todayCPR.tc,
-    stoplossLabel: "S1 (today's S1)",
-    getStoploss: (r) => r.todayCPR.s1,
-      order: 0
-},
+
   {
       key: "BC-B-B-BB-BB-EL4U4-SL-BAGap-S4",
       label: "B6-EL4U4-pMini",
@@ -7152,7 +7037,7 @@ const OVERLAP_BELOW_DUPLICATE_VIEWS: ViewDef[] = [
       r.SSLLCategory === "SSLL-BB",
     order: 1,
   },
-  { key: "B-E-HA-BB-EL3U4", label: "B-E-HA-BB-EL3U4", parentKey: "OVB-B-E-HA-BB", kind: "pattern", condition: (r) => r.EL3U4, order: 0 },
+  { key: "OVB-B-E-HA-BB-EL3U4", label: "B-E-HA-BB-EL3U4", parentKey: "OVB-B-E-HA-BB", kind: "pattern", condition: (r) => r.EL3U4, order: 0 },
   { key: "B-E-HA-BB-EL2U3", label: "B-E-HA-BB-EL2U3", parentKey: "OVB-B-E-HA-BB", kind: "pattern", condition: (r) => r.EL2U3, order: 1 },
   { key: "B-E-HA-BB-EL3U3", label: "B-E-HA-BB-EL3U3", parentKey: "OVB-B-E-HA-BB", kind: "pattern", condition: (r) => r.EL3U3, order: 2 },
   { key: "B-E-HA-BB-EU2L2", label: "B-E-HA-BB-EU2L2", parentKey: "OVB-B-E-HA-BB", kind: "pattern", condition: (r) => r.EU2L2, order: 3 },
