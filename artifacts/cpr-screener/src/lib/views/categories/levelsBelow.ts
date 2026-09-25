@@ -104,6 +104,33 @@ export const LEVELSBELOW_VIEWS: ViewDef[] = [
   { key: "B-C-BB-SB-CL3U2", label: "B-C-BB-SB-CL3U2", parentKey: "B-C-BB-SB", kind: "pattern", condition: (r) => r.CL3U2, order: 0 },
   { key: "B-C-BB-E-CL3U3", label: "B-C-BB-E-CL3U3", parentKey: "B-C-BB-E", kind: "pattern", condition: (r) => r.CL3U3, order: 0 },
   { key: "B-C-BB-C-CL4U3", label: "B-C-BB-C-CL4U3", parentKey: "B-C-BB-C", kind: "pattern", condition: (r) => r.CL4U3, order: 0 },
+  // Missing Subpatterns added from PatternStats (B-C-BB-SB, 95 rows, 72 unclassified)
+  { key: "B-C-BB-SB-CL4U3", label: "B-C-BB-SB-CL4U3", parentKey: "B-C-BB-SB", kind: "pattern", condition: (r) => r.CL4U3, order: 1 },
+  { key: "B-C-BB-SB-CL4U4", label: "B-C-BB-SB-CL4U4", parentKey: "B-C-BB-SB", kind: "pattern", condition: (r) => r.CL4U4, order: 2 },
+  { key: "B-C-BB-SB-CL3U3", label: "B-C-BB-SB-CL3U3", parentKey: "B-C-BB-SB", kind: "pattern", condition: (r) => r.CL3U3, order: 3 },
+  { key: "B-C-BB-SB-CL4U2", label: "B-C-BB-SB-CL4U2", parentKey: "B-C-BB-SB", kind: "pattern", condition: (r) => r.CL4U2, order: 4 },
+  { key: "B-C-BB-SB-L4U4", label: "B-C-BB-SB-L4U4", parentKey: "B-C-BB-SB", kind: "pattern", condition: (r) => r.L4U4, order: 5 },
+  { key: "B-C-BB-SB-L4U3", label: "B-C-BB-SB-L4U3", parentKey: "B-C-BB-SB", kind: "pattern", condition: (r) => r.L4U3, order: 6 },
+  // Missing Subpatterns added from PatternStats (B-B-BB-OB, 209 rows, 82 unclassified)
+  { key: "B-B-BB-OB-CL4U3", label: "B-B-BB-OB-CL4U3", parentKey: "B-B-BB-OB", kind: "pattern", condition: (r) => r.CL4U3, order: 2 },
+  { key: "B-B-BB-OB-CL3U3", label: "B-B-BB-OB-CL3U3", parentKey: "B-B-BB-OB", kind: "pattern", condition: (r) => r.CL3U3, order: 3 },
+  { key: "B-B-BB-OB-CL3U1", label: "B-B-BB-OB-CL3U1", parentKey: "B-B-BB-OB", kind: "pattern", condition: (r) => r.CL3U1, order: 4 },
+  { key: "B-B-BB-OB-L4U4", label: "B-B-BB-OB-L4U4", parentKey: "B-B-BB-OB", kind: "pattern", condition: (r) => r.L4U4, order: 5 },
+  { key: "B-B-BB-OB-CL4U2", label: "B-B-BB-OB-CL4U2", parentKey: "B-B-BB-OB", kind: "pattern", condition: (r) => r.CL4U2, order: 6 },
+  { key: "B-B-BB-OB-None", label: "B-B-BB-OB-None", parentKey: "B-B-BB-OB", kind: "pattern", condition: (r) => !pickOuterLevelPattern(r), order: 7 },
+  // Missing Subpatterns added from PatternStats (B-E-E-BB, 175 rows, 70 unclassified)
+  { key: "B-E-E-BB-EL3U4", label: "B-E-E-BB-EL3U4", parentKey: "B-E-E-BB", kind: "pattern", condition: (r) => r.EL3U4, order: 1 },
+  { key: "B-E-E-BB-EL2U4", label: "B-E-E-BB-EL2U4", parentKey: "B-E-E-BB", kind: "pattern", condition: (r) => r.EL2U4, order: 2 },
+  { key: "B-E-E-BB-EL3U3", label: "B-E-E-BB-EL3U3", parentKey: "B-E-E-BB", kind: "pattern", condition: (r) => r.EL3U3, order: 3 },
+  { key: "B-E-E-BB-EL4U4", label: "B-E-E-BB-EL4U4", parentKey: "B-E-E-BB", kind: "pattern", condition: (r) => r.EL4U4, order: 4 },
+  // Missing Subpatterns added from PatternStats (B-C-BB-E, 60 rows, 49 unclassified)
+  { key: "B-C-BB-E-CL3U2", label: "B-C-BB-E-CL3U2", parentKey: "B-C-BB-E", kind: "pattern", condition: (r) => r.CL3U2, order: 1 },
+  { key: "B-C-BB-E-CL4U3", label: "B-C-BB-E-CL4U3", parentKey: "B-C-BB-E", kind: "pattern", condition: (r) => r.CL4U3, order: 2 },
+  { key: "B-C-BB-E-CL4U4", label: "B-C-BB-E-CL4U4", parentKey: "B-C-BB-E", kind: "pattern", condition: (r) => r.CL4U4, order: 3 },
+  { key: "B-C-BB-E-CL3U1", label: "B-C-BB-E-CL3U1", parentKey: "B-C-BB-E", kind: "pattern", condition: (r) => r.CL3U1, order: 4 },
+  // Missing Subpatterns added from PatternStats (B-C-BB-C, 37 rows, 5 unclassified)
+  { key: "B-C-BB-C-CL4U4", label: "B-C-BB-C-CL4U4", parentKey: "B-C-BB-C", kind: "pattern", condition: (r) => r.CL4U4, order: 1 },
+  { key: "B-C-BB-C-CL3U2", label: "B-C-BB-C-CL3U2", parentKey: "B-C-BB-C", kind: "pattern", condition: (r) => r.CL3U2, order: 2 },
 
   // --- leaf Views ---
 
