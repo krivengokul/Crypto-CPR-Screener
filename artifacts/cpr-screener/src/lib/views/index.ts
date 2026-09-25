@@ -5,7 +5,7 @@ import { LEVELSABOVE_VIEWS } from "./categories/levelsAbove";
 import { LEVELSBELOW_VIEWS } from "./categories/levelsBelow";
 import { COMPRESSED_VIEWS } from "./categories/compressed";
 import { EXPANDED_VIEWS } from "./categories/expanded";
-import { R1ABOVEPR4_S1BELOWPS4_VIEWS } from "./categories/r1s1";
+import { R1ABOVEPR4_S1BELOWPS4_VIEWS } from "./categories/r4s4";
 import { COPY_VIEWS } from "./categories/copyViews";
 import { MISC_VIEWS, OUTER_LEVEL_PATTERNS } from "./categories/misc";
 import {
@@ -61,7 +61,7 @@ export * from "./categories/levelsAbove";
 export * from "./categories/levelsBelow";
 export * from "./categories/compressed";
 export * from "./categories/expanded";
-export * from "./categories/r1s1";
+export * from "./categories/r4s4";
 export * from "./categories/copyViews";
 export * from "./categories/misc";
 export * from "./categories/touchcpr";
