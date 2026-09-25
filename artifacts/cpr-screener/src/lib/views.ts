@@ -339,14 +339,11 @@ interface CompoundCombo {
  * resulting conditions live.
  */
 const COMPOUND_COMBOS: CompoundCombo[] = [
-  // A-B-*
-  { ssrr: "A", hhll: "B", rrhh: "C", ssll: "C" },
-  { ssrr: "A", hhll: "B", rrhh: "C", ssll: "LB" },
-  { ssrr: "A", hhll: "B", rrhh: "E", ssll: "E" },
-  { ssrr: "A", hhll: "B", rrhh: "E", ssll: "LB" },
-  { ssrr: "A", hhll: "B", rrhh: "RA", ssll: "C" },
-  { ssrr: "A", hhll: "B", rrhh: "RA", ssll: "E" },
-  { ssrr: "A", hhll: "B", rrhh: "RA", ssll: "LB" },
+  // A-B-* — removed per user request: all 7 combos (A-B-C-C, A-B-C-LB,
+  // A-B-E-E, A-B-E-LB, A-B-RA-C, A-B-RA-E, A-B-RA-LB) showed 0 matched
+  // rows under LEVEL ABOVE in PatternStats, along with A-B-C-C's own
+  // EU4L4 child and that child's "8AM:pPDHA-SRA-U4+2:2AM" leaf view
+  // (both removed below, in LEVELSABOVE_VIEWS).
   // A-A-*
   { ssrr: "A", hhll: "A", rrhh: "AA", ssll: "AA" },
   { ssrr: "A", hhll: "A", rrhh: "AA", ssll: "OA" },
@@ -483,13 +480,6 @@ const COMPOUND_VIEWS: ViewDef[] = COMPOUND_COMBOS.map(makeCompoundView);
 // can't carry order the way the hand-authored batches below do; patched
 // on after construction instead.
 const COMPOUND_ORDER: Record<string, number> = {
-  "A-B-C-C": 2,
-  "A-B-C-LB": 4,
-  "A-B-E-E": 5,
-  "A-B-E-LB": 6,
-  "A-B-RA-C": 7,
-  "A-B-RA-E": 8,
-  "A-B-RA-LB": 9,
   "A-A-AA-AA": 10,
   "A-A-AA-OA": 11,
   "A-A-OA-AA": 12,
@@ -642,11 +632,6 @@ function computePrevPattern(today: CPRLevels, prev: CPRLevels | undefined | null
 }
 
 const LEVELSABOVE_VIEWS: ViewDef[] = [
-  // --- A-B-C-C's one nested child ---
-  { key: "A-B-C-C-EU4L4", label: "A-B-C-C-EU4L4", parentKey: "A-B-C-C", kind: "pattern", condition: (r) => r.EU4L4,
-      order: 3
-},
-
   // --- A-A-AA-AA's nested Subpattern children ---
   { key: "A-A-AA-AA-U3L3", label: "A-A-AA-AA-U3L3", parentKey: "A-A-AA-AA", kind: "pattern", condition: (r) => r.U3L3,
       order: 1
@@ -693,6 +678,10 @@ const LEVELSABOVE_VIEWS: ViewDef[] = [
   { key: "A-A-AA-AA-U3L2", label: "A-A-AA-AA-U3L2", parentKey: "A-A-AA-AA", kind: "pattern", condition: (r) => r.U3L2,
       order: 15
 },
+  // Added from PatternStats "Missing Subpatterns" (A-A-AA-AA, 3 unclassified rows).
+  { key: "A-A-AA-AA-EU4L4", label: "A-A-AA-AA-EU4L4", parentKey: "A-A-AA-AA", kind: "pattern", condition: (r) => r.EU4L4,
+      order: 16
+},
   { key: "A-A-AA-AA-EUTL3", label: "A-A-AA-AA-EUTL3", parentKey: "R1AbovePR4-A-A-AA-AA", kind: "pattern", condition: (r) => r.EUTL3,
       order: 7
 },
@@ -709,6 +698,10 @@ const LEVELSABOVE_VIEWS: ViewDef[] = [
 },
   { key: "A-A-AA-OA-EU2L4", label: "A-A-AA-OA-EU2L4", parentKey: "A-A-AA-OA", kind: "pattern", condition: (r) => r.EU2L4,
       order: 3
+},
+  // Added from PatternStats "Missing Subpatterns" (A-A-AA-OA, 4 unclassified rows).
+  { key: "A-A-AA-OA-EU2L3", label: "A-A-AA-OA-EU2L3", parentKey: "A-A-AA-OA", kind: "pattern", condition: (r) => r.EU2L3,
+      order: 4
 },
 
   // --- leaf Views (self-contained, target-graded) ---
@@ -740,26 +733,6 @@ const LEVELSABOVE_VIEWS: ViewDef[] = [
     direction: "Up",
     condition: (r) => r.prevCPR.pivot > r.todayCPR.prevLow && r.todayCPR.pivot > r.prevCPR.prevHigh,
     targetLabel: "FAU4 (Far Above today's R4)",
-    getTarget: (r) => r.todayCPR.r4,
-    entryLabel: "TC (today's TC)",
-    getEntry: (r) => r.todayCPR.tc,
-    stoplossLabel: "S1 (today's S1)",
-    getStoploss: (r) => r.todayCPR.s1,
-      order: 0
-},
-  {
-    key: "8AM:pPDHA-SRA-U4+2:2AM",
-    label: "8AM:pPDHA-SRA-U4+2:2AM",
-    parentKey: "A-B-C-C-EU4L4",
-    kind: "view",
-    direction: "Up",
-    condition: (r) =>
-      r.SSRRCategory === "RRSS-A" &&
-      r.prevCPR.prevHigh > r.todayCPR.prevHigh &&
-      r.prevCPR.prevLow > r.todayCPR.prevLow &&
-      (r.todayCPR.HLSwitch !== "HL-B" ||
-        (r.prevCPR.prevHigh > r.todayCPR.r1 && r.todayCPR.prevLow > r.prevCPR.s1)),
-    targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
     entryLabel: "TC (today's TC)",
     getEntry: (r) => r.todayCPR.tc,
