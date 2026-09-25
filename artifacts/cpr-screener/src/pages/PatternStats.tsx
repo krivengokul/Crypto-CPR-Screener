@@ -440,6 +440,35 @@ function missingChildCount(patterns: StatRow[], index: number): number {
 }
 
 /**
+ * Whether a Pattern (depth 1) row has any immediate Subpattern (depth 2)
+ * children listed under it in the tree at all, regardless of their counts.
+ * A Pattern with none defined for it in views.ts can never be "fully
+ * covered" no matter what its own count is — see isFullyCoveredPattern.
+ */
+function hasChildPatterns(patterns: StatRow[], index: number): boolean {
+  const row = patterns[index];
+  const childDepth = row.depth + 1;
+  for (let j = index + 1; j < patterns.length; j++) {
+    const next = patterns[j];
+    if (next.depth <= row.depth) break;
+    if (next.depth === childDepth) return true;
+  }
+  return false;
+}
+
+/**
+ * A top-level Pattern's count badge is shown in green only when its
+ * Subpatterns fully account for it: it has at least one Subpattern listed
+ * under it in the tree, AND their counts add up to its own total (no
+ * unclassified remainder). Otherwise — no Subpatterns defined at all, or
+ * some of its matches aren't covered by any of them — it's shown in red
+ * instead, same red for both cases.
+ */
+function isFullyCoveredPattern(patterns: StatRow[], index: number): boolean {
+  return hasChildPatterns(patterns, index) && missingChildCount(patterns, index) === 0;
+}
+
+/**
  * Suggested subpattern key for an unclassified row, in the same shape as the
  * real keys in views.ts: the row's own RRSS-HHLL-RRHH-SSLL compound plus its
  * outer band flag — "C-C-BB-AA-CL4U3", "B-A-C-C-EU4L4", ... Falls back to
@@ -583,10 +612,18 @@ function CategoryBox({
             // children (Subpatterns) below. Subpatterns (depth 2) and Views
             // only show green counts.
             const missing = isTop ? missingChildCount(group.patterns, i) : 0;
+            const hasChildren = isTop ? hasChildPatterns(group.patterns, i) : false;
+            // Only top-level Pattern rows are judged red/green by subpattern
+            // coverage — Subpatterns and Views (leave-as-is per design) are
+            // always green-when-matched, same as before.
+            const isFullyCovered = isTop ? hasChildren && missing === 0 : true;
+            const isUncovered = isTop && p.count > 0 && !isFullyCovered;
             const scopedKey = `${group.categoryKey}::${p.patternKey}`;
             const unclass = unclassified?.[scopedKey];
             const isExpanded = expandedMissingKey === scopedKey;
-            const breakdownTooltip = unclass && unclass.length > 0
+            const breakdownTooltip = !hasChildren
+              ? `${p.count} total. No Subpatterns are defined under this pattern yet.`
+              : unclass && unclass.length > 0
               ? `${p.count} total, only ${p.count - missing} accounted for by subpatterns below.\n\n${missing} unclassified breakdown:\n${unclass.map((u) => `• ${suggestedKeyFor(p.patternKey, u)}: ${u.count}`).join("\n")}\n\nClick to view breakdown & copy suggested keys`
               : `${p.count} total, only ${p.count - missing} accounted for by its Subpatterns below — ${missing} unclassified`;
 
@@ -621,17 +658,7 @@ function CategoryBox({
                     {p.patternLabel}
                   </span>
                   <span className="relative flex shrink-0 items-center gap-1">
-                    <span
-                      className={[
-                        "shrink-0 rounded-full border px-1.5 py-0.5 font-mono text-[10px] font-bold",
-                        p.count > 0
-                          ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-300"
-                          : "border-[#223347] bg-[#182333] text-slate-500",
-                      ].join(" ")}
-                    >
-                      {p.count}
-                    </span>
-                    {missing > 0 && (
+                    {isUncovered ? (
                       <button
                         type="button"
                         onClick={(e) => {
@@ -644,39 +671,61 @@ function CategoryBox({
                         ].join(" ")}
                         title={breakdownTooltip}
                       >
-                        {missing}
+                        {p.count}
                       </button>
+                    ) : (
+                      <span
+                        className={[
+                          "shrink-0 rounded-full border px-1.5 py-0.5 font-mono text-[10px] font-bold",
+                          p.count > 0
+                            ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-300"
+                            : "border-[#223347] bg-[#182333] text-slate-500",
+                        ].join(" ")}
+                        title={isTop ? breakdownTooltip : undefined}
+                      >
+                        {p.count}
+                      </span>
                     )}
                   </span>
                 </div>
-                {isExpanded && unclass && unclass.length > 0 && (
+                {isExpanded && (
                   <div className="mx-2 my-1.5 rounded-lg border border-rose-500/30 bg-[#121c2b] p-2.5 shadow-md">
-                    <div className="mb-2 flex items-center justify-between text-[11px] font-semibold text-rose-300">
-                      <span>Missing Subpatterns ({missing} unclassified rows):</span>
-                      <span className="text-[10px] text-slate-400 font-normal">Click a chip to copy key</span>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {unclass.map((u) => {
-                        const suggestedKey = suggestedKeyFor(p.patternKey, u);
-                        return (
-                          <button
-                            key={suggestedKey}
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigator.clipboard.writeText(suggestedKey);
-                            }}
-                            title={`Click to copy "${suggestedKey}"`}
-                            className="group/chip flex items-center gap-1.5 rounded-md border border-[#22354a] bg-[#162234] px-2 py-1 font-mono text-[11px] text-slate-200 transition hover:border-teal-500/60 hover:bg-[#1e2f47]"
-                          >
-                            <span className="font-semibold text-slate-100">{suggestedKey}</span>
-                            <span className="rounded bg-rose-500/20 px-1 py-0.2 text-[10px] font-bold text-rose-300">
-                              {u.count}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
+                    {unclass && unclass.length > 0 ? (
+                      <>
+                        <div className="mb-2 flex items-center justify-between text-[11px] font-semibold text-rose-300">
+                          <span>Missing Subpatterns ({missing} unclassified rows):</span>
+                          <span className="text-[10px] text-slate-400 font-normal">Click a chip to copy key</span>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {unclass.map((u) => {
+                            const suggestedKey = suggestedKeyFor(p.patternKey, u);
+                            return (
+                              <button
+                                key={suggestedKey}
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigator.clipboard.writeText(suggestedKey);
+                                }}
+                                title={`Click to copy "${suggestedKey}"`}
+                                className="group/chip flex items-center gap-1.5 rounded-md border border-[#22354a] bg-[#162234] px-2 py-1 font-mono text-[11px] text-slate-200 transition hover:border-teal-500/60 hover:bg-[#1e2f47]"
+                              >
+                                <span className="font-semibold text-slate-100">{suggestedKey}</span>
+                                <span className="rounded bg-rose-500/20 px-1 py-0.2 text-[10px] font-bold text-rose-300">
+                                  {u.count}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </>
+                    ) : (
+                      <p className="text-[11px] text-slate-400">
+                        {hasChildren
+                          ? "No unclassified breakdown available for this pattern."
+                          : "No Subpatterns are defined under this pattern yet."}
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
