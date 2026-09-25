@@ -564,7 +564,7 @@ function CategoryBox({
               <span
                 className={[
                   "shrink-0 font-mono text-[10px] font-bold",
-                  p.count > 0 ? "text-emerald-300" : "text-rose-400",
+                  p.count > 0 ? "text-emerald-300" : "text-slate-600",
                 ].join(" ")}
               >
                 {p.count}
@@ -577,9 +577,6 @@ function CategoryBox({
           {group.patterns.map((p, i) => {
             const pct = maxCount > 0 ? Math.max(p.count > 0 ? 4 : 0, Math.round((p.count / maxCount) * 100)) : 0;
             const isTop = p.depth === 1;
-            // A zero count is highlighted as missing only for Pattern rows.
-            // Subpatterns (depth 2+) and Views intentionally keep the muted zero style.
-            const showMissingCount = p.count === 0 && isTop && group.categoryKey !== VIEWS_CATEGORY_KEY;
             const dirClass = p.count > 0 ? directionTextClass(normalizeViewDirection(p.direction)) : null;
             // Only top-level Pattern (depth 1) rows get a "missing" count —
             // the amount of their own total not covered by their immediate
@@ -629,8 +626,6 @@ function CategoryBox({
                         "shrink-0 rounded-full border px-1.5 py-0.5 font-mono text-[10px] font-bold",
                         p.count > 0
                           ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-300"
-                          : showMissingCount
-                          ? "border-rose-500/40 bg-rose-500/15 text-rose-300"
                           : "border-[#223347] bg-[#182333] text-slate-500",
                       ].join(" ")}
                     >
