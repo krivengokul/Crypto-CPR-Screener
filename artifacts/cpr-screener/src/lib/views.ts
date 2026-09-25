@@ -1701,6 +1701,11 @@ const LEVELSBELOW_VIEWS: ViewDef[] = [
 
   // --- B-E-HA-BB's nested Pattern children (LEVEL BELOW) ---
   { key: "B-E-HA-BB-EL3U4", label: "B-E-HA-BB-EL3U4", parentKey: "B-E-HA-BB", kind: "pattern", condition: (r) => r.EL3U4, order: 0 },
+  // Missing Subpatterns added from PatternStats (B-E-HA-BB, 49 unclassified rows)
+  { key: "B-E-HA-BB-EL2U4", label: "B-E-HA-BB-EL2U4", parentKey: "B-E-HA-BB", kind: "pattern", condition: (r) => r.EL2U4, order: 1 },
+  { key: "B-E-HA-BB-EL2U3", label: "B-E-HA-BB-EL2U3", parentKey: "B-E-HA-BB", kind: "pattern", condition: (r) => r.EL2U3, order: 2 },
+  { key: "B-E-HA-BB-EL3U3", label: "B-E-HA-BB-EL3U3", parentKey: "B-E-HA-BB", kind: "pattern", condition: (r) => r.EL3U3, order: 3 },
+  { key: "B-E-HA-BB-EL4U4", label: "B-E-HA-BB-EL4U4", parentKey: "B-E-HA-BB", kind: "pattern", condition: (r) => r.EL4U4, order: 4 },
 
   // --- leaf Views ---
 
