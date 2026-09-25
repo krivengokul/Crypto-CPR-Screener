@@ -1393,11 +1393,19 @@ export const OVERLAP_BELOW_TOUCH_VIEWS: ViewDef[] = [
     order: 1,
   },
   { key: "OVB-B-E-HA-BB-EL3U4", label: "B-E-HA-BB-EL3U4", parentKey: "OVB-B-E-HA-BB", kind: "pattern", condition: (r) => r.EL3U4, order: 0 },
-  { key: "B-E-HA-BB-EL2U3", label: "B-E-HA-BB-EL2U3", parentKey: "OVB-B-E-HA-BB", kind: "pattern", condition: (r) => r.EL2U3, order: 1 },
-  { key: "B-E-HA-BB-EL3U3", label: "B-E-HA-BB-EL3U3", parentKey: "OVB-B-E-HA-BB", kind: "pattern", condition: (r) => r.EL3U3, order: 2 },
-  { key: "B-E-HA-BB-EU2L2", label: "B-E-HA-BB-EU2L2", parentKey: "OVB-B-E-HA-BB", kind: "pattern", condition: (r) => r.EU2L2, order: 3 },
-  { key: "B-E-HA-BB-L4U4", label: "B-E-HA-BB-L4U4", parentKey: "OVB-B-E-HA-BB", kind: "pattern", condition: (r) => r.L4U4, order: 4 },
-  { key: "B-E-HA-BB-L3U4", label: "B-E-HA-BB-L3U4", parentKey: "OVB-B-E-HA-BB", kind: "pattern", condition: (r) => r.L3U4, order: 5 },
+  // NOTE: these five used to carry bare (unprefixed) keys, which collided
+  // 1:1 with LEVEL BELOW's own hand-authored "B-E-HA-BB-*" subpatterns in
+  // levelsBelow.ts (same ViewDef.key, different parentKey/category chain).
+  // Since VIEWS.push order puts LEVELSBELOW_VIEWS before this Touch CPR
+  // block, getView()/passesPattern() would always resolve the LEVEL BELOW
+  // version for these keys — silently making Touch CPR's own counts here
+  // evaluate LEVEL BELOW's base condition instead of Touch's. Prefixed to
+  // match this section's own "OVB-B-E-HA-BB-EL3U4" sibling above.
+  { key: "OVB-B-E-HA-BB-EL2U3", label: "B-E-HA-BB-EL2U3", parentKey: "OVB-B-E-HA-BB", kind: "pattern", condition: (r) => r.EL2U3, order: 1 },
+  { key: "OVB-B-E-HA-BB-EL3U3", label: "B-E-HA-BB-EL3U3", parentKey: "OVB-B-E-HA-BB", kind: "pattern", condition: (r) => r.EL3U3, order: 2 },
+  { key: "OVB-B-E-HA-BB-EU2L2", label: "B-E-HA-BB-EU2L2", parentKey: "OVB-B-E-HA-BB", kind: "pattern", condition: (r) => r.EU2L2, order: 3 },
+  { key: "OVB-B-E-HA-BB-L4U4", label: "B-E-HA-BB-L4U4", parentKey: "OVB-B-E-HA-BB", kind: "pattern", condition: (r) => r.L4U4, order: 4 },
+  { key: "OVB-B-E-HA-BB-L3U4", label: "B-E-HA-BB-L3U4", parentKey: "OVB-B-E-HA-BB", kind: "pattern", condition: (r) => r.L3U4, order: 5 },
 
   // --- B-E-E-BB (order 2) ---
   {
@@ -1412,10 +1420,13 @@ export const OVERLAP_BELOW_TOUCH_VIEWS: ViewDef[] = [
       r.SSLLCategory === "SSLL-BB",
     order: 2,
   },
-  { key: "B-E-E-BB-EL3U4", label: "B-E-E-BB-EL3U4", parentKey: "OVB-B-E-E-BB", kind: "pattern", condition: (r) => r.EL3U4, order: 0 },
-  { key: "B-E-E-BB-EL2U3", label: "B-E-E-BB-EL2U3", parentKey: "OVB-B-E-E-BB", kind: "pattern", condition: (r) => r.EL2U3, order: 1 },
-  { key: "B-E-E-BB-EL3U3", label: "B-E-E-BB-EL3U3", parentKey: "OVB-B-E-E-BB", kind: "pattern", condition: (r) => r.EL3U3, order: 2 },
-  { key: "B-E-E-BB-EL2U4", label: "B-E-E-BB-EL2U4", parentKey: "OVB-B-E-E-BB", kind: "pattern", condition: (r) => r.EL2U4, order: 3 },
+  // NOTE: same unprefixed-key collision risk as OVB-B-E-HA-BB above (one of
+  // these — EL2U3 — now also exists as a LEVEL BELOW subpattern in
+  // levelsBelow.ts); prefixed for the same reason.
+  { key: "OVB-B-E-E-BB-EL3U4", label: "B-E-E-BB-EL3U4", parentKey: "OVB-B-E-E-BB", kind: "pattern", condition: (r) => r.EL3U4, order: 0 },
+  { key: "OVB-B-E-E-BB-EL2U3", label: "B-E-E-BB-EL2U3", parentKey: "OVB-B-E-E-BB", kind: "pattern", condition: (r) => r.EL2U3, order: 1 },
+  { key: "OVB-B-E-E-BB-EL3U3", label: "B-E-E-BB-EL3U3", parentKey: "OVB-B-E-E-BB", kind: "pattern", condition: (r) => r.EL3U3, order: 2 },
+  { key: "OVB-B-E-E-BB-EL2U4", label: "B-E-E-BB-EL2U4", parentKey: "OVB-B-E-E-BB", kind: "pattern", condition: (r) => r.EL2U4, order: 3 },
 
   // --- B-A-HA-SB (order 3) ---
   {

@@ -1,5 +1,5 @@
 import type { CPRResult } from "../../cpr";
-import { computePrevPattern } from "../../cpr";
+import { computePrevPattern, pickOuterLevelPattern } from "../../cpr";
 import type { ViewDef } from "../types";
 import { passesView } from "../registry";
 import { matchesGapBadge } from "../gapBadges";
@@ -70,6 +70,11 @@ export const LEVELSBELOW_VIEWS: ViewDef[] = [
   { key: "B-B-BB-BB-CL3U2", label: "B-B-BB-BB-CL3U2", parentKey: "B-B-BB-BB", kind: "pattern", condition: (r) => r.CL3U2, order: 12 },
   { key: "B-B-BB-BB-CL4U4", label: "B-B-BB-BB-CL4U4", parentKey: "B-B-BB-BB", kind: "pattern", condition: (r) => r.CL4U4, order: 13 },
   { key: "B-B-BB-BB-L4U2", label: "B-B-BB-BB-L4U2", parentKey: "B-B-BB-BB", kind: "pattern", condition: (r) => r.L4U2, order: 14 },
+  // Missing Subpatterns added from PatternStats (B-B-BB-BB, 2626 rows, 12 unclassified)
+  { key: "B-B-BB-BB-L3U2", label: "B-B-BB-BB-L3U2", parentKey: "B-B-BB-BB", kind: "pattern", condition: (r) => r.L3U2, order: 15 },
+  { key: "B-B-BB-BB-None", label: "B-B-BB-BB-None", parentKey: "B-B-BB-BB", kind: "pattern", condition: (r) => !pickOuterLevelPattern(r), order: 16 },
+  { key: "B-B-BB-BB-CL3U1", label: "B-B-BB-BB-CL3U1", parentKey: "B-B-BB-BB", kind: "pattern", condition: (r) => r.CL3U1, order: 17 },
+  { key: "B-B-BB-BB-CL3U3", label: "B-B-BB-BB-CL3U3", parentKey: "B-B-BB-BB", kind: "pattern", condition: (r) => r.CL3U3, order: 18 },
 
   // --- B-E-HA-BB's nested Pattern children (LEVEL BELOW) ---
   { key: "B-E-HA-BB-EL3U4", label: "B-E-HA-BB-EL3U4", parentKey: "B-E-HA-BB", kind: "pattern", condition: (r) => r.EL3U4, order: 0 },
@@ -78,6 +83,22 @@ export const LEVELSBELOW_VIEWS: ViewDef[] = [
   { key: "B-E-HA-BB-EL2U3", label: "B-E-HA-BB-EL2U3", parentKey: "B-E-HA-BB", kind: "pattern", condition: (r) => r.EL2U3, order: 2 },
   { key: "B-E-HA-BB-EL3U3", label: "B-E-HA-BB-EL3U3", parentKey: "B-E-HA-BB", kind: "pattern", condition: (r) => r.EL3U3, order: 3 },
   { key: "B-E-HA-BB-EL4U4", label: "B-E-HA-BB-EL4U4", parentKey: "B-E-HA-BB", kind: "pattern", condition: (r) => r.EL4U4, order: 4 },
+  // Missing Subpatterns added from PatternStats (B-E-HA-BB, 211 rows, 6 unclassified)
+  { key: "B-E-HA-BB-L4U4", label: "B-E-HA-BB-L4U4", parentKey: "B-E-HA-BB", kind: "pattern", condition: (r) => r.L4U4, order: 5 },
+  { key: "B-E-HA-BB-L3U4", label: "B-E-HA-BB-L3U4", parentKey: "B-E-HA-BB", kind: "pattern", condition: (r) => r.L3U4, order: 6 },
+
+  // --- B-B-BB-OB's nested Pattern children (LEVEL BELOW) ---
+  { key: "B-B-BB-OB-CL3U2", label: "B-B-BB-OB-CL3U2", parentKey: "B-B-BB-OB", kind: "pattern", condition: (r) => r.CL3U2, order: 0 },
+  { key: "B-B-BB-OB-CL4U4", label: "B-B-BB-OB-CL4U4", parentKey: "B-B-BB-OB", kind: "pattern", condition: (r) => r.CL4U4, order: 1 },
+
+  // --- B-B-OB-BB's nested Pattern children (LEVEL BELOW) ---
+  { key: "B-B-OB-BB-EL3U4", label: "B-B-OB-BB-EL3U4", parentKey: "B-B-OB-BB", kind: "pattern", condition: (r) => r.EL3U4, order: 0 },
+
+  // --- B-E-E-BB's nested Pattern children (LEVEL BELOW) ---
+  { key: "B-E-E-BB-EL2U3", label: "B-E-E-BB-EL2U3", parentKey: "B-E-E-BB", kind: "pattern", condition: (r) => r.EL2U3, order: 0 },
+
+  // --- B-E-C-BB's nested Pattern children (LEVEL BELOW) ---
+  { key: "B-E-C-BB-EL2U3", label: "B-E-C-BB-EL2U3", parentKey: "B-E-C-BB", kind: "pattern", condition: (r) => r.EL2U3, order: 0 },
 
   // --- leaf Views ---
 
