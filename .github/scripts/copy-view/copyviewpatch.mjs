@@ -43,6 +43,14 @@ function getScreenerNavCategoryIds(sourceText) {
     .filter(Boolean);
 }
 
+function isViewsStaticObjectLiteral(sourceText) {
+  const project = new Project({ useInMemoryFileSystem: true });
+  const sourceFile = project.createSourceFile("ViewsSidebar.tsx", sourceText);
+  const viewsDecl = sourceFile.getVariableDeclaration("Views");
+  const initializer = viewsDecl?.getInitializer();
+  return !!initializer && initializer.isKind(SyntaxKind.ObjectLiteralExpression);
+}
+
 function updateScreenerNav(sourceText, categoryKey, sourceKey, newKey, newLabel, isEdit) {
   const project = new Project({ useInMemoryFileSystem: true });
   const sourceFile = project.createSourceFile("ViewsSidebar.tsx", sourceText);
@@ -390,19 +398,27 @@ if (isEdit && sourceFile !== targetFile) {
 const viewsSidebarFilePath = resolve(process.cwd(), "../../../", viewsSidebarFilePathEnv);
 const viewsSidebarText = readFileSync(viewsSidebarFilePath, "utf-8");
 
-const navIds = getScreenerNavCategoryIds(viewsSidebarText);
-const screenerCategoryKey = topCat && navIds.includes(topCat) ? topCat : "copyViews";
-if (screenerCategoryKey !== topCat) {
-  console.warn(
-    `"${topCat ?? attachKey}" has no entry in ViewsSidebar.tsx's pivotcategories — putting the nav chip in "copyViews" instead.`
-  );
-}
-
-const patchedViewsSidebarText = updateScreenerNav(viewsSidebarText, screenerCategoryKey, sourceKey, newKey, newLabel, isEdit);
-writeFileSync(viewsSidebarFilePath, patchedViewsSidebarText, "utf-8");
-
 const levelCheckNote = levelCheckDefs ? ` with ${levelCheckDefs.length} symbol-derived levelCheckDefs` : "";
 console.log(
   `Patched: "${sourceKey}" -> "${newKey}" under "${attachKey}" in ${arrName} (grades against "${originalConditionKey}")${levelCheckNote}`
 );
-console.log(`Added "${newKey}" to ${viewsSidebarFilePathEnv}'s Views["${screenerCategoryKey}"]`);
+
+if (isViewsStaticObjectLiteral(viewsSidebarText)) {
+  const navIds = getScreenerNavCategoryIds(viewsSidebarText);
+  const screenerCategoryKey = topCat && navIds.includes(topCat) ? topCat : "copyViews";
+  if (screenerCategoryKey !== topCat) {
+    console.warn(
+      `"${topCat ?? attachKey}" has no entry in ViewsSidebar.tsx's pivotcategories — putting the nav chip in "copyViews" instead.`
+    );
+  }
+
+  const patchedViewsSidebarText = updateScreenerNav(viewsSidebarText, screenerCategoryKey, sourceKey, newKey, newLabel, isEdit);
+  writeFileSync(viewsSidebarFilePath, patchedViewsSidebarText, "utf-8");
+  console.log(`Added "${newKey}" to ${viewsSidebarFilePathEnv}'s Views["${screenerCategoryKey}"]`);
+} else {
+  // Views is now derived automatically (see buildSidebarViews() in ViewsSidebar.tsx) from
+  // each ViewDef's parentKey/navigationCategoryKey, so no separate sidebar patch is needed.
+  console.log(
+    `${viewsSidebarFilePathEnv}'s Views is auto-derived from the view registry — no sidebar patch needed for "${newKey}".`
+  );
+}
