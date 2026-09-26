@@ -1053,7 +1053,7 @@ export default function Screener({
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <div className="max-w-7xl px-4 py-8 min-h-screen flex flex-col">
+      <div className="max-w-7xl px-4 pt-3 pb-8 min-h-screen flex flex-col">
         {/* Header — description paragraph removed, spacing tightened so the
             title row and the Legend grid below both sit higher on the page.
             Title stacks tightly over the byline (no gap between them), the
