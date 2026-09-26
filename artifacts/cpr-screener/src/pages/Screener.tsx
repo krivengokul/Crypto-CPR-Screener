@@ -1158,13 +1158,17 @@ export default function Screener({
                 style={{ background: "linear-gradient(135deg, rgba(16,185,129,0.12), rgba(6,182,212,0.10))" }}
                 title="Time of the last completed scan feeding this view"
               >
-                <span className="relative flex h-1.5 w-1.5 shrink-0">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                </span>
                 <Clock className="w-3 h-3 text-emerald-400 shrink-0" />
                 <span className="text-[11px] leading-none text-emerald-300/90 whitespace-nowrap">
-                  Scanned at{" "}
+                  Scanned{" "}
+                  {(activeTab === "binance"
+                    ? "Binance "
+                    : activeTab === "delta"
+                    ? "Delta "
+                    : activeTab === "coindcx"
+                    ? "CoinDCX "
+                    : "")}
+                  at{" "}
                   <span className="font-mono font-semibold text-emerald-200">
                     {formatScanTime(activeScannedAt)}
                   </span>
@@ -1330,11 +1334,11 @@ export default function Screener({
               </span>
               <span>{progressPct}%</span>
             </div>
-            {/* Thin purple progress bar (was bg-primary/gold, h-1.5) */}
+            {/* Thin emerald-green progress bar, matching the CoinDCX tab/button color (was purple #8b5cf6) */}
             <div className="w-full bg-muted rounded-full h-1">
               <div
                 className="h-1 rounded-full transition-all"
-                style={{ width: `${progressPct}%`, backgroundColor: "#8b5cf6" }}
+                style={{ width: `${progressPct}%`, backgroundColor: "#10b981" }}
               />
             </div>
           </div>
