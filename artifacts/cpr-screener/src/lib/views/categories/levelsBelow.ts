@@ -131,6 +131,12 @@ export const LEVELSBELOW_VIEWS: ViewDef[] = [
   // Missing Subpatterns added from PatternStats (B-C-BB-C, 37 rows, 5 unclassified)
   { key: "B-C-BB-C-CL4U4", label: "B-C-BB-C-CL4U4", parentKey: "B-C-BB-C", kind: "pattern", condition: (r) => r.CL4U4, order: 1 },
   { key: "B-C-BB-C-CL3U2", label: "B-C-BB-C-CL3U2", parentKey: "B-C-BB-C", kind: "pattern", condition: (r) => r.CL3U2, order: 2 },
+  // Additional LEVEL BELOW subpatterns requested from PatternStats.
+  { key: "B-B-BB-C-CL3U2", label: "B-B-BB-C-CL3U2", parentKey: "B-B-BB-C", kind: "pattern", condition: (r) => r.CL3U2, order: 0 },
+  { key: "B-C-BB-OB-L4U4", label: "B-C-BB-OB-L4U4", parentKey: "B-C-BB-OB", kind: "pattern", condition: (r) => r.L4U4, order: 0 },
+  { key: "B-C-BB-OA-CL3U3", label: "B-C-BB-OA-CL3U3", parentKey: "B-C-BB-OA", kind: "pattern", condition: (r) => r.CL3U3, order: 0 },
+  { key: "B-E-OB-BB-EL2U3", label: "B-E-OB-BB-EL2U3", parentKey: "B-E-OB-BB", kind: "pattern", condition: (r) => r.EL2U3, order: 0 },
+  { key: "B-E-OA-BB-EL3U3", label: "B-E-OA-BB-EL3U3", parentKey: "B-E-OA-BB", kind: "pattern", condition: (r) => r.EL3U3, order: 0 },
 
   // --- leaf Views ---
 
