@@ -91,7 +91,7 @@ async function fetchWithRetry(
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      const res = await fetch(url, { signal: controller.signal });
+      const res = await fetch(url, { signal: controller.signal, cache: "no-store" });
       clearTimeout(timer);
       if (res.ok) return res;
       lastStatus = res.status;
@@ -341,6 +341,12 @@ export async function runCoinDCXScreener(
 
   const pinnedSet = reconcilePinnedSymbols(activeSymbols);
   const symbols = activeSymbols.filter((s) => pinnedSet.has(s));
+  if (symbols.length === 0) {
+    throw new Error("CoinDCX returned no eligible USDT futures symbols.");
+  }
+  console.info(
+    `[coindcx] active instruments=${activeSymbols.length}, eligible symbols=${symbols.length}`
+  );
 
   const skipped: string[] = [];
   let done = 0;
@@ -414,10 +420,12 @@ export async function runCoinDCXScreener(
 
   const results: CPRResult[] = perSymbolResults.filter((r): r is CPRResult => r !== null);
 
+  console.info(
+    `[coindcx] scan complete: scanned=${symbols.length}, analysed=${results.length}, skipped=${skipped.length}`
+  );
   if (skipped.length) {
     console.warn(
-      `[coindcx] scanned ${symbols.length} symbols, ${results.length} analysed, ` +
-        `${skipped.length} skipped for missing candle data:`,
+      `[coindcx] skipped symbols for missing candle data:`,
       skipped
     );
   }
