@@ -1370,8 +1370,14 @@ export default function Screener({
           />
         )}
 
-        {/* Show-all toggle + sub-filter buttons */}
-        {currentStatus === "done" && (
+        {/* Show-all toggle + sub-filter buttons — only rendered when there's
+            actually something inside to show (a Views sub-pattern row, or
+            one of the Patterns/Touch/Size/NTime/XTime panels toggled open).
+            Previously this wrapped div (with its mb-3 margin) always
+            rendered once a scan was done, leaving an empty gap above the
+            search bar whenever Show All was on and no panel was expanded. */}
+        {currentStatus === "done" &&
+          (!showAll || showTouchList || showPatternList || showSizeList || showEntryTimeList || showExitTimeList) && (
           <div className="flex flex-col gap-2 mb-3">
           <div className="flex items-center gap-2 flex-wrap">
             {!showAll && (
