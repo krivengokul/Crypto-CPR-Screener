@@ -74,8 +74,12 @@ export function isCacheFresh<T>(cache: CachedResults<T> | null): boolean {
   return !!cache && cache.date === getTodayISTDate();
 }
 
-export function shouldAutoScanForCache<T>(cache: CachedResults<T> | null): boolean {
-  return isPastScheduledTime() && !isCacheFresh(cache);
+export function shouldAutoScanForCache<T>(
+  cache: CachedResults<T> | null,
+  source?: string
+): boolean {
+  const alreadyDone = source ? isScanFreshForSource(source, cache) : isCacheFresh(cache);
+  return isPastScheduledTime() && !alreadyDone;
 }
 
 export interface CachedResults<T> {
@@ -117,7 +121,7 @@ export function formatScanTime(savedAtMs: number): string {
   });
 }
 
-export function saveCachedResults<T>(key: string, data: T[]): void {
+export function saveCachedResults<T>(key: string, data: T[]): boolean {
   try {
     const today = getTodayISTDate();
     localStorage.setItem(
@@ -128,9 +132,59 @@ export function saveCachedResults<T>(key: string, data: T[]): void {
         savedAt: Date.now(),
       })
     );
+    return true;
   } catch {
-    // Ignore quota errors
+    // Quota exceeded (or storage unavailable) — the full result set didn't
+    // persist. Callers must not treat this the same as "never scanned":
+    // see markScannedForSource/hasScannedTodayForSource below, which record
+    // the fact that today's scan completed in a tiny, quota-safe key that
+    // survives even when the (much larger) result cache above doesn't.
+    return false;
   }
+}
+
+// ─── Lightweight per-source "scanned today" marker ───────────────────────
+// Independent of the (potentially large) cached result set above. Binance,
+// Delta, and CoinDCX all write their full scan results via
+// saveCachedResults(), and CoinDCX in particular tends to be the largest/
+// last payload written per refresh — if total localStorage usage is near
+// the browser's per-origin quota, its write can silently fail (see the
+// catch above) while Binance/Delta's earlier, smaller writes succeed. That
+// made CoinDCX look "never scanned" on the next hard refresh and forced a
+// pointless rescan every time, even though the day's scan genuinely
+// completed. These tiny (just a date string) per-source keys always fit
+// well within quota, so "was this source scanned today" no longer depends
+// on the big result cache having successfully persisted.
+const SCANNED_MARKER_PREFIX = "cpr_scanned_date_";
+
+export function markScannedForSource(source: string): void {
+  try {
+    localStorage.setItem(SCANNED_MARKER_PREFIX + source, getTodayISTDate());
+  } catch {
+    // Storage unavailable — nothing more we can do; caller falls back to
+    // the result cache's own date field.
+  }
+}
+
+export function hasScannedTodayForSource(source: string): boolean {
+  try {
+    return localStorage.getItem(SCANNED_MARKER_PREFIX + source) === getTodayISTDate();
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * True if this source's scan should be treated as "already done today" —
+ * either because its full result cache is fresh, or (fallback) because the
+ * lightweight scanned-today marker says so even though the result cache
+ * itself failed to persist (e.g. quota exceeded).
+ */
+export function isScanFreshForSource<T>(
+  source: string,
+  cache: CachedResults<T> | null
+): boolean {
+  return isCacheFresh(cache) || hasScannedTodayForSource(source);
 }
 
 export function formatCountdown(targetUtc: Date): string {

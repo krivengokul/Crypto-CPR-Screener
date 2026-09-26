@@ -28,6 +28,8 @@ import {
   saveCachedResults,
   formatScanTime,
   isCacheFresh,
+  isScanFreshForSource,
+  markScannedForSource,
   STORAGE_KEY_BINANCE,
   STORAGE_KEY_DELTA,
   STORAGE_KEY_COINDCX,
@@ -431,6 +433,7 @@ export default function Screener({
       setStatus("done");
       markScannedToday();
       saveCachedResults(STORAGE_KEY_BINANCE, results);
+      markScannedForSource("binance");
       setBinanceScannedAt(Date.now());
       setNextScanUtc(getNextScanIST());
     } catch (e) {
@@ -458,6 +461,7 @@ export default function Screener({
       setDeltaFiltered(results.filter((r) => passesPattern(r, activeView)));
       setDeltaStatus("done");
       saveCachedResults(STORAGE_KEY_DELTA, results);
+      markScannedForSource("delta");
       setDeltaScannedAt(Date.now());
     } catch (e) {
       setDeltaError(e instanceof Error ? e.message : "Unknown error");
@@ -487,6 +491,7 @@ export default function Screener({
       setCoinDCXFiltered(results.filter((r) => passesPattern(r, activeView)));
       setCoinDCXStatus("done");
       saveCachedResults(STORAGE_KEY_COINDCX, results);
+      markScannedForSource("coindcx");
       setCoinDCXScannedAt(Date.now());
     } catch (e) {
       setCoinDCXError(e instanceof Error ? e.message : "Unknown error");
@@ -497,9 +502,9 @@ export default function Screener({
   }, [activeView]);
 
   useEffect(() => {
-    if (shouldAutoScanForCache(cachedBinance)) void doScan();
-    if (shouldAutoScanForCache(cachedDelta)) void doDeltaScan(false);
-    if (shouldAutoScanForCache(cachedCoinDCX)) void doCoinDCXScan(false);
+    if (shouldAutoScanForCache(cachedBinance, "binance")) void doScan();
+    if (shouldAutoScanForCache(cachedDelta, "delta")) void doDeltaScan(false);
+    if (shouldAutoScanForCache(cachedCoinDCX, "coindcx")) void doCoinDCXScan(false);
   }, [cachedBinance, cachedDelta, cachedCoinDCX, doScan, doDeltaScan, doCoinDCXScan]);
 
   const isFirstMountRef = useRef(true);
@@ -509,9 +514,15 @@ export default function Screener({
         isFirstMountRef.current = false;
         // Each exchange decides independently from its own cache date.
         // Binance having scanned must not suppress CoinDCX or Delta.
-        if (!isCacheFresh(cachedBinance)) void doScan();
-        if (!isCacheFresh(cachedDelta)) void doDeltaScan(false);
-        if (!isCacheFresh(cachedCoinDCX)) void doCoinDCXScan(false);
+        // isScanFreshForSource falls back to the lightweight per-source
+        // "scanned today" marker when the full result cache didn't
+        // persist (e.g. CoinDCX's larger payload hitting localStorage's
+        // quota after Binance/Delta already wrote theirs) — so a source
+        // that genuinely already scanned today doesn't rescan on every
+        // hard refresh just because its bulky cache write failed.
+        if (!isScanFreshForSource("binance", cachedBinance)) void doScan();
+        if (!isScanFreshForSource("delta", cachedDelta)) void doDeltaScan(false);
+        if (!isScanFreshForSource("coindcx", cachedCoinDCX)) void doCoinDCXScan(false);
         return;
       }
       // Explicit click from Header "Scan Now" button
