@@ -1021,10 +1021,10 @@ R:R: ${item.riskReward}`;
                     <div className="grid grid-cols-3 gap-2 bg-[#090f19] border border-[#1b2636] rounded-lg p-2.5 mb-3 font-mono">
                       {isDown && (
                         <div>
-                          <div className="text-[10px] text-emerald-400 font-sans flex items-center gap-0.5">
+                          <div className="text-[10px] text-rose-400 font-sans flex items-center gap-0.5">
                             <Target className="w-2.5 h-2.5" /> Target
                           </div>
-                          <div className="text-xs font-bold text-emerald-400 mt-0.5">{fmt(item.targetPrice)}</div>
+                          <div className="text-xs font-bold text-rose-400 mt-0.5">{fmt(item.targetPrice)}</div>
                         </div>
                       )}
                       {!isDown && (
@@ -1039,8 +1039,8 @@ R:R: ${item.riskReward}`;
                       </div>
                       {isDown ? (
                         <div>
-                          <div className="text-[10px] text-rose-400 font-sans">Stop Loss</div>
-                          <div className="text-xs font-bold text-rose-400 mt-0.5">{fmt(item.stopPrice)}</div>
+                          <div className="text-[10px] text-emerald-400 font-sans">Stop Loss</div>
+                          <div className="text-xs font-bold text-emerald-400 mt-0.5">{fmt(item.stopPrice)}</div>
                         </div>
                       ) : (
                         <div>
@@ -1062,7 +1062,7 @@ R:R: ${item.riskReward}`;
                           </strong>
                         </div>
                         <span className="font-mono text-slate-300">
-                          R:R <strong className="text-amber-400">{item.riskReward}</strong>
+                          R:R <strong className="text-white">{item.riskReward}</strong>
                         </span>
                       </div>
                       {item.isSaved && item.patternId && (

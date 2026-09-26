@@ -221,11 +221,23 @@ export default function SignalProgressBar({
           className="h-full rounded-l-full relative"
           style={{ width: `${pivotPct}%`, backgroundColor: leftTrackColor }}
         >
+          {/* S1 tick notch */}
+          <div
+            className="absolute top-0 bottom-0 w-[1px] bg-black/40"
+            style={{ left: `${(s1Pct / (pivotPct || 1)) * 100}%` }}
+          />
           {/* S2 tick notch */}
           <div
             className="absolute top-0 bottom-0 w-[1px] bg-black/40"
             style={{ left: `${(s2Pct / (pivotPct || 1)) * 100}%` }}
           />
+          {/* S3 tick notch */}
+          {s3Pct !== null && (
+            <div
+              className="absolute top-0 bottom-0 w-[1px] bg-black/40"
+              style={{ left: `${(s3Pct / (pivotPct || 1)) * 100}%` }}
+            />
+          )}
         </div>
 
         {/* Right Side: PIVOT to R4 — green/emerald for Up, red for Down */}
@@ -233,6 +245,13 @@ export default function SignalProgressBar({
           className="h-full rounded-r-full relative flex-1"
           style={{ backgroundColor: rightTrackColor }}
         >
+          {/* R1 tick notch */}
+          <div
+            className="absolute top-0 bottom-0 w-[1px] bg-black/40"
+            style={{
+              left: `${((r1Pct - pivotPct) / (100 - pivotPct || 1)) * 100}%`,
+            }}
+          />
           {/* R2 tick notch */}
           <div
             className="absolute top-0 bottom-0 w-[1px] bg-black/40"
@@ -240,6 +259,15 @@ export default function SignalProgressBar({
               left: `${((r2Pct - pivotPct) / (100 - pivotPct || 1)) * 100}%`,
             }}
           />
+          {/* R3 tick notch */}
+          {r3Pct !== null && (
+            <div
+              className="absolute top-0 bottom-0 w-[1px] bg-black/40"
+              style={{
+                left: `${((r3Pct - pivotPct) / (100 - pivotPct || 1)) * 100}%`,
+              }}
+            />
+          )}
         </div>
 
         {/* S4 left tick */}
