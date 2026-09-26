@@ -1169,12 +1169,23 @@ export default function Screener({
             <LiveClock />
             {currentStatus === "done" && activeScannedAt && (
               <div
-                className="flex items-center gap-1.5 rounded-full border border-emerald-500/30 px-2.5 py-1 shrink-0"
-                style={{ background: "linear-gradient(135deg, rgba(16,185,129,0.12), rgba(6,182,212,0.10))" }}
+                className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 shrink-0 ${
+                  activeTab === "binance" ? "border-[#6F2DA8]/40" : "border-emerald-500/30"
+                }`}
+                style={{
+                  background:
+                    activeTab === "binance"
+                      ? "linear-gradient(135deg, rgba(111,45,168,0.20), rgba(111,45,168,0.10))"
+                      : "linear-gradient(135deg, rgba(16,185,129,0.12), rgba(6,182,212,0.10))",
+                }}
                 title="Time of the last completed scan feeding this view"
               >
-                <Clock className="w-3 h-3 text-emerald-400 shrink-0" />
-                <span className="text-[11px] leading-none text-emerald-300/90 whitespace-nowrap">
+                <Clock className={`w-3 h-3 shrink-0 ${activeTab === "binance" ? "text-[#a566e0]" : "text-emerald-400"}`} />
+                <span
+                  className={`text-[11px] leading-none whitespace-nowrap ${
+                    activeTab === "binance" ? "text-[#c39ce8]" : "text-emerald-300/90"
+                  }`}
+                >
                   Scanned{" "}
                   {(activeTab === "binance"
                     ? "Binance "
@@ -1184,7 +1195,11 @@ export default function Screener({
                     ? "CoinDCX "
                     : "")}
                   at{" "}
-                  <span className="font-mono font-semibold text-emerald-200">
+                  <span
+                    className={`font-mono font-semibold ${
+                      activeTab === "binance" ? "text-[#e2caf5]" : "text-emerald-200"
+                    }`}
+                  >
                     {formatScanTime(activeScannedAt)}
                   </span>
                 </span>
@@ -1210,7 +1225,7 @@ export default function Screener({
             onClick={() => { void doScan(); }}
             disabled={status === "scanning"}
             className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-all disabled:opacity-50 shrink-0"
-            style={{ background: "linear-gradient(135deg,#3b82f6,#6366f1)", color: "#fff" }}
+            style={{ background: "linear-gradient(135deg,#8e4fd1,#6F2DA8)", color: "#fff" }}
           >
             <RefreshCw className={`w-3 h-3 ${status === "scanning" ? "animate-spin" : ""}`} />
             {status === "scanning" ? "Scanning Binance…" : "Scan Binance"}
@@ -1903,7 +1918,7 @@ export default function Screener({
                           ? tab === "combined"
                             ? "bg-amber-500/20 text-amber-400 border border-amber-500/40"
                             : tab === "binance"
-                            ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/40"
+                            ? "bg-[#6F2DA8]/20 text-[#a566e0] border border-[#6F2DA8]/50"
                             : tab === "coindcx"
                             ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
                             : "bg-cyan-500/20 text-cyan-400 border border-cyan-500/40"
