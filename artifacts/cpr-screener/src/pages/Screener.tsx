@@ -231,10 +231,10 @@ export default function Screener({
   });
   const [progress, setProgress] = useState({ done: 0, total: 0, symbol: "" });
   const [allResults, setAllResults] = useState<CPRResult[]>(() => {
-    return isCacheFresh(cachedBinance) ? cachedBinance.data : [];
+    return isCacheFresh(cachedBinance) ? cachedBinance?.data ?? [] : [];
   });
   const [filtered, setFiltered] = useState<CPRResult[]>(() => {
-    return isCacheFresh(cachedBinance) ? cachedBinance.data : [];
+    return isCacheFresh(cachedBinance) ? cachedBinance?.data ?? [] : [];
   });
   // "Scanned at" badge — wall-clock time of the last completed scan for
   // each source, seeded from the cached entry's savedAt (undefined for
@@ -317,13 +317,13 @@ export default function Screener({
   });
   const [deltaProgress, setDeltaProgress] = useState({ done: 0, total: 0, symbol: "" });
   const [deltaAllResults, setDeltaAllResults] = useState<CPRResult[]>(() => {
-    return isCacheFresh(cachedDelta) ? cachedDelta.data : [];
+    return isCacheFresh(cachedDelta) ? cachedDelta?.data ?? [] : [];
   });
   const [deltaScannedAt, setDeltaScannedAt] = useState<number | null>(
     () => (isCacheFresh(cachedDelta) ? cachedDelta?.savedAt ?? null : null)
   );
   const [deltaFiltered, setDeltaFiltered] = useState<CPRResult[]>(() => {
-    return isCacheFresh(cachedDelta) ? cachedDelta.data : [];
+    return isCacheFresh(cachedDelta) ? cachedDelta?.data ?? [] : [];
   });
   const [deltaError, setDeltaError] = useState("");
 
@@ -332,13 +332,13 @@ export default function Screener({
   });
   const [coindcxProgress, setCoinDCXProgress] = useState({ done: 0, total: 0, symbol: "" });
   const [coindcxAllResults, setCoinDCXAllResults] = useState<CPRResult[]>(() => {
-    return isCacheFresh(cachedCoinDCX) ? cachedCoinDCX.data : [];
+    return isCacheFresh(cachedCoinDCX) ? cachedCoinDCX?.data ?? [] : [];
   });
   const [coindcxScannedAt, setCoinDCXScannedAt] = useState<number | null>(
     () => (isCacheFresh(cachedCoinDCX) ? cachedCoinDCX?.savedAt ?? null : null)
   );
   const [coindcxFiltered, setCoinDCXFiltered] = useState<CPRResult[]>(() => {
-    return isCacheFresh(cachedCoinDCX) ? cachedCoinDCX.data : [];
+    return isCacheFresh(cachedCoinDCX) ? cachedCoinDCX?.data ?? [] : [];
   });
   const [coindcxError, setCoinDCXError] = useState("");
   const [activeTabState, setActiveTabState] = useState<ActiveTab>("binance");
@@ -397,7 +397,7 @@ export default function Screener({
   // NEW: resolve activeView to its parent left-nav category ("section").
   // Clicking a top-level category in the left-nav sets activeView to the
   // category id directly (e.g. "compressed"), but clicking one of its
-  // Views/sub-patterns instead (e.g. "6A:HLC-SSLL:R4-6P") sets
+  // Views/sub-patterns instead sets
   // activeView to that LEAF id — ViewsSidebar's handleSubClick calls
   // onSelect(subId), not onSelect(parentId). Row filtering already handles
   // both cases fine (passesPattern resolves leaf ids directly), but

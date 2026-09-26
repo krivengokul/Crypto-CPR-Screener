@@ -168,36 +168,12 @@ export const Views: Record<string, SubPattern[]> = {
       { id: "R1-B-B-BB-BB-L4U4-SL-GapAB-R4", label: "B6-L4U4-Micro" }
 ],
   "compressed": [
-    // RENAMED from "SMi-L1pU1>-APU4:11PM": all previous conditions removed.
-    // "6A:HLC-SSLL:R4-6P" — compressed + HHLL-C + SSLL-AA + RRHH-BB +
-    // SSGap + LLGap (see ScreenerUtils.tsx / cpr.ts). Bullish, entry ~6AM,
-    // targets today's own R4 (U4) by ~6PM.
-    {
-      id: "6A:HLC-SSLL:R4-6P",
-      label: "6A:HLC-SSLL:R4-6P",
-      activeColor: "#22c55e",              // green-500 border
-      activeText:  "#4ade80",              // green-400 text
-      activeBg:    "rgba(34, 197, 94, 0.14)",
-    },
-    // RENAMED from "S0-L1pU1>-AU4:7PM": all previous conditions removed.
-    // "8A:HLC-SSHH:S4-1P" — second sub-pattern under "COMPRESSED". Condition
-    // is compressed + SSGap + RRHH-BB + SSLL-AA + HHLL-C + HHGap + pHL-A +
-    // HLGap-B (see ScreenerUtils.tsx / cpr.ts). Bearish, entry ~8AM,
-    // targets today's own S4 (L4) by ~1PM. Rose color family to visually
-    // distinguish as bearish.
-    {
-      id: "8A:HLC-SSHH:S4-1P",
-      label: "8A:HLC-SSHH:S4-1P",
-      activeColor: "#fb7185",              // rose-400 border
-      activeText:  "#fda4af",              // rose-300 text
-      activeBg:    "rgba(244, 63, 94, 0.14)", // rose-500 tint
-    },
     // NEW: "C-B-BB-LB-CL3U2-RRHHGap:R4" — View under the
     // "C-B-BB-LB-CL3U2" Pattern in "COMPRESSED". Condition is
     // C-B-BB-LB + CL3U2 + RRGap + HHGap + pHLGap-A + HL-B (see
     // ScreenerUtils.tsx / cpr.ts). Bullish, entry at today's TC, targets
     // today's own R4 (U4), stoploss today's S1. Green color family,
-    // matching its bullish 6A:HLC-SSLL:R4-6P sibling.
+    // matching its bullish sibling.
     {
       id: "C-B-BB-LB-CL3U2-RRHHGap:R4",
       label: "C-B-BB-LB-CL3U2-RRHHGap:R4",

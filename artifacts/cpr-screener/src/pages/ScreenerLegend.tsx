@@ -231,16 +231,6 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             <div className="text-xs font-semibold text-green-400 mb-1">Pattern: RHSLB-SSLLpGap&nbsp;&nbsp;L4U4</div>
             <div className="text-xs text-muted-foreground">LEVEL BELOW base, plus the shared RHSLB-SSLLpGap Pattern (RRSS-B + HHLL-B + RRHH-BB + SSLL-BB + SSGap + LLGap + prev day&apos;s PDH/U1 relation HL-A with the gap the wider of the two (pHLGap-A) + today&apos;s PDH/U1 relation HL-B), plus L4U4 (today&apos;s R4 inside prev&apos;s R3/R4 AND prev&apos;s S4 inside today&apos;s S3/S4), plus prev day&apos;s own PDL above today&apos;s Pivot</div>
           </>
-        ) : activeView === "6A:HLC-SSLL:R4-6P" ? (
-          <>
-            <div className="text-xs font-semibold text-green-400 mb-1">HHLL-C&nbsp;&nbsp;SSLL-AA&nbsp;&nbsp;RRHH-BB&nbsp;&nbsp;SSGap&nbsp;&nbsp;LLGap</div>
-            <div className="text-xs text-muted-foreground">Compressed, today&apos;s PDH/PDL range narrowed on one side and held on the other (HHLL-C), today&apos;s S1/PDL band fully above prev&apos;s (SSLL-AA), today&apos;s R1/PDH band fully below prev&apos;s (RRHH-BB), today&apos;s S1 gap larger than the R1 gap (SSGap), today&apos;s PDL gap larger than the PDH gap (LLGap), today&apos;s S2 above the lower of prev&apos;s S1 and prev&apos;s PDL, and either today&apos;s R2 above the lower of prev&apos;s R1 and prev&apos;s PDH or today&apos;s S3 above the lower of prev&apos;s S1 and prev&apos;s PDL</div>
-          </>
-        ) : activeView === "8A:HLC-SSHH:S4-1P" ? (
-          <>
-            <div className="text-xs font-semibold text-rose-400 mb-1">HHLL-C&nbsp;&nbsp;SSLL-AA&nbsp;&nbsp;RRHH-BB&nbsp;&nbsp;SSGap&nbsp;&nbsp;HHGap&nbsp;&nbsp;pHL-A&nbsp;&nbsp;HLGap-B</div>
-            <div className="text-xs text-muted-foreground">Compressed, today&apos;s PDH/PDL range narrowed on one side and held on the other (HHLL-C), today&apos;s S1/PDL band fully above prev&apos;s (SSLL-AA), today&apos;s R1/PDH band fully below prev&apos;s (RRHH-BB), today&apos;s S1 gap larger than the R1 gap (SSGap), today&apos;s PDH gap larger than the PDL gap (HHGap), prev day&apos;s PDH/U1 relation is HL-A (pHL-A), and today&apos;s PDH/U1 relation is HL-B with today&apos;s HL gap the wider of the two (HLGap-B)</div>
-          </>
         ) : activeView === "falling" ? (
           <>
             <div className="text-xs font-semibold mb-1 text-destructive">CPR Falling</div>
@@ -359,16 +349,6 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
           <>
             <div className="text-xs font-semibold text-green-400 mb-1">Target: U4&nbsp;&nbsp;&nbsp;Entry: 2PM&nbsp;&nbsp;&nbsp;Time: 2AM</div>
             <div className="text-xs text-emerald-400/80">RHSLB-SSLLpGap base plus L4U4 (today&apos;s R4 inside prev&apos;s R3/R4, prev&apos;s S4 inside today&apos;s S3/S4) plus prev day&apos;s own PDL above today&apos;s Pivot — expected move toward today&apos;s own U4 (R4) by ~2AM</div>
-          </>
-        ) : activeView === "6A:HLC-SSLL:R4-6P" ? (
-          <>
-            <div className="text-xs font-semibold text-green-400 mb-1">Target: U4&nbsp;&nbsp;&nbsp;Entry: 6AM&nbsp;&nbsp;&nbsp;Time: 6PM</div>
-            <div className="text-xs text-emerald-400/80">6AM setup with Up continuation expected toward today&apos;s U4 (R4) by ~6PM</div>
-          </>
-        ) : activeView === "8A:HLC-SSHH:S4-1P" ? (
-          <>
-            <div className="text-xs font-semibold text-rose-400 mb-1">Target: L4&nbsp;&nbsp;&nbsp;Entry: 8AM&nbsp;&nbsp;&nbsp;Time: 1PM</div>
-            <div className="text-xs text-muted-foreground">8AM setup with Down continuation expected toward today&apos;s S4 (L4) by ~1PM</div>
           </>
         ) : null}
       </div>
