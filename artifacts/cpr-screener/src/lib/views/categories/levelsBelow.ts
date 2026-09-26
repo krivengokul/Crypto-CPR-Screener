@@ -137,6 +137,27 @@ export const LEVELSBELOW_VIEWS: ViewDef[] = [
   { key: "B-C-BB-OA-CL3U3", label: "B-C-BB-OA-CL3U3", parentKey: "B-C-BB-OA", kind: "pattern", condition: (r) => r.CL3U3, order: 0 },
   { key: "B-E-OB-BB-EL2U3", label: "B-E-OB-BB-EL2U3", parentKey: "B-E-OB-BB", kind: "pattern", condition: (r) => r.EL2U3, order: 0 },
   { key: "B-E-OA-BB-EL3U3", label: "B-E-OA-BB-EL3U3", parentKey: "B-E-OA-BB", kind: "pattern", condition: (r) => r.EL3U3, order: 0 },
+  // Additional missing LEVEL BELOW subpatterns from PatternStats.
+  { key: "levelsbelow-B-B-OB-BB-EL2U3", label: "B-B-OB-BB-EL2U3", parentKey: "B-B-OB-BB", kind: "pattern", condition: (r) => r.EL2U3, order: 100 },
+  { key: "levelsbelow-B-B-OB-BB-EL2U4", label: "B-B-OB-BB-EL2U4", parentKey: "B-B-OB-BB", kind: "pattern", condition: (r) => r.EL2U4, order: 101 },
+  { key: "levelsbelow-B-B-OB-BB-EL4U4", label: "B-B-OB-BB-EL4U4", parentKey: "B-B-OB-BB", kind: "pattern", condition: (r) => r.EL4U4, order: 102 },
+  { key: "levelsbelow-B-B-OB-BB-L4U4", label: "B-B-OB-BB-L4U4", parentKey: "B-B-OB-BB", kind: "pattern", condition: (r) => r.L4U4, order: 103 },
+  { key: "levelsbelow-B-B-OB-BB-EL3U3", label: "B-B-OB-BB-EL3U3", parentKey: "B-B-OB-BB", kind: "pattern", condition: (r) => r.EL3U3, order: 104 },
+  { key: "levelsbelow-B-B-OB-BB-L3U4", label: "B-B-OB-BB-L3U4", parentKey: "B-B-OB-BB", kind: "pattern", condition: (r) => r.L3U4, order: 105 },
+  { key: "levelsbelow-B-C-BB-C-CL3U3", label: "B-C-BB-C-CL3U3", parentKey: "B-C-BB-C", kind: "pattern", condition: (r) => r.CL3U3, order: 100 },
+  { key: "levelsbelow-B-B-BB-C-CL4U3", label: "B-B-BB-C-CL4U3", parentKey: "B-B-BB-C", kind: "pattern", condition: (r) => r.CL4U3, order: 100 },
+  { key: "levelsbelow-B-C-BB-OB-CL4U3", label: "B-C-BB-OB-CL4U3", parentKey: "B-C-BB-OB", kind: "pattern", condition: (r) => r.CL4U3, order: 100 },
+  { key: "levelsbelow-B-C-BB-OB-CL3U2", label: "B-C-BB-OB-CL3U2", parentKey: "B-C-BB-OB", kind: "pattern", condition: (r) => r.CL3U2, order: 101 },
+  { key: "levelsbelow-B-C-BB-OB-CL3U3", label: "B-C-BB-OB-CL3U3", parentKey: "B-C-BB-OB", kind: "pattern", condition: (r) => r.CL3U3, order: 102 },
+  { key: "levelsbelow-B-C-BB-OA-CL4U3", label: "B-C-BB-OA-CL4U3", parentKey: "B-C-BB-OA", kind: "pattern", condition: (r) => r.CL4U3, order: 100 },
+  { key: "levelsbelow-B-E-C-BB-EL3U4", label: "B-E-C-BB-EL3U4", parentKey: "B-E-C-BB", kind: "pattern", condition: (r) => r.EL3U4, order: 100 },
+  { key: "levelsbelow-B-E-C-BB-EL3U3", label: "B-E-C-BB-EL3U3", parentKey: "B-E-C-BB", kind: "pattern", condition: (r) => r.EL3U3, order: 101 },
+  { key: "levelsbelow-B-E-C-BB-EL4U4", label: "B-E-C-BB-EL4U4", parentKey: "B-E-C-BB", kind: "pattern", condition: (r) => r.EL4U4, order: 102 },
+  { key: "levelsbelow-B-E-OB-BB-EL3U4", label: "B-E-OB-BB-EL3U4", parentKey: "B-E-OB-BB", kind: "pattern", condition: (r) => r.EL3U4, order: 100 },
+  { key: "levelsbelow-B-E-OB-BB-EL2U4", label: "B-E-OB-BB-EL2U4", parentKey: "B-E-OB-BB", kind: "pattern", condition: (r) => r.EL2U4, order: 101 },
+  { key: "levelsbelow-B-E-OB-BB-EL4U4", label: "B-E-OB-BB-EL4U4", parentKey: "B-E-OB-BB", kind: "pattern", condition: (r) => r.EL4U4, order: 102 },
+  { key: "levelsbelow-B-E-OB-BB-L4U4", label: "B-E-OB-BB-L4U4", parentKey: "B-E-OB-BB", kind: "pattern", condition: (r) => r.L4U4, order: 103 },
+  { key: "levelsbelow-B-E-OA-BB-EL2U3", label: "B-E-OA-BB-EL2U3", parentKey: "B-E-OA-BB", kind: "pattern", condition: (r) => r.EL2U3, order: 100 },
 
   // --- leaf Views ---
 
