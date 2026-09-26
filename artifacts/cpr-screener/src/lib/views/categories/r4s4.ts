@@ -257,10 +257,98 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
     order: 0,
   },
 
-  // --- "EL1U4" Pattern nested under "S1BelowPS4" ---
-  { key: "EL1U4", label: "EL1U4", parentKey: "S1BelowPS4", kind: "pattern", condition: (r) => r.EL1U4,
-      order: 0
-},
+  // --- Compound Pattern children and their Subpatterns under "S1BelowPS4" ---
+  {
+    key: "S1BelowPS4-B-B-BB-BB",
+    label: "B-B-BB-BB",
+    parentKey: "S1BelowPS4",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-B" &&
+      r.HHLLCategory === "HHLL-B" &&
+      r.RRHHCategory === "RRHH-BB" &&
+      r.SSLLCategory === "SSLL-BB",
+    order: 0,
+  },
+  { key: "S1BelowPS4-B-B-BB-BB-EL1U4", label: "B-B-BB-BB-EL1U4", parentKey: "S1BelowPS4-B-B-BB-BB", kind: "pattern", condition: (r) => r.EL1U4, order: 0 },
+  {
+    key: "S1BelowPS4-B-E-E-BB",
+    label: "B-E-E-BB",
+    parentKey: "S1BelowPS4",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-B" &&
+      r.HHLLCategory === "HHLL-E" &&
+      r.RRHHCategory === "RRHH-E" &&
+      r.SSLLCategory === "SSLL-BB",
+    order: 1,
+  },
+  { key: "S1BelowPS4-B-E-E-BB-EL1U3", label: "B-E-E-BB-EL1U3", parentKey: "S1BelowPS4-B-E-E-BB", kind: "pattern", condition: (r) => r.EL1U3, order: 0 },
+  {
+    key: "S1BelowPS4-B-E-HA-BB",
+    label: "B-E-HA-BB",
+    parentKey: "S1BelowPS4",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-B" &&
+      r.HHLLCategory === "HHLL-E" &&
+      r.RRHHCategory === "RRHH-HA" &&
+      r.SSLLCategory === "SSLL-BB",
+    order: 2,
+  },
+  { key: "S1BelowPS4-B-E-HA-BB-EL1U3", label: "B-E-HA-BB-EL1U3", parentKey: "S1BelowPS4-B-E-HA-BB", kind: "pattern", condition: (r) => r.EL1U3, order: 0 },
+  {
+    key: "S1BelowPS4-E-A-AA-E",
+    label: "E-A-AA-E",
+    parentKey: "S1BelowPS4",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-E" &&
+      r.HHLLCategory === "HHLL-A" &&
+      r.RRHHCategory === "RRHH-AA" &&
+      r.SSLLCategory === "SSLL-E",
+    order: 3,
+  },
+  { key: "S1BelowPS4-E-A-AA-E-EUBL1", label: "E-A-AA-E-EUBL1", parentKey: "S1BelowPS4-E-A-AA-E", kind: "pattern", condition: (r) => r.EUBL1, order: 0 },
+  {
+    key: "S1BelowPS4-E-E-AA-BB",
+    label: "E-E-AA-BB",
+    parentKey: "S1BelowPS4",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-E" &&
+      r.HHLLCategory === "HHLL-E" &&
+      r.RRHHCategory === "RRHH-AA" &&
+      r.SSLLCategory === "SSLL-BB",
+    order: 4,
+  },
+  { key: "S1BelowPS4-E-E-AA-BB-EL1U2", label: "E-E-AA-BB-EL1U2", parentKey: "S1BelowPS4-E-E-AA-BB", kind: "pattern", condition: (r) => r.EL1U2, order: 0 },
+  {
+    key: "S1BelowPS4-E-B-E-BB",
+    label: "E-B-E-BB",
+    parentKey: "S1BelowPS4",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-E" &&
+      r.HHLLCategory === "HHLL-B" &&
+      r.RRHHCategory === "RRHH-E" &&
+      r.SSLLCategory === "SSLL-BB",
+    order: 5,
+  },
+  { key: "S1BelowPS4-E-B-E-BB-ELPU2", label: "E-B-E-BB-ELPU2", parentKey: "S1BelowPS4-E-B-E-BB", kind: "pattern", condition: (r) => r.ELPU2, order: 0 },
+  {
+    key: "S1BelowPS4-B-E-C-BB",
+    label: "B-E-C-BB",
+    parentKey: "S1BelowPS4",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-B" &&
+      r.HHLLCategory === "HHLL-E" &&
+      r.RRHHCategory === "RRHH-C" &&
+      r.SSLLCategory === "SSLL-BB",
+    order: 6,
+  },
+  { key: "S1BelowPS4-B-E-C-BB-EL1U3", label: "B-E-C-BB-EL1U3", parentKey: "S1BelowPS4-B-E-C-BB", kind: "pattern", condition: (r) => r.EL1U3, order: 0 },
 
   // --- leaf Views ---
   {
@@ -444,26 +532,6 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
       r.todayCPR.HLSwitch === "HL-B" &&
       r.hlGapWinner === "today" &&
       r.prevCPR.r1 > r.todayCPR.s1,
-    targetLabel: "U4 (today's R4)",
-    getTarget: (r) => r.todayCPR.r4,
-    entryLabel: "TC (today's TC)",
-    getEntry: (r) => r.todayCPR.tc,
-    stoplossLabel: "S1 (today's S1)",
-    getStoploss: (r) => r.todayCPR.s1,
-      order: 0
-},
-  {
-    key: "ss-EL1U4-U4:10PM",
-    label: "ss-EL1U4-U4:10PM",
-    parentKey: "EL1U4",
-    kind: "view",
-    direction: "Up",
-    condition: (r) =>
-      r.cprFalling && r.strWideCPR &&
-      r.prevCPR.HLSwitch === "HL-A" && r.todayCPR.HLSwitch === "HL-A" &&
-      r.prevCPR.bc >= r.todayCPR.prevHigh && r.prevCPR.s2 >= r.todayCPR.tc &&
-      r.prevCPR.widthPct > 0.60 && r.prevCPR.widthPct <= 1.10 && // pSmall
-      r.todayCPR.widthPct > 0.60 && r.todayCPR.widthPct <= 1.10, // Small
     targetLabel: "U4 (today's R4)",
     getTarget: (r) => r.todayCPR.r4,
     entryLabel: "TC (today's TC)",
