@@ -116,7 +116,7 @@ export default function SignalProgressBar({
     if (price > pivot) {
       const toPivotPct = Math.abs(((price - pivot) / price) * 100).toFixed(2);
       leftText = `${toPivotPct}% to PIVOT`;
-      leftColor = "text-emerald-400";
+      leftColor = "text-rose-400";
 
       // Determine closest resistance above or equal to current price
       if (price <= r1) {
@@ -132,11 +132,11 @@ export default function SignalProgressBar({
         const diff = Math.abs(((r4 - price) / (price || 1)) * 100).toFixed(2);
         rightText = `${diff}% from R4`;
       }
-      rightColor = "text-rose-400";
+      rightColor = "text-emerald-400";
     } else {
       const belowPivotPct = Math.abs(((pivot - price) / (pivot || 1)) * 100).toFixed(2);
       rightText = `${belowPivotPct}% from PIVOT`;
-      rightColor = "text-rose-400";
+      rightColor = "text-emerald-400";
 
       // Determine closest support below or equal to current price — the
       // Down signal's actual target, so this reads "to S1" / "to S2" etc.
@@ -153,7 +153,7 @@ export default function SignalProgressBar({
         const diff = Math.abs(((price - s4) / (price || 1)) * 100).toFixed(2);
         leftText = `${diff}% to S4`;
       }
-      leftColor = "text-emerald-400";
+      leftColor = "text-rose-400";
     }
   }
 
