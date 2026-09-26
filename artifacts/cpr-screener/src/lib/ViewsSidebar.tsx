@@ -206,6 +206,7 @@ export const Views: Record<string, SubPattern[]> = {
     { id: "C-A-OA-AA-CU4L4", label: "C-A-OA-AA-CU4L4" },
     { id: "C-A-OA-AA-CU3L3", label: "C-A-OA-AA-CU3L3" },
     { id: "C-A-OA-AA-U4L4", label: "C-A-OA-AA-U4L4" },
+    { id: "C-A-OA-AA-CU3L2", label: "C-A-OA-AA-CU3L2" },
     { id: "C-A-OB-AA-CU4L4", label: "C-A-OB-AA-CU4L4" },
     { id: "C-B-BB-C-CL3U2", label: "C-B-BB-C-CL3U2" },
     { id: "C-B-BB-C-CL3U3", label: "C-B-BB-C-CL3U3" },
@@ -227,6 +228,9 @@ export const Views: Record<string, SubPattern[]> = {
     { id: "C-C-BB-OA-CL4U4", label: "C-C-BB-OA-CL4U4" },
     { id: "C-C-BB-OA-CL1U1", label: "C-C-BB-OA-CL1U1" },
     { id: "C-B-BB-E-CL3U3", label: "C-B-BB-E-CL3U3" },
+    { id: "C-B-BB-E-CL4U3", label: "C-B-BB-E-CL4U3" },
+    { id: "C-B-BB-E-CL3U2", label: "C-B-BB-E-CL3U2" },
+    { id: "C-B-BB-E-CL4U4", label: "C-B-BB-E-CL4U4" },
     // NEW: "C-B-BB-LB-CL3U2-RRHHGap:R4" — View under the
     // "C-B-BB-LB-CL3U2" Pattern in "COMPRESSED". Condition is
     // C-B-BB-LB + CL3U2 + RRGap + HHGap + pHLGap-A + HL-B (see
