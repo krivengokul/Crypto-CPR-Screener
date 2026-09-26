@@ -1,6 +1,6 @@
 import type { CPRResult } from "../../cpr";
 import type { ViewDef } from "../types";
-import { dirTol, computePrevPattern } from "../../cpr";
+import { dirTol, computePrevPattern, pickOuterLevelPattern } from "../../cpr";
 import { passesView } from "../registry";
 
 export const COMPRESSED_VIEWS: ViewDef[] = [
@@ -43,6 +43,24 @@ export const COMPRESSED_VIEWS: ViewDef[] = [
     getStoploss: (r) => r.todayCPR.s1,
       order: 0
 },
+
+  // Missing compressed subpatterns reported by PatternStats.
+  { key: "C-B-BB-LB-CL4U3", label: "C-B-BB-LB-CL4U3", parentKey: "C-B-BB-LB", kind: "pattern", condition: (r) => r.CL4U3, order: 1 },
+  { key: "C-B-BB-LB-CL3U3", label: "C-B-BB-LB-CL3U3", parentKey: "C-B-BB-LB", kind: "pattern", condition: (r) => r.CL3U3, order: 2 },
+  { key: "C-B-BB-LB-CL2U2", label: "C-B-BB-LB-CL2U2", parentKey: "C-B-BB-LB", kind: "pattern", condition: (r) => r.CL2U2, order: 3 },
+  { key: "C-B-BB-LB-CL4U4", label: "C-B-BB-LB-CL4U4", parentKey: "C-B-BB-LB", kind: "pattern", condition: (r) => r.CL4U4, order: 4 },
+  { key: "C-B-BB-LB-CL2U1", label: "C-B-BB-LB-CL2U1", parentKey: "C-B-BB-LB", kind: "pattern", condition: (r) => r.CL2U1, order: 5 },
+  { key: "C-B-BB-LB-CL1U1", label: "C-B-BB-LB-CL1U1", parentKey: "C-B-BB-LB", kind: "pattern", condition: (r) => r.CL1U1, order: 6 },
+  { key: "C-B-BB-LB-L4U4", label: "C-B-BB-LB-L4U4", parentKey: "C-B-BB-LB", kind: "pattern", condition: (r) => r.L4U4, order: 7 },
+
+  { key: "C-A-C-AA-CU3L2", label: "C-A-C-AA-CU3L2", parentKey: "C-A-C-AA", kind: "pattern", condition: (r) => r.CU3L2, order: 0 },
+  { key: "C-A-HA-AA-CU3L2", label: "C-A-HA-AA-CU3L2", parentKey: "C-A-HA-AA", kind: "pattern", condition: (r) => r.CU3L2, order: 0 },
+  { key: "C-C-BB-OA-CL2U1", label: "C-C-BB-OA-CL2U1", parentKey: "C-C-BB-OA", kind: "pattern", condition: (r) => r.CL2U1, order: 0 },
+  { key: "C-C-OB-AA-CU3L2", label: "C-C-OB-AA-CU3L2", parentKey: "C-C-OB-AA", kind: "pattern", condition: (r) => r.CU3L2, order: 0 },
+  { key: "C-B-BB-C-CL2U2", label: "C-B-BB-C-CL2U2", parentKey: "C-B-BB-C", kind: "pattern", condition: (r) => r.CL2U2, order: 0 },
+  { key: "C-A-E-AA-CU4L3", label: "C-A-E-AA-CU4L3", parentKey: "C-A-E-AA", kind: "pattern", condition: (r) => r.CU4L3, order: 0 },
+  { key: "C-A-OA-AA-CU4L3", label: "C-A-OA-AA-CU4L3", parentKey: "C-A-OA-AA", kind: "pattern", condition: (r) => r.CU4L3, order: 0 },
+  { key: "C-A-OB-AA-CU3L2", label: "C-A-OB-AA-CU3L2", parentKey: "C-A-OB-AA", kind: "pattern", condition: (r) => r.CU3L2, order: 0 },
 
   // --- "C-C-BB-AA"'s 14 nested Subpattern children (raw flag AND'd onto
   // the parent compound condition via parentKey) — none target-graded
@@ -90,6 +108,7 @@ export const COMPRESSED_VIEWS: ViewDef[] = [
   { key: "C-C-BB-AA-CL1U1", label: "C-C-BB-AA-CL1U1", parentKey: "C-C-BB-AA", kind: "pattern", condition: (r) => r.CL1U1,
       order: 13
 },
+  { key: "C-C-BB-AA-None", label: "C-C-BB-AA-None", parentKey: "C-C-BB-AA", kind: "pattern", condition: (r) => !pickOuterLevelPattern(r), order: 14 },
     {
         key: "C-CL3U3-SH-AGapB-S4",
         label: "C-CL3U3-SH-AGapB-S4",

@@ -168,6 +168,23 @@ export const Views: Record<string, SubPattern[]> = {
       { id: "R1-B-B-BB-BB-L4U4-SL-GapAB-R4", label: "B6-L4U4-Micro" }
 ],
   "compressed": [
+    { id: "C-B-BB-LB-CL4U3", label: "C-B-BB-LB-CL4U3" },
+    { id: "C-B-BB-LB-CL3U3", label: "C-B-BB-LB-CL3U3" },
+    { id: "C-B-BB-LB-CL2U2", label: "C-B-BB-LB-CL2U2" },
+    { id: "C-B-BB-LB-CL4U4", label: "C-B-BB-LB-CL4U4" },
+    { id: "C-B-BB-LB-CL2U1", label: "C-B-BB-LB-CL2U1" },
+    { id: "C-B-BB-LB-CL1U1", label: "C-B-BB-LB-CL1U1" },
+    { id: "C-B-BB-LB-L4U4", label: "C-B-BB-LB-L4U4" },
+    { id: "C-C-BB-AA-None", label: "C-C-BB-AA-None" },
+    { id: "C-A-C-AA-CU3L2", label: "C-A-C-AA-CU3L2" },
+    { id: "C-A-HA-AA-CU3L2", label: "C-A-HA-AA-CU3L2" },
+    { id: "C-C-BB-OA-CL2U1", label: "C-C-BB-OA-CL2U1" },
+    { id: "C-C-OB-AA-CU3L2", label: "C-C-OB-AA-CU3L2" },
+    { id: "C-B-BB-C-CL2U2", label: "C-B-BB-C-CL2U2" },
+    { id: "C-A-E-AA-CU4L3", label: "C-A-E-AA-CU4L3" },
+    { id: "C-A-OA-AA-CU4L3", label: "C-A-OA-AA-CU4L3" },
+    { id: "C-A-OB-AA", label: "C-A-OB-AA" },
+    { id: "C-A-OB-AA-CU3L2", label: "C-A-OB-AA-CU3L2" },
     // NEW: "C-B-BB-LB-CL3U2-RRHHGap:R4" — View under the
     // "C-B-BB-LB-CL3U2" Pattern in "COMPRESSED". Condition is
     // C-B-BB-LB + CL3U2 + RRGap + HHGap + pHLGap-A + HL-B (see
