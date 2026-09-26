@@ -2,6 +2,168 @@ import type { CPRResult } from "../../cpr";
 import type { ViewDef } from "../types";
 import { passesView } from "../registry";
 
+const TOUCH_PATTERN_FLAGS = [
+  "EL4U4", "EU4L4", "CL4U4", "EL3U3", "CU4L3", "EU3L4", "CL3U3",
+  "EL3U4", "CL4U3", "U4L4", "CU3L3", "CU4L4", "EU3L3", "CU3L2", "L4U4",
+] as const satisfies readonly (keyof CPRResult)[];
+type TouchPatternFlag = typeof TOUCH_PATTERN_FLAGS[number];
+
+function buildUnclassifiedTouchPatterns(
+  keyPrefix: string,
+  parentKey: string,
+  codes: readonly string[],
+): ViewDef[] {
+  const groups = new Map<string, { ssrr: string; hhll: string; rrhh: string; ssll: string; flags: TouchPatternFlag[] }>();
+
+  for (const code of codes) {
+    const parts = code.split("-");
+    if (parts.length !== 5) throw new Error(`Invalid touch pattern code: ${code}`);
+    const [ssrr, hhll, rrhh, ssll, rawFlag] = parts;
+    const flag = TOUCH_PATTERN_FLAGS.find((candidate) => candidate === rawFlag);
+    if (!flag) throw new Error(`Unknown touch pattern flag in code: ${code}`);
+    const key = `${ssrr}-${hhll}-${rrhh}-${ssll}`;
+    let group = groups.get(key);
+    if (!group) {
+      group = { ssrr, hhll, rrhh, ssll, flags: [] };
+      groups.set(key, group);
+    }
+    group.flags.push(flag);
+  }
+
+  const definitions: ViewDef[] = [];
+  let groupOrder = 100;
+  for (const [compound, group] of groups) {
+    const compoundKey = `${keyPrefix}-${compound}`;
+    definitions.push({
+      key: compoundKey,
+      label: compound,
+      parentKey,
+      kind: "pattern",
+      condition: (r) =>
+        String(r.SSRRCategory) === `RRSS-${group.ssrr}` &&
+        String(r.HHLLCategory) === `HHLL-${group.hhll}` &&
+        String(r.RRHHCategory) === `RRHH-${group.rrhh}` &&
+        String(r.SSLLCategory) === `SSLL-${group.ssll}`,
+      order: groupOrder++,
+    });
+
+    group.flags.forEach((flag, order) => {
+      const code = `${compound}-${flag}`;
+      definitions.push({
+        key: `${keyPrefix}-${code}`,
+        label: code,
+        parentKey: compoundKey,
+        kind: "pattern",
+        condition: (r) => r[flag],
+        order,
+      });
+    });
+  }
+  return definitions;
+}
+
+const INCPR_UNCLASSIFIED_PATTERNS = buildUnclassifiedTouchPatterns("INCPR-Unclassified", "insidecpr", [
+  "E-B-C-OB-EL4U4",
+  "A-E-AA-C-EU4L4",
+  "C-B-OB-C-CL4U4",
+  "E-E-OA-BB-EL3U3",
+  "C-B-OB-C-CU4L3",
+  "A-E-OA-C-EU4L4",
+  "B-E-C-OB-EL4U4",
+  "B-C-BB-SB-CL3U3",
+  "B-E-C-BB-EL4U4",
+  "E-B-C-BB-EL4U4",
+  "A-E-AA-C-EU3L4",
+  "B-E-C-BB-EL3U4",
+  "E-E-OA-OB-EU4L4",
+  "B-E-HA-BB-EL3U3",
+  "B-A-OB-SB-CL4U3",
+  "A-B-RA-OB-EL4U4",
+  "E-E-OA-OB-EL4U4",
+  "E-B-RA-BB-EL3U4",
+  "A-E-OA-C-U4L4",
+  "A-C-RA-OA-CU3L3",
+  "B-C-BB-SB-CL4U3",
+  "B-C-BB-SB-CL4U4",
+  "C-B-OB-LB-CU4L3",
+]);
+
+const OUTCPR_UNCLASSIFIED_PATTERNS = buildUnclassifiedTouchPatterns("OUT-Unclassified", "outcpr", [
+  "B-E-E-BB-EL3U4",
+  "B-C-BB-E-CL4U4",
+  "B-C-BB-E-CL4U3",
+  "C-B-OB-C-CL4U4",
+  "E-B-C-OB-EL3U4",
+  "E-B-C-BB-EL3U4",
+  "B-C-OB-E-CL4U4",
+  "B-A-OB-SB-CL4U3",
+  "B-C-BB-E-CL3U3",
+  "B-A-HA-OB-EL3U4",
+  "E-B-C-OB-EL4U4",
+  "B-E-E-OB-EL3U4",
+  "B-B-BB-C-CL4U4",
+  "E-B-OB-BB-EL3U4",
+  "B-C-OB-C-CL4U4",
+  "B-E-OB-OB-EL4U4",
+  "B-A-C-SB-EL4U4",
+  "B-A-OB-SB-L4U4",
+  "B-A-C-SB-EL3U4",
+  "B-C-OB-OA-CL4U4",
+  "B-A-OB-SB-CL4U4",
+  "A-B-C-LB-EL4U4",
+  "B-A-HA-OB-L4U4",
+  "B-E-OB-OB-EL3U4",
+]);
+
+const OVA_UNCLASSIFIED_PATTERNS = buildUnclassifiedTouchPatterns("OVA-Unclassified", "OVA", [
+  "A-E-AA-C-EU4L4",
+  "A-E-AA-C-EU3L4",
+  "C-C-OB-OA-CU4L4",
+  "B-A-HA-C-EU4L4",
+  "A-B-RA-C-EU4L4",
+  "A-E-OA-C-EU4L4",
+  "A-E-AA-C-EU3L3",
+  "B-A-E-SB-CU4L4",
+  "C-A-C-OA-CU4L4",
+  "C-A-OB-AA-CU3L3",
+  "C-A-E-OA-CU4L4",
+  "C-C-OB-OA-CU3L3",
+  "B-A-HA-C-U4L4",
+  "C-A-OB-AA-CU4L3",
+  "C-C-OB-OA-CL4U3",
+  "E-A-OA-E-EU4L4",
+  "A-E-OA-LB-EU4L4",
+  "C-A-OB-AA-CU4L4",
+  "C-A-OB-AA-CU3L2",
+]);
+
+const OVB_UNCLASSIFIED_PATTERNS = buildUnclassifiedTouchPatterns("OVB-Unclassified", "overlapLower", [
+  "E-B-C-BB-EL4U4",
+  "B-C-BB-E-CL4U4",
+  "B-C-BB-E-CL4U3",
+  "C-B-OB-C-CL4U4",
+  "E-B-C-OB-EL3U4",
+  "E-B-C-BB-EL3U4",
+  "B-C-OB-E-CL4U4",
+  "B-A-OB-SB-CL4U3",
+  "B-C-BB-E-CL3U3",
+  "B-A-HA-OB-EL3U4",
+  "E-B-C-OB-EL4U4",
+  "B-E-E-OB-EL3U4",
+  "B-B-BB-C-CL4U4",
+  "E-B-OB-BB-EL3U4",
+  "B-C-OB-C-CL4U4",
+  "B-E-OB-OB-EL4U4",
+  "B-A-C-SB-EL4U4",
+  "B-A-OB-SB-L4U4",
+  "B-A-C-SB-EL3U4",
+  "B-C-OB-OA-CL4U4",
+  "B-A-OB-SB-CL4U4",
+  "A-B-C-LB-EL4U4",
+  "B-A-HA-OB-L4U4",
+  "B-E-OB-OB-EL3U4",
+]);
+
 export const OVERLAP_ABOVE_TOUCH_VIEWS: ViewDef[] = [
   // --- A-A-OA-AA (order 1) ---
   {
@@ -565,6 +727,7 @@ export const OVERLAP_ABOVE_TOUCH_VIEWS: ViewDef[] = [
     order: 30,
   },
   { key: "OVA-E-A-OA-C-EU4L4", label: "E-A-OA-C-EU4L4", parentKey: "OVA-E-A-OA-C", kind: "pattern", condition: (r) => r.EU4L4, order: 0 },
+  ...OVA_UNCLASSIFIED_PATTERNS,
 ];
 
 export const INSIDE_CPR_TOUCH_VIEWS: ViewDef[] = [
@@ -984,6 +1147,7 @@ export const INSIDE_CPR_TOUCH_VIEWS: ViewDef[] = [
     order: 26,
   },
   { key: "INCPR-C-A-OB-AA-CU3L2", label: "C-A-OB-AA-CU3L2", parentKey: "INCPR-C-A-OB-AA", kind: "pattern", condition: (r) => r.CU3L2, order: 0 },
+  ...INCPR_UNCLASSIFIED_PATTERNS,
 ];
 
 export const OUTCPR_TOUCH_VIEWS: ViewDef[] = [
@@ -1344,6 +1508,7 @@ export const OUTCPR_TOUCH_VIEWS: ViewDef[] = [
     order: 22,
   },
   { key: "OUT-E-B-E-OB-EL4U4", label: "E-B-E-OB-EL4U4", parentKey: "OUT-E-B-E-OB", kind: "pattern", condition: (r) => r.EL4U4, order: 0 },
+  ...OUTCPR_UNCLASSIFIED_PATTERNS,
 ];
 
 export const OVERLAP_BELOW_TOUCH_VIEWS: ViewDef[] = [
@@ -1884,6 +2049,7 @@ export const OVERLAP_BELOW_TOUCH_VIEWS: ViewDef[] = [
     order: 31,
   },
   { key: "OVB-E-E-OA-OB-EL4U4", label: "E-E-OA-OB-EL4U4", parentKey: "OVB-E-E-OA-OB", kind: "pattern", condition: (r) => r.EL4U4, order: 0 },
+  ...OVB_UNCLASSIFIED_PATTERNS,
 ];
 
 // Backward compatibility aliases
