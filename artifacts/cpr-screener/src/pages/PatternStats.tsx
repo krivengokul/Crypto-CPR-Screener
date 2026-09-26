@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { passesPattern, computeInnerLevelPattern, INNER_LEVEL_PATTERN_KEYS, normalizeViewDirection, type ViewDirection } from "./ScreenerUtils";
 import { pivotcategories } from "@/lib/ViewsSidebar";
-import { buildViewTree, type ViewTreeNode } from "@/lib/views";
+import { buildViewTree, VIEWS, type ViewTreeNode } from "@/lib/views";
 import {
   runPatternCensus,
   OUTER_PATTERNS_CATEGORY_KEY,
@@ -172,6 +172,10 @@ function buildTreeMeta(): { scoped: Map<string, TreeMeta>; byKey: Map<string, Tr
     walk(cat.children, 1);
   }
   return { scoped, byKey };
+}
+
+function buildTreeSignature(): string {
+  return JSON.stringify(VIEWS.map(({ key, parentKey, kind }) => [key, parentKey, kind]));
 }
 
 // --- Small UTC date helpers (all dates here are UTC ISO strings) ---
@@ -607,19 +611,18 @@ function CategoryBox({
             const pct = maxCount > 0 ? Math.max(p.count > 0 ? 4 : 0, Math.round((p.count / maxCount) * 100)) : 0;
             const isTop = p.depth === 1;
             const dirClass = p.count > 0 ? directionTextClass(normalizeViewDirection(p.direction)) : null;
-            // Only top-level Pattern (depth 1) rows get a "missing" count —
-            // the amount of their own total not covered by their immediate
-            // children (Subpatterns) below. Subpatterns (depth 2) and Views
-            // only show green counts.
-            const missing = isTop ? missingChildCount(group.patterns, i) : 0;
-            const hasChildren = isTop ? hasChildPatterns(group.patterns, i) : false;
-            // Only top-level Pattern rows are judged red/green by subpattern
-            // coverage — Subpatterns and Views (leave-as-is per design) are
-            // always green-when-matched, same as before.
-            const isFullyCovered = isTop ? hasChildren && missing === 0 : true;
-            const isUncovered = isTop && p.count > 0 && !isFullyCovered;
             const scopedKey = `${group.categoryKey}::${p.patternKey}`;
             const unclass = unclassified?.[scopedKey];
+            // Use the census's direct unmatched-child count so overlapping
+            // child conditions cannot inflate or understate the remainder.
+            const missing = isTop
+              ? unclassified
+                ? unclass?.reduce((sum, item) => sum + item.count, 0) ?? 0
+                : missingChildCount(group.patterns, i)
+              : 0;
+            const hasChildren = isTop ? hasChildPatterns(group.patterns, i) : false;
+            const isFullyCovered = isTop ? hasChildren && missing === 0 : true;
+            const isUncovered = isTop && p.count > 0 && !isFullyCovered;
             const isExpanded = expandedMissingKey === scopedKey;
             const breakdownTooltip = !hasChildren
               ? `${p.count} total. No Subpatterns are defined under this pattern yet.`
@@ -829,9 +832,10 @@ export default function PatternStats() {
   // a second copy of it here.
   const [categoryFilter, setCategoryFilter] = useState<string>("");
 
-  // Depth + dropdown order for every (category, pattern) pair. Built once —
-  // views.ts's tree doesn't change while the page is open.
-  const treeMeta = useMemo(() => buildTreeMeta(), []);
+  const treeSignature = useMemo(buildTreeSignature, [VIEWS, VIEWS.length]);
+  const [scannedTreeSignature, setScannedTreeSignature] = useState<string | null>(null);
+  const hasStaleResults = rows !== null && scannedTreeSignature !== treeSignature;
+  const treeMeta = useMemo(() => buildTreeMeta(), [treeSignature]);
   // rows/emptyCount/etc. below narrow to just the selected category when one
   // is chosen, so the summary chips and boxes reflect the same scope as the
   // dropdown — "All categories" (categoryFilter === "") keeps everything.
@@ -970,10 +974,12 @@ export default function PatternStats() {
     setRunning(true);
     setError(null);
     setRows(null);
+    setScannedTreeSignature(null);
     setCombos(null);
     setCategoryMatches(null);
     setUnclassified(null);
     setProgress(null);
+    const scanTreeSignature = treeSignature;
     try {
       const { rows: result, combos: comboResult, categoryMatches: categoryMatchResult, unclassified: unclassResult } = await runPatternCensus(
         startDate,
@@ -987,6 +993,7 @@ export default function PatternStats() {
       setCombos(comboResult);
       setCategoryMatches(categoryMatchResult);
       setUnclassified(unclassResult);
+      setScannedTreeSignature(scanTreeSignature);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -1017,7 +1024,7 @@ export default function PatternStats() {
           </div>
         </div>
 
-        {rows && (
+        {rows && !hasStaleResults && (
           <div className="flex flex-wrap items-center gap-2">
             <StatChip icon={Layers} label="Patterns" value={scopedRows?.length ?? 0} />
             <StatChip icon={Sigma} label="Distinct matches" value={totalMatches} tone="emerald" />
@@ -1120,6 +1127,13 @@ export default function PatternStats() {
           </div>
         )}
 
+        {hasStaleResults && (
+          <div className="mb-4 flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>Pattern definitions changed since this scan. Run the scan again to refresh the counts and missing-subpattern breakdown.</span>
+          </div>
+        )}
+
         {!rows && !running && !error && (
           <div className="flex h-64 flex-col items-center justify-center rounded-xl border border-dashed border-[#1e2d3d] text-slate-400">
             <BarChart3 className="mb-2 h-10 w-10 text-slate-600" />
@@ -1128,7 +1142,7 @@ export default function PatternStats() {
           </div>
         )}
 
-        {rows && (
+        {rows && !hasStaleResults && (
           <>
             <div className="mb-3 flex items-center justify-between gap-2">
               <span className="font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-400">
