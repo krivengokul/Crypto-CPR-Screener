@@ -513,50 +513,6 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
 export type ViewDirection = "Up" | "Down";
 
 /**
- * Sub-filter keys by section. Direction ("Up" or "Down") is derived directly
- * from views.ts (ViewDef.direction), keeping views.ts as the single source of truth.
- *
- * Used purely to color the row dot in the Symbol column — NOT tied to
- * whether the sub-filter's toggle button is currently pressed. A row gets
- * a dot the moment its data satisfies ANY sub-filter condition belonging
- * to the active section, via the same passesPattern() check the toggle
- * buttons use internally.
- *
- * When a row matches more than one sub-filter in the section, the FIRST
- * match (in array order below) determines the dot's color.
- */
-const SUBFILTERS_BY_SECTION: Record<string, string[]> = {
-  "levelsbelow": [
-    "B-B-BB-BB-CL4U2",
-    "B-B-BB-BB-L4U4-pLAP:R4",
-    "B6-L4U4-pStepUp:R4",
-    "B-B-BB-BB-EL4U4-SSLLGap:S4",
-  ],
-  "levelsabove": [
-    "A-A-AA-AA-EU3L4-GapB",
-    "A-A-AA-OA-U3L4-RRHHGap:R4",
-    "7PM:MoMi->U4:2AM",
-    "7PM:MoMi-<L4:2AM",
-    "6PM:APHS1A-FAU4:9PM",
-    "8AM:pPDHA-SRA-U4+2:2AM",
-    "A6-U3L3-SLBBG-R4",
-  ],
-  "compressed": [],
-  "expanded": [],
-  "R1AbovePR4": [
-    "A-A-AA-AA-EUPL3-RRHHGap:R4",
-    "6A:A-A-AA-AA-EUTL3-S1ATCpE-pL4:4A",
-    "6AM:MegMeg-L3:8PM",
-  ],
-  "S1BelowPS4": [
-    "ss-EL1U4-U4:10PM",
-  ],
-  "equal-cpr": [
-    "eXLoL3U3-L3",
-  ],
-};
-
-/**
  * normalizeViewDirection — shared Up/Down normalization for a ViewDef's
  * raw `direction` string (which may be "Up"/"up"/"bullish"/"Down"/"down"/
  * "bearish"/etc across views.ts). Returns null when the view has no
@@ -569,17 +525,12 @@ export function normalizeViewDirection(direction: string | undefined): ViewDirec
 }
 
 /**
- * Returns "Up"/"Down" if row r matches any sub-filter condition for the
- * given section, or null if it matches none (or the section has no
- * sub-filters defined, e.g. "falling"/"inside-value"). Direction is retrieved
- * directly from views.ts (ViewDef.direction).
+ * Returns "Up"/"Down" if row r matches any registered View for the selected
+ * section, or null when there is no matching View with a direction.
  */
 export function getViewDirection(r: CPRResult, activeView: string): ViewDirection | null {
-  // Prefer ViewsSidebar's Views map (single source of truth) over
-  // hardcoded SUBFILTERS_BY_SECTION — any new View added to
-  // ViewsSidebar automatically gets green-dot support.
   const subs = Views[activeView];
-  const keys = subs ? subs.map((s) => s.id) : SUBFILTERS_BY_SECTION[activeView];
+  const keys = subs?.map((s) => s.id);
   if (!keys || keys.length === 0) return null;
   for (const key of keys) {
     if (passesPattern(r, key)) {
@@ -634,9 +585,8 @@ export interface ActiveViewInfo {
 }
 
 /**
- * getActiveViewLabels — every View (left-nav leaf, e.g. a compound pattern
- * or a leaf View key from views.ts)
- * that row `r` currently satisfies, across ALL categories in the Views map
+ * getActiveViewLabels — every registered View (left-nav leaf)
+ * that row `r` currently satisfies, across all registry-backed navigation categories
  * (not just the currently active section) — same "Active Views" concept
  * already shown in the Journal's PATTERN column (LoggedSignal.patternName).
  * Used to populate the Live Screener's own VIEW column, independent of

@@ -41,7 +41,7 @@ VIEWS.push(
   ...COMPRESSED_VIEWS,
   ...EXPANDED_VIEWS,
   ...R1ABOVEPR4_S1BELOWPS4_VIEWS,
-  ...COPY_VIEWS,
+  ...COPY_VIEWS.map((view) => ({ ...view, navigationCategoryKey: "copyViews" })),
   ...MISC_VIEWS,
   ...OVERLAP_ABOVE_TOUCH_VIEWS,
   ...INSIDE_CPR_TOUCH_VIEWS,

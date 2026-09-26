@@ -34,6 +34,8 @@ export interface ViewDef {
   getStoploss?: (r: CPRResult) => number;
   stoplossLabel?: string;
   showInLeftNav?: boolean;
+  /** Optional navigation bucket when a View is grouped outside its parent tree. */
+  navigationCategoryKey?: string;
   order?: number;
   levelCheckDefs?: LevelCheckCondition[];
 }

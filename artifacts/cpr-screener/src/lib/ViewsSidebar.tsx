@@ -12,7 +12,7 @@ import {
   Activity,
   BookmarkCheck,
 } from "lucide-react";
-import { VIEWS } from "@/lib/views";
+import { getView, VIEWS, type ViewDef } from "@/lib/views";
 
 export interface Category {
   id: string;
@@ -21,348 +21,76 @@ export interface Category {
   icon: React.ElementType;
 }
 
-export interface SubPattern {
+export interface SidebarView {
   id: string;
   label: string;
-  /** Optional per-sub-item highlight border color (CSS color). Defaults to ACTIVE_BLUE. */
+  /** Optional per-view highlight border color (CSS color). Defaults to ACTIVE_BLUE. */
   activeColor?: string;
-  /** Optional per-sub-item highlight text color (CSS color). Defaults to ACTIVE_TEXT. */
+  /** Optional per-view highlight text color (CSS color). Defaults to ACTIVE_TEXT. */
   activeText?: string;
-  /** Optional per-sub-item highlight background (CSS color). Defaults to blue-tinted. */
+  /** Optional per-view highlight background (CSS color). Defaults to blue-tinted. */
   activeBg?: string;
 }
 
-/**
- * Sub-patterns for each parent pattern.
- * Each `id` maps to a passesPattern() case in ScreenerUtils.tsx so the
- * existing Screener filtering logic works with no changes.
- */
-export const Views: Record<string, SubPattern[]> = {
-  // Auto-generated Views land here — every "Copy View" / "Create View"
-  // in the Backtest panel now automatically pushes {id: newKey, label}
-  // into this array (see copy-view.yml / create-view.yml's "Add to
-  // Screener nav" step), rather than requiring a curated category
-  // choice per View. passesPattern(r, newKey) resolves these via their
-  // conditionKey + levelCheckDefs — see the new block at the top of
-  // passesPattern in ScreenerUtils.tsx.
-  copyViews: [{ id: "A-A-AA-AA-EUBL2-pS4S2:R2", label: "A-A-AA-AA-EUBL2-pS4S2:R2" }, { id: "B-B-BB-BB-L4U4-pGapA", label: "B-B-BB-BB-L4U4-pGapA" }, { id: "A5-EUTL3-pA-S1ATC", label: "A5-EUTL3-pA-S1ATC" }, { id: "CU3L2-MedMicro-R4", label: "CU3L2-MedMicro-R4" }],
-  "levelsabove": [
-    // NEW: "A-A-AA-OA-U3L4-RRHHGap:R4" — badges A-A-AA-OA + U3L4 +
-    // RRGap + HHGap + pHL-B + HLGap-B (see ScreenerUtils.tsx / cpr.ts).
-    // Bullish: entry today's TC, target today's R4, stoploss today's S1.
-    {
-      id: "A-A-AA-OA-U3L4-RRHHGap:R4",
-      label: "A-A-AA-OA-U3L4-RRHHGap:R4",
-      activeColor: "#22c55e",
-      activeText: "#4ade80",
-      activeBg: "rgba(34, 197, 94, 0.14)",
-    },
-    {
-      id: "A-A-AA-AA-EU3L4-GapB",
-      label: "A-A-AA-AA-EU3L4-GapB",
-      activeColor: "#22c55e",
-      activeText: "#4ade80",
-      activeBg: "rgba(34, 197, 94, 0.14)",
-    },
-    {
-      id: "A-A-AA-AA-U3L4-pGapB",
-      label: "A-A-AA-AA-U3L4-pGapB",
-      activeColor: "#fb7185",
-      activeText: "#fda4af",
-      activeBg: "rgba(244, 63, 94, 0.14)",
-    },
-    // RENAMED from "9AM:MegL-U4+1:3PM": all existing conditions removed.
-    // NEW: 6PM:APHS1A-FAU4:9PM — LEVEL ABOVE + Pattern EU2L4 + the PREVIOUS
-    // day's own pivot sub-label (prevCPR vs ppCPR) being EU3L4
-    // ("p-EU3L4" badge) + today's BC above prev day's own PDH
-    // (todayCPR.bc > prevCPR.prevHigh) + today's S1 above prev day's TC
-    // (todayCPR.s1 > prevCPR.tc). Bullish, entry ~6PM, targets Far Above
-    // U4 by ~9PM. Green color family, same as its A-A-AA-AA-EU3L4-GapB
-    // sibling, to flag it as bullish.
-    {
-      id: "6PM:APHS1A-FAU4:9PM",
-      label: "6PM:APHS1A-FAU4:9PM",
-      activeColor: "#22c55e",      // green-500 border
-      activeText:  "#4ade80",      // green-400 text
-      activeBg:    "rgba(34, 197, 94, 0.14)",
-    },
-    // REMOVED: 8AM:pPDHA-SRA-U4+2:2AM — its parent branch "A-B-C-C" (and
-    // the whole A-B-* compound group under LEVEL ABOVE) was removed for
-    // showing 0 matched rows in PatternStats; this color entry went with it.
-    // 9AM:pPALPApH-FAU4:2PM — LEVEL ABOVE + Pattern A-A-AA-AA-U4L3 + prev day's
-    // own Pivot above today's PDL (prevCPR.pivot > todayCPR.prevLow) +
-    // today's own Pivot above today's own PDH (todayCPR.pivot >
-    // todayCPR.prevHigh). Bullish, entry ~9AM, targets Far Above U4 by
-    // ~2PM. Green color family, same as its A-A-AA-AA-EU3L4-GapB /
-    // 6PM:APHS1A-FAU4:9PM siblings.
-    {
-      id: "9AM:pPALPApH-FAU4:2PM",
-      label: "9AM:pPALPApH-FAU4:2PM",
-      activeColor: "#22c55e",      // green-500 border
-      activeText:  "#4ade80",      // green-400 text
-      activeBg:    "rgba(34, 197, 94, 0.14)",
-    },
-    // MOVED from "R1AbovePR4" — "A6-U3L3-SLBBG-R4" (renamed from
-    // "A-A-AA-AA-U3L3-SSLLGap:R4") — View under the "A-A-AA-AA-U3L3"
-    // Subpattern (under the "A-A-AA-AA" Pattern), now in LEVEL ABOVE
-    // (LevelsAbove). Condition is A-A-AA-AA + U3L3 + SSGap + LLGap +
-    // pHL-B + HLGap-B (see ScreenerUtils.tsx / cpr.ts). Bullish, entry
-    // at today's TC, targets today's own R4 (U4), stoploss today's S1.
-    // Green color family, matching its bullish siblings.
-    {
-      id: "A6-U3L3-SLBBG-R4",
-      label: "A6-U3L3-SLBBG-R4",
-      activeColor: "#22c55e",              // green-500 border
-      activeText:  "#4ade80",              // green-400 text
-      activeBg:    "rgba(34, 197, 94, 0.14)",
-    },
-      { id: "A-A-AA-AA-CU4L3-GapBB:R4", label: "A-A-AA-AA-CU4L3-GapBB:R4" },
-      { id: "A6-EU2L4-RH-BGapB:R4", label: "A6-EU2L4-RH-BGapB:R4" },
-      { id: "A6-EU2L4-RH-BGapB1:R4", label: "A6-EU2L4-RH-BGapB1:R4" },
-      { id: "A6-U4L4-SLBBG-R4", label: "A6-U4L4-SLBBG-R4" },
-      { id: "A6-U2L4-PLpTC-R4", label: "A6-U2L4-PLpTC-R4" },
-      { id: "BC-A-A-AA-AA-EU2L4-RH-GapBB-S1", label: "pMega-S1" },
-      { id: "BC-A-A-AA-AA-EU2L4-RH-GapBB-S2", label: "A6-EU2L4-pUltra-S2" }
-],
-  "levelsbelow": [
-    // NEW: B-B-BB-BB-L4U4-pLAP:R4 — View nested under the
-    // "B-B-BB-BB-L4U4" Pattern arrow (renamed from "2P:L4U4-pLAP:R4-2A",
-    // which nested under the now-removed "RHSLB-SSLLpGap" Pattern — see
-    // matchesPatternFlag in ScreenerUtils.tsx). LEVEL BELOW + the parent's
-    // raw B-B-BB-BB-L4U4 flag + prevCPR.HLSwitch HL-A with hlGapWinner
-    // "prev" + prev day's own PDL above today's Pivot + SSGap + LLGap +
-    // todayCPR.HLSwitch HL-B. Bullish, entry ~2PM, targets today's own R4
-    // (U4) by ~2AM. Same green color family as its bullish LEVEL BELOW
-    // siblings.
-    {
-      id: "B-B-BB-BB-L4U4-pLAP:R4",
-      label: "B-B-BB-BB-L4U4-pLAP:R4",
-      activeColor: "#22c55e",              // green-500 border
-      activeText:  "#4ade80",              // green-400 text
-      activeBg:    "rgba(34, 197, 94, 0.14)",
-    },
-    // NEW: B-B-BB-BB-EL4U4-SSLLGap:S4 — View nested under the new
-    // "B-B-BB-BB-EL4U4" Pattern arrow (LEVEL BELOW). Condition:
-    // parent's raw B-B-BB-BB-EL4U4 flag + SSGap + LLGap + pHL-B +
-    // HLGap-A (today HL-A with hlGapWinner "today"). Bearish, entry BC
-    // (today's BC), targets today's own S4 (L4), stoploss R1. Rose color
-    // family to visually mark it bearish.
-    { id: "BC-B-B-BB-BB-EL4U4-SL-BAGap-S4", label: "B6-EL4U4-pMini" },
-    { id: "R1-B-B-BB-BB-L4U4-RH-GapAA-R4", label: "B6-L4U4-pStepUp" },
-    // NEW: B-B-BB-BB-L2U4-pPPHR1 — Copy View nested under the
-    // "B-B-BB-BB-L2U4" Pattern arrow (LEVEL BELOW). Grades against its
-    // conditionKey target, same as its siblings above.
-    { id: "B-B-BB-BB-L2U4-pPPHR1", label: "B-B-BB-BB-L2U4-pPPHR1" },
-    // NEW: B6-L4U4-MiniTiny:R4 — LEVEL BELOW + B-B-BB-BB-L4U4 pattern.
-    // Grades against conditionKey B-B-BB-BB-L4U4. Bullish, entry TC,
-    // targets today's R4 (U4). Moved here from CREATED VIEWS.
-    {
-      id: "B6-L4U4-MiniTiny:R4",
-      label: "B6-L4U4-MiniTiny:R4",
-      activeColor: "#22c55e",
-      activeText:  "#4ade80",
-      activeBg:    "rgba(34, 197, 94, 0.14)",
-    },
-      { id: "B6-L3U3-GapAA:R4", label: "B6-L3U3-GapAA:R4" },
-      { id: "R1-B-B-BB-BB-EL3U4-SL-GapBA-R4", label: "B6-EL3U4-MiniMicro" },
-      { id: "R1-B-B-BB-BB-L4U4-SH-GapAB-R4", label: "B6-L4U4-Micro" },
-      { id: "R1-B-B-BB-BB-L4U4-SL-GapAB-R4", label: "B6-L4U4-Micro" }
-],
-  "compressed": [
-    { id: "C-B-BB-LB-CL4U3", label: "C-B-BB-LB-CL4U3" },
-    { id: "C-B-BB-LB-CL3U3", label: "C-B-BB-LB-CL3U3" },
-    { id: "C-B-BB-LB-CL2U2", label: "C-B-BB-LB-CL2U2" },
-    { id: "C-B-BB-LB-CL4U4", label: "C-B-BB-LB-CL4U4" },
-    { id: "C-B-BB-LB-CL2U1", label: "C-B-BB-LB-CL2U1" },
-    { id: "C-B-BB-LB-CL1U1", label: "C-B-BB-LB-CL1U1" },
-    { id: "C-B-BB-LB-L4U4", label: "C-B-BB-LB-L4U4" },
-    { id: "C-C-BB-AA-None", label: "C-C-BB-AA-None" },
-    { id: "C-A-C-AA-CU3L2", label: "C-A-C-AA-CU3L2" },
-    { id: "C-A-HA-AA-CU3L2", label: "C-A-HA-AA-CU3L2" },
-    { id: "C-C-BB-OA-CL2U1", label: "C-C-BB-OA-CL2U1" },
-    { id: "C-C-OB-AA-CU3L2", label: "C-C-OB-AA-CU3L2" },
-    { id: "C-B-BB-C-CL2U2", label: "C-B-BB-C-CL2U2" },
-    { id: "C-A-E-AA-CU4L3", label: "C-A-E-AA-CU4L3" },
-    { id: "C-A-OA-AA-CU4L3", label: "C-A-OA-AA-CU4L3" },
-    { id: "C-A-OB-AA", label: "C-A-OB-AA" },
-    { id: "C-A-OB-AA-CU3L2", label: "C-A-OB-AA-CU3L2" },
-    { id: "C-A-C-AA-CU3L3", label: "C-A-C-AA-CU3L3" },
-    { id: "C-A-C-AA-CU4L3", label: "C-A-C-AA-CU4L3" },
-    { id: "C-A-C-AA-CU4L4", label: "C-A-C-AA-CU4L4" },
-    { id: "C-A-C-AA-CU2L2", label: "C-A-C-AA-CU2L2" },
-    { id: "C-A-C-AA-CU2L1", label: "C-A-C-AA-CU2L1" },
-    { id: "C-A-C-AA-CU3L1", label: "C-A-C-AA-CU3L1" },
-    { id: "C-A-C-AA-CU2BC", label: "C-A-C-AA-CU2BC" },
-    { id: "C-A-C-AA-None", label: "C-A-C-AA-None" },
-    { id: "C-A-C-AA-U4L4", label: "C-A-C-AA-U4L4" },
-    { id: "C-A-HA-AA-CU4L3", label: "C-A-HA-AA-CU4L3" },
-    { id: "C-A-HA-AA-CU3L3", label: "C-A-HA-AA-CU3L3" },
-    { id: "C-A-HA-AA-CU4L4", label: "C-A-HA-AA-CU4L4" },
-    { id: "C-A-HA-AA-U4L4", label: "C-A-HA-AA-U4L4" },
-    { id: "C-A-HA-AA-CU2L2", label: "C-A-HA-AA-CU2L2" },
-    { id: "C-A-HA-AA-CU2L1", label: "C-A-HA-AA-CU2L1" },
-    { id: "C-A-HA-AA-CU4L2", label: "C-A-HA-AA-CU4L2" },
-    { id: "C-A-E-AA-CU3L3", label: "C-A-E-AA-CU3L3" },
-    { id: "C-A-E-AA-CU4L4", label: "C-A-E-AA-CU4L4" },
-    { id: "C-A-OA-AA-CU4L4", label: "C-A-OA-AA-CU4L4" },
-    { id: "C-A-OA-AA-CU3L3", label: "C-A-OA-AA-CU3L3" },
-    { id: "C-A-OA-AA-U4L4", label: "C-A-OA-AA-U4L4" },
-    { id: "C-A-OA-AA-CU3L2", label: "C-A-OA-AA-CU3L2" },
-    { id: "C-A-OB-AA-CU4L4", label: "C-A-OB-AA-CU4L4" },
-    { id: "C-B-BB-C-CL3U2", label: "C-B-BB-C-CL3U2" },
-    { id: "C-B-BB-C-CL3U3", label: "C-B-BB-C-CL3U3" },
-    { id: "C-B-BB-C-CL2U1", label: "C-B-BB-C-CL2U1" },
-    { id: "C-B-BB-C-CL3U1", label: "C-B-BB-C-CL3U1" },
-    { id: "C-B-BB-C-CL2UT", label: "C-B-BB-C-CL2UT" },
-    { id: "C-B-BB-C-CL4U3", label: "C-B-BB-C-CL4U3" },
-    { id: "C-B-BB-C-CL4U4", label: "C-B-BB-C-CL4U4" },
-    { id: "C-B-BB-C-L3TC", label: "C-B-BB-C-L3TC" },
-    { id: "C-C-OB-AA-CU3L3", label: "C-C-OB-AA-CU3L3" },
-    { id: "C-C-OB-AA-CU2L2", label: "C-C-OB-AA-CU2L2" },
-    { id: "C-C-OB-AA-CU4L3", label: "C-C-OB-AA-CU4L3" },
-    { id: "C-C-OB-AA-CU2L1", label: "C-C-OB-AA-CU2L1" },
-    { id: "C-C-OB-AA-CU2BC", label: "C-C-OB-AA-CU2BC" },
-    { id: "C-C-BB-OA-CL3U2", label: "C-C-BB-OA-CL3U2" },
-    { id: "C-C-BB-OA-CL2U2", label: "C-C-BB-OA-CL2U2" },
-    { id: "C-C-BB-OA-CL3U3", label: "C-C-BB-OA-CL3U3" },
-    { id: "C-C-BB-OA-CL4U3", label: "C-C-BB-OA-CL4U3" },
-    { id: "C-C-BB-OA-CL4U4", label: "C-C-BB-OA-CL4U4" },
-    { id: "C-C-BB-OA-CL1U1", label: "C-C-BB-OA-CL1U1" },
-    { id: "C-B-BB-E-CL3U3", label: "C-B-BB-E-CL3U3" },
-    { id: "C-B-BB-E-CL4U3", label: "C-B-BB-E-CL4U3" },
-    { id: "C-B-BB-E-CL3U2", label: "C-B-BB-E-CL3U2" },
-    { id: "C-B-BB-E-CL4U4", label: "C-B-BB-E-CL4U4" },
-    // NEW: "C-B-BB-LB-CL3U2-RRHHGap:R4" — View under the
-    // "C-B-BB-LB-CL3U2" Pattern in "COMPRESSED". Condition is
-    // C-B-BB-LB + CL3U2 + RRGap + HHGap + pHLGap-A + HL-B (see
-    // ScreenerUtils.tsx / cpr.ts). Bullish, entry at today's TC, targets
-    // today's own R4 (U4), stoploss today's S1. Green color family,
-    // matching its bullish sibling.
-    {
-      id: "C-B-BB-LB-CL3U2-RRHHGap:R4",
-      label: "C-B-BB-LB-CL3U2-RRHHGap:R4",
-      activeColor: "#22c55e",              // green-500 border
-      activeText:  "#4ade80",              // green-400 text
-      activeBg:    "rgba(34, 197, 94, 0.14)",
-    },
-      { id: "C-CL3U3-SH-AGapB-S4", label: "C-CL3U3-SH-AGapB-S4" },
-      { id: "CBA-CL2U2-RHGapAB-R4", label: "CBA-CL2U2-RHGapAB-R4" },
-      { id: "CBA-CL3U2-RH-GapAB-R4", label: "CBA-CL3U2-RH-GapAB-R4" },
-      { id: "CBA-CL2U1-RH-AAGap-R4", label: "CBA-CL2U1-RH-AAGap-R4" }
-],
-  // "expanded" — "EXPANDED": RRSS-E only, mirroring "compressed" above.
-  "expanded": [],
-  "R1AbovePR4": [
-    // NEW: "A-A-AA-AA-EUPL3-RRHHGap:R4" — View under the
-    // "A-A-AA-AA-EUPL3" Subpattern (under the "A-A-AA-AA" Pattern) in
-    // "U1 > pU4". Condition is A-A-AA-AA + EUPL3 + RRGap + HHGap +
-    // pHL-A + HLGap-B (see ScreenerUtils.tsx / cpr.ts). Bullish, entry
-    // at today's TC, targets today's own R4 (U4), stoploss today's S1.
-    // Green color family, matching its bullish siblings below.
-    {
-      id: "A-A-AA-AA-EUPL3-RRHHGap:R4",
-      label: "A-A-AA-AA-EUPL3-RRHHGap:R4",
-      activeColor: "#22c55e",              // green-500 border
-      activeText:  "#4ade80",              // green-400 text
-      activeBg:    "rgba(34, 197, 94, 0.14)",
-    },
-    { id: "9AM:APHS1A-FAU4:4AM", label: "9AM:APHS1A-FAU4:4AM",
-      activeColor: "#22c55e", activeText: "#4ade80", activeBg: "rgba(34,197,94,0.18)" },
-    // NEW: 6AM:pX-APHS1A-pL4:4AM — same condition as 9AM:APHS1A-FAU4:4AM plus
-    // the prev day's own pattern being p-EU3L4. Bearish, targets pL4
-    // (prev day's S4) by ~4AM. Red color family.
-    {
-      id: "6AM:pX-APHS1A-pL4:4AM",
-      label: "6AM:pX-APHS1A-pL4:4AM",
-      activeColor: "#f87171",              // red-400 border
-      activeText:  "#fca5a5",              // red-300 text
-      activeBg:    "rgba(239, 68, 68, 0.14)",
-    },    // NEW: 6AM:MegMeg-L3:8PM — U1>pU4 + Pattern A-A-AA-AA-EU1L4 + pMega (prev CPR
-    // width Mega, 5.00%-10.00%) + Mega (today's CPR width Mega,
-    // 5.00%-10.00%). Bearish, targets L3 (today's S3) by ~8PM. Red color
-    // family, same as its 6AM:pX-APHS1A-pL4:4AM sibling.
-    {
-      id: "6AM:MegMeg-L3:8PM",
-      label: "6AM:MegMeg-L3:8PM",
-      activeColor: "#f87171",              // red-400 border
-      activeText:  "#fca5a5",              // red-300 text
-      activeBg:    "rgba(239, 68, 68, 0.14)",
-    },
-    // MERGED: was accidentally living in a second, duplicate
-    // "R1AbovePR4" key further down this object literal — a duplicate
-    // object key silently wins in JS, so that whole second definition
-    // was clobbering this entire array at runtime and everything below
-    // (6AM:MegMeg-L3:8PM, etc.)
-    // was rendering as if it didn't exist. Folded the one entry that
-    // was in that duplicate back in here instead of losing it.
-    { id: "A-E-AA-E-EUBL2-GapB-S1", label: "A-E-AA-E-EUBL2-GapB-S1" },
-    // NEW: "6A:A-A-AA-AA-EUTL3-S1ATCpE-pL4:4A" — nested under
-    // "A-A-AA-AA-EUTL3" (see views.ts). Bearish (direction: "Down"),
-    // targets pL4 (prev day's S4) by ~4AM. Red color family, matching
-    // its bearish R1AbovePR4 siblings.
-    { id: "BC-A-A-AA-AA-EUTL3-RH-BBGap-S2", label: "A6-EUTL3-MegaUltra" },
-    // NEW: "A5-EUTL3-pA-S1ATC" — nested under "A-A-AA-AA-EUTL3" (see
-    // views.ts). Bullish (direction: "Up"), targets U2 (today's R2).
-    // Was previously only reachable via the flat "copyViews" bucket
-    // above, not from the actual R1AbovePR4 nav section. Green color
-    // family, matching its bullish siblings.
-    {
-      id: "A5-EUTL3-pA-S1ATC",
-      label: "A5-EUTL3-pA-S1ATC",
-      activeColor: "#22c55e",              // green-500 border
-      activeText:  "#4ade80",              // green-400 text
-      activeBg:    "rgba(34, 197, 94, 0.14)",
-    },
-      { id: "A6-EUTL3-BGapB-Ultra-S1", label: "A6-EUTL3-BGapB-Ultra-S1" },
-      { id: "A5-EU1L2-AGapA-R3", label: "A5-EU1L2-AGapA-R3" },
-      { id: "AE-EUBL2-RH-AGapB-R4", label: "AE-EUBL2-RH-AGapB-R4" },
-      { id: "A6-EL2L1-ABGap-R2", label: "A6-EL2L1-ABGap-R2" },
-      { id: "BC-A-A-AA-AA-EUPL3-RH-BBGap-S2", label: "A6-EUPL3-Ultra-S2" },
-      { id: "TC-A-A-AA-AA-EUTL3-RH-BBGap-R1", label: "A6-EUTL3-pTiny" },
-      { id: "TC-A-A-AA-AA-EUBL2-RH-BBGap-R4", label: "A6-EUBL2-Large" }
-],
-  "S1BelowPS4": [
-    {
-      id: "ss-EL1U4-U4:10PM",
-      label: "ss-EL1U4-U4:10PM",
-      activeColor: "#22c55e",              // green-500 border
-      activeText:  "#4ade80",              // green-400 text
-      activeBg:    "rgba(34, 197, 94, 0.14)",
-    },
-  ],
-  "equal-cpr": [
-    { id: "eXLoL3U3-L3", label: "eXLoL3U3-L3" },
-  ],
-  "touch": [{ id: "A5-CU3L3-SLGapBB-R4", label: "A5-CU3L3-SLGapBB-R4" }, { id: "TC-INCPR-B-A-C-C-U4L4-RL-GapBB-R4", label: "InnerRocket" }, { id: "R1-INCPR-C-C-BB-AA-CL2U2-SH-GapAB-R4", label: "PR4ContinueR4Nxt" }, { id: "S1-INCPR-C-C-BB-AA-CL3U3-RL-GapBB-S4", label: "CL3U3-MicroFall" }, { id: "R1-OVA-A-A-OA-OA-EU4L4-RH-BBGap-R4", label: "A2OA2-EU4L4-SmallMedium" }],
-};
-
 export const pivotcategories: Category[] = [
-  { id: "levelsabove",        label: "LEVEL ABOVE",    subtitle: "RRSS-A only (today's R1 up, S1 not down vs prev), excludes ABOVE LEVEL4", icon: TrendingUp },
-  { id: "R1AbovePR4",          label: "ABOVE LEVEL4",  subtitle: "Today R1 above Prev R4",   icon: TrendingUp },
-  { id: "levelsbelow",    label: "LEVEL BELOW", subtitle: "RRSS-B only (today's R1 not up, S1 down vs prev)", icon: TrendingUp },
-  { id: "compressed",        label: "COMPRESSED",   subtitle: "RRSS-C only (today's R1 down, S1 up vs prev)",   icon: TrendingUp },
-  { id: "expanded",          label: "EXPANDED",     subtitle: "RRSS-E only (today's R1 up, S1 down vs prev)",   icon: TrendingUp },
-  { id: "S1BelowPS4",          label: "BELOW LEVEL4",  subtitle: "Today S1 below Prev S4",   icon: TrendingDown },
-  { id: "equal-cpr",          label: "Equal CPR",     subtitle: "Prev & Today CPR Equal",   icon: Equal },
-  { id: "touch",              label: "TOUCH",         subtitle: "Inside, Out, Overlap Above/Below...", icon: Activity },
-  // NEW: home for every auto-generated Copy View / Create View — see
-  // Views.copyViews above.
+  { id: "levelsabove", label: getView("levelsabove")?.label ?? "LEVEL ABOVE", subtitle: "RRSS-A only (today's R1 up, S1 not down vs prev), excludes ABOVE LEVEL4", icon: TrendingUp },
+  { id: "R1AbovePR4", label: getView("R1AbovePR4")?.label ?? "ABOVE LEVEL4", subtitle: "Today R1 above Prev R4", icon: TrendingUp },
+  { id: "levelsbelow", label: getView("levelsbelow")?.label ?? "LEVEL BELOW", subtitle: "RRSS-B only (today's R1 not up, S1 down vs prev)", icon: TrendingUp },
+  { id: "compressed", label: getView("compressed")?.label ?? "COMPRESSED", subtitle: "RRSS-C only (today's R1 down, S1 up vs prev)", icon: TrendingUp },
+  { id: "expanded", label: getView("expanded")?.label ?? "EXPANDED", subtitle: "RRSS-E only (today's R1 up, S1 down vs prev)", icon: TrendingUp },
+  { id: "S1BelowPS4", label: getView("S1BelowPS4")?.label ?? "BELOW LEVEL4", subtitle: "Today S1 below Prev S4", icon: TrendingDown },
+  { id: "equal-cpr", label: getView("equal-cpr")?.label ?? "Equal CPR", subtitle: "Prev & Today CPR Equal", icon: Equal },
+  { id: "touch", label: getView("touch")?.label ?? "TOUCH", subtitle: "Inside, Out, Overlap Above/Below...", icon: Activity },
   { id: "copyViews", label: "CREATED VIEWS", subtitle: "Auto-generated from Backtest's Copy View / Create View", icon: BookmarkCheck },
 ];
 
+const NAVIGATION_CATEGORY_IDS = new Set(pivotcategories.map((category) => category.id));
+
+function getNavigationCategoryId(definition: ViewDef): string | null {
+  if (definition.navigationCategoryKey && NAVIGATION_CATEGORY_IDS.has(definition.navigationCategoryKey)) {
+    return definition.navigationCategoryKey;
+  }
+
+  let current: ViewDef | undefined = definition;
+  while (current) {
+    if (NAVIGATION_CATEGORY_IDS.has(current.key)) return current.key;
+    current = current.parentKey ? getView(current.parentKey) : undefined;
+  }
+  return null;
+}
+
+function buildSidebarViews(): Record<string, SidebarView[]> {
+  const grouped: Record<string, SidebarView[]> = Object.fromEntries(
+    pivotcategories.map((category) => [category.id, []]),
+  );
+
+  for (const view of VIEWS) {
+    if (view.kind !== "view") continue;
+    const categoryId = getNavigationCategoryId(view);
+    if (!categoryId) continue;
+    const isBullish = view.direction === "Up";
+    const isBearish = view.direction === "Down";
+    grouped[categoryId].push({
+      id: view.key,
+      label: view.label,
+      ...(isBullish
+        ? { activeColor: "#22c55e", activeText: "#4ade80", activeBg: "rgba(34, 197, 94, 0.14)" }
+        : isBearish
+          ? { activeColor: "#f87171", activeText: "#fca5a5", activeBg: "rgba(239, 68, 68, 0.14)" }
+          : {}),
+    });
+  }
+  return grouped;
+}
+
+/** Screener navigation entries derived from the canonical view registry. */
+export const Views = buildSidebarViews();
+
 /**
  * Single source of truth for every pattern id the Screener handles —
- * derived from `pivotcategories` (top-level) + `Views` (nested). Legacy /
- * previously-visible left-nav ids that aren't in the tree anymore live in
- * LEGACY_SCREENER_PATTERN_IDS so App.tsx no longer has to duplicate the tree.
+ * derived from the registry plus legacy Screener-only ids that aren't in it.
  */
 export const LEGACY_SCREENER_PATTERN_IDS = [
-  "Price-AbovePDH",
-  "Price-BelowPDL",
-  "HB-L1<PL1-PU12CU23",
-  "HB-L1<PL4-U1>TCPR",
-  "HB-L1<PL2-U12CPU12",
-  "HB-L1>PL1-PU1CU234",
   // sub-patterns whose passesPattern() case exists but aren't in the tree yet
   "la-allstepup",
   "eXHiU1L3",
@@ -372,34 +100,26 @@ export const LEGACY_SCREENER_PATTERN_IDS = [
   "LAT-PU12CU23",
   "LBT-PU1>U1PL1>L1",
   "HA-U1>PU4",
-  "HAThin-U1>PU4",
   "HA55-HrL4U34-FAU4",
   "L1<pL4",
 ] as const;
 
 export const SCREENER_PATTERN_IDS: ReadonlySet<string> = new Set<string>([
-  ...pivotcategories.map((p) => p.id),
-  ...Object.values(Views).flatMap((subs) => subs.map((s) => s.id)),
+  ...VIEWS.map((view) => view.key),
   ...LEGACY_SCREENER_PATTERN_IDS,
 ]);
-
-const VIEW_IDS = new Set(
-  VIEWS.filter((view) => view.kind === "view").map((view) => view.key),
-);
 
 export type SidebarMode = "scanner" | "signals" | "stats" | "backtest" | "journal";
 
 /**
- * Flat id → label lookup covering every view in the tree — both the
- * top-level `pivotcategories` entries and every nested `Views` sub-item.
+ * Flat id → label lookup covering every registry definition and navigation
+ * category.
  * Used by SignalDesk's chip strip (and anywhere else that needs a view's
  * display label from just its id, without walking the nested tree).
  */
 export const VIEW_LABEL_BY_ID: Record<string, string> = {
-  ...Object.fromEntries(pivotcategories.map((p) => [p.id, p.label])),
-  ...Object.fromEntries(
-    Object.values(Views).flatMap((subs) => subs.map((s) => [s.id, s.label] as const)),
-  ),
+  ...Object.fromEntries(VIEWS.map((view) => [view.key, view.label] as const)),
+  ...Object.fromEntries(pivotcategories.map((category) => [category.id, category.label] as const)),
 };
 
 /**
@@ -421,12 +141,12 @@ export function subscribeViewDeselect(listener: ViewDeselectListener) {
   };
 }
 
-/** Returns the parent ID for a sub-pattern, or null if it is a parent itself. */
+/** Returns the navigation category for a View or nested registry entry. */
 function getParentId(patternId: string): string | null {
-  for (const [parentId, children] of Object.entries(Views)) {
-    if (children.some((c) => c.id === patternId)) return parentId;
-  }
-  return null;
+  if (NAVIGATION_CATEGORY_IDS.has(patternId)) return null;
+  const definition = getView(patternId);
+  if (!definition) return null;
+  return getNavigationCategoryId(definition);
 }
 
 interface ViewsSidebarProps {
@@ -488,12 +208,12 @@ export default function ViewsSidebar({
   const showOnlyWithCounts = true;
   const visiblePivotCategories = showOnlyWithCounts
     ? pivotcategories.filter((pattern) => {
-        const children = (Views[pattern.id] ?? []).filter((child) => VIEW_IDS.has(child.id));
+        const children = Views[pattern.id] ?? [];
         return !!counts?.[pattern.id] || children.some((c) => !!counts?.[c.id]);
       })
     : pivotcategories;
   function visibleChildren(patternId: string) {
-    const children = (Views[patternId] ?? []).filter((child) => VIEW_IDS.has(child.id));
+    const children = Views[patternId] ?? [];
     return showOnlyWithCounts ? children.filter((c) => !!counts?.[c.id]) : children;
   }
 

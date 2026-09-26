@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo, Fragment } from "react";
-import { pivotcategories, Views, requestViewDeselect } from "@/lib/ViewsSidebar";
+import { pivotcategories, Views, VIEW_LABEL_BY_ID, requestViewDeselect } from "@/lib/ViewsSidebar";
 import { getView } from "@/lib/views";
 import {
   TrendingUp,
@@ -106,68 +106,39 @@ function NoSignalsPanel({
 }
 
 /**
- * GENERIC_VIEW_CATEGORIES — left-nav categories whose Views (sub-patterns)
- * are rendered generically (see the "Generic Views" block in the JSX below
- * and the matching fallback in getActivePool), instead of each sub-pattern
+ * GENERIC_VIEW_CATEGORIES — left-nav categories whose Views are rendered
+ * generically (see the "Generic Views" block in the JSX below and the
+ * matching fallback in getActivePool), instead of each View
  * getting its own hand-written useState + button + pool block like the
  * older hardcoded categories above it used to.
  *
- * Why: every new sub-pattern under those older categories needs a new
+ * Why: every new View under those older categories needs a new
  * useState, a cleanup-effect entry, a getActivePool() branch, an
  * anySubFilter entry, AND a JSX button — five places to touch, and it's
- * easy to add a sub-pattern to ViewsSidebar's `Views` map and
- * forget one of them (exactly what happened here: LEVELS ABOVE's three
- * Views existed in the left-nav but never got a Screener button, so the
- * Views list showed empty). The generic path here only needs the
- * Views entry — passesPattern(r, sub.id) already resolves any
- * sub-pattern id generically (see the per-sub-pattern count loop above),
- * so no per-view code is needed on this side at all.
+ * easy to add a View to navigation while forgetting to wire its Screener
+ * filter. The generic path only needs the registry definition:
+ * passesPattern(r, sub.id) already resolves any View id generically, so no
+ * per-View code is needed on this side.
  *
- * Add a category key here any time a NEW top-level left-nav pattern is
- * introduced (or move one of the older hardcoded categories in here later
- * if it stops needing its bespoke behaviour).
+ * Categories are derived from the registry-backed sidebar Views map, so
+ * adding a View to a category automatically wires its Screener filter UI.
  */
-const GENERIC_VIEW_CATEGORIES = new Set([
-  "levelsabove",
-  "levelsbelow",
-  "compressed",
-  "expanded",
-  "R1AbovePR4",
-  "S1BelowPS4",
-  "equal-cpr",
-  // NEW: inside-cpr — was hand-wired to a single legacy button
-  // ("Ti-cOLo-APU4-9PM") that no longer matches the left-nav's Views
-  // list (8AM:SRBHHLLA-pU4+1:8AM, 2PM:pPDHLA-SRA-U4:7PM), so the left-nav
-  // Views were invisible in the Screener and the Screener's button pointed
-  // at a Views entry no longer in the left-nav. Moving it to the generic
-  // path makes ViewsSidebar's Views the single source of truth for
-  // both surfaces.
-  "inside-cpr",
-  // NEW: copyViews — auto-generated "Create View"/"Copy View" entries.
-  // Adding here ensures every view in this bucket automatically gets a
-  // count (and green dot) in the live screener, without requiring any
-  // per-view wiring. Future created views will Just Work.
-  "copyViews",
-]);
+const GENERIC_VIEW_CATEGORIES = new Set(
+  Object.entries(Views)
+    .filter(([, views]) => views.length > 0)
+    .map(([categoryId]) => categoryId),
+);
 
-/** View ids used by hand-written Views filter buttons that aren't listed in
- *  ViewsSidebar's `Views` map, but still need a "(n)" count. */
+/** View ids used by hand-written filter buttons that still need a "(n)" count. */
 const EXTRA_VIEW_COUNT_IDS: string[] = [];
 
 /**
- * Flat id → label lookup covering every view in the tree — both the
- * top-level `pivotcategories` entries and every nested `Views` sub-item.
+ * Flat id → label lookup covering every registry definition and sidebar
+ * category.
  * Used by the header's "Active view" stat card so it can show a readable
  * label instead of the raw activeView id (mirrors SignalDesk's
  * VIEW_LABEL_BY_ID).
  */
-const VIEW_LABEL_BY_ID: Record<string, string> = {
-  ...Object.fromEntries(pivotcategories.map((p) => [p.id, p.label])),
-  ...Object.fromEntries(
-    Object.values(Views).flatMap((subs) => subs.map((s) => [s.id, s.label] as const)),
-  ),
-};
-
 export default function Screener({
   activeView = "levelsabove",
   scanKey = 0,
@@ -251,11 +222,8 @@ export default function Screener({
   // left-nav pattern, the screener should show ALL scanned results
   // (unfiltered) rather than being pre-filtered to a specific pattern.
   const [showAll, setShowAll] = useState(true);
-  // NEW: generic Views (sub-pattern) toggle — covers every category listed
-  // in GENERIC_VIEW_CATEGORIES (LEVELS ABOVE, LEVELs BELOW, COMPRESSED,
-  // U1>pU4, L1<pL4, Equal CPR, and any future category added there) instead
-  // of a bespoke useState per sub-pattern. Holds the currently-selected
-  // sub-pattern id (e.g. "7PM:MoMi->U4:2AM"), or null when none selected.
+  // Generic Views toggle — covers every non-empty category derived from
+  // the registry-backed navigation map. Holds the selected View id, or null.
   const [activeGenericSubView, setActiveGenericSubView] = useState<string | null>(null);
   const [PatternFilter, setPatternFilter] = useState<string | null>(null);
   const [showPatternList, setShowPatternList] = useState(false);
@@ -1410,14 +1378,8 @@ export default function Screener({
             <span className="text-[10px] text-pink-400/90 uppercase tracking-wider mr-0.5 font-semibold">VIEWS:</span>
             )}
 
-            {/* NEW: generic Views (sub-pattern) buttons — covers LEVELS ABOVE,
-                LEVELs BELOW, COMPRESSED, U1>pU4, L1<pL4, Equal CPR (see
-                GENERIC_VIEW_CATEGORIES above), and any future category added
-                there. Colours come straight from each sub-pattern's own
-                activeColor/activeText/activeBg in ViewsSidebar's
-                Views map, same as the left-nav itself, so a newly
-                added Views entry is styled automatically without touching
-                this file. */}
+            {/* Generic View buttons are derived from the registry-backed
+                navigation map, so new registered Views work automatically. */}
             {GENERIC_VIEW_CATEGORIES.has(activeSectionKey) &&
               !showAll &&
               (Views[activeSectionKey] ?? []).map((sub) => {

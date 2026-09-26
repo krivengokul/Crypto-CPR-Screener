@@ -114,10 +114,8 @@ export interface SignalItem {
 
 // Which top-level Views bucket a View id lives under — e.g. "compressed",
 // "expanded", "levelsabove", "levelsbelow", "R1AbovePR4", "S1BelowPS4",
-// "touch", "copyViews". This is literally just which key of the Views
-// object (ViewsSidebar.tsx) the id's SubPattern was declared under, so it
-// stays in sync automatically as Views categories are added/renamed —
-// nothing about this needs to be hand-maintained here.
+// "touch", "copyViews". The map is generated from the view registry, so this
+// stays in sync as registered Views or their navigation parents change.
 function getCategoryForViewId(id: string): string {
   for (const [category, subList] of Object.entries(Views)) {
     if (subList.some((sub) => sub.id === id)) return category;
@@ -125,10 +123,7 @@ function getCategoryForViewId(id: string): string {
   return "";
 }
 
-// Friendly display names for the Views object's top-level category keys
-// (raw keys, exactly as declared in ViewsSidebar.tsx). This is the ONLY
-// place these need updating if a category is renamed/added there — every
-// other reference goes through getCategoryLabel below, never the raw key.
+// Friendly SignalDesk-specific display names for registry navigation keys.
 const CATEGORY_LABELS: Record<string, string> = {
   levelsabove: "Level Above",
   levelsbelow: "Level Below",

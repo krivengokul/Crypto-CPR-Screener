@@ -10,7 +10,7 @@ import { passesPattern } from "@/pages/ScreenerUtils";
 import { autoSaveQualifiedSignals } from "@/lib/signalTracker";
 import PatternStats from "@/pages/PatternStats";
 import SignalsJournal from "./pages/SignalsJournal";
-import ViewsSidebar, { pivotcategories, SCREENER_PATTERN_IDS, type SidebarMode } from "@/lib/ViewsSidebar";
+import ViewsSidebar, { SCREENER_PATTERN_IDS, VIEW_LABEL_BY_ID, type SidebarMode } from "@/lib/ViewsSidebar";
 import { Menu } from "lucide-react";
 
 const queryClient = new QueryClient();
@@ -53,9 +53,8 @@ function ComingSoon({ label }: { label: string }) {
   );
 }
 
-// Screener-handled pattern IDs now come from ViewsSidebar (single source
-// of truth — derived from its `pivotcategories` + `Views` tree, plus a small
-// LEGACY_SCREENER_PATTERN_IDS list). Kept out of App.tsx to avoid drift.
+// Screener-handled IDs come from the registry-backed ViewsSidebar export,
+// plus a small list of legacy IDs not present in the registry.
 
 function App() {
   // Empty string = no left-nav pattern selected. On first load / refresh we
@@ -164,8 +163,7 @@ function App() {
     } catch { /* ignore */ }
   };
 
-  const activeLabel =
-    pivotcategories.find((p) => p.id === activeView)?.label ?? activeView;
+  const activeLabel = VIEW_LABEL_BY_ID[activeView] ?? activeView;
 
   return (
     <QueryClientProvider client={queryClient}>
