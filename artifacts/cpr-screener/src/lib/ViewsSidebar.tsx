@@ -12,6 +12,7 @@ import {
   Activity,
   BookmarkCheck,
 } from "lucide-react";
+import { VIEWS } from "@/lib/views";
 
 export interface Category {
   id: string;
@@ -382,6 +383,10 @@ export const SCREENER_PATTERN_IDS: ReadonlySet<string> = new Set<string>([
   ...LEGACY_SCREENER_PATTERN_IDS,
 ]);
 
+const VIEW_IDS = new Set(
+  VIEWS.filter((view) => view.kind === "view").map((view) => view.key),
+);
+
 export type SidebarMode = "scanner" | "signals" | "stats" | "backtest" | "journal";
 
 /**
@@ -483,12 +488,12 @@ export default function ViewsSidebar({
   const showOnlyWithCounts = true;
   const visiblePivotCategories = showOnlyWithCounts
     ? pivotcategories.filter((pattern) => {
-        const children = Views[pattern.id] ?? [];
+        const children = (Views[pattern.id] ?? []).filter((child) => VIEW_IDS.has(child.id));
         return !!counts?.[pattern.id] || children.some((c) => !!counts?.[c.id]);
       })
     : pivotcategories;
   function visibleChildren(patternId: string) {
-    const children = Views[patternId] ?? [];
+    const children = (Views[patternId] ?? []).filter((child) => VIEW_IDS.has(child.id));
     return showOnlyWithCounts ? children.filter((c) => !!counts?.[c.id]) : children;
   }
 
