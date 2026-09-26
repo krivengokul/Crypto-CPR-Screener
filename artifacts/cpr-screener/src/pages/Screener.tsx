@@ -17,7 +17,7 @@ import { runCoinDCXScreener } from "@/lib/coinDCX";
 import type { CPRResult } from "@/lib/cpr";
 import { utcTodayISO } from "@/lib/backtest";
 import {
-  shouldAutoScan,
+  shouldAutoScanForCache,
   markScannedToday,
   hasScannedToday,
   getLastScanDate,
@@ -27,6 +27,7 @@ import {
   loadCachedResults,
   saveCachedResults,
   formatScanTime,
+  isCacheFresh,
   STORAGE_KEY_BINANCE,
   STORAGE_KEY_DELTA,
   STORAGE_KEY_COINDCX,
@@ -224,14 +225,14 @@ export default function Screener({
   const cachedCoinDCX = useMemo(() => loadCachedResults<CPRResult>(STORAGE_KEY_COINDCX), []);
 
   const [status, setStatus] = useState<"idle" | "scanning" | "done" | "error">(() => {
-    return cachedBinance?.data && cachedBinance.data.length > 0 && hasScannedToday() ? "done" : "idle";
+    return isCacheFresh(cachedBinance) ? "done" : "idle";
   });
   const [progress, setProgress] = useState({ done: 0, total: 0, symbol: "" });
   const [allResults, setAllResults] = useState<CPRResult[]>(() => {
-    return cachedBinance?.data && hasScannedToday() ? cachedBinance.data : [];
+    return isCacheFresh(cachedBinance) ? cachedBinance.data : [];
   });
   const [filtered, setFiltered] = useState<CPRResult[]>(() => {
-    return cachedBinance?.data && hasScannedToday() ? cachedBinance.data : [];
+    return isCacheFresh(cachedBinance) ? cachedBinance.data : [];
   });
   // "Scanned at" badge — wall-clock time of the last completed scan for
   // each source, seeded from the cached entry's savedAt (undefined for
@@ -239,7 +240,7 @@ export default function Screener({
   // has been scanned yet today) and refreshed the moment a fresh scan
   // completes, right alongside saveCachedResults below.
   const [binanceScannedAt, setBinanceScannedAt] = useState<number | null>(
-    () => (hasScannedToday() ? cachedBinance?.savedAt ?? null : null)
+    () => (isCacheFresh(cachedBinance) ? cachedBinance?.savedAt ?? null : null)
   );
   const [sortKey, setSortKey] = useState<SortKey>("compressionRatio");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
@@ -310,32 +311,32 @@ export default function Screener({
   const scanRef = useRef(false);
 
   const [deltaStatus, setDeltaStatus] = useState<"idle" | "scanning" | "done" | "error">(() => {
-    return cachedDelta?.data && cachedDelta.data.length > 0 && hasScannedToday() ? "done" : "idle";
+    return isCacheFresh(cachedDelta) ? "done" : "idle";
   });
   const [deltaProgress, setDeltaProgress] = useState({ done: 0, total: 0, symbol: "" });
   const [deltaAllResults, setDeltaAllResults] = useState<CPRResult[]>(() => {
-    return cachedDelta?.data && hasScannedToday() ? cachedDelta.data : [];
+    return isCacheFresh(cachedDelta) ? cachedDelta.data : [];
   });
   const [deltaScannedAt, setDeltaScannedAt] = useState<number | null>(
-    () => (hasScannedToday() ? cachedDelta?.savedAt ?? null : null)
+    () => (isCacheFresh(cachedDelta) ? cachedDelta?.savedAt ?? null : null)
   );
   const [deltaFiltered, setDeltaFiltered] = useState<CPRResult[]>(() => {
-    return cachedDelta?.data && hasScannedToday() ? cachedDelta.data : [];
+    return isCacheFresh(cachedDelta) ? cachedDelta.data : [];
   });
   const [deltaError, setDeltaError] = useState("");
 
   const [coindcxStatus, setCoinDCXStatus] = useState<"idle" | "scanning" | "done" | "error">(() => {
-    return cachedCoinDCX?.data && cachedCoinDCX.data.length > 0 && hasScannedToday() ? "done" : "idle";
+    return isCacheFresh(cachedCoinDCX) ? "done" : "idle";
   });
   const [coindcxProgress, setCoinDCXProgress] = useState({ done: 0, total: 0, symbol: "" });
   const [coindcxAllResults, setCoinDCXAllResults] = useState<CPRResult[]>(() => {
-    return cachedCoinDCX?.data && hasScannedToday() ? cachedCoinDCX.data : [];
+    return isCacheFresh(cachedCoinDCX) ? cachedCoinDCX.data : [];
   });
   const [coindcxScannedAt, setCoinDCXScannedAt] = useState<number | null>(
-    () => (hasScannedToday() ? cachedCoinDCX?.savedAt ?? null : null)
+    () => (isCacheFresh(cachedCoinDCX) ? cachedCoinDCX?.savedAt ?? null : null)
   );
   const [coindcxFiltered, setCoinDCXFiltered] = useState<CPRResult[]>(() => {
-    return cachedCoinDCX?.data && hasScannedToday() ? cachedCoinDCX.data : [];
+    return isCacheFresh(cachedCoinDCX) ? cachedCoinDCX.data : [];
   });
   const [coindcxError, setCoinDCXError] = useState("");
   const [activeTabState, setActiveTabState] = useState<ActiveTab>("binance");
@@ -471,8 +472,11 @@ export default function Screener({
     coindcxScanRef.current = true;
     setCoinDCXStatus("scanning");
     if (switchTab) setActiveTab("coindcx");
-    setCoinDCXAllResults([]);
-    setCoinDCXFiltered([]);
+    // Keep the last successful CoinDCX result visible while the next scan
+    // runs, so a slow or partially rate-limited refresh never looks empty.
+    const previousCoinDCXResults = coindcxAllResultsRef.current;
+    setCoinDCXAllResults(previousCoinDCXResults);
+    setCoinDCXFiltered(previousCoinDCXResults.filter((r) => passesPattern(r, activeView)));
     setCoinDCXError("");
     setCoinDCXProgress({ done: 0, total: 0, symbol: "" });
     try {
@@ -493,20 +497,21 @@ export default function Screener({
   }, [activeView]);
 
   useEffect(() => {
-    if (shouldAutoScan()) doScan();
-  }, [doScan]);
+    if (shouldAutoScanForCache(cachedBinance)) void doScan();
+    if (shouldAutoScanForCache(cachedDelta)) void doDeltaScan(false);
+    if (shouldAutoScanForCache(cachedCoinDCX)) void doCoinDCXScan(false);
+  }, [cachedBinance, cachedDelta, cachedCoinDCX, doScan, doDeltaScan, doCoinDCXScan]);
 
   const isFirstMountRef = useRef(true);
   useEffect(() => {
     if (scanKey > 0) {
       if (isFirstMountRef.current) {
         isFirstMountRef.current = false;
-        // On refresh or initial mount, only scan if today's scan hasn't run yet or we have no data
-        if (!hasScannedToday() || allResults.length === 0) {
-          doScan();
-          doDeltaScan(false);
-          doCoinDCXScan(false);
-        }
+        // Each exchange decides independently from its own cache date.
+        // Binance having scanned must not suppress CoinDCX or Delta.
+        if (!isCacheFresh(cachedBinance)) void doScan();
+        if (!isCacheFresh(cachedDelta)) void doDeltaScan(false);
+        if (!isCacheFresh(cachedCoinDCX)) void doCoinDCXScan(false);
         return;
       }
       // Explicit click from Header "Scan Now" button
@@ -1354,6 +1359,13 @@ export default function Screener({
           </div>
         )}
 
+        {currentStatus === "idle" && activeTab === "coindcx" && (
+          <NoSignalsPanel
+            title="CoinDCX has not been scanned today"
+            subtitle="Click Scan CoinDCX to load today’s futures symbols"
+          />
+        )}
+
         {/* Show-all toggle + sub-filter buttons */}
         {currentStatus === "done" && (
           <div className="flex flex-col gap-2 mb-3">
@@ -1883,7 +1895,7 @@ export default function Screener({
         )}
 
         {/* Table */}
-        {currentStatus === "done" && displayed.length > 0 && (
+        {currentStatus !== "idle" && displayed.length > 0 && (
           <div className="rounded-xl border border-border bg-card overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm border-collapse">
