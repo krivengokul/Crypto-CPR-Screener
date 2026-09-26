@@ -62,6 +62,58 @@ export const COMPRESSED_VIEWS: ViewDef[] = [
   { key: "C-A-OA-AA-CU4L3", label: "C-A-OA-AA-CU4L3", parentKey: "C-A-OA-AA", kind: "pattern", condition: (r) => r.CU4L3, order: 0 },
   { key: "C-A-OB-AA-CU3L2", label: "C-A-OB-AA-CU3L2", parentKey: "C-A-OB-AA", kind: "pattern", condition: (r) => r.CU3L2, order: 0 },
 
+  // Remaining compressed entries from the PatternStats missing-subpattern lists.
+  { key: "C-A-C-AA-CU3L3", label: "C-A-C-AA-CU3L3", parentKey: "C-A-C-AA", kind: "pattern", condition: (r) => r.CU3L3, order: 1 },
+  { key: "C-A-C-AA-CU4L3", label: "C-A-C-AA-CU4L3", parentKey: "C-A-C-AA", kind: "pattern", condition: (r) => r.CU4L3, order: 2 },
+  { key: "C-A-C-AA-CU4L4", label: "C-A-C-AA-CU4L4", parentKey: "C-A-C-AA", kind: "pattern", condition: (r) => r.CU4L4, order: 3 },
+  { key: "C-A-C-AA-CU2L2", label: "C-A-C-AA-CU2L2", parentKey: "C-A-C-AA", kind: "pattern", condition: (r) => r.CU2L2, order: 4 },
+  { key: "C-A-C-AA-CU2L1", label: "C-A-C-AA-CU2L1", parentKey: "C-A-C-AA", kind: "pattern", condition: (r) => r.CU2L1, order: 5 },
+  { key: "C-A-C-AA-CU3L1", label: "C-A-C-AA-CU3L1", parentKey: "C-A-C-AA", kind: "pattern", condition: (r) => r.CU3L1, order: 6 },
+  { key: "C-A-C-AA-CU2BC", label: "C-A-C-AA-CU2BC", parentKey: "C-A-C-AA", kind: "pattern", condition: (r) => r.CU2BC, order: 7 },
+  { key: "C-A-C-AA-None", label: "C-A-C-AA-None", parentKey: "C-A-C-AA", kind: "pattern", condition: (r) => !pickOuterLevelPattern(r), order: 8 },
+  { key: "C-A-C-AA-U4L4", label: "C-A-C-AA-U4L4", parentKey: "C-A-C-AA", kind: "pattern", condition: (r) => r.U4L4, order: 9 },
+
+  { key: "C-A-HA-AA-CU4L3", label: "C-A-HA-AA-CU4L3", parentKey: "C-A-HA-AA", kind: "pattern", condition: (r) => r.CU4L3, order: 1 },
+  { key: "C-A-HA-AA-CU3L3", label: "C-A-HA-AA-CU3L3", parentKey: "C-A-HA-AA", kind: "pattern", condition: (r) => r.CU3L3, order: 2 },
+  { key: "C-A-HA-AA-CU4L4", label: "C-A-HA-AA-CU4L4", parentKey: "C-A-HA-AA", kind: "pattern", condition: (r) => r.CU4L4, order: 3 },
+  { key: "C-A-HA-AA-U4L4", label: "C-A-HA-AA-U4L4", parentKey: "C-A-HA-AA", kind: "pattern", condition: (r) => r.U4L4, order: 4 },
+  { key: "C-A-HA-AA-CU2L2", label: "C-A-HA-AA-CU2L2", parentKey: "C-A-HA-AA", kind: "pattern", condition: (r) => r.CU2L2, order: 5 },
+  { key: "C-A-HA-AA-CU2L1", label: "C-A-HA-AA-CU2L1", parentKey: "C-A-HA-AA", kind: "pattern", condition: (r) => r.CU2L1, order: 6 },
+  { key: "C-A-HA-AA-CU4L2", label: "C-A-HA-AA-CU4L2", parentKey: "C-A-HA-AA", kind: "pattern", condition: (r) => r.CU4L2, order: 7 },
+
+  { key: "C-A-E-AA-CU3L3", label: "C-A-E-AA-CU3L3", parentKey: "C-A-E-AA", kind: "pattern", condition: (r) => r.CU3L3, order: 1 },
+  { key: "C-A-E-AA-CU4L4", label: "C-A-E-AA-CU4L4", parentKey: "C-A-E-AA", kind: "pattern", condition: (r) => r.CU4L4, order: 2 },
+
+  { key: "C-A-OA-AA-CU4L4", label: "C-A-OA-AA-CU4L4", parentKey: "C-A-OA-AA", kind: "pattern", condition: (r) => r.CU4L4, order: 1 },
+  { key: "C-A-OA-AA-CU3L3", label: "C-A-OA-AA-CU3L3", parentKey: "C-A-OA-AA", kind: "pattern", condition: (r) => r.CU3L3, order: 2 },
+  { key: "C-A-OA-AA-U4L4", label: "C-A-OA-AA-U4L4", parentKey: "C-A-OA-AA", kind: "pattern", condition: (r) => r.U4L4, order: 3 },
+
+  { key: "C-A-OB-AA-CU4L4", label: "C-A-OB-AA-CU4L4", parentKey: "C-A-OB-AA", kind: "pattern", condition: (r) => r.CU4L4, order: 1 },
+
+  { key: "C-B-BB-C-CL3U2", label: "C-B-BB-C-CL3U2", parentKey: "C-B-BB-C", kind: "pattern", condition: (r) => r.CL3U2, order: 1 },
+  { key: "C-B-BB-C-CL3U3", label: "C-B-BB-C-CL3U3", parentKey: "C-B-BB-C", kind: "pattern", condition: (r) => r.CL3U3, order: 2 },
+  { key: "C-B-BB-C-CL2U1", label: "C-B-BB-C-CL2U1", parentKey: "C-B-BB-C", kind: "pattern", condition: (r) => r.CL2U1, order: 3 },
+  { key: "C-B-BB-C-CL3U1", label: "C-B-BB-C-CL3U1", parentKey: "C-B-BB-C", kind: "pattern", condition: (r) => r.CL3U1, order: 4 },
+  { key: "C-B-BB-C-CL2UT", label: "C-B-BB-C-CL2UT", parentKey: "C-B-BB-C", kind: "pattern", condition: (r) => r.CL2UT, order: 5 },
+  { key: "C-B-BB-C-CL4U3", label: "C-B-BB-C-CL4U3", parentKey: "C-B-BB-C", kind: "pattern", condition: (r) => r.CL4U3, order: 6 },
+  { key: "C-B-BB-C-CL4U4", label: "C-B-BB-C-CL4U4", parentKey: "C-B-BB-C", kind: "pattern", condition: (r) => r.CL4U4, order: 7 },
+  { key: "C-B-BB-C-L3TC", label: "C-B-BB-C-L3TC", parentKey: "C-B-BB-C", kind: "pattern", condition: (r) => r.L3TC, order: 8 },
+
+  { key: "C-C-OB-AA-CU3L3", label: "C-C-OB-AA-CU3L3", parentKey: "C-C-OB-AA", kind: "pattern", condition: (r) => r.CU3L3, order: 1 },
+  { key: "C-C-OB-AA-CU2L2", label: "C-C-OB-AA-CU2L2", parentKey: "C-C-OB-AA", kind: "pattern", condition: (r) => r.CU2L2, order: 2 },
+  { key: "C-C-OB-AA-CU4L3", label: "C-C-OB-AA-CU4L3", parentKey: "C-C-OB-AA", kind: "pattern", condition: (r) => r.CU4L3, order: 3 },
+  { key: "C-C-OB-AA-CU2L1", label: "C-C-OB-AA-CU2L1", parentKey: "C-C-OB-AA", kind: "pattern", condition: (r) => r.CU2L1, order: 4 },
+  { key: "C-C-OB-AA-CU2BC", label: "C-C-OB-AA-CU2BC", parentKey: "C-C-OB-AA", kind: "pattern", condition: (r) => r.CU2BC, order: 5 },
+
+  { key: "C-C-BB-OA-CL3U2", label: "C-C-BB-OA-CL3U2", parentKey: "C-C-BB-OA", kind: "pattern", condition: (r) => r.CL3U2, order: 1 },
+  { key: "C-C-BB-OA-CL2U2", label: "C-C-BB-OA-CL2U2", parentKey: "C-C-BB-OA", kind: "pattern", condition: (r) => r.CL2U2, order: 2 },
+  { key: "C-C-BB-OA-CL3U3", label: "C-C-BB-OA-CL3U3", parentKey: "C-C-BB-OA", kind: "pattern", condition: (r) => r.CL3U3, order: 3 },
+  { key: "C-C-BB-OA-CL4U3", label: "C-C-BB-OA-CL4U3", parentKey: "C-C-BB-OA", kind: "pattern", condition: (r) => r.CL4U3, order: 4 },
+  { key: "C-C-BB-OA-CL4U4", label: "C-C-BB-OA-CL4U4", parentKey: "C-C-BB-OA", kind: "pattern", condition: (r) => r.CL4U4, order: 5 },
+  { key: "C-C-BB-OA-CL1U1", label: "C-C-BB-OA-CL1U1", parentKey: "C-C-BB-OA", kind: "pattern", condition: (r) => r.CL1U1, order: 6 },
+
+  { key: "C-B-BB-E-CL3U3", label: "C-B-BB-E-CL3U3", parentKey: "C-B-BB-E", kind: "pattern", condition: (r) => r.CL3U3, order: 0 },
+
   // --- "C-C-BB-AA"'s 14 nested Subpattern children (raw flag AND'd onto
   // the parent compound condition via parentKey) — none target-graded
   // yet (no BACKTEST_TARGETS entries for these 14), so each is currently
