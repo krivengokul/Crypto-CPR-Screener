@@ -4,7 +4,7 @@ import { passesView } from "../registry";
 
 const TOUCH_PATTERN_FLAGS = [
   "EL4U4", "EU4L4", "CL4U4", "EL3U3", "CU4L3", "EU3L4", "CL3U3",
-  "EL3U4", "CL4U3", "U4L4", "CU3L3", "CU4L4", "EU3L3", "CU3L2", "L4U4",
+  "EL3U4", "CL4U3", "U4L4", "CU3L3", "CU4L4", "EU3L3", "CU3L2", "L4U4", "EU2L2",
 ] as const satisfies readonly (keyof CPRResult)[];
 type TouchPatternFlag = typeof TOUCH_PATTERN_FLAGS[number];
 
@@ -113,6 +113,28 @@ const OUTCPR_UNCLASSIFIED_PATTERNS = buildUnclassifiedTouchPatterns("OUT-Unclass
   "A-B-C-LB-EL4U4",
   "B-A-HA-OB-L4U4",
   "B-E-OB-OB-EL3U4",
+  "E-A-AA-SB-EU3L3",
+  "B-A-HA-E-EU4L4",
+  "B-C-BB-SB-CL4U3",
+  "C-B-OB-E-CL4U4",
+  "C-C-BB-OA-CL3U3",
+  "C-A-E-OA-CU4L4",
+  "C-A-E-AA-CU4L4",
+  "C-B-BB-LB-CL3U3",
+  "E-A-OA-E-EU4L4",
+  "C-B-OB-LB-CL3U3",
+  "C-C-BB-OA-CL4U4",
+  "E-A-OA-OB-EL3U4",
+  "C-A-OB-AA-CU4L4",
+  "E-A-AA-SB-EL3U4",
+  "E-A-AA-OB-EU3L3",
+  "C-C-BB-OA-CL4U3",
+  "A-C-E-OA-CU4L4",
+  "A-C-RA-AA-CU3L3",
+  "C-A-OB-OA-CU4L4",
+  "E-A-AA-OB-EU2L2",
+  "C-A-HA-AA-CU3L3",
+  "B-A-HA-E-EL3U4",
 ]);
 
 const OVA_UNCLASSIFIED_PATTERNS = buildUnclassifiedTouchPatterns("OVA-Unclassified", "OVA", [
