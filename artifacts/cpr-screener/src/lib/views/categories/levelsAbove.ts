@@ -1005,5 +1005,13 @@ export const LEVELSABOVE_VIEWS: ViewDef[] = [
             ]
           }
         ],
-      }
+      },
+  // Added from PatternStats "Missing Subpatterns" for LEVEL ABOVE.
+  { key: "A-A-OA-AA-CU4L4", label: "A-A-OA-AA-CU4L4", parentKey: "A-A-OA-AA", kind: "pattern", condition: (r) => r.CU4L4, order: 100 },
+  { key: "A-C-C-AA-CU4L4", label: "A-C-C-AA-CU4L4", parentKey: "A-C-C-AA", kind: "pattern", condition: (r) => r.CU4L4, order: 100 },
+  { key: "A-C-E-AA-CU3L2", label: "A-C-E-AA-CU3L2", parentKey: "A-C-E-AA", kind: "pattern", condition: (r) => r.CU3L2, order: 100 },
+  { key: "A-C-RA-AA-CU4L3", label: "A-C-RA-AA-CU4L3", parentKey: "A-C-RA-AA", kind: "pattern", condition: (r) => r.CU4L3, order: 100 },
+  { key: "A-E-AA-C-EU3L4", label: "A-E-AA-C-EU3L4", parentKey: "A-E-AA-C", kind: "pattern", condition: (r) => r.EU3L4, order: 100 },
+  { key: "A-E-AA-E-EU3L3", label: "A-E-AA-E-EU3L3", parentKey: "A-E-AA-E", kind: "pattern", condition: (r) => r.EU3L3, order: 100 },
+  { key: "A-E-AA-LB-EU2L3", label: "A-E-AA-LB-EU2L3", parentKey: "A-E-AA-LB", kind: "pattern", condition: (r) => r.EU2L3, order: 100 },
 ];
