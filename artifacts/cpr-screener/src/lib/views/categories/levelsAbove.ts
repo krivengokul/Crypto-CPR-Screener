@@ -1,5 +1,5 @@
 import type { CPRResult } from "../../cpr";
-import { computePrevPattern } from "../../cpr";
+import { computePrevPattern, pickOuterLevelPattern } from "../../cpr";
 import type { ViewDef } from "../types";
 import { passesView } from "../registry";
 import { matchesGapBadge } from "../gapBadges";
@@ -1014,4 +1014,40 @@ export const LEVELSABOVE_VIEWS: ViewDef[] = [
   { key: "A-E-AA-C-EU3L4", label: "A-E-AA-C-EU3L4", parentKey: "A-E-AA-C", kind: "pattern", condition: (r) => r.EU3L4, order: 100 },
   { key: "A-E-AA-E-EU3L3", label: "A-E-AA-E-EU3L3", parentKey: "A-E-AA-E", kind: "pattern", condition: (r) => r.EU3L3, order: 100 },
   { key: "A-E-AA-LB-EU2L3", label: "A-E-AA-LB-EU2L3", parentKey: "A-E-AA-LB", kind: "pattern", condition: (r) => r.EU2L3, order: 100 },
+  { key: "LEVELSABOVE-A-A-AA-AA-None", label: "A-A-AA-AA-None", parentKey: "A-A-AA-AA", kind: "pattern", condition: (r) => !pickOuterLevelPattern(r), order: 101 },
+  { key: "A-A-AA-AA-CU3L3", label: "A-A-AA-AA-CU3L3", parentKey: "A-A-AA-AA", kind: "pattern", condition: (r) => r.CU3L3, order: 101 },
+  { key: "A-A-AA-AA-CU3L1", label: "A-A-AA-AA-CU3L1", parentKey: "A-A-AA-AA", kind: "pattern", condition: (r) => r.CU3L1, order: 102 },
+  { key: "A-A-AA-OA-EU4L4", label: "A-A-AA-OA-EU4L4", parentKey: "A-A-AA-OA", kind: "pattern", condition: (r) => r.EU4L4, order: 101 },
+  { key: "A-A-AA-OA-EU3L3", label: "A-A-AA-OA-EU3L3", parentKey: "A-A-AA-OA", kind: "pattern", condition: (r) => r.EU3L3, order: 102 },
+  { key: "A-A-OA-AA-CU3L2", label: "A-A-OA-AA-CU3L2", parentKey: "A-A-OA-AA", kind: "pattern", condition: (r) => r.CU3L2, order: 101 },
+  { key: "A-A-OA-AA-CU4L3", label: "A-A-OA-AA-CU4L3", parentKey: "A-A-OA-AA", kind: "pattern", condition: (r) => r.CU4L3, order: 102 },
+  { key: "A-A-OA-AA-CU3L3", label: "A-A-OA-AA-CU3L3", parentKey: "A-A-OA-AA", kind: "pattern", condition: (r) => r.CU3L3, order: 103 },
+  { key: "A-A-OA-AA-U4L4", label: "A-A-OA-AA-U4L4", parentKey: "A-A-OA-AA", kind: "pattern", condition: (r) => r.U4L4, order: 104 },
+  { key: "A-A-OA-AA-CU4L2", label: "A-A-OA-AA-CU4L2", parentKey: "A-A-OA-AA", kind: "pattern", condition: (r) => r.CU4L2, order: 105 },
+  { key: "A-A-OA-AA-CU3L1", label: "A-A-OA-AA-CU3L1", parentKey: "A-A-OA-AA", kind: "pattern", condition: (r) => r.CU3L1, order: 106 },
+  { key: "A-A-OA-AA-None", label: "A-A-OA-AA-None", parentKey: "A-A-OA-AA", kind: "pattern", condition: (r) => !pickOuterLevelPattern(r), order: 107 },
+  { key: "A-C-C-AA-CU4L3", label: "A-C-C-AA-CU4L3", parentKey: "A-C-C-AA", kind: "pattern", condition: (r) => r.CU4L3, order: 101 },
+  { key: "A-C-C-AA-CU3L2", label: "A-C-C-AA-CU3L2", parentKey: "A-C-C-AA", kind: "pattern", condition: (r) => r.CU3L2, order: 102 },
+  { key: "A-C-C-AA-CU3L3", label: "A-C-C-AA-CU3L3", parentKey: "A-C-C-AA", kind: "pattern", condition: (r) => r.CU3L3, order: 103 },
+  { key: "A-C-E-AA-CU4L3", label: "A-C-E-AA-CU4L3", parentKey: "A-C-E-AA", kind: "pattern", condition: (r) => r.CU4L3, order: 101 },
+  { key: "A-C-E-AA-CU3L3", label: "A-C-E-AA-CU3L3", parentKey: "A-C-E-AA", kind: "pattern", condition: (r) => r.CU3L3, order: 102 },
+  { key: "A-C-E-AA-CU4L4", label: "A-C-E-AA-CU4L4", parentKey: "A-C-E-AA", kind: "pattern", condition: (r) => r.CU4L4, order: 103 },
+  { key: "A-C-RA-AA-CU3L2", label: "A-C-RA-AA-CU3L2", parentKey: "A-C-RA-AA", kind: "pattern", condition: (r) => r.CU3L2, order: 101 },
+  { key: "A-C-RA-AA-CU3L3", label: "A-C-RA-AA-CU3L3", parentKey: "A-C-RA-AA", kind: "pattern", condition: (r) => r.CU3L3, order: 102 },
+  { key: "A-C-RA-AA-CU4L4", label: "A-C-RA-AA-CU4L4", parentKey: "A-C-RA-AA", kind: "pattern", condition: (r) => r.CU4L4, order: 103 },
+  { key: "A-C-RA-AA-U4L3", label: "A-C-RA-AA-U4L3", parentKey: "A-C-RA-AA", kind: "pattern", condition: (r) => r.U4L3, order: 104 },
+  { key: "A-C-RA-AA-CU4L2", label: "A-C-RA-AA-CU4L2", parentKey: "A-C-RA-AA", kind: "pattern", condition: (r) => r.CU4L2, order: 105 },
+  { key: "A-E-AA-C-EU2L3", label: "A-E-AA-C-EU2L3", parentKey: "A-E-AA-C", kind: "pattern", condition: (r) => r.EU2L3, order: 101 },
+  { key: "A-E-AA-C-EU3L3", label: "A-E-AA-C-EU3L3", parentKey: "A-E-AA-C", kind: "pattern", condition: (r) => r.EU3L3, order: 102 },
+  { key: "A-E-AA-C-EU4L4", label: "A-E-AA-C-EU4L4", parentKey: "A-E-AA-C", kind: "pattern", condition: (r) => r.EU4L4, order: 103 },
+  { key: "A-E-AA-E-EU3L4", label: "A-E-AA-E-EU3L4", parentKey: "A-E-AA-E", kind: "pattern", condition: (r) => r.EU3L4, order: 101 },
+  { key: "A-E-AA-E-EU2L3", label: "A-E-AA-E-EU2L3", parentKey: "A-E-AA-E", kind: "pattern", condition: (r) => r.EU2L3, order: 102 },
+  { key: "A-E-AA-E-EU2L4", label: "A-E-AA-E-EU2L4", parentKey: "A-E-AA-E", kind: "pattern", condition: (r) => r.EU2L4, order: 103 },
+  { key: "A-E-AA-E-None", label: "A-E-AA-E-None", parentKey: "A-E-AA-E", kind: "pattern", condition: (r) => !pickOuterLevelPattern(r), order: 104 },
+  { key: "A-E-AA-LB-EU3L4", label: "A-E-AA-LB-EU3L4", parentKey: "A-E-AA-LB", kind: "pattern", condition: (r) => r.EU3L4, order: 101 },
+  { key: "A-E-AA-LB-EU2L4", label: "A-E-AA-LB-EU2L4", parentKey: "A-E-AA-LB", kind: "pattern", condition: (r) => r.EU2L4, order: 102 },
+  { key: "A-E-AA-LB-EU4L4", label: "A-E-AA-LB-EU4L4", parentKey: "A-E-AA-LB", kind: "pattern", condition: (r) => r.EU4L4, order: 103 },
+  { key: "A-E-AA-LB-U3L4", label: "A-E-AA-LB-U3L4", parentKey: "A-E-AA-LB", kind: "pattern", condition: (r) => r.U3L4, order: 104 },
+  { key: "A-E-AA-LB-EU3L3", label: "A-E-AA-LB-EU3L3", parentKey: "A-E-AA-LB", kind: "pattern", condition: (r) => r.EU3L3, order: 105 },
+  { key: "A-E-AA-LB-U4L4", label: "A-E-AA-LB-U4L4", parentKey: "A-E-AA-LB", kind: "pattern", condition: (r) => r.U4L4, order: 106 },
 ];
