@@ -817,7 +817,7 @@ export default function PatternStats() {
   const [endDate, setEndDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
 
   const [running, setRunning] = useState(false);
-  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  const [progress, setProgress] = useState<{ done: number; total: number; symbol: string } | null>(null);
   const [rows, setRows] = useState<PatternCensusRow[] | null>(null);
   // TEMPORARY DEBUG ADDITION — see CategoryComboRow in backtest.ts.
   const [combos, setCombos] = useState<CategoryComboRow[] | null>(null);
@@ -986,7 +986,7 @@ export default function PatternStats() {
         endDate,
         source,
         passesPattern,
-        (done, total) => setProgress({ done, total }),
+        (done, total, symbol) => setProgress({ done, total, symbol }),
         INNER_PATTERNS_CONFIG
       );
       setRows(result);
@@ -1043,7 +1043,7 @@ export default function PatternStats() {
 
           <div className="flex flex-wrap items-end gap-3">
             <label className="block">
-              <span className={CONTROL_LABEL}>Source</span>
+              <span className={CONTROL_LABEL}>EXCHANGE</span>
               <div className="relative">
                 <Database className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-teal-400" />
                 <select
@@ -1124,6 +1124,39 @@ export default function PatternStats() {
           <div className="mb-4 flex items-start gap-2 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
             <span>{error}</span>
+          </div>
+        )}
+
+        {running && (
+          <div className="flex min-h-64 flex-col items-center justify-center rounded-xl border border-emerald-500/20 bg-[#0c131f] px-6 py-10 text-center">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full border border-emerald-500/30 bg-emerald-500/10">
+              <Loader2 className="h-6 w-6 animate-spin text-emerald-400" />
+            </div>
+            <p className="text-base font-semibold text-white">
+              Scanning {source === "binance" ? "Binance" : source === "delta" ? "Delta Exchange" : "CoinDCX"}…
+            </p>
+            <p className="mt-1 text-sm text-slate-400">
+              Checking historical symbols for matching patterns. Results will appear here when the scan completes.
+            </p>
+            <div className="mt-5 w-full max-w-md">
+              <div className="mb-1.5 flex justify-between font-mono text-[11px] text-slate-400">
+                <span>
+                  {progress
+                    ? `Scanning symbols… ${progress.done}/${progress.total}${progress.symbol ? ` · ${progress.symbol}` : ""}`
+                    : "Preparing scan…"}
+                </span>
+                {progress && <span className="text-teal-300">{progressPct}%</span>}
+              </div>
+              <div className="h-1.5 overflow-hidden rounded-full bg-[#151e2c]">
+                <div
+                  className={[
+                    "h-full rounded-full bg-gradient-to-r from-emerald-400 to-teal-400 transition-all duration-300",
+                    progress ? "" : "w-1/4 animate-pulse",
+                  ].join(" ")}
+                  style={progress ? { width: `${progressPct}%` } : undefined}
+                />
+              </div>
+            </div>
           </div>
         )}
 
