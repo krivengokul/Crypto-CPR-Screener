@@ -68,6 +68,7 @@ export const EXPANDED_VIEWS: ViewDef[] = [
   { key: "E-A-AA-E-EU4L4", label: "E-A-AA-E-EU4L4", parentKey: "E-A-AA-E", kind: "pattern", condition: (r) => r.EU4L4, order: 3 },
   { key: "E-A-AA-E-EU2L2", label: "E-A-AA-E-EU2L2", parentKey: "E-A-AA-E", kind: "pattern", condition: (r) => r.EU2L2, order: 4 },
   { key: "E-A-AA-E-U4L4", label: "E-A-AA-E-U4L4", parentKey: "E-A-AA-E", kind: "pattern", condition: (r) => r.U4L4, order: 5 },
+  { key: "E-A-AA-C-EU3L4", label: "E-A-AA-C-EU3L4", parentKey: "E-A-AA-C", kind: "pattern", condition: (r) => r.EU3L4, order: 6 },
   { key: "E-A-AA-SB-EU3L4", label: "E-A-AA-SB-EU3L4", parentKey: "E-A-AA-SB", kind: "pattern", condition: (r) => r.EU3L4, order: 0 },
   { key: "E-A-AA-SB-EU2L3", label: "E-A-AA-SB-EU2L3", parentKey: "E-A-AA-SB", kind: "pattern", condition: (r) => r.EU2L3, order: 1 },
   { key: "E-A-AA-SB-U4L4", label: "E-A-AA-SB-U4L4", parentKey: "E-A-AA-SB", kind: "pattern", condition: (r) => r.U4L4, order: 2 },
