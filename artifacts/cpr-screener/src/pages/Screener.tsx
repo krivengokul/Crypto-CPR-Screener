@@ -710,9 +710,24 @@ export default function Screener({
     else { setSortKey(key); setSortDir("asc"); }
   };
 
+  // Which source's progress the scanning status bar should reflect: the one
+  // actually mid-scan right now, not whichever tab happens to be selected.
+  // A hard refresh kicks off Binance/Delta/CoinDCX scans together without
+  // switching tabs away from "binance", so once Binance (the fastest) is
+  // done but CoinDCX (or Delta) is still running, the bar used to keep
+  // showing stale Binance text/progress because it only ever looked at
+  // activeTab. Falls back to activeTab once nothing is actively scanning
+  // (the block isn't rendered at that point anyway).
+  const scanningSource: "binance" | "delta" | "coindcx" =
+    status === "scanning" ? "binance"
+    : deltaStatus === "scanning" ? "delta"
+    : coindcxStatus === "scanning" ? "coindcx"
+    : activeTab === "delta" ? "delta"
+    : activeTab === "coindcx" ? "coindcx"
+    : "binance";
   const activeProgress =
-    activeTab === "delta" ? deltaProgress
-    : activeTab === "coindcx" ? coindcxProgress
+    scanningSource === "delta" ? deltaProgress
+    : scanningSource === "coindcx" ? coindcxProgress
     : progress;
   const progressPct = activeProgress.total > 0 ? Math.round((activeProgress.done / activeProgress.total) * 100) : 0;
 
@@ -1326,9 +1341,9 @@ export default function Screener({
           <div className="mb-4 rounded-lg border border-border bg-card p-3">
             <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
               <span>
-                {activeTab === "delta"
+                {scanningSource === "delta"
                   ? `Scanning Delta Exchange… ${deltaProgress.symbol}`
-                  : activeTab === "coindcx"
+                  : scanningSource === "coindcx"
                   ? `Scanning CoinDCX Futures… ${coindcxProgress.symbol}`
                   : `Scanning Binance… ${progress.symbol}`}
               </span>
