@@ -69,6 +69,15 @@ export function formatISTTime(utcDate: Date): string {
   });
 }
 
+
+export function isCacheFresh<T>(cache: CachedResults<T> | null): boolean {
+  return !!cache && cache.date === getTodayISTDate();
+}
+
+export function shouldAutoScanForCache<T>(cache: CachedResults<T> | null): boolean {
+  return isPastScheduledTime() && !isCacheFresh(cache);
+}
+
 export interface CachedResults<T> {
   data: T[];
   date: string;
