@@ -785,7 +785,7 @@ R:R: ${item.riskReward}`;
           <div className="shrink-0 bg-[#131b26] border border-[#1e2d3d] rounded-lg px-3 py-1.5 flex items-center gap-2 text-xs text-emerald-400">
             <Cloud className="w-3.5 h-3.5 text-emerald-400" />
             <span className="font-medium text-slate-300">
-              Running (In Journal): <strong className="text-emerald-400 font-mono font-bold">{stats.saved}</strong>
+              Active (In Journal): <strong className="text-emerald-400 font-mono font-bold">{stats.saved}</strong>
             </span>
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
           </div>
@@ -942,7 +942,7 @@ R:R: ${item.riskReward}`;
                   : "text-emerald-400/70 hover:text-emerald-300 bg-[#151e2c] border border-transparent"
               }`}
             >
-              Running
+              Active
             </button>
             <button
               onClick={() => setStatusFilter(statusFilter === "ready" ? "all" : "ready")}
@@ -1041,7 +1041,7 @@ R:R: ${item.riskReward}`;
                 item.isTriggered ? (
                   <div className="flex items-center gap-1 text-[11px] text-emerald-400 font-mono shrink-0">
                     <Cloud className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Running</span>
+                    <span>Active</span>
                   </div>
                 ) : (
                   <div
