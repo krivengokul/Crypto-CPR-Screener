@@ -12,6 +12,9 @@ import {
   summarizePaperTrades,
 } from "@/lib/paperTrading";
 import { fmt, getChartUrl, hasKnownChartMapping } from "@/pages/ScreenerUtils";
+import { fetchTopUSDTSymbols } from "@/lib/binance";
+import { fetchCoinDCXLastPrices } from "@/lib/coinDCX";
+import { fetchDeltaPerps } from "@/lib/delta";
 import { VIEWS } from "@/lib/views";
 import {
   CheckCircle2,
@@ -26,11 +29,16 @@ import {
   ExternalLink,
 } from "lucide-react";
 
+function priceKey(source: LoggedSignal["source"], symbol: string): string {
+  return source + ":" + symbol.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+}
+
 export default function SignalsJournal() {
   const [signals, setSignals] = useState<LoggedSignal[]>([]);
   const [loading, setLoading] = useState(true);
   const [evaluating, setEvaluating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [livePrices, setLivePrices] = useState<Record<string, number>>({});
   const [evalProgress, setEvalProgress] = useState<{ done: number; total: number } | null>(null);
   const [filterStatus, setFilterStatus] = useState<"ALL" | "ACTIVE" | "PASS" | "FAIL">("ALL");
   // Default to Binance — mirrors the Live Screener, Backtest panel, and
@@ -52,6 +60,70 @@ export default function SignalsJournal() {
   useEffect(() => {
     loadSignals();
   }, []);
+
+  useEffect(() => {
+    if (signals.length === 0) {
+      setLivePrices({});
+      return;
+    }
+
+    let cancelled = false;
+    const refreshLivePrices = async () => {
+      const sources = new Set(signals.map((signal) => signal.source));
+      const next: Record<string, number> = {};
+      const tasks: Promise<void>[] = [];
+
+      if (sources.has("binance")) {
+        tasks.push(
+          fetchTopUSDTSymbols().then((rows) => {
+            rows.forEach((row) => {
+              const price = Number(row.lastPrice);
+              if (Number.isFinite(price) && price > 0) {
+                next[priceKey("binance", row.symbol)] = price;
+              }
+            });
+          })
+        );
+      }
+
+      if (sources.has("delta")) {
+        tasks.push(
+          fetchDeltaPerps().then((rows) => {
+            rows.forEach((row) => {
+              const price = Number(row.close);
+              if (Number.isFinite(price) && price > 0) {
+                next[priceKey("delta", row.symbol)] = price;
+              }
+            });
+          })
+        );
+      }
+
+      if (sources.has("coindcx")) {
+        tasks.push(
+          fetchCoinDCXLastPrices().then((prices) => {
+            prices.forEach((price, symbol) => {
+              if (Number.isFinite(price) && price > 0) {
+                next[priceKey("coindcx", symbol)] = price;
+              }
+            });
+          })
+        );
+      }
+
+      await Promise.allSettled(tasks);
+      if (!cancelled) {
+        setLivePrices((previous) => ({ ...previous, ...next }));
+      }
+    };
+
+    void refreshLivePrices();
+    const interval = window.setInterval(() => void refreshLivePrices(), 30_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [signals]);
 
   const handleClearAll = async () => {
     if (signals.length === 0) return;
@@ -399,9 +471,14 @@ export default function SignalsJournal() {
                 <tr>
                   <th className="py-2.5 px-3">Symbol</th>
                   <th className="py-2.5 px-3">View</th>
-                  <th className="py-2.5 px-3">Entry</th>
-                  <th className="py-2.5 px-3">Target (TP)</th>
-                  <th className="py-2.5 px-3">Stop (SL)</th>
+                  <th className="py-2.5 px-3">Current Price</th>
+                  <th className="py-2.5 px-3">
+                    <div className="space-y-0.5">
+                      <div>Target (TP)</div>
+                      <div>Entry</div>
+                      <div>Stop (SL)</div>
+                    </div>
+                  </th>
                   <th className="py-2.5 px-3">R:R</th>
                   <th className="py-2.5 px-3" title="Gross price return from entry to recorded TP/SL exit; excludes fees and slippage.">Paper Return</th>
                   <th className="py-2.5 px-3 text-center">Status</th>
@@ -417,6 +494,7 @@ export default function SignalsJournal() {
                   const isFail = item.status === "FAIL";
                   const isActive = item.status === "ACTIVE";
                   const grossReturnPct = calculateGrossReturnPct(item);
+                  const livePrice = livePrices[priceKey(item.source, item.symbol)] ?? item.currentPrice;
                   const autoSavedDate =
                     item.outcomeNotes?.match(/^Auto-saved setup \((\d{4}-\d{2}-\d{2})\)\./)?.[1] ??
                     (Number.isFinite(item.timestamp) && Number.isFinite(new Date(item.timestamp).getTime())
@@ -474,12 +552,17 @@ export default function SignalsJournal() {
                           </div>
                         )}
                       </td>
-                      <td className="py-2.5 px-3 text-slate-200">${fmt(item.entry)}</td>
-                      <td className="py-2.5 px-3 text-emerald-400 font-bold whitespace-nowrap">
-                        <span className="text-xs mr-1 text-emerald-500">◎</span>${fmt(item.target)}
+                      <td className="py-2.5 px-3 text-cyan-300 font-bold whitespace-nowrap">
+                        ${fmt(livePrice)}
                       </td>
-                      <td className="py-2.5 px-3 text-rose-400 font-bold whitespace-nowrap">
-                        ${fmt(item.sl)}
+                      <td className="py-2.5 px-3 font-bold whitespace-nowrap">
+                        <div className="space-y-0.5">
+                          <div className="text-emerald-400">
+                            <span className="text-xs mr-1 text-emerald-500">◎</span>${fmt(item.target)}
+                          </div>
+                          <div className="text-slate-200">${fmt(item.entry)}</div>
+                          <div className="text-rose-400">${fmt(item.sl)}</div>
+                        </div>
                       </td>
                       <td className="py-2.5 px-3 text-cyan-300 font-bold whitespace-nowrap">{item.rr}</td>
                       <td className={`py-2.5 px-3 font-bold whitespace-nowrap ${
