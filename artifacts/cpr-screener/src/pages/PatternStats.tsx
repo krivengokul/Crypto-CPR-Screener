@@ -647,7 +647,7 @@ function CategoryBox({
                   )}
                   <span
                     className={[
-                      "relative truncate font-mono text-xs",
+                      "relative min-w-0 truncate font-mono text-xs",
                       p.kind === "view" && dirClass
                         ? [dirClass, "font-medium"].join(" ")
                         : p.kind === "view"
@@ -655,7 +655,16 @@ function CategoryBox({
                         : ["text-white", isTop ? "font-semibold" : "font-medium"].join(" "),
                     ].join(" ")}
                   >
-                    {p.patternLabel}
+                    {isViewsList ? (
+                      <span className="flex min-w-0 flex-col gap-0">
+                        <span className="truncate">{p.patternLabel}</span>
+                        <span className="truncate font-mono text-[10px] font-normal text-slate-400">
+                          {p.patternKey}
+                        </span>
+                      </span>
+                    ) : (
+                      p.patternLabel
+                    )}
                   </span>
                   <span className="relative flex shrink-0 items-center gap-1">
                     {isUncovered ? (
@@ -678,7 +687,9 @@ function CategoryBox({
                         className={[
                           "shrink-0 rounded-full border px-1.5 py-0.5 font-mono text-[10px] font-bold",
                           isViewsList
-                            ? "border-[#223347] bg-[#182333] text-white"
+                            ? p.count > 0
+                              ? "border-[#223347] bg-[#182333] text-white"
+                              : "border-[#223347] bg-[#182333] text-slate-500"
                             : p.count > 0
                             ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-300"
                             : "border-[#223347] bg-[#182333] text-slate-500",
