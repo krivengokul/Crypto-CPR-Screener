@@ -217,8 +217,12 @@ function resolveCategory(row: CPRResultWithSource | undefined, fallbackPatternId
 // View has no BACKTEST_TARGETS entry — such a symbol has no defined target
 // to trade or save against, full stop, rather than falling back to guessed
 // R/S thresholds.
-//   • target is an S-level (bearish)  → entry = today's TC, stop = today's R1
-//   • target is an R-level (bullish)  → entry = today's BC, stop = today's S1
+//   • entry uses the matched View's OWN getEntry(r) when it defines one —
+//     each View can pin its entry to whichever CPR level actually fits its
+//     setup (TC, BC, R1, S1, ...), not just "Up→BC / Down→TC". Only Views
+//     that don't define getEntry fall back to that direction-based BC/TC
+//     default.
+//   • stop is still fixed by direction alone (Up: today's S1, Down: today's R1)
 export function computeSignalLevels(
   r: CPRResultWithSource,
   viewPills: { id: string; label: string }[],
@@ -232,7 +236,7 @@ export function computeSignalLevels(
 
   const isUp = targetDef.direction === "Up" || (targetDef.direction as string) === "bullish";
   const direction: "Up" | "Down" = isUp ? "Up" : "Down";
-  const price = isUp ? r.todayCPR.bc : r.todayCPR.tc; // entry
+  const price = targetDef.getEntry ? targetDef.getEntry(r) : (isUp ? r.todayCPR.bc : r.todayCPR.tc); // entry
   const stopPrice = isUp ? r.todayCPR.s1 : r.todayCPR.r1;
   const targetPrice = targetDef.getTarget(r);
   const targetLevel = targetDef.targetLabel ?? "";

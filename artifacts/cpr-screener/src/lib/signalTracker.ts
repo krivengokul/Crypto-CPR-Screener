@@ -132,11 +132,11 @@ export async function saveSignalToCloud(
 /**
  * Has this candidate's live price actually reached its entry line yet?
  * Active View / pattern membership only tells you the SETUP matched — it
- * says nothing about whether price has come back to the level you'd
- * actually enter at. Bullish (Up) setups enter on a pullback DOWN to
- * their BC entry line (target is an R-level above, stop is S1 further
- * below); bearish (Down) setups enter on a rally UP to their TC entry
- * line (target is an S-level below, stop is R1 further above) — see
+ * says nothing about whether price has actually crossed the level you'd
+ * enter at. Bullish (Up) setups trigger once price reaches or breaks ABOVE
+ * their entry line (target is an R-level above, stop is S1 further below);
+ * bearish (Down) setups trigger once price reaches or breaks BELOW their
+ * entry line (target is an S-level below, stop is R1 further above) — see
  * computeSignalLevels' doc comment in SignalDesk.tsx. Exported so callers
  * (SignalDesk.tsx, App.tsx) can gate on this BEFORE deciding a candidate
  * counts as "submitted today", not just performAutoSave below — otherwise
@@ -148,8 +148,8 @@ export function hasTouchedEntry(
   entry: number,
   currentPrice: number
 ): boolean {
-  if (direction === "Up") return currentPrice <= entry;
-  if (direction === "Down") return currentPrice >= entry;
+  if (direction === "Up") return currentPrice >= entry;
+  if (direction === "Down") return currentPrice <= entry;
   // Other direction values (LONG/SHORT/NEUTRAL) carry no BC/TC entry line
   // from computeSignalLevels — nothing defined to gate on here.
   return true;
