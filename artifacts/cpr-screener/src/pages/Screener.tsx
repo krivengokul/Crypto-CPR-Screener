@@ -400,8 +400,16 @@ export default function Screener({
       setFiltered(results.filter((r) => passesPattern(r, activeSignal)));
       setStatus("done");
       markScannedToday();
-      saveCachedResults(STORAGE_KEY_BINANCE, results);
-      markScannedForSource("binance");
+      // FIX (CoinDCX/Delta/Binance stuck at 0 after a quota-exceeded write):
+      // saveCachedResults() swallows a failed localStorage write and returns
+      // false instead of throwing. markScannedForSource() must only record
+      // "today's scan is done" when the result cache actually persisted —
+      // otherwise a source whose write silently failed (most likely CoinDCX,
+      // being the largest/last payload) looks "already scanned today" on the
+      // next reload even though its results were never saved, permanently
+      // blocking the auto-rescan that would otherwise fix it.
+      const binanceSaved = saveCachedResults(STORAGE_KEY_BINANCE, results);
+      if (binanceSaved) markScannedForSource("binance");
       setBinanceScannedAt(Date.now());
       setNextScanUtc(getNextScanIST());
     } catch (e) {
@@ -428,8 +436,10 @@ export default function Screener({
       setDeltaAllResults(results);
       setDeltaFiltered(results.filter((r) => passesPattern(r, activeSignal)));
       setDeltaStatus("done");
-      saveCachedResults(STORAGE_KEY_DELTA, results);
-      markScannedForSource("delta");
+      // See the matching comment in doScan above — only mark "scanned today"
+      // when the cache write actually succeeded.
+      const deltaSaved = saveCachedResults(STORAGE_KEY_DELTA, results);
+      if (deltaSaved) markScannedForSource("delta");
       setDeltaScannedAt(Date.now());
     } catch (e) {
       setDeltaError(e instanceof Error ? e.message : "Unknown error");
@@ -458,8 +468,15 @@ export default function Screener({
       setCoinDCXAllResults(results);
       setCoinDCXFiltered(results.filter((r) => passesPattern(r, activeSignal)));
       setCoinDCXStatus("done");
-      saveCachedResults(STORAGE_KEY_COINDCX, results);
-      markScannedForSource("coindcx");
+      // See the matching comment in doScan above. CoinDCX is the exchange
+      // most likely to hit this: its cache write runs last of the three and
+      // is often the one that overflows localStorage's per-origin quota
+      // after Binance/Delta have already written theirs — without this
+      // guard, that failed write got treated as "scanned today" anyway,
+      // leaving CoinDCX stuck at 0 results until the marker expired the
+      // next IST day, even though the scan itself succeeded.
+      const coindcxSaved = saveCachedResults(STORAGE_KEY_COINDCX, results);
+      if (coindcxSaved) markScannedForSource("coindcx");
       setCoinDCXScannedAt(Date.now());
     } catch (e) {
       setCoinDCXError(e instanceof Error ? e.message : "Unknown error");
