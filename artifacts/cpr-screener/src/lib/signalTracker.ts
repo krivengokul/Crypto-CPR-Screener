@@ -315,14 +315,10 @@ export async function deleteSavedSignalFromCloud(id: string): Promise<void> {
   const localList = getLocalSignalsCache().filter((s) => s.id !== id);
   saveLocalSignalsCache(localList);
 
-  try {
-    const uid = await ensureSignedIn();
-    const db = getDb();
-    const docRef = doc(db, SIGNALS_COLLECTION, signalDocId(uid, id));
-    await deleteDoc(docRef);
-  } catch {
-    // non-blocking
-  }
+  const uid = await ensureSignedIn();
+  const db = getDb();
+  const docRef = doc(db, SIGNALS_COLLECTION, signalDocId(uid, id));
+  await deleteDoc(docRef);
 }
 
 export async function clearAllSignalsFromCloud(signalIds: string[]): Promise<void> {
@@ -333,22 +329,18 @@ export async function clearAllSignalsFromCloud(signalIds: string[]): Promise<voi
   const remaining = getLocalSignalsCache().filter((s) => !toDelete.has(s.id));
   saveLocalSignalsCache(remaining);
 
-  try {
-    const uid = await ensureSignedIn();
-    const db = getDb();
-    const BATCH_SIZE = 400;
+  const uid = await ensureSignedIn();
+  const db = getDb();
+  const BATCH_SIZE = 400;
 
-    for (let i = 0; i < signalIds.length; i += BATCH_SIZE) {
-      const chunk = signalIds.slice(i, i + BATCH_SIZE);
-      const batch = writeBatch(db);
-      for (const id of chunk) {
-        const docRef = doc(db, SIGNALS_COLLECTION, signalDocId(uid, id));
-        batch.delete(docRef);
-      }
-      await batch.commit();
+  for (let i = 0; i < signalIds.length; i += BATCH_SIZE) {
+    const chunk = signalIds.slice(i, i + BATCH_SIZE);
+    const batch = writeBatch(db);
+    for (const id of chunk) {
+      const docRef = doc(db, SIGNALS_COLLECTION, signalDocId(uid, id));
+      batch.delete(docRef);
     }
-  } catch {
-    // non-blocking
+    await batch.commit();
   }
 }
 
