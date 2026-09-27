@@ -770,7 +770,9 @@ R:R: ${item.riskReward}`;
                 </span>
               </h1>
               <p className="text-xs text-slate-400">
-                Actionable pivot breakout triggers, CPR trend directions, and automated risk/reward setups
+                Actionable pivot breakout triggers, CPR trend directions,
+                <br />
+                and automated risk/reward setups
               </p>
             </div>
           </div>
@@ -1032,6 +1034,26 @@ R:R: ${item.riskReward}`;
                 </span>
               );
 
+              // Running/Ready status — sits right beside the direction badge,
+              // on the side closer to the card's center (after Down, before
+              // Up), so the two read together as one status cluster.
+              const statusBadge = item.isSaved && (
+                item.isTriggered ? (
+                  <div className="flex items-center gap-1 text-[11px] text-emerald-400 font-mono shrink-0">
+                    <Cloud className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Running</span>
+                  </div>
+                ) : (
+                  <div
+                    className="flex items-center gap-1 text-[11px] text-amber-400 font-mono shrink-0"
+                    title="Matches an Active View but price hasn't reached the entry line yet"
+                  >
+                    <Clock className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Ready</span>
+                  </div>
+                )
+              );
+
               return (
                 <div
                   key={item.id}
@@ -1044,6 +1066,7 @@ R:R: ${item.riskReward}`;
                           of the symbol block; Up (and no-signal) keep the
                           symbol block alone on the left. */}
                       {isDown && directionBadge}
+                      {isDown && statusBadge}
 
                       {/* Left: Symbol & Exchange + Live Price & 24h % change */}
                       <div className="flex items-start gap-4 sm:gap-6">
@@ -1093,6 +1116,7 @@ R:R: ${item.riskReward}`;
 
                       {/* Up (and no-signal) signals keep the badge on the
                           top-right, as before. */}
+                      {!isDown && statusBadge}
                       {!isDown && directionBadge}
                     </div>
 
@@ -1202,26 +1226,6 @@ R:R: ${item.riskReward}`;
                     </button>
 
                     <div className="flex items-center gap-2">
-                      {item.isSaved && (
-                        <div className="flex flex-col items-end gap-1">
-                          {directionBadge}
-                          {item.isTriggered ? (
-                            <div className="flex items-center gap-1 text-[11px] text-emerald-400 font-mono">
-                              <Cloud className="w-3 h-3 text-emerald-400" />
-                              <span>Running</span>
-                            </div>
-                          ) : (
-                            <div
-                              className="flex items-center gap-1 text-[11px] text-amber-400 font-mono"
-                              title="Matches an Active View but price hasn't reached the entry line yet"
-                            >
-                              <Clock className="w-3 h-3 text-amber-400" />
-                              <span>Ready</span>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
                       <button
                         onClick={() => handleCopy(item)}
                         className="px-2 py-1 rounded bg-[#162130] hover:bg-[#1f2e42] border border-[#22354a] text-slate-300 text-xs font-medium flex items-center gap-1 transition"
