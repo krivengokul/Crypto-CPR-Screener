@@ -554,11 +554,7 @@ export default function SignalsJournal() {
                           <div className="text-emerald-400">
                             <span className="text-xs mr-1 text-emerald-500">◎</span>${fmt(item.target)}
                           </div>
-                          <div
-                            style={{ color: "#3b82f6", textShadow: "-1.5px 0 0 #e12afb" }}
-                          >
-                            ${fmt(item.entry)}
-                          </div>
+                          <div className="text-sky-300">${fmt(item.entry)}</div>
                           <div className="text-rose-400">${fmt(item.sl)}</div>
                         </div>
                       </td>
