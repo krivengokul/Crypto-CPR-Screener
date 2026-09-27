@@ -379,7 +379,6 @@ export default function SignalsJournal() {
                 <tr>
                   <th className="py-2.5 px-3">Date / Time</th>
                   <th className="py-2.5 px-3">Symbol</th>
-                  <th className="py-2.5 px-3">Source</th>
                   <th className="py-2.5 px-3">Direction</th>
                   <th className="py-2.5 px-3">Pattern</th>
                   <th className="py-2.5 px-3">Entry</th>
@@ -406,40 +405,34 @@ export default function SignalsJournal() {
                       <td className="py-2.5 px-3 text-slate-400 text-[11px] whitespace-nowrap">
                         {item.dateStr}
                       </td>
-                      <td className="py-2.5 px-3 font-bold text-white whitespace-nowrap">
-                        <div className="flex items-center gap-1">
-                          <span>{item.symbol}</span>
-                          {hasKnownChartMapping(item.symbol, item.source) ? (
-                            <a
-                              href={getChartUrl(item.symbol, item.source)}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={(e) => e.stopPropagation()}
-                              className="text-muted-foreground hover:text-primary transition-colors shrink-0"
-                              title="Open on TradingView"
-                            >
-                              <ExternalLink className="w-3 h-3" />
-                            </a>
-                          ) : (
-                            <span
-                              className="text-muted-foreground/30 cursor-not-allowed inline-flex shrink-0"
-                              title="Not available on TradingView"
-                            >
-                              <ExternalLink className="w-3 h-3" />
-                            </span>
-                          )}
-                        </div>
-                      </td>
                       <td className="py-2.5 px-3 whitespace-nowrap">
-                        <span
-                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full capitalize w-fit ${
-                            item.source === "delta"
-                              ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/40"
-                              : "bg-yellow-500/20 text-yellow-400 border border-yellow-500/40"
-                          }`}
-                        >
-                          {item.source}
-                        </span>
+                        <div className="flex flex-col items-start">
+                          <div className="flex items-center gap-1 font-bold text-white">
+                            <span>{item.symbol}</span>
+                            {hasKnownChartMapping(item.symbol, item.source) ? (
+                              <a
+                                href={getChartUrl(item.symbol, item.source)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="text-muted-foreground hover:text-primary transition-colors shrink-0"
+                                title="Open on TradingView"
+                              >
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
+                            ) : (
+                              <span
+                                className="text-muted-foreground/30 cursor-not-allowed inline-flex shrink-0"
+                                title="Not available on TradingView"
+                              >
+                                <ExternalLink className="w-3 h-3" />
+                              </span>
+                            )}
+                          </div>
+                          <span className="mt-0.5 text-[10px] font-mono uppercase tracking-wide text-slate-400">
+                            {item.source}
+                          </span>
+                        </div>
                       </td>
                       <td className="py-2.5 px-3 whitespace-nowrap">
                         <span
