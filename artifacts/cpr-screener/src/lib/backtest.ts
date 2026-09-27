@@ -405,17 +405,17 @@ export interface CreateViewResult {
 const BULLISH_TARGETS: Record<string, { label: string; key: "r1" | "r2" | "r3" | "r4" }> = {
   // R1 is the nearest rung above entry (TC) — the quickest-to-hit target,
   // and the one an Up View's own stoploss (S1) mirrors on the other side.
-  R1: { label: "U1 (today's R1)", key: "r1" },
-  R2: { label: "U2 (today's R2)", key: "r2" },
-  R3: { label: "U3 (today's R3)", key: "r3" },
-  R4: { label: "U4 (today's R4)", key: "r4" },
+  R1: { label: "R1", key: "r1" },
+  R2: { label: "R2", key: "r2" },
+  R3: { label: "R3", key: "r3" },
+  R4: { label: "R4", key: "r4" },
 };
 const BEARISH_TARGETS: Record<string, { label: string; key: "s1" | "s2" | "s3" | "s4" }> = {
   // S1 mirrors R1 above: nearest rung below entry (BC), stoploss R1.
-  S1: { label: "L1 (today's S1)", key: "s1" },
-  S2: { label: "L2 (today's S2)", key: "s2" },
-  S3: { label: "L3 (today's S3)", key: "s3" },
-  S4: { label: "L4 (today's S4)", key: "s4" },
+  S1: { label: "S1", key: "s1" },
+  S2: { label: "S2", key: "s2" },
+  S3: { label: "S3", key: "s3" },
+  S4: { label: "S4", key: "s4" },
 };
 
 /**
@@ -431,17 +431,17 @@ export const ENTRY_DEFS: Record<
   string,
   { label: string; key: "r4" | "r3" | "r2" | "r1" | "tc" | "pivot" | "bc" | "s1" | "s2" | "s3" | "s4" }
 > = {
-  R4: { label: "R4 (today's R4)", key: "r4" },
-  R3: { label: "R3 (today's R3)", key: "r3" },
-  R2: { label: "R2 (today's R2)", key: "r2" },
-  R1: { label: "R1 (today's R1)", key: "r1" },
-  TC: { label: "TC (today's TC)", key: "tc" },
-  Pivot: { label: "Pivot (today's Pivot)", key: "pivot" },
-  BC: { label: "BC (today's BC)", key: "bc" },
-  S1: { label: "S1 (today's S1)", key: "s1" },
-  S2: { label: "S2 (today's S2)", key: "s2" },
-  S3: { label: "S3 (today's S3)", key: "s3" },
-  S4: { label: "S4 (today's S4)", key: "s4" },
+  R4: { label: "R4", key: "r4" },
+  R3: { label: "R3", key: "r3" },
+  R2: { label: "R2", key: "r2" },
+  R1: { label: "R1", key: "r1" },
+  TC: { label: "TC", key: "tc" },
+  Pivot: { label: "Pivot", key: "pivot" },
+  BC: { label: "BC", key: "bc" },
+  S1: { label: "S1", key: "s1" },
+  S2: { label: "S2", key: "s2" },
+  S3: { label: "S3", key: "s3" },
+  S4: { label: "S4", key: "s4" },
 };
 
 /**
@@ -543,7 +543,7 @@ export function editBacktestView(
     getTarget: (r: CPRResult) => r.todayCPR[targetKey],
     entryLabel: entryDef.label,
     getEntry: (r: CPRResult) => r.todayCPR[entryKey],
-    stoplossLabel: isUp ? "S1 (today's S1)" : "R1 (today's R1)",
+    stoplossLabel: isUp ? "S1" : "R1",
     getStoploss: (r: CPRResult) => (isUp ? r.todayCPR.s1 : r.todayCPR.r1),
     levelCheckDefs: levelCheckDefs ?? old.levelCheckDefs,
     ...(trimmedGapBadge
@@ -604,7 +604,7 @@ export function createBacktestView(
     getTarget: (r: CPRResult) => r.todayCPR[targetKey],
     entryLabel: entryDef.label,
     getEntry: (r: CPRResult) => r.todayCPR[entryKey],
-    stoplossLabel: isUp ? "S1 (today's S1)" : "R1 (today's R1)",
+    stoplossLabel: isUp ? "S1" : "R1",
     getStoploss: (r: CPRResult) => (isUp ? r.todayCPR.s1 : r.todayCPR.r1),
     levelCheckDefs: levelCheckDefs
       ? levelCheckDefs.map(d => ({ ...d, bandKeys: [...d.bandKeys] }))
@@ -1485,11 +1485,11 @@ export async function backtestSymbolOnDate(
       prevCPR: result.prevCPR,
       compressionRatio: result.compressionRatio,
       targetLevel,
-      targetLabel: target.targetLabel ?? "U4 (today's R4)",
+      targetLabel: target.targetLabel ?? "R4",
       entryLevel,
-      entryLabel: target.entryLabel ?? "TC (today's TC)",
+      entryLabel: target.entryLabel ?? "TC",
       stoplossLevel,
-      stoplossLabel: target.stoplossLabel ?? "S1 (today's S1)",
+      stoplossLabel: target.stoplossLabel ?? "S1",
       result: "invalid-target",
       hitDate: null,
       daysToHit: null,
@@ -1522,11 +1522,11 @@ export async function backtestSymbolOnDate(
     prevCPR: result.prevCPR,
     compressionRatio: result.compressionRatio,
     targetLevel,
-    targetLabel: target.targetLabel ?? "U4 (today's R4)",
+    targetLabel: target.targetLabel ?? "R4",
     entryLevel,
-    entryLabel: target.entryLabel ?? "TC (today's TC)",
+    entryLabel: target.entryLabel ?? "TC",
     stoplossLevel,
-    stoplossLabel: target.stoplossLabel ?? "S1 (today's S1)",
+    stoplossLabel: target.stoplossLabel ?? "S1",
     result: outcome,
     hitDate,
     daysToHit,
@@ -1612,11 +1612,11 @@ export async function pivotLevelBacktestSymbolOnDate(
     ? definedTarget.direction === "Up" || (definedTarget.direction as string) === "bullish" || (definedTarget.direction as string) !== "Down" && (definedTarget.direction as string) !== "bearish"
     : true;
   const targetLevel = definedTarget?.getTarget ? definedTarget.getTarget(result) : result.todayCPR.r4;
-  const targetLabel = definedTarget?.targetLabel ?? "U4 (today's R4)";
+  const targetLabel = definedTarget?.targetLabel ?? "R4";
   const entryLevel = definedTarget?.getEntry ? definedTarget.getEntry(result) : (isUpTarget ? result.todayCPR.tc : result.todayCPR.bc);
-  const entryLabel = definedTarget?.entryLabel ?? (isUpTarget ? "TC (today's TC)" : "BC (today's BC)");
+  const entryLabel = definedTarget?.entryLabel ?? (isUpTarget ? "TC" : "BC");
   const stoplossLevel = definedTarget?.getStoploss ? definedTarget.getStoploss(result) : (isUpTarget ? result.todayCPR.s1 : result.todayCPR.r1);
-  const stoplossLabel = definedTarget?.stoplossLabel ?? (isUpTarget ? "S1 (today's S1)" : "R1 (today's R1)");
+  const stoplossLabel = definedTarget?.stoplossLabel ?? (isUpTarget ? "S1" : "R1");
   const entryDayCandle = window.get(entryDateISO) ?? null;
   const nextDayCandle = window.get(dPlus1) ?? null;
 

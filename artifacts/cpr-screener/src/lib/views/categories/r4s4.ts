@@ -432,11 +432,11 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
     condition: (r) =>
       r.prevCPR.widthPct > 5.00 && r.prevCPR.widthPct <= 10.00 && // pMega
       r.todayCPR.widthPct > 5.00 && r.todayCPR.widthPct <= 10.00, // Mega
-    targetLabel: "L3 (today's S3)",
+    targetLabel: "S3",
     getTarget: (r) => r.todayCPR.s3,
-    entryLabel: "BC (today's BC)",
+    entryLabel: "BC",
     getEntry: (r) => r.todayCPR.bc,
-    stoplossLabel: "R1 (today's R1)",
+    stoplossLabel: "R1",
     getStoploss: (r) => r.todayCPR.r1,
       order: 0
 },
@@ -448,11 +448,11 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
       standalone: true,
       kind: "view",
       direction: "Down",
-      targetLabel: "L2 (today's S2)",
+      targetLabel: "S2",
       getTarget: (r) => r.todayCPR.s2,
-      entryLabel: "BC (today's BC)",
+      entryLabel: "BC",
       getEntry: (r) => r.todayCPR.bc,
-      stoplossLabel: "R1 (today's R1)",
+      stoplossLabel: "R1",
       getStoploss: (r) => r.todayCPR.r1,
       levelCheckDefs: [
     {
@@ -568,11 +568,11 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
     kind: "view",
     direction: "Up",
     condition: (r) => r.prevCPR.HLSwitch === "HL-A",
-    targetLabel: "U2 (today's R2)",
+    targetLabel: "R2",
     getTarget: (r) => r.todayCPR.r2,
-    entryLabel: "TC (today's TC)",
+    entryLabel: "TC",
     getEntry: (r) => r.todayCPR.tc,
-    stoplossLabel: "S1 (today's S1)",
+    stoplossLabel: "S1",
     getStoploss: (r) => r.todayCPR.s1,
     levelCheckDefs: [
       { key: "r4", subject: "previous", bandKeys: ["tc", "pivot"] },
@@ -604,11 +604,11 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
       r.todayCPR.HLSwitch === "HL-B" &&
       r.hlGapWinner === "today" &&
       r.prevCPR.r1 > r.todayCPR.s1,
-    targetLabel: "U4 (today's R4)",
+    targetLabel: "R4",
     getTarget: (r) => r.todayCPR.r4,
-    entryLabel: "TC (today's TC)",
+    entryLabel: "TC",
     getEntry: (r) => r.todayCPR.tc,
-    stoplossLabel: "S1 (today's S1)",
+    stoplossLabel: "S1",
     getStoploss: (r) => r.todayCPR.s1,
       order: 0
 },
@@ -619,11 +619,11 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
         conditionKey: "A-E-AA-E-EUBL2",
         kind: "view",
         direction: "Down",
-        targetLabel: "L2 (today's S2)",
+        targetLabel: "S2",
         getTarget: (r) => r.todayCPR.s2,
-        entryLabel: "BC (today's BC)",
+        entryLabel: "BC",
         getEntry: (r) => r.todayCPR.bc,
-        stoplossLabel: "R1 (today's R1)",
+        stoplossLabel: "R1",
         getStoploss: (r) => r.todayCPR.r1,
         levelCheckDefs: [
       {
@@ -739,11 +739,11 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
         conditionKey: "R1AbovePR4",
         kind: "view",
         direction: "Down",
-        targetLabel: "L1 (today's S1)",
+        targetLabel: "S1",
         getTarget: (r) => r.todayCPR.s1,
-        entryLabel: "BC (today's BC)",
+        entryLabel: "BC",
         getEntry: (r) => r.todayCPR.bc,
-        stoplossLabel: "R1 (today's R1)",
+        stoplossLabel: "R1",
         getStoploss: (r) => r.todayCPR.r1,
         levelCheckDefs: [
       {
@@ -859,11 +859,11 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
         conditionKey: "A-A-AA-OA-EU1L2",
         kind: "view",
         direction: "Up",
-        targetLabel: "U3 (today's R3)",
+        targetLabel: "R3",
         getTarget: (r) => r.todayCPR.r3,
-        entryLabel: "TC (today's TC)",
+        entryLabel: "TC",
         getEntry: (r) => r.todayCPR.tc,
-        stoplossLabel: "S1 (today's S1)",
+        stoplossLabel: "S1",
         getStoploss: (r) => r.todayCPR.s1,
         levelCheckDefs: [
       {
@@ -979,11 +979,11 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
         conditionKey: "A-E-AA-E-EUBL2",
         kind: "view",
         direction: "Up",
-        targetLabel: "U4 (today's R4)",
+        targetLabel: "R4",
         getTarget: (r) => r.todayCPR.r4,
-        entryLabel: "TC (today's TC)",
+        entryLabel: "TC",
         getEntry: (r) => r.todayCPR.tc,
-        stoplossLabel: "S1 (today's S1)",
+        stoplossLabel: "S1",
         getStoploss: (r) => r.todayCPR.s1,
         levelCheckDefs: [
       {
@@ -1099,11 +1099,11 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
         conditionKey: "A-A-AA-AA-EL2L1",
         kind: "view",
         direction: "Up",
-        targetLabel: "U4 (today's R4)",
+        targetLabel: "R4",
         getTarget: (r) => r.todayCPR.r4,
-        entryLabel: "TC (today's TC)",
+        entryLabel: "TC",
         getEntry: (r) => r.todayCPR.tc,
-        stoplossLabel: "S1 (today's S1)",
+        stoplossLabel: "S1",
         getStoploss: (r) => r.todayCPR.s1,
         levelCheckDefs: [
       {
@@ -1220,11 +1220,11 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
         standalone: true,
         kind: "view",
         direction: "Down",
-        targetLabel: "L2 (today's S2)",
+        targetLabel: "S2",
         getTarget: (r) => r.todayCPR.s2,
-        entryLabel: "BC (today's BC)",
+        entryLabel: "BC",
         getEntry: (r) => r.todayCPR.bc,
-        stoplossLabel: "R1 (today's R1)",
+        stoplossLabel: "R1",
         getStoploss: (r) => r.todayCPR.r1,
         levelCheckDefs: [
       {
@@ -1341,11 +1341,11 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
         standalone: true,
         kind: "view",
         direction: "Up",
-        targetLabel: "U1 (today's R1)",
+        targetLabel: "R1",
         getTarget: (r) => r.todayCPR.r1,
-        entryLabel: "TC (today's TC)",
+        entryLabel: "TC",
         getEntry: (r) => r.todayCPR.tc,
-        stoplossLabel: "S1 (today's S1)",
+        stoplossLabel: "S1",
         getStoploss: (r) => r.todayCPR.s1,
         levelCheckDefs: [
       {
@@ -1462,11 +1462,11 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
         standalone: true,
         kind: "view",
         direction: "Up",
-        targetLabel: "U4 (today's R4)",
+        targetLabel: "R4",
         getTarget: (r) => r.todayCPR.r4,
-        entryLabel: "TC (today's TC)",
+        entryLabel: "TC",
         getEntry: (r) => r.todayCPR.tc,
-        stoplossLabel: "S1 (today's S1)",
+        stoplossLabel: "S1",
         getStoploss: (r) => r.todayCPR.s1,
         levelCheckDefs: [
       {

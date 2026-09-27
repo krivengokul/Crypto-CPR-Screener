@@ -14,11 +14,11 @@ export const COMPRESSED_VIEWS: ViewDef[] = [
     kind: "pattern",
     condition: (r) => r.CL3U2,
     direction: "Up",
-    targetLabel: "U4 (today's R4)",
+    targetLabel: "R4",
     getTarget: (r) => r.todayCPR.r4,
-    entryLabel: "TC (today's TC)",
+    entryLabel: "TC",
     getEntry: (r) => r.todayCPR.tc,
-    stoplossLabel: "S1 (today's S1)",
+    stoplossLabel: "S1",
     getStoploss: (r) => r.todayCPR.s1,
       order: 0
 },
@@ -35,11 +35,11 @@ export const COMPRESSED_VIEWS: ViewDef[] = [
       r.todayCPR.HLSwitch === "HL-B" &&
       r.todayCPR.prevHigh > r.prevCPR.pivot &&
       r.todayCPR.r1 > r.prevCPR.tc,
-    targetLabel: "U4 (today's R4)",
+    targetLabel: "R4",
     getTarget: (r) => r.todayCPR.r4,
-    entryLabel: "TC (today's TC)",
+    entryLabel: "TC",
     getEntry: (r) => r.todayCPR.tc,
-    stoplossLabel: "S1 (today's S1)",
+    stoplossLabel: "S1",
     getStoploss: (r) => r.todayCPR.s1,
       order: 0
 },
@@ -172,11 +172,11 @@ export const COMPRESSED_VIEWS: ViewDef[] = [
         conditionKey: "compressed",
         kind: "view",
         direction: "Down",
-        targetLabel: "L4 (today's S4)",
+        targetLabel: "S4",
         getTarget: (r) => r.todayCPR.s4,
-        entryLabel: "BC (today's BC)",
+        entryLabel: "BC",
         getEntry: (r) => r.todayCPR.bc,
-        stoplossLabel: "R1 (today's R1)",
+        stoplossLabel: "R1",
         getStoploss: (r) => r.todayCPR.r1,
         levelCheckDefs: [
       {
@@ -292,11 +292,11 @@ export const COMPRESSED_VIEWS: ViewDef[] = [
         conditionKey: "C-C-BB-AA-CL2U2",
         kind: "view",
         direction: "Up",
-        targetLabel: "U4 (today's R4)",
+        targetLabel: "R4",
         getTarget: (r) => r.todayCPR.r4,
-        entryLabel: "TC (today's TC)",
+        entryLabel: "TC",
         getEntry: (r) => r.todayCPR.tc,
-        stoplossLabel: "S1 (today's S1)",
+        stoplossLabel: "S1",
         getStoploss: (r) => r.todayCPR.s1,
         levelCheckDefs: [
       {
@@ -412,11 +412,11 @@ export const COMPRESSED_VIEWS: ViewDef[] = [
         conditionKey: "C-C-BB-AA-CL3U2",
         kind: "view",
         direction: "Up",
-        targetLabel: "U4 (today's R4)",
+        targetLabel: "R4",
         getTarget: (r) => r.todayCPR.r4,
-        entryLabel: "TC (today's TC)",
+        entryLabel: "TC",
         getEntry: (r) => r.todayCPR.tc,
-        stoplossLabel: "S1 (today's S1)",
+        stoplossLabel: "S1",
         getStoploss: (r) => r.todayCPR.s1,
         levelCheckDefs: [
       {
@@ -532,11 +532,11 @@ export const COMPRESSED_VIEWS: ViewDef[] = [
         conditionKey: "C-C-BB-AA-CL2U1",
         kind: "view",
         direction: "Up",
-        targetLabel: "U4 (today's R4)",
+        targetLabel: "R4",
         getTarget: (r) => r.todayCPR.r4,
-        entryLabel: "TC (today's TC)",
+        entryLabel: "TC",
         getEntry: (r) => r.todayCPR.tc,
-        stoplossLabel: "S1 (today's S1)",
+        stoplossLabel: "S1",
         getStoploss: (r) => r.todayCPR.s1,
         levelCheckDefs: [
       {

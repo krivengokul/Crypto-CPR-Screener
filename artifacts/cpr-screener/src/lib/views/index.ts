@@ -28,11 +28,11 @@ VIEWS.push(
   const bbbb = VIEWS.find((v) => v.key === "B-B-BB-BB");
   if (bbbb) {
     bbbb.direction = "Down";
-    bbbb.targetLabel = "L2 (today's S2)";
+    bbbb.targetLabel = "S2";
     bbbb.getTarget = (r) => r.todayCPR.s2;
-    bbbb.entryLabel = "BC (today's BC)";
+    bbbb.entryLabel = "BC";
     bbbb.getEntry = (r) => r.todayCPR.bc;
-    bbbb.stoplossLabel = "R1 (today's R1)";
+    bbbb.stoplossLabel = "R1";
     bbbb.getStoploss = (r) => r.todayCPR.r1;
   }
 }
