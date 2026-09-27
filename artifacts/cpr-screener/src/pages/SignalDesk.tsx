@@ -614,6 +614,7 @@ export default function SignalDesk({
       direction: "Up" | "Down" | "NEUTRAL" | "LONG" | "SHORT";
       type: string;
       patternName: string;
+      patternId: string;
       entry: number;
       currentPrice: number;
       target: number;
@@ -640,6 +641,7 @@ export default function SignalDesk({
         direction: levels.direction,
         type: `${levels.patternLabel} Setup`,
         patternName: levels.patternLabel,
+        patternId: levels.patternId,
         entry: levels.price,
         currentPrice: levels.price,
         target: levels.targetPrice,

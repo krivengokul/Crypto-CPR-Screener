@@ -23,6 +23,7 @@ export interface LoggedSignal {
   direction: "Up" | "Down" | "NEUTRAL" | "LONG" | "SHORT";
   type: string;
   patternName: string;
+  patternId?: string;
   entry: number;
   currentPrice: number;
   target: number;

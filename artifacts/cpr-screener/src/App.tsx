@@ -125,6 +125,7 @@ function App() {
         direction: levels.direction,
         type: `${levels.patternLabel} Setup`,
         patternName: levels.patternLabel,
+        patternId: levels.patternId,
         entry: levels.price,
         currentPrice: levels.price,
         target: levels.targetPrice,

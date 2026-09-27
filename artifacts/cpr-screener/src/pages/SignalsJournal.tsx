@@ -12,6 +12,7 @@ import {
   summarizePaperTrades,
 } from "@/lib/paperTrading";
 import { fmt, getChartUrl, hasKnownChartMapping } from "@/pages/ScreenerUtils";
+import { VIEWS } from "@/lib/views";
 import {
   CheckCircle2,
   XCircle,
@@ -375,7 +376,6 @@ export default function SignalsJournal() {
             <table className="w-full text-left text-xs border-collapse font-sans select-text">
               <thead className="bg-[#121b2b] text-slate-400 border-b border-[#1e2d3d] font-mono uppercase text-[10px]">
                 <tr>
-                  <th className="py-2.5 px-3">Date / Time</th>
                   <th className="py-2.5 px-3">Symbol</th>
                   <th className="py-2.5 px-3">View</th>
                   <th className="py-2.5 px-3">Entry</th>
@@ -401,6 +401,11 @@ export default function SignalsJournal() {
                     (Number.isFinite(item.timestamp) && Number.isFinite(new Date(item.timestamp).getTime())
                       ? new Date(item.timestamp).toISOString().slice(0, 10)
                       : "unknown date");
+                  const viewCode =
+                    item.patternId ??
+                    VIEWS.find(
+                      (view) => view.kind === "view" && view.label === item.patternName
+                    )?.key;
 
                   return (
                     <tr key={item.id} className="hover:bg-[#121d2e] transition font-mono">
@@ -431,15 +436,25 @@ export default function SignalsJournal() {
                               </span>
                             )}
                           </div>
+                          <span className="mt-0.5 text-[10px] font-mono text-slate-400">
+                            {item.dateStr}
+                          </span>
                           <span className="mt-0.5 text-[10px] font-mono uppercase tracking-wide text-slate-400">
                             {item.source}
                           </span>
                         </div>
                       </td>
-                      <td className={`py-2.5 px-3 font-medium whitespace-nowrap ${
-                        isUp ? "text-emerald-400" : isDown ? "text-rose-400" : "text-slate-300"
-                      }`}>
-                        {item.patternName}
+                      <td className="py-2.5 px-3 whitespace-nowrap">
+                        <div className={`font-medium ${
+                          isUp ? "text-emerald-400" : isDown ? "text-rose-400" : "text-slate-300"
+                        }`}>
+                          {item.patternName}
+                        </div>
+                        {viewCode && (
+                          <div className="mt-0.5 text-[10px] font-mono text-slate-400">
+                            {viewCode}
+                          </div>
+                        )}
                       </td>
                       <td className="py-2.5 px-3 text-slate-200">${fmt(item.entry)}</td>
                       <td className="py-2.5 px-3 text-emerald-400 font-bold whitespace-nowrap">
