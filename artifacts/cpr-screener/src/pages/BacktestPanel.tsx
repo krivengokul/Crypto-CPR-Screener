@@ -2738,9 +2738,6 @@ export default function BacktestPanel() {
                       </span>
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Entry Date
-                    </th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       <button
                         type="button"
                         onClick={() =>
@@ -2809,6 +2806,11 @@ export default function BacktestPanel() {
                               <span className={`font-mono text-[11px] font-medium ${closeColor}`}>
                                 {r.closePrice !== null && r.closePrice !== undefined ? fmt(r.closePrice) : "—"}
                               </span>
+                              {/* Entry Date — moved here (below symbol/price) from its own
+                                  column, matching how the graded results table below shows it. */}
+                              <span className="font-mono text-[11px] text-muted-foreground">
+                                {formatDisplay(r.entryDate)}
+                              </span>
                             </div>
                           </div>
                         </td>
@@ -2823,9 +2825,6 @@ export default function BacktestPanel() {
                         <td className="px-3 py-2 font-mono whitespace-nowrap">
                           {renderPivotSizeCell(r.prevCPR, r.todayCPR, r.compressionRatio)}
                         </td>
-                        <td className="px-3 py-2 font-mono text-xs text-muted-foreground whitespace-nowrap">
-                          {formatDisplay(r.entryDate)}
-                        </td>
                         <td className={`px-3 py-2 font-mono text-sm font-medium ${chgColor}`}>
                           {chg !== null && chg !== undefined
                             ? `${chg >= 0 ? "+" : ""}${chg.toFixed(2)}%`
@@ -2837,7 +2836,7 @@ export default function BacktestPanel() {
                           r={toSRLadderData(r.raw, r.closePrice ?? undefined, r.prevClose ?? undefined, r.ppClose ?? undefined)}
                           rowKey={`${r.source}-${r.symbol}-${r.entryDate}`}
                           viewKey={isViewOnly ? selectedKey : undefined}
-                          colSpan={7}
+                          colSpan={6}
                           todayPatternBadge={renderTodayPatternBadges(r.raw)}
                           prevPatternBadge={renderPrevPatternBadge(r.raw)}
                           pivotPatternBadge={renderPivotPatternBadge(r.raw)}
@@ -2905,8 +2904,9 @@ export default function BacktestPanel() {
       {/* Pattern backtest results — symbol list + Target/Result/Hit Date.
           CHANGED: also shown for isPatternOnly ("-R4" Pattern selections),
           which now grade identically to a View backtest — same columns
-          (Symbol/Pattern/View/Ladder Check/Pivot Size/Entry Date/Result/Hit
-          Date/Change). GAP now lives under the expanded row's "PDay S/R"
+          (Symbol/Pattern/View/Ladder Check/Pivot Size/Result/Hit
+          Date/Change; Entry Date now renders under Symbol instead of its
+          own column). GAP now lives under the expanded row's "PDay S/R"
           ladder instead of its own column. */}
       {status === "done" && (isViewOnly || isPatternOnly) && (
         <>
@@ -3008,9 +3008,6 @@ export default function BacktestPanel() {
                       </span>
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Entry Date
-                    </th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Result
                     </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -3075,6 +3072,12 @@ export default function BacktestPanel() {
                                 </span>
                               );
                             })()}
+                            {/* Entry Date — moved here (below symbol/price) from its own
+                                column, so it reads the way it now does in the category
+                                scan results table above. */}
+                            <span className="font-mono text-[11px] text-muted-foreground">
+                              {formatDisplay(r.entryDate)}
+                            </span>
                           </div>
                         </div>
                       </td>
@@ -3120,7 +3123,6 @@ export default function BacktestPanel() {
                       <td className="px-3 py-2 font-mono whitespace-nowrap">
                         {renderPivotSizeCell(r.prevCPR, r.todayCPR, r.compressionRatio)}
                       </td>
-                      <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{formatDisplay(r.entryDate)}</td>
                       <td className="px-3 py-2">
                         <div className="flex flex-col items-start gap-0.5">
                           {r.result === "pass" && (
@@ -3185,7 +3187,7 @@ export default function BacktestPanel() {
                         r={toSRLadderData(r.raw, r.closePrice ?? undefined, r.prevClose ?? undefined, r.ppClose ?? undefined)}
                         rowKey={`${r.source}-${r.symbol}-${r.entryDate}`}
                         viewKey={isViewOnly ? selectedKey : undefined}
-                        colSpan={10}
+                        colSpan={9}
                         todayPatternBadge={renderTodayPatternBadges(r.raw)}
                         prevPatternBadge={renderPrevPatternBadge(r.raw)}
                         pivotPatternBadge={renderPivotPatternBadge(r.raw)}
