@@ -633,6 +633,21 @@ export default function SignalDesk({
       const levels = computeSignalLevels(r, viewPills);
       if (!levels) continue; // no backtest-defined target for this symbol's View — nothing to save
 
+      // Being in an Active View only means the setup is armed — it does NOT
+      // mean price has actually reached the entry yet. Only push to the
+      // Journal once the live price has touched (or crossed through) the
+      // entry level itself. Bullish (Up) setups use today's CPR BC as a
+      // support-style entry, so price must pull back down to/through it;
+      // bearish (Down) setups use TC as a resistance-style entry, so price
+      // must rally up to/through it. Until that happens, leave the symbol
+      // alone so it's re-checked on the next price tick instead of being
+      // logged immediately.
+      const entryTouched =
+        levels.direction === "Up"
+          ? r.currentPrice <= levels.price
+          : r.currentPrice >= levels.price;
+      if (!entryTouched) continue;
+
       newlySubmitted.push(key);
       candidateSignals.push({
         symbol: r.symbol,
