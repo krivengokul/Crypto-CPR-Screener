@@ -18,8 +18,6 @@ import {
   Clock,
   RefreshCw,
   Trash2,
-  TrendingUp,
-  TrendingDown,
   Download,
   AlertCircle,
   Database,
@@ -379,8 +377,7 @@ export default function SignalsJournal() {
                 <tr>
                   <th className="py-2.5 px-3">Date / Time</th>
                   <th className="py-2.5 px-3">Symbol</th>
-                  <th className="py-2.5 px-3">Direction</th>
-                  <th className="py-2.5 px-3">Pattern</th>
+                  <th className="py-2.5 px-3">View</th>
                   <th className="py-2.5 px-3">Entry</th>
                   <th className="py-2.5 px-3">Target (TP)</th>
                   <th className="py-2.5 px-3">Stop (SL)</th>
@@ -399,6 +396,11 @@ export default function SignalsJournal() {
                   const isFail = item.status === "FAIL";
                   const isActive = item.status === "ACTIVE";
                   const grossReturnPct = calculateGrossReturnPct(item);
+                  const autoSavedDate =
+                    item.outcomeNotes?.match(/^Auto-saved setup \((\d{4}-\d{2}-\d{2})\)\./)?.[1] ??
+                    (Number.isFinite(item.timestamp) && Number.isFinite(new Date(item.timestamp).getTime())
+                      ? new Date(item.timestamp).toISOString().slice(0, 10)
+                      : "unknown date");
 
                   return (
                     <tr key={item.id} className="hover:bg-[#121d2e] transition font-mono">
@@ -434,25 +436,9 @@ export default function SignalsJournal() {
                           </span>
                         </div>
                       </td>
-                      <td className="py-2.5 px-3 whitespace-nowrap">
-                        <span
-                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 w-fit ${
-                            isUp
-                              ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
-                              : isDown
-                              ? "bg-rose-500/20 text-rose-400 border border-rose-500/40"
-                              : "bg-slate-500/20 text-slate-300 border border-slate-500/40"
-                          }`}
-                        >
-                          {isUp ? (
-                            <TrendingUp className="w-3 h-3" />
-                          ) : isDown ? (
-                            <TrendingDown className="w-3 h-3" />
-                          ) : null}
-                          {isUp ? "Up" : isDown ? "Down" : item.direction}
-                        </span>
-                      </td>
-                      <td className="py-2.5 px-3 text-violet-300 font-medium whitespace-nowrap">
+                      <td className={`py-2.5 px-3 font-medium whitespace-nowrap ${
+                        isUp ? "text-emerald-400" : isDown ? "text-rose-400" : "text-slate-300"
+                      }`}>
                         {item.patternName}
                       </td>
                       <td className="py-2.5 px-3 text-slate-200">${fmt(item.entry)}</td>
@@ -496,8 +482,17 @@ export default function SignalsJournal() {
                           {item.status}
                         </span>
                       </td>
-                      <td className="py-2.5 px-3 text-slate-300 font-sans text-[11px] max-w-xs truncate">
-                        {item.outcomeNotes || (isActive ? `Auto-captured setup. Awaiting TP ($${fmt(item.target)}) or SL ($${fmt(item.sl)}) hit.` : "—")}
+                      <td className="py-2.5 px-3 text-slate-300 font-sans text-[11px] max-w-xs">
+                        {isActive ? (
+                          <div className="space-y-0.5">
+                            <div>Auto-saved setup ({autoSavedDate}).</div>
+                            <div>
+                              Awaiting TP (${fmt(item.target)}) or SL (${fmt(item.sl)}) outcome.
+                            </div>
+                          </div>
+                        ) : (
+                          item.outcomeNotes || "—"
+                        )}
                       </td>
                       <td className="py-2.5 px-3 text-right">
                         <button
