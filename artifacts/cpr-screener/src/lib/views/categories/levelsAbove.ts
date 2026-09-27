@@ -1258,7 +1258,7 @@ export const LEVELSABOVE_VIEWS: ViewDef[] = [
       },
     {
         key: "TC-A-A-AA-AA-U4L4-SL-GapBB-R4",
-        label: "StepUpR4-Reverse",
+        label: "1StepUpR4-Reverse",
         parentKey: "A-A-AA-AA-U4L4",
         condition: (r) => passesView(r, "A-A-AA-AA-U4L4") && matchesGapBadge(r, "SL-GapBB"),
         standalone: true,
