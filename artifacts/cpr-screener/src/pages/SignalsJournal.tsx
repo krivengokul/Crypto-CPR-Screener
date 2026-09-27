@@ -30,6 +30,7 @@ export default function SignalsJournal() {
   const [signals, setSignals] = useState<LoggedSignal[]>([]);
   const [loading, setLoading] = useState(true);
   const [evaluating, setEvaluating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [evalProgress, setEvalProgress] = useState<{ done: number; total: number } | null>(null);
   const [filterStatus, setFilterStatus] = useState<"ALL" | "ACTIVE" | "PASS" | "FAIL">("ALL");
   // Default to Binance — mirrors the Live Screener, Backtest panel, and
@@ -57,8 +58,16 @@ export default function SignalsJournal() {
     const confirm = window.confirm("Are you sure you want to clear all saved signals in your journal?");
     if (!confirm) return;
     setLoading(true);
-    await clearAllSignalsFromCloud(signals.map((s) => s.id));
-    await loadSignals();
+    setError(null);
+    try {
+      await clearAllSignalsFromCloud(signals.map((s) => s.id));
+      await loadSignals();
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Cloud delete failed. Your saved signals were not deleted.");
+      await loadSignals();
+    } finally {
+      setLoading(false);
+    }
   };
 
   // High-speed parallel evaluation with live progress and immediate state updates
@@ -107,8 +116,14 @@ export default function SignalsJournal() {
   };
 
   const handleDelete = async (id: string) => {
-    await deleteSavedSignalFromCloud(id);
-    setSignals((prev) => prev.filter((s) => s.id !== id));
+    setError(null);
+    try {
+      await deleteSavedSignalFromCloud(id);
+      setSignals((prev) => prev.filter((s) => s.id !== id));
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Cloud delete failed. Your saved signal was not deleted.");
+      await loadSignals();
+    }
   };
 
   const handleExportCSV = () => {
@@ -203,7 +218,13 @@ export default function SignalsJournal() {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-2 flex-wrap">
+        {error && (
+        <div role="alert" className="mb-3 rounded-lg border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
+          Cloud delete failed: {error}
+        </div>
+      )}
+
+      <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={loadSignals}
             disabled={loading}
