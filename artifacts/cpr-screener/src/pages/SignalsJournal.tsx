@@ -489,6 +489,21 @@ export default function SignalsJournal() {
                   const isActive = item.status === "ACTIVE";
                   const grossReturnPct = calculateGrossReturnPct(item);
                   const livePrice = livePrices[priceKey(item.source, item.symbol)] ?? item.currentPrice;
+                  const livePriceColor = Number.isFinite(livePrice)
+                    ? isUp
+                      ? livePrice > item.entry
+                        ? "text-emerald-400"
+                        : livePrice < item.sl
+                          ? "text-rose-400"
+                          : "text-white"
+                      : isDown
+                        ? livePrice < item.entry
+                          ? "text-rose-400"
+                          : livePrice > item.sl
+                            ? "text-emerald-400"
+                            : "text-white"
+                        : "text-white"
+                    : "text-white";
                   const autoSavedDate =
                     item.outcomeNotes?.match(/^Auto-saved setup \((\d{4}-\d{2}-\d{2})\)\./)?.[1] ??
                     (Number.isFinite(item.timestamp) && Number.isFinite(new Date(item.timestamp).getTime())
@@ -546,16 +561,28 @@ export default function SignalsJournal() {
                           </div>
                         )}
                       </td>
-                      <td className="py-2.5 px-3 text-white font-bold whitespace-nowrap">
+                      <td className={`py-2.5 px-3 font-bold whitespace-nowrap ${livePriceColor}`}>
                         ${fmt(livePrice)}
                       </td>
                       <td className="py-2.5 px-3 font-bold whitespace-nowrap">
                         <div className="space-y-0.5">
-                          <div className="text-emerald-400">
-                            <span className="text-xs mr-1 text-emerald-500">◎</span>${fmt(item.target)}
-                          </div>
-                          <div className="text-sky-300">${fmt(item.entry)}</div>
-                          <div className="text-rose-400">${fmt(item.sl)}</div>
+                          {isDown ? (
+                            <>
+                              <div className="text-emerald-400">${fmt(item.sl)}</div>
+                              <div className="text-sky-300">${fmt(item.entry)}</div>
+                              <div className="text-rose-400">
+                                <span className="text-xs mr-1 text-rose-500">◎</span>${fmt(item.target)}
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <div className="text-emerald-400">
+                                <span className="text-xs mr-1 text-emerald-500">◎</span>${fmt(item.target)}
+                              </div>
+                              <div className="text-sky-300">${fmt(item.entry)}</div>
+                              <div className="text-rose-400">${fmt(item.sl)}</div>
+                            </>
+                          )}
                         </div>
                       </td>
                       <td className="py-2.5 px-3 text-cyan-300 font-bold whitespace-nowrap">{item.rr}</td>
