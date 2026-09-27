@@ -8,7 +8,7 @@ import {
   getChartUrl,
   hasKnownChartMapping,
 } from "./ScreenerUtils";
-import { autoSaveQualifiedSignals } from "@/lib/signalTracker";
+import { autoSaveQualifiedSignals, hasTouchedEntry } from "@/lib/signalTracker";
 import { Views } from "@/lib/ViewsSidebar";
 import { getView } from "@/lib/views";
 import SignalProgressBar from "@/lib/SignalProgressBar";
@@ -633,20 +633,11 @@ export default function SignalDesk({
       const levels = computeSignalLevels(r, viewPills);
       if (!levels) continue; // no backtest-defined target for this symbol's View — nothing to save
 
-      // Being in an Active View only means the setup is armed — it does NOT
-      // mean price has actually reached the entry yet. Only push to the
-      // Journal once the live price has touched (or crossed through) the
-      // entry level itself. Bullish (Up) setups use today's CPR BC as a
-      // support-style entry, so price must pull back down to/through it;
-      // bearish (Down) setups use TC as a resistance-style entry, so price
-      // must rally up to/through it. Until that happens, leave the symbol
-      // alone so it's re-checked on the next price tick instead of being
-      // logged immediately.
-      const entryTouched =
-        levels.direction === "Up"
-          ? r.currentPrice <= levels.price
-          : r.currentPrice >= levels.price;
-      if (!entryTouched) continue;
+      // Setup matched, but don't mark this symbol "submitted today" (and
+      // don't send it to the Journal) until price has actually touched
+      // its entry line — see hasTouchedEntry's doc comment. Leaving it
+      // OUT of alreadySubmitted means the next tick re-checks it fresh.
+      if (!hasTouchedEntry(levels.direction, levels.price, r.currentPrice)) continue;
 
       newlySubmitted.push(key);
       candidateSignals.push({
@@ -658,7 +649,10 @@ export default function SignalDesk({
         patternName: levels.patternLabel,
         patternId: levels.patternId,
         entry: levels.price,
-        currentPrice: levels.price,
+        // Live price, NOT levels.price (the static BC/TC entry line) —
+        // performAutoSave needs the real current price to know whether
+        // this candidate has actually touched its entry line yet.
+        currentPrice: r.currentPrice,
         target: levels.targetPrice,
         sl: levels.stopPrice,
         rr: `1 : ${levels.rrRatio}`,

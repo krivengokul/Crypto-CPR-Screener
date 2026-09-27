@@ -7,7 +7,7 @@ import BacktestPanel from "@/pages/BacktestPanel";
 import SignalDesk, { type SignalDeskSymbol, buildPills, computeSignalLevels } from "@/pages/SignalDesk";
 import type { CPRResultWithSource, ActiveTab } from "@/pages/ScreenerUtils";
 import { passesPattern } from "@/pages/ScreenerUtils";
-import { autoSaveQualifiedSignals } from "@/lib/signalTracker";
+import { autoSaveQualifiedSignals, hasTouchedEntry } from "@/lib/signalTracker";
 import PatternStats from "@/pages/PatternStats";
 import SignalsJournal from "./pages/SignalsJournal";
 import ViewsSidebar, { SCREENER_PATTERN_IDS, VIEW_LABEL_BY_ID, type SidebarMode } from "@/lib/ViewsSidebar";
@@ -118,6 +118,12 @@ function App() {
     for (const [, r] of activeMap.entries()) {
       const levels = computeSignalLevels(r, pills);
       if (!levels) continue;
+      // Setup matched, but skip it until price actually touches the
+      // entry line — see hasTouchedEntry's doc comment in
+      // signalTracker.ts. performAutoSave re-checks this too, so this is
+      // just to avoid building/sending candidates that would be dropped
+      // anyway.
+      if (!hasTouchedEntry(levels.direction, levels.price, r.currentPrice)) continue;
       candidateSignals.push({
         symbol: r.symbol,
         source: r.source,
@@ -127,7 +133,10 @@ function App() {
         patternName: levels.patternLabel,
         patternId: levels.patternId,
         entry: levels.price,
-        currentPrice: levels.price,
+        // Live price, NOT levels.price (the static BC/TC entry line) —
+        // performAutoSave needs the real current price to know whether
+        // this candidate has actually touched its entry line yet.
+        currentPrice: r.currentPrice,
         target: levels.targetPrice,
         sl: levels.stopPrice,
         rr: `1 : ${levels.rrRatio}`,

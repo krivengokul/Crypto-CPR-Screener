@@ -129,9 +129,44 @@ export async function saveSignalToCloud(
   }
 }
 
+/**
+ * Has this candidate's live price actually reached its entry line yet?
+ * Active View / pattern membership only tells you the SETUP matched — it
+ * says nothing about whether price has come back to the level you'd
+ * actually enter at. Bullish (Up) setups enter on a pullback DOWN to
+ * their BC entry line (target is an R-level above, stop is S1 further
+ * below); bearish (Down) setups enter on a rally UP to their TC entry
+ * line (target is an S-level below, stop is R1 further above) — see
+ * computeSignalLevels' doc comment in SignalDesk.tsx. Exported so callers
+ * (SignalDesk.tsx, App.tsx) can gate on this BEFORE deciding a candidate
+ * counts as "submitted today", not just performAutoSave below — otherwise
+ * a candidate seen once while still short of entry would get marked
+ * submitted and never re-checked for the rest of the day.
+ */
+export function hasTouchedEntry(
+  direction: string,
+  entry: number,
+  currentPrice: number
+): boolean {
+  if (direction === "Up") return currentPrice <= entry;
+  if (direction === "Down") return currentPrice >= entry;
+  // Other direction values (LONG/SHORT/NEUTRAL) carry no BC/TC entry line
+  // from computeSignalLevels — nothing defined to gate on here.
+  return true;
+}
+
 async function performAutoSave(
   signals: Omit<LoggedSignal, "id">[]
 ): Promise<number> {
+  // Belt-and-suspenders: callers are expected to have already filtered on
+  // hasTouchedEntry before marking anything "submitted" (see its doc
+  // comment), but re-check here too so this function is safe on its own
+  // for any future caller that doesn't.
+  signals = signals.filter((sig) =>
+    hasTouchedEntry(sig.direction, sig.entry, sig.currentPrice)
+  );
+  if (signals.length === 0) return 0;
+
   const todayKey = new Date().toISOString().slice(0, 10);
   const localList = getLocalSignalsCache();
   const localMap = new Map(localList.map((s) => [s.id, s]));
