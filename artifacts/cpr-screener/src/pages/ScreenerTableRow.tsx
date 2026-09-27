@@ -20,7 +20,7 @@ import {
   computeGapBadge,
   getViewDirection,
   getAnyViewDirection,
-  getActiveViewLabels,
+  getMatchingSignals,
   cprDistancePct,
   levelsInDistanceRange,
   renderSSRRHHLLBadges,
@@ -635,7 +635,7 @@ export function renderLevelColumnRestBadges(r: CPRResult) {
 
 /**
  * "VIEW" column body — every View (left-nav leaf) this row currently
- * satisfies, across all categories (see getActiveViewLabels), rendered as
+ * satisfies, across all categories (see getMatchingSignals), rendered as
  * plain stacked text lines. Font size matches the "LevelCheck UnDefined"
  * text (text-xs) elsewhere in this same table. Each View name is colored by
  * its own direction — green when Up, red when Down — falling back to the
@@ -646,9 +646,9 @@ export function renderLevelColumnRestBadges(r: CPRResult) {
  * row's "LEVELS VIEW" ladder, so the same identifier reads the same way in
  * both places. Renders nothing (blank cell) when the row matches no View.
  */
-export function renderActiveViewLabels(
+export function renderMatchingSignals(
   r: CPRResult,
-  views: ReturnType<typeof getActiveViewLabels> = getActiveViewLabels(r),
+  views: ReturnType<typeof getMatchingSignals> = getMatchingSignals(r),
 ) {
   if (views.length === 0) return null;
   return (
@@ -715,14 +715,14 @@ export function ScreenerTableHeader({
         </th>
         <th
           className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[180px]"
-          title="Every View (left-nav leaf) this row currently satisfies, across all categories"
+          title="Every signal (left-nav selection) this row currently satisfies, across all categories"
         >
-          View
+          Signal
         </th>
         <th
           className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
           onClick={() => toggleSort("ladderCheck")}
-          title="Level Check (matching/13) for each View in the VIEW column, one line per View, graded with that View's own levelCheckDefs. Sort by each row's best n/13 — desc surfaces 13/13 first, then 12/13, etc."
+          title="Level Check (matching/13) for each signal in the SIGNAL column, one line per signal, graded with its own levelCheckDefs. Sort by each row's best n/13 — desc surfaces 13/13 first, then 12/13, etc."
         >
           Ladder Check <SortIcon k="ladderCheck" />
         </th>
@@ -760,10 +760,10 @@ export interface ScreenerTableRowProps {
   canShowCombined: boolean;
   activeTab: ActiveTab;
   activePattern?: string;
-  activeView?: string;
-  /** Display name of the currently active View (the highlighted "VIEWS:" pill), e.g. "A-A-AA-AA-EU3L4-GapB". Shown as a badge next to "Levels VIEW" in the expanded S/R ladder. Omit to hide it. */
+  activeSignal?: string;
+  /** Display name of the currently selected signal (the highlighted "SIGNALS:" pill), e.g. "A-A-AA-AA-EU3L4-GapB". Shown as a badge next to "Levels VIEW" in the expanded S/R ladder. Omit to hide it. */
   viewName?: string;
-  /** The active View's own 13 Level Check conditions (its levelCheckDefs), passed straight through to SRLadderRow/SRLadderDiffPanel. Undefined (no View active, or that View has no levelCheckDefs) renders "No levelCheckDefs" rather than a checklist — see SRLadderDiff.tsx. */
+  /** The selected signal's own 13 Level Check conditions (its levelCheckDefs), passed straight through to SRLadderRow/SRLadderDiffPanel. Undefined (no signal selected, or no levelCheckDefs) renders "No levelCheckDefs" rather than a checklist — see SRLadderDiff.tsx. */
   levelCheckConditions?: LevelCheckCondition[];
 }
 
@@ -781,11 +781,11 @@ export default function ScreenerTableRow({
   canShowCombined,
   activeTab,
   activePattern: rawActivePattern,
-  activeView,
+  activeSignal,
   viewName,
   levelCheckConditions,
 }: ScreenerTableRowProps) {
-  const activePattern = rawActivePattern ?? activeView ?? "";
+  const activePattern = rawActivePattern ?? activeSignal ?? "";
   // Hoisted so the same up/down call drives both the per-row dot in the
   // Symbol column AND the new "Levels VIEW" name badge below — one row
   // shouldn't ever show a green dot next to a red badge.
@@ -826,8 +826,8 @@ export default function ScreenerTableRow({
   // graded with THAT View's own levelCheckDefs — same per-row approach
   // BacktestPanel uses (rowViewDefByRow). Computed once here and shared with
   // the VIEW and Ladder Check cells so their lines stay 1:1 and in order.
-  const activeViews = getActiveViewLabels(r);
-  const viewLadders = activeViews.map((v) => {
+  const matchingSignals = getMatchingSignals(r);
+  const viewLadders = matchingSignals.map((v) => {
     const defs = getView(v.id)?.levelCheckDefs;
     return {
       id: v.id,
@@ -853,7 +853,7 @@ export default function ScreenerTableRow({
   const hasSelectedView = !!viewName;
   const firstDefinedView = viewLadders.find((v) => v.ladder.hasConditions);
   const primaryView = hasSelectedView
-    ? { name: viewName, direction: dir ?? undefined, defs: levelCheckConditions, key: activeView }
+    ? { name: viewName, direction: dir ?? undefined, defs: levelCheckConditions, key: activeSignal }
     : firstDefinedView
     ? { name: firstDefinedView.label, direction: firstDefinedView.direction ?? undefined, defs: firstDefinedView.defs, key: firstDefinedView.id }
     : undefined;
@@ -959,7 +959,7 @@ export default function ScreenerTableRow({
           </div>
         </td>
         <td className="px-3 py-3">
-          {renderActiveViewLabels(r, activeViews)}
+          {renderMatchingSignals(r, matchingSignals)}
         </td>
         {/* Ladder Check — right after VIEW, before PIVOT SIZE. One line per
             View in the VIEW column (same order), each graded with that

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo, Fragment } from "react";
-import { pivotcategories, Views, VIEW_LABEL_BY_ID, requestViewDeselect } from "@/lib/ViewsSidebar";
+import { pivotcategories, Views, VIEW_LABEL_BY_ID, requestSignalDeselect } from "@/lib/ViewsSidebar";
 import { getView } from "@/lib/views";
 import {
   TrendingUp,
@@ -62,7 +62,7 @@ import {
   type PatternInfo,
   getViewDirection,
   getRowDirection,
-  getActiveViewLabels,
+  getMatchingSignals,
 } from "./ScreenerUtils";
 import LiveClock from "./LiveClock";
 import ScreenerLegend from "./ScreenerLegend";
@@ -135,21 +135,21 @@ const EXTRA_VIEW_COUNT_IDS: string[] = [];
 /**
  * Flat id → label lookup covering every registry definition and sidebar
  * category.
- * Used by the header's "Active view" stat card so it can show a readable
- * label instead of the raw activeView id (mirrors SignalDesk's
+ * Used by the header's active-signal stat card so it can show a readable
+ * label instead of the raw activeSignal id (mirrors SignalDesk's
  * VIEW_LABEL_BY_ID).
  */
 export default function Screener({
-  activeView = "levelsabove",
+  activeSignal = "levelsabove",
   scanKey = 0,
   onCounts,
   onSignalSymbols,
   onResults,
   activeTab: activeTabProp,
   onActiveTabChange,
-  onActiveViewChange,
+  onActiveSignalChange,
 }: {
-  activeView?: string;
+  activeSignal?: string;
   scanKey?: number;
   onCounts?: (counts: Record<string, number>) => void;
   // Full unfiltered scan pool (both Binance + Delta, every symbol) — NOT
@@ -157,7 +157,7 @@ export default function Screener({
   // `signalSymbols` below. SignalDesk's auto-save-to-Journal effect needs
   // this to check every symbol against every left-nav View's
   // passesPattern(), independent of whichever single view happens to be
-  // on screen. Without this prop, SignalDesk's activeViewSymbols stays
+  // on screen. Without this prop, SignalDesk's activeSignalSymbols stays
   // permanently empty and it silently never writes to the Journal.
   onResults?: (results: CPRResultWithSource[]) => void;
   onSignalSymbols?: (
@@ -189,9 +189,9 @@ export default function Screener({
   onActiveTabChange?: (tab: ActiveTab) => void;
   // NEW: lets the Show All button clear whatever category/View is
   // currently highlighted in the left nav (App.tsx owns that selection
-  // as activeView/setActiveView — Screener only ever receives it as a
+  // as activeSignal/setActiveSignal — Screener only ever receives it as a
   // prop, so it needs this callback to reset it back up to "").
-  onActiveViewChange?: (id: string) => void;
+  onActiveSignalChange?: (id: string) => void;
 }) {
   const cachedBinance = useMemo(() => loadCachedResults<CPRResult>(STORAGE_KEY_BINANCE), []);
   const cachedDelta = useMemo(() => loadCachedResults<CPRResult>(STORAGE_KEY_DELTA), []);
@@ -224,7 +224,7 @@ export default function Screener({
   const [showAll, setShowAll] = useState(true);
   // Generic Views toggle — covers every non-empty category derived from
   // the registry-backed navigation map. Holds the selected View id, or null.
-  const [activeGenericSubView, setActiveGenericSubView] = useState<string | null>(null);
+  const [activeGenericSignal, setActiveGenericSignal] = useState<string | null>(null);
   const [PatternFilter, setPatternFilter] = useState<string | null>(null);
   const [showPatternList, setShowPatternList] = useState(false);
   const [showTouchList, setShowTouchList] = useState(false);
@@ -240,7 +240,7 @@ export default function Screener({
   // hour shows only rows that satisfy at least one Views (sub-pattern)
   // whose id/label ends with that hour, e.g. clicking "6PM" matches every
   // sub-pattern id ending in ":6PM" (T1-U4:6AM, MeMi-eXHiL4U3-U4:6PM, etc.)
-  // across ALL parent patterns — independent of activeView.
+  // across ALL parent patterns — independent of activeSignal.
   const [exitTimeFilter, setExitTimeFilter] = useState<string | null>(null);
 
   // NEW: full 24hr cycle starting at 5AM through 4AM the next day, split
@@ -271,7 +271,7 @@ export default function Screener({
   // (today's CPR width) can be active at the same time.
   const [prevWidthFilter, setPrevWidthFilter] = useState<WidthCategoryKey | null>(null);
   const [todayWidthFilter, setTodayWidthFilter] = useState<WidthCategoryKey | null>(null);
-  // NEW: PDH/PDL filter — independent of activeView, mutually exclusive (like pivot/width filters).
+  // NEW: PDH/PDL filter — independent of activeSignal, mutually exclusive (like pivot/width filters).
   const [pdhPdlFilter, setPdhPdlFilter] = useState<"above" | "below" | "abovepu4" | "belowpl4" | "pdhgtu1" | "pdlltl1" | "s1r1in" | null>(null);
   const [error, setError] = useState("");
   const [countdown, setCountdown] = useState("");
@@ -332,16 +332,16 @@ export default function Screener({
   const allResultsRef = useRef<CPRResult[]>([]);
   const deltaAllResultsRef = useRef<CPRResult[]>([]);
   const coindcxAllResultsRef = useRef<CPRResult[]>([]);
-  const activePatternRef = useRef(activeView);
+  const activeSignalRef = useRef(activeSignal);
   useEffect(() => { allResultsRef.current = allResults; }, [allResults]);
   useEffect(() => { deltaAllResultsRef.current = deltaAllResults; }, [deltaAllResults]);
   useEffect(() => { coindcxAllResultsRef.current = coindcxAllResults; }, [coindcxAllResults]);
-  useEffect(() => { activePatternRef.current = activeView; }, [activeView]);
+  useEffect(() => { activeSignalRef.current = activeSignal; }, [activeSignal]);
 
   // NEW: auto-hide "Show All" whenever a left-nav view/category is clicked.
   // ViewsSidebar's onSelect (both handlePatternClick for top-level categories
-  // and handleSubClick for their Views/sub-patterns) updates activeView,
-  // so any change to activeView after the initial mount means the user
+  // and handleSubClick for their Views/sub-patterns) updates activeSignal,
+  // so any change to activeSignal after the initial mount means the user
   // just picked something in the left nav — at that point showAll should be
   // turned off so the screener actually reflects the selected filter instead
   // of continuing to show every scanned result. The isFirstPatternRef guard
@@ -354,34 +354,34 @@ export default function Screener({
       return;
     }
     // Only turn off showAll when a real category/view was selected in the left nav.
-    // When activeView is cleared back to "" (e.g. via Show All), ensure showAll is true.
-    if (activeView) {
+    // When activeSignal is cleared back to "" (e.g. via Show All), ensure showAll is true.
+    if (activeSignal) {
       setShowAll(false);
     } else {
       setShowAll(true);
     }
-  }, [activeView]);
+  }, [activeSignal]);
 
-  // NEW: resolve activeView to its parent left-nav category ("section").
-  // Clicking a top-level category in the left-nav sets activeView to the
+  // NEW: resolve activeSignal to its parent left-nav category ("section").
+  // Clicking a top-level category in the left-nav sets activeSignal to the
   // category id directly (e.g. "compressed"), but clicking one of its
   // Views/sub-patterns instead sets
-  // activeView to that LEAF id — ViewsSidebar's handleSubClick calls
+  // activeSignal to that LEAF id — ViewsSidebar's handleSubClick calls
   // onSelect(subId), not onSelect(parentId). Row filtering already handles
   // both cases fine (passesPattern resolves leaf ids directly), but
   // anything keyed off the *category* — the Views button row and the
   // per-row green/red direction dot (getViewDirection) — was comparing
-  // against the raw activeView and so went blank whenever a leaf was
+  // against the raw activeSignal and so went blank whenever a leaf was
   // selected via the left-nav. activeSectionKey resolves either case back
   // to the owning category so those two stay populated regardless of
   // whether the category or one of its leaves triggered the selection.
   const activeSectionKey = useMemo(() => {
-    if (Views[activeView]) return activeView; // already a category id
+    if (Views[activeSignal]) return activeSignal; // already a category id
     for (const [section, subs] of Object.entries(Views)) {
-      if (subs.some((s) => s.id === activeView)) return section;
+      if (subs.some((s) => s.id === activeSignal)) return section;
     }
-    return activeView; // not a known category or leaf — leave as-is
-  }, [activeView]);
+    return activeSignal; // not a known category or leaf — leave as-is
+  }, [activeSignal]);
 
   const doScan = useCallback(async (switchTab: boolean = true) => {
     if (scanRef.current) return;
@@ -397,7 +397,7 @@ export default function Screener({
         setProgress({ done, total, symbol });
       });
       setAllResults(results);
-      setFiltered(results.filter((r) => passesPattern(r, activeView)));
+      setFiltered(results.filter((r) => passesPattern(r, activeSignal)));
       setStatus("done");
       markScannedToday();
       saveCachedResults(STORAGE_KEY_BINANCE, results);
@@ -410,7 +410,7 @@ export default function Screener({
     } finally {
       scanRef.current = false;
     }
-  }, [activeView]);
+  }, [activeSignal]);
 
   const doDeltaScan = useCallback(async (switchTab: boolean = true) => {
     if (deltaScanRef.current) return;
@@ -426,7 +426,7 @@ export default function Screener({
         setDeltaProgress({ done, total, symbol });
       });
       setDeltaAllResults(results);
-      setDeltaFiltered(results.filter((r) => passesPattern(r, activeView)));
+      setDeltaFiltered(results.filter((r) => passesPattern(r, activeSignal)));
       setDeltaStatus("done");
       saveCachedResults(STORAGE_KEY_DELTA, results);
       markScannedForSource("delta");
@@ -437,7 +437,7 @@ export default function Screener({
     } finally {
       deltaScanRef.current = false;
     }
-  }, [activeView]);
+  }, [activeSignal]);
 
   const doCoinDCXScan = useCallback(async (switchTab: boolean = true) => {
     if (coindcxScanRef.current) return;
@@ -448,7 +448,7 @@ export default function Screener({
     // runs, so a slow or partially rate-limited refresh never looks empty.
     const previousCoinDCXResults = coindcxAllResultsRef.current;
     setCoinDCXAllResults(previousCoinDCXResults);
-    setCoinDCXFiltered(previousCoinDCXResults.filter((r) => passesPattern(r, activeView)));
+    setCoinDCXFiltered(previousCoinDCXResults.filter((r) => passesPattern(r, activeSignal)));
     setCoinDCXError("");
     setCoinDCXProgress({ done: 0, total: 0, symbol: "" });
     try {
@@ -456,7 +456,7 @@ export default function Screener({
         setCoinDCXProgress({ done, total, symbol });
       });
       setCoinDCXAllResults(results);
-      setCoinDCXFiltered(results.filter((r) => passesPattern(r, activeView)));
+      setCoinDCXFiltered(results.filter((r) => passesPattern(r, activeSignal)));
       setCoinDCXStatus("done");
       saveCachedResults(STORAGE_KEY_COINDCX, results);
       markScannedForSource("coindcx");
@@ -467,7 +467,7 @@ export default function Screener({
     } finally {
       coindcxScanRef.current = false;
     }
-  }, [activeView]);
+  }, [activeSignal]);
 
   useEffect(() => {
     if (shouldAutoScanForCache(cachedBinance, "binance")) void doScan();
@@ -512,10 +512,10 @@ export default function Screener({
   useCoinDCXLiveRefresh(coindcxStatus, coindcxAllResultsRef, setCoinDCXAllResults, setCoinDCXFiltered);
 
   useEffect(() => {
-    if (allResults.length > 0) setFiltered(allResults.filter((r) => passesPattern(r, activeView)));
-    if (deltaAllResults.length > 0) setDeltaFiltered(deltaAllResults.filter((r) => passesPattern(r, activeView)));
-    if (coindcxAllResults.length > 0) setCoinDCXFiltered(coindcxAllResults.filter((r) => passesPattern(r, activeView)));
-  }, [activeView, allResults, deltaAllResults, coindcxAllResults]);
+    if (allResults.length > 0) setFiltered(allResults.filter((r) => passesPattern(r, activeSignal)));
+    if (deltaAllResults.length > 0) setDeltaFiltered(deltaAllResults.filter((r) => passesPattern(r, activeSignal)));
+    if (coindcxAllResults.length > 0) setCoinDCXFiltered(coindcxAllResults.filter((r) => passesPattern(r, activeSignal)));
+  }, [activeSignal, allResults, deltaAllResults, coindcxAllResults]);
 
   // ─── Two-way sync between the left-nav Views and the Screener's own
   //     Views filter buttons ────────────────────────────────────────────────
@@ -530,27 +530,27 @@ export default function Screener({
   // selected, so we can deselect it in the sidebar too.
   const VIEW_STATES: Record<string, boolean> = {};
 
-  // Is activeView a Views leaf (a sub-pattern) rather than a category?
-  const isLeafView = useMemo(
-    () => Object.values(Views).some((subs) => subs.some((s) => s.id === activeView)),
-    [activeView],
+  // Is activeSignal a Views leaf (a sub-pattern) rather than a category?
+  const isSignalLeaf = useMemo(
+    () => Object.values(Views).some((subs) => subs.some((s) => s.id === activeSignal)),
+    [activeSignal],
   );
 
-  // Display name of the currently active View (the highlighted "VIEWS:"
+  // Display name of the currently selected signal (the highlighted "SIGNALS:"
   // pill) for the "Levels VIEW" badge in each row's expanded S/R ladder.
-  // activeGenericSubView already covers both ways a specific View gets
+  // activeGenericSignal already covers both ways a specific View gets
   // selected — clicking its pill directly, and navigating straight to it
   // as a leaf via the left-nav (see the sync effect below, which calls
-  // setActiveGenericSubView(activeView) for the leaf case) — so there's
-  // no separate leaf/category branch needed here. null (no View active,
+  // setActiveGenericSignal(activeSignal) for the leaf case) — so there's
+  // no separate leaf/category branch needed here. null (no signal selected,
   // e.g. a plain category like "Levels Above" with nothing pinned) means
   // no badge is shown for that row.
-  const activeViewId = activeGenericSubView;
-  const activeViewName = activeViewId
-    ? VIEW_LABEL_BY_ID[activeViewId] ?? activeViewId
+  const activeSignalId = activeGenericSignal;
+  const activeSignalName = activeSignalId
+    ? VIEW_LABEL_BY_ID[activeSignalId] ?? activeSignalId
     : undefined;
 
-  // The active View's own 13 Level Check conditions (its levelCheckDefs
+  // The selected signal's own 13 Level Check conditions (its levelCheckDefs
   // from views.ts/BACKTEST_TARGETS — see passesPattern's v.levelCheckDefs
   // usage above and SRLadderDiff.tsx's compareSRLadders). Only defined
   // when a specific View is active AND that View actually has
@@ -558,71 +558,71 @@ export default function Screener({
   // or a View authored without them, has no Level Check to show, and
   // SRLadderDiffPanel already renders "No levelCheckDefs" plainly for
   // that case rather than needing a guessed fallback here.
-  const activeViewLevelCheckDefs = activeViewId
-    ? getView(activeViewId)?.levelCheckDefs
+  const activeSignalLevelCheckDefs = activeSignalId
+    ? getView(activeSignalId)?.levelCheckDefs
     : undefined;
 
   // Sidebar → Screener: whenever the left-nav selects a View leaf, switch the
   // matching Screener filter button on. Runs after the reset effect above
-  // (which clears every button on each activeView / results change), so the
+  // (which clears every button on each activeSignal / results change), so the
   // selected one survives while the rest stay off.
   /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
-    if (!isLeafView) return;
-    const setter = VIEW_SETTERS[activeView];
+    if (!isSignalLeaf) return;
+    const setter = VIEW_SETTERS[activeSignal];
     if (setter !== undefined) {
-      Object.entries(VIEW_SETTERS).forEach(([id, set]) => set?.(id === activeView));
-      setActiveGenericSubView(null);
+      Object.entries(VIEW_SETTERS).forEach(([id, set]) => set?.(id === activeSignal));
+      setActiveGenericSignal(null);
     } else {
       // generic (data-driven) Views button
-      setActiveGenericSubView(activeView);
+      setActiveGenericSignal(activeSignal);
     }
-  }, [activeView, isLeafView, allResults, deltaAllResults]);
+  }, [activeSignal, isSignalLeaf, allResults, deltaAllResults]);
   /* eslint-enable react-hooks/exhaustive-deps */
 
-  // Sidebar → Screener (deselect): clicking the "✕" on an active View chip in
-  // the left nav falls back to its parent category, so activeView goes from
+  // Sidebar → Screener (deselect): clicking the "✕" on a signal chip in
+  // the left nav falls back to its parent category, so activeSignal goes from
   // a leaf to a non-leaf. The category-level reset above only clears buttons
   // when leaving the category entirely, so clear every View filter button here
   // too — both surfaces show the same filter and must switch off together.
-  const prevPatternRef = useRef(activeView);
+  const prevPatternRef = useRef(activeSignal);
   useEffect(() => {
     const prev = prevPatternRef.current;
-    prevPatternRef.current = activeView;
-    if (prev === activeView) return;
+    prevPatternRef.current = activeSignal;
+    if (prev === activeSignal) return;
     const prevWasLeaf = Object.values(Views).some((subs) => subs.some((s) => s.id === prev));
-    if (prevWasLeaf && !isLeafView) {
+    if (prevWasLeaf && !isSignalLeaf) {
       Object.values(VIEW_SETTERS).forEach((set) => set?.(false));
-      setActiveGenericSubView(null);
+      setActiveGenericSignal(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeView, isLeafView]);
+  }, [activeSignal, isSignalLeaf]);
 
   // Screener → Sidebar: when the currently-selected View's Screener button is
   // closed with its ✕, tell the left-nav to deselect the same View (falls back
   // to its parent category). Only fires on a true → false transition so the
   // sync effect above never triggers it.
-  const activeViewOn = VIEW_SETTERS[activeView]
-    ? !!VIEW_STATES[activeView]
-    : activeGenericSubView === activeView;
-  const prevActiveViewOnRef = useRef(false);
+  const activeSignalOn = VIEW_SETTERS[activeSignal]
+    ? !!VIEW_STATES[activeSignal]
+    : activeGenericSignal === activeSignal;
+  const prevActiveSignalOnRef = useRef(false);
   useEffect(() => {
-    const wasOn = prevActiveViewOnRef.current;
-    prevActiveViewOnRef.current = activeViewOn;
-    if (isLeafView && wasOn && !activeViewOn) requestViewDeselect(activeView);
-  }, [activeViewOn, isLeafView, activeView]);
+    const wasOn = prevActiveSignalOnRef.current;
+    prevActiveSignalOnRef.current = activeSignalOn;
+    if (isSignalLeaf && wasOn && !activeSignalOn) requestSignalDeselect(activeSignal);
+  }, [activeSignalOn, isSignalLeaf, activeSignal]);
   // NEW: reset the generic Views toggle whenever it no longer belongs to
-  // the current activeView — either because we've left every generic
+  // the current activeSignal — either because we've left every generic
   // category entirely, or because we've switched from one generic category
   // to another (e.g. "levelsabove" -> "compressed") and the previously
   // selected sub-pattern id doesn't exist under the new one.
   useEffect(() => {
-    if (!activeGenericSubView) return;
+    if (!activeGenericSignal) return;
     const stillValid =
       GENERIC_VIEW_CATEGORIES.has(activeSectionKey) &&
-      (Views[activeSectionKey] ?? []).some((s) => s.id === activeGenericSubView);
-    if (!stillValid) setActiveGenericSubView(null);
-  }, [activeView, activeSectionKey]);
+      (Views[activeSectionKey] ?? []).some((s) => s.id === activeGenericSignal);
+    if (!stillValid) setActiveGenericSignal(null);
+  }, [activeSignal, activeSectionKey]);
   // NEW: report per-pattern (top-level nav) matching counts up to App so
   // the left sidebar can show "Little ABOVE (41)" etc. Computed off the
   // currently active tab's full unfiltered result set, so the counts
@@ -741,8 +741,8 @@ export default function Screener({
     // sub-pattern id generically (same lookup used for the left-nav counts
     // above), so this one branch replaces what would otherwise be a
     // separate hand-written pool block per sub-pattern.
-    if (activeGenericSubView && GENERIC_VIEW_CATEGORIES.has(activeSectionKey)) {
-      return intersectPool(activeGenericSubView);
+    if (activeGenericSignal && GENERIC_VIEW_CATEGORIES.has(activeSectionKey)) {
+      return intersectPool(activeGenericSignal);
     }
     if (activeTab === "combined") return showAll ? combinedAllResults : combinedResults;
     if (activeTab === "delta") return (showAll ? deltaAllResults : deltaFiltered).map((r) => ({ ...r, source: "delta" as const }));
@@ -752,13 +752,13 @@ export default function Screener({
 
   // Search box matches EITHER the symbol OR the name of any View the row
   // currently satisfies (the same names shown in the table's VIEW column,
-  // via getActiveViewLabels). Typing part of a View name — e.g. "EU3L4" —
+  // via getMatchingSignals). Typing part of a View name — e.g. "EU3L4" —
   // keeps only the rows that match a View whose label/id contains it.
   const searchQuery = search.trim().toLowerCase();
   const matchesSearch = (r: CPRResultWithSource): boolean => {
     if (!searchQuery) return true;
     if (r.symbol.toLowerCase().includes(searchQuery)) return true;
-    return getActiveViewLabels(r).some(
+    return getMatchingSignals(r).some(
       (v) =>
         v.label.toLowerCase().includes(searchQuery) ||
         v.id.toLowerCase().includes(searchQuery),
@@ -812,16 +812,16 @@ export default function Screener({
       if (PatternFilter === "EU3L4") return r.EU3L4;
       // NEW: U3L4 / CU3L2 — same treatment: independent,
       // section-agnostic Pattern flags, always shown regardless of
-      // activeView/left-nav.
+      // activeSignal/left-nav.
       if (PatternFilter === "U3L4") return r.U3L4;
       // NEW: U2L4 — same treatment as U3L4: independent,
       // section-agnostic Pattern flag, always shown regardless of
-      // activeView/left-nav.
+      // activeSignal/left-nav.
       if (PatternFilter === "U2L4") return r.U2L4;
       if (PatternFilter === "U1L4") return r.U1L4;
       // NEW: L3TC — same treatment as U3L4/U2L4: independent,
       // section-agnostic Pattern flag, always shown regardless of
-      // activeView/left-nav.
+      // activeSignal/left-nav.
       if (PatternFilter === "L3TC") return r.L3TC;
       if (PatternFilter === "EL1L2") return r.EL1L2;
       if (PatternFilter === "EL2L1") return r.EL2L1;
@@ -935,7 +935,7 @@ export default function Screener({
     })
     // NEW: TIME filter — when an hour is selected, keep only rows that
     // satisfy at least one Views (sub-pattern) targeting that hour, across
-    // every parent pattern (independent of activeView/PatternFilter).
+    // every parent pattern (independent of activeSignal/PatternFilter).
     .filter((r) => {
       if (!exitTimeFilter) return true;
       return exitTimeMatchedSubIds.some((id) => passesPattern(r, id));
@@ -967,7 +967,7 @@ export default function Screener({
     source: r.source,
     currentPrice: r.currentPrice,
     change24h: r.change24h,
-    direction: getRowDirection(r, activeView),
+    direction: getRowDirection(r, activeSignal),
     s4: r.todayCPR.s4,
     s3: r.todayCPR.s3,
     s2: r.todayCPR.s2,
@@ -1042,7 +1042,7 @@ export default function Screener({
 
   // Helper: is any sub-filter active (to decide the result count label)
   const anySubFilter =
-    !!activeGenericSubView ||
+    !!activeGenericSignal ||
     !!PatternFilter || !!touchFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter || !!exitTimeFilter;
 
   return (
@@ -1179,7 +1179,7 @@ export default function Screener({
             render with nothing to show. */}
         {currentStatus === "done" && !showAll && (
         <ScreenerLegend
-          activeView={activeView}
+          activeSignal={activeSignal}
         />
         )}
 
@@ -1232,14 +1232,14 @@ export default function Screener({
                   // NEW: also clear the generic Views (sub-pattern) selection —
                   // covers inside-cpr and every other GENERIC_VIEW_CATEGORIES
                   // category, so "Show All" fully resets state everywhere.
-                  setActiveGenericSubView(null);
+                  setActiveGenericSignal(null);
                   setTouchFilter(null);
                   // NEW: clear whatever category/View is highlighted in the
-                  // left nav too — without this, App.tsx's activeView state
+                  // left nav too — without this, App.tsx's activeSignal state
                   // (and therefore ViewsSidebar's highlighting) was untouched
                   // by Show All, so the previously-selected item stayed
                   // highlighted even though the table was now unfiltered.
-                  onActiveViewChange?.("");
+                  onActiveSignalChange?.("");
                 }}
                 className={`flex items-center gap-0.5 text-xs font-bold px-2 py-1 rounded border border-border transition-colors shrink-0 ${showAll ? "bg-foreground/15 text-foreground" : "text-muted-foreground hover:text-foreground"}`}
               >
@@ -1375,7 +1375,7 @@ export default function Screener({
           <div className="flex flex-col gap-2 mb-3">
           <div className="flex items-center gap-2 flex-wrap">
             {!showAll && (
-            <span className="text-[10px] text-pink-400/90 uppercase tracking-wider mr-0.5 font-semibold">VIEWS:</span>
+            <span className="text-[10px] text-pink-400/90 uppercase tracking-wider mr-0.5 font-semibold">SIGNALS:</span>
             )}
 
             {/* Generic View buttons are derived from the registry-backed
@@ -1383,16 +1383,16 @@ export default function Screener({
             {GENERIC_VIEW_CATEGORIES.has(activeSectionKey) &&
               !showAll &&
               (Views[activeSectionKey] ?? []).map((sub) => {
-                const isActive = activeGenericSubView
-                  ? activeGenericSubView === sub.id
-                  : activeView === sub.id; // left-nav navigated straight to this leaf
+                const isActive = activeGenericSignal
+                  ? activeGenericSignal === sub.id
+                  : activeSignal === sub.id; // left-nav navigated straight to this leaf
                 const borderColor = sub.activeColor ?? "var(--foreground)";
                 const textColor = sub.activeText ?? "var(--foreground)";
                 const bg = sub.activeBg;
                 return (
                   <button
                     key={sub.id}
-                    onClick={() => setActiveGenericSubView((v) => (v === sub.id ? null : sub.id))}
+                    onClick={() => setActiveGenericSignal((v) => (v === sub.id ? null : sub.id))}
                     className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                       isActive ? "" : "border-border text-muted-foreground hover:text-foreground"
                     }`}
@@ -1406,7 +1406,7 @@ export default function Screener({
               })}
           </div>
 
-          {/* Pattern filter buttons — own line, independent of activeView
+          {/* Pattern filter buttons — own line, independent of activeSignal
               AND independent of showAll. These always render, regardless of Show All state, and
               are mutually exclusive within their own group. */}
           {showTouchList && (
@@ -1578,7 +1578,7 @@ export default function Screener({
               pMicro-pTiny-pMini-pSmall-pMedium-pLarge-pMega-pUltra, then
               Micro-Tiny-Mini-Small-Medium-Large-Mega-Ultra. Mutually exclusive
               within the whole row (single widthFilter state), independent of
-              activeView and showAll. */}
+              activeSignal and showAll. */}
           {/* CPR Size — prev day's width (pMicro..pUltra). Own row, own state
               (prevWidthFilter) — independent of the today's-width row below. */}
           {showSizeList && (
@@ -1703,7 +1703,7 @@ export default function Screener({
               (5AM..4PM). Clicking an hour (e.g. "6PM") shows only rows that
               satisfy at least one Views/sub-pattern targeting that hour,
               across every parent pattern. Mutually exclusive (single
-              exitTimeFilter state), independent of activeView,
+              exitTimeFilter state), independent of activeSignal,
               PatternFilter, and showAll. Whole section hidden until
               "XTime +" is toggled on. */}
           {showExitTimeList && (
@@ -1926,9 +1926,9 @@ export default function Screener({
                         toggleExpand={toggleExpand}
                         canShowCombined={canShowCombined}
                         activeTab={activeTab}
-                        activeView={activeSectionKey}
-                        viewName={activeViewName}
-                        levelCheckConditions={activeViewLevelCheckDefs}
+                        activeSignal={activeSectionKey}
+                        viewName={activeSignalName}
+                        levelCheckConditions={activeSignalLevelCheckDefs}
                       />
                     );
                   })}

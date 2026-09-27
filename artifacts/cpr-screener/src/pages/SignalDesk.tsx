@@ -34,8 +34,8 @@ import {
 // scoped to whatever left-nav pattern/Views is active), not the full
 // CPRResultWithSource. It intentionally does NOT carry tc/bc or the
 // SSRR/HHLL pattern-category flags, so SignalDesk no longer re-derives
-// "which pattern matched" itself — it trusts Screener's activeView/
-// activeLabel for that and just projects each symbol into a card.
+// "which pattern matched" itself — it trusts Screener's activeSignal/
+// activeSignalLabel for that and just projects each symbol into a card.
 export interface SignalDeskSymbol {
   key: string;
   symbol: string;
@@ -57,11 +57,11 @@ export interface SignalDeskSymbol {
 interface SignalDeskProps {
   symbols?: SignalDeskSymbol[];
   results?: CPRResultWithSource[];
-  activeView?: string;
-  activeLabel?: string;
+  activeSignal?: string;
+  activeSignalLabel?: string;
   counts?: Record<string, number>;
-  onSelectPattern?: (patternId: string) => void;
-  onNavigateToScreener?: (patternId: string) => void;
+  onSelectSignal?: (signalId: string) => void;
+  onNavigateToScreener?: (signalId: string) => void;
   // NEW: lift sourceFilter (Binance/Delta/All) to be controllable from
   // outside — App.tsx now owns this as shared app-level state so this
   // toggle drives the SAME source Screener uses for its onCounts effect
@@ -111,7 +111,7 @@ export interface SignalItem {
   s4: number;
   change24h?: number;
   timestamp: string;
-  // Matches an Active View / has a backtest-defined target — the setup is
+  // Matches an Active Signal / has a backtest-defined target — the setup is
   // "ready" and being watched, but this alone does NOT mean it's in the
   // Journal yet. Kept as its own flag (rather than folded into isTriggered)
   // since other parts of this file already read isSaved to mean "has a real
@@ -195,10 +195,10 @@ function getRowCategory(r: CPRResultWithSource): string {
 
 // Resolves a card's Category independent of whether it has a full computed
 // signal (levels/isSaved) — this is what makes Category display for every
-// symbol, not just ones belonging to an Active View. Prefers the row's own
+// symbol, not just ones belonging to an Active Signal. Prefers the row's own
 // classification flags (getRowCategory) whenever a full CPRResultWithSource
 // is available; falls back to whatever patternId the card already resolved
-// to (e.g. the currently selected/active View) only when no row at all is
+// to (e.g. the currently selected/active signal) only when no row at all is
 // available to read flags from (the lightweight `symbols`-only path with no
 // `results` supplied).
 function resolveCategory(row: CPRResultWithSource | undefined, fallbackPatternId: string): string {
@@ -276,10 +276,10 @@ export function buildPills(pool: CPRResultWithSource[]) {
 export default function SignalDesk({
   symbols,
   results,
-  activeView,
-  activeLabel,
+  activeSignal,
+  activeSignalLabel,
   counts,
-  onSelectPattern,
+  onSelectSignal,
   onNavigateToScreener,
   sourceFilter: sourceFilterProp,
   onSourceFilterChange,
@@ -290,24 +290,24 @@ export default function SignalDesk({
   const setSourceFilter = onSourceFilterChange ?? setSourceFilterState;
   const [directionFilter, setDirectionFilter] = useState<"all" | "Up" | "Down">("all");
   // Status filter — "saved" = already touched entry and sitting in the
-  // Journal (item.isTriggered); "ready" = matched an Active View but
+  // Journal (item.isTriggered); "ready" = matched an Active Signal but
   // hasn't touched entry yet, still being watched (item.isSaved &&
   // !item.isTriggered) — same split the header's Auto-Saved/Ready
   // (Watching) badges use. "all" applies no status filtering.
   const [statusFilter, setStatusFilter] = useState<"all" | "saved" | "ready">("all");
-  const [selectedViewPattern, setSelectedViewPattern] = useState<string>(activeView || "");
+  const [selectedSignalId, setSelectedSignalId] = useState<string>(activeSignal || "");
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (activeView !== undefined) {
-      setSelectedViewPattern(activeView);
+    if (activeSignal !== undefined) {
+      setSelectedSignalId(activeSignal);
     }
-  }, [activeView]);
+  }, [activeSignal]);
 
   const viewPills = useMemo(() => buildPills(results ?? []), [results]);
 
   // Source-scoped pill set — same function, filtered pool. Display only:
-  // this is what the "Active Views" strip actually renders, so it's the
+  // this is what the "Active Signals" strip actually renders, so it's the
   // one that responds to the Binance/Delta/All toggle.
   const displayViewPills = useMemo(() => {
     if (sourceFilter === "all") return viewPills;
@@ -315,15 +315,15 @@ export default function SignalDesk({
   }, [results, sourceFilter, viewPills]);
 
   // ─────────────────────────────────────────────────────────────────────
-  // SOURCE OF TRUTH for "does this symbol belong to an Active View" — the
+  // SOURCE OF TRUTH for "does this symbol belong to an Active Signal" — the
   // Journal save-list must be built from THIS, not from SignalDesk's own
   // card-rendering branches below. It mirrors effectiveCounts exactly:
   // for each sidebar pill (a View with count > 0), the same passesPattern()
   // check ScreenerUtils/ViewsSidebar use to produce that pill's count.
-  // Deliberately independent of selectedViewPattern/activeView — a symbol
-  // is eligible whenever it belongs to ANY Active View, regardless of
+  // Deliberately independent of selectedSignalId/activeSignal — a symbol
+  // is eligible whenever it belongs to ANY Active Signal, regardless of
   // which single View SignalDesk happens to be displaying right now.
-  const activeViewSymbols = useMemo(() => {
+  const activeSignalSymbols = useMemo(() => {
     const map = new Map<string, CPRResultWithSource>();
     if (!results || results.length === 0 || viewPills.length === 0) return map;
     for (const v of viewPills) {
@@ -339,8 +339,8 @@ export default function SignalDesk({
 
   // symbol -> its full CPRResultWithSource row, for filtering the
   // lightweight `symbols` prop against a specific selected View. Kept
-  // separate from activeViewSymbols (which only tells you a symbol
-  // belongs to SOME Active View, not which one).
+  // separate from activeSignalSymbols (which only tells you a symbol
+  // belongs to SOME Active Signal, not which one).
   const resultsBySymbol = useMemo(() => {
     const map = new Map<string, CPRResultWithSource>();
     if (!results) return map;
@@ -354,41 +354,41 @@ export default function SignalDesk({
   const signals = useMemo<SignalItem[]>(() => {
     // If external symbols were passed explicitly, map them
     if (symbols && symbols.length > 0) {
-      // Prefer the canonical activeViewSymbols set (built straight from
+      // Prefer the canonical activeSignalSymbols set (built straight from
       // ScreenerUtils' passesPattern — see above) whenever `results` is
       // available. It's only when this component gets JUST the lightweight
       // `symbols` projection (no CPRResult tc/bc/pattern-category fields to
       // run passesPattern against) that we fall back to trusting the
-      // currently-selected View is itself a qualifying Active View.
-      const currentViewId = selectedViewPattern || activeView || "";
-      const isCurrentViewActive = viewPills.some((p) => p.id === currentViewId);
-      const label = selectedViewPattern
-        ? viewPills.find((p) => p.id === selectedViewPattern)?.label ?? selectedViewPattern
-        : activeLabel || "Active View";
+      // currently-selected View is itself a qualifying Active Signal.
+      const currentSignalId = selectedSignalId || activeSignal || "";
+      const isCurrentSignalActive = viewPills.some((p) => p.id === currentSignalId);
+      const label = selectedSignalId
+        ? viewPills.find((p) => p.id === selectedSignalId)?.label ?? selectedSignalId
+        : activeSignalLabel || "Active Signal";
 
       // Filter down to symbols whose full CPR row (from `results`, when the
       // parent also provides it) actually passes the selected View's own
       // passesPattern() condition — same check the sidebar pill counts and
-      // activeViewSymbols use. IMPORTANT: only apply this when we actually
+      // activeSignalSymbols use. IMPORTANT: only apply this when we actually
       // have CPR rows to check against (`results` populated). When the
       // parent supplies ONLY the lightweight `symbols` projection (no
       // `results`), there's nothing to test locally — per this file's own
       // doc comment, `symbols` is already the parent's pre-filtered,
-      // active-View-scoped pool (see handlePillClick's onSelectPattern call
+      // active-View-scoped pool (see handlePillClick's onSelectSignal call
       // above, which is what actually re-scopes it), so trust it as-is
       // instead of filtering everything down to zero.
       const filteredSymbols =
-        selectedViewPattern && resultsBySymbol.size > 0
+        selectedSignalId && resultsBySymbol.size > 0
           ? symbols.filter((sym) => {
               const row = resultsBySymbol.get(sym.symbol);
-              return row ? passesPattern(row, selectedViewPattern) : false;
+              return row ? passesPattern(row, selectedSignalId) : false;
             })
           : symbols;
 
       return filteredSymbols.map((sym) => {
-        const matchedRow = activeViewSymbols.get(sym.symbol);
+        const matchedRow = activeSignalSymbols.get(sym.symbol);
         const levels = matchedRow ? computeSignalLevels(matchedRow, viewPills) : null;
-        const isEligible = activeViewSymbols.size > 0 ? levels !== null : isCurrentViewActive;
+        const isEligible = activeSignalSymbols.size > 0 ? levels !== null : isCurrentSignalActive;
 
         // When this symbol has a real backtest-defined target (levels !==
         // null), entry/target/stop come straight from BACKTEST_TARGETS —
@@ -440,10 +440,10 @@ export default function SignalDesk({
           : (Math.abs(targetPrice - price) / Math.max(0.0000001, Math.abs(price - stopPrice))).toFixed(1);
 
         const patternLabel = levels ? levels.patternLabel : label;
-        // Fall back to the actual selected/active View id (never a label)
-        // so "View in Screener" always re-selects something ViewsSidebar
+        // Fall back to the actual selected/active signal id (never a label)
+        // so "Signal in Screener" always re-selects something ViewsSidebar
         // can match against sub.id.
-        const patternId = levels ? levels.patternId : (selectedViewPattern || activeView || "");
+        const patternId = levels ? levels.patternId : (selectedSignalId || activeSignal || "");
 
         // Same trigger check the Journal auto-save effect uses — this is
         // display-only here, so a card can show "Ready" vs "Running" without
@@ -498,28 +498,28 @@ export default function SignalDesk({
     if (!results || results.length === 0) return [];
 
     let pool = results;
-    if (selectedViewPattern) {
-      pool = results.filter((r) => passesPattern(r, selectedViewPattern));
+    if (selectedSignalId) {
+      pool = results.filter((r) => passesPattern(r, selectedSignalId));
     }
 
-    // Eligibility now comes purely from activeViewSymbols (the canonical
+    // Eligibility now comes purely from activeSignalSymbols (the canonical
     // passesPattern-against-every-Active-View set computed above) — not
     // from whichever single View this branch's `pool` happens to be scoped
-    // to display right now. A symbol belonging to Active View #7 must still
+    // to display right now. A symbol belonging to Active Signal #7 must still
     // show the Saved badge and reach the Journal even while the user is
-    // browsing Active View #3.
+    // browsing Active Signal #3.
     const list: SignalItem[] = [];
 
     for (const r of pool) {
-      const levels = computeSignalLevels(r, viewPills, selectedViewPattern || undefined);
-      const isActiveViewSymbol = activeViewSymbols.has(r.symbol) && levels !== null;
+      const levels = computeSignalLevels(r, viewPills, selectedSignalId || undefined);
+      const isActiveSignalSymbol = activeSignalSymbols.has(r.symbol) && levels !== null;
 
       const pivot = r.todayCPR.pivot;
       const { r1, r2, r3, r4, s1, s2, s3, s4 } = r.todayCPR;
 
       // When this row has a real backtest-defined target (levels !== null),
       // entry/target/stop come straight from BACKTEST_TARGETS. Otherwise
-      // (not in an Active View, or its View has no BACKTEST_TARGETS entry)
+      // (not in an Active Signal, or its View has no BACKTEST_TARGETS entry)
       // fall back to a simple display-only approximation so the card still
       // has something to show; this fallback is NEVER what gets saved.
       const fallbackPrice = r.currentPrice || pivot;
@@ -527,8 +527,8 @@ export default function SignalDesk({
 
       const patternLabel = levels?.patternLabel ?? "Standard CPR";
       // Same rule as branch A above: never fall back to a display label
-      // for the id that "View in Screener" hands back to the left nav.
-      const patternId = levels?.patternId ?? (selectedViewPattern || "");
+      // for the id that "Signal in Screener" hands back to the left nav.
+      const patternId = levels?.patternId ?? (selectedSignalId || "");
       const direction: "Up" | "Down" = levels ? levels.direction : fallbackDirection;
       const price = levels ? levels.price : fallbackPrice;
       const targetPrice = levels ? levels.targetPrice : (direction === "Up" ? r1 : s1);
@@ -547,7 +547,7 @@ export default function SignalDesk({
         : false;
 
       list.push({
-        id: `${r.source}-${r.symbol}-${selectedViewPattern || patternLabel}`,
+        id: `${r.source}-${r.symbol}-${selectedSignalId || patternLabel}`,
         symbol: r.symbol,
         source: r.source,
         timeframe: "Daily / 1D",
@@ -567,7 +567,7 @@ export default function SignalDesk({
         targetLevel,
         stoplossLevel,
         riskReward: `1 : ${rrRatio}`,
-        cprStatus: isActiveViewSymbol ? `${patternLabel} (Target ${targetLevel})` : "General CPR Setup",
+        cprStatus: isActiveSignalSymbol ? `${patternLabel} (Target ${targetLevel})` : "General CPR Setup",
         pivot,
         r1,
         s1,
@@ -578,13 +578,13 @@ export default function SignalDesk({
         r4,
         s4,
         timestamp: "Active",
-        isSaved: isActiveViewSymbol,
+        isSaved: isActiveSignalSymbol,
         isTriggered,
       });
     }
 
     return list;
-  }, [symbols, results, viewPills, activeViewSymbols, resultsBySymbol, selectedViewPattern, activeView, activeLabel]);
+  }, [symbols, results, viewPills, activeSignalSymbols, resultsBySymbol, selectedSignalId, activeSignal, activeSignalLabel]);
 
   const filteredSignals = useMemo(() => {
     return signals.filter((s) => {
@@ -611,38 +611,38 @@ export default function SignalDesk({
   }, [signals, sourceFilter, directionFilter, statusFilter, searchTerm]);
 
   // Header stats are scoped to symbols that actually belong to an Active
-  // View (item.isSaved — despite the name, this flags Active View
+  // View (item.isSaved — despite the name, this flags Active Signal
   // membership, the same eligibility check the auto-save effect uses) —
   // NOT the full scanned/displayed symbol universe. Previously this counted
   // every card in filteredSignals regardless of whether it matched any
-  // Active View, which is why "Signals" showed the full scan size (e.g.
-  // 516) instead of the actual Active View total (e.g. ~114).
+  // Active Signal, which is why "Signals" showed the full scan size (e.g.
+  // 516) instead of the actual Active Signal total (e.g. ~114).
   const stats = useMemo(() => {
-    const activeViewOnly = filteredSignals.filter((s) => s.isSaved);
-    const total = activeViewOnly.length;
+    const activeSignalOnly = filteredSignals.filter((s) => s.isSaved);
+    const total = activeSignalOnly.length;
     // "saved" = actually touched entry and sitting in the Journal.
-    // "ready" = matched an Active View but hasn't touched entry yet — still
+    // "ready" = matched an Active Signal but hasn't touched entry yet — still
     // being watched, not yet written to the Journal. These used to be the
-    // same number (any Active View match got auto-saved immediately); now
+    // same number (any Active Signal match got auto-saved immediately); now
     // that auto-save gates on hasTouchedEntry, they're split so the header
     // doesn't overclaim how many signals are actually in the Journal.
-    const saved = activeViewOnly.filter((s) => s.isTriggered).length;
+    const saved = activeSignalOnly.filter((s) => s.isTriggered).length;
     const ready = total - saved;
-    const upCount = activeViewOnly.filter((s) => s.direction === "Up" || (s.direction as string) === "LONG").length;
-    const downCount = activeViewOnly.filter((s) => s.direction === "Down" || (s.direction as string) === "SHORT").length;
-    const watch = activeViewOnly.filter((s) => s.direction === "NEUTRAL").length;
+    const upCount = activeSignalOnly.filter((s) => s.direction === "Up" || (s.direction as string) === "LONG").length;
+    const downCount = activeSignalOnly.filter((s) => s.direction === "Down" || (s.direction as string) === "SHORT").length;
+    const watch = activeSignalOnly.filter((s) => s.direction === "NEUTRAL").length;
     return { total, saved, ready, upCount, downCount, watch, longs: upCount, shorts: downCount };
   }, [filteredSignals]);
 
-  // Automatically save ONLY qualified signals from Active Views directly to the Journal.
-  // Candidates now come straight from activeViewSymbols — the same
+  // Automatically save ONLY qualified signals from Active Signals directly to the Journal.
+  // Candidates now come straight from activeSignalSymbols — the same
   // passesPattern()-against-every-pill computation buildPills() above uses
   // to produce the sidebar's View counts — NOT from
   // SignalDesk's own rendered `signals` card list. That keeps Journal
-  // membership tied exactly to "which symbols select into Active Views",
+  // membership tied exactly to "which symbols select into Active Signals",
   // regardless of which single View happens to be on screen, which pool
   // branch rendered the cards, or how the cards' own labels are derived. Tracks which symbols were already submitted TODAY so re-renders
-  // triggered by price ticks or switching between Active Views don't keep
+  // triggered by price ticks or switching between Active Signals don't keep
   // re-submitting the same symbols over and over — the Journal enforces one
   // row per symbol/day, but there's no reason to spam it with redundant
   // writes on every tick either.
@@ -652,7 +652,7 @@ export default function SignalDesk({
   });
 
   useEffect(() => {
-    if (activeViewSymbols.size === 0) return;
+    if (activeSignalSymbols.size === 0) return;
 
     const todayKey = new Date().toISOString().slice(0, 10);
     if (submittedTodayRef.current.day !== todayKey) {
@@ -681,7 +681,7 @@ export default function SignalDesk({
       status: "ACTIVE";
     }> = [];
 
-    for (const [symbol, r] of activeViewSymbols.entries()) {
+    for (const [symbol, r] of activeSignalSymbols.entries()) {
       const key = symbol.toUpperCase();
       if (alreadySubmitted.has(key)) continue;
 
@@ -725,7 +725,7 @@ export default function SignalDesk({
         alreadySubmitted.add(key);
       }
     });
-  }, [activeViewSymbols, viewPills]);
+  }, [activeSignalSymbols, viewPills]);
 
   const handleCopy = (item: SignalItem) => {
     const text = `[PIVOT SIGNAL: ${item.symbol}] (${item.direction})
@@ -741,8 +741,8 @@ R:R: ${item.riskReward}`;
   };
 
   const handlePillClick = (pillId: string) => {
-    const next = selectedViewPattern === pillId ? "" : pillId;
-    setSelectedViewPattern(next);
+    const next = selectedSignalId === pillId ? "" : pillId;
+    setSelectedSignalId(next);
     // Tell the parent (same callback ViewsSidebar's onSelect wires up to) so
     // it can re-scope/re-fetch its own filtered pool and hand a freshly
     // pre-filtered `symbols` array back down — this is the actual filtering
@@ -750,7 +750,7 @@ R:R: ${item.riskReward}`;
     // pattern/Views is active" contract at the top of the file. Without this
     // call, the parent never learns the View changed and keeps sending the
     // exact same `symbols` it always was.
-    onSelectPattern?.(next);
+    onSelectSignal?.(next);
   };
 
   return (
@@ -820,11 +820,11 @@ R:R: ${item.riskReward}`;
           <div className="flex items-center justify-between gap-2 mb-2">
             <div className="flex items-center gap-2">
               <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider font-mono">
-                Active Views ({displayViewPills.length})
+                Active Signals ({displayViewPills.length})
               </span>
-              {selectedViewPattern && (
+              {selectedSignalId && (
                 <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-teal-500/20 text-teal-300 border border-teal-500/30">
-                  {selectedViewPattern}
+                  {selectedSignalId}
                 </span>
               )}
             </div>
@@ -835,7 +835,7 @@ R:R: ${item.riskReward}`;
 
           <div className="flex flex-wrap gap-1.5 items-center max-h-36 overflow-y-auto">
             {displayViewPills.map((pill) => {
-              const isSelected = selectedViewPattern === pill.id;
+              const isSelected = selectedSignalId === pill.id;
 
               return (
                 <button
@@ -862,11 +862,11 @@ R:R: ${item.riskReward}`;
               );
             })}
 
-            {selectedViewPattern && (
+            {selectedSignalId && (
               <button
                 onClick={() => {
-                  setSelectedViewPattern("");
-                  onSelectPattern?.("");
+                  setSelectedSignalId("");
+                  onSelectSignal?.("");
                 }}
                 className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 transition cursor-pointer"
                 title="Clear selected pattern filter"
@@ -930,7 +930,7 @@ R:R: ${item.riskReward}`;
           </div>
 
           {/* Status Filter — Running (triggered, in the Journal) / Ready
-              (matched an Active View, still watching for entry). Toggle
+              (matched an Active Signal, still watching for entry). Toggle
               behavior: clicking the already-active button clears it back
               to "all", matching the Direction/Source filters' feel. */}
           <div className="flex items-center gap-1">
@@ -1017,7 +1017,7 @@ R:R: ${item.riskReward}`;
               const isDown = item.direction === "Down" || (item.direction as string) === "SHORT";
 
               // Direction badge — only for symbols with a real signal
-              // (Active View match, item.isSaved). Placed top-right for Up,
+              // (Active Signal match, item.isSaved). Placed top-right for Up,
               // top-left for Down (see the two render spots below).
               const directionBadge = item.isSaved && (
                 <span
@@ -1046,7 +1046,7 @@ R:R: ${item.riskReward}`;
                 ) : (
                   <div
                     className="flex items-center gap-1 text-[11px] text-amber-400 font-mono shrink-0"
-                    title="Matches an Active View but price hasn't reached the entry line yet"
+                    title="Matches an active signal but price hasn't reached the entry line yet"
                   >
                     <Clock className="w-3.5 h-3.5 text-amber-400" />
                     <span>Ready</span>
@@ -1177,7 +1177,7 @@ R:R: ${item.riskReward}`;
                     <div className="text-[11px] text-slate-400 mb-3 px-1 space-y-0.5">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1">
-                          <span>View:</span>
+                          <span>Signal:</span>
                           <strong className="text-slate-200 font-semibold">
                             {item.isSaved ? item.patternName : ""}
                           </strong>
@@ -1213,16 +1213,16 @@ R:R: ${item.riskReward}`;
                   <div className="pt-2 border-t border-[#1e2d3d] flex items-center justify-between gap-2">
                     <button
                       onClick={() => {
-                        const targetId = item.patternId || item.patternName;
+                        const targetSignalId = item.patternId || item.patternName;
                         if (onNavigateToScreener) {
-                          onNavigateToScreener(targetId);
+                          onNavigateToScreener(targetSignalId);
                         } else {
-                          onSelectPattern?.(targetId);
+                          onSelectSignal?.(targetSignalId);
                         }
                       }}
                       className="text-xs text-blue-400 hover:text-blue-300 font-semibold transition flex items-center gap-1 cursor-pointer"
                     >
-                      View in Screener &rarr;
+                      Open Signal in Screener &rarr;
                     </button>
 
                     <div className="flex items-center gap-2">

@@ -123,21 +123,21 @@ export const VIEW_LABEL_BY_ID: Record<string, string> = {
 };
 
 /**
- * Tiny pub/sub used by the Screener to tell the sidebar that a View was
+ * Tiny pub/sub used by the Screener to tell the sidebar that a signal was
  * deselected there (its "✕" filter button was closed), so the same View gets
  * deselected in the left nav too — both surfaces show the same filter.
  */
-type ViewDeselectListener = (viewId: string) => void;
-const viewDeselectListeners = new Set<ViewDeselectListener>();
+type SignalDeselectListener = (signalId: string) => void;
+const signalDeselectListeners = new Set<SignalDeselectListener>();
 
-export function requestViewDeselect(viewId: string) {
-  viewDeselectListeners.forEach((listener) => listener(viewId));
+export function requestSignalDeselect(signalId: string) {
+  signalDeselectListeners.forEach((listener) => listener(signalId));
 }
 
-export function subscribeViewDeselect(listener: ViewDeselectListener) {
-  viewDeselectListeners.add(listener);
+export function subscribeSignalDeselect(listener: SignalDeselectListener) {
+  signalDeselectListeners.add(listener);
   return () => {
-    viewDeselectListeners.delete(listener);
+    signalDeselectListeners.delete(listener);
   };
 }
 
@@ -150,7 +150,7 @@ function getParentId(patternId: string): string | null {
 }
 
 interface ViewsSidebarProps {
-  activeView: string;
+  activeSignal: string;
   onSelect: (id: string) => void;
   collapsed: boolean;
   onToggle: () => void;
@@ -165,7 +165,7 @@ interface ViewsSidebarProps {
 }
 
 export default function ViewsSidebar({
-  activeView,
+  activeSignal,
   onSelect,
   collapsed,
   onToggle,
@@ -177,33 +177,33 @@ export default function ViewsSidebar({
 }: ViewsSidebarProps) {
   // Which parent pattern is currently open in the tree
   const [expandedId, setExpandedId] = useState<string | null>(() => {
-    if (!activeView) return null;
-    const parent = getParentId(activeView);
-    return parent ?? activeView;
+    if (!activeSignal) return null;
+    const parent = getParentId(activeSignal);
+    return parent ?? activeSignal;
   });
 
-  // Keep tree in sync when activeView is changed from outside
+  // Keep tree in sync when activeSignal is changed from outside
   useEffect(() => {
-    if (!activeView) {
+    if (!activeSignal) {
       setExpandedId(null);
       return;
     }
-    const parent = getParentId(activeView);
+    const parent = getParentId(activeSignal);
     if (parent) {
       setExpandedId(parent);
-    } else if (pivotcategories.some((p) => p.id === activeView)) {
-      setExpandedId(activeView);
+    } else if (pivotcategories.some((p) => p.id === activeSignal)) {
+      setExpandedId(activeSignal);
     } else {
       setExpandedId(null);
     }
-  }, [activeView]);
+  }, [activeSignal]);
 
   // CHANGED: now applies in every mode, including the Live Screener —
-  // mirrors Signal Desk's own Active Views strip (buildPills drops
+  // mirrors Signal Desk's own Active Signals strip (buildPills drops
   // zero-count entries the same way). This only affects this left-nav
-  // tree; it's separate from the "VIEWS:" button row Screener.tsx renders
+  // tree; it's separate from the "SIGNALS:" button row Screener.tsx renders
   // in its own main panel when a category is selected (see the pink
-  // "VIEWS:" label there) — that row intentionally keeps showing every
+  // "SIGNALS:" label there) — that row intentionally keeps showing every
   // View regardless of count, unaffected by this change.
   const showOnlyWithCounts = true;
   const visiblePivotCategories = showOnlyWithCounts
@@ -226,19 +226,19 @@ export default function ViewsSidebar({
     setExpandedId(parentId);
     // Clicking an already-selected sub-view (its "✕") deselects it and falls
     // back to the parent category — mirroring the Screener's ✕ filter buttons.
-    onSelect(activeView === subId ? parentId : subId);
+    onSelect(activeSignal === subId ? parentId : subId);
   }
 
   // Screener → sidebar: closing the matching ✕ filter button in the Screener
   // deselects the same View here.
   useEffect(
     () =>
-      subscribeViewDeselect((viewId) => {
-        if (viewId !== activeView) return;
-        const parent = getParentId(viewId);
+      subscribeSignalDeselect((signalId) => {
+        if (signalId !== activeSignal) return;
+        const parent = getParentId(signalId);
         if (parent) onSelect(parent);
       }),
-    [activeView, onSelect],
+    [activeSignal, onSelect],
   );
 
   // ─── Shared style helpers ─────────────────────────────────────────────────
@@ -388,8 +388,8 @@ export default function ViewsSidebar({
           {visiblePivotCategories.map((pattern) => {
             const Icon = pattern.icon;
             const children = visibleChildren(pattern.id);
-            const isActiveParent = activeView === pattern.id;
-            const hasActiveChild = children.some((c) => c.id === activeView);
+            const isActiveParent = activeSignal === pattern.id;
+            const hasActiveChild = children.some((c) => c.id === activeSignal);
             const isHighlighted = isActiveParent || hasActiveChild;
             const isExpanded = expandedId === pattern.id;
 
@@ -553,7 +553,7 @@ export default function ViewsSidebar({
                     }}
                   >
                     {children.map((sub) => {
-                      const isActiveSub = activeView === sub.id;
+                      const isActiveSub = activeSignal === sub.id;
                       const subActiveColor = sub.activeColor ?? ACTIVE_BLUE;
                       const subActiveText  = sub.activeText  ?? ACTIVE_TEXT;
                       const subActiveBg    = sub.activeBg    ?? "rgba(59,130,246,0.18)";
@@ -707,8 +707,8 @@ export default function ViewsSidebar({
           const Icon = pattern.icon;
           const children = visibleChildren(pattern.id);
           const isHighlighted =
-            activeView === pattern.id ||
-            children.some((c) => c.id === activeView);
+            activeSignal === pattern.id ||
+            children.some((c) => c.id === activeSignal);
           return (
             <button
               key={pattern.id}

@@ -64,7 +64,7 @@ function App() {
   // any nav item, and the Screener render check below special-cases it to
   // still render the Screener (with its own showAll-defaults-true state)
   // instead of the ComingSoon placeholder.
-  const [activeView, setActiveView] = useState("");
+  const [activeSignal, setActiveSignal] = useState("");
   const [scanKey, setScanKey] = useState(0);
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(getSavedCollapsed);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -75,8 +75,8 @@ function App() {
   const [signalSymbols, setSignalSymbols] = useState<SignalDeskSymbol[]>([]);
   // Full CPR rows (with tc/bc/pattern flags) for whatever Screener just
   // scanned — this is what SignalDesk's auto-save-to-Journal effect needs
-  // to build activeViewSymbols. Without this, SignalDesk only ever gets
-  // `symbols` (the lightweight card projection), activeViewSymbols stays
+  // to build activeSignalSymbols. Without this, SignalDesk only ever gets
+  // `symbols` (the lightweight card projection), activeSignalSymbols stays
   // permanently empty, and the real autoSaveQualifiedSignals() call never
   // fires even though the cards still render fine via the symbols-only
   // fallback path.
@@ -98,7 +98,7 @@ function App() {
 
   // Global background auto-save to Firestore Journal: whenever Screener
   // scans live market data and updates signalResults, all qualified signals
-  // across Active Views are saved directly to Firestore without requiring
+  // across matching signals are saved directly to Firestore without requiring
   // the user to manually visit the Signals Desk tab first.
   useEffect(() => {
     if (signalResults.length === 0) return;
@@ -162,8 +162,8 @@ function App() {
     });
   };
 
-  const handlePatternSelect = (id: string) => {
-    setActiveView(id);
+  const handleSignalSelect = (id: string) => {
+    setActiveSignal(id);
   };
 
   const handleModeChange = (next: SidebarMode) => {
@@ -173,15 +173,15 @@ function App() {
     } catch { /* ignore */ }
   };
 
-  const activeLabel = VIEW_LABEL_BY_ID[activeView] ?? activeView;
+  const activeSignalLabel = VIEW_LABEL_BY_ID[activeSignal] ?? activeSignal;
 
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <div className="flex min-h-screen bg-background">
           <ViewsSidebar
-            activeView={activeView}
-            onSelect={handlePatternSelect}
+            activeSignal={activeSignal}
+            onSelect={handleSignalSelect}
             collapsed={sidebarCollapsed}
             onToggle={handleToggle}
             mobileOpen={mobileOpen}
@@ -204,19 +204,19 @@ function App() {
                 not the active view — so switching modes/patterns never remounts
                 it and never re-triggers the scanKey effect / loses scan state. */}
             <div style={{ display: mode === "scanner" ? "block" : "none" }}>
-              {activeView === "" || SCREENER_PATTERN_IDS.has(activeView) ? (
+              {activeSignal === "" || SCREENER_PATTERN_IDS.has(activeSignal) ? (
                 <Screener
-                  activeView={activeView}
+                  activeSignal={activeSignal}
                   scanKey={scanKey}
                   onCounts={setPatternCounts}
                   onSignalSymbols={setSignalSymbols}
                   onResults={setSignalResults}
                   activeTab={dataSource}
                   onActiveTabChange={setDataSource}
-                  onActiveViewChange={setActiveView}
+                  onActiveSignalChange={setActiveSignal}
                 />
               ) : (
-                <ComingSoon label={activeLabel} />
+                <ComingSoon label={activeSignalLabel} />
               )}
             </div>
 
@@ -230,12 +230,12 @@ function App() {
               <SignalDesk
                 symbols={signalSymbols}
                 results={signalResults}
-                activeView={activeView}
-                activeLabel={activeLabel}
+                activeSignal={activeSignal}
+                activeSignalLabel={activeSignalLabel}
                 counts={patternCounts}
-                onSelectPattern={handlePatternSelect}
-                onNavigateToScreener={(patternId) => {
-                  setActiveView(patternId);
+                onSelectSignal={handleSignalSelect}
+                onNavigateToScreener={(signalId) => {
+                  setActiveSignal(signalId);
                   handleModeChange("scanner");
                 }}
                 sourceFilter={dataSource === "combined" ? "all" : dataSource}

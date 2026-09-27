@@ -470,7 +470,7 @@ export default function SignalsJournal() {
               <thead className="bg-[#121b2b] text-slate-400 border-b border-[#1e2d3d] font-mono uppercase text-[10px]">
                 <tr>
                   <th className="py-2.5 px-3">Symbol</th>
-                  <th className="py-2.5 px-3">View</th>
+                  <th className="py-2.5 px-3">Signal</th>
                   <th className="py-2.5 px-3">Live Price</th>
                   <th className="py-2.5 px-3 whitespace-nowrap">SL-Entry-TP</th>
                   <th className="py-2.5 px-3">R:R</th>

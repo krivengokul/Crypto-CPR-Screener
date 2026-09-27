@@ -164,7 +164,7 @@ export function levelsInDistanceRange(r: CPRResult): DistanceLevel[] {
 /**
  * Ladder Check sort value for a row — the Ladder Check column can render
  * more than one line per row (one per View the row currently satisfies,
- * see getActiveViewLabels/viewLadders in ScreenerTableRow.tsx), each
+ * see getMatchingSignals/viewLadders in ScreenerTableRow.tsx), each
  * graded against that View's OWN levelCheckDefs (getLadderMatchSummary),
  * same as the column itself. There's no single row-level "the" ladder
  * score to sort by, so this takes the BEST (highest matchingCount) among
@@ -175,9 +175,9 @@ export function levelsInDistanceRange(r: CPRResult): DistanceLevel[] {
  * desc order (and above them in asc order, same as any other numeric key).
  */
 export function getLadderCheckSortValue(r: CPRResultWithSource): number {
-  const activeViews = getActiveViewLabels(r);
+  const matchingSignals = getMatchingSignals(r);
   let best = -1;
-  for (const v of activeViews) {
+  for (const v of matchingSignals) {
     const defs = getView(v.id)?.levelCheckDefs;
     const ladder = getLadderMatchSummary(r.prevCPR, r.todayCPR, defs);
     if (ladder.hasConditions && ladder.matchingCount > best) best = ladder.matchingCount;
@@ -521,7 +521,7 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
 
 
 /**
- * Sub-filter direction map, grouped by top-level section (activeView).
+ * Sub-filter direction map, grouped by top-level section (activeSignal).
  * Used purely to color the row dot in the Symbol column — NOT tied to
  * whether the sub-filter's toggle button is currently pressed. A row gets
  * a dot the moment its data satisfies ANY sub-filter condition belonging
@@ -554,8 +554,8 @@ export function normalizeViewDirection(direction: string | undefined): ViewDirec
  * Returns "Up"/"Down" if row r matches any registered View for the selected
  * section, or null when there is no matching View with a direction.
  */
-export function getViewDirection(r: CPRResult, activeView: string): ViewDirection | null {
-  const subs = Views[activeView];
+export function getViewDirection(r: CPRResult, activeSignal: string): ViewDirection | null {
+  const subs = Views[activeSignal];
   const keys = subs?.map((s) => s.id);
   if (!keys || keys.length === 0) return null;
   for (const key of keys) {
@@ -572,7 +572,7 @@ export function getViewDirection(r: CPRResult, activeView: string): ViewDirectio
  * View across every category (not just one section), returning the
  * direction of the first one row `r` matches (Views' own declaration
  * order). Used for the Symbol column's up/down dot when no left-nav
- * section is selected (Show All / activeView === "") — getViewDirection
+ * section is selected (Show All / activeSignal === "") — getViewDirection
  * returns null there since there's no section to scope to, which used to
  * mean the dot never showed at all in Show All. Also null when the row
  * matches no View, or matches one with no direction set.
@@ -592,18 +592,18 @@ export function getAnyViewDirection(r: CPRResult): ViewDirection | null {
 
 /**
  * getRowDirection — single Up/Down call for a row.
- * Tries getViewDirection(r, activeView) first — looking up the pattern's
+ * Tries getViewDirection(r, activeSignal) first — looking up the pattern's
  * direction defined in views.ts — and falls back to 24h change
  * (change24h >= 0 → Up, else Down) when none is matched.
  */
-export function getRowDirection(r: CPRResult, activeView: string): "Up" | "Down" {
-  const subDir = (activeView ? getViewDirection(r, activeView) : null) ?? getAnyViewDirection(r);
+export function getRowDirection(r: CPRResult, activeSignal: string): "Up" | "Down" {
+  const subDir = (activeSignal ? getViewDirection(r, activeSignal) : null) ?? getAnyViewDirection(r);
   if (subDir) return subDir;
   return r.change24h >= 0 ? "Up" : "Down";
 }
 
-/** One row's worth of "Active Views" info for the VIEW column — see getActiveViewLabels. */
-export interface ActiveViewInfo {
+/** One row's worth of "matching signals" info for the VIEW column — see getMatchingSignals. */
+export interface SignalMatchInfo {
   id: string;
   label: string;
   /** Up -> green text, Down -> red text, null -> the View has no direction set (neutral text). */
@@ -611,9 +611,9 @@ export interface ActiveViewInfo {
 }
 
 /**
- * getActiveViewLabels — every registered View (left-nav leaf)
+ * getMatchingSignals — every registered View (left-nav leaf)
  * that row `r` currently satisfies, across all registry-backed navigation categories
- * (not just the currently active section) — same "Active Views" concept
+ * (not just the currently active section) — same "matching signals" concept
  * already shown in the Journal's PATTERN column (LoggedSignal.patternName).
  * Used to populate the Live Screener's own VIEW column, independent of
  * whatever section/activePattern the user has selected in the left nav.
@@ -625,9 +625,9 @@ export interface ActiveViewInfo {
  * when the row matches no View — callers should render that as a blank
  * cell rather than a placeholder.
  */
-export function getActiveViewLabels(r: CPRResult): ActiveViewInfo[] {
+export function getMatchingSignals(r: CPRResult): SignalMatchInfo[] {
   const seen = new Set<string>();
-  const infos: ActiveViewInfo[] = [];
+  const infos: SignalMatchInfo[] = [];
   const EXCLUDE_TOUCH_IDS = new Set(["insidecpr", "outcpr", "OVA", "overlapLower", "touch"]);
   for (const [sectionKey, subs] of Object.entries(Views)) {
     if (sectionKey === "touch") continue;
@@ -685,7 +685,7 @@ export function getActiveViewLabels(r: CPRResult): ActiveViewInfo[] {
  * co-occur with any of eX-Higher/eX-Lower/cO-Higher/cO-Lower/Higher/Lower
  * and isn't mutually exclusive with them). Screener.tsx renders it as its
  * own second-row badge and its own Pattern filter button, checking
- * r.EU4L4 directly — independent of activeView/section, unlike the
+ * r.EU4L4 directly — independent of activeSignal/section, unlike the
  * "eXLo-L4U4-U4" *pattern*, which gates the same boolean behind
  * overlapLower for its own section.
  *
@@ -694,7 +694,7 @@ export function getActiveViewLabels(r: CPRResult): ActiveViewInfo[] {
  * S4 inside today's S1/S2). Not returned as the primary label here for the
  * same reason as EU4L4/U4L4/etc — Screener.tsx renders it as its own
  * second-row badge and its own Pattern filter button, checking
- * r.EL2U4 directly, regardless of activeView/left-nav section. The
+ * r.EL2U4 directly, regardless of activeSignal/left-nav section. The
  * "EL2U4-AU4" *pattern* (Big Below) additionally requires strWideCPR +
  * cprFalling + extra R3/pivot/width conditions on top of this raw flag.
  *

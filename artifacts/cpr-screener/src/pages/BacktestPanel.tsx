@@ -117,7 +117,7 @@ function isViewDescendant(viewKey: string, ancestorKey: string): boolean {
  * names when a row happens to satisfy more than one View globally. Direction
  * is normalized via ScreenerUtils.tsx's own normalizeViewDirection — same
  * Up/Down source the Screener's VIEW column already colors by
- * (getActiveViewLabels/renderActiveViewLabels in ScreenerUtils.tsx /
+ * (getMatchingSignals/renderMatchingSignals in ScreenerUtils.tsx /
  * ScreenerTableRow.tsx) — rather than re-deriving Up/Down here.
  *
  * EXCEPTION: TOP 15 GAINERS/LOSERS (SYMBOL_LIST_ONLY_CATEGORY_KEYS) are flat
@@ -200,7 +200,7 @@ function matchingView(raw: CPRResult, selectedKey: string): { label: string; key
  * under the View name, its Viewcode (match.key) is shown as a second,
  * quieter line — same font-mono text-xs text-muted-foreground styling as
  * the Viewcode line under the Screener's own VIEW column
- * (renderActiveViewLabels in ScreenerTableRow.tsx) and under the expanded
+ * (renderMatchingSignals in ScreenerTableRow.tsx) and under the expanded
  * row's "Levels VIEW" ladder (SRLadderPanel.tsx), so the same identifier
  * reads the same way everywhere it appears.
  */
@@ -1911,12 +1911,12 @@ export default function BacktestPanel() {
   const activeCategory = isCategory ? getView(selectedKey) : undefined;
   const activeLevelCheckDefs = (activeTarget ?? activePatternTarget)?.levelCheckDefs;
 
-  const activeViewName = isViewOnly
+  const activeSignalName = isViewOnly
     ? activeTarget?.label ?? selectedKey
     : undefined;
   const isTargetUp = activeTarget?.direction === "Up" || (activeTarget?.direction as string) === "bullish";
   const isTargetDown = activeTarget?.direction === "Down" || (activeTarget?.direction as string) === "bearish";
-  const activeViewDirection: ViewDirection | undefined =
+  const activeSignalDirection: ViewDirection | undefined =
     isTargetUp
       ? "Up"
       : isTargetDown
@@ -2846,8 +2846,8 @@ export default function BacktestPanel() {
                           hhllBadge={renderHHLLCategoryBadge(r.raw)}
                           rrssBadge={renderSSRRCategoryBadge(r.raw)}
                           rrhhBadge={renderRRHHCategoryBadge(r.raw)}
-                          viewName={activeViewName}
-                          viewDirection={activeViewDirection}
+                          viewName={activeSignalName}
+                          viewDirection={activeSignalDirection}
                           showLevelCheck
                           levelCheckConditions={activeLevelCheckDefs}
                           copyViewControl={
@@ -3197,8 +3197,8 @@ export default function BacktestPanel() {
                         hhllBadge={renderHHLLCategoryBadge(r.raw)}
                         rrssBadge={renderSSRRCategoryBadge(r.raw)}
                         rrhhBadge={renderRRHHCategoryBadge(r.raw)}
-                        viewName={activeViewName}
-                        viewDirection={activeViewDirection}
+                        viewName={activeSignalName}
+                        viewDirection={activeSignalDirection}
                         showLevelCheck
                         levelCheckConditions={levelCheckDefsFor(r)}
                         // Simplified rule: "Copy View" only when the
