@@ -24,6 +24,7 @@ import {
   ShieldAlert,
   Target,
   Cloud,
+  Clock,
   X,
   ExternalLink,
 } from "lucide-react";
@@ -109,7 +110,17 @@ export interface SignalItem {
   s4: number;
   change24h?: number;
   timestamp: string;
+  // Matches an Active View / has a backtest-defined target — the setup is
+  // "armed" and being watched, but this alone does NOT mean it's in the
+  // Journal yet. Kept as its own flag (rather than folded into isTriggered)
+  // since other parts of this file already read isSaved to mean "has a real
+  // signal to show" independent of entry-touch status.
   isSaved: boolean;
+  // NEW: price has actually reached/crossed the entry line (BC for Up, TC
+  // for Down — see hasTouchedEntry in signalTracker.ts), i.e. this is the
+  // subset of isSaved signals that are actually sitting in the Journal
+  // right now, not just armed and being watched.
+  isTriggered: boolean;
 }
 
 // Which top-level Views bucket a View id lives under — e.g. "compressed",
@@ -418,6 +429,13 @@ export default function SignalDesk({
         // can match against sub.id.
         const patternId = levels ? levels.patternId : (selectedViewPattern || activeView || "");
 
+        // Same trigger check the Journal auto-save effect uses — this is
+        // display-only here, so a card can show "Armed" vs "Saved" without
+        // waiting for the next auto-save tick to resolve.
+        const isTriggered = levels
+          ? hasTouchedEntry(levels.direction, levels.price, sym.currentPrice)
+          : false;
+
         return {
           id: sym.key,
           symbol: sym.symbol,
@@ -455,6 +473,7 @@ export default function SignalDesk({
           s4,
           timestamp: "Active",
           isSaved: isEligible,
+          isTriggered,
         };
       });
     }
@@ -502,6 +521,13 @@ export default function SignalDesk({
         ? levels.rrRatio
         : (Math.abs(targetPrice - price) / Math.max(0.0000001, Math.abs(price - stopPrice))).toFixed(1);
 
+      // Same trigger check the Journal auto-save effect uses — display-only
+      // here so a card can show "Armed" vs "Saved" without waiting for the
+      // next auto-save tick to resolve.
+      const isTriggered = levels
+        ? hasTouchedEntry(levels.direction, levels.price, r.currentPrice)
+        : false;
+
       list.push({
         id: `${r.source}-${r.symbol}-${selectedViewPattern || patternLabel}`,
         symbol: r.symbol,
@@ -534,6 +560,7 @@ export default function SignalDesk({
         s4,
         timestamp: "Active",
         isSaved: isActiveViewSymbol,
+        isTriggered,
       });
     }
 
@@ -572,11 +599,18 @@ export default function SignalDesk({
   const stats = useMemo(() => {
     const activeViewOnly = filteredSignals.filter((s) => s.isSaved);
     const total = activeViewOnly.length;
-    const saved = activeViewOnly.length;
+    // "saved" = actually touched entry and sitting in the Journal.
+    // "armed" = matched an Active View but hasn't touched entry yet — still
+    // being watched, not yet written to the Journal. These used to be the
+    // same number (any Active View match got auto-saved immediately); now
+    // that auto-save gates on hasTouchedEntry, they're split so the header
+    // doesn't overclaim how many signals are actually in the Journal.
+    const saved = activeViewOnly.filter((s) => s.isTriggered).length;
+    const armed = total - saved;
     const upCount = activeViewOnly.filter((s) => s.direction === "Up" || (s.direction as string) === "LONG").length;
     const downCount = activeViewOnly.filter((s) => s.direction === "Down" || (s.direction as string) === "SHORT").length;
     const watch = activeViewOnly.filter((s) => s.direction === "NEUTRAL").length;
-    return { total, saved, upCount, downCount, watch, longs: upCount, shorts: downCount };
+    return { total, saved, armed, upCount, downCount, watch, longs: upCount, shorts: downCount };
   }, [filteredSignals]);
 
   // Automatically save ONLY qualified signals from Active Views directly to the Journal.
@@ -729,6 +763,13 @@ R:R: ${item.riskReward}`;
               Auto-Saved to Journal: <strong className="text-emerald-400 font-mono font-bold">{stats.saved}</strong>
             </span>
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          </div>
+
+          <div className="bg-[#131b26] border border-[#1e2d3d] rounded-lg px-3 py-1.5 flex items-center gap-2 text-xs text-amber-400">
+            <Clock className="w-3.5 h-3.5 text-amber-400" />
+            <span className="font-medium text-slate-300">
+              Armed (Watching): <strong className="text-amber-400 font-mono font-bold">{stats.armed}</strong>
+            </span>
           </div>
 
           <div className="bg-[#131b26] border border-[#1e2d3d] rounded-lg px-3 py-1.5 flex items-center gap-2">
@@ -1106,10 +1147,20 @@ R:R: ${item.riskReward}`;
 
                     <div className="flex items-center gap-2">
                       {item.isSaved && (
-                        <div className="flex items-center gap-1 text-[11px] text-emerald-400 font-mono">
-                          <Cloud className="w-3 h-3 text-emerald-400" />
-                          <span>Saved</span>
-                        </div>
+                        item.isTriggered ? (
+                          <div className="flex items-center gap-1 text-[11px] text-emerald-400 font-mono">
+                            <Cloud className="w-3 h-3 text-emerald-400" />
+                            <span>Saved</span>
+                          </div>
+                        ) : (
+                          <div
+                            className="flex items-center gap-1 text-[11px] text-amber-400 font-mono"
+                            title="Matches an Active View but price hasn't reached the entry line yet"
+                          >
+                            <Clock className="w-3 h-3 text-amber-400" />
+                            <span>Armed</span>
+                          </div>
+                        )
                       )}
 
                       <button
