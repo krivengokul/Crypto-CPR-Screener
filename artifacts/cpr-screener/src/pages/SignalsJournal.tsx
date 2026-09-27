@@ -498,9 +498,7 @@ export default function SignalsJournal() {
                         {isActive ? (
                           <div className="space-y-0.5">
                             <div>Auto-saved setup ({autoSavedDate}).</div>
-                            <div>
-                              Awaiting TP (${fmt(item.target)}) or SL (${fmt(item.sl)}) outcome.
-                            </div>
+                            <div>Awaiting TP/SL</div>
                           </div>
                         ) : (
                           item.outcomeNotes || "—"
