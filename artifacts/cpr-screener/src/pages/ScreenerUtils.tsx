@@ -18,8 +18,9 @@ import {
 import { levelCheckFullyMatches } from "@/lib/backtest";
 import { getView, passesView } from "@/lib/views";
 import { Views } from "@/lib/ViewsSidebar";
+import { getLadderMatchSummary } from "./SRLadderDiff";
 
-export type SortKey = "symbol" | "compressionRatio" | "currentPrice" | "change24h" | "quoteVolume" | "priceVsCpr" | "cprDistance" | "pdhPdlPct";
+export type SortKey = "symbol" | "compressionRatio" | "currentPrice" | "change24h" | "quoteVolume" | "priceVsCpr" | "cprDistance" | "pdhPdlPct" | "ladderCheck";
 export type SortDir = "asc" | "desc";
 // Scan venues. CoinDCX futures (`B-<BASE>_USDT`) are scanned as `<BASE>USDT`,
 // the same symbol shape as Binance — see coinDCX.ts.
@@ -160,6 +161,30 @@ export function levelsInDistanceRange(r: CPRResult): DistanceLevel[] {
     .sort((a, b) => a.value - b.value);
 }
 
+/**
+ * Ladder Check sort value for a row — the Ladder Check column can render
+ * more than one line per row (one per View the row currently satisfies,
+ * see getActiveViewLabels/viewLadders in ScreenerTableRow.tsx), each
+ * graded against that View's OWN levelCheckDefs (getLadderMatchSummary),
+ * same as the column itself. There's no single row-level "the" ladder
+ * score to sort by, so this takes the BEST (highest matchingCount) among
+ * the row's defined ladders — i.e. sorting desc surfaces 13/13 rows
+ * first, then 12/13, etc., matching how the column reads top-to-bottom.
+ * Rows with no View carrying levelCheckDefs (so nothing the column would
+ * render as "n/13") get -1 here, so they sort below every graded row in
+ * desc order (and above them in asc order, same as any other numeric key).
+ */
+export function getLadderCheckSortValue(r: CPRResultWithSource): number {
+  const activeViews = getActiveViewLabels(r);
+  let best = -1;
+  for (const v of activeViews) {
+    const defs = getView(v.id)?.levelCheckDefs;
+    const ladder = getLadderMatchSummary(r.prevCPR, r.todayCPR, defs);
+    if (ladder.hasConditions && ladder.matchingCount > best) best = ladder.matchingCount;
+  }
+  return best;
+}
+
 export function getVal(r: CPRResultWithSource, key: SortKey): number | string {
   switch (key) {
     case "symbol":          return r.symbol;
@@ -170,6 +195,7 @@ export function getVal(r: CPRResultWithSource, key: SortKey): number | string {
     case "priceVsCpr":      return priceVsCprValue(r);
     case "cprDistance":     return cprDistancePct(r) ?? -Infinity;
     case "pdhPdlPct":       return pdhPdlValue(r);
+    case "ladderCheck":     return getLadderCheckSortValue(r);
   }
 }
 

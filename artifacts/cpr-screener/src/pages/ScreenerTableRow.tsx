@@ -720,10 +720,11 @@ export function ScreenerTableHeader({
           View
         </th>
         <th
-          className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider"
-          title="Level Check (matching/13) for each View in the VIEW column, one line per View, graded with that View's own levelCheckDefs"
+          className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
+          onClick={() => toggleSort("ladderCheck")}
+          title="Level Check (matching/13) for each View in the VIEW column, one line per View, graded with that View's own levelCheckDefs. Sort by each row's best n/13 — desc surfaces 13/13 first, then 12/13, etc."
         >
-          Ladder Check
+          Ladder Check <SortIcon k="ladderCheck" />
         </th>
         <th
           className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[220px] cursor-pointer hover:text-foreground"
