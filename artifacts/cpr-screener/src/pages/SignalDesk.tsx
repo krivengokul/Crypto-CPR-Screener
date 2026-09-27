@@ -112,7 +112,7 @@ export interface SignalItem {
   change24h?: number;
   timestamp: string;
   // Matches an Active View / has a backtest-defined target — the setup is
-  // "armed" and being watched, but this alone does NOT mean it's in the
+  // "ready" and being watched, but this alone does NOT mean it's in the
   // Journal yet. Kept as its own flag (rather than folded into isTriggered)
   // since other parts of this file already read isSaved to mean "has a real
   // signal to show" independent of entry-touch status.
@@ -120,7 +120,7 @@ export interface SignalItem {
   // NEW: price has actually reached/crossed the entry line (BC for Up, TC
   // for Down — see hasTouchedEntry in signalTracker.ts), i.e. this is the
   // subset of isSaved signals that are actually sitting in the Journal
-  // right now, not just armed and being watched.
+  // right now, not just ready and being watched.
   isTriggered: boolean;
 }
 
@@ -289,6 +289,12 @@ export default function SignalDesk({
   const sourceFilter = sourceFilterProp ?? sourceFilterState;
   const setSourceFilter = onSourceFilterChange ?? setSourceFilterState;
   const [directionFilter, setDirectionFilter] = useState<"all" | "Up" | "Down">("all");
+  // Status filter — "saved" = already touched entry and sitting in the
+  // Journal (item.isTriggered); "ready" = matched an Active View but
+  // hasn't touched entry yet, still being watched (item.isSaved &&
+  // !item.isTriggered) — same split the header's Auto-Saved/Ready
+  // (Watching) badges use. "all" applies no status filtering.
+  const [statusFilter, setStatusFilter] = useState<"all" | "saved" | "ready">("all");
   const [selectedViewPattern, setSelectedViewPattern] = useState<string>(activeView || "");
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -440,7 +446,7 @@ export default function SignalDesk({
         const patternId = levels ? levels.patternId : (selectedViewPattern || activeView || "");
 
         // Same trigger check the Journal auto-save effect uses — this is
-        // display-only here, so a card can show "Armed" vs "Saved" without
+        // display-only here, so a card can show "Ready" vs "Saved" without
         // waiting for the next auto-save tick to resolve.
         const isTriggered = levels
           ? hasTouchedEntry(levels.direction, levels.price, sym.currentPrice)
@@ -534,7 +540,7 @@ export default function SignalDesk({
         : (Math.abs(targetPrice - price) / Math.max(0.0000001, Math.abs(price - stopPrice))).toFixed(1);
 
       // Same trigger check the Journal auto-save effect uses — display-only
-      // here so a card can show "Armed" vs "Saved" without waiting for the
+      // here so a card can show "Ready" vs "Saved" without waiting for the
       // next auto-save tick to resolve.
       const isTriggered = levels
         ? hasTouchedEntry(levels.direction, levels.price, r.currentPrice)
@@ -590,6 +596,8 @@ export default function SignalDesk({
           (directionFilter === "Down" && (s.direction as string) === "SHORT");
         if (!isMatch) return false;
       }
+      if (statusFilter === "saved" && !s.isTriggered) return false;
+      if (statusFilter === "ready" && !(s.isSaved && !s.isTriggered)) return false;
       if (searchTerm) {
         const query = searchTerm.toLowerCase();
         return (
@@ -600,7 +608,7 @@ export default function SignalDesk({
       }
       return true;
     });
-  }, [signals, sourceFilter, directionFilter, searchTerm]);
+  }, [signals, sourceFilter, directionFilter, statusFilter, searchTerm]);
 
   // Header stats are scoped to symbols that actually belong to an Active
   // View (item.isSaved — despite the name, this flags Active View
@@ -613,17 +621,17 @@ export default function SignalDesk({
     const activeViewOnly = filteredSignals.filter((s) => s.isSaved);
     const total = activeViewOnly.length;
     // "saved" = actually touched entry and sitting in the Journal.
-    // "armed" = matched an Active View but hasn't touched entry yet — still
+    // "ready" = matched an Active View but hasn't touched entry yet — still
     // being watched, not yet written to the Journal. These used to be the
     // same number (any Active View match got auto-saved immediately); now
     // that auto-save gates on hasTouchedEntry, they're split so the header
     // doesn't overclaim how many signals are actually in the Journal.
     const saved = activeViewOnly.filter((s) => s.isTriggered).length;
-    const armed = total - saved;
+    const ready = total - saved;
     const upCount = activeViewOnly.filter((s) => s.direction === "Up" || (s.direction as string) === "LONG").length;
     const downCount = activeViewOnly.filter((s) => s.direction === "Down" || (s.direction as string) === "SHORT").length;
     const watch = activeViewOnly.filter((s) => s.direction === "NEUTRAL").length;
-    return { total, saved, armed, upCount, downCount, watch, longs: upCount, shorts: downCount };
+    return { total, saved, ready, upCount, downCount, watch, longs: upCount, shorts: downCount };
   }, [filteredSignals]);
 
   // Automatically save ONLY qualified signals from Active Views directly to the Journal.
@@ -768,9 +776,11 @@ R:R: ${item.riskReward}`;
           </div>
         </div>
 
-        {/* Quick Stats Counter Badges */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="bg-[#131b26] border border-[#1e2d3d] rounded-lg px-3 py-1.5 flex items-center gap-2 text-xs text-emerald-400">
+        {/* Quick Stats Counter Badges — kept to a single non-wrapping row;
+            scrolls horizontally on very narrow viewports rather than
+            dropping badges to a second line. */}
+        <div className="flex items-center gap-2 flex-nowrap overflow-x-auto">
+          <div className="shrink-0 bg-[#131b26] border border-[#1e2d3d] rounded-lg px-3 py-1.5 flex items-center gap-2 text-xs text-emerald-400">
             <Cloud className="w-3.5 h-3.5 text-emerald-400" />
             <span className="font-medium text-slate-300">
               Auto-Saved to Journal: <strong className="text-emerald-400 font-mono font-bold">{stats.saved}</strong>
@@ -778,23 +788,23 @@ R:R: ${item.riskReward}`;
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
           </div>
 
-          <div className="bg-[#131b26] border border-[#1e2d3d] rounded-lg px-3 py-1.5 flex items-center gap-2 text-xs text-amber-400">
+          <div className="shrink-0 bg-[#131b26] border border-[#1e2d3d] rounded-lg px-3 py-1.5 flex items-center gap-2 text-xs text-amber-400">
             <Clock className="w-3.5 h-3.5 text-amber-400" />
             <span className="font-medium text-slate-300">
-              Armed (Watching): <strong className="text-amber-400 font-mono font-bold">{stats.armed}</strong>
+              Ready (Watching): <strong className="text-amber-400 font-mono font-bold">{stats.ready}</strong>
             </span>
           </div>
 
-          <div className="bg-[#131b26] border border-[#1e2d3d] rounded-lg px-3 py-1.5 flex items-center gap-2">
+          <div className="shrink-0 bg-[#131b26] border border-[#1e2d3d] rounded-lg px-3 py-1.5 flex items-center gap-2">
             <span className="text-[11px] text-slate-400 font-medium">Signals:</span>
             <span className="text-sm font-bold text-white font-mono">{stats.total}</span>
           </div>
-          <div className="bg-[#131b26] border border-emerald-500/30 rounded-lg px-3 py-1.5 flex items-center gap-2">
+          <div className="shrink-0 bg-[#131b26] border border-emerald-500/30 rounded-lg px-3 py-1.5 flex items-center gap-2">
             <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
             <span className="text-[11px] text-emerald-400 font-medium">Up:</span>
             <span className="text-sm font-bold text-emerald-400 font-mono">{stats.upCount}</span>
           </div>
-          <div className="bg-[#131b26] border border-rose-500/30 rounded-lg px-3 py-1.5 flex items-center gap-2">
+          <div className="shrink-0 bg-[#131b26] border border-rose-500/30 rounded-lg px-3 py-1.5 flex items-center gap-2">
             <TrendingDown className="w-3.5 h-3.5 text-rose-400" />
             <span className="text-[11px] text-rose-400 font-medium">Down:</span>
             <span className="text-sm font-bold text-rose-400 font-mono">{stats.downCount}</span>
@@ -914,6 +924,33 @@ R:R: ${item.riskReward}`;
               }`}
             >
               Down
+            </button>
+          </div>
+
+          {/* Status Filter — Saved (triggered, in the Journal) / Ready
+              (matched an Active View, still watching for entry). Toggle
+              behavior: clicking the already-active button clears it back
+              to "all", matching the Direction/Source filters' feel. */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setStatusFilter(statusFilter === "saved" ? "all" : "saved")}
+              className={`px-2 py-1 rounded text-xs font-semibold transition cursor-pointer ${
+                statusFilter === "saved"
+                  ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
+                  : "text-emerald-400/70 hover:text-emerald-300 bg-[#151e2c] border border-transparent"
+              }`}
+            >
+              Saved
+            </button>
+            <button
+              onClick={() => setStatusFilter(statusFilter === "ready" ? "all" : "ready")}
+              className={`px-2 py-1 rounded text-xs font-semibold transition cursor-pointer ${
+                statusFilter === "ready"
+                  ? "bg-amber-500/20 text-amber-400 border border-amber-500/40"
+                  : "text-amber-400/70 hover:text-amber-300 bg-[#151e2c] border border-transparent"
+              }`}
+            >
+              Ready
             </button>
           </div>
 
@@ -1175,7 +1212,7 @@ R:R: ${item.riskReward}`;
                             title="Matches an Active View but price hasn't reached the entry line yet"
                           >
                             <Clock className="w-3 h-3 text-amber-400" />
-                            <span>Armed</span>
+                            <span>Ready</span>
                           </div>
                         )
                       )}
