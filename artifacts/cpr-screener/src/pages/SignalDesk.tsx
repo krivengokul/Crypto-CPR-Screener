@@ -97,6 +97,7 @@ export interface SignalItem {
   targetPrice: number;
   stopPrice: number;
   targetLevel: string;
+  stoplossLevel: string;
   riskReward: string;
   cprStatus: string;
   pivot: number;
@@ -235,6 +236,7 @@ export function computeSignalLevels(
   const stopPrice = isUp ? r.todayCPR.s1 : r.todayCPR.r1;
   const targetPrice = targetDef.getTarget(r);
   const targetLevel = targetDef.targetLabel ?? "";
+  const stoplossLevel = targetDef.stoplossLabel ?? (isUp ? "S1" : "R1");
   const patternLabel = primaryView.label;
   const patternId = primaryView.id;
   const category = getCategoryForViewId(patternId);
@@ -243,7 +245,7 @@ export function computeSignalLevels(
   const reward = Math.abs(targetPrice - price);
   const rrRatio = (reward / risk).toFixed(1);
 
-  return { patternLabel, patternId, category, price, direction, targetPrice, stopPrice, targetLevel, rrRatio };
+  return { patternLabel, patternId, category, price, direction, targetPrice, stopPrice, targetLevel, stoplossLevel, rrRatio };
 }
 
 // Single source of truth for turning a pool of CPRResultWithSource rows
@@ -394,11 +396,13 @@ export default function SignalDesk({
         let targetPrice: number;
         let stopPrice: number;
         let targetLevel: string;
+        let stoplossLevel: string;
 
         if (levels) {
           targetPrice = levels.targetPrice;
           stopPrice = levels.stopPrice;
           targetLevel = levels.targetLevel;
+          stoplossLevel = levels.stoplossLevel;
         } else if (direction === "Up") {
           if (sym.currentPrice >= r1) {
             targetPrice = r2;
@@ -408,6 +412,7 @@ export default function SignalDesk({
             targetLevel = "R1";
           }
           stopPrice = s1;
+          stoplossLevel = "S1";
         } else {
           if (sym.currentPrice <= s1) {
             targetPrice = s2;
@@ -417,6 +422,7 @@ export default function SignalDesk({
             targetLevel = "S1";
           }
           stopPrice = r1;
+          stoplossLevel = "R1";
         }
 
         const rrRatio = levels
@@ -458,6 +464,7 @@ export default function SignalDesk({
           targetPrice,
           stopPrice,
           targetLevel,
+          stoplossLevel,
           riskReward: `1 : ${rrRatio}`,
           cprStatus: isEligible
             ? `${patternLabel} (Target ${targetLevel})`
@@ -517,6 +524,7 @@ export default function SignalDesk({
       const targetPrice = levels ? levels.targetPrice : (direction === "Up" ? r1 : s1);
       const stopPrice = levels ? levels.stopPrice : (direction === "Up" ? s1 : r1);
       const targetLevel = levels ? levels.targetLevel : (direction === "Up" ? "R1" : "S1");
+      const stoplossLevel = levels ? levels.stoplossLevel : (direction === "Up" ? "S1" : "R1");
       const rrRatio = levels
         ? levels.rrRatio
         : (Math.abs(targetPrice - price) / Math.max(0.0000001, Math.abs(price - stopPrice))).toFixed(1);
@@ -547,6 +555,7 @@ export default function SignalDesk({
         targetPrice,
         stopPrice,
         targetLevel,
+        stoplossLevel,
         riskReward: `1 : ${rrRatio}`,
         cprStatus: isActiveViewSymbol ? `${patternLabel} (Target ${targetLevel})` : "General CPR Setup",
         pivot,
@@ -1105,7 +1114,7 @@ R:R: ${item.riskReward}`;
                         <div className="flex items-center gap-1">
                           <span>View:</span>
                           <strong className="text-slate-200 font-semibold">
-                            {item.isSaved ? selectedViewPattern || item.patternName : ""}
+                            {item.isSaved ? item.patternName : ""}
                           </strong>
                         </div>
                         <span className="font-mono text-slate-300">
@@ -1121,6 +1130,10 @@ R:R: ${item.riskReward}`;
                       <div className="flex items-center gap-1">
                         <span>Target:</span>
                         <strong className="text-slate-200 font-semibold font-mono">{item.targetLevel || "S2"}</strong>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span>Stoploss:</span>
+                        <strong className="text-slate-200 font-semibold font-mono">{item.stoplossLevel || "S1"}</strong>
                       </div>
                       <div className="flex items-center gap-1">
                         <span>Category:</span>
