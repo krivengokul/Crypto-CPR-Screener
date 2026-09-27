@@ -409,9 +409,6 @@ export default function SignalsJournal() {
 
                   return (
                     <tr key={item.id} className="hover:bg-[#121d2e] transition font-mono">
-                      <td className="py-2.5 px-3 text-slate-400 text-[11px] whitespace-nowrap">
-                        {item.dateStr}
-                      </td>
                       <td className="py-2.5 px-3 whitespace-nowrap">
                         <div className="flex flex-col items-start">
                           <div className="flex items-center gap-1 font-bold text-white">
@@ -436,11 +433,11 @@ export default function SignalsJournal() {
                               </span>
                             )}
                           </div>
-                          <span className="mt-0.5 text-[10px] font-mono text-slate-400">
-                            {item.dateStr}
-                          </span>
                           <span className="mt-0.5 text-[10px] font-mono uppercase tracking-wide text-slate-400">
                             {item.source}
+                          </span>
+                          <span className="mt-0.5 text-[10px] font-mono text-slate-400">
+                            {item.dateStr}
                           </span>
                         </div>
                       </td>
