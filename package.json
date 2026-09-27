@@ -10,7 +10,8 @@
     "dev": "npm run dev --workspace=@workspace/cpr-screener",
     "build": "npm run build --workspace=@workspace/cpr-screener && rm -rf dist && cp -r artifacts/cpr-screener/dist dist",
     "typecheck": "npm run typecheck --workspace=@workspace/cpr-screener",
-    "lint": "npm run typecheck --workspace=@workspace/cpr-screener"
+    "lint": "npm run typecheck --workspace=@workspace/cpr-screener && npm run test --workspace=@workspace/cpr-screener",
+    "test": "npm run test --workspace=@workspace/cpr-screener"
   },
   "devDependencies": {
     "@types/node": "^25.3.3",

@@ -7,6 +7,10 @@ import {
   updateSignalOutcomeInCloud,
   clearAllSignalsFromCloud,
 } from "@/lib/signalTracker";
+import {
+  calculateGrossReturnPct,
+  summarizePaperTrades,
+} from "@/lib/paperTrading";
 import { fmt, getChartUrl, hasKnownChartMapping } from "@/pages/ScreenerUtils";
 import {
   CheckCircle2,
@@ -122,6 +126,7 @@ export default function SignalsJournal() {
       "StopLoss",
       "R:R",
       "Status",
+      "Gross Return (%)",
       "Outcome Notes",
     ];
     const rows = signals.map((s) => [
@@ -136,6 +141,7 @@ export default function SignalsJournal() {
       s.sl,
       s.rr,
       s.status,
+      calculateGrossReturnPct(s)?.toFixed(2) ?? "",
       `"${s.outcomeNotes || ""}"`,
     ]);
     const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
@@ -171,13 +177,7 @@ export default function SignalsJournal() {
     // breakdown across all four buckets, not just the currently filtered one.
     const scoped =
       sourceFilter === "all" ? signals : signals.filter((s) => s.source === sourceFilter);
-    const total = scoped.length;
-    const pass = scoped.filter((s) => s.status === "PASS").length;
-    const fail = scoped.filter((s) => s.status === "FAIL").length;
-    const active = scoped.filter((s) => s.status === "ACTIVE").length;
-    const resolved = pass + fail;
-    const winRate = resolved > 0 ? ((pass / resolved) * 100).toFixed(1) : "100.0";
-    return { total, pass, fail, active, winRate };
+    return summarizePaperTrades(scoped);
   }, [signals, sourceFilter]);
 
   return (
@@ -191,15 +191,14 @@ export default function SignalsJournal() {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-base font-bold text-white tracking-wide">
-                SIGNAL JOURNAL &amp; STATUS EVALUATOR
+                SIGNAL JOURNAL &amp; PAPER-TRADE TRACKER
               </h1>
-              <span className="text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                Auto-Synced Journal
+              <span className="text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full">
+                SIMULATION ONLY
               </span>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
-              Permanently saved signals with automatic next-day Pass/Fail verification against Binance candles
+              Signals are auto-saved; run Auto-Check to resolve target/stop outcomes. Gross price returns exclude sizing, fees, and slippage.
             </p>
           </div>
         </div>
@@ -251,7 +250,7 @@ export default function SignalsJournal() {
       </div>
 
       {/* Metrics Summary Strip */}
-      <div className="px-4 py-3 bg-[#0a101b] border-b border-[#1b263b] grid grid-cols-2 sm:grid-cols-5 gap-3 shrink-0">
+      <div className="px-4 py-3 bg-[#0a101b] border-b border-[#1b263b] grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3 shrink-0">
         <div className="bg-[#121a28] border border-[#1e2d3d] p-2.5 rounded-lg">
           <div className="text-[10px] uppercase font-mono text-slate-400">Total Saved</div>
           <div className="text-lg font-black text-white font-mono">{stats.total}</div>
@@ -278,9 +277,31 @@ export default function SignalsJournal() {
           <div className="text-lg font-black text-amber-400 font-mono">{stats.active}</div>
         </div>
 
+        <div className="bg-[#121a28] border border-slate-500/30 p-2.5 rounded-lg">
+          <div className="text-[10px] uppercase font-mono text-slate-400">Expired</div>
+          <div className="text-lg font-black text-slate-300 font-mono">{stats.expired}</div>
+        </div>
+
         <div className="bg-[#121a28] border border-cyan-500/30 p-2.5 rounded-lg">
           <div className="text-[10px] uppercase font-mono text-cyan-400">Win Rate</div>
-          <div className="text-lg font-black text-cyan-300 font-mono">{stats.winRate}%</div>
+          <div className="text-lg font-black text-cyan-300 font-mono">
+            {stats.winRatePct === null ? "—" : `${stats.winRatePct.toFixed(1)}%`}
+          </div>
+        </div>
+
+        <div className="bg-[#121a28] border border-violet-500/30 p-2.5 rounded-lg">
+          <div className="text-[10px] uppercase font-mono text-violet-300">Avg. Gross Return</div>
+          <div className={`text-lg font-black font-mono ${
+            stats.averageGrossReturnPct === null
+              ? "text-slate-400"
+              : stats.averageGrossReturnPct >= 0
+                ? "text-emerald-400"
+                : "text-rose-400"
+          }`}>
+            {stats.averageGrossReturnPct === null
+              ? "—"
+              : `${stats.averageGrossReturnPct >= 0 ? "+" : ""}${stats.averageGrossReturnPct.toFixed(2)}%`}
+          </div>
         </div>
       </div>
 
@@ -365,6 +386,7 @@ export default function SignalsJournal() {
                   <th className="py-2.5 px-3">Target (TP)</th>
                   <th className="py-2.5 px-3">Stop (SL)</th>
                   <th className="py-2.5 px-3">R:R</th>
+                  <th className="py-2.5 px-3" title="Gross price return from entry to recorded TP/SL exit; excludes fees and slippage.">Paper Return</th>
                   <th className="py-2.5 px-3 text-center">Status</th>
                   <th className="py-2.5 px-3">Outcome / Notes</th>
                   <th className="py-2.5 px-3 text-right">Action</th>
@@ -377,6 +399,7 @@ export default function SignalsJournal() {
                   const isPass = item.status === "PASS";
                   const isFail = item.status === "FAIL";
                   const isActive = item.status === "ACTIVE";
+                  const grossReturnPct = calculateGrossReturnPct(item);
 
                   return (
                     <tr key={item.id} className="hover:bg-[#121d2e] transition font-mono">
@@ -447,6 +470,17 @@ export default function SignalsJournal() {
                         ${fmt(item.sl)}
                       </td>
                       <td className="py-2.5 px-3 text-cyan-300 font-bold whitespace-nowrap">{item.rr}</td>
+                      <td className={`py-2.5 px-3 font-bold whitespace-nowrap ${
+                        grossReturnPct === null
+                          ? "text-slate-500"
+                          : grossReturnPct >= 0
+                            ? "text-emerald-400"
+                            : "text-rose-400"
+                      }`}>
+                        {grossReturnPct === null
+                          ? "—"
+                          : `${grossReturnPct >= 0 ? "+" : ""}${grossReturnPct.toFixed(2)}%`}
+                      </td>
                       <td className="py-2.5 px-3 text-center whitespace-nowrap">
                         <span
                           className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full inline-flex items-center gap-1 ${
