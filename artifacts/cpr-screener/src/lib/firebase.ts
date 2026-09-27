@@ -116,6 +116,7 @@ function getOfflineFallbackUid(): string {
 }
 
 let signInPromise: Promise<string> | null = null;
+let resolvedUid: string | null = null;
 
 /**
  * Ensures the current browser has a signed-in (anonymous) Firebase user
@@ -130,15 +131,22 @@ export function ensureSignedIn(): Promise<string> {
   }
 
   const auth = getAuthInstance();
+
+  // Once a UID has been used, keep using it for this browser session. A late
+  // Firebase auth result must not redirect reads/writes to another path.
+  if (resolvedUid) return Promise.resolve(resolvedUid);
+
   if (auth.currentUser?.uid) {
-    return Promise.resolve(auth.currentUser.uid);
+    resolvedUid = auth.currentUser.uid;
+    return Promise.resolve(resolvedUid);
   }
 
   if (signInPromise) return signInPromise;
 
   signInPromise = new Promise<string>((resolve) => {
     if (auth.currentUser?.uid) {
-      resolve(auth.currentUser.uid);
+      resolvedUid = auth.currentUser.uid;
+      resolve(resolvedUid);
       return;
     }
 
@@ -146,6 +154,7 @@ export function ensureSignedIn(): Promise<string> {
     const finish = (uid: string) => {
       if (!settled) {
         settled = true;
+        resolvedUid = uid;
         unsubscribe();
         resolve(uid);
       }
@@ -180,7 +189,8 @@ export function ensureSignedIn(): Promise<string> {
     }, 3000);
   }).catch(() => {
     signInPromise = null;
-    return getOfflineFallbackUid();
+    resolvedUid = getOfflineFallbackUid();
+    return resolvedUid;
   });
 
   return signInPromise;
