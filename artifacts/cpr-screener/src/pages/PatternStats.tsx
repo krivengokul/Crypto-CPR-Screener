@@ -499,6 +499,7 @@ function CategoryBox({
   const Icon = meta?.icon ?? Layers;
   const maxCount = group.patterns.reduce((m, p) => Math.max(m, p.count), 0);
   const matchedPatterns = group.patterns.filter((p) => p.count > 0).length;
+  const isViewsList = group.categoryKey === VIEWS_CATEGORY_KEY;
   // OUTER / INNER PATTERNS are flat lists of short keys with no nesting, so
   // they're laid out as a grid of compact tiles (in a full-width card)
   // instead of one very tall column.
@@ -612,16 +613,16 @@ function CategoryBox({
             const isTop = p.depth === 1;
             const dirClass = p.count > 0 ? directionTextClass(normalizeViewDirection(p.direction)) : null;
             const scopedKey = `${group.categoryKey}::${p.patternKey}`;
-            const unclass = unclassified?.[scopedKey];
+            const unclass = isViewsList ? undefined : unclassified?.[scopedKey];
             // Use the census's direct unmatched-child count so overlapping
             // child conditions cannot inflate or understate the remainder.
-            const missing = isTop
+            const missing = isTop && !isViewsList
               ? unclassified
                 ? unclass?.reduce((sum, item) => sum + item.count, 0) ?? 0
                 : missingChildCount(group.patterns, i)
               : 0;
-            const hasChildren = isTop ? hasChildPatterns(group.patterns, i) : false;
-            const isFullyCovered = isTop ? hasChildren && missing === 0 : true;
+            const hasChildren = isTop && !isViewsList ? hasChildPatterns(group.patterns, i) : false;
+            const isFullyCovered = !isViewsList && isTop ? hasChildren && missing === 0 : true;
             const isUncovered = isTop && p.count > 0 && !isFullyCovered;
             const isExpanded = expandedMissingKey === scopedKey;
             const breakdownTooltip = !hasChildren
@@ -676,11 +677,13 @@ function CategoryBox({
                       <span
                         className={[
                           "shrink-0 rounded-full border px-1.5 py-0.5 font-mono text-[10px] font-bold",
-                          p.count > 0
+                          isViewsList
+                            ? "border-[#223347] bg-[#182333] text-white"
+                            : p.count > 0
                             ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-300"
                             : "border-[#223347] bg-[#182333] text-slate-500",
                         ].join(" ")}
-                        title={isTop ? breakdownTooltip : undefined}
+                        title={isTop && !isViewsList ? breakdownTooltip : undefined}
                       >
                         {p.count}
                       </span>
