@@ -198,7 +198,7 @@ export default function Screener({
   const cachedCoinDCX = useMemo(() => loadCachedResults<CPRResult>(STORAGE_KEY_COINDCX), []);
 
   const [status, setStatus] = useState<"idle" | "scanning" | "done" | "error">(() => {
-    return isCacheFresh(cachedBinance) ? "done" : "idle";
+    return isScanFreshForSource("binance", cachedBinance) ? "done" : "idle";
   });
   const [progress, setProgress] = useState({ done: 0, total: 0, symbol: "" });
   const [allResults, setAllResults] = useState<CPRResult[]>(() => {
@@ -281,7 +281,7 @@ export default function Screener({
   const scanRef = useRef(false);
 
   const [deltaStatus, setDeltaStatus] = useState<"idle" | "scanning" | "done" | "error">(() => {
-    return isCacheFresh(cachedDelta) ? "done" : "idle";
+    return isScanFreshForSource("delta", cachedDelta) ? "done" : "idle";
   });
   const [deltaProgress, setDeltaProgress] = useState({ done: 0, total: 0, symbol: "" });
   const [deltaAllResults, setDeltaAllResults] = useState<CPRResult[]>(() => {
@@ -296,7 +296,7 @@ export default function Screener({
   const [deltaError, setDeltaError] = useState("");
 
   const [coindcxStatus, setCoinDCXStatus] = useState<"idle" | "scanning" | "done" | "error">(() => {
-    return isCacheFresh(cachedCoinDCX) ? "done" : "idle";
+    return isScanFreshForSource("coindcx", cachedCoinDCX) ? "done" : "idle";
   });
   const [coindcxProgress, setCoinDCXProgress] = useState({ done: 0, total: 0, symbol: "" });
   const [coindcxAllResults, setCoinDCXAllResults] = useState<CPRResult[]>(() => {
