@@ -471,14 +471,8 @@ export default function SignalsJournal() {
                 <tr>
                   <th className="py-2.5 px-3">Symbol</th>
                   <th className="py-2.5 px-3">View</th>
-                  <th className="py-2.5 px-3">Current Price</th>
-                  <th className="py-2.5 px-3">
-                    <div className="space-y-0.5">
-                      <div>Target (TP)</div>
-                      <div>Entry</div>
-                      <div>Stop (SL)</div>
-                    </div>
-                  </th>
+                  <th className="py-2.5 px-3">Live Price</th>
+                  <th className="py-2.5 px-3 whitespace-nowrap">SL-Entry-TP</th>
                   <th className="py-2.5 px-3">R:R</th>
                   <th className="py-2.5 px-3" title="Gross price return from entry to recorded TP/SL exit; excludes fees and slippage.">Paper Return</th>
                   <th className="py-2.5 px-3 text-center">Status</th>
@@ -552,7 +546,7 @@ export default function SignalsJournal() {
                           </div>
                         )}
                       </td>
-                      <td className="py-2.5 px-3 text-cyan-300 font-bold whitespace-nowrap">
+                      <td className="py-2.5 px-3 text-white font-bold whitespace-nowrap">
                         ${fmt(livePrice)}
                       </td>
                       <td className="py-2.5 px-3 font-bold whitespace-nowrap">
@@ -560,7 +554,11 @@ export default function SignalsJournal() {
                           <div className="text-emerald-400">
                             <span className="text-xs mr-1 text-emerald-500">◎</span>${fmt(item.target)}
                           </div>
-                          <div className="text-slate-200">${fmt(item.entry)}</div>
+                          <div
+                            style={{ color: "#3b82f6", textShadow: "-1.5px 0 0 #e12afb" }}
+                          >
+                            ${fmt(item.entry)}
+                          </div>
                           <div className="text-rose-400">${fmt(item.sl)}</div>
                         </div>
                       </td>
