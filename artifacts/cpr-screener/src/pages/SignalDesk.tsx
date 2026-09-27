@@ -446,7 +446,7 @@ export default function SignalDesk({
         const patternId = levels ? levels.patternId : (selectedViewPattern || activeView || "");
 
         // Same trigger check the Journal auto-save effect uses — this is
-        // display-only here, so a card can show "Ready" vs "Saved" without
+        // display-only here, so a card can show "Ready" vs "Running" without
         // waiting for the next auto-save tick to resolve.
         const isTriggered = levels
           ? hasTouchedEntry(levels.direction, levels.price, sym.currentPrice)
@@ -540,7 +540,7 @@ export default function SignalDesk({
         : (Math.abs(targetPrice - price) / Math.max(0.0000001, Math.abs(price - stopPrice))).toFixed(1);
 
       // Same trigger check the Journal auto-save effect uses — display-only
-      // here so a card can show "Ready" vs "Saved" without waiting for the
+      // here so a card can show "Ready" vs "Running" without waiting for the
       // next auto-save tick to resolve.
       const isTriggered = levels
         ? hasTouchedEntry(levels.direction, levels.price, r.currentPrice)
@@ -783,7 +783,7 @@ R:R: ${item.riskReward}`;
           <div className="shrink-0 bg-[#131b26] border border-[#1e2d3d] rounded-lg px-3 py-1.5 flex items-center gap-2 text-xs text-emerald-400">
             <Cloud className="w-3.5 h-3.5 text-emerald-400" />
             <span className="font-medium text-slate-300">
-              Auto-Saved to Journal: <strong className="text-emerald-400 font-mono font-bold">{stats.saved}</strong>
+              Running (In Journal): <strong className="text-emerald-400 font-mono font-bold">{stats.saved}</strong>
             </span>
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
           </div>
@@ -791,7 +791,7 @@ R:R: ${item.riskReward}`;
           <div className="shrink-0 bg-[#131b26] border border-[#1e2d3d] rounded-lg px-3 py-1.5 flex items-center gap-2 text-xs text-amber-400">
             <Clock className="w-3.5 h-3.5 text-amber-400" />
             <span className="font-medium text-slate-300">
-              Ready (Watching): <strong className="text-amber-400 font-mono font-bold">{stats.ready}</strong>
+              Ready: <strong className="text-amber-400 font-mono font-bold">{stats.ready}</strong>
             </span>
           </div>
 
@@ -927,7 +927,7 @@ R:R: ${item.riskReward}`;
             </button>
           </div>
 
-          {/* Status Filter — Saved (triggered, in the Journal) / Ready
+          {/* Status Filter — Running (triggered, in the Journal) / Ready
               (matched an Active View, still watching for entry). Toggle
               behavior: clicking the already-active button clears it back
               to "all", matching the Direction/Source filters' feel. */}
@@ -940,7 +940,7 @@ R:R: ${item.riskReward}`;
                   : "text-emerald-400/70 hover:text-emerald-300 bg-[#151e2c] border border-transparent"
               }`}
             >
-              Saved
+              Running
             </button>
             <button
               onClick={() => setStatusFilter(statusFilter === "ready" ? "all" : "ready")}
@@ -1168,13 +1168,15 @@ R:R: ${item.riskReward}`;
                           <strong className="text-slate-500 font-mono text-[11px]">{item.patternId}</strong>
                         </div>
                       )}
-                      <div className="flex items-center gap-1">
-                        <span>Target:</span>
-                        <strong className="text-slate-200 font-semibold font-mono">{item.targetLevel || "S2"}</strong>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <span>Stoploss:</span>
-                        <strong className="text-slate-200 font-semibold font-mono">{item.stoplossLevel || "S1"}</strong>
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-1">
+                          <span>Target:</span>
+                          <strong className="text-slate-200 font-semibold font-mono">{item.targetLevel || "S2"}</strong>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span>Stoploss:</span>
+                          <strong className="text-rose-400 font-semibold font-mono">{item.stoplossLevel || "S1"}</strong>
+                        </div>
                       </div>
                       <div className="flex items-center gap-1">
                         <span>Category:</span>
@@ -1201,20 +1203,23 @@ R:R: ${item.riskReward}`;
 
                     <div className="flex items-center gap-2">
                       {item.isSaved && (
-                        item.isTriggered ? (
-                          <div className="flex items-center gap-1 text-[11px] text-emerald-400 font-mono">
-                            <Cloud className="w-3 h-3 text-emerald-400" />
-                            <span>Saved</span>
-                          </div>
-                        ) : (
-                          <div
-                            className="flex items-center gap-1 text-[11px] text-amber-400 font-mono"
-                            title="Matches an Active View but price hasn't reached the entry line yet"
-                          >
-                            <Clock className="w-3 h-3 text-amber-400" />
-                            <span>Ready</span>
-                          </div>
-                        )
+                        <div className="flex flex-col items-end gap-1">
+                          {directionBadge}
+                          {item.isTriggered ? (
+                            <div className="flex items-center gap-1 text-[11px] text-emerald-400 font-mono">
+                              <Cloud className="w-3 h-3 text-emerald-400" />
+                              <span>Running</span>
+                            </div>
+                          ) : (
+                            <div
+                              className="flex items-center gap-1 text-[11px] text-amber-400 font-mono"
+                              title="Matches an Active View but price hasn't reached the entry line yet"
+                            >
+                              <Clock className="w-3 h-3 text-amber-400" />
+                              <span>Ready</span>
+                            </div>
+                          )}
+                        </div>
                       )}
 
                       <button
