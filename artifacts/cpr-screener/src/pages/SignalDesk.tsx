@@ -956,24 +956,24 @@ R:R: ${item.riskReward}`;
             </button>
           </div>
 
-          {/* Source Filter — grouped segmented control (same layout as the
-              Signals Journal). Colours: All fuchsia, Binance gold,
-              Delta cyan, CoinDCX green. */}
-          <div className="flex rounded-md overflow-hidden border border-[#22354a] bg-[#151e2c]">
+          {/* Source Filter — grouped tab control (same as the Signals Journal).
+              Selected tab gets a border (inside the group only). All fuchsia,
+              Binance indigo, Delta cyan, CoinDCX green. */}
+          <div className="flex gap-0.5 p-0.5 rounded-md border border-[#22354a] bg-[#151e2c]">
             {(["all", "binance", "delta", "coindcx"] as const).map((src) => (
               <button
                 key={src}
                 onClick={() => setSourceFilter(src)}
-                className={`px-3 py-1 text-xs font-semibold transition cursor-pointer ${
+                className={`px-3 py-1 rounded text-xs font-semibold transition cursor-pointer border ${
                   sourceFilter === src
                     ? src === "delta"
-                      ? "bg-cyan-500/20 text-cyan-400"
+                      ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/50"
                       : src === "binance"
-                      ? "bg-yellow-500/20 text-yellow-400"
+                      ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/50"
                       : src === "coindcx"
-                      ? "bg-emerald-500/20 text-emerald-400"
-                      : "bg-fuchsia-500/20 text-fuchsia-300"
-                    : "text-slate-400 hover:text-slate-200"
+                      ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/50"
+                      : "bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/50"
+                    : "text-slate-400 hover:text-slate-200 border-transparent"
                 }`}
               >
                 {src === "all" ? "All" : src === "coindcx" ? "CoinDCX" : src === "delta" ? "Delta" : "Binance"}

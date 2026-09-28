@@ -412,28 +412,6 @@ export default function SignalsJournal() {
 
         <div className="flex items-center gap-3">
           <div className="flex rounded-md overflow-hidden border border-[#22354a] bg-[#151e2c]">
-            {(["all", "binance", "delta", "coindcx"] as const).map((src) => (
-              <button
-                key={src}
-                onClick={() => setSourceFilter(src)}
-                className={`px-3 py-1 text-xs font-semibold capitalize transition cursor-pointer ${
-                  sourceFilter === src
-                    ? src === "delta"
-                      ? "bg-cyan-500/20 text-cyan-400"
-                      : src === "binance"
-                      ? "bg-yellow-500/20 text-yellow-400"
-                      : src === "coindcx"
-                      ? "bg-violet-500/20 text-violet-400"
-                      : "bg-amber-500/20 text-amber-400"
-                    : "text-slate-400 hover:text-slate-200"
-                }`}
-              >
-                {src === "coindcx" ? "CoinDCX" : src}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex rounded-md overflow-hidden border border-[#22354a] bg-[#151e2c]">
             {(["ALL", "ACTIVE", "PASS", "FAIL"] as const).map((status) => (
               <button
                 key={status}
@@ -445,6 +423,31 @@ export default function SignalsJournal() {
                 }`}
               >
                 {status}
+              </button>
+            ))}
+          </div>
+
+          {/* Exchange tab group — sits right after the status tabs. Selected
+              tab gets a border (inside the group only). Binance indigo,
+              Delta cyan, CoinDCX green. */}
+          <div className="flex gap-0.5 p-0.5 rounded-md border border-[#22354a] bg-[#151e2c]">
+            {(["all", "binance", "delta", "coindcx"] as const).map((src) => (
+              <button
+                key={src}
+                onClick={() => setSourceFilter(src)}
+                className={`px-3 py-1 rounded text-xs font-semibold capitalize transition cursor-pointer border ${
+                  sourceFilter === src
+                    ? src === "delta"
+                      ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/50"
+                      : src === "binance"
+                      ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/50"
+                      : src === "coindcx"
+                      ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/50"
+                      : "bg-amber-500/20 text-amber-400 border-amber-500/50"
+                    : "text-slate-400 hover:text-slate-200 border-transparent"
+                }`}
+              >
+                {src === "coindcx" ? "CoinDCX" : src}
               </button>
             ))}
           </div>
