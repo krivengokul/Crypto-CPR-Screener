@@ -425,23 +425,6 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
 
   // --- leaf Views ---
   {
-    key: "6AM:MegMeg-L3:8PM",
-    label: "6AM:MegMeg-L3:8PM",
-    parentKey: "A-A-AA-AA-EU1L4",
-    kind: "view",
-    direction: "Down",
-    condition: (r) =>
-      r.prevCPR.widthPct > 5.00 && r.prevCPR.widthPct <= 10.00 && // pMega
-      r.todayCPR.widthPct > 5.00 && r.todayCPR.widthPct <= 10.00, // Mega
-    targetLabel: "S3",
-    getTarget: (r) => r.todayCPR.s3,
-    entryLabel: "BC",
-    getEntry: (r) => r.todayCPR.bc,
-    stoplossLabel: "R1",
-    getStoploss: (r) => r.todayCPR.r1,
-      order: 0
-},
-  {
       key: "BC-A-A-AA-AA-EUTL3-RH-BBGap-S2",
       label: "A6-EUTL3-MegaUltra",
       parentKey: "A-A-AA-AA-EUTL3",
