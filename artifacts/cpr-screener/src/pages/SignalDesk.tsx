@@ -1195,11 +1195,11 @@ R:R: ${item.riskReward}`;
                       <div className="flex items-center gap-4">
                         <div className="flex items-center gap-1">
                           <span>Target:</span>
-                          <strong className="text-slate-200 font-semibold font-mono">{item.targetLevel || "S2"}</strong>
+                          <strong className={`${isDown ? "text-rose-400" : "text-emerald-400"} font-semibold font-mono`}>{item.targetLevel || "S2"}</strong>
                         </div>
                         <div className="flex items-center gap-1">
                           <span>Stoploss:</span>
-                          <strong className="text-rose-400 font-semibold font-mono">{item.stoplossLevel || "S1"}</strong>
+                          <strong className={`${isDown ? "text-emerald-400" : "text-rose-400"} font-semibold font-mono`}>{item.stoplossLevel || "S1"}</strong>
                         </div>
                       </div>
                       <div className="flex items-center gap-1">
