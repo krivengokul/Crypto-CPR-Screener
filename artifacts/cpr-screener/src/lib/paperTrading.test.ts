@@ -5,6 +5,7 @@ import {
   summarizePaperTrades,
   type PaperTradeRecord,
 } from "./paperTrading.ts";
+import { evaluateSignalCandles } from "./signalOutcome.ts";
 
 function trade(overrides: Partial<PaperTradeRecord> = {}): PaperTradeRecord {
   return {
@@ -74,4 +75,27 @@ test("uses null metrics when there are no resolved trades", () => {
 
   assert.equal(summary.winRatePct, null);
   assert.equal(summary.averageGrossReturnPct, null);
+});
+
+test("resolves a short target when a candle low falls below TP", () => {
+  const outcome = evaluateSignalCandles(
+    { direction: "Down", entry: 4259.89, target: 4228.06, sl: 4283.08, timestamp: 1000 },
+    [{ high: 4260, low: 4144.4 }],
+    2000
+  );
+
+  assert.equal(outcome.status, "PASS");
+  assert.equal(outcome.exitPrice, 4228.06);
+  assert.match(outcome.outcomeNotes, /Target achieved/);
+});
+
+test("resolves the first reached boundary for a short signal", () => {
+  const outcome = evaluateSignalCandles(
+    { direction: "Down", entry: 100, target: 90, sl: 110, timestamp: 1000 },
+    [{ high: 111, low: 89 }],
+    2000
+  );
+
+  assert.equal(outcome.status, "FAIL");
+  assert.equal(outcome.exitPrice, 110);
 });

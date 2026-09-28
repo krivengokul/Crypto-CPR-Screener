@@ -14,6 +14,7 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { getDb, ensureSignedIn } from "@/lib/firebase";
+import { evaluateSignalCandles } from "./signalOutcome";
 
 export interface LoggedSignal {
   id: string;
@@ -373,9 +374,48 @@ export async function updateSignalOutcomeInCloud(
 /**
  * Fast direct kline fetcher with fast timeout & Futures priority
  */
-async function fetchKlinesFast(symbol: string, startTime: number): Promise<any[] | null> {
-  const cleanSymbol = symbol.replace(/[\/_\-]/g, "").toUpperCase();
+interface OutcomeCandle {
+  high: number;
+  low: number;
+}
+
+async function fetchKlinesFast(signal: LoggedSignal): Promise<OutcomeCandle[] | null> {
+  if (signal.source === "delta") {
+    try {
+      const now = Math.floor(Date.now() / 1000);
+      const start = Math.floor(signal.timestamp / 1000);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      const response = await fetch(
+        `https://api.india.delta.exchange/v2/history/candles?symbol=${encodeURIComponent(signal.symbol)}&resolution=1h&start=${start}&end=${now}`,
+        { signal: controller.signal, cache: "no-store" }
+      );
+      clearTimeout(timeoutId);
+      if (!response.ok) return null;
+
+      const body = await response.json();
+      const rows: unknown[] = Array.isArray(body.result)
+        ? body.result
+        : Array.isArray(body.result?.candles)
+          ? body.result.candles
+          : Array.isArray(body.candles)
+            ? body.candles
+            : Array.isArray(body)
+              ? body
+              : [];
+      return rows
+        .map((row) => row as { time?: number; high?: number; low?: number })
+        .sort((a, b) => Number(a.time) - Number(b.time))
+        .map((candle) => ({ high: Number(candle.high), low: Number(candle.low) }))
+        .filter((candle) => Number.isFinite(candle.high) && Number.isFinite(candle.low));
+    } catch {
+      return null;
+    }
+  }
+
+  const cleanSymbol = signal.symbol.replace(/[\/_\-]/g, "").toUpperCase();
   const binanceSymbol = cleanSymbol.endsWith("USDT") ? cleanSymbol : `${cleanSymbol}USDT`;
+  const startTime = signal.timestamp;
 
   const endpoints = [
     `https://fapi.binance.com/fapi/v1/klines?symbol=${binanceSymbol}&interval=1h&startTime=${startTime}&limit=168`,
@@ -392,7 +432,8 @@ async function fetchKlinesFast(symbol: string, startTime: number): Promise<any[]
       if (resp.ok) {
         const data = await resp.json();
         if (Array.isArray(data) && data.length > 0) {
-          return data;
+          return data.map((k) => ({ high: Number(k[2]), low: Number(k[3]) }))
+            .filter((candle) => Number.isFinite(candle.high) && Number.isFinite(candle.low));
         }
       }
     } catch {
@@ -408,66 +449,10 @@ export async function evaluateSignalOutcome(
   if (signal.status !== "ACTIVE") return null;
 
   try {
-    const klines = await fetchKlinesFast(signal.symbol, signal.timestamp);
+    const klines = await fetchKlinesFast(signal);
     if (!klines || klines.length === 0) return null;
 
-    let highest = signal.entry;
-    let lowest = signal.entry;
-    let finalStatus: "ACTIVE" | "PASS" | "FAIL" | "EXPIRED" = "ACTIVE";
-    let notes = "Trade active and within parameters";
-    let exitPrice = signal.entry;
-
-    const isUp = signal.direction === "Up" || signal.direction === "LONG";
-    const isDown = signal.direction === "Down" || signal.direction === "SHORT";
-
-    for (const k of klines) {
-      const high = parseFloat(k[2]);
-      const low = parseFloat(k[3]);
-
-      if (high > highest) highest = high;
-      if (low < lowest) lowest = low;
-
-      if (isUp) {
-        if (low <= signal.sl) {
-          finalStatus = "FAIL";
-          exitPrice = signal.sl;
-          notes = `Stopped out at $${signal.sl.toFixed(4)}`;
-          break;
-        } else if (high >= signal.target) {
-          finalStatus = "PASS";
-          exitPrice = signal.target;
-          notes = `Target achieved at $${signal.target.toFixed(4)}`;
-          break;
-        }
-      } else if (isDown) {
-        if (high >= signal.sl) {
-          finalStatus = "FAIL";
-          exitPrice = signal.sl;
-          notes = `Stopped out at $${signal.sl.toFixed(4)}`;
-          break;
-        } else if (low <= signal.target) {
-          finalStatus = "PASS";
-          exitPrice = signal.target;
-          notes = `Target achieved at $${signal.target.toFixed(4)}`;
-          break;
-        }
-      }
-    }
-
-    const now = Date.now();
-    if (finalStatus === "ACTIVE" && now - signal.timestamp > 7 * 24 * 60 * 60 * 1000) {
-      finalStatus = "EXPIRED";
-      notes = "Session expired after 7 days without triggering SL or TP";
-    }
-
-    return {
-      status: finalStatus,
-      highestPriceSince: highest,
-      lowestPriceSince: lowest,
-      outcomeNotes: notes,
-      evaluatedAt: Date.now(),
-      exitPrice: finalStatus !== "ACTIVE" ? exitPrice : undefined,
-    };
+    return evaluateSignalCandles(signal, klines);
   } catch (err) {
     console.warn("Evaluation error for", signal.symbol, err);
     return null;
