@@ -1194,8 +1194,8 @@ R:R: ${item.riskReward}`;
                       )}
                       <div className="flex items-center gap-4">
                         <div className={`flex items-center gap-1 ${isDown ? "order-1" : "order-2"}`}>
-                          <Target className={`w-3 h-3 ${isDown ? "text-rose-400" : "text-emerald-400"}`} />
                           <span>Target:</span>
+                          <Target className={`w-3 h-3 ${isDown ? "text-rose-400" : "text-emerald-400"}`} />
                           <strong className={`${isDown ? "text-rose-400" : "text-emerald-400"} font-semibold font-mono`}>{item.targetLevel || "S2"}</strong>
                         </div>
                         <div className={`flex items-center gap-1 ${isDown ? "order-2" : "order-1"}`}>
