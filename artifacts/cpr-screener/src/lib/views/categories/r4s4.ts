@@ -1820,7 +1820,7 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
       },
     {
         key: "BC-A-E-AA-LB-EUTL2-RH-ABGap-S1",
-        label: "EUTL2=2Ultra",
+        label: "EUTL2-2Ultra",
         parentKey: "A-E-AA-LB-EUTL2",
         condition: (r) => passesView(r, "A-E-AA-LB-EUTL2") && matchesGapBadge(r, "RH-ABGap"),
         standalone: true,
