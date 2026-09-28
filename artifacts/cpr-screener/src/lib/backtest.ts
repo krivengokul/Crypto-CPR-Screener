@@ -1452,7 +1452,10 @@ export async function backtestSymbolOnDate(
   const { result, window } = reconstructed;
 
   if (!passesPatternFn(result, target.conditionKey ?? target.key)) return null; // didn't match the pattern on this date
-  if (!levelCheckFullyMatches(result, target.levelCheckDefs)) return null; // didn't hit this View's full Level Check signature
+  // NOTE: the View's 13/13 Level Check gate is intentionally NOT applied here.
+  // Selecting a View in the Backtest panel lists every symbol belonging to
+  // that View (its pattern condition), whatever its Ladder Check score is;
+  // the Ladder Check column still shows each row's own N/13.
 
   const getTarget = target.getTarget ?? ((r: CPRResult) => r.todayCPR.r4);
   const isDown = target.direction === "Down" || (target.direction as string) === "bearish";

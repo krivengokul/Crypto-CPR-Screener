@@ -99,6 +99,21 @@ function formatDisplay(iso: string): string {
   return fromISO(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
 }
 
+/**
+ * Backtest-side pattern check for a selected View: same conditionKey redirect
+ * as ScreenerUtils' passesPattern, but WITHOUT the 13/13 Level Check gate, so
+ * choosing a View lists every symbol belonging to it regardless of its
+ * Ladder Check score. (The live Screener keeps using passesPattern as-is.)
+ */
+function passesPatternNoLadder(r: CPRResult, pattern: string): boolean {
+  const v = getView(pattern);
+  if (!v) return false;
+  if (v.conditionKey && v.conditionKey !== pattern) {
+    return passesPatternNoLadder(r, v.conditionKey);
+  }
+  return passesView(r, pattern);
+}
+
 /** Return true when viewKey is nested under ancestorKey in the View tree. */
 function isViewDescendant(viewKey: string, ancestorKey: string): boolean {
   const seen = new Set<string>();
@@ -2165,7 +2180,7 @@ export default function BacktestPanel() {
           selectedKey,
           entryDate,
           source,
-          passesPattern,
+          passesPatternNoLadder,
           (done, total, symbol) => setProgress({ done, total, symbol }),
           // Stream matched rows into the table as each batch resolves.
           (streamed) => setRows((prev) => [...prev, ...streamed])
@@ -2181,7 +2196,7 @@ export default function BacktestPanel() {
             selectedKey,
             d,
             source,
-            passesPattern,
+            passesPatternNoLadder,
             (done, total, symbol) => setProgress({ done, total, symbol }),
             // Stream matched rows into the table as each batch resolves.
             (streamed) => setRows((prev) => [...prev, ...streamed])
