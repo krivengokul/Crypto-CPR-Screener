@@ -71,7 +71,10 @@ export function formatISTTime(utcDate: Date): string {
 
 
 export function isCacheFresh<T>(cache: CachedResults<T> | null): boolean {
-  return !!cache && cache.date === getTodayISTDate();
+  // A cache only counts as fresh when it is from today AND actually holds
+  // rows. An empty (or missing) result set must never be treated as "done":
+  // that state showed 0 results all day with the auto-rescan suppressed.
+  return !!cache && cache.date === getTodayISTDate() && cache.data.length > 0;
 }
 
 export function shouldAutoScanForCache<T>(
@@ -122,24 +125,42 @@ export function formatScanTime(savedAtMs: number): string {
 }
 
 export function saveCachedResults<T>(key: string, data: T[]): boolean {
+  const payload = JSON.stringify({
+    data,
+    date: getTodayISTDate(),
+    savedAt: Date.now(),
+  });
   try {
-    const today = getTodayISTDate();
-    localStorage.setItem(
-      key,
-      JSON.stringify({
-        data,
-        date: today,
-        savedAt: Date.now(),
-      })
-    );
+    localStorage.setItem(key, payload);
     return true;
   } catch {
-    // Quota exceeded (or storage unavailable) — the full result set didn't
-    // persist. Callers must not treat this the same as "never scanned":
-    // see markScannedForSource/hasScannedTodayForSource below, which record
-    // the fact that today's scan completed in a tiny, quota-safe key that
-    // survives even when the (much larger) result cache above doesn't.
-    return false;
+    // Quota exceeded (or storage unavailable). Free space by dropping
+    // obsolete app keys (old scanned-date markers, previous days' symbol
+    // pins) and retry once before giving up.
+    try {
+      const keep = new Set([
+        STORAGE_KEY,
+        STORAGE_KEY_BINANCE,
+        STORAGE_KEY_DELTA,
+        STORAGE_KEY_COINDCX,
+      ]);
+      const today = getTodayISTDate();
+      for (const k of Object.keys(localStorage)) {
+        if (k === key || keep.has(k)) continue;
+        const isPin = /^cpr_(binance|delta|coindcx)_symbols_/.test(k);
+        if ((isPin && !k.endsWith(today)) || k.startsWith(SCANNED_MARKER_PREFIX)) {
+          localStorage.removeItem(k);
+        }
+      }
+      localStorage.setItem(key, payload);
+      return true;
+    } catch {
+      console.warn(
+        `[scheduler] could not persist "${key}" (${Math.round(payload.length / 1024)} KB) — ` +
+          `localStorage quota is full. Results stay in memory only; the source will rescan on refresh.`
+      );
+      return false;
+    }
   }
 }
 
@@ -175,16 +196,16 @@ export function hasScannedTodayForSource(source: string): boolean {
 }
 
 /**
- * True if this source's scan should be treated as "already done today" —
- * either because its full result cache is fresh, or (fallback) because the
- * lightweight scanned-today marker says so even though the result cache
- * itself failed to persist (e.g. quota exceeded).
+ * True only if this source has usable results for today (a same-day cache
+ * that actually contains rows). The lightweight scanned-today marker is
+ * deliberately NOT consulted here: a marker without loadable results made
+ * the app skip the rescan and show 0 rows until the next IST day.
  */
 export function isScanFreshForSource<T>(
-  source: string,
+  _source: string,
   cache: CachedResults<T> | null
 ): boolean {
-  return isCacheFresh(cache) || hasScannedTodayForSource(source);
+  return isCacheFresh(cache);
 }
 
 export function formatCountdown(targetUtc: Date): string {

@@ -396,6 +396,9 @@ export default function Screener({
       const results = await runScreener((done, total, symbol) => {
         setProgress({ done, total, symbol });
       });
+      if (results.length === 0) {
+        throw new Error("Binance scan returned no results — will retry on the next scan/refresh.");
+      }
       setAllResults(results);
       setFiltered(results.filter((r) => passesPattern(r, activeSignal)));
       setStatus("done");
@@ -433,6 +436,9 @@ export default function Screener({
       const results = await runDeltaScreener((done, total, symbol) => {
         setDeltaProgress({ done, total, symbol });
       });
+      if (results.length === 0) {
+        throw new Error("Delta scan returned no results — will retry on the next scan/refresh.");
+      }
       setDeltaAllResults(results);
       setDeltaFiltered(results.filter((r) => passesPattern(r, activeSignal)));
       setDeltaStatus("done");
@@ -465,6 +471,9 @@ export default function Screener({
       const results = await runCoinDCXScreener((done, total, symbol) => {
         setCoinDCXProgress({ done, total, symbol });
       });
+      if (results.length === 0) {
+        throw new Error("CoinDCX scan returned no results — will retry on the next scan/refresh.");
+      }
       setCoinDCXAllResults(results);
       setCoinDCXFiltered(results.filter((r) => passesPattern(r, activeSignal)));
       setCoinDCXStatus("done");
