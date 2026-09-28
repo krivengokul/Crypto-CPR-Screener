@@ -402,7 +402,10 @@ export interface CreateViewResult {
   created?: ViewDef;
 }
 
-const BULLISH_TARGETS: Record<string, { label: string; key: "r1" | "r2" | "r3" | "r4" }> = {
+const BULLISH_TARGETS: Record<string, { label: string; key: "prevHigh" | "r1" | "r2" | "r3" | "r4" }> = {
+  // PH = previous day's high (todayCPR.prevHigh) — sits above R1 in the
+  // Target dropdown; its position relative to R1 varies day to day (HL-A/HL-B).
+  PH: { label: "PH", key: "prevHigh" },
   // R1 is the nearest rung above entry (TC) — the quickest-to-hit target,
   // and the one an Up View's own stoploss (S1) mirrors on the other side.
   R1: { label: "R1", key: "r1" },
@@ -410,7 +413,9 @@ const BULLISH_TARGETS: Record<string, { label: string; key: "r1" | "r2" | "r3" |
   R3: { label: "R3", key: "r3" },
   R4: { label: "R4", key: "r4" },
 };
-const BEARISH_TARGETS: Record<string, { label: string; key: "s1" | "s2" | "s3" | "s4" }> = {
+const BEARISH_TARGETS: Record<string, { label: string; key: "prevLow" | "s1" | "s2" | "s3" | "s4" }> = {
+  // PL = previous day's low (todayCPR.prevLow), listed above S1.
+  PL: { label: "PL", key: "prevLow" },
   // S1 mirrors R1 above: nearest rung below entry (BC), stoploss R1.
   S1: { label: "S1", key: "s1" },
   S2: { label: "S2", key: "s2" },
@@ -429,15 +434,17 @@ const BEARISH_TARGETS: Record<string, { label: string; key: "s1" | "s2" | "s3" |
  */
 export const ENTRY_DEFS: Record<
   string,
-  { label: string; key: "r4" | "r3" | "r2" | "r1" | "tc" | "pivot" | "bc" | "s1" | "s2" | "s3" | "s4" }
+  { label: string; key: "r4" | "r3" | "r2" | "r1" | "prevHigh" | "tc" | "pivot" | "bc" | "prevLow" | "s1" | "s2" | "s3" | "s4" }
 > = {
   R4: { label: "R4", key: "r4" },
   R3: { label: "R3", key: "r3" },
   R2: { label: "R2", key: "r2" },
   R1: { label: "R1", key: "r1" },
+  PH: { label: "PH", key: "prevHigh" },
   TC: { label: "TC", key: "tc" },
   Pivot: { label: "Pivot", key: "pivot" },
   BC: { label: "BC", key: "bc" },
+  PL: { label: "PL", key: "prevLow" },
   S1: { label: "S1", key: "s1" },
   S2: { label: "S2", key: "s2" },
   S3: { label: "S3", key: "s3" },

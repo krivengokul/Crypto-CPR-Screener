@@ -514,12 +514,25 @@ function AttachPointSelect({
   );
 }
 
-const ENTRY_OPTIONS = ["R4", "R3", "R2", "R1", "TC", "Pivot", "BC", "S1", "S2", "S3", "S4"];
+const ENTRY_OPTIONS = ["R4", "R3", "R2", "R1", "PH", "TC", "Pivot", "BC", "PL", "S1", "S2", "S3", "S4"];
 
 /** Every valid Target rung — union of BULLISH_TARGETS/BEARISH_TARGETS keys
  * on the workflow-patch side (copyviewpatch.mjs), used here only to parse
  * an existing View's key back into its parts (see parseComposedViewKey). */
-const TARGET_OPTIONS = ["R1", "R2", "R3", "R4", "S1", "S2", "S3", "S4"];
+const TARGET_OPTIONS = ["PH", "R1", "R2", "R3", "R4", "PL", "S1", "S2", "S3", "S4"];
+
+/** Target dropdown choices per direction (PH / PL = previous day's high / low). */
+const UP_TARGETS = ["PH", "R1", "R2", "R3", "R4"];
+const DOWN_TARGETS = ["PL", "S1", "S2", "S3", "S4"];
+
+/** Parses a View's targetLabel back into a Target dropdown value. */
+function targetFromLabel(label: string | undefined, direction: "Up" | "Down" | undefined): string {
+  const t = label?.trim();
+  if (t === "PH" || t === "PL") return t;
+  const m = label?.match(/[RLS]\d/)?.[0];
+  if (m) return m.startsWith("L") ? m.replace("L", "S") : m;
+  return direction === "Down" ? "S4" : "R4";
+}
 
 /**
  * "Create" View's key is fully derived (never typed) as
@@ -629,11 +642,7 @@ function CopyViewControl({
     const raw = sourceView?.entryLabel?.split(" ")[0];
     return ENTRY_OPTIONS.includes(raw ?? "") ? raw! : initialDirection === "Down" ? "BC" : "TC";
   })();
-  const initialTarget = (() => {
-    const m = sourceView?.targetLabel?.match(/[RLS]\d/)?.[0];
-    if (m) return m.startsWith("L") ? m.replace("L", "S") : m;
-    return initialDirection === "Down" ? "S4" : "R4";
-  })();
+  const initialTarget = targetFromLabel(sourceView?.targetLabel, initialDirection);
   const initialGapBadge = parseComposedViewKey(sourceKey).gapBadge ?? "";
 
   const [open, setOpen] = useState(initialOpen);
@@ -813,7 +822,7 @@ function CopyViewControl({
           disabled={!!command}
           className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
         >
-          {(direction === "Up" ? ["R1", "R2", "R3", "R4"] : ["S1", "S2", "S3", "S4"]).map((t) => (
+          {(direction === "Up" ? UP_TARGETS : DOWN_TARGETS).map((t) => (
             <option key={t} value={t}>Target {t}</option>
           ))}
         </select>
@@ -929,9 +938,7 @@ function EditViewControl({
     // S1)", and "L…" sorts before "S…" in the string so it's what the
     // regex finds first) — never a literal "U…" match, since U isn't
     // in the character class.
-    const m = activeTarget.targetLabel?.match(/[RLS]\d/)?.[0];
-    if (m) return m.startsWith("L") ? m.replace("L", "S") : m;
-    return activeTarget.direction === "Down" ? "S4" : "R4";
+    return targetFromLabel(activeTarget.targetLabel, activeTarget.direction);
   });
   const [label, setLabel] = useState(activeTarget.label);
   const [attachKey, setAttachKey] = useState(() => activeTarget.parentKey ?? findContainingNodeKey(activeTarget.key) ?? activeTarget.key);
@@ -974,9 +981,7 @@ function EditViewControl({
       return ENTRY_OPTIONS.includes(raw ?? "") ? raw! : (activeTarget.direction === "Down" ? "BC" : "TC");
     });
     setTarget(() => {
-      const m = activeTarget.targetLabel?.match(/[RLS]\d/)?.[0];
-      if (m) return m.startsWith("L") ? m.replace("L", "S") : m;
-      return activeTarget.direction === "Down" ? "S4" : "R4";
+      return targetFromLabel(activeTarget.targetLabel, activeTarget.direction);
     });
     setLabel(activeTarget.label);
     setAttachKey(activeTarget.parentKey ?? findContainingNodeKey(activeTarget.key) ?? activeTarget.key);
@@ -1138,7 +1143,7 @@ function EditViewControl({
           disabled={!!command}
           className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
         >
-          {(direction === "Up" ? ["R1", "R2", "R3", "R4"] : ["S1", "S2", "S3", "S4"]).map((t) => (
+          {(direction === "Up" ? UP_TARGETS : DOWN_TARGETS).map((t) => (
             <option key={t} value={t}>
               Target {t}
             </option>
@@ -1548,7 +1553,7 @@ function CreateViewControl({
           disabled={!!command}
           className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
         >
-          {(direction === "Up" ? ["R1", "R2", "R3", "R4"] : ["S1", "S2", "S3", "S4"]).map((t) => (
+          {(direction === "Up" ? UP_TARGETS : DOWN_TARGETS).map((t) => (
             <option key={t} value={t}>
               Target {t}
             </option>
