@@ -411,14 +411,14 @@ export default function SignalsJournal() {
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="flex rounded-md overflow-hidden border border-[#22354a] bg-[#151e2c]">
+          <div className="flex rounded-md overflow-hidden border border-[#22354a] bg-[#151e2c] mr-3">
             {(["ALL", "ACTIVE", "PASS", "FAIL"] as const).map((status) => (
               <button
                 key={status}
                 onClick={() => setFilterStatus(status)}
                 className={`px-3 py-1 text-xs font-semibold transition cursor-pointer ${
                   filterStatus === status
-                    ? "bg-blue-600 text-white"
+                    ? "bg-violet-600 text-white"
                     : "text-slate-400 hover:text-slate-200"
                 }`}
               >
