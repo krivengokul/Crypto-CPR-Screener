@@ -956,48 +956,29 @@ R:R: ${item.riskReward}`;
             </button>
           </div>
 
-          {/* Source Filter */}
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setSourceFilter("all")}
-              className={`px-2 py-1 rounded text-xs font-semibold transition cursor-pointer ${
-                sourceFilter === "all"
-                  ? "bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/40"
-                  : "text-slate-400 hover:text-white bg-[#151e2c]"
-              }`}
-            >
-              All
-            </button>
-            <button
-              onClick={() => setSourceFilter("binance")}
-              className={`px-2 py-1 rounded text-xs font-semibold transition cursor-pointer ${
-                sourceFilter === "binance"
-                  ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/40"
-                  : "text-slate-400 hover:text-white bg-[#151e2c]"
-              }`}
-            >
-              Binance
-            </button>
-            <button
-              onClick={() => setSourceFilter("delta")}
-              className={`px-2 py-1 rounded text-xs font-semibold transition cursor-pointer ${
-                sourceFilter === "delta"
-                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/40"
-                  : "text-slate-400 hover:text-white bg-[#151e2c]"
-              }`}
-            >
-              Delta
-            </button>
-            <button
-              onClick={() => setSourceFilter("coindcx")}
-              className={`px-2 py-1 rounded text-xs font-semibold transition cursor-pointer ${
-                sourceFilter === "coindcx"
-                  ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
-                  : "text-slate-400 hover:text-white bg-[#151e2c]"
-              }`}
-            >
-              CoinDCX
-            </button>
+          {/* Source Filter — grouped segmented control (same layout as the
+              Signals Journal). Colours: All fuchsia, Binance gold,
+              Delta cyan, CoinDCX green. */}
+          <div className="flex rounded-md overflow-hidden border border-[#22354a] bg-[#151e2c]">
+            {(["all", "binance", "delta", "coindcx"] as const).map((src) => (
+              <button
+                key={src}
+                onClick={() => setSourceFilter(src)}
+                className={`px-3 py-1 text-xs font-semibold transition cursor-pointer ${
+                  sourceFilter === src
+                    ? src === "delta"
+                      ? "bg-cyan-500/20 text-cyan-400"
+                      : src === "binance"
+                      ? "bg-yellow-500/20 text-yellow-400"
+                      : src === "coindcx"
+                      ? "bg-emerald-500/20 text-emerald-400"
+                      : "bg-fuchsia-500/20 text-fuchsia-300"
+                    : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                {src === "all" ? "All" : src === "coindcx" ? "CoinDCX" : src === "delta" ? "Delta" : "Binance"}
+              </button>
+            ))}
           </div>
         </div>
       </div>
