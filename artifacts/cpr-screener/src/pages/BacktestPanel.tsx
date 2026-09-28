@@ -527,8 +527,8 @@ const DOWN_TARGETS = ["PL", "S1", "S2", "S3", "S4"];
 
 /** Parses a View's targetLabel back into a Target dropdown value. */
 function targetFromLabel(label: string | undefined, direction: "Up" | "Down" | undefined): string {
-  const t = label?.trim();
-  if (t === "PH" || t === "PL") return t;
+  const pv = label?.trim().match(/^(PH|PL)\b/)?.[1];
+  if (pv) return pv;
   const m = label?.match(/[RLS]\d/)?.[0];
   if (m) return m.startsWith("L") ? m.replace("L", "S") : m;
   return direction === "Down" ? "S4" : "R4";

@@ -117,12 +117,14 @@ function resolveTopLevelCategoryKey(allViewObjs, attachKey) {
 }
 
 const BULLISH_TARGETS = {
+  PH: { label: "PH (previous day's high)", key: "prevHigh" },
   R1: { label: "U1 (today's R1)", key: "r1" },
   R2: { label: "U2 (today's R2)", key: "r2" },
   R3: { label: "U3 (today's R3)", key: "r3" },
   R4: { label: "U4 (today's R4)", key: "r4" },
 };
 const BEARISH_TARGETS = {
+  PL: { label: "PL (previous day's low)", key: "prevLow" },
   S1: { label: "L1 (today's S1)", key: "s1" },
   S2: { label: "L2 (today's S2)", key: "s2" },
   S3: { label: "L3 (today's S3)", key: "s3" },
@@ -134,9 +136,11 @@ const ENTRY_DEFS = {
   R3: { label: "R3 (today's R3)", key: "r3" },
   R2: { label: "R2 (today's R2)", key: "r2" },
   R1: { label: "R1 (today's R1)", key: "r1" },
+  PH: { label: "PH (previous day's high)", key: "prevHigh" },
   TC: { label: "TC (today's TC)", key: "tc" },
   Pivot: { label: "Pivot (today's Pivot)", key: "pivot" },
   BC: { label: "BC (today's BC)", key: "bc" },
+  PL: { label: "PL (previous day's low)", key: "prevLow" },
   S1: { label: "S1 (today's S1)", key: "s1" },
   S2: { label: "S2 (today's S2)", key: "s2" },
   S3: { label: "S3 (today's S3)", key: "s3" },
