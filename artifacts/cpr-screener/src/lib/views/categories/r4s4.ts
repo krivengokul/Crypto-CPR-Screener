@@ -1817,5 +1817,126 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
         ]
       }
     ],
+      },
+    {
+        key: "BC-A-E-AA-LB-EUTL2-RH-ABGap-S1",
+        label: "EUTL2=2Ultra",
+        parentKey: "A-E-AA-LB-EUTL2",
+        condition: (r) => passesView(r, "A-E-AA-LB-EUTL2") && matchesGapBadge(r, "RH-ABGap"),
+        standalone: true,
+        kind: "view",
+        direction: "Down",
+        targetLabel: "L1 (today's S1)",
+        getTarget: (r) => r.todayCPR.s1,
+        entryLabel: "BC (today's BC)",
+        getEntry: (r) => r.todayCPR.bc,
+        stoplossLabel: "R1 (today's R1)",
+        getStoploss: (r) => r.todayCPR.r1,
+        levelCheckDefs: [
+      {
+        "key": "r4",
+        "subject": "previous",
+        "bandKeys": [
+          "tc",
+          "pivot"
+        ]
+      },
+      {
+        "key": "r3",
+        "subject": "previous",
+        "bandKeys": [
+          "bc",
+          "s1"
+        ]
+      },
+      {
+        "key": "r2",
+        "subject": "previous",
+        "bandKeys": [
+          "bc",
+          "s1"
+        ]
+      },
+      {
+        "key": "prevHigh",
+        "subject": "previous",
+        "bandKeys": [
+          "bc",
+          "s1"
+        ]
+      },
+      {
+        "key": "r1",
+        "subject": "previous",
+        "bandKeys": [
+          "bc",
+          "s1"
+        ]
+      },
+      {
+        "key": "tc",
+        "subject": "previous",
+        "bandKeys": [
+          "s1",
+          "prevLow"
+        ]
+      },
+      {
+        "key": "pivot",
+        "subject": "previous",
+        "bandKeys": [
+          "s1",
+          "prevLow"
+        ]
+      },
+      {
+        "key": "bc",
+        "subject": "previous",
+        "bandKeys": [
+          "s1",
+          "prevLow"
+        ]
+      },
+      {
+        "key": "prevLow",
+        "subject": "previous",
+        "bandKeys": [
+          "s1",
+          "prevLow"
+        ]
+      },
+      {
+        "key": "s1",
+        "subject": "previous",
+        "bandKeys": [
+          "prevLow",
+          "s2"
+        ]
+      },
+      {
+        "key": "s2",
+        "subject": "previous",
+        "bandKeys": [
+          "prevLow",
+          "s2"
+        ]
+      },
+      {
+        "key": "s3",
+        "subject": "previous",
+        "bandKeys": [
+          "prevLow",
+          "s2"
+        ]
+      },
+      {
+        "key": "s4",
+        "subject": "previous",
+        "bandKeys": [
+          "prevLow",
+          "s2"
+        ]
+      }
+    ],
       }
 ];
