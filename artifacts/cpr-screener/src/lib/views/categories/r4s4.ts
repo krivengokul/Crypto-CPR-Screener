@@ -1578,7 +1578,7 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
       },
     {
         key: "S1-S1BelowPS4-B-B-BB-BB-ELPU3-SL-AAGap-S4",
-        label: "BL4-B6-ToPPL4Fall",
+        label: "BL4-pMicroTiny-ToPPL4Fall",
         parentKey: "S1BelowPS4-B-B-BB-BB-ELPU3",
         condition: (r) => passesView(r, "S1BelowPS4-B-B-BB-BB-ELPU3") && matchesGapBadge(r, "SL-AAGap"),
         standalone: true,
