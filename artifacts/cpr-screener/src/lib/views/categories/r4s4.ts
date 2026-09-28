@@ -421,6 +421,7 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
   { key: "S1BelowPS4-B-B-OB-BB-EL1U4", label: "B-B-OB-BB-EL1U4", parentKey: "S1BelowPS4-B-B-OB-BB", kind: "pattern", condition: (r) => r.EL1U4, order: 1 },
   { key: "S1BelowPS4-B-B-OB-BB-EL1U2", label: "B-B-OB-BB-EL1U2", parentKey: "S1BelowPS4-B-B-OB-BB", kind: "pattern", condition: (r) => r.EL1U2, order: 2 },
   { key: "S1BelowPS4-B-B-OB-BB-ELBU2", label: "B-B-OB-BB-ELBU2", parentKey: "S1BelowPS4-B-B-OB-BB", kind: "pattern", condition: (r) => r.ELBU2, order: 3 },
+  { key: "S1BelowPS4-B-B-OB-BB-ELBU3", label: "B-B-OB-BB-ELBU3", parentKey: "S1BelowPS4-B-B-OB-BB", kind: "pattern", condition: (r) => r.ELBU3, order: 4 },
 
   // --- leaf Views ---
   {

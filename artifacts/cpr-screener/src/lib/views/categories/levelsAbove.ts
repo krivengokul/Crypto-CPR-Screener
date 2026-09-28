@@ -1122,6 +1122,7 @@ export const LEVELSABOVE_VIEWS: ViewDef[] = [
   { key: "A-C-RA-AA-CU4L4", label: "A-C-RA-AA-CU4L4", parentKey: "A-C-RA-AA", kind: "pattern", condition: (r) => r.CU4L4, order: 103 },
   { key: "A-C-RA-AA-U4L3", label: "A-C-RA-AA-U4L3", parentKey: "A-C-RA-AA", kind: "pattern", condition: (r) => r.U4L3, order: 104 },
   { key: "A-C-RA-AA-CU4L2", label: "A-C-RA-AA-CU4L2", parentKey: "A-C-RA-AA", kind: "pattern", condition: (r) => r.CU4L2, order: 105 },
+  { key: "A-C-RA-AA-U4L4", label: "A-C-RA-AA-U4L4", parentKey: "A-C-RA-AA", kind: "pattern", condition: (r) => r.U4L4, order: 106 },
   { key: "A-E-AA-C-EU2L3", label: "A-E-AA-C-EU2L3", parentKey: "A-E-AA-C", kind: "pattern", condition: (r) => r.EU2L3, order: 101 },
   { key: "A-E-AA-C-EU3L3", label: "A-E-AA-C-EU3L3", parentKey: "A-E-AA-C", kind: "pattern", condition: (r) => r.EU3L3, order: 102 },
   { key: "A-E-AA-C-EU4L4", label: "A-E-AA-C-EU4L4", parentKey: "A-E-AA-C", kind: "pattern", condition: (r) => r.EU4L4, order: 103 },

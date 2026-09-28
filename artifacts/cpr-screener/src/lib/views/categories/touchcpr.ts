@@ -63,6 +63,7 @@ function buildUnclassifiedTouchPatterns(
 }
 
 const INCPR_UNCLASSIFIED_PATTERNS = buildUnclassifiedTouchPatterns("INCPR-Unclassified", "insidecpr", [
+  "E-A-AA-SB-EU4L4",
   "E-B-C-OB-EL4U4",
   "A-E-AA-C-EU4L4",
   "C-B-OB-C-CL4U4",
@@ -108,6 +109,7 @@ const OUTCPR_UNCLASSIFIED_PATTERNS = buildUnclassifiedTouchPatterns("OUT-Unclass
   "B-A-HA-E-EU4L4",
   "B-C-BB-SB-CL4U3",
   "C-B-OB-E-CL4U4",
+  "B-C-OB-E-CL4U4",
   "C-C-BB-OA-CL3U3",
   "C-A-E-OA-CU4L4",
   "C-A-E-AA-CU4L4",
@@ -151,6 +153,7 @@ const OVA_UNCLASSIFIED_PATTERNS = buildUnclassifiedTouchPatterns("OVA-Unclassifi
 ]);
 
 const OVB_UNCLASSIFIED_PATTERNS = buildUnclassifiedTouchPatterns("OVB-Unclassified", "overlapLower", [
+  "B-E-OB-BB-EL3U4",
   "E-B-C-BB-EL4U4",
   "B-C-BB-E-CL4U4",
   "B-C-BB-E-CL4U3",
