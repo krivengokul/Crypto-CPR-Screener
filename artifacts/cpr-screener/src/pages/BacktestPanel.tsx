@@ -133,26 +133,51 @@ function matchingViewDef(raw: CPRResult, selectedKey: string): ViewDef | null {
 
   const searchGlobally = SYMBOL_LIST_ONLY_CATEGORY_KEYS.has(selectedKey);
 
-  return VIEWS
+  const candidates = VIEWS
     .filter((view) =>
       view.kind === "view" &&
       (searchGlobally || view.key === selectedKey || isViewDescendant(view.key, selectedKey))
     )
-    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-    .find((view) => {
-      // Backtest rows have already passed the selected category/subpattern.
-      // Evaluate the child View's own predicate directly so a legacy View
-      // whose parent metadata is incomplete cannot disappear from this column.
-      const ownConditionMatches = view.condition ? view.condition(raw) : false;
-      const patternMatches = ownConditionMatches || passesView(raw, view.key);
-      if (!patternMatches) return false;
-      // Same two-step grading as runBacktest: after the base pattern
-      // condition, a View with levelCheckDefs also requires its full
-      // 13/13 Level Check signature. Without this, a Copy View (whose
-      // conditionKey just redirects to its parent pattern) matched every
-      // row under that pattern and its name showed on all of them.
-      return levelCheckFullyMatches(raw, view.levelCheckDefs);
-    }) ?? null;
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+  // Backtest rows have already passed the selected category/subpattern.
+  // Evaluate the child View's own predicate directly so a legacy View
+  // whose parent metadata is incomplete cannot disappear from this column.
+  const conditionMatches = (view: ViewDef): boolean => {
+    const ownConditionMatches = view.condition ? view.condition(raw) : false;
+    return ownConditionMatches || passesView(raw, view.key);
+  };
+
+  // Pass 1 (unchanged behaviour): same two-step grading as runBacktest —
+  // after the base pattern condition, a View with levelCheckDefs also
+  // requires its full 13/13 Level Check signature. Without this, a Copy
+  // View (whose conditionKey just redirects to its parent pattern) matched
+  // every row under that pattern and its name showed on all of them.
+  const full = candidates.find(
+    (view) => conditionMatches(view) && levelCheckFullyMatches(raw, view.levelCheckDefs)
+  );
+  if (full) return full;
+
+  // Pass 2 (partial-match fallback): the Journal/live Screener record a
+  // View from its condition alone, so a row can legitimately match a View
+  // while scoring e.g. 11/13 on its Level Check. Rather than showing "—"
+  // (and "LevelCheck UnDefined" in Ladder Check, which takes its defs from
+  // the matched View), surface the View with the best partial ladder score.
+  // Only Views with their OWN condition and no conditionKey redirect are
+  // eligible — Copy Views redirect to their parent pattern, so their
+  // condition matches every row under it and they'd flood the column again.
+  let best: ViewDef | null = null;
+  let bestCount = -1;
+  for (const view of candidates) {
+    if (view.conditionKey || !view.condition || !view.levelCheckDefs?.length) continue;
+    if (!conditionMatches(view)) continue;
+    const summary = getLadderMatchSummary(raw.prevCPR, raw.todayCPR, view.levelCheckDefs);
+    if (summary.matchingCount > bestCount) {
+      best = view;
+      bestCount = summary.matchingCount;
+    }
+  }
+  return best;
 }
 
 /**
