@@ -418,7 +418,7 @@ export default function SignalsJournal() {
                 onClick={() => setFilterStatus(status)}
                 className={`px-3 py-1 text-xs font-semibold transition cursor-pointer ${
                   filterStatus === status
-                    ? "bg-violet-600 text-white"
+                    ? "bg-pink-600 text-white"
                     : "text-slate-400 hover:text-slate-200"
                 }`}
               >
