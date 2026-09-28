@@ -1068,6 +1068,7 @@ export default function PatternStats() {
                 >
                   <option value="binance">Binance</option>
                   <option value="delta">Delta</option>
+                  <option value="coindcx">CoinDCX</option>
                 </select>
                 <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
               </div>

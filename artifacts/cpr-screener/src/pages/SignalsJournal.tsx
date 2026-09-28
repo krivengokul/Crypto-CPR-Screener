@@ -44,7 +44,7 @@ export default function SignalsJournal() {
   // Default to Binance — mirrors the Live Screener, Backtest panel, and
   // Signals desk, which all default to Binance rather than showing every
   // exchange's rows at once.
-  const [sourceFilter, setSourceFilter] = useState<"all" | "binance" | "delta">("all");
+  const [sourceFilter, setSourceFilter] = useState<"all" | "binance" | "delta" | "coindcx">("all");
   const [searchTerm, setSearchTerm] = useState("");
 
   const loadSignals = async () => {
@@ -412,7 +412,7 @@ export default function SignalsJournal() {
 
         <div className="flex items-center gap-3">
           <div className="flex rounded-md overflow-hidden border border-[#22354a] bg-[#151e2c]">
-            {(["all", "binance", "delta"] as const).map((src) => (
+            {(["all", "binance", "delta", "coindcx"] as const).map((src) => (
               <button
                 key={src}
                 onClick={() => setSourceFilter(src)}
@@ -422,11 +422,13 @@ export default function SignalsJournal() {
                       ? "bg-cyan-500/20 text-cyan-400"
                       : src === "binance"
                       ? "bg-yellow-500/20 text-yellow-400"
+                      : src === "coindcx"
+                      ? "bg-violet-500/20 text-violet-400"
                       : "bg-amber-500/20 text-amber-400"
                     : "text-slate-400 hover:text-slate-200"
                 }`}
               >
-                {src}
+                {src === "coindcx" ? "CoinDCX" : src}
               </button>
             ))}
           </div>
