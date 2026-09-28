@@ -893,36 +893,35 @@ R:R: ${item.riskReward}`;
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end flex-wrap">
-          {/* Direction Filter — small individual pill tabs, matching the
-              Source filter's look: muted when inactive, a translucent
-              color tint (not a big solid fill) when active. */}
-          <div className="flex items-center gap-1">
+          {/* Direction Filter — grouped tab control (bordered container, like the
+              Source filter), spaced apart from the Status and Source groups. */}
+          <div className="flex gap-0.5 p-0.5 rounded-md border border-[#22354a] bg-[#151e2c] mr-5">
             <button
               onClick={() => setDirectionFilter("all")}
-              className={`px-2 py-1 rounded text-xs font-semibold transition cursor-pointer ${
+              className={`px-3 py-1 rounded text-xs font-semibold transition cursor-pointer ${
                 directionFilter === "all"
                   ? "bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/40"
-                  : "text-slate-400 hover:text-white bg-[#151e2c] border border-transparent"
+                  : "text-slate-400 hover:text-white border border-transparent"
               }`}
             >
               All
             </button>
             <button
               onClick={() => setDirectionFilter("Up")}
-              className={`px-2 py-1 rounded text-xs font-semibold transition cursor-pointer ${
+              className={`px-3 py-1 rounded text-xs font-semibold transition cursor-pointer ${
                 directionFilter === "Up"
                   ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
-                  : "text-emerald-400/70 hover:text-emerald-300 bg-[#151e2c] border border-transparent"
+                  : "text-emerald-400/70 hover:text-emerald-300 border border-transparent"
               }`}
             >
               Up
             </button>
             <button
               onClick={() => setDirectionFilter("Down")}
-              className={`px-2 py-1 rounded text-xs font-semibold transition cursor-pointer ${
+              className={`px-3 py-1 rounded text-xs font-semibold transition cursor-pointer ${
                 directionFilter === "Down"
                   ? "bg-rose-500/20 text-rose-400 border border-rose-500/40"
-                  : "text-rose-400/70 hover:text-rose-300 bg-[#151e2c] border border-transparent"
+                  : "text-rose-400/70 hover:text-rose-300 border border-transparent"
               }`}
             >
               Down
@@ -933,23 +932,23 @@ R:R: ${item.riskReward}`;
               (matched an Active Signal, still watching for entry). Toggle
               behavior: clicking the already-active button clears it back
               to "all", matching the Direction/Source filters' feel. */}
-          <div className="flex items-center gap-1">
+          <div className="flex gap-0.5 p-0.5 rounded-md border border-[#22354a] bg-[#151e2c] mr-3">
             <button
               onClick={() => setStatusFilter(statusFilter === "saved" ? "all" : "saved")}
-              className={`px-2 py-1 rounded text-xs font-semibold transition cursor-pointer ${
+              className={`px-3 py-1 rounded text-xs font-semibold transition cursor-pointer ${
                 statusFilter === "saved"
                   ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
-                  : "text-emerald-400/70 hover:text-emerald-300 bg-[#151e2c] border border-transparent"
+                  : "text-emerald-400/70 hover:text-emerald-300 border border-transparent"
               }`}
             >
               Active
             </button>
             <button
               onClick={() => setStatusFilter(statusFilter === "ready" ? "all" : "ready")}
-              className={`px-2 py-1 rounded text-xs font-semibold transition cursor-pointer ${
+              className={`px-3 py-1 rounded text-xs font-semibold transition cursor-pointer ${
                 statusFilter === "ready"
                   ? "bg-amber-500/20 text-amber-400 border border-amber-500/40"
-                  : "text-amber-400/70 hover:text-amber-300 bg-[#151e2c] border border-transparent"
+                  : "text-amber-400/70 hover:text-amber-300 border border-transparent"
               }`}
             >
               Ready
