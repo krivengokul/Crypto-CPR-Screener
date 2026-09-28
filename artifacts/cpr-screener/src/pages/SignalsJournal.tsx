@@ -31,16 +31,17 @@ import {
 } from "lucide-react";
 
 
-// Glossy plum-magenta "glass button" look for the selected Journal status tab:
-// a white gloss highlight over the top half, a deep magenta body, a lighter
-// pink reflected glow along the bottom, plus a bright inner rim and soft glow.
+// Light-glass plum-magenta selected state for the Journal status tabs. Same
+// structure as the Backtest exchange group (flush tabs in a bordered rounded
+// container, translucent tinted selected tab), just tinted with the plum
+// magenta glass color: a faint white gloss over the top half on a translucent
+// magenta body, with a soft inner rim.
 const GLASS_MAGENTA_STYLE: CSSProperties = {
   background:
-    "linear-gradient(to bottom, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.16) 46%, rgba(255,255,255,0) 50%), " +
-    "linear-gradient(to bottom, #b8479f 0%, #85155f 30%, #6e0b4d 55%, #8f1f6d 80%, #cf68b4 100%)",
+    "linear-gradient(to bottom, rgba(255,255,255,0.20) 0%, rgba(255,255,255,0.05) 48%, rgba(255,255,255,0) 50%), " +
+    "linear-gradient(to bottom, rgba(190,60,160,0.38) 0%, rgba(140,20,105,0.30) 55%, rgba(200,90,175,0.34) 100%)",
   boxShadow:
-    "inset 0 1px 1px rgba(255,255,255,0.75), inset 0 -2px 5px rgba(255,170,225,0.5), inset 0 0 0 1px rgba(255,255,255,0.12), 0 0 10px rgba(170,35,125,0.55)",
-  textShadow: "0 1px 2px rgba(60,0,40,0.7)",
+    "inset 0 1px 0 rgba(255,255,255,0.35), inset 0 -1px 3px rgba(255,150,220,0.25)",
 };
 
 function priceKey(source: LoggedSignal["source"], symbol: string): string {
@@ -433,7 +434,7 @@ export default function SignalsJournal() {
                 style={filterStatus === status ? GLASS_MAGENTA_STYLE : undefined}
                 className={`px-3 py-1 text-xs font-semibold transition cursor-pointer ${
                   filterStatus === status
-                    ? "text-white"
+                    ? "text-pink-300"
                     : "text-slate-400 hover:text-slate-200"
                 }`}
               >
