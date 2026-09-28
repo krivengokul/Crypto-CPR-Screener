@@ -516,7 +516,29 @@ export function passesPattern(r: CPRResult, pattern: string): boolean {
       levelCheckFullyMatches(r, v.levelCheckDefs)
     );
   }
-  return passesView(r, pattern);
+  // FIX (live/backtest mismatch): a View can carry its own levelCheckDefs
+  // directly (not just via a conditionKey redirect — see e.g.
+  // "R1-A-A-AA-AA-U3L4-RH-GapBB-R4" / "A6-U3L4-1Up2Up" in
+  // levelsAbove.ts, which pairs a plain `condition` with a 13-line
+  // levelCheckDefs). Previously only the conditionKey branch above ever
+  // consulted levelCheckDefs; this branch fell straight through to
+  // passesView(), which itself never reads levelCheckDefs at all (see
+  // registry.ts's passesView). That let the live Screener/SignalDesk
+  // (both of which call passesPattern to decide matches and to fire/save
+  // Journal signals) count a row as a match on the loose `condition`
+  // alone, while BacktestPanel's backtestSymbolOnDate additionally and
+  // explicitly re-checked levelCheckFullyMatches on top — exactly as
+  // levelCheckFullyMatches's own doc comment says passesPattern is
+  // supposed to do ("...for both the live Screener (ScreenerUtils.tsx's
+  // passesPattern) and Backtest"). The result: a symbol (e.g. MAGICUSDT
+  // on A6-U3L4-1Up2Up) could get auto-saved to the Journal live, then
+  // show 0 matches when the same date/pattern was run through Backtest,
+  // because Backtest was correctly enforcing the View's full 13-line
+  // signature and the live path wasn't. levelCheckFullyMatches no-ops
+  // (returns true) for any View without levelCheckDefs, so this adds no
+  // extra gate for the vast majority of patterns/categories that don't
+  // define one.
+  return passesView(r, pattern) && levelCheckFullyMatches(r, v.levelCheckDefs);
 }
 
 
@@ -745,7 +767,15 @@ export function getOuterLevelPatternInfo(r: CPRResult): PatternInfo {
  * original switch's `default` case used.
  */
 export function matchesPatternFlag(r: CPRResult, label: string): boolean {
-  if (getView(label)) return passesView(r, label);
+  // FIX: delegate to passesPattern (not passesView directly) so a View's
+  // own levelCheckDefs — see the fix in passesPattern above — are
+  // enforced here too. matchesPatternFlag is BacktestPanel's
+  // matchesPatternFn for Pattern-only (Pivot Level) backtests, so
+  // without this it could disagree with passesPattern's now-stricter
+  // behavior for any Pattern-kind entry that carries its own
+  // levelCheckDefs, the same way the live Screener used to disagree
+  // with Backtest's View-only path before that fix.
+  if (getView(label)) return passesPattern(r, label);
   return getOuterLevelPatternInfo(r)?.label === label;
 }
 
