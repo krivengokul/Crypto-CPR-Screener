@@ -34,7 +34,12 @@ import {
   renderGapColumnBadges,
   renderPivotSizeCell,
 } from "./ScreenerUtils";
-import { getRowCategory, getCategoryLabel, CATEGORY_TEXT_COLORS } from "@/lib/rowCategory";
+import {
+  getRowCategory,
+  getCategoryLabel,
+  getCategoryShortLabel,
+  CATEGORY_TEXT_COLORS,
+} from "@/lib/rowCategory";
 import { SRLadderRow, toSRLadderData } from "./SRLadderPanel";
 import { getLadderMatchSummary, type LevelCheckCondition } from "./SRLadderDiff";
 
@@ -946,7 +951,23 @@ export default function ScreenerTableRow({
                   </span>
                 )}
               </div>
-              <span className="text-muted-foreground text-xs font-normal">/{sym.quote}</span>
+              <span className="text-muted-foreground text-xs font-normal whitespace-nowrap">
+                /{sym.quote}
+                {(() => {
+                  const category = getRowCategory(r);
+                  if (!category) return null;
+                  return (
+                    <span
+                      className={`ml-1 text-[10px] uppercase tracking-wide ${
+                        CATEGORY_TEXT_COLORS[category] ?? "text-muted-foreground"
+                      }`}
+                      title={`Category: ${getCategoryLabel(category)}`}
+                    >
+                      · {getCategoryShortLabel(category)}
+                    </span>
+                  );
+                })()}
+              </span>
             </div>
           </div>
         </td>
@@ -957,20 +978,6 @@ export default function ScreenerTableRow({
               {renderTodayPatternBadges(r)}
             </div>
             {renderPivotAndGapBadges(r)}
-            {(() => {
-              const category = getRowCategory(r);
-              if (!category) return null;
-              return (
-                <div
-                  className={`text-[10px] uppercase tracking-wide leading-none whitespace-nowrap ${
-                    CATEGORY_TEXT_COLORS[category] ?? "text-muted-foreground"
-                  }`}
-                  title={`Category: ${getCategoryLabel(category)}`}
-                >
-                  {getCategoryLabel(category)}
-                </div>
-              );
-            })()}
           </div>
         </td>
         <td className="px-3 py-3">

@@ -54,3 +54,19 @@ export const CATEGORY_TEXT_COLORS: Record<string, string> = {
   expanded: "text-sky-400/80",
   touch: "text-violet-400/80",
 };
+
+/** Compact labels for space-constrained spots (e.g. beside "/USDT" under the symbol). */
+export const CATEGORY_SHORT_LABELS: Record<string, string> = {
+  levelsabove: "Lvl Abv",
+  levelsbelow: "Lvl Blw",
+  compressed: "Cmprsd",
+  expanded: "Expnd",
+  R1AbovePR4: "Abv L4",
+  S1BelowPS4: "Blw L4",
+  touch: "Touch",
+};
+
+export function getCategoryShortLabel(rawCategory: string): string {
+  if (!rawCategory) return "";
+  return CATEGORY_SHORT_LABELS[rawCategory] ?? getCategoryLabel(rawCategory);
+}
