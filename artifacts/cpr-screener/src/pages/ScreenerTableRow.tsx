@@ -37,7 +37,6 @@ import {
 import {
   getRowCategory,
   getCategoryLabel,
-  getCategoryShortLabel,
   CATEGORY_TEXT_COLORS,
 } from "@/lib/rowCategory";
 import { SRLadderRow, toSRLadderData } from "./SRLadderPanel";
@@ -951,23 +950,21 @@ export default function ScreenerTableRow({
                   </span>
                 )}
               </div>
-              <span className="text-muted-foreground text-xs font-normal whitespace-nowrap">
-                /{sym.quote}
-                {(() => {
-                  const category = getRowCategory(r);
-                  if (!category) return null;
-                  return (
-                    <span
-                      className={`ml-1 text-[10px] uppercase tracking-wide ${
-                        CATEGORY_TEXT_COLORS[category] ?? "text-muted-foreground"
-                      }`}
-                      title={`Category: ${getCategoryLabel(category)}`}
-                    >
-                      · {getCategoryShortLabel(category)}
-                    </span>
-                  );
-                })()}
-              </span>
+              <span className="text-muted-foreground text-xs font-normal">/{sym.quote}</span>
+              {(() => {
+                const category = getRowCategory(r);
+                if (!category) return null;
+                return (
+                  <span
+                    className={`mt-0.5 text-[10px] uppercase tracking-wide leading-none whitespace-nowrap ${
+                      CATEGORY_TEXT_COLORS[category] ?? "text-muted-foreground"
+                    }`}
+                    title={`Category: ${getCategoryLabel(category)}`}
+                  >
+                    {getCategoryLabel(category)}
+                  </span>
+                );
+              })()}
             </div>
           </div>
         </td>
