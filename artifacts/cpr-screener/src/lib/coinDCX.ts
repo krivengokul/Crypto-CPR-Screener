@@ -1,4 +1,5 @@
 import { OHLC, CPRResult, analyzeCPR } from "./cpr";
+import { safeSetItem } from "./safeStorage";
 import { shouldExcludeSymbol } from "./symbolFilters";
 import { isLiveDailyCandle, candlesAreContiguous } from "./binance";
 
@@ -131,15 +132,17 @@ function getPinnedSymbols(): string[] | null {
 }
 
 function setPinnedSymbols(symbols: string[]): void {
+  const key = PINNED_KEY_PREFIX + getTodayISTDate();
   try {
-    const key = PINNED_KEY_PREFIX + getTodayISTDate();
-    localStorage.setItem(key, JSON.stringify(symbols));
+    // Prune previous days first so the write has room.
     Object.keys(localStorage)
       .filter((k) => k.startsWith(PINNED_KEY_PREFIX) && k !== key)
       .forEach((k) => localStorage.removeItem(k));
   } catch {
-    /* storage unavailable — pin is a convenience, not required */
+    /* storage unavailable */
   }
+  // Quota-safe: the pin is a convenience, not required.
+  safeSetItem(key, JSON.stringify(symbols));
 }
 
 function reconcilePinnedSymbols(currentSymbols: string[]): Set<string> {

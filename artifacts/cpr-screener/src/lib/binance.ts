@@ -1,3 +1,4 @@
+import { safeSetItem } from "./safeStorage";
 import { OHLC, CPRResult, analyzeCPR } from "./cpr";
 import { shouldExcludeSymbol } from "./symbolFilters";
 
@@ -101,17 +102,28 @@ function getTodayISTDate(): string {
 }
 
 function getPinnedSymbols(): string[] | null {
-  const key = PINNED_KEY_PREFIX + getTodayISTDate();
-  const stored = localStorage.getItem(key);
-  return stored ? (JSON.parse(stored) as string[]) : null;
+  try {
+    const key = PINNED_KEY_PREFIX + getTodayISTDate();
+    const stored = localStorage.getItem(key);
+    return stored ? (JSON.parse(stored) as string[]) : null;
+  } catch {
+    return null;
+  }
 }
 
 function setPinnedSymbols(symbols: string[]): void {
   const key = PINNED_KEY_PREFIX + getTodayISTDate();
-  localStorage.setItem(key, JSON.stringify(symbols));
-  Object.keys(localStorage)
-    .filter((k) => k.startsWith(PINNED_KEY_PREFIX) && k !== key)
-    .forEach((k) => localStorage.removeItem(k));
+  // Drop previous days' pins FIRST so the write below has room, and use the
+  // quota-safe writer: the pin is a convenience, so a full localStorage must
+  // never abort the scan (it used to throw QuotaExceededError here).
+  try {
+    Object.keys(localStorage)
+      .filter((k) => k.startsWith(PINNED_KEY_PREFIX) && k !== key)
+      .forEach((k) => localStorage.removeItem(k));
+  } catch {
+    /* storage unavailable */
+  }
+  safeSetItem(key, JSON.stringify(symbols));
 }
 
 /**

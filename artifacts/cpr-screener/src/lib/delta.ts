@@ -1,4 +1,5 @@
 import { OHLC, CPRResult, analyzeCPR } from "./cpr";
+import { safeSetItem } from "./safeStorage";
 import { shouldExcludeSymbol } from "./symbolFilters";
 
 const BASE = "https://api.india.delta.exchange/v2";
@@ -39,17 +40,26 @@ function getTodayISTDate(): string {
 }
 
 function getPinnedSessionOpenMap(): SessionOpenMap | null {
-  const key = DELTA_SESSION_OPEN_KEY_PREFIX + getTodayISTDate();
-  const stored = localStorage.getItem(key);
-  return stored ? (JSON.parse(stored) as SessionOpenMap) : null;
+  try {
+    const key = DELTA_SESSION_OPEN_KEY_PREFIX + getTodayISTDate();
+    const stored = localStorage.getItem(key);
+    return stored ? (JSON.parse(stored) as SessionOpenMap) : null;
+  } catch {
+    return null;
+  }
 }
 
 function setPinnedSessionOpenMap(map: SessionOpenMap): void {
   const key = DELTA_SESSION_OPEN_KEY_PREFIX + getTodayISTDate();
-  localStorage.setItem(key, JSON.stringify(map));
-  Object.keys(localStorage)
-    .filter((k) => k.startsWith(DELTA_SESSION_OPEN_KEY_PREFIX) && k !== key)
-    .forEach((k) => localStorage.removeItem(k));
+  try {
+    Object.keys(localStorage)
+      .filter((k) => k.startsWith(DELTA_SESSION_OPEN_KEY_PREFIX) && k !== key)
+      .forEach((k) => localStorage.removeItem(k));
+  } catch {
+    /* storage unavailable */
+  }
+  // Quota-safe: a full localStorage must never abort a completed Delta scan.
+  safeSetItem(key, JSON.stringify(map));
 }
 
 /**

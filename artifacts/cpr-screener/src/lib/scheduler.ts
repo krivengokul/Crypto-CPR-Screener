@@ -1,9 +1,9 @@
+import { safeSetItem } from "./safeStorage";
+
 const STORAGE_KEY = "cpr_last_scan_date";
 const STORAGE_KEY_BINANCE = "cpr_scan_results_binance";
 const STORAGE_KEY_DELTA = "cpr_scan_results_delta";
 const STORAGE_KEY_COINDCX = "cpr_scan_results_coindcx";
-// Owned by backtest.ts; pruned here only as a last resort when a write hits the quota.
-const UNIVERSE_SNAPSHOT_PREFIX = "cpr_historical_universe_v1:";
 
 export { STORAGE_KEY_BINANCE, STORAGE_KEY_DELTA, STORAGE_KEY_COINDCX };
 
@@ -23,11 +23,15 @@ export function getTodayISTDate(): string {
 }
 
 export function getLastScanDate(): string | null {
-  return localStorage.getItem(STORAGE_KEY);
+  try {
+    return localStorage.getItem(STORAGE_KEY);
+  } catch {
+    return null;
+  }
 }
 
 export function markScannedToday(): void {
-  localStorage.setItem(STORAGE_KEY, getTodayISTDate());
+  safeSetItem(STORAGE_KEY, getTodayISTDate());
 }
 
 export function hasScannedToday(): boolean {
@@ -132,62 +136,11 @@ export function saveCachedResults<T>(key: string, data: T[]): boolean {
     date: getTodayISTDate(),
     savedAt: Date.now(),
   });
-  try {
-    localStorage.setItem(key, payload);
-    return true;
-  } catch {
-    // Quota exceeded (or storage unavailable). Free space by dropping
-    // obsolete app keys (old scanned-date markers, previous days' symbol
-    // pins) and retry once before giving up.
-    try {
-      const keep = new Set([
-        STORAGE_KEY,
-        STORAGE_KEY_BINANCE,
-        STORAGE_KEY_DELTA,
-        STORAGE_KEY_COINDCX,
-      ]);
-      const today = getTodayISTDate();
-      for (const k of Object.keys(localStorage)) {
-        if (k === key || keep.has(k)) continue;
-        const isPin = /^cpr_(binance|delta|coindcx)_symbols_/.test(k);
-        if ((isPin && !k.endsWith(today)) || k.startsWith(SCANNED_MARKER_PREFIX)) {
-          localStorage.removeItem(k);
-        }
-      }
-      localStorage.setItem(key, payload);
-      return true;
-    } catch {
-      // Still full. The largest re-derivable tenant of localStorage is
-      // backtest.ts's per-day "historical universe" snapshots
-      // (cpr_historical_universe_v1:<source>:<date>) — one key per source
-      // per day, never pruned, so they grow without bound. They only make
-      // old-date backtests exact (otherwise a candle-based approximation is
-      // used), whereas today's scan cache is needed on every refresh. Drop
-      // them oldest-first, in small batches, until the write fits.
-      const universeKeys = Object.keys(localStorage)
-        .filter((k) => k.startsWith(UNIVERSE_SNAPSHOT_PREFIX))
-        .sort((a, b) => a.slice(a.lastIndexOf(":") + 1).localeCompare(b.slice(b.lastIndexOf(":") + 1)));
-      const BATCH = 20;
-      for (let i = 0; i < universeKeys.length; i += BATCH) {
-        universeKeys.slice(i, i + BATCH).forEach((k) => localStorage.removeItem(k));
-        try {
-          localStorage.setItem(key, payload);
-          console.info(
-            `[scheduler] freed localStorage by pruning ${Math.min(i + BATCH, universeKeys.length)} ` +
-              `old historical-universe snapshot(s) to persist "${key}".`
-          );
-          return true;
-        } catch {
-          /* keep pruning */
-        }
-      }
-      console.warn(
-        `[scheduler] could not persist "${key}" (${Math.round(payload.length / 1024)} KB) — ` +
-          `localStorage quota is full. Results stay in memory only; the source will rescan on refresh.`
-      );
-      return false;
-    }
-  }
+  // safeSetItem frees previous days' pins/session maps, scanned markers and
+  // (last resort) old historical-universe snapshots, retrying after each step.
+  // If it still can't fit, results stay in memory only and the source rescans
+  // on refresh.
+  return safeSetItem(key, payload);
 }
 
 // ─── Lightweight per-source "scanned today" marker ───────────────────────
