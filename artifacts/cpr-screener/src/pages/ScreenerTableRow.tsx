@@ -34,6 +34,7 @@ import {
   renderGapColumnBadges,
   renderPivotSizeCell,
 } from "./ScreenerUtils";
+import { getRowCategory, getCategoryLabel, CATEGORY_TEXT_COLORS } from "@/lib/rowCategory";
 import { SRLadderRow, toSRLadderData } from "./SRLadderPanel";
 import { getLadderMatchSummary, type LevelCheckCondition } from "./SRLadderDiff";
 
@@ -956,6 +957,20 @@ export default function ScreenerTableRow({
               {renderTodayPatternBadges(r)}
             </div>
             {renderPivotAndGapBadges(r)}
+            {(() => {
+              const category = getRowCategory(r);
+              if (!category) return null;
+              return (
+                <div
+                  className={`text-[10px] uppercase tracking-wide leading-none whitespace-nowrap ${
+                    CATEGORY_TEXT_COLORS[category] ?? "text-muted-foreground"
+                  }`}
+                  title={`Category: ${getCategoryLabel(category)}`}
+                >
+                  {getCategoryLabel(category)}
+                </div>
+              );
+            })()}
           </div>
         </td>
         <td className="px-3 py-3">

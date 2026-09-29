@@ -11,6 +11,7 @@ import {
 import { autoSaveQualifiedSignals, hasTouchedEntry } from "@/lib/signalTracker";
 import { Views } from "@/lib/ViewsSidebar";
 import { getView, shortLevelLabel } from "@/lib/views";
+import { getRowCategory, getCategoryLabel } from "@/lib/rowCategory";
 import SignalProgressBar from "@/lib/SignalProgressBar";
 import {
   Radio,
@@ -135,27 +136,6 @@ function getCategoryForViewId(id: string): string {
   return "";
 }
 
-// Friendly SignalDesk-specific display names for registry navigation keys.
-const CATEGORY_LABELS: Record<string, string> = {
-  levelsabove: "Level Above",
-  levelsbelow: "Level Below",
-  compressed: "Compressed",
-  expanded: "Expanded",
-  R1AbovePR4: "Above Level4",
-  S1BelowPS4: "Below Level4",
-  touch: "Touch",
-  copyViews: "Created Views",
-};
-
-// Prettify a raw category key for display — falls back to the raw key
-// itself for any bucket not yet in CATEGORY_LABELS (e.g. a brand-new
-// category added to Views before this map is updated), so nothing ever
-// silently disappears.
-function getCategoryLabel(rawCategory: string): string {
-  if (!rawCategory) return "";
-  return CATEGORY_LABELS[rawCategory] ?? rawCategory;
-}
-
 // Which View (if any) a row matches, testing preferredViewId first if
 // given, else every declared View's own passesPattern condition. Used by
 // computeSignalLevels to find the specific curated View/signal a row
@@ -170,27 +150,6 @@ function findPrimaryView(
   return preferredViewId
     ? viewPills.find((v) => v.id === preferredViewId)
     : viewPills.find((v) => passesPattern(r, v.id));
-}
-
-// Which top-level category a row itself belongs to, read directly off its
-// own classification flags — the SAME flags views.ts's top-level "category"
-// kind nodes gate on (r.LevelsAbove, r.LevelsBelow, r.compressed,
-// r.expanded, r.R1AbovePR4, r.S1BelowPS4, r.touchCategory). These are
-// mutually-exclusive partitions computed upstream in cpr.ts (confirmed by
-// views.ts's own doc comment: R1AbovePR4/S1BelowPS4 are "true complements
-// of levelsabove/levelsbelow", and touchCategory "already applies the
-// shared precedence rule ... Level4 crossings ... do not also appear under
-// TOUCH") — so this works for EVERY row, whether or not it happens to also
-// qualify for any specific curated View/signal.
-function getRowCategory(r: CPRResultWithSource): string {
-  if (r.LevelsAbove) return "levelsabove";
-  if (r.R1AbovePR4) return "R1AbovePR4";
-  if (r.LevelsBelow) return "levelsbelow";
-  if (r.compressed) return "compressed";
-  if (r.expanded) return "expanded";
-  if (r.S1BelowPS4) return "S1BelowPS4";
-  if (r.touchCategory) return "touch";
-  return "";
 }
 
 // Resolves a card's Category independent of whether it has a full computed
