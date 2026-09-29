@@ -79,3 +79,21 @@ export function evaluateSignalCandles(
     exitPrice: status !== "ACTIVE" ? exitPrice : undefined,
   };
 }
+
+/**
+ * Has the live price already reached (or passed) this signal's target or
+ * stop? Long: price >= target passes, price <= sl fails. Short: price <=
+ * target passes, price >= sl fails. Used to trigger an outcome check without
+ * waiting for the user to press Auto-Check.
+ */
+export function livePriceCrossedBoundary(
+  signal: Pick<SignalOutcomeInput, "direction" | "target" | "sl">,
+  livePrice: number | undefined
+): boolean {
+  if (livePrice === undefined || !Number.isFinite(livePrice) || livePrice <= 0) return false;
+  const isUp = signal.direction === "Up" || signal.direction === "LONG";
+  const isDown = signal.direction === "Down" || signal.direction === "SHORT";
+  if (isUp) return livePrice >= signal.target || livePrice <= signal.sl;
+  if (isDown) return livePrice <= signal.target || livePrice >= signal.sl;
+  return false;
+}

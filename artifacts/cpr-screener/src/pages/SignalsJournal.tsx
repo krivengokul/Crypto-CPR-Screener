@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, type CSSProperties } from "react";
+import { useState, useEffect, useMemo, useRef, type CSSProperties } from "react";
 import {
   LoggedSignal,
   fetchSavedSignalsFromCloud,
@@ -16,6 +16,7 @@ import { fetchTopUSDTSymbols } from "@/lib/binance";
 import { fetchCoinDCXLastPrices } from "@/lib/coinDCX";
 import { fetchDeltaPerps } from "@/lib/delta";
 import { VIEWS } from "@/lib/views";
+import { livePriceCrossedBoundary } from "@/lib/signalOutcome";
 
 import {
   CheckCircle2,
@@ -173,7 +174,7 @@ export default function SignalsJournal() {
         const batch = activeSignals.slice(i, i + CONCURRENCY);
         const batchResults = await Promise.all(
           batch.map(async (sig) => {
-            const update = await evaluateSignalOutcome(sig);
+            const update = await evaluateSignalOutcome(sig, livePrices[priceKey(sig.source, sig.symbol)]);
             if (update && update.status !== sig.status) {
               await updateSignalOutcomeInCloud(sig.id, update);
               return { id: sig.id, update };
@@ -201,6 +202,25 @@ export default function SignalsJournal() {
       setEvalProgress(null);
     }
   };
+
+  // Auto-resolve: as soon as a live price has reached an ACTIVE signal's
+  // target or stop, run the outcome check instead of waiting for the user to
+  // press Auto-Check. Each signal is auto-checked at most once per page load
+  // so a check that can't resolve it (e.g. history fetch failed) can't loop.
+  const autoCheckedRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (evaluating) return;
+    const crossed = signals.filter(
+      (s) =>
+        s.status === "ACTIVE" &&
+        !autoCheckedRef.current.has(s.id) &&
+        livePriceCrossedBoundary(s, livePrices[priceKey(s.source, s.symbol)])
+    );
+    if (crossed.length === 0) return;
+    crossed.forEach((s) => autoCheckedRef.current.add(s.id));
+    void handleEvaluateAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [signals, livePrices, evaluating]);
 
   const handleDelete = async (id: string) => {
     setError(null);

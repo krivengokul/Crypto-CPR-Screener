@@ -14,7 +14,7 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { getDb, ensureSignedIn } from "@/lib/firebase";
-import { evaluateSignalCandles } from "./signalOutcome";
+import { evaluateSignalCandles, type SignalOutcomeCandle } from "./signalOutcome";
 
 export interface LoggedSignal {
   id: string;
@@ -444,13 +444,23 @@ async function fetchKlinesFast(signal: LoggedSignal): Promise<OutcomeCandle[] | 
 }
 
 export async function evaluateSignalOutcome(
-  signal: LoggedSignal
+  signal: LoggedSignal,
+  livePrice?: number
 ): Promise<Partial<LoggedSignal> | null> {
   if (signal.status !== "ACTIVE") return null;
 
   try {
-    const klines = await fetchKlinesFast(signal);
-    if (!klines || klines.length === 0) return null;
+    const klines: SignalOutcomeCandle[] = (await fetchKlinesFast(signal)) ?? [];
+    // The hourly history can be unavailable (CoinDCX signals are checked
+    // against Binance candles, and that request can fail or lag by up to an
+    // hour). The exchange's live price is appended as a final zero-range
+    // candle so a target/stop the price has ALREADY reached still resolves.
+    // Real candles are evaluated first, so an earlier SL-before-TP sequence
+    // in the history still wins.
+    if (livePrice !== undefined && Number.isFinite(livePrice) && livePrice > 0) {
+      klines.push({ high: livePrice, low: livePrice });
+    }
+    if (klines.length === 0) return null;
 
     return evaluateSignalCandles(signal, klines);
   } catch (err) {

@@ -5,7 +5,7 @@ import {
   summarizePaperTrades,
   type PaperTradeRecord,
 } from "./paperTrading.ts";
-import { evaluateSignalCandles } from "./signalOutcome.ts";
+import { evaluateSignalCandles, livePriceCrossedBoundary } from "./signalOutcome.ts";
 
 function trade(overrides: Partial<PaperTradeRecord> = {}): PaperTradeRecord {
   return {
@@ -98,4 +98,26 @@ test("resolves the first reached boundary for a short signal", () => {
 
   assert.equal(outcome.status, "FAIL");
   assert.equal(outcome.exitPrice, 110);
+});
+
+test("live price beyond a short target resolves PASS when candle history is empty", () => {
+  const outcome = evaluateSignalCandles(
+    { direction: "Down", entry: 4254.94, target: 4218.31, sl: 4281.71, timestamp: 1000 },
+    [{ high: 4135.51, low: 4135.51 }],
+    2000
+  );
+  assert.equal(outcome.status, "PASS");
+  assert.equal(outcome.exitPrice, 4218.31);
+});
+
+test("livePriceCrossedBoundary detects target and stop for both directions", () => {
+  const short = { direction: "Down", target: 90, sl: 110 };
+  assert.equal(livePriceCrossedBoundary(short, 89), true);
+  assert.equal(livePriceCrossedBoundary(short, 111), true);
+  assert.equal(livePriceCrossedBoundary(short, 100), false);
+  const long = { direction: "Up", target: 110, sl: 90 };
+  assert.equal(livePriceCrossedBoundary(long, 111), true);
+  assert.equal(livePriceCrossedBoundary(long, 89), true);
+  assert.equal(livePriceCrossedBoundary(long, 100), false);
+  assert.equal(livePriceCrossedBoundary(long, undefined), false);
 });
