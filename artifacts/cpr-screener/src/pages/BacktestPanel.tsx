@@ -45,6 +45,7 @@ import {
   computeGapBadge,
   type ViewTreeNode,
   type ViewDef,
+  shortLevelLabel,
 } from "@/lib/views";
 import {
   passesPattern,
@@ -2669,7 +2670,7 @@ export default function BacktestPanel() {
       )}
       {isViewOnly && activeTarget && (
         <div className="text-xs text-muted-foreground mb-3">
-          Target: <span className="text-foreground font-medium">{activeTarget.targetLabel}</span>{" "}
+          Target: <span className="text-foreground font-medium">{shortLevelLabel(activeTarget.targetLabel)}</span>{" "}
           ({activeTarget.direction === "Up" || (activeTarget.direction as string) === "bullish" ? "price must reach or exceed it" : "price must reach or fall below it"})
         </div>
       )}
@@ -2685,7 +2686,7 @@ export default function BacktestPanel() {
       {isPatternOnly && activePatternInfo && (
         <div className="text-xs text-muted-foreground mb-3">
           Target: <span className="text-foreground font-medium">
-            {activePatternTarget?.targetLabel ?? "U4 (today's R4)"}
+            {shortLevelLabel(activePatternTarget?.targetLabel) || "R4"}
           </span>{" "}
           (price must {activePatternTarget?.direction === "Down" || (activePatternTarget?.direction as string) === "bearish" ? "reach or fall below it" : "reach or exceed it"}) — every symbol matching{" "}
           <span className="text-foreground font-medium">{activePatternInfo.category.label}</span>&apos;s
