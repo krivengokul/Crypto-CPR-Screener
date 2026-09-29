@@ -955,7 +955,6 @@ export default function ScreenerTableRow({
                   </span>
                 )}
               </div>
-              <span className="text-muted-foreground text-xs font-normal">/{sym.quote}</span>
               {(() => {
                 const category = getRowCategory(r);
                 if (!category) return null;
