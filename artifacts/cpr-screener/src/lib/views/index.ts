@@ -1,4 +1,5 @@
 import { VIEWS } from "./registry";
+import { shortLevelLabel } from "./types";
 import { CATEGORY_VIEWS } from "./categories/categories";
 import { COMPOUND_VIEWS, PIVOT_PATTERNS } from "./categories/compound";
 import { LEVELSABOVE_VIEWS } from "./categories/levelsAbove";
@@ -49,6 +50,14 @@ VIEWS.push(
   ...OVERLAP_BELOW_TOUCH_VIEWS,
   ...OUTER_LEVEL_PATTERNS
 );
+
+// Guarantee short pivot codes (R1, S4, TC...) for every view's target/entry/
+// stoploss label, even if a view is authored with descriptive text.
+for (const v of VIEWS) {
+  if (v.targetLabel) v.targetLabel = shortLevelLabel(v.targetLabel);
+  if (v.entryLabel) v.entryLabel = shortLevelLabel(v.entryLabel);
+  if (v.stoplossLabel) v.stoplossLabel = shortLevelLabel(v.stoplossLabel);
+}
 
 // Re-export everything for backward compatibility
 export * from "./types";

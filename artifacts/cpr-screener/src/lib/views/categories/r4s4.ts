@@ -1567,11 +1567,11 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
         standalone: true,
         kind: "view",
         direction: "Down",
-        targetLabel: "L4 (today's S4)",
+        targetLabel: "S4",
         getTarget: (r) => r.todayCPR.s4,
-        entryLabel: "S1 (today's S1)",
+        entryLabel: "S1",
         getEntry: (r) => r.todayCPR.s1,
-        stoplossLabel: "R1 (today's R1)",
+        stoplossLabel: "R1",
         getStoploss: (r) => r.todayCPR.r1,
         levelCheckDefs: [
       {
@@ -1688,11 +1688,11 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
         standalone: true,
         kind: "view",
         direction: "Down",
-        targetLabel: "L4 (today's S4)",
+        targetLabel: "S4",
         getTarget: (r) => r.todayCPR.s4,
-        entryLabel: "S1 (today's S1)",
+        entryLabel: "S1",
         getEntry: (r) => r.todayCPR.s1,
-        stoplossLabel: "R1 (today's R1)",
+        stoplossLabel: "R1",
         getStoploss: (r) => r.todayCPR.r1,
         levelCheckDefs: [
       {
@@ -1809,11 +1809,11 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
         standalone: true,
         kind: "view",
         direction: "Down",
-        targetLabel: "L1 (today's S1)",
+        targetLabel: "S1",
         getTarget: (r) => r.todayCPR.s1,
-        entryLabel: "BC (today's BC)",
+        entryLabel: "BC",
         getEntry: (r) => r.todayCPR.bc,
-        stoplossLabel: "R1 (today's R1)",
+        stoplossLabel: "R1",
         getStoploss: (r) => r.todayCPR.r1,
         levelCheckDefs: [
       {
@@ -1930,11 +1930,11 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
         standalone: true,
         kind: "view",
         direction: "Up",
-        targetLabel: "U2 (today's R2)",
+        targetLabel: "R2",
         getTarget: (r) => r.todayCPR.r2,
-        entryLabel: "TC (today's TC)",
+        entryLabel: "TC",
         getEntry: (r) => r.todayCPR.tc,
-        stoplossLabel: "S1 (today's S1)",
+        stoplossLabel: "S1",
         getStoploss: (r) => r.todayCPR.s1,
         levelCheckDefs: [
       {
@@ -2051,11 +2051,11 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
         standalone: true,
         kind: "view",
         direction: "Down",
-        targetLabel: "PL (previous day's low)",
+        targetLabel: "PL",
         getTarget: (r) => r.todayCPR.prevLow,
-        entryLabel: "BC (today's BC)",
+        entryLabel: "BC",
         getEntry: (r) => r.todayCPR.bc,
-        stoplossLabel: "R1 (today's R1)",
+        stoplossLabel: "R1",
         getStoploss: (r) => r.todayCPR.r1,
         levelCheckDefs: [
       {

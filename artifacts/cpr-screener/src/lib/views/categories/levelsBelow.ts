@@ -290,11 +290,11 @@ export const LEVELSBELOW_VIEWS: ViewDef[] = [
       standalone: true,
       kind: "view",
       direction: "Up",
-      targetLabel: "U4 (today's R4)",
+      targetLabel: "R4",
       getTarget: (r) => r.todayCPR.r4,
-      entryLabel: "TC (today's TC)",
+      entryLabel: "TC",
       getEntry: (r) => r.todayCPR.tc,
-      stoplossLabel: "S1 (today's S1)",
+      stoplossLabel: "S1",
       getStoploss: (r) => r.todayCPR.s1,
       levelCheckDefs: [
     {

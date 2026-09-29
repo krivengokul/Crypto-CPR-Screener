@@ -1386,11 +1386,11 @@ export const LEVELSABOVE_VIEWS: ViewDef[] = [
         standalone: true,
         kind: "view",
         direction: "Down",
-        targetLabel: "L4 (today's S4)",
+        targetLabel: "S4",
         getTarget: (r) => r.todayCPR.s4,
-        entryLabel: "S1 (today's S1)",
+        entryLabel: "S1",
         getEntry: (r) => r.todayCPR.s1,
-        stoplossLabel: "R1 (today's R1)",
+        stoplossLabel: "R1",
         getStoploss: (r) => r.todayCPR.r1,
         levelCheckDefs: [
       {
@@ -1507,11 +1507,11 @@ export const LEVELSABOVE_VIEWS: ViewDef[] = [
         standalone: true,
         kind: "view",
         direction: "Up",
-        targetLabel: "U4 (today's R4)",
+        targetLabel: "R4",
         getTarget: (r) => r.todayCPR.r4,
-        entryLabel: "TC (today's TC)",
+        entryLabel: "TC",
         getEntry: (r) => r.todayCPR.tc,
-        stoplossLabel: "S1 (today's S1)",
+        stoplossLabel: "S1",
         getStoploss: (r) => r.todayCPR.s1,
         levelCheckDefs: [
       {

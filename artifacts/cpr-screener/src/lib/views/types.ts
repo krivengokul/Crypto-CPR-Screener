@@ -65,3 +65,18 @@ export interface CompoundCombo {
   ssll: SSLLSuffix;
   label?: string;
 }
+
+/**
+ * Level labels are always shown as short pivot codes (R1-R4, S1-S4, BC, TC,
+ * PH, PL). Newer views have repeatedly been authored with descriptive text
+ * such as "L4 (today's S4)" or "R1 (today's R1)"; this reduces any such
+ * label to the code inside the parentheses (or the leading code).
+ */
+export function shortLevelLabel(label: string | undefined): string {
+  if (!label) return "";
+  const inner = label.match(/\((?:today's|previous day's)?\s*([A-Za-z0-9]+)\)\s*$/i);
+  const explicit = label.match(/\(today's\s*([A-Za-z0-9]+)\)\s*$/i);
+  if (explicit) return explicit[1];
+  if (inner && /previous day's/i.test(label)) return label.split(/\s+/)[0];
+  return label.replace(/\s*\(.*\)\s*$/, "").trim();
+}

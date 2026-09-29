@@ -10,7 +10,7 @@ import {
 } from "./ScreenerUtils";
 import { autoSaveQualifiedSignals, hasTouchedEntry } from "@/lib/signalTracker";
 import { Views } from "@/lib/ViewsSidebar";
-import { getView } from "@/lib/views";
+import { getView, shortLevelLabel } from "@/lib/views";
 import SignalProgressBar from "@/lib/SignalProgressBar";
 import {
   Radio,
@@ -239,8 +239,8 @@ export function computeSignalLevels(
   const price = targetDef.getEntry ? targetDef.getEntry(r) : (isUp ? r.todayCPR.bc : r.todayCPR.tc); // entry
   const stopPrice = isUp ? r.todayCPR.s1 : r.todayCPR.r1;
   const targetPrice = targetDef.getTarget(r);
-  const targetLevel = targetDef.targetLabel ?? "";
-  const stoplossLevel = targetDef.stoplossLabel ?? (isUp ? "S1" : "R1");
+  const targetLevel = shortLevelLabel(targetDef.targetLabel);
+  const stoplossLevel = shortLevelLabel(targetDef.stoplossLabel) || (isUp ? "S1" : "R1");
   const patternLabel = primaryView.label;
   const patternId = primaryView.id;
   const category = getCategoryForViewId(patternId);
