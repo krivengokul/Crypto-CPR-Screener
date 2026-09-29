@@ -1682,17 +1682,17 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
       },
     {
         key: "S1-S1BelowPS4-B-B-BB-BB-ELBU3-SL-BAGap-S4",
-        label: "BL4-B6-ELBU3-PPL4Fall",
+        label: "P-MicroTiny-PPL4Fall",
         parentKey: "S1BelowPS4-B-B-BB-BB-ELBU3",
         condition: (r) => passesView(r, "S1BelowPS4-B-B-BB-BB-ELBU3") && matchesGapBadge(r, "SL-BAGap"),
         standalone: true,
         kind: "view",
         direction: "Down",
-        targetLabel: "S4",
+        targetLabel: "L4 (today's S4)",
         getTarget: (r) => r.todayCPR.s4,
-        entryLabel: "S1",
+        entryLabel: "S1 (today's S1)",
         getEntry: (r) => r.todayCPR.s1,
-        stoplossLabel: "R1",
+        stoplossLabel: "R1 (today's R1)",
         getStoploss: (r) => r.todayCPR.r1,
         levelCheckDefs: [
       {
