@@ -516,11 +516,16 @@ export function renderGapBadge(r: CPRResult) {
  * behaviour for the pivot half) and renderGapBadge, so the two sit side by
  * side without nesting renderPivotPatternBadge's own wrapper div (which
  * would double up on its "mt-1" margin).
+ *
+ * flex-nowrap (not flex-wrap): the two badges must stay on ONE row. With wrap,
+ * the pair overflowed the ~160px Pattern column and the GapBadge dropped to a
+ * third row, making the whole table row taller. nowrap lets the column grow
+ * to fit the pair instead.
  */
 export function renderPivotAndGapBadges(r: CPRResult) {
   const pivotPattern = computeInnerLevelPattern(r);
   return (
-    <div className="flex flex-wrap items-center gap-1 mt-1">
+    <div className="flex flex-nowrap items-center gap-1 mt-1 whitespace-nowrap">
       {pivotPattern && (
         <span
           className={`text-[10px] px-1 py-0.5 rounded border font-medium ${getBadgeClasses(pivotPattern)}`}
