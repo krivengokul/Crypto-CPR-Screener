@@ -76,11 +76,31 @@ export function formatISTTime(utcDate: Date): string {
 }
 
 
+/**
+ * The scan "session" rolls over at 5:30 AM IST (= UTC 00:00, when the daily
+ * candles the CPR is built from roll over) — NOT at IST calendar midnight.
+ * A scan run at 12:11 AM IST is stamped with today's IST date but still uses
+ * the PREVIOUS session's candles, so comparing calendar dates wrongly treated
+ * it as "fresh" after 5:30 AM and suppressed that source's auto-scan while
+ * the other sources (with older caches) rescanned.
+ */
+export function getScanSessionDate(atMs: number = Date.now()): string {
+  return new Date(atMs).toISOString().slice(0, 10); // UTC date == IST date shifted by 5:30
+}
+
 export function isCacheFresh<T>(cache: CachedResults<T> | null): boolean {
-  // A cache only counts as fresh when it is from today AND actually holds
-  // rows. An empty (or missing) result set must never be treated as "done":
-  // that state showed 0 results all day with the auto-rescan suppressed.
-  return !!cache && cache.date === getTodayISTDate() && cache.data.length > 0;
+  // A cache only counts as fresh when it belongs to the CURRENT scan session
+  // AND actually holds rows. An empty (or missing) result set must never be
+  // treated as "done": that state showed 0 results all day with the
+  // auto-rescan suppressed.
+  if (!cache || cache.data.length === 0) return false;
+  // Entries with savedAt are judged by when they were really written; legacy
+  // entries (no savedAt) fall back to their IST calendar date, which is
+  // conservative — before 5:30 AM IST it never matches the session date, so
+  // they simply rescan once.
+  const cacheSession =
+    typeof cache.savedAt === "number" ? getScanSessionDate(cache.savedAt) : cache.date;
+  return cacheSession === getScanSessionDate();
 }
 
 export function shouldAutoScanForCache<T>(
