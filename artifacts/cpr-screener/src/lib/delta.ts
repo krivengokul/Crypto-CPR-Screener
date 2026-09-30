@@ -119,6 +119,58 @@ export async function fetchDeltaPerps(): Promise<DeltaTicker[]> {
   .sort((a, b) => (b.turnover_usd || 0) - (a.turnover_usd || 0));
 }
 
+const DELTA_QUOTE_SUFFIXES = ["USDT", "BUSD", "USDC", "USD", "INR"];
+
+/** Base ticker of a Delta symbol ("AAPLXUSD" -> "AAPLX", "BTC_USDT" -> "BTC"). */
+function deltaBaseOf(symbol: string): string {
+  const upper = symbol.toUpperCase();
+  if (upper.includes("_")) return upper.split("_")[0];
+  for (const q of DELTA_QUOTE_SUFFIXES) {
+    if (upper.length > q.length && upper.endsWith(q)) return upper.slice(0, -q.length);
+  }
+  return upper;
+}
+
+let _deltaBasesCache: { at: number; bases: Set<string> } | null = null;
+let _deltaBasesInflight: Promise<Set<string>> | null = null;
+const DELTA_BASES_TTL_MS = 10 * 60 * 1000;
+
+/**
+ * Base tickers currently listed on Delta, used by binance.ts to decide which
+ * Binance TradFi perps to scan ("match Delta's list").
+ *
+ * Delta lists tokenized stocks with an "X" suffix on the base (AAPLXUSD), while
+ * Binance uses the plain ticker (AAPLUSDT), so each base is added both as-is
+ * and with one trailing "X" stripped. Never throws: on failure it returns the
+ * last good set (or an empty one) so a Delta hiccup can't abort the Binance scan.
+ */
+export async function fetchDeltaBaseTickers(): Promise<Set<string>> {
+  if (_deltaBasesCache && Date.now() - _deltaBasesCache.at < DELTA_BASES_TTL_MS) {
+    return _deltaBasesCache.bases;
+  }
+  if (_deltaBasesInflight) return _deltaBasesInflight;
+  _deltaBasesInflight = (async () => {
+    try {
+      const tickers = await fetchDeltaPerps();
+      const bases = new Set<string>();
+      for (const t of tickers) {
+        const base = deltaBaseOf(t.symbol);
+        if (!base) continue;
+        bases.add(base);
+        if (base.length > 2 && base.endsWith("X")) bases.add(base.slice(0, -1));
+      }
+      _deltaBasesCache = { at: Date.now(), bases };
+      return bases;
+    } catch (e) {
+      console.warn("[delta] base-ticker fetch failed; TradFi matching uses last known set", e);
+      return _deltaBasesCache?.bases ?? new Set<string>();
+    } finally {
+      _deltaBasesInflight = null;
+    }
+  })();
+  return _deltaBasesInflight;
+}
+
 let _candleDebugLogged = false;
 
 // ADK FIX: window bumped from 6 → 8 days. We need at least 3 COMPLETED daily

@@ -1,6 +1,7 @@
 import { safeSetItem } from "./safeStorage";
 import { OHLC, CPRResult, analyzeCPR } from "./cpr";
 import { shouldExcludeSymbol } from "./symbolFilters";
+import { fetchDeltaBaseTickers } from "./delta";
 
 // FUTURES/PERPS ONLY — Spot is no longer used anywhere in this file. The
 // screener links every row to TradingView's perpetual chart
@@ -94,14 +95,20 @@ async function fetchWithRetry(
 }
 
 /**
- * TradFi perpetuals (commodities) that should be scanned alongside the crypto
- * universe. Binance tags these with contractType "TRADIFI_PERPETUAL" (not
+ * TradFi perpetuals are tagged contractType "TRADIFI_PERPETUAL" (not
  * "PERPETUAL"), so the strict PERPETUAL check in fetchActiveSymbols used to
- * drop them silently. This is an explicit allowlist on purpose — Binance
- * lists dozens of TradFi underlyings (stocks, indices, ETFs) and only these
- * four are wanted: WTI crude, Brent crude, gold, silver.
+ * drop them all. Binance lists ~200 of them, so only two groups are scanned:
+ *  1. ALWAYS_TRADFI_SYMBOLS — commodities wanted regardless of Delta: WTI
+ *     crude, Brent crude, gold, silver.
+ *  2. Any TradFi perp whose base ticker also exists on Delta (see
+ *     fetchDeltaBaseTickers — Delta's "AAPLX" matches Binance's "AAPL").
  */
-const ALLOWED_TRADFI_SYMBOLS = new Set(["CLUSDT", "BZUSDT", "XAUUSDT", "XAGUSDT"]);
+const ALWAYS_TRADFI_SYMBOLS = new Set(["CLUSDT", "BZUSDT", "XAUUSDT", "XAGUSDT"]);
+
+// TradFi symbols admitted by the last fetchActiveSymbols run. Their tickers can
+// legitimately contain "UP"/"DOWN"/"BULL"/"BEAR" (e.g. UPS), so the
+// leveraged-token name filter in fetchTopUSDTSymbols skips them.
+let tradfiActiveSymbols: Set<string> = new Set();
 
 const PINNED_KEY_PREFIX = "cpr_symbols_";
 
@@ -232,6 +239,8 @@ async function fetchActiveSymbols(): Promise<Set<string>> {
   }
 
   const active = new Set<string>();
+  const tradfi = new Set<string>();
+  const deltaBases = await fetchDeltaBaseTickers();
 
   const fut: {
     symbols: { symbol: string; status: string; contractType?: string }[];
@@ -239,15 +248,17 @@ async function fetchActiveSymbols(): Promise<Set<string>> {
   for (const s of fut.symbols) {
     if (s.status !== "TRADING") continue;
     if (s.contractType && s.contractType !== "PERPETUAL") {
-      // Let the allowlisted TradFi perps through; everything else that isn't
-      // a plain PERPETUAL (quarterly/delivery contracts, other TradFi) stays out.
-      const isAllowedTradFi =
-        s.contractType.includes("PERPETUAL") && ALLOWED_TRADFI_SYMBOLS.has(s.symbol);
-      if (!isAllowedTradFi) continue;
+      // Non-plain-perpetual: quarterly/delivery contracts stay out. TradFi
+      // perps are admitted only if allowlisted or listed on Delta too.
+      if (!s.contractType.includes("PERPETUAL") || !s.symbol.endsWith("USDT")) continue;
+      const base = s.symbol.slice(0, -4);
+      if (!ALWAYS_TRADFI_SYMBOLS.has(s.symbol) && !deltaBases.has(base)) continue;
+      tradfi.add(s.symbol);
     }
     active.add(s.symbol);
   }
 
+  tradfiActiveSymbols = tradfi;
   cachedActiveSymbols = active;
   return active;
 }
@@ -291,10 +302,11 @@ export async function fetchTopUSDTSymbols(limit?: number): Promise<Ticker24h[]> 
       (t) =>
         activeSymbols.has(t.symbol) &&     // ← filters out delisted coins
         t.symbol.endsWith("USDT") &&
-        !t.symbol.includes("DOWN") &&
-        !t.symbol.includes("UP") &&
-        !t.symbol.includes("BEAR") &&
-        !t.symbol.includes("BULL") &&
+        (tradfiActiveSymbols.has(t.symbol) ||
+          (!t.symbol.includes("DOWN") &&
+            !t.symbol.includes("UP") &&
+            !t.symbol.includes("BEAR") &&
+            !t.symbol.includes("BULL"))) &&
         !shouldExcludeSymbol(t.symbol) &&  // excludes stablecoins + non-ASCII tickers
         parseFloat(t.quoteVolume) > 0
     )
