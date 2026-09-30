@@ -16,7 +16,7 @@ import {
   type RRHHCategory,
 } from "@/lib/cpr";
 import { levelCheckFullyMatches } from "@/lib/backtest";
-import { getView, passesView } from "@/lib/views";
+import { getView, passesView, VIEWS } from "@/lib/views";
 import { Views } from "@/lib/ViewsSidebar";
 import { getLadderMatchSummary } from "./SRLadderDiff";
 
@@ -642,6 +642,22 @@ export function getMatchingSignals(r: CPRResult): SignalMatchInfo[] {
           direction: normalizeViewDirection(getView(sub.id)?.direction as string | undefined),
         });
       }
+    }
+  }
+  // Views registered outside the left-nav map (e.g. the ones filed under the
+  // TOUCH section, which the loop above skips) still count as active when
+  // they're tradable signals (own target + entry) — same set the Entry
+  // filter and Signal Desk read straight from the registry.
+  for (const v of VIEWS) {
+    if (v.kind !== "view" || !v.getTarget || !v.getEntry) continue;
+    if (seen.has(v.key)) continue;
+    seen.add(v.key);
+    if (passesPattern(r, v.key)) {
+      infos.push({
+        id: v.key,
+        label: v.label,
+        direction: normalizeViewDirection(v.direction as string | undefined),
+      });
     }
   }
   return infos;

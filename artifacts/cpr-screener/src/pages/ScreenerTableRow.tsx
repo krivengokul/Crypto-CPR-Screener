@@ -1,5 +1,6 @@
 import { Fragment } from "react";
-import { ExternalLink, CheckCircle2, XCircle } from "lucide-react";
+import { ExternalLink, CheckCircle2, XCircle, Cloud, Clock } from "lucide-react";
+import { hasTouchedEntry } from "@/lib/signalTracker";
 import type { CPRResult } from "@/lib/cpr";
 import { getView } from "@/lib/views";
 import {
@@ -662,26 +663,57 @@ export function renderMatchingSignals(
 ) {
   if (views.length === 0) return null;
   return (
-    <div className="flex flex-col gap-1 max-w-[200px]">
-      {views.map((v) => (
-        <div key={v.id} className="flex flex-col gap-0">
-          <span
-            className={`text-xs font-medium font-mono truncate ${
-              v.direction === "Up"
-                ? "text-green-400"
-                : v.direction === "Down"
-                ? "text-red-400"
-                : "text-violet-300"
-            }`}
-            title={v.label}
-          >
-            {v.label}
-          </span>
-          <span className="truncate font-mono text-xs text-muted-foreground" title={v.id}>
-            {v.id}
-          </span>
-        </div>
-      ))}
+    <div className="flex flex-col gap-1.5 max-w-[240px]">
+      {views.map((v) => {
+        // Same Active/Ready rule Signal Desk uses: a tradable View (has its
+        // own entry) is Active once price has touched the entry line,
+        // otherwise Ready. Views without an entry show no status.
+        const entryFn = getView(v.id)?.getEntry;
+        const status: "active" | "ready" | null = entryFn
+          ? hasTouchedEntry(v.direction ?? "", entryFn(r), r.currentPrice)
+            ? "active"
+            : "ready"
+          : null;
+        const tone =
+          v.direction === "Up"
+            ? "border-green-500/40 bg-green-500/10 text-green-400"
+            : v.direction === "Down"
+            ? "border-red-500/40 bg-red-500/10 text-red-400"
+            : "border-violet-500/40 bg-violet-500/10 text-violet-300";
+        return (
+          <div key={v.id} className="flex flex-col gap-0.5">
+            <div className="flex flex-wrap items-center gap-1">
+              <span
+                className={`inline-flex items-center rounded-md border px-2 py-1 text-xs font-medium font-mono ${tone}`}
+                title={`Active View: ${v.label} (${v.id})`}
+              >
+                {v.label}
+              </span>
+              {status === "active" && (
+                <span
+                  className="inline-flex items-center gap-1 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-1.5 py-1 text-[11px] font-mono text-emerald-400"
+                  title="Price has reached the entry line"
+                >
+                  <Cloud className="w-3 h-3" />
+                  Active
+                </span>
+              )}
+              {status === "ready" && (
+                <span
+                  className="inline-flex items-center gap-1 rounded-md border border-amber-500/40 bg-amber-500/10 px-1.5 py-1 text-[11px] font-mono text-amber-400"
+                  title="Matches an active signal but price hasn't reached the entry line yet"
+                >
+                  <Clock className="w-3 h-3" />
+                  Ready
+                </span>
+              )}
+            </div>
+            <span className="truncate font-mono text-[10px] text-muted-foreground" title={v.id}>
+              {v.id}
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -725,9 +757,9 @@ export function ScreenerTableHeader({
         </th>
         <th
           className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[180px]"
-          title="Every signal (left-nav selection) this row currently satisfies, across all categories"
+          title="Every View this row currently satisfies, across all categories, with Active/Ready status"
         >
-          Signal
+          Active Views
         </th>
         <th
           className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
