@@ -1237,7 +1237,15 @@ export default function Screener({
         )}
 
         {/* Controls */}
-        <div className="flex flex-wrap items-center gap-2 mb-4">
+        <div
+          className={`flex flex-wrap items-center gap-2 ${
+            currentStatus === "done" &&
+            showAll &&
+            (showTouchList || showPatternList || showSizeList || showEntryTimeList || showExitTimeList || showEntryLevelList)
+              ? "mb-2"
+              : "mb-4"
+          }`}
+        >
           <button
             onClick={() => { void doScan(); }}
             disabled={status === "scanning"}
@@ -1439,6 +1447,9 @@ export default function Screener({
         {currentStatus === "done" &&
           (!showAll || showTouchList || showPatternList || showSizeList || showEntryTimeList || showExitTimeList || showEntryLevelList) && (
           <div className="flex flex-col gap-2 mb-3">
+          {/* Signals row is empty while Show All is on — don't render it, or
+              its zero-height box still adds a flex gap above the panels. */}
+          {!showAll && (
           <div className="flex items-center gap-2 flex-wrap">
             {!showAll && (
             <span className="text-[10px] text-pink-400/90 uppercase tracking-wider mr-0.5 font-semibold">SIGNALS:</span>
@@ -1471,6 +1482,7 @@ export default function Screener({
                 );
               })}
           </div>
+          )}
 
           {/* Pattern filter buttons — own line, independent of activeSignal
               AND independent of showAll. These always render, regardless of Show All state, and
