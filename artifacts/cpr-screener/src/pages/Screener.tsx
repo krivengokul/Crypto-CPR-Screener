@@ -981,17 +981,15 @@ export default function Screener({
     })
     // NEW: ENTRY filter — keep rows where at least one currently-active View
     // (condition passes) has the selected rung as its entry. Entry is the
-    // View's own getEntry(r); Views without one fall back to the same
-    // direction default Signal Desk uses (Up -> BC, Down -> TC).
+    // View's own getEntry(r); Views without one never match.
     .filter((r) => {
       if (!entryLevelFilter) return true;
       const rung = ENTRY_DEFS[entryLevelFilter]?.key;
       if (!rung) return true;
       const target = r.todayCPR[rung];
       return entrySignalViews.some((v) => {
-        if (!passesPattern(r, v.key)) return false;
-        const isUp = v.direction === "Up" || (v.direction as string) === "bullish";
-        const entry = v.getEntry ? v.getEntry(r) : isUp ? r.todayCPR.bc : r.todayCPR.tc;
+        if (!v.getEntry || !passesPattern(r, v.key)) return false;
+        const entry = v.getEntry(r);
         return Math.abs(entry - target) <= Math.abs(target) * 1e-9;
       });
     })

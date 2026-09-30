@@ -147,9 +147,11 @@ function findPrimaryView(
   viewPills: { id: string; label: string }[],
   preferredViewId?: string
 ) {
+  // Views without their own getEntry never produce a signal, so skip them
+  // when auto-picking a matching View.
   return preferredViewId
     ? viewPills.find((v) => v.id === preferredViewId)
-    : viewPills.find((v) => passesPattern(r, v.id));
+    : viewPills.find((v) => !!getView(v.id)?.getEntry && passesPattern(r, v.id));
 }
 
 // Resolves a card's Category independent of whether it has a full computed
@@ -176,11 +178,10 @@ function resolveCategory(row: CPRResultWithSource | undefined, fallbackPatternId
 // View has no BACKTEST_TARGETS entry — such a symbol has no defined target
 // to trade or save against, full stop, rather than falling back to guessed
 // R/S thresholds.
-//   • entry uses the matched View's OWN getEntry(r) when it defines one —
-//     each View can pin its entry to whichever CPR level actually fits its
-//     setup (TC, BC, R1, S1, ...), not just "Up→BC / Down→TC". Only Views
-//     that don't define getEntry fall back to that direction-based BC/TC
-//     default.
+//   • entry is the matched View's OWN getEntry(r) — each View pins its entry
+//     to whichever CPR level fits its setup (TC, BC, R1, S1, ...). A View
+//     that doesn't define getEntry has NO signal (returns null) — there is
+//     no direction-based BC/TC fallback.
 //   • stop is still fixed by direction alone (Up: today's S1, Down: today's R1)
 export function computeSignalLevels(
   r: CPRResultWithSource,
@@ -191,11 +192,11 @@ export function computeSignalLevels(
   if (!primaryView) return null;
 
   const targetDef = getView(primaryView.id);
-  if (!targetDef || !targetDef.getTarget) return null;
+  if (!targetDef || !targetDef.getTarget || !targetDef.getEntry) return null;
 
   const isUp = targetDef.direction === "Up" || (targetDef.direction as string) === "bullish";
   const direction: "Up" | "Down" = isUp ? "Up" : "Down";
-  const price = targetDef.getEntry ? targetDef.getEntry(r) : (isUp ? r.todayCPR.bc : r.todayCPR.tc); // entry
+  const price = targetDef.getEntry(r); // entry
   const stopPrice = isUp ? r.todayCPR.s1 : r.todayCPR.r1;
   const targetPrice = targetDef.getTarget(r);
   const targetLevel = shortLevelLabel(targetDef.targetLabel);
