@@ -93,6 +93,16 @@ async function fetchWithRetry(
   return null;
 }
 
+/**
+ * TradFi perpetuals (commodities) that should be scanned alongside the crypto
+ * universe. Binance tags these with contractType "TRADIFI_PERPETUAL" (not
+ * "PERPETUAL"), so the strict PERPETUAL check in fetchActiveSymbols used to
+ * drop them silently. This is an explicit allowlist on purpose — Binance
+ * lists dozens of TradFi underlyings (stocks, indices, ETFs) and only these
+ * four are wanted: WTI crude, Brent crude, gold, silver.
+ */
+const ALLOWED_TRADFI_SYMBOLS = new Set(["CLUSDT", "BZUSDT", "XAUUSDT", "XAGUSDT"]);
+
 const PINNED_KEY_PREFIX = "cpr_symbols_";
 
 function getTodayISTDate(): string {
@@ -228,7 +238,13 @@ async function fetchActiveSymbols(): Promise<Set<string>> {
   } = await futRes.json();
   for (const s of fut.symbols) {
     if (s.status !== "TRADING") continue;
-    if (s.contractType && s.contractType !== "PERPETUAL") continue;
+    if (s.contractType && s.contractType !== "PERPETUAL") {
+      // Let the allowlisted TradFi perps through; everything else that isn't
+      // a plain PERPETUAL (quarterly/delivery contracts, other TradFi) stays out.
+      const isAllowedTradFi =
+        s.contractType.includes("PERPETUAL") && ALLOWED_TRADFI_SYMBOLS.has(s.symbol);
+      if (!isAllowedTradFi) continue;
+    }
     active.add(s.symbol);
   }
 
