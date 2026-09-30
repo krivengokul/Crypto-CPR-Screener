@@ -16,6 +16,12 @@ export interface CPRLevels {
   // ADK: Previous Day High/Low shown as additional S/R levels
   prevHigh: number;
   prevLow: number;
+  // PC — Previous Close: the close of the candle this level set was built
+  // from (same candle as prevHigh/prevLow). Drawn as a white "PC" line in
+  // the Levels VIEW chart and as a "PC" row in the S/R ladders. It is NOT
+  // part of the pivot-pattern band classification (LEVEL_KEYS / classifyCPRPair
+  // are unchanged), so it cannot affect any pattern, view or backtest result.
+  prevClose: number;
   // ADK Classic Pivot Resistance levels
   r1: number;
   r2: number;
@@ -643,7 +649,7 @@ export function calcCPR(candle: OHLC): CPRLevels {
 
   return {
     pivot, bc, tc, width, widthPct,
-    prevHigh: h, prevLow: l,
+    prevHigh: h, prevLow: l, prevClose: c,
     r1, r2, r3, r4,
     s1, s2, s3, s4,
     HLSwitch,

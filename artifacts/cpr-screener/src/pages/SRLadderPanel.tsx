@@ -262,6 +262,12 @@ export function SRLadder({
     { key: "S2",    value: cpr.s2 },
     { key: "S3",    value: cpr.s3 },
     { key: "S4",    value: cpr.s4 },
+    // PC (Previous Close, white). The PDay ladder (pricePlain) already shows
+    // this same close as its plain price row (relabelled "PC" below), so PC
+    // is only added as a level row on the other ladders to avoid a duplicate.
+    ...(!pricePlain && Number.isFinite(cpr.prevClose)
+      ? [{ key: "PC", value: cpr.prevClose }]
+      : []),
   ].sort((a, b) => b.value - a.value);
 
   type Row =
@@ -281,6 +287,7 @@ export function SRLadder({
   if (!priceInserted) rows.push({ type: "price" });
 
   const rowColor = (key: string) => {
+    if (key === "PC") return "text-white";
     if (key === "TC") return "text-sky-400";
     if (key === "Pivot") return "text-yellow-300";
     if (key === "BC") return "text-sky-400";
@@ -310,7 +317,7 @@ export function SRLadder({
               pricePlain ? "" : "bg-emerald-700/70 font-bold"
             }`}
           >
-            <span>{pricePlain ? "Close" : "▶ Price"}</span>
+            <span>{pricePlain ? "PC" : "▶ Price"}</span>
             <span className="font-mono">{fmt(currentPrice as number)}</span>
           </div>
         ) : (
@@ -343,6 +350,17 @@ const LEVEL_KEYS = [
   "s3",
   "s4",
 ] as const;
+
+/**
+ * PC (Previous Close) is drawn on the Levels VIEW chart as an extra white
+ * line, but it is deliberately NOT in LEVEL_KEYS: LEVEL_KEYS drives the
+ * focus-band slice, and SRLadderDiff's level-check / view matching mirrors
+ * the same 13 keys, so adding it there would shift indices and change
+ * pattern matching. Keeping it a separate overlay makes it purely visual.
+ */
+const PC_KEY = "prevClose" as const;
+const PC_LABEL = "PC";
+const PC_COLOR = "#ffffff";
 
 function levelLabel(key: (typeof LEVEL_KEYS)[number]): string {
   if (key === "prevHigh") return "PH";
@@ -615,12 +633,20 @@ function CPRLevelChart({
 
   // Text at fontSize 8/9 needs roughly 9-10px of vertical room to avoid
   // clashing (see the overlapping P-TC/P-BC/etc. labels this fixes).
+  const hasPrevPC = Number.isFinite(prevCPR.prevClose);
+  const hasTodayPC = Number.isFinite(todayCPR.prevClose);
   const prevLabelY = declutterLabelPositions(
-    LEVEL_KEYS.map((k) => ({ key: k, y: yFor(prevCPR[k as keyof CPRLevels] as number) })),
+    [
+      ...LEVEL_KEYS.map((k) => ({ key: k as string, y: yFor(prevCPR[k as keyof CPRLevels] as number) })),
+      ...(hasPrevPC ? [{ key: PC_KEY as string, y: yFor(prevCPR.prevClose) }] : []),
+    ],
     10
   );
   const todayLabelY = declutterLabelPositions(
-    LEVEL_KEYS.map((k) => ({ key: k, y: yFor(todayCPR[k as keyof CPRLevels] as number) })),
+    [
+      ...LEVEL_KEYS.map((k) => ({ key: k as string, y: yFor(todayCPR[k as keyof CPRLevels] as number) })),
+      ...(hasTodayPC ? [{ key: PC_KEY as string, y: yFor(todayCPR.prevClose) }] : []),
+    ],
     11
   );
 
@@ -733,6 +759,49 @@ function CPRLevelChart({
             </g>
           );
         })}
+        {hasPrevPC && (
+          <g key="prev-pc">
+            <line
+              x1={leftMargin}
+              x2={prevSegmentEnd}
+              y1={yFor(prevCPR.prevClose)}
+              y2={yFor(prevCPR.prevClose)}
+              stroke={PC_COLOR}
+              strokeWidth={0.5}
+            />
+            <text
+              x={leftMargin - 4}
+              y={(prevLabelY.get(PC_KEY) as number) + 3}
+              fontSize={8}
+              fontFamily="monospace"
+              fill={PC_COLOR}
+              textAnchor="end"
+            >
+              P-{PC_LABEL} {fmt(prevCPR.prevClose)}
+            </text>
+          </g>
+        )}
+        {hasTodayPC && (
+          <g key="today-pc">
+            <line
+              x1={prevSegmentEnd}
+              x2={leftMargin + plotWidth}
+              y1={yFor(todayCPR.prevClose)}
+              y2={yFor(todayCPR.prevClose)}
+              stroke={PC_COLOR}
+              strokeWidth={0.5}
+            />
+            <text
+              x={leftMargin + plotWidth + 4}
+              y={(todayLabelY.get(PC_KEY) as number) + 3}
+              fontSize={9}
+              fontFamily="monospace"
+              fill={PC_COLOR}
+            >
+              {PC_LABEL} {fmt(todayCPR.prevClose)}
+            </text>
+          </g>
+        )}
         {innerLabelEntries.map((entry) => {
           if (!LEVEL_KEYS.some((k) => k === entry.levelKey)) return null;
           const value = todayCPR[entry.levelKey as keyof CPRLevels] as number;
