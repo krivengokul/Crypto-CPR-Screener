@@ -937,6 +937,10 @@ export default function Screener({
     // R4 (PU4), or below prev day's S4 (PL4)
     .filter((r) => {
       if (pdhPdlFilter === "s1r1in") {
+        // Applies only to TOUCH-category rows (Inside / Outside / Overlap /
+        // Equal CPR) — never to LevelsAbove, LevelsBelow, Compressed,
+        // Expanded, ABOVE/BELOW LEVEL4.
+        if (!r.touchCategory) return false;
         // Today's S1/R1 inside (or touching) prev day's CPR band, OR
         // prev day's S1/R1 inside (or touching) today's CPR band.
         const inBand = (lvl: number, b: { bc: number; tc: number }) => {
@@ -1861,7 +1865,7 @@ export default function Screener({
                       ? "border-amber-400 text-amber-400"
                       : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
                   }`}
-                  title="Today's S1/R1 inside previous day's CPR, or previous day's S1/R1 inside today's CPR"
+                  title="TOUCH category only: today's S1/R1 inside previous day's CPR, or previous day's S1/R1 inside today's CPR"
                 >
                   {pdhPdlFilter === "s1r1in" ? "✕ S1-R1 IN" : "S1-R1 IN"}
                 </button>
