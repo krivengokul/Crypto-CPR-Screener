@@ -1,6 +1,6 @@
 import { useState, useEffect, isValidElement, type ReactNode } from "react";
 import { Link2, Loader2 } from "lucide-react";
-import type { CPRLevels, CPRResult } from "@/lib/cpr";
+import { getPC, type CPRLevels, type CPRResult } from "@/lib/cpr";
 import { fmt } from "./ScreenerUtils";
 import { SRLadderDiffPanel, type LevelCheckCondition } from "./SRLadderDiff";
 import { getChartLink, setChartLink, removeChartLink, type StoredChartLink } from "@/lib/chartLinks";
@@ -265,8 +265,8 @@ export function SRLadder({
     // PC (Previous Close, white). The PDay ladder (pricePlain) already shows
     // this same close as its plain price row (relabelled "PC" below), so PC
     // is only added as a level row on the other ladders to avoid a duplicate.
-    ...(!pricePlain && Number.isFinite(cpr.prevClose)
-      ? [{ key: "PC", value: cpr.prevClose }]
+    ...(!pricePlain && Number.isFinite(getPC(cpr))
+      ? [{ key: "PC", value: getPC(cpr) }]
       : []),
   ].sort((a, b) => b.value - a.value);
 
@@ -633,19 +633,21 @@ function CPRLevelChart({
 
   // Text at fontSize 8/9 needs roughly 9-10px of vertical room to avoid
   // clashing (see the overlapping P-TC/P-BC/etc. labels this fixes).
-  const hasPrevPC = Number.isFinite(prevCPR.prevClose);
-  const hasTodayPC = Number.isFinite(todayCPR.prevClose);
+  const prevPC = getPC(prevCPR);
+  const todayPC = getPC(todayCPR);
+  const hasPrevPC = Number.isFinite(prevPC);
+  const hasTodayPC = Number.isFinite(todayPC);
   const prevLabelY = declutterLabelPositions(
     [
       ...LEVEL_KEYS.map((k) => ({ key: k as string, y: yFor(prevCPR[k as keyof CPRLevels] as number) })),
-      ...(hasPrevPC ? [{ key: PC_KEY as string, y: yFor(prevCPR.prevClose) }] : []),
+      ...(hasPrevPC ? [{ key: PC_KEY as string, y: yFor(prevPC) }] : []),
     ],
     10
   );
   const todayLabelY = declutterLabelPositions(
     [
       ...LEVEL_KEYS.map((k) => ({ key: k as string, y: yFor(todayCPR[k as keyof CPRLevels] as number) })),
-      ...(hasTodayPC ? [{ key: PC_KEY as string, y: yFor(todayCPR.prevClose) }] : []),
+      ...(hasTodayPC ? [{ key: PC_KEY as string, y: yFor(todayPC) }] : []),
     ],
     11
   );
@@ -764,8 +766,8 @@ function CPRLevelChart({
             <line
               x1={leftMargin}
               x2={prevSegmentEnd}
-              y1={yFor(prevCPR.prevClose)}
-              y2={yFor(prevCPR.prevClose)}
+              y1={yFor(prevPC)}
+              y2={yFor(prevPC)}
               stroke={PC_COLOR}
               strokeWidth={0.5}
             />
@@ -777,7 +779,7 @@ function CPRLevelChart({
               fill={PC_COLOR}
               textAnchor="end"
             >
-              P-{PC_LABEL} {fmt(prevCPR.prevClose)}
+              P-{PC_LABEL} {fmt(prevPC)}
             </text>
           </g>
         )}
@@ -786,8 +788,8 @@ function CPRLevelChart({
             <line
               x1={prevSegmentEnd}
               x2={leftMargin + plotWidth}
-              y1={yFor(todayCPR.prevClose)}
-              y2={yFor(todayCPR.prevClose)}
+              y1={yFor(todayPC)}
+              y2={yFor(todayPC)}
               stroke={PC_COLOR}
               strokeWidth={0.5}
             />
@@ -798,7 +800,7 @@ function CPRLevelChart({
               fontFamily="monospace"
               fill={PC_COLOR}
             >
-              {PC_LABEL} {fmt(todayCPR.prevClose)}
+              {PC_LABEL} {fmt(todayPC)}
             </text>
           </g>
         )}

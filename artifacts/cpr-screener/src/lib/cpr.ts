@@ -592,6 +592,19 @@ export function dirTol(today: number, prev: number): -1 | 0 | 1 {
 }
 
 /**
+ * getPC — Previous Close for a CPRLevels set.
+ *
+ * Uses the stored `prevClose` when present. Results cached before that field
+ * existed (e.g. Screener results restored from localStorage) don't have it,
+ * so fall back to inverting the pivot formula: pivot = (H + L + C) / 3, hence
+ * C = 3 * pivot - H - L. Returns NaN only for non-finite inputs.
+ */
+export function getPC(cpr: CPRLevels): number {
+  if (Number.isFinite(cpr.prevClose)) return cpr.prevClose;
+  return 3 * cpr.pivot - cpr.prevHigh - cpr.prevLow;
+}
+
+/**
  * ADK Classic Pivot CPR calculation.
  *
  * Matches "CPR by Ask Dinesh Kumar (ADK)" TradingView indicator exactly:
