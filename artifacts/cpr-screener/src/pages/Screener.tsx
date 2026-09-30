@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo, Fragment } from "react";
 import { pivotcategories, Views, VIEW_LABEL_BY_ID, requestSignalDeselect } from "@/lib/ViewsSidebar";
 import { getView, VIEWS } from "@/lib/views";
+import { hasTouchedEntry } from "@/lib/signalTracker";
 import {
   TrendingUp,
   RefreshCw,
@@ -139,6 +140,42 @@ const EXTRA_VIEW_COUNT_IDS: string[] = [];
  * label instead of the raw activeSignal id (mirrors SignalDesk's
  * VIEW_LABEL_BY_ID).
  */
+/**
+ * S1-R1 IN — TOUCH-category rows only: today's S1/R1 inside (or touching) the
+ * previous day's CPR band, OR the previous day's S1/R1 inside (or touching)
+ * today's CPR band. Shared by the S1-R1 IN filter and its "(n)" count so the
+ * two can never disagree.
+ */
+function matchesS1R1In(r: CPRResult): boolean {
+  if (!r.touchCategory) return false;
+  const inBand = (lvl: number, b: { bc: number; tc: number }) => {
+    const lo = Math.min(b.bc, b.tc), hi = Math.max(b.bc, b.tc);
+    return lvl >= lo && lvl <= hi;
+  };
+  const todayInPrev = inBand(r.todayCPR.s1, r.prevCPR) || inBand(r.todayCPR.r1, r.prevCPR);
+  const prevInToday = inBand(r.prevCPR.s1, r.todayCPR) || inBand(r.prevCPR.r1, r.todayCPR);
+  return todayInPrev || prevInToday;
+}
+
+/**
+ * Active / Ready status of a row — same rule as the per-row "Active Views"
+ * pills and Signal Desk: a tradable View (has its own entry) the row matches
+ * is Active once price has touched the entry line, otherwise Ready. A row is
+ * "active" if any of its Views is Active, "ready" if any is Ready.
+ */
+function getRowStatus(r: CPRResult): { active: boolean; ready: boolean } {
+  let active = false;
+  let ready = false;
+  for (const v of getMatchingSignals(r)) {
+    const entryFn = getView(v.id)?.getEntry;
+    if (!entryFn) continue;
+    if (hasTouchedEntry(v.direction ?? "", entryFn(r), r.currentPrice)) active = true;
+    else ready = true;
+    if (active && ready) break;
+  }
+  return { active, ready };
+}
+
 export default function Screener({
   activeSignal = "levelsabove",
   scanKey = 0,
@@ -284,6 +321,9 @@ export default function Screener({
   const [todayWidthFilter, setTodayWidthFilter] = useState<WidthCategoryKey | null>(null);
   // NEW: PDH/PDL filter — independent of activeSignal, mutually exclusive (like pivot/width filters).
   const [pdhPdlFilter, setPdhPdlFilter] = useState<"above" | "below" | "abovepu4" | "belowpl4" | "pdhgtu1" | "pdlltl1" | "s1r1in" | null>(null);
+  // Active / Ready status filter (grouped tab control in the search bar).
+  // Clicking the already-selected button clears it back to "all".
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "ready">("all");
   const [error, setError] = useState("");
   const [countdown, setCountdown] = useState("");
   const [nextScanUtc, setNextScanUtc] = useState<Date>(getNextScanIST());
@@ -702,6 +742,11 @@ export default function Screener({
       OVA: pool.filter((r) => r.touchCategory && !!r.overlapHigher).length,
       overlapLower: pool.filter((r) => r.touchCategory && !!r.overlapLower).length,
       equalCPR: pool.filter((r) => r.touchCategory && !!r.equalCPR).length,
+      // Counts for the three extra filters that live in the TOUCH row. They
+      // use the same predicates as the filters themselves, over the full pool.
+      s1r1in: pool.filter(matchesS1R1In).length,
+      pdhgtu1: pool.filter((r) => r.todayCPR.prevHigh > r.todayCPR.r1).length,
+      pdlltl1: pool.filter((r) => r.todayCPR.prevLow < r.todayCPR.s1).length,
     };
   }, [allResults, deltaAllResults, coindcxAllResults, activeTab]);
 
@@ -947,23 +992,7 @@ export default function Screener({
     // NEW: Price Level filter — price above PDH, below PDL, above prev day's
     // R4 (PU4), or below prev day's S4 (PL4)
     .filter((r) => {
-      if (pdhPdlFilter === "s1r1in") {
-        // Applies only to TOUCH-category rows (Inside / Outside / Overlap /
-        // Equal CPR) — never to LevelsAbove, LevelsBelow, Compressed,
-        // Expanded, ABOVE/BELOW LEVEL4.
-        if (!r.touchCategory) return false;
-        // Today's S1/R1 inside (or touching) prev day's CPR band, OR
-        // prev day's S1/R1 inside (or touching) today's CPR band.
-        const inBand = (lvl: number, b: { bc: number; tc: number }) => {
-          const lo = Math.min(b.bc, b.tc), hi = Math.max(b.bc, b.tc);
-          return lvl >= lo && lvl <= hi;
-        };
-        const todayInPrev =
-          inBand(r.todayCPR.s1, r.prevCPR) || inBand(r.todayCPR.r1, r.prevCPR);
-        const prevInToday =
-          inBand(r.prevCPR.s1, r.todayCPR) || inBand(r.prevCPR.r1, r.todayCPR);
-        return todayInPrev || prevInToday;
-      }
+      if (pdhPdlFilter === "s1r1in") return matchesS1R1In(r);
       if (pdhPdlFilter === "pdhgtu1") return r.todayCPR.prevHigh > r.todayCPR.r1;
       if (pdhPdlFilter === "pdlltl1") return r.todayCPR.prevLow < r.todayCPR.s1;
       if (pdhPdlFilter === "above") return passesPattern(r, "Price-AbovePDH");
@@ -971,6 +1000,12 @@ export default function Screener({
       if (pdhPdlFilter === "abovepu4") return r.currentPrice > r.prevCPR.r4;
       if (pdhPdlFilter === "belowpl4") return r.currentPrice < r.prevCPR.s4;
       return true;
+    })
+    // Active / Ready status filter (see getRowStatus).
+    .filter((r) => {
+      if (statusFilter === "all") return true;
+      const st = getRowStatus(r);
+      return statusFilter === "active" ? st.active : st.ready;
     })
     // NEW: TIME filter — when an hour is selected, keep only rows that
     // satisfy at least one Views (sub-pattern) targeting that hour, across
@@ -1096,7 +1131,7 @@ export default function Screener({
   // Helper: is any sub-filter active (to decide the result count label)
   const anySubFilter =
     !!activeGenericSignal ||
-    !!PatternFilter || !!touchFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter || !!exitTimeFilter || !!entryLevelFilter;
+    !!PatternFilter || !!touchFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter || statusFilter !== "all" || !!exitTimeFilter || !!entryLevelFilter;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -1522,11 +1557,11 @@ export default function Screener({
                   location and pill styling changed to match the Touch row. */}
               {(
                 [
-                  { id: "s1r1in", label: "S1-R1 IN", title: "TOUCH category only: today's S1/R1 inside previous day's CPR, or previous day's S1/R1 inside today's CPR" },
-                  { id: "pdhgtu1", label: "PDHL-A", title: "Show only rows where today's Previous Day High (PDH) is above today's R1 (U1)" },
-                  { id: "pdlltl1", label: "PDHL-B", title: "Show only rows where today's Previous Day Low (PDL) is below today's S1 (L1)" },
+                  { id: "s1r1in", label: "S1-R1 IN", count: touchCounts.s1r1in, title: "TOUCH category only: today's S1/R1 inside previous day's CPR, or previous day's S1/R1 inside today's CPR" },
+                  { id: "pdhgtu1", label: "PDHL-A", count: touchCounts.pdhgtu1, title: "Show only rows where today's Previous Day High (PDH) is above today's R1 (U1)" },
+                  { id: "pdlltl1", label: "PDHL-B", count: touchCounts.pdlltl1, title: "Show only rows where today's Previous Day Low (PDL) is below today's S1 (L1)" },
                 ] as const
-              ).map(({ id, label, title }) => {
+              ).map(({ id, label, count, title }) => {
                 const isActive = pdhPdlFilter === id;
                 return (
                   <button
@@ -1540,6 +1575,7 @@ export default function Screener({
                     title={title}
                   >
                     {isActive ? `✕ ${label}` : label}
+                    <span className="text-[11px] font-mono text-muted-foreground ml-1">({count})</span>
                   </button>
                 );
               })}
@@ -1963,22 +1999,54 @@ export default function Screener({
                 </button>
               </div>
 
+              {/* Status Filter — Active (price has reached a View's entry line) /
+                  Ready (matches a View, still waiting for entry). Same grouped
+                  tab control as Signal Desk; clicking the selected button
+                  clears it back to "all". */}
+              <div className="flex gap-0.5 p-0.5 rounded-md border border-[#22354a] bg-[#151e2c] mr-3">
+                <button
+                  onClick={() => setStatusFilter(statusFilter === "active" ? "all" : "active")}
+                  className={`px-3 py-1 rounded text-xs font-semibold transition cursor-pointer ${
+                    statusFilter === "active"
+                      ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
+                      : "text-emerald-400/70 hover:text-emerald-300 border border-transparent"
+                  }`}
+                  title="Rows with a View whose entry line price has already reached"
+                >
+                  Active
+                </button>
+                <button
+                  onClick={() => setStatusFilter(statusFilter === "ready" ? "all" : "ready")}
+                  className={`px-3 py-1 rounded text-xs font-semibold transition cursor-pointer ${
+                    statusFilter === "ready"
+                      ? "bg-amber-500/20 text-amber-400 border border-amber-500/40"
+                      : "text-amber-400/70 hover:text-amber-300 border border-transparent"
+                  }`}
+                  title="Rows with a View that matches but price hasn't reached its entry line yet"
+                >
+                  Ready
+                </button>
+              </div>
+
+              {/* Exchange / Source Filter — grouped tab control (same as Signal
+                  Desk). All fuchsia, Binance indigo, Delta cyan, CoinDCX green.
+                  "All" is the existing "combined" activeTab value. */}
               {canShowCombined && (
-                <div className="flex items-center gap-1">
+                <div className="flex gap-0.5 p-0.5 rounded-md border border-[#22354a] bg-[#151e2c]">
                   {(["combined", "binance", "delta", "coindcx"] as ActiveTab[]).map((tab) => (
                     <button
                       key={tab}
                       onClick={() => setActiveTab(tab)}
-                      className={`px-2 py-1 rounded text-xs font-semibold transition cursor-pointer ${
+                      className={`px-3 py-1 rounded text-xs font-semibold transition cursor-pointer border ${
                         activeTab === tab
-                          ? tab === "combined"
-                            ? "bg-amber-500/20 text-amber-400 border border-amber-500/40"
+                          ? tab === "delta"
+                            ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/50"
                             : tab === "binance"
-                            ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/40"
+                            ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/50"
                             : tab === "coindcx"
-                            ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
-                            : "bg-cyan-500/20 text-cyan-400 border border-cyan-500/40"
-                          : "text-slate-400 hover:text-white bg-[#151e2c]"
+                            ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/50"
+                            : "bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/50"
+                          : "text-slate-400 hover:text-slate-200 border-transparent"
                       }`}
                     >
                       {tab === "combined" ? "All" : tab === "binance" ? "Binance" : tab === "coindcx" ? "CoinDCX" : "Delta"}
