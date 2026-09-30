@@ -937,19 +937,17 @@ export default function Screener({
     // R4 (PU4), or below prev day's S4 (PL4)
     .filter((r) => {
       if (pdhPdlFilter === "s1r1in") {
-        const eligible =
-          passesPattern(r, "inside-cpr") ||
-          passesPattern(r, "overlapping-lower");
-        if (!eligible) return false;
+        // Today's S1/R1 inside (or touching) prev day's CPR band, OR
+        // prev day's S1/R1 inside (or touching) today's CPR band.
         const inBand = (lvl: number, b: { bc: number; tc: number }) => {
           const lo = Math.min(b.bc, b.tc), hi = Math.max(b.bc, b.tc);
           return lvl >= lo && lvl <= hi;
         };
-        const levels = [
-          r.todayCPR.s1, r.todayCPR.r1, 
-          r.prevCPR.s1,  r.prevCPR.r1,
-        ];
-        return levels.some((l) => inBand(l, r.todayCPR) || inBand(l, r.prevCPR));
+        const todayInPrev =
+          inBand(r.todayCPR.s1, r.prevCPR) || inBand(r.todayCPR.r1, r.prevCPR);
+        const prevInToday =
+          inBand(r.prevCPR.s1, r.todayCPR) || inBand(r.prevCPR.r1, r.todayCPR);
+        return todayInPrev || prevInToday;
       }
       if (pdhPdlFilter === "pdhgtu1") return r.todayCPR.prevHigh > r.todayCPR.r1;
       if (pdhPdlFilter === "pdlltl1") return r.todayCPR.prevLow < r.todayCPR.s1;
@@ -1863,7 +1861,7 @@ export default function Screener({
                       ? "border-amber-400 text-amber-400"
                       : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
                   }`}
-                  title="Inside/Outside/Overlap rows where S1, R1, prev S1, or prev R1 sits inside or touches today's or previous CPR band"
+                  title="Today's S1/R1 inside previous day's CPR, or previous day's S1/R1 inside today's CPR"
                 >
                   {pdhPdlFilter === "s1r1in" ? "✕ S1-R1 IN" : "S1-R1 IN"}
                 </button>
