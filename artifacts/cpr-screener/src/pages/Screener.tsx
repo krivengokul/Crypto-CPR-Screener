@@ -1827,10 +1827,10 @@ export default function Screener({
               Hidden until "Entry +" is toggled on. */}
           {showEntryLevelList && (
           <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-[10px] text-amber-400/90 uppercase tracking-wider mr-0.5 font-semibold">
+            <span className="text-[10px] text-green-400/90 uppercase tracking-wider mr-0.5 font-semibold">
               Entry:
             </span>
-            {Object.keys(ENTRY_DEFS).map((lvl) => (
+            {Object.keys(ENTRY_DEFS).slice().reverse().map((lvl) => (
               <button
                 key={lvl}
                 onClick={() => setEntryLevelFilter((v) => (v === lvl ? null : lvl))}
