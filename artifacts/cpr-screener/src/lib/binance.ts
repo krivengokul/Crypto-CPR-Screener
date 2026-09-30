@@ -105,6 +105,11 @@ async function fetchWithRetry(
  */
 const ALWAYS_TRADFI_SYMBOLS = new Set(["CLUSDT", "BZUSDT", "XAUUSDT", "XAGUSDT"]);
 
+// Symbol -> label for non-crypto perps, rebuilt on every fetchActiveSymbols run
+// and stamped onto results in runScreener so the UI can show "BINANCE/TRADFI"
+// or "BINANCE/COM" under the symbol. Crypto perps have no entry.
+let assetClassBySymbol: Map<string, "COMMOD" | "TRADFI"> = new Map();
+
 const PINNED_KEY_PREFIX = "cpr_symbols_";
 
 function getTodayISTDate(): string {
@@ -234,6 +239,7 @@ async function fetchActiveSymbols(): Promise<Set<string>> {
   }
 
   const active = new Set<string>();
+  const assetClasses = new Map<string, "COMMOD" | "TRADFI">();
   const deltaBases = await fetchDeltaBaseTickers();
 
   const fut: {
@@ -247,9 +253,15 @@ async function fetchActiveSymbols(): Promise<Set<string>> {
       if (!s.contractType.includes("PERPETUAL") || !s.symbol.endsWith("USDT")) continue;
       const base = s.symbol.slice(0, -4);
       if (!ALWAYS_TRADFI_SYMBOLS.has(s.symbol) && !deltaBases.has(base)) continue;
+      assetClasses.set(s.symbol, ALWAYS_TRADFI_SYMBOLS.has(s.symbol) ? "COMMOD" : "TRADFI");
+    } else if (ALWAYS_TRADFI_SYMBOLS.has(s.symbol)) {
+      // Commodities are labelled COM even if Binance tags them plain PERPETUAL.
+      assetClasses.set(s.symbol, "COMMOD");
     }
     active.add(s.symbol);
   }
+
+  assetClassBySymbol = assetClasses;
 
   cachedActiveSymbols = active;
   return active;
@@ -484,7 +496,7 @@ export async function runScreener(
       ? [ppCandle, prevCandle, todayCandle]
       : [prevCandle, todayCandle];
 
-    return analyzeCPR(
+    const result = analyzeCPR(
       t.symbol,
       candlesForAnalysis,
       currentPrice,
@@ -492,6 +504,9 @@ export async function runScreener(
       parseFloat(t.quoteVolume),
       liveCandle ? liveCandle.open : todayCandle.open
     );
+    const assetClass = assetClassBySymbol.get(t.symbol);
+    if (result && assetClass) result.assetClass = assetClass;
+    return result;
   });
 
   const results: CPRResult[] = perSymbolResults.filter((r): r is CPRResult => r !== null);

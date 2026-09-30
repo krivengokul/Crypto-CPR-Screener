@@ -284,6 +284,9 @@ export interface CPRPairFlags {
 
 export interface CPRResult {
   symbol: string;
+  /** Binance only: "COMMOD" = commodity perp (CL/BZ/XAU/XAG), "TRADFI" = other TradFi
+   *  perp (stocks/ETFs). Unset for ordinary crypto perps. Set in binance.ts. */
+  assetClass?: "COMMOD" | "TRADFI";
   todayCPR: CPRLevels;
   prevCPR: CPRLevels;
   ppCPR?: CPRLevels;

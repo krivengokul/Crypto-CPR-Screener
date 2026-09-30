@@ -970,6 +970,14 @@ export default function ScreenerTableRow({
                   separate Exchange column. Shown for every tab. */}
               <span className="mt-0.5 text-[10px] font-mono uppercase tracking-wide leading-none text-slate-400 whitespace-nowrap">
                 {r.source}
+                {r.assetClass && (
+                  <span
+                    className={r.assetClass === "COMMOD" ? "text-amber-400" : "text-sky-400"}
+                    title={r.assetClass === "COMMOD" ? "Commodity perpetual" : "TradFi perpetual (stock/ETF)"}
+                  >
+                    /{r.assetClass}
+                  </span>
+                )}
               </span>
               {(() => {
                 const category = getRowCategory(r);
