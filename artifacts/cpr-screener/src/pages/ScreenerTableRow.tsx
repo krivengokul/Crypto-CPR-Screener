@@ -681,17 +681,17 @@ export function renderMatchingSignals(
             ? "border-red-500/40 bg-red-500/10 text-red-400"
             : "border-violet-500/40 bg-violet-500/10 text-violet-300";
         return (
-          <div key={v.id} className="flex flex-col gap-0.5">
-            <div className="flex flex-wrap items-center gap-1">
+          <div key={v.id} className="flex h-11 flex-col justify-center gap-0.5 overflow-hidden">
+            <div className="flex flex-nowrap items-center gap-1">
               <span
-                className={`inline-flex items-center rounded-md border px-2 py-1 text-xs font-medium font-mono ${tone}`}
+                className={`inline-flex min-w-0 items-center truncate rounded-md border px-2 py-1 text-xs font-medium font-mono ${tone}`}
                 title={`Active View: ${v.label} (${v.id})`}
               >
                 {v.label}
               </span>
               {status === "active" && (
                 <span
-                  className="inline-flex items-center gap-1 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-1.5 py-1 text-[11px] font-mono text-emerald-400"
+                  className="inline-flex shrink-0 items-center gap-1 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-1.5 py-1 text-[11px] font-mono text-emerald-400"
                   title="Price has reached the entry line"
                 >
                   <Cloud className="w-3 h-3" />
@@ -700,7 +700,7 @@ export function renderMatchingSignals(
               )}
               {status === "ready" && (
                 <span
-                  className="inline-flex items-center gap-1 rounded-md border border-amber-500/40 bg-amber-500/10 px-1.5 py-1 text-[11px] font-mono text-amber-400"
+                  className="inline-flex shrink-0 items-center gap-1 rounded-md border border-amber-500/40 bg-amber-500/10 px-1.5 py-1 text-[11px] font-mono text-amber-400"
                   title="Matches an active signal but price hasn't reached the entry line yet"
                 >
                   <Clock className="w-3 h-3" />
@@ -708,7 +708,7 @@ export function renderMatchingSignals(
                 </span>
               )}
             </div>
-            <span className="truncate font-mono text-[10px] text-muted-foreground" title={v.id}>
+            <span className="truncate font-mono text-[10px] leading-3 text-muted-foreground" title={v.id}>
               {v.id}
             </span>
           </div>
@@ -769,7 +769,7 @@ export function ScreenerTableHeader({
           Ladder Check <SortIcon k="ladderCheck" />
         </th>
         <th
-          className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[220px] cursor-pointer hover:text-foreground"
+          className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[160px] cursor-pointer hover:text-foreground"
           onClick={() => toggleSort("compressionRatio")}
         >
             PIVOT SIZE <SortIcon k="compressionRatio" />
@@ -1026,9 +1026,9 @@ export default function ScreenerTableRow({
             Row matches no View                         -> blank cell */}
         <td className="px-3 py-3">
           {viewLadders.length > 0 && (anyLadderDefined || hasSelectedView) && (
-            <div className="flex flex-col gap-0.5">
+            <div className="flex flex-col gap-1.5">
               {viewLadders.map(({ id, label, ladder }) => (
-                <div key={id} className="h-4 flex items-center whitespace-nowrap">
+                <div key={id} className="h-11 flex items-center whitespace-nowrap">
                   {!ladder.hasConditions ? (
                     hasSelectedView ? (
                       <span className="text-xs text-muted-foreground" title={label}>
