@@ -728,8 +728,6 @@ export interface ScreenerTableHeaderProps {
 
 /** Table <thead> for the screener results table. Moved from Screener.tsx as-is. */
 export function ScreenerTableHeader({
-  canShowCombined,
-  activeTab,
   sortKey,
   sortDir,
   toggleSort,
@@ -743,9 +741,6 @@ export function ScreenerTableHeader({
   return (
     <thead>
       <tr className="border-b border-border bg-muted/30">
-        {canShowCombined && activeTab === "combined" && (
-          <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Exchange</th>
-        )}
         <th
           className="px-2 py-3 w-16 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
           onClick={() => toggleSort("symbol")}
@@ -820,8 +815,6 @@ export default function ScreenerTableRow({
   rowKey,
   isExpanded,
   toggleExpand,
-  canShowCombined,
-  activeTab,
   activePattern: rawActivePattern,
   activeSignal,
   viewName,
@@ -930,21 +923,6 @@ export default function ScreenerTableRow({
       <tr
         className={`hover:bg-muted/20 transition-colors ${dir ? "bg-accent/3" : ""}`}
       >
-        {canShowCombined && activeTab === "combined" && (
-          <td className="px-4 py-3 whitespace-nowrap">
-            <span
-              className={`text-xs px-1.5 py-0.5 rounded border font-medium ${
-                r.source === "binance"
-                  ? "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
-                  : r.source === "coindcx"
-                  ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                  : "bg-blue-500/10 text-blue-400 border-blue-500/20"
-              }`}
-            >
-              {r.source === "binance" ? "Binance" : r.source === "coindcx" ? "CoinDCX" : "Delta"}
-            </span>
-          </td>
-        )}
         <td
           className="px-2 py-3 w-16 font-mono font-semibold text-foreground cursor-pointer select-none"
           onClick={() => toggleExpand(rowKey)}
@@ -987,6 +965,12 @@ export default function ScreenerTableRow({
                   </span>
                 )}
               </div>
+              {/* Exchange — same line the Signals Journal shows under the
+                  symbol (tiny, mono, uppercase, slate), replacing the old
+                  separate Exchange column. Shown for every tab. */}
+              <span className="mt-0.5 text-[10px] font-mono uppercase tracking-wide leading-none text-slate-400 whitespace-nowrap">
+                {r.source}
+              </span>
               {(() => {
                 const category = getRowCategory(r);
                 if (!category) return null;
