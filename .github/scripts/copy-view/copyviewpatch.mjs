@@ -182,6 +182,7 @@ const CATEGORY_FILE_MAP = {
   compressed: { file: "categories/compressed.ts", arr: "COMPRESSED_VIEWS" },
   expanded: { file: "categories/expanded.ts", arr: "EXPANDED_VIEWS" },
   R1AbovePR4: { file: "categories/r4s4.ts", arr: "R1ABOVEPR4_S1BELOWPS4_VIEWS" },
+  BPS4: { file: "categories/r4s4.ts", arr: "R1ABOVEPR4_S1BELOWPS4_VIEWS" },
   S1BelowPS4: { file: "categories/r4s4.ts", arr: "R1ABOVEPR4_S1BELOWPS4_VIEWS" },
   "equal-cpr": { file: "categories/misc.ts", arr: "MISC_VIEWS" },
   top15gainers: { file: "categories/misc.ts", arr: "MISC_VIEWS" },

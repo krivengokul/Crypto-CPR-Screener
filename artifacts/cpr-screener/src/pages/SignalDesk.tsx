@@ -126,7 +126,7 @@ export interface SignalItem {
 }
 
 // Which top-level Views bucket a View id lives under — e.g. "compressed",
-// "expanded", "levelsabove", "levelsbelow", "R1AbovePR4", "S1BelowPS4",
+// "expanded", "levelsabove", "levelsbelow", "R1AbovePR4", "BPS4",
 // "touch", "copyViews". The map is generated from the view registry, so this
 // stays in sync as registered Views or their navigation parents change.
 function getCategoryForViewId(id: string): string {

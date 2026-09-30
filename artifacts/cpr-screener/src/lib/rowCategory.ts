@@ -21,7 +21,7 @@ export function getRowCategory(
   if (r.LevelsBelow) return "levelsbelow";
   if (r.compressed) return "compressed";
   if (r.expanded) return "expanded";
-  if (r.S1BelowPS4) return "S1BelowPS4";
+  if (r.S1BelowPS4) return "BPS4";
   if (r.touchCategory) return "touch";
   return "";
 }
@@ -33,7 +33,7 @@ export const CATEGORY_LABELS: Record<string, string> = {
   compressed: "Compressed",
   expanded: "Expanded",
   R1AbovePR4: "Above Level4",
-  S1BelowPS4: "Below Level4",
+  BPS4: "Below Level4",
   touch: "Touch",
   copyViews: "Created Views",
 };
@@ -49,7 +49,7 @@ export const CATEGORY_TEXT_COLORS: Record<string, string> = {
   levelsabove: "text-emerald-400/80",
   R1AbovePR4: "text-emerald-300/80",
   levelsbelow: "text-rose-400/80",
-  S1BelowPS4: "text-rose-300/80",
+  BPS4: "text-rose-300/80",
   compressed: "text-amber-400/80",
   expanded: "text-sky-400/80",
   touch: "text-violet-400/80",

@@ -9,7 +9,7 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
   { key: "R1AbovePR4", label: "ABOVE LEVEL4", kind: "category", condition: (r) => r.R1AbovePR4,
       order: 6
 },
-  { key: "S1BelowPS4", label: "BELOW LEVEL4", kind: "category", condition: (r) => r.S1BelowPS4,
+  { key: "BPS4", label: "BELOW LEVEL4", kind: "category", condition: (r) => r.S1BelowPS4,
       order: 7
 },
 
@@ -257,11 +257,11 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
     order: 0,
   },
 
-  // --- Compound Pattern children and their Subpatterns under "S1BelowPS4" ---
+  // --- Compound Pattern children and their Subpatterns under "BPS4" ---
   {
-    key: "S1BelowPS4-B-B-BB-BB",
+    key: "BPS4-B-B-BB-BB",
     label: "B-B-BB-BB",
-    parentKey: "S1BelowPS4",
+    parentKey: "BPS4",
     kind: "pattern",
     condition: (r) =>
       r.SSRRCategory === "RRSS-B" &&
@@ -270,20 +270,20 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
       r.SSLLCategory === "SSLL-BB",
     order: 0,
   },
-  { key: "S1BelowPS4-B-B-BB-BB-EL1U4", label: "B-B-BB-BB-EL1U4", parentKey: "S1BelowPS4-B-B-BB-BB", kind: "pattern", condition: (r) => r.EL1U4, order: 0 },
-  { key: "S1BelowPS4-B-B-BB-BB-EL1U3", label: "B-B-BB-BB-EL1U3", parentKey: "S1BelowPS4-B-B-BB-BB", kind: "pattern", condition: (r) => r.EL1U3, order: 1 },
-  { key: "S1BelowPS4-B-B-BB-BB-ELTU2", label: "B-B-BB-BB-ELTU2", parentKey: "S1BelowPS4-B-B-BB-BB", kind: "pattern", condition: (r) => r.ELTU2, order: 2 },
-  { key: "S1BelowPS4-B-B-BB-BB-ELBU3", label: "B-B-BB-BB-ELBU3", parentKey: "S1BelowPS4-B-B-BB-BB", kind: "pattern", condition: (r) => r.ELBU3, order: 3 },
-  { key: "S1BelowPS4-B-B-BB-BB-ELPU3", label: "B-B-BB-BB-ELPU3", parentKey: "S1BelowPS4-B-B-BB-BB", kind: "pattern", condition: (r) => r.ELPU3, order: 4 },
-  { key: "S1BelowPS4-B-B-BB-BB-EL1U2", label: "B-B-BB-BB-EL1U2", parentKey: "S1BelowPS4-B-B-BB-BB", kind: "pattern", condition: (r) => r.EL1U2, order: 5 },
-  { key: "S1BelowPS4-B-B-BB-BB-ELTU3", label: "B-B-BB-BB-ELTU3", parentKey: "S1BelowPS4-B-B-BB-BB", kind: "pattern", condition: (r) => r.ELTU3, order: 6 },
-  { key: "S1BelowPS4-B-B-BB-BB-L1U4", label: "B-B-BB-BB-L1U4", parentKey: "S1BelowPS4-B-B-BB-BB", kind: "pattern", condition: (r) => r.L1U4, order: 7 },
-  { key: "S1BelowPS4-B-B-BB-BB-ELBU4", label: "B-B-BB-BB-ELBU4", parentKey: "S1BelowPS4-B-B-BB-BB", kind: "pattern", condition: (r) => r.ELBU4, order: 8 },
-  { key: "S1BelowPS4-B-B-BB-BB-ELPU2", label: "B-B-BB-BB-ELPU2", parentKey: "S1BelowPS4-B-B-BB-BB", kind: "pattern", condition: (r) => r.ELPU2, order: 9 },
+  { key: "BPS4-B-B-BB-BB-EL1U4", label: "B-B-BB-BB-EL1U4", parentKey: "BPS4-B-B-BB-BB", kind: "pattern", condition: (r) => r.EL1U4, order: 0 },
+  { key: "BPS4-B-B-BB-BB-EL1U3", label: "B-B-BB-BB-EL1U3", parentKey: "BPS4-B-B-BB-BB", kind: "pattern", condition: (r) => r.EL1U3, order: 1 },
+  { key: "BPS4-B-B-BB-BB-ELTU2", label: "B-B-BB-BB-ELTU2", parentKey: "BPS4-B-B-BB-BB", kind: "pattern", condition: (r) => r.ELTU2, order: 2 },
+  { key: "BPS4-B-B-BB-BB-ELBU3", label: "B-B-BB-BB-ELBU3", parentKey: "BPS4-B-B-BB-BB", kind: "pattern", condition: (r) => r.ELBU3, order: 3 },
+  { key: "BPS4-B-B-BB-BB-ELPU3", label: "B-B-BB-BB-ELPU3", parentKey: "BPS4-B-B-BB-BB", kind: "pattern", condition: (r) => r.ELPU3, order: 4 },
+  { key: "BPS4-B-B-BB-BB-EL1U2", label: "B-B-BB-BB-EL1U2", parentKey: "BPS4-B-B-BB-BB", kind: "pattern", condition: (r) => r.EL1U2, order: 5 },
+  { key: "BPS4-B-B-BB-BB-ELTU3", label: "B-B-BB-BB-ELTU3", parentKey: "BPS4-B-B-BB-BB", kind: "pattern", condition: (r) => r.ELTU3, order: 6 },
+  { key: "BPS4-B-B-BB-BB-L1U4", label: "B-B-BB-BB-L1U4", parentKey: "BPS4-B-B-BB-BB", kind: "pattern", condition: (r) => r.L1U4, order: 7 },
+  { key: "BPS4-B-B-BB-BB-ELBU4", label: "B-B-BB-BB-ELBU4", parentKey: "BPS4-B-B-BB-BB", kind: "pattern", condition: (r) => r.ELBU4, order: 8 },
+  { key: "BPS4-B-B-BB-BB-ELPU2", label: "B-B-BB-BB-ELPU2", parentKey: "BPS4-B-B-BB-BB", kind: "pattern", condition: (r) => r.ELPU2, order: 9 },
   {
-    key: "S1BelowPS4-B-E-E-BB",
+    key: "BPS4-B-E-E-BB",
     label: "B-E-E-BB",
-    parentKey: "S1BelowPS4",
+    parentKey: "BPS4",
     kind: "pattern",
     condition: (r) =>
       r.SSRRCategory === "RRSS-B" &&
@@ -292,14 +292,14 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
       r.SSLLCategory === "SSLL-BB",
     order: 1,
   },
-  { key: "S1BelowPS4-B-E-E-BB-EL1U3", label: "B-E-E-BB-EL1U3", parentKey: "S1BelowPS4-B-E-E-BB", kind: "pattern", condition: (r) => r.EL1U3, order: 0 },
-  { key: "S1BelowPS4-B-E-E-BB-EL1U2", label: "B-E-E-BB-EL1U2", parentKey: "S1BelowPS4-B-E-E-BB", kind: "pattern", condition: (r) => r.EL1U2, order: 1 },
-  { key: "S1BelowPS4-B-E-E-BB-ELBU2", label: "B-E-E-BB-ELBU2", parentKey: "S1BelowPS4-B-E-E-BB", kind: "pattern", condition: (r) => r.ELBU2, order: 2 },
-  { key: "S1BelowPS4-B-E-E-BB-ELTU2", label: "B-E-E-BB-ELTU2", parentKey: "S1BelowPS4-B-E-E-BB", kind: "pattern", condition: (r) => r.ELTU2, order: 3 },
+  { key: "BPS4-B-E-E-BB-EL1U3", label: "B-E-E-BB-EL1U3", parentKey: "BPS4-B-E-E-BB", kind: "pattern", condition: (r) => r.EL1U3, order: 0 },
+  { key: "BPS4-B-E-E-BB-EL1U2", label: "B-E-E-BB-EL1U2", parentKey: "BPS4-B-E-E-BB", kind: "pattern", condition: (r) => r.EL1U2, order: 1 },
+  { key: "BPS4-B-E-E-BB-ELBU2", label: "B-E-E-BB-ELBU2", parentKey: "BPS4-B-E-E-BB", kind: "pattern", condition: (r) => r.ELBU2, order: 2 },
+  { key: "BPS4-B-E-E-BB-ELTU2", label: "B-E-E-BB-ELTU2", parentKey: "BPS4-B-E-E-BB", kind: "pattern", condition: (r) => r.ELTU2, order: 3 },
   {
-    key: "S1BelowPS4-B-E-HA-BB",
+    key: "BPS4-B-E-HA-BB",
     label: "B-E-HA-BB",
-    parentKey: "S1BelowPS4",
+    parentKey: "BPS4",
     kind: "pattern",
     condition: (r) =>
       r.SSRRCategory === "RRSS-B" &&
@@ -308,14 +308,14 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
       r.SSLLCategory === "SSLL-BB",
     order: 2,
   },
-  { key: "S1BelowPS4-B-E-HA-BB-EL1U3", label: "B-E-HA-BB-EL1U3", parentKey: "S1BelowPS4-B-E-HA-BB", kind: "pattern", condition: (r) => r.EL1U3, order: 0 },
-  { key: "S1BelowPS4-B-E-HA-BB-EL1U2", label: "B-E-HA-BB-EL1U2", parentKey: "S1BelowPS4-B-E-HA-BB", kind: "pattern", condition: (r) => r.EL1U2, order: 1 },
-  { key: "S1BelowPS4-B-E-HA-BB-EL1U4", label: "B-E-HA-BB-EL1U4", parentKey: "S1BelowPS4-B-E-HA-BB", kind: "pattern", condition: (r) => r.EL1U4, order: 2 },
-  { key: "S1BelowPS4-B-E-HA-BB-ELBU3", label: "B-E-HA-BB-ELBU3", parentKey: "S1BelowPS4-B-E-HA-BB", kind: "pattern", condition: (r) => r.ELBU3, order: 3 },
+  { key: "BPS4-B-E-HA-BB-EL1U3", label: "B-E-HA-BB-EL1U3", parentKey: "BPS4-B-E-HA-BB", kind: "pattern", condition: (r) => r.EL1U3, order: 0 },
+  { key: "BPS4-B-E-HA-BB-EL1U2", label: "B-E-HA-BB-EL1U2", parentKey: "BPS4-B-E-HA-BB", kind: "pattern", condition: (r) => r.EL1U2, order: 1 },
+  { key: "BPS4-B-E-HA-BB-EL1U4", label: "B-E-HA-BB-EL1U4", parentKey: "BPS4-B-E-HA-BB", kind: "pattern", condition: (r) => r.EL1U4, order: 2 },
+  { key: "BPS4-B-E-HA-BB-ELBU3", label: "B-E-HA-BB-ELBU3", parentKey: "BPS4-B-E-HA-BB", kind: "pattern", condition: (r) => r.ELBU3, order: 3 },
   {
-    key: "S1BelowPS4-E-A-AA-E",
+    key: "BPS4-E-A-AA-E",
     label: "E-A-AA-E",
-    parentKey: "S1BelowPS4",
+    parentKey: "BPS4",
     kind: "pattern",
     condition: (r) =>
       r.SSRRCategory === "RRSS-E" &&
@@ -324,11 +324,11 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
       r.SSLLCategory === "SSLL-E",
     order: 3,
   },
-  { key: "S1BelowPS4-E-A-AA-E-EUBL1", label: "E-A-AA-E-EUBL1", parentKey: "S1BelowPS4-E-A-AA-E", kind: "pattern", condition: (r) => r.EUBL1, order: 0 },
+  { key: "BPS4-E-A-AA-E-EUBL1", label: "E-A-AA-E-EUBL1", parentKey: "BPS4-E-A-AA-E", kind: "pattern", condition: (r) => r.EUBL1, order: 0 },
   {
-    key: "S1BelowPS4-E-E-AA-BB",
+    key: "BPS4-E-E-AA-BB",
     label: "E-E-AA-BB",
-    parentKey: "S1BelowPS4",
+    parentKey: "BPS4",
     kind: "pattern",
     condition: (r) =>
       r.SSRRCategory === "RRSS-E" &&
@@ -337,19 +337,19 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
       r.SSLLCategory === "SSLL-BB",
     order: 4,
   },
-  { key: "S1BelowPS4-E-E-AA-BB-EL1U2", label: "E-E-AA-BB-EL1U2", parentKey: "S1BelowPS4-E-E-AA-BB", kind: "pattern", condition: (r) => r.EL1U2, order: 0 },
-  { key: "S1BelowPS4-E-E-AA-BB-EU1L1", label: "E-E-AA-BB-EU1L1", parentKey: "S1BelowPS4-E-E-AA-BB", kind: "pattern", condition: (r) => r.EU1L1, order: 1 },
-  { key: "S1BelowPS4-E-E-AA-BB-EL1U1", label: "E-E-AA-BB-EL1U1", parentKey: "S1BelowPS4-E-E-AA-BB", kind: "pattern", condition: (r) => r.EL1U1, order: 2 },
-  { key: "S1BelowPS4-E-E-AA-BB-EUBL1", label: "E-E-AA-BB-EUBL1", parentKey: "S1BelowPS4-E-E-AA-BB", kind: "pattern", condition: (r) => r.EUBL1, order: 3 },
-  { key: "S1BelowPS4-E-E-AA-BB-ELBU2", label: "E-E-AA-BB-ELBU2", parentKey: "S1BelowPS4-E-E-AA-BB", kind: "pattern", condition: (r) => r.ELBU2, order: 4 },
-  { key: "S1BelowPS4-E-E-AA-BB-EUTL1", label: "E-E-AA-BB-EUTL1", parentKey: "S1BelowPS4-E-E-AA-BB", kind: "pattern", condition: (r) => r.EUTL1, order: 5 },
-  { key: "S1BelowPS4-E-E-AA-BB-EUPL1", label: "E-E-AA-BB-EUPL1", parentKey: "S1BelowPS4-E-E-AA-BB", kind: "pattern", condition: (r) => r.EUPL1, order: 6 },
-  { key: "S1BelowPS4-E-E-AA-BB-EL1U3", label: "E-E-AA-BB-EL1U3", parentKey: "S1BelowPS4-E-E-AA-BB", kind: "pattern", condition: (r) => r.EL1U3, order: 7 },
-  { key: "S1BelowPS4-E-E-AA-BB-ELPU2", label: "E-E-AA-BB-ELPU2", parentKey: "S1BelowPS4-E-E-AA-BB", kind: "pattern", condition: (r) => r.ELPU2, order: 8 },
+  { key: "BPS4-E-E-AA-BB-EL1U2", label: "E-E-AA-BB-EL1U2", parentKey: "BPS4-E-E-AA-BB", kind: "pattern", condition: (r) => r.EL1U2, order: 0 },
+  { key: "BPS4-E-E-AA-BB-EU1L1", label: "E-E-AA-BB-EU1L1", parentKey: "BPS4-E-E-AA-BB", kind: "pattern", condition: (r) => r.EU1L1, order: 1 },
+  { key: "BPS4-E-E-AA-BB-EL1U1", label: "E-E-AA-BB-EL1U1", parentKey: "BPS4-E-E-AA-BB", kind: "pattern", condition: (r) => r.EL1U1, order: 2 },
+  { key: "BPS4-E-E-AA-BB-EUBL1", label: "E-E-AA-BB-EUBL1", parentKey: "BPS4-E-E-AA-BB", kind: "pattern", condition: (r) => r.EUBL1, order: 3 },
+  { key: "BPS4-E-E-AA-BB-ELBU2", label: "E-E-AA-BB-ELBU2", parentKey: "BPS4-E-E-AA-BB", kind: "pattern", condition: (r) => r.ELBU2, order: 4 },
+  { key: "BPS4-E-E-AA-BB-EUTL1", label: "E-E-AA-BB-EUTL1", parentKey: "BPS4-E-E-AA-BB", kind: "pattern", condition: (r) => r.EUTL1, order: 5 },
+  { key: "BPS4-E-E-AA-BB-EUPL1", label: "E-E-AA-BB-EUPL1", parentKey: "BPS4-E-E-AA-BB", kind: "pattern", condition: (r) => r.EUPL1, order: 6 },
+  { key: "BPS4-E-E-AA-BB-EL1U3", label: "E-E-AA-BB-EL1U3", parentKey: "BPS4-E-E-AA-BB", kind: "pattern", condition: (r) => r.EL1U3, order: 7 },
+  { key: "BPS4-E-E-AA-BB-ELPU2", label: "E-E-AA-BB-ELPU2", parentKey: "BPS4-E-E-AA-BB", kind: "pattern", condition: (r) => r.ELPU2, order: 8 },
   {
-    key: "S1BelowPS4-E-B-E-BB",
+    key: "BPS4-E-B-E-BB",
     label: "E-B-E-BB",
-    parentKey: "S1BelowPS4",
+    parentKey: "BPS4",
     kind: "pattern",
     condition: (r) =>
       r.SSRRCategory === "RRSS-E" &&
@@ -358,15 +358,15 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
       r.SSLLCategory === "SSLL-BB",
     order: 5,
   },
-  { key: "S1BelowPS4-E-B-E-BB-ELPU2", label: "E-B-E-BB-ELPU2", parentKey: "S1BelowPS4-E-B-E-BB", kind: "pattern", condition: (r) => r.ELPU2, order: 0 },
-  { key: "S1BelowPS4-E-B-E-BB-EL1U2", label: "E-B-E-BB-EL1U2", parentKey: "S1BelowPS4-E-B-E-BB", kind: "pattern", condition: (r) => r.EL1U2, order: 1 },
-  { key: "S1BelowPS4-E-B-E-BB-EL1U3", label: "E-B-E-BB-EL1U3", parentKey: "S1BelowPS4-E-B-E-BB", kind: "pattern", condition: (r) => r.EL1U3, order: 2 },
-  { key: "S1BelowPS4-E-B-E-BB-ELTU2", label: "E-B-E-BB-ELTU2", parentKey: "S1BelowPS4-E-B-E-BB", kind: "pattern", condition: (r) => r.ELTU2, order: 3 },
-  { key: "S1BelowPS4-E-B-E-BB-ELBU2", label: "E-B-E-BB-ELBU2", parentKey: "S1BelowPS4-E-B-E-BB", kind: "pattern", condition: (r) => r.ELBU2, order: 4 },
+  { key: "BPS4-E-B-E-BB-ELPU2", label: "E-B-E-BB-ELPU2", parentKey: "BPS4-E-B-E-BB", kind: "pattern", condition: (r) => r.ELPU2, order: 0 },
+  { key: "BPS4-E-B-E-BB-EL1U2", label: "E-B-E-BB-EL1U2", parentKey: "BPS4-E-B-E-BB", kind: "pattern", condition: (r) => r.EL1U2, order: 1 },
+  { key: "BPS4-E-B-E-BB-EL1U3", label: "E-B-E-BB-EL1U3", parentKey: "BPS4-E-B-E-BB", kind: "pattern", condition: (r) => r.EL1U3, order: 2 },
+  { key: "BPS4-E-B-E-BB-ELTU2", label: "E-B-E-BB-ELTU2", parentKey: "BPS4-E-B-E-BB", kind: "pattern", condition: (r) => r.ELTU2, order: 3 },
+  { key: "BPS4-E-B-E-BB-ELBU2", label: "E-B-E-BB-ELBU2", parentKey: "BPS4-E-B-E-BB", kind: "pattern", condition: (r) => r.ELBU2, order: 4 },
   {
-    key: "S1BelowPS4-B-E-C-BB",
+    key: "BPS4-B-E-C-BB",
     label: "B-E-C-BB",
-    parentKey: "S1BelowPS4",
+    parentKey: "BPS4",
     kind: "pattern",
     condition: (r) =>
       r.SSRRCategory === "RRSS-B" &&
@@ -375,11 +375,11 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
       r.SSLLCategory === "SSLL-BB",
     order: 6,
   },
-  { key: "S1BelowPS4-B-E-C-BB-EL1U3", label: "B-E-C-BB-EL1U3", parentKey: "S1BelowPS4-B-E-C-BB", kind: "pattern", condition: (r) => r.EL1U3, order: 0 },
+  { key: "BPS4-B-E-C-BB-EL1U3", label: "B-E-C-BB-EL1U3", parentKey: "BPS4-B-E-C-BB", kind: "pattern", condition: (r) => r.EL1U3, order: 0 },
   {
-    key: "S1BelowPS4-E-B-RA-BB",
+    key: "BPS4-E-B-RA-BB",
     label: "E-B-RA-BB",
-    parentKey: "S1BelowPS4",
+    parentKey: "BPS4",
     kind: "pattern",
     condition: (r) =>
       r.SSRRCategory === "RRSS-E" &&
@@ -388,14 +388,14 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
       r.SSLLCategory === "SSLL-BB",
     order: 7,
   },
-  { key: "S1BelowPS4-E-B-RA-BB-EL1U2", label: "E-B-RA-BB-EL1U2", parentKey: "S1BelowPS4-E-B-RA-BB", kind: "pattern", condition: (r) => r.EL1U2, order: 0 },
-  { key: "S1BelowPS4-E-B-RA-BB-EL1U3", label: "E-B-RA-BB-EL1U3", parentKey: "S1BelowPS4-E-B-RA-BB", kind: "pattern", condition: (r) => r.EL1U3, order: 1 },
-  { key: "S1BelowPS4-E-B-RA-BB-ELTU2", label: "E-B-RA-BB-ELTU2", parentKey: "S1BelowPS4-E-B-RA-BB", kind: "pattern", condition: (r) => r.ELTU2, order: 2 },
-  { key: "S1BelowPS4-E-B-RA-BB-ELBU2", label: "E-B-RA-BB-ELBU2", parentKey: "S1BelowPS4-E-B-RA-BB", kind: "pattern", condition: (r) => r.ELBU2, order: 3 },
+  { key: "BPS4-E-B-RA-BB-EL1U2", label: "E-B-RA-BB-EL1U2", parentKey: "BPS4-E-B-RA-BB", kind: "pattern", condition: (r) => r.EL1U2, order: 0 },
+  { key: "BPS4-E-B-RA-BB-EL1U3", label: "E-B-RA-BB-EL1U3", parentKey: "BPS4-E-B-RA-BB", kind: "pattern", condition: (r) => r.EL1U3, order: 1 },
+  { key: "BPS4-E-B-RA-BB-ELTU2", label: "E-B-RA-BB-ELTU2", parentKey: "BPS4-E-B-RA-BB", kind: "pattern", condition: (r) => r.ELTU2, order: 2 },
+  { key: "BPS4-E-B-RA-BB-ELBU2", label: "E-B-RA-BB-ELBU2", parentKey: "BPS4-E-B-RA-BB", kind: "pattern", condition: (r) => r.ELBU2, order: 3 },
   {
-    key: "S1BelowPS4-E-B-C-BB",
+    key: "BPS4-E-B-C-BB",
     label: "E-B-C-BB",
-    parentKey: "S1BelowPS4",
+    parentKey: "BPS4",
     kind: "pattern",
     condition: (r) =>
       r.SSRRCategory === "RRSS-E" &&
@@ -404,11 +404,11 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
       r.SSLLCategory === "SSLL-BB",
     order: 8,
   },
-  { key: "S1BelowPS4-E-B-C-BB-EL1U3", label: "E-B-C-BB-EL1U3", parentKey: "S1BelowPS4-E-B-C-BB", kind: "pattern", condition: (r) => r.EL1U3, order: 0 },
+  { key: "BPS4-E-B-C-BB-EL1U3", label: "E-B-C-BB-EL1U3", parentKey: "BPS4-E-B-C-BB", kind: "pattern", condition: (r) => r.EL1U3, order: 0 },
   {
-    key: "S1BelowPS4-B-B-OB-BB",
+    key: "BPS4-B-B-OB-BB",
     label: "B-B-OB-BB",
-    parentKey: "S1BelowPS4",
+    parentKey: "BPS4",
     kind: "pattern",
     condition: (r) =>
       r.SSRRCategory === "RRSS-B" &&
@@ -417,11 +417,11 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
       r.SSLLCategory === "SSLL-BB",
     order: 9,
   },
-  { key: "S1BelowPS4-B-B-OB-BB-EL1U3", label: "B-B-OB-BB-EL1U3", parentKey: "S1BelowPS4-B-B-OB-BB", kind: "pattern", condition: (r) => r.EL1U3, order: 0 },
-  { key: "S1BelowPS4-B-B-OB-BB-EL1U4", label: "B-B-OB-BB-EL1U4", parentKey: "S1BelowPS4-B-B-OB-BB", kind: "pattern", condition: (r) => r.EL1U4, order: 1 },
-  { key: "S1BelowPS4-B-B-OB-BB-EL1U2", label: "B-B-OB-BB-EL1U2", parentKey: "S1BelowPS4-B-B-OB-BB", kind: "pattern", condition: (r) => r.EL1U2, order: 2 },
-  { key: "S1BelowPS4-B-B-OB-BB-ELBU2", label: "B-B-OB-BB-ELBU2", parentKey: "S1BelowPS4-B-B-OB-BB", kind: "pattern", condition: (r) => r.ELBU2, order: 3 },
-  { key: "S1BelowPS4-B-B-OB-BB-ELBU3", label: "B-B-OB-BB-ELBU3", parentKey: "S1BelowPS4-B-B-OB-BB", kind: "pattern", condition: (r) => r.ELBU3, order: 4 },
+  { key: "BPS4-B-B-OB-BB-EL1U3", label: "B-B-OB-BB-EL1U3", parentKey: "BPS4-B-B-OB-BB", kind: "pattern", condition: (r) => r.EL1U3, order: 0 },
+  { key: "BPS4-B-B-OB-BB-EL1U4", label: "B-B-OB-BB-EL1U4", parentKey: "BPS4-B-B-OB-BB", kind: "pattern", condition: (r) => r.EL1U4, order: 1 },
+  { key: "BPS4-B-B-OB-BB-EL1U2", label: "B-B-OB-BB-EL1U2", parentKey: "BPS4-B-B-OB-BB", kind: "pattern", condition: (r) => r.EL1U2, order: 2 },
+  { key: "BPS4-B-B-OB-BB-ELBU2", label: "B-B-OB-BB-ELBU2", parentKey: "BPS4-B-B-OB-BB", kind: "pattern", condition: (r) => r.ELBU2, order: 3 },
+  { key: "BPS4-B-B-OB-BB-ELBU3", label: "B-B-OB-BB-ELBU3", parentKey: "BPS4-B-B-OB-BB", kind: "pattern", condition: (r) => r.ELBU3, order: 4 },
 
   // --- leaf Views ---
   {
@@ -1560,10 +1560,10 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
     ],
       },
     {
-        key: "S1-S1BelowPS4-B-B-BB-BB-ELPU3-SL-AAGap-S4",
+        key: "S1-BPS4-B-B-BB-BB-ELPU3-SL-AAGap-S4",
         label: "BL4-pMicroTiny-ToPPL4Fall",
-        parentKey: "S1BelowPS4-B-B-BB-BB-ELPU3",
-        condition: (r) => passesView(r, "S1BelowPS4-B-B-BB-BB-ELPU3") && matchesGapBadge(r, "SL-AAGap"),
+        parentKey: "BPS4-B-B-BB-BB-ELPU3",
+        condition: (r) => passesView(r, "BPS4-B-B-BB-BB-ELPU3") && matchesGapBadge(r, "SL-AAGap"),
         standalone: true,
         kind: "view",
         direction: "Down",
@@ -1681,10 +1681,10 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
     ],
       },
     {
-        key: "S1-S1BelowPS4-B-B-BB-BB-ELBU3-SL-BAGap-S4",
+        key: "S1-BPS4-B-B-BB-BB-ELBU3-SL-BAGap-S4",
         label: "P-MicroTiny-PPL4Fall",
-        parentKey: "S1BelowPS4-B-B-BB-BB-ELBU3",
-        condition: (r) => passesView(r, "S1BelowPS4-B-B-BB-BB-ELBU3") && matchesGapBadge(r, "SL-BAGap"),
+        parentKey: "BPS4-B-B-BB-BB-ELBU3",
+        condition: (r) => passesView(r, "BPS4-B-B-BB-BB-ELBU3") && matchesGapBadge(r, "SL-BAGap"),
         standalone: true,
         kind: "view",
         direction: "Down",
@@ -2044,10 +2044,10 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
     ],
       },
     {
-        key: "BC-S1BelowPS4-E-A-AA-E-EUBL1-RH-AAGap-PL",
+        key: "BC-BPS4-E-A-AA-E-EUBL1-RH-AAGap-PL",
         label: "BPS4-EUBL1-UltraFall",
-        parentKey: "S1BelowPS4-E-A-AA-E-EUBL1",
-        condition: (r) => passesView(r, "S1BelowPS4-E-A-AA-E-EUBL1") && matchesGapBadge(r, "RH-AAGap"),
+        parentKey: "BPS4-E-A-AA-E-EUBL1",
+        condition: (r) => passesView(r, "BPS4-E-A-AA-E-EUBL1") && matchesGapBadge(r, "RH-AAGap"),
         standalone: true,
         kind: "view",
         direction: "Down",
@@ -2165,10 +2165,10 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
     ],
       },
     {
-        key: "TC-S1BelowPS4-B-B-BB-BB-ELBU3-SL-AAGap-R4",
+        key: "TC-BPS4-B-B-BB-BB-ELBU3-SL-AAGap-R4",
         label: "pPHAR1-pPAPH-UpR4",
-        parentKey: "S1BelowPS4-B-B-BB-BB-ELBU3",
-        condition: (r) => passesView(r, "S1BelowPS4-B-B-BB-BB-ELBU3") && matchesGapBadge(r, "SL-AAGap"),
+        parentKey: "BPS4-B-B-BB-BB-ELBU3",
+        condition: (r) => passesView(r, "BPS4-B-B-BB-BB-ELBU3") && matchesGapBadge(r, "SL-AAGap"),
         standalone: true,
         kind: "view",
         direction: "Up",

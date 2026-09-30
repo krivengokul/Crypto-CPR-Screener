@@ -109,7 +109,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             </div>
             <div className="text-xs text-muted-foreground">Today&apos;s R1 above prev day&apos;s R4 (also excluded from LEVEL ABOVE — a symbol here never appears there)</div>
           </>
-        ) : activeSignal === "S1BelowPS4" ? (
+        ) : activeSignal === "BPS4" ? (
           <>
             <div className="flex items-center gap-1.5 mb-1 flex-wrap">
               <span className="text-xs font-semibold text-primary">BELOW LEVEL4</span>
