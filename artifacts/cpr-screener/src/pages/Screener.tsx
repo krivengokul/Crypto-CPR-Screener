@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo, Fragment } from "react";
 import { pivotcategories, Views, VIEW_LABEL_BY_ID, requestSignalDeselect } from "@/lib/ViewsSidebar";
-import { getView } from "@/lib/views";
+import { getView, VIEWS } from "@/lib/views";
 import {
   TrendingUp,
   RefreshCw,
@@ -15,7 +15,7 @@ import { runScreener } from "@/lib/binance";
 import { runDeltaScreener } from "@/lib/delta";
 import { runCoinDCXScreener } from "@/lib/coinDCX";
 import type { CPRResult } from "@/lib/cpr";
-import { utcTodayISO } from "@/lib/backtest";
+import { utcTodayISO, ENTRY_DEFS } from "@/lib/backtest";
 import {
   shouldAutoScanForCache,
   markScannedToday,
@@ -242,6 +242,11 @@ export default function Screener({
   // sub-pattern id ending in ":6PM" (T1-U4:6AM, MeMi-eXHiL4U3-U4:6PM, etc.)
   // across ALL parent patterns — independent of activeSignal.
   const [exitTimeFilter, setExitTimeFilter] = useState<string | null>(null);
+  // NEW: ENTRY level filter — 13 buttons (R4..S4, same rungs as Create View's
+  // Entry dropdown, minus the "Entry " prefix). Selecting one keeps only rows
+  // that currently satisfy at least one View whose ENTRY is that rung.
+  const [showEntryLevelList, setShowEntryLevelList] = useState(false);
+  const [entryLevelFilter, setEntryLevelFilter] = useState<string | null>(null);
 
   // NEW: full 24hr cycle starting at 5AM through 4AM the next day, split
   // into two 12-item rows: 5AM..4PM on the first line, 5PM..4AM on the
@@ -266,6 +271,12 @@ export default function Screener({
       .filter((s) => s.id.endsWith(suffix))
       .map((s) => s.id);
   }, [exitTimeFilter]);
+  // NEW: every View that defines a target (i.e. a tradable signal), flattened
+  // once — the ENTRY filter below reads each one's entry rung per row.
+  const entrySignalViews = useMemo(
+    () => VIEWS.filter((v) => v.kind === "view" && !!v.getTarget),
+    []
+  );
   // CHANGED: split into two independent states so one pMicro..pUltra
   // selection (prev day's CPR width) and one Micro..Ultra selection
   // (today's CPR width) can be active at the same time.
@@ -968,6 +979,22 @@ export default function Screener({
       if (!exitTimeFilter) return true;
       return exitTimeMatchedSubIds.some((id) => passesPattern(r, id));
     })
+    // NEW: ENTRY filter — keep rows where at least one currently-active View
+    // (condition passes) has the selected rung as its entry. Entry is the
+    // View's own getEntry(r); Views without one fall back to the same
+    // direction default Signal Desk uses (Up -> BC, Down -> TC).
+    .filter((r) => {
+      if (!entryLevelFilter) return true;
+      const rung = ENTRY_DEFS[entryLevelFilter]?.key;
+      if (!rung) return true;
+      const target = r.todayCPR[rung];
+      return entrySignalViews.some((v) => {
+        if (!passesPattern(r, v.key)) return false;
+        const isUp = v.direction === "Up" || (v.direction as string) === "bullish";
+        const entry = v.getEntry ? v.getEntry(r) : isUp ? r.todayCPR.bc : r.todayCPR.tc;
+        return Math.abs(entry - target) <= Math.abs(target) * 1e-9;
+      });
+    })
     .slice()
     .sort((a, b) => {
       const av = getVal(a, sortKey);
@@ -1071,7 +1098,7 @@ export default function Screener({
   // Helper: is any sub-filter active (to decide the result count label)
   const anySubFilter =
     !!activeGenericSignal ||
-    !!PatternFilter || !!touchFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter || !!exitTimeFilter;
+    !!PatternFilter || !!touchFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter || !!exitTimeFilter || !!entryLevelFilter;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -1339,6 +1366,19 @@ export default function Screener({
                 <span className="leading-none">{showExitTimeList ? "−" : "+"}</span>
                 XTime
               </button>
+              <button
+                type="button"
+                onClick={() => setShowEntryLevelList((v) => !v)}
+                className={`flex items-center gap-0.5 text-xs font-bold uppercase tracking-wide px-2 py-1 rounded border border-border transition-colors shrink-0 ${
+                  showEntryLevelList
+                    ? "bg-foreground/15 text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                title={showEntryLevelList ? "Hide entry level filters" : "Show entry level filters"}
+              >
+                <span className="leading-none">{showEntryLevelList ? "−" : "+"}</span>
+                Entry
+              </button>
             </div>
           )}
         </div>
@@ -1399,7 +1439,7 @@ export default function Screener({
             rendered once a scan was done, leaving an empty gap above the
             search bar whenever Show All was on and no panel was expanded. */}
         {currentStatus === "done" &&
-          (!showAll || showTouchList || showPatternList || showSizeList || showEntryTimeList || showExitTimeList) && (
+          (!showAll || showTouchList || showPatternList || showSizeList || showEntryTimeList || showExitTimeList || showEntryLevelList) && (
           <div className="flex flex-col gap-2 mb-3">
           <div className="flex items-center gap-2 flex-wrap">
             {!showAll && (
@@ -1778,6 +1818,32 @@ export default function Screener({
                 title={`Show only rows with a Views (sub-pattern) target of ~${slot}`}
               >
                 {exitTimeFilter === slot ? `✕ ${slot}` : slot}
+              </button>
+            ))}
+          </div>
+          )}
+
+          {/* NEW: ENTRY level filter — one button per Entry rung (R4..S4).
+              Clicking e.g. "R1" shows every row with an active View whose
+              entry is R1. Single-select, independent of the other filters.
+              Hidden until "Entry +" is toggled on. */}
+          {showEntryLevelList && (
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[10px] text-amber-400/90 uppercase tracking-wider mr-0.5 font-semibold">
+              Entry:
+            </span>
+            {Object.keys(ENTRY_DEFS).map((lvl) => (
+              <button
+                key={lvl}
+                onClick={() => setEntryLevelFilter((v) => (v === lvl ? null : lvl))}
+                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                  entryLevelFilter === lvl
+                    ? "bg-foreground/15 text-foreground border-border"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+                title={`Active signals with entry at ${lvl}`}
+              >
+                {entryLevelFilter === lvl ? `✕ ${lvl}` : lvl}
               </button>
             ))}
           </div>
