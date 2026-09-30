@@ -1516,6 +1516,33 @@ export default function Screener({
                   </button>
                 );
               })}
+              {/* Moved here from the search/source bar: S1-R1 IN, PDHL-A and
+                  PDHL-B. Still driven by pdhPdlFilter (same state, same
+                  mutual-exclusivity with >PDH/<PDL/>PU4/<PL4), only the
+                  location and pill styling changed to match the Touch row. */}
+              {(
+                [
+                  { id: "s1r1in", label: "S1-R1 IN", title: "TOUCH category only: today's S1/R1 inside previous day's CPR, or previous day's S1/R1 inside today's CPR" },
+                  { id: "pdhgtu1", label: "PDHL-A", title: "Show only rows where today's Previous Day High (PDH) is above today's R1 (U1)" },
+                  { id: "pdlltl1", label: "PDHL-B", title: "Show only rows where today's Previous Day Low (PDL) is below today's S1 (L1)" },
+                ] as const
+              ).map(({ id, label, title }) => {
+                const isActive = pdhPdlFilter === id;
+                return (
+                  <button
+                    key={id}
+                    onClick={() => setPdhPdlFilter((v) => (v === id ? null : id))}
+                    className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                      isActive
+                        ? "bg-foreground/15 text-foreground border-foreground/30"
+                        : "border-border text-muted-foreground hover:text-foreground"
+                    }`}
+                    title={title}
+                  >
+                    {isActive ? `✕ ${label}` : label}
+                  </button>
+                );
+              })}
             </div>
           )}
           <div className="flex items-center gap-1.5 flex-wrap">
@@ -1933,39 +1960,6 @@ export default function Screener({
                   title="Show only rows where price is currently below previous day's S4 (PL4)"
                 >
                   {pdhPdlFilter === "belowpl4" ? "✕ <PL4" : "<PL4"}
-                </button>
-                <button
-                  onClick={() => setPdhPdlFilter((v) => (v === "s1r1in" ? null : "s1r1in"))}
-                  className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                    pdhPdlFilter === "s1r1in"
-                      ? "border-amber-400 text-amber-400"
-                      : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
-                  }`}
-                  title="TOUCH category only: today's S1/R1 inside previous day's CPR, or previous day's S1/R1 inside today's CPR"
-                >
-                  {pdhPdlFilter === "s1r1in" ? "✕ S1-R1 IN" : "S1-R1 IN"}
-                </button>
-                <button
-                  onClick={() => setPdhPdlFilter((v) => (v === "pdhgtu1" ? null : "pdhgtu1"))}
-                  className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                    pdhPdlFilter === "pdhgtu1"
-                      ? "border-cyan-400 text-cyan-400"
-                      : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
-                  }`}
-                  title="Show only rows where today's Previous Day High (PDH) is above today's R1 (U1)"
-                >
-                  {pdhPdlFilter === "pdhgtu1" ? "✕ PDHL-A" : "PDHL-A"}
-                </button>
-                <button
-                  onClick={() => setPdhPdlFilter((v) => (v === "pdlltl1" ? null : "pdlltl1"))}
-                  className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                    pdhPdlFilter === "pdlltl1"
-                      ? "border-rose-400 text-rose-400"
-                      : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
-                  }`}
-                  title="Show only rows where today's Previous Day Low (PDL) is below today's S1 (L1)"
-                >
-                  {pdhPdlFilter === "pdlltl1" ? "✕ PDHL-B" : "PDHL-B"}
                 </button>
               </div>
 
