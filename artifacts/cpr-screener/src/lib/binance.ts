@@ -105,11 +105,6 @@ async function fetchWithRetry(
  */
 const ALWAYS_TRADFI_SYMBOLS = new Set(["CLUSDT", "BZUSDT", "XAUUSDT", "XAGUSDT"]);
 
-// TradFi symbols admitted by the last fetchActiveSymbols run. Their tickers can
-// legitimately contain "UP"/"DOWN"/"BULL"/"BEAR" (e.g. UPS), so the
-// leveraged-token name filter in fetchTopUSDTSymbols skips them.
-let tradfiActiveSymbols: Set<string> = new Set();
-
 const PINNED_KEY_PREFIX = "cpr_symbols_";
 
 function getTodayISTDate(): string {
@@ -239,7 +234,6 @@ async function fetchActiveSymbols(): Promise<Set<string>> {
   }
 
   const active = new Set<string>();
-  const tradfi = new Set<string>();
   const deltaBases = await fetchDeltaBaseTickers();
 
   const fut: {
@@ -253,12 +247,10 @@ async function fetchActiveSymbols(): Promise<Set<string>> {
       if (!s.contractType.includes("PERPETUAL") || !s.symbol.endsWith("USDT")) continue;
       const base = s.symbol.slice(0, -4);
       if (!ALWAYS_TRADFI_SYMBOLS.has(s.symbol) && !deltaBases.has(base)) continue;
-      tradfi.add(s.symbol);
     }
     active.add(s.symbol);
   }
 
-  tradfiActiveSymbols = tradfi;
   cachedActiveSymbols = active;
   return active;
 }
@@ -302,11 +294,10 @@ export async function fetchTopUSDTSymbols(limit?: number): Promise<Ticker24h[]> 
       (t) =>
         activeSymbols.has(t.symbol) &&     // ← filters out delisted coins
         t.symbol.endsWith("USDT") &&
-        (tradfiActiveSymbols.has(t.symbol) ||
-          (!t.symbol.includes("DOWN") &&
-            !t.symbol.includes("UP") &&
-            !t.symbol.includes("BEAR") &&
-            !t.symbol.includes("BULL"))) &&
+        // No UP/DOWN/BULL/BEAR name filter: that only targeted Binance *spot*
+        // leveraged tokens (BTCUPUSDT, ETHDOWNUSDT …), which never exist on
+        // USDⓈ-M Futures. As a substring test it wrongly dropped real perps
+        // whose names merely contain those letters (SUPERUSDT, UPUSDT, UPS …).
         !shouldExcludeSymbol(t.symbol) &&  // excludes stablecoins + non-ASCII tickers
         parseFloat(t.quoteVolume) > 0
     )
