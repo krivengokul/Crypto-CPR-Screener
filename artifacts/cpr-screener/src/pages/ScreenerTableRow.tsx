@@ -1059,8 +1059,10 @@ export default function ScreenerTableRow({
           const move = distanceFromCPR(r.currentPrice, r.todayCPR);
           const pdh = pdhPdlStatus(r);
           const pdhTitle = `PDH: ${fmt(r.todayCPR.prevHigh)}  |  PDL: ${fmt(r.todayCPR.prevLow)}`;
+          const LABEL_FONT = "font-mono font-semibold text-[10px] uppercase tracking-wide leading-none";
+          const moveInCpr = move.main === "IN-CPR";
           const moveLine = (
-            <div className="whitespace-nowrap">
+            <div className={`whitespace-nowrap ${moveInCpr ? LABEL_FONT : ""}`}>
               {move.main}
               {move.sub && <span className="text-[10px] ml-1">{move.sub}</span>}
             </div>
@@ -1076,7 +1078,7 @@ export default function ScreenerTableRow({
             return (
               <td className={`pl-3 pr-2 py-3 whitespace-nowrap text-xs font-medium ${move.color}`}>
                 <div
-                  className={inRange ? "font-mono font-semibold text-[10px] uppercase tracking-wide leading-none text-orange-400" : pdh.color}
+                  className={inRange ? `${LABEL_FONT} text-orange-400` : pdh.color}
                   title={pdhTitle}
                 >
                   {pdh.main}
@@ -1089,7 +1091,7 @@ export default function ScreenerTableRow({
           return (
             <td className={`pl-3 pr-2 py-3 whitespace-nowrap text-xs font-medium ${move.color}`}>
               {moveLine}
-              <div className={`mt-0.5 ${pdh.color}`} title={pdhTitle}>
+              <div className={`mt-0.5 ${pdh.color} ${pdh.main === "IN-PDHL" ? LABEL_FONT : ""}`} title={pdhTitle}>
                 {pdh.main}
                 {pdh.sub && <span className="text-[10px] ml-1">{pdh.sub}</span>}
               </div>
