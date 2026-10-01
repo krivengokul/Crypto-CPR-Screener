@@ -1057,27 +1057,40 @@ export default function ScreenerTableRow({
         </td>
         {(() => {
           const move = distanceFromCPR(r.currentPrice, r.todayCPR);
-          // ">TC" (price above TC but hasn't cleared R1) drops to its own
-          // second row; the farther rungs (>R1..>R4) and "<BC"/"<S1..S4"
-          // stay inline next to the % on row 1 as before.
-          const tcOnSecondRow = move.sub === ">TC";
           const pdh = pdhPdlStatus(r);
+          const pdhTitle = `PDH: ${fmt(r.todayCPR.prevHigh)}  |  PDL: ${fmt(r.todayCPR.prevLow)}`;
+          const moveLine = (
+            <div className="whitespace-nowrap">
+              {move.main}
+              {move.sub && <span className="text-[10px] ml-1">{move.sub}</span>}
+            </div>
+          );
+          // Price above TC but hasn't cleared R1: PDH is always above TC, so
+          // the PDH/PDL status goes on row 1 and "+x% >TC" sits on row 2 as a
+          // single line. IN-PDHL is smaller and orange (PPWAY's falling-CPR
+          // colour) in this layout. Every other case keeps the original
+          // order: MOVE % first, PDH/PDL second.
+          if (move.sub === ">TC") {
+            const inRange = pdh.main === "IN-PDHL";
+            return (
+              <td className={`pl-3 pr-2 py-3 whitespace-nowrap text-xs font-medium ${move.color}`}>
+                <div
+                  className={inRange ? "text-[11px] text-orange-400" : pdh.color}
+                  title={pdhTitle}
+                >
+                  {pdh.main}
+                  {pdh.sub && <span className="text-[10px] ml-1">{pdh.sub}</span>}
+                </div>
+                <div className="mt-0.5">{moveLine}</div>
+              </td>
+            );
+          }
           return (
             <td className={`pl-3 pr-2 py-3 whitespace-nowrap text-xs font-medium ${move.color}`}>
-              <div>
-                {move.main}
-                {move.sub && !tcOnSecondRow && (
-                  <span className="text-[10px] ml-1">{move.sub}</span>
-                )}
-              </div>
-              {tcOnSecondRow && (
-                <div className="text-[10px] mt-0.5">{move.sub}</div>
-              )}
-              <div className={`mt-0.5 ${pdh.color}`} title={`PDH: ${fmt(r.todayCPR.prevHigh)}  |  PDL: ${fmt(r.todayCPR.prevLow)}`}>
+              {moveLine}
+              <div className={`mt-0.5 ${pdh.color}`} title={pdhTitle}>
                 {pdh.main}
-                {pdh.sub && (
-                  <span className="text-[10px] ml-1">{pdh.sub}</span>
-                )}
+                {pdh.sub && <span className="text-[10px] ml-1">{pdh.sub}</span>}
               </div>
             </td>
           );
