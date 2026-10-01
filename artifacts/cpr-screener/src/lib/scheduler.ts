@@ -118,13 +118,61 @@ export interface CachedResults<T> {
   savedAt?: number;
 }
 
+// ─── Compact on-disk format for cached scan results ──────────────────────
+// A scanned row has ~147 fields, ~120 of them boolean pattern flags that are
+// almost always `false`. Written naively, that is ~3.9 KB/row (~2.2 MB for a
+// 555-symbol Binance scan) and three sources together overran localStorage's
+// ~5 MB quota, so the LAST cache write failed silently, the source looked
+// "never scanned", and it rescanned on every page load. Dropping `false`
+// flags roughly halves the payload. Only keys that are boolean in EVERY row
+// are dropped, so restoring them as `false` on load is lossless.
+export function compactRows<T>(rows: T[]): { rows: T[]; falseKeys: string[] } {
+  if (rows.length === 0) return { rows, falseKeys: [] };
+  let candidates: Set<string> | undefined;
+  for (const row of rows) {
+    if (!row || typeof row !== "object" || Array.isArray(row)) return { rows, falseKeys: [] };
+    const here = new Set<string>();
+    for (const [k, v] of Object.entries(row as Record<string, unknown>)) {
+      if (typeof v === "boolean") here.add(k);
+    }
+    const prev: Set<string> | undefined = candidates;
+    candidates = prev ? new Set([...prev].filter((k) => here.has(k))) : here;
+  }
+  const falseKeys: string[] = candidates ? [...candidates] : [];
+  if (falseKeys.length === 0) return { rows, falseKeys };
+  const dropSet = new Set(falseKeys);
+  const compact = rows.map((row) => {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(row as Record<string, unknown>)) {
+      if (dropSet.has(k) && v === false) continue;
+      out[k] = v;
+    }
+    return out as T;
+  });
+  return { rows: compact, falseKeys };
+}
+
+export function expandRows<T>(rows: T[], falseKeys: string[]): T[] {
+  if (falseKeys.length === 0) return rows;
+  return rows.map((row) => {
+    const out = { ...(row as Record<string, unknown>) };
+    for (const k of falseKeys) if (!(k in out)) out[k] = false;
+    return out as T;
+  });
+}
+
 export function loadCachedResults<T>(key: string): CachedResults<T> | null {
   try {
     const raw = localStorage.getItem(key);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (parsed && Array.isArray(parsed.data) && typeof parsed.date === "string") {
-      return parsed;
+      const falseKeys: string[] = Array.isArray(parsed.falseKeys) ? parsed.falseKeys : [];
+      return {
+        data: expandRows<T>(parsed.data, falseKeys),
+        date: parsed.date,
+        savedAt: parsed.savedAt,
+      };
     }
     if (Array.isArray(parsed)) {
       return { data: parsed, date: getLastScanDate() ?? getTodayISTDate() };
@@ -151,8 +199,10 @@ export function formatScanTime(savedAtMs: number): string {
 }
 
 export function saveCachedResults<T>(key: string, data: T[]): boolean {
+  const { rows, falseKeys } = compactRows(data);
   const payload = JSON.stringify({
-    data,
+    data: rows,
+    falseKeys,
     date: getTodayISTDate(),
     savedAt: Date.now(),
   });
