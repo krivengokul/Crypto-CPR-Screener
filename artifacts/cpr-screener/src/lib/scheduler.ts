@@ -257,6 +257,28 @@ export function isScanFreshForSource<T>(
   return isCacheFresh(cache);
 }
 
+/**
+ * Delete everything CoinDCX has stored in localStorage (result cache, scanned
+ * marker, daily symbol pins, historical-universe snapshots). Used while
+ * COINDCX_ENABLED is false so the paused venue stops taking up quota. All of it
+ * is re-derivable by simply scanning again.
+ */
+export function purgeCoinDCXStorage(): void {
+  try {
+    const prefixes = [
+      STORAGE_KEY_COINDCX,
+      SCANNED_MARKER_PREFIX + "coindcx",
+      "cpr_coindcx_symbols_",
+      "cpr_historical_universe_v1:coindcx:",
+    ];
+    for (const k of Object.keys(localStorage)) {
+      if (prefixes.some((p) => k === p || k.startsWith(p))) localStorage.removeItem(k);
+    }
+  } catch {
+    /* storage unavailable — nothing to purge */
+  }
+}
+
 export function formatCountdown(targetUtc: Date): string {
   const diff = targetUtc.getTime() - Date.now();
   if (diff <= 0) return "now";

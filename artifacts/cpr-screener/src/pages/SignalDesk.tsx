@@ -13,6 +13,7 @@ import { Views } from "@/lib/ViewsSidebar";
 import { getView, shortLevelLabel } from "@/lib/views";
 import { getRowCategory, getCategoryLabel } from "@/lib/rowCategory";
 import SignalProgressBar from "@/lib/SignalProgressBar";
+import { COINDCX_ENABLED } from "@/lib/featureFlags";
 import {
   Radio,
   TrendingUp,
@@ -923,7 +924,13 @@ R:R: ${item.riskReward}`;
               <button
                 key={src}
                 onClick={() => setSourceFilter(src)}
-                className={`px-3 py-1 rounded text-xs font-semibold transition cursor-pointer border ${
+                disabled={src === "coindcx" && !COINDCX_ENABLED}
+                title={src === "coindcx" && !COINDCX_ENABLED ? "CoinDCX is paused" : undefined}
+                className={`px-3 py-1 rounded text-xs font-semibold transition border ${
+                  src === "coindcx" && !COINDCX_ENABLED
+                    ? "opacity-30 cursor-not-allowed text-slate-500 border-transparent"
+                    : "cursor-pointer"
+                } ${
                   sourceFilter === src
                     ? src === "delta"
                       ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/50"

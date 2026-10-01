@@ -73,6 +73,7 @@ import { SRLadderRow, toSRLadderData, type ViewDirection } from "./SRLadderPanel
 import { getLadderMatchSummary, LEVEL_KEYS, type LevelCheckCondition, type LevelKey } from "./SRLadderDiff";
 import { useChartLinks, findChartLink, preloadChartLinks, type StoredChartLink } from "@/lib/chartLinks";
 import { isExpandedPatternPair, type CPRLevels, type CPRResult } from "@/lib/cpr";
+import { COINDCX_ENABLED } from "@/lib/featureFlags";
 
 // --- Small UTC date helpers (all dates in this panel are UTC ISO strings) ---
 function toISO(d: Date): string {
@@ -2642,7 +2643,11 @@ export default function BacktestPanel() {
               <button
                 key={s}
                 onClick={() => setSource(s)}
-                className={`px-3 py-1 text-xs font-semibold capitalize transition cursor-pointer ${
+                disabled={s === "coindcx" && !COINDCX_ENABLED}
+                title={s === "coindcx" && !COINDCX_ENABLED ? "CoinDCX is paused" : undefined}
+                className={`px-3 py-1 text-xs font-semibold capitalize transition ${
+                  s === "coindcx" && !COINDCX_ENABLED ? "opacity-30 cursor-not-allowed" : "cursor-pointer"
+                } ${
                   source === s
                     ? "bg-cyan-500/20 text-cyan-400"
                     : "text-slate-400 hover:text-slate-200"

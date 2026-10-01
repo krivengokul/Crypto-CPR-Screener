@@ -15,6 +15,7 @@ import {
 import { runScreener } from "@/lib/binance";
 import { runDeltaScreener } from "@/lib/delta";
 import { runCoinDCXScreener } from "@/lib/coinDCX";
+import { COINDCX_ENABLED } from "@/lib/featureFlags";
 import type { CPRResult } from "@/lib/cpr";
 import { utcTodayISO, ENTRY_DEFS } from "@/lib/backtest";
 import {
@@ -31,6 +32,7 @@ import {
   isCacheFresh,
   isScanFreshForSource,
   markScannedForSource,
+  purgeCoinDCXStorage,
   STORAGE_KEY_BINANCE,
   STORAGE_KEY_DELTA,
   STORAGE_KEY_COINDCX,
@@ -232,7 +234,15 @@ export default function Screener({
 }) {
   const cachedBinance = useMemo(() => loadCachedResults<CPRResult>(STORAGE_KEY_BINANCE), []);
   const cachedDelta = useMemo(() => loadCachedResults<CPRResult>(STORAGE_KEY_DELTA), []);
-  const cachedCoinDCX = useMemo(() => loadCachedResults<CPRResult>(STORAGE_KEY_COINDCX), []);
+  // CoinDCX paused (COINDCX_ENABLED=false): don't even read its cache, and
+  // delete whatever it left in localStorage so the quota is freed.
+  const cachedCoinDCX = useMemo(() => {
+    if (!COINDCX_ENABLED) {
+      purgeCoinDCXStorage();
+      return null;
+    }
+    return loadCachedResults<CPRResult>(STORAGE_KEY_COINDCX);
+  }, []);
 
   const [status, setStatus] = useState<"idle" | "scanning" | "done" | "error">(() => {
     return isScanFreshForSource("binance", cachedBinance) ? "done" : "idle";
@@ -507,6 +517,9 @@ export default function Screener({
   }, [activeSignal]);
 
   const doCoinDCXScan = useCallback(async (switchTab: boolean = true) => {
+    // Paused: this single guard stops every entry point (auto-scan, hard
+    // refresh, "Scan Now", and the Scan CoinDCX button).
+    if (!COINDCX_ENABLED) return;
     if (coindcxScanRef.current) return;
     coindcxScanRef.current = true;
     setCoinDCXStatus("scanning");
@@ -1223,9 +1236,9 @@ export default function Screener({
                 </p>
                 <p className="mt-0.5 text-lg font-semibold text-violet-300">{deltaAllResults.length}</p>
               </div>
-              <div className="rounded-lg border border-border bg-card px-3 py-1">
+              <div className={`rounded-lg border border-border bg-card px-3 py-1 ${COINDCX_ENABLED ? "" : "opacity-40"}`}>
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                  CoinDCX
+                  CoinDCX{COINDCX_ENABLED ? "" : " (paused)"}
                 </p>
                 <p className="mt-0.5 text-lg font-semibold text-emerald-300">{coindcxAllResults.length}</p>
               </div>
@@ -1303,9 +1316,16 @@ export default function Screener({
 
           <button
             onClick={() => { void doCoinDCXScan(); }}
-            disabled={coindcxStatus === "scanning"}
-            className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-all disabled:opacity-50 shrink-0"
-            style={{ background: "linear-gradient(135deg,#10b981,#047857)", color: "#fff" }}
+            disabled={!COINDCX_ENABLED || coindcxStatus === "scanning"}
+            title={COINDCX_ENABLED ? undefined : "CoinDCX scanning is paused"}
+            className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-all shrink-0 ${
+              COINDCX_ENABLED ? "disabled:opacity-50" : "opacity-40 cursor-not-allowed"
+            }`}
+            style={
+              COINDCX_ENABLED
+                ? { background: "linear-gradient(135deg,#10b981,#047857)", color: "#fff" }
+                : { background: "#334155", color: "#94a3b8" }
+            }
           >
             <RefreshCw className={`w-3 h-3 ${coindcxStatus === "scanning" ? "animate-spin" : ""}`} />
             {coindcxStatus === "scanning" ? "Scanning CoinDCX…" : "Scan CoinDCX"}
@@ -2037,7 +2057,13 @@ export default function Screener({
                     <button
                       key={tab}
                       onClick={() => setActiveTab(tab)}
-                      className={`px-3 py-1 rounded text-xs font-semibold transition cursor-pointer border ${
+                      disabled={tab === "coindcx" && !COINDCX_ENABLED}
+                      title={tab === "coindcx" && !COINDCX_ENABLED ? "CoinDCX scanning is paused" : undefined}
+                      className={`px-3 py-1 rounded text-xs font-semibold transition border ${
+                        tab === "coindcx" && !COINDCX_ENABLED
+                          ? "opacity-30 cursor-not-allowed text-slate-500 border-transparent"
+                          : "cursor-pointer"
+                      } ${
                         activeTab === tab
                           ? tab === "delta"
                             ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/50"
