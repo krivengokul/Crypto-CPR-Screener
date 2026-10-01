@@ -764,10 +764,10 @@ export function ScreenerTableHeader({
           Ladder Check <SortIcon k="ladderCheck" />
         </th>
         <th
-          className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[160px] cursor-pointer hover:text-foreground"
-          onClick={() => toggleSort("compressionRatio")}
+          className="pl-3 pr-2 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
+          onClick={() => toggleSort("priceVsCpr")}
         >
-            PIVOT SIZE <SortIcon k="compressionRatio" />
+          MOVE <SortIcon k="priceVsCpr" />
         </th>
         <th
           className="px-3 py-3 pr-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
@@ -776,10 +776,10 @@ export function ScreenerTableHeader({
           Price <SortIcon k="change24h" />
         </th>
         <th
-          className="pl-3 pr-2 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
-          onClick={() => toggleSort("priceVsCpr")}
+          className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[160px] cursor-pointer hover:text-foreground"
+          onClick={() => toggleSort("compressionRatio")}
         >
-          MOVE <SortIcon k="priceVsCpr" />
+            PIVOT SIZE <SortIcon k="compressionRatio" />
         </th>
         <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           PPWAY
@@ -1055,9 +1055,33 @@ export default function ScreenerTableRow({
             </div>
           )}
         </td>
-        <td className="px-3 py-3 font-mono whitespace-nowrap">
-          {renderPivotSizeCell(r.prevCPR, r.todayCPR, r.compressionRatio)}
-        </td>
+        {(() => {
+          const move = distanceFromCPR(r.currentPrice, r.todayCPR);
+          // ">TC" (price above TC but hasn't cleared R1) drops to its own
+          // second row; the farther rungs (>R1..>R4) and "<BC"/"<S1..S4"
+          // stay inline next to the % on row 1 as before.
+          const tcOnSecondRow = move.sub === ">TC";
+          const pdh = pdhPdlStatus(r);
+          return (
+            <td className={`pl-3 pr-2 py-3 whitespace-nowrap text-xs font-medium ${move.color}`}>
+              <div>
+                {move.main}
+                {move.sub && !tcOnSecondRow && (
+                  <span className="text-[10px] ml-1">{move.sub}</span>
+                )}
+              </div>
+              {tcOnSecondRow && (
+                <div className="text-[10px] mt-0.5">{move.sub}</div>
+              )}
+              <div className={`mt-0.5 ${pdh.color}`} title={`PDH: ${fmt(r.todayCPR.prevHigh)}  |  PDL: ${fmt(r.todayCPR.prevLow)}`}>
+                {pdh.main}
+                {pdh.sub && (
+                  <span className="text-[10px] ml-1">{pdh.sub}</span>
+                )}
+              </div>
+            </td>
+          );
+        })()}
         <td className="px-3 py-3 pr-3 font-mono whitespace-nowrap">
           <div className="text-sm font-bold text-foreground">
             {fmt(r.currentPrice)}
@@ -1069,25 +1093,9 @@ export default function ScreenerTableRow({
           </div>
           <div className="text-xs text-muted-foreground">OPrice: {fmt(r.openPrice)}</div>
         </td>
-        {(() => {
-          const move = distanceFromCPR(r.currentPrice, r.todayCPR);
-          return (
-            <td className={`pl-3 pr-2 py-3 whitespace-nowrap text-xs font-medium ${move.color}`}>
-              <div>
-                {move.main}
-                {move.sub && (
-                  <span className="text-[10px] ml-1">{move.sub}</span>
-                )}
-              </div>
-              <div className={`mt-0.5 ${pdhPdlStatus(r).color}`} title={`PDH: ${fmt(r.todayCPR.prevHigh)}  |  PDL: ${fmt(r.todayCPR.prevLow)}`}>
-                {pdhPdlStatus(r).main}
-                {pdhPdlStatus(r).sub && (
-                  <span className="text-[10px] ml-1">{pdhPdlStatus(r).sub}</span>
-                )}
-              </div>
-            </td>
-          );
-        })()}
+        <td className="px-3 py-3 font-mono whitespace-nowrap">
+          {renderPivotSizeCell(r.prevCPR, r.todayCPR, r.compressionRatio)}
+        </td>
         <td className="px-4 py-3 whitespace-nowrap text-xs font-mono font-medium">
           {(() => {
             const dist = cprDistancePct(r);
