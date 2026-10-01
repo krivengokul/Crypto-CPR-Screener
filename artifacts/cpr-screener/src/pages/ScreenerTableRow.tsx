@@ -1069,13 +1069,14 @@ export default function ScreenerTableRow({
           // the PDH/PDL status goes on row 1 and "+x% >TC" sits on row 2 as a
           // single line. IN-PDHL is smaller and orange (PPWAY's falling-CPR
           // colour) in this layout. Every other case keeps the original
-          // order: MOVE % first, PDH/PDL second.
+          // order: MOVE % first, PDH/PDL second. (IN-PDHL uses the same font as the
+          // Symbol column's category label — COMPRESSED, TOUCH, etc.)
           if (move.sub === ">TC") {
             const inRange = pdh.main === "IN-PDHL";
             return (
               <td className={`pl-3 pr-2 py-3 whitespace-nowrap text-xs font-medium ${move.color}`}>
                 <div
-                  className={inRange ? "text-[11px] text-orange-400" : pdh.color}
+                  className={inRange ? "font-mono font-semibold text-[10px] uppercase tracking-wide leading-none text-orange-400" : pdh.color}
                   title={pdhTitle}
                 >
                   {pdh.main}
