@@ -1954,6 +1954,14 @@ export interface InnerPatternsConfig {
 // (categoryKey, patternKey) pair alongside its normal one, under this key
 // instead of its real category. See the "VIEWS" duplication in
 // runPatternCensus's collectPatterns below.
+/**
+ * Categories whose top-level children are sub-GROUPS (e.g. TOUCH -> OutCPR,
+ * INCPR, Overlap Above...) with the real compound patterns (A-B-E-E...) one
+ * level deeper. For these, the "Missing Subpatterns" check runs on the
+ * compound level too, not just on the direct children of the category.
+ */
+export const NESTED_COMPOUND_CATEGORY_KEYS: ReadonlySet<string> = new Set(["touch"]);
+
 export const VIEWS_CATEGORY_KEY = "allViews";
 export const VIEWS_CATEGORY_LABEL = "VIEWS";
 
@@ -2110,6 +2118,21 @@ export async function runPatternCensus(
           .filter((c) => c.kind === "pattern")
           .map((c) => c.key);
         scopedPatternToChildKeys.set(`${cat.key}::${p.key}`, subKeys);
+      }
+    }
+    // One level deeper for grouped categories (see NESTED_COMPOUND_CATEGORY_KEYS):
+    // each compound under a sub-group gets its own unclassified tracking.
+    if (NESTED_COMPOUND_CATEGORY_KEYS.has(cat.key)) {
+      for (const group of cat.children) {
+        for (const compound of group.children ?? []) {
+          if (compound.kind !== "pattern") continue;
+          const subKeys = (compound.children ?? [])
+            .filter((c) => c.kind === "pattern")
+            .map((c) => c.key);
+          if (subKeys.length > 0) {
+            scopedPatternToChildKeys.set(`${cat.key}::${compound.key}`, subKeys);
+          }
+        }
       }
     }
   }

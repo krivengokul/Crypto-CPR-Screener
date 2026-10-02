@@ -31,6 +31,7 @@ import {
   INNER_PATTERNS_CATEGORY_LABEL,
   VIEWS_CATEGORY_KEY,
   VIEWS_CATEGORY_LABEL,
+  NESTED_COMPOUND_CATEGORY_KEYS,
   BacktestSource,
   PatternCensusRow,
   CategoryComboRow,
@@ -612,19 +613,28 @@ function CategoryBox({
           {group.patterns.map((p, i) => {
             const pct = maxCount > 0 ? Math.max(p.count > 0 ? 4 : 0, Math.round((p.count / maxCount) * 100)) : 0;
             const isTop = p.depth === 1;
+            // Compound patterns one level down inside grouped categories
+            // (TOUCH -> OutCPR -> A-B-E-E) get the same missing-subpattern
+            // tracking as top-level patterns, but only when they actually
+            // have Subpatterns listed under them.
+            const isTracked =
+              isTop ||
+              (NESTED_COMPOUND_CATEGORY_KEYS.has(group.categoryKey) &&
+                p.depth === 2 &&
+                hasChildPatterns(group.patterns, i));
             const dirClass = p.count > 0 ? directionTextClass(normalizeViewDirection(p.direction)) : null;
             const scopedKey = `${group.categoryKey}::${p.patternKey}`;
             const unclass = isViewsList ? undefined : unclassified?.[scopedKey];
             // Use the census's direct unmatched-child count so overlapping
             // child conditions cannot inflate or understate the remainder.
-            const missing = isTop && !isViewsList
+            const missing = isTracked && !isViewsList
               ? unclassified
                 ? unclass?.reduce((sum, item) => sum + item.count, 0) ?? 0
                 : missingChildCount(group.patterns, i)
               : 0;
-            const hasChildren = isTop && !isViewsList ? hasChildPatterns(group.patterns, i) : false;
-            const isFullyCovered = !isViewsList && isTop ? hasChildren && missing === 0 : true;
-            const isUncovered = isTop && p.count > 0 && !isFullyCovered;
+            const hasChildren = isTracked && !isViewsList ? hasChildPatterns(group.patterns, i) : false;
+            const isFullyCovered = !isViewsList && isTracked ? hasChildren && missing === 0 : true;
+            const isUncovered = isTracked && p.count > 0 && !isFullyCovered;
             const isExpanded = expandedMissingKey === scopedKey;
             const breakdownTooltip = !hasChildren
               ? `${p.count} total. No Subpatterns are defined under this pattern yet.`
@@ -695,7 +705,7 @@ function CategoryBox({
                             ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-300"
                             : "border-[#223347] bg-[#182333] text-slate-500",
                         ].join(" ")}
-                        title={isTop && !isViewsList ? breakdownTooltip : undefined}
+                        title={isTracked && !isViewsList ? breakdownTooltip : undefined}
                       >
                         {p.count}
                       </span>
