@@ -278,6 +278,11 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
     condition: (r) => r.EUBL2,
     order: 0,
   },
+  { key: "R1AbovePR4-E-A-AA-E-EU1L2", label: "E-A-AA-E-EU1L2", parentKey: "R1AbovePR4-E-A-AA-E", kind: "pattern", condition: (r) => r.EU1L2, order: 1 },
+  { key: "R1AbovePR4-E-A-AA-E-EU1L3", label: "E-A-AA-E-EU1L3", parentKey: "R1AbovePR4-E-A-AA-E", kind: "pattern", condition: (r) => r.EU1L3, order: 2 },
+  { key: "R1AbovePR4-E-A-AA-E-EUTL2", label: "E-A-AA-E-EUTL2", parentKey: "R1AbovePR4-E-A-AA-E", kind: "pattern", condition: (r) => r.EUTL2, order: 3 },
+  { key: "R1AbovePR4-E-A-AA-E-EUPL2", label: "E-A-AA-E-EUPL2", parentKey: "R1AbovePR4-E-A-AA-E", kind: "pattern", condition: (r) => r.EUPL2, order: 4 },
+  { key: "R1AbovePR4-E-A-AA-E-EUBL1", label: "E-A-AA-E-EUBL1", parentKey: "R1AbovePR4-E-A-AA-E", kind: "pattern", condition: (r) => r.EUBL1, order: 5 },
 
   // --- Compound Pattern children and their Subpatterns under "BPS4" ---
   {
