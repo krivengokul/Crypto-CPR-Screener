@@ -775,6 +775,9 @@ export const INSIDE_CPR_TOUCH_VIEWS: ViewDef[] = [
   { key: "INCPR-C-C-BB-AA-CL3U3", label: "C-C-BB-AA-CL3U3", parentKey: "INCPR-C-C-BB-AA", kind: "pattern", condition: (r) => r.CL3U3, order: 3 },
   { key: "INCPR-C-C-BB-AA-CU2L2", label: "C-C-BB-AA-CU2L2", parentKey: "INCPR-C-C-BB-AA", kind: "pattern", condition: (r) => r.CU2L2, order: 4 },
   { key: "INCPR-C-C-BB-AA-CL2U2", label: "C-C-BB-AA-CL2U2", parentKey: "INCPR-C-C-BB-AA", kind: "pattern", condition: (r) => r.CL2U2, order: 5 },
+  { key: "INCPR-C-C-BB-AA-CL3U2", label: "C-C-BB-AA-CL3U2", parentKey: "INCPR-C-C-BB-AA", kind: "pattern", condition: (r) => r.CL3U2, order: 6 },
+  { key: "INCPR-C-C-BB-AA-CU3L2", label: "C-C-BB-AA-CU3L2", parentKey: "INCPR-C-C-BB-AA", kind: "pattern", condition: (r) => r.CU3L2, order: 7 },
+  { key: "INCPR-C-C-BB-AA-CL4U4", label: "C-C-BB-AA-CL4U4", parentKey: "INCPR-C-C-BB-AA", kind: "pattern", condition: (r) => r.CL4U4, order: 8 },
 
   {
     key: "INCPR-C-B-BB-LB",
@@ -1198,6 +1201,9 @@ export const OUTCPR_TOUCH_VIEWS: ViewDef[] = [
     condition: (r) => r.CL3U3,
     order: 0,
   },
+  // "OUT-" prefixed: plain "C-C-BB-AA-<FLAG>" keys already exist in compressed.ts.
+  { key: "OUT-C-C-BB-AA-CU3L3", label: "C-C-BB-AA-CU3L3", parentKey: "OUT-C-C-BB-AA", kind: "pattern", condition: (r) => r.CU3L3, order: 1 },
+  { key: "OUT-C-C-BB-AA-CU4L3", label: "C-C-BB-AA-CU4L3", parentKey: "OUT-C-C-BB-AA", kind: "pattern", condition: (r) => r.CU4L3, order: 2 },
 
   // Added from PatternStats "Missing Subpatterns" (OutCPR 29-row
   // unclassified breakdown). Child keys reuse the plain "<compound>-<FLAG>"
@@ -1221,7 +1227,11 @@ export const OUTCPR_TOUCH_VIEWS: ViewDef[] = [
     order: 1,
   },
   { key: "OUT-E-E-AA-BB-EU2L2", label: "E-E-AA-BB-EU2L2", parentKey: "OUT-E-E-AA-BB", kind: "pattern", condition: (r) => r.EU2L2, order: 0 },
-  { key: "E-E-AA-BB-EU3L3", label: "E-E-AA-BB-EU3L3", parentKey: "OUT-E-E-AA-BB", kind: "pattern", condition: (r) => r.EU3L3, order: 1 },
+  // "OUT-" prefixed: the plain key duplicated expanded.ts's E-E-AA-BB-EU3L3, which shadowed this node
+  // in Stats and kept EU3L3 listed as "missing".
+  { key: "OUT-E-E-AA-BB-EU3L3", label: "E-E-AA-BB-EU3L3", parentKey: "OUT-E-E-AA-BB", kind: "pattern", condition: (r) => r.EU3L3, order: 1 },
+  { key: "OUT-E-E-AA-BB-EL3U3", label: "E-E-AA-BB-EL3U3", parentKey: "OUT-E-E-AA-BB", kind: "pattern", condition: (r) => r.EL3U3, order: 2 },
+  { key: "OUT-E-E-AA-BB-EU3L4", label: "E-E-AA-BB-EU3L4", parentKey: "OUT-E-E-AA-BB", kind: "pattern", condition: (r) => r.EU3L4, order: 3 },
 
   // --- B-E-HA-BB (order 2) ---
   {
