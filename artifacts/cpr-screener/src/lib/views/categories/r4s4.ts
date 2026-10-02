@@ -181,6 +181,7 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
   },
   { key: "A-A-AA-OA-EUBL2", label: "A-A-AA-OA-EUBL2", parentKey: "APR4-A-A-AA-OA", kind: "pattern", condition: (r) => r.EUBL2, order: 2 },
   { key: "A-A-AA-OA-EUPL2", label: "A-A-AA-OA-EUPL2", parentKey: "APR4-A-A-AA-OA", kind: "pattern", condition: (r) => r.EUPL2, order: 3 },
+  { key: "A-A-AA-OA-EUTL2", label: "A-A-AA-OA-EUTL2", parentKey: "APR4-A-A-AA-OA", kind: "pattern", condition: (r) => r.EUTL2, order: 4 },
 
   // --- Pattern "A-E-AA-LB" inside "ABOVE LEVEL4" and its subpatterns ---
   {
