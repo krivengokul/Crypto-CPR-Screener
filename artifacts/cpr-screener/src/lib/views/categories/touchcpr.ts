@@ -1315,6 +1315,8 @@ export const OUTCPR_TOUCH_VIEWS: ViewDef[] = [
   { key: "A-B-E-E-EL4U4", label: "A-B-E-E-EL4U4", parentKey: "OUT-A-B-E-E", kind: "pattern", condition: (r) => r.EL4U4, order: 0 },
   { key: "A-B-E-E-L4U4", label: "A-B-E-E-L4U4", parentKey: "OUT-A-B-E-E", kind: "pattern", condition: (r) => r.L4U4, order: 1 },
   { key: "A-B-E-E-EU4L4", label: "A-B-E-E-EU4L4", parentKey: "OUT-A-B-E-E", kind: "pattern", condition: (r) => r.EU4L4, order: 2 },
+  { key: "A-B-E-E-CU4L4", label: "A-B-E-E-CU4L4", parentKey: "OUT-A-B-E-E", kind: "pattern", condition: (r) => r.CU4L4, order: 3 },
+  { key: "A-B-E-E-CL4U4", label: "A-B-E-E-CL4U4", parentKey: "OUT-A-B-E-E", kind: "pattern", condition: (r) => r.CL4U4, order: 4 },
 
   // --- A-E-OA-E (order 8) ---
   {
@@ -1346,6 +1348,9 @@ export const OUTCPR_TOUCH_VIEWS: ViewDef[] = [
   },
   { key: "B-A-E-E-L4U4", label: "B-A-E-E-L4U4", parentKey: "OUT-B-A-E-E", kind: "pattern", condition: (r) => r.L4U4, order: 0 },
   { key: "B-A-E-E-CL4U4", label: "B-A-E-E-CL4U4", parentKey: "OUT-B-A-E-E", kind: "pattern", condition: (r) => r.CL4U4, order: 1 },
+  { key: "B-A-E-E-U4L4", label: "B-A-E-E-U4L4", parentKey: "OUT-B-A-E-E", kind: "pattern", condition: (r) => r.U4L4, order: 2 },
+  { key: "B-A-E-E-CU4L4", label: "B-A-E-E-CU4L4", parentKey: "OUT-B-A-E-E", kind: "pattern", condition: (r) => r.CU4L4, order: 3 },
+  { key: "B-A-E-E-EU4L4", label: "B-A-E-E-EU4L4", parentKey: "OUT-B-A-E-E", kind: "pattern", condition: (r) => r.EU4L4, order: 4 },
 
   // --- B-A-E-SB (order 10) ---
   {
