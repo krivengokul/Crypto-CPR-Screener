@@ -143,6 +143,7 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
   { key: "A-A-AA-AA-EL2L1", label: "A-A-AA-AA-EL2L1", parentKey: "APR4-A-A-AA-AA", kind: "pattern", condition: (r) => r.EL2L1,
       order: 9
 },
+  { key: "A-A-AA-AA-EUTL3", label: "A-A-AA-AA-EUTL3", parentKey: "APR4-A-A-AA-AA", kind: "pattern", condition: (r) => r.EUTL3, order: 7 },
   { key: "A-A-AA-AA-EUTL4", label: "A-A-AA-AA-EUTL4", parentKey: "APR4-A-A-AA-AA", kind: "pattern", condition: (r) => r.EUTL4, order: 10 },
   { key: "A-A-AA-AA-U1L4", label: "A-A-AA-AA-U1L4", parentKey: "APR4-A-A-AA-AA", kind: "pattern", condition: (r) => r.U1L4, order: 11 },
   { key: "A-A-AA-AA-None", label: "A-A-AA-AA-None", parentKey: "APR4-A-A-AA-AA", kind: "pattern", condition: (r) => !pickOuterLevelPattern(r), order: 12 },
