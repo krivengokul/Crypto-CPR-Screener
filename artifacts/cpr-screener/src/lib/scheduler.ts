@@ -195,7 +195,21 @@ export function formatScanTime(savedAtMs: number): string {
     hour: "numeric",
     minute: "2-digit",
     hour12: true,
-  });
+  }).toUpperCase();
+}
+
+/**
+ * formatScanDate — IST date for the "Scanned ..." badge, e.g. "Oct 02,2026".
+ */
+export function formatScanDate(savedAtMs: number): string {
+  return new Date(savedAtMs)
+    .toLocaleDateString("en-US", {
+      timeZone: "Asia/Kolkata",
+      month: "short",
+      day: "2-digit",
+      year: "numeric",
+    })
+    .replace(", ", ",");
 }
 
 export function saveCachedResults<T>(key: string, data: T[]): boolean {

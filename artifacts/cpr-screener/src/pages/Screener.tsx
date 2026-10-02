@@ -29,6 +29,7 @@ import {
   loadCachedResults,
   saveCachedResults,
   formatScanTime,
+  formatScanDate,
   isCacheFresh,
   isScanFreshForSource,
   markScannedForSource,
@@ -1249,24 +1250,24 @@ export default function Screener({
             <LiveClock />
             {currentStatus === "done" && activeScannedAt && (
               <div
-                className="flex items-center gap-1.5 rounded-full border border-emerald-500/30 px-2.5 py-1 shrink-0"
-                style={{ background: "linear-gradient(135deg, rgba(16,185,129,0.12), rgba(6,182,212,0.10))" }}
+                className="flex flex-col items-end gap-0.5 shrink-0 text-[11px] leading-tight text-emerald-300/90 whitespace-nowrap"
                 title="Time of the last completed scan feeding this view"
               >
-                <Clock className="w-3 h-3 text-emerald-400 shrink-0" />
-                <span className="text-[11px] leading-none text-emerald-300/90 whitespace-nowrap">
-                  Scanned{" "}
-                  {(activeTab === "binance"
-                    ? "Binance "
-                    : activeTab === "delta"
-                    ? "Delta "
-                    : activeTab === "coindcx"
-                    ? "CoinDCX "
-                    : "")}
-                  at{" "}
-                  <span className="font-mono font-semibold text-emerald-200">
-                    {formatScanTime(activeScannedAt)}
+                <span className="flex items-center gap-1.5">
+                  <Clock className="w-3 h-3 text-emerald-400 shrink-0" />
+                  <span>
+                    Scanned{" "}
+                    {(activeTab === "binance"
+                      ? "Binance"
+                      : activeTab === "delta"
+                      ? "Delta"
+                      : activeTab === "coindcx"
+                      ? "CoinDCX"
+                      : "")}
                   </span>
+                </span>
+                <span>
+                  @ {formatScanTime(activeScannedAt)} ({formatScanDate(activeScannedAt)})
                 </span>
               </div>
             )}
