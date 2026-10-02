@@ -257,6 +257,28 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
     order: 0,
   },
 
+  // --- Pattern "E-A-AA-E" inside "ABOVE LEVEL4" and its subpatterns ---
+  {
+    key: "R1AbovePR4-E-A-AA-E",
+    label: "E-A-AA-E",
+    parentKey: "R1AbovePR4",
+    kind: "pattern",
+    condition: (r) =>
+      r.SSRRCategory === "RRSS-E" &&
+      r.HHLLCategory === "HHLL-A" &&
+      r.RRHHCategory === "RRHH-AA" &&
+      r.SSLLCategory === "SSLL-E",
+    order: 12,
+  },
+  {
+    key: "R1AbovePR4-E-A-AA-E-EUBL2",
+    label: "E-A-AA-E-EUBL2",
+    parentKey: "R1AbovePR4-E-A-AA-E",
+    kind: "pattern",
+    condition: (r) => r.EUBL2,
+    order: 0,
+  },
+
   // --- Compound Pattern children and their Subpatterns under "BPS4" ---
   {
     key: "BPS4-B-B-BB-BB",
