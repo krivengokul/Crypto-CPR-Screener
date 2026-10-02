@@ -20,11 +20,11 @@ export const SSRR_INFO: Record<SSRRLetter, { parentKey: string; category: SSRRCa
   E: { parentKey: "expanded", category: "RRSS-E" },
 };
 
-const HHLL_INFO: Record<HHLLLetter, HHLLCategory> = {
-  A: "HHLL-A",
-  B: "HHLL-B",
-  C: "HHLL-C",
-  E: "HHLL-E",
+export const HHLL_INFO: Record<HHLLLetter, { parentKey: string; category: HHLLCategory }> = {
+  A: { parentKey: "levelsabove", category: "HHLL-A" },
+  B: { parentKey: "levelsbelow", category: "HHLL-B" },
+  C: { parentKey: "compressed", category: "HHLL-C" },
+  E: { parentKey: "expanded", category: "HHLL-E" },
 };
 
 function rrhhCategory(suffix: RRHHSuffix): RRHHCategory {
@@ -153,8 +153,8 @@ const COMPOUND_COMBOS: CompoundCombo[] = [
 
 function makeCompoundView(c: CompoundCombo): ViewDef {
   const key = `${c.ssrr}-${c.hhll}-${c.rrhh}-${c.ssll}`;
-  const { parentKey, category: ssrrCategory } = SSRR_INFO[c.ssrr];
-  const hhllCategory = HHLL_INFO[c.hhll];
+  const { parentKey, category: hhllCategory } = HHLL_INFO[c.hhll];
+  const ssrrCategory = SSRR_INFO[c.ssrr].category;
   const rrhh = rrhhCategory(c.rrhh);
   const ssll = ssllCategory(c.ssll);
   return {
