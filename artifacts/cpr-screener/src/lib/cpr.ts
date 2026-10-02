@@ -157,27 +157,18 @@ export interface CPRPairFlags {
   // instead of U1 (TC→R1).
   EL1U2: boolean;
   CL2UT: boolean;
-  // compressed — "COMPRESSED": RRSS-C only (see classifyCPRPair for the
-  // exact tolerance-aware R1/S1 test, mirroring SSRRCategory === "RRSS-C").
-  // Note: r1 down + s1 flat is NOT compressed — that lands in LevelsBelow
-  // (RRSS-B) instead. Formerly a two-clause CPR-band test named
-  // L1pU1Above; simplified.
+  // compressed — "COMPRESSED": HHLL-C (today's PH not up vs prev's PH AND
+  // today's PL up vs prev's PL, i.e. ph down or flat, pl strictly up).
   compressed: boolean;
-  // expanded — "EXPANDED": RRSS-E only (see classifyCPRPair for the
-  // exact tolerance-aware R1/S1 test, mirroring SSRRCategory === "RRSS-E").
-  // Mirrors compressed above.
+  // expanded — "EXPANDED": HHLL-E (today's PH up vs prev's PH AND today's
+  // PL down vs prev's PL). Mirrors compressed above, excluding L4 carve-outs.
   expanded: boolean;
-  // LevelsBelow — "LEVEL BELOW": RRSS-B only (today's R1 down AND today's
-  // S1 not up vs prev — this includes r1 down + s1 flat — OR today's R1
-  // flat AND today's S1 down, i.e. same tolerance-aware test as
-  // SSRRCategory === "RRSS-B"). Formerly a two-clause CPR-band test named
-  // pCPR1Above; simplified.
+  // LevelsBelow — "LEVEL BELOW": HHLL-B (today's PH down vs prev's PH AND
+  // today's PL not up vs prev's PL, OR today's PH flat AND today's PL down
+  // vs prev's PL). Excludes S1BelowPS4.
   LevelsBelow: boolean;
-  // LevelsAbove — "LEVEL ABOVE": RRSS-A only (today's R1 up AND today's S1
-  // not down vs prev, i.e. same tolerance-aware test as SSRRCategory ===
-  // "RRSS-A"), AND NOT R1AbovePR4 (see below) — that carve-out belongs to
-  // "ABOVE LEVEL4" instead. Formerly a two-clause CPR-band test named
-  // CPRs1Above; simplified.
+  // LevelsAbove — "LEVEL ABOVE": HHLL-A (today's PH up vs prev's PH AND
+  // today's PL not down vs prev's PL). Excludes R1AbovePR4.
   LevelsAbove: boolean;
   // R1AbovePR4 — "ABOVE LEVEL4" base condition: today's R1 above prev's R4
   // (plain magnitude comparison, no tolerance — matches the raw
@@ -1014,48 +1005,35 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
   const phDirVsPrev = dirTol(today.prevHigh, prev.prevHigh);
   const plDirVsPrev = dirTol(today.prevLow, prev.prevLow);
 
-  // compressed — "COMPRESSED": RRSS-C only. Same tolerance-aware R1/S1
-  // direction test used for SSRRCategory === "RRSS-C": today's R1 not up
-  // vs prev's R1 AND today's S1 up vs prev's S1 (i.e. r1 down or flat,
-  // s1 strictly up). Note: r1 down + s1 flat is NOT compressed — that
-  // case belongs to LevelsBelow/RRSS-B below. Formerly a two-clause
-  // CPR-band test named L1pU1Above; simplified.
-  const compressed = r1DirVsPrev <= 0 && s1DirVsPrev > 0;
-
-  // expanded — "EXPANDED": RRSS-E only. Same tolerance-aware R1/S1
-  // direction test used for SSRRCategory === "RRSS-E": today's R1 up vs
-  // prev's R1 AND today's S1 down vs prev's S1. Mirrors compressed above.
-  const expanded = r1DirVsPrev > 0 && s1DirVsPrev < 0 && !(today.r1 > prev.r4) && !(today.s1 < prev.s4);
-
-  // LevelsBelow — "LEVEL BELOW": RRSS-B only. Replaces the old two-clause
-  // CPR-band condition (formerly named pCPR1Above) with the same
-  // tolerance-aware R1/S1 direction test used for SSRRCategory ===
-  // "RRSS-B": today's R1 down vs prev's R1 AND today's S1 not up vs
-  // prev's S1 (covers r1 down + s1 flat too), OR today's R1 flat AND
-  // today's S1 down vs prev's S1. Excludes S1BelowPS4 (see below) — a
-  // symbol whose today's S1 has already dropped below prev's S4 belongs
-  // exclusively to the "BELOW LEVEL4" (S1BelowPS4) section, not LEVELs
-  // BELOW, so it's carved out here at the source rather than in each
-  // caller (mirrors the R1AbovePR4/LevelsAbove carve-out below).
-  const LevelsBelow = ((r1DirVsPrev < 0 && s1DirVsPrev <= 0) ||
-                       (r1DirVsPrev === 0 && s1DirVsPrev < 0)) &&
-                       !(today.s1 < prev.s4);
-
-  // LevelsAbove — "LEVEL ABOVE": RRSS-A only. Replaces the old two-clause
-  // CPR-band condition (formerly named CPRs1Above) with the same
-  // tolerance-aware R1/S1 direction test used for SSRRCategory ===
-  // "RRSS-A": today's R1 up vs prev's R1, AND today's S1 not down vs
-  // prev's S1. Excludes R1AbovePR4 (see below) — a symbol whose today's
-  // R1 has already cleared prev's R4 belongs exclusively to the "ABOVE
-  // LEVEL4" (R1AbovePR4) section, not LEVEL ABOVE, so it's carved out
-  // here at the source rather than in each caller.
+  // R1AbovePR4 — "ABOVE LEVEL4" base condition: today's R1 above prev's R4
+  // (plain magnitude comparison, no tolerance). Also subtracted out of
+  // LevelsAbove and expanded so the sections never share a symbol.
   const R1AbovePR4 = today.r1 > prev.r4;
-  const LevelsAbove = r1DirVsPrev > 0 && s1DirVsPrev >= 0 && !R1AbovePR4;
   // S1BelowPS4 — "BELOW LEVEL4" base condition, mirroring R1AbovePR4:
   // today's S1 below prev's S4 (plain magnitude comparison, no
-  // tolerance). Also subtracted out of LevelsBelow above so the two
-  // sections never share a symbol.
+  // tolerance). Also subtracted out of LevelsBelow and expanded.
   const S1BelowPS4 = today.s1 < prev.s4;
+
+  // compressed — "COMPRESSED": HHLL-C (today's PH not up vs prev's PH AND
+  // today's PL up vs prev's PL, i.e. ph down or flat, pl strictly up).
+  // Note: ph down + pl flat is NOT compressed — that case belongs to
+  // LevelsBelow/HHLL-B below.
+  const compressed = phDirVsPrev <= 0 && plDirVsPrev > 0;
+
+  // expanded — "EXPANDED": HHLL-E (today's PH up vs prev's PH AND today's
+  // PL down vs prev's PL). Excludes R1AbovePR4 and S1BelowPS4 carve-outs.
+  const expanded = phDirVsPrev > 0 && plDirVsPrev < 0 && !R1AbovePR4 && !S1BelowPS4;
+
+  // LevelsBelow — "LEVEL BELOW": HHLL-B (today's PH down vs prev's PH AND
+  // today's PL not up vs prev's PL, OR today's PH flat AND today's PL down
+  // vs prev's PL). Excludes S1BelowPS4 carve-out.
+  const LevelsBelow = ((phDirVsPrev < 0 && plDirVsPrev <= 0) ||
+                       (phDirVsPrev === 0 && plDirVsPrev < 0)) &&
+                      !S1BelowPS4;
+
+  // LevelsAbove — "LEVEL ABOVE": HHLL-A (today's PH up vs prev's PH AND
+  // today's PL not down vs prev's PL). Excludes R1AbovePR4 carve-out.
+  const LevelsAbove = phDirVsPrev > 0 && plDirVsPrev >= 0 && !R1AbovePR4;
 
   // CL1U1 / CU1L1 — split by which side (R1 vs S1) moved further.
   const r1Move = Math.abs(prev.r1 - today.r1);
