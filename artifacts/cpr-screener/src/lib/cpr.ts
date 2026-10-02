@@ -70,6 +70,12 @@ export interface CPRPairFlags {
   // exposed on the flags object instead of being recomputed per caller.
   r1DirVsPrev: -1 | 0 | 1;
   s1DirVsPrev: -1 | 0 | 1;
+  // phDirVsPrev / plDirVsPrev — tolerance-aware direction (dirTol: -1 down,
+  // 0 flat, +1 up) of today's Previous High (PH) / Previous Low (PL) vs prev's
+  // Previous High / Previous Low. Added as Step 1 directional foundation for
+  // PH/PL classification.
+  phDirVsPrev: -1 | 0 | 1;
+  plDirVsPrev: -1 | 0 | 1;
 
   // Band-classification flags (order below matches pickOuterLevelPattern priority)
   CL4U3: boolean;
@@ -329,6 +335,8 @@ export interface CPRResult {
   srExpandedLower: boolean;
   r1DirVsPrev: -1 | 0 | 1;
   s1DirVsPrev: -1 | 0 | 1;
+  phDirVsPrev: -1 | 0 | 1;
+  plDirVsPrev: -1 | 0 | 1;
   CL4U3: boolean;
   CU3L2: boolean;
   CU3L3: boolean;
@@ -1001,6 +1009,11 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
   const r1DirVsPrev = dirTol(today.r1, prev.r1);
   const s1DirVsPrev = dirTol(today.s1, prev.s1);
 
+  // Shared PH/PL tolerance-aware direction (dirTol: -1 down, 0 flat, +1 up)
+  // vs prev — mirrors the HHDir/LLDir pairing used for HHLLCategory in analyzeCPR.
+  const phDirVsPrev = dirTol(today.prevHigh, prev.prevHigh);
+  const plDirVsPrev = dirTol(today.prevLow, prev.prevLow);
+
   // compressed — "COMPRESSED": RRSS-C only. Same tolerance-aware R1/S1
   // direction test used for SSRRCategory === "RRSS-C": today's R1 not up
   // vs prev's R1 AND today's S1 up vs prev's S1 (i.e. r1 down or flat,
@@ -1102,6 +1115,7 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
     srHigher, srLower, srExpanded, srCompressed,
     srCompressedHigher, srCompressedLower, srExpandedHigher, srExpandedLower,
     r1DirVsPrev, s1DirVsPrev,
+    phDirVsPrev, plDirVsPrev,
     CL4U3, CU3L2, CU3L3, EU4L4, EL4U4, QU4L4, InsideCPR, U3L4, U2L4, U4L2, U3L2, U4L3, U4L4, U1L4,
     L4U4, EU3L4, EL2U4, EL3U4, CU4L2, CU4L4, CL4U4, EU2L3,
     CU4L3, CL3U3, L4U3, L3U3, CL3U2, L4U2, L3U2, L3U4, L2U4,
@@ -1523,8 +1537,10 @@ export function analyzeCPR(
   // + PDL down" (flat top with a falling bottom still counts as the range
   // expanding), leaving only "PDH down + PDL flat" as the one-sided gap
   // that resolves to HHLL-C, and "PDH down + PDL down" as HHLL-B.
-  const HHDir = dirTol(todayCPR.prevHigh, prevCPR.prevHigh);
-  const LLDir = dirTol(todayCPR.prevLow, prevCPR.prevLow);
+  // PH/PL direction already computed once in classifyCPRPair (see
+  // flags.phDirVsPrev / flags.plDirVsPrev), reused here instead of recomputing.
+  const HHDir = flags.phDirVsPrev;
+  const LLDir = flags.plDirVsPrev;
   const HHLLCategory: HHLLCategory =
     (HHDir === 0 && LLDir === 0) ? "HHLL-Q" :
     (HHDir >= 0 && LLDir >= 0) ? "HHLL-A" :
