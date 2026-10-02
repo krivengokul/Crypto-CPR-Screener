@@ -58,7 +58,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
               <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-green-500 text-white">Above</span>
               <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-500 text-white">Pivot Level</span>
             </div>
-            <div className="text-xs text-muted-foreground">Today&apos;s TC sits between prev R1 and R2, and today&apos;s S1 sits between prev BC and R1</div>
+            <div className="text-xs text-muted-foreground">Today&apos;s PH up vs prev PH and PL not down vs prev PL (HHLL-A category)</div>
           </>
         ) : legendPattern === "levelsbelow" ? (
           <>
@@ -67,7 +67,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
               <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-green-500 text-white">Above</span>
               <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-500 text-white">Pivot Level</span>
             </div>
-            <div className="text-xs text-muted-foreground">Yesterday&apos;s Pivot sits between today&apos;s R1 and R2, and today&apos;s BC sits between yesterday&apos;s S1 and BC</div>
+            <div className="text-xs text-muted-foreground">Today&apos;s PH not up vs prev PH and PL down vs prev PL (HHLL-B category)</div>
           </>
         ) : legendPattern === "compressed" ? (
           <>
@@ -75,7 +75,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
               <span className="text-xs font-semibold text-primary">COMPRESSED</span>
               <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-500 text-white">Compressed</span>
             </div>
-            <div className="text-xs text-muted-foreground">RRSS-C only — today&apos;s R1 down and today&apos;s S1 up vs yesterday (levels squeezing inward)</div>
+            <div className="text-xs text-muted-foreground">HHLL-C only — today&apos;s PH not up and today&apos;s PL up vs yesterday (price range squeezing inward)</div>
           </>
         ) : legendPattern === "expanded" ? (
           <>
@@ -83,7 +83,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
               <span className="text-xs font-semibold text-primary">EXPANDED</span>
               <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-sky-500 text-white">Expanded</span>
             </div>
-            <div className="text-xs text-muted-foreground">RRSS-E only — today&apos;s R1 up and today&apos;s S1 down vs yesterday (levels widening outward)</div>
+            <div className="text-xs text-muted-foreground">HHLL-E only — today&apos;s PH up and today&apos;s PL down vs yesterday (price range widening outward)</div>
           </>
         ) : legendPattern === "inside-cpr" ? (
           <>
@@ -213,13 +213,13 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
           </>
         ) : activeSignal === "levelsabove" ? (
           <>
-            <div className="text-xs font-semibold text-green-400 mb-1">Pivot Level: CPR in prev U2 band</div>
-            <div className="text-xs text-muted-foreground">Today TC &gt; prev R1 &amp; &lt; prev R2 — today S1 &gt; prev BC &amp; &lt; prev R1</div>
+            <div className="text-xs font-semibold text-green-400 mb-1">LEVEL ABOVE: PH up, PL not down vs prev</div>
+            <div className="text-xs text-muted-foreground">Today&apos;s Prev High moved up vs yesterday&apos;s Prev High, and today&apos;s Prev Low did not move down vs yesterday&apos;s Prev Low (HHLL-A)</div>
           </>
         ) : activeSignal === "levelsbelow" ? (
           <>
-            <div className="text-xs font-semibold text-green-400 mb-1">Pivot Level: pCPR in U1 band</div>
-            <div className="text-xs text-muted-foreground">Prev Pivot &gt; today R1 &amp; &lt; today R2 — today BC &gt; prev S1 &amp; &lt; prev BC</div>
+            <div className="text-xs font-semibold text-green-400 mb-1">LEVEL BELOW: PH not up, PL down vs prev</div>
+            <div className="text-xs text-muted-foreground">Today&apos;s Prev High did not move up vs yesterday&apos;s Prev High, and today&apos;s Prev Low moved down vs yesterday&apos;s Prev Low (HHLL-B)</div>
           </>
         ) : activeSignal === "2P:L4U4-pLAP:R4-2A" ? (
           <>
@@ -327,13 +327,13 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
           </>
         ) : activeSignal === "levelsabove" ? (
           <>
-            <div className="text-xs font-semibold text-emerald-400 mb-1">Bias: Up shift</div>
-            <div className="text-xs text-emerald-400/80">Today&apos;s CPR has stepped one band above yesterday&apos;s — TC inside prev&apos;s U2 zone, S1 still within prev&apos;s wider BC/R1 range</div>
+            <div className="text-xs font-semibold text-emerald-400 mb-1">Bias: Bullish (PH up, PL held)</div>
+            <div className="text-xs text-emerald-400/80">Today&apos;s Prev High is higher than yesterday&apos;s and the Prev Low did not drop — upward shift in the day range (HHLL-A)</div>
           </>
         ) : activeSignal === "levelsbelow" ? (
           <>
-            <div className="text-xs font-semibold text-emerald-400 mb-1">Bias: Up shift</div>
-            <div className="text-xs text-emerald-400/80">Today&apos;s CPR has stepped above yesterday&apos;s lower band while prev Pivot still caps the U1/U2 zone</div>
+            <div className="text-xs font-semibold text-emerald-400 mb-1">Bias: Bearish (PH held, PL down)</div>
+            <div className="text-xs text-emerald-400/80">Today&apos;s Prev High did not move up while the Prev Low dropped — downward shift in the day range (HHLL-B)</div>
           </>
         ) : activeSignal === "2P:L4U4-pLAP:R4-2A" ? (
           <>

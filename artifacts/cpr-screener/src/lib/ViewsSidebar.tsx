@@ -33,11 +33,11 @@ export interface SidebarView {
 }
 
 export const pivotcategories: Category[] = [
-  { id: "levelsabove", label: getView("levelsabove")?.label ?? "LEVEL ABOVE", subtitle: "RRSS-A only (today's R1 up, S1 not down vs prev), excludes ABOVE LEVEL4", icon: TrendingUp },
+  { id: "levelsabove", label: getView("levelsabove")?.label ?? "LEVEL ABOVE", subtitle: "HHLL-A (today's PH up, PL not down vs prev), excludes ABOVE LEVEL4", icon: TrendingUp },
   { id: "R1AbovePR4", label: getView("R1AbovePR4")?.label ?? "ABOVE LEVEL4", subtitle: "Today R1 above Prev R4", icon: TrendingUp },
-  { id: "levelsbelow", label: getView("levelsbelow")?.label ?? "LEVEL BELOW", subtitle: "RRSS-B only (today's R1 not up, S1 down vs prev)", icon: TrendingUp },
-  { id: "compressed", label: getView("compressed")?.label ?? "COMPRESSED", subtitle: "RRSS-C only (today's R1 down, S1 up vs prev)", icon: TrendingUp },
-  { id: "expanded", label: getView("expanded")?.label ?? "EXPANDED", subtitle: "RRSS-E only (today's R1 up, S1 down vs prev)", icon: TrendingUp },
+  { id: "levelsbelow", label: getView("levelsbelow")?.label ?? "LEVEL BELOW", subtitle: "HHLL-B (today's PH not up, PL down vs prev)", icon: TrendingUp },
+  { id: "compressed", label: getView("compressed")?.label ?? "COMPRESSED", subtitle: "HHLL-C (today's PH not up, PL up vs prev)", icon: TrendingUp },
+  { id: "expanded", label: getView("expanded")?.label ?? "EXPANDED", subtitle: "HHLL-E (today's PH up, PL down vs prev)", icon: TrendingUp },
   { id: "BPS4", label: getView("BPS4")?.label ?? "BELOW LEVEL4", subtitle: "Today S1 below Prev S4", icon: TrendingDown },
   { id: "equal-cpr", label: getView("equal-cpr")?.label ?? "Equal CPR", subtitle: "Prev & Today CPR Equal", icon: Equal },
   { id: "touch", label: getView("touch")?.label ?? "TOUCH", subtitle: "Inside, Out, Overlap Above/Below...", icon: Activity },
