@@ -284,6 +284,16 @@ export const OVERLAP_ABOVE_TOUCH_VIEWS: ViewDef[] = [
     condition: (r) => r.CU3L2,
     order: 1,
   },
+  // "OVA-" prefixed: the plain "C-A-C-AA-CU3L3" key already exists on the
+  // compressed branch (compressed.ts), so this keeps the keys unique.
+  {
+    key: "OVA-C-A-C-AA-CU3L3",
+    label: "C-A-C-AA-CU3L3",
+    parentKey: "OVA-C-A-C-AA",
+    kind: "pattern",
+    condition: (r) => r.CU3L3,
+    order: 2,
+  },
 
   // --- C-A-E-AA (order 5) ---
   {
