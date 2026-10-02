@@ -55,7 +55,7 @@ export const LEVELSABOVE_VIEWS: ViewDef[] = [
   { key: "A-A-AA-AA-EU4L4", label: "A-A-AA-AA-EU4L4", parentKey: "A-A-AA-AA", kind: "pattern", condition: (r) => r.EU4L4,
       order: 16
 },
-  { key: "A-A-AA-AA-EUTL3", label: "A-A-AA-AA-EUTL3", parentKey: "R1AbovePR4-A-A-AA-AA", kind: "pattern", condition: (r) => r.EUTL3,
+  { key: "A-A-AA-AA-EUTL3", label: "A-A-AA-AA-EUTL3", parentKey: "APR4-A-A-AA-AA", kind: "pattern", condition: (r) => r.EUTL3,
       order: 7
 },
 
