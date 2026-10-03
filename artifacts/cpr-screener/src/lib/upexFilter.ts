@@ -1,10 +1,8 @@
 import type { OHLC } from "./cpr";
-import { toCoinDCXPair } from "./coinDCXPair.ts";
 
-type UpexSource = "binance" | "delta" | "coindcx";
+type UpexSource = "binance" | "delta";
 
 const DELTA_BASE = "https://api.india.delta.exchange/v2";
-const COINDCX_BASE = "https://public.coindcx.com";
 const CANDLE_INTERVAL_MS = 15 * 60 * 1000;
 const MAX_CONCURRENT_REQUESTS = 8;
 
@@ -99,22 +97,6 @@ function parseDeltaCandles(payload: unknown): OHLC[] {
     }));
 }
 
-function parseCoinDCXCandles(payload: unknown): OHLC[] {
-  if (!payload || typeof payload !== "object") return [];
-  const body = payload as { s?: string; data?: unknown[] };
-  if ((body.s !== undefined && body.s !== "ok") || !Array.isArray(body.data)) return [];
-  return body.data
-    .filter((row): row is Record<string, unknown> => !!row && typeof row === "object")
-    .map((row) => ({
-      openTime: Number(row.time),
-      open: Number(row.open),
-      high: Number(row.high),
-      low: Number(row.low),
-      close: Number(row.close),
-      volume: Number(row.volume),
-    }));
-}
-
 async function fetchUpexCandles(
   candidate: UpexCandidate,
   startTime: number,
@@ -128,21 +110,11 @@ async function fetchUpexCandles(
     return payload === null ? null : parseBinanceCandles(payload);
   }
 
-  if (candidate.source === "delta") {
-    const payload = await fetchJson(
-      `${DELTA_BASE}/history/candles?symbol=${encodeURIComponent(candidate.symbol)}` +
-        `&resolution=15m&start=${Math.floor(startTime / 1000)}&end=${Math.floor(now / 1000)}`
-    );
-    return payload === null ? null : parseDeltaCandles(payload);
-  }
-
-  const fromSec = Math.floor(startTime / 1000);
-  const toSec = Math.floor(now / 1000);
   const payload = await fetchJson(
-    `${COINDCX_BASE}/market_data/candlesticks?pair=${encodeURIComponent(toCoinDCXPair(candidate.symbol))}` +
-      `&from=${fromSec}&to=${toSec}&resolution=15&pcode=f`
+    `${DELTA_BASE}/history/candles?symbol=${encodeURIComponent(candidate.symbol)}` +
+      `&resolution=15m&start=${Math.floor(startTime / 1000)}&end=${Math.floor(now / 1000)}`
   );
-  return payload === null ? null : parseCoinDCXCandles(payload);
+  return payload === null ? null : parseDeltaCandles(payload);
 }
 
 export async function findUpexSymbols(

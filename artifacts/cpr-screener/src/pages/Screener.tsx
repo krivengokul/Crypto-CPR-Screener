@@ -888,14 +888,23 @@ export default function Screener({
 
     const candidates = Array.from(
       new Map(
-        getActivePool().map((row) => [
-          `${row.source}:${row.symbol}`,
-          { symbol: row.symbol, source: row.source, bc: row.todayCPR.bc },
-        ])
+        getActivePool()
+          .filter(
+            (row): row is CPRResultWithSource & { source: "binance" | "delta" } =>
+              row.source !== "coindcx"
+          )
+          .map((row) => [
+            `${row.source}:${row.symbol}`,
+            { symbol: row.symbol, source: row.source, bc: row.todayCPR.bc },
+          ])
       ).values()
     );
     if (candidates.length === 0) {
-      setUpexMessage("Run a Screener scan before applying UPEX.");
+      setUpexMessage(
+        activeTab === "coindcx"
+          ? "UPEX checks Binance and Delta only; CoinDCX results are not filtered."
+          : "Run a Binance or Delta Screener scan before applying UPEX."
+      );
       return;
     }
 
@@ -1097,7 +1106,12 @@ export default function Screener({
       if (pdhPdlFilter === "belowpl4") return r.currentPrice < r.prevCPR.s4;
       return true;
     })
-    .filter((r) => !upexFilter || upexIncludedSymbols.has(`${r.source}:${r.symbol}`))
+    .filter(
+      (r) =>
+        !upexFilter ||
+        r.source === "coindcx" ||
+        upexIncludedSymbols.has(`${r.source}:${r.symbol}`)
+    )
     // Active / Ready status filter (see getRowStatus).
     .filter((r) => {
       if (statusFilter === "all") return true;
@@ -2059,13 +2073,13 @@ export default function Screener({
               <div className="flex items-center gap-1 flex-wrap">
                 <button
                   onClick={() => void handleUpexFilter()}
-                  disabled={!!upexProgress || currentAllCount === 0}
+                  disabled={!!upexProgress || currentAllCount === 0 || activeTab === "coindcx"}
                   className={`text-xs px-2.5 py-1 rounded border transition-colors disabled:opacity-50 ${
                     upexFilter
                       ? "border-cyan-400 text-cyan-300"
                       : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
                   }`}
-                  title="Keep symbols with no completed 15-minute candle body (open and close) below today's CPR BC since 05:30 IST. Symbols with unavailable candle data are excluded."
+                  title="For Binance and Delta, keep symbols with no completed 15-minute candle body (open and close) below today's CPR BC since 05:30 IST. CoinDCX results are not checked or filtered."
                 >
                   {upexProgress
                     ? `UPEX ${upexProgress.done}/${upexProgress.total}`
