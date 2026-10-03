@@ -757,11 +757,13 @@ export function ScreenerTableHeader({
           Active Views
         </th>
         <th
-          className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
+          className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap cursor-pointer hover:text-foreground"
           onClick={() => toggleSort("ladderCheck")}
           title="Level Check (matching/13) for each signal in the SIGNAL column, one line per signal, graded with its own levelCheckDefs. Sort by each row's best n/13 — desc surfaces 13/13 first, then 12/13, etc."
         >
-          MATCH <SortIcon k="ladderCheck" />
+          <span className="inline-flex items-center whitespace-nowrap">
+            MATCH <SortIcon k="ladderCheck" />
+          </span>
         </th>
         <th
           className="pl-3 pr-2 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
