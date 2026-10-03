@@ -462,7 +462,7 @@ export default function Screener({
         throw new Error("Binance scan returned no results — will retry on the next scan/refresh.");
       }
       setAllResults(results);
-      setFiltered(results.filter((r) => passesPattern(r, activeSignal)));
+      setFiltered(results.filter((r) => passesPattern(r, activeSignalRef.current)));
       setStatus("done");
       markScannedToday();
       // FIX (CoinDCX/Delta/Binance stuck at 0 after a quota-exceeded write):
@@ -483,7 +483,7 @@ export default function Screener({
     } finally {
       scanRef.current = false;
     }
-  }, [activeSignal]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const doDeltaScan = useCallback(async (switchTab: boolean = true) => {
     if (deltaScanRef.current) return;
@@ -502,7 +502,7 @@ export default function Screener({
         throw new Error("Delta scan returned no results — will retry on the next scan/refresh.");
       }
       setDeltaAllResults(results);
-      setDeltaFiltered(results.filter((r) => passesPattern(r, activeSignal)));
+      setDeltaFiltered(results.filter((r) => passesPattern(r, activeSignalRef.current)));
       setDeltaStatus("done");
       // See the matching comment in doScan above — only mark "scanned today"
       // when the cache write actually succeeded.
@@ -515,7 +515,7 @@ export default function Screener({
     } finally {
       deltaScanRef.current = false;
     }
-  }, [activeSignal]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const doCoinDCXScan = useCallback(async (switchTab: boolean = true) => {
     // Paused: this single guard stops every entry point (auto-scan, hard
@@ -529,7 +529,7 @@ export default function Screener({
     // runs, so a slow or partially rate-limited refresh never looks empty.
     const previousCoinDCXResults = coindcxAllResultsRef.current;
     setCoinDCXAllResults(previousCoinDCXResults);
-    setCoinDCXFiltered(previousCoinDCXResults.filter((r) => passesPattern(r, activeSignal)));
+    setCoinDCXFiltered(previousCoinDCXResults.filter((r) => passesPattern(r, activeSignalRef.current)));
     setCoinDCXError("");
     setCoinDCXProgress({ done: 0, total: 0, symbol: "" });
     try {
@@ -540,7 +540,7 @@ export default function Screener({
         throw new Error("CoinDCX scan returned no results — will retry on the next scan/refresh.");
       }
       setCoinDCXAllResults(results);
-      setCoinDCXFiltered(results.filter((r) => passesPattern(r, activeSignal)));
+      setCoinDCXFiltered(results.filter((r) => passesPattern(r, activeSignalRef.current)));
       setCoinDCXStatus("done");
       // See the matching comment in doScan above. CoinDCX is the exchange
       // most likely to hit this: its cache write runs last of the three and
@@ -558,9 +558,12 @@ export default function Screener({
     } finally {
       coindcxScanRef.current = false;
     }
-  }, [activeSignal]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const autoScanRanRef = useRef(false);
   useEffect(() => {
+    if (autoScanRanRef.current) return;
+    autoScanRanRef.current = true;
     if (shouldAutoScanForCache(cachedBinance, "binance")) void doScan();
     if (shouldAutoScanForCache(cachedDelta, "delta")) void doDeltaScan(false);
     if (shouldAutoScanForCache(cachedCoinDCX, "coindcx")) void doCoinDCXScan(false);
