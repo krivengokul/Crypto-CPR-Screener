@@ -109,13 +109,13 @@ function updateScreenerNav(sourceText, categoryKey, sourceKey, newKey, newLabel,
   return sourceFile.getFullText();
 }
 
-const SSRR_LETTER_TO_CATEGORY = {
+const HHLL_LETTER_TO_CATEGORY = {
   A: "levelsabove",
   B: "levelsbelow",
   C: "compressed",
   E: "expanded",
 };
-const COMPOUND_KEY_RE = /^([ABCE])-[ABCE]-[A-Za-z]+-[A-Za-z]+$/;
+const COMPOUND_KEY_RE = /^[ABCE]-([ABCE])-[A-Za-z]+-[A-Za-z]+$/;
 
 function resolveTopLevelCategoryKey(allViewObjs, attachKey) {
   const objMap = new Map();
@@ -138,7 +138,7 @@ function resolveTopLevelCategoryKey(allViewObjs, attachKey) {
     }
 
     const compound = COMPOUND_KEY_RE.exec(currKey);
-    if (compound) return SSRR_LETTER_TO_CATEGORY[compound[1]] ?? null;
+    if (compound) return HHLL_LETTER_TO_CATEGORY[compound[1]] ?? null;
 
     break;
   }
