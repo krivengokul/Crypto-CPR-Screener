@@ -2,12 +2,14 @@ import { OHLC, CPRResult, analyzeCPR } from "./cpr";
 import { safeSetItem } from "./safeStorage";
 import { shouldExcludeSymbol } from "./symbolFilters";
 import { isLiveDailyCandle, candlesAreContiguous } from "./binance";
+import { fromCoinDCXPair, toCoinDCXPair } from "./coinDCXPair";
+export { fromCoinDCXPair, toCoinDCXPair } from "./coinDCXPair";
 
 // FUTURES ONLY. CoinDCX futures instruments are named `B-<BASE>_USDT`
 // (the `B-` prefix means the contract is routed to Binance), e.g.
 // `B-BTC_USDT`. To stay consistent with binance.ts and symbolFilters.ts the
-// rest of the app sees the symbol as `BTCUSDT` — `toCoinDCXPair` /
-// `fromCoinDCXPair` below are the ONLY place the two forms are converted.
+// rest of the app sees the symbol as `BTCUSDT` — the `coinDCXPair` module is
+// the ONLY place the two forms are converted.
 //
 // Endpoints used (all public, no API key):
 //   GET api.coindcx.com/exchange/v1/derivatives/futures/data/active_instruments
@@ -29,20 +31,6 @@ const API_BASE = PROXY ? `${PROXY}/api` : "https://api.coindcx.com";
 const PUBLIC_BASE = PROXY ? `${PROXY}/public` : "https://public.coindcx.com";
 
 const QUOTE = "USDT";
-const PAIR_PREFIX = "B-";
-
-export function toCoinDCXPair(symbol: string): string {
-  // "BTCUSDT" -> "B-BTC_USDT"
-  const base = symbol.endsWith(QUOTE) ? symbol.slice(0, -QUOTE.length) : symbol;
-  return `${PAIR_PREFIX}${base}_${QUOTE}`;
-}
-
-export function fromCoinDCXPair(pair: string): string | null {
-  // "B-BTC_USDT" -> "BTCUSDT"; anything not B-*_USDT is not scanned.
-  if (!pair.startsWith(PAIR_PREFIX) || !pair.endsWith(`_${QUOTE}`)) return null;
-  const base = pair.slice(PAIR_PREFIX.length, -(QUOTE.length + 1));
-  return base ? `${base}${QUOTE}` : null;
-}
 
 interface CandleRaw {
   open: number | string;

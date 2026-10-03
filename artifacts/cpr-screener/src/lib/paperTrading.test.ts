@@ -8,6 +8,8 @@ import {
 import { gradeTargetHit } from "./backtestOutcome.ts";
 import type { OHLC } from "./cpr.ts";
 import { evaluateSignalCandles, livePriceCrossedBoundary } from "./signalOutcome.ts";
+import { fromCoinDCXPair, toCoinDCXPair } from "./coinDCXPair.ts";
+import { passesUpexFilter, upexSessionStartUtcMs } from "./upexFilter.ts";
 
 function trade(overrides: Partial<PaperTradeRecord> = {}): PaperTradeRecord {
   return {
@@ -116,6 +118,44 @@ test("grades a touched S4 target as a pass for a Down view", () => {
     gradeTargetHit(false, 0.0544, "2026-09-23", candle, null),
     { result: "pass", hitDate: "2026-09-23", daysToHit: 0 }
   );
+});
+
+test("UPEX uses the 05:30 IST day boundary and ignores candles outside completed session data", () => {
+  const now = Date.parse("2026-10-03T08:07:00.000Z");
+  const start = upexSessionStartUtcMs(now);
+  assert.equal(start, Date.parse("2026-10-03T00:00:00.000Z"));
+
+  const candle = (openTime: number, open: number, close: number): OHLC => ({
+    openTime,
+    open,
+    high: Math.max(open, close) + 1,
+    low: Math.min(open, close) - 1,
+    close,
+    volume: 1,
+  });
+
+  assert.equal(
+    passesUpexFilter([candle(start + 15 * 60_000, 99, 99.5)], 100, start, now),
+    false
+  );
+  assert.equal(
+    passesUpexFilter([candle(start + 30 * 60_000, 99, 101)], 100, start, now),
+    true
+  );
+  assert.equal(
+    passesUpexFilter([candle(start - 15 * 60_000, 99, 99)], 100, start, now),
+    null
+  );
+  assert.equal(
+    passesUpexFilter([candle(now - 5 * 60_000, 99, 99)], 100, start, now),
+    null
+  );
+});
+
+test("CoinDCX futures pair conversion is shared by the screener and UPEX", () => {
+  assert.equal(toCoinDCXPair("BTCUSDT"), "B-BTC_USDT");
+  assert.equal(fromCoinDCXPair("B-BTC_USDT"), "BTCUSDT");
+  assert.equal(fromCoinDCXPair("BTC_USDT"), null);
 });
 
 test("live price beyond a short target resolves PASS when candle history is empty", () => {

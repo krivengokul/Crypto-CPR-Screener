@@ -16,6 +16,7 @@ import { runScreener } from "@/lib/binance";
 import { runDeltaScreener } from "@/lib/delta";
 import { runCoinDCXScreener } from "@/lib/coinDCX";
 import { COINDCX_ENABLED } from "@/lib/featureFlags";
+import { findUpexSymbols } from "@/lib/upexFilter";
 import type { CPRResult } from "@/lib/cpr";
 import { utcTodayISO, ENTRY_DEFS } from "@/lib/backtest";
 import {
@@ -332,6 +333,11 @@ export default function Screener({
   const [todayWidthFilter, setTodayWidthFilter] = useState<WidthCategoryKey | null>(null);
   // NEW: PDH/PDL filter — independent of activeSignal, mutually exclusive (like pivot/width filters).
   const [pdhPdlFilter, setPdhPdlFilter] = useState<"above" | "below" | "abovepu4" | "belowpl4" | "pdhgtu1" | "pdlltl1" | "s1r1in" | null>(null);
+  const [upexFilter, setUpexFilter] = useState(false);
+  const [upexIncludedSymbols, setUpexIncludedSymbols] = useState<Set<string>>(() => new Set());
+  const [upexProgress, setUpexProgress] = useState<{ done: number; total: number } | null>(null);
+  const [upexMessage, setUpexMessage] = useState("");
+  const upexRunRef = useRef(0);
   // Active / Ready status filter (grouped tab control in the search bar).
   // Clicking the already-selected button clears it back to "all".
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "ready">("all");
@@ -378,6 +384,13 @@ export default function Screener({
   // changed.
   const activeTab = activeTabProp ?? activeTabState;
   const setActiveTab = onActiveTabChange ?? setActiveTabState;
+  useEffect(() => {
+    upexRunRef.current += 1;
+    setUpexFilter(false);
+    setUpexIncludedSymbols(new Set());
+    setUpexProgress(null);
+    setUpexMessage("");
+  }, [activeTab]);
   const deltaScanRef = useRef(false);
   const coindcxScanRef = useRef(false);
 
@@ -448,6 +461,11 @@ export default function Screener({
   const doScan = useCallback(async (switchTab: boolean = true) => {
     if (scanRef.current) return;
     scanRef.current = true;
+    upexRunRef.current += 1;
+    setUpexFilter(false);
+    setUpexIncludedSymbols(new Set());
+    setUpexProgress(null);
+    setUpexMessage("");
     setStatus("scanning");
     if (switchTab) setActiveTab("binance");
     setAllResults([]);
@@ -488,6 +506,11 @@ export default function Screener({
   const doDeltaScan = useCallback(async (switchTab: boolean = true) => {
     if (deltaScanRef.current) return;
     deltaScanRef.current = true;
+    upexRunRef.current += 1;
+    setUpexFilter(false);
+    setUpexIncludedSymbols(new Set());
+    setUpexProgress(null);
+    setUpexMessage("");
     setDeltaStatus("scanning");
     if (switchTab) setActiveTab("delta");
     setDeltaAllResults([]);
@@ -523,6 +546,11 @@ export default function Screener({
     if (!COINDCX_ENABLED) return;
     if (coindcxScanRef.current) return;
     coindcxScanRef.current = true;
+    upexRunRef.current += 1;
+    setUpexFilter(false);
+    setUpexIncludedSymbols(new Set());
+    setUpexProgress(null);
+    setUpexMessage("");
     setCoinDCXStatus("scanning");
     if (switchTab) setActiveTab("coindcx");
     // Keep the last successful CoinDCX result visible while the next scan
@@ -849,6 +877,57 @@ export default function Screener({
     return (showAll ? allResults : filtered).map((r) => ({ ...r, source: "binance" as const }));
   };
 
+  const handleUpexFilter = async () => {
+    if (upexProgress) return;
+    if (upexFilter) {
+      setUpexFilter(false);
+      setUpexIncludedSymbols(new Set());
+      setUpexMessage("");
+      return;
+    }
+
+    const candidates = Array.from(
+      new Map(
+        getActivePool().map((row) => [
+          `${row.source}:${row.symbol}`,
+          { symbol: row.symbol, source: row.source, bc: row.todayCPR.bc },
+        ])
+      ).values()
+    );
+    if (candidates.length === 0) {
+      setUpexMessage("Run a Screener scan before applying UPEX.");
+      return;
+    }
+
+    const runId = ++upexRunRef.current;
+    setUpexMessage("");
+    setUpexProgress({ done: 0, total: candidates.length });
+    try {
+      const { included, unavailable } = await findUpexSymbols(
+        candidates,
+        (done, total) => {
+          if (runId === upexRunRef.current) setUpexProgress({ done, total });
+        }
+      );
+      if (runId !== upexRunRef.current) return;
+      setUpexIncludedSymbols(included);
+      setUpexFilter(true);
+      setUpexMessage(
+        unavailable > 0
+          ? `${unavailable} symbol${unavailable === 1 ? "" : "s"} excluded because completed 15m candle data was unavailable.`
+          : ""
+      );
+    } catch (cause) {
+      if (runId === upexRunRef.current) {
+        setUpexMessage(
+          cause instanceof Error ? `UPEX scan failed: ${cause.message}` : "UPEX scan failed."
+        );
+      }
+    } finally {
+      if (runId === upexRunRef.current) setUpexProgress(null);
+    }
+  };
+
   // Search box matches EITHER the symbol OR the name of any View the row
   // currently satisfies (the same names shown in the table's VIEW column,
   // via getMatchingSignals). Typing part of a View name — e.g. "EU3L4" —
@@ -1018,6 +1097,7 @@ export default function Screener({
       if (pdhPdlFilter === "belowpl4") return r.currentPrice < r.prevCPR.s4;
       return true;
     })
+    .filter((r) => !upexFilter || upexIncludedSymbols.has(`${r.source}:${r.symbol}`))
     // Active / Ready status filter (see getRowStatus).
     .filter((r) => {
       if (statusFilter === "all") return true;
@@ -1148,7 +1228,7 @@ export default function Screener({
   // Helper: is any sub-filter active (to decide the result count label)
   const anySubFilter =
     !!activeGenericSignal ||
-    !!PatternFilter || !!touchFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter || statusFilter !== "all" || !!exitTimeFilter || !!entryLevelFilter;
+    !!PatternFilter || !!touchFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter || upexFilter || statusFilter !== "all" || !!exitTimeFilter || !!entryLevelFilter;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -1978,6 +2058,22 @@ export default function Screener({
                   pdhPdlFilter state and mutual-exclusivity as before. */}
               <div className="flex items-center gap-1 flex-wrap">
                 <button
+                  onClick={() => void handleUpexFilter()}
+                  disabled={!!upexProgress || currentAllCount === 0}
+                  className={`text-xs px-2.5 py-1 rounded border transition-colors disabled:opacity-50 ${
+                    upexFilter
+                      ? "border-cyan-400 text-cyan-300"
+                      : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
+                  }`}
+                  title="Keep symbols with no completed 15-minute candle body (open and close) below today's CPR BC since 05:30 IST. Symbols with unavailable candle data are excluded."
+                >
+                  {upexProgress
+                    ? `UPEX ${upexProgress.done}/${upexProgress.total}`
+                    : upexFilter
+                      ? `✕ UPEX (${upexIncludedSymbols.size})`
+                      : "UPEX"}
+                </button>
+                <button
                   onClick={() => setPdhPdlFilter((v) => (v === "above" ? null : "above"))}
                   className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                     pdhPdlFilter === "above"
@@ -2022,6 +2118,11 @@ export default function Screener({
                   {pdhPdlFilter === "belowpl4" ? "✕ <PL4" : "<PL4"}
                 </button>
               </div>
+              {upexMessage && (
+                <span className="text-[10px] text-amber-300" role="status">
+                  {upexMessage}
+                </span>
+              )}
 
               {/* Status Filter — Active (price has reached a View's entry line) /
                   Ready (matches a View, still waiting for entry). Same grouped
