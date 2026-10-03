@@ -52,5 +52,5 @@ export const CATEGORY_TEXT_COLORS: Record<string, string> = {
   BPS4: "text-rose-300/80",
   compressed: "text-amber-400/80",
   expanded: "text-sky-400/80",
-  touch: "text-violet-400/80",
+  touch: "text-lime-300",
 };
