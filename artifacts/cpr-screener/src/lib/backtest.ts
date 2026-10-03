@@ -3,6 +3,7 @@ import { fetchTopUSDTSymbols, fetchDailyKlines, isLiveDailyCandle } from "./bina
 import { fetchDeltaPerps } from "./delta";
 import { fetchCoinDCXDailyKlines, fetchCoinDCXActiveSymbols } from "./coinDCX";
 import { buildViewTree, type ViewTreeNode, VIEWS, getView, type ViewDef, passesView, matchesGapBadge, ALL_GAP_BADGES } from "./views";
+import { gradeTargetHit } from "./backtestOutcome";
 
 
 export type BacktestSource = "binance" | "delta" | "coindcx";
@@ -775,6 +776,16 @@ export interface BacktestRow {
    * and Pattern badges as the category-scan tables.
    */
   raw: CPRResult;
+  /** Per-row outcome for the applicable nested View when a non-View node is selected. */
+  viewOutcome?: BacktestViewOutcome | null;
+}
+
+export interface BacktestViewOutcome {
+  targetLevel: number | null;
+  targetLabel: string;
+  result: "pass" | "fail" | "insufficient-data" | "invalid-target";
+  hitDate: string | null;
+  daysToHit: 0 | 1 | null;
 }
 
 /**
@@ -1508,21 +1519,13 @@ export async function backtestSymbolOnDate(
     };
   }
 
-  const hits = (c: OHLC | null) =>
-    !!c && (isUp ? c.high >= targetLevel : c.low <= targetLevel);
-
-  let hitDate: string | null = null;
-  let daysToHit: 0 | 1 | null = null;
-  if (hits(entryDayCandle)) {
-    hitDate = entryDateISO;
-    daysToHit = 0;
-  } else if (hits(nextDayCandle)) {
-    hitDate = dPlus1;
-    daysToHit = 1;
-  }
-
-  const outcome: BacktestRow["result"] =
-    entryDayCandle || nextDayCandle ? (hitDate ? "pass" : "fail") : "insufficient-data";
+  const { result: outcome, hitDate, daysToHit } = gradeTargetHit(
+    isUp,
+    targetLevel,
+    entryDateISO,
+    entryDayCandle,
+    nextDayCandle
+  );
 
   return {
     symbol,
@@ -1543,6 +1546,52 @@ export async function backtestSymbolOnDate(
     ...closeAndChange(window, entryDateISO),
     raw: result,
   };
+}
+
+/**
+ * Grade a scanned row against its matching View's own target, rather than a
+ * category/pattern fallback target. A null View means the row has no
+ * applicable View and should remain ungraded in the results table.
+ */
+export async function evaluateBacktestViewOutcome(
+  row: Pick<CategoryScanRow, "symbol" | "source" | "entryDate" | "raw">,
+  view: ViewDef | null
+): Promise<BacktestViewOutcome | null> {
+  if (!view?.getTarget) return null;
+
+  const targetLabel = view.targetLabel ?? "R4";
+  const targetLevel = view.getTarget(row.raw);
+  if (!Number.isFinite(targetLevel)) {
+    return {
+      targetLevel: null,
+      targetLabel,
+      result: "invalid-target",
+      hitDate: null,
+      daysToHit: null,
+    };
+  }
+
+  const window = await getHistory(row.symbol, row.source);
+  if (!window) {
+    return {
+      targetLevel,
+      targetLabel,
+      result: "insufficient-data",
+      hitDate: null,
+      daysToHit: null,
+    };
+  }
+
+  const dPlus1 = addDaysISO(row.entryDate, 1);
+  const isDown = view.direction === "Down" || (view.direction as string) === "bearish";
+  const outcome = gradeTargetHit(
+    !isDown,
+    targetLevel,
+    row.entryDate,
+    window.get(row.entryDate) ?? null,
+    window.get(dPlus1) ?? null
+  );
+  return { targetLevel, targetLabel, ...outcome };
 }
 
 /**
@@ -1658,20 +1707,13 @@ export async function pivotLevelBacktestSymbolOnDate(
     };
   }
 
-  const hits = (c: OHLC | null) => !!c && (isUpTarget ? c.high >= targetLevel : c.low <= targetLevel);
-
-  let hitDate: string | null = null;
-  let daysToHit: 0 | 1 | null = null;
-  if (hits(entryDayCandle)) {
-    hitDate = entryDateISO;
-    daysToHit = 0;
-  } else if (hits(nextDayCandle)) {
-    hitDate = dPlus1;
-    daysToHit = 1;
-  }
-
-  const outcome: BacktestRow["result"] =
-    entryDayCandle || nextDayCandle ? (hitDate ? "pass" : "fail") : "insufficient-data";
+  const { result: outcome, hitDate, daysToHit } = gradeTargetHit(
+    isUpTarget,
+    targetLevel,
+    entryDateISO,
+    entryDayCandle,
+    nextDayCandle
+  );
 
   return {
     symbol,

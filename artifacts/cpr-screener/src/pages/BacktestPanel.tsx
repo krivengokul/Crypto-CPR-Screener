@@ -25,11 +25,13 @@ import {
   deriveLevelCheckDefs,
   levelCheckFullyMatches,
   findTightestAdjacentBand,
+  evaluateBacktestViewOutcome,
   getAttachPointOptions,
   findContainingNodeKey,
   selectTopByChange,
   SYMBOL_LIST_ONLY_CATEGORY_KEYS,
   type BacktestRow,
+  type BacktestViewOutcome,
   type CategoryScanRow,
   type BacktestSource,
   type AttachPointOption,
@@ -233,6 +235,30 @@ function matchingView(raw: CPRResult, selectedKey: string): { label: string; key
     key: match.key,
     direction: normalizeViewDirection(match.direction as string | undefined),
   };
+}
+
+function hasViewsInScope(selectedKey: string): boolean {
+  return SYMBOL_LIST_ONLY_CATEGORY_KEYS.has(selectedKey) ||
+    VIEWS.some(
+      (view) =>
+        view.kind === "view" &&
+        (view.key === selectedKey || isViewDescendant(view.key, selectedKey))
+    );
+}
+
+async function addApplicableViewOutcomes<T extends Pick<CategoryScanRow, "symbol" | "source" | "entryDate" | "raw">>(
+  rows: T[],
+  scopeKey: string
+): Promise<(T & { viewOutcome: BacktestViewOutcome | null })[]> {
+  return Promise.all(
+    rows.map(async (row) => {
+      const view = matchingViewDef(row.raw, scopeKey);
+      return {
+        ...row,
+        viewOutcome: await evaluateBacktestViewOutcome(row, view),
+      };
+    })
+  );
 }
 
 /**
@@ -1839,7 +1865,9 @@ export default function BacktestPanel() {
   // Results-table pagination (50 rows/page) — keeps large result sets from
   // locking the DOM on a big multi-date run.
   const [resultPage, setResultPage] = useState(0);
-  const [categoryRows, setCategoryRows] = useState<(CategoryScanRow & { entryDate: string })[]>([]);
+  const [categoryRows, setCategoryRows] = useState<
+    (CategoryScanRow & { viewOutcome: BacktestViewOutcome | null })[]
+  >([]);
   const [changeSortDir, setChangeSortDir] = useState<"asc" | "desc" | null>(null);
   const [resultChangeSortDir, setResultChangeSortDir] = useState<"asc" | "desc" | null>(null);
   // Ladder Check column sort — mutually exclusive with resultChangeSortDir
@@ -1854,8 +1882,8 @@ export default function BacktestPanel() {
   // (the two fields present on both CategoryScanRow and BacktestRow).
   const [resultSearch, setResultSearch] = useState("");
 
-  // FIX (stale-results bug): the "Target: ... Pattern <label>" header and
-  // the dropdown's trigger label are derived live from `selectedKey`, but
+  // FIX (stale-results bug): the selected View's target header and the
+  // dropdown's trigger label are derived live from `selectedKey`, but
   // `rows`/`categoryRows` only get refreshed when `run()` is clicked. Without
   // this, changing the selection after a run finished (without re-running)
   // left the OLD pattern's results on screen underneath the NEW pattern's
@@ -1944,6 +1972,7 @@ export default function BacktestPanel() {
   const viewMatchScopeKey = isPatternOnly && activePatternInfo
     ? activePatternInfo.sub.key
     : selectedKey;
+  const scopedViewsAvailable = hasViewsInScope(viewMatchScopeKey);
 
   const isViewOnly = !isCategory && !isPatternOnly;
 
@@ -2124,12 +2153,15 @@ export default function BacktestPanel() {
             (done, total, symbol) => setProgress({ done, total, symbol })
           );
           const withDate = result.map((r) => ({ ...r, entryDate }));
-          setCategoryRows(
-            topByChangeDirection ? selectTopByChange(withDate, topByChangeDirection) : withDate
-          );
+          const selectedRows = topByChangeDirection
+            ? selectTopByChange(withDate, topByChangeDirection)
+            : withDate;
+          setCategoryRows(await addApplicableViewOutcomes(selectedRows, viewMatchScopeKey));
         } else {
           const dates = enumerateDatesUTC(fromDate, toDate);
-          const allRows: (CategoryScanRow & { entryDate: string })[] = [];
+          const allRows: (CategoryScanRow & {
+            viewOutcome: BacktestViewOutcome | null;
+          })[] = [];
           for (let i = 0; i < dates.length; i++) {
             const d = dates[i];
             setDateProgress({ current: i + 1, total: dates.length, date: d });
@@ -2141,8 +2173,11 @@ export default function BacktestPanel() {
               (done, total, symbol) => setProgress({ done, total, symbol })
             );
             const withDate = dayResult.map((r) => ({ ...r, entryDate: d }));
+            const selectedRows = topByChangeDirection
+              ? selectTopByChange(withDate, topByChangeDirection)
+              : withDate;
             allRows.push(
-              ...(topByChangeDirection ? selectTopByChange(withDate, topByChangeDirection) : withDate)
+              ...(await addApplicableViewOutcomes(selectedRows, viewMatchScopeKey))
             );
           }
           setCategoryRows(allRows);
@@ -2162,7 +2197,7 @@ export default function BacktestPanel() {
             matchesPatternFlag,
             (done, total, symbol) => setProgress({ done, total, symbol })
           );
-          setRows(result);
+          setRows(await addApplicableViewOutcomes(result, viewMatchScopeKey));
         } else {
           const dates = enumerateDatesUTC(fromDate, toDate);
           const allRows: BacktestRow[] = [];
@@ -2178,7 +2213,7 @@ export default function BacktestPanel() {
               matchesPatternFlag,
               (done, total, symbol) => setProgress({ done, total, symbol })
             );
-            allRows.push(...dayResult);
+            allRows.push(...(await addApplicableViewOutcomes(dayResult, viewMatchScopeKey)));
           }
           setRows(allRows);
         }
@@ -2241,14 +2276,16 @@ export default function BacktestPanel() {
     );
   }, [rows, resultSearch]);
 
-  const passCount = rows.filter((r) => r.result === "pass").length;
-  const failCount = rows.filter((r) => r.result === "fail").length;
-  const insufficientCount = rows.filter((r) => r.result === "insufficient-data").length;
-  // NEW: rows where the pattern matched but its target level came back
-  // non-finite (see backtest.ts's "invalid-target" fix) — excluded from
-  // gradedCount same as insufficient-data, since neither is a real pass/fail.
-  const invalidTargetCount = rows.filter((r) => r.result === "invalid-target").length;
-  const gradedCount = rows.length - insufficientCount - invalidTargetCount;
+  const rowResult = (row: BacktestRow) =>
+    isViewOnly ? row.result : row.viewOutcome?.result;
+  const passCount = rows.filter((r) => rowResult(r) === "pass").length;
+  const failCount = rows.filter((r) => rowResult(r) === "fail").length;
+  const insufficientCount = rows.filter((r) => rowResult(r) === "insufficient-data").length;
+  const invalidTargetCount = rows.filter((r) => rowResult(r) === "invalid-target").length;
+  const gradedCount = passCount + failCount;
+  const categoryPassCount = categoryRows.filter((r) => r.viewOutcome?.result === "pass").length;
+  const categoryFailCount = categoryRows.filter((r) => r.viewOutcome?.result === "fail").length;
+  const categoryGradedCount = categoryPassCount + categoryFailCount;
   const progressPct = progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0;
 
   // Ladder Check: one summary per row, scoped to `rows` — which only ever
@@ -2317,7 +2354,7 @@ export default function BacktestPanel() {
     [sortedRows, currentPage]
   );
 
-  const gradedRows = rows.filter((r) => r.result === "pass" || r.result === "fail");
+  const gradedRows = rows.filter((r) => rowResult(r) === "pass" || rowResult(r) === "fail");
   // Rows with no Level Check defined are excluded from both groups —
   // "undefined" is not a "mismatch".
   const fullMatchGraded = gradedRows.filter((r) => ladderByRow.get(r)?.fullMatch);
@@ -2326,10 +2363,10 @@ export default function BacktestPanel() {
     return !!l && l.hasConditions && !l.fullMatch;
   });
   const fullMatchHitRate = fullMatchGraded.length
-    ? Math.round((fullMatchGraded.filter((r) => r.result === "pass").length / fullMatchGraded.length) * 100)
+    ? Math.round((fullMatchGraded.filter((r) => rowResult(r) === "pass").length / fullMatchGraded.length) * 100)
     : null;
   const mismatchHitRate = mismatchGraded.length
-    ? Math.round((mismatchGraded.filter((r) => r.result === "pass").length / mismatchGraded.length) * 100)
+    ? Math.round((mismatchGraded.filter((r) => rowResult(r) === "pass").length / mismatchGraded.length) * 100)
     : null;
 
   const ChartLink = ({ symbol, source }: { symbol: string; source: BacktestSource }) =>
@@ -2683,24 +2720,10 @@ export default function BacktestPanel() {
         <div className="text-xs text-muted-foreground mb-3">
           Category scan — lists every symbol matching{" "}
           <span className="text-foreground font-medium">{activeCategory.label}</span>&apos;s base
-          condition on {dateMode === "range" ? "each date in the range" : "the entry date"}. No
-          Target/Result/Hit Date (select one of its sub-patterns or Pattern sub-categories above
-          for those).
-        </div>
-      )}
-      {isPatternOnly && activePatternInfo && (
-        <div className="text-xs text-muted-foreground mb-3">
-          Target: <span className="text-foreground font-medium">
-            {shortLevelLabel(activePatternTarget?.targetLabel) || "R4"}
-          </span>{" "}
-          (price must {activePatternTarget?.direction === "Down" || (activePatternTarget?.direction as string) === "bearish" ? "reach or fall below it" : "reach or exceed it"}) — every symbol matching{" "}
-          <span className="text-foreground font-medium">{activePatternInfo.category.label}</span>&apos;s
-          base condition AND Pattern{" "}
-          <span className="text-foreground font-medium">
-            {activePatternInfo.path.map((p) => p.label).join(" → ")}
-          </span>{" "}
-          on{" "}
-          {dateMode === "range" ? "each date in the range" : "the entry date"} is graded against it.
+          condition on {dateMode === "range" ? "each date in the range" : "the entry date"}.
+          {scopedViewsAvailable
+            ? " Matching nested Views are graded against their own targets; rows without an applicable View have no result."
+            : " No nested Views are available to grade."}
         </div>
       )}
 
@@ -2744,6 +2767,15 @@ export default function BacktestPanel() {
                 ? `${categoryRows.length} symbols matched ${symbolListLabel} across ${enumerateDatesUTC(fromDate, toDate).length} days (${fromDate} to ${toDate})`
                 : `${categoryRows.length} symbols matched ${symbolListLabel} on ${entryDate}`}
             </span>
+            {scopedViewsAvailable && categoryGradedCount > 0 && (
+              <>
+                <span className="text-green-400 font-medium">{categoryPassCount} pass</span>
+                <span className="text-destructive font-medium">{categoryFailCount} fail</span>
+                <span className="text-foreground font-medium">
+                  {Math.round((categoryPassCount / categoryGradedCount) * 100)}% hit rate
+                </span>
+              </>
+            )}
           </div>
 
           {categoryRows.length > 0 && (
@@ -2788,6 +2820,16 @@ export default function BacktestPanel() {
                         Pivot Size <PivotSizeInfo />
                       </span>
                     </th>
+                    {scopedViewsAvailable && (
+                      <>
+                        <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                          Result
+                        </th>
+                        <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                          Hit Date
+                        </th>
+                      </>
+                    )}
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       <button
                         type="button"
@@ -2876,6 +2918,45 @@ export default function BacktestPanel() {
                         <td className="px-3 py-2 font-mono whitespace-nowrap">
                           {renderPivotSizeCell(r.prevCPR, r.todayCPR, r.compressionRatio)}
                         </td>
+                        {scopedViewsAvailable && (
+                          <>
+                            <td className="px-3 py-2">
+                              {r.viewOutcome?.result === "pass" && (
+                                <span className="inline-flex items-center gap-1 text-xs font-medium text-green-400">
+                                  <CheckCircle2 className="w-3.5 h-3.5" /> Pass
+                                </span>
+                              )}
+                              {r.viewOutcome?.result === "fail" && (
+                                <span className="inline-flex items-center gap-1 text-xs font-medium text-destructive">
+                                  <XCircle className="w-3.5 h-3.5" /> Fail
+                                </span>
+                              )}
+                              {r.viewOutcome?.result === "insufficient-data" && (
+                                <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground">
+                                  <AlertCircle className="w-3.5 h-3.5" /> No data
+                                </span>
+                              )}
+                              {r.viewOutcome?.result === "invalid-target" && (
+                                <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-400">
+                                  <AlertCircle className="w-3.5 h-3.5" /> No target
+                                </span>
+                              )}
+                              {r.viewOutcome?.targetLevel !== null &&
+                                r.viewOutcome?.targetLevel !== undefined && (
+                                  <div className="font-mono text-[10px] text-muted-foreground">
+                                    {r.viewOutcome.targetLabel}: {fmt(r.viewOutcome.targetLevel)}
+                                  </div>
+                                )}
+                            </td>
+                            <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">
+                              {r.viewOutcome?.hitDate
+                                ? `${formatDisplay(r.viewOutcome.hitDate)} ${
+                                    r.viewOutcome.daysToHit === 0 ? "(entry day)" : "(next day)"
+                                  }`
+                                : ""}
+                            </td>
+                          </>
+                        )}
                         <td className={`px-3 py-2 font-mono text-sm font-medium ${chgColor}`}>
                           {chg !== null && chg !== undefined
                             ? `${chg >= 0 ? "+" : ""}${chg.toFixed(2)}%`
@@ -2887,7 +2968,7 @@ export default function BacktestPanel() {
                           r={toSRLadderData(r.raw, r.closePrice ?? undefined, r.prevClose ?? undefined, r.ppClose ?? undefined)}
                           rowKey={`${r.source}-${r.symbol}-${r.entryDate}`}
                           viewKey={isViewOnly ? selectedKey : undefined}
-                          colSpan={6}
+                          colSpan={scopedViewsAvailable ? 7 : 5}
                           todayPatternBadge={renderTodayPatternBadges(r.raw)}
                           prevPatternBadge={renderPrevPatternBadge(r.raw)}
                           pivotPatternBadge={renderPivotPatternBadge(r.raw)}
@@ -3176,22 +3257,22 @@ export default function BacktestPanel() {
                       </td>
                       <td className="px-3 py-2">
                         <div className="flex flex-col items-start gap-0.5">
-                          {r.result === "pass" && (
+                          {rowResult(r) === "pass" && (
                             <span className="inline-flex items-center gap-1 text-xs font-medium text-green-400">
                               <CheckCircle2 className="w-3.5 h-3.5" /> Pass
                             </span>
                           )}
-                          {r.result === "fail" && (
+                          {rowResult(r) === "fail" && (
                             <span className="inline-flex items-center gap-1 text-xs font-medium text-destructive">
                               <XCircle className="w-3.5 h-3.5" /> Fail
                             </span>
                           )}
-                          {r.result === "insufficient-data" && (
+                          {rowResult(r) === "insufficient-data" && (
                             <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground">
                               <AlertCircle className="w-3.5 h-3.5" /> No data
                             </span>
                           )}
-                          {r.result === "invalid-target" && (
+                          {rowResult(r) === "invalid-target" && (
                             <span
                               className="inline-flex items-center gap-1 text-xs font-medium text-amber-400"
                               title="Pattern matched, but its target level couldn't be computed for this date — not a real pass or fail."
@@ -3200,16 +3281,23 @@ export default function BacktestPanel() {
                             </span>
                           )}
                           <span className="font-mono text-[10px] text-muted-foreground">
-                            Target: {fmt(r.targetLevel)}
+                            {isViewOnly
+                              ? `Target: ${fmt(r.targetLevel)}`
+                              : r.viewOutcome?.targetLevel !== null &&
+                                  r.viewOutcome?.targetLevel !== undefined
+                                ? `${r.viewOutcome.targetLabel}: ${fmt(r.viewOutcome.targetLevel)}`
+                                : null}
                           </span>
                         </div>
                       </td>
                       <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">
-                        {r.hitDate ? (
+                        {(isViewOnly ? r.hitDate : r.viewOutcome?.hitDate) ? (
                           <div className="flex flex-col leading-tight">
-                            <span>{formatDisplay(r.hitDate)}</span>
+                            <span>{formatDisplay((isViewOnly ? r.hitDate : r.viewOutcome?.hitDate)!)}</span>
                             <span className="text-[11px] text-muted-foreground/70">
-                              {r.daysToHit === 0 ? "(entry day)" : "(next day)"}
+                              {(isViewOnly ? r.daysToHit : r.viewOutcome?.daysToHit) === 0
+                                ? "(entry day)"
+                                : "(next day)"}
                             </span>
                           </div>
                         ) : (

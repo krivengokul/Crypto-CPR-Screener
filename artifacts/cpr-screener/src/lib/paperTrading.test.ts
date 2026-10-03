@@ -5,6 +5,8 @@ import {
   summarizePaperTrades,
   type PaperTradeRecord,
 } from "./paperTrading.ts";
+import { gradeTargetHit } from "./backtestOutcome.ts";
+import type { OHLC } from "./cpr.ts";
 import { evaluateSignalCandles, livePriceCrossedBoundary } from "./signalOutcome.ts";
 
 function trade(overrides: Partial<PaperTradeRecord> = {}): PaperTradeRecord {
@@ -98,6 +100,22 @@ test("resolves the first reached boundary for a short signal", () => {
 
   assert.equal(outcome.status, "FAIL");
   assert.equal(outcome.exitPrice, 110);
+});
+
+test("grades a touched S4 target as a pass for a Down view", () => {
+  const candle: OHLC = {
+    openTime: Date.parse("2026-09-23T00:00:00.000Z"),
+    open: 0.058,
+    high: 0.059,
+    low: 0.04638,
+    close: 0.04638,
+    volume: 1,
+  };
+
+  assert.deepEqual(
+    gradeTargetHit(false, 0.0544, "2026-09-23", candle, null),
+    { result: "pass", hitDate: "2026-09-23", daysToHit: 0 }
+  );
 });
 
 test("live price beyond a short target resolves PASS when candle history is empty", () => {
