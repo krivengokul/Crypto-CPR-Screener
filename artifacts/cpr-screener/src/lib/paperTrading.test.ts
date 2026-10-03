@@ -147,6 +147,30 @@ test("UPEX uses the 05:30 IST day boundary and ignores candles outside completed
     true
   );
   assert.equal(
+    passesUpexFilter(
+      [
+        { ...candle(start, 101, 102), low: 95 },
+        { ...candle(start + 15 * 60_000, 99, 98), low: 96 },
+      ],
+      100,
+      start,
+      now
+    ),
+    true
+  );
+  assert.equal(
+    passesUpexFilter(
+      [
+        { ...candle(start, 101, 102), low: 99 },
+        { ...candle(start + 15 * 60_000, 99, 98), low: 97 },
+      ],
+      100,
+      start,
+      now
+    ),
+    false
+  );
+  assert.equal(
     passesUpexFilter([candle(start - 15 * 60_000, 99, 99)], 100, start, now),
     null
   );
@@ -183,6 +207,30 @@ test("P-UPEX checks the previous IST session and passes candles that are not ful
   assert.equal(
     passesUpexFilter([candle(start + 30 * 60_000, 101, 99)], 100, start, end),
     true
+  );
+  assert.equal(
+    passesUpexFilter(
+      [
+        { ...candle(start, 101, 102), low: 95 },
+        { ...candle(start + 15 * 60_000, 99, 98), low: 96 },
+      ],
+      100,
+      start,
+      end
+    ),
+    true
+  );
+  assert.equal(
+    passesUpexFilter(
+      [
+        { ...candle(start, 101, 102), low: 99 },
+        { ...candle(start + 15 * 60_000, 99, 98), low: 97 },
+      ],
+      100,
+      start,
+      end
+    ),
+    false
   );
   assert.equal(
     passesUpexFilter([candle(end, 99, 99)], 100, start, end),

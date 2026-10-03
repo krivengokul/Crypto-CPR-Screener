@@ -35,11 +35,28 @@ export function passesUpexFilter(
       candle.openTime >= startTime &&
       candle.openTime + CANDLE_INTERVAL_MS <= now &&
       Number.isFinite(candle.open) &&
-      Number.isFinite(candle.close)
-  );
+      Number.isFinite(candle.close) &&
+      Number.isFinite(candle.low)
+  ).sort((a, b) => a.openTime - b.openTime);
   if (completed.length === 0) return null;
 
-  return !completed.some((candle) => candle.open < bc && candle.close < bc);
+  let previousLowestWick: number | null = null;
+  for (const candle of completed) {
+    const fullBodyBelowBc = candle.open < bc && candle.close < bc;
+    const bodyLow = Math.min(candle.open, candle.close);
+    if (
+      fullBodyBelowBc &&
+      (previousLowestWick === null || bodyLow < previousLowestWick)
+    ) {
+      return false;
+    }
+    previousLowestWick =
+      previousLowestWick === null
+        ? candle.low
+        : Math.min(previousLowestWick, candle.low);
+  }
+
+  return true;
 }
 
 async function fetchJson(url: string): Promise<unknown | null> {

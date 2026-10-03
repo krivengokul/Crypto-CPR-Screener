@@ -1989,7 +1989,7 @@ export default function Screener({
                       ? "border-cyan-400 text-cyan-300"
                       : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
                   }`}
-                  title="For Binance and Delta, keep symbols with no previous-session 15-minute candle body (open and close) below previous day's CPR BC. CoinDCX results are not checked or filtered."
+                  title="For Binance and Delta, exclude a symbol only when a previous-session 15-minute candle body is below previous day's CPR BC and its lower body edge breaks below earlier session wick lows. CoinDCX results are not checked or filtered."
                 >
                   {upexProgress?.filter === "P-UPEX"
                     ? `P-UPEX ${upexProgress.done}/${upexProgress.total}`
@@ -2005,7 +2005,7 @@ export default function Screener({
                       ? "border-cyan-400 text-cyan-300"
                       : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
                   }`}
-                  title="For Binance and Delta, keep symbols with no completed 15-minute candle body (open and close) below today's CPR BC since 05:30 IST. CoinDCX results are not checked or filtered."
+                  title="For Binance and Delta, exclude a symbol only when a completed 15-minute candle body is below today's CPR BC and its lower body edge breaks below earlier session wick lows since 05:30 IST. CoinDCX results are not checked or filtered."
                 >
                   {upexProgress?.filter === "UPEX"
                     ? `UPEX ${upexProgress.done}/${upexProgress.total}`
