@@ -17,6 +17,10 @@ export function upexSessionStartUtcMs(now = Date.now()): number {
   return Date.UTC(istNow.getUTCFullYear(), istNow.getUTCMonth(), istNow.getUTCDate());
 }
 
+export function previousUpexSessionStartUtcMs(now = Date.now()): number {
+  return upexSessionStartUtcMs(now) - 24 * 60 * 60 * 1000;
+}
+
 export function passesUpexFilter(
   candles: OHLC[],
   bc: number,
@@ -100,29 +104,29 @@ function parseDeltaCandles(payload: unknown): OHLC[] {
 async function fetchUpexCandles(
   candidate: UpexCandidate,
   startTime: number,
-  now: number
+  endTime: number
 ): Promise<OHLC[] | null> {
   if (candidate.source === "binance") {
     const payload = await fetchJson(
       `https://fapi.binance.com/fapi/v1/klines?symbol=${encodeURIComponent(candidate.symbol)}` +
-        `&interval=15m&startTime=${startTime}&endTime=${now}&limit=100`
+        `&interval=15m&startTime=${startTime}&endTime=${endTime}&limit=100`
     );
     return payload === null ? null : parseBinanceCandles(payload);
   }
 
   const payload = await fetchJson(
     `${DELTA_BASE}/history/candles?symbol=${encodeURIComponent(candidate.symbol)}` +
-      `&resolution=15m&start=${Math.floor(startTime / 1000)}&end=${Math.floor(now / 1000)}`
+      `&resolution=15m&start=${Math.floor(startTime / 1000)}&end=${Math.floor(endTime / 1000)}`
   );
   return payload === null ? null : parseDeltaCandles(payload);
 }
 
-export async function findUpexSymbols(
+async function findSymbolsForSession(
   candidates: UpexCandidate[],
+  startTime: number,
+  endTime: number,
   onProgress?: (done: number, total: number) => void,
-  now = Date.now()
 ): Promise<{ included: Set<string>; unavailable: number }> {
-  const startTime = upexSessionStartUtcMs(now);
   const included = new Set<string>();
   let unavailable = 0;
 
@@ -130,11 +134,11 @@ export async function findUpexSymbols(
     const batch = candidates.slice(offset, offset + MAX_CONCURRENT_REQUESTS);
     const results = await Promise.all(
       batch.map(async (candidate) => {
-        const candles = await fetchUpexCandles(candidate, startTime, now);
+        const candles = await fetchUpexCandles(candidate, startTime, endTime);
         if (!candles) return { candidate, passes: null };
         return {
           candidate,
-          passes: passesUpexFilter(candles, candidate.bc, startTime, now),
+          passes: passesUpexFilter(candles, candidate.bc, startTime, endTime),
         };
       })
     );
@@ -147,4 +151,22 @@ export async function findUpexSymbols(
   }
 
   return { included, unavailable };
+}
+
+export function findUpexSymbols(
+  candidates: UpexCandidate[],
+  onProgress?: (done: number, total: number) => void,
+  now = Date.now()
+): Promise<{ included: Set<string>; unavailable: number }> {
+  return findSymbolsForSession(candidates, upexSessionStartUtcMs(now), now, onProgress);
+}
+
+export function findPreviousUpexSymbols(
+  candidates: UpexCandidate[],
+  onProgress?: (done: number, total: number) => void,
+  now = Date.now()
+): Promise<{ included: Set<string>; unavailable: number }> {
+  const endTime = upexSessionStartUtcMs(now);
+  const startTime = previousUpexSessionStartUtcMs(now);
+  return findSymbolsForSession(candidates, startTime, endTime, onProgress);
 }

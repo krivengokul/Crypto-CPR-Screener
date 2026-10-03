@@ -9,7 +9,11 @@ import { gradeTargetHit } from "./backtestOutcome.ts";
 import type { OHLC } from "./cpr.ts";
 import { evaluateSignalCandles, livePriceCrossedBoundary } from "./signalOutcome.ts";
 import { fromCoinDCXPair, toCoinDCXPair } from "./coinDCXPair.ts";
-import { passesUpexFilter, upexSessionStartUtcMs } from "./upexFilter.ts";
+import {
+  passesUpexFilter,
+  previousUpexSessionStartUtcMs,
+  upexSessionStartUtcMs,
+} from "./upexFilter.ts";
 
 function trade(overrides: Partial<PaperTradeRecord> = {}): PaperTradeRecord {
   return {
@@ -148,6 +152,40 @@ test("UPEX uses the 05:30 IST day boundary and ignores candles outside completed
   );
   assert.equal(
     passesUpexFilter([candle(now - 5 * 60_000, 99, 99)], 100, start, now),
+    null
+  );
+});
+
+test("P-UPEX checks the previous IST session and passes candles that are not fully below BC", () => {
+  const now = Date.parse("2026-10-03T08:07:00.000Z");
+  const end = upexSessionStartUtcMs(now);
+  const start = previousUpexSessionStartUtcMs(now);
+  assert.equal(start, Date.parse("2026-10-02T00:00:00.000Z"));
+  assert.equal(end, Date.parse("2026-10-03T00:00:00.000Z"));
+
+  const candle = (openTime: number, open: number, close: number): OHLC => ({
+    openTime,
+    open,
+    high: Math.max(open, close) + 1,
+    low: Math.min(open, close) - 1,
+    close,
+    volume: 1,
+  });
+
+  assert.equal(
+    passesUpexFilter([candle(start, 99, 99.5)], 100, start, end),
+    false
+  );
+  assert.equal(
+    passesUpexFilter([candle(start + 15 * 60_000, 99, 100)], 100, start, end),
+    true
+  );
+  assert.equal(
+    passesUpexFilter([candle(start + 30 * 60_000, 101, 99)], 100, start, end),
+    true
+  );
+  assert.equal(
+    passesUpexFilter([candle(end, 99, 99)], 100, start, end),
     null
   );
 });

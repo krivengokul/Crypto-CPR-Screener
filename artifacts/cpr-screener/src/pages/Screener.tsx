@@ -16,7 +16,7 @@ import { runScreener } from "@/lib/binance";
 import { runDeltaScreener } from "@/lib/delta";
 import { runCoinDCXScreener } from "@/lib/coinDCX";
 import { COINDCX_ENABLED } from "@/lib/featureFlags";
-import { findUpexSymbols } from "@/lib/upexFilter";
+import { findPreviousUpexSymbols, findUpexSymbols } from "@/lib/upexFilter";
 import type { CPRResult } from "@/lib/cpr";
 import { utcTodayISO, ENTRY_DEFS } from "@/lib/backtest";
 import {
@@ -301,7 +301,13 @@ export default function Screener({
   const [pdhPdlFilter, setPdhPdlFilter] = useState<"above" | "below" | "abovepu4" | "belowpl4" | "pdhgtu1" | "pdlltl1" | "s1r1in" | null>(null);
   const [upexFilter, setUpexFilter] = useState(false);
   const [upexIncludedSymbols, setUpexIncludedSymbols] = useState<Set<string>>(() => new Set());
-  const [upexProgress, setUpexProgress] = useState<{ done: number; total: number } | null>(null);
+  const [previousUpexFilter, setPreviousUpexFilter] = useState(false);
+  const [previousUpexIncludedSymbols, setPreviousUpexIncludedSymbols] = useState<Set<string>>(() => new Set());
+  const [upexProgress, setUpexProgress] = useState<{
+    done: number;
+    total: number;
+    filter: "P-UPEX" | "UPEX";
+  } | null>(null);
   const [upexMessage, setUpexMessage] = useState("");
   const upexRunRef = useRef(0);
   // Active / Ready status filter (grouped tab control in the search bar).
@@ -354,6 +360,8 @@ export default function Screener({
     upexRunRef.current += 1;
     setUpexFilter(false);
     setUpexIncludedSymbols(new Set());
+    setPreviousUpexFilter(false);
+    setPreviousUpexIncludedSymbols(new Set());
     setUpexProgress(null);
     setUpexMessage("");
   }, [activeTab]);
@@ -430,6 +438,8 @@ export default function Screener({
     upexRunRef.current += 1;
     setUpexFilter(false);
     setUpexIncludedSymbols(new Set());
+    setPreviousUpexFilter(false);
+    setPreviousUpexIncludedSymbols(new Set());
     setUpexProgress(null);
     setUpexMessage("");
     setStatus("scanning");
@@ -475,6 +485,8 @@ export default function Screener({
     upexRunRef.current += 1;
     setUpexFilter(false);
     setUpexIncludedSymbols(new Set());
+    setPreviousUpexFilter(false);
+    setPreviousUpexIncludedSymbols(new Set());
     setUpexProgress(null);
     setUpexMessage("");
     setDeltaStatus("scanning");
@@ -515,6 +527,8 @@ export default function Screener({
     upexRunRef.current += 1;
     setUpexFilter(false);
     setUpexIncludedSymbols(new Set());
+    setPreviousUpexFilter(false);
+    setPreviousUpexIncludedSymbols(new Set());
     setUpexProgress(null);
     setUpexMessage("");
     setCoinDCXStatus("scanning");
@@ -843,11 +857,16 @@ export default function Screener({
     return (showAll ? allResults : filtered).map((r) => ({ ...r, source: "binance" as const }));
   };
 
-  const handleUpexFilter = async () => {
+  const handleUpexFilter = async (period: "previous" | "today") => {
     if (upexProgress) return;
-    if (upexFilter) {
-      setUpexFilter(false);
-      setUpexIncludedSymbols(new Set());
+    const isPrevious = period === "previous";
+    const isActive = isPrevious ? previousUpexFilter : upexFilter;
+    const setActive = isPrevious ? setPreviousUpexFilter : setUpexFilter;
+    const setIncluded = isPrevious ? setPreviousUpexIncludedSymbols : setUpexIncludedSymbols;
+    const filterName = isPrevious ? "P-UPEX" : "UPEX";
+    if (isActive) {
+      setActive(false);
+      setIncluded(new Set());
       setUpexMessage("");
       return;
     }
@@ -861,35 +880,40 @@ export default function Screener({
           )
           .map((row) => [
             `${row.source}:${row.symbol}`,
-            { symbol: row.symbol, source: row.source, bc: row.todayCPR.bc },
+            {
+              symbol: row.symbol,
+              source: row.source,
+              bc: isPrevious ? row.prevCPR.bc : row.todayCPR.bc,
+            },
           ])
       ).values()
     );
     if (candidates.length === 0) {
       setUpexMessage(
         activeTab === "coindcx"
-          ? "UPEX checks Binance and Delta only; CoinDCX results are not filtered."
-          : "Run a Binance or Delta Screener scan before applying UPEX."
+          ? `${filterName} checks Binance and Delta only; CoinDCX results are not filtered.`
+          : `Run a Binance or Delta Screener scan before applying ${filterName}.`
       );
       return;
     }
 
     const runId = ++upexRunRef.current;
     setUpexMessage("");
-    setUpexProgress({ done: 0, total: candidates.length });
+    setUpexProgress({ done: 0, total: candidates.length, filter: filterName });
     try {
-      const { included, unavailable } = await findUpexSymbols(
+      const findSymbols = isPrevious ? findPreviousUpexSymbols : findUpexSymbols;
+      const { included, unavailable } = await findSymbols(
         candidates,
         (done, total) => {
-          if (runId === upexRunRef.current) setUpexProgress({ done, total });
+          if (runId === upexRunRef.current) setUpexProgress({ done, total, filter: filterName });
         }
       );
       if (runId !== upexRunRef.current) return;
-      setUpexIncludedSymbols(included);
-      setUpexFilter(true);
+      setIncluded(included);
+      setActive(true);
       setUpexMessage(
         unavailable > 0
-          ? `${unavailable} symbol${unavailable === 1 ? "" : "s"} excluded because completed 15m candle data was unavailable.`
+          ? `${unavailable} symbol${unavailable === 1 ? "" : "s"} excluded from ${filterName} because completed 15m candle data was unavailable.`
           : ""
       );
     } catch (cause) {
@@ -1078,6 +1102,12 @@ export default function Screener({
         r.source === "coindcx" ||
         upexIncludedSymbols.has(`${r.source}:${r.symbol}`)
     )
+    .filter(
+      (r) =>
+        !previousUpexFilter ||
+        r.source === "coindcx" ||
+        previousUpexIncludedSymbols.has(`${r.source}:${r.symbol}`)
+    )
     // Active / Ready status filter (see getRowStatus).
     .filter((r) => {
       if (statusFilter === "all") return true;
@@ -1201,7 +1231,7 @@ export default function Screener({
   // Helper: is any sub-filter active (to decide the result count label)
   const anySubFilter =
     !!activeGenericSignal ||
-    !!PatternFilter || !!touchFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter || upexFilter || statusFilter !== "all" || !!entryLevelFilter;
+    !!PatternFilter || !!touchFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter || upexFilter || previousUpexFilter || statusFilter !== "all" || !!entryLevelFilter;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -1952,7 +1982,23 @@ export default function Screener({
               {/* UPEX filter */}
               <div className="flex items-center gap-1 flex-wrap">
                 <button
-                  onClick={() => void handleUpexFilter()}
+                  onClick={() => void handleUpexFilter("previous")}
+                  disabled={!!upexProgress || currentAllCount === 0 || activeTab === "coindcx"}
+                  className={`text-xs px-2.5 py-1 rounded border transition-colors disabled:opacity-50 ${
+                    previousUpexFilter
+                      ? "border-cyan-400 text-cyan-300"
+                      : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
+                  }`}
+                  title="For Binance and Delta, keep symbols with no previous-session 15-minute candle body (open and close) below previous day's CPR BC. CoinDCX results are not checked or filtered."
+                >
+                  {upexProgress?.filter === "P-UPEX"
+                    ? `P-UPEX ${upexProgress.done}/${upexProgress.total}`
+                    : previousUpexFilter
+                      ? `✕ P-UPEX (${previousUpexIncludedSymbols.size})`
+                      : "P-UPEX"}
+                </button>
+                <button
+                  onClick={() => void handleUpexFilter("today")}
                   disabled={!!upexProgress || currentAllCount === 0 || activeTab === "coindcx"}
                   className={`text-xs px-2.5 py-1 rounded border transition-colors disabled:opacity-50 ${
                     upexFilter
@@ -1961,7 +2007,7 @@ export default function Screener({
                   }`}
                   title="For Binance and Delta, keep symbols with no completed 15-minute candle body (open and close) below today's CPR BC since 05:30 IST. CoinDCX results are not checked or filtered."
                 >
-                  {upexProgress
+                  {upexProgress?.filter === "UPEX"
                     ? `UPEX ${upexProgress.done}/${upexProgress.total}`
                     : upexFilter
                       ? `✕ UPEX (${upexIncludedSymbols.size})`
