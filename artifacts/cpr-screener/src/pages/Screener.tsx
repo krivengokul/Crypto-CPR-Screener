@@ -279,47 +279,13 @@ export default function Screener({
   const [showTouchList, setShowTouchList] = useState(false);
   const [touchFilter, setTouchFilter] = useState<string | null>(null);
   const [showSizeList, setShowSizeList] = useState(false);
-  const [showExitTimeList, setShowExitTimeList] = useState(false);
-  // NEW: ENTRY TIME — mirrors Exit Time's UI (label, 2-row hour grid,
-  // toggle button) but is not yet wired into the display filter chain.
-  // Functionality to filter by entry time will be added in a future update.
-  const [showEntryTimeList, setShowEntryTimeList] = useState(false);
-  const [entryTimeFilter, setEntryTimeFilter] = useState<string | null>(null);
-  // NEW: TIME filter — 24 hourly toggles (6AM..5AM next day). Selecting an
-  // hour shows only rows that satisfy at least one Views (sub-pattern)
-  // whose id/label ends with that hour, e.g. clicking "6PM" matches every
-  // sub-pattern id ending in ":6PM" (T1-U4:6AM, MeMi-eXHiL4U3-U4:6PM, etc.)
-  // across ALL parent patterns — independent of activeSignal.
-  const [exitTimeFilter, setExitTimeFilter] = useState<string | null>(null);
+  const [showPriceList, setShowPriceList] = useState(false);
   // NEW: ENTRY level filter — 13 buttons (R4..S4, same rungs as Create View's
   // Entry dropdown, minus the "Entry " prefix). Selecting one keeps only rows
   // that currently satisfy at least one View whose ENTRY is that rung.
   const [showEntryLevelList, setShowEntryLevelList] = useState(false);
   const [entryLevelFilter, setEntryLevelFilter] = useState<string | null>(null);
 
-  // NEW: full 24hr cycle starting at 5AM through 4AM the next day, split
-  // into two 12-item rows: 5AM..4PM on the first line, 5PM..4AM on the
-  // second — matching the requested layout.
-  const TIME_SLOTS: string[] = [
-    "5AM", "6AM", "7AM", "8AM", "9AM", "10AM", "11AM",
-    "12PM", "1PM", "2PM", "3PM", "4PM",
-    "5PM", "6PM", "7PM", "8PM", "9PM", "10PM", "11PM",
-    "12AM", "1AM", "2AM", "3AM", "4AM",
-  ];
-  const TIME_SLOTS_ROW1 = TIME_SLOTS.slice(0, 12); // 5AM..4PM
-  const TIME_SLOTS_ROW2 = TIME_SLOTS.slice(12);    // 5PM..4AM
-
-  // NEW: every sub-pattern (Views) id across every parent pattern whose
-  // id ends with ":<selected time>" — flattened once per exitTimeFilter change
-  // so the display filter below stays a cheap .some() lookup per row.
-  const exitTimeMatchedSubIds = useMemo(() => {
-    if (!exitTimeFilter) return [] as string[];
-    const suffix = `:${exitTimeFilter}`;
-    return Object.values(Views)
-      .flat()
-      .filter((s) => s.id.endsWith(suffix))
-      .map((s) => s.id);
-  }, [exitTimeFilter]);
   // NEW: every View that defines a target (i.e. a tradable signal), flattened
   // once — the ENTRY filter below reads each one's entry rung per row.
   const entrySignalViews = useMemo(
@@ -1118,13 +1084,6 @@ export default function Screener({
       const st = getRowStatus(r);
       return statusFilter === "active" ? st.active : st.ready;
     })
-    // NEW: TIME filter — when an hour is selected, keep only rows that
-    // satisfy at least one Views (sub-pattern) targeting that hour, across
-    // every parent pattern (independent of activeSignal/PatternFilter).
-    .filter((r) => {
-      if (!exitTimeFilter) return true;
-      return exitTimeMatchedSubIds.some((id) => passesPattern(r, id));
-    })
     // NEW: ENTRY filter — keep rows where at least one currently-active View
     // (condition passes) has the selected rung as its entry. Entry is the
     // View's own getEntry(r); Views without one never match.
@@ -1242,7 +1201,7 @@ export default function Screener({
   // Helper: is any sub-filter active (to decide the result count label)
   const anySubFilter =
     !!activeGenericSignal ||
-    !!PatternFilter || !!touchFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter || upexFilter || statusFilter !== "all" || !!exitTimeFilter || !!entryLevelFilter;
+    !!PatternFilter || !!touchFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter || upexFilter || statusFilter !== "all" || !!entryLevelFilter;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -1387,7 +1346,7 @@ export default function Screener({
           className={`flex flex-wrap items-center gap-2 ${
             currentStatus === "done" &&
             showAll &&
-            (showTouchList || showPatternList || showSizeList || showEntryTimeList || showExitTimeList || showEntryLevelList)
+            (showTouchList || showPatternList || showSizeList || showPriceList || showEntryLevelList)
               ? "mb-2"
               : "mb-4"
           }`}
@@ -1501,32 +1460,6 @@ export default function Screener({
               </button>
               <button
                 type="button"
-                onClick={() => setShowEntryTimeList((v) => !v)}
-                className={`flex items-center gap-0.5 text-xs font-bold uppercase tracking-wide px-2 py-1 rounded border border-border transition-colors shrink-0 ${
-                  showEntryTimeList
-                    ? "bg-foreground/15 text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-                title={showEntryTimeList ? "Hide entry time filters" : "Show entry time filters"}
-              >
-                <span className="leading-none">{showEntryTimeList ? "−" : "+"}</span>
-                NTime
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowExitTimeList((v) => !v)}
-                className={`flex items-center gap-0.5 text-xs font-bold uppercase tracking-wide px-2 py-1 rounded border border-border transition-colors shrink-0 ${
-                  showExitTimeList
-                    ? "bg-foreground/15 text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-                title={showExitTimeList ? "Hide exit time filters" : "Show exit time filters"}
-              >
-                <span className="leading-none">{showExitTimeList ? "−" : "+"}</span>
-                XTime
-              </button>
-              <button
-                type="button"
                 onClick={() => setShowEntryLevelList((v) => !v)}
                 className={`flex items-center gap-0.5 text-xs font-bold uppercase tracking-wide px-2 py-1 rounded border border-border transition-colors shrink-0 ${
                   showEntryLevelList
@@ -1537,6 +1470,19 @@ export default function Screener({
               >
                 <span className="leading-none">{showEntryLevelList ? "−" : "+"}</span>
                 Entry
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowPriceList((v) => !v)}
+                className={`flex items-center gap-0.5 text-xs font-bold uppercase tracking-wide px-2 py-1 rounded border border-border transition-colors shrink-0 ${
+                  showPriceList
+                    ? "bg-foreground/15 text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                title={showPriceList ? "Hide price filters" : "Show price filters"}
+              >
+                <span className="leading-none">{showPriceList ? "−" : "+"}</span>
+                Price
               </button>
             </div>
           )}
@@ -1593,12 +1539,12 @@ export default function Screener({
 
         {/* Show-all toggle + sub-filter buttons — only rendered when there's
             actually something inside to show (a Views sub-pattern row, or
-            one of the Patterns/Touch/Size/NTime/XTime panels toggled open).
+            one of the Patterns/Touch/Size/Entry/Price panels toggled open).
             Previously this wrapped div (with its mb-3 margin) always
             rendered once a scan was done, leaving an empty gap above the
             search bar whenever Show All was on and no panel was expanded. */}
         {currentStatus === "done" &&
-          (!showAll || showTouchList || showPatternList || showSizeList || showEntryTimeList || showExitTimeList || showEntryLevelList) && (
+          (!showAll || showTouchList || showPatternList || showSizeList || showEntryLevelList || showPriceList) && (
           <div className="flex flex-col gap-2 mb-3">
           {/* Signals row is empty while Show All is on — don't render it, or
               its zero-height box still adds a flex gap above the panels. */}
@@ -1902,115 +1848,54 @@ export default function Screener({
           </div>
           )}
 
-          {/* NEW: ENTRY TIME filter — mirrors Exit Time's UI (24 hourly
-              toggles, 5AM..4AM next day, 2-row grid aligned so row 2 sits
-              directly under row 1). Selection state only for now — not yet
-              wired into the display filter chain; functionality to filter
-              by entry time will be added in a future update. Whole section
-              hidden until "NTime +" is toggled on. */}
-          {showEntryTimeList && (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: `max-content repeat(${TIME_SLOTS_ROW1.length}, max-content)`,
-              columnGap: "6px",
-              rowGap: "6px",
-              alignItems: "center",
-            }}
-          >
-            <span
-              style={{ gridColumn: 1, gridRow: 1 }}
-              className="text-[10px] text-teal-400/90 uppercase tracking-wider mr-0.5 font-semibold"
+          {/* Price filters moved out of the search/source bar into this
+              panel; their existing single-select behavior is unchanged. */}
+          {showPriceList && (
+          <div className="flex items-center gap-1 flex-wrap">
+            <button
+              onClick={() => setPdhPdlFilter((v) => (v === "above" ? null : "above"))}
+              className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                pdhPdlFilter === "above"
+                  ? "border-green-400 text-green-400"
+                  : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
+              }`}
+              title="Show only rows where price is currently above yesterday's High (PDH)"
             >
-              Entry Time:
-            </span>
-            {TIME_SLOTS_ROW1.map((slot, i) => (
-              <button
-                key={slot}
-                style={{ gridColumn: i + 2, gridRow: 1 }}
-                onClick={() => setEntryTimeFilter((v) => (v === slot ? null : slot))}
-                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                  entryTimeFilter === slot
-                    ? "bg-foreground/15 text-foreground border-border"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-                title={`Entry time ~${slot} (filtering coming soon)`}
-              >
-                {entryTimeFilter === slot ? `✕ ${slot}` : slot}
-              </button>
-            ))}
-            {TIME_SLOTS_ROW2.map((slot, i) => (
-              <button
-                key={slot}
-                style={{ gridColumn: i + 2, gridRow: 2 }}
-                onClick={() => setEntryTimeFilter((v) => (v === slot ? null : slot))}
-                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                  entryTimeFilter === slot
-                    ? "bg-foreground/15 text-foreground border-border"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-                title={`Entry time ~${slot} (filtering coming soon)`}
-              >
-                {entryTimeFilter === slot ? `✕ ${slot}` : slot}
-              </button>
-            ))}
-          </div>
-          )}
-
-          {/* NEW: EXIT TIME filter — 24 hourly toggles (5AM..4AM next day),
-              2-row grid aligned so row 2 (5PM..4AM) sits directly under row 1
-              (5AM..4PM). Clicking an hour (e.g. "6PM") shows only rows that
-              satisfy at least one Views/sub-pattern targeting that hour,
-              across every parent pattern. Mutually exclusive (single
-              exitTimeFilter state), independent of activeSignal,
-              PatternFilter, and showAll. Whole section hidden until
-              "XTime +" is toggled on. */}
-          {showExitTimeList && (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: `max-content repeat(${TIME_SLOTS_ROW1.length}, max-content)`,
-              columnGap: "6px",
-              rowGap: "6px",
-              alignItems: "center",
-            }}
-          >
-            <span
-              style={{ gridColumn: 1, gridRow: 1 }}
-              className="text-[10px] text-indigo-400/90 uppercase tracking-wider mr-0.5 font-semibold"
+              {pdhPdlFilter === "above" ? "✕ >PDH" : ">PDH"}
+            </button>
+            <button
+              onClick={() => setPdhPdlFilter((v) => (v === "below" ? null : "below"))}
+              className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                pdhPdlFilter === "below"
+                  ? "border-destructive text-destructive"
+                  : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
+              }`}
+              title="Show only rows where price is currently below yesterday's Low (PDL)"
             >
-              Exit Time:
-            </span>
-            {TIME_SLOTS_ROW1.map((slot, i) => (
-              <button
-                key={slot}
-                style={{ gridColumn: i + 2, gridRow: 1 }}
-                onClick={() => setExitTimeFilter((v) => (v === slot ? null : slot))}
-                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                  exitTimeFilter === slot
-                    ? "bg-foreground/15 text-foreground border-border"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-                title={`Show only rows with a Views (sub-pattern) target of ~${slot}`}
-              >
-                {exitTimeFilter === slot ? `✕ ${slot}` : slot}
-              </button>
-            ))}
-            {TIME_SLOTS_ROW2.map((slot, i) => (
-              <button
-                key={slot}
-                style={{ gridColumn: i + 2, gridRow: 2 }}
-                onClick={() => setExitTimeFilter((v) => (v === slot ? null : slot))}
-                className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                  exitTimeFilter === slot
-                    ? "bg-foreground/15 text-foreground border-border"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-                title={`Show only rows with a Views (sub-pattern) target of ~${slot}`}
-              >
-                {exitTimeFilter === slot ? `✕ ${slot}` : slot}
-              </button>
-            ))}
+              {pdhPdlFilter === "below" ? "✕ <PDL" : "<PDL"}
+            </button>
+            <button
+              onClick={() => setPdhPdlFilter((v) => (v === "abovepu4" ? null : "abovepu4"))}
+              className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                pdhPdlFilter === "abovepu4"
+                  ? "border-emerald-400 text-emerald-400"
+                  : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
+              }`}
+              title="Show only rows where price is currently above previous day's R4 (PU4)"
+            >
+              {pdhPdlFilter === "abovepu4" ? "✕ >PU4" : ">PU4"}
+            </button>
+            <button
+              onClick={() => setPdhPdlFilter((v) => (v === "belowpl4" ? null : "belowpl4"))}
+              className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                pdhPdlFilter === "belowpl4"
+                  ? "border-red-400 text-red-400"
+                  : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
+              }`}
+              title="Show only rows where price is currently below previous day's S4 (PL4)"
+            >
+              {pdhPdlFilter === "belowpl4" ? "✕ <PL4" : "<PL4"}
+            </button>
           </div>
           )}
 
@@ -2064,12 +1949,7 @@ export default function Screener({
             </div>
 
             <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end flex-wrap">
-              {/* Price Level filter buttons — moved inline here (was its own
-                  labeled row further down, under "Price Level:"/"PDH/PDL:"
-                  headings). Labels dropped, same as Signal Desk's own
-                  Direction/Source Filter groups, which have no text prefix
-                  either — the button colors alone carry the meaning. Same
-                  pdhPdlFilter state and mutual-exclusivity as before. */}
+              {/* UPEX filter */}
               <div className="flex items-center gap-1 flex-wrap">
                 <button
                   onClick={() => void handleUpexFilter()}
@@ -2086,50 +1966,6 @@ export default function Screener({
                     : upexFilter
                       ? `✕ UPEX (${upexIncludedSymbols.size})`
                       : "UPEX"}
-                </button>
-                <button
-                  onClick={() => setPdhPdlFilter((v) => (v === "above" ? null : "above"))}
-                  className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                    pdhPdlFilter === "above"
-                      ? "border-green-400 text-green-400"
-                      : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
-                  }`}
-                  title="Show only rows where price is currently above yesterday's High (PDH)"
-                >
-                  {pdhPdlFilter === "above" ? "✕ >PDH" : ">PDH"}
-                </button>
-                <button
-                  onClick={() => setPdhPdlFilter((v) => (v === "below" ? null : "below"))}
-                  className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                    pdhPdlFilter === "below"
-                      ? "border-destructive text-destructive"
-                      : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
-                  }`}
-                  title="Show only rows where price is currently below yesterday's Low (PDL)"
-                >
-                  {pdhPdlFilter === "below" ? "✕ <PDL" : "<PDL"}
-                </button>
-                <button
-                  onClick={() => setPdhPdlFilter((v) => (v === "abovepu4" ? null : "abovepu4"))}
-                  className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                    pdhPdlFilter === "abovepu4"
-                      ? "border-emerald-400 text-emerald-400"
-                      : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
-                  }`}
-                  title="Show only rows where price is currently above previous day's R4 (PU4)"
-                >
-                  {pdhPdlFilter === "abovepu4" ? "✕ >PU4" : ">PU4"}
-                </button>
-                <button
-                  onClick={() => setPdhPdlFilter((v) => (v === "belowpl4" ? null : "belowpl4"))}
-                  className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                    pdhPdlFilter === "belowpl4"
-                      ? "border-red-400 text-red-400"
-                      : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
-                  }`}
-                  title="Show only rows where price is currently below previous day's S4 (PL4)"
-                >
-                  {pdhPdlFilter === "belowpl4" ? "✕ <PL4" : "<PL4"}
                 </button>
               </div>
               {upexMessage && (
