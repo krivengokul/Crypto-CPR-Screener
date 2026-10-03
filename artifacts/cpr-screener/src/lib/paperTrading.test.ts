@@ -10,6 +10,7 @@ import type { OHLC } from "./cpr.ts";
 import { evaluateSignalCandles, livePriceCrossedBoundary } from "./signalOutcome.ts";
 import { fromCoinDCXPair, toCoinDCXPair } from "./coinDCXPair.ts";
 import {
+  getUpexBc,
   passesUpexFilter,
   previousUpexSessionStartUtcMs,
   upexSessionStartUtcMs,
@@ -178,6 +179,11 @@ test("UPEX uses the 05:30 IST day boundary and ignores candles outside completed
     passesUpexFilter([candle(now - 5 * 60_000, 99, 99)], 100, start, now),
     null
   );
+});
+
+test("UPEX uses previous day's BC only for today's Overlap Above rows", () => {
+  assert.equal(getUpexBc(100, 90, true), 90);
+  assert.equal(getUpexBc(100, 90, false), 100);
 });
 
 test("P-UPEX checks the previous IST session and passes candles that are not fully below BC", () => {

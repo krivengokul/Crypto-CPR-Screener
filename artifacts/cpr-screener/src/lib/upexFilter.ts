@@ -12,6 +12,14 @@ export interface UpexCandidate {
   bc: number;
 }
 
+export function getUpexBc(
+  todayBc: number,
+  previousBc: number,
+  overlapsAboveToday: boolean
+): number {
+  return overlapsAboveToday ? previousBc : todayBc;
+}
+
 export function upexSessionStartUtcMs(now = Date.now()): number {
   const istNow = new Date(now + 330 * 60 * 1000);
   return Date.UTC(istNow.getUTCFullYear(), istNow.getUTCMonth(), istNow.getUTCDate());

@@ -16,7 +16,7 @@ import { runScreener } from "@/lib/binance";
 import { runDeltaScreener } from "@/lib/delta";
 import { runCoinDCXScreener } from "@/lib/coinDCX";
 import { COINDCX_ENABLED } from "@/lib/featureFlags";
-import { findPreviousUpexSymbols, findUpexSymbols } from "@/lib/upexFilter";
+import { findPreviousUpexSymbols, findUpexSymbols, getUpexBc } from "@/lib/upexFilter";
 import type { CPRResult } from "@/lib/cpr";
 import { utcTodayISO, ENTRY_DEFS } from "@/lib/backtest";
 import {
@@ -883,7 +883,9 @@ export default function Screener({
             {
               symbol: row.symbol,
               source: row.source,
-              bc: isPrevious ? row.prevCPR.bc : row.todayCPR.bc,
+              bc: isPrevious
+                ? row.prevCPR.bc
+                : getUpexBc(row.todayCPR.bc, row.prevCPR.bc, row.overlapHigher),
             },
           ])
       ).values()
@@ -2005,7 +2007,7 @@ export default function Screener({
                       ? "border-cyan-400 text-cyan-300"
                       : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
                   }`}
-                  title="For Binance and Delta, exclude a symbol only when a completed 15-minute candle body is below today's CPR BC and its lower body edge breaks below earlier session wick lows since 05:30 IST. CoinDCX results are not checked or filtered."
+                  title="For Binance and Delta, exclude a symbol only when a completed 15-minute candle body is below the reference BC and its lower body edge breaks below earlier session wick lows since 05:30 IST. Overlap Above today uses previous day's BC; all other rows use today's BC. CoinDCX results are not checked or filtered."
                 >
                   {upexProgress?.filter === "UPEX"
                     ? `UPEX ${upexProgress.done}/${upexProgress.total}`
