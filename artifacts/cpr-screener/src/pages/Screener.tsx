@@ -442,6 +442,26 @@ export default function Screener({
     const missing = currentCandidates.filter(
       (candidate) => !previousUpexResultsRef.current.has(cacheKey(candidate)),
     );
+    const syncPreparedFlags = () => {
+      setAllResults((rows) =>
+        rows.map((row) => ({
+          ...row,
+          previousUpexPass:
+            previousUpexResultsRef.current.get(
+              `${previousUpexSessionStart}|binance:${row.symbol}:${row.prevCPR.bc}`,
+            ) === true,
+        })),
+      );
+      setDeltaAllResults((rows) =>
+        rows.map((row) => ({
+          ...row,
+          previousUpexPass:
+            previousUpexResultsRef.current.get(
+              `${previousUpexSessionStart}|delta:${row.symbol}:${row.prevCPR.bc}`,
+            ) === true,
+        })),
+      );
+    };
     const updateIncluded = () => {
       setPreviousUpexIncludedSymbols(
         new Set(
@@ -452,6 +472,7 @@ export default function Screener({
       );
     };
     updateIncluded();
+    syncPreparedFlags();
 
     if (missing.length === 0) {
       setPreviousUpexReady(true);
@@ -481,6 +502,7 @@ export default function Screener({
         );
       }
       updateIncluded();
+      syncPreparedFlags();
       setPreviousUpexReady(true);
       setPreviousUpexProgress(null);
       setUpexMessage(

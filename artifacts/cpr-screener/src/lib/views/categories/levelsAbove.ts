@@ -3,6 +3,7 @@ import type { ViewDef } from "../types";
 import { dirTol, computePrevPattern, pickOuterLevelPattern } from "../../cpr";
 import { passesView } from "../registry";
 import { matchesGapBadge } from "../gapBadges";
+import { matchesCprAboveLevelStatus } from "../pUpexCprAbove";
 
 export const LEVELSABOVE_VIEWS: ViewDef[] = [
   // --- A-A-AA-AA's nested Subpattern children ---
@@ -1557,4 +1558,12 @@ export const LEVELSABOVE_VIEWS: ViewDef[] = [
   { key: "E-A-AA-SB-EU2L4", label: "E-A-AA-SB-EU2L4", parentKey: "E-A-AA-SB", kind: "pattern", condition: (r) => r.EU2L4, order: 6 },
 
   { key: "E-A-AA-OB-EU2L3", label: "E-A-AA-OB-EU2L3", parentKey: "E-A-AA-OB", kind: "pattern", condition: (r) => r.EU2L3, order: 0 },
+  {
+    key: "P-UPEX-CPRABOVE",
+    label: "P-UPEX-CPRABOVE",
+    parentKey: "levelsabove",
+    kind: "view",
+    condition: (r) => r.previousUpexPass === true && matchesCprAboveLevelStatus(r),
+    order: 999,
+  },
 ];

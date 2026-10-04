@@ -1,6 +1,7 @@
 import type { CPRResult } from "../../cpr";
 import type { ViewDef } from "../types";
 import { passesView } from "../registry";
+import { matchesCprAboveOverlapStatus } from "../pUpexCprAbove";
 
 const TOUCH_PATTERN_FLAGS = [
   "EL4U4", "EU4L4", "CL4U4", "EL3U3", "CU4L3", "EU3L4", "CL3U3",
@@ -753,6 +754,14 @@ export const OVERLAP_ABOVE_TOUCH_VIEWS: ViewDef[] = [
     order: 30,
   },
   { key: "OVA-E-A-OA-C-EU4L4", label: "E-A-OA-C-EU4L4", parentKey: "OVA-E-A-OA-C", kind: "pattern", condition: (r) => r.EU4L4, order: 0 },
+  {
+    key: "P-UPEX-CPRABOVE-OVA",
+    label: "P-UPEX-CPRABOVE",
+    parentKey: "OVA",
+    kind: "view",
+    condition: (r) => r.previousUpexPass === true && matchesCprAboveOverlapStatus(r),
+    order: 999,
+  },
   ...OVA_UNCLASSIFIED_PATTERNS,
 ];
 

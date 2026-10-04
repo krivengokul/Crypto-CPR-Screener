@@ -281,6 +281,8 @@ export interface CPRPairFlags {
 
 export interface CPRResult {
   symbol: string;
+  /** Prepared previous-session UPEX result; populated by the live Screener. */
+  previousUpexPass?: boolean;
   /** Binance only: "COMMOD" = commodity perp (CL/BZ/XAU/XAG), "TRADFI" = other TradFi
    *  perp (stocks/ETFs). Unset for ordinary crypto perps. Set in binance.ts. */
   assetClass?: "COMMOD" | "TRADFI";

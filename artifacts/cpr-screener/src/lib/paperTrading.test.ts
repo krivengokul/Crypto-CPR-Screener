@@ -15,6 +15,10 @@ import {
   previousUpexSessionStartUtcMs,
   upexSessionStartUtcMs,
 } from "./upexFilter.ts";
+import {
+  matchesCprAboveLevelStatus,
+  matchesCprAboveOverlapStatus,
+} from "./views/pUpexCprAbove.ts";
 
 function trade(overrides: Partial<PaperTradeRecord> = {}): PaperTradeRecord {
   return {
@@ -241,6 +245,42 @@ test("P-UPEX checks the previous IST session and passes candles that are not ful
   assert.equal(
     passesUpexFilter([candle(end, 99, 99)], 100, start, end),
     null
+  );
+});
+
+test("P-UPEX CPR ABOVE groups the four requested CPR status variants", () => {
+  const base = {
+    narrowCPR: false,
+    InsideCPR: false,
+    strWideCPR: false,
+    outCPR: false,
+    cprRising: false,
+    overlapHigher: false,
+  };
+
+  assert.equal(
+    matchesCprAboveLevelStatus({ ...base, narrowCPR: true, cprRising: true }),
+    true
+  );
+  assert.equal(
+    matchesCprAboveLevelStatus({ ...base, strWideCPR: true, cprRising: true }),
+    true
+  );
+  assert.equal(
+    matchesCprAboveOverlapStatus({ ...base, narrowCPR: true, overlapHigher: true }),
+    true
+  );
+  assert.equal(
+    matchesCprAboveOverlapStatus({ ...base, strWideCPR: true, overlapHigher: true }),
+    true
+  );
+  assert.equal(
+    matchesCprAboveLevelStatus({ ...base, narrowCPR: true, InsideCPR: true, cprRising: true }),
+    false
+  );
+  assert.equal(
+    matchesCprAboveLevelStatus({ ...base, strWideCPR: true, outCPR: true, cprRising: true }),
+    false
   );
 });
 
