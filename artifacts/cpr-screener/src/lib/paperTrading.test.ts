@@ -6,7 +6,8 @@ import {
   type PaperTradeRecord,
 } from "./paperTrading.ts";
 import { gradeTargetHit } from "./backtestOutcome.ts";
-import type { OHLC } from "./cpr.ts";
+import type { CPRLevels, OHLC } from "./cpr.ts";
+import { isTouchCPRCategory } from "./cpr.ts";
 import { evaluateSignalCandles, livePriceCrossedBoundary } from "./signalOutcome.ts";
 import { fromCoinDCXPair, toCoinDCXPair } from "./coinDCXPair.ts";
 import {
@@ -22,6 +23,7 @@ import {
 import {
   matchesCprAboveLevelStatus,
   matchesCprAboveOverlapStatus,
+  previousCprIsTouchCategory,
 } from "./views/pUpexCprAbove.ts";
 
 function trade(overrides: Partial<PaperTradeRecord> = {}): PaperTradeRecord {
@@ -286,6 +288,68 @@ test("P-UPEX CPR ABOVE groups the four requested CPR status variants", () => {
     matchesCprAboveLevelStatus({ ...base, strWideCPR: true, outCPR: true, cprRising: true }),
     false
   );
+});
+
+test("P-UPEX CPR ABOVE excludes symbols whose previous-day CPR pair is TOUCH", () => {
+  const levels = (tc: number, bc: number): CPRLevels => {
+    const pivot = (tc + bc) / 2;
+    const width = tc - bc;
+    const step = width / 2;
+    return {
+      pivot,
+      bc,
+      tc,
+      width,
+      widthPct: (width / pivot) * 100,
+      prevHigh: tc + width,
+      prevLow: bc - width,
+      prevClose: pivot,
+      r1: tc + step,
+      r2: tc + step * 2,
+      r3: tc + step * 3,
+      r4: tc + step * 4,
+      s1: bc - step,
+      s2: bc - step * 2,
+      s3: bc - step * 3,
+      s4: bc - step * 4,
+      HLSwitch: "HL-A",
+      hlGap: width,
+    };
+  };
+
+  const touchingPairs = [
+    [levels(101, 99), levels(101, 99)], // Equal
+    [levels(100.5, 99.5), levels(101, 99)], // Inside
+    [levels(102, 98), levels(101, 99)], // OutCPR
+    [levels(103, 101), levels(101, 99)], // Overlap Above
+    [levels(99, 97), levels(101, 99)], // Overlap Below
+  ];
+  for (const [previous, prior] of touchingPairs) {
+    assert.equal(isTouchCPRCategory(previous, prior), true);
+    assert.equal(
+      previousCprIsTouchCategory({ prevCPR: previous, ppCPR: prior }),
+      true,
+    );
+  }
+
+  assert.equal(
+    previousCprIsTouchCategory({
+      prevCPR: levels(103, 101),
+      ppCPR: levels(100, 98),
+    }),
+    false,
+  );
+  assert.equal(
+    previousCprIsTouchCategory({
+      prevCPR: levels(102, 98),
+      ppCPR: {
+        ...levels(101, 99),
+        r4: levels(101, 99).r1,
+      },
+    }),
+    false,
+  );
+  assert.equal(previousCprIsTouchCategory({ prevCPR: levels(101, 99) }), false);
 });
 
 test("historical P-UPEX checks the session before the selected backtest date and caches passes", async () => {

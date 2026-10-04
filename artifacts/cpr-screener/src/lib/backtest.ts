@@ -8,6 +8,7 @@ import { findPreviousUpexPass } from "./upexFilter";
 import {
   matchesCprAboveLevelStatus,
   matchesCprAboveOverlapStatus,
+  previousCprIsTouchCategory,
 } from "./views/pUpexCprAbove";
 
 
@@ -1482,9 +1483,12 @@ export async function backtestSymbolOnDate(
     if (source === "coindcx") return null;
     const matchesStructure =
       target.key === "P-UPEX-CPRABOVE"
-        ? result.LevelsAbove && matchesCprAboveLevelStatus(result)
+        ? result.LevelsAbove &&
+          !previousCprIsTouchCategory(result) &&
+          matchesCprAboveLevelStatus(result)
         : result.touchCategory &&
           result.overlapHigher &&
+          !previousCprIsTouchCategory(result) &&
           matchesCprAboveOverlapStatus(result);
     if (!matchesStructure) return null;
 
