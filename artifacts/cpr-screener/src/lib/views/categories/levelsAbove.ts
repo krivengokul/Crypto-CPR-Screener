@@ -1564,6 +1564,11 @@ export const LEVELSABOVE_VIEWS: ViewDef[] = [
     parentKey: "levelsabove",
     kind: "view",
     condition: (r) => r.previousUpexPass === true && matchesCprAboveLevelStatus(r),
+    direction: "Up",
+    targetLabel: "R4",
+    getTarget: (r) => r.todayCPR.r4,
+    stoplossLabel: "S1",
+    getStoploss: (r) => r.todayCPR.s1,
     order: 999,
   },
 ];
