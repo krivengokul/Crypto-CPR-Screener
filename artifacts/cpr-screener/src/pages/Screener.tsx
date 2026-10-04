@@ -283,6 +283,8 @@ export default function Screener({
   // the registry-backed navigation map. Holds the selected View id, or null.
   const [activeGenericSignal, setActiveGenericSignal] = useState<string | null>(null);
   const [PatternFilter, setPatternFilter] = useState<string | null>(null);
+  // Independent of the left-nav Views: cycles off -> BRK (fresh 15m squeeze breakouts) -> SQZ (coiling now).
+  const [breakoutMode, setBreakoutMode] = useState<"off" | "brk" | "sqz">("off");
   const [showPatternList, setShowPatternList] = useState(false);
   const [showTouchList, setShowTouchList] = useState(false);
   const [touchFilter, setTouchFilter] = useState<string | null>(null);
@@ -1105,6 +1107,11 @@ export default function Screener({
 
   const displayed = getActivePool()
     .filter(matchesSearch)
+    .filter((r) => {
+      if (breakoutMode === "off") return true;
+      if (breakoutMode === "brk") return !!r.breakout?.signal;
+      return !!r.breakout?.squeezeNow && !r.breakout?.signal;
+    })
     // NEW: CL2U1 / CL4U3 are independent booleans in cpr.ts (not
     // actually gated behind srLower), so a row can satisfy one of them
     // AND a higher-priority bucket (e.g. srHigher) at the same time.
@@ -1609,6 +1616,32 @@ export default function Screener({
               >
                 <span className="leading-none">{showAll ? "−" : "+"}</span>
                 Show All
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setBreakoutMode((m) => (m === "off" ? "brk" : m === "brk" ? "sqz" : "off"))
+                }
+                className={`flex items-center gap-0.5 text-xs font-bold uppercase tracking-wide px-2 py-1 rounded border transition-colors shrink-0 ${
+                  breakoutMode === "off"
+                    ? "border-border text-muted-foreground hover:text-foreground"
+                    : "border-amber-500/60 bg-amber-500/15 text-amber-300"
+                }`}
+                title="15m breakout filter: click to cycle Off → BRK (fresh squeeze breakouts, high rel. volume) → SQZ (coiling now)"
+              >
+                {breakoutMode === "off" ? "Breakout" : breakoutMode === "brk" ? "BRK" : "SQZ"}
+                {breakoutMode !== "off" && (
+                  <span className="font-mono">
+                    {" "}
+                    {
+                      getActivePool().filter((r) =>
+                        breakoutMode === "brk"
+                          ? !!r.breakout?.signal
+                          : !!r.breakout?.squeezeNow && !r.breakout?.signal
+                      ).length
+                    }
+                  </span>
+                )}
               </button>
               <button
                 type="button"

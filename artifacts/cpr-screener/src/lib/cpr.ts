@@ -1,3 +1,5 @@
+import type { BreakoutResult } from "./breakout";
+
 export interface OHLC {
   open: number;
   high: number;
@@ -283,6 +285,8 @@ export interface CPRResult {
   symbol: string;
   /** Prepared previous-session UPEX result; populated by the live Screener. */
   previousUpexPass?: boolean;
+  /** 15m squeeze + volume-breakout analysis; attached by binance.ts / delta.ts at scan time. */
+  breakout?: BreakoutResult;
   /** Binance only: "COMMOD" = commodity perp (CL/BZ/XAU/XAG), "TRADFI" = other TradFi
    *  perp (stocks/ETFs). Unset for ordinary crypto perps. Set in binance.ts. */
   assetClass?: "COMMOD" | "TRADFI";

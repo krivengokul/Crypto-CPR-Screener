@@ -1,5 +1,6 @@
 import { safeSetItem } from "./safeStorage";
 import { OHLC, CPRResult, analyzeCPR } from "./cpr";
+import { analyzeBreakout, levelsFromCPR } from "./breakout";
 import { shouldExcludeSymbol } from "./symbolFilters";
 import { fetchDeltaBaseTickers } from "./delta";
 
@@ -360,6 +361,29 @@ export async function fetchDailyKlines(
   return null;
 }
 
+/**
+ * Closed 15m futures candles for the squeeze/breakout detector (breakout.ts).
+ * Optional data: returns null on any failure (the symbol just gets no
+ * breakout badge) and never logs/blocks the CPR scan. The still-forming last
+ * candle is dropped so relative volume isn't understated.
+ */
+const FIFTEEN_MIN_MS = 15 * 60 * 1000;
+async function fetchIntradayKlines(symbol: string, limit = 300): Promise<OHLC[] | null> {
+  const res = await fetchWithRetry(
+    `${FBASE}/klines?symbol=${symbol}&interval=15m&limit=${limit}`,
+    { attempts: 3 }
+  );
+  if (!res?.ok) return null;
+  try {
+    const data: KlineRaw[] = await res.json();
+    if (!Array.isArray(data)) return null;
+    const now = Date.now();
+    return data.map(parseKline).filter((c) => c.openTime + FIFTEEN_MIN_MS <= now);
+  } catch {
+    return null;
+  }
+}
+
 // FIX: bumped from 4 → 6 (see note above); thin wrapper over the shared
 // fetcher so the live screener and the backtest cannot drift apart.
 async function fetchKlines(symbol: string): Promise<OHLC[] | null> {
@@ -436,7 +460,10 @@ export async function runScreener(
   const CONCURRENCY = 10;
 
   const perSymbolResults = await mapWithConcurrency(tickers, CONCURRENCY, async (t) => {
-    const klines = await fetchKlines(t.symbol);
+    const [klines, intraday] = await Promise.all([
+      fetchKlines(t.symbol),
+      fetchIntradayKlines(t.symbol),
+    ]);
     done++;
     onProgress(done, tickers.length, t.symbol);
 
@@ -506,6 +533,13 @@ export async function runScreener(
     );
     const assetClass = assetClassBySymbol.get(t.symbol);
     if (result && assetClass) result.assetClass = assetClass;
+    if (result && intraday) {
+      try {
+        result.breakout = analyzeBreakout(intraday, levelsFromCPR(result.todayCPR)) ?? undefined;
+      } catch (e) {
+        console.warn(`[binance] breakout analysis failed for ${t.symbol}`, e);
+      }
+    }
     return result;
   });
 

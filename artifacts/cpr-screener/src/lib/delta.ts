@@ -1,4 +1,5 @@
 import { OHLC, CPRResult, analyzeCPR } from "./cpr";
+import { analyzeBreakout, levelsFromCPR } from "./breakout";
 import { safeSetItem } from "./safeStorage";
 import { shouldExcludeSymbol } from "./symbolFilters";
 
@@ -227,6 +228,45 @@ async function fetchDeltaCandles(symbol: string): Promise<OHLC[] | null> {
   }
 }
 
+/**
+ * Closed 15m candles (~4 days) for the squeeze/breakout detector. Optional
+ * data: null on any failure; never blocks the CPR scan. Drops the forming candle.
+ */
+async function fetchDeltaIntradayCandles(symbol: string): Promise<OHLC[] | null> {
+  try {
+    const now = Math.floor(Date.now() / 1000);
+    const start = now - 4 * 86400;
+    const res = await fetch(
+      `${BASE}/history/candles?symbol=${symbol}&resolution=15m&start=${start}&end=${now}`,
+      { cache: "no-store" }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const raw: DeltaCandle[] | null = Array.isArray(data.result)
+      ? data.result
+      : Array.isArray(data.result?.candles)
+      ? data.result.candles
+      : Array.isArray(data.candles)
+      ? data.candles
+      : null;
+    if (!raw || raw.length < 2) return null;
+    raw.sort((a, b) => a.time - b.time);
+    const nowMs = Date.now();
+    return raw
+      .map((k) => ({
+        openTime: k.time > 1e10 ? k.time : k.time * 1000,
+        open: Number(k.open),
+        high: Number(k.high),
+        low: Number(k.low),
+        close: Number(k.close),
+        volume: Number(k.volume),
+      }))
+      .filter((c) => c.openTime + 15 * 60 * 1000 <= nowMs);
+  } catch {
+    return null;
+  }
+}
+
 export async function runDeltaScreener(
   onProgress: (done: number, total: number, symbol: string) => void
 ): Promise<CPRResult[]> {
@@ -248,7 +288,10 @@ export async function runDeltaScreener(
 
     const batchResults = await Promise.all(
       batch.map(async (t) => {
-        const candles = await fetchDeltaCandles(t.symbol);
+        const [candles, intraday] = await Promise.all([
+          fetchDeltaCandles(t.symbol),
+          fetchDeltaIntradayCandles(t.symbol),
+        ]);
         if (!candles || candles.length < 3) { nullCount++; return null; }
 
         const lastCandle = candles[candles.length - 1];
@@ -299,7 +342,7 @@ export async function runDeltaScreener(
           ? [ppCandle, prevCandle, todayCandle]
           : [prevCandle, todayCandle];
 
-        return analyzeCPR(
+        const cprResult = analyzeCPR(
           t.symbol,
           candlesForAnalysis,
           currentPrice,
@@ -307,6 +350,14 @@ export async function runDeltaScreener(
           t.turnover_usd || 0,
           todayLiveOpen ?? undefined   // today's session open (5:30 AM IST) for OPrice display
         );
+        if (cprResult && intraday) {
+          try {
+            cprResult.breakout = analyzeBreakout(intraday, levelsFromCPR(cprResult.todayCPR)) ?? undefined;
+          } catch (e) {
+            console.warn(`[delta] breakout analysis failed for ${t.symbol}`, e);
+          }
+        }
+        return cprResult;
       })
     );
 
