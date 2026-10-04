@@ -12,8 +12,11 @@ import { fromCoinDCXPair, toCoinDCXPair } from "./coinDCXPair.ts";
 import {
   findPreviousUpexPass,
   getUpexBc,
+  loadPreviousUpexResults,
   passesUpexFilter,
+  previousUpexCandidateCacheKey,
   previousUpexSessionStartUtcMs,
+  savePreviousUpexResults,
   upexSessionStartUtcMs,
 } from "./upexFilter.ts";
 import {
@@ -330,6 +333,47 @@ test("historical P-UPEX checks the session before the selected backtest date and
     assert.equal(fetchCount, 3);
   } finally {
     globalThis.fetch = originalFetch;
+  }
+});
+
+test("P-UPEX prepared results persist only for their matching session", () => {
+  const originalDescriptor = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
+  const values = new Map<string, string>();
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    value: {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => values.set(key, value),
+    },
+  });
+
+  try {
+    const sessionStart = Date.parse("2026-10-03T00:00:00.000Z");
+    const candidate = { symbol: "BTCUSDT", source: "binance" as const, bc: 100 };
+    const results = new Map([
+      [previousUpexCandidateCacheKey(sessionStart, candidate), true],
+      [
+        previousUpexCandidateCacheKey(sessionStart, {
+          symbol: "ETHUSDT",
+          source: "binance",
+          bc: 200,
+        }),
+        null,
+      ],
+    ]);
+    savePreviousUpexResults(sessionStart, results);
+
+    assert.deepEqual(
+      [...loadPreviousUpexResults(sessionStart)],
+      [...results],
+    );
+    assert.equal(loadPreviousUpexResults(sessionStart + 24 * 60 * 60 * 1000).size, 0);
+  } finally {
+    if (originalDescriptor) {
+      Object.defineProperty(globalThis, "localStorage", originalDescriptor);
+    } else {
+      Reflect.deleteProperty(globalThis, "localStorage");
+    }
   }
 });
 

@@ -1,10 +1,12 @@
 import type { OHLC } from "./cpr";
+import { safeSetItem } from "./safeStorage.ts";
 
 type UpexSource = "binance" | "delta";
 
 const DELTA_BASE = "https://api.india.delta.exchange/v2";
 const CANDLE_INTERVAL_MS = 15 * 60 * 1000;
 const MAX_CONCURRENT_REQUESTS = 8;
+const PREVIOUS_UPEX_CACHE_KEY = "cpr_previous_upex_results_v1";
 
 export interface UpexCandidate {
   symbol: string;
@@ -151,8 +153,13 @@ async function findSymbolsForSession(
   startTime: number,
   endTime: number,
   onProgress?: (done: number, total: number) => void,
-): Promise<{ included: Set<string>; unavailable: number }> {
+): Promise<{
+  included: Set<string>;
+  unavailable: number;
+  outcomes: Map<string, boolean | null>;
+}> {
   const included = new Set<string>();
+  const outcomes = new Map<string, boolean | null>();
   let unavailable = 0;
 
   for (let offset = 0; offset < candidates.length; offset += MAX_CONCURRENT_REQUESTS) {
@@ -169,13 +176,21 @@ async function findSymbolsForSession(
     );
 
     for (const { candidate, passes } of results) {
-      if (passes === true) included.add(`${candidate.source}:${candidate.symbol}`);
+      const symbolKey = `${candidate.source}:${candidate.symbol}`;
+      outcomes.set(symbolKey, passes);
+      if (passes === true) included.add(symbolKey);
       else if (passes === null) unavailable++;
     }
     onProgress?.(Math.min(offset + batch.length, candidates.length), candidates.length);
   }
 
-  return { included, unavailable };
+  return { included, unavailable, outcomes };
+}
+
+export interface PreviousUpexScanResults {
+  included: Set<string>;
+  unavailable: number;
+  outcomes: Map<string, boolean | null>;
 }
 
 export function findUpexSymbols(
@@ -190,10 +205,59 @@ export function findPreviousUpexSymbols(
   candidates: UpexCandidate[],
   onProgress?: (done: number, total: number) => void,
   now = Date.now()
-): Promise<{ included: Set<string>; unavailable: number }> {
+): Promise<PreviousUpexScanResults> {
   const endTime = upexSessionStartUtcMs(now);
   const startTime = previousUpexSessionStartUtcMs(now);
   return findSymbolsForSession(candidates, startTime, endTime, onProgress);
+}
+
+export function previousUpexCandidateCacheKey(
+  sessionStart: number,
+  candidate: UpexCandidate,
+): string {
+  return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.bc}`;
+}
+
+export function loadPreviousUpexResults(
+  sessionStart: number,
+): Map<string, boolean | null> {
+  try {
+    const raw = localStorage.getItem(PREVIOUS_UPEX_CACHE_KEY);
+    if (!raw) return new Map();
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      !("sessionStart" in parsed) ||
+      parsed.sessionStart !== sessionStart ||
+      !("results" in parsed) ||
+      !parsed.results ||
+      typeof parsed.results !== "object"
+    ) {
+      return new Map();
+    }
+
+    const results = new Map<string, boolean | null>();
+    for (const [key, value] of Object.entries(parsed.results)) {
+      if (typeof value === "boolean" || value === null) {
+        results.set(key, value);
+      }
+    }
+    return results;
+  } catch {
+    return new Map();
+  }
+}
+
+export function savePreviousUpexResults(
+  sessionStart: number,
+  results: Map<string, boolean | null>,
+): void {
+  const payload = JSON.stringify({
+    sessionStart,
+    results: Object.fromEntries(results),
+  });
+  safeSetItem(PREVIOUS_UPEX_CACHE_KEY, payload);
 }
 
 const previousUpexPassCache = new Map<string, Promise<boolean | null>>();

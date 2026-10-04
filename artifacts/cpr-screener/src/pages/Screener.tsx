@@ -20,7 +20,10 @@ import {
   findPreviousUpexSymbols,
   findUpexSymbols,
   getUpexBc,
+  loadPreviousUpexResults,
+  previousUpexCandidateCacheKey,
   previousUpexSessionStartUtcMs,
+  savePreviousUpexResults,
 } from "@/lib/upexFilter";
 import type { CPRResult } from "@/lib/cpr";
 import { utcTodayISO, ENTRY_DEFS } from "@/lib/backtest";
@@ -313,7 +316,11 @@ export default function Screener({
     total: number;
   } | null>(null);
   const [previousUpexReady, setPreviousUpexReady] = useState(false);
-  const previousUpexResultsRef = useRef<Map<string, boolean>>(new Map());
+  const previousUpexSessionStart = previousUpexSessionStartUtcMs();
+  const previousUpexResultsRef = useRef<Map<string, boolean | null>>(
+    loadPreviousUpexResults(previousUpexSessionStart),
+  );
+  const previousUpexCacheSessionRef = useRef(previousUpexSessionStart);
   const previousUpexRunRef = useRef(0);
   const [upexProgress, setUpexProgress] = useState<{
     done: number;
@@ -398,9 +405,11 @@ export default function Screener({
   useEffect(() => { coindcxAllResultsRef.current = coindcxAllResults; }, [coindcxAllResults]);
   useEffect(() => { activeSignalRef.current = activeSignal; }, [activeSignal]);
 
-  const previousUpexSessionStart = previousUpexSessionStartUtcMs();
-
   useEffect(() => {
+    if (previousUpexCacheSessionRef.current !== previousUpexSessionStart) {
+      previousUpexResultsRef.current = loadPreviousUpexResults(previousUpexSessionStart);
+      previousUpexCacheSessionRef.current = previousUpexSessionStart;
+    }
     if (
       status === "idle" ||
       status === "scanning" ||
@@ -438,7 +447,7 @@ export default function Screener({
     }
 
     const cacheKey = (candidate: (typeof currentCandidates)[number]) =>
-      `${previousUpexSessionStart}|${candidate.source}:${candidate.symbol}:${candidate.bc}`;
+      previousUpexCandidateCacheKey(previousUpexSessionStart, candidate);
     const missing = currentCandidates.filter(
       (candidate) => !previousUpexResultsRef.current.has(cacheKey(candidate)),
     );
@@ -477,6 +486,14 @@ export default function Screener({
     if (missing.length === 0) {
       setPreviousUpexReady(true);
       setPreviousUpexProgress(null);
+      const unavailable = currentCandidates.filter(
+        (candidate) => previousUpexResultsRef.current.get(cacheKey(candidate)) === null,
+      ).length;
+      setUpexMessage(
+        unavailable > 0
+          ? `${unavailable} symbol${unavailable === 1 ? "" : "s"} excluded from P-UPEX because completed 15m candle data was unavailable.`
+          : "",
+      );
       return;
     }
 
@@ -492,19 +509,23 @@ export default function Screener({
         }
       },
       previousUpexSessionStart + 24 * 60 * 60 * 1000,
-    ).then(({ included, unavailable }) => {
+    ).then(({ outcomes }) => {
       if (runId !== previousUpexRunRef.current) return;
       for (const candidate of missing) {
         const symbolKey = `${candidate.source}:${candidate.symbol}`;
         previousUpexResultsRef.current.set(
           cacheKey(candidate),
-          included.has(symbolKey),
+          outcomes.get(symbolKey) ?? null,
         );
       }
+      savePreviousUpexResults(previousUpexSessionStart, previousUpexResultsRef.current);
       updateIncluded();
       syncPreparedFlags();
       setPreviousUpexReady(true);
       setPreviousUpexProgress(null);
+      const unavailable = currentCandidates.filter(
+        (candidate) => previousUpexResultsRef.current.get(cacheKey(candidate)) === null,
+      ).length;
       setUpexMessage(
         unavailable > 0
           ? `${unavailable} symbol${unavailable === 1 ? "" : "s"} excluded from P-UPEX because completed 15m candle data was unavailable.`
