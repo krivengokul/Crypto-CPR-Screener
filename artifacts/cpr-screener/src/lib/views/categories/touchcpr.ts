@@ -1160,6 +1160,7 @@ export const INSIDE_CPR_TOUCH_VIEWS: ViewDef[] = [
     order: 24,
   },
   { key: "INCPR-C-A-HA-AA-CU3L2", label: "C-A-HA-AA-CU3L2", parentKey: "INCPR-C-A-HA-AA", kind: "pattern", condition: (r) => r.CU3L2, order: 0 },
+  { key: "INCPR-C-A-HA-AA-CU3L3", label: "C-A-HA-AA-CU3L3", parentKey: "INCPR-C-A-HA-AA", kind: "pattern", condition: (r) => r.CU3L3, order: 1 },
   {
     key: "INCPR-C-A-HA-AA-C-A-HA-AA",
     label: "C-A-HA-AA-C-A-HA-AA",
@@ -1167,7 +1168,7 @@ export const INSIDE_CPR_TOUCH_VIEWS: ViewDef[] = [
     kind: "pattern",
     condition: (r) =>
       getCompoundPatternForCprPair(r.prevCPR, r.ppCPR) === "C-A-HA-AA",
-    order: 1,
+    order: 2,
   },
   // --- B-C-BB-C (order 25) ---
   {
