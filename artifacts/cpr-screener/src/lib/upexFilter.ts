@@ -195,3 +195,43 @@ export function findPreviousUpexSymbols(
   const startTime = previousUpexSessionStartUtcMs(now);
   return findSymbolsForSession(candidates, startTime, endTime, onProgress);
 }
+
+const previousUpexPassCache = new Map<string, Promise<boolean | null>>();
+const MAX_PREVIOUS_UPEX_CACHE_ENTRIES = 20_000;
+
+/**
+ * Evaluate one symbol's previous-session candles for a historical/current
+ * session boundary. Successful pass/fail results are cached for date sweeps;
+ * unavailable candle data is not cached so a later retry can recover.
+ */
+export function findPreviousUpexPass(
+  candidate: UpexCandidate,
+  now: number
+): Promise<boolean | null> {
+  const endTime = upexSessionStartUtcMs(now);
+  const startTime = previousUpexSessionStartUtcMs(now);
+  const key =
+    `${startTime}:${candidate.source}:${candidate.symbol}:${candidate.bc}`;
+  const cached = previousUpexPassCache.get(key);
+  if (cached) return cached;
+
+  const request = findSymbolsForSession([candidate], startTime, endTime).then(
+    ({ included, unavailable }) => {
+      if (unavailable > 0) {
+        previousUpexPassCache.delete(key);
+        return null;
+      }
+      if (previousUpexPassCache.size > MAX_PREVIOUS_UPEX_CACHE_ENTRIES) {
+        const oldestKey = previousUpexPassCache.keys().next().value;
+        if (oldestKey) previousUpexPassCache.delete(oldestKey);
+      }
+      return included.has(`${candidate.source}:${candidate.symbol}`);
+    },
+    (error: unknown) => {
+      previousUpexPassCache.delete(key);
+      throw error;
+    }
+  );
+  previousUpexPassCache.set(key, request);
+  return request;
+}

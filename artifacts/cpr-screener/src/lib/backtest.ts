@@ -4,6 +4,11 @@ import { fetchDeltaPerps } from "./delta";
 import { fetchCoinDCXDailyKlines, fetchCoinDCXActiveSymbols } from "./coinDCX";
 import { buildViewTree, type ViewTreeNode, VIEWS, getView, type ViewDef, passesView, matchesGapBadge, ALL_GAP_BADGES } from "./views";
 import { gradeTargetHit } from "./backtestOutcome";
+import { findPreviousUpexPass } from "./upexFilter";
+import {
+  matchesCprAboveLevelStatus,
+  matchesCprAboveOverlapStatus,
+} from "./views/pUpexCprAbove";
 
 
 export type BacktestSource = "binance" | "delta" | "coindcx";
@@ -1461,13 +1466,36 @@ export async function backtestSymbolOnDate(
   source: BacktestSource,
   entryDateISO: string,
   target: ViewDef,
-  passesPatternFn: (r: CPRResult, pattern: string) => boolean
+  passesPatternFn: (r: CPRResult, pattern: string) => boolean,
+  onPreviousUpexUnavailable?: (symbol: string) => void
 ): Promise<BacktestRow | null> {
   const dPlus1 = addDaysISO(entryDateISO, 1);
 
   const reconstructed = await reconstructCPRForDate(symbol, source, entryDateISO);
   if (!reconstructed) return null;
   const { result, window } = reconstructed;
+
+  if (
+    target.key === "P-UPEX-CPRABOVE" ||
+    target.key === "P-UPEX-CPRABOVE-OVA"
+  ) {
+    if (source === "coindcx") return null;
+    const matchesStructure =
+      target.key === "P-UPEX-CPRABOVE"
+        ? result.LevelsAbove && matchesCprAboveLevelStatus(result)
+        : result.touchCategory &&
+          result.overlapHigher &&
+          matchesCprAboveOverlapStatus(result);
+    if (!matchesStructure) return null;
+
+    const sessionStart = Date.parse(`${entryDateISO}T00:00:00.000Z`);
+    const previousUpexPass = await findPreviousUpexPass(
+      { symbol, source, bc: result.prevCPR.bc },
+      sessionStart,
+    );
+    if (previousUpexPass === null) onPreviousUpexUnavailable?.(symbol);
+    result.previousUpexPass = previousUpexPass === true;
+  }
 
   if (!passesPatternFn(result, target.conditionKey ?? target.key)) return null; // didn't match the pattern on this date
   // NOTE: the View's 13/13 Level Check gate is intentionally NOT applied here.
@@ -1752,7 +1780,8 @@ export async function runBacktest(
   onProgress?: (done: number, total: number, symbol: string) => void,
   // NEW: streams matched rows to the UI as each batch resolves, instead of
   // waiting for the full scan to finish before showing anything.
-  onPartialRows?: (newRows: BacktestRow[]) => void
+  onPartialRows?: (newRows: BacktestRow[]) => void,
+  onWarning?: (message: string) => void
 ): Promise<BacktestRow[]> {
   const target = getView(patternKey);
   if (!target) throw new Error(`No backtest target defined yet for pattern "${patternKey}"`);
@@ -1762,20 +1791,20 @@ export async function runBacktest(
   // the initial universe prefetch reports progress instead of going silent.
   const symbols: string[] = await getSymbolUniverse(source, entryDateISO, onProgress);
 
-  // Warm the candle cache once; subsequent dates in a sweep hit memory only.
+  // Warm the daily-candle cache once; P-UPEX's 15-minute checks are
+  // separately date-scoped and cached by the UPEX helper.
   await prefetchHistories(symbols, source, onProgress);
 
   const rows: BacktestRow[] = [];
-  // PERF FIX: this was dropped from 50 to 25 in a recent change, which
-  // doubled the number of batch iterations (and doubled the number of
-  // yieldToBrowser() macrotask hops + onPartialRows/setRows re-renders)
-  // for the same symbol universe -- the direct cause of Run Backtest
-  // feeling slower. Raised to 100: by this point prefetchHistories has
-  // already warmed the whole universe into cache, so backtestSymbolOnDate
-  // is pure in-memory CPR reconstruction + pattern matching here, not
-  // network I/O -- a bigger batch costs nothing in lost parallelism and
-  // buys fewer round-trips through the loop below.
-  const batchSize = 100;
+  // P-UPEX requires a second historical candle request for structurally
+  // matching Binance/Delta rows, so keep its request concurrency bounded.
+  // Other Views use the warmed daily-history cache and can run in larger
+  // batches without generating more exchange traffic.
+  const batchSize =
+    target.key === "P-UPEX-CPRABOVE" || target.key === "P-UPEX-CPRABOVE-OVA"
+      ? 8
+      : 100;
+  let previousUpexUnavailable = 0;
 
   // PERF FIX: streamed rows are now buffered and flushed to onPartialRows
   // at most every FLUSH_INTERVAL_MS, instead of once per batch. Flushing
@@ -1801,7 +1830,16 @@ export async function runBacktest(
   for (let i = 0; i < symbols.length; i += batchSize) {
     const batch = symbols.slice(i, i + batchSize);
     const batchResults = await Promise.all(
-      batch.map((sym) => backtestSymbolOnDate(sym, source, entryDateISO, target, passesPatternFn))
+      batch.map((sym) =>
+        backtestSymbolOnDate(
+          sym,
+          source,
+          entryDateISO,
+          target,
+          passesPatternFn,
+          () => previousUpexUnavailable++,
+        ),
+      )
     );
     const isLastBatch = i + batchSize >= symbols.length;
     batchResults.forEach((r) => {
@@ -1810,6 +1848,14 @@ export async function runBacktest(
     maybeFlush(isLastBatch);
     onProgress?.(Math.min(i + batchSize, symbols.length), symbols.length, batch[batch.length - 1]);
     await yieldToBrowser();
+  }
+
+  if (previousUpexUnavailable > 0) {
+    const message =
+      `P-UPEX candles were unavailable for ${previousUpexUnavailable} structurally ` +
+      `matching ${source} symbol(s) on ${entryDateISO}; they were omitted, not counted as passing.`;
+    console.warn(`[backtest] ${message}`);
+    onWarning?.(message);
   }
 
   return rows;

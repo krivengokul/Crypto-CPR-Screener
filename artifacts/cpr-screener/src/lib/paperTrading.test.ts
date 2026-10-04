@@ -10,6 +10,7 @@ import type { OHLC } from "./cpr.ts";
 import { evaluateSignalCandles, livePriceCrossedBoundary } from "./signalOutcome.ts";
 import { fromCoinDCXPair, toCoinDCXPair } from "./coinDCXPair.ts";
 import {
+  findPreviousUpexPass,
   getUpexBc,
   passesUpexFilter,
   previousUpexSessionStartUtcMs,
@@ -282,6 +283,54 @@ test("P-UPEX CPR ABOVE groups the four requested CPR status variants", () => {
     matchesCprAboveLevelStatus({ ...base, strWideCPR: true, outCPR: true, cprRising: true }),
     false
   );
+});
+
+test("historical P-UPEX checks the session before the selected backtest date and caches passes", async () => {
+  const originalFetch = globalThis.fetch;
+  const entryDate = "2026-09-30";
+  const sessionStart = Date.parse(`${entryDate}T00:00:00.000Z`);
+  const expectedPreviousSession = sessionStart - 24 * 60 * 60 * 1000;
+  let fetchCount = 0;
+
+  globalThis.fetch = async (input) => {
+    fetchCount++;
+    const url = new URL(String(input));
+    assert.equal(Number(url.searchParams.get("startTime")), expectedPreviousSession);
+    assert.equal(Number(url.searchParams.get("endTime")), sessionStart);
+    const symbol = url.searchParams.get("symbol");
+    const candle = symbol === "PUEXFAILUSDT"
+      ? [expectedPreviousSession, "90", "96", "89", "95", "1"]
+      : symbol === "PUEXEMPTYUSDT"
+        ? null
+        : [expectedPreviousSession, "101", "103", "100.5", "102", "1"];
+    return new Response(
+      JSON.stringify(candle ? [candle] : []),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  };
+
+  try {
+    const candidate = { symbol: "PUEXTESTUSDT", source: "binance" as const, bc: 100 };
+    assert.equal(await findPreviousUpexPass(candidate, sessionStart), true);
+    assert.equal(await findPreviousUpexPass(candidate, sessionStart), true);
+    assert.equal(
+      await findPreviousUpexPass(
+        { ...candidate, symbol: "PUEXFAILUSDT" },
+        sessionStart,
+      ),
+      false,
+    );
+    assert.equal(
+      await findPreviousUpexPass(
+        { ...candidate, symbol: "PUEXEMPTYUSDT" },
+        sessionStart,
+      ),
+      null,
+    );
+    assert.equal(fetchCount, 3);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test("CoinDCX futures pair conversion is shared by the screener and UPEX", () => {

@@ -1875,6 +1875,7 @@ export default function BacktestPanel() {
   // sort on the pattern/View results table.
   const [ladderSortDir, setLadderSortDir] = useState<"asc" | "desc" | null>(null);
   const [error, setError] = useState("");
+  const [warning, setWarning] = useState("");
   // Live map of chart snapshots attached to symbol-date rows
   const chartLinks = useChartLinks();
   // Search box for the results tables (category scan + graded backtest) —
@@ -1898,6 +1899,7 @@ export default function BacktestPanel() {
     setRows([]);
     setCategoryRows([]);
     setError("");
+    setWarning("");
     setResultSearch("");
   }, [selectedKey]);
 
@@ -2125,6 +2127,7 @@ export default function BacktestPanel() {
 
     setStatus("running");
     setError("");
+    setWarning("");
     setRows([]);
     setCategoryRows([]);
       setChangeSortDir(null);
@@ -2225,7 +2228,8 @@ export default function BacktestPanel() {
           passesPatternNoLadder,
           (done, total, symbol) => setProgress({ done, total, symbol }),
           // Stream matched rows into the table as each batch resolves.
-          (streamed) => setRows((prev) => [...prev, ...streamed])
+          (streamed) => setRows((prev) => [...prev, ...streamed]),
+          (message) => setWarning(message)
         );
         setRows(result);
       } else {
@@ -2241,7 +2245,13 @@ export default function BacktestPanel() {
             passesPatternNoLadder,
             (done, total, symbol) => setProgress({ done, total, symbol }),
             // Stream matched rows into the table as each batch resolves.
-            (streamed) => setRows((prev) => [...prev, ...streamed])
+            (streamed) => setRows((prev) => [...prev, ...streamed]),
+            () =>
+              setWarning(
+                (current) =>
+                  current ||
+                  "Some P-UPEX candidates were omitted because historical candles were unavailable; see the browser console for per-date counts.",
+              )
           );
           allRows.push(...dayResult);
         }
@@ -2750,6 +2760,14 @@ export default function BacktestPanel() {
       {error && (
         <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
           Error: {error}
+        </div>
+      )}
+      {warning && (
+        <div
+          role="status"
+          className="mb-4 whitespace-pre-line rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-300"
+        >
+          {warning}
         </div>
       )}
 
