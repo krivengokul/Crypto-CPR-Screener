@@ -7,6 +7,7 @@ import {
 } from "./paperTrading.ts";
 import { gradeTargetHit } from "./backtestOutcome.ts";
 import type { OHLC } from "./cpr.ts";
+import { analyzeCPR, getCompoundPatternForCprPair } from "./cpr.ts";
 import { evaluateSignalCandles, livePriceCrossedBoundary } from "./signalOutcome.ts";
 import { fromCoinDCXPair, toCoinDCXPair } from "./coinDCXPair.ts";
 import {
@@ -33,6 +34,64 @@ function trade(overrides: Partial<PaperTradeRecord> = {}): PaperTradeRecord {
     ...overrides,
   };
 }
+
+test("previous compound pattern is reconstructed from the previous and prior CPRs", () => {
+  const candles: OHLC[] = [
+    { open: 100, high: 106, low: 98, close: 104, volume: 1, openTime: 0 },
+    { open: 104, high: 108, low: 101, close: 102, volume: 1, openTime: 1 },
+    { open: 102, high: 110, low: 100, close: 109, volume: 1, openTime: 2 },
+  ];
+  const result = analyzeCPR("TEST", candles, 109, 0, 1);
+  assert.ok(result?.ppCPR);
+
+  const previousPair = analyzeCPR(
+    "TEST",
+    [candles[0], candles[1]],
+    candles[1].close,
+    0,
+    1,
+  );
+  assert.ok(previousPair);
+  const expected = [
+    previousPair.SSRRCategory.replace("RRSS-", ""),
+    previousPair.HHLLCategory.replace("HHLL-", ""),
+    previousPair.RRHHCategory.replace("RRHH-", ""),
+    previousPair.SSLLCategory.replace("SSLL-", ""),
+  ].join("-");
+
+  assert.equal(
+    getCompoundPatternForCprPair(result.prevCPR, result.ppCPR),
+    expected,
+  );
+  assert.equal(getCompoundPatternForCprPair(result.prevCPR, null), null);
+});
+
+test("previous compound classifier can identify C-A-HA-AA", () => {
+  const candles: OHLC[] = [
+    {
+      open: 23.123521090085514,
+      high: 23.253315418287098,
+      low: 22.606897008867453,
+      close: 23.0838172184911,
+      volume: 1,
+      openTime: 0,
+    },
+    {
+      open: 23.287549313394244,
+      high: 23.446200789406106,
+      low: 22.95520643943593,
+      close: 23.033656870747567,
+      volume: 1,
+      openTime: 1,
+    },
+  ];
+  const pair = analyzeCPR("TEST", candles, candles[1].close, 0, 1);
+  assert.ok(pair);
+  assert.equal(
+    getCompoundPatternForCprPair(pair.todayCPR, pair.prevCPR),
+    "C-A-HA-AA",
+  );
+});
 
 test("calculates gross returns for long and short trades", () => {
   assert.equal(calculateGrossReturnPct(trade()), 10);

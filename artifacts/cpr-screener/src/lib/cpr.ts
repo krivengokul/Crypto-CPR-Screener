@@ -1750,3 +1750,45 @@ export function analyzeCPR(
     hlGapWinner,
   };
 }
+
+/**
+ * Classify the compound category formed by two consecutive CPR level sets.
+ * CPRLevels retains the source candle's high, low and close, allowing the
+ * normal CPR analyzer to apply the same category rules to historical pairs.
+ */
+export function getCompoundPatternForCprPair(
+  today: CPRLevels,
+  previous: CPRLevels | undefined | null,
+): string | null {
+  if (!previous) return null;
+
+  const toCandle = (levels: CPRLevels): OHLC => ({
+    open: levels.prevClose,
+    high: levels.prevHigh,
+    low: levels.prevLow,
+    close: levels.prevClose,
+    volume: 0,
+    openTime: 0,
+  });
+  const todayCandle = toCandle(today);
+  const previousCandle = toCandle(previous);
+  const result = analyzeCPR(
+    "",
+    [previousCandle, todayCandle],
+    todayCandle.close,
+    0,
+    0,
+    todayCandle.open,
+  );
+  if (!result) return null;
+
+  const parts = [
+    result.SSRRCategory.replace("RRSS-", ""),
+    result.HHLLCategory.replace("HHLL-", ""),
+    result.RRHHCategory.replace("RRHH-", ""),
+    result.SSLLCategory.replace("SSLL-", ""),
+  ];
+  return parts.some((part) => part === "none" || part === "Q")
+    ? null
+    : parts.join("-");
+}
