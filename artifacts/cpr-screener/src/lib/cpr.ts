@@ -1109,35 +1109,6 @@ export function classifyCPRPair(today: CPRLevels, prev: CPRLevels): CPRPairFlags
   };
 }
 
-/** Whether a (today, previous-day) CPR pair belongs to the TOUCH category. */
-export function isTouchCPRCategory(
-  today: CPRLevels,
-  prev: CPRLevels,
-  flags = classifyCPRPair(today, prev),
-): boolean {
-  const equalCPR =
-    eqTol(prev.tc, today.tc) &&
-    eqTol(prev.pivot, today.pivot) &&
-    eqTol(prev.bc, today.bc);
-  const outCPR = today.tc > prev.tc && today.bc < prev.bc;
-  const overlapHigher =
-    !equalCPR &&
-    today.bc >= prev.bc &&
-    today.bc <= prev.tc &&
-    today.tc > prev.tc;
-  const overlapLower =
-    !equalCPR &&
-    today.tc <= prev.tc &&
-    today.tc >= prev.bc &&
-    today.bc < prev.bc;
-
-  return (
-    !flags.R1AbovePR4 &&
-    !flags.S1BelowPS4 &&
-    (equalCPR || flags.InsideCPR || outCPR || overlapHigher || overlapLower)
-  );
-}
-
 /**
  * OuterPatternKey — every CPRPairFlags key that is one of the named
  * (today vs prev) band-classification patterns, e.g. "L2U4", "EU2L4",
@@ -1448,7 +1419,10 @@ export function analyzeCPR(
   // in LiveScanner or BacktestPanel. A CPR pair can satisfy a raw touch
   // shape and a direction category at the same time; TOUCH owns that pair
   // unless it has already crossed a previous Level4 boundary.
-  const touchCategory = isTouchCPRCategory(todayCPR, prevCPR, flags);
+  const touchCategory =
+    !flags.R1AbovePR4 &&
+    !flags.S1BelowPS4 &&
+    (equalCPR || flags.InsideCPR || outCPR || overlapHigher || overlapLower);
   const compressed = !touchCategory && flags.compressed;
   const expanded = !touchCategory && flags.expanded;
   const LevelsBelow = !touchCategory && flags.LevelsBelow;
