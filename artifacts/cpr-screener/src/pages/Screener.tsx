@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo, Fragment } from "rea
 import { pivotcategories, Views, VIEW_LABEL_BY_ID, requestSignalDeselect } from "@/lib/ViewsSidebar";
 import { getView, VIEWS } from "@/lib/views";
 import { hasTouchedEntry } from "@/lib/signalTracker";
+import { sessionReachedTarget } from "@/lib/signalOutcome";
 import {
   TrendingUp,
   RefreshCw,
@@ -185,7 +186,13 @@ function getRowStatus(r: CPRResult): { active: boolean; ready: boolean } {
   for (const v of getMatchingSignals(r)) {
     const entryFn = getView(v.id)?.getEntry;
     if (!entryFn) continue;
-    if (hasTouchedEntry(v.direction ?? "", entryFn(r), r.currentPrice)) active = true;
+    // A target already reached today (even if price has since retraced) means
+    // the entry was necessarily touched, so it counts as Active - never Ready.
+    const targetFn = getView(v.id)?.getTarget;
+    const passed =
+      !!targetFn &&
+      sessionReachedTarget(v.direction ?? "", targetFn(r), r.todayHigh, r.todayLow, r.currentPrice);
+    if (passed || hasTouchedEntry(v.direction ?? "", entryFn(r), r.currentPrice)) active = true;
     else ready = true;
     if (active && ready) break;
   }

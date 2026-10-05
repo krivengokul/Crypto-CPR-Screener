@@ -442,6 +442,9 @@ export interface CPRResult {
   /** PDay-1 candle's close — the "Price" row in the PDay-1 S/R ladder. Only present when a pp candle exists (mirrors ppCPR). */
   ppClose?: number;
   openPrice: number;
+  /** Highest / lowest price of today's session candle at scan time. Lets Pass stay latched after price retraces from the target. Absent in results cached before this field existed (rescan to populate). */
+  todayHigh?: number;
+  todayLow?: number;
   change24h: number;
   quoteVolume: number;
   prevR1Gap: number;
@@ -1739,6 +1742,8 @@ export function analyzeCPR(
     currentPrice,
     prevClose: prevCandle.close,
     openPrice: openPrice ?? todayCandle.open,
+    todayHigh: todayCandle.high,
+    todayLow: todayCandle.low,
     change24h,
     quoteVolume,
     prevR1Gap,

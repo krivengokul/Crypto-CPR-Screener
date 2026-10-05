@@ -1,7 +1,7 @@
 import { Fragment } from "react";
 import { ExternalLink, CheckCircle2, XCircle, Cloud, Clock } from "lucide-react";
 import { hasTouchedEntry } from "@/lib/signalTracker";
-import { livePriceReachedTarget } from "@/lib/signalOutcome";
+import { sessionReachedTarget } from "@/lib/signalOutcome";
 import type { CPRResult } from "@/lib/cpr";
 import { getView } from "@/lib/views";
 import {
@@ -670,7 +670,7 @@ export function renderMatchingSignals(
         const entryFn = view?.getEntry;
         const targetFn = view?.getTarget;
         const status: "pass" | "active" | "ready" | null = targetFn &&
-          livePriceReachedTarget(v.direction ?? "", targetFn(r), r.currentPrice)
+          sessionReachedTarget(v.direction ?? "", targetFn(r), r.todayHigh, r.todayLow, r.currentPrice)
           ? "pass"
           : entryFn
             ? hasTouchedEntry(v.direction ?? "", entryFn(r), r.currentPrice)
@@ -695,7 +695,7 @@ export function renderMatchingSignals(
               {status === "pass" && (
                 <span
                   className="inline-flex shrink-0 items-center gap-1 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-1.5 py-1 text-[11px] font-mono text-emerald-400"
-                  title="Live price has reached the View target"
+                  title="Target reached - live price now, or earlier in today's session (session high/low)"
                 >
                   <CheckCircle2 className="w-3 h-3" />
                   Pass

@@ -98,6 +98,33 @@ export function livePriceCrossedBoundary(
   return false;
 }
 
+/**
+ * Has the target been reached at any point this session? True if the live
+ * price is at/through the target OR today's session high (Up) / low (Down)
+ * got there. Without the session extreme, a coin that hit the target and then
+ * retraced (pump-and-crash) falls back to "Ready" even though the trade has
+ * already played out. Session high/low are optional: when missing (results
+ * cached before they were stored) this behaves exactly like
+ * livePriceReachedTarget.
+ */
+export function sessionReachedTarget(
+  direction: string,
+  target: number,
+  sessionHigh: number | undefined,
+  sessionLow: number | undefined,
+  livePrice: number | undefined
+): boolean {
+  if (livePriceReachedTarget(direction, target, livePrice)) return true;
+  if (!Number.isFinite(target)) return false;
+  if (direction === "Up" || direction === "LONG") {
+    return sessionHigh !== undefined && Number.isFinite(sessionHigh) && sessionHigh >= target;
+  }
+  if (direction === "Down" || direction === "SHORT") {
+    return sessionLow !== undefined && Number.isFinite(sessionLow) && sessionLow > 0 && sessionLow <= target;
+  }
+  return false;
+}
+
 export function livePriceReachedTarget(
   direction: string,
   target: number,
