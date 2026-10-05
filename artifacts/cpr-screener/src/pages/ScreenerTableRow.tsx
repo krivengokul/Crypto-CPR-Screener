@@ -1,6 +1,7 @@
 import { Fragment } from "react";
 import { ExternalLink, CheckCircle2, XCircle, Cloud, Clock } from "lucide-react";
 import { hasTouchedEntry } from "@/lib/signalTracker";
+import { livePriceReachedTarget } from "@/lib/signalOutcome";
 import type { CPRResult } from "@/lib/cpr";
 import { getView } from "@/lib/views";
 import {
@@ -665,15 +666,17 @@ export function renderMatchingSignals(
   return (
     <div className="flex flex-col gap-1.5 max-w-[240px]">
       {views.map((v) => {
-        // Same Active/Ready rule Signal Desk uses: a tradable View (has its
-        // own entry) is Active once price has touched the entry line,
-        // otherwise Ready. Views without an entry show no status.
-        const entryFn = getView(v.id)?.getEntry;
-        const status: "active" | "ready" | null = entryFn
-          ? hasTouchedEntry(v.direction ?? "", entryFn(r), r.currentPrice)
-            ? "active"
-            : "ready"
-          : null;
+        const view = getView(v.id);
+        const entryFn = view?.getEntry;
+        const targetFn = view?.getTarget;
+        const status: "pass" | "active" | "ready" | null = targetFn &&
+          livePriceReachedTarget(v.direction ?? "", targetFn(r), r.currentPrice)
+          ? "pass"
+          : entryFn
+            ? hasTouchedEntry(v.direction ?? "", entryFn(r), r.currentPrice)
+              ? "active"
+              : "ready"
+            : null;
         const tone =
           v.direction === "Up"
             ? "border-green-500/40 bg-green-500/10 text-green-400"
@@ -689,6 +692,15 @@ export function renderMatchingSignals(
               >
                 {v.label}
               </span>
+              {status === "pass" && (
+                <span
+                  className="inline-flex shrink-0 items-center gap-1 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-1.5 py-1 text-[11px] font-mono text-emerald-400"
+                  title="Live price has reached the View target"
+                >
+                  <CheckCircle2 className="w-3 h-3" />
+                  Pass
+                </span>
+              )}
               {status === "active" && (
                 <span
                   className="inline-flex shrink-0 items-center gap-1 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-1.5 py-1 text-[11px] font-mono text-emerald-400"

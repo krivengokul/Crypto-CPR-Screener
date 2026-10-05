@@ -97,3 +97,20 @@ export function livePriceCrossedBoundary(
   if (isDown) return livePrice <= signal.target || livePrice >= signal.sl;
   return false;
 }
+
+export function livePriceReachedTarget(
+  direction: string,
+  target: number,
+  livePrice: number | undefined
+): boolean {
+  if (
+    livePrice === undefined ||
+    !Number.isFinite(livePrice) ||
+    livePrice <= 0 ||
+    !Number.isFinite(target)
+  ) return false;
+
+  if (direction === "Up" || direction === "LONG") return livePrice >= target;
+  if (direction === "Down" || direction === "SHORT") return livePrice <= target;
+  return false;
+}

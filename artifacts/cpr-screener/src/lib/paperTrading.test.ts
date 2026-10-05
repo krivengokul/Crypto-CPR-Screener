@@ -8,7 +8,11 @@ import {
 import { gradeTargetHit } from "./backtestOutcome.ts";
 import type { OHLC } from "./cpr.ts";
 import { analyzeCPR, getCompoundPatternForCprPair } from "./cpr.ts";
-import { evaluateSignalCandles, livePriceCrossedBoundary } from "./signalOutcome.ts";
+import {
+  evaluateSignalCandles,
+  livePriceCrossedBoundary,
+  livePriceReachedTarget,
+} from "./signalOutcome.ts";
 import { fromCoinDCXPair, toCoinDCXPair } from "./coinDCXPair.ts";
 import {
   findPrevious15MBSymbols,
@@ -624,4 +628,15 @@ test("livePriceCrossedBoundary detects target and stop for both directions", () 
   assert.equal(livePriceCrossedBoundary(long, 89), true);
   assert.equal(livePriceCrossedBoundary(long, 100), false);
   assert.equal(livePriceCrossedBoundary(long, undefined), false);
+});
+
+test("livePriceReachedTarget recognizes Up and Down target prices only", () => {
+  assert.equal(livePriceReachedTarget("Up", 110, 110), true);
+  assert.equal(livePriceReachedTarget("Up", 110, 111), true);
+  assert.equal(livePriceReachedTarget("Up", 110, 109), false);
+  assert.equal(livePriceReachedTarget("Down", 90, 90), true);
+  assert.equal(livePriceReachedTarget("Down", 90, 89), true);
+  assert.equal(livePriceReachedTarget("Down", 90, 91), false);
+  assert.equal(livePriceReachedTarget("NEUTRAL", 100, 110), false);
+  assert.equal(livePriceReachedTarget("Up", 100, undefined), false);
 });
