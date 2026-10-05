@@ -302,6 +302,8 @@ export async function runDeltaScreener(
         let prevCandle: OHLC;
         let todayCandle: OHLC;
         let todayLiveOpen: number | null = null;
+        let liveHigh: number | null = null;
+        let liveLow: number | null = null;
         // ADK FIX: pp candle — the completed daily candle immediately before
         // prevCandle. Needed for the "pWideAbove" sub-toggle. Previously this
         // was always undefined because only [prevCandle, todayCandle] was
@@ -314,6 +316,8 @@ export async function runDeltaScreener(
           prevCandle     = candles[candles.length - 3]; // 2 days ago (completed)
           todayCandle    = candles[candles.length - 2]; // yesterday (completed) → today's CPR
           todayLiveOpen  = lastCandle.open;              // today's forming candle open (fresh from API)
+          liveHigh       = lastCandle.high;              // session extremes for the Pass latch
+          liveLow        = lastCandle.low;
           if (candles.length >= 4) ppCandle = candles[candles.length - 4];
         } else {
           if (candles.length < 2) return null;
@@ -350,6 +354,10 @@ export async function runDeltaScreener(
           t.turnover_usd || 0,
           todayLiveOpen ?? undefined   // today's session open (5:30 AM IST) for OPrice display
         );
+        if (cprResult && liveHigh !== null && liveLow !== null) {
+          cprResult.todayHigh = Math.max(liveHigh, currentPrice);
+          cprResult.todayLow = Math.min(liveLow, currentPrice);
+        }
         if (cprResult && intraday) {
           try {
             cprResult.breakout = analyzeBreakout(intraday, levelsFromCPR(cprResult.todayCPR)) ?? undefined;

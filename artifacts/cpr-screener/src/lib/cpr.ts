@@ -442,7 +442,7 @@ export interface CPRResult {
   /** PDay-1 candle's close — the "Price" row in the PDay-1 S/R ladder. Only present when a pp candle exists (mirrors ppCPR). */
   ppClose?: number;
   openPrice: number;
-  /** Highest / lowest price of today's session candle at scan time. Lets Pass stay latched after price retraces from the target. Absent in results cached before this field existed (rescan to populate). */
+  /** Highest / lowest price of today's LIVE daily candle at scan time (set by binance.ts / delta.ts from the forming candle, not from analyzeCPR's pivot-defining candle). Lets Pass stay latched after price retraces from the target. Absent when no live candle exists yet; live ticks then start tracking. */
   todayHigh?: number;
   todayLow?: number;
   change24h: number;
@@ -1742,8 +1742,6 @@ export function analyzeCPR(
     currentPrice,
     prevClose: prevCandle.close,
     openPrice: openPrice ?? todayCandle.open,
-    todayHigh: todayCandle.high,
-    todayLow: todayCandle.low,
     change24h,
     quoteVolume,
     prevR1Gap,

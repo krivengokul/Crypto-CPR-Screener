@@ -533,6 +533,13 @@ export async function runScreener(
     );
     const assetClass = assetClassBySymbol.get(t.symbol);
     if (result && assetClass) result.assetClass = assetClass;
+    // Session extremes come from today's forming daily candle (liveCandle),
+    // NOT analyzeCPR's todayCandle, which is yesterday's completed candle
+    // whenever a live candle exists.
+    if (result && liveCandle) {
+      result.todayHigh = Math.max(liveCandle.high, currentPrice);
+      result.todayLow = Math.min(liveCandle.low, currentPrice);
+    }
     if (result && intraday) {
       try {
         result.breakout = analyzeBreakout(intraday, levelsFromCPR(result.todayCPR)) ?? undefined;
