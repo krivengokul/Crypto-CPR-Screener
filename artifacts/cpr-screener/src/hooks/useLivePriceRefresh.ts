@@ -20,6 +20,25 @@ const MAX_MISSED_TICKS = 3; // ~45s of no update before warning
 const SANITY_JUMP_RATIO = 0.5; // reject a >50% single-tick jump
 
 /**
+ * Keeps the row's session high/low (todayHigh/todayLow, captured at scan time)
+ * current between scans: every live tick can only widen them. This is what
+ * lets a "Pass" (target reached) stay latched if price touches the target
+ * and then retraces before the next scan. Only prices this hook actually
+ * samples are seen, so a spike that happens entirely between two 15s ticks
+ * is still missed until the next scan. Rows from scans saved before these
+ * fields existed start tracking from the first tick.
+ */
+function trackSessionExtremes(
+  r: CPRResult,
+  price: number
+): { todayHigh: number; todayLow: number } {
+  return {
+    todayHigh: r.todayHigh !== undefined && Number.isFinite(r.todayHigh) ? Math.max(r.todayHigh, price) : price,
+    todayLow: r.todayLow !== undefined && Number.isFinite(r.todayLow) && r.todayLow > 0 ? Math.min(r.todayLow, price) : price,
+  };
+}
+
+/**
  * Refreshes Binance live prices every 15s while status === "done".
  * USDⓈ-M perpetual prices take precedence over spot so the displayed price
  * stays aligned with the BINANCE:<SYMBOL>.P TradingView chart.
@@ -130,7 +149,7 @@ export function useBinanceLiveRefresh(
             const change24h = r.openPrice > 0
               ? ((live.price - r.openPrice) / r.openPrice) * 100
               : live.change; // fallback
-            return { ...r, currentPrice: live.price, change24h };
+            return { ...r, currentPrice: live.price, change24h, ...trackSessionExtremes(r, live.price) };
           });
         setAllResults((p) => apply(p));
         setFiltered((p) => apply(p));
@@ -184,7 +203,7 @@ export function useDeltaLiveRefresh(
             const change24h = r.openPrice > 0
               ? ((price - r.openPrice) / r.openPrice) * 100
               : parseFloat(t.ltp_change_24h); // fallback
-            return { ...r, currentPrice: price, change24h };
+            return { ...r, currentPrice: price, change24h, ...trackSessionExtremes(r, price) };
           });
         setDeltaAllResults((p) => apply(p));
         setDeltaFiltered((p) => apply(p));
@@ -228,7 +247,7 @@ export function useCoinDCXLiveRefresh(
             const change24h = r.openPrice > 0
               ? ((price - r.openPrice) / r.openPrice) * 100
               : r.change24h;
-            return { ...r, currentPrice: price, change24h };
+            return { ...r, currentPrice: price, change24h, ...trackSessionExtremes(r, price) };
           });
         setCoinDCXAllResults((p) => apply(p));
         setCoinDCXFiltered((p) => apply(p));
