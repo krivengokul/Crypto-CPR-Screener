@@ -2250,7 +2250,7 @@ export default function BacktestPanel() {
               setWarning(
                 (current) =>
                   current ||
-                  "Some P-UPEX candidates were omitted because historical candles were unavailable; see the browser console for per-date counts.",
+                  "Some P-15M-A candidates were omitted because historical candles were unavailable; see the browser console for per-date counts.",
               )
           );
           allRows.push(...dayResult);

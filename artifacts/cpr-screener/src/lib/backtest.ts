@@ -4,11 +4,11 @@ import { fetchDeltaPerps } from "./delta";
 import { fetchCoinDCXDailyKlines, fetchCoinDCXActiveSymbols } from "./coinDCX";
 import { buildViewTree, type ViewTreeNode, VIEWS, getView, type ViewDef, passesView, matchesGapBadge, ALL_GAP_BADGES } from "./views";
 import { gradeTargetHit } from "./backtestOutcome";
-import { findPreviousUpexPass } from "./upexFilter";
+import { findPreviousUpexPass } from "./15MAbove";
 import {
   matchesCprAboveLevelStatus,
   matchesCprAboveOverlapStatus,
-} from "./views/pUpexCprAbove";
+} from "./views/p15MAbove";
 
 
 export type BacktestSource = "binance" | "delta" | "coindcx";
@@ -1791,12 +1791,12 @@ export async function runBacktest(
   // the initial universe prefetch reports progress instead of going silent.
   const symbols: string[] = await getSymbolUniverse(source, entryDateISO, onProgress);
 
-  // Warm the daily-candle cache once; P-UPEX's 15-minute checks are
-  // separately date-scoped and cached by the UPEX helper.
+  // Warm the daily-candle cache once; P-15M-A's checks are separately
+  // date-scoped and cached by the 15-minute helper.
   await prefetchHistories(symbols, source, onProgress);
 
   const rows: BacktestRow[] = [];
-  // P-UPEX requires a second historical candle request for structurally
+  // P-15M-A requires a second historical candle request for structurally
   // matching Binance/Delta rows, so keep its request concurrency bounded.
   // Other Views use the warmed daily-history cache and can run in larger
   // batches without generating more exchange traffic.
@@ -1852,7 +1852,7 @@ export async function runBacktest(
 
   if (previousUpexUnavailable > 0) {
     const message =
-      `P-UPEX candles were unavailable for ${previousUpexUnavailable} structurally ` +
+      `P-15M-A candles were unavailable for ${previousUpexUnavailable} structurally ` +
       `matching ${source} symbol(s) on ${entryDateISO}; they were omitted, not counted as passing.`;
     console.warn(`[backtest] ${message}`);
     onWarning?.(message);

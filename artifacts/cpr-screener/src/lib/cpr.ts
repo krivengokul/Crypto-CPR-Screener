@@ -283,7 +283,7 @@ export interface CPRPairFlags {
 
 export interface CPRResult {
   symbol: string;
-  /** Prepared previous-session UPEX result; populated by the live Screener. */
+  /** Prepared previous-session P-15M-A result; populated by the live Screener. */
   previousUpexPass?: boolean;
   /** 15m squeeze + volume-breakout analysis; attached by binance.ts / delta.ts at scan time. */
   breakout?: BreakoutResult;

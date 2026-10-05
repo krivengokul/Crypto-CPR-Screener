@@ -3,7 +3,7 @@ import type { ViewDef } from "../types";
 import { dirTol, computePrevPattern, pickOuterLevelPattern } from "../../cpr";
 import { passesView } from "../registry";
 import { matchesGapBadge } from "../gapBadges";
-import { matchesCprAboveLevelStatus } from "../pUpexCprAbove";
+import { matchesCprAboveLevelStatus } from "../p15MAbove";
 
 export const LEVELSABOVE_VIEWS: ViewDef[] = [
   // --- A-A-AA-AA's nested Subpattern children ---

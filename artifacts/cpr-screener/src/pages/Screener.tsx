@@ -24,7 +24,7 @@ import {
   previousUpexCandidateCacheKey,
   previousUpexSessionStartUtcMs,
   savePreviousUpexResults,
-} from "@/lib/upexFilter";
+} from "@/lib/15MAbove";
 import type { CPRResult } from "@/lib/cpr";
 import { utcTodayISO, ENTRY_DEFS } from "@/lib/backtest";
 import {
@@ -327,7 +327,7 @@ export default function Screener({
   const [upexProgress, setUpexProgress] = useState<{
     done: number;
     total: number;
-    filter: "UPEX";
+    filter: "15M-A";
   } | null>(null);
   const [upexMessage, setUpexMessage] = useState("");
   const upexRunRef = useRef(0);
@@ -493,7 +493,7 @@ export default function Screener({
       ).length;
       setUpexMessage(
         unavailable > 0
-          ? `${unavailable} symbol${unavailable === 1 ? "" : "s"} excluded from P-UPEX because completed 15m candle data was unavailable.`
+          ? `${unavailable} symbol${unavailable === 1 ? "" : "s"} excluded from P-15M-A because completed 15m candle data was unavailable.`
           : "",
       );
       return;
@@ -530,7 +530,7 @@ export default function Screener({
       ).length;
       setUpexMessage(
         unavailable > 0
-          ? `${unavailable} symbol${unavailable === 1 ? "" : "s"} excluded from P-UPEX because completed 15m candle data was unavailable.`
+          ? `${unavailable} symbol${unavailable === 1 ? "" : "s"} excluded from P-15M-A because completed 15m candle data was unavailable.`
           : "",
       );
     }).catch((cause: unknown) => {
@@ -539,8 +539,8 @@ export default function Screener({
       setPreviousUpexReady(false);
       setUpexMessage(
         cause instanceof Error
-          ? `P-UPEX preparation failed: ${cause.message}`
-          : "P-UPEX preparation failed.",
+          ? `P-15M-A preparation failed: ${cause.message}`
+          : "P-15M-A preparation failed.",
       );
     });
     // This runs on scan completion/session rollover, not live-price ticks.
@@ -1055,20 +1055,20 @@ export default function Screener({
     if (candidates.length === 0) {
       setUpexMessage(
         activeTab === "coindcx"
-          ? "UPEX checks Binance and Delta only; CoinDCX results are not filtered."
-          : "Run a Binance or Delta Screener scan before applying UPEX."
+          ? "15M-A checks Binance and Delta only; CoinDCX results are not filtered."
+          : "Run a Binance or Delta Screener scan before applying 15M-A."
       );
       return;
     }
 
     const runId = ++upexRunRef.current;
     setUpexMessage("");
-    setUpexProgress({ done: 0, total: candidates.length, filter: "UPEX" });
+    setUpexProgress({ done: 0, total: candidates.length, filter: "15M-A" });
     try {
       const { included, unavailable } = await findUpexSymbols(
         candidates,
         (done, total) => {
-          if (runId === upexRunRef.current) setUpexProgress({ done, total, filter: "UPEX" });
+          if (runId === upexRunRef.current) setUpexProgress({ done, total, filter: "15M-A" });
         }
       );
       if (runId !== upexRunRef.current) return;
@@ -1076,13 +1076,13 @@ export default function Screener({
       setUpexFilter(true);
       setUpexMessage(
         unavailable > 0
-          ? `${unavailable} symbol${unavailable === 1 ? "" : "s"} excluded from UPEX because completed 15m candle data was unavailable.`
+          ? `${unavailable} symbol${unavailable === 1 ? "" : "s"} excluded from 15M-A because completed 15m candle data was unavailable.`
           : ""
       );
     } catch (cause) {
       if (runId === upexRunRef.current) {
         setUpexMessage(
-          cause instanceof Error ? `UPEX scan failed: ${cause.message}` : "UPEX scan failed."
+          cause instanceof Error ? `15M-A scan failed: ${cause.message}` : "15M-A scan failed."
         );
       }
     } finally {
@@ -2135,12 +2135,12 @@ export default function Screener({
               title="For Binance and Delta, exclude a symbol only when a previous-session 15-minute candle body is below previous day's BC and its lower body edge breaks below earlier session wick lows. Prepared once after exchange scan data loads; toggling reuses the cached result."
             >
               {previousUpexProgress
-                ? `P-UPEX ${previousUpexProgress.done}/${previousUpexProgress.total}`
+                ? `P-15M-A ${previousUpexProgress.done}/${previousUpexProgress.total}`
                 : previousUpexReady
                   ? previousUpexFilter
-                    ? `✕ P-UPEX (${previousUpexIncludedCount})`
-                    : `P-UPEX (${previousUpexIncludedCount})`
-                  : "P-UPEX…"}
+                    ? `✕ P-15M-A (${previousUpexIncludedCount})`
+                    : `P-15M-A (${previousUpexIncludedCount})`
+                  : "P-15M-A…"}
             </button>
           </div>
           )}
@@ -2195,7 +2195,7 @@ export default function Screener({
             </div>
 
             <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end flex-wrap">
-              {/* UPEX filter */}
+              {/* 15M-A filter */}
               <div className="flex items-center gap-1 flex-wrap">
                 <button
                   onClick={() => void handleUpexFilter()}
@@ -2207,11 +2207,11 @@ export default function Screener({
                   }`}
                   title="For Binance and Delta, exclude a symbol only when a completed 15-minute candle body is below the reference BC and its lower body edge breaks below earlier session wick lows since 05:30 IST. Overlap Above today uses previous day's BC; all other rows use today's BC. CoinDCX results are not checked or filtered."
                 >
-                  {upexProgress?.filter === "UPEX"
-                    ? `UPEX ${upexProgress.done}/${upexProgress.total}`
+                  {upexProgress?.filter === "15M-A"
+                    ? `15M-A ${upexProgress.done}/${upexProgress.total}`
                     : upexFilter
-                      ? `✕ UPEX (${upexIncludedSymbols.size})`
-                      : "UPEX"}
+                      ? `✕ 15M-A (${upexIncludedSymbols.size})`
+                      : "15M-A"}
                 </button>
               </div>
               {upexMessage && (

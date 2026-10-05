@@ -19,11 +19,11 @@ import {
   previousUpexSessionStartUtcMs,
   savePreviousUpexResults,
   upexSessionStartUtcMs,
-} from "./upexFilter.ts";
+} from "./15MAbove.ts";
 import {
   matchesCprAboveLevelStatus,
   matchesCprAboveOverlapStatus,
-} from "./views/pUpexCprAbove.ts";
+} from "./views/p15MAbove.ts";
 
 function trade(overrides: Partial<PaperTradeRecord> = {}): PaperTradeRecord {
   return {
@@ -192,7 +192,7 @@ test("grades a touched S4 target as a pass for a Down view", () => {
   );
 });
 
-test("UPEX uses the 05:30 IST day boundary and ignores candles outside completed session data", () => {
+test("15M-A uses the 05:30 IST day boundary and ignores candles outside completed session data", () => {
   const now = Date.parse("2026-10-03T08:07:00.000Z");
   const start = upexSessionStartUtcMs(now);
   assert.equal(start, Date.parse("2026-10-03T00:00:00.000Z"));
@@ -248,12 +248,12 @@ test("UPEX uses the 05:30 IST day boundary and ignores candles outside completed
   );
 });
 
-test("UPEX uses previous day's BC only for today's Overlap Above rows", () => {
+test("15M-A uses previous day's BC only for today's Overlap Above rows", () => {
   assert.equal(getUpexBc(100, 90, true), 90);
   assert.equal(getUpexBc(100, 90, false), 100);
 });
 
-test("P-UPEX checks the previous IST session and passes candles that are not fully below BC", () => {
+test("P-15M-A checks the previous IST session and passes candles that are not fully below BC", () => {
   const now = Date.parse("2026-10-03T08:07:00.000Z");
   const end = upexSessionStartUtcMs(now);
   const start = previousUpexSessionStartUtcMs(now);
@@ -311,7 +311,7 @@ test("P-UPEX checks the previous IST session and passes candles that are not ful
   );
 });
 
-test("P-UPEX CPR ABOVE groups the four requested CPR status variants", () => {
+test("P-15M-A CPR ABOVE groups the four requested CPR status variants", () => {
   const base = {
     narrowCPR: false,
     InsideCPR: false,
@@ -347,7 +347,7 @@ test("P-UPEX CPR ABOVE groups the four requested CPR status variants", () => {
   );
 });
 
-test("historical P-UPEX checks the session before the selected backtest date and caches passes", async () => {
+test("historical P-15M-A checks the session before the selected backtest date and caches passes", async () => {
   const originalFetch = globalThis.fetch;
   const entryDate = "2026-09-30";
   const sessionStart = Date.parse(`${entryDate}T00:00:00.000Z`);
@@ -395,7 +395,7 @@ test("historical P-UPEX checks the session before the selected backtest date and
   }
 });
 
-test("P-UPEX prepared results persist only for their matching session", () => {
+test("P-15M-A prepared results persist only for their matching session", () => {
   const originalDescriptor = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
   const values = new Map<string, string>();
   Object.defineProperty(globalThis, "localStorage", {
@@ -436,7 +436,7 @@ test("P-UPEX prepared results persist only for their matching session", () => {
   }
 });
 
-test("CoinDCX futures pair conversion is shared by the screener and UPEX", () => {
+test("CoinDCX futures pair conversion is shared by the screener and 15M-A", () => {
   assert.equal(toCoinDCXPair("BTCUSDT"), "B-BTC_USDT");
   assert.equal(fromCoinDCXPair("B-BTC_USDT"), "BTCUSDT");
   assert.equal(fromCoinDCXPair("BTC_USDT"), null);

@@ -1,7 +1,7 @@
 import { getCompoundPatternForCprPair, type CPRResult } from "../../cpr";
 import type { ViewDef } from "../types";
 import { passesView } from "../registry";
-import { matchesCprAboveOverlapStatus } from "../pUpexCprAbove";
+import { matchesCprAboveOverlapStatus } from "../p15MAbove";
 
 const TOUCH_PATTERN_FLAGS = [
   "EL4U4", "EU4L4", "CL4U4", "EL3U3", "CU4L3", "EU3L4", "CL3U3",

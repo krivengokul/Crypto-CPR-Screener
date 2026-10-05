@@ -1,7 +1,7 @@
 import type { OHLC } from "./cpr";
 import { safeSetItem } from "./safeStorage.ts";
 
-type UpexSource = "binance" | "delta";
+type FifteenMinuteSource = "binance" | "delta";
 
 const DELTA_BASE = "https://api.india.delta.exchange/v2";
 const CANDLE_INTERVAL_MS = 15 * 60 * 1000;
@@ -10,7 +10,7 @@ const PREVIOUS_UPEX_CACHE_KEY = "cpr_previous_upex_results_v1";
 
 export interface UpexCandidate {
   symbol: string;
-  source: UpexSource;
+  source: FifteenMinuteSource;
   bc: number;
 }
 
