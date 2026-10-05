@@ -240,41 +240,6 @@ export const LEVELSABOVE_VIEWS: ViewDef[] = [
       },
 
 
-  {
-      key: "A-A-AA-OA-U3L4-RRHHGap:R4",
-      label: "A-A-AA-OA-U3L4-RRHHGap:R4",
-      parentKey: "A-A-AA-OA-U3L4",
-      kind: "view",
-      direction: "Up",
-      condition: (r) =>
-        r.RRSSGapCategory === "RRGap" &&
-        r.PDHPDLGapCategory === "HHGap" &&
-        r.prevCPR.HLSwitch === "HL-B" &&
-        r.todayCPR.HLSwitch === "HL-B" &&
-        r.hlGapWinner === "today",
-      targetLabel: "R4",
-      getTarget: (r) => r.todayCPR.r4,
-      entryLabel: "TC",
-      getEntry: (r) => r.todayCPR.tc,
-      stoplossLabel: "S1",
-      getStoploss: (r) => r.todayCPR.s1,
-      levelCheckDefs: [
-        { key: "r4", subject: "previous", bandKeys: ["r3", "r2"] },
-        { key: "r3", subject: "previous", bandKeys: ["r3", "r2"] },
-        { key: "r2", subject: "today", bandKeys: ["r3", "r2"] },
-        { key: "r1", subject: "today", bandKeys: ["r2", "r1"] },
-        { key: "prevHigh", subject: "today", bandKeys: ["r2", "r1"] },
-        { key: "tc", subject: "today", bandKeys: ["prevHigh", "tc"] },
-        { key: "pivot", subject: "today", bandKeys: ["prevHigh", "tc"] },
-        { key: "bc", subject: "today", bandKeys: ["prevHigh", "tc"] },
-        { key: "s1", subject: "today", bandKeys: ["bc", "s1"] },
-        { key: "prevLow", subject: "today", bandKeys: ["s1", "prevLow"] },
-        { key: "s2", subject: "today", bandKeys: ["prevLow", "s2"] },
-        { key: "s3", subject: "today", bandKeys: ["s2", "s3"] },
-        { key: "s4", subject: "today", bandKeys: ["s3", "s4"] },
-      ],
-        order: 0
-  },
 
   {
       key: "A6-U3L3-SLBBG-R4",

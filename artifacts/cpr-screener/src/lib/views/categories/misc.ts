@@ -9,14 +9,6 @@ export const MISC_VIEWS: ViewDef[] = [
       order: 5
 },
   {
-    key: "eXLoL3U3-L3",
-    label: "eXLoL3U3-L3",
-    parentKey: "equal-cpr",
-    kind: "view",
-    direction: "Down",
-    condition: (r) => r.srExpandedLower,
-  },
-  {
     key: "touch",
     label: "TOUCH",
     kind: "category",

@@ -915,27 +915,6 @@ export const LEVELSBELOW_VIEWS: ViewDef[] = [
         order: 0
   },
 
-  {
-      key: "C-B-BB-LB-CL3U2-RRHHGap:R4",
-      label: "C-B-BB-LB-CL3U2-RRHHGap:R4",
-      parentKey: "C-B-BB-LB-CL3U2",
-      kind: "view",
-      direction: "Up",
-      condition: (r) =>
-        r.RRSSGapCategory === "RRGap" &&
-        r.PDHPDLGapCategory === "HHGap" &&
-        r.prevCPR.HLSwitch === "HL-A" &&
-        r.todayCPR.HLSwitch === "HL-B" &&
-        r.todayCPR.prevHigh > r.prevCPR.pivot &&
-        r.todayCPR.r1 > r.prevCPR.tc,
-      targetLabel: "R4",
-      getTarget: (r) => r.todayCPR.r4,
-      entryLabel: "TC",
-      getEntry: (r) => r.todayCPR.tc,
-      stoplossLabel: "S1",
-      getStoploss: (r) => r.todayCPR.s1,
-        order: 0
-  },
 
   // Missing compressed subpatterns reported by PatternStats.
     { key: "C-B-BB-LB-CL4U3", label: "C-B-BB-LB-CL4U3", parentKey: "C-B-BB-LB", kind: "pattern", condition: (r) => r.CL4U3, order: 1 },
