@@ -162,7 +162,7 @@ function fetchUpexCandles(
   const cached = sessionCandleCache.get(key);
   if (cached) return cached;
 
-  const request = (async (): Promise<OHLC[] | null> => {
+  const fetchRequest = (async (): Promise<OHLC[] | null> => {
     if (candidate.source === "binance") {
       const payload = await fetchJson(
         `https://fapi.binance.com/fapi/v1/klines?symbol=${encodeURIComponent(candidate.symbol)}` +
@@ -179,6 +179,10 @@ function fetchUpexCandles(
   })().catch((error: unknown) => {
     sessionCandleCache.delete(key);
     throw error;
+  });
+  const request = fetchRequest.then((candles) => {
+    if (candles === null) sessionCandleCache.delete(key);
+    return candles;
   });
   if (sessionCandleCache.size > MAX_SESSION_CANDLE_CACHE_ENTRIES) {
     const oldestKey = sessionCandleCache.keys().next().value;
@@ -301,7 +305,7 @@ export function loadPreviousUpexResults(
 
     const results = new Map<string, boolean | null>();
     for (const [key, value] of Object.entries(parsed.results)) {
-      if (typeof value === "boolean" || value === null) {
+      if (typeof value === "boolean") {
         results.set(key, value);
       }
     }
@@ -317,7 +321,9 @@ export function savePreviousUpexResults(
 ): void {
   const payload = JSON.stringify({
     sessionStart,
-    results: Object.fromEntries(results),
+    results: Object.fromEntries(
+      [...results].filter((entry): entry is [string, boolean] => typeof entry[1] === "boolean"),
+    ),
   });
   safeSetItem(PREVIOUS_UPEX_CACHE_KEY, payload);
 }
@@ -350,7 +356,7 @@ export function loadPrevious15MBResults(
 
     const results = new Map<string, boolean | null>();
     for (const [key, value] of Object.entries(parsed.results)) {
-      if (typeof value === "boolean" || value === null) {
+      if (typeof value === "boolean") {
         results.set(key, value);
       }
     }
@@ -366,7 +372,9 @@ export function savePrevious15MBResults(
 ): void {
   const payload = JSON.stringify({
     sessionStart,
-    results: Object.fromEntries(results),
+    results: Object.fromEntries(
+      [...results].filter((entry): entry is [string, boolean] => typeof entry[1] === "boolean"),
+    ),
   });
   safeSetItem(PREVIOUS_15M_B_CACHE_KEY, payload);
 }

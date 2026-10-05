@@ -432,10 +432,9 @@ export default function Screener({
       previousUpexCacheSessionRef.current = previousUpexSessionStart;
     }
     if (
-      status === "idle" ||
       status === "scanning" ||
-      deltaStatus === "idle" ||
-      deltaStatus === "scanning"
+      deltaStatus === "scanning" ||
+      (status !== "done" && deltaStatus !== "done")
     ) return;
     const candidates = new Map<string, {
       symbol: string;
@@ -512,7 +511,7 @@ export default function Screener({
       ).length;
       setUpexMessage(
         unavailable > 0
-          ? `${unavailable} symbol${unavailable === 1 ? "" : "s"} excluded from P-15M-A because completed 15m candle data was unavailable.`
+          ? `${unavailable} symbol${unavailable === 1 ? "" : "s"} excluded from P-15M-A because no usable completed 15m candles were returned for the previous IST session.`
           : "",
       );
       return;
@@ -530,26 +529,25 @@ export default function Screener({
         }
       },
       previousUpexSessionStart + 24 * 60 * 60 * 1000,
-    ).then(({ outcomes }) => {
+    ).then(({ outcomes, unavailable }) => {
       if (runId !== previousUpexRunRef.current) return;
       for (const candidate of missing) {
         const symbolKey = `${candidate.source}:${candidate.symbol}`;
-        previousUpexResultsRef.current.set(
-          cacheKey(candidate),
-          outcomes.get(symbolKey) ?? null,
-        );
+        const outcome = outcomes.get(symbolKey);
+        if (typeof outcome === "boolean") {
+          previousUpexResultsRef.current.set(cacheKey(candidate), outcome);
+        } else {
+          previousUpexResultsRef.current.delete(cacheKey(candidate));
+        }
       }
       savePreviousUpexResults(previousUpexSessionStart, previousUpexResultsRef.current);
       updateIncluded();
       syncPreparedFlags();
       setPreviousUpexReady(true);
       setPreviousUpexProgress(null);
-      const unavailable = currentCandidates.filter(
-        (candidate) => previousUpexResultsRef.current.get(cacheKey(candidate)) === null,
-      ).length;
       setUpexMessage(
         unavailable > 0
-          ? `${unavailable} symbol${unavailable === 1 ? "" : "s"} excluded from P-15M-A because completed 15m candle data was unavailable.`
+          ? `${unavailable} symbol${unavailable === 1 ? "" : "s"} excluded from P-15M-A because no usable completed 15m candles were returned for the previous IST session.`
           : "",
       );
     }).catch((cause: unknown) => {
@@ -572,10 +570,9 @@ export default function Screener({
       previous15MBCacheSessionRef.current = previousUpexSessionStart;
     }
     if (
-      status === "idle" ||
       status === "scanning" ||
-      deltaStatus === "idle" ||
-      deltaStatus === "scanning"
+      deltaStatus === "scanning" ||
+      (status !== "done" && deltaStatus !== "done")
     ) return;
 
     const candidates = new Map<string, {
@@ -653,7 +650,7 @@ export default function Screener({
       ).length;
       setPrevious15MBMessage(
         unavailable > 0
-          ? `${unavailable} symbol${unavailable === 1 ? "" : "s"} excluded from P-15M-B because completed 15m candle data was unavailable.`
+          ? `${unavailable} symbol${unavailable === 1 ? "" : "s"} excluded from P-15M-B because no usable completed 15m candles were returned for the previous IST session.`
           : "",
       );
       return;
@@ -671,26 +668,25 @@ export default function Screener({
         }
       },
       previousUpexSessionStart + 24 * 60 * 60 * 1000,
-    ).then(({ outcomes }) => {
+    ).then(({ outcomes, unavailable }) => {
       if (runId !== previous15MBRunRef.current) return;
       for (const candidate of missing) {
         const symbolKey = `${candidate.source}:${candidate.symbol}`;
-        previous15MBResultsRef.current.set(
-          cacheKey(candidate),
-          outcomes.get(symbolKey) ?? null,
-        );
+        const outcome = outcomes.get(symbolKey);
+        if (typeof outcome === "boolean") {
+          previous15MBResultsRef.current.set(cacheKey(candidate), outcome);
+        } else {
+          previous15MBResultsRef.current.delete(cacheKey(candidate));
+        }
       }
       savePrevious15MBResults(previousUpexSessionStart, previous15MBResultsRef.current);
       updateIncluded();
       syncPreparedFlags();
       setPrevious15MBReady(true);
       setPrevious15MBProgress(null);
-      const unavailable = currentCandidates.filter(
-        (candidate) => previous15MBResultsRef.current.get(cacheKey(candidate)) === null,
-      ).length;
       setPrevious15MBMessage(
         unavailable > 0
-          ? `${unavailable} symbol${unavailable === 1 ? "" : "s"} excluded from P-15M-B because completed 15m candle data was unavailable.`
+          ? `${unavailable} symbol${unavailable === 1 ? "" : "s"} excluded from P-15M-B because no usable completed 15m candles were returned for the previous IST session.`
           : "",
       );
     }).catch((cause: unknown) => {
@@ -1458,7 +1454,6 @@ export default function Screener({
     .filter(
       (r) =>
         !previous15MBFilter ||
-        r.source === "coindcx" ||
         previous15MBIncludedSymbols.has(`${r.source}:${r.symbol}`)
     )
     // Active / Ready status filter (see getRowStatus).
@@ -1584,7 +1579,7 @@ export default function Screener({
   // Helper: is any sub-filter active (to decide the result count label)
   const anySubFilter =
     !!activeGenericSignal ||
-    !!PatternFilter || !!touchFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter || upexFilter || previousUpexFilter || statusFilter !== "all" || !!entryLevelFilter;
+    !!PatternFilter || !!touchFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter || upexFilter || previousUpexFilter || previous15MBFilter || statusFilter !== "all" || !!entryLevelFilter;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -2339,7 +2334,7 @@ export default function Screener({
                   ? "border-cyan-400 text-cyan-300"
                   : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
               }`}
-              title="Include Binance and Delta symbols with at least one completed previous-session 15-minute candle whose open and close are below previous day's BC. Prepared after exchange scans and cached for the session."
+              title="Include Binance and Delta symbols with at least one completed previous-session 15-minute candle whose open and close are below previous day's BC. Unevaluated sources such as CoinDCX are excluded while active."
             >
               {previous15MBProgress
                 ? `P-15M-B ${previous15MBProgress.done}/${previous15MBProgress.total}`
@@ -2349,11 +2344,6 @@ export default function Screener({
                     : `P-15M-B (${previous15MBIncludedCount})`
                   : "P-15M-B…"}
             </button>
-            {previous15MBMessage && (
-              <span className="text-[10px] text-amber-300" role="status">
-                {previous15MBMessage}
-              </span>
-            )}
           </div>
           )}
 
@@ -2385,6 +2375,13 @@ export default function Screener({
 
           </div>
 
+        )}
+
+        {(upexMessage || previous15MBMessage) && currentStatus === "done" && (
+          <div className="flex flex-col gap-1 px-1 -mt-1 mb-2 text-[10px] text-amber-300" role="status">
+            {upexMessage && <span>{upexMessage}</span>}
+            {previous15MBMessage && <span>{previous15MBMessage}</span>}
+          </div>
         )}
 
         {/* Search + Source Filter bar — same look and feel as Signal
@@ -2426,12 +2423,6 @@ export default function Screener({
                       : "15M-A"}
                 </button>
               </div>
-              {upexMessage && (
-                <span className="text-[10px] text-amber-300" role="status">
-                  {upexMessage}
-                </span>
-              )}
-
               {/* Status Filter — Active (price has reached a View's entry line) /
                   Ready (matches a View, still waiting for entry). Same grouped
                   tab control as Signal Desk; clicking the selected button

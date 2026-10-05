@@ -490,6 +490,32 @@ test("P-15M-A and P-15M-B share a previous-session candle request", async () => 
   }
 });
 
+test("previous-session API failures are not cached and can be retried", async () => {
+  const originalFetch = globalThis.fetch;
+  const now = Date.parse("2026-10-06T00:00:00.000Z");
+  const start = now - 24 * 60 * 60 * 1000;
+  let fetchCount = 0;
+  globalThis.fetch = async () => {
+    fetchCount++;
+    if (fetchCount === 1) return new Response("unavailable", { status: 400 });
+    return new Response(
+      JSON.stringify([[start, "99", "100", "97", "98", "1"]]),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  };
+
+  try {
+    const candidate = { symbol: "P15MRETRYUSDT", source: "binance" as const, bc: 100 };
+    const first = await findPreviousUpexSymbols([candidate], undefined, now);
+    const second = await findPreviousUpexSymbols([candidate], undefined, now);
+    assert.equal(first.outcomes.get("binance:P15MRETRYUSDT"), null);
+    assert.equal(second.outcomes.get("binance:P15MRETRYUSDT"), false);
+    assert.equal(fetchCount, 2);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("P-15M-A prepared results persist only for their matching session", () => {
   const originalDescriptor = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
   const values = new Map<string, string>();
@@ -519,7 +545,7 @@ test("P-15M-A prepared results persist only for their matching session", () => {
 
     assert.deepEqual(
       [...loadPreviousUpexResults(sessionStart)],
-      [...results],
+      [[previousUpexCandidateCacheKey(sessionStart, candidate), true]],
     );
     assert.equal(loadPreviousUpexResults(sessionStart + 24 * 60 * 60 * 1000).size, 0);
   } finally {
