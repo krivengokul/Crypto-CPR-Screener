@@ -4,7 +4,7 @@ import { fetchDeltaPerps } from "./delta";
 import { fetchCoinDCXDailyKlines, fetchCoinDCXActiveSymbols } from "./coinDCX";
 import { buildViewTree, type ViewTreeNode, VIEWS, getView, type ViewDef, passesView, matchesGapBadge, ALL_GAP_BADGES } from "./views";
 import { gradeTargetHit } from "./backtestOutcome";
-import { findPreviousUpexPass } from "./15MAbove";
+import { findPrevious15MBPass, findPreviousUpexPass } from "./15MAbove";
 import {
   matchesCprAboveLevelStatus,
   matchesCprAboveOverlapStatus,
@@ -1467,7 +1467,8 @@ export async function backtestSymbolOnDate(
   entryDateISO: string,
   target: ViewDef,
   passesPatternFn: (r: CPRResult, pattern: string) => boolean,
-  onPreviousUpexUnavailable?: (symbol: string) => void
+  onPreviousUpexUnavailable?: (symbol: string) => void,
+  onPrevious15MBUnavailable?: (symbol: string) => void
 ): Promise<BacktestRow | null> {
   const dPlus1 = addDaysISO(entryDateISO, 1);
 
@@ -1476,12 +1477,12 @@ export async function backtestSymbolOnDate(
   const { result, window } = reconstructed;
 
   if (
-    target.key === "P-UPEX-CPRABOVE" ||
+    target.key === "P15M-A-CPRABOVE" ||
     target.key === "P-UPEX-CPRABOVE-OVA"
   ) {
     if (source === "coindcx") return null;
     const matchesStructure =
-      target.key === "P-UPEX-CPRABOVE"
+      target.key === "P15M-A-CPRABOVE"
         ? result.LevelsAbove && matchesCprAboveLevelStatus(result)
         : result.touchCategory &&
           result.overlapHigher &&
@@ -1495,6 +1496,16 @@ export async function backtestSymbolOnDate(
     );
     if (previousUpexPass === null) onPreviousUpexUnavailable?.(symbol);
     result.previousUpexPass = previousUpexPass === true;
+  }
+
+  if (target.key === "P15M-B-CPRBELOW") {
+    if (source === "coindcx" || !result.LevelsBelow) return null;
+    const previous15MBPass = await findPrevious15MBPass(
+      { symbol, source, bc: result.prevCPR.bc },
+      Date.parse(`${entryDateISO}T00:00:00.000Z`),
+    );
+    if (previous15MBPass === null) onPrevious15MBUnavailable?.(symbol);
+    result.previous15MBPass = previous15MBPass === true;
   }
 
   if (!passesPatternFn(result, target.conditionKey ?? target.key)) return null; // didn't match the pattern on this date
@@ -1791,20 +1802,23 @@ export async function runBacktest(
   // the initial universe prefetch reports progress instead of going silent.
   const symbols: string[] = await getSymbolUniverse(source, entryDateISO, onProgress);
 
-  // Warm the daily-candle cache once; P-15M-A's checks are separately
+  // Warm the daily-candle cache once; previous 15-minute checks are separately
   // date-scoped and cached by the 15-minute helper.
   await prefetchHistories(symbols, source, onProgress);
 
   const rows: BacktestRow[] = [];
-  // P-15M-A requires a second historical candle request for structurally
-  // matching Binance/Delta rows, so keep its request concurrency bounded.
+  // Historical 15-minute views require a second candle request for
+  // structurally matching Binance/Delta rows, so keep concurrency bounded.
   // Other Views use the warmed daily-history cache and can run in larger
   // batches without generating more exchange traffic.
   const batchSize =
-    target.key === "P-UPEX-CPRABOVE" || target.key === "P-UPEX-CPRABOVE-OVA"
+    target.key === "P15M-A-CPRABOVE" ||
+    target.key === "P-UPEX-CPRABOVE-OVA" ||
+    target.key === "P15M-B-CPRBELOW"
       ? 8
       : 100;
   let previousUpexUnavailable = 0;
+  let previous15MBUnavailable = 0;
 
   // PERF FIX: streamed rows are now buffered and flushed to onPartialRows
   // at most every FLUSH_INTERVAL_MS, instead of once per batch. Flushing
@@ -1838,6 +1852,7 @@ export async function runBacktest(
           target,
           passesPatternFn,
           () => previousUpexUnavailable++,
+          () => previous15MBUnavailable++,
         ),
       )
     );
@@ -1853,6 +1868,13 @@ export async function runBacktest(
   if (previousUpexUnavailable > 0) {
     const message =
       `P-15M-A candles were unavailable for ${previousUpexUnavailable} structurally ` +
+      `matching ${source} symbol(s) on ${entryDateISO}; they were omitted, not counted as passing.`;
+    console.warn(`[backtest] ${message}`);
+    onWarning?.(message);
+  }
+  if (previous15MBUnavailable > 0) {
+    const message =
+      `P-15M-B candles were unavailable for ${previous15MBUnavailable} structurally ` +
       `matching ${source} symbol(s) on ${entryDateISO}; they were omitted, not counted as passing.`;
     console.warn(`[backtest] ${message}`);
     onWarning?.(message);

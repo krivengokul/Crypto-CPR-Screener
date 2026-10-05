@@ -285,6 +285,8 @@ export interface CPRResult {
   symbol: string;
   /** Prepared previous-session P-15M-A result; populated by the live Screener. */
   previousUpexPass?: boolean;
+  /** Prepared previous-session P-15M-B result; populated by the live Screener. */
+  previous15MBPass?: boolean;
   /** 15m squeeze + volume-breakout analysis; attached by binance.ts / delta.ts at scan time. */
   breakout?: BreakoutResult;
   /** Binance only: "COMMOD" = commodity perp (CL/BZ/XAU/XAG), "TRADFI" = other TradFi

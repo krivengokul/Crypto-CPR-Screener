@@ -11,8 +11,12 @@ import { analyzeCPR, getCompoundPatternForCprPair } from "./cpr.ts";
 import { evaluateSignalCandles, livePriceCrossedBoundary } from "./signalOutcome.ts";
 import { fromCoinDCXPair, toCoinDCXPair } from "./coinDCXPair.ts";
 import {
+  findPrevious15MBSymbols,
+  findPrevious15MBPass,
+  findPreviousUpexSymbols,
   findPreviousUpexPass,
   getUpexBc,
+  passesPrevious15MBFilter,
   loadPreviousUpexResults,
   passesUpexFilter,
   previousUpexCandidateCacheKey,
@@ -311,6 +315,37 @@ test("P-15M-A checks the previous IST session and passes candles that are not fu
   );
 });
 
+test("P-15M-B includes a session with a completed candle body below BC", () => {
+  const now = Date.parse("2026-10-03T00:00:00.000Z");
+  const start = Date.parse("2026-10-02T00:00:00.000Z");
+  const candle = (openTime: number, open: number, close: number): OHLC => ({
+    openTime,
+    open,
+    high: Math.max(open, close) + 1,
+    low: Math.min(open, close) - 1,
+    close,
+    volume: 1,
+  });
+
+  assert.equal(
+    passesPrevious15MBFilter(
+      [candle(start, 101, 102), candle(start + 15 * 60_000, 99, 98)],
+      100,
+      start,
+      now,
+    ),
+    true,
+  );
+  assert.equal(
+    passesPrevious15MBFilter([candle(start, 101, 99)], 100, start, now),
+    false,
+  );
+  assert.equal(
+    passesPrevious15MBFilter([candle(now, 99, 98)], 100, start, now),
+    null,
+  );
+});
+
 test("P-15M-A CPR ABOVE groups the four requested CPR status variants", () => {
   const base = {
     narrowCPR: false,
@@ -390,6 +425,66 @@ test("historical P-15M-A checks the session before the selected backtest date an
       null,
     );
     assert.equal(fetchCount, 3);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("historical P-15M-B checks the previous session for a candle body below BC", async () => {
+  const originalFetch = globalThis.fetch;
+  const entryDate = "2026-10-01";
+  const sessionStart = Date.parse(`${entryDate}T00:00:00.000Z`);
+  const expectedPreviousSession = sessionStart - 24 * 60 * 60 * 1000;
+  globalThis.fetch = async (input) => {
+    const url = new URL(String(input));
+    assert.equal(Number(url.searchParams.get("startTime")), expectedPreviousSession);
+    assert.equal(Number(url.searchParams.get("endTime")), sessionStart);
+    const candle = url.searchParams.get("symbol") === "P15MBLOWUSDT"
+      ? [expectedPreviousSession, "99", "100", "97", "98", "1"]
+      : [expectedPreviousSession, "101", "103", "100.5", "102", "1"];
+    return new Response(
+      JSON.stringify([candle]),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  };
+
+  try {
+    const candidate = { symbol: "P15MBLOWUSDT", source: "binance" as const, bc: 100 };
+    assert.equal(await findPrevious15MBPass(candidate, sessionStart), true);
+    assert.equal(
+      await findPrevious15MBPass(
+        { ...candidate, symbol: "P15MABOVEUSDT" },
+        sessionStart,
+      ),
+      false,
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("P-15M-A and P-15M-B share a previous-session candle request", async () => {
+  const originalFetch = globalThis.fetch;
+  const now = Date.parse("2026-10-04T00:00:00.000Z");
+  const start = now - 24 * 60 * 60 * 1000;
+  let fetchCount = 0;
+  globalThis.fetch = async () => {
+    fetchCount++;
+    return new Response(
+      JSON.stringify([[start, "99", "100", "97", "98", "1"]]),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  };
+
+  try {
+    const candidate = { symbol: "P15MSHAREDUSDT", source: "binance" as const, bc: 100 };
+    const [above, below] = await Promise.all([
+      findPreviousUpexSymbols([candidate], undefined, now),
+      findPrevious15MBSymbols([candidate], undefined, now),
+    ]);
+    assert.equal(above.outcomes.get("binance:P15MSHAREDUSDT"), false);
+    assert.equal(below.outcomes.get("binance:P15MSHAREDUSDT"), true);
+    assert.equal(fetchCount, 1);
   } finally {
     globalThis.fetch = originalFetch;
   }

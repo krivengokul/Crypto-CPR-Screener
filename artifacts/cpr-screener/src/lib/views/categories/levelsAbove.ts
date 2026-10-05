@@ -1559,8 +1559,8 @@ export const LEVELSABOVE_VIEWS: ViewDef[] = [
 
   { key: "E-A-AA-OB-EU2L3", label: "E-A-AA-OB-EU2L3", parentKey: "E-A-AA-OB", kind: "pattern", condition: (r) => r.EU2L3, order: 0 },
   {
-    key: "P-UPEX-CPRABOVE",
-    label: "P-UPEX-CPRABOVE",
+    key: "P15M-A-CPRABOVE",
+    label: "P15M-A-CPRABOVE",
     parentKey: "levelsabove",
     kind: "view",
     condition: (r) => r.previousUpexPass === true && matchesCprAboveLevelStatus(r),

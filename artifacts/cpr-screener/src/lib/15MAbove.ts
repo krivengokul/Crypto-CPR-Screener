@@ -7,6 +7,7 @@ const DELTA_BASE = "https://api.india.delta.exchange/v2";
 const CANDLE_INTERVAL_MS = 15 * 60 * 1000;
 const MAX_CONCURRENT_REQUESTS = 8;
 const PREVIOUS_UPEX_CACHE_KEY = "cpr_previous_upex_results_v1";
+const PREVIOUS_15M_B_CACHE_KEY = "cpr_previous_15m_b_results_v1";
 
 export interface UpexCandidate {
   symbol: string;
@@ -69,6 +70,27 @@ export function passesUpexFilter(
   return true;
 }
 
+export function passesPrevious15MBFilter(
+  candles: OHLC[],
+  bc: number,
+  startTime: number,
+  now: number
+): boolean | null {
+  if (!Number.isFinite(bc)) return null;
+
+  const completed = candles.filter(
+    (candle) =>
+      Number.isFinite(candle.openTime) &&
+      candle.openTime >= startTime &&
+      candle.openTime + CANDLE_INTERVAL_MS <= now &&
+      Number.isFinite(candle.open) &&
+      Number.isFinite(candle.close)
+  );
+  if (completed.length === 0) return null;
+
+  return completed.some((candle) => candle.open < bc && candle.close < bc);
+}
+
 async function fetchJson(url: string): Promise<unknown | null> {
   for (let attempt = 0; attempt < 3; attempt++) {
     const controller = new AbortController();
@@ -128,24 +150,42 @@ function parseDeltaCandles(payload: unknown): OHLC[] {
     }));
 }
 
-async function fetchUpexCandles(
+const sessionCandleCache = new Map<string, Promise<OHLC[] | null>>();
+const MAX_SESSION_CANDLE_CACHE_ENTRIES = 20_000;
+
+function fetchUpexCandles(
   candidate: UpexCandidate,
   startTime: number,
   endTime: number
 ): Promise<OHLC[] | null> {
-  if (candidate.source === "binance") {
-    const payload = await fetchJson(
-      `https://fapi.binance.com/fapi/v1/klines?symbol=${encodeURIComponent(candidate.symbol)}` +
-        `&interval=15m&startTime=${startTime}&endTime=${endTime}&limit=100`
-    );
-    return payload === null ? null : parseBinanceCandles(payload);
-  }
+  const key = `${candidate.source}:${candidate.symbol}:${startTime}:${endTime}`;
+  const cached = sessionCandleCache.get(key);
+  if (cached) return cached;
 
-  const payload = await fetchJson(
-    `${DELTA_BASE}/history/candles?symbol=${encodeURIComponent(candidate.symbol)}` +
-      `&resolution=15m&start=${Math.floor(startTime / 1000)}&end=${Math.floor(endTime / 1000)}`
-  );
-  return payload === null ? null : parseDeltaCandles(payload);
+  const request = (async (): Promise<OHLC[] | null> => {
+    if (candidate.source === "binance") {
+      const payload = await fetchJson(
+        `https://fapi.binance.com/fapi/v1/klines?symbol=${encodeURIComponent(candidate.symbol)}` +
+          `&interval=15m&startTime=${startTime}&endTime=${endTime}&limit=100`
+      );
+      return payload === null ? null : parseBinanceCandles(payload);
+    }
+
+    const payload = await fetchJson(
+      `${DELTA_BASE}/history/candles?symbol=${encodeURIComponent(candidate.symbol)}` +
+        `&resolution=15m&start=${Math.floor(startTime / 1000)}&end=${Math.floor(endTime / 1000)}`
+    );
+    return payload === null ? null : parseDeltaCandles(payload);
+  })().catch((error: unknown) => {
+    sessionCandleCache.delete(key);
+    throw error;
+  });
+  if (sessionCandleCache.size > MAX_SESSION_CANDLE_CACHE_ENTRIES) {
+    const oldestKey = sessionCandleCache.keys().next().value;
+    if (oldestKey) sessionCandleCache.delete(oldestKey);
+  }
+  sessionCandleCache.set(key, request);
+  return request;
 }
 
 async function findSymbolsForSession(
@@ -153,6 +193,12 @@ async function findSymbolsForSession(
   startTime: number,
   endTime: number,
   onProgress?: (done: number, total: number) => void,
+  evaluate: (
+    candles: OHLC[],
+    bc: number,
+    startTime: number,
+    now: number
+  ) => boolean | null = passesUpexFilter,
 ): Promise<{
   included: Set<string>;
   unavailable: number;
@@ -170,7 +216,7 @@ async function findSymbolsForSession(
         if (!candles) return { candidate, passes: null };
         return {
           candidate,
-          passes: passesUpexFilter(candles, candidate.bc, startTime, endTime),
+          passes: evaluate(candles, candidate.bc, startTime, endTime),
         };
       })
     );
@@ -209,6 +255,22 @@ export function findPreviousUpexSymbols(
   const endTime = upexSessionStartUtcMs(now);
   const startTime = previousUpexSessionStartUtcMs(now);
   return findSymbolsForSession(candidates, startTime, endTime, onProgress);
+}
+
+export function findPrevious15MBSymbols(
+  candidates: UpexCandidate[],
+  onProgress?: (done: number, total: number) => void,
+  now = Date.now()
+): Promise<PreviousUpexScanResults> {
+  const endTime = upexSessionStartUtcMs(now);
+  const startTime = previousUpexSessionStartUtcMs(now);
+  return findSymbolsForSession(
+    candidates,
+    startTime,
+    endTime,
+    onProgress,
+    passesPrevious15MBFilter,
+  );
 }
 
 export function previousUpexCandidateCacheKey(
@@ -260,7 +322,57 @@ export function savePreviousUpexResults(
   safeSetItem(PREVIOUS_UPEX_CACHE_KEY, payload);
 }
 
+export function previous15MBCandidateCacheKey(
+  sessionStart: number,
+  candidate: UpexCandidate,
+): string {
+  return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.bc}`;
+}
+
+export function loadPrevious15MBResults(
+  sessionStart: number,
+): Map<string, boolean | null> {
+  try {
+    const raw = localStorage.getItem(PREVIOUS_15M_B_CACHE_KEY);
+    if (!raw) return new Map();
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      !("sessionStart" in parsed) ||
+      parsed.sessionStart !== sessionStart ||
+      !("results" in parsed) ||
+      !parsed.results ||
+      typeof parsed.results !== "object"
+    ) {
+      return new Map();
+    }
+
+    const results = new Map<string, boolean | null>();
+    for (const [key, value] of Object.entries(parsed.results)) {
+      if (typeof value === "boolean" || value === null) {
+        results.set(key, value);
+      }
+    }
+    return results;
+  } catch {
+    return new Map();
+  }
+}
+
+export function savePrevious15MBResults(
+  sessionStart: number,
+  results: Map<string, boolean | null>,
+): void {
+  const payload = JSON.stringify({
+    sessionStart,
+    results: Object.fromEntries(results),
+  });
+  safeSetItem(PREVIOUS_15M_B_CACHE_KEY, payload);
+}
+
 const previousUpexPassCache = new Map<string, Promise<boolean | null>>();
+const previous15MBPassCache = new Map<string, Promise<boolean | null>>();
 const MAX_PREVIOUS_UPEX_CACHE_ENTRIES = 20_000;
 
 /**
@@ -297,5 +409,43 @@ export function findPreviousUpexPass(
     }
   );
   previousUpexPassCache.set(key, request);
+  return request;
+}
+
+export function findPrevious15MBPass(
+  candidate: UpexCandidate,
+  now: number
+): Promise<boolean | null> {
+  const endTime = upexSessionStartUtcMs(now);
+  const startTime = previousUpexSessionStartUtcMs(now);
+  const key =
+    `${startTime}:${candidate.source}:${candidate.symbol}:${candidate.bc}`;
+  const cached = previous15MBPassCache.get(key);
+  if (cached) return cached;
+
+  const request = findSymbolsForSession(
+    [candidate],
+    startTime,
+    endTime,
+    undefined,
+    passesPrevious15MBFilter,
+  ).then(
+    ({ included, unavailable }) => {
+      if (unavailable > 0) {
+        previous15MBPassCache.delete(key);
+        return null;
+      }
+      if (previous15MBPassCache.size > MAX_PREVIOUS_UPEX_CACHE_ENTRIES) {
+        const oldestKey = previous15MBPassCache.keys().next().value;
+        if (oldestKey) previous15MBPassCache.delete(oldestKey);
+      }
+      return included.has(`${candidate.source}:${candidate.symbol}`);
+    },
+    (error: unknown) => {
+      previous15MBPassCache.delete(key);
+      throw error;
+    }
+  );
+  previous15MBPassCache.set(key, request);
   return request;
 }

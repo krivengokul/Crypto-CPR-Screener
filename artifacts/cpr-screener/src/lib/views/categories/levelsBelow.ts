@@ -1001,4 +1001,20 @@ export const LEVELSBELOW_VIEWS: ViewDef[] = [
   { key: "E-B-RA-BB-EL3U3", label: "E-B-RA-BB-EL3U3", parentKey: "E-B-RA-BB", kind: "pattern", condition: (r) => r.EL3U3, order: 3 },
 
   { key: "E-B-RA-BB-L4U4", label: "E-B-RA-BB-L4U4", parentKey: "E-B-RA-BB", kind: "pattern", condition: (r) => r.L4U4, order: 4 },
+
+  {
+    key: "P15M-B-CPRBELOW",
+    label: "P15M-B-CPRBELOW",
+    parentKey: "levelsbelow",
+    kind: "view",
+    condition: (r) => r.previous15MBPass === true && r.LevelsBelow,
+    direction: "Down",
+    targetLabel: "S4",
+    getTarget: (r) => r.todayCPR.s4,
+    entryLabel: "BC",
+    getEntry: (r) => r.todayCPR.bc,
+    stoplossLabel: "R1",
+    getStoploss: (r) => r.todayCPR.r1,
+    order: 999,
+  },
 ];
