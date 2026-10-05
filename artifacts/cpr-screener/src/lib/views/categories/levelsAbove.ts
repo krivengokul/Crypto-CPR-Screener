@@ -116,21 +116,6 @@ export const LEVELSABOVE_VIEWS: ViewDef[] = [
         order: 2
   },
 
-  {
-      key: "9AM:pPALPApH-FAU4:2PM",
-      label: "9AM:pPALPApH-FAU4:2PM",
-      parentKey: "A-A-AA-AA-U4L3",
-      kind: "view",
-      direction: "Up",
-      condition: (r) => r.prevCPR.pivot > r.todayCPR.prevLow && r.todayCPR.pivot > r.prevCPR.prevHigh,
-      targetLabel: "R4",
-      getTarget: (r) => r.todayCPR.r4,
-      entryLabel: "TC",
-      getEntry: (r) => r.todayCPR.tc,
-      stoplossLabel: "S1",
-      getStoploss: (r) => r.todayCPR.s1,
-        order: 0
-  },
 
   {
         key: "R1-A-A-AA-AA-U3L4-RH-GapBB-R4",
@@ -254,21 +239,6 @@ export const LEVELSABOVE_VIEWS: ViewDef[] = [
     ],
       },
 
-  {
-      key: "A-A-AA-AA-EU3L4-GapB",
-      label: "A-A-AA-AA-EU3L4-GapB",
-      parentKey: "A-A-AA-AA-EU3L4",
-      kind: "view",
-      direction: "Up",
-      condition: (r) => r.todayCPR.HLSwitch === "HL-B" && r.hlGapWinner === "today",
-      targetLabel: "R4",
-      getTarget: (r) => r.todayCPR.r4,
-      entryLabel: "TC",
-      getEntry: (r) => r.todayCPR.tc,
-      stoplossLabel: "S1",
-      getStoploss: (r) => r.todayCPR.s1,
-        order: 0
-  },
 
   {
       key: "A-A-AA-OA-U3L4-RRHHGap:R4",

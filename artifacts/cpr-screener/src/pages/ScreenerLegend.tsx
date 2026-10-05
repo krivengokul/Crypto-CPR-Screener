@@ -140,11 +140,6 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
             <div className="text-xs font-semibold text-green-400 mb-1">Pattern: EU2L4&nbsp;&nbsp;Prev: p-EU3L4&nbsp;&nbsp;BC &gt; pPDH&nbsp;&nbsp;S1 &gt; pTC</div>
             <div className="text-xs text-muted-foreground">LEVEL ABOVE + Pattern EU2L4 + prev day&apos;s own pattern p-EU3L4 + today&apos;s BC above prev day&apos;s own PDH + today&apos;s S1 above prev day&apos;s TC</div>
           </>
-        ) : activeSignal === "9AM:pPALPApH-FAU4:2PM" ? (
-          <>
-            <div className="text-xs font-semibold text-green-400 mb-1">Pattern: A-A-AA-AA-U4L3&nbsp;&nbsp;pPivot &gt; PDL&nbsp;&nbsp;Pivot &gt; PDH</div>
-            <div className="text-xs text-muted-foreground">LEVEL ABOVE + Pattern A-A-AA-AA-U4L3 (today&apos;s S4 in prev&apos;s S3/S2 band, prev&apos;s R4 in today&apos;s R3/R4 band) + prev day&apos;s own Pivot above today&apos;s PDL + today&apos;s own Pivot above today&apos;s PDH</div>
-          </>
         ) : activeSignal === "ss-EL1U4-U4:10PM" ? (
           <>
             <div className="text-xs font-semibold text-green-400 mb-1">Pattern: EL1U4&nbsp;&nbsp;PCPR: Wide&nbsp;&nbsp;pBC &gt; U1</div>
