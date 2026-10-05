@@ -17,6 +17,7 @@ import {
   findPreviousUpexPass,
   getUpexBc,
   passesPrevious15MBFilter,
+  loadPrevious15MBResults,
   loadPreviousUpexResults,
   passesUpexFilter,
   previousUpexCandidateCacheKey,
@@ -561,6 +562,33 @@ test("P-15M-A prepared results persist only for their matching session", () => {
       [[previousUpexCandidateCacheKey(sessionStart, candidate), true]],
     );
     assert.equal(loadPreviousUpexResults(sessionStart + 24 * 60 * 60 * 1000).size, 0);
+  } finally {
+    if (originalDescriptor) {
+      Object.defineProperty(globalThis, "localStorage", originalDescriptor);
+    } else {
+      Reflect.deleteProperty(globalThis, "localStorage");
+    }
+  }
+});
+
+test("P-15M-B ignores cached results from the previous filter rule", () => {
+  const originalDescriptor = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
+  const values = new Map<string, string>([
+    [
+      "cpr_previous_15m_b_results_v1",
+      JSON.stringify({
+        sessionStart: Date.parse("2026-10-03T00:00:00.000Z"),
+        results: { "BTCUSDT": true },
+      }),
+    ],
+  ]);
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    value: { getItem: (key: string) => values.get(key) ?? null },
+  });
+
+  try {
+    assert.equal(loadPrevious15MBResults(Date.parse("2026-10-03T00:00:00.000Z")).size, 0);
   } finally {
     if (originalDescriptor) {
       Object.defineProperty(globalThis, "localStorage", originalDescriptor);

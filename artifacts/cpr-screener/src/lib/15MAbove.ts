@@ -7,7 +7,7 @@ const DELTA_BASE = "https://api.india.delta.exchange/v2";
 const CANDLE_INTERVAL_MS = 15 * 60 * 1000;
 const MAX_CONCURRENT_REQUESTS = 8;
 const PREVIOUS_UPEX_CACHE_KEY = "cpr_previous_upex_results_v1";
-const PREVIOUS_15M_B_CACHE_KEY = "cpr_previous_15m_b_results_v1";
+const PREVIOUS_15M_B_CACHE_KEY = "cpr_previous_15m_b_results_v2";
 
 export interface UpexCandidate {
   symbol: string;
