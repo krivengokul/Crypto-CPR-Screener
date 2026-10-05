@@ -1017,4 +1017,125 @@ export const LEVELSBELOW_VIEWS: ViewDef[] = [
     getStoploss: (r) => r.todayCPR.s1,
     order: 999,
   },
+    {
+        key: "PL-B-B-BB-OB-CL3U1-RH-GapAA-S2",
+        label: "UltraMega-S2",
+        parentKey: "B-B-BB-OB-CL3U1",
+        condition: (r) => passesView(r, "B-B-BB-OB-CL3U1") && matchesGapBadge(r, "RH-GapAA"),
+        standalone: true,
+        kind: "view",
+        direction: "Down",
+        targetLabel: "L2 (today's S2)",
+        getTarget: (r) => r.todayCPR.s2,
+        entryLabel: "PL (previous day's low)",
+        getEntry: (r) => r.todayCPR.prevLow,
+        stoplossLabel: "R1 (today's R1)",
+        getStoploss: (r) => r.todayCPR.r1,
+        levelCheckDefs: [
+      {
+        "key": "r4",
+        "subject": "today",
+        "bandKeys": [
+          "r1",
+          "tc"
+        ]
+      },
+      {
+        "key": "r3",
+        "subject": "today",
+        "bandKeys": [
+          "tc",
+          "pivot"
+        ]
+      },
+      {
+        "key": "r2",
+        "subject": "today",
+        "bandKeys": [
+          "pivot",
+          "bc"
+        ]
+      },
+      {
+        "key": "prevHigh",
+        "subject": "today",
+        "bandKeys": [
+          "bc",
+          "prevLow"
+        ]
+      },
+      {
+        "key": "r1",
+        "subject": "today",
+        "bandKeys": [
+          "bc",
+          "prevLow"
+        ]
+      },
+      {
+        "key": "tc",
+        "subject": "today",
+        "bandKeys": [
+          "prevLow",
+          "s1"
+        ]
+      },
+      {
+        "key": "pivot",
+        "subject": "today",
+        "bandKeys": [
+          "prevLow",
+          "s1"
+        ]
+      },
+      {
+        "key": "bc",
+        "subject": "today",
+        "bandKeys": [
+          "prevLow",
+          "s1"
+        ]
+      },
+      {
+        "key": "prevLow",
+        "subject": "today",
+        "bandKeys": [
+          "prevLow",
+          "s1"
+        ]
+      },
+      {
+        "key": "s1",
+        "subject": "today",
+        "bandKeys": [
+          "s1",
+          "s2"
+        ]
+      },
+      {
+        "key": "s2",
+        "subject": "today",
+        "bandKeys": [
+          "s1",
+          "s2"
+        ]
+      },
+      {
+        "key": "s3",
+        "subject": "today",
+        "bandKeys": [
+          "s2",
+          "s3"
+        ]
+      },
+      {
+        "key": "s4",
+        "subject": "today",
+        "bandKeys": [
+          "s2",
+          "s3"
+        ]
+      }
+    ],
+      }
 ];
