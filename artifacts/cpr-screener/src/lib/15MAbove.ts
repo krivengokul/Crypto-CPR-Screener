@@ -88,7 +88,8 @@ export function passesPrevious15MBFilter(
   );
   if (completed.length === 0) return null;
 
-  return completed.some((candle) => candle.open < bc && candle.close < bc);
+  // A session passes unless any candle body is wholly above the previous BC.
+  return !completed.some((candle) => candle.open > bc && candle.close > bc);
 }
 
 async function fetchJson(url: string): Promise<unknown | null> {

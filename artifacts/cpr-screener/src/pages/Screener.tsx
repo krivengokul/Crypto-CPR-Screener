@@ -2334,7 +2334,7 @@ export default function Screener({
                   ? "border-cyan-400 text-cyan-300"
                   : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
               }`}
-              title="Include Binance and Delta symbols with at least one completed previous-session 15-minute candle whose open and close are below previous day's BC. Unevaluated sources such as CoinDCX are excluded while active."
+              title="Include Binance and Delta symbols unless a completed previous-session 15-minute candle has both its open and close strictly above previous day's BC. Unevaluated sources such as CoinDCX are excluded while active."
             >
               {previous15MBProgress
                 ? `P-15M-B ${previous15MBProgress.done}/${previous15MBProgress.total}`

@@ -315,7 +315,7 @@ test("P-15M-A checks the previous IST session and passes candles that are not fu
   );
 });
 
-test("P-15M-B includes a session with a completed candle body below BC", () => {
+test("P-15M-B excludes a session only when a completed candle body is above BC", () => {
   const now = Date.parse("2026-10-03T00:00:00.000Z");
   const start = Date.parse("2026-10-02T00:00:00.000Z");
   const candle = (openTime: number, open: number, close: number): OHLC => ({
@@ -329,7 +329,7 @@ test("P-15M-B includes a session with a completed candle body below BC", () => {
 
   assert.equal(
     passesPrevious15MBFilter(
-      [candle(start, 101, 102), candle(start + 15 * 60_000, 99, 98)],
+      [candle(start, 99, 98), candle(start + 15 * 60_000, 101, 99)],
       100,
       start,
       now,
@@ -337,8 +337,21 @@ test("P-15M-B includes a session with a completed candle body below BC", () => {
     true,
   );
   assert.equal(
-    passesPrevious15MBFilter([candle(start, 101, 99)], 100, start, now),
+    passesPrevious15MBFilter(
+      [candle(start, 99, 98), candle(start + 15 * 60_000, 101, 102)],
+      100,
+      start,
+      now,
+    ),
     false,
+  );
+  assert.equal(
+    passesPrevious15MBFilter([candle(start, 101, 99)], 100, start, now),
+    true,
+  );
+  assert.equal(
+    passesPrevious15MBFilter([candle(start, 100, 100)], 100, start, now),
+    true,
   );
   assert.equal(
     passesPrevious15MBFilter([candle(now, 99, 98)], 100, start, now),
@@ -430,7 +443,7 @@ test("historical P-15M-A checks the session before the selected backtest date an
   }
 });
 
-test("historical P-15M-B checks the previous session for a candle body below BC", async () => {
+test("historical P-15M-B fails only when a previous-session candle body is above BC", async () => {
   const originalFetch = globalThis.fetch;
   const entryDate = "2026-10-01";
   const sessionStart = Date.parse(`${entryDate}T00:00:00.000Z`);
