@@ -16,7 +16,7 @@ import {
 import { fromCoinDCXPair, toCoinDCXPair } from "./coinDCXPair.ts";
 import {
   findPrevious15MBSymbols,
-  findPrevious15MBPass,
+  findPD15MBelowPass,
   getPrevious15MBFloor,
   findPreviousUpexSymbols,
   findPreviousUpexPass,
@@ -539,9 +539,9 @@ test("historical P-15M-B fails only when a previous-session candle body is above
 
   try {
     const candidate = { symbol: "P15MBLOWUSDT", source: "binance" as const, bc: 100 };
-    assert.equal(await findPrevious15MBPass(candidate, sessionStart), true);
+    assert.equal(await findPD15MBelowPass(candidate, sessionStart), true);
     assert.equal(
-      await findPrevious15MBPass(
+      await findPD15MBelowPass(
         { ...candidate, symbol: "P15MABOVEUSDT" },
         sessionStart,
       ),
@@ -568,13 +568,13 @@ test("historical PD-15M-Below-BC fails when a previous-session body is below the
     const candidate = { symbol: "PD15MFLOORUSDT", source: "binance" as const, bc: 100 };
     // Body is below a floor of 90 -> fail.
     assert.equal(
-      await findPrevious15MBPass({ ...candidate, floor: 90 }, sessionStart),
+      await findPD15MBelowPass({ ...candidate, floor: 90 }, sessionStart),
       false,
     );
     // Same candles with a lower floor (e.g. S1 below PL) -> pass; also proves
     // the result isn't reused across different floors.
     assert.equal(
-      await findPrevious15MBPass({ ...candidate, floor: 85 }, sessionStart),
+      await findPD15MBelowPass({ ...candidate, floor: 85 }, sessionStart),
       true,
     );
   } finally {

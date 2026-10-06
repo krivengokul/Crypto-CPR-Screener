@@ -4,7 +4,7 @@ import { fetchDeltaPerps } from "./delta";
 import { fetchCoinDCXDailyKlines, fetchCoinDCXActiveSymbols } from "./coinDCX";
 import { buildViewTree, type ViewTreeNode, VIEWS, getView, type ViewDef, passesView, matchesGapBadge, ALL_GAP_BADGES } from "./views";
 import { gradeTargetHit } from "./backtestOutcome";
-import { findPrevious15MBPass, findPD15MBelowTCPass, findPreviousUpexPass, getPrevious15MBFloor } from "./15MCandleCheck";
+import { findPD15MBelowPass, findPD15MBelowTCPass, findPreviousUpexPass, getPrevious15MBFloor } from "./15MCandleCheck";
 import {
   matchesCprAboveLevelStatus,
   matchesCprAboveOverlapStatus,
@@ -1501,7 +1501,7 @@ export async function backtestSymbolOnDate(
 
   if (target.key === "P15M-B-CPRBELOW") {
     if (source === "coindcx" || !result.LevelsBelow) return null;
-    const PD15MBelowBCPass = await findPrevious15MBPass(
+    const PD15MBelowBCPass = await findPD15MBelowPass(
       {
         symbol,
         source,

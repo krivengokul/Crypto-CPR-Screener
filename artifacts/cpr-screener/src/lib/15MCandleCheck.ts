@@ -567,7 +567,7 @@ export function findPreviousUpexPass(
   return request;
 }
 
-export function findPrevious15MBPass(
+export function findPD15MBelowPass(
   candidate: UpexCandidate,
   now: number
 ): Promise<boolean | null> {
