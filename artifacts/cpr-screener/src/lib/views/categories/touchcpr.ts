@@ -2114,6 +2114,28 @@ export const OVERLAP_BELOW_TOUCH_VIEWS: ViewDef[] = [
     order: 31,
   },
   { key: "OVB-E-E-OA-OB-EL4U4", label: "E-E-OA-OB-EL4U4", parentKey: "OVB-E-E-OA-OB", kind: "pattern", condition: (r) => r.EL4U4, order: 0 },
+
+  // --- P15M-TC-B-OVB ---
+  // Moved here from levelsBelow.ts (it lives under TOUCH > Overlap Below).
+  // Needs result.previous15MTCPass, which the live Screener and the
+  // backtest both populate.
+  {
+    key: "P15M-TC-B-OVB",
+    label: "P15M-TC-B-OVB",
+    parentKey: "overlapLower",
+    kind: "view",
+    standalone: true,
+    condition: (r) => r.previous15MTCPass === true && r.overlapLower,
+    direction: "Down",
+    targetLabel: "S4",
+    getTarget: (r) => r.todayCPR.s4,
+    entryLabel: "PL",
+    getEntry: (r) => r.todayCPR.prevLow,
+    stoplossLabel: "R1",
+    getStoploss: (r) => r.todayCPR.r1,
+    order: 1000,
+  },
+
   ...OVB_UNCLASSIFIED_PATTERNS,
 ];
 
