@@ -793,7 +793,7 @@ export default function Screener({
       setAllResults((rows) =>
         rows.map((row) => ({
           ...row,
-          previous15MTCPass:
+          PD15MBelowTCPass:
             previous15MTCResultsRef.current.get(
               `${previousUpexSessionStart}|binance:${row.symbol}:${row.prevCPR.tc}`,
             ) === true,
@@ -802,7 +802,7 @@ export default function Screener({
       setDeltaAllResults((rows) =>
         rows.map((row) => ({
           ...row,
-          previous15MTCPass:
+          PD15MBelowTCPass:
             previous15MTCResultsRef.current.get(
               `${previousUpexSessionStart}|delta:${row.symbol}:${row.prevCPR.tc}`,
             ) === true,

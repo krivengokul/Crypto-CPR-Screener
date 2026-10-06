@@ -292,7 +292,7 @@ export interface CPRResult {
    * prevCPR.prevLow / prevCPR.s1.
    */
   PD15MBelowBCPass?: boolean;
-  previous15MTCPass?: boolean;
+  PD15MBelowTCPass?: boolean;
   /** 15m squeeze + volume-breakout analysis; attached by binance.ts / delta.ts at scan time. */
   breakout?: BreakoutResult;
   /** Binance only: "COMMOD" = commodity perp (CL/BZ/XAU/XAG), "TRADFI" = other TradFi

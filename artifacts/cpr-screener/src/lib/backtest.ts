@@ -1515,21 +1515,21 @@ export async function backtestSymbolOnDate(
   }
 
   if (target.key === "OVB-P15MBelowTC") {
-    // FIX: this view's condition reads result.previous15MTCPass, but nothing in
+    // FIX: this view's condition reads result.PD15MBelowTCPass, but nothing in
     // the backtest ever populated it (only P15M-A / P-UPEX / P15MBelow-CPRB
     // were wired), so it was always undefined -> every symbol failed -> 0 rows.
     if (source === "coindcx") return null;
     // Structural gate first, without any 15m fetch: assume the 15m part passes
     // and see whether the rest of the pattern (CPR structure) still matches.
     // Only structurally matching symbols pay for a 15m candle request.
-    result.previous15MTCPass = true;
+    result.PD15MBelowTCPass = true;
     if (!passesPatternFn(result, target.conditionKey ?? target.key)) return null;
     const pd15MBelowTCPass = await findPD15MBelowTCPass(
       { symbol, source, bc: result.prevCPR.tc }, // level under test = previous day's TC
       Date.parse(`${entryDateISO}T00:00:00.000Z`),
     );
     if (pd15MBelowTCPass === null) onPD15MBelowTCUnavailable?.(symbol);
-    result.previous15MTCPass = pd15MBelowTCPass === true;
+    result.PD15MBelowTCPass = pd15MBelowTCPass === true;
   }
 
   if (!passesPatternFn(result, target.conditionKey ?? target.key)) return null; // didn't match the pattern on this date
