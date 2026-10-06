@@ -999,7 +999,7 @@ export const LEVELSBELOW_VIEWS: ViewDef[] = [
   {
     key: "P15M-TC-B-OVB",
     label: "P15M-TC-B-OVB",
-    parentKey: "levelsbelow",
+    parentKey: "overlapLower",
     kind: "view",
     standalone: true,
     condition: (r) => r.previous15MTCPass === true && r.overlapLower,
