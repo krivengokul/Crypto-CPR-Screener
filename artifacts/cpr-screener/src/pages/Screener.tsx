@@ -18,7 +18,7 @@ import { runDeltaScreener } from "@/lib/delta";
 import { runCoinDCXScreener } from "@/lib/coinDCX";
 import { COINDCX_ENABLED } from "@/lib/featureFlags";
 import {
-  findPrevious15MBSymbols,
+  findPD15MBelowSymbols,
   findPD15MBelowTCSymbols,
   findPreviousUpexSymbols,
   findUpexSymbols,
@@ -700,7 +700,7 @@ export default function Screener({
     setPrevious15MBFilter(false);
     setPrevious15MBReady(false);
     setPrevious15MBProgress({ done: 0, total: missing.length });
-    void findPrevious15MBSymbols(
+    void findPD15MBelowSymbols(
       missing,
       (done, total) => {
         if (runId === previous15MBRunRef.current) {

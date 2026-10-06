@@ -15,7 +15,7 @@ import {
 } from "./signalOutcome.ts";
 import { fromCoinDCXPair, toCoinDCXPair } from "./coinDCXPair.ts";
 import {
-  findPrevious15MBSymbols,
+  findPD15MBelowSymbols,
   findPD15MBelowPass,
   getPrevious15MBFloor,
   findPreviousUpexSymbols,
@@ -599,7 +599,7 @@ test("P-15M-A and P-15M-B share a previous-session candle request", async () => 
     const candidate = { symbol: "P15MSHAREDUSDT", source: "binance" as const, bc: 100 };
     const [above, below] = await Promise.all([
       findPreviousUpexSymbols([candidate], undefined, now),
-      findPrevious15MBSymbols([candidate], undefined, now),
+      findPD15MBelowSymbols([candidate], undefined, now),
     ]);
     assert.equal(above.outcomes.get("binance:P15MSHAREDUSDT"), false);
     assert.equal(below.outcomes.get("binance:P15MSHAREDUSDT"), true);

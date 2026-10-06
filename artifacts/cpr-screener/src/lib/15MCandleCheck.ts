@@ -340,7 +340,7 @@ export function findPreviousUpexSymbols(
   return findSymbolsForSession(candidates, startTime, endTime, onProgress);
 }
 
-export function findPrevious15MBSymbols(
+export function findPD15MBelowSymbols(
   candidates: UpexCandidate[],
   onProgress?: (done: number, total: number) => void,
   now = Date.now()
