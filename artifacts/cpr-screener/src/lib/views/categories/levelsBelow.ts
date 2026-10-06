@@ -986,7 +986,7 @@ export const LEVELSBELOW_VIEWS: ViewDef[] = [
     label: "P15M-B-CPRBELOW",
     parentKey: "levelsbelow",
     kind: "view",
-    condition: (r) => r.previous15MBPass === true && r.LevelsBelow,
+    condition: (r) => r.PD15MBelowBCPass === true && r.LevelsBelow,
     direction: "Up",
     targetLabel: "R4",
     getTarget: (r) => r.todayCPR.r4,

@@ -7,13 +7,31 @@ const DELTA_BASE = "https://api.india.delta.exchange/v2";
 const CANDLE_INTERVAL_MS = 15 * 60 * 1000;
 const MAX_CONCURRENT_REQUESTS = 8;
 const PREVIOUS_UPEX_CACHE_KEY = "cpr_previous_upex_results_v1";
-const PREVIOUS_15M_B_CACHE_KEY = "cpr_previous_15m_b_results_v2";
+const PREVIOUS_15M_B_CACHE_KEY = "cpr_previous_15m_b_results_v3";
 const PREVIOUS_15M_TC_B_CACHE_KEY = "cpr_previous_15m_tc_b_results_v2";
 
 export interface UpexCandidate {
   symbol: string;
   source: FifteenMinuteSource;
   bc: number;
+  /**
+   * Lower bound for the PD-15M-Below-BC check (see passesPrevious15MBFilter):
+   * the lower of the previous CPR's Prev Low (PL) and S1. Optional because
+   * the other 15m filters (P-15M-A, P-15M-TC-B) don't use it.
+   */
+  floor?: number;
+}
+
+/**
+ * The level the PD-15M-Below-BC check tests candle bodies against on the
+ * downside: previous CPR's PL, or its S1 when S1 sits below PL (i.e. the
+ * lower of the two).
+ */
+export function getPrevious15MBFloor(prevLevels: {
+  prevLow: number;
+  s1: number;
+}): number {
+  return Math.min(prevLevels.prevLow, prevLevels.s1);
 }
 
 export function getUpexBc(
@@ -123,9 +141,13 @@ export function passesPrevious15MBFilter(
   candles: OHLC[],
   bc: number,
   startTime: number,
-  now: number
+  now: number,
+  floor?: number
 ): boolean | null {
   if (!Number.isFinite(bc)) return null;
+  // `floor` is optional so callers that only care about BC keep working; when
+  // supplied it must be a real number or the session can't be evaluated.
+  if (floor !== undefined && !Number.isFinite(floor)) return null;
 
   const completed = candles.filter(
     (candle) =>
@@ -137,8 +159,14 @@ export function passesPrevious15MBFilter(
   );
   if (completed.length === 0) return null;
 
-  // A session passes unless any candle body is wholly above the previous BC.
-  return !completed.some((candle) => candle.open > bc && candle.close > bc);
+  // A session passes unless any candle body is wholly above the previous BC,
+  // or wholly below the floor (lower of previous PL / S1). Only bodies count:
+  // a wick beyond either level does not fail the session.
+  return !completed.some(
+    (candle) =>
+      (candle.open > bc && candle.close > bc) ||
+      (floor !== undefined && candle.open < floor && candle.close < floor),
+  );
 }
 
 async function fetchJson(url: string): Promise<unknown | null> {
@@ -251,7 +279,8 @@ async function findSymbolsForSession(
     candles: OHLC[],
     bc: number,
     startTime: number,
-    now: number
+    now: number,
+    floor?: number
   ) => boolean | null = passesUpexFilter,
 ): Promise<{
   included: Set<string>;
@@ -270,7 +299,7 @@ async function findSymbolsForSession(
         if (!candles) return { candidate, passes: null };
         return {
           candidate,
-          passes: evaluate(candles, candidate.bc, startTime, endTime),
+          passes: evaluate(candles, candidate.bc, startTime, endTime, candidate.floor),
         };
       })
     );
@@ -449,7 +478,7 @@ export function previous15MBCandidateCacheKey(
   sessionStart: number,
   candidate: UpexCandidate,
 ): string {
-  return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.bc}`;
+  return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.floor}`;
 }
 
 export function loadPrevious15MBResults(
@@ -545,7 +574,7 @@ export function findPrevious15MBPass(
   const endTime = upexSessionStartUtcMs(now);
   const startTime = previousUpexSessionStartUtcMs(now);
   const key =
-    `${startTime}:${candidate.source}:${candidate.symbol}:${candidate.bc}`;
+    `${startTime}:${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.floor}`;
   const cached = previous15MBPassCache.get(key);
   if (cached) return cached;
 

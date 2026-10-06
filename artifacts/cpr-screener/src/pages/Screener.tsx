@@ -27,6 +27,7 @@ import {
   loadPD15MTCBelowResults,
   loadPreviousUpexResults,
   previous15MBCandidateCacheKey,
+  getPrevious15MBFloor,
   previous15MTCCandidateCacheKey,
   previousUpexCandidateCacheKey,
   previousUpexSessionStartUtcMs,
@@ -605,6 +606,7 @@ export default function Screener({
       symbol: string;
       source: "binance" | "delta";
       bc: number;
+      floor: number;
     }>();
     if (status === "done") {
       for (const row of allResults) {
@@ -612,6 +614,7 @@ export default function Screener({
           symbol: row.symbol,
           source: "binance",
           bc: row.prevCPR.bc,
+          floor: getPrevious15MBFloor(row.prevCPR),
         });
       }
     }
@@ -621,6 +624,7 @@ export default function Screener({
           symbol: row.symbol,
           source: "delta",
           bc: row.prevCPR.bc,
+          floor: getPrevious15MBFloor(row.prevCPR),
         });
       }
     }
@@ -640,18 +644,28 @@ export default function Screener({
       setAllResults((rows) =>
         rows.map((row) => ({
           ...row,
-          previous15MBPass:
+          PD15MBelowBCPass:
             previous15MBResultsRef.current.get(
-              `${previousUpexSessionStart}|binance:${row.symbol}:${row.prevCPR.bc}`,
+              previous15MBCandidateCacheKey(previousUpexSessionStart, {
+                symbol: row.symbol,
+                source: "binance",
+                bc: row.prevCPR.bc,
+                floor: getPrevious15MBFloor(row.prevCPR),
+              }),
             ) === true,
         })),
       );
       setDeltaAllResults((rows) =>
         rows.map((row) => ({
           ...row,
-          previous15MBPass:
+          PD15MBelowBCPass:
             previous15MBResultsRef.current.get(
-              `${previousUpexSessionStart}|delta:${row.symbol}:${row.prevCPR.bc}`,
+              previous15MBCandidateCacheKey(previousUpexSessionStart, {
+                symbol: row.symbol,
+                source: "delta",
+                bc: row.prevCPR.bc,
+                floor: getPrevious15MBFloor(row.prevCPR),
+              }),
             ) === true,
         })),
       );

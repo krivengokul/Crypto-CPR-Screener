@@ -17,6 +17,7 @@ import { fromCoinDCXPair, toCoinDCXPair } from "./coinDCXPair.ts";
 import {
   findPrevious15MBSymbols,
   findPrevious15MBPass,
+  getPrevious15MBFloor,
   findPreviousUpexSymbols,
   findPreviousUpexPass,
   getUpexBc,
@@ -364,6 +365,76 @@ test("P-15M-B excludes a session only when a completed candle body is above BC",
   );
 });
 
+test("PD-15M-Below-BC also fails when a candle body is wholly below the floor", () => {
+  const now = Date.parse("2026-10-03T00:00:00.000Z");
+  const start = Date.parse("2026-10-02T00:00:00.000Z");
+  const candle = (openTime: number, open: number, close: number): OHLC => ({
+    openTime,
+    open,
+    high: Math.max(open, close) + 1,
+    low: Math.min(open, close) - 1,
+    close,
+    volume: 1,
+  });
+  const bc = 100;
+  const floor = 90;
+
+  // Both open and close below the floor -> fails.
+  assert.equal(
+    passesPrevious15MBFilter([candle(start, 89, 88)], bc, start, now, floor),
+    false,
+  );
+  // Only the wick dips below the floor (body straddles or sits above) -> passes.
+  assert.equal(
+    passesPrevious15MBFilter([candle(start, 91, 89)], bc, start, now, floor),
+    true,
+  );
+  assert.equal(
+    passesPrevious15MBFilter([candle(start, 89, 91)], bc, start, now, floor),
+    true,
+  );
+  assert.equal(
+    passesPrevious15MBFilter([{ ...candle(start, 95, 94), low: 80 }], bc, start, now, floor),
+    true,
+  );
+  // A body exactly on the floor is not below it.
+  assert.equal(
+    passesPrevious15MBFilter([candle(start, 90, 90)], bc, start, now, floor),
+    true,
+  );
+  // The BC rule still applies alongside the floor rule.
+  assert.equal(
+    passesPrevious15MBFilter([candle(start, 101, 102)], bc, start, now, floor),
+    false,
+  );
+  assert.equal(
+    passesPrevious15MBFilter(
+      [candle(start, 95, 94), candle(start + 15 * 60_000, 96, 97)],
+      bc,
+      start,
+      now,
+      floor,
+    ),
+    true,
+  );
+  // Without a floor, candles below it are not checked.
+  assert.equal(
+    passesPrevious15MBFilter([candle(start, 89, 88)], bc, start, now),
+    true,
+  );
+  // A non-finite floor can't be evaluated.
+  assert.equal(
+    passesPrevious15MBFilter([candle(start, 95, 94)], bc, start, now, Number.NaN),
+    null,
+  );
+});
+
+test("PD-15M-Below-BC floor is the lower of previous PL and S1", () => {
+  assert.equal(getPrevious15MBFloor({ prevLow: 90, s1: 95 }), 90);
+  assert.equal(getPrevious15MBFloor({ prevLow: 90, s1: 85 }), 85);
+  assert.equal(getPrevious15MBFloor({ prevLow: 90, s1: 90 }), 90);
+});
+
 test("P-15M-A CPR ABOVE groups the four requested CPR status variants", () => {
   const base = {
     narrowCPR: false,
@@ -481,6 +552,36 @@ test("historical P-15M-B fails only when a previous-session candle body is above
   }
 });
 
+test("historical PD-15M-Below-BC fails when a previous-session body is below the floor", async () => {
+  const originalFetch = globalThis.fetch;
+  const entryDate = "2026-10-01";
+  const sessionStart = Date.parse(`${entryDate}T00:00:00.000Z`);
+  const expectedPreviousSession = sessionStart - 24 * 60 * 60 * 1000;
+  globalThis.fetch = async () =>
+    new Response(
+      // open 89, high 90, low 87, close 88 -> body wholly below 90, under BC 100
+      JSON.stringify([[expectedPreviousSession, "89", "90", "87", "88", "1"]]),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+
+  try {
+    const candidate = { symbol: "PD15MFLOORUSDT", source: "binance" as const, bc: 100 };
+    // Body is below a floor of 90 -> fail.
+    assert.equal(
+      await findPrevious15MBPass({ ...candidate, floor: 90 }, sessionStart),
+      false,
+    );
+    // Same candles with a lower floor (e.g. S1 below PL) -> pass; also proves
+    // the result isn't reused across different floors.
+    assert.equal(
+      await findPrevious15MBPass({ ...candidate, floor: 85 }, sessionStart),
+      true,
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("P-15M-A and P-15M-B share a previous-session candle request", async () => {
   const originalFetch = globalThis.fetch;
   const now = Date.parse("2026-10-04T00:00:00.000Z");
@@ -583,6 +684,33 @@ test("P-15M-B ignores cached results from the previous filter rule", () => {
       JSON.stringify({
         sessionStart: Date.parse("2026-10-03T00:00:00.000Z"),
         results: { "BTCUSDT": true },
+      }),
+    ],
+  ]);
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    value: { getItem: (key: string) => values.get(key) ?? null },
+  });
+
+  try {
+    assert.equal(loadPrevious15MBResults(Date.parse("2026-10-03T00:00:00.000Z")).size, 0);
+  } finally {
+    if (originalDescriptor) {
+      Object.defineProperty(globalThis, "localStorage", originalDescriptor);
+    } else {
+      Reflect.deleteProperty(globalThis, "localStorage");
+    }
+  }
+});
+
+test("PD-15M-Below-BC ignores cached results from before the floor check", () => {
+  const originalDescriptor = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
+  const values = new Map<string, string>([
+    [
+      "cpr_previous_15m_b_results_v2",
+      JSON.stringify({
+        sessionStart: Date.parse("2026-10-03T00:00:00.000Z"),
+        results: { "2026-10-03|binance:BTCUSDT:100": true },
       }),
     ],
   ]);

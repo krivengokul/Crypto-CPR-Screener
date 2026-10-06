@@ -4,7 +4,7 @@ import { fetchDeltaPerps } from "./delta";
 import { fetchCoinDCXDailyKlines, fetchCoinDCXActiveSymbols } from "./coinDCX";
 import { buildViewTree, type ViewTreeNode, VIEWS, getView, type ViewDef, passesView, matchesGapBadge, ALL_GAP_BADGES } from "./views";
 import { gradeTargetHit } from "./backtestOutcome";
-import { findPrevious15MBPass, findPD15MBelowTCPass, findPreviousUpexPass } from "./15MCandleCheck";
+import { findPrevious15MBPass, findPD15MBelowTCPass, findPreviousUpexPass, getPrevious15MBFloor } from "./15MCandleCheck";
 import {
   matchesCprAboveLevelStatus,
   matchesCprAboveOverlapStatus,
@@ -1501,12 +1501,17 @@ export async function backtestSymbolOnDate(
 
   if (target.key === "P15M-B-CPRBELOW") {
     if (source === "coindcx" || !result.LevelsBelow) return null;
-    const previous15MBPass = await findPrevious15MBPass(
-      { symbol, source, bc: result.prevCPR.bc },
+    const PD15MBelowBCPass = await findPrevious15MBPass(
+      {
+        symbol,
+        source,
+        bc: result.prevCPR.bc,
+        floor: getPrevious15MBFloor(result.prevCPR),
+      },
       Date.parse(`${entryDateISO}T00:00:00.000Z`),
     );
-    if (previous15MBPass === null) onPrevious15MBUnavailable?.(symbol);
-    result.previous15MBPass = previous15MBPass === true;
+    if (PD15MBelowBCPass === null) onPrevious15MBUnavailable?.(symbol);
+    result.PD15MBelowBCPass = PD15MBelowBCPass === true;
   }
 
   if (target.key === "OVB-P15MBelowTC") {

@@ -285,8 +285,13 @@ export interface CPRResult {
   symbol: string;
   /** Prepared previous-session P-15M-A result; populated by the live Screener. */
   previousUpexPass?: boolean;
-  /** Prepared previous-session P-15M-B result; populated by the live Screener. */
-  previous15MBPass?: boolean;
+  /**
+   * Prepared previous-session PD-15M-Below-BC result; populated by the live
+   * Screener and the backtest. True when no completed 15m candle body in the
+   * previous session was wholly above prevCPR.bc or wholly below the lower of
+   * prevCPR.prevLow / prevCPR.s1.
+   */
+  PD15MBelowBCPass?: boolean;
   previous15MTCPass?: boolean;
   /** 15m squeeze + volume-breakout analysis; attached by binance.ts / delta.ts at scan time. */
   breakout?: BreakoutResult;
