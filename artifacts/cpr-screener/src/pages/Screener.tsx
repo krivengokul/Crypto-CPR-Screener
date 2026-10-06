@@ -502,7 +502,7 @@ export default function Screener({
       setAllResults((rows) =>
         rows.map((row) => ({
           ...row,
-          previousUpexPass:
+          PD15MAboveBCPass:
             previousUpexResultsRef.current.get(
               `${previousUpexSessionStart}|binance:${row.symbol}:${row.prevCPR.bc}`,
             ) === true,
@@ -511,7 +511,7 @@ export default function Screener({
       setDeltaAllResults((rows) =>
         rows.map((row) => ({
           ...row,
-          previousUpexPass:
+          PD15MAboveBCPass:
             previousUpexResultsRef.current.get(
               `${previousUpexSessionStart}|delta:${row.symbol}:${row.prevCPR.bc}`,
             ) === true,
@@ -538,7 +538,7 @@ export default function Screener({
       ).length;
       setUpexMessage(
         unavailable > 0
-          ? `${unavailable} symbol${unavailable === 1 ? "" : "s"} excluded from P-15M-A because no usable completed 15m candles were returned for the previous IST session.`
+          ? `${unavailable} symbol${unavailable === 1 ? "" : "s"} excluded from PD15M>BC because no usable completed 15m candles were returned for the previous IST session.`
           : "",
       );
       return;
@@ -574,7 +574,7 @@ export default function Screener({
       setPreviousUpexProgress(null);
       setUpexMessage(
         unavailable > 0
-          ? `${unavailable} symbol${unavailable === 1 ? "" : "s"} excluded from P-15M-A because no usable completed 15m candles were returned for the previous IST session.`
+          ? `${unavailable} symbol${unavailable === 1 ? "" : "s"} excluded from PD15M>BC because no usable completed 15m candles were returned for the previous IST session.`
           : "",
       );
     }).catch((cause: unknown) => {
@@ -583,8 +583,8 @@ export default function Screener({
       setPreviousUpexReady(false);
       setUpexMessage(
         cause instanceof Error
-          ? `P-15M-A preparation failed: ${cause.message}`
-          : "P-15M-A preparation failed.",
+          ? `PD15M>BC preparation failed: ${cause.message}`
+          : "PD15M>BC preparation failed.",
       );
     });
     // This runs on scan completion/session rollover, not live-price ticks.
@@ -2518,12 +2518,12 @@ export default function Screener({
               title="For Binance and Delta, exclude a symbol only when a previous-session 15-minute candle body is below previous day's BC and its lower body edge breaks below earlier session wick lows. Prepared once after exchange scan data loads; toggling reuses the cached result."
             >
               {previousUpexProgress
-                ? `P-15M-A ${previousUpexProgress.done}/${previousUpexProgress.total}`
+                ? `PD15M>BC ${previousUpexProgress.done}/${previousUpexProgress.total}`
                 : previousUpexReady
                   ? previousUpexFilter
-                    ? `✕ P-15M-A (${previousUpexIncludedCount})`
-                    : `P-15M-A (${previousUpexIncludedCount})`
-                  : "P-15M-A…"}
+                    ? `✕ PD15M>BC (${previousUpexIncludedCount})`
+                    : `PD15M>BC (${previousUpexIncludedCount})`
+                  : "PD15M>BC…"}
             </button>
             <button
               onClick={() => {

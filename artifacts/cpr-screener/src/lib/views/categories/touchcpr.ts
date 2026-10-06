@@ -759,7 +759,7 @@ export const OVERLAP_ABOVE_TOUCH_VIEWS: ViewDef[] = [
     label: "P15M-A-CPRABOVE",
     parentKey: "OVA",
     kind: "view",
-    condition: (r) => r.previousUpexPass === true && matchesCprAboveOverlapStatus(r),
+    condition: (r) => r.PD15MAboveBCPass === true && matchesCprAboveOverlapStatus(r),
     direction: "Up",
     targetLabel: "R4",
     getTarget: (r) => r.todayCPR.r4,
@@ -2137,8 +2137,8 @@ export const OVERLAP_BELOW_TOUCH_VIEWS: ViewDef[] = [
   },
 
   // --- OVB-P15MAboveBC ---
-  // Mirror of OVB-P15MBelowTC on the BC side. Reuses the existing P-15M-A
-  // previous-session check (passesUpexFilter -> result.previousUpexPass, which
+  // Mirror of OVB-P15MBelowTC on the BC side. Reuses the existing PD15M>BC
+  // previous-session check (passesUpexFilter -> result.PD15MAboveBCPass, which
   // the live Screener and the backtest both populate): it fails as soon as a
   // completed 15m candle has its whole body below yesterday's BC AND that
   // body's low is under the lowest wick of every earlier candle (a fresh low
@@ -2149,7 +2149,7 @@ export const OVERLAP_BELOW_TOUCH_VIEWS: ViewDef[] = [
     parentKey: "overlapLower",
     kind: "view",
     standalone: true,
-    condition: (r) => r.previousUpexPass === true && r.overlapLower,
+    condition: (r) => r.PD15MAboveBCPass === true && r.overlapLower,
     direction: "Down",
     targetLabel: "S4",
     getTarget: (r) => r.todayCPR.s4,

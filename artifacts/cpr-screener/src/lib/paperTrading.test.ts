@@ -263,7 +263,7 @@ test("15M-A uses previous day's BC only for today's Overlap Above rows", () => {
   assert.equal(getUpexBc(100, 90, false), 100);
 });
 
-test("P-15M-A checks the previous IST session and passes candles that are not fully below BC", () => {
+test("PD15M>BC checks the previous IST session and passes candles that are not fully below BC", () => {
   const now = Date.parse("2026-10-03T08:07:00.000Z");
   const end = upexSessionStartUtcMs(now);
   const start = previousUpexSessionStartUtcMs(now);
@@ -435,7 +435,7 @@ test("PD-15M-Below-BC floor is the lower of previous PL and S1", () => {
   assert.equal(getPrevious15MBFloor({ prevLow: 90, s1: 90 }), 90);
 });
 
-test("P-15M-A CPR ABOVE groups the four requested CPR status variants", () => {
+test("PD15M>BC CPR ABOVE groups the four requested CPR status variants", () => {
   const base = {
     narrowCPR: false,
     InsideCPR: false,
@@ -471,7 +471,7 @@ test("P-15M-A CPR ABOVE groups the four requested CPR status variants", () => {
   );
 });
 
-test("historical P-15M-A checks the session before the selected backtest date and caches passes", async () => {
+test("historical PD15M>BC checks the session before the selected backtest date and caches passes", async () => {
   const originalFetch = globalThis.fetch;
   const entryDate = "2026-09-30";
   const sessionStart = Date.parse(`${entryDate}T00:00:00.000Z`);
@@ -582,7 +582,7 @@ test("historical PD-15M-Below-BC fails when a previous-session body is below the
   }
 });
 
-test("P-15M-A and P-15M-B share a previous-session candle request", async () => {
+test("PD15M>BC and P-15M-B share a previous-session candle request", async () => {
   const originalFetch = globalThis.fetch;
   const now = Date.parse("2026-10-04T00:00:00.000Z");
   const start = now - 24 * 60 * 60 * 1000;
@@ -635,7 +635,7 @@ test("previous-session API failures are not cached and can be retried", async ()
   }
 });
 
-test("P-15M-A prepared results persist only for their matching session", () => {
+test("PD15M>BC prepared results persist only for their matching session", () => {
   const originalDescriptor = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
   const values = new Map<string, string>();
   Object.defineProperty(globalThis, "localStorage", {

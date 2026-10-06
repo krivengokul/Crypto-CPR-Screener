@@ -283,8 +283,8 @@ export interface CPRPairFlags {
 
 export interface CPRResult {
   symbol: string;
-  /** Prepared previous-session P-15M-A result; populated by the live Screener. */
-  previousUpexPass?: boolean;
+  /** Prepared previous-session PD15M>BC result; populated by the live Screener. */
+  PD15MAboveBCPass?: boolean;
   /**
    * Prepared previous-session PD-15M-Below-BC result; populated by the live
    * Screener and the backtest. True when no completed 15m candle body in the

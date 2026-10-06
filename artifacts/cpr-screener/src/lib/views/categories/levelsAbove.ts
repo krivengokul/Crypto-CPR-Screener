@@ -1499,7 +1499,7 @@ export const LEVELSABOVE_VIEWS: ViewDef[] = [
     label: "P15M-A-CPRABOVE",
     parentKey: "levelsabove",
     kind: "view",
-    condition: (r) => r.previousUpexPass === true && matchesCprAboveLevelStatus(r),
+    condition: (r) => r.PD15MAboveBCPass === true && matchesCprAboveLevelStatus(r),
     direction: "Up",
     targetLabel: "R4",
     getTarget: (r) => r.todayCPR.r4,

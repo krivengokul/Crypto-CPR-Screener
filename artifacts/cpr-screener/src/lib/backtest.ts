@@ -1491,12 +1491,12 @@ export async function backtestSymbolOnDate(
     if (!matchesStructure) return null;
 
     const sessionStart = Date.parse(`${entryDateISO}T00:00:00.000Z`);
-    const previousUpexPass = await findPreviousUpexPass(
+    const PD15MAboveBCPass = await findPreviousUpexPass(
       { symbol, source, bc: result.prevCPR.bc },
       sessionStart,
     );
-    if (previousUpexPass === null) onPreviousUpexUnavailable?.(symbol);
-    result.previousUpexPass = previousUpexPass === true;
+    if (PD15MAboveBCPass === null) onPreviousUpexUnavailable?.(symbol);
+    result.PD15MAboveBCPass = PD15MAboveBCPass === true;
   }
 
   if (target.key === "P15MBelow-CPRB") {
@@ -1515,19 +1515,19 @@ export async function backtestSymbolOnDate(
   }
 
   if (target.key === "OVB-P15MAboveBC") {
-    // Reuses the P-15M-A previous-session check (result.previousUpexPass) with
+    // Reuses the PD15M>BC previous-session check (result.PD15MAboveBCPass) with
     // yesterday's BC as the level under test.
     if (source === "coindcx") return null;
     // Structural gate first, without any 15m fetch: assume the 15m part passes
     // and see whether the rest of the pattern (CPR structure) still matches.
-    result.previousUpexPass = true;
+    result.PD15MAboveBCPass = true;
     if (!passesPatternFn(result, target.conditionKey ?? target.key)) return null;
-    const previousUpexPass = await findPreviousUpexPass(
+    const PD15MAboveBCPass = await findPreviousUpexPass(
       { symbol, source, bc: result.prevCPR.bc },
       Date.parse(`${entryDateISO}T00:00:00.000Z`),
     );
-    if (previousUpexPass === null) onPreviousUpexUnavailable?.(symbol);
-    result.previousUpexPass = previousUpexPass === true;
+    if (PD15MAboveBCPass === null) onPreviousUpexUnavailable?.(symbol);
+    result.PD15MAboveBCPass = PD15MAboveBCPass === true;
   }
 
   if (target.key === "OVB-P15MBelowTC") {
@@ -1911,7 +1911,7 @@ export async function runBacktest(
 
   if (previousUpexUnavailable > 0) {
     const message =
-      `P-15M-A candles were unavailable for ${previousUpexUnavailable} structurally ` +
+      `PD15M>BC candles were unavailable for ${previousUpexUnavailable} structurally ` +
       `matching ${source} symbol(s) on ${entryDateISO}; they were omitted, not counted as passing.`;
     console.warn(`[backtest] ${message}`);
     onWarning?.(message);

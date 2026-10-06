@@ -17,7 +17,7 @@ export interface UpexCandidate {
   /**
    * Lower bound for the PD-15M-Below-BC check (see passesPrevious15MBFilter):
    * the lower of the previous CPR's Prev Low (PL) and S1. Optional because
-   * the other 15m filters (P-15M-A, P-15M-TC-B) don't use it.
+   * the other 15m filters (PD15M>BC, P-15M-TC-B) don't use it.
    */
   floor?: number;
 }
@@ -90,7 +90,7 @@ export function passesUpexFilter(
 }
 
 /**
- * P-15M-TC-B ("Below TC"), the mirror image of passesUpexFilter (P-15M-A / BC):
+ * P-15M-TC-B ("Below TC"), the mirror image of passesUpexFilter (PD15M>BC / BC):
  * walk the previous session's completed 15m candles in time order and fail as
  * soon as a candle's WHOLE body is above `tc` AND that body's top is higher
  * than the highest wick seen on any earlier candle (a fresh high above TC).
