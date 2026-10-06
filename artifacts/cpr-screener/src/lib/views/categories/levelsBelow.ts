@@ -1001,6 +1001,7 @@ export const LEVELSBELOW_VIEWS: ViewDef[] = [
     label: "P15M-TC-B-OVB",
     parentKey: "levelsbelow",
     kind: "view",
+    standalone: true,
     condition: (r) => r.previous15MTCPass === true && r.overlapLower,
     direction: "Down",
     targetLabel: "S4",
