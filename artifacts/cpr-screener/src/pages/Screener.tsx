@@ -24,14 +24,14 @@ import {
   findUpexSymbols,
   getUpexBc,
   loadPrevious15MBResults,
-  loadPrevious15MTCResults,
+  loadPD15MTCBelowResults,
   loadPreviousUpexResults,
   previous15MBCandidateCacheKey,
   previous15MTCCandidateCacheKey,
   previousUpexCandidateCacheKey,
   previousUpexSessionStartUtcMs,
   savePrevious15MBResults,
-  savePrevious15MTCResults,
+  savePD15MBelowTCResults,
   savePreviousUpexResults,
 } from "@/lib/15MAbove";
 import type { CPRResult } from "@/lib/cpr";
@@ -361,7 +361,7 @@ export default function Screener({
   const previous15MBCacheSessionRef = useRef(previousUpexSessionStart);
   const previous15MBRunRef = useRef(0);
   const previous15MTCResultsRef = useRef<Map<string, boolean | null>>(
-    loadPrevious15MTCResults(previousUpexSessionStart),
+    loadPD15MTCBelowResults(previousUpexSessionStart),
   );
   const previous15MTCCacheSessionRef = useRef(previousUpexSessionStart);
   const previous15MTCRunRef = useRef(0);
@@ -731,7 +731,7 @@ export default function Screener({
 
   useEffect(() => {
     if (previous15MTCCacheSessionRef.current !== previousUpexSessionStart) {
-      previous15MTCResultsRef.current = loadPrevious15MTCResults(previousUpexSessionStart);
+      previous15MTCResultsRef.current = loadPD15MTCBelowResults(previousUpexSessionStart);
       previous15MTCCacheSessionRef.current = previousUpexSessionStart;
     }
     if (
@@ -844,7 +844,7 @@ export default function Screener({
           previous15MTCResultsRef.current.delete(cacheKey(candidate));
         }
       }
-      savePrevious15MTCResults(previousUpexSessionStart, previous15MTCResultsRef.current);
+      savePD15MBelowTCResults(previousUpexSessionStart, previous15MTCResultsRef.current);
       updateIncluded();
       syncPreparedFlags();
       setPrevious15MTCReady(true);

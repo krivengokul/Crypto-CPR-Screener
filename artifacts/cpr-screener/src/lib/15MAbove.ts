@@ -353,7 +353,7 @@ export function previous15MTCCandidateCacheKey(
   return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.bc}`;
 }
 
-export function loadPrevious15MTCResults(
+export function loadPD15MTCBelowResults(
   sessionStart: number,
 ): Map<string, boolean | null> {
   try {
@@ -384,7 +384,7 @@ export function loadPrevious15MTCResults(
   }
 }
 
-export function savePrevious15MTCResults(
+export function savePD15MBelowTCResults(
   sessionStart: number,
   results: Map<string, boolean | null>,
 ): void {
@@ -450,6 +450,7 @@ export function savePrevious15MBResults(
 
 const previousUpexPassCache = new Map<string, Promise<boolean | null>>();
 const previous15MBPassCache = new Map<string, Promise<boolean | null>>();
+const pd15MBelowTCPassCache = new Map<string, Promise<boolean | null>>();
 const MAX_PREVIOUS_UPEX_CACHE_ENTRIES = 20_000;
 
 /**
@@ -524,5 +525,50 @@ export function findPrevious15MBPass(
     }
   );
   previous15MBPassCache.set(key, request);
+  return request;
+}
+
+/**
+ * Previous-day 15m "Below TC" pass for a single symbol (P-15M-TC-B).
+ * Pass `candidate.bc` = the previous day's TC (the field name is historical;
+ * it is simply the level under test). Passes when no completed 15m candle in
+ * the previous session has its whole body above that level.
+ * Own cache so TC results never collide with the BC-based P-15M-B results.
+ */
+export function findPD15MBelowTCPass(
+  candidate: UpexCandidate,
+  now: number
+): Promise<boolean | null> {
+  const endTime = upexSessionStartUtcMs(now);
+  const startTime = previousUpexSessionStartUtcMs(now);
+  const key =
+    `${startTime}:${candidate.source}:${candidate.symbol}:${candidate.bc}`;
+  const cached = pd15MBelowTCPassCache.get(key);
+  if (cached) return cached;
+
+  const request = findSymbolsForSession(
+    [candidate],
+    startTime,
+    endTime,
+    undefined,
+    passesPrevious15MBFilter,
+  ).then(
+    ({ included, unavailable }) => {
+      if (unavailable > 0) {
+        pd15MBelowTCPassCache.delete(key);
+        return null;
+      }
+      if (pd15MBelowTCPassCache.size > MAX_PREVIOUS_UPEX_CACHE_ENTRIES) {
+        const oldestKey = pd15MBelowTCPassCache.keys().next().value;
+        if (oldestKey) pd15MBelowTCPassCache.delete(oldestKey);
+      }
+      return included.has(`${candidate.source}:${candidate.symbol}`);
+    },
+    (error: unknown) => {
+      pd15MBelowTCPassCache.delete(key);
+      throw error;
+    }
+  );
+  pd15MBelowTCPassCache.set(key, request);
   return request;
 }

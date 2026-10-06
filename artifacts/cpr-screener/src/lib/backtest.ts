@@ -4,7 +4,7 @@ import { fetchDeltaPerps } from "./delta";
 import { fetchCoinDCXDailyKlines, fetchCoinDCXActiveSymbols } from "./coinDCX";
 import { buildViewTree, type ViewTreeNode, VIEWS, getView, type ViewDef, passesView, matchesGapBadge, ALL_GAP_BADGES } from "./views";
 import { gradeTargetHit } from "./backtestOutcome";
-import { findPrevious15MBPass, findPreviousUpexPass } from "./15MAbove";
+import { findPrevious15MBPass, findPD15MBelowTCPass, findPreviousUpexPass } from "./15MAbove";
 import {
   matchesCprAboveLevelStatus,
   matchesCprAboveOverlapStatus,
@@ -1468,7 +1468,8 @@ export async function backtestSymbolOnDate(
   target: ViewDef,
   passesPatternFn: (r: CPRResult, pattern: string) => boolean,
   onPreviousUpexUnavailable?: (symbol: string) => void,
-  onPrevious15MBUnavailable?: (symbol: string) => void
+  onPrevious15MBUnavailable?: (symbol: string) => void,
+  onPD15MBelowTCUnavailable?: (symbol: string) => void
 ): Promise<BacktestRow | null> {
   const dPlus1 = addDaysISO(entryDateISO, 1);
 
@@ -1506,6 +1507,24 @@ export async function backtestSymbolOnDate(
     );
     if (previous15MBPass === null) onPrevious15MBUnavailable?.(symbol);
     result.previous15MBPass = previous15MBPass === true;
+  }
+
+  if (target.key === "P15M-TC-B-OVB") {
+    // FIX: this view's condition reads result.previous15MTCPass, but nothing in
+    // the backtest ever populated it (only P15M-A / P-UPEX / P15M-B-CPRBELOW
+    // were wired), so it was always undefined -> every symbol failed -> 0 rows.
+    if (source === "coindcx") return null;
+    // Structural gate first, without any 15m fetch: assume the 15m part passes
+    // and see whether the rest of the pattern (CPR structure) still matches.
+    // Only structurally matching symbols pay for a 15m candle request.
+    result.previous15MTCPass = true;
+    if (!passesPatternFn(result, target.conditionKey ?? target.key)) return null;
+    const pd15MBelowTCPass = await findPD15MBelowTCPass(
+      { symbol, source, bc: result.prevCPR.tc }, // level under test = previous day's TC
+      Date.parse(`${entryDateISO}T00:00:00.000Z`),
+    );
+    if (pd15MBelowTCPass === null) onPD15MBelowTCUnavailable?.(symbol);
+    result.previous15MTCPass = pd15MBelowTCPass === true;
   }
 
   if (!passesPatternFn(result, target.conditionKey ?? target.key)) return null; // didn't match the pattern on this date
@@ -1814,11 +1833,13 @@ export async function runBacktest(
   const batchSize =
     target.key === "P15M-A-CPRABOVE" ||
     target.key === "P-UPEX-CPRABOVE-OVA" ||
-    target.key === "P15M-B-CPRBELOW"
+    target.key === "P15M-B-CPRBELOW" ||
+    target.key === "P15M-TC-B-OVB"
       ? 8
       : 100;
   let previousUpexUnavailable = 0;
   let previous15MBUnavailable = 0;
+  let pd15MBelowTCUnavailable = 0;
 
   // PERF FIX: streamed rows are now buffered and flushed to onPartialRows
   // at most every FLUSH_INTERVAL_MS, instead of once per batch. Flushing
@@ -1853,6 +1874,7 @@ export async function runBacktest(
           passesPatternFn,
           () => previousUpexUnavailable++,
           () => previous15MBUnavailable++,
+          () => pd15MBelowTCUnavailable++,
         ),
       )
     );
@@ -1875,6 +1897,14 @@ export async function runBacktest(
   if (previous15MBUnavailable > 0) {
     const message =
       `P-15M-B candles were unavailable for ${previous15MBUnavailable} structurally ` +
+      `matching ${source} symbol(s) on ${entryDateISO}; they were omitted, not counted as passing.`;
+    console.warn(`[backtest] ${message}`);
+    onWarning?.(message);
+  }
+
+  if (pd15MBelowTCUnavailable > 0) {
+    const message =
+      `PD-15M-Below-TC candles were unavailable for ${pd15MBelowTCUnavailable} structurally ` +
       `matching ${source} symbol(s) on ${entryDateISO}; they were omitted, not counted as passing.`;
     console.warn(`[backtest] ${message}`);
     onWarning?.(message);
