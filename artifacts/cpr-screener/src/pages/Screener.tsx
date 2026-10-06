@@ -33,7 +33,7 @@ import {
   savePrevious15MBResults,
   savePD15MBelowTCResults,
   savePreviousUpexResults,
-} from "@/lib/15MAbove";
+} from "@/lib/15MCandleCheck";
 import type { CPRResult } from "@/lib/cpr";
 import { utcTodayISO, ENTRY_DEFS } from "@/lib/backtest";
 import {

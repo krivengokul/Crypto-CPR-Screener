@@ -28,7 +28,7 @@ import {
   previousUpexSessionStartUtcMs,
   savePreviousUpexResults,
   upexSessionStartUtcMs,
-} from "./15MAbove.ts";
+} from "./15MCandleCheck.ts";
 import {
   matchesCprAboveLevelStatus,
   matchesCprAboveOverlapStatus,

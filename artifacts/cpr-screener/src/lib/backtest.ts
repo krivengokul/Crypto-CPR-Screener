@@ -4,7 +4,7 @@ import { fetchDeltaPerps } from "./delta";
 import { fetchCoinDCXDailyKlines, fetchCoinDCXActiveSymbols } from "./coinDCX";
 import { buildViewTree, type ViewTreeNode, VIEWS, getView, type ViewDef, passesView, matchesGapBadge, ALL_GAP_BADGES } from "./views";
 import { gradeTargetHit } from "./backtestOutcome";
-import { findPrevious15MBPass, findPD15MBelowTCPass, findPreviousUpexPass } from "./15MAbove";
+import { findPrevious15MBPass, findPD15MBelowTCPass, findPreviousUpexPass } from "./15MCandleCheck";
 import {
   matchesCprAboveLevelStatus,
   matchesCprAboveOverlapStatus,
