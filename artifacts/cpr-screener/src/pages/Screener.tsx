@@ -19,7 +19,7 @@ import { runCoinDCXScreener } from "@/lib/coinDCX";
 import { COINDCX_ENABLED } from "@/lib/featureFlags";
 import {
   findPrevious15MBSymbols,
-  findPrevious15MTCSymbols,
+  findPD15MBelowTCSymbols,
   findPreviousUpexSymbols,
   findUpexSymbols,
   getUpexBc,
@@ -825,7 +825,7 @@ export default function Screener({
     setPrevious15MTCFilter(false);
     setPrevious15MTCReady(false);
     setPrevious15MTCProgress({ done: 0, total: missing.length });
-    void findPrevious15MTCSymbols(
+    void findPD15MBelowTCSymbols(
       missing,
       (done, total) => {
         if (runId === previous15MTCRunRef.current) {

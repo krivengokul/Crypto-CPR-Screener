@@ -378,7 +378,7 @@ export function savePreviousUpexResults(
   safeSetItem(PREVIOUS_UPEX_CACHE_KEY, payload);
 }
 
-export function findPrevious15MTCSymbols(
+export function findPD15MBelowTCSymbols(
   candidates: UpexCandidate[],
   onProgress?: (done: number, total: number) => void,
   now = Date.now()
