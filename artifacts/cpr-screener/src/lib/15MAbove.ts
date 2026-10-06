@@ -8,7 +8,7 @@ const CANDLE_INTERVAL_MS = 15 * 60 * 1000;
 const MAX_CONCURRENT_REQUESTS = 8;
 const PREVIOUS_UPEX_CACHE_KEY = "cpr_previous_upex_results_v1";
 const PREVIOUS_15M_B_CACHE_KEY = "cpr_previous_15m_b_results_v2";
-const PREVIOUS_15M_TC_B_CACHE_KEY = "cpr_previous_15m_tc_b_results_v1";
+const PREVIOUS_15M_TC_B_CACHE_KEY = "cpr_previous_15m_tc_b_results_v2";
 
 export interface UpexCandidate {
   symbol: string;
@@ -68,6 +68,54 @@ export function passesUpexFilter(
         : Math.min(previousLowestWick, candle.low);
   }
 
+  return true;
+}
+
+/**
+ * P-15M-TC-B ("Below TC"), the mirror image of passesUpexFilter (P-15M-A / BC):
+ * walk the previous session's completed 15m candles in time order and fail as
+ * soon as a candle's WHOLE body is above `tc` AND that body's top is higher
+ * than the highest wick seen on any earlier candle (a fresh high above TC).
+ * A body above TC that stays at or under an earlier candle's high does not
+ * fail. The first candle has no earlier wick, so a full body above TC on it
+ * fails (same as the BC rule).
+ */
+export function passesPD15MBelowTCFilter(
+  candles: OHLC[],
+  tc: number,
+  startTime: number,
+  now: number
+): boolean | null {
+  if (!Number.isFinite(tc)) return null;
+  const completed = candles
+    .filter(
+      (candle) =>
+        Number.isFinite(candle.openTime) &&
+        candle.openTime >= startTime &&
+        candle.openTime + CANDLE_INTERVAL_MS <= now &&
+        Number.isFinite(candle.open) &&
+        Number.isFinite(candle.close) &&
+        Number.isFinite(candle.high)
+    )
+    .sort((a, b) => a.openTime - b.openTime);
+
+  if (completed.length === 0) return null;
+
+  let previousHighestWick: number | null = null;
+  for (const candle of completed) {
+    const fullBodyAboveTc = candle.open > tc && candle.close > tc;
+    const bodyHigh = Math.max(candle.open, candle.close);
+    if (
+      fullBodyAboveTc &&
+      (previousHighestWick === null || bodyHigh > previousHighestWick)
+    ) {
+      return false;
+    }
+    previousHighestWick =
+      previousHighestWick === null
+        ? candle.high
+        : Math.max(previousHighestWick, candle.high);
+  }
   return true;
 }
 
@@ -342,7 +390,7 @@ export function findPrevious15MTCSymbols(
     startTime,
     endTime,
     onProgress,
-    passesPrevious15MBFilter,
+    passesPD15MBelowTCFilter,
   );
 }
 
@@ -531,8 +579,9 @@ export function findPrevious15MBPass(
 /**
  * Previous-day 15m "Below TC" pass for a single symbol (P-15M-TC-B).
  * Pass `candidate.bc` = the previous day's TC (the field name is historical;
- * it is simply the level under test). Passes when no completed 15m candle in
- * the previous session has its whole body above that level.
+ * it is simply the level under test). Passes unless a completed 15m candle in
+ * the previous session has its whole body above that level AND makes a new
+ * high versus earlier candles (see passesPD15MBelowTCFilter).
  * Own cache so TC results never collide with the BC-based P-15M-B results.
  */
 export function findPD15MBelowTCPass(
@@ -551,7 +600,7 @@ export function findPD15MBelowTCPass(
     startTime,
     endTime,
     undefined,
-    passesPrevious15MBFilter,
+    passesPD15MBelowTCFilter,
   ).then(
     ({ included, unavailable }) => {
       if (unavailable > 0) {
