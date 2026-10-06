@@ -2136,6 +2136,30 @@ export const OVERLAP_BELOW_TOUCH_VIEWS: ViewDef[] = [
     order: 1000,
   },
 
+  // --- OVB-P15MAboveBC ---
+  // Mirror of OVB-P15MBelowTC on the BC side. Reuses the existing P-15M-A
+  // previous-session check (passesUpexFilter -> result.previousUpexPass, which
+  // the live Screener and the backtest both populate): it fails as soon as a
+  // completed 15m candle has its whole body below yesterday's BC AND that
+  // body's low is under the lowest wick of every earlier candle (a fresh low
+  // below BC).
+  {
+    key: "OVB-P15MAboveBC",
+    label: "OVB-P15MAboveBC",
+    parentKey: "overlapLower",
+    kind: "view",
+    standalone: true,
+    condition: (r) => r.previousUpexPass === true && r.overlapLower,
+    direction: "Down",
+    targetLabel: "S4",
+    getTarget: (r) => r.todayCPR.s4,
+    entryLabel: "PL",
+    getEntry: (r) => r.todayCPR.prevLow,
+    stoplossLabel: "R1",
+    getStoploss: (r) => r.todayCPR.r1,
+    order: 1001,
+  },
+
   ...OVB_UNCLASSIFIED_PATTERNS,
 ];
 

@@ -1514,6 +1514,22 @@ export async function backtestSymbolOnDate(
     result.PD15MBelowBCPass = PD15MBelowBCPass === true;
   }
 
+  if (target.key === "OVB-P15MAboveBC") {
+    // Reuses the P-15M-A previous-session check (result.previousUpexPass) with
+    // yesterday's BC as the level under test.
+    if (source === "coindcx") return null;
+    // Structural gate first, without any 15m fetch: assume the 15m part passes
+    // and see whether the rest of the pattern (CPR structure) still matches.
+    result.previousUpexPass = true;
+    if (!passesPatternFn(result, target.conditionKey ?? target.key)) return null;
+    const previousUpexPass = await findPreviousUpexPass(
+      { symbol, source, bc: result.prevCPR.bc },
+      Date.parse(`${entryDateISO}T00:00:00.000Z`),
+    );
+    if (previousUpexPass === null) onPreviousUpexUnavailable?.(symbol);
+    result.previousUpexPass = previousUpexPass === true;
+  }
+
   if (target.key === "OVB-P15MBelowTC") {
     // FIX: this view's condition reads result.PD15MBelowTCPass, but nothing in
     // the backtest ever populated it (only P15M-A / P-UPEX / P15MBelow-CPRB
@@ -1839,7 +1855,8 @@ export async function runBacktest(
     target.key === "P15M-A-CPRABOVE" ||
     target.key === "P-UPEX-CPRABOVE-OVA" ||
     target.key === "P15MBelow-CPRB" ||
-    target.key === "OVB-P15MBelowTC"
+    target.key === "OVB-P15MBelowTC" ||
+    target.key === "OVB-P15MAboveBC"
       ? 8
       : 100;
   let previousUpexUnavailable = 0;
