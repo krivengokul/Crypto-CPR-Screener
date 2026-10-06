@@ -1499,7 +1499,7 @@ export async function backtestSymbolOnDate(
     result.previousUpexPass = previousUpexPass === true;
   }
 
-  if (target.key === "P15M-B-CPRBELOW") {
+  if (target.key === "P15MBelow-CPRB") {
     if (source === "coindcx" || !result.LevelsBelow) return null;
     const PD15MBelowBCPass = await findPD15MBelowPass(
       {
@@ -1516,7 +1516,7 @@ export async function backtestSymbolOnDate(
 
   if (target.key === "OVB-P15MBelowTC") {
     // FIX: this view's condition reads result.previous15MTCPass, but nothing in
-    // the backtest ever populated it (only P15M-A / P-UPEX / P15M-B-CPRBELOW
+    // the backtest ever populated it (only P15M-A / P-UPEX / P15MBelow-CPRB
     // were wired), so it was always undefined -> every symbol failed -> 0 rows.
     if (source === "coindcx") return null;
     // Structural gate first, without any 15m fetch: assume the 15m part passes
@@ -1838,7 +1838,7 @@ export async function runBacktest(
   const batchSize =
     target.key === "P15M-A-CPRABOVE" ||
     target.key === "P-UPEX-CPRABOVE-OVA" ||
-    target.key === "P15M-B-CPRBELOW" ||
+    target.key === "P15MBelow-CPRB" ||
     target.key === "OVB-P15MBelowTC"
       ? 8
       : 100;

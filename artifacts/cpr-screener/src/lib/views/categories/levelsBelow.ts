@@ -982,8 +982,8 @@ export const LEVELSBELOW_VIEWS: ViewDef[] = [
   { key: "E-B-RA-BB-L4U4", label: "E-B-RA-BB-L4U4", parentKey: "E-B-RA-BB", kind: "pattern", condition: (r) => r.L4U4, order: 4 },
 
   {
-    key: "P15M-B-CPRBELOW",
-    label: "P15M-B-CPRBELOW",
+    key: "P15MBelow-CPRB",
+    label: "P15MBelow-CPRB",
     parentKey: "levelsbelow",
     kind: "view",
     condition: (r) => r.PD15MBelowBCPass === true && r.LevelsBelow,
