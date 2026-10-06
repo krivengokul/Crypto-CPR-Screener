@@ -1509,7 +1509,7 @@ export async function backtestSymbolOnDate(
     result.previous15MBPass = previous15MBPass === true;
   }
 
-  if (target.key === "P15M-TC-B-OVB") {
+  if (target.key === "OVB-P15MBelowTC") {
     // FIX: this view's condition reads result.previous15MTCPass, but nothing in
     // the backtest ever populated it (only P15M-A / P-UPEX / P15M-B-CPRBELOW
     // were wired), so it was always undefined -> every symbol failed -> 0 rows.
@@ -1834,7 +1834,7 @@ export async function runBacktest(
     target.key === "P15M-A-CPRABOVE" ||
     target.key === "P-UPEX-CPRABOVE-OVA" ||
     target.key === "P15M-B-CPRBELOW" ||
-    target.key === "P15M-TC-B-OVB"
+    target.key === "OVB-P15MBelowTC"
       ? 8
       : 100;
   let previousUpexUnavailable = 0;
