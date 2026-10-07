@@ -2678,7 +2678,7 @@ export default function Screener({
               disabled={!previousConsolidateAReady || currentAllCount === 0 || activeTab === "coindcx"}
               className={`text-xs px-2.5 py-1 rounded border transition-colors disabled:opacity-50 ${
                 previousConsolidateAFilter
-                  ? "border-cyan-400 text-cyan-300"
+                  ? "bg-foreground/15 text-foreground border-border font-bold"
                   : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
               }`}
               title="Include Binance and Delta symbols unless a completed previous-session 15-minute candle (a) has its whole body below previous day's BC while making a new low versus earlier candles, or (b) has its whole body above the higher of previous day's PH and R1. Unevaluated sources such as CoinDCX are excluded while active."
@@ -2686,9 +2686,7 @@ export default function Screener({
               {previousConsolidateAProgress
                 ? `CONSOLIDATE-A ${previousConsolidateAProgress.done}/${previousConsolidateAProgress.total}`
                 : previousConsolidateAReady
-                  ? previousConsolidateAFilter
-                    ? `✕ CONSOLIDATE-A (${previousConsolidateAIncludedCount})`
-                    : `CONSOLIDATE-A (${previousConsolidateAIncludedCount})`
+                  ? `CONSOLIDATE-A (${previousConsolidateAIncludedCount})`
                   : "CONSOLIDATE-A…"}
             </button>
             <button
@@ -2700,7 +2698,7 @@ export default function Screener({
               disabled={!previousUpexReady || currentAllCount === 0 || activeTab === "coindcx"}
               className={`text-xs px-2.5 py-1 rounded border transition-colors disabled:opacity-50 ${
                 previousUpexFilter
-                  ? "border-cyan-400 text-cyan-300"
+                  ? "bg-foreground/15 text-foreground border-border font-bold"
                   : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
               }`}
               title="For Binance and Delta, exclude a symbol only when a previous-session 15-minute candle body is below previous day's BC and its lower body edge breaks below earlier session wick lows. Prepared once after exchange scan data loads; toggling reuses the cached result."
@@ -2708,9 +2706,7 @@ export default function Screener({
               {previousUpexProgress
                 ? `MOMENTUM-A ${previousUpexProgress.done}/${previousUpexProgress.total}`
                 : previousUpexReady
-                  ? previousUpexFilter
-                    ? `✕ MOMENTUM-A (${previousUpexIncludedCount})`
-                    : `MOMENTUM-A (${previousUpexIncludedCount})`
+                  ? `MOMENTUM-A (${previousUpexIncludedCount})`
                   : "MOMENTUM-A…"}
             </button>
             <button
@@ -2722,7 +2718,7 @@ export default function Screener({
               disabled={!previous15MTCReady || currentAllCount === 0 || activeTab === "coindcx"}
               className={`text-xs px-2.5 py-1 rounded border transition-colors disabled:opacity-50 ${
                 previous15MTCFilter
-                  ? "border-cyan-400 text-cyan-300"
+                  ? "bg-foreground/15 text-foreground border-border font-bold"
                   : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
               }`}
               title="Include Binance and Delta symbols unless a completed previous-session 15-minute candle (a) has its whole body above previous day's TC while making a new high versus earlier candles, or (b) has its whole body below the lower of previous day's PL and S1. Unevaluated sources such as CoinDCX are excluded while active."
@@ -2730,9 +2726,7 @@ export default function Screener({
               {previous15MTCProgress
                 ? `CONSOLIDATE-B ${previous15MTCProgress.done}/${previous15MTCProgress.total}`
                 : previous15MTCReady
-                  ? previous15MTCFilter
-                    ? `✕ CONSOLIDATE-B (${previous15MTCIncludedCount})`
-                    : `CONSOLIDATE-B (${previous15MTCIncludedCount})`
+                  ? `CONSOLIDATE-B (${previous15MTCIncludedCount})`
                   : "CONSOLIDATE-B…"}
             </button>
             <button
@@ -2744,7 +2738,7 @@ export default function Screener({
               disabled={!previous15MMomentumReady || currentAllCount === 0 || activeTab === "coindcx"}
               className={`text-xs px-2.5 py-1 rounded border transition-colors disabled:opacity-50 ${
                 previous15MMomentumFilter
-                  ? "border-cyan-400 text-cyan-300"
+                  ? "bg-foreground/15 text-foreground border-border font-bold"
                   : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
               }`}
               title="Same as CONSOLIDATE-B but without the PL/S1 check: include Binance and Delta symbols unless a completed previous-session 15-minute candle has its whole body above previous day's TC while making a new high versus earlier candles. Unevaluated sources such as CoinDCX are excluded while active."
@@ -2752,9 +2746,7 @@ export default function Screener({
               {previous15MMomentumProgress
                 ? `MOMENTUM-B ${previous15MMomentumProgress.done}/${previous15MMomentumProgress.total}`
                 : previous15MMomentumReady
-                  ? previous15MMomentumFilter
-                    ? `✕ MOMENTUM-B (${previous15MMomentumIncludedCount})`
-                    : `MOMENTUM-B (${previous15MMomentumIncludedCount})`
+                  ? `MOMENTUM-B (${previous15MMomentumIncludedCount})`
                   : "MOMENTUM-B…"}
             </button>
           </div>
