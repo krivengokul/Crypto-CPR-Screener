@@ -2584,7 +2584,10 @@ export default function BacktestPanel() {
                               selectedKey === value ? "bg-cyan-500/20 text-cyan-300" : "text-foreground/90 hover:bg-muted/40"
                             }`}
                           >
-                            <span className="text-muted-foreground shrink-0">{"\u21B3"}</span>
+                            {/* The four collapsible groups use the chevron instead of the arrow. */}
+                            {!collapsible && (
+                              <span className="text-muted-foreground shrink-0">{"\u21B3"}</span>
+                            )}
                             <span className="truncate">{node.sub.label}</span>
                           </button>
                         );
