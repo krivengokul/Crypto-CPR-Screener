@@ -2537,6 +2537,12 @@ export default function BacktestPanel() {
                           (t) => !q || catLabelHit || nodeLabelHit || hit(t.label)
                         );
                         const visibleChildren = node.children.filter(patternIsVisible);
+                        // Views are normally listed after the nested patterns.
+                        // A view with a negative `order` is pinned above them
+                        // (e.g. OVB-P15MBelowTC / OVB-P15MAboveBC at the top of
+                        // Overlap Below).
+                        const pinnedViews = visibleViews.filter((t) => (t.order ?? 0) < 0);
+                        const otherViews = visibleViews.filter((t) => (t.order ?? 0) >= 0);
                         const value = patternSelectionKey(node.path);
                         return (
                           <div key={value}>
@@ -2554,8 +2560,9 @@ export default function BacktestPanel() {
                             </button>
                             {(visibleChildren.length > 0 || visibleViews.length > 0) && (
                               <div className="ml-3 pl-2 border-l border-border/60 mt-0.5 space-y-0.5">
+                                {pinnedViews.map(viewButton)}
                                 {visibleChildren.map((child) => renderPattern(child))}
-                                {visibleViews.map(viewButton)}
+                                {otherViews.map(viewButton)}
                               </div>
                             )}
                           </div>
