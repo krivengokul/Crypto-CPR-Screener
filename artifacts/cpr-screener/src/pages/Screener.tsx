@@ -758,6 +758,7 @@ export default function Screener({
       symbol: string;
       source: "binance" | "delta";
       bc: number;
+      floor: number;
     }>();
     if (status === "done") {
       for (const row of allResults) {
@@ -765,6 +766,7 @@ export default function Screener({
           symbol: row.symbol,
           source: "binance",
           bc: row.prevCPR.tc,
+          floor: getPrevious15MBFloor(row.prevCPR),
         });
       }
     }
@@ -774,6 +776,7 @@ export default function Screener({
           symbol: row.symbol,
           source: "delta",
           bc: row.prevCPR.tc,
+          floor: getPrevious15MBFloor(row.prevCPR),
         });
       }
     }
@@ -795,7 +798,12 @@ export default function Screener({
           ...row,
           PD15MBelowTCPass:
             previous15MTCResultsRef.current.get(
-              `${previousUpexSessionStart}|binance:${row.symbol}:${row.prevCPR.tc}`,
+              previous15MTCCandidateCacheKey(previousUpexSessionStart, {
+                symbol: row.symbol,
+                source: "binance",
+                bc: row.prevCPR.tc,
+                floor: getPrevious15MBFloor(row.prevCPR),
+              }),
             ) === true,
         })),
       );
@@ -804,7 +812,12 @@ export default function Screener({
           ...row,
           PD15MBelowTCPass:
             previous15MTCResultsRef.current.get(
-              `${previousUpexSessionStart}|delta:${row.symbol}:${row.prevCPR.tc}`,
+              previous15MTCCandidateCacheKey(previousUpexSessionStart, {
+                symbol: row.symbol,
+                source: "delta",
+                bc: row.prevCPR.tc,
+                floor: getPrevious15MBFloor(row.prevCPR),
+              }),
             ) === true,
         })),
       );

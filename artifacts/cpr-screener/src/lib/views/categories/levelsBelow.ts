@@ -982,10 +982,11 @@ export const LEVELSBELOW_VIEWS: ViewDef[] = [
   { key: "E-B-RA-BB-L4U4", label: "E-B-RA-BB-L4U4", parentKey: "E-B-RA-BB", kind: "pattern", condition: (r) => r.L4U4, order: 4 },
 
   // PD15M-Below-TC filter as a pattern: the previous session's 15m candles never
-  // made a fresh high with a body wholly above yesterday's TC (see
+  // made a fresh high with a body wholly above yesterday's TC, and never had a
+  // body wholly below the lower of yesterday's PL / S1 (see
   // passesPD15MBelowTCFilter / PD15MBelowTCPass).
   {
-    key: "PD15MBelowTC",
+    key: "LB-P15MBTC",
     label: "PD15MBelowTC",
     parentKey: "levelsbelow",
     kind: "pattern",
@@ -995,15 +996,11 @@ export const LEVELSBELOW_VIEWS: ViewDef[] = [
   {
     key: "P15MBelow-CPRB",
     label: "P15MBelow-CPRB",
-    parentKey: "PD15MBelowTC",
+    parentKey: "LB-P15MBTC",
     kind: "view",
-    // Nested under PD15MBelowTC in the tree only. This view is built on the
-    // PD15M-Below-BC filter (PD15MBelowBCPass), a different check, so it is
-    // standalone: it keeps its own condition and is NOT additionally gated by
-    // the parent pattern's TC check (or LevelsBelow via the category — its
-    // own condition already requires LevelsBelow).
-    standalone: true,
-    condition: (r) => r.PD15MBelowBCPass === true && r.LevelsBelow,
+    // Built on the same PD15M-Below-TC filter (with the PL/S1 floor) as its
+    // parent pattern.
+    condition: (r) => r.PD15MBelowTCPass === true && r.LevelsBelow,
     direction: "Up",
     targetLabel: "R4",
     getTarget: (r) => r.todayCPR.r4,

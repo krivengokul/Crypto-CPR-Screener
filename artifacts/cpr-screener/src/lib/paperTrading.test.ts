@@ -18,6 +18,7 @@ import {
   findPD15MBelowSymbols,
   findPD15MBelowPass,
   getPrevious15MBFloor,
+  passesPD15MBelowTCFilter,
   findPreviousUpexSymbols,
   findPreviousUpexPass,
   getUpexBc,
@@ -425,6 +426,36 @@ test("PD-15M-Below-BC also fails when a candle body is wholly below the floor", 
   // A non-finite floor can't be evaluated.
   assert.equal(
     passesPrevious15MBFilter([candle(start, 95, 94)], bc, start, now, Number.NaN),
+    null,
+  );
+});
+
+test("PD-15M-Below-TC also fails when a candle body is wholly below the floor", () => {
+  const now = Date.parse("2026-10-03T00:00:00.000Z");
+  const start = Date.parse("2026-10-02T00:00:00.000Z");
+  const candle = (openTime: number, open: number, close: number): OHLC => ({
+    openTime,
+    open,
+    high: Math.max(open, close) + 1,
+    low: Math.min(open, close) - 1,
+    close,
+    volume: 1,
+  });
+  const tc = 100;
+  const floor = 90;
+
+  // Body wholly below the floor -> fails.
+  assert.equal(passesPD15MBelowTCFilter([candle(start, 89, 88)], tc, start, now, floor), false);
+  // Only a wick below the floor, or a body on the floor -> passes.
+  assert.equal(passesPD15MBelowTCFilter([candle(start, 91, 89)], tc, start, now, floor), true);
+  assert.equal(passesPD15MBelowTCFilter([candle(start, 90, 90)], tc, start, now, floor), true);
+  // The fresh-high-above-TC rule still applies alongside the floor rule.
+  assert.equal(passesPD15MBelowTCFilter([candle(start, 101, 102)], tc, start, now, floor), false);
+  // Without a floor only the TC rule applies.
+  assert.equal(passesPD15MBelowTCFilter([candle(start, 89, 88)], tc, start, now), true);
+  // A non-finite floor can't be evaluated.
+  assert.equal(
+    passesPD15MBelowTCFilter([candle(start, 95, 94)], tc, start, now, Number.NaN),
     null,
   );
 });

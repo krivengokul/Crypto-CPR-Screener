@@ -8,16 +8,17 @@ const CANDLE_INTERVAL_MS = 15 * 60 * 1000;
 const MAX_CONCURRENT_REQUESTS = 8;
 const PREVIOUS_UPEX_CACHE_KEY = "cpr_previous_upex_results_v1";
 const PREVIOUS_15M_B_CACHE_KEY = "cpr_previous_15m_b_results_v3";
-const PREVIOUS_15M_TC_B_CACHE_KEY = "cpr_previous_15m_tc_b_results_v2";
+const PREVIOUS_15M_TC_B_CACHE_KEY = "cpr_previous_15m_tc_b_results_v3";
 
 export interface UpexCandidate {
   symbol: string;
   source: FifteenMinuteSource;
   bc: number;
   /**
-   * Lower bound for the PD-15M-Below-BC check (see passesPrevious15MBFilter):
-   * the lower of the previous CPR's Prev Low (PL) and S1. Optional because
-   * the other 15m filters (PD15M>BC, P-15M-TC-B) don't use it.
+   * Lower bound used by the PD-15M-Below-BC and PD-15M-Below-TC checks (see
+   * passesPrevious15MBFilter / passesPD15MBelowTCFilter): the lower of the
+   * previous CPR's Prev Low (PL) and S1. Optional because PD15M>BC doesn't
+   * use it.
    */
   floor?: number;
 }
@@ -97,14 +98,22 @@ export function passesUpexFilter(
  * A body above TC that stays at or under an earlier candle's high does not
  * fail. The first candle has no earlier wick, so a full body above TC on it
  * fails (same as the BC rule).
+ *
+ * Optional `floor` (lower of the previous CPR's PL / S1, see
+ * getPrevious15MBFloor) adds a second rule: the session also fails if any
+ * candle's whole body is below the floor. Bodies only; a wick below the floor,
+ * or a body exactly on it, does not fail. Without a floor only the TC rule
+ * applies.
  */
 export function passesPD15MBelowTCFilter(
   candles: OHLC[],
   tc: number,
   startTime: number,
-  now: number
+  now: number,
+  floor?: number
 ): boolean | null {
   if (!Number.isFinite(tc)) return null;
+  if (floor !== undefined && !Number.isFinite(floor)) return null;
   const completed = candles
     .filter(
       (candle) =>
@@ -121,6 +130,9 @@ export function passesPD15MBelowTCFilter(
 
   let previousHighestWick: number | null = null;
   for (const candle of completed) {
+    if (floor !== undefined && candle.open < floor && candle.close < floor) {
+      return false;
+    }
     const fullBodyAboveTc = candle.open > tc && candle.close > tc;
     const bodyHigh = Math.max(candle.open, candle.close);
     if (
@@ -427,7 +439,7 @@ export function previous15MTCCandidateCacheKey(
   sessionStart: number,
   candidate: UpexCandidate,
 ): string {
-  return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.bc}`;
+  return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.floor}`;
 }
 
 export function loadPD15MTCBelowResults(
@@ -610,7 +622,9 @@ export function findPD15MBelowPass(
  * Pass `candidate.bc` = the previous day's TC (the field name is historical;
  * it is simply the level under test). Passes unless a completed 15m candle in
  * the previous session has its whole body above that level AND makes a new
- * high versus earlier candles (see passesPD15MBelowTCFilter).
+ * high versus earlier candles, or has its whole body below `candidate.floor`
+ * (lower of previous PL / S1) when one is supplied (see
+ * passesPD15MBelowTCFilter).
  * Own cache so TC results never collide with the BC-based P-15M-B results.
  */
 export function findPD15MBelowTCPass(
@@ -620,7 +634,7 @@ export function findPD15MBelowTCPass(
   const endTime = upexSessionStartUtcMs(now);
   const startTime = previousUpexSessionStartUtcMs(now);
   const key =
-    `${startTime}:${candidate.source}:${candidate.symbol}:${candidate.bc}`;
+    `${startTime}:${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.floor}`;
   const cached = pd15MBelowTCPassCache.get(key);
   if (cached) return cached;
 

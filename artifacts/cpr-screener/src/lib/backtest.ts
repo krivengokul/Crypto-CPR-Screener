@@ -4,7 +4,7 @@ import { fetchDeltaPerps } from "./delta";
 import { fetchCoinDCXDailyKlines, fetchCoinDCXActiveSymbols } from "./coinDCX";
 import { buildViewTree, type ViewTreeNode, VIEWS, getView, type ViewDef, passesView, matchesGapBadge, ALL_GAP_BADGES } from "./views";
 import { gradeTargetHit } from "./backtestOutcome";
-import { findPD15MBelowPass, findPD15MBelowTCPass, findPreviousUpexPass, getPrevious15MBFloor } from "./15MCandleCheck";
+import { findPD15MBelowTCPass, findPreviousUpexPass, getPrevious15MBFloor } from "./15MCandleCheck";
 import {
   matchesCprAboveLevelStatus,
   matchesCprAboveOverlapStatus,
@@ -1504,17 +1504,19 @@ export async function backtestSymbolOnDate(
 
   if (target.key === "P15MBelow-CPRB") {
     if (source === "coindcx" || !result.LevelsBelow) return null;
-    const PD15MBelowBCPass = await findPD15MBelowPass(
+    // Built on the PD15M-Below-TC filter (previous day's TC as the level under
+    // test) plus the PL/S1 floor rule.
+    const PD15MBelowTCPass = await findPD15MBelowTCPass(
       {
         symbol,
         source,
-        bc: result.prevCPR.bc,
+        bc: result.prevCPR.tc,
         floor: getPrevious15MBFloor(result.prevCPR),
       },
       Date.parse(`${entryDateISO}T00:00:00.000Z`),
     );
-    if (PD15MBelowBCPass === null) onPrevious15MBUnavailable?.(symbol);
-    result.PD15MBelowBCPass = PD15MBelowBCPass === true;
+    if (PD15MBelowTCPass === null) onPD15MBelowTCUnavailable?.(symbol);
+    result.PD15MBelowTCPass = PD15MBelowTCPass === true;
   }
 
   if (target.key === "OVB-P15MAboveBC") {
@@ -1544,7 +1546,12 @@ export async function backtestSymbolOnDate(
     result.PD15MBelowTCPass = true;
     if (!passesPatternFn(result, target.conditionKey ?? target.key)) return null;
     const pd15MBelowTCPass = await findPD15MBelowTCPass(
-      { symbol, source, bc: result.prevCPR.tc }, // level under test = previous day's TC
+      {
+        symbol,
+        source,
+        bc: result.prevCPR.tc, // level under test = previous day's TC
+        floor: getPrevious15MBFloor(result.prevCPR),
+      },
       Date.parse(`${entryDateISO}T00:00:00.000Z`),
     );
     if (pd15MBelowTCPass === null) onPD15MBelowTCUnavailable?.(symbol);
@@ -1759,10 +1766,15 @@ export async function pivotLevelBacktestSymbolOnDate(
 
   // Same idea for the PD15M-Below-TC pattern (previous day's TC is the level
   // under test, as in the OVB-P15MBelowTC view above).
-  if (pivotLevelKey === "PD15MBelowTC") {
+  if (pivotLevelKey === "LB-P15MBTC") {
     if (source === "coindcx") return null;
     const PD15MBelowTCPass = await findPD15MBelowTCPass(
-      { symbol, source, bc: result.prevCPR.tc },
+      {
+        symbol,
+        source,
+        bc: result.prevCPR.tc,
+        floor: getPrevious15MBFloor(result.prevCPR),
+      },
       Date.parse(`${entryDateISO}T00:00:00.000Z`),
     );
     if (PD15MBelowTCPass === null) {
@@ -2657,7 +2669,7 @@ export async function runPivotLevelBacktest(
   // The PD15M>BC pattern makes one extra 15m candle request per LEVEL ABOVE
   // symbol, so keep concurrency bounded like the other 15m views.
   const batchSize =
-    pivotLevelKey === "P15MABC" || pivotLevelKey === "PD15MBelowTC" ? 8 : 50;
+    pivotLevelKey === "P15MABC" || pivotLevelKey === "LB-P15MBTC" ? 8 : 50;
 
   for (let i = 0; i < symbols.length; i += batchSize) {
     const batch = symbols.slice(i, i + batchSize);
