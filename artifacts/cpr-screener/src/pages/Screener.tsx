@@ -310,6 +310,9 @@ export default function Screener({
   const [touchFilter, setTouchFilter] = useState<string | null>(null);
   const [showSizeList, setShowSizeList] = useState(false);
   const [showPriceList, setShowPriceList] = useState(false);
+  // Previous-session 15m candle filters (PD15M>BC, P-15M-BC-B, CONSOLIDATE-B,
+  // MOMENTUM-B) live in their own "Candle" panel, split out of the Price panel.
+  const [showCandleList, setShowCandleList] = useState(false);
   // NEW: ENTRY level filter — 13 buttons (R4..S4, same rungs as Create View's
   // Entry dropdown, minus the "Entry " prefix). Selecting one keeps only rows
   // that currently satisfy at least one View whose ENTRY is that rung.
@@ -2100,7 +2103,7 @@ export default function Screener({
           className={`flex flex-wrap items-center gap-2 ${
             currentStatus === "done" &&
             showAll &&
-            (showTouchList || showPatternList || showSizeList || showPriceList || showEntryLevelList)
+            (showTouchList || showPatternList || showSizeList || showPriceList || showCandleList || showEntryLevelList)
               ? "mb-2"
               : "mb-4"
           }`}
@@ -2264,6 +2267,19 @@ export default function Screener({
                 <span className="leading-none">{showPriceList ? "−" : "+"}</span>
                 Price
               </button>
+              <button
+                type="button"
+                onClick={() => setShowCandleList((v) => !v)}
+                className={`flex items-center gap-0.5 text-xs font-bold uppercase tracking-wide px-2 py-1 rounded border border-border transition-colors shrink-0 ${
+                  showCandleList
+                    ? "bg-foreground/15 text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                title={showCandleList ? "Hide previous session candle filters" : "Show previous session candle filters"}
+              >
+                <span className="leading-none">{showCandleList ? "−" : "+"}</span>
+                Candle
+              </button>
             </div>
           )}
         </div>
@@ -2319,12 +2335,12 @@ export default function Screener({
 
         {/* Show-all toggle + sub-filter buttons — only rendered when there's
             actually something inside to show (a Views sub-pattern row, or
-            one of the Patterns/Touch/Size/Entry/Price panels toggled open).
+            one of the Patterns/Touch/Size/Entry/Price/Candle panels toggled open).
             Previously this wrapped div (with its mb-3 margin) always
             rendered once a scan was done, leaving an empty gap above the
             search bar whenever Show All was on and no panel was expanded. */}
         {currentStatus === "done" &&
-          (!showAll || showTouchList || showPatternList || showSizeList || showEntryLevelList || showPriceList) && (
+          (!showAll || showTouchList || showPatternList || showSizeList || showEntryLevelList || showPriceList || showCandleList) && (
           <div className="flex flex-col gap-2 mb-3">
           {/* Signals row is empty while Show All is on — don't render it, or
               its zero-height box still adds a flex gap above the panels. */}
@@ -2629,7 +2645,8 @@ export default function Screener({
           )}
 
           {/* Price filters moved out of the search/source bar into this
-              panel; their existing single-select behavior is unchanged. */}
+              panel; their existing single-select behavior is unchanged.
+              (The previous-session candle filters now live in the Candle panel.) */}
           {showPriceList && (
           <div className="flex items-center gap-1 flex-wrap">
             <button
@@ -2676,6 +2693,16 @@ export default function Screener({
             >
               {pdhPdlFilter === "belowpl4" ? "✕ <PL4" : "<PL4"}
             </button>
+          </div>
+          )}
+
+          {/* Previous-session 15m candle filters, moved out of the Price panel.
+              Same buttons, state and behavior; only the container changed. */}
+          {showCandleList && (
+          <div className="flex items-center gap-1 flex-wrap">
+            <span className="text-[10px] text-cyan-400/90 uppercase tracking-wider mr-1 font-semibold">
+              Previous session candle:
+            </span>
             <button
               onClick={() => {
                 if (!previousUpexReady) return;
