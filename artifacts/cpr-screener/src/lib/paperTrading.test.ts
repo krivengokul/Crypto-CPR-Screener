@@ -17,6 +17,12 @@ import { fromCoinDCXPair, toCoinDCXPair } from "./coinDCXPair.ts";
 import {
   findPD15MBelowSymbols,
   findPD15MBelowPass,
+  findPD15MBelowTCSymbols,
+  findPD15MMomentumBelowSymbols,
+  loadPD15MMomentumBelowResults,
+  loadPD15MTCBelowResults,
+  previous15MMomentumCandidateCacheKey,
+  savePD15MMomentumBelowResults,
   getPrevious15MBFloor,
   passesPD15MBelowTCFilter,
   findPreviousUpexSymbols,
@@ -458,6 +464,81 @@ test("PD-15M-Below-TC also fails when a candle body is wholly below the floor", 
     passesPD15MBelowTCFilter([candle(start, 95, 94)], tc, start, now, Number.NaN),
     null,
   );
+});
+
+test("MOMENTUM-B is CONSOLIDATE-B without the PL/S1 floor check", async () => {
+  const originalFetch = globalThis.fetch;
+  const sessionStart = Date.parse("2026-10-01T00:00:00.000Z");
+  const previousSession = sessionStart - 24 * 60 * 60 * 1000;
+  globalThis.fetch = async () =>
+    new Response(
+      // open 89, high 90, low 87, close 88: body wholly below a floor of 90,
+      // well under TC 100, so no fresh high above TC.
+      JSON.stringify([[previousSession, "89", "90", "87", "88", "1"]]),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+
+  try {
+    const candidate = { symbol: "MOMENTUMBTEST", source: "binance" as const, bc: 100, floor: 90 };
+    // CONSOLIDATE-B (with the floor) excludes it...
+    const consolidate = await findPD15MBelowTCSymbols([candidate], undefined, sessionStart);
+    assert.equal(consolidate.included.has("binance:MOMENTUMBTEST"), false);
+    // ...MOMENTUM-B ignores the floor and keeps it.
+    const momentum = await findPD15MMomentumBelowSymbols([candidate], undefined, sessionStart);
+    assert.equal(momentum.included.has("binance:MOMENTUMBTEST"), true);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("MOMENTUM-B keeps the fresh-high-above-TC rule", async () => {
+  const originalFetch = globalThis.fetch;
+  const sessionStart = Date.parse("2026-10-01T00:00:00.000Z");
+  const previousSession = sessionStart - 24 * 60 * 60 * 1000;
+  globalThis.fetch = async () =>
+    new Response(
+      // Whole body (101 -> 102) above TC 100 on the first candle: fails.
+      JSON.stringify([[previousSession, "101", "103", "100.5", "102", "1"]]),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+
+  try {
+    const candidate = { symbol: "MOMENTUMBHIGH", source: "binance" as const, bc: 100 };
+    const momentum = await findPD15MMomentumBelowSymbols([candidate], undefined, sessionStart);
+    assert.equal(momentum.included.has("binance:MOMENTUMBHIGH"), false);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("MOMENTUM-B results are cached separately from CONSOLIDATE-B", () => {
+  const originalDescriptor = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
+  const values = new Map<string, string>();
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    value: {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => values.set(key, value),
+    },
+  });
+
+  try {
+    const sessionStart = Date.parse("2026-10-03T00:00:00.000Z");
+    const candidate = { symbol: "BTCUSDT", source: "binance" as const, bc: 100 };
+    const key = previous15MMomentumCandidateCacheKey(sessionStart, candidate);
+    savePD15MMomentumBelowResults(sessionStart, new Map([[key, true]]));
+
+    assert.deepEqual([...loadPD15MMomentumBelowResults(sessionStart)], [[key, true]]);
+    assert.equal(loadPD15MMomentumBelowResults(sessionStart + 24 * 60 * 60 * 1000).size, 0);
+    // CONSOLIDATE-B's cache never sees MOMENTUM-B's results.
+    assert.equal(loadPD15MTCBelowResults(sessionStart).size, 0);
+  } finally {
+    if (originalDescriptor) {
+      Object.defineProperty(globalThis, "localStorage", originalDescriptor);
+    } else {
+      Reflect.deleteProperty(globalThis, "localStorage");
+    }
+  }
 });
 
 test("PD-15M-Below-BC floor is the lower of previous PL and S1", () => {

@@ -9,6 +9,7 @@ const MAX_CONCURRENT_REQUESTS = 8;
 const PREVIOUS_UPEX_CACHE_KEY = "cpr_previous_upex_results_v1";
 const PREVIOUS_15M_B_CACHE_KEY = "cpr_previous_15m_b_results_v3";
 const PREVIOUS_15M_TC_B_CACHE_KEY = "cpr_previous_15m_tc_b_results_v3";
+const PREVIOUS_15M_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_momentum_b_results_v1";
 
 export interface UpexCandidate {
   symbol: string;
@@ -91,7 +92,7 @@ export function passesUpexFilter(
 }
 
 /**
- * P-15M-TC-B ("Below TC"), the mirror image of passesUpexFilter (PD15M>BC / BC):
+ * CONSOLIDATE-B ("Below TC"), the mirror image of passesUpexFilter (PD15M>BC / BC):
  * walk the previous session's completed 15m candles in time order and fail as
  * soon as a candle's WHOLE body is above `tc` AND that body's top is higher
  * than the highest wick seen on any earlier candle (a fresh high above TC).
@@ -486,6 +487,75 @@ export function savePD15MBelowTCResults(
   safeSetItem(PREVIOUS_15M_TC_B_CACHE_KEY, payload);
 }
 
+/**
+ * MOMENTUM-B: the same previous-session "Below TC" check as CONSOLIDATE-B
+ * (passesPD15MBelowTCFilter), but WITHOUT the PL/S1 floor rule. Any `floor` on
+ * the candidates is dropped so only the fresh-high-above-TC rule applies.
+ * Has its own results cache so it never mixes with CONSOLIDATE-B's.
+ */
+export function findPD15MMomentumBelowSymbols(
+  candidates: UpexCandidate[],
+  onProgress?: (done: number, total: number) => void,
+  now = Date.now()
+): Promise<PreviousUpexScanResults> {
+  return findPD15MBelowTCSymbols(
+    candidates.map((candidate) => ({ ...candidate, floor: undefined })),
+    onProgress,
+    now,
+  );
+}
+
+export function previous15MMomentumCandidateCacheKey(
+  sessionStart: number,
+  candidate: UpexCandidate,
+): string {
+  return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.bc}`;
+}
+
+export function loadPD15MMomentumBelowResults(
+  sessionStart: number,
+): Map<string, boolean | null> {
+  try {
+    const raw = localStorage.getItem(PREVIOUS_15M_MOMENTUM_B_CACHE_KEY);
+    if (!raw) return new Map();
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      !("sessionStart" in parsed) ||
+      parsed.sessionStart !== sessionStart ||
+      !("results" in parsed) ||
+      !parsed.results ||
+      typeof parsed.results !== "object"
+    ) {
+      return new Map();
+    }
+
+    const results = new Map<string, boolean | null>();
+    for (const [key, value] of Object.entries(parsed.results)) {
+      if (typeof value === "boolean") {
+        results.set(key, value);
+      }
+    }
+    return results;
+  } catch {
+    return new Map();
+  }
+}
+
+export function savePD15MMomentumBelowResults(
+  sessionStart: number,
+  results: Map<string, boolean | null>,
+): void {
+  const payload = JSON.stringify({
+    sessionStart,
+    results: Object.fromEntries(
+      [...results].filter((entry): entry is [string, boolean] => typeof entry[1] === "boolean"),
+    ),
+  });
+  safeSetItem(PREVIOUS_15M_MOMENTUM_B_CACHE_KEY, payload);
+}
+
 export function previous15MBCandidateCacheKey(
   sessionStart: number,
   candidate: UpexCandidate,
@@ -618,7 +688,7 @@ export function findPD15MBelowPass(
 }
 
 /**
- * Previous-day 15m "Below TC" pass for a single symbol (P-15M-TC-B).
+ * Previous-day 15m "Below TC" pass for a single symbol (CONSOLIDATE-B).
  * Pass `candidate.bc` = the previous day's TC (the field name is historical;
  * it is simply the level under test). Passes unless a completed 15m candle in
  * the previous session has its whole body above that level AND makes a new

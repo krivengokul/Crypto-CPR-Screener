@@ -20,19 +20,23 @@ import { COINDCX_ENABLED } from "@/lib/featureFlags";
 import {
   findPD15MBelowSymbols,
   findPD15MBelowTCSymbols,
+  findPD15MMomentumBelowSymbols,
   findPreviousUpexSymbols,
   findUpexSymbols,
   getUpexBc,
   loadPrevious15MBResults,
+  loadPD15MMomentumBelowResults,
   loadPD15MTCBelowResults,
   loadPreviousUpexResults,
   previous15MBCandidateCacheKey,
   getPrevious15MBFloor,
+  previous15MMomentumCandidateCacheKey,
   previous15MTCCandidateCacheKey,
   previousUpexCandidateCacheKey,
   previousUpexSessionStartUtcMs,
   savePrevious15MBResults,
   savePD15MBelowTCResults,
+  savePD15MMomentumBelowResults,
   savePreviousUpexResults,
 } from "@/lib/15MCandleCheck";
 import type { CPRResult } from "@/lib/cpr";
@@ -350,6 +354,14 @@ export default function Screener({
   } | null>(null);
   const [previous15MTCReady, setPrevious15MTCReady] = useState(false);
   const [previous15MTCMessage, setPrevious15MTCMessage] = useState("");
+  const [previous15MMomentumFilter, setPrevious15MMomentumFilter] = useState(false);
+  const [previous15MMomentumIncludedSymbols, setPrevious15MMomentumIncludedSymbols] = useState<Set<string>>(() => new Set());
+  const [previous15MMomentumProgress, setPrevious15MMomentumProgress] = useState<{
+    done: number;
+    total: number;
+  } | null>(null);
+  const [previous15MMomentumReady, setPrevious15MMomentumReady] = useState(false);
+  const [previous15MMomentumMessage, setPrevious15MMomentumMessage] = useState("");
   const previousUpexSessionStart = previousUpexSessionStartUtcMs();
   const previousUpexResultsRef = useRef<Map<string, boolean | null>>(
     loadPreviousUpexResults(previousUpexSessionStart),
@@ -366,6 +378,11 @@ export default function Screener({
   );
   const previous15MTCCacheSessionRef = useRef(previousUpexSessionStart);
   const previous15MTCRunRef = useRef(0);
+  const previous15MMomentumResultsRef = useRef<Map<string, boolean | null>>(
+    loadPD15MMomentumBelowResults(previousUpexSessionStart),
+  );
+  const previous15MMomentumCacheSessionRef = useRef(previousUpexSessionStart);
+  const previous15MMomentumRunRef = useRef(0);
   const [upexProgress, setUpexProgress] = useState<{
     done: number;
     total: number;
@@ -426,10 +443,12 @@ export default function Screener({
     setPreviousUpexFilter(false);
     setPrevious15MBFilter(false);
     setPrevious15MTCFilter(false);
+    setPrevious15MMomentumFilter(false);
     setUpexProgress(null);
     setUpexMessage("");
     setPrevious15MBMessage("");
     setPrevious15MTCMessage("");
+    setPrevious15MMomentumMessage("");
   }, [activeTab]);
   const deltaScanRef = useRef(false);
   const coindcxScanRef = useRef(false);
@@ -842,7 +861,7 @@ export default function Screener({
       ).length;
       setPrevious15MTCMessage(
         unavailable > 0
-          ? `${unavailable} symbol${unavailable === 1 ? "" : "s"} excluded from P-15M-TC-B because no usable completed 15m candles were returned for the previous IST session.`
+          ? `${unavailable} symbol${unavailable === 1 ? "" : "s"} excluded from CONSOLIDATE-B because no usable completed 15m candles were returned for the previous IST session.`
           : "",
       );
       return;
@@ -878,7 +897,7 @@ export default function Screener({
       setPrevious15MTCProgress(null);
       setPrevious15MTCMessage(
         unavailable > 0
-          ? `${unavailable} symbol${unavailable === 1 ? "" : "s"} excluded from P-15M-TC-B because no usable completed 15m candles were returned for the previous IST session.`
+          ? `${unavailable} symbol${unavailable === 1 ? "" : "s"} excluded from CONSOLIDATE-B because no usable completed 15m candles were returned for the previous IST session.`
           : "",
       );
     }).catch((cause: unknown) => {
@@ -887,8 +906,125 @@ export default function Screener({
       setPrevious15MTCReady(false);
       setPrevious15MTCMessage(
         cause instanceof Error
-          ? `P-15M-TC-B preparation failed: ${cause.message}`
-          : "P-15M-TC-B preparation failed.",
+          ? `CONSOLIDATE-B preparation failed: ${cause.message}`
+          : "CONSOLIDATE-B preparation failed.",
+      );
+    });
+    // This runs on scan completion/session rollover, not live-price ticks.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, deltaStatus, previousUpexSessionStart]);
+
+  useEffect(() => {
+    if (previous15MMomentumCacheSessionRef.current !== previousUpexSessionStart) {
+      previous15MMomentumResultsRef.current = loadPD15MMomentumBelowResults(previousUpexSessionStart);
+      previous15MMomentumCacheSessionRef.current = previousUpexSessionStart;
+    }
+    if (
+      status === "scanning" ||
+      deltaStatus === "scanning" ||
+      (status !== "done" && deltaStatus !== "done")
+    ) return;
+
+    const candidates = new Map<string, {
+      symbol: string;
+      source: "binance" | "delta";
+      bc: number;
+    }>();
+    if (status === "done") {
+      for (const row of allResults) {
+        candidates.set(`binance:${row.symbol}`, {
+          symbol: row.symbol,
+          source: "binance",
+          bc: row.prevCPR.tc,
+        });
+      }
+    }
+    if (deltaStatus === "done") {
+      for (const row of deltaAllResults) {
+        candidates.set(`delta:${row.symbol}`, {
+          symbol: row.symbol,
+          source: "delta",
+          bc: row.prevCPR.tc,
+        });
+      }
+    }
+    const currentCandidates = Array.from(candidates.values());
+    if (currentCandidates.length === 0) {
+      setPrevious15MMomentumReady(false);
+      setPrevious15MMomentumProgress(null);
+      return;
+    }
+
+    const cacheKey = (candidate: (typeof currentCandidates)[number]) =>
+      previous15MMomentumCandidateCacheKey(previousUpexSessionStart, candidate);
+    const missing = currentCandidates.filter(
+      (candidate) => !previous15MMomentumResultsRef.current.has(cacheKey(candidate)),
+    );
+    const updateIncluded = () => {
+      setPrevious15MMomentumIncludedSymbols(
+        new Set(
+          currentCandidates
+            .filter((candidate) => previous15MMomentumResultsRef.current.get(cacheKey(candidate)) === true)
+            .map((candidate) => `${candidate.source}:${candidate.symbol}`),
+        ),
+      );
+    };
+    updateIncluded();
+
+    if (missing.length === 0) {
+      setPrevious15MMomentumReady(true);
+      setPrevious15MMomentumProgress(null);
+      const unavailable = currentCandidates.filter(
+        (candidate) => previous15MMomentumResultsRef.current.get(cacheKey(candidate)) === null,
+      ).length;
+      setPrevious15MMomentumMessage(
+        unavailable > 0
+          ? `${unavailable} symbol${unavailable === 1 ? "" : "s"} excluded from MOMENTUM-B because no usable completed 15m candles were returned for the previous IST session.`
+          : "",
+      );
+      return;
+    }
+
+    const runId = ++previous15MMomentumRunRef.current;
+    setPrevious15MMomentumFilter(false);
+    setPrevious15MMomentumReady(false);
+    setPrevious15MMomentumProgress({ done: 0, total: missing.length });
+    void findPD15MMomentumBelowSymbols(
+      missing,
+      (done, total) => {
+        if (runId === previous15MMomentumRunRef.current) {
+          setPrevious15MMomentumProgress({ done, total });
+        }
+      },
+      previousUpexSessionStart + 24 * 60 * 60 * 1000,
+    ).then(({ outcomes, unavailable }) => {
+      if (runId !== previous15MMomentumRunRef.current) return;
+      for (const candidate of missing) {
+        const symbolKey = `${candidate.source}:${candidate.symbol}`;
+        const outcome = outcomes.get(symbolKey);
+        if (typeof outcome === "boolean") {
+          previous15MMomentumResultsRef.current.set(cacheKey(candidate), outcome);
+        } else {
+          previous15MMomentumResultsRef.current.delete(cacheKey(candidate));
+        }
+      }
+      savePD15MMomentumBelowResults(previousUpexSessionStart, previous15MMomentumResultsRef.current);
+      updateIncluded();
+        setPrevious15MMomentumReady(true);
+      setPrevious15MMomentumProgress(null);
+      setPrevious15MMomentumMessage(
+        unavailable > 0
+          ? `${unavailable} symbol${unavailable === 1 ? "" : "s"} excluded from MOMENTUM-B because no usable completed 15m candles were returned for the previous IST session.`
+          : "",
+      );
+    }).catch((cause: unknown) => {
+      if (runId !== previous15MMomentumRunRef.current) return;
+      setPrevious15MMomentumProgress(null);
+      setPrevious15MMomentumReady(false);
+      setPrevious15MMomentumMessage(
+        cause instanceof Error
+          ? `MOMENTUM-B preparation failed: ${cause.message}`
+          : "MOMENTUM-B preparation failed.",
       );
     });
     // This runs on scan completion/session rollover, not live-price ticks.
@@ -947,23 +1083,29 @@ export default function Screener({
     previousUpexRunRef.current += 1;
     previous15MBRunRef.current += 1;
     previous15MTCRunRef.current += 1;
+    previous15MMomentumRunRef.current += 1;
     setUpexFilter(false);
     setUpexIncludedSymbols(new Set());
     setPreviousUpexFilter(false);
     setPrevious15MBFilter(false);
     setPrevious15MTCFilter(false);
+    setPrevious15MMomentumFilter(false);
     setPreviousUpexProgress(null);
     setPreviousUpexReady(false);
     setPrevious15MBProgress(null);
     setPrevious15MTCProgress(null);
+    setPrevious15MMomentumProgress(null);
     setPrevious15MBReady(false);
     setPrevious15MTCReady(false);
+    setPrevious15MMomentumReady(false);
     setPrevious15MBIncludedSymbols(new Set());
     setPrevious15MTCIncludedSymbols(new Set());
+    setPrevious15MMomentumIncludedSymbols(new Set());
     setUpexProgress(null);
     setUpexMessage("");
     setPrevious15MBMessage("");
     setPrevious15MTCMessage("");
+    setPrevious15MMomentumMessage("");
     setStatus("scanning");
     if (switchTab) setActiveTab("binance");
     setAllResults([]);
@@ -1008,23 +1150,29 @@ export default function Screener({
     previousUpexRunRef.current += 1;
     previous15MBRunRef.current += 1;
     previous15MTCRunRef.current += 1;
+    previous15MMomentumRunRef.current += 1;
     setUpexFilter(false);
     setUpexIncludedSymbols(new Set());
     setPreviousUpexFilter(false);
     setPrevious15MBFilter(false);
     setPrevious15MTCFilter(false);
+    setPrevious15MMomentumFilter(false);
     setPreviousUpexProgress(null);
     setPreviousUpexReady(false);
     setPrevious15MBProgress(null);
     setPrevious15MTCProgress(null);
+    setPrevious15MMomentumProgress(null);
     setPrevious15MBReady(false);
     setPrevious15MTCReady(false);
+    setPrevious15MMomentumReady(false);
     setPrevious15MBIncludedSymbols(new Set());
     setPrevious15MTCIncludedSymbols(new Set());
+    setPrevious15MMomentumIncludedSymbols(new Set());
     setUpexProgress(null);
     setUpexMessage("");
     setPrevious15MBMessage("");
     setPrevious15MTCMessage("");
+    setPrevious15MMomentumMessage("");
     setDeltaStatus("scanning");
     if (switchTab) setActiveTab("delta");
     setDeltaAllResults([]);
@@ -1066,10 +1214,12 @@ export default function Screener({
     setPreviousUpexFilter(false);
     setPrevious15MBFilter(false);
     setPrevious15MTCFilter(false);
+    setPrevious15MMomentumFilter(false);
     setUpexProgress(null);
     setUpexMessage("");
     setPrevious15MBMessage("");
     setPrevious15MTCMessage("");
+    setPrevious15MMomentumMessage("");
     setCoinDCXStatus("scanning");
     if (switchTab) setActiveTab("coindcx");
     // Keep the last successful CoinDCX result visible while the next scan
@@ -1411,6 +1561,11 @@ export default function Screener({
       row.source !== "coindcx" &&
       previous15MTCIncludedSymbols.has(`${row.source}:${row.symbol}`),
   ).length;
+  const previous15MMomentumIncludedCount = getActivePool().filter(
+    (row) =>
+      row.source !== "coindcx" &&
+      previous15MMomentumIncludedSymbols.has(`${row.source}:${row.symbol}`),
+  ).length;
 
   const handleUpexFilter = async () => {
     if (upexProgress) return;
@@ -1672,6 +1827,11 @@ export default function Screener({
         !previous15MTCFilter ||
         previous15MTCIncludedSymbols.has(`${r.source}:${r.symbol}`)
     )
+    .filter(
+      (r) =>
+        !previous15MMomentumFilter ||
+        previous15MMomentumIncludedSymbols.has(`${r.source}:${r.symbol}`)
+    )
     // Active / Ready status filter (see getRowStatus).
     .filter((r) => {
       if (statusFilter === "all") return true;
@@ -1795,7 +1955,7 @@ export default function Screener({
   // Helper: is any sub-filter active (to decide the result count label)
   const anySubFilter =
     !!activeGenericSignal ||
-    !!PatternFilter || !!touchFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter || upexFilter || previousUpexFilter || previous15MBFilter || previous15MTCFilter || statusFilter !== "all" || !!entryLevelFilter;
+    !!PatternFilter || !!touchFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter || upexFilter || previousUpexFilter || previous15MBFilter || previous15MTCFilter || previous15MMomentumFilter || statusFilter !== "all" || !!entryLevelFilter;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -2572,15 +2732,37 @@ export default function Screener({
                   ? "border-cyan-400 text-cyan-300"
                   : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
               }`}
-              title="Include Binance and Delta symbols unless a completed previous-session 15-minute candle has both its open and close strictly above previous day's TC. Unevaluated sources such as CoinDCX are excluded while active."
+              title="Include Binance and Delta symbols unless a completed previous-session 15-minute candle (a) has its whole body above previous day's TC while making a new high versus earlier candles, or (b) has its whole body below the lower of previous day's PL and S1. Unevaluated sources such as CoinDCX are excluded while active."
             >
               {previous15MTCProgress
-                ? `P-15M-TC-B ${previous15MTCProgress.done}/${previous15MTCProgress.total}`
+                ? `CONSOLIDATE-B ${previous15MTCProgress.done}/${previous15MTCProgress.total}`
                 : previous15MTCReady
                   ? previous15MTCFilter
-                    ? `✕ P-15M-TC-B (${previous15MTCIncludedCount})`
-                    : `P-15M-TC-B (${previous15MTCIncludedCount})`
-                  : "P-15M-TC-B…"}
+                    ? `✕ CONSOLIDATE-B (${previous15MTCIncludedCount})`
+                    : `CONSOLIDATE-B (${previous15MTCIncludedCount})`
+                  : "CONSOLIDATE-B…"}
+            </button>
+            <button
+              onClick={() => {
+                if (!previous15MMomentumReady) return;
+                setPrevious15MMomentumFilter((active) => !active);
+                setPrevious15MMomentumMessage("");
+              }}
+              disabled={!previous15MMomentumReady || currentAllCount === 0 || activeTab === "coindcx"}
+              className={`text-xs px-2.5 py-1 rounded border transition-colors disabled:opacity-50 ${
+                previous15MMomentumFilter
+                  ? "border-cyan-400 text-cyan-300"
+                  : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
+              }`}
+              title="Same as CONSOLIDATE-B but without the PL/S1 check: include Binance and Delta symbols unless a completed previous-session 15-minute candle has its whole body above previous day's TC while making a new high versus earlier candles. Unevaluated sources such as CoinDCX are excluded while active."
+            >
+              {previous15MMomentumProgress
+                ? `MOMENTUM-B ${previous15MMomentumProgress.done}/${previous15MMomentumProgress.total}`
+                : previous15MMomentumReady
+                  ? previous15MMomentumFilter
+                    ? `✕ MOMENTUM-B (${previous15MMomentumIncludedCount})`
+                    : `MOMENTUM-B (${previous15MMomentumIncludedCount})`
+                  : "MOMENTUM-B…"}
             </button>
           </div>
           )}
@@ -2615,11 +2797,12 @@ export default function Screener({
 
         )}
 
-        {(upexMessage || previous15MBMessage || previous15MTCMessage) && currentStatus === "done" && (
+        {(upexMessage || previous15MBMessage || previous15MTCMessage || previous15MMomentumMessage) && currentStatus === "done" && (
           <div className="flex flex-col gap-1 px-1 -mt-1 mb-2 text-[10px] text-amber-300" role="status">
             {upexMessage && <span>{upexMessage}</span>}
             {previous15MBMessage && <span>{previous15MBMessage}</span>}
             {previous15MTCMessage && <span>{previous15MTCMessage}</span>}
+            {previous15MMomentumMessage && <span>{previous15MMomentumMessage}</span>}
           </div>
         )}
 
