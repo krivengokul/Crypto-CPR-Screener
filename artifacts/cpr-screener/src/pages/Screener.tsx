@@ -2672,8 +2672,14 @@ export default function Screener({
             <button
               onClick={() => {
                 if (!previousConsolidateAReady) return;
-                setPreviousConsolidateAFilter((active) => !active);
+                const next = !previousConsolidateAFilter;
+                setPreviousConsolidateAFilter(next);
                 setPreviousConsolidateAMessage("");
+                if (next) {
+                  setPreviousUpexFilter(false);
+                  setPrevious15MTCFilter(false);
+                  setPrevious15MMomentumFilter(false);
+                }
               }}
               disabled={!previousConsolidateAReady || currentAllCount === 0 || activeTab === "coindcx"}
               className={`text-xs px-2.5 py-1 rounded border transition-colors disabled:opacity-50 ${
@@ -2692,8 +2698,14 @@ export default function Screener({
             <button
               onClick={() => {
                 if (!previousUpexReady) return;
-                setPreviousUpexFilter((active) => !active);
+                const next = !previousUpexFilter;
+                setPreviousUpexFilter(next);
                 setUpexMessage("");
+                if (next) {
+                  setPreviousConsolidateAFilter(false);
+                  setPrevious15MTCFilter(false);
+                  setPrevious15MMomentumFilter(false);
+                }
               }}
               disabled={!previousUpexReady || currentAllCount === 0 || activeTab === "coindcx"}
               className={`text-xs px-2.5 py-1 rounded border transition-colors disabled:opacity-50 ${
@@ -2712,8 +2724,14 @@ export default function Screener({
             <button
               onClick={() => {
                 if (!previous15MTCReady) return;
-                setPrevious15MTCFilter((active) => !active);
+                const next = !previous15MTCFilter;
+                setPrevious15MTCFilter(next);
                 setPrevious15MTCMessage("");
+                if (next) {
+                  setPreviousConsolidateAFilter(false);
+                  setPreviousUpexFilter(false);
+                  setPrevious15MMomentumFilter(false);
+                }
               }}
               disabled={!previous15MTCReady || currentAllCount === 0 || activeTab === "coindcx"}
               className={`text-xs px-2.5 py-1 rounded border transition-colors disabled:opacity-50 ${
@@ -2732,8 +2750,14 @@ export default function Screener({
             <button
               onClick={() => {
                 if (!previous15MMomentumReady) return;
-                setPrevious15MMomentumFilter((active) => !active);
+                const next = !previous15MMomentumFilter;
+                setPrevious15MMomentumFilter(next);
                 setPrevious15MMomentumMessage("");
+                if (next) {
+                  setPreviousConsolidateAFilter(false);
+                  setPreviousUpexFilter(false);
+                  setPrevious15MTCFilter(false);
+                }
               }}
               disabled={!previous15MMomentumReady || currentAllCount === 0 || activeTab === "coindcx"}
               className={`text-xs px-2.5 py-1 rounded border transition-colors disabled:opacity-50 ${
