@@ -1506,8 +1506,8 @@ export const LEVELSABOVE_VIEWS: ViewDef[] = [
     order: 999,
   },
   {
-    key: "P15M-A-CPRABOVE",
-    label: "P15M-A-CPRABOVE",
+    key: "P15MAboveBC-CPRA",
+    label: "P15MAboveBC-CPRA",
     parentKey: "P15MABC",
     kind: "view",
     condition: (r) => r.PD15MAboveBCPass === true && matchesCprAboveLevelStatus(r),

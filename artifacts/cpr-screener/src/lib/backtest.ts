@@ -1479,14 +1479,14 @@ export async function backtestSymbolOnDate(
 
   if (
     target.key === "P15MABC" ||
-    target.key === "P15M-A-CPRABOVE" ||
+    target.key === "P15MAboveBC-CPRA" ||
     target.key === "P-UPEX-CPRABOVE-OVA"
   ) {
     if (source === "coindcx") return null;
     const matchesStructure =
       target.key === "P15MABC"
         ? result.LevelsAbove
-        : target.key === "P15M-A-CPRABOVE"
+        : target.key === "P15MAboveBC-CPRA"
         ? result.LevelsAbove && matchesCprAboveLevelStatus(result)
         : result.touchCategory &&
           result.overlapHigher &&
@@ -1856,7 +1856,7 @@ export async function runBacktest(
   // batches without generating more exchange traffic.
   const batchSize =
     target.key === "P15MABC" ||
-    target.key === "P15M-A-CPRABOVE" ||
+    target.key === "P15MAboveBC-CPRA" ||
     target.key === "P-UPEX-CPRABOVE-OVA" ||
     target.key === "P15MBelow-CPRB" ||
     target.key === "OVB-P15MBelowTC" ||
