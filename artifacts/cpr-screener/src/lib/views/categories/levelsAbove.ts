@@ -1498,8 +1498,8 @@ export const LEVELSABOVE_VIEWS: ViewDef[] = [
   // wholly below yesterday's BC that also made a fresh low (see
   // passesUpexFilter). Views that depend on the filter nest under it.
   {
-    key: "PD15MAboveBC",
-    label: "PD15MAboveBC",
+    key: "P15MABC",
+    label: "P15MABC",
     parentKey: "levelsabove",
     kind: "pattern",
     condition: (r) => r.PD15MAboveBCPass === true,
@@ -1508,7 +1508,7 @@ export const LEVELSABOVE_VIEWS: ViewDef[] = [
   {
     key: "P15M-A-CPRABOVE",
     label: "P15M-A-CPRABOVE",
-    parentKey: "PD15MAboveBC",
+    parentKey: "P15MABC",
     kind: "view",
     condition: (r) => r.PD15MAboveBCPass === true && matchesCprAboveLevelStatus(r),
     direction: "Up",
