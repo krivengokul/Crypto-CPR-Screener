@@ -1787,7 +1787,7 @@ export default function Screener({
     )
     .filter(
       (r) =>
-        !previousConsolidateAFilter || previousUpexFilter ||
+        !previousUpexFilter ||
         r.source === "coindcx" ||
         previousUpexIncludedSymbols.has(`${r.source}:${r.symbol}`)
     )
