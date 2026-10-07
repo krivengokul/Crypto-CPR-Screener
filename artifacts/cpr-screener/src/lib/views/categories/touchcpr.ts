@@ -2133,7 +2133,7 @@ export const OVERLAP_BELOW_TOUCH_VIEWS: ViewDef[] = [
     getEntry: (r) => r.todayCPR.prevLow,
     stoplossLabel: "R1",
     getStoploss: (r) => r.todayCPR.r1,
-    order: 1000,
+    order: -2,
   },
 
   // --- OVB-P15MAboveBC ---
@@ -2157,7 +2157,7 @@ export const OVERLAP_BELOW_TOUCH_VIEWS: ViewDef[] = [
     getEntry: (r) => r.todayCPR.prevLow,
     stoplossLabel: "R1",
     getStoploss: (r) => r.todayCPR.r1,
-    order: 1001,
+    order: -1,
   },
 
   ...OVB_UNCLASSIFIED_PATTERNS,
