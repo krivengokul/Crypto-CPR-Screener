@@ -1478,12 +1478,15 @@ export async function backtestSymbolOnDate(
   const { result, window } = reconstructed;
 
   if (
+    target.key === "PD15MAboveBC" ||
     target.key === "P15M-A-CPRABOVE" ||
     target.key === "P-UPEX-CPRABOVE-OVA"
   ) {
     if (source === "coindcx") return null;
     const matchesStructure =
-      target.key === "P15M-A-CPRABOVE"
+      target.key === "PD15MAboveBC"
+        ? result.LevelsAbove
+        : target.key === "P15M-A-CPRABOVE"
         ? result.LevelsAbove && matchesCprAboveLevelStatus(result)
         : result.touchCategory &&
           result.overlapHigher &&
@@ -1852,6 +1855,7 @@ export async function runBacktest(
   // Other Views use the warmed daily-history cache and can run in larger
   // batches without generating more exchange traffic.
   const batchSize =
+    target.key === "PD15MAboveBC" ||
     target.key === "P15M-A-CPRABOVE" ||
     target.key === "P-UPEX-CPRABOVE-OVA" ||
     target.key === "P15MBelow-CPRB" ||
