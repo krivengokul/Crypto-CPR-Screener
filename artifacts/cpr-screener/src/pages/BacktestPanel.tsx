@@ -1829,6 +1829,15 @@ function DateField({
  * <option> elements can't render partial bold, so the category name is shown
  * in plain text; the visual grouping comes from indentation and arrows.
  */
+// Pattern groups (under TOUCH) that get their own expand/collapse chevron in
+// the category picker, like the top-level categories do. Keys are registry keys.
+const COLLAPSIBLE_PATTERN_KEYS: ReadonlySet<string> = new Set([
+  "insidecpr",
+  "outcpr",
+  "OVA",
+  "overlapLower",
+]);
+
 export default function BacktestPanel() {
   const defaultKey = VIEWS.find((v) => v.kind === "category")?.key ?? "levelsabove";
   const [selectedKey, setSelectedKey] = useState<string>(defaultKey);
@@ -1925,6 +1934,10 @@ export default function BacktestPanel() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerQuery, setPickerQuery] = useState("");
   const [expandedCats, setExpandedCats] = useState<Set<string>>(new Set());
+  // Explicit expand/collapse choices for collapsible pattern groups, keyed by
+  // the pattern's selection path. Unset = collapsed unless it contains the
+  // current selection.
+  const [patternExpansion, setPatternExpansion] = useState<Record<string, boolean>>({});
   const pickerRef = useRef<HTMLDivElement>(null);
 
   const SUBCATEGORY_SEP = "::";
@@ -2080,6 +2093,7 @@ export default function BacktestPanel() {
         subCats.some((s) => containsSelection(s, cat.key))
     );
     setExpandedCats(cat ? new Set([cat.cat.key]) : new Set());
+    setPatternExpansion({});
     setPickerQuery("");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pickerOpen]);
@@ -2537,6 +2551,22 @@ export default function BacktestPanel() {
                           (t) => !q || catLabelHit || nodeLabelHit || hit(t.label)
                         );
                         const visibleChildren = node.children.filter(patternIsVisible);
+                        const hasSelectedDescendant = (n: ResolvedSub): boolean =>
+                          n.Views.some((t) => t.key === selectedKey) ||
+                          n.children.some(
+                            (child) =>
+                              patternSelectionKey(child.path) === selectedKey ||
+                              hasSelectedDescendant(child)
+                          );
+                        const collapsible =
+                          COLLAPSIBLE_PATTERN_KEYS.has(node.sub.key) &&
+                          (node.children.length > 0 || node.Views.length > 0);
+                        // Searching forces every group open (like categories).
+                        const patternExpanded =
+                          !collapsible ||
+                          !!q ||
+                          (patternExpansion[patternSelectionKey(node.path)] ??
+                            hasSelectedDescendant(node));
                         // Views are normally listed after the nested patterns.
                         // A view with a negative `order` is pinned above them
                         // (e.g. OVB-P15MBelowTC / OVB-P15MAboveBC at the top of
@@ -2544,21 +2574,42 @@ export default function BacktestPanel() {
                         const pinnedViews = visibleViews.filter((t) => (t.order ?? 0) < 0);
                         const otherViews = visibleViews.filter((t) => (t.order ?? 0) >= 0);
                         const value = patternSelectionKey(node.path);
+                        const patternButton = (
+                          <button
+                            type="button"
+                            role="option"
+                            aria-selected={selectedKey === value}
+                            onClick={() => selectAndClose(value, cat.key)}
+                            className={`w-full flex items-center gap-1.5 text-left px-2 py-1 rounded-md text-xs truncate ${
+                              selectedKey === value ? "bg-cyan-500/20 text-cyan-300" : "text-foreground/90 hover:bg-muted/40"
+                            }`}
+                          >
+                            <span className="text-muted-foreground shrink-0">{"\u21B3"}</span>
+                            <span className="truncate">{node.sub.label}</span>
+                          </button>
+                        );
                         return (
                           <div key={value}>
-                            <button
-                              type="button"
-                              role="option"
-                              aria-selected={selectedKey === value}
-                              onClick={() => selectAndClose(value, cat.key)}
-                              className={`w-full flex items-center gap-1.5 text-left px-2 py-1 rounded-md text-xs truncate ${
-                                selectedKey === value ? "bg-cyan-500/20 text-cyan-300" : "text-foreground/90 hover:bg-muted/40"
-                              }`}
-                            >
-                              <span className="text-muted-foreground shrink-0">{"\u21B3"}</span>
-                              <span className="truncate">{node.sub.label}</span>
-                            </button>
-                            {(visibleChildren.length > 0 || visibleViews.length > 0) && (
+                            {collapsible && !q ? (
+                              <div className="flex items-center">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setPatternExpansion((prev) => ({ ...prev, [value]: !patternExpanded }))
+                                  }
+                                  aria-label={patternExpanded ? "Collapse group" : "Expand group"}
+                                  className="p-1 text-muted-foreground hover:text-foreground shrink-0"
+                                >
+                                  <ChevronRight
+                                    className={`w-3.5 h-3.5 transition-transform ${patternExpanded ? "rotate-90" : ""}`}
+                                  />
+                                </button>
+                                <div className="flex-1 min-w-0">{patternButton}</div>
+                              </div>
+                            ) : (
+                              patternButton
+                            )}
+                            {patternExpanded && (visibleChildren.length > 0 || visibleViews.length > 0) && (
                               <div className="ml-3 pl-2 border-l border-border/60 mt-0.5 space-y-0.5">
                                 {pinnedViews.map(viewButton)}
                                 {visibleChildren.map((child) => renderPattern(child))}
