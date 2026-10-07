@@ -744,9 +744,16 @@ export function ScreenerTableHeader({
   sortDir,
   toggleSort,
 }: ScreenerTableHeaderProps) {
-  const SortIcon = ({ k }: { k: SortKey }) => (
+  // `reverse` flips the arrow for columns where the natural reading is the
+  // opposite (MOVE, Price): asc shows ▼ and desc shows ▲. Sorting itself is
+  // unchanged; only the icon differs. The unsorted ↕ stays the same.
+  const SortIcon = ({ k, reverse = false }: { k: SortKey; reverse?: boolean }) => (
     <span className="text-[10px] ml-1 text-white">
-      {sortKey === k ? (sortDir === "asc" ? "▲" : "▼") : "↕"}
+      {sortKey === k
+        ? (sortDir === "asc") !== reverse
+          ? "▲"
+          : "▼"
+        : "↕"}
     </span>
   );
 
@@ -781,13 +788,13 @@ export function ScreenerTableHeader({
           className="pl-3 pr-2 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
           onClick={() => toggleSort("priceVsCpr")}
         >
-          MOVE <SortIcon k="priceVsCpr" />
+          MOVE <SortIcon k="priceVsCpr" reverse />
         </th>
         <th
           className="px-3 py-3 pr-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
           onClick={() => toggleSort("change24h")}
         >
-          Price <SortIcon k="change24h" />
+          Price <SortIcon k="change24h" reverse />
         </th>
         <th
           className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[160px] cursor-pointer hover:text-foreground"
