@@ -1,6 +1,6 @@
 import type { CPRResult } from "../../cpr";
 import type { ViewDef } from "../types";
-import { dirTol, computePrevPattern, pickOuterLevelPattern } from "../../cpr";
+import { dirTol, pickOuterLevelPattern } from "../../cpr";
 import { passesView } from "../registry";
 import { matchesGapBadge } from "../gapBadges";
 import { matchesCprAboveLevelStatus } from "../p15MAbove";
@@ -95,26 +95,6 @@ export const LEVELSABOVE_VIEWS: ViewDef[] = [
   },
 
   // --- leaf Views (self-contained, target-graded) ---
-    {
-      key: "6PM:APHS1A-FAU4:9PM",
-      label: "6PM:APHS1A-FAU4:9PM",
-      parentKey: "A-A-AA-AA-EU2L4",
-      kind: "view",
-      direction: "Up",
-      condition: (r) =>
-        r.todayCPR.bc > r.prevCPR.prevHigh && r.todayCPR.s1 > r.prevCPR.tc &&
-        (computePrevPattern(r.prevCPR, r.ppCPR) === "EU3L3" ||
-          computePrevPattern(r.prevCPR, r.ppCPR) === "L4U4" ||
-          (computePrevPattern(r.prevCPR, r.ppCPR) === "EU3L4" &&
-            r.prevCPR.pivot > r.todayCPR.prevLow && r.todayCPR.s3 > r.prevCPR.s3)),
-      targetLabel: "R4",
-      getTarget: (r) => r.todayCPR.r4,
-      entryLabel: "TC",
-      getEntry: (r) => r.todayCPR.tc,
-      stoplossLabel: "S1",
-      getStoploss: (r) => r.todayCPR.s1,
-        order: 2
-  },
 
 
   {
