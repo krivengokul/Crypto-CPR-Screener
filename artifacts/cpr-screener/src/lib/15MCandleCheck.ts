@@ -10,6 +10,7 @@ const PREVIOUS_UPEX_CACHE_KEY = "cpr_previous_upex_results_v1";
 const PREVIOUS_15M_B_CACHE_KEY = "cpr_previous_15m_b_results_v3";
 const PREVIOUS_15M_TC_B_CACHE_KEY = "cpr_previous_15m_tc_b_results_v3";
 const PREVIOUS_15M_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_momentum_b_results_v1";
+const PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_consolidate_a_results_v1";
 
 export interface UpexCandidate {
   symbol: string;
@@ -22,6 +23,8 @@ export interface UpexCandidate {
    * use it.
    */
   floor?: number;
+  /** Upper bound used by CONSOLIDATE-A: the higher of previous CPR Prev High (PH) and R1. */
+  ceiling?: number;
 }
 
 /**
@@ -34,6 +37,18 @@ export function getPrevious15MBFloor(prevLevels: {
   s1: number;
 }): number {
   return Math.min(prevLevels.prevLow, prevLevels.s1);
+}
+
+/**
+ * The level the CONSOLIDATE-A check tests candle bodies against on the
+ * upside: previous CPR Prev High (PH), or its R1 when R1 sits above PH (i.e. the
+ * higher of the two).
+ */
+export function getPrevious15MACeiling(prevLevels: {
+  prevHigh: number;
+  r1: number;
+}): number {
+  return Math.max(prevLevels.prevHigh, prevLevels.r1);
 }
 
 export function getUpexBc(
@@ -57,9 +72,11 @@ export function passesUpexFilter(
   candles: OHLC[],
   bc: number,
   startTime: number,
-  now: number
+  now: number,
+  ceiling?: number
 ): boolean | null {
   if (!Number.isFinite(bc)) return null;
+  if (ceiling !== undefined && !Number.isFinite(ceiling)) return null;
 
   const completed = candles.filter(
     (candle) =>
@@ -74,6 +91,9 @@ export function passesUpexFilter(
 
   let previousLowestWick: number | null = null;
   for (const candle of completed) {
+    if (ceiling !== undefined && candle.open > ceiling && candle.close > ceiling) {
+      return false;
+    }
     const fullBodyBelowBc = candle.open < bc && candle.close < bc;
     const bodyLow = Math.min(candle.open, candle.close);
     if (
@@ -312,7 +332,7 @@ async function findSymbolsForSession(
         if (!candles) return { candidate, passes: null };
         return {
           candidate,
-          passes: evaluate(candles, candidate.bc, startTime, endTime, candidate.floor),
+          passes: evaluate(candles, candidate.bc, startTime, endTime, candidate.ceiling !== undefined ? candidate.ceiling : candidate.floor),
         };
       })
     );
@@ -341,6 +361,73 @@ export function findUpexSymbols(
   now = Date.now()
 ): Promise<{ included: Set<string>; unavailable: number }> {
   return findSymbolsForSession(candidates, upexSessionStartUtcMs(now), now, onProgress);
+}
+
+export function findPreviousConsolidateASymbols(
+  candidates: UpexCandidate[],
+  onProgress?: (done: number, total: number) => void,
+  now = Date.now()
+): Promise<PreviousUpexScanResults> {
+  const endTime = upexSessionStartUtcMs(now);
+  const startTime = previousUpexSessionStartUtcMs(now);
+  return findSymbolsForSession(
+    candidates,
+    startTime,
+    endTime,
+    onProgress,
+    passesUpexFilter,
+  );
+}
+
+export function previousConsolidateACandidateCacheKey(
+  sessionStart: number,
+  candidate: UpexCandidate,
+): string {
+  return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.ceiling}`;
+}
+
+export function loadPreviousConsolidateAResults(
+  sessionStart: number,
+): Map<string, boolean | null> {
+  try {
+    const raw = localStorage.getItem(PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY);
+    if (!raw) return new Map();
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      !("sessionStart" in parsed) ||
+      parsed.sessionStart !== sessionStart ||
+      !("results" in parsed) ||
+      !parsed.results ||
+      typeof parsed.results !== "object"
+    ) {
+      return new Map();
+    }
+
+    const results = new Map<string, boolean | null>();
+    for (const [key, value] of Object.entries(parsed.results)) {
+      if (typeof value === "boolean") {
+        results.set(key, value);
+      }
+    }
+    return results;
+  } catch {
+    return new Map();
+  }
+}
+
+export function savePreviousConsolidateAResults(
+  sessionStart: number,
+  results: Map<string, boolean | null>,
+): void {
+  const payload = JSON.stringify({
+    sessionStart,
+    results: Object.fromEntries(
+      [...results].filter((entry): entry is [string, boolean] => typeof entry[1] === "boolean"),
+    ),
+  });
+  safeSetItem(PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY, payload);
 }
 
 export function findPreviousUpexSymbols(

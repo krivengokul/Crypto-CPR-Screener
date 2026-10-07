@@ -20,19 +20,24 @@ import { COINDCX_ENABLED } from "@/lib/featureFlags";
 import {
   findPD15MBelowTCSymbols,
   findPD15MMomentumBelowSymbols,
+  findPreviousConsolidateASymbols,
   findPreviousUpexSymbols,
   findUpexSymbols,
   getUpexBc,
   loadPD15MMomentumBelowResults,
   loadPD15MTCBelowResults,
+  loadPreviousConsolidateAResults,
   loadPreviousUpexResults,
+  getPrevious15MACeiling,
   getPrevious15MBFloor,
   previous15MMomentumCandidateCacheKey,
   previous15MTCCandidateCacheKey,
+  previousConsolidateACandidateCacheKey,
   previousUpexCandidateCacheKey,
   previousUpexSessionStartUtcMs,
   savePD15MBelowTCResults,
   savePD15MMomentumBelowResults,
+  savePreviousConsolidateAResults,
   savePreviousUpexResults,
 } from "@/lib/15MCandleCheck";
 import type { CPRResult } from "@/lib/cpr";
@@ -330,6 +335,20 @@ export default function Screener({
   const [pdhPdlFilter, setPdhPdlFilter] = useState<"above" | "below" | "abovepu4" | "belowpl4" | "pdhgtu1" | "pdlltl1" | "s1r1in" | null>(null);
   const [upexFilter, setUpexFilter] = useState(false);
   const [upexIncludedSymbols, setUpexIncludedSymbols] = useState<Set<string>>(() => new Set());
+  const [previousConsolidateAFilter, setPreviousConsolidateAFilter] = useState(false);
+  const [previousConsolidateAIncludedSymbols, setPreviousConsolidateAIncludedSymbols] = useState<Set<string>>(() => new Set());
+  const [previousConsolidateAProgress, setPreviousConsolidateAProgress] = useState<{
+    done: number;
+    total: number;
+  } | null>(null);
+  const [previousConsolidateAReady, setPreviousConsolidateAReady] = useState(false);
+  const [previousConsolidateAMessage, setPreviousConsolidateAMessage] = useState("");
+  const previousConsolidateAResultsRef = useRef<Map<string, boolean | null>>(
+    loadPreviousConsolidateAResults(previousUpexSessionStartUtcMs()),
+  );
+  const previousConsolidateACacheSessionRef = useRef(previousUpexSessionStartUtcMs());
+  const previousConsolidateARunRef = useRef(0);
+
   const [previousUpexFilter, setPreviousUpexFilter] = useState(false);
   const [previousUpexIncludedSymbols, setPreviousUpexIncludedSymbols] = useState<Set<string>>(() => new Set());
   const [previousUpexProgress, setPreviousUpexProgress] = useState<{
@@ -426,6 +445,8 @@ export default function Screener({
     upexRunRef.current += 1;
     setUpexFilter(false);
     setUpexIncludedSymbols(new Set());
+    setPreviousConsolidateAFilter(false);
+    setPreviousConsolidateAMessage("");
     setPreviousUpexFilter(false);
     setPrevious15MTCFilter(false);
     setPrevious15MMomentumFilter(false);
@@ -455,6 +476,125 @@ export default function Screener({
   useEffect(() => { deltaAllResultsRef.current = deltaAllResults; }, [deltaAllResults]);
   useEffect(() => { coindcxAllResultsRef.current = coindcxAllResults; }, [coindcxAllResults]);
   useEffect(() => { activeSignalRef.current = activeSignal; }, [activeSignal]);
+
+  useEffect(() => {
+    if (previousConsolidateACacheSessionRef.current !== previousUpexSessionStart) {
+      previousConsolidateAResultsRef.current = loadPreviousConsolidateAResults(previousUpexSessionStart);
+      previousConsolidateACacheSessionRef.current = previousUpexSessionStart;
+    }
+    if (
+      status === "scanning" ||
+      deltaStatus === "scanning" ||
+      (status !== "done" && deltaStatus !== "done")
+    ) return;
+
+    const candidates = new Map<string, {
+      symbol: string;
+      source: "binance" | "delta";
+      bc: number;
+      ceiling: number;
+    }>();
+    if (status === "done") {
+      for (const row of allResults) {
+        candidates.set(`binance:${row.symbol}`, {
+          symbol: row.symbol,
+          source: "binance",
+          bc: row.prevCPR.bc,
+          ceiling: getPrevious15MACeiling(row.prevCPR),
+        });
+      }
+    }
+    if (deltaStatus === "done") {
+      for (const row of deltaAllResults) {
+        candidates.set(`delta:${row.symbol}`, {
+          symbol: row.symbol,
+          source: "delta",
+          bc: row.prevCPR.bc,
+          ceiling: getPrevious15MACeiling(row.prevCPR),
+        });
+      }
+    }
+    const currentCandidates = Array.from(candidates.values());
+    if (currentCandidates.length === 0) {
+      setPreviousConsolidateAReady(false);
+      setPreviousConsolidateAProgress(null);
+      return;
+    }
+
+    const cacheKey = (candidate: (typeof currentCandidates)[number]) =>
+      previousConsolidateACandidateCacheKey(previousUpexSessionStart, candidate);
+    const missing = currentCandidates.filter(
+      (candidate) => !previousConsolidateAResultsRef.current.has(cacheKey(candidate)),
+    );
+    const updateIncluded = () => {
+      setPreviousConsolidateAIncludedSymbols(
+        new Set(
+          currentCandidates
+            .filter((candidate) => previousConsolidateAResultsRef.current.get(cacheKey(candidate)) === true)
+            .map((candidate) => `${candidate.source}:${candidate.symbol}`),
+        ),
+      );
+    };
+    updateIncluded();
+
+    if (missing.length === 0) {
+      setPreviousConsolidateAReady(true);
+      setPreviousConsolidateAProgress(null);
+      const unavailable = currentCandidates.filter(
+        (candidate) => previousConsolidateAResultsRef.current.get(cacheKey(candidate)) === null,
+      ).length;
+      setPreviousConsolidateAMessage(
+        unavailable > 0
+          ? `${unavailable} symbol${unavailable === 1 ? "" : "s"} excluded from CONSOLIDATE-A because no usable completed 15m candles were returned for the previous IST session.`
+          : "",
+      );
+      return;
+    }
+
+    const runId = ++previousConsolidateARunRef.current;
+    setPreviousConsolidateAFilter(false);
+    setPreviousConsolidateAReady(false);
+    setPreviousConsolidateAProgress({ done: 0, total: missing.length });
+    void findPreviousConsolidateASymbols(
+      missing,
+      (done, total) => {
+        if (runId === previousConsolidateARunRef.current) {
+          setPreviousConsolidateAProgress({ done, total });
+        }
+      },
+      previousUpexSessionStart + 24 * 60 * 60 * 1000,
+    ).then(({ outcomes, unavailable }) => {
+      if (runId !== previousConsolidateARunRef.current) return;
+      for (const candidate of missing) {
+        const symbolKey = `${candidate.source}:${candidate.symbol}`;
+        const outcome = outcomes.get(symbolKey);
+        if (typeof outcome === "boolean") {
+          previousConsolidateAResultsRef.current.set(cacheKey(candidate), outcome);
+        } else {
+          previousConsolidateAResultsRef.current.delete(cacheKey(candidate));
+        }
+      }
+      savePreviousConsolidateAResults(previousUpexSessionStart, previousConsolidateAResultsRef.current);
+      updateIncluded();
+      setPreviousConsolidateAReady(true);
+      setPreviousConsolidateAProgress(null);
+      setPreviousConsolidateAMessage(
+        unavailable > 0
+          ? `${unavailable} symbol${unavailable === 1 ? "" : "s"} excluded from CONSOLIDATE-A because no usable completed 15m candles were returned for the previous IST session.`
+          : "",
+      );
+    }).catch((cause: unknown) => {
+      if (runId !== previousConsolidateARunRef.current) return;
+      setPreviousConsolidateAProgress(null);
+      setPreviousConsolidateAReady(false);
+      setPreviousConsolidateAMessage(
+        cause instanceof Error
+          ? `CONSOLIDATE-A preparation failed: ${cause.message}`
+          : "CONSOLIDATE-A preparation failed.",
+      );
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, deltaStatus, previousUpexSessionStart]);
 
   useEffect(() => {
     if (previousUpexCacheSessionRef.current !== previousUpexSessionStart) {
@@ -913,11 +1053,14 @@ export default function Screener({
     if (scanRef.current) return;
     scanRef.current = true;
     upexRunRef.current += 1;
+    previousConsolidateARunRef.current += 1;
     previousUpexRunRef.current += 1;
     previous15MTCRunRef.current += 1;
     previous15MMomentumRunRef.current += 1;
     setUpexFilter(false);
     setUpexIncludedSymbols(new Set());
+    setPreviousConsolidateAFilter(false);
+    setPreviousConsolidateAMessage("");
     setPreviousUpexFilter(false);
     setPrevious15MTCFilter(false);
     setPrevious15MMomentumFilter(false);
@@ -974,11 +1117,14 @@ export default function Screener({
     if (deltaScanRef.current) return;
     deltaScanRef.current = true;
     upexRunRef.current += 1;
+    previousConsolidateARunRef.current += 1;
     previousUpexRunRef.current += 1;
     previous15MTCRunRef.current += 1;
     previous15MMomentumRunRef.current += 1;
     setUpexFilter(false);
     setUpexIncludedSymbols(new Set());
+    setPreviousConsolidateAFilter(false);
+    setPreviousConsolidateAMessage("");
     setPreviousUpexFilter(false);
     setPrevious15MTCFilter(false);
     setPrevious15MMomentumFilter(false);
@@ -1032,6 +1178,8 @@ export default function Screener({
     upexRunRef.current += 1;
     setUpexFilter(false);
     setUpexIncludedSymbols(new Set());
+    setPreviousConsolidateAFilter(false);
+    setPreviousConsolidateAMessage("");
     setPreviousUpexFilter(false);
     setPrevious15MTCFilter(false);
     setPrevious15MMomentumFilter(false);
@@ -1365,6 +1513,12 @@ export default function Screener({
     return (showAll ? allResults : filtered).map((r) => ({ ...r, source: "binance" as const }));
   };
 
+  const previousConsolidateAIncludedCount = getActivePool().filter(
+    (row) =>
+      row.source !== "coindcx" &&
+      previousConsolidateAIncludedSymbols.has(`${row.source}:${row.symbol}`),
+  ).length;
+
   const previousUpexIncludedCount = getActivePool().filter(
     (row) =>
       row.source !== "coindcx" &&
@@ -1627,7 +1781,13 @@ export default function Screener({
     )
     .filter(
       (r) =>
-        !previousUpexFilter ||
+        !previousConsolidateAFilter ||
+        r.source === "coindcx" ||
+        previousConsolidateAIncludedSymbols.has(`${r.source}:${r.symbol}`)
+    )
+    .filter(
+      (r) =>
+        !previousConsolidateAFilter || previousUpexFilter ||
         r.source === "coindcx" ||
         previousUpexIncludedSymbols.has(`${r.source}:${r.symbol}`)
     )
@@ -1764,7 +1924,7 @@ export default function Screener({
   // Helper: is any sub-filter active (to decide the result count label)
   const anySubFilter =
     !!activeGenericSignal ||
-    !!PatternFilter || !!touchFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter || upexFilter || previousUpexFilter || previous15MTCFilter || previous15MMomentumFilter || statusFilter !== "all" || !!entryLevelFilter;
+    !!PatternFilter || !!touchFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter || upexFilter || previousConsolidateAFilter || previousUpexFilter || previous15MTCFilter || previous15MMomentumFilter || statusFilter !== "all" || !!entryLevelFilter;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -2511,6 +2671,28 @@ export default function Screener({
             </span>
             <button
               onClick={() => {
+                if (!previousConsolidateAReady) return;
+                setPreviousConsolidateAFilter((active) => !active);
+                setPreviousConsolidateAMessage("");
+              }}
+              disabled={!previousConsolidateAReady || currentAllCount === 0 || activeTab === "coindcx"}
+              className={`text-xs px-2.5 py-1 rounded border transition-colors disabled:opacity-50 ${
+                previousConsolidateAFilter
+                  ? "border-cyan-400 text-cyan-300"
+                  : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
+              }`}
+              title="Include Binance and Delta symbols unless a completed previous-session 15-minute candle (a) has its whole body below previous day's BC while making a new low versus earlier candles, or (b) has its whole body above the higher of previous day's PH and R1. Unevaluated sources such as CoinDCX are excluded while active."
+            >
+              {previousConsolidateAProgress
+                ? `CONSOLIDATE-A ${previousConsolidateAProgress.done}/${previousConsolidateAProgress.total}`
+                : previousConsolidateAReady
+                  ? previousConsolidateAFilter
+                    ? `✕ CONSOLIDATE-A (${previousConsolidateAIncludedCount})`
+                    : `CONSOLIDATE-A (${previousConsolidateAIncludedCount})`
+                  : "CONSOLIDATE-A…"}
+            </button>
+            <button
+              onClick={() => {
                 if (!previousUpexReady) return;
                 setPreviousUpexFilter((active) => !active);
                 setUpexMessage("");
@@ -2608,8 +2790,9 @@ export default function Screener({
 
         )}
 
-        {(upexMessage || previous15MTCMessage || previous15MMomentumMessage) && currentStatus === "done" && (
+        {(previousConsolidateAMessage || upexMessage || previous15MTCMessage || previous15MMomentumMessage) && currentStatus === "done" && (
           <div className="flex flex-col gap-1 px-1 -mt-1 mb-2 text-[10px] text-amber-300" role="status">
+            {previousConsolidateAMessage && <span>{previousConsolidateAMessage}</span>}
             {upexMessage && <span>{upexMessage}</span>}
             {previous15MTCMessage && <span>{previous15MTCMessage}</span>}
             {previous15MMomentumMessage && <span>{previous15MMomentumMessage}</span>}

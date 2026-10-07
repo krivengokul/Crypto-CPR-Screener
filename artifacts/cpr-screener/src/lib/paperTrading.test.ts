@@ -23,6 +23,7 @@ import {
   loadPD15MTCBelowResults,
   previous15MMomentumCandidateCacheKey,
   savePD15MMomentumBelowResults,
+  getPrevious15MACeiling,
   getPrevious15MBFloor,
   passesPD15MBelowTCFilter,
   findPreviousUpexSymbols,
@@ -539,6 +540,45 @@ test("MOMENTUM-B results are cached separately from CONSOLIDATE-B", () => {
       Reflect.deleteProperty(globalThis, "localStorage");
     }
   }
+});
+
+test("CONSOLIDATE-A ceiling is the higher of previous PH and R1", () => {
+  assert.equal(getPrevious15MACeiling({ prevHigh: 110, r1: 105 }), 110);
+  assert.equal(getPrevious15MACeiling({ prevHigh: 110, r1: 115 }), 115);
+  assert.equal(getPrevious15MACeiling({ prevHigh: 110, r1: 110 }), 110);
+});
+
+test("passesUpexFilter with ceiling fails when a candle body is above ceiling", () => {
+  const start = Date.parse("2026-10-06T00:00:00.000Z");
+  const now = Date.parse("2026-10-06T06:00:00.000Z");
+  const bc = 100;
+  const ceiling = 110;
+  const makeCandle = (openTime: number, open: number, close: number): OHLC => ({
+    openTime,
+    open,
+    high: Math.max(open, close) + 1,
+    low: Math.min(open, close) - 1,
+    close,
+    volume: 1,
+  });
+
+  // Candle body completely above ceiling (112, 114) fails
+  assert.equal(
+    passesUpexFilter([makeCandle(start, 112, 114)], bc, start, now, ceiling),
+    false
+  );
+
+  // Candle body within range (102, 105) with wick above ceiling passes
+  assert.equal(
+    passesUpexFilter([{ ...makeCandle(start, 102, 105), high: 115 }], bc, start, now, ceiling),
+    true
+  );
+
+  // Candle body exactly on ceiling (105, 110) passes
+  assert.equal(
+    passesUpexFilter([makeCandle(start, 105, 110)], bc, start, now, ceiling),
+    true
+  );
 });
 
 test("PD-15M-Below-BC floor is the lower of previous PL and S1", () => {
