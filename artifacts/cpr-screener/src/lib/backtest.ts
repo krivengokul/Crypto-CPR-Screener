@@ -1738,6 +1738,25 @@ export async function pivotLevelBacktestSymbolOnDate(
   const { result, window } = reconstructed;
 
   if (!passesPatternFn(result, categoryKey)) return null; // didn't match the parent category's base condition
+
+  // The PD15M>BC pattern depends on the previous session's 15m candles, which
+  // are not part of the daily-candle CPR reconstruction. Populate the flag
+  // here (after the cheap category gate, so only LEVEL ABOVE symbols trigger
+  // a candle fetch) before the pattern's own condition is evaluated.
+  if (pivotLevelKey === "P15MABC") {
+    if (source === "coindcx") return null;
+    const PD15MAboveBCPass = await findPreviousUpexPass(
+      { symbol, source, bc: result.prevCPR.bc },
+      Date.parse(`${entryDateISO}T00:00:00.000Z`),
+    );
+    if (PD15MAboveBCPass === null) {
+      console.warn(
+        `[backtest] ${symbol} on ${entryDateISO}: PD15M>BC 15m candles unavailable — treated as not passing.`
+      );
+    }
+    result.PD15MAboveBCPass = PD15MAboveBCPass === true;
+  }
+
   if (!matchesPatternFn(result, pivotLevelKey)) return null; // didn't match this Pattern's raw flag
 
   // NEW: if this Pattern (or a nested Subpattern under it — see
@@ -2619,7 +2638,9 @@ export async function runPivotLevelBacktest(
   const rows: BacktestRow[] = [];
   await prefetchHistories(symbols, source, onProgress);
 
-  const batchSize = 50;
+  // The PD15M>BC pattern makes one extra 15m candle request per LEVEL ABOVE
+  // symbol, so keep concurrency bounded like the other 15m views.
+  const batchSize = pivotLevelKey === "P15MABC" ? 8 : 50;
 
   for (let i = 0; i < symbols.length; i += batchSize) {
     const batch = symbols.slice(i, i + batchSize);
