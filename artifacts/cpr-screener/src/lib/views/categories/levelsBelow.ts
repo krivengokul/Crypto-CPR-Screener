@@ -991,7 +991,9 @@ export const LEVELSBELOW_VIEWS: ViewDef[] = [
     parentKey: "levelsbelow",
     kind: "pattern",
     condition: (r) => r.PD15MBelowTCPass === true,
-    order: 999,
+    // Negative so it sorts above every other LEVEL BELOW child (the first
+    // compound pattern, B-B-BB-BB, is order 0).
+    order: -1,
   },
   {
     key: "P15MBelow-CPRB",
