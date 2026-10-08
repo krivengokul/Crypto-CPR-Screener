@@ -2865,7 +2865,7 @@ export default function BacktestPanel() {
                 placeholder="Search symbol or entry date…"
                 value={resultSearch}
                 onChange={(e) => setResultSearch(e.target.value)}
-                className="w-full bg-background border border-border rounded-md pl-8 pr-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                className="w-full bg-background border border-border rounded-md pl-8 pr-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
               />
             </div>
           )}
@@ -3166,7 +3166,7 @@ export default function BacktestPanel() {
                 placeholder="Search symbol or entry date…"
                 value={resultSearch}
                 onChange={(e) => setResultSearch(e.target.value)}
-                className="w-full bg-background border border-border rounded-md pl-8 pr-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                className="w-full bg-background border border-border rounded-md pl-8 pr-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
               />
             </div>
           )}
