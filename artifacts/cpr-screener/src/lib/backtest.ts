@@ -1703,10 +1703,10 @@ export async function evaluateBacktestViewOutcome(
  * populates them from the previous session's 15m candles first.
  */
 export const P_FILTER_CATEGORY_KEYS: ReadonlySet<string> = new Set([
-  "p-consolidate-a",
-  "p-momentum-a",
-  "p-consolidate-b",
-  "p-momentum-b",
+  "CON-A",
+  "MOM-A",
+  "CON-B",
+  "MOM-B",
 ]);
 
 /**
@@ -1737,10 +1737,10 @@ async function populatePFilterFlags(
     );
 
   switch (categoryKey) {
-    case "p-consolidate-a":
+    case "CON-A":
       result.PD15MConsolidateAPass = (await consolidateA()) === true;
       break;
-    case "p-momentum-a": {
+    case "MOM-A": {
       const [momentum, consolidate] = await Promise.all([
         findPreviousUpexPass({ symbol, source, bc: prevCPR.bc }, sessionStart),
         consolidateA(),
@@ -1749,10 +1749,10 @@ async function populatePFilterFlags(
       result.PD15MConsolidateAPass = consolidate === true;
       break;
     }
-    case "p-consolidate-b":
+    case "CON-B":
       result.PD15MBelowTCPass = (await consolidateB()) === true;
       break;
-    case "p-momentum-b": {
+    case "MOM-B": {
       const [momentum, consolidate] = await Promise.all([
         // MOMENTUM-B = the CONSOLIDATE-B TC check without the PL/S1 floor.
         findPD15MBelowTCPass({ symbol, source, bc: prevCPR.tc }, sessionStart),

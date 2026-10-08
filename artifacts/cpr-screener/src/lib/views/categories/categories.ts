@@ -6,16 +6,16 @@ export const CATEGORY_VIEWS: ViewDef[] =  [
   // LOSERS (1) and LEVEL ABOVE (2). The flags are populated by
   // categoryScanSymbolOnDate in backtest.ts. MOMENTUM excludes the matching
   // CONSOLIDATE set, same as the Screener buttons.
-  { key: "p-consolidate-a", label: "P-CONSOLIDATE-A", kind: "category", condition: (r) => r.PD15MConsolidateAPass === true,
+  { key: "CON-A", label: "P-CONSOLIDATE-A", kind: "category", condition: (r) => r.PD15MConsolidateAPass === true,
       order: 1.1
 },
-  { key: "p-momentum-a", label: "P-MOMENTUM-A", kind: "category", condition: (r) => r.PD15MAboveBCPass === true && r.PD15MConsolidateAPass !== true,
+  { key: "MOM-A", label: "P-MOMENTUM-A", kind: "category", condition: (r) => r.PD15MAboveBCPass === true && r.PD15MConsolidateAPass !== true,
       order: 1.2
 },
-  { key: "p-consolidate-b", label: "P-CONSOLIDATE-B", kind: "category", condition: (r) => r.PD15MBelowTCPass === true,
+  { key: "CON-B", label: "P-CONSOLIDATE-B", kind: "category", condition: (r) => r.PD15MBelowTCPass === true,
       order: 1.3
 },
-  { key: "p-momentum-b", label: "P-MOMENTUM-B", kind: "category", condition: (r) => r.PD15MMomentumBPass === true && r.PD15MBelowTCPass !== true,
+  { key: "MOM-B", label: "P-MOMENTUM-B", kind: "category", condition: (r) => r.PD15MMomentumBPass === true && r.PD15MBelowTCPass !== true,
       order: 1.4
 },
   { key: "levelsabove", label: "LEVEL ABOVE", kind: "category", condition: (r) => r.LevelsAbove,
