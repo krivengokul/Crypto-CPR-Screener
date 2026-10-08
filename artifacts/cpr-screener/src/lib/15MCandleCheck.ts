@@ -10,7 +10,7 @@ const PREVIOUS_UPEX_CACHE_KEY = "cpr_previous_upex_results_v1";
 const PREVIOUS_15M_B_CACHE_KEY = "cpr_previous_15m_b_results_v3";
 const PREVIOUS_15M_TC_B_CACHE_KEY = "cpr_previous_15m_tc_b_results_v4";
 const PREVIOUS_15M_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_momentum_b_results_v1";
-const PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_consolidate_a_results_v1";
+const PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_consolidate_a_results_v2";
 
 export interface UpexCandidate {
   symbol: string;
@@ -68,6 +68,18 @@ export function previousUpexSessionStartUtcMs(now = Date.now()): number {
   return upexSessionStartUtcMs(now) - 24 * 60 * 60 * 1000;
 }
 
+/**
+ * PD15M>BC (and CONSOLIDATE-A when a `ceiling` is supplied): walk the previous
+ * session's completed 15m candles in time order.
+ *  - BC rule: fail when a candle's WHOLE body is below `bc` AND the body's
+ *    bottom is lower than the lowest wick of any earlier candle (a fresh low).
+ *  - Ceiling rule (CONSOLIDATE-A, mirror of the BC rule): fail when a candle's
+ *    WHOLE body is above `ceiling` (higher of previous PH / R1) AND the body's
+ *    top is higher than the highest wick of any earlier candle (a fresh high).
+ *    A body above the ceiling that stays at or under an earlier candle's high
+ *    does not fail. The first candle has no earlier wick, so a full body above
+ *    the ceiling on it fails (same as the BC rule).
+ */
 export function passesUpexFilter(
   candles: OHLC[],
   bc: number,
@@ -90,8 +102,15 @@ export function passesUpexFilter(
   if (completed.length === 0) return null;
 
   let previousLowestWick: number | null = null;
+  let previousHighestWick: number | null = null;
   for (const candle of completed) {
-    if (ceiling !== undefined && candle.open > ceiling && candle.close > ceiling) {
+    if (
+      ceiling !== undefined &&
+      candle.open > ceiling &&
+      candle.close > ceiling &&
+      (previousHighestWick === null ||
+        Math.max(candle.open, candle.close) > previousHighestWick)
+    ) {
       return false;
     }
     const fullBodyBelowBc = candle.open < bc && candle.close < bc;
@@ -106,6 +125,12 @@ export function passesUpexFilter(
       previousLowestWick === null
         ? candle.low
         : Math.min(previousLowestWick, candle.low);
+    if (Number.isFinite(candle.high)) {
+      previousHighestWick =
+        previousHighestWick === null
+          ? candle.high
+          : Math.max(previousHighestWick, candle.high);
+    }
   }
 
   return true;

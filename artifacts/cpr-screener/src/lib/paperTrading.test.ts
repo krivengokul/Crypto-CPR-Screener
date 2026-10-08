@@ -599,6 +599,27 @@ test("passesUpexFilter with ceiling fails when a candle body is above ceiling", 
     passesUpexFilter([makeCandle(start, 105, 110)], bc, start, now, ceiling),
     true
   );
+
+  // Wick condition (mirror of the BC rule): a body above the ceiling only fails
+  // when it is also higher than the highest wick of every earlier candle.
+  const m = 15 * 60_000;
+  // Earlier candle wicked up to 125; later body (112/114) is above the ceiling
+  // but under that earlier high -> not a fresh high -> passes.
+  assert.equal(
+    passesUpexFilter(
+      [{ ...makeCandle(start, 105, 106), high: 125 }, makeCandle(start + m, 112, 114)],
+      bc, start, now, ceiling,
+    ),
+    true
+  );
+  // Later body (126/128) is above the earlier high of 125 -> fresh high -> fails.
+  assert.equal(
+    passesUpexFilter(
+      [{ ...makeCandle(start, 105, 106), high: 125 }, makeCandle(start + m, 126, 128)],
+      bc, start, now, ceiling,
+    ),
+    false
+  );
 });
 
 test("PD-15M-Below-BC floor is the lower of previous PL and S1", () => {
