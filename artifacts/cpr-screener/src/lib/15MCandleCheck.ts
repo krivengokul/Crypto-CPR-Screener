@@ -170,6 +170,80 @@ export function passesPD15MBelowTCFilter(
   return true;
 }
 
+/**
+ * Debug helper for PD15MBelowTC / CONSOLIDATE-B: mirrors the loop in
+ * passesPD15MBelowTCFilter but reports WHICH candle and rule made it fail
+ * (null when it passes or can't be evaluated). Never affects results.
+ */
+export function explainPD15MBelowTCFailure(
+  candles: OHLC[],
+  tc: number,
+  startTime: number,
+  now: number,
+  floor?: number
+): {
+  rule: "floor" | "freshHighAboveTC";
+  openTime: string;
+  open: number;
+  close: number;
+  tc: number;
+  floor?: number;
+  previousHighestWick: number | null;
+} | null {
+  if (!Number.isFinite(tc)) return null;
+  const completed = candles
+    .filter(
+      (c) =>
+        Number.isFinite(c.openTime) &&
+        c.openTime >= startTime &&
+        c.openTime + CANDLE_INTERVAL_MS <= now &&
+        Number.isFinite(c.open) &&
+        Number.isFinite(c.close) &&
+        Number.isFinite(c.high)
+    )
+    .sort((a, b) => a.openTime - b.openTime);
+  let previousHighestWick: number | null = null;
+  for (const c of completed) {
+    const base = {
+      openTime: new Date(c.openTime).toISOString(),
+      open: c.open,
+      close: c.close,
+      tc,
+      floor,
+      previousHighestWick,
+    };
+    if (floor !== undefined && Number.isFinite(floor) && c.open < floor && c.close < floor) {
+      return { rule: "floor", ...base };
+    }
+    if (
+      c.open > tc &&
+      c.close > tc &&
+      (previousHighestWick === null || Math.max(c.open, c.close) > previousHighestWick)
+    ) {
+      return { rule: "freshHighAboveTC", ...base };
+    }
+    previousHighestWick =
+      previousHighestWick === null ? c.high : Math.max(previousHighestWick, c.high);
+  }
+  return null;
+}
+
+/**
+ * Opt-in logging: in the browser console run
+ *   localStorage.debugPD15M = "SANDUSDT"   (comma list, or "*" for all)
+ * then re-run the backtest/screener to see why a symbol failed PD15MBelowTC.
+ */
+function shouldDebugPD15M(symbol: string): boolean {
+  try {
+    const raw = typeof localStorage !== "undefined" ? localStorage.getItem("debugPD15M") : null;
+    if (!raw) return false;
+    const list = raw.split(",").map((x) => x.trim().toUpperCase());
+    return list.includes("*") || list.includes(symbol.toUpperCase());
+  } catch {
+    return false;
+  }
+}
+
 export function passesPrevious15MBFilter(
   candles: OHLC[],
   bc: number,
@@ -800,7 +874,16 @@ export function findPD15MBelowTCPass(
     startTime,
     endTime,
     undefined,
-    passesPD15MBelowTCFilter,
+    (candles, tc, st, now_, floor) => {
+      const passes = passesPD15MBelowTCFilter(candles, tc, st, now_, floor);
+      if (passes === false && shouldDebugPD15M(candidate.symbol)) {
+        console.info(
+          `[PD15MBelowTC] ${candidate.source}:${candidate.symbol} FAILED`,
+          explainPD15MBelowTCFailure(candles, tc, st, now_, floor)
+        );
+      }
+      return passes;
+    },
   ).then(
     ({ included, unavailable }) => {
       if (unavailable > 0) {
