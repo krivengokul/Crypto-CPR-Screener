@@ -4,7 +4,13 @@ import { fetchDeltaPerps } from "./delta";
 import { fetchCoinDCXDailyKlines, fetchCoinDCXActiveSymbols } from "./coinDCX";
 import { buildViewTree, type ViewTreeNode, VIEWS, getView, type ViewDef, passesView, matchesGapBadge, ALL_GAP_BADGES } from "./views";
 import { gradeTargetHit } from "./backtestOutcome";
-import { findPD15MBelowTCPass, findPreviousUpexPass, getPrevious15MBFloor } from "./15MCandleCheck";
+import {
+  findPD15MBelowTCPass,
+  findPreviousConsolidateAPass,
+  findPreviousUpexPass,
+  getPrevious15MACeiling,
+  getPrevious15MBFloor,
+} from "./15MCandleCheck";
 import {
   matchesCprAboveLevelStatus,
   matchesCprAboveOverlapStatus,
@@ -1690,6 +1696,76 @@ export async function evaluateBacktestViewOutcome(
  * CategoryScanRow with no target/result/hitDate fields, since a category
  * has no single defined target to grade against.
  */
+/**
+ * Backtest categories that mirror the Screener's previous-session 15m filter
+ * buttons (P-CONSOLIDATE-A/B, P-MOMENTUM-A/B). Their conditions read flags
+ * that are not part of the daily-candle CPR reconstruction, so the scan
+ * populates them from the previous session's 15m candles first.
+ */
+export const P_FILTER_CATEGORY_KEYS: ReadonlySet<string> = new Set([
+  "p-consolidate-a",
+  "p-momentum-a",
+  "p-consolidate-b",
+  "p-momentum-b",
+]);
+
+/**
+ * Fill in the 15m flags a P-* category's condition needs. Returns false when
+ * the symbol can't be evaluated (CoinDCX has no 15m check). Unavailable
+ * candles count as "not passing", like the other 15m patterns.
+ */
+async function populatePFilterFlags(
+  result: CPRResult,
+  symbol: string,
+  source: BacktestSource,
+  entryDateISO: string,
+  categoryKey: string,
+): Promise<boolean> {
+  if (source === "coindcx") return false;
+  const sessionStart = Date.parse(`${entryDateISO}T00:00:00.000Z`);
+  const { prevCPR } = result;
+
+  const consolidateA = () =>
+    findPreviousConsolidateAPass(
+      { symbol, source, bc: prevCPR.bc, ceiling: getPrevious15MACeiling(prevCPR) },
+      sessionStart,
+    );
+  const consolidateB = () =>
+    findPD15MBelowTCPass(
+      { symbol, source, bc: prevCPR.tc, floor: getPrevious15MBFloor(prevCPR) },
+      sessionStart,
+    );
+
+  switch (categoryKey) {
+    case "p-consolidate-a":
+      result.PD15MConsolidateAPass = (await consolidateA()) === true;
+      break;
+    case "p-momentum-a": {
+      const [momentum, consolidate] = await Promise.all([
+        findPreviousUpexPass({ symbol, source, bc: prevCPR.bc }, sessionStart),
+        consolidateA(),
+      ]);
+      result.PD15MAboveBCPass = momentum === true;
+      result.PD15MConsolidateAPass = consolidate === true;
+      break;
+    }
+    case "p-consolidate-b":
+      result.PD15MBelowTCPass = (await consolidateB()) === true;
+      break;
+    case "p-momentum-b": {
+      const [momentum, consolidate] = await Promise.all([
+        // MOMENTUM-B = the CONSOLIDATE-B TC check without the PL/S1 floor.
+        findPD15MBelowTCPass({ symbol, source, bc: prevCPR.tc }, sessionStart),
+        consolidateB(),
+      ]);
+      result.PD15MMomentumBPass = momentum === true;
+      result.PD15MBelowTCPass = consolidate === true;
+      break;
+    }
+  }
+  return true;
+}
+
 export async function categoryScanSymbolOnDate(
   symbol: string,
   source: BacktestSource,
@@ -1700,6 +1776,10 @@ export async function categoryScanSymbolOnDate(
   const reconstructed = await reconstructCPRForDate(symbol, source, entryDateISO);
   if (!reconstructed) return null;
   const { result, window } = reconstructed;
+
+  if (P_FILTER_CATEGORY_KEYS.has(categoryKey)) {
+    if (!(await populatePFilterFlags(result, symbol, source, entryDateISO, categoryKey))) return null;
+  }
 
   if (!passesPatternFn(result, categoryKey)) return null; // didn't match the category's base condition
 
@@ -2006,7 +2086,9 @@ export async function runCategoryScan(
   const rows: CategoryScanRow[] = [];
   await prefetchHistories(symbols, source, onProgress);
 
-  const batchSize = 50;
+  // The P-* categories make 15m candle requests for every symbol, so keep
+  // concurrency bounded like the other 15m patterns.
+  const batchSize = P_FILTER_CATEGORY_KEYS.has(categoryKey) ? 8 : 50;
 
   for (let i = 0; i < symbols.length; i += batchSize) {
     const batch = symbols.slice(i, i + batchSize);

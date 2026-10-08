@@ -821,6 +821,7 @@ export function savePrevious15MBResults(
 const previousUpexPassCache = new Map<string, Promise<boolean | null>>();
 const previous15MBPassCache = new Map<string, Promise<boolean | null>>();
 const pd15MBelowTCPassCache = new Map<string, Promise<boolean | null>>();
+const previousConsolidateAPassCache = new Map<string, Promise<boolean | null>>();
 const MAX_PREVIOUS_UPEX_CACHE_ENTRIES = 20_000;
 
 /**
@@ -857,6 +858,51 @@ export function findPreviousUpexPass(
     }
   );
   previousUpexPassCache.set(key, request);
+  return request;
+}
+
+/**
+ * Previous-session CONSOLIDATE-A pass for a single symbol (the per-symbol
+ * counterpart of findPreviousConsolidateASymbols). `candidate.bc` is the
+ * previous day's BC and `candidate.ceiling` the higher of previous PH / R1
+ * (see getPrevious15MACeiling). Own cache so results never collide with the
+ * ceiling-less MOMENTUM-A results from findPreviousUpexPass.
+ */
+export function findPreviousConsolidateAPass(
+  candidate: UpexCandidate,
+  now: number
+): Promise<boolean | null> {
+  const endTime = upexSessionStartUtcMs(now);
+  const startTime = previousUpexSessionStartUtcMs(now);
+  const key =
+    `${startTime}:${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.ceiling}`;
+  const cached = previousConsolidateAPassCache.get(key);
+  if (cached) return cached;
+
+  const request = findSymbolsForSession(
+    [candidate],
+    startTime,
+    endTime,
+    undefined,
+    passesUpexFilter,
+  ).then(
+    ({ included, unavailable }) => {
+      if (unavailable > 0) {
+        previousConsolidateAPassCache.delete(key);
+        return null;
+      }
+      if (previousConsolidateAPassCache.size > MAX_PREVIOUS_UPEX_CACHE_ENTRIES) {
+        const oldestKey = previousConsolidateAPassCache.keys().next().value;
+        if (oldestKey) previousConsolidateAPassCache.delete(oldestKey);
+      }
+      return included.has(`${candidate.source}:${candidate.symbol}`);
+    },
+    (error: unknown) => {
+      previousConsolidateAPassCache.delete(key);
+      throw error;
+    }
+  );
+  previousConsolidateAPassCache.set(key, request);
   return request;
 }
 
