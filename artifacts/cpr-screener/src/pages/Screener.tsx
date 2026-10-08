@@ -1522,7 +1522,9 @@ export default function Screener({
   const previousUpexIncludedCount = getActivePool().filter(
     (row) =>
       row.source !== "coindcx" &&
-      previousUpexIncludedSymbols.has(`${row.source}:${row.symbol}`),
+      previousUpexIncludedSymbols.has(`${row.source}:${row.symbol}`) &&
+      // MOMENTUM-A never includes symbols that are CONSOLIDATE-A.
+      !previousConsolidateAIncludedSymbols.has(`${row.source}:${row.symbol}`),
   ).length;
   const previous15MTCIncludedCount = getActivePool().filter(
     (row) =>
@@ -1532,7 +1534,9 @@ export default function Screener({
   const previous15MMomentumIncludedCount = getActivePool().filter(
     (row) =>
       row.source !== "coindcx" &&
-      previous15MMomentumIncludedSymbols.has(`${row.source}:${row.symbol}`),
+      previous15MMomentumIncludedSymbols.has(`${row.source}:${row.symbol}`) &&
+      // MOMENTUM-B never includes symbols that are CONSOLIDATE-B.
+      !previous15MTCIncludedSymbols.has(`${row.source}:${row.symbol}`),
   ).length;
 
   const handleUpexFilter = async () => {
@@ -1789,7 +1793,9 @@ export default function Screener({
       (r) =>
         !previousUpexFilter ||
         r.source === "coindcx" ||
-        previousUpexIncludedSymbols.has(`${r.source}:${r.symbol}`)
+        // MOMENTUM-A excludes CONSOLIDATE-A symbols.
+        (previousUpexIncludedSymbols.has(`${r.source}:${r.symbol}`) &&
+          !previousConsolidateAIncludedSymbols.has(`${r.source}:${r.symbol}`))
     )
     .filter(
       (r) =>
@@ -1799,7 +1805,9 @@ export default function Screener({
     .filter(
       (r) =>
         !previous15MMomentumFilter ||
-        previous15MMomentumIncludedSymbols.has(`${r.source}:${r.symbol}`)
+        // MOMENTUM-B excludes CONSOLIDATE-B symbols.
+        (previous15MMomentumIncludedSymbols.has(`${r.source}:${r.symbol}`) &&
+          !previous15MTCIncludedSymbols.has(`${r.source}:${r.symbol}`))
     )
     // Active / Ready status filter (see getRowStatus).
     .filter((r) => {
