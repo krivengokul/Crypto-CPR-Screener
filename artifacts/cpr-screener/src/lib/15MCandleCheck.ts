@@ -8,7 +8,7 @@ const CANDLE_INTERVAL_MS = 15 * 60 * 1000;
 const MAX_CONCURRENT_REQUESTS = 8;
 const PREVIOUS_UPEX_CACHE_KEY = "cpr_previous_upex_results_v1";
 const PREVIOUS_15M_B_CACHE_KEY = "cpr_previous_15m_b_results_v3";
-const PREVIOUS_15M_TC_B_CACHE_KEY = "cpr_previous_15m_tc_b_results_v3";
+const PREVIOUS_15M_TC_B_CACHE_KEY = "cpr_previous_15m_tc_b_results_v4";
 const PREVIOUS_15M_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_momentum_b_results_v1";
 const PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_consolidate_a_results_v1";
 
@@ -121,10 +121,13 @@ export function passesUpexFilter(
  * fails (same as the BC rule).
  *
  * Optional `floor` (lower of the previous CPR's PL / S1, see
- * getPrevious15MBFloor) adds a second rule: the session also fails if any
- * candle's whole body is below the floor. Bodies only; a wick below the floor,
- * or a body exactly on it, does not fail. Without a floor only the TC rule
- * applies.
+ * getPrevious15MBFloor) adds the mirror-image second rule: the session also
+ * fails if a candle's whole body is below the floor AND that body's bottom is
+ * lower than the lowest wick seen on any earlier candle (a fresh low below the
+ * floor). A body below the floor that stays at or above an earlier candle's
+ * low does not fail; neither does a wick below the floor or a body exactly on
+ * it. The first candle has no earlier wick, so a full body below the floor on
+ * it fails (same as the TC rule). Without a floor only the TC rule applies.
  */
 export function passesPD15MBelowTCFilter(
   candles: OHLC[],
@@ -150,8 +153,15 @@ export function passesPD15MBelowTCFilter(
   if (completed.length === 0) return null;
 
   let previousHighestWick: number | null = null;
+  let previousLowestWick: number | null = null;
   for (const candle of completed) {
-    if (floor !== undefined && candle.open < floor && candle.close < floor) {
+    const fullBodyBelowFloor =
+      floor !== undefined && candle.open < floor && candle.close < floor;
+    const bodyLow = Math.min(candle.open, candle.close);
+    if (
+      fullBodyBelowFloor &&
+      (previousLowestWick === null || bodyLow < previousLowestWick)
+    ) {
       return false;
     }
     const fullBodyAboveTc = candle.open > tc && candle.close > tc;
@@ -166,6 +176,10 @@ export function passesPD15MBelowTCFilter(
       previousHighestWick === null
         ? candle.high
         : Math.max(previousHighestWick, candle.high);
+    previousLowestWick =
+      previousLowestWick === null
+        ? candle.low
+        : Math.min(previousLowestWick, candle.low);
   }
   return true;
 }
@@ -189,6 +203,7 @@ export function explainPD15MBelowTCFailure(
   tc: number;
   floor?: number;
   previousHighestWick: number | null;
+  previousLowestWick: number | null;
 } | null {
   if (!Number.isFinite(tc)) return null;
   const completed = candles
@@ -203,6 +218,7 @@ export function explainPD15MBelowTCFailure(
     )
     .sort((a, b) => a.openTime - b.openTime);
   let previousHighestWick: number | null = null;
+  let previousLowestWick: number | null = null;
   for (const c of completed) {
     const base = {
       openTime: new Date(c.openTime).toISOString(),
@@ -211,8 +227,15 @@ export function explainPD15MBelowTCFailure(
       tc,
       floor,
       previousHighestWick,
+      previousLowestWick,
     };
-    if (floor !== undefined && Number.isFinite(floor) && c.open < floor && c.close < floor) {
+    if (
+      floor !== undefined &&
+      Number.isFinite(floor) &&
+      c.open < floor &&
+      c.close < floor &&
+      (previousLowestWick === null || Math.min(c.open, c.close) < previousLowestWick)
+    ) {
       return { rule: "floor", ...base };
     }
     if (
@@ -224,6 +247,8 @@ export function explainPD15MBelowTCFailure(
     }
     previousHighestWick =
       previousHighestWick === null ? c.high : Math.max(previousHighestWick, c.high);
+    previousLowestWick =
+      previousLowestWick === null ? c.low : Math.min(previousLowestWick, c.low);
   }
   return null;
 }

@@ -456,6 +456,26 @@ test("PD-15M-Below-TC also fails when a candle body is wholly below the floor", 
   // Only a wick below the floor, or a body on the floor -> passes.
   assert.equal(passesPD15MBelowTCFilter([candle(start, 91, 89)], tc, start, now, floor), true);
   assert.equal(passesPD15MBelowTCFilter([candle(start, 90, 90)], tc, start, now, floor), true);
+  // Wick condition (mirror of the TC rule): a body below the floor only fails
+  // when it is also lower than the lowest wick of every earlier candle.
+  const m = 15 * 60_000;
+  // Earlier candle wicked down to 80; later body (86/85) is below the floor but
+  // above that earlier low -> not a fresh low -> passes.
+  assert.equal(
+    passesPD15MBelowTCFilter(
+      [{ ...candle(start, 95, 94), low: 80 }, candle(start + m, 86, 85)],
+      tc, start, now, floor,
+    ),
+    true,
+  );
+  // Later body (79/78) is under the earlier low of 80 -> fresh low -> fails.
+  assert.equal(
+    passesPD15MBelowTCFilter(
+      [{ ...candle(start, 95, 94), low: 80 }, candle(start + m, 79, 78)],
+      tc, start, now, floor,
+    ),
+    false,
+  );
   // The fresh-high-above-TC rule still applies alongside the floor rule.
   assert.equal(passesPD15MBelowTCFilter([candle(start, 101, 102)], tc, start, now, floor), false);
   // Without a floor only the TC rule applies.
