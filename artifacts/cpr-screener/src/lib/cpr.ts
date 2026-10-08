@@ -283,7 +283,7 @@ export interface CPRPairFlags {
 
 export interface CPRResult {
   symbol: string;
-  /** Prepared previous-session PD15M>BC result; populated by the live Screener. */
+  /** Prepared previous-session MOMENTUM-A (PD15M>BC) result; populated by the live Screener. */
   PD15MAboveBCPass?: boolean;
   /**
    * Prepared previous-session PD-15M-Below-BC result; populated by the live

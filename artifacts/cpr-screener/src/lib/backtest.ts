@@ -1520,7 +1520,7 @@ export async function backtestSymbolOnDate(
   }
 
   if (target.key === "OVB-P15MAboveBC") {
-    // Reuses the PD15M>BC previous-session check (result.PD15MAboveBCPass) with
+    // Reuses the MOMENTUM-A previous-session check (result.PD15MAboveBCPass) with
     // yesterday's BC as the level under test.
     if (source === "coindcx") return null;
     // Structural gate first, without any 15m fetch: assume the 15m part passes
@@ -1746,7 +1746,7 @@ export async function pivotLevelBacktestSymbolOnDate(
 
   if (!passesPatternFn(result, categoryKey)) return null; // didn't match the parent category's base condition
 
-  // The PD15M>BC pattern depends on the previous session's 15m candles, which
+  // The MOMENTUM-A pattern depends on the previous session's 15m candles, which
   // are not part of the daily-candle CPR reconstruction. Populate the flag
   // here (after the cheap category gate, so only LEVEL ABOVE symbols trigger
   // a candle fetch) before the pattern's own condition is evaluated.
@@ -1758,7 +1758,7 @@ export async function pivotLevelBacktestSymbolOnDate(
     );
     if (PD15MAboveBCPass === null) {
       console.warn(
-        `[backtest] ${symbol} on ${entryDateISO}: PD15M>BC 15m candles unavailable — treated as not passing.`
+        `[backtest] ${symbol} on ${entryDateISO}: MOMENTUM-A 15m candles unavailable — treated as not passing.`
       );
     }
     result.PD15MAboveBCPass = PD15MAboveBCPass === true;
@@ -1962,7 +1962,7 @@ export async function runBacktest(
 
   if (previousUpexUnavailable > 0) {
     const message =
-      `PD15M>BC candles were unavailable for ${previousUpexUnavailable} structurally ` +
+      `MOMENTUM-A candles were unavailable for ${previousUpexUnavailable} structurally ` +
       `matching ${source} symbol(s) on ${entryDateISO}; they were omitted, not counted as passing.`;
     console.warn(`[backtest] ${message}`);
     onWarning?.(message);
@@ -2666,7 +2666,7 @@ export async function runPivotLevelBacktest(
   const rows: BacktestRow[] = [];
   await prefetchHistories(symbols, source, onProgress);
 
-  // The PD15M>BC pattern makes one extra 15m candle request per LEVEL ABOVE
+  // The MOMENTUM-A pattern makes one extra 15m candle request per LEVEL ABOVE
   // symbol, so keep concurrency bounded like the other 15m views.
   const batchSize =
     pivotLevelKey === "P15MABC" || pivotLevelKey === "LB-P15MBTC" ? 8 : 50;

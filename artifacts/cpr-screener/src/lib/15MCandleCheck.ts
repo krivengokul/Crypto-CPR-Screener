@@ -19,7 +19,7 @@ export interface UpexCandidate {
   /**
    * Lower bound used by the PD-15M-Below-BC and PD-15M-Below-TC checks (see
    * passesPrevious15MBFilter / passesPD15MBelowTCFilter): the lower of the
-   * previous CPR's Prev Low (PL) and S1. Optional because PD15M>BC doesn't
+   * previous CPR's Prev Low (PL) and S1. Optional because MOMENTUM-A doesn't
    * use it.
    */
   floor?: number;
@@ -69,7 +69,7 @@ export function previousUpexSessionStartUtcMs(now = Date.now()): number {
 }
 
 /**
- * PD15M>BC (and CONSOLIDATE-A when a `ceiling` is supplied): walk the previous
+ * MOMENTUM-A (PD15M>BC; becomes CONSOLIDATE-A when a `ceiling` is supplied): walk the previous
  * session's completed 15m candles in time order.
  *  - BC rule: fail when a candle's WHOLE body is below `bc` AND the body's
  *    bottom is lower than the lowest wick of any earlier candle (a fresh low).
@@ -137,7 +137,7 @@ export function passesUpexFilter(
 }
 
 /**
- * CONSOLIDATE-B ("Below TC"), the mirror image of passesUpexFilter (PD15M>BC / BC):
+ * CONSOLIDATE-B ("Below TC"), the mirror image of passesUpexFilter (MOMENTUM-A / BC):
  * walk the previous session's completed 15m candles in time order and fail as
  * soon as a candle's WHOLE body is above `tc` AND that body's top is higher
  * than the highest wick seen on any earlier candle (a fresh high above TC).

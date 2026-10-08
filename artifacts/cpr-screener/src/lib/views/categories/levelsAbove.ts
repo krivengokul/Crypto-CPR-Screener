@@ -1474,12 +1474,12 @@ export const LEVELSABOVE_VIEWS: ViewDef[] = [
   { key: "E-A-AA-SB-EU2L4", label: "E-A-AA-SB-EU2L4", parentKey: "E-A-AA-SB", kind: "pattern", condition: (r) => r.EU2L4, order: 6 },
 
   { key: "E-A-AA-OB-EU2L3", label: "E-A-AA-OB-EU2L3", parentKey: "E-A-AA-OB", kind: "pattern", condition: (r) => r.EU2L3, order: 0 },
-  // PD15M>BC filter as a pattern: previous-session 15m candles never had a body
+  // MOMENTUM-A (PD15M>BC) filter as a pattern: previous-session 15m candles never had a body
   // wholly below yesterday's BC that also made a fresh low (see
   // passesUpexFilter). Views that depend on the filter nest under it.
   {
     key: "P15MABC",
-    label: "PD15MAboveBC",
+    label: "Momentum-A",
     parentKey: "levelsabove",
     kind: "pattern",
     condition: (r) => r.PD15MAboveBCPass === true,
@@ -1487,7 +1487,7 @@ export const LEVELSABOVE_VIEWS: ViewDef[] = [
   },
   {
     key: "P15MAboveBC-CPRA",
-    label: "P15MAboveBC-CPRA",
+    label: "Momentum-A-CPRA",
     parentKey: "P15MABC",
     kind: "view",
     condition: (r) => r.PD15MAboveBCPass === true && matchesCprAboveLevelStatus(r),
