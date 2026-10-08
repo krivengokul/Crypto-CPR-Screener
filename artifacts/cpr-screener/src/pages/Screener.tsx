@@ -2698,10 +2698,10 @@ export default function Screener({
               title="Include Binance and Delta symbols unless a completed previous-session 15-minute candle (a) has its whole body below previous day's BC while making a new low versus earlier candles, or (b) has its whole body above the higher of previous day's PH and R1. Unevaluated sources such as CoinDCX are excluded while active."
             >
               {previousConsolidateAProgress
-                ? `CONSOLIDATE-A ${previousConsolidateAProgress.done}/${previousConsolidateAProgress.total}`
+                ? `P-CONSOLIDATE-A ${previousConsolidateAProgress.done}/${previousConsolidateAProgress.total}`
                 : previousConsolidateAReady
-                  ? `CONSOLIDATE-A (${previousConsolidateAIncludedCount})`
-                  : "CONSOLIDATE-A…"}
+                  ? `P-CONSOLIDATE-A (${previousConsolidateAIncludedCount})`
+                  : "P-CONSOLIDATE-A…"}
             </button>
             <button
               onClick={() => {
@@ -2724,10 +2724,10 @@ export default function Screener({
               title="For Binance and Delta, exclude a symbol only when a previous-session 15-minute candle body is below previous day's BC and its lower body edge breaks below earlier session wick lows. Prepared once after exchange scan data loads; toggling reuses the cached result."
             >
               {previousUpexProgress
-                ? `MOMENTUM-A ${previousUpexProgress.done}/${previousUpexProgress.total}`
+                ? `P-MOMENTUM-A ${previousUpexProgress.done}/${previousUpexProgress.total}`
                 : previousUpexReady
-                  ? `MOMENTUM-A (${previousUpexIncludedCount})`
-                  : "MOMENTUM-A…"}
+                  ? `P-MOMENTUM-A (${previousUpexIncludedCount})`
+                  : "P-MOMENTUM-A…"}
             </button>
             <button
               onClick={() => {
@@ -2750,10 +2750,10 @@ export default function Screener({
               title="Include Binance and Delta symbols unless a completed previous-session 15-minute candle (a) has its whole body above previous day's TC while making a new high versus earlier candles, or (b) has its whole body below the lower of previous day's PL and S1. Unevaluated sources such as CoinDCX are excluded while active."
             >
               {previous15MTCProgress
-                ? `CONSOLIDATE-B ${previous15MTCProgress.done}/${previous15MTCProgress.total}`
+                ? `P-CONSOLIDATE-B ${previous15MTCProgress.done}/${previous15MTCProgress.total}`
                 : previous15MTCReady
-                  ? `CONSOLIDATE-B (${previous15MTCIncludedCount})`
-                  : "CONSOLIDATE-B…"}
+                  ? `P-CONSOLIDATE-B (${previous15MTCIncludedCount})`
+                  : "P-CONSOLIDATE-B…"}
             </button>
             <button
               onClick={() => {
@@ -2776,10 +2776,10 @@ export default function Screener({
               title="Same as CONSOLIDATE-B but without the PL/S1 check: include Binance and Delta symbols unless a completed previous-session 15-minute candle has its whole body above previous day's TC while making a new high versus earlier candles. Unevaluated sources such as CoinDCX are excluded while active."
             >
               {previous15MMomentumProgress
-                ? `MOMENTUM-B ${previous15MMomentumProgress.done}/${previous15MMomentumProgress.total}`
+                ? `P-MOMENTUM-B ${previous15MMomentumProgress.done}/${previous15MMomentumProgress.total}`
                 : previous15MMomentumReady
-                  ? `MOMENTUM-B (${previous15MMomentumIncludedCount})`
-                  : "MOMENTUM-B…"}
+                  ? `P-MOMENTUM-B (${previous15MMomentumIncludedCount})`
+                  : "P-MOMENTUM-B…"}
             </button>
           </div>
           )}
