@@ -1504,7 +1504,7 @@ export async function backtestSymbolOnDate(
 
   if (target.key === "P15MBelow-CPRB") {
     if (source === "coindcx" || !result.LevelsBelow) return null;
-    // Built on the PD15M-Below-TC filter (previous day's TC as the level under
+    // Built on the CONSOLIDATE-B filter (previous day's TC as the level under
     // test) plus the PL/S1 floor rule.
     const PD15MBelowTCPass = await findPD15MBelowTCPass(
       {
@@ -1764,7 +1764,7 @@ export async function pivotLevelBacktestSymbolOnDate(
     result.PD15MAboveBCPass = PD15MAboveBCPass === true;
   }
 
-  // Same idea for the PD15M-Below-TC pattern (previous day's TC is the level
+  // Same idea for the CONSOLIDATE-B pattern (previous day's TC is the level
   // under test, as in the OVB-P15MBelowTC view above).
   if (pivotLevelKey === "LB-P15MBTC") {
     if (source === "coindcx") return null;
@@ -1779,7 +1779,7 @@ export async function pivotLevelBacktestSymbolOnDate(
     );
     if (PD15MBelowTCPass === null) {
       console.warn(
-        `[backtest] ${symbol} on ${entryDateISO}: PD15M-Below-TC 15m candles unavailable — treated as not passing.`
+        `[backtest] ${symbol} on ${entryDateISO}: CONSOLIDATE-B 15m candles unavailable — treated as not passing.`
       );
     }
     result.PD15MBelowTCPass = PD15MBelowTCPass === true;
@@ -1977,7 +1977,7 @@ export async function runBacktest(
 
   if (pd15MBelowTCUnavailable > 0) {
     const message =
-      `PD-15M-Below-TC candles were unavailable for ${pd15MBelowTCUnavailable} structurally ` +
+      `CONSOLIDATE-B candles were unavailable for ${pd15MBelowTCUnavailable} structurally ` +
       `matching ${source} symbol(s) on ${entryDateISO}; they were omitted, not counted as passing.`;
     console.warn(`[backtest] ${message}`);
     onWarning?.(message);

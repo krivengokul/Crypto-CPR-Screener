@@ -2121,7 +2121,7 @@ export const OVERLAP_BELOW_TOUCH_VIEWS: ViewDef[] = [
   // backtest both populate.
   {
     key: "OVB-P15MBelowTC",
-    label: "OVB-P15MBelowTC",
+    label: "OVB-Consolidate-B",
     parentKey: "overlapLower",
     kind: "view",
     standalone: true,
