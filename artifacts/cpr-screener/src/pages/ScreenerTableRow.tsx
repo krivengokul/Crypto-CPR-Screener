@@ -677,12 +677,14 @@ export function renderMatchingSignals(
               ? "active"
               : "ready"
             : null;
-        const tone =
-          v.direction === "Up"
-            ? "border-green-500/40 bg-green-500/10 text-green-400"
-            : v.direction === "Down"
-            ? "border-red-500/40 bg-red-500/10 text-red-400"
-            : "border-violet-500/40 bg-violet-500/10 text-violet-300";
+        const isPass = status === "pass";
+        const tone = isPass
+          ? "border-muted-foreground/40 bg-muted-foreground/10 text-muted-foreground"
+          : v.direction === "Up"
+          ? "border-green-500/40 bg-green-500/10 text-green-400"
+          : v.direction === "Down"
+          ? "border-red-500/40 bg-red-500/10 text-red-400"
+          : "border-violet-500/40 bg-violet-500/10 text-violet-300";
         return (
           <div key={v.id} className="flex h-11 flex-col justify-center gap-0.5 overflow-hidden">
             <div className="flex flex-nowrap items-center gap-1">
@@ -694,7 +696,7 @@ export function renderMatchingSignals(
               </span>
               {status === "pass" && (
                 <span
-                  className="inline-flex shrink-0 items-center gap-1 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-1.5 py-1 text-[11px] font-mono text-emerald-400"
+                  className="inline-flex shrink-0 items-center gap-1 rounded-md border border-muted-foreground/40 bg-muted-foreground/10 px-1.5 py-1 text-[11px] font-mono text-muted-foreground"
                   title="Target reached - live price now, or earlier in today's session (session high/low)"
                 >
                   <CheckCircle2 className="w-3 h-3" />
