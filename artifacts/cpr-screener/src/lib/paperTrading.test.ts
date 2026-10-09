@@ -31,6 +31,7 @@ import {
   getUpexBc,
   getConsolidateABc,
   getConsolidateBTc,
+  pruneLegacy15MResultCaches,
   passesPrevious15MBFilter,
   loadPrevious15MBResults,
   loadPreviousUpexResults,
@@ -1048,4 +1049,46 @@ test("CONSOLIDATE-B next-candle confirmation: lower side (floor rule)", () => {
     false,
   );
   assert.equal(passesPD15MBelowTCFilter([c1, c2], tc, start, now, floor), false);
+});
+
+test("pruneLegacy15MResultCaches removes only superseded cache versions", () => {
+  const originalDescriptor = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
+  const store: Record<string, string> = {
+    cpr_previous_15m_tc_b_results_v1: "x",
+    cpr_previous_15m_tc_b_results_v4: "x",
+    cpr_previous_15m_tc_b_results_v5: "keep",
+    cpr_previous_15m_b_results_v1: "x",
+    cpr_previous_15m_b_results_v3: "keep",
+    cpr_previous_upex_results_v1: "keep",
+    cpr_previous_15m_consolidate_a_results_v1: "x",
+    cpr_previous_15m_consolidate_a_results_v2: "keep",
+    cpr_previous_15m_momentum_b_results_v1: "keep",
+    "cpr_symbols_2026-10-09": "unrelated",
+  };
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    value: new Proxy(store, {
+      get: (t, prop) =>
+        prop === "removeItem" ? (k: string) => { delete t[k]; } : t[prop as string],
+    }),
+  });
+  try {
+    assert.equal(pruneLegacy15MResultCaches(), 4);
+    assert.deepEqual(Object.keys(store).sort(), [
+      "cpr_previous_15m_b_results_v3",
+      "cpr_previous_15m_consolidate_a_results_v2",
+      "cpr_previous_15m_momentum_b_results_v1",
+      "cpr_previous_15m_tc_b_results_v5",
+      "cpr_previous_upex_results_v1",
+      "cpr_symbols_2026-10-09",
+    ]);
+    // Running again is a no-op.
+    assert.equal(pruneLegacy15MResultCaches(), 0);
+  } finally {
+    if (originalDescriptor) {
+      Object.defineProperty(globalThis, "localStorage", originalDescriptor);
+    } else {
+      Reflect.deleteProperty(globalThis, "localStorage");
+    }
+  }
 });

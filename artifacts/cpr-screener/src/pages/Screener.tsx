@@ -26,6 +26,7 @@ import {
   getUpexBc,
   getConsolidateABc,
   getConsolidateBTc,
+  pruneLegacy15MResultCaches,
   loadPD15MMomentumBelowResults,
   loadPD15MTCBelowResults,
   loadPreviousConsolidateAResults,
@@ -474,6 +475,8 @@ export default function Screener({
   const deltaAllResultsRef = useRef<CPRResult[]>([]);
   const coindcxAllResultsRef = useRef<CPRResult[]>([]);
   const activeSignalRef = useRef(activeSignal);
+  // One-time cleanup of superseded 15m result-cache keys (old _vN versions).
+  useEffect(() => { pruneLegacy15MResultCaches(); }, []);
   useEffect(() => { allResultsRef.current = allResults; }, [allResults]);
   useEffect(() => { deltaAllResultsRef.current = deltaAllResults; }, [deltaAllResults]);
   useEffect(() => { coindcxAllResultsRef.current = coindcxAllResults; }, [coindcxAllResults]);

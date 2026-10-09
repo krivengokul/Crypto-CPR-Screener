@@ -96,6 +96,40 @@ export function getConsolidateBTc(
   return overlapBelow || inside ? ppCPR.tc : prevCPR.tc;
 }
 
+/**
+ * One-time housekeeping: delete superseded versions of the previous-session
+ * 15m result caches. Each cache key ends in `_v<N>`; whenever the check's logic
+ * changes the version is bumped, which orphans the older keys in localStorage
+ * (nothing reads them again). Removes every `<same prefix>_v<other N>` key and
+ * leaves the current ones untouched. Returns how many keys were removed.
+ */
+export function pruneLegacy15MResultCaches(): number {
+  if (typeof localStorage === "undefined") return 0;
+  const currentKeys = [
+    PREVIOUS_UPEX_CACHE_KEY,
+    PREVIOUS_15M_B_CACHE_KEY,
+    PREVIOUS_15M_TC_B_CACHE_KEY,
+    PREVIOUS_15M_MOMENTUM_B_CACHE_KEY,
+    PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY,
+  ];
+  const prefixes = currentKeys.map((key) => key.replace(/\d+$/, ""));
+  let removed = 0;
+  try {
+    for (const key of Object.keys(localStorage)) {
+      if (
+        !currentKeys.includes(key) &&
+        prefixes.some((prefix) => key.startsWith(prefix) && /^\d+$/.test(key.slice(prefix.length)))
+      ) {
+        localStorage.removeItem(key);
+        removed++;
+      }
+    }
+  } catch {
+    /* storage unavailable */
+  }
+  return removed;
+}
+
 export function getUpexBc(
   todayBc: number,
   previousBc: number,
