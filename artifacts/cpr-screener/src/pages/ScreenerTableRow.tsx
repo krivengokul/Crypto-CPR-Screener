@@ -823,6 +823,8 @@ export interface ScreenerTableRowProps {
   viewName?: string;
   /** The selected signal's own 13 Level Check conditions (its levelCheckDefs), passed straight through to SRLadderRow/SRLadderDiffPanel. Undefined (no signal selected, or no levelCheckDefs) renders "No levelCheckDefs" rather than a checklist — see SRLadderDiff.tsx. */
   levelCheckConditions?: LevelCheckCondition[];
+  /** True when the Screener's P-CONSOLIDATE-A check passed for this row (held in Screener state, not on the row data). */
+  isConsolidateA?: boolean;
 }
 
 /**
@@ -840,6 +842,7 @@ export default function ScreenerTableRow({
   activeSignal,
   viewName,
   levelCheckConditions,
+  isConsolidateA,
 }: ScreenerTableRowProps) {
   const activePattern = rawActivePattern ?? activeSignal ?? "";
   // Hoisted so the same up/down call drives both the per-row dot in the
@@ -1028,7 +1031,7 @@ export default function ScreenerTableRow({
         </td>
         <td className="px-3 py-3">
           {renderMatchingSignals(r, matchingSignals)}
-          {r.PD15MConsolidateAPass === true && (
+          {(isConsolidateA || r.PD15MConsolidateAPass === true) && (
             <div
               className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
               style={{ color: "#03b07c" }}
