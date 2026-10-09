@@ -1028,6 +1028,14 @@ export default function ScreenerTableRow({
         </td>
         <td className="px-3 py-3">
           {renderMatchingSignals(r, matchingSignals)}
+          {r.PD15MConsolidateAPass === true && (
+            <div
+              className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
+              style={{ color: "#03b07c" }}
+            >
+              P-CONSOLIDATE-A
+            </div>
+          )}
         </td>
         {/* Ladder Check — right after VIEW, before PIVOT SIZE. One line per
             View in the VIEW column (same order), each graded with that
