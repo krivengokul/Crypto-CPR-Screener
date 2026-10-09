@@ -995,23 +995,6 @@ export const LEVELSBELOW_VIEWS: ViewDef[] = [
     // compound pattern, B-B-BB-BB, is order 0).
     order: -1,
   },
-  {
-    key: "P15MBelow-CPRB",
-    label: "Consolidate-B-CPRB",
-    parentKey: "LB-P15MBTC",
-    kind: "view",
-    // Built on the same CONSOLIDATE-B filter (with the PL/S1 floor) as its
-    // parent pattern.
-    condition: (r) => r.PD15MBelowTCPass === true && r.LevelsBelow,
-    direction: "Up",
-    targetLabel: "R4",
-    getTarget: (r) => r.todayCPR.r4,
-    entryLabel: "TC",
-    getEntry: (r) => r.todayCPR.tc,
-    stoplossLabel: "S1",
-    getStoploss: (r) => r.todayCPR.s1,
-    order: 0,
-  },
     {
         key: "PL-B-B-BB-OB-CL3U1-RH-GapAA-S2",
         label: "UltraMega-S2",

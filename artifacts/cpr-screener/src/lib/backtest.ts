@@ -1504,23 +1504,6 @@ export async function backtestSymbolOnDate(
     result.PD15MAboveBCPass = PD15MAboveBCPass === true;
   }
 
-  if (target.key === "P15MBelow-CPRB") {
-    if (source === "coindcx" || !result.LevelsBelow) return null;
-    // Built on the CONSOLIDATE-B filter (previous day's TC as the level under
-    // test) plus the PL/S1 floor rule.
-    const PD15MBelowTCPass = await findPD15MBelowTCPass(
-      {
-        symbol,
-        source,
-        bc: result.prevCPR.tc,
-        floor: getPrevious15MBFloor(result.prevCPR),
-      },
-      Date.parse(`${entryDateISO}T00:00:00.000Z`),
-    );
-    if (PD15MBelowTCPass === null) onPD15MBelowTCUnavailable?.(symbol);
-    result.PD15MBelowTCPass = PD15MBelowTCPass === true;
-  }
-
   if (target.key === "OVB-P15MAboveBC") {
     // Reuses the MOMENTUM-A previous-session check (result.PD15MAboveBCPass) with
     // yesterday's BC as the level under test.
@@ -1539,7 +1522,7 @@ export async function backtestSymbolOnDate(
 
   if (target.key === "OVB-P15MBelowTC") {
     // FIX: this view's condition reads result.PD15MBelowTCPass, but nothing in
-    // the backtest ever populated it (only P15M-A / P-UPEX / P15MBelow-CPRB
+    // the backtest ever populated it (only P15M-A / P-UPEX
     // were wired), so it was always undefined -> every symbol failed -> 0 rows.
     if (source === "coindcx") return null;
     // Structural gate first, without any 15m fetch: assume the 15m part passes
@@ -1980,7 +1963,6 @@ export async function runBacktest(
   const batchSize =
     target.key === "P15MABC" ||
     target.key === "P-UPEX-CPRABOVE-OVA" ||
-    target.key === "P15MBelow-CPRB" ||
     target.key === "OVB-P15MBelowTC" ||
     target.key === "OVB-P15MAboveBC"
       ? 8
