@@ -2964,6 +2964,7 @@ export default function Screener({
                         activeSignal={activeSectionKey}
                         viewName={activeSignalName}
                         levelCheckConditions={activeSignalLevelCheckDefs}
+                        isConsolidateA={previousConsolidateAIncludedSymbols.has(`${r.source}:${r.symbol}`)}
                       />
                     );
                   })}
