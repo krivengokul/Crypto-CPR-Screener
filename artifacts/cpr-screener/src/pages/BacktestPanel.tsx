@@ -49,6 +49,7 @@ import {
   type ViewDef,
   shortLevelLabel,
 } from "@/lib/views";
+import { computePatternDedupe } from "@/lib/views/patternDedupe";
 import {
   passesPattern,
   matchesPatternFlag,
@@ -2055,10 +2056,28 @@ export default function BacktestPanel() {
     [viewTree]
   );
 
+  // Display-level de-duplication: the same pattern is registered once per
+  // section that lists it, so the picker shows the first copy and offers the
+  // other sections as small chips. Every copy keeps its own key and section
+  // filter — only what the picker renders changes. Computed lazily (it probes
+  // ~1000 conditions the first time), i.e. when the picker opens or a pattern
+  // is already selected.
+  const needsDedupe = pickerOpen || selectedKey.includes(SUBCATEGORY_SEP);
+  const dedupe = useMemo(
+    () => (needsDedupe ? computePatternDedupe(viewTree) : null),
+    [needsDedupe, viewTree],
+  );
+  // The visible copy standing in for the selection when a hidden twin is
+  // selected, so the picker still expands to where the pattern is shown.
+  const selectedHome = dedupe?.primaryOf.get(selectedKey) ?? selectedKey;
+  const selectedContext = isPatternOnly ? dedupe?.contextOf.get(selectedKey) : undefined;
+
   const triggerLabel = isCategory
     ? activeCategory?.label
     : isPatternOnly && activePatternInfo
-    ? activePatternInfo.sub.label
+    ? selectedContext
+      ? `${activePatternInfo.sub.label} · ${selectedContext}`
+      : activePatternInfo.sub.label
     : activeTarget?.label ?? selectedKey;
 
   // Close on outside click / Escape.
@@ -2081,7 +2100,7 @@ export default function BacktestPanel() {
   // clear any leftover search text.
   useEffect(() => {
     const containsSelection = (node: ResolvedSub, catKey: string): boolean =>
-      [catKey, ...node.path.map((p) => p.key)].join(SUBCATEGORY_SEP) === selectedKey ||
+      [catKey, ...node.path.map((p) => p.key)].join(SUBCATEGORY_SEP) === selectedHome ||
       node.Views.some((t) => t.key === selectedKey) ||
       node.children.some((child) => containsSelection(child, catKey));
 
@@ -2511,11 +2530,12 @@ export default function BacktestPanel() {
                       const patternSelectionKey = (path: ViewTreeNode[]) =>
                         [cat.key, ...path.map((p) => p.key)].join(SUBCATEGORY_SEP);
                       const patternIsVisible = (node: ResolvedSub): boolean =>
-                        !q ||
+                        !dedupe?.hidden.has(patternSelectionKey(node.path)) &&
+                        (!q ||
                         catLabelHit ||
                         hit(node.sub.label) ||
                         node.Views.some((t) => hit(t.label)) ||
-                        node.children.some(patternIsVisible);
+                        node.children.some(patternIsVisible));
 
                       const viewButton = (t: ViewTreeNode | ViewDef) => {
                         // Derive direction from ViewDef (direct) or ViewTreeNode.viewDef
@@ -2555,7 +2575,7 @@ export default function BacktestPanel() {
                           n.Views.some((t) => t.key === selectedKey) ||
                           n.children.some(
                             (child) =>
-                              patternSelectionKey(child.path) === selectedKey ||
+                              patternSelectionKey(child.path) === selectedHome ||
                               hasSelectedDescendant(child)
                           );
                         const collapsible =
@@ -2574,7 +2594,7 @@ export default function BacktestPanel() {
                         const pinnedViews = visibleViews.filter((t) => (t.order ?? 0) < 0);
                         const otherViews = visibleViews.filter((t) => (t.order ?? 0) >= 0);
                         const value = patternSelectionKey(node.path);
-                        const patternButton = (
+                        const mainPatternButton = (
                           <button
                             type="button"
                             role="option"
@@ -2591,6 +2611,34 @@ export default function BacktestPanel() {
                             <span className="truncate">{node.sub.label}</span>
                           </button>
                         );
+                        // Other sections that list this same pattern (hidden from the
+                        // tree). A chip selects that section's own copy, so it keeps
+                        // its own section filter and results.
+                        const twinChips = dedupe?.twins.get(value) ?? [];
+                        const patternButton =
+                          twinChips.length === 0 ? (
+                            mainPatternButton
+                          ) : (
+                            <div className="flex flex-wrap items-center gap-1">
+                              <div className="flex-1 min-w-[120px]">{mainPatternButton}</div>
+                              {twinChips.map((twin) => (
+                                <button
+                                  key={twin.value}
+                                  type="button"
+                                  onClick={() => selectAndClose(twin.value, twin.catKey)}
+                                  aria-pressed={selectedKey === twin.value}
+                                  title={`Same pattern in ${twin.context}. Selects that section's own version; its section filter applies.`}
+                                  className={`shrink-0 max-w-[110px] truncate rounded border px-1 py-0.5 text-[9px] leading-none ${
+                                    selectedKey === twin.value
+                                      ? "border-cyan-500/50 bg-cyan-500/20 text-cyan-300"
+                                      : "border-border/60 text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                                  }`}
+                                >
+                                  {twin.context.replace(/ › /g, "/")}
+                                </button>
+                              ))}
+                            </div>
+                          );
                         return (
                           <div key={value}>
                             {collapsible && !q ? (
