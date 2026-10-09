@@ -74,6 +74,28 @@ export function getConsolidateABc(
   return overlapAbove || inside ? ppCPR.bc : prevCPR.bc;
 }
 
+/**
+ * Top (TC) level for the P-CONSOLIDATE-B check. Normally the previous
+ * session's own TC (PDay TC). When PDay's CPR was Overlap-Below or Inside
+ * (INCPR) versus the day before it (PPDay), the top check uses PPDay's TC
+ * instead. Mirror image of getConsolidateABc. Falls back to PDay's TC when
+ * PPDay's CPR isn't available.
+ */
+export function getConsolidateBTc(
+  prevCPR: { tc: number; bc: number },
+  ppCPR?: { tc: number; bc: number } | null
+): number {
+  if (!ppCPR || !Number.isFinite(ppCPR.bc) || !Number.isFinite(ppCPR.tc)) {
+    return prevCPR.tc;
+  }
+  const overlapBelow =
+    prevCPR.tc <= ppCPR.tc && prevCPR.tc >= ppCPR.bc && prevCPR.bc < ppCPR.bc;
+  const inside =
+    (prevCPR.tc <= ppCPR.tc && prevCPR.bc > ppCPR.bc) ||
+    (prevCPR.tc < ppCPR.tc && prevCPR.bc >= ppCPR.bc);
+  return overlapBelow || inside ? ppCPR.tc : prevCPR.tc;
+}
+
 export function getUpexBc(
   todayBc: number,
   previousBc: number,

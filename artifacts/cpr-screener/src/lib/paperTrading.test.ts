@@ -30,6 +30,7 @@ import {
   findPreviousUpexPass,
   getUpexBc,
   getConsolidateABc,
+  getConsolidateBTc,
   passesPrevious15MBFilter,
   loadPrevious15MBResults,
   loadPreviousUpexResults,
@@ -975,4 +976,18 @@ test("CONSOLIDATE-A bottom check uses PPDay BC when PDay overlaps above or is in
   assert.equal(getConsolidateABc({ tc: 130, bc: 115 }, pp), 115);
   // No PPDay data: fall back to PDay BC
   assert.equal(getConsolidateABc({ tc: 120, bc: 105 }, undefined), 105);
+});
+
+test("CONSOLIDATE-B top check uses PPDay TC when PDay overlaps below or is inside PPDay CPR", () => {
+  const pp = { tc: 110, bc: 100 };
+  // Overlap below: PDay TC within PPDay band, PDay BC below PPDay BC
+  assert.equal(getConsolidateBTc({ tc: 105, bc: 95 }, pp), 110);
+  // Inside CPR
+  assert.equal(getConsolidateBTc({ tc: 108, bc: 102 }, pp), 110);
+  // Overlap above / out / gap-below: keep PDay TC
+  assert.equal(getConsolidateBTc({ tc: 120, bc: 105 }, pp), 120);
+  assert.equal(getConsolidateBTc({ tc: 120, bc: 95 }, pp), 120);
+  assert.equal(getConsolidateBTc({ tc: 90, bc: 85 }, pp), 90);
+  // No PPDay data: fall back to PDay TC
+  assert.equal(getConsolidateBTc({ tc: 105, bc: 95 }, undefined), 105);
 });

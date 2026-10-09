@@ -25,6 +25,7 @@ import {
   findUpexSymbols,
   getUpexBc,
   getConsolidateABc,
+  getConsolidateBTc,
   loadPD15MMomentumBelowResults,
   loadPD15MTCBelowResults,
   loadPreviousConsolidateAResults,
@@ -758,7 +759,7 @@ export default function Screener({
         candidates.set(`binance:${row.symbol}`, {
           symbol: row.symbol,
           source: "binance",
-          bc: row.prevCPR.tc,
+          bc: getConsolidateBTc(row.prevCPR, row.ppCPR),
           floor: getPrevious15MBFloor(row.prevCPR),
         });
       }
@@ -768,7 +769,7 @@ export default function Screener({
         candidates.set(`delta:${row.symbol}`, {
           symbol: row.symbol,
           source: "delta",
-          bc: row.prevCPR.tc,
+          bc: getConsolidateBTc(row.prevCPR, row.ppCPR),
           floor: getPrevious15MBFloor(row.prevCPR),
         });
       }
@@ -794,7 +795,7 @@ export default function Screener({
               previous15MTCCandidateCacheKey(previousUpexSessionStart, {
                 symbol: row.symbol,
                 source: "binance",
-                bc: row.prevCPR.tc,
+                bc: getConsolidateBTc(row.prevCPR, row.ppCPR),
                 floor: getPrevious15MBFloor(row.prevCPR),
               }),
             ) === true,
@@ -808,7 +809,7 @@ export default function Screener({
               previous15MTCCandidateCacheKey(previousUpexSessionStart, {
                 symbol: row.symbol,
                 source: "delta",
-                bc: row.prevCPR.tc,
+                bc: getConsolidateBTc(row.prevCPR, row.ppCPR),
                 floor: getPrevious15MBFloor(row.prevCPR),
               }),
             ) === true,

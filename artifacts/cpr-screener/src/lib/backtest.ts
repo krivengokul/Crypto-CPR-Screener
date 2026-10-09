@@ -10,6 +10,7 @@ import {
   findPreviousUpexPass,
   getPrevious15MACeiling,
   getConsolidateABc,
+  getConsolidateBTc,
   getPrevious15MBFloor,
 } from "./15MCandleCheck";
 import {
@@ -1535,7 +1536,7 @@ export async function backtestSymbolOnDate(
       {
         symbol,
         source,
-        bc: result.prevCPR.tc, // level under test = previous day's TC
+        bc: getConsolidateBTc(result.prevCPR, result.ppCPR), // level under test = previous day's TC (PPDay TC if PDay overlapped below / inside PPDay)
         floor: getPrevious15MBFloor(result.prevCPR),
       },
       Date.parse(`${entryDateISO}T00:00:00.000Z`),
@@ -1712,7 +1713,7 @@ async function populatePFilterFlags(
     );
   const consolidateB = () =>
     findPD15MBelowTCPass(
-      { symbol, source, bc: prevCPR.tc, floor: getPrevious15MBFloor(prevCPR) },
+      { symbol, source, bc: getConsolidateBTc(prevCPR, result.ppCPR), floor: getPrevious15MBFloor(prevCPR) },
       sessionStart,
     );
 
@@ -1832,7 +1833,7 @@ export async function pivotLevelBacktestSymbolOnDate(
       {
         symbol,
         source,
-        bc: result.prevCPR.tc,
+        bc: getConsolidateBTc(result.prevCPR, result.ppCPR),
         floor: getPrevious15MBFloor(result.prevCPR),
       },
       Date.parse(`${entryDateISO}T00:00:00.000Z`),
