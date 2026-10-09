@@ -991,3 +991,61 @@ test("CONSOLIDATE-B top check uses PPDay TC when PDay overlaps below or is insid
   // No PPDay data: fall back to PDay TC
   assert.equal(getConsolidateBTc({ tc: 105, bc: 95 }, undefined), 105);
 });
+
+test("CONSOLIDATE-B next-candle confirmation: upper side (TC rule)", () => {
+  const start = Date.parse("2026-10-02T00:00:00.000Z");
+  const now = Date.parse("2026-10-03T00:00:00.000Z");
+  const m = 15 * 60_000;
+  const c = (i: number, open: number, high: number, low: number, close: number): OHLC => ({
+    openTime: start + i * m, open, high, low, close, volume: 1,
+  });
+  const tc = 100;
+  const floor = 80;
+  const c1 = c(0, 97, 99, 96, 98);          // below TC
+  const c2 = c(1, 101, 103, 100, 102);      // body above TC, fresh high -> crossing
+  const c3 = c(2, 102, 106, 101, 104);      // high 106 > C2 high 103 -> new reference
+  const c4 = c(3, 104, 105.5, 103, 105);    // body top 105 < 106 -> fine
+  const c5 = c(4, 107, 109, 106.5, 108);    // body top 108 > 106 -> fails
+
+  // C2 is forgiven; C4 stays under the new reference -> passes.
+  assert.equal(passesPD15MBelowTCFilter([c1, c2, c3, c4], tc, start, now, floor), true);
+  // C5 body goes above the C3-set reference -> fails.
+  assert.equal(passesPD15MBelowTCFilter([c1, c2, c3, c4, c5], tc, start, now, floor), false);
+  // Next candle does not make a higher high than the crossing candle -> C2 fails as before.
+  assert.equal(
+    passesPD15MBelowTCFilter([c1, c2, c(2, 102, 103, 101, 102.5)], tc, start, now, floor),
+    false,
+  );
+  // Crossing candle is the last candle (no confirmation possible) -> fails.
+  assert.equal(passesPD15MBelowTCFilter([c1, c2], tc, start, now, floor), false);
+  // Only one forgiveness per side: a second fresh high above TC beyond the reference fails
+  // (C5 above), and the check can be switched off explicitly.
+  assert.equal(passesPD15MBelowTCFilter([c1, c2, c3, c4], tc, start, now, floor, false), false);
+  // MOMENTUM-B (no floor) keeps the old rule: C2 fails.
+  assert.equal(passesPD15MBelowTCFilter([c1, c2, c3, c4], tc, start, now), false);
+});
+
+test("CONSOLIDATE-B next-candle confirmation: lower side (floor rule)", () => {
+  const start = Date.parse("2026-10-02T00:00:00.000Z");
+  const now = Date.parse("2026-10-03T00:00:00.000Z");
+  const m = 15 * 60_000;
+  const c = (i: number, open: number, high: number, low: number, close: number): OHLC => ({
+    openTime: start + i * m, open, high, low, close, volume: 1,
+  });
+  const tc = 120;
+  const floor = 90;
+  const c1 = c(0, 94, 95, 92, 93);          // above floor
+  const c2 = c(1, 89, 90, 87, 88);          // body below floor, fresh low -> crossing
+  const c3 = c(2, 88, 89, 85, 86);          // low 85 < C2 low 87 -> new reference
+  const c4 = c(3, 87, 87.5, 85.5, 86.5);    // body bottom 86 > 85 -> fine
+  const c5 = c(4, 83, 83.5, 81, 82);        // body bottom 82 < 85 -> fails
+
+  assert.equal(passesPD15MBelowTCFilter([c1, c2, c3, c4], tc, start, now, floor), true);
+  assert.equal(passesPD15MBelowTCFilter([c1, c2, c3, c4, c5], tc, start, now, floor), false);
+  // Next candle does not go lower than the crossing candle -> C2 fails as before.
+  assert.equal(
+    passesPD15MBelowTCFilter([c1, c2, c(2, 88, 89, 87.5, 88.2)], tc, start, now, floor),
+    false,
+  );
+  assert.equal(passesPD15MBelowTCFilter([c1, c2], tc, start, now, floor), false);
+});
