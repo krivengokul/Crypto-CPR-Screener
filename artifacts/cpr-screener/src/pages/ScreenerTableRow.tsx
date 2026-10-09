@@ -825,6 +825,8 @@ export interface ScreenerTableRowProps {
   levelCheckConditions?: LevelCheckCondition[];
   /** True when the Screener's P-CONSOLIDATE-A check passed for this row (held in Screener state, not on the row data). */
   isConsolidateA?: boolean;
+  /** True when the Screener's P-CONSOLIDATE-B check passed for this row (held in Screener state, not on the row data). */
+  isConsolidateB?: boolean;
 }
 
 /**
@@ -843,6 +845,7 @@ export default function ScreenerTableRow({
   viewName,
   levelCheckConditions,
   isConsolidateA,
+  isConsolidateB,
 }: ScreenerTableRowProps) {
   const activePattern = rawActivePattern ?? activeSignal ?? "";
   // Hoisted so the same up/down call drives both the per-row dot in the
@@ -1037,6 +1040,14 @@ export default function ScreenerTableRow({
               style={{ color: "#03b07c" }}
             >
               P-CONSOLIDATE-A
+            </div>
+          )}
+          {(isConsolidateB || r.PD15MBelowTCPass === true) && (
+            <div
+              className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-pink-400"
+              style={{ color: "#f472b6" }}
+            >
+              P-CONSOLIDATE-B
             </div>
           )}
         </td>
