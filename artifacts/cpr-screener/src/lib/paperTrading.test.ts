@@ -29,6 +29,7 @@ import {
   findPreviousUpexSymbols,
   findPreviousUpexPass,
   getUpexBc,
+  getConsolidateABc,
   passesPrevious15MBFilter,
   loadPrevious15MBResults,
   loadPreviousUpexResults,
@@ -960,4 +961,18 @@ test("livePriceReachedTarget recognizes Up and Down target prices only", () => {
   assert.equal(livePriceReachedTarget("Down", 90, 91), false);
   assert.equal(livePriceReachedTarget("NEUTRAL", 100, 110), false);
   assert.equal(livePriceReachedTarget("Up", 100, undefined), false);
+});
+
+test("CONSOLIDATE-A bottom check uses PPDay BC when PDay overlaps above or is inside PPDay CPR", () => {
+  const pp = { tc: 110, bc: 100 };
+  // Overlap above: PDay BC within PPDay band, PDay TC above PPDay TC
+  assert.equal(getConsolidateABc({ tc: 120, bc: 105 }, pp), 100);
+  // Inside CPR: PDay band contained in PPDay band
+  assert.equal(getConsolidateABc({ tc: 108, bc: 102 }, pp), 100);
+  // Overlap below / out / above-gap: keep PDay BC
+  assert.equal(getConsolidateABc({ tc: 105, bc: 95 }, pp), 95);
+  assert.equal(getConsolidateABc({ tc: 120, bc: 95 }, pp), 95);
+  assert.equal(getConsolidateABc({ tc: 130, bc: 115 }, pp), 115);
+  // No PPDay data: fall back to PDay BC
+  assert.equal(getConsolidateABc({ tc: 120, bc: 105 }, undefined), 105);
 });

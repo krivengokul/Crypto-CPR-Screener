@@ -9,6 +9,7 @@ import {
   findPreviousConsolidateAPass,
   findPreviousUpexPass,
   getPrevious15MACeiling,
+  getConsolidateABc,
   getPrevious15MBFloor,
 } from "./15MCandleCheck";
 import {
@@ -1706,7 +1707,7 @@ async function populatePFilterFlags(
 
   const consolidateA = () =>
     findPreviousConsolidateAPass(
-      { symbol, source, bc: prevCPR.bc, ceiling: getPrevious15MACeiling(prevCPR) },
+      { symbol, source, bc: getConsolidateABc(prevCPR, result.ppCPR), ceiling: getPrevious15MACeiling(prevCPR) },
       sessionStart,
     );
   const consolidateB = () =>

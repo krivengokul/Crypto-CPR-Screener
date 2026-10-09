@@ -51,6 +51,29 @@ export function getPrevious15MACeiling(prevLevels: {
   return Math.max(prevLevels.prevHigh, prevLevels.r1);
 }
 
+/**
+ * Bottom (BC) level for the P-CONSOLIDATE-A check. Normally the previous
+ * session's own BC (PDay BC). When PDay's CPR was Overlap-Above or Inside
+ * (INCPR) versus the day before it (PPDay), the bottom check uses PPDay's BC
+ * instead (the "previous day BC" from the checked session's point of view),
+ * mirroring getUpexBc for the current session. Falls back to PDay BC when
+ * PPDay's CPR isn't available.
+ */
+export function getConsolidateABc(
+  prevCPR: { tc: number; bc: number },
+  ppCPR?: { tc: number; bc: number } | null
+): number {
+  if (!ppCPR || !Number.isFinite(ppCPR.bc) || !Number.isFinite(ppCPR.tc)) {
+    return prevCPR.bc;
+  }
+  const overlapAbove =
+    prevCPR.bc >= ppCPR.bc && prevCPR.bc <= ppCPR.tc && prevCPR.tc > ppCPR.tc;
+  const inside =
+    (prevCPR.tc <= ppCPR.tc && prevCPR.bc > ppCPR.bc) ||
+    (prevCPR.tc < ppCPR.tc && prevCPR.bc >= ppCPR.bc);
+  return overlapAbove || inside ? ppCPR.bc : prevCPR.bc;
+}
+
 export function getUpexBc(
   todayBc: number,
   previousBc: number,

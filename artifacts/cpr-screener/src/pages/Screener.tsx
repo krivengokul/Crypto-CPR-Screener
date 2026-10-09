@@ -24,6 +24,7 @@ import {
   findPreviousUpexSymbols,
   findUpexSymbols,
   getUpexBc,
+  getConsolidateABc,
   loadPD15MMomentumBelowResults,
   loadPD15MTCBelowResults,
   loadPreviousConsolidateAResults,
@@ -499,7 +500,7 @@ export default function Screener({
         candidates.set(`binance:${row.symbol}`, {
           symbol: row.symbol,
           source: "binance",
-          bc: row.prevCPR.bc,
+          bc: getConsolidateABc(row.prevCPR, row.ppCPR),
           ceiling: getPrevious15MACeiling(row.prevCPR),
         });
       }
@@ -509,7 +510,7 @@ export default function Screener({
         candidates.set(`delta:${row.symbol}`, {
           symbol: row.symbol,
           source: "delta",
-          bc: row.prevCPR.bc,
+          bc: getConsolidateABc(row.prevCPR, row.ppCPR),
           ceiling: getPrevious15MACeiling(row.prevCPR),
         });
       }
