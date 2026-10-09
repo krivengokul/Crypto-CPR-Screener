@@ -1075,7 +1075,7 @@ export default function ScreenerTableRow({
           {showMomentumB && (
             <div
               className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
-              style={{ color: "#a78bfa" }}
+              style={{ color: "#FC0FC0" }}
             >
               P-MOMENTUM-B
             </div>
