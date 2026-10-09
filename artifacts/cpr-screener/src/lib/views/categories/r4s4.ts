@@ -2646,5 +2646,126 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
         ]
       }
     ],
+      },
+    {
+        key: "TC-BPS4-B-B-BB-BB-EL1U3-SL-BAGap-R4",
+        label: "FallenThenRockettoR4",
+        parentKey: "BPS4-B-B-BB-BB-EL1U3",
+        condition: (r) => passesView(r, "BPS4-B-B-BB-BB-EL1U3") && matchesGapBadge(r, "SL-BAGap"),
+        standalone: true,
+        kind: "view",
+        direction: "Up",
+        targetLabel: "U4 (today's R4)",
+        getTarget: (r) => r.todayCPR.r4,
+        entryLabel: "TC (today's TC)",
+        getEntry: (r) => r.todayCPR.tc,
+        stoplossLabel: "S1 (today's S1)",
+        getStoploss: (r) => r.todayCPR.s1,
+        levelCheckDefs: [
+      {
+        "key": "r4",
+        "subject": "previous",
+        "bandKeys": [
+          "r3",
+          "r2"
+        ]
+      },
+      {
+        "key": "r3",
+        "subject": "previous",
+        "bandKeys": [
+          "r3",
+          "r2"
+        ]
+      },
+      {
+        "key": "r2",
+        "subject": "previous",
+        "bandKeys": [
+          "r2",
+          "prevHigh"
+        ]
+      },
+      {
+        "key": "prevHigh",
+        "subject": "previous",
+        "bandKeys": [
+          "r2",
+          "prevHigh"
+        ]
+      },
+      {
+        "key": "r1",
+        "subject": "previous",
+        "bandKeys": [
+          "r2",
+          "prevHigh"
+        ]
+      },
+      {
+        "key": "tc",
+        "subject": "previous",
+        "bandKeys": [
+          "prevHigh",
+          "r1"
+        ]
+      },
+      {
+        "key": "pivot",
+        "subject": "previous",
+        "bandKeys": [
+          "prevHigh",
+          "r1"
+        ]
+      },
+      {
+        "key": "bc",
+        "subject": "previous",
+        "bandKeys": [
+          "prevHigh",
+          "r1"
+        ]
+      },
+      {
+        "key": "prevLow",
+        "subject": "previous",
+        "bandKeys": [
+          "r1",
+          "tc"
+        ]
+      },
+      {
+        "key": "s1",
+        "subject": "previous",
+        "bandKeys": [
+          "r1",
+          "tc"
+        ]
+      },
+      {
+        "key": "s2",
+        "subject": "previous",
+        "bandKeys": [
+          "tc",
+          "pivot"
+        ]
+      },
+      {
+        "key": "s3",
+        "subject": "previous",
+        "bandKeys": [
+          "bc",
+          "prevLow"
+        ]
+      },
+      {
+        "key": "s4",
+        "subject": "previous",
+        "bandKeys": [
+          "prevLow",
+          "s1"
+        ]
+      }
+    ],
       }
 ];
