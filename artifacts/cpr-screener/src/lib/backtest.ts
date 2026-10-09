@@ -12,7 +12,6 @@ import {
   getPrevious15MBFloor,
 } from "./15MCandleCheck";
 import {
-  matchesCprAboveLevelStatus,
   matchesCprAboveOverlapStatus,
 } from "./views/p15MAbove";
 
@@ -1485,15 +1484,12 @@ export async function backtestSymbolOnDate(
 
   if (
     target.key === "P15MABC" ||
-    target.key === "P15MAboveBC-CPRA" ||
     target.key === "P-UPEX-CPRABOVE-OVA"
   ) {
     if (source === "coindcx") return null;
     const matchesStructure =
       target.key === "P15MABC"
         ? result.LevelsAbove
-        : target.key === "P15MAboveBC-CPRA"
-        ? result.LevelsAbove && matchesCprAboveLevelStatus(result)
         : result.touchCategory &&
           result.overlapHigher &&
           matchesCprAboveOverlapStatus(result);
@@ -1983,7 +1979,6 @@ export async function runBacktest(
   // batches without generating more exchange traffic.
   const batchSize =
     target.key === "P15MABC" ||
-    target.key === "P15MAboveBC-CPRA" ||
     target.key === "P-UPEX-CPRABOVE-OVA" ||
     target.key === "P15MBelow-CPRB" ||
     target.key === "OVB-P15MBelowTC" ||

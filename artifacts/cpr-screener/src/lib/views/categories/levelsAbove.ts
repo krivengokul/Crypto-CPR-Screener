@@ -3,7 +3,6 @@ import type { ViewDef } from "../types";
 import { dirTol, pickOuterLevelPattern } from "../../cpr";
 import { passesView } from "../registry";
 import { matchesGapBadge } from "../gapBadges";
-import { matchesCprAboveLevelStatus } from "../p15MAbove";
 
 export const LEVELSABOVE_VIEWS: ViewDef[] = [
   // --- A-A-AA-AA's nested Subpattern children ---
@@ -1484,19 +1483,6 @@ export const LEVELSABOVE_VIEWS: ViewDef[] = [
     kind: "pattern",
     condition: (r) => r.PD15MAboveBCPass === true,
     order: 999,
-  },
-  {
-    key: "P15MAboveBC-CPRA",
-    label: "Momentum-A-CPRA",
-    parentKey: "P15MABC",
-    kind: "view",
-    condition: (r) => r.PD15MAboveBCPass === true && matchesCprAboveLevelStatus(r),
-    direction: "Up",
-    targetLabel: "R4",
-    getTarget: (r) => r.todayCPR.r4,
-    stoplossLabel: "S1",
-    getStoploss: (r) => r.todayCPR.s1,
-    order: 0,
   },
     {
         key: "TC-A-A-AA-AA-CU4L2-SL-GapBA-R4",
