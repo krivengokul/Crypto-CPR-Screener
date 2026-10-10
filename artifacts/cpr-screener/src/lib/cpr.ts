@@ -285,13 +285,6 @@ export interface CPRResult {
   symbol: string;
   /** Prepared previous-session MOMENTUM-A (PD15M>BC) result; populated by the live Screener. */
   PD15MAboveBCPass?: boolean;
-  /**
-   * Prepared previous-session PD-15M-Below-BC result; populated by the live
-   * Screener and the backtest. True when no completed 15m candle body in the
-   * previous session was wholly above prevCPR.bc or wholly below the lower of
-   * prevCPR.prevLow / prevCPR.s1.
-   */
-  PD15MBelowBCPass?: boolean;
   PD15MBelowTCPass?: boolean;
   /** Previous-session CONSOLIDATE-A result; populated by the backtest's P-category scans. */
   PD15MConsolidateAPass?: boolean;

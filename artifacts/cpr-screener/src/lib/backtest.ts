@@ -1522,7 +1522,6 @@ export async function backtestSymbolOnDate(
   target: ViewDef,
   passesPatternFn: (r: CPRResult, pattern: string) => boolean,
   onPreviousUpexUnavailable?: (symbol: string) => void,
-  onPrevious15MBUnavailable?: (symbol: string) => void,
   onPD15MBelowTCUnavailable?: (symbol: string) => void
 ): Promise<BacktestRow | null> {
   const dPlus1 = addDaysISO(entryDateISO, 1);
@@ -1982,7 +1981,6 @@ export async function runBacktest(
       ? 8
       : 100;
   let previousUpexUnavailable = 0;
-  let previous15MBUnavailable = 0;
   let pd15MBelowTCUnavailable = 0;
 
   // PERF FIX: streamed rows are now buffered and flushed to onPartialRows
@@ -2017,7 +2015,6 @@ export async function runBacktest(
           target,
           passesPatternFn,
           () => previousUpexUnavailable++,
-          () => previous15MBUnavailable++,
           () => pd15MBelowTCUnavailable++,
         ),
       )
@@ -2034,13 +2031,6 @@ export async function runBacktest(
   if (previousUpexUnavailable > 0) {
     const message =
       `MOMENTUM-A candles were unavailable for ${previousUpexUnavailable} structurally ` +
-      `matching ${source} symbol(s) on ${entryDateISO}; they were omitted, not counted as passing.`;
-    console.warn(`[backtest] ${message}`);
-    onWarning?.(message);
-  }
-  if (previous15MBUnavailable > 0) {
-    const message =
-      `P-15M-B candles were unavailable for ${previous15MBUnavailable} structurally ` +
       `matching ${source} symbol(s) on ${entryDateISO}; they were omitted, not counted as passing.`;
     console.warn(`[backtest] ${message}`);
     onWarning?.(message);

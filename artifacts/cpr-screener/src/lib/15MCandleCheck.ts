@@ -8,7 +8,6 @@ const CANDLE_INTERVAL_MS = 15 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_CONCURRENT_REQUESTS = 8;
 const PREVIOUS_UPEX_CACHE_KEY = "cpr_previous_upex_results_v2";
-const PREVIOUS_15M_B_CACHE_KEY = "cpr_previous_15m_b_results_v3";
 const PREVIOUS_15M_TC_B_CACHE_KEY = "cpr_previous_15m_tc_b_results_v6";
 const PREVIOUS_15M_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_momentum_b_results_v2";
 const PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_consolidate_a_results_v3";
@@ -18,10 +17,9 @@ export interface UpexCandidate {
   source: FifteenMinuteSource;
   bc: number;
   /**
-   * Lower bound used by the PD-15M-Below-BC and PD-15M-Below-TC checks (see
-   * passesPrevious15MBFilter / passesPD15MBelowTCFilter): the lower of the
-   * previous CPR's Prev Low (PL) and S1. Optional because MOMENTUM-A doesn't
-   * use it.
+   * Lower bound used by the CONSOLIDATE-B check (see passesPD15MBelowTCFilter):
+   * the lower of the previous CPR's Prev Low (PL) and S1. Optional because
+   * MOMENTUM-A and MOMENTUM-B don't use it.
    */
   floor?: number;
   /** Upper bound used by CONSOLIDATE-A: the higher of previous CPR Prev High (PH) and R1. */
@@ -29,7 +27,7 @@ export interface UpexCandidate {
 }
 
 /**
- * The level the PD-15M-Below-BC check tests candle bodies against on the
+ * The level the CONSOLIDATE-B check tests candle bodies against on the
  * downside: previous CPR's PL, or its S1 when S1 sits below PL (i.e. the
  * lower of the two).
  */
@@ -102,18 +100,23 @@ export function getConsolidateBTc(
  * 15m result caches. Each cache key ends in `_v<N>`; whenever the check's logic
  * changes the version is bumped, which orphans the older keys in localStorage
  * (nothing reads them again). Removes every `<same prefix>_v<other N>` key and
- * leaves the current ones untouched. Returns how many keys were removed.
+ * leaves the current ones untouched. Caches of retired checks (every version)
+ * are removed too. Returns how many keys were removed.
  */
 export function pruneLegacy15MResultCaches(): number {
   if (typeof localStorage === "undefined") return 0;
   const currentKeys = [
     PREVIOUS_UPEX_CACHE_KEY,
-    PREVIOUS_15M_B_CACHE_KEY,
     PREVIOUS_15M_TC_B_CACHE_KEY,
     PREVIOUS_15M_MOMENTUM_B_CACHE_KEY,
     PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY,
   ];
-  const prefixes = currentKeys.map((key) => key.replace(/\d+$/, ""));
+  // The P-15M-B (BC-based) check was removed; none of its versions are read.
+  const retiredPrefixes = ["cpr_previous_15m_b_results_v"];
+  const prefixes = [
+    ...currentKeys.map((key) => key.replace(/\d+$/, "")),
+    ...retiredPrefixes,
+  ];
   let removed = 0;
   try {
     for (const key of Object.keys(localStorage)) {
@@ -465,38 +468,6 @@ function shouldDebugPD15M(symbol: string): boolean {
   }
 }
 
-export function passesPrevious15MBFilter(
-  candles: OHLC[],
-  bc: number,
-  startTime: number,
-  now: number,
-  floor?: number
-): boolean | null {
-  if (!Number.isFinite(bc)) return null;
-  // `floor` is optional so callers that only care about BC keep working; when
-  // supplied it must be a real number or the session can't be evaluated.
-  if (floor !== undefined && !Number.isFinite(floor)) return null;
-
-  const completed = candles.filter(
-    (candle) =>
-      Number.isFinite(candle.openTime) &&
-      candle.openTime >= startTime &&
-      candle.openTime + CANDLE_INTERVAL_MS <= now &&
-      Number.isFinite(candle.open) &&
-      Number.isFinite(candle.close)
-  );
-  if (completed.length === 0) return null;
-
-  // A session passes unless any candle body is wholly above the previous BC,
-  // or wholly below the floor (lower of previous PL / S1). Only bodies count:
-  // a wick beyond either level does not fail the session.
-  return !completed.some(
-    (candle) =>
-      (candle.open > bc && candle.close > bc) ||
-      (floor !== undefined && candle.open < floor && candle.close < floor),
-  );
-}
-
 async function fetchJson(url: string): Promise<unknown | null> {
   for (let attempt = 0; attempt < 3; attempt++) {
     const controller = new AbortController();
@@ -735,22 +706,6 @@ export function findPreviousUpexSymbols(
   return findSymbolsForSession(candidates, startTime, endTime, onProgress);
 }
 
-export function findPD15MBelowSymbols(
-  candidates: UpexCandidate[],
-  onProgress?: (done: number, total: number) => void,
-  now = Date.now()
-): Promise<PreviousUpexScanResults> {
-  const endTime = upexSessionStartUtcMs(now);
-  const startTime = previousUpexSessionStartUtcMs(now);
-  return findSymbolsForSession(
-    candidates,
-    startTime,
-    endTime,
-    onProgress,
-    passesPrevious15MBFilter,
-  );
-}
-
 export function previousUpexCandidateCacheKey(
   sessionStart: number,
   candidate: UpexCandidate,
@@ -938,59 +893,7 @@ export function savePD15MMomentumBelowResults(
   safeSetItem(PREVIOUS_15M_MOMENTUM_B_CACHE_KEY, payload);
 }
 
-export function previous15MBCandidateCacheKey(
-  sessionStart: number,
-  candidate: UpexCandidate,
-): string {
-  return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.floor}`;
-}
-
-export function loadPrevious15MBResults(
-  sessionStart: number,
-): Map<string, boolean | null> {
-  try {
-    const raw = localStorage.getItem(PREVIOUS_15M_B_CACHE_KEY);
-    if (!raw) return new Map();
-    const parsed: unknown = JSON.parse(raw);
-    if (
-      !parsed ||
-      typeof parsed !== "object" ||
-      !("sessionStart" in parsed) ||
-      parsed.sessionStart !== sessionStart ||
-      !("results" in parsed) ||
-      !parsed.results ||
-      typeof parsed.results !== "object"
-    ) {
-      return new Map();
-    }
-
-    const results = new Map<string, boolean | null>();
-    for (const [key, value] of Object.entries(parsed.results)) {
-      if (typeof value === "boolean") {
-        results.set(key, value);
-      }
-    }
-    return results;
-  } catch {
-    return new Map();
-  }
-}
-
-export function savePrevious15MBResults(
-  sessionStart: number,
-  results: Map<string, boolean | null>,
-): void {
-  const payload = JSON.stringify({
-    sessionStart,
-    results: Object.fromEntries(
-      [...results].filter((entry): entry is [string, boolean] => typeof entry[1] === "boolean"),
-    ),
-  });
-  safeSetItem(PREVIOUS_15M_B_CACHE_KEY, payload);
-}
-
 const previousUpexPassCache = new Map<string, Promise<boolean | null>>();
-const previous15MBPassCache = new Map<string, Promise<boolean | null>>();
 const pd15MBelowTCPassCache = new Map<string, Promise<boolean | null>>();
 const previousConsolidateAPassCache = new Map<string, Promise<boolean | null>>();
 const MAX_PREVIOUS_UPEX_CACHE_ENTRIES = 20_000;
@@ -1077,44 +980,6 @@ export function findPreviousConsolidateAPass(
   return request;
 }
 
-export function findPD15MBelowPass(
-  candidate: UpexCandidate,
-  now: number
-): Promise<boolean | null> {
-  const endTime = upexSessionStartUtcMs(now);
-  const startTime = previousUpexSessionStartUtcMs(now);
-  const key =
-    `${startTime}:${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.floor}`;
-  const cached = previous15MBPassCache.get(key);
-  if (cached) return cached;
-
-  const request = findSymbolsForSession(
-    [candidate],
-    startTime,
-    endTime,
-    undefined,
-    passesPrevious15MBFilter,
-  ).then(
-    ({ included, unavailable }) => {
-      if (unavailable > 0) {
-        previous15MBPassCache.delete(key);
-        return null;
-      }
-      if (previous15MBPassCache.size > MAX_PREVIOUS_UPEX_CACHE_ENTRIES) {
-        const oldestKey = previous15MBPassCache.keys().next().value;
-        if (oldestKey) previous15MBPassCache.delete(oldestKey);
-      }
-      return included.has(`${candidate.source}:${candidate.symbol}`);
-    },
-    (error: unknown) => {
-      previous15MBPassCache.delete(key);
-      throw error;
-    }
-  );
-  previous15MBPassCache.set(key, request);
-  return request;
-}
-
 /**
  * Previous-day 15m "Below TC" pass for a single symbol (CONSOLIDATE-B).
  * Pass `candidate.bc` = the previous day's TC (the field name is historical;
@@ -1123,7 +988,6 @@ export function findPD15MBelowPass(
  * high versus earlier candles, or has its whole body below `candidate.floor`
  * (lower of previous PL / S1) when one is supplied (see
  * passesPD15MBelowTCFilter).
- * Own cache so TC results never collide with the BC-based P-15M-B results.
  */
 export function findPD15MBelowTCPass(
   candidate: UpexCandidate,

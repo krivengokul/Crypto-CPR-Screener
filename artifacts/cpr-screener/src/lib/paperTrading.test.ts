@@ -15,8 +15,7 @@ import {
 } from "./signalOutcome.ts";
 import { fromCoinDCXPair, toCoinDCXPair } from "./coinDCXPair.ts";
 import {
-  findPD15MBelowSymbols,
-  findPD15MBelowPass,
+  findPD15MBelowTCPass,
   findPD15MBelowTCSymbols,
   findPD15MMomentumBelowSymbols,
   loadPD15MMomentumBelowResults,
@@ -32,8 +31,6 @@ import {
   getConsolidateABc,
   getConsolidateBTc,
   pruneLegacy15MResultCaches,
-  passesPrevious15MBFilter,
-  loadPrevious15MBResults,
   loadPreviousUpexResults,
   passesConsolidateAFilter,
   previousUpexCandidateCacheKey,
@@ -373,114 +370,6 @@ test("PD15M>BC checks the previous IST session and passes candles that are not f
   );
 });
 
-test("P-15M-B excludes a session only when a completed candle body is above BC", () => {
-  const now = Date.parse("2026-10-03T00:00:00.000Z");
-  const start = Date.parse("2026-10-02T00:00:00.000Z");
-  const candle = (openTime: number, open: number, close: number): OHLC => ({
-    openTime,
-    open,
-    high: Math.max(open, close) + 1,
-    low: Math.min(open, close) - 1,
-    close,
-    volume: 1,
-  });
-
-  assert.equal(
-    passesPrevious15MBFilter(
-      [candle(start, 99, 98), candle(start + 15 * 60_000, 101, 99)],
-      100,
-      start,
-      now,
-    ),
-    true,
-  );
-  assert.equal(
-    passesPrevious15MBFilter(
-      [candle(start, 99, 98), candle(start + 15 * 60_000, 101, 102)],
-      100,
-      start,
-      now,
-    ),
-    false,
-  );
-  assert.equal(
-    passesPrevious15MBFilter([candle(start, 101, 99)], 100, start, now),
-    true,
-  );
-  assert.equal(
-    passesPrevious15MBFilter([candle(start, 100, 100)], 100, start, now),
-    true,
-  );
-  assert.equal(
-    passesPrevious15MBFilter([candle(now, 99, 98)], 100, start, now),
-    null,
-  );
-});
-
-test("PD-15M-Below-BC also fails when a candle body is wholly below the floor", () => {
-  const now = Date.parse("2026-10-03T00:00:00.000Z");
-  const start = Date.parse("2026-10-02T00:00:00.000Z");
-  const candle = (openTime: number, open: number, close: number): OHLC => ({
-    openTime,
-    open,
-    high: Math.max(open, close) + 1,
-    low: Math.min(open, close) - 1,
-    close,
-    volume: 1,
-  });
-  const bc = 100;
-  const floor = 90;
-
-  // Both open and close below the floor -> fails.
-  assert.equal(
-    passesPrevious15MBFilter([candle(start, 89, 88)], bc, start, now, floor),
-    false,
-  );
-  // Only the wick dips below the floor (body straddles or sits above) -> passes.
-  assert.equal(
-    passesPrevious15MBFilter([candle(start, 91, 89)], bc, start, now, floor),
-    true,
-  );
-  assert.equal(
-    passesPrevious15MBFilter([candle(start, 89, 91)], bc, start, now, floor),
-    true,
-  );
-  assert.equal(
-    passesPrevious15MBFilter([{ ...candle(start, 95, 94), low: 80 }], bc, start, now, floor),
-    true,
-  );
-  // A body exactly on the floor is not below it.
-  assert.equal(
-    passesPrevious15MBFilter([candle(start, 90, 90)], bc, start, now, floor),
-    true,
-  );
-  // The BC rule still applies alongside the floor rule.
-  assert.equal(
-    passesPrevious15MBFilter([candle(start, 101, 102)], bc, start, now, floor),
-    false,
-  );
-  assert.equal(
-    passesPrevious15MBFilter(
-      [candle(start, 95, 94), candle(start + 15 * 60_000, 96, 97)],
-      bc,
-      start,
-      now,
-      floor,
-    ),
-    true,
-  );
-  // Without a floor, candles below it are not checked.
-  assert.equal(
-    passesPrevious15MBFilter([candle(start, 89, 88)], bc, start, now),
-    true,
-  );
-  // A non-finite floor can't be evaluated.
-  assert.equal(
-    passesPrevious15MBFilter([candle(start, 95, 94)], bc, start, now, Number.NaN),
-    null,
-  );
-});
-
 test("PD-15M-Below-TC also fails when a candle body is wholly below the floor", () => {
   const now = Date.parse("2026-10-03T00:00:00.000Z");
   const start = Date.parse("2026-10-02T00:00:00.000Z");
@@ -801,40 +690,7 @@ test("historical PD15M>BC checks the session before the selected backtest date a
   }
 });
 
-test("historical P-15M-B fails only when a previous-session candle body is above BC", async () => {
-  const originalFetch = globalThis.fetch;
-  const entryDate = "2026-10-01";
-  const sessionStart = Date.parse(`${entryDate}T00:00:00.000Z`);
-  const expectedPreviousSession = sessionStart - 24 * 60 * 60 * 1000;
-  globalThis.fetch = async (input) => {
-    const url = new URL(String(input));
-    assert.equal(Number(url.searchParams.get("startTime")), expectedPreviousSession);
-    assert.equal(Number(url.searchParams.get("endTime")), sessionStart);
-    const candle = url.searchParams.get("symbol") === "P15MBLOWUSDT"
-      ? [expectedPreviousSession, "99", "100", "97", "98", "1"]
-      : [expectedPreviousSession, "101", "103", "100.5", "102", "1"];
-    return new Response(
-      JSON.stringify([candle]),
-      { status: 200, headers: { "Content-Type": "application/json" } },
-    );
-  };
-
-  try {
-    const candidate = { symbol: "P15MBLOWUSDT", source: "binance" as const, bc: 100 };
-    assert.equal(await findPD15MBelowPass(candidate, sessionStart), true);
-    assert.equal(
-      await findPD15MBelowPass(
-        { ...candidate, symbol: "P15MABOVEUSDT" },
-        sessionStart,
-      ),
-      false,
-    );
-  } finally {
-    globalThis.fetch = originalFetch;
-  }
-});
-
-test("historical PD-15M-Below-BC fails when a previous-session body is below the floor", async () => {
+test("historical CONSOLIDATE-B fails when a previous-session body is below the floor", async () => {
   const originalFetch = globalThis.fetch;
   const entryDate = "2026-10-01";
   const sessionStart = Date.parse(`${entryDate}T00:00:00.000Z`);
@@ -850,13 +706,13 @@ test("historical PD-15M-Below-BC fails when a previous-session body is below the
     const candidate = { symbol: "PD15MFLOORUSDT", source: "binance" as const, bc: 100 };
     // Body is below a floor of 90 -> fail.
     assert.equal(
-      await findPD15MBelowPass({ ...candidate, floor: 90 }, sessionStart),
+      await findPD15MBelowTCPass({ ...candidate, floor: 90 }, sessionStart),
       false,
     );
     // Same candles with a lower floor (e.g. S1 below PL) -> pass; also proves
     // the result isn't reused across different floors.
     assert.equal(
-      await findPD15MBelowPass({ ...candidate, floor: 85 }, sessionStart),
+      await findPD15MBelowTCPass({ ...candidate, floor: 85 }, sessionStart),
       true,
     );
   } finally {
@@ -864,7 +720,7 @@ test("historical PD-15M-Below-BC fails when a previous-session body is below the
   }
 });
 
-test("PD15M>BC and P-15M-B share a previous-session candle request", async () => {
+test("PD15M>BC and CONSOLIDATE-B share a previous-session candle request", async () => {
   const originalFetch = globalThis.fetch;
   const now = Date.parse("2026-10-04T00:00:00.000Z");
   const start = now - 24 * 60 * 60 * 1000;
@@ -881,7 +737,7 @@ test("PD15M>BC and P-15M-B share a previous-session candle request", async () =>
     const candidate = { symbol: "P15MSHAREDUSDT", source: "binance" as const, bc: 100 };
     const [above, below] = await Promise.all([
       findPreviousUpexSymbols([candidate], undefined, now),
-      findPD15MBelowSymbols([candidate], undefined, now),
+      findPD15MBelowTCSymbols([candidate], undefined, now),
     ]);
     assert.equal(above.outcomes.get("binance:P15MSHAREDUSDT"), false);
     assert.equal(below.outcomes.get("binance:P15MSHAREDUSDT"), true);
@@ -949,60 +805,6 @@ test("PD15M>BC prepared results persist only for their matching session", () => 
       [[previousUpexCandidateCacheKey(sessionStart, candidate), true]],
     );
     assert.equal(loadPreviousUpexResults(sessionStart + 24 * 60 * 60 * 1000).size, 0);
-  } finally {
-    if (originalDescriptor) {
-      Object.defineProperty(globalThis, "localStorage", originalDescriptor);
-    } else {
-      Reflect.deleteProperty(globalThis, "localStorage");
-    }
-  }
-});
-
-test("P-15M-B ignores cached results from the previous filter rule", () => {
-  const originalDescriptor = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
-  const values = new Map<string, string>([
-    [
-      "cpr_previous_15m_b_results_v1",
-      JSON.stringify({
-        sessionStart: Date.parse("2026-10-03T00:00:00.000Z"),
-        results: { "BTCUSDT": true },
-      }),
-    ],
-  ]);
-  Object.defineProperty(globalThis, "localStorage", {
-    configurable: true,
-    value: { getItem: (key: string) => values.get(key) ?? null },
-  });
-
-  try {
-    assert.equal(loadPrevious15MBResults(Date.parse("2026-10-03T00:00:00.000Z")).size, 0);
-  } finally {
-    if (originalDescriptor) {
-      Object.defineProperty(globalThis, "localStorage", originalDescriptor);
-    } else {
-      Reflect.deleteProperty(globalThis, "localStorage");
-    }
-  }
-});
-
-test("PD-15M-Below-BC ignores cached results from before the floor check", () => {
-  const originalDescriptor = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
-  const values = new Map<string, string>([
-    [
-      "cpr_previous_15m_b_results_v2",
-      JSON.stringify({
-        sessionStart: Date.parse("2026-10-03T00:00:00.000Z"),
-        results: { "2026-10-03|binance:BTCUSDT:100": true },
-      }),
-    ],
-  ]);
-  Object.defineProperty(globalThis, "localStorage", {
-    configurable: true,
-    value: { getItem: (key: string) => values.get(key) ?? null },
-  });
-
-  try {
-    assert.equal(loadPrevious15MBResults(Date.parse("2026-10-03T00:00:00.000Z")).size, 0);
   } finally {
     if (originalDescriptor) {
       Object.defineProperty(globalThis, "localStorage", originalDescriptor);
@@ -1233,7 +1035,7 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     cpr_previous_15m_tc_b_results_v5: "x",
     cpr_previous_15m_tc_b_results_v6: "keep",
     cpr_previous_15m_b_results_v1: "x",
-    cpr_previous_15m_b_results_v3: "keep",
+    cpr_previous_15m_b_results_v3: "x",
     cpr_previous_upex_results_v1: "x",
     cpr_previous_upex_results_v2: "keep",
     cpr_previous_15m_consolidate_a_results_v1: "x",
@@ -1251,9 +1053,8 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     }),
   });
   try {
-    assert.equal(pruneLegacy15MResultCaches(), 8);
+    assert.equal(pruneLegacy15MResultCaches(), 9);
     assert.deepEqual(Object.keys(store).sort(), [
-      "cpr_previous_15m_b_results_v3",
       "cpr_previous_15m_consolidate_a_results_v3",
       "cpr_previous_15m_momentum_b_results_v2",
       "cpr_previous_15m_tc_b_results_v6",
