@@ -1522,29 +1522,6 @@ export async function backtestSymbolOnDate(
     result.PD15MAboveBCPass = PD15MAboveBCPass === true;
   }
 
-  if (target.key === "OVB-P15MBelowTC") {
-    // FIX: this view's condition reads result.PD15MBelowTCPass, but nothing in
-    // the backtest ever populated it (only P15M-A / P-UPEX
-    // were wired), so it was always undefined -> every symbol failed -> 0 rows.
-    if (source === "coindcx") return null;
-    // Structural gate first, without any 15m fetch: assume the 15m part passes
-    // and see whether the rest of the pattern (CPR structure) still matches.
-    // Only structurally matching symbols pay for a 15m candle request.
-    result.PD15MBelowTCPass = true;
-    if (!passesPatternFn(result, target.conditionKey ?? target.key)) return null;
-    const pd15MBelowTCPass = await findPD15MBelowTCPass(
-      {
-        symbol,
-        source,
-        bc: getConsolidateBTc(result.prevCPR, result.ppCPR), // level under test = previous day's TC (PPDay TC if PDay overlapped below / inside PPDay)
-        floor: getPrevious15MBFloor(result.prevCPR),
-      },
-      Date.parse(`${entryDateISO}T00:00:00.000Z`),
-    );
-    if (pd15MBelowTCPass === null) onPD15MBelowTCUnavailable?.(symbol);
-    result.PD15MBelowTCPass = pd15MBelowTCPass === true;
-  }
-
   if (!passesPatternFn(result, target.conditionKey ?? target.key)) return null; // didn't match the pattern on this date
   // NOTE: the View's 13/13 Level Check gate is intentionally NOT applied here.
   // Selecting a View in the Backtest panel lists every symbol belonging to
@@ -1825,27 +1802,6 @@ export async function pivotLevelBacktestSymbolOnDate(
     result.PD15MAboveBCPass = PD15MAboveBCPass === true;
   }
 
-  // Same idea for the CONSOLIDATE-B pattern (previous day's TC is the level
-  // under test, as in the OVB-P15MBelowTC view above).
-  if (pivotLevelKey === "LB-P15MBTC") {
-    if (source === "coindcx") return null;
-    const PD15MBelowTCPass = await findPD15MBelowTCPass(
-      {
-        symbol,
-        source,
-        bc: getConsolidateBTc(result.prevCPR, result.ppCPR),
-        floor: getPrevious15MBFloor(result.prevCPR),
-      },
-      Date.parse(`${entryDateISO}T00:00:00.000Z`),
-    );
-    if (PD15MBelowTCPass === null) {
-      console.warn(
-        `[backtest] ${symbol} on ${entryDateISO}: CONSOLIDATE-B 15m candles unavailable — treated as not passing.`
-      );
-    }
-    result.PD15MBelowTCPass = PD15MBelowTCPass === true;
-  }
-
   if (!matchesPatternFn(result, pivotLevelKey)) return null; // didn't match this Pattern's raw flag
 
   // NEW: if this Pattern (or a nested Subpattern under it — see
@@ -1965,7 +1921,6 @@ export async function runBacktest(
   const batchSize =
     target.key === "P15MABC" ||
     target.key === "P-UPEX-CPRABOVE-OVA" ||
-    target.key === "OVB-P15MBelowTC" ||
     target.key === "OVB-P15MAboveBC"
       ? 8
       : 100;
@@ -2730,7 +2685,7 @@ export async function runPivotLevelBacktest(
   // The MOMENTUM-A pattern makes one extra 15m candle request per LEVEL ABOVE
   // symbol, so keep concurrency bounded like the other 15m views.
   const batchSize =
-    pivotLevelKey === "P15MABC" || pivotLevelKey === "LB-P15MBTC" ? 8 : 50;
+    pivotLevelKey === "P15MABC" ? 8 : 50;
 
   for (let i = 0; i < symbols.length; i += batchSize) {
     const batch = symbols.slice(i, i + batchSize);

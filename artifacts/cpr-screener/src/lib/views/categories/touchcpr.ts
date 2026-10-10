@@ -2115,27 +2115,6 @@ export const OVERLAP_BELOW_TOUCH_VIEWS: ViewDef[] = [
   },
   { key: "OVB-E-E-OA-OB-EL4U4", label: "E-E-OA-OB-EL4U4", parentKey: "OVB-E-E-OA-OB", kind: "pattern", condition: (r) => r.EL4U4, order: 0 },
 
-  // --- OVB-P15MBelowTC ---
-  // Moved here from levelsBelow.ts (it lives under TOUCH > Overlap Below).
-  // Needs result.PD15MBelowTCPass, which the live Screener and the
-  // backtest both populate.
-  {
-    key: "OVB-P15MBelowTC",
-    label: "OVB-Consolidate-B",
-    parentKey: "overlapLower",
-    kind: "view",
-    standalone: true,
-    condition: (r) => r.PD15MBelowTCPass === true && r.overlapLower,
-    direction: "Down",
-    targetLabel: "S4",
-    getTarget: (r) => r.todayCPR.s4,
-    entryLabel: "PL",
-    getEntry: (r) => r.todayCPR.prevLow,
-    stoplossLabel: "R1",
-    getStoploss: (r) => r.todayCPR.r1,
-    order: -2,
-  },
-
   // --- OVB-P15MAboveBC ---
   // Mirror of OVB-P15MBelowTC on the BC side. Reuses the existing MOMENTUM-A (PD15M>BC)
   // previous-session check (passesUpexFilter -> result.PD15MAboveBCPass, which

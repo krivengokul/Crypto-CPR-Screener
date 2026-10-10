@@ -981,20 +981,6 @@ export const LEVELSBELOW_VIEWS: ViewDef[] = [
 
   { key: "E-B-RA-BB-L4U4", label: "E-B-RA-BB-L4U4", parentKey: "E-B-RA-BB", kind: "pattern", condition: (r) => r.L4U4, order: 4 },
 
-  // CONSOLIDATE-B (PD15M-Below-TC) filter as a pattern: the previous session's 15m candles never
-  // made a fresh high with a body wholly above yesterday's TC, and never had a
-  // body wholly below the lower of yesterday's PL / S1 (see
-  // passesPD15MBelowTCFilter / PD15MBelowTCPass).
-  {
-    key: "LB-P15MBTC",
-    label: "Consolidate-B",
-    parentKey: "levelsbelow",
-    kind: "pattern",
-    condition: (r) => r.PD15MBelowTCPass === true,
-    // Negative so it sorts above every other LEVEL BELOW child (the first
-    // compound pattern, B-B-BB-BB, is order 0).
-    order: -1,
-  },
     {
         key: "PL-B-B-BB-OB-CL3U1-RH-GapAA-S2",
         label: "UltraMega-S2",
