@@ -2120,8 +2120,8 @@ export const OVERLAP_BELOW_TOUCH_VIEWS: ViewDef[] = [
   // previous-session check (passesUpexFilter -> result.PD15MAboveBCPass, which
   // the live Screener and the backtest both populate): it fails as soon as a
   // completed 15m candle has its whole body below yesterday's BC AND that
-  // body's low is under the lowest wick of every earlier candle (a fresh low
-  // below BC).
+  // whole body (its top) is under the lowest wick of every earlier candle (a
+  // fresh low below BC).
   {
     key: "OVB-P15MAboveBC",
     label: "OVB-Momentum-A",

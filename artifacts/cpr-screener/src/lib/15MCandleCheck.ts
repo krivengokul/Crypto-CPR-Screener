@@ -7,11 +7,11 @@ const DELTA_BASE = "https://api.india.delta.exchange/v2";
 const CANDLE_INTERVAL_MS = 15 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_CONCURRENT_REQUESTS = 8;
-const PREVIOUS_UPEX_CACHE_KEY = "cpr_previous_upex_results_v1";
+const PREVIOUS_UPEX_CACHE_KEY = "cpr_previous_upex_results_v2";
 const PREVIOUS_15M_B_CACHE_KEY = "cpr_previous_15m_b_results_v3";
 const PREVIOUS_15M_TC_B_CACHE_KEY = "cpr_previous_15m_tc_b_results_v6";
 const PREVIOUS_15M_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_momentum_b_results_v2";
-const PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_consolidate_a_results_v2";
+const PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_consolidate_a_results_v3";
 
 export interface UpexCandidate {
   symbol: string;
@@ -155,14 +155,17 @@ export function previousUpexSessionStartUtcMs(now = Date.now()): number {
 /**
  * MOMENTUM-A (PD15M>BC; becomes CONSOLIDATE-A when a `ceiling` is supplied): walk the previous
  * session's completed 15m candles in time order.
- *  - BC rule: fail when a candle's WHOLE body is below `bc` AND the body's
- *    bottom is lower than the lowest wick of any earlier candle (a fresh low).
+ *  - BC rule: fail when a candle's WHOLE body is below `bc` AND the WHOLE body
+ *    is below the lowest wick of any earlier candle (body top under that wick
+ *    low: a fresh low). A body whose bottom dips under an earlier wick while
+ *    its top is still at or over that wick does not fail.
  *  - Ceiling rule (CONSOLIDATE-A, mirror of the BC rule): fail when a candle's
- *    WHOLE body is above `ceiling` (higher of previous PH / R1) AND the body's
- *    top is higher than the highest wick of any earlier candle (a fresh high).
- *    A body above the ceiling that stays at or under an earlier candle's high
- *    does not fail. The first candle has no earlier wick, so a full body above
- *    the ceiling on it fails (same as the BC rule).
+ *    WHOLE body is above `ceiling` (higher of previous PH / R1) AND the WHOLE
+ *    body is above the highest wick of any earlier candle (body bottom over
+ *    that wick high: a fresh high). A body above the ceiling whose bottom is
+ *    still at or under an earlier candle's high does not fail, even if its top
+ *    pokes above it. The first candle has no earlier wick, so a full body above
+ *    the ceiling (or below BC) on it fails.
  */
 export function passesUpexFilter(
   candles: OHLC[],
@@ -188,20 +191,24 @@ export function passesUpexFilter(
   let previousLowestWick: number | null = null;
   let previousHighestWick: number | null = null;
   for (const candle of completed) {
+    const bodyBottom = Math.min(candle.open, candle.close);
+    const bodyTop = Math.max(candle.open, candle.close);
+    // Upper side: whole body above the ceiling AND the WHOLE body above the
+    // highest wick of every earlier candle (body bottom over that wick high).
     if (
       ceiling !== undefined &&
       candle.open > ceiling &&
       candle.close > ceiling &&
-      (previousHighestWick === null ||
-        Math.max(candle.open, candle.close) > previousHighestWick)
+      (previousHighestWick === null || bodyBottom > previousHighestWick)
     ) {
       return false;
     }
+    // Lower side: whole body below BC AND the WHOLE body below the lowest wick
+    // of every earlier candle (body top under that wick low).
     const fullBodyBelowBc = candle.open < bc && candle.close < bc;
-    const bodyLow = Math.min(candle.open, candle.close);
     if (
       fullBodyBelowBc &&
-      (previousLowestWick === null || bodyLow < previousLowestWick)
+      (previousLowestWick === null || bodyTop < previousLowestWick)
     ) {
       return false;
     }

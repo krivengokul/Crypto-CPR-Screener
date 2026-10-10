@@ -253,11 +253,26 @@ test("15M-A uses the 05:30 IST day boundary and ignores candles outside complete
     ),
     true
   );
+  // Body (98..99) is below BC but its top sits exactly on the earlier wick low
+  // of 99 -> the whole body is not under that wick -> passes.
   assert.equal(
     passesUpexFilter(
       [
         { ...candle(start, 101, 102), low: 99 },
         { ...candle(start + 15 * 60_000, 99, 98), low: 97 },
+      ],
+      100,
+      start,
+      now
+    ),
+    true
+  );
+  // Whole body (97..98) is under the earlier wick low of 99 -> fresh low -> fails.
+  assert.equal(
+    passesUpexFilter(
+      [
+        { ...candle(start, 101, 102), low: 99 },
+        { ...candle(start + 15 * 60_000, 98, 97), low: 96 },
       ],
       100,
       start,
@@ -326,11 +341,25 @@ test("PD15M>BC checks the previous IST session and passes candles that are not f
     ),
     true
   );
+  // Body top exactly on the earlier wick low of 99 -> not wholly under it -> passes.
   assert.equal(
     passesUpexFilter(
       [
         { ...candle(start, 101, 102), low: 99 },
         { ...candle(start + 15 * 60_000, 99, 98), low: 97 },
+      ],
+      100,
+      start,
+      end
+    ),
+    true
+  );
+  // Whole body (97..98) under the earlier wick low of 99 -> fresh low -> fails.
+  assert.equal(
+    passesUpexFilter(
+      [
+        { ...candle(start, 101, 102), low: 99 },
+        { ...candle(start + 15 * 60_000, 98, 97), low: 96 },
       ],
       100,
       start,
@@ -634,6 +663,51 @@ test("passesUpexFilter with ceiling fails when a candle body is above ceiling", 
       bc, start, now, ceiling,
     ),
     false
+  );
+  // Whole-body rule: body (124/128) has its top over the earlier high of 125 but
+  // its bottom is still under it -> not wholly above -> passes.
+  assert.equal(
+    passesUpexFilter(
+      [{ ...makeCandle(start, 105, 106), high: 125 }, makeCandle(start + m, 124, 128)],
+      bc, start, now, ceiling,
+    ),
+    true
+  );
+  // Body bottom exactly on the earlier high -> not above it -> passes.
+  assert.equal(
+    passesUpexFilter(
+      [{ ...makeCandle(start, 105, 106), high: 125 }, makeCandle(start + m, 125, 128)],
+      bc, start, now, ceiling,
+    ),
+    true
+  );
+});
+
+test("passesUpexFilter BC rule needs the WHOLE body below the prior lowest wick", () => {
+  const start = Date.parse("2026-10-06T00:00:00.000Z");
+  const now = Date.parse("2026-10-06T06:00:00.000Z");
+  const m = 15 * 60_000;
+  const bc = 100;
+  const c = (i: number, open: number, high: number, low: number, close: number): OHLC => ({
+    openTime: start + i * m, open, high, low, close, volume: 1,
+  });
+  // Spike wick down to 90, body at/above BC.
+  const c1 = c(0, 102, 103, 90, 101);
+  // Body 96 -> 88: its bottom dips under the 90 wick but its top is still over it -> passes.
+  assert.equal(passesUpexFilter([c1, c(1, 96, 97, 87, 88)], bc, start, now), true);
+  // Whole body (85..89) under the 90 wick -> fresh low -> fails.
+  assert.equal(passesUpexFilter([c1, c(1, 89, 90, 84, 85)], bc, start, now), false);
+  // Body top exactly on the wick -> passes.
+  assert.equal(passesUpexFilter([c1, c(1, 90, 91, 84, 85)], bc, start, now), true);
+  // The reference keeps rolling: after a candle with low 87, a body wholly
+  // under 87 fails while one straddling it passes.
+  assert.equal(
+    passesUpexFilter([c1, c(1, 96, 97, 87, 88), c(2, 90, 91, 86, 88)], bc, start, now),
+    true,
+  );
+  assert.equal(
+    passesUpexFilter([c1, c(1, 96, 97, 87, 88), c(2, 86, 86.5, 83, 84)], bc, start, now),
+    false,
   );
 });
 
@@ -1160,9 +1234,11 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     cpr_previous_15m_tc_b_results_v6: "keep",
     cpr_previous_15m_b_results_v1: "x",
     cpr_previous_15m_b_results_v3: "keep",
-    cpr_previous_upex_results_v1: "keep",
+    cpr_previous_upex_results_v1: "x",
+    cpr_previous_upex_results_v2: "keep",
     cpr_previous_15m_consolidate_a_results_v1: "x",
-    cpr_previous_15m_consolidate_a_results_v2: "keep",
+    cpr_previous_15m_consolidate_a_results_v2: "x",
+    cpr_previous_15m_consolidate_a_results_v3: "keep",
     cpr_previous_15m_momentum_b_results_v1: "x",
     cpr_previous_15m_momentum_b_results_v2: "keep",
     "cpr_symbols_2026-10-09": "unrelated",
@@ -1175,13 +1251,13 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     }),
   });
   try {
-    assert.equal(pruneLegacy15MResultCaches(), 6);
+    assert.equal(pruneLegacy15MResultCaches(), 8);
     assert.deepEqual(Object.keys(store).sort(), [
       "cpr_previous_15m_b_results_v3",
-      "cpr_previous_15m_consolidate_a_results_v2",
+      "cpr_previous_15m_consolidate_a_results_v3",
       "cpr_previous_15m_momentum_b_results_v2",
       "cpr_previous_15m_tc_b_results_v6",
-      "cpr_previous_upex_results_v1",
+      "cpr_previous_upex_results_v2",
       "cpr_symbols_2026-10-09",
     ]);
     // Running again is a no-op.
