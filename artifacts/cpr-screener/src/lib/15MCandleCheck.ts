@@ -541,7 +541,7 @@ const sessionCandleCache = new Map<string, Promise<OHLC[] | null>>();
 const MAX_SESSION_CANDLE_CACHE_ENTRIES = 20_000;
 
 function fetchUpexCandles(
-  candidate: UpexCandidate,
+  candidate: Pick<UpexCandidate, "symbol" | "source">,
   startTime: number,
   endTime: number
 ): Promise<OHLC[] | null> {
@@ -1151,4 +1151,276 @@ export function findPD15MBelowTCPass(
   );
   pd15MBelowTCPassCache.set(key, request);
   return request;
+}
+
+/* ---------------------------------------------------------------------------
+ * RECLAIM-S / RECLAIM-R — live, CURRENT-session failed-break flags.
+ *
+ * Unlike the P-CONSOLIDATE / P-MOMENTUM checks above (which judge the PREVIOUS
+ * session once per day), these describe how TODAY is playing out: price broke
+ * through one or more of today's S1..S4 (or R1..R4) levels and has since come
+ * back inside them — a round trip / failed break.
+ *
+ *  - pierced   = how many levels (counted outward from S1 / R1) a completed
+ *                15m candle has broken so far this session (see
+ *                RECLAIM_BREAK_MODE). Needs candles, so it is fetched per
+ *                15m window and can only grow within a session.
+ *  - recrossed = how many of those pierced levels the CURRENT price is back
+ *                inside. Computed from the live price at render time, so it
+ *                updates on every tick with no refetch.
+ *
+ * A row gets the RECLAIM badge / filter once recrossed >= RECLAIM_MIN_RECROSSED.
+ * Shown as "RECLAIM-S 2/3" = 3 levels pierced, price back above 2 of them.
+ * ------------------------------------------------------------------------- */
+
+/**
+ * What counts as a level being "pierced" by a completed 15m candle:
+ *  - "body"  : the WHOLE body is beyond the level (open AND close) — same
+ *              convention as the previous-session checks above (default).
+ *  - "close" : the candle's close is beyond the level.
+ *  - "wick"  : the candle's high/low touched beyond the level.
+ * "wick" >= "close" >= "body" in sensitivity (wick shows the deepest depth).
+ */
+export type ReclaimBreakMode = "body" | "close" | "wick";
+export const RECLAIM_BREAK_MODE: ReclaimBreakMode = "body";
+/** Minimum number of pierced levels price must be back inside for the badge / filter. */
+export const RECLAIM_MIN_RECROSSED = 2;
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+/** Wait this long after a 15m boundary before treating the new window as settled. */
+const RECLAIM_SETTLE_MS = 5_000;
+
+/**
+ * Start (UTC ms) of the trading session containing `now`: the most recent
+ * 00:00 UTC (= 05:30 IST), i.e. the same daily candle boundary the CPR levels
+ * are built on. NOTE: this is deliberately NOT upexSessionStartUtcMs(), which
+ * is keyed to the IST calendar date and therefore points at a FUTURE 05:30 IST
+ * between 00:00 and 05:30 IST.
+ */
+export function currentSessionStartUtcMs(now = Date.now()): number {
+  return Math.floor(now / DAY_MS) * DAY_MS;
+}
+
+/**
+ * Open time (UTC ms) of the forming 15m candle, i.e. the end of the last
+ * completed one, lagged by RECLAIM_SETTLE_MS so a just-closed candle is final
+ * before it is evaluated. Changes once every 15 minutes.
+ */
+export function currentReclaimWindowMs(now = Date.now()): number {
+  return Math.floor((now - RECLAIM_SETTLE_MS) / CANDLE_INTERVAL_MS) * CANDLE_INTERVAL_MS;
+}
+
+type Four = [number, number, number, number];
+
+/** Today's support / resistance ladders, shallowest first: [s1..s4], [r1..r4]. */
+export interface ReclaimLevels {
+  s: Four;
+  r: Four;
+}
+
+export function reclaimLevelsFromCPR(cpr: {
+  s1: number; s2: number; s3: number; s4: number;
+  r1: number; r2: number; r3: number; r4: number;
+}): ReclaimLevels {
+  return {
+    s: [cpr.s1, cpr.s2, cpr.s3, cpr.s4],
+    r: [cpr.r1, cpr.r2, cpr.r3, cpr.r4],
+  };
+}
+
+export interface ReclaimCandidate {
+  symbol: string;
+  source: FifteenMinuteSource;
+  levels: ReclaimLevels;
+}
+
+export interface ReclaimDepth {
+  /** Support levels pierced so far this session (0..4, counted from S1). */
+  sPierced: number;
+  /** Resistance levels pierced so far this session (0..4, counted from R1). */
+  rPierced: number;
+}
+
+/**
+ * Cheap necessary condition for any candle to have pierced S1 or R1, from the
+ * row's live daily high/low (and price). Every break mode needs at least a wick
+ * beyond the level, so a row whose day range never left [S1, R1] can be skipped
+ * without a candle request. Unknown high/low -> true (fetch to be safe).
+ */
+export function mayHavePiercedFirstLevel(row: {
+  todayCPR: { s1: number; r1: number };
+  currentPrice: number;
+  todayHigh?: number;
+  todayLow?: number;
+}): boolean {
+  const { s1, r1 } = row.todayCPR;
+  const lo = row.todayLow;
+  const hi = row.todayHigh;
+  if (lo === undefined || hi === undefined || !Number.isFinite(lo) || !Number.isFinite(hi)) {
+    return true;
+  }
+  const px = row.currentPrice;
+  return lo <= s1 || hi >= r1 || (Number.isFinite(px) && (px <= s1 || px >= r1));
+}
+
+/**
+ * Walk the session's COMPLETED 15m candles and return how many S / R levels
+ * have been pierced (see ReclaimBreakMode). `now` bounds "completed": a candle
+ * counts only when openTime + 15m <= now.
+ */
+export function computeReclaimDepth(
+  candles: OHLC[],
+  levels: ReclaimLevels,
+  startTime: number,
+  now: number,
+  mode: ReclaimBreakMode = RECLAIM_BREAK_MODE
+): ReclaimDepth {
+  let sPierced = 0;
+  let rPierced = 0;
+  for (const candle of candles) {
+    if (
+      !Number.isFinite(candle.openTime) ||
+      candle.openTime < startTime ||
+      candle.openTime + CANDLE_INTERVAL_MS > now ||
+      !Number.isFinite(candle.open) ||
+      !Number.isFinite(candle.close) ||
+      !Number.isFinite(candle.high) ||
+      !Number.isFinite(candle.low)
+    ) {
+      continue;
+    }
+    // The value that has to be beyond a level for that level to count as
+    // pierced: body mode needs the WHOLE body beyond it (so the body's near
+    // edge), close mode the close, wick mode the extreme.
+    const sRef =
+      mode === "body" ? Math.max(candle.open, candle.close)
+      : mode === "close" ? candle.close
+      : candle.low;
+    const rRef =
+      mode === "body" ? Math.min(candle.open, candle.close)
+      : mode === "close" ? candle.close
+      : candle.high;
+    while (sPierced < 4 && sRef < levels.s[sPierced]) sPierced++;
+    while (rPierced < 4 && rRef > levels.r[rPierced]) rPierced++;
+  }
+  return { sPierced, rPierced };
+}
+
+/**
+ * Fetch the current session's completed 15m candles for each candidate and
+ * compute its pierced depth. `now` should be currentReclaimWindowMs(): the
+ * request window is then identical for every call inside one 15m window, so
+ * the shared per-session candle cache de-duplicates repeat requests. A symbol
+ * whose candles could not be fetched is counted as unavailable (and omitted
+ * from `depths`); a symbol with candles but nothing pierced yet gets 0 / 0.
+ */
+export async function findReclaimDepths(
+  candidates: ReclaimCandidate[],
+  onProgress?: (done: number, total: number) => void,
+  now = currentReclaimWindowMs()
+): Promise<{ depths: Map<string, ReclaimDepth>; unavailable: number }> {
+  const windowEnd = Math.floor(now / CANDLE_INTERVAL_MS) * CANDLE_INTERVAL_MS;
+  const startTime = currentSessionStartUtcMs(windowEnd);
+  const depths = new Map<string, ReclaimDepth>();
+  let unavailable = 0;
+
+  for (let offset = 0; offset < candidates.length; offset += MAX_CONCURRENT_REQUESTS) {
+    const batch = candidates.slice(offset, offset + MAX_CONCURRENT_REQUESTS);
+    const results = await Promise.all(
+      batch.map(async (candidate) => {
+        // Nothing can be completed before the first 15m window of a session.
+        if (windowEnd <= startTime) {
+          return { candidate, depth: { sPierced: 0, rPierced: 0 } as ReclaimDepth | null };
+        }
+        const candles = await fetchUpexCandles(candidate, startTime, windowEnd);
+        return {
+          candidate,
+          depth: candles ? computeReclaimDepth(candles, candidate.levels, startTime, windowEnd) : null,
+        };
+      })
+    );
+    for (const { candidate, depth } of results) {
+      if (depth === null) unavailable++;
+      else depths.set(`${candidate.source}:${candidate.symbol}`, depth);
+    }
+    onProgress?.(Math.min(offset + batch.length, candidates.length), candidates.length);
+  }
+  return { depths, unavailable };
+}
+
+/** One side (S = failed breakdown, R = failed breakout) of a row's live RECLAIM state. */
+export interface ReclaimSideState {
+  side: "S" | "R";
+  mode: ReclaimBreakMode;
+  /** Levels pierced this session (1..4), counted from S1 / R1. */
+  pierced: number;
+  /** Of those, how many the current price is back inside (0..pierced). */
+  recrossed: number;
+  /** Values of the pierced levels, shallowest first. */
+  levels: number[];
+  price: number;
+  /** Day low (S) / day high (R) when it lies beyond the first level. */
+  extreme?: number;
+  /** % of the way from `extreme` back to the first level (>= 100 = first level fully reclaimed). */
+  retracePct?: number;
+  /** recrossed >= RECLAIM_MIN_RECROSSED — drives the badge and the filter. */
+  qualifies: boolean;
+}
+
+function reclaimSideState(
+  side: "S" | "R",
+  ladder: Four,
+  pierced: number,
+  price: number,
+  dayExtreme: number | undefined
+): ReclaimSideState | null {
+  if (pierced <= 0 || !Number.isFinite(price)) return null;
+  const levels = ladder.slice(0, Math.min(pierced, 4));
+  const recrossed = levels.filter((lvl) => (side === "S" ? price > lvl : price < lvl)).length;
+  const first = ladder[0];
+  let extreme: number | undefined;
+  let retracePct: number | undefined;
+  if (dayExtreme !== undefined && Number.isFinite(dayExtreme)) {
+    const span = side === "S" ? first - dayExtreme : dayExtreme - first;
+    if (span > 0) {
+      extreme = dayExtreme;
+      retracePct = Math.round(((side === "S" ? price - dayExtreme : dayExtreme - price) / span) * 100);
+    }
+  }
+  return {
+    side,
+    mode: RECLAIM_BREAK_MODE,
+    pierced: levels.length,
+    recrossed,
+    levels,
+    price,
+    extreme,
+    retracePct,
+    qualifies: recrossed >= RECLAIM_MIN_RECROSSED,
+  };
+}
+
+/**
+ * Live RECLAIM state for a row from its pierced depth (fetched per 15m window)
+ * and its current price / day range (live). Pure and cheap — call it at
+ * render / filter time.
+ */
+export function getReclaimStates(
+  row: {
+    todayCPR: {
+      s1: number; s2: number; s3: number; s4: number;
+      r1: number; r2: number; r3: number; r4: number;
+    };
+    currentPrice: number;
+    todayHigh?: number;
+    todayLow?: number;
+  },
+  depth: ReclaimDepth | undefined
+): { s: ReclaimSideState | null; r: ReclaimSideState | null } {
+  if (!depth) return { s: null, r: null };
+  const { s, r } = reclaimLevelsFromCPR(row.todayCPR);
+  return {
+    s: reclaimSideState("S", s, depth.sPierced, row.currentPrice, row.todayLow),
+    r: reclaimSideState("R", r, depth.rPierced, row.currentPrice, row.todayHigh),
+  };
 }

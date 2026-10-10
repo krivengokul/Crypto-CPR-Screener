@@ -3,6 +3,7 @@ import { ExternalLink, CheckCircle2, XCircle, Cloud, Clock } from "lucide-react"
 import { hasTouchedEntry } from "@/lib/signalTracker";
 import { sessionReachedTarget } from "@/lib/signalOutcome";
 import type { CPRResult } from "@/lib/cpr";
+import type { ReclaimSideState } from "@/lib/15MCandleCheck";
 import { getView } from "@/lib/views";
 import {
   type CPRResultWithSource,
@@ -833,6 +834,37 @@ export interface ScreenerTableRowProps {
   isMomentumA?: boolean;
   /** True when the Screener's P-MOMENTUM-B check passed for this row and it is not CONSOLIDATE-B. */
   isMomentumB?: boolean;
+  /** Live RECLAIM-S state (failed breakdown this session) — only passed when it qualifies, else null/undefined. */
+  reclaimS?: ReclaimSideState | null;
+  /** Live RECLAIM-R state (failed breakout this session) — only passed when it qualifies, else null/undefined. */
+  reclaimR?: ReclaimSideState | null;
+}
+
+/**
+ * Hover text for the RECLAIM-S / RECLAIM-R badge: which levels were pierced and
+ * by what rule, the day extreme, where price is now, and how far back it is.
+ */
+function reclaimTooltip(st: ReclaimSideState): string {
+  const isS = st.side === "S";
+  const prefix = isS ? "S" : "R";
+  const verb = isS ? "below" : "above";
+  const back = isS ? "above" : "below";
+  const rule =
+    st.mode === "body" ? "a completed 15m candle body" :
+    st.mode === "close" ? "a completed 15m candle close" :
+    "a 15m wick";
+  const piercedNames = st.levels
+    .map((lvl, i) => `${prefix}${i + 1} ${fmt(lvl)}`)
+    .join(", ");
+  const parts = [
+    `${isS ? "Failed breakdown" : "Failed breakout"}: ${rule} went ${verb} ${piercedNames}`,
+    st.extreme !== undefined ? `${isS ? "day low" : "day high"} ${fmt(st.extreme)}` : null,
+    `price ${fmt(st.price)} is back ${back} ${st.recrossed} of ${st.pierced} pierced level${st.pierced === 1 ? "" : "s"}`,
+    st.retracePct !== undefined
+      ? `${st.retracePct}% of the way back to ${prefix}1`
+      : null,
+  ].filter(Boolean);
+  return parts.join(" · ");
 }
 
 /**
@@ -854,6 +886,8 @@ export default function ScreenerTableRow({
   isConsolidateB,
   isMomentumA,
   isMomentumB,
+  reclaimS,
+  reclaimR,
 }: ScreenerTableRowProps) {
   const activePattern = rawActivePattern ?? activeSignal ?? "";
   // Previous-session 15m badges. MOMENTUM never shows alongside the matching
@@ -1078,6 +1112,26 @@ export default function ScreenerTableRow({
               style={{ color: "#FC0FC0" }}
             >
               P-MOMENTUM-B
+            </div>
+          )}
+          {/* Live current-session failed-break flags: "2/3" = 3 levels pierced,
+              price back inside 2 of them. Support side sky-blue, resistance orange. */}
+          {reclaimS && (
+            <div
+              className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
+              style={{ color: "#38bdf8" }}
+              title={reclaimTooltip(reclaimS)}
+            >
+              RECLAIM-S {reclaimS.recrossed}/{reclaimS.pierced}
+            </div>
+          )}
+          {reclaimR && (
+            <div
+              className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
+              style={{ color: "#fb923c" }}
+              title={reclaimTooltip(reclaimR)}
+            >
+              RECLAIM-R {reclaimR.recrossed}/{reclaimR.pierced}
             </div>
           )}
         </td>

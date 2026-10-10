@@ -42,6 +42,14 @@ import {
   savePD15MMomentumBelowResults,
   savePreviousConsolidateAResults,
   savePreviousUpexResults,
+  currentReclaimWindowMs,
+  currentSessionStartUtcMs,
+  findReclaimDepths,
+  getReclaimStates,
+  mayHavePiercedFirstLevel,
+  reclaimLevelsFromCPR,
+  type ReclaimCandidate,
+  type ReclaimDepth,
 } from "@/lib/15MCandleCheck";
 import type { CPRResult } from "@/lib/cpr";
 import { utcTodayISO, ENTRY_DEFS } from "@/lib/backtest";
@@ -375,6 +383,19 @@ export default function Screener({
   } | null>(null);
   const [previous15MMomentumReady, setPrevious15MMomentumReady] = useState(false);
   const [previous15MMomentumMessage, setPrevious15MMomentumMessage] = useState("");
+  // RECLAIM-S / RECLAIM-R (live, current session): pierced depth per symbol
+  // comes from 15m candles (re-fetched once per settled 15m window); whether
+  // price is back inside those levels is computed live at render/filter time.
+  const [reclaimSFilter, setReclaimSFilter] = useState(false);
+  const [reclaimRFilter, setReclaimRFilter] = useState(false);
+  const [reclaimDepths, setReclaimDepths] = useState<Map<string, ReclaimDepth>>(() => new Map());
+  const [reclaimProgress, setReclaimProgress] = useState<{ done: number; total: number } | null>(null);
+  const [reclaimReady, setReclaimReady] = useState(false);
+  const [reclaimMessage, setReclaimMessage] = useState("");
+  const [reclaimWindow, setReclaimWindow] = useState(() => currentReclaimWindowMs());
+  const reclaimDepthsRef = useRef<Map<string, ReclaimDepth>>(new Map());
+  const reclaimSessionRef = useRef(currentSessionStartUtcMs());
+  const reclaimRunRef = useRef(0);
   const previousUpexSessionStart = previousUpexSessionStartUtcMs();
   const previousUpexResultsRef = useRef<Map<string, boolean | null>>(
     loadPreviousUpexResults(previousUpexSessionStart),
@@ -457,6 +478,8 @@ export default function Screener({
     setUpexMessage("");
     setPrevious15MTCMessage("");
     setPrevious15MMomentumMessage("");
+    setReclaimSFilter(false);
+    setReclaimRFilter(false);
   }, [activeTab]);
   const deltaScanRef = useRef(false);
   const coindcxScanRef = useRef(false);
@@ -1274,6 +1297,106 @@ export default function Screener({
   useDeltaLiveRefresh(deltaStatus, deltaAllResultsRef, setDeltaAllResults, setDeltaFiltered);
   useCoinDCXLiveRefresh(coindcxStatus, coindcxAllResultsRef, setCoinDCXAllResults, setCoinDCXFiltered);
 
+  // RECLAIM-S / RECLAIM-R — bump `reclaimWindow` once per settled 15m window
+  // so the pierced-depth scan below re-runs after each candle close.
+  useEffect(() => {
+    const id = setInterval(() => {
+      const next = currentReclaimWindowMs();
+      setReclaimWindow((prev) => (prev === next ? prev : next));
+    }, 15_000);
+    return () => clearInterval(id);
+  }, []);
+
+  // RECLAIM-S / RECLAIM-R — pierced-depth scan. Runs after the scans finish
+  // and again every settled 15m window. Only symbols whose live day range has
+  // left [S1, R1] are fetched (see mayHavePiercedFirstLevel), and depth can
+  // only grow within a session, so each window merges (max) into what is known.
+  // Whether price is currently back inside the pierced levels is NOT decided
+  // here — that is live (getReclaimStates at render/filter time).
+  useEffect(() => {
+    if (
+      status === "scanning" ||
+      deltaStatus === "scanning" ||
+      (status !== "done" && deltaStatus !== "done")
+    ) return;
+
+    const sessionStart = currentSessionStartUtcMs(reclaimWindow);
+    if (reclaimSessionRef.current !== sessionStart) {
+      reclaimSessionRef.current = sessionStart;
+      reclaimDepthsRef.current = new Map();
+      setReclaimDepths(new Map());
+    }
+
+    const sourced: Array<{ source: "binance" | "delta"; row: CPRResult }> = [];
+    if (status === "done") {
+      for (const row of allResults) sourced.push({ source: "binance", row });
+    }
+    if (deltaStatus === "done") {
+      for (const row of deltaAllResults) sourced.push({ source: "delta", row });
+    }
+    if (sourced.length === 0) {
+      setReclaimReady(false);
+      setReclaimProgress(null);
+      return;
+    }
+
+    const candidates: ReclaimCandidate[] = [];
+    for (const { source, row } of sourced) {
+      const prior = reclaimDepthsRef.current.get(`${source}:${row.symbol}`);
+      if (prior && prior.sPierced >= 4 && prior.rPierced >= 4) continue;
+      if (!mayHavePiercedFirstLevel(row)) continue;
+      candidates.push({
+        symbol: row.symbol,
+        source,
+        levels: reclaimLevelsFromCPR(row.todayCPR),
+      });
+    }
+
+    const runId = ++reclaimRunRef.current;
+    if (candidates.length === 0) {
+      setReclaimReady(true);
+      setReclaimProgress(null);
+      setReclaimMessage("");
+      return;
+    }
+    setReclaimProgress({ done: 0, total: candidates.length });
+    void findReclaimDepths(
+      candidates,
+      (done, total) => {
+        if (runId === reclaimRunRef.current) setReclaimProgress({ done, total });
+      },
+      reclaimWindow,
+    ).then(({ depths, unavailable }) => {
+      if (runId !== reclaimRunRef.current) return;
+      for (const [key, depth] of depths) {
+        const prior = reclaimDepthsRef.current.get(key);
+        reclaimDepthsRef.current.set(key, {
+          sPierced: Math.max(prior?.sPierced ?? 0, depth.sPierced),
+          rPierced: Math.max(prior?.rPierced ?? 0, depth.rPierced),
+        });
+      }
+      setReclaimDepths(new Map(reclaimDepthsRef.current));
+      setReclaimReady(true);
+      setReclaimProgress(null);
+      setReclaimMessage(
+        unavailable > 0
+          ? `${unavailable} symbol${unavailable === 1 ? "" : "s"} skipped by RECLAIM because no usable 15m candles were returned for the current IST session.`
+          : "",
+      );
+    }).catch((cause: unknown) => {
+      if (runId !== reclaimRunRef.current) return;
+      setReclaimProgress(null);
+      setReclaimMessage(
+        cause instanceof Error
+          ? `RECLAIM preparation failed: ${cause.message}`
+          : "RECLAIM preparation failed.",
+      );
+    });
+    // Runs on scan completion and once per settled 15m window, not on
+    // live-price ticks (those are handled live by getReclaimStates).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, deltaStatus, reclaimWindow]);
+
   useEffect(() => {
     if (allResults.length > 0) setFiltered(allResults.filter((r) => passesPattern(r, activeSignal)));
     if (deltaAllResults.length > 0) setDeltaFiltered(deltaAllResults.filter((r) => passesPattern(r, activeSignal)));
@@ -1543,6 +1666,16 @@ export default function Screener({
       // MOMENTUM-B never includes symbols that are CONSOLIDATE-B.
       !previous15MTCIncludedSymbols.has(`${row.source}:${row.symbol}`),
   ).length;
+
+  // RECLAIM-S / RECLAIM-R — live state for a row (pierced depth from the
+  // per-window scan + current price/day range from the live-refreshed row).
+  // CoinDCX rows are never evaluated (no candle source).
+  const reclaimStatesFor = (row: CPRResultWithSource) =>
+    row.source === "coindcx"
+      ? { s: null, r: null }
+      : getReclaimStates(row, reclaimDepths.get(`${row.source}:${row.symbol}`));
+  const reclaimSCount = getActivePool().filter((row) => !!reclaimStatesFor(row).s?.qualifies).length;
+  const reclaimRCount = getActivePool().filter((row) => !!reclaimStatesFor(row).r?.qualifies).length;
 
   const handleUpexFilter = async () => {
     if (upexProgress) return;
@@ -1814,6 +1947,10 @@ export default function Screener({
         (previous15MMomentumIncludedSymbols.has(`${r.source}:${r.symbol}`) &&
           !previous15MTCIncludedSymbols.has(`${r.source}:${r.symbol}`))
     )
+    // RECLAIM-S / RECLAIM-R — live failed breakdown / breakout (independent of
+    // the previous-session Consolidate/Momentum filters, so they combine).
+    .filter((r) => !reclaimSFilter || !!reclaimStatesFor(r).s?.qualifies)
+    .filter((r) => !reclaimRFilter || !!reclaimStatesFor(r).r?.qualifies)
     // Active / Ready status filter (see getRowStatus).
     .filter((r) => {
       if (statusFilter === "all") return true;
@@ -1937,7 +2074,7 @@ export default function Screener({
   // Helper: is any sub-filter active (to decide the result count label)
   const anySubFilter =
     !!activeGenericSignal ||
-    !!PatternFilter || !!touchFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter || upexFilter || previousConsolidateAFilter || previousUpexFilter || previous15MTCFilter || previous15MMomentumFilter || statusFilter !== "all" || !!entryLevelFilter;
+    !!PatternFilter || !!touchFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter || upexFilter || previousConsolidateAFilter || previousUpexFilter || previous15MTCFilter || previous15MMomentumFilter || reclaimSFilter || reclaimRFilter || statusFilter !== "all" || !!entryLevelFilter;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -2790,6 +2927,57 @@ export default function Screener({
                     : "P-MOMENTUM-B…"}
               </button>
             </div>
+            {/* Live current-session failed-break flags. Independent of the
+                previous-session groups above (they combine with them), but
+                S and R exclude each other. Badge text "RECLAIM-S 2/3" =
+                3 support levels pierced, price back above 2 of them. */}
+            <span className="text-[10px] text-cyan-400/90 uppercase tracking-wider ml-2 mr-1 font-semibold">
+              Live session:
+            </span>
+            <div className="inline-flex items-stretch mr-1" role="group" aria-label="Reclaim filters">
+              <button
+                onClick={() => {
+                  if (!reclaimReady) return;
+                  const next = !reclaimSFilter;
+                  setReclaimSFilter(next);
+                  if (next) setReclaimRFilter(false);
+                }}
+                disabled={!reclaimReady || currentAllCount === 0 || activeTab === "coindcx"}
+                className={`text-xs px-2.5 py-1 rounded-l rounded-r-none border transition-colors disabled:opacity-50 ${
+                  reclaimSFilter
+                    ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
+                    : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
+                }`}
+                title="Failed breakdown: this session a completed 15m candle body broke below S1 (and possibly S2–S4), and price is now back above at least 2 of those pierced levels. Live — recalculated on every price tick; the pierced depth refreshes after each 15m candle closes. Binance and Delta only."
+              >
+                {reclaimProgress && !reclaimReady
+                  ? `RECLAIM-S ${reclaimProgress.done}/${reclaimProgress.total}`
+                  : reclaimReady
+                    ? `RECLAIM-S (${reclaimSCount})`
+                    : "RECLAIM-S…"}
+              </button>
+              <button
+                onClick={() => {
+                  if (!reclaimReady) return;
+                  const next = !reclaimRFilter;
+                  setReclaimRFilter(next);
+                  if (next) setReclaimSFilter(false);
+                }}
+                disabled={!reclaimReady || currentAllCount === 0 || activeTab === "coindcx"}
+                className={`text-xs px-2.5 py-1 rounded-r rounded-l-none -ml-px border transition-colors disabled:opacity-50 ${
+                  reclaimRFilter
+                    ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
+                    : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
+                }`}
+                title="Failed breakout: this session a completed 15m candle body broke above R1 (and possibly R2–R4), and price is now back below at least 2 of those pierced levels. Live — recalculated on every price tick; the pierced depth refreshes after each 15m candle closes. Binance and Delta only."
+              >
+                {reclaimProgress && !reclaimReady
+                  ? `RECLAIM-R ${reclaimProgress.done}/${reclaimProgress.total}`
+                  : reclaimReady
+                    ? `RECLAIM-R (${reclaimRCount})`
+                    : "RECLAIM-R…"}
+              </button>
+            </div>
           </div>
           )}
 
@@ -2823,12 +3011,13 @@ export default function Screener({
 
         )}
 
-        {(previousConsolidateAMessage || upexMessage || previous15MTCMessage || previous15MMomentumMessage) && currentStatus === "done" && (
+        {(previousConsolidateAMessage || upexMessage || previous15MTCMessage || previous15MMomentumMessage || reclaimMessage) && currentStatus === "done" && (
           <div className="flex flex-col gap-1 px-1 -mt-1 mb-2 text-[10px] text-amber-300" role="status">
             {previousConsolidateAMessage && <span>{previousConsolidateAMessage}</span>}
             {upexMessage && <span>{upexMessage}</span>}
             {previous15MTCMessage && <span>{previous15MTCMessage}</span>}
             {previous15MMomentumMessage && <span>{previous15MMomentumMessage}</span>}
+            {reclaimMessage && <span>{reclaimMessage}</span>}
           </div>
         )}
 
@@ -2961,6 +3150,7 @@ export default function Screener({
                     // missing over there.
                     const rowKey = `${r.source}-${r.symbol}-${utcTodayISO()}`;
                     const isExpanded = expandedSymbols.has(rowKey);
+                    const reclaim = reclaimStatesFor(r);
                     return (
                       <ScreenerTableRow
                         key={rowKey}
@@ -2983,6 +3173,8 @@ export default function Screener({
                           previous15MMomentumIncludedSymbols.has(`${r.source}:${r.symbol}`) &&
                           !previous15MTCIncludedSymbols.has(`${r.source}:${r.symbol}`)
                         }
+                        reclaimS={reclaim.s?.qualifies ? reclaim.s : null}
+                        reclaimR={reclaim.r?.qualifies ? reclaim.r : null}
                       />
                     );
                   })}
