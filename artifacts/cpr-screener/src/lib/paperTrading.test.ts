@@ -35,7 +35,7 @@ import {
   passesPrevious15MBFilter,
   loadPrevious15MBResults,
   loadPreviousUpexResults,
-  passesUpexFilter,
+  passesConsolidateAFilter,
   previousUpexCandidateCacheKey,
   previousUpexSessionStartUtcMs,
   savePreviousUpexResults,
@@ -234,15 +234,15 @@ test("15M-A uses the 05:30 IST day boundary and ignores candles outside complete
   });
 
   assert.equal(
-    passesUpexFilter([candle(start + 15 * 60_000, 99, 99.5)], 100, start, now),
+    passesConsolidateAFilter([candle(start + 15 * 60_000, 99, 99.5)], 100, start, now),
     false
   );
   assert.equal(
-    passesUpexFilter([candle(start + 30 * 60_000, 99, 101)], 100, start, now),
+    passesConsolidateAFilter([candle(start + 30 * 60_000, 99, 101)], 100, start, now),
     true
   );
   assert.equal(
-    passesUpexFilter(
+    passesConsolidateAFilter(
       [
         { ...candle(start, 101, 102), low: 95 },
         { ...candle(start + 15 * 60_000, 99, 98), low: 96 },
@@ -256,7 +256,7 @@ test("15M-A uses the 05:30 IST day boundary and ignores candles outside complete
   // Body (98..99) is below BC but its top sits exactly on the earlier wick low
   // of 99 -> the whole body is not under that wick -> passes.
   assert.equal(
-    passesUpexFilter(
+    passesConsolidateAFilter(
       [
         { ...candle(start, 101, 102), low: 99 },
         { ...candle(start + 15 * 60_000, 99, 98), low: 97 },
@@ -269,7 +269,7 @@ test("15M-A uses the 05:30 IST day boundary and ignores candles outside complete
   );
   // Whole body (97..98) is under the earlier wick low of 99 -> fresh low -> fails.
   assert.equal(
-    passesUpexFilter(
+    passesConsolidateAFilter(
       [
         { ...candle(start, 101, 102), low: 99 },
         { ...candle(start + 15 * 60_000, 98, 97), low: 96 },
@@ -281,11 +281,11 @@ test("15M-A uses the 05:30 IST day boundary and ignores candles outside complete
     false
   );
   assert.equal(
-    passesUpexFilter([candle(start - 15 * 60_000, 99, 99)], 100, start, now),
+    passesConsolidateAFilter([candle(start - 15 * 60_000, 99, 99)], 100, start, now),
     null
   );
   assert.equal(
-    passesUpexFilter([candle(now - 5 * 60_000, 99, 99)], 100, start, now),
+    passesConsolidateAFilter([candle(now - 5 * 60_000, 99, 99)], 100, start, now),
     null
   );
 });
@@ -318,19 +318,19 @@ test("PD15M>BC checks the previous IST session and passes candles that are not f
   });
 
   assert.equal(
-    passesUpexFilter([candle(start, 99, 99.5)], 100, start, end),
+    passesConsolidateAFilter([candle(start, 99, 99.5)], 100, start, end),
     false
   );
   assert.equal(
-    passesUpexFilter([candle(start + 15 * 60_000, 99, 100)], 100, start, end),
+    passesConsolidateAFilter([candle(start + 15 * 60_000, 99, 100)], 100, start, end),
     true
   );
   assert.equal(
-    passesUpexFilter([candle(start + 30 * 60_000, 101, 99)], 100, start, end),
+    passesConsolidateAFilter([candle(start + 30 * 60_000, 101, 99)], 100, start, end),
     true
   );
   assert.equal(
-    passesUpexFilter(
+    passesConsolidateAFilter(
       [
         { ...candle(start, 101, 102), low: 95 },
         { ...candle(start + 15 * 60_000, 99, 98), low: 96 },
@@ -343,7 +343,7 @@ test("PD15M>BC checks the previous IST session and passes candles that are not f
   );
   // Body top exactly on the earlier wick low of 99 -> not wholly under it -> passes.
   assert.equal(
-    passesUpexFilter(
+    passesConsolidateAFilter(
       [
         { ...candle(start, 101, 102), low: 99 },
         { ...candle(start + 15 * 60_000, 99, 98), low: 97 },
@@ -356,7 +356,7 @@ test("PD15M>BC checks the previous IST session and passes candles that are not f
   );
   // Whole body (97..98) under the earlier wick low of 99 -> fresh low -> fails.
   assert.equal(
-    passesUpexFilter(
+    passesConsolidateAFilter(
       [
         { ...candle(start, 101, 102), low: 99 },
         { ...candle(start + 15 * 60_000, 98, 97), low: 96 },
@@ -368,7 +368,7 @@ test("PD15M>BC checks the previous IST session and passes candles that are not f
     false
   );
   assert.equal(
-    passesUpexFilter([candle(end, 99, 99)], 100, start, end),
+    passesConsolidateAFilter([candle(end, 99, 99)], 100, start, end),
     null
   );
 });
@@ -612,7 +612,7 @@ test("CONSOLIDATE-A ceiling is the higher of previous PH and R1", () => {
   assert.equal(getPrevious15MACeiling({ prevHigh: 110, r1: 110 }), 110);
 });
 
-test("passesUpexFilter with ceiling fails when a candle body is above ceiling", () => {
+test("passesConsolidateAFilter with ceiling fails when a candle body is above ceiling", () => {
   const start = Date.parse("2026-10-06T00:00:00.000Z");
   const now = Date.parse("2026-10-06T06:00:00.000Z");
   const bc = 100;
@@ -628,19 +628,19 @@ test("passesUpexFilter with ceiling fails when a candle body is above ceiling", 
 
   // Candle body completely above ceiling (112, 114) fails
   assert.equal(
-    passesUpexFilter([makeCandle(start, 112, 114)], bc, start, now, ceiling),
+    passesConsolidateAFilter([makeCandle(start, 112, 114)], bc, start, now, ceiling),
     false
   );
 
   // Candle body within range (102, 105) with wick above ceiling passes
   assert.equal(
-    passesUpexFilter([{ ...makeCandle(start, 102, 105), high: 115 }], bc, start, now, ceiling),
+    passesConsolidateAFilter([{ ...makeCandle(start, 102, 105), high: 115 }], bc, start, now, ceiling),
     true
   );
 
   // Candle body exactly on ceiling (105, 110) passes
   assert.equal(
-    passesUpexFilter([makeCandle(start, 105, 110)], bc, start, now, ceiling),
+    passesConsolidateAFilter([makeCandle(start, 105, 110)], bc, start, now, ceiling),
     true
   );
 
@@ -650,7 +650,7 @@ test("passesUpexFilter with ceiling fails when a candle body is above ceiling", 
   // Earlier candle wicked up to 125; later body (112/114) is above the ceiling
   // but under that earlier high -> not a fresh high -> passes.
   assert.equal(
-    passesUpexFilter(
+    passesConsolidateAFilter(
       [{ ...makeCandle(start, 105, 106), high: 125 }, makeCandle(start + m, 112, 114)],
       bc, start, now, ceiling,
     ),
@@ -658,7 +658,7 @@ test("passesUpexFilter with ceiling fails when a candle body is above ceiling", 
   );
   // Later body (126/128) is above the earlier high of 125 -> fresh high -> fails.
   assert.equal(
-    passesUpexFilter(
+    passesConsolidateAFilter(
       [{ ...makeCandle(start, 105, 106), high: 125 }, makeCandle(start + m, 126, 128)],
       bc, start, now, ceiling,
     ),
@@ -667,7 +667,7 @@ test("passesUpexFilter with ceiling fails when a candle body is above ceiling", 
   // Whole-body rule: body (124/128) has its top over the earlier high of 125 but
   // its bottom is still under it -> not wholly above -> passes.
   assert.equal(
-    passesUpexFilter(
+    passesConsolidateAFilter(
       [{ ...makeCandle(start, 105, 106), high: 125 }, makeCandle(start + m, 124, 128)],
       bc, start, now, ceiling,
     ),
@@ -675,7 +675,7 @@ test("passesUpexFilter with ceiling fails when a candle body is above ceiling", 
   );
   // Body bottom exactly on the earlier high -> not above it -> passes.
   assert.equal(
-    passesUpexFilter(
+    passesConsolidateAFilter(
       [{ ...makeCandle(start, 105, 106), high: 125 }, makeCandle(start + m, 125, 128)],
       bc, start, now, ceiling,
     ),
@@ -683,7 +683,7 @@ test("passesUpexFilter with ceiling fails when a candle body is above ceiling", 
   );
 });
 
-test("passesUpexFilter BC rule needs the WHOLE body below the prior lowest wick", () => {
+test("passesConsolidateAFilter BC rule needs the WHOLE body below the prior lowest wick", () => {
   const start = Date.parse("2026-10-06T00:00:00.000Z");
   const now = Date.parse("2026-10-06T06:00:00.000Z");
   const m = 15 * 60_000;
@@ -694,19 +694,19 @@ test("passesUpexFilter BC rule needs the WHOLE body below the prior lowest wick"
   // Spike wick down to 90, body at/above BC.
   const c1 = c(0, 102, 103, 90, 101);
   // Body 96 -> 88: its bottom dips under the 90 wick but its top is still over it -> passes.
-  assert.equal(passesUpexFilter([c1, c(1, 96, 97, 87, 88)], bc, start, now), true);
+  assert.equal(passesConsolidateAFilter([c1, c(1, 96, 97, 87, 88)], bc, start, now), true);
   // Whole body (85..89) under the 90 wick -> fresh low -> fails.
-  assert.equal(passesUpexFilter([c1, c(1, 89, 90, 84, 85)], bc, start, now), false);
+  assert.equal(passesConsolidateAFilter([c1, c(1, 89, 90, 84, 85)], bc, start, now), false);
   // Body top exactly on the wick -> passes.
-  assert.equal(passesUpexFilter([c1, c(1, 90, 91, 84, 85)], bc, start, now), true);
+  assert.equal(passesConsolidateAFilter([c1, c(1, 90, 91, 84, 85)], bc, start, now), true);
   // The reference keeps rolling: after a candle with low 87, a body wholly
   // under 87 fails while one straddling it passes.
   assert.equal(
-    passesUpexFilter([c1, c(1, 96, 97, 87, 88), c(2, 90, 91, 86, 88)], bc, start, now),
+    passesConsolidateAFilter([c1, c(1, 96, 97, 87, 88), c(2, 90, 91, 86, 88)], bc, start, now),
     true,
   );
   assert.equal(
-    passesUpexFilter([c1, c(1, 96, 97, 87, 88), c(2, 86, 86.5, 83, 84)], bc, start, now),
+    passesConsolidateAFilter([c1, c(1, 96, 97, 87, 88), c(2, 86, 86.5, 83, 84)], bc, start, now),
     false,
   );
 });

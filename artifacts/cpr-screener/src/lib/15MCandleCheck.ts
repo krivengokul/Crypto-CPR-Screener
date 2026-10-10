@@ -167,7 +167,7 @@ export function previousUpexSessionStartUtcMs(now = Date.now()): number {
  *    pokes above it. The first candle has no earlier wick, so a full body above
  *    the ceiling (or below BC) on it fails.
  */
-export function passesUpexFilter(
+export function passesConsolidateAFilter(
   candles: OHLC[],
   bc: number,
   startTime: number,
@@ -366,7 +366,7 @@ function completedBelowTCCandles(
 }
 
 /**
- * CONSOLIDATE-B ("Below TC"), the mirror image of passesUpexFilter (MOMENTUM-A / BC):
+ * CONSOLIDATE-B ("Below TC"), the mirror image of passesConsolidateAFilter (MOMENTUM-A / BC):
  * walk the previous session's completed 15m candles in time order and fail as
  * soon as a candle's WHOLE body is above `tc` AND that whole body (its bottom
  * edge) is above the highest wick seen on any earlier candle (a fresh high
@@ -609,7 +609,7 @@ async function findSymbolsForSession(
     startTime: number,
     now: number,
     floor?: number
-  ) => boolean | null = passesUpexFilter,
+  ) => boolean | null = passesConsolidateAFilter,
 ): Promise<{
   included: Set<string>;
   unavailable: number;
@@ -670,7 +670,7 @@ export function findPreviousConsolidateASymbols(
     startTime,
     endTime,
     onProgress,
-    passesUpexFilter,
+    passesConsolidateAFilter,
   );
 }
 
@@ -1055,7 +1055,7 @@ export function findPreviousConsolidateAPass(
     startTime,
     endTime,
     undefined,
-    passesUpexFilter,
+    passesConsolidateAFilter,
   ).then(
     ({ included, unavailable }) => {
       if (unavailable > 0) {

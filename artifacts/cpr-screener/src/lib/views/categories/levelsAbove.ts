@@ -1475,7 +1475,7 @@ export const LEVELSABOVE_VIEWS: ViewDef[] = [
   { key: "E-A-AA-OB-EU2L3", label: "E-A-AA-OB-EU2L3", parentKey: "E-A-AA-OB", kind: "pattern", condition: (r) => r.EU2L3, order: 0 },
   // MOMENTUM-A (PD15M>BC) filter as a pattern: previous-session 15m candles never had a body
   // wholly below yesterday's BC that also made a fresh low (see
-  // passesUpexFilter). Views that depend on the filter nest under it.
+  // passesConsolidateAFilter). Views that depend on the filter nest under it.
   {
     key: "P15MABC",
     label: "Momentum-A",

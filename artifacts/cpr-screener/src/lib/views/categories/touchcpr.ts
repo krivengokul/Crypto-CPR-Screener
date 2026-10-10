@@ -2117,7 +2117,7 @@ export const OVERLAP_BELOW_TOUCH_VIEWS: ViewDef[] = [
 
   // --- OVB-P15MAboveBC ---
   // Mirror of OVB-P15MBelowTC on the BC side. Reuses the existing MOMENTUM-A (PD15M>BC)
-  // previous-session check (passesUpexFilter -> result.PD15MAboveBCPass, which
+  // previous-session check (passesConsolidateAFilter -> result.PD15MAboveBCPass, which
   // the live Screener and the backtest both populate): it fails as soon as a
   // completed 15m candle has its whole body below yesterday's BC AND that
   // whole body (its top) is under the lowest wick of every earlier candle (a
