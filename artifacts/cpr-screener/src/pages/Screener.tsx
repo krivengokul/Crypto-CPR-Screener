@@ -1630,30 +1630,34 @@ export default function Screener({
     return (showAll ? allResults : filtered).map((r) => ({ ...r, source: "binance" as const }));
   };
 
-  const previousConsolidateAIncludedCount = getActivePool().filter(
-    (row) =>
-      row.source !== "coindcx" &&
-      previousConsolidateAIncludedSymbols.has(`${row.source}:${row.symbol}`),
-  ).length;
+  // The four previous-session filters are one classification. If a symbol
+  // passes multiple independent checks, the first matching tab wins, so the
+  // counts, filter results, and badges all stay mutually exclusive.
+  const hasConsolidateA = (row: CPRResultWithSource) =>
+    previousConsolidateAIncludedSymbols.has(`${row.source}:${row.symbol}`);
+  const hasMomentumA = (row: CPRResultWithSource) =>
+    previousUpexIncludedSymbols.has(`${row.source}:${row.symbol}`) && !hasConsolidateA(row);
+  const hasConsolidateB = (row: CPRResultWithSource) =>
+    previous15MTCIncludedSymbols.has(`${row.source}:${row.symbol}`) &&
+    !hasConsolidateA(row) &&
+    !hasMomentumA(row);
+  const hasMomentumB = (row: CPRResultWithSource) =>
+    previous15MMomentumIncludedSymbols.has(`${row.source}:${row.symbol}`) &&
+    !hasConsolidateA(row) &&
+    !hasMomentumA(row) &&
+    !hasConsolidateB(row);
 
+  const previousConsolidateAIncludedCount = getActivePool().filter(
+    (row) => row.source !== "coindcx" && hasConsolidateA(row),
+  ).length;
   const previousUpexIncludedCount = getActivePool().filter(
-    (row) =>
-      row.source !== "coindcx" &&
-      previousUpexIncludedSymbols.has(`${row.source}:${row.symbol}`) &&
-      // MOMENTUM-A never includes symbols that are CONSOLIDATE-A.
-      !previousConsolidateAIncludedSymbols.has(`${row.source}:${row.symbol}`),
+    (row) => row.source !== "coindcx" && hasMomentumA(row),
   ).length;
   const previous15MTCIncludedCount = getActivePool().filter(
-    (row) =>
-      row.source !== "coindcx" &&
-      previous15MTCIncludedSymbols.has(`${row.source}:${row.symbol}`),
+    (row) => row.source !== "coindcx" && hasConsolidateB(row),
   ).length;
   const previous15MMomentumIncludedCount = getActivePool().filter(
-    (row) =>
-      row.source !== "coindcx" &&
-      previous15MMomentumIncludedSymbols.has(`${row.source}:${row.symbol}`) &&
-      // MOMENTUM-B never includes symbols that are CONSOLIDATE-B.
-      !previous15MTCIncludedSymbols.has(`${row.source}:${row.symbol}`),
+    (row) => row.source !== "coindcx" && hasMomentumB(row),
   ).length;
 
   // RECLAIM-S / RECLAIM-R — live state for a row (pierced depth from the
@@ -1913,28 +1917,22 @@ export default function Screener({
     .filter(
       (r) =>
         previousCandleFilter !== "consolidate-a" ||
-        r.source === "coindcx" ||
-        previousConsolidateAIncludedSymbols.has(`${r.source}:${r.symbol}`)
+        hasConsolidateA(r)
     )
     .filter(
       (r) =>
         previousCandleFilter !== "momentum-a" ||
-        r.source === "coindcx" ||
-        // MOMENTUM-A excludes CONSOLIDATE-A symbols.
-        (previousUpexIncludedSymbols.has(`${r.source}:${r.symbol}`) &&
-          !previousConsolidateAIncludedSymbols.has(`${r.source}:${r.symbol}`))
+        hasMomentumA(r)
     )
     .filter(
       (r) =>
         previousCandleFilter !== "consolidate-b" ||
-        previous15MTCIncludedSymbols.has(`${r.source}:${r.symbol}`)
+        hasConsolidateB(r)
     )
     .filter(
       (r) =>
         previousCandleFilter !== "momentum-b" ||
-        // MOMENTUM-B excludes CONSOLIDATE-B symbols.
-        (previous15MMomentumIncludedSymbols.has(`${r.source}:${r.symbol}`) &&
-          !previous15MTCIncludedSymbols.has(`${r.source}:${r.symbol}`))
+        hasMomentumB(r)
     )
     // RECLAIM-S / RECLAIM-R — live failed breakdown / breakout (independent of
     // the previous-session Consolidate/Momentum filters, so they combine).
@@ -3146,16 +3144,10 @@ export default function Screener({
                         activeSignal={activeSectionKey}
                         viewName={activeSignalName}
                         levelCheckConditions={activeSignalLevelCheckDefs}
-                        isConsolidateA={previousConsolidateAIncludedSymbols.has(`${r.source}:${r.symbol}`)}
-                        isConsolidateB={previous15MTCIncludedSymbols.has(`${r.source}:${r.symbol}`)}
-                        isMomentumA={
-                          previousUpexIncludedSymbols.has(`${r.source}:${r.symbol}`) &&
-                          !previousConsolidateAIncludedSymbols.has(`${r.source}:${r.symbol}`)
-                        }
-                        isMomentumB={
-                          previous15MMomentumIncludedSymbols.has(`${r.source}:${r.symbol}`) &&
-                          !previous15MTCIncludedSymbols.has(`${r.source}:${r.symbol}`)
-                        }
+                        isConsolidateA={hasConsolidateA(r)}
+                        isMomentumA={hasMomentumA(r)}
+                        isConsolidateB={hasConsolidateB(r)}
+                        isMomentumB={hasMomentumB(r)}
                         reclaimS={reclaim.s?.qualifies ? reclaim.s : null}
                         reclaimR={reclaim.r?.qualifies ? reclaim.r : null}
                       />

@@ -828,11 +828,11 @@ export interface ScreenerTableRowProps {
   levelCheckConditions?: LevelCheckCondition[];
   /** True when the Screener's P-CONSOLIDATE-A check passed for this row (held in Screener state, not on the row data). */
   isConsolidateA?: boolean;
-  /** True when the Screener's P-CONSOLIDATE-B check passed for this row (held in Screener state, not on the row data). */
+  /** True when this row is assigned to the exclusive P-CONSOLIDATE-B class (held in Screener state, not on the row data). */
   isConsolidateB?: boolean;
   /** True when the Screener's P-MOMENTUM-A check passed for this row and it is not CONSOLIDATE-A (momentum excludes consolidate, as in the filters). */
   isMomentumA?: boolean;
-  /** True when the Screener's P-MOMENTUM-B check passed for this row and it is not CONSOLIDATE-B. */
+  /** True when this row is assigned to the exclusive P-MOMENTUM-B class (after earlier classes are excluded). */
   isMomentumB?: boolean;
   /** Live RECLAIM-S state (failed breakdown this session) — only passed when it qualifies, else null/undefined. */
   reclaimS?: ReclaimSideState | null;
@@ -890,12 +890,12 @@ export default function ScreenerTableRow({
   reclaimR,
 }: ScreenerTableRowProps) {
   const activePattern = rawActivePattern ?? activeSignal ?? "";
-  // Previous-session 15m badges. MOMENTUM never shows alongside the matching
-  // CONSOLIDATE badge (same rule as the filter buttons and the CON/MOM categories).
-  const showConsolidateA = isConsolidateA || r.PD15MConsolidateAPass === true;
-  const showConsolidateB = isConsolidateB || r.PD15MBelowTCPass === true;
-  const showMomentumA = !showConsolidateA && (isMomentumA || r.PD15MAboveBCPass === true);
-  const showMomentumB = !showConsolidateB && (isMomentumB || r.PD15MMomentumBPass === true);
+  // When supplied, the Screener props are the complete mutually exclusive
+  // classification. Fall back to row flags only for callers without props.
+  const showConsolidateA = isConsolidateA ?? r.PD15MConsolidateAPass === true;
+  const showConsolidateB = isConsolidateB ?? r.PD15MBelowTCPass === true;
+  const showMomentumA = (isMomentumA ?? r.PD15MAboveBCPass === true) && !showConsolidateA;
+  const showMomentumB = (isMomentumB ?? r.PD15MMomentumBPass === true) && !showConsolidateB;
   // Hoisted so the same up/down call drives both the per-row dot in the
   // Symbol column AND the new "Levels VIEW" name badge below — one row
   // shouldn't ever show a green dot next to a red badge.
