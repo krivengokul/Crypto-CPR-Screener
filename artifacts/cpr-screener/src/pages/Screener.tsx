@@ -466,11 +466,8 @@ export default function Screener({
     upexRunRef.current += 1;
     setUpexFilter(false);
     setUpexIncludedSymbols(new Set());
-    setPreviousConsolidateAFilter(false);
+    setPreviousCandleFilter("all");
     setPreviousConsolidateAMessage("");
-    setPreviousUpexFilter(false);
-    setPrevious15MTCFilter(false);
-    setPrevious15MMomentumFilter(false);
     setUpexProgress(null);
     setUpexMessage("");
     setPrevious15MTCMessage("");
@@ -577,7 +574,7 @@ export default function Screener({
     }
 
     const runId = ++previousConsolidateARunRef.current;
-    setPreviousConsolidateAFilter(false);
+    setPreviousCandleFilter((filter) => filter === "consolidate-a" ? "all" : filter);
     setPreviousConsolidateAReady(false);
     setPreviousConsolidateAProgress({ done: 0, total: missing.length });
     void findPreviousConsolidateASymbols(
@@ -713,7 +710,7 @@ export default function Screener({
     }
 
     const runId = ++previousUpexRunRef.current;
-    setPreviousUpexFilter(false);
+    setPreviousCandleFilter((filter) => filter === "momentum-a" ? "all" : filter);
     setPreviousUpexReady(false);
     setPreviousUpexProgress({ done: 0, total: missing.length });
     void findPreviousUpexSymbols(
@@ -866,7 +863,7 @@ export default function Screener({
     }
 
     const runId = ++previous15MTCRunRef.current;
-    setPrevious15MTCFilter(false);
+    setPreviousCandleFilter((filter) => filter === "consolidate-b" ? "all" : filter);
     setPrevious15MTCReady(false);
     setPrevious15MTCProgress({ done: 0, total: missing.length });
     void findPD15MBelowTCSymbols(
@@ -984,7 +981,7 @@ export default function Screener({
     }
 
     const runId = ++previous15MMomentumRunRef.current;
-    setPrevious15MMomentumFilter(false);
+    setPreviousCandleFilter((filter) => filter === "momentum-b" ? "all" : filter);
     setPrevious15MMomentumReady(false);
     setPrevious15MMomentumProgress({ done: 0, total: missing.length });
     void findPD15MMomentumBelowSymbols(
@@ -1084,11 +1081,8 @@ export default function Screener({
     previous15MMomentumRunRef.current += 1;
     setUpexFilter(false);
     setUpexIncludedSymbols(new Set());
-    setPreviousConsolidateAFilter(false);
+    setPreviousCandleFilter("all");
     setPreviousConsolidateAMessage("");
-    setPreviousUpexFilter(false);
-    setPrevious15MTCFilter(false);
-    setPrevious15MMomentumFilter(false);
     setPreviousUpexProgress(null);
     setPreviousUpexReady(false);
     setPrevious15MTCProgress(null);
@@ -1148,11 +1142,8 @@ export default function Screener({
     previous15MMomentumRunRef.current += 1;
     setUpexFilter(false);
     setUpexIncludedSymbols(new Set());
-    setPreviousConsolidateAFilter(false);
+    setPreviousCandleFilter("all");
     setPreviousConsolidateAMessage("");
-    setPreviousUpexFilter(false);
-    setPrevious15MTCFilter(false);
-    setPrevious15MMomentumFilter(false);
     setPreviousUpexProgress(null);
     setPreviousUpexReady(false);
     setPrevious15MTCProgress(null);
@@ -1203,11 +1194,8 @@ export default function Screener({
     upexRunRef.current += 1;
     setUpexFilter(false);
     setUpexIncludedSymbols(new Set());
-    setPreviousConsolidateAFilter(false);
+    setPreviousCandleFilter("all");
     setPreviousConsolidateAMessage("");
-    setPreviousUpexFilter(false);
-    setPrevious15MTCFilter(false);
-    setPrevious15MMomentumFilter(false);
     setUpexProgress(null);
     setUpexMessage("");
     setPrevious15MTCMessage("");
