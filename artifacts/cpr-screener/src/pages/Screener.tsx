@@ -2931,7 +2931,10 @@ export default function Screener({
                 previous-session groups above (they combine with them), but
                 S and R exclude each other. Badge text "RECLAIM-S 2/3" =
                 3 support levels pierced, price back above 2 of them. */}
-            <span className="text-[10px] text-cyan-400/90 uppercase tracking-wider ml-2 mr-1 font-semibold">
+            {/* Forces the Live session group onto its own line below the
+                Momentum filters (the parent row is flex-wrap). */}
+            <div className="basis-full h-0" aria-hidden="true" />
+            <span className="text-[10px] text-cyan-400/90 uppercase tracking-wider mr-1 font-semibold">
               Live session:
             </span>
             <div className="inline-flex items-stretch mr-1" role="group" aria-label="Reclaim filters">
