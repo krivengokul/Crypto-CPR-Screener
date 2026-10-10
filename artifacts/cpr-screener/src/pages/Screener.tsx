@@ -1577,7 +1577,11 @@ export default function Screener({
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    else { setSortKey(key); setSortDir("asc"); }
+    else {
+      setSortKey(key);
+      // MATCH, MOVE and Price open highest-first (desc) on the first click.
+      setSortDir(key === "ladderCheck" || key === "priceVsCpr" || key === "change24h" ? "desc" : "asc");
+    }
   };
 
   // Which source's progress the scanning status bar should reflect: the one
