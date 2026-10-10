@@ -281,6 +281,12 @@ test("PD15M>BC checks the previous IST session and passes candles that are not f
   assert.equal(start, Date.parse("2026-10-02T00:00:00.000Z"));
   assert.equal(end, Date.parse("2026-10-03T00:00:00.000Z"));
 
+  // Between 00:00 and 05:30 IST (e.g. 02:00 AM IST on Oct 10 = 20:30 UTC on Oct 9),
+  // session start must stay on Oct 9 00:00 UTC (not jump to the future Oct 10 00:00 UTC).
+  const earlyMorningIst = Date.parse("2026-10-09T20:30:00.000Z");
+  assert.equal(upexSessionStartUtcMs(earlyMorningIst), Date.parse("2026-10-09T00:00:00.000Z"));
+  assert.equal(previousUpexSessionStartUtcMs(earlyMorningIst), Date.parse("2026-10-08T00:00:00.000Z"));
+
   const candle = (openTime: number, open: number, close: number): OHLC => ({
     openTime,
     open,

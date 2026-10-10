@@ -5,6 +5,7 @@ type FifteenMinuteSource = "binance" | "delta";
 
 const DELTA_BASE = "https://api.india.delta.exchange/v2";
 const CANDLE_INTERVAL_MS = 15 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_CONCURRENT_REQUESTS = 8;
 const PREVIOUS_UPEX_CACHE_KEY = "cpr_previous_upex_results_v1";
 const PREVIOUS_15M_B_CACHE_KEY = "cpr_previous_15m_b_results_v3";
@@ -138,13 +139,17 @@ export function getUpexBc(
   return overlapsAboveToday ? previousBc : todayBc;
 }
 
+/**
+ * Start (UTC ms) of the trading session containing `now`: the most recent
+ * 00:00 UTC (= 05:30 IST), i.e. the same daily candle boundary the CPR levels
+ * are built on.
+ */
 export function upexSessionStartUtcMs(now = Date.now()): number {
-  const istNow = new Date(now + 330 * 60 * 1000);
-  return Date.UTC(istNow.getUTCFullYear(), istNow.getUTCMonth(), istNow.getUTCDate());
+  return Math.floor(now / DAY_MS) * DAY_MS;
 }
 
 export function previousUpexSessionStartUtcMs(now = Date.now()): number {
-  return upexSessionStartUtcMs(now) - 24 * 60 * 60 * 1000;
+  return upexSessionStartUtcMs(now) - DAY_MS;
 }
 
 /**
@@ -1186,16 +1191,13 @@ export const RECLAIM_BREAK_MODE: ReclaimBreakMode = "body";
 /** Minimum number of pierced levels price must be back inside for the badge / filter. */
 export const RECLAIM_MIN_RECROSSED = 2;
 
-const DAY_MS = 24 * 60 * 60 * 1000;
 /** Wait this long after a 15m boundary before treating the new window as settled. */
 const RECLAIM_SETTLE_MS = 5_000;
 
 /**
  * Start (UTC ms) of the trading session containing `now`: the most recent
  * 00:00 UTC (= 05:30 IST), i.e. the same daily candle boundary the CPR levels
- * are built on. NOTE: this is deliberately NOT upexSessionStartUtcMs(), which
- * is keyed to the IST calendar date and therefore points at a FUTURE 05:30 IST
- * between 00:00 and 05:30 IST.
+ * are built on (same as upexSessionStartUtcMs).
  */
 export function currentSessionStartUtcMs(now = Date.now()): number {
   return Math.floor(now / DAY_MS) * DAY_MS;
