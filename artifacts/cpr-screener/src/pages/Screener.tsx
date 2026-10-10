@@ -2819,7 +2819,7 @@ export default function Screener({
             <span className="text-[10px] text-cyan-400/90 uppercase tracking-wider mr-1 font-semibold">
               Previous session candle:
             </span>
-            <div className="inline-flex items-stretch mr-1" role="group" aria-label="Consolidate filters">
+            <div className="inline-flex items-stretch mr-1" role="group" aria-label="A filters">
               <button
                 onClick={() => {
                   if (!previousConsolidateAReady) return;
@@ -2848,34 +2848,6 @@ export default function Screener({
               </button>
               <button
                 onClick={() => {
-                  if (!previous15MTCReady) return;
-                  const next = !previous15MTCFilter;
-                  setPrevious15MTCFilter(next);
-                  setPrevious15MTCMessage("");
-                  if (next) {
-                    setPreviousConsolidateAFilter(false);
-                    setPreviousUpexFilter(false);
-                    setPrevious15MMomentumFilter(false);
-                  }
-                }}
-                disabled={!previous15MTCReady || currentAllCount === 0 || activeTab === "coindcx"}
-                className={`text-xs px-2.5 py-1 rounded-r rounded-l-none -ml-px border transition-colors disabled:opacity-50 ${
-                  previous15MTCFilter
-                    ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
-                    : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
-                }`}
-                title="Include Binance and Delta symbols unless a completed previous-session 15-minute candle (a) has its whole body above previous day's TC while making a new high versus earlier candles, or (b) has its whole body below the lower of previous day's PL and S1. Unevaluated sources such as CoinDCX are excluded while active."
-              >
-                {previous15MTCProgress
-                  ? `P-CONSOLIDATE-B ${previous15MTCProgress.done}/${previous15MTCProgress.total}`
-                  : previous15MTCReady
-                    ? `P-CONSOLIDATE-B (${previous15MTCIncludedCount})`
-                    : "P-CONSOLIDATE-B…"}
-              </button>
-            </div>
-            <div className="inline-flex items-stretch mr-1" role="group" aria-label="Momentum filters">
-              <button
-                onClick={() => {
                   if (!previousUpexReady) return;
                   const next = !previousUpexFilter;
                   setPreviousUpexFilter(next);
@@ -2887,7 +2859,7 @@ export default function Screener({
                   }
                 }}
                 disabled={!previousUpexReady || currentAllCount === 0 || activeTab === "coindcx"}
-                className={`text-xs px-2.5 py-1 rounded-l rounded-r-none border transition-colors disabled:opacity-50 ${
+                className={`text-xs px-2.5 py-1 rounded-r rounded-l-none -ml-px border transition-colors disabled:opacity-50 ${
                   previousUpexFilter
                     ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
                     : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
@@ -2899,6 +2871,34 @@ export default function Screener({
                   : previousUpexReady
                     ? `P-MOMENTUM-A (${previousUpexIncludedCount})`
                     : "P-MOMENTUM-A…"}
+              </button>
+            </div>
+            <div className="inline-flex items-stretch mr-1" role="group" aria-label="B filters">
+              <button
+                onClick={() => {
+                  if (!previous15MTCReady) return;
+                  const next = !previous15MTCFilter;
+                  setPrevious15MTCFilter(next);
+                  setPrevious15MTCMessage("");
+                  if (next) {
+                    setPreviousConsolidateAFilter(false);
+                    setPreviousUpexFilter(false);
+                    setPrevious15MMomentumFilter(false);
+                  }
+                }}
+                disabled={!previous15MTCReady || currentAllCount === 0 || activeTab === "coindcx"}
+                className={`text-xs px-2.5 py-1 rounded-l rounded-r-none border transition-colors disabled:opacity-50 ${
+                  previous15MTCFilter
+                    ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
+                    : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
+                }`}
+                title="Include Binance and Delta symbols unless a completed previous-session 15-minute candle (a) has its whole body above previous day's TC while making a new high versus earlier candles, or (b) has its whole body below the lower of previous day's PL and S1. Unevaluated sources such as CoinDCX are excluded while active."
+              >
+                {previous15MTCProgress
+                  ? `P-CONSOLIDATE-B ${previous15MTCProgress.done}/${previous15MTCProgress.total}`
+                  : previous15MTCReady
+                    ? `P-CONSOLIDATE-B (${previous15MTCIncludedCount})`
+                    : "P-CONSOLIDATE-B…"}
               </button>
               <button
                 onClick={() => {
