@@ -63,3 +63,93 @@ export const ALL_GAP_BADGES: string[] = (() => {
 export function matchesGapBadge(r: CPRResult, badge: string): boolean {
   return computeGapBadge(r) === badge;
 }
+
+import {
+  ALL_CANDLE_CHECKS,
+  type CandleCheckCode,
+  CANDLE_CHECK_OPTIONS,
+  matchesCandleCheck,
+  candleCheckToCategoryKey,
+} from "./candleChecks.ts";
+
+export {
+  ALL_CANDLE_CHECKS,
+  type CandleCheckCode,
+  CANDLE_CHECK_OPTIONS,
+  matchesCandleCheck,
+  candleCheckToCategoryKey,
+};
+
+export const ENTRY_OPTIONS = [
+  "R4",
+  "R3",
+  "R2",
+  "R1",
+  "PH",
+  "TC",
+  "Pivot",
+  "BC",
+  "PL",
+  "S1",
+  "S2",
+  "S3",
+  "S4",
+];
+
+export const TARGET_OPTIONS = [
+  "PH",
+  "R1",
+  "R2",
+  "R3",
+  "R4",
+  "PL",
+  "S1",
+  "S2",
+  "S3",
+  "S4",
+];
+
+export function parseComposedViewKey(
+  key: string
+): { patternKey: string; entry?: string; target?: string; gapBadge?: string; candleCheck?: string } {
+  let rest = key;
+
+  let entry: string | undefined;
+  for (const opt of ENTRY_OPTIONS) {
+    if (rest.startsWith(`${opt}-`)) {
+      entry = opt;
+      rest = rest.slice(opt.length + 1);
+      break;
+    }
+  }
+
+  let candleCheck: string | undefined;
+  for (const code of ALL_CANDLE_CHECKS) {
+    if (rest === code || rest.startsWith(`${code}-`)) {
+      candleCheck = code;
+      rest = rest === code ? "" : rest.slice(code.length + 1);
+      break;
+    }
+  }
+
+  let target: string | undefined;
+  for (const opt of TARGET_OPTIONS) {
+    if (rest.endsWith(`-${opt}`)) {
+      target = opt;
+      rest = rest.slice(0, -(opt.length + 1));
+      break;
+    }
+  }
+
+  let gapBadge: string | undefined;
+  for (const badge of ALL_GAP_BADGES) {
+    if (rest.endsWith(`-${badge}`)) {
+      gapBadge = badge;
+      rest = rest.slice(0, -(badge.length + 1));
+      break;
+    }
+  }
+
+  return { patternKey: rest, entry, target, gapBadge, candleCheck };
+}
+

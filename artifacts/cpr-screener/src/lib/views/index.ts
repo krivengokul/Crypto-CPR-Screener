@@ -62,6 +62,7 @@ for (const v of VIEWS) {
 // Re-export everything for backward compatibility
 export * from "./types";
 export * from "./gapBadges";
+export * from "./candleChecks";
 export * from "./registry";
 export * from "./categories/categories";
 export * from "./categories/compound";

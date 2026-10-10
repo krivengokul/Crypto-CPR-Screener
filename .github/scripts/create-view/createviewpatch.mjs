@@ -177,6 +177,7 @@ const levelCheckDefsB64 = process.env.LEVEL_CHECK_DEFS_B64;
 const attachKey = process.env.ATTACH_KEY && process.env.ATTACH_KEY.trim() !== "" ? process.env.ATTACH_KEY : patternKey;
 const direction = normalizeDirection(process.env.DIRECTION) ?? "Up";
 const target = process.env.TARGET && process.env.TARGET.trim() !== "" ? process.env.TARGET.trim() : direction === "Up" ? "R4" : "S4";
+const candleCheck = process.env.CANDLE_CHECK && process.env.CANDLE_CHECK.trim() !== "" ? process.env.CANDLE_CHECK.trim() : undefined;
 const gapBadge = process.env.GAP_BADGE && process.env.GAP_BADGE.trim() !== "" ? process.env.GAP_BADGE.trim() : undefined;
 const entry = process.env.ENTRY && process.env.ENTRY.trim() !== "" ? process.env.ENTRY.trim() : direction === "Up" ? "TC" : "BC";
 const viewsFilePath = process.env.VIEWS_FILE_PATH ?? process.env.BACKTEST_FILE_PATH ?? "artifacts/cpr-screener/src/lib/views.ts";
@@ -259,16 +260,23 @@ const entryText = `entryLabel: "${entryDef.label}",\n    getEntry: (r) => r.toda
   direction === "Up" ? "S1 (today's S1)" : "R1 (today's R1)"
 }",\n    getStoploss: (r) => r.todayCPR.${direction === "Up" ? "s1" : "r1"},`;
 
-const conditionText = gapBadge
-  ? `condition: (r) => passesView(r, "${escapeForDoubleQuotedString(patternKey)}") && matchesGapBadge(r, "${escapeForDoubleQuotedString(gapBadge)}"),
-    standalone: true,`
-  : `conditionKey: "${escapeForDoubleQuotedString(patternKey)}",`;
+let conditionText;
+if (gapBadge || candleCheck) {
+  const parts = [`passesView(r, "${escapeForDoubleQuotedString(patternKey)}")`];
+  if (gapBadge) parts.push(`matchesGapBadge(r, "${escapeForDoubleQuotedString(gapBadge)}")`);
+  if (candleCheck) parts.push(`matchesCandleCheck(r, "${escapeForDoubleQuotedString(candleCheck)}")`);
+  conditionText = `condition: (r) => ${parts.join(" && ")},\n    standalone: true,`;
+} else {
+  conditionText = `conditionKey: "${escapeForDoubleQuotedString(patternKey)}",`;
+}
+
+const candleCheckProperty = candleCheck ? `\n    candleCheck: "${escapeForDoubleQuotedString(candleCheck)}",` : "";
 
 const newViewLiteral = `{
     key: "${escapeForDoubleQuotedString(newKey)}",
     label: "${escapeForDoubleQuotedString(newLabel)}",
     parentKey: "${escapeForDoubleQuotedString(effectiveAttachKey)}",
-    ${conditionText}
+    ${conditionText}${candleCheckProperty}
     kind: "view",
     direction: "${direction}",
     targetLabel: "${targetDef.label}",
@@ -297,6 +305,22 @@ if (isModular) {
   targetFile = project.getSourceFiles()[0];
   targetArrayDecl = targetFile.getVariableDeclarationOrThrow(arrName);
   targetArray = targetArrayDecl.getInitializerIfKindOrThrow(SyntaxKind.ArrayLiteralExpression);
+}
+
+if (candleCheck) {
+  const gapImport = targetFile.getImportDeclaration((decl) =>
+    decl.getModuleSpecifierValue().includes("gapBadges") || decl.getModuleSpecifierValue().includes("candleChecks")
+  );
+  if (gapImport) {
+    if (!gapImport.getNamedImports().some((ni) => ni.getName() === "matchesCandleCheck")) {
+      gapImport.addNamedImport("matchesCandleCheck");
+    }
+  } else {
+    targetFile.addImportDeclaration({
+      moduleSpecifier: "../gapBadges",
+      namedImports: ["matchesCandleCheck"],
+    });
+  }
 }
 
 targetArray.addElement(newViewLiteral);

@@ -24,6 +24,7 @@ export interface ViewDef {
   parentKey?: string;
   kind: "category" | "pattern" | "view";
   standalone?: boolean;
+  candleCheck?: string;
   condition?: (r: CPRResult) => boolean;
   conditionKey?: string;
   direction?: "Up" | "Down";

@@ -45,6 +45,12 @@ import {
   VIEWS,
   ALL_GAP_BADGES,
   computeGapBadge,
+  ALL_CANDLE_CHECKS,
+  CANDLE_CHECK_OPTIONS,
+  matchesCandleCheck,
+  parseComposedViewKey,
+  ENTRY_OPTIONS,
+  TARGET_OPTIONS,
   type ViewTreeNode,
   type ViewDef,
   shortLevelLabel,
@@ -543,13 +549,6 @@ function AttachPointSelect({
   );
 }
 
-const ENTRY_OPTIONS = ["R4", "R3", "R2", "R1", "PH", "TC", "Pivot", "BC", "PL", "S1", "S2", "S3", "S4"];
-
-/** Every valid Target rung — union of BULLISH_TARGETS/BEARISH_TARGETS keys
- * on the workflow-patch side (copyviewpatch.mjs), used here only to parse
- * an existing View's key back into its parts (see parseComposedViewKey). */
-const TARGET_OPTIONS = ["PH", "R1", "R2", "R3", "R4", "PL", "S1", "S2", "S3", "S4"];
-
 /** Target dropdown choices per direction (PH / PL = previous day's high / low). */
 const UP_TARGETS = ["PH", "R1", "R2", "R3", "R4"];
 const DOWN_TARGETS = ["PL", "S1", "S2", "S3", "S4"];
@@ -561,64 +560,6 @@ function targetFromLabel(label: string | undefined, direction: "Up" | "Down" | u
   const m = label?.match(/[RLS]\d/)?.[0];
   if (m) return m.startsWith("L") ? m.replace("L", "S") : m;
   return direction === "Down" ? "S4" : "R4";
-}
-
-/**
- * "Create" View's key is fully derived (never typed) as
- * "{Entry}-{Pattern/Subpattern key}[-{Gap Badge}]-{Target}" — see
- * CreateViewControl's own `viewKey` below. This walks that same
- * composition back apart for an *existing* View: strip a known Entry
- * off the front, a known Target off the back, then a known Gap Badge
- * off whatever's left, in that order (the only order consistent with
- * how the pieces were joined).
- *
- * EditViewControl uses only the `gapBadge` result of this, to preselect
- * its Gap Badge dropdown to whatever this View's key already seems to
- * encode instead of always resetting to "Any Gap Badge" — there's no
- * field on ViewDef that stores a Gap Badge filter directly (it only
- * lives baked into the View's `condition` closure), so this string-match
- * is the only way to guess it, and a miss just leaves the dropdown at
- * "Any Gap Badge". The `patternKey` this returns is deliberately NOT
- * used for the View Key field itself — a hand-created or otherwise
- * non-hyphenated key (e.g. one using ":" instead of "-") won't parse
- * cleanly here, and EditViewControl instead reads `conditionKey` off the
- * ViewDef directly (see its own `patternKey` — the same value
- * editBacktestView itself uses), which needs no parsing and never
- * misses.
- */
-function parseComposedViewKey(
-  key: string
-): { patternKey: string; entry?: string; target?: string; gapBadge?: string } {
-  let rest = key;
-
-  let entry: string | undefined;
-  for (const opt of ENTRY_OPTIONS) {
-    if (rest.startsWith(`${opt}-`)) {
-      entry = opt;
-      rest = rest.slice(opt.length + 1);
-      break;
-    }
-  }
-
-  let target: string | undefined;
-  for (const opt of TARGET_OPTIONS) {
-    if (rest.endsWith(`-${opt}`)) {
-      target = opt;
-      rest = rest.slice(0, -(opt.length + 1));
-      break;
-    }
-  }
-
-  let gapBadge: string | undefined;
-  for (const badge of ALL_GAP_BADGES) {
-    if (rest.endsWith(`-${badge}`)) {
-      gapBadge = badge;
-      rest = rest.slice(0, -(badge.length + 1));
-      break;
-    }
-  }
-
-  return { patternKey: rest, entry, target, gapBadge };
 }
 
 /**
@@ -671,8 +612,10 @@ function CopyViewControl({
     const raw = sourceView?.entryLabel?.split(" ")[0];
     return ENTRY_OPTIONS.includes(raw ?? "") ? raw! : initialDirection === "Down" ? "BC" : "TC";
   })();
+  const parsedKey = parseComposedViewKey(sourceKey);
   const initialTarget = targetFromLabel(sourceView?.targetLabel, initialDirection);
-  const initialGapBadge = parseComposedViewKey(sourceKey).gapBadge ?? "";
+  const initialGapBadge = parsedKey.gapBadge ?? "";
+  const initialCandleCheck = sourceView?.candleCheck ?? parsedKey.candleCheck ?? "";
 
   const [open, setOpen] = useState(initialOpen);
   const [direction, setDirection] = useState<"Up" | "Down">(initialDirection);
@@ -682,6 +625,7 @@ function CopyViewControl({
   const [attachKey, setAttachKey] = useState(
     () => sourceView?.parentKey ?? findContainingNodeKey(sourceKey) ?? sourceKey
   );
+  const [candleCheck, setCandleCheck] = useState(initialCandleCheck);
   const [gapBadge, setGapBadge] = useState(initialGapBadge);
   const [error, setError] = useState("");
   const [command, setCommand] = useState<string | null>(null);
@@ -694,8 +638,9 @@ function CopyViewControl({
   // choose the copied View's recipe and where it is attached.
   const viewKey = useMemo(() => {
     const trimmedGapBadge = gapBadge.trim();
-    return [entry, attachKey, trimmedGapBadge || undefined, target].filter(Boolean).join("-");
-  }, [entry, attachKey, gapBadge, target]);
+    const trimmedCandleCheck = candleCheck.trim();
+    return [entry, trimmedCandleCheck || undefined, attachKey, trimmedGapBadge || undefined, target].filter(Boolean).join("-");
+  }, [entry, candleCheck, attachKey, gapBadge, target]);
 
   function openForm() {
     setDirection(initialDirection);
@@ -703,6 +648,7 @@ function CopyViewControl({
     setTarget(initialTarget);
     setLabel(sourceLabel);
     setAttachKey(sourceView?.parentKey ?? findContainingNodeKey(sourceKey) ?? sourceKey);
+    setCandleCheck(initialCandleCheck);
     setGapBadge(initialGapBadge);
     setError("");
     setCommand(null);
@@ -715,6 +661,7 @@ function CopyViewControl({
   function confirm() {
     const trimmedLabel = label.trim() || viewKey;
     const trimmedGapBadge = gapBadge.trim();
+    const trimmedCandleCheck = candleCheck.trim();
     const q = (s: string) => '"' + s.replace(/"/g, "") + '"';
 
     let derived: LevelCheckCondition[];
@@ -753,7 +700,8 @@ function CopyViewControl({
         entry,
         attachKey,
         trimmedGapBadge,
-        derived
+        derived,
+        trimmedCandleCheck
       );
       if (!adjusted.ok) {
         setError("Couldn't apply the selected Copy View settings.");
@@ -771,6 +719,7 @@ function CopyViewControl({
         "-f entry=" + q(entry),
         "-f target=" + q(target),
         "-f attachKey=" + q(attachKey),
+        ...(trimmedCandleCheck ? ["-f candleCheck=" + q(trimmedCandleCheck)] : []),
         ...(trimmedGapBadge ? ["-f gapBadge=" + q(trimmedGapBadge)] : []),
         "-f levelCheckDefs=" + btoa(
           Array.from(new TextEncoder().encode(JSON.stringify(derived)), (b) => String.fromCharCode(b)).join("")
@@ -865,6 +814,19 @@ function CopyViewControl({
         className="w-full bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
       />
       <AttachPointSelect value={attachKey} onChange={setAttachKey} disabled={!!command} />
+      <select
+        value={candleCheck}
+        onChange={(e) => setCandleCheck(e.target.value)}
+        disabled={!!command}
+        title="Optionally require this 15-minute candle check in the copied View."
+        className="w-full bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+      >
+        {CANDLE_CHECK_OPTIONS.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
       <select
         value={gapBadge}
         onChange={(e) => setGapBadge(e.target.value)}
@@ -983,6 +945,7 @@ function EditViewControl({
   // patternKey used to; unlike patternKey, there's no closure-free way to
   // recover it, so a miss here just starts the dropdown at "Any Gap
   // Badge" rather than corrupting anything.
+  const [candleCheck, setCandleCheck] = useState(() => activeTarget.candleCheck ?? parsedKey.candleCheck ?? "");
   const [gapBadge, setGapBadge] = useState(() => parsedKey.gapBadge ?? "");
   const [error, setError] = useState("");
   const [command, setCommand] = useState<string | null>(null);
@@ -1000,8 +963,9 @@ function EditViewControl({
   // the new format on save.
   const viewKey = useMemo(() => {
     const trimmedGapBadge = gapBadge.trim();
-    return [entry, attachKey, trimmedGapBadge || undefined, target].filter(Boolean).join("-");
-  }, [entry, attachKey, gapBadge, target]);
+    const trimmedCandleCheck = candleCheck.trim();
+    return [entry, trimmedCandleCheck || undefined, attachKey, trimmedGapBadge || undefined, target].filter(Boolean).join("-");
+  }, [entry, candleCheck, attachKey, gapBadge, target]);
 
   function openForm() {
     setDirection(activeTarget.direction ?? "Up");
@@ -1014,6 +978,7 @@ function EditViewControl({
     });
     setLabel(activeTarget.label);
     setAttachKey(activeTarget.parentKey ?? findContainingNodeKey(activeTarget.key) ?? activeTarget.key);
+    setCandleCheck(activeTarget.candleCheck ?? parsedKey.candleCheck ?? "");
     setGapBadge(parsedKey.gapBadge ?? "");
     setError("");
     setCommand(null);
@@ -1048,6 +1013,8 @@ function EditViewControl({
       return;
     }
 
+    const trimmedCandleCheck = candleCheck.trim();
+
     const res = editBacktestView(
       activeTarget.key,
       viewKey,
@@ -1057,7 +1024,8 @@ function EditViewControl({
       entry,
       attachKey,
       gapBadge,
-      derived
+      derived,
+      trimmedCandleCheck
     );
 
     if (!res.ok) {
@@ -1068,6 +1036,8 @@ function EditViewControl({
           ? `"${target}" isn't a valid target for ${direction === "Up" ? "an Up" : "a Down"} View.`
           : res.reason === "invalid-gap-badge"
           ? `"${gapBadge.trim()}" isn't a known Gap Badge.`
+          : res.reason === "invalid-candle-check"
+          ? `"${trimmedCandleCheck}" isn't a known Candle Check.`
           : res.reason === "invalid-entry"
           ? `"${entry}" isn't a valid Entry.`
           : "Couldn't find this View anymore — it may have been renamed or removed elsewhere."
@@ -1088,7 +1058,7 @@ function EditViewControl({
     const b64 = btoa(binary);
 
     const q = (s: string) => `"${s.replace(/"/g, "")}"`;
-    const cmd = `gh workflow run copy-view.yml --repo krivengokul/Crypto-CPR-Screener -f sourceKey=${q(activeTarget.key)} -f newKey=${q(viewKey)} -f newLabel=${q(trimmedLabel)} -f isEdit=true -f direction=${q(direction)} -f entry=${q(entry)} -f target=${q(target)} -f attachKey=${q(attachKey)}${gapBadge ? ` -f gapBadge=${q(gapBadge)}` : ""} -f levelCheckDefs=${b64}`;
+    const cmd = `gh workflow run copy-view.yml --repo krivengokul/Crypto-CPR-Screener -f sourceKey=${q(activeTarget.key)} -f newKey=${q(viewKey)} -f newLabel=${q(trimmedLabel)} -f isEdit=true -f direction=${q(direction)} -f entry=${q(entry)} -f target=${q(target)} -f attachKey=${q(attachKey)}${trimmedCandleCheck ? ` -f candleCheck=${q(trimmedCandleCheck)}` : ""}${gapBadge ? ` -f gapBadge=${q(gapBadge)}` : ""} -f levelCheckDefs=${b64}`;
     setCommand(cmd);
     // Deliberately NOT calling onUpdated here, same reasoning as
     // CreateViewControl/CopyViewControl's confirm(): onUpdated moves the
@@ -1188,6 +1158,19 @@ function EditViewControl({
         className="w-full bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
       />
       <AttachPointSelect value={attachKey} onChange={setAttachKey} disabled={!!command} />
+      <select
+        value={candleCheck}
+        onChange={(e) => setCandleCheck(e.target.value)}
+        disabled={!!command}
+        title="Optionally also require this 15-minute candle check."
+        className="w-full bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+      >
+        {CANDLE_CHECK_OPTIONS.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
       <select
         value={gapBadge}
         onChange={(e) => setGapBadge(e.target.value)}
@@ -1394,6 +1377,7 @@ function CreateViewControl({
   // original conditionKey-redirect behavior. Preselected to the row's own
   // existingGapBadge (same idea as attachKey defaulting to patternKey);
   // falls back to "" (Any Gap Badge) if that's somehow not a known badge.
+  const [candleCheck, setCandleCheck] = useState("");
   const [gapBadge, setGapBadge] = useState(
     existingGapBadge && ALL_GAP_BADGES.includes(existingGapBadge) ? existingGapBadge : ""
   );
@@ -1421,15 +1405,24 @@ function CreateViewControl({
     return { key: cat.key, label: cat.label };
   }, [patternKey, patternLabel, attachKey]);
 
-  // The View key is fully derived, not typed — "{Entry}-{Pattern key}
-  // [-{Gap Badge}]-{Target}" (e.g. "R1-B-B-BB-BB-EL3U4-SL-GapBA-R4"),
-  // omitting the Gap Badge segment entirely when none is selected. No
+  // The View key is fully derived, not typed — "{Entry}-{CandleCheck}-{Pattern key}
+  // [-{Gap Badge}]-{Target}" (e.g. "R1-CA-B-B-BB-BB-EL3U4-SL-GapBA-R4"),
+  // omitting the Gap Badge and Candle Check segments when none is selected. No
   // "edited" tracking needed since there's no free-text box to diverge
   // from it — it just recomputes whenever any of its ingredients change.
   const viewKey = useMemo(() => {
     const trimmedGapBadge = gapBadge.trim();
-    return [entry, effectivePattern.key, trimmedGapBadge || undefined, target].filter(Boolean).join("-");
-  }, [entry, effectivePattern.key, gapBadge, target]);
+    const trimmedCandleCheck = candleCheck.trim();
+    return [
+      entry,
+      trimmedCandleCheck || undefined,
+      effectivePattern.key,
+      trimmedGapBadge || undefined,
+      target,
+    ]
+      .filter(Boolean)
+      .join("-");
+  }, [entry, candleCheck, effectivePattern.key, gapBadge, target]);
 
   useEffect(() => {
     if (!open || command) return;
@@ -1441,6 +1434,7 @@ function CreateViewControl({
     setDirection("Up");
     setEntry("TC");
     setTarget("R4");
+    setCandleCheck("");
     setGapBadge(existingGapBadge && ALL_GAP_BADGES.includes(existingGapBadge) ? existingGapBadge : "");
     setNewLabel(patternLabel);
     setLabelEdited(false);
@@ -1459,6 +1453,7 @@ function CreateViewControl({
     const derived = deriveLevelCheckDefs({ prevCPR, todayCPR } as unknown as CPRResult);
 
     const trimmedGapBadge = gapBadge.trim();
+    const trimmedCandleCheck = candleCheck.trim();
 
     const result = createBacktestView(
       effectivePattern.key,
@@ -1469,7 +1464,8 @@ function CreateViewControl({
       derived,
       attachKey,
       trimmedGapBadge || undefined,
-      entry
+      entry,
+      trimmedCandleCheck || undefined
     );
     if (!result.ok) {
       setError(
@@ -1479,6 +1475,8 @@ function CreateViewControl({
           ? `"${target}" isn't a valid target for ${direction === "Up" ? "an Up" : "a Down"} View.`
           : result.reason === "invalid-gap-badge"
           ? `"${trimmedGapBadge}" isn't a known Gap Badge.`
+          : result.reason === "invalid-candle-check"
+          ? `"${trimmedCandleCheck}" isn't a known Candle Check.`
           : result.reason === "invalid-entry"
           ? `"${entry}" isn't a valid Entry.`
           : "Couldn't find this Pattern/Subpattern in the dropdown tree."
@@ -1511,7 +1509,7 @@ function CreateViewControl({
     const b64 = btoa(binary);
 
     setCommand(
-      `gh workflow run create-view.yml --repo krivengokul/Crypto-CPR-Screener -f patternKey=${q(effectivePattern.key)} -f newKey=${q(viewKey)} -f newLabel=${q(trimmedLabel)} -f direction=${q(direction)} -f entry=${q(entry)} -f target=${q(target)} -f attachKey=${q(attachKey)}${trimmedGapBadge ? ` -f gapBadge=${q(trimmedGapBadge)}` : ""} -f levelCheckDefs=${b64}`
+      `gh workflow run create-view.yml --repo krivengokul/Crypto-CPR-Screener -f patternKey=${q(effectivePattern.key)} -f newKey=${q(viewKey)} -f newLabel=${q(trimmedLabel)} -f direction=${q(direction)} -f entry=${q(entry)} -f target=${q(target)} -f attachKey=${q(attachKey)}${trimmedCandleCheck ? ` -f candleCheck=${q(trimmedCandleCheck)}` : ""}${trimmedGapBadge ? ` -f gapBadge=${q(trimmedGapBadge)}` : ""} -f levelCheckDefs=${b64}`
     );
     setCreatedKey(viewKey);
   }
@@ -1601,6 +1599,19 @@ function CreateViewControl({
         className="w-full bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
       />
       <AttachPointSelect value={attachKey} onChange={setAttachKey} disabled={!!command} />
+      <select
+        value={candleCheck}
+        onChange={(e) => setCandleCheck(e.target.value)}
+        disabled={!!command}
+        title="Optionally also require this 15-minute candle check."
+        className="w-full bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+      >
+        {CANDLE_CHECK_OPTIONS.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
       <select
         value={gapBadge}
         onChange={(e) => setGapBadge(e.target.value)}

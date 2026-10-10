@@ -2,7 +2,20 @@ import { OHLC, CPRResult, analyzeCPR, isExpandedPatternPair, OUTER_PATTERN_KEYS,
 import { fetchTopUSDTSymbols, fetchDailyKlines, isLiveDailyCandle } from "./binance";
 import { fetchDeltaPerps } from "./delta";
 import { fetchCoinDCXDailyKlines, fetchCoinDCXActiveSymbols } from "./coinDCX";
-import { buildViewTree, type ViewTreeNode, VIEWS, getView, type ViewDef, passesView, matchesGapBadge, ALL_GAP_BADGES } from "./views";
+import {
+  buildViewTree,
+  type ViewTreeNode,
+  VIEWS,
+  getView,
+  type ViewDef,
+  passesView,
+  matchesGapBadge,
+  ALL_GAP_BADGES,
+  matchesCandleCheck,
+  ALL_CANDLE_CHECKS,
+  candleCheckToCategoryKey,
+  parseComposedViewKey,
+} from "./views";
 import { gradeTargetHit } from "./backtestOutcome";
 import {
   findPD15MBelowTCPass,
@@ -411,7 +424,7 @@ export function copyBacktestView(
 
 export interface CreateViewResult {
   ok: boolean;
-  reason?: "pattern-not-found" | "duplicate-key" | "invalid-target" | "invalid-gap-badge" | "invalid-entry";
+  reason?: "pattern-not-found" | "duplicate-key" | "invalid-target" | "invalid-gap-badge" | "invalid-candle-check" | "invalid-entry";
   created?: ViewDef;
 }
 
@@ -527,7 +540,8 @@ export function editBacktestView(
   entry: string,
   attachKey?: string,
   gapBadge?: string,
-  levelCheckDefs?: LevelCheckCondition[]
+  levelCheckDefs?: LevelCheckCondition[],
+  candleCheck?: string
 ): { ok: boolean; reason?: string; updated?: ViewDef } {
   const idx = VIEWS.findIndex((v) => v.key === oldKey);
   if (idx === -1) return { ok: false, reason: "pattern-not-found" };
@@ -548,10 +562,25 @@ export function editBacktestView(
     return { ok: false, reason: "invalid-gap-badge" };
   }
 
+  const trimmedCandleCheck = candleCheck?.trim();
+  if (trimmedCandleCheck && !ALL_CANDLE_CHECKS.includes(trimmedCandleCheck)) {
+    return { ok: false, reason: "invalid-candle-check" };
+  }
+
   const old = VIEWS[idx];
   const targetKey = targetDef.key;
   const entryKey = entryDef.key;
   const patternKey = old.conditionKey ?? oldKey;
+
+  const hasFilter = Boolean(trimmedGapBadge || trimmedCandleCheck);
+  const filterCondition = hasFilter
+    ? (r: CPRResult) => {
+        if (!passesView(r, patternKey)) return false;
+        if (trimmedGapBadge && !matchesGapBadge(r, trimmedGapBadge)) return false;
+        if (trimmedCandleCheck && !matchesCandleCheck(r, trimmedCandleCheck)) return false;
+        return true;
+      }
+    : undefined;
 
   const updatedDef: ViewDef = {
     ...old,
@@ -566,9 +595,10 @@ export function editBacktestView(
     stoplossLabel: isUp ? "S1" : "R1",
     getStoploss: (r: CPRResult) => (isUp ? r.todayCPR.s1 : r.todayCPR.r1),
     levelCheckDefs: levelCheckDefs ?? old.levelCheckDefs,
-    ...(trimmedGapBadge
+    candleCheck: trimmedCandleCheck || undefined,
+    ...(hasFilter
       ? {
-          condition: (r: CPRResult) => passesView(r, patternKey) && matchesGapBadge(r, trimmedGapBadge),
+          condition: filterCondition,
           standalone: true,
         }
       : { conditionKey: patternKey, condition: undefined, standalone: undefined }),
@@ -587,7 +617,8 @@ export function createBacktestView(
   levelCheckDefs?: LevelCheckCondition[],
   attachKey?: string,
   gapBadge?: string,
-  entry?: string
+  entry?: string,
+  candleCheck?: string
 ): CreateViewResult {
   if (VIEWS.some(v => v.key === newKey)) {
     return { ok: false, reason: "duplicate-key" };
@@ -610,9 +641,24 @@ export function createBacktestView(
     return { ok: false, reason: "invalid-gap-badge" };
   }
 
+  const trimmedCandleCheck = candleCheck?.trim();
+  if (trimmedCandleCheck && !ALL_CANDLE_CHECKS.includes(trimmedCandleCheck)) {
+    return { ok: false, reason: "invalid-candle-check" };
+  }
+
   const resolvedParentKey = attachKey ?? patternKey;
   const targetKey = targetDef.key;
   const entryKey = entryDef.key;
+
+  const hasFilter = Boolean(trimmedGapBadge || trimmedCandleCheck);
+  const filterCondition = hasFilter
+    ? (r: CPRResult) => {
+        if (!passesView(r, patternKey)) return false;
+        if (trimmedGapBadge && !matchesGapBadge(r, trimmedGapBadge)) return false;
+        if (trimmedCandleCheck && !matchesCandleCheck(r, trimmedCandleCheck)) return false;
+        return true;
+      }
+    : undefined;
 
   const newViewDef: ViewDef = {
     key: newKey,
@@ -629,9 +675,10 @@ export function createBacktestView(
     levelCheckDefs: levelCheckDefs
       ? levelCheckDefs.map(d => ({ ...d, bandKeys: [...d.bandKeys] }))
       : undefined,
-    ...(trimmedGapBadge
+    candleCheck: trimmedCandleCheck || undefined,
+    ...(hasFilter
       ? {
-          condition: (r: CPRResult) => passesView(r, patternKey) && matchesGapBadge(r, trimmedGapBadge),
+          condition: filterCondition,
           standalone: true,
         }
       : { conditionKey: patternKey }),
@@ -1522,6 +1569,14 @@ export async function backtestSymbolOnDate(
     result.PD15MAboveBCPass = PD15MAboveBCPass === true;
   }
 
+  const activeCandleCheck = target.candleCheck ?? parseComposedViewKey(target.key).candleCheck;
+  if (activeCandleCheck) {
+    const catKey = candleCheckToCategoryKey(activeCandleCheck);
+    if (catKey) {
+      if (!(await populatePFilterFlags(result, symbol, source, entryDateISO, catKey))) return null;
+    }
+  }
+
   if (!passesPatternFn(result, target.conditionKey ?? target.key)) return null; // didn't match the pattern on this date
   // NOTE: the View's 13/13 Level Check gate is intentionally NOT applied here.
   // Selecting a View in the Backtest panel lists every symbol belonging to
@@ -1921,7 +1976,9 @@ export async function runBacktest(
   const batchSize =
     target.key === "P15MABC" ||
     target.key === "P-UPEX-CPRABOVE-OVA" ||
-    target.key === "OVB-P15MAboveBC"
+    target.key === "OVB-P15MAboveBC" ||
+    Boolean(target.candleCheck) ||
+    Boolean(parseComposedViewKey(target.key).candleCheck)
       ? 8
       : 100;
   let previousUpexUnavailable = 0;

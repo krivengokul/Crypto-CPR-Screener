@@ -45,6 +45,12 @@ import {
   matchesCprAboveLevelStatus,
   matchesCprAboveOverlapStatus,
 } from "./views/p15MAbove.ts";
+import {
+  matchesCandleCheck,
+  ALL_CANDLE_CHECKS,
+  CANDLE_CHECK_OPTIONS,
+} from "./views/candleChecks.ts";
+import { parseComposedViewKey } from "./views/gapBadges.ts";
 
 function trade(overrides: Partial<PaperTradeRecord> = {}): PaperTradeRecord {
   return {
@@ -1098,3 +1104,71 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     }
   }
 });
+
+test("parseComposedViewKey parses candleCheck segment between entry and pattern", () => {
+  // Target format: R1-CA-C-B-BB-LB-CL3U2-RH-GapAB-R4
+  const parsed1 = parseComposedViewKey("R1-CA-C-B-BB-LB-CL3U2-RH-GapAB-R4");
+  assert.equal(parsed1.entry, "R1");
+  assert.equal(parsed1.candleCheck, "CA");
+  assert.equal(parsed1.patternKey, "C-B-BB-LB-CL3U2");
+  assert.equal(parsed1.gapBadge, "RH-GapAB");
+  assert.equal(parsed1.target, "R4");
+
+  // Without candleCheck (legacy/None format)
+  const parsed2 = parseComposedViewKey("R1-C-B-BB-LB-CL3U2-RH-GapAB-R4");
+  assert.equal(parsed2.entry, "R1");
+  assert.equal(parsed2.candleCheck, undefined);
+  assert.equal(parsed2.patternKey, "C-B-BB-LB-CL3U2");
+  assert.equal(parsed2.gapBadge, "RH-GapAB");
+  assert.equal(parsed2.target, "R4");
+
+  // With candleCheck and without gapBadge
+  const parsed3 = parseComposedViewKey("R1-MA-C-B-BB-LB-CL3U2-R4");
+  assert.equal(parsed3.entry, "R1");
+  assert.equal(parsed3.candleCheck, "MA");
+  assert.equal(parsed3.patternKey, "C-B-BB-LB-CL3U2");
+  assert.equal(parsed3.gapBadge, undefined);
+  assert.equal(parsed3.target, "R4");
+
+  // Other codes: CB and MB
+  const parsedCB = parseComposedViewKey("TC-CB-A-A-AA-AA-S1");
+  assert.equal(parsedCB.entry, "TC");
+  assert.equal(parsedCB.candleCheck, "CB");
+  assert.equal(parsedCB.patternKey, "A-A-AA-AA");
+  assert.equal(parsedCB.target, "S1");
+
+  const parsedMB = parseComposedViewKey("BC-MB-A-A-AA-AA-SL-GapAB-S4");
+  assert.equal(parsedMB.entry, "BC");
+  assert.equal(parsedMB.candleCheck, "MB");
+  assert.equal(parsedMB.patternKey, "A-A-AA-AA");
+  assert.equal(parsedMB.gapBadge, "SL-GapAB");
+  assert.equal(parsedMB.target, "S4");
+});
+
+test("matchesCandleCheck validates CPRResult flags according to code", () => {
+  const dummyCPR = {} as any;
+
+  // CA: P-CONSOLIDATE-A requires PD15MConsolidateAPass === true
+  assert.equal(matchesCandleCheck({ ...dummyCPR, PD15MConsolidateAPass: true }, "CA"), true);
+  assert.equal(matchesCandleCheck({ ...dummyCPR, PD15MConsolidateAPass: false }, "CA"), false);
+  assert.equal(matchesCandleCheck({ ...dummyCPR }, "CA"), false);
+
+  // MA: P-MOMENTUM-A requires PD15MAboveBCPass === true && PD15MConsolidateAPass !== true
+  assert.equal(matchesCandleCheck({ ...dummyCPR, PD15MAboveBCPass: true, PD15MConsolidateAPass: false }, "MA"), true);
+  assert.equal(matchesCandleCheck({ ...dummyCPR, PD15MAboveBCPass: true, PD15MConsolidateAPass: true }, "MA"), false);
+  assert.equal(matchesCandleCheck({ ...dummyCPR, PD15MAboveBCPass: false }, "MA"), false);
+
+  // CB: P-CONSOLIDATE-B requires PD15MBelowTCPass === true
+  assert.equal(matchesCandleCheck({ ...dummyCPR, PD15MBelowTCPass: true }, "CB"), true);
+  assert.equal(matchesCandleCheck({ ...dummyCPR, PD15MBelowTCPass: false }, "CB"), false);
+  assert.equal(matchesCandleCheck({ ...dummyCPR }, "CB"), false);
+
+  // MB: P-MOMENTUM-B requires PD15MMomentumBPass === true && PD15MBelowTCPass !== true
+  assert.equal(matchesCandleCheck({ ...dummyCPR, PD15MMomentumBPass: true, PD15MBelowTCPass: false }, "MB"), true);
+  assert.equal(matchesCandleCheck({ ...dummyCPR, PD15MMomentumBPass: true, PD15MBelowTCPass: true }, "MB"), false);
+  assert.equal(matchesCandleCheck({ ...dummyCPR, PD15MMomentumBPass: false }, "MB"), false);
+
+  // None / empty string
+  assert.equal(matchesCandleCheck(dummyCPR, ""), true);
+});
+

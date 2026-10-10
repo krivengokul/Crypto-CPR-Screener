@@ -42,6 +42,10 @@ on:
         description: "Target level: R1..R4 or S1..S4"
         required: false
         type: string
+      candleCheck:
+        description: "Optional 15-minute candle check code (CA, MA, CB, MB). Leave blank for none."
+        required: false
+        type: string
       gapBadge:
         description: "Optional gap badge filter"
         required: false
@@ -87,6 +91,7 @@ jobs:
           DIRECTION: ${{ inputs.direction }}
           ENTRY: ${{ inputs.entry }}
           TARGET: ${{ inputs.target }}
+          CANDLE_CHECK: ${{ inputs.candleCheck }}
           GAP_BADGE: ${{ inputs.gapBadge }}
           SOURCE_KEY: ${{ inputs.sourceKey }}
           NEW_KEY: ${{ inputs.newKey }}

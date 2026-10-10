@@ -205,6 +205,7 @@ const overrides = {
   direction: process.env.DIRECTION,
   entry: process.env.ENTRY,
   target: process.env.TARGET,
+  candleCheck: process.env.CANDLE_CHECK,
   gapBadge: process.env.GAP_BADGE,
 };
 
@@ -343,15 +344,24 @@ if (levelCheckDefs !== null) {
 }
 
 const gapBadge = overrides.gapBadge?.trim();
-const conditionField = gapBadge
-  ? `condition: (r) => passesView(r, "${escapeForDoubleQuotedString(originalConditionKey)}") && matchesGapBadge(r, "${escapeForDoubleQuotedString(gapBadge)}"),\n    standalone: true,`
-  : `conditionKey: "${escapeForDoubleQuotedString(originalConditionKey)}",`;
+const candleCheck = overrides.candleCheck?.trim();
+let conditionField;
+if (gapBadge || candleCheck) {
+  const parts = [`passesView(r, "${escapeForDoubleQuotedString(originalConditionKey)}")`];
+  if (gapBadge) parts.push(`matchesGapBadge(r, "${escapeForDoubleQuotedString(gapBadge)}")`);
+  if (candleCheck) parts.push(`matchesCandleCheck(r, "${escapeForDoubleQuotedString(candleCheck)}")`);
+  conditionField = `condition: (r) => ${parts.join(" && ")},\n    standalone: true,`;
+} else {
+  conditionField = `conditionKey: "${escapeForDoubleQuotedString(originalConditionKey)}",`;
+}
+
+const candleCheckProperty = candleCheck ? `\n    candleCheck: "${escapeForDoubleQuotedString(candleCheck)}",` : "";
 
 const newViewLiteral = `{
     key: "${escapeForDoubleQuotedString(newKey)}",
     label: "${escapeForDoubleQuotedString(newLabel)}",
     parentKey: "${escapeForDoubleQuotedString(effectiveAttachKey)}",
-    ${conditionField}
+    ${conditionField}${candleCheckProperty}
     kind: "view",
     direction: "${direction}",
     targetLabel: "${escapeForDoubleQuotedString(targetLabel)}",
@@ -378,6 +388,22 @@ if (isModular) {
   targetFile = sourceFile;
   targetArrayDecl = sourceFile.getVariableDeclaration(arrName) ?? sourceFile.getVariableDeclarationOrThrow("COPY_VIEWS");
   targetArray = targetArrayDecl.getInitializerIfKindOrThrow(SyntaxKind.ArrayLiteralExpression);
+}
+
+if (candleCheck) {
+  const gapImport = targetFile.getImportDeclaration((decl) =>
+    decl.getModuleSpecifierValue().includes("gapBadges") || decl.getModuleSpecifierValue().includes("candleChecks")
+  );
+  if (gapImport) {
+    if (!gapImport.getNamedImports().some((ni) => ni.getName() === "matchesCandleCheck")) {
+      gapImport.addNamedImport("matchesCandleCheck");
+    }
+  } else {
+    targetFile.addImportDeclaration({
+      moduleSpecifier: "../gapBadges",
+      namedImports: ["matchesCandleCheck"],
+    });
+  }
 }
 
 if (isEdit) {
