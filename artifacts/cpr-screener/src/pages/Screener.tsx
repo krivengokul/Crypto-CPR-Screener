@@ -2808,19 +2808,6 @@ export default function Screener({
             </span>
             <div className="inline-flex items-stretch mr-1" role="group" aria-label="Previous session candle filters">
               <button
-                onClick={() => setPreviousCandleFilter("all")}
-                disabled={currentAllCount === 0}
-                aria-pressed={previousCandleFilter === "all"}
-                className={`text-xs px-2.5 py-1 rounded-l border transition-colors disabled:opacity-50 ${
-                  previousCandleFilter === "all"
-                    ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
-                    : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
-                }`}
-                title="Show all symbols without a previous-session candle filter"
-              >
-                ALL ({getActivePool().length})
-              </button>
-              <button
                 onClick={() => {
                   if (!previousConsolidateAReady) return;
                   setPreviousCandleFilter((v) => v === "consolidate-a" ? "all" : "consolidate-a");
@@ -2828,7 +2815,7 @@ export default function Screener({
                 }}
                 disabled={!previousConsolidateAReady || currentAllCount === 0 || activeTab === "coindcx"}
                 aria-pressed={previousCandleFilter === "consolidate-a"}
-                className={`text-xs px-2.5 py-1 -ml-px border transition-colors disabled:opacity-50 ${
+                className={`text-xs px-2.5 py-1 rounded-l border transition-colors disabled:opacity-50 ${
                   previousCandleFilter === "consolidate-a"
                     ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
                     : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
