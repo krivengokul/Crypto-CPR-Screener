@@ -9,8 +9,8 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_CONCURRENT_REQUESTS = 8;
 const PREVIOUS_UPEX_CACHE_KEY = "cpr_previous_upex_results_v1";
 const PREVIOUS_15M_B_CACHE_KEY = "cpr_previous_15m_b_results_v3";
-const PREVIOUS_15M_TC_B_CACHE_KEY = "cpr_previous_15m_tc_b_results_v5";
-const PREVIOUS_15M_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_momentum_b_results_v1";
+const PREVIOUS_15M_TC_B_CACHE_KEY = "cpr_previous_15m_tc_b_results_v6";
+const PREVIOUS_15M_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_momentum_b_results_v2";
 const PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_consolidate_a_results_v2";
 
 export interface UpexCandidate {
@@ -237,15 +237,17 @@ interface PD15MBelowTCFailure {
  * failure, or null when the session passes.
  *
  * Next-candle confirmation (`confirmWithNextCandle`), one per side:
- * - Upper: a candle whose whole body is above `tc` and whose body top beats
- *   every earlier wick is a "crossing" candle. Normally that fails the
+ * - Upper: a candle whose whole body is above `tc` and whose WHOLE body (body
+ *   bottom) is above every earlier wick is a "crossing" candle. A body that
+ *   only pokes above an earlier wick with its top, while its bottom is still
+ *   at or under that wick, is not a crossing candle. Normally that fails the
  *   session. With confirmation, if the IMMEDIATE next candle's high is above
  *   the crossing candle's high, the crossing candle is forgiven and the next
  *   candle's top wick becomes the reference for all later candles (the next
  *   candle itself is not judged by the TC rule). If there is no next candle,
  *   or it does not make a higher high, the crossing candle fails as before.
- * - Lower (mirror): a candle whose whole body is below `floor` with a body
- *   bottom under every earlier wick low is forgiven when the immediate next
+ * - Lower (mirror): a candle whose whole body is below `floor` with its WHOLE
+ *   body (body top) under every earlier wick low is forgiven when the immediate next
  *   candle's low is under the crossing candle's low; that low then becomes
  *   the reference.
  * Each side is forgiven at most once: any later fresh high above TC (or fresh
@@ -272,13 +274,17 @@ function findPD15MBelowTCFailure(
     lowerConfirming = false;
     upperConfirming = false;
 
+    const bodyBottom = Math.min(candle.open, candle.close);
+    const bodyTop = Math.max(candle.open, candle.close);
+
+    // Lower side: whole body below the floor AND the WHOLE body below the
+    // lowest wick of every earlier candle (body top under that wick low).
     const fullBodyBelowFloor =
       floor !== undefined && candle.open < floor && candle.close < floor;
-    const bodyLow = Math.min(candle.open, candle.close);
     if (
       fullBodyBelowFloor &&
       !skipLower &&
-      (previousLowestWick === null || bodyLow < previousLowestWick)
+      (previousLowestWick === null || bodyTop < previousLowestWick)
     ) {
       if (
         confirmWithNextCandle &&
@@ -293,12 +299,13 @@ function findPD15MBelowTCFailure(
       }
     }
 
+    // Upper side: whole body above TC AND the WHOLE body above the highest
+    // wick of every earlier candle (body bottom over that wick high).
     const fullBodyAboveTc = candle.open > tc && candle.close > tc;
-    const bodyHigh = Math.max(candle.open, candle.close);
     if (
       fullBodyAboveTc &&
       !skipUpper &&
-      (previousHighestWick === null || bodyHigh > previousHighestWick)
+      (previousHighestWick === null || bodyBottom > previousHighestWick)
     ) {
       if (
         confirmWithNextCandle &&
@@ -354,21 +361,21 @@ function completedBelowTCCandles(
 /**
  * CONSOLIDATE-B ("Below TC"), the mirror image of passesUpexFilter (MOMENTUM-A / BC):
  * walk the previous session's completed 15m candles in time order and fail as
- * soon as a candle's WHOLE body is above `tc` AND that body's top is higher
- * than the highest wick seen on any earlier candle (a fresh high above TC).
- * A body above TC that stays at or under an earlier candle's high does not
- * fail. The first candle has no earlier wick, so a full body above TC on it
- * fails (same as the BC rule).
+ * soon as a candle's WHOLE body is above `tc` AND that whole body (its bottom
+ * edge) is above the highest wick seen on any earlier candle (a fresh high
+ * above TC). A body above TC whose bottom is still at or under an earlier
+ * candle's high does not fail, even if its top pokes above that high. The
+ * first candle has no earlier wick, so a full body above TC on it fails.
  *
  * Optional `floor` (lower of the previous CPR's PL / S1, see
  * getPrevious15MBFloor) adds the mirror-image second rule: the session also
- * fails if a candle's whole body is below the floor AND that body's bottom is
- * lower than the lowest wick seen on any earlier candle (a fresh low below
- * the floor). A body below the floor that stays at or above an earlier
- * candle's low does not fail; neither does a wick below the floor or a body
- * exactly on it. The first candle has no earlier wick, so a full body below
- * the floor on it fails (same as the TC rule). Without a floor only the TC
- * rule applies.
+ * fails if a candle's whole body is below the floor AND that whole body (its
+ * top edge) is below the lowest wick seen on any earlier candle (a fresh low
+ * below the floor). A body below the floor whose top is still at or above an
+ * earlier candle's low does not fail; neither does a wick below the floor or a
+ * body exactly on it. The first candle has no earlier wick, so a full body
+ * below the floor on it fails (same as the TC rule). Without a floor only the
+ * TC rule applies.
  *
  * `confirmWithNextCandle` (defaults to ON when a floor is supplied, i.e. for
  * CONSOLIDATE-B, and OFF for MOMENTUM-B which has no floor) enables the

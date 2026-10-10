@@ -1063,18 +1063,108 @@ test("CONSOLIDATE-B next-candle confirmation: lower side (floor rule)", () => {
   assert.equal(passesPD15MBelowTCFilter([c1, c2], tc, start, now, floor), false);
 });
 
+test("CONSOLIDATE-B upper side needs the WHOLE body above the prior highest wick", () => {
+  const start = Date.parse("2026-10-02T00:00:00.000Z");
+  const now = Date.parse("2026-10-03T00:00:00.000Z");
+  const m = 15 * 60_000;
+  const c = (i: number, open: number, high: number, low: number, close: number): OHLC => ({
+    openTime: start + i * m, open, high, low, close, volume: 1,
+  });
+  const tc = 100;
+  // Body below TC, but a spike wick up to 110 sets the reference.
+  const c1 = c(0, 97, 110, 96, 98);
+
+  // Whole body above TC; top (112) pokes over the 110 wick but the bottom (105)
+  // is still under it -> not a fresh high above TC -> passes.
+  const pokes = c(1, 105, 113, 104, 112);
+  assert.equal(passesPD15MBelowTCFilter([c1, pokes], tc, start, now), true);
+  assert.equal(passesPD15MBelowTCFilter([c1, pokes], tc, start, now, 80), true);
+  // Whole body (111..112) clear of the 110 wick -> fresh high above TC -> fails.
+  const clear = c(1, 111, 113, 110.5, 112);
+  assert.equal(passesPD15MBelowTCFilter([c1, clear], tc, start, now), false);
+  assert.equal(passesPD15MBelowTCFilter([c1, clear], tc, start, now, 80), false);
+  // Body bottom exactly on the wick is not above it -> passes.
+  assert.equal(
+    passesPD15MBelowTCFilter([c1, c(1, 110, 113, 109, 112)], tc, start, now),
+    true,
+  );
+  // The reference keeps rolling: after `pokes` (high 113) a later body must
+  // sit wholly above the running highest wick.
+  assert.equal(
+    passesPD15MBelowTCFilter([c1, pokes, c(2, 111, 113.5, 110.5, 112.8)], tc, start, now),
+    true,
+  );
+  assert.equal(
+    passesPD15MBelowTCFilter(
+      [c1, pokes, c(2, 111, 113.5, 110.5, 112.8), c(3, 114, 116, 113.8, 115)],
+      tc, start, now,
+    ),
+    false,
+  );
+  // The first candle has no earlier wick: a full body above TC still fails.
+  assert.equal(passesPD15MBelowTCFilter([c(0, 101, 103, 100.5, 102)], tc, start, now), false);
+});
+
+test("CONSOLIDATE-B lower side needs the WHOLE body below the prior lowest wick", () => {
+  const start = Date.parse("2026-10-02T00:00:00.000Z");
+  const now = Date.parse("2026-10-03T00:00:00.000Z");
+  const m = 15 * 60_000;
+  const c = (i: number, open: number, high: number, low: number, close: number): OHLC => ({
+    openTime: start + i * m, open, high, low, close, volume: 1,
+  });
+  const tc = 120;
+  const floor = 90;
+  // Body above the floor, but a spike wick down to 80 sets the reference.
+  const c1 = c(0, 94, 95, 80, 93);
+
+  // Whole body below the floor; bottom (78) dips under the 80 wick but the top
+  // (85) is still over it -> not a fresh low below the floor -> passes.
+  const pokes = c(1, 85, 86, 77, 78);
+  assert.equal(passesPD15MBelowTCFilter([c1, pokes], tc, start, now, floor), true);
+  // Whole body (77..79) under the 80 wick -> fresh low below the floor -> fails.
+  assert.equal(
+    passesPD15MBelowTCFilter([c1, c(1, 79, 80, 76, 77)], tc, start, now, floor),
+    false,
+  );
+  // Body top exactly on the wick is not below it -> passes.
+  assert.equal(
+    passesPD15MBelowTCFilter([c1, c(1, 80, 81, 76, 77)], tc, start, now, floor),
+    true,
+  );
+  // The reference keeps rolling: after `pokes` (low 77) a later body must sit
+  // wholly under the running lowest wick.
+  assert.equal(
+    passesPD15MBelowTCFilter([c1, pokes, c(2, 84, 85, 76.5, 78)], tc, start, now, floor),
+    true,
+  );
+  assert.equal(
+    passesPD15MBelowTCFilter(
+      [c1, pokes, c(2, 84, 85, 76.5, 78), c(3, 76, 76.5, 74, 75)],
+      tc, start, now, floor,
+    ),
+    false,
+  );
+  // The first candle has no earlier wick: a full body below the floor still fails.
+  assert.equal(
+    passesPD15MBelowTCFilter([c(0, 89, 90, 87, 88)], tc, start, now, floor),
+    false,
+  );
+});
+
 test("pruneLegacy15MResultCaches removes only superseded cache versions", () => {
   const originalDescriptor = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
   const store: Record<string, string> = {
     cpr_previous_15m_tc_b_results_v1: "x",
     cpr_previous_15m_tc_b_results_v4: "x",
-    cpr_previous_15m_tc_b_results_v5: "keep",
+    cpr_previous_15m_tc_b_results_v5: "x",
+    cpr_previous_15m_tc_b_results_v6: "keep",
     cpr_previous_15m_b_results_v1: "x",
     cpr_previous_15m_b_results_v3: "keep",
     cpr_previous_upex_results_v1: "keep",
     cpr_previous_15m_consolidate_a_results_v1: "x",
     cpr_previous_15m_consolidate_a_results_v2: "keep",
-    cpr_previous_15m_momentum_b_results_v1: "keep",
+    cpr_previous_15m_momentum_b_results_v1: "x",
+    cpr_previous_15m_momentum_b_results_v2: "keep",
     "cpr_symbols_2026-10-09": "unrelated",
   };
   Object.defineProperty(globalThis, "localStorage", {
@@ -1085,12 +1175,12 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     }),
   });
   try {
-    assert.equal(pruneLegacy15MResultCaches(), 4);
+    assert.equal(pruneLegacy15MResultCaches(), 6);
     assert.deepEqual(Object.keys(store).sort(), [
       "cpr_previous_15m_b_results_v3",
       "cpr_previous_15m_consolidate_a_results_v2",
-      "cpr_previous_15m_momentum_b_results_v1",
-      "cpr_previous_15m_tc_b_results_v5",
+      "cpr_previous_15m_momentum_b_results_v2",
+      "cpr_previous_15m_tc_b_results_v6",
       "cpr_previous_upex_results_v1",
       "cpr_symbols_2026-10-09",
     ]);
