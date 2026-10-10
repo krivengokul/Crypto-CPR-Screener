@@ -1854,7 +1854,7 @@ export const LEVELSABOVE_VIEWS: ViewDef[] = [
     kind: "view",
     standalone: true,
     condition: (r) =>
-      r.todayCPR.pivot > r.todayCPR.prevHigh &&
+      r.todayCPR.pivot > r.prevCPR.prevHigh &&
       r.prevCPR.pivot > r.todayCPR.prevLow,
     direction: "Up",
     targetLabel: "R4",
