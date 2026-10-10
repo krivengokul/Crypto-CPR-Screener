@@ -748,7 +748,7 @@ export function ScreenerTableHeader({
   toggleSort,
 }: ScreenerTableHeaderProps) {
   // `reverse` flips the arrow for columns where the natural reading is the
-  // opposite (MOVE, Price): asc shows ▼ and desc shows ▲. Sorting itself is
+  // opposite (MATCH, MOVE, Price): asc shows ▼ and desc shows ▲. Sorting itself is
   // unchanged; only the icon differs. The unsorted ↕ stays the same.
   const SortIcon = ({ k, reverse = false }: { k: SortKey; reverse?: boolean }) => (
     <span className="text-[10px] ml-1 text-white">
@@ -784,7 +784,7 @@ export function ScreenerTableHeader({
           title="Level Check (matching/13) for each signal in the SIGNAL column, one line per signal, graded with its own levelCheckDefs. Sort by each row's best n/13 — desc surfaces 13/13 first, then 12/13, etc."
         >
           <span className="inline-flex items-center whitespace-nowrap">
-            MATCH <SortIcon k="ladderCheck" />
+            MATCH <SortIcon k="ladderCheck" reverse />
           </span>
         </th>
         <th
