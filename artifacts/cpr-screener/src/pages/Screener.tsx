@@ -346,7 +346,7 @@ export default function Screener({
   const [pdhPdlFilter, setPdhPdlFilter] = useState<"above" | "below" | "abovepu4" | "belowpl4" | "pdhgtu1" | "pdlltl1" | "s1r1in" | null>(null);
   const [upexFilter, setUpexFilter] = useState(false);
   const [upexIncludedSymbols, setUpexIncludedSymbols] = useState<Set<string>>(() => new Set());
-  const [previousConsolidateAFilter, setPreviousConsolidateAFilter] = useState(false);
+  const [previousCandleFilter, setPreviousCandleFilter] = useState<"all" | "consolidate-a" | "momentum-a" | "consolidate-b" | "momentum-b">("all");
   const [previousConsolidateAIncludedSymbols, setPreviousConsolidateAIncludedSymbols] = useState<Set<string>>(() => new Set());
   const [previousConsolidateAProgress, setPreviousConsolidateAProgress] = useState<{
     done: number;
@@ -360,14 +360,12 @@ export default function Screener({
   const previousConsolidateACacheSessionRef = useRef(previousUpexSessionStartUtcMs());
   const previousConsolidateARunRef = useRef(0);
 
-  const [previousUpexFilter, setPreviousUpexFilter] = useState(false);
   const [previousUpexIncludedSymbols, setPreviousUpexIncludedSymbols] = useState<Set<string>>(() => new Set());
   const [previousUpexProgress, setPreviousUpexProgress] = useState<{
     done: number;
     total: number;
   } | null>(null);
   const [previousUpexReady, setPreviousUpexReady] = useState(false);
-  const [previous15MTCFilter, setPrevious15MTCFilter] = useState(false);
   const [previous15MTCIncludedSymbols, setPrevious15MTCIncludedSymbols] = useState<Set<string>>(() => new Set());
   const [previous15MTCProgress, setPrevious15MTCProgress] = useState<{
     done: number;
@@ -375,7 +373,6 @@ export default function Screener({
   } | null>(null);
   const [previous15MTCReady, setPrevious15MTCReady] = useState(false);
   const [previous15MTCMessage, setPrevious15MTCMessage] = useState("");
-  const [previous15MMomentumFilter, setPrevious15MMomentumFilter] = useState(false);
   const [previous15MMomentumIncludedSymbols, setPrevious15MMomentumIncludedSymbols] = useState<Set<string>>(() => new Set());
   const [previous15MMomentumProgress, setPrevious15MMomentumProgress] = useState<{
     done: number;
@@ -1927,13 +1924,13 @@ export default function Screener({
     )
     .filter(
       (r) =>
-        !previousConsolidateAFilter ||
+        previousCandleFilter !== "consolidate-a" ||
         r.source === "coindcx" ||
         previousConsolidateAIncludedSymbols.has(`${r.source}:${r.symbol}`)
     )
     .filter(
       (r) =>
-        !previousUpexFilter ||
+        previousCandleFilter !== "momentum-a" ||
         r.source === "coindcx" ||
         // MOMENTUM-A excludes CONSOLIDATE-A symbols.
         (previousUpexIncludedSymbols.has(`${r.source}:${r.symbol}`) &&
@@ -1941,12 +1938,12 @@ export default function Screener({
     )
     .filter(
       (r) =>
-        !previous15MTCFilter ||
+        previousCandleFilter !== "consolidate-b" ||
         previous15MTCIncludedSymbols.has(`${r.source}:${r.symbol}`)
     )
     .filter(
       (r) =>
-        !previous15MMomentumFilter ||
+        previousCandleFilter !== "momentum-b" ||
         // MOMENTUM-B excludes CONSOLIDATE-B symbols.
         (previous15MMomentumIncludedSymbols.has(`${r.source}:${r.symbol}`) &&
           !previous15MTCIncludedSymbols.has(`${r.source}:${r.symbol}`))
@@ -2078,7 +2075,7 @@ export default function Screener({
   // Helper: is any sub-filter active (to decide the result count label)
   const anySubFilter =
     !!activeGenericSignal ||
-    !!PatternFilter || !!touchFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter || upexFilter || previousConsolidateAFilter || previousUpexFilter || previous15MTCFilter || previous15MMomentumFilter || reclaimSFilter || reclaimRFilter || statusFilter !== "all" || !!entryLevelFilter;
+    !!PatternFilter || !!touchFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter || upexFilter || previousCandleFilter !== "all" || reclaimSFilter || reclaimRFilter || statusFilter !== "all" || !!entryLevelFilter;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -2823,22 +2820,30 @@ export default function Screener({
             <span className="text-[10px] text-cyan-400/90 uppercase tracking-wider mr-1 font-semibold">
               Previous session candle:
             </span>
-            <div className="inline-flex items-stretch mr-1" role="group" aria-label="A filters">
+            <div className="inline-flex items-stretch mr-1" role="group" aria-label="Previous session candle filters">
+              <button
+                onClick={() => setPreviousCandleFilter("all")}
+                disabled={currentAllCount === 0}
+                aria-pressed={previousCandleFilter === "all"}
+                className={`text-xs px-2.5 py-1 rounded-l border transition-colors disabled:opacity-50 ${
+                  previousCandleFilter === "all"
+                    ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
+                    : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
+                }`}
+                title="Show all symbols without a previous-session candle filter"
+              >
+                ALL ({getActivePool().length})
+              </button>
               <button
                 onClick={() => {
                   if (!previousConsolidateAReady) return;
-                  const next = !previousConsolidateAFilter;
-                  setPreviousConsolidateAFilter(next);
+                  setPreviousCandleFilter((v) => v === "consolidate-a" ? "all" : "consolidate-a");
                   setPreviousConsolidateAMessage("");
-                  if (next) {
-                    setPreviousUpexFilter(false);
-                    setPrevious15MTCFilter(false);
-                    setPrevious15MMomentumFilter(false);
-                  }
                 }}
                 disabled={!previousConsolidateAReady || currentAllCount === 0 || activeTab === "coindcx"}
-                className={`text-xs px-2.5 py-1 rounded-l rounded-r-none border transition-colors disabled:opacity-50 ${
-                  previousConsolidateAFilter
+                aria-pressed={previousCandleFilter === "consolidate-a"}
+                className={`text-xs px-2.5 py-1 -ml-px border transition-colors disabled:opacity-50 ${
+                  previousCandleFilter === "consolidate-a"
                     ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
                     : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
                 }`}
@@ -2853,18 +2858,13 @@ export default function Screener({
               <button
                 onClick={() => {
                   if (!previousUpexReady) return;
-                  const next = !previousUpexFilter;
-                  setPreviousUpexFilter(next);
+                  setPreviousCandleFilter((v) => v === "momentum-a" ? "all" : "momentum-a");
                   setUpexMessage("");
-                  if (next) {
-                    setPreviousConsolidateAFilter(false);
-                    setPrevious15MTCFilter(false);
-                    setPrevious15MMomentumFilter(false);
-                  }
                 }}
                 disabled={!previousUpexReady || currentAllCount === 0 || activeTab === "coindcx"}
-                className={`text-xs px-2.5 py-1 rounded-r rounded-l-none -ml-px border transition-colors disabled:opacity-50 ${
-                  previousUpexFilter
+                aria-pressed={previousCandleFilter === "momentum-a"}
+                className={`text-xs px-2.5 py-1 -ml-px border transition-colors disabled:opacity-50 ${
+                  previousCandleFilter === "momentum-a"
                     ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
                     : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
                 }`}
@@ -2876,23 +2876,16 @@ export default function Screener({
                     ? `P-MOMENTUM-A (${previousUpexIncludedCount})`
                     : "P-MOMENTUM-A…"}
               </button>
-            </div>
-            <div className="inline-flex items-stretch mr-1" role="group" aria-label="B filters">
               <button
                 onClick={() => {
                   if (!previous15MTCReady) return;
-                  const next = !previous15MTCFilter;
-                  setPrevious15MTCFilter(next);
+                  setPreviousCandleFilter((v) => v === "consolidate-b" ? "all" : "consolidate-b");
                   setPrevious15MTCMessage("");
-                  if (next) {
-                    setPreviousConsolidateAFilter(false);
-                    setPreviousUpexFilter(false);
-                    setPrevious15MMomentumFilter(false);
-                  }
                 }}
                 disabled={!previous15MTCReady || currentAllCount === 0 || activeTab === "coindcx"}
-                className={`text-xs px-2.5 py-1 rounded-l rounded-r-none border transition-colors disabled:opacity-50 ${
-                  previous15MTCFilter
+                aria-pressed={previousCandleFilter === "consolidate-b"}
+                className={`text-xs px-2.5 py-1 -ml-px border transition-colors disabled:opacity-50 ${
+                  previousCandleFilter === "consolidate-b"
                     ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
                     : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
                 }`}
@@ -2907,18 +2900,13 @@ export default function Screener({
               <button
                 onClick={() => {
                   if (!previous15MMomentumReady) return;
-                  const next = !previous15MMomentumFilter;
-                  setPrevious15MMomentumFilter(next);
+                  setPreviousCandleFilter((v) => v === "momentum-b" ? "all" : "momentum-b");
                   setPrevious15MMomentumMessage("");
-                  if (next) {
-                    setPreviousConsolidateAFilter(false);
-                    setPreviousUpexFilter(false);
-                    setPrevious15MTCFilter(false);
-                  }
                 }}
                 disabled={!previous15MMomentumReady || currentAllCount === 0 || activeTab === "coindcx"}
-                className={`text-xs px-2.5 py-1 rounded-r rounded-l-none -ml-px border transition-colors disabled:opacity-50 ${
-                  previous15MMomentumFilter
+                aria-pressed={previousCandleFilter === "momentum-b"}
+                className={`text-xs px-2.5 py-1 rounded-r -ml-px border transition-colors disabled:opacity-50 ${
+                  previousCandleFilter === "momentum-b"
                     ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
                     : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
                 }`}
