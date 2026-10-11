@@ -1896,7 +1896,7 @@ export const MISC_VIEWS: ViewDef[] = [
       },
     {
         key: "PH-CB-INCPR-C-C-BB-AA-CU2L2-SH-GapAB-R4",
-        label: "C-C-BB-AA-CU2L2",
+        label: "CONS-B-INCPRUPMOVE-PR4",
         parentKey: "INCPR-C-C-BB-AA-CU2L2",
         condition: (r) => passesView(r, "INCPR-C-C-BB-AA-CU2L2") && matchesGapBadge(r, "SH-GapAB") && matchesCandleCheck(r, "CB"),
         standalone: true,
