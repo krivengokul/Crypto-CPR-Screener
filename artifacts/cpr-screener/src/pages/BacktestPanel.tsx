@@ -269,15 +269,20 @@ async function addApplicableViewOutcomes<T extends Pick<CategoryScanRow, "symbol
 }
 
 /**
- * Same P-CONSOLIDATE / P-MOMENTUM labels as ScreenerTableRow's Active Views
- * column (exclusive pairs: MOM excludes CON on each side).
- * Reads flags already set on the CPRResult by the 15m backtest path.
+ * Same mutually exclusive P-CONSOLIDATE / P-MOMENTUM classification as the
+ * Screener's Active Views filters. Overlapping raw flags are resolved in the
+ * same priority order: CONSOLIDATE-B, MOMENTUM-B, CONSOLIDATE-A, MOMENTUM-A.
  */
 function renderCandleCheckBadges(raw: CPRResult) {
-  const showConsolidateA = raw.PD15MConsolidateAPass === true;
   const showConsolidateB = raw.PD15MBelowTCPass === true;
-  const showMomentumA = raw.PD15MAboveBCPass === true && !showConsolidateA;
   const showMomentumB = raw.PD15MMomentumBPass === true && !showConsolidateB;
+  const showConsolidateA =
+    raw.PD15MConsolidateAPass === true && !showConsolidateB && !showMomentumB;
+  const showMomentumA =
+    raw.PD15MAboveBCPass === true &&
+    !showConsolidateB &&
+    !showMomentumB &&
+    !showConsolidateA;
 
   if (!showConsolidateA && !showConsolidateB && !showMomentumA && !showMomentumB) {
     return null;
