@@ -346,7 +346,7 @@ export default function Screener({
   const [pdhPdlFilter, setPdhPdlFilter] = useState<"above" | "below" | "abovepu4" | "belowpl4" | "pdhgtu1" | "pdlltl1" | "s1r1in" | null>(null);
   const [upexFilter, setUpexFilter] = useState(false);
   const [upexIncludedSymbols, setUpexIncludedSymbols] = useState<Set<string>>(() => new Set());
-  const [previousCandleFilter, setPreviousCandleFilter] = useState<"all" | "consolidate-a" | "momentum-a" | "consolidate-b" | "momentum-b">("all");
+  const [previousCandleFilter, setPreviousCandleFilter] = useState<"all" | "consolidate-a" | "momentum-a" | "consolidate-b" | "momentum-b" | "inrange-r">("all");
   const [previousConsolidateAIncludedSymbols, setPreviousConsolidateAIncludedSymbols] = useState<Set<string>>(() => new Set());
   const [previousConsolidateAProgress, setPreviousConsolidateAProgress] = useState<{
     done: number;
@@ -1632,20 +1632,33 @@ export default function Screener({
 
   // The four previous-session filters are one classification. If a symbol
   // passes multiple independent checks, the first matching tab wins, so the
-  // counts, filter results, and badges all stay mutually exclusive.
-  const hasConsolidateA = (row: CPRResultWithSource) =>
-    previousConsolidateAIncludedSymbols.has(`${row.source}:${row.symbol}`);
-  const hasMomentumA = (row: CPRResultWithSource) =>
-    previousUpexIncludedSymbols.has(`${row.source}:${row.symbol}`) && !hasConsolidateA(row);
+  // counts, filter results, and badges all stay mutually exclusive. Priority
+  // follows the displayed order: MOMENTUM-B, CONSOLIDATE-B, CONSOLIDATE-A,
+  // MOMENTUM-A. INRANGE-R is the complement across the active Show All pool.
+  const hasMomentumB = (row: CPRResultWithSource) =>
+    previous15MMomentumIncludedSymbols.has(`${row.source}:${row.symbol}`);
   const hasConsolidateB = (row: CPRResultWithSource) =>
     previous15MTCIncludedSymbols.has(`${row.source}:${row.symbol}`) &&
-    !hasConsolidateA(row) &&
-    !hasMomentumA(row);
-  const hasMomentumB = (row: CPRResultWithSource) =>
-    previous15MMomentumIncludedSymbols.has(`${row.source}:${row.symbol}`) &&
+    !hasMomentumB(row);
+  const hasConsolidateA = (row: CPRResultWithSource) =>
+    previousConsolidateAIncludedSymbols.has(`${row.source}:${row.symbol}`) &&
+    !hasMomentumB(row) &&
+    !hasConsolidateB(row);
+  const hasMomentumA = (row: CPRResultWithSource) =>
+    previousUpexIncludedSymbols.has(`${row.source}:${row.symbol}`) &&
+    !hasMomentumB(row) &&
+    !hasConsolidateB(row) &&
+    !hasConsolidateA(row);
+  const hasInRangeR = (row: CPRResultWithSource) =>
     !hasConsolidateA(row) &&
     !hasMomentumA(row) &&
-    !hasConsolidateB(row);
+    !hasConsolidateB(row) &&
+    !hasMomentumB(row);
+  const previousCandleClassificationReady =
+    previousConsolidateAReady &&
+    previousUpexReady &&
+    previous15MTCReady &&
+    previous15MMomentumReady;
 
   const previousConsolidateAIncludedCount = getActivePool().filter(
     (row) => row.source !== "coindcx" && hasConsolidateA(row),
@@ -1659,6 +1672,7 @@ export default function Screener({
   const previous15MMomentumIncludedCount = getActivePool().filter(
     (row) => row.source !== "coindcx" && hasMomentumB(row),
   ).length;
+  const previousInRangeRIncludedCount = getActivePool().filter(hasInRangeR).length;
 
   // RECLAIM-S / RECLAIM-R — live state for a row (pierced depth from the
   // per-window scan + current price/day range from the live-refreshed row).
@@ -1933,6 +1947,11 @@ export default function Screener({
       (r) =>
         previousCandleFilter !== "momentum-b" ||
         hasMomentumB(r)
+    )
+    .filter(
+      (r) =>
+        previousCandleFilter !== "inrange-r" ||
+        hasInRangeR(r)
     )
     // RECLAIM-S / RECLAIM-R — live failed breakdown / breakout (independent of
     // the previous-session Consolidate/Momentum filters, so they combine).
@@ -2809,45 +2828,24 @@ export default function Screener({
             <div className="inline-flex items-stretch mr-1" role="group" aria-label="Previous session candle filters">
               <button
                 onClick={() => {
-                  if (!previousConsolidateAReady) return;
-                  setPreviousCandleFilter((v) => v === "consolidate-a" ? "all" : "consolidate-a");
-                  setPreviousConsolidateAMessage("");
+                  if (!previous15MMomentumReady) return;
+                  setPreviousCandleFilter((v) => v === "momentum-b" ? "all" : "momentum-b");
+                  setPrevious15MMomentumMessage("");
                 }}
-                disabled={!previousConsolidateAReady || currentAllCount === 0 || activeTab === "coindcx"}
-                aria-pressed={previousCandleFilter === "consolidate-a"}
+                disabled={!previous15MMomentumReady || currentAllCount === 0 || activeTab === "coindcx"}
+                aria-pressed={previousCandleFilter === "momentum-b"}
                 className={`text-xs px-2.5 py-1 rounded-l border transition-colors disabled:opacity-50 ${
-                  previousCandleFilter === "consolidate-a"
+                  previousCandleFilter === "momentum-b"
                     ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
                     : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
                 }`}
-                title="Include Binance and Delta symbols unless a completed previous-session 15-minute candle (a) has its whole body below previous day's BC while making a new low versus earlier candles, or (b) has its whole body above the higher of previous day's PH and R1. For the first fresh low, an immediate next candle with a lower wick becomes the reference instead. Unevaluated sources such as CoinDCX are excluded while active."
+                title="Same as CONSOLIDATE-B but without the PL/S1 check: include Binance and Delta symbols unless a completed previous-session 15-minute candle has its whole body above previous day's TC while making a new high versus earlier candles. Unevaluated sources such as CoinDCX are excluded while active."
               >
-                {previousConsolidateAProgress
-                  ? `P-CONSOLIDATE-A ${previousConsolidateAProgress.done}/${previousConsolidateAProgress.total}`
-                  : previousConsolidateAReady
-                    ? `P-CONSOLIDATE-A (${previousConsolidateAIncludedCount})`
-                    : "P-CONSOLIDATE-A…"}
-              </button>
-              <button
-                onClick={() => {
-                  if (!previousUpexReady) return;
-                  setPreviousCandleFilter((v) => v === "momentum-a" ? "all" : "momentum-a");
-                  setUpexMessage("");
-                }}
-                disabled={!previousUpexReady || currentAllCount === 0 || activeTab === "coindcx"}
-                aria-pressed={previousCandleFilter === "momentum-a"}
-                className={`text-xs px-2.5 py-1 -ml-px border transition-colors disabled:opacity-50 ${
-                  previousCandleFilter === "momentum-a"
-                    ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
-                    : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
-                }`}
-                title="For Binance and Delta, exclude a symbol only when a previous-session 15-minute candle body is below previous day's BC and its lower body edge breaks below earlier session wick lows. The first fresh-low break is forgiven if the immediate next candle makes a lower wick, which becomes the reference. Prepared once after exchange scan data loads; toggling reuses the cached result."
-              >
-                {previousUpexProgress
-                  ? `P-MOMENTUM-A ${previousUpexProgress.done}/${previousUpexProgress.total}`
-                  : previousUpexReady
-                    ? `P-MOMENTUM-A (${previousUpexIncludedCount})`
-                    : "P-MOMENTUM-A…"}
+                {previous15MMomentumProgress
+                  ? `P-MOMENTUM-B ${previous15MMomentumProgress.done}/${previous15MMomentumProgress.total}`
+                  : previous15MMomentumReady
+                    ? `P-MOMENTUM-B (${previous15MMomentumIncludedCount})`
+                    : "P-MOMENTUM-B…"}
               </button>
               <button
                 onClick={() => {
@@ -2872,24 +2870,63 @@ export default function Screener({
               </button>
               <button
                 onClick={() => {
-                  if (!previous15MMomentumReady) return;
-                  setPreviousCandleFilter((v) => v === "momentum-b" ? "all" : "momentum-b");
-                  setPrevious15MMomentumMessage("");
+                  if (!previousCandleClassificationReady) return;
+                  setPreviousCandleFilter((v) => v === "inrange-r" ? "all" : "inrange-r");
                 }}
-                disabled={!previous15MMomentumReady || currentAllCount === 0 || activeTab === "coindcx"}
-                aria-pressed={previousCandleFilter === "momentum-b"}
-                className={`text-xs px-2.5 py-1 rounded-r -ml-px border transition-colors disabled:opacity-50 ${
-                  previousCandleFilter === "momentum-b"
+                disabled={!previousCandleClassificationReady || currentAllCount === 0 || activeTab === "coindcx"}
+                aria-pressed={previousCandleFilter === "inrange-r"}
+                className={`text-xs px-2.5 py-1 -ml-px border transition-colors disabled:opacity-50 ${
+                  previousCandleFilter === "inrange-r"
                     ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
                     : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
                 }`}
-                title="Same as CONSOLIDATE-B but without the PL/S1 check: include Binance and Delta symbols unless a completed previous-session 15-minute candle has its whole body above previous day's TC while making a new high versus earlier candles. Unevaluated sources such as CoinDCX are excluded while active."
+                title="Show remaining symbols in the active Show All pool that are not in P-MOMENTUM-B, P-CONSOLIDATE-B, P-CONSOLIDATE-A, or P-MOMENTUM-A. Includes symbols those candle checks could not classify."
               >
-                {previous15MMomentumProgress
-                  ? `P-MOMENTUM-B ${previous15MMomentumProgress.done}/${previous15MMomentumProgress.total}`
-                  : previous15MMomentumReady
-                    ? `P-MOMENTUM-B (${previous15MMomentumIncludedCount})`
-                    : "P-MOMENTUM-B…"}
+                {previousCandleClassificationReady
+                  ? `P-INRANGE-R (${previousInRangeRIncludedCount})`
+                  : "P-INRANGE-R…"}
+              </button>
+              <button
+                onClick={() => {
+                  if (!previousConsolidateAReady) return;
+                  setPreviousCandleFilter((v) => v === "consolidate-a" ? "all" : "consolidate-a");
+                  setPreviousConsolidateAMessage("");
+                }}
+                disabled={!previousConsolidateAReady || currentAllCount === 0 || activeTab === "coindcx"}
+                aria-pressed={previousCandleFilter === "consolidate-a"}
+                className={`text-xs px-2.5 py-1 -ml-px border transition-colors disabled:opacity-50 ${
+                  previousCandleFilter === "consolidate-a"
+                    ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
+                    : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
+                }`}
+                title="Include Binance and Delta symbols unless a completed previous-session 15-minute candle (a) has its whole body below previous day's BC while making a new low versus earlier candles, or (b) has its whole body above the higher of previous day's PH and R1. For the first fresh low, an immediate next candle with a lower wick becomes the reference instead. Unevaluated sources such as CoinDCX are excluded while active."
+              >
+                {previousConsolidateAProgress
+                  ? `P-CONSOLIDATE-A ${previousConsolidateAProgress.done}/${previousConsolidateAProgress.total}`
+                  : previousConsolidateAReady
+                    ? `P-CONSOLIDATE-A (${previousConsolidateAIncludedCount})`
+                    : "P-CONSOLIDATE-A…"}
+              </button>
+              <button
+                onClick={() => {
+                  if (!previousUpexReady) return;
+                  setPreviousCandleFilter((v) => v === "momentum-a" ? "all" : "momentum-a");
+                  setUpexMessage("");
+                }}
+                disabled={!previousUpexReady || currentAllCount === 0 || activeTab === "coindcx"}
+                aria-pressed={previousCandleFilter === "momentum-a"}
+                className={`text-xs px-2.5 py-1 rounded-r -ml-px border transition-colors disabled:opacity-50 ${
+                  previousCandleFilter === "momentum-a"
+                    ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
+                    : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
+                }`}
+                title="For Binance and Delta, exclude a symbol only when a previous-session 15-minute candle body is below previous day's BC and its lower body edge breaks below earlier session wick lows. The first fresh-low break is forgiven if the immediate next candle makes a lower wick, which becomes the reference. Prepared once after exchange scan data loads; toggling reuses the cached result."
+              >
+                {previousUpexProgress
+                  ? `P-MOMENTUM-A ${previousUpexProgress.done}/${previousUpexProgress.total}`
+                  : previousUpexReady
+                    ? `P-MOMENTUM-A (${previousUpexIncludedCount})`
+                    : "P-MOMENTUM-A…"}
               </button>
             </div>
             {/* Live current-session failed-break flags. Independent of the
