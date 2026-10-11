@@ -172,18 +172,124 @@ export const EXPANDED_VIEWS: ViewDef[] = [
   { key: "E-E-AA-OB-EU3L4", label: "E-E-AA-OB-EU3L4", parentKey: "E-E-AA-OB", kind: "pattern", condition: (r) => r.EU3L4, order: 3 },
   // --- SENTUSDT Oct 9 2026 (-15.39%) setup: expanded ladder + gapped-down support shelf ---
   {
-    key: "PL-B-E-HA-BB-EL2U3-SL-GapBA-S3",
-    label: "ExpandedGapFall",
-    parentKey: "B-E-HA-BB-EL2U3",
-    condition: (r) => passesView(r, "B-E-HA-BB-EL2U3") && matchesGapBadge(r, "SL-GapBA"),
-    standalone: true,
-    kind: "view",
-    direction: "Down",
-    targetLabel: "S3",
-    getTarget: (r) => r.todayCPR.s3,
-    entryLabel: "PL",
-    getEntry: (r) => r.todayCPR.prevLow,
-    stoplossLabel: "TC",
-    getStoploss: (r) => r.todayCPR.tc,
-  },
+      key: "PL-B-E-HA-BB-EL2U3-SL-GapBA-S2",
+      label: "ExpandedLLGapFall",
+      parentKey: "B-E-HA-BB-EL2U3",
+      condition: (r) => passesView(r, "B-E-HA-BB-EL2U3") && matchesGapBadge(r, "SL-GapBA"),
+      standalone: true,
+      kind: "view",
+      direction: "Down",
+      targetLabel: "L2 (today's S2)",
+      getTarget: (r) => r.todayCPR.s2,
+      entryLabel: "PL (previous day's low)",
+      getEntry: (r) => r.todayCPR.prevLow,
+      stoplossLabel: "R1 (today's R1)",
+      getStoploss: (r) => r.todayCPR.r1,
+      levelCheckDefs: [
+    {
+      "key": "r4",
+      "subject": "previous",
+      "bandKeys": [
+        "r3",
+        "r2"
+      ]
+    },
+    {
+      "key": "r3",
+      "subject": "previous",
+      "bandKeys": [
+        "r2",
+        "prevHigh"
+      ]
+    },
+    {
+      "key": "r2",
+      "subject": "previous",
+      "bandKeys": [
+        "r2",
+        "prevHigh"
+      ]
+    },
+    {
+      "key": "prevHigh",
+      "subject": "previous",
+      "bandKeys": [
+        "r1",
+        "tc"
+      ]
+    },
+    {
+      "key": "r1",
+      "subject": "previous",
+      "bandKeys": [
+        "prevHigh",
+        "r1"
+      ]
+    },
+    {
+      "key": "tc",
+      "subject": "previous",
+      "bandKeys": [
+        "r1",
+        "tc"
+      ]
+    },
+    {
+      "key": "pivot",
+      "subject": "previous",
+      "bandKeys": [
+        "r1",
+        "tc"
+      ]
+    },
+    {
+      "key": "bc",
+      "subject": "previous",
+      "bandKeys": [
+        "r1",
+        "tc"
+      ]
+    },
+    {
+      "key": "prevLow",
+      "subject": "previous",
+      "bandKeys": [
+        "bc",
+        "prevLow"
+      ]
+    },
+    {
+      "key": "s1",
+      "subject": "previous",
+      "bandKeys": [
+        "bc",
+        "prevLow"
+      ]
+    },
+    {
+      "key": "s2",
+      "subject": "previous",
+      "bandKeys": [
+        "bc",
+        "prevLow"
+      ]
+    },
+    {
+      "key": "s3",
+      "subject": "previous",
+      "bandKeys": [
+        "s1",
+        "s2"
+      ]
+    },
+    {
+      "key": "s4",
+      "subject": "previous",
+      "bandKeys": [
+        "s1",
+        "s2"
+      ]
+    }
+  ],
+    },
 ];
