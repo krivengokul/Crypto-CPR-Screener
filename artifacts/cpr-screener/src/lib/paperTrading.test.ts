@@ -637,6 +637,64 @@ test("passesUpexFilter with ceiling fails when a candle body is above ceiling", 
   );
 });
 
+test("MOMENTUM-A and CONSOLIDATE-A use the immediate lower-wick candle as the fresh-low reference", () => {
+  const start = Date.parse("2026-10-06T00:00:00.000Z");
+  const now = Date.parse("2026-10-06T06:00:00.000Z");
+  const m = 15 * 60_000;
+  const bc = 100;
+  const ceiling = 120;
+  const c = (
+    i: number,
+    open: number,
+    high: number,
+    low: number,
+    close: number
+  ): OHLC => ({ openTime: start + i * m, open, high, low, close, volume: 1 });
+  const beforeBreak = c(0, 101, 103, 95, 102);
+  const breaksBelowBc = c(1, 94, 96, 92, 93);
+  const immediateLowerWick = c(2, 94, 96, 90, 93);
+  const staysAboveReference = c(3, 91, 94, 90.5, 92);
+  const breaksReference = c(4, 89, 91, 88, 90);
+
+  assert.equal(
+    passesUpexFilter(
+      [beforeBreak, breaksBelowBc, immediateLowerWick, staysAboveReference],
+      bc, start, now, ceiling,
+    ),
+    true,
+  );
+  assert.equal(
+    passesUpexFilter(
+      [beforeBreak, breaksBelowBc, immediateLowerWick, staysAboveReference, breaksReference],
+      bc, start, now, ceiling,
+    ),
+    false,
+  );
+  // MOMENTUM-A uses the same immediate-next-candle confirmation.
+  assert.equal(
+    passesUpexFilter(
+      [beforeBreak, breaksBelowBc, immediateLowerWick, staysAboveReference],
+      bc, start, now,
+    ),
+    true,
+  );
+  assert.equal(
+    passesUpexFilter(
+      [beforeBreak, breaksBelowBc, immediateLowerWick, staysAboveReference, breaksReference],
+      bc, start, now,
+    ),
+    false,
+  );
+  // No lower wick on the immediate next candle means the original break fails.
+  assert.equal(
+    passesUpexFilter(
+      [beforeBreak, breaksBelowBc, c(2, 94, 96, 92, 93)],
+      bc, start, now,
+    ),
+    false,
+  );
+});
+
 test("PD-15M-Below-BC floor is the lower of previous PL and S1", () => {
   assert.equal(getPrevious15MBFloor({ prevLow: 90, s1: 95 }), 90);
   assert.equal(getPrevious15MBFloor({ prevLow: 90, s1: 85 }), 85);
@@ -1071,9 +1129,11 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     cpr_previous_15m_tc_b_results_v5: "keep",
     cpr_previous_15m_b_results_v1: "x",
     cpr_previous_15m_b_results_v3: "keep",
-    cpr_previous_upex_results_v1: "keep",
+    cpr_previous_upex_results_v1: "x",
+    cpr_previous_upex_results_v2: "keep",
     cpr_previous_15m_consolidate_a_results_v1: "x",
-    cpr_previous_15m_consolidate_a_results_v2: "keep",
+    cpr_previous_15m_consolidate_a_results_v2: "x",
+    cpr_previous_15m_consolidate_a_results_v3: "keep",
     cpr_previous_15m_momentum_b_results_v1: "keep",
     "cpr_symbols_2026-10-09": "unrelated",
   };
@@ -1085,13 +1145,13 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     }),
   });
   try {
-    assert.equal(pruneLegacy15MResultCaches(), 4);
+    assert.equal(pruneLegacy15MResultCaches(), 6);
     assert.deepEqual(Object.keys(store).sort(), [
       "cpr_previous_15m_b_results_v3",
-      "cpr_previous_15m_consolidate_a_results_v2",
+      "cpr_previous_15m_consolidate_a_results_v3",
       "cpr_previous_15m_momentum_b_results_v1",
       "cpr_previous_15m_tc_b_results_v5",
-      "cpr_previous_upex_results_v1",
+      "cpr_previous_upex_results_v2",
       "cpr_symbols_2026-10-09",
     ]);
     // Running again is a no-op.
@@ -1186,4 +1246,3 @@ test("matchesCandleCheck validates CPRResult flags according to code", () => {
   // None / empty string
   assert.equal(matchesCandleCheck(dummyCPR, ""), true);
 });
-

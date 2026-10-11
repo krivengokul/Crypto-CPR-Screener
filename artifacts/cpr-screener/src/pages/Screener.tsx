@@ -2820,7 +2820,7 @@ export default function Screener({
                     ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
                     : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
                 }`}
-                title="Include Binance and Delta symbols unless a completed previous-session 15-minute candle (a) has its whole body below previous day's BC while making a new low versus earlier candles, or (b) has its whole body above the higher of previous day's PH and R1. Unevaluated sources such as CoinDCX are excluded while active."
+                title="Include Binance and Delta symbols unless a completed previous-session 15-minute candle (a) has its whole body below previous day's BC while making a new low versus earlier candles, or (b) has its whole body above the higher of previous day's PH and R1. For the first fresh low, an immediate next candle with a lower wick becomes the reference instead. Unevaluated sources such as CoinDCX are excluded while active."
               >
                 {previousConsolidateAProgress
                   ? `P-CONSOLIDATE-A ${previousConsolidateAProgress.done}/${previousConsolidateAProgress.total}`
@@ -2841,7 +2841,7 @@ export default function Screener({
                     ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
                     : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
                 }`}
-                title="For Binance and Delta, exclude a symbol only when a previous-session 15-minute candle body is below previous day's BC and its lower body edge breaks below earlier session wick lows. Prepared once after exchange scan data loads; toggling reuses the cached result."
+                title="For Binance and Delta, exclude a symbol only when a previous-session 15-minute candle body is below previous day's BC and its lower body edge breaks below earlier session wick lows. The first fresh-low break is forgiven if the immediate next candle makes a lower wick, which becomes the reference. Prepared once after exchange scan data loads; toggling reuses the cached result."
               >
                 {previousUpexProgress
                   ? `P-MOMENTUM-A ${previousUpexProgress.done}/${previousUpexProgress.total}`
