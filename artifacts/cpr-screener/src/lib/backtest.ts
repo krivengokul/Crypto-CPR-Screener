@@ -13,7 +13,6 @@ import {
   ALL_GAP_BADGES,
   matchesCandleCheck,
   ALL_CANDLE_CHECKS,
-  candleCheckToCategoryKey,
   parseComposedViewKey,
 } from "./views";
 import { gradeTargetHit } from "./backtestOutcome";
@@ -1574,12 +1573,17 @@ export async function backtestSymbolOnDate(
     result.PD15MAboveBCPass = PD15MAboveBCPass === true;
   }
 
+  // Always populate all four P-filter flags (View column badges + candleCheck gates).
+  // CoinDCX: leave flags unset/false; Views that require a candleCheck still fail below.
+  if (source !== "coindcx") {
+    await populateAllPFilterFlags(result, symbol, source, entryDateISO);
+  }
+
   const activeCandleCheck = target.candleCheck ?? parseComposedViewKey(target.key).candleCheck;
   if (activeCandleCheck) {
-    const catKey = candleCheckToCategoryKey(activeCandleCheck);
-    if (catKey) {
-      if (!(await populatePFilterFlags(result, symbol, source, entryDateISO, catKey))) return null;
-    }
+    // Candle-check Views need the flags; CoinDCX cannot satisfy them.
+    if (source === "coindcx") return null;
+    if (!matchesCandleCheck(result, activeCandleCheck)) return null;
   }
 
   if (!passesPatternFn(result, target.conditionKey ?? target.key)) return null; // didn't match the pattern on this date
@@ -1728,59 +1732,60 @@ export const P_FILTER_CATEGORY_KEYS: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * Fill in the 15m flags a P-* category's condition needs. Returns false when
- * the symbol can't be evaluated (CoinDCX has no 15m check). Unavailable
- * candles count as "not passing", like the other 15m patterns.
+ * Fill ALL previous-session 15m P-filter flags on `result`:
+ *   PD15MConsolidateAPass, PD15MAboveBCPass,
+ *   PD15MBelowTCPass,      PD15MMomentumBPass
+ *
+ * Used for every category / view / pattern backtest row so the View column
+ * can show P-CONSOLIDATE-A/B and P-MOMENTUM-A/B the same way as the live
+ * Screener. Returns false when the source has no 15m path (CoinDCX).
+ * Unavailable candles count as "not passing" (flag = false).
  */
-async function populatePFilterFlags(
+async function populateAllPFilterFlags(
   result: CPRResult,
   symbol: string,
   source: BacktestSource,
   entryDateISO: string,
-  categoryKey: string,
 ): Promise<boolean> {
   if (source === "coindcx") return false;
+
   const sessionStart = Date.parse(`${entryDateISO}T00:00:00.000Z`);
   const { prevCPR } = result;
 
-  const consolidateA = () =>
+  const [consolidateA, momentumA, consolidateB, momentumB] = await Promise.all([
     findPreviousConsolidateAPass(
-      { symbol, source, bc: getConsolidateABc(prevCPR, result.ppCPR), ceiling: getPrevious15MACeiling(prevCPR) },
+      {
+        symbol,
+        source,
+        bc: getConsolidateABc(prevCPR, result.ppCPR),
+        ceiling: getPrevious15MACeiling(prevCPR),
+      },
       sessionStart,
-    );
-  const consolidateB = () =>
+    ),
+    findPreviousUpexPass(
+      { symbol, source, bc: prevCPR.bc },
+      sessionStart,
+    ),
     findPD15MBelowTCPass(
-      { symbol, source, bc: getConsolidateBTc(prevCPR, result.ppCPR), floor: getPrevious15MBFloor(prevCPR) },
+      {
+        symbol,
+        source,
+        bc: getConsolidateBTc(prevCPR, result.ppCPR),
+        floor: getPrevious15MBFloor(prevCPR),
+      },
       sessionStart,
-    );
+    ),
+    // MOMENTUM-B = CONSOLIDATE-B TC check without the PL/S1 floor
+    findPD15MBelowTCPass(
+      { symbol, source, bc: prevCPR.tc },
+      sessionStart,
+    ),
+  ]);
 
-  switch (categoryKey) {
-    case "CON-A":
-      result.PD15MConsolidateAPass = (await consolidateA()) === true;
-      break;
-    case "MOM-A": {
-      const [momentum, consolidate] = await Promise.all([
-        findPreviousUpexPass({ symbol, source, bc: prevCPR.bc }, sessionStart),
-        consolidateA(),
-      ]);
-      result.PD15MAboveBCPass = momentum === true;
-      result.PD15MConsolidateAPass = consolidate === true;
-      break;
-    }
-    case "CON-B":
-      result.PD15MBelowTCPass = (await consolidateB()) === true;
-      break;
-    case "MOM-B": {
-      const [momentum, consolidate] = await Promise.all([
-        // MOMENTUM-B = the CONSOLIDATE-B TC check without the PL/S1 floor.
-        findPD15MBelowTCPass({ symbol, source, bc: prevCPR.tc }, sessionStart),
-        consolidateB(),
-      ]);
-      result.PD15MMomentumBPass = momentum === true;
-      result.PD15MBelowTCPass = consolidate === true;
-      break;
-    }
-  }
+  result.PD15MConsolidateAPass = consolidateA === true;
+  result.PD15MAboveBCPass = momentumA === true;
+  result.PD15MBelowTCPass = consolidateB === true;
+  result.PD15MMomentumBPass = momentumB === true;
   return true;
 }
 
@@ -1795,8 +1800,12 @@ export async function categoryScanSymbolOnDate(
   if (!reconstructed) return null;
   const { result, window } = reconstructed;
 
-  if (P_FILTER_CATEGORY_KEYS.has(categoryKey)) {
-    if (!(await populatePFilterFlags(result, symbol, source, entryDateISO, categoryKey))) return null;
+  // Always fill all four P-filter flags so the View column can show badges.
+  // CoinDCX has no 15m path: skip population; P-* categories still cannot match.
+  if (source !== "coindcx") {
+    await populateAllPFilterFlags(result, symbol, source, entryDateISO);
+  } else if (P_FILTER_CATEGORY_KEYS.has(categoryKey)) {
+    return null;
   }
 
   if (!passesPatternFn(result, categoryKey)) return null; // didn't match the category's base condition
@@ -1844,22 +1853,12 @@ export async function pivotLevelBacktestSymbolOnDate(
 
   if (!passesPatternFn(result, categoryKey)) return null; // didn't match the parent category's base condition
 
-  // The MOMENTUM-A pattern depends on the previous session's 15m candles, which
-  // are not part of the daily-candle CPR reconstruction. Populate the flag
-  // here (after the cheap category gate, so only LEVEL ABOVE symbols trigger
-  // a candle fetch) before the pattern's own condition is evaluated.
-  if (pivotLevelKey === "P15MABC") {
-    if (source === "coindcx") return null;
-    const PD15MAboveBCPass = await findPreviousUpexPass(
-      { symbol, source, bc: result.prevCPR.bc },
-      Date.parse(`${entryDateISO}T00:00:00.000Z`),
-    );
-    if (PD15MAboveBCPass === null) {
-      console.warn(
-        `[backtest] ${symbol} on ${entryDateISO}: MOMENTUM-A 15m candles unavailable — treated as not passing.`
-      );
-    }
-    result.PD15MAboveBCPass = PD15MAboveBCPass === true;
+  // Populate all four 15m P-filter flags after the cheap category gate (so only
+  // symbols matching the parent category trigger candle fetches). This covers
+  // the MOMENTUM-A pattern (P15MABC) and lets the View column show badges.
+  // CoinDCX leaves the flags unset, so P15MABC still cannot match there.
+  if (source !== "coindcx") {
+    await populateAllPFilterFlags(result, symbol, source, entryDateISO);
   }
 
   if (!matchesPatternFn(result, pivotLevelKey)) return null; // didn't match this Pattern's raw flag
@@ -1974,18 +1973,9 @@ export async function runBacktest(
   await prefetchHistories(symbols, source, onProgress);
 
   const rows: BacktestRow[] = [];
-  // Historical 15-minute views require a second candle request for
-  // structurally matching Binance/Delta rows, so keep concurrency bounded.
-  // Other Views use the warmed daily-history cache and can run in larger
-  // batches without generating more exchange traffic.
-  const batchSize =
-    target.key === "P15MABC" ||
-    target.key === "P-UPEX-CPRABOVE-OVA" ||
-    target.key === "OVB-P15MAboveBC" ||
-    Boolean(target.candleCheck) ||
-    Boolean(parseComposedViewKey(target.key).candleCheck)
-      ? 8
-      : 100;
+  // Every Binance/Delta row now evaluates the four 15m P-filter flags, so keep
+  // concurrency bounded for all Views (15m candle requests are cached).
+  const batchSize = 8;
   let previousUpexUnavailable = 0;
   let previous15MBUnavailable = 0;
   let pd15MBelowTCUnavailable = 0;
@@ -2082,9 +2072,9 @@ export async function runCategoryScan(
   const rows: CategoryScanRow[] = [];
   await prefetchHistories(symbols, source, onProgress);
 
-  // The P-* categories make 15m candle requests for every symbol, so keep
-  // concurrency bounded like the other 15m patterns.
-  const batchSize = P_FILTER_CATEGORY_KEYS.has(categoryKey) ? 8 : 50;
+  // Every Binance/Delta row now evaluates the four 15m P-filter flags, so keep
+  // concurrency bounded.
+  const batchSize = 8;
 
   for (let i = 0; i < symbols.length; i += batchSize) {
     const batch = symbols.slice(i, i + batchSize);
@@ -2744,10 +2734,9 @@ export async function runPivotLevelBacktest(
   const rows: BacktestRow[] = [];
   await prefetchHistories(symbols, source, onProgress);
 
-  // The MOMENTUM-A pattern makes one extra 15m candle request per LEVEL ABOVE
-  // symbol, so keep concurrency bounded like the other 15m views.
-  const batchSize =
-    pivotLevelKey === "P15MABC" ? 8 : 50;
+  // Every symbol passing the category gate now evaluates the four 15m P-filter
+  // flags, so keep concurrency bounded.
+  const batchSize = 8;
 
   for (let i = 0; i < symbols.length; i += batchSize) {
     const batch = symbols.slice(i, i + batchSize);
