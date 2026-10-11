@@ -85,7 +85,19 @@ export default function SignalsJournal() {
   }, []);
 
   useEffect(() => {
-    const refreshJournal = () => void loadSignals();
+    const refreshJournal = (event: Event) => {
+      const rows = (event as CustomEvent<{ signals?: LoggedSignal[] }>).detail?.signals;
+      if (rows?.length) {
+        setSignals((previous) => {
+          const byId = new Map(previous.map((signal) => [signal.id, signal]));
+          rows.forEach((signal) => byId.set(signal.id, { ...byId.get(signal.id), ...signal }));
+          return Array.from(byId.values()).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+        });
+      }
+      // Reconcile with Firestore in the background after applying the local
+      // row immediately; loadSignals keeps the current table mounted.
+      void loadSignals();
+    };
     window.addEventListener(SIGNALS_JOURNAL_UPDATED_EVENT, refreshJournal);
     return () => window.removeEventListener(SIGNALS_JOURNAL_UPDATED_EVENT, refreshJournal);
   }, []);

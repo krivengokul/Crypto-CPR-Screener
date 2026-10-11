@@ -48,6 +48,12 @@ const SIGNALS_COLLECTION = "signalsJournal";
 const SIGNALS_LOCAL_KEY = "cpr_signals_journal_cache";
 export const SIGNALS_JOURNAL_UPDATED_EVENT = "cpr-signals-journal-updated";
 
+function notifySignalsJournalUpdated(signals: LoggedSignal[]) {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent(SIGNALS_JOURNAL_UPDATED_EVENT, { detail: { signals } }));
+  }
+}
+
 function signalDocId(uid: string, signalId: string): string {
   return `${uid}::${signalId}`;
 }
@@ -180,6 +186,7 @@ async function performAutoSave(
 
   const newSignals: LoggedSignal[] = [];
   const upgradedSignals: LoggedSignal[] = [];
+  const matchedSignals: LoggedSignal[] = [];
   for (const sig of signals) {
     const patternSlug = sig.patternName.replace(/[^a-zA-Z0-9]/g, "_").toUpperCase();
     const deterministicId = `${sig.symbol}-${sig.direction}-${patternSlug}-${todayKey}`;
@@ -208,12 +215,19 @@ async function performAutoSave(
       };
       upgradedSignals.push(upgraded);
       localMap.set(deterministicId, upgraded);
+    } else {
+      // Keep the Journal's visible row in sync even when this setup already
+      // has its one-per-day record and therefore does not create a duplicate.
+      matchedSignals.push(existing);
     }
   }
 
   // Save to local cache first
   if (newSignals.length > 0 || upgradedSignals.length > 0) {
     saveLocalSignalsCache(Array.from(localMap.values()));
+  }
+  if (newSignals.length > 0 || upgradedSignals.length > 0 || matchedSignals.length > 0) {
+    notifySignalsJournalUpdated([...newSignals, ...upgradedSignals, ...matchedSignals]);
   }
 
   // Attempt Firestore sync
@@ -305,11 +319,7 @@ export async function autoSaveQualifiedSignals(
   if (!signals || signals.length === 0) return 0;
 
   try {
-    const saved = await performAutoSave(signals);
-    if (saved > 0 && typeof window !== "undefined") {
-      window.dispatchEvent(new Event(SIGNALS_JOURNAL_UPDATED_EVENT));
-    }
-    return saved;
+    return await performAutoSave(signals);
   } catch (err: any) {
     const msg = err?.message || String(err);
     if (msg.includes("closing") || msg.includes("Closing")) {
@@ -318,11 +328,7 @@ export async function autoSaveQualifiedSignals(
           window.dispatchEvent(new Event("pageshow"));
         }
         await new Promise((r) => setTimeout(r, 600));
-        const saved = await performAutoSave(signals);
-        if (saved > 0 && typeof window !== "undefined") {
-          window.dispatchEvent(new Event(SIGNALS_JOURNAL_UPDATED_EVENT));
-        }
-        return saved;
+        return await performAutoSave(signals);
       } catch {
         return 0;
       }
