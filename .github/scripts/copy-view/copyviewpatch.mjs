@@ -147,18 +147,20 @@ function resolveTopLevelCategoryKey(allViewObjs, attachKey) {
 }
 
 const BULLISH_TARGETS = {
-  PH: { label: "PH (previous day's high)", prop: "prevHigh" },
-  R1: { label: "U1 (today's R1)", prop: "r1" },
-  R2: { label: "U2 (today's R2)", prop: "r2" },
-  R3: { label: "U3 (today's R3)", prop: "r3" },
-  R4: { label: "U4 (today's R4)", prop: "r4" },
+  PH: { label: "PH (previous day's high)", prop: "prevHigh", cpr: "todayCPR" },
+  R1: { label: "U1 (today's R1)", prop: "r1", cpr: "todayCPR" },
+  R2: { label: "U2 (today's R2)", prop: "r2", cpr: "todayCPR" },
+  R3: { label: "U3 (today's R3)", prop: "r3", cpr: "todayCPR" },
+  R4: { label: "U4 (today's R4)", prop: "r4", cpr: "todayCPR" },
+  PR4: { label: "PR4 (previous day's R4)", prop: "r4", cpr: "prevCPR" },
 };
 const BEARISH_TARGETS = {
-  PL: { label: "PL (previous day's low)", prop: "prevLow" },
-  S1: { label: "L1 (today's S1)", prop: "s1" },
-  S2: { label: "L2 (today's S2)", prop: "s2" },
-  S3: { label: "L3 (today's S3)", prop: "s3" },
-  S4: { label: "L4 (today's S4)", prop: "s4" },
+  PL: { label: "PL (previous day's low)", prop: "prevLow", cpr: "todayCPR" },
+  S1: { label: "L1 (today's S1)", prop: "s1", cpr: "todayCPR" },
+  S2: { label: "L2 (today's S2)", prop: "s2", cpr: "todayCPR" },
+  S3: { label: "L3 (today's S3)", prop: "s3", cpr: "todayCPR" },
+  S4: { label: "L4 (today's S4)", prop: "s4", cpr: "todayCPR" },
+  PS4: { label: "PS4 (previous day's S4)", prop: "s4", cpr: "prevCPR" },
 };
 const ENTRY_MAP = {
   R4: { label: "R4 (today's R4)", prop: "r4" },
@@ -317,7 +319,7 @@ let targetLabel, getTargetText;
 if (overrides.target) {
   const tDef = (isUp ? BULLISH_TARGETS : BEARISH_TARGETS)[overrides.target];
   targetLabel = tDef ? tDef.label : (isUp ? "U4 (today's R4)" : "L4 (today's S4)");
-  getTargetText = tDef ? `(r) => r.todayCPR.${tDef.prop}` : (isUp ? "(r) => r.todayCPR.r4" : "(r) => r.todayCPR.s4");
+  getTargetText = tDef ? `(r) => r.${tDef.cpr ?? "todayCPR"}.${tDef.prop}` : (isUp ? "(r) => r.todayCPR.r4" : "(r) => r.todayCPR.s4");
 } else {
   targetLabel = getStringPropertyValue(sourceObj, "targetLabel") ?? (isUp ? "U4 (today's R4)" : "L4 (today's S4)");
   getTargetText = getInitializerText(sourceObj, "getTarget") ?? (isUp ? "(r) => r.todayCPR.r4" : "(r) => r.todayCPR.s4");

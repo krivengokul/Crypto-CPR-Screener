@@ -97,6 +97,8 @@ export const ENTRY_OPTIONS = [
 ];
 
 export const TARGET_OPTIONS = [
+  "PR4",
+  "PS4",
   "PH",
   "R1",
   "R2",

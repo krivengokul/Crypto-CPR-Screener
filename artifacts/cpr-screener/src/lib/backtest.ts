@@ -428,25 +428,32 @@ export interface CreateViewResult {
   created?: ViewDef;
 }
 
-const BULLISH_TARGETS: Record<string, { label: string; key: "prevHigh" | "r1" | "r2" | "r3" | "r4" }> = {
+export interface BacktestTargetDef {
+  label: string;
+  getTarget: (r: CPRResult) => number;
+}
+
+const BULLISH_TARGETS: Record<string, BacktestTargetDef> = {
   // PH = previous day's high (todayCPR.prevHigh) — sits above R1 in the
   // Target dropdown; its position relative to R1 varies day to day (HL-A/HL-B).
-  PH: { label: "PH", key: "prevHigh" },
+  PH: { label: "PH", getTarget: (r: CPRResult) => r.todayCPR.prevHigh },
   // R1 is the nearest rung above entry (TC) — the quickest-to-hit target,
   // and the one an Up View's own stoploss (S1) mirrors on the other side.
-  R1: { label: "R1", key: "r1" },
-  R2: { label: "R2", key: "r2" },
-  R3: { label: "R3", key: "r3" },
-  R4: { label: "R4", key: "r4" },
+  R1: { label: "R1", getTarget: (r: CPRResult) => r.todayCPR.r1 },
+  R2: { label: "R2", getTarget: (r: CPRResult) => r.todayCPR.r2 },
+  R3: { label: "R3", getTarget: (r: CPRResult) => r.todayCPR.r3 },
+  R4: { label: "R4", getTarget: (r: CPRResult) => r.todayCPR.r4 },
+  PR4: { label: "PR4", getTarget: (r: CPRResult) => r.prevCPR.r4 },
 };
-const BEARISH_TARGETS: Record<string, { label: string; key: "prevLow" | "s1" | "s2" | "s3" | "s4" }> = {
+const BEARISH_TARGETS: Record<string, BacktestTargetDef> = {
   // PL = previous day's low (todayCPR.prevLow), listed above S1.
-  PL: { label: "PL", key: "prevLow" },
+  PL: { label: "PL", getTarget: (r: CPRResult) => r.todayCPR.prevLow },
   // S1 mirrors R1 above: nearest rung below entry (BC), stoploss R1.
-  S1: { label: "S1", key: "s1" },
-  S2: { label: "S2", key: "s2" },
-  S3: { label: "S3", key: "s3" },
-  S4: { label: "S4", key: "s4" },
+  S1: { label: "S1", getTarget: (r: CPRResult) => r.todayCPR.s1 },
+  S2: { label: "S2", getTarget: (r: CPRResult) => r.todayCPR.s2 },
+  S3: { label: "S3", getTarget: (r: CPRResult) => r.todayCPR.s3 },
+  S4: { label: "S4", getTarget: (r: CPRResult) => r.todayCPR.s4 },
+  PS4: { label: "PS4", getTarget: (r: CPRResult) => r.prevCPR.s4 },
 };
 
 /**
@@ -568,7 +575,6 @@ export function editBacktestView(
   }
 
   const old = VIEWS[idx];
-  const targetKey = targetDef.key;
   const entryKey = entryDef.key;
   const patternKey = old.conditionKey ?? oldKey;
 
@@ -589,7 +595,7 @@ export function editBacktestView(
     parentKey: attachKey ?? old.parentKey,
     direction: isUp ? "Up" : "Down",
     targetLabel: targetDef.label,
-    getTarget: (r: CPRResult) => r.todayCPR[targetKey],
+    getTarget: targetDef.getTarget,
     entryLabel: entryDef.label,
     getEntry: (r: CPRResult) => r.todayCPR[entryKey],
     stoplossLabel: isUp ? "S1" : "R1",
@@ -647,7 +653,6 @@ export function createBacktestView(
   }
 
   const resolvedParentKey = attachKey ?? patternKey;
-  const targetKey = targetDef.key;
   const entryKey = entryDef.key;
 
   const hasFilter = Boolean(trimmedGapBadge || trimmedCandleCheck);
@@ -667,7 +672,7 @@ export function createBacktestView(
     kind: "view",
     direction: isUp ? "Up" : "Down",
     targetLabel: targetDef.label,
-    getTarget: (r: CPRResult) => r.todayCPR[targetKey],
+    getTarget: targetDef.getTarget,
     entryLabel: entryDef.label,
     getEntry: (r: CPRResult) => r.todayCPR[entryKey],
     stoplossLabel: isUp ? "S1" : "R1",

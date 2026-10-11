@@ -1143,6 +1143,21 @@ test("parseComposedViewKey parses candleCheck segment between entry and pattern"
   assert.equal(parsedMB.patternKey, "A-A-AA-AA");
   assert.equal(parsedMB.gapBadge, "SL-GapAB");
   assert.equal(parsedMB.target, "S4");
+
+  // With PR4 as target
+  const parsedPR4 = parseComposedViewKey("R1-CA-C-B-BB-LB-CL3U2-RH-GapAB-PR4");
+  assert.equal(parsedPR4.entry, "R1");
+  assert.equal(parsedPR4.candleCheck, "CA");
+  assert.equal(parsedPR4.patternKey, "C-B-BB-LB-CL3U2");
+  assert.equal(parsedPR4.gapBadge, "RH-GapAB");
+  assert.equal(parsedPR4.target, "PR4");
+
+  // With PS4 as target
+  const parsedPS4 = parseComposedViewKey("S1-CB-A-A-AA-AA-PS4");
+  assert.equal(parsedPS4.entry, "S1");
+  assert.equal(parsedPS4.candleCheck, "CB");
+  assert.equal(parsedPS4.patternKey, "A-A-AA-AA");
+  assert.equal(parsedPS4.target, "PS4");
 });
 
 test("matchesCandleCheck validates CPRResult flags according to code", () => {

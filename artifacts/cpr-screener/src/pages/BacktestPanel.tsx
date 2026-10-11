@@ -550,11 +550,13 @@ function AttachPointSelect({
 }
 
 /** Target dropdown choices per direction (PH / PL = previous day's high / low). */
-const UP_TARGETS = ["PH", "R1", "R2", "R3", "R4"];
-const DOWN_TARGETS = ["PL", "S1", "S2", "S3", "S4"];
+const UP_TARGETS = ["PH", "R1", "R2", "R3", "R4", "PR4"];
+const DOWN_TARGETS = ["PL", "S1", "S2", "S3", "S4", "PS4"];
 
 /** Parses a View's targetLabel back into a Target dropdown value. */
 function targetFromLabel(label: string | undefined, direction: "Up" | "Down" | undefined): string {
+  const pr = label?.trim().match(/^(PR4|PS4)\b/)?.[1];
+  if (pr) return pr;
   const pv = label?.trim().match(/^(PH|PL)\b/)?.[1];
   if (pv) return pv;
   const m = label?.match(/[RLS]\d/)?.[0];

@@ -117,18 +117,20 @@ function resolveTopLevelCategoryKey(allViewObjs, attachKey) {
 }
 
 const BULLISH_TARGETS = {
-  PH: { label: "PH (previous day's high)", key: "prevHigh" },
-  R1: { label: "U1 (today's R1)", key: "r1" },
-  R2: { label: "U2 (today's R2)", key: "r2" },
-  R3: { label: "U3 (today's R3)", key: "r3" },
-  R4: { label: "U4 (today's R4)", key: "r4" },
+  PH: { label: "PH (previous day's high)", key: "prevHigh", cpr: "todayCPR" },
+  R1: { label: "U1 (today's R1)", key: "r1", cpr: "todayCPR" },
+  R2: { label: "U2 (today's R2)", key: "r2", cpr: "todayCPR" },
+  R3: { label: "U3 (today's R3)", key: "r3", cpr: "todayCPR" },
+  R4: { label: "U4 (today's R4)", key: "r4", cpr: "todayCPR" },
+  PR4: { label: "PR4 (previous day's R4)", key: "r4", cpr: "prevCPR" },
 };
 const BEARISH_TARGETS = {
-  PL: { label: "PL (previous day's low)", key: "prevLow" },
-  S1: { label: "L1 (today's S1)", key: "s1" },
-  S2: { label: "L2 (today's S2)", key: "s2" },
-  S3: { label: "L3 (today's S3)", key: "s3" },
-  S4: { label: "L4 (today's S4)", key: "s4" },
+  PL: { label: "PL (previous day's low)", key: "prevLow", cpr: "todayCPR" },
+  S1: { label: "L1 (today's S1)", key: "s1", cpr: "todayCPR" },
+  S2: { label: "L2 (today's S2)", key: "s2", cpr: "todayCPR" },
+  S3: { label: "L3 (today's S3)", key: "s3", cpr: "todayCPR" },
+  S4: { label: "L4 (today's S4)", key: "s4", cpr: "todayCPR" },
+  PS4: { label: "PS4 (previous day's S4)", key: "s4", cpr: "prevCPR" },
 };
 
 const ENTRY_DEFS = {
@@ -280,7 +282,7 @@ const newViewLiteral = `{
     kind: "view",
     direction: "${direction}",
     targetLabel: "${targetDef.label}",
-    getTarget: (r) => r.todayCPR.${targetDef.key},
+    getTarget: (r) => r.${targetDef.cpr ?? "todayCPR"}.${targetDef.key},
     ${entryText}
     levelCheckDefs: ${JSON.stringify(levelCheckDefs, null, 2)},
   }`;
