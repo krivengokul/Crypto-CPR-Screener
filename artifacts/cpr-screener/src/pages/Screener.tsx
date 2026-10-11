@@ -1632,14 +1632,17 @@ export default function Screener({
 
   // The four previous-session filters are one classification. If a symbol
   // passes multiple independent checks, the first matching tab wins, so the
-  // counts, filter results, and badges all stay mutually exclusive. Priority
-  // follows the displayed order: MOMENTUM-B, CONSOLIDATE-B, CONSOLIDATE-A,
-  // MOMENTUM-A. INRANGE-R is the complement across the active Show All pool.
-  const hasMomentumB = (row: CPRResultWithSource) =>
-    previous15MMomentumIncludedSymbols.has(`${row.source}:${row.symbol}`);
+  // counts, filter results, and badges all stay mutually exclusive. B-side
+  // follows the category/backtest definitions:
+  //   CON-B: PD15MBelowTCPass === true
+  //   MOM-B: PD15MMomentumBPass === true && PD15MBelowTCPass !== true
+  // Then CONSOLIDATE-A and MOMENTUM-A are classified after the B buckets.
+  // INRANGE-R is the complement across the active Show All pool.
   const hasConsolidateB = (row: CPRResultWithSource) =>
-    previous15MTCIncludedSymbols.has(`${row.source}:${row.symbol}`) &&
-    !hasMomentumB(row);
+    previous15MTCIncludedSymbols.has(`${row.source}:${row.symbol}`);
+  const hasMomentumB = (row: CPRResultWithSource) =>
+    previous15MMomentumIncludedSymbols.has(`${row.source}:${row.symbol}`) &&
+    !hasConsolidateB(row);
   const hasConsolidateA = (row: CPRResultWithSource) =>
     previousConsolidateAIncludedSymbols.has(`${row.source}:${row.symbol}`) &&
     !hasMomentumB(row) &&
