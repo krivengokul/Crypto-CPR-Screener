@@ -153,6 +153,7 @@ function App() {
         currentPrice: price,
         timestamp,
         dateStr: new Date(timestamp).toLocaleString(),
+        entryTimeSource: "exchange_trade" as const,
       }]);
     });
     entryMonitorRef.current = monitor;

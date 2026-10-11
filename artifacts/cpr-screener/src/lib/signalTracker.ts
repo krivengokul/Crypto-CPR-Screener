@@ -33,6 +33,8 @@ export interface LoggedSignal {
   cprStatus: string;
   timestamp: number;
   dateStr: string;
+  /** Missing on rows created before entry times came from exchange trades. */
+  entryTimeSource?: "exchange_trade";
   status: "ACTIVE" | "PASS" | "FAIL" | "EXPIRED";
   outcomeNotes?: string;
   evaluatedAt?: number;
@@ -81,6 +83,9 @@ function mergeSignals(existing: LoggedSignal[], incoming: LoggedSignal[]): Logge
     } else {
       // If previous has already completed (PASS/FAIL/EXPIRED), retain its outcome
       if (prev.status === "PASS" || prev.status === "FAIL" || prev.status === "EXPIRED") {
+        map.set(s.id, { ...s, ...prev });
+      } else if (prev.entryTimeSource === "exchange_trade" && s.entryTimeSource !== "exchange_trade") {
+        // Don't let a stale cloud copy replace a locally cached exact trade time.
         map.set(s.id, { ...s, ...prev });
       } else {
         map.set(s.id, { ...prev, ...s });
@@ -174,10 +179,12 @@ async function performAutoSave(
   const localMap = new Map(localList.map((s) => [s.id, s]));
 
   const newSignals: LoggedSignal[] = [];
+  const upgradedSignals: LoggedSignal[] = [];
   for (const sig of signals) {
     const patternSlug = sig.patternName.replace(/[^a-zA-Z0-9]/g, "_").toUpperCase();
     const deterministicId = `${sig.symbol}-${sig.direction}-${patternSlug}-${todayKey}`;
-    if (!localMap.has(deterministicId)) {
+    const existing = localMap.get(deterministicId);
+    if (!existing) {
       const fullSig: LoggedSignal = {
         ...sig,
         id: deterministicId,
@@ -187,11 +194,25 @@ async function performAutoSave(
       };
       newSignals.push(fullSig);
       localMap.set(deterministicId, fullSig);
+    } else if (
+      sig.entryTimeSource === "exchange_trade" &&
+      existing.status === "ACTIVE" &&
+      existing.entryTimeSource !== "exchange_trade"
+    ) {
+      const upgraded = {
+        ...existing,
+        currentPrice: sig.currentPrice,
+        timestamp: sig.timestamp,
+        dateStr: new Date(sig.timestamp).toLocaleString(),
+        entryTimeSource: "exchange_trade" as const,
+      };
+      upgradedSignals.push(upgraded);
+      localMap.set(deterministicId, upgraded);
     }
   }
 
   // Save to local cache first
-  if (newSignals.length > 0) {
+  if (newSignals.length > 0 || upgradedSignals.length > 0) {
     saveLocalSignalsCache(Array.from(localMap.values()));
   }
 
@@ -206,8 +227,8 @@ async function performAutoSave(
       where("uid", "==", uid)
     );
     const existingSnap = await getDocs(q);
-    const existingIds = new Set<string>();
-    existingSnap.forEach((d) => existingIds.add(d.id));
+    const existingDocs = new Map<string, LoggedSignal>();
+    existingSnap.forEach((d) => existingDocs.set(d.id, d.data() as LoggedSignal));
 
     let savedCount = 0;
     const BATCH_SIZE = 400;
@@ -222,7 +243,24 @@ async function performAutoSave(
         const deterministicId = `${sig.symbol}-${sig.direction}-${patternSlug}-${todayKey}`;
         const fullDocId = signalDocId(uid, deterministicId);
 
-        if (existingIds.has(fullDocId)) {
+        const existing = existingDocs.get(fullDocId);
+        if (existing) {
+          if (
+            sig.entryTimeSource === "exchange_trade" &&
+            existing.status === "ACTIVE" &&
+            existing.entryTimeSource !== "exchange_trade"
+          ) {
+            const docRef = doc(db, SIGNALS_COLLECTION, fullDocId);
+            batch.update(docRef, {
+              currentPrice: sig.currentPrice,
+              timestamp: sig.timestamp,
+              dateStr: new Date(sig.timestamp).toLocaleString(),
+              entryTimeSource: "exchange_trade",
+              updatedAt: serverTimestamp(),
+            });
+            hasWrites = true;
+            savedCount++;
+          }
           continue;
         }
 
@@ -239,7 +277,7 @@ async function performAutoSave(
         };
 
         batch.set(docRef, data);
-        existingIds.add(fullDocId);
+        existingDocs.set(fullDocId, data);
         hasWrites = true;
         savedCount++;
       }
@@ -249,10 +287,10 @@ async function performAutoSave(
       }
     }
 
-    return savedCount > 0 ? savedCount : newSignals.length;
+    return savedCount > 0 ? savedCount : newSignals.length + upgradedSignals.length;
   } catch {
     // When offline or Firestore backend unavailable, return locally saved count
-    return newSignals.length;
+    return newSignals.length + upgradedSignals.length;
   }
 }
 
