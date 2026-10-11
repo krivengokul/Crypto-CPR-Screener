@@ -269,6 +269,53 @@ async function addApplicableViewOutcomes<T extends Pick<CategoryScanRow, "symbol
 }
 
 /**
+ * Same P-CONSOLIDATE / P-MOMENTUM labels as ScreenerTableRow's Active Views
+ * column (exclusive pairs: MOM excludes CON on each side).
+ * Reads flags already set on the CPRResult by the 15m backtest path.
+ */
+function renderCandleCheckBadges(raw: CPRResult) {
+  const showConsolidateA = raw.PD15MConsolidateAPass === true;
+  const showConsolidateB = raw.PD15MBelowTCPass === true;
+  const showMomentumA = raw.PD15MAboveBCPass === true && !showConsolidateA;
+  const showMomentumB = raw.PD15MMomentumBPass === true && !showConsolidateB;
+
+  if (!showConsolidateA && !showConsolidateB && !showMomentumA && !showMomentumB) {
+    return null;
+  }
+
+  return (
+    <div className="mt-1 flex flex-col gap-0.5">
+      {showConsolidateA && (
+        <div
+          className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
+          style={{ color: "#03b07c" }}
+        >
+          P-CONSOLIDATE-A
+        </div>
+      )}
+      {showConsolidateB && (
+        <div
+          className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-pink-400"
+          style={{ color: "#f472b6" }}
+        >
+          P-CONSOLIDATE-B
+        </div>
+      )}
+      {showMomentumA && (
+        <div className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-cyan-400">
+          P-MOMENTUM-A
+        </div>
+      )}
+      {showMomentumB && (
+        <div className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-violet-400">
+          P-MOMENTUM-B
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
  * "View" column cell — matched View name colored by direction: green for
  * Up, rose for Down, plain text when the matched View has no direction set
  * (or no View matches at all, rendered as the usual muted em dash). Directly
@@ -281,15 +328,35 @@ async function addApplicableViewOutcomes<T extends Pick<CategoryScanRow, "symbol
  */
 function renderMatchingViewName(raw: CPRResult, selectedKey: string) {
   const match = matchingView(raw, selectedKey);
-  if (!match) return <span className="text-muted-foreground">—</span>;
+  const candleBadges = renderCandleCheckBadges(raw);
+
+  if (!match && !candleBadges) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+
   const colorClass =
-    match.direction === "Up" ? "text-green-400" : match.direction === "Down" ? "text-rose-400" : undefined;
+    match?.direction === "Up"
+      ? "text-green-400"
+      : match?.direction === "Down"
+        ? "text-rose-400"
+        : undefined;
+
   return (
     <div className="flex flex-col gap-0">
-      <span className={colorClass}>{match.label}</span>
-      <span className="truncate font-mono text-xs text-muted-foreground" title={match.key}>
-        {match.key}
-      </span>
+      {match ? (
+        <>
+          <span className={colorClass}>{match.label}</span>
+          <span
+            className="truncate font-mono text-xs text-muted-foreground"
+            title={match.key}
+          >
+            {match.key}
+          </span>
+        </>
+      ) : (
+        <span className="text-muted-foreground">—</span>
+      )}
+      {candleBadges}
     </div>
   );
 }
