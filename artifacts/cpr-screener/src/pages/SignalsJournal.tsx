@@ -54,6 +54,7 @@ function priceKey(source: LoggedSignal["source"], symbol: string): string {
 export default function SignalsJournal() {
   const [signals, setSignals] = useState<LoggedSignal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [evaluating, setEvaluating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [livePrices, setLivePrices] = useState<Record<string, number>>({});
@@ -65,13 +66,17 @@ export default function SignalsJournal() {
   const [sourceFilter, setSourceFilter] = useState<"all" | "binance" | "delta" | "coindcx">("all");
   const [searchTerm, setSearchTerm] = useState("");
 
-  const loadSignals = async () => {
-    setLoading(true);
+  const loadSignals = async (showRefreshIndicator = false) => {
+    // Keep the existing table mounted during live Journal updates. The loading
+    // placeholder is only for the first load; background syncs and manual
+    // refreshes update rows in place without a page-sized flash.
+    if (showRefreshIndicator) setRefreshing(true);
     try {
       const data = await fetchSavedSignalsFromCloud();
       setSignals(data);
     } finally {
       setLoading(false);
+      if (showRefreshIndicator) setRefreshing(false);
     }
   };
 
@@ -341,12 +346,12 @@ export default function SignalsJournal() {
 
       <div className="flex items-center gap-2 flex-wrap">
           <button
-            onClick={loadSignals}
-            disabled={loading}
+            onClick={() => void loadSignals(true)}
+            disabled={refreshing}
             className="px-3 py-1.5 rounded-lg bg-[#162130] hover:bg-[#1e2f47] border border-[#22354a] disabled:opacity-50 text-slate-200 text-xs font-medium flex items-center gap-1.5 transition cursor-pointer"
             title="Reload signals from Firestore"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
             <span>Refresh</span>
           </button>
 
