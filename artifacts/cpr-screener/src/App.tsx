@@ -9,6 +9,7 @@ import type { CPRResultWithSource, ActiveTab } from "@/pages/ScreenerUtils";
 import { passesPattern } from "@/pages/ScreenerUtils";
 import { autoSaveQualifiedSignals } from "@/lib/signalTracker";
 import { LiveEntryCrossMonitor, type EntryCrossCandidate } from "@/lib/liveEntryCrossMonitor";
+import { playEntryCrossAlert, unlockAlertAudio } from "@/lib/alertSound";
 import PatternStats from "@/pages/PatternStats";
 import SignalsJournal from "./pages/SignalsJournal";
 import ViewsSidebar, { SCREENER_PATTERN_IDS, VIEW_LABEL_BY_ID, type SidebarMode } from "@/lib/ViewsSidebar";
@@ -92,6 +93,22 @@ function App() {
   // mapped at the two call sites below, not renamed in either file.
   const [dataSource, setDataSource] = useState<ActiveTab>("binance");
 
+  // Browsers require a user gesture before they allow audio playback. Unlock
+  // once on the first interaction so later websocket crossings can alert.
+  useEffect(() => {
+    const unlock = () => {
+      unlockAlertAudio();
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("keydown", unlock);
+    };
+    window.addEventListener("pointerdown", unlock, { once: true });
+    window.addEventListener("keydown", unlock, { once: true });
+    return () => {
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("keydown", unlock);
+    };
+  }, []);
+
   // Auto-scan on first page load
   useEffect(() => {
     setScanKey((k) => k + 1);
@@ -148,6 +165,7 @@ function App() {
   const entryMonitorRef = useRef<LiveEntryCrossMonitor | null>(null);
   useEffect(() => {
     const monitor = new LiveEntryCrossMonitor((candidate, price, timestamp) => {
+      playEntryCrossAlert();
       void autoSaveQualifiedSignals([{
         ...candidate.payload,
         currentPrice: price,
