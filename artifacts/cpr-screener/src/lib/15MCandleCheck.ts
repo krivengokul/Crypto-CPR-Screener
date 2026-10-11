@@ -9,7 +9,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_CONCURRENT_REQUESTS = 8;
 const PREVIOUS_UPEX_CACHE_KEY = "cpr_previous_upex_results_v5";
 const PREVIOUS_15M_B_CACHE_KEY = "cpr_previous_15m_b_results_v3";
-const PREVIOUS_15M_TC_B_CACHE_KEY = "cpr_previous_15m_tc_b_results_v5";
+const PREVIOUS_15M_TC_B_CACHE_KEY = "cpr_previous_15m_tc_b_results_v6";
 const PREVIOUS_15M_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_momentum_b_results_v1";
 const PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_consolidate_a_results_v6";
 
@@ -236,102 +236,59 @@ interface PD15MBelowTCFailure {
 
 /**
  * Core walk shared by passesPD15MBelowTCFilter and explainPD15MBelowTCFailure.
- * `completed` must already be filtered and sorted by time. Returns the first
- * failure, or null when the session passes.
- *
- * Next-candle confirmation (`confirmWithNextCandle`), one per side:
- * - Upper: a candle whose whole body is above `tc` and whose body top beats
- *   every earlier wick is a "crossing" candle. Normally that fails the
- *   session. With confirmation, if the IMMEDIATE next candle's high is above
- *   the crossing candle's high, the crossing candle is forgiven and the next
- *   candle's top wick becomes the reference for all later candles (the next
- *   candle itself is not judged by the TC rule). If there is no next candle,
- *   or it does not make a higher high, the crossing candle fails as before.
- * - Lower (mirror): a candle whose whole body is below `floor` with a body
- *   bottom under every earlier wick low is forgiven when the immediate next
- *   candle's low is under the crossing candle's low; that low then becomes
- *   the reference.
- * Each side is forgiven at most once: any later fresh high above TC (or fresh
- * low below the floor) beyond the new reference fails the session.
+ * `completed` must already be filtered and sorted by time. Its TC and floor
+ * rules mirror CONSOLIDATE-A: fail on a fresh whole-body breakout above TC;
+ * below the floor, establish a wick reference on the first body that enters
+ * below it, allow the immediate next wick to reset that reference, then fail
+ * if a later body breaks below the reference.
  */
 function findPD15MBelowTCFailure(
   completed: OHLC[],
   tc: number,
-  floor: number | undefined,
-  confirmWithNextCandle: boolean
+  floor: number | undefined
 ): PD15MBelowTCFailure | null {
   let previousHighestWick: number | null = null;
-  let previousLowestWick: number | null = null;
-  let upperConfirmUsed = false;
-  let lowerConfirmUsed = false;
-  let upperConfirming = false; // this candle is the confirmation candle
-  let lowerConfirming = false;
+  let lowerReference: number | null = null;
 
   for (let i = 0; i < completed.length; i++) {
     const candle = completed[i];
     const next: OHLC | undefined = completed[i + 1];
-    const skipLower = lowerConfirming;
-    const skipUpper = upperConfirming;
-    lowerConfirming = false;
-    upperConfirming = false;
-
-    const fullBodyBelowFloor =
-      floor !== undefined && candle.open < floor && candle.close < floor;
-    const bodyLow = Math.min(candle.open, candle.close);
-    if (
-      fullBodyBelowFloor &&
-      !skipLower &&
-      (previousLowestWick === null || bodyLow < previousLowestWick)
-    ) {
-      if (
-        confirmWithNextCandle &&
-        !lowerConfirmUsed &&
-        next !== undefined &&
-        next.low < candle.low
-      ) {
-        lowerConfirmUsed = true;
-        lowerConfirming = true;
-      } else {
-        return { rule: "floor", candle, previousHighestWick, previousLowestWick };
-      }
-    }
 
     const fullBodyAboveTc = candle.open > tc && candle.close > tc;
     const bodyHigh = Math.max(candle.open, candle.close);
     if (
       fullBodyAboveTc &&
-      !skipUpper &&
       (previousHighestWick === null || bodyHigh > previousHighestWick)
     ) {
-      if (
-        confirmWithNextCandle &&
-        !upperConfirmUsed &&
-        next !== undefined &&
-        next.high > candle.high
-      ) {
-        upperConfirmUsed = true;
-        upperConfirming = true;
-      } else {
-        return {
-          rule: "freshHighAboveTC",
-          candle,
-          previousHighestWick,
-          previousLowestWick,
-        };
-      }
+      return {
+        rule: "freshHighAboveTC",
+        candle,
+        previousHighestWick,
+        previousLowestWick: lowerReference,
+      };
     }
 
-    // After a forgiven crossing the next candle's high/low is the highest/
-    // lowest wick so far (it is beyond the crossing candle's), so the usual
-    // running max/min below already makes it the reference.
+    const bodyLow = Math.min(candle.open, candle.close);
+    const bodyPartBelowFloor = floor !== undefined &&
+      (candle.open < floor || candle.close < floor);
+    if (lowerReference === null && bodyPartBelowFloor) {
+      lowerReference = candle.low;
+      if (next !== undefined && next.low < candle.low) {
+        lowerReference = next.low;
+      }
+    } else if (lowerReference !== null && bodyLow < lowerReference) {
+      return {
+        rule: "floor",
+        candle,
+        previousHighestWick,
+        previousLowestWick: lowerReference,
+      };
+    }
+
     previousHighestWick =
       previousHighestWick === null
         ? candle.high
         : Math.max(previousHighestWick, candle.high);
-    previousLowestWick =
-      previousLowestWick === null
-        ? candle.low
-        : Math.min(previousLowestWick, candle.low);
   }
   return null;
 }
@@ -349,41 +306,25 @@ function completedBelowTCCandles(
         candle.openTime + CANDLE_INTERVAL_MS <= now &&
         Number.isFinite(candle.open) &&
         Number.isFinite(candle.close) &&
-        Number.isFinite(candle.high)
+        Number.isFinite(candle.high) &&
+        Number.isFinite(candle.low)
     )
     .sort((a, b) => a.openTime - b.openTime);
 }
 
 /**
- * CONSOLIDATE-B ("Below TC"), the mirror image of passesUpexFilter (MOMENTUM-A / BC):
- * walk the previous session's completed 15m candles in time order and fail as
- * soon as a candle's WHOLE body is above `tc` AND that body's top is higher
- * than the highest wick seen on any earlier candle (a fresh high above TC).
- * A body above TC that stays at or under an earlier candle's high does not
- * fail. The first candle has no earlier wick, so a full body above TC on it
- * fails (same as the BC rule).
- *
- * Optional `floor` (lower of the previous CPR's PL / S1, see
- * getPrevious15MBFloor) adds the mirror-image second rule: the session also
- * fails if a candle's whole body is below the floor AND that body's bottom is
- * lower than the lowest wick seen on any earlier candle (a fresh low below
- * the floor). A body below the floor that stays at or above an earlier
- * candle's low does not fail; neither does a wick below the floor or a body
- * exactly on it. The first candle has no earlier wick, so a full body below
- * the floor on it fails (same as the TC rule). Without a floor only the TC
- * rule applies.
- *
- * `confirmWithNextCandle` (defaults to ON when a floor is supplied, i.e. for
- * CONSOLIDATE-B, and OFF for MOMENTUM-B which has no floor) enables the
- * next-candle confirmation described on findPD15MBelowTCFailure.
+ * CONSOLIDATE-B mirrors CONSOLIDATE-A's two sides. Above TC, a whole candle
+ * body must also make a fresh high above every earlier wick to fail. Below the
+ * lower PL/S1 floor, the first body that enters below sets a low-wick
+ * reference; the immediate next candle can lower that reference, and a later
+ * body below it fails. Without a floor (MOMENTUM-B), only the TC rule applies.
  */
 export function passesPD15MBelowTCFilter(
   candles: OHLC[],
   tc: number,
   startTime: number,
   now: number,
-  floor?: number,
-  confirmWithNextCandle: boolean = floor !== undefined
+  floor?: number
 ): boolean | null {
   if (!Number.isFinite(tc)) return null;
   if (floor !== undefined && !Number.isFinite(floor)) return null;
@@ -391,7 +332,7 @@ export function passesPD15MBelowTCFilter(
   const completed = completedBelowTCCandles(candles, startTime, now);
   if (completed.length === 0) return null;
 
-  return findPD15MBelowTCFailure(completed, tc, floor, confirmWithNextCandle) === null;
+  return findPD15MBelowTCFailure(completed, tc, floor) === null;
 }
 
 /**
@@ -404,8 +345,7 @@ export function explainPD15MBelowTCFailure(
   tc: number,
   startTime: number,
   now: number,
-  floor?: number,
-  confirmWithNextCandle: boolean = floor !== undefined
+  floor?: number
 ): {
   rule: "floor" | "freshHighAboveTC";
   openTime: string;
@@ -422,8 +362,7 @@ export function explainPD15MBelowTCFailure(
   const failure = findPD15MBelowTCFailure(
     completedBelowTCCandles(candles, startTime, now),
     tc,
-    effectiveFloor,
-    confirmWithNextCandle
+    effectiveFloor
   );
   if (!failure) return null;
   return {
