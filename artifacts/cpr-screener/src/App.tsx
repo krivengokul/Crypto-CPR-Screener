@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -7,7 +7,8 @@ import BacktestPanel from "@/pages/BacktestPanel";
 import SignalDesk, { type SignalDeskSymbol, buildPills, computeSignalLevels } from "@/pages/SignalDesk";
 import type { CPRResultWithSource, ActiveTab } from "@/pages/ScreenerUtils";
 import { passesPattern } from "@/pages/ScreenerUtils";
-import { autoSaveQualifiedSignals, hasTouchedEntry } from "@/lib/signalTracker";
+import { autoSaveQualifiedSignals } from "@/lib/signalTracker";
+import { LiveEntryCrossMonitor, type EntryCrossCandidate } from "@/lib/liveEntryCrossMonitor";
 import PatternStats from "@/pages/PatternStats";
 import SignalsJournal from "./pages/SignalsJournal";
 import ViewsSidebar, { SCREENER_PATTERN_IDS, VIEW_LABEL_BY_ID, type SidebarMode } from "@/lib/ViewsSidebar";
@@ -96,61 +97,74 @@ function App() {
     setScanKey((k) => k + 1);
   }, []);
 
-  // Global background auto-save to Firestore Journal: whenever Screener
-  // scans live market data and updates signalResults, all qualified signals
-  // across matching signals are saved directly to Firestore without requiring
-  // the user to manually visit the Signals Desk tab first.
-  useEffect(() => {
-    if (signalResults.length === 0) return;
+  // Derive eligible setups from the scan, then use exchange trade streams to
+  // catch their entry crossing. This prevents the next 15-second REST refresh
+  // from being mislabeled as the time of entry.
+  const entryCrossCandidates = useMemo(() => {
+    if (signalResults.length === 0) return [] as EntryCrossCandidate[];
     const pills = buildPills(signalResults);
-    if (pills.length === 0) return;
-
     const activeMap = new Map<string, CPRResultWithSource>();
     for (const v of pills) {
       for (const r of signalResults) {
-        if (!activeMap.has(r.symbol) && passesPattern(r, v.id)) {
-          activeMap.set(r.symbol, r);
-        }
+        const key = `${r.source}:${r.symbol.toUpperCase()}`;
+        if (!activeMap.has(key) && passesPattern(r, v.id)) activeMap.set(key, r);
       }
     }
-
-    const candidateSignals = [];
-    for (const [, r] of activeMap.entries()) {
+    const candidates: EntryCrossCandidate[] = [];
+    for (const [key, r] of activeMap) {
+      if (r.source === "coindcx") continue;
       const levels = computeSignalLevels(r, pills);
-      if (!levels) continue;
-      // Setup matched, but skip it until price actually touches the
-      // entry line — see hasTouchedEntry's doc comment in
-      // signalTracker.ts. performAutoSave re-checks this too, so this is
-      // just to avoid building/sending candidates that would be dropped
-      // anyway.
-      if (!hasTouchedEntry(levels.direction, levels.price, r.currentPrice)) continue;
-      candidateSignals.push({
+      if (!levels || !Number.isFinite(levels.price) || !Number.isFinite(r.currentPrice)) continue;
+      candidates.push({
+        key,
         symbol: r.symbol,
         source: r.source,
-        timeframe: "Daily / 1D",
         direction: levels.direction,
-        type: `${levels.patternLabel} Setup`,
-        patternName: levels.patternLabel,
-        patternId: levels.patternId,
         entry: levels.price,
-        // Live price, NOT levels.price (the static BC/TC entry line) —
-        // performAutoSave needs the real current price to know whether
-        // this candidate has actually touched its entry line yet.
-        currentPrice: r.currentPrice,
-        target: levels.targetPrice,
-        sl: levels.stopPrice,
-        rr: `1 : ${levels.rrRatio}`,
-        cprStatus: `${levels.patternLabel} (Target ${levels.targetLevel})`,
-        timestamp: Date.now(),
-        dateStr: new Date().toLocaleString(),
-        status: "ACTIVE" as const,
+        initialPrice: r.currentPrice,
+        payload: {
+          symbol: r.symbol,
+          source: r.source,
+          timeframe: "Daily / 1D",
+          direction: levels.direction,
+          type: `${levels.patternLabel} Setup`,
+          patternName: levels.patternLabel,
+          patternId: levels.patternId,
+          entry: levels.price,
+          currentPrice: r.currentPrice,
+          target: levels.targetPrice,
+          sl: levels.stopPrice,
+          rr: `1 : ${levels.rrRatio}`,
+          cprStatus: `${levels.patternLabel} (Target ${levels.targetLevel})`,
+          timestamp: 0,
+          dateStr: "",
+          status: "ACTIVE",
+        },
       });
     }
-
-    if (candidateSignals.length > 0) {
-      autoSaveQualifiedSignals(candidateSignals);
-    }
+    return candidates;
   }, [signalResults]);
+
+  const entryMonitorRef = useRef<LiveEntryCrossMonitor | null>(null);
+  useEffect(() => {
+    const monitor = new LiveEntryCrossMonitor((candidate, price, timestamp) => {
+      void autoSaveQualifiedSignals([{
+        ...candidate.payload,
+        currentPrice: price,
+        timestamp,
+        dateStr: new Date(timestamp).toLocaleString(),
+      }]);
+    });
+    entryMonitorRef.current = monitor;
+    return () => {
+      monitor.stop();
+      entryMonitorRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    entryMonitorRef.current?.update(entryCrossCandidates);
+  }, [entryCrossCandidates]);
 
   const handleToggle = () => {
     setSidebarCollapsed((v) => {

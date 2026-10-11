@@ -44,6 +44,7 @@ export interface LoggedSignal {
 
 const SIGNALS_COLLECTION = "signalsJournal";
 const SIGNALS_LOCAL_KEY = "cpr_signals_journal_cache";
+export const SIGNALS_JOURNAL_UPDATED_EVENT = "cpr-signals-journal-updated";
 
 function signalDocId(uid: string, signalId: string): string {
   return `${uid}::${signalId}`;
@@ -266,7 +267,11 @@ export async function autoSaveQualifiedSignals(
   if (!signals || signals.length === 0) return 0;
 
   try {
-    return await performAutoSave(signals);
+    const saved = await performAutoSave(signals);
+    if (saved > 0 && typeof window !== "undefined") {
+      window.dispatchEvent(new Event(SIGNALS_JOURNAL_UPDATED_EVENT));
+    }
+    return saved;
   } catch (err: any) {
     const msg = err?.message || String(err);
     if (msg.includes("closing") || msg.includes("Closing")) {
@@ -275,7 +280,11 @@ export async function autoSaveQualifiedSignals(
           window.dispatchEvent(new Event("pageshow"));
         }
         await new Promise((r) => setTimeout(r, 600));
-        return await performAutoSave(signals);
+        const saved = await performAutoSave(signals);
+        if (saved > 0 && typeof window !== "undefined") {
+          window.dispatchEvent(new Event(SIGNALS_JOURNAL_UPDATED_EVENT));
+        }
+        return saved;
       } catch {
         return 0;
       }

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   CPRResultWithSource,
   SourceId,
@@ -8,7 +8,7 @@ import {
   getChartUrl,
   hasKnownChartMapping,
 } from "./ScreenerUtils";
-import { autoSaveQualifiedSignals, hasTouchedEntry } from "@/lib/signalTracker";
+import { hasTouchedEntry } from "@/lib/signalTracker";
 import { Views } from "@/lib/ViewsSidebar";
 import { getView, shortLevelLabel } from "@/lib/views";
 import { getRowCategory, getCategoryLabel } from "@/lib/rowCategory";
@@ -594,99 +594,6 @@ export default function SignalDesk({
     const watch = activeSignalOnly.filter((s) => s.direction === "NEUTRAL").length;
     return { total, saved, ready, upCount, downCount, watch, longs: upCount, shorts: downCount };
   }, [filteredSignals]);
-
-  // Automatically save ONLY qualified signals from Active Signals directly to the Journal.
-  // Candidates now come straight from activeSignalSymbols — the same
-  // passesPattern()-against-every-pill computation buildPills() above uses
-  // to produce the sidebar's View counts — NOT from
-  // SignalDesk's own rendered `signals` card list. That keeps Journal
-  // membership tied exactly to "which symbols select into Active Signals",
-  // regardless of which single View happens to be on screen, which pool
-  // branch rendered the cards, or how the cards' own labels are derived. Tracks which symbols were already submitted TODAY so re-renders
-  // triggered by price ticks or switching between Active Signals don't keep
-  // re-submitting the same symbols over and over — the Journal enforces one
-  // row per symbol/day, but there's no reason to spam it with redundant
-  // writes on every tick either.
-  const submittedTodayRef = useRef<{ day: string; symbols: Set<string> }>({
-    day: "",
-    symbols: new Set(),
-  });
-
-  useEffect(() => {
-    if (activeSignalSymbols.size === 0) return;
-
-    const todayKey = new Date().toISOString().slice(0, 10);
-    if (submittedTodayRef.current.day !== todayKey) {
-      // New day — reset the in-memory "already submitted" tracker.
-      submittedTodayRef.current = { day: todayKey, symbols: new Set() };
-    }
-
-    const alreadySubmitted = submittedTodayRef.current.symbols;
-    const newlySubmitted: string[] = [];
-    const candidateSignals: Array<{
-      symbol: string;
-      source: SourceId;
-      timeframe: string;
-      direction: "Up" | "Down" | "NEUTRAL" | "LONG" | "SHORT";
-      type: string;
-      patternName: string;
-      patternId: string;
-      entry: number;
-      currentPrice: number;
-      target: number;
-      sl: number;
-      rr: string;
-      cprStatus: string;
-      timestamp: number;
-      dateStr: string;
-      status: "ACTIVE";
-    }> = [];
-
-    for (const [symbol, r] of activeSignalSymbols.entries()) {
-      const key = symbol.toUpperCase();
-      if (alreadySubmitted.has(key)) continue;
-
-      const levels = computeSignalLevels(r, viewPills);
-      if (!levels) continue; // no backtest-defined target for this symbol's View — nothing to save
-
-      // Setup matched, but don't mark this symbol "submitted today" (and
-      // don't send it to the Journal) until price has actually touched
-      // its entry line — see hasTouchedEntry's doc comment. Leaving it
-      // OUT of alreadySubmitted means the next tick re-checks it fresh.
-      if (!hasTouchedEntry(levels.direction, levels.price, r.currentPrice)) continue;
-
-      newlySubmitted.push(key);
-      candidateSignals.push({
-        symbol: r.symbol,
-        source: r.source,
-        timeframe: "Daily / 1D",
-        direction: levels.direction,
-        type: `${levels.patternLabel} Setup`,
-        patternName: levels.patternLabel,
-        patternId: levels.patternId,
-        entry: levels.price,
-        // Live price, NOT levels.price (the static BC/TC entry line) —
-        // performAutoSave needs the real current price to know whether
-        // this candidate has actually touched its entry line yet.
-        currentPrice: r.currentPrice,
-        target: levels.targetPrice,
-        sl: levels.stopPrice,
-        rr: `1 : ${levels.rrRatio}`,
-        cprStatus: `${levels.patternLabel} (Target ${levels.targetLevel})`,
-        timestamp: Date.now(),
-        dateStr: new Date().toLocaleString(),
-        status: "ACTIVE",
-      });
-    }
-
-    if (candidateSignals.length === 0) return;
-
-    autoSaveQualifiedSignals(candidateSignals).then(() => {
-      for (const key of newlySubmitted) {
-        alreadySubmitted.add(key);
-      }
-    });
-  }, [activeSignalSymbols, viewPills]);
 
   const handleCopy = (item: SignalItem) => {
     const text = `[PIVOT SIGNAL: ${item.symbol}] (${item.direction})

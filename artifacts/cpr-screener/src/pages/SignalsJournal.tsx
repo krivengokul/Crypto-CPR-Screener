@@ -6,6 +6,7 @@ import {
   evaluateSignalOutcome,
   updateSignalOutcomeInCloud,
   clearAllSignalsFromCloud,
+  SIGNALS_JOURNAL_UPDATED_EVENT,
 } from "@/lib/signalTracker";
 import {
   calculateGrossReturnPct,
@@ -76,6 +77,12 @@ export default function SignalsJournal() {
 
   useEffect(() => {
     loadSignals();
+  }, []);
+
+  useEffect(() => {
+    const refreshJournal = () => void loadSignals();
+    window.addEventListener(SIGNALS_JOURNAL_UPDATED_EVENT, refreshJournal);
+    return () => window.removeEventListener(SIGNALS_JOURNAL_UPDATED_EVENT, refreshJournal);
   }, []);
 
   useEffect(() => {
