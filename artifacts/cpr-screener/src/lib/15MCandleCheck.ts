@@ -7,11 +7,11 @@ const DELTA_BASE = "https://api.india.delta.exchange/v2";
 const CANDLE_INTERVAL_MS = 15 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_CONCURRENT_REQUESTS = 8;
-const PREVIOUS_UPEX_CACHE_KEY = "cpr_previous_upex_results_v2";
+const PREVIOUS_UPEX_CACHE_KEY = "cpr_previous_upex_results_v5";
 const PREVIOUS_15M_B_CACHE_KEY = "cpr_previous_15m_b_results_v3";
 const PREVIOUS_15M_TC_B_CACHE_KEY = "cpr_previous_15m_tc_b_results_v5";
 const PREVIOUS_15M_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_momentum_b_results_v1";
-const PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_consolidate_a_results_v3";
+const PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_consolidate_a_results_v6";
 
 export interface UpexCandidate {
   symbol: string;
@@ -155,11 +155,10 @@ export function previousUpexSessionStartUtcMs(now = Date.now()): number {
 /**
  * MOMENTUM-A (PD15M>BC; becomes CONSOLIDATE-A when a `ceiling` is supplied): walk the previous
  * session's completed 15m candles in time order.
- *  - BC rule: fail when a candle's WHOLE body is below `bc` AND the body's
- *    bottom is lower than the lowest wick of any earlier candle (a fresh low).
- *    For either filter, forgive the first such candle when the immediate next
- *    candle makes a lower wick; that next candle becomes the reference for
- *    subsequent fresh-low checks.
+ *  - BC rule: the first candle with any part of its body below `bc` sets the
+ *    reference wick. Its immediate next available candle may replace that
+ *    reference if its wick is lower. Later candles never change the reference;
+ *    fail when any part of a later candle's body is below the reference.
  *  - Ceiling rule (CONSOLIDATE-A, mirror of the BC rule): fail when a candle's
  *    WHOLE body is above `ceiling` (higher of previous PH / R1) AND the body's
  *    top is higher than the highest wick of any earlier candle (a fresh high).
@@ -188,15 +187,11 @@ export function passesUpexFilter(
   ).sort((a, b) => a.openTime - b.openTime);
   if (completed.length === 0) return null;
 
-  let previousLowestWick: number | null = null;
   let previousHighestWick: number | null = null;
-  let lowerConfirmationUsed = false;
-  let lowerConfirming = false;
+  let lowerReference: number | null = null;
   for (let i = 0; i < completed.length; i++) {
     const candle = completed[i];
     const next = completed[i + 1];
-    const skipLowerCheck = lowerConfirming;
-    lowerConfirming = false;
 
     if (
       ceiling !== undefined &&
@@ -207,28 +202,16 @@ export function passesUpexFilter(
     ) {
       return false;
     }
-    const fullBodyBelowBc = candle.open < bc && candle.close < bc;
     const bodyLow = Math.min(candle.open, candle.close);
-    if (
-      fullBodyBelowBc &&
-      !skipLowerCheck &&
-      (previousLowestWick === null || bodyLow < previousLowestWick)
-    ) {
-      if (
-        !lowerConfirmationUsed &&
-        next !== undefined &&
-        next.low < candle.low
-      ) {
-        lowerConfirmationUsed = true;
-        lowerConfirming = true;
-      } else {
-        return false;
+    const bodyPartBelowBc = candle.open < bc || candle.close < bc;
+    if (lowerReference === null && bodyPartBelowBc) {
+      lowerReference = candle.low;
+      if (next !== undefined && next.low < candle.low) {
+        lowerReference = next.low;
       }
+    } else if (lowerReference !== null && bodyLow < lowerReference) {
+      return false;
     }
-    previousLowestWick =
-      previousLowestWick === null
-        ? candle.low
-        : Math.min(previousLowestWick, candle.low);
     if (Number.isFinite(candle.high)) {
       previousHighestWick =
         previousHighestWick === null

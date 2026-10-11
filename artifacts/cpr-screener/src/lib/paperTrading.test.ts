@@ -235,7 +235,7 @@ test("15M-A uses the 05:30 IST day boundary and ignores candles outside complete
 
   assert.equal(
     passesUpexFilter([candle(start + 15 * 60_000, 99, 99.5)], 100, start, now),
-    false
+    true
   );
   assert.equal(
     passesUpexFilter([candle(start + 30 * 60_000, 99, 101)], 100, start, now),
@@ -263,7 +263,7 @@ test("15M-A uses the 05:30 IST day boundary and ignores candles outside complete
       start,
       now
     ),
-    false
+    true
   );
   assert.equal(
     passesUpexFilter([candle(start - 15 * 60_000, 99, 99)], 100, start, now),
@@ -304,7 +304,7 @@ test("PD15M>BC checks the previous IST session and passes candles that are not f
 
   assert.equal(
     passesUpexFilter([candle(start, 99, 99.5)], 100, start, end),
-    false
+    true
   );
   assert.equal(
     passesUpexFilter([candle(start + 15 * 60_000, 99, 100)], 100, start, end),
@@ -331,6 +331,20 @@ test("PD15M>BC checks the previous IST session and passes candles that are not f
       [
         { ...candle(start, 101, 102), low: 99 },
         { ...candle(start + 15 * 60_000, 99, 98), low: 97 },
+      ],
+      100,
+      start,
+      end
+    ),
+    true
+  );
+  assert.equal(
+    passesUpexFilter(
+      [
+        { ...candle(start, 101, 102), low: 99 },
+        { ...candle(start + 15 * 60_000, 99, 98), low: 97 },
+        { ...candle(start + 30 * 60_000, 96, 95), low: 94 },
+        { ...candle(start + 45 * 60_000, 93, 92), low: 91 },
       ],
       100,
       start,
@@ -637,7 +651,7 @@ test("passesUpexFilter with ceiling fails when a candle body is above ceiling", 
   );
 });
 
-test("MOMENTUM-A and CONSOLIDATE-A use the immediate lower-wick candle as the fresh-low reference", () => {
+test("MOMENTUM-A and CONSOLIDATE-A use one immediate lower-wick reference", () => {
   const start = Date.parse("2026-10-06T00:00:00.000Z");
   const now = Date.parse("2026-10-06T06:00:00.000Z");
   const m = 15 * 60_000;
@@ -685,11 +699,74 @@ test("MOMENTUM-A and CONSOLIDATE-A use the immediate lower-wick candle as the fr
     ),
     false,
   );
-  // No lower wick on the immediate next candle means the original break fails.
+  // Without a lower wick on the immediate next candle, the BC-break candle
+  // remains the reference for all later body checks.
   assert.equal(
     passesUpexFilter(
       [beforeBreak, breaksBelowBc, c(2, 94, 96, 92, 93)],
       bc, start, now,
+    ),
+    true,
+  );
+  assert.equal(
+    passesUpexFilter(
+      [beforeBreak, breaksBelowBc, c(2, 94, 96, 92, 93), c(3, 91, 93, 89, 90)],
+      bc, start, now,
+    ),
+    false,
+  );
+});
+
+test("CONSOLIDATE-A freezes the reference after one immediate-next-available-candle confirmation", () => {
+  const start = Date.parse("2026-10-07T00:00:00.000Z");
+  const now = start + 8 * 15 * 60_000;
+  const m = 15 * 60_000;
+  const c = (
+    i: number,
+    open: number,
+    high: number,
+    low: number,
+    close: number,
+  ): OHLC => ({ openTime: start + i * m, open, high, low, close, volume: 1 });
+  const candles = [
+    c(0, 101, 105, 100, 102),
+    c(1, 101, 102, 96, 99),     // part of body below BC; reference low is 96
+    c(2, 99, 101, 94, 100),     // next available lower wick; new reference is 94
+    c(3, 97, 98, 92, 96),       // later wick below reference does not reset it
+    c(4, 93.5, 96, 92, 95),     // part of body below reference: fails
+  ];
+
+  assert.equal(passesUpexFilter(candles.slice(0, 4), 100, start, now, 120), true);
+  assert.equal(passesUpexFilter(candles, 100, start, now, 120), false);
+  // "Next" means the next available candle, even if the feed has a time gap.
+  assert.equal(
+    passesUpexFilter(
+      [
+        candles[0],
+        candles[1],
+        { ...candles[2], openTime: start + 4 * m },
+        { ...c(3, 95, 97, 92, 96), openTime: start + 5 * m },
+      ],
+      100,
+      start,
+      now,
+      120,
+    ),
+    true,
+  );
+  // Either body endpoint below BC establishes the initial reference.
+  assert.equal(
+    passesUpexFilter(
+      [
+        candles[0],
+        c(1, 101, 103, 90, 99.5),
+        c(2, 99, 100, 95, 99),
+        c(3, 101, 103, 88, 89.5),
+      ],
+      100,
+      start,
+      now,
+      120,
     ),
     false,
   );
@@ -750,13 +827,17 @@ test("historical PD15M>BC checks the session before the selected backtest date a
     assert.equal(Number(url.searchParams.get("startTime")), expectedPreviousSession);
     assert.equal(Number(url.searchParams.get("endTime")), sessionStart);
     const symbol = url.searchParams.get("symbol");
-    const candle = symbol === "PUEXFAILUSDT"
-      ? [expectedPreviousSession, "90", "96", "89", "95", "1"]
+    const candles = symbol === "PUEXFAILUSDT"
+      ? [
+          [expectedPreviousSession, "90", "96", "89", "95", "1"],
+          [expectedPreviousSession + 15 * 60_000, "88", "90", "86", "87", "1"],
+          [expectedPreviousSession + 30 * 60_000, "85", "87", "83", "84", "1"],
+        ]
       : symbol === "PUEXEMPTYUSDT"
         ? null
-        : [expectedPreviousSession, "101", "103", "100.5", "102", "1"];
+        : [[expectedPreviousSession, "101", "103", "100.5", "102", "1"]];
     return new Response(
-      JSON.stringify(candle ? [candle] : []),
+      JSON.stringify(candles ?? []),
       { status: 200, headers: { "Content-Type": "application/json" } },
     );
   };
@@ -867,7 +948,7 @@ test("PD15M>BC and P-15M-B share a previous-session candle request", async () =>
       findPreviousUpexSymbols([candidate], undefined, now),
       findPD15MBelowSymbols([candidate], undefined, now),
     ]);
-    assert.equal(above.outcomes.get("binance:P15MSHAREDUSDT"), false);
+    assert.equal(above.outcomes.get("binance:P15MSHAREDUSDT"), true);
     assert.equal(below.outcomes.get("binance:P15MSHAREDUSDT"), true);
     assert.equal(fetchCount, 1);
   } finally {
@@ -894,7 +975,7 @@ test("previous-session API failures are not cached and can be retried", async ()
     const first = await findPreviousUpexSymbols([candidate], undefined, now);
     const second = await findPreviousUpexSymbols([candidate], undefined, now);
     assert.equal(first.outcomes.get("binance:P15MRETRYUSDT"), null);
-    assert.equal(second.outcomes.get("binance:P15MRETRYUSDT"), false);
+    assert.equal(second.outcomes.get("binance:P15MRETRYUSDT"), true);
     assert.equal(fetchCount, 2);
   } finally {
     globalThis.fetch = originalFetch;
@@ -1130,10 +1211,16 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     cpr_previous_15m_b_results_v1: "x",
     cpr_previous_15m_b_results_v3: "keep",
     cpr_previous_upex_results_v1: "x",
-    cpr_previous_upex_results_v2: "keep",
+    cpr_previous_upex_results_v2: "x",
+    cpr_previous_upex_results_v3: "x",
+    cpr_previous_upex_results_v4: "x",
+    cpr_previous_upex_results_v5: "keep",
     cpr_previous_15m_consolidate_a_results_v1: "x",
     cpr_previous_15m_consolidate_a_results_v2: "x",
-    cpr_previous_15m_consolidate_a_results_v3: "keep",
+    cpr_previous_15m_consolidate_a_results_v3: "x",
+    cpr_previous_15m_consolidate_a_results_v4: "x",
+    cpr_previous_15m_consolidate_a_results_v5: "x",
+    cpr_previous_15m_consolidate_a_results_v6: "keep",
     cpr_previous_15m_momentum_b_results_v1: "keep",
     "cpr_symbols_2026-10-09": "unrelated",
   };
@@ -1145,13 +1232,13 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     }),
   });
   try {
-    assert.equal(pruneLegacy15MResultCaches(), 6);
+    assert.equal(pruneLegacy15MResultCaches(), 12);
     assert.deepEqual(Object.keys(store).sort(), [
       "cpr_previous_15m_b_results_v3",
-      "cpr_previous_15m_consolidate_a_results_v3",
+      "cpr_previous_15m_consolidate_a_results_v6",
       "cpr_previous_15m_momentum_b_results_v1",
       "cpr_previous_15m_tc_b_results_v5",
-      "cpr_previous_upex_results_v2",
+      "cpr_previous_upex_results_v5",
       "cpr_symbols_2026-10-09",
     ]);
     // Running again is a no-op.
