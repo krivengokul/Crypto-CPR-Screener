@@ -1008,7 +1008,9 @@ export default function SignalDesk({
     return list;
   }, [symbols, results, viewPills, activeSignalSymbols, resultsBySymbol, selectedSignalId, activeSignal, activeSignalLabel, getTriggeredAt, getJournalMatch]);
 
-  const filteredSignals = useMemo(() => {
+  // Shared base filters (source / direction / search) — status is applied
+  // separately so header counts stay stable when toggling Active/Ready/Pass/Fail.
+  const baseFilteredSignals = useMemo(() => {
     return signals.filter((s) => {
       if (sourceFilter !== "all" && s.source !== sourceFilter) return false;
       if (directionFilter !== "all") {
@@ -1018,10 +1020,6 @@ export default function SignalDesk({
           (directionFilter === "Down" && (s.direction as string) === "SHORT");
         if (!isMatch) return false;
       }
-      if (statusFilter === "saved" && !s.isTriggered) return false;
-      if (statusFilter === "ready" && !(s.isSaved && !s.isTriggered)) return false;
-      if (statusFilter === "pass" && s.journalStatus !== "PASS") return false;
-      if (statusFilter === "fail" && s.journalStatus !== "FAIL") return false;
       if (searchTerm) {
         const query = searchTerm.toLowerCase();
         return (
@@ -1032,33 +1030,43 @@ export default function SignalDesk({
       }
       return true;
     });
-  }, [signals, sourceFilter, directionFilter, statusFilter, searchTerm]);
+  }, [signals, sourceFilter, directionFilter, searchTerm]);
 
-  // Header stats are scoped to symbols that actually belong to an Active
-  // View (item.isSaved — despite the name, this flags Active Signal
-  // membership, the same eligibility check the auto-save effect uses) —
-  // NOT the full scanned/displayed symbol universe. Previously this counted
-  // every card in filteredSignals regardless of whether it matched any
-  // Active Signal, which is why "Signals" showed the full scan size (e.g.
-  // 516) instead of the actual Active Signal total (e.g. ~114).
+  const filteredSignals = useMemo(() => {
+    return baseFilteredSignals.filter((s) => {
+      // Active = entry touched and still open (not PASS/FAIL/EXPIRED).
+      // Ready  = setup matched, entry not touched yet.
+      // Pass/Fail = terminal journal outcomes only.
+      const terminal =
+        s.journalStatus === "PASS" ||
+        s.journalStatus === "FAIL" ||
+        s.journalStatus === "EXPIRED";
+      if (statusFilter === "saved" && !(s.isTriggered && !terminal)) return false;
+      if (statusFilter === "ready" && !(s.isSaved && !s.isTriggered && !terminal)) return false;
+      if (statusFilter === "pass" && s.journalStatus !== "PASS") return false;
+      if (statusFilter === "fail" && s.journalStatus !== "FAIL") return false;
+      return true;
+    });
+  }, [baseFilteredSignals, statusFilter]);
+
+  // Header stats scoped to Active-Signal membership (isSaved), using base
+  // filters only so counts don't collapse when a status tab is selected.
   const stats = useMemo(() => {
-    const activeSignalOnly = filteredSignals.filter((s) => s.isSaved);
+    const activeSignalOnly = baseFilteredSignals.filter((s) => s.isSaved);
     const total = activeSignalOnly.length;
-    // "saved" = actually touched entry and sitting in the Journal.
-    // "ready" = matched an Active Signal but hasn't touched entry yet — still
-    // being watched, not yet written to the Journal. These used to be the
-    // same number (any Active Signal match got auto-saved immediately); now
-    // that auto-save gates on hasTouchedEntry, they're split so the header
-    // doesn't overclaim how many signals are actually in the Journal.
-    const saved = activeSignalOnly.filter((s) => s.isTriggered).length;
-    const ready = total - saved;
+    const isTerminal = (s: SignalItem) =>
+      s.journalStatus === "PASS" ||
+      s.journalStatus === "FAIL" ||
+      s.journalStatus === "EXPIRED";
+    const saved = activeSignalOnly.filter((s) => s.isTriggered && !isTerminal(s)).length;
+    const ready = activeSignalOnly.filter((s) => !s.isTriggered && !isTerminal(s)).length;
     const pass = activeSignalOnly.filter((s) => s.journalStatus === "PASS").length;
     const fail = activeSignalOnly.filter((s) => s.journalStatus === "FAIL").length;
     const upCount = activeSignalOnly.filter((s) => s.direction === "Up" || (s.direction as string) === "LONG").length;
     const downCount = activeSignalOnly.filter((s) => s.direction === "Down" || (s.direction as string) === "SHORT").length;
     const watch = activeSignalOnly.filter((s) => s.direction === "NEUTRAL").length;
     return { total, saved, ready, pass, fail, upCount, downCount, watch, longs: upCount, shorts: downCount };
-  }, [filteredSignals]);
+  }, [baseFilteredSignals]);
 
   const handleCopy = useCallback((item: SignalItem) => {
     const text = `[PIVOT SIGNAL: ${item.symbol}] (${item.direction})
@@ -1320,13 +1328,22 @@ R:R: ${item.riskReward}`;
             </button>
           </div>
 
-          {/* Status Filter — Running (triggered, in the Journal) / Ready
-              (matched an Active Signal, still watching for entry). Toggle
-              behavior: clicking the already-active button clears it back
-              to "all", matching the Direction/Source filters' feel. */}
+          {/* Status Filter — All / Active (open, in Journal) / Ready
+              (watching for entry) / Pass / Fail. Active excludes terminal
+              PASS/FAIL/EXPIRED outcomes so they only appear under Pass/Fail. */}
           <div className="flex gap-0.5 p-0.5 rounded-md border border-[#22354a] bg-[#151e2c] mr-3">
             <button
-              onClick={() => setStatusFilter(statusFilter === "saved" ? "all" : "saved")}
+              onClick={() => setStatusFilter("all")}
+              className={`px-3 py-1 rounded text-xs font-semibold transition cursor-pointer ${
+                statusFilter === "all"
+                  ? "bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/40"
+                  : "text-slate-400 hover:text-slate-200 border border-transparent"
+              }`}
+            >
+              All
+            </button>
+            <button
+              onClick={() => setStatusFilter("saved")}
               className={`px-3 py-1 rounded text-xs font-semibold transition cursor-pointer ${
                 statusFilter === "saved"
                   ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
@@ -1336,7 +1353,7 @@ R:R: ${item.riskReward}`;
               Active
             </button>
             <button
-              onClick={() => setStatusFilter(statusFilter === "ready" ? "all" : "ready")}
+              onClick={() => setStatusFilter("ready")}
               className={`px-3 py-1 rounded text-xs font-semibold transition cursor-pointer ${
                 statusFilter === "ready"
                   ? "bg-amber-500/20 text-amber-400 border border-amber-500/40"
@@ -1346,7 +1363,7 @@ R:R: ${item.riskReward}`;
               Ready
             </button>
             <button
-              onClick={() => setStatusFilter(statusFilter === "pass" ? "all" : "pass")}
+              onClick={() => setStatusFilter("pass")}
               className={`px-3 py-1 rounded text-xs font-semibold transition cursor-pointer ${
                 statusFilter === "pass"
                   ? "bg-green-500/20 text-green-400 border border-green-500/40"
@@ -1356,7 +1373,7 @@ R:R: ${item.riskReward}`;
               Pass
             </button>
             <button
-              onClick={() => setStatusFilter(statusFilter === "fail" ? "all" : "fail")}
+              onClick={() => setStatusFilter("fail")}
               className={`px-3 py-1 rounded text-xs font-semibold transition cursor-pointer ${
                 statusFilter === "fail"
                   ? "bg-rose-500/20 text-rose-400 border border-rose-500/40"
