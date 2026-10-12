@@ -116,6 +116,9 @@ function formatDisplay(iso: string): string {
  * choosing a View lists every symbol belonging to it regardless of its
  * Ladder Check score. (The live Screener keeps using passesPattern as-is.)
  */
+/** Special picker key: no category/pattern filter — full universe (or symbol search). */
+const ALL_VIEWS_KEY = "__all__";
+
 function passesPatternNoLadder(r: CPRResult, pattern: string): boolean {
   const v = getView(pattern);
   if (!v) return false;
@@ -157,7 +160,8 @@ function matchingViewDef(raw: CPRResult, selectedKey: string): ViewDef | null {
   const selected = getView(selectedKey);
   if (!selected) return null;
 
-  const searchGlobally = SYMBOL_LIST_ONLY_CATEGORY_KEYS.has(selectedKey);
+  const searchGlobally =
+    selectedKey === ALL_VIEWS_KEY || SYMBOL_LIST_ONLY_CATEGORY_KEYS.has(selectedKey);
 
   const candidates = VIEWS
     .filter((view) =>
@@ -245,7 +249,7 @@ function matchingView(raw: CPRResult, selectedKey: string): { label: string; key
 }
 
 function hasViewsInScope(selectedKey: string): boolean {
-  return SYMBOL_LIST_ONLY_CATEGORY_KEYS.has(selectedKey) ||
+  return selectedKey === ALL_VIEWS_KEY || SYMBOL_LIST_ONLY_CATEGORY_KEYS.has(selectedKey) ||
     VIEWS.some(
       (view) =>
         view.kind === "view" &&
@@ -2040,7 +2044,8 @@ export default function BacktestPanel() {
   } | null>(null);
   const viewTree = useMemo(() => buildViewTree(), [treeRevision, VIEWS.length]);
 
-  const isCategory = viewTree.some((c) => c.key === selectedKey);
+  const isAllViews = selectedKey === ALL_VIEWS_KEY;
+  const isCategory = isAllViews || viewTree.some((c) => c.key === selectedKey);
 
   let activePatternInfo: {
     category: ViewTreeNode;
@@ -2100,7 +2105,9 @@ export default function BacktestPanel() {
       ? "Down"
       : undefined;
 
-  const symbolListLabel = isCategory
+  const symbolListLabel = isAllViews
+    ? "ALL — any pattern"
+    : isCategory
     ? activeCategory?.label
     : isPatternOnly && activePatternInfo
     ? `${activePatternInfo.category.label} → ${activePatternInfo.path.map((p) => `Pattern ${p.label}`).join(" → ")}`
@@ -2157,7 +2164,9 @@ export default function BacktestPanel() {
   const selectedHome = dedupe?.primaryOf.get(selectedKey) ?? selectedKey;
   const selectedContext = isPatternOnly ? dedupe?.contextOf.get(selectedKey) : undefined;
 
-  const triggerLabel = isCategory
+  const triggerLabel = isAllViews
+    ? "ALL — any pattern"
+    : isCategory
     ? activeCategory?.label
     : isPatternOnly && activePatternInfo
     ? selectedContext
@@ -2257,10 +2266,10 @@ export default function BacktestPanel() {
     setDateProgress({ current: 0, total: 0, date: "" });
     try {
       if (isCategory) {
-        // NEW: "TOP 15 GAINERS" / "TOP 15 LOSERS" rank the whole scanned
-        // pool by entry-day % change instead of showing every match — see
-        // selectTopByChange (lib/backtest). Applied per entry date, so a date-range
-        // scan shows each day's own top 15, not a cross-day aggregate.
+        // ALL = no pattern filter (symbol search / full universe). TOP 15
+        // GAINERS/LOSERS still rank the whole pool by entry-day % change.
+        const categoryPassFn: (r: CPRResult, pattern: string) => boolean =
+          isAllViews ? () => true : passesPattern;
         const topByChangeDirection =
           selectedKey === "top15gainers" ? "gainers" :
           selectedKey === "top15losers" ? "losers" :
@@ -2270,7 +2279,7 @@ export default function BacktestPanel() {
             selectedKey,
             entryDate,
             source,
-            passesPattern,
+            categoryPassFn,
             (done, total, symbol) => setProgress({ done, total, symbol })
           );
           const withDate = result.map((r) => ({ ...r, entryDate }));
@@ -2290,7 +2299,7 @@ export default function BacktestPanel() {
               selectedKey,
               d,
               source,
-              passesPattern,
+              categoryPassFn,
               (done, total, symbol) => setProgress({ done, total, symbol })
             );
             const withDate = dayResult.map((r) => ({ ...r, entryDate: d }));
@@ -2608,6 +2617,8 @@ export default function BacktestPanel() {
                 {(() => {
                   const q = pickerQuery.trim().toLowerCase();
                   const hit = (s: string) => s.toLowerCase().includes(q);
+                  const allLabel = "ALL — any pattern";
+                  const showAllOption = !q || hit(allLabel) || hit("all") || hit("any");
                   const blocks = categoryTree
                     .map(({ cat, directPatterns, subCats }) => {
                       const catLabelHit = hit(cat.label);
@@ -2800,10 +2811,36 @@ export default function BacktestPanel() {
                     })
                     .filter((b): b is NonNullable<typeof b> => b !== null);
 
-                  if (q && blocks.length === 0) {
+                  if (q && blocks.length === 0 && !showAllOption) {
                     return <div className="px-3 py-6 text-xs text-center text-muted-foreground">No matches for &quot;{pickerQuery}&quot;</div>;
                   }
-                  return blocks;
+                  return (
+                    <>
+                      {showAllOption && (
+                        <button
+                          type="button"
+                          role="option"
+                          aria-selected={selectedKey === ALL_VIEWS_KEY}
+                          onClick={() => selectAndClose(ALL_VIEWS_KEY, ALL_VIEWS_KEY)}
+                          className={`w-full flex items-center gap-2 text-left px-2 py-1.5 mb-0.5 rounded-md text-xs font-semibold ${
+                            selectedKey === ALL_VIEWS_KEY
+                              ? "bg-cyan-500/20 text-cyan-300"
+                              : "text-foreground hover:bg-muted/40"
+                          }`}
+                          title="No category/pattern filter — scan the full universe or a single symbol"
+                        >
+                          <span className="truncate">{allLabel}</span>
+                          <span className="ml-auto text-[10px] font-normal text-muted-foreground shrink-0">
+                            symbol search
+                          </span>
+                        </button>
+                      )}
+                      {showAllOption && blocks.length > 0 && (
+                        <div className="mx-2 my-1 border-t border-border/60" />
+                      )}
+                      {blocks}
+                    </>
+                  );
                 })()}
               </div>
             </div>
