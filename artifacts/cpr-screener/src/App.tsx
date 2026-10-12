@@ -11,6 +11,7 @@ import { autoSaveQualifiedSignals } from "@/lib/signalTracker";
 import { LiveEntryCrossMonitor, type EntryCrossCandidate } from "@/lib/liveEntryCrossMonitor";
 import { playEntryCrossAlert, unlockAlertAudio } from "@/lib/alertSound";
 import { toast } from "@/hooks/use-toast";
+import { BuildFooter } from "@/components/BuildFooter";
 import PatternStats from "@/pages/PatternStats";
 import SignalsJournal from "./pages/SignalsJournal";
 import ViewsSidebar, { SCREENER_PATTERN_IDS, VIEW_LABEL_BY_ID, type SidebarMode } from "@/lib/ViewsSidebar";
@@ -297,6 +298,7 @@ function App() {
           </main>
         </div>
         <Toaster />
+        <BuildFooter />
       </TooltipProvider>
     </QueryClientProvider>
   );
