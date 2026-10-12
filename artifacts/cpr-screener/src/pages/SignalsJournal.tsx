@@ -619,7 +619,7 @@ export default function SignalsJournal() {
                           <span className="mt-0.5 text-[10px] font-mono text-slate-400">
                             {item.entryTimeSource === "exchange_trade"
                               ? item.dateStr
-                              : "Entry time unverified (legacy record)"}
+                              : "Entry time unverified"}
                           </span>
                         </div>
                       </td>
