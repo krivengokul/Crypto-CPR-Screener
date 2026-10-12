@@ -2,46 +2,120 @@ import { useEffect, useRef } from "react";
 import type { CPRResult } from "@/lib/cpr";
 import { fetchCoinDCXLastPrices } from "@/lib/coinDCX";
 
-// FIX (Price silently going stale — e.g. LIT, XMR showing prices far off
-// TradingView): a symbol that stops appearing in the ticker response (brief
-// listing-status change, delisting, rate limiting) used to just keep
-// whatever currentPrice it had from the last successful tick, forever,
-// with nothing visible beyond a console.debug. MAX_MISSED_TICKS controls
-// how many consecutive 15s cycles a symbol is allowed to go unmatched
-// before we log a loud, symbol-specific warning so this is actually
-// diagnosable instead of silently drifting further from the real price.
-const MAX_MISSED_TICKS = 3; // ~45s of no update before warning
+// Missed-tick warning: ~3 × poll interval with no match → log once.
+const MAX_MISSED_TICKS = 3;
 
-// FIX (bad single-tick data corrupting the table): if a symbol's live price
-// jumps more than SANITY_JUMP_RATIO against its own last-known price in a
-// single 15s tick, that's far more likely to be bad/misrouted ticker data
-// than a real move, so we log it and skip applying that one update rather
-// than let a bogus price overwrite a good one.
-const SANITY_JUMP_RATIO = 0.5; // reject a >50% single-tick jump
+// Log-only: large single-tick jumps are still applied (so a stale price can
+// correct), but we want visibility when something looks wrong.
+const SANITY_JUMP_RATIO = 0.5;
+
+/** Poll cadence for live prices while a scan is "done". */
+const LIVE_PRICE_POLL_MS = 25_000;
 
 /**
- * Keeps the row's session high/low (todayHigh/todayLow, captured at scan time)
- * current between scans: every live tick can only widen them. This is what
- * lets a "Pass" (target reached) stay latched if price touches the target
- * and then retraces before the next scan. Only prices this hook actually
- * samples are seen, so a spike that happens entirely between two 15s ticks
- * is still missed until the next scan. Rows from scans saved before these
- * fields existed start tracking from the first tick.
+ * Keeps the row's session high/low (todayHigh/todayLow) current between scans:
+ * every live tick can only widen them. Lets a "Pass" stay latched if price
+ * touches the target then retraces before the next full scan.
  */
 function trackSessionExtremes(
   r: CPRResult,
   price: number
 ): { todayHigh: number; todayLow: number } {
   return {
-    todayHigh: r.todayHigh !== undefined && Number.isFinite(r.todayHigh) ? Math.max(r.todayHigh, price) : price,
-    todayLow: r.todayLow !== undefined && Number.isFinite(r.todayLow) && r.todayLow > 0 ? Math.min(r.todayLow, price) : price,
+    todayHigh:
+      r.todayHigh !== undefined && Number.isFinite(r.todayHigh)
+        ? Math.max(r.todayHigh, price)
+        : price,
+    todayLow:
+      r.todayLow !== undefined && Number.isFinite(r.todayLow) && r.todayLow > 0
+        ? Math.min(r.todayLow, price)
+        : price,
   };
 }
 
 /**
- * Refreshes Binance live prices every 15s while status === "done".
- * USDⓈ-M perpetual prices take precedence over spot so the displayed price
- * stays aligned with the BINANCE:<SYMBOL>.P TradingView chart.
+ * Apply a price map to a results array. Returns the same array reference
+ * when nothing changed (avoids a React re-render).
+ */
+function applyPrices(
+  prev: CPRResult[],
+  priceMap: Map<string, number>,
+  opts: {
+    missedTicks?: Map<string, number>;
+    logPrefix?: string;
+    fallbackChange?: (r: CPRResult, price: number) => number;
+  } = {}
+): CPRResult[] {
+  const { missedTicks, logPrefix = "live-refresh", fallbackChange } = opts;
+  let changed = false;
+
+  const next = prev.map((r) => {
+    const price = priceMap.get(r.symbol);
+    if (price === undefined || !(price > 0)) {
+      if (missedTicks) {
+        const misses = (missedTicks.get(r.symbol) ?? 0) + 1;
+        missedTicks.set(r.symbol, misses);
+        if (misses === MAX_MISSED_TICKS) {
+          console.warn(
+            `[${logPrefix}] ${r.symbol} missing from ticker responses for ` +
+              `${misses} consecutive ticks (~${misses * (LIVE_PRICE_POLL_MS / 1000)}s) — ` +
+              `currentPrice is now stale (last known: ${r.currentPrice}).`
+          );
+        }
+      }
+      return r;
+    }
+    missedTicks?.delete(r.symbol);
+
+    if (
+      r.currentPrice > 0 &&
+      Math.abs(price - r.currentPrice) / r.currentPrice > SANITY_JUMP_RATIO
+    ) {
+      console.warn(
+        `[${logPrefix}] ${r.symbol} — large single-tick price jump ` +
+          `(${r.currentPrice} → ${price}, >${SANITY_JUMP_RATIO * 100}%). Applying anyway.`
+      );
+    }
+
+    // Skip object allocation when price (and thus extremes) are unchanged.
+    if (price === r.currentPrice) return r;
+
+    changed = true;
+    const change24h =
+      r.openPrice > 0
+        ? ((price - r.openPrice) / r.openPrice) * 100
+        : fallbackChange
+          ? fallbackChange(r, price)
+          : r.change24h;
+
+    return {
+      ...r,
+      currentPrice: price,
+      change24h,
+      ...trackSessionExtremes(r, price),
+    };
+  });
+
+  return changed ? next : prev;
+}
+
+async function safeFetchJson<T>(url: string, timeoutMs = 6000): Promise<T | null> {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    const res = await fetch(url, { signal: controller.signal, cache: "no-store" });
+    clearTimeout(timeoutId);
+    if (!res.ok) return null;
+    return (await res.json()) as T;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Binance live prices while status === "done".
+ * Uses lightweight /fapi/v1/ticker/price (not the heavy 24hr book).
+ * Spot is only used as fallback for symbols missing from futures.
  */
 export function useBinanceLiveRefresh(
   status: "idle" | "scanning" | "done" | "error",
@@ -53,119 +127,89 @@ export function useBinanceLiveRefresh(
 
   useEffect(() => {
     if (status !== "done") return;
+
+    let cancelled = false;
+    let running = false;
+
     const refresh = async () => {
-      const results = allResultsRef.current;
-      if (!results.length) {
-        console.debug("[binance-live-refresh] tick — no results in ref yet, skipping");
-        return;
-      }
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+      if (running || cancelled) return;
+      running = true;
+
       try {
-        const priceMap = new Map<string, { price: number; change: number }>();
+        const results = allResultsRef.current;
+        if (!results.length) return;
 
-        type LiveTicker = { symbol: string; lastPrice: string; openPrice: string };
-
-        // Helper to safely fetch tickers with a timeout without throwing unhandled exceptions
-        const safeFetchTickers = async (url: string): Promise<LiveTicker[]> => {
-          try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 6000);
-            const res = await fetch(url, { signal: controller.signal });
-            clearTimeout(timeoutId);
-            if (!res.ok) return [];
-            return (await res.json()) as LiveTicker[];
-          } catch {
-            return [];
-          }
-        };
-
-        // Attempt futures ticker first (aligned with BINANCE:<SYMBOL>.P perps),
-        // with spot and backup mirrors as fallbacks
-        const [futuresTickers, spotTickers] = await Promise.all([
-          safeFetchTickers("https://fapi.binance.com/fapi/v1/ticker/24hr"),
-          safeFetchTickers("https://api.binance.com/api/v3/ticker/24hr?type=MINI").then(async (list) => {
-            if (list.length > 0) return list;
-            return safeFetchTickers("https://data-api.binance.vision/api/v3/ticker/24hr?type=MINI");
-          }),
-        ]);
-
-        if (spotTickers.length === 0 && futuresTickers.length === 0) {
-          // Both endpoints were unreachable or timed out this cycle; skip quietly and retry next tick
-          return;
-        }
-        // Only keep symbols we actually need — the response covers every
-        // Binance symbol, not just the ones currently in `results`.
         const wanted = new Set(results.map((r) => r.symbol));
-        const addTickers = (tickers: LiveTicker[]) => tickers.forEach((t) => {
-          if (!wanted.has(t.symbol)) return;
-          const price = parseFloat(t.lastPrice);
-          const open  = parseFloat(t.openPrice);
-          if (!Number.isFinite(price) || price <= 0) return;
-          priceMap.set(t.symbol, { price, change: open > 0 ? ((price - open) / open) * 100 : 0 });
-        });
-        // Match binance.ts: spot is fallback; perpetual overwrites collisions.
-        addTickers(spotTickers);
-        addTickers(futuresTickers);
-        // Use r.openPrice (the 5:30 AM IST baseline) for % calc
-        const missedTicks = missedTicksRef.current;
-        const apply = (prev: CPRResult[]): CPRResult[] =>
-          prev.map((r) => {
-            const live = priceMap.get(r.symbol);
-            if (!live) {
-              // FIX: symbol didn't come back in this tick's ticker response —
-              // count consecutive misses and warn loudly once it's gone
-              // stale for a while, instead of silently freezing forever.
-              const misses = (missedTicks.get(r.symbol) ?? 0) + 1;
-              missedTicks.set(r.symbol, misses);
-              if (misses === MAX_MISSED_TICKS) {
-                console.warn(
-                  `[binance-live-refresh] ${r.symbol} missing from spot+futures ` +
-                    `ticker responses for ${misses} consecutive ticks (~` +
-                    `${misses * 15}s) — currentPrice is now stale (last known: ` +
-                    `${r.currentPrice}). Check whether it's still TRADING on ` +
-                    `USDⓈ-M futures.`
-                );
-              }
-              return r;
-            }
-            missedTicks.delete(r.symbol);
 
-            // REVERTED to log-only: rejecting the jump and keeping the old
-            // price meant that IF currentPrice was ever wrong (stale/bad),
-            // a real correction from the ticker would get silently blocked
-            // forever instead of fixing it — worse than the original bug.
-            // Still worth knowing about, so it's logged, but always applied.
-            if (
-              r.currentPrice > 0 &&
-              Math.abs(live.price - r.currentPrice) / r.currentPrice > SANITY_JUMP_RATIO
-            ) {
-              console.warn(
-                `[binance-live-refresh] ${r.symbol} — large single-tick price ` +
-                  `jump (${r.currentPrice} → ${live.price}, >` +
-                  `${SANITY_JUMP_RATIO * 100}% in one 15s tick). Applying it ` +
-                  `anyway; worth spot-checking against TradingView.`
-              );
-            }
+        // Primary: futures last price only (much smaller than ticker/24hr).
+        type PriceRow = { symbol: string; price: string };
+        const futuresRows =
+          (await safeFetchJson<PriceRow[]>("https://fapi.binance.com/fapi/v1/ticker/price")) ?? [];
 
-            const change24h = r.openPrice > 0
-              ? ((live.price - r.openPrice) / r.openPrice) * 100
-              : live.change; // fallback
-            return { ...r, currentPrice: live.price, change24h, ...trackSessionExtremes(r, live.price) };
+        const priceMap = new Map<string, number>();
+        for (const t of futuresRows) {
+          if (!wanted.has(t.symbol)) continue;
+          const p = parseFloat(t.price);
+          if (Number.isFinite(p) && p > 0) priceMap.set(t.symbol, p);
+        }
+
+        // Optional spot fallback only for symbols still missing.
+        if (priceMap.size < wanted.size) {
+          type MiniTicker = { symbol: string; lastPrice?: string; c?: string };
+          const spot =
+            (await safeFetchJson<MiniTicker[]>(
+              "https://api.binance.com/api/v3/ticker/24hr?type=MINI"
+            )) ??
+            (await safeFetchJson<MiniTicker[]>(
+              "https://data-api.binance.vision/api/v3/ticker/24hr?type=MINI"
+            )) ??
+            [];
+          for (const t of spot) {
+            if (!wanted.has(t.symbol) || priceMap.has(t.symbol)) continue;
+            const p = parseFloat(t.lastPrice ?? t.c ?? "");
+            if (Number.isFinite(p) && p > 0) priceMap.set(t.symbol, p);
+          }
+        }
+
+        if (priceMap.size === 0) return;
+
+        const apply = (prev: CPRResult[]) =>
+          applyPrices(prev, priceMap, {
+            missedTicks: missedTicksRef.current,
+            logPrefix: "binance-live-refresh",
           });
-        setAllResults((p) => apply(p));
-        setFiltered((p) => apply(p));
+
+        if (cancelled) return;
+        // Keep filtered in sync without re-running passesPattern (Screener
+        // still holds a parallel filtered array for the table).
+        setAllResults(apply);
+        setFiltered(apply);
       } catch (err) {
         console.warn("[binance-live-refresh] refresh cycle skipped:", err);
+      } finally {
+        running = false;
       }
     };
-    const id = setInterval(refresh, 15_000);
-    return () => clearInterval(id);
+
+    void refresh();
+    const id = window.setInterval(() => void refresh(), LIVE_PRICE_POLL_MS);
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") void refresh();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, [status, allResultsRef, setAllResults, setFiltered]);
 }
 
 /**
- * Refreshes Delta Exchange live prices every 15s while deltaStatus === "done".
- * Behavior is unchanged from the original inline effect in Screener.tsx —
- * this is a mechanical extraction only.
+ * Delta live prices while deltaStatus === "done".
+ * Still one page of tickers; filtered to symbols currently in results.
  */
 export function useDeltaLiveRefresh(
   deltaStatus: "idle" | "scanning" | "done" | "error",
@@ -175,52 +219,88 @@ export function useDeltaLiveRefresh(
 ) {
   useEffect(() => {
     if (deltaStatus !== "done") return;
+
+    let cancelled = false;
+    let running = false;
+
     const refresh = async () => {
-      const results = deltaAllResultsRef.current;
-      if (!results.length) {
-        console.debug("[delta-live-refresh] tick — no results in ref yet, skipping");
-        return;
-      }
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+      if (running || cancelled) return;
+      running = true;
+
       try {
+        const results = deltaAllResultsRef.current;
+        if (!results.length) return;
+
+        const wanted = new Set(results.map((r) => r.symbol));
         const res = await fetch(
           "https://api.india.delta.exchange/v2/tickers?contract_types=perpetual_futures&page_size=500",
           { cache: "no-store" }
         );
         if (!res.ok) {
-          console.error(`[delta-live-refresh] tickers ${res.status} ${res.statusText}`, await res.text().catch(() => ""));
+          console.error(
+            `[delta-live-refresh] tickers ${res.status} ${res.statusText}`,
+            await res.text().catch(() => "")
+          );
           return;
         }
         const data = await res.json();
-        const tickers: Array<{ symbol: string; mark_price: string; ltp_change_24h: string }> =
-          (data.result ?? []) as Array<{ symbol: string; mark_price: string; ltp_change_24h: string }>;
-        const priceMap = new Map(tickers.map((t) => [t.symbol, t]));
-        const apply = (prev: CPRResult[]): CPRResult[] =>
-          prev.map((r) => {
-            const t = priceMap.get(r.symbol);
-            if (!t) return r;
-            const price = parseFloat(t.mark_price);
-            if (price <= 0) return r;
-            const change24h = r.openPrice > 0
-              ? ((price - r.openPrice) / r.openPrice) * 100
-              : parseFloat(t.ltp_change_24h); // fallback
-            return { ...r, currentPrice: price, change24h, ...trackSessionExtremes(r, price) };
+        const tickers: Array<{
+          symbol: string;
+          mark_price: string;
+          ltp_change_24h: string;
+        }> = (data.result ?? []) as Array<{
+          symbol: string;
+          mark_price: string;
+          ltp_change_24h: string;
+        }>;
+
+        const priceMap = new Map<string, number>();
+        const changeFallback = new Map<string, number>();
+        for (const t of tickers) {
+          if (!wanted.has(t.symbol)) continue;
+          const price = parseFloat(t.mark_price);
+          if (price > 0) {
+            priceMap.set(t.symbol, price);
+            const ch = parseFloat(t.ltp_change_24h);
+            if (Number.isFinite(ch)) changeFallback.set(t.symbol, ch);
+          }
+        }
+        if (priceMap.size === 0) return;
+
+        const apply = (prev: CPRResult[]) =>
+          applyPrices(prev, priceMap, {
+            logPrefix: "delta-live-refresh",
+            fallbackChange: (r) => changeFallback.get(r.symbol) ?? r.change24h,
           });
-        setDeltaAllResults((p) => apply(p));
-        setDeltaFiltered((p) => apply(p));
+
+        if (cancelled) return;
+        setDeltaAllResults(apply);
+        setDeltaFiltered(apply);
       } catch (err) {
         console.warn("[delta-live-refresh] refresh cycle skipped:", err);
+      } finally {
+        running = false;
       }
     };
-    const id = setInterval(refresh, 15_000);
-    return () => clearInterval(id);
+
+    void refresh();
+    const id = window.setInterval(() => void refresh(), LIVE_PRICE_POLL_MS);
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") void refresh();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, [deltaStatus, deltaAllResultsRef, setDeltaAllResults, setDeltaFiltered]);
 }
 
 /**
- * Refreshes CoinDCX futures live prices every 15s while status === "done".
- * Mirrors useDeltaLiveRefresh: one snapshot request per tick, matched by
- * symbol (`BTCUSDT`). If the snapshot is unavailable the tick is skipped and
- * existing prices are left untouched — the next tick simply tries again.
+ * CoinDCX live prices while status === "done".
  */
 export function useCoinDCXLiveRefresh(
   status: "idle" | "scanning" | "done" | "error",
@@ -230,32 +310,54 @@ export function useCoinDCXLiveRefresh(
 ) {
   useEffect(() => {
     if (status !== "done") return;
+
+    let cancelled = false;
+    let running = false;
+
     const refresh = async () => {
-      const results = coindcxAllResultsRef.current;
-      if (!results.length) {
-        console.debug("[coindcx-live-refresh] tick — no results in ref yet, skipping");
-        return;
-      }
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+      if (running || cancelled) return;
+      running = true;
+
       try {
-        // Single attempt: the next 15s tick is the retry.
-        const priceMap = await fetchCoinDCXLastPrices(1);
+        const results = coindcxAllResultsRef.current;
+        if (!results.length) return;
+
+        // Single attempt; next poll is the retry.
+        const raw = await fetchCoinDCXLastPrices(1);
+        if (raw.size === 0) return;
+
+        const wanted = new Set(results.map((r) => r.symbol));
+        const priceMap = new Map<string, number>();
+        raw.forEach((price, symbol) => {
+          if (wanted.has(symbol) && price > 0) priceMap.set(symbol, price);
+        });
         if (priceMap.size === 0) return;
-        const apply = (prev: CPRResult[]): CPRResult[] =>
-          prev.map((r) => {
-            const price = priceMap.get(r.symbol);
-            if (!price || price <= 0) return r;
-            const change24h = r.openPrice > 0
-              ? ((price - r.openPrice) / r.openPrice) * 100
-              : r.change24h;
-            return { ...r, currentPrice: price, change24h, ...trackSessionExtremes(r, price) };
-          });
-        setCoinDCXAllResults((p) => apply(p));
-        setCoinDCXFiltered((p) => apply(p));
+
+        const apply = (prev: CPRResult[]) =>
+          applyPrices(prev, priceMap, { logPrefix: "coindcx-live-refresh" });
+
+        if (cancelled) return;
+        setCoinDCXAllResults(apply);
+        setCoinDCXFiltered(apply);
       } catch (err) {
         console.warn("[coindcx-live-refresh] refresh cycle skipped:", err);
+      } finally {
+        running = false;
       }
     };
-    const id = setInterval(refresh, 15_000);
-    return () => clearInterval(id);
+
+    void refresh();
+    const id = window.setInterval(() => void refresh(), LIVE_PRICE_POLL_MS);
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") void refresh();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, [status, coindcxAllResultsRef, setCoinDCXAllResults, setCoinDCXFiltered]);
 }
