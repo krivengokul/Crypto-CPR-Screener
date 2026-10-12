@@ -7,14 +7,14 @@ import BacktestPanel from "@/pages/BacktestPanel";
 import SignalDesk, { type SignalDeskSymbol, type FocusSymbol, buildPills, computeSignalLevels } from "@/pages/SignalDesk";
 import type { CPRResultWithSource, ActiveTab } from "@/pages/ScreenerUtils";
 import { passesPattern } from "@/pages/ScreenerUtils";
-import { autoSaveQualifiedSignals } from "@/lib/signalTracker";
+import { autoSaveQualifiedSignals, isSignalCompletedToday } from "@/lib/signalTracker";
 import { LiveEntryCrossMonitor, type EntryCrossCandidate } from "@/lib/liveEntryCrossMonitor";
 import {
   playEntryCrossAlert,
   unlockAlertAudio,
 } from "@/lib/alertSound";
+import { sessionReachedTarget } from "@/lib/signalOutcome";
 import { toast } from "@/hooks/use-toast";
-import { ToastAction } from "@/components/ui/toast";
 import { BuildFooter } from "@/components/BuildFooter";
 import PatternStats from "@/pages/PatternStats";
 import SignalsJournal from "./pages/SignalsJournal";
@@ -99,8 +99,41 @@ function App() {
   // mapped at the two call sites below, not renamed in either file.
   const [dataSource, setDataSource] = useState<ActiveTab>("binance");
 
-  // Symbol the "Open SignalDesk" toast action asks SignalDesk to focus.
+  // Symbol SignalDesk should scroll to (toast click / deep-link query params).
   const [focusSymbol, setFocusSymbol] = useState<FocusSymbol | null>(null);
+
+  // Deep-link from entry-cross toast: ?mode=signals&symbol=X&source=Y&patternId=Z
+  // opens SignalDesk focused on that card (used when the toast opens a new tab).
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const modeParam = params.get("mode");
+      if (modeParam === "signals" || modeParam === "journal" || modeParam === "stats" || modeParam === "backtest" || modeParam === "scanner") {
+        setMode(modeParam as SidebarMode);
+        try { localStorage.setItem(MODE_KEY, modeParam); } catch { /* ignore */ }
+      }
+      const symbol = params.get("symbol");
+      const source = params.get("source") as FocusSymbol["source"] | null;
+      const patternId = params.get("patternId") || undefined;
+      if (symbol && (source === "binance" || source === "delta" || source === "coindcx")) {
+        setFocusSymbol({ symbol, source, patternId });
+        if (patternId) setActiveSignal(patternId);
+        if (!modeParam) {
+          setMode("signals");
+          try { localStorage.setItem(MODE_KEY, "signals"); } catch { /* ignore */ }
+        }
+      }
+      // Clean the URL so a refresh doesn't re-apply the deep-link forever.
+      if (modeParam || symbol) {
+        const url = new URL(window.location.href);
+        url.searchParams.delete("mode");
+        url.searchParams.delete("symbol");
+        url.searchParams.delete("source");
+        url.searchParams.delete("patternId");
+        window.history.replaceState({}, "", url.pathname + url.search + url.hash);
+      }
+    } catch { /* ignore */ }
+  }, []);
 
   // Browsers require a user gesture before they allow audio playback. Unlock
   // once on the first interaction so later websocket crossings can alert.
@@ -168,43 +201,73 @@ function App() {
         },
       });
     }
-    return candidates;
+    // Drop setups already PASS/FAIL/EXPIRED today, or whose target was
+    // already hit this session — no more alerts or Journal writes for them.
+    return candidates.filter((c) => {
+      if (isSignalCompletedToday(c.symbol, c.direction, c.payload.patternName, c.source)) {
+        return false;
+      }
+      const row = signalResults.find(
+        (r) => r.source === c.source && r.symbol.toUpperCase() === c.symbol.toUpperCase(),
+      );
+      if (
+        row &&
+        sessionReachedTarget(
+          c.direction,
+          c.payload.target,
+          row.todayHigh,
+          row.todayLow,
+          row.currentPrice,
+        )
+      ) {
+        return false;
+      }
+      return true;
+    });
   }, [signalResults]);
 
   const entryMonitorRef = useRef<LiveEntryCrossMonitor | null>(null);
   useEffect(() => {
     const monitor = new LiveEntryCrossMonitor((candidate, price, timestamp) => {
+      // Re-check at fire time: Journal may have marked PASS/FAIL since the
+      // candidate list was last built, or price may already have hit target.
+      if (isSignalCompletedToday(
+        candidate.symbol,
+        candidate.direction,
+        candidate.payload.patternName,
+        candidate.source,
+      )) {
+        return;
+      }
+
       playEntryCrossAlert();
 
-      // Light, global banner (Toaster lives at the App root, so it shows on
-      // every screen) explaining why the beep fired. The sound itself stays
-      // here, at the same place the Journal save happens, so Desk and Journal
-      // never disagree about when an entry crossed.
       const dir = candidate.direction === "Up" ? "LONG" : "SHORT";
       const px = Number.isFinite(price) ? price.toPrecision(6) : String(price);
       const entry = Number.isFinite(candidate.entry)
         ? candidate.entry.toPrecision(6)
         : String(candidate.entry);
+
+      const openSignalDeskTab = () => {
+        try {
+          const url = new URL(window.location.href);
+          url.searchParams.set("mode", "signals");
+          url.searchParams.set("symbol", candidate.symbol);
+          url.searchParams.set("source", candidate.source);
+          if (candidate.payload.patternId) {
+            url.searchParams.set("patternId", candidate.payload.patternId);
+          }
+          window.open(url.toString(), "_blank", "noopener,noreferrer");
+        } catch { /* ignore */ }
+      };
+
+      // Whole toast is clickable → SignalDesk in a new tab (no action button).
       toast({
         title: "Entry crossed — alert",
         description: `${candidate.symbol} (${candidate.source}) ${dir} · ${candidate.payload.patternName} · trade ${px} crossed entry ${entry}`,
-        duration: 12_000, // ms; dismissible via X anytime
-        action: (
-          <ToastAction
-            altText="Open Signal Desk"
-            onClick={() => {
-              setFocusSymbol({
-                symbol: candidate.symbol,
-                source: candidate.source,
-                patternId: candidate.payload.patternId,
-              });
-              if (candidate.payload.patternId) setActiveSignal(candidate.payload.patternId);
-              handleModeChange("signals");
-            }}
-          >
-            Open SignalDesk
-          </ToastAction>
-        ),
+        duration: 12_000,
+        className: "cursor-pointer",
+        onClick: openSignalDeskTab,
       });
 
       void autoSaveQualifiedSignals([{

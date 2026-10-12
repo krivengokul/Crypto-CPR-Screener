@@ -48,6 +48,36 @@ const SIGNALS_COLLECTION = "signalsJournal";
 const SIGNALS_LOCAL_KEY = "cpr_signals_journal_cache";
 export const SIGNALS_JOURNAL_UPDATED_EVENT = "cpr-signals-journal-updated";
 
+/**
+ * True when today's Journal already has a terminal outcome (PASS/FAIL/EXPIRED)
+ * for this symbol+direction+pattern. Once resolved for the day, ignore further
+ * entry-cross alerts and auto-saves for that setup.
+ */
+export function isSignalCompletedToday(
+  symbol: string,
+  direction: string,
+  patternName: string,
+  source?: string,
+): boolean {
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const patternSlug = patternName.replace(/[^a-zA-Z0-9]/g, "_").toUpperCase();
+  const deterministicId = `${symbol}-${direction}-${patternSlug}-${todayKey}`;
+  const local = getLocalSignalsCache();
+  for (const s of local) {
+    if (s.id === deterministicId || (
+      s.symbol?.toUpperCase() === symbol.toUpperCase() &&
+      String(s.direction) === String(direction) &&
+      (s.patternName === patternName) &&
+      (!source || s.source === source) &&
+      Number.isFinite(s.timestamp) &&
+      new Date(s.timestamp).toISOString().slice(0, 10) === todayKey
+    )) {
+      if (s.status === "PASS" || s.status === "FAIL" || s.status === "EXPIRED") return true;
+    }
+  }
+  return false;
+}
+
 function notifySignalsJournalUpdated(signals: LoggedSignal[]) {
   if (typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent(SIGNALS_JOURNAL_UPDATED_EVENT, { detail: { signals } }));
@@ -191,6 +221,10 @@ async function performAutoSave(
     const patternSlug = sig.patternName.replace(/[^a-zA-Z0-9]/g, "_").toUpperCase();
     const deterministicId = `${sig.symbol}-${sig.direction}-${patternSlug}-${todayKey}`;
     const existing = localMap.get(deterministicId);
+    // Once PASS/FAIL/EXPIRED for the day, never re-log or re-touch this setup.
+    if (existing && (existing.status === "PASS" || existing.status === "FAIL" || existing.status === "EXPIRED")) {
+      continue;
+    }
     if (!existing) {
       const fullSig: LoggedSignal = {
         ...sig,
@@ -259,6 +293,9 @@ async function performAutoSave(
 
         const existing = existingDocs.get(fullDocId);
         if (existing) {
+          if (existing.status === "PASS" || existing.status === "FAIL" || existing.status === "EXPIRED") {
+            continue;
+          }
           if (
             sig.entryTimeSource === "exchange_trade" &&
             existing.status === "ACTIVE" &&
