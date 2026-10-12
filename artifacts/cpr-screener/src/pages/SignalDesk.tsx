@@ -291,8 +291,6 @@ const SignalDeskCard = memo(
     const isDown = item.direction === "Down" || (item.direction as string) === "SHORT";
 
     // Direction badge — only for symbols with a real signal
-    // (Active Signal match, item.isSaved). Placed top-right for Up,
-    // top-left for Down (see the two render spots below).
     const directionBadge = item.isSaved && (
       <span
         className={`text-xs font-bold px-2 py-0.5 rounded-md flex items-center gap-1 font-mono shrink-0 ${
@@ -308,9 +306,7 @@ const SignalDeskCard = memo(
       </span>
     );
 
-    // Running/Ready status — sits right beside the direction badge,
-    // on the side closer to the card's center (after Down, before
-    // Up), so the two read together as one status cluster.
+    // Running/Ready status badge (timestamp on its own row below badges)
     const statusBadge = item.isSaved && (
       item.journalStatus === "PASS" ? (
         <div
@@ -327,16 +323,12 @@ const SignalDeskCard = memo(
           <span>FAIL</span>
         </div>
       ) : item.isTriggered ? (
-        <div className="flex flex-col items-end gap-0.5 shrink-0">
-          <div className="flex items-center gap-1 text-[11px] text-emerald-400 font-mono">
-            <Cloud className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Active</span>
-          </div>
-          {item.triggeredAt && (
-            <span className="text-[10px] font-mono text-slate-400">
-              @ {item.triggeredAt}
-            </span>
-          )}
+        <div
+          className="flex items-center gap-1 text-[11px] text-emerald-400 font-mono shrink-0"
+          title="Price has reached the entry line"
+        >
+          <Cloud className="w-3.5 h-3.5 text-emerald-400" />
+          <span>Active</span>
         </div>
       ) : (
         <div
@@ -354,65 +346,64 @@ const SignalDeskCard = memo(
         id={`sd-card-${item.source}-${item.symbol.toUpperCase()}`}
         className="bg-[#0f1724] border border-[#1e2d3d] hover:border-slate-600 rounded-xl p-4 transition-all flex flex-col justify-between shadow-lg"
       >
-        {/* Card Top */}
+        {/* Card Top — clean 2-column layout:
+            Left: badges → timestamp → symbol → source
+            Right: price → 24h change */}
         <div>
-          <div className="flex items-start justify-between mb-3">
-            {/* Down signals get the badge on the top-left, ahead
-                of the symbol block; Up (and no-signal) keep the
-                symbol block alone on the left. */}
-            {isDown && directionBadge}
-            {isDown && statusBadge}
-
-            {/* Left: Symbol & Exchange + Live Price & 24h % change */}
-            <div className="flex items-start gap-4 sm:gap-6">
-              <div>
-                <div className="flex items-center gap-1">
-                  <span className="text-base sm:text-lg font-extrabold text-white font-mono tracking-tight leading-tight">
-                    {item.symbol}
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <div className="flex flex-col gap-1 min-w-0">
+              {item.isSaved && (
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {directionBadge}
+                  {statusBadge}
+                </div>
+              )}
+              {item.isSaved && item.isTriggered && item.triggeredAt && (
+                <span className="text-[10px] font-mono text-slate-400 leading-none">
+                  @ {item.triggeredAt}
+                </span>
+              )}
+              <div className="flex items-center gap-1 min-w-0">
+                <span className="text-base sm:text-lg font-extrabold text-white font-mono tracking-tight leading-tight truncate">
+                  {item.symbol}
+                </span>
+                {hasKnownChartMapping(item.symbol, item.source) ? (
+                  <a
+                    href={getChartUrl(item.symbol, item.source)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="text-muted-foreground hover:text-primary transition-colors shrink-0"
+                    title="Open on TradingView"
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                ) : (
+                  <span
+                    className="text-muted-foreground/30 cursor-not-allowed inline-flex shrink-0"
+                    title="Not available on TradingView"
+                  >
+                    <ExternalLink className="w-3 h-3" />
                   </span>
-                  {hasKnownChartMapping(item.symbol, item.source) ? (
-                    <a
-                      href={getChartUrl(item.symbol, item.source)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      className="text-muted-foreground hover:text-primary transition-colors shrink-0"
-                      title="Open on TradingView"
-                    >
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
-                  ) : (
-                    <span
-                      className="text-muted-foreground/30 cursor-not-allowed inline-flex shrink-0"
-                      title="Not available on TradingView"
-                    >
-                      <ExternalLink className="w-3 h-3" />
-                    </span>
-                  )}
-                </div>
-                <div className="text-[11px] font-semibold text-slate-400 font-mono uppercase tracking-wider mt-0.5">
-                  {item.source}
-                </div>
+                )}
               </div>
-
-              <div className="flex flex-col items-end">
-                <div className="text-sm sm:text-base font-bold text-white font-mono leading-tight">
-                  {fmt(item.currentPrice).replace(/,/g, "")}
-                </div>
-                <div
-                  className={`text-xs font-mono font-bold leading-tight mt-0.5 text-right ${
-                    (item.change24h ?? 0) >= 0 ? "text-emerald-400" : "text-rose-400"
-                  }`}
-                >
-                  {fmtPct(item.change24h ?? 0)}
-                </div>
+              <div className="text-[11px] font-semibold text-slate-400 font-mono uppercase tracking-wider leading-none">
+                {item.source}
               </div>
             </div>
 
-            {/* Up (and no-signal) signals keep the badge on the
-                top-right, as before. */}
-            {!isDown && statusBadge}
-            {!isDown && directionBadge}
+            <div className="flex flex-col items-end shrink-0">
+              <div className="text-sm sm:text-base font-bold text-white font-mono leading-tight">
+                {fmt(item.currentPrice).replace(/,/g, "")}
+              </div>
+              <div
+                className={`text-xs font-mono font-bold leading-tight mt-0.5 text-right ${
+                  (item.change24h ?? 0) >= 0 ? "text-emerald-400" : "text-rose-400"
+                }`}
+              >
+                {fmtPct(item.change24h ?? 0)}
+              </div>
+            </div>
           </div>
 
           {/* Live Price Progress Bar — red-left/green-right for Up,
