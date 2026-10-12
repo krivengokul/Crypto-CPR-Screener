@@ -19,6 +19,7 @@ import { getView, shortLevelLabel } from "@/lib/views";
 import { getRowCategory, getCategoryLabel } from "@/lib/rowCategory";
 import SignalProgressBar from "@/lib/SignalProgressBar";
 import { COINDCX_ENABLED } from "@/lib/featureFlags";
+import { getLadderMatchSummary } from "./SRLadderDiff";
 import {
   Radio,
   TrendingUp,
@@ -34,6 +35,8 @@ import {
   Clock,
   X,
   ExternalLink,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 
 // Lightweight projection of a matching row that Screener hands up via
@@ -143,6 +146,11 @@ export interface SignalItem {
   triggeredAt?: string;
   /** Today's journal outcome for this card's setup, when one exists. */
   journalStatus?: "ACTIVE" | "PASS" | "FAIL" | "EXPIRED";
+  /** Level-check MATCH score for the card's View (same as Screener MATCH column). */
+  matchCount?: number;
+  matchTotal?: number;
+  matchFull?: boolean;
+  matchMismatches?: string;
 }
 
 type StatusFilter = "all" | "saved" | "ready" | "pass" | "fail";
@@ -347,8 +355,8 @@ const SignalDeskCard = memo(
         className="bg-[#0f1724] border border-[#1e2d3d] hover:border-slate-600 rounded-xl p-4 transition-all flex flex-col justify-between shadow-lg"
       >
         {/* Card Top — clean 2-column layout:
-            Left: badges → timestamp → symbol → source
-            Right: price → 24h change */}
+            Left:  badges → timestamp → MATCH
+            Right: symbol → source → price → 24h change */}
         <div>
           <div className="flex items-start justify-between gap-3 mb-3">
             <div className="flex flex-col gap-1 min-w-0">
@@ -363,6 +371,32 @@ const SignalDeskCard = memo(
                   @ {item.triggeredAt}
                 </span>
               )}
+              {item.isSaved && typeof item.matchCount === "number" && typeof item.matchTotal === "number" && (
+                <span
+                  className={`inline-flex items-center gap-1 font-mono text-[11px] leading-none ${
+                    item.matchFull
+                      ? "text-green-400"
+                      : item.matchCount >= item.matchTotal - 2
+                      ? "text-amber-400"
+                      : "text-rose-400"
+                  }`}
+                  title={
+                    item.matchFull
+                      ? `MATCH: all ${item.matchTotal} levels matched`
+                      : `MATCH: ${item.matchCount}/${item.matchTotal}${item.matchMismatches ? ` — broke: ${item.matchMismatches}` : ""}`
+                  }
+                >
+                  {item.matchFull ? (
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                  ) : (
+                    <XCircle className="w-3.5 h-3.5" />
+                  )}
+                  MATCH {item.matchCount}/{item.matchTotal}
+                </span>
+              )}
+            </div>
+
+            <div className="flex flex-col items-end shrink-0 min-w-0">
               <div className="flex items-center gap-1 min-w-0">
                 <span className="text-base sm:text-lg font-extrabold text-white font-mono tracking-tight leading-tight truncate">
                   {item.symbol}
@@ -387,13 +421,10 @@ const SignalDeskCard = memo(
                   </span>
                 )}
               </div>
-              <div className="text-[11px] font-semibold text-slate-400 font-mono uppercase tracking-wider leading-none">
+              <div className="text-[11px] font-semibold text-slate-400 font-mono uppercase tracking-wider leading-none mt-0.5">
                 {item.source}
               </div>
-            </div>
-
-            <div className="flex flex-col items-end shrink-0">
-              <div className="text-sm sm:text-base font-bold text-white font-mono leading-tight">
+              <div className="text-sm sm:text-base font-bold text-white font-mono leading-tight mt-1">
                 {fmt(item.currentPrice).replace(/,/g, "")}
               </div>
               <div
@@ -813,6 +844,13 @@ export default function SignalDesk({
           ? currentJournalStatus(getJournalMatch(sym.source, sym.symbol, patternId, patternLabel))
           : undefined;
 
+        // MATCH (level-check) for this card's View — same score as Screener MATCH column
+        const matchRow = resultsBySymbol.get(sym.symbol) ?? matchedRow;
+        const matchDefs = patternId ? getView(patternId)?.levelCheckDefs : undefined;
+        const matchLadder = matchRow
+          ? getLadderMatchSummary(matchRow.prevCPR, matchRow.todayCPR, matchDefs)
+          : null;
+
         return {
           id: sym.key,
           symbol: sym.symbol,
@@ -854,6 +892,10 @@ export default function SignalDesk({
           isTriggered,
           triggeredAt,
           journalStatus,
+          matchCount: matchLadder?.hasConditions ? matchLadder.matchingCount : undefined,
+          matchTotal: matchLadder?.hasConditions ? matchLadder.total : undefined,
+          matchFull: matchLadder?.hasConditions ? matchLadder.fullMatch : undefined,
+          matchMismatches: matchLadder?.hasConditions ? matchLadder.mismatchLabels.join(", ") : undefined,
         };
       });
     }
@@ -916,6 +958,10 @@ export default function SignalDesk({
         ? currentJournalStatus(getJournalMatch(r.source, r.symbol, patternId, patternLabel))
         : undefined;
 
+      // MATCH (level-check) for this card's View — same score as Screener MATCH column
+      const matchDefsB = patternId ? getView(patternId)?.levelCheckDefs : undefined;
+      const matchLadderB = getLadderMatchSummary(r.prevCPR, r.todayCPR, matchDefsB);
+
       list.push({
         id: `${r.source}-${r.symbol}-${selectedSignalId || patternLabel}`,
         symbol: r.symbol,
@@ -952,6 +998,10 @@ export default function SignalDesk({
         isTriggered,
         triggeredAt,
         journalStatus,
+        matchCount: matchLadderB.hasConditions ? matchLadderB.matchingCount : undefined,
+        matchTotal: matchLadderB.hasConditions ? matchLadderB.total : undefined,
+        matchFull: matchLadderB.hasConditions ? matchLadderB.fullMatch : undefined,
+        matchMismatches: matchLadderB.hasConditions ? matchLadderB.mismatchLabels.join(", ") : undefined,
       });
     }
 

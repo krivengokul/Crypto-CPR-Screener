@@ -665,7 +665,7 @@ export function renderMatchingSignals(
 ) {
   if (views.length === 0) return null;
   return (
-    <div className="flex flex-col gap-1.5 max-w-[280px]">
+    <div className="flex flex-col gap-1.5 max-w-[240px]">
       {views.map((v) => {
         const view = getView(v.id);
         const entryFn = view?.getEntry;
@@ -686,10 +686,8 @@ export function renderMatchingSignals(
           : v.direction === "Down"
           ? "border-red-500/40 bg-red-500/10 text-red-400"
           : "border-violet-500/40 bg-violet-500/10 text-violet-300";
-        // MATCH (level-check n/13) shown just under the view label, alongside Active/Ready
-        const ladder = getLadderMatchSummary(r.prevCPR, r.todayCPR, view?.levelCheckDefs);
         return (
-          <div key={v.id} className="flex min-h-11 flex-col justify-center gap-0.5 overflow-hidden">
+          <div key={v.id} className="flex h-11 flex-col justify-center gap-0.5 overflow-hidden">
             <div className="flex flex-nowrap items-center gap-1">
               <span
                 className={`inline-flex min-w-0 items-center truncate rounded-md border px-2 py-1 text-xs font-medium font-mono ${tone}`}
@@ -725,34 +723,9 @@ export function renderMatchingSignals(
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-1.5 min-w-0">
-              <span className="truncate font-mono text-[10px] leading-3 text-muted-foreground" title={v.id}>
-                {v.id}
-              </span>
-              {ladder.hasConditions && (
-                <span
-                  className={`inline-flex shrink-0 items-center gap-0.5 font-mono text-[10px] leading-3 ${
-                    ladder.fullMatch
-                      ? "text-green-400"
-                      : ladder.matchingCount >= ladder.total - 2
-                      ? "text-amber-400"
-                      : "text-destructive"
-                  }`}
-                  title={
-                    ladder.fullMatch
-                      ? `${v.label}: all ${ladder.total} levels matched their previous-day zone`
-                      : `${v.label} — broke through: ${ladder.mismatchLabels.join(", ")}`
-                  }
-                >
-                  {ladder.fullMatch ? (
-                    <CheckCircle2 className="w-3 h-3" />
-                  ) : (
-                    <XCircle className="w-3 h-3" />
-                  )}
-                  {ladder.matchingCount}/{ladder.total}
-                </span>
-              )}
-            </div>
+            <span className="truncate font-mono text-[10px] leading-3 text-muted-foreground" title={v.id}>
+              {v.id}
+            </span>
           </div>
         );
       })}
