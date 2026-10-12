@@ -10,6 +10,7 @@ import { passesPattern } from "@/pages/ScreenerUtils";
 import { autoSaveQualifiedSignals } from "@/lib/signalTracker";
 import { LiveEntryCrossMonitor, type EntryCrossCandidate } from "@/lib/liveEntryCrossMonitor";
 import { playEntryCrossAlert, unlockAlertAudio } from "@/lib/alertSound";
+import { toast } from "@/hooks/use-toast";
 import PatternStats from "@/pages/PatternStats";
 import SignalsJournal from "./pages/SignalsJournal";
 import ViewsSidebar, { SCREENER_PATTERN_IDS, VIEW_LABEL_BY_ID, type SidebarMode } from "@/lib/ViewsSidebar";
@@ -166,6 +167,20 @@ function App() {
   useEffect(() => {
     const monitor = new LiveEntryCrossMonitor((candidate, price, timestamp) => {
       playEntryCrossAlert();
+
+      // Light, global banner (Toaster lives at the App root, so it shows on
+      // every screen) explaining why the beep fired.
+      const dir = candidate.direction === "Up" ? "LONG" : "SHORT";
+      const px = Number.isFinite(price) ? price.toPrecision(6) : String(price);
+      const entry = Number.isFinite(candidate.entry)
+        ? candidate.entry.toPrecision(6)
+        : String(candidate.entry);
+      toast({
+        title: "Entry crossed — alert",
+        description: `${candidate.symbol} (${candidate.source}) ${dir} · ${candidate.payload.patternName} · trade ${px} crossed entry ${entry}`,
+        duration: 12_000, // ms; dismissible via X anytime
+      });
+
       void autoSaveQualifiedSignals([{
         ...candidate.payload,
         currentPrice: price,

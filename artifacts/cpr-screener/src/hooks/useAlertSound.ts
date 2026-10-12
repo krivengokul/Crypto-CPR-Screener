@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import type { CPRResult } from "@/lib/cpr";
 import { passesPattern, isRisingAboveTC } from "../pages/ScreenerUtils";
+import { toast } from "@/hooks/use-toast";
 
 /**
  * Sound-alert logic scoped to the pMini-L34C4/U3>4 sub-filter under
@@ -71,7 +72,14 @@ export function usePMiniAlert(
       if (!currentRisingKeys.has(key)) pMiniRisingAlertedRef.current.delete(key);
     });
 
-    if (newlyRising) playPMiniAlertSound();
+    if (newlyRising) {
+      playPMiniAlertSound();
+      toast({
+        title: "pMini Rising alert",
+        description: "A Big Below pMini symbol just crossed above today's TC.",
+        duration: 10_000,
+      });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allResults, deltaAllResults, activePattern, showBigBelowPMiniPL3, pMiniAlertsEnabled]);
 
