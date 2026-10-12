@@ -1,6 +1,6 @@
 /**
  * Shows which git commit the current Pages build came from.
- * Values are injected at build time via VITE_* env (see deploy.yml).
+ * Document-flow footer (not position:fixed) so it never covers page controls.
  */
 export function BuildFooter() {
   const full = (import.meta.env.VITE_GIT_SHA ?? "").trim();
@@ -32,17 +32,16 @@ export function BuildFooter() {
 
   return (
     <footer
-      className="pointer-events-none fixed bottom-2 right-2 z-40 select-none"
+      className="w-full shrink-0 select-none"
       aria-label="Build version"
+      style={{
+        borderTop: "1px solid #1e2d3d",
+        background: "rgba(13, 20, 34, 0.6)",
+      }}
     >
       <div
-        className="pointer-events-auto flex items-center gap-2 rounded-md border px-2 py-1 text-[10px] font-mono leading-none"
-        style={{
-          background: "rgba(13, 20, 34, 0.85)",
-          borderColor: "#1e2d3d",
-          color: "#6b8299",
-          backdropFilter: "blur(6px)",
-        }}
+        className="flex items-center justify-end gap-2 px-3 py-1.5 text-[10px] font-mono leading-none"
+        style={{ color: "#6b8299" }}
         title={
           full
             ? `Commit ${full}${builtLabel ? ` · built ${builtLabel}` : ""}`

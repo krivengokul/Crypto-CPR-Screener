@@ -239,66 +239,69 @@ function App() {
             onModeChange={handleModeChange}
             counts={patternCounts}
           />
-          <main className="flex-1 overflow-auto min-w-0">
-            <button
-              className="md:hidden fixed top-3 left-3 z-30 flex items-center justify-center w-9 h-9 rounded-lg transition-colors"
-              style={{ background: "#161b22", border: "1px solid #1e2d3d", color: "#8ba3bc" }}
-              onClick={() => setMobileOpen(true)}
-              aria-label="Open menu"
-            >
-              <Menu className="w-5 h-5" />
-            </button>
+          {/* Column: scrollable pages + real footer at the bottom-right of this column */}
+          <div className="flex min-h-screen min-w-0 flex-1 flex-col">
+            <main className="min-w-0 flex-1 overflow-auto">
+              <button
+                className="md:hidden fixed top-3 left-3 z-30 flex items-center justify-center w-9 h-9 rounded-lg transition-colors"
+                style={{ background: "#161b22", border: "1px solid #1e2d3d", color: "#8ba3bc" }}
+                onClick={() => setMobileOpen(true)}
+                aria-label="Open menu"
+              >
+                <Menu className="w-5 h-5" />
+              </button>
 
-            {/* Screener stays mounted at all times — only visually hidden when
-                not the active view — so switching modes/patterns never remounts
-                it and never re-triggers the scanKey effect / loses scan state. */}
-            <div style={{ display: mode === "scanner" ? "block" : "none" }}>
-              {activeSignal === "" || SCREENER_PATTERN_IDS.has(activeSignal) ? (
-                <Screener
-                  activeSignal={activeSignal}
-                  scanKey={scanKey}
-                  onCounts={setPatternCounts}
-                  onSignalSymbols={setSignalSymbols}
-                  onResults={setSignalResults}
-                  activeTab={dataSource}
-                  onActiveTabChange={setDataSource}
-                  onActiveSignalChange={setActiveSignal}
-                />
-              ) : (
-                <ComingSoon label={activeSignalLabel} />
-              )}
-            </div>
-
-            {mode === "backtest" && (
-              <div className="w-full px-1 py-8 sm:px-2">
-                <BacktestPanel />
+              {/* Screener stays mounted at all times — only visually hidden when
+                  not the active view — so switching modes/patterns never remounts
+                  it and never re-triggers the scanKey effect / loses scan state. */}
+              <div style={{ display: mode === "scanner" ? "block" : "none" }}>
+                {activeSignal === "" || SCREENER_PATTERN_IDS.has(activeSignal) ? (
+                  <Screener
+                    activeSignal={activeSignal}
+                    scanKey={scanKey}
+                    onCounts={setPatternCounts}
+                    onSignalSymbols={setSignalSymbols}
+                    onResults={setSignalResults}
+                    activeTab={dataSource}
+                    onActiveTabChange={setDataSource}
+                    onActiveSignalChange={setActiveSignal}
+                  />
+                ) : (
+                  <ComingSoon label={activeSignalLabel} />
+                )}
               </div>
-            )}
 
-            {mode === "signals" && (
-              <SignalDesk
-                symbols={signalSymbols}
-                results={signalResults}
-                activeSignal={activeSignal}
-                activeSignalLabel={activeSignalLabel}
-                counts={patternCounts}
-                onSelectSignal={handleSignalSelect}
-                onNavigateToScreener={(signalId) => {
-                  setActiveSignal(signalId);
-                  handleModeChange("scanner");
-                }}
-                sourceFilter={dataSource === "combined" ? "all" : dataSource}
-                onSourceFilterChange={(next) => setDataSource(next === "all" ? "combined" : next)}
-              />
-            )}
+              {mode === "backtest" && (
+                <div className="w-full px-1 py-8 sm:px-2">
+                  <BacktestPanel />
+                </div>
+              )}
 
-            {mode === "stats" && <PatternStats />}
+              {mode === "signals" && (
+                <SignalDesk
+                  symbols={signalSymbols}
+                  results={signalResults}
+                  activeSignal={activeSignal}
+                  activeSignalLabel={activeSignalLabel}
+                  counts={patternCounts}
+                  onSelectSignal={handleSignalSelect}
+                  onNavigateToScreener={(signalId) => {
+                    setActiveSignal(signalId);
+                    handleModeChange("scanner");
+                  }}
+                  sourceFilter={dataSource === "combined" ? "all" : dataSource}
+                  onSourceFilterChange={(next) => setDataSource(next === "all" ? "combined" : next)}
+                />
+              )}
 
-            {mode === "journal" && <SignalsJournal />}
-          </main>
+              {mode === "stats" && <PatternStats />}
+
+              {mode === "journal" && <SignalsJournal />}
+            </main>
+            <BuildFooter />
+          </div>
         </div>
         <Toaster />
-        <BuildFooter />
       </TooltipProvider>
     </QueryClientProvider>
   );
