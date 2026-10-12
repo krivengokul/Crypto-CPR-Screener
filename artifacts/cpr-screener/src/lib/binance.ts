@@ -521,7 +521,10 @@ export async function runScreener(
 
   const skipped: string[] = [];
   let done = 0;
-  const CONCURRENCY = 10;
+  // 16 keeps the pipeline fuller without usually tripping Binance 429s;
+  // fetchWithRetry still backs off if needed.
+  const CONCURRENCY = 16;
+  let lastReported = 0;
 
   const perSymbolResults = await mapWithConcurrency(tickers, CONCURRENCY, async (t) => {
     const [klines, intraday] = await Promise.all([
@@ -529,7 +532,11 @@ export async function runScreener(
       fetchIntradayKlines(t.symbol),
     ]);
     done++;
-    onProgress(done, tickers.length, t.symbol);
+    // Throttle UI progress updates (every 5 symbols or final) to cut React churn mid-scan.
+    if (done - lastReported >= 5 || done === tickers.length) {
+      lastReported = done;
+      onProgress(done, tickers.length, t.symbol);
+    }
 
     if (!klines || klines.length < 2) {
       skipped.push(t.symbol);
