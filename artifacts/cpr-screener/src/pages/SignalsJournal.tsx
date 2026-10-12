@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, type CSSProperties } from "react";
+import { memo, useState, useEffect, useMemo, useRef, useCallback, type CSSProperties } from "react";
 import {
   LoggedSignal,
   fetchSavedSignalsFromCloud,
@@ -13,7 +13,7 @@ import {
   summarizePaperTrades,
 } from "@/lib/paperTrading";
 import { fmt, getChartUrl, hasKnownChartMapping } from "@/pages/ScreenerUtils";
-import { fetchTopUSDTSymbols } from "@/lib/binance";
+import { fetchBinanceFuturesPrices } from "@/lib/binance";
 import { fetchCoinDCXLastPrices } from "@/lib/coinDCX";
 import { fetchDeltaPerps } from "@/lib/delta";
 import { VIEWS } from "@/lib/views";
@@ -50,6 +50,209 @@ const GLASS_MAGENTA_STYLE: CSSProperties = {
 function priceKey(source: LoggedSignal["source"], symbol: string): string {
   return source + ":" + symbol.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
 }
+
+/**
+ * Stable string of the source:symbol keys that still need live prices
+ * (ACTIVE signals only — PASS/FAIL rows never need a live price to resolve).
+ * Being a primitive string, it only changes when the *set* of tracked symbols
+ * changes, so the polling effect is not torn down by unrelated signal updates
+ * (cloud sync, deletes, outcome writes).
+ */
+function activePriceKeys(signals: LoggedSignal[]): string {
+  return Array.from(
+    new Set(
+      signals
+        .filter((s) => s.status === "ACTIVE")
+        .map((s) => priceKey(s.source, s.symbol))
+    )
+  )
+    .sort()
+    .join("|");
+}
+
+// Pattern-label -> view key, built once. Replaces a VIEWS.find() scan
+// (thousands of entries) that ran for every row on every render. `find`
+// returned the first match, so the first occurrence wins here too.
+let viewKeyByLabel: Map<string, string> | null = null;
+function viewKeyForLabel(label: string): string | undefined {
+  if (!viewKeyByLabel) {
+    viewKeyByLabel = new Map();
+    for (const view of VIEWS) {
+      if (view.kind === "view" && !viewKeyByLabel.has(view.label)) {
+        viewKeyByLabel.set(view.label, view.key);
+      }
+    }
+  }
+  return viewKeyByLabel.get(label);
+}
+
+const LIVE_PRICE_POLL_MS = 45_000;
+
+const JournalRow = memo(function JournalRow({
+  item,
+  livePrice,
+  onDelete,
+}: {
+  item: LoggedSignal;
+  livePrice: number;
+  onDelete: (id: string) => void;
+}) {
+  const isUp = item.direction === "Up" || (item.direction as string) === "LONG";
+  const isDown = item.direction === "Down" || (item.direction as string) === "SHORT";
+  const isPass = item.status === "PASS";
+  const isFail = item.status === "FAIL";
+  const isActive = item.status === "ACTIVE";
+  const grossReturnPct = calculateGrossReturnPct(item);
+  const livePriceColor = Number.isFinite(livePrice)
+    ? isUp
+      ? livePrice > item.entry
+        ? "text-emerald-400"
+        : livePrice < item.sl
+          ? "text-rose-400"
+          : "text-white"
+      : isDown
+        ? livePrice < item.entry
+          ? "text-rose-400"
+          : livePrice > item.sl
+            ? "text-emerald-400"
+            : "text-white"
+        : "text-white"
+    : "text-white";
+  const autoSavedDate =
+    item.outcomeNotes?.match(/^Auto-saved setup \((\d{4}-\d{2}-\d{2})\)\./)?.[1] ??
+    (Number.isFinite(item.timestamp) && Number.isFinite(new Date(item.timestamp).getTime())
+      ? new Date(item.timestamp).toISOString().slice(0, 10)
+      : "unknown date");
+  const viewCode = item.patternId ?? viewKeyForLabel(item.patternName);
+
+  return (
+    <tr className="hover:bg-[#121d2e] transition font-mono">
+      <td className="py-2.5 px-3 whitespace-nowrap">
+        <div className="flex flex-col items-start">
+          <div className="flex items-center gap-1 font-bold text-white">
+            <span>{item.symbol}</span>
+            {hasKnownChartMapping(item.symbol, item.source) ? (
+              <a
+                href={getChartUrl(item.symbol, item.source)}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="text-muted-foreground hover:text-primary transition-colors shrink-0"
+                title="Open on TradingView"
+              >
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            ) : (
+              <span
+                className="text-muted-foreground/30 cursor-not-allowed inline-flex shrink-0"
+                title="Not available on TradingView"
+              >
+                <ExternalLink className="w-3 h-3" />
+              </span>
+            )}
+          </div>
+          <span className="mt-0.5 text-[10px] font-mono uppercase tracking-wide text-slate-400">
+            {item.source}
+          </span>
+          <span className="mt-0.5 text-[10px] font-mono text-slate-400">
+            {item.entryTimeSource === "exchange_trade"
+              ? item.dateStr
+              : "Entry time unverified"}
+          </span>
+        </div>
+      </td>
+      <td className="py-2.5 px-3 whitespace-nowrap">
+        <div className={`font-medium ${
+          isUp ? "text-emerald-400" : isDown ? "text-rose-400" : "text-slate-300"
+        }`}>
+          {item.patternName}
+        </div>
+        {viewCode && (
+          <div className="mt-0.5 text-[10px] font-mono text-slate-400">
+            {viewCode}
+          </div>
+        )}
+      </td>
+      <td className={`py-2.5 px-3 font-bold whitespace-nowrap ${livePriceColor}`}>
+        ${fmt(livePrice)}
+      </td>
+      <td className="py-2.5 px-3 font-bold whitespace-nowrap">
+        <div className="space-y-0.5">
+          {isDown ? (
+            <>
+              <div className="text-emerald-400">${fmt(item.sl)}</div>
+              <div className="text-sky-300">${fmt(item.entry)}</div>
+              <div className="text-rose-400">
+                <span className="text-xs mr-1 text-rose-500">◎</span>${fmt(item.target)}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="text-emerald-400">
+                <span className="text-xs mr-1 text-emerald-500">◎</span>${fmt(item.target)}
+              </div>
+              <div className="text-sky-300">${fmt(item.entry)}</div>
+              <div className="text-rose-400">${fmt(item.sl)}</div>
+            </>
+          )}
+        </div>
+      </td>
+      <td className="py-2.5 px-3 text-cyan-300 font-bold whitespace-nowrap">{item.rr}</td>
+      <td className={`py-2.5 px-3 font-bold whitespace-nowrap ${
+        grossReturnPct === null
+          ? "text-slate-500"
+          : grossReturnPct >= 0
+            ? "text-emerald-400"
+            : "text-rose-400"
+      }`}>
+        {grossReturnPct === null
+          ? "—"
+          : `${grossReturnPct >= 0 ? "+" : ""}${grossReturnPct.toFixed(2)}%`}
+      </td>
+      <td className="py-2.5 px-3 text-center whitespace-nowrap">
+        <span
+          className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full inline-flex items-center gap-1 ${
+            isPass
+              ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 shadow-[0_0_8px_rgba(16,185,129,0.3)]"
+              : isFail
+              ? "bg-rose-500/20 text-rose-400 border border-rose-500/50"
+              : isActive
+              ? "bg-amber-500/20 text-amber-400 border border-amber-500/40"
+              : "bg-slate-700/40 text-slate-400 border border-slate-600"
+          }`}
+        >
+          {isPass ? (
+            <CheckCircle2 className="w-3 h-3" />
+          ) : isFail ? (
+            <XCircle className="w-3 h-3" />
+          ) : (
+            <Clock className="w-3 h-3" />
+          )}
+          {item.status}
+        </span>
+      </td>
+      <td className="py-2.5 px-3 text-slate-300 font-sans text-[11px] max-w-xs">
+        {isActive ? (
+          <div className="space-y-0.5">
+            <div>Auto-saved setup ({autoSavedDate}).</div>
+            <div>Awaiting TP/SL</div>
+          </div>
+        ) : (
+          item.outcomeNotes || "—"
+        )}
+      </td>
+      <td className="py-2.5 px-3 text-right">
+        <button
+          onClick={() => onDelete(item.id)}
+          className="p-1 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 rounded transition cursor-pointer"
+          title="Delete signal"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+      </td>
+    </tr>
+  );
+});
 
 export default function SignalsJournal() {
   const [signals, setSignals] = useState<LoggedSignal[]>([]);
@@ -102,69 +305,103 @@ export default function SignalsJournal() {
     return () => window.removeEventListener(SIGNALS_JOURNAL_UPDATED_EVENT, refreshJournal);
   }, []);
 
+  const activeKeys = useMemo(() => activePriceKeys(signals), [signals]);
+
   useEffect(() => {
-    if (signals.length === 0) {
-      setLivePrices({});
+    if (!activeKeys) {
+      setLivePrices((previous) => (Object.keys(previous).length === 0 ? previous : {}));
       return;
     }
 
+    // Symbols to poll, grouped by exchange (keys are source:NORMALISEDSYMBOL).
+    const bySource: Record<"binance" | "delta" | "coindcx", string[]> = {
+      binance: [],
+      delta: [],
+      coindcx: [],
+    };
+    activeKeys.split("|").forEach((key) => {
+      const sep = key.indexOf(":");
+      const source = key.slice(0, sep);
+      const symbol = key.slice(sep + 1);
+      if (symbol && (source === "binance" || source === "delta" || source === "coindcx")) {
+        bySource[source].push(symbol);
+      }
+    });
+
     let cancelled = false;
+    let running = false;
+
     const refreshLivePrices = async () => {
-      const sources = new Set(signals.map((signal) => signal.source));
-      const next: Record<string, number> = {};
-      const tasks: Promise<void>[] = [];
+      // No point polling while the tab is in the background; the
+      // visibilitychange handler below catches up as soon as it is shown.
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+      if (running) return; // never stack overlapping polls on a slow network
+      running = true;
+      try {
+        const next: Record<string, number> = {};
+        const tasks: Promise<void>[] = [];
 
-      if (sources.has("binance")) {
-        tasks.push(
-          fetchTopUSDTSymbols().then((rows) => {
-            rows.forEach((row) => {
-              const price = Number(row.lastPrice);
-              if (Number.isFinite(price) && price > 0) {
-                next[priceKey("binance", row.symbol)] = price;
-              }
-            });
-          })
-        );
-      }
+        if (bySource.binance.length > 0) {
+          tasks.push(
+            fetchBinanceFuturesPrices(bySource.binance).then((prices) => {
+              prices.forEach((price, symbol) => {
+                next[priceKey("binance", symbol)] = price;
+              });
+            })
+          );
+        }
 
-      if (sources.has("delta")) {
-        tasks.push(
-          fetchDeltaPerps().then((rows) => {
-            rows.forEach((row) => {
-              const price = Number(row.close);
-              if (Number.isFinite(price) && price > 0) {
-                next[priceKey("delta", row.symbol)] = price;
-              }
-            });
-          })
-        );
-      }
+        if (bySource.delta.length > 0) {
+          const want = new Set(bySource.delta);
+          tasks.push(
+            fetchDeltaPerps().then((rows) => {
+              rows.forEach((row) => {
+                const key = priceKey("delta", row.symbol);
+                if (!want.has(key.slice("delta:".length))) return;
+                const price = Number(row.close);
+                if (Number.isFinite(price) && price > 0) next[key] = price;
+              });
+            })
+          );
+        }
 
-      if (sources.has("coindcx")) {
-        tasks.push(
-          fetchCoinDCXLastPrices().then((prices) => {
-            prices.forEach((price, symbol) => {
-              if (Number.isFinite(price) && price > 0) {
-                next[priceKey("coindcx", symbol)] = price;
-              }
-            });
-          })
-        );
-      }
+        if (bySource.coindcx.length > 0) {
+          const want = new Set(bySource.coindcx);
+          tasks.push(
+            fetchCoinDCXLastPrices().then((prices) => {
+              prices.forEach((price, symbol) => {
+                const key = priceKey("coindcx", symbol);
+                if (!want.has(key.slice("coindcx:".length))) return;
+                if (Number.isFinite(price) && price > 0) next[key] = price;
+              });
+            })
+          );
+        }
 
-      await Promise.allSettled(tasks);
-      if (!cancelled) {
-        setLivePrices((previous) => ({ ...previous, ...next }));
+        await Promise.allSettled(tasks);
+        if (!cancelled) {
+          setLivePrices((previous) => ({ ...previous, ...next }));
+        }
+      } finally {
+        running = false;
       }
     };
 
     void refreshLivePrices();
-    const interval = window.setInterval(() => void refreshLivePrices(), 30_000);
+    const interval = window.setInterval(() => void refreshLivePrices(), LIVE_PRICE_POLL_MS);
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") void refreshLivePrices();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
     return () => {
       cancelled = true;
       window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [signals]);
+    // activeKeys is a stable string: the interval is NOT restarted by every
+    // change to the signals array, only when the tracked symbol set changes.
+  }, [activeKeys]);
 
   const handleClearAll = async () => {
     if (signals.length === 0) return;
@@ -233,8 +470,9 @@ export default function SignalsJournal() {
   // press Auto-Check. Each signal is auto-checked at most once per page load
   // so a check that can't resolve it (e.g. history fetch failed) can't loop.
   const autoCheckedRef = useRef<Set<string>>(new Set());
+  const evaluateInFlight = useRef(false);
   useEffect(() => {
-    if (evaluating) return;
+    if (evaluating || evaluateInFlight.current) return;
     const crossed = signals.filter(
       (s) =>
         s.status === "ACTIVE" &&
@@ -243,11 +481,16 @@ export default function SignalsJournal() {
     );
     if (crossed.length === 0) return;
     crossed.forEach((s) => autoCheckedRef.current.add(s.id));
-    void handleEvaluateAll();
+    evaluateInFlight.current = true;
+    void handleEvaluateAll().finally(() => {
+      evaluateInFlight.current = false;
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [signals, livePrices, evaluating]);
 
-  const handleDelete = async (id: string) => {
+  // Stable identity so memoised rows are not re-rendered by unrelated state.
+  // loadSignals only touches state setters + imports, so no stale closure.
+  const handleDelete = useCallback(async (id: string) => {
     setError(null);
     try {
       await deleteSavedSignalFromCloud(id);
@@ -256,7 +499,8 @@ export default function SignalsJournal() {
       setError(error instanceof Error ? error.message : "Cloud delete failed. Your saved signal was not deleted.");
       await loadSignals();
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleExportCSV = () => {
     if (signals.length === 0) return;
@@ -553,168 +797,14 @@ export default function SignalsJournal() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#1b263b]">
-                {filtered.map((item) => {
-                  const isUp = item.direction === "Up" || (item.direction as string) === "LONG";
-                  const isDown = item.direction === "Down" || (item.direction as string) === "SHORT";
-                  const isPass = item.status === "PASS";
-                  const isFail = item.status === "FAIL";
-                  const isActive = item.status === "ACTIVE";
-                  const grossReturnPct = calculateGrossReturnPct(item);
-                  const livePrice = livePrices[priceKey(item.source, item.symbol)] ?? item.currentPrice;
-                  const livePriceColor = Number.isFinite(livePrice)
-                    ? isUp
-                      ? livePrice > item.entry
-                        ? "text-emerald-400"
-                        : livePrice < item.sl
-                          ? "text-rose-400"
-                          : "text-white"
-                      : isDown
-                        ? livePrice < item.entry
-                          ? "text-rose-400"
-                          : livePrice > item.sl
-                            ? "text-emerald-400"
-                            : "text-white"
-                        : "text-white"
-                    : "text-white";
-                  const autoSavedDate =
-                    item.outcomeNotes?.match(/^Auto-saved setup \((\d{4}-\d{2}-\d{2})\)\./)?.[1] ??
-                    (Number.isFinite(item.timestamp) && Number.isFinite(new Date(item.timestamp).getTime())
-                      ? new Date(item.timestamp).toISOString().slice(0, 10)
-                      : "unknown date");
-                  const viewCode =
-                    item.patternId ??
-                    VIEWS.find(
-                      (view) => view.kind === "view" && view.label === item.patternName
-                    )?.key;
-
-                  return (
-                    <tr key={item.id} className="hover:bg-[#121d2e] transition font-mono">
-                      <td className="py-2.5 px-3 whitespace-nowrap">
-                        <div className="flex flex-col items-start">
-                          <div className="flex items-center gap-1 font-bold text-white">
-                            <span>{item.symbol}</span>
-                            {hasKnownChartMapping(item.symbol, item.source) ? (
-                              <a
-                                href={getChartUrl(item.symbol, item.source)}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                onClick={(e) => e.stopPropagation()}
-                                className="text-muted-foreground hover:text-primary transition-colors shrink-0"
-                                title="Open on TradingView"
-                              >
-                                <ExternalLink className="w-3 h-3" />
-                              </a>
-                            ) : (
-                              <span
-                                className="text-muted-foreground/30 cursor-not-allowed inline-flex shrink-0"
-                                title="Not available on TradingView"
-                              >
-                                <ExternalLink className="w-3 h-3" />
-                              </span>
-                            )}
-                          </div>
-                          <span className="mt-0.5 text-[10px] font-mono uppercase tracking-wide text-slate-400">
-                            {item.source}
-                          </span>
-                          <span className="mt-0.5 text-[10px] font-mono text-slate-400">
-                            {item.entryTimeSource === "exchange_trade"
-                              ? item.dateStr
-                              : "Entry time unverified"}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="py-2.5 px-3 whitespace-nowrap">
-                        <div className={`font-medium ${
-                          isUp ? "text-emerald-400" : isDown ? "text-rose-400" : "text-slate-300"
-                        }`}>
-                          {item.patternName}
-                        </div>
-                        {viewCode && (
-                          <div className="mt-0.5 text-[10px] font-mono text-slate-400">
-                            {viewCode}
-                          </div>
-                        )}
-                      </td>
-                      <td className={`py-2.5 px-3 font-bold whitespace-nowrap ${livePriceColor}`}>
-                        ${fmt(livePrice)}
-                      </td>
-                      <td className="py-2.5 px-3 font-bold whitespace-nowrap">
-                        <div className="space-y-0.5">
-                          {isDown ? (
-                            <>
-                              <div className="text-emerald-400">${fmt(item.sl)}</div>
-                              <div className="text-sky-300">${fmt(item.entry)}</div>
-                              <div className="text-rose-400">
-                                <span className="text-xs mr-1 text-rose-500">◎</span>${fmt(item.target)}
-                              </div>
-                            </>
-                          ) : (
-                            <>
-                              <div className="text-emerald-400">
-                                <span className="text-xs mr-1 text-emerald-500">◎</span>${fmt(item.target)}
-                              </div>
-                              <div className="text-sky-300">${fmt(item.entry)}</div>
-                              <div className="text-rose-400">${fmt(item.sl)}</div>
-                            </>
-                          )}
-                        </div>
-                      </td>
-                      <td className="py-2.5 px-3 text-cyan-300 font-bold whitespace-nowrap">{item.rr}</td>
-                      <td className={`py-2.5 px-3 font-bold whitespace-nowrap ${
-                        grossReturnPct === null
-                          ? "text-slate-500"
-                          : grossReturnPct >= 0
-                            ? "text-emerald-400"
-                            : "text-rose-400"
-                      }`}>
-                        {grossReturnPct === null
-                          ? "—"
-                          : `${grossReturnPct >= 0 ? "+" : ""}${grossReturnPct.toFixed(2)}%`}
-                      </td>
-                      <td className="py-2.5 px-3 text-center whitespace-nowrap">
-                        <span
-                          className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full inline-flex items-center gap-1 ${
-                            isPass
-                              ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 shadow-[0_0_8px_rgba(16,185,129,0.3)]"
-                              : isFail
-                              ? "bg-rose-500/20 text-rose-400 border border-rose-500/50"
-                              : isActive
-                              ? "bg-amber-500/20 text-amber-400 border border-amber-500/40"
-                              : "bg-slate-700/40 text-slate-400 border border-slate-600"
-                          }`}
-                        >
-                          {isPass ? (
-                            <CheckCircle2 className="w-3 h-3" />
-                          ) : isFail ? (
-                            <XCircle className="w-3 h-3" />
-                          ) : (
-                            <Clock className="w-3 h-3" />
-                          )}
-                          {item.status}
-                        </span>
-                      </td>
-                      <td className="py-2.5 px-3 text-slate-300 font-sans text-[11px] max-w-xs">
-                        {isActive ? (
-                          <div className="space-y-0.5">
-                            <div>Auto-saved setup ({autoSavedDate}).</div>
-                            <div>Awaiting TP/SL</div>
-                          </div>
-                        ) : (
-                          item.outcomeNotes || "—"
-                        )}
-                      </td>
-                      <td className="py-2.5 px-3 text-right">
-                        <button
-                          onClick={() => handleDelete(item.id)}
-                          className="p-1 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 rounded transition cursor-pointer"
-                          title="Delete signal"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
+                {filtered.map((item) => (
+                  <JournalRow
+                    key={item.id}
+                    item={item}
+                    livePrice={livePrices[priceKey(item.source, item.symbol)] ?? item.currentPrice}
+                    onDelete={handleDelete}
+                  />
+                ))}
               </tbody>
             </table>
           </div>

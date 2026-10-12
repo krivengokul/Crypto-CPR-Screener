@@ -319,6 +319,70 @@ export async function fetchTopUSDTSymbols(limit?: number): Promise<Ticker24h[]> 
   return typeof limit === "number" ? filtered.slice(0, limit) : filtered;
 }
 
+/**
+ * Lightweight last-price lookup for a KNOWN set of USDⓈ-M futures symbols.
+ *
+ * Used by the Journal's live-price polling, which only needs prices for the
+ * handful of ACTIVE signals. `fetchTopUSDTSymbols` downloads exchangeInfo plus
+ * the full 24h ticker book (hundreds of symbols) which is wasteful for that.
+ *
+ *  - few symbols  -> one tiny `ticker/price?symbol=` call per symbol
+ *  - many symbols -> a single `ticker/price` call (all symbols, weight 2)
+ *
+ * Goes through `fetchWithRetry` like every other Binance read. Returns a map
+ * keyed by the normalised symbol (upper-case alphanumerics) containing only
+ * symbols that were requested and returned a valid positive price.
+ */
+const PER_SYMBOL_PRICE_LIMIT = 12;
+
+export async function fetchBinanceFuturesPrices(
+  symbols: string[]
+): Promise<Map<string, number>> {
+  const out = new Map<string, number>();
+  const wanted = new Set(
+    symbols.map((s) => s.replace(/[^a-zA-Z0-9]/g, "").toUpperCase()).filter(Boolean)
+  );
+  if (wanted.size === 0) return out;
+
+  // Polling path: fail fast and let the next tick retry instead of stalling.
+  const opts = { attempts: 2, baseDelayMs: 400, timeoutMs: 8000 };
+  const accept = (symbol: unknown, price: unknown) => {
+    if (typeof symbol !== "string") return;
+    const norm = symbol.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+    const n = Number(price);
+    if (wanted.has(norm) && Number.isFinite(n) && n > 0) out.set(norm, n);
+  };
+
+  if (wanted.size <= PER_SYMBOL_PRICE_LIMIT) {
+    await Promise.all(
+      Array.from(wanted).map(async (sym) => {
+        const res = await fetchWithRetry(
+          `${FBASE}/ticker/price?symbol=${encodeURIComponent(sym)}`,
+          opts
+        );
+        if (!res || !res.ok) return; // e.g. delisted symbol -> 400, skip it
+        try {
+          const data = (await res.json()) as { symbol?: string; price?: string };
+          accept(data.symbol ?? sym, data.price);
+        } catch {
+          /* ignore a malformed single response */
+        }
+      })
+    );
+    return out;
+  }
+
+  const res = await fetchWithRetry(`${FBASE}/ticker/price`, opts);
+  if (!res || !res.ok) return out;
+  try {
+    const rows = (await res.json()) as Array<{ symbol?: string; price?: string }>;
+    if (Array.isArray(rows)) rows.forEach((row) => accept(row.symbol, row.price));
+  } catch {
+    /* ignore a malformed response */
+  }
+  return out;
+}
+
 // FIX: bumped from 4 → 6. We need at least 3 COMPLETED daily candles
 // available (pp / prev / today) plus room for the still-forming "live" candle
 // on top of that (4 total in the worst case), so 4 was one candle short of
