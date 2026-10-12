@@ -1847,22 +1847,4 @@ export const LEVELSABOVE_VIEWS: ViewDef[] = [
       }
     ],
       },
-  {
-    key: "2CPR-ABOVEPHPL",
-    label: "2CPR-ABOVEPHPL",
-    parentKey: "levelsabove",
-    kind: "view",
-    standalone: true,
-    condition: (r) =>
-      r.todayCPR.pivot > r.prevCPR.prevHigh &&
-      r.prevCPR.pivot > r.todayCPR.prevLow,
-    direction: "Up",
-    targetLabel: "R4",
-    getTarget: (r) => r.todayCPR.r4,
-    entryLabel: "R1",
-    getEntry: (r) => r.todayCPR.r1,
-    stoplossLabel: "S1",
-    getStoploss: (r) => r.todayCPR.s1,
-    order: 1000,
-  },
 ];
