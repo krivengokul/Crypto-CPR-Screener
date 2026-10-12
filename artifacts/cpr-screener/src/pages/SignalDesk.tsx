@@ -8,7 +8,12 @@ import {
   getChartUrl,
   hasKnownChartMapping,
 } from "./ScreenerUtils";
-import { hasTouchedEntry } from "@/lib/signalTracker";
+import {
+  hasTouchedEntry,
+  fetchSavedSignalsFromCloud,
+  SIGNALS_JOURNAL_UPDATED_EVENT,
+  type LoggedSignal,
+} from "@/lib/signalTracker";
 import { Views } from "@/lib/ViewsSidebar";
 import { getView, shortLevelLabel } from "@/lib/views";
 import { getRowCategory, getCategoryLabel } from "@/lib/rowCategory";
@@ -124,6 +129,8 @@ export interface SignalItem {
   // subset of isSaved signals that are actually sitting in the Journal
   // right now, not just ready and being watched.
   isTriggered: boolean;
+  /** Journal entry time for the most recent matching triggered signal. */
+  triggeredAt?: string;
 }
 
 // Which top-level Views bucket a View id lives under — e.g. "compressed",
@@ -258,6 +265,47 @@ export default function SignalDesk({
   const [statusFilter, setStatusFilter] = useState<"all" | "saved" | "ready">("all");
   const [selectedSignalId, setSelectedSignalId] = useState<string>(activeSignal || "");
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [journalSignals, setJournalSignals] = useState<LoggedSignal[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchSavedSignalsFromCloud().then((saved) => {
+      if (!cancelled) {
+        setJournalSignals((previous) => {
+          const byId = new Map(saved.map((signal) => [signal.id, signal]));
+          previous.forEach((signal) => byId.set(signal.id, { ...byId.get(signal.id), ...signal }));
+          return Array.from(byId.values());
+        });
+      }
+    });
+    const updateJournalSignals = (event: Event) => {
+      const rows = (event as CustomEvent<{ signals?: LoggedSignal[] }>).detail?.signals;
+      if (!rows?.length) return;
+      setJournalSignals((previous) => {
+        const byId = new Map(previous.map((signal) => [signal.id, signal]));
+        rows.forEach((signal) => byId.set(signal.id, { ...byId.get(signal.id), ...signal }));
+        return Array.from(byId.values());
+      });
+    };
+    window.addEventListener(SIGNALS_JOURNAL_UPDATED_EVENT, updateJournalSignals);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(SIGNALS_JOURNAL_UPDATED_EVENT, updateJournalSignals);
+    };
+  }, []);
+
+  const getTriggeredAt = (source: SourceId, symbol: string, patternId: string, patternName: string) => {
+    const matches = journalSignals
+      .filter((saved) =>
+        saved.source === source &&
+        saved.symbol.toUpperCase() === symbol.toUpperCase() &&
+        (saved.patternId ? saved.patternId === patternId : saved.patternName === patternName)
+      )
+      .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+    const match = matches[0];
+    if (!match) return undefined;
+    return match.entryTimeSource === "exchange_trade" ? match.dateStr : "Entry time unverified";
+  };
 
   useEffect(() => {
     if (activeSignal !== undefined) {
@@ -413,6 +461,10 @@ export default function SignalDesk({
           ? hasTouchedEntry(levels.direction, levels.price, sym.currentPrice)
           : false;
 
+        const triggeredAt = isTriggered
+          ? getTriggeredAt(sym.source, sym.symbol, patternId, patternLabel)
+          : undefined;
+
         return {
           id: sym.key,
           symbol: sym.symbol,
@@ -452,6 +504,7 @@ export default function SignalDesk({
           timestamp: "Active",
           isSaved: isEligible,
           isTriggered,
+          triggeredAt,
         };
       });
     }
@@ -507,6 +560,10 @@ export default function SignalDesk({
         ? hasTouchedEntry(levels.direction, levels.price, r.currentPrice)
         : false;
 
+      const triggeredAt = isTriggered
+        ? getTriggeredAt(r.source, r.symbol, patternId, patternLabel)
+        : undefined;
+
       list.push({
         id: `${r.source}-${r.symbol}-${selectedSignalId || patternLabel}`,
         symbol: r.symbol,
@@ -541,11 +598,12 @@ export default function SignalDesk({
         timestamp: "Active",
         isSaved: isActiveSignalSymbol,
         isTriggered,
+        triggeredAt,
       });
     }
 
     return list;
-  }, [symbols, results, viewPills, activeSignalSymbols, resultsBySymbol, selectedSignalId, activeSignal, activeSignalLabel]);
+  }, [symbols, results, viewPills, activeSignalSymbols, resultsBySymbol, selectedSignalId, activeSignal, activeSignalLabel, journalSignals]);
 
   const filteredSignals = useMemo(() => {
     return signals.filter((s) => {
@@ -893,9 +951,16 @@ R:R: ${item.riskReward}`;
               // Up), so the two read together as one status cluster.
               const statusBadge = item.isSaved && (
                 item.isTriggered ? (
-                  <div className="flex items-center gap-1 text-[11px] text-emerald-400 font-mono shrink-0">
-                    <Cloud className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Active</span>
+                  <div className="flex flex-col items-end gap-0.5 shrink-0">
+                    <div className="flex items-center gap-1 text-[11px] text-emerald-400 font-mono">
+                      <Cloud className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Active</span>
+                    </div>
+                    {item.triggeredAt && (
+                      <span className="text-[10px] font-mono text-slate-400">
+                        @ {item.triggeredAt}
+                      </span>
+                    )}
                   </div>
                 ) : (
                   <div
@@ -1044,6 +1109,16 @@ R:R: ${item.riskReward}`;
                         <div className="flex items-center gap-1">
                           <span>Code:</span>
                           <strong className="text-slate-500 font-mono text-[11px]">{item.patternId}</strong>
+                        </div>
+                      )}
+                      {item.isSaved && (
+                        <div className="flex items-center gap-1">
+                          <span>Status:</span>
+                          <strong className={`font-semibold ${item.isTriggered ? "text-emerald-400" : "text-amber-400"}`}>
+                            {item.isTriggered
+                              ? `Active${item.triggeredAt ? ` @ ${item.triggeredAt}` : ""}`
+                              : "Ready"}
+                          </strong>
                         </div>
                       )}
                       <div className="flex items-center gap-4">
