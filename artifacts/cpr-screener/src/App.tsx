@@ -262,9 +262,16 @@ function App() {
       };
 
       // Whole toast is clickable → SignalDesk in a new tab (no action button).
+      const viewLabel = candidate.payload.patternName;
+      const viewCode = candidate.payload.patternId;
+      const viewPart =
+        viewCode && viewCode !== viewLabel
+          ? `${viewLabel} (${viewCode})`
+          : viewLabel || viewCode || "View";
+
       toast({
         title: "Entry crossed — alert",
-        description: `${candidate.symbol} (${candidate.source}) ${dir} · ${candidate.payload.patternName} · trade ${px} crossed entry ${entry}`,
+        description: `${candidate.symbol} (${candidate.source}) ${dir} · ${viewPart} · trade ${px} crossed entry ${entry}`,
         duration: 12_000,
         className: "cursor-pointer",
         onClick: openSignalDeskTab,
