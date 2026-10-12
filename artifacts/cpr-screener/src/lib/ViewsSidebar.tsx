@@ -11,8 +11,16 @@ import {
   Zap,
   Activity,
   BookmarkCheck,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 import { getView, VIEWS, type ViewDef } from "@/lib/views";
+import {
+  isAlertMuted,
+  setAlertMuted,
+  unlockAlertAudio,
+  ALERT_MUTE_EVENT,
+} from "@/lib/alertSound";
 
 export interface Category {
   id: string;
@@ -175,6 +183,25 @@ export default function ViewsSidebar({
   onModeChange,
   counts,
 }: ViewsSidebarProps) {
+  // Alert sound mute (persisted in localStorage by alertSound.ts)
+  const [alertMuted, setAlertMutedState] = useState<boolean>(() => isAlertMuted());
+
+  useEffect(() => {
+    const onMute = (e: Event) => {
+      const muted = (e as CustomEvent<{ muted: boolean }>).detail?.muted;
+      if (typeof muted === "boolean") setAlertMutedState(muted);
+    };
+    window.addEventListener(ALERT_MUTE_EVENT, onMute);
+    return () => window.removeEventListener(ALERT_MUTE_EVENT, onMute);
+  }, []);
+
+  const toggleAlertMuted = () => {
+    const next = !alertMuted;
+    setAlertMuted(next);
+    setAlertMutedState(next);
+    if (!next) unlockAlertAudio();
+  };
+
   // Which parent pattern is currently open in the tree
   const [expandedId, setExpandedId] = useState<string | null>(() => {
     if (!activeSignal) return null;
@@ -263,24 +290,44 @@ export default function ViewsSidebar({
           flexDirection: "column",
         }}
       >
-        {/* Header */}
+        {/* Header — Sound toggle left of label so the main-area top bar can be removed */}
         <div
           style={{
-            padding: "13px 10px 12px 16px",
+            padding: "10px 8px 10px 10px",
             borderBottom: `1px solid ${BORDER_COLOR}`,
             display: "flex",
             alignItems: "center",
-            justifyContent: "space-between",
+            gap: 8,
             flexShrink: 0,
           }}
         >
+          <button
+            type="button"
+            onClick={toggleAlertMuted}
+            className="flex items-center gap-1 rounded-md border px-1.5 py-1 text-[10px] font-medium transition-colors shrink-0"
+            style={{
+              background: alertMuted ? "rgba(239,68,68,0.12)" : "rgba(34,197,94,0.10)",
+              borderColor: alertMuted ? "rgba(239,68,68,0.35)" : "rgba(34,197,94,0.35)",
+              color: alertMuted ? "#fca5a5" : "#86efac",
+            }}
+            title={alertMuted ? "Alerts muted — click to enable sound" : "Alerts on — click to mute"}
+            aria-pressed={alertMuted}
+          >
+            {alertMuted ? <VolumeX style={{ width: 12, height: 12 }} /> : <Volume2 style={{ width: 12, height: 12 }} />}
+            {alertMuted ? "Muted" : "Sound"}
+          </button>
           <span
             style={{
               fontSize: 11,
               fontWeight: 700,
               color: DIM_TEXT,
-              letterSpacing: "0.08em",
+              letterSpacing: "0.06em",
               textTransform: "uppercase",
+              flex: 1,
+              minWidth: 0,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
             }}
           >
             PIVOT LEVEL | VIEWS
@@ -297,6 +344,7 @@ export default function ViewsSidebar({
               display: "flex",
               alignItems: "center",
               borderRadius: 4,
+              flexShrink: 0,
             }}
           >
             {onClose
@@ -645,6 +693,29 @@ export default function ViewsSidebar({
           }}
         >
           <ChevronRight style={{ width: 15, height: 15 }} />
+        </button>
+
+        {/* Sound toggle (icon-only when collapsed) */}
+        <button
+          type="button"
+          onClick={toggleAlertMuted}
+          title={alertMuted ? "Alerts muted — click to enable sound" : "Alerts on — click to mute"}
+          aria-pressed={alertMuted}
+          style={{
+            width: 36,
+            height: 32,
+            borderRadius: 6,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            border: `1px solid ${alertMuted ? "rgba(239,68,68,0.35)" : "rgba(34,197,94,0.35)"}`,
+            background: alertMuted ? "rgba(239,68,68,0.12)" : "rgba(34,197,94,0.10)",
+            color: alertMuted ? "#fca5a5" : "#86efac",
+            marginBottom: 4,
+          }}
+        >
+          {alertMuted ? <VolumeX style={{ width: 14, height: 14 }} /> : <Volume2 style={{ width: 14, height: 14 }} />}
         </button>
 
         {/* Mode Icons Rail */}
