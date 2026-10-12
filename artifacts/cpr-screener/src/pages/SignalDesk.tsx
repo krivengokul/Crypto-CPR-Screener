@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { memo, useState, useMemo, useEffect, useCallback, useRef } from "react";
 import {
   CPRResultWithSource,
   SourceId,
@@ -61,6 +61,13 @@ export interface SignalDeskSymbol {
   r4: number;
 }
 
+/** Set by App when the user clicks "Open SignalDesk" on an entry-cross toast. */
+export interface FocusSymbol {
+  symbol: string;
+  source: SourceId;
+  patternId?: string;
+}
+
 interface SignalDeskProps {
   symbols?: SignalDeskSymbol[];
   results?: CPRResultWithSource[];
@@ -77,6 +84,9 @@ interface SignalDeskProps {
   // own local state when unset, so this component still works standalone.
   sourceFilter?: "all" | SourceId;
   onSourceFilterChange?: (next: "all" | SourceId) => void;
+  // Scroll to + highlight this symbol's card (entry-cross toast action).
+  focusSymbol?: FocusSymbol | null;
+  onFocusSymbolConsumed?: () => void;
 }
 
 export interface SignalItem {
@@ -131,6 +141,19 @@ export interface SignalItem {
   isTriggered: boolean;
   /** Journal entry time for the most recent matching triggered signal. */
   triggeredAt?: string;
+  /** Today's journal outcome for this card's setup, when one exists. */
+  journalStatus?: "ACTIVE" | "PASS" | "FAIL" | "EXPIRED";
+}
+
+type StatusFilter = "all" | "saved" | "ready" | "pass" | "fail";
+
+// The journal keeps ONE record per symbol/direction/pattern per UTC day, so a
+// journal outcome only describes the card's setup if it is from today.
+// Without this, yesterday's PASS would show on today's fresh "Ready" card.
+function currentJournalStatus(match: LoggedSignal | undefined): SignalItem["journalStatus"] {
+  if (!match || !Number.isFinite(match.timestamp) || !match.timestamp) return undefined;
+  const day = new Date(match.timestamp).toISOString().slice(0, 10);
+  return day === new Date().toISOString().slice(0, 10) ? match.status : undefined;
 }
 
 // Which top-level Views bucket a View id lives under — e.g. "compressed",
@@ -241,6 +264,313 @@ export function buildPills(pool: CPRResultWithSource[]) {
   return list.sort((a, b) => b.count - a.count);
 }
 
+function shallowEqualItem(a: SignalItem, b: SignalItem): boolean {
+  if (a === b) return true;
+  const keys = Object.keys(a) as (keyof SignalItem)[];
+  if (keys.length !== Object.keys(b).length) return false;
+  for (const k of keys) if (a[k] !== b[k]) return false;
+  return true;
+}
+
+// One card. Memoised: every SignalItem field is a primitive, so a full field
+// comparison lets a card skip re-rendering when a live tick rebuilt its item
+// object but nothing it displays actually changed.
+const SignalDeskCard = memo(
+  function SignalDeskCard({
+    item,
+    copied,
+    onCopy,
+    onOpenInScreener,
+  }: {
+    item: SignalItem;
+    copied: boolean;
+    onCopy: (item: SignalItem) => void;
+    onOpenInScreener: (signalId: string) => void;
+  }) {
+    const isUp = item.direction === "Up" || (item.direction as string) === "LONG";
+    const isDown = item.direction === "Down" || (item.direction as string) === "SHORT";
+
+    // Direction badge — only for symbols with a real signal
+    // (Active Signal match, item.isSaved). Placed top-right for Up,
+    // top-left for Down (see the two render spots below).
+    const directionBadge = item.isSaved && (
+      <span
+        className={`text-xs font-bold px-2 py-0.5 rounded-md flex items-center gap-1 font-mono shrink-0 ${
+          isUp
+            ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
+            : isDown
+            ? "bg-rose-500/20 text-rose-400 border border-rose-500/40"
+            : "bg-slate-500/20 text-slate-300 border border-slate-500/40"
+        }`}
+      >
+        {isUp ? <ArrowUpRight className="w-3.5 h-3.5" /> : isDown ? <ArrowDownLeft className="w-3.5 h-3.5" /> : null}
+        {isUp ? "Up" : isDown ? "Down" : item.direction}
+      </span>
+    );
+
+    // Running/Ready status — sits right beside the direction badge,
+    // on the side closer to the card's center (after Down, before
+    // Up), so the two read together as one status cluster.
+    const statusBadge = item.isSaved && (
+      item.journalStatus === "PASS" ? (
+        <div
+          className="flex items-center gap-1 text-[11px] text-emerald-400 font-mono shrink-0"
+          title="Target hit — outcome recorded in the Journal"
+        >
+          <span>PASS</span>
+        </div>
+      ) : item.journalStatus === "FAIL" ? (
+        <div
+          className="flex items-center gap-1 text-[11px] text-rose-400 font-mono shrink-0"
+          title="Stop hit — outcome recorded in the Journal"
+        >
+          <span>FAIL</span>
+        </div>
+      ) : item.isTriggered ? (
+        <div className="flex flex-col items-end gap-0.5 shrink-0">
+          <div className="flex items-center gap-1 text-[11px] text-emerald-400 font-mono">
+            <Cloud className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Active</span>
+          </div>
+          {item.triggeredAt && (
+            <span className="text-[10px] font-mono text-slate-400">
+              @ {item.triggeredAt}
+            </span>
+          )}
+        </div>
+      ) : (
+        <div
+          className="flex items-center gap-1 text-[11px] text-amber-400 font-mono shrink-0"
+          title="Matches an active signal but price hasn't reached the entry line yet"
+        >
+          <Clock className="w-3.5 h-3.5 text-amber-400" />
+          <span>Ready</span>
+        </div>
+      )
+    );
+
+    return (
+      <div
+        id={`sd-card-${item.source}-${item.symbol.toUpperCase()}`}
+        className="bg-[#0f1724] border border-[#1e2d3d] hover:border-slate-600 rounded-xl p-4 transition-all flex flex-col justify-between shadow-lg"
+      >
+        {/* Card Top */}
+        <div>
+          <div className="flex items-start justify-between mb-3">
+            {/* Down signals get the badge on the top-left, ahead
+                of the symbol block; Up (and no-signal) keep the
+                symbol block alone on the left. */}
+            {isDown && directionBadge}
+            {isDown && statusBadge}
+
+            {/* Left: Symbol & Exchange + Live Price & 24h % change */}
+            <div className="flex items-start gap-4 sm:gap-6">
+              <div>
+                <div className="flex items-center gap-1">
+                  <span className="text-base sm:text-lg font-extrabold text-white font-mono tracking-tight leading-tight">
+                    {item.symbol}
+                  </span>
+                  {hasKnownChartMapping(item.symbol, item.source) ? (
+                    <a
+                      href={getChartUrl(item.symbol, item.source)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-muted-foreground hover:text-primary transition-colors shrink-0"
+                      title="Open on TradingView"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  ) : (
+                    <span
+                      className="text-muted-foreground/30 cursor-not-allowed inline-flex shrink-0"
+                      title="Not available on TradingView"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                    </span>
+                  )}
+                </div>
+                <div className="text-[11px] font-semibold text-slate-400 font-mono uppercase tracking-wider mt-0.5">
+                  {item.source}
+                </div>
+              </div>
+
+              <div className="flex flex-col items-end">
+                <div className="text-sm sm:text-base font-bold text-white font-mono leading-tight">
+                  {fmt(item.currentPrice).replace(/,/g, "")}
+                </div>
+                <div
+                  className={`text-xs font-mono font-bold leading-tight mt-0.5 text-right ${
+                    (item.change24h ?? 0) >= 0 ? "text-emerald-400" : "text-rose-400"
+                  }`}
+                >
+                  {fmtPct(item.change24h ?? 0)}
+                </div>
+              </div>
+            </div>
+
+            {/* Up (and no-signal) signals keep the badge on the
+                top-right, as before. */}
+            {!isDown && statusBadge}
+            {!isDown && directionBadge}
+          </div>
+
+          {/* Live Price Progress Bar — red-left/green-right for Up,
+              flipped to green-left/red-right for Down (via isDown) */}
+          <SignalProgressBar
+            price={item.currentPrice}
+            pivot={item.pivot}
+            s1={item.s1}
+            s2={item.s2}
+            s3={item.s3}
+            s4={item.s4}
+            r1={item.r1}
+            r2={item.r2}
+            r3={item.r3}
+            r4={item.r4}
+            isDown={isDown}
+          />
+
+          {/* Pricing Level Metrics — order flips with direction:
+              Up: Stop Loss (left) · Trigger/Entry (middle) · Target (right)
+              Down: Target (left) · Trigger/Entry (middle) · Stop Loss (right) */}
+          <div className="grid grid-cols-3 gap-2 bg-[#090f19] border border-[#1b2636] rounded-lg p-2.5 mb-3 font-mono">
+            {isDown && (
+              <div>
+                <div className="text-[10px] text-rose-400 font-sans flex items-center gap-0.5">
+                  <Target className="w-2.5 h-2.5" /> Target
+                </div>
+                <div className="text-xs font-bold text-rose-400 mt-0.5">{fmt(item.targetPrice)}</div>
+              </div>
+            )}
+            {!isDown && (
+              <div>
+                <div className="text-[10px] text-rose-400 font-sans">Stop Loss</div>
+                <div className="text-xs font-bold text-rose-400 mt-0.5">{fmt(item.stopPrice)}</div>
+              </div>
+            )}
+            <div>
+              <div className="text-[10px] text-slate-400 font-sans">Trigger / Entry</div>
+              <div className="text-xs font-bold text-white mt-0.5">{fmt(item.triggerPrice)}</div>
+            </div>
+            {isDown ? (
+              <div>
+                <div className="text-[10px] text-emerald-400 font-sans">Stop Loss</div>
+                <div className="text-xs font-bold text-emerald-400 mt-0.5">{fmt(item.stopPrice)}</div>
+              </div>
+            ) : (
+              <div>
+                <div className="text-[10px] text-emerald-400 font-sans flex items-center gap-0.5">
+                  <Target className="w-2.5 h-2.5" /> Target
+                </div>
+                <div className="text-xs font-bold text-emerald-400 mt-0.5">{fmt(item.targetPrice)}</div>
+              </div>
+            )}
+          </div>
+
+          {/* View and Target Details */}
+          <div className="text-[11px] text-slate-400 mb-3 px-1 space-y-0.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1">
+                <span>Signal:</span>
+                <strong className="text-slate-200 font-semibold">
+                  {item.isSaved ? item.patternName : ""}
+                </strong>
+              </div>
+              <span className="font-mono text-slate-300">
+                R:R <strong className="text-white">{item.riskReward}</strong>
+              </span>
+            </div>
+            {item.isSaved && item.patternId && (
+              <div className="flex items-center gap-1">
+                <span>Code:</span>
+                <strong className="text-slate-500 font-mono text-[11px]">{item.patternId}</strong>
+              </div>
+            )}
+            {item.isSaved && (
+              <div className="flex items-center gap-1">
+                <span>Status:</span>
+                <strong
+                  className={`font-semibold ${
+                    item.journalStatus === "PASS"
+                      ? "text-emerald-400"
+                      : item.journalStatus === "FAIL"
+                      ? "text-rose-400"
+                      : item.isTriggered
+                      ? "text-emerald-400"
+                      : "text-amber-400"
+                  }`}
+                >
+                  {item.journalStatus === "PASS"
+                    ? "PASS"
+                    : item.journalStatus === "FAIL"
+                    ? "FAIL"
+                    : item.isTriggered
+                    ? `Active${item.triggeredAt ? ` @ ${item.triggeredAt}` : ""}`
+                    : "Ready"}
+                </strong>
+              </div>
+            )}
+            <div className="flex items-center gap-4">
+              <div className={`flex items-center gap-1 ${isDown ? "order-1" : "order-2"}`}>
+                <span>Target:</span>
+                <Target className={`w-3 h-3 ${isDown ? "text-rose-400" : "text-emerald-400"}`} />
+                <strong className={`${isDown ? "text-rose-400" : "text-emerald-400"} font-semibold font-mono`}>{item.targetLevel || "S2"}</strong>
+              </div>
+              <div className={`flex items-center gap-1 ${isDown ? "order-2" : "order-1"}`}>
+                <span>Stoploss:</span>
+                <strong className={`${isDown ? "text-emerald-400" : "text-rose-400"} font-semibold font-mono`}>{item.stoplossLevel || "S1"}</strong>
+              </div>
+            </div>
+            <div className="flex items-center gap-1">
+              <span>Category:</span>
+              <strong className="text-slate-200 font-semibold">{getCategoryLabel(item.category)}</strong>
+            </div>
+          </div>
+        </div>
+
+        {/* Card Action Footer */}
+        <div className="pt-2 border-t border-[#1e2d3d] flex items-center justify-between gap-2">
+          <button
+            onClick={() => {
+              onOpenInScreener(item.patternId || item.patternName);
+            }}
+            className="text-xs text-blue-400 hover:text-blue-300 font-semibold transition flex items-center gap-1 cursor-pointer"
+          >
+            Open Signal in Screener &rarr;
+          </button>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => onCopy(item)}
+              className="px-2 py-1 rounded bg-[#162130] hover:bg-[#1f2e42] border border-[#22354a] text-slate-300 text-xs font-medium flex items-center gap-1 transition"
+              title="Copy signal details"
+            >
+              {copied ? (
+                <>
+                  <Check className="w-3 h-3 text-emerald-400" />
+                  <span className="text-emerald-400 text-[11px]">Copied</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="w-3 h-3 text-slate-400" />
+                  <span className="text-[11px]">Copy</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+
+  },
+  (prev, next) =>
+    prev.copied === next.copied &&
+    prev.onCopy === next.onCopy &&
+    prev.onOpenInScreener === next.onOpenInScreener &&
+    shallowEqualItem(prev.item, next.item)
+);
+
 export default function SignalDesk({
   symbols,
   results,
@@ -251,6 +581,8 @@ export default function SignalDesk({
   onNavigateToScreener,
   sourceFilter: sourceFilterProp,
   onSourceFilterChange,
+  focusSymbol,
+  onFocusSymbolConsumed,
 }: SignalDeskProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [sourceFilterState, setSourceFilterState] = useState<"all" | SourceId>("binance");
@@ -262,7 +594,7 @@ export default function SignalDesk({
   // hasn't touched entry yet, still being watched (item.isSaved &&
   // !item.isTriggered) — same split the header's Auto-Saved/Ready
   // (Watching) badges use. "all" applies no status filtering.
-  const [statusFilter, setStatusFilter] = useState<"all" | "saved" | "ready">("all");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [selectedSignalId, setSelectedSignalId] = useState<string>(activeSignal || "");
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [journalSignals, setJournalSignals] = useState<LoggedSignal[]>([]);
@@ -294,18 +626,40 @@ export default function SignalDesk({
     };
   }, []);
 
-  const getTriggeredAt = (source: SourceId, symbol: string, patternId: string, patternName: string) => {
-    const matches = journalSignals
-      .filter((saved) =>
-        saved.source === source &&
-        saved.symbol.toUpperCase() === symbol.toUpperCase() &&
-        (saved.patternId ? saved.patternId === patternId : saved.patternName === patternName)
-      )
-      .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-    const match = matches[0];
-    if (!match) return undefined;
-    return match.entryTimeSource === "exchange_trade" ? match.dateStr : "Entry time unverified";
-  };
+  // source:SYMBOL:patternId|patternName -> newest journal row. O(1) lookups
+  // instead of filter+sort over every journal row for every card.
+  const journalByKey = useMemo(() => {
+    const map = new Map<string, LoggedSignal>();
+    for (const saved of journalSignals) {
+      const key = `${saved.source}:${saved.symbol.toUpperCase()}:${saved.patternId || saved.patternName || ""}`;
+      const prev = map.get(key);
+      if (!prev || (saved.timestamp || 0) > (prev.timestamp || 0)) map.set(key, saved);
+    }
+    return map;
+  }, [journalSignals]);
+
+  // useCallback so the big `signals` memo below only recomputes when the
+  // journal actually changes, not on every render.
+  const getJournalMatch = useCallback(
+    (source: SourceId, symbol: string, patternId: string, patternName: string) => {
+      const sym = symbol.toUpperCase();
+      return (
+        journalByKey.get(`${source}:${sym}:${patternId}`) ||
+        journalByKey.get(`${source}:${sym}:${patternName}`) ||
+        undefined
+      );
+    },
+    [journalByKey]
+  );
+
+  const getTriggeredAt = useCallback(
+    (source: SourceId, symbol: string, patternId: string, patternName: string) => {
+      const match = getJournalMatch(source, symbol, patternId, patternName);
+      if (!match) return undefined;
+      return match.entryTimeSource === "exchange_trade" ? match.dateStr : "Entry time unverified";
+    },
+    [getJournalMatch]
+  );
 
   useEffect(() => {
     if (activeSignal !== undefined) {
@@ -464,6 +818,9 @@ export default function SignalDesk({
         const triggeredAt = isTriggered
           ? getTriggeredAt(sym.source, sym.symbol, patternId, patternLabel)
           : undefined;
+        const journalStatus = levels
+          ? currentJournalStatus(getJournalMatch(sym.source, sym.symbol, patternId, patternLabel))
+          : undefined;
 
         return {
           id: sym.key,
@@ -505,6 +862,7 @@ export default function SignalDesk({
           isSaved: isEligible,
           isTriggered,
           triggeredAt,
+          journalStatus,
         };
       });
     }
@@ -563,6 +921,9 @@ export default function SignalDesk({
       const triggeredAt = isTriggered
         ? getTriggeredAt(r.source, r.symbol, patternId, patternLabel)
         : undefined;
+      const journalStatus = levels
+        ? currentJournalStatus(getJournalMatch(r.source, r.symbol, patternId, patternLabel))
+        : undefined;
 
       list.push({
         id: `${r.source}-${r.symbol}-${selectedSignalId || patternLabel}`,
@@ -599,11 +960,12 @@ export default function SignalDesk({
         isSaved: isActiveSignalSymbol,
         isTriggered,
         triggeredAt,
+        journalStatus,
       });
     }
 
     return list;
-  }, [symbols, results, viewPills, activeSignalSymbols, resultsBySymbol, selectedSignalId, activeSignal, activeSignalLabel, journalSignals]);
+  }, [symbols, results, viewPills, activeSignalSymbols, resultsBySymbol, selectedSignalId, activeSignal, activeSignalLabel, getTriggeredAt, getJournalMatch]);
 
   const filteredSignals = useMemo(() => {
     return signals.filter((s) => {
@@ -617,6 +979,8 @@ export default function SignalDesk({
       }
       if (statusFilter === "saved" && !s.isTriggered) return false;
       if (statusFilter === "ready" && !(s.isSaved && !s.isTriggered)) return false;
+      if (statusFilter === "pass" && s.journalStatus !== "PASS") return false;
+      if (statusFilter === "fail" && s.journalStatus !== "FAIL") return false;
       if (searchTerm) {
         const query = searchTerm.toLowerCase();
         return (
@@ -647,13 +1011,15 @@ export default function SignalDesk({
     // doesn't overclaim how many signals are actually in the Journal.
     const saved = activeSignalOnly.filter((s) => s.isTriggered).length;
     const ready = total - saved;
+    const pass = activeSignalOnly.filter((s) => s.journalStatus === "PASS").length;
+    const fail = activeSignalOnly.filter((s) => s.journalStatus === "FAIL").length;
     const upCount = activeSignalOnly.filter((s) => s.direction === "Up" || (s.direction as string) === "LONG").length;
     const downCount = activeSignalOnly.filter((s) => s.direction === "Down" || (s.direction as string) === "SHORT").length;
     const watch = activeSignalOnly.filter((s) => s.direction === "NEUTRAL").length;
-    return { total, saved, ready, upCount, downCount, watch, longs: upCount, shorts: downCount };
+    return { total, saved, ready, pass, fail, upCount, downCount, watch, longs: upCount, shorts: downCount };
   }, [filteredSignals]);
 
-  const handleCopy = (item: SignalItem) => {
+  const handleCopy = useCallback((item: SignalItem) => {
     const text = `[PIVOT SIGNAL: ${item.symbol}] (${item.direction})
 Pattern: ${item.patternName} (${item.type})
 Source: ${item.source.toUpperCase()}
@@ -664,7 +1030,55 @@ R:R: ${item.riskReward}`;
     navigator.clipboard.writeText(text);
     setCopiedId(item.id);
     setTimeout(() => setCopiedId(null), 2000);
-  };
+  }, []);
+
+  // The parent passes inline arrow callbacks (new identity every render). Read
+  // them through a ref so the memoised cards get a stable handler.
+  const navRef = useRef({ onNavigateToScreener, onSelectSignal });
+  navRef.current = { onNavigateToScreener, onSelectSignal };
+  const handleOpenInScreener = useCallback((targetSignalId: string) => {
+    const { onNavigateToScreener: navigate, onSelectSignal: select } = navRef.current;
+    if (navigate) navigate(targetSignalId);
+    else select?.(targetSignalId);
+  }, []);
+
+  // Entry-cross toast -> scroll to + highlight the symbol's card. Filters that
+  // could hide it are cleared first. Retries briefly because the card may only
+  // render after the mode / pattern / source switch settles.
+  const focusConsumedRef = useRef(onFocusSymbolConsumed);
+  focusConsumedRef.current = onFocusSymbolConsumed;
+  useEffect(() => {
+    if (!focusSymbol) return;
+    setSearchTerm("");
+    setDirectionFilter("all");
+    setStatusFilter("all");
+    if (sourceFilter !== "all" && sourceFilter !== focusSymbol.source) {
+      setSourceFilter(focusSymbol.source);
+    }
+    const id = `sd-card-${focusSymbol.source}-${focusSymbol.symbol.toUpperCase()}`;
+    let attempts = 0;
+    let retryTimer: number | undefined;
+    const tryFocus = () => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.classList.add("ring-2", "ring-cyan-400/70");
+        // Deliberately NOT cleared in the effect cleanup: consuming the focus
+        // below re-runs this effect's cleanup, which must not leave the ring on.
+        window.setTimeout(() => el.classList.remove("ring-2", "ring-cyan-400/70"), 4000);
+        focusConsumedRef.current?.();
+        return;
+      }
+      if (++attempts < 12) {
+        retryTimer = window.setTimeout(tryFocus, 150);
+      } else {
+        focusConsumedRef.current?.(); // give up quietly
+      }
+    };
+    retryTimer = window.setTimeout(tryFocus, 80);
+    return () => window.clearTimeout(retryTimer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusSymbol]);
 
   const handlePillClick = (pillId: string) => {
     const next = selectedSignalId === pillId ? "" : pillId;
@@ -720,6 +1134,17 @@ R:R: ${item.riskReward}`;
             <Clock className="w-3.5 h-3.5 text-amber-400" />
             <span className="font-medium text-slate-300">
               Ready: <strong className="text-amber-400 font-mono font-bold">{stats.ready}</strong>
+            </span>
+          </div>
+
+          <div className="shrink-0 bg-[#131b26] border border-emerald-500/30 rounded-lg px-3 py-1.5 flex items-center gap-2 text-xs">
+            <span className="font-medium text-slate-300">
+              Pass: <strong className="text-emerald-400 font-mono font-bold">{stats.pass}</strong>
+            </span>
+          </div>
+          <div className="shrink-0 bg-[#131b26] border border-rose-500/30 rounded-lg px-3 py-1.5 flex items-center gap-2 text-xs">
+            <span className="font-medium text-slate-300">
+              Fail: <strong className="text-rose-400 font-mono font-bold">{stats.fail}</strong>
             </span>
           </div>
 
@@ -879,6 +1304,26 @@ R:R: ${item.riskReward}`;
             >
               Ready
             </button>
+            <button
+              onClick={() => setStatusFilter(statusFilter === "pass" ? "all" : "pass")}
+              className={`px-3 py-1 rounded text-xs font-semibold transition cursor-pointer ${
+                statusFilter === "pass"
+                  ? "bg-green-500/20 text-green-400 border border-green-500/40"
+                  : "text-green-400/70 hover:text-green-300 border border-transparent"
+              }`}
+            >
+              Pass
+            </button>
+            <button
+              onClick={() => setStatusFilter(statusFilter === "fail" ? "all" : "fail")}
+              className={`px-3 py-1 rounded text-xs font-semibold transition cursor-pointer ${
+                statusFilter === "fail"
+                  ? "bg-rose-500/20 text-rose-400 border border-rose-500/40"
+                  : "text-rose-400/70 hover:text-rose-300 border border-transparent"
+              }`}
+            >
+              Fail
+            </button>
           </div>
 
           {/* Source Filter — grouped tab control (same as the Signals Journal).
@@ -924,260 +1369,15 @@ R:R: ${item.riskReward}`;
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
-            {filteredSignals.map((item) => {
-              const isUp = item.direction === "Up" || (item.direction as string) === "LONG";
-              const isDown = item.direction === "Down" || (item.direction as string) === "SHORT";
-
-              // Direction badge — only for symbols with a real signal
-              // (Active Signal match, item.isSaved). Placed top-right for Up,
-              // top-left for Down (see the two render spots below).
-              const directionBadge = item.isSaved && (
-                <span
-                  className={`text-xs font-bold px-2 py-0.5 rounded-md flex items-center gap-1 font-mono shrink-0 ${
-                    isUp
-                      ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
-                      : isDown
-                      ? "bg-rose-500/20 text-rose-400 border border-rose-500/40"
-                      : "bg-slate-500/20 text-slate-300 border border-slate-500/40"
-                  }`}
-                >
-                  {isUp ? <ArrowUpRight className="w-3.5 h-3.5" /> : isDown ? <ArrowDownLeft className="w-3.5 h-3.5" /> : null}
-                  {isUp ? "Up" : isDown ? "Down" : item.direction}
-                </span>
-              );
-
-              // Running/Ready status — sits right beside the direction badge,
-              // on the side closer to the card's center (after Down, before
-              // Up), so the two read together as one status cluster.
-              const statusBadge = item.isSaved && (
-                item.isTriggered ? (
-                  <div className="flex flex-col items-end gap-0.5 shrink-0">
-                    <div className="flex items-center gap-1 text-[11px] text-emerald-400 font-mono">
-                      <Cloud className="w-3.5 h-3.5 text-emerald-400" />
-                      <span>Active</span>
-                    </div>
-                    {item.triggeredAt && (
-                      <span className="text-[10px] font-mono text-slate-400">
-                        @ {item.triggeredAt}
-                      </span>
-                    )}
-                  </div>
-                ) : (
-                  <div
-                    className="flex items-center gap-1 text-[11px] text-amber-400 font-mono shrink-0"
-                    title="Matches an active signal but price hasn't reached the entry line yet"
-                  >
-                    <Clock className="w-3.5 h-3.5 text-amber-400" />
-                    <span>Ready</span>
-                  </div>
-                )
-              );
-
-              return (
-                <div
-                  key={item.id}
-                  className="bg-[#0f1724] border border-[#1e2d3d] hover:border-slate-600 rounded-xl p-4 transition-all flex flex-col justify-between shadow-lg"
-                >
-                  {/* Card Top */}
-                  <div>
-                    <div className="flex items-start justify-between mb-3">
-                      {/* Down signals get the badge on the top-left, ahead
-                          of the symbol block; Up (and no-signal) keep the
-                          symbol block alone on the left. */}
-                      {isDown && directionBadge}
-                      {isDown && statusBadge}
-
-                      {/* Left: Symbol & Exchange + Live Price & 24h % change */}
-                      <div className="flex items-start gap-4 sm:gap-6">
-                        <div>
-                          <div className="flex items-center gap-1">
-                            <span className="text-base sm:text-lg font-extrabold text-white font-mono tracking-tight leading-tight">
-                              {item.symbol}
-                            </span>
-                            {hasKnownChartMapping(item.symbol, item.source) ? (
-                              <a
-                                href={getChartUrl(item.symbol, item.source)}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                onClick={(e) => e.stopPropagation()}
-                                className="text-muted-foreground hover:text-primary transition-colors shrink-0"
-                                title="Open on TradingView"
-                              >
-                                <ExternalLink className="w-3 h-3" />
-                              </a>
-                            ) : (
-                              <span
-                                className="text-muted-foreground/30 cursor-not-allowed inline-flex shrink-0"
-                                title="Not available on TradingView"
-                              >
-                                <ExternalLink className="w-3 h-3" />
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-[11px] font-semibold text-slate-400 font-mono uppercase tracking-wider mt-0.5">
-                            {item.source}
-                          </div>
-                        </div>
-
-                        <div className="flex flex-col items-end">
-                          <div className="text-sm sm:text-base font-bold text-white font-mono leading-tight">
-                            {fmt(item.currentPrice).replace(/,/g, "")}
-                          </div>
-                          <div
-                            className={`text-xs font-mono font-bold leading-tight mt-0.5 text-right ${
-                              (item.change24h ?? 0) >= 0 ? "text-emerald-400" : "text-rose-400"
-                            }`}
-                          >
-                            {fmtPct(item.change24h ?? 0)}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Up (and no-signal) signals keep the badge on the
-                          top-right, as before. */}
-                      {!isDown && statusBadge}
-                      {!isDown && directionBadge}
-                    </div>
-
-                    {/* Live Price Progress Bar — red-left/green-right for Up,
-                        flipped to green-left/red-right for Down (via isDown) */}
-                    <SignalProgressBar
-                      price={item.currentPrice}
-                      pivot={item.pivot}
-                      s1={item.s1}
-                      s2={item.s2}
-                      s3={item.s3}
-                      s4={item.s4}
-                      r1={item.r1}
-                      r2={item.r2}
-                      r3={item.r3}
-                      r4={item.r4}
-                      isDown={isDown}
-                    />
-
-                    {/* Pricing Level Metrics — order flips with direction:
-                        Up: Stop Loss (left) · Trigger/Entry (middle) · Target (right)
-                        Down: Target (left) · Trigger/Entry (middle) · Stop Loss (right) */}
-                    <div className="grid grid-cols-3 gap-2 bg-[#090f19] border border-[#1b2636] rounded-lg p-2.5 mb-3 font-mono">
-                      {isDown && (
-                        <div>
-                          <div className="text-[10px] text-rose-400 font-sans flex items-center gap-0.5">
-                            <Target className="w-2.5 h-2.5" /> Target
-                          </div>
-                          <div className="text-xs font-bold text-rose-400 mt-0.5">{fmt(item.targetPrice)}</div>
-                        </div>
-                      )}
-                      {!isDown && (
-                        <div>
-                          <div className="text-[10px] text-rose-400 font-sans">Stop Loss</div>
-                          <div className="text-xs font-bold text-rose-400 mt-0.5">{fmt(item.stopPrice)}</div>
-                        </div>
-                      )}
-                      <div>
-                        <div className="text-[10px] text-slate-400 font-sans">Trigger / Entry</div>
-                        <div className="text-xs font-bold text-white mt-0.5">{fmt(item.triggerPrice)}</div>
-                      </div>
-                      {isDown ? (
-                        <div>
-                          <div className="text-[10px] text-emerald-400 font-sans">Stop Loss</div>
-                          <div className="text-xs font-bold text-emerald-400 mt-0.5">{fmt(item.stopPrice)}</div>
-                        </div>
-                      ) : (
-                        <div>
-                          <div className="text-[10px] text-emerald-400 font-sans flex items-center gap-0.5">
-                            <Target className="w-2.5 h-2.5" /> Target
-                          </div>
-                          <div className="text-xs font-bold text-emerald-400 mt-0.5">{fmt(item.targetPrice)}</div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* View and Target Details */}
-                    <div className="text-[11px] text-slate-400 mb-3 px-1 space-y-0.5">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1">
-                          <span>Signal:</span>
-                          <strong className="text-slate-200 font-semibold">
-                            {item.isSaved ? item.patternName : ""}
-                          </strong>
-                        </div>
-                        <span className="font-mono text-slate-300">
-                          R:R <strong className="text-white">{item.riskReward}</strong>
-                        </span>
-                      </div>
-                      {item.isSaved && item.patternId && (
-                        <div className="flex items-center gap-1">
-                          <span>Code:</span>
-                          <strong className="text-slate-500 font-mono text-[11px]">{item.patternId}</strong>
-                        </div>
-                      )}
-                      {item.isSaved && (
-                        <div className="flex items-center gap-1">
-                          <span>Status:</span>
-                          <strong className={`font-semibold ${item.isTriggered ? "text-emerald-400" : "text-amber-400"}`}>
-                            {item.isTriggered
-                              ? `Active${item.triggeredAt ? ` @ ${item.triggeredAt}` : ""}`
-                              : "Ready"}
-                          </strong>
-                        </div>
-                      )}
-                      <div className="flex items-center gap-4">
-                        <div className={`flex items-center gap-1 ${isDown ? "order-1" : "order-2"}`}>
-                          <span>Target:</span>
-                          <Target className={`w-3 h-3 ${isDown ? "text-rose-400" : "text-emerald-400"}`} />
-                          <strong className={`${isDown ? "text-rose-400" : "text-emerald-400"} font-semibold font-mono`}>{item.targetLevel || "S2"}</strong>
-                        </div>
-                        <div className={`flex items-center gap-1 ${isDown ? "order-2" : "order-1"}`}>
-                          <span>Stoploss:</span>
-                          <strong className={`${isDown ? "text-emerald-400" : "text-rose-400"} font-semibold font-mono`}>{item.stoplossLevel || "S1"}</strong>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <span>Category:</span>
-                        <strong className="text-slate-200 font-semibold">{getCategoryLabel(item.category)}</strong>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Card Action Footer */}
-                  <div className="pt-2 border-t border-[#1e2d3d] flex items-center justify-between gap-2">
-                    <button
-                      onClick={() => {
-                        const targetSignalId = item.patternId || item.patternName;
-                        if (onNavigateToScreener) {
-                          onNavigateToScreener(targetSignalId);
-                        } else {
-                          onSelectSignal?.(targetSignalId);
-                        }
-                      }}
-                      className="text-xs text-blue-400 hover:text-blue-300 font-semibold transition flex items-center gap-1 cursor-pointer"
-                    >
-                      Open Signal in Screener &rarr;
-                    </button>
-
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleCopy(item)}
-                        className="px-2 py-1 rounded bg-[#162130] hover:bg-[#1f2e42] border border-[#22354a] text-slate-300 text-xs font-medium flex items-center gap-1 transition"
-                        title="Copy signal details"
-                      >
-                        {copiedId === item.id ? (
-                          <>
-                            <Check className="w-3 h-3 text-emerald-400" />
-                            <span className="text-emerald-400 text-[11px]">Copied</span>
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="w-3 h-3 text-slate-400" />
-                            <span className="text-[11px]">Copy</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+            {filteredSignals.map((item) => (
+              <SignalDeskCard
+                key={item.id}
+                item={item}
+                copied={copiedId === item.id}
+                onCopy={handleCopy}
+                onOpenInScreener={handleOpenInScreener}
+              />
+            ))}
           </div>
         )}
       </div>

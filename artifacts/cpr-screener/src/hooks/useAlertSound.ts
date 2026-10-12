@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import type { CPRResult } from "@/lib/cpr";
 import { passesPattern, isRisingAboveTC } from "../pages/ScreenerUtils";
 import { toast } from "@/hooks/use-toast";
+import { isAlertMuted } from "@/lib/alertSound";
 
 /**
  * Sound-alert logic scoped to the pMini-L34C4/U3>4 sub-filter under
@@ -20,6 +21,7 @@ export function usePMiniAlert(
   const audioCtxRef = useRef<AudioContext | null>(null);
 
   const playPMiniAlertSound = useCallback(() => {
+    if (isAlertMuted()) return;
     try {
       if (!audioCtxRef.current) {
         const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;

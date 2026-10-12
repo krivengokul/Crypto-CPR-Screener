@@ -1,5 +1,23 @@
 let audioContext: AudioContext | null = null;
 
+const MUTE_KEY = "cpr-alert-muted";
+export const ALERT_MUTE_EVENT = "cpr-alert-mute-changed";
+
+export function isAlertMuted(): boolean {
+  try {
+    return localStorage.getItem(MUTE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function setAlertMuted(muted: boolean) {
+  try {
+    localStorage.setItem(MUTE_KEY, muted ? "1" : "0");
+  } catch { /* ignore */ }
+  window.dispatchEvent(new CustomEvent(ALERT_MUTE_EVENT, { detail: { muted } }));
+}
+
 function getAudioContext(): AudioContext | null {
   try {
     if (!audioContext) {
@@ -22,6 +40,7 @@ export function unlockAlertAudio() {
 
 /** Play the short two-note alert when an exchange trade crosses a signal entry. */
 export function playEntryCrossAlert() {
+  if (isAlertMuted()) return;
   const context = getAudioContext();
   if (!context) return;
   if (context.state === "suspended") void context.resume().catch(() => undefined);

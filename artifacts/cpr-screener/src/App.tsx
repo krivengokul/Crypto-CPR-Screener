@@ -4,18 +4,25 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Screener from "@/pages/Screener";
 import BacktestPanel from "@/pages/BacktestPanel";
-import SignalDesk, { type SignalDeskSymbol, buildPills, computeSignalLevels } from "@/pages/SignalDesk";
+import SignalDesk, { type SignalDeskSymbol, type FocusSymbol, buildPills, computeSignalLevels } from "@/pages/SignalDesk";
 import type { CPRResultWithSource, ActiveTab } from "@/pages/ScreenerUtils";
 import { passesPattern } from "@/pages/ScreenerUtils";
 import { autoSaveQualifiedSignals } from "@/lib/signalTracker";
 import { LiveEntryCrossMonitor, type EntryCrossCandidate } from "@/lib/liveEntryCrossMonitor";
-import { playEntryCrossAlert, unlockAlertAudio } from "@/lib/alertSound";
+import {
+  playEntryCrossAlert,
+  unlockAlertAudio,
+  isAlertMuted,
+  setAlertMuted,
+  ALERT_MUTE_EVENT,
+} from "@/lib/alertSound";
 import { toast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import { BuildFooter } from "@/components/BuildFooter";
 import PatternStats from "@/pages/PatternStats";
 import SignalsJournal from "./pages/SignalsJournal";
 import ViewsSidebar, { SCREENER_PATTERN_IDS, VIEW_LABEL_BY_ID, type SidebarMode } from "@/lib/ViewsSidebar";
-import { Menu } from "lucide-react";
+import { Menu, Volume2, VolumeX } from "lucide-react";
 
 const queryClient = new QueryClient();
 const SIDEBAR_KEY = "cpr-sidebar-collapsed";
@@ -95,6 +102,20 @@ function App() {
   // mapped at the two call sites below, not renamed in either file.
   const [dataSource, setDataSource] = useState<ActiveTab>("binance");
 
+  // Alert sound mute (persisted in localStorage by alertSound.ts) and the
+  // symbol the "Open SignalDesk" toast action asks SignalDesk to focus.
+  const [alertMuted, setAlertMutedState] = useState<boolean>(() => isAlertMuted());
+  const [focusSymbol, setFocusSymbol] = useState<FocusSymbol | null>(null);
+
+  useEffect(() => {
+    const onMute = (e: Event) => {
+      const muted = (e as CustomEvent<{ muted: boolean }>).detail?.muted;
+      if (typeof muted === "boolean") setAlertMutedState(muted);
+    };
+    window.addEventListener(ALERT_MUTE_EVENT, onMute);
+    return () => window.removeEventListener(ALERT_MUTE_EVENT, onMute);
+  }, []);
+
   // Browsers require a user gesture before they allow audio playback. Unlock
   // once on the first interaction so later websocket crossings can alert.
   useEffect(() => {
@@ -170,7 +191,9 @@ function App() {
       playEntryCrossAlert();
 
       // Light, global banner (Toaster lives at the App root, so it shows on
-      // every screen) explaining why the beep fired.
+      // every screen) explaining why the beep fired. The sound itself stays
+      // here, at the same place the Journal save happens, so Desk and Journal
+      // never disagree about when an entry crossed.
       const dir = candidate.direction === "Up" ? "LONG" : "SHORT";
       const px = Number.isFinite(price) ? price.toPrecision(6) : String(price);
       const entry = Number.isFinite(candidate.entry)
@@ -180,6 +203,22 @@ function App() {
         title: "Entry crossed — alert",
         description: `${candidate.symbol} (${candidate.source}) ${dir} · ${candidate.payload.patternName} · trade ${px} crossed entry ${entry}`,
         duration: 12_000, // ms; dismissible via X anytime
+        action: (
+          <ToastAction
+            altText="Open Signal Desk"
+            onClick={() => {
+              setFocusSymbol({
+                symbol: candidate.symbol,
+                source: candidate.source,
+                patternId: candidate.payload.patternId,
+              });
+              if (candidate.payload.patternId) setActiveSignal(candidate.payload.patternId);
+              handleModeChange("signals");
+            }}
+          >
+            Open SignalDesk
+          </ToastAction>
+        ),
       });
 
       void autoSaveQualifiedSignals([{
@@ -241,6 +280,33 @@ function App() {
           />
           {/* Column: scrollable pages + real footer at the bottom-right of this column */}
           <div className="flex min-h-screen min-w-0 flex-1 flex-col">
+            {/* Slim in-flow bar (not position:fixed) so the sound toggle can
+                never sit on top of page controls. */}
+            <div
+              className="flex shrink-0 items-center justify-end px-3 py-1.5"
+              style={{ borderBottom: "1px solid #1e2d3d", background: "rgba(13, 20, 34, 0.6)" }}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  const next = !alertMuted;
+                  setAlertMuted(next);
+                  setAlertMutedState(next);
+                  if (!next) unlockAlertAudio();
+                }}
+                className="flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[11px] font-medium transition-colors"
+                style={{
+                  background: alertMuted ? "rgba(239,68,68,0.12)" : "rgba(34,197,94,0.10)",
+                  borderColor: alertMuted ? "rgba(239,68,68,0.35)" : "rgba(34,197,94,0.35)",
+                  color: alertMuted ? "#fca5a5" : "#86efac",
+                }}
+                title={alertMuted ? "Alerts muted — click to enable sound" : "Alerts on — click to mute"}
+                aria-pressed={alertMuted}
+              >
+                {alertMuted ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
+                {alertMuted ? "Muted" : "Sound"}
+              </button>
+            </div>
             <main className="min-w-0 flex-1 overflow-auto">
               <button
                 className="md:hidden fixed top-3 left-3 z-30 flex items-center justify-center w-9 h-9 rounded-lg transition-colors"
@@ -291,6 +357,8 @@ function App() {
                   }}
                   sourceFilter={dataSource === "combined" ? "all" : dataSource}
                   onSourceFilterChange={(next) => setDataSource(next === "all" ? "combined" : next)}
+                  focusSymbol={focusSymbol}
+                  onFocusSymbolConsumed={() => setFocusSymbol(null)}
                 />
               )}
 
