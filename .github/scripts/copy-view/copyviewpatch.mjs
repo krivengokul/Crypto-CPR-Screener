@@ -206,6 +206,7 @@ const viewsSidebarFilePathEnv = process.env.VIEWS_SIDEBAR_FILE_PATH ?? "artifact
 const overrides = {
   direction: process.env.DIRECTION,
   entry: process.env.ENTRY,
+  stoploss: process.env.STOPLOSS,
   target: process.env.TARGET,
   candleCheck: process.env.CANDLE_CHECK,
   gapBadge: process.env.GAP_BADGE,
@@ -335,8 +336,24 @@ if (overrides.entry && ENTRY_MAP[overrides.entry]) {
   getEntryText = getInitializerText(sourceObj, "getEntry") ?? (isUp ? "(r) => r.todayCPR.tc" : "(r) => r.todayCPR.bc");
 }
 
-const stoplossLabel = isUp ? "S1 (today's S1)" : "R1 (today's R1)";
-const getStoplossText = isUp ? "(r) => r.todayCPR.s1" : "(r) => r.todayCPR.r1";
+// Stoploss: explicit override (same rungs as Entry) wins; otherwise keep the
+// source View's own stoploss on edit; otherwise default from direction.
+let stoplossLabel, getStoplossText;
+const stoplossOverride = overrides.stoploss?.trim();
+if (stoplossOverride && ENTRY_MAP[stoplossOverride]) {
+  const sDef = ENTRY_MAP[stoplossOverride];
+  stoplossLabel = sDef.label;
+  getStoplossText = `(r) => r.todayCPR.${sDef.prop}`;
+} else if (stoplossOverride) {
+  throw new Error(`"${stoplossOverride}" isn't a valid Stoploss (see ENTRY_MAP).`);
+} else {
+  stoplossLabel =
+    getStringPropertyValue(sourceObj, "stoplossLabel") ??
+    (isUp ? "S1 (today's S1)" : "R1 (today's R1)");
+  getStoplossText =
+    getInitializerText(sourceObj, "getStoploss") ??
+    (isUp ? "(r) => r.todayCPR.s1" : "(r) => r.todayCPR.r1");
+}
 
 let levelCheckDefsJson = "undefined";
 if (levelCheckDefs !== null) {

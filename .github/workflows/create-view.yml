@@ -41,6 +41,10 @@ on:
         description: "Entry rung: one of R4/R3/R2/R1/TC/Pivot/BC/S1/S2/S3/S4. Leave blank for direction's default (TC for Up, BC for Down)."
         required: false
         type: string
+      stoploss:
+        description: "Stoploss level: R4..S4 (defaults from direction if omitted)"
+        required: false
+        type: string
       target:
         description: "Which rung to grade against — R1/R2/R3/R4 for Up, S1/S2/S3/S4 for Down"
         required: true

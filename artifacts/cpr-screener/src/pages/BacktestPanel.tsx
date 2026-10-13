@@ -1763,19 +1763,6 @@ function CreateViewControl({
       />
       <AttachPointSelect value={attachKey} onChange={setAttachKey} disabled={!!command} />
       <select
-        value={candleCheck}
-        onChange={(e) => setCandleCheck(e.target.value)}
-        disabled={!!command}
-        title="Optionally also require this 15-minute candle check."
-        className="w-full bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
-      >
-        {CANDLE_CHECK_OPTIONS.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
-      <select
         value={gapBadge}
         onChange={(e) => setGapBadge(e.target.value)}
         disabled={!!command}

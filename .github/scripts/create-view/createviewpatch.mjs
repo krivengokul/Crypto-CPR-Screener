@@ -263,7 +263,7 @@ const stoplossDef = ENTRY_DEFS[stoploss] || ENTRY_DEFS[direction === "Up" ? "S1"
 if (!stoplossDef) {
   throw new Error(`"${stoploss}" isn't a valid Stoploss (see ENTRY_DEFS).`);
 }
-const entryText = `entryLabel: "${entryDef.label}",\n    getEntry: (r) => r.todayCPR.${entryDef.key},\n    stoplossLabel: "${stoplossDef.label} (today's ${stoplossDef.label})",\n    getStoploss: (r) => r.todayCPR.${stoplossDef.key},`;
+const entryText = `entryLabel: "${entryDef.label}",\n    getEntry: (r) => r.todayCPR.${entryDef.key},\n    stoplossLabel: "${stoplossDef.label}",\n    getStoploss: (r) => r.todayCPR.${stoplossDef.key},`;
 
 let conditionText;
 if (gapBadge || candleCheck) {

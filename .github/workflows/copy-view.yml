@@ -38,6 +38,10 @@ on:
         description: "Entry level: R4..S4"
         required: false
         type: string
+      stoploss:
+        description: "Stoploss level: R4..S4 (defaults from direction if omitted)"
+        required: false
+        type: string
       target:
         description: "Target level: R1..R4 or S1..S4"
         required: false
@@ -90,6 +94,7 @@ jobs:
           IS_EDIT: ${{ inputs.isEdit }}
           DIRECTION: ${{ inputs.direction }}
           ENTRY: ${{ inputs.entry }}
+          STOPLOSS: ${{ inputs.stoploss }}
           TARGET: ${{ inputs.target }}
           CANDLE_CHECK: ${{ inputs.candleCheck }}
           GAP_BADGE: ${{ inputs.gapBadge }}
