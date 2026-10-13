@@ -877,6 +877,8 @@ export const LEVELSABOVE_VIEWS: ViewDef[] = [
 
   { key: "A-A-AA-OA-EU3L3", label: "A-A-AA-OA-EU3L3", parentKey: "A-A-AA-OA", kind: "pattern", condition: (r) => r.EU3L3, order: 102 },
 
+  { key: "A-A-AA-OA-None", label: "A-A-AA-OA-None", parentKey: "A-A-AA-OA", kind: "pattern", condition: (r) => !pickOuterLevelPattern(r), order: 103 },
+
   { key: "A-A-OA-AA-CU3L2", label: "A-A-OA-AA-CU3L2", parentKey: "A-A-OA-AA", kind: "pattern", condition: (r) => r.CU3L2, order: 101 },
 
   { key: "A-A-OA-AA-CU4L3", label: "A-A-OA-AA-CU4L3", parentKey: "A-A-OA-AA", kind: "pattern", condition: (r) => r.CU4L3, order: 102 },
@@ -1408,6 +1410,8 @@ export const LEVELSABOVE_VIEWS: ViewDef[] = [
 
   { key: "C-A-C-AA-U4L4", label: "C-A-C-AA-U4L4", parentKey: "C-A-C-AA", kind: "pattern", condition: (r) => r.U4L4, order: 9 },
 
+  { key: "C-A-C-AA-CU1L1", label: "C-A-C-AA-CU1L1", parentKey: "C-A-C-AA", kind: "pattern", condition: (r) => r.CU1L1, order: 10 },
+
   { key: "C-A-HA-AA-CU4L3", label: "C-A-HA-AA-CU4L3", parentKey: "C-A-HA-AA", kind: "pattern", condition: (r) => r.CU4L3, order: 1 },
 
   { key: "C-A-HA-AA-CU3L3", label: "C-A-HA-AA-CU3L3", parentKey: "C-A-HA-AA", kind: "pattern", condition: (r) => r.CU3L3, order: 2 },
@@ -1422,9 +1426,15 @@ export const LEVELSABOVE_VIEWS: ViewDef[] = [
 
   { key: "C-A-HA-AA-CU4L2", label: "C-A-HA-AA-CU4L2", parentKey: "C-A-HA-AA", kind: "pattern", condition: (r) => r.CU4L2, order: 7 },
 
+  { key: "C-A-HA-AA-U4L3", label: "C-A-HA-AA-U4L3", parentKey: "C-A-HA-AA", kind: "pattern", condition: (r) => r.U4L3, order: 9 },
+
+  { key: "C-A-HA-AA-CU1L1", label: "C-A-HA-AA-CU1L1", parentKey: "C-A-HA-AA", kind: "pattern", condition: (r) => r.CU1L1, order: 8 },
+
   { key: "C-A-E-AA-CU3L3", label: "C-A-E-AA-CU3L3", parentKey: "C-A-E-AA", kind: "pattern", condition: (r) => r.CU3L3, order: 1 },
 
   { key: "C-A-E-AA-CU4L4", label: "C-A-E-AA-CU4L4", parentKey: "C-A-E-AA", kind: "pattern", condition: (r) => r.CU4L4, order: 2 },
+
+  { key: "C-A-E-AA-CU3L2", label: "C-A-E-AA-CU3L2", parentKey: "C-A-E-AA", kind: "pattern", condition: (r) => r.CU3L2, order: 3 },
 
   { key: "C-A-OA-AA-CU3L2", label: "C-A-OA-AA-CU3L2", parentKey: "C-A-OA-AA", kind: "pattern", condition: (r) => r.CU3L2, order: 4 },
 
