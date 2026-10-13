@@ -19,15 +19,6 @@ import { getView, shortLevelLabel } from "@/lib/views";
 import { getRowCategory, getCategoryLabel } from "@/lib/rowCategory";
 import SignalProgressBar from "@/lib/SignalProgressBar";
 import { COINDCX_ENABLED } from "@/lib/featureFlags";
-import {
-  loadCachedResults,
-  formatScanTime,
-  formatScanDate,
-  isCacheFresh,
-  STORAGE_KEY_BINANCE,
-  STORAGE_KEY_DELTA,
-  STORAGE_KEY_COINDCX,
-} from "@/lib/scheduler";
 import { getLadderMatchSummary } from "./SRLadderDiff";
 import {
   Radio,
@@ -1102,36 +1093,6 @@ export default function SignalDesk({
     return { total, saved, ready, pass, fail, upCount, downCount, watch, longs: upCount, shorts: downCount };
   }, [baseFilteredSignals]);
 
-  // Same "Scanned Binance @ …" badge as Screener — read from the persisted
-  // scan cache so SignalDesk stays in sync after a hard refresh.
-  const scanBadge = useMemo(() => {
-    const keys: { source: SourceId; key: string; label: string }[] = [
-      { source: "binance", key: STORAGE_KEY_BINANCE, label: "Binance" },
-      { source: "delta", key: STORAGE_KEY_DELTA, label: "Delta" },
-      { source: "coindcx", key: STORAGE_KEY_COINDCX, label: "CoinDCX" },
-    ];
-    const pick = (source: SourceId | "all") => {
-      if (source === "all") {
-        let best: { label: string; savedAt: number } | null = null;
-        for (const k of keys) {
-          const cache = loadCachedResults(k.key);
-          if (!cache || !isCacheFresh(cache) || typeof cache.savedAt !== "number") continue;
-          if (!best || cache.savedAt > best.savedAt) {
-            best = { label: k.label, savedAt: cache.savedAt };
-          }
-        }
-        return best;
-      }
-      const entry = keys.find((k) => k.source === source);
-      if (!entry) return null;
-      const cache = loadCachedResults(entry.key);
-      if (!cache || !isCacheFresh(cache) || typeof cache.savedAt !== "number") return null;
-      return { label: entry.label, savedAt: cache.savedAt };
-    };
-    return pick(sourceFilter);
-    // results identity changes when Screener finishes a scan and App re-renders SignalDesk
-  }, [sourceFilter, results]);
-
   const handleCopy = useCallback((item: SignalItem) => {
     const text = `[PIVOT SIGNAL: ${item.symbol}] (${item.direction})
 Pattern: ${item.patternName} (${item.type})
@@ -1231,60 +1192,50 @@ R:R: ${item.riskReward}`;
           </div>
         </div>
 
-        {/* Quick Stats Counter Badges — badges may scroll on narrow widths;
-            scan label sits outside the scroll area in the trailing gap. */}
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="flex items-center gap-2 flex-nowrap overflow-x-auto min-w-0 flex-1">
-            <div className="shrink-0 bg-[#131b26] border border-[#1e2d3d] rounded-lg px-3 py-1.5 flex items-center gap-2 text-xs text-emerald-400">
-              <Cloud className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="font-medium text-slate-300">
-                Active (In Journal): <strong className="text-emerald-400 font-mono font-bold">{stats.saved}</strong>
-              </span>
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            </div>
-
-            <div className="shrink-0 bg-[#131b26] border border-[#1e2d3d] rounded-lg px-3 py-1.5 flex items-center gap-2 text-xs text-amber-400">
-              <Clock className="w-3.5 h-3.5 text-amber-400" />
-              <span className="font-medium text-slate-300">
-                Ready: <strong className="text-amber-400 font-mono font-bold">{stats.ready}</strong>
-              </span>
-            </div>
-
-            <div className="shrink-0 bg-[#131b26] border border-emerald-500/30 rounded-lg px-3 py-1.5 flex items-center gap-2 text-xs">
-              <span className="font-medium text-slate-300">
-                Pass: <strong className="text-emerald-400 font-mono font-bold">{stats.pass}</strong>
-              </span>
-            </div>
-            <div className="shrink-0 bg-[#131b26] border border-rose-500/30 rounded-lg px-3 py-1.5 flex items-center gap-2 text-xs">
-              <span className="font-medium text-slate-300">
-                Fail: <strong className="text-rose-400 font-mono font-bold">{stats.fail}</strong>
-              </span>
-            </div>
-
-            <div className="shrink-0 bg-[#131b26] border border-[#1e2d3d] rounded-lg px-3 py-1.5 flex items-center gap-2">
-              <span className="text-[11px] text-slate-400 font-medium">Signals:</span>
-              <span className="text-sm font-bold text-white font-mono">{stats.total}</span>
-            </div>
-            <div className="shrink-0 bg-[#131b26] border border-emerald-500/30 rounded-lg px-3 py-1.5 flex items-center gap-2">
-              <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="text-[11px] text-emerald-400 font-medium">Up:</span>
-              <span className="text-sm font-bold text-emerald-400 font-mono">{stats.upCount}</span>
-            </div>
-            <div className="shrink-0 bg-[#131b26] border border-rose-500/30 rounded-lg px-3 py-1.5 flex items-center gap-2">
-              <TrendingDown className="w-3.5 h-3.5 text-rose-400" />
-              <span className="text-[11px] text-rose-400 font-medium">Down:</span>
-              <span className="text-sm font-bold text-rose-400 font-mono">{stats.downCount}</span>
-            </div>
+        {/* Quick Stats Counter Badges — kept to a single non-wrapping row;
+            scrolls horizontally on very narrow viewports rather than
+            dropping badges to a second line. */}
+        <div className="flex items-center gap-2 flex-nowrap overflow-x-auto">
+          <div className="shrink-0 bg-[#131b26] border border-[#1e2d3d] rounded-lg px-3 py-1.5 flex items-center gap-2 text-xs text-emerald-400">
+            <Cloud className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="font-medium text-slate-300">
+              Active (In Journal): <strong className="text-emerald-400 font-mono font-bold">{stats.saved}</strong>
+            </span>
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
           </div>
 
-          {scanBadge && (
-            <span
-              className="shrink-0 text-[10px] leading-none text-emerald-300/80 whitespace-nowrap"
-              title="Time of the last completed scan feeding this view"
-            >
-              Scanned {scanBadge.label} @ {formatScanTime(scanBadge.savedAt)} ({formatScanDate(scanBadge.savedAt)})
+          <div className="shrink-0 bg-[#131b26] border border-[#1e2d3d] rounded-lg px-3 py-1.5 flex items-center gap-2 text-xs text-amber-400">
+            <Clock className="w-3.5 h-3.5 text-amber-400" />
+            <span className="font-medium text-slate-300">
+              Ready: <strong className="text-amber-400 font-mono font-bold">{stats.ready}</strong>
             </span>
-          )}
+          </div>
+
+          <div className="shrink-0 bg-[#131b26] border border-emerald-500/30 rounded-lg px-3 py-1.5 flex items-center gap-2 text-xs">
+            <span className="font-medium text-slate-300">
+              Pass: <strong className="text-emerald-400 font-mono font-bold">{stats.pass}</strong>
+            </span>
+          </div>
+          <div className="shrink-0 bg-[#131b26] border border-rose-500/30 rounded-lg px-3 py-1.5 flex items-center gap-2 text-xs">
+            <span className="font-medium text-slate-300">
+              Fail: <strong className="text-rose-400 font-mono font-bold">{stats.fail}</strong>
+            </span>
+          </div>
+
+          <div className="shrink-0 bg-[#131b26] border border-[#1e2d3d] rounded-lg px-3 py-1.5 flex items-center gap-2">
+            <span className="text-[11px] text-slate-400 font-medium">Signals:</span>
+            <span className="text-sm font-bold text-white font-mono">{stats.total}</span>
+          </div>
+          <div className="shrink-0 bg-[#131b26] border border-emerald-500/30 rounded-lg px-3 py-1.5 flex items-center gap-2">
+            <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="text-[11px] text-emerald-400 font-medium">Up:</span>
+            <span className="text-sm font-bold text-emerald-400 font-mono">{stats.upCount}</span>
+          </div>
+          <div className="shrink-0 bg-[#131b26] border border-rose-500/30 rounded-lg px-3 py-1.5 flex items-center gap-2">
+            <TrendingDown className="w-3.5 h-3.5 text-rose-400" />
+            <span className="text-[11px] text-rose-400 font-medium">Down:</span>
+            <span className="text-sm font-bold text-rose-400 font-mono">{stats.downCount}</span>
+          </div>
         </div>
       </div>
 
