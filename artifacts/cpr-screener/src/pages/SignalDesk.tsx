@@ -1183,11 +1183,6 @@ R:R: ${item.riskReward}`;
                   Live Scanner Feeds
                 </span>
               </h1>
-              <p className="text-xs text-slate-400">
-                Actionable pivot breakout triggers, CPR trend directions,
-                <br />
-                and automated risk/reward setups
-              </p>
             </div>
           </div>
         </div>
