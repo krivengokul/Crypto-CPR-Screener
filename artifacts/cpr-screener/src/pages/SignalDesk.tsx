@@ -1275,24 +1275,25 @@ R:R: ${item.riskReward}`;
             <span className="text-[11px] text-rose-400 font-medium">Down:</span>
             <span className="text-sm font-bold text-rose-400 font-mono">{stats.downCount}</span>
           </div>
+        </div>
 
-          {scanBadge && (
-            <div
-              className="shrink-0 ml-auto bg-[#131b26] border border-emerald-500/25 rounded-lg px-3 py-1.5 flex flex-col items-end gap-0.5 text-[11px] leading-tight text-emerald-300/90 whitespace-nowrap"
-              title="Time of the last completed scan feeding this view"
-            >
-              <span className="flex items-center gap-1.5">
-                <Clock className="w-3 h-3 text-emerald-400 shrink-0" />
-                <span>
-                  Scanned <span className="font-semibold text-emerald-300">{scanBadge.label}</span>
+        {scanBadge && (
+          <div
+            className="mt-1.5 flex justify-end"
+            title="Time of the last completed scan feeding this view"
+          >
+            <div className="inline-flex items-center gap-1.5 bg-[#131b26] border border-emerald-500/25 rounded-lg px-3 py-1 text-[11px] leading-none text-emerald-300/90 whitespace-nowrap">
+              <Clock className="w-3 h-3 text-emerald-400 shrink-0" />
+              <span>
+                Scanned <span className="font-semibold text-emerald-300">{scanBadge.label}</span>
+                {" "}
+                <span className="text-emerald-300/80">
+                  @ {formatScanTime(scanBadge.savedAt)} ({formatScanDate(scanBadge.savedAt)})
                 </span>
               </span>
-              <span className="text-emerald-300/80">
-                @ {formatScanTime(scanBadge.savedAt)} ({formatScanDate(scanBadge.savedAt)})
-              </span>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Available Views with Counts Strip (Wrapping chips from sidebar with count > 0) */}
