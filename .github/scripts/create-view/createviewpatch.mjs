@@ -182,6 +182,7 @@ const target = process.env.TARGET && process.env.TARGET.trim() !== "" ? process.
 const candleCheck = process.env.CANDLE_CHECK && process.env.CANDLE_CHECK.trim() !== "" ? process.env.CANDLE_CHECK.trim() : undefined;
 const gapBadge = process.env.GAP_BADGE && process.env.GAP_BADGE.trim() !== "" ? process.env.GAP_BADGE.trim() : undefined;
 const entry = process.env.ENTRY && process.env.ENTRY.trim() !== "" ? process.env.ENTRY.trim() : direction === "Up" ? "TC" : "BC";
+const stoploss = process.env.STOPLOSS && process.env.STOPLOSS.trim() !== "" ? process.env.STOPLOSS.trim() : direction === "Up" ? "S1" : "R1";
 const viewsFilePath = process.env.VIEWS_FILE_PATH ?? process.env.BACKTEST_FILE_PATH ?? "artifacts/cpr-screener/src/lib/views.ts";
 const viewsSidebarFilePathEnv = process.env.VIEWS_SIDEBAR_FILE_PATH ?? "artifacts/cpr-screener/src/lib/ViewsSidebar.tsx";
 
@@ -258,9 +259,11 @@ if (!entryDef) {
 
 const effectiveAttachKey = attachKey && attachKey.trim() !== "" ? attachKey : patternKey;
 
-const entryText = `entryLabel: "${entryDef.label}",\n    getEntry: (r) => r.todayCPR.${entryDef.key},\n    stoplossLabel: "${
-  direction === "Up" ? "S1 (today's S1)" : "R1 (today's R1)"
-}",\n    getStoploss: (r) => r.todayCPR.${direction === "Up" ? "s1" : "r1"},`;
+const stoplossDef = ENTRY_DEFS[stoploss] || ENTRY_DEFS[direction === "Up" ? "S1" : "R1"];
+if (!stoplossDef) {
+  throw new Error(`"${stoploss}" isn't a valid Stoploss (see ENTRY_DEFS).`);
+}
+const entryText = `entryLabel: "${entryDef.label}",\n    getEntry: (r) => r.todayCPR.${entryDef.key},\n    stoplossLabel: "${stoplossDef.label} (today's ${stoplossDef.label})",\n    getStoploss: (r) => r.todayCPR.${stoplossDef.key},`;
 
 let conditionText;
 if (gapBadge || candleCheck) {

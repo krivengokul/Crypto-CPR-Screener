@@ -80,6 +80,11 @@ export {
   candleCheckToCategoryKey,
 };
 
+/** Same ladder rungs as Entry — used by Create/Edit/Copy View Stoploss dropdown. */
+export const STOPLOSS_OPTIONS = [
+  "R4", "R3", "R2", "R1", "PH", "TC", "Pivot", "BC", "PL", "S1", "S2", "S3", "S4",
+] as const;
+
 export const ENTRY_OPTIONS = [
   "R4",
   "R3",

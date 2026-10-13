@@ -101,6 +101,7 @@ jobs:
           NEW_LABEL: ${{ inputs.newLabel }}
           DIRECTION: ${{ inputs.direction }}
           ENTRY: ${{ inputs.entry }}
+          STOPLOSS: ${{ inputs.stoploss }}
           TARGET: ${{ inputs.target }}
           CANDLE_CHECK: ${{ inputs.candleCheck }}
           GAP_BADGE: ${{ inputs.gapBadge }}

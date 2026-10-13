@@ -423,7 +423,7 @@ export function copyBacktestView(
 
 export interface CreateViewResult {
   ok: boolean;
-  reason?: "pattern-not-found" | "duplicate-key" | "invalid-target" | "invalid-gap-badge" | "invalid-candle-check" | "invalid-entry";
+  reason?: "pattern-not-found" | "duplicate-key" | "invalid-target" | "invalid-gap-badge" | "invalid-candle-check" | "invalid-entry" | "invalid-stoploss";
   created?: ViewDef;
 }
 
@@ -482,6 +482,9 @@ export const ENTRY_DEFS: Record<
   S3: { label: "S3", key: "s3" },
   S4: { label: "S4", key: "s4" },
 };
+
+/** Stoploss rungs — same ladder as ENTRY_DEFS (Create/Edit/Copy View Stoploss dropdown). */
+export const STOPLOSS_DEFS = ENTRY_DEFS;
 
 /**
  * Creates a brand-new View directly under a Pattern/Subpattern that
@@ -547,7 +550,8 @@ export function editBacktestView(
   attachKey?: string,
   gapBadge?: string,
   levelCheckDefs?: LevelCheckCondition[],
-  candleCheck?: string
+  candleCheck?: string,
+  stoploss?: string,
 ): { ok: boolean; reason?: string; updated?: ViewDef } {
   const idx = VIEWS.findIndex((v) => v.key === oldKey);
   if (idx === -1) return { ok: false, reason: "pattern-not-found" };
@@ -597,8 +601,11 @@ export function editBacktestView(
     getTarget: targetDef.getTarget,
     entryLabel: entryDef.label,
     getEntry: (r: CPRResult) => r.todayCPR[entryKey],
-    stoplossLabel: isUp ? "S1" : "R1",
-    getStoploss: (r: CPRResult) => (isUp ? r.todayCPR.s1 : r.todayCPR.r1),
+    stoplossLabel: (STOPLOSS_DEFS[stoploss ?? (isUp ? "S1" : "R1")] ?? STOPLOSS_DEFS[isUp ? "S1" : "R1"]).label,
+    getStoploss: (r: CPRResult) => {
+      const def = STOPLOSS_DEFS[stoploss ?? (isUp ? "S1" : "R1")] ?? STOPLOSS_DEFS[isUp ? "S1" : "R1"];
+      return r.todayCPR[def.key];
+    },
     levelCheckDefs: levelCheckDefs ?? old.levelCheckDefs,
     candleCheck: trimmedCandleCheck || undefined,
     ...(hasFilter
@@ -623,7 +630,8 @@ export function createBacktestView(
   attachKey?: string,
   gapBadge?: string,
   entry?: string,
-  candleCheck?: string
+  candleCheck?: string,
+  stoploss?: string,
 ): CreateViewResult {
   if (VIEWS.some(v => v.key === newKey)) {
     return { ok: false, reason: "duplicate-key" };
@@ -641,6 +649,11 @@ export function createBacktestView(
     return { ok: false, reason: "invalid-entry" };
   }
 
+  const stoplossDef = STOPLOSS_DEFS[stoploss ?? (isUp ? "S1" : "R1")];
+  if (!stoplossDef) {
+    return { ok: false, reason: "invalid-stoploss" as any };
+  }
+
   const trimmedGapBadge = gapBadge?.trim();
   if (trimmedGapBadge && !ALL_GAP_BADGES.includes(trimmedGapBadge)) {
     return { ok: false, reason: "invalid-gap-badge" };
@@ -653,6 +666,7 @@ export function createBacktestView(
 
   const resolvedParentKey = attachKey ?? patternKey;
   const entryKey = entryDef.key;
+  const stoplossKey = stoplossDef.key;
 
   const hasFilter = Boolean(trimmedGapBadge || trimmedCandleCheck);
   const filterCondition = hasFilter
@@ -674,8 +688,8 @@ export function createBacktestView(
     getTarget: targetDef.getTarget,
     entryLabel: entryDef.label,
     getEntry: (r: CPRResult) => r.todayCPR[entryKey],
-    stoplossLabel: isUp ? "S1" : "R1",
-    getStoploss: (r: CPRResult) => (isUp ? r.todayCPR.s1 : r.todayCPR.r1),
+    stoplossLabel: stoplossDef.label,
+    getStoploss: (r: CPRResult) => r.todayCPR[stoplossKey],
     levelCheckDefs: levelCheckDefs
       ? levelCheckDefs.map(d => ({ ...d, bandKeys: [...d.bandKeys] }))
       : undefined,

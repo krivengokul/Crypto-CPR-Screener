@@ -50,6 +50,7 @@ import {
   matchesCandleCheck,
   parseComposedViewKey,
   ENTRY_OPTIONS,
+  STOPLOSS_OPTIONS,
   TARGET_OPTIONS,
   type ViewTreeNode,
   type ViewDef,
@@ -698,6 +699,11 @@ function CopyViewControl({
   const [open, setOpen] = useState(initialOpen);
   const [direction, setDirection] = useState<"Up" | "Down">(initialDirection);
   const [entry, setEntry] = useState(initialEntry);
+  const initialStoploss = (() => {
+    const raw = sourceView?.stoplossLabel?.split(" ")[0];
+    return (STOPLOSS_OPTIONS as readonly string[]).includes(raw ?? "") ? raw! : (initialDirection === "Up" ? "S1" : "R1");
+  })();
+  const [stoploss, setStoploss] = useState(initialStoploss);
   const [target, setTarget] = useState(initialTarget);
   const [label, setLabel] = useState(sourceLabel);
   const [attachKey, setAttachKey] = useState(
@@ -844,7 +850,7 @@ function CopyViewControl({
         COPY VIEW FROM &quot;{sourceLabel}&quot;
       </span>
       <span className="text-[10px] text-muted-foreground">
-        Entry {entry} · Stoploss {direction === "Up" ? "S1" : "R1"} — Level Check for this View
+        Entry {entry} · Stoploss {stoploss} — Level Check for this View
       </span>
       <div className="flex gap-1.5">
         <select
@@ -853,6 +859,7 @@ function CopyViewControl({
             const next = e.target.value as "Up" | "Down";
             setDirection(next);
             setEntry(next === "Up" ? "TC" : "BC");
+            setStoploss(next === "Up" ? "S1" : "R1");
             setTarget(next === "Up" ? "R4" : "S4");
           }}
           disabled={!!command}
@@ -883,7 +890,36 @@ function CopyViewControl({
           ))}
         </select>
       </div>
-      <input
+            <div className="flex gap-1.5">
+        <select
+          value={candleCheck}
+          onChange={(e) => setCandleCheck(e.target.value)}
+          disabled={!!command}
+          title="Optional 15m CONSOLIDATE/MOMENTUM filter (CA/MA/CB/MB)."
+          className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+        >
+          <option value="">Any CONSOLIDATE/MOMENTUM</option>
+          {CANDLE_CHECK_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+        <select
+          value={stoploss}
+          onChange={(e) => setStoploss(e.target.value)}
+          disabled={!!command}
+          title="Which rung this View's stoploss reads off today's CPR."
+          className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+        >
+          {STOPLOSS_OPTIONS.map((opt) => (
+            <option key={opt} value={opt}>
+              Stoploss {opt}
+            </option>
+          ))}
+        </select>
+      </div>
+<input
         value={label}
         onChange={(e) => setLabel(e.target.value)}
         placeholder="View name"
@@ -892,19 +928,6 @@ function CopyViewControl({
         className="w-full bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
       />
       <AttachPointSelect value={attachKey} onChange={setAttachKey} disabled={!!command} />
-      <select
-        value={candleCheck}
-        onChange={(e) => setCandleCheck(e.target.value)}
-        disabled={!!command}
-        title="Optionally require this 15-minute candle check in the copied View."
-        className="w-full bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
-      >
-        {CANDLE_CHECK_OPTIONS.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
       <select
         value={gapBadge}
         onChange={(e) => setGapBadge(e.target.value)}
@@ -1103,7 +1126,8 @@ function EditViewControl({
       attachKey,
       gapBadge,
       derived,
-      trimmedCandleCheck
+      trimmedCandleCheck,
+      stoploss,
     );
 
     if (!res.ok) {
@@ -1136,7 +1160,7 @@ function EditViewControl({
     const b64 = btoa(binary);
 
     const q = (s: string) => `"${s.replace(/"/g, "")}"`;
-    const cmd = `gh workflow run copy-view.yml --repo krivengokul/Crypto-CPR-Screener -f sourceKey=${q(activeTarget.key)} -f newKey=${q(viewKey)} -f newLabel=${q(trimmedLabel)} -f isEdit=true -f direction=${q(direction)} -f entry=${q(entry)} -f target=${q(target)} -f attachKey=${q(attachKey)}${trimmedCandleCheck ? ` -f candleCheck=${q(trimmedCandleCheck)}` : ""}${gapBadge ? ` -f gapBadge=${q(gapBadge)}` : ""} -f levelCheckDefs=${b64}`;
+    const cmd = `gh workflow run copy-view.yml --repo krivengokul/Crypto-CPR-Screener -f sourceKey=${q(activeTarget.key)} -f newKey=${q(viewKey)} -f newLabel=${q(trimmedLabel)} -f isEdit=true -f direction=${q(direction)} -f entry=${q(entry)} -f stoploss=${q(stoploss)} -f target=${q(target)} -f attachKey=${q(attachKey)}${trimmedCandleCheck ? ` -f candleCheck=${q(trimmedCandleCheck)}` : ""}${gapBadge ? ` -f gapBadge=${q(gapBadge)}` : ""} -f levelCheckDefs=${b64}`;
     setCommand(cmd);
     // Deliberately NOT calling onUpdated here, same reasoning as
     // CreateViewControl/CopyViewControl's confirm(): onUpdated moves the
@@ -1184,7 +1208,7 @@ function EditViewControl({
         EDIT VIEW FOR &quot;{activeTarget.label}&quot;
       </span>
       <span className="text-[10px] text-muted-foreground">
-        Entry {entry} · Stoploss {direction === "Up" ? "S1" : "R1"} — Level Check for this View
+        Entry {entry} · Stoploss {stoploss} — Level Check for this View
       </span>
       <div className="flex gap-1.5">
         <select
@@ -1193,6 +1217,7 @@ function EditViewControl({
             const next = e.target.value as "Up" | "Down";
             setDirection(next);
             setEntry(next === "Up" ? "TC" : "BC");
+            setStoploss(next === "Up" ? "S1" : "R1");
             setTarget(next === "Up" ? "R4" : "S4");
           }}
           disabled={!!command}
@@ -1227,7 +1252,36 @@ function EditViewControl({
           ))}
         </select>
       </div>
-      <input
+            <div className="flex gap-1.5">
+        <select
+          value={candleCheck}
+          onChange={(e) => setCandleCheck(e.target.value)}
+          disabled={!!command}
+          title="Optional 15m CONSOLIDATE/MOMENTUM filter (CA/MA/CB/MB)."
+          className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+        >
+          <option value="">Any CONSOLIDATE/MOMENTUM</option>
+          {CANDLE_CHECK_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+        <select
+          value={stoploss}
+          onChange={(e) => setStoploss(e.target.value)}
+          disabled={!!command}
+          title="Which rung this View's stoploss reads off today's CPR."
+          className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+        >
+          {STOPLOSS_OPTIONS.map((opt) => (
+            <option key={opt} value={opt}>
+              Stoploss {opt}
+            </option>
+          ))}
+        </select>
+      </div>
+<input
         value={label}
         onChange={(e) => setLabel(e.target.value)}
         placeholder="View name"
@@ -1236,19 +1290,6 @@ function EditViewControl({
         className="w-full bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
       />
       <AttachPointSelect value={attachKey} onChange={setAttachKey} disabled={!!command} />
-      <select
-        value={candleCheck}
-        onChange={(e) => setCandleCheck(e.target.value)}
-        disabled={!!command}
-        title="Optionally also require this 15-minute candle check."
-        className="w-full bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
-      >
-        {CANDLE_CHECK_OPTIONS.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
       <select
         value={gapBadge}
         onChange={(e) => setGapBadge(e.target.value)}
@@ -1448,6 +1489,7 @@ function CreateViewControl({
   // rung on the ladder can be picked).
   const [direction, setDirection] = useState<"Up" | "Down">("Up");
   const [entry, setEntry] = useState("TC");
+  const [stoploss, setStoploss] = useState("S1");
   const [target, setTarget] = useState("R4");
   // Optional composite Gap Badge label (e.g. "RH-GapAB", "SL-GapBB" —
   // views.ts's ALL_GAP_BADGES) to additionally require on top of
@@ -1511,6 +1553,7 @@ function CreateViewControl({
     setAttachKey(patternKey);
     setDirection("Up");
     setEntry("TC");
+    setStoploss("S1");
     setTarget("R4");
     setCandleCheck("");
     setGapBadge(existingGapBadge && ALL_GAP_BADGES.includes(existingGapBadge) ? existingGapBadge : "");
@@ -1543,7 +1586,8 @@ function CreateViewControl({
       attachKey,
       trimmedGapBadge || undefined,
       entry,
-      trimmedCandleCheck || undefined
+      trimmedCandleCheck || undefined,
+      stoploss,
     );
     if (!result.ok) {
       setError(
@@ -1587,7 +1631,7 @@ function CreateViewControl({
     const b64 = btoa(binary);
 
     setCommand(
-      `gh workflow run create-view.yml --repo krivengokul/Crypto-CPR-Screener -f patternKey=${q(effectivePattern.key)} -f newKey=${q(viewKey)} -f newLabel=${q(trimmedLabel)} -f direction=${q(direction)} -f entry=${q(entry)} -f target=${q(target)} -f attachKey=${q(attachKey)}${trimmedCandleCheck ? ` -f candleCheck=${q(trimmedCandleCheck)}` : ""}${trimmedGapBadge ? ` -f gapBadge=${q(trimmedGapBadge)}` : ""} -f levelCheckDefs=${b64}`
+      `gh workflow run create-view.yml --repo krivengokul/Crypto-CPR-Screener -f patternKey=${q(effectivePattern.key)} -f newKey=${q(viewKey)} -f newLabel=${q(trimmedLabel)} -f direction=${q(direction)} -f entry=${q(entry)} -f stoploss=${q(stoploss)} -f target=${q(target)} -f attachKey=${q(attachKey)}${trimmedCandleCheck ? ` -f candleCheck=${q(trimmedCandleCheck)}` : ""}${trimmedGapBadge ? ` -f gapBadge=${q(trimmedGapBadge)}` : ""} -f levelCheckDefs=${b64}`
     );
     setCreatedKey(viewKey);
   }
@@ -1622,7 +1666,7 @@ function CreateViewControl({
         Create View for &quot;{effectivePattern.label}&quot;
       </span>
       <span className="text-[10px] text-muted-foreground">
-        Entry {entry} · Stoploss {direction === "Up" ? "S1" : "R1"} — Level Check derived from this symbol
+        Entry {entry} · Stoploss {stoploss} — Level Check derived from this symbol
       </span>
       <div className="flex gap-1.5">
         <select
@@ -1631,6 +1675,7 @@ function CreateViewControl({
             const next = e.target.value as "Up" | "Down";
             setDirection(next);
             setEntry(next === "Up" ? "TC" : "BC");
+            setStoploss(next === "Up" ? "S1" : "R1");
             setTarget(next === "Up" ? "R4" : "S4");
           }}
           disabled={!!command}
@@ -1661,6 +1706,35 @@ function CreateViewControl({
           {(direction === "Up" ? UP_TARGETS : DOWN_TARGETS).map((t) => (
             <option key={t} value={t}>
               Target {t}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="flex gap-1.5">
+        <select
+          value={candleCheck}
+          onChange={(e) => setCandleCheck(e.target.value)}
+          disabled={!!command}
+          title="Optional 15m CONSOLIDATE/MOMENTUM filter (CA/MA/CB/MB)."
+          className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+        >
+          <option value="">Any CONSOLIDATE/MOMENTUM</option>
+          {CANDLE_CHECK_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+        <select
+          value={stoploss}
+          onChange={(e) => setStoploss(e.target.value)}
+          disabled={!!command}
+          title="Which rung this View's stoploss reads off today's CPR — sets getStoploss."
+          className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+        >
+          {STOPLOSS_OPTIONS.map((opt) => (
+            <option key={opt} value={opt}>
+              Stoploss {opt}
             </option>
           ))}
         </select>

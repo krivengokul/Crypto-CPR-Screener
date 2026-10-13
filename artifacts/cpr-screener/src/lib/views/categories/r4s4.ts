@@ -2659,8 +2659,8 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
         getTarget: (r) => r.todayCPR.r4,
         entryLabel: "TC (today's TC)",
         getEntry: (r) => r.todayCPR.tc,
-        stoplossLabel: "S1 (today's S1)",
-        getStoploss: (r) => r.todayCPR.s1,
+        stoplossLabel: "S4 (today's S4)",
+        getStoploss: (r) => r.todayCPR.s4,
         levelCheckDefs: [
       {
         "key": "r4",
