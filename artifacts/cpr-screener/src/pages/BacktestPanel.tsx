@@ -1032,6 +1032,14 @@ function EditViewControl({
     // in the character class.
     return targetFromLabel(activeTarget.targetLabel, activeTarget.direction);
   });
+  // FIX: Edit View referenced stoploss/setStoploss without declaring state
+  // (Copy/Create already had this) → ReferenceError on open.
+  const [stoploss, setStoploss] = useState(() => {
+    const raw = activeTarget.stoplossLabel?.split(" ")[0];
+    return (STOPLOSS_OPTIONS as readonly string[]).includes(raw ?? "")
+      ? raw!
+      : (activeTarget.direction === "Up" ? "S1" : "R1");
+  });
   const [label, setLabel] = useState(activeTarget.label);
   const [attachKey, setAttachKey] = useState(() => activeTarget.parentKey ?? findContainingNodeKey(activeTarget.key) ?? activeTarget.key);
   // Preselected to whatever Gap Badge this View's own key already
@@ -1076,6 +1084,12 @@ function EditViewControl({
     });
     setTarget(() => {
       return targetFromLabel(activeTarget.targetLabel, activeTarget.direction);
+    });
+    setStoploss(() => {
+      const raw = activeTarget.stoplossLabel?.split(" ")[0];
+      return (STOPLOSS_OPTIONS as readonly string[]).includes(raw ?? "")
+        ? raw!
+        : (activeTarget.direction === "Up" ? "S1" : "R1");
     });
     setLabel(activeTarget.label);
     setAttachKey(activeTarget.parentKey ?? findContainingNodeKey(activeTarget.key) ?? activeTarget.key);
