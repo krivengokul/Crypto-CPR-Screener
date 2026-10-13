@@ -92,6 +92,10 @@ export const LEVELSBELOW_VIEWS: ViewDef[] = [
   { key: "B-B-BB-BB-CL3U1", label: "B-B-BB-BB-CL3U1", parentKey: "B-B-BB-BB", kind: "pattern", condition: (r) => r.CL3U1, order: 17 },
 
   { key: "B-B-BB-BB-CL3U3", label: "B-B-BB-BB-CL3U3", parentKey: "B-B-BB-BB", kind: "pattern", condition: (r) => r.CL3U3, order: 18 },
+  { key: "B-B-BB-BB-EL3U3", label: "B-B-BB-BB-EL3U3", parentKey: "B-B-BB-BB", kind: "pattern", condition: (r) => r.EL3U3, order: 19 },
+
+  { key: "B-B-BB-BB-L2U3", label: "B-B-BB-BB-L2U3", parentKey: "B-B-BB-BB", kind: "pattern", condition: (r) => r.L2U3, order: 20 },
+
 
   // --- B-B-BB-OB's nested Pattern children (LEVEL BELOW) ---
     { key: "B-B-BB-OB-CL3U2", label: "B-B-BB-OB-CL3U2", parentKey: "B-B-BB-OB", kind: "pattern", condition: (r) => r.CL3U2, order: 0 },
@@ -131,6 +135,10 @@ export const LEVELSBELOW_VIEWS: ViewDef[] = [
   { key: "levelsbelow-B-B-OB-BB-L3U4", label: "B-B-OB-BB-L3U4", parentKey: "B-B-OB-BB", kind: "pattern", condition: (r) => r.L3U4, order: 105 },
 
   { key: "levelsbelow-B-B-BB-C-CL4U3", label: "B-B-BB-C-CL4U3", parentKey: "B-B-BB-C", kind: "pattern", condition: (r) => r.CL4U3, order: 100 },
+  { key: "B-B-BB-C-CL3U3", label: "B-B-BB-C-CL3U3", parentKey: "B-B-BB-C", kind: "pattern", condition: (r) => r.CL3U3, order: 101 },
+
+  { key: "B-B-BB-C-CL4U4", label: "B-B-BB-C-CL4U4", parentKey: "B-B-BB-C", kind: "pattern", condition: (r) => r.CL4U4, order: 102 },
+
 
   // --- leaf Views ---
 
@@ -948,6 +956,10 @@ export const LEVELSBELOW_VIEWS: ViewDef[] = [
   { key: "C-B-BB-C-CL4U4", label: "C-B-BB-C-CL4U4", parentKey: "C-B-BB-C", kind: "pattern", condition: (r) => r.CL4U4, order: 7 },
 
   { key: "C-B-BB-C-L3TC", label: "C-B-BB-C-L3TC", parentKey: "C-B-BB-C", kind: "pattern", condition: (r) => r.L3TC, order: 8 },
+  { key: "C-B-BB-C-CL1U1", label: "C-B-BB-C-CL1U1", parentKey: "C-B-BB-C", kind: "pattern", condition: (r) => r.CL1U1, order: 9 },
+
+  { key: "C-B-BB-C-L2CP", label: "C-B-BB-C-L2CP", parentKey: "C-B-BB-C", kind: "pattern", condition: (r) => r.L2CP, order: 10 },
+
 
   { key: "C-B-BB-E-CL3U3", label: "C-B-BB-E-CL3U3", parentKey: "C-B-BB-E", kind: "pattern", condition: (r) => r.CL3U3, order: 0 },
 
@@ -964,12 +976,16 @@ export const LEVELSBELOW_VIEWS: ViewDef[] = [
   { key: "E-B-E-BB-EL4U4", label: "E-B-E-BB-EL4U4", parentKey: "E-B-E-BB", kind: "pattern", condition: (r) => r.EL4U4, order: 2 },
 
   { key: "E-B-E-BB-EL3U3", label: "E-B-E-BB-EL3U3", parentKey: "E-B-E-BB", kind: "pattern", condition: (r) => r.EL3U3, order: 3 },
+  { key: "E-B-E-BB-EU2L2", label: "E-B-E-BB-EU2L2", parentKey: "E-B-E-BB", kind: "pattern", condition: (r) => r.EU2L2, order: 4 },
+
 
   { key: "E-B-C-BB-EL2U3", label: "E-B-C-BB-EL2U3", parentKey: "E-B-C-BB", kind: "pattern", condition: (r) => r.EL2U3, order: 0 },
 
   { key: "E-B-C-BB-EL3U4", label: "E-B-C-BB-EL3U4", parentKey: "E-B-C-BB", kind: "pattern", condition: (r) => r.EL3U4, order: 1 },
 
   { key: "E-B-C-BB-EL4U4", label: "E-B-C-BB-EL4U4", parentKey: "E-B-C-BB", kind: "pattern", condition: (r) => r.EL4U4, order: 2 },
+  { key: "E-B-C-BB-EL3U3", label: "E-B-C-BB-EL3U3", parentKey: "E-B-C-BB", kind: "pattern", condition: (r) => r.EL3U3, order: 3 },
+
 
   { key: "E-B-RA-BB-EL3U4", label: "E-B-RA-BB-EL3U4", parentKey: "E-B-RA-BB", kind: "pattern", condition: (r) => r.EL3U4, order: 0 },
 
@@ -980,6 +996,8 @@ export const LEVELSBELOW_VIEWS: ViewDef[] = [
   { key: "E-B-RA-BB-EL3U3", label: "E-B-RA-BB-EL3U3", parentKey: "E-B-RA-BB", kind: "pattern", condition: (r) => r.EL3U3, order: 3 },
 
   { key: "E-B-RA-BB-L4U4", label: "E-B-RA-BB-L4U4", parentKey: "E-B-RA-BB", kind: "pattern", condition: (r) => r.L4U4, order: 4 },
+  { key: "E-B-RA-BB-EU2L2", label: "E-B-RA-BB-EU2L2", parentKey: "E-B-RA-BB", kind: "pattern", condition: (r) => r.EU2L2, order: 5 },
+
 
     {
         key: "PL-B-B-BB-OB-CL3U1-RH-GapAA-S2",
