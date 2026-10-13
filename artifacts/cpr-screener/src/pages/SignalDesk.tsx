@@ -14,6 +14,10 @@ import {
   SIGNALS_JOURNAL_UPDATED_EVENT,
   type LoggedSignal,
 } from "@/lib/signalTracker";
+import {
+  sessionReachedTarget,
+  livePriceReachedTarget,
+} from "@/lib/signalOutcome";
 import { Views } from "@/lib/ViewsSidebar";
 import { getView, shortLevelLabel } from "@/lib/views";
 import { getRowCategory, getCategoryLabel } from "@/lib/rowCategory";
@@ -179,6 +183,68 @@ function isJournalMatchToday(match: LoggedSignal | undefined): boolean {
   if (!match) return false;
   const day = journalDayKey(match.timestamp);
   return !!day && day === utcTodayKey();
+}
+
+/**
+ * Live PASS/FAIL overlay when the Journal is still ACTIVE (or not written yet)
+ * but price/session extremes have already hit target or stop. Without this,
+ * SignalDesk kept showing "Active" until Signals Journal ran evaluateSignalOutcome.
+ */
+function liveOutcomeStatus(
+  direction: "Up" | "Down" | string,
+  target: number,
+  stop: number,
+  livePrice: number,
+  sessionHigh?: number,
+  sessionLow?: number,
+): "PASS" | "FAIL" | undefined {
+  if (!Number.isFinite(livePrice) || livePrice <= 0) return undefined;
+  if (!Number.isFinite(target) || !Number.isFinite(stop)) return undefined;
+
+  const isUp = direction === "Up" || direction === "LONG";
+  const isDown = direction === "Down" || direction === "SHORT";
+  if (!isUp && !isDown) return undefined;
+
+  // Target first via session extremes (hit-and-retraced still counts).
+  if (sessionReachedTarget(direction, target, sessionHigh, sessionLow, livePrice)) {
+    return "PASS";
+  }
+  if (livePriceReachedTarget(direction, target, livePrice)) {
+    return "PASS";
+  }
+
+  // Stop: live price or session extreme through SL.
+  if (isUp) {
+    if (livePrice <= stop) return "FAIL";
+    if (sessionLow !== undefined && Number.isFinite(sessionLow) && sessionLow > 0 && sessionLow <= stop) {
+      return "FAIL";
+    }
+  } else {
+    if (livePrice >= stop) return "FAIL";
+    if (sessionHigh !== undefined && Number.isFinite(sessionHigh) && sessionHigh >= stop) {
+      return "FAIL";
+    }
+  }
+  return undefined;
+}
+
+function resolveCardStatus(
+  journalStatus: SignalItem["journalStatus"],
+  direction: "Up" | "Down" | string,
+  target: number,
+  stop: number,
+  livePrice: number,
+  sessionHigh?: number,
+  sessionLow?: number,
+  entryTouched?: boolean,
+): SignalItem["journalStatus"] {
+  if (journalStatus === "PASS" || journalStatus === "FAIL" || journalStatus === "EXPIRED") {
+    return journalStatus;
+  }
+  // Only resolve live outcomes once entry is in play (journal ACTIVE or price touched).
+  if (!(entryTouched || journalStatus === "ACTIVE")) return journalStatus;
+  const live = liveOutcomeStatus(direction, target, stop, livePrice, sessionHigh, sessionLow);
+  return live ?? journalStatus;
 }
 
 // Which top-level Views bucket a View id lives under — e.g. "compressed",
@@ -870,11 +936,29 @@ export default function SignalDesk({
         const journalMatch = levels
           ? getJournalMatch(sym.source, sym.symbol, patternId, patternLabel)
           : undefined;
-        const journalStatus = currentJournalStatus(journalMatch);
+        const rawJournalStatus = currentJournalStatus(journalMatch);
         const priceTouched = levels
           ? hasTouchedEntry(levels.direction, levels.price, sym.currentPrice)
           : false;
-        const isTriggered = !!journalStatus || priceTouched;
+        const rowForSession = resultsBySymbol.get(sym.symbol) ?? matchedRow;
+        const journalStatus = levels
+          ? resolveCardStatus(
+              rawJournalStatus,
+              levels.direction,
+              levels.targetPrice,
+              levels.stopPrice,
+              sym.currentPrice,
+              rowForSession?.todayHigh,
+              rowForSession?.todayLow,
+              priceTouched || rawJournalStatus === "ACTIVE",
+            )
+          : rawJournalStatus;
+        // Triggered if entry touched, journal says so, or live already resolved PASS/FAIL.
+        const isTriggered =
+          !!journalStatus ||
+          priceTouched ||
+          journalStatus === "PASS" ||
+          journalStatus === "FAIL";
 
         const triggeredAt = isJournalMatchToday(journalMatch)
           ? getTriggeredAt(sym.source, sym.symbol, patternId, patternLabel)
@@ -989,11 +1073,27 @@ export default function SignalDesk({
       const journalMatch = levels
         ? getJournalMatch(r.source, r.symbol, patternId, patternLabel)
         : undefined;
-      const journalStatus = currentJournalStatus(journalMatch);
+      const rawJournalStatus = currentJournalStatus(journalMatch);
       const priceTouched = levels
         ? hasTouchedEntry(levels.direction, levels.price, r.currentPrice)
         : false;
-      const isTriggered = !!journalStatus || priceTouched;
+      const journalStatus = levels
+        ? resolveCardStatus(
+            rawJournalStatus,
+            levels.direction,
+            levels.targetPrice,
+            levels.stopPrice,
+            r.currentPrice,
+            r.todayHigh,
+            r.todayLow,
+            priceTouched || rawJournalStatus === "ACTIVE",
+          )
+        : rawJournalStatus;
+      const isTriggered =
+        !!journalStatus ||
+        priceTouched ||
+        journalStatus === "PASS" ||
+        journalStatus === "FAIL";
 
       const triggeredAt = isJournalMatchToday(journalMatch)
         ? getTriggeredAt(r.source, r.symbol, patternId, patternLabel)
