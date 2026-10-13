@@ -19,6 +19,15 @@ import { getView, shortLevelLabel } from "@/lib/views";
 import { getRowCategory, getCategoryLabel } from "@/lib/rowCategory";
 import SignalProgressBar from "@/lib/SignalProgressBar";
 import { COINDCX_ENABLED } from "@/lib/featureFlags";
+import {
+  loadCachedResults,
+  formatScanTime,
+  formatScanDate,
+  isCacheFresh,
+  STORAGE_KEY_BINANCE,
+  STORAGE_KEY_DELTA,
+  STORAGE_KEY_COINDCX,
+} from "@/lib/scheduler";
 import { getLadderMatchSummary } from "./SRLadderDiff";
 import {
   Radio,
@@ -1093,6 +1102,36 @@ export default function SignalDesk({
     return { total, saved, ready, pass, fail, upCount, downCount, watch, longs: upCount, shorts: downCount };
   }, [baseFilteredSignals]);
 
+  // Same "Scanned Binance @ …" badge as Screener — read from the persisted
+  // scan cache so SignalDesk stays in sync after a hard refresh.
+  const scanBadge = useMemo(() => {
+    const keys: { source: SourceId; key: string; label: string }[] = [
+      { source: "binance", key: STORAGE_KEY_BINANCE, label: "Binance" },
+      { source: "delta", key: STORAGE_KEY_DELTA, label: "Delta" },
+      { source: "coindcx", key: STORAGE_KEY_COINDCX, label: "CoinDCX" },
+    ];
+    const pick = (source: SourceId | "all") => {
+      if (source === "all") {
+        let best: { label: string; savedAt: number } | null = null;
+        for (const k of keys) {
+          const cache = loadCachedResults(k.key);
+          if (!cache || !isCacheFresh(cache) || typeof cache.savedAt !== "number") continue;
+          if (!best || cache.savedAt > best.savedAt) {
+            best = { label: k.label, savedAt: cache.savedAt };
+          }
+        }
+        return best;
+      }
+      const entry = keys.find((k) => k.source === source);
+      if (!entry) return null;
+      const cache = loadCachedResults(entry.key);
+      if (!cache || !isCacheFresh(cache) || typeof cache.savedAt !== "number") return null;
+      return { label: entry.label, savedAt: cache.savedAt };
+    };
+    return pick(sourceFilter);
+    // results identity changes when Screener finishes a scan and App re-renders SignalDesk
+  }, [sourceFilter, results]);
+
   const handleCopy = useCallback((item: SignalItem) => {
     const text = `[PIVOT SIGNAL: ${item.symbol}] (${item.direction})
 Pattern: ${item.patternName} (${item.type})
@@ -1236,6 +1275,23 @@ R:R: ${item.riskReward}`;
             <span className="text-[11px] text-rose-400 font-medium">Down:</span>
             <span className="text-sm font-bold text-rose-400 font-mono">{stats.downCount}</span>
           </div>
+
+          {scanBadge && (
+            <div
+              className="shrink-0 ml-auto bg-[#131b26] border border-emerald-500/25 rounded-lg px-3 py-1.5 flex flex-col items-end gap-0.5 text-[11px] leading-tight text-emerald-300/90 whitespace-nowrap"
+              title="Time of the last completed scan feeding this view"
+            >
+              <span className="flex items-center gap-1.5">
+                <Clock className="w-3 h-3 text-emerald-400 shrink-0" />
+                <span>
+                  Scanned <span className="font-semibold text-emerald-300">{scanBadge.label}</span>
+                </span>
+              </span>
+              <span className="text-emerald-300/80">
+                @ {formatScanTime(scanBadge.savedAt)} ({formatScanDate(scanBadge.savedAt)})
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
