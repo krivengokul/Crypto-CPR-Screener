@@ -791,10 +791,23 @@ export default function SignalDesk({
             })
           : symbols;
 
-      return filteredSymbols.map((sym) => {
+      // SignalDesk only shows Active-View symbols with a real signal
+      // (entry/target levels). Plain scan rows must not become cards.
+      const activeOnlySymbols = filteredSymbols.filter((sym) => {
         const matchedRow = activeSignalSymbols.get(sym.symbol);
-        const levels = matchedRow ? computeSignalLevels(matchedRow, viewPills) : null;
-        const isEligible = activeSignalSymbols.size > 0 ? levels !== null : isCurrentSignalActive;
+        if (matchedRow) {
+          return computeSignalLevels(matchedRow, viewPills, selectedSignalId || undefined) !== null;
+        }
+        // Lightweight symbols-only mode: trust parent scope when a View is selected.
+        return activeSignalSymbols.size === 0 && isCurrentSignalActive;
+      });
+
+      return activeOnlySymbols.map((sym) => {
+        const matchedRow = activeSignalSymbols.get(sym.symbol);
+        const levels = matchedRow
+          ? computeSignalLevels(matchedRow, viewPills, selectedSignalId || undefined)
+          : null;
+        const isEligible = true;
 
         // When this symbol has a real backtest-defined target (levels !==
         // null), entry/target/stop come straight from BACKTEST_TARGETS —
@@ -940,7 +953,10 @@ export default function SignalDesk({
 
     for (const r of pool) {
       const levels = computeSignalLevels(r, viewPills, selectedSignalId || undefined);
-      const isActiveSignalSymbol = activeSignalSymbols.has(r.symbol) && levels !== null;
+      // Only Active-View symbols — skip general scan rows with no signal.
+      const isActiveSignalSymbol =
+        activeSignalSymbols.has(r.symbol) && levels !== null;
+      if (!isActiveSignalSymbol) continue;
 
       const pivot = r.todayCPR.pivot;
       const { r1, r2, r3, r4, s1, s2, s3, s4 } = r.todayCPR;
