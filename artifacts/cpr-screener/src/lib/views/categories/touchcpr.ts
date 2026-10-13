@@ -89,6 +89,7 @@ const INCPR_UNCLASSIFIED_PATTERNS = buildUnclassifiedTouchPatterns("INCPR-Unclas
   "B-C-BB-SB-CL4U3",
   "B-C-BB-SB-CL4U4",
   "C-B-OB-LB-CU4L3",
+  "E-E-AA-OB-EU3L3",
 ]);
 
 const OUTCPR_UNCLASSIFIED_PATTERNS = buildUnclassifiedTouchPatterns("OUT-Unclassified", "outcpr", [
@@ -847,6 +848,11 @@ export const INSIDE_CPR_TOUCH_VIEWS: ViewDef[] = [
   { key: "INCPR-C-C-BB-AA-CL3U2", label: "C-C-BB-AA-CL3U2", parentKey: "INCPR-C-C-BB-AA", kind: "pattern", condition: (r) => r.CL3U2, order: 6 },
   { key: "INCPR-C-C-BB-AA-CU3L2", label: "C-C-BB-AA-CU3L2", parentKey: "INCPR-C-C-BB-AA", kind: "pattern", condition: (r) => r.CU3L2, order: 7 },
   { key: "INCPR-C-C-BB-AA-CL4U4", label: "C-C-BB-AA-CL4U4", parentKey: "INCPR-C-C-BB-AA", kind: "pattern", condition: (r) => r.CL4U4, order: 8 },
+  { key: "INCPR-C-C-BB-AA-CU2L1", label: "C-C-BB-AA-CU2L1", parentKey: "INCPR-C-C-BB-AA", kind: "pattern", condition: (r) => r.CU2L1, order: 9 },
+  { key: "INCPR-C-C-BB-AA-CU1L1", label: "C-C-BB-AA-CU1L1", parentKey: "INCPR-C-C-BB-AA", kind: "pattern", condition: (r) => r.CU1L1, order: 10 },
+  { key: "INCPR-C-C-BB-AA-CU4L3", label: "C-C-BB-AA-CU4L3", parentKey: "INCPR-C-C-BB-AA", kind: "pattern", condition: (r) => r.CU4L3, order: 11 },
+  { key: "INCPR-C-C-BB-AA-CL1U1", label: "C-C-BB-AA-CL1U1", parentKey: "INCPR-C-C-BB-AA", kind: "pattern", condition: (r) => r.CL1U1, order: 12 },
+  { key: "INCPR-C-C-BB-AA-CL2U1", label: "C-C-BB-AA-CL2U1", parentKey: "INCPR-C-C-BB-AA", kind: "pattern", condition: (r) => r.CL2U1, order: 13 },
 
   {
     key: "INCPR-C-B-BB-LB",
@@ -861,6 +867,8 @@ export const INSIDE_CPR_TOUCH_VIEWS: ViewDef[] = [
     order: 1,
   },
   { key: "INCPR-C-B-BB-LB-CL3U3", label: "C-B-BB-LB-CL3U3", parentKey: "INCPR-C-B-BB-LB", kind: "pattern", condition: (r) => r.CL3U3, order: 0 },
+  { key: "INCPR-C-B-BB-LB-CL4U4", label: "C-B-BB-LB-CL4U4", parentKey: "INCPR-C-B-BB-LB", kind: "pattern", condition: (r) => r.CL4U4, order: 1 },
+  { key: "INCPR-C-B-BB-LB-CL2U2", label: "C-B-BB-LB-CL2U2", parentKey: "INCPR-C-B-BB-LB", kind: "pattern", condition: (r) => r.CL2U2, order: 2 },
 
   {
     key: "INCPR-B-A-C-SB",
@@ -875,6 +883,9 @@ export const INSIDE_CPR_TOUCH_VIEWS: ViewDef[] = [
     order: 2,
   },
   { key: "INCPR-B-A-C-SB-CU4L4", label: "B-A-C-SB-CU4L4", parentKey: "INCPR-B-A-C-SB", kind: "pattern", condition: (r) => r.CU4L4, order: 0 },
+  { key: "INCPR-B-A-C-SB-EL4U4", label: "B-A-C-SB-EL4U4", parentKey: "INCPR-B-A-C-SB", kind: "pattern", condition: (r) => r.EL4U4, order: 1 },
+  { key: "INCPR-B-A-C-SB-L4U4", label: "B-A-C-SB-L4U4", parentKey: "INCPR-B-A-C-SB", kind: "pattern", condition: (r) => r.L4U4, order: 2 },
+  { key: "INCPR-B-A-C-SB-CL4U3", label: "B-A-C-SB-CL4U3", parentKey: "INCPR-B-A-C-SB", kind: "pattern", condition: (r) => r.CL4U3, order: 3 },
 
   {
     key: "INCPR-B-A-C-C",
@@ -892,6 +903,9 @@ export const INSIDE_CPR_TOUCH_VIEWS: ViewDef[] = [
   { key: "INCPR-B-A-C-C-L4U4", label: "B-A-C-C-L4U4", parentKey: "INCPR-B-A-C-C", kind: "pattern", condition: (r) => r.L4U4, order: 1 },
   { key: "INCPR-B-A-C-C-EU4L4", label: "B-A-C-C-EU4L4", parentKey: "INCPR-B-A-C-C", kind: "pattern", condition: (r) => r.EU4L4, order: 2 },
   { key: "INCPR-B-A-C-C-EL4U4", label: "B-A-C-C-EL4U4", parentKey: "INCPR-B-A-C-C", kind: "pattern", condition: (r) => r.EL4U4, order: 3 },
+  { key: "INCPR-B-A-C-C-CL4U4", label: "B-A-C-C-CL4U4", parentKey: "INCPR-B-A-C-C", kind: "pattern", condition: (r) => r.CL4U4, order: 4 },
+  { key: "INCPR-B-A-C-C-CU4L4", label: "B-A-C-C-CU4L4", parentKey: "INCPR-B-A-C-C", kind: "pattern", condition: (r) => r.CU4L4, order: 5 },
+  { key: "INCPR-B-A-C-C-CL4U3", label: "B-A-C-C-CL4U3", parentKey: "INCPR-B-A-C-C", kind: "pattern", condition: (r) => r.CL4U3, order: 6 },
 
   {
     key: "INCPR-B-C-OB-C",
@@ -906,6 +920,8 @@ export const INSIDE_CPR_TOUCH_VIEWS: ViewDef[] = [
     order: 4,
   },
   { key: "INCPR-B-C-OB-C-CL4U4", label: "B-C-OB-C-CL4U4", parentKey: "INCPR-B-C-OB-C", kind: "pattern", condition: (r) => r.CL4U4, order: 0 },
+  { key: "INCPR-B-C-OB-C-CL4U3", label: "B-C-OB-C-CL4U3", parentKey: "INCPR-B-C-OB-C", kind: "pattern", condition: (r) => r.CL4U3, order: 1 },
+  { key: "INCPR-B-C-OB-C-L4U4", label: "B-C-OB-C-L4U4", parentKey: "INCPR-B-C-OB-C", kind: "pattern", condition: (r) => r.L4U4, order: 2 },
 
   {
     key: "INCPR-E-E-AA-BB",
@@ -920,6 +936,13 @@ export const INSIDE_CPR_TOUCH_VIEWS: ViewDef[] = [
     order: 5,
   },
   { key: "INCPR-E-E-AA-BB-EU3L3", label: "E-E-AA-BB-EU3L3", parentKey: "INCPR-E-E-AA-BB", kind: "pattern", condition: (r) => r.EU3L3, order: 0 },
+  { key: "INCPR-E-E-AA-BB-EL3U3", label: "E-E-AA-BB-EL3U3", parentKey: "INCPR-E-E-AA-BB", kind: "pattern", condition: (r) => r.EL3U3, order: 1 },
+  { key: "INCPR-E-E-AA-BB-EU2L2", label: "E-E-AA-BB-EU2L2", parentKey: "INCPR-E-E-AA-BB", kind: "pattern", condition: (r) => r.EU2L2, order: 2 },
+  { key: "INCPR-E-E-AA-BB-EU3L4", label: "E-E-AA-BB-EU3L4", parentKey: "INCPR-E-E-AA-BB", kind: "pattern", condition: (r) => r.EU3L4, order: 3 },
+  { key: "INCPR-E-E-AA-BB-EL2U3", label: "E-E-AA-BB-EL2U3", parentKey: "INCPR-E-E-AA-BB", kind: "pattern", condition: (r) => r.EL2U3, order: 4 },
+  { key: "INCPR-E-E-AA-BB-EU2L3", label: "E-E-AA-BB-EU2L3", parentKey: "INCPR-E-E-AA-BB", kind: "pattern", condition: (r) => r.EU2L3, order: 5 },
+  { key: "INCPR-E-E-AA-BB-EU4L4", label: "E-E-AA-BB-EU4L4", parentKey: "INCPR-E-E-AA-BB", kind: "pattern", condition: (r) => r.EU4L4, order: 6 },
+  { key: "INCPR-E-E-AA-BB-EL3U4", label: "E-E-AA-BB-EL3U4", parentKey: "INCPR-E-E-AA-BB", kind: "pattern", condition: (r) => r.EL3U4, order: 7 },
 
   {
     key: "INCPR-C-C-OB-AA",
@@ -935,6 +958,9 @@ export const INSIDE_CPR_TOUCH_VIEWS: ViewDef[] = [
   },
   { key: "INCPR-C-C-OB-AA-CU4L4", label: "C-C-OB-AA-CU4L4", parentKey: "INCPR-C-C-OB-AA", kind: "pattern", condition: (r) => r.CU4L4, order: 0 },
   { key: "INCPR-C-C-OB-AA-CL4U3", label: "C-C-OB-AA-CL4U3", parentKey: "INCPR-C-C-OB-AA", kind: "pattern", condition: (r) => r.CL4U3, order: 1 },
+  { key: "INCPR-C-C-OB-AA-CU3L3", label: "C-C-OB-AA-CU3L3", parentKey: "INCPR-C-C-OB-AA", kind: "pattern", condition: (r) => r.CU3L3, order: 2 },
+  { key: "INCPR-C-C-OB-AA-CU4L3", label: "C-C-OB-AA-CU4L3", parentKey: "INCPR-C-C-OB-AA", kind: "pattern", condition: (r) => r.CU4L3, order: 3 },
+  { key: "INCPR-C-C-OB-AA-CU3L2", label: "C-C-OB-AA-CU3L2", parentKey: "INCPR-C-C-OB-AA", kind: "pattern", condition: (r) => r.CU3L2, order: 4 },
 
   {
     key: "INCPR-C-A-C-OA",
@@ -965,6 +991,8 @@ export const INSIDE_CPR_TOUCH_VIEWS: ViewDef[] = [
   },
   { key: "INCPR-C-A-C-AA-CU3L3", label: "C-A-C-AA-CU3L3", parentKey: "INCPR-C-A-C-AA", kind: "pattern", condition: (r) => r.CU3L3, order: 0 },
   { key: "INCPR-C-A-C-AA-CU3L2", label: "C-A-C-AA-CU3L2", parentKey: "INCPR-C-A-C-AA", kind: "pattern", condition: (r) => r.CU3L2, order: 1 },
+  { key: "INCPR-C-A-C-AA-CU4L4", label: "C-A-C-AA-CU4L4", parentKey: "INCPR-C-A-C-AA", kind: "pattern", condition: (r) => r.CU4L4, order: 2 },
+  { key: "INCPR-C-A-C-AA-CL4U3", label: "C-A-C-AA-CL4U3", parentKey: "INCPR-C-A-C-AA", kind: "pattern", condition: (r) => r.CL4U3, order: 3 },
 
   {
     key: "INCPR-B-A-OA-C",
@@ -994,6 +1022,12 @@ export const INSIDE_CPR_TOUCH_VIEWS: ViewDef[] = [
   },
   { key: "INCPR-B-A-HA-SB-CL4U3", label: "B-A-HA-SB-CL4U3", parentKey: "INCPR-B-A-HA-SB", kind: "pattern", condition: (r) => r.CL4U3, order: 0 },
   { key: "INCPR-B-A-HA-SB-EU4L4", label: "B-A-HA-SB-EU4L4", parentKey: "INCPR-B-A-HA-SB", kind: "pattern", condition: (r) => r.EU4L4, order: 1 },
+  { key: "INCPR-B-A-HA-SB-CU3L3", label: "B-A-HA-SB-CU3L3", parentKey: "INCPR-B-A-HA-SB", kind: "pattern", condition: (r) => r.CU3L3, order: 2 },
+  { key: "INCPR-B-A-HA-SB-CL3U3", label: "B-A-HA-SB-CL3U3", parentKey: "INCPR-B-A-HA-SB", kind: "pattern", condition: (r) => r.CL3U3, order: 3 },
+  { key: "INCPR-B-A-HA-SB-EL4U4", label: "B-A-HA-SB-EL4U4", parentKey: "INCPR-B-A-HA-SB", kind: "pattern", condition: (r) => r.EL4U4, order: 4 },
+  { key: "INCPR-B-A-HA-SB-CU4L4", label: "B-A-HA-SB-CU4L4", parentKey: "INCPR-B-A-HA-SB", kind: "pattern", condition: (r) => r.CU4L4, order: 5 },
+  { key: "INCPR-B-A-HA-SB-CL4U4", label: "B-A-HA-SB-CL4U4", parentKey: "INCPR-B-A-HA-SB", kind: "pattern", condition: (r) => r.CL4U4, order: 6 },
+  { key: "INCPR-B-A-HA-SB-EL3U4", label: "B-A-HA-SB-EL3U4", parentKey: "INCPR-B-A-HA-SB", kind: "pattern", condition: (r) => r.EL3U4, order: 7 },
 
   {
     key: "INCPR-B-A-HA-C",
@@ -1008,6 +1042,9 @@ export const INSIDE_CPR_TOUCH_VIEWS: ViewDef[] = [
     order: 11,
   },
   { key: "INCPR-B-A-HA-C-EU4L4", label: "B-A-HA-C-EU4L4", parentKey: "INCPR-B-A-HA-C", kind: "pattern", condition: (r) => r.EU4L4, order: 0 },
+  { key: "INCPR-B-A-HA-C-CL4U3", label: "B-A-HA-C-CL4U3", parentKey: "INCPR-B-A-HA-C", kind: "pattern", condition: (r) => r.CL4U3, order: 1 },
+  { key: "INCPR-B-A-HA-C-CL4U4", label: "B-A-HA-C-CL4U4", parentKey: "INCPR-B-A-HA-C", kind: "pattern", condition: (r) => r.CL4U4, order: 2 },
+  { key: "INCPR-B-A-HA-C-L4U4", label: "B-A-HA-C-L4U4", parentKey: "INCPR-B-A-HA-C", kind: "pattern", condition: (r) => r.L4U4, order: 3 },
 
   {
     key: "INCPR-E-A-AA-C",
@@ -1022,6 +1059,8 @@ export const INSIDE_CPR_TOUCH_VIEWS: ViewDef[] = [
     order: 12,
   },
   { key: "INCPR-E-A-AA-C-EU3L4", label: "E-A-AA-C-EU3L4", parentKey: "INCPR-E-A-AA-C", kind: "pattern", condition: (r) => r.EU3L4, order: 0 },
+  { key: "INCPR-E-A-AA-C-EU4L4", label: "E-A-AA-C-EU4L4", parentKey: "INCPR-E-A-AA-C", kind: "pattern", condition: (r) => r.EU4L4, order: 1 },
+  { key: "INCPR-E-A-AA-C-EU3L3", label: "E-A-AA-C-EU3L3", parentKey: "INCPR-E-A-AA-C", kind: "pattern", condition: (r) => r.EU3L3, order: 2 },
 
   {
     key: "INCPR-C-C-OB-OA",
@@ -1036,6 +1075,8 @@ export const INSIDE_CPR_TOUCH_VIEWS: ViewDef[] = [
     order: 13,
   },
   { key: "INCPR-C-C-OB-OA-CU4L4", label: "C-C-OB-OA-CU4L4", parentKey: "INCPR-C-C-OB-OA", kind: "pattern", condition: (r) => r.CU4L4, order: 0 },
+  { key: "INCPR-C-C-OB-OA-CU4L3", label: "C-C-OB-OA-CU4L3", parentKey: "INCPR-C-C-OB-OA", kind: "pattern", condition: (r) => r.CU4L3, order: 1 },
+  { key: "INCPR-C-C-OB-OA-CL4U3", label: "C-C-OB-OA-CL4U3", parentKey: "INCPR-C-C-OB-OA", kind: "pattern", condition: (r) => r.CL4U3, order: 2 },
 
   {
     key: "INCPR-E-A-OA-C",
@@ -1073,6 +1114,8 @@ export const INSIDE_CPR_TOUCH_VIEWS: ViewDef[] = [
   { key: "INCPR-A-B-RA-LB-CL3U3", label: "A-B-RA-LB-CL3U3", parentKey: "INCPR-A-B-RA-LB", kind: "pattern", condition: (r) => r.CL3U3, order: 1 },
   { key: "INCPR-A-B-RA-LB-CU3L3", label: "A-B-RA-LB-CU3L3", parentKey: "INCPR-A-B-RA-LB", kind: "pattern", condition: (r) => r.CU3L3, order: 2 },
   { key: "INCPR-A-B-RA-LB-CL4U4", label: "A-B-RA-LB-CL4U4", parentKey: "INCPR-A-B-RA-LB", kind: "pattern", condition: (r) => r.CL4U4, order: 3 },
+  { key: "INCPR-A-B-RA-LB-CU4L4", label: "A-B-RA-LB-CU4L4", parentKey: "INCPR-A-B-RA-LB", kind: "pattern", condition: (r) => r.CU4L4, order: 4 },
+  { key: "INCPR-A-B-RA-LB-EL4U4", label: "A-B-RA-LB-EL4U4", parentKey: "INCPR-A-B-RA-LB", kind: "pattern", condition: (r) => r.EL4U4, order: 5 },
 
   // --- A-C-RA-AA (order 16) ---
   {
@@ -1088,6 +1131,7 @@ export const INSIDE_CPR_TOUCH_VIEWS: ViewDef[] = [
     order: 16,
   },
   { key: "INCPR-A-C-RA-AA-CU3L3", label: "A-C-RA-AA-CU3L3", parentKey: "INCPR-A-C-RA-AA", kind: "pattern", condition: (r) => r.CU3L3, order: 0 },
+  { key: "INCPR-A-C-RA-AA-CU4L3", label: "A-C-RA-AA-CU4L3", parentKey: "INCPR-A-C-RA-AA", kind: "pattern", condition: (r) => r.CU4L3, order: 1 },
 
   // --- A-C-C-AA (order 17) ---
   {
@@ -1103,6 +1147,8 @@ export const INSIDE_CPR_TOUCH_VIEWS: ViewDef[] = [
     order: 17,
   },
   { key: "INCPR-A-C-C-AA-CU4L3", label: "A-C-C-AA-CU4L3", parentKey: "INCPR-A-C-C-AA", kind: "pattern", condition: (r) => r.CU4L3, order: 0 },
+  { key: "INCPR-A-C-C-AA-CU4L4", label: "A-C-C-AA-CU4L4", parentKey: "INCPR-A-C-C-AA", kind: "pattern", condition: (r) => r.CU4L4, order: 1 },
+  { key: "INCPR-A-C-C-AA-CU3L3", label: "A-C-C-AA-CU3L3", parentKey: "INCPR-A-C-C-AA", kind: "pattern", condition: (r) => r.CU3L3, order: 2 },
 
   // --- A-B-C-LB (order 18) ---
   {
@@ -1119,6 +1165,7 @@ export const INSIDE_CPR_TOUCH_VIEWS: ViewDef[] = [
   },
   { key: "INCPR-A-B-C-LB-CU4L3", label: "A-B-C-LB-CU4L3", parentKey: "INCPR-A-B-C-LB", kind: "pattern", condition: (r) => r.CU4L3, order: 0 },
   { key: "INCPR-A-B-C-LB-CU4L4", label: "A-B-C-LB-CU4L4", parentKey: "INCPR-A-B-C-LB", kind: "pattern", condition: (r) => r.CU4L4, order: 1 },
+  { key: "INCPR-A-B-C-LB-EL4U4", label: "A-B-C-LB-EL4U4", parentKey: "INCPR-A-B-C-LB", kind: "pattern", condition: (r) => r.EL4U4, order: 2 },
 
   // --- C-B-BB-C (order 19) ---
   {
@@ -1135,6 +1182,7 @@ export const INSIDE_CPR_TOUCH_VIEWS: ViewDef[] = [
   },
   { key: "INCPR-C-B-BB-C-CL3U3", label: "C-B-BB-C-CL3U3", parentKey: "INCPR-C-B-BB-C", kind: "pattern", condition: (r) => r.CL3U3, order: 0 },
   { key: "INCPR-C-B-BB-C-CL3U2", label: "C-B-BB-C-CL3U2", parentKey: "INCPR-C-B-BB-C", kind: "pattern", condition: (r) => r.CL3U2, order: 1 },
+  { key: "INCPR-C-B-BB-C-CU4L3", label: "C-B-BB-C-CU4L3", parentKey: "INCPR-C-B-BB-C", kind: "pattern", condition: (r) => r.CU4L3, order: 2 },
 
   // --- C-C-BB-OA (order 20) ---
   {
@@ -1150,6 +1198,10 @@ export const INSIDE_CPR_TOUCH_VIEWS: ViewDef[] = [
     order: 20,
   },
   { key: "INCPR-C-C-BB-OA-CL3U3", label: "C-C-BB-OA-CL3U3", parentKey: "INCPR-C-C-BB-OA", kind: "pattern", condition: (r) => r.CL3U3, order: 0 },
+  { key: "INCPR-C-C-BB-OA-CL3U2", label: "C-C-BB-OA-CL3U2", parentKey: "INCPR-C-C-BB-OA", kind: "pattern", condition: (r) => r.CL3U2, order: 1 },
+  { key: "INCPR-C-C-BB-OA-CL4U4", label: "C-C-BB-OA-CL4U4", parentKey: "INCPR-C-C-BB-OA", kind: "pattern", condition: (r) => r.CL4U4, order: 2 },
+  { key: "INCPR-C-C-BB-OA-CL4U3", label: "C-C-BB-OA-CL4U3", parentKey: "INCPR-C-C-BB-OA", kind: "pattern", condition: (r) => r.CL4U3, order: 3 },
+  { key: "INCPR-C-C-BB-OA-CU4L3", label: "C-C-BB-OA-CU4L3", parentKey: "INCPR-C-C-BB-OA", kind: "pattern", condition: (r) => r.CU4L3, order: 4 },
 
   // --- A-C-C-OA (order 21) ---
   {
