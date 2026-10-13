@@ -7,7 +7,12 @@ import BacktestPanel from "@/pages/BacktestPanel";
 import SignalDesk, { type SignalDeskSymbol, type FocusSymbol, buildPills, computeSignalLevels } from "@/pages/SignalDesk";
 import type { CPRResultWithSource, ActiveTab } from "@/pages/ScreenerUtils";
 import { passesPattern } from "@/pages/ScreenerUtils";
-import { autoSaveQualifiedSignals, isSignalCompletedToday } from "@/lib/signalTracker";
+import {
+  autoSaveQualifiedSignals,
+  fetchSavedSignalsFromCloud,
+  isSignalCompletedToday,
+  SIGNALS_JOURNAL_UPDATED_EVENT,
+} from "@/lib/signalTracker";
 import { LiveEntryCrossMonitor, type EntryCrossCandidate } from "@/lib/liveEntryCrossMonitor";
 import {
   playEntryCrossAlert,
@@ -156,6 +161,28 @@ function App() {
     setScanKey((k) => k + 1);
   }, []);
 
+  // Bumped whenever the Journal changes (local outcome updates, other tabs,
+  // cloud sync) so the candidate list is rebuilt and PASS/FAIL setups drop out
+  // immediately instead of waiting for the next scan.
+  const [journalRevision, setJournalRevision] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    const bump = () => setJournalRevision((n) => n + 1);
+    const syncCloud = () => {
+      void fetchSavedSignalsFromCloud().then(() => {
+        if (!cancelled) bump();
+      });
+    };
+    syncCloud();
+    const timer = window.setInterval(syncCloud, 60_000);
+    window.addEventListener(SIGNALS_JOURNAL_UPDATED_EVENT, bump);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+      window.removeEventListener(SIGNALS_JOURNAL_UPDATED_EVENT, bump);
+    };
+  }, []);
+
   // Derive eligible setups from the scan, then use exchange trade streams to
   // catch their entry crossing. This prevents the next 15-second REST refresh
   // from being mislabeled as the time of entry.
@@ -204,7 +231,13 @@ function App() {
     // Drop setups already PASS/FAIL/EXPIRED today, or whose target was
     // already hit this session — no more alerts or Journal writes for them.
     return candidates.filter((c) => {
-      if (isSignalCompletedToday(c.symbol, c.direction, c.payload.patternName, c.source)) {
+      if (isSignalCompletedToday(
+          c.symbol,
+          c.direction,
+          c.payload.patternName,
+          c.source,
+          c.payload.patternId,
+        )) {
         return false;
       }
       const row = signalResults.find(
@@ -224,7 +257,7 @@ function App() {
       }
       return true;
     });
-  }, [signalResults]);
+  }, [signalResults, journalRevision]);
 
   const entryMonitorRef = useRef<LiveEntryCrossMonitor | null>(null);
   useEffect(() => {
@@ -236,6 +269,7 @@ function App() {
         candidate.direction,
         candidate.payload.patternName,
         candidate.source,
+        candidate.payload.patternId,
       )) {
         return;
       }

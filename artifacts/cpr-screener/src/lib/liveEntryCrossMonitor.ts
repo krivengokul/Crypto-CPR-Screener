@@ -25,6 +25,28 @@ export type EntryCrossCandidate = {
   };
 };
 
+const FIRED_STORAGE_KEY = "cpr-entry-cross-fired";
+const utcDay = () => new Date().toISOString().slice(0, 10);
+
+/** Keys already alerted today, kept in sessionStorage so a reload doesn't re-arm them. */
+function loadFiredToday(): Set<string> {
+  try {
+    const raw = sessionStorage.getItem(FIRED_STORAGE_KEY);
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw) as { day?: string; keys?: string[] };
+    if (parsed.day !== utcDay() || !Array.isArray(parsed.keys)) return new Set();
+    return new Set(parsed.keys);
+  } catch {
+    return new Set();
+  }
+}
+
+function saveFiredToday(keys: Set<string>) {
+  try {
+    sessionStorage.setItem(FIRED_STORAGE_KEY, JSON.stringify({ day: utcDay(), keys: [...keys] }));
+  } catch { /* storage unavailable: in-memory only */ }
+}
+
 type TradeEvent = { source: "binance" | "delta"; symbol: string; price: number; timestamp: number };
 
 /**
@@ -36,7 +58,10 @@ type TradeEvent = { source: "binance" | "delta"; symbol: string; price: number; 
 export class LiveEntryCrossMonitor {
   private candidates = new Map<string, EntryCrossCandidate>();
   private previousPrice = new Map<string, number>();
-  private fired = new Set<string>();
+  // Alerted keys stay armed-off for the whole UTC day, even if the candidate
+  // temporarily drops out of the list and comes back (scan refresh, reorder).
+  private fired = loadFiredToday();
+  private firedDay = utcDay();
   private binanceSocket: WebSocket | null = null;
   private deltaSocket: WebSocket | null = null;
   private binanceSubscribed = new Set<string>();
@@ -50,6 +75,12 @@ export class LiveEntryCrossMonitor {
   constructor(private readonly onCross: (candidate: EntryCrossCandidate, price: number, timestamp: number) => void) {}
 
   update(candidates: EntryCrossCandidate[]) {
+    const today = utcDay();
+    if (today !== this.firedDay) {
+      this.firedDay = today;
+      this.fired.clear();
+      saveFiredToday(this.fired);
+    }
     const next = new Map(candidates.map((candidate) => [candidate.key, candidate]));
     for (const candidate of candidates) {
       if (!this.candidates.has(candidate.key)) {
@@ -59,7 +90,6 @@ export class LiveEntryCrossMonitor {
     for (const key of this.candidates.keys()) {
       if (!next.has(key)) {
         this.previousPrice.delete(key);
-        this.fired.delete(key);
       }
     }
     this.candidates = next;
@@ -91,6 +121,7 @@ export class LiveEntryCrossMonitor {
       : previous > candidate.entry && price <= candidate.entry;
     if (!crossed) return;
     this.fired.add(key);
+    saveFiredToday(this.fired);
     this.onCross(candidate, price, timestamp);
   }
 

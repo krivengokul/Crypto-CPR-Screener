@@ -48,31 +48,56 @@ const SIGNALS_COLLECTION = "signalsJournal";
 const SIGNALS_LOCAL_KEY = "cpr_signals_journal_cache";
 export const SIGNALS_JOURNAL_UPDATED_EVENT = "cpr-signals-journal-updated";
 
+/** Journal rows use Up/Down and LONG/SHORT interchangeably. */
+function normalizeSignalDirection(d: unknown): string {
+  const x = String(d ?? "").trim().toUpperCase();
+  if (x === "UP" || x === "LONG") return "UP";
+  if (x === "DOWN" || x === "SHORT") return "DOWN";
+  return x;
+}
+
 /**
  * True when today's Journal already has a terminal outcome (PASS/FAIL/EXPIRED)
  * for this symbol+direction+pattern. Once resolved for the day, ignore further
  * entry-cross alerts and auto-saves for that setup.
+ *
+ * Matching is tolerant: direction is normalised (Up/LONG, Down/SHORT) and the
+ * pattern may match by display name or by patternId, so a PASS row is found
+ * even when the stored label/direction spelling differs slightly.
  */
 export function isSignalCompletedToday(
   symbol: string,
   direction: string,
   patternName: string,
   source?: string,
+  patternId?: string,
 ): boolean {
   const todayKey = new Date().toISOString().slice(0, 10);
   const patternSlug = patternName.replace(/[^a-zA-Z0-9]/g, "_").toUpperCase();
   const deterministicId = `${symbol}-${direction}-${patternSlug}-${todayKey}`;
+  const sym = symbol.toUpperCase();
+  const dir = normalizeSignalDirection(direction);
   const local = getLocalSignalsCache();
+
   for (const s of local) {
-    if (s.id === deterministicId || (
-      s.symbol?.toUpperCase() === symbol.toUpperCase() &&
-      String(s.direction) === String(direction) &&
-      (s.patternName === patternName) &&
-      (!source || s.source === source) &&
+    if (s.status !== "PASS" && s.status !== "FAIL" && s.status !== "EXPIRED") continue;
+    if (s.id === deterministicId) return true;
+    if (s.symbol?.toUpperCase() !== sym) continue;
+    if (source && s.source !== source) continue;
+    if (normalizeSignalDirection(s.direction) !== dir) continue;
+
+    const samePattern =
+      s.patternName === patternName ||
+      (!!patternId && !!s.patternId && s.patternId === patternId) ||
+      (!!s.patternId && s.patternId === patternName) ||
+      (!!patternId && s.patternName === patternId);
+    if (!samePattern) continue;
+
+    if (
       Number.isFinite(s.timestamp) &&
       new Date(s.timestamp).toISOString().slice(0, 10) === todayKey
-    )) {
-      if (s.status === "PASS" || s.status === "FAIL" || s.status === "EXPIRED") return true;
+    ) {
+      return true;
     }
   }
   return false;
@@ -442,6 +467,8 @@ export async function updateSignalOutcomeInCloud(
   // 1. Update local cache immediately
   const localList = getLocalSignalsCache().map((s) => (s.id === id ? { ...s, ...update } : s));
   saveLocalSignalsCache(localList);
+  const updatedRow = localList.find((s) => s.id === id);
+  if (updatedRow) notifySignalsJournalUpdated([updatedRow]);
 
   try {
     const uid = await ensureSignedIn();
