@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, type MouseEvent as ReactMouseEvent } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -274,7 +274,12 @@ function App() {
         description: `${candidate.symbol} (${candidate.source}) ${dir} · ${viewPart} · trade ${px} crossed entry ${entry}`,
         duration: 12_000,
         className: "cursor-pointer",
-        onClick: openSignalDeskTab,
+        // Body click → SignalDesk. Ignore the X close control (and its icon).
+        onClick: (e: ReactMouseEvent) => {
+          const el = e.target as HTMLElement | null;
+          if (el?.closest?.("[toast-close], [data-radix-toast-close]")) return;
+          openSignalDeskTab();
+        },
       });
 
       void autoSaveQualifiedSignals([{
