@@ -155,13 +155,30 @@ export interface SignalItem {
 
 type StatusFilter = "all" | "saved" | "ready" | "pass" | "fail";
 
+// Journal day key (UTC). CPR session rolls at 00:00 UTC (~5:30 AM IST), so
+// after the morning scan, only rows from this UTC date are "today".
+function journalDayKey(ts?: number): string | null {
+  if (!Number.isFinite(ts) || !ts) return null;
+  return new Date(ts as number).toISOString().slice(0, 10);
+}
+
+function utcTodayKey(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
 // The journal keeps ONE record per symbol/direction/pattern per UTC day, so a
 // journal outcome only describes the card's setup if it is from today.
 // Without this, yesterday's PASS would show on today's fresh "Ready" card.
 function currentJournalStatus(match: LoggedSignal | undefined): SignalItem["journalStatus"] {
-  if (!match || !Number.isFinite(match.timestamp) || !match.timestamp) return undefined;
-  const day = new Date(match.timestamp).toISOString().slice(0, 10);
-  return day === new Date().toISOString().slice(0, 10) ? match.status : undefined;
+  if (!match) return undefined;
+  const day = journalDayKey(match.timestamp);
+  return day && day === utcTodayKey() ? match.status : undefined;
+}
+
+function isJournalMatchToday(match: LoggedSignal | undefined): boolean {
+  if (!match) return false;
+  const day = journalDayKey(match.timestamp);
+  return !!day && day === utcTodayKey();
 }
 
 // Which top-level Views bucket a View id lives under — e.g. "compressed",
@@ -648,11 +665,15 @@ export default function SignalDesk({
     };
   }, []);
 
-  // source:SYMBOL:patternId|patternName -> newest journal row. O(1) lookups
-  // instead of filter+sort over every journal row for every card.
+  // source:SYMBOL:patternId|patternName -> newest **today** journal row.
+  // Yesterday's PASS/FAIL/ACTIVE must not paint today's cards after the
+  // UTC day rolls (~5:30 AM IST) and Screener has rescanned.
   const journalByKey = useMemo(() => {
+    const today = utcTodayKey();
     const map = new Map<string, LoggedSignal>();
     for (const saved of journalSignals) {
+      const day = journalDayKey(saved.timestamp);
+      if (day !== today) continue;
       const key = `${saved.source}:${saved.symbol.toUpperCase()}:${saved.patternId || saved.patternName || ""}`;
       const prev = map.get(key);
       if (!prev || (saved.timestamp || 0) > (prev.timestamp || 0)) map.set(key, saved);
@@ -830,18 +851,20 @@ export default function SignalDesk({
         // can match against sub.id.
         const patternId = levels ? levels.patternId : (selectedSignalId || activeSignal || "");
 
-        // Same trigger check the Journal auto-save effect uses — this is
-        // display-only here, so a card can show "Ready" vs "Running" without
-        // waiting for the next auto-save tick to resolve.
-        const isTriggered = levels
+        // Triggered = today's journal row exists, OR live price has crossed
+        // entry (provisional Active before auto-save). Yesterday's journal is
+        // already excluded from journalByKey after the UTC day roll.
+        const journalMatch = levels
+          ? getJournalMatch(sym.source, sym.symbol, patternId, patternLabel)
+          : undefined;
+        const journalStatus = currentJournalStatus(journalMatch);
+        const priceTouched = levels
           ? hasTouchedEntry(levels.direction, levels.price, sym.currentPrice)
           : false;
+        const isTriggered = !!journalStatus || priceTouched;
 
-        const triggeredAt = isTriggered
+        const triggeredAt = isJournalMatchToday(journalMatch)
           ? getTriggeredAt(sym.source, sym.symbol, patternId, patternLabel)
-          : undefined;
-        const journalStatus = levels
-          ? currentJournalStatus(getJournalMatch(sym.source, sym.symbol, patternId, patternLabel))
           : undefined;
 
         // MATCH (level-check) for this card's View — same score as Screener MATCH column
@@ -944,18 +967,20 @@ export default function SignalDesk({
         ? levels.rrRatio
         : (Math.abs(targetPrice - price) / Math.max(0.0000001, Math.abs(price - stopPrice))).toFixed(1);
 
-      // Same trigger check the Journal auto-save effect uses — display-only
-      // here so a card can show "Ready" vs "Running" without waiting for the
-      // next auto-save tick to resolve.
-      const isTriggered = levels
+      // Triggered = today's journal row exists, OR live price has crossed
+      // entry (provisional Active before auto-save). Yesterday's journal is
+      // already excluded from journalByKey after the UTC day roll.
+      const journalMatch = levels
+        ? getJournalMatch(r.source, r.symbol, patternId, patternLabel)
+        : undefined;
+      const journalStatus = currentJournalStatus(journalMatch);
+      const priceTouched = levels
         ? hasTouchedEntry(levels.direction, levels.price, r.currentPrice)
         : false;
+      const isTriggered = !!journalStatus || priceTouched;
 
-      const triggeredAt = isTriggered
+      const triggeredAt = isJournalMatchToday(journalMatch)
         ? getTriggeredAt(r.source, r.symbol, patternId, patternLabel)
-        : undefined;
-      const journalStatus = levels
-        ? currentJournalStatus(getJournalMatch(r.source, r.symbol, patternId, patternLabel))
         : undefined;
 
       // MATCH (level-check) for this card's View — same score as Screener MATCH column
