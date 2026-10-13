@@ -1231,69 +1231,61 @@ R:R: ${item.riskReward}`;
           </div>
         </div>
 
-        {/* Quick Stats Counter Badges — kept to a single non-wrapping row;
-            scrolls horizontally on very narrow viewports rather than
-            dropping badges to a second line. */}
-        <div className="flex items-center gap-2 flex-nowrap overflow-x-auto">
-          <div className="shrink-0 bg-[#131b26] border border-[#1e2d3d] rounded-lg px-3 py-1.5 flex items-center gap-2 text-xs text-emerald-400">
-            <Cloud className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="font-medium text-slate-300">
-              Active (In Journal): <strong className="text-emerald-400 font-mono font-bold">{stats.saved}</strong>
-            </span>
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          </div>
+        {/* Quick Stats Counter Badges — badges may scroll on narrow widths;
+            scan label sits outside the scroll area in the trailing gap. */}
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-2 flex-nowrap overflow-x-auto min-w-0 flex-1">
+            <div className="shrink-0 bg-[#131b26] border border-[#1e2d3d] rounded-lg px-3 py-1.5 flex items-center gap-2 text-xs text-emerald-400">
+              <Cloud className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="font-medium text-slate-300">
+                Active (In Journal): <strong className="text-emerald-400 font-mono font-bold">{stats.saved}</strong>
+              </span>
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            </div>
 
-          <div className="shrink-0 bg-[#131b26] border border-[#1e2d3d] rounded-lg px-3 py-1.5 flex items-center gap-2 text-xs text-amber-400">
-            <Clock className="w-3.5 h-3.5 text-amber-400" />
-            <span className="font-medium text-slate-300">
-              Ready: <strong className="text-amber-400 font-mono font-bold">{stats.ready}</strong>
-            </span>
-          </div>
-
-          <div className="shrink-0 bg-[#131b26] border border-emerald-500/30 rounded-lg px-3 py-1.5 flex items-center gap-2 text-xs">
-            <span className="font-medium text-slate-300">
-              Pass: <strong className="text-emerald-400 font-mono font-bold">{stats.pass}</strong>
-            </span>
-          </div>
-          <div className="shrink-0 bg-[#131b26] border border-rose-500/30 rounded-lg px-3 py-1.5 flex items-center gap-2 text-xs">
-            <span className="font-medium text-slate-300">
-              Fail: <strong className="text-rose-400 font-mono font-bold">{stats.fail}</strong>
-            </span>
-          </div>
-
-          <div className="shrink-0 bg-[#131b26] border border-[#1e2d3d] rounded-lg px-3 py-1.5 flex items-center gap-2">
-            <span className="text-[11px] text-slate-400 font-medium">Signals:</span>
-            <span className="text-sm font-bold text-white font-mono">{stats.total}</span>
-          </div>
-          <div className="shrink-0 bg-[#131b26] border border-emerald-500/30 rounded-lg px-3 py-1.5 flex items-center gap-2">
-            <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="text-[11px] text-emerald-400 font-medium">Up:</span>
-            <span className="text-sm font-bold text-emerald-400 font-mono">{stats.upCount}</span>
-          </div>
-          <div className="shrink-0 bg-[#131b26] border border-rose-500/30 rounded-lg px-3 py-1.5 flex items-center gap-2">
-            <TrendingDown className="w-3.5 h-3.5 text-rose-400" />
-            <span className="text-[11px] text-rose-400 font-medium">Down:</span>
-            <span className="text-sm font-bold text-rose-400 font-mono">{stats.downCount}</span>
-          </div>
-        </div>
-
-        {scanBadge && (
-          <div
-            className="mt-1.5 flex justify-end"
-            title="Time of the last completed scan feeding this view"
-          >
-            <div className="inline-flex items-center gap-1.5 bg-[#131b26] border border-emerald-500/25 rounded-lg px-3 py-1 text-[11px] leading-none text-emerald-300/90 whitespace-nowrap">
-              <Clock className="w-3 h-3 text-emerald-400 shrink-0" />
-              <span>
-                Scanned <span className="font-semibold text-emerald-300">{scanBadge.label}</span>
-                {" "}
-                <span className="text-emerald-300/80">
-                  @ {formatScanTime(scanBadge.savedAt)} ({formatScanDate(scanBadge.savedAt)})
-                </span>
+            <div className="shrink-0 bg-[#131b26] border border-[#1e2d3d] rounded-lg px-3 py-1.5 flex items-center gap-2 text-xs text-amber-400">
+              <Clock className="w-3.5 h-3.5 text-amber-400" />
+              <span className="font-medium text-slate-300">
+                Ready: <strong className="text-amber-400 font-mono font-bold">{stats.ready}</strong>
               </span>
             </div>
+
+            <div className="shrink-0 bg-[#131b26] border border-emerald-500/30 rounded-lg px-3 py-1.5 flex items-center gap-2 text-xs">
+              <span className="font-medium text-slate-300">
+                Pass: <strong className="text-emerald-400 font-mono font-bold">{stats.pass}</strong>
+              </span>
+            </div>
+            <div className="shrink-0 bg-[#131b26] border border-rose-500/30 rounded-lg px-3 py-1.5 flex items-center gap-2 text-xs">
+              <span className="font-medium text-slate-300">
+                Fail: <strong className="text-rose-400 font-mono font-bold">{stats.fail}</strong>
+              </span>
+            </div>
+
+            <div className="shrink-0 bg-[#131b26] border border-[#1e2d3d] rounded-lg px-3 py-1.5 flex items-center gap-2">
+              <span className="text-[11px] text-slate-400 font-medium">Signals:</span>
+              <span className="text-sm font-bold text-white font-mono">{stats.total}</span>
+            </div>
+            <div className="shrink-0 bg-[#131b26] border border-emerald-500/30 rounded-lg px-3 py-1.5 flex items-center gap-2">
+              <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="text-[11px] text-emerald-400 font-medium">Up:</span>
+              <span className="text-sm font-bold text-emerald-400 font-mono">{stats.upCount}</span>
+            </div>
+            <div className="shrink-0 bg-[#131b26] border border-rose-500/30 rounded-lg px-3 py-1.5 flex items-center gap-2">
+              <TrendingDown className="w-3.5 h-3.5 text-rose-400" />
+              <span className="text-[11px] text-rose-400 font-medium">Down:</span>
+              <span className="text-sm font-bold text-rose-400 font-mono">{stats.downCount}</span>
+            </div>
           </div>
-        )}
+
+          {scanBadge && (
+            <span
+              className="shrink-0 text-[10px] leading-none text-emerald-300/80 whitespace-nowrap"
+              title="Time of the last completed scan feeding this view"
+            >
+              Scanned {scanBadge.label} @ {formatScanTime(scanBadge.savedAt)} ({formatScanDate(scanBadge.savedAt)})
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Available Views with Counts Strip (Wrapping chips from sidebar with count > 0) */}
