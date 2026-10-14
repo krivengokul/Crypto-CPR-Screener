@@ -35,21 +35,6 @@ export const COPY_VIEWS: ViewDef[] = [
       order: 1
 },
   {
-    key: "A-A-AA-AA-U3L3-SL-PAR1:R4",
-    label: "A-A-AA-AA-U3L3-SL-PAR1:R4",
-    parentKey: "A-A-AA-AA-U3L3",
-    conditionKey: "A6-U3L3-SLBBG-R4",
-    kind: "view",
-    direction: "Up",
-    targetLabel: "R4",
-    getTarget: (r) => r.todayCPR.r4,
-    entryLabel: "TC",
-    getEntry: (r) => r.todayCPR.tc,
-    stoplossLabel: "S1",
-    getStoploss: (r) => r.todayCPR.s1,
-      order: 2
-},
-  {
     key: "A-A-AA-AA-EUBL2-pS4S2:R2",
     label: "A-A-AA-AA-EUBL2-pS4S2:R2",
     parentKey: "A-A-AA-AA-EUBL2",
