@@ -188,6 +188,9 @@ const OVB_UNCLASSIFIED_PATTERNS = buildUnclassifiedTouchPatterns("OVB-Unclassifi
   "A-B-C-LB-EL4U4",
   "B-A-HA-OB-L4U4",
   "B-E-OB-OB-EL3U4",
+  "B-A-OB-E-CL4U4",
+  "C-B-OB-LB-CL4U4",
+  "B-A-OB-C-CL4U3",
 ]);
 
 export const OVERLAP_ABOVE_TOUCH_VIEWS: ViewDef[] = [
@@ -1720,6 +1723,12 @@ export const OVERLAP_BELOW_TOUCH_VIEWS: ViewDef[] = [
     condition: (r) => r.CL4U4,
     order: 0,
   },
+  { key: "OVB-C-B-BB-LB-CL3U3", label: "C-B-BB-LB-CL3U3", parentKey: "OVB-C-B-BB-LB", kind: "pattern", condition: (r) => r.CL3U3, order: 1 },
+  { key: "OVB-C-B-BB-LB-CL3U2", label: "C-B-BB-LB-CL3U2", parentKey: "OVB-C-B-BB-LB", kind: "pattern", condition: (r) => r.CL3U2, order: 2 },
+  { key: "OVB-C-B-BB-LB-CL2U2", label: "C-B-BB-LB-CL2U2", parentKey: "OVB-C-B-BB-LB", kind: "pattern", condition: (r) => r.CL2U2, order: 3 },
+  { key: "OVB-C-B-BB-LB-CL4U3", label: "C-B-BB-LB-CL4U3", parentKey: "OVB-C-B-BB-LB", kind: "pattern", condition: (r) => r.CL4U3, order: 4 },
+  { key: "OVB-C-B-BB-LB-L4U4", label: "C-B-BB-LB-L4U4", parentKey: "OVB-C-B-BB-LB", kind: "pattern", condition: (r) => r.L4U4, order: 5 },
+  { key: "OVB-C-B-BB-LB-CU4L3", label: "C-B-BB-LB-CU4L3", parentKey: "OVB-C-B-BB-LB", kind: "pattern", condition: (r) => r.CU4L3, order: 6 },
 
   // Added from PatternStats "Missing Subpatterns" (Overlap Below 101-row
   // unclassified breakdown) — one duplicate top node per distinct
@@ -1758,6 +1767,7 @@ export const OVERLAP_BELOW_TOUCH_VIEWS: ViewDef[] = [
   { key: "OVB-B-E-HA-BB-EU2L2", label: "B-E-HA-BB-EU2L2", parentKey: "OVB-B-E-HA-BB", kind: "pattern", condition: (r) => r.EU2L2, order: 3 },
   { key: "OVB-B-E-HA-BB-L4U4", label: "B-E-HA-BB-L4U4", parentKey: "OVB-B-E-HA-BB", kind: "pattern", condition: (r) => r.L4U4, order: 4 },
   { key: "OVB-B-E-HA-BB-L3U4", label: "B-E-HA-BB-L3U4", parentKey: "OVB-B-E-HA-BB", kind: "pattern", condition: (r) => r.L3U4, order: 5 },
+  { key: "OVB-B-E-HA-BB-EL4U4", label: "B-E-HA-BB-EL4U4", parentKey: "OVB-B-E-HA-BB", kind: "pattern", condition: (r) => r.EL4U4, order: 6 },
 
   // --- B-E-E-BB (order 2) ---
   {
@@ -1779,6 +1789,7 @@ export const OVERLAP_BELOW_TOUCH_VIEWS: ViewDef[] = [
   { key: "OVB-B-E-E-BB-EL2U3", label: "B-E-E-BB-EL2U3", parentKey: "OVB-B-E-E-BB", kind: "pattern", condition: (r) => r.EL2U3, order: 1 },
   { key: "OVB-B-E-E-BB-EL3U3", label: "B-E-E-BB-EL3U3", parentKey: "OVB-B-E-E-BB", kind: "pattern", condition: (r) => r.EL3U3, order: 2 },
   { key: "OVB-B-E-E-BB-EL2U4", label: "B-E-E-BB-EL2U4", parentKey: "OVB-B-E-E-BB", kind: "pattern", condition: (r) => r.EL2U4, order: 3 },
+  { key: "OVB-B-E-E-BB-EL4U4", label: "B-E-E-BB-EL4U4", parentKey: "OVB-B-E-E-BB", kind: "pattern", condition: (r) => r.EL4U4, order: 4 },
 
   // --- B-A-HA-SB (order 3) ---
   {
@@ -1798,6 +1809,8 @@ export const OVERLAP_BELOW_TOUCH_VIEWS: ViewDef[] = [
   { key: "OVB-B-A-HA-SB-CL4U3", label: "B-A-HA-SB-CL4U3", parentKey: "OVB-B-A-HA-SB", kind: "pattern", condition: (r) => r.CL4U3, order: 2 },
   { key: "OVB-B-A-HA-SB-EL3U4", label: "B-A-HA-SB-EL3U4", parentKey: "OVB-B-A-HA-SB", kind: "pattern", condition: (r) => r.EL3U4, order: 3 },
   { key: "OVB-B-A-HA-SB-L3U4", label: "B-A-HA-SB-L3U4", parentKey: "OVB-B-A-HA-SB", kind: "pattern", condition: (r) => r.L3U4, order: 4 },
+  { key: "OVB-B-A-HA-SB-CL4U4", label: "B-A-HA-SB-CL4U4", parentKey: "OVB-B-A-HA-SB", kind: "pattern", condition: (r) => r.CL4U4, order: 5 },
+  { key: "OVB-B-A-HA-SB-L4U3", label: "B-A-HA-SB-L4U3", parentKey: "OVB-B-A-HA-SB", kind: "pattern", condition: (r) => r.L4U3, order: 6 },
 
   // --- E-E-AA-BB (order 4) ---
   {
@@ -1817,6 +1830,7 @@ export const OVERLAP_BELOW_TOUCH_VIEWS: ViewDef[] = [
   { key: "OVB-E-E-AA-BB-EU2L2", label: "E-E-AA-BB-EU2L2", parentKey: "OVB-E-E-AA-BB", kind: "pattern", condition: (r) => r.EU2L2, order: 0 },
   { key: "OVB-E-E-AA-BB-EL3U3", label: "E-E-AA-BB-EL3U3", parentKey: "OVB-E-E-AA-BB", kind: "pattern", condition: (r) => r.EL3U3, order: 1 },
   { key: "OVB-E-E-AA-BB-EL2U3", label: "E-E-AA-BB-EL2U3", parentKey: "OVB-E-E-AA-BB", kind: "pattern", condition: (r) => r.EL2U3, order: 2 },
+  { key: "OVB-E-E-AA-BB-EL4U4", label: "E-E-AA-BB-EL4U4", parentKey: "OVB-E-E-AA-BB", kind: "pattern", condition: (r) => r.EL4U4, order: 3 },
 
   // --- B-E-C-BB (order 5) ---
   {
@@ -1834,6 +1848,7 @@ export const OVERLAP_BELOW_TOUCH_VIEWS: ViewDef[] = [
   { key: "OVB-B-E-C-BB-L4U4", label: "B-E-C-BB-L4U4", parentKey: "OVB-B-E-C-BB", kind: "pattern", condition: (r) => r.L4U4, order: 0 },
   { key: "OVB-B-E-C-BB-EL3U3", label: "B-E-C-BB-EL3U3", parentKey: "OVB-B-E-C-BB", kind: "pattern", condition: (r) => r.EL3U3, order: 1 },
   { key: "OVB-B-E-C-BB-EL3U4", label: "B-E-C-BB-EL3U4", parentKey: "OVB-B-E-C-BB", kind: "pattern", condition: (r) => r.EL3U4, order: 2 },
+  { key: "OVB-B-E-C-BB-EL4U4", label: "B-E-C-BB-EL4U4", parentKey: "OVB-B-E-C-BB", kind: "pattern", condition: (r) => r.EL4U4, order: 3 },
 
   // --- B-C-BB-SB (order 6) ---
   {
@@ -1850,6 +1865,10 @@ export const OVERLAP_BELOW_TOUCH_VIEWS: ViewDef[] = [
   },
   { key: "OVB-B-C-BB-SB-CL4U3", label: "B-C-BB-SB-CL4U3", parentKey: "OVB-B-C-BB-SB", kind: "pattern", condition: (r) => r.CL4U3, order: 0 },
   { key: "OVB-B-C-BB-SB-L4U3", label: "B-C-BB-SB-L4U3", parentKey: "OVB-B-C-BB-SB", kind: "pattern", condition: (r) => r.L4U3, order: 1 },
+  { key: "OVB-B-C-BB-SB-CL3U3", label: "B-C-BB-SB-CL3U3", parentKey: "OVB-B-C-BB-SB", kind: "pattern", condition: (r) => r.CL3U3, order: 2 },
+  { key: "OVB-B-C-BB-SB-CL4U4", label: "B-C-BB-SB-CL4U4", parentKey: "OVB-B-C-BB-SB", kind: "pattern", condition: (r) => r.CL4U4, order: 3 },
+  { key: "OVB-B-C-BB-SB-L4U4", label: "B-C-BB-SB-L4U4", parentKey: "OVB-B-C-BB-SB", kind: "pattern", condition: (r) => r.L4U4, order: 4 },
+  { key: "OVB-B-C-BB-SB-CL3U2", label: "B-C-BB-SB-CL3U2", parentKey: "OVB-B-C-BB-SB", kind: "pattern", condition: (r) => r.CL3U2, order: 5 },
 
   // --- B-A-HA-C (order 7) ---
   {
@@ -1865,6 +1884,8 @@ export const OVERLAP_BELOW_TOUCH_VIEWS: ViewDef[] = [
     order: 7,
   },
   { key: "OVB-B-A-HA-C-CL4U4", label: "B-A-HA-C-CL4U4", parentKey: "OVB-B-A-HA-C", kind: "pattern", condition: (r) => r.CL4U4, order: 0 },
+  { key: "OVB-B-A-HA-C-CL4U3", label: "B-A-HA-C-CL4U3", parentKey: "OVB-B-A-HA-C", kind: "pattern", condition: (r) => r.CL4U3, order: 1 },
+  { key: "OVB-B-A-HA-C-L4U4", label: "B-A-HA-C-L4U4", parentKey: "OVB-B-A-HA-C", kind: "pattern", condition: (r) => r.L4U4, order: 2 },
 
   // --- E-B-E-BB (order 8) ---
   {
@@ -1880,6 +1901,9 @@ export const OVERLAP_BELOW_TOUCH_VIEWS: ViewDef[] = [
     order: 8,
   },
   { key: "OVB-E-B-E-BB-EL3U3", label: "E-B-E-BB-EL3U3", parentKey: "OVB-E-B-E-BB", kind: "pattern", condition: (r) => r.EL3U3, order: 0 },
+  { key: "OVB-E-B-E-BB-EL4U4", label: "E-B-E-BB-EL4U4", parentKey: "OVB-E-B-E-BB", kind: "pattern", condition: (r) => r.EL4U4, order: 1 },
+  { key: "OVB-E-B-E-BB-EL3U4", label: "E-B-E-BB-EL3U4", parentKey: "OVB-E-B-E-BB", kind: "pattern", condition: (r) => r.EL3U4, order: 2 },
+  { key: "OVB-E-B-E-BB-EU3L4", label: "E-B-E-BB-EU3L4", parentKey: "OVB-E-B-E-BB", kind: "pattern", condition: (r) => r.EU3L4, order: 3 },
 
   // --- E-E-OA-BB (order 9) ---
   {
@@ -1896,6 +1920,9 @@ export const OVERLAP_BELOW_TOUCH_VIEWS: ViewDef[] = [
   },
   { key: "OVB-E-E-OA-BB-EL2U3", label: "E-E-OA-BB-EL2U3", parentKey: "OVB-E-E-OA-BB", kind: "pattern", condition: (r) => r.EL2U3, order: 0 },
   { key: "OVB-E-E-OA-BB-EL3U4", label: "E-E-OA-BB-EL3U4", parentKey: "OVB-E-E-OA-BB", kind: "pattern", condition: (r) => r.EL3U4, order: 1 },
+  { key: "OVB-E-E-OA-BB-EL3U3", label: "E-E-OA-BB-EL3U3", parentKey: "OVB-E-E-OA-BB", kind: "pattern", condition: (r) => r.EL3U3, order: 2 },
+  { key: "OVB-E-E-OA-BB-EL4U4", label: "E-E-OA-BB-EL4U4", parentKey: "OVB-E-E-OA-BB", kind: "pattern", condition: (r) => r.EL4U4, order: 3 },
+  { key: "OVB-E-E-OA-BB-EU3L4", label: "E-E-OA-BB-EU3L4", parentKey: "OVB-E-E-OA-BB", kind: "pattern", condition: (r) => r.EU3L4, order: 4 },
 
   // --- C-C-BB-AA (order 10) ---
   {
@@ -1916,6 +1943,12 @@ export const OVERLAP_BELOW_TOUCH_VIEWS: ViewDef[] = [
   { key: "OVB-C-C-BB-AA-CL3U3", label: "C-C-BB-AA-CL3U3", parentKey: "OVB-C-C-BB-AA", kind: "pattern", condition: (r) => r.CL3U3, order: 1 },
   { key: "OVB-C-C-BB-AA-CL2U2", label: "C-C-BB-AA-CL2U2", parentKey: "OVB-C-C-BB-AA", kind: "pattern", condition: (r) => r.CL2U2, order: 2 },
   { key: "OVB-C-C-BB-AA-CL3U2", label: "C-C-BB-AA-CL3U2", parentKey: "OVB-C-C-BB-AA", kind: "pattern", condition: (r) => r.CL3U2, order: 3 },
+  { key: "OVB-C-C-BB-AA-CL1U1", label: "C-C-BB-AA-CL1U1", parentKey: "OVB-C-C-BB-AA", kind: "pattern", condition: (r) => r.CL1U1, order: 4 },
+  { key: "OVB-C-C-BB-AA-CU1L1", label: "C-C-BB-AA-CU1L1", parentKey: "OVB-C-C-BB-AA", kind: "pattern", condition: (r) => r.CU1L1, order: 5 },
+  { key: "OVB-C-C-BB-AA-CL2U1", label: "C-C-BB-AA-CL2U1", parentKey: "OVB-C-C-BB-AA", kind: "pattern", condition: (r) => r.CL2U1, order: 6 },
+  { key: "OVB-C-C-BB-AA-CL4U3", label: "C-C-BB-AA-CL4U3", parentKey: "OVB-C-C-BB-AA", kind: "pattern", condition: (r) => r.CL4U3, order: 7 },
+  { key: "OVB-C-C-BB-AA-CU2L1", label: "C-C-BB-AA-CU2L1", parentKey: "OVB-C-C-BB-AA", kind: "pattern", condition: (r) => r.CU2L1, order: 8 },
+  { key: "OVB-C-C-BB-AA-CU4L3", label: "C-C-BB-AA-CU4L3", parentKey: "OVB-C-C-BB-AA", kind: "pattern", condition: (r) => r.CU4L3, order: 9 },
 
   // --- E-B-RA-BB (order 11) ---
   {
@@ -1931,6 +1964,10 @@ export const OVERLAP_BELOW_TOUCH_VIEWS: ViewDef[] = [
     order: 11,
   },
   { key: "OVB-E-B-RA-BB-EL4U4", label: "E-B-RA-BB-EL4U4", parentKey: "OVB-E-B-RA-BB", kind: "pattern", condition: (r) => r.EL4U4, order: 0 },
+  { key: "OVB-E-B-RA-BB-EL3U3", label: "E-B-RA-BB-EL3U3", parentKey: "OVB-E-B-RA-BB", kind: "pattern", condition: (r) => r.EL3U3, order: 1 },
+  { key: "OVB-E-B-RA-BB-EL2U3", label: "E-B-RA-BB-EL2U3", parentKey: "OVB-E-B-RA-BB", kind: "pattern", condition: (r) => r.EL2U3, order: 2 },
+  { key: "OVB-E-B-RA-BB-L4U4", label: "E-B-RA-BB-L4U4", parentKey: "OVB-E-B-RA-BB", kind: "pattern", condition: (r) => r.L4U4, order: 3 },
+  { key: "OVB-E-B-RA-BB-EL3U4", label: "E-B-RA-BB-EL3U4", parentKey: "OVB-E-B-RA-BB", kind: "pattern", condition: (r) => r.EL3U4, order: 4 },
 
   // --- A-B-RA-LB (order 12) ---
   {
@@ -1946,6 +1983,11 @@ export const OVERLAP_BELOW_TOUCH_VIEWS: ViewDef[] = [
     order: 12,
   },
   { key: "OVB-A-B-RA-LB-CL4U4", label: "A-B-RA-LB-CL4U4", parentKey: "OVB-A-B-RA-LB", kind: "pattern", condition: (r) => r.CL4U4, order: 0 },
+  { key: "OVB-A-B-RA-LB-L4U4", label: "A-B-RA-LB-L4U4", parentKey: "OVB-A-B-RA-LB", kind: "pattern", condition: (r) => r.L4U4, order: 1 },
+  { key: "OVB-A-B-RA-LB-CU4L3", label: "A-B-RA-LB-CU4L3", parentKey: "OVB-A-B-RA-LB", kind: "pattern", condition: (r) => r.CU4L3, order: 2 },
+  { key: "OVB-A-B-RA-LB-EL4U4", label: "A-B-RA-LB-EL4U4", parentKey: "OVB-A-B-RA-LB", kind: "pattern", condition: (r) => r.EL4U4, order: 3 },
+  { key: "OVB-A-B-RA-LB-CL3U3", label: "A-B-RA-LB-CL3U3", parentKey: "OVB-A-B-RA-LB", kind: "pattern", condition: (r) => r.CL3U3, order: 4 },
+  { key: "OVB-A-B-RA-LB-EU3L4", label: "A-B-RA-LB-EU3L4", parentKey: "OVB-A-B-RA-LB", kind: "pattern", condition: (r) => r.EU3L4, order: 5 },
 
   // --- B-C-BB-C (order 13) ---
   {
@@ -1961,6 +2003,7 @@ export const OVERLAP_BELOW_TOUCH_VIEWS: ViewDef[] = [
     order: 13,
   },
   { key: "OVB-B-C-BB-C-CL4U3", label: "B-C-BB-C-CL4U3", parentKey: "OVB-B-C-BB-C", kind: "pattern", condition: (r) => r.CL4U3, order: 0 },
+  { key: "OVB-B-C-BB-C-CL4U4", label: "B-C-BB-C-CL4U4", parentKey: "OVB-B-C-BB-C", kind: "pattern", condition: (r) => r.CL4U4, order: 1 },
 
   // --- B-E-OA-BB (order 14) ---
   {
@@ -1991,6 +2034,8 @@ export const OVERLAP_BELOW_TOUCH_VIEWS: ViewDef[] = [
     order: 15,
   },
   { key: "OVB-B-A-E-SB-L4U3", label: "B-A-E-SB-L4U3", parentKey: "OVB-B-A-E-SB", kind: "pattern", condition: (r) => r.L4U3, order: 0 },
+  { key: "OVB-B-A-E-SB-EL3U4", label: "B-A-E-SB-EL3U4", parentKey: "OVB-B-A-E-SB", kind: "pattern", condition: (r) => r.EL3U4, order: 1 },
+  { key: "OVB-B-A-E-SB-EL4U4", label: "B-A-E-SB-EL4U4", parentKey: "OVB-B-A-E-SB", kind: "pattern", condition: (r) => r.EL4U4, order: 2 },
 
   // --- E-B-E-OB (order 16) ---
   {
@@ -2006,6 +2051,8 @@ export const OVERLAP_BELOW_TOUCH_VIEWS: ViewDef[] = [
     order: 16,
   },
   { key: "OVB-E-B-E-OB-EL4U4", label: "E-B-E-OB-EL4U4", parentKey: "OVB-E-B-E-OB", kind: "pattern", condition: (r) => r.EL4U4, order: 0 },
+  { key: "OVB-E-B-E-OB-EU3L4", label: "E-B-E-OB-EU3L4", parentKey: "OVB-E-B-E-OB", kind: "pattern", condition: (r) => r.EU3L4, order: 1 },
+  { key: "OVB-E-B-E-OB-L4U4", label: "E-B-E-OB-L4U4", parentKey: "OVB-E-B-E-OB", kind: "pattern", condition: (r) => r.L4U4, order: 2 },
 
   // --- B-B-OB-OB (order 17) ---
   {
@@ -2021,6 +2068,9 @@ export const OVERLAP_BELOW_TOUCH_VIEWS: ViewDef[] = [
     order: 17,
   },
   { key: "OVB-B-B-OB-OB-L4U4", label: "B-B-OB-OB-L4U4", parentKey: "OVB-B-B-OB-OB", kind: "pattern", condition: (r) => r.L4U4, order: 0 },
+  { key: "OVB-B-B-OB-OB-CL4U4", label: "B-B-OB-OB-CL4U4", parentKey: "OVB-B-B-OB-OB", kind: "pattern", condition: (r) => r.CL4U4, order: 1 },
+  { key: "OVB-B-B-OB-OB-EL4U4", label: "B-B-OB-OB-EL4U4", parentKey: "OVB-B-B-OB-OB", kind: "pattern", condition: (r) => r.EL4U4, order: 2 },
+  { key: "OVB-B-B-OB-OB-EL3U4", label: "B-B-OB-OB-EL3U4", parentKey: "OVB-B-B-OB-OB", kind: "pattern", condition: (r) => r.EL3U4, order: 3 },
 
   // --- C-B-OB-E (order 18) ---
   {
@@ -2051,6 +2101,8 @@ export const OVERLAP_BELOW_TOUCH_VIEWS: ViewDef[] = [
     order: 19,
   },
   { key: "OVB-B-B-OB-BB-EL4U4", label: "B-B-OB-BB-EL4U4", parentKey: "OVB-B-B-OB-BB", kind: "pattern", condition: (r) => r.EL4U4, order: 0 },
+  { key: "OVB-B-B-OB-BB-L4U4", label: "B-B-OB-BB-L4U4", parentKey: "OVB-B-B-OB-BB", kind: "pattern", condition: (r) => r.L4U4, order: 1 },
+  { key: "OVB-B-B-OB-BB-EL3U4", label: "B-B-OB-BB-EL3U4", parentKey: "OVB-B-B-OB-BB", kind: "pattern", condition: (r) => r.EL3U4, order: 2 },
 
   // --- C-C-OB-OA (order 20) ---
   {
@@ -2066,6 +2118,9 @@ export const OVERLAP_BELOW_TOUCH_VIEWS: ViewDef[] = [
     order: 20,
   },
   { key: "OVB-C-C-OB-OA-CL4U3", label: "C-C-OB-OA-CL4U3", parentKey: "OVB-C-C-OB-OA", kind: "pattern", condition: (r) => r.CL4U3, order: 0 },
+  { key: "OVB-C-C-OB-OA-CL4U4", label: "C-C-OB-OA-CL4U4", parentKey: "OVB-C-C-OB-OA", kind: "pattern", condition: (r) => r.CL4U4, order: 1 },
+  { key: "OVB-C-C-OB-OA-CU4L3", label: "C-C-OB-OA-CU4L3", parentKey: "OVB-C-C-OB-OA", kind: "pattern", condition: (r) => r.CU4L3, order: 2 },
+  { key: "OVB-C-C-OB-OA-CL3U3", label: "C-C-OB-OA-CL3U3", parentKey: "OVB-C-C-OB-OA", kind: "pattern", condition: (r) => r.CL3U3, order: 3 },
 
   // Added from PatternStats "Missing Subpatterns" (Overlap Below 17-row
   // unclassified breakdown). Every child key here is "OVB-" prefixed
