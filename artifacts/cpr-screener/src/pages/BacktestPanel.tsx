@@ -2756,9 +2756,7 @@ export default function BacktestPanel() {
                           (patternExpansion[patternSelectionKey(node.path)] ??
                             hasSelectedDescendant(node));
                         // Views are normally listed after the nested patterns.
-                        // A view with a negative `order` is pinned above them
-                        // (e.g. OVB-P15MAboveBC at the top of
-                        // Overlap Below).
+                        // A view with a negative `order` is pinned above them.
                         const pinnedViews = visibleViews.filter((t) => (t.order ?? 0) < 0);
                         const otherViews = visibleViews.filter((t) => (t.order ?? 0) >= 0);
                         const value = patternSelectionKey(node.path);

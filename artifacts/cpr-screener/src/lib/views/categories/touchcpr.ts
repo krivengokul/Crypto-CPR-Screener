@@ -2292,30 +2292,6 @@ export const OVERLAP_BELOW_TOUCH_VIEWS: ViewDef[] = [
   },
   { key: "OVB-E-E-OA-OB-EL4U4", label: "E-E-OA-OB-EL4U4", parentKey: "OVB-E-E-OA-OB", kind: "pattern", condition: (r) => r.EL4U4, order: 0 },
 
-  // --- OVB-P15MAboveBC ---
-  // Mirror of OVB-P15MBelowTC on the BC side. Reuses the existing MOMENTUM-A (PD15M>BC)
-  // previous-session check (passesUpexFilter -> result.PD15MAboveBCPass, which
-  // the live Screener and the backtest both populate): it fails as soon as a
-  // completed 15m candle has its whole body below yesterday's BC AND that
-  // body's low is under the lowest wick of every earlier candle (a fresh low
-  // below BC).
-  {
-    key: "OVB-P15MAboveBC",
-    label: "OVB-Momentum-A",
-    parentKey: "overlapLower",
-    kind: "view",
-    standalone: true,
-    condition: (r) => r.PD15MAboveBCPass === true && r.overlapLower,
-    direction: "Down",
-    targetLabel: "S4",
-    getTarget: (r) => r.todayCPR.s4,
-    entryLabel: "PL",
-    getEntry: (r) => r.todayCPR.prevLow,
-    stoplossLabel: "R1",
-    getStoploss: (r) => r.todayCPR.r1,
-    order: -1,
-  },
-
   ...OVB_UNCLASSIFIED_PATTERNS,
 ];
 

@@ -1596,22 +1596,6 @@ export async function backtestSymbolOnDate(
     result.PD15MAboveBCPass = PD15MAboveBCPass === true;
   }
 
-  if (target.key === "OVB-P15MAboveBC") {
-    // Reuses the MOMENTUM-A previous-session check (result.PD15MAboveBCPass) with
-    // yesterday's BC as the level under test.
-    if (source === "coindcx") return null;
-    // Structural gate first, without any 15m fetch: assume the 15m part passes
-    // and see whether the rest of the pattern (CPR structure) still matches.
-    result.PD15MAboveBCPass = true;
-    if (!passesPatternFn(result, target.conditionKey ?? target.key)) return null;
-    const PD15MAboveBCPass = await findPreviousUpexPass(
-      { symbol, source, bc: result.prevCPR.bc },
-      Date.parse(`${entryDateISO}T00:00:00.000Z`),
-    );
-    if (PD15MAboveBCPass === null) onPreviousUpexUnavailable?.(symbol);
-    result.PD15MAboveBCPass = PD15MAboveBCPass === true;
-  }
-
   // Always populate all four P-filter flags (View column badges + candleCheck gates).
   // CoinDCX: leave flags unset/false; Views that require a candleCheck still fail below.
   if (source !== "coindcx") {
