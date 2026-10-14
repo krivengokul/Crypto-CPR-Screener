@@ -834,6 +834,8 @@ export interface ScreenerTableRowProps {
   isMomentumA?: boolean;
   /** True when this row is assigned to the exclusive P-MOMENTUM-B class (after earlier classes are excluded). */
   isMomentumB?: boolean;
+  /** True when this row is assigned to INSIDE-R1S1 (candles fully inside R1–S1 band, or dual CON-A+CON-B). */
+  isInsideR1S1?: boolean;
   /** Live RECLAIM-S state (failed breakdown this session) — only passed when it qualifies, else null/undefined. */
   reclaimS?: ReclaimSideState | null;
   /** Live RECLAIM-R state (failed breakout this session) — only passed when it qualifies, else null/undefined. */
@@ -886,16 +888,20 @@ export default function ScreenerTableRow({
   isConsolidateB,
   isMomentumA,
   isMomentumB,
+  isInsideR1S1,
   reclaimS,
   reclaimR,
 }: ScreenerTableRowProps) {
   const activePattern = rawActivePattern ?? activeSignal ?? "";
   // When supplied, the Screener props are the complete mutually exclusive
   // classification. Fall back to row flags only for callers without props.
-  const showConsolidateA = isConsolidateA ?? r.PD15MConsolidateAPass === true;
-  const showConsolidateB = isConsolidateB ?? r.PD15MBelowTCPass === true;
-  const showMomentumA = (isMomentumA ?? r.PD15MAboveBCPass === true) && !showConsolidateA;
-  const showMomentumB = (isMomentumB ?? r.PD15MMomentumBPass === true) && !showConsolidateB;
+  // When Screener passes exclusive bucket props, show exactly one badge.
+  // Fallback (no props) uses raw flags with within-side MOM excluding CON.
+  const showInsideR1S1 = isInsideR1S1 === true;
+  const showConsolidateA = showInsideR1S1 ? false : (isConsolidateA ?? r.PD15MConsolidateAPass === true);
+  const showConsolidateB = showInsideR1S1 ? false : (isConsolidateB ?? r.PD15MBelowTCPass === true);
+  const showMomentumA = showInsideR1S1 ? false : ((isMomentumA ?? r.PD15MAboveBCPass === true) && !showConsolidateA);
+  const showMomentumB = showInsideR1S1 ? false : ((isMomentumB ?? r.PD15MMomentumBPass === true) && !showConsolidateB);
   // Hoisted so the same up/down call drives both the per-row dot in the
   // Symbol column AND the new "Levels VIEW" name badge below — one row
   // shouldn't ever show a green dot next to a red badge.
@@ -1110,6 +1116,13 @@ export default function ScreenerTableRow({
               className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-violet-400"
             >
               P-MOMENTUM-B
+            </div>
+          )}
+          {showInsideR1S1 && (
+            <div
+              className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-amber-300"
+            >
+              INSIDE-R1S1
             </div>
           )}
           {/* Live current-session failed-break flags: "2/3" = 3 levels pierced,

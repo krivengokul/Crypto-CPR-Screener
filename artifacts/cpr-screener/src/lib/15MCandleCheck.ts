@@ -12,6 +12,7 @@ const PREVIOUS_15M_B_CACHE_KEY = "cpr_previous_15m_b_results_v3";
 const PREVIOUS_15M_TC_B_CACHE_KEY = "cpr_previous_15m_tc_b_results_v6";
 const PREVIOUS_15M_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_momentum_b_results_v1";
 const PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_consolidate_a_results_v6";
+const PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_inside_r1s1_results_v1";
 
 export interface UpexCandidate {
   symbol: string;
@@ -112,6 +113,7 @@ export function pruneLegacy15MResultCaches(): number {
     PREVIOUS_15M_TC_B_CACHE_KEY,
     PREVIOUS_15M_MOMENTUM_B_CACHE_KEY,
     PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY,
+    PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY,
   ];
   const prefixes = currentKeys.map((key) => key.replace(/\d+$/, ""));
   let removed = 0;
@@ -865,6 +867,147 @@ export function savePD15MMomentumBelowResults(
   });
   safeSetItem(PREVIOUS_15M_MOMENTUM_B_CACHE_KEY, payload);
 }
+
+/**
+ * INSIDE-R1S1: every completed previous-session 15m candle stays fully inside
+ * [floor, ceiling], where:
+ *   floor   = min(prev S1, prev Low / PL)
+ *   ceiling = max(prev R1, prev High / PH)
+ * Wick and body both must stay inside — a pierce of either bound fails.
+ * Returns null when there are no usable completed candles.
+ */
+export function passesInsideR1S1Filter(
+  candles: OHLC[],
+  floor: number,
+  ceiling: number,
+  startTime: number,
+  now: number,
+): boolean | null {
+  if (!Number.isFinite(floor) || !Number.isFinite(ceiling)) return null;
+  if (floor > ceiling) return null;
+
+  const completed = candles.filter(
+    (candle) =>
+      Number.isFinite(candle.openTime) &&
+      candle.openTime >= startTime &&
+      candle.openTime + CANDLE_INTERVAL_MS <= now &&
+      Number.isFinite(candle.open) &&
+      Number.isFinite(candle.close) &&
+      Number.isFinite(candle.high) &&
+      Number.isFinite(candle.low),
+  );
+  if (completed.length === 0) return null;
+
+  return completed.every(
+    (candle) => candle.low >= floor && candle.high <= ceiling,
+  );
+}
+
+/**
+ * Batch scan for INSIDE-R1S1. Candidates must carry floor + ceiling
+ * (getPrevious15MBFloor / getPrevious15MACeiling). `candidate.bc` is unused
+ * for the pass rule but still required by UpexCandidate.
+ */
+export function findInsideR1S1Symbols(
+  candidates: UpexCandidate[],
+  onProgress?: (done: number, total: number) => void,
+  now = Date.now(),
+): Promise<PreviousUpexScanResults> {
+  const endTime = upexSessionStartUtcMs(now);
+  const startTime = previousUpexSessionStartUtcMs(now);
+  return findInsideR1S1ForSession(candidates, startTime, endTime, onProgress);
+}
+
+async function findInsideR1S1ForSession(
+  candidates: UpexCandidate[],
+  startTime: number,
+  endTime: number,
+  onProgress?: (done: number, total: number) => void,
+): Promise<PreviousUpexScanResults> {
+  const included = new Set<string>();
+  const outcomes = new Map<string, boolean | null>();
+  let unavailable = 0;
+
+  for (let offset = 0; offset < candidates.length; offset += MAX_CONCURRENT_REQUESTS) {
+    const batch = candidates.slice(offset, offset + MAX_CONCURRENT_REQUESTS);
+    const results = await Promise.all(
+      batch.map(async (candidate) => {
+        const floor = candidate.floor;
+        const ceiling = candidate.ceiling;
+        if (floor === undefined || ceiling === undefined) {
+          return { candidate, passes: null as boolean | null };
+        }
+        const candles = await fetchUpexCandles(candidate, startTime, endTime);
+        if (!candles) return { candidate, passes: null as boolean | null };
+        return {
+          candidate,
+          passes: passesInsideR1S1Filter(candles, floor, ceiling, startTime, endTime),
+        };
+      }),
+    );
+
+    for (const { candidate, passes } of results) {
+      const symbolKey = `${candidate.source}:${candidate.symbol}`;
+      outcomes.set(symbolKey, passes);
+      if (passes === true) included.add(symbolKey);
+      else if (passes === null) unavailable++;
+    }
+    onProgress?.(Math.min(offset + batch.length, candidates.length), candidates.length);
+  }
+
+  return { included, unavailable, outcomes };
+}
+
+export function previousInsideR1S1CandidateCacheKey(
+  sessionStart: number,
+  candidate: UpexCandidate,
+): string {
+  return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.floor}:${candidate.ceiling}`;
+}
+
+export function loadPreviousInsideR1S1Results(
+  sessionStart: number,
+): Map<string, boolean | null> {
+  try {
+    const raw = localStorage.getItem(PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY);
+    if (!raw) return new Map();
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      !("sessionStart" in parsed) ||
+      (parsed as { sessionStart: number }).sessionStart !== sessionStart ||
+      !("results" in parsed) ||
+      !(parsed as { results: unknown }).results ||
+      typeof (parsed as { results: unknown }).results !== "object"
+    ) {
+      return new Map();
+    }
+    const results = new Map<string, boolean | null>();
+    for (const [key, value] of Object.entries(
+      (parsed as { results: Record<string, unknown> }).results,
+    )) {
+      if (typeof value === "boolean") results.set(key, value);
+    }
+    return results;
+  } catch {
+    return new Map();
+  }
+}
+
+export function savePreviousInsideR1S1Results(
+  sessionStart: number,
+  results: Map<string, boolean | null>,
+): void {
+  const payload = JSON.stringify({
+    sessionStart,
+    results: Object.fromEntries(
+      [...results].filter((entry): entry is [string, boolean] => typeof entry[1] === "boolean"),
+    ),
+  });
+  safeSetItem(PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY, payload);
+}
+
 
 export function previous15MBCandidateCacheKey(
   sessionStart: number,

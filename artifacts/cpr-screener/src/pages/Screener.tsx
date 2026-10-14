@@ -22,6 +22,7 @@ import {
   findPD15MMomentumBelowSymbols,
   findPreviousConsolidateASymbols,
   findPreviousUpexSymbols,
+  findInsideR1S1Symbols,
   findUpexSymbols,
   getUpexBc,
   getConsolidateABc,
@@ -31,17 +32,20 @@ import {
   loadPD15MTCBelowResults,
   loadPreviousConsolidateAResults,
   loadPreviousUpexResults,
+  loadPreviousInsideR1S1Results,
   getPrevious15MACeiling,
   getPrevious15MBFloor,
   previous15MMomentumCandidateCacheKey,
   previous15MTCCandidateCacheKey,
   previousConsolidateACandidateCacheKey,
   previousUpexCandidateCacheKey,
+  previousInsideR1S1CandidateCacheKey,
   previousUpexSessionStartUtcMs,
   savePD15MBelowTCResults,
   savePD15MMomentumBelowResults,
   savePreviousConsolidateAResults,
   savePreviousUpexResults,
+  savePreviousInsideR1S1Results,
   currentReclaimWindowMs,
   currentSessionStartUtcMs,
   findReclaimDepths,
@@ -107,6 +111,7 @@ import LiveClock from "./LiveClock";
 import ScreenerLegend from "./ScreenerLegend";
 import ScreenerTableRow, { ScreenerTableHeader, getBadgeClasses } from "./ScreenerTableRow";
 import { useBinanceLiveRefresh, useDeltaLiveRefresh, useCoinDCXLiveRefresh } from "@/hooks/useLivePriceRefresh";
+import { usePreviousCandleFilterPrep } from "@/hooks/usePreviousCandleFilterPrep";
 
 /**
  * ViewCount — "(n)" badge shown at the end of every Views filter button,
@@ -346,40 +351,10 @@ export default function Screener({
   const [pdhPdlFilter, setPdhPdlFilter] = useState<"above" | "below" | "abovepu4" | "belowpl4" | "pdhgtu1" | "pdlltl1" | "s1r1in" | null>(null);
   const [upexFilter, setUpexFilter] = useState(false);
   const [upexIncludedSymbols, setUpexIncludedSymbols] = useState<Set<string>>(() => new Set());
-  const [previousCandleFilter, setPreviousCandleFilter] = useState<"all" | "consolidate-a" | "momentum-a" | "consolidate-b" | "momentum-b" | "inrange-r">("all");
-  const [previousConsolidateAIncludedSymbols, setPreviousConsolidateAIncludedSymbols] = useState<Set<string>>(() => new Set());
-  const [previousConsolidateAProgress, setPreviousConsolidateAProgress] = useState<{
-    done: number;
-    total: number;
-  } | null>(null);
-  const [previousConsolidateAReady, setPreviousConsolidateAReady] = useState(false);
-  const [previousConsolidateAMessage, setPreviousConsolidateAMessage] = useState("");
-  const previousConsolidateAResultsRef = useRef<Map<string, boolean | null>>(
-    loadPreviousConsolidateAResults(previousUpexSessionStartUtcMs()),
-  );
-  const previousConsolidateACacheSessionRef = useRef(previousUpexSessionStartUtcMs());
-  const previousConsolidateARunRef = useRef(0);
+  const [previousCandleFilter, setPreviousCandleFilter] = useState<"all" | "consolidate-a" | "momentum-a" | "consolidate-b" | "momentum-b" | "inside-r1s1">("all");
+  // CON-A / MOM-A / CON-B / MOM-B / INSIDE-R1S1 prep state comes from
+  // usePreviousCandleFilterPrep (wired just after scan refs below).
 
-  const [previousUpexIncludedSymbols, setPreviousUpexIncludedSymbols] = useState<Set<string>>(() => new Set());
-  const [previousUpexProgress, setPreviousUpexProgress] = useState<{
-    done: number;
-    total: number;
-  } | null>(null);
-  const [previousUpexReady, setPreviousUpexReady] = useState(false);
-  const [previous15MTCIncludedSymbols, setPrevious15MTCIncludedSymbols] = useState<Set<string>>(() => new Set());
-  const [previous15MTCProgress, setPrevious15MTCProgress] = useState<{
-    done: number;
-    total: number;
-  } | null>(null);
-  const [previous15MTCReady, setPrevious15MTCReady] = useState(false);
-  const [previous15MTCMessage, setPrevious15MTCMessage] = useState("");
-  const [previous15MMomentumIncludedSymbols, setPrevious15MMomentumIncludedSymbols] = useState<Set<string>>(() => new Set());
-  const [previous15MMomentumProgress, setPrevious15MMomentumProgress] = useState<{
-    done: number;
-    total: number;
-  } | null>(null);
-  const [previous15MMomentumReady, setPrevious15MMomentumReady] = useState(false);
-  const [previous15MMomentumMessage, setPrevious15MMomentumMessage] = useState("");
   // RECLAIM-S / RECLAIM-R (live, current session): pierced depth per symbol
   // comes from 15m candles (re-fetched once per settled 15m window); whether
   // price is back inside those levels is computed live at render/filter time.
@@ -393,22 +368,7 @@ export default function Screener({
   const reclaimDepthsRef = useRef<Map<string, ReclaimDepth>>(new Map());
   const reclaimSessionRef = useRef(currentSessionStartUtcMs());
   const reclaimRunRef = useRef(0);
-  const previousUpexSessionStart = previousUpexSessionStartUtcMs();
-  const previousUpexResultsRef = useRef<Map<string, boolean | null>>(
-    loadPreviousUpexResults(previousUpexSessionStart),
-  );
-  const previousUpexCacheSessionRef = useRef(previousUpexSessionStart);
-  const previousUpexRunRef = useRef(0);
-  const previous15MTCResultsRef = useRef<Map<string, boolean | null>>(
-    loadPD15MTCBelowResults(previousUpexSessionStart),
-  );
-  const previous15MTCCacheSessionRef = useRef(previousUpexSessionStart);
-  const previous15MTCRunRef = useRef(0);
-  const previous15MMomentumResultsRef = useRef<Map<string, boolean | null>>(
-    loadPD15MMomentumBelowResults(previousUpexSessionStart),
-  );
-  const previous15MMomentumCacheSessionRef = useRef(previousUpexSessionStart);
-  const previous15MMomentumRunRef = useRef(0);
+
   const [upexProgress, setUpexProgress] = useState<{
     done: number;
     total: number;
@@ -467,11 +427,8 @@ export default function Screener({
     setUpexFilter(false);
     setUpexIncludedSymbols(new Set());
     setPreviousCandleFilter("all");
-    setPreviousConsolidateAMessage("");
     setUpexProgress(null);
     setUpexMessage("");
-    setPrevious15MTCMessage("");
-    setPrevious15MMomentumMessage("");
     setReclaimSFilter(false);
     setReclaimRFilter(false);
   }, [activeTab]);
@@ -499,532 +456,211 @@ export default function Screener({
   useEffect(() => { coindcxAllResultsRef.current = coindcxAllResults; }, [coindcxAllResults]);
   useEffect(() => { activeSignalRef.current = activeSignal; }, [activeSignal]);
 
-  useEffect(() => {
-    if (previousConsolidateACacheSessionRef.current !== previousUpexSessionStart) {
-      previousConsolidateAResultsRef.current = loadPreviousConsolidateAResults(previousUpexSessionStart);
-      previousConsolidateACacheSessionRef.current = previousUpexSessionStart;
-    }
-    if (
-      status === "scanning" ||
-      deltaStatus === "scanning" ||
-      (status !== "done" && deltaStatus !== "done")
-    ) return;
 
-    const candidates = new Map<string, {
-      symbol: string;
-      source: "binance" | "delta";
-      bc: number;
-      ceiling: number;
-    }>();
-    if (status === "done") {
-      for (const row of allResults) {
-        candidates.set(`binance:${row.symbol}`, {
-          symbol: row.symbol,
-          source: "binance",
-          bc: getConsolidateABc(row.prevCPR, row.ppCPR),
-          ceiling: getPrevious15MACeiling(row.prevCPR),
-        });
-      }
-    }
-    if (deltaStatus === "done") {
-      for (const row of deltaAllResults) {
-        candidates.set(`delta:${row.symbol}`, {
-          symbol: row.symbol,
-          source: "delta",
-          bc: getConsolidateABc(row.prevCPR, row.ppCPR),
-          ceiling: getPrevious15MACeiling(row.prevCPR),
-        });
-      }
-    }
-    const currentCandidates = Array.from(candidates.values());
-    if (currentCandidates.length === 0) {
-      setPreviousConsolidateAReady(false);
-      setPreviousConsolidateAProgress(null);
-      return;
-    }
+  const previousUpexSessionStart = previousUpexSessionStartUtcMs();
 
-    const cacheKey = (candidate: (typeof currentCandidates)[number]) =>
-      previousConsolidateACandidateCacheKey(previousUpexSessionStart, candidate);
-    const missing = currentCandidates.filter(
-      (candidate) => !previousConsolidateAResultsRef.current.has(cacheKey(candidate)),
-    );
-    const updateIncluded = () => {
-      setPreviousConsolidateAIncludedSymbols(
-        new Set(
-          currentCandidates
-            .filter((candidate) => previousConsolidateAResultsRef.current.get(cacheKey(candidate)) === true)
-            .map((candidate) => `${candidate.source}:${candidate.symbol}`),
-        ),
-      );
-    };
-    updateIncluded();
+  // --- Previous-session 15m candle filters (shared prep hook) ---
+  const candlePrepCanRun =
+    status !== "scanning" &&
+    deltaStatus !== "scanning" &&
+    (status === "done" || deltaStatus === "done");
 
-    if (missing.length === 0) {
-      setPreviousConsolidateAReady(true);
-      setPreviousConsolidateAProgress(null);
-      const unavailable = currentCandidates.filter(
-        (candidate) => previousConsolidateAResultsRef.current.get(cacheKey(candidate)) === null,
-      ).length;
-      setPreviousConsolidateAMessage(
-        unavailable > 0
-          ? `${unavailable} symbol${unavailable === 1 ? "" : "s"} excluded from CONSOLIDATE-A because no usable completed 15m candles were returned for the previous IST session.`
-          : "",
-      );
-      return;
-    }
-
-    const runId = ++previousConsolidateARunRef.current;
-    setPreviousCandleFilter((filter) => filter === "consolidate-a" ? "all" : filter);
-    setPreviousConsolidateAReady(false);
-    setPreviousConsolidateAProgress({ done: 0, total: missing.length });
-    void findPreviousConsolidateASymbols(
-      missing,
-      (done, total) => {
-        if (runId === previousConsolidateARunRef.current) {
-          setPreviousConsolidateAProgress({ done, total });
-        }
-      },
-      previousUpexSessionStart + 24 * 60 * 60 * 1000,
-    ).then(({ outcomes, unavailable }) => {
-      if (runId !== previousConsolidateARunRef.current) return;
-      for (const candidate of missing) {
-        const symbolKey = `${candidate.source}:${candidate.symbol}`;
-        const outcome = outcomes.get(symbolKey);
-        if (typeof outcome === "boolean") {
-          previousConsolidateAResultsRef.current.set(cacheKey(candidate), outcome);
-        } else {
-          previousConsolidateAResultsRef.current.delete(cacheKey(candidate));
+  const consolidateAPrep = usePreviousCandleFilterPrep({
+    label: "CONSOLIDATE-A",
+    canRun: candlePrepCanRun,
+    sessionStartMs: previousUpexSessionStart,
+    buildCandidates: () => {
+      const candidates = new Map<string, {
+        symbol: string; source: "binance" | "delta"; bc: number; ceiling: number;
+      }>();
+      if (status === "done") {
+        for (const row of allResults) {
+          candidates.set(`binance:${row.symbol}`, {
+            symbol: row.symbol, source: "binance",
+            bc: getConsolidateABc(row.prevCPR, row.ppCPR),
+            ceiling: getPrevious15MACeiling(row.prevCPR),
+          });
         }
       }
-      savePreviousConsolidateAResults(previousUpexSessionStart, previousConsolidateAResultsRef.current);
-      updateIncluded();
-      setPreviousConsolidateAReady(true);
-      setPreviousConsolidateAProgress(null);
-      setPreviousConsolidateAMessage(
-        unavailable > 0
-          ? `${unavailable} symbol${unavailable === 1 ? "" : "s"} excluded from CONSOLIDATE-A because no usable completed 15m candles were returned for the previous IST session.`
-          : "",
-      );
-    }).catch((cause: unknown) => {
-      if (runId !== previousConsolidateARunRef.current) return;
-      setPreviousConsolidateAProgress(null);
-      setPreviousConsolidateAReady(false);
-      setPreviousConsolidateAMessage(
-        cause instanceof Error
-          ? `CONSOLIDATE-A preparation failed: ${cause.message}`
-          : "CONSOLIDATE-A preparation failed.",
-      );
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, deltaStatus, previousUpexSessionStart]);
-
-  useEffect(() => {
-    if (previousUpexCacheSessionRef.current !== previousUpexSessionStart) {
-      previousUpexResultsRef.current = loadPreviousUpexResults(previousUpexSessionStart);
-      previousUpexCacheSessionRef.current = previousUpexSessionStart;
-    }
-    if (
-      status === "scanning" ||
-      deltaStatus === "scanning" ||
-      (status !== "done" && deltaStatus !== "done")
-    ) return;
-    const candidates = new Map<string, {
-      symbol: string;
-      source: "binance" | "delta";
-      bc: number;
-    }>();
-    if (status === "done") {
-      for (const row of allResults) {
-        candidates.set(`binance:${row.symbol}`, {
-          symbol: row.symbol,
-          source: "binance",
-          bc: row.prevCPR.bc,
-        });
-      }
-    }
-    if (deltaStatus === "done") {
-      for (const row of deltaAllResults) {
-        candidates.set(`delta:${row.symbol}`, {
-          symbol: row.symbol,
-          source: "delta",
-          bc: row.prevCPR.bc,
-        });
-      }
-    }
-    const currentCandidates = Array.from(candidates.values());
-    if (currentCandidates.length === 0) {
-      setPreviousUpexReady(false);
-      setPreviousUpexProgress(null);
-      return;
-    }
-
-    const cacheKey = (candidate: (typeof currentCandidates)[number]) =>
-      previousUpexCandidateCacheKey(previousUpexSessionStart, candidate);
-    const missing = currentCandidates.filter(
-      (candidate) => !previousUpexResultsRef.current.has(cacheKey(candidate)),
-    );
-    const syncPreparedFlags = () => {
-      setAllResults((rows) =>
-        rows.map((row) => ({
-          ...row,
-          PD15MAboveBCPass:
-            previousUpexResultsRef.current.get(
-              `${previousUpexSessionStart}|binance:${row.symbol}:${row.prevCPR.bc}`,
-            ) === true,
-        })),
-      );
-      setDeltaAllResults((rows) =>
-        rows.map((row) => ({
-          ...row,
-          PD15MAboveBCPass:
-            previousUpexResultsRef.current.get(
-              `${previousUpexSessionStart}|delta:${row.symbol}:${row.prevCPR.bc}`,
-            ) === true,
-        })),
-      );
-    };
-    const updateIncluded = () => {
-      setPreviousUpexIncludedSymbols(
-        new Set(
-          currentCandidates
-            .filter((candidate) => previousUpexResultsRef.current.get(cacheKey(candidate)) === true)
-            .map((candidate) => `${candidate.source}:${candidate.symbol}`),
-        ),
-      );
-    };
-    updateIncluded();
-    syncPreparedFlags();
-
-    if (missing.length === 0) {
-      setPreviousUpexReady(true);
-      setPreviousUpexProgress(null);
-      const unavailable = currentCandidates.filter(
-        (candidate) => previousUpexResultsRef.current.get(cacheKey(candidate)) === null,
-      ).length;
-      setUpexMessage(
-        unavailable > 0
-          ? `${unavailable} symbol${unavailable === 1 ? "" : "s"} excluded from MOMENTUM-A because no usable completed 15m candles were returned for the previous IST session.`
-          : "",
-      );
-      return;
-    }
-
-    const runId = ++previousUpexRunRef.current;
-    setPreviousCandleFilter((filter) => filter === "momentum-a" ? "all" : filter);
-    setPreviousUpexReady(false);
-    setPreviousUpexProgress({ done: 0, total: missing.length });
-    void findPreviousUpexSymbols(
-      missing,
-      (done, total) => {
-        if (runId === previousUpexRunRef.current) {
-          setPreviousUpexProgress({ done, total });
-        }
-      },
-      previousUpexSessionStart + 24 * 60 * 60 * 1000,
-    ).then(({ outcomes, unavailable }) => {
-      if (runId !== previousUpexRunRef.current) return;
-      for (const candidate of missing) {
-        const symbolKey = `${candidate.source}:${candidate.symbol}`;
-        const outcome = outcomes.get(symbolKey);
-        if (typeof outcome === "boolean") {
-          previousUpexResultsRef.current.set(cacheKey(candidate), outcome);
-        } else {
-          previousUpexResultsRef.current.delete(cacheKey(candidate));
+      if (deltaStatus === "done") {
+        for (const row of deltaAllResults) {
+          candidates.set(`delta:${row.symbol}`, {
+            symbol: row.symbol, source: "delta",
+            bc: getConsolidateABc(row.prevCPR, row.ppCPR),
+            ceiling: getPrevious15MACeiling(row.prevCPR),
+          });
         }
       }
-      savePreviousUpexResults(previousUpexSessionStart, previousUpexResultsRef.current);
-      updateIncluded();
-      syncPreparedFlags();
-      setPreviousUpexReady(true);
-      setPreviousUpexProgress(null);
-      setUpexMessage(
-        unavailable > 0
-          ? `${unavailable} symbol${unavailable === 1 ? "" : "s"} excluded from MOMENTUM-A because no usable completed 15m candles were returned for the previous IST session.`
-          : "",
-      );
-    }).catch((cause: unknown) => {
-      if (runId !== previousUpexRunRef.current) return;
-      setPreviousUpexProgress(null);
-      setPreviousUpexReady(false);
-      setUpexMessage(
-        cause instanceof Error
-          ? `MOMENTUM-A preparation failed: ${cause.message}`
-          : "MOMENTUM-A preparation failed.",
-      );
-    });
-    // This runs on scan completion/session rollover, not live-price ticks.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, deltaStatus, previousUpexSessionStart]);
+      return Array.from(candidates.values());
+    },
+    cacheKey: previousConsolidateACandidateCacheKey,
+    loadResults: loadPreviousConsolidateAResults,
+    saveResults: savePreviousConsolidateAResults,
+    scanMissing: (missing, onProgress, sessionEndMs) =>
+      findPreviousConsolidateASymbols(missing, onProgress, sessionEndMs),
+  });
 
-
-  useEffect(() => {
-    if (previous15MTCCacheSessionRef.current !== previousUpexSessionStart) {
-      previous15MTCResultsRef.current = loadPD15MTCBelowResults(previousUpexSessionStart);
-      previous15MTCCacheSessionRef.current = previousUpexSessionStart;
-    }
-    if (
-      status === "scanning" ||
-      deltaStatus === "scanning" ||
-      (status !== "done" && deltaStatus !== "done")
-    ) return;
-
-    const candidates = new Map<string, {
-      symbol: string;
-      source: "binance" | "delta";
-      bc: number;
-      floor: number;
-    }>();
-    if (status === "done") {
-      for (const row of allResults) {
-        candidates.set(`binance:${row.symbol}`, {
-          symbol: row.symbol,
-          source: "binance",
-          bc: getConsolidateBTc(row.prevCPR, row.ppCPR),
-          floor: getPrevious15MBFloor(row.prevCPR),
-        });
-      }
-    }
-    if (deltaStatus === "done") {
-      for (const row of deltaAllResults) {
-        candidates.set(`delta:${row.symbol}`, {
-          symbol: row.symbol,
-          source: "delta",
-          bc: getConsolidateBTc(row.prevCPR, row.ppCPR),
-          floor: getPrevious15MBFloor(row.prevCPR),
-        });
-      }
-    }
-    const currentCandidates = Array.from(candidates.values());
-    if (currentCandidates.length === 0) {
-      setPrevious15MTCReady(false);
-      setPrevious15MTCProgress(null);
-      return;
-    }
-
-    const cacheKey = (candidate: (typeof currentCandidates)[number]) =>
-      previous15MTCCandidateCacheKey(previousUpexSessionStart, candidate);
-    const missing = currentCandidates.filter(
-      (candidate) => !previous15MTCResultsRef.current.has(cacheKey(candidate)),
-    );
-    const syncPreparedFlags = () => {
-      setAllResults((rows) =>
-        rows.map((row) => ({
-          ...row,
-          PD15MBelowTCPass:
-            previous15MTCResultsRef.current.get(
-              previous15MTCCandidateCacheKey(previousUpexSessionStart, {
-                symbol: row.symbol,
-                source: "binance",
-                bc: getConsolidateBTc(row.prevCPR, row.ppCPR),
-                floor: getPrevious15MBFloor(row.prevCPR),
-              }),
-            ) === true,
-        })),
-      );
-      setDeltaAllResults((rows) =>
-        rows.map((row) => ({
-          ...row,
-          PD15MBelowTCPass:
-            previous15MTCResultsRef.current.get(
-              previous15MTCCandidateCacheKey(previousUpexSessionStart, {
-                symbol: row.symbol,
-                source: "delta",
-                bc: getConsolidateBTc(row.prevCPR, row.ppCPR),
-                floor: getPrevious15MBFloor(row.prevCPR),
-              }),
-            ) === true,
-        })),
-      );
-    };
-    const updateIncluded = () => {
-      setPrevious15MTCIncludedSymbols(
-        new Set(
-          currentCandidates
-            .filter((candidate) => previous15MTCResultsRef.current.get(cacheKey(candidate)) === true)
-            .map((candidate) => `${candidate.source}:${candidate.symbol}`),
-        ),
-      );
-    };
-    updateIncluded();
-    syncPreparedFlags();
-
-    if (missing.length === 0) {
-      setPrevious15MTCReady(true);
-      setPrevious15MTCProgress(null);
-      const unavailable = currentCandidates.filter(
-        (candidate) => previous15MTCResultsRef.current.get(cacheKey(candidate)) === null,
-      ).length;
-      setPrevious15MTCMessage(
-        unavailable > 0
-          ? `${unavailable} symbol${unavailable === 1 ? "" : "s"} excluded from CONSOLIDATE-B because no usable completed 15m candles were returned for the previous IST session.`
-          : "",
-      );
-      return;
-    }
-
-    const runId = ++previous15MTCRunRef.current;
-    setPreviousCandleFilter((filter) => filter === "consolidate-b" ? "all" : filter);
-    setPrevious15MTCReady(false);
-    setPrevious15MTCProgress({ done: 0, total: missing.length });
-    void findPD15MBelowTCSymbols(
-      missing,
-      (done, total) => {
-        if (runId === previous15MTCRunRef.current) {
-          setPrevious15MTCProgress({ done, total });
-        }
-      },
-      previousUpexSessionStart + 24 * 60 * 60 * 1000,
-    ).then(({ outcomes, unavailable }) => {
-      if (runId !== previous15MTCRunRef.current) return;
-      for (const candidate of missing) {
-        const symbolKey = `${candidate.source}:${candidate.symbol}`;
-        const outcome = outcomes.get(symbolKey);
-        if (typeof outcome === "boolean") {
-          previous15MTCResultsRef.current.set(cacheKey(candidate), outcome);
-        } else {
-          previous15MTCResultsRef.current.delete(cacheKey(candidate));
+  const momentumAPrep = usePreviousCandleFilterPrep({
+    label: "MOMENTUM-A",
+    canRun: candlePrepCanRun,
+    sessionStartMs: previousUpexSessionStart,
+    buildCandidates: () => {
+      const candidates = new Map<string, {
+        symbol: string; source: "binance" | "delta"; bc: number;
+      }>();
+      if (status === "done") {
+        for (const row of allResults) {
+          candidates.set(`binance:${row.symbol}`, {
+            symbol: row.symbol, source: "binance", bc: row.prevCPR.bc,
+          });
         }
       }
-      savePD15MBelowTCResults(previousUpexSessionStart, previous15MTCResultsRef.current);
-      updateIncluded();
-      syncPreparedFlags();
-      setPrevious15MTCReady(true);
-      setPrevious15MTCProgress(null);
-      setPrevious15MTCMessage(
-        unavailable > 0
-          ? `${unavailable} symbol${unavailable === 1 ? "" : "s"} excluded from CONSOLIDATE-B because no usable completed 15m candles were returned for the previous IST session.`
-          : "",
-      );
-    }).catch((cause: unknown) => {
-      if (runId !== previous15MTCRunRef.current) return;
-      setPrevious15MTCProgress(null);
-      setPrevious15MTCReady(false);
-      setPrevious15MTCMessage(
-        cause instanceof Error
-          ? `CONSOLIDATE-B preparation failed: ${cause.message}`
-          : "CONSOLIDATE-B preparation failed.",
-      );
-    });
-    // This runs on scan completion/session rollover, not live-price ticks.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, deltaStatus, previousUpexSessionStart]);
-
-  useEffect(() => {
-    if (previous15MMomentumCacheSessionRef.current !== previousUpexSessionStart) {
-      previous15MMomentumResultsRef.current = loadPD15MMomentumBelowResults(previousUpexSessionStart);
-      previous15MMomentumCacheSessionRef.current = previousUpexSessionStart;
-    }
-    if (
-      status === "scanning" ||
-      deltaStatus === "scanning" ||
-      (status !== "done" && deltaStatus !== "done")
-    ) return;
-
-    const candidates = new Map<string, {
-      symbol: string;
-      source: "binance" | "delta";
-      bc: number;
-    }>();
-    if (status === "done") {
-      for (const row of allResults) {
-        candidates.set(`binance:${row.symbol}`, {
-          symbol: row.symbol,
-          source: "binance",
-          bc: row.prevCPR.tc,
-        });
-      }
-    }
-    if (deltaStatus === "done") {
-      for (const row of deltaAllResults) {
-        candidates.set(`delta:${row.symbol}`, {
-          symbol: row.symbol,
-          source: "delta",
-          bc: row.prevCPR.tc,
-        });
-      }
-    }
-    const currentCandidates = Array.from(candidates.values());
-    if (currentCandidates.length === 0) {
-      setPrevious15MMomentumReady(false);
-      setPrevious15MMomentumProgress(null);
-      return;
-    }
-
-    const cacheKey = (candidate: (typeof currentCandidates)[number]) =>
-      previous15MMomentumCandidateCacheKey(previousUpexSessionStart, candidate);
-    const missing = currentCandidates.filter(
-      (candidate) => !previous15MMomentumResultsRef.current.has(cacheKey(candidate)),
-    );
-    const updateIncluded = () => {
-      setPrevious15MMomentumIncludedSymbols(
-        new Set(
-          currentCandidates
-            .filter((candidate) => previous15MMomentumResultsRef.current.get(cacheKey(candidate)) === true)
-            .map((candidate) => `${candidate.source}:${candidate.symbol}`),
-        ),
-      );
-    };
-    updateIncluded();
-
-    if (missing.length === 0) {
-      setPrevious15MMomentumReady(true);
-      setPrevious15MMomentumProgress(null);
-      const unavailable = currentCandidates.filter(
-        (candidate) => previous15MMomentumResultsRef.current.get(cacheKey(candidate)) === null,
-      ).length;
-      setPrevious15MMomentumMessage(
-        unavailable > 0
-          ? `${unavailable} symbol${unavailable === 1 ? "" : "s"} excluded from MOMENTUM-B because no usable completed 15m candles were returned for the previous IST session.`
-          : "",
-      );
-      return;
-    }
-
-    const runId = ++previous15MMomentumRunRef.current;
-    setPreviousCandleFilter((filter) => filter === "momentum-b" ? "all" : filter);
-    setPrevious15MMomentumReady(false);
-    setPrevious15MMomentumProgress({ done: 0, total: missing.length });
-    void findPD15MMomentumBelowSymbols(
-      missing,
-      (done, total) => {
-        if (runId === previous15MMomentumRunRef.current) {
-          setPrevious15MMomentumProgress({ done, total });
-        }
-      },
-      previousUpexSessionStart + 24 * 60 * 60 * 1000,
-    ).then(({ outcomes, unavailable }) => {
-      if (runId !== previous15MMomentumRunRef.current) return;
-      for (const candidate of missing) {
-        const symbolKey = `${candidate.source}:${candidate.symbol}`;
-        const outcome = outcomes.get(symbolKey);
-        if (typeof outcome === "boolean") {
-          previous15MMomentumResultsRef.current.set(cacheKey(candidate), outcome);
-        } else {
-          previous15MMomentumResultsRef.current.delete(cacheKey(candidate));
+      if (deltaStatus === "done") {
+        for (const row of deltaAllResults) {
+          candidates.set(`delta:${row.symbol}`, {
+            symbol: row.symbol, source: "delta", bc: row.prevCPR.bc,
+          });
         }
       }
-      savePD15MMomentumBelowResults(previousUpexSessionStart, previous15MMomentumResultsRef.current);
-      updateIncluded();
-        setPrevious15MMomentumReady(true);
-      setPrevious15MMomentumProgress(null);
-      setPrevious15MMomentumMessage(
-        unavailable > 0
-          ? `${unavailable} symbol${unavailable === 1 ? "" : "s"} excluded from MOMENTUM-B because no usable completed 15m candles were returned for the previous IST session.`
-          : "",
-      );
-    }).catch((cause: unknown) => {
-      if (runId !== previous15MMomentumRunRef.current) return;
-      setPrevious15MMomentumProgress(null);
-      setPrevious15MMomentumReady(false);
-      setPrevious15MMomentumMessage(
-        cause instanceof Error
-          ? `MOMENTUM-B preparation failed: ${cause.message}`
-          : "MOMENTUM-B preparation failed.",
-      );
-    });
-    // This runs on scan completion/session rollover, not live-price ticks.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, deltaStatus, previousUpexSessionStart]);
+      return Array.from(candidates.values());
+    },
+    cacheKey: previousUpexCandidateCacheKey,
+    loadResults: loadPreviousUpexResults,
+    saveResults: savePreviousUpexResults,
+    scanMissing: (missing, onProgress, sessionEndMs) =>
+      findPreviousUpexSymbols(missing, onProgress, sessionEndMs),
+  });
+
+  const consolidateBPrep = usePreviousCandleFilterPrep({
+    label: "CONSOLIDATE-B",
+    canRun: candlePrepCanRun,
+    sessionStartMs: previousUpexSessionStart,
+    buildCandidates: () => {
+      const candidates = new Map<string, {
+        symbol: string; source: "binance" | "delta"; bc: number; floor: number;
+      }>();
+      if (status === "done") {
+        for (const row of allResults) {
+          candidates.set(`binance:${row.symbol}`, {
+            symbol: row.symbol, source: "binance",
+            bc: getConsolidateBTc(row.prevCPR, row.ppCPR),
+            floor: getPrevious15MBFloor(row.prevCPR),
+          });
+        }
+      }
+      if (deltaStatus === "done") {
+        for (const row of deltaAllResults) {
+          candidates.set(`delta:${row.symbol}`, {
+            symbol: row.symbol, source: "delta",
+            bc: getConsolidateBTc(row.prevCPR, row.ppCPR),
+            floor: getPrevious15MBFloor(row.prevCPR),
+          });
+        }
+      }
+      return Array.from(candidates.values());
+    },
+    cacheKey: previous15MTCCandidateCacheKey,
+    loadResults: loadPD15MTCBelowResults,
+    saveResults: savePD15MBelowTCResults,
+    scanMissing: (missing, onProgress, sessionEndMs) =>
+      findPD15MBelowTCSymbols(missing, onProgress, sessionEndMs),
+  });
+
+  const momentumBPrep = usePreviousCandleFilterPrep({
+    label: "MOMENTUM-B",
+    canRun: candlePrepCanRun,
+    sessionStartMs: previousUpexSessionStart,
+    buildCandidates: () => {
+      const candidates = new Map<string, {
+        symbol: string; source: "binance" | "delta"; bc: number;
+      }>();
+      if (status === "done") {
+        for (const row of allResults) {
+          candidates.set(`binance:${row.symbol}`, {
+            symbol: row.symbol, source: "binance", bc: row.prevCPR.tc,
+          });
+        }
+      }
+      if (deltaStatus === "done") {
+        for (const row of deltaAllResults) {
+          candidates.set(`delta:${row.symbol}`, {
+            symbol: row.symbol, source: "delta", bc: row.prevCPR.tc,
+          });
+        }
+      }
+      return Array.from(candidates.values());
+    },
+    cacheKey: previous15MMomentumCandidateCacheKey,
+    loadResults: loadPD15MMomentumBelowResults,
+    saveResults: savePD15MMomentumBelowResults,
+    scanMissing: (missing, onProgress, sessionEndMs) =>
+      findPD15MMomentumBelowSymbols(missing, onProgress, sessionEndMs),
+  });
+
+  const insideR1S1Prep = usePreviousCandleFilterPrep({
+    label: "INSIDE-R1S1",
+    canRun: candlePrepCanRun,
+    sessionStartMs: previousUpexSessionStart,
+    buildCandidates: () => {
+      const candidates = new Map<string, {
+        symbol: string; source: "binance" | "delta"; bc: number; floor: number; ceiling: number;
+      }>();
+      if (status === "done") {
+        for (const row of allResults) {
+          const floor = getPrevious15MBFloor(row.prevCPR);
+          const ceiling = getPrevious15MACeiling(row.prevCPR);
+          candidates.set(`binance:${row.symbol}`, {
+            symbol: row.symbol, source: "binance",
+            bc: row.prevCPR.bc, floor, ceiling,
+          });
+        }
+      }
+      if (deltaStatus === "done") {
+        for (const row of deltaAllResults) {
+          const floor = getPrevious15MBFloor(row.prevCPR);
+          const ceiling = getPrevious15MACeiling(row.prevCPR);
+          candidates.set(`delta:${row.symbol}`, {
+            symbol: row.symbol, source: "delta",
+            bc: row.prevCPR.bc, floor, ceiling,
+          });
+        }
+      }
+      return Array.from(candidates.values());
+    },
+    cacheKey: previousInsideR1S1CandidateCacheKey,
+    loadResults: loadPreviousInsideR1S1Results,
+    saveResults: savePreviousInsideR1S1Results,
+    scanMissing: (missing, onProgress, sessionEndMs) =>
+      findInsideR1S1Symbols(missing, onProgress, sessionEndMs),
+  });
+
+  // Aliases so existing filter / badge / count code keeps working
+  const previousConsolidateAIncludedSymbols = consolidateAPrep.includedSymbols;
+  const previousConsolidateAProgress = consolidateAPrep.progress;
+  const previousConsolidateAReady = consolidateAPrep.ready;
+  const previousConsolidateAMessage = consolidateAPrep.message;
+  const previousUpexIncludedSymbols = momentumAPrep.includedSymbols;
+  const previousUpexProgress = momentumAPrep.progress;
+  const previousUpexReady = momentumAPrep.ready;
+  const upexMessageFromPrep = momentumAPrep.message;
+  const previous15MTCIncludedSymbols = consolidateBPrep.includedSymbols;
+  const previous15MTCProgress = consolidateBPrep.progress;
+  const previous15MTCReady = consolidateBPrep.ready;
+  const previous15MTCMessage = consolidateBPrep.message;
+  const previous15MMomentumIncludedSymbols = momentumBPrep.includedSymbols;
+  const previous15MMomentumProgress = momentumBPrep.progress;
+  const previous15MMomentumReady = momentumBPrep.ready;
+  const previous15MMomentumMessage = momentumBPrep.message;
+  const previousInsideR1S1IncludedSymbols = insideR1S1Prep.includedSymbols;
+  const previousInsideR1S1Progress = insideR1S1Prep.progress;
+  const previousInsideR1S1Ready = insideR1S1Prep.ready;
+  const previousInsideR1S1Message = insideR1S1Prep.message;
+  const resetConsolidateAMessage = consolidateAPrep.resetMessage;
+  const resetMomentumAMessage = momentumAPrep.resetMessage;
+  const resetConsolidateBMessage = consolidateBPrep.resetMessage;
+  const resetMomentumBMessage = momentumBPrep.resetMessage;
+  const resetInsideR1S1Message = insideR1S1Prep.resetMessage;
+
 
   // NEW: auto-hide "Show All" whenever a left-nav view/category is clicked.
   // ViewsSidebar's onSelect (both handlePatternClick for top-level categories
@@ -1075,26 +711,11 @@ export default function Screener({
     if (scanRef.current) return;
     scanRef.current = true;
     upexRunRef.current += 1;
-    previousConsolidateARunRef.current += 1;
-    previousUpexRunRef.current += 1;
-    previous15MTCRunRef.current += 1;
-    previous15MMomentumRunRef.current += 1;
     setUpexFilter(false);
     setUpexIncludedSymbols(new Set());
     setPreviousCandleFilter("all");
-    setPreviousConsolidateAMessage("");
-    setPreviousUpexProgress(null);
-    setPreviousUpexReady(false);
-    setPrevious15MTCProgress(null);
-    setPrevious15MMomentumProgress(null);
-    setPrevious15MTCReady(false);
-    setPrevious15MMomentumReady(false);
-    setPrevious15MTCIncludedSymbols(new Set());
-    setPrevious15MMomentumIncludedSymbols(new Set());
     setUpexProgress(null);
     setUpexMessage("");
-    setPrevious15MTCMessage("");
-    setPrevious15MMomentumMessage("");
     setStatus("scanning");
     if (switchTab) setActiveTab("binance");
     setAllResults([]);
@@ -1136,26 +757,11 @@ export default function Screener({
     if (deltaScanRef.current) return;
     deltaScanRef.current = true;
     upexRunRef.current += 1;
-    previousConsolidateARunRef.current += 1;
-    previousUpexRunRef.current += 1;
-    previous15MTCRunRef.current += 1;
-    previous15MMomentumRunRef.current += 1;
     setUpexFilter(false);
     setUpexIncludedSymbols(new Set());
     setPreviousCandleFilter("all");
-    setPreviousConsolidateAMessage("");
-    setPreviousUpexProgress(null);
-    setPreviousUpexReady(false);
-    setPrevious15MTCProgress(null);
-    setPrevious15MMomentumProgress(null);
-    setPrevious15MTCReady(false);
-    setPrevious15MMomentumReady(false);
-    setPrevious15MTCIncludedSymbols(new Set());
-    setPrevious15MMomentumIncludedSymbols(new Set());
     setUpexProgress(null);
     setUpexMessage("");
-    setPrevious15MTCMessage("");
-    setPrevious15MMomentumMessage("");
     setDeltaStatus("scanning");
     if (switchTab) setActiveTab("delta");
     setDeltaAllResults([]);
@@ -1195,11 +801,8 @@ export default function Screener({
     setUpexFilter(false);
     setUpexIncludedSymbols(new Set());
     setPreviousCandleFilter("all");
-    setPreviousConsolidateAMessage("");
     setUpexProgress(null);
     setUpexMessage("");
-    setPrevious15MTCMessage("");
-    setPrevious15MMomentumMessage("");
     setCoinDCXStatus("scanning");
     if (switchTab) setActiveTab("coindcx");
     // Keep the last successful CoinDCX result visible while the next scan
@@ -1630,38 +1233,57 @@ export default function Screener({
     return (showAll ? allResults : filtered).map((r) => ({ ...r, source: "binance" as const }));
   };
 
-  // The four previous-session filters are one classification. If a symbol
-  // passes multiple independent checks, the first matching tab wins, so the
-  // counts, filter results, and badges all stay mutually exclusive. B-side
-  // follows the category/backtest definitions:
-  //   CON-B: PD15MBelowTCPass === true
-  //   MOM-B: PD15MMomentumBPass === true && PD15MBelowTCPass !== true
-  // Then CONSOLIDATE-A and MOMENTUM-A are classified after the B buckets.
-  // INRANGE-R is the complement across the active Show All pool.
-  const hasConsolidateB = (row: CPRResultWithSource) =>
-    previous15MTCIncludedSymbols.has(`${row.source}:${row.symbol}`);
-  const hasMomentumB = (row: CPRResultWithSource) =>
-    previous15MMomentumIncludedSymbols.has(`${row.source}:${row.symbol}`) &&
-    !hasConsolidateB(row);
-  const hasConsolidateA = (row: CPRResultWithSource) =>
-    previousConsolidateAIncludedSymbols.has(`${row.source}:${row.symbol}`) &&
-    !hasMomentumB(row) &&
-    !hasConsolidateB(row);
-  const hasMomentumA = (row: CPRResultWithSource) =>
-    previousUpexIncludedSymbols.has(`${row.source}:${row.symbol}`) &&
-    !hasMomentumB(row) &&
-    !hasConsolidateB(row) &&
-    !hasConsolidateA(row);
-  const hasInRangeR = (row: CPRResultWithSource) =>
-    !hasConsolidateA(row) &&
-    !hasMomentumA(row) &&
-    !hasConsolidateB(row) &&
-    !hasMomentumB(row);
+  // Five mutually exclusive previous-session buckets (exactly one per symbol
+  // when a raw check applies). Assignment order:
+  //   1. Both CON-A and CON-B raw pass → INSIDE-R1S1
+  //   2. CON-B alone → P-CONSOLIDATE-B
+  //   3. MOM-B (and not CON-B) → P-MOMENTUM-B
+  //   4. CON-A alone → P-CONSOLIDATE-A
+  //   5. MOM-A (and not CON-A) → P-MOMENTUM-A
+  //   6. INSIDE-R1S1 raw (candles fully inside floor/ceiling) → INSIDE-R1S1
+  // INSIDE-R1S1 is NOT the leftover complement; it has its own 15m definition
+  // (every completed candle high/low stays in [min(S1,PL), max(R1,PH)]).
+  const rawKey = (row: CPRResultWithSource) => `${row.source}:${row.symbol}`;
+  const rawConsolidateA = (row: CPRResultWithSource) =>
+    previousConsolidateAIncludedSymbols.has(rawKey(row));
+  const rawMomentumA = (row: CPRResultWithSource) =>
+    previousUpexIncludedSymbols.has(rawKey(row));
+  const rawConsolidateB = (row: CPRResultWithSource) =>
+    previous15MTCIncludedSymbols.has(rawKey(row));
+  const rawMomentumB = (row: CPRResultWithSource) =>
+    previous15MMomentumIncludedSymbols.has(rawKey(row));
+  const rawInsideR1S1 = (row: CPRResultWithSource) =>
+    previousInsideR1S1IncludedSymbols.has(rawKey(row));
+
+  const candleBucket = (row: CPRResultWithSource): "consolidate-a" | "momentum-a" | "consolidate-b" | "momentum-b" | "inside-r1s1" | null => {
+    const conA = rawConsolidateA(row);
+    const momA = rawMomentumA(row);
+    const conB = rawConsolidateB(row);
+    const momB = rawMomentumB(row);
+    const inside = rawInsideR1S1(row);
+    if (conA && conB) return "inside-r1s1";
+    if (conB) return "consolidate-b";
+    if (momB) return "momentum-b";
+    if (conA) return "consolidate-a";
+    if (momA) return "momentum-a";
+    if (inside) return "inside-r1s1";
+    return null;
+  };
+
+  const hasConsolidateB = (row: CPRResultWithSource) => candleBucket(row) === "consolidate-b";
+  const hasMomentumB = (row: CPRResultWithSource) => candleBucket(row) === "momentum-b";
+  const hasConsolidateA = (row: CPRResultWithSource) => candleBucket(row) === "consolidate-a";
+  const hasMomentumA = (row: CPRResultWithSource) => candleBucket(row) === "momentum-a";
+  const hasInsideR1S1 = (row: CPRResultWithSource) => candleBucket(row) === "inside-r1s1";
+  // Back-compat alias for any leftover inrange references during transition
+  const hasInRangeR = hasInsideR1S1;
+
   const previousCandleClassificationReady =
     previousConsolidateAReady &&
     previousUpexReady &&
     previous15MTCReady &&
-    previous15MMomentumReady;
+    previous15MMomentumReady &&
+    previousInsideR1S1Ready;
 
   const previousConsolidateAIncludedCount = getActivePool().filter(
     (row) => row.source !== "coindcx" && hasConsolidateA(row),
@@ -1675,7 +1297,10 @@ export default function Screener({
   const previous15MMomentumIncludedCount = getActivePool().filter(
     (row) => row.source !== "coindcx" && hasMomentumB(row),
   ).length;
-  const previousInRangeRIncludedCount = getActivePool().filter(hasInRangeR).length;
+  const previousInsideR1S1IncludedCount = getActivePool().filter(
+    (row) => row.source !== "coindcx" && hasInsideR1S1(row),
+  ).length;
+  const previousInRangeRIncludedCount = previousInsideR1S1IncludedCount;
 
   // RECLAIM-S / RECLAIM-R — live state for a row (pierced depth from the
   // per-window scan + current price/day range from the live-refreshed row).
@@ -1953,7 +1578,7 @@ export default function Screener({
     )
     .filter(
       (r) =>
-        previousCandleFilter !== "inrange-r" ||
+        previousCandleFilter !== "inside-r1s1" ||
         hasInRangeR(r)
     )
     // RECLAIM-S / RECLAIM-R — live failed breakdown / breakout (independent of
@@ -2833,7 +2458,6 @@ export default function Screener({
                 onClick={() => {
                   if (!previous15MMomentumReady) return;
                   setPreviousCandleFilter((v) => v === "momentum-b" ? "all" : "momentum-b");
-                  setPrevious15MMomentumMessage("");
                 }}
                 disabled={!previous15MMomentumReady || currentAllCount === 0 || activeTab === "coindcx"}
                 aria-pressed={previousCandleFilter === "momentum-b"}
@@ -2854,7 +2478,6 @@ export default function Screener({
                 onClick={() => {
                   if (!previous15MTCReady) return;
                   setPreviousCandleFilter((v) => v === "consolidate-b" ? "all" : "consolidate-b");
-                  setPrevious15MTCMessage("");
                 }}
                 disabled={!previous15MTCReady || currentAllCount === 0 || activeTab === "coindcx"}
                 aria-pressed={previousCandleFilter === "consolidate-b"}
@@ -2873,27 +2496,29 @@ export default function Screener({
               </button>
               <button
                 onClick={() => {
-                  if (!previousCandleClassificationReady) return;
-                  setPreviousCandleFilter((v) => v === "inrange-r" ? "all" : "inrange-r");
+                  if (!previousInsideR1S1Ready) return;
+                  setPreviousCandleFilter((v) => v === "inside-r1s1" ? "all" : "inside-r1s1");
+                  resetInsideR1S1Message();
                 }}
-                disabled={!previousCandleClassificationReady || currentAllCount === 0 || activeTab === "coindcx"}
-                aria-pressed={previousCandleFilter === "inrange-r"}
+                disabled={!previousInsideR1S1Ready || currentAllCount === 0 || activeTab === "coindcx"}
+                aria-pressed={previousCandleFilter === "inside-r1s1"}
                 className={`text-xs px-2.5 py-1 -ml-px border transition-colors disabled:opacity-50 ${
-                  previousCandleFilter === "inrange-r"
+                  previousCandleFilter === "inside-r1s1"
                     ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
                     : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
                 }`}
-                title="Show remaining symbols in the active Show All pool that are not in P-MOMENTUM-B, P-CONSOLIDATE-B, P-CONSOLIDATE-A, or P-MOMENTUM-A. Includes symbols those candle checks could not classify."
+                title="INSIDE-R1S1: every completed previous-session 15m candle stays fully inside [min(S1,PL), max(R1,PH)]. Also receives symbols that pass both P-CONSOLIDATE-A and P-CONSOLIDATE-B (those are not listed under CON-A/CON-B). Mutually exclusive with the other four candle filters."
               >
-                {previousCandleClassificationReady
-                  ? `P-INRANGE-R (${previousInRangeRIncludedCount})`
-                  : "P-INRANGE-R…"}
+                {previousInsideR1S1Progress
+                  ? `P-INSIDE-R1S1 ${previousInsideR1S1Progress.done}/${previousInsideR1S1Progress.total}`
+                  : previousInsideR1S1Ready
+                    ? `P-INSIDE-R1S1 (${previousInsideR1S1IncludedCount})`
+                    : "P-INSIDE-R1S1…"}
               </button>
               <button
                 onClick={() => {
                   if (!previousConsolidateAReady) return;
                   setPreviousCandleFilter((v) => v === "consolidate-a" ? "all" : "consolidate-a");
-                  setPreviousConsolidateAMessage("");
                 }}
                 disabled={!previousConsolidateAReady || currentAllCount === 0 || activeTab === "coindcx"}
                 aria-pressed={previousCandleFilter === "consolidate-a"}
@@ -3019,12 +2644,14 @@ export default function Screener({
 
         )}
 
-        {(previousConsolidateAMessage || upexMessage || previous15MTCMessage || previous15MMomentumMessage || reclaimMessage) && currentStatus === "done" && (
+        {(previousConsolidateAMessage || upexMessageFromPrep || previous15MTCMessage || previous15MMomentumMessage || previousInsideR1S1Message || upexMessage || reclaimMessage) && currentStatus === "done" && (
           <div className="flex flex-col gap-1 px-1 -mt-1 mb-2 text-[10px] text-amber-300" role="status">
             {previousConsolidateAMessage && <span>{previousConsolidateAMessage}</span>}
-            {upexMessage && <span>{upexMessage}</span>}
+            {upexMessageFromPrep && <span>{upexMessageFromPrep}</span>}
             {previous15MTCMessage && <span>{previous15MTCMessage}</span>}
             {previous15MMomentumMessage && <span>{previous15MMomentumMessage}</span>}
+            {previousInsideR1S1Message && <span>{previousInsideR1S1Message}</span>}
+            {upexMessage && <span>{upexMessage}</span>}
             {reclaimMessage && <span>{reclaimMessage}</span>}
           </div>
         )}
@@ -3175,6 +2802,7 @@ export default function Screener({
                         isMomentumA={hasMomentumA(r)}
                         isConsolidateB={hasConsolidateB(r)}
                         isMomentumB={hasMomentumB(r)}
+                        isInsideR1S1={hasInsideR1S1(r)}
                         reclaimS={reclaim.s?.qualifies ? reclaim.s : null}
                         reclaimR={reclaim.r?.qualifies ? reclaim.r : null}
                       />
