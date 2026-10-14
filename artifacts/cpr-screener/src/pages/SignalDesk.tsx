@@ -411,14 +411,58 @@ const SignalDeskCard = memo(
         className="bg-[#0f1724] border border-[#1e2d3d] hover:border-slate-600 rounded-xl p-4 transition-all flex flex-col justify-between shadow-lg"
       >
         {/* Card Top — clean 2-column layout:
-            Left:  badges → timestamp → MATCH
-            Right: symbol+link | price
-                   source      | 24h change */}
+            Left:  symbol+link + price
+                   source + 24h change (left-aligned)
+            Right: direction/status badges → timestamp → MATCH (right-aligned) */}
         <div>
           <div className="flex items-start justify-between gap-3 mb-3">
-            <div className="flex flex-col gap-1 min-w-0">
+            <div className="flex flex-col items-start min-w-0 gap-0.5">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="flex items-center gap-1 min-w-0">
+                  <span className="text-base sm:text-lg font-extrabold text-white font-mono tracking-tight leading-none truncate">
+                    {item.symbol}
+                  </span>
+                  {hasKnownChartMapping(item.symbol, item.source) ? (
+                    <a
+                      href={getChartUrl(item.symbol, item.source)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-muted-foreground hover:text-primary transition-colors shrink-0"
+                      title="Open on TradingView"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  ) : (
+                    <span
+                      className="text-muted-foreground/30 cursor-not-allowed inline-flex shrink-0"
+                      title="Not available on TradingView"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                    </span>
+                  )}
+                </div>
+                <span className="text-xs sm:text-sm font-bold text-white font-mono leading-none tabular-nums">
+                  {fmt(item.currentPrice).replace(/,/g, "")}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-semibold text-slate-400 font-mono uppercase tracking-wider leading-none">
+                  {item.source}
+                </span>
+                <span
+                  className={`text-xs font-mono font-bold leading-none ${
+                    (item.change24h ?? 0) >= 0 ? "text-emerald-400" : "text-rose-400"
+                  }`}
+                >
+                  {fmtPct(item.change24h ?? 0)}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-col items-end text-right gap-1 shrink-0 min-w-0">
               {item.isSaved && (
-                <div className="flex items-center gap-1.5 flex-wrap">
+                <div className="flex items-center justify-end gap-1.5 flex-wrap">
                   {directionBadge}
                   {statusBadge}
                 </div>
@@ -451,50 +495,6 @@ const SignalDeskCard = memo(
                   MATCH {item.matchCount}/{item.matchTotal}
                 </span>
               )}
-            </div>
-
-            <div className="flex flex-col items-end shrink-0 min-w-0 gap-0.5">
-              <div className="flex items-center gap-2 min-w-0">
-                <div className="flex items-center gap-1 min-w-0">
-                  <span className="text-base sm:text-lg font-extrabold text-white font-mono tracking-tight leading-none truncate">
-                    {item.symbol}
-                  </span>
-                  {hasKnownChartMapping(item.symbol, item.source) ? (
-                    <a
-                      href={getChartUrl(item.symbol, item.source)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      className="text-muted-foreground hover:text-primary transition-colors shrink-0"
-                      title="Open on TradingView"
-                    >
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
-                  ) : (
-                    <span
-                      className="text-muted-foreground/30 cursor-not-allowed inline-flex shrink-0"
-                      title="Not available on TradingView"
-                    >
-                      <ExternalLink className="w-3 h-3" />
-                    </span>
-                  )}
-                </div>
-                <span className="text-sm sm:text-base font-bold text-white font-mono leading-none tabular-nums">
-                  {fmt(item.currentPrice).replace(/,/g, "")}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] font-semibold text-slate-400 font-mono uppercase tracking-wider leading-none">
-                  {item.source}
-                </span>
-                <span
-                  className={`text-xs font-mono font-bold leading-none ${
-                    (item.change24h ?? 0) >= 0 ? "text-emerald-400" : "text-rose-400"
-                  }`}
-                >
-                  {fmtPct(item.change24h ?? 0)}
-                </span>
-              </div>
             </div>
           </div>
 
