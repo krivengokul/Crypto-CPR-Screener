@@ -22,7 +22,6 @@ import {
   findPD15MMomentumBelowSymbols,
   findPreviousConsolidateASymbols,
   findPreviousUpexSymbols,
-  findInsideR1S1Symbols,
   findUpexSymbols,
   getUpexBc,
   getConsolidateABc,
@@ -32,20 +31,17 @@ import {
   loadPD15MTCBelowResults,
   loadPreviousConsolidateAResults,
   loadPreviousUpexResults,
-  loadPreviousInsideR1S1Results,
   getPrevious15MACeiling,
   getPrevious15MBFloor,
   previous15MMomentumCandidateCacheKey,
   previous15MTCCandidateCacheKey,
   previousConsolidateACandidateCacheKey,
   previousUpexCandidateCacheKey,
-  previousInsideR1S1CandidateCacheKey,
   previousUpexSessionStartUtcMs,
   savePD15MBelowTCResults,
   savePD15MMomentumBelowResults,
   savePreviousConsolidateAResults,
   savePreviousUpexResults,
-  savePreviousInsideR1S1Results,
   currentReclaimWindowMs,
   currentSessionStartUtcMs,
   findReclaimDepths,
@@ -597,42 +593,6 @@ export default function Screener({
       findPD15MMomentumBelowSymbols(missing, onProgress, sessionEndMs),
   });
 
-  const insideR1S1Prep = usePreviousCandleFilterPrep({
-    label: "INSIDE-R1S1",
-    canRun: candlePrepCanRun,
-    sessionStartMs: previousUpexSessionStart,
-    buildCandidates: () => {
-      const candidates = new Map<string, {
-        symbol: string; source: "binance" | "delta"; bc: number; floor: number; ceiling: number;
-      }>();
-      if (status === "done") {
-        for (const row of allResults) {
-          const floor = getPrevious15MBFloor(row.prevCPR);
-          const ceiling = getPrevious15MACeiling(row.prevCPR);
-          candidates.set(`binance:${row.symbol}`, {
-            symbol: row.symbol, source: "binance",
-            bc: row.prevCPR.bc, floor, ceiling,
-          });
-        }
-      }
-      if (deltaStatus === "done") {
-        for (const row of deltaAllResults) {
-          const floor = getPrevious15MBFloor(row.prevCPR);
-          const ceiling = getPrevious15MACeiling(row.prevCPR);
-          candidates.set(`delta:${row.symbol}`, {
-            symbol: row.symbol, source: "delta",
-            bc: row.prevCPR.bc, floor, ceiling,
-          });
-        }
-      }
-      return Array.from(candidates.values());
-    },
-    cacheKey: previousInsideR1S1CandidateCacheKey,
-    loadResults: loadPreviousInsideR1S1Results,
-    saveResults: savePreviousInsideR1S1Results,
-    scanMissing: (missing, onProgress, sessionEndMs) =>
-      findInsideR1S1Symbols(missing, onProgress, sessionEndMs),
-  });
 
   // Aliases so existing filter / badge / count code keeps working
   const previousConsolidateAIncludedSymbols = consolidateAPrep.includedSymbols;
@@ -651,15 +611,10 @@ export default function Screener({
   const previous15MMomentumProgress = momentumBPrep.progress;
   const previous15MMomentumReady = momentumBPrep.ready;
   const previous15MMomentumMessage = momentumBPrep.message;
-  const previousInsideR1S1IncludedSymbols = insideR1S1Prep.includedSymbols;
-  const previousInsideR1S1Progress = insideR1S1Prep.progress;
-  const previousInsideR1S1Ready = insideR1S1Prep.ready;
-  const previousInsideR1S1Message = insideR1S1Prep.message;
   const resetConsolidateAMessage = consolidateAPrep.resetMessage;
   const resetMomentumAMessage = momentumAPrep.resetMessage;
   const resetConsolidateBMessage = consolidateBPrep.resetMessage;
   const resetMomentumBMessage = momentumBPrep.resetMessage;
-  const resetInsideR1S1Message = insideR1S1Prep.resetMessage;
 
 
   // NEW: auto-hide "Show All" whenever a left-nav view/category is clicked.
@@ -1233,17 +1188,14 @@ export default function Screener({
     return (showAll ? allResults : filtered).map((r) => ({ ...r, source: "binance" as const }));
   };
 
-  // Five mutually exclusive previous-session buckets (exactly one per symbol
-  // when a raw check applies). Assignment order:
-  //   1. Both CON-A and CON-B raw pass → INSIDE-R1S1
+  // Five mutually exclusive previous-session buckets. Assignment order:
+  //   1. Both CON-A AND CON-B raw pass → INSIDE-R1S1  (intersection only)
   //   2. CON-B alone → P-CONSOLIDATE-B
   //   3. MOM-B (and not CON-B) → P-MOMENTUM-B
   //   4. CON-A alone → P-CONSOLIDATE-A
   //   5. MOM-A (and not CON-A) → P-MOMENTUM-A
-  //   6. INSIDE-R1S1 raw (body+wick-reference within floor/ceiling) → INSIDE-R1S1
-  // INSIDE-R1S1 is NOT the leftover complement; same containment mode as CON-A/B:
-  // ceiling = body above max(R1,PH) with fresh high; floor = body vs min(S1,PL)
-  // with wick reference (wicks alone do not fail).
+  // INSIDE-R1S1 is ONLY the intersection of CON-A ∩ CON-B — no separate
+  // range scan and no leftover / pure-inside assignment.
   const rawKey = (row: CPRResultWithSource) => `${row.source}:${row.symbol}`;
   const rawConsolidateA = (row: CPRResultWithSource) =>
     previousConsolidateAIncludedSymbols.has(rawKey(row));
@@ -1253,21 +1205,18 @@ export default function Screener({
     previous15MTCIncludedSymbols.has(rawKey(row));
   const rawMomentumB = (row: CPRResultWithSource) =>
     previous15MMomentumIncludedSymbols.has(rawKey(row));
-  const rawInsideR1S1 = (row: CPRResultWithSource) =>
-    previousInsideR1S1IncludedSymbols.has(rawKey(row));
 
   const candleBucket = (row: CPRResultWithSource): "consolidate-a" | "momentum-a" | "consolidate-b" | "momentum-b" | "inside-r1s1" | null => {
     const conA = rawConsolidateA(row);
     const momA = rawMomentumA(row);
     const conB = rawConsolidateB(row);
     const momB = rawMomentumB(row);
-    const inside = rawInsideR1S1(row);
+    // Only symbols that pass BOTH consolidate checks land in INSIDE-R1S1.
     if (conA && conB) return "inside-r1s1";
     if (conB) return "consolidate-b";
     if (momB) return "momentum-b";
     if (conA) return "consolidate-a";
     if (momA) return "momentum-a";
-    if (inside) return "inside-r1s1";
     return null;
   };
 
@@ -1276,15 +1225,28 @@ export default function Screener({
   const hasConsolidateA = (row: CPRResultWithSource) => candleBucket(row) === "consolidate-a";
   const hasMomentumA = (row: CPRResultWithSource) => candleBucket(row) === "momentum-a";
   const hasInsideR1S1 = (row: CPRResultWithSource) => candleBucket(row) === "inside-r1s1";
-  // Back-compat alias for any leftover inrange references during transition
   const hasInRangeR = hasInsideR1S1;
+
+  // INSIDE needs both CON prep pipelines ready (it is their intersection).
+  const previousInsideR1S1Ready = previousConsolidateAReady && previous15MTCReady;
+  const previousInsideR1S1Progress =
+    !previousInsideR1S1Ready && (previousConsolidateAProgress || previous15MTCProgress)
+      ? {
+          done:
+            (previousConsolidateAProgress?.done ?? 0) +
+            (previous15MTCProgress?.done ?? 0),
+          total:
+            (previousConsolidateAProgress?.total ?? 0) +
+            (previous15MTCProgress?.total ?? 0),
+        }
+      : null;
+  const previousInsideR1S1Message = "";
 
   const previousCandleClassificationReady =
     previousConsolidateAReady &&
     previousUpexReady &&
     previous15MTCReady &&
-    previous15MMomentumReady &&
-    previousInsideR1S1Ready;
+    previous15MMomentumReady;
 
   const previousConsolidateAIncludedCount = getActivePool().filter(
     (row) => row.source !== "coindcx" && hasConsolidateA(row),
@@ -2499,7 +2461,6 @@ export default function Screener({
                 onClick={() => {
                   if (!previousInsideR1S1Ready) return;
                   setPreviousCandleFilter((v) => v === "inside-r1s1" ? "all" : "inside-r1s1");
-                  resetInsideR1S1Message();
                 }}
                 disabled={!previousInsideR1S1Ready || currentAllCount === 0 || activeTab === "coindcx"}
                 aria-pressed={previousCandleFilter === "inside-r1s1"}
@@ -2508,7 +2469,7 @@ export default function Screener({
                     ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
                     : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
                 }`}
-                title="INSIDE-R1S1: same body/wick-reference containment as CON-A/B between floor min(S1,PL) and ceiling max(R1,PH). Whole body above ceiling with a fresh high fails; body below floor uses the wick-reference walk. Wicks alone do not fail. Also receives symbols that pass both CON-A and CON-B. Mutually exclusive with the other four candle filters."
+                title="INSIDE-R1S1: only symbols that pass BOTH P-CONSOLIDATE-A and P-CONSOLIDATE-B. CON-B alone stays in P-CONSOLIDATE-B; CON-A alone stays in P-CONSOLIDATE-A. Mutually exclusive with the other four candle filters."
               >
                 {previousInsideR1S1Progress
                   ? `P-INSIDE-R1S1 ${previousInsideR1S1Progress.done}/${previousInsideR1S1Progress.total}`
