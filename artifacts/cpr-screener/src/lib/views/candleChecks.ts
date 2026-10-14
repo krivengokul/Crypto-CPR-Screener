@@ -20,23 +20,46 @@ export const CANDLE_CHECK_OPTIONS: Array<{ value: CandleCheckCode | ""; label: s
  *   CA = CON-A only
  *   MB / MA = momentum only on that side
  */
-export function matchesCandleCheck(r: CPRResult, code: string): boolean {
+export type CandleBucket =
+  | "consolidate-a"
+  | "momentum-a"
+  | "consolidate-b"
+  | "momentum-b"
+  | "inside-r1s1"
+  | null;
+
+/** Exclusive assignment matching Screener / charts (CON-A ∩ CON-B → INSIDE). */
+export function resolveCandleBucket(r: {
+  PD15MConsolidateAPass?: boolean;
+  PD15MBelowTCPass?: boolean;
+  PD15MAboveBCPass?: boolean;
+  PD15MMomentumBPass?: boolean;
+}): CandleBucket {
   const conA = r.PD15MConsolidateAPass === true;
   const conB = r.PD15MBelowTCPass === true;
   const momA = r.PD15MAboveBCPass === true;
   const momB = r.PD15MMomentumBPass === true;
+  if (conA && conB) return "inside-r1s1";
+  if (conB) return "consolidate-b";
+  if (momB) return "momentum-b";
+  if (conA) return "consolidate-a";
+  if (momA) return "momentum-a";
+  return null;
+}
 
+export function matchesCandleCheck(r: CPRResult, code: string): boolean {
+  const bucket = resolveCandleBucket(r);
   switch (code) {
     case "IR":
-      return conA && conB;
+      return bucket === "inside-r1s1";
     case "CA":
-      return conA && !conB;
+      return bucket === "consolidate-a";
     case "MA":
-      return momA && !conA;
+      return bucket === "momentum-a";
     case "CB":
-      return conB && !conA;
+      return bucket === "consolidate-b";
     case "MB":
-      return momB && !conB;
+      return bucket === "momentum-b";
     default:
       return true;
   }

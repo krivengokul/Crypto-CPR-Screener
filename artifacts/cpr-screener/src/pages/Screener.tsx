@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo, Fragment } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, Fragment, type Dispatch, type SetStateAction } from "react";
 import { pivotcategories, Views, VIEW_LABEL_BY_ID, requestSignalDeselect } from "@/lib/ViewsSidebar";
 import { getView, VIEWS } from "@/lib/views";
 import { hasTouchedEntry } from "@/lib/signalTracker";
@@ -611,6 +611,53 @@ export default function Screener({
   const previous15MMomentumProgress = momentumBPrep.progress;
   const previous15MMomentumReady = momentumBPrep.ready;
   const previous15MMomentumMessage = momentumBPrep.message;
+
+  // Annotate scan rows with raw 15m flags so matchesCandleCheck / category
+  // conditions / Backtest badges see the same CON-A / CON-B / MOM bits the
+  // exclusive candleBucket uses (prep Sets are the source of truth).
+  useEffect(() => {
+    const applyFlags = (
+      rows: CPRResult[],
+      setRows: Dispatch<SetStateAction<CPRResult[]>>,
+      source: "binance" | "delta",
+    ) => {
+      if (rows.length === 0) return;
+      let changed = false;
+      const next = rows.map((row) => {
+        const key = `${source}:${row.symbol}`;
+        const a = previousConsolidateAIncludedSymbols.has(key);
+        const ma = previousUpexIncludedSymbols.has(key);
+        const b = previous15MTCIncludedSymbols.has(key);
+        const mb = previous15MMomentumIncludedSymbols.has(key);
+        if (
+          row.PD15MConsolidateAPass === a &&
+          row.PD15MAboveBCPass === ma &&
+          row.PD15MBelowTCPass === b &&
+          row.PD15MMomentumBPass === mb
+        ) {
+          return row;
+        }
+        changed = true;
+        return {
+          ...row,
+          PD15MConsolidateAPass: a,
+          PD15MAboveBCPass: ma,
+          PD15MBelowTCPass: b,
+          PD15MMomentumBPass: mb,
+        };
+      });
+      if (changed) setRows(next);
+    };
+    applyFlags(allResults, setAllResults, "binance");
+    applyFlags(deltaAllResults, setDeltaAllResults, "delta");
+  }, [
+    previousConsolidateAIncludedSymbols,
+    previousUpexIncludedSymbols,
+    previous15MTCIncludedSymbols,
+    previous15MMomentumIncludedSymbols,
+    allResults,
+    deltaAllResults,
+  ]);
   const resetConsolidateAMessage = consolidateAPrep.resetMessage;
   const resetMomentumAMessage = momentumAPrep.resetMessage;
   const resetConsolidateBMessage = consolidateBPrep.resetMessage;

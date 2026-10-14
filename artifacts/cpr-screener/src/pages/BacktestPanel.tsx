@@ -279,22 +279,29 @@ async function addApplicableViewOutcomes<T extends Pick<CategoryScanRow, "symbol
  * same priority order: CONSOLIDATE-B, MOMENTUM-B, CONSOLIDATE-A, MOMENTUM-A.
  */
 function renderCandleCheckBadges(raw: CPRResult) {
-  const showConsolidateB = raw.PD15MBelowTCPass === true;
-  const showMomentumB = raw.PD15MMomentumBPass === true && !showConsolidateB;
-  const showConsolidateA =
-    raw.PD15MConsolidateAPass === true && !showConsolidateB && !showMomentumB;
-  const showMomentumA =
-    raw.PD15MAboveBCPass === true &&
-    !showConsolidateB &&
-    !showMomentumB &&
-    !showConsolidateA;
+  // Exclusive buckets (same as Screener candleBucket / charts):
+  // CON-A ∩ CON-B → INSIDE-R1S1 only; pure CON-A / CON-B keep their own badge.
+  const conA = raw.PD15MConsolidateAPass === true;
+  const conB = raw.PD15MBelowTCPass === true;
+  const momA = raw.PD15MAboveBCPass === true;
+  const momB = raw.PD15MMomentumBPass === true;
+  const showInside = conA && conB;
+  const showConsolidateB = conB && !conA;
+  const showConsolidateA = conA && !conB;
+  const showMomentumB = momB && !conB;
+  const showMomentumA = momA && !conA;
 
-  if (!showConsolidateA && !showConsolidateB && !showMomentumA && !showMomentumB) {
+  if (!showInside && !showConsolidateA && !showConsolidateB && !showMomentumA && !showMomentumB) {
     return null;
   }
 
   return (
     <div className="mt-1 flex flex-col gap-0.5">
+      {showInside && (
+        <div className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-amber-300">
+          INSIDE-R1S1
+        </div>
+      )}
       {showConsolidateA && (
         <div
           className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
@@ -898,6 +905,7 @@ function CopyViewControl({
           title="Optional 15m CONSOLIDATE/MOMENTUM filter (CA/MA/CB/MB)."
           className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
         >
+          <option value="">Any CONSOLIDATE/MOMENTUM</option>
           {CANDLE_CHECK_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
               {opt.label}
@@ -1031,14 +1039,6 @@ function EditViewControl({
     // in the character class.
     return targetFromLabel(activeTarget.targetLabel, activeTarget.direction);
   });
-  // FIX: Edit View referenced stoploss/setStoploss without declaring state
-  // (Copy/Create already had this) → ReferenceError on open.
-  const [stoploss, setStoploss] = useState(() => {
-    const raw = activeTarget.stoplossLabel?.split(" ")[0];
-    return (STOPLOSS_OPTIONS as readonly string[]).includes(raw ?? "")
-      ? raw!
-      : (activeTarget.direction === "Up" ? "S1" : "R1");
-  });
   const [label, setLabel] = useState(activeTarget.label);
   const [attachKey, setAttachKey] = useState(() => activeTarget.parentKey ?? findContainingNodeKey(activeTarget.key) ?? activeTarget.key);
   // Preselected to whatever Gap Badge this View's own key already
@@ -1083,12 +1083,6 @@ function EditViewControl({
     });
     setTarget(() => {
       return targetFromLabel(activeTarget.targetLabel, activeTarget.direction);
-    });
-    setStoploss(() => {
-      const raw = activeTarget.stoplossLabel?.split(" ")[0];
-      return (STOPLOSS_OPTIONS as readonly string[]).includes(raw ?? "")
-        ? raw!
-        : (activeTarget.direction === "Up" ? "S1" : "R1");
     });
     setLabel(activeTarget.label);
     setAttachKey(activeTarget.parentKey ?? findContainingNodeKey(activeTarget.key) ?? activeTarget.key);
@@ -1273,6 +1267,7 @@ function EditViewControl({
           title="Optional 15m CONSOLIDATE/MOMENTUM filter (CA/MA/CB/MB)."
           className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
         >
+          <option value="">Any CONSOLIDATE/MOMENTUM</option>
           {CANDLE_CHECK_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
               {opt.label}
@@ -1730,6 +1725,7 @@ function CreateViewControl({
           title="Optional 15m CONSOLIDATE/MOMENTUM filter (CA/MA/CB/MB)."
           className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
         >
+          <option value="">Any CONSOLIDATE/MOMENTUM</option>
           {CANDLE_CHECK_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
               {opt.label}
@@ -1762,6 +1758,19 @@ function CreateViewControl({
         className="w-full bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
       />
       <AttachPointSelect value={attachKey} onChange={setAttachKey} disabled={!!command} />
+      <select
+        value={candleCheck}
+        onChange={(e) => setCandleCheck(e.target.value)}
+        disabled={!!command}
+        title="Optionally also require this 15-minute candle check."
+        className="w-full bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+      >
+        {CANDLE_CHECK_OPTIONS.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
       <select
         value={gapBadge}
         onChange={(e) => setGapBadge(e.target.value)}
@@ -2756,7 +2765,9 @@ export default function BacktestPanel() {
                           (patternExpansion[patternSelectionKey(node.path)] ??
                             hasSelectedDescendant(node));
                         // Views are normally listed after the nested patterns.
-                        // A view with a negative `order` is pinned above them.
+                        // A view with a negative `order` is pinned above them
+                        // (e.g. OVB-P15MAboveBC at the top of
+                        // Overlap Below).
                         const pinnedViews = visibleViews.filter((t) => (t.order ?? 0) < 0);
                         const otherViews = visibleViews.filter((t) => (t.order ?? 0) >= 0);
                         const value = patternSelectionKey(node.path);
