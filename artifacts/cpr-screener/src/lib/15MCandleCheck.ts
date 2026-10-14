@@ -12,7 +12,7 @@ const PREVIOUS_15M_B_CACHE_KEY = "cpr_previous_15m_b_results_v3";
 const PREVIOUS_15M_TC_B_CACHE_KEY = "cpr_previous_15m_tc_b_results_v6";
 const PREVIOUS_15M_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_momentum_b_results_v1";
 const PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_consolidate_a_results_v6";
-const PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_inside_r1s1_results_v1";
+const PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_inside_r1s1_results_v2";
 
 export interface UpexCandidate {
   symbol: string;
@@ -869,11 +869,19 @@ export function savePD15MMomentumBelowResults(
 }
 
 /**
- * INSIDE-R1S1: every completed previous-session 15m candle stays fully inside
- * [floor, ceiling], where:
- *   floor   = min(prev S1, prev Low / PL)
- *   ceiling = max(prev R1, prev High / PH)
- * Wick and body both must stay inside — a pierce of either bound fails.
+ * INSIDE-R1S1 containment — same body / wick-reference mode as CON-A & CON-B:
+ *
+ *   Ceiling side (mirror of CONSOLIDATE-A):
+ *     Fail when a candle's WHOLE body is above `ceiling` (max R1/PH) AND the
+ *     body top is a fresh high vs every earlier wick. A body above the ceiling
+ *     that stays at/under an earlier high does not fail.
+ *
+ *   Floor side (same as CONSOLIDATE-B floor):
+ *     First body with any part below `floor` (min S1/PL) sets a low-wick
+ *     reference; the immediate next candle may lower that reference; a later
+ *     body low below the reference fails.
+ *
+ * No full-candle (high/low) containment — wicks alone do not fail either side.
  * Returns null when there are no usable completed candles.
  */
 export function passesInsideR1S1Filter(
@@ -886,21 +894,56 @@ export function passesInsideR1S1Filter(
   if (!Number.isFinite(floor) || !Number.isFinite(ceiling)) return null;
   if (floor > ceiling) return null;
 
-  const completed = candles.filter(
-    (candle) =>
-      Number.isFinite(candle.openTime) &&
-      candle.openTime >= startTime &&
-      candle.openTime + CANDLE_INTERVAL_MS <= now &&
-      Number.isFinite(candle.open) &&
-      Number.isFinite(candle.close) &&
-      Number.isFinite(candle.high) &&
-      Number.isFinite(candle.low),
-  );
+  const completed = candles
+    .filter(
+      (candle) =>
+        Number.isFinite(candle.openTime) &&
+        candle.openTime >= startTime &&
+        candle.openTime + CANDLE_INTERVAL_MS <= now &&
+        Number.isFinite(candle.open) &&
+        Number.isFinite(candle.close) &&
+        Number.isFinite(candle.high) &&
+        Number.isFinite(candle.low),
+    )
+    .sort((a, b) => a.openTime - b.openTime);
   if (completed.length === 0) return null;
 
-  return completed.every(
-    (candle) => candle.low >= floor && candle.high <= ceiling,
-  );
+  let previousHighestWick: number | null = null;
+  let lowerReference: number | null = null;
+
+  for (let i = 0; i < completed.length; i++) {
+    const candle = completed[i];
+    const next: OHLC | undefined = completed[i + 1];
+
+    // Ceiling side — same walk as CONSOLIDATE-A ceiling / CONSOLIDATE-B TC
+    const fullBodyAboveCeiling = candle.open > ceiling && candle.close > ceiling;
+    const bodyHigh = Math.max(candle.open, candle.close);
+    if (
+      fullBodyAboveCeiling &&
+      (previousHighestWick === null || bodyHigh > previousHighestWick)
+    ) {
+      return false;
+    }
+
+    // Floor side — same walk as CONSOLIDATE-B floor / CONSOLIDATE-A BC
+    const bodyLow = Math.min(candle.open, candle.close);
+    const bodyPartBelowFloor = candle.open < floor || candle.close < floor;
+    if (lowerReference === null && bodyPartBelowFloor) {
+      lowerReference = candle.low;
+      if (next !== undefined && next.low < candle.low) {
+        lowerReference = next.low;
+      }
+    } else if (lowerReference !== null && bodyLow < lowerReference) {
+      return false;
+    }
+
+    previousHighestWick =
+      previousHighestWick === null
+        ? candle.high
+        : Math.max(previousHighestWick, candle.high);
+  }
+
+  return true;
 }
 
 /**

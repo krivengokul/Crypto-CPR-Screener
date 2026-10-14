@@ -1240,9 +1240,10 @@ export default function Screener({
   //   3. MOM-B (and not CON-B) → P-MOMENTUM-B
   //   4. CON-A alone → P-CONSOLIDATE-A
   //   5. MOM-A (and not CON-A) → P-MOMENTUM-A
-  //   6. INSIDE-R1S1 raw (candles fully inside floor/ceiling) → INSIDE-R1S1
-  // INSIDE-R1S1 is NOT the leftover complement; it has its own 15m definition
-  // (every completed candle high/low stays in [min(S1,PL), max(R1,PH)]).
+  //   6. INSIDE-R1S1 raw (body+wick-reference within floor/ceiling) → INSIDE-R1S1
+  // INSIDE-R1S1 is NOT the leftover complement; same containment mode as CON-A/B:
+  // ceiling = body above max(R1,PH) with fresh high; floor = body vs min(S1,PL)
+  // with wick reference (wicks alone do not fail).
   const rawKey = (row: CPRResultWithSource) => `${row.source}:${row.symbol}`;
   const rawConsolidateA = (row: CPRResultWithSource) =>
     previousConsolidateAIncludedSymbols.has(rawKey(row));
@@ -2507,7 +2508,7 @@ export default function Screener({
                     ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
                     : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
                 }`}
-                title="INSIDE-R1S1: every completed previous-session 15m candle stays fully inside [min(S1,PL), max(R1,PH)]. Also receives symbols that pass both P-CONSOLIDATE-A and P-CONSOLIDATE-B (those are not listed under CON-A/CON-B). Mutually exclusive with the other four candle filters."
+                title="INSIDE-R1S1: same body/wick-reference containment as CON-A/B between floor min(S1,PL) and ceiling max(R1,PH). Whole body above ceiling with a fresh high fails; body below floor uses the wick-reference walk. Wicks alone do not fail. Also receives symbols that pass both CON-A and CON-B. Mutually exclusive with the other four candle filters."
               >
                 {previousInsideR1S1Progress
                   ? `P-INSIDE-R1S1 ${previousInsideR1S1Progress.done}/${previousInsideR1S1Progress.total}`
