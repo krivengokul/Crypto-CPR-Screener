@@ -488,6 +488,82 @@ export async function updateSignalOutcomeInCloud(
   }
 }
 
+/** Deterministic Journal id for (symbol, direction, pattern) on a UTC day. */
+export function buildTodaySignalId(
+  symbol: string,
+  direction: string,
+  patternName: string,
+  dayKey: string = new Date().toISOString().slice(0, 10),
+): string {
+  const patternSlug = patternName.replace(/[^a-zA-Z0-9]/g, "_").toUpperCase();
+  return `${symbol}-${direction}-${patternSlug}-${dayKey}`;
+}
+
+/** Today's journal row for this setup, if any (local cache). */
+export function getTodayLoggedSignal(
+  symbol: string,
+  direction: string,
+  patternName: string,
+  source?: string,
+): LoggedSignal | undefined {
+  const id = buildTodaySignalId(symbol, direction, patternName);
+  const local = getLocalSignalsCache();
+  const byId = local.find((s) => s.id === id);
+  if (byId) return byId;
+  const todayKey = new Date().toISOString().slice(0, 10);
+  return local.find(
+    (s) =>
+      s.symbol?.toUpperCase() === symbol.toUpperCase() &&
+      normalizeSignalDirection(s.direction) === normalizeSignalDirection(direction) &&
+      s.patternName === patternName &&
+      (!source || s.source === source) &&
+      Number.isFinite(s.timestamp) &&
+      new Date(s.timestamp).toISOString().slice(0, 10) === todayKey,
+  );
+}
+
+/**
+ * Persist a live Pass/Fail onto today's Journal row (ACTIVE → PASS/FAIL).
+ * No-op if no row, already terminal, or status is not PASS/FAIL.
+ */
+export async function persistLiveJournalOutcome(args: {
+  symbol: string;
+  direction: string;
+  patternName: string;
+  source?: string;
+  status: "PASS" | "FAIL";
+  exitPrice?: number;
+  notes?: string;
+}): Promise<boolean> {
+  const existing = getTodayLoggedSignal(
+    args.symbol,
+    args.direction,
+    args.patternName,
+    args.source,
+  );
+  if (!existing) return false;
+  if (
+    existing.status === "PASS" ||
+    existing.status === "FAIL" ||
+    existing.status === "EXPIRED"
+  ) {
+    return false;
+  }
+  if (existing.status !== "ACTIVE") return false;
+
+  await updateSignalOutcomeInCloud(existing.id, {
+    status: args.status,
+    exitPrice: args.exitPrice,
+    evaluatedAt: Date.now(),
+    outcomeNotes:
+      args.notes ||
+      (args.status === "PASS"
+        ? `Target achieved (live sync).`
+        : `Stop hit (live sync).`),
+  });
+  return true;
+}
+
 /**
  * Fast direct kline fetcher with fast timeout & Futures priority
  */
