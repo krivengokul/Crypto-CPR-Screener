@@ -539,6 +539,13 @@ export const STOPLOSS_DEFS = ENTRY_DEFS;
  * Edits an existing View in the in-memory VIEWS array.
  * Supports updating direction, target, entry, label, attach point, gapBadge filter,
  * and level check conditions.
+ *
+ * The attach-point / pattern dropdown (`attachKey`) is BOTH where the View is
+ * filed (`parentKey`) AND what it grades against (`conditionKey` or the base
+ * of a gap/candle `condition`). Changing that dropdown therefore re-scopes
+ * which rows match — not only the tree path / composed view-code string.
+ * (Previously grading stayed on `old.conditionKey ?? oldKey`, so a pattern
+ * change was cosmetic after save/refresh.)
  */
 export function editBacktestView(
   oldKey: string,
@@ -579,7 +586,14 @@ export function editBacktestView(
 
   const old = VIEWS[idx];
   const entryKey = entryDef.key;
-  const patternKey = old.conditionKey ?? oldKey;
+  // Grade against the pattern currently selected in the dropdown — same node
+  // the View is filed under. Fall back to prior parent / conditionKey only when
+  // attachKey is omitted.
+  const patternKey =
+    (attachKey && attachKey.trim()) ||
+    old.parentKey ||
+    old.conditionKey ||
+    oldKey;
 
   const hasFilter = Boolean(trimmedGapBadge || trimmedCandleCheck);
   const filterCondition = hasFilter
@@ -591,11 +605,20 @@ export function editBacktestView(
       }
     : undefined;
 
+  // Drop prior grading fields so a custom condition (e.g. grades against a
+  // broader compound only) cannot survive a pattern-dropdown change.
+  const {
+    condition: _oldCondition,
+    conditionKey: _oldConditionKey,
+    standalone: _oldStandalone,
+    ...oldRest
+  } = old;
+
   const updatedDef: ViewDef = {
-    ...old,
+    ...oldRest,
     key: newKey,
     label: newLabel,
-    parentKey: attachKey ?? old.parentKey,
+    parentKey: patternKey,
     direction: isUp ? "Up" : "Down",
     targetLabel: targetDef.label,
     getTarget: targetDef.getTarget,
@@ -611,9 +634,11 @@ export function editBacktestView(
     ...(hasFilter
       ? {
           condition: filterCondition,
-          standalone: true,
+          standalone: true as const,
         }
-      : { conditionKey: patternKey, condition: undefined, standalone: undefined }),
+      : {
+          conditionKey: patternKey,
+        }),
   };
 
   VIEWS[idx] = updatedDef;

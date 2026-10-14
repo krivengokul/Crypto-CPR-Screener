@@ -297,19 +297,27 @@ const effectiveAttachKey =
     ? attachKey
     : getStringPropertyValue(sourceObj, "parentKey") ?? sourceKey;
 
-let originalConditionKey = getStringPropertyValue(sourceObj, "conditionKey");
-if (!originalConditionKey || originalConditionKey === sourceKey) {
-  const condProp = getObjectProperty(sourceObj, "condition");
-  if (condProp) {
-    const condText = condProp.getInitializer()?.getText() ?? "";
-    const match = condText.match(/passesView\(r,\s*[\"\']([^\"\']+)[\"\']\)/);
-    if (match && match[1] && match[1] !== sourceKey) {
-      originalConditionKey = match[1];
+// Grading key: on Edit, the attach/pattern dropdown is the source of truth
+// (same as in-memory editBacktestView). On Copy, keep the source View's
+// conditionKey / extracted passesView target, falling back to attach/parent.
+let originalConditionKey;
+if (isEdit) {
+  originalConditionKey = effectiveAttachKey;
+} else {
+  originalConditionKey = getStringPropertyValue(sourceObj, "conditionKey");
+  if (!originalConditionKey || originalConditionKey === sourceKey) {
+    const condProp = getObjectProperty(sourceObj, "condition");
+    if (condProp) {
+      const condText = condProp.getInitializer()?.getText() ?? "";
+      const match = condText.match(/passesView\(r,\s*[\"\']([^\"\']+)[\"\']\)/);
+      if (match && match[1] && match[1] !== sourceKey) {
+        originalConditionKey = match[1];
+      }
     }
   }
-}
-if (!originalConditionKey || originalConditionKey === sourceKey) {
-  originalConditionKey = getStringPropertyValue(sourceObj, "parentKey") ?? effectiveAttachKey;
+  if (!originalConditionKey || originalConditionKey === sourceKey) {
+    originalConditionKey = getStringPropertyValue(sourceObj, "parentKey") ?? effectiveAttachKey;
+  }
 }
 
 const rawDirection = overrides.direction ?? getStringPropertyValue(sourceObj, "direction") ?? "Up";
