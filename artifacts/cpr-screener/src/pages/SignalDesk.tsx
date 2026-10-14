@@ -12,12 +12,13 @@ import {
   hasTouchedEntry,
   fetchSavedSignalsFromCloud,
   SIGNALS_JOURNAL_UPDATED_EVENT,
+  persistLiveJournalOutcome,
   type LoggedSignal,
 } from "@/lib/signalTracker";
 import {
-  sessionReachedTarget,
-  livePriceReachedTarget,
-} from "@/lib/signalOutcome";
+  resolveSignalStatus,
+  type SignalLifecycleStatus,
+} from "@/lib/signalStatus";
 import { Views } from "@/lib/ViewsSidebar";
 import { getView, shortLevelLabel } from "@/lib/views";
 import { getRowCategory, getCategoryLabel } from "@/lib/rowCategory";
@@ -185,66 +186,38 @@ function isJournalMatchToday(match: LoggedSignal | undefined): boolean {
   return !!day && day === utcTodayKey();
 }
 
-/**
- * Live PASS/FAIL overlay when the Journal is still ACTIVE (or not written yet)
- * but price/session extremes have already hit target or stop. Without this,
- * SignalDesk kept showing "Active" until Signals Journal ran evaluateSignalOutcome.
- */
-function liveOutcomeStatus(
-  direction: "Up" | "Down" | string,
-  target: number,
-  stop: number,
-  livePrice: number,
-  sessionHigh?: number,
-  sessionLow?: number,
-): "PASS" | "FAIL" | undefined {
-  if (!Number.isFinite(livePrice) || livePrice <= 0) return undefined;
-  if (!Number.isFinite(target) || !Number.isFinite(stop)) return undefined;
-
-  const isUp = direction === "Up" || direction === "LONG";
-  const isDown = direction === "Down" || direction === "SHORT";
-  if (!isUp && !isDown) return undefined;
-
-  // Target first via session extremes (hit-and-retraced still counts).
-  if (sessionReachedTarget(direction, target, sessionHigh, sessionLow, livePrice)) {
-    return "PASS";
-  }
-  if (livePriceReachedTarget(direction, target, livePrice)) {
-    return "PASS";
-  }
-
-  // Stop: live price or session extreme through SL.
-  if (isUp) {
-    if (livePrice <= stop) return "FAIL";
-    if (sessionLow !== undefined && Number.isFinite(sessionLow) && sessionLow > 0 && sessionLow <= stop) {
-      return "FAIL";
-    }
-  } else {
-    if (livePrice >= stop) return "FAIL";
-    if (sessionHigh !== undefined && Number.isFinite(sessionHigh) && sessionHigh >= stop) {
-      return "FAIL";
-    }
-  }
+/** Map shared lifecycle status → SignalDesk journalStatus field. */
+function lifecycleToCardJournalStatus(
+  life: SignalLifecycleStatus,
+  prior?: SignalItem["journalStatus"],
+): SignalItem["journalStatus"] {
+  if (life === "pass") return "PASS";
+  if (life === "fail") return prior === "EXPIRED" ? "EXPIRED" : "FAIL";
+  if (life === "active") return prior === "ACTIVE" ? "ACTIVE" : prior ?? "ACTIVE";
   return undefined;
 }
 
 function resolveCardStatus(
   journalStatus: SignalItem["journalStatus"],
   direction: "Up" | "Down" | string,
+  entry: number,
   target: number,
   stop: number,
   livePrice: number,
   sessionHigh?: number,
   sessionLow?: number,
-  entryTouched?: boolean,
 ): SignalItem["journalStatus"] {
-  if (journalStatus === "PASS" || journalStatus === "FAIL" || journalStatus === "EXPIRED") {
-    return journalStatus;
-  }
-  // Only resolve live outcomes once entry is in play (journal ACTIVE or price touched).
-  if (!(entryTouched || journalStatus === "ACTIVE")) return journalStatus;
-  const live = liveOutcomeStatus(direction, target, stop, livePrice, sessionHigh, sessionLow);
-  return live ?? journalStatus;
+  const life = resolveSignalStatus({
+    direction,
+    entry,
+    target,
+    stop,
+    livePrice,
+    sessionHigh,
+    sessionLow,
+    journalStatus: journalStatus ?? null,
+  });
+  return lifecycleToCardJournalStatus(life, journalStatus);
 }
 
 // Which top-level Views bucket a View id lives under — e.g. "compressed",
@@ -439,7 +412,8 @@ const SignalDeskCard = memo(
       >
         {/* Card Top — clean 2-column layout:
             Left:  badges → timestamp → MATCH
-            Right: symbol → source → price → 24h change */}
+            Right: symbol+link | price
+                   source      | 24h change */}
         <div>
           <div className="flex items-start justify-between gap-3 mb-3">
             <div className="flex flex-col gap-1 min-w-0">
@@ -479,43 +453,47 @@ const SignalDeskCard = memo(
               )}
             </div>
 
-            <div className="flex flex-col items-end shrink-0 min-w-0">
-              <div className="flex items-center gap-1 min-w-0">
-                <span className="text-base sm:text-lg font-extrabold text-white font-mono tracking-tight leading-tight truncate">
-                  {item.symbol}
-                </span>
-                {hasKnownChartMapping(item.symbol, item.source) ? (
-                  <a
-                    href={getChartUrl(item.symbol, item.source)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    className="text-muted-foreground hover:text-primary transition-colors shrink-0"
-                    title="Open on TradingView"
-                  >
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
-                ) : (
-                  <span
-                    className="text-muted-foreground/30 cursor-not-allowed inline-flex shrink-0"
-                    title="Not available on TradingView"
-                  >
-                    <ExternalLink className="w-3 h-3" />
+            <div className="flex flex-col items-end shrink-0 min-w-0 gap-0.5">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="flex items-center gap-1 min-w-0">
+                  <span className="text-base sm:text-lg font-extrabold text-white font-mono tracking-tight leading-none truncate">
+                    {item.symbol}
                   </span>
-                )}
+                  {hasKnownChartMapping(item.symbol, item.source) ? (
+                    <a
+                      href={getChartUrl(item.symbol, item.source)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-muted-foreground hover:text-primary transition-colors shrink-0"
+                      title="Open on TradingView"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  ) : (
+                    <span
+                      className="text-muted-foreground/30 cursor-not-allowed inline-flex shrink-0"
+                      title="Not available on TradingView"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                    </span>
+                  )}
+                </div>
+                <span className="text-sm sm:text-base font-bold text-white font-mono leading-none tabular-nums">
+                  {fmt(item.currentPrice).replace(/,/g, "")}
+                </span>
               </div>
-              <div className="text-[11px] font-semibold text-slate-400 font-mono uppercase tracking-wider leading-none mt-0.5">
-                {item.source}
-              </div>
-              <div className="text-sm sm:text-base font-bold text-white font-mono leading-tight mt-1">
-                {fmt(item.currentPrice).replace(/,/g, "")}
-              </div>
-              <div
-                className={`text-xs font-mono font-bold leading-tight mt-0.5 text-right ${
-                  (item.change24h ?? 0) >= 0 ? "text-emerald-400" : "text-rose-400"
-                }`}
-              >
-                {fmtPct(item.change24h ?? 0)}
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-semibold text-slate-400 font-mono uppercase tracking-wider leading-none">
+                  {item.source}
+                </span>
+                <span
+                  className={`text-xs font-mono font-bold leading-none ${
+                    (item.change24h ?? 0) >= 0 ? "text-emerald-400" : "text-rose-400"
+                  }`}
+                >
+                  {fmtPct(item.change24h ?? 0)}
+                </span>
               </div>
             </div>
           </div>
@@ -945,20 +923,21 @@ export default function SignalDesk({
           ? resolveCardStatus(
               rawJournalStatus,
               levels.direction,
+              levels.price,
               levels.targetPrice,
               levels.stopPrice,
               sym.currentPrice,
               rowForSession?.todayHigh,
               rowForSession?.todayLow,
-              priceTouched || rawJournalStatus === "ACTIVE",
             )
           : rawJournalStatus;
-        // Triggered if entry touched, journal says so, or live already resolved PASS/FAIL.
+        // Active/Pass/Fail = not pure Ready
         const isTriggered =
-          !!journalStatus ||
           priceTouched ||
+          journalStatus === "ACTIVE" ||
           journalStatus === "PASS" ||
-          journalStatus === "FAIL";
+          journalStatus === "FAIL" ||
+          journalStatus === "EXPIRED";
 
         const triggeredAt = isJournalMatchToday(journalMatch)
           ? getTriggeredAt(sym.source, sym.symbol, patternId, patternLabel)
@@ -1081,19 +1060,20 @@ export default function SignalDesk({
         ? resolveCardStatus(
             rawJournalStatus,
             levels.direction,
+            levels.price,
             levels.targetPrice,
             levels.stopPrice,
             r.currentPrice,
             r.todayHigh,
             r.todayLow,
-            priceTouched || rawJournalStatus === "ACTIVE",
           )
         : rawJournalStatus;
       const isTriggered =
-        !!journalStatus ||
         priceTouched ||
+        journalStatus === "ACTIVE" ||
         journalStatus === "PASS" ||
-        journalStatus === "FAIL";
+        journalStatus === "FAIL" ||
+        journalStatus === "EXPIRED";
 
       const triggeredAt = isJournalMatchToday(journalMatch)
         ? getTriggeredAt(r.source, r.symbol, patternId, patternLabel)
@@ -1148,6 +1128,43 @@ export default function SignalDesk({
 
     return list;
   }, [symbols, results, viewPills, activeSignalSymbols, resultsBySymbol, selectedSignalId, activeSignal, activeSignalLabel, getTriggeredAt, getJournalMatch]);
+
+  // Persist live Pass/Fail onto Journal so Desk / Journal stay aligned without
+  // waiting for the Journal page's evaluate pass.
+  const persistedOutcomesRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      for (const item of signals) {
+        if (!item.isSaved || !item.patternName) continue;
+        if (item.journalStatus !== "PASS" && item.journalStatus !== "FAIL") continue;
+        const key = `${item.source}:${item.symbol}:${item.patternName}:${item.journalStatus}`;
+        if (persistedOutcomesRef.current.has(key)) continue;
+        persistedOutcomesRef.current.add(key);
+        try {
+          await persistLiveJournalOutcome({
+            symbol: item.symbol,
+            direction: item.direction,
+            patternName: item.patternName,
+            source: item.source,
+            status: item.journalStatus,
+            exitPrice: item.journalStatus === "PASS" ? item.targetPrice : item.stopPrice,
+            notes:
+              item.journalStatus === "PASS"
+                ? `Target achieved (SignalDesk live sync @ ${item.currentPrice}).`
+                : `Stop hit (SignalDesk live sync @ ${item.currentPrice}).`,
+          });
+        } catch {
+          persistedOutcomesRef.current.delete(key);
+        }
+        if (cancelled) return;
+      }
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [signals]);
 
   // Shared base filters (source / direction / search) — status is applied
   // separately so header counts stay stable when toggling Active/Ready/Pass/Fail.
