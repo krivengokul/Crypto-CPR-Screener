@@ -897,11 +897,35 @@ export default function ScreenerTableRow({
   // classification. Fall back to row flags only for callers without props.
   // When Screener passes exclusive bucket props, show exactly one badge.
   // Fallback (no props) uses raw flags with within-side MOM excluding CON.
-  const showInsideR1S1 = isInsideR1S1 === true;
-  const showConsolidateA = showInsideR1S1 ? false : (isConsolidateA ?? r.PD15MConsolidateAPass === true);
-  const showConsolidateB = showInsideR1S1 ? false : (isConsolidateB ?? r.PD15MBelowTCPass === true);
-  const showMomentumA = showInsideR1S1 ? false : ((isMomentumA ?? r.PD15MAboveBCPass === true) && !showConsolidateA);
-  const showMomentumB = showInsideR1S1 ? false : ((isMomentumB ?? r.PD15MMomentumBPass === true) && !showConsolidateB);
+  // Exclusive badges (same as Screener candleBucket):
+  // INSIDE = CON-A ∩ CON-B only; pure CON-A / CON-B keep their own badges.
+  const rawConA = r.PD15MConsolidateAPass === true;
+  const rawConB = r.PD15MBelowTCPass === true;
+  const rawMomA = r.PD15MAboveBCPass === true;
+  const rawMomB = r.PD15MMomentumBPass === true;
+  const showInsideR1S1 =
+    isInsideR1S1 === true ||
+    (isInsideR1S1 === undefined &&
+      isConsolidateA === undefined &&
+      isConsolidateB === undefined &&
+      rawConA &&
+      rawConB);
+  const showConsolidateA =
+    showInsideR1S1
+      ? false
+      : (isConsolidateA ?? (rawConA && !rawConB));
+  const showConsolidateB =
+    showInsideR1S1
+      ? false
+      : (isConsolidateB ?? (rawConB && !rawConA));
+  const showMomentumA =
+    showInsideR1S1
+      ? false
+      : (isMomentumA ?? (rawMomA && !rawConA));
+  const showMomentumB =
+    showInsideR1S1
+      ? false
+      : (isMomentumB ?? (rawMomB && !rawConB));
   // Hoisted so the same up/down call drives both the per-row dot in the
   // Symbol column AND the new "Levels VIEW" name badge below — one row
   // shouldn't ever show a green dot next to a red badge.

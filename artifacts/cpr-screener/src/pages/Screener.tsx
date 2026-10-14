@@ -1206,15 +1206,26 @@ export default function Screener({
   const rawMomentumB = (row: CPRResultWithSource) =>
     previous15MMomentumIncludedSymbols.has(rawKey(row));
 
+  /**
+   * Exclusive P-filter bucket (matches charts):
+   *   CON-A  = previous 15m stayed within BC → max(R1, PH)
+   *   CON-B  = previous 15m stayed within TC → min(S1, PL)
+   *   INSIDE = both CON-A and CON-B (candles in the R1/PH ↔ S1/PL overlap)
+   *   MOM-A  = from BC & above, not CON-A
+   *   MOM-B  = from TC & below, not CON-B
+   * Dual CON-A+CON-B is ONLY shown under P-INSIDE-R1S1 — never under CON-A or CON-B.
+   */
   const candleBucket = (row: CPRResultWithSource): "consolidate-a" | "momentum-a" | "consolidate-b" | "momentum-b" | "inside-r1s1" | null => {
     const conA = rawConsolidateA(row);
     const momA = rawMomentumA(row);
     const conB = rawConsolidateB(row);
     const momB = rawMomentumB(row);
-    // Only symbols that pass BOTH consolidate checks land in INSIDE-R1S1.
+    // Both consolidate bands → INSIDE-R1S1 only
     if (conA && conB) return "inside-r1s1";
+    // CON-B alone (TC → min(S1,PL))
     if (conB) return "consolidate-b";
     if (momB) return "momentum-b";
+    // CON-A alone (BC → max(R1,PH))
     if (conA) return "consolidate-a";
     if (momA) return "momentum-a";
     return null;
