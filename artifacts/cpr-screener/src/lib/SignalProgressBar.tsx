@@ -36,10 +36,10 @@ export default function SignalProgressBar({
   r4,
   isDown = false,
 }: SignalProgressBarProps) {
-  // Track segment colors: S4->PIVOT is always red/crimson, PIVOT->R4 is
-  // always green/emerald, regardless of signal direction.
-  const leftTrackColor = "#881337";
-  const rightTrackColor = "#065f46";
+  // Up: left (support / stop side) red, right (target side) green
+  // Down: left (target / support side) green, right (stop / resistance) red
+  const leftTrackColor = isDown ? "#065f46" : "#881337";
+  const rightTrackColor = isDown ? "#881337" : "#065f46";
 
   // Ensure valid min/max boundaries
   const minVal = s4 || pivot * 0.95;
@@ -59,16 +59,13 @@ export default function SignalProgressBar({
   const r2Pct = getPercent(r2);
   const r3Pct = r3 !== undefined ? getPercent(r3) : null;
 
-  // Dynamic context calculations below the bar (matching image: e.g. "1.42% from S1   0.23% to PIVOT")
-  // Up signals: left = support-side context (rose), right = progress toward
-  // the R-level target (emerald) — this is the original framing, unchanged.
-  // Down signals: mirrored — left = progress toward the S-level target
-  // (emerald), right = resistance-side context (rose) — matching the
-  // green-left/red-right flip already applied to the track above.
+  // Dynamic context below the bar (e.g. "1.42% from S1   0.23% to PIVOT")
+  // Up: left = support context (rose), right = progress to R-target (emerald)
+  // Down: left = progress to S-target (emerald), right = resistance context (rose)
   let leftText = "";
   let rightText = "";
-  let leftColor = "text-rose-400";
-  let rightColor = "text-emerald-400";
+  let leftColor = isDown ? "text-emerald-400" : "text-rose-400";
+  let rightColor = isDown ? "text-rose-400" : "text-emerald-400";
 
   if (!isDown) {
     if (price < pivot) {
@@ -76,7 +73,6 @@ export default function SignalProgressBar({
       rightText = `${toPivotPct}% to PIVOT`;
       rightColor = "text-emerald-400";
 
-      // Determine closest support below or equal to current price
       if (price >= s1) {
         const diff = Math.abs(((price - s1) / (s1 || 1)) * 100).toFixed(2);
         leftText = `${diff}% from S1`;
@@ -96,7 +92,6 @@ export default function SignalProgressBar({
       leftText = `${abovePivotPct}% from PIVOT`;
       leftColor = "text-rose-400";
 
-      // Determine closest resistance above or equal to current price
       if (price <= r1) {
         const diff = Math.abs(((r1 - price) / (price || 1)) * 100).toFixed(2);
         rightText = `${diff}% to R1`;
@@ -113,12 +108,12 @@ export default function SignalProgressBar({
       rightColor = "text-emerald-400";
     }
   } else {
+    // Down: target is below (S side = green/left), stop is above (R side = red/right)
     if (price > pivot) {
       const toPivotPct = Math.abs(((price - pivot) / price) * 100).toFixed(2);
       leftText = `${toPivotPct}% to PIVOT`;
-      leftColor = "text-rose-400";
+      leftColor = "text-emerald-400";
 
-      // Determine closest resistance above or equal to current price
       if (price <= r1) {
         const diff = Math.abs(((r1 - price) / (price || 1)) * 100).toFixed(2);
         rightText = `${diff}% from R1`;
@@ -132,14 +127,12 @@ export default function SignalProgressBar({
         const diff = Math.abs(((r4 - price) / (price || 1)) * 100).toFixed(2);
         rightText = `${diff}% from R4`;
       }
-      rightColor = "text-emerald-400";
+      rightColor = "text-rose-400";
     } else {
       const belowPivotPct = Math.abs(((pivot - price) / (pivot || 1)) * 100).toFixed(2);
       rightText = `${belowPivotPct}% from PIVOT`;
-      rightColor = "text-emerald-400";
+      rightColor = "text-rose-400";
 
-      // Determine closest support below or equal to current price — the
-      // Down signal's actual target, so this reads "to S1" / "to S2" etc.
       if (price >= s1) {
         const diff = Math.abs(((price - s1) / (price || 1)) * 100).toFixed(2);
         leftText = `${diff}% to S1`;
@@ -153,7 +146,7 @@ export default function SignalProgressBar({
         const diff = Math.abs(((price - s4) / (price || 1)) * 100).toFixed(2);
         leftText = `${diff}% to S4`;
       }
-      leftColor = "text-rose-400";
+      leftColor = "text-emerald-400";
     }
   }
 
@@ -174,8 +167,7 @@ export default function SignalProgressBar({
         </div>
       </div>
 
-      {/* S3 / S1 / R1 / R3 context labels, sitting between the live price
-          callout above and the progress track below */}
+      {/* S3 / S1 / R1 / R3 context labels */}
       <div className="relative w-full h-7 mb-0.5 font-mono text-[9px] text-slate-400">
         {s3Pct !== null && (
           <div
@@ -214,24 +206,21 @@ export default function SignalProgressBar({
         )}
       </div>
 
-      {/* Progress Track: S4 -> PIVOT (Red Family) & PIVOT -> R4 (Green Family) */}
+      {/* Progress Track */}
       <div className="relative w-full h-2 rounded-full overflow-visible flex items-center">
-        {/* Left Side: S4 to PIVOT — red/crimson for Up, green for Down */}
+        {/* Left: S4 → PIVOT — red for Up, green for Down */}
         <div
           className="h-full rounded-l-full relative"
           style={{ width: `${pivotPct}%`, backgroundColor: leftTrackColor }}
         >
-          {/* S1 tick notch */}
           <div
             className="absolute top-0 bottom-0 w-[1px] bg-black/40"
             style={{ left: `${(s1Pct / (pivotPct || 1)) * 100}%` }}
           />
-          {/* S2 tick notch */}
           <div
             className="absolute top-0 bottom-0 w-[1px] bg-black/40"
             style={{ left: `${(s2Pct / (pivotPct || 1)) * 100}%` }}
           />
-          {/* S3 tick notch */}
           {s3Pct !== null && (
             <div
               className="absolute top-0 bottom-0 w-[1px] bg-black/40"
@@ -240,26 +229,23 @@ export default function SignalProgressBar({
           )}
         </div>
 
-        {/* Right Side: PIVOT to R4 — green/emerald for Up, red for Down */}
+        {/* Right: PIVOT → R4 — green for Up, red for Down */}
         <div
           className="h-full rounded-r-full relative flex-1"
           style={{ backgroundColor: rightTrackColor }}
         >
-          {/* R1 tick notch */}
           <div
             className="absolute top-0 bottom-0 w-[1px] bg-black/40"
             style={{
               left: `${((r1Pct - pivotPct) / (100 - pivotPct || 1)) * 100}%`,
             }}
           />
-          {/* R2 tick notch */}
           <div
             className="absolute top-0 bottom-0 w-[1px] bg-black/40"
             style={{
               left: `${((r2Pct - pivotPct) / (100 - pivotPct || 1)) * 100}%`,
             }}
           />
-          {/* R3 tick notch */}
           {r3Pct !== null && (
             <div
               className="absolute top-0 bottom-0 w-[1px] bg-black/40"
@@ -270,19 +256,16 @@ export default function SignalProgressBar({
           )}
         </div>
 
-        {/* S4 left tick */}
-        <div className="absolute left-0 top-0 bottom-0 w-[1px] bg-black/50" />
-
-        {/* Pivot Center Division Tick */}
+        {/* Pivot marker */}
         <div
-          className="absolute top-0 bottom-0 w-[1.5px] bg-black/60 z-10"
-          style={{ left: `${pivotPct}%` }}
+          className="absolute top-0 bottom-0 w-[1.5px] bg-slate-200/80 z-10"
+          style={{ left: `${pivotPct}%`, transform: "translateX(-50%)" }}
         />
 
-        {/* R4 right tick */}
+        <div className="absolute left-0 top-0 bottom-0 w-[1px] bg-black/50" />
         <div className="absolute right-0 top-0 bottom-0 w-[1px] bg-black/50" />
 
-        {/* Live Price Needle / Indicator */}
+        {/* Live Price Needle */}
         <div
           className="absolute top-[-3px] bottom-[-3px] w-[2px] bg-[#f97316] z-20 shadow-sm shadow-orange-500 transition-all duration-300"
           style={{
@@ -292,15 +275,13 @@ export default function SignalProgressBar({
         />
       </div>
 
-      {/* Labels below the bar (S4, S2, PIVOT, R2, R4 with price numbers) */}
+      {/* Labels below the bar */}
       <div className="relative w-full h-8 mt-1 font-mono text-[9px] text-slate-400">
-        {/* S4 Label */}
         <div className="absolute left-0 top-0 text-left">
           <div className="font-semibold text-slate-400 text-[9px]">S4</div>
           <div className="text-[8.5px] text-slate-300">{fmtNoCommas(s4)}</div>
         </div>
 
-        {/* S2 Label */}
         <div
           className="absolute top-0 -translate-x-1/2 text-center"
           style={{ left: `${s2Pct}%` }}
@@ -309,7 +290,6 @@ export default function SignalProgressBar({
           <div className="text-[8.5px] text-slate-300">{fmtNoCommas(s2)}</div>
         </div>
 
-        {/* PIVOT Label */}
         <div
           className="absolute top-0 -translate-x-1/2 text-center"
           style={{ left: `${pivotPct}%` }}
@@ -318,7 +298,6 @@ export default function SignalProgressBar({
           <div className="text-[8.5px] text-slate-200">{fmtNoCommas(pivot)}</div>
         </div>
 
-        {/* R2 Label */}
         <div
           className="absolute top-0 -translate-x-1/2 text-center"
           style={{ left: `${r2Pct}%` }}
@@ -327,14 +306,13 @@ export default function SignalProgressBar({
           <div className="text-[8.5px] text-slate-300">{fmtNoCommas(r2)}</div>
         </div>
 
-        {/* R4 Label */}
         <div className="absolute right-0 top-0 text-right">
           <div className="font-semibold text-slate-400 text-[9px]">R4</div>
           <div className="text-[8.5px] text-slate-300">{fmtNoCommas(r4)}</div>
         </div>
       </div>
 
-      {/* Bottom context summary (e.g. 1.42% from S1   0.23% to PIVOT) */}
+      {/* Bottom context summary */}
       <div className="flex items-center justify-center gap-3 text-[11px] font-mono mt-0.5">
         <span className={leftColor}>{leftText}</span>
         <span className={rightColor}>{rightText}</span>
