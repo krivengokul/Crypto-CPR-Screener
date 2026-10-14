@@ -661,7 +661,7 @@ function targetFromLabel(label: string | undefined, direction: "Up" | "Down" | u
  * `patternKey` below) rather than typed, and — unlike Create View — that
  * derived key can differ from the View's current key, which renames/moves
  * it to the new key on save (see viewKey below and handleSave's newKey).
- * Reuses the copyviewpatch.mjs AST patcher via copy-view.yml with isEdit=true,
+ * Reuses the EditCopyViewpatch.mjs AST patcher via editcopy-view.yml with isEdit=true,
  * which already supports sourceKey !== newKey (renaming/moving an existing
  * entry, including across category arrays) — see applyCopyViewPatch's
  * `if (isEdit)` branch there.
@@ -794,7 +794,7 @@ function CopyViewControl({
 
       setError("");
       const commandParts = [
-        "gh workflow run copy-view.yml",
+        "gh workflow run editcopy-view.yml",
         "--repo krivengokul/Crypto-CPR-Screener",
         "-f sourceKey=" + q(sourceKey),
         "-f newKey=" + q(viewKey),
@@ -1173,7 +1173,7 @@ function EditViewControl({
     const b64 = btoa(binary);
 
     const q = (s: string) => `"${s.replace(/"/g, "")}"`;
-    const cmd = `gh workflow run copy-view.yml --repo krivengokul/Crypto-CPR-Screener -f sourceKey=${q(activeTarget.key)} -f newKey=${q(viewKey)} -f newLabel=${q(trimmedLabel)} -f isEdit=true -f direction=${q(direction)} -f entry=${q(entry)} -f stoploss=${q(stoploss)} -f target=${q(target)} -f attachKey=${q(attachKey)}${trimmedCandleCheck ? ` -f candleCheck=${q(trimmedCandleCheck)}` : ""}${gapBadge ? ` -f gapBadge=${q(gapBadge)}` : ""} -f levelCheckDefs=${b64}`;
+    const cmd = `gh workflow run editcopy-view.yml --repo krivengokul/Crypto-CPR-Screener -f sourceKey=${q(activeTarget.key)} -f newKey=${q(viewKey)} -f newLabel=${q(trimmedLabel)} -f isEdit=true -f direction=${q(direction)} -f entry=${q(entry)} -f stoploss=${q(stoploss)} -f target=${q(target)} -f attachKey=${q(attachKey)}${trimmedCandleCheck ? ` -f candleCheck=${q(trimmedCandleCheck)}` : ""}${gapBadge ? ` -f gapBadge=${q(gapBadge)}` : ""} -f levelCheckDefs=${b64}`;
     setCommand(cmd);
     // Deliberately NOT calling onUpdated here, same reasoning as
     // CreateViewControl/CopyViewControl's confirm(): onUpdated moves the

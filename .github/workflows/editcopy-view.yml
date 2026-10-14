@@ -1,7 +1,7 @@
-name: Create Copy View
+name: Edit / Copy View
 
 # Manually triggered only — via the Actions tab "Run workflow" button, or
-# `gh workflow run copy-view.yml -f sourceKey=... -f newKey=... -f newLabel=...`
+# `gh workflow run editcopy-view.yml -f sourceKey=... -f newKey=... -f newLabel=...`
 # from any terminal with `gh` installed and logged in. A static GitHub
 # Pages site can't trigger this automatically without embedding a
 # credential in browser JS, which we're deliberately avoiding — so this
@@ -67,7 +67,7 @@ permissions:
   actions: write
 
 jobs:
-  copy-view:
+  editcopy-view:
     runs-on: ubuntu-latest
     env:
       # Repo layout is artifacts/cpr-screener/src/... (not repo-root).
@@ -84,12 +84,12 @@ jobs:
           node-version: "20"
 
       - name: Install patch script dependencies
-        working-directory: .github/scripts/copy-view
+        working-directory: .github/scripts/editcopy-view
         run: npm install
 
       - name: Apply the copy
-        working-directory: .github/scripts/copy-view
-        run: node copyviewpatch.mjs
+        working-directory: .github/scripts/editcopy-view
+        run: node EditCopyViewpatch.mjs
         env:
           IS_EDIT: ${{ inputs.isEdit }}
           DIRECTION: ${{ inputs.direction }}

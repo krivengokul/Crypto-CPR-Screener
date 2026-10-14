@@ -1,6 +1,6 @@
 name: Create View
 
-# Manually triggered only — same reasoning as copy-view.yml: a static
+# Manually triggered only — same reasoning as editcopy-view.yml: a static
 # GitHub Pages site can't trigger this automatically without embedding a
 # credential in browser JS. Run via:
 #   gh workflow run create-view.yml -f patternKey=... -f newKey=... -f newLabel=... -f levelCheckDefs=...

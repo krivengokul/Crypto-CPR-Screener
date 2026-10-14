@@ -499,7 +499,7 @@ export function formatWidthFilterLabel(widthFilter: WidthFilter): string {
  * the misc named Views, and the standalone raw-flag Patterns.
  *
  * The Copy View / Create View "conditionKey" redirect (auto-nav entries
- * written directly into views.ts's source by copy-view.yml/
+ * written directly into views.ts's source by editcopy-view.yml/
  * create-view.yml's patch.mjs) is handled here rather than inside
  * passesView() itself, because it additionally gates on the View's own
  * levelCheckDefs — a Copy View only counts as a pass when BOTH the
