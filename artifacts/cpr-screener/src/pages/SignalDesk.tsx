@@ -416,48 +416,46 @@ const SignalDeskCard = memo(
             Right: direction/status badges → timestamp → MATCH (right-aligned) */}
         <div>
           <div className="flex items-start justify-between gap-3 mb-3">
-            <div className="flex flex-col items-start min-w-0 gap-0.5">
-              <div className="flex items-center gap-2 min-w-0">
-                <div className="flex items-center gap-1 min-w-0">
-                  <span className="text-base sm:text-lg font-extrabold text-white font-mono tracking-tight leading-none truncate">
-                    {item.symbol}
+            {/* 2x2 grid keeps the 24h change directly under the price (same left edge)
+                and the source directly under the symbol. */}
+            <div className="grid grid-cols-[auto_auto] items-center justify-start gap-x-2 gap-y-0.5 min-w-0">
+              <div className="flex items-center gap-1 min-w-0">
+                <span className="text-base sm:text-lg font-extrabold text-white font-mono tracking-tight leading-none truncate">
+                  {item.symbol}
+                </span>
+                {hasKnownChartMapping(item.symbol, item.source) ? (
+                  <a
+                    href={getChartUrl(item.symbol, item.source)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="text-muted-foreground hover:text-primary transition-colors shrink-0"
+                    title="Open on TradingView"
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                ) : (
+                  <span
+                    className="text-muted-foreground/30 cursor-not-allowed inline-flex shrink-0"
+                    title="Not available on TradingView"
+                  >
+                    <ExternalLink className="w-3 h-3" />
                   </span>
-                  {hasKnownChartMapping(item.symbol, item.source) ? (
-                    <a
-                      href={getChartUrl(item.symbol, item.source)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      className="text-muted-foreground hover:text-primary transition-colors shrink-0"
-                      title="Open on TradingView"
-                    >
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
-                  ) : (
-                    <span
-                      className="text-muted-foreground/30 cursor-not-allowed inline-flex shrink-0"
-                      title="Not available on TradingView"
-                    >
-                      <ExternalLink className="w-3 h-3" />
-                    </span>
-                  )}
-                </div>
-                <span className="text-xs sm:text-sm font-bold text-white font-mono leading-none tabular-nums">
-                  {fmt(item.currentPrice).replace(/,/g, "")}
-                </span>
+                )}
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] font-semibold text-slate-400 font-mono uppercase tracking-wider leading-none">
-                  {item.source}
-                </span>
-                <span
-                  className={`text-xs font-mono font-bold leading-none ${
-                    (item.change24h ?? 0) >= 0 ? "text-emerald-400" : "text-rose-400"
-                  }`}
-                >
-                  {fmtPct(item.change24h ?? 0)}
-                </span>
-              </div>
+              <span className="text-xs sm:text-sm font-bold text-white font-mono leading-none tabular-nums">
+                {fmt(item.currentPrice).replace(/,/g, "")}
+              </span>
+              <span className="text-[11px] font-semibold text-slate-400 font-mono uppercase tracking-wider leading-none">
+                {item.source}
+              </span>
+              <span
+                className={`text-xs font-mono font-bold leading-none ${
+                  (item.change24h ?? 0) >= 0 ? "text-emerald-400" : "text-rose-400"
+                }`}
+              >
+                {fmtPct(item.change24h ?? 0)}
+              </span>
             </div>
 
             <div className="flex flex-col items-end text-right gap-1 shrink-0 min-w-0">
