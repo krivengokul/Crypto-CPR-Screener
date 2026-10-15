@@ -243,7 +243,9 @@ function DateField({
   min?: string;
 }) {
   const [open, setOpen] = useState(false);
-  const [viewMonth, setViewMonth] = useState(() => startOfMonthUTC(fromISO(value)));
+  const [viewMonth, setViewMonth] = useState(() =>
+    startOfMonthUTC(value ? fromISO(value) : new Date())
+  );
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -255,16 +257,20 @@ function DateField({
   }, []);
 
   useEffect(() => {
-    if (open) setViewMonth(startOfMonthUTC(fromISO(value)));
+    if (open) {
+      const base = value ? fromISO(value) : new Date();
+      setViewMonth(startOfMonthUTC(base));
+    }
   }, [open, value]);
 
   const today = new Date();
   const todayISO = toISO(today);
   const quickPicks = [
+    { label: "Any", iso: "" },
     { label: "Yesterday", iso: toISO(addDaysUTC(today, -1)) },
     { label: "7d ago", iso: toISO(addDaysUTC(today, -7)) },
     { label: "30d ago", iso: toISO(addDaysUTC(today, -30)) },
-  ].filter((q) => (!max || q.iso <= max) && (!min || q.iso >= min));
+  ].filter((q) => q.iso === "" || ((!max || q.iso <= max) && (!min || q.iso >= min)));
 
   const firstWeekday = startOfMonthUTC(viewMonth).getUTCDay();
   const totalDays = daysInMonthUTC(viewMonth);
@@ -282,7 +288,7 @@ function DateField({
         className={`${CONTROL_BOX} flex items-center gap-2 px-2.5 py-1.5`}
       >
         <CalendarIcon className="h-3.5 w-3.5 text-teal-400" />
-        <span>{formatDisplay(value)}</span>
+        <span>{value ? formatDisplay(value) : "Any date"}</span>
       </button>
 
       {open && (
@@ -865,6 +871,7 @@ function ChartLinksSection({
   exchangeFilter,
   startDate,
   endDate,
+  onClearFilters,
 }: {
   records: StoredChartLinkRecord[] | null;
   loading: boolean;
@@ -873,6 +880,7 @@ function ChartLinksSection({
   exchangeFilter: BacktestSource | "all";
   startDate: string;
   endDate: string;
+  onClearFilters?: () => void;
 }) {
   const [symbolSearch, setSymbolSearch] = useState("");
   const [viewNameSearch, setViewNameSearch] = useState("");
@@ -884,11 +892,20 @@ function ChartLinksSection({
         const details = parseChartRowKey(record.rowKey);
         const symbol = details.symbol.toLowerCase();
         const viewName = getChartViewName(record.viewKey).toLowerCase();
-        // Keep legacy links with an unparseable date visible rather than
-        // silently hiding them when a date range is selected.
+        // Prefer trade date from rowKey; fall back to savedAt (YYYY-MM-DD).
+        // Empty start/end = no date filter (show all).
+        const effectiveDate =
+          details.date ||
+          (record.savedAt && /^\d{4}-\d{2}-\d{2}/.test(record.savedAt)
+            ? record.savedAt.slice(0, 10)
+            : "");
         const dateMatches =
-          !details.date ||
-          ((!startDate || details.date >= startDate) && (!endDate || details.date <= endDate));
+          !startDate && !endDate
+            ? true
+            : !effectiveDate
+              ? true // keep undated links visible
+              : (!startDate || effectiveDate >= startDate) &&
+                (!endDate || effectiveDate <= endDate);
         return (
           (exchangeFilter === "all" || !details.exchange || details.exchange === exchangeFilter) &&
           dateMatches &&
@@ -1029,10 +1046,11 @@ function ChartLinksSection({
             onClick={() => {
               setSymbolSearch("");
               setViewNameSearch("");
+              onClearFilters?.();
             }}
             className="mt-2 text-xs text-teal-300 hover:text-teal-200"
           >
-            Clear text searches
+            Clear all filters
           </button>
         </div>
       ) : !error ? (
@@ -1353,27 +1371,19 @@ export default function PatternStats() {
 
             {categoryFilter === CHARTS_CATEGORY_KEY ? (
               <>
-                <label className="block">
-                  <span className={CONTROL_LABEL}>Start Date (UTC)</span>
-                  <input
-                    type="date"
-                    value={chartStartDateFilter}
-                    max={chartEndDateFilter || undefined}
-                    onChange={(e) => setChartStartDateFilter(e.target.value)}
-                    className={`${CONTROL_BOX} min-w-[160px] py-1.5 px-2 [color-scheme:dark]`}
-                  />
-                </label>
-                <label className="block">
-                  <span className={CONTROL_LABEL}>End Date (UTC)</span>
-                  <input
-                    type="date"
-                    value={chartEndDateFilter}
-                    min={chartStartDateFilter || undefined}
-                    max={new Date().toISOString().slice(0, 10)}
-                    onChange={(e) => setChartEndDateFilter(e.target.value)}
-                    className={`${CONTROL_BOX} min-w-[160px] py-1.5 px-2 [color-scheme:dark]`}
-                  />
-                </label>
+                <DateField
+                  label="Start Date (UTC)"
+                  value={chartStartDateFilter}
+                  onChange={setChartStartDateFilter}
+                  max={chartEndDateFilter || undefined}
+                />
+                <DateField
+                  label="End Date (UTC)"
+                  value={chartEndDateFilter}
+                  onChange={setChartEndDateFilter}
+                  min={chartStartDateFilter || undefined}
+                  max={new Date().toISOString().slice(0, 10)}
+                />
               </>
             ) : (
               <>
@@ -1408,7 +1418,17 @@ export default function PatternStats() {
               </div>
             </label>
 
-            {categoryFilter !== CHARTS_CATEGORY_KEY && (
+            {categoryFilter === CHARTS_CATEGORY_KEY ? (
+              <button
+                type="button"
+                className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-400 to-teal-400 px-4 py-1.5 text-sm font-bold text-[#04140f] shadow-md shadow-emerald-900/40 transition hover:from-emerald-300 hover:to-teal-300 disabled:cursor-not-allowed disabled:opacity-60"
+                onClick={() => setChartReloadKey((key) => key + 1)}
+                disabled={chartRecordsLoading}
+              >
+                {chartRecordsLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4 fill-current" />}
+                {chartRecordsLoading ? "Loading…" : "Run scan"}
+              </button>
+            ) : (
               <button
                 className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-400 to-teal-400 px-4 py-1.5 text-sm font-bold text-[#04140f] shadow-md shadow-emerald-900/40 transition hover:from-emerald-300 hover:to-teal-300 disabled:cursor-not-allowed disabled:opacity-60"
                 onClick={handleRun}
@@ -1451,6 +1471,11 @@ export default function PatternStats() {
             exchangeFilter={chartExchangeFilter}
             startDate={chartStartDateFilter}
             endDate={chartEndDateFilter}
+            onClearFilters={() => {
+              setChartStartDateFilter("");
+              setChartEndDateFilter("");
+              setChartExchangeFilter("all");
+            }}
           />
         ) : (
           <>

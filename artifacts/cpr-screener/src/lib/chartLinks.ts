@@ -80,30 +80,56 @@ export function getAllChartLinks(): Record<string, StoredChartLink> {
   return getLocalCache();
 }
 
-/** Read every saved chart-link document belonging to the current browser's Firebase user. */
+/** Read every saved chart-link for this browser: Firebase (by uid) + local cache merge. */
 export async function getAllChartLinkRecords(): Promise<StoredChartLinkRecord[]> {
-  const uid = await ensureSignedIn();
-  const db = getDb();
-  const snapshot = await getDocs(query(collection(db, CHART_LINKS_COLLECTION), where("uid", "==", uid)));
+  const byId = new Map<string, StoredChartLinkRecord>();
 
-  return snapshot.docs
-    .flatMap((chartDoc) => {
+  // 1) Local cache first so offline / not-yet-synced saves still appear
+  const local = getLocalCache();
+  for (const [key, link] of Object.entries(local)) {
+    if (!link?.url) continue;
+    const legacySeparator = key.lastIndexOf("::");
+    const legacyViewKey = legacySeparator >= 0 ? key.slice(0, legacySeparator) : "";
+    const legacyRowKey = legacySeparator >= 0 ? key.slice(legacySeparator + 2) : key;
+    byId.set(key, {
+      id: key,
+      url: link.url,
+      savedAt: typeof link.savedAt === "string" ? link.savedAt : "",
+      rowKey: legacyRowKey,
+      viewKey: legacyViewKey,
+    });
+  }
+
+  // 2) Firestore docs for this uid (overwrite / fill gaps)
+  try {
+    const uid = await ensureSignedIn();
+    const db = getDb();
+    const snapshot = await getDocs(query(collection(db, CHART_LINKS_COLLECTION), where("uid", "==", uid)));
+
+    for (const chartDoc of snapshot.docs) {
       const data = chartDoc.data();
-      if (typeof data.url !== "string" || !data.url) return [];
+      if (typeof data.url !== "string" || !data.url) continue;
 
       const legacySeparator = chartDoc.id.lastIndexOf("::");
       const legacyViewKey = legacySeparator >= 0 ? chartDoc.id.slice(0, legacySeparator) : "";
       const legacyRowKey = legacySeparator >= 0 ? chartDoc.id.slice(legacySeparator + 2) : chartDoc.id;
+      const rowKey = typeof data.rowKey === "string" && data.rowKey ? data.rowKey : legacyRowKey;
+      const viewKey =
+        typeof data.lastViewKey === "string" && data.lastViewKey ? data.lastViewKey : legacyViewKey;
 
-      return [{
+      byId.set(chartDoc.id, {
         id: chartDoc.id,
         url: data.url,
         savedAt: typeof data.savedAt === "string" ? data.savedAt : "",
-        rowKey: typeof data.rowKey === "string" && data.rowKey ? data.rowKey : legacyRowKey,
-        viewKey: typeof data.lastViewKey === "string" && data.lastViewKey ? data.lastViewKey : legacyViewKey,
-      }];
-    })
-    .sort((a, b) => b.savedAt.localeCompare(a.savedAt));
+        rowKey,
+        viewKey,
+      });
+    }
+  } catch {
+    // offline — return whatever we had in local cache
+  }
+
+  return Array.from(byId.values()).sort((a, b) => b.savedAt.localeCompare(a.savedAt));
 }
 
 /** React hook returning live map of chart links, automatically re-rendering when links are added/removed */
