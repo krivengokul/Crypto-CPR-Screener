@@ -244,18 +244,42 @@ export function splitSymbol(symbol: string, source: SourceId) {
  * use an underscore. Now the check is specific: only symbols whose quote
  * (per splitSymbol) is "BUSD" are treated as unmapped; every other Delta
  * symbol — underscore-delimited or not — gets a chart link as normal.
+ *
+ * Tokenized commodity products that are not listed under DELTAIN still return
+ * true when they have an entry in DELTA_TV_SYMBOL_OVERRIDES (e.g. OILUSD → USO).
  */
 export function hasKnownChartMapping(symbol: string, source: SourceId): boolean {
   // Binance and CoinDCX (Binance-routed `B-` instruments) both map cleanly.
   if (source !== "delta") return true;
+  const normalized = symbol.trim().toUpperCase().replace(/\.P$/i, "");
+  if (normalized in DELTA_TV_SYMBOL_OVERRIDES) return true;
   return splitSymbol(symbol, "delta").quote !== "BUSD";
 }
+
+/**
+ * Delta symbols that are NOT listed on TradingView as DELTAIN:<SYM>.P.
+ * Map to a public TradingView symbol that tracks the same underlying
+ * (e.g. OILUSD is the US Oil Fund ONDO token → AMEX:USO).
+ * host: "www" uses tradingview.com; "in" uses in.tradingview.com.
+ */
+const DELTA_TV_SYMBOL_OVERRIDES: Record<
+  string,
+  { tvSymbol: string; host?: "www" | "in" }
+> = {
+  // US Oil Fund ONDO token perpetual — DELTAIN:OILUSD.P does not exist
+  OILUSD: { tvSymbol: "AMEX:USO", host: "www" },
+  // iShares Silver (XAG) Trust ONDO token — use SLV ETF as proxy
+  SLVONUSD: { tvSymbol: "AMEX:SLV", host: "www" },
+};
 
 /**
  * Returns the TradingView chart URL for the market scanned by this screener.
  * Binance results use USDⓈ-M perpetual candles, so always request TradingView's
  * perpetual symbol (`BINANCE:<SYMBOL>.P`). This also fixes futures-only listings
  * such as UAIUSDT and IDOLUSDT when older call sites only pass symbol + source.
+ *
+ * Delta: default DELTAIN:<SYM>.P on in.tradingview.com; symbols in
+ * DELTA_TV_SYMBOL_OVERRIDES use a public proxy ticker when DELTAIN has no listing.
  */
 export type BinanceVenue = "spot" | "futures";
 
@@ -267,8 +291,16 @@ export function getChartUrl(
   const normalizedSymbol = symbol.trim().toUpperCase().replace(/\.P$/i, "");
 
   if (source === "delta") {
-    // Delta Exchange India symbols on TradingView: DELTAIN: prefix, in.tradingview.com, .p suffix
-    // e.g. AAPLXUSD → https://in.tradingview.com/chart/?symbol=DELTAIN:AAPLXUSD.p
+    const override = DELTA_TV_SYMBOL_OVERRIDES[normalizedSymbol];
+    if (override) {
+      const host =
+        override.host === "www"
+          ? "https://www.tradingview.com"
+          : "https://in.tradingview.com";
+      return `${host}/chart/?symbol=${encodeURIComponent(override.tvSymbol)}`;
+    }
+    // Delta Exchange India symbols on TradingView: DELTAIN: prefix, .P suffix
+    // e.g. AAPLXUSD → https://in.tradingview.com/chart/?symbol=DELTAIN:AAPLXUSD.P
     const tvSymbol = encodeURIComponent(`DELTAIN:${normalizedSymbol}.P`);
     return `https://in.tradingview.com/chart/?symbol=${tvSymbol}`;
   }
