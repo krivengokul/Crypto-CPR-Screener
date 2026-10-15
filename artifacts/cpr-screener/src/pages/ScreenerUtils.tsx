@@ -397,7 +397,13 @@ export function renderPivotSizeCell(
         <span className="text-[10px]">p{prevCat.label}</span>
         <span className="text-[10px] font-mono">{prevCPR.widthPct.toFixed(2)}%</span>
       </span>
-      <span className="font-sans text-[10px] font-semibold text-muted-foreground shrink-0">
+      <span
+        className={`font-sans text-[10px] font-semibold shrink-0 ${
+          compressionRatio < 50 || compressionRatio > 500
+            ? "text-emerald-400"
+            : "text-muted-foreground"
+        }`}
+      >
         {compressionRatio > 999 ? "999%" : `${Math.round(compressionRatio)}%`}
       </span>
       <span

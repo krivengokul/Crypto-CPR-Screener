@@ -7,6 +7,7 @@ import {
   passesPattern,
   getChartUrl,
   hasKnownChartMapping,
+  renderPivotSizeCell,
 } from "./ScreenerUtils";
 import {
   hasTouchedEntry,
@@ -156,6 +157,10 @@ export interface SignalItem {
   matchTotal?: number;
   matchFull?: boolean;
   matchMismatches?: string;
+  /** Pivot Size column (same as Screener): prev/today width% + compression ratio. */
+  prevWidthPct?: number;
+  todayWidthPct?: number;
+  compressionRatio?: number;
 }
 
 type StatusFilter = "all" | "saved" | "ready" | "pass" | "fail";
@@ -610,18 +615,23 @@ const SignalDeskCard = memo(
           </div>
         </div>
 
-        {/* Card Action Footer */}
+        {/* Card Action Footer — Pivot Size (Screener column) + Copy */}
         <div className="pt-2 border-t border-[#1e2d3d] flex items-center justify-between gap-2">
-          <button
-            onClick={() => {
-              onOpenInScreener(item.patternId || item.patternName);
-            }}
-            className="text-xs text-blue-400 hover:text-blue-300 font-semibold transition flex items-center gap-1 cursor-pointer"
-          >
-            Open Signal in Screener &rarr;
-          </button>
+          <div className="min-w-0 overflow-x-auto">
+            {item.prevWidthPct != null &&
+            item.todayWidthPct != null &&
+            item.compressionRatio != null ? (
+              renderPivotSizeCell(
+                { widthPct: item.prevWidthPct },
+                { widthPct: item.todayWidthPct },
+                item.compressionRatio,
+              )
+            ) : (
+              <span className="text-[10px] text-slate-500">Pivot size unavailable</span>
+            )}
+          </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={() => onCopy(item)}
               className="px-2 py-1 rounded bg-[#162130] hover:bg-[#1f2e42] border border-[#22354a] text-slate-300 text-xs font-medium flex items-center gap-1 transition"
@@ -993,6 +1003,9 @@ export default function SignalDesk({
           matchTotal: matchLadder?.hasConditions ? matchLadder.total : undefined,
           matchFull: matchLadder?.hasConditions ? matchLadder.fullMatch : undefined,
           matchMismatches: matchLadder?.hasConditions ? matchLadder.mismatchLabels.join(", ") : undefined,
+          prevWidthPct: matchRow?.prevCPR?.widthPct,
+          todayWidthPct: matchRow?.todayCPR?.widthPct,
+          compressionRatio: matchRow?.compressionRatio,
         };
       });
     }
@@ -1121,6 +1134,9 @@ export default function SignalDesk({
         matchTotal: matchLadderB.hasConditions ? matchLadderB.total : undefined,
         matchFull: matchLadderB.hasConditions ? matchLadderB.fullMatch : undefined,
         matchMismatches: matchLadderB.hasConditions ? matchLadderB.mismatchLabels.join(", ") : undefined,
+        prevWidthPct: r.prevCPR?.widthPct,
+        todayWidthPct: r.todayCPR?.widthPct,
+        compressionRatio: r.compressionRatio,
       });
     }
 
