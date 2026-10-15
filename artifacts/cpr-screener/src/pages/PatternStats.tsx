@@ -26,7 +26,12 @@ import { passesPattern, computeInnerLevelPattern, INNER_LEVEL_PATTERN_KEYS, norm
 import { pivotcategories } from "@/lib/ViewsSidebar";
 import { COINDCX_ENABLED } from "@/lib/featureFlags";
 import { buildViewTree, VIEWS, type ViewTreeNode } from "@/lib/views";
-import { getAllChartLinkRecords, type StoredChartLinkRecord } from "@/lib/chartLinks";
+import {
+  getAllChartLinkRecords,
+  updateChartLinkViewKey,
+  backfillChartLinkViewKeys,
+  type StoredChartLinkRecord,
+} from "@/lib/chartLinks";
 import {
   runPatternCensus,
   OUTER_PATTERNS_CATEGORY_KEY,
@@ -899,6 +904,8 @@ function ChartLinksSection({
   endDate: string;
   onClearFilters?: () => void;
 }) {
+  const [assigningKey, setAssigningKey] = useState<string | null>(null);
+  const [recovering, setRecovering] = useState(false);
   const [symbolSearch, setSymbolSearch] = useState("");
   const [viewNameSearch, setViewNameSearch] = useState("");
   const normalizedSymbolSearch = symbolSearch.trim().toLowerCase();
@@ -947,15 +954,43 @@ function ChartLinksSection({
             </p>
           )}
         </div>
-        <button
-          type="button"
-          onClick={onRefresh}
-          disabled={loading}
-          className="flex items-center gap-2 rounded-lg border border-[#22354a] bg-[#151e2c] px-3 py-1.5 text-xs text-slate-200 transition hover:border-teal-500/60 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
-          Refresh
-        </button>
+                  <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={loading || recovering}
+              onClick={async () => {
+                setRecovering(true);
+                try {
+                  // Allow backfill to run again even if it ran once already
+                  try {
+                    localStorage.removeItem("cpr_chart_links_viewkey_backfill_v1");
+                  } catch {}
+                  await backfillChartLinkViewKeys({ force: true });
+                } finally {
+                  setRecovering(false);
+                  onRefresh();
+                }
+              }}
+              className="flex items-center gap-2 rounded-lg border border-[#22354a] bg-[#151e2c] px-3 py-1.5 text-xs text-slate-200 transition hover:border-teal-500/60 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+              title="Re-scan Firebase for legacy viewKey::rowKey docs and fill missing VIEW NAME fields"
+            >
+              {(recovering || loading) ? (
+                <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3.5 w-3.5" />
+              )}
+              Recover names
+            </button>
+            <button
+              type="button"
+              onClick={onRefresh}
+              disabled={loading}
+              className="flex items-center gap-2 rounded-lg border border-[#22354a] bg-[#151e2c] px-3 py-1.5 text-xs text-slate-200 transition hover:border-teal-500/60 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+              Refresh
+            </button>
+          </div>
       </div>
 
       {!!records?.length && (
@@ -1046,7 +1081,33 @@ function ChartLinksSection({
                     </td>
                     <td className="px-3 py-2.5 text-slate-300">{details.date || "—"}</td>
                     <td className="px-3 py-2.5 text-slate-300">{exchangeName}</td>
-                    <td className="max-w-[260px] truncate px-3 py-2.5 text-slate-300" title={viewName}>{viewName}</td>
+                    <td className="max-w-[280px] px-3 py-2.5 text-slate-300">
+                      {record.viewKey ? (
+                        <span className="truncate block" title={viewName}>{viewName}</span>
+                      ) : (
+                        <select
+                          className="w-full max-w-[240px] rounded border border-[#22354a] bg-[#151e2c] px-1.5 py-1 text-[11px] text-slate-200"
+                          defaultValue=""
+                          disabled={assigningKey === record.rowKey}
+                          title="This chart was saved without a view. Pick one to store it."
+                          onChange={async (e) => {
+                            const vk = e.target.value;
+                            if (!vk) return;
+                            setAssigningKey(record.rowKey);
+                            const ok = await updateChartLinkViewKey(record.rowKey, vk);
+                            setAssigningKey(null);
+                            if (ok) onRefresh();
+                          }}
+                        >
+                          <option value="">Assign view…</option>
+                          {VIEWS.map((v) => (
+                            <option key={v.key} value={v.key}>
+                              {v.label || v.key}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </td>
                     <td className="whitespace-nowrap px-3 py-2.5 text-slate-400">{formatChartSavedAt(record.savedAt)}</td>
                   </tr>
                 );

@@ -91,8 +91,11 @@ const VIEW_KEY_BACKFILL_FLAG = "cpr_chart_links_viewkey_backfill_v1";
  * Safe to call multiple times; runs at most once per browser until the flag is cleared.
  * Returns how many primary docs were updated.
  */
-export async function backfillChartLinkViewKeys(): Promise<{ updated: number; skipped: boolean }> {
-  if (typeof window !== "undefined") {
+export async function backfillChartLinkViewKeys(
+  options?: { force?: boolean },
+): Promise<{ updated: number; skipped: boolean }> {
+  const force = options?.force === true;
+  if (!force && typeof window !== "undefined") {
     try {
       if (localStorage.getItem(VIEW_KEY_BACKFILL_FLAG) === "1") {
         return { updated: 0, skipped: true };
@@ -514,6 +517,94 @@ export async function setChartLink(viewKey: string, rowKey: string, url: string)
   } catch {
     // Firestore sync failed (e.g. offline/network issue) — already saved locally
     return true;
+  }
+}
+
+
+/** Set or fix the view key on an existing chart link (primary rowKey doc + local cache). */
+export async function updateChartLinkViewKey(rowKey: string, viewKey: string): Promise<boolean> {
+  const key = (rowKey || "").trim();
+  const vk = (viewKey || "").trim();
+  if (!key || !vk) return false;
+
+  const local = getLocalCache();
+  const existing = local[key];
+  const url = existing?.url;
+  const savedAt = existing?.savedAt || new Date().toISOString();
+
+  // Update local immediately when we already have the URL
+  if (url) {
+    saveToLocalCache(key, { url, savedAt, lastViewKey: vk });
+  }
+
+  try {
+    const uid = await ensureSignedIn();
+    const db = getDb();
+    const ref = doc(db, CHART_LINKS_COLLECTION, key);
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      const data = snap.data();
+      const resolvedUrl = typeof data.url === "string" && data.url ? data.url : url;
+      if (!resolvedUrl) return false;
+      await setDoc(
+        ref,
+        {
+          url: resolvedUrl,
+          savedAt: typeof data.savedAt === "string" && data.savedAt ? data.savedAt : savedAt,
+          uid,
+          rowKey: key,
+          lastViewKey: vk,
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true },
+      );
+      saveToLocalCache(key, {
+        url: resolvedUrl,
+        savedAt: typeof data.savedAt === "string" && data.savedAt ? data.savedAt : savedAt,
+        lastViewKey: vk,
+      });
+      // Keep a legacy mirror so future backfills see the view
+      try {
+        await setDoc(doc(db, CHART_LINKS_COLLECTION, `${vk}::${key}`), {
+          url: resolvedUrl,
+          savedAt: typeof data.savedAt === "string" && data.savedAt ? data.savedAt : savedAt,
+          uid,
+          lastViewKey: vk,
+          updatedAt: serverTimestamp(),
+        });
+      } catch {
+        // non-blocking
+      }
+      return true;
+    }
+
+    // No primary doc — try any legacy *::rowKey
+    const snapshot = await getDocs(query(collection(db, CHART_LINKS_COLLECTION), where("uid", "==", uid)));
+    let foundUrl = url || "";
+    let foundSaved = savedAt;
+    for (const d of snapshot.docs) {
+      if (!d.id.endsWith(`::${key}`) && d.id !== key) continue;
+      const data = d.data();
+      if (typeof data.url === "string" && data.url) {
+        foundUrl = data.url;
+        foundSaved = typeof data.savedAt === "string" ? data.savedAt : foundSaved;
+        break;
+      }
+    }
+    if (!foundUrl) return false;
+
+    await setDoc(ref, {
+      url: foundUrl,
+      savedAt: foundSaved,
+      uid,
+      rowKey: key,
+      lastViewKey: vk,
+      updatedAt: serverTimestamp(),
+    });
+    saveToLocalCache(key, { url: foundUrl, savedAt: foundSaved, lastViewKey: vk });
+    return true;
+  } catch {
+    return !!url; // local-only update counts as success if we had cache
   }
 }
 
