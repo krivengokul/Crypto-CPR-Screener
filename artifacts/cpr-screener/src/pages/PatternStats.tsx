@@ -862,7 +862,7 @@ function ChartLinksSection({
   loading,
   error,
   onRefresh,
-  source,
+  exchangeFilter,
   startDate,
   endDate,
 }: {
@@ -870,7 +870,7 @@ function ChartLinksSection({
   loading: boolean;
   error: string | null;
   onRefresh: () => void;
-  source: BacktestSource;
+  exchangeFilter: BacktestSource | "all";
   startDate: string;
   endDate: string;
 }) {
@@ -887,15 +887,16 @@ function ChartLinksSection({
         // Keep legacy links with an unparseable date visible rather than
         // silently hiding them when a date range is selected.
         const dateMatches =
-          !details.date || (details.date >= startDate && details.date <= endDate);
+          !details.date ||
+          ((!startDate || details.date >= startDate) && (!endDate || details.date <= endDate));
         return (
-          details.exchange === source &&
+          (exchangeFilter === "all" || !details.exchange || details.exchange === exchangeFilter) &&
           dateMatches &&
           (!normalizedSymbolSearch || symbol.includes(normalizedSymbolSearch)) &&
           (!normalizedViewNameSearch || viewName.includes(normalizedViewNameSearch))
         );
       }),
-    [records, source, startDate, endDate, normalizedSymbolSearch, normalizedViewNameSearch]
+    [records, exchangeFilter, startDate, endDate, normalizedSymbolSearch, normalizedViewNameSearch]
   );
 
   return (
@@ -1085,6 +1086,9 @@ export default function PatternStats() {
   const [chartRecordsLoading, setChartRecordsLoading] = useState(false);
   const [chartRecordsError, setChartRecordsError] = useState<string | null>(null);
   const [chartReloadKey, setChartReloadKey] = useState(0);
+  const [chartExchangeFilter, setChartExchangeFilter] = useState<BacktestSource | "all">("all");
+  const [chartStartDateFilter, setChartStartDateFilter] = useState("");
+  const [chartEndDateFilter, setChartEndDateFilter] = useState("");
 
   useEffect(() => {
     if (categoryFilter !== CHARTS_CATEGORY_KEY) return;
@@ -1326,10 +1330,17 @@ export default function PatternStats() {
                 <Database className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-teal-400" />
                 <select
                   className={`${CONTROL_BOX} min-w-[120px] appearance-none py-1.5 pl-8 pr-7 disabled:opacity-60`}
-                  value={source}
-                  onChange={(e) => setSource(e.target.value as BacktestSource)}
+                  value={categoryFilter === CHARTS_CATEGORY_KEY ? chartExchangeFilter : source}
+                  onChange={(e) => {
+                    if (categoryFilter === CHARTS_CATEGORY_KEY) {
+                      setChartExchangeFilter(e.target.value as BacktestSource | "all");
+                    } else {
+                      setSource(e.target.value as BacktestSource);
+                    }
+                  }}
                   disabled={running}
                 >
+                  {categoryFilter === CHARTS_CATEGORY_KEY && <option value="all">All exchanges</option>}
                   <option value="binance">Binance</option>
                   <option value="delta">Delta</option>
                   <option value="coindcx" disabled={!COINDCX_ENABLED}>
@@ -1340,14 +1351,42 @@ export default function PatternStats() {
               </div>
             </label>
 
-            <DateField label="Start Date (UTC)" value={startDate} onChange={setStartDate} max={endDate} />
-            <DateField
-              label="End Date (UTC)"
-              value={endDate}
-              onChange={setEndDate}
-              min={startDate}
-              max={new Date().toISOString().slice(0, 10)}
-            />
+            {categoryFilter === CHARTS_CATEGORY_KEY ? (
+              <>
+                <label className="block">
+                  <span className={CONTROL_LABEL}>Start Date (UTC)</span>
+                  <input
+                    type="date"
+                    value={chartStartDateFilter}
+                    max={chartEndDateFilter || undefined}
+                    onChange={(e) => setChartStartDateFilter(e.target.value)}
+                    className={`${CONTROL_BOX} min-w-[160px] py-1.5 px-2 [color-scheme:dark]`}
+                  />
+                </label>
+                <label className="block">
+                  <span className={CONTROL_LABEL}>End Date (UTC)</span>
+                  <input
+                    type="date"
+                    value={chartEndDateFilter}
+                    min={chartStartDateFilter || undefined}
+                    max={new Date().toISOString().slice(0, 10)}
+                    onChange={(e) => setChartEndDateFilter(e.target.value)}
+                    className={`${CONTROL_BOX} min-w-[160px] py-1.5 px-2 [color-scheme:dark]`}
+                  />
+                </label>
+              </>
+            ) : (
+              <>
+                <DateField label="Start Date (UTC)" value={startDate} onChange={setStartDate} max={endDate} />
+                <DateField
+                  label="End Date (UTC)"
+                  value={endDate}
+                  onChange={setEndDate}
+                  min={startDate}
+                  max={new Date().toISOString().slice(0, 10)}
+                />
+              </>
+            )}
 
             <label className="block">
               <span className={CONTROL_LABEL}>Category</span>
@@ -1409,9 +1448,9 @@ export default function PatternStats() {
             loading={chartRecordsLoading}
             error={chartRecordsError}
             onRefresh={() => setChartReloadKey((key) => key + 1)}
-            source={source}
-            startDate={startDate}
-            endDate={endDate}
+            exchangeFilter={chartExchangeFilter}
+            startDate={chartStartDateFilter}
+            endDate={chartEndDateFilter}
           />
         ) : (
           <>
