@@ -862,11 +862,17 @@ function ChartLinksSection({
   loading,
   error,
   onRefresh,
+  source,
+  startDate,
+  endDate,
 }: {
   records: StoredChartLinkRecord[] | null;
   loading: boolean;
   error: string | null;
   onRefresh: () => void;
+  source: BacktestSource;
+  startDate: string;
+  endDate: string;
 }) {
   const [symbolSearch, setSymbolSearch] = useState("");
   const [viewNameSearch, setViewNameSearch] = useState("");
@@ -875,14 +881,21 @@ function ChartLinksSection({
   const filteredRecords = useMemo(
     () =>
       (records ?? []).filter((record) => {
-        const symbol = parseChartRowKey(record.rowKey).symbol.toLowerCase();
+        const details = parseChartRowKey(record.rowKey);
+        const symbol = details.symbol.toLowerCase();
         const viewName = getChartViewName(record.viewKey).toLowerCase();
+        // Keep legacy links with an unparseable date visible rather than
+        // silently hiding them when a date range is selected.
+        const dateMatches =
+          !details.date || (details.date >= startDate && details.date <= endDate);
         return (
+          details.exchange === source &&
+          dateMatches &&
           (!normalizedSymbolSearch || symbol.includes(normalizedSymbolSearch)) &&
           (!normalizedViewNameSearch || viewName.includes(normalizedViewNameSearch))
         );
       }),
-    [records, normalizedSymbolSearch, normalizedViewNameSearch]
+    [records, source, startDate, endDate, normalizedSymbolSearch, normalizedViewNameSearch]
   );
 
   return (
@@ -893,6 +906,11 @@ function ChartLinksSection({
             Saved chart links{records ? ` (${records.length})` : ""}
           </p>
           <p className="mt-1 text-xs text-slate-500">Chart links stored in Firebase for this browser</p>
+          {records && (
+            <p className="mt-1 text-xs text-slate-500">
+              Showing {filteredRecords.length} of {records.length} saved links
+            </p>
+          )}
         </div>
         <button
           type="button"
@@ -1004,7 +1022,7 @@ function ChartLinksSection({
       ) : !error && records?.length ? (
         <div className="flex min-h-48 flex-col items-center justify-center rounded-xl border border-dashed border-[#1e2d3d] text-slate-400">
           <Search className="mb-2 h-8 w-8 text-slate-600" />
-          <p className="text-sm font-medium">No charts match these searches</p>
+          <p className="text-sm font-medium">No charts match these filters</p>
           <button
             type="button"
             onClick={() => {
@@ -1013,7 +1031,7 @@ function ChartLinksSection({
             }}
             className="mt-2 text-xs text-teal-300 hover:text-teal-200"
           >
-            Clear searches
+            Clear text searches
           </button>
         </div>
       ) : !error ? (
@@ -1302,38 +1320,34 @@ export default function PatternStats() {
           </div>
 
           <div className="flex flex-wrap items-end gap-3">
-            {categoryFilter !== CHARTS_CATEGORY_KEY && (
-              <>
-                <label className="block">
-                  <span className={CONTROL_LABEL}>EXCHANGE</span>
-                  <div className="relative">
-                    <Database className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-teal-400" />
-                    <select
-                      className={`${CONTROL_BOX} min-w-[120px] appearance-none py-1.5 pl-8 pr-7 disabled:opacity-60`}
-                      value={source}
-                      onChange={(e) => setSource(e.target.value as BacktestSource)}
-                      disabled={running}
-                    >
-                      <option value="binance">Binance</option>
-                      <option value="delta">Delta</option>
-                      <option value="coindcx" disabled={!COINDCX_ENABLED}>
-                        {COINDCX_ENABLED ? "CoinDCX" : "CoinDCX (paused)"}
-                      </option>
-                    </select>
-                    <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
-                  </div>
-                </label>
+            <label className="block">
+              <span className={CONTROL_LABEL}>EXCHANGE</span>
+              <div className="relative">
+                <Database className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-teal-400" />
+                <select
+                  className={`${CONTROL_BOX} min-w-[120px] appearance-none py-1.5 pl-8 pr-7 disabled:opacity-60`}
+                  value={source}
+                  onChange={(e) => setSource(e.target.value as BacktestSource)}
+                  disabled={running}
+                >
+                  <option value="binance">Binance</option>
+                  <option value="delta">Delta</option>
+                  <option value="coindcx" disabled={!COINDCX_ENABLED}>
+                    {COINDCX_ENABLED ? "CoinDCX" : "CoinDCX (paused)"}
+                  </option>
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+              </div>
+            </label>
 
-                <DateField label="Start Date (UTC)" value={startDate} onChange={setStartDate} max={endDate} />
-                <DateField
-                  label="End Date (UTC)"
-                  value={endDate}
-                  onChange={setEndDate}
-                  min={startDate}
-                  max={new Date().toISOString().slice(0, 10)}
-                />
-              </>
-            )}
+            <DateField label="Start Date (UTC)" value={startDate} onChange={setStartDate} max={endDate} />
+            <DateField
+              label="End Date (UTC)"
+              value={endDate}
+              onChange={setEndDate}
+              min={startDate}
+              max={new Date().toISOString().slice(0, 10)}
+            />
 
             <label className="block">
               <span className={CONTROL_LABEL}>Category</span>
@@ -1395,6 +1409,9 @@ export default function PatternStats() {
             loading={chartRecordsLoading}
             error={chartRecordsError}
             onRefresh={() => setChartReloadKey((key) => key + 1)}
+            source={source}
+            startDate={startDate}
+            endDate={endDate}
           />
         ) : (
           <>
