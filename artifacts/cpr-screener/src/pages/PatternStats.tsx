@@ -860,7 +860,24 @@ function formatChartSavedAt(savedAt: string): string {
 }
 
 function getChartViewName(viewKey: string): string {
-  return VIEWS.find((view) => view.key === viewKey)?.label || viewKey || "—";
+  if (!viewKey) return "—";
+  const view = VIEWS.find((v) => v.key === viewKey);
+  if (view?.label) return view.label;
+  // Category / synthetic keys (Top 15, Charts, etc.)
+  const cat = CATEGORY_META.get(viewKey);
+  if (cat?.label) return cat.label;
+  // Breadcrumb path "parent»child" — show last segment label if known
+  const sep = viewKey.includes("»") ? "»" : viewKey.includes("/") ? "/" : null;
+  if (sep) {
+    const leaf = viewKey.split(sep).pop()?.trim() || "";
+    if (leaf) {
+      const leafView = VIEWS.find((v) => v.key === leaf);
+      if (leafView?.label) return leafView.label;
+      const leafCat = CATEGORY_META.get(leaf);
+      if (leafCat?.label) return leafCat.label;
+    }
+  }
+  return viewKey;
 }
 
 function ChartLinksSection({

@@ -22,6 +22,8 @@ const LOCAL_CACHE_KEY = "cpr_chart_links_cache";
 export type StoredChartLink = {
   url: string;
   savedAt: string; // ISO timestamp, set client-side for easy display
+  /** View or category key active when the chart was last saved */
+  lastViewKey?: string;
 };
 
 export type StoredChartLinkRecord = StoredChartLink & {
@@ -80,27 +82,56 @@ export function getAllChartLinks(): Record<string, StoredChartLink> {
   return getLocalCache();
 }
 
-/** Read every saved chart-link for this browser: Firebase (by uid) + local cache merge. */
-export async function getAllChartLinkRecords(): Promise<StoredChartLinkRecord[]> {
-  const byId = new Map<string, StoredChartLinkRecord>();
+/** Prefer the richer of two records for the same symbol-date row. */
+function preferChartRecord(a: StoredChartLinkRecord, b: StoredChartLinkRecord): StoredChartLinkRecord {
+  const score = (r: StoredChartLinkRecord) =>
+    (r.viewKey ? 4 : 0) + (r.savedAt ? 2 : 0) + (r.id.includes("::") ? 0 : 1);
+  let winner = score(b) > score(a) ? b : score(a) > score(b) ? a : a.savedAt >= b.savedAt ? a : b;
+  const other = winner === a ? b : a;
+  // Keep a non-empty view name if the winner is missing one
+  if (!winner.viewKey && other.viewKey) {
+    winner = { ...winner, viewKey: other.viewKey };
+  }
+  if (!winner.savedAt && other.savedAt) {
+    winner = { ...winner, savedAt: other.savedAt };
+  }
+  return winner;
+}
 
-  // 1) Local cache first so offline / not-yet-synced saves still appear
+/** Collapse primary + legacy docs (and cache duplicates) to one row per symbol-date. */
+function dedupeChartRecords(records: StoredChartLinkRecord[]): StoredChartLinkRecord[] {
+  const byRow = new Map<string, StoredChartLinkRecord>();
+  for (const rec of records) {
+    const key = rec.rowKey || rec.id;
+    const prev = byRow.get(key);
+    byRow.set(key, prev ? preferChartRecord(prev, rec) : rec);
+  }
+  return Array.from(byRow.values()).sort((a, b) => b.savedAt.localeCompare(a.savedAt));
+}
+
+/** Read every saved chart-link for this browser: Firebase (by uid) + local cache, deduped. */
+export async function getAllChartLinkRecords(): Promise<StoredChartLinkRecord[]> {
+  const raw: StoredChartLinkRecord[] = [];
+
+  // 1) Local cache
   const local = getLocalCache();
   for (const [key, link] of Object.entries(local)) {
     if (!link?.url) continue;
     const legacySeparator = key.lastIndexOf("::");
     const legacyViewKey = legacySeparator >= 0 ? key.slice(0, legacySeparator) : "";
     const legacyRowKey = legacySeparator >= 0 ? key.slice(legacySeparator + 2) : key;
-    byId.set(key, {
+    const viewKey =
+      (typeof link.lastViewKey === "string" && link.lastViewKey) || legacyViewKey || "";
+    raw.push({
       id: key,
       url: link.url,
       savedAt: typeof link.savedAt === "string" ? link.savedAt : "",
       rowKey: legacyRowKey,
-      viewKey: legacyViewKey,
+      viewKey,
     });
   }
 
-  // 2) Firestore docs for this uid (overwrite / fill gaps)
+  // 2) Firestore for this uid
   try {
     const uid = await ensureSignedIn();
     const db = getDb();
@@ -115,9 +146,9 @@ export async function getAllChartLinkRecords(): Promise<StoredChartLinkRecord[]>
       const legacyRowKey = legacySeparator >= 0 ? chartDoc.id.slice(legacySeparator + 2) : chartDoc.id;
       const rowKey = typeof data.rowKey === "string" && data.rowKey ? data.rowKey : legacyRowKey;
       const viewKey =
-        typeof data.lastViewKey === "string" && data.lastViewKey ? data.lastViewKey : legacyViewKey;
+        (typeof data.lastViewKey === "string" && data.lastViewKey) || legacyViewKey || "";
 
-      byId.set(chartDoc.id, {
+      raw.push({
         id: chartDoc.id,
         url: data.url,
         savedAt: typeof data.savedAt === "string" ? data.savedAt : "",
@@ -126,10 +157,10 @@ export async function getAllChartLinkRecords(): Promise<StoredChartLinkRecord[]>
       });
     }
   } catch {
-    // offline — return whatever we had in local cache
+    // offline — local cache only
   }
 
-  return Array.from(byId.values()).sort((a, b) => b.savedAt.localeCompare(a.savedAt));
+  return dedupeChartRecords(raw);
 }
 
 /** React hook returning live map of chart links, automatically re-rendering when links are added/removed */
@@ -249,6 +280,8 @@ export async function getChartLink(viewKey: string, rowKey: string): Promise<Sto
         const result: StoredChartLink = {
           url: data.url,
           savedAt: typeof data.savedAt === "string" ? data.savedAt : "",
+          lastViewKey:
+            typeof data.lastViewKey === "string" ? data.lastViewKey : viewKey || "",
         };
         saveToLocalCache(primaryKey, result);
         return result;
@@ -264,6 +297,10 @@ export async function getChartLink(viewKey: string, rowKey: string): Promise<Sto
           const result: StoredChartLink = {
             url: legacyData.url,
             savedAt: typeof legacyData.savedAt === "string" ? legacyData.savedAt : "",
+            lastViewKey:
+              typeof legacyData.lastViewKey === "string"
+                ? legacyData.lastViewKey
+                : viewKey || "",
           };
           saveToLocalCache(primaryKey, result);
           return result;
@@ -288,7 +325,11 @@ export async function setChartLink(viewKey: string, rowKey: string, url: string)
 
   const savedAt = new Date().toISOString();
   const primaryKey = rowKey || viewKey;
-  const storedLink: StoredChartLink = { url: trimmed, savedAt };
+  const storedLink: StoredChartLink = {
+    url: trimmed,
+    savedAt,
+    lastViewKey: viewKey || "",
+  };
 
   // Always save to local cache first so user changes are never lost even when offline
   saveToLocalCache(primaryKey, storedLink);

@@ -3311,7 +3311,11 @@ export default function BacktestPanel() {
                         <SRLadderRow
                           r={toSRLadderData(r.raw, r.closePrice ?? undefined, r.prevClose ?? undefined, r.ppClose ?? undefined)}
                           rowKey={`${r.source}-${r.symbol}-${r.entryDate}`}
-                          viewKey={isViewOnly ? selectedKey : undefined}
+                          viewKey={
+                            isViewOnly
+                              ? selectedKey
+                              : matchingView(r.raw, selectedKey)?.key ?? selectedKey
+                          }
                           colSpan={scopedViewsAvailable ? 7 : 5}
                           todayPatternBadge={renderTodayPatternBadges(r.raw)}
                           prevPatternBadge={renderPrevPatternBadge(r.raw)}
@@ -3669,7 +3673,11 @@ export default function BacktestPanel() {
                       <SRLadderRow
                         r={toSRLadderData(r.raw, r.closePrice ?? undefined, r.prevClose ?? undefined, r.ppClose ?? undefined)}
                         rowKey={`${r.source}-${r.symbol}-${r.entryDate}`}
-                        viewKey={isViewOnly ? selectedKey : undefined}
+                        viewKey={
+                            isViewOnly
+                              ? selectedKey
+                              : matchingView(r.raw, selectedKey)?.key ?? selectedKey
+                          }
                         colSpan={9}
                         todayPatternBadge={renderTodayPatternBadges(r.raw)}
                         prevPatternBadge={renderPrevPatternBadge(r.raw)}
