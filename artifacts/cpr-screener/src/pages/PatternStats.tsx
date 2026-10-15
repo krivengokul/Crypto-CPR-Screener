@@ -16,6 +16,7 @@ import {
   Loader2,
   Play,
   RefreshCw,
+  Search,
   Sigma,
   Snowflake,
   Target,
@@ -852,6 +853,10 @@ function formatChartSavedAt(savedAt: string): string {
   return Number.isNaN(date.getTime()) ? savedAt : date.toLocaleString();
 }
 
+function getChartViewName(viewKey: string): string {
+  return VIEWS.find((view) => view.key === viewKey)?.label || viewKey || "—";
+}
+
 function ChartLinksSection({
   records,
   loading,
@@ -863,6 +868,23 @@ function ChartLinksSection({
   error: string | null;
   onRefresh: () => void;
 }) {
+  const [symbolSearch, setSymbolSearch] = useState("");
+  const [viewNameSearch, setViewNameSearch] = useState("");
+  const normalizedSymbolSearch = symbolSearch.trim().toLowerCase();
+  const normalizedViewNameSearch = viewNameSearch.trim().toLowerCase();
+  const filteredRecords = useMemo(
+    () =>
+      (records ?? []).filter((record) => {
+        const symbol = parseChartRowKey(record.rowKey).symbol.toLowerCase();
+        const viewName = getChartViewName(record.viewKey).toLowerCase();
+        return (
+          (!normalizedSymbolSearch || symbol.includes(normalizedSymbolSearch)) &&
+          (!normalizedViewNameSearch || viewName.includes(normalizedViewNameSearch))
+        );
+      }),
+    [records, normalizedSymbolSearch, normalizedViewNameSearch]
+  );
+
   return (
     <section>
       <div className="mb-3 flex items-center justify-between gap-3">
@@ -883,6 +905,39 @@ function ChartLinksSection({
         </button>
       </div>
 
+      {!!records?.length && (
+        <div className="mb-3 grid gap-2 sm:grid-cols-2">
+          <label className="block">
+            <span className={CONTROL_LABEL}>Symbol</span>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-teal-400" />
+              <input
+                type="search"
+                aria-label="Search chart links by symbol"
+                placeholder="Search symbol"
+                value={symbolSearch}
+                onChange={(event) => setSymbolSearch(event.target.value)}
+                className={`${CONTROL_BOX} w-full py-1.5 pl-8 pr-3`}
+              />
+            </div>
+          </label>
+          <label className="block">
+            <span className={CONTROL_LABEL}>View name</span>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-teal-400" />
+              <input
+                type="search"
+                aria-label="Search chart links by view name"
+                placeholder="Search view name"
+                value={viewNameSearch}
+                onChange={(event) => setViewNameSearch(event.target.value)}
+                className={`${CONTROL_BOX} w-full py-1.5 pl-8 pr-3`}
+              />
+            </div>
+          </label>
+        </div>
+      )}
+
       {error && (
         <div className="mb-3 flex items-start gap-2 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -895,7 +950,7 @@ function ChartLinksSection({
           <Loader2 className="h-4 w-4 animate-spin text-teal-400" />
           Loading saved charts…
         </div>
-      ) : !error && records?.length ? (
+      ) : !error && filteredRecords.length > 0 ? (
         <div className="overflow-x-auto rounded-xl border border-[#22354a] bg-[#0c131f]">
           <table className="w-full min-w-[760px] border-collapse text-left text-xs">
             <thead className="border-b border-[#22354a] bg-[#121b28] font-mono uppercase tracking-wider text-slate-400">
@@ -908,9 +963,9 @@ function ChartLinksSection({
               </tr>
             </thead>
             <tbody className="divide-y divide-[#1e2d3d]">
-              {records.map((record) => {
+              {filteredRecords.map((record) => {
                 const details = parseChartRowKey(record.rowKey);
-                const viewName = VIEWS.find((view) => view.key === record.viewKey)?.label || record.viewKey || "—";
+                const viewName = getChartViewName(record.viewKey);
                 const exchangeName =
                   details.exchange === "coindcx"
                     ? "CoinDCX"
@@ -945,6 +1000,21 @@ function ChartLinksSection({
               })}
             </tbody>
           </table>
+        </div>
+      ) : !error && records?.length ? (
+        <div className="flex min-h-48 flex-col items-center justify-center rounded-xl border border-dashed border-[#1e2d3d] text-slate-400">
+          <Search className="mb-2 h-8 w-8 text-slate-600" />
+          <p className="text-sm font-medium">No charts match these searches</p>
+          <button
+            type="button"
+            onClick={() => {
+              setSymbolSearch("");
+              setViewNameSearch("");
+            }}
+            className="mt-2 text-xs text-teal-300 hover:text-teal-200"
+          >
+            Clear searches
+          </button>
         </div>
       ) : !error ? (
         <div className="flex min-h-48 flex-col items-center justify-center rounded-xl border border-dashed border-[#1e2d3d] text-slate-400">
