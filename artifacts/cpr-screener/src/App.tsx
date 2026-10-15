@@ -82,6 +82,8 @@ function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(getSavedCollapsed);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mode, setMode] = useState<SidebarMode>(getSavedMode);
+  const modeRef = useRef(mode);
+  modeRef.current = mode;
   // NEW: top-level pattern -> matching count, reported up by Screener,
   // passed down into ViewsSidebar for the "(41)" labels.
   const [patternCounts, setPatternCounts] = useState<Record<string, number>>({});
@@ -282,37 +284,54 @@ function App() {
         ? candidate.entry.toPrecision(6)
         : String(candidate.entry);
 
-      const openSignalDeskTab = () => {
-        try {
-          const url = new URL(window.location.href);
-          url.searchParams.set("mode", "signals");
-          url.searchParams.set("symbol", candidate.symbol);
-          url.searchParams.set("source", candidate.source);
-          if (candidate.payload.patternId) {
-            url.searchParams.set("patternId", candidate.payload.patternId);
+      // Focus the card on this page. If already on SignalDesk, do not open a
+      // new tab/page — just scroll + highlight. Otherwise switch mode in-place.
+      const focusSignalDeskCard = () => {
+        const patternId = candidate.payload.patternId || undefined;
+        if (patternId) setActiveSignal(patternId);
+        setFocusSymbol({
+          symbol: candidate.symbol,
+          source: candidate.source,
+          patternId,
+        });
+        if (modeRef.current !== "signals") {
+          setMode("signals");
+          try {
+            localStorage.setItem(MODE_KEY, "signals");
+          } catch {
+            /* ignore */
           }
-          window.open(url.toString(), "_blank", "noopener,noreferrer");
-        } catch { /* ignore */ }
+        }
       };
 
-      // Whole toast is clickable → SignalDesk in a new tab (no action button).
-      const viewLabel = candidate.payload.patternName;
-      const viewCode = candidate.payload.patternId;
-      const viewPart =
-        viewCode && viewCode !== viewLabel
-          ? `${viewLabel} (${viewCode})`
-          : viewLabel || viewCode || "View";
+      const viewLabel = candidate.payload.patternName || "";
+      const viewCode = candidate.payload.patternId || "";
 
       toast({
         title: "Entry crossed — alert",
-        description: `${candidate.symbol} (${candidate.source}) ${dir} · ${viewPart} · trade ${px} crossed entry ${entry}`,
+        description: (
+          <div className="space-y-0.5 text-sm leading-snug">
+            <div>
+              {candidate.symbol} ({candidate.source}) {dir} · trade {px} crossed entry {entry}
+            </div>
+            <div>
+              <span className="text-slate-400">View:</span>{" "}
+              <span className="text-slate-100">{viewLabel || "—"}</span>
+            </div>
+            <div>
+              <span className="text-slate-400">View code:</span>{" "}
+              <span className="font-mono text-[11px] text-slate-200">{viewCode || "—"}</span>
+            </div>
+          </div>
+        ),
         duration: 12_000,
         className: "cursor-pointer",
-        // Body click → SignalDesk. Ignore the X close control (and its icon).
+        // Body click → focus card (same page when already on SignalDesk).
+        // Ignore the X close control (and its icon).
         onClick: (e: ReactMouseEvent) => {
           const el = e.target as HTMLElement | null;
           if (el?.closest?.("[toast-close], [data-radix-toast-close]")) return;
-          openSignalDeskTab();
+          focusSignalDeskCard();
         },
       });
 
