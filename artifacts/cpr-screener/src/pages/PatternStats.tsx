@@ -4,6 +4,7 @@ import {
   BarChart3,
   Ban,
   Calendar as CalendarIcon,
+  Camera,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -14,6 +15,7 @@ import {
   Layers,
   Loader2,
   Play,
+  RefreshCw,
   Sigma,
   Snowflake,
   Target,
@@ -23,6 +25,7 @@ import { passesPattern, computeInnerLevelPattern, INNER_LEVEL_PATTERN_KEYS, norm
 import { pivotcategories } from "@/lib/ViewsSidebar";
 import { COINDCX_ENABLED } from "@/lib/featureFlags";
 import { buildViewTree, VIEWS, type ViewTreeNode } from "@/lib/views";
+import { getAllChartLinkRecords, type StoredChartLinkRecord } from "@/lib/chartLinks";
 import {
   runPatternCensus,
   OUTER_PATTERNS_CATEGORY_KEY,
@@ -108,6 +111,14 @@ const VIEWS_OPTION: CategoryOption = {
   icon: Eye,
 };
 
+const CHARTS_CATEGORY_KEY = "charts";
+const CHARTS_OPTION: CategoryOption = {
+  id: CHARTS_CATEGORY_KEY,
+  label: "Charts",
+  subtitle: "Saved chart links from Firebase, including symbol, date, exchange, and view.",
+  icon: BarChart3,
+};
+
 // The three synthetic panels are flat lists with no nesting.
 const FLAT_LIST_IDS = new Set([OUTER_PATTERNS_CATEGORY_KEY, INNER_PATTERNS_CATEGORY_KEY]);
 
@@ -121,6 +132,7 @@ const CATEGORY_FILTER_OPTIONS: CategoryOption[] = [
   OUTER_PATTERNS_OPTION,
   INNER_PATTERNS_OPTION,
   VIEWS_OPTION,
+  CHARTS_OPTION,
 ];
 
 // Categories whose matches OVERLAP the others (a TOP 15 mover, a row with
@@ -820,6 +832,131 @@ function StatChip({
   );
 }
 
+function parseChartRowKey(rowKey: string) {
+  const legacySeparator = rowKey.lastIndexOf("::");
+  const normalizedKey = legacySeparator >= 0 ? rowKey.slice(legacySeparator + 2) : rowKey;
+  const dateMatch = normalizedKey.match(/-(\d{4}-\d{2}-\d{2})$/);
+  const sourceAndSymbol = dateMatch ? normalizedKey.slice(0, -11) : normalizedKey;
+  const separator = sourceAndSymbol.indexOf("-");
+
+  return {
+    exchange: separator >= 0 ? sourceAndSymbol.slice(0, separator) : "",
+    symbol: separator >= 0 ? sourceAndSymbol.slice(separator + 1) : sourceAndSymbol,
+    date: dateMatch?.[1] ?? "",
+  };
+}
+
+function formatChartSavedAt(savedAt: string): string {
+  if (!savedAt) return "—";
+  const date = new Date(savedAt);
+  return Number.isNaN(date.getTime()) ? savedAt : date.toLocaleString();
+}
+
+function ChartLinksSection({
+  records,
+  loading,
+  error,
+  onRefresh,
+}: {
+  records: StoredChartLinkRecord[] | null;
+  loading: boolean;
+  error: string | null;
+  onRefresh: () => void;
+}) {
+  return (
+    <section>
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div>
+          <p className="font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300">
+            Saved chart links{records ? ` (${records.length})` : ""}
+          </p>
+          <p className="mt-1 text-xs text-slate-500">Chart links stored in Firebase for this browser</p>
+        </div>
+        <button
+          type="button"
+          onClick={onRefresh}
+          disabled={loading}
+          className="flex items-center gap-2 rounded-lg border border-[#22354a] bg-[#151e2c] px-3 py-1.5 text-xs text-slate-200 transition hover:border-teal-500/60 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+          Refresh
+        </button>
+      </div>
+
+      {error && (
+        <div className="mb-3 flex items-start gap-2 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="flex min-h-48 items-center justify-center gap-2 rounded-xl border border-[#1e2d3d] bg-[#0c131f] text-sm text-slate-400">
+          <Loader2 className="h-4 w-4 animate-spin text-teal-400" />
+          Loading saved charts…
+        </div>
+      ) : !error && records?.length ? (
+        <div className="overflow-x-auto rounded-xl border border-[#22354a] bg-[#0c131f]">
+          <table className="w-full min-w-[760px] border-collapse text-left text-xs">
+            <thead className="border-b border-[#22354a] bg-[#121b28] font-mono uppercase tracking-wider text-slate-400">
+              <tr>
+                <th className="px-3 py-2.5">Symbol</th>
+                <th className="px-3 py-2.5">Date</th>
+                <th className="px-3 py-2.5">Exchange</th>
+                <th className="px-3 py-2.5">View name</th>
+                <th className="px-3 py-2.5">Saved</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#1e2d3d]">
+              {records.map((record) => {
+                const details = parseChartRowKey(record.rowKey);
+                const viewName = VIEWS.find((view) => view.key === record.viewKey)?.label || record.viewKey || "—";
+                const exchangeName =
+                  details.exchange === "coindcx"
+                    ? "CoinDCX"
+                    : details.exchange === "binance"
+                      ? "Binance"
+                      : details.exchange === "delta"
+                        ? "Delta"
+                        : details.exchange || "—";
+
+                return (
+                  <tr key={record.id} className="transition hover:bg-[#151e2c]/70">
+                    <td className="px-3 py-2.5">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-semibold text-white">{details.symbol || "—"}</span>
+                        <a
+                          href={record.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title={`TradingView Snapshot Attached\n${record.url}${record.savedAt ? `\nSaved: ${new Date(record.savedAt).toLocaleDateString()}` : ""}\nClick to open in new tab`}
+                          className="inline-flex h-4 w-4 shrink-0 cursor-pointer items-center justify-center rounded border border-sky-500/40 bg-sky-500/20 text-sky-400 shadow-sm shadow-sky-950/40 transition-all hover:border-sky-300 hover:bg-sky-500/35 hover:text-sky-200"
+                        >
+                          <Camera className="h-2.5 w-2.5" />
+                        </a>
+                      </div>
+                    </td>
+                    <td className="px-3 py-2.5 text-slate-300">{details.date || "—"}</td>
+                    <td className="px-3 py-2.5 text-slate-300">{exchangeName}</td>
+                    <td className="max-w-[260px] truncate px-3 py-2.5 text-slate-300" title={viewName}>{viewName}</td>
+                    <td className="whitespace-nowrap px-3 py-2.5 text-slate-400">{formatChartSavedAt(record.savedAt)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : !error ? (
+        <div className="flex min-h-48 flex-col items-center justify-center rounded-xl border border-dashed border-[#1e2d3d] text-slate-400">
+          <BarChart3 className="mb-2 h-8 w-8 text-slate-600" />
+          <p className="text-sm font-medium">No saved charts found</p>
+          <p className="mt-1 text-xs text-slate-500">Chart links you save from a chart row will appear here.</p>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 /**
  * Pattern Statistics — a standalone page (not nested inside BacktestPanel)
  * that answers one question: "of every pattern in the Backtest dropdown, how
@@ -856,6 +993,34 @@ export default function PatternStats() {
   // left-nav sidebar's category list/labels exactly, rather than maintaining
   // a second copy of it here.
   const [categoryFilter, setCategoryFilter] = useState<string>("");
+  const [chartRecords, setChartRecords] = useState<StoredChartLinkRecord[] | null>(null);
+  const [chartRecordsLoading, setChartRecordsLoading] = useState(false);
+  const [chartRecordsError, setChartRecordsError] = useState<string | null>(null);
+  const [chartReloadKey, setChartReloadKey] = useState(0);
+
+  useEffect(() => {
+    if (categoryFilter !== CHARTS_CATEGORY_KEY) return;
+
+    let cancelled = false;
+    setChartRecordsLoading(true);
+    setChartRecordsError(null);
+    getAllChartLinkRecords()
+      .then((records) => {
+        if (!cancelled) setChartRecords(records);
+      })
+      .catch((e) => {
+        if (!cancelled) {
+          setChartRecordsError(e instanceof Error ? e.message : "Check your connection and Firebase access.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setChartRecordsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [categoryFilter, chartReloadKey]);
 
   const treeSignature = useMemo(buildTreeSignature, [VIEWS, VIEWS.length]);
   const [scannedTreeSignature, setScannedTreeSignature] = useState<string | null>(null);
@@ -1049,7 +1214,7 @@ export default function PatternStats() {
           </div>
         </div>
 
-        {rows && !hasStaleResults && (
+        {categoryFilter !== CHARTS_CATEGORY_KEY && rows && !hasStaleResults && (
           <div className="flex flex-wrap items-center gap-2">
             <StatChip icon={Layers} label="Patterns" value={scopedRows?.length ?? 0} />
             <StatChip icon={Sigma} label="Distinct matches" value={totalMatches} tone="emerald" />
@@ -1063,38 +1228,42 @@ export default function PatternStats() {
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div className="flex shrink-0 items-center gap-2 pb-1.5 font-mono text-[11px] font-semibold uppercase tracking-wider text-teal-400">
             <Filter className="h-3.5 w-3.5" />
-            Filter scan
+            {categoryFilter === CHARTS_CATEGORY_KEY ? "Saved charts" : "Filter scan"}
           </div>
 
           <div className="flex flex-wrap items-end gap-3">
-            <label className="block">
-              <span className={CONTROL_LABEL}>EXCHANGE</span>
-              <div className="relative">
-                <Database className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-teal-400" />
-                <select
-                  className={`${CONTROL_BOX} min-w-[120px] appearance-none py-1.5 pl-8 pr-7 disabled:opacity-60`}
-                  value={source}
-                  onChange={(e) => setSource(e.target.value as BacktestSource)}
-                  disabled={running}
-                >
-                  <option value="binance">Binance</option>
-                  <option value="delta">Delta</option>
-                  <option value="coindcx" disabled={!COINDCX_ENABLED}>
-                    {COINDCX_ENABLED ? "CoinDCX" : "CoinDCX (paused)"}
-                  </option>
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
-              </div>
-            </label>
+            {categoryFilter !== CHARTS_CATEGORY_KEY && (
+              <>
+                <label className="block">
+                  <span className={CONTROL_LABEL}>EXCHANGE</span>
+                  <div className="relative">
+                    <Database className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-teal-400" />
+                    <select
+                      className={`${CONTROL_BOX} min-w-[120px] appearance-none py-1.5 pl-8 pr-7 disabled:opacity-60`}
+                      value={source}
+                      onChange={(e) => setSource(e.target.value as BacktestSource)}
+                      disabled={running}
+                    >
+                      <option value="binance">Binance</option>
+                      <option value="delta">Delta</option>
+                      <option value="coindcx" disabled={!COINDCX_ENABLED}>
+                        {COINDCX_ENABLED ? "CoinDCX" : "CoinDCX (paused)"}
+                      </option>
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+                  </div>
+                </label>
 
-            <DateField label="Start Date (UTC)" value={startDate} onChange={setStartDate} max={endDate} />
-            <DateField
-              label="End Date (UTC)"
-              value={endDate}
-              onChange={setEndDate}
-              min={startDate}
-              max={new Date().toISOString().slice(0, 10)}
-            />
+                <DateField label="Start Date (UTC)" value={startDate} onChange={setStartDate} max={endDate} />
+                <DateField
+                  label="End Date (UTC)"
+                  value={endDate}
+                  onChange={setEndDate}
+                  min={startDate}
+                  max={new Date().toISOString().slice(0, 10)}
+                />
+              </>
+            )}
 
             <label className="block">
               <span className={CONTROL_LABEL}>Category</span>
@@ -1116,14 +1285,16 @@ export default function PatternStats() {
               </div>
             </label>
 
-            <button
-              className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-400 to-teal-400 px-4 py-1.5 text-sm font-bold text-[#04140f] shadow-md shadow-emerald-900/40 transition hover:from-emerald-300 hover:to-teal-300 disabled:cursor-not-allowed disabled:opacity-60"
-              onClick={handleRun}
-              disabled={running}
-            >
-              {running ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4 fill-current" />}
-              {running ? "Running…" : "Run scan"}
-            </button>
+            {categoryFilter !== CHARTS_CATEGORY_KEY && (
+              <button
+                className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-400 to-teal-400 px-4 py-1.5 text-sm font-bold text-[#04140f] shadow-md shadow-emerald-900/40 transition hover:from-emerald-300 hover:to-teal-300 disabled:cursor-not-allowed disabled:opacity-60"
+                onClick={handleRun}
+                disabled={running}
+              >
+                {running ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4 fill-current" />}
+                {running ? "Running…" : "Run scan"}
+              </button>
+            )}
           </div>
         </div>
 
@@ -1148,6 +1319,15 @@ export default function PatternStats() {
 
       {/* Results */}
       <div className="flex-1 overflow-y-auto p-4">
+        {categoryFilter === CHARTS_CATEGORY_KEY ? (
+          <ChartLinksSection
+            records={chartRecords}
+            loading={chartRecordsLoading}
+            error={chartRecordsError}
+            onRefresh={() => setChartReloadKey((key) => key + 1)}
+          />
+        ) : (
+          <>
         {error && (
           <div className="mb-4 flex items-start gap-2 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -1227,6 +1407,8 @@ export default function PatternStats() {
                 ))}
               </section>
             )}
+          </>
+        )}
           </>
         )}
       </div>

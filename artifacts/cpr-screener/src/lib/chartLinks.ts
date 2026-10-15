@@ -13,7 +13,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { doc, getDoc, setDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
+import { collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp, setDoc, where } from "firebase/firestore";
 import { getDb, ensureSignedIn } from "@/lib/firebase";
 
 const CHART_LINKS_COLLECTION = "chartLinks";
@@ -22,6 +22,12 @@ const LOCAL_CACHE_KEY = "cpr_chart_links_cache";
 export type StoredChartLink = {
   url: string;
   savedAt: string; // ISO timestamp, set client-side for easy display
+};
+
+export type StoredChartLinkRecord = StoredChartLink & {
+  id: string;
+  rowKey: string;
+  viewKey: string;
 };
 
 type Listener = () => void;
@@ -72,6 +78,32 @@ function saveToLocalCache(key: string, link: StoredChartLink | null) {
 /** Get all chart links currently stored in local cache */
 export function getAllChartLinks(): Record<string, StoredChartLink> {
   return getLocalCache();
+}
+
+/** Read every saved chart-link document belonging to the current browser's Firebase user. */
+export async function getAllChartLinkRecords(): Promise<StoredChartLinkRecord[]> {
+  const uid = await ensureSignedIn();
+  const db = getDb();
+  const snapshot = await getDocs(query(collection(db, CHART_LINKS_COLLECTION), where("uid", "==", uid)));
+
+  return snapshot.docs
+    .flatMap((chartDoc) => {
+      const data = chartDoc.data();
+      if (typeof data.url !== "string" || !data.url) return [];
+
+      const legacySeparator = chartDoc.id.lastIndexOf("::");
+      const legacyViewKey = legacySeparator >= 0 ? chartDoc.id.slice(0, legacySeparator) : "";
+      const legacyRowKey = legacySeparator >= 0 ? chartDoc.id.slice(legacySeparator + 2) : chartDoc.id;
+
+      return [{
+        id: chartDoc.id,
+        url: data.url,
+        savedAt: typeof data.savedAt === "string" ? data.savedAt : "",
+        rowKey: typeof data.rowKey === "string" && data.rowKey ? data.rowKey : legacyRowKey,
+        viewKey: typeof data.lastViewKey === "string" && data.lastViewKey ? data.lastViewKey : legacyViewKey,
+      }];
+    })
+    .sort((a, b) => b.savedAt.localeCompare(a.savedAt));
 }
 
 /** React hook returning live map of chart links, automatically re-rendering when links are added/removed */
