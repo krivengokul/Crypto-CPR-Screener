@@ -13,67 +13,21 @@ import {
   ShieldAlert,
   Clock,
 } from "lucide-react";
-import { runScreener } from "@/lib/binance";
-import { runDeltaScreener } from "@/lib/delta";
-import { runCoinDCXScreener } from "@/lib/coinDCX";
 import { COINDCX_ENABLED, DELTA_ENABLED } from "@/lib/featureFlags";
 import { NIFTY_MOCK_CONTRACTS } from "@/lib/nifty";
 import NiftyWorkspace from "@/components/NiftyWorkspace";
 import {
-  findPD15MBelowTCSymbols,
-  findPD15MMomentumBelowSymbols,
-  findPreviousConsolidateASymbols,
-  findPreviousUpexSymbols,
   findUpexSymbols,
   getUpexBc,
-  getConsolidateABc,
-  getConsolidateBTc,
-  pruneLegacy15MResultCaches,
-  loadPD15MMomentumBelowResults,
-  loadPD15MTCBelowResults,
-  loadPreviousConsolidateAResults,
-  loadPreviousUpexResults,
-  getPrevious15MACeiling,
-  getPrevious15MBFloor,
-  previous15MMomentumCandidateCacheKey,
-  previous15MTCCandidateCacheKey,
-  previousConsolidateACandidateCacheKey,
-  previousUpexCandidateCacheKey,
-  previousUpexSessionStartUtcMs,
-  savePD15MBelowTCResults,
-  savePD15MMomentumBelowResults,
-  savePreviousConsolidateAResults,
-  savePreviousUpexResults,
-  currentReclaimWindowMs,
-  currentSessionStartUtcMs,
-  findReclaimDepths,
   getReclaimStates,
-  mayHavePiercedFirstLevel,
-  reclaimLevelsFromCPR,
-  type ReclaimCandidate,
   type ReclaimDepth,
 } from "@/lib/15MCandleCheck";
 import type { CPRResult } from "@/lib/cpr";
 import { utcTodayISO, ENTRY_DEFS } from "@/lib/backtest";
 import {
-  shouldAutoScanForCache,
-  markScannedToday,
-  hasScannedToday,
-  getLastScanDate,
-  getNextScanIST,
-  formatCountdown,
   formatISTTime,
-  loadCachedResults,
-  saveCachedResults,
   formatScanTime,
   formatScanDate,
-  isCacheFresh,
-  isScanFreshForSource,
-  markScannedForSource,
-  purgeCoinDCXStorage,
-  STORAGE_KEY_BINANCE,
-  STORAGE_KEY_DELTA,
-  STORAGE_KEY_COINDCX,
 } from "@/lib/scheduler";
 import {
   type SortKey,
@@ -107,9 +61,11 @@ import {
 } from "./ScreenerUtils";
 import LiveClock from "./LiveClock";
 import ScreenerLegend from "./ScreenerLegend";
-import ScreenerTableRow, { ScreenerTableHeader, getBadgeClasses } from "./ScreenerTableRow";
-import { useBinanceLiveRefresh, useDeltaLiveRefresh, useCoinDCXLiveRefresh } from "@/hooks/useLivePriceRefresh";
-import { usePreviousCandleFilterPrep } from "@/hooks/usePreviousCandleFilterPrep";
+import ScreenerTableRow, { getBadgeClasses } from "./ScreenerTableRow";
+import { useExchangeScan } from "@/hooks/useExchangeScan";
+import { usePreviousCandleFilters } from "@/hooks/usePreviousCandleFilters";
+import { useReclaimFilters } from "@/hooks/useReclaimFilters";
+import { ScreenerResultsTable } from "@/components/ScreenerResultsTable";
 
 /**
  * ViewCount — "(n)" badge shown at the end of every Views filter button,
@@ -277,96 +233,37 @@ export default function Screener({
   // prop, so it needs this callback to reset it back up to "").
   onActiveSignalChange?: (id: string) => void;
 }) {
-  const cachedBinance = useMemo(() => loadCachedResults<CPRResult>(STORAGE_KEY_BINANCE), []);
-  const cachedDelta = useMemo(() => loadCachedResults<CPRResult>(STORAGE_KEY_DELTA), []);
-  // CoinDCX paused (COINDCX_ENABLED=false): don't even read its cache, and
-  // delete whatever it left in localStorage so the quota is freed.
-  const cachedCoinDCX = useMemo(() => {
-    if (!COINDCX_ENABLED) {
-      purgeCoinDCXStorage();
-      return null;
-    }
-    return loadCachedResults<CPRResult>(STORAGE_KEY_COINDCX);
-  }, []);
-
-  const [status, setStatus] = useState<"idle" | "scanning" | "done" | "error">(() => {
-    return isScanFreshForSource("binance", cachedBinance) ? "done" : "idle";
-  });
-  const [progress, setProgress] = useState({ done: 0, total: 0, symbol: "" });
-  const [allResults, setAllResults] = useState<CPRResult[]>(() => {
-    return isCacheFresh(cachedBinance) ? cachedBinance?.data ?? [] : [];
-  });
-  const [filtered, setFiltered] = useState<CPRResult[]>(() => {
-    return isCacheFresh(cachedBinance) ? cachedBinance?.data ?? [] : [];
-  });
-  // "Scanned at" badge — wall-clock time of the last completed scan for
-  // each source, seeded from the cached entry's savedAt (undefined for
-  // legacy cache entries saved before that field existed, or when nothing
-  // has been scanned yet today) and refreshed the moment a fresh scan
-  // completes, right alongside saveCachedResults below.
-  const [binanceScannedAt, setBinanceScannedAt] = useState<number | null>(
-    () => (isCacheFresh(cachedBinance) ? cachedBinance?.savedAt ?? null : null)
-  );
+  // ── UI / filter state (stays in Screener) ─────────────────────────────
   const [sortKey, setSortKey] = useState<SortKey>("compressionRatio");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [search, setSearch] = useState("");
-  // Default to true: on first load / refresh, before the user picks a
-  // left-nav pattern, the screener should show ALL scanned results
-  // (unfiltered) rather than being pre-filtered to a specific pattern.
   const [showAll, setShowAll] = useState(true);
-  // Generic Views toggle — covers every non-empty category derived from
-  // the registry-backed navigation map. Holds the selected View id, or null.
   const [activeGenericSignal, setActiveGenericSignal] = useState<string | null>(null);
+  // NEW: PDH/PDL filter — independent of activeSignal, mutually exclusive (like pivot/width filters).
+  const [pdhPdlFilter, setPdhPdlFilter] = useState<"above" | "below" | "abovepu4" | "belowpl4" | "pdhgtu1" | "pdlltl1" | "s1r1in" | null>(null);
   const [PatternFilter, setPatternFilter] = useState<string | null>(null);
-  // Independent of the left-nav Views: cycles off -> BRK (fresh 15m squeeze breakouts) -> SQZ (coiling now).
   const [breakoutMode, setBreakoutMode] = useState<"off" | "brk" | "sqz">("off");
   const [showPatternList, setShowPatternList] = useState(false);
   const [showTouchList, setShowTouchList] = useState(false);
   const [touchFilter, setTouchFilter] = useState<string | null>(null);
   const [showSizeList, setShowSizeList] = useState(false);
   const [showPriceList, setShowPriceList] = useState(false);
-  // Previous-session 15m candle filters (MOMENTUM-A, CONSOLIDATE-B,
-  // MOMENTUM-B) live in their own "Candle" panel, split out of the Price panel.
   const [showCandleList, setShowCandleList] = useState(false);
-  // NEW: ENTRY level filter — 13 buttons (R4..S4, same rungs as Create View's
-  // Entry dropdown, minus the "Entry " prefix). Selecting one keeps only rows
-  // that currently satisfy at least one View whose ENTRY is that rung.
   const [showEntryLevelList, setShowEntryLevelList] = useState(false);
   const [entryLevelFilter, setEntryLevelFilter] = useState<string | null>(null);
 
-  // NEW: every View that defines a target (i.e. a tradable signal), flattened
-  // once — the ENTRY filter below reads each one's entry rung per row.
   const entrySignalViews = useMemo(
     () => VIEWS.filter((v) => v.kind === "view" && !!v.getTarget),
     []
   );
-  // CHANGED: split into two independent states so one pMicro..pUltra
-  // selection (prev day's CPR width) and one Micro..Ultra selection
-  // (today's CPR width) can be active at the same time.
   const [prevWidthFilter, setPrevWidthFilter] = useState<WidthCategoryKey | null>(null);
   const [todayWidthFilter, setTodayWidthFilter] = useState<WidthCategoryKey | null>(null);
-  // NEW: PDH/PDL filter — independent of activeSignal, mutually exclusive (like pivot/width filters).
-  const [pdhPdlFilter, setPdhPdlFilter] = useState<"above" | "below" | "abovepu4" | "belowpl4" | "pdhgtu1" | "pdlltl1" | "s1r1in" | null>(null);
+
   const [upexFilter, setUpexFilter] = useState(false);
   const [upexIncludedSymbols, setUpexIncludedSymbols] = useState<Set<string>>(() => new Set());
-  const [previousCandleFilter, setPreviousCandleFilter] = useState<"all" | "consolidate-a" | "momentum-a" | "consolidate-b" | "momentum-b" | "inside-r1s1">("all");
-  // CON-A / MOM-A / CON-B / MOM-B / INSIDE-R1S1 prep state comes from
-  // usePreviousCandleFilterPrep (wired just after scan refs below).
-
-  // RECLAIM-S / RECLAIM-R (live, current session): pierced depth per symbol
-  // comes from 15m candles (re-fetched once per settled 15m window); whether
-  // price is back inside those levels is computed live at render/filter time.
-  const [reclaimSFilter, setReclaimSFilter] = useState(false);
-  const [reclaimRFilter, setReclaimRFilter] = useState(false);
-  const [reclaimDepths, setReclaimDepths] = useState<Map<string, ReclaimDepth>>(() => new Map());
-  const [reclaimProgress, setReclaimProgress] = useState<{ done: number; total: number } | null>(null);
-  const [reclaimReady, setReclaimReady] = useState(false);
-  const [reclaimMessage, setReclaimMessage] = useState("");
-  const [reclaimWindow, setReclaimWindow] = useState(() => currentReclaimWindowMs());
-  const reclaimDepthsRef = useRef<Map<string, ReclaimDepth>>(new Map());
-  const reclaimSessionRef = useRef(currentSessionStartUtcMs());
-  const reclaimRunRef = useRef(0);
-
+  const [previousCandleFilter, setPreviousCandleFilter] = useState<
+    "all" | "consolidate-a" | "momentum-a" | "consolidate-b" | "momentum-b" | "inside-r1s1"
+  >("all");
   const [upexProgress, setUpexProgress] = useState<{
     done: number;
     total: number;
@@ -374,67 +271,9 @@ export default function Screener({
   } | null>(null);
   const [upexMessage, setUpexMessage] = useState("");
   const upexRunRef = useRef(0);
-  // Active / Ready status filter (grouped tab control in the search bar).
-  // Clicking the already-selected button clears it back to "all".
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "ready">("all");
-  const [error, setError] = useState("");
-  const [countdown, setCountdown] = useState("");
-  const [nextScanUtc, setNextScanUtc] = useState<Date>(getNextScanIST());
-  const [alreadyScannedToday] = useState(() => hasScannedToday());
-  const [lastScanDate] = useState(() => getLastScanDate());
-  const scanRef = useRef(false);
-
-  const [deltaStatus, setDeltaStatus] = useState<"idle" | "scanning" | "done" | "error">(() => {
-    return isScanFreshForSource("delta", cachedDelta) ? "done" : "idle";
-  });
-  const [deltaProgress, setDeltaProgress] = useState({ done: 0, total: 0, symbol: "" });
-  const [deltaAllResults, setDeltaAllResults] = useState<CPRResult[]>(() => {
-    return isCacheFresh(cachedDelta) ? cachedDelta?.data ?? [] : [];
-  });
-  const [deltaScannedAt, setDeltaScannedAt] = useState<number | null>(
-    () => (isCacheFresh(cachedDelta) ? cachedDelta?.savedAt ?? null : null)
-  );
-  const [deltaFiltered, setDeltaFiltered] = useState<CPRResult[]>(() => {
-    return isCacheFresh(cachedDelta) ? cachedDelta?.data ?? [] : [];
-  });
-  const [deltaError, setDeltaError] = useState("");
-
-  const [coindcxStatus, setCoinDCXStatus] = useState<"idle" | "scanning" | "done" | "error">(() => {
-    return isScanFreshForSource("coindcx", cachedCoinDCX) ? "done" : "idle";
-  });
-  const [coindcxProgress, setCoinDCXProgress] = useState({ done: 0, total: 0, symbol: "" });
-  const [coindcxAllResults, setCoinDCXAllResults] = useState<CPRResult[]>(() => {
-    return isCacheFresh(cachedCoinDCX) ? cachedCoinDCX?.data ?? [] : [];
-  });
-  const [coindcxScannedAt, setCoinDCXScannedAt] = useState<number | null>(
-    () => (isCacheFresh(cachedCoinDCX) ? cachedCoinDCX?.savedAt ?? null : null)
-  );
-  const [coindcxFiltered, setCoinDCXFiltered] = useState<CPRResult[]>(() => {
-    return isCacheFresh(cachedCoinDCX) ? cachedCoinDCX?.data ?? [] : [];
-  });
-  const [coindcxError, setCoinDCXError] = useState("");
-  const [activeTabState, setActiveTabState] = useState<ActiveTab>("binance");
-  // Controlled when App.tsx passes activeTab/onActiveTabChange (the normal
-  // case now); falls back to local state otherwise. setActiveTab below is
-  // used everywhere else in this file exactly as before — only its source
-  // changed.
-  const activeTab = activeTabProp ?? activeTabState;
-  const setActiveTab = onActiveTabChange ?? setActiveTabState;
-  useEffect(() => {
-    upexRunRef.current += 1;
-    setUpexFilter(false);
-    setUpexIncludedSymbols(new Set());
-    setPreviousCandleFilter("all");
-    setUpexProgress(null);
-    setUpexMessage("");
-    setReclaimSFilter(false);
-    setReclaimRFilter(false);
-  }, [activeTab]);
-  const deltaScanRef = useRef(false);
-  const coindcxScanRef = useRef(false);
 
   const [expandedSymbols, setExpandedSymbols] = useState<Set<string>>(new Set());
-
   function toggleExpand(key: string) {
     setExpandedSymbols((prev) => {
       const next = new Set(prev);
@@ -443,552 +282,152 @@ export default function Screener({
     });
   }
 
-  const allResultsRef = useRef<CPRResult[]>([]);
-  const deltaAllResultsRef = useRef<CPRResult[]>([]);
-  const coindcxAllResultsRef = useRef<CPRResult[]>([]);
-  const activeSignalRef = useRef(activeSignal);
-  // One-time cleanup of superseded 15m result-cache keys (old _vN versions).
-  useEffect(() => { pruneLegacy15MResultCaches(); }, []);
-  useEffect(() => { allResultsRef.current = allResults; }, [allResults]);
-  useEffect(() => { deltaAllResultsRef.current = deltaAllResults; }, [deltaAllResults]);
-  useEffect(() => { coindcxAllResultsRef.current = coindcxAllResults; }, [coindcxAllResults]);
-  useEffect(() => { activeSignalRef.current = activeSignal; }, [activeSignal]);
+  // Reclaim reset is filled after useReclaimFilters mounts
+  const reclaimResetRef = useRef<() => void>(() => {});
 
+  const onScanOrTabReset = useCallback(() => {
+    upexRunRef.current += 1;
+    setUpexFilter(false);
+    setUpexIncludedSymbols(new Set());
+    setPreviousCandleFilter("all");
+    setUpexProgress(null);
+    setUpexMessage("");
+    reclaimResetRef.current();
+  }, []);
 
-  const previousUpexSessionStart = previousUpexSessionStartUtcMs();
-
-  // --- Previous-session 15m candle filters (shared prep hook) ---
-  const candlePrepCanRun =
-    status !== "scanning" &&
-    deltaStatus !== "scanning" &&
-    (status === "done" || deltaStatus === "done");
-
-  const consolidateAPrep = usePreviousCandleFilterPrep({
-    label: "CONSOLIDATE-A",
-    canRun: candlePrepCanRun,
-    sessionStartMs: previousUpexSessionStart,
-    buildCandidates: () => {
-      const candidates = new Map<string, {
-        symbol: string; source: "binance" | "delta"; bc: number; ceiling: number;
-      }>();
-      if (status === "done") {
-        for (const row of allResults) {
-          candidates.set(`binance:${row.symbol}`, {
-            symbol: row.symbol, source: "binance",
-            bc: getConsolidateABc(row.prevCPR, row.ppCPR),
-            ceiling: getPrevious15MACeiling(row.prevCPR),
-          });
-        }
-      }
-      if (deltaStatus === "done") {
-        for (const row of deltaAllResults) {
-          candidates.set(`delta:${row.symbol}`, {
-            symbol: row.symbol, source: "delta",
-            bc: getConsolidateABc(row.prevCPR, row.ppCPR),
-            ceiling: getPrevious15MACeiling(row.prevCPR),
-          });
-        }
-      }
-      return Array.from(candidates.values());
-    },
-    cacheKey: previousConsolidateACandidateCacheKey,
-    loadResults: loadPreviousConsolidateAResults,
-    saveResults: savePreviousConsolidateAResults,
-    scanMissing: (missing, onProgress, sessionEndMs) =>
-      findPreviousConsolidateASymbols(missing, onProgress, sessionEndMs),
+  // ── Exchange scans (Binance / Delta / CoinDCX) ─────────────────────────
+  const {
+    activeTab,
+    setActiveTab,
+    status,
+    progress,
+    allResults,
+    setAllResults,
+    filtered,
+    setFiltered,
+    binanceScannedAt,
+    error,
+    countdown,
+    nextScanUtc,
+    alreadyScannedToday,
+    lastScanDate,
+    deltaStatus,
+    deltaProgress,
+    deltaAllResults,
+    setDeltaAllResults,
+    deltaFiltered,
+    setDeltaFiltered,
+    deltaScannedAt,
+    deltaError,
+    coindcxStatus,
+    coindcxProgress,
+    coindcxAllResults,
+    setCoinDCXAllResults,
+    coindcxFiltered,
+    setCoinDCXFiltered,
+    coindcxScannedAt,
+    coindcxError,
+    doScan,
+    doDeltaScan,
+    doCoinDCXScan,
+    allResultsRef,
+    deltaAllResultsRef,
+    coindcxAllResultsRef,
+  } = useExchangeScan({
+    activeSignal,
+    scanKey,
+    activeTab: activeTabProp,
+    onActiveTabChange,
+    onScanOrTabReset,
   });
 
-  const momentumAPrep = usePreviousCandleFilterPrep({
-    label: "MOMENTUM-A",
-    canRun: candlePrepCanRun,
-    sessionStartMs: previousUpexSessionStart,
-    buildCandidates: () => {
-      const candidates = new Map<string, {
-        symbol: string; source: "binance" | "delta"; bc: number;
-      }>();
-      if (status === "done") {
-        for (const row of allResults) {
-          candidates.set(`binance:${row.symbol}`, {
-            symbol: row.symbol, source: "binance", bc: row.prevCPR.bc,
-          });
-        }
-      }
-      if (deltaStatus === "done") {
-        for (const row of deltaAllResults) {
-          candidates.set(`delta:${row.symbol}`, {
-            symbol: row.symbol, source: "delta", bc: row.prevCPR.bc,
-          });
-        }
-      }
-      return Array.from(candidates.values());
-    },
-    cacheKey: previousUpexCandidateCacheKey,
-    loadResults: loadPreviousUpexResults,
-    saveResults: savePreviousUpexResults,
-    scanMissing: (missing, onProgress, sessionEndMs) =>
-      findPreviousUpexSymbols(missing, onProgress, sessionEndMs),
-  });
-
-  const consolidateBPrep = usePreviousCandleFilterPrep({
-    label: "CONSOLIDATE-B",
-    canRun: candlePrepCanRun,
-    sessionStartMs: previousUpexSessionStart,
-    buildCandidates: () => {
-      const candidates = new Map<string, {
-        symbol: string; source: "binance" | "delta"; bc: number; floor: number;
-      }>();
-      if (status === "done") {
-        for (const row of allResults) {
-          candidates.set(`binance:${row.symbol}`, {
-            symbol: row.symbol, source: "binance",
-            bc: getConsolidateBTc(row.prevCPR, row.ppCPR),
-            floor: getPrevious15MBFloor(row.prevCPR),
-          });
-        }
-      }
-      if (deltaStatus === "done") {
-        for (const row of deltaAllResults) {
-          candidates.set(`delta:${row.symbol}`, {
-            symbol: row.symbol, source: "delta",
-            bc: getConsolidateBTc(row.prevCPR, row.ppCPR),
-            floor: getPrevious15MBFloor(row.prevCPR),
-          });
-        }
-      }
-      return Array.from(candidates.values());
-    },
-    cacheKey: previous15MTCCandidateCacheKey,
-    loadResults: loadPD15MTCBelowResults,
-    saveResults: savePD15MBelowTCResults,
-    scanMissing: (missing, onProgress, sessionEndMs) =>
-      findPD15MBelowTCSymbols(missing, onProgress, sessionEndMs),
-  });
-
-  const momentumBPrep = usePreviousCandleFilterPrep({
-    label: "MOMENTUM-B",
-    canRun: candlePrepCanRun,
-    sessionStartMs: previousUpexSessionStart,
-    buildCandidates: () => {
-      const candidates = new Map<string, {
-        symbol: string; source: "binance" | "delta"; bc: number;
-      }>();
-      if (status === "done") {
-        for (const row of allResults) {
-          candidates.set(`binance:${row.symbol}`, {
-            symbol: row.symbol, source: "binance", bc: row.prevCPR.tc,
-          });
-        }
-      }
-      if (deltaStatus === "done") {
-        for (const row of deltaAllResults) {
-          candidates.set(`delta:${row.symbol}`, {
-            symbol: row.symbol, source: "delta", bc: row.prevCPR.tc,
-          });
-        }
-      }
-      return Array.from(candidates.values());
-    },
-    cacheKey: previous15MMomentumCandidateCacheKey,
-    loadResults: loadPD15MMomentumBelowResults,
-    saveResults: savePD15MMomentumBelowResults,
-    scanMissing: (missing, onProgress, sessionEndMs) =>
-      findPD15MMomentumBelowSymbols(missing, onProgress, sessionEndMs),
-  });
-
-
-  // Aliases so existing filter / badge / count code keeps working
-  const previousConsolidateAIncludedSymbols = consolidateAPrep.includedSymbols;
-  const previousConsolidateAProgress = consolidateAPrep.progress;
-  const previousConsolidateAReady = consolidateAPrep.ready;
-  const previousConsolidateAMessage = consolidateAPrep.message;
-  const previousUpexIncludedSymbols = momentumAPrep.includedSymbols;
-  const previousUpexProgress = momentumAPrep.progress;
-  const previousUpexReady = momentumAPrep.ready;
-  const upexMessageFromPrep = momentumAPrep.message;
-  const previous15MTCIncludedSymbols = consolidateBPrep.includedSymbols;
-  const previous15MTCProgress = consolidateBPrep.progress;
-  const previous15MTCReady = consolidateBPrep.ready;
-  const previous15MTCMessage = consolidateBPrep.message;
-  const previous15MMomentumIncludedSymbols = momentumBPrep.includedSymbols;
-  const previous15MMomentumProgress = momentumBPrep.progress;
-  const previous15MMomentumReady = momentumBPrep.ready;
-  const previous15MMomentumMessage = momentumBPrep.message;
-
-  // Annotate scan rows with raw 15m flags so matchesCandleCheck / category
-  // conditions / Backtest badges see the same CON-A / CON-B / MOM bits the
-  // exclusive candleBucket uses (prep Sets are the source of truth).
-  useEffect(() => {
-    const applyFlags = (
-      rows: CPRResult[],
-      setRows: Dispatch<SetStateAction<CPRResult[]>>,
-      source: "binance" | "delta",
-    ) => {
-      if (rows.length === 0) return;
-      let changed = false;
-      const next = rows.map((row) => {
-        const key = `${source}:${row.symbol}`;
-        const a = previousConsolidateAIncludedSymbols.has(key);
-        const ma = previousUpexIncludedSymbols.has(key);
-        const b = previous15MTCIncludedSymbols.has(key);
-        const mb = previous15MMomentumIncludedSymbols.has(key);
-        if (
-          row.PD15MConsolidateAPass === a &&
-          row.PD15MAboveBCPass === ma &&
-          row.PD15MBelowTCPass === b &&
-          row.PD15MMomentumBPass === mb
-        ) {
-          return row;
-        }
-        changed = true;
-        return {
-          ...row,
-          PD15MConsolidateAPass: a,
-          PD15MAboveBCPass: ma,
-          PD15MBelowTCPass: b,
-          PD15MMomentumBPass: mb,
-        };
-      });
-      if (changed) setRows(next);
-    };
-    applyFlags(allResults, setAllResults, "binance");
-    applyFlags(deltaAllResults, setDeltaAllResults, "delta");
-  }, [
+  // ── Previous-session 15m P-filters ────────────────────────────────────
+  const {
     previousConsolidateAIncludedSymbols,
+    previousConsolidateAProgress,
+    previousConsolidateAReady,
+    previousConsolidateAMessage,
     previousUpexIncludedSymbols,
+    previousUpexProgress,
+    previousUpexReady,
+    upexMessageFromPrep,
     previous15MTCIncludedSymbols,
+    previous15MTCProgress,
+    previous15MTCReady,
+    previous15MTCMessage,
     previous15MMomentumIncludedSymbols,
+    previous15MMomentumProgress,
+    previous15MMomentumReady,
+    previous15MMomentumMessage,
+    candleBucket,
+    hasConsolidateB,
+    hasMomentumB,
+    hasConsolidateA,
+    hasMomentumA,
+    hasInsideR1S1,
+    previousInsideR1S1Ready,
+    resetConsolidateAMessage,
+    resetMomentumAMessage,
+    resetConsolidateBMessage,
+    resetMomentumBMessage,
+  } = usePreviousCandleFilters({
+    status,
+    deltaStatus,
     allResults,
     deltaAllResults,
-  ]);
-  const resetConsolidateAMessage = consolidateAPrep.resetMessage;
-  const resetMomentumAMessage = momentumAPrep.resetMessage;
-  const resetConsolidateBMessage = consolidateBPrep.resetMessage;
-  const resetMomentumBMessage = momentumBPrep.resetMessage;
+    setAllResults,
+    setDeltaAllResults,
+  });
 
+  const hasInRangeR = hasInsideR1S1;
+  const previousInsideR1S1Progress =
+    !previousInsideR1S1Ready && (previousConsolidateAProgress || previous15MTCProgress)
+      ? {
+          done:
+            (previousConsolidateAProgress?.done ?? 0) +
+            (previous15MTCProgress?.done ?? 0),
+          total:
+            (previousConsolidateAProgress?.total ?? 0) +
+            (previous15MTCProgress?.total ?? 0),
+        }
+      : null;
+  const previousInsideR1S1Message = "";
+  const previousCandleClassificationReady =
+    previousConsolidateAReady &&
+    previousUpexReady &&
+    previous15MTCReady &&
+    previous15MMomentumReady;
 
-  // NEW: auto-hide "Show All" whenever a left-nav view/category is clicked.
-  // ViewsSidebar's onSelect (both handlePatternClick for top-level categories
-  // and handleSubClick for their Views/sub-patterns) updates activeSignal,
-  // so any change to activeSignal after the initial mount means the user
-  // just picked something in the left nav — at that point showAll should be
-  // turned off so the screener actually reflects the selected filter instead
-  // of continuing to show every scanned result. The isFirstPatternRef guard
-  // skips the mount-time run so the intentional "start in Show All" default
-  // (see showAll's useState above) is left alone on first load.
+  // ── RECLAIM-S / RECLAIM-R ─────────────────────────────────────────────
+  const {
+    reclaimSFilter,
+    setReclaimSFilter,
+    reclaimRFilter,
+    setReclaimRFilter,
+    reclaimDepths,
+    reclaimProgress,
+    reclaimReady,
+    reclaimMessage,
+    resetReclaimUi,
+  } = useReclaimFilters({
+    status,
+    deltaStatus,
+    allResults,
+    deltaAllResults,
+  });
+  reclaimResetRef.current = resetReclaimUi;
+
+  // Sync showAll with left-nav selection
   const isFirstPatternRef = useRef(true);
   useEffect(() => {
     if (isFirstPatternRef.current) {
       isFirstPatternRef.current = false;
       return;
     }
-    // Only turn off showAll when a real category/view was selected in the left nav.
-    // When activeSignal is cleared back to "" (e.g. via Show All), ensure showAll is true.
-    if (activeSignal) {
-      setShowAll(false);
-    } else {
-      setShowAll(true);
-    }
+    if (activeSignal) setShowAll(false);
+    else setShowAll(true);
   }, [activeSignal]);
 
-  // NEW: resolve activeSignal to its parent left-nav category ("section").
-  // Clicking a top-level category in the left-nav sets activeSignal to the
-  // category id directly (e.g. "compressed"), but clicking one of its
-  // Views/sub-patterns instead sets
-  // activeSignal to that LEAF id — ViewsSidebar's handleSubClick calls
-  // onSelect(subId), not onSelect(parentId). Row filtering already handles
-  // both cases fine (passesPattern resolves leaf ids directly), but
-  // anything keyed off the *category* — the Views button row and the
-  // per-row green/red direction dot (getViewDirection) — was comparing
-  // against the raw activeSignal and so went blank whenever a leaf was
-  // selected via the left-nav. activeSectionKey resolves either case back
-  // to the owning category so those two stay populated regardless of
-  // whether the category or one of its leaves triggered the selection.
-  const activeSectionKey = useMemo(() => {
-    if (Views[activeSignal]) return activeSignal; // already a category id
-    for (const [section, subs] of Object.entries(Views)) {
-      if (subs.some((s) => s.id === activeSignal)) return section;
-    }
-    return activeSignal; // not a known category or leaf — leave as-is
-  }, [activeSignal]);
-
-  const doScan = useCallback(async (switchTab: boolean = true) => {
-    if (scanRef.current) return;
-    scanRef.current = true;
-    upexRunRef.current += 1;
-    setUpexFilter(false);
-    setUpexIncludedSymbols(new Set());
-    setPreviousCandleFilter("all");
-    setUpexProgress(null);
-    setUpexMessage("");
-    setStatus("scanning");
-    if (switchTab) setActiveTab("binance");
-    setAllResults([]);
-    setFiltered([]);
-    setError("");
-    setProgress({ done: 0, total: 0, symbol: "" });
-    try {
-      const results = await runScreener((done, total, symbol) => {
-        setProgress({ done, total, symbol });
-      });
-      if (results.length === 0) {
-        throw new Error("Binance scan returned no results — will retry on the next scan/refresh.");
-      }
-      setAllResults(results);
-      setFiltered(results.filter((r) => passesPattern(r, activeSignalRef.current)));
-      setStatus("done");
-      markScannedToday();
-      // FIX (CoinDCX/Delta/Binance stuck at 0 after a quota-exceeded write):
-      // saveCachedResults() swallows a failed localStorage write and returns
-      // false instead of throwing. markScannedForSource() must only record
-      // "today's scan is done" when the result cache actually persisted —
-      // otherwise a source whose write silently failed (most likely CoinDCX,
-      // being the largest/last payload) looks "already scanned today" on the
-      // next reload even though its results were never saved, permanently
-      // blocking the auto-rescan that would otherwise fix it.
-      const binanceSaved = saveCachedResults(STORAGE_KEY_BINANCE, results);
-      if (binanceSaved) markScannedForSource("binance");
-      setBinanceScannedAt(Date.now());
-      setNextScanUtc(getNextScanIST());
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Unknown error");
-      setStatus("error");
-    } finally {
-      scanRef.current = false;
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const doDeltaScan = useCallback(async (switchTab: boolean = true) => {
-    if (!DELTA_ENABLED) return;
-    if (deltaScanRef.current) return;
-    deltaScanRef.current = true;
-    upexRunRef.current += 1;
-    setUpexFilter(false);
-    setUpexIncludedSymbols(new Set());
-    setPreviousCandleFilter("all");
-    setUpexProgress(null);
-    setUpexMessage("");
-    setDeltaStatus("scanning");
-    if (switchTab) setActiveTab("delta");
-    setDeltaAllResults([]);
-    setDeltaFiltered([]);
-    setDeltaError("");
-    setDeltaProgress({ done: 0, total: 0, symbol: "" });
-    try {
-      const results = await runDeltaScreener((done, total, symbol) => {
-        setDeltaProgress({ done, total, symbol });
-      });
-      if (results.length === 0) {
-        throw new Error("Delta scan returned no results — will retry on the next scan/refresh.");
-      }
-      setDeltaAllResults(results);
-      setDeltaFiltered(results.filter((r) => passesPattern(r, activeSignalRef.current)));
-      setDeltaStatus("done");
-      // See the matching comment in doScan above — only mark "scanned today"
-      // when the cache write actually succeeded.
-      const deltaSaved = saveCachedResults(STORAGE_KEY_DELTA, results);
-      if (deltaSaved) markScannedForSource("delta");
-      setDeltaScannedAt(Date.now());
-    } catch (e) {
-      setDeltaError(e instanceof Error ? e.message : "Unknown error");
-      setDeltaStatus("error");
-    } finally {
-      deltaScanRef.current = false;
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const doCoinDCXScan = useCallback(async (switchTab: boolean = true) => {
-    // Paused: this single guard stops every entry point (auto-scan, hard
-    // refresh, "Scan Now", and the Scan CoinDCX button).
-    if (!COINDCX_ENABLED) return;
-    if (coindcxScanRef.current) return;
-    coindcxScanRef.current = true;
-    upexRunRef.current += 1;
-    setUpexFilter(false);
-    setUpexIncludedSymbols(new Set());
-    setPreviousCandleFilter("all");
-    setUpexProgress(null);
-    setUpexMessage("");
-    setCoinDCXStatus("scanning");
-    if (switchTab) setActiveTab("coindcx");
-    // Keep the last successful CoinDCX result visible while the next scan
-    // runs, so a slow or partially rate-limited refresh never looks empty.
-    const previousCoinDCXResults = coindcxAllResultsRef.current;
-    setCoinDCXAllResults(previousCoinDCXResults);
-    setCoinDCXFiltered(previousCoinDCXResults.filter((r) => passesPattern(r, activeSignalRef.current)));
-    setCoinDCXError("");
-    setCoinDCXProgress({ done: 0, total: 0, symbol: "" });
-    try {
-      const results = await runCoinDCXScreener((done, total, symbol) => {
-        setCoinDCXProgress({ done, total, symbol });
-      });
-      if (results.length === 0) {
-        throw new Error("CoinDCX scan returned no results — will retry on the next scan/refresh.");
-      }
-      setCoinDCXAllResults(results);
-      setCoinDCXFiltered(results.filter((r) => passesPattern(r, activeSignalRef.current)));
-      setCoinDCXStatus("done");
-      // See the matching comment in doScan above. CoinDCX is the exchange
-      // most likely to hit this: its cache write runs last of the three and
-      // is often the one that overflows localStorage's per-origin quota
-      // after Binance/Delta have already written theirs — without this
-      // guard, that failed write got treated as "scanned today" anyway,
-      // leaving CoinDCX stuck at 0 results until the marker expired the
-      // next IST day, even though the scan itself succeeded.
-      const coindcxSaved = saveCachedResults(STORAGE_KEY_COINDCX, results);
-      if (coindcxSaved) markScannedForSource("coindcx");
-      setCoinDCXScannedAt(Date.now());
-    } catch (e) {
-      setCoinDCXError(e instanceof Error ? e.message : "Unknown error");
-      setCoinDCXStatus("error");
-    } finally {
-      coindcxScanRef.current = false;
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const autoScanRanRef = useRef(false);
-  useEffect(() => {
-    if (autoScanRanRef.current) return;
-    autoScanRanRef.current = true;
-    if (shouldAutoScanForCache(cachedBinance, "binance")) void doScan();
-    if (DELTA_ENABLED && shouldAutoScanForCache(cachedDelta, "delta")) void doDeltaScan(false);
-    if (shouldAutoScanForCache(cachedCoinDCX, "coindcx")) void doCoinDCXScan(false);
-  }, [cachedBinance, cachedDelta, cachedCoinDCX, doScan, doDeltaScan, doCoinDCXScan]);
-
-  const isFirstMountRef = useRef(true);
-  useEffect(() => {
-    if (scanKey > 0) {
-      if (isFirstMountRef.current) {
-        isFirstMountRef.current = false;
-        // Each exchange decides independently from its own cache date.
-        // Binance having scanned must not suppress CoinDCX or Delta.
-        // isScanFreshForSource falls back to the lightweight per-source
-        // "scanned today" marker when the full result cache didn't
-        // persist (e.g. CoinDCX's larger payload hitting localStorage's
-        // quota after Binance/Delta already wrote theirs) — so a source
-        // that genuinely already scanned today doesn't rescan on every
-        // hard refresh just because its bulky cache write failed.
-        if (!isScanFreshForSource("binance", cachedBinance)) void doScan();
-        if (DELTA_ENABLED && !isScanFreshForSource("delta", cachedDelta)) void doDeltaScan(false);
-        if (!isScanFreshForSource("coindcx", cachedCoinDCX)) void doCoinDCXScan(false);
-        return;
-      }
-      // Explicit click from Header "Scan Now" button
-      doScan();
-      if (DELTA_ENABLED) doDeltaScan(false);
-      doCoinDCXScan(false);
-    }
-  }, [scanKey]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    const tick = () => setCountdown(formatCountdown(nextScanUtc));
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, [nextScanUtc]);
-
-  useBinanceLiveRefresh(status, allResultsRef, setAllResults, setFiltered);
-  useDeltaLiveRefresh(deltaStatus, deltaAllResultsRef, setDeltaAllResults, setDeltaFiltered);
-  useCoinDCXLiveRefresh(coindcxStatus, coindcxAllResultsRef, setCoinDCXAllResults, setCoinDCXFiltered);
-
-  // RECLAIM-S / RECLAIM-R — bump `reclaimWindow` once per settled 15m window
-  // so the pierced-depth scan below re-runs after each candle close.
-  useEffect(() => {
-    const id = setInterval(() => {
-      const next = currentReclaimWindowMs();
-      setReclaimWindow((prev) => (prev === next ? prev : next));
-    }, 15_000);
-    return () => clearInterval(id);
-  }, []);
-
-  // RECLAIM-S / RECLAIM-R — pierced-depth scan. Runs after the scans finish
-  // and again every settled 15m window. Only symbols whose live day range has
-  // left [S1, R1] are fetched (see mayHavePiercedFirstLevel), and depth can
-  // only grow within a session, so each window merges (max) into what is known.
-  // Whether price is currently back inside the pierced levels is NOT decided
-  // here — that is live (getReclaimStates at render/filter time).
-  useEffect(() => {
-    if (
-      status === "scanning" ||
-      deltaStatus === "scanning" ||
-      (status !== "done" && deltaStatus !== "done")
-    ) return;
-
-    const sessionStart = currentSessionStartUtcMs(reclaimWindow);
-    if (reclaimSessionRef.current !== sessionStart) {
-      reclaimSessionRef.current = sessionStart;
-      reclaimDepthsRef.current = new Map();
-      setReclaimDepths(new Map());
-    }
-
-    const sourced: Array<{ source: "binance" | "delta"; row: CPRResult }> = [];
-    if (status === "done") {
-      for (const row of allResults) sourced.push({ source: "binance", row });
-    }
-    if (deltaStatus === "done") {
-      for (const row of deltaAllResults) sourced.push({ source: "delta", row });
-    }
-    if (sourced.length === 0) {
-      setReclaimReady(false);
-      setReclaimProgress(null);
-      return;
-    }
-
-    const candidates: ReclaimCandidate[] = [];
-    for (const { source, row } of sourced) {
-      const prior = reclaimDepthsRef.current.get(`${source}:${row.symbol}`);
-      if (prior && prior.sPierced >= 4 && prior.rPierced >= 4) continue;
-      if (!mayHavePiercedFirstLevel(row)) continue;
-      candidates.push({
-        symbol: row.symbol,
-        source,
-        levels: reclaimLevelsFromCPR(row.todayCPR),
-      });
-    }
-
-    const runId = ++reclaimRunRef.current;
-    if (candidates.length === 0) {
-      setReclaimReady(true);
-      setReclaimProgress(null);
-      setReclaimMessage("");
-      return;
-    }
-    setReclaimProgress({ done: 0, total: candidates.length });
-    void findReclaimDepths(
-      candidates,
-      (done, total) => {
-        if (runId === reclaimRunRef.current) setReclaimProgress({ done, total });
-      },
-      reclaimWindow,
-    ).then(({ depths, unavailable }) => {
-      if (runId !== reclaimRunRef.current) return;
-      for (const [key, depth] of depths) {
-        const prior = reclaimDepthsRef.current.get(key);
-        reclaimDepthsRef.current.set(key, {
-          sPierced: Math.max(prior?.sPierced ?? 0, depth.sPierced),
-          rPierced: Math.max(prior?.rPierced ?? 0, depth.rPierced),
-        });
-      }
-      setReclaimDepths(new Map(reclaimDepthsRef.current));
-      setReclaimReady(true);
-      setReclaimProgress(null);
-      setReclaimMessage(
-        unavailable > 0
-          ? `${unavailable} symbol${unavailable === 1 ? "" : "s"} skipped by RECLAIM because no usable 15m candles were returned for the current IST session.`
-          : "",
-      );
-    }).catch((cause: unknown) => {
-      if (runId !== reclaimRunRef.current) return;
-      setReclaimProgress(null);
-      setReclaimMessage(
-        cause instanceof Error
-          ? `RECLAIM preparation failed: ${cause.message}`
-          : "RECLAIM preparation failed.",
-      );
-    });
-    // Runs on scan completion and once per settled 15m window, not on
-    // live-price ticks (those are handled live by getReclaimStates).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, deltaStatus, reclaimWindow]);
 
   useEffect(() => {
     if (allResults.length > 0) setFiltered(allResults.filter((r) => passesPattern(r, activeSignal)));
@@ -1090,6 +529,17 @@ export default function Screener({
     prevActiveSignalOnRef.current = activeSignalOn;
     if (isSignalLeaf && wasOn && !activeSignalOn) requestSignalDeselect(activeSignal);
   }, [activeSignalOn, isSignalLeaf, activeSignal]);
+  // activeSectionKey resolves either a category id or one of its leaves back to
+  // the owning category, so the Views button row and the per-row direction dot
+  // stay populated whether the category or a leaf triggered the selection.
+  const activeSectionKey = useMemo(() => {
+    if (Views[activeSignal]) return activeSignal; // already a category id
+    for (const [section, subs] of Object.entries(Views)) {
+      if (subs.some((s) => s.id === activeSignal)) return section;
+    }
+    return activeSignal; // not a known category or leaf — leave as-is
+  }, [activeSignal]);
+
   // NEW: reset the generic Views toggle whenever it no longer belongs to
   // the current activeSignal — either because we've left every generic
   // category entirely, or because we've switched from one generic category
@@ -1247,69 +697,6 @@ export default function Screener({
   //   5. MOM-A (and not CON-A) → P-MOMENTUM-A
   // INSIDE-R1S1 is ONLY the intersection of CON-A ∩ CON-B — no separate
   // range scan and no leftover / pure-inside assignment.
-  const rawKey = (row: CPRResultWithSource) => `${row.source}:${row.symbol}`;
-  const rawConsolidateA = (row: CPRResultWithSource) =>
-    previousConsolidateAIncludedSymbols.has(rawKey(row));
-  const rawMomentumA = (row: CPRResultWithSource) =>
-    previousUpexIncludedSymbols.has(rawKey(row));
-  const rawConsolidateB = (row: CPRResultWithSource) =>
-    previous15MTCIncludedSymbols.has(rawKey(row));
-  const rawMomentumB = (row: CPRResultWithSource) =>
-    previous15MMomentumIncludedSymbols.has(rawKey(row));
-
-  /**
-   * Exclusive P-filter bucket (matches charts):
-   *   CON-A  = previous 15m stayed within BC → max(R1, PH)
-   *   CON-B  = previous 15m stayed within TC → min(S1, PL)
-   *   INSIDE = both CON-A and CON-B (candles in the R1/PH ↔ S1/PL overlap)
-   *   MOM-A  = from BC & above, not CON-A
-   *   MOM-B  = from TC & below, not CON-B
-   * Dual CON-A+CON-B is ONLY shown under P-INSIDE-R1S1 — never under CON-A or CON-B.
-   */
-  const candleBucket = (row: CPRResultWithSource): "consolidate-a" | "momentum-a" | "consolidate-b" | "momentum-b" | "inside-r1s1" | null => {
-    const conA = rawConsolidateA(row);
-    const momA = rawMomentumA(row);
-    const conB = rawConsolidateB(row);
-    const momB = rawMomentumB(row);
-    // Both consolidate bands → INSIDE-R1S1 only
-    if (conA && conB) return "inside-r1s1";
-    // CON-B alone (TC → min(S1,PL))
-    if (conB) return "consolidate-b";
-    if (momB) return "momentum-b";
-    // CON-A alone (BC → max(R1,PH))
-    if (conA) return "consolidate-a";
-    if (momA) return "momentum-a";
-    return null;
-  };
-
-  const hasConsolidateB = (row: CPRResultWithSource) => candleBucket(row) === "consolidate-b";
-  const hasMomentumB = (row: CPRResultWithSource) => candleBucket(row) === "momentum-b";
-  const hasConsolidateA = (row: CPRResultWithSource) => candleBucket(row) === "consolidate-a";
-  const hasMomentumA = (row: CPRResultWithSource) => candleBucket(row) === "momentum-a";
-  const hasInsideR1S1 = (row: CPRResultWithSource) => candleBucket(row) === "inside-r1s1";
-  const hasInRangeR = hasInsideR1S1;
-
-  // INSIDE needs both CON prep pipelines ready (it is their intersection).
-  const previousInsideR1S1Ready = previousConsolidateAReady && previous15MTCReady;
-  const previousInsideR1S1Progress =
-    !previousInsideR1S1Ready && (previousConsolidateAProgress || previous15MTCProgress)
-      ? {
-          done:
-            (previousConsolidateAProgress?.done ?? 0) +
-            (previous15MTCProgress?.done ?? 0),
-          total:
-            (previousConsolidateAProgress?.total ?? 0) +
-            (previous15MTCProgress?.total ?? 0),
-        }
-      : null;
-  const previousInsideR1S1Message = "";
-
-  const previousCandleClassificationReady =
-    previousConsolidateAReady &&
-    previousUpexReady &&
-    previous15MTCReady &&
-    previous15MMomentumReady;
-
   const previousConsolidateAIncludedCount = getActivePool().filter(
     (row) => row.source !== "coindcx" && hasConsolidateA(row),
   ).length;
@@ -2822,17 +2209,13 @@ export default function Screener({
 
         {/* Table */}
         {currentStatus !== "idle" && displayed.length > 0 && (
-          <div className="rounded-xl border border-border bg-card overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm border-collapse">
-                <ScreenerTableHeader
-                  canShowCombined={canShowCombined}
-                  activeTab={activeTab}
-                  sortKey={sortKey}
-                  sortDir={sortDir}
-                  toggleSort={toggleSort}
-                />
-                <tbody className="divide-y divide-border">
+          <ScreenerResultsTable
+            canShowCombined={canShowCombined}
+            activeTab={activeTab}
+            sortKey={sortKey}
+            sortDir={sortDir}
+            toggleSort={toggleSort}
+          >
                   {displayed.map((r) => {
                     const sym = splitSymbol(r.symbol, r.source);
                     // Include today's date so this rowKey lines up exactly
@@ -2868,10 +2251,7 @@ export default function Screener({
                       />
                     );
                   })}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          </ScreenerResultsTable>
         )}
 
         {currentStatus === "done" && displayed.length === 0 && (
