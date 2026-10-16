@@ -187,8 +187,8 @@ function getRowStatus(r: CPRResult): {
     }
     if (slFn) {
       const sl = slFn(r);
-      const isUp = dir === "Up" || dir === "LONG";
-      const isDown = dir === "Down" || dir === "SHORT";
+      const isUp = dir === "Up";
+      const isDown = dir === "Down";
       if (
         isUp &&
         Number.isFinite(sl) &&
@@ -2118,7 +2118,7 @@ export default function Screener({
                   Ready (matches a View, still waiting for entry). Same grouped
                   tab control as Signal Desk; clicking the selected button
                   clears it back to "all". */}
-                            <div className="flex gap-0.5 p-0.5 rounded-md border border-[#22354a] bg-[#151e2c] mr-3">
+              <div className="flex gap-0.5 p-0.5 rounded-md border border-[#22354a] bg-[#151e2c] mr-3">
                 <button
                   type="button"
                   onClick={() => setStatusFilter("all")}
@@ -2179,14 +2179,6 @@ export default function Screener({
                   Fail
                 </button>
               </div>
-
-              {/* Exchange / Source Filter — grouped tab control (same as Signal
-                  Desk). All fuchsia, Binance indigo, Delta cyan, CoinDCX green.
-                  "All" is the existing "combined" activeTab value. */}
-              {canShowCombined && (
-                <div className="flex gap-0.5 p-0.5 rounded-md border border-[#22354a] bg-[#151e2c]">
-                  
-              )}
             </div>
           </div>
         )}
