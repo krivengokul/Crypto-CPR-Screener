@@ -1486,7 +1486,7 @@ export const LEVELSBELOW_VIEWS: ViewDef[] = [
       },
     {
         key: "PL-MB-B-B-BB-BB-EL2U4-SL-AAGap-S4",
-        label: "PMINISMALL-FALL",
+        label: "PMINISMALL-MOMB-FALL",
         parentKey: "B-B-BB-BB-EL2U4",
         condition: (r) => passesView(r, "B-B-BB-BB-EL2U4") && matchesGapBadge(r, "SL-AAGap") && matchesCandleCheck(r, "MB"),
         standalone: true,
