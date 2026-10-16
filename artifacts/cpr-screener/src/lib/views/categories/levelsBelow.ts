@@ -384,6 +384,7 @@ export const LEVELSBELOW_VIEWS: ViewDef[] = [
       ]
     }
   ],
+      requireFullMatch: true,
     },
 
   {
