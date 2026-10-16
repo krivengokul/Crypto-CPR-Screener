@@ -6,7 +6,7 @@ import Screener from "@/pages/Screener";
 import BacktestPanel from "@/pages/BacktestPanel";
 import SignalDesk, { type SignalDeskSymbol, type FocusSymbol, buildPills, computeSignalLevels } from "@/pages/SignalDesk";
 import type { CPRResultWithSource, ActiveTab } from "@/pages/ScreenerUtils";
-import { passesPattern } from "@/pages/ScreenerUtils";
+import { passesPattern, getChartUrl } from "@/pages/ScreenerUtils";
 import {
   autoSaveQualifiedSignals,
   fetchSavedSignalsFromCloud,
@@ -349,12 +349,15 @@ function App() {
         ),
         duration: 12_000,
         className: "cursor-pointer",
-        // Body click still focuses (e.g. user navigated away or dismissed earlier).
+        // Body click → open TradingView chart for this symbol in a new tab
+        // (same URL as the chart icon on Screener / SignalDesk rows).
+        // Works from any page (scanner, signals, journal, etc.).
         // Ignore the X close control (and its icon).
         onClick: (e: ReactMouseEvent) => {
           const el = e.target as HTMLElement | null;
           if (el?.closest?.("[toast-close], [data-radix-toast-close]")) return;
-          focusAlertTarget();
+          const url = getChartUrl(candidate.symbol, candidate.source);
+          window.open(url, "_blank", "noopener,noreferrer");
         },
       });
 
