@@ -214,6 +214,13 @@ function getRowStatus(r: CPRResult): {
   return { active, ready, pass, fail };
 }
 
+/** Set by App when an entry-cross toast should scroll to + highlight a row. */
+export interface ScreenerFocusSymbol {
+  symbol: string;
+  source: SourceId;
+  patternId?: string;
+}
+
 export default function Screener({
   activeSignal = "levelsabove",
   scanKey = 0,
@@ -223,6 +230,8 @@ export default function Screener({
   activeTab: activeTabProp,
   onActiveTabChange,
   onActiveSignalChange,
+  focusSymbol,
+  onFocusSymbolConsumed,
 }: {
   activeSignal?: string;
   scanKey?: number;
@@ -267,6 +276,9 @@ export default function Screener({
   // as activeSignal/setActiveSignal — Screener only ever receives it as a
   // prop, so it needs this callback to reset it back up to "").
   onActiveSignalChange?: (id: string) => void;
+  // Scroll to + highlight this symbol's table row (entry-cross toast).
+  focusSymbol?: ScreenerFocusSymbol | null;
+  onFocusSymbolConsumed?: () => void;
 }) {
   // ── UI / filter state (stays in Screener) ─────────────────────────────
   const [sortKey, setSortKey] = useState<SortKey>("compressionRatio");
@@ -316,6 +328,52 @@ export default function Screener({
       return next;
     });
   }
+
+  // Entry-cross toast → scroll to + highlight the symbol's table row.
+  // Search is set to the symbol so the row survives other filters; retries
+  // briefly while tab / pattern filter settle. Runs automatically when
+  // focusSymbol arrives (no toast click required).
+  const focusConsumedRef = useRef(onFocusSymbolConsumed);
+  focusConsumedRef.current = onFocusSymbolConsumed;
+  useEffect(() => {
+    if (!focusSymbol) return;
+    setSearch(focusSymbol.symbol);
+    setStatusFilter("all");
+    // Switch exchange tab to the toast's source when not already on combined.
+    if (
+      focusSymbol.source === "binance" ||
+      focusSymbol.source === "delta" ||
+      focusSymbol.source === "coindcx"
+    ) {
+      // activeTab / setActiveTab come from the scan hook below; effect re-runs
+      // after first render when they exist. Use onActiveTabChange when lifted.
+      onActiveTabChange?.(focusSymbol.source);
+    }
+    const id = `sc-row-${focusSymbol.source}-${focusSymbol.symbol.toUpperCase()}`;
+    let attempts = 0;
+    let retryTimer: number | undefined;
+    const tryFocus = () => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.classList.add("ring-2", "ring-cyan-400/70", "ring-inset");
+        window.setTimeout(
+          () => el.classList.remove("ring-2", "ring-cyan-400/70", "ring-inset"),
+          4000,
+        );
+        focusConsumedRef.current?.();
+        return;
+      }
+      if (++attempts < 16) {
+        retryTimer = window.setTimeout(tryFocus, 150);
+      } else {
+        focusConsumedRef.current?.();
+      }
+    };
+    retryTimer = window.setTimeout(tryFocus, 80);
+    return () => window.clearTimeout(retryTimer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusSymbol]);
 
   // Reclaim reset is filled after useReclaimFilters mounts
   const reclaimResetRef = useRef<() => void>(() => {});

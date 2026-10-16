@@ -285,9 +285,11 @@ function App() {
         ? candidate.entry.toPrecision(6)
         : String(candidate.entry);
 
-      // Focus the card on this page. If already on SignalDesk, do not open a
-      // new tab/page — just scroll + highlight. Otherwise switch mode in-place.
-      const focusSignalDeskCard = () => {
+      // Auto-focus the matching symbol when the toast arrives — no click needed.
+      // • Already on Screener (scanner) → stay there, highlight the table row.
+      // • Already on SignalDesk (signals) → stay there, scroll + highlight the card.
+      // • Any other mode → switch to SignalDesk and focus the card.
+      const focusAlertTarget = () => {
         const patternId = candidate.payload.patternId || undefined;
         if (patternId) setActiveSignal(patternId);
         setFocusSymbol({
@@ -295,13 +297,16 @@ function App() {
           source: candidate.source,
           patternId,
         });
-        if (modeRef.current !== "signals") {
-          setMode("signals");
-          try {
-            localStorage.setItem(MODE_KEY, "signals");
-          } catch {
-            /* ignore */
-          }
+        const mode = modeRef.current;
+        if (mode === "scanner" || mode === "signals") {
+          // stay on current page; Screener / SignalDesk consume focusSymbol
+          return;
+        }
+        setMode("signals");
+        try {
+          localStorage.setItem(MODE_KEY, "signals");
+        } catch {
+          /* ignore */
         }
       };
 
@@ -313,10 +318,8 @@ function App() {
         (viewCode.includes("-") ? viewCode.split("-")[0] : "") ||
         "Entry";
 
-      // Auto-focus the symbol card when the toast arrives — no click required.
-      // If already on SignalDesk this scrolls + highlights; otherwise switches
-      // to SignalDesk mode in-place and then focuses the card.
-      focusSignalDeskCard();
+      // Auto-focus as soon as the toast appears (no click required).
+      focusAlertTarget();
 
       toast({
         title: "Entry crossed — alert",
@@ -351,7 +354,7 @@ function App() {
         onClick: (e: ReactMouseEvent) => {
           const el = e.target as HTMLElement | null;
           if (el?.closest?.("[toast-close], [data-radix-toast-close]")) return;
-          focusSignalDeskCard();
+          focusAlertTarget();
         },
       });
 
@@ -438,6 +441,10 @@ function App() {
                     activeTab={dataSource}
                     onActiveTabChange={setDataSource}
                     onActiveSignalChange={setActiveSignal}
+                    // Only pass when Screener is the visible page so it does
+                    // not consume focusSymbol while SignalDesk is active.
+                    focusSymbol={mode === "scanner" ? focusSymbol : null}
+                    onFocusSymbolConsumed={() => setFocusSymbol(null)}
                   />
                 ) : (
                   <ComingSoon label={activeSignalLabel} />

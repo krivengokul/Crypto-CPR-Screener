@@ -1035,6 +1035,7 @@ export default function ScreenerTableRow({
   return (
     <Fragment key={rowKey}>
       <tr
+        id={`sc-row-${r.source}-${r.symbol.toUpperCase()}`}
         className={`hover:bg-muted/20 transition-colors ${dir ? "bg-accent/3" : ""}`}
       >
         <td
