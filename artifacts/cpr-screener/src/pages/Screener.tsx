@@ -66,6 +66,7 @@ import { useExchangeScan } from "@/hooks/useExchangeScan";
 import { usePreviousCandleFilters } from "@/hooks/usePreviousCandleFilters";
 import { useReclaimFilters } from "@/hooks/useReclaimFilters";
 import { ScreenerResultsTable } from "@/components/ScreenerResultsTable";
+import { ScreenerToolbar } from "@/components/ScreenerToolbar";
 
 /**
  * ViewCount — "(n)" badge shown at the end of every Views filter button,
@@ -1265,8 +1266,23 @@ export default function Screener({
         />
         )}
 
-        {/* Controls */}
-        <div
+        {/* Controls — scan / search / source tabs extracted to ScreenerToolbar */}
+          <ScreenerToolbar
+            search={search}
+            onSearchChange={setSearch}
+            activeTab={activeTab}
+            onActiveTabChange={setActiveTab}
+            canShowCombined={canShowCombined}
+            status={status}
+            deltaStatus={deltaStatus}
+            coindcxStatus={coindcxStatus}
+            onScanBinance={() => { void doScan(); }}
+            onScanDelta={() => { void doDeltaScan(); }}
+            onScanCoinDCX={() => { void doCoinDCXScan(); }}
+          />
+
+          {/* Results count / Show All / panel toggles (scan buttons live in ScreenerToolbar) */}
+          <div
           className={`flex flex-wrap items-center gap-2 ${
             currentStatus === "done" &&
             showAll &&
@@ -1275,49 +1291,7 @@ export default function Screener({
               : "mb-4"
           }`}
         >
-          <button
-            onClick={() => { void doScan(); }}
-            disabled={status === "scanning"}
-            className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-all disabled:opacity-50 shrink-0"
-            style={{ background: "linear-gradient(135deg,#3b82f6,#6366f1)", color: "#fff" }}
-          >
-            <RefreshCw className={`w-3 h-3 ${status === "scanning" ? "animate-spin" : ""}`} />
-            {status === "scanning" ? "Scanning Binance…" : "Scan Binance"}
-          </button>
 
-          <button
-            onClick={() => { void doDeltaScan(); }}
-            disabled={!DELTA_ENABLED || deltaStatus === "scanning"}
-            title={DELTA_ENABLED ? undefined : "Delta scanning is paused (duplicates Binance symbols)"}
-            className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-all shrink-0 ${
-              DELTA_ENABLED ? "disabled:opacity-50" : "opacity-40 cursor-not-allowed"
-            }`}
-            style={
-              DELTA_ENABLED
-                ? { background: "linear-gradient(135deg,#8b5cf6,#6d28d9)", color: "#fff" }
-                : { background: "#334155", color: "#94a3b8" }
-            }
-          >
-            <RefreshCw className={`w-3 h-3 ${deltaStatus === "scanning" ? "animate-spin" : ""}`} />
-            {deltaStatus === "scanning" ? "Scanning Delta…" : "Scan Delta"}
-          </button>
-
-          <button
-            onClick={() => { void doCoinDCXScan(); }}
-            disabled={!COINDCX_ENABLED || coindcxStatus === "scanning"}
-            title={COINDCX_ENABLED ? undefined : "CoinDCX scanning is paused"}
-            className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-all shrink-0 ${
-              COINDCX_ENABLED ? "disabled:opacity-50" : "opacity-40 cursor-not-allowed"
-            }`}
-            style={
-              COINDCX_ENABLED
-                ? { background: "linear-gradient(135deg,#10b981,#047857)", color: "#fff" }
-                : { background: "#334155", color: "#94a3b8" }
-            }
-          >
-            <RefreshCw className={`w-3 h-3 ${coindcxStatus === "scanning" ? "animate-spin" : ""}`} />
-            {coindcxStatus === "scanning" ? "Scanning CoinDCX…" : "Scan CoinDCX"}
-          </button>
 
           {currentStatus === "done" && (
             <div className="flex items-center gap-1.5 text-xs shrink-0">
@@ -2079,25 +2053,9 @@ export default function Screener({
           </div>
         )}
 
-        {/* Search + Source Filter bar — same look and feel as Signal
-            Desk's filter bar (search left, source toggle right, same
-            colors/borders/pill shapes). Sits directly above the grid.
-            "Combined" is relabeled "All" here to match Signal Desk's own
-            wording, though the underlying activeTab value is unchanged
-            ("combined") — see ActiveTab in ScreenerUtils.tsx. */}
+        {/* Secondary filter bar — 15M-A + Active/Ready (search + source tabs live in ScreenerToolbar). */}
         {currentStatus === "done" && (
           <div className="px-4 py-2 border-b border-[#1b263b] bg-[#0d1422] flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0 mb-3 rounded-lg border">
-            <div className="relative flex-1 w-full sm:max-w-xs">
-              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="search"
-                placeholder="Search symbol or view…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full bg-[#151e2c] border border-[#22354a] rounded-md pl-8 pr-3 py-1 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-teal-500/50"
-              />
-            </div>
-
             <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end flex-wrap">
               {/* 15M-A filter */}
               <div className="flex items-center gap-1 flex-wrap">
@@ -2146,60 +2104,6 @@ export default function Screener({
                   Ready
                 </button>
               </div>
-
-              {/* Exchange / Source Filter — grouped tab control (same as Signal
-                  Desk). All fuchsia, Binance indigo, Delta cyan, CoinDCX green.
-                  "All" is the existing "combined" activeTab value. */}
-              {canShowCombined && (
-                <div className="flex gap-0.5 p-0.5 rounded-md border border-[#22354a] bg-[#151e2c]">
-                  {(["combined", "binance", "delta", "coindcx", "nifty"] as ActiveTab[]).map((tab) => {
-                    const paused =
-                      (tab === "coindcx" && !COINDCX_ENABLED) ||
-                      (tab === "delta" && !DELTA_ENABLED);
-                    const label =
-                      tab === "combined" ? "All"
-                      : tab === "binance" ? "Binance"
-                      : tab === "delta" ? "Delta"
-                      : tab === "coindcx" ? "CoinDCX"
-                      : "NIFTY";
-                    const activeClass =
-                      tab === "delta"
-                        ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/50"
-                        : tab === "binance"
-                        ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/50"
-                        : tab === "coindcx"
-                        ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/50"
-                        : tab === "nifty"
-                        ? "bg-amber-500/20 text-amber-300 border-amber-500/50"
-                        : "bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/50";
-                    return (
-                    <button
-                      key={tab}
-                      onClick={() => setActiveTab(tab)}
-                      disabled={paused}
-                      title={
-                        tab === "coindcx" && !COINDCX_ENABLED
-                          ? "CoinDCX scanning is paused"
-                          : tab === "delta" && !DELTA_ENABLED
-                          ? "Delta scanning is paused"
-                          : tab === "nifty"
-                          ? "NIFTY options via Shoonya (API pending)"
-                          : undefined
-                      }
-                      className={`px-3 py-1 rounded text-xs font-semibold transition border ${
-                        paused
-                          ? "opacity-30 cursor-not-allowed text-slate-500 border-transparent"
-                          : "cursor-pointer"
-                      } ${
-                        activeTab === tab ? activeClass : "text-slate-400 hover:text-slate-200 border-transparent"
-                      }`}
-                    >
-                      {label}
-                    </button>
-                    );
-                  })}
-                </div>
-              )}
             </div>
           </div>
         )}
