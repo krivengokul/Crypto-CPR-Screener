@@ -275,9 +275,6 @@ export function usePreviousCandleFilters(opts: {
   const resetConsolidateAMessage = consolidateAPrep.resetMessage;
   const resetMomentumAMessage = momentumAPrep.resetMessage;
   const resetConsolidateBMessage = consolidateBPrep.resetMessage;
-  const resetConsolidateAMessage = consolidateAPrep.resetMessage;
-  const resetMomentumAMessage = momentumAPrep.resetMessage;
-  const resetConsolidateBMessage = consolidateBPrep.resetMessage;
   const resetMomentumBMessage = momentumBPrep.resetMessage;
 
   const candleBucket = (row: CPRResultWithSource): CandleBucket => {
