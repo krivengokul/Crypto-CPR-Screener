@@ -313,6 +313,11 @@ function App() {
         (viewCode.includes("-") ? viewCode.split("-")[0] : "") ||
         "Entry";
 
+      // Auto-focus the symbol card when the toast arrives — no click required.
+      // If already on SignalDesk this scrolls + highlights; otherwise switches
+      // to SignalDesk mode in-place and then focuses the card.
+      focusSignalDeskCard();
+
       toast({
         title: "Entry crossed — alert",
         description: (
@@ -341,7 +346,7 @@ function App() {
         ),
         duration: 12_000,
         className: "cursor-pointer",
-        // Body click → focus card (same page when already on SignalDesk).
+        // Body click still focuses (e.g. user navigated away or dismissed earlier).
         // Ignore the X close control (and its icon).
         onClick: (e: ReactMouseEvent) => {
           const el = e.target as HTMLElement | null;

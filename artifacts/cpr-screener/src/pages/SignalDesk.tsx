@@ -1266,6 +1266,8 @@ R:R: ${item.riskReward}`;
   // Entry-cross toast -> scroll to + highlight the symbol's card. Filters that
   // could hide it are cleared first. Retries briefly because the card may only
   // render after the mode / pattern / source switch settles.
+  // When focusSymbol arrives (including automatically on toast, not only on
+  // click), this effect runs without any user interaction.
   const focusConsumedRef = useRef(onFocusSymbolConsumed);
   focusConsumedRef.current = onFocusSymbolConsumed;
   useEffect(() => {
@@ -1273,6 +1275,12 @@ R:R: ${item.riskReward}`;
     setSearchTerm("");
     setDirectionFilter("all");
     setStatusFilter("all");
+    // Align local pattern filter + parent active signal with the toast's View
+    // so the card is in the visible pool (not filtered out by a different pill).
+    if (focusSymbol.patternId) {
+      setSelectedSignalId(focusSymbol.patternId);
+      onSelectSignal?.(focusSymbol.patternId);
+    }
     if (sourceFilter !== "all" && sourceFilter !== focusSymbol.source) {
       setSourceFilter(focusSymbol.source);
     }
