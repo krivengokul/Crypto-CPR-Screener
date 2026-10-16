@@ -161,23 +161,57 @@ function matchesS1R1In(r: CPRResult): boolean {
  * is Active once price has touched the entry line, otherwise Ready. A row is
  * "active" if any of its Views is Active, "ready" if any is Ready.
  */
-function getRowStatus(r: CPRResult): { active: boolean; ready: boolean } {
+function getRowStatus(r: CPRResult): {
+  active: boolean;
+  ready: boolean;
+  pass: boolean;
+  fail: boolean;
+} {
   let active = false;
   let ready = false;
+  let pass = false;
+  let fail = false;
   for (const v of getMatchingSignals(r)) {
-    const entryFn = getView(v.id)?.getEntry;
+    const view = getView(v.id);
+    const entryFn = view?.getEntry;
     if (!entryFn) continue;
-    // A target already reached today (even if price has since retraced) means
-    // the entry was necessarily touched, so it counts as Active - never Ready.
-    const targetFn = getView(v.id)?.getTarget;
+    const dir = v.direction ?? "";
+    const targetFn = view?.getTarget;
+    const slFn = view?.getStoploss;
     const passed =
       !!targetFn &&
-      sessionReachedTarget(v.direction ?? "", targetFn(r), r.todayHigh, r.todayLow, r.currentPrice);
-    if (passed || hasTouchedEntry(v.direction ?? "", entryFn(r), r.currentPrice)) active = true;
+      sessionReachedTarget(dir, targetFn(r), r.todayHigh, r.todayLow, r.currentPrice);
+    if (passed) {
+      pass = true;
+      continue;
+    }
+    if (slFn) {
+      const sl = slFn(r);
+      const isUp = dir === "Up" || dir === "LONG";
+      const isDown = dir === "Down" || dir === "SHORT";
+      if (
+        isUp &&
+        Number.isFinite(sl) &&
+        ((typeof r.todayLow === "number" && r.todayLow <= sl) ||
+          (typeof r.currentPrice === "number" && r.currentPrice <= sl))
+      ) {
+        fail = true;
+        continue;
+      }
+      if (
+        isDown &&
+        Number.isFinite(sl) &&
+        ((typeof r.todayHigh === "number" && r.todayHigh >= sl) ||
+          (typeof r.currentPrice === "number" && r.currentPrice >= sl))
+      ) {
+        fail = true;
+        continue;
+      }
+    }
+    if (hasTouchedEntry(dir, entryFn(r), r.currentPrice)) active = true;
     else ready = true;
-    if (active && ready) break;
   }
-  return { active, ready };
+  return { active, ready, pass, fail };
 }
 
 export default function Screener({
@@ -272,7 +306,7 @@ export default function Screener({
   } | null>(null);
   const [upexMessage, setUpexMessage] = useState("");
   const upexRunRef = useRef(0);
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "ready">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "ready" | "pass" | "fail">("all");
 
   const [expandedSymbols, setExpandedSymbols] = useState<Set<string>>(new Set());
   function toggleExpand(key: string) {
@@ -1002,7 +1036,11 @@ export default function Screener({
     .filter((r) => {
       if (statusFilter === "all") return true;
       const st = getRowStatus(r);
-      return statusFilter === "active" ? st.active : st.ready;
+      if (statusFilter === "active") return st.active;
+      if (statusFilter === "ready") return st.ready;
+      if (statusFilter === "pass") return st.pass;
+      if (statusFilter === "fail") return st.fail;
+      return true;
     })
     // NEW: ENTRY filter — keep rows where at least one currently-active View
     // (condition passes) has the selected rung as its entry. Entry is the
@@ -2080,8 +2118,20 @@ export default function Screener({
                   Ready (matches a View, still waiting for entry). Same grouped
                   tab control as Signal Desk; clicking the selected button
                   clears it back to "all". */}
-              <div className="flex gap-0.5 p-0.5 rounded-md border border-[#22354a] bg-[#151e2c] mr-3">
+                            <div className="flex gap-0.5 p-0.5 rounded-md border border-[#22354a] bg-[#151e2c] mr-3">
                 <button
+                  type="button"
+                  onClick={() => setStatusFilter("all")}
+                  className={`px-3 py-1 rounded text-xs font-semibold transition cursor-pointer ${
+                    statusFilter === "all"
+                      ? "bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/40"
+                      : "text-slate-400 hover:text-white border border-transparent"
+                  }`}
+                >
+                  All
+                </button>
+                <button
+                  type="button"
                   onClick={() => setStatusFilter(statusFilter === "active" ? "all" : "active")}
                   className={`px-3 py-1 rounded text-xs font-semibold transition cursor-pointer ${
                     statusFilter === "active"
@@ -2093,17 +2143,50 @@ export default function Screener({
                   Active
                 </button>
                 <button
+                  type="button"
                   onClick={() => setStatusFilter(statusFilter === "ready" ? "all" : "ready")}
                   className={`px-3 py-1 rounded text-xs font-semibold transition cursor-pointer ${
                     statusFilter === "ready"
                       ? "bg-amber-500/20 text-amber-400 border border-amber-500/40"
                       : "text-amber-400/70 hover:text-amber-300 border border-transparent"
                   }`}
-                  title="Rows with a View that matches but price hasn't reached its entry line yet"
+                  title="Rows matching a View, still waiting for entry"
                 >
                   Ready
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter(statusFilter === "pass" ? "all" : "pass")}
+                  className={`px-3 py-1 rounded text-xs font-semibold transition cursor-pointer ${
+                    statusFilter === "pass"
+                      ? "bg-teal-500/20 text-teal-300 border border-teal-500/40"
+                      : "text-teal-400/70 hover:text-teal-300 border border-transparent"
+                  }`}
+                  title="Rows where a matching View has already hit target this session"
+                >
+                  Pass
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter(statusFilter === "fail" ? "all" : "fail")}
+                  className={`px-3 py-1 rounded text-xs font-semibold transition cursor-pointer ${
+                    statusFilter === "fail"
+                      ? "bg-rose-500/20 text-rose-400 border border-rose-500/40"
+                      : "text-rose-400/70 hover:text-rose-300 border border-transparent"
+                  }`}
+                  title="Rows where a matching View has already hit stoploss this session"
+                >
+                  Fail
+                </button>
               </div>
+
+              {/* Exchange / Source Filter — grouped tab control (same as Signal
+                  Desk). All fuchsia, Binance indigo, Delta cyan, CoinDCX green.
+                  "All" is the existing "combined" activeTab value. */}
+              {canShowCombined && (
+                <div className="flex gap-0.5 p-0.5 rounded-md border border-[#22354a] bg-[#151e2c]">
+                  
+              )}
             </div>
           </div>
         )}

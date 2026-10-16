@@ -457,7 +457,11 @@ function App() {
                     setActiveSignal(signalId);
                     handleModeChange("scanner");
                   }}
-                  sourceFilter={dataSource === "combined" ? "all" : dataSource}
+                  sourceFilter={
+                    dataSource === "combined" || dataSource === "delta" || dataSource === "coindcx"
+                      ? "binance"
+                      : dataSource
+                  }
                   onSourceFilterChange={(next) => setDataSource(next === "all" ? "combined" : next)}
                   focusSymbol={focusSymbol}
                   onFocusSymbolConsumed={() => setFocusSymbol(null)}

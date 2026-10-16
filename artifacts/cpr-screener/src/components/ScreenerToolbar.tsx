@@ -27,13 +27,13 @@ export type ScreenerToolbarProps = {
   children?: ReactNode;
 };
 
-const TAB_LABEL: Record<ActiveTab, string> = {
-  combined: "All",
+const TAB_LABEL: Partial<Record<ActiveTab, string>> = {
   binance: "Binance",
-  delta: "Delta",
-  coindcx: "CoinDCX",
   nifty: "NIFTY",
 };
+
+/** Source switches shown in the toolbar (Binance + NIFTY only). */
+const SOURCE_TABS: ActiveTab[] = ["binance", "nifty"];
 
 export function ScreenerToolbar({
   search,
@@ -111,30 +111,21 @@ export function ScreenerToolbar({
             />
           </div>
           <div className="flex gap-0.5 p-0.5 rounded-md border border-[#22354a] bg-[#151e2c]">
-            {(["combined", "binance", "delta", "coindcx", "nifty"] as ActiveTab[]).map((tab) => {
-              const paused =
-                (tab === "coindcx" && !COINDCX_ENABLED) || (tab === "delta" && !DELTA_ENABLED);
+            {SOURCE_TABS.map((tab) => {
               const activeClass =
-                tab === "delta"
-                  ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/50"
-                  : tab === "binance"
-                    ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/50"
-                    : tab === "coindcx"
-                      ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/50"
-                      : tab === "nifty"
-                        ? "bg-amber-500/20 text-amber-300 border-amber-500/50"
-                        : "bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/50";
+                tab === "binance"
+                  ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/50"
+                  : "bg-amber-500/20 text-amber-300 border-amber-500/50";
               return (
                 <button
                   key={tab}
                   type="button"
                   onClick={() => onActiveTabChange(tab)}
-                  disabled={paused}
-                  className={`px-3 py-1 rounded text-xs font-semibold transition border ${
-                    paused
-                      ? "opacity-30 cursor-not-allowed text-slate-500 border-transparent"
-                      : "cursor-pointer"
-                  } ${activeTab === tab ? activeClass : "text-slate-400 hover:text-slate-200 border-transparent"}`}
+                  className={`px-3 py-1 rounded text-xs font-semibold transition border cursor-pointer ${
+                    activeTab === tab
+                      ? activeClass
+                      : "text-slate-400 hover:text-slate-200 border-transparent"
+                  }`}
                 >
                   {TAB_LABEL[tab]}
                 </button>

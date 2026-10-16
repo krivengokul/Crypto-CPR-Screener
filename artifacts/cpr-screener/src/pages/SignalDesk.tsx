@@ -1551,33 +1551,22 @@ R:R: ${item.riskReward}`;
             </button>
           </div>
 
-          {/* Source Filter — grouped tab control (same as the Signals Journal).
-              Selected tab gets a border (inside the group only). All fuchsia,
-              Binance indigo, Delta cyan, CoinDCX green. */}
+          {/* Source Filter — Binance / NIFTY only (Delta & CoinDCX removed from switch). */}
           <div className="flex gap-0.5 p-0.5 rounded-md border border-[#22354a] bg-[#151e2c]">
-            {(["all", "binance", "delta", "coindcx"] as const).map((src) => (
+            {(["binance", "nifty"] as const).map((src) => (
               <button
                 key={src}
+                type="button"
                 onClick={() => setSourceFilter(src)}
-                disabled={src === "coindcx" && !COINDCX_ENABLED}
-                title={src === "coindcx" && !COINDCX_ENABLED ? "CoinDCX is paused" : undefined}
-                className={`px-3 py-1 rounded text-xs font-semibold transition border ${
-                  src === "coindcx" && !COINDCX_ENABLED
-                    ? "opacity-30 cursor-not-allowed text-slate-500 border-transparent"
-                    : "cursor-pointer"
-                } ${
+                className={`px-3 py-1 rounded text-xs font-semibold transition border cursor-pointer ${
                   sourceFilter === src
-                    ? src === "delta"
-                      ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/50"
-                      : src === "binance"
+                    ? src === "binance"
                       ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/50"
-                      : src === "coindcx"
-                      ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/50"
-                      : "bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/50"
+                      : "bg-amber-500/20 text-amber-300 border-amber-500/50"
                     : "text-slate-400 hover:text-slate-200 border-transparent"
                 }`}
               >
-                {src === "all" ? "All" : src === "coindcx" ? "CoinDCX" : src === "delta" ? "Delta" : "Binance"}
+                {src === "binance" ? "Binance" : "NIFTY"}
               </button>
             ))}
           </div>
