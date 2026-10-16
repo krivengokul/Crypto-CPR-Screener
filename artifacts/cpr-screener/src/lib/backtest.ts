@@ -1596,20 +1596,21 @@ export async function backtestSymbolOnDate(
     result.PD15MAboveBCPass = PD15MAboveBCPass === true;
   }
 
-  // Always populate all four P-filter flags (View column badges + candleCheck gates).
-  // CoinDCX: leave flags unset/false; Views that require a candleCheck still fail below.
-  if (source !== "coindcx") {
-    await populateAllPFilterFlags(result, symbol, source, entryDateISO);
-  }
-
+  // 15m P-flags are expensive. Only evaluate when the View gates on a
+  // candleCheck, or AFTER a cheap pattern match (badges on matched rows only).
   const activeCandleCheck = target.candleCheck ?? parseComposedViewKey(target.key).candleCheck;
   if (activeCandleCheck) {
-    // Candle-check Views need the flags; CoinDCX cannot satisfy them.
     if (source === "coindcx") return null;
+    await populateAllPFilterFlags(result, symbol, source, entryDateISO);
     if (!matchesCandleCheck(result, activeCandleCheck)) return null;
   }
 
   if (!passesPatternFn(result, target.conditionKey ?? target.key)) return null; // didn't match the pattern on this date
+
+  // Badges for matched rows only (skip if already populated for candleCheck).
+  if (!activeCandleCheck && source !== "coindcx") {
+    await populateAllPFilterFlags(result, symbol, source, entryDateISO);
+  }
   // NOTE: the View's 13/13 Level Check gate is intentionally NOT applied here.
   // Selecting a View in the Backtest panel lists every symbol belonging to
   // that View (its pattern condition), whatever its Ladder Check score is;
@@ -1823,15 +1824,19 @@ export async function categoryScanSymbolOnDate(
   if (!reconstructed) return null;
   const { result, window } = reconstructed;
 
-  // Always fill all four P-filter flags so the View column can show badges.
-  // CoinDCX has no 15m path: skip population; P-* categories still cannot match.
-  if (source !== "coindcx") {
+  // P-* categories need 15m flags BEFORE the condition. All other categories
+  // match on daily CPR first, then fill flags only for the matched minority.
+  const isPFilterCategory = P_FILTER_CATEGORY_KEYS.has(categoryKey);
+  if (isPFilterCategory) {
+    if (source === "coindcx") return null;
     await populateAllPFilterFlags(result, symbol, source, entryDateISO);
-  } else if (P_FILTER_CATEGORY_KEYS.has(categoryKey)) {
-    return null;
   }
 
   if (!passesPatternFn(result, categoryKey)) return null; // didn't match the category's base condition
+
+  if (!isPFilterCategory && source !== "coindcx") {
+    await populateAllPFilterFlags(result, symbol, source, entryDateISO);
+  }
 
   return {
     symbol,
@@ -1876,15 +1881,23 @@ export async function pivotLevelBacktestSymbolOnDate(
 
   if (!passesPatternFn(result, categoryKey)) return null; // didn't match the parent category's base condition
 
-  // Populate all four 15m P-filter flags after the cheap category gate (so only
-  // symbols matching the parent category trigger candle fetches). This covers
-  // the MOMENTUM-A pattern (P15MABC) and lets the View column show badges.
-  // CoinDCX leaves the flags unset, so P15MABC still cannot match there.
-  if (source !== "coindcx") {
+  // 15m only when the pattern itself needs flags (e.g. P15MABC) or after a
+  // match for View-column badges — not for every symbol that passed the parent
+  // category gate.
+  const pivotNeeds15mBeforeMatch =
+    pivotLevelKey === "P15MABC" ||
+    pivotLevelKey === "P-UPEX-CPRABOVE-OVA" ||
+    pivotLevelKey.startsWith("P-");
+  if (pivotNeeds15mBeforeMatch) {
+    if (source === "coindcx") return null;
     await populateAllPFilterFlags(result, symbol, source, entryDateISO);
   }
 
   if (!matchesPatternFn(result, pivotLevelKey)) return null; // didn't match this Pattern's raw flag
+
+  if (!pivotNeeds15mBeforeMatch && source !== "coindcx") {
+    await populateAllPFilterFlags(result, symbol, source, entryDateISO);
+  }
 
   // NEW: if this Pattern (or a nested Subpattern under it — see
   // BacktestSubCategoryDef.patterns in the interfaces above) has its own
@@ -1996,9 +2009,12 @@ export async function runBacktest(
   await prefetchHistories(symbols, source, onProgress);
 
   const rows: BacktestRow[] = [];
-  // Every Binance/Delta row now evaluates the four 15m P-filter flags, so keep
-  // concurrency bounded for all Views (15m candle requests are cached).
-  const batchSize = 8;
+  // Full-universe 15m only when the View has a candleCheck; otherwise flags
+  // run after match on a small set. Use higher concurrency for the common path.
+  const viewNeeds15mUpFront = !!(
+    target.candleCheck ?? parseComposedViewKey(target.key).candleCheck
+  );
+  const batchSize = viewNeeds15mUpFront ? 12 : 40;
   let previousUpexUnavailable = 0;
   let previous15MBUnavailable = 0;
   let pd15MBelowTCUnavailable = 0;
@@ -2095,9 +2111,8 @@ export async function runCategoryScan(
   const rows: CategoryScanRow[] = [];
   await prefetchHistories(symbols, source, onProgress);
 
-  // Every Binance/Delta row now evaluates the four 15m P-filter flags, so keep
-  // concurrency bounded.
-  const batchSize = 8;
+  // P-* categories need 15m on the full universe; others only post-match.
+  const batchSize = P_FILTER_CATEGORY_KEYS.has(categoryKey) ? 12 : 40;
 
   for (let i = 0; i < symbols.length; i += batchSize) {
     const batch = symbols.slice(i, i + batchSize);
@@ -2757,9 +2772,13 @@ export async function runPivotLevelBacktest(
   const rows: BacktestRow[] = [];
   await prefetchHistories(symbols, source, onProgress);
 
-  // Every symbol passing the category gate now evaluates the four 15m P-filter
-  // flags, so keep concurrency bounded.
-  const batchSize = 8;
+  // Most patterns only hit 15m after match; P15M* keys still need lower concurrency.
+  const batchSize =
+    pivotLevelKey === "P15MABC" ||
+    pivotLevelKey === "P-UPEX-CPRABOVE-OVA" ||
+    pivotLevelKey.startsWith("P-")
+      ? 12
+      : 40;
 
   for (let i = 0; i < symbols.length; i += batchSize) {
     const batch = symbols.slice(i, i + batchSize);
