@@ -17,7 +17,8 @@ import { runScreener } from "@/lib/binance";
 import { runDeltaScreener } from "@/lib/delta";
 import { runCoinDCXScreener } from "@/lib/coinDCX";
 import { COINDCX_ENABLED, DELTA_ENABLED } from "@/lib/featureFlags";
-import { getNiftyMockSymbols, isNiftyApiConnected, NIFTY_MOCK_CONTRACTS } from "@/lib/nifty";
+import { NIFTY_MOCK_CONTRACTS } from "@/lib/nifty";
+import NiftyWorkspace from "@/components/NiftyWorkspace";
 import {
   findPD15MBelowTCSymbols,
   findPD15MMomentumBelowSymbols,
@@ -2816,42 +2817,8 @@ export default function Screener({
           </div>
         )}
 
-        {/* NIFTY source — scaffold until Shoonya API is connected */}
-        {activeTab === "nifty" && (
-          <div className="rounded-xl border border-amber-500/30 bg-[#121a12] px-4 py-6 mb-4">
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-              <div>
-                <h3 className="text-sm font-semibold text-amber-200 tracking-wide">NIFTY (Shoonya)</h3>
-                <p className="mt-1 text-xs text-slate-400 max-w-xl">
-                  {isNiftyApiConnected()
-                    ? "Connected — scanning NFO option chain…"
-                    : "Account / API not connected. Complete Shoonya reactivation and API keys, then this tab will load live NIFTY option contracts (5m candles)."}
-                </p>
-                <p className="mt-2 text-[11px] text-slate-500">
-                  Session 09:15–15:30 IST · Intraday interval 5m · Source id <code className="text-amber-300/80">nifty</code>
-                </p>
-              </div>
-              <span className="shrink-0 text-[10px] uppercase tracking-wider px-2 py-1 rounded border border-amber-500/40 text-amber-300/90">
-                {isNiftyApiConnected() ? "API live" : "Mock layout"}
-              </span>
-            </div>
-            <div className="mt-4">
-              <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-2">
-                Sample CE/PE symbols ({NIFTY_MOCK_CONTRACTS.length}) — layout only
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {getNiftyMockSymbols().map((sym) => (
-                  <span
-                    key={sym}
-                    className="text-[11px] font-mono px-2 py-0.5 rounded border border-[#2a3a28] bg-[#0d140d] text-slate-300"
-                  >
-                    {sym}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
+        {/* NIFTY mode — chain workspace (Underlying → Expiry → ATM± → CE/PE) */}
+        {activeTab === "nifty" && <NiftyWorkspace />}
 
         {/* Table */}
         {currentStatus !== "idle" && displayed.length > 0 && (
