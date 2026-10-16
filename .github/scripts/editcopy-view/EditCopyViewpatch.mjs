@@ -210,6 +210,7 @@ const overrides = {
   target: process.env.TARGET,
   candleCheck: process.env.CANDLE_CHECK,
   gapBadge: process.env.GAP_BADGE,
+  requireFullMatch: process.env.REQUIRE_FULL_MATCH,
 };
 
 if (!sourceKey || !newKey || !newLabel) {
@@ -383,6 +384,13 @@ if (gapBadge || candleCheck) {
 }
 
 const candleCheckProperty = candleCheck ? `\n    candleCheck: "${escapeForDoubleQuotedString(candleCheck)}",` : "";
+const requireFullMatchRaw = overrides.requireFullMatch?.trim()?.toLowerCase();
+const requireFullMatchProperty =
+  requireFullMatchRaw === "true"
+    ? `\n    requireFullMatch: true,`
+    : requireFullMatchRaw === "false"
+      ? `\n    requireFullMatch: false,`
+      : "";
 
 const newViewLiteral = `{
     key: "${escapeForDoubleQuotedString(newKey)}",
@@ -397,7 +405,7 @@ const newViewLiteral = `{
     getEntry: ${getEntryText},
     stoplossLabel: "${escapeForDoubleQuotedString(stoplossLabel)}",
     getStoploss: ${getStoplossText},
-    levelCheckDefs: ${levelCheckDefsJson},
+    levelCheckDefs: ${levelCheckDefsJson},${requireFullMatchProperty}
   }`;
 
 const topCat = resolveTopLevelCategoryKey(allViewObjs, effectiveAttachKey);

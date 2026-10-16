@@ -555,13 +555,30 @@ export function formatWidthFilterLabel(widthFilter: WidthFilter): string {
 export function passesPattern(r: CPRResult, pattern: string): boolean {
   const v = getView(pattern);
   if (!v) return false;
-  if (v.conditionKey && v.conditionKey !== pattern) {
-    return (
-      passesPattern(r, v.conditionKey) &&
-      levelCheckFullyMatches(r, v.levelCheckDefs)
-    );
+
+  // Base match: conditionKey redirect (Copy/Create Views) or own condition.
+  const base =
+    v.conditionKey && v.conditionKey !== pattern
+      ? passesPattern(r, v.conditionKey)
+      : passesView(r, pattern);
+
+  if (!base) return false;
+
+  // 13/13 MATCH gate (ViewDef.requireFullMatch):
+  //   true  → always require full Level Check match
+  //   false → never require it (even for conditionKey Copy Views)
+  //   undefined → legacy: require it only for conditionKey redirects
+  const shouldRequireFullMatch =
+    v.requireFullMatch === true
+      ? true
+      : v.requireFullMatch === false
+        ? false
+        : Boolean(v.conditionKey && v.conditionKey !== pattern);
+
+  if (shouldRequireFullMatch) {
+    return levelCheckFullyMatches(r, v.levelCheckDefs);
   }
-  return passesView(r, pattern);
+  return true;
 }
 
 

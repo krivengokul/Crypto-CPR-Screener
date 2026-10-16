@@ -380,7 +380,8 @@ export function copyBacktestView(
   newKey: string,
   newLabel: string,
   attachKey?: string,
-  levelCheckDefs?: LevelCheckCondition[]
+  levelCheckDefs?: LevelCheckCondition[],
+  requireFullMatch?: boolean,
 ): CopyViewResult {
   if (VIEWS.some(v => v.key === newKey)) {
     return { ok: false, reason: "duplicate-key" };
@@ -406,6 +407,8 @@ export function copyBacktestView(
       : sourceView.levelCheckDefs
       ? sourceView.levelCheckDefs.map(d => ({ ...d, bandKeys: [...d.bandKeys] }))
       : undefined,
+    requireFullMatch:
+      requireFullMatch !== undefined ? requireFullMatch : sourceView.requireFullMatch,
   };
 
   VIEWS.push(newViewDef);
@@ -559,6 +562,7 @@ export function editBacktestView(
   levelCheckDefs?: LevelCheckCondition[],
   candleCheck?: string,
   stoploss?: string,
+  requireFullMatch?: boolean,
 ): { ok: boolean; reason?: string; updated?: ViewDef } {
   const idx = VIEWS.findIndex((v) => v.key === oldKey);
   if (idx === -1) return { ok: false, reason: "pattern-not-found" };
@@ -631,6 +635,7 @@ export function editBacktestView(
     },
     levelCheckDefs: levelCheckDefs ?? old.levelCheckDefs,
     candleCheck: trimmedCandleCheck || undefined,
+    requireFullMatch: requireFullMatch === true ? true : requireFullMatch === false ? false : old.requireFullMatch,
     ...(hasFilter
       ? {
           condition: filterCondition,
@@ -657,6 +662,7 @@ export function createBacktestView(
   entry?: string,
   candleCheck?: string,
   stoploss?: string,
+  requireFullMatch?: boolean,
 ): CreateViewResult {
   if (VIEWS.some(v => v.key === newKey)) {
     return { ok: false, reason: "duplicate-key" };
@@ -719,6 +725,7 @@ export function createBacktestView(
       ? levelCheckDefs.map(d => ({ ...d, bandKeys: [...d.bandKeys] }))
       : undefined,
     candleCheck: trimmedCandleCheck || undefined,
+    requireFullMatch: requireFullMatch === true ? true : undefined,
     ...(hasFilter
       ? {
           condition: filterCondition,

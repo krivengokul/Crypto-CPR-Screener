@@ -276,6 +276,13 @@ if (gapBadge || candleCheck) {
 }
 
 const candleCheckProperty = candleCheck ? `\n    candleCheck: "${escapeForDoubleQuotedString(candleCheck)}",` : "";
+const requireFullMatchRaw = (process.env.REQUIRE_FULL_MATCH || "").trim().toLowerCase();
+const requireFullMatchProperty =
+  requireFullMatchRaw === "true"
+    ? `\n    requireFullMatch: true,`
+    : requireFullMatchRaw === "false"
+      ? `\n    requireFullMatch: false,`
+      : "";
 
 const newViewLiteral = `{
     key: "${escapeForDoubleQuotedString(newKey)}",
@@ -287,7 +294,7 @@ const newViewLiteral = `{
     targetLabel: "${targetDef.label}",
     getTarget: (r) => r.${targetDef.cpr ?? "todayCPR"}.${targetDef.key},
     ${entryText}
-    levelCheckDefs: ${JSON.stringify(levelCheckDefs, null, 2)},
+    levelCheckDefs: ${JSON.stringify(levelCheckDefs, null, 2)},${requireFullMatchProperty}
   }`;
 
 const topCat = resolveTopLevelCategoryKey(allViewObjs, effectiveAttachKey);

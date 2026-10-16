@@ -39,6 +39,13 @@ export interface ViewDef {
   navigationCategoryKey?: string;
   order?: number;
   levelCheckDefs?: LevelCheckCondition[];
+  /**
+   * When true, this View only matches / fires when the row's Level Check
+   * scores a full 13/13 against this View's levelCheckDefs. When false,
+   * the 13/13 gate is never applied. When omitted, legacy behavior applies:
+   * Copy/Create Views with a conditionKey redirect still require 13/13.
+   */
+  requireFullMatch?: boolean;
 }
 
 export interface ViewTreeNode {

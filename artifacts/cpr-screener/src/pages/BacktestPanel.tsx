@@ -725,6 +725,7 @@ function CopyViewControl({
   );
   const [candleCheck, setCandleCheck] = useState(initialCandleCheck);
   const [gapBadge, setGapBadge] = useState(initialGapBadge);
+  const [requireFullMatch, setRequireFullMatch] = useState(() => sourceView?.requireFullMatch === true);
   const [error, setError] = useState("");
   const [command, setCommand] = useState<string | null>(null);
   const [createdKey, setCreatedKey] = useState<string | null>(null);
@@ -748,6 +749,7 @@ function CopyViewControl({
     setAttachKey(sourceView?.parentKey ?? findContainingNodeKey(sourceKey) ?? sourceKey);
     setCandleCheck(initialCandleCheck);
     setGapBadge(initialGapBadge);
+    setRequireFullMatch(sourceView?.requireFullMatch === true);
     setError("");
     setCommand(null);
     setCreatedKey(null);
@@ -777,7 +779,7 @@ function CopyViewControl({
 
       // Clone first so the source View's condition is retained, then apply
       // the same direction/entry/target/gap recipe used by Edit View.
-      const result = copyBacktestView(sourceKey, viewKey, trimmedLabel, attachKey, derived);
+      const result = copyBacktestView(sourceKey, viewKey, trimmedLabel, attachKey, derived, requireFullMatch);
       if (!result.ok) {
         setError(
           result.reason === "duplicate-key"
@@ -799,7 +801,9 @@ function CopyViewControl({
         attachKey,
         trimmedGapBadge,
         derived,
-        trimmedCandleCheck
+        trimmedCandleCheck,
+        stoploss,
+        requireFullMatch,
       );
       if (!adjusted.ok) {
         setError("Couldn't apply the selected Copy View settings.");
@@ -819,6 +823,7 @@ function CopyViewControl({
         "-f attachKey=" + q(attachKey),
         ...(trimmedCandleCheck ? ["-f candleCheck=" + q(trimmedCandleCheck)] : []),
         ...(trimmedGapBadge ? ["-f gapBadge=" + q(trimmedGapBadge)] : []),
+        "-f requireFullMatch=" + (requireFullMatch ? "true" : "false"),
         "-f levelCheckDefs=" + btoa(
           Array.from(new TextEncoder().encode(JSON.stringify(derived)), (b) => String.fromCharCode(b)).join("")
         ),
@@ -980,27 +985,42 @@ function CopyViewControl({
           </button>
         </div>
       )}
-      <div className="flex justify-end gap-1.5 pt-0.5">
-        <button
-          type="button"
-          onClick={() => {
-            setOpen(false);
-            onClose?.();
-            if (createdKey) onCopied(createdKey);
-          }}
-          className="rounded-md px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+      <div className="flex items-center justify-between gap-1.5 pt-0.5">
+        <label
+          className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer select-none"
+          title="When ticked, this View only matches / fires when the row has a full 13/13 Level Check match."
         >
-          {command ? "Done" : "Cancel"}
-        </button>
-        {!command && (
+          <input
+            type="checkbox"
+            checked={requireFullMatch}
+            onChange={(e) => setRequireFullMatch(e.target.checked)}
+            disabled={!!command}
+            className="h-3.5 w-3.5 rounded border-cyan-500/40 accent-cyan-500"
+          />
+          <span>13/13 MATCH</span>
+        </label>
+        <div className="flex justify-end gap-1.5">
           <button
             type="button"
-            onClick={confirm}
-            className="rounded-md bg-cyan-500/20 px-2 py-1 text-[11px] font-medium text-cyan-300 hover:bg-cyan-500/30"
+            onClick={() => {
+              setOpen(false);
+              onClose?.();
+              if (createdKey) onCopied(createdKey);
+            }}
+            className="rounded-md px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted/40 hover:text-foreground"
           >
-            Copy View
+            {command ? "Done" : "Cancel"}
           </button>
-        )}
+          {!command && (
+            <button
+              type="button"
+              onClick={confirm}
+              className="rounded-md bg-cyan-500/20 px-2 py-1 text-[11px] font-medium text-cyan-300 hover:bg-cyan-500/30"
+            >
+              Copy View
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -1070,6 +1090,8 @@ function EditViewControl({
   // Badge" rather than corrupting anything.
   const [candleCheck, setCandleCheck] = useState(() => activeTarget.candleCheck ?? parsedKey.candleCheck ?? "");
   const [gapBadge, setGapBadge] = useState(() => parsedKey.gapBadge ?? "");
+  // 13/13 MATCH: when ticked, View only fires for rows with a full Level Check match.
+  const [requireFullMatch, setRequireFullMatch] = useState(() => activeTarget.requireFullMatch === true);
   const [error, setError] = useState("");
   const [command, setCommand] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -1109,6 +1131,7 @@ function EditViewControl({
     setAttachKey(activeTarget.parentKey ?? findContainingNodeKey(activeTarget.key) ?? activeTarget.key);
     setCandleCheck(activeTarget.candleCheck ?? parsedKey.candleCheck ?? "");
     setGapBadge(parsedKey.gapBadge ?? "");
+    setRequireFullMatch(activeTarget.requireFullMatch === true);
     setError("");
     setCommand(null);
     setCopied(false);
@@ -1156,6 +1179,7 @@ function EditViewControl({
       derived,
       trimmedCandleCheck,
       stoploss,
+      requireFullMatch,
     );
 
     if (!res.ok) {
@@ -1188,7 +1212,7 @@ function EditViewControl({
     const b64 = btoa(binary);
 
     const q = (s: string) => `"${s.replace(/"/g, "")}"`;
-    const cmd = `gh workflow run editcopy-view.yml --repo krivengokul/Crypto-CPR-Screener -f sourceKey=${q(activeTarget.key)} -f newKey=${q(viewKey)} -f newLabel=${q(trimmedLabel)} -f isEdit=true -f direction=${q(direction)} -f entry=${q(entry)} -f stoploss=${q(stoploss)} -f target=${q(target)} -f attachKey=${q(attachKey)}${trimmedCandleCheck ? ` -f candleCheck=${q(trimmedCandleCheck)}` : ""}${gapBadge ? ` -f gapBadge=${q(gapBadge)}` : ""} -f levelCheckDefs=${b64}`;
+    const cmd = `gh workflow run editcopy-view.yml --repo krivengokul/Crypto-CPR-Screener -f sourceKey=${q(activeTarget.key)} -f newKey=${q(viewKey)} -f newLabel=${q(trimmedLabel)} -f isEdit=true -f direction=${q(direction)} -f entry=${q(entry)} -f stoploss=${q(stoploss)} -f target=${q(target)} -f attachKey=${q(attachKey)}${trimmedCandleCheck ? ` -f candleCheck=${q(trimmedCandleCheck)}` : ""}${gapBadge ? ` -f gapBadge=${q(gapBadge)}` : ""} -f requireFullMatch=${requireFullMatch ? "true" : "false"} -f levelCheckDefs=${b64}`;
     setCommand(cmd);
     // Deliberately NOT calling onUpdated here, same reasoning as
     // CreateViewControl/CopyViewControl's confirm(): onUpdated moves the
@@ -1361,30 +1385,45 @@ function EditViewControl({
           </button>
         </div>
       )}
-      <div className="flex justify-end gap-1.5 pt-0.5">
-        <button
-          type="button"
-          onClick={() => {
-            setOpen(false);
-            // Switch the dropdown to the (possibly renamed) key now that
-            // the person has had a chance to see/copy the command — not
-            // before. See handleSave's note above.
-            if (savedKey) onUpdated?.(savedKey);
-            onClose?.();
-          }}
-          className="rounded-md px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+      <div className="flex items-center justify-between gap-1.5 pt-0.5">
+        <label
+          className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer select-none"
+          title="When ticked, this View only matches / fires when the row has a full 13/13 Level Check match. Unticked: View fires on its pattern condition alone."
         >
-          {command ? "Done" : "Cancel"}
-        </button>
-        {!command && (
+          <input
+            type="checkbox"
+            checked={requireFullMatch}
+            onChange={(e) => setRequireFullMatch(e.target.checked)}
+            disabled={!!command}
+            className="h-3.5 w-3.5 rounded border-cyan-500/40 accent-cyan-500"
+          />
+          <span>13/13 MATCH</span>
+        </label>
+        <div className="flex justify-end gap-1.5">
           <button
             type="button"
-            onClick={handleSave}
-            className="rounded-md bg-cyan-500/20 px-2 py-1 text-[11px] font-medium text-cyan-300 hover:bg-cyan-500/30"
+            onClick={() => {
+              setOpen(false);
+              // Switch the dropdown to the (possibly renamed) key now that
+              // the person has had a chance to see/copy the command — not
+              // before. See handleSave's note above.
+              if (savedKey) onUpdated?.(savedKey);
+              onClose?.();
+            }}
+            className="rounded-md px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted/40 hover:text-foreground"
           >
-            Save View
+            {command ? "Done" : "Cancel"}
           </button>
-        )}
+          {!command && (
+            <button
+              type="button"
+              onClick={handleSave}
+              className="rounded-md bg-cyan-500/20 px-2 py-1 text-[11px] font-medium text-cyan-300 hover:bg-cyan-500/30"
+            >
+              Save View
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -1529,6 +1568,7 @@ function CreateViewControl({
   const [gapBadge, setGapBadge] = useState(
     existingGapBadge && ALL_GAP_BADGES.includes(existingGapBadge) ? existingGapBadge : ""
   );
+  const [requireFullMatch, setRequireFullMatch] = useState(false);
   // Whether the person has typed into the View name box yet — until they
   // do, it tracks effectivePattern below so switching the attach point
   // off a TOP 15 bucket doesn't leave "top15gainers" sitting in the name
@@ -1616,6 +1656,7 @@ function CreateViewControl({
       entry,
       trimmedCandleCheck || undefined,
       stoploss,
+      requireFullMatch,
     );
     if (!result.ok) {
       setError(
@@ -1659,7 +1700,7 @@ function CreateViewControl({
     const b64 = btoa(binary);
 
     setCommand(
-      `gh workflow run create-view.yml --repo krivengokul/Crypto-CPR-Screener -f patternKey=${q(effectivePattern.key)} -f newKey=${q(viewKey)} -f newLabel=${q(trimmedLabel)} -f direction=${q(direction)} -f entry=${q(entry)} -f stoploss=${q(stoploss)} -f target=${q(target)} -f attachKey=${q(attachKey)}${trimmedCandleCheck ? ` -f candleCheck=${q(trimmedCandleCheck)}` : ""}${trimmedGapBadge ? ` -f gapBadge=${q(trimmedGapBadge)}` : ""} -f levelCheckDefs=${b64}`
+      `gh workflow run create-view.yml --repo krivengokul/Crypto-CPR-Screener -f patternKey=${q(effectivePattern.key)} -f newKey=${q(viewKey)} -f newLabel=${q(trimmedLabel)} -f direction=${q(direction)} -f entry=${q(entry)} -f stoploss=${q(stoploss)} -f target=${q(target)} -f attachKey=${q(attachKey)}${trimmedCandleCheck ? ` -f candleCheck=${q(trimmedCandleCheck)}` : ""}${trimmedGapBadge ? ` -f gapBadge=${q(trimmedGapBadge)}` : ""} -f requireFullMatch=${requireFullMatch ? "true" : "false"} -f levelCheckDefs=${b64}`
     );
     setCreatedKey(viewKey);
   }
@@ -1830,26 +1871,41 @@ function CreateViewControl({
           </button>
         </div>
       )}
-      <div className="flex justify-end gap-1.5 pt-0.5">
-        <button
-          type="button"
-          onClick={() => {
-            setOpen(false);
-            if (createdKey) onCreated(createdKey);
-          }}
-          className="rounded-md px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+      <div className="flex items-center justify-between gap-1.5 pt-0.5">
+        <label
+          className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer select-none"
+          title="When ticked, this View only matches / fires when the row has a full 13/13 Level Check match."
         >
-          {command ? "Done" : "Cancel"}
-        </button>
-        {!command && (
+          <input
+            type="checkbox"
+            checked={requireFullMatch}
+            onChange={(e) => setRequireFullMatch(e.target.checked)}
+            disabled={!!command}
+            className="h-3.5 w-3.5 rounded border-cyan-500/40 accent-cyan-500"
+          />
+          <span>13/13 MATCH</span>
+        </label>
+        <div className="flex justify-end gap-1.5">
           <button
             type="button"
-            onClick={confirm}
-            className="rounded-md bg-cyan-500/20 px-2 py-1 text-[11px] font-medium text-cyan-300 hover:bg-cyan-500/30"
+            onClick={() => {
+              setOpen(false);
+              if (createdKey) onCreated(createdKey);
+            }}
+            className="rounded-md px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted/40 hover:text-foreground"
           >
-            Create View
+            {command ? "Done" : "Cancel"}
           </button>
-        )}
+          {!command && (
+            <button
+              type="button"
+              onClick={confirm}
+              className="rounded-md bg-cyan-500/20 px-2 py-1 text-[11px] font-medium text-cyan-300 hover:bg-cyan-500/30"
+            >
+              Create View
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
