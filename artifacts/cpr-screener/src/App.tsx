@@ -201,7 +201,7 @@ function App() {
     }
     const candidates: EntryCrossCandidate[] = [];
     for (const [key, r] of activeMap) {
-      if (r.source === "coindcx") continue;
+      if (r.source === "coindcx" || r.source === "nifty") continue; // no live entry-cross for CoinDCX / mock NIFTY
       const levels = computeSignalLevels(r, pills);
       if (!levels || !Number.isFinite(levels.price) || !Number.isFinite(r.currentPrice)) continue;
       candidates.push({
