@@ -24,6 +24,7 @@ import { BuildFooter } from "@/components/BuildFooter";
 import PatternStats from "@/pages/PatternStats";
 import SignalsJournal from "./pages/SignalsJournal";
 import ViewsSidebar, { SCREENER_PATTERN_IDS, VIEW_LABEL_BY_ID, type SidebarMode } from "@/lib/ViewsSidebar";
+import { getView } from "@/lib/views";
 import { Menu } from "lucide-react";
 
 const queryClient = new QueryClient();
@@ -306,13 +307,27 @@ function App() {
 
       const viewLabel = candidate.payload.patternName || "";
       const viewCode = candidate.payload.patternId || "";
+      // Entry level name from View def (e.g. R1, TC); fall back to first segment of view code.
+      const entryLevel =
+        getView(viewCode)?.entryLabel ||
+        (viewCode.includes("-") ? viewCode.split("-")[0] : "") ||
+        "Entry";
 
       toast({
         title: "Entry crossed — alert",
         description: (
           <div className="space-y-0.5 text-sm leading-snug">
             <div>
-              {candidate.symbol} ({candidate.source}) {dir} · trade {px} crossed entry {entry}
+              {candidate.symbol} ({candidate.source}) {dir}
+            </div>
+            <div>
+              <span className="text-slate-400">Price:</span>{" "}
+              <span className="font-mono text-slate-100">{px}</span>
+              {"  "}
+              crossed Entry:{" "}
+              <span className="font-semibold text-amber-300">{entryLevel}</span>
+              {" @ "}
+              <span className="font-mono text-slate-100">{entry}</span>
             </div>
             <div>
               <span className="text-slate-400">View:</span>{" "}
