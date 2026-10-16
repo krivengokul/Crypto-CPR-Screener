@@ -1102,6 +1102,15 @@ function EditViewControl({
   // the "Done" button can pass it to onUpdated — see handleSave's note
   // on why onUpdated isn't called from there directly.
   const [savedKey, setSavedKey] = useState<string | null>(null);
+  // Chart-link migration is deferred until Done (not Save). Save only builds
+  // the gh command; if the user never runs the workflow, migrating on Save
+  // would leave links pointing at a key that only exists in-memory.
+  // On Done we migrate; Stats Reassign still covers orphans after a refresh
+  // without a successful workflow.
+  const [pendingChartRename, setPendingChartRename] = useState<{
+    from: string;
+    to: string;
+  } | null>(null);
 
   // Fully derived from the CURRENT dropdown selections — never pulled
   // from stored keys or conditionKey. Composes as
@@ -1139,6 +1148,7 @@ function EditViewControl({
     setCommand(null);
     setCopied(false);
     setSavedKey(null);
+    setPendingChartRename(null);
     setOpen(true);
   }
 
@@ -1215,12 +1225,14 @@ function EditViewControl({
     const b64 = btoa(binary);
 
     const q = (s: string) => `"${s.replace(/"/g, "")}"`;
-    // Chart links in Stats store the View *key* at save time. When Edit View
-    // renames the key (auto-composed Entry-Pattern-Gap-Target), migrate those
-    // links so Charts shows the new view name instead of the stale key.
-    if (activeTarget.key !== viewKey) {
-      void renameChartLinkViewKeys(activeTarget.key, viewKey);
-    }
+    // Do NOT migrate chart links here — only stash a pending rename for Done.
+    // Migrating on Save would rewrite links before the user runs the gh
+    // workflow (or if they cancel), leaving Stats pointing at an unpersisted key.
+    setPendingChartRename(
+      activeTarget.key !== viewKey
+        ? { from: activeTarget.key, to: viewKey }
+        : null,
+    );
 
     const cmd = `gh workflow run editcopy-view.yml --repo krivengokul/Crypto-CPR-Screener -f sourceKey=${q(activeTarget.key)} -f newKey=${q(viewKey)} -f newLabel=${q(trimmedLabel)} -f isEdit=true -f direction=${q(direction)} -f entry=${q(entry)} -f stoploss=${q(stoploss)} -f target=${q(target)} -f attachKey=${q(attachKey)}${trimmedCandleCheck ? ` -f candleCheck=${q(trimmedCandleCheck)}` : ""}${gapBadge ? ` -f gapBadge=${q(gapBadge)}` : ""} -f requireFullMatch=${requireFullMatch ? "true" : "false"} -f levelCheckDefs=${b64}`;
     setCommand(cmd);
@@ -1413,6 +1425,18 @@ function EditViewControl({
           <button
             type="button"
             onClick={() => {
+              // Migrate chart links only on Done (after Save produced a command),
+              // not on Cancel and not at the moment the gh command is generated.
+              // True "wait until workflow succeeds" isn't possible from the
+              // browser; Done is the closest user-confirmed commit. If the
+              // workflow never runs and the page is refreshed, Reassign in
+              // Stats → Charts still fixes orphans.
+              if (command && pendingChartRename) {
+                void renameChartLinkViewKeys(
+                  pendingChartRename.from,
+                  pendingChartRename.to,
+                );
+              }
               setOpen(false);
               // Switch the dropdown to the (possibly renamed) key now that
               // the person has had a chance to see/copy the command — not
