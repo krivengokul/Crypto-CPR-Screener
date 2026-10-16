@@ -903,29 +903,38 @@ export default function ScreenerTableRow({
   const rawConB = r.PD15MBelowTCPass === true;
   const rawMomA = r.PD15MAboveBCPass === true;
   const rawMomB = r.PD15MMomentumBPass === true;
-  const showInsideR1S1 =
-    isInsideR1S1 === true ||
-    (isInsideR1S1 === undefined &&
-      isConsolidateA === undefined &&
-      isConsolidateB === undefined &&
-      rawConA &&
-      rawConB);
-  const showConsolidateA =
-    showInsideR1S1
-      ? false
-      : (isConsolidateA ?? (rawConA && !rawConB));
-  const showConsolidateB =
-    showInsideR1S1
-      ? false
-      : (isConsolidateB ?? (rawConB && !rawConA));
-  const showMomentumA =
-    showInsideR1S1
-      ? false
-      : (isMomentumA ?? (rawMomA && !rawConA));
-  const showMomentumB =
-    showInsideR1S1
-      ? false
-      : (isMomentumB ?? (rawMomB && !rawConB));
+  // Prefer exclusive props from Screener (exactly one of these when set).
+  // Fallback: same priority as Screener candleBucket / backtest badges.
+  const exclusiveFromProps =
+    isInsideR1S1 !== undefined ||
+    isConsolidateA !== undefined ||
+    isConsolidateB !== undefined ||
+    isMomentumA !== undefined ||
+    isMomentumB !== undefined;
+
+  let showInsideR1S1 = false;
+  let showConsolidateA = false;
+  let showConsolidateB = false;
+  let showMomentumA = false;
+  let showMomentumB = false;
+
+  if (exclusiveFromProps) {
+    showInsideR1S1 = isInsideR1S1 === true;
+    showConsolidateA = !showInsideR1S1 && isConsolidateA === true;
+    showConsolidateB = !showInsideR1S1 && isConsolidateB === true;
+    showMomentumA = !showInsideR1S1 && isMomentumA === true;
+    showMomentumB = !showInsideR1S1 && isMomentumB === true;
+  } else if (rawConA && rawConB) {
+    showInsideR1S1 = true;
+  } else if (rawConB) {
+    showConsolidateB = true;
+  } else if (rawMomB) {
+    showMomentumB = true;
+  } else if (rawConA) {
+    showConsolidateA = true;
+  } else if (rawMomA) {
+    showMomentumA = true;
+  }
   // Hoisted so the same up/down call drives both the per-row dot in the
   // Symbol column AND the new "Levels VIEW" name badge below — one row
   // shouldn't ever show a green dot next to a red badge.

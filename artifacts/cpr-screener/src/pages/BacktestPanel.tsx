@@ -274,60 +274,67 @@ async function addApplicableViewOutcomes<T extends Pick<CategoryScanRow, "symbol
 }
 
 /**
- * Same mutually exclusive P-CONSOLIDATE / P-MOMENTUM classification as the
- * Screener's Active Views filters. Overlapping raw flags are resolved in the
- * same priority order: CONSOLIDATE-B, MOMENTUM-B, CONSOLIDATE-A, MOMENTUM-A.
+ * Same mutually exclusive P-filter buckets as Screener `candleBucket`.
+ * Priority (exactly one badge):
+ *   1. CON-A ∩ CON-B → INSIDE-R1S1
+ *   2. CON-B alone → P-CONSOLIDATE-B
+ *   3. MOM-B (not CON-B) → P-MOMENTUM-B
+ *   4. CON-A alone → P-CONSOLIDATE-A
+ *   5. MOM-A (not CON-A) → P-MOMENTUM-A
  */
-function renderCandleCheckBadges(raw: CPRResult) {
-  // Exclusive buckets (same as Screener candleBucket / charts):
-  // CON-A ∩ CON-B → INSIDE-R1S1 only; pure CON-A / CON-B keep their own badge.
+function candleBucketFromFlags(
+  raw: CPRResult,
+): "inside-r1s1" | "consolidate-b" | "momentum-b" | "consolidate-a" | "momentum-a" | null {
   const conA = raw.PD15MConsolidateAPass === true;
   const conB = raw.PD15MBelowTCPass === true;
   const momA = raw.PD15MAboveBCPass === true;
   const momB = raw.PD15MMomentumBPass === true;
-  const showInside = conA && conB;
-  const showConsolidateB = conB && !conA;
-  const showConsolidateA = conA && !conB;
-  const showMomentumB = momB && !conB;
-  const showMomentumA = momA && !conA;
+  if (conA && conB) return "inside-r1s1";
+  if (conB) return "consolidate-b";
+  if (momB) return "momentum-b";
+  if (conA) return "consolidate-a";
+  if (momA) return "momentum-a";
+  return null;
+}
 
-  if (!showInside && !showConsolidateA && !showConsolidateB && !showMomentumA && !showMomentumB) {
-    return null;
-  }
+function renderCandleCheckBadges(raw: CPRResult) {
+  const bucket = candleBucketFromFlags(raw);
+  if (!bucket) return null;
+
+  const label =
+    bucket === "inside-r1s1"
+      ? "INSIDE-R1S1"
+      : bucket === "consolidate-a"
+        ? "P-CONSOLIDATE-A"
+        : bucket === "consolidate-b"
+          ? "P-CONSOLIDATE-B"
+          : bucket === "momentum-a"
+            ? "P-MOMENTUM-A"
+            : "P-MOMENTUM-B";
+
+  const className =
+    bucket === "inside-r1s1"
+      ? "font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-amber-300"
+      : bucket === "consolidate-a"
+        ? "font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
+        : bucket === "consolidate-b"
+          ? "font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-pink-400"
+          : bucket === "momentum-a"
+            ? "font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-cyan-400"
+            : "font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-violet-400";
+
+  const style =
+    bucket === "consolidate-a"
+      ? { color: "#03b07c" }
+      : bucket === "consolidate-b"
+        ? { color: "#f472b6" }
+        : undefined;
 
   return (
     <div className="mt-1 flex flex-col gap-0.5">
-      {showInside && (
-        <div className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-amber-300">
-          INSIDE-R1S1
-        </div>
-      )}
-      {showConsolidateA && (
-        <div
-          className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
-          style={{ color: "#03b07c" }}
-        >
-          P-CONSOLIDATE-A
-        </div>
-      )}
-      {showConsolidateB && (
-        <div
-          className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-pink-400"
-          style={{ color: "#f472b6" }}
-        >
-          P-CONSOLIDATE-B
-        </div>
-      )}
-      {showMomentumA && (
-        <div className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-cyan-400">
-          P-MOMENTUM-A
-        </div>
-      )}
-      {showMomentumB && (
-        <div className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-violet-400">
-          P-MOMENTUM-B
-        </div>
-      )}
+      <div className={className} style={style}>
+        {label}
+      </div>
     </div>
   );
 }
