@@ -1304,19 +1304,10 @@ export default function Screener({
         />
         )}
 
-        {/* Controls — scan / search / source tabs extracted to ScreenerToolbar */}
+        {/* Controls — Scan Binance only (ScreenerToolbar) */}
           <ScreenerToolbar
-            search={search}
-            onSearchChange={setSearch}
-            activeTab={activeTab}
-            onActiveTabChange={setActiveTab}
-            canShowCombined={canShowCombined}
             status={status}
-            deltaStatus={deltaStatus}
-            coindcxStatus={coindcxStatus}
             onScanBinance={() => { void doScan(); }}
-            onScanDelta={() => { void doDeltaScan(); }}
-            onScanCoinDCX={() => { void doCoinDCXScan(); }}
           />
 
           {/* Results count / Show All / panel toggles (scan buttons live in ScreenerToolbar) */}
@@ -2091,10 +2082,19 @@ export default function Screener({
           </div>
         )}
 
-        {/* Secondary filter bar — 15M-A + Active/Ready (search + source tabs live in ScreenerToolbar). */}
-        {currentStatus === "done" && (
-          <div className="px-4 py-2 border-b border-[#1b263b] bg-[#0d1422] flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0 mb-3 rounded-lg border">
-            <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end flex-wrap">
+        {/* Single filter row, left → right: Search · 15M-A · All/Active/Ready/Pass/Fail · Binance | NIFTY (right). */}
+        {canShowCombined && (
+          <div className="px-4 py-2 border-b border-[#1b263b] bg-[#0d1422] flex flex-nowrap items-center gap-3 overflow-x-auto shrink-0 mb-3 rounded-lg border">
+              <div className="relative shrink-0 w-48 sm:w-56">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="search"
+                  placeholder="Search symbol or view…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full bg-[#151e2c] border border-[#22354a] rounded-md pl-8 pr-3 py-1 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-teal-500/50"
+                />
+              </div>
               {/* 15M-A filter */}
               <div className="flex items-center gap-1 flex-wrap">
                 <button
@@ -2118,7 +2118,7 @@ export default function Screener({
                   Ready (matches a View, still waiting for entry). Same grouped
                   tab control as Signal Desk; clicking the selected button
                   clears it back to "all". */}
-              <div className="flex gap-0.5 p-0.5 rounded-md border border-[#22354a] bg-[#151e2c] mr-3">
+              <div className="flex gap-0.5 p-0.5 rounded-md border border-[#22354a] bg-[#151e2c] shrink-0">
                 <button
                   type="button"
                   onClick={() => setStatusFilter("all")}
@@ -2179,7 +2179,25 @@ export default function Screener({
                   Fail
                 </button>
               </div>
-            </div>
+              {/* Source switch — Binance | NIFTY only, pinned right */}
+              <div className="ml-auto flex gap-0.5 p-0.5 rounded-md border border-[#22354a] bg-[#151e2c] shrink-0">
+                {(["binance", "nifty"] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => setActiveTab(tab)}
+                    className={`px-3 py-1 rounded text-xs font-semibold transition border cursor-pointer ${
+                      activeTab === tab
+                        ? tab === "binance"
+                          ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/50"
+                          : "bg-amber-500/20 text-amber-300 border-amber-500/50"
+                        : "text-slate-400 hover:text-slate-200 border-transparent"
+                    }`}
+                  >
+                    {tab === "binance" ? "Binance" : "NIFTY"}
+                  </button>
+                ))}
+              </div>
           </div>
         )}
 
