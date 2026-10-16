@@ -521,6 +521,99 @@ export async function setChartLink(viewKey: string, rowKey: string, url: string)
 }
 
 
+/**
+ * When a View is renamed (Edit View changes its key), rewrite every chart
+ * link that still points at the old key so Stats → Charts shows the new
+ * view name instead of the stale key string.
+ */
+export async function renameChartLinkViewKeys(
+  oldViewKey: string,
+  newViewKey: string,
+): Promise<number> {
+  const from = (oldViewKey || "").trim();
+  const to = (newViewKey || "").trim();
+  if (!from || !to || from === to) return 0;
+
+  let updated = 0;
+
+  // 1) Local cache
+  const local = getLocalCache();
+  for (const [rowKey, link] of Object.entries(local)) {
+    if (!link?.url) continue;
+    if (link.lastViewKey === from) {
+      saveToLocalCache(rowKey, {
+        url: link.url,
+        savedAt: link.savedAt || new Date().toISOString(),
+        lastViewKey: to,
+      });
+      updated += 1;
+    }
+  }
+
+  // 2) Firestore (all docs for this uid whose lastViewKey / legacy id uses old key)
+  try {
+    const uid = await ensureSignedIn();
+    const db = getDb();
+    const snapshot = await getDocs(
+      query(collection(db, CHART_LINKS_COLLECTION), where("uid", "==", uid)),
+    );
+    for (const chartDoc of snapshot.docs) {
+      const data = chartDoc.data();
+      const legacySep = chartDoc.id.lastIndexOf("::");
+      const legacyViewKey = legacySep >= 0 ? chartDoc.id.slice(0, legacySep) : "";
+      const lastViewKey =
+        (typeof data.lastViewKey === "string" && data.lastViewKey) || legacyViewKey || "";
+      if (lastViewKey !== from) continue;
+
+      const rowKey =
+        (typeof data.rowKey === "string" && data.rowKey) ||
+        (legacySep >= 0 ? chartDoc.id.slice(legacySep + 2) : chartDoc.id);
+      const url = typeof data.url === "string" ? data.url : "";
+      if (!url) continue;
+      const savedAt =
+        typeof data.savedAt === "string" && data.savedAt
+          ? data.savedAt
+          : new Date().toISOString();
+
+      try {
+        await setDoc(
+          chartDoc.ref,
+          {
+            lastViewKey: to,
+            rowKey,
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true },
+        );
+        // Keep primary symbol-date doc in sync when this was a legacy id
+        if (legacySep >= 0 && rowKey) {
+          await setDoc(
+            doc(db, CHART_LINKS_COLLECTION, rowKey),
+            {
+              url,
+              savedAt,
+              uid,
+              rowKey,
+              lastViewKey: to,
+              updatedAt: serverTimestamp(),
+            },
+            { merge: true },
+          );
+        }
+        saveToLocalCache(rowKey, { url, savedAt, lastViewKey: to });
+        updated += 1;
+      } catch {
+        // non-blocking per doc
+      }
+    }
+  } catch {
+    // offline — local cache updates still help this browser
+  }
+
+  if (updated > 0) notifyChartLinksChanged();
+  return updated;
+}
+
 /** Set or fix the view key on an existing chart link (primary rowKey doc + local cache). */
 export async function updateChartLinkViewKey(rowKey: string, viewKey: string): Promise<boolean> {
   const key = (rowKey || "").trim();

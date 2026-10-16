@@ -1082,31 +1082,52 @@ function ChartLinksSection({
                     <td className="px-3 py-2.5 text-slate-300">{details.date || "—"}</td>
                     <td className="px-3 py-2.5 text-slate-300">{exchangeName}</td>
                     <td className="max-w-[280px] px-3 py-2.5 text-slate-300">
-                      {record.viewKey ? (
-                        <span className="truncate block" title={viewName}>{viewName}</span>
-                      ) : (
-                        <select
-                          className="w-full max-w-[240px] rounded border border-[#22354a] bg-[#151e2c] px-1.5 py-1 text-[11px] text-slate-200"
-                          defaultValue=""
-                          disabled={assigningKey === record.rowKey}
-                          title="This chart was saved without a view. Pick one to store it."
-                          onChange={async (e) => {
-                            const vk = e.target.value;
-                            if (!vk) return;
-                            setAssigningKey(record.rowKey);
-                            const ok = await updateChartLinkViewKey(record.rowKey, vk);
-                            setAssigningKey(null);
-                            if (ok) onRefresh();
-                          }}
-                        >
-                          <option value="">Assign view…</option>
-                          {VIEWS.map((v) => (
-                            <option key={v.key} value={v.key}>
-                              {v.label || v.key}
+                      {(() => {
+                        // Known view → show friendly label. Missing/renamed key →
+                        // offer reassignment (Edit View renames the key, so old
+                        // chart links would otherwise keep showing the stale key).
+                        const known =
+                          !!record.viewKey &&
+                          VIEWS.some((v) => v.key === record.viewKey);
+                        if (known) {
+                          return (
+                            <span className="truncate block" title={viewName}>
+                              {viewName}
+                            </span>
+                          );
+                        }
+                        return (
+                          <select
+                            className="w-full max-w-[240px] rounded border border-[#22354a] bg-[#151e2c] px-1.5 py-1 text-[11px] text-slate-200"
+                            defaultValue=""
+                            disabled={assigningKey === record.rowKey}
+                            title={
+                              record.viewKey
+                                ? `Saved under old key "${record.viewKey}" (view was renamed). Pick the current view.`
+                                : "This chart was saved without a view. Pick one to store it."
+                            }
+                            onChange={async (e) => {
+                              const vk = e.target.value;
+                              if (!vk) return;
+                              setAssigningKey(record.rowKey);
+                              const ok = await updateChartLinkViewKey(record.rowKey, vk);
+                              setAssigningKey(null);
+                              if (ok) onRefresh();
+                            }}
+                          >
+                            <option value="">
+                              {record.viewKey
+                                ? `Reassign (was: ${record.viewKey.slice(0, 28)}${record.viewKey.length > 28 ? "…" : ""})…`
+                                : "Assign view…"}
                             </option>
-                          ))}
-                        </select>
-                      )}
+                            {VIEWS.filter((v) => v.kind === "view").map((v) => (
+                              <option key={v.key} value={v.key}>
+                                {v.label || v.key}
+                              </option>
+                            ))}
+                          </select>
+                        );
+                      })()}
                     </td>
                     <td className="whitespace-nowrap px-3 py-2.5 text-slate-400">{formatChartSavedAt(record.savedAt)}</td>
                   </tr>
