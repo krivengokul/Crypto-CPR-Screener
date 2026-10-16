@@ -197,9 +197,12 @@ function matchingViewDef(raw: CPRResult, selectedKey: string): ViewDef | null {
   // Only Views with their OWN condition and no conditionKey redirect are
   // eligible — Copy Views redirect to their parent pattern, so their
   // condition matches every row under it and they'd flood the column again.
+  // Views with requireFullMatch=true never appear here: only genuine 13/13
+  // (Pass 1) can surface them.
   let best: ViewDef | null = null;
   let bestCount = -1;
   for (const view of candidates) {
+    if (view.requireFullMatch === true) continue;
     if (view.conditionKey || !view.condition || !view.levelCheckDefs?.length) continue;
     if (!conditionMatches(view)) continue;
     const summary = getLadderMatchSummary(raw.prevCPR, raw.todayCPR, view.levelCheckDefs);
