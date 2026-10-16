@@ -265,126 +265,126 @@ export const LEVELSBELOW_VIEWS: ViewDef[] = [
       },
 
   {
-        key: "TC-B-B-BB-BB-L4U4-SL-GapAB-R4",
-        label: "PLATC-Micro",
-        parentKey: "B-B-BB-BB-L4U4",
-        condition: (r) => passesView(r, "B-B-BB-BB-L4U4") && matchesGapBadge(r, "SL-GapAB"),
-        standalone: true,
-        kind: "view",
-        direction: "Up",
-        targetLabel: "R4",
-        getTarget: (r) => r.todayCPR.r4,
-        entryLabel: "TC",
-        getEntry: (r) => r.todayCPR.tc,
-        stoplossLabel: "S1",
-        getStoploss: (r) => r.todayCPR.s1,
-        levelCheckDefs: [
-      {
-        "key": "r4",
-        "subject": "today",
-        "bandKeys": [
-          "r4",
-          "r3"
-        ]
-      },
-      {
-        "key": "r3",
-        "subject": "today",
-        "bandKeys": [
-          "r3",
-          "r2"
-        ]
-      },
-      {
-        "key": "r2",
-        "subject": "today",
-        "bandKeys": [
-          "prevHigh",
-          "r1"
-        ]
-      },
-      {
-        "key": "prevHigh",
-        "subject": "today",
-        "bandKeys": [
-          "tc",
-          "pivot"
-        ]
-      },
-      {
-        "key": "r1",
-        "subject": "today",
-        "bandKeys": [
-          "tc",
-          "pivot"
-        ]
-      },
-      {
-        "key": "tc",
-        "subject": "today",
-        "bandKeys": [
-          "prevLow",
-          "s1"
-        ]
-      },
-      {
-        "key": "pivot",
-        "subject": "today",
-        "bandKeys": [
-          "prevLow",
-          "s1"
-        ]
-      },
-      {
-        "key": "bc",
-        "subject": "today",
-        "bandKeys": [
-          "prevLow",
-          "s1"
-        ]
-      },
-      {
-        "key": "prevLow",
-        "subject": "today",
-        "bandKeys": [
-          "s1",
-          "s2"
-        ]
-      },
-      {
-        "key": "s1",
-        "subject": "today",
-        "bandKeys": [
-          "s1",
-          "s2"
-        ]
-      },
-      {
-        "key": "s2",
-        "subject": "today",
-        "bandKeys": [
-          "s2",
-          "s3"
-        ]
-      },
-      {
-        "key": "s3",
-        "subject": "today",
-        "bandKeys": [
-          "s3",
-          "s4"
-        ]
-      },
-      {
-        "key": "s4",
-        "subject": "previous",
-        "bandKeys": [
-          "s3",
-          "s4"
-        ]
-      }
-    ],
-      },
+      key: "PH-B-B-BB-BB-L4U4-SL-GapAB-R4",
+      label: "MICRO-13/13ONLY",
+      parentKey: "B-B-BB-BB-L4U4",
+      condition: (r) => passesView(r, "B-B-BB-BB-L4U4") && matchesGapBadge(r, "SL-GapAB"),
+      standalone: true,
+      kind: "view",
+      direction: "Up",
+      targetLabel: "U4 (today's R4)",
+      getTarget: (r) => r.todayCPR.r4,
+      entryLabel: "PH (previous day's high)",
+      getEntry: (r) => r.todayCPR.prevHigh,
+      stoplossLabel: "S1 (today's S1)",
+      getStoploss: (r) => r.todayCPR.s1,
+      levelCheckDefs: [
+    {
+      "key": "r4",
+      "subject": "today",
+      "bandKeys": [
+        "r4",
+        "r3"
+      ]
+    },
+    {
+      "key": "r3",
+      "subject": "today",
+      "bandKeys": [
+        "r3",
+        "r2"
+      ]
+    },
+    {
+      "key": "r2",
+      "subject": "today",
+      "bandKeys": [
+        "prevHigh",
+        "r1"
+      ]
+    },
+    {
+      "key": "prevHigh",
+      "subject": "today",
+      "bandKeys": [
+        "tc",
+        "pivot"
+      ]
+    },
+    {
+      "key": "r1",
+      "subject": "today",
+      "bandKeys": [
+        "tc",
+        "pivot"
+      ]
+    },
+    {
+      "key": "tc",
+      "subject": "today",
+      "bandKeys": [
+        "prevLow",
+        "s1"
+      ]
+    },
+    {
+      "key": "pivot",
+      "subject": "today",
+      "bandKeys": [
+        "prevLow",
+        "s1"
+      ]
+    },
+    {
+      "key": "bc",
+      "subject": "today",
+      "bandKeys": [
+        "prevLow",
+        "s1"
+      ]
+    },
+    {
+      "key": "prevLow",
+      "subject": "today",
+      "bandKeys": [
+        "s1",
+        "s2"
+      ]
+    },
+    {
+      "key": "s1",
+      "subject": "today",
+      "bandKeys": [
+        "s1",
+        "s2"
+      ]
+    },
+    {
+      "key": "s2",
+      "subject": "today",
+      "bandKeys": [
+        "s2",
+        "s3"
+      ]
+    },
+    {
+      "key": "s3",
+      "subject": "today",
+      "bandKeys": [
+        "s3",
+        "s4"
+      ]
+    },
+    {
+      "key": "s4",
+      "subject": "previous",
+      "bandKeys": [
+        "s3",
+        "s4"
+      ]
+    }
+  ],
+    },
 
   {
         key: "R1-B-B-BB-BB-L4U4-SL-GapAB-R4",
