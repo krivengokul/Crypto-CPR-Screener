@@ -16,7 +16,8 @@ import {
 import { runScreener } from "@/lib/binance";
 import { runDeltaScreener } from "@/lib/delta";
 import { runCoinDCXScreener } from "@/lib/coinDCX";
-import { COINDCX_ENABLED } from "@/lib/featureFlags";
+import { COINDCX_ENABLED, DELTA_ENABLED } from "@/lib/featureFlags";
+import { getNiftyMockSymbols, isNiftyApiConnected, NIFTY_MOCK_CONTRACTS } from "@/lib/nifty";
 import {
   findPD15MBelowTCSymbols,
   findPD15MMomentumBelowSymbols,
@@ -756,6 +757,7 @@ export default function Screener({
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const doDeltaScan = useCallback(async (switchTab: boolean = true) => {
+    if (!DELTA_ENABLED) return;
     if (deltaScanRef.current) return;
     deltaScanRef.current = true;
     upexRunRef.current += 1;
@@ -847,7 +849,7 @@ export default function Screener({
     if (autoScanRanRef.current) return;
     autoScanRanRef.current = true;
     if (shouldAutoScanForCache(cachedBinance, "binance")) void doScan();
-    if (shouldAutoScanForCache(cachedDelta, "delta")) void doDeltaScan(false);
+    if (DELTA_ENABLED && shouldAutoScanForCache(cachedDelta, "delta")) void doDeltaScan(false);
     if (shouldAutoScanForCache(cachedCoinDCX, "coindcx")) void doCoinDCXScan(false);
   }, [cachedBinance, cachedDelta, cachedCoinDCX, doScan, doDeltaScan, doCoinDCXScan]);
 
@@ -865,13 +867,13 @@ export default function Screener({
         // that genuinely already scanned today doesn't rescan on every
         // hard refresh just because its bulky cache write failed.
         if (!isScanFreshForSource("binance", cachedBinance)) void doScan();
-        if (!isScanFreshForSource("delta", cachedDelta)) void doDeltaScan(false);
+        if (DELTA_ENABLED && !isScanFreshForSource("delta", cachedDelta)) void doDeltaScan(false);
         if (!isScanFreshForSource("coindcx", cachedCoinDCX)) void doCoinDCXScan(false);
         return;
       }
       // Explicit click from Header "Scan Now" button
       doScan();
-      doDeltaScan(false);
+      if (DELTA_ENABLED) doDeltaScan(false);
       doCoinDCXScan(false);
     }
   }, [scanKey]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -1232,6 +1234,7 @@ export default function Screener({
     if (activeTab === "combined") return showAll ? combinedAllResults : combinedResults;
     if (activeTab === "delta") return (showAll ? deltaAllResults : deltaFiltered).map((r) => ({ ...r, source: "delta" as const }));
     if (activeTab === "coindcx") return (showAll ? coindcxAllResults : coindcxFiltered).map((r) => ({ ...r, source: "coindcx" as const }));
+    if (activeTab === "nifty") return []; // live CPR rows after Shoonya API is wired
     return (showAll ? allResults : filtered).map((r) => ({ ...r, source: "binance" as const }));
   };
 
@@ -1690,6 +1693,7 @@ export default function Screener({
     activeTab === "binance" ? status
     : activeTab === "delta" ? deltaStatus
     : activeTab === "coindcx" ? coindcxStatus
+    : activeTab === "nifty" ? "done"
     : status === "done" || deltaStatus === "done" || coindcxStatus === "done" ? "done"
     : status === "scanning" || deltaStatus === "scanning" || coindcxStatus === "scanning" ? "scanning"
     : "idle";
@@ -1712,12 +1716,14 @@ export default function Screener({
     activeTab === "combined" ? combinedResults.length
     : activeTab === "delta" ? deltaFiltered.length
     : activeTab === "coindcx" ? coindcxFiltered.length
+    : activeTab === "nifty" ? 0
     : filtered.length;
 
   const currentAllCount =
     activeTab === "combined" ? combinedAllResults.length
     : activeTab === "delta" ? deltaAllResults.length
     : activeTab === "coindcx" ? coindcxAllResults.length
+    : activeTab === "nifty" ? NIFTY_MOCK_CONTRACTS.length
     : allResults.length;
 
   const currentError =
@@ -1815,9 +1821,9 @@ export default function Screener({
                 </p>
                 <p className="mt-0.5 text-lg font-semibold text-blue-300">{allResults.length}</p>
               </div>
-              <div className="rounded-lg border border-border bg-card px-3 py-1">
+              <div className={`rounded-lg border border-border bg-card px-3 py-1 ${DELTA_ENABLED ? "" : "opacity-40"}`}>
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                  Delta
+                  Delta{DELTA_ENABLED ? "" : " (paused)"}
                 </p>
                 <p className="mt-0.5 text-lg font-semibold text-violet-300">{deltaAllResults.length}</p>
               </div>
@@ -1847,6 +1853,8 @@ export default function Screener({
                       ? "Delta"
                       : activeTab === "coindcx"
                       ? "CoinDCX"
+                      : activeTab === "nifty"
+                      ? "NIFTY"
                       : "")}
                   </span>
                 </span>
@@ -1891,9 +1899,16 @@ export default function Screener({
 
           <button
             onClick={() => { void doDeltaScan(); }}
-            disabled={deltaStatus === "scanning"}
-            className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-all disabled:opacity-50 shrink-0"
-            style={{ background: "linear-gradient(135deg,#8b5cf6,#6d28d9)", color: "#fff" }}
+            disabled={!DELTA_ENABLED || deltaStatus === "scanning"}
+            title={DELTA_ENABLED ? undefined : "Delta scanning is paused (duplicates Binance symbols)"}
+            className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-all shrink-0 ${
+              DELTA_ENABLED ? "disabled:opacity-50" : "opacity-40 cursor-not-allowed"
+            }`}
+            style={
+              DELTA_ENABLED
+                ? { background: "linear-gradient(135deg,#8b5cf6,#6d28d9)", color: "#fff" }
+                : { background: "#334155", color: "#94a3b8" }
+            }
           >
             <RefreshCw className={`w-3 h-3 ${deltaStatus === "scanning" ? "animate-spin" : ""}`} />
             {deltaStatus === "scanning" ? "Scanning Delta…" : "Scan Delta"}
@@ -2749,33 +2764,91 @@ export default function Screener({
                   "All" is the existing "combined" activeTab value. */}
               {canShowCombined && (
                 <div className="flex gap-0.5 p-0.5 rounded-md border border-[#22354a] bg-[#151e2c]">
-                  {(["combined", "binance", "delta", "coindcx"] as ActiveTab[]).map((tab) => (
+                  {(["combined", "binance", "delta", "coindcx", "nifty"] as ActiveTab[]).map((tab) => {
+                    const paused =
+                      (tab === "coindcx" && !COINDCX_ENABLED) ||
+                      (tab === "delta" && !DELTA_ENABLED);
+                    const label =
+                      tab === "combined" ? "All"
+                      : tab === "binance" ? "Binance"
+                      : tab === "delta" ? "Delta"
+                      : tab === "coindcx" ? "CoinDCX"
+                      : "NIFTY";
+                    const activeClass =
+                      tab === "delta"
+                        ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/50"
+                        : tab === "binance"
+                        ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/50"
+                        : tab === "coindcx"
+                        ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/50"
+                        : tab === "nifty"
+                        ? "bg-amber-500/20 text-amber-300 border-amber-500/50"
+                        : "bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/50";
+                    return (
                     <button
                       key={tab}
                       onClick={() => setActiveTab(tab)}
-                      disabled={tab === "coindcx" && !COINDCX_ENABLED}
-                      title={tab === "coindcx" && !COINDCX_ENABLED ? "CoinDCX scanning is paused" : undefined}
-                      className={`px-3 py-1 rounded text-xs font-semibold transition border ${
+                      disabled={paused}
+                      title={
                         tab === "coindcx" && !COINDCX_ENABLED
+                          ? "CoinDCX scanning is paused"
+                          : tab === "delta" && !DELTA_ENABLED
+                          ? "Delta scanning is paused"
+                          : tab === "nifty"
+                          ? "NIFTY options via Shoonya (API pending)"
+                          : undefined
+                      }
+                      className={`px-3 py-1 rounded text-xs font-semibold transition border ${
+                        paused
                           ? "opacity-30 cursor-not-allowed text-slate-500 border-transparent"
                           : "cursor-pointer"
                       } ${
-                        activeTab === tab
-                          ? tab === "delta"
-                            ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/50"
-                            : tab === "binance"
-                            ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/50"
-                            : tab === "coindcx"
-                            ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/50"
-                            : "bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/50"
-                          : "text-slate-400 hover:text-slate-200 border-transparent"
+                        activeTab === tab ? activeClass : "text-slate-400 hover:text-slate-200 border-transparent"
                       }`}
                     >
-                      {tab === "combined" ? "All" : tab === "binance" ? "Binance" : tab === "coindcx" ? "CoinDCX" : "Delta"}
+                      {label}
                     </button>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* NIFTY source — scaffold until Shoonya API is connected */}
+        {activeTab === "nifty" && (
+          <div className="rounded-xl border border-amber-500/30 bg-[#121a12] px-4 py-6 mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+              <div>
+                <h3 className="text-sm font-semibold text-amber-200 tracking-wide">NIFTY (Shoonya)</h3>
+                <p className="mt-1 text-xs text-slate-400 max-w-xl">
+                  {isNiftyApiConnected()
+                    ? "Connected — scanning NFO option chain…"
+                    : "Account / API not connected. Complete Shoonya reactivation and API keys, then this tab will load live NIFTY option contracts (5m candles)."}
+                </p>
+                <p className="mt-2 text-[11px] text-slate-500">
+                  Session 09:15–15:30 IST · Intraday interval 5m · Source id <code className="text-amber-300/80">nifty</code>
+                </p>
+              </div>
+              <span className="shrink-0 text-[10px] uppercase tracking-wider px-2 py-1 rounded border border-amber-500/40 text-amber-300/90">
+                {isNiftyApiConnected() ? "API live" : "Mock layout"}
+              </span>
+            </div>
+            <div className="mt-4">
+              <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-2">
+                Sample CE/PE symbols ({NIFTY_MOCK_CONTRACTS.length}) — layout only
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {getNiftyMockSymbols().map((sym) => (
+                  <span
+                    key={sym}
+                    className="text-[11px] font-mono px-2 py-0.5 rounded border border-[#2a3a28] bg-[#0d140d] text-slate-300"
+                  >
+                    {sym}
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
         )}

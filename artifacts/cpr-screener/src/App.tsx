@@ -122,7 +122,7 @@ function App() {
       const symbol = params.get("symbol");
       const source = params.get("source") as FocusSymbol["source"] | null;
       const patternId = params.get("patternId") || undefined;
-      if (symbol && (source === "binance" || source === "delta" || source === "coindcx")) {
+      if (symbol && (source === "binance" || source === "delta" || source === "coindcx" || source === "nifty")) {
         setFocusSymbol({ symbol, source, patternId });
         if (patternId) setActiveSignal(patternId);
         if (!modeParam) {

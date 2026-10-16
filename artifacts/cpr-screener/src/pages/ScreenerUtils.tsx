@@ -24,7 +24,7 @@ export type SortKey = "symbol" | "compressionRatio" | "currentPrice" | "change24
 export type SortDir = "asc" | "desc";
 // Scan venues. CoinDCX futures (`B-<BASE>_USDT`) are scanned as `<BASE>USDT`,
 // the same symbol shape as Binance — see coinDCX.ts.
-export type SourceId = "binance" | "delta" | "coindcx";
+export type SourceId = "binance" | "delta" | "coindcx" | "nifty";
 export type ActiveTab = SourceId | "combined";
 
 export interface CPRResultWithSource extends CPRResult {
@@ -216,6 +216,13 @@ export function getVal(r: CPRResultWithSource, key: SortKey): number | string {
 const DELTA_QUOTE_SUFFIXES = ["USDT", "BUSD", "USDC", "USD", "INR"];
 
 export function splitSymbol(symbol: string, source: SourceId) {
+  if (source === "nifty") {
+    // NIFTY28OCT2524500CE → base NIFTY…, quote CE/PE
+    if (symbol.endsWith("CE") || symbol.endsWith("PE")) {
+      return { base: symbol.slice(0, -2), quote: symbol.slice(-2) };
+    }
+    return { base: symbol, quote: "" };
+  }
   if (source === "binance" || source === "coindcx") {
     if (symbol.endsWith("USDT")) return { base: symbol.slice(0, -4), quote: "USDT" };
     return { base: symbol, quote: "" };
