@@ -98,13 +98,57 @@ async function fetchWithRetry(
 /**
  * TradFi perpetuals are tagged contractType "TRADIFI_PERPETUAL" (not
  * "PERPETUAL"), so the strict PERPETUAL check in fetchActiveSymbols used to
- * drop them all. Binance lists ~200 of them, so only two groups are scanned:
- *  1. ALWAYS_TRADFI_SYMBOLS — commodities wanted regardless of Delta: WTI
- *     crude, Brent crude, gold, silver.
- *  2. Any TradFi perp whose base ticker also exists on Delta (see
- *     fetchDeltaBaseTickers — Delta's "AAPLX" matches Binance's "AAPL").
+ * drop them all. Binance lists ~200 of them; we admit three groups:
+ *  1. ALWAYS_TRADFI_SYMBOLS — commodities: WTI, Brent, gold, silver.
+ *  2. STOCK_INDEX_TRADFI — stock/index ETF perps (QQQ, SPY, NVDA, …) that
+ *     mirror CoinDCX Global Futures–style names where Binance lists them.
+ *  3. Any other TradFi perp whose base ticker also exists on Delta
+ *     (fetchDeltaBaseTickers — Delta's "AAPLX" matches Binance's "AAPL").
+ *
+ * Only TRADING USDT contracts from exchangeInfo are added; delisted names
+ * in the allowlists are simply skipped.
  */
 const ALWAYS_TRADFI_SYMBOLS = new Set(["CLUSDT", "BZUSDT", "XAUUSDT", "XAGUSDT"]);
+
+/** Stock / index / popular equity TradFi perps — always scan when TRADING. */
+const STOCK_INDEX_TRADFI = new Set([
+  // Indices / ETFs
+  "QQQUSDT",   // Nasdaq-100 ETF
+  "SPYUSDT",   // S&P 500 ETF
+  "TQQQUSDT",  // 3x Nasdaq-100
+  "SQQQUSDT",  // -3x Nasdaq-100
+  "SOXLUSDT",  // 3x semiconductors
+  "BITOUSDT",  // Bitcoin strategy ETF (if listed)
+  // Mega-cap / tech
+  "TSLAUSDT",
+  "NVDAUSDT",
+  "AAPLUSDT",
+  "MSFTUSDT",
+  "AMZNUSDT",
+  "METAUSDT",
+  "GOOGLUSDT",
+  "NFLXUSDT",
+  "AMDUSDT",
+  "INTCUSDT",
+  "ORCLUSDT",
+  "TSMUSDT",
+  "DELLUSDT",
+  // Other high-interest names (CoinDCX Global–style overlap)
+  "COINUSDT",
+  "PLTRUSDT",
+  "HOODUSDT",
+  "BABAUSDT",
+  "SNDKUSDT",
+  "SPCXUSDT",
+  "CRMUSDT",
+  "AVGOUSDT",
+  "ARMUSDT",
+  "MSTRUSDT",
+]);
+
+function isAllowlistedTradFi(symbol: string): boolean {
+  return ALWAYS_TRADFI_SYMBOLS.has(symbol) || STOCK_INDEX_TRADFI.has(symbol);
+}
 
 // Symbol -> label for non-crypto perps, rebuilt on every fetchActiveSymbols run
 // and stamped onto results in runScreener so the UI can show "BINANCE/TRADFI"
@@ -253,11 +297,17 @@ async function fetchActiveSymbols(): Promise<Set<string>> {
       // perps are admitted only if allowlisted or listed on Delta too.
       if (!s.contractType.includes("PERPETUAL") || !s.symbol.endsWith("USDT")) continue;
       const base = s.symbol.slice(0, -4);
-      if (!ALWAYS_TRADFI_SYMBOLS.has(s.symbol) && !deltaBases.has(base)) continue;
-      assetClasses.set(s.symbol, ALWAYS_TRADFI_SYMBOLS.has(s.symbol) ? "COMMOD" : "TRADFI");
+      if (!isAllowlistedTradFi(s.symbol) && !deltaBases.has(base)) continue;
+      assetClasses.set(
+        s.symbol,
+        ALWAYS_TRADFI_SYMBOLS.has(s.symbol) ? "COMMOD" : "TRADFI",
+      );
     } else if (ALWAYS_TRADFI_SYMBOLS.has(s.symbol)) {
       // Commodities are labelled COM even if Binance tags them plain PERPETUAL.
       assetClasses.set(s.symbol, "COMMOD");
+    } else if (STOCK_INDEX_TRADFI.has(s.symbol)) {
+      // Stock/index allowlist may appear as plain PERPETUAL on some listings.
+      assetClasses.set(s.symbol, "TRADFI");
     }
     active.add(s.symbol);
   }
