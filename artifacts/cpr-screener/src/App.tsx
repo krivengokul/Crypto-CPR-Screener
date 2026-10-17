@@ -285,11 +285,10 @@ function App() {
         ? candidate.entry.toPrecision(6)
         : String(candidate.entry);
 
-      // Auto-focus the matching symbol when the toast arrives — no click needed.
-      // • Already on Screener (scanner) → stay there, highlight the table row.
-      // • Already on SignalDesk (signals) → stay there, scroll + highlight the card.
-      // • Any other mode → switch to SignalDesk and focus the card.
+      // Auto-focus only when already on SignalDesk — never navigate away from
+      // Backtest / Screener / Journal / etc. when a toast appears.
       const focusAlertTarget = () => {
+        if (modeRef.current !== "signals") return;
         const patternId = candidate.payload.patternId || undefined;
         if (patternId) setActiveSignal(patternId);
         setFocusSymbol({
@@ -297,17 +296,6 @@ function App() {
           source: candidate.source,
           patternId,
         });
-        const mode = modeRef.current;
-        if (mode === "scanner" || mode === "signals") {
-          // stay on current page; Screener / SignalDesk consume focusSymbol
-          return;
-        }
-        setMode("signals");
-        try {
-          localStorage.setItem(MODE_KEY, "signals");
-        } catch {
-          /* ignore */
-        }
       };
 
       const viewLabel = candidate.payload.patternName || "";
