@@ -282,11 +282,11 @@ async function addApplicableViewOutcomes<T extends Pick<CategoryScanRow, "symbol
 /**
  * Same mutually exclusive P-filter buckets as Screener `candleBucket`.
  * Priority (exactly one badge):
- *   1. CON-A ∩ CON-B → INSIDE-R1S1
- *   2. CON-B alone → P-CONSOLIDATE-B
- *   3. MOM-B (not CON-B) → P-MOMENTUM-B
- *   4. CON-A alone → P-CONSOLIDATE-A
- *   5. MOM-A (not CON-A) → P-MOMENTUM-A
+ *   1. CON-B → P-CONSOLIDATE-B
+ *   2. MOM-B → P-MOMENTUM-B
+ *   3. CON-A → P-CONSOLIDATE-A
+ *   4. MOM-A → P-MOMENTUM-A
+ *   5. INSIDE (max R1/PH – min S1/PL; not CON-A/CON-B) → INSIDE-R1S1
  */
 function candleBucketFromFlags(
   raw: CPRResult,
@@ -295,11 +295,12 @@ function candleBucketFromFlags(
   const conB = raw.PD15MBelowTCPass === true;
   const momA = raw.PD15MAboveBCPass === true;
   const momB = raw.PD15MMomentumBPass === true;
-  if (conA && conB) return "inside-r1s1";
+  const inside = raw.PD15MInsideR1S1Pass === true;
   if (conB) return "consolidate-b";
   if (momB) return "momentum-b";
   if (conA) return "consolidate-a";
   if (momA) return "momentum-a";
+  if (inside) return "inside-r1s1";
   return null;
 }
 

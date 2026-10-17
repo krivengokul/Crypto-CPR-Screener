@@ -19,6 +19,7 @@ import { gradeTargetHit } from "./backtestOutcome";
 import {
   findPD15MBelowTCPass,
   findPreviousConsolidateAPass,
+  findInsideR1S1Pass,
   findPreviousUpexPass,
   getPrevious15MACeiling,
   getConsolidateABc,
@@ -1793,13 +1794,15 @@ async function populateAllPFilterFlags(
   const sessionStart = Date.parse(`${entryDateISO}T00:00:00.000Z`);
   const { prevCPR } = result;
 
-  const [consolidateA, momentumA, consolidateB, momentumB] = await Promise.all([
+  const floor = getPrevious15MBFloor(prevCPR);
+  const ceiling = getPrevious15MACeiling(prevCPR);
+  const [consolidateA, momentumA, consolidateB, momentumB, insideR1S1] = await Promise.all([
     findPreviousConsolidateAPass(
       {
         symbol,
         source,
         bc: getConsolidateABc(prevCPR, result.ppCPR),
-        ceiling: getPrevious15MACeiling(prevCPR),
+        ceiling,
       },
       sessionStart,
     ),
@@ -1812,7 +1815,7 @@ async function populateAllPFilterFlags(
         symbol,
         source,
         bc: getConsolidateBTc(prevCPR, result.ppCPR),
-        floor: getPrevious15MBFloor(prevCPR),
+        floor,
       },
       sessionStart,
     ),
@@ -1821,12 +1824,17 @@ async function populateAllPFilterFlags(
       { symbol, source, bc: prevCPR.tc },
       sessionStart,
     ),
+    findInsideR1S1Pass(
+      { symbol, source, bc: floor, floor, ceiling },
+      sessionStart,
+    ),
   ]);
 
   result.PD15MConsolidateAPass = consolidateA === true;
   result.PD15MAboveBCPass = momentumA === true;
   result.PD15MBelowTCPass = consolidateB === true;
   result.PD15MMomentumBPass = momentumB === true;
+  result.PD15MInsideR1S1Pass = insideR1S1 === true;
   return true;
 }
 

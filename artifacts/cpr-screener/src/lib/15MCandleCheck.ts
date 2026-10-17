@@ -1191,6 +1191,51 @@ export function findPreviousConsolidateAPass(
   return request;
 }
 
+const previousInsideR1S1PassCache = new Map<string, Promise<boolean | null>>();
+
+/**
+ * Previous-session INSIDE-R1S1 pass for one symbol (max R1/PH – min S1/PL).
+ * Independent of CON-A / CON-B.
+ */
+export function findInsideR1S1Pass(
+  candidate: UpexCandidate,
+  now: number
+): Promise<boolean | null> {
+  const endTime = upexSessionStartUtcMs(now);
+  const startTime = previousUpexSessionStartUtcMs(now);
+  const floor = candidate.floor;
+  const ceiling = candidate.ceiling;
+  const key =
+    `${startTime}:${candidate.source}:${candidate.symbol}:${floor}:${ceiling}`;
+  const cached = previousInsideR1S1PassCache.get(key);
+  if (cached) return cached;
+
+  const request = findInsideR1S1ForSession(
+    [candidate],
+    startTime,
+    endTime,
+  ).then(
+    ({ included, unavailable }) => {
+      if (unavailable > 0) {
+        previousInsideR1S1PassCache.delete(key);
+        return null;
+      }
+      if (previousInsideR1S1PassCache.size > MAX_PREVIOUS_UPEX_CACHE_ENTRIES) {
+        const oldestKey = previousInsideR1S1PassCache.keys().next().value;
+        if (oldestKey) previousInsideR1S1PassCache.delete(oldestKey);
+      }
+      return included.has(`${candidate.source}:${candidate.symbol}`);
+    },
+    (error: unknown) => {
+      previousInsideR1S1PassCache.delete(key);
+      throw error;
+    },
+  );
+  previousInsideR1S1PassCache.set(key, request);
+  return request;
+}
+
+
 export function findPD15MBelowPass(
   candidate: UpexCandidate,
   now: number

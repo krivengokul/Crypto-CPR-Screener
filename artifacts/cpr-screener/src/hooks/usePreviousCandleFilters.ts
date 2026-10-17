@@ -6,6 +6,7 @@ import { useEffect, useMemo, type Dispatch, type SetStateAction } from "react";
 import type { CPRResult } from "@/lib/cpr";
 import type { CPRResultWithSource } from "@/pages/ScreenerUtils";
 import {
+  findInsideR1S1Symbols,
   findPD15MBelowTCSymbols,
   findPD15MMomentumBelowSymbols,
   findPreviousConsolidateASymbols,
@@ -18,16 +19,19 @@ import {
   loadPD15MMomentumBelowResults,
   loadPD15MTCBelowResults,
   loadPreviousConsolidateAResults,
+  loadPreviousInsideR1S1Results,
   loadPreviousUpexResults,
   previous15MMomentumCandidateCacheKey,
   previous15MTCCandidateCacheKey,
   previousConsolidateACandidateCacheKey,
+  previousInsideR1S1CandidateCacheKey,
   previousUpexCandidateCacheKey,
   previousUpexSessionStartUtcMs,
   pruneLegacy15MResultCaches,
   savePD15MBelowTCResults,
   savePD15MMomentumBelowResults,
   savePreviousConsolidateAResults,
+  savePreviousInsideR1S1Results,
   savePreviousUpexResults,
 } from "@/lib/15MCandleCheck";
 import { usePreviousCandleFilterPrep } from "@/hooks/usePreviousCandleFilterPrep";
@@ -226,68 +230,121 @@ export function usePreviousCandleFilters(opts: {
   const previous15MMomentumReady = momentumBPrep.ready;
   const previous15MMomentumMessage = momentumBPrep.message;
 
-  // Annotate scan rows with raw 15m flags so matchesCandleCheck / category
-  // conditions / Backtest badges see the same CON-A / CON-B / MOM bits the
-  // exclusive candleBucket uses (prep Sets are the source of truth).
-  useEffect(() => {
-  const applyFlags = (
-    rows: CPRResult[],
-    setRows: Dispatch<SetStateAction<CPRResult[]>>,
-    source: "binance" | "delta",
-  ) => {
-    if (rows.length === 0) return;
-    let changed = false;
-    const next = rows.map((row) => {
-      const key = `${source}:${row.symbol}`;
-      const a = previousConsolidateAIncludedSymbols.has(key);
-      const ma = previousUpexIncludedSymbols.has(key);
-      const b = previous15MTCIncludedSymbols.has(key);
-      const mb = previous15MMomentumIncludedSymbols.has(key);
-      if (
-        row.PD15MConsolidateAPass === a &&
-        row.PD15MAboveBCPass === ma &&
-        row.PD15MBelowTCPass === b &&
-        row.PD15MMomentumBPass === mb
-      ) {
-        return row;
-      }
-      changed = true;
-      return {
-        ...row,
-        PD15MConsolidateAPass: a,
-        PD15MAboveBCPass: ma,
-        PD15MBelowTCPass: b,
-        PD15MMomentumBPass: mb,
+  // INSIDE-R1S1: max(R1,PH)–min(S1,PL) body/wick mode — independent of CON-A/CON-B
+  const insideR1S1Prep = usePreviousCandleFilterPrep({
+    label: "INSIDE-R1S1",
+    canRun: candlePrepCanRun,
+    sessionStartMs: previousUpexSessionStart,
+    buildCandidates: () => {
+      const candidates = new Map<
+        string,
+        { symbol: string; source: "binance" | "delta"; bc: number; floor: number; ceiling: number }
+      >();
+      const push = (row: CPRResult, source: "binance" | "delta") => {
+        const floor = getPrevious15MBFloor(row.prevCPR);
+        const ceiling = getPrevious15MACeiling(row.prevCPR);
+        candidates.set(`${source}:${row.symbol}`, {
+          symbol: row.symbol,
+          source,
+          bc: floor,
+          floor,
+          ceiling,
+        });
       };
-    });
-    if (changed) setRows(next);
-  };
-  applyFlags(allResults, setAllResults, "binance");
-  applyFlags(deltaAllResults, setDeltaAllResults, "delta");
-}, [
-  previousConsolidateAIncludedSymbols,
-  previousUpexIncludedSymbols,
-  previous15MTCIncludedSymbols,
-  previous15MMomentumIncludedSymbols,
-  allResults,
-  deltaAllResults,
-]);
+      if (status === "done") for (const row of allResults) push(row, "binance");
+      if (deltaStatus === "done") for (const row of deltaAllResults) push(row, "delta");
+      return Array.from(candidates.values());
+    },
+    cacheKey: previousInsideR1S1CandidateCacheKey,
+    loadResults: loadPreviousInsideR1S1Results,
+    saveResults: savePreviousInsideR1S1Results,
+    scanMissing: (missing, onProgress, sessionEndMs) =>
+      findInsideR1S1Symbols(missing, onProgress, sessionEndMs),
+  });
+
+  const previousInsideR1S1IncludedSymbols = insideR1S1Prep.includedSymbols;
+  const previousInsideR1S1Progress = insideR1S1Prep.progress;
+  const previousInsideR1S1Ready = insideR1S1Prep.ready;
+  const previousInsideR1S1Message = insideR1S1Prep.message;
+
+  // Annotate scan rows with raw 15m flags
+  useEffect(() => {
+    const applyFlags = (
+      rows: CPRResult[],
+      setRows: Dispatch<SetStateAction<CPRResult[]>>,
+      source: "binance" | "delta",
+    ) => {
+      if (rows.length === 0) return;
+      let changed = false;
+      const next = rows.map((row) => {
+        const key = `${source}:${row.symbol}`;
+        const a = previousConsolidateAIncludedSymbols.has(key);
+        const ma = previousUpexIncludedSymbols.has(key);
+        const b = previous15MTCIncludedSymbols.has(key);
+        const mb = previous15MMomentumIncludedSymbols.has(key);
+        const ins = previousInsideR1S1IncludedSymbols.has(key);
+        if (
+          row.PD15MConsolidateAPass === a &&
+          row.PD15MAboveBCPass === ma &&
+          row.PD15MBelowTCPass === b &&
+          row.PD15MMomentumBPass === mb &&
+          row.PD15MInsideR1S1Pass === ins
+        ) {
+          return row;
+        }
+        changed = true;
+        return {
+          ...row,
+          PD15MConsolidateAPass: a,
+          PD15MAboveBCPass: ma,
+          PD15MBelowTCPass: b,
+          PD15MMomentumBPass: mb,
+          PD15MInsideR1S1Pass: ins,
+        };
+      });
+      if (changed) setRows(next);
+    };
+    applyFlags(allResults, setAllResults, "binance");
+    applyFlags(deltaAllResults, setDeltaAllResults, "delta");
+  }, [
+    previousConsolidateAIncludedSymbols,
+    previousUpexIncludedSymbols,
+    previous15MTCIncludedSymbols,
+    previous15MMomentumIncludedSymbols,
+    previousInsideR1S1IncludedSymbols,
+    allResults,
+    deltaAllResults,
+    setAllResults,
+    setDeltaAllResults,
+  ]);
+
   const resetConsolidateAMessage = consolidateAPrep.resetMessage;
   const resetMomentumAMessage = momentumAPrep.resetMessage;
   const resetConsolidateBMessage = consolidateBPrep.resetMessage;
   const resetMomentumBMessage = momentumBPrep.resetMessage;
+  const resetInsideR1S1Message = insideR1S1Prep.resetMessage;
 
+  /**
+   * Exclusive P-filter bucket:
+   *   CON-B → P-CONSOLIDATE-B
+   *   MOM-B → P-MOMENTUM-B
+   *   CON-A → P-CONSOLIDATE-A
+   *   MOM-A → P-MOMENTUM-A
+   *   INSIDE (R1/PH–S1/PL pass, and not CON-A/CON-B) → INSIDE-R1S1
+   * INSIDE ignores BC/TC consolidate membership; those win first when true.
+   */
   const candleBucket = (row: CPRResultWithSource): CandleBucket => {
     const key = `${row.source}:${row.symbol}`;
     const conA = previousConsolidateAIncludedSymbols.has(key);
     const momA = previousUpexIncludedSymbols.has(key);
     const conB = previous15MTCIncludedSymbols.has(key);
     const momB = previous15MMomentumIncludedSymbols.has(key);
-    if (conA && conB) return "inside-r1s1";
+    const inside = previousInsideR1S1IncludedSymbols.has(key);
     if (conB) return "consolidate-b";
     if (momB) return "momentum-b";
     if (conA) return "consolidate-a";
     if (momA) return "momentum-a";
+    if (inside) return "inside-r1s1";
     return null;
   };
 
@@ -308,16 +365,20 @@ export function usePreviousCandleFilters(opts: {
     previous15MMomentumProgress,
     previous15MMomentumReady,
     previous15MMomentumMessage,
+    previousInsideR1S1IncludedSymbols,
+    previousInsideR1S1Progress,
+    previousInsideR1S1Ready,
+    previousInsideR1S1Message,
     candleBucket,
     hasConsolidateB: (row: CPRResultWithSource) => candleBucket(row) === "consolidate-b",
     hasMomentumB: (row: CPRResultWithSource) => candleBucket(row) === "momentum-b",
     hasConsolidateA: (row: CPRResultWithSource) => candleBucket(row) === "consolidate-a",
     hasMomentumA: (row: CPRResultWithSource) => candleBucket(row) === "momentum-a",
     hasInsideR1S1: (row: CPRResultWithSource) => candleBucket(row) === "inside-r1s1",
-    previousInsideR1S1Ready: previousConsolidateAReady && previous15MTCReady,
     resetConsolidateAMessage,
     resetMomentumAMessage,
     resetConsolidateBMessage,
     resetMomentumBMessage,
+    resetInsideR1S1Message,
   };
 }

@@ -460,6 +460,8 @@ export default function Screener({
     hasMomentumA,
     hasInsideR1S1,
     previousInsideR1S1Ready,
+    previousInsideR1S1Progress,
+    previousInsideR1S1Message,
     resetConsolidateAMessage,
     resetMomentumAMessage,
     resetConsolidateBMessage,
@@ -474,23 +476,12 @@ export default function Screener({
   });
 
   const hasInRangeR = hasInsideR1S1;
-  const previousInsideR1S1Progress =
-    !previousInsideR1S1Ready && (previousConsolidateAProgress || previous15MTCProgress)
-      ? {
-          done:
-            (previousConsolidateAProgress?.done ?? 0) +
-            (previous15MTCProgress?.done ?? 0),
-          total:
-            (previousConsolidateAProgress?.total ?? 0) +
-            (previous15MTCProgress?.total ?? 0),
-        }
-      : null;
-  const previousInsideR1S1Message = "";
   const previousCandleClassificationReady =
     previousConsolidateAReady &&
     previousUpexReady &&
     previous15MTCReady &&
-    previous15MMomentumReady;
+    previous15MMomentumReady &&
+    previousInsideR1S1Ready;
 
   // ── RECLAIM-S / RECLAIM-R ─────────────────────────────────────────────
   const {

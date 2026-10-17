@@ -297,6 +297,8 @@ export interface CPRResult {
   PD15MConsolidateAPass?: boolean;
   /** Previous-session MOMENTUM-B result (CONSOLIDATE-B's TC check without the PL/S1 floor); populated by the backtest's P-category scans. */
   PD15MMomentumBPass?: boolean;
+  /** Previous-session INSIDE max(R1,PH)–min(S1,PL); independent of CON-A/CON-B. */
+  PD15MInsideR1S1Pass?: boolean;
   /** 15m squeeze + volume-breakout analysis; attached by binance.ts / delta.ts at scan time. */
   breakout?: BreakoutResult;
   /** Binance only: "COMMOD" = commodity perp (CL/BZ/XAU/XAG), "TRADFI" = other TradFi
