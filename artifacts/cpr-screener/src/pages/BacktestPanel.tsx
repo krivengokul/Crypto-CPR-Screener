@@ -2609,11 +2609,13 @@ export default function BacktestPanel() {
     isViewOnly ? row.result : row.viewOutcome?.result;
   const passCount = rows.filter((r) => rowResult(r) === "pass").length;
   const failCount = rows.filter((r) => rowResult(r) === "fail").length;
+  const notTriggeredCount = rows.filter((r) => rowResult(r) === "not-triggered").length;
   const insufficientCount = rows.filter((r) => rowResult(r) === "insufficient-data").length;
   const invalidTargetCount = rows.filter((r) => rowResult(r) === "invalid-target").length;
-  const gradedCount = passCount + failCount;
+  const gradedCount = passCount + failCount; // excludes not-triggered
   const categoryPassCount = categoryRows.filter((r) => r.viewOutcome?.result === "pass").length;
   const categoryFailCount = categoryRows.filter((r) => r.viewOutcome?.result === "fail").length;
+  const categoryNotTriggeredCount = categoryRows.filter((r) => r.viewOutcome?.result === "not-triggered").length;
   const categoryGradedCount = categoryPassCount + categoryFailCount;
   const progressPct = progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0;
 
@@ -3212,6 +3214,11 @@ export default function BacktestPanel() {
               <>
                 <span className="text-green-400 font-medium">{categoryPassCount} pass</span>
                 <span className="text-destructive font-medium">{categoryFailCount} fail</span>
+                {categoryNotTriggeredCount > 0 && (
+                  <span className="text-slate-400 font-medium" title="Never crossed entry — excluded from hit rate">
+                    {categoryNotTriggeredCount} no entry
+                  </span>
+                )}
                 <span className="text-foreground font-medium">
                   {Math.round((categoryPassCount / categoryGradedCount) * 100)}% hit rate
                 </span>
@@ -3372,6 +3379,11 @@ export default function BacktestPanel() {
                                   <XCircle className="w-3.5 h-3.5" /> Fail
                                 </span>
                               )}
+                              {r.viewOutcome?.result === "not-triggered" && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded border border-slate-600 text-slate-400" title="Entry never crossed — ignored for PASS/FAIL">
+                                  NO ENTRY
+                                </span>
+                              )}
                               {r.viewOutcome?.result === "insufficient-data" && (
                                 <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground">
                                   <AlertCircle className="w-3.5 h-3.5" /> No data
@@ -3497,6 +3509,11 @@ export default function BacktestPanel() {
               <>
                 <span className="text-green-400 font-medium">{passCount} pass</span>
                 <span className="text-destructive font-medium">{failCount} fail</span>
+                {notTriggeredCount > 0 && (
+                  <span className="text-slate-400 font-medium" title="Never crossed entry — excluded from hit rate">
+                    {notTriggeredCount} no entry
+                  </span>
+                )}
                 {insufficientCount > 0 && (
                   <span className="text-muted-foreground">{insufficientCount} insufficient data</span>
                 )}
@@ -3710,6 +3727,11 @@ export default function BacktestPanel() {
                           {rowResult(r) === "fail" && (
                             <span className="inline-flex items-center gap-1 text-xs font-medium text-destructive">
                               <XCircle className="w-3.5 h-3.5" /> Fail
+                            </span>
+                          )}
+                          {rowResult(r) === "not-triggered" && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded border border-slate-600 text-slate-400" title="Entry never crossed — ignored for PASS/FAIL">
+                              NO ENTRY
                             </span>
                           )}
                           {rowResult(r) === "insufficient-data" && (

@@ -870,7 +870,7 @@ export interface BacktestRow {
   // against. Previously this silently fell through to "fail", which read
   // as a real miss even though the target itself was never computable —
   // see BACKTEST_TARGETS' getTarget comment and backtestSymbolOnDate below.
-  result: "pass" | "fail" | "insufficient-data" | "invalid-target";
+  result: "pass" | "fail" | "insufficient-data" | "invalid-target" | "not-triggered";
   hitDate: string | null;          // which day (entryDate, entryDate+1, or entryDate+2) hit target, if any
   daysToHit: 0 | 1 | null;
   /** Entry-day close / prev close / day-before-prev close / day-over-day % change (same as CategoryScanRow). */
@@ -892,7 +892,7 @@ export interface BacktestRow {
 export interface BacktestViewOutcome {
   targetLevel: number | null;
   targetLabel: string;
-  result: "pass" | "fail" | "insufficient-data" | "invalid-target";
+  result: "pass" | "fail" | "insufficient-data" | "invalid-target" | "not-triggered";
   hitDate: string | null;
   daysToHit: 0 | 1 | null;
 }
@@ -1679,7 +1679,8 @@ export async function backtestSymbolOnDate(
     targetLevel,
     entryDateISO,
     entryDayCandle,
-    nextDayCandle
+    nextDayCandle,
+    entryLevel,
   );
 
   return {
@@ -1739,12 +1740,14 @@ export async function evaluateBacktestViewOutcome(
 
   const dPlus1 = addDaysISO(row.entryDate, 1);
   const isDown = view.direction === "Down" || (view.direction as string) === "bearish";
+  const entryLevel = view.getEntry ? view.getEntry(row.raw) : null;
   const outcome = gradeTargetHit(
     !isDown,
     targetLevel,
     row.entryDate,
     window.get(row.entryDate) ?? null,
-    window.get(dPlus1) ?? null
+    window.get(dPlus1) ?? null,
+    entryLevel,
   );
   return { targetLevel, targetLabel, ...outcome };
 }
@@ -1967,7 +1970,8 @@ export async function pivotLevelBacktestSymbolOnDate(
     targetLevel,
     entryDateISO,
     entryDayCandle,
-    nextDayCandle
+    nextDayCandle,
+    entryLevel,
   );
 
   return {
