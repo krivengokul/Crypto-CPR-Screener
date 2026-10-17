@@ -12,6 +12,7 @@ import {
   BellOff,
   ShieldAlert,
   Clock,
+  X,
 } from "lucide-react";
 import { COINDCX_ENABLED, DELTA_ENABLED } from "@/lib/featureFlags";
 import { NIFTY_MOCK_CONTRACTS } from "@/lib/nifty";
@@ -2144,14 +2145,25 @@ export default function Screener({
         {canShowCombined && (
           <div className="px-4 py-2 border-b border-[#1b263b] bg-[#0d1422] flex flex-nowrap items-center gap-3 overflow-x-auto shrink-0 mb-3 rounded-lg border">
               <div className="relative shrink-0 w-48 sm:w-56">
-                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   type="search"
                   placeholder="Search symbol or view…"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="w-full bg-[#151e2c] border border-[#22354a] rounded-md pl-8 pr-3 py-1 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-teal-500/50"
+                  className="w-full bg-[#151e2c] border border-[#22354a] rounded-md pl-8 pr-8 py-1 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-teal-500/50 [&::-webkit-search-cancel-button]:hidden"
                 />
+                {search.trim() !== "" && (
+                  <button
+                    type="button"
+                    onClick={() => setSearch("")}
+                    aria-label="Clear search"
+                    title="Clear search"
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 inline-flex h-5 w-5 items-center justify-center rounded text-slate-400 hover:text-white hover:bg-[#22354a] transition-colors"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
               {/* 15M-A filter */}
               <div className="flex items-center gap-1 flex-wrap">
