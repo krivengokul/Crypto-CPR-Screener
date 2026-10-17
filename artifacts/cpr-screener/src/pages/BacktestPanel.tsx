@@ -158,11 +158,14 @@ function isViewDescendant(viewKey: string, ancestorKey: string): boolean {
  * (unrelated) pattern View a mover also happens to satisfy.
  */
 function matchingViewDef(raw: CPRResult, selectedKey: string): ViewDef | null {
-  const selected = getView(selectedKey);
-  if (!selected) return null;
-
+  // ALL / symbol-list-only scopes are virtual keys (not real ViewDefs). Still
+  // search every View so the View column can show a name when the user picks
+  // "ALL — any pattern" or filters by symbol under that mode.
   const searchGlobally =
     selectedKey === ALL_VIEWS_KEY || SYMBOL_LIST_ONLY_CATEGORY_KEYS.has(selectedKey);
+
+  const selected = getView(selectedKey);
+  if (!selected && !searchGlobally) return null;
 
   const candidates = VIEWS
     .filter((view) =>
