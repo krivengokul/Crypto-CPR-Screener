@@ -21,6 +21,7 @@ import {
   type SignalLifecycleStatus,
 } from "@/lib/signalStatus";
 import { Views } from "@/lib/ViewsSidebar";
+import { formatTradFiSubtitle } from "@/lib/tradfiDisplay";
 import { getView, shortLevelLabel } from "@/lib/views";
 import { getRowCategory, getCategoryLabel } from "@/lib/rowCategory";
 import SignalProgressBar from "@/lib/SignalProgressBar";
@@ -453,6 +454,15 @@ const SignalDeskCard = memo(
               </span>
               <span className="text-[11px] font-semibold text-slate-400 font-mono uppercase tracking-wider leading-none">
                 {item.source}
+                {(() => {
+                  const tradfi = formatTradFiSubtitle(item.symbol);
+                  if (!tradfi) return null;
+                  return (
+                    <span className="block mt-0.5 normal-case tracking-normal text-sky-300/90 font-sans font-medium truncate" title={tradfi}>
+                      {tradfi}
+                    </span>
+                  );
+                })()}
               </span>
               <span
                 className={`text-xs font-mono font-bold leading-none ${

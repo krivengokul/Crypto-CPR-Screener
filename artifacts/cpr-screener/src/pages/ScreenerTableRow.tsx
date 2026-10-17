@@ -37,6 +37,7 @@ import {
   renderGapColumnBadges,
   renderPivotSizeCell,
 } from "./ScreenerUtils";
+import { formatTradFiSubtitle } from "@/lib/tradfiDisplay";
 import {
   getRowCategory,
   getCategoryLabel,
@@ -1094,6 +1095,18 @@ export default function ScreenerTableRow({
                   </span>
                 )}
               </span>
+              {(() => {
+                const tradfi = formatTradFiSubtitle(r.symbol);
+                if (!tradfi) return null;
+                return (
+                  <span
+                    className="mt-0.5 text-[10px] leading-none text-sky-300/90 truncate"
+                    title={tradfi}
+                  >
+                    {tradfi}
+                  </span>
+                );
+              })()}
               {(() => {
                 const category = getRowCategory(r);
                 if (!category) return null;
