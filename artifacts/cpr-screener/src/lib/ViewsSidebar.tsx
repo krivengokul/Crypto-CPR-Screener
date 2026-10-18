@@ -251,7 +251,7 @@ export default function ViewsSidebar({
 
   function handleSubClick(subId: string, parentId: string) {
     setExpandedId(parentId);
-    // Clicking an already-selected sub-view (its "✕") deselects it and falls
+    // Clicking an already-selected sub-view deselects it and falls
     // back to the parent category — mirroring the Screener's ✕ filter buttons.
     onSelect(activeSignal === subId ? parentId : subId);
   }
@@ -271,8 +271,18 @@ export default function ViewsSidebar({
   // ─── Shared style helpers ─────────────────────────────────────────────────
   const BG_DARK = "#0d1117";
   const BORDER_COLOR = "#1e2d3d";
+  /** Mode-tab blue (scanner/signals/…) — keep for rail tabs only. */
   const ACTIVE_BLUE = "#3b82f6";
   const ACTIVE_TEXT = "#60a5fa";
+  /**
+   * Selected View highlight — same rose/red family as SignalDesk progress
+   * bar stop side (#881337 track / rose-400 labels). No chip border; soft fill.
+   */
+  const SELECT_RED = "#f87171";
+  const SELECT_RED_TEXT = "#fecaca";
+  const SELECT_RED_BG = "rgba(248, 113, 113, 0.14)";
+  const SELECT_RED_BG_SOFT = "rgba(248, 113, 113, 0.08)";
+  const SELECT_RED_ICON_BG = "rgba(248, 113, 113, 0.20)";
   const MUTED_TEXT = "#8ba3bc";
   const DIM_TEXT = "#4b6a8a";
   const SUB_TEXT = "#5a7a96";
@@ -454,12 +464,12 @@ export default function ViewsSidebar({
                     alignItems: "center",
                     gap: 10,
                     padding: "9px 10px 9px 14px",
-                    background: isHighlighted ? "rgba(59,130,246,0.10)" : "transparent",
+                    background: isHighlighted ? SELECT_RED_BG_SOFT : "transparent",
                     outline: "none",
                     borderTop: "none",
                     borderRight: "none",
                     borderBottom: "none",
-                    borderLeft: `3px solid ${isHighlighted ? ACTIVE_BLUE : "transparent"}`,
+                    borderLeft: `3px solid ${isHighlighted ? SELECT_RED : "transparent"}`,
                     cursor: "pointer",
                     textAlign: "left",
                     transition: "background 0.12s",
@@ -467,7 +477,7 @@ export default function ViewsSidebar({
                   onMouseEnter={(e) => {
                     if (!isHighlighted)
                       (e.currentTarget as HTMLElement).style.background =
-                        "rgba(59,130,246,0.05)";
+                        SELECT_RED_BG_SOFT;
                   }}
                   onMouseLeave={(e) => {
                     if (!isHighlighted)
@@ -485,7 +495,7 @@ export default function ViewsSidebar({
                       justifyContent: "center",
                       flexShrink: 0,
                       background: isHighlighted
-                        ? "rgba(59,130,246,0.22)"
+                        ? SELECT_RED_ICON_BG
                         : "rgba(255,255,255,0.04)",
                     }}
                   >
@@ -493,7 +503,7 @@ export default function ViewsSidebar({
                       style={{
                         width: 14,
                         height: 14,
-                        color: isHighlighted ? ACTIVE_TEXT : DIM_TEXT,
+                        color: isHighlighted ? SELECT_RED_TEXT : DIM_TEXT,
                       }}
                     />
                   </div>
@@ -540,6 +550,10 @@ export default function ViewsSidebar({
                         e.stopPropagation();
                         if (isExpanded) {
                           setExpandedId(null);
+                          // Hiding category → drop focus if a child View was selected
+                          if (children.some((c) => c.id === activeSignal)) {
+                            onSelect(pattern.id);
+                          }
                         } else {
                           handleParentClick(pattern.id);
                         }
@@ -558,9 +572,11 @@ export default function ViewsSidebar({
                         fontWeight: 700,
                         borderRadius: 4,
                         cursor: "pointer",
-                        border: `1px solid ${isExpanded ? ACTIVE_BLUE : BORDER_COLOR}`,
-                        background: isExpanded ? "rgba(59,130,246,0.18)" : "rgba(255,255,255,0.02)",
-                        color: isExpanded ? ACTIVE_TEXT : SUB_TEXT,
+                        border: `1px solid ${isExpanded ? (isHighlighted ? SELECT_RED : BORDER_COLOR) : BORDER_COLOR}`,
+                        background: isExpanded
+                          ? (isHighlighted ? SELECT_RED_BG : "rgba(255,255,255,0.04)")
+                          : "rgba(255,255,255,0.02)",
+                        color: isExpanded ? (isHighlighted ? SELECT_RED_TEXT : SUB_TEXT) : SUB_TEXT,
                         transition: "all 0.1s",
                       }}
                       onMouseEnter={(e) => {
@@ -602,48 +618,58 @@ export default function ViewsSidebar({
                   >
                     {children.map((sub) => {
                       const isActiveSub = activeSignal === sub.id;
-                      const subActiveColor = sub.activeColor ?? ACTIVE_BLUE;
-                      const subActiveText  = sub.activeText  ?? ACTIVE_TEXT;
-                      const subActiveBg    = sub.activeBg    ?? "rgba(59,130,246,0.18)";
+                      // Selected = soft red fill + left accent; no border box, no ✕.
+                      // Per-view activeColor still allowed for special cases.
+                      const subActiveText = sub.activeText ?? SELECT_RED_TEXT;
+                      const subActiveBg = sub.activeBg ?? SELECT_RED_BG;
                       return (
                         <button
                           key={sub.id}
+                          type="button"
                           onClick={() => handleSubClick(sub.id, pattern.id)}
+                          title={isActiveSub ? `Selected — click again to clear` : `Select ${sub.label}`}
                           style={{
-                            padding: "3px 8px",
+                            padding: "4px 10px 4px 8px",
                             fontSize: 11,
                             fontWeight: isActiveSub ? 600 : 400,
-                            borderRadius: 4,
+                            borderRadius: 6,
                             cursor: "pointer",
-                            border: `1px solid ${isActiveSub ? subActiveColor : BORDER_COLOR}`,
-                            background: isActiveSub
-                              ? subActiveBg
-                              : "rgba(255,255,255,0.02)",
+                            border: "none",
+                            borderLeft: isActiveSub
+                              ? `2px solid ${sub.activeColor ?? SELECT_RED}`
+                              : "2px solid transparent",
+                            background: isActiveSub ? subActiveBg : "transparent",
                             color: isActiveSub ? subActiveText : SUB_TEXT,
-                            transition: "all 0.1s",
+                            transition: "background 0.12s, color 0.12s",
                             whiteSpace: "nowrap",
+                            textAlign: "left",
                           }}
                           onMouseEnter={(e) => {
                             if (!isActiveSub) {
                               const el = e.currentTarget as HTMLElement;
-                              el.style.borderColor = "#2e4a6a";
+                              el.style.background = SELECT_RED_BG_SOFT;
                               el.style.color = MUTED_TEXT;
-                              el.style.background = "rgba(59,130,246,0.06)";
                             }
                           }}
                           onMouseLeave={(e) => {
                             if (!isActiveSub) {
                               const el = e.currentTarget as HTMLElement;
-                              el.style.borderColor = BORDER_COLOR;
+                              el.style.background = "transparent";
                               el.style.color = SUB_TEXT;
-                              el.style.background = "rgba(255,255,255,0.02)";
                             }
                           }}
                         >
-                          {isActiveSub ? `\u2715 ${sub.label}` : sub.label}
+                          {sub.label}
                           {!!counts?.[sub.id] && (
-                            <span style={{ color: "#ffffff" }}>
-                              {" "}({counts[sub.id]})
+                            <span
+                              style={{
+                                color: isActiveSub ? "#fff" : "#94a3b8",
+                                fontWeight: isActiveSub ? 700 : 500,
+                                fontVariantNumeric: "tabular-nums",
+                              }}
+                            >
+                              {" "}
+                              ({counts[sub.id]})
                             </span>
                           )}
                         </button>
@@ -818,7 +844,7 @@ export default function ViewsSidebar({
                 style={{
                   width: 15,
                   height: 15,
-                  color: isHighlighted ? ACTIVE_TEXT : DIM_TEXT,
+                  color: isHighlighted ? SELECT_RED_TEXT : DIM_TEXT,
                 }}
               />
             </button>

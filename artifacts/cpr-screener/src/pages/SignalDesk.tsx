@@ -1504,7 +1504,7 @@ R:R: ${item.riskReward}`;
                 Active Signals ({displayViewPills.length})
               </span>
               {selectedSignalId && (
-                <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-teal-500/20 text-teal-300 border border-teal-500/30">
+                <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-rose-500/15 text-rose-200">
                   {selectedSignalId}
                 </span>
               )}
@@ -1525,7 +1525,7 @@ R:R: ${item.riskReward}`;
                   title={`Filter by ${pill.label} (${pill.count} pairs)`}
                   className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-all select-none cursor-pointer ${
                     isSelected
-                      ? "bg-[#062c2c] border border-teal-500/80 text-teal-200 shadow-sm shadow-teal-900/60 ring-1 ring-teal-500/40"
+                      ? "bg-rose-500/15 text-rose-100 shadow-sm shadow-rose-950/40 ring-1 ring-rose-400/50"
                       : "bg-[#111927] hover:bg-[#182335] border border-[#1e2d3f] text-slate-300 hover:text-white"
                   }`}
                 >
@@ -1533,7 +1533,7 @@ R:R: ${item.riskReward}`;
                   <span
                     className={`px-1.5 py-0.2 font-mono text-[10px] rounded-full font-bold ${
                       isSelected
-                        ? "bg-teal-500/30 text-teal-200 border border-teal-500/40"
+                        ? "bg-rose-500/25 text-rose-100"
                         : "bg-[#182333] text-slate-400 border border-[#223347]"
                     }`}
                   >
