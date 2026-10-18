@@ -18,6 +18,10 @@ import {
   playEntryCrossAlert,
   unlockAlertAudio,
 } from "@/lib/alertSound";
+import {
+  postAlertWebhook,
+  buildEntryCrossWebhookPayload,
+} from "@/lib/alertWebhook";
 import { sessionReachedTarget } from "@/lib/signalOutcome";
 import { toast } from "@/hooks/use-toast";
 import { BuildFooter } from "@/components/BuildFooter";
@@ -348,6 +352,23 @@ function App() {
           window.open(url, "_blank", "noopener,noreferrer");
         },
       });
+
+      void postAlertWebhook(
+        buildEntryCrossWebhookPayload({
+          symbol: candidate.symbol,
+          source: candidate.source,
+          direction: candidate.direction,
+          price,
+          entry: candidate.entry,
+          entryLevel,
+          target: candidate.payload.target,
+          stop: candidate.payload.sl,
+          riskReward: candidate.payload.rr,
+          viewLabel,
+          viewCode,
+          timestamp,
+        }),
+      );
 
       void autoSaveQualifiedSignals([{
         ...candidate.payload,

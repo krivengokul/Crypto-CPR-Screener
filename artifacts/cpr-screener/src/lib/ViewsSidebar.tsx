@@ -21,6 +21,11 @@ import {
   unlockAlertAudio,
   ALERT_MUTE_EVENT,
 } from "@/lib/alertSound";
+import {
+  getAlertWebhookUrl,
+  setAlertWebhookUrl,
+  ALERT_WEBHOOK_CHANGED_EVENT,
+} from "@/lib/alertWebhook";
 
 export interface Category {
   id: string;
@@ -185,14 +190,26 @@ export default function ViewsSidebar({
 }: ViewsSidebarProps) {
   // Alert sound mute (persisted in localStorage by alertSound.ts)
   const [alertMuted, setAlertMutedState] = useState<boolean>(() => isAlertMuted());
+  const [webhookUrl, setWebhookUrlState] = useState(() => getAlertWebhookUrl());
+  const [webhookOpen, setWebhookOpen] = useState(false);
+  const [webhookDraft, setWebhookDraft] = useState(() => getAlertWebhookUrl());
 
   useEffect(() => {
     const onMute = (e: Event) => {
       const muted = (e as CustomEvent<{ muted: boolean }>).detail?.muted;
       if (typeof muted === "boolean") setAlertMutedState(muted);
     };
+    const onHook = () => {
+      const u = getAlertWebhookUrl();
+      setWebhookUrlState(u);
+      setWebhookDraft(u);
+    };
     window.addEventListener(ALERT_MUTE_EVENT, onMute);
-    return () => window.removeEventListener(ALERT_MUTE_EVENT, onMute);
+    window.addEventListener(ALERT_WEBHOOK_CHANGED_EVENT, onHook);
+    return () => {
+      window.removeEventListener(ALERT_MUTE_EVENT, onMute);
+      window.removeEventListener(ALERT_WEBHOOK_CHANGED_EVENT, onHook);
+    };
   }, []);
 
   const toggleAlertMuted = () => {
@@ -326,6 +343,22 @@ export default function ViewsSidebar({
             {alertMuted ? <VolumeX style={{ width: 12, height: 12 }} /> : <Volume2 style={{ width: 12, height: 12 }} />}
             {alertMuted ? "Muted" : "Sound"}
           </button>
+          <button
+            type="button"
+            onClick={() => {
+              setWebhookDraft(getAlertWebhookUrl());
+              setWebhookOpen((v) => !v);
+            }}
+            className="flex items-center gap-1 rounded-md border px-1.5 py-1 text-[10px] font-medium transition-colors shrink-0"
+            style={{
+              background: webhookUrl ? "rgba(56,189,248,0.12)" : "rgba(255,255,255,0.04)",
+              borderColor: webhookUrl ? "rgba(56,189,248,0.4)" : BORDER_COLOR,
+              color: webhookUrl ? "#7dd3fc" : DIM_TEXT,
+            }}
+            title={webhookUrl ? "Alert webhook configured — click to edit" : "Set alert webhook URL (n8n / Make → Telegram)"}
+          >
+            Hook{webhookUrl ? " · on" : ""}
+          </button>
           <span
             style={{
               fontSize: 11,
@@ -363,6 +396,83 @@ export default function ViewsSidebar({
             }
           </button>
         </div>
+
+
+        {webhookOpen && (
+          <div
+            style={{
+              padding: "8px 10px",
+              borderBottom: `1px solid ${BORDER_COLOR}`,
+              flexShrink: 0,
+              background: "rgba(0,0,0,0.25)",
+            }}
+          >
+            <div style={{ fontSize: 10, color: "#94a3b8", marginBottom: 6, lineHeight: 1.35 }}>
+              Alert webhook. On entry-cross the app POSTs JSON here — use n8n/Make to forward to Telegram (token stays outside this app).
+            </div>
+            <input
+              type="url"
+              value={webhookDraft}
+              onChange={(e) => setWebhookDraft(e.target.value)}
+              placeholder="https://…/webhook/…"
+              spellCheck={false}
+              style={{
+                width: "100%",
+                boxSizing: "border-box",
+                fontSize: 11,
+                fontFamily: "ui-monospace, monospace",
+                padding: "6px 8px",
+                borderRadius: 6,
+                border: `1px solid ${BORDER_COLOR}`,
+                background: "#0b1220",
+                color: "#e2e8f0",
+                marginBottom: 6,
+              }}
+            />
+            <div style={{ display: "flex", gap: 6 }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setAlertWebhookUrl(webhookDraft);
+                  setWebhookUrlState(webhookDraft.trim());
+                  setWebhookOpen(false);
+                }}
+                style={{
+                  flex: 1,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  padding: "5px 8px",
+                  borderRadius: 6,
+                  border: "1px solid rgba(56,189,248,0.45)",
+                  background: "rgba(56,189,248,0.15)",
+                  color: "#7dd3fc",
+                  cursor: "pointer",
+                }}
+              >
+                Save
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAlertWebhookUrl("");
+                  setWebhookDraft("");
+                  setWebhookUrlState("");
+                }}
+                style={{
+                  fontSize: 11,
+                  padding: "5px 8px",
+                  borderRadius: 6,
+                  border: `1px solid ${BORDER_COLOR}`,
+                  background: "transparent",
+                  color: "#94a3b8",
+                  cursor: "pointer",
+                }}
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Mode toggle */}
         <div
