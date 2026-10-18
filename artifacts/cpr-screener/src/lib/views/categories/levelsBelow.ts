@@ -1487,7 +1487,7 @@ export const LEVELSBELOW_VIEWS: ViewDef[] = [
       },
     {
         key: "PL-MB-B-B-BB-BB-EL2U4-SL-AAGap-S4",
-        label: "PMINISMALL-MOMB-FALL",
+        label: "PPIVOT-BELOWPH",
         parentKey: "B-B-BB-BB-EL2U4",
         condition: (r) => passesView(r, "B-B-BB-BB-EL2U4") && matchesGapBadge(r, "SL-AAGap") && matchesCandleCheck(r, "MB"),
         standalone: true,
@@ -1606,6 +1606,7 @@ export const LEVELSBELOW_VIEWS: ViewDef[] = [
         ]
       }
     ],
+        requireFullMatch: true,
       },
     {
         key: "BC-CB-C-B-BB-C-CL3U3-RH-GapAB-S4",
