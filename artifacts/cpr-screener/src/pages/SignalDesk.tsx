@@ -1,4 +1,4 @@
-import { memo, useState, useMemo, useEffect, useCallback, useRef } from "react";
+import { memo, useState, useMemo, useEffect, useCallback, useRef, type CSSProperties } from "react";
 import {
   CPRResultWithSource,
   SourceId,
@@ -9,6 +9,7 @@ import {
   hasKnownChartMapping,
   renderPivotSizeCell,
 } from "./ScreenerUtils";
+import type { CPRResult } from "@/lib/cpr";
 import {
   hasTouchedEntry,
   fetchSavedSignalsFromCloud,
@@ -124,7 +125,12 @@ export interface SignalItem {
   targetPrice: number;
   stopPrice: number;
   targetLevel: string;
+  entryLevel: string;
   stoplossLevel: string;
+  /** Exclusive previous-day 15m class (Screener P-* label). */
+  pDayText?: string;
+  pDayClassName?: string;
+  pDayStyle?: CSSProperties;
   riskReward: string;
   cprStatus: string;
   pivot: number;
@@ -230,6 +236,54 @@ function resolveCardStatus(
 // "expanded", "levelsabove", "levelsbelow", "R1AbovePR4", "BPS4",
 // "touch", "copyViews". The map is generated from the view registry, so this
 // stays in sync as registered Views or their navigation parents change.
+
+/** Exclusive P-filter badge — same priority/colors as Screener View column. */
+function exclusivePDayBadge(r: CPRResult | undefined | null): {
+  text: string;
+  className: string;
+  style?: CSSProperties;
+} | null {
+  if (!r) return null;
+  const conA = r.PD15MConsolidateAPass === true;
+  const conB = r.PD15MBelowTCPass === true;
+  const momA = r.PD15MAboveBCPass === true;
+  const momB = r.PD15MMomentumBPass === true;
+  const inside = r.PD15MInsideR1S1Pass === true;
+  if (conB) {
+    return {
+      text: "P-CONSOLIDATE-B",
+      className: "font-mono text-xs font-bold uppercase tracking-widest text-pink-400",
+      style: { color: "#f472b6" },
+    };
+  }
+  if (momB) {
+    return {
+      text: "P-MOMENTUM-B",
+      className: "font-mono text-xs font-bold uppercase tracking-widest text-violet-400",
+    };
+  }
+  if (conA) {
+    return {
+      text: "P-CONSOLIDATE-A",
+      className: "font-mono text-xs font-bold uppercase tracking-widest",
+      style: { color: "#03b07c" },
+    };
+  }
+  if (momA) {
+    return {
+      text: "P-MOMENTUM-A",
+      className: "font-mono text-xs font-bold uppercase tracking-widest text-cyan-400",
+    };
+  }
+  if (inside) {
+    return {
+      text: "INSIDE-R1S1",
+      className: "font-mono text-xs font-bold uppercase tracking-widest text-amber-300",
+    };
+  }
+  return null;
+}
+
 function getCategoryForViewId(id: string): string {
   for (const [category, subList] of Object.entries(Views)) {
     if (subList.some((sub) => sub.id === id)) return category;
@@ -301,6 +355,7 @@ export function computeSignalLevels(
   const stopPrice = isUp ? r.todayCPR.s1 : r.todayCPR.r1;
   const targetPrice = targetDef.getTarget(r);
   const targetLevel = shortLevelLabel(targetDef.targetLabel);
+  const entryLevel = shortLevelLabel(targetDef.entryLabel) || "";
   const stoplossLevel = shortLevelLabel(targetDef.stoplossLabel) || (isUp ? "S1" : "R1");
   const patternLabel = primaryView.label;
   const patternId = primaryView.id;
@@ -310,7 +365,19 @@ export function computeSignalLevels(
   const reward = Math.abs(targetPrice - price);
   const rrRatio = (reward / risk).toFixed(1);
 
-  return { patternLabel, patternId, category, price, direction, targetPrice, stopPrice, targetLevel, stoplossLevel, rrRatio };
+  return {
+    patternLabel,
+    patternId,
+    category,
+    price,
+    direction,
+    targetPrice,
+    stopPrice,
+    targetLevel,
+    entryLevel,
+    stoplossLevel,
+    rrRatio,
+  };
 }
 
 // Single source of truth for turning a pool of CPRResultWithSource rows
@@ -607,16 +674,30 @@ const SignalDeskCard = memo(
                 </strong>
               </div>
             )}
-            <div className="flex items-center gap-4">
-              <div className={`flex items-center gap-1 ${isDown ? "order-1" : "order-2"}`}>
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-1">
                 <span>Target:</span>
                 <Target className="w-3 h-3 text-emerald-400" />
                 <strong className="text-emerald-400 font-semibold font-mono">{item.targetLevel || "S2"}</strong>
               </div>
-              <div className={`flex items-center gap-1 ${isDown ? "order-2" : "order-1"}`}>
+              <div className="flex items-center gap-1">
+                <span>Entry:</span>
+                <strong className="text-amber-300 font-semibold font-mono">{item.entryLevel || "—"}</strong>
+              </div>
+              <div className="flex items-center gap-1">
                 <span>Stoploss:</span>
                 <strong className="text-rose-400 font-semibold font-mono">{item.stoplossLevel || "S1"}</strong>
               </div>
+            </div>
+            <div className="flex items-center gap-1 min-w-0">
+              <span>PDay:</span>
+              {item.pDayText ? (
+                <strong className={item.pDayClassName || "text-slate-200"} style={item.pDayStyle}>
+                  {item.pDayText}
+                </strong>
+              ) : (
+                <strong className="text-slate-500 font-semibold">—</strong>
+              )}
             </div>
             <div className="flex items-center gap-1">
               <span>Category:</span>
@@ -887,12 +968,14 @@ export default function SignalDesk({
         let targetPrice: number;
         let stopPrice: number;
         let targetLevel: string;
+        let entryLevel: string;
         let stoplossLevel: string;
 
         if (levels) {
           targetPrice = levels.targetPrice;
           stopPrice = levels.stopPrice;
           targetLevel = levels.targetLevel;
+          entryLevel = levels.entryLevel || "";
           stoplossLevel = levels.stoplossLevel;
         } else if (direction === "Up") {
           if (sym.currentPrice >= r1) {
@@ -904,6 +987,7 @@ export default function SignalDesk({
           }
           stopPrice = s1;
           stoplossLevel = "S1";
+          entryLevel = "";
         } else {
           if (sym.currentPrice <= s1) {
             targetPrice = s2;
@@ -914,6 +998,7 @@ export default function SignalDesk({
           }
           stopPrice = r1;
           stoplossLevel = "R1";
+          entryLevel = "";
         }
 
         const rrRatio = levels
@@ -967,6 +1052,7 @@ export default function SignalDesk({
         const matchLadder = matchRow
           ? getLadderMatchSummary(matchRow.prevCPR, matchRow.todayCPR, matchDefs)
           : null;
+        const pDayBadge = exclusivePDayBadge(matchRow);
 
         return {
           id: sym.key,
@@ -990,7 +1076,11 @@ export default function SignalDesk({
           targetPrice,
           stopPrice,
           targetLevel,
+          entryLevel,
           stoplossLevel,
+          pDayText: pDayBadge?.text,
+          pDayClassName: pDayBadge?.className,
+          pDayStyle: pDayBadge?.style,
           riskReward: `1 : ${rrRatio}`,
           cprStatus: isEligible
             ? `${patternLabel} (Target ${targetLevel})`
@@ -1062,7 +1152,9 @@ export default function SignalDesk({
       const targetPrice = levels ? levels.targetPrice : (direction === "Up" ? r1 : s1);
       const stopPrice = levels ? levels.stopPrice : (direction === "Up" ? s1 : r1);
       const targetLevel = levels ? levels.targetLevel : (direction === "Up" ? "R1" : "S1");
+      const entryLevel = levels ? levels.entryLevel || "" : "";
       const stoplossLevel = levels ? levels.stoplossLevel : (direction === "Up" ? "S1" : "R1");
+      const pDay = exclusivePDayBadge(r);
       const rrRatio = levels
         ? levels.rrRatio
         : (Math.abs(targetPrice - price) / Math.max(0.0000001, Math.abs(price - stopPrice))).toFixed(1);
@@ -1123,7 +1215,11 @@ export default function SignalDesk({
         targetPrice,
         stopPrice,
         targetLevel,
+        entryLevel,
         stoplossLevel,
+        pDayText: pDay?.text,
+        pDayClassName: pDay?.className,
+        pDayStyle: pDay?.style,
         riskReward: `1 : ${rrRatio}`,
         cprStatus: isActiveSignalSymbol ? `${patternLabel} (Target ${targetLevel})` : "General CPR Setup",
         pivot,
