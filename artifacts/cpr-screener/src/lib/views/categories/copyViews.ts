@@ -4,36 +4,7 @@ import { passesView } from "../registry";
 import { matchesGapBadge } from "../gapBadges";
 
 export const COPY_VIEWS: ViewDef[] = [
-  {
-    key: "A-A-AA-AA-U3L3-SSLLGap:R4+1",
-    label: "A-A-AA-AA-U3L3-SSLLGap:R4 +1",
-    parentKey: "A-A-AA-AA-U3L3",
-    conditionKey: "A6-U3L3-SLBBG-R4",
-    kind: "view",
-    direction: "Up",
-    targetLabel: "R4",
-    getTarget: (r) => r.todayCPR.r4,
-    entryLabel: "TC",
-    getEntry: (r) => r.todayCPR.tc,
-    stoplossLabel: "S1",
-    getStoploss: (r) => r.todayCPR.s1,
-    levelCheckDefs: [
-      { key: "r4", subject: "previous", bandKeys: ["r2", "r3"] },
-      { key: "r3", subject: "previous", bandKeys: ["r1", "r2"] },
-      { key: "r2", subject: "today", bandKeys: ["r3", "r4"] },
-      { key: "r1", subject: "today", bandKeys: ["r2", "r3"] },
-      { key: "prevHigh", subject: "today", bandKeys: ["r2", "r3"] },
-      { key: "tc", subject: "today", bandKeys: ["r1", "r2"] },
-      { key: "pivot", subject: "today", bandKeys: ["r1", "r2"] },
-      { key: "bc", subject: "today", bandKeys: ["r1", "r2"] },
-      { key: "s1", subject: "today", bandKeys: ["tc", "prevHigh"] },
-      { key: "prevLow", subject: "today", bandKeys: ["tc", "prevHigh"] },
-      { key: "s2", subject: "today", bandKeys: ["s1", "bc"] },
-      { key: "s3", subject: "today", bandKeys: ["prevLow", "s1"] },
-      { key: "s4", subject: "today", bandKeys: ["s3", "s2"] },
-    ],
-      order: 1
-},
+
   {
     key: "A-A-AA-AA-EUBL2-pS4S2:R2",
     label: "A-A-AA-AA-EUBL2-pS4S2:R2",
