@@ -1,10 +1,9 @@
 /**
- * Optional outbound webhook for signal alerts (option B).
- * App POSTs JSON to the URL you configure; n8n / Make / a Worker can
- * forward to Telegram without putting a bot token in the browser.
+ * Outbound alert webhook — sends entry-cross events to your Cloudflare Worker,
+ * which forwards them to Telegram. The Worker URL is the only thing stored
+ * here; the Telegram bot token lives in Cloudflare as a secret.
  *
- * Uses text/plain + no-cors so browser clients can hit typical webhook
- * endpoints that do not send CORS headers. The receiver still gets the body.
+ * Flow:  Browser  →  Cloudflare Worker  →  Telegram Bot API
  */
 
 const STORAGE_KEY = "cpr_alert_webhook_url_v1";
@@ -63,17 +62,21 @@ function isPlausibleWebhookUrl(url: string): boolean {
 }
 
 /**
- * Fire-and-forget POST. Never throws to callers; failures are console-warned.
+ * Fire-and-forget POST to your Cloudflare Worker.
+ * The Worker is CORS-enabled so we can use mode:"cors" and proper JSON.
+ * Falls back to sendBeacon (survives tab backgrounding) when available.
+ * Never throws to callers; failures are console-warned.
  */
 export async function postAlertWebhook(payload: AlertWebhookPayload): Promise<void> {
   const url = getAlertWebhookUrl();
   if (!url || !isPlausibleWebhookUrl(url)) return;
 
   const body = JSON.stringify(payload);
+
+  // sendBeacon path — fires even if tab is being closed
   try {
-    // Prefer sendBeacon when available (survives tab backgrounding briefly).
     if (typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
-      const blob = new Blob([body], { type: "text/plain;charset=utf-8" });
+      const blob = new Blob([body], { type: "application/json" });
       const ok = navigator.sendBeacon(url, blob);
       if (ok) return;
     }
@@ -81,12 +84,12 @@ export async function postAlertWebhook(payload: AlertWebhookPayload): Promise<vo
     /* fall through to fetch */
   }
 
+  // Standard fetch — Cloudflare Worker sends proper CORS headers
   try {
     await fetch(url, {
       method: "POST",
-      mode: "no-cors",
       cache: "no-store",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      headers: { "Content-Type": "application/json" },
       body,
     });
   } catch (err) {

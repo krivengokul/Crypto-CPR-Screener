@@ -355,7 +355,7 @@ export default function ViewsSidebar({
               borderColor: webhookUrl ? "rgba(56,189,248,0.4)" : BORDER_COLOR,
               color: webhookUrl ? "#7dd3fc" : DIM_TEXT,
             }}
-            title={webhookUrl ? "Alert webhook configured — click to edit" : "Set alert webhook URL (n8n / Make → Telegram)"}
+            title={webhookUrl ? "Cloudflare Worker configured — click to edit" : "Set Cloudflare Worker URL to receive Telegram alerts"}
           >
             Hook{webhookUrl ? " · on" : ""}
           </button>
@@ -408,13 +408,13 @@ export default function ViewsSidebar({
             }}
           >
             <div style={{ fontSize: 10, color: "#94a3b8", marginBottom: 6, lineHeight: 1.35 }}>
-              Alert webhook. On entry-cross the app POSTs JSON here — use n8n/Make to forward to Telegram (token stays outside this app).
+              Cloudflare Worker URL. On entry-cross the app POSTs JSON here — the Worker forwards it to Telegram (bot token stays in Cloudflare, never in this app).
             </div>
             <input
               type="url"
               value={webhookDraft}
               onChange={(e) => setWebhookDraft(e.target.value)}
-              placeholder="https://…/webhook/…"
+              placeholder="https://cpr-alert.your-name.workers.dev"
               spellCheck={false}
               style={{
                 width: "100%",
