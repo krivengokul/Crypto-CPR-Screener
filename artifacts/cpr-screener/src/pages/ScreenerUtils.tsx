@@ -438,7 +438,7 @@ export function renderPivotSizeCell(
       </span>
       <span
         className={`font-sans text-[10px] font-semibold shrink-0 ${
-          compressionRatio < 50 || compressionRatio > 500
+          compressionRatio < 50 || Math.round(compressionRatio) >= 200
             ? "text-emerald-400"
             : "text-muted-foreground"
         }`}
