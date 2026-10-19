@@ -675,19 +675,40 @@ const SignalDeskCard = memo(
               </div>
             )}
             <div className="flex items-center gap-3 flex-wrap">
-              <div className="flex items-center gap-1">
-                <span>Target:</span>
-                <Target className="w-3 h-3 text-emerald-400" />
-                <strong className="text-emerald-400 font-semibold font-mono">{item.targetLevel || "S2"}</strong>
-              </div>
-              <div className="flex items-center gap-1">
-                <span>Entry:</span>
-                <strong className="text-amber-300 font-semibold font-mono">{item.entryLevel || "—"}</strong>
-              </div>
-              <div className="flex items-center gap-1">
-                <span>Stoploss:</span>
-                <strong className="text-rose-400 font-semibold font-mono">{item.stoplossLevel || "S1"}</strong>
-              </div>
+              {/* Up: Stoploss left · Entry (white) · Target right; Down: Target left · Entry · Stoploss */}
+              {isDown ? (
+                <>
+                  <div className="flex items-center gap-1">
+                    <span>Target:</span>
+                    <Target className="w-3 h-3 text-emerald-400" />
+                    <strong className="text-emerald-400 font-semibold font-mono">{item.targetLevel || "S2"}</strong>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span>Entry:</span>
+                    <strong className="text-white font-semibold font-mono">{item.entryLevel || "—"}</strong>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span>Stoploss:</span>
+                    <strong className="text-rose-400 font-semibold font-mono">{item.stoplossLevel || "S1"}</strong>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center gap-1">
+                    <span>Stoploss:</span>
+                    <strong className="text-rose-400 font-semibold font-mono">{item.stoplossLevel || "S1"}</strong>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span>Entry:</span>
+                    <strong className="text-white font-semibold font-mono">{item.entryLevel || "—"}</strong>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span>Target:</span>
+                    <Target className="w-3 h-3 text-emerald-400" />
+                    <strong className="text-emerald-400 font-semibold font-mono">{item.targetLevel || "R4"}</strong>
+                  </div>
+                </>
+              )}
             </div>
             <div className="flex items-center gap-1 min-w-0">
               <span>PDay:</span>

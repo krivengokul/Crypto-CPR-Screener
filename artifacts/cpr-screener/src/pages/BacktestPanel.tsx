@@ -1521,7 +1521,7 @@ function ViewActionsRow({
   }
 
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex flex-wrap items-center gap-1.5">
       <button
         type="button"
         onClick={() => setMode("edit")}
@@ -1538,6 +1538,21 @@ function ViewActionsRow({
         >
           + Copy View
         </button>
+      {/* Read-only 13/13 MATCH status (same flag as Create/Edit checkbox) */}
+      <span
+        className={`inline-flex items-center rounded-md border px-2 py-1 text-[11px] font-medium ${
+          activeTarget.requireFullMatch
+            ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-300"
+            : "border-border text-muted-foreground"
+        }`}
+        title={
+          activeTarget.requireFullMatch
+            ? "This View only matches when Level Check is a full 13/13"
+            : "This View matches on pattern condition alone (13/13 not required)"
+        }
+      >
+        13/13 MATCH: {activeTarget.requireFullMatch ? "ON" : "OFF"}
+      </span>
     </div>
   );
 }
@@ -1858,19 +1873,6 @@ function CreateViewControl({
         className="w-full bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
       />
       <AttachPointSelect value={attachKey} onChange={setAttachKey} disabled={!!command} />
-      <select
-        value={candleCheck}
-        onChange={(e) => setCandleCheck(e.target.value)}
-        disabled={!!command}
-        title="Optionally also require this 15-minute candle check."
-        className="w-full bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
-      >
-        {CANDLE_CHECK_OPTIONS.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
       <select
         value={gapBadge}
         onChange={(e) => setGapBadge(e.target.value)}
@@ -3150,9 +3152,28 @@ export default function BacktestPanel() {
         </div>
       )}
       {isViewOnly && activeTarget && (
-        <div className="text-xs text-muted-foreground mb-3">
-          Target: <span className="text-foreground font-medium">{shortLevelLabel(activeTarget.targetLabel)}</span>{" "}
-          ({activeTarget.direction === "Up" || (activeTarget.direction as string) === "bullish" ? "price must reach or exceed it" : "price must reach or fall below it"})
+        <div className="text-xs text-muted-foreground mb-3 space-y-0.5">
+          <div>
+            Target:{" "}
+            <span className="text-foreground font-medium">{shortLevelLabel(activeTarget.targetLabel)}</span>
+            {" · "}
+            Entry:{" "}
+            <span className="text-foreground font-medium">{shortLevelLabel(activeTarget.entryLabel) || "—"}</span>
+            {" · "}
+            Stoploss:{" "}
+            <span className="text-foreground font-medium">{shortLevelLabel(activeTarget.stoplossLabel) || "—"}</span>
+            {" · "}
+            13/13 MATCH:{" "}
+            <span className={activeTarget.requireFullMatch ? "text-cyan-400 font-medium" : "text-foreground font-medium"}>
+              {activeTarget.requireFullMatch ? "ON" : "OFF"}
+            </span>
+          </div>
+          <div>
+            ({activeTarget.direction === "Up" || (activeTarget.direction as string) === "bullish"
+              ? "price must reach or exceed target"
+              : "price must reach or fall below target"}
+            )
+          </div>
         </div>
       )}
       {isCategory && activeCategory && (
