@@ -494,6 +494,7 @@ export default function Screener({
     reclaimProgress,
     reclaimReady,
     reclaimMessage,
+    clearReclaimMessage,
     resetReclaimUi,
   } = useReclaimFilters({
     status,
@@ -2138,7 +2139,7 @@ export default function Screener({
           const activeStatusMessages: { text: string; dismiss: () => void }[] = [];
           if (activeCandleMessage?.text) activeStatusMessages.push(activeCandleMessage);
           if (upexFilter && upexMessage) activeStatusMessages.push({ text: upexMessage, dismiss: () => setUpexMessage("") });
-          if ((reclaimSFilter || reclaimRFilter) && reclaimMessage) activeStatusMessages.push({ text: reclaimMessage, dismiss: () => setReclaimMessage("") });
+          if ((reclaimSFilter || reclaimRFilter) && reclaimMessage) activeStatusMessages.push({ text: reclaimMessage, dismiss: () => clearReclaimMessage() });
 
           if (activeStatusMessages.length === 0 || currentStatus !== "done") return null;
 

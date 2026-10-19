@@ -133,6 +133,8 @@ export function useReclaimFilters(opts: {
     [reclaimDepths],
   );
 
+  const clearReclaimMessage = useCallback(() => setReclaimMessage(""), []);
+
   return {
     reclaimSFilter,
     setReclaimSFilter,
@@ -142,6 +144,7 @@ export function useReclaimFilters(opts: {
     reclaimProgress,
     reclaimReady,
     reclaimMessage,
+    clearReclaimMessage,
     reclaimWindow,
     resetReclaimUi,
     reclaimStatesFor,

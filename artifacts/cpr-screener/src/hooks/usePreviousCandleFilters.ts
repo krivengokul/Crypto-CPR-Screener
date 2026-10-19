@@ -36,6 +36,20 @@ import {
 } from "@/lib/15MCandleCheck";
 import { usePreviousCandleFilterPrep } from "@/hooks/usePreviousCandleFilterPrep";
 
+/**
+ * INSIDE-R1S1 candidate. A type alias (not the UpexCandidate interface) so it
+ * satisfies CandleFilterCandidate's index signature; it is structurally
+ * assignable to UpexCandidate for the cacheKey / scan helpers. `bc` is unused
+ * by the pass rule — floor + ceiling do the work.
+ */
+type InsideR1S1Candidate = {
+  symbol: string;
+  source: "binance" | "delta";
+  bc: number;
+  floor: number;
+  ceiling: number;
+};
+
 export type PreviousCandleFilterId =
   | "all"
   | "consolidate-a"
@@ -235,15 +249,12 @@ export function usePreviousCandleFilters(opts: {
   const previous15MMomentumMessage = momentumBPrep.message;
 
   // INSIDE-R1S1: max(R1,PH)–min(S1,PL) body/wick mode — independent of CON-A/CON-B
-  const insideR1S1Prep = usePreviousCandleFilterPrep({
+  const insideR1S1Prep = usePreviousCandleFilterPrep<InsideR1S1Candidate>({
     label: "INSIDE-R1S1",
     canRun: candlePrepCanRun,
     sessionStartMs: previousUpexSessionStart,
     buildCandidates: () => {
-      const candidates = new Map<
-        string,
-        { symbol: string; source: "binance" | "delta"; bc: number; floor: number; ceiling: number }
-      >();
+      const candidates = new Map<string, InsideR1S1Candidate>();
       const push = (row: CPRResult, source: "binance" | "delta") => {
         const floor = getPrevious15MBFloor(row.prevCPR);
         const ceiling = getPrevious15MACeiling(row.prevCPR);
