@@ -1263,6 +1263,6 @@ export const COMPRESSED_VIEWS: ViewDef[] = [
         ]
       }
     ],
-        requireFullMatch: false,
+        requireFullMatch: true,
       }
 ];
