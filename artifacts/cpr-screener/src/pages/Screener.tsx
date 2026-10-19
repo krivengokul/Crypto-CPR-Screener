@@ -466,6 +466,7 @@ export default function Screener({
     resetMomentumAMessage,
     resetConsolidateBMessage,
     resetMomentumBMessage,
+    resetInsideR1S1Message,
   } = usePreviousCandleFilters({
     status,
     deltaStatus,
@@ -2120,17 +2121,45 @@ export default function Screener({
 
         )}
 
-        {(previousConsolidateAMessage || upexMessageFromPrep || previous15MTCMessage || previous15MMomentumMessage || previousInsideR1S1Message || upexMessage || reclaimMessage) && currentStatus === "done" && (
-          <div className="flex flex-col gap-1 px-1 -mt-1 mb-2 text-[10px] text-amber-300" role="status">
-            {previousConsolidateAMessage && <span>{previousConsolidateAMessage}</span>}
-            {upexMessageFromPrep && <span>{upexMessageFromPrep}</span>}
-            {previous15MTCMessage && <span>{previous15MTCMessage}</span>}
-            {previous15MMomentumMessage && <span>{previous15MMomentumMessage}</span>}
-            {previousInsideR1S1Message && <span>{previousInsideR1S1Message}</span>}
-            {upexMessage && <span>{upexMessage}</span>}
-            {reclaimMessage && <span>{reclaimMessage}</span>}
-          </div>
-        )}
+        {(() => {
+          const activeCandleMessage =
+            previousCandleFilter === "consolidate-a"
+              ? { text: previousConsolidateAMessage, dismiss: resetConsolidateAMessage }
+              : previousCandleFilter === "momentum-a"
+              ? { text: upexMessageFromPrep, dismiss: resetMomentumAMessage }
+              : previousCandleFilter === "consolidate-b"
+              ? { text: previous15MTCMessage, dismiss: resetConsolidateBMessage }
+              : previousCandleFilter === "momentum-b"
+              ? { text: previous15MMomentumMessage, dismiss: resetMomentumBMessage }
+              : previousCandleFilter === "inside-r1s1"
+              ? { text: previousInsideR1S1Message, dismiss: resetInsideR1S1Message }
+              : null;
+
+          const activeStatusMessages: { text: string; dismiss: () => void }[] = [];
+          if (activeCandleMessage?.text) activeStatusMessages.push(activeCandleMessage);
+          if (upexFilter && upexMessage) activeStatusMessages.push({ text: upexMessage, dismiss: () => setUpexMessage("") });
+          if ((reclaimSFilter || reclaimRFilter) && reclaimMessage) activeStatusMessages.push({ text: reclaimMessage, dismiss: () => setReclaimMessage("") });
+
+          if (activeStatusMessages.length === 0 || currentStatus !== "done") return null;
+
+          return (
+            <div className="flex flex-col gap-1 px-1 -mt-1 mb-2 text-[10px] text-amber-300" role="status">
+              {activeStatusMessages.map((m, idx) => (
+                <div key={idx} className="flex items-center gap-1.5">
+                  <span>{m.text}</span>
+                  <button
+                    type="button"
+                    onClick={m.dismiss}
+                    className="hover:text-amber-100 text-amber-400/80 px-1 py-0.5 rounded transition-colors"
+                    title="Dismiss message"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          );
+        })()}
 
         {/* Single filter row, left → right: Search · 15M-A · All/Active/Ready/Pass/Fail · Binance | NIFTY (right). */}
         {canShowCombined && (
