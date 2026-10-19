@@ -1819,9 +1819,10 @@ async function populateAllPFilterFlags(
       },
       sessionStart,
     ),
-    // MOMENTUM-B = CONSOLIDATE-B TC check without the PL/S1 floor
+    // MOMENTUM-B = CONSOLIDATE-B TC check without the PL/S1 floor.
+    // Same ceiling as CON-B: getConsolidateBTc (ppCPR.tc when prev was INCPR / Overlap-Below).
     findPD15MBelowTCPass(
-      { symbol, source, bc: prevCPR.tc },
+      { symbol, source, bc: getConsolidateBTc(prevCPR, result.ppCPR) },
       sessionStart,
     ),
     findInsideR1S1Pass(
