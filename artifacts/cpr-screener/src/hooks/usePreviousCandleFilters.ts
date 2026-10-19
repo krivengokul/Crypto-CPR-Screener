@@ -185,20 +185,24 @@ export function usePreviousCandleFilters(opts: {
   canRun: candlePrepCanRun,
   sessionStartMs: previousUpexSessionStart,
   buildCandidates: () => {
+    // Same TC ceiling as CON-B: prevCPR.tc, or ppCPR.tc when previous
+    // session was INCPR / Overlap-Below vs the day before (getConsolidateBTc).
     const candidates = new Map<string, {
       symbol: string; source: "binance" | "delta"; bc: number;
     }>();
     if (status === "done") {
       for (const row of allResults) {
         candidates.set(`binance:${row.symbol}`, {
-          symbol: row.symbol, source: "binance", bc: row.prevCPR.tc,
+          symbol: row.symbol, source: "binance",
+          bc: getConsolidateBTc(row.prevCPR, row.ppCPR),
         });
       }
     }
     if (deltaStatus === "done") {
       for (const row of deltaAllResults) {
         candidates.set(`delta:${row.symbol}`, {
-          symbol: row.symbol, source: "delta", bc: row.prevCPR.tc,
+          symbol: row.symbol, source: "delta",
+          bc: getConsolidateBTc(row.prevCPR, row.ppCPR),
         });
       }
     }
