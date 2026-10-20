@@ -4,6 +4,12 @@
  * here; the Telegram bot token lives in Cloudflare as a secret.
  *
  * Flow:  Browser  →  Cloudflare Worker  →  Telegram Bot API
+ *
+ * Reliability:
+ * - Prefer fetch() while the page is active so every entry-cross toast also
+ *   reaches Telegram and failures show in the Network tab / console.
+ * - Use sendBeacon only when the document is hidden (background tab), where
+ *   fetch may be cancelled, or as a last-resort fallback if fetch fails.
  */
 
 const STORAGE_KEY = "cpr_alert_webhook_url_v1";
@@ -61,39 +67,65 @@ function isPlausibleWebhookUrl(url: string): boolean {
   }
 }
 
+function pageIsHidden(): boolean {
+  if (typeof document === "undefined") return false;
+  return document.visibilityState === "hidden";
+}
+
 /**
- * Fire-and-forget POST to your Cloudflare Worker.
- * The Worker is CORS-enabled so we can use mode:"cors" and proper JSON.
- * Falls back to sendBeacon (survives tab backgrounding) when available.
- * Never throws to callers; failures are console-warned.
+ * POST to your Cloudflare Worker.
+ * Returns true if the browser accepted a successful send (2xx or beacon ok).
+ * Never throws; failures are console-warned and return false so the caller
+ * can surface a short error next to the entry-cross toast.
  */
-export async function postAlertWebhook(payload: AlertWebhookPayload): Promise<void> {
+export async function postAlertWebhook(payload: AlertWebhookPayload): Promise<boolean> {
   const url = getAlertWebhookUrl();
-  if (!url || !isPlausibleWebhookUrl(url)) return;
+  if (!url || !isPlausibleWebhookUrl(url)) {
+    console.warn("[alertWebhook] no Hook URL configured — Telegram skipped");
+    return false;
+  }
 
   const body = JSON.stringify(payload);
 
-  // sendBeacon path — fires even if tab is being closed
-  try {
-    if (typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
-      const blob = new Blob([body], { type: "application/json" });
-      const ok = navigator.sendBeacon(url, blob);
-      if (ok) return;
+  const tryBeacon = (): boolean => {
+    try {
+      if (typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
+        const blob = new Blob([body], { type: "application/json" });
+        return navigator.sendBeacon(url, blob);
+      }
+    } catch {
+      /* ignore */
     }
-  } catch {
-    /* fall through to fetch */
+    return false;
+  };
+
+  // Background tab: beacon first (more likely to flush under suspension).
+  if (pageIsHidden() && tryBeacon()) {
+    return true;
   }
 
-  // Standard fetch — Cloudflare Worker sends proper CORS headers
+  // Active tab (or beacon unavailable): fetch with keepalive so the request
+  // is visible in Network and more reliable than beacon-only.
   try {
-    await fetch(url, {
+    const res = await fetch(url, {
       method: "POST",
       cache: "no-store",
+      keepalive: true,
       headers: { "Content-Type": "application/json" },
       body,
     });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      console.warn("[alertWebhook] worker returned", res.status, text);
+      // One beacon retry after a non-OK response (e.g. transient 502).
+      if (tryBeacon()) return true;
+      return false;
+    }
+    return true;
   } catch (err) {
+    if (tryBeacon()) return true;
     console.warn("[alertWebhook] post failed", err);
+    return false;
   }
 }
 

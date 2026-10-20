@@ -353,22 +353,34 @@ function App() {
         },
       });
 
-      void postAlertWebhook(
-        buildEntryCrossWebhookPayload({
-          symbol: candidate.symbol,
-          source: candidate.source,
-          direction: candidate.direction,
-          price,
-          entry: candidate.entry,
-          entryLevel,
-          target: candidate.payload.target,
-          stop: candidate.payload.sl,
-          riskReward: candidate.payload.rr,
-          viewLabel,
-          viewCode,
-          timestamp,
-        }),
-      );
+      // Always pair toast with Telegram: prefer fetch (see alertWebhook.ts).
+      // Surface a short follow-up toast if the Hook URL is missing or the
+      // Worker/Telegram path fails, so a silent miss is visible in the UI.
+      void (async () => {
+        const ok = await postAlertWebhook(
+          buildEntryCrossWebhookPayload({
+            symbol: candidate.symbol,
+            source: candidate.source,
+            direction: candidate.direction,
+            price,
+            entry: candidate.entry,
+            entryLevel,
+            target: candidate.payload.target,
+            stop: candidate.payload.sl,
+            riskReward: candidate.payload.rr,
+            viewLabel,
+            viewCode,
+            timestamp,
+          }),
+        );
+        if (!ok) {
+          toast({
+            title: "Telegram alert failed",
+            description: `${candidate.symbol}: check Hook URL / Cloudflare Worker (see console).`,
+            duration: 8_000,
+          });
+        }
+      })();
 
       void autoSaveQualifiedSignals([{
         ...candidate.payload,
