@@ -289,12 +289,16 @@ function App() {
         ? candidate.entry.toPrecision(6)
         : String(candidate.entry);
 
-      // Auto-focus only when already on SignalDesk — never navigate away from
-      // Backtest / Screener / Journal / etc. when a toast appears.
+      // Auto-focus the crossed symbol when already on Signal Desk or Screener.
+      // Never switch modes (stay on Backtest / Journal / Stats if those are open).
       const focusAlertTarget = () => {
-        if (modeRef.current !== "signals") return;
+        const mode = modeRef.current;
+        if (mode !== "signals" && mode !== "scanner") return;
         const patternId = candidate.payload.patternId || undefined;
-        if (patternId) setActiveSignal(patternId);
+        // On Signal Desk, also pin the left-nav View so the card stays visible.
+        // On Screener, Screener's own focus effect searches + scrolls the row;
+        // do not force activeSignal there (user may be on Show All / another filter).
+        if (mode === "signals" && patternId) setActiveSignal(patternId);
         setFocusSymbol({
           symbol: candidate.symbol,
           source: candidate.source,
