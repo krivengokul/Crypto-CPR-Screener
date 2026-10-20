@@ -262,8 +262,13 @@ export default function ViewsSidebar({
   }
 
   function handleParentClick(patternId: string) {
-    setExpandedId(patternId);
-    onSelect(patternId);
+    if (expandedId === patternId) {
+      setExpandedId(null);
+      onSelect("");
+    } else {
+      setExpandedId(patternId);
+      onSelect(patternId);
+    }
   }
 
   function handleSubClick(subId: string, parentId: string) {
@@ -541,9 +546,6 @@ export default function ViewsSidebar({
           {visiblePivotCategories.map((pattern) => {
             const Icon = pattern.icon;
             const children = visibleChildren(pattern.id);
-            const isActiveParent = activeSignal === pattern.id;
-            const hasActiveChild = children.some((c) => c.id === activeSignal);
-            const isHighlighted = isActiveParent || hasActiveChild;
             const isExpanded = expandedId === pattern.id;
 
             return (
@@ -559,24 +561,23 @@ export default function ViewsSidebar({
                     alignItems: "center",
                     gap: 10,
                     padding: "9px 10px 9px 14px",
-                    background: isHighlighted ? SELECT_RED_BG_SOFT : "transparent",
+                    background: isExpanded ? "rgba(255,255,255,0.03)" : "transparent",
                     outline: "none",
                     borderTop: "none",
                     borderRight: "none",
                     borderBottom: "none",
-                    borderLeft: `3px solid ${isHighlighted ? SELECT_RED : "transparent"}`,
+                    borderLeft: "3px solid transparent",
                     cursor: "pointer",
                     textAlign: "left",
                     transition: "background 0.12s",
                   }}
                   onMouseEnter={(e) => {
-                    if (!isHighlighted)
-                      (e.currentTarget as HTMLElement).style.background =
-                        SELECT_RED_BG_SOFT;
+                    (e.currentTarget as HTMLElement).style.background =
+                      isExpanded ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.03)";
                   }}
                   onMouseLeave={(e) => {
-                    if (!isHighlighted)
-                      (e.currentTarget as HTMLElement).style.background = "transparent";
+                    (e.currentTarget as HTMLElement).style.background =
+                      isExpanded ? "rgba(255,255,255,0.03)" : "transparent";
                   }}
                 >
                   {/* Icon */}
@@ -589,8 +590,8 @@ export default function ViewsSidebar({
                       alignItems: "center",
                       justifyContent: "center",
                       flexShrink: 0,
-                      background: isHighlighted
-                        ? SELECT_RED_ICON_BG
+                      background: isExpanded
+                        ? "rgba(255,255,255,0.06)"
                         : "rgba(255,255,255,0.04)",
                     }}
                   >
@@ -598,7 +599,7 @@ export default function ViewsSidebar({
                       style={{
                         width: 14,
                         height: 14,
-                        color: isHighlighted ? SELECT_RED_TEXT : DIM_TEXT,
+                        color: isExpanded ? "#94a3b8" : DIM_TEXT,
                       }}
                     />
                   </div>
@@ -609,7 +610,7 @@ export default function ViewsSidebar({
                       style={{
                         fontSize: 12,
                         fontWeight: 600,
-                        color: isHighlighted ? "#e2e8f0" : MUTED_TEXT,
+                        color: isExpanded ? "#f1f5f9" : MUTED_TEXT,
                         whiteSpace: "nowrap",
                         overflow: "hidden",
                         textOverflow: "ellipsis",
@@ -643,15 +644,7 @@ export default function ViewsSidebar({
                       aria-label={isExpanded ? `Collapse ${pattern.label}` : `Expand ${pattern.label}`}
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (isExpanded) {
-                          setExpandedId(null);
-                          // Hiding category → drop focus if a child View was selected
-                          if (children.some((c) => c.id === activeSignal)) {
-                            onSelect(pattern.id);
-                          }
-                        } else {
-                          handleParentClick(pattern.id);
-                        }
+                        handleParentClick(pattern.id);
                       }}
                       style={{
                         flexShrink: 0,
@@ -667,28 +660,26 @@ export default function ViewsSidebar({
                         fontWeight: 700,
                         borderRadius: 4,
                         cursor: "pointer",
-                        border: `1px solid ${isExpanded ? (isHighlighted ? SELECT_RED : BORDER_COLOR) : BORDER_COLOR}`,
+                        border: `1px solid ${isExpanded ? "#2e4a6a" : BORDER_COLOR}`,
                         background: isExpanded
-                          ? (isHighlighted ? SELECT_RED_BG : "rgba(255,255,255,0.04)")
+                          ? "rgba(255,255,255,0.06)"
                           : "rgba(255,255,255,0.02)",
-                        color: isExpanded ? (isHighlighted ? SELECT_RED_TEXT : SUB_TEXT) : SUB_TEXT,
+                        color: isExpanded ? "#e2e8f0" : SUB_TEXT,
                         transition: "all 0.1s",
                       }}
                       onMouseEnter={(e) => {
                         const el = e.currentTarget as HTMLElement;
-                        if (!isExpanded) {
-                          el.style.borderColor = "#2e4a6a";
-                          el.style.color = MUTED_TEXT;
-                          el.style.background = "rgba(59,130,246,0.06)";
-                        }
+                        el.style.borderColor = "#2e4a6a";
+                        el.style.color = MUTED_TEXT;
+                        el.style.background = "rgba(59,130,246,0.06)";
                       }}
                       onMouseLeave={(e) => {
                         const el = e.currentTarget as HTMLElement;
-                        if (!isExpanded) {
-                          el.style.borderColor = BORDER_COLOR;
-                          el.style.color = SUB_TEXT;
-                          el.style.background = "rgba(255,255,255,0.02)";
-                        }
+                        el.style.borderColor = isExpanded ? "#2e4a6a" : BORDER_COLOR;
+                        el.style.color = isExpanded ? "#e2e8f0" : SUB_TEXT;
+                        el.style.background = isExpanded
+                          ? "rgba(255,255,255,0.06)"
+                          : "rgba(255,255,255,0.02)";
                       }}
                     >
                       {isExpanded ? "\u2212" : "+"}
