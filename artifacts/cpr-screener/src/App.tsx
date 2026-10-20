@@ -295,10 +295,10 @@ function App() {
         const mode = modeRef.current;
         if (mode !== "signals" && mode !== "scanner") return;
         const patternId = candidate.payload.patternId || undefined;
-        // On Signal Desk, also pin the left-nav View so the card stays visible.
-        // On Screener, Screener's own focus effect searches + scrolls the row;
-        // do not force activeSignal there (user may be on Show All / another filter).
-        if (mode === "signals" && patternId) setActiveSignal(patternId);
+        // Pin the left-nav View on Signal Desk *and* Screener so Card 3 of
+        // ScreenerLegend (SelectedViewTradeCard) shows this View's entry /
+        // target / stoploss. Screener also searches + scrolls the row.
+        if (patternId) setActiveSignal(patternId);
         setFocusSymbol({
           symbol: candidate.symbol,
           source: candidate.source,

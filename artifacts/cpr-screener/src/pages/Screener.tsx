@@ -340,6 +340,13 @@ export default function Screener({
     if (!focusSymbol) return;
     setSearch(focusSymbol.symbol);
     setStatusFilter("all");
+    // Show legend (including Card 3 View trade sheet). Parent sets
+    // activeSignal from toast patternId; leave Show All so the row is visible
+    // under that View filter and the 3-card legend is rendered.
+    if (focusSymbol.patternId) {
+      setShowAll(false);
+      onActiveSignalChange?.(focusSymbol.patternId);
+    }
     // Switch exchange tab to the toast's source when not already on combined.
     if (
       focusSymbol.source === "binance" ||
