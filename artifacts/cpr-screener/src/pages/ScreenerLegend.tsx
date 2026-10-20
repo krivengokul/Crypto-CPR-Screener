@@ -62,34 +62,35 @@ function SelectedViewTradeCard({ activeSignal }: { activeSignal: string }) {
           {code}
         </span>
       </div>
-      <div className={`flex items-center gap-1 ${dirColor}`}>
-        {isUp ? (
-          <ArrowUp className="w-3 h-3 shrink-0" aria-hidden />
-        ) : isDown ? (
-          <ArrowDown className="w-3 h-3 shrink-0" aria-hidden />
-        ) : (
-          <Flag className="w-3 h-3 shrink-0 text-slate-500" aria-hidden />
-        )}
-        <span className="text-[10px] font-semibold uppercase tracking-wide">
-          {direction === "Up" ? "Long / Up" : direction === "Down" ? "Short / Down" : "No direction"}
+      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 pt-0.5 border-t border-border/60 text-[10px]">
+        <span className={`inline-flex items-center gap-0.5 font-semibold uppercase tracking-wide ${dirColor}`}>
+          {isUp ? (
+            <ArrowUp className="w-3 h-3 shrink-0" aria-hidden />
+          ) : isDown ? (
+            <ArrowDown className="w-3 h-3 shrink-0" aria-hidden />
+          ) : (
+            <Flag className="w-3 h-3 shrink-0 text-slate-500" aria-hidden />
+          )}
+          {direction === "Up" ? "Long / Up" : direction === "Down" ? "Short / Down" : "—"}
         </span>
-      </div>
-      <div className="grid grid-cols-1 gap-0.5 pt-0.5 border-t border-border/60">
-        <div className="flex items-center gap-1.5 text-[10px]">
+        <span className="text-slate-600 select-none" aria-hidden>
+          ·
+        </span>
+        <span className="inline-flex items-center gap-0.5">
           <Crosshair className="w-3 h-3 shrink-0 text-amber-400" aria-hidden />
-          <span className="text-slate-500 w-10 shrink-0">Entry</span>
+          <span className="text-slate-500">Entry</span>
           <span className="font-mono font-semibold text-amber-200">{entryLvl}</span>
-        </div>
-        <div className="flex items-center gap-1.5 text-[10px]">
+        </span>
+        <span className="inline-flex items-center gap-0.5">
           <Target className="w-3 h-3 shrink-0 text-emerald-400" aria-hidden />
-          <span className="text-slate-500 w-10 shrink-0">Target</span>
+          <span className="text-slate-500">Target</span>
           <span className="font-mono font-semibold text-emerald-300">{targetLvl}</span>
-        </div>
-        <div className="flex items-center gap-1.5 text-[10px]">
+        </span>
+        <span className="inline-flex items-center gap-0.5">
           <Shield className="w-3 h-3 shrink-0 text-rose-400" aria-hidden />
-          <span className="text-slate-500 w-10 shrink-0">Stop</span>
+          <span className="text-slate-500">Stop</span>
           <span className="font-mono font-semibold text-rose-300">{stopLvl}</span>
-        </div>
+        </span>
       </div>
       {!view?.getEntry && !view?.getTarget && (
         <div className="text-[9px] text-slate-500 pt-0.5">
