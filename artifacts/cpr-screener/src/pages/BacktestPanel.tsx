@@ -924,7 +924,6 @@ function CopyViewControl({
           title="Optional 15m CONSOLIDATE/MOMENTUM filter (CA/MA/CB/MB)."
           className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
         >
-          <option value="">Any CONSOLIDATE/MOMENTUM</option>
           {CANDLE_CHECK_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
               {opt.label}
@@ -1338,7 +1337,6 @@ function EditViewControl({
           title="Optional 15m CONSOLIDATE/MOMENTUM filter (CA/MA/CB/MB)."
           className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
         >
-          <option value="">Any CONSOLIDATE/MOMENTUM</option>
           {CANDLE_CHECK_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
               {opt.label}
@@ -1840,7 +1838,6 @@ function CreateViewControl({
           title="Optional 15m CONSOLIDATE/MOMENTUM filter (CA/MA/CB/MB)."
           className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
         >
-          <option value="">Any CONSOLIDATE/MOMENTUM</option>
           {CANDLE_CHECK_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
               {opt.label}
