@@ -1605,7 +1605,7 @@ export default function Screener({
                       border: "none",
                       fontWeight: isActive ? 600 : 400,
                       background: isActive ? bg : "transparent",
-                      color: isActive ? textColor : "var(--muted-foreground)",
+                      color: isActive ? textColor : "#5a7a96",
                       cursor: "pointer",
                     }}
                     onMouseEnter={(e) => {
