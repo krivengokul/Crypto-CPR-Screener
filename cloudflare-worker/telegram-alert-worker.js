@@ -85,7 +85,7 @@ function formatTelegramMessage(p) {
   const dir      = p.direction === "Up" ? "⬆️" : "⬇️";
   const symbol   = escHtml(p.symbol ?? "—");
   const source   = escHtml(p.source ?? "");
-  const view     = p.viewLabel ? escHtml(p.viewLabel) : (p.viewCode ? escHtml(p.viewCode) : null);
+  // View name stays in the in-app toast only — omit from Telegram.
   const entry    = fmt(p.entry);
   const target   = fmt(p.target);
   const stop     = fmt(p.stop);
@@ -100,11 +100,10 @@ function formatTelegramMessage(p) {
     `<i>${source}</i>`,
   ];
 
-  if (view)   lines.push(`📋 View: ${view}`);
-
   lines.push(`💰 Price: <code>${price}</code>`);
-  if (entry)  lines.push(`🎯 Entry: <code>${entry}</code>`);
-  if (target) lines.push(`🏁 Target: <code>${target}</code>`);
+  // Entry → pin; Target → former Entry bullseye (🎯).
+  if (entry)  lines.push(`📍 Entry: <code>${entry}</code>`);
+  if (target) lines.push(`🎯 Target: <code>${target}</code>`);
   if (stop)   lines.push(`🛑 Stop: <code>${stop}</code>`);
   if (rr)     lines.push(`⚖️ R:R  ${rr}`);
   if (timeStr)lines.push(`🕐 ${timeStr} IST`);
