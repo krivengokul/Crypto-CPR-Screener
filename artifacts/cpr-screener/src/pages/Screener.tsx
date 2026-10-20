@@ -1594,20 +1594,31 @@ export default function Screener({
                 const isActive = activeGenericSignal
                   ? activeGenericSignal === sub.id
                   : activeSignal === sub.id; // left-nav navigated straight to this leaf
-                const borderColor = sub.activeColor ?? "var(--foreground)";
                 const textColor = sub.activeText ?? "var(--foreground)";
-                const bg = sub.activeBg;
+                const bg = sub.activeBg ?? "rgba(255,255,255,0.08)";
                 return (
                   <button
                     key={sub.id}
                     onClick={() => setActiveGenericSignal((v) => (v === sub.id ? null : sub.id))}
-                    className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                      isActive ? "" : "border-border text-muted-foreground hover:text-foreground"
-                    }`}
-                    style={isActive ? { borderColor, color: textColor, backgroundColor: bg } : undefined}
-                    title={`Show only rows matching ${sub.label}`}
+                    className="text-xs px-2.5 py-1 rounded transition-colors"
+                    style={{
+                      border: "none",
+                      fontWeight: isActive ? 600 : 400,
+                      background: isActive ? bg : "transparent",
+                      color: isActive ? textColor : "var(--muted-foreground)",
+                      cursor: "pointer",
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isActive)
+                        (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.06)";
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isActive)
+                        (e.currentTarget as HTMLElement).style.background = "transparent";
+                    }}
+                    title={isActive ? `Selected — click again to clear` : `Show only rows matching ${sub.label}`}
                   >
-                    {isActive ? `✕ ${sub.label}` : sub.label}
+                    {sub.label}
                     <ViewCount id={sub.id} counts={viewCounts} />
                   </button>
                 );

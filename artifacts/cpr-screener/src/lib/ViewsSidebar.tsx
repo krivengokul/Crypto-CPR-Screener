@@ -89,7 +89,7 @@ function buildSidebarViews(): Record<string, SidebarView[]> {
       ...(isBullish
         ? { activeColor: "#22c55e", activeText: "#4ade80", activeBg: "rgba(34, 197, 94, 0.14)" }
         : isBearish
-          ? { activeColor: "#f87171", activeText: "#fca5a5", activeBg: "rgba(239, 68, 68, 0.14)" }
+          ? { activeColor: "#fb7185", activeText: "#fda4af", activeBg: "rgba(251, 113, 133, 0.14)" }
           : {}),
     });
   }
@@ -297,14 +297,14 @@ export default function ViewsSidebar({
   const ACTIVE_BLUE = "#3b82f6";
   const ACTIVE_TEXT = "#60a5fa";
   /**
-   * Selected View highlight — same rose/red family as SignalDesk progress
-   * bar stop side (#881337 track / rose-400 labels). No chip border; soft fill.
+   * Selected View highlight — rose (P-CONSOLIDATE-B rose-400 family) for Down
+   * direction views; green for Up. No chip border; soft fill.
    */
-  const SELECT_RED = "#f87171";
-  const SELECT_RED_TEXT = "#fecaca";
-  const SELECT_RED_BG = "rgba(248, 113, 113, 0.14)";
-  const SELECT_RED_BG_SOFT = "rgba(248, 113, 113, 0.08)";
-  const SELECT_RED_ICON_BG = "rgba(248, 113, 113, 0.20)";
+  const SELECT_RED = "#fb7185";
+  const SELECT_RED_TEXT = "#fda4af";
+  const SELECT_RED_BG = "rgba(251, 113, 133, 0.14)";
+  const SELECT_RED_BG_SOFT = "rgba(251, 113, 133, 0.08)";
+  const SELECT_RED_ICON_BG = "rgba(251, 113, 133, 0.20)";
   const MUTED_TEXT = "#8ba3bc";
   const DIM_TEXT = "#4b6a8a";
   const SUB_TEXT = "#5a7a96";
@@ -704,7 +704,7 @@ export default function ViewsSidebar({
                   >
                     {children.map((sub) => {
                       const isActiveSub = activeSignal === sub.id;
-                      // Selected = soft red fill + left accent; no border box, no ✕.
+                      // Selected = soft rose fill + left accent; no border box, no ✕.
                       // Per-view activeColor still allowed for special cases.
                       const subActiveText = sub.activeText ?? SELECT_RED_TEXT;
                       const subActiveBg = sub.activeBg ?? SELECT_RED_BG;
