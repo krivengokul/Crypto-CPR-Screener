@@ -1,4 +1,15 @@
-import { Views } from "@/lib/ViewsSidebar"
+import { Views } from "@/lib/ViewsSidebar";
+import { getView, shortLevelLabel } from "@/lib/views";
+import {
+  ArrowDown,
+  ArrowUp,
+  Crosshair,
+  Flag,
+  Hash,
+  Shield,
+  Tag,
+  Target,
+} from "lucide-react";
 
 export interface ScreenerLegendProps {
   activeSignal: string;
@@ -7,10 +18,92 @@ export interface ScreenerLegendProps {
 }
 
 /**
- * The 3-card legend grid shown above the controls row. Mechanical
- * extraction of the "{/* Legend *}" block from Screener.tsx — same
- * conditions, same copy, same styling. Takes every boolean the original
- * ternary chain read as a prop.
+ * Card 3 — when a View (or any left-nav leaf) is selected, replace the old
+ * hardcoded bias/time copy with a compact trade sheet: name, code, direction,
+ * entry / target / stoploss level labels from the View registry.
+ */
+function SelectedViewTradeCard({ activeSignal }: { activeSignal: string }) {
+  const view = activeSignal ? getView(activeSignal) : undefined;
+  if (!activeSignal) {
+    return (
+      <div className="text-[11px] text-muted-foreground">
+        Select a View in the left nav to see entry, target, and stoploss.
+      </div>
+    );
+  }
+
+  const name = view?.label || activeSignal;
+  const code = view?.key || activeSignal;
+  const direction = view?.direction;
+  const entryLvl = shortLevelLabel(view?.entryLabel) || view?.entryLabel || "—";
+  const targetLvl = shortLevelLabel(view?.targetLabel) || view?.targetLabel || "—";
+  const stopLvl = shortLevelLabel(view?.stoplossLabel) || view?.stoplossLabel || "—";
+  const isUp = direction === "Up";
+  const isDown = direction === "Down";
+  const dirColor = isUp
+    ? "text-emerald-400"
+    : isDown
+      ? "text-rose-400"
+      : "text-slate-400";
+
+  return (
+    <div className="space-y-1.5 min-w-0">
+      <div className="flex items-start gap-1.5 min-w-0">
+        <Tag className="w-3 h-3 mt-0.5 shrink-0 text-primary" aria-hidden />
+        <div className="min-w-0">
+          <div className="text-[11px] font-semibold text-primary leading-tight truncate" title={name}>
+            {name}
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center gap-1 min-w-0">
+        <Hash className="w-3 h-3 shrink-0 text-slate-500" aria-hidden />
+        <span className="font-mono text-[10px] text-slate-300 truncate" title={code}>
+          {code}
+        </span>
+      </div>
+      <div className={`flex items-center gap-1 ${dirColor}`}>
+        {isUp ? (
+          <ArrowUp className="w-3 h-3 shrink-0" aria-hidden />
+        ) : isDown ? (
+          <ArrowDown className="w-3 h-3 shrink-0" aria-hidden />
+        ) : (
+          <Flag className="w-3 h-3 shrink-0 text-slate-500" aria-hidden />
+        )}
+        <span className="text-[10px] font-semibold uppercase tracking-wide">
+          {direction === "Up" ? "Long / Up" : direction === "Down" ? "Short / Down" : "No direction"}
+        </span>
+      </div>
+      <div className="grid grid-cols-1 gap-0.5 pt-0.5 border-t border-border/60">
+        <div className="flex items-center gap-1.5 text-[10px]">
+          <Crosshair className="w-3 h-3 shrink-0 text-amber-400" aria-hidden />
+          <span className="text-slate-500 w-10 shrink-0">Entry</span>
+          <span className="font-mono font-semibold text-amber-200">{entryLvl}</span>
+        </div>
+        <div className="flex items-center gap-1.5 text-[10px]">
+          <Target className="w-3 h-3 shrink-0 text-emerald-400" aria-hidden />
+          <span className="text-slate-500 w-10 shrink-0">Target</span>
+          <span className="font-mono font-semibold text-emerald-300">{targetLvl}</span>
+        </div>
+        <div className="flex items-center gap-1.5 text-[10px]">
+          <Shield className="w-3 h-3 shrink-0 text-rose-400" aria-hidden />
+          <span className="text-slate-500 w-10 shrink-0">Stop</span>
+          <span className="font-mono font-semibold text-rose-300">{stopLvl}</span>
+        </div>
+      </div>
+      {!view?.getEntry && !view?.getTarget && (
+        <div className="text-[9px] text-slate-500 pt-0.5">
+          Category / filter — no fixed entry levels on this node.
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * The 3-card legend grid shown above the controls row.
+ * Card 1–2: category / pattern overview (unchanged).
+ * Card 3: selected View trade sheet (name, code, direction, entry/target/stop).
  */
 export default function ScreenerLegend(props: ScreenerLegendProps) {
   const {
@@ -228,104 +321,9 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
           </>
         ) : null}
       </div>
+      {/* Card 3: selected View — name, code, direction, entry / target / stop */}
       <div className="rounded-lg border border-border bg-card p-3">
-        {activeSignal === "6PM:HHLLA-RRHHGap:6AM" ? (
-          <>
-            <div className="text-xs font-semibold text-green-400 mb-1">Target: U4&nbsp;&nbsp;&nbsp;Entry: 6PM&nbsp;&nbsp;&nbsp;Time: 6AM</div>
-            <div className="text-xs text-emerald-400/80">6PM setup with Up continuation expected toward today&apos;s U4 by ~6AM</div>
-          </>
-        ) : activeSignal === "7PM:MoMi->U4:2AM" ? (
-          <>
-            <div className="text-xs font-semibold text-cyan-400 mb-1">Target: U4&nbsp;&nbsp;&nbsp;Entry: 7PM&nbsp;&nbsp;&nbsp;Time: 2AM</div>
-            <div className="text-xs text-cyan-400/80">7PM setup with Up continuation expected toward today&apos;s U4 by ~2AM</div>
-          </>
-        ) : activeSignal === "7PM:MoMi-<L4:2AM" ? (
-          <>
-            <div className="text-xs font-semibold text-rose-400 mb-1">Target: L4&nbsp;&nbsp;&nbsp;Entry: 7PM&nbsp;&nbsp;&nbsp;Time: 2AM</div>
-            <div className="text-xs text-rose-400/80">7PM setup with Down continuation expected toward today&apos;s L4 by ~2AM</div>
-          </>
-        ) : activeSignal === "ss-EL1U4-U4:10PM" ? (
-          <>
-            <div className="text-xs font-semibold text-green-400 mb-1">Target: U4&nbsp;&nbsp;Time: 10PM</div>
-            <div className="text-xs text-emerald-400/80">Bullish sweep from a deep BELOW LEVEL4 setup — expected recovery toward today&apos;s U4 by ~10PM IST</div>
-          </>
-        ) : activeSignal === "9AM:APHS1A-FAU4:4AM" ? (
-          <>
-            <div className="text-xs font-semibold text-green-400 mb-1">Target: FAU4	Time: 3PM</div>
-            <div className="text-xs text-muted-foreground">Expected upside far above U4 by ~3PM</div>
-          </>
-        ) : activeSignal === "6AM:pX-APHS1A-pL4:4AM" ? (
-          <>
-            <div className="text-xs font-semibold text-red-400 mb-1">Exp Target: pL4 (prev day&apos;s S4)<br />Entry: 6AM&nbsp;&nbsp;Time: 4AM</div>
-            <div className="text-xs text-red-400/80">6AM setup with the prev day&apos;s own p-EU3L4 pattern — expected downside toward pL4 by ~4AM</div>
-          </>
-        ) : activeSignal === "8AM:APHS1A-FAU4:4AM" ? (
-          <>
-            <div className="text-xs font-semibold text-green-400 mb-1">Target: FAU4&nbsp;&nbsp;Time: 4AM</div>
-            <div className="text-xs text-muted-foreground">A-A-AA-AA-EU1L3 base plus today&apos;s BC above prev day&apos;s own PDH and today&apos;s S1 above prev day&apos;s TC — expected upside far above U4 by ~4AM</div>
-          </>
-        ) : activeSignal === "SMg-exHiL2L1-U4:3AM" ? (
-          <>
-            <div className="text-xs font-semibold text-sky-400 mb-1">Exp Target: U4 (today&apos;s R4)<br />Time: 3AM</div>
-            <div className="text-xs text-muted-foreground">Expected upside target U4 (today&apos;s R4) by ~3AM</div>
-          </>
-        ) : activeSignal === "8AM:CoLApHA-U4+1:8AM" ? (
-          <>
-            <div className="text-xs font-semibold text-green-400 mb-1">
-              Target: PU4&nbsp;&nbsp;&nbsp;Entry: 8AM&nbsp;&nbsp;&nbsp;Time: 8AM (+1)
-            </div>
-            <div className="text-xs text-muted-foreground">
-              Up continuation from an Inside-CPR setup where today&apos;s PDL holds above prev day&apos;s S1 and either today&apos;s PDH clears prev day&apos;s R1 or prev day&apos;s PDH clears today&apos;s R1 — expected move toward prev day&apos;s U4 by ~8AM the next day.
-            </div>
-          </>
-        ) : activeSignal === "8AM:SRBHHLLA-pU4+1:8AM" ? (
-          <>
-            <div className="text-xs font-semibold text-green-400 mb-1">
-              Target: PU4&nbsp;&nbsp;&nbsp;Entry: 8AM&nbsp;&nbsp;&nbsp;Time: 8AM (+1)
-            </div>
-            <div className="text-xs text-muted-foreground">
-              Up continuation from an Inside-CPR/CU3L3 setup with contracting pivots — expected move toward prev day&apos;s U4 by ~8AM the next day.
-            </div>
-          </>
-        ) : activeSignal === "2PM:pPDHLA-SRA-U4:7PM" ? (
-          <>
-            <div className="text-xs font-semibold text-green-400 mb-1">
-              Target: U4&nbsp;&nbsp;&nbsp;Entry: 2PM&nbsp;&nbsp;&nbsp;Time: 7PM
-            </div>
-            <div className="text-xs text-muted-foreground">
-              Up continuation from an Inside-CPR/CU4L4 setup with pivots stepping up — expected move toward today&apos;s U4 by ~7PM IST.
-            </div>
-          </>
-        ) : activeSignal === "8AM:pPDHA-SRA-U4+2:2AM" ? (
-          <>
-            <div className="text-xs font-semibold text-green-400 mb-1">
-              Target: U4&nbsp;&nbsp;&nbsp;Entry: 8AM&nbsp;&nbsp;&nbsp;Time: 2AM (+2)
-            </div>
-            <div className="text-xs text-muted-foreground">
-              Up continuation from an Inside-CPR/EU4L4 setup with today&apos;s SSRRAbove holding — expected move toward today&apos;s U4 by ~2AM, two days out.
-            </div>
-          </>
-        ) : activeSignal === "6A:SLE-RRHH:R2-6A" ? (
-          <>
-            <div className="text-xs font-semibold text-emerald-400 mb-1">Target: U2&nbsp;&nbsp;&nbsp;Entry: 6AM&nbsp;&nbsp;&nbsp;Time: 6AM</div>
-            <div className="text-xs text-muted-foreground">6AM setup with Up continuation expected toward today&apos;s U2 (R2) by ~6AM</div>
-          </>
-        ) : activeSignal === "levelsabove" ? (
-          <>
-            <div className="text-xs font-semibold text-emerald-400 mb-1">Bias: Bullish (PH up, PL held)</div>
-            <div className="text-xs text-emerald-400/80">Today&apos;s Prev High is higher than yesterday&apos;s and the Prev Low did not drop — upward shift in the day range (HHLL-A)</div>
-          </>
-        ) : activeSignal === "levelsbelow" ? (
-          <>
-            <div className="text-xs font-semibold text-emerald-400 mb-1">Bias: Bearish (PH held, PL down)</div>
-            <div className="text-xs text-emerald-400/80">Today&apos;s Prev High did not move up while the Prev Low dropped — downward shift in the day range (HHLL-B)</div>
-          </>
-        ) : activeSignal === "2P:L4U4-pLAP:R4-2A" ? (
-          <>
-            <div className="text-xs font-semibold text-green-400 mb-1">Target: U4&nbsp;&nbsp;&nbsp;Entry: 2PM&nbsp;&nbsp;&nbsp;Time: 2AM</div>
-            <div className="text-xs text-emerald-400/80">RHSLB-SSLLpGap base plus L4U4 (today&apos;s R4 inside prev&apos;s R3/R4, prev&apos;s S4 inside today&apos;s S3/S4) plus prev day&apos;s own PDL above today&apos;s Pivot — expected move toward today&apos;s own U4 (R4) by ~2AM</div>
-          </>
-        ) : null}
+        <SelectedViewTradeCard activeSignal={activeSignal} />
       </div>
     </div>
   );
