@@ -2,7 +2,7 @@ import type { CPRResult } from "../../cpr";
 import type { ViewDef } from "../types";
 import { pickOuterLevelPattern } from "../../cpr";
 import { passesView } from "../registry";
-import { matchesGapBadge } from "../gapBadges";
+import { matchesGapBadge, matchesCandleCheck } from "../gapBadges";
 
 export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
   // --- the two standalone top-level categories ---
@@ -1076,17 +1076,19 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
     ],
       },
     {
-        key: "A6-EL2L1-ABGap-R2",
-        label: "A6-EL2L1-ABGap-R2",
+        key: "TC-MA-A-A-AA-AA-EL2L1-RH-ABGap-R2",
+        label: "PCPR-PLA-Ultra-R2",
         parentKey: "A-A-AA-AA-EL2L1",
-        conditionKey: "A-A-AA-AA-EL2L1",
+        condition: (r) => passesView(r, "A-A-AA-AA-EL2L1") && matchesGapBadge(r, "RH-ABGap") && matchesCandleCheck(r, "MA"),
+        standalone: true,
+        candleCheck: "MA",
         kind: "view",
         direction: "Up",
-        targetLabel: "R4",
-        getTarget: (r) => r.todayCPR.r4,
-        entryLabel: "TC",
+        targetLabel: "U2 (today's R2)",
+        getTarget: (r) => r.todayCPR.r2,
+        entryLabel: "TC (today's TC)",
         getEntry: (r) => r.todayCPR.tc,
-        stoplossLabel: "S1",
+        stoplossLabel: "S1 (today's S1)",
         getStoploss: (r) => r.todayCPR.s1,
         levelCheckDefs: [
       {
@@ -1194,6 +1196,7 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
         ]
       }
     ],
+        requireFullMatch: false,
       },
     {
         key: "BC-A-A-AA-AA-EUPL3-RH-BBGap-S2",
