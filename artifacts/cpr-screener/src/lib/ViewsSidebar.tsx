@@ -278,17 +278,6 @@ export default function ViewsSidebar({
     onSelect(activeSignal === subId ? parentId : subId);
   }
 
-  // Screener → sidebar: closing the matching ✕ filter button in the Screener
-  // deselects the same View here.
-  useEffect(
-    () =>
-      subscribeSignalDeselect((signalId) => {
-        if (signalId !== activeSignal) return;
-        const parent = getParentId(signalId);
-        if (parent) onSelect(parent);
-      }),
-    [activeSignal, onSelect],
-  );
 
   // ─── Shared style helpers ─────────────────────────────────────────────────
   const BG_DARK = "#0d1117";

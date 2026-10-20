@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo, Fragment, type Dispatch, type SetStateAction } from "react";
-import { pivotcategories, Views, VIEW_LABEL_BY_ID, requestSignalDeselect } from "@/lib/ViewsSidebar";
+import { pivotcategories, Views, VIEW_LABEL_BY_ID } from "@/lib/ViewsSidebar";
 import { getView, VIEWS } from "@/lib/views";
 import { hasTouchedEntry } from "@/lib/signalTracker";
 import { sessionReachedTarget } from "@/lib/signalOutcome";
@@ -610,19 +610,6 @@ export default function Screener({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSignal, isSignalLeaf]);
 
-  // Screener → Sidebar: when the currently-selected View's Screener button is
-  // closed with its ✕, tell the left-nav to deselect the same View (falls back
-  // to its parent category). Only fires on a true → false transition so the
-  // sync effect above never triggers it.
-  const activeSignalOn = VIEW_SETTERS[activeSignal]
-    ? !!VIEW_STATES[activeSignal]
-    : activeGenericSignal === activeSignal;
-  const prevActiveSignalOnRef = useRef(false);
-  useEffect(() => {
-    const wasOn = prevActiveSignalOnRef.current;
-    prevActiveSignalOnRef.current = activeSignalOn;
-    if (isSignalLeaf && wasOn && !activeSignalOn) requestSignalDeselect(activeSignal);
-  }, [activeSignalOn, isSignalLeaf, activeSignal]);
   // activeSectionKey resolves either a category id or one of its leaves back to
   // the owning category, so the Views button row and the per-row direction dot
   // stay populated whether the category or a leaf triggered the selection.
@@ -1599,7 +1586,15 @@ export default function Screener({
                 return (
                   <button
                     key={sub.id}
-                    onClick={() => setActiveGenericSignal((v) => (v === sub.id ? null : sub.id))}
+                    onClick={() => {
+                      if (isActive) {
+                        setActiveGenericSignal(null);
+                        onActiveSignalChange?.(activeSectionKey);
+                      } else {
+                        setActiveGenericSignal(sub.id);
+                        onActiveSignalChange?.(sub.id);
+                      }
+                    }}
                     className="text-xs px-2.5 py-1 rounded transition-colors"
                     style={{
                       border: "none",
