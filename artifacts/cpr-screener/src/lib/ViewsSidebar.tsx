@@ -359,22 +359,7 @@ export default function ViewsSidebar({
           >
             Hook{webhookUrl ? " · on" : ""}
           </button>
-          <span
-            style={{
-              fontSize: 11,
-              fontWeight: 700,
-              color: DIM_TEXT,
-              letterSpacing: "0.06em",
-              textTransform: "uppercase",
-              flex: 1,
-              minWidth: 0,
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-            }}
-          >
-            PIVOT LEVEL | VIEWS
-          </span>
+          <div style={{ flex: 1, minWidth: 0 }} aria-hidden />
           <button
             onClick={onClose ?? onToggle}
             aria-label={onClose ? "Close menu" : "Collapse sidebar"}
