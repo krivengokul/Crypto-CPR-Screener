@@ -575,26 +575,127 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
   ],
     },
   {
-    key: "A-A-AA-AA-EUPL3-RRHHGap:R4",
-    label: "A-A-AA-AA-EUPL3-RRHHGap:R4",
-    parentKey: "A-A-AA-AA-EUPL3",
-    kind: "view",
-    direction: "Up",
-    condition: (r) =>
-      r.RRSSGapCategory === "RRGap" &&
-      r.PDHPDLGapCategory === "HHGap" &&
-      r.prevCPR.HLSwitch === "HL-A" &&
-      r.todayCPR.HLSwitch === "HL-B" &&
-      r.hlGapWinner === "today" &&
-      r.prevCPR.r1 > r.todayCPR.s1,
-    targetLabel: "R4",
-    getTarget: (r) => r.todayCPR.r4,
-    entryLabel: "TC",
-    getEntry: (r) => r.todayCPR.tc,
-    stoplossLabel: "S1",
-    getStoploss: (r) => r.todayCPR.s1,
-      order: 0
-},
+      key: "TC-A-A-AA-AA-EUPL3-RH-ABGap-R4",
+      label: "PTINYLARGE-R4AGAIN",
+      parentKey: "A-A-AA-AA-EUPL3",
+      condition: (r) => passesView(r, "A-A-AA-AA-EUPL3") && matchesGapBadge(r, "RH-ABGap"),
+      standalone: true,
+      kind: "view",
+      direction: "Up",
+      targetLabel: "U4 (today's R4)",
+      getTarget: (r) => r.todayCPR.r4,
+      entryLabel: "TC (today's TC)",
+      getEntry: (r) => r.todayCPR.tc,
+      stoplossLabel: "S1 (today's S1)",
+      getStoploss: (r) => r.todayCPR.s1,
+      levelCheckDefs: [
+    {
+      "key": "r4",
+      "subject": "previous",
+      "bandKeys": [
+        "pivot",
+        "bc"
+      ]
+    },
+    {
+      "key": "r3",
+      "subject": "previous",
+      "bandKeys": [
+        "bc",
+        "s1"
+      ]
+    },
+    {
+      "key": "r2",
+      "subject": "previous",
+      "bandKeys": [
+        "bc",
+        "s1"
+      ]
+    },
+    {
+      "key": "prevHigh",
+      "subject": "previous",
+      "bandKeys": [
+        "bc",
+        "s1"
+      ]
+    },
+    {
+      "key": "r1",
+      "subject": "previous",
+      "bandKeys": [
+        "bc",
+        "s1"
+      ]
+    },
+    {
+      "key": "tc",
+      "subject": "previous",
+      "bandKeys": [
+        "s1",
+        "prevLow"
+      ]
+    },
+    {
+      "key": "pivot",
+      "subject": "previous",
+      "bandKeys": [
+        "s1",
+        "prevLow"
+      ]
+    },
+    {
+      "key": "bc",
+      "subject": "previous",
+      "bandKeys": [
+        "s1",
+        "prevLow"
+      ]
+    },
+    {
+      "key": "prevLow",
+      "subject": "previous",
+      "bandKeys": [
+        "prevLow",
+        "s2"
+      ]
+    },
+    {
+      "key": "s1",
+      "subject": "previous",
+      "bandKeys": [
+        "prevLow",
+        "s2"
+      ]
+    },
+    {
+      "key": "s2",
+      "subject": "previous",
+      "bandKeys": [
+        "prevLow",
+        "s2"
+      ]
+    },
+    {
+      "key": "s3",
+      "subject": "previous",
+      "bandKeys": [
+        "prevLow",
+        "s2"
+      ]
+    },
+    {
+      "key": "s4",
+      "subject": "previous",
+      "bandKeys": [
+        "s2",
+        "s3"
+      ]
+    }
+  ],
+      requireFullMatch: true,
+    },
     {
         key: "A-E-AA-E-EUBL2-GapB-S1",
         label: "A-E-AA-E-EUBL2-GapB-S1",
