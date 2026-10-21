@@ -284,6 +284,10 @@ function App() {
       playEntryCrossAlert();
 
       const dir = candidate.direction === "Up" ? "LONG" : "SHORT";
+      const isUp = candidate.direction === "Up";
+      // Border + symbol follow direction: green for Up, rose for Down.
+      const dirBorder = isUp ? "border-emerald-500/60" : "border-rose-500/60";
+      const dirText = isUp ? "text-emerald-400" : "text-rose-400";
       const px = Number.isFinite(price) ? price.toPrecision(6) : String(price);
       const entry = Number.isFinite(candidate.entry)
         ? candidate.entry.toPrecision(6)
@@ -322,7 +326,7 @@ function App() {
         description: (
           <div className="space-y-0.5 text-sm leading-snug">
             <div>
-              {candidate.symbol} -- {dir}
+              <span className={`font-semibold ${dirText}`}>{candidate.symbol}</span> -- {dir}
             </div>
             <div>
               <span className="text-slate-400">Price:</span>{" "}
@@ -347,7 +351,7 @@ function App() {
           </div>
         ),
         duration: 12_000,
-        className: "cursor-pointer",
+        className: `cursor-pointer ${dirBorder}`,
         // Body click → open TradingView chart for this symbol in a new tab
         // (same URL as the chart icon on Screener / SignalDesk rows).
         // Works from any page (scanner, signals, journal, etc.).
