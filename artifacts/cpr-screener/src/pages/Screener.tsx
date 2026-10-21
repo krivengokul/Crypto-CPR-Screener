@@ -344,7 +344,25 @@ export default function Screener({
   useEffect(() => {
     if (!focusSymbol) return;
     setSearch(focusSymbol.symbol);
+    // Soft "Show All": clear every extra filter that could hide the toast's
+    // row (sub-filters, width/PDH-PDL/touch/entry-level, breakout, UPEX,
+    // previous-candle, reclaim). The View itself is set just below from the
+    // toast's patternId, so only that View's filter remains.
     setStatusFilter("all");
+    setPatternFilter(null);
+    setTouchFilter(null);
+    setEntryLevelFilter(null);
+    setPrevWidthFilter(null);
+    setTodayWidthFilter(null);
+    setPdhPdlFilter(null);
+    setBreakoutMode("off");
+    onScanOrTabReset();
+    if (!focusSymbol.patternId) {
+      // No View to switch to: full Show All, same as the Show All button.
+      setShowAll(true);
+      setActiveGenericSignal(null);
+      onActiveSignalChange?.("");
+    }
     // Show legend (including Card 3 View trade sheet). Parent sets
     // activeSignal from toast patternId; leave Show All so the row is visible
     // under that View filter and the 3-card legend is rendered.
