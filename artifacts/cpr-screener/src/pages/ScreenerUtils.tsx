@@ -319,6 +319,48 @@ export function getChartUrl(
   return `https://www.tradingview.com/chart/?symbol=${tvSymbol}`;
 }
 
+
+/**
+ * Open a TradingView (or other) chart URL in a new tab with a *full*
+ * document navigation. Plain `window.open(url, "_blank", "noopener,noreferrer")`
+ * often leaves TradingView stuck on a spinner until the user re-submits the
+ * address bar (Enter). Opening about:blank first, then assigning location,
+ * matches that hard navigation.
+ */
+export function openChartInNewTab(url: string): void {
+  if (typeof window === "undefined" || !url) return;
+  try {
+    const win = window.open("about:blank", "_blank");
+    if (win) {
+      try {
+        // Drop opener for security; still allows full navigation in this tab.
+        win.opener = null;
+      } catch {
+        /* ignore */
+      }
+      win.location.replace(url);
+      return;
+    }
+  } catch {
+    /* popup blocked or other */
+  }
+  // Fallback: synthetic <a> click (same path as row chart icons).
+  try {
+    const a = document.createElement("a");
+    a.href = url;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    return;
+  } catch {
+    /* ignore */
+  }
+  window.location.assign(url);
+}
+
 /**
  * CPR>PU4 — sub-toggle condition for the "U1>PU4" filter (BigCPR Above):
  * today's BC sits above previous day's R4.

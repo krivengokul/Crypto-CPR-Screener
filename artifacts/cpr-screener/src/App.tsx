@@ -6,7 +6,7 @@ import Screener from "@/pages/Screener";
 import BacktestPanel from "@/pages/BacktestPanel";
 import SignalDesk, { type SignalDeskSymbol, type FocusSymbol, buildPills, computeSignalLevels } from "@/pages/SignalDesk";
 import type { CPRResultWithSource, ActiveTab } from "@/pages/ScreenerUtils";
-import { passesPattern, getChartUrl } from "@/pages/ScreenerUtils";
+import { passesPattern, getChartUrl, openChartInNewTab } from "@/pages/ScreenerUtils";
 import {
   autoSaveQualifiedSignals,
   fetchSavedSignalsFromCloud,
@@ -353,7 +353,9 @@ function App() {
           const el = e.target as HTMLElement | null;
           if (el?.closest?.("[toast-close], [data-radix-toast-close]")) return;
           const url = getChartUrl(candidate.symbol, candidate.source);
-          window.open(url, "_blank", "noopener,noreferrer");
+          // Full navigation (about:blank → location) so TradingView finishes
+          // loading the same way as pressing Enter in the address bar.
+          openChartInNewTab(url);
         },
       });
 
