@@ -83,7 +83,7 @@ export function useR1CrossAlert(
     const listed = crosses.slice(0, MAX_LISTED);
     const extra = crosses.length - listed.length;
     toast({
-      title: crosses.length === 1 ? "R1 breakout — price above R1" : `R1 breakout — ${crosses.length} coins above R1`,
+      title: crosses.length === 1 ? "R1 Breakout — Price above R1" : `R1 Breakout — ${crosses.length} coins above R1`,
       description: (
         <div className="space-y-0.5 text-sm leading-snug">
           {listed.map((c) => (
@@ -97,13 +97,11 @@ export function useR1CrossAlert(
                 openChartInNewTab(getChartUrl(c.symbol, c.source));
               }}
             >
-              <span className="font-semibold text-sky-300">{c.symbol}</span>{" "}
-              <span className="text-slate-400">({c.source})</span>{" "}
-              <span className="text-slate-400">R1</span>{" "}
-              <span className="font-mono text-slate-100">{c.r1.toPrecision(6)}</span>
+              <span className="font-semibold text-sky-300">{c.symbol}</span>
+              <span className="font-mono text-white">({c.price.toPrecision(6)})</span>
               {"  "}
-              <span className="text-slate-400">Price</span>{" "}
-              <span className="font-mono text-slate-100">{c.price.toPrecision(6)}</span>
+              <span className="text-slate-400">Above R1</span>
+              <span className="font-mono text-slate-100">({c.r1.toPrecision(6)})</span>
             </div>
           ))}
           {extra > 0 && <div className="text-slate-400">+{extra} more</div>}
