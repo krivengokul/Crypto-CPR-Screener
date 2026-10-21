@@ -61,7 +61,8 @@ import {
   getMatchingSignals,
 } from "./ScreenerUtils";
 import LiveClock from "./LiveClock";
-import ScreenerLegend from "./ScreenerLegend";
+import ScreenerLegend, { type ScreenerLegendFocusToast } from "./ScreenerLegend";
+import { getLadderMatchSummary } from "./SRLadderDiff";
 import ScreenerTableRow, { getBadgeClasses } from "./ScreenerTableRow";
 import { useExchangeScan } from "@/hooks/useExchangeScan";
 import { usePreviousCandleFilters } from "@/hooks/usePreviousCandleFilters";
@@ -322,6 +323,9 @@ export default function Screener({
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "ready" | "pass" | "fail">("all");
 
   const [expandedSymbols, setExpandedSymbols] = useState<Set<string>>(new Set());
+  /** Persist toast row PDay + MATCH in Legend Card 2 until the next toast. */
+  const [legendToastFocus, setLegendToastFocus] = useState<ScreenerLegendFocusToast | null>(null);
+
   function toggleExpand(key: string) {
     setExpandedSymbols((prev) => {
       const next = new Set(prev);
@@ -347,6 +351,51 @@ export default function Screener({
       setShowAll(false);
       onActiveSignalChange?.(focusSymbol.patternId);
     }
+
+    // Legend Card 2: SignalCode (colored by direction) + PDay + MATCH.
+    const sym = focusSymbol.symbol.toUpperCase();
+    const src = focusSymbol.source;
+    const pool = [
+      ...allResults.map((r) => ({ ...r, source: "binance" as const })),
+      ...deltaAllResults.map((r) => ({ ...r, source: "delta" as const })),
+      ...coindcxAllResults.map((r) => ({ ...r, source: "coindcx" as const })),
+    ];
+    const row = pool.find(
+      (r) => r.source === src && r.symbol.toUpperCase() === sym,
+    );
+    let pDayText = "—";
+    let matchText = "—";
+    const patternId = focusSymbol.patternId || activeSignal || "";
+    const viewDef = patternId ? getView(patternId) : undefined;
+    const signalCode = patternId || "—";
+    const direction = viewDef?.direction;
+    if (row) {
+      if (hasInsideR1S1(row)) pDayText = "P-INSIDE-R1S1";
+      else if (hasConsolidateB(row)) pDayText = "P-CONSOLIDATE-B";
+      else if (hasMomentumB(row)) pDayText = "P-MOMENTUM-B";
+      else if (hasConsolidateA(row)) pDayText = "P-CONSOLIDATE-A";
+      else if (hasMomentumA(row)) pDayText = "P-MOMENTUM-A";
+      else {
+        const conA = row.PD15MConsolidateAPass === true;
+        const conB = row.PD15MBelowTCPass === true;
+        const momA = row.PD15MAboveBCPass === true;
+        const momB = row.PD15MMomentumBPass === true;
+        if (conA && conB) pDayText = "P-INSIDE-R1S1";
+        else if (conB) pDayText = "P-CONSOLIDATE-B";
+        else if (momB) pDayText = "P-MOMENTUM-B";
+        else if (conA) pDayText = "P-CONSOLIDATE-A";
+        else if (momA) pDayText = "P-MOMENTUM-A";
+      }
+      const defs = viewDef?.levelCheckDefs;
+      if (row.prevCPR && row.todayCPR) {
+        const ladder = getLadderMatchSummary(row.prevCPR, row.todayCPR, defs as any);
+        if (ladder.hasConditions) {
+          matchText = `${ladder.matchingCount}/${ladder.total}`;
+        }
+      }
+    }
+    setLegendToastFocus({ signalCode, direction, pDayText, matchText });
+
     // Switch exchange tab to the toast's source when not already on combined.
     if (
       focusSymbol.source === "binance" ||
@@ -381,7 +430,7 @@ export default function Screener({
     retryTimer = window.setTimeout(tryFocus, 80);
     return () => window.clearTimeout(retryTimer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusSymbol]);
+  }, [focusSymbol, allResults, deltaAllResults, coindcxAllResults]);
 
   // Reclaim reset is filled after useReclaimFilters mounts
   const reclaimResetRef = useRef<() => void>(() => {});
@@ -1347,6 +1396,7 @@ export default function Screener({
         {currentStatus === "done" && !showAll && (
         <ScreenerLegend
           activeSignal={activeSignal}
+          focusToast={legendToastFocus}
         />
         )}
 
