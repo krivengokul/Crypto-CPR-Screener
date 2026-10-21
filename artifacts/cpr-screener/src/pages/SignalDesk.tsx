@@ -385,18 +385,57 @@ export function computeSignalLevels(
 // against whichever pool is passed in, zero-count ids dropped, sorted
 // descending.
 export function buildPills(pool: CPRResultWithSource[]) {
-  const pillMap = new Map<string, { id: string; label: string }>();
+  const pillMap = new Map<
+    string,
+    {
+      id: string;
+      label: string;
+      direction?: "Up" | "Down";
+      activeColor?: string;
+      activeText?: string;
+      activeBg?: string;
+    }
+  >();
   for (const subList of Object.values(Views)) {
     for (const sub of subList) {
       if (!pillMap.has(sub.id)) {
-        pillMap.set(sub.id, { id: sub.id, label: sub.label || sub.id });
+        const v = getView(sub.id);
+        const direction = v?.direction;
+        const isBullish = direction === "Up";
+        const isBearish = direction === "Down";
+        pillMap.set(sub.id, {
+          id: sub.id,
+          label: sub.label || sub.id,
+          direction,
+          activeColor: sub.activeColor ?? (isBullish ? "#22c55e" : isBearish ? "#fb7185" : undefined),
+          activeText: sub.activeText ?? (isBullish ? "#4ade80" : isBearish ? "#fda4af" : undefined),
+          activeBg: sub.activeBg ?? (isBullish ? "rgba(34, 197, 94, 0.14)" : isBearish ? "rgba(251, 113, 133, 0.14)" : undefined),
+        });
       }
     }
   }
-  const list: { id: string; label: string; count: number }[] = [];
+  const list: {
+    id: string;
+    label: string;
+    count: number;
+    direction?: "Up" | "Down";
+    activeColor?: string;
+    activeText?: string;
+    activeBg?: string;
+  }[] = [];
   for (const [id, item] of pillMap.entries()) {
     const count = pool.filter((r) => passesPattern(r, id)).length;
-    if (count > 0) list.push({ id, label: item.label, count });
+    if (count > 0) {
+      list.push({
+        id,
+        label: item.label,
+        count,
+        direction: item.direction,
+        activeColor: item.activeColor,
+        activeText: item.activeText,
+        activeBg: item.activeBg,
+      });
+    }
   }
   return list.sort((a, b) => b.count - a.count);
 }
@@ -883,6 +922,10 @@ export default function SignalDesk({
     if (sourceFilter === "all") return viewPills;
     return buildPills((results ?? []).filter((r) => r.source === sourceFilter));
   }, [results, sourceFilter, viewPills]);
+
+  const totalActiveSymbols = useMemo(() => {
+    return displayViewPills.reduce((sum, p) => sum + p.count, 0);
+  }, [displayViewPills]);
 
   // ─────────────────────────────────────────────────────────────────────
   // SOURCE OF TRUTH for "does this symbol belong to an Active Signal" — the
@@ -1522,13 +1565,8 @@ R:R: ${item.riskReward}`;
           <div className="flex items-center justify-between gap-2 mb-2">
             <div className="flex items-center gap-2">
               <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider font-mono">
-                Active Signals ({displayViewPills.length})
+                ACTIVE VIEWS({displayViewPills.length}) / SIGNALS({totalActiveSymbols})
               </span>
-              {selectedSignalId && (
-                <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-rose-500/15 text-rose-200">
-                  {selectedSignalId}
-                </span>
-              )}
             </div>
             <p className="text-[11px] text-slate-500 italic hidden sm:block">
               Select a different filter in the sidebar to refresh this list.
@@ -1538,6 +1576,30 @@ R:R: ${item.riskReward}`;
           <div className="flex flex-wrap gap-1.5 items-center max-h-36 overflow-y-auto">
             {displayViewPills.map((pill) => {
               const isSelected = selectedSignalId === pill.id;
+              const isBullish = pill.direction === "Up" || pill.activeColor === "#22c55e";
+              const isBearish = pill.direction === "Down" || pill.activeColor === "#fb7185";
+
+              // Colors matching Screener / ViewsSidebar without border when highlighted:
+              const activeBg =
+                pill.activeBg ||
+                (isBullish
+                  ? "rgba(34, 197, 94, 0.14)"
+                  : isBearish
+                    ? "rgba(251, 113, 133, 0.14)"
+                    : "rgba(255, 255, 255, 0.08)");
+              const activeText =
+                pill.activeText ||
+                (isBullish ? "#4ade80" : isBearish ? "#fda4af" : "#e2e8f0");
+              const activeCountBg = isBullish
+                ? "rgba(34, 197, 94, 0.25)"
+                : isBearish
+                  ? "rgba(251, 113, 133, 0.25)"
+                  : "rgba(255, 255, 255, 0.15)";
+              const activeCountText = isBullish
+                ? "#86efac"
+                : isBearish
+                  ? "#fecdd3"
+                  : "#ffffff";
 
               return (
                 <button
@@ -1546,17 +1608,35 @@ R:R: ${item.riskReward}`;
                   title={`Filter by ${pill.label} (${pill.count} pairs)`}
                   className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-all select-none cursor-pointer ${
                     isSelected
-                      ? "bg-rose-500/15 text-rose-100 shadow-sm shadow-rose-950/40 ring-1 ring-rose-400/50"
+                      ? "shadow-sm"
                       : "bg-[#111927] hover:bg-[#182335] border border-[#1e2d3f] text-slate-300 hover:text-white"
                   }`}
+                  style={
+                    isSelected
+                      ? {
+                          backgroundColor: activeBg,
+                          color: activeText,
+                          border: "none",
+                        }
+                      : undefined
+                  }
                 >
                   <span className="truncate max-w-[260px] sm:max-w-none">{pill.label}</span>
                   <span
                     className={`px-1.5 py-0.2 font-mono text-[10px] rounded-full font-bold ${
                       isSelected
-                        ? "bg-rose-500/25 text-rose-100"
+                        ? ""
                         : "bg-[#182333] text-slate-400 border border-[#223347]"
                     }`}
+                    style={
+                      isSelected
+                        ? {
+                            backgroundColor: activeCountBg,
+                            color: activeCountText,
+                            border: "none",
+                          }
+                        : undefined
+                    }
                   >
                     {pill.count}
                   </span>
