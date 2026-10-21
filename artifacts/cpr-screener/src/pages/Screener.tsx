@@ -65,6 +65,7 @@ import ScreenerLegend, { type ScreenerLegendFocusToast } from "./ScreenerLegend"
 import { getLadderMatchSummary } from "./SRLadderDiff";
 import ScreenerTableRow, { getBadgeClasses } from "./ScreenerTableRow";
 import { useExchangeScan } from "@/hooks/useExchangeScan";
+import { useR1CrossAlert } from "@/hooks/useR1CrossAlert";
 import { usePreviousCandleFilters } from "@/hooks/usePreviousCandleFilters";
 import { useReclaimFilters } from "@/hooks/useReclaimFilters";
 import { ScreenerResultsTable } from "@/components/ScreenerResultsTable";
@@ -446,6 +447,9 @@ export default function Screener({
     onActiveTabChange,
     onScanOrTabReset,
   });
+
+  // Distinct sound + toast when a scanned coin crosses above its R1 (no Telegram).
+  useR1CrossAlert(allResults, deltaAllResults, coindcxAllResults);
 
   // ── Previous-session 15m P-filters ────────────────────────────────────
   const {

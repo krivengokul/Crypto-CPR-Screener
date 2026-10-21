@@ -60,3 +60,34 @@ export function playEntryCrossAlert() {
     oscillator.stop(start + offset + 0.16);
   });
 }
+
+/**
+ * Distinct alert for a coin crossing above its R1 in the Screener: a rising
+ * three-note triangle-wave chime, so it can't be confused with the two-note
+ * sine beep used for View entry crosses.
+ */
+export function playR1CrossAlert() {
+  if (isAlertMuted()) return;
+  const context = getAudioContext();
+  if (!context) return;
+  if (context.state === "suspended") void context.resume().catch(() => undefined);
+
+  const start = context.currentTime;
+  [
+    { offset: 0, freq: 523.25 },
+    { offset: 0.12, freq: 659.25 },
+    { offset: 0.24, freq: 783.99 },
+  ].forEach(({ offset, freq }) => {
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    oscillator.type = "triangle";
+    oscillator.frequency.setValueAtTime(freq, start + offset);
+    gain.gain.setValueAtTime(0.0001, start + offset);
+    gain.gain.exponentialRampToValueAtTime(0.25, start + offset + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + offset + 0.3);
+    oscillator.connect(gain);
+    gain.connect(context.destination);
+    oscillator.start(start + offset);
+    oscillator.stop(start + offset + 0.32);
+  });
+}
