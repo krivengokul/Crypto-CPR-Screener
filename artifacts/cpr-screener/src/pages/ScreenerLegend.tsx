@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 
 export interface ScreenerLegendFocusToast {
+  /** Crossed coin symbol, e.g. "BTCUSDT" (shown in white above the View code). */
+  symbol?: string;
   /** View / pattern id (toast View code). */
   signalCode: string;
   /** View direction — colors SignalCode green (Up) or rose (Down). */
@@ -133,16 +135,26 @@ function FocusToastCard({ focusToast }: { focusToast?: ScreenerLegendFocusToast 
       : "text-slate-200";
   return (
     <div className="space-y-1 min-w-0">
+      {focusToast.symbol && (
+        <div
+          className="text-xs font-bold font-mono text-white leading-tight truncate"
+          title={focusToast.symbol}
+        >
+          {focusToast.symbol}
+        </div>
+      )}
       <div className="text-xs font-semibold font-mono leading-tight min-w-0">
         <span className={`${codeColor} truncate`} title={focusToast.signalCode}>
           {focusToast.signalCode || "—"}
         </span>
       </div>
-      <div className="text-xs font-semibold text-primary font-mono leading-tight">
-        PDay:{focusToast.pDayText}
+      <div className="text-xs font-semibold font-mono leading-tight">
+        <span className="text-muted-foreground">PDay:</span>
+        <span className="text-amber-300">{focusToast.pDayText}</span>
       </div>
-      <div className="text-xs font-semibold text-slate-200 font-mono leading-tight">
-        MATCH:{focusToast.matchText}
+      <div className="text-xs font-semibold font-mono leading-tight">
+        <span className="text-muted-foreground">MATCH:</span>
+        <span className="text-sky-300">{focusToast.matchText}</span>
       </div>
     </div>
   );

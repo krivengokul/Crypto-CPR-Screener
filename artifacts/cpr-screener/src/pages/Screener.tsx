@@ -537,7 +537,7 @@ export default function Screener({
         }
       }
     }
-    setLegendToastFocus({ signalCode, direction, pDayText, matchText });
+    setLegendToastFocus({ symbol: focusSymbol.symbol, signalCode, direction, pDayText, matchText });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusSymbol, allResults, deltaAllResults, coindcxAllResults]);
 
