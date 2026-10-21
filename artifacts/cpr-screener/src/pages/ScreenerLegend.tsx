@@ -134,7 +134,6 @@ function FocusToastCard({ focusToast }: { focusToast?: ScreenerLegendFocusToast 
   return (
     <div className="space-y-1 min-w-0">
       <div className="text-xs font-semibold font-mono leading-tight min-w-0">
-        <span className="text-muted-foreground">SignalCode:</span>{" "}
         <span className={`${codeColor} truncate`} title={focusToast.signalCode}>
           {focusToast.signalCode || "—"}
         </span>
