@@ -67,9 +67,9 @@ function SelectedViewTradeCard({ activeSignal }: { activeSignal: string }) {
   return (
     <div className="space-y-1.5 min-w-0">
       <div className="flex items-start gap-1.5 min-w-0">
-        <Tag className="w-3 h-3 mt-0.5 shrink-0 text-primary" aria-hidden />
+        <Tag className={`w-3 h-3 mt-0.5 shrink-0 ${dirColor}`} aria-hidden />
         <div className="min-w-0">
-          <div className="text-[11px] font-semibold text-primary leading-tight truncate" title={name}>
+          <div className={`text-[11px] font-semibold leading-tight truncate ${dirColor}`} title={name}>
             {name}
           </div>
         </div>
