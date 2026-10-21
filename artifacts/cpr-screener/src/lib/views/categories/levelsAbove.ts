@@ -2797,5 +2797,128 @@ export const LEVELSABOVE_VIEWS: ViewDef[] = [
       }
     ],
         requireFullMatch: true,
+      },
+    {
+        key: "TC-CA-A-A-AA-AA-CU4L2-SL-ABGap-PR4",
+        label: "ROCKETUPMOVE",
+        parentKey: "A-A-AA-AA-CU4L2",
+        condition: (r) => passesView(r, "A-A-AA-AA-CU4L2") && matchesGapBadge(r, "SL-ABGap") && matchesCandleCheck(r, "CA"),
+        standalone: true,
+        candleCheck: "CA",
+        kind: "view",
+        direction: "Up",
+        targetLabel: "PR4 (previous day's R4)",
+        getTarget: (r) => r.prevCPR.r4,
+        entryLabel: "TC (today's TC)",
+        getEntry: (r) => r.todayCPR.tc,
+        stoplossLabel: "S1 (today's S1)",
+        getStoploss: (r) => r.todayCPR.s1,
+        levelCheckDefs: [
+      {
+        "key": "r4",
+        "subject": "today",
+        "bandKeys": [
+          "r4",
+          "r3"
+        ]
+      },
+      {
+        "key": "r3",
+        "subject": "today",
+        "bandKeys": [
+          "r3",
+          "r2"
+        ]
+      },
+      {
+        "key": "r2",
+        "subject": "today",
+        "bandKeys": [
+          "r2",
+          "prevHigh"
+        ]
+      },
+      {
+        "key": "prevHigh",
+        "subject": "today",
+        "bandKeys": [
+          "r2",
+          "prevHigh"
+        ]
+      },
+      {
+        "key": "r1",
+        "subject": "today",
+        "bandKeys": [
+          "r2",
+          "prevHigh"
+        ]
+      },
+      {
+        "key": "tc",
+        "subject": "today",
+        "bandKeys": [
+          "r1",
+          "tc"
+        ]
+      },
+      {
+        "key": "pivot",
+        "subject": "today",
+        "bandKeys": [
+          "r1",
+          "tc"
+        ]
+      },
+      {
+        "key": "bc",
+        "subject": "today",
+        "bandKeys": [
+          "r1",
+          "tc"
+        ]
+      },
+      {
+        "key": "prevLow",
+        "subject": "today",
+        "bandKeys": [
+          "bc",
+          "prevLow"
+        ]
+      },
+      {
+        "key": "s1",
+        "subject": "today",
+        "bandKeys": [
+          "r1",
+          "tc"
+        ]
+      },
+      {
+        "key": "s2",
+        "subject": "today",
+        "bandKeys": [
+          "bc",
+          "prevLow"
+        ]
+      },
+      {
+        "key": "s3",
+        "subject": "today",
+        "bandKeys": [
+          "s1",
+          "s2"
+        ]
+      },
+      {
+        "key": "s4",
+        "subject": "today",
+        "bandKeys": [
+          "s1",
+          "s2"
+        ]
+      }
+    ],
+        requireFullMatch: true,
       }
 ];
