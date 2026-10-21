@@ -341,8 +341,8 @@ export const LEVELSABOVE_VIEWS: ViewDef[] = [
         },
 
   {
-      key: "TC-A-A-AA-AA-U4L4-SL-BBGap-R4",
-      label: "A6-U4L4-SLBBG-R4",
+      key: "PH-A-A-AA-AA-U4L4-SL-BBGap-R4",
+      label: "BUYABOVEPH-R4",
       parentKey: "A-A-AA-AA-U4L4",
       condition: (r) => passesView(r, "A-A-AA-AA-U4L4") && matchesGapBadge(r, "SL-BBGap"),
       standalone: true,
@@ -350,8 +350,8 @@ export const LEVELSABOVE_VIEWS: ViewDef[] = [
       direction: "Up",
       targetLabel: "U4 (today's R4)",
       getTarget: (r) => r.todayCPR.r4,
-      entryLabel: "TC (today's TC)",
-      getEntry: (r) => r.todayCPR.tc,
+      entryLabel: "PH (previous day's high)",
+      getEntry: (r) => r.todayCPR.prevHigh,
       stoplossLabel: "S1 (today's S1)",
       getStoploss: (r) => r.todayCPR.s1,
       levelCheckDefs: [
@@ -460,6 +460,7 @@ export const LEVELSABOVE_VIEWS: ViewDef[] = [
       ]
     }
   ],
+      requireFullMatch: true,
     },
 
   {
