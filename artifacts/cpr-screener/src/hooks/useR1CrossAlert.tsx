@@ -1,7 +1,7 @@
 import { useEffect, useRef, type MouseEvent as ReactMouseEvent } from "react";
 import type { CPRResult } from "@/lib/cpr";
 import { playR1CrossAlert } from "@/lib/alertSound";
-import { getChartUrl } from "@/pages/ScreenerUtils";
+import { getChartUrl, openChartInNewTab } from "@/pages/ScreenerUtils";
 import { toast } from "@/hooks/use-toast";
 
 const FIRED_KEY = "cpr-r1-cross-fired";
@@ -105,7 +105,7 @@ export function useR1CrossAlert(
       onClick: (e: ReactMouseEvent) => {
         const el = e.target as HTMLElement | null;
         if (el?.closest?.("[toast-close], [data-radix-toast-close]")) return;
-        window.open(getChartUrl(listed[0].symbol, listed[0].source), "_blank", "noopener,noreferrer");
+        openChartInNewTab(getChartUrl(listed[0].symbol, listed[0].source));
       },
     });
   }, [binanceResults, deltaResults, coindcxResults]);
