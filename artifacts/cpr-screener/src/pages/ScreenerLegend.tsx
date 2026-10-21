@@ -115,6 +115,20 @@ function SelectedViewTradeCard({ activeSignal }: { activeSignal: string }) {
 }
 
 /**
+ * PDay value colors — same palette as the Active View (SignalDesk
+ * exclusivePDayBadge): CON-B pink, MOM-B violet, CON-A green, MOM-A cyan,
+ * INSIDE-R1S1 amber. Keep in sync with SignalDesk.tsx.
+ */
+const PDAY_COLORS: Record<string, string> = {
+  "P-CONSOLIDATE-B": "#f472b6",
+  "P-MOMENTUM-B": "#a78bfa",
+  "P-CONSOLIDATE-A": "#03b07c",
+  "P-MOMENTUM-A": "#22d3ee",
+  "P-INSIDE-R1S1": "#fcd34d",
+  "INSIDE-R1S1": "#fcd34d",
+};
+
+/**
  * Card 2 (middle) — only the toast-focused row's PDay + MATCH.
  * All previous pattern-description copy was removed by design.
  */
@@ -150,7 +164,12 @@ function FocusToastCard({ focusToast }: { focusToast?: ScreenerLegendFocusToast 
       </div>
       <div className="text-xs font-semibold font-mono leading-tight">
         <span className="text-muted-foreground">PDay:</span>
-        <span className="text-amber-300">{focusToast.pDayText}</span>
+        <span
+          className={PDAY_COLORS[focusToast.pDayText] ? undefined : "text-slate-200"}
+          style={PDAY_COLORS[focusToast.pDayText] ? { color: PDAY_COLORS[focusToast.pDayText] } : undefined}
+        >
+          {focusToast.pDayText}
+        </span>
       </div>
       <div className="text-xs font-semibold font-mono leading-tight">
         <span className="text-muted-foreground">MATCH:</span>
