@@ -46,7 +46,7 @@ function showCrossToast(kind: Kind, crosses: Cross[]) {
         ? `${kind} ${word} — Price ${verb} ${kind}`
         : `${kind} ${word} — ${crosses.length} coins ${verb} ${kind}`,
     description: (
-      <div className="space-y-0.5 text-sm leading-snug">
+      <div className="space-y-0.5 text-[13px] leading-snug">
         {listed.map((c) => (
           <div
             key={`${c.source}:${c.symbol}`}
@@ -60,10 +60,9 @@ function showCrossToast(kind: Kind, crosses: Cross[]) {
           >
             <span className={`font-semibold ${symbolColor}`}>{c.symbol}</span>
             <span className="font-mono text-white">({c.price.toPrecision(6)})</span>
-            <div>
-              <span className="text-slate-400">{verb} {kind}</span>
-              <span className="font-mono text-slate-100">({c.level.toPrecision(6)})</span>
-            </div>
+            {" "}
+            <span className="text-slate-400">{verb} {kind}</span>
+            <span className="font-mono text-slate-100">({c.level.toPrecision(6)})</span>
           </div>
         ))}
         {extra > 0 && <div className="text-slate-400">+{extra} more</div>}
