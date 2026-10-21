@@ -91,3 +91,33 @@ export function playR1CrossAlert() {
     oscillator.stop(start + offset + 0.32);
   });
 }
+
+/**
+ * Distinct alert for a coin crossing below its S1 in the Screener: a lower,
+ * descending three-note chime (opposite of the R1 rising chime).
+ */
+export function playS1CrossAlert() {
+  if (isAlertMuted()) return;
+  const context = getAudioContext();
+  if (!context) return;
+  if (context.state === "suspended") void context.resume().catch(() => undefined);
+
+  const start = context.currentTime;
+  [
+    { offset: 0, freq: 392.0 },
+    { offset: 0.14, freq: 329.63 },
+    { offset: 0.28, freq: 261.63 },
+  ].forEach(({ offset, freq }) => {
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    oscillator.type = "square";
+    oscillator.frequency.setValueAtTime(freq, start + offset);
+    gain.gain.setValueAtTime(0.0001, start + offset);
+    gain.gain.exponentialRampToValueAtTime(0.12, start + offset + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + offset + 0.34);
+    oscillator.connect(gain);
+    gain.connect(context.destination);
+    oscillator.start(start + offset);
+    oscillator.stop(start + offset + 0.36);
+  });
+}
