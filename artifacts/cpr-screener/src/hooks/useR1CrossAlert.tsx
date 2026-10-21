@@ -87,7 +87,16 @@ export function useR1CrossAlert(
       description: (
         <div className="space-y-0.5 text-sm leading-snug">
           {listed.map((c) => (
-            <div key={`${c.source}:${c.symbol}`}>
+            <div
+              key={`${c.source}:${c.symbol}`}
+              data-r1-row
+              className="cursor-pointer rounded px-0.5 hover:bg-slate-700/40"
+              title={`Open ${c.symbol} chart`}
+              onClick={(e: ReactMouseEvent) => {
+                e.stopPropagation();
+                openChartInNewTab(getChartUrl(c.symbol, c.source));
+              }}
+            >
               <span className="font-semibold text-sky-300">{c.symbol}</span>{" "}
               <span className="text-slate-400">({c.source})</span>{" "}
               <span className="text-slate-400">R1</span>{" "}
@@ -104,8 +113,10 @@ export function useR1CrossAlert(
       className: "cursor-pointer border-sky-500/60",
       onClick: (e: ReactMouseEvent) => {
         const el = e.target as HTMLElement | null;
-        if (el?.closest?.("[toast-close], [data-radix-toast-close]")) return;
-        openChartInNewTab(getChartUrl(listed[0].symbol, listed[0].source));
+        if (el?.closest?.("[toast-close], [data-radix-toast-close], [data-r1-row]")) return;
+        // Coin rows open their own chart; a bare click only opens the chart
+        // when the toast lists a single coin.
+        if (listed.length === 1) openChartInNewTab(getChartUrl(listed[0].symbol, listed[0].source));
       },
     });
   }, [binanceResults, deltaResults, coindcxResults]);
