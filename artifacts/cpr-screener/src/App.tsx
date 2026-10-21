@@ -318,20 +318,23 @@ function App() {
       focusAlertTarget();
 
       toast({
-        title: "Entry crossed — alert",
+        title: "Entry crossed — Alert",
         description: (
           <div className="space-y-0.5 text-sm leading-snug">
             <div>
-              {candidate.symbol} ({candidate.source}) {dir}
+              {candidate.symbol} -- {dir}
             </div>
             <div>
               <span className="text-slate-400">Price:</span>{" "}
               <span className="font-mono text-slate-100">{px}</span>
               {"  "}
-              crossed Entry:{" "}
-              <span className="font-semibold text-amber-300">{entryLevel}</span>
-              {" @ "}
-              <span className="font-mono text-slate-100">{entry}</span>
+              <span className="text-slate-500">crossed</span>
+            </div>
+            <div>
+              <span className="text-slate-400">Entry:</span>{" "}
+              <span className="font-semibold text-white">{entryLevel}</span>
+              {" "}
+              <span className="font-mono text-slate-100">({entry})</span>
             </div>
             <div>
               <span className="text-slate-400">View:</span>{" "}
