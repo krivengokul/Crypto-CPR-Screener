@@ -164,6 +164,8 @@ export interface SignalItem {
   matchTotal?: number;
   matchFull?: boolean;
   matchMismatches?: string;
+  /** Whether this View requires full 13/13 (from create/edit checkbox). */
+  requireFullMatch?: boolean;
   /** Pivot Size column (same as Screener): prev/today width% + compression ratio. */
   prevWidthPct?: number;
   todayWidthPct?: number;
@@ -689,6 +691,23 @@ const SignalDeskCard = memo(
                 <strong className="text-slate-500 font-mono text-[11px]">{item.patternId}</strong>
               </div>
             )}
+            {item.isSaved && item.patternId && (
+              <div className="flex items-center gap-1">
+                <span>13/13 MATCH:</span>
+                <strong
+                  className={`font-semibold font-mono text-[11px] ${
+                    item.requireFullMatch ? "text-emerald-400" : "text-slate-500"
+                  }`}
+                  title={
+                    item.requireFullMatch
+                      ? "This View requires full 13/13 level match (create/edit checkbox ON)"
+                      : "This View does not require full 13/13 (create/edit checkbox OFF)"
+                  }
+                >
+                  {item.requireFullMatch ? "ON" : "OFF"}
+                </strong>
+              </div>
+            )}
             {item.isSaved && (
               <div className="flex items-center gap-1">
                 <span>Status:</span>
@@ -1167,6 +1186,7 @@ export default function SignalDesk({
           matchTotal: matchLadder?.hasConditions ? matchLadder.total : undefined,
           matchFull: matchLadder?.hasConditions ? matchLadder.fullMatch : undefined,
           matchMismatches: matchLadder?.hasConditions ? matchLadder.mismatchLabels.join(", ") : undefined,
+          requireFullMatch: patternId ? getView(patternId)?.requireFullMatch === true : undefined,
           prevWidthPct: matchRow?.prevCPR?.widthPct,
           todayWidthPct: matchRow?.todayCPR?.widthPct,
           compressionRatio: matchRow?.compressionRatio,
@@ -1304,6 +1324,7 @@ export default function SignalDesk({
         matchTotal: matchLadderB.hasConditions ? matchLadderB.total : undefined,
         matchFull: matchLadderB.hasConditions ? matchLadderB.fullMatch : undefined,
         matchMismatches: matchLadderB.hasConditions ? matchLadderB.mismatchLabels.join(", ") : undefined,
+        requireFullMatch: patternId ? getView(patternId)?.requireFullMatch === true : undefined,
         prevWidthPct: r.prevCPR?.widthPct,
         todayWidthPct: r.todayCPR?.widthPct,
         compressionRatio: r.compressionRatio,
