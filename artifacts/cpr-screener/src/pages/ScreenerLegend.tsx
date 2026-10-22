@@ -271,8 +271,6 @@ function FocusToastCard({ focusToast }: { focusToast?: ScreenerLegendFocusToast 
         </span>
         <HistoricalChartCameras
           viewKey={viewKey}
-          symbol={focusToast.symbol}
-          source={focusToast.source}
           limit={3}
         />
       </div>
