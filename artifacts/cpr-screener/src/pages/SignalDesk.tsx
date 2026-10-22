@@ -604,16 +604,18 @@ const SignalDeskCard = memo(
                   }`}
                   title={
                     item.matchFull
-                      ? `MATCH: all ${item.matchTotal} levels matched`
+                      ? item.requireFullMatch
+                        ? `MATCH: all ${item.matchTotal} levels matched (13/13 MATCH ON)`
+                        : `MATCH: all ${item.matchTotal} levels matched`
                       : `MATCH: ${item.matchCount}/${item.matchTotal}${item.matchMismatches ? ` — broke: ${item.matchMismatches}` : ""}`
                   }
                 >
-                  {item.matchFull ? (
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                  ) : (
-                    <XCircle className="w-3.5 h-3.5" />
-                  )}
                   MATCH {item.matchCount}/{item.matchTotal}
+                  {item.matchFull && item.requireFullMatch ? (
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                  ) : !item.matchFull ? (
+                    <XCircle className="w-3.5 h-3.5" />
+                  ) : null}
                 </span>
               )}
             </div>

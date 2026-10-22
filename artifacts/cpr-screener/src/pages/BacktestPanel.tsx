@@ -3772,6 +3772,12 @@ export default function BacktestPanel() {
                           if (!ladder.hasConditions) {
                             return <span className="text-xs text-muted-foreground">LevelCheck UnDefined</span>;
                           }
+                          // Tick after n/13 only when the graded View has
+                          // "13/13 MATCH" ON and this row is a full match.
+                          const requireFull =
+                            (isPatternOnly
+                              ? rowViewDefByRow.get(r)?.requireFullMatch
+                              : activeTarget?.requireFullMatch) === true;
                           const color = ladder.fullMatch
                             ? "text-green-400"
                             : ladder.matchingCount >= ladder.total - 2
@@ -3782,16 +3788,18 @@ export default function BacktestPanel() {
                               className={`inline-flex items-center gap-1 text-xs font-mono font-medium ${color}`}
                               title={
                                 ladder.fullMatch
-                                  ? "All 13 levels matched their previous-day zone"
+                                  ? requireFull
+                                    ? "All 13 levels matched (13/13 MATCH ON)"
+                                    : "All 13 levels matched their previous-day zone"
                                   : `Broke through: ${ladder.mismatchLabels.join(", ")}`
                               }
                             >
-                              {ladder.fullMatch ? (
-                                <CheckCircle2 className="w-3.5 h-3.5" />
-                              ) : (
-                                <XCircle className="w-3.5 h-3.5" />
-                              )}
                               {ladder.matchingCount}/{ladder.total}
+                              {ladder.fullMatch && requireFull ? (
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                              ) : !ladder.fullMatch ? (
+                                <XCircle className="w-3.5 h-3.5" />
+                              ) : null}
                             </span>
                           );
                         })()}

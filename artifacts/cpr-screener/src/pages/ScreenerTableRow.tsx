@@ -1203,7 +1203,12 @@ export default function ScreenerTableRow({
         <td className="px-3 py-3">
           {viewLadders.length > 0 && (anyLadderDefined || hasSelectedView) && (
             <div className="flex flex-col gap-1.5">
-              {viewLadders.map(({ id, label, ladder }) => (
+              {viewLadders.map(({ id, label, ladder }) => {
+                // Tick after n/13 only when this View has "13/13 MATCH" ON
+                // and the row is a full match. Full match without the flag
+                // stays green "13/13" with no tick.
+                const requireFull = getView(id)?.requireFullMatch === true;
+                return (
                 <div key={id} className="h-11 flex items-center whitespace-nowrap">
                   {!ladder.hasConditions ? (
                     hasSelectedView ? (
@@ -1222,20 +1227,23 @@ export default function ScreenerTableRow({
                       }`}
                       title={
                         ladder.fullMatch
-                          ? `${label}: all ${ladder.total} levels matched their previous-day zone`
+                          ? requireFull
+                            ? `${label}: all ${ladder.total} levels matched (13/13 MATCH ON)`
+                            : `${label}: all ${ladder.total} levels matched`
                           : `${label} — broke through: ${ladder.mismatchLabels.join(", ")}`
                       }
                     >
-                      {ladder.fullMatch ? (
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                      ) : (
-                        <XCircle className="w-3.5 h-3.5" />
-                      )}
                       {ladder.matchingCount}/{ladder.total}
+                      {ladder.fullMatch && requireFull ? (
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                      ) : !ladder.fullMatch ? (
+                        <XCircle className="w-3.5 h-3.5" />
+                      ) : null}
                     </span>
                   )}
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </td>
