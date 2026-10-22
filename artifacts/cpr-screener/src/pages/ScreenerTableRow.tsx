@@ -1,5 +1,7 @@
 import { Fragment } from "react";
-import { ExternalLink, CheckCircle2, XCircle, Tag } from "lucide-react";
+import { ExternalLink, CheckCircle2, XCircle, Tag, Cloud, Clock } from "lucide-react";
+import { hasTouchedEntry } from "@/lib/signalTracker";
+import { sessionReachedTarget } from "@/lib/signalOutcome";
 import type { CPRResult } from "@/lib/cpr";
 import type { ReclaimSideState } from "@/lib/15MCandleCheck";
 import { getView } from "@/lib/views";
@@ -661,7 +663,17 @@ export function renderMatchingSignals(
     <div className="flex flex-col gap-1.5 max-w-[240px]">
       {views.map((v) => {
         const view = getView(v.id);
+        const entryFn = view?.getEntry;
+        const targetFn = view?.getTarget;
         const direction = v.direction || view?.direction;
+        const status: "pass" | "active" | "ready" | null = targetFn &&
+          sessionReachedTarget(direction ?? "", targetFn(r), r.todayHigh, r.todayLow, r.currentPrice)
+          ? "pass"
+          : entryFn
+            ? hasTouchedEntry(direction ?? "", entryFn(r), r.currentPrice)
+              ? "active"
+              : "ready"
+            : null;
         const isUp = direction === "Up";
         const isDown = direction === "Down";
         const dirColor = isUp
@@ -670,18 +682,50 @@ export function renderMatchingSignals(
             ? "text-rose-400"
             : "text-slate-400";
         return (
-          <div key={v.id} className="flex h-11 items-center overflow-hidden">
-            <div className="flex items-center gap-1.5 min-w-0">
-              <Tag className={`w-3 h-3 shrink-0 ${dirColor}`} aria-hidden />
-              <div className="min-w-0">
-                <div
-                  className={`text-[11px] font-semibold leading-tight truncate ${dirColor}`}
-                  title={v.label}
-                >
-                  {v.label}
+          <div key={v.id} className="flex h-11 flex-col justify-center gap-0.5 overflow-hidden">
+            <div className="flex flex-nowrap items-center gap-1">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <Tag className={`w-3 h-3 shrink-0 ${dirColor}`} aria-hidden />
+                <div className="min-w-0">
+                  <div
+                    className={`text-[11px] font-semibold leading-tight truncate ${dirColor}`}
+                    title={v.label}
+                  >
+                    {v.label}
+                  </div>
                 </div>
               </div>
+              {status === "pass" && (
+                <span
+                  className="inline-flex shrink-0 items-center gap-1 rounded-md border border-muted-foreground/40 bg-muted-foreground/10 px-1.5 py-1 text-[11px] font-mono text-muted-foreground"
+                  title="Target reached - live price now, or earlier in today's session (session high/low)"
+                >
+                  <CheckCircle2 className="w-3 h-3" />
+                  Pass
+                </span>
+              )}
+              {status === "active" && (
+                <span
+                  className="inline-flex shrink-0 items-center gap-1 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-1.5 py-1 text-[11px] font-mono text-emerald-400"
+                  title="Price has reached the entry line"
+                >
+                  <Cloud className="w-3 h-3" />
+                  Active
+                </span>
+              )}
+              {status === "ready" && (
+                <span
+                  className="inline-flex shrink-0 items-center gap-1 rounded-md border border-amber-500/40 bg-amber-500/10 px-1.5 py-1 text-[11px] font-mono text-amber-400"
+                  title="Matches an active signal but price hasn't reached the entry line yet"
+                >
+                  <Clock className="w-3 h-3" />
+                  Ready
+                </span>
+              )}
             </div>
+            <span className="truncate font-mono text-[10px] leading-3 text-muted-foreground" title={v.id}>
+              {v.id}
+            </span>
           </div>
         );
       })}
