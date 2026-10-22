@@ -2071,7 +2071,7 @@ export const LEVELSABOVE_VIEWS: ViewDef[] = [
       },
     {
         key: "BC-MA-A-A-AA-AA-EU2L4-RH-BBGap-S4",
-        label: "PDAYR4TA-REVERSALDOWN",
+        label: "PDAYTA-REVERSAL",
         parentKey: "A-A-AA-AA-EU2L4",
         condition: (r) => passesView(r, "A-A-AA-AA-EU2L4") && matchesGapBadge(r, "RH-BBGap") && matchesCandleCheck(r, "MA"),
         standalone: true,
@@ -2190,6 +2190,7 @@ export const LEVELSABOVE_VIEWS: ViewDef[] = [
         ]
       }
     ],
+        requireFullMatch: true,
       },
     {
         key: "R1-CA-A-A-AA-AA-EU2L4-RH-GapBB-R4",
