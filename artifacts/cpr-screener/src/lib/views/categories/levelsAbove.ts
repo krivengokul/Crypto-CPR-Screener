@@ -1461,17 +1461,18 @@ export const LEVELSABOVE_VIEWS: ViewDef[] = [
     order: 999,
   },
     {
-        key: "TC-A-A-AA-AA-CU4L2-SL-GapBA-R4",
-        label: "A6-Upmove",
+        key: "R1-CA-A-A-AA-AA-CU4L2-SL-GapBA-R4",
+        label: "SMALLMINI-Upmove",
         parentKey: "A-A-AA-AA-CU4L2",
-        condition: (r) => passesView(r, "A-A-AA-AA-CU4L2") && matchesGapBadge(r, "SL-GapBA"),
+        condition: (r) => passesView(r, "A-A-AA-AA-CU4L2") && matchesGapBadge(r, "SL-GapBA") && matchesCandleCheck(r, "CA"),
         standalone: true,
+        candleCheck: "CA",
         kind: "view",
         direction: "Up",
         targetLabel: "U4 (today's R4)",
         getTarget: (r) => r.todayCPR.r4,
-        entryLabel: "TC (today's TC)",
-        getEntry: (r) => r.todayCPR.tc,
+        entryLabel: "R1 (today's R1)",
+        getEntry: (r) => r.todayCPR.r1,
         stoplossLabel: "S1 (today's S1)",
         getStoploss: (r) => r.todayCPR.s1,
         levelCheckDefs: [
@@ -1580,6 +1581,7 @@ export const LEVELSABOVE_VIEWS: ViewDef[] = [
         ]
       }
     ],
+        requireFullMatch: true,
       },
     {
         key: "PH-C-A-C-AA-CU3L3-SL-GapBA-R4",
