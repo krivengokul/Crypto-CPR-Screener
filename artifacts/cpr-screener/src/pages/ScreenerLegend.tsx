@@ -1,8 +1,16 @@
+import { useEffect, useMemo, useState } from "react";
 import { Views } from "@/lib/ViewsSidebar";
 import { getView, shortLevelLabel } from "@/lib/views";
 import {
+  findHistoricalChartLinks,
+  getAllChartLinkRecords,
+  type HistoricalChartLink,
+  type StoredChartLinkRecord,
+} from "@/lib/chartLinks";
+import {
   ArrowDown,
   ArrowUp,
+  Camera,
   Crosshair,
   Flag,
   Hash,
@@ -14,6 +22,8 @@ import {
 export interface ScreenerLegendFocusToast {
   /** Crossed coin symbol, e.g. "BTCUSDT" (shown in white above the View code). */
   symbol?: string;
+  /** Exchange of the toast row (binance / delta / coindcx) for chart-link match. */
+  source?: string;
   /** View / pattern id (toast View code). */
   signalCode: string;
   /** View direction — colors SignalCode green (Up) or rose (Down). */
@@ -34,6 +44,95 @@ export interface ScreenerLegendProps {
    */
   focusToast?: ScreenerLegendFocusToast | null;
 }
+
+
+function formatChartDate(entryDate?: string, savedAt?: string): string {
+  const raw = entryDate || (savedAt ? savedAt.slice(0, 10) : "");
+  if (!raw) return "";
+  const d = new Date(raw + (raw.length === 10 ? "T00:00:00.000Z" : ""));
+  if (Number.isNaN(d.getTime())) return raw;
+  return d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "2-digit" });
+}
+
+/** Camera badges for historical TradingView snapshots (same affordance as BacktestPanel). */
+function HistoricalChartCameras({
+  viewKey,
+  symbol,
+  source,
+  limit = 3,
+}: {
+  viewKey?: string;
+  symbol?: string;
+  source?: string;
+  limit?: number;
+}) {
+  const [records, setRecords] = useState<StoredChartLinkRecord[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getAllChartLinkRecords()
+      .then((recs) => {
+        if (!cancelled) setRecords(recs);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [viewKey, symbol, source]);
+
+  const links = useMemo(
+    () =>
+      findHistoricalChartLinks({
+        records,
+        viewKey: viewKey || "",
+        symbol,
+        source,
+        excludeToday: true,
+        limit,
+      }),
+    [records, viewKey, symbol, source, limit],
+  );
+
+  if (!viewKey || links.length === 0) return null;
+
+  return (
+    <div className="flex flex-wrap items-center gap-1 min-w-0">
+      {links.map((link) => (
+        <HistoricalCameraBadge key={`${link.id}-${link.url}`} link={link} />
+      ))}
+    </div>
+  );
+}
+
+function HistoricalCameraBadge({ link }: { link: HistoricalChartLink }) {
+  const label = formatChartDate(link.entryDate, link.savedAt);
+  const title = [
+    "Historical chart snapshot",
+    link.symbol ? `Symbol: ${link.symbol}` : null,
+    label ? `Day: ${label}` : null,
+    link.viewKey ? `View: ${link.viewKey}` : null,
+    "Click to open in new tab",
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  return (
+    <a
+      href={link.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={(e) => e.stopPropagation()}
+      className="inline-flex items-center gap-0.5 h-4 max-w-[4.5rem] rounded px-1 bg-sky-500/20 text-sky-400 hover:bg-sky-500/35 hover:text-sky-200 border border-sky-500/40 hover:border-sky-300 transition-all shrink-0 cursor-pointer shadow-sm shadow-sky-950/40"
+      title={title}
+    >
+      <Camera className="w-2.5 h-2.5 shrink-0" />
+      {label ? (
+        <span className="text-[9px] font-mono leading-none truncate">{label}</span>
+      ) : null}
+    </a>
+  );
+}
+
 
 /**
  * Card 3 — when a View (or any left-nav leaf) is selected, replace the old
@@ -68,9 +167,12 @@ function SelectedViewTradeCard({ activeSignal }: { activeSignal: string }) {
     <div className="space-y-1.5 min-w-0">
       <div className="flex items-start gap-1.5 min-w-0">
         <Tag className={`w-3 h-3 mt-0.5 shrink-0 ${dirColor}`} aria-hidden />
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <div className={`text-[11px] font-semibold leading-tight truncate ${dirColor}`} title={name}>
             {name}
+          </div>
+          <div className="mt-0.5">
+            <HistoricalChartCameras viewKey={code} limit={3} />
           </div>
         </div>
       </div>
@@ -146,6 +248,10 @@ function FocusToastCard({ focusToast }: { focusToast?: ScreenerLegendFocusToast 
     : isDown
       ? "text-rose-400"
       : "text-slate-200";
+  const viewKey =
+    focusToast.signalCode && focusToast.signalCode !== "—"
+      ? focusToast.signalCode
+      : undefined;
   return (
     <div className="space-y-1 min-w-0">
       {focusToast.symbol && (
@@ -156,10 +262,19 @@ function FocusToastCard({ focusToast }: { focusToast?: ScreenerLegendFocusToast 
           {focusToast.symbol}
         </div>
       )}
-      <div className="text-xs font-semibold font-mono leading-tight min-w-0">
-        <span className={`${codeColor} truncate`} title={focusToast.signalCode}>
+      <div className="flex items-center gap-1.5 min-w-0">
+        <span
+          className={`text-xs font-semibold font-mono leading-tight ${codeColor} truncate`}
+          title={focusToast.signalCode}
+        >
           {focusToast.signalCode || "—"}
         </span>
+        <HistoricalChartCameras
+          viewKey={viewKey}
+          symbol={focusToast.symbol}
+          source={focusToast.source}
+          limit={3}
+        />
       </div>
       <div className="text-xs font-semibold font-mono leading-tight">
         <span className="text-muted-foreground">PDay:</span>

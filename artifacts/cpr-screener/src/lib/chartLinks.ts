@@ -352,6 +352,94 @@ export function findChartLink(
   return null;
 }
 
+
+/** Parse Backtest/Screener rowKey: `source-symbol-YYYY-MM-DD`. */
+export function parseChartRowKey(rowKey: string): {
+  source?: string;
+  symbol?: string;
+  entryDate?: string;
+} {
+  if (!rowKey) return {};
+  const m = rowKey.match(/^(binance|delta|coindcx)-(.+)-(\d{4}-\d{2}-\d{2})$/i);
+  if (!m) return {};
+  return {
+    source: m[1].toLowerCase(),
+    symbol: m[2],
+    entryDate: m[3],
+  };
+}
+
+export type HistoricalChartLink = StoredChartLinkRecord & {
+  entryDate?: string;
+  symbol?: string;
+  source?: string;
+};
+
+function todayUtcISO(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+/**
+ * Historical chart snapshots for a View (and optional symbol/source).
+ * Prefer past days when excludeToday is true. Sorted newest date first.
+ */
+export function findHistoricalChartLinks(args: {
+  records: StoredChartLinkRecord[];
+  viewKey: string;
+  symbol?: string;
+  source?: string;
+  excludeToday?: boolean;
+  limit?: number;
+}): HistoricalChartLink[] {
+  const viewKey = (args.viewKey || "").trim();
+  if (!viewKey || !args.records?.length) return [];
+
+  const sym = args.symbol?.toUpperCase();
+  const src = args.source?.toLowerCase();
+  const excludeToday = args.excludeToday !== false;
+  const limit = args.limit ?? 3;
+  const today = todayUtcISO();
+
+  const out: HistoricalChartLink[] = [];
+  const seenUrl = new Set<string>();
+
+  for (const rec of args.records) {
+    if (!rec.url) continue;
+    const vk = (rec.viewKey || rec.lastViewKey || "").trim();
+    if (vk !== viewKey) continue;
+
+    const parsed = parseChartRowKey(rec.rowKey || "");
+    const entryDate = parsed.entryDate;
+    const recSym = parsed.symbol?.toUpperCase();
+    const recSrc = parsed.source?.toLowerCase();
+
+    if (sym && recSym && recSym !== sym) continue;
+    if (sym && !recSym) continue; // require parseable symbol when filtering by symbol
+    if (src && recSrc && recSrc !== src) continue;
+    if (excludeToday && entryDate && entryDate === today) continue;
+
+    const dedupe = `${rec.url}|${entryDate || ""}|${recSym || ""}`;
+    if (seenUrl.has(dedupe)) continue;
+    seenUrl.add(dedupe);
+
+    out.push({
+      ...rec,
+      entryDate,
+      symbol: recSym,
+      source: recSrc,
+    });
+  }
+
+  out.sort((a, b) => {
+    const da = a.entryDate || a.savedAt || "";
+    const db = b.entryDate || b.savedAt || "";
+    return db.localeCompare(da);
+  });
+
+  return out.slice(0, limit);
+}
+
+
 /** Preload chart links from Firestore for a list of row keys if not yet in local cache */
 export async function preloadChartLinks(keys: string[]): Promise<void> {
   if (!keys || keys.length === 0) return;
