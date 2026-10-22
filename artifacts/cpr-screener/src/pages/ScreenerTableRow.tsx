@@ -1166,9 +1166,9 @@ export default function ScreenerTableRow({
           )}
           {showInsideR1S1 && (
             <div
-              className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-amber-300"
+              className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-lime-400"
             >
-              INSIDE-R1S1
+              P-VOLATILE-R1S1
             </div>
           )}
           {/* Live current-session failed-break flags: "2/3" = 3 levels pierced,

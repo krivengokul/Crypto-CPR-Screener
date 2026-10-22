@@ -117,15 +117,14 @@ function SelectedViewTradeCard({ activeSignal }: { activeSignal: string }) {
 /**
  * PDay value colors — same palette as the Active View (SignalDesk
  * exclusivePDayBadge): CON-B pink, MOM-B violet, CON-A green, MOM-A cyan,
- * INSIDE-R1S1 amber. Keep in sync with SignalDesk.tsx.
+ * P-VOLATILE-R1S1 lime. Keep in sync with SignalDesk.tsx.
  */
 const PDAY_COLORS: Record<string, string> = {
   "P-CONSOLIDATE-B": "#f472b6",
   "P-MOMENTUM-B": "#a78bfa",
   "P-CONSOLIDATE-A": "#03b07c",
   "P-MOMENTUM-A": "#22d3ee",
-  "P-INSIDE-R1S1": "#fcd34d",
-  "INSIDE-R1S1": "#fcd34d",
+  "P-VOLATILE-R1S1": "#a3e635",
 };
 
 /**

@@ -250,7 +250,7 @@ export function usePreviousCandleFilters(opts: {
 
   // INSIDE-R1S1: max(R1,PH)–min(S1,PL) body/wick mode — independent of CON-A/CON-B
   const insideR1S1Prep = usePreviousCandleFilterPrep<InsideR1S1Candidate>({
-    label: "INSIDE-R1S1",
+    label: "P-VOLATILE-R1S1",
     canRun: candlePrepCanRun,
     sessionStartMs: previousUpexSessionStart,
     buildCandidates: () => {

@@ -1771,6 +1771,7 @@ export const P_FILTER_CATEGORY_KEYS: ReadonlySet<string> = new Set([
   "MOM-A",
   "CON-B",
   "MOM-B",
+  "INSIDE-R1S1", // shown as P-VOLATILE-R1S1
 ]);
 
 /**

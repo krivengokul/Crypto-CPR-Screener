@@ -1,6 +1,6 @@
 import type { CPRResult } from "../cpr.ts";
 
-export const ALL_CANDLE_CHECK_CODES = ["CA", "MA", "CB", "MB"] as const;
+export const ALL_CANDLE_CHECK_CODES = ["CA", "MA", "VR", "CB", "MB"] as const;
 export type CandleCheckCode = (typeof ALL_CANDLE_CHECK_CODES)[number];
 export const ALL_CANDLE_CHECKS: readonly string[] = ALL_CANDLE_CHECK_CODES;
 
@@ -8,13 +8,14 @@ export const CANDLE_CHECK_OPTIONS: Array<{ value: CandleCheckCode | ""; label: s
   { value: "", label: "None" },
   { value: "CA", label: "P-CONSOLIDATE-A" },
   { value: "MA", label: "P-MOMENTUM-A" },
+  { value: "VR", label: "P-VOLATILE-R1S1" },
   { value: "CB", label: "P-CONSOLIDATE-B" },
   { value: "MB", label: "P-MOMENTUM-B" },
 ];
 
 /**
  * Exclusive buckets aligned with Screener `candleBucket` priority:
- *   INSIDE (R1/PH–S1/PL pass, not CON-A/CON-B) → separate from CA/CB
+ *   VR (P-VOLATILE-R1S1: R1/PH–S1/PL pass, not CON-A/CON-B) → separate from CA/CB
  *   CB → conB && !conA
  *   MB → momB && !conB
  *   CA → conA && !conB && !momB
@@ -35,6 +36,7 @@ export function matchesCandleCheck(r: CPRResult, code: string): boolean {
       return conA && !conB;
     case "MA":
       return momA && !conA && !conB;
+    case "VR":
     case "IR":
     case "INSIDE":
       // INSIDE band only when not already CON-A or CON-B
@@ -52,6 +54,8 @@ export function candleCheckToCategoryKey(code: string): string | undefined {
       return "MOM-A";
     case "CB":
       return "CON-B";
+    case "VR":
+      return "INSIDE-R1S1";
     case "MB":
       return "MOM-B";
     default:

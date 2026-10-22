@@ -279,8 +279,8 @@ function exclusivePDayBadge(r: CPRResult | undefined | null): {
   }
   if (inside) {
     return {
-      text: "INSIDE-R1S1",
-      className: "font-mono text-xs font-bold uppercase tracking-widest text-amber-300",
+      text: "P-VOLATILE-R1S1",
+      className: "font-mono text-xs font-bold uppercase tracking-widest text-lime-400",
     };
   }
   return null;

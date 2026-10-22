@@ -286,7 +286,7 @@ async function addApplicableViewOutcomes<T extends Pick<CategoryScanRow, "symbol
  *   2. MOM-B → P-MOMENTUM-B
  *   3. CON-A → P-CONSOLIDATE-A
  *   4. MOM-A → P-MOMENTUM-A
- *   5. INSIDE (max R1/PH – min S1/PL; not CON-A/CON-B) → INSIDE-R1S1
+ *   5. INSIDE (max R1/PH – min S1/PL; not CON-A/CON-B) → P-VOLATILE-R1S1
  */
 function candleBucketFromFlags(
   raw: CPRResult,
@@ -310,7 +310,7 @@ function renderCandleCheckBadges(raw: CPRResult) {
 
   const label =
     bucket === "inside-r1s1"
-      ? "INSIDE-R1S1"
+      ? "P-VOLATILE-R1S1"
       : bucket === "consolidate-a"
         ? "P-CONSOLIDATE-A"
         : bucket === "consolidate-b"
@@ -321,7 +321,7 @@ function renderCandleCheckBadges(raw: CPRResult) {
 
   const className =
     bucket === "inside-r1s1"
-      ? "font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-amber-300"
+      ? "font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-lime-400"
       : bucket === "consolidate-a"
         ? "font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
         : bucket === "consolidate-b"
