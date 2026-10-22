@@ -158,14 +158,11 @@ function isViewDescendant(viewKey: string, ancestorKey: string): boolean {
  * (unrelated) pattern View a mover also happens to satisfy.
  */
 function matchingViewDef(raw: CPRResult, selectedKey: string): ViewDef | null {
-  // ALL / symbol-list-only scopes are virtual keys (not real ViewDefs). Still
-  // search every View so the View column can show a name when the user picks
-  // "ALL — any pattern" or filters by symbol under that mode.
+  const selected = getView(selectedKey);
+  if (!selected) return null;
+
   const searchGlobally =
     selectedKey === ALL_VIEWS_KEY || SYMBOL_LIST_ONLY_CATEGORY_KEYS.has(selectedKey);
-
-  const selected = getView(selectedKey);
-  if (!selected && !searchGlobally) return null;
 
   const candidates = VIEWS
     .filter((view) =>
@@ -282,11 +279,11 @@ async function addApplicableViewOutcomes<T extends Pick<CategoryScanRow, "symbol
 /**
  * Same mutually exclusive P-filter buckets as Screener `candleBucket`.
  * Priority (exactly one badge):
- *   1. CON-B → P-CONSOLIDATE-B
- *   2. MOM-B → P-MOMENTUM-B
- *   3. CON-A → P-CONSOLIDATE-A
- *   4. MOM-A → P-MOMENTUM-A
- *   5. INSIDE (max R1/PH – min S1/PL; not CON-A/CON-B) → P-VOLATILE-R1S1
+ *   1. CON-A ∩ CON-B → INSIDE-R1S1
+ *   2. CON-B alone → P-CONSOLIDATE-B
+ *   3. MOM-B (not CON-B) → P-MOMENTUM-B
+ *   4. CON-A alone → P-CONSOLIDATE-A
+ *   5. MOM-A (not CON-A) → P-MOMENTUM-A
  */
 function candleBucketFromFlags(
   raw: CPRResult,
@@ -295,12 +292,11 @@ function candleBucketFromFlags(
   const conB = raw.PD15MBelowTCPass === true;
   const momA = raw.PD15MAboveBCPass === true;
   const momB = raw.PD15MMomentumBPass === true;
-  const inside = raw.PD15MInsideR1S1Pass === true;
+  if (conA && conB) return "inside-r1s1";
   if (conB) return "consolidate-b";
   if (momB) return "momentum-b";
   if (conA) return "consolidate-a";
   if (momA) return "momentum-a";
-  if (inside) return "inside-r1s1";
   return null;
 }
 
@@ -310,7 +306,7 @@ function renderCandleCheckBadges(raw: CPRResult) {
 
   const label =
     bucket === "inside-r1s1"
-      ? "P-VOLATILE-R1S1"
+      ? "INSIDE-R1S1"
       : bucket === "consolidate-a"
         ? "P-CONSOLIDATE-A"
         : bucket === "consolidate-b"
@@ -321,7 +317,7 @@ function renderCandleCheckBadges(raw: CPRResult) {
 
   const className =
     bucket === "inside-r1s1"
-      ? "font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-lime-400"
+      ? "font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-amber-300"
       : bucket === "consolidate-a"
         ? "font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
         : bucket === "consolidate-b"
@@ -598,6 +594,22 @@ function deriveLevelCheckDefsForSymbol(
   return derived;
 }
 
+// Attach-point tree is stable for a session; cache once so Create/Edit/Copy
+// View does not rebuild + re-render hundreds of <option>s on every open
+// (that was the blank flash while the form "loaded all dropdowns").
+let cachedAttachPointOptions: AttachPointOption[] | null = null;
+function getCachedAttachPointOptions(): AttachPointOption[] {
+  if (!cachedAttachPointOptions) {
+    cachedAttachPointOptions = getAttachPointOptions();
+  }
+  return cachedAttachPointOptions;
+}
+
+/** Call after VIEWS tree mutations if attach points can change in-session. */
+export function invalidateAttachPointOptionsCache() {
+  cachedAttachPointOptions = null;
+}
+
 // Shared "attach under" dropdown for the Create/Copy View popovers.
 // Renders every Category/Pattern/Subpattern node in BACKTEST_CATEGORIES
 // (getAttachPointOptions — Views excluded, they're leaves) grouped by
@@ -610,12 +622,15 @@ function AttachPointSelect({
   value,
   onChange,
   disabled,
+  ready = true,
 }: {
   value: string;
   onChange: (key: string) => void;
   disabled?: boolean;
+  /** When false, render a lightweight placeholder instead of the full tree. */
+  ready?: boolean;
 }) {
-  const options = useMemo(() => getAttachPointOptions(), []);
+  const options = useMemo(() => (ready ? getCachedAttachPointOptions() : []), [ready]);
   const byCategory = useMemo(() => {
     const map = new Map<string, AttachPointOption[]>();
     for (const opt of options) {
@@ -625,6 +640,19 @@ function AttachPointSelect({
     }
     return map;
   }, [options]);
+
+  if (!ready) {
+    return (
+      <select
+        disabled
+        aria-busy="true"
+        title="Loading attach points…"
+        className="w-full bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-muted-foreground focus:outline-none disabled:opacity-70"
+      >
+        <option>Loading attach points…</option>
+      </select>
+    );
+  }
 
   return (
     <select
@@ -797,6 +825,7 @@ function CopyViewControl({
         );
         return;
       }
+      invalidateAttachPointOptionsCache();
 
       const adjusted = editBacktestView(
         viewKey,
@@ -924,6 +953,7 @@ function CopyViewControl({
           title="Optional 15m CONSOLIDATE/MOMENTUM filter (CA/MA/CB/MB)."
           className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
         >
+          <option value="">Any CONSOLIDATE/MOMENTUM</option>
           {CANDLE_CHECK_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
               {opt.label}
@@ -1214,6 +1244,7 @@ function EditViewControl({
       );
       return;
     }
+    invalidateAttachPointOptionsCache();
 
     // Base64, not double-quoted JSON — same reasoning as CopyViewControl's
     // confirm(): the derived defs are JSON full of literal " characters,
@@ -1337,6 +1368,7 @@ function EditViewControl({
           title="Optional 15m CONSOLIDATE/MOMENTUM filter (CA/MA/CB/MB)."
           className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
         >
+          <option value="">Any CONSOLIDATE/MOMENTUM</option>
           {CANDLE_CHECK_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
               {opt.label}
@@ -1519,7 +1551,7 @@ function ViewActionsRow({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
+    <div className="flex items-center gap-1.5">
       <button
         type="button"
         onClick={() => setMode("edit")}
@@ -1536,21 +1568,6 @@ function ViewActionsRow({
         >
           + Copy View
         </button>
-      {/* Read-only 13/13 MATCH status (same flag as Create/Edit checkbox) */}
-      <span
-        className={`inline-flex items-center rounded-md border px-2 py-1 text-[11px] font-medium ${
-          activeTarget.requireFullMatch
-            ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-300"
-            : "border-border text-muted-foreground"
-        }`}
-        title={
-          activeTarget.requireFullMatch
-            ? "This View only matches when Level Check is a full 13/13"
-            : "This View matches on pattern condition alone (13/13 not required)"
-        }
-      >
-        13/13 MATCH: {activeTarget.requireFullMatch ? "ON" : "OFF"}
-      </span>
     </div>
   );
 }
@@ -1626,6 +1643,10 @@ function CreateViewControl({
   // field. The View key is no longer a free-text field at all — see
   // viewKey below — so there's nothing to track "edited" for there.
   const [labelEdited, setLabelEdited] = useState(false);
+  // Heavy <select> option trees (attach points, gap badges) mount one
+  // frame after open so the panel chrome paints immediately instead of
+  // a blank/white flash while hundreds of options are built.
+  const [optionsReady, setOptionsReady] = useState(false);
 
   // The node this View is actually created FOR — normally the one
   // "Create View" was opened from, but for the TOP 15 buckets it follows
@@ -1668,6 +1689,16 @@ function CreateViewControl({
     if (!labelEdited) setNewLabel(effectivePattern.label);
   }, [open, command, labelEdited, effectivePattern.label]);
 
+  useEffect(() => {
+    if (!open) {
+      setOptionsReady(false);
+      return;
+    }
+    // Paint the panel shell first; fill option lists on the next frame.
+    const id = requestAnimationFrame(() => setOptionsReady(true));
+    return () => cancelAnimationFrame(id);
+  }, [open]);
+
   function openForm() {
     setAttachKey(patternKey);
     setDirection("Up");
@@ -1682,6 +1713,8 @@ function CreateViewControl({
     setCommand(null);
     setCreatedKey(null);
     setCopied(false);
+    setOptionsReady(false);
+    setRequireFullMatch(false);
     setOpen(true);
   }
 
@@ -1725,6 +1758,7 @@ function CreateViewControl({
       );
       return;
     }
+    invalidateAttachPointOptionsCache();
     setError("");
     // Deliberately NOT calling onCreated here — same reason as
     // CopyViewControl.confirm(): switching the dropdown's selected View
@@ -1781,13 +1815,16 @@ function CreateViewControl({
   }
 
   return (
-    <div className="flex w-fit min-w-[300px] flex-col gap-1.5 rounded-md border border-border bg-popover p-2">
+    <div className="relative z-30 flex w-fit min-w-[300px] flex-col gap-1.5 rounded-md border border-border bg-popover p-2 shadow-lg">
       <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
         Create View for &quot;{effectivePattern.label}&quot;
       </span>
       <span className="text-[10px] text-muted-foreground">
         Entry {entry} · Stoploss {stoploss} — Level Check derived from this symbol
       </span>
+      {!optionsReady && (
+        <span className="text-[10px] text-cyan-400/80">Loading options…</span>
+      )}
       <div className="flex gap-1.5">
         <select
           value={direction}
@@ -1838,6 +1875,7 @@ function CreateViewControl({
           title="Optional 15m CONSOLIDATE/MOMENTUM filter (CA/MA/CB/MB)."
           className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
         >
+          <option value="">Any CONSOLIDATE/MOMENTUM</option>
           {CANDLE_CHECK_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
               {opt.label}
@@ -1869,20 +1907,26 @@ function CreateViewControl({
         title="User-friendly display name for this View — shown in the dropdown tree, editable."
         className="w-full bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
       />
-      <AttachPointSelect value={attachKey} onChange={setAttachKey} disabled={!!command} />
+      <AttachPointSelect
+        value={attachKey}
+        onChange={setAttachKey}
+        disabled={!!command}
+        ready={optionsReady}
+      />
       <select
         value={gapBadge}
         onChange={(e) => setGapBadge(e.target.value)}
-        disabled={!!command}
+        disabled={!!command || !optionsReady}
         title="Optionally also require this exact composite Gap Badge (RRSSGapCategory + PDHPDLGapCategory + HL-switch), on top of the Pattern's own condition — same label shown in the Pattern column's Gap Badge (e.g. RH-GapAB, SL-GapBB)."
         className="w-full bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
       >
         <option value="">Any Gap Badge</option>
-        {ALL_GAP_BADGES.map((badge) => (
-          <option key={badge} value={badge}>
-            {badge}
-          </option>
-        ))}
+        {optionsReady &&
+          ALL_GAP_BADGES.map((badge) => (
+            <option key={badge} value={badge}>
+              {badge}
+            </option>
+          ))}
       </select>
       <input
         value={viewKey}
@@ -2612,13 +2656,11 @@ export default function BacktestPanel() {
     isViewOnly ? row.result : row.viewOutcome?.result;
   const passCount = rows.filter((r) => rowResult(r) === "pass").length;
   const failCount = rows.filter((r) => rowResult(r) === "fail").length;
-  const notTriggeredCount = rows.filter((r) => rowResult(r) === "not-triggered").length;
   const insufficientCount = rows.filter((r) => rowResult(r) === "insufficient-data").length;
   const invalidTargetCount = rows.filter((r) => rowResult(r) === "invalid-target").length;
-  const gradedCount = passCount + failCount; // excludes not-triggered
+  const gradedCount = passCount + failCount;
   const categoryPassCount = categoryRows.filter((r) => r.viewOutcome?.result === "pass").length;
   const categoryFailCount = categoryRows.filter((r) => r.viewOutcome?.result === "fail").length;
-  const categoryNotTriggeredCount = categoryRows.filter((r) => r.viewOutcome?.result === "not-triggered").length;
   const categoryGradedCount = categoryPassCount + categoryFailCount;
   const progressPct = progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0;
 
@@ -3149,28 +3191,9 @@ export default function BacktestPanel() {
         </div>
       )}
       {isViewOnly && activeTarget && (
-        <div className="text-xs text-muted-foreground mb-3 space-y-0.5">
-          <div>
-            Target:{" "}
-            <span className="text-foreground font-medium">{shortLevelLabel(activeTarget.targetLabel)}</span>
-            {" · "}
-            Entry:{" "}
-            <span className="text-foreground font-medium">{shortLevelLabel(activeTarget.entryLabel) || "—"}</span>
-            {" · "}
-            Stoploss:{" "}
-            <span className="text-foreground font-medium">{shortLevelLabel(activeTarget.stoplossLabel) || "—"}</span>
-            {" · "}
-            13/13 MATCH:{" "}
-            <span className={activeTarget.requireFullMatch ? "text-cyan-400 font-medium" : "text-foreground font-medium"}>
-              {activeTarget.requireFullMatch ? "ON" : "OFF"}
-            </span>
-          </div>
-          <div>
-            ({activeTarget.direction === "Up" || (activeTarget.direction as string) === "bullish"
-              ? "price must reach or exceed target"
-              : "price must reach or fall below target"}
-            )
-          </div>
+        <div className="text-xs text-muted-foreground mb-3">
+          Target: <span className="text-foreground font-medium">{shortLevelLabel(activeTarget.targetLabel)}</span>{" "}
+          ({activeTarget.direction === "Up" || (activeTarget.direction as string) === "bullish" ? "price must reach or exceed it" : "price must reach or fall below it"})
         </div>
       )}
       {isCategory && activeCategory && (
@@ -3236,11 +3259,6 @@ export default function BacktestPanel() {
               <>
                 <span className="text-green-400 font-medium">{categoryPassCount} pass</span>
                 <span className="text-destructive font-medium">{categoryFailCount} fail</span>
-                {categoryNotTriggeredCount > 0 && (
-                  <span className="text-slate-400 font-medium" title="Never crossed entry — excluded from hit rate">
-                    {categoryNotTriggeredCount} no entry
-                  </span>
-                )}
                 <span className="text-foreground font-medium">
                   {Math.round((categoryPassCount / categoryGradedCount) * 100)}% hit rate
                 </span>
@@ -3401,11 +3419,6 @@ export default function BacktestPanel() {
                                   <XCircle className="w-3.5 h-3.5" /> Fail
                                 </span>
                               )}
-                              {r.viewOutcome?.result === "not-triggered" && (
-                                <span className="text-[10px] px-1.5 py-0.5 rounded border border-slate-600 text-slate-400" title="Entry never crossed — ignored for PASS/FAIL">
-                                  NO ENTRY
-                                </span>
-                              )}
                               {r.viewOutcome?.result === "insufficient-data" && (
                                 <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground">
                                   <AlertCircle className="w-3.5 h-3.5" /> No data
@@ -3531,11 +3544,6 @@ export default function BacktestPanel() {
               <>
                 <span className="text-green-400 font-medium">{passCount} pass</span>
                 <span className="text-destructive font-medium">{failCount} fail</span>
-                {notTriggeredCount > 0 && (
-                  <span className="text-slate-400 font-medium" title="Never crossed entry — excluded from hit rate">
-                    {notTriggeredCount} no entry
-                  </span>
-                )}
                 {insufficientCount > 0 && (
                   <span className="text-muted-foreground">{insufficientCount} insufficient data</span>
                 )}
@@ -3749,11 +3757,6 @@ export default function BacktestPanel() {
                           {rowResult(r) === "fail" && (
                             <span className="inline-flex items-center gap-1 text-xs font-medium text-destructive">
                               <XCircle className="w-3.5 h-3.5" /> Fail
-                            </span>
-                          )}
-                          {rowResult(r) === "not-triggered" && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded border border-slate-600 text-slate-400" title="Entry never crossed — ignored for PASS/FAIL">
-                              NO ENTRY
                             </span>
                           )}
                           {rowResult(r) === "insufficient-data" && (
