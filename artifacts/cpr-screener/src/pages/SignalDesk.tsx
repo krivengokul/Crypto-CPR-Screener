@@ -502,10 +502,10 @@ const SignalDeskCard = memo(
         </div>
       ) : item.isTriggered ? (
         <div
-          className="flex items-center gap-1 text-[11px] text-emerald-400 font-mono shrink-0"
+          className="flex items-center gap-1 text-[11px] text-lime-400 font-mono shrink-0"
           title="Price has reached the entry line"
         >
-          <Cloud className="w-3.5 h-3.5 text-emerald-400" />
+          <Cloud className="w-3.5 h-3.5 text-lime-400" />
           <span>Active</span>
         </div>
       ) : (
@@ -718,7 +718,7 @@ const SignalDeskCard = memo(
                       : item.journalStatus === "FAIL"
                       ? "text-rose-400"
                       : item.isTriggered
-                      ? "text-emerald-400"
+                      ? "text-lime-400"
                       : "text-amber-400"
                   }`}
                 >
