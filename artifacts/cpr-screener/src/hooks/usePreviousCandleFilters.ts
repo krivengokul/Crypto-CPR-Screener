@@ -99,7 +99,7 @@ export function usePreviousCandleFilters(opts: {
   sessionStartMs: previousUpexSessionStart,
   buildCandidates: () => {
     const candidates = new Map<string, {
-      symbol: string; source: "binance" | "delta"; bc: number; ceiling: number;
+      symbol: string; source: "binance" | "delta"; bc: number; ceiling: number; r2: number;
     }>();
     if (status === "done") {
       for (const row of allResults) {
@@ -107,6 +107,7 @@ export function usePreviousCandleFilters(opts: {
           symbol: row.symbol, source: "binance",
           bc: getConsolidateABc(row.prevCPR, row.ppCPR),
           ceiling: getPrevious15MACeiling(row.prevCPR),
+          r2: row.prevCPR.r2,
         });
       }
     }
@@ -116,6 +117,7 @@ export function usePreviousCandleFilters(opts: {
           symbol: row.symbol, source: "delta",
           bc: getConsolidateABc(row.prevCPR, row.ppCPR),
           ceiling: getPrevious15MACeiling(row.prevCPR),
+          r2: row.prevCPR.r2,
         });
       }
     }
@@ -165,7 +167,7 @@ export function usePreviousCandleFilters(opts: {
   sessionStartMs: previousUpexSessionStart,
   buildCandidates: () => {
     const candidates = new Map<string, {
-      symbol: string; source: "binance" | "delta"; bc: number; floor: number;
+      symbol: string; source: "binance" | "delta"; bc: number; floor: number; s2: number;
     }>();
     if (status === "done") {
       for (const row of allResults) {
@@ -173,6 +175,7 @@ export function usePreviousCandleFilters(opts: {
           symbol: row.symbol, source: "binance",
           bc: getConsolidateBTc(row.prevCPR, row.ppCPR),
           floor: getPrevious15MBFloor(row.prevCPR),
+          s2: row.prevCPR.s2,
         });
       }
     }
@@ -182,6 +185,7 @@ export function usePreviousCandleFilters(opts: {
           symbol: row.symbol, source: "delta",
           bc: getConsolidateBTc(row.prevCPR, row.ppCPR),
           floor: getPrevious15MBFloor(row.prevCPR),
+          s2: row.prevCPR.s2,
         });
       }
     }

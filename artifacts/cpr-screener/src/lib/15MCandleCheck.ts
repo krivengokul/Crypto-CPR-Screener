@@ -9,9 +9,9 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_CONCURRENT_REQUESTS = 8;
 const PREVIOUS_UPEX_CACHE_KEY = "cpr_previous_upex_results_v5";
 const PREVIOUS_15M_B_CACHE_KEY = "cpr_previous_15m_b_results_v3";
-const PREVIOUS_15M_TC_B_CACHE_KEY = "cpr_previous_15m_tc_b_results_v6";
+const PREVIOUS_15M_TC_B_CACHE_KEY = "cpr_previous_15m_tc_b_results_v7";
 const PREVIOUS_15M_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_momentum_b_results_v1";
-const PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_consolidate_a_results_v6";
+const PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_consolidate_a_results_v7";
 const PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_inside_r1s1_results_v3";
 
 export interface UpexCandidate {
@@ -27,6 +27,16 @@ export interface UpexCandidate {
   floor?: number;
   /** Upper bound used by CONSOLIDATE-A: the higher of previous CPR Prev High (PH) and R1. */
   ceiling?: number;
+  /**
+   * R2 of the previous session — CON-A fails (→ MOM-A) when a first-crossing
+   * or new-high 15m candle has open/close at or above this level.
+   */
+  r2?: number;
+  /**
+   * S2 of the previous session — CON-B fails (→ MOM-B) when a first-crossing
+   * or new-low 15m candle has open/close at or below this level.
+   */
+  s2?: number;
 }
 
 /**
@@ -167,13 +177,17 @@ export function previousUpexSessionStartUtcMs(now = Date.now()): number {
  *    A body above the ceiling that stays at or under an earlier candle's high
  *    does not fail. The first candle has no earlier wick, so a full body above
  *    the ceiling on it fails (same as the BC rule).
+ *  - R2 body rule (CONSOLIDATE-A only, when `r2` is supplied): fail when a
+ *    first-crossing or new-high candle has open/close at or above R2. That
+ *    session is MOMENTUM-A, not CONSOLIDATE-A.
  */
 export function passesUpexFilter(
   candles: OHLC[],
   bc: number,
   startTime: number,
   now: number,
-  ceiling?: number
+  ceiling?: number,
+  r2?: number,
 ): boolean | null {
   if (!Number.isFinite(bc)) return null;
   if (ceiling !== undefined && !Number.isFinite(ceiling)) return null;
@@ -191,6 +205,10 @@ export function passesUpexFilter(
 
   let previousHighestWick: number | null = null;
   let lowerReference: number | null = null;
+  let seenBodyInR2 = false;
+  const useR2 =
+    ceiling !== undefined && r2 !== undefined && Number.isFinite(r2);
+
   for (let i = 0; i < completed.length; i++) {
     const candle = completed[i];
     const next = completed[i + 1];
@@ -204,6 +222,19 @@ export function passesUpexFilter(
     ) {
       return false;
     }
+
+    // CON-A → MOM-A: first body at/above R2, or new-high candle with body at/above R2
+    if (useR2) {
+      const bodyInR2 = candle.open >= (r2 as number) || candle.close >= (r2 as number);
+      const isNewHigh =
+        previousHighestWick === null ||
+        (Number.isFinite(candle.high) && candle.high > previousHighestWick);
+      if (bodyInR2 && (isNewHigh || !seenBodyInR2)) {
+        return false;
+      }
+      if (bodyInR2) seenBodyInR2 = true;
+    }
+
     const bodyLow = Math.min(candle.open, candle.close);
     const bodyPartBelowBc = candle.open < bc || candle.close < bc;
     if (lowerReference === null && bodyPartBelowBc) {
@@ -230,7 +261,7 @@ export function passesUpexFilter(
  * wick references that candle was judged against.
  */
 interface PD15MBelowTCFailure {
-  rule: "floor" | "freshHighAboveTC";
+  rule: "floor" | "freshHighAboveTC" | "bodyInS2";
   candle: OHLC;
   previousHighestWick: number | null;
   previousLowestWick: number | null;
@@ -247,10 +278,14 @@ interface PD15MBelowTCFailure {
 function findPD15MBelowTCFailure(
   completed: OHLC[],
   tc: number,
-  floor: number | undefined
+  floor: number | undefined,
+  s2?: number,
 ): PD15MBelowTCFailure | null {
   let previousHighestWick: number | null = null;
+  let previousLowestWick: number | null = null;
   let lowerReference: number | null = null;
+  let seenBodyInS2 = false;
+  const useS2 = s2 !== undefined && Number.isFinite(s2);
 
   for (let i = 0; i < completed.length; i++) {
     const candle = completed[i];
@@ -266,8 +301,25 @@ function findPD15MBelowTCFailure(
         rule: "freshHighAboveTC",
         candle,
         previousHighestWick,
-        previousLowestWick: lowerReference,
+        previousLowestWick,
       };
+    }
+
+    // CON-B → MOM-B: first body at/below S2, or new-low candle with body at/below S2
+    if (useS2) {
+      const bodyInS2 = candle.open <= (s2 as number) || candle.close <= (s2 as number);
+      const isNewLow =
+        previousLowestWick === null ||
+        (Number.isFinite(candle.low) && candle.low < previousLowestWick);
+      if (bodyInS2 && (isNewLow || !seenBodyInS2)) {
+        return {
+          rule: "bodyInS2",
+          candle,
+          previousHighestWick,
+          previousLowestWick,
+        };
+      }
+      if (bodyInS2) seenBodyInS2 = true;
     }
 
     const bodyLow = Math.min(candle.open, candle.close);
@@ -291,6 +343,12 @@ function findPD15MBelowTCFailure(
       previousHighestWick === null
         ? candle.high
         : Math.max(previousHighestWick, candle.high);
+    if (Number.isFinite(candle.low)) {
+      previousLowestWick =
+        previousLowestWick === null
+          ? candle.low
+          : Math.min(previousLowestWick, candle.low);
+    }
   }
   return null;
 }
@@ -326,7 +384,8 @@ export function passesPD15MBelowTCFilter(
   tc: number,
   startTime: number,
   now: number,
-  floor?: number
+  floor?: number,
+  s2?: number,
 ): boolean | null {
   if (!Number.isFinite(tc)) return null;
   if (floor !== undefined && !Number.isFinite(floor)) return null;
@@ -334,7 +393,7 @@ export function passesPD15MBelowTCFilter(
   const completed = completedBelowTCCandles(candles, startTime, now);
   if (completed.length === 0) return null;
 
-  return findPD15MBelowTCFailure(completed, tc, floor) === null;
+  return findPD15MBelowTCFailure(completed, tc, floor, s2) === null;
 }
 
 /**
@@ -347,9 +406,10 @@ export function explainPD15MBelowTCFailure(
   tc: number,
   startTime: number,
   now: number,
-  floor?: number
+  floor?: number,
+  s2?: number,
 ): {
-  rule: "floor" | "freshHighAboveTC";
+  rule: "floor" | "freshHighAboveTC" | "bodyInS2";
   openTime: string;
   open: number;
   close: number;
@@ -364,7 +424,8 @@ export function explainPD15MBelowTCFailure(
   const failure = findPD15MBelowTCFailure(
     completedBelowTCCandles(candles, startTime, now),
     tc,
-    effectiveFloor
+    effectiveFloor,
+    s2,
   );
   if (!failure) return null;
   return {
@@ -538,7 +599,8 @@ async function findSymbolsForSession(
     bc: number,
     startTime: number,
     now: number,
-    floor?: number
+    floor?: number,
+    expansionLevel?: number,
   ) => boolean | null = passesUpexFilter,
 ): Promise<{
   included: Set<string>;
@@ -557,7 +619,14 @@ async function findSymbolsForSession(
         if (!candles) return { candidate, passes: null };
         return {
           candidate,
-          passes: evaluate(candles, candidate.bc, startTime, endTime, candidate.ceiling !== undefined ? candidate.ceiling : candidate.floor),
+          passes: evaluate(
+            candles,
+            candidate.bc,
+            startTime,
+            endTime,
+            candidate.ceiling !== undefined ? candidate.ceiling : candidate.floor,
+            candidate.ceiling !== undefined ? candidate.r2 : candidate.s2,
+          ),
         };
       })
     );
@@ -608,7 +677,7 @@ export function previousConsolidateACandidateCacheKey(
   sessionStart: number,
   candidate: UpexCandidate,
 ): string {
-  return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.ceiling}`;
+  return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.ceiling}:${candidate.r2}`;
 }
 
 export function loadPreviousConsolidateAResults(
@@ -752,7 +821,7 @@ export function previous15MTCCandidateCacheKey(
   sessionStart: number,
   candidate: UpexCandidate,
 ): string {
-  return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.floor}`;
+  return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.floor}:${candidate.s2}`;
 }
 
 export function loadPD15MTCBelowResults(
@@ -1130,7 +1199,7 @@ export function findPreviousConsolidateAPass(
   const endTime = upexSessionStartUtcMs(now);
   const startTime = previousUpexSessionStartUtcMs(now);
   const key =
-    `${startTime}:${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.ceiling}`;
+    `${startTime}:${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.ceiling}:${candidate.r2}`;
   const cached = previousConsolidateAPassCache.get(key);
   if (cached) return cached;
 
@@ -1213,7 +1282,7 @@ export function findPD15MBelowPass(
   const endTime = upexSessionStartUtcMs(now);
   const startTime = previousUpexSessionStartUtcMs(now);
   const key =
-    `${startTime}:${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.floor}`;
+    `${startTime}:${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.floor}:${candidate.s2}`;
   const cached = previous15MBPassCache.get(key);
   if (cached) return cached;
 
@@ -1271,11 +1340,11 @@ export function findPD15MBelowTCPass(
     endTime,
     undefined,
     (candles, tc, st, now_, floor) => {
-      const passes = passesPD15MBelowTCFilter(candles, tc, st, now_, floor);
+      const passes = passesPD15MBelowTCFilter(candles, tc, st, now_, floor, candidate.s2);
       if (passes === false && shouldDebugPD15M(candidate.symbol)) {
         console.info(
           `[PD15MBelowTC] ${candidate.source}:${candidate.symbol} FAILED`,
-          explainPD15MBelowTCFailure(candles, tc, st, now_, floor)
+          explainPD15MBelowTCFailure(candles, tc, st, now_, floor, candidate.s2)
         );
       }
       return passes;
