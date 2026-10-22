@@ -598,6 +598,22 @@ function deriveLevelCheckDefsForSymbol(
   return derived;
 }
 
+// Attach-point tree is stable for a session; cache once so Create/Edit/Copy
+// View does not rebuild + re-render hundreds of <option>s on every open
+// (that was the blank flash while the form "loaded all dropdowns").
+let cachedAttachPointOptions: AttachPointOption[] | null = null;
+function getCachedAttachPointOptions(): AttachPointOption[] {
+  if (!cachedAttachPointOptions) {
+    cachedAttachPointOptions = getAttachPointOptions();
+  }
+  return cachedAttachPointOptions;
+}
+
+/** Call after VIEWS tree mutations if attach points can change in-session. */
+export function invalidateAttachPointOptionsCache() {
+  cachedAttachPointOptions = null;
+}
+
 // Shared "attach under" dropdown for the Create/Copy View popovers.
 // Renders every Category/Pattern/Subpattern node in BACKTEST_CATEGORIES
 // (getAttachPointOptions — Views excluded, they're leaves) grouped by
@@ -610,12 +626,15 @@ function AttachPointSelect({
   value,
   onChange,
   disabled,
+  ready = true,
 }: {
   value: string;
   onChange: (key: string) => void;
   disabled?: boolean;
+  /** When false, render a lightweight placeholder instead of the full tree. */
+  ready?: boolean;
 }) {
-  const options = useMemo(() => getAttachPointOptions(), []);
+  const options = useMemo(() => (ready ? getCachedAttachPointOptions() : []), [ready]);
   const byCategory = useMemo(() => {
     const map = new Map<string, AttachPointOption[]>();
     for (const opt of options) {
@@ -625,6 +644,19 @@ function AttachPointSelect({
     }
     return map;
   }, [options]);
+
+  if (!ready) {
+    return (
+      <select
+        disabled
+        aria-busy="true"
+        title="Loading attach points…"
+        className="w-full bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-muted-foreground focus:outline-none disabled:opacity-70"
+      >
+        <option>Loading attach points…</option>
+      </select>
+    );
+  }
 
   return (
     <select
@@ -797,6 +829,7 @@ function CopyViewControl({
         );
         return;
       }
+      invalidateAttachPointOptionsCache();
 
       const adjusted = editBacktestView(
         viewKey,
@@ -1214,6 +1247,7 @@ function EditViewControl({
       );
       return;
     }
+    invalidateAttachPointOptionsCache();
 
     // Base64, not double-quoted JSON — same reasoning as CopyViewControl's
     // confirm(): the derived defs are JSON full of literal " characters,
@@ -1626,6 +1660,10 @@ function CreateViewControl({
   // field. The View key is no longer a free-text field at all — see
   // viewKey below — so there's nothing to track "edited" for there.
   const [labelEdited, setLabelEdited] = useState(false);
+  // Heavy <select> option trees (attach points, gap badges) mount one
+  // frame after open so the panel chrome paints immediately instead of
+  // a blank/white flash while hundreds of options are built.
+  const [optionsReady, setOptionsReady] = useState(false);
 
   // The node this View is actually created FOR — normally the one
   // "Create View" was opened from, but for the TOP 15 buckets it follows
@@ -1668,6 +1706,16 @@ function CreateViewControl({
     if (!labelEdited) setNewLabel(effectivePattern.label);
   }, [open, command, labelEdited, effectivePattern.label]);
 
+  useEffect(() => {
+    if (!open) {
+      setOptionsReady(false);
+      return;
+    }
+    // Paint the panel shell first; fill option lists on the next frame.
+    const id = requestAnimationFrame(() => setOptionsReady(true));
+    return () => cancelAnimationFrame(id);
+  }, [open]);
+
   function openForm() {
     setAttachKey(patternKey);
     setDirection("Up");
@@ -1682,6 +1730,8 @@ function CreateViewControl({
     setCommand(null);
     setCreatedKey(null);
     setCopied(false);
+    setOptionsReady(false);
+    setRequireFullMatch(false);
     setOpen(true);
   }
 
@@ -1725,6 +1775,7 @@ function CreateViewControl({
       );
       return;
     }
+    invalidateAttachPointOptionsCache();
     setError("");
     // Deliberately NOT calling onCreated here — same reason as
     // CopyViewControl.confirm(): switching the dropdown's selected View
@@ -1781,13 +1832,16 @@ function CreateViewControl({
   }
 
   return (
-    <div className="flex w-fit min-w-[300px] flex-col gap-1.5 rounded-md border border-border bg-popover p-2">
+    <div className="relative z-30 flex w-fit min-w-[300px] flex-col gap-1.5 rounded-md border border-border bg-popover p-2 shadow-lg">
       <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
         Create View for &quot;{effectivePattern.label}&quot;
       </span>
       <span className="text-[10px] text-muted-foreground">
         Entry {entry} · Stoploss {stoploss} — Level Check derived from this symbol
       </span>
+      {!optionsReady && (
+        <span className="text-[10px] text-cyan-400/80">Loading options…</span>
+      )}
       <div className="flex gap-1.5">
         <select
           value={direction}
@@ -1869,20 +1923,26 @@ function CreateViewControl({
         title="User-friendly display name for this View — shown in the dropdown tree, editable."
         className="w-full bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
       />
-      <AttachPointSelect value={attachKey} onChange={setAttachKey} disabled={!!command} />
+      <AttachPointSelect
+        value={attachKey}
+        onChange={setAttachKey}
+        disabled={!!command}
+        ready={optionsReady}
+      />
       <select
         value={gapBadge}
         onChange={(e) => setGapBadge(e.target.value)}
-        disabled={!!command}
+        disabled={!!command || !optionsReady}
         title="Optionally also require this exact composite Gap Badge (RRSSGapCategory + PDHPDLGapCategory + HL-switch), on top of the Pattern's own condition — same label shown in the Pattern column's Gap Badge (e.g. RH-GapAB, SL-GapBB)."
         className="w-full bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
       >
         <option value="">Any Gap Badge</option>
-        {ALL_GAP_BADGES.map((badge) => (
-          <option key={badge} value={badge}>
-            {badge}
-          </option>
-        ))}
+        {optionsReady &&
+          ALL_GAP_BADGES.map((badge) => (
+            <option key={badge} value={badge}>
+              {badge}
+            </option>
+          ))}
       </select>
       <input
         value={viewKey}
