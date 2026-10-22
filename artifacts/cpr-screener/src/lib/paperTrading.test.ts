@@ -42,10 +42,6 @@ import {
   upexSessionStartUtcMs,
 } from "./15MCandleCheck.ts";
 import {
-  matchesCprAboveLevelStatus,
-  matchesCprAboveOverlapStatus,
-} from "./views/p15MAbove.ts";
-import {
   matchesCandleCheck,
   ALL_CANDLE_CHECKS,
   CANDLE_CHECK_OPTIONS,
@@ -782,42 +778,6 @@ test("PD-15M-Below-BC floor is the lower of previous PL and S1", () => {
   assert.equal(getPrevious15MBFloor({ prevLow: 90, s1: 95 }), 90);
   assert.equal(getPrevious15MBFloor({ prevLow: 90, s1: 85 }), 85);
   assert.equal(getPrevious15MBFloor({ prevLow: 90, s1: 90 }), 90);
-});
-
-test("PD15M>BC CPR ABOVE groups the four requested CPR status variants", () => {
-  const base = {
-    narrowCPR: false,
-    InsideCPR: false,
-    strWideCPR: false,
-    outCPR: false,
-    cprRising: false,
-    overlapHigher: false,
-  };
-
-  assert.equal(
-    matchesCprAboveLevelStatus({ ...base, narrowCPR: true, cprRising: true }),
-    true
-  );
-  assert.equal(
-    matchesCprAboveLevelStatus({ ...base, strWideCPR: true, cprRising: true }),
-    true
-  );
-  assert.equal(
-    matchesCprAboveOverlapStatus({ ...base, narrowCPR: true, overlapHigher: true }),
-    true
-  );
-  assert.equal(
-    matchesCprAboveOverlapStatus({ ...base, strWideCPR: true, overlapHigher: true }),
-    true
-  );
-  assert.equal(
-    matchesCprAboveLevelStatus({ ...base, narrowCPR: true, InsideCPR: true, cprRising: true }),
-    false
-  );
-  assert.equal(
-    matchesCprAboveLevelStatus({ ...base, strWideCPR: true, outCPR: true, cprRising: true }),
-    false
-  );
 });
 
 test("historical PD15M>BC checks the session before the selected backtest date and caches passes", async () => {

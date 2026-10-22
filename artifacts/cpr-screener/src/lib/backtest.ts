@@ -26,11 +26,6 @@ import {
   getConsolidateBTc,
   getPrevious15MBFloor,
 } from "./15MCandleCheck";
-import {
-  matchesCprAboveOverlapStatus,
-} from "./views/p15MAbove";
-
-
 export type BacktestSource = "binance" | "delta" | "coindcx";
 
 /**
@@ -1582,18 +1577,9 @@ export async function backtestSymbolOnDate(
   if (!reconstructed) return null;
   const { result, window } = reconstructed;
 
-  if (
-    target.key === "P15MABC" ||
-    target.key === "P-UPEX-CPRABOVE-OVA"
-  ) {
+  if (target.key === "P15MABC") {
     if (source === "coindcx") return null;
-    const matchesStructure =
-      target.key === "P15MABC"
-        ? result.LevelsAbove
-        : result.touchCategory &&
-          result.overlapHigher &&
-          matchesCprAboveOverlapStatus(result);
-    if (!matchesStructure) return null;
+    if (!result.LevelsAbove) return null;
 
     const sessionStart = Date.parse(`${entryDateISO}T00:00:00.000Z`);
     const PD15MAboveBCPass = await findPreviousUpexPass(
@@ -1913,7 +1899,6 @@ export async function pivotLevelBacktestSymbolOnDate(
   // category gate.
   const pivotNeeds15mBeforeMatch =
     pivotLevelKey === "P15MABC" ||
-    pivotLevelKey === "P-UPEX-CPRABOVE-OVA" ||
     pivotLevelKey.startsWith("P-");
   if (pivotNeeds15mBeforeMatch) {
     if (source === "coindcx") return null;
@@ -2803,7 +2788,6 @@ export async function runPivotLevelBacktest(
   // Most patterns only hit 15m after match; P15M* keys still need lower concurrency.
   const batchSize =
     pivotLevelKey === "P15MABC" ||
-    pivotLevelKey === "P-UPEX-CPRABOVE-OVA" ||
     pivotLevelKey.startsWith("P-")
       ? 12
       : 40;
