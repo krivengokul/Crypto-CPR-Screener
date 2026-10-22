@@ -1,7 +1,5 @@
 import { Fragment } from "react";
-import { ExternalLink, CheckCircle2, XCircle, Cloud, Clock } from "lucide-react";
-import { hasTouchedEntry } from "@/lib/signalTracker";
-import { sessionReachedTarget } from "@/lib/signalOutcome";
+import { ExternalLink, CheckCircle2, XCircle, Tag } from "lucide-react";
 import type { CPRResult } from "@/lib/cpr";
 import type { ReclaimSideState } from "@/lib/15MCandleCheck";
 import { getView } from "@/lib/views";
@@ -648,17 +646,11 @@ export function renderLevelColumnRestBadges(r: CPRResult) {
 }
 
 /**
- * "VIEW" column body — every View (left-nav leaf) this row currently
- * satisfies, across all categories (see getMatchingSignals), rendered as
- * plain stacked text lines. Font size matches the "LevelCheck UnDefined"
- * text (text-xs) elsewhere in this same table. Each View name is colored by
- * its own direction — green when Up, red when Down — falling back to the
- * neutral violet the Journal's PATTERN column uses when a View has no
- * direction set. Directly under each View name, its Viewcode (v.id) is
- * shown as a second, quieter line — same font-mono text-xs
- * text-muted-foreground styling as the Viewcode line under the expanded
- * row's "LEVELS VIEW" ladder, so the same identifier reads the same way in
- * both places. Renders nothing (blank cell) when the row matches no View.
+ * Active Views column body — every View (left-nav leaf) this row currently
+ * satisfies, across all categories (see getMatchingSignals).
+ * Displays only the View name with its Tag icon in its direction colour
+ * (emerald Up, rose Down, slate neutral), matching the Legend3 card display
+ * style instead of a badge. Renders nothing (blank cell) when the row matches no View.
  */
 export function renderMatchingSignals(
   r: CPRResult,
@@ -669,64 +661,27 @@ export function renderMatchingSignals(
     <div className="flex flex-col gap-1.5 max-w-[240px]">
       {views.map((v) => {
         const view = getView(v.id);
-        const entryFn = view?.getEntry;
-        const targetFn = view?.getTarget;
-        const status: "pass" | "active" | "ready" | null = targetFn &&
-          sessionReachedTarget(v.direction ?? "", targetFn(r), r.todayHigh, r.todayLow, r.currentPrice)
-          ? "pass"
-          : entryFn
-            ? hasTouchedEntry(v.direction ?? "", entryFn(r), r.currentPrice)
-              ? "active"
-              : "ready"
-            : null;
-        const isPass = status === "pass";
-        const tone = isPass
-          ? "border-muted-foreground/40 bg-muted-foreground/10 text-muted-foreground"
-          : v.direction === "Up"
-          ? "border-green-500/40 bg-green-500/10 text-green-400"
-          : v.direction === "Down"
-          ? "border-red-500/40 bg-red-500/10 text-red-400"
-          : "border-violet-500/40 bg-violet-500/10 text-violet-300";
+        const direction = v.direction || view?.direction;
+        const isUp = direction === "Up";
+        const isDown = direction === "Down";
+        const dirColor = isUp
+          ? "text-emerald-400"
+          : isDown
+            ? "text-rose-400"
+            : "text-slate-400";
         return (
-          <div key={v.id} className="flex h-11 flex-col justify-center gap-0.5 overflow-hidden">
-            <div className="flex flex-nowrap items-center gap-1">
-              <span
-                className={`inline-flex min-w-0 items-center truncate rounded-md border px-2 py-1 text-xs font-medium font-mono ${tone}`}
-                title={`Active View: ${v.label} (${v.id})`}
-              >
-                {v.label}
-              </span>
-              {status === "pass" && (
-                <span
-                  className="inline-flex shrink-0 items-center gap-1 rounded-md border border-muted-foreground/40 bg-muted-foreground/10 px-1.5 py-1 text-[11px] font-mono text-muted-foreground"
-                  title="Target reached - live price now, or earlier in today's session (session high/low)"
+          <div key={v.id} className="flex h-11 items-center overflow-hidden">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <Tag className={`w-3 h-3 shrink-0 ${dirColor}`} aria-hidden />
+              <div className="min-w-0">
+                <div
+                  className={`text-[11px] font-semibold leading-tight truncate ${dirColor}`}
+                  title={v.label}
                 >
-                  <CheckCircle2 className="w-3 h-3" />
-                  Pass
-                </span>
-              )}
-              {status === "active" && (
-                <span
-                  className="inline-flex shrink-0 items-center gap-1 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-1.5 py-1 text-[11px] font-mono text-emerald-400"
-                  title="Price has reached the entry line"
-                >
-                  <Cloud className="w-3 h-3" />
-                  Active
-                </span>
-              )}
-              {status === "ready" && (
-                <span
-                  className="inline-flex shrink-0 items-center gap-1 rounded-md border border-amber-500/40 bg-amber-500/10 px-1.5 py-1 text-[11px] font-mono text-amber-400"
-                  title="Matches an active signal but price hasn't reached the entry line yet"
-                >
-                  <Clock className="w-3 h-3" />
-                  Ready
-                </span>
-              )}
+                  {v.label}
+                </div>
+              </div>
             </div>
-            <span className="truncate font-mono text-[10px] leading-3 text-muted-foreground" title={v.id}>
-              {v.id}
-            </span>
           </div>
         );
       })}
