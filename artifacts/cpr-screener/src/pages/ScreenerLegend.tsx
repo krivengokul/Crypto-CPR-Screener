@@ -185,7 +185,7 @@ function HistoricalCameraBadge({ link }: { link: HistoricalChartLink }) {
  * hardcoded bias/time copy with a compact trade sheet: name, code, direction,
  * entry / target / stoploss level labels from the View registry.
  */
-function SelectedViewTradeCard({ activeSignal }: { activeSignal: string }) {
+function SelectedViewTradeCard({ activeSignal, symbol }: { activeSignal: string; symbol?: string }) {
   const view = activeSignal ? getView(activeSignal) : undefined;
   if (!activeSignal) {
     return (
@@ -212,11 +212,18 @@ function SelectedViewTradeCard({ activeSignal }: { activeSignal: string }) {
   return (
     <div className="space-y-1.5 min-w-0">
       <div className="flex items-start gap-1.5 min-w-0">
-        <Tag className={`w-3 h-3 mt-0.5 shrink-0 ${dirColor}`} aria-hidden />
+        {symbol ? null : <Tag className={`w-3 h-3 mt-0.5 shrink-0 ${dirColor}`} aria-hidden />}
         <div className="min-w-0 flex-1">
-          <div className={`text-[11px] font-semibold leading-tight truncate ${dirColor}`} title={name}>
-            {name}
-          </div>
+          {symbol ? (
+            // A row is focused: its symbol takes the top row (View name lives in Card 2).
+            <div className="text-xs font-bold font-mono text-white leading-tight truncate" title={symbol}>
+              {symbol}
+            </div>
+          ) : (
+            <div className={`text-[11px] font-semibold leading-tight truncate ${dirColor}`} title={name}>
+              {name}
+            </div>
+          )}
           <div className="mt-0.5">
             <HistoricalChartCameras viewKey={code} limit={3} />
           </div>
@@ -298,27 +305,22 @@ function FocusToastCard({ focusToast }: { focusToast?: ScreenerLegendFocusToast 
     focusToast.signalCode && focusToast.signalCode !== "—"
       ? focusToast.signalCode
       : undefined;
+  const viewName = (viewKey && getView(viewKey)?.label) || viewKey || "";
   return (
     <div className="space-y-1 min-w-0">
-      {focusToast.symbol && (
+      {viewName && (
         <div
-          className="text-xs font-bold font-mono text-white leading-tight truncate"
-          title={focusToast.symbol}
+          className={`text-xs font-bold leading-tight truncate ${codeColor}`}
+          title={viewName}
         >
-          {focusToast.symbol}
+          {viewName}
         </div>
       )}
-      <div className="flex items-center gap-1.5 min-w-0">
-        <span
-          className={`text-xs font-semibold font-mono leading-tight ${codeColor} truncate`}
-          title={focusToast.signalCode}
-        >
-          {focusToast.signalCode || "—"}
-        </span>
-        <HistoricalChartCameras
-          viewKey={viewKey}
-          limit={3}
-        />
+      <div
+        className={`text-[11px] font-semibold font-mono leading-tight ${codeColor} truncate`}
+        title={focusToast.signalCode}
+      >
+        {focusToast.signalCode || "—"}
       </div>
       <div className="text-xs font-semibold font-mono leading-tight">
         <span className="text-muted-foreground">PDay:</span>
@@ -329,9 +331,12 @@ function FocusToastCard({ focusToast }: { focusToast?: ScreenerLegendFocusToast 
           {focusToast.pDayText}
         </span>
       </div>
-      <div className="text-xs font-semibold font-mono leading-tight">
-        <span className="text-muted-foreground">MATCH:</span>
-        <span className="text-sky-300">{focusToast.matchText}</span>
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0">
+        <div className="text-xs font-semibold font-mono leading-tight">
+          <span className="text-muted-foreground">MATCH:</span>
+          <span className="text-sky-300">{focusToast.matchText}</span>
+        </div>
+        <HistoricalChartCameras viewKey={viewKey} limit={3} />
       </div>
     </div>
   );
@@ -441,7 +446,10 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
 
       {/* Card 3: selected View — name, code, direction, entry / target / stop */}
       <div className="rounded-lg border border-border bg-card p-3">
-        <SelectedViewTradeCard activeSignal={activeSignal} />
+        <SelectedViewTradeCard
+          activeSignal={focusedViewCode || props.activeSignal}
+          symbol={focusToast?.symbol}
+        />
       </div>
     </div>
   );
