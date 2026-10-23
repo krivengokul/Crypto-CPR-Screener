@@ -380,19 +380,55 @@ function todayUtcISO(): string {
 }
 
 /**
+ * Build a list of StoredChartLinkRecord from the synchronous local cache only.
+ * Used so legend cameras can render before Firestore returns.
+ */
+export function chartLinkRecordsFromLocalCache(): StoredChartLinkRecord[] {
+  const raw: StoredChartLinkRecord[] = [];
+  const local = getLocalCache();
+  for (const [key, link] of Object.entries(local)) {
+    if (!link?.url) continue;
+    const legacySeparator = key.lastIndexOf("::");
+    const legacyViewKey = legacySeparator >= 0 ? key.slice(0, legacySeparator) : "";
+    const legacyRowKey = legacySeparator >= 0 ? key.slice(legacySeparator + 2) : key;
+    const viewKey =
+      (typeof link.lastViewKey === "string" && link.lastViewKey) || legacyViewKey || "";
+    raw.push({
+      id: key,
+      url: link.url,
+      savedAt: typeof link.savedAt === "string" ? link.savedAt : "",
+      lastViewKey: link.lastViewKey,
+      rowKey: legacyRowKey,
+      viewKey,
+    });
+  }
+  return dedupeChartRecords(raw);
+}
+
+/**
  * Historical chart snapshots for a View (and optional symbol/source).
+ * `viewKey` may be a View key or label — pass aliases via `viewKeys` when known.
  * Prefer past days when excludeToday is true. Sorted newest date first.
  */
 export function findHistoricalChartLinks(args: {
   records: StoredChartLinkRecord[];
+  /** Primary view id (key or label). */
   viewKey: string;
+  /** Optional extra aliases (e.g. key + label) to match stored lastViewKey. */
+  viewKeys?: string[];
   symbol?: string;
   source?: string;
   excludeToday?: boolean;
   limit?: number;
 }): HistoricalChartLink[] {
-  const viewKey = (args.viewKey || "").trim();
-  if (!viewKey || !args.records?.length) return [];
+  const primary = (args.viewKey || "").trim();
+  const aliasSet = new Set<string>();
+  if (primary) aliasSet.add(primary);
+  for (const k of args.viewKeys || []) {
+    const t = (k || "").trim();
+    if (t) aliasSet.add(t);
+  }
+  if (aliasSet.size === 0 || !args.records?.length) return [];
 
   const sym = args.symbol?.toUpperCase();
   const src = args.source?.toLowerCase();
@@ -406,7 +442,8 @@ export function findHistoricalChartLinks(args: {
   for (const rec of args.records) {
     if (!rec.url) continue;
     const vk = (rec.viewKey || rec.lastViewKey || "").trim();
-    if (vk !== viewKey) continue;
+    // Require a stored view key and match any alias (key or label)
+    if (!vk || !aliasSet.has(vk)) continue;
 
     const parsed = parseChartRowKey(rec.rowKey || "");
     const entryDate = parsed.entryDate;
@@ -414,7 +451,7 @@ export function findHistoricalChartLinks(args: {
     const recSrc = parsed.source?.toLowerCase();
 
     if (sym && recSym && recSym !== sym) continue;
-    if (sym && !recSym) continue; // require parseable symbol when filtering by symbol
+    if (sym && !recSym) continue;
     if (src && recSrc && recSrc !== src) continue;
     if (excludeToday && entryDate && entryDate === today) continue;
 
@@ -438,6 +475,7 @@ export function findHistoricalChartLinks(args: {
 
   return out.slice(0, limit);
 }
+
 
 
 /** Preload chart links from Firestore for a list of row keys if not yet in local cache */

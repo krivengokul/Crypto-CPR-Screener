@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Views } from "@/lib/ViewsSidebar";
 import { getView, shortLevelLabel } from "@/lib/views";
 import {
+  chartLinkRecordsFromLocalCache,
   findHistoricalChartLinks,
   getAllChartLinkRecords,
   type HistoricalChartLink,
@@ -54,6 +55,17 @@ function formatChartDate(entryDate?: string, savedAt?: string): string {
   return d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "2-digit" });
 }
 
+/** Match stored lastViewKey whether it was saved as View key or label. */
+function viewKeyAliases(viewKey?: string): string[] {
+  const raw = (viewKey || "").trim();
+  if (!raw) return [];
+  const aliases = new Set<string>([raw]);
+  const v = getView(raw);
+  if (v?.key) aliases.add(v.key);
+  if (v?.label) aliases.add(v.label);
+  return [...aliases];
+}
+
 /** Camera badges for historical TradingView snapshots (same affordance as BacktestPanel). */
 function HistoricalChartCameras({
   viewKey,
@@ -66,10 +78,15 @@ function HistoricalChartCameras({
   source?: string;
   limit?: number;
 }) {
-  const [records, setRecords] = useState<StoredChartLinkRecord[]>([]);
+  // Seed from local cache immediately (Backtest saves here); refresh from Firestore.
+  const [records, setRecords] = useState<StoredChartLinkRecord[]>(() =>
+    chartLinkRecordsFromLocalCache(),
+  );
 
   useEffect(() => {
     let cancelled = false;
+    // Re-read local cache when View changes (storage may have updated in Backtest).
+    setRecords(chartLinkRecordsFromLocalCache());
     getAllChartLinkRecords()
       .then((recs) => {
         if (!cancelled) setRecords(recs);
@@ -80,17 +97,20 @@ function HistoricalChartCameras({
     };
   }, [viewKey, symbol, source]);
 
+  const aliases = useMemo(() => viewKeyAliases(viewKey), [viewKey]);
+
   const links = useMemo(
     () =>
       findHistoricalChartLinks({
         records,
         viewKey: viewKey || "",
+        viewKeys: aliases,
         symbol,
         source,
         excludeToday: true,
         limit,
       }),
-    [records, viewKey, symbol, source, limit],
+    [records, viewKey, aliases, symbol, source, limit],
   );
 
   if (!viewKey || links.length === 0) return null;
