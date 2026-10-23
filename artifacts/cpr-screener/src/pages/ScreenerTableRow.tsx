@@ -833,6 +833,8 @@ export interface ScreenerTableRowProps {
   reclaimR?: ReclaimSideState | null;
   /** Called when the user clicks the row (expand cell) — drives Legend Card 2 like an entry-cross toast. */
   onRowFocus?: (r: CPRResultWithSource) => void;
+  /** Visual highlight when this row is the legend-focused selection. */
+  isFocused?: boolean;
 }
 
 /**
@@ -885,6 +887,7 @@ export default function ScreenerTableRow({
   reclaimS,
   reclaimR,
   onRowFocus,
+  isFocused,
 }: ScreenerTableRowProps) {
   const activePattern = rawActivePattern ?? activeSignal ?? "";
   // When supplied, the Screener props are the complete mutually exclusive
@@ -1030,7 +1033,12 @@ export default function ScreenerTableRow({
     <Fragment key={rowKey}>
       <tr
         id={`sc-row-${r.source}-${r.symbol.toUpperCase()}`}
-        className={`hover:bg-muted/20 transition-colors ${dir ? "bg-accent/3" : ""}`}
+        className={`hover:bg-muted/20 transition-colors ${dir ? "bg-accent/3" : ""} ${
+          isFocused
+            ? "ring-1 ring-inset ring-sky-500/70 bg-sky-500/10"
+            : ""
+        }`}
+      onClick={() => onRowFocus?.(r)}
       >
         <td
           className="px-2 py-3 w-16 font-mono font-semibold text-foreground cursor-pointer select-none"
@@ -1038,6 +1046,7 @@ export default function ScreenerTableRow({
             toggleExpand(rowKey);
             onRowFocus?.(r);
           }}
+
           title="Click to expand ADK S/R ladder / focus legend"
         >
           <div className="flex items-start gap-1.5">

@@ -217,6 +217,36 @@ function getRowStatus(r: CPRResult): {
   return { active, ready, pass, fail };
 }
 
+
+/** Prefer Active/Pass matching View on the row; else first Active Views entry. */
+function pickPrimaryMatchingViewId(r: CPRResult, preferred?: string): string {
+  const matches = getMatchingSignals(r);
+  if (matches.length === 0) return (preferred || "").trim();
+  if (preferred && matches.some((m) => m.id === preferred)) return preferred;
+
+  const statusOf = (id: string): "pass" | "active" | "ready" | null => {
+    const view = getView(id);
+    const entryFn = view?.getEntry;
+    const targetFn = view?.getTarget;
+    const direction = view?.direction ?? "";
+    if (!entryFn) return null;
+    if (
+      targetFn &&
+      sessionReachedTarget(direction, targetFn(r), r.todayHigh, r.todayLow, r.currentPrice)
+    ) {
+      return "pass";
+    }
+    if (hasTouchedEntry(direction, entryFn(r), r.currentPrice)) return "active";
+    return "ready";
+  };
+
+  for (const rank of ["pass", "active", "ready"] as const) {
+    const hit = matches.find((m) => statusOf(m.id) === rank);
+    if (hit) return hit.id;
+  }
+  return matches[0].id;
+}
+
 /** Set by App when an entry-cross toast should scroll to + highlight a row. */
 export interface ScreenerFocusSymbol {
   symbol: string;
@@ -326,6 +356,8 @@ export default function Screener({
   const [expandedSymbols, setExpandedSymbols] = useState<Set<string>>(new Set());
   /** Persist toast row PDay + MATCH in Legend Card 2 until the next toast. */
   const [legendToastFocus, setLegendToastFocus] = useState<ScreenerLegendFocusToast | null>(null);
+  /** Row key highlighted after click / search / toast focus. */
+  const [focusedRowKey, setFocusedRowKey] = useState<string | null>(null);
 
   function toggleExpand(key: string) {
     setExpandedSymbols((prev) => {
@@ -564,6 +596,9 @@ export default function Screener({
         pDayText,
         matchText,
       });
+      if (row.source && row.symbol) {
+        setFocusedRowKey(`${row.source}-${row.symbol}-${utcTodayISO()}`);
+      }
     },
     // has* and activeSignal are stable enough for legend; intentionally broad
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -621,7 +656,12 @@ export default function Screener({
       exact.find((r) => r.source === activeTab) ||
       (exact.length === 1 ? exact[0] : null);
     if (preferred) {
-      applyLegendFocus(preferred, activeSignal || "");
+      const viewId = pickPrimaryMatchingViewId(preferred, activeSignal || "");
+      if (viewId) {
+        onActiveSignalChange?.(viewId);
+        setShowAll(false);
+      }
+      applyLegendFocus(preferred, viewId || activeSignal || "");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, allResults, deltaAllResults, coindcxAllResults, activeTab, activeSignal, applyLegendFocus]);
@@ -2492,7 +2532,18 @@ export default function Screener({
                         isInsideR1S1={hasInsideR1S1(r)}
                         reclaimS={reclaim.s?.qualifies ? reclaim.s : null}
                         reclaimR={reclaim.r?.qualifies ? reclaim.r : null}
-                        onRowFocus={(row) => applyLegendFocus(row, activeSectionKey || activeSignal || "")}
+                        onRowFocus={(row) => {
+                          const viewId = pickPrimaryMatchingViewId(
+                            row,
+                            activeSectionKey || activeSignal || "",
+                          );
+                          if (viewId) {
+                            onActiveSignalChange?.(viewId);
+                            setShowAll(false);
+                          }
+                          applyLegendFocus(row, viewId || activeSectionKey || activeSignal || "");
+                        }}
+                        isFocused={focusedRowKey === rowKey}
                       />
                     );
                   })}
