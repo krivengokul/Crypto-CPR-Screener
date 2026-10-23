@@ -318,7 +318,12 @@ function FocusToastCard({ focusToast }: { focusToast?: ScreenerLegendFocusToast 
  * Card 3: selected View trade sheet (name, code, direction, entry/target/stop).
  */
 export default function ScreenerLegend(props: ScreenerLegendProps) {
-  const { activeSignal, focusToast } = props;
+  const { focusToast } = props;
+  // When no View is selected in the left nav (Show All), fall back to the
+  // focused row's View code so Cards 1 and 3 can still fill in from the registry.
+  const focusedViewCode =
+    focusToast?.signalCode && focusToast.signalCode !== "—" ? focusToast.signalCode : "";
+  const activeSignal = props.activeSignal || focusedViewCode;
 
   // Prefer a direct Views parent match; if activeSignal is a leaf View, walk
   // back to its parent category id (e.g. "overlapping-lower"), so Legend Card 1
