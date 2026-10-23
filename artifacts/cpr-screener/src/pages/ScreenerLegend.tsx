@@ -253,9 +253,6 @@ function SelectedViewTradeCard({ activeSignal, symbol }: { activeSignal: string;
               {name}
             </div>
           )}
-          <div className="mt-0.5">
-            <HistoricalChartCameras viewKey={code} limit={3} />
-          </div>
         </div>
       </div>
       <div className="flex items-center gap-1 min-w-0">
