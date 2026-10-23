@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Views } from "@/lib/ViewsSidebar";
 import { getView, shortLevelLabel } from "@/lib/views";
+import { buildBacktestOptions } from "@/lib/backtest";
 import {
   chartLinkRecordsFromLocalCache,
   findHistoricalChartLinks,
@@ -55,7 +56,31 @@ function formatChartDate(entryDate?: string, savedAt?: string): string {
   return d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "2-digit" });
 }
 
-/** Match stored lastViewKey whether it was saved as View key or label. */
+/**
+ * Backtest saves a chart link under whatever node was selected at the time —
+ * a View key, or a Pattern path like "levelsbelow::B-B-BB-BB::B-B-BB-BB-CL4U2".
+ * Return every Pattern path (and its parent paths, minus the bare category)
+ * that contains this View so those saved links still match.
+ */
+function owningPatternPaths(viewKey: string): string[] {
+  const out = new Set<string>();
+  try {
+    const opts = buildBacktestOptions();
+    for (const o of opts) {
+      if (o.kind !== "view" || o.viewKey !== viewKey || !o.patternKey) continue;
+      for (const p of opts) {
+        if (p.kind !== "pattern" || p.categoryKey !== o.categoryKey || p.patternKey !== o.patternKey) continue;
+        const parts = p.value.split("::");
+        for (let n = parts.length; n >= 2; n--) out.add(parts.slice(0, n).join("::"));
+      }
+    }
+  } catch {
+    /* registry unavailable — fall back to key/label only */
+  }
+  return [...out];
+}
+
+/** Match stored lastViewKey saved as View key, label, or an owning Pattern path. */
 function viewKeyAliases(viewKey?: string): string[] {
   const raw = (viewKey || "").trim();
   if (!raw) return [];
@@ -63,6 +88,7 @@ function viewKeyAliases(viewKey?: string): string[] {
   const v = getView(raw);
   if (v?.key) aliases.add(v.key);
   if (v?.label) aliases.add(v.label);
+  for (const path of owningPatternPaths(v?.key || raw)) aliases.add(path);
   return [...aliases];
 }
 
