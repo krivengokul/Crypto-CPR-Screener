@@ -1,5 +1,5 @@
 import { Fragment } from "react";
-import { ExternalLink, CheckCircle2, XCircle, Tag, Cloud, Clock } from "lucide-react";
+import { ExternalLink, CheckCircle2, XCircle, Tag, Cloud } from "lucide-react";
 import { hasTouchedEntry } from "@/lib/signalTracker";
 import { sessionReachedTarget } from "@/lib/signalOutcome";
 import type { CPRResult } from "@/lib/cpr";
@@ -711,15 +711,6 @@ export function renderMatchingSignals(
                 >
                   <Cloud className="w-3 h-3" />
                   Active
-                </span>
-              )}
-              {status === "ready" && (
-                <span
-                  className="inline-flex shrink-0 items-center gap-1 rounded-md border border-amber-500/40 bg-amber-500/10 px-1.5 py-1 text-[11px] font-mono text-amber-400"
-                  title="Matches an active signal but price hasn't reached the entry line yet"
-                >
-                  <Clock className="w-3 h-3" />
-                  Ready
                 </span>
               )}
             </div>

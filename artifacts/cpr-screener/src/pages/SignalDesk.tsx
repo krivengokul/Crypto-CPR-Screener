@@ -508,15 +508,7 @@ const SignalDeskCard = memo(
           <Cloud className="w-3.5 h-3.5 text-lime-400" />
           <span>Active</span>
         </div>
-      ) : (
-        <div
-          className="flex items-center gap-1 text-[11px] text-amber-400 font-mono shrink-0"
-          title="Matches an active signal but price hasn't reached the entry line yet"
-        >
-          <Clock className="w-3.5 h-3.5 text-amber-400" />
-          <span>Ready</span>
-        </div>
-      )
+      ) : null
     );
 
     return (
@@ -710,7 +702,10 @@ const SignalDeskCard = memo(
                 </strong>
               </div>
             )}
-            {item.isSaved && (
+            {item.isSaved &&
+              (item.journalStatus === "PASS" ||
+                item.journalStatus === "FAIL" ||
+                item.isTriggered) && (
               <div className="flex items-center gap-1">
                 <span>Status:</span>
                 <strong
@@ -719,18 +714,14 @@ const SignalDeskCard = memo(
                       ? "text-emerald-400"
                       : item.journalStatus === "FAIL"
                       ? "text-rose-400"
-                      : item.isTriggered
-                      ? "text-lime-400"
-                      : "text-amber-400"
+                      : "text-lime-400"
                   }`}
                 >
                   {item.journalStatus === "PASS"
                     ? "PASS"
                     : item.journalStatus === "FAIL"
                     ? "FAIL"
-                    : item.isTriggered
-                    ? `Active${item.triggeredAt ? ` @ ${item.triggeredAt}` : ""}`
-                    : "Ready"}
+                    : `Active${item.triggeredAt ? ` @ ${item.triggeredAt}` : ""}`}
                 </strong>
               </div>
             )}
