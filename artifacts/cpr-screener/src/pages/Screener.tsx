@@ -1483,12 +1483,10 @@ export default function Screener({
           </div>
         </div>
 
-        {/* Legend — hidden while idle (initial load/refresh, before the
-            first scan resolves), while a scan is in progress, AND whenever
-            no left-nav category is selected (showAll true, i.e. "All
-            scanned"/no filter), so the three empty legend cards don't
-            render with nothing to show. */}
-        {currentStatus === "done" && !showAll && (
+        {/* Legend — hidden while idle/scanning. Shown when a left-nav
+            View is selected (!showAll), or when Card 2 has focus from toast,
+            row click, or symbol search (so focus works in Show All mode). */}
+        {currentStatus === "done" && (!showAll || !!legendToastFocus) && (
         <ScreenerLegend
           activeSignal={activeSignal}
           focusToast={legendToastFocus}
