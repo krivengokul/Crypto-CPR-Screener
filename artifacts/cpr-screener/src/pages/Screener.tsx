@@ -510,32 +510,34 @@ export default function Screener({
     setDeltaAllResults,
   });
 
-  // Legend Card 2 — must run AFTER scan + candle hooks so allResults / has*
-  // exist (avoids TDZ: Cannot access before initialization).
-  useEffect(() => {
-    if (!focusSymbol) return;
-    const sym = focusSymbol.symbol.toUpperCase();
-    const src = focusSymbol.source;
-    const pool = [
-      ...allResults.map((r) => ({ ...r, source: "binance" as const })),
-      ...deltaAllResults.map((r) => ({ ...r, source: "delta" as const })),
-      ...coindcxAllResults.map((r) => ({ ...r, source: "coindcx" as const })),
-    ];
-    const row = pool.find(
-      (r) => r.source === src && r.symbol.toUpperCase() === sym,
-    );
-    let pDayText = "—";
-    let matchText = "—";
-    const patternId = focusSymbol.patternId || activeSignal || "";
-    const viewDef = patternId ? getView(patternId) : undefined;
-    const signalCode = patternId || "—";
-    const direction = viewDef?.direction;
-    if (row) {
-      if (hasInsideR1S1(row)) pDayText = "P-VOLATILE-R1S1";
-      else if (hasConsolidateB(row)) pDayText = "P-CONSOLIDATE-B";
-      else if (hasMomentumB(row)) pDayText = "P-MOMENTUM-B";
-      else if (hasConsolidateA(row)) pDayText = "P-CONSOLIDATE-A";
-      else if (hasMomentumA(row)) pDayText = "P-MOMENTUM-A";
+  // Legend Card 2 — shared builder for toast focus, row click, and search.
+  // Must sit AFTER scan + candle hooks so allResults / has* exist (TDZ).
+  const applyLegendFocus = useCallback(
+    (
+      row: {
+        symbol: string;
+        source: string;
+        prevCPR?: CPRResult["prevCPR"];
+        todayCPR?: CPRResult["todayCPR"];
+        PD15MConsolidateAPass?: boolean;
+        PD15MBelowTCPass?: boolean;
+        PD15MAboveBCPass?: boolean;
+        PD15MMomentumBPass?: boolean;
+      },
+      preferredPatternId?: string,
+    ) => {
+      let pDayText = "—";
+      let matchText = "—";
+      const patternId = preferredPatternId || activeSignal || "";
+      const viewDef = patternId ? getView(patternId) : undefined;
+      const signalCode = patternId || "—";
+      const direction = viewDef?.direction;
+
+      if (hasInsideR1S1(row as CPRResult)) pDayText = "P-VOLATILE-R1S1";
+      else if (hasConsolidateB(row as CPRResult)) pDayText = "P-CONSOLIDATE-B";
+      else if (hasMomentumB(row as CPRResult)) pDayText = "P-MOMENTUM-B";
+      else if (hasConsolidateA(row as CPRResult)) pDayText = "P-CONSOLIDATE-A";
+      else if (hasMomentumA(row as CPRResult)) pDayText = "P-MOMENTUM-A";
       else {
         const conA = row.PD15MConsolidateAPass === true;
         const conB = row.PD15MBelowTCPass === true;
@@ -554,10 +556,75 @@ export default function Screener({
           matchText = `${ladder.matchingCount}/${ladder.total}`;
         }
       }
-    }
-    setLegendToastFocus({ symbol: focusSymbol.symbol, source: focusSymbol.source, signalCode, direction, pDayText, matchText });
+      setLegendToastFocus({
+        symbol: row.symbol,
+        source: row.source,
+        signalCode,
+        direction,
+        pDayText,
+        matchText,
+      });
+    },
+    // has* and activeSignal are stable enough for legend; intentionally broad
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusSymbol, allResults, deltaAllResults, coindcxAllResults]);
+    [activeSignal, hasInsideR1S1, hasConsolidateA, hasConsolidateB, hasMomentumA, hasMomentumB],
+  );
+
+  // Entry-cross toast → Legend Card 2
+  useEffect(() => {
+    if (!focusSymbol) return;
+    const sym = focusSymbol.symbol.toUpperCase();
+    const src = focusSymbol.source;
+    const pool = [
+      ...allResults.map((r) => ({ ...r, source: "binance" as const })),
+      ...deltaAllResults.map((r) => ({ ...r, source: "delta" as const })),
+      ...coindcxAllResults.map((r) => ({ ...r, source: "coindcx" as const })),
+    ];
+    const row = pool.find(
+      (r) => r.source === src && r.symbol.toUpperCase() === sym,
+    );
+    if (row) {
+      applyLegendFocus(row, focusSymbol.patternId || activeSignal || "");
+    } else {
+      const patternId = focusSymbol.patternId || activeSignal || "";
+      const viewDef = patternId ? getView(patternId) : undefined;
+      setLegendToastFocus({
+        symbol: focusSymbol.symbol,
+        source: focusSymbol.source,
+        signalCode: patternId || "—",
+        direction: viewDef?.direction,
+        pDayText: "—",
+        matchText: "—",
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusSymbol, allResults, deltaAllResults, coindcxAllResults, applyLegendFocus]);
+
+  // Manual search box → Legend Card 2 when the query resolves to one symbol
+  useEffect(() => {
+    const q = search.trim().toUpperCase();
+    if (q.length < 2) return;
+    // Don't fight an active toast focus that just set the search to the same symbol
+    if (focusSymbol && focusSymbol.symbol.toUpperCase() === q) return;
+
+    const pool = [
+      ...allResults.map((r) => ({ ...r, source: "binance" as const })),
+      ...deltaAllResults.map((r) => ({ ...r, source: "delta" as const })),
+      ...coindcxAllResults.map((r) => ({ ...r, source: "coindcx" as const })),
+    ];
+    const exact = pool.filter((r) => {
+      const s = r.symbol.toUpperCase();
+      return s === q || s === `${q}USDT` || s.replace(/USDT$/, "") === q;
+    });
+    // Prefer current tab source when multiple exchanges match
+    const preferred =
+      exact.find((r) => r.source === activeTab) ||
+      (exact.length === 1 ? exact[0] : null);
+    if (preferred) {
+      applyLegendFocus(preferred, activeSignal || "");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, allResults, deltaAllResults, coindcxAllResults, activeTab, activeSignal, applyLegendFocus]);
 
 
   const hasInRangeR = hasInsideR1S1;
@@ -2427,6 +2494,7 @@ export default function Screener({
                         isInsideR1S1={hasInsideR1S1(r)}
                         reclaimS={reclaim.s?.qualifies ? reclaim.s : null}
                         reclaimR={reclaim.r?.qualifies ? reclaim.r : null}
+                        onRowFocus={(row) => applyLegendFocus(row, activeSectionKey || activeSignal || "")}
                       />
                     );
                   })}

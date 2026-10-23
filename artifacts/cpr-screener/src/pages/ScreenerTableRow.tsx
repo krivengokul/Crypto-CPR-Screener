@@ -831,6 +831,8 @@ export interface ScreenerTableRowProps {
   reclaimS?: ReclaimSideState | null;
   /** Live RECLAIM-R state (failed breakout this session) — only passed when it qualifies, else null/undefined. */
   reclaimR?: ReclaimSideState | null;
+  /** Called when the user clicks the row (expand cell) — drives Legend Card 2 like an entry-cross toast. */
+  onRowFocus?: (r: CPRResultWithSource) => void;
 }
 
 /**
@@ -882,6 +884,7 @@ export default function ScreenerTableRow({
   isInsideR1S1,
   reclaimS,
   reclaimR,
+  onRowFocus,
 }: ScreenerTableRowProps) {
   const activePattern = rawActivePattern ?? activeSignal ?? "";
   // When supplied, the Screener props are the complete mutually exclusive
@@ -1031,8 +1034,11 @@ export default function ScreenerTableRow({
       >
         <td
           className="px-2 py-3 w-16 font-mono font-semibold text-foreground cursor-pointer select-none"
-          onClick={() => toggleExpand(rowKey)}
-          title="Click to expand ADK S/R ladder"
+          onClick={() => {
+            toggleExpand(rowKey);
+            onRowFocus?.(r);
+          }}
+          title="Click to expand ADK S/R ladder / focus legend"
         >
           <div className="flex items-start gap-1.5">
             <span className="text-muted-foreground text-xs mt-0.5">{isExpanded ? "▼" : "▶"}</span>
