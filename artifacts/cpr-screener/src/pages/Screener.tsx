@@ -656,11 +656,8 @@ export default function Screener({
       exact.find((r) => r.source === activeTab) ||
       (exact.length === 1 ? exact[0] : null);
     if (preferred) {
+      // Legend-only focus: don't switch the left-nav View or leave Show All.
       const viewId = pickPrimaryMatchingViewId(preferred, activeSignal || "");
-      if (viewId) {
-        onActiveSignalChange?.(viewId);
-        setShowAll(false);
-      }
       applyLegendFocus(preferred, viewId || activeSignal || "");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2533,14 +2530,11 @@ export default function Screener({
                         reclaimS={reclaim.s?.qualifies ? reclaim.s : null}
                         reclaimR={reclaim.r?.qualifies ? reclaim.r : null}
                         onRowFocus={(row) => {
+                          // Legend-only focus: don't switch the left-nav View or leave Show All.
                           const viewId = pickPrimaryMatchingViewId(
                             row,
                             activeSectionKey || activeSignal || "",
                           );
-                          if (viewId) {
-                            onActiveSignalChange?.(viewId);
-                            setShowAll(false);
-                          }
                           applyLegendFocus(row, viewId || activeSectionKey || activeSignal || "");
                         }}
                         isFocused={focusedRowKey === rowKey}
