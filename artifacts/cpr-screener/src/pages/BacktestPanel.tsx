@@ -255,6 +255,18 @@ function matchingView(raw: CPRResult, selectedKey: string): { label: string; key
   };
 }
 
+/**
+ * View key to store with a chart link. A Pattern selection is a composite path
+ * ("category::pattern::sub"), which getView() can't resolve — so resolve the
+ * row's View against the path's last Pattern key and save the real View key
+ * (not the Pattern path) whenever one matches.
+ */
+function chartLinkViewKey(raw: CPRResult, selectedKey: string, isViewOnly: boolean): string {
+  if (isViewOnly) return selectedKey;
+  const scope = selectedKey.includes("::") ? selectedKey.split("::").pop() || selectedKey : selectedKey;
+  return matchingView(raw, scope)?.key ?? selectedKey;
+}
+
 function hasViewsInScope(selectedKey: string): boolean {
   return selectedKey === ALL_VIEWS_KEY || SYMBOL_LIST_ONLY_CATEGORY_KEYS.has(selectedKey) ||
     VIEWS.some(
@@ -3502,11 +3514,7 @@ export default function BacktestPanel() {
                         <SRLadderRow
                           r={toSRLadderData(r.raw, r.closePrice ?? undefined, r.prevClose ?? undefined, r.ppClose ?? undefined)}
                           rowKey={`${r.source}-${r.symbol}-${r.entryDate}`}
-                          viewKey={
-                            isViewOnly
-                              ? selectedKey
-                              : matchingView(r.raw, selectedKey)?.key ?? selectedKey
-                          }
+                          viewKey={chartLinkViewKey(r.raw, selectedKey, isViewOnly)}
                           colSpan={scopedViewsAvailable ? 7 : 5}
                           todayPatternBadge={renderTodayPatternBadges(r.raw)}
                           prevPatternBadge={renderPrevPatternBadge(r.raw)}
@@ -3882,11 +3890,7 @@ export default function BacktestPanel() {
                       <SRLadderRow
                         r={toSRLadderData(r.raw, r.closePrice ?? undefined, r.prevClose ?? undefined, r.ppClose ?? undefined)}
                         rowKey={`${r.source}-${r.symbol}-${r.entryDate}`}
-                        viewKey={
-                            isViewOnly
-                              ? selectedKey
-                              : matchingView(r.raw, selectedKey)?.key ?? selectedKey
-                          }
+                        viewKey={chartLinkViewKey(r.raw, selectedKey, isViewOnly)}
                         colSpan={9}
                         todayPatternBadge={renderTodayPatternBadges(r.raw)}
                         prevPatternBadge={renderPrevPatternBadge(r.raw)}
