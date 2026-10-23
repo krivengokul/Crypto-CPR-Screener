@@ -12,7 +12,7 @@ import {
   calculateGrossReturnPct,
   summarizePaperTrades,
 } from "@/lib/paperTrading";
-import { fmt, getChartUrl, hasKnownChartMapping } from "@/pages/ScreenerUtils";
+import { fmt, getChartUrl, openChartInNewTab, hasKnownChartMapping } from "@/pages/ScreenerUtils";
 import { fetchBinanceFuturesPrices } from "@/lib/binance";
 import { fetchCoinDCXLastPrices } from "@/lib/coinDCX";
 import { fetchDeltaPerps } from "@/lib/delta";
@@ -132,16 +132,17 @@ const JournalRow = memo(function JournalRow({
           <div className="flex items-center gap-1 font-bold text-white">
             <span>{item.symbol}</span>
             {hasKnownChartMapping(item.symbol, item.source) ? (
-              <a
-                href={getChartUrl(item.symbol, item.source)}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openChartInNewTab(getChartUrl(item.symbol, item.source));
+                }}
                 className="text-muted-foreground hover:text-primary transition-colors shrink-0"
                 title="Open on TradingView"
               >
                 <ExternalLink className="w-3 h-3" />
-              </a>
+              </button>
             ) : (
               <span
                 className="text-muted-foreground/30 cursor-not-allowed inline-flex shrink-0"

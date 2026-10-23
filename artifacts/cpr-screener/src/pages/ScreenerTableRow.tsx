@@ -14,6 +14,7 @@ import {
   fmtPct,
   splitSymbol,
   getChartUrl,
+  openChartInNewTab,
   hasKnownChartMapping,
   passesPattern,
   distanceFromCPR,
@@ -1067,16 +1068,17 @@ export default function ScreenerTableRow({
               <div className="flex items-center gap-1">
                 <span className="truncate">{sym.base}</span>
                 {hasKnownChartMapping(r.symbol, r.source) ? (
-                  <a
-                    href={getChartUrl(r.symbol, r.source)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openChartInNewTab(getChartUrl(r.symbol, r.source));
+                    }}
                     className="text-muted-foreground hover:text-primary transition-colors shrink-0"
                     title="Open on TradingView"
                   >
                     <ExternalLink className="w-3 h-3" />
-                  </a>
+                  </button>
                 ) : (
                   <span
                     className="text-muted-foreground/30 cursor-not-allowed inline-flex shrink-0"

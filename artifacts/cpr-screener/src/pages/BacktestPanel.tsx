@@ -62,6 +62,7 @@ import {
   matchesPatternFlag,
   fmt,
   getChartUrl,
+  openChartInNewTab,
   hasKnownChartMapping,
   getWidthCategory,
   renderGapColumnBadges,
@@ -2777,16 +2778,17 @@ export default function BacktestPanel() {
 
   const ChartLink = ({ symbol, source }: { symbol: string; source: BacktestSource }) =>
     hasKnownChartMapping(symbol, source) ? (
-      <a
-        href={getChartUrl(symbol, source)}
-        target="_blank"
-        rel="noopener noreferrer"
-        onClick={(e) => e.stopPropagation()}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          openChartInNewTab(getChartUrl(symbol, source));
+        }}
         className="text-muted-foreground hover:text-primary transition-colors inline-flex"
         title="Open on TradingView"
       >
         <ExternalLink className="w-3 h-3" />
-      </a>
+      </button>
     ) : (
       <span
         className="text-muted-foreground/30 cursor-not-allowed inline-flex"
@@ -2799,16 +2801,17 @@ export default function BacktestPanel() {
   const ChartAttachmentBadge = ({ link }: { link: StoredChartLink }) => {
     const formattedDate = link.savedAt ? new Date(link.savedAt).toLocaleDateString() : "";
     return (
-      <a
-        href={link.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        onClick={(e) => e.stopPropagation()}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          openChartInNewTab(link.url);
+        }}
         className="inline-flex items-center justify-center w-4 h-4 rounded bg-sky-500/20 text-sky-400 hover:bg-sky-500/35 hover:text-sky-200 border border-sky-500/40 hover:border-sky-300 transition-all shrink-0 cursor-pointer shadow-sm shadow-sky-950/40"
         title={`TradingView Snapshot Attached\n${link.url}${formattedDate ? `\nSaved: ${formattedDate}` : ""}\nClick to open in new tab`}
       >
         <Camera className="w-2.5 h-2.5" />
-      </a>
+      </button>
     );
   };
 

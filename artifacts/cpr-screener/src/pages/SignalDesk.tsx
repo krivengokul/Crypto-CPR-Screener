@@ -6,6 +6,7 @@ import {
   fmtPct,
   passesPattern,
   getChartUrl,
+  openChartInNewTab,
   hasKnownChartMapping,
   renderPivotSizeCell,
 } from "./ScreenerUtils";
@@ -530,16 +531,17 @@ const SignalDeskCard = memo(
                   {item.symbol}
                 </span>
                 {hasKnownChartMapping(item.symbol, item.source) ? (
-                  <a
-                    href={getChartUrl(item.symbol, item.source)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openChartInNewTab(getChartUrl(item.symbol, item.source));
+                    }}
                     className="text-muted-foreground hover:text-primary transition-colors shrink-0"
                     title="Open on TradingView"
                   >
                     <ExternalLink className="w-3 h-3" />
-                  </a>
+                  </button>
                 ) : (
                   <span
                     className="text-muted-foreground/30 cursor-not-allowed inline-flex shrink-0"
