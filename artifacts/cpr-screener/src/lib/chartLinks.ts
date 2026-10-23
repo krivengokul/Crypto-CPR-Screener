@@ -410,6 +410,26 @@ export function chartLinkRecordsFromLocalCache(): StoredChartLinkRecord[] {
  * `viewKey` may be a View key or label — pass aliases via `viewKeys` when known.
  * Prefer past days when excludeToday is true. Sorted newest date first.
  */
+
+/**
+ * True when a stored lastViewKey matches this View's aliases.
+ * Supports: exact View key/label, parent pattern keys, and Backtest composite
+ * paths (`category::pattern::sub`) where any segment is an alias.
+ */
+export function chartStoredKeyMatchesAliases(
+  storedKey: string,
+  aliases: Set<string> | string[],
+): boolean {
+  const sk = (storedKey || "").trim();
+  if (!sk) return false;
+  const set = aliases instanceof Set ? aliases : new Set(aliases);
+  if (set.has(sk)) return true;
+  for (const seg of sk.split("::")) {
+    if (seg && set.has(seg)) return true;
+  }
+  return false;
+}
+
 export function findHistoricalChartLinks(args: {
   records: StoredChartLinkRecord[];
   /** Primary view id (key or label). */
@@ -442,8 +462,9 @@ export function findHistoricalChartLinks(args: {
   for (const rec of args.records) {
     if (!rec.url) continue;
     const vk = (rec.viewKey || rec.lastViewKey || "").trim();
-    // Require a stored view key and match any alias (key or label)
-    if (!vk || !aliasSet.has(vk)) continue;
+    // Match View key/label, or a Backtest pattern path whose segments hit an alias
+    // (e.g. levelsbelow::B-B-BB-BB::B-B-BB-BB-EL3U4 for TinyMini-Upmove).
+    if (!vk || !chartStoredKeyMatchesAliases(vk, aliasSet)) continue;
 
     const parsed = parseChartRowKey(rec.rowKey || "");
     const entryDate = parsed.entryDate;

@@ -57,38 +57,67 @@ function formatChartDate(entryDate?: string, savedAt?: string): string {
 }
 
 /**
- * Backtest saves a chart link under whatever node was selected at the time —
- * a View key, or a Pattern path like "levelsbelow::B-B-BB-BB::B-B-BB-BB-CL4U2".
- * Return every Pattern path (and its parent paths, minus the bare category)
- * that contains this View so those saved links still match.
+ * Every id that may have been stored as lastViewKey for this View:
+ * - View key + label
+ * - parentKey chain (pattern / subpattern nodes)
+ * - Backtest dropdown values: full `category::pattern::…` paths and segments
+ *   so links saved under a Pattern selection still resolve in the Legend.
  */
-function owningPatternPaths(viewKey: string): string[] {
-  const out = new Set<string>();
-  try {
-    const opts = buildBacktestOptions();
-    for (const o of opts) {
-      if (o.kind !== "view" || o.viewKey !== viewKey || !o.patternKey) continue;
-      for (const p of opts) {
-        if (p.kind !== "pattern" || p.categoryKey !== o.categoryKey || p.patternKey !== o.patternKey) continue;
-        const parts = p.value.split("::");
-        for (let n = parts.length; n >= 2; n--) out.add(parts.slice(0, n).join("::"));
-      }
-    }
-  } catch {
-    /* registry unavailable — fall back to key/label only */
-  }
-  return [...out];
-}
-
-/** Match stored lastViewKey saved as View key, label, or an owning Pattern path. */
 function viewKeyAliases(viewKey?: string): string[] {
   const raw = (viewKey || "").trim();
   if (!raw) return [];
-  const aliases = new Set<string>([raw]);
-  const v = getView(raw);
-  if (v?.key) aliases.add(v.key);
-  if (v?.label) aliases.add(v.label);
-  for (const path of owningPatternPaths(v?.key || raw)) aliases.add(path);
+  const aliases = new Set<string>();
+  const add = (s?: string | null) => {
+    const t = (s || "").trim();
+    if (t) aliases.add(t);
+  };
+
+  add(raw);
+  const resolved = getView(raw);
+  const leafKey = resolved?.key || raw;
+  add(leafKey);
+  add(resolved?.label);
+
+  // Parent pattern chain (e.g. B-B-BB-BB-EL3U4 → B-B-BB-BB → …)
+  const parents: string[] = [];
+  const seen = new Set<string>();
+  let cur: string | undefined = resolved?.parentKey;
+  while (cur && !seen.has(cur)) {
+    seen.add(cur);
+    parents.push(cur);
+    add(cur);
+    cur = getView(cur)?.parentKey;
+  }
+
+  try {
+    const opts = buildBacktestOptions();
+    for (const o of opts) {
+      if (o.kind === "view" && (o.viewKey === leafKey || o.viewKey === raw)) {
+        add(o.viewKey);
+        add(o.patternKey);
+        add(o.value);
+      }
+      if (o.kind === "pattern") {
+        const last = o.value.split("::").pop() || "";
+        const owns =
+          (o.patternKey && (o.patternKey === leafKey || parents.includes(o.patternKey))) ||
+          last === leafKey ||
+          parents.includes(last);
+        if (!owns) continue;
+        add(o.value);
+        add(o.patternKey);
+        const parts = o.value.split("::");
+        // Intermediate paths (skip bare category-only n=1)
+        for (let n = 2; n <= parts.length; n++) {
+          add(parts.slice(0, n).join("::"));
+        }
+        for (const seg of parts) add(seg);
+      }
+    }
+  } catch {
+    /* registry unavailable — key/label/parents still apply */
+  }
+
   return [...aliases];
 }
 
