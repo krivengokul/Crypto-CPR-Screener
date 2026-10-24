@@ -122,7 +122,7 @@ async function inferViewFromData(rowKey: string, scope: string): Promise<Resolut
       scope,
       passes,
     );
-    if (!row) return { ok: false, reason: `row no longer matches ${scope} (or history unavailable)` };
+    if (!row) return { ok: false, reason: `row doesn't match ${scope} on that date, or price history couldn't be loaded (network/CORS)` };
     const view = panel.matchingViewDef(row.raw, scope);
     if (!view || view.kind !== "view") return { ok: false, reason: `no View under ${scope} matches this row` };
     return { ok: true, key: view.key, how: `data match under ${scope}` };
@@ -223,6 +223,22 @@ export async function repairChartLinkViewKeys(
   // Pattern-level links: rebuild each row's data and pick the View the Backtest panel would show.
   if (pendingInfer.length) {
     console.log(`[cprRepairChartLinks] re-grading ${pendingInfer.length} pattern-level links from row data (loads price history; may take a minute)…`);
+    // The Backtest panel keeps only ~10 days of daily candles by default and widens
+    // that window per run. Do the same here, sized to the oldest link, or older
+    // rows can't be rebuilt and wrongly look like "no longer matches".
+    try {
+      const { setBacktestHistoryLimit } = await import("@/lib/backtest");
+      const todayMs = Date.parse(new Date().toISOString().slice(0, 10) + "T00:00:00.000Z");
+      let maxDaysAgo = 0;
+      for (const p of pendingInfer) {
+        const d = parseChartRowKey(p.rowKey).entryDate;
+        const ms = d ? Date.parse(d + "T00:00:00.000Z") : NaN;
+        if (Number.isFinite(ms)) maxDaysAgo = Math.max(maxDaysAgo, Math.ceil((todayMs - ms) / 86_400_000));
+      }
+      setBacktestHistoryLimit(Math.min(1500, Math.max(10, maxDaysAgo + 6)));
+    } catch (err) {
+      console.warn("[cprRepairChartLinks] could not widen price-history window", err);
+    }
     let next = 0;
     const worker = async () => {
       while (next < pendingInfer.length) {
