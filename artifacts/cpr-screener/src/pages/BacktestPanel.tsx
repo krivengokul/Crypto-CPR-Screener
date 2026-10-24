@@ -158,7 +158,7 @@ function isViewDescendant(viewKey: string, ancestorKey: string): boolean {
  * tree instead: the whole point of a top-mover list is seeing which
  * (unrelated) pattern View a mover also happens to satisfy.
  */
-function matchingViewDef(raw: CPRResult, selectedKey: string): ViewDef | null {
+export function matchingViewDef(raw: CPRResult, selectedKey: string): ViewDef | null {
   // ALL / symbol-list-only scopes are virtual keys (not real ViewDefs). Still
   // search every View so the View column can show a name when the user picks
   // "ALL — any pattern" or filters by symbol under that mode.

@@ -20,7 +20,7 @@
 import { collection, doc, getDocs, query, serverTimestamp, setDoc, where } from "firebase/firestore";
 import { getDb, ensureSignedIn } from "@/lib/firebase";
 import { VIEWS, getView } from "@/lib/views";
-import { getLocalCache, saveToLocalCache } from "@/lib/chartLinks";
+import { getLocalCache, saveToLocalCache, parseChartRowKey } from "@/lib/chartLinks";
 
 const CHART_LINKS_COLLECTION = "chartLinks";
 const BACKUP_KEY = "cpr_chart_links_repair_backup";
@@ -83,6 +83,54 @@ function resolveViewKey(stored: string, extraCandidates: string[]): Resolution {
   return { ok: false, reason: s ? "unknown key (renamed or deleted View?)" : "no lastViewKey" };
 }
 
+/**
+ * Scope to re-grade a link against when its stored key is not a View:
+ *  - "__all__"                         -> search every View
+ *  - a pattern / category id (bare, or the last segment of a composite path)
+ *  - an unknown key that starts with a real pattern id (renamed / deleted View)
+ */
+function inferScope(stored: string): string | null {
+  const s = (stored || "").trim();
+  if (!s) return null;
+  if (s === "__all__") return s;
+  const last = s.split("::").filter(Boolean).pop() || "";
+  const node = getView(last);
+  if (node) return node.kind === "view" ? null : last;
+  const prefixed = VIEWS.filter((v) => v.kind !== "view" && v.key.length >= 6 && last.startsWith(v.key)).sort(
+    (a, b) => b.key.length - a.key.length,
+  );
+  return prefixed[0]?.key ?? null;
+}
+
+/** Rebuild the row's data for that day and pick the View the Backtest panel would show. */
+async function inferViewFromData(rowKey: string, scope: string): Promise<Resolution> {
+  const parsed = parseChartRowKey(rowKey);
+  if (!parsed.symbol || !parsed.source || !parsed.entryDate) {
+    return { ok: false, reason: "row key has no symbol/source/date" };
+  }
+  try {
+    const [{ categoryScanSymbolOnDate }, { passesPattern }, panel] = await Promise.all([
+      import("@/lib/backtest"),
+      import("@/pages/ScreenerUtils"),
+      import("@/pages/BacktestPanel"),
+    ]);
+    const passes = scope === "__all__" ? () => true : passesPattern;
+    const row = await categoryScanSymbolOnDate(
+      parsed.symbol,
+      parsed.source as Parameters<typeof categoryScanSymbolOnDate>[1],
+      parsed.entryDate,
+      scope,
+      passes,
+    );
+    if (!row) return { ok: false, reason: `row no longer matches ${scope} (or history unavailable)` };
+    const view = panel.matchingViewDef(row.raw, scope);
+    if (!view || view.kind !== "view") return { ok: false, reason: `no View under ${scope} matches this row` };
+    return { ok: true, key: view.key, how: `data match under ${scope}` };
+  } catch (err) {
+    return { ok: false, reason: `could not rebuild row data: ${err instanceof Error ? err.message : String(err)}` };
+  }
+}
+
 export type ChartLinkRepairItem = {
   rowKey: string;
   stored: string;
@@ -102,9 +150,10 @@ export type ChartLinkRepairReport = {
 };
 
 export async function repairChartLinkViewKeys(
-  options: { dryRun?: boolean } = {},
+  options: { dryRun?: boolean; infer?: boolean } = {},
 ): Promise<ChartLinkRepairReport> {
   const dryRun = options.dryRun !== false; // default: dry run
+  const infer = options.infer !== false; // default: also re-grade pattern-level links from row data
   const uid = await ensureSignedIn();
   const db = getDb();
   const snapshot = await getDocs(
@@ -131,6 +180,8 @@ export async function repairChartLinkViewKeys(
     localFixed: 0,
   };
   const pendingWrites: { id: string; rowKey: string; data: Record<string, unknown> }[] = [];
+  const pendingInfer: { id: string; rowKey: string; stored: string; scope: string; data: Record<string, unknown> }[] = [];
+  const resolvedByRow = new Map<string, string>(); // rowKey -> new View key (sync + inferred)
 
   for (const d of snapshot.docs) {
     if (d.id.includes("::")) continue; // primary (symbol-date) docs only
@@ -143,7 +194,12 @@ export async function repairChartLinkViewKeys(
     const res = resolveViewKey(stored, mirrorKeysByRow.get(rowKey) ?? []);
 
     if (!res.ok) {
-      report.unresolved.push({ rowKey, stored, reason: res.reason });
+      const scope = infer ? inferScope(stored) : null;
+      if (scope) {
+        pendingInfer.push({ id: d.id, rowKey, stored, scope, data });
+      } else {
+        report.unresolved.push({ rowKey, stored, reason: res.reason });
+      }
       continue;
     }
     if (res.key === stored) {
@@ -151,6 +207,7 @@ export async function repairChartLinkViewKeys(
       continue;
     }
     report.fixable.push({ rowKey, stored, newKey: res.key, how: res.how });
+    resolvedByRow.set(rowKey, res.key);
     pendingWrites.push({
       id: d.id,
       rowKey,
@@ -163,13 +220,44 @@ export async function repairChartLinkViewKeys(
     });
   }
 
+  // Pattern-level links: rebuild each row's data and pick the View the Backtest panel would show.
+  if (pendingInfer.length) {
+    console.log(`[cprRepairChartLinks] re-grading ${pendingInfer.length} pattern-level links from row data (loads price history; may take a minute)…`);
+    let next = 0;
+    const worker = async () => {
+      while (next < pendingInfer.length) {
+        const p = pendingInfer[next++];
+        const res = await inferViewFromData(p.rowKey, p.scope);
+        if (res.ok) {
+          report.fixable.push({ rowKey: p.rowKey, stored: p.stored, newKey: res.key, how: res.how });
+          resolvedByRow.set(p.rowKey, res.key);
+          pendingWrites.push({
+            id: p.id,
+            rowKey: p.rowKey,
+            data: {
+              lastViewKey: res.key,
+              previousLastViewKey: typeof p.data.previousLastViewKey === "string" ? p.data.previousLastViewKey : p.stored,
+              viewKeyRepaired: true,
+              updatedAt: serverTimestamp(),
+            },
+          });
+        } else {
+          report.unresolved.push({ rowKey: p.rowKey, stored: p.stored, reason: res.reason });
+        }
+      }
+    };
+    await Promise.all([worker(), worker(), worker()]);
+  }
+
   // Local cache (this browser) — same rules.
   const local = getLocalCache();
   const localFixes: { rowKey: string; link: { url: string; savedAt: string; lastViewKey: string } }[] = [];
   for (const [rowKey, link] of Object.entries(local)) {
     if (!link?.url || rowKey.includes("::")) continue;
     const stored = (link.lastViewKey || "").trim();
-    const res = resolveViewKey(stored, mirrorKeysByRow.get(rowKey) ?? []);
+    const res: Resolution = resolvedByRow.has(rowKey)
+      ? { ok: true, key: resolvedByRow.get(rowKey)!, how: "same as Firestore fix" }
+      : resolveViewKey(stored, mirrorKeysByRow.get(rowKey) ?? []);
     if (res.ok && res.key !== stored) {
       localFixes.push({
         rowKey,
