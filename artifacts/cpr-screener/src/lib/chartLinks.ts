@@ -453,7 +453,8 @@ export function findHistoricalChartLinks(args: {
   const sym = args.symbol?.toUpperCase();
   const src = args.source?.toLowerCase();
   const excludeToday = args.excludeToday !== false;
-  const limit = args.limit ?? 3;
+  // Default raised from 3 so Legend Card 2 can show ~1 month of View attachments
+  const limit = args.limit ?? 40;
   const today = todayUtcISO();
 
   const out: HistoricalChartLink[] = [];

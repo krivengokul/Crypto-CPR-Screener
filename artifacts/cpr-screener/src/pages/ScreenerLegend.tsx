@@ -135,7 +135,8 @@ function HistoricalChartCameras({
   viewKey,
   symbol,
   source,
-  limit = 3,
+  // ~1 trading month of snapshots (was 3 — older View attachments never appeared)
+  limit = 40,
 }: {
   viewKey?: string;
   symbol?: string;
@@ -371,7 +372,7 @@ function FocusToastCard({ focusToast }: { focusToast?: ScreenerLegendFocusToast 
           <span className="text-muted-foreground">MATCH:</span>
           <span className="text-sky-300">{focusToast.matchText}</span>
         </div>
-        <HistoricalChartCameras viewKey={viewKey} limit={3} />
+        <HistoricalChartCameras viewKey={viewKey} limit={40} />
       </div>
     </div>
   );
