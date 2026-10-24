@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, Fragment } from "react";
+import { useState, useEffect, useRef, useMemo, Fragment, type ReactNode } from "react";
 import {
   RefreshCw,
   CheckCircle2,
@@ -372,6 +372,7 @@ function renderCandleCheckBadges(raw: CPRResult) {
  */
 function renderMatchingViewName(raw: CPRResult, selectedKey: string) {
   const match = matchingView(raw, selectedKey);
+  const matchDef = matchingViewDef(raw, selectedKey);
   const candleBadges = renderCandleCheckBadges(raw);
 
   if (!match && !candleBadges) {
@@ -385,11 +386,48 @@ function renderMatchingViewName(raw: CPRResult, selectedKey: string) {
         ? "text-rose-400"
         : undefined;
 
+  // Ladder Match next to the View name when this row is graded to a View
+  // that carries levelCheckDefs (same n/13 the Screener MATCH column uses).
+  let matchBadge: ReactNode = null;
+  if (matchDef) {
+    const ladder = getLadderMatchSummary(raw.prevCPR, raw.todayCPR, matchDef.levelCheckDefs);
+    if (ladder.hasConditions) {
+      const requireFull = matchDef.requireFullMatch === true;
+      const matchColor = ladder.fullMatch
+        ? "text-green-400"
+        : ladder.matchingCount >= ladder.total - 2
+          ? "text-amber-400"
+          : "text-destructive";
+      matchBadge = (
+        <span
+          className={`inline-flex items-center gap-0.5 font-mono text-xs font-medium ${matchColor}`}
+          title={
+            ladder.fullMatch
+              ? requireFull
+                ? `Match: all ${ladder.total} levels (13/13 MATCH ON)`
+                : `Match: all ${ladder.total} levels`
+              : `Match: ${ladder.matchingCount}/${ladder.total} — broke: ${ladder.mismatchLabels.join(", ")}`
+          }
+        >
+          {ladder.matchingCount}/{ladder.total}
+          {ladder.fullMatch && requireFull ? (
+            <CheckCircle2 className="w-3 h-3" />
+          ) : !ladder.fullMatch ? (
+            <XCircle className="w-3 h-3" />
+          ) : null}
+        </span>
+      );
+    }
+  }
+
   return (
     <div className="flex flex-col gap-0">
       {match ? (
         <>
-          <span className={colorClass}>{match.label}</span>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className={colorClass}>{match.label}</span>
+            {matchBadge}
+          </div>
           <span
             className="truncate font-mono text-xs text-muted-foreground"
             title={match.key}
@@ -3375,23 +3413,6 @@ export default function BacktestPanel() {
                         </th>
                       </>
                     )}
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setChangeSortDir((d) =>
-                            d === null ? "desc" : d === "desc" ? "asc" : null
-                          )
-                        }
-                        className="inline-flex items-center gap-1 uppercase tracking-wider hover:text-foreground transition-colors"
-                        title="Sort by Change"
-                      >
-                        Change
-                        <span className="text-[10px]">
-                          {changeSortDir === "asc" ? "▲" : changeSortDir === "desc" ? "▼" : "↕"}
-                        </span>
-                      </button>
-                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -3415,13 +3436,11 @@ export default function BacktestPanel() {
                         : chg >= 0
                         ? "text-green-400"
                         : "text-destructive";
-                    // Close price colored by the same day-over-day sign as % change.
-                    const closeColor = chgColor;
                     return (
                       <Fragment key={`${r.source}-${r.symbol}-${r.entryDate}`}>
                       <tr className="hover:bg-muted/20">
                         <td
-                          className="px-2 py-2 w-28 font-mono font-semibold cursor-pointer select-none"
+                          className="px-2 py-2 min-w-[148px] w-40 font-mono font-semibold cursor-pointer select-none"
                           onClick={() => toggleExpand(`${r.source}-${r.symbol}-${r.entryDate}`)}
                           title="Click to expand ADK S/R ladder"
                         >
@@ -3434,19 +3453,20 @@ export default function BacktestPanel() {
                               const attached = findChartLink(chartLinks, rowKey, selectedKey);
                               return attached ? <ChartAttachmentBadge link={attached} /> : null;
                             })()}
-                            <div className="min-w-0 flex flex-col">
+                            <div className="min-w-0 flex flex-col gap-0.5">
                               <div className="flex items-center gap-1.5">
                                 <span className="truncate">{r.symbol}</span>
                                 <span onClick={(e) => e.stopPropagation()}>
                                   <ChartLink symbol={r.symbol} source={r.source} />
                                 </span>
                               </div>
-                              <span className={`font-mono text-[11px] font-medium ${closeColor}`}>
-                                {r.closePrice !== null && r.closePrice !== undefined ? fmt(r.closePrice) : "—"}
+                              {/* % Change (replaces close price); same weight as former Change column */}
+                              <span className={`font-mono text-sm font-medium leading-none ${chgColor}`}>
+                                {chg !== null && chg !== undefined
+                                  ? `${chg >= 0 ? "+" : ""}${chg.toFixed(2)}%`
+                                  : "—"}
                               </span>
-                              {/* Entry Date — moved here (below symbol/price) from its own
-                                  column, matching how the graded results table below shows it. */}
-                              <span className="font-mono text-[11px] text-muted-foreground">
+                              <span className="font-mono text-[11px] text-muted-foreground whitespace-nowrap leading-none">
                                 {formatDisplay(r.entryDate)}
                               </span>
                             </div>
@@ -3507,18 +3527,13 @@ export default function BacktestPanel() {
                             </td>
                           </>
                         )}
-                        <td className={`px-3 py-2 font-mono text-sm font-medium ${chgColor}`}>
-                          {chg !== null && chg !== undefined
-                            ? `${chg >= 0 ? "+" : ""}${chg.toFixed(2)}%`
-                            : "—"}
-                        </td>
                       </tr>
                       {expandedSymbols.has(`${r.source}-${r.symbol}-${r.entryDate}`) && (
                         <SRLadderRow
                           r={toSRLadderData(r.raw, r.closePrice ?? undefined, r.prevClose ?? undefined, r.ppClose ?? undefined)}
                           rowKey={`${r.source}-${r.symbol}-${r.entryDate}`}
                           viewKey={chartLinkViewKey(r.raw, selectedKey, isViewOnly)}
-                          colSpan={scopedViewsAvailable ? 7 : 5}
+                          colSpan={scopedViewsAvailable ? 6 : 4}
                           todayPatternBadge={renderTodayPatternBadges(r.raw)}
                           prevPatternBadge={renderPrevPatternBadge(r.raw)}
                           pivotPatternBadge={renderPivotPatternBadge(r.raw)}
@@ -3700,24 +3715,6 @@ export default function BacktestPanel() {
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Hit Date
                     </th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setResultChangeSortDir((d) => {
-                            setLadderSortDir(null);
-                            return d === null ? "desc" : d === "desc" ? "asc" : null;
-                          })
-                        }
-                        className="inline-flex items-center gap-1 uppercase tracking-wider hover:text-foreground transition-colors"
-                        title="Sort by Change"
-                      >
-                        Change
-                        <span className="text-[10px]">
-                          {resultChangeSortDir === "asc" ? "▲" : resultChangeSortDir === "desc" ? "▼" : "↕"}
-                        </span>
-                      </button>
-                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -3725,7 +3722,7 @@ export default function BacktestPanel() {
                     <Fragment key={`${r.source}-${r.symbol}-${r.entryDate}`}>
                     <tr className="hover:bg-muted/20">
                       <td
-                        className="px-3 py-2 font-mono font-semibold cursor-pointer select-none"
+                        className="px-3 py-2 min-w-[148px] w-40 font-mono font-semibold cursor-pointer select-none"
                         onClick={() => toggleExpand(`${r.source}-${r.symbol}-${r.entryDate}`)}
                         title="Click to expand ADK S/R ladder"
                       >
@@ -3738,7 +3735,7 @@ export default function BacktestPanel() {
                             const attached = findChartLink(chartLinks, rowKey, selectedKey);
                             return attached ? <ChartAttachmentBadge link={attached} /> : null;
                           })()}
-                          <div className="min-w-0 flex flex-col">
+                          <div className="min-w-0 flex flex-col gap-0.5">
                             <div className="flex items-center gap-1.5">
                               <span className="truncate">{r.symbol}</span>
                               <span onClick={(e) => e.stopPropagation()}>
@@ -3747,22 +3744,21 @@ export default function BacktestPanel() {
                             </div>
                             {(() => {
                               const chg = r.changePct;
-                              const closeColor =
+                              const chgColor =
                                 chg === null || chg === undefined
                                   ? "text-muted-foreground"
                                   : chg >= 0
                                   ? "text-green-400"
                                   : "text-destructive";
                               return (
-                                <span className={`font-mono text-[11px] font-medium ${closeColor}`}>
-                                  {r.closePrice !== null && r.closePrice !== undefined ? fmt(r.closePrice) : "—"}
+                                <span className={`font-mono text-sm font-medium leading-none ${chgColor}`}>
+                                  {chg !== null && chg !== undefined
+                                    ? `${chg >= 0 ? "+" : ""}${chg.toFixed(2)}%`
+                                    : "—"}
                                 </span>
                               );
                             })()}
-                            {/* Entry Date — moved here (below symbol/price) from its own
-                                column, so it reads the way it now does in the category
-                                scan results table above. */}
-                            <span className="font-mono text-[11px] text-muted-foreground">
+                            <span className="font-mono text-[11px] text-muted-foreground whitespace-nowrap leading-none">
                               {formatDisplay(r.entryDate)}
                             </span>
                           </div>
@@ -3872,29 +3868,13 @@ export default function BacktestPanel() {
                           "—"
                         )}
                       </td>
-                      <td className="px-3 py-2 font-mono text-xs font-medium">
-                        {(() => {
-                          const chg = r.changePct;
-                          const chgColor =
-                            chg === null || chg === undefined
-                              ? "text-muted-foreground"
-                              : chg >= 0
-                              ? "text-green-400"
-                              : "text-destructive";
-                          return (
-                            <span className={chgColor}>
-                              {chg === null || chg === undefined ? "—" : `${chg >= 0 ? "+" : ""}${chg.toFixed(2)}%`}
-                            </span>
-                          );
-                        })()}
-                      </td>
                     </tr>
                     {expandedSymbols.has(`${r.source}-${r.symbol}-${r.entryDate}`) && (
                       <SRLadderRow
                         r={toSRLadderData(r.raw, r.closePrice ?? undefined, r.prevClose ?? undefined, r.ppClose ?? undefined)}
                         rowKey={`${r.source}-${r.symbol}-${r.entryDate}`}
                         viewKey={chartLinkViewKey(r.raw, selectedKey, isViewOnly)}
-                        colSpan={9}
+                        colSpan={7}
                         todayPatternBadge={renderTodayPatternBadges(r.raw)}
                         prevPatternBadge={renderPrevPatternBadge(r.raw)}
                         pivotPatternBadge={renderPivotPatternBadge(r.raw)}
