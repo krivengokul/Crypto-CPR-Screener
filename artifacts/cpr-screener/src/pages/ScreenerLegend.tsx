@@ -66,7 +66,7 @@ function formatChartDate(entryDate?: string, savedAt?: string): string {
  * Broader aliases (parent chain + Backtest composite paths) are kept
  * only for pure pattern / category nodes.
  */
-function viewKeyAliases(viewKey?: string): string[] {
+export function viewKeyAliases(viewKey?: string): string[] {
   const raw = (viewKey || "").trim();
   if (!raw) return [];
   const aliases = new Set<string>();
