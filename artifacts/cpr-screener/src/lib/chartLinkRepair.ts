@@ -75,6 +75,27 @@ function resolveViewKey(stored: string, extraCandidates: string[]): Resolution {
       }
     }
   }
+  // Old "<key or label>:<target>" form, e.g. "B6-L4U4-pStepUp:R4". The suffix names
+  // the target, so pick the View with that name whose key ends in "-<target>".
+  // Only accept when exactly one View fits; never guess between several.
+  const suffixed = s && !s.includes("::") ? s.match(/^(.+):([A-Za-z]{1,2}\d+)$/) : null;
+  if (suffixed) {
+    const [, base, target] = suffixed;
+    const baseView = getView(base);
+    const pool = baseView?.kind === "view" ? [baseView.key] : viewKeysForLabel(base);
+    const hits = pool.filter((k) => k.toUpperCase().endsWith(`-${target.toUpperCase()}`));
+    if (hits.length === 1) {
+      return { ok: true, key: hits[0], how: `old '<name>:<target>' form -> View ending -${target}` };
+    }
+    if (!firstFailure) {
+      firstFailure = {
+        ok: false,
+        reason: hits.length > 1
+          ? `'${base}' with target ${target} matches several Views`
+          : `no View named '${base}' ends with -${target}`,
+      };
+    }
+  }
   for (const c of extraCandidates) {
     const hit = consider(resolveOne(c));
     if (hit) return { ok: true, key: hit.key, how: `legacy doc id -> ${hit.how}` };
