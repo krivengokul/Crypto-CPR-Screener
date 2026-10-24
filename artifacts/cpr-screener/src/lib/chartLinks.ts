@@ -53,7 +53,7 @@ export function notifyChartLinksChanged() {
   }
 }
 
-function getLocalCache(): Record<string, StoredChartLink> {
+export function getLocalCache(): Record<string, StoredChartLink> {
   try {
     const raw = localStorage.getItem(LOCAL_CACHE_KEY);
     return raw ? JSON.parse(raw) : {};
@@ -62,7 +62,7 @@ function getLocalCache(): Record<string, StoredChartLink> {
   }
 }
 
-function saveToLocalCache(key: string, link: StoredChartLink | null) {
+export function saveToLocalCache(key: string, link: StoredChartLink | null) {
   try {
     const cache = getLocalCache();
     if (link) {
