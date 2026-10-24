@@ -57,11 +57,14 @@ function formatChartDate(entryDate?: string, savedAt?: string): string {
 }
 
 /**
- * Every id that may have been stored as lastViewKey for this View:
- * - View key + label
- * - parentKey chain (pattern / subpattern nodes)
- * - Backtest dropdown values: full `category::pattern::…` paths and segments
- *   so links saved under a Pattern selection still resolve in the Legend.
+ * Every id that may have been stored as lastViewKey for this View.
+ *
+ * For concrete / Created Views (kind === "view") we keep the list tight
+ * (exact key + label only) so Legend Card 2 cameras do not leak
+ * attachments from parent patterns or sibling Views.
+ *
+ * Broader aliases (parent chain + Backtest composite paths) are kept
+ * only for pure pattern / category nodes.
  */
 function viewKeyAliases(viewKey?: string): string[] {
   const raw = (viewKey || "").trim();
@@ -78,7 +81,13 @@ function viewKeyAliases(viewKey?: string): string[] {
   add(leafKey);
   add(resolved?.label);
 
-  // Parent pattern chain (e.g. B-B-BB-BB-EL3U4 → B-B-BB-BB → …)
+  // Strict mode for concrete Views — no parent / path leakage.
+  const isConcreteView = resolved?.kind === "view";
+  if (isConcreteView) {
+    return [...aliases];
+  }
+
+  // Parent pattern chain (only for pattern / category nodes)
   const parents: string[] = [];
   const seen = new Set<string>();
   let cur: string | undefined = resolved?.parentKey;
@@ -115,7 +124,7 @@ function viewKeyAliases(viewKey?: string): string[] {
       }
     }
   } catch {
-    /* registry unavailable — key/label/parents still apply */
+    /* registry unavailable — key/label still apply */
   }
 
   return [...aliases];
