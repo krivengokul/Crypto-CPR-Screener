@@ -13,6 +13,9 @@ export type TradfiAssetClass = "COMMOD" | "TRADFI";
 
 export const HIDE_TRADFI_WEEKEND_STORAGE_KEY = "cpr_hide_tradfi_commod_weekend";
 
+/** Fired on window after the Week toggle changes (ViewsSidebar ↔ Screener). */
+export const HIDE_TRADFI_WEEKEND_CHANGED_EVENT = "cpr_hide_tradfi_weekend_changed";
+
 /** Saturday (6) or Sunday (0) in the browser's local timezone. */
 export function isWeekend(date: Date = new Date()): boolean {
   const day = date.getDay();
@@ -41,6 +44,15 @@ export function writeHideTradfiWeekend(on: boolean): void {
     localStorage.setItem(HIDE_TRADFI_WEEKEND_STORAGE_KEY, on ? "1" : "0");
   } catch {
     /* ignore quota / private mode */
+  }
+  if (typeof window !== "undefined") {
+    try {
+      window.dispatchEvent(
+        new CustomEvent(HIDE_TRADFI_WEEKEND_CHANGED_EVENT, { detail: { on } }),
+      );
+    } catch {
+      /* ignore */
+    }
   }
 }
 

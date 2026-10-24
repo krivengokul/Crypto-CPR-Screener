@@ -26,6 +26,11 @@ import {
   setAlertWebhookUrl,
   ALERT_WEBHOOK_CHANGED_EVENT,
 } from "@/lib/alertWebhook";
+import {
+  isWeekend,
+  readHideTradfiWeekend,
+  writeHideTradfiWeekend,
+} from "@/lib/weekendMarketFilter";
 
 export interface Category {
   id: string;
@@ -191,6 +196,8 @@ export default function ViewsSidebar({
   // Alert sound mute (persisted in localStorage by alertSound.ts)
   const [alertMuted, setAlertMutedState] = useState<boolean>(() => isAlertMuted());
   const [webhookUrl, setWebhookUrlState] = useState(() => getAlertWebhookUrl());
+  const [hideTradfiWeekend, setHideTradfiWeekend] = useState(() => readHideTradfiWeekend());
+  const weekendNow = isWeekend();
   const [webhookOpen, setWebhookOpen] = useState(false);
   const [webhookDraft, setWebhookDraft] = useState(() => getAlertWebhookUrl());
 
@@ -352,6 +359,36 @@ export default function ViewsSidebar({
             title={webhookUrl ? "Cloudflare Worker configured — click to edit" : "Set Cloudflare Worker URL to receive Telegram alerts"}
           >
             Hook{webhookUrl ? " · on" : ""}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setHideTradfiWeekend((prev) => {
+                const next = !prev;
+                writeHideTradfiWeekend(next);
+                return next;
+              });
+            }}
+            className="flex items-center gap-1 rounded-md border px-1.5 py-1 text-[10px] font-medium transition-colors shrink-0"
+            style={{
+              background: hideTradfiWeekend
+                ? weekendNow
+                  ? "rgba(245,158,11,0.18)"
+                  : "rgba(245,158,11,0.10)"
+                : "rgba(255,255,255,0.04)",
+              borderColor: hideTradfiWeekend ? "rgba(245,158,11,0.45)" : BORDER_COLOR,
+              color: hideTradfiWeekend ? "#fcd34d" : DIM_TEXT,
+            }}
+            title={
+              hideTradfiWeekend
+                ? weekendNow
+                  ? "Week ON: TRADFI & COMMOD hidden (weekend). Click to show."
+                  : "Week ON: TRADFI & COMMOD will hide on Sat/Sun. Click to turn OFF."
+                : "Week OFF: TRADFI & COMMOD always shown. Click to hide them on weekends."
+            }
+            aria-pressed={hideTradfiWeekend}
+          >
+            Week{hideTradfiWeekend ? (weekendNow ? " · hide" : " · on") : ""}
           </button>
           <div style={{ flex: 1, minWidth: 0 }} aria-hidden />
           <button

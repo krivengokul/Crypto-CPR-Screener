@@ -16,10 +16,9 @@ import {
 } from "lucide-react";
 import { COINDCX_ENABLED, DELTA_ENABLED } from "@/lib/featureFlags";
 import {
-  isWeekend,
   readHideTradfiWeekend,
-  writeHideTradfiWeekend,
   shouldHideTradfiCommodRow,
+  HIDE_TRADFI_WEEKEND_CHANGED_EVENT,
 } from "@/lib/weekendMarketFilter";
 import { NIFTY_MOCK_CONTRACTS } from "@/lib/nifty";
 import NiftyWorkspace from "@/components/NiftyWorkspace";
@@ -360,7 +359,18 @@ export default function Screener({
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "ready" | "pass" | "fail">("all");
   /** When ON (default) and today is Sat/Sun, hide Binance TRADFI + COMMOD rows. */
   const [hideTradfiWeekend, setHideTradfiWeekend] = useState(() => readHideTradfiWeekend());
-  const weekendNow = isWeekend();
+  useEffect(() => {
+    const onChange = (e: Event) => {
+      const detail = (e as CustomEvent<{ on?: boolean }>).detail;
+      if (typeof detail?.on === "boolean") {
+        setHideTradfiWeekend(detail.on);
+      } else {
+        setHideTradfiWeekend(readHideTradfiWeekend());
+      }
+    };
+    window.addEventListener(HIDE_TRADFI_WEEKEND_CHANGED_EVENT, onChange);
+    return () => window.removeEventListener(HIDE_TRADFI_WEEKEND_CHANGED_EVENT, onChange);
+  }, []);
 
   const [expandedSymbols, setExpandedSymbols] = useState<Set<string>>(new Set());
   /** Persist toast row PDay + MATCH in Legend Card 2 until the next toast. */
@@ -830,12 +840,18 @@ export default function Screener({
   // whenever scan results or the active tab change.
   useEffect(() => {
     if (!onCounts) return;
-    const pool: CPRResult[] =
+    const rawPool: CPRResultWithSource[] =
       activeTab === "delta" ? deltaAllResults
       : activeTab === "coindcx" ? coindcxAllResults
       : activeTab === "combined" ? [...allResults, ...deltaAllResults, ...coindcxAllResults]
       : allResults;
-    if (pool.length === 0) return;
+    const pool = rawPool.filter(
+      (r) => !shouldHideTradfiCommodRow(r.assetClass, hideTradfiWeekend),
+    );
+    if (pool.length === 0) {
+      onCounts({});
+      return;
+    }
     const counts: Record<string, number> = {};
     for (const p of pivotcategories) {
       counts[p.id] = pool.filter((r) => passesPattern(r, p.id)).length;
@@ -848,17 +864,20 @@ export default function Screener({
       }
     }
     onCounts(counts);
-  }, [allResults, deltaAllResults, coindcxAllResults, activeTab, onCounts]);
+  }, [allResults, deltaAllResults, coindcxAllResults, activeTab, onCounts, hideTradfiWeekend]);
 
   // NEW: per-view matching counts for the Views filter buttons rendered in
   // this screen ("(41)" suffix), computed off the same unfiltered pool used
   // for the left-nav counts so both always agree.
   const touchCounts = useMemo(() => {
-    const pool: CPRResult[] =
+    const rawPool: CPRResultWithSource[] =
       activeTab === "delta" ? deltaAllResults
       : activeTab === "coindcx" ? coindcxAllResults
       : activeTab === "combined" ? [...allResults, ...deltaAllResults, ...coindcxAllResults]
       : allResults;
+    const pool = rawPool.filter(
+      (r) => !shouldHideTradfiCommodRow(r.assetClass, hideTradfiWeekend),
+    );
     return {
       insidecpr: pool.filter((r) => r.touchCategory && !!(r.InsideCPR || (r as any).insideCPR)).length,
       outcpr: pool.filter((r) => r.touchCategory && !!r.outCPR).length,
@@ -871,14 +890,17 @@ export default function Screener({
       pdhgtu1: pool.filter((r) => r.todayCPR.prevHigh > r.todayCPR.r1).length,
       pdlltl1: pool.filter((r) => r.todayCPR.prevLow < r.todayCPR.s1).length,
     };
-  }, [allResults, deltaAllResults, coindcxAllResults, activeTab]);
+  }, [allResults, deltaAllResults, coindcxAllResults, activeTab, hideTradfiWeekend]);
 
   const viewCounts = useMemo(() => {
-    const pool: CPRResult[] =
+    const rawPool: CPRResultWithSource[] =
       activeTab === "delta" ? deltaAllResults
       : activeTab === "coindcx" ? coindcxAllResults
       : activeTab === "combined" ? [...allResults, ...deltaAllResults, ...coindcxAllResults]
       : allResults;
+    const pool = rawPool.filter(
+      (r) => !shouldHideTradfiCommodRow(r.assetClass, hideTradfiWeekend),
+    );
     const map: Record<string, number> = {};
     if (pool.length === 0) return map;
     const ids = new Set<string>();
@@ -887,7 +909,7 @@ export default function Screener({
     for (const extra of EXTRA_VIEW_COUNT_IDS) ids.add(extra);
     for (const id of ids) map[id] = pool.filter((r) => passesPattern(r, id)).length;
     return map;
-  }, [allResults, deltaAllResults, coindcxAllResults, activeTab]);
+  }, [allResults, deltaAllResults, coindcxAllResults, activeTab, hideTradfiWeekend]);
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -1387,12 +1409,16 @@ export default function Screener({
     : activeTab === "nifty" ? 0
     : filtered.length;
 
-  const currentAllCount =
-    activeTab === "combined" ? combinedAllResults.length
-    : activeTab === "delta" ? deltaAllResults.length
-    : activeTab === "coindcx" ? coindcxAllResults.length
-    : activeTab === "nifty" ? NIFTY_MOCK_CONTRACTS.length
-    : allResults.length;
+  const currentAllCount = (() => {
+    const pool =
+      activeTab === "combined" ? combinedAllResults
+      : activeTab === "delta" ? deltaAllResults
+      : activeTab === "coindcx" ? coindcxAllResults
+      : activeTab === "nifty" ? []
+      : allResults;
+    if (activeTab === "nifty") return NIFTY_MOCK_CONTRACTS.length;
+    return pool.filter((r) => !shouldHideTradfiCommodRow(r.assetClass, hideTradfiWeekend)).length;
+  })();
 
   const currentError =
     activeTab === "delta" ? deltaError
@@ -2369,7 +2395,7 @@ export default function Screener({
           );
         })()}
 
-        {/* Single filter row, left → right: Search · Weekend TRADFI · 15M-A · All/Active/Ready/Pass/Fail · Binance | NIFTY (right). */}
+        {/* Single filter row, left → right: Search · 15M-A · All/Active/Ready/Pass/Fail · Binance | NIFTY (right). */}
         {canShowCombined && (
           <div className="px-4 py-2 border-b border-[#1b263b] bg-[#0d1422] flex flex-nowrap items-center gap-3 overflow-x-auto shrink-0 mb-3 rounded-lg border">
               <div className="relative shrink-0 w-48 sm:w-56">
@@ -2393,32 +2419,6 @@ export default function Screener({
                   </button>
                 )}
               </div>
-              {/* Weekend TRADFI/COMMOD — ON hides those rows on Sat/Sun */}
-              <button
-                type="button"
-                onClick={() => {
-                  setHideTradfiWeekend((prev) => {
-                    const next = !prev;
-                    writeHideTradfiWeekend(next);
-                    return next;
-                  });
-                }}
-                className={`text-xs px-2.5 py-1 rounded border transition-colors shrink-0 ${
-                  hideTradfiWeekend
-                    ? "border-amber-400/60 text-amber-300 bg-amber-500/10"
-                    : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
-                }`}
-                title={
-                  hideTradfiWeekend
-                    ? weekendNow
-                      ? "ON: TRADFI & COMMOD symbols are hidden (weekend). Click to show them."
-                      : "ON: TRADFI & COMMOD will be hidden on Sat/Sun. Click to turn OFF."
-                    : "OFF: TRADFI & COMMOD always shown, including weekends. Click to hide them on Sat/Sun."
-                }
-              >
-                {hideTradfiWeekend ? "Weekend TRADFI ON" : "Weekend TRADFI OFF"}
-                {weekendNow && hideTradfiWeekend ? " · hiding" : ""}
-              </button>
               {/* 15M-A filter */}
               <div className="flex items-center gap-1 flex-wrap">
                 <button
