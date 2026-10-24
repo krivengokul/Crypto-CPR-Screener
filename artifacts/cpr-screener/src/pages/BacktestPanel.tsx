@@ -260,12 +260,17 @@ function matchingView(raw: CPRResult, selectedKey: string): { label: string; key
  * View key to store with a chart link. A Pattern selection is a composite path
  * ("category::pattern::sub"), which getView() can't resolve — so resolve the
  * row's View against the path's last Pattern key and save the real View key
- * (not the Pattern path) whenever one matches.
+ * (not the Pattern path) whenever one matches. With no match anywhere it
+ * returns "" (unattributed) instead of the Pattern path.
  */
 function chartLinkViewKey(raw: CPRResult, selectedKey: string, isViewOnly: boolean): string {
-  if (isViewOnly) return selectedKey;
+  // Always a concrete View key — never a category / pattern id or a composite
+  // path — so Legend cameras (matched by View key) find the link later.
+  if (isViewOnly || getView(selectedKey)?.kind === "view") return selectedKey;
   const scope = selectedKey.includes("::") ? selectedKey.split("::").pop() || selectedKey : selectedKey;
-  return matchingView(raw, scope)?.key ?? selectedKey;
+  // Prefer a View under the selected Pattern; else any View this row matches;
+  // else leave it unattributed ("") rather than storing a Pattern id.
+  return (matchingView(raw, scope) ?? matchingView(raw, ALL_VIEWS_KEY))?.key ?? "";
 }
 
 function hasViewsInScope(selectedKey: string): boolean {

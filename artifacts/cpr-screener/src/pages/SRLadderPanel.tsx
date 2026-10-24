@@ -507,6 +507,7 @@ function CPRLevelChart({
   todayCPR,
   pivotPatternBadge,
   viewKey,
+  chartViewKey,
   rowKey,
   ssllBadge,
   hhllBadge,
@@ -531,6 +532,8 @@ function CPRLevelChart({
    * VIEW" header below, which now shows ChartLinkControl in that spot.
    */
   viewKey?: string;
+  /** Concrete View key stored with a chart link (never a category/pattern id). Falls back to viewKey. */
+  chartViewKey?: string;
   /**
    * Row identity (symbol+date) ChartLinkControl needs to load/save its
    * saved chart link. Same `rowKey` SRLadderPanel/SRLadderRow already
@@ -700,7 +703,7 @@ function CPRLevelChart({
             sits where the ViewNameBadge/Viewcode used to. The
             ViewNameBadge/Viewcode text now lives in that toolbar instead
             (see SRLadderPanel's "Top Right Section"). */}
-        {rowKey && <ChartLinkControl viewKey={viewKey ?? ""} rowKey={rowKey} />}
+        {rowKey && <ChartLinkControl viewKey={chartViewKey ?? viewKey ?? ""} rowKey={rowKey} />}
       </div>
       <svg
         viewBox={`0 0 ${width} ${height}`}
@@ -856,6 +859,7 @@ export function SRLadderPanel({
   r,
   rowKey,
   viewKey,
+  chartViewKey,
   todayPatternBadge,
   prevPatternBadge,
   pDay1PatternBadge,
@@ -887,6 +891,8 @@ export function SRLadderPanel({
    * to an empty-string scope if omitted.
    */
   viewKey?: string;
+  /** Concrete View key stored with a chart link (never a category/pattern id). Falls back to viewKey. */
+  chartViewKey?: string;
   /** Today's pattern badge(s) — e.g. renderTodayPatternBadges(r) — shown on the "Today S/R" ladder. */
   todayPatternBadge?: ReactNode;
   /** Prev day's own "p-xxxx" pattern badge — e.g. renderPrevPatternBadge(r) — shown on the "PDay S/R" ladder. */
@@ -999,6 +1005,7 @@ export function SRLadderPanel({
           todayCPR={r.todayCPR}
           pivotPatternBadge={pivotPatternBadge}
           viewKey={viewKey}
+          chartViewKey={chartViewKey}
           rowKey={rowKey}
           ssllBadge={ssllBadge}
           hhllBadge={hhllBadge}
@@ -1075,6 +1082,7 @@ export function SRLadderRow({
   colSpan = 20,
   rowKey,
   viewKey,
+  chartViewKey,
   todayPatternBadge,
   prevPatternBadge,
   pDay1PatternBadge,
@@ -1097,6 +1105,8 @@ export function SRLadderRow({
   rowKey?: string;
   /** Same viewKey as SRLadderPanel — passed straight through. */
   viewKey?: string;
+  /** Same chartViewKey as SRLadderPanel — passed straight through. */
+  chartViewKey?: string;
   /** Today's pattern badge(s) — e.g. renderTodayPatternBadges(r) — shown on the "Today S/R" ladder. */
   todayPatternBadge?: ReactNode;
   /** Prev day's own "p-xxxx" pattern badge — e.g. renderPrevPatternBadge(r) — shown on the "PDay S/R" ladder. */
@@ -1137,6 +1147,7 @@ export function SRLadderRow({
           r={r}
           rowKey={rowKey}
           viewKey={viewKey}
+          chartViewKey={chartViewKey}
           todayPatternBadge={todayPatternBadge}
           prevPatternBadge={prevPatternBadge}
           pDay1PatternBadge={pDay1PatternBadge}

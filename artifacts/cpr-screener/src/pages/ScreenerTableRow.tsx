@@ -5,6 +5,18 @@ import { sessionReachedTarget } from "@/lib/signalOutcome";
 import type { CPRResult } from "@/lib/cpr";
 import type { ReclaimSideState } from "@/lib/15MCandleCheck";
 import { getView } from "@/lib/views";
+
+/** True when `viewKey` is a descendant (via parentKey) of `ancestorKey`. */
+function isViewUnder(viewKey: string, ancestorKey: string): boolean {
+  const seen = new Set<string>();
+  let cur = getView(viewKey);
+  while (cur?.parentKey && !seen.has(cur.key)) {
+    if (cur.parentKey === ancestorKey) return true;
+    seen.add(cur.key);
+    cur = getView(cur.parentKey);
+  }
+  return false;
+}
 import {
   type CPRResultWithSource,
   type ActiveTab,
@@ -1004,6 +1016,18 @@ export default function ScreenerTableRow({
     : firstDefinedView
     ? { name: firstDefinedView.label, direction: firstDefinedView.direction ?? undefined, defs: firstDefinedView.defs, key: firstDefinedView.id }
     : undefined;
+  // Key stored with an attached chart link: always a concrete View this row
+  // matches — never a category / pattern id (activeSignal can be one), which
+  // Legend cameras (matched by View key) could not find later.
+  const selectedNode = activeSignal ? getView(activeSignal) : undefined;
+  const chartViewKey =
+    selectedNode?.kind === "view"
+      ? selectedNode.key
+      : (
+          (activeSignal ? viewLadders.find((v) => isViewUnder(v.id, activeSignal)) : undefined) ??
+          firstDefinedView ??
+          viewLadders.find((v) => getView(v.id)?.kind === "view")
+        )?.id ?? "";
   // SSLLCategory badge (e.g. "SSLL-AA") — shown above the S1 line in the
   // expanded row's "Levels VIEW" chart, right side.
   const ssllBadge = renderSSLLCategoryBadge(r);
@@ -1372,6 +1396,7 @@ export default function ScreenerTableRow({
           pivotPatternBadge={renderPivotPatternBadge(r)}
           viewName={primaryView?.name}
           viewKey={primaryView?.key}
+          chartViewKey={chartViewKey}
           viewDirection={primaryView?.direction}
           showLevelCheck
           levelCheckConditions={primaryView?.defs}
