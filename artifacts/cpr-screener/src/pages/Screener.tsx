@@ -15,6 +15,12 @@ import {
   X,
 } from "lucide-react";
 import { COINDCX_ENABLED, DELTA_ENABLED } from "@/lib/featureFlags";
+import {
+  isWeekend,
+  readHideTradfiWeekend,
+  writeHideTradfiWeekend,
+  shouldHideTradfiCommodRow,
+} from "@/lib/weekendMarketFilter";
 import { NIFTY_MOCK_CONTRACTS } from "@/lib/nifty";
 import NiftyWorkspace from "@/components/NiftyWorkspace";
 import {
@@ -352,6 +358,9 @@ export default function Screener({
   const [upexMessage, setUpexMessage] = useState("");
   const upexRunRef = useRef(0);
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "ready" | "pass" | "fail">("all");
+  /** When ON (default) and today is Sat/Sun, hide Binance TRADFI + COMMOD rows. */
+  const [hideTradfiWeekend, setHideTradfiWeekend] = useState(() => readHideTradfiWeekend());
+  const weekendNow = isWeekend();
 
   const [expandedSymbols, setExpandedSymbols] = useState<Set<string>>(new Set());
   /** Persist toast row PDay + MATCH in Legend Card 2 until the next toast. */
@@ -1066,6 +1075,9 @@ export default function Screener({
   };
 
   const displayed = getActivePool()
+    .filter(
+      (r) => !shouldHideTradfiCommodRow(r.assetClass, hideTradfiWeekend),
+    )
     .filter(matchesSearch)
     .filter((r) => {
       if (breakoutMode === "off") return true;
@@ -1304,7 +1316,9 @@ export default function Screener({
   // change24h is passed straight through so SignalDeskSymbol's optional
   // 24h-change badge has data to render. direction drives SignalDesk's
   // long/short header icon — see getRowDirection in ScreenerUtils.tsx.
-  const signalSymbols = combinedAllResults.map((r) => ({
+  const signalSymbols = combinedAllResults
+    .filter((r) => !shouldHideTradfiCommodRow(r.assetClass, hideTradfiWeekend))
+    .map((r) => ({
     key: `${r.source}-${r.symbol}`,
     symbol: r.symbol,
     source: r.source,
@@ -2355,7 +2369,7 @@ export default function Screener({
           );
         })()}
 
-        {/* Single filter row, left → right: Search · 15M-A · All/Active/Ready/Pass/Fail · Binance | NIFTY (right). */}
+        {/* Single filter row, left → right: Search · Weekend TRADFI · 15M-A · All/Active/Ready/Pass/Fail · Binance | NIFTY (right). */}
         {canShowCombined && (
           <div className="px-4 py-2 border-b border-[#1b263b] bg-[#0d1422] flex flex-nowrap items-center gap-3 overflow-x-auto shrink-0 mb-3 rounded-lg border">
               <div className="relative shrink-0 w-48 sm:w-56">
@@ -2379,6 +2393,32 @@ export default function Screener({
                   </button>
                 )}
               </div>
+              {/* Weekend TRADFI/COMMOD — ON hides those rows on Sat/Sun */}
+              <button
+                type="button"
+                onClick={() => {
+                  setHideTradfiWeekend((prev) => {
+                    const next = !prev;
+                    writeHideTradfiWeekend(next);
+                    return next;
+                  });
+                }}
+                className={`text-xs px-2.5 py-1 rounded border transition-colors shrink-0 ${
+                  hideTradfiWeekend
+                    ? "border-amber-400/60 text-amber-300 bg-amber-500/10"
+                    : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
+                }`}
+                title={
+                  hideTradfiWeekend
+                    ? weekendNow
+                      ? "ON: TRADFI & COMMOD symbols are hidden (weekend). Click to show them."
+                      : "ON: TRADFI & COMMOD will be hidden on Sat/Sun. Click to turn OFF."
+                    : "OFF: TRADFI & COMMOD always shown, including weekends. Click to hide them on Sat/Sun."
+                }
+              >
+                {hideTradfiWeekend ? "Weekend TRADFI ON" : "Weekend TRADFI OFF"}
+                {weekendNow && hideTradfiWeekend ? " · hiding" : ""}
+              </button>
               {/* 15M-A filter */}
               <div className="flex items-center gap-1 flex-wrap">
                 <button

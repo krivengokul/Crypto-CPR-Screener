@@ -8,6 +8,10 @@ import SignalDesk, { type SignalDeskSymbol, type FocusSymbol, buildPills, comput
 import type { CPRResultWithSource, ActiveTab } from "@/pages/ScreenerUtils";
 import { passesPattern, getChartUrl, openChartInNewTab } from "@/pages/ScreenerUtils";
 import {
+  readHideTradfiWeekend,
+  shouldHideTradfiCommodRow,
+} from "@/lib/weekendMarketFilter";
+import {
   autoSaveQualifiedSignals,
   fetchSavedSignalsFromCloud,
   isSignalCompletedToday,
@@ -195,10 +199,14 @@ function App() {
   // from being mislabeled as the time of entry.
   const entryCrossCandidates = useMemo(() => {
     if (signalResults.length === 0) return [] as EntryCrossCandidate[];
-    const pills = buildPills(signalResults);
+    const hideTradfiWeekend = readHideTradfiWeekend();
+    const livePool = signalResults.filter(
+      (r) => !shouldHideTradfiCommodRow(r.assetClass, hideTradfiWeekend),
+    );
+    const pills = buildPills(livePool);
     const activeMap = new Map<string, CPRResultWithSource>();
     for (const v of pills) {
-      for (const r of signalResults) {
+      for (const r of livePool) {
         const key = `${r.source}:${r.symbol.toUpperCase()}`;
         if (!activeMap.has(key) && passesPattern(r, v.id)) activeMap.set(key, r);
       }
