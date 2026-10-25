@@ -28,10 +28,16 @@ export type EntryCrossCandidate = {
 const FIRED_STORAGE_KEY = "cpr-entry-cross-fired";
 const utcDay = () => new Date().toISOString().slice(0, 10);
 
-/** Keys already alerted today, kept in sessionStorage so a reload doesn't re-arm them. */
+/**
+ * Keys already alerted today.
+ * Uses localStorage (not sessionStorage) so multiple tabs of the same origin
+ * share one fired set and do not each send a Telegram message for the same cross.
+ */
 function loadFiredToday(): Set<string> {
   try {
-    const raw = sessionStorage.getItem(FIRED_STORAGE_KEY);
+    const raw =
+      localStorage.getItem(FIRED_STORAGE_KEY) ||
+      sessionStorage.getItem(FIRED_STORAGE_KEY); // migrate older session-only keys
     if (!raw) return new Set();
     const parsed = JSON.parse(raw) as { day?: string; keys?: string[] };
     if (parsed.day !== utcDay() || !Array.isArray(parsed.keys)) return new Set();
@@ -42,9 +48,13 @@ function loadFiredToday(): Set<string> {
 }
 
 function saveFiredToday(keys: Set<string>) {
+  const payload = JSON.stringify({ day: utcDay(), keys: [...keys] });
   try {
-    sessionStorage.setItem(FIRED_STORAGE_KEY, JSON.stringify({ day: utcDay(), keys: [...keys] }));
+    localStorage.setItem(FIRED_STORAGE_KEY, payload);
   } catch { /* storage unavailable: in-memory only */ }
+  try {
+    sessionStorage.setItem(FIRED_STORAGE_KEY, payload);
+  } catch { /* ignore */ }
 }
 
 type TradeEvent = { source: "binance" | "delta"; symbol: string; price: number; timestamp: number };

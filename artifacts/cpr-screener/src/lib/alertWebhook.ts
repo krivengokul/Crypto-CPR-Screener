@@ -5,14 +5,16 @@
  *
  * Flow:  Browser  →  Cloudflare Worker  →  Telegram Bot API
  *
- * Reliability:
- * - Prefer fetch() while the page is active so every entry-cross toast also
- *   reaches Telegram and failures show in the Network tab / console.
- * - Use sendBeacon only when the document is hidden (background tab), where
- *   fetch may be cancelled, or as a last-resort fallback if fetch fails.
+ * Telegram copy (worker should prefer `telegramText` if present):
+ * - side / action = LONG | SHORT (not BUY / SELL)
+ * - no exchange name under the symbol (source left empty for display)
  */
 
 const STORAGE_KEY = "cpr_alert_webhook_url_v1";
+/** Cross-tab / double-post guard for the same signal within a short window. */
+const RECENT_POST_KEY = "cpr_alert_webhook_recent_v1";
+const RECENT_POST_TTL_MS = 5 * 60_000; // 5 minutes
+
 export const ALERT_WEBHOOK_CHANGED_EVENT = "cpr-alert-webhook-changed";
 
 export type AlertWebhookEventType = "entry_crossed";
@@ -20,9 +22,19 @@ export type AlertWebhookEventType = "entry_crossed";
 export interface AlertWebhookPayload {
   event: AlertWebhookEventType;
   symbol: string;
+  /**
+   * Display source for Telegram. Intentionally empty so workers that print
+   * `source` under the symbol do not show "binance". Original exchange is in
+   * `exchange`.
+   */
   source: string;
+  /** Original exchange id (binance | delta | …). Prefer not to print on Telegram. */
+  exchange?: string;
   direction: "Up" | "Down" | string;
+  /** LONG or SHORT — use this (not BUY/SELL). */
   side: "LONG" | "SHORT";
+  /** Same as side — some workers map `action`. */
+  action: "LONG" | "SHORT";
   price: number | string;
   entry: number | string;
   entryLevel?: string;
@@ -33,6 +45,13 @@ export interface AlertWebhookPayload {
   viewCode?: string;
   timestamp: number;
   timestampISO: string;
+  /** Stable key so Worker / client can drop duplicate posts. */
+  idempotencyKey: string;
+  /**
+   * Ready-to-send Telegram text. Prefer this in the Cloudflare Worker
+   * so BUY/SELL and exchange labels are not re-derived incorrectly.
+   */
+  telegramText: string;
 }
 
 export function getAlertWebhookUrl(): string {
@@ -72,6 +91,74 @@ function pageIsHidden(): boolean {
   return document.visibilityState === "hidden";
 }
 
+function utcDayISO(ts = Date.now()): string {
+  return new Date(ts).toISOString().slice(0, 10);
+}
+
+/** Drop duplicate posts for the same signal across tabs / double-fire. */
+function shouldSkipDuplicatePost(idempotencyKey: string): boolean {
+  if (typeof localStorage === "undefined" || !idempotencyKey) return false;
+  try {
+    const raw = localStorage.getItem(RECENT_POST_KEY);
+    const map: Record<string, number> = raw ? JSON.parse(raw) : {};
+    const now = Date.now();
+    let changed = false;
+    for (const k of Object.keys(map)) {
+      if (now - map[k] > RECENT_POST_TTL_MS) {
+        delete map[k];
+        changed = true;
+      }
+    }
+    if (map[idempotencyKey] && now - map[idempotencyKey] < RECENT_POST_TTL_MS) {
+      if (changed) localStorage.setItem(RECENT_POST_KEY, JSON.stringify(map));
+      return true;
+    }
+    map[idempotencyKey] = now;
+    localStorage.setItem(RECENT_POST_KEY, JSON.stringify(map));
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+function formatTelegramText(args: {
+  side: "LONG" | "SHORT";
+  symbol: string;
+  price: number | string;
+  entry: number | string;
+  entryLevel?: string;
+  target?: number | string;
+  stop?: number | string;
+  riskReward?: string;
+  viewLabel?: string;
+  viewCode?: string;
+}): string {
+  const lines: string[] = [
+    `${args.side}`,
+    args.symbol,
+    // no exchange / "binance" line under symbol
+  ];
+  const entryLvl = (args.entryLevel || "Entry").trim();
+  lines.push(`Entry: ${entryLvl} (${args.entry})`);
+  lines.push(`Price: ${args.price}`);
+  if (args.target !== undefined && args.target !== "") {
+    lines.push(`Target: ${args.target}`);
+  }
+  if (args.stop !== undefined && args.stop !== "") {
+    lines.push(`SL: ${args.stop}`);
+  }
+  if (args.riskReward) {
+    lines.push(`RR: ${args.riskReward}`);
+  }
+  if (args.viewLabel) {
+    lines.push(`View: ${args.viewLabel}`);
+  }
+  if (args.viewCode && args.viewCode !== args.viewLabel) {
+    lines.push(`Code: ${args.viewCode}`);
+  }
+  return lines.join("\n");
+}
+
 /**
  * POST to your Cloudflare Worker.
  * Returns true if the browser accepted a successful send (2xx or beacon ok).
@@ -81,8 +168,13 @@ function pageIsHidden(): boolean {
 export async function postAlertWebhook(payload: AlertWebhookPayload): Promise<boolean> {
   const url = getAlertWebhookUrl();
   if (!url || !isPlausibleWebhookUrl(url)) {
-    console.warn("[alertWebhook] no Hook URL configured — Telegram skipped");
+    console.warn("[alertWebhook] no valid Hook URL configured");
     return false;
+  }
+
+  if (shouldSkipDuplicatePost(payload.idempotencyKey)) {
+    console.info("[alertWebhook] skip duplicate", payload.idempotencyKey);
+    return true; // treat as success so UI does not show "Telegram alert failed"
   }
 
   const body = JSON.stringify(payload);
@@ -99,13 +191,13 @@ export async function postAlertWebhook(payload: AlertWebhookPayload): Promise<bo
     return false;
   };
 
-  // Background tab: beacon first (more likely to flush under suspension).
-  if (pageIsHidden() && tryBeacon()) {
-    return true;
+  // Background tab: beacon only (do not also fetch — avoids double Telegram).
+  if (pageIsHidden()) {
+    return tryBeacon();
   }
 
-  // Active tab (or beacon unavailable): fetch with keepalive so the request
-  // is visible in Network and more reliable than beacon-only.
+  // Active tab: fetch only. No beacon fallback after OK/ambiguous responses
+  // (fetch + beacon was a common cause of duplicate Telegram messages).
   try {
     const res = await fetch(url, {
       method: "POST",
@@ -117,15 +209,13 @@ export async function postAlertWebhook(payload: AlertWebhookPayload): Promise<bo
     if (!res.ok) {
       const text = await res.text().catch(() => "");
       console.warn("[alertWebhook] worker returned", res.status, text);
-      // One beacon retry after a non-OK response (e.g. transient 502).
-      if (tryBeacon()) return true;
       return false;
     }
     return true;
   } catch (err) {
-    if (tryBeacon()) return true;
     console.warn("[alertWebhook] post failed", err);
-    return false;
+    // Last resort when fetch cannot run (e.g. page unloading mid-request).
+    return tryBeacon();
   }
 }
 
@@ -145,14 +235,29 @@ export function buildEntryCrossWebhookPayload(args: {
 }): AlertWebhookPayload {
   const timestamp = args.timestamp ?? Date.now();
   const dir = args.direction === "Up" || args.direction === "bullish" ? "Up" : "Down";
+  const side: "LONG" | "SHORT" = dir === "Up" ? "LONG" : "SHORT";
+  const price = Number.isFinite(args.price) ? args.price : String(args.price);
+  const entry = Number.isFinite(args.entry) ? args.entry : String(args.entry);
+  const idempotencyKey = [
+    "entry_crossed",
+    (args.symbol || "").toUpperCase(),
+    (args.source || "").toLowerCase(),
+    String(args.entry),
+    (args.viewCode || args.viewLabel || "").trim(),
+    utcDayISO(timestamp),
+  ].join("|");
+
   return {
     event: "entry_crossed",
     symbol: args.symbol,
-    source: args.source,
+    // Empty so Telegram templates that print `source` under the symbol show nothing.
+    source: "",
+    exchange: args.source,
     direction: dir,
-    side: dir === "Up" ? "LONG" : "SHORT",
-    price: Number.isFinite(args.price) ? args.price : String(args.price),
-    entry: Number.isFinite(args.entry) ? args.entry : String(args.entry),
+    side,
+    action: side,
+    price,
+    entry,
     entryLevel: args.entryLevel,
     target: args.target,
     stop: args.stop,
@@ -161,5 +266,18 @@ export function buildEntryCrossWebhookPayload(args: {
     viewCode: args.viewCode,
     timestamp,
     timestampISO: new Date(timestamp).toISOString(),
+    idempotencyKey,
+    telegramText: formatTelegramText({
+      side,
+      symbol: args.symbol,
+      price,
+      entry,
+      entryLevel: args.entryLevel,
+      target: args.target,
+      stop: args.stop,
+      riskReward: args.riskReward,
+      viewLabel: args.viewLabel,
+      viewCode: args.viewCode,
+    }),
   };
 }
