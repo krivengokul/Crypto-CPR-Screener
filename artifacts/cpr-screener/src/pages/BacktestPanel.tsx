@@ -3580,6 +3580,11 @@ export default function BacktestPanel() {
                                   setPendingEditedView(null);
                                   setTreeRevision((r) => r + 1);
                                   setSelectedKey(key);
+                                  // Restamp this row's chart (covers legacy pattern-path lastViewKey too).
+                                  const rk = `${r.source}-${r.symbol}-${r.entryDate}`;
+                                  if (findChartLink(chartLinks, rk)?.url) {
+                                    void updateChartLinkViewKey(rk, key);
+                                  }
                                 }}
                               />
                             ) : isPatternOnly && activePatternInfo ? (
@@ -3945,6 +3950,11 @@ export default function BacktestPanel() {
                                 setPendingEditedView(null);
                                 setTreeRevision((r) => r + 1);
                                 setSelectedKey(key);
+                                // Restamp this row's chart (covers legacy pattern-path lastViewKey too).
+                                const rk = `${r.source}-${r.symbol}-${r.entryDate}`;
+                                if (findChartLink(chartLinks, rk)?.url) {
+                                  void updateChartLinkViewKey(rk, key);
+                                }
                               }}
                             />
                           ) : isPatternOnly && rowViewDefByRow.get(r) && !pendingCreateViewRows.has(`${r.source}-${r.symbol}-${r.entryDate}`) ? (
@@ -3955,6 +3965,11 @@ export default function BacktestPanel() {
                               onUpdated={(key) => {
                                 setTreeRevision((r) => r + 1);
                                 setSelectedKey(key);
+                                // Restamp this row's chart (covers legacy pattern-path lastViewKey too).
+                                const rk = `${r.source}-${r.symbol}-${r.entryDate}`;
+                                if (findChartLink(chartLinks, rk)?.url) {
+                                  void updateChartLinkViewKey(rk, key);
+                                }
                               }}
                             />
                           ) : isPatternOnly && activePatternInfo ? (
