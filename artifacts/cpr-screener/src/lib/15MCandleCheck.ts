@@ -417,6 +417,8 @@ export function explainPD15MBelowTCFailure(
   floor?: number;
   previousHighestWick: number | null;
   previousLowestWick: number | null;
+  /** 1-based 15m candle number within the session (1 = the 00:00 UTC / 05:30 IST candle). */
+  candleNumber: number;
 } | null {
   if (!Number.isFinite(tc)) return null;
   const effectiveFloor =
@@ -431,6 +433,7 @@ export function explainPD15MBelowTCFailure(
   return {
     rule: failure.rule,
     openTime: new Date(failure.candle.openTime).toISOString(),
+    candleNumber: Math.floor((failure.candle.openTime - startTime) / CANDLE_INTERVAL_MS) + 1,
     open: failure.candle.open,
     close: failure.candle.close,
     tc,
@@ -1180,23 +1183,24 @@ export function getPD15MBelowTCFailureNote(
   if (failure === "noCandles") {
     return { label: "no 15m data", detail: "Previous-session 15m candles were unavailable, so the check could not run." };
   }
-  const hhmm = failure.openTime.slice(11, 16);
+  const ist = new Date(Date.parse(failure.openTime) + 19_800_000).toISOString().slice(11, 16);
+  const hhmm = `#${failure.candleNumber} (${ist} IST)`;
   const body = `${failure.open}→${failure.close}`;
   switch (failure.rule) {
     case "freshHighAboveTC":
       return {
-        label: `fresh high > ${tcName}`,
-        detail: `${hhmm} UTC candle body ${body} fully above ${tcName} ${failure.tc} and above the earlier highest wick ${failure.previousHighestWick ?? "—"}.`,
+        label: `fresh high > ${tcName} · candle #${failure.candleNumber}`,
+        detail: `candle ${hhmm} body ${body} fully above ${tcName} ${failure.tc} and above the earlier highest wick ${failure.previousHighestWick ?? "—"}.`,
       };
     case "bodyInS2":
       return {
-        label: "body ≤ S2",
-        detail: `${hhmm} UTC candle body ${body} reached S2 (first body at/below S2, or a new low) — this is MOMENTUM-B, not CONSOLIDATE-B.`,
+        label: `body ≤ S2 · candle #${failure.candleNumber}`,
+        detail: `candle ${hhmm} body ${body} reached S2 (first body at/below S2, or a new low) — this is MOMENTUM-B, not CONSOLIDATE-B.`,
       };
     case "floor":
       return {
-        label: "broke below floor wick",
-        detail: `${hhmm} UTC candle body ${body} went below the low-wick reference ${failure.previousLowestWick ?? "—"} set after the first body under the PL/S1 floor ${failure.floor ?? "—"}.`,
+        label: `broke below floor wick · candle #${failure.candleNumber}`,
+        detail: `candle ${hhmm} body ${body} went below the low-wick reference ${failure.previousLowestWick ?? "—"} set after the first body under the PL/S1 floor ${failure.floor ?? "—"}.`,
       };
   }
 }
