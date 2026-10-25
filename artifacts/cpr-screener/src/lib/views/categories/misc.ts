@@ -792,6 +792,7 @@ export const MISC_VIEWS: ViewDef[] = [
         ]
       }
     ],
+        requireFullMatch: true,
       },
     {
         key: "TC-OVA-C-A-C-AA-CU3L3-SL-GapBB-R4",
