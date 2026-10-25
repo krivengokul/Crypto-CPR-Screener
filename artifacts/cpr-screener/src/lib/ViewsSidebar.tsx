@@ -561,6 +561,7 @@ export default function ViewsSidebar({
         </div>
 
         {/* Tree nav */}
+        {mode !== "backtest" && (
         <nav
           style={{
             flex: 1,
@@ -793,6 +794,7 @@ export default function ViewsSidebar({
             );
           })}
         </nav>
+        )}
       </div>
     );
   }
@@ -912,7 +914,7 @@ export default function ViewsSidebar({
         />
 
         {/* One icon per pattern */}
-        {visiblePivotCategories.map((pattern) => {
+        {mode !== "backtest" && visiblePivotCategories.map((pattern) => {
           const Icon = pattern.icon;
           const children = visibleChildren(pattern.id);
           const isHighlighted =
