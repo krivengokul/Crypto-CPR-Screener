@@ -419,17 +419,22 @@ export function explainPD15MBelowTCFailure(
   previousLowestWick: number | null;
   /** 1-based 15m candle number within the session (1 = the 00:00 UTC / 05:30 IST candle). */
   candleNumber: number;
+  /** Candle number whose high set previousHighestWick (first one that reached it), or null. */
+  previousHighestWickCandle: number | null;
 } | null {
   if (!Number.isFinite(tc)) return null;
   const effectiveFloor =
     floor !== undefined && Number.isFinite(floor) ? floor : undefined;
-  const failure = findPD15MBelowTCFailure(
-    completedBelowTCCandles(candles, startTime, now),
-    tc,
-    effectiveFloor,
-    s2,
-  );
+  const completed = completedBelowTCCandles(candles, startTime, now);
+  const failure = findPD15MBelowTCFailure(completed, tc, effectiveFloor, s2);
   if (!failure) return null;
+  const numberOf = (c: OHLC) => Math.floor((c.openTime - startTime) / CANDLE_INTERVAL_MS) + 1;
+  const wickCandle =
+    failure.previousHighestWick === null
+      ? undefined
+      : completed.find(
+          (c) => c.openTime < failure.candle.openTime && c.high === failure.previousHighestWick,
+        );
   return {
     rule: failure.rule,
     openTime: new Date(failure.candle.openTime).toISOString(),
@@ -440,6 +445,7 @@ export function explainPD15MBelowTCFailure(
     floor,
     previousHighestWick: failure.previousHighestWick,
     previousLowestWick: failure.previousLowestWick,
+    previousHighestWickCandle: wickCandle ? numberOf(wickCandle) : null,
   };
 }
 
@@ -1190,7 +1196,11 @@ export function getPD15MBelowTCFailureNote(
     case "freshHighAboveTC":
       return {
         label: `fresh high > ${tcName} · candle #${failure.candleNumber}`,
-        detail: `candle ${hhmm} body ${body} fully above ${tcName} ${failure.tc} and above the earlier highest wick ${failure.previousHighestWick ?? "—"}.`,
+        detail:
+          `#${failure.candleNumber} (${ist} IST) body ${body}, body top ${Math.max(failure.open, failure.close)}` +
+          ` > earlier high ${failure.previousHighestWick ?? "—"}` +
+          (failure.previousHighestWickCandle ? ` (candle #${failure.previousHighestWickCandle})` : "") +
+          ` · ${tcName} ${failure.tc}`,
       };
     case "bodyInS2":
       return {
