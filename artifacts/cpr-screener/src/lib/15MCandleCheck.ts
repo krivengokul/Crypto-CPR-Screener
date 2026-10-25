@@ -7,11 +7,11 @@ const DELTA_BASE = "https://api.india.delta.exchange/v2";
 const CANDLE_INTERVAL_MS = 15 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_CONCURRENT_REQUESTS = 8;
-const PREVIOUS_UPEX_CACHE_KEY = "cpr_previous_upex_results_v5";
+const PREVIOUS_UPEX_CACHE_KEY = "cpr_previous_upex_results_v6";
 const PREVIOUS_15M_B_CACHE_KEY = "cpr_previous_15m_b_results_v3";
-const PREVIOUS_15M_TC_B_CACHE_KEY = "cpr_previous_15m_tc_b_results_v7";
-const PREVIOUS_15M_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_momentum_b_results_v1";
-const PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_consolidate_a_results_v7";
+const PREVIOUS_15M_TC_B_CACHE_KEY = "cpr_previous_15m_tc_b_results_v8";
+const PREVIOUS_15M_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_momentum_b_results_v2";
+const PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_consolidate_a_results_v8";
 const PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_inside_r1s1_results_v3";
 
 export interface UpexCandidate {
@@ -166,17 +166,16 @@ export function previousUpexSessionStartUtcMs(now = Date.now()): number {
 
 /**
  * MOMENTUM-A (PD15M>BC; becomes CONSOLIDATE-A when a `ceiling` is supplied): walk the previous
- * session's completed 15m candles in time order.
- *  - BC rule: the first candle with any part of its body below `bc` sets the
- *    reference wick. Its immediate next available candle may replace that
- *    reference if its wick is lower. Later candles never change the reference;
- *    fail when any part of a later candle's body is below the reference.
- *  - Ceiling rule (CONSOLIDATE-A, mirror of the BC rule): fail when a candle's
- *    WHOLE body is above `ceiling` (higher of previous PH / R1) AND the WHOLE
- *    body sits at/above the highest wick of any earlier candle (body low >=
- *    that high — a clean fresh high, same as CONSOLIDATE-B). A body above the
- *    ceiling whose open is still under an earlier candle's high does not fail. The first candle has no earlier wick, so a full body above
- *    the ceiling on it fails (same as the BC rule).
+ * session's completed 15m candles in time order using the Reference Candle Principle.
+ *  - Floor rule (BC, MOMENTUM-A and CONSOLIDATE-A): a candle whose body spans BC sets /
+ *    updates the floor reference with its lower wick. A candle whose body is wholly below
+ *    the reference (or below BC if no reference has been established yet) fails the session.
+ *    Candle 1 with a full body below BC fails immediately.
+ *  - Ceiling rule (CONSOLIDATE-A only, when `ceiling` is supplied): a candle whose body
+ *    spans the ceiling (higher of PH / R1) sets / updates the ceiling reference with its
+ *    higher wick. A candle whose body is wholly above the reference (or above ceiling if
+ *    no reference has been established yet) fails the session. Candle 1 with a full body
+ *    above ceiling fails immediately. MOMENTUM-A has no ceiling check.
  *  - R2 body rule (CONSOLIDATE-A only, when `r2` is supplied): fail when a
  *    first-crossing or new-high candle has open/close at or above R2. That
  *    session is MOMENTUM-A, not CONSOLIDATE-A.
@@ -203,53 +202,51 @@ export function passesUpexFilter(
   ).sort((a, b) => a.openTime - b.openTime);
   if (completed.length === 0) return null;
 
-  let previousHighestWick: number | null = null;
-  let lowerReference: number | null = null;
+  let refFloorLow: number | null = null;
+  let refCeilingHigh: number | null = null;
   let seenBodyInR2 = false;
   const useR2 =
     ceiling !== undefined && r2 !== undefined && Number.isFinite(r2);
 
   for (let i = 0; i < completed.length; i++) {
     const candle = completed[i];
-    const next = completed[i + 1];
+    const bodyLow = Math.min(candle.open, candle.close);
+    const bodyHigh = Math.max(candle.open, candle.close);
 
-    if (
-      ceiling !== undefined &&
-      candle.open > ceiling &&
-      candle.close > ceiling &&
-      (previousHighestWick === null ||
-        Math.min(candle.open, candle.close) >= previousHighestWick)
-    ) {
+    // Floor rule (BC) - applies to both MOMENTUM-A and CONSOLIDATE-A
+    const bodyInBc = bodyLow <= bc && bodyHigh >= bc;
+    if (bodyInBc) {
+      if (refFloorLow === null || candle.low < refFloorLow) {
+        refFloorLow = candle.low;
+      }
+    }
+    if (bodyHigh < (refFloorLow ?? bc)) {
       return false;
+    }
+
+    // Ceiling rule (R1 / PH) - applies only to CONSOLIDATE-A
+    if (ceiling !== undefined) {
+      const bodyInCeiling = bodyLow <= ceiling && bodyHigh >= ceiling;
+      if (bodyInCeiling) {
+        if (refCeilingHigh === null || (Number.isFinite(candle.high) && candle.high > refCeilingHigh)) {
+          refCeilingHigh = candle.high;
+        }
+      }
+      if (bodyLow > (refCeilingHigh ?? ceiling)) {
+        return false;
+      }
     }
 
     // CON-A → MOM-A: first body at/above R2, or new-high candle with body at/above R2
     if (useR2) {
       const bodyInR2 = candle.open >= (r2 as number) || candle.close >= (r2 as number);
       const isNewHigh =
-        previousHighestWick === null ||
-        (Number.isFinite(candle.high) && candle.high > previousHighestWick);
+        refCeilingHigh === null ||
+        (Number.isFinite(candle.high) && candle.high > refCeilingHigh);
       if (bodyInR2 && (isNewHigh || !seenBodyInR2)) {
         return false;
       }
       if (bodyInR2) seenBodyInR2 = true;
-    }
-
-    const bodyLow = Math.min(candle.open, candle.close);
-    const bodyPartBelowBc = candle.open < bc || candle.close < bc;
-    if (lowerReference === null && bodyPartBelowBc) {
-      lowerReference = candle.low;
-      if (next !== undefined && next.low < candle.low) {
-        lowerReference = next.low;
-      }
-    } else if (lowerReference !== null && bodyLow < lowerReference) {
-      return false;
-    }
-    if (Number.isFinite(candle.high)) {
-      previousHighestWick =
-        previousHighestWick === null
-          ? candle.high
-          : Math.max(previousHighestWick, candle.high);
     }
   }
 
@@ -269,11 +266,20 @@ interface PD15MBelowTCFailure {
 
 /**
  * Core walk shared by passesPD15MBelowTCFilter and explainPD15MBelowTCFailure.
- * `completed` must already be filtered and sorted by time. Its TC and floor
- * rules mirror CONSOLIDATE-A: fail on a fresh whole-body breakout above TC;
- * below the floor, establish a wick reference on the first body that enters
- * below it, allow the immediate next wick to reset that reference, then fail
- * if a later body breaks below the reference.
+ * `completed` must already be filtered and sorted by time.
+ *
+ * Reference Candle Principle:
+ * - Ceiling rule (TC, CONSOLIDATE-B and MOMENTUM-B):
+ *   A candle whose body spans TC sets / updates the ceiling reference with its
+ *   higher wick. A candle whose body is wholly above this reference (or above
+ *   TC if no reference has been established yet) fails the session.
+ *   Candle 1 with a full body above TC fails immediately.
+ * - Floor rule (lower of PL / S1, CONSOLIDATE-B ONLY):
+ *   A candle whose body spans the floor sets / updates the floor reference with
+ *   its lower wick. A candle whose body is wholly below this reference (or below
+ *   the floor if no reference has been established yet) fails the session.
+ *   Candle 1 with a full body below floor fails immediately.
+ *   MOMENTUM-B has no floor rule.
  */
 function findPD15MBelowTCFailure(
   completed: OHLC[],
@@ -281,76 +287,68 @@ function findPD15MBelowTCFailure(
   floor: number | undefined,
   s2?: number,
 ): PD15MBelowTCFailure | null {
-  let previousHighestWick: number | null = null;
-  let previousLowestWick: number | null = null;
-  let lowerReference: number | null = null;
+  let refCeilingHigh: number | null = null;
+  let refFloorLow: number | null = null;
   let seenBodyInS2 = false;
   const useS2 = s2 !== undefined && Number.isFinite(s2);
 
   for (let i = 0; i < completed.length; i++) {
     const candle = completed[i];
-    const next: OHLC | undefined = completed[i + 1];
-
-    const fullBodyAboveTc = candle.open > tc && candle.close > tc;
     const bodyLow = Math.min(candle.open, candle.close);
-    // Fresh high = the WHOLE body sits at/above the highest earlier wick (a body
-    // whose open is still under that wick is not a clean breakout).
-    if (
-      fullBodyAboveTc &&
-      (previousHighestWick === null || bodyLow >= previousHighestWick)
-    ) {
+    const bodyHigh = Math.max(candle.open, candle.close);
+
+    // Ceiling check (TC) - CON-B and MOM-B
+    const bodyInTc = bodyLow <= tc && bodyHigh >= tc;
+    if (bodyInTc) {
+      if (refCeilingHigh === null || (Number.isFinite(candle.high) && candle.high > refCeilingHigh)) {
+        refCeilingHigh = candle.high;
+      }
+    }
+    if (bodyLow > (refCeilingHigh ?? tc)) {
       return {
         rule: "freshHighAboveTC",
         candle,
-        previousHighestWick,
-        previousLowestWick,
+        previousHighestWick: refCeilingHigh,
+        previousLowestWick: refFloorLow,
       };
+    }
+
+    // Floor check (PL / S1) - Only applicable to CON-B (when floor is supplied)
+    if (floor !== undefined) {
+      const bodyInFloor = bodyLow <= floor && bodyHigh >= floor;
+      if (bodyInFloor) {
+        if (refFloorLow === null || (Number.isFinite(candle.low) && candle.low < refFloorLow)) {
+          refFloorLow = candle.low;
+        }
+      }
+      if (bodyHigh < (refFloorLow ?? floor)) {
+        return {
+          rule: "floor",
+          candle,
+          previousHighestWick: refCeilingHigh,
+          previousLowestWick: refFloorLow,
+        };
+      }
     }
 
     // CON-B → MOM-B: first body at/below S2, or new-low candle with body at/below S2
     if (useS2) {
       const bodyInS2 = candle.open <= (s2 as number) || candle.close <= (s2 as number);
       const isNewLow =
-        previousLowestWick === null ||
-        (Number.isFinite(candle.low) && candle.low < previousLowestWick);
+        refFloorLow === null ||
+        (Number.isFinite(candle.low) && candle.low < refFloorLow);
       if (bodyInS2 && (isNewLow || !seenBodyInS2)) {
         return {
           rule: "bodyInS2",
           candle,
-          previousHighestWick,
-          previousLowestWick,
+          previousHighestWick: refCeilingHigh,
+          previousLowestWick: refFloorLow,
         };
       }
       if (bodyInS2) seenBodyInS2 = true;
     }
-
-    const bodyPartBelowFloor = floor !== undefined &&
-      (candle.open < floor || candle.close < floor);
-    if (lowerReference === null && bodyPartBelowFloor) {
-      lowerReference = candle.low;
-      if (next !== undefined && next.low < candle.low) {
-        lowerReference = next.low;
-      }
-    } else if (lowerReference !== null && bodyLow < lowerReference) {
-      return {
-        rule: "floor",
-        candle,
-        previousHighestWick,
-        previousLowestWick: lowerReference,
-      };
-    }
-
-    previousHighestWick =
-      previousHighestWick === null
-        ? candle.high
-        : Math.max(previousHighestWick, candle.high);
-    if (Number.isFinite(candle.low)) {
-      previousLowestWick =
-        previousLowestWick === null
-          ? candle.low
-          : Math.min(previousLowestWick, candle.low);
-    }
   }
+
   return null;
 }
 
@@ -476,23 +474,37 @@ export function explainPD15MBelowTCPass(
   const completed = completedBelowTCCandles(candles, startTime, now);
   if (completed.length === 0) return null;
   const numberOf = (c: OHLC) => Math.floor((c.openTime - startTime) / CANDLE_INTERVAL_MS) + 1;
-  let prevHigh: number | null = null;
+  let refCeilingHigh: number | null = null;
   let lowestLow: number | null = null;
   const excused: number[] = [];
   let floorRefCandle: number | null = null;
   let floorRef: number | null = null;
+  let highestHigh: number | null = null;
   for (let i = 0; i < completed.length; i++) {
     const c = completed[i];
     const bodyLow = Math.min(c.open, c.close);
-    if (c.open > tc && c.close > tc && prevHigh !== null && bodyLow < prevHigh) {
+    const bodyHigh = Math.max(c.open, c.close);
+
+    const bodyInTc = bodyLow <= tc && bodyHigh >= tc;
+    if (bodyInTc) {
+      if (refCeilingHigh === null || (Number.isFinite(c.high) && c.high > refCeilingHigh)) {
+        refCeilingHigh = c.high;
+      }
+    } else if (bodyLow > tc && refCeilingHigh !== null && bodyLow <= refCeilingHigh) {
       excused.push(numberOf(c));
     }
-    if (floorRefCandle === null && floor !== undefined && bodyLow < floor) {
-      floorRefCandle = numberOf(c);
-      const next = completed[i + 1];
-      floorRef = next !== undefined && next.low < c.low ? next.low : c.low;
+
+    if (floor !== undefined) {
+      const bodyInFloor = bodyLow <= floor && bodyHigh >= floor;
+      if (bodyInFloor) {
+        if (floorRef === null || (Number.isFinite(c.low) && c.low < floorRef)) {
+          floorRef = c.low;
+          floorRefCandle = numberOf(c);
+        }
+      }
     }
-    prevHigh = prevHigh === null ? c.high : Math.max(prevHigh, c.high);
+
+    highestHigh = highestHigh === null ? c.high : Math.max(highestHigh, c.high);
     lowestLow = lowestLow === null ? c.low : Math.min(lowestLow, c.low);
   }
   return {
@@ -502,7 +514,7 @@ export function explainPD15MBelowTCPass(
     floorRef,
     floor,
     tc,
-    highestHigh: prevHigh,
+    highestHigh: highestHigh ?? refCeilingHigh,
     lowestLow,
   };
 }
@@ -1243,7 +1255,7 @@ export function getPD15MBelowTCPassNote(
   parts.push(
     info.excusedAboveTc.length === 0
       ? `no body fully above ${tcName} ${info.tc}`
-      : `bodies above ${tcName} ${info.tc} only at #${info.excusedAboveTc.join(", #")} (all opened under an earlier wick high)`,
+      : `bodies above ${tcName} ${info.tc} only at #${info.excusedAboveTc.join(", #")} (stayed within TC reference wick high)`,
   );
   if (info.floor !== undefined) {
     parts.push(

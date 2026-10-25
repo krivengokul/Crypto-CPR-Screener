@@ -231,7 +231,7 @@ test("15M-A uses the 05:30 IST day boundary and ignores candles outside complete
 
   assert.equal(
     passesUpexFilter([candle(start + 15 * 60_000, 99, 99.5)], 100, start, now),
-    true
+    false
   );
   assert.equal(
     passesUpexFilter([candle(start + 30 * 60_000, 99, 101)], 100, start, now),
@@ -240,7 +240,7 @@ test("15M-A uses the 05:30 IST day boundary and ignores candles outside complete
   assert.equal(
     passesUpexFilter(
       [
-        { ...candle(start, 101, 102), low: 95 },
+        { ...candle(start, 99, 101), low: 95 },
         { ...candle(start + 15 * 60_000, 99, 98), low: 96 },
       ],
       100,
@@ -252,7 +252,7 @@ test("15M-A uses the 05:30 IST day boundary and ignores candles outside complete
   assert.equal(
     passesUpexFilter(
       [
-        { ...candle(start, 101, 102), low: 99 },
+        { ...candle(start, 99, 101), low: 97 },
         { ...candle(start + 15 * 60_000, 99, 98), low: 97 },
       ],
       100,
@@ -300,7 +300,7 @@ test("PD15M>BC checks the previous IST session and passes candles that are not f
 
   assert.equal(
     passesUpexFilter([candle(start, 99, 99.5)], 100, start, end),
-    true
+    false
   );
   assert.equal(
     passesUpexFilter([candle(start + 15 * 60_000, 99, 100)], 100, start, end),
@@ -313,7 +313,7 @@ test("PD15M>BC checks the previous IST session and passes candles that are not f
   assert.equal(
     passesUpexFilter(
       [
-        { ...candle(start, 101, 102), low: 95 },
+        { ...candle(start, 99, 101), low: 95 },
         { ...candle(start + 15 * 60_000, 99, 98), low: 96 },
       ],
       100,
@@ -325,7 +325,7 @@ test("PD15M>BC checks the previous IST session and passes candles that are not f
   assert.equal(
     passesUpexFilter(
       [
-        { ...candle(start, 101, 102), low: 99 },
+        { ...candle(start, 99, 101), low: 97 },
         { ...candle(start + 15 * 60_000, 99, 98), low: 97 },
       ],
       100,
@@ -337,7 +337,7 @@ test("PD15M>BC checks the previous IST session and passes candles that are not f
   assert.equal(
     passesUpexFilter(
       [
-        { ...candle(start, 101, 102), low: 99 },
+        { ...candle(start, 99, 101), low: 97 },
         { ...candle(start + 15 * 60_000, 99, 98), low: 97 },
         { ...candle(start + 30 * 60_000, 96, 95), low: 94 },
         { ...candle(start + 45 * 60_000, 93, 92), low: 91 },
@@ -476,20 +476,19 @@ test("CONSOLIDATE-B floor mirrors the P-CONSOLIDATE-A wick reference rule", () =
   const tc = 100;
   const floor = 90;
 
-  // The first body entering below the floor establishes a wick reference.
-  // Without a later body breaking that reference, the session passes.
-  assert.equal(passesPD15MBelowTCFilter([candle(start, 89, 88)], tc, start, now, floor), true);
+  // First body completely below floor fails immediately (gap on Candle 1).
+  assert.equal(passesPD15MBelowTCFilter([candle(start, 89, 88)], tc, start, now, floor), false);
   // A body ending exactly at the floor does not establish a lower reference.
   assert.equal(passesPD15MBelowTCFilter([candle(start, 91, 90)], tc, start, now, floor), true);
   assert.equal(passesPD15MBelowTCFilter([candle(start, 90, 90)], tc, start, now, floor), true);
   const m = 15 * 60_000;
-  // The next candle may lower the first candle's low-wick reference; a later
+  // A subsequent candle whose body is in the floor may lower the reference; a later
   // body below that reference fails.
   assert.equal(
     passesPD15MBelowTCFilter(
       [
         { ...candle(start, 91, 89), low: 80 },
-        { ...candle(start + m, 89, 88), low: 75 },
+        { ...candle(start + m, 90.5, 89.5), low: 75 },
         candle(start + 2 * m, 88, 86),
       ],
       tc, start, now, floor,
@@ -500,8 +499,8 @@ test("CONSOLIDATE-B floor mirrors the P-CONSOLIDATE-A wick reference rule", () =
     passesPD15MBelowTCFilter(
       [
         { ...candle(start, 91, 89), low: 80 },
-        { ...candle(start + m, 89, 88), low: 75 },
-        candle(start + 2 * m, 74, 76),
+        { ...candle(start + m, 90.5, 89.5), low: 75 },
+        candle(start + 2 * m, 73, 74),
       ],
       tc, start, now, floor,
     ),
@@ -631,46 +630,27 @@ test("passesUpexFilter with ceiling fails when a candle body is above ceiling", 
     true
   );
 
-  // Wick condition (mirror of the BC rule): a body above the ceiling only fails
-  // when it is also higher than the highest wick of every earlier candle.
   const m = 15 * 60_000;
-  // Earlier candle wicked up to 125; later body (112/114) is above the ceiling
-  // but under that earlier high -> not a fresh high -> passes.
+  // Reference candle with body in ceiling (110) wicked up to 125; later body (112/114) is above the ceiling
+  // but under that reference high -> passes.
   assert.equal(
     passesUpexFilter(
-      [{ ...makeCandle(start, 105, 106), high: 125 }, makeCandle(start + m, 112, 114)],
+      [{ ...makeCandle(start, 108, 112), high: 125 }, makeCandle(start + m, 112, 114)],
       bc, start, now, ceiling,
     ),
     true
   );
-  // Later body (126/128) is above the earlier high of 125 -> fresh high -> fails.
+  // Later body (126/128) is above the reference high of 125 -> fails.
   assert.equal(
     passesUpexFilter(
-      [{ ...makeCandle(start, 105, 106), high: 125 }, makeCandle(start + m, 126, 128)],
-      bc, start, now, ceiling,
-    ),
-    false
-  );
-  // Whole-body rule (same as CONSOLIDATE-B): earlier wick high 125; a later body
-  // 124/128 tops the wick but OPENS under it -> not a clean fresh high -> passes.
-  assert.equal(
-    passesUpexFilter(
-      [{ ...makeCandle(start, 105, 106), high: 125 }, makeCandle(start + m, 124, 128)],
-      bc, start, now, ceiling,
-    ),
-    true
-  );
-  // Body 125/128 starts exactly at the earlier high -> fresh high -> fails.
-  assert.equal(
-    passesUpexFilter(
-      [{ ...makeCandle(start, 105, 106), high: 125 }, makeCandle(start + m, 125, 128)],
+      [{ ...makeCandle(start, 108, 112), high: 125 }, makeCandle(start + m, 126, 128)],
       bc, start, now, ceiling,
     ),
     false
   );
 });
 
-test("MOMENTUM-A and CONSOLIDATE-A use one immediate lower-wick reference", () => {
+test("MOMENTUM-A and CONSOLIDATE-A use reference candle principle for BC floor", () => {
   const start = Date.parse("2026-10-06T00:00:00.000Z");
   const now = Date.parse("2026-10-06T06:00:00.000Z");
   const m = 15 * 60_000;
@@ -683,60 +663,22 @@ test("MOMENTUM-A and CONSOLIDATE-A use one immediate lower-wick reference", () =
     low: number,
     close: number
   ): OHLC => ({ openTime: start + i * m, open, high, low, close, volume: 1 });
-  const beforeBreak = c(0, 101, 103, 95, 102);
-  const breaksBelowBc = c(1, 94, 96, 92, 93);
-  const immediateLowerWick = c(2, 94, 96, 90, 93);
-  const staysAboveReference = c(3, 91, 94, 90.5, 92);
-  const breaksReference = c(4, 89, 91, 88, 90);
+  const c0 = c(0, 101, 103, 98, 102);           // body above BC
+  const c1 = c(1, 99, 102, 92, 101);            // body in BC, sets reference low = 92
+  const c2 = c(2, 99.5, 101, 90, 100.5);        // body in BC, low 90 < 92 -> new reference low = 90
+  const c3 = c(3, 98, 99.5, 89.5, 99);          // body below BC, body high 99 >= 90 -> passes
+  const c4 = c(4, 88, 89.5, 87, 89);            // body below reference low 90 -> fails
 
-  assert.equal(
-    passesUpexFilter(
-      [beforeBreak, breaksBelowBc, immediateLowerWick, staysAboveReference],
-      bc, start, now, ceiling,
-    ),
-    true,
-  );
-  assert.equal(
-    passesUpexFilter(
-      [beforeBreak, breaksBelowBc, immediateLowerWick, staysAboveReference, breaksReference],
-      bc, start, now, ceiling,
-    ),
-    false,
-  );
-  // MOMENTUM-A uses the same immediate-next-candle confirmation.
-  assert.equal(
-    passesUpexFilter(
-      [beforeBreak, breaksBelowBc, immediateLowerWick, staysAboveReference],
-      bc, start, now,
-    ),
-    true,
-  );
-  assert.equal(
-    passesUpexFilter(
-      [beforeBreak, breaksBelowBc, immediateLowerWick, staysAboveReference, breaksReference],
-      bc, start, now,
-    ),
-    false,
-  );
-  // Without a lower wick on the immediate next candle, the BC-break candle
-  // remains the reference for all later body checks.
-  assert.equal(
-    passesUpexFilter(
-      [beforeBreak, breaksBelowBc, c(2, 94, 96, 92, 93)],
-      bc, start, now,
-    ),
-    true,
-  );
-  assert.equal(
-    passesUpexFilter(
-      [beforeBreak, breaksBelowBc, c(2, 94, 96, 92, 93), c(3, 91, 93, 89, 90)],
-      bc, start, now,
-    ),
-    false,
-  );
+  assert.equal(passesUpexFilter([c0, c1, c2, c3], bc, start, now, ceiling), true);
+  assert.equal(passesUpexFilter([c0, c1, c2, c3, c4], bc, start, now, ceiling), false);
+  // MOMENTUM-A uses the same BC floor reference candle check.
+  assert.equal(passesUpexFilter([c0, c1, c2, c3], bc, start, now), true);
+  assert.equal(passesUpexFilter([c0, c1, c2, c3, c4], bc, start, now), false);
+  // Candle 1 gap below BC fails immediately.
+  assert.equal(passesUpexFilter([c(0, 98, 99, 97, 98.5)], bc, start, now), false);
 });
 
-test("CONSOLIDATE-A freezes the reference after one immediate-next-available-candle confirmation", () => {
+test("CONSOLIDATE-A ceiling check uses reference candle principle (PH / R1)", () => {
   const start = Date.parse("2026-10-07T00:00:00.000Z");
   const now = start + 8 * 15 * 60_000;
   const m = 15 * 60_000;
@@ -747,48 +689,20 @@ test("CONSOLIDATE-A freezes the reference after one immediate-next-available-can
     low: number,
     close: number,
   ): OHLC => ({ openTime: start + i * m, open, high, low, close, volume: 1 });
-  const candles = [
-    c(0, 101, 105, 100, 102),
-    c(1, 101, 102, 96, 99),     // part of body below BC; reference low is 96
-    c(2, 99, 101, 94, 100),     // next available lower wick; new reference is 94
-    c(3, 97, 98, 92, 96),       // later wick below reference does not reset it
-    c(4, 93.5, 96, 92, 95),     // part of body below reference: fails
-  ];
+  const ceiling = 120;
+  const bc = 100;
+  const c0 = c(0, 105, 108, 104, 106);          // body between BC and ceiling
+  const c1 = c(1, 118, 122, 117, 121);          // body in ceiling (120), sets ref high = 122
+  const c2 = c(2, 119, 125, 118, 121);          // body in ceiling, high 125 > 122 -> new ref high = 125
+  const c3 = c(3, 121, 126, 120.5, 124);        // body above ceiling, but body low 121 <= 125 -> passes
+  const c4 = c(4, 126, 128, 125.5, 127);        // body above ref high 125 -> fails CON-A
 
-  assert.equal(passesUpexFilter(candles.slice(0, 4), 100, start, now, 120), true);
-  assert.equal(passesUpexFilter(candles, 100, start, now, 120), false);
-  // "Next" means the next available candle, even if the feed has a time gap.
-  assert.equal(
-    passesUpexFilter(
-      [
-        candles[0],
-        candles[1],
-        { ...candles[2], openTime: start + 4 * m },
-        { ...c(3, 95, 97, 92, 96), openTime: start + 5 * m },
-      ],
-      100,
-      start,
-      now,
-      120,
-    ),
-    true,
-  );
-  // Either body endpoint below BC establishes the initial reference.
-  assert.equal(
-    passesUpexFilter(
-      [
-        candles[0],
-        c(1, 101, 103, 90, 99.5),
-        c(2, 99, 100, 95, 99),
-        c(3, 101, 103, 88, 89.5),
-      ],
-      100,
-      start,
-      now,
-      120,
-    ),
-    false,
-  );
+  assert.equal(passesUpexFilter([c0, c1, c2, c3], bc, start, now, ceiling), true);
+  assert.equal(passesUpexFilter([c0, c1, c2, c3, c4], bc, start, now, ceiling), false);
+  // MOMENTUM-A has NO ceiling check, so c4 passes MOM-A.
+  assert.equal(passesUpexFilter([c0, c1, c2, c3, c4], bc, start, now), true);
+  // Candle 1 gap above ceiling fails CON-A immediately.
+  assert.equal(passesUpexFilter([c(0, 121, 123, 120.5, 122)], bc, start, now, ceiling), false);
 });
 
 test("PD-15M-Below-BC floor is the lower of previous PL and S1", () => {
@@ -931,7 +845,7 @@ test("PD15M>BC and P-15M-B share a previous-session candle request", async () =>
       findPreviousUpexSymbols([candidate], undefined, now),
       findPD15MBelowSymbols([candidate], undefined, now),
     ]);
-    assert.equal(above.outcomes.get("binance:P15MSHAREDUSDT"), true);
+    assert.equal(above.outcomes.get("binance:P15MSHAREDUSDT"), false);
     assert.equal(below.outcomes.get("binance:P15MSHAREDUSDT"), true);
     assert.equal(fetchCount, 1);
   } finally {
@@ -958,7 +872,7 @@ test("previous-session API failures are not cached and can be retried", async ()
     const first = await findPreviousUpexSymbols([candidate], undefined, now);
     const second = await findPreviousUpexSymbols([candidate], undefined, now);
     assert.equal(first.outcomes.get("binance:P15MRETRYUSDT"), null);
-    assert.equal(second.outcomes.get("binance:P15MRETRYUSDT"), true);
+    assert.equal(second.outcomes.get("binance:P15MRETRYUSDT"), false);
     assert.equal(fetchCount, 2);
   } finally {
     globalThis.fetch = originalFetch;
@@ -1127,7 +1041,7 @@ test("CONSOLIDATE-B top check uses PPDay TC when PDay overlaps below or is insid
   assert.equal(getConsolidateBTc({ tc: 105, bc: 95 }, undefined), 105);
 });
 
-test("CONSOLIDATE-B upper TC check mirrors the P-CONSOLIDATE-A ceiling rule", () => {
+test("CONSOLIDATE-B and MOMENTUM-B reference candle principle: upper side (TC rule)", () => {
   const start = Date.parse("2026-10-02T00:00:00.000Z");
   const now = Date.parse("2026-10-03T00:00:00.000Z");
   const m = 15 * 60_000;
@@ -1136,34 +1050,62 @@ test("CONSOLIDATE-B upper TC check mirrors the P-CONSOLIDATE-A ceiling rule", ()
   });
   const tc = 100;
   const floor = 80;
-  const c1 = c(0, 101, 103, 100, 102);       // first body above TC -> fails
-  const c2 = c(1, 97, 105, 96, 98);          // body below TC, wick sets high reference
-  const c3 = c(2, 101, 104, 100, 102);       // body above TC but under prior wick -> passes
-  const c4 = c(3, 105, 107, 104, 106);       // fresh body high above TC -> fails
+  const c1 = c(0, 101, 103, 100.5, 102);     // first body above TC -> fails immediately
+  const c2 = c(1, 99, 105, 98, 101);         // body in TC, sets reference high = 105
+  const c3 = c(2, 101, 104, 100.5, 102);     // body above TC but <= ref high 105 -> passes
+  const c4 = c(3, 105.5, 107, 105.2, 106.5); // body above ref high 105 -> fails
 
   assert.equal(passesPD15MBelowTCFilter([c1], tc, start, now, floor), false);
   assert.equal(passesPD15MBelowTCFilter([c2, c3], tc, start, now, floor), true);
   assert.equal(passesPD15MBelowTCFilter([c2, c3, c4], tc, start, now, floor), false);
   // MOMENTUM-B (no floor) uses the same upper check.
   assert.equal(passesPD15MBelowTCFilter([c1], tc, start, now), false);
+  assert.equal(passesPD15MBelowTCFilter([c2, c3], tc, start, now), true);
+  assert.equal(passesPD15MBelowTCFilter([c2, c3, c4], tc, start, now), false);
 });
 
-test("CONSOLIDATE-B fresh high needs the WHOLE body at/above the earlier highest wick", () => {
-  const start = Date.parse("2026-10-02T00:00:00.000Z");
-  const now = Date.parse("2026-10-03T00:00:00.000Z");
+test("BABY trending day setup: CON-B and MOM-B fail when price trends above TC reference high", () => {
+  const start = Date.parse("2026-10-24T00:00:00.000Z");
+  const now = Date.parse("2026-10-25T00:00:00.000Z");
   const m = 15 * 60_000;
   const c = (i: number, open: number, high: number, low: number, close: number): OHLC => ({
     openTime: start + i * m, open, high, low, close, volume: 1,
   });
-  const tc = 0.4773;
-  const c1 = c(0, 0.4770, 0.4785, 0.4765, 0.4771); // body under TC, wick high 0.4785
-  const c3 = c(1, 0.4784, 0.4795, 0.4780, 0.4792); // body above TC, open under prior wick -> not a fresh high
-  const c4 = c(2, 0.4796, 0.4800, 0.4795, 0.4799); // whole body above every earlier wick -> fails
-  assert.equal(passesPD15MBelowTCFilter([c1, c3], tc, start, now), true);
-  assert.equal(passesPD15MBelowTCFilter([c1, c3, c4], tc, start, now), false);
+  const tc = 0.013255;
+  const floor = 0.012000;
+
+  // Candle 1 starts around/below CPR
+  const c1 = c(0, 0.013100, 0.013200, 0.013050, 0.013180);
+  // Candle 2: body in TC -> initial reference
+  const c2 = c(1, 0.013200, 0.013300, 0.013150, 0.013260);
+  // Candle 3: body in TC, higher high -> updates reference high to 0.013400
+  const c3 = c(2, 0.013250, 0.013400, 0.013210, 0.013280);
+  // Candle 4: body in TC, higher high -> updates reference high to 0.013500
+  const c4 = c(3, 0.013240, 0.013500, 0.013220, 0.013290);
+  // Candle 5: body entirely above TC, body low 0.013320 <= ref high 0.013500 -> cannot be ref, passes
+  const c5 = c(4, 0.013320, 0.013480, 0.013300, 0.013450);
+  // Candle 6: body entirely above ref high 0.013500 -> CON-B and MOM-B fail!
+  const c6 = c(5, 0.013520, 0.013700, 0.013480, 0.013650);
+
+  // Candles 1-5 pass
+  assert.equal(passesPD15MBelowTCFilter([c1, c2, c3, c4, c5], tc, start, now, floor), true);
+  assert.equal(passesPD15MBelowTCFilter([c1, c2, c3, c4, c5], tc, start, now), true);
+
+  // Candle 6 fails both CON-B and MOM-B
+  assert.equal(passesPD15MBelowTCFilter([c1, c2, c3, c4, c5, c6], tc, start, now, floor), false);
+  assert.equal(passesPD15MBelowTCFilter([c1, c2, c3, c4, c5, c6], tc, start, now), false);
+
+  // Even with 20 continuous climbing candles where each opens below prior high, it remains failed
+  const trendingCandles = [c1, c2, c3, c4, c5, c6];
+  for (let i = 6; i < 26; i++) {
+    const prev = trendingCandles[i - 1];
+    trendingCandles.push(c(i, prev.close, prev.high + 0.0001, prev.close - 0.00005, prev.close + 0.00008));
+  }
+  assert.equal(passesPD15MBelowTCFilter(trendingCandles, tc, start, now, floor), false);
+  assert.equal(passesPD15MBelowTCFilter(trendingCandles, tc, start, now), false);
 });
 
-test("CONSOLIDATE-B floor check mirrors the P-CONSOLIDATE-A lower wick rule", () => {
+test("CONSOLIDATE-B reference candle principle: lower side (floor rule)", () => {
   const start = Date.parse("2026-10-02T00:00:00.000Z");
   const now = Date.parse("2026-10-03T00:00:00.000Z");
   const m = 15 * 60_000;
@@ -1173,13 +1115,17 @@ test("CONSOLIDATE-B floor check mirrors the P-CONSOLIDATE-A lower wick rule", ()
   const tc = 120;
   const floor = 90;
   const c1 = c(0, 94, 95, 92, 93);          // above floor
-  const c2 = c(1, 89, 90, 87, 88);          // body enters below; low 87 is reference
-  const c3 = c(2, 88, 89, 85, 86);          // next low 85 resets reference
-  const c4 = c(3, 87, 87.5, 85.5, 86.5);    // body low 86 stays above reference
-  const c5 = c(4, 83, 83.5, 81, 82);        // body low 82 breaks reference -> fails
+  const c2 = c(1, 89, 91, 87, 90.5);        // body in floor -> sets ref low 87
+  const c3 = c(2, 89.5, 91, 85, 90.2);      // body in floor -> low 85 < 87 -> new ref low 85
+  const c4 = c(3, 86, 88.5, 85.5, 87);      // body below floor, cannot be ref, body high 87 >= 85 -> fine
+  const c5 = c(4, 82, 84.5, 81, 83);        // body below ref low 85 -> fails CON-B
 
   assert.equal(passesPD15MBelowTCFilter([c1, c2, c3, c4], tc, start, now, floor), true);
   assert.equal(passesPD15MBelowTCFilter([c1, c2, c3, c4, c5], tc, start, now, floor), false);
+  // MOMENTUM-B has NO floor check, so it passes even when dropping below floor.
+  assert.equal(passesPD15MBelowTCFilter([c1, c2, c3, c4, c5], tc, start, now), true);
+  // Candle 1 gap below floor fails CON-B immediately.
+  assert.equal(passesPD15MBelowTCFilter([c(0, 88, 89, 87, 88.5)], tc, start, now, floor), false);
 });
 
 test("pruneLegacy15MResultCaches removes only superseded cache versions", () => {
@@ -1188,21 +1134,27 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     cpr_previous_15m_tc_b_results_v1: "x",
     cpr_previous_15m_tc_b_results_v4: "x",
     cpr_previous_15m_tc_b_results_v5: "x",
-    cpr_previous_15m_tc_b_results_v6: "keep",
+    cpr_previous_15m_tc_b_results_v6: "x",
+    cpr_previous_15m_tc_b_results_v7: "x",
+    cpr_previous_15m_tc_b_results_v8: "keep",
     cpr_previous_15m_b_results_v1: "x",
     cpr_previous_15m_b_results_v3: "keep",
     cpr_previous_upex_results_v1: "x",
     cpr_previous_upex_results_v2: "x",
     cpr_previous_upex_results_v3: "x",
     cpr_previous_upex_results_v4: "x",
-    cpr_previous_upex_results_v5: "keep",
+    cpr_previous_upex_results_v5: "x",
+    cpr_previous_upex_results_v6: "keep",
     cpr_previous_15m_consolidate_a_results_v1: "x",
     cpr_previous_15m_consolidate_a_results_v2: "x",
     cpr_previous_15m_consolidate_a_results_v3: "x",
     cpr_previous_15m_consolidate_a_results_v4: "x",
     cpr_previous_15m_consolidate_a_results_v5: "x",
-    cpr_previous_15m_consolidate_a_results_v6: "keep",
-    cpr_previous_15m_momentum_b_results_v1: "keep",
+    cpr_previous_15m_consolidate_a_results_v6: "x",
+    cpr_previous_15m_consolidate_a_results_v7: "x",
+    cpr_previous_15m_consolidate_a_results_v8: "keep",
+    cpr_previous_15m_momentum_b_results_v1: "x",
+    cpr_previous_15m_momentum_b_results_v2: "keep",
     "cpr_symbols_2026-10-09": "unrelated",
   };
   Object.defineProperty(globalThis, "localStorage", {
@@ -1213,13 +1165,13 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     }),
   });
   try {
-    assert.equal(pruneLegacy15MResultCaches(), 13);
+    assert.equal(pruneLegacy15MResultCaches(), 19);
     assert.deepEqual(Object.keys(store).sort(), [
       "cpr_previous_15m_b_results_v3",
-      "cpr_previous_15m_consolidate_a_results_v6",
-      "cpr_previous_15m_momentum_b_results_v1",
-      "cpr_previous_15m_tc_b_results_v6",
-      "cpr_previous_upex_results_v5",
+      "cpr_previous_15m_consolidate_a_results_v8",
+      "cpr_previous_15m_momentum_b_results_v2",
+      "cpr_previous_15m_tc_b_results_v8",
+      "cpr_previous_upex_results_v6",
       "cpr_symbols_2026-10-09",
     ]);
     // Running again is a no-op.
