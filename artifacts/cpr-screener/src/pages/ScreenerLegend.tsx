@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { Views } from "@/lib/ViewsSidebar";
 import { getView, shortLevelLabel } from "@/lib/views";
 import { buildBacktestOptions } from "@/lib/backtest";
 import {
@@ -14,7 +13,6 @@ import {
   ArrowUp,
   Camera,
   Crosshair,
-  Flag,
   Hash,
   Shield,
   Tag,
@@ -42,7 +40,7 @@ export interface ScreenerLegendProps {
   showInsideCPRTiCOLo?: boolean;
   /**
    * When an entry-cross toast focuses a row, Card 2 shows SignalCode +
-   * PDay + MATCH. All prior Card 2 pattern copy is removed.
+   * PDay + MATCH. Card 1 shows the View name and its chart-link cameras.
    */
   focusToast?: ScreenerLegendFocusToast | null;
 }
@@ -137,11 +135,14 @@ function HistoricalChartCameras({
   source,
   // ~1 trading month of snapshots (was 3 — older View attachments never appeared)
   limit = 40,
+  emptyText,
 }: {
   viewKey?: string;
   symbol?: string;
   source?: string;
   limit?: number;
+  /** Shown instead of nothing when the View has no saved chart links. */
+  emptyText?: string;
 }) {
   // Seed from local cache immediately (Backtest saves here); refresh from Firestore.
   const [records, setRecords] = useState<StoredChartLinkRecord[]>(() =>
@@ -178,7 +179,10 @@ function HistoricalChartCameras({
     [records, viewKey, aliases, symbol, source, limit],
   );
 
-  if (!viewKey || links.length === 0) return null;
+  if (!viewKey) return null;
+  if (links.length === 0) {
+    return emptyText ? <div className="text-[11px] text-muted-foreground">{emptyText}</div> : null;
+  }
 
   return (
     <div className="flex flex-wrap items-center gap-1 min-w-0">
@@ -218,6 +222,41 @@ function HistoricalCameraBadge({ link }: { link: HistoricalChartLink }) {
   );
 }
 
+
+/**
+ * Card 1 (left) — View name on the first row, then every saved chart-link
+ * camera for that View from the second row on (wraps onto further rows).
+ * Replaces the old category-overview copy; the cameras used to sit next to
+ * MATCH in Card 2.
+ */
+function ViewCamerasCard({ viewKey }: { viewKey: string }) {
+  if (!viewKey) {
+    return <div className="text-[11px] text-muted-foreground">Select a category or View</div>;
+  }
+  const view = getView(viewKey);
+  const name = view?.label || viewKey;
+  const nameColor =
+    view?.direction === "Up"
+      ? "text-emerald-400"
+      : view?.direction === "Down"
+        ? "text-rose-400"
+        : "text-slate-200";
+  return (
+    <div className="space-y-1.5 min-w-0">
+      <div className={`text-xs font-bold leading-tight truncate ${nameColor}`} title={name}>
+        {name}
+      </div>
+      {/* Capped height so many cameras scroll inside the card instead of stretching the legend row. */}
+      <div className="max-h-[7.5rem] overflow-y-auto pr-0.5">
+        <HistoricalChartCameras
+          viewKey={viewKey}
+          limit={40}
+          emptyText="No chart snapshots saved for this View yet."
+        />
+      </div>
+    </div>
+  );
+}
 
 /**
  * Card 3 — when a View (or any left-nav leaf) is selected, replace the old
@@ -367,12 +406,9 @@ function FocusToastCard({ focusToast }: { focusToast?: ScreenerLegendFocusToast 
           {focusToast.pDayText}
         </span>
       </div>
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0">
-        <div className="text-xs font-semibold font-mono leading-tight">
-          <span className="text-muted-foreground">MATCH:</span>
-          <span className="text-sky-300">{focusToast.matchText}</span>
-        </div>
-        <HistoricalChartCameras viewKey={viewKey} limit={40} />
+      <div className="text-xs font-semibold font-mono leading-tight">
+        <span className="text-muted-foreground">MATCH:</span>
+        <span className="text-sky-300">{focusToast.matchText}</span>
       </div>
     </div>
   );
@@ -380,99 +416,23 @@ function FocusToastCard({ focusToast }: { focusToast?: ScreenerLegendFocusToast 
 
 /**
  * The 3-card legend grid shown above the controls row.
- * Card 1: category / pattern overview (unchanged).
+ * Card 1: View name, then the View's chart-link cameras (second row onward).
  * Card 2: toast-focused row SignalCode + PDay + MATCH (no legacy pattern text).
  * Card 3: selected View trade sheet (name, code, direction, entry/target/stop).
  */
 export default function ScreenerLegend(props: ScreenerLegendProps) {
   const { focusToast } = props;
-  // When no View is selected in the left nav (Show All), fall back to the
-  // focused row's View code so Cards 1 and 3 can still fill in from the registry.
+  // The toast-focused row's View wins; otherwise the left-nav selection.
+  // Cards 1 and 3 both fill in from this same View.
   const focusedViewCode =
     focusToast?.signalCode && focusToast.signalCode !== "—" ? focusToast.signalCode : "";
-  const activeSignal = props.activeSignal || focusedViewCode;
-
-  // Prefer a direct Views parent match; if activeSignal is a leaf View, walk
-  // back to its parent category id (e.g. "overlapping-lower"), so Legend Card 1
-  // still shows the parent's overview card instead of going blank when a
-  // specific View is selected.
-  function getLegendParentPattern(patternId: string): string {
-    for (const [parentId, children] of Object.entries(Views)) {
-      if (children.some((c) => c.id === patternId)) return parentId;
-    }
-    return patternId;
-  }
-  const legendPattern = getLegendParentPattern(activeSignal);
+  const shownView = focusedViewCode || props.activeSignal;
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3">
+      {/* Card 1: View name (row 1) + chart-link cameras (row 2 onward) */}
       <div className="rounded-lg border border-border bg-card p-3">
-        {/* Card 1 — category overview. Keyed on activeSignal's parent category.
-            The old "ADK CPR Formula" fallback for unmatched patterns has been
-            removed entirely — unmatched patterns now render empty until the
-            left nav (pivotcategories array in ViewsSidebar.tsx). */}
-        {legendPattern === "overlapping-lower" ? (
-          <>
-            <div className="text-xs font-semibold text-primary mb-1">Overlapping Lower</div>
-            <div className="text-xs text-muted-foreground">Today CPR overlaps below prev CPR</div>
-          </>
-        ) : legendPattern === "levelsabove" ? (
-          <>
-            <div className="text-xs font-semibold text-green-400 mb-1">Levels Above</div>
-            <div className="text-xs text-muted-foreground">Price structure leaning higher vs prior session</div>
-          </>
-        ) : legendPattern === "levelsbelow" ? (
-          <>
-            <div className="text-xs font-semibold text-rose-400 mb-1">Levels Below</div>
-            <div className="text-xs text-muted-foreground">Price structure leaning lower vs prior session</div>
-          </>
-        ) : legendPattern === "compressed" ? (
-          <>
-            <div className="text-xs font-semibold text-amber-400 mb-1">Compressed CPR</div>
-            <div className="text-xs text-muted-foreground">Narrow CPR — breakout potential</div>
-          </>
-        ) : legendPattern === "expanded" ? (
-          <>
-            <div className="text-xs font-semibold text-cyan-400 mb-1">Expanded CPR</div>
-            <div className="text-xs text-muted-foreground">Wide CPR — range / mean-reversion bias</div>
-          </>
-        ) : legendPattern === "inside-cpr" ? (
-          <>
-            <div className="text-xs font-semibold text-accent mb-1">Inside CPR</div>
-            <div className="text-xs text-muted-foreground">Today CPR fully inside previous CPR</div>
-          </>
-        ) : legendPattern === "equal-cpr" ? (
-          <>
-            <div className="text-xs font-semibold text-primary mb-1">Equal CPR</div>
-            <div className="text-xs text-muted-foreground">Today CPR width matches previous</div>
-          </>
-        ) : legendPattern === "R1AbovePR4" ? (
-          <>
-            <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-              <span className="text-xs font-semibold text-primary">ABOVE LEVEL4</span>
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500 text-white">Above L4</span>
-            </div>
-            <div className="text-xs text-muted-foreground">Today&apos;s R1 above prev day&apos;s R4</div>
-          </>
-        ) : legendPattern === "BPS4" || legendPattern === "S1BelowPS4" ? (
-          <>
-            <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-              <span className="text-xs font-semibold text-primary">BELOW LEVEL4</span>
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-destructive text-white">Below L4</span>
-            </div>
-            <div className="text-xs text-muted-foreground">Today&apos;s S1 below prev day&apos;s S4</div>
-          </>
-        ) : activeSignal ? (
-          <>
-            <div className="flex items-center gap-1 mb-1">
-              <Flag className="w-3 h-3 text-primary shrink-0" aria-hidden />
-              <span className="text-xs font-semibold text-primary truncate">{activeSignal}</span>
-            </div>
-            <div className="text-xs text-muted-foreground">Selected pattern / View</div>
-          </>
-        ) : (
-          <div className="text-[11px] text-muted-foreground">Select a category or View</div>
-        )}
+        <ViewCamerasCard viewKey={shownView} />
       </div>
 
       {/* Card 2: toast-focused row — PDay + MATCH only */}
@@ -483,7 +443,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
       {/* Card 3: selected View — name, code, direction, entry / target / stop */}
       <div className="rounded-lg border border-border bg-card p-3">
         <SelectedViewTradeCard
-          activeSignal={focusedViewCode || props.activeSignal}
+          activeSignal={shownView}
           symbol={focusToast?.symbol}
         />
       </div>
