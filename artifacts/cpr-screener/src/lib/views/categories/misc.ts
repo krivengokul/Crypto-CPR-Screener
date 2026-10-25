@@ -68,18 +68,6 @@ export const MISC_VIEWS: ViewDef[] = [
   { key: "top15losers", label: "TOP 15 LOSERS", kind: "category", condition: () => true,
       order: 1
 },
-  { key: "Price-AbovePDH", label: "Price-AbovePDH", kind: "view", condition: (r) => r.currentPrice > r.todayCPR.prevHigh },
-  { key: "Price-BelowPDL", label: "Price-BelowPDL", kind: "view", condition: (r) => r.currentPrice < r.todayCPR.prevLow },
-  {
-    key: "HAThin-U1>PU4",
-    label: "HAThin-U1>PU4",
-    kind: "view",
-    condition: (r) => r.cprRising && r.strWideCPR && r.bothTight && r.R1AbovePR4,
-  },
-  { key: "HB-L1<PL1-PU12CU23", label: "HB-L1<PL1-PU12CU23", kind: "view", condition: (r) => r.cprFalling && r.strWideCPR && r.hbJPattern1 },
-  { key: "HB-L1<PL4-U1>TCPR", label: "HB-L1<PL4-U1>TCPR", kind: "view", condition: (r) => r.cprFalling && r.strWideCPR && r.hbJPattern2 },
-  { key: "HB-L1<PL2-U12CPU12", label: "HB-L1<PL2-U12CPU12", kind: "view", condition: (r) => r.cprFalling && r.strWideCPR && r.hbJPattern3 },
-  { key: "HB-L1>PL1-PU1CU234", label: "HB-L1>PL1-PU1CU234", kind: "view", condition: (r) => r.cprFalling && r.strWideCPR && r.hbJPattern4 },
     {
         key: "A5-CU3L3-SLGapBB-R4",
         label: "A5-CU3L3-SLGapBB-R4",

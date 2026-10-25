@@ -1252,8 +1252,8 @@ export default function Screener({
       if (pdhPdlFilter === "s1r1in") return matchesS1R1In(r);
       if (pdhPdlFilter === "pdhgtu1") return r.todayCPR.prevHigh > r.todayCPR.r1;
       if (pdhPdlFilter === "pdlltl1") return r.todayCPR.prevLow < r.todayCPR.s1;
-      if (pdhPdlFilter === "above") return passesPattern(r, "Price-AbovePDH");
-      if (pdhPdlFilter === "below") return passesPattern(r, "Price-BelowPDL");
+      if (pdhPdlFilter === "above") return r.currentPrice > r.todayCPR.prevHigh;
+      if (pdhPdlFilter === "below") return r.currentPrice < r.todayCPR.prevLow;
       if (pdhPdlFilter === "abovepu4") return r.currentPrice > r.prevCPR.r4;
       if (pdhPdlFilter === "belowpl4") return r.currentPrice < r.prevCPR.s4;
       return true;
