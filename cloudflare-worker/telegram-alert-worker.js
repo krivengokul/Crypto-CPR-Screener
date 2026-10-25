@@ -18,17 +18,23 @@
  * never leaves Cloudflare.
  */
 
-const ALLOWED_ORIGIN = "*"; // lock this to your deployed app domain if you like
+// "*" = any site may call this Worker. Set it to your app's origin, e.g.
+// "https://krivengokul.github.io", to lock it down. Either way the Worker echoes
+// the caller's Origin (never a bare "*") when the request is credentialed —
+// navigator.sendBeacon always is, and browsers reject "*" for those requests.
+const ALLOWED_ORIGIN = "*";
 
 export default {
   async fetch(request, env) {
+    const reply = (body, status) => corsResponse(body, status, request);
+
     // Handle CORS preflight
     if (request.method === "OPTIONS") {
-      return corsResponse(null, 204);
+      return reply(null, 204);
     }
 
     if (request.method !== "POST") {
-      return corsResponse("Method Not Allowed", 405);
+      return reply("Method Not Allowed", 405);
     }
 
     // Parse incoming JSON payload from the screener
@@ -36,7 +42,7 @@ export default {
     try {
       payload = await request.json();
     } catch {
-      return corsResponse("Bad JSON", 400);
+      return reply("Bad JSON", 400);
     }
 
     const botToken = env.BOT_TOKEN;
@@ -44,7 +50,7 @@ export default {
 
     if (!botToken || !chatId) {
       console.error("Missing BOT_TOKEN or CHAT_ID secrets");
-      return corsResponse("Worker not configured", 500);
+      return reply("Worker not configured", 500);
     }
 
     const text = formatTelegramMessage(payload);
@@ -67,14 +73,14 @@ export default {
       if (!tgRes.ok) {
         const err = await tgRes.text();
         console.error("Telegram error:", err);
-        return corsResponse("Telegram API error", 502);
+        return reply("Telegram API error", 502);
       }
     } catch (err) {
       console.error("Fetch to Telegram failed:", err);
-      return corsResponse("Upstream error", 502);
+      return reply("Upstream error", 502);
     }
 
-    return corsResponse("OK", 200);
+    return reply("OK", 200);
   },
 };
 
@@ -127,12 +133,21 @@ function escHtml(str) {
 
 // ─── CORS helper ─────────────────────────────────────────────────────────────
 
-function corsResponse(body, status) {
+function corsResponse(body, status, request) {
+  const origin = request?.headers.get("Origin") || "";
   const headers = {
-    "Access-Control-Allow-Origin":  ALLOWED_ORIGIN,
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
+    "Vary": "Origin",
     "Content-Type": "text/plain",
   };
+  if (origin && (ALLOWED_ORIGIN === "*" || origin === ALLOWED_ORIGIN)) {
+    // Credentialed requests (sendBeacon) need the exact origin, not "*",
+    // plus Allow-Credentials. Harmless for plain fetch.
+    headers["Access-Control-Allow-Origin"] = origin;
+    headers["Access-Control-Allow-Credentials"] = "true";
+  } else {
+    headers["Access-Control-Allow-Origin"] = ALLOWED_ORIGIN;
+  }
   return new Response(body, { status, headers });
 }
