@@ -83,7 +83,7 @@ import {
 } from "./ScreenerTableRow";
 import { SRLadderRow, toSRLadderData, type ViewDirection } from "./SRLadderPanel";
 import { getLadderMatchSummary, LEVEL_KEYS, type LevelCheckCondition, type LevelKey } from "./SRLadderDiff";
-import { useChartLinks, findChartLink, preloadChartLinks, renameChartLinkViewKeys, type StoredChartLink } from "@/lib/chartLinks";
+import { useChartLinks, findChartLink, preloadChartLinks, renameChartLinkViewKeys, updateChartLinkViewKey, type StoredChartLink } from "@/lib/chartLinks";
 import { isExpandedPatternPair, type CPRLevels, type CPRResult } from "@/lib/cpr";
 import { COINDCX_ENABLED } from "@/lib/featureFlags";
 
@@ -3567,6 +3567,11 @@ export default function BacktestPanel() {
                                 onCopied={(newKey) => {
                                   setTreeRevision((r) => r + 1);
                                   setSelectedKey(newKey);
+                                  // Same as Create: if this row already has a chart, stamp the new Copy View key.
+                                  const rk = `${r.source}-${r.symbol}-${r.entryDate}`;
+                                  if (findChartLink(chartLinks, rk)?.url) {
+                                    void updateChartLinkViewKey(rk, newKey);
+                                  }
                                 }}
                                 onSaved={(_, updated) => {
                                   setPendingEditedView({ oldKey: selectedKey, view: updated });
@@ -3590,6 +3595,11 @@ export default function BacktestPanel() {
                                     onCreated={(newKey) => {
                                       setTreeRevision((r) => r + 1);
                                       setSelectedKey(newKey);
+                                      // Chart was attached before Create View → stamp new View key on that row.
+                                      const rk = `${r.source}-${r.symbol}-${r.entryDate}`;
+                                      if (findChartLink(chartLinks, rk)?.url) {
+                                        void updateChartLinkViewKey(rk, newKey);
+                                      }
                                     }}
                                   />
                                 );
@@ -3920,9 +3930,14 @@ export default function BacktestPanel() {
                               activeLevelCheckDefs={activeLevelCheckDefs}
                               isFullMatch={ladderByRow.get(r)?.fullMatch}
                               onCopied={(newKey) => {
-                                setTreeRevision((r) => r + 1);
-                                setSelectedKey(newKey);
-                              }}
+                                  setTreeRevision((r) => r + 1);
+                                  setSelectedKey(newKey);
+                                  // Same as Create: if this row already has a chart, stamp the new Copy View key.
+                                  const rk = `${r.source}-${r.symbol}-${r.entryDate}`;
+                                  if (findChartLink(chartLinks, rk)?.url) {
+                                    void updateChartLinkViewKey(rk, newKey);
+                                  }
+                                }}
                               onSaved={(_, updated) => {
                                 setPendingEditedView({ oldKey: selectedKey, view: updated });
                               }}
@@ -3970,6 +3985,10 @@ export default function BacktestPanel() {
                                     });
                                     setTreeRevision((r) => r + 1);
                                     setSelectedKey(newKey);
+                                    // Chart was attached before Create View → stamp new View key on that row.
+                                    if (findChartLink(chartLinks, rowKey)?.url) {
+                                      void updateChartLinkViewKey(rowKey, newKey);
+                                    }
                                   }}
                                 />
                               );
