@@ -2316,7 +2316,7 @@ export const LEVELSABOVE_VIEWS: ViewDef[] = [
       },
     {
         key: "TC-A-A-AA-AA-U3L4-RH-ABGap-R4",
-        label: "PMICROMICRO-UP",
+        label: "PMICROAS1-R4",
         parentKey: "A-A-AA-AA-U3L4",
         condition: (r) => passesView(r, "A-A-AA-AA-U3L4") && matchesGapBadge(r, "RH-ABGap"),
         standalone: true,
@@ -2434,6 +2434,7 @@ export const LEVELSABOVE_VIEWS: ViewDef[] = [
         ]
       }
     ],
+        requireFullMatch: true,
       },
     {
         key: "BC-MA-A-A-AA-AA-U3L3-SL-BBGap-S2",
