@@ -879,7 +879,7 @@ function CopyViewControl({
       if (!result.ok) {
         setError(
           result.reason === "duplicate-key"
-            ? '"' + viewKey + '" already exists — change the Entry, Pattern, Gap Badge, or Target.'
+            ? '"' + viewKey + '" already exists with the same 13/13 MATCH — change Entry, Pattern, Gap Badge, Target, or toggle 13/13 MATCH.'
             : result.reason === "source-not-found"
             ? "Couldn't find the source View."
             : "Couldn't copy this View."

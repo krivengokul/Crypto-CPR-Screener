@@ -196,7 +196,7 @@ const DEFAULT_TARGET = { file: "categories/copyViews.ts", arr: "COPY_VIEWS" };
 // --- Entry point ------------------------------------------------------
 const isEdit = process.env.IS_EDIT === "true";
 const sourceKey = process.env.SOURCE_KEY;
-const newKey = process.env.NEW_KEY ?? sourceKey;
+let newKey = process.env.NEW_KEY ?? sourceKey;
 const newLabel = process.env.NEW_LABEL;
 const levelCheckDefsB64 = process.env.LEVEL_CHECK_DEFS_B64;
 const attachKey = process.env.ATTACH_KEY && process.env.ATTACH_KEY.trim() !== "" ? process.env.ATTACH_KEY : sourceKey;
@@ -283,14 +283,43 @@ if (!sourceObj) {
   throw new Error(`No ViewDef entry with key "${sourceKey}" found.`);
 }
 
-if (isEdit) {
-  if (newKey !== sourceKey && allViewObjs.some((el) => el !== sourceObj && getStringPropertyValue(el, "key") === newKey)) {
-    throw new Error(`"${newKey}" already exists with the same 13/13 MATCH (or disambiguated key is taken).`);
+function readRequireFullMatch(obj) {
+  try {
+    const p = typeof obj.getProperty === "function" ? obj.getProperty("requireFullMatch") : undefined;
+    const init = p?.getInitializer?.();
+    if (!init) return false;
+    const t = init.getText?.() ?? "";
+    return t === "true";
+  } catch {
+    return false;
   }
-} else {
-  if (allViewObjs.some((el) => getStringPropertyValue(el, "key") === newKey)) {
-    throw new Error(`"${newKey}" already exists with the same 13/13 MATCH (or disambiguated key is taken).`);
+}
+
+const wantFullMatch = String(process.env.REQUIRE_FULL_MATCH || "").toLowerCase() === "true";
+
+/** Other ViewDefs with this key (on Edit, ignore the source object being rewritten). */
+function othersWithKey(key) {
+  return allViewObjs.filter((el) => {
+    if (getStringPropertyValue(el, "key") !== key) return false;
+    if (isEdit && el === sourceObj) return false;
+    return true;
+  });
+}
+
+const colliding = othersWithKey(newKey);
+const sameMatchCollision = colliding.some((el) => readRequireFullMatch(el) === wantFullMatch);
+if (sameMatchCollision) {
+  throw new Error(
+    `"${newKey}" already exists with the same 13/13 MATCH — change Entry, Gap Badge, Target, or 13/13 MATCH.`,
+  );
+}
+// Same code, opposite MATCH → disambiguate (-13 / -ANY). Keys must stay unique.
+if (colliding.length > 0) {
+  const alt = wantFullMatch ? `${newKey}-13` : `${newKey}-ANY`;
+  if (othersWithKey(alt).length > 0) {
+    throw new Error(`"${alt}" already exists — pick a different key.`);
   }
+  newKey = alt;
 }
 
 const effectiveAttachKey =
