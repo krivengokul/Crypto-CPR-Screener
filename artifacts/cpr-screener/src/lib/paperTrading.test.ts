@@ -1131,6 +1131,21 @@ test("CONSOLIDATE-B upper TC check mirrors the P-CONSOLIDATE-A ceiling rule", ()
   assert.equal(passesPD15MBelowTCFilter([c1], tc, start, now), false);
 });
 
+test("CONSOLIDATE-B fresh high needs the WHOLE body at/above the earlier highest wick", () => {
+  const start = Date.parse("2026-10-02T00:00:00.000Z");
+  const now = Date.parse("2026-10-03T00:00:00.000Z");
+  const m = 15 * 60_000;
+  const c = (i: number, open: number, high: number, low: number, close: number): OHLC => ({
+    openTime: start + i * m, open, high, low, close, volume: 1,
+  });
+  const tc = 0.4773;
+  const c1 = c(0, 0.4770, 0.4785, 0.4765, 0.4771); // body under TC, wick high 0.4785
+  const c3 = c(1, 0.4784, 0.4795, 0.4780, 0.4792); // body above TC, open under prior wick -> not a fresh high
+  const c4 = c(2, 0.4796, 0.4800, 0.4795, 0.4799); // whole body above every earlier wick -> fails
+  assert.equal(passesPD15MBelowTCFilter([c1, c3], tc, start, now), true);
+  assert.equal(passesPD15MBelowTCFilter([c1, c3, c4], tc, start, now), false);
+});
+
 test("CONSOLIDATE-B floor check mirrors the P-CONSOLIDATE-A lower wick rule", () => {
   const start = Date.parse("2026-10-02T00:00:00.000Z");
   const now = Date.parse("2026-10-03T00:00:00.000Z");

@@ -292,10 +292,12 @@ function findPD15MBelowTCFailure(
     const next: OHLC | undefined = completed[i + 1];
 
     const fullBodyAboveTc = candle.open > tc && candle.close > tc;
-    const bodyHigh = Math.max(candle.open, candle.close);
+    const bodyLow = Math.min(candle.open, candle.close);
+    // Fresh high = the WHOLE body sits at/above the highest earlier wick (a body
+    // whose open is still under that wick is not a clean breakout).
     if (
       fullBodyAboveTc &&
-      (previousHighestWick === null || bodyHigh > previousHighestWick)
+      (previousHighestWick === null || bodyLow >= previousHighestWick)
     ) {
       return {
         rule: "freshHighAboveTC",
@@ -322,7 +324,6 @@ function findPD15MBelowTCFailure(
       if (bodyInS2) seenBodyInS2 = true;
     }
 
-    const bodyLow = Math.min(candle.open, candle.close);
     const bodyPartBelowFloor = floor !== undefined &&
       (candle.open < floor || candle.close < floor);
     if (lowerReference === null && bodyPartBelowFloor) {
@@ -374,7 +375,8 @@ function completedBelowTCCandles(
 
 /**
  * CONSOLIDATE-B mirrors CONSOLIDATE-A's two sides. Above TC, a whole candle
- * body must also make a fresh high above every earlier wick to fail. Below the
+ * body must also sit entirely at/above every earlier wick (body low >= highest
+ * earlier high) to fail. Below the
  * lower PL/S1 floor, the first body that enters below sets a low-wick
  * reference; the immediate next candle can lower that reference, and a later
  * body below it fails. Without a floor (MOMENTUM-B), only the TC rule applies.
