@@ -22,6 +22,7 @@ import {
   copyBacktestView,
   createBacktestView,
   editBacktestView,
+  resolveCreateViewKey,
   deriveLevelCheckDefs,
   levelCheckFullyMatches,
   findTightestAdjacentBand,
@@ -887,9 +888,12 @@ function CopyViewControl({
       }
       invalidateAttachPointOptionsCache();
 
+      // Key may have been disambiguated (-13 / -ANY) when the same code exists
+      // with the opposite 13/13 MATCH — use the cloned View's real key below.
+      const finalKey = result.cloned.key;
       const adjusted = editBacktestView(
-        viewKey,
-        viewKey,
+        finalKey,
+        finalKey,
         trimmedLabel,
         direction,
         target,
@@ -911,7 +915,7 @@ function CopyViewControl({
         "gh workflow run editcopy-view.yml",
         "--repo krivengokul/Crypto-CPR-Screener",
         "-f sourceKey=" + q(sourceKey),
-        "-f newKey=" + q(viewKey),
+        "-f newKey=" + q(finalKey),
         "-f newLabel=" + q(trimmedLabel),
         "-f direction=" + q(direction),
         "-f entry=" + q(entry),
@@ -925,7 +929,7 @@ function CopyViewControl({
         ),
       ];
       setCommand(commandParts.join(" "));
-      setCreatedKey(viewKey);
+      setCreatedKey(finalKey);
     } catch (err) {
       setError(
         err instanceof Error
@@ -1060,7 +1064,7 @@ function CopyViewControl({
       />
       {viewKey === sourceKey && (
         <span className="text-[10px] text-amber-400">
-          This View code already exists. Change the Entry, Pattern/Subpattern, Gap Badge, or Target before copying.
+          This View code already exists with the same 13/13 MATCH. Change Entry, Pattern/Subpattern, Gap Badge, Target, or 13/13 MATCH before copying.
         </span>
       )}
       {error && <span className="text-[10px] text-destructive">{error}</span>}
@@ -1290,7 +1294,7 @@ function EditViewControl({
     if (!res.ok) {
       setError(
         res.reason === "duplicate-key"
-          ? `"${viewKey}" already exists — change the Entry, Gap Badge, or Target to make it unique.`
+          ? `"${viewKey}" already exists with the same 13/13 MATCH — change Entry, Gap Badge, Target, or toggle 13/13 MATCH.`
           : res.reason === "invalid-target"
           ? `"${target}" isn't a valid target for ${direction === "Up" ? "an Up" : "a Down"} View.`
           : res.reason === "invalid-gap-badge"
@@ -1322,12 +1326,13 @@ function EditViewControl({
     // Migrating on Save would rewrite links before the user runs the gh
     // workflow (or if they cancel), leaving Stats pointing at an unpersisted key.
     setPendingChartRename(
-      activeTarget.key !== viewKey
-        ? { from: activeTarget.key, to: viewKey }
+      activeTarget.key !== res.updated.key
+        ? { from: activeTarget.key, to: res.updated.key }
         : null,
     );
 
-    const cmd = `gh workflow run editcopy-view.yml --repo krivengokul/Crypto-CPR-Screener -f sourceKey=${q(activeTarget.key)} -f newKey=${q(viewKey)} -f newLabel=${q(trimmedLabel)} -f isEdit=true -f direction=${q(direction)} -f entry=${q(entry)} -f stoploss=${q(stoploss)} -f target=${q(target)} -f attachKey=${q(attachKey)}${trimmedCandleCheck ? ` -f candleCheck=${q(trimmedCandleCheck)}` : ""}${gapBadge ? ` -f gapBadge=${q(gapBadge)}` : ""} -f requireFullMatch=${requireFullMatch ? "true" : "false"} -f levelCheckDefs=${b64}`;
+    const finalKey = res.updated.key;
+    const cmd = `gh workflow run editcopy-view.yml --repo krivengokul/Crypto-CPR-Screener -f sourceKey=${q(activeTarget.key)} -f newKey=${q(finalKey)} -f newLabel=${q(trimmedLabel)} -f isEdit=true -f direction=${q(direction)} -f entry=${q(entry)} -f stoploss=${q(stoploss)} -f target=${q(target)} -f attachKey=${q(attachKey)}${trimmedCandleCheck ? ` -f candleCheck=${q(trimmedCandleCheck)}` : ""}${gapBadge ? ` -f gapBadge=${q(gapBadge)}` : ""} -f requireFullMatch=${requireFullMatch ? "true" : "false"} -f levelCheckDefs=${b64}`;
     setCommand(cmd);
     // Deliberately NOT calling onUpdated here, same reasoning as
     // CreateViewControl/CopyViewControl's confirm(): onUpdated moves the
@@ -1341,7 +1346,7 @@ function EditViewControl({
     // false the instant selectedKey stops matching the old breadcrumb —
     // unmounting this popover and losing the command before "Done" is
     // even clickable. Stash the key instead; onUpdated fires from Done.
-    setSavedKey(viewKey);
+    setSavedKey(finalKey);
     if (res.updated) onSaved?.(activeTarget.key, res.updated);
   }
 
@@ -1818,7 +1823,7 @@ function CreateViewControl({
     if (!result.ok) {
       setError(
         result.reason === "duplicate-key"
-          ? `"${viewKey}" already exists — change the Entry, Gap Badge, or Target to make it unique.`
+          ? `"${viewKey}" already exists with the same 13/13 MATCH — change Entry, Gap Badge, Target, or toggle 13/13 MATCH.`
           : result.reason === "invalid-target"
           ? `"${target}" isn't a valid target for ${direction === "Up" ? "an Up" : "a Down"} View.`
           : result.reason === "invalid-gap-badge"
@@ -1858,7 +1863,7 @@ function CreateViewControl({
     const b64 = btoa(binary);
 
     setCommand(
-      `gh workflow run create-view.yml --repo krivengokul/Crypto-CPR-Screener -f patternKey=${q(effectivePattern.key)} -f newKey=${q(viewKey)} -f newLabel=${q(trimmedLabel)} -f direction=${q(direction)} -f entry=${q(entry)} -f stoploss=${q(stoploss)} -f target=${q(target)} -f attachKey=${q(attachKey)}${trimmedCandleCheck ? ` -f candleCheck=${q(trimmedCandleCheck)}` : ""}${trimmedGapBadge ? ` -f gapBadge=${q(trimmedGapBadge)}` : ""} -f requireFullMatch=${requireFullMatch ? "true" : "false"} -f levelCheckDefs=${b64}`
+      `gh workflow run create-view.yml --repo krivengokul/Crypto-CPR-Screener -f patternKey=${q(effectivePattern.key)} -f newKey=${q(result.created?.key ?? viewKey)} -f newLabel=${q(trimmedLabel)} -f direction=${q(direction)} -f entry=${q(entry)} -f stoploss=${q(stoploss)} -f target=${q(target)} -f attachKey=${q(attachKey)}${trimmedCandleCheck ? ` -f candleCheck=${q(trimmedCandleCheck)}` : ""}${trimmedGapBadge ? ` -f gapBadge=${q(trimmedGapBadge)}` : ""} -f requireFullMatch=${requireFullMatch ? "true" : "false"} -f levelCheckDefs=${b64}`
     );
     setCreatedKey(viewKey);
   }

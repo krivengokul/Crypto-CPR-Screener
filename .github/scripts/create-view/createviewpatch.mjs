@@ -173,7 +173,7 @@ function normalizeDirection(raw) {
 
 // --- Entry point ------------------------------------------------------
 const patternKey = process.env.PATTERN_KEY;
-const newKey = process.env.NEW_KEY;
+let newKey = process.env.NEW_KEY;
 const newLabel = process.env.NEW_LABEL;
 const levelCheckDefsB64 = process.env.LEVEL_CHECK_DEFS_B64;
 const attachKey = process.env.ATTACH_KEY && process.env.ATTACH_KEY.trim() !== "" ? process.env.ATTACH_KEY : patternKey;
@@ -243,8 +243,39 @@ if (isModular) {
     .filter((obj) => getStringPropertyValue(obj, "key") !== undefined);
 }
 
+function readRequireFullMatch(obj) {
+  const prop = obj.getProperty("requireFullMatch");
+  if (!prop || !prop.isKind || !prop.isKind(SyntaxKind.PropertyAssignment)) {
+    // ts-morph PropertyAssignment
+  }
+  try {
+    const p = typeof obj.getProperty === "function" ? obj.getProperty("requireFullMatch") : undefined;
+    const init = p?.getInitializer?.();
+    if (!init) return false;
+    const t = init.getText?.() ?? "";
+    return t === "true";
+  } catch {
+    return false;
+  }
+}
+
+const wantFullMatch = String(process.env.REQUIRE_FULL_MATCH || "").toLowerCase() === "true";
+const keyTakenSameMatch = allViewObjs.some((el) => {
+  if (getStringPropertyValue(el, "key") !== newKey) return false;
+  return readRequireFullMatch(el) === wantFullMatch;
+});
+if (keyTakenSameMatch) {
+  throw new Error(
+    `"${newKey}" already exists with the same 13/13 MATCH — change Entry, Gap Badge, Target, or 13/13 MATCH.`,
+  );
+}
+// Same code, opposite MATCH → disambiguate key (must stay unique in registry)
 if (allViewObjs.some((el) => getStringPropertyValue(el, "key") === newKey)) {
-  throw new Error(`"${newKey}" already exists — pick a different key.`);
+  const alt = wantFullMatch ? `${newKey}-13` : `${newKey}-ANY`;
+  if (allViewObjs.some((el) => getStringPropertyValue(el, "key") === alt)) {
+    throw new Error(`"${alt}" already exists — pick a different key.`);
+  }
+  newKey = alt;
 }
 
 const targetDef = direction === "Up" ? BULLISH_TARGETS[target] : BEARISH_TARGETS[target];

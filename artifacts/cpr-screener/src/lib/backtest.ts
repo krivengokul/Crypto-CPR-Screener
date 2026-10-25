@@ -371,6 +371,43 @@ export function getAttachPointOptions(): AttachPointOption[] {
   return opts;
 }
 
+
+/** Normalize 13/13 MATCH flag (missing/undefined = off). */
+export function isRequireFullMatchOn(v?: boolean): boolean {
+  return v === true;
+}
+
+/**
+ * Duplicate only when the same View key is already used with the same 13/13 MATCH.
+ * Same structural code with the opposite MATCH is allowed via a disambiguated key
+ * (`-13` when MATCH on, `-ANY` when MATCH off and base is taken by MATCH-on).
+ */
+export function resolveCreateViewKey(
+  baseKey: string,
+  requireFullMatch?: boolean,
+  ignoreKey?: string,
+): { key: string; conflict: boolean } {
+  const base = (baseKey || "").trim();
+  if (!base) return { key: base, conflict: true };
+  const fm = isRequireFullMatchOn(requireFullMatch);
+
+  const findOther = (k: string) =>
+    VIEWS.find((v) => v.key === k && (!ignoreKey || v.key !== ignoreKey));
+
+  const existing = findOther(base);
+  if (!existing) return { key: base, conflict: false };
+  if (isRequireFullMatchOn(existing.requireFullMatch) === fm) {
+    return { key: base, conflict: true };
+  }
+  const alt = fm ? `${base}-13` : `${base}-ANY`;
+  const altExisting = findOther(alt);
+  if (!altExisting) return { key: alt, conflict: false };
+  if (isRequireFullMatchOn(altExisting.requireFullMatch) === fm) {
+    return { key: alt, conflict: true };
+  }
+  return { key: alt, conflict: true };
+}
+
 export function copyBacktestView(
   sourceKey: string,
   newKey: string,
@@ -379,9 +416,11 @@ export function copyBacktestView(
   levelCheckDefs?: LevelCheckCondition[],
   requireFullMatch?: boolean,
 ): CopyViewResult {
-  if (VIEWS.some(v => v.key === newKey)) {
+  const resolved = resolveCreateViewKey(newKey, requireFullMatch);
+  if (resolved.conflict) {
     return { ok: false, reason: "duplicate-key" };
   }
+  newKey = resolved.key;
 
   const sourceView = getView(sourceKey);
   if (!sourceView) {
@@ -562,8 +601,12 @@ export function editBacktestView(
 ): { ok: boolean; reason?: string; updated?: ViewDef } {
   const idx = VIEWS.findIndex((v) => v.key === oldKey);
   if (idx === -1) return { ok: false, reason: "pattern-not-found" };
-  if (newKey !== oldKey && VIEWS.some((v) => v.key === newKey)) {
-    return { ok: false, reason: "duplicate-key" };
+  if (newKey !== oldKey) {
+    const resolved = resolveCreateViewKey(newKey, requireFullMatch, oldKey);
+    if (resolved.conflict) {
+      return { ok: false, reason: "duplicate-key" };
+    }
+    newKey = resolved.key;
   }
 
   const isUp = direction === "Up" || (direction as string) === "bullish";
@@ -660,9 +703,11 @@ export function createBacktestView(
   stoploss?: string,
   requireFullMatch?: boolean,
 ): CreateViewResult {
-  if (VIEWS.some(v => v.key === newKey)) {
+  const resolved = resolveCreateViewKey(newKey, requireFullMatch);
+  if (resolved.conflict) {
     return { ok: false, reason: "duplicate-key" };
   }
+  newKey = resolved.key;
 
   const isUp = direction === "Up" || (direction as string) === "bullish";
   const targetDefs = isUp ? BULLISH_TARGETS : BEARISH_TARGETS;

@@ -285,11 +285,11 @@ if (!sourceObj) {
 
 if (isEdit) {
   if (newKey !== sourceKey && allViewObjs.some((el) => el !== sourceObj && getStringPropertyValue(el, "key") === newKey)) {
-    throw new Error(`"${newKey}" already exists — pick a different key.`);
+    throw new Error(`"${newKey}" already exists with the same 13/13 MATCH (or disambiguated key is taken).`);
   }
 } else {
   if (allViewObjs.some((el) => getStringPropertyValue(el, "key") === newKey)) {
-    throw new Error(`"${newKey}" already exists — pick a different key.`);
+    throw new Error(`"${newKey}" already exists with the same 13/13 MATCH (or disambiguated key is taken).`);
   }
 }
 
