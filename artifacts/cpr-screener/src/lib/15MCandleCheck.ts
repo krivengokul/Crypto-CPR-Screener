@@ -451,6 +451,62 @@ export function explainPD15MBelowTCFailure(
   };
 }
 
+export interface PD15MBelowTCPassInfo {
+  candles: number;
+  /** Candle numbers whose whole body was above TC but under an earlier wick high (excused). */
+  excusedAboveTc: number[];
+  /** Candle number of the first body below the PL/S1 floor (sets the wick reference), or null. */
+  floorRefCandle: number | null;
+  floorRef: number | null;
+  floor?: number;
+  tc: number;
+  highestHigh: number | null;
+  lowestLow: number | null;
+}
+
+/** Why a session PASSED the CONSOLIDATE-B / MOMENTUM-B walk (same filtering as passesPD15MBelowTCFilter). */
+export function explainPD15MBelowTCPass(
+  candles: OHLC[],
+  tc: number,
+  startTime: number,
+  now: number,
+  floor?: number,
+): PD15MBelowTCPassInfo | null {
+  if (!Number.isFinite(tc)) return null;
+  const completed = completedBelowTCCandles(candles, startTime, now);
+  if (completed.length === 0) return null;
+  const numberOf = (c: OHLC) => Math.floor((c.openTime - startTime) / CANDLE_INTERVAL_MS) + 1;
+  let prevHigh: number | null = null;
+  let lowestLow: number | null = null;
+  const excused: number[] = [];
+  let floorRefCandle: number | null = null;
+  let floorRef: number | null = null;
+  for (let i = 0; i < completed.length; i++) {
+    const c = completed[i];
+    const bodyLow = Math.min(c.open, c.close);
+    if (c.open > tc && c.close > tc && prevHigh !== null && bodyLow < prevHigh) {
+      excused.push(numberOf(c));
+    }
+    if (floorRefCandle === null && floor !== undefined && bodyLow < floor) {
+      floorRefCandle = numberOf(c);
+      const next = completed[i + 1];
+      floorRef = next !== undefined && next.low < c.low ? next.low : c.low;
+    }
+    prevHigh = prevHigh === null ? c.high : Math.max(prevHigh, c.high);
+    lowestLow = lowestLow === null ? c.low : Math.min(lowestLow, c.low);
+  }
+  return {
+    candles: completed.length,
+    excusedAboveTc: excused,
+    floorRefCandle,
+    floorRef,
+    floor,
+    tc,
+    highestHigh: prevHigh,
+    lowestLow,
+  };
+}
+
 /**
  * Opt-in logging: in the browser console run
  *   localStorage.debugPD15M = "SANDUSDT"   (comma list, or "*" for all)
@@ -1171,6 +1227,36 @@ type PD15MBelowTCFailureInfo = NonNullable<ReturnType<typeof explainPD15MBelowTC
  * P-CONSOLIDATE-B didn't light up without opening the console.
  */
 const pd15MBelowTCFailureCache = new Map<string, PD15MBelowTCFailureInfo | "noCandles">();
+const pd15MBelowTCPassInfoCache = new Map<string, PD15MBelowTCPassInfo>();
+
+/** Readable "why it passed" note for a CONSOLIDATE-B / MOMENTUM-B pass (await findPD15MBelowTCPass first). */
+export function getPD15MBelowTCPassNote(
+  candidate: UpexCandidate,
+  now: number,
+  tcName = "TC",
+): { label: string; detail: string } | null {
+  const info = pd15MBelowTCPassInfoCache.get(
+    pd15MBelowTCKey(candidate, previousUpexSessionStartUtcMs(now)),
+  );
+  if (!info) return null;
+  const parts: string[] = [`${info.candles} candles`];
+  parts.push(
+    info.excusedAboveTc.length === 0
+      ? `no body fully above ${tcName} ${info.tc}`
+      : `bodies above ${tcName} ${info.tc} only at #${info.excusedAboveTc.join(", #")} (all opened under an earlier wick high)`,
+  );
+  if (info.floor !== undefined) {
+    parts.push(
+      info.floorRefCandle === null
+        ? `no body below floor ${info.floor}`
+        : `first body below floor ${info.floor} at #${info.floorRefCandle}, wick ref ${info.floorRef}, never broken`,
+    );
+  }
+  if (info.highestHigh !== null && info.lowestLow !== null) {
+    parts.push(`session range ${info.lowestLow}–${info.highestHigh}`);
+  }
+  return { label: `${tcName} ${info.tc}`, detail: parts.join(" · ") };
+}
 
 /**
  * Human-readable reason the previous-session CONSOLIDATE-B / MOMENTUM-B check
@@ -1422,6 +1508,8 @@ export function findPD15MBelowTCPass(
         }
       } else if (passes === true) {
         pd15MBelowTCFailureCache.delete(key);
+        const info = explainPD15MBelowTCPass(candles, tc, st, now_, floor);
+        if (info) pd15MBelowTCPassInfoCache.set(key, info);
       }
       return passes;
     },

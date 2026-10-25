@@ -299,6 +299,8 @@ export interface CPRResult {
    * when no P-CONSOLIDATE-B badge appears. Unset when CON-B passed.
    */
   PD15MBelowTCFailure?: { label: string; detail: string };
+  /** Why CONSOLIDATE-B passed (TC used, candles checked, excused bodies, floor reference). Backtest-only. */
+  PD15MBelowTCPassNote?: { label: string; detail: string };
   /** Previous-session CONSOLIDATE-A result; populated by the backtest's P-category scans. */
   PD15MConsolidateAPass?: boolean;
   /** Previous-session MOMENTUM-B result (CONSOLIDATE-B's TC check without the PL/S1 floor); populated by the backtest's P-category scans. */

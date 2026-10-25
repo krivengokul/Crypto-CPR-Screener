@@ -25,6 +25,7 @@ import {
   getConsolidateABc,
   getConsolidateBTc,
   getPD15MBelowTCFailureNote,
+  getPD15MBelowTCPassNote,
   getPrevious15MBFloor,
 } from "./15MCandleCheck";
 export type BacktestSource = "binance" | "delta" | "coindcx";
@@ -1881,7 +1882,14 @@ async function populateAllPFilterFlags(
   // blocking reason; otherwise CON-B failed on the floor / S2 rule.
   if (consolidateB === true) {
     result.PD15MBelowTCFailure = undefined;
+    result.PD15MBelowTCPassNote =
+      getPD15MBelowTCPassNote(
+        { symbol, source, bc: conBTc, floor, s2: prevCPR.s2 },
+        sessionStart,
+        conBTcName,
+      ) ?? undefined;
   } else {
+    result.PD15MBelowTCPassNote = undefined;
     result.PD15MBelowTCFailure =
       (momentumB !== true
         ? getPD15MBelowTCFailureNote({ symbol, source, bc: conBTc }, sessionStart, conBTcName)

@@ -388,6 +388,11 @@ function renderCandleCheckBadges(raw: CPRResult) {
       </div>
       {conBFailureLine}
       {conBFailureDetail}
+      {bucket === "consolidate-b" && raw.PD15MBelowTCPassNote ? (
+        <div className="font-mono text-[10px] whitespace-nowrap text-muted-foreground">
+          ✓ {raw.PD15MBelowTCPassNote.label} · {raw.PD15MBelowTCPassNote.detail}
+        </div>
+      ) : null}
     </div>
   );
 }
