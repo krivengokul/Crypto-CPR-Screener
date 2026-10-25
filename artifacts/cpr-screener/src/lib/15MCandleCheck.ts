@@ -172,10 +172,10 @@ export function previousUpexSessionStartUtcMs(now = Date.now()): number {
  *    reference if its wick is lower. Later candles never change the reference;
  *    fail when any part of a later candle's body is below the reference.
  *  - Ceiling rule (CONSOLIDATE-A, mirror of the BC rule): fail when a candle's
- *    WHOLE body is above `ceiling` (higher of previous PH / R1) AND the body's
- *    top is higher than the highest wick of any earlier candle (a fresh high).
- *    A body above the ceiling that stays at or under an earlier candle's high
- *    does not fail. The first candle has no earlier wick, so a full body above
+ *    WHOLE body is above `ceiling` (higher of previous PH / R1) AND the WHOLE
+ *    body sits at/above the highest wick of any earlier candle (body low >=
+ *    that high — a clean fresh high, same as CONSOLIDATE-B). A body above the
+ *    ceiling whose open is still under an earlier candle's high does not fail. The first candle has no earlier wick, so a full body above
  *    the ceiling on it fails (same as the BC rule).
  *  - R2 body rule (CONSOLIDATE-A only, when `r2` is supplied): fail when a
  *    first-crossing or new-high candle has open/close at or above R2. That
@@ -218,7 +218,7 @@ export function passesUpexFilter(
       candle.open > ceiling &&
       candle.close > ceiling &&
       (previousHighestWick === null ||
-        Math.max(candle.open, candle.close) > previousHighestWick)
+        Math.min(candle.open, candle.close) >= previousHighestWick)
     ) {
       return false;
     }

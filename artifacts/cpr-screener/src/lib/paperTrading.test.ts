@@ -651,6 +651,23 @@ test("passesUpexFilter with ceiling fails when a candle body is above ceiling", 
     ),
     false
   );
+  // Whole-body rule (same as CONSOLIDATE-B): earlier wick high 125; a later body
+  // 124/128 tops the wick but OPENS under it -> not a clean fresh high -> passes.
+  assert.equal(
+    passesUpexFilter(
+      [{ ...makeCandle(start, 105, 106), high: 125 }, makeCandle(start + m, 124, 128)],
+      bc, start, now, ceiling,
+    ),
+    true
+  );
+  // Body 125/128 starts exactly at the earlier high -> fresh high -> fails.
+  assert.equal(
+    passesUpexFilter(
+      [{ ...makeCandle(start, 105, 106), high: 125 }, makeCandle(start + m, 125, 128)],
+      bc, start, now, ceiling,
+    ),
+    false
+  );
 });
 
 test("MOMENTUM-A and CONSOLIDATE-A use one immediate lower-wick reference", () => {
