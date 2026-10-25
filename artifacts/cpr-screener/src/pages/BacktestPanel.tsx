@@ -325,7 +325,27 @@ function candleBucketFromFlags(
 
 function renderCandleCheckBadges(raw: CPRResult) {
   const bucket = candleBucketFromFlags(raw);
-  if (!bucket) return null;
+
+  // Why P-CONSOLIDATE-B is missing: only worth showing when no badge is shown
+  // at all, or the row fell through to P-MOMENTUM-B (CON-B's floor / S2 rule).
+  const conBFailure =
+    raw.PD15MBelowTCPass !== true && (bucket === null || bucket === "momentum-b")
+      ? raw.PD15MBelowTCFailure
+      : undefined;
+  const conBFailureLine = conBFailure ? (
+    <div
+      className="font-mono text-[11px] whitespace-nowrap text-pink-400/70 cursor-help"
+      title={conBFailure.detail}
+    >
+      P-CONSOLIDATE-B ✗ {conBFailure.label}
+    </div>
+  ) : null;
+
+  if (!bucket) {
+    return conBFailureLine ? (
+      <div className="mt-1 flex flex-col gap-0.5">{conBFailureLine}</div>
+    ) : null;
+  }
 
   const label =
     bucket === "inside-r1s1"
@@ -361,6 +381,7 @@ function renderCandleCheckBadges(raw: CPRResult) {
       <div className={className} style={style}>
         {label}
       </div>
+      {conBFailureLine}
     </div>
   );
 }

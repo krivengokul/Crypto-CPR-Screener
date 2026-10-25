@@ -293,6 +293,12 @@ export interface CPRResult {
    */
   PD15MBelowBCPass?: boolean;
   PD15MBelowTCPass?: boolean;
+  /**
+   * Why CONSOLIDATE-B (or its MOMENTUM-B TC check) failed for this row — e.g.
+   * label "fresh high > PPDay TC". Backtest-only; shown under the View cell
+   * when no P-CONSOLIDATE-B badge appears. Unset when CON-B passed.
+   */
+  PD15MBelowTCFailure?: { label: string; detail: string };
   /** Previous-session CONSOLIDATE-A result; populated by the backtest's P-category scans. */
   PD15MConsolidateAPass?: boolean;
   /** Previous-session MOMENTUM-B result (CONSOLIDATE-B's TC check without the PL/S1 floor); populated by the backtest's P-category scans. */

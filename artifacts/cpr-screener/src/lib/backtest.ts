@@ -24,6 +24,7 @@ import {
   getPrevious15MACeiling,
   getConsolidateABc,
   getConsolidateBTc,
+  getPD15MBelowTCFailureNote,
   getPrevious15MBFloor,
 } from "./15MCandleCheck";
 export type BacktestSource = "binance" | "delta" | "coindcx";
@@ -1828,6 +1829,11 @@ async function populateAllPFilterFlags(
 
   const floor = getPrevious15MBFloor(prevCPR);
   const ceiling = getPrevious15MACeiling(prevCPR);
+  // The TC actually under test for CON-B / MOM-B: PDay TC, or PPDay TC when
+  // PDay was Overlap-Below / Inside vs PPDay (see getConsolidateBTc).
+  const conBTc = getConsolidateBTc(prevCPR, result.ppCPR);
+  const conBTcName =
+    result.ppCPR && conBTc === result.ppCPR.tc && conBTc !== prevCPR.tc ? "PPDay TC" : "PDay TC";
   const [consolidateA, momentumA, consolidateB, momentumB, insideR1S1] = await Promise.all([
     findPreviousConsolidateAPass(
       {
@@ -1870,6 +1876,23 @@ async function populateAllPFilterFlags(
   result.PD15MBelowTCPass = consolidateB === true;
   result.PD15MMomentumBPass = momentumB === true;
   result.PD15MInsideR1S1Pass = insideR1S1 === true;
+
+  // Why CON-B didn't pass. If MOM-B (TC rule only) also failed, that's the
+  // blocking reason; otherwise CON-B failed on the floor / S2 rule.
+  if (consolidateB === true) {
+    result.PD15MBelowTCFailure = undefined;
+  } else {
+    result.PD15MBelowTCFailure =
+      (momentumB !== true
+        ? getPD15MBelowTCFailureNote({ symbol, source, bc: conBTc }, sessionStart, conBTcName)
+        : null) ??
+      getPD15MBelowTCFailureNote(
+        { symbol, source, bc: conBTc, floor, s2: prevCPR.s2 },
+        sessionStart,
+        conBTcName,
+      ) ??
+      undefined;
+  }
   return true;
 }
 

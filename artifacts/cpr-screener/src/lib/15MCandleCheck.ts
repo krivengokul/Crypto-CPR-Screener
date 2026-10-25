@@ -1145,6 +1145,61 @@ export function savePrevious15MBResults(
 const previousUpexPassCache = new Map<string, Promise<boolean | null>>();
 const previous15MBPassCache = new Map<string, Promise<boolean | null>>();
 const pd15MBelowTCPassCache = new Map<string, Promise<boolean | null>>();
+
+/** Cache key shared by findPD15MBelowTCPass and the failure-note lookup. */
+function pd15MBelowTCKey(candidate: UpexCandidate, startTime: number): string {
+  return `${startTime}:${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.floor}`;
+}
+
+type PD15MBelowTCFailureInfo = NonNullable<ReturnType<typeof explainPD15MBelowTCFailure>>;
+
+/**
+ * Why each PD15MBelowTC evaluation last failed (same key as the pass cache),
+ * or "noCandles" when the 15m data was unavailable. Read by
+ * getPD15MBelowTCFailureNote so the Backtest View cell can say WHY
+ * P-CONSOLIDATE-B didn't light up without opening the console.
+ */
+const pd15MBelowTCFailureCache = new Map<string, PD15MBelowTCFailureInfo | "noCandles">();
+
+/**
+ * Human-readable reason the previous-session CONSOLIDATE-B / MOMENTUM-B check
+ * failed for `candidate` (same candidate you passed to findPD15MBelowTCPass —
+ * `await` that first). `tcName` labels the ceiling in use ("PDay TC" or
+ * "PPDay TC"). Returns null when no failure was recorded (it passed, or the
+ * check never ran).
+ */
+export function getPD15MBelowTCFailureNote(
+  candidate: UpexCandidate,
+  now: number,
+  tcName = "TC",
+): { label: string; detail: string } | null {
+  const failure = pd15MBelowTCFailureCache.get(
+    pd15MBelowTCKey(candidate, previousUpexSessionStartUtcMs(now)),
+  );
+  if (!failure) return null;
+  if (failure === "noCandles") {
+    return { label: "no 15m data", detail: "Previous-session 15m candles were unavailable, so the check could not run." };
+  }
+  const hhmm = failure.openTime.slice(11, 16);
+  const body = `${failure.open}→${failure.close}`;
+  switch (failure.rule) {
+    case "freshHighAboveTC":
+      return {
+        label: `fresh high > ${tcName}`,
+        detail: `${hhmm} UTC candle body ${body} fully above ${tcName} ${failure.tc} and above the earlier highest wick ${failure.previousHighestWick ?? "—"}.`,
+      };
+    case "bodyInS2":
+      return {
+        label: "body ≤ S2",
+        detail: `${hhmm} UTC candle body ${body} reached S2 (first body at/below S2, or a new low) — this is MOMENTUM-B, not CONSOLIDATE-B.`,
+      };
+    case "floor":
+      return {
+        label: "broke below floor wick",
+        detail: `${hhmm} UTC candle body ${body} went below the low-wick reference ${failure.previousLowestWick ?? "—"} set after the first body under the PL/S1 floor ${failure.floor ?? "—"}.`,
+      };
+  }
+}
 const previousConsolidateAPassCache = new Map<string, Promise<boolean | null>>();
 const MAX_PREVIOUS_UPEX_CACHE_ENTRIES = 20_000;
 
@@ -1329,8 +1384,7 @@ export function findPD15MBelowTCPass(
 ): Promise<boolean | null> {
   const endTime = upexSessionStartUtcMs(now);
   const startTime = previousUpexSessionStartUtcMs(now);
-  const key =
-    `${startTime}:${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.floor}`;
+  const key = pd15MBelowTCKey(candidate, startTime);
   const cached = pd15MBelowTCPassCache.get(key);
   if (cached) return cached;
 
@@ -1341,11 +1395,17 @@ export function findPD15MBelowTCPass(
     undefined,
     (candles, tc, st, now_, floor) => {
       const passes = passesPD15MBelowTCFilter(candles, tc, st, now_, floor, candidate.s2);
-      if (passes === false && shouldDebugPD15M(candidate.symbol)) {
-        console.info(
-          `[PD15MBelowTC] ${candidate.source}:${candidate.symbol} FAILED`,
-          explainPD15MBelowTCFailure(candles, tc, st, now_, floor, candidate.s2)
-        );
+      if (passes === false) {
+        const failure = explainPD15MBelowTCFailure(candles, tc, st, now_, floor, candidate.s2);
+        if (failure) pd15MBelowTCFailureCache.set(key, failure);
+        if (shouldDebugPD15M(candidate.symbol)) {
+          console.info(
+            `[PD15MBelowTC] ${candidate.source}:${candidate.symbol} FAILED`,
+            failure
+          );
+        }
+      } else if (passes === true) {
+        pd15MBelowTCFailureCache.delete(key);
       }
       return passes;
     },
@@ -1353,6 +1413,7 @@ export function findPD15MBelowTCPass(
     ({ included, unavailable }) => {
       if (unavailable > 0) {
         pd15MBelowTCPassCache.delete(key);
+        pd15MBelowTCFailureCache.set(key, "noCandles");
         return null;
       }
       if (pd15MBelowTCPassCache.size > MAX_PREVIOUS_UPEX_CACHE_ENTRIES) {
