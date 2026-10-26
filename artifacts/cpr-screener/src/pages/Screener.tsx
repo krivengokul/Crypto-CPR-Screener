@@ -571,7 +571,7 @@ export default function Screener({
       const signalCode = patternId || "—";
       const direction = viewDef?.direction;
 
-      if (hasInsideR1S1(row)) pDayText = "P-VOLATILE-R1S1";
+      if (hasInsideR1S1(row)) pDayText = "P-VOLATILE-R1S1 ✗";
       else if (hasConsolidateB(row)) pDayText = "P-CONSOLIDATE-B";
       else if (hasMomentumB(row)) pDayText = "P-MOMENTUM-B";
       else if (hasConsolidateA(row)) pDayText = "P-CONSOLIDATE-A";
@@ -581,7 +581,7 @@ export default function Screener({
         const conB = row.PD15MBelowTCPass === true;
         const momA = row.PD15MAboveBCPass === true;
         const momB = row.PD15MMomentumBPass === true;
-        if (conA && conB) pDayText = "P-VOLATILE-R1S1";
+        if (conA && conB) pDayText = "P-VOLATILE-R1S1 ✗";
         else if (conB) pDayText = "P-CONSOLIDATE-B";
         else if (momB) pDayText = "P-MOMENTUM-B";
         else if (conA) pDayText = "P-CONSOLIDATE-A";
@@ -2154,10 +2154,10 @@ export default function Screener({
                 title="P-VOLATILE-R1S1: previous-session 15m bodies stay inside max(R1, PH) … min(S1, PL) (wicks ignored). Only shown when the symbol is not CON-A, CON-B, MOM-A or MOM-B — mutually exclusive with the other four candle filters."
               >
                 {previousInsideR1S1Progress
-                  ? `P-VOLATILE-R1S1 ${previousInsideR1S1Progress.done}/${previousInsideR1S1Progress.total}`
+                  ? `P-VOLATILE-R1S1 ✗ ${previousInsideR1S1Progress.done}/${previousInsideR1S1Progress.total}`
                   : previousInsideR1S1Ready
-                    ? `P-VOLATILE-R1S1 (${previousInsideR1S1IncludedCount})`
-                    : "P-VOLATILE-R1S1…"}
+                    ? `P-VOLATILE-R1S1 ✗ (${previousInsideR1S1IncludedCount})`
+                    : "P-VOLATILE-R1S1 ✗…"}
               </button>
               <button
                 onClick={() => {

@@ -351,7 +351,7 @@ function renderCandleCheckBadges(raw: CPRResult) {
 
   const label =
     bucket === "inside-r1s1"
-      ? "P-VOLATILE-R1S1"
+      ? "P-VOLATILE-R1S1 ✗"
       : bucket === "consolidate-a"
         ? "P-CONSOLIDATE-A"
         : bucket === "consolidate-b"
@@ -380,7 +380,15 @@ function renderCandleCheckBadges(raw: CPRResult) {
 
   return (
     <div className="mt-1 flex flex-col gap-0.5">
-      <div className={className} style={style}>
+      <div
+        className={className}
+        style={style}
+        title={
+          bucket === "inside-r1s1"
+            ? "Previous-session 15m was inside R1/PH–S1/PL band but not CON-A/CON-B (volatile)"
+            : undefined
+        }
+      >
         {label}
       </div>
       {conBFailureLine}
