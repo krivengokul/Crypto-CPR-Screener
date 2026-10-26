@@ -9,8 +9,8 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_CONCURRENT_REQUESTS = 8;
 const PREVIOUS_UPEX_CACHE_KEY = "cpr_previous_upex_results_v6";
 const PREVIOUS_15M_B_CACHE_KEY = "cpr_previous_15m_b_results_v3";
-const PREVIOUS_15M_TC_B_CACHE_KEY = "cpr_previous_15m_tc_b_results_v8";
-const PREVIOUS_15M_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_momentum_b_results_v2";
+const PREVIOUS_15M_TC_B_CACHE_KEY = "cpr_previous_15m_tc_b_results_v9";
+const PREVIOUS_15M_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_momentum_b_results_v3";
 const PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_consolidate_a_results_v8";
 const PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_inside_r1s1_results_v3";
 
@@ -506,6 +506,7 @@ interface PD15MBelowTCFailure {
   candle: OHLC;
   previousHighestWick: number | null;
   previousLowestWick: number | null;
+  refCeilingCandle?: OHLC | null;
 }
 
 /**
@@ -514,10 +515,11 @@ interface PD15MBelowTCFailure {
  *
  * Reference Candle Principle:
  * - Ceiling rule (TC, CONSOLIDATE-B and MOMENTUM-B):
- *   A candle whose body spans TC sets / updates the ceiling reference with its
- *   higher wick. A candle whose body is wholly above this reference (or above
- *   TC if no reference has been established yet) fails the session.
- *   Candle 1 with a full body above TC fails immediately.
+ *   Only a candle whose body spans TC sets / updates the ceiling reference high.
+ *   Candles with full body above TC before any reference candle cannot set reference;
+ *   once a reference candle in TC appears, all previous full-body candles are checked
+ *   against its high. Any candle with full body above the reference high fails.
+ *   If no candle in the entire session has body in TC, any candle with full body above TC fails.
  * - Floor rule (lower of PL / S1, CONSOLIDATE-B ONLY):
  *   A candle whose body spans the floor sets / updates the floor reference with
  *   its lower wick. A candle whose body is wholly below this reference (or below
@@ -532,9 +534,11 @@ function findPD15MBelowTCFailure(
   s2?: number,
 ): PD15MBelowTCFailure | null {
   let refCeilingHigh: number | null = null;
+  let refCeilingCandle: OHLC | null = null;
   let refFloorLow: number | null = null;
   let seenBodyInS2 = false;
   const useS2 = s2 !== undefined && Number.isFinite(s2);
+  const pendingAboveTc: OHLC[] = [];
 
   for (let i = 0; i < completed.length; i++) {
     const candle = completed[i];
@@ -546,15 +550,33 @@ function findPD15MBelowTCFailure(
     if (bodyInTc) {
       if (refCeilingHigh === null || (Number.isFinite(candle.high) && candle.high > refCeilingHigh)) {
         refCeilingHigh = candle.high;
+        refCeilingCandle = candle;
+        // Check all previous candles that had body fully above TC
+        for (const prev of pendingAboveTc) {
+          const prevBodyLow = Math.min(prev.open, prev.close);
+          if (prevBodyLow > refCeilingHigh) {
+            return {
+              rule: "freshHighAboveTC",
+              candle: prev,
+              previousHighestWick: refCeilingHigh,
+              previousLowestWick: refFloorLow,
+              refCeilingCandle,
+            };
+          }
+        }
       }
-    }
-    if (bodyLow > (refCeilingHigh ?? tc)) {
-      return {
-        rule: "freshHighAboveTC",
-        candle,
-        previousHighestWick: refCeilingHigh,
-        previousLowestWick: refFloorLow,
-      };
+    } else if (bodyLow > tc) {
+      if (refCeilingHigh === null) {
+        pendingAboveTc.push(candle);
+      } else if (bodyLow > refCeilingHigh) {
+        return {
+          rule: "freshHighAboveTC",
+          candle,
+          previousHighestWick: refCeilingHigh,
+          previousLowestWick: refFloorLow,
+          refCeilingCandle,
+        };
+      }
     }
 
     // Floor check (PL / S1) - Only applicable to CON-B (when floor is supplied)
@@ -571,6 +593,7 @@ function findPD15MBelowTCFailure(
           candle,
           previousHighestWick: refCeilingHigh,
           previousLowestWick: refFloorLow,
+          refCeilingCandle,
         };
       }
     }
@@ -587,10 +610,22 @@ function findPD15MBelowTCFailure(
           candle,
           previousHighestWick: refCeilingHigh,
           previousLowestWick: refFloorLow,
+          refCeilingCandle,
         };
       }
       if (bodyInS2) seenBodyInS2 = true;
     }
+  }
+
+  // If there were candles with full body above TC, but no candle ever had body in TC:
+  if (refCeilingHigh === null && pendingAboveTc.length > 0) {
+    return {
+      rule: "freshHighAboveTC",
+      candle: pendingAboveTc[0],
+      previousHighestWick: null,
+      previousLowestWick: refFloorLow,
+      refCeilingCandle: null,
+    };
   }
 
   return null;
@@ -674,11 +709,12 @@ export function explainPD15MBelowTCFailure(
   if (!failure) return null;
   const numberOf = (c: OHLC) => Math.floor((c.openTime - startTime) / CANDLE_INTERVAL_MS) + 1;
   const wickCandle =
-    failure.previousHighestWick === null
+    failure.refCeilingCandle ??
+    (failure.previousHighestWick === null
       ? undefined
       : completed.find(
           (c) => c.openTime < failure.candle.openTime && c.high === failure.previousHighestWick,
-        );
+        ));
   return {
     rule: failure.rule,
     openTime: new Date(failure.candle.openTime).toISOString(),
@@ -720,6 +756,7 @@ export function explainPD15MBelowTCPass(
   const numberOf = (c: OHLC) => Math.floor((c.openTime - startTime) / CANDLE_INTERVAL_MS) + 1;
   let refCeilingHigh: number | null = null;
   let lowestLow: number | null = null;
+  const pendingExcused: OHLC[] = [];
   const excused: number[] = [];
   let floorRefCandle: number | null = null;
   let floorRef: number | null = null;
@@ -734,8 +771,8 @@ export function explainPD15MBelowTCPass(
       if (refCeilingHigh === null || (Number.isFinite(c.high) && c.high > refCeilingHigh)) {
         refCeilingHigh = c.high;
       }
-    } else if (bodyLow > tc && refCeilingHigh !== null && bodyLow <= refCeilingHigh) {
-      excused.push(numberOf(c));
+    } else if (bodyLow > tc) {
+      pendingExcused.push(c);
     }
 
     if (floor !== undefined) {
@@ -751,9 +788,19 @@ export function explainPD15MBelowTCPass(
     highestHigh = highestHigh === null ? c.high : Math.max(highestHigh, c.high);
     lowestLow = lowestLow === null ? c.low : Math.min(lowestLow, c.low);
   }
+
+  if (refCeilingHigh !== null) {
+    for (const c of pendingExcused) {
+      const bodyLow = Math.min(c.open, c.close);
+      if (bodyLow <= refCeilingHigh) {
+        excused.push(numberOf(c));
+      }
+    }
+  }
+
   return {
     candles: completed.length,
-    excusedAboveTc: excused,
+    excusedAboveTc: excused.sort((a, b) => a - b),
     floorRefCandle,
     floorRef,
     floor,

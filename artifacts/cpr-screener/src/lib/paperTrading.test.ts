@@ -1137,7 +1137,8 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     cpr_previous_15m_tc_b_results_v5: "x",
     cpr_previous_15m_tc_b_results_v6: "x",
     cpr_previous_15m_tc_b_results_v7: "x",
-    cpr_previous_15m_tc_b_results_v8: "keep",
+    cpr_previous_15m_tc_b_results_v8: "x",
+    cpr_previous_15m_tc_b_results_v9: "keep",
     cpr_previous_15m_b_results_v1: "x",
     cpr_previous_15m_b_results_v3: "keep",
     cpr_previous_upex_results_v1: "x",
@@ -1155,7 +1156,8 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     cpr_previous_15m_consolidate_a_results_v7: "x",
     cpr_previous_15m_consolidate_a_results_v8: "keep",
     cpr_previous_15m_momentum_b_results_v1: "x",
-    cpr_previous_15m_momentum_b_results_v2: "keep",
+    cpr_previous_15m_momentum_b_results_v2: "x",
+    cpr_previous_15m_momentum_b_results_v3: "keep",
     "cpr_symbols_2026-10-09": "unrelated",
   };
   Object.defineProperty(globalThis, "localStorage", {
@@ -1166,12 +1168,12 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     }),
   });
   try {
-    assert.equal(pruneLegacy15MResultCaches(), 19);
+    assert.equal(pruneLegacy15MResultCaches(), 21);
     assert.deepEqual(Object.keys(store).sort(), [
       "cpr_previous_15m_b_results_v3",
       "cpr_previous_15m_consolidate_a_results_v8",
-      "cpr_previous_15m_momentum_b_results_v2",
-      "cpr_previous_15m_tc_b_results_v8",
+      "cpr_previous_15m_momentum_b_results_v3",
+      "cpr_previous_15m_tc_b_results_v9",
       "cpr_previous_upex_results_v6",
       "cpr_symbols_2026-10-09",
     ]);
@@ -1288,4 +1290,35 @@ test("allBodiesThroughLevel detects all candle numbers whose body spans level", 
 
   const matchesNone = allBodiesThroughLevel([c1, c2, c3, c4], 110, start, now);
   assert.deepEqual(matchesNone, []);
+});
+
+test("CONSOLIDATE-B passes when candles before reference candle stay within reference candle high (GRAM 23 Oct case)", () => {
+  const start = Date.parse("2026-10-22T00:00:00.000Z");
+  const now = Date.parse("2026-10-23T00:00:00.000Z");
+  const m = 15 * 60_000;
+  const c = (i: number, open: number, high: number, low: number, close: number): OHLC => ({
+    openTime: start + i * m, open, high, low, close, volume: 1,
+  });
+  const tc = 1.353;
+  const floor = 1.328;
+
+  // Candles 1-6: body fully above TC (1.353), but body <= candle 7 high (1.357)
+  const c1 = c(0, 1.357, 1.360, 1.357, 1.357);
+  const c2 = c(1, 1.357, 1.358, 1.355, 1.355);
+  const c3 = c(2, 1.355, 1.356, 1.354, 1.355);
+  const c4 = c(3, 1.355, 1.361, 1.355, 1.357);
+  const c5 = c(4, 1.357, 1.357, 1.354, 1.356);
+  const c6 = c(5, 1.356, 1.358, 1.355, 1.357);
+  // Candle 7: body in TC (1.346 to 1.356 spans 1.353), high is 1.357
+  const c7 = c(6, 1.356, 1.357, 1.339, 1.346);
+
+  // Candles 1-7 pass because candles 1-6 bodyLow (1.355-1.357) <= candle 7 high (1.357)
+  assert.equal(passesPD15MBelowTCFilter([c1, c2, c3, c4, c5, c6, c7], tc, start, now, floor), true);
+
+  // If candle 1 had a full body above candle 7 high (e.g. open 1.359, close 1.358 -> bodyLow 1.358 > 1.357), it fails!
+  const c1High = c(0, 1.359, 1.362, 1.358, 1.358);
+  assert.equal(passesPD15MBelowTCFilter([c1High, c2, c3, c4, c5, c6, c7], tc, start, now, floor), false);
+
+  // If no candle ever has body in TC, candles 1-6 fail
+  assert.equal(passesPD15MBelowTCFilter([c1, c2, c3, c4, c5, c6], tc, start, now, floor), false);
 });
