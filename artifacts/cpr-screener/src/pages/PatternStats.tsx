@@ -21,6 +21,7 @@ import {
   Snowflake,
   Target,
   Crosshair,
+  ExternalLink,
 } from "lucide-react";
 import {
   explainPD15MBelowTCFailure,
@@ -39,7 +40,7 @@ import {
   findPD15MBelowTCPass,
   findPreviousConsolidateAPass,
 } from "@/lib/15MCandleCheck";
-import { passesPattern, computeInnerLevelPattern, INNER_LEVEL_PATTERN_KEYS, normalizeViewDirection, type ViewDirection } from "./ScreenerUtils";
+import { passesPattern, computeInnerLevelPattern, INNER_LEVEL_PATTERN_KEYS, normalizeViewDirection, getChartUrl, openChartInNewTab, type ViewDirection } from "./ScreenerUtils";
 import { pivotcategories } from "@/lib/ViewsSidebar";
 import { COINDCX_ENABLED } from "@/lib/featureFlags";
 import { buildViewTree, VIEWS, type ViewTreeNode } from "@/lib/views";
@@ -1186,15 +1187,14 @@ function ChartLinksSection({
                     <td className="px-3 py-2.5">
                       <div className="flex items-center gap-2">
                         {/* Snapshot (attached chart) — before symbol */}
-                        <a
-                          href={record.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          title={`TradingView Snapshot Attached\n${record.url}${record.savedAt ? `\nSaved: ${new Date(record.savedAt).toLocaleDateString()}` : ""}\nClick to open in new tab`}
+                        <button
+                          type="button"
+                          title={`TradingView Snapshot Attached\n${record.url}${record.savedAt ? `\nSaved: ${new Date(record.savedAt).toLocaleDateString()}` : ""}\nClick to open (hard reload)`}
+                          onClick={() => openChartInNewTab(record.url)}
                           className="inline-flex h-4 w-4 shrink-0 cursor-pointer items-center justify-center rounded border border-sky-500/40 bg-sky-500/20 text-sky-400 shadow-sm shadow-sky-950/40 transition-all hover:border-sky-300 hover:bg-sky-500/35 hover:text-sky-200"
                         >
                           <Camera className="h-2.5 w-2.5" />
-                        </a>
+                        </button>
                         {/* Live TradingView chart */}
                         {liveChartUrl ? (
                           <button
