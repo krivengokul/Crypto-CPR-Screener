@@ -692,7 +692,7 @@ export function renderMatchingSignals(
         const dirColor = isUp
           ? "text-emerald-400"
           : isDown
-            ? "text-rose-400"
+            ? "text-pink-400"
             : "text-slate-400";
         return (
           <div key={v.id} className="flex h-11 flex-col justify-center gap-0.5 overflow-hidden">
@@ -1200,7 +1200,8 @@ function ScreenerTableRow({
           )}
           {showInsideR1S1 && (
             <div
-              className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-lime-400"
+              className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
+              style={{ color: "#ff637e" }}
             >
               P-VOLATILE-R1S1
             </div>

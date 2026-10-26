@@ -442,7 +442,7 @@ function ViewNameBadge({ name, direction }: { name: string; direction?: ViewDire
     isUp
       ? "border-green-500/40 bg-green-500/10 text-green-400"
       : isDown
-      ? "border-red-500/40 bg-red-500/10 text-red-400"
+      ? "border-pink-500/40 bg-pink-500/10 text-pink-400"
       : "border-slate-500/40 bg-slate-500/10 text-slate-300";
   return (
     <span

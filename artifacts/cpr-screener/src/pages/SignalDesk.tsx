@@ -281,7 +281,7 @@ function exclusivePDayBadge(r: CPRResult | undefined | null): {
   if (inside) {
     return {
       text: "P-VOLATILE-R1S1",
-      className: "font-mono text-xs font-bold uppercase tracking-widest text-lime-400",
+      className: "font-mono text-xs font-bold uppercase tracking-widest text-[#ff637e]",
     };
   }
   return null;
@@ -410,9 +410,9 @@ export function buildPills(pool: CPRResultWithSource[]) {
           id: sub.id,
           label: sub.label || sub.id,
           direction,
-          activeColor: sub.activeColor ?? (isBullish ? "#22c55e" : isBearish ? "#fb7185" : undefined),
-          activeText: sub.activeText ?? (isBullish ? "#4ade80" : isBearish ? "#fda4af" : undefined),
-          activeBg: sub.activeBg ?? (isBullish ? "rgba(34, 197, 94, 0.14)" : isBearish ? "rgba(251, 113, 133, 0.14)" : undefined),
+          activeColor: sub.activeColor ?? (isBullish ? "#22c55e" : isBearish ? "#fb64b6" : undefined),
+          activeText: sub.activeText ?? (isBullish ? "#4ade80" : isBearish ? "#fb64b6" : undefined),
+          activeBg: sub.activeBg ?? (isBullish ? "rgba(34, 197, 94, 0.14)" : isBearish ? "rgba(251, 100, 182, 0.14)" : undefined),
         });
       }
     }
@@ -476,7 +476,7 @@ const SignalDeskCard = memo(
           isUp
             ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
             : isDown
-            ? "bg-rose-500/20 text-rose-400 border border-rose-500/40"
+            ? "bg-pink-500/20 text-pink-400 border border-pink-500/40"
             : "bg-slate-500/20 text-slate-300 border border-slate-500/40"
         }`}
       >
@@ -673,7 +673,11 @@ const SignalDeskCard = memo(
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1">
                 <span>Signal:</span>
-                <strong className="text-slate-200 font-semibold">
+                <strong
+                  className={`font-semibold ${
+                    isUp ? "text-emerald-400" : isDown ? "text-pink-400" : "text-slate-200"
+                  }`}
+                >
                   {item.isSaved ? item.patternName : ""}
                 </strong>
               </div>

@@ -360,7 +360,7 @@ function renderCandleCheckBadges(raw: CPRResult) {
 
   const className =
     bucket === "inside-r1s1"
-      ? "font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-lime-400"
+      ? "font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-[#ff637e]"
       : bucket === "consolidate-a"
         ? "font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
         : bucket === "consolidate-b"
@@ -415,7 +415,7 @@ function renderMatchingViewName(raw: CPRResult, selectedKey: string) {
     match?.direction === "Up"
       ? "text-green-400"
       : match?.direction === "Down"
-        ? "text-rose-400"
+        ? "text-pink-400"
         : undefined;
 
   // Ladder Match next to the View name when this row is graded to a View
