@@ -10,7 +10,7 @@ const MAX_MISSED_TICKS = 3;
 const SANITY_JUMP_RATIO = 0.5;
 
 /** Poll cadence for live prices while a scan is "done". */
-const LIVE_PRICE_POLL_MS = 25_000;
+const LIVE_PRICE_POLL_MS = 40_000;
 
 /**
  * Keeps the row's session high/low (todayHigh/todayLow) current between scans:

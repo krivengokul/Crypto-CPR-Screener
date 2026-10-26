@@ -1,4 +1,4 @@
-import { Fragment } from "react";
+import { Fragment, memo } from "react";
 import { ExternalLink, CheckCircle2, XCircle, Tag, Cloud } from "lucide-react";
 import { hasTouchedEntry } from "@/lib/signalTracker";
 import { sessionReachedTarget } from "@/lib/signalOutcome";
@@ -817,6 +817,8 @@ export function ScreenerTableHeader({
   );
 }
 
+
+
 export interface ScreenerTableRowProps {
   r: CPRResultWithSource;
   rowKey: string;
@@ -883,7 +885,7 @@ function reclaimTooltip(st: ReclaimSideState): string {
  * Screener.tsx's table body — same badges, same columns, same logic. No
  * behavior changes.
  */
-export default function ScreenerTableRow({
+function ScreenerTableRow({
   r,
   rowKey,
   isExpanded,
@@ -1411,3 +1413,5 @@ export default function ScreenerTableRow({
     </Fragment>
   );
 }
+
+export default memo(ScreenerTableRow);

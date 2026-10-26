@@ -378,13 +378,14 @@ export default function Screener({
   /** Row key highlighted after click / search / toast focus. */
   const [focusedRowKey, setFocusedRowKey] = useState<string | null>(null);
 
-  function toggleExpand(key: string) {
+
+  const toggleExpand = useCallback((key: string) => {
     setExpandedSymbols((prev) => {
       const next = new Set(prev);
       next.has(key) ? next.delete(key) : next.add(key);
       return next;
     });
-  }
+  }, []);
 
   // Entry-cross toast → scroll to + highlight the symbol's table row.
   // Search is set to the symbol so the row survives other filters; retries
@@ -651,8 +652,9 @@ export default function Screener({
         matchText: "—",
       });
     }
+    // Do not depend on allResults*: live price ticks would re-run this every poll.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusSymbol, allResults, deltaAllResults, coindcxAllResults, applyLegendFocus]);
+  }, [focusSymbol, applyLegendFocus]);
 
   // Manual search box → Legend Card 2 when the query resolves to one symbol
   useEffect(() => {
@@ -679,8 +681,9 @@ export default function Screener({
       const viewId = pickPrimaryMatchingViewId(preferred, activeSignal || "");
       applyLegendFocus(preferred, viewId || activeSignal || "");
     }
+    // Do not depend on allResults*: live price ticks would re-run this every poll.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, allResults, deltaAllResults, coindcxAllResults, activeTab, activeSignal, applyLegendFocus]);
+  }, [search, activeTab, activeSignal, applyLegendFocus, focusSymbol]);
 
 
   const hasInRangeR = hasInsideR1S1;
@@ -820,6 +823,19 @@ export default function Screener({
     }
     return activeSignal; // not a known category or leaf — leave as-is
   }, [activeSignal]);
+  const handleRowFocus = useCallback(
+    (row: CPRResultWithSource) => {
+      // Legend-only focus: don't switch the left-nav View or leave Show All.
+      const viewId = pickPrimaryMatchingViewId(
+        row,
+        activeSectionKey || activeSignal || "",
+      );
+      applyLegendFocus(row, viewId || activeSectionKey || activeSignal || "");
+    },
+    [activeSectionKey, activeSignal, applyLegendFocus],
+  );
+
+
 
   // NEW: reset the generic Views toggle whenever it no longer belongs to
   // the current activeSignal — either because we've left every generic
@@ -2537,18 +2553,8 @@ export default function Screener({
             sortDir={sortDir}
             toggleSort={toggleSort}
           >
-                  {displayed.map((r) => {
-                    const sym = splitSymbol(r.symbol, r.source);
-                    // Include today's date so this rowKey lines up exactly
-                    // with BacktestPanel's `${r.source}-${r.symbol}-${r.entryDate}`
-                    // for today's row — otherwise a chart link attached
-                    // here (Screener has no date dimension of its own, it's
-                    // always "today") gets stored under a different
-                    // Firestore doc than the one Backtest/SR Ladder looks
-                    // up for that same symbol+date, and shows up as
-                    // missing over there.
-                    const rowKey = `${r.source}-${r.symbol}-${utcTodayISO()}`;
-                    const isExpanded = expandedSymbols.has(rowKey);
+                  {(() => { const screenerTodayISO = utcTodayISO(); return displayed.map((r) => {
+                    const rowKey = `${r.source}-${r.symbol}-${screenerTodayISO}`;
                     const reclaim = reclaimStatesFor(r);
                     return (
                       <ScreenerTableRow
@@ -2569,18 +2575,11 @@ export default function Screener({
                         isInsideR1S1={hasInsideR1S1(r)}
                         reclaimS={reclaim.s?.qualifies ? reclaim.s : null}
                         reclaimR={reclaim.r?.qualifies ? reclaim.r : null}
-                        onRowFocus={(row) => {
-                          // Legend-only focus: don't switch the left-nav View or leave Show All.
-                          const viewId = pickPrimaryMatchingViewId(
-                            row,
-                            activeSectionKey || activeSignal || "",
-                          );
-                          applyLegendFocus(row, viewId || activeSectionKey || activeSignal || "");
-                        }}
+                        onRowFocus={handleRowFocus}
                         isFocused={focusedRowKey === rowKey}
                       />
                     );
-                  })}
+                  }); })()}
           </ScreenerResultsTable>
         )}
 
