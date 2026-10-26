@@ -428,8 +428,13 @@ function renderMatchingViewName(raw: CPRResult, selectedKey: string) {
     const ladder = getLadderMatchSummary(raw.prevCPR, raw.todayCPR, matchDef.levelCheckDefs);
     if (ladder.hasConditions) {
       const requireFull = matchDef.requireFullMatch === true;
+      const isDownView =
+        matchDef.direction === "Down" ||
+        (matchDef.direction as string) === "bearish";
       const matchColor = ladder.fullMatch
-        ? "text-green-400"
+        ? isDownView
+          ? "text-pink-400"
+          : "text-green-400"
         : ladder.matchingCount >= ladder.total - 2
           ? "text-amber-400"
           : "text-destructive";

@@ -1239,11 +1239,12 @@ function ScreenerTableRow({
         <td className="px-3 py-3">
           {viewLadders.length > 0 && (anyLadderDefined || hasSelectedView) && (
             <div className="flex flex-col gap-1.5">
-              {viewLadders.map(({ id, label, ladder }) => {
+              {viewLadders.map(({ id, label, ladder, direction }) => {
                 // Tick after n/13 only when this View has "13/13 MATCH" ON
                 // and the row is a full match. Full match without the flag
-                // stays green "13/13" with no tick.
+                // stays green "13/13" with no tick (pink when View is Down).
                 const requireFull = getView(id)?.requireFullMatch === true;
+                const isDownView = direction === "Down";
                 return (
                 <div key={id} className="h-11 flex items-center whitespace-nowrap">
                   {!ladder.hasConditions ? (
@@ -1256,7 +1257,9 @@ function ScreenerTableRow({
                     <span
                       className={`inline-flex items-center gap-1 text-xs font-mono font-medium ${
                         ladder.fullMatch
-                          ? "text-green-400"
+                          ? isDownView
+                            ? "text-pink-400"
+                            : "text-green-400"
                           : ladder.matchingCount >= ladder.total - 2
                           ? "text-amber-400"
                           : "text-destructive"
