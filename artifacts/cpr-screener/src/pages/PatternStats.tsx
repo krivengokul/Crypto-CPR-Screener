@@ -1309,14 +1309,15 @@ function PreviousDaySection() {
 
       const now = prevEnd; // session end = "now" for historical walk
       // CON-* use full rules; MOM-* drop the opposite-side constraint.
-      const failConB = explainPD15MBelowTCFailure(candles, conBTc, prevStart, now, floor);
+      // Pass S2 like the Screener does: a body reaching S2 demotes CON-B to MOM-B.
+      const failConB = explainPD15MBelowTCFailure(candles, conBTc, prevStart, now, floor, cpr.prevCPR.s2);
       const failConA = explainUpexFailure(candles, conABc, prevStart, now, ceiling, cpr.prevCPR.r2);
       const failMomB = explainPD15MBelowTCFailure(candles, conBTc, prevStart, now); // no floor
       const failMomA = explainUpexFailure(candles, conABc, prevStart, now); // no ceiling / R2
 
       await Promise.all([
         findPD15MBelowTCPass(
-          { symbol: fullSym, source, bc: conBTc, floor },
+          { symbol: fullSym, source, bc: conBTc, floor, s2: cpr.prevCPR.s2 },
           sessionEnd,
         ),
         findPreviousConsolidateAPass(
@@ -1326,7 +1327,7 @@ function PreviousDaySection() {
       ]);
 
       const noteBFromCache = getPD15MBelowTCFailureNote(
-        { symbol: fullSym, source, bc: conBTc, floor },
+        { symbol: fullSym, source, bc: conBTc, floor, s2: cpr.prevCPR.s2 },
         sessionEnd,
         tcName,
       );
