@@ -3983,29 +3983,10 @@ export default function BacktestPanel() {
                               }}
                             />
                           ) : isPatternOnly && rowViewDefByRow.get(r) && !pendingCreateViewRows.has(`${r.source}-${r.symbol}-${r.entryDate}`) ? (
-                            <ViewActionsRow
-                              activeTarget={rowViewDefByRow.get(r)!}
-                              prevCPR={r.prevCPR}
-                              todayCPR={r.todayCPR}
-                              activeLevelCheckDefs={rowViewDefByRow.get(r)?.levelCheckDefs}
-                              isFullMatch={ladderByRow.get(r)?.fullMatch}
-                              onCopied={(newKey) => {
-                                setTreeRevision((rev) => rev + 1);
-                                setSelectedKey(newKey);
-                                const rk = `${r.source}-${r.symbol}-${r.entryDate}`;
-                                if (findChartLink(chartLinks, rk)?.url) {
-                                  void updateChartLinkViewKey(rk, newKey);
-                                }
-                              }}
-                              onUpdated={(key) => {
-                                setTreeRevision((rev) => rev + 1);
-                                setSelectedKey(key);
-                                const rk = `${r.source}-${r.symbol}-${r.entryDate}`;
-                                if (findChartLink(chartLinks, rk)?.url) {
-                                  void updateChartLinkViewKey(rk, key);
-                                }
-                              }}
-                            />
+                            // Pattern selected + row already matches a View: no Edit/Copy
+                            // actions here — those only appear when a View itself is
+                            // selected in the dropdown.
+                            undefined
                           ) : isPatternOnly && activePatternInfo ? (
                             (() => {
                               const rowPattern = deepestMatchingPattern(r.raw, activePatternInfo.sub.key);
