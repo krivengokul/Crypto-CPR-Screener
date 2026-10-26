@@ -679,6 +679,52 @@ test("MOMENTUM-A and CONSOLIDATE-A use reference candle principle for BC floor",
   assert.equal(passesUpexFilter([c(0, 98, 99, 97, 98.5)], bc, start, now), false);
 });
 
+test("MOMENTUM-A / CONSOLIDATE-A BC floor: full-body-below-BC candles before reference candle are buffered", () => {
+  // Regression test: earlier full-body-below-BC candles must be checked against
+  // the first BC-spanning reference candle (Reference Candle Principle for floor).
+  const start = Date.parse("2026-10-08T00:00:00.000Z");
+  const now = start + 10 * 15 * 60_000;
+  const m = 15 * 60_000;
+  const bc = 100;
+  const ceiling = 120;
+  const c = (
+    i: number,
+    open: number,
+    high: number,
+    low: number,
+    close: number,
+  ): OHLC => ({ openTime: start + i * m, open, high, low, close, volume: 1 });
+
+  // Scenario A: early full-body-below-BC candle, then BC-spanning candle whose low is ABOVE
+  // the early candle's bodyHigh → early candle's body is below reference low → should fail.
+  //   c0: body fully above BC (no issue)
+  //   c1: body fully below BC, bodyHigh = 96 (buffered, no reference yet)
+  //   c2: body in BC, low = 97 > 96 → refFloorLow = 97
+  //     → retroactive check: c1 bodyHigh(96) < refFloorLow(97) → FAIL
+  const cA0 = c(0, 102, 105, 101, 103);     // body above BC
+  const cA1 = c(1, 93, 96, 91, 95);         // full body below BC, bodyHigh=95 (buffered)
+  const cA2 = c(2, 98, 103, 97, 101);       // body in BC, low=97 → refFloorLow=97, retro-check: 95 < 97 → fail
+  assert.equal(passesUpexFilter([cA0, cA1, cA2], bc, start, now), false);
+  assert.equal(passesUpexFilter([cA0, cA1, cA2], bc, start, now, ceiling), false);
+
+  // Scenario B: early full-body-below-BC candle, then BC-spanning candle whose low is BELOW
+  // the early candle's bodyHigh → early candle passes retroactive check.
+  //   c0: body above BC
+  //   c1: body fully below BC, bodyHigh = 96 (buffered)
+  //   c2: body in BC, low = 94 → refFloorLow = 94, retro-check: 96 >= 94 → passes
+  const cB0 = c(0, 102, 105, 101, 103);
+  const cB1 = c(1, 93, 96, 91, 95);         // full body below BC, bodyHigh=95 (buffered)
+  const cB2 = c(2, 98, 103, 94, 101);       // body in BC, low=94 → refFloorLow=94, 95 >= 94 → passes
+  assert.equal(passesUpexFilter([cB0, cB1, cB2], bc, start, now), true);
+  assert.equal(passesUpexFilter([cB0, cB1, cB2], bc, start, now, ceiling), true);
+
+  // Scenario C: no BC-spanning candle ever, but a full-body-below-BC candle exists → fail.
+  const cC0 = c(0, 102, 105, 101, 103);     // body above BC
+  const cC1 = c(1, 93, 96, 91, 95);         // full body below BC, bodyHigh=95, no ref candle → fail
+  assert.equal(passesUpexFilter([cC0, cC1], bc, start, now), false);
+  assert.equal(passesUpexFilter([cC0, cC1], bc, start, now, ceiling), false);
+});
+
 test("CONSOLIDATE-A ceiling check uses reference candle principle (PH / R1)", () => {
   const start = Date.parse("2026-10-07T00:00:00.000Z");
   const now = start + 8 * 15 * 60_000;
@@ -1146,7 +1192,8 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     cpr_previous_upex_results_v3: "x",
     cpr_previous_upex_results_v4: "x",
     cpr_previous_upex_results_v5: "x",
-    cpr_previous_upex_results_v6: "keep",
+    cpr_previous_upex_results_v6: "x",
+    cpr_previous_upex_results_v7: "keep",
     cpr_previous_15m_consolidate_a_results_v1: "x",
     cpr_previous_15m_consolidate_a_results_v2: "x",
     cpr_previous_15m_consolidate_a_results_v3: "x",
@@ -1154,7 +1201,8 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     cpr_previous_15m_consolidate_a_results_v5: "x",
     cpr_previous_15m_consolidate_a_results_v6: "x",
     cpr_previous_15m_consolidate_a_results_v7: "x",
-    cpr_previous_15m_consolidate_a_results_v8: "keep",
+    cpr_previous_15m_consolidate_a_results_v8: "x",
+    cpr_previous_15m_consolidate_a_results_v9: "keep",
     cpr_previous_15m_momentum_b_results_v1: "x",
     cpr_previous_15m_momentum_b_results_v2: "x",
     cpr_previous_15m_momentum_b_results_v3: "keep",
@@ -1168,13 +1216,13 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     }),
   });
   try {
-    assert.equal(pruneLegacy15MResultCaches(), 21);
+    assert.equal(pruneLegacy15MResultCaches(), 23);
     assert.deepEqual(Object.keys(store).sort(), [
       "cpr_previous_15m_b_results_v3",
-      "cpr_previous_15m_consolidate_a_results_v8",
+      "cpr_previous_15m_consolidate_a_results_v9",
       "cpr_previous_15m_momentum_b_results_v3",
       "cpr_previous_15m_tc_b_results_v9",
-      "cpr_previous_upex_results_v6",
+      "cpr_previous_upex_results_v7",
       "cpr_symbols_2026-10-09",
     ]);
     // Running again is a no-op.

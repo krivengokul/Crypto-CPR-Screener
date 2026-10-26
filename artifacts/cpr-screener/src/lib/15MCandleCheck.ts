@@ -7,11 +7,11 @@ const DELTA_BASE = "https://api.india.delta.exchange/v2";
 const CANDLE_INTERVAL_MS = 15 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_CONCURRENT_REQUESTS = 8;
-const PREVIOUS_UPEX_CACHE_KEY = "cpr_previous_upex_results_v6";
+const PREVIOUS_UPEX_CACHE_KEY = "cpr_previous_upex_results_v7";
 const PREVIOUS_15M_B_CACHE_KEY = "cpr_previous_15m_b_results_v3";
 const PREVIOUS_15M_TC_B_CACHE_KEY = "cpr_previous_15m_tc_b_results_v9";
 const PREVIOUS_15M_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_momentum_b_results_v3";
-const PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_consolidate_a_results_v8";
+const PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_consolidate_a_results_v9";
 const PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_inside_r1s1_results_v3";
 
 export interface UpexCandidate {
@@ -167,10 +167,12 @@ export function previousUpexSessionStartUtcMs(now = Date.now()): number {
 /**
  * MOMENTUM-A (PD15M>BC; becomes CONSOLIDATE-A when a `ceiling` is supplied): walk the previous
  * session's completed 15m candles in time order using the Reference Candle Principle.
- *  - Floor rule (BC, MOMENTUM-A and CONSOLIDATE-A): a candle whose body spans BC sets /
- *    updates the floor reference with its lower wick. A candle whose body is wholly below
- *    the reference (or below BC if no reference has been established yet) fails the session.
- *    Candle 1 with a full body below BC fails immediately.
+ *  - Floor rule (BC, MOMENTUM-A and CONSOLIDATE-A): uses the Reference Candle Principle.
+ *    Candles with a full body below BC are buffered until the first BC-spanning candle appears.
+ *    That candle's low becomes refFloorLow; buffered candles are checked retroactively — any
+ *    whose bodyHigh < refFloorLow fails. Further BC-spanning candles with a lower low update
+ *    refFloorLow and re-check. If no BC-spanning candle ever appears but there were full-body-
+ *    below-BC candles, the session fails on the first such candle.
  *  - Ceiling rule (CONSOLIDATE-A only, when `ceiling` is supplied): a candle whose body
  *    spans the ceiling (higher of PH / R1) sets / updates the ceiling reference with its
  *    higher wick. A candle whose body is wholly above the reference (or above ceiling if
@@ -207,6 +209,8 @@ export function passesUpexFilter(
   let seenBodyInR2 = false;
   const useR2 =
     ceiling !== undefined && r2 !== undefined && Number.isFinite(r2);
+  // Buffer for candles whose body is fully below BC before a BC-spanning reference candle appears.
+  const pendingBelowBc: OHLC[] = [];
 
   for (let i = 0; i < completed.length; i++) {
     const candle = completed[i];
@@ -214,14 +218,26 @@ export function passesUpexFilter(
     const bodyHigh = Math.max(candle.open, candle.close);
 
     // Floor rule (BC) - applies to both MOMENTUM-A and CONSOLIDATE-A
+    // Uses the Reference Candle Principle: the first candle with body in BC sets
+    // refFloorLow. All earlier full-body-below-BC candles are checked retroactively.
     const bodyInBc = bodyLow <= bc && bodyHigh >= bc;
     if (bodyInBc) {
       if (refFloorLow === null || candle.low < refFloorLow) {
         refFloorLow = candle.low;
+        // Retroactively check all buffered candles against the new reference low.
+        for (const prev of pendingBelowBc) {
+          const prevBodyHigh = Math.max(prev.open, prev.close);
+          if (prevBodyHigh < refFloorLow) return false;
+        }
       }
-    }
-    if (bodyHigh < (refFloorLow ?? bc)) {
-      return false;
+    } else if (bodyHigh < bc) {
+      // Full body below BC.
+      if (refFloorLow === null) {
+        // No reference candle yet — buffer this candle for later retroactive check.
+        pendingBelowBc.push(candle);
+      } else if (bodyHigh < refFloorLow) {
+        return false;
+      }
     }
 
     // Ceiling rule (R1 / PH) - applies only to CONSOLIDATE-A
@@ -248,6 +264,11 @@ export function passesUpexFilter(
       }
       if (bodyInR2) seenBodyInR2 = true;
     }
+  }
+
+  // If no candle ever had body in BC but there were full-body-below-BC candles, fail on the first.
+  if (refFloorLow === null && pendingBelowBc.length > 0) {
+    return false;
   }
 
   return true;
@@ -302,31 +323,57 @@ export function explainUpexFailure(
   let seenBodyInR2 = false;
   const useR2 = ceiling !== undefined && r2 !== undefined && Number.isFinite(r2);
   const numberOf = (c: OHLC) => Math.floor((c.openTime - startTime) / CANDLE_INTERVAL_MS) + 1;
+  // Buffer for candles whose body is fully below BC before a BC-spanning reference candle appears.
+  const pendingBelowBc: OHLC[] = [];
 
   for (let i = 0; i < completed.length; i++) {
     const candle = completed[i];
     const bodyLow = Math.min(candle.open, candle.close);
     const bodyHigh = Math.max(candle.open, candle.close);
 
+    // Floor rule (BC) — Reference Candle Principle (mirrors CON-B ceiling check).
     const bodyInBc = bodyLow <= bc && bodyHigh >= bc;
     if (bodyInBc) {
       if (refFloorLow === null || candle.low < refFloorLow) {
         refFloorLow = candle.low;
+        // Retroactively check all buffered full-body-below-BC candles.
+        for (const prev of pendingBelowBc) {
+          const prevBodyHigh = Math.max(prev.open, prev.close);
+          if (prevBodyHigh < refFloorLow) {
+            return {
+              rule: "floor",
+              openTime: new Date(prev.openTime).toISOString(),
+              candleNumber: numberOf(prev),
+              open: prev.open,
+              close: prev.close,
+              bc,
+              ceiling,
+              previousLowestWick: refFloorLow,
+              previousHighestWick: refCeilingHigh,
+              previousHighestWickCandle: null,
+            };
+          }
+        }
       }
-    }
-    if (bodyHigh < (refFloorLow ?? bc)) {
-      return {
-        rule: "floor",
-        openTime: new Date(candle.openTime).toISOString(),
-        candleNumber: numberOf(candle),
-        open: candle.open,
-        close: candle.close,
-        bc,
-        ceiling,
-        previousLowestWick: refFloorLow,
-        previousHighestWick: refCeilingHigh,
-        previousHighestWickCandle: null,
-      };
+    } else if (bodyHigh < bc) {
+      // Full body below BC.
+      if (refFloorLow === null) {
+        // No reference candle yet — buffer for later retroactive check.
+        pendingBelowBc.push(candle);
+      } else if (bodyHigh < refFloorLow) {
+        return {
+          rule: "floor",
+          openTime: new Date(candle.openTime).toISOString(),
+          candleNumber: numberOf(candle),
+          open: candle.open,
+          close: candle.close,
+          bc,
+          ceiling,
+          previousLowestWick: refFloorLow,
+          previousHighestWick: refCeilingHigh,
+          previousHighestWickCandle: null,
+        };
+      }
     }
 
     if (ceiling !== undefined) {
@@ -379,6 +426,23 @@ export function explainUpexFailure(
       }
       if (bodyInR2) seenBodyInR2 = true;
     }
+  }
+
+  // If no candle ever had body in BC but there were full-body-below-BC candles, fail on the first.
+  if (refFloorLow === null && pendingBelowBc.length > 0) {
+    const first = pendingBelowBc[0];
+    return {
+      rule: "floor",
+      openTime: new Date(first.openTime).toISOString(),
+      candleNumber: numberOf(first),
+      open: first.open,
+      close: first.close,
+      bc,
+      ceiling,
+      previousLowestWick: null,
+      previousHighestWick: refCeilingHigh,
+      previousHighestWickCandle: null,
+    };
   }
 
   return null;
