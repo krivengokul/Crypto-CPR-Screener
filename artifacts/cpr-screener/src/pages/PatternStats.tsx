@@ -28,6 +28,8 @@ import {
   explainUpexFailure,
   fetchPreviousSessionCandles,
   firstBodyThroughLevel,
+  allBodiesThroughLevel,
+  type CandleBodyLevelMatch,
   formatQualifyCandle,
   formatUpexFailureNote,
   getConsolidateABc,
@@ -1333,6 +1335,8 @@ type PrevDayDiagnosis = {
     tcName: string;
     ceilingName: string;
   };
+  tcCandles: CandleBodyLevelMatch[];
+  bcCandles: CandleBodyLevelMatch[];
   conA: PrevDayCheckBlock;
   conB: PrevDayCheckBlock;
   momA: PrevDayCheckBlock;
@@ -1443,8 +1447,10 @@ function PreviousDaySection() {
         tcName,
       );
 
-      const tcTouch = firstBodyThroughLevel(candles, conBTc, prevStart, now);
-      const bcTouch = firstBodyThroughLevel(candles, conABc, prevStart, now);
+      const tcMatches = allBodiesThroughLevel(candles, conBTc, prevStart, now);
+      const bcMatches = allBodiesThroughLevel(candles, conABc, prevStart, now);
+      const tcTouch = tcMatches[0] ?? null;
+      const bcTouch = bcMatches[0] ?? null;
 
       const conB = failConB
         ? formatConBNote(failConB, tcName)
@@ -1496,6 +1502,8 @@ function PreviousDaySection() {
         entryDate,
         prevSessionLabel: prevLabel,
         levels: { conABc, ceiling, conBTc, floor, tcName, ceilingName },
+        tcCandles: tcMatches,
+        bcCandles: bcMatches,
         conA: { pass: failConA ? false : true, label: conA.label, detail: conA.detail },
         conB: { pass: failConB ? false : true, label: conB.label, detail: conB.detail },
         momA: { pass: failMomA ? false : true, label: momA.label, detail: momA.detail },
@@ -1586,6 +1594,71 @@ function PreviousDaySection() {
             <span className="font-mono text-slate-200">{result.prevSessionLabel}</span>
           </div>
 
+          {/* Dedicated summary of all candle numbers having body in TC and body in BC */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {/* TC block */}
+            <div className="rounded-xl border border-pink-500/25 bg-[#141220] p-3.5">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-xs font-bold text-pink-400 tracking-wide">
+                    CANDLES WITH BODY IN {result.levels.tcName.toUpperCase()}
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-mono">({result.levels.conBTc})</span>
+                </div>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-pink-500/15 text-pink-300 border border-pink-500/30">
+                  {result.tcCandles.length} {result.tcCandles.length === 1 ? "candle" : "candles"}
+                </span>
+              </div>
+              {result.tcCandles.length === 0 ? (
+                <div className="text-[11px] text-slate-500 italic">No candles had body spanning {result.levels.tcName}</div>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {result.tcCandles.map((c) => (
+                    <span
+                      key={c.candleNumber}
+                      title={`Candle #${c.candleNumber} (${c.ist} IST)\nBody: ${c.open} → ${c.close}\nHigh: ${c.high} · Low: ${c.low}`}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded font-mono text-[11px] bg-pink-500/15 text-pink-200 border border-pink-500/30 hover:bg-pink-500/25 cursor-default transition-colors"
+                    >
+                      <span className="font-semibold">#{c.candleNumber}</span>
+                      <span className="text-[10px] text-pink-400/80">({c.ist})</span>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* BC block */}
+            <div className="rounded-xl border border-emerald-500/25 bg-[#0e1c1e] p-3.5">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-xs font-bold text-emerald-400 tracking-wide">
+                    CANDLES WITH BODY IN BC
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-mono">({result.levels.conABc})</span>
+                </div>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                  {result.bcCandles.length} {result.bcCandles.length === 1 ? "candle" : "candles"}
+                </span>
+              </div>
+              {result.bcCandles.length === 0 ? (
+                <div className="text-[11px] text-slate-500 italic">No candles had body spanning BC</div>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {result.bcCandles.map((c) => (
+                    <span
+                      key={c.candleNumber}
+                      title={`Candle #${c.candleNumber} (${c.ist} IST)\nBody: ${c.open} → ${c.close}\nHigh: ${c.high} · Low: ${c.low}`}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded font-mono text-[11px] bg-emerald-500/15 text-emerald-200 border border-emerald-500/30 hover:bg-emerald-500/25 cursor-default transition-colors"
+                    >
+                      <span className="font-semibold">#{c.candleNumber}</span>
+                      <span className="text-[10px] text-emerald-400/80">({c.ist})</span>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
           {(
             [
               {
@@ -1594,6 +1667,7 @@ function PreviousDaySection() {
                 levels: `${result.levels.tcName} ${result.levels.conBTc} · floor ${result.levels.floor}`,
                 tonePass: "border-pink-500/30 bg-pink-500/5",
                 textPass: "text-pink-400",
+                levelType: "TC" as const,
               },
               {
                 key: "momB" as const,
@@ -1601,6 +1675,7 @@ function PreviousDaySection() {
                 levels: `${result.levels.tcName} ${result.levels.conBTc} · no floor`,
                 tonePass: "border-violet-500/30 bg-violet-500/5",
                 textPass: "text-violet-300",
+                levelType: "TC" as const,
               },
               {
                 key: "conA" as const,
@@ -1608,6 +1683,7 @@ function PreviousDaySection() {
                 levels: `BC ${result.levels.conABc} · ceiling ${result.levels.ceiling}`,
                 tonePass: "border-emerald-500/30 bg-emerald-500/5",
                 textPass: "text-emerald-400",
+                levelType: "BC" as const,
               },
               {
                 key: "momA" as const,
@@ -1615,11 +1691,15 @@ function PreviousDaySection() {
                 levels: `BC ${result.levels.conABc} · no ceiling`,
                 tonePass: "border-cyan-500/30 bg-cyan-500/5",
                 textPass: "text-cyan-300",
+                levelType: "BC" as const,
               },
             ] as const
-          ).map(({ key, title, levels, tonePass, textPass }) => {
+          ).map(({ key, title, levels, tonePass, textPass, levelType }) => {
             const block = result[key];
             const ok = block.pass === true;
+            const candleMatches = levelType === "TC" ? result.tcCandles : result.bcCandles;
+            const levelLabel = levelType === "TC" ? result.levels.tcName : "BC";
+            const levelVal = levelType === "TC" ? result.levels.conBTc : result.levels.conABc;
             return (
               <div
                 key={key}
@@ -1643,6 +1723,34 @@ function PreviousDaySection() {
                   </div>
                 )}
                 <div className="mt-1 text-[11px] leading-relaxed text-slate-300">{block.detail}</div>
+
+                <div className="mt-2.5 pt-2 border-t border-slate-700/40 flex flex-wrap items-center gap-1.5 text-[11px]">
+                  <span className="text-slate-400 font-mono text-[10px] uppercase">
+                    Body in {levelLabel} ({levelVal}):
+                  </span>
+                  {candleMatches.length === 0 ? (
+                    <span className="text-slate-500 italic text-[10px]">none</span>
+                  ) : (
+                    candleMatches.map((c) => (
+                      <span
+                        key={c.candleNumber}
+                        title={`Candle #${c.candleNumber} (${c.ist} IST)\nBody: ${c.open} → ${c.close}\nHigh: ${c.high} · Low: ${c.low}`}
+                        className={`inline-flex items-center px-1.5 py-0.5 rounded font-mono text-[10px] border ${
+                          levelType === "TC"
+                            ? "bg-pink-500/10 text-pink-300 border-pink-500/25"
+                            : "bg-emerald-500/10 text-emerald-300 border-emerald-500/25"
+                        }`}
+                      >
+                        #{c.candleNumber}
+                      </span>
+                    ))
+                  )}
+                  {candleMatches.length > 0 && (
+                    <span className="text-[10px] text-slate-500 font-mono ml-1">
+                      ({candleMatches.length} {candleMatches.length === 1 ? "candle" : "candles"})
+                    </span>
+                  )}
+                </div>
               </div>
             );
           })}

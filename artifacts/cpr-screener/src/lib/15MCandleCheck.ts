@@ -425,21 +425,24 @@ export async function fetchPreviousSessionCandles(
   return fetchUpexCandles(candidate, startTime, endTime);
 }
 
-/** First completed 15m candle whose body spans `level` (open/close straddle). */
-export function firstBodyThroughLevel(
-  candles: OHLC[],
-  level: number,
-  startTime: number,
-  now: number,
-): {
+export interface CandleBodyLevelMatch {
   candleNumber: number;
   openTime: string;
+  ist: string;
   open: number;
   close: number;
   high: number;
   low: number;
-} | null {
-  if (!Number.isFinite(level)) return null;
+}
+
+/** All completed 15m candles whose body spans `level` (open/close straddle). */
+export function allBodiesThroughLevel(
+  candles: OHLC[],
+  level: number,
+  startTime: number,
+  now: number,
+): CandleBodyLevelMatch[] {
+  if (!Number.isFinite(level)) return [];
   const completed = candles
     .filter(
       (c) =>
@@ -450,29 +453,43 @@ export function firstBodyThroughLevel(
         Number.isFinite(c.close),
     )
     .sort((a, b) => a.openTime - b.openTime);
+  const matches: CandleBodyLevelMatch[] = [];
   for (const c of completed) {
     const bodyLow = Math.min(c.open, c.close);
     const bodyHigh = Math.max(c.open, c.close);
     if (bodyLow <= level && bodyHigh >= level) {
-      return {
+      const ist = new Date(c.openTime + 19_800_000).toISOString().slice(11, 16);
+      matches.push({
         candleNumber: Math.floor((c.openTime - startTime) / CANDLE_INTERVAL_MS) + 1,
         openTime: new Date(c.openTime).toISOString(),
+        ist,
         open: c.open,
         close: c.close,
         high: c.high,
         low: c.low,
-      };
+      });
     }
   }
-  return null;
+  return matches;
+}
+
+/** First completed 15m candle whose body spans `level` (open/close straddle). */
+export function firstBodyThroughLevel(
+  candles: OHLC[],
+  level: number,
+  startTime: number,
+  now: number,
+): CandleBodyLevelMatch | null {
+  const matches = allBodiesThroughLevel(candles, level, startTime, now);
+  return matches.length > 0 ? matches[0] : null;
 }
 
 export function formatQualifyCandle(
-  q: NonNullable<ReturnType<typeof firstBodyThroughLevel>>,
+  q: CandleBodyLevelMatch,
   levelName: string,
   level: number,
 ): string {
-  const ist = new Date(Date.parse(q.openTime) + 19_800_000).toISOString().slice(11, 16);
+  const ist = q.ist || new Date(Date.parse(q.openTime) + 19_800_000).toISOString().slice(11, 16);
   return (
     `Qualified on candle #${q.candleNumber} (${ist} IST): body ${q.open}→${q.close} spans ${levelName} ${level}` +
     ` (high ${q.high}, low ${q.low}).`

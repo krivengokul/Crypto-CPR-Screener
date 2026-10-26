@@ -38,6 +38,7 @@ import {
   passesUpexFilter,
   previousUpexCandidateCacheKey,
   previousUpexSessionStartUtcMs,
+  allBodiesThroughLevel,
   savePreviousUpexResults,
   upexSessionStartUtcMs,
 } from "./15MCandleCheck.ts";
@@ -1265,4 +1266,26 @@ test("matchesCandleCheck validates CPRResult flags according to code", () => {
 
   // None / empty string
   assert.equal(matchesCandleCheck(dummyCPR, ""), true);
+});
+
+test("allBodiesThroughLevel detects all candle numbers whose body spans level", () => {
+  const start = 0;
+  const now = 4 * 15 * 60 * 1000; // 4 candles
+  const makeCandle = (i: number, open: number, high: number, low: number, close: number): OHLC => ({
+    openTime: i * 15 * 60 * 1000,
+    open,
+    high,
+    low,
+    close,
+  });
+  const c1 = makeCandle(0, 100, 105, 95, 102);  // body 100->102 (spans 101, spans 100) -> candle #1
+  const c2 = makeCandle(1, 103, 106, 102, 105); // body 103->105 (does not span 101) -> candle #2
+  const c3 = makeCandle(2, 102, 104, 99, 100);  // body 100->102 (spans 101) -> candle #3
+  const c4 = makeCandle(3, 98, 101.5, 97, 101); // body 98->101 (spans 101) -> candle #4
+
+  const matches101 = allBodiesThroughLevel([c1, c2, c3, c4], 101, start, now);
+  assert.deepEqual(matches101.map((m) => m.candleNumber), [1, 3, 4]);
+
+  const matchesNone = allBodiesThroughLevel([c1, c2, c3, c4], 110, start, now);
+  assert.deepEqual(matchesNone, []);
 });
