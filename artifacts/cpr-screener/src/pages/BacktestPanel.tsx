@@ -327,11 +327,9 @@ function renderCandleCheckBadges(raw: CPRResult) {
   const bucket = candleBucketFromFlags(raw);
 
   // Why P-CONSOLIDATE-B is missing: only worth showing when no badge is shown
-  // at all, or the row fell through to P-MOMENTUM-B (CON-B's floor / S2 rule)
-  // or P-VOLATILE-R1S1 (shown after the label, same "✗ reason" line).
+  // at all, or the row fell through to P-MOMENTUM-B (CON-B's floor / S2 rule).
   const conBFailure =
-    raw.PD15MBelowTCPass !== true &&
-    (bucket === null || bucket === "momentum-b" || bucket === "inside-r1s1")
+    raw.PD15MBelowTCPass !== true && (bucket === null || bucket === "momentum-b")
       ? raw.PD15MBelowTCFailure
       : undefined;
   const conBFailureLine = conBFailure ? (
