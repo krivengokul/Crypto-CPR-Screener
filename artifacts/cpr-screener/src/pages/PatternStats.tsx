@@ -1186,7 +1186,7 @@ function ChartLinksSection({
                   <tr key={record.id} className="transition hover:bg-[#151e2c]/70">
                     <td className="px-3 py-2.5">
                       <div className="flex items-center gap-2">
-                        {/* Snapshot (attached chart) — before symbol */}
+                        {/* Snapshot camera — before symbol */}
                         <button
                           type="button"
                           title={`TradingView Snapshot Attached\n${record.url}${record.savedAt ? `\nSaved: ${new Date(record.savedAt).toLocaleDateString()}` : ""}\nClick to open (hard reload)`}
@@ -1195,7 +1195,8 @@ function ChartLinksSection({
                         >
                           <Camera className="h-2.5 w-2.5" />
                         </button>
-                        {/* Live TradingView chart */}
+                        <span className="font-mono font-semibold text-white">{details.symbol || "—"}</span>
+                        {/* Live TradingView chart — after symbol */}
                         {liveChartUrl ? (
                           <button
                             type="button"
@@ -1206,7 +1207,6 @@ function ChartLinksSection({
                             <ExternalLink className="h-2.5 w-2.5" />
                           </button>
                         ) : null}
-                        <span className="font-mono font-semibold text-white">{details.symbol || "—"}</span>
                       </div>
                     </td>
                     <td className="px-3 py-2.5 text-slate-300">{details.date || "—"}</td>
