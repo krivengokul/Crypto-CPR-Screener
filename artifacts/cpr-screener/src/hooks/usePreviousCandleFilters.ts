@@ -140,17 +140,18 @@ export function usePreviousCandleFilters(opts: {
     const candidates = new Map<string, {
       symbol: string; source: "binance" | "delta"; bc: number;
     }>();
+    // Same BC as CON-A: PDay BC, or PPDay BC when PDay was Overlap-Above / Inside vs PPDay.
     if (status === "done") {
       for (const row of allResults) {
         candidates.set(`binance:${row.symbol}`, {
-          symbol: row.symbol, source: "binance", bc: row.prevCPR.bc,
+          symbol: row.symbol, source: "binance", bc: getConsolidateABc(row.prevCPR, row.ppCPR),
         });
       }
     }
     if (deltaStatus === "done") {
       for (const row of deltaAllResults) {
         candidates.set(`delta:${row.symbol}`, {
-          symbol: row.symbol, source: "delta", bc: row.prevCPR.bc,
+          symbol: row.symbol, source: "delta", bc: getConsolidateABc(row.prevCPR, row.ppCPR),
         });
       }
     }

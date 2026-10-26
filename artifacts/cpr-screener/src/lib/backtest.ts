@@ -1847,7 +1847,9 @@ async function populateAllPFilterFlags(
       sessionStart,
     ),
     findPreviousUpexPass(
-      { symbol, source, bc: prevCPR.bc },
+      // MOMENTUM-A uses the same BC as CON-A: PDay BC, or PPDay BC when PDay
+      // was Overlap-Above / Inside vs PPDay (see getConsolidateABc).
+      { symbol, source, bc: getConsolidateABc(prevCPR, result.ppCPR) },
       sessionStart,
     ),
     findPD15MBelowTCPass(
