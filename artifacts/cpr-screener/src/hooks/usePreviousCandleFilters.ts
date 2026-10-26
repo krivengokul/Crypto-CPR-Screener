@@ -8,6 +8,7 @@ import type { CPRResultWithSource } from "@/pages/ScreenerUtils";
 import {
   findInsideR1S1Symbols,
   findPD15MBelowTCSymbols,
+  getPD15MBelowTCFailureNote,
   findPD15MMomentumBelowSymbols,
   findPreviousConsolidateASymbols,
   findPreviousUpexSymbols,
@@ -302,12 +303,49 @@ export function usePreviousCandleFilters(opts: {
         const b = previous15MTCIncludedSymbols.has(key);
         const mb = previous15MMomentumIncludedSymbols.has(key);
         const ins = previousInsideR1S1IncludedSymbols.has(key);
+
+        // Why CON-B failed (same short label Backtest View cell uses).
+        let failure: CPRResult["PD15MBelowTCFailure"] = undefined;
+        if (!b) {
+          const conBTc = getConsolidateBTc(row.prevCPR, row.ppCPR);
+          const floor = getPrevious15MBFloor(row.prevCPR);
+          const conBTcName =
+            row.ppCPR && conBTc === row.ppCPR.tc && conBTc !== row.prevCPR.tc
+              ? "PPDay TC"
+              : "PDay TC";
+          const now = Date.now();
+          // Prefer MOM-B (TC-only) failure when that also failed — same as backtest.
+          failure =
+            (mb !== true
+              ? getPD15MBelowTCFailureNote(
+                  { symbol: row.symbol, source, bc: conBTc },
+                  now,
+                  conBTcName,
+                )
+              : getPD15MBelowTCFailureNote(
+                  {
+                    symbol: row.symbol,
+                    source,
+                    bc: conBTc,
+                    floor,
+                    s2: row.prevCPR.s2,
+                  },
+                  now,
+                  conBTcName,
+                )) ?? undefined;
+        }
+
+        const failSame =
+          (row.PD15MBelowTCFailure?.label ?? null) === (failure?.label ?? null) &&
+          (row.PD15MBelowTCFailure?.detail ?? null) === (failure?.detail ?? null);
+
         if (
           row.PD15MConsolidateAPass === a &&
           row.PD15MAboveBCPass === ma &&
           row.PD15MBelowTCPass === b &&
           row.PD15MMomentumBPass === mb &&
-          row.PD15MInsideR1S1Pass === ins
+          row.PD15MInsideR1S1Pass === ins &&
+          failSame
         ) {
           return row;
         }
@@ -319,6 +357,7 @@ export function usePreviousCandleFilters(opts: {
           PD15MBelowTCPass: b,
           PD15MMomentumBPass: mb,
           PD15MInsideR1S1Pass: ins,
+          PD15MBelowTCFailure: failure,
         };
       });
       if (changed) setRows(next);

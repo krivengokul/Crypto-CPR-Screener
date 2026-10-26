@@ -340,15 +340,10 @@ function renderCandleCheckBadges(raw: CPRResult) {
       P-CONSOLIDATE-B ✗ {conBFailure.label}
     </div>
   ) : null;
-  const conBFailureDetail = conBFailure ? (
-    <div className="font-mono text-[10px] whitespace-nowrap text-muted-foreground">
-      {conBFailure.detail}
-    </div>
-  ) : null;
 
   if (!bucket) {
     return conBFailureLine ? (
-      <div className="mt-1 flex flex-col gap-0.5">{conBFailureLine}{conBFailureDetail}</div>
+      <div className="mt-1 flex flex-col gap-0.5">{conBFailureLine}</div>
     ) : null;
   }
 
@@ -387,7 +382,6 @@ function renderCandleCheckBadges(raw: CPRResult) {
         {label}
       </div>
       {conBFailureLine}
-      {conBFailureDetail}
       {bucket === "consolidate-b" && raw.PD15MBelowTCPassNote ? (
         <div className="font-mono text-[10px] whitespace-nowrap text-muted-foreground">
           ✓ {raw.PD15MBelowTCPassNote.label} · {raw.PD15MBelowTCPassNote.detail}
