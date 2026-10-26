@@ -294,7 +294,7 @@ export function SRLadder({
     if (key === "PH") return "text-fuchsia-500";
     if (key === "PL") return "text-fuchsia-500";
     if (key.startsWith("R")) return "text-green-400";
-    return "text-red-400";
+    return "text-pink-400";
   };
 
   return (
@@ -377,7 +377,7 @@ function levelLabel(key: (typeof LEVEL_KEYS)[number]): string {
  * previously rendered in the much lighter Tailwind red-400 (#f87171)
  * instead of this one.
  */
-const S_LEVEL_DARK_RED = "#ff2e2e";
+const S_LEVEL_PINK = "#f472b6";
 
 /** Same color coding as SRLadder's rowColor, expressed as hex for SVG stroke/fill. */
 function levelColor(key: (typeof LEVEL_KEYS)[number]): string {
@@ -387,8 +387,8 @@ function levelColor(key: (typeof LEVEL_KEYS)[number]): string {
   if (key === "prevHigh") return "#FF00FF"; // fuchsia (swapped with BC)
   if (key === "prevLow") return "#FF00FF"; // fuchsia (swapped with BC)
   if (key.startsWith("r")) return "#4ade80"; // green-400
-  // S1-S4 all share this exact same red — no per-level variation.
-  return S_LEVEL_DARK_RED;
+  // S1-S4 all share this same pink — no per-level variation.
+  return S_LEVEL_PINK;
 }
 
 /**
@@ -472,10 +472,8 @@ function ViewNameBadge({ name, direction }: { name: string; direction?: ViewDire
 const INNER_LABEL_TEXT_HEX: Record<string, string> = {
   "green-400": "#4ade80",
   // HHLL-B, RRSS-B, SSLL-BB/OB, RRHH-BB/OB all use text-red-400 — matched
-  // to S_LEVEL_DARK_RED (the exact red used by the S1-S4 line-end labels)
-  // instead of Tailwind's lighter red-400 (#f87171), so every "-B"/"-BB"
-  // category badge reads in the same dark red as the S lines.
-  "red-400": S_LEVEL_DARK_RED,
+  // HHLL-B etc. still map red-400 class → S-level pink for visual consistency on the chart.
+  "red-400": S_LEVEL_PINK,
   "blue-400": "#60a5fa",
   "orange-400": "#fb923c",
   "yellow-400": "#facc15",
