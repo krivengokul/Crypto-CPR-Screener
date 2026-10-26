@@ -1552,7 +1552,7 @@ export async function prefetchHistories(
  * does (pp/prev/today candle selection). Returns null if there isn't
  * enough history to reconstruct it at all.
  */
-async function reconstructCPRForDate(
+export async function reconstructCPRForDate(
   symbol: string,
   source: BacktestSource,
   entryDateISO: string

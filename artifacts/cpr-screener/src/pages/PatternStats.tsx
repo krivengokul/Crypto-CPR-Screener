@@ -22,6 +22,21 @@ import {
   Target,
   Crosshair,
 } from "lucide-react";
+import {
+  explainPD15MBelowTCFailure,
+  explainUpexFailure,
+  fetchPreviousSessionCandles,
+  formatUpexFailureNote,
+  getConsolidateABc,
+  getConsolidateBTc,
+  getPD15MBelowTCFailureNote,
+  getPrevious15MACeiling,
+  getPrevious15MBFloor,
+  previousUpexSessionStartUtcMs,
+  upexSessionStartUtcMs,
+  findPD15MBelowTCPass,
+  findPreviousConsolidateAPass,
+} from "@/lib/15MCandleCheck";
 import { passesPattern, computeInnerLevelPattern, INNER_LEVEL_PATTERN_KEYS, normalizeViewDirection, type ViewDirection } from "./ScreenerUtils";
 import { pivotcategories } from "@/lib/ViewsSidebar";
 import { COINDCX_ENABLED } from "@/lib/featureFlags";
@@ -46,6 +61,7 @@ import {
   CategoryComboRow,
   CategoryMatchRow,
   UnclassifiedPatternMatch,
+  reconstructCPRForDate,
 } from "@/lib/backtest";
 
 // The Category filter's options come straight from ViewsSidebar's own
@@ -125,6 +141,14 @@ const CHARTS_OPTION: CategoryOption = {
   icon: BarChart3,
 };
 
+const PREVIOUS_DAY_CATEGORY_KEY = "previous-day";
+const PREVIOUS_DAY_OPTION: CategoryOption = {
+  id: PREVIOUS_DAY_CATEGORY_KEY,
+  label: "Previous Day",
+  subtitle: "Why P-CONSOLIDATE-A / P-CONSOLIDATE-B failed (or passed) on the previous 15m session for one symbol + date.",
+  icon: Search,
+};
+
 // The three synthetic panels are flat lists with no nesting.
 const FLAT_LIST_IDS = new Set([OUTER_PATTERNS_CATEGORY_KEY, INNER_PATTERNS_CATEGORY_KEY]);
 
@@ -139,6 +163,7 @@ const CATEGORY_FILTER_OPTIONS: CategoryOption[] = [
   INNER_PATTERNS_OPTION,
   VIEWS_OPTION,
   CHARTS_OPTION,
+  PREVIOUS_DAY_OPTION,
 ];
 
 // Categories whose matches OVERLAP the others (a TOP 15 mover, a row with
@@ -1175,6 +1200,276 @@ function ChartLinksSection({
  * treatment as RRSSA-COA, RRSSB-EBB, etc.) are obvious at a glance, grouped
  * by the category they actually live under.
  */
+
+type PrevDayDiagnosis = {
+  symbol: string;
+  source: "binance" | "delta";
+  entryDate: string;
+  prevSessionLabel: string;
+  levels: {
+    conABc: number;
+    ceiling: number;
+    conBTc: number;
+    floor: number;
+    tcName: string;
+    ceilingName: string;
+  };
+  conA: { pass: boolean | null; label: string; detail: string };
+  conB: { pass: boolean | null; label: string; detail: string };
+};
+
+function formatConBNote(
+  failure: NonNullable<ReturnType<typeof explainPD15MBelowTCFailure>>,
+  tcName: string,
+): { label: string; detail: string } {
+  const ist = new Date(Date.parse(failure.openTime) + 19_800_000).toISOString().slice(11, 16);
+  const hhmm = `#${failure.candleNumber} (${ist} IST)`;
+  const body = `${failure.open}→${failure.close}`;
+  switch (failure.rule) {
+    case "freshHighAboveTC":
+      return {
+        label: `fresh high > ${tcName} · candle #${failure.candleNumber}`,
+        detail:
+          `#${failure.candleNumber} (${ist} IST) body ${body}, body top ${Math.max(failure.open, failure.close)}` +
+          ` > earlier high ${failure.previousHighestWick ?? "—"}` +
+          (failure.previousHighestWickCandle ? ` (candle #${failure.previousHighestWickCandle})` : "") +
+          ` · ${tcName} ${failure.tc}`,
+      };
+    case "bodyInS2":
+      return {
+        label: `body ≤ S2 · candle #${failure.candleNumber}`,
+        detail: `candle ${hhmm} body ${body} reached S2 — MOMENTUM-B territory, not CONSOLIDATE-B.`,
+      };
+    case "floor":
+      return {
+        label: `broke below floor wick · candle #${failure.candleNumber}`,
+        detail: `candle ${hhmm} body ${body} went below the low-wick reference ${failure.previousLowestWick ?? "—"} under PL/S1 floor ${failure.floor ?? "—"}.`,
+      };
+  }
+}
+
+function PreviousDaySection() {
+  const [symbol, setSymbol] = useState("");
+  const [entryDate, setEntryDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [source, setSource] = useState<"binance" | "delta">("binance");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<PrevDayDiagnosis | null>(null);
+
+  const run = async () => {
+    const sym = symbol.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+    if (!sym) {
+      setError("Enter a symbol (e.g. BTCUSDT).");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    setResult(null);
+    try {
+      const fullSym = sym.endsWith("USDT") ? sym : `${sym}USDT`;
+      const reconstructed = await reconstructCPRForDate(fullSym, source, entryDate);
+      if (!reconstructed) {
+        setError(`Could not reconstruct CPR for ${fullSym} on ${entryDate}.`);
+        return;
+      }
+      const { result: cpr } = reconstructed;
+      const sessionEnd = Date.parse(`${entryDate}T00:00:00.000Z`);
+      const prevStart = previousUpexSessionStartUtcMs(sessionEnd);
+      const prevEnd = upexSessionStartUtcMs(sessionEnd);
+
+      const conABc = getConsolidateABc(cpr.prevCPR, cpr.ppCPR);
+      const ceiling = getPrevious15MACeiling(cpr.prevCPR);
+      const conBTc = getConsolidateBTc(cpr.prevCPR, cpr.ppCPR);
+      const floor = getPrevious15MBFloor(cpr.prevCPR);
+      const tcName =
+        cpr.ppCPR && conBTc === cpr.ppCPR.tc && conBTc !== cpr.prevCPR.tc ? "PPDay TC" : "PDay TC";
+      const ceilingName =
+        cpr.ppCPR && conABc === cpr.ppCPR.bc && conABc !== cpr.prevCPR.bc
+          ? "PPDay BC band / PH-R1"
+          : "PDay PH/R1";
+
+      const candles = await fetchPreviousSessionCandles(
+        { symbol: fullSym, source },
+        sessionEnd,
+      );
+      if (!candles || candles.length === 0) {
+        setError(`No previous-session 15m candles for ${fullSym}.`);
+        return;
+      }
+
+      const now = prevEnd; // session end = "now" for historical walk
+      const failB = explainPD15MBelowTCFailure(candles, conBTc, prevStart, now, floor);
+      const failA = explainUpexFailure(candles, conABc, prevStart, now, ceiling, cpr.prevCPR.r2);
+
+      // Also populate pass caches for note helper (optional)
+      await Promise.all([
+        findPD15MBelowTCPass(
+          { symbol: fullSym, source, bc: conBTc, floor },
+          sessionEnd,
+        ),
+        findPreviousConsolidateAPass(
+          { symbol: fullSym, source, bc: conABc, ceiling, r2: cpr.prevCPR.r2 },
+          sessionEnd,
+        ),
+      ]);
+
+      const noteBFromCache = getPD15MBelowTCFailureNote(
+        { symbol: fullSym, source, bc: conBTc, floor },
+        sessionEnd,
+        tcName,
+      );
+
+      const conB = failB
+        ? formatConBNote(failB, tcName)
+        : noteBFromCache
+          ? noteBFromCache
+          : {
+              label: "PASS",
+              detail: `All previous-session 15m bodies stayed within CONSOLIDATE-B rules (ceiling ${tcName} ${conBTc}, floor PL/S1 ${floor}).`,
+            };
+
+      const conA = failA
+        ? formatUpexFailureNote(failA, ceilingName)
+        : {
+            label: "PASS",
+            detail: `All previous-session 15m bodies stayed within CONSOLIDATE-A rules (BC ${conABc}, ceiling PH/R1 ${ceiling}).`,
+          };
+
+      const prevLabel = new Date(prevStart).toISOString().slice(0, 10);
+
+      setResult({
+        symbol: fullSym,
+        source,
+        entryDate,
+        prevSessionLabel: prevLabel,
+        levels: { conABc, ceiling, conBTc, floor, tcName, ceilingName },
+        conA: { pass: failA ? false : true, label: conA.label, detail: conA.detail },
+        conB: { pass: failB ? false : true, label: conB.label, detail: conB.detail },
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <section className="space-y-4">
+      <div className="rounded-xl border border-[#22354a] bg-[#0c131f] p-4">
+        <h2 className="mb-1 text-sm font-semibold text-teal-300">Previous Day — 15m CON-A / CON-B</h2>
+        <p className="mb-3 text-[11px] text-slate-400">
+          Enter a symbol and entry date (UTC session day). Shows why P-CONSOLIDATE-A and P-CONSOLIDATE-B
+          failed or passed on the <span className="text-slate-200">previous</span> 15m session — same detail
+          that used to appear under the Backtest View cell.
+        </p>
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="block">
+            <span className={CONTROL_LABEL}>Symbol</span>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-teal-400" />
+              <input
+                type="search"
+                value={symbol}
+                onChange={(e) => setSymbol(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && void run()}
+                placeholder="BTCUSDT"
+                className={`${CONTROL_BOX} w-44 py-1.5 pl-8 pr-3`}
+              />
+            </div>
+          </label>
+          <label className="block">
+            <span className={CONTROL_LABEL}>Entry date (UTC)</span>
+            <input
+              type="date"
+              value={entryDate}
+              onChange={(e) => setEntryDate(e.target.value)}
+              className={`${CONTROL_BOX} py-1.5 px-3`}
+            />
+          </label>
+          <div className="flex rounded-md overflow-hidden border border-[#22354a] bg-[#151e2c]">
+            {(["binance", "delta"] as const).map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setSource(s)}
+                className={`px-3 py-1.5 text-xs font-semibold capitalize ${
+                  source === s ? "bg-cyan-500/20 text-cyan-400" : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => void run()}
+            disabled={loading}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-teal-500/40 bg-teal-500/15 px-3 py-1.5 text-xs font-semibold text-teal-300 hover:bg-teal-500/25 disabled:opacity-50"
+          >
+            {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+            Diagnose
+          </button>
+        </div>
+      </div>
+
+      {error && (
+        <div className="flex items-start gap-2 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {result && (
+        <div className="space-y-3">
+          <div className="text-xs text-slate-400">
+            <span className="font-mono text-slate-200">{result.symbol}</span>
+            {" · "}
+            {result.source}
+            {" · entry "}
+            <span className="font-mono text-slate-200">{result.entryDate}</span>
+            {" · previous session "}
+            <span className="font-mono text-slate-200">{result.prevSessionLabel}</span>
+          </div>
+
+          {(["conB", "conA"] as const).map((key) => {
+            const block = result[key];
+            const title = key === "conB" ? "P-CONSOLIDATE-B" : "P-CONSOLIDATE-A";
+            const levels =
+              key === "conB"
+                ? `${result.levels.tcName} ${result.levels.conBTc} · floor ${result.levels.floor}`
+                : `BC ${result.levels.conABc} · ceiling ${result.levels.ceiling}`;
+            const ok = block.pass === true;
+            return (
+              <div
+                key={key}
+                className={`rounded-xl border px-4 py-3 ${
+                  ok
+                    ? "border-emerald-500/30 bg-emerald-500/5"
+                    : "border-pink-500/30 bg-pink-500/5"
+                }`}
+              >
+                <div className="mb-1 flex flex-wrap items-center gap-2">
+                  <span className={`font-mono text-xs font-bold uppercase tracking-wider ${ok ? "text-emerald-400" : "text-pink-400"}`}>
+                    {title} {ok ? "PASS" : "✗"}
+                  </span>
+                  <span className="text-[10px] text-slate-500">{levels}</span>
+                </div>
+                {!ok && (
+                  <div className="font-mono text-[12px] text-pink-300/90">
+                    {title} {block.label}
+                  </div>
+                )}
+                <div className="mt-1 text-[11px] leading-relaxed text-slate-300">{block.detail}</div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
+
 export default function PatternStats() {
   const [source, setSource] = useState<BacktestSource>("binance");
   const [startDate, setStartDate] = useState<string>(() => {
@@ -1437,7 +1732,11 @@ export default function PatternStats() {
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div className="flex shrink-0 items-center gap-2 pb-1.5 font-mono text-[11px] font-semibold uppercase tracking-wider text-teal-400">
             <Filter className="h-3.5 w-3.5" />
-            {categoryFilter === CHARTS_CATEGORY_KEY ? "Saved charts" : "Filter scan"}
+            {categoryFilter === CHARTS_CATEGORY_KEY
+              ? "Saved charts"
+              : categoryFilter === PREVIOUS_DAY_CATEGORY_KEY
+                ? "Previous day 15m"
+                : "Filter scan"}
           </div>
 
           <div className="flex flex-wrap items-end gap-3">
@@ -1561,7 +1860,9 @@ export default function PatternStats() {
 
       {/* Results */}
       <div className="flex-1 overflow-y-auto p-4">
-        {categoryFilter === CHARTS_CATEGORY_KEY ? (
+        {categoryFilter === PREVIOUS_DAY_CATEGORY_KEY ? (
+          <PreviousDaySection />
+        ) : categoryFilter === CHARTS_CATEGORY_KEY ? (
           <ChartLinksSection
             records={chartRecords}
             loading={chartRecordsLoading}

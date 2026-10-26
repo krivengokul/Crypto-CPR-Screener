@@ -253,6 +253,178 @@ export function passesUpexFilter(
   return true;
 }
 
+/** Why CONSOLIDATE-A / MOMENTUM-A failed on a previous-session 15m walk. */
+export type UpexFailureRule = "floor" | "freshHighAboveCeiling" | "bodyInR2";
+
+export interface UpexFailureInfo {
+  rule: UpexFailureRule;
+  openTime: string;
+  candleNumber: number;
+  open: number;
+  close: number;
+  bc: number;
+  ceiling?: number;
+  previousLowestWick: number | null;
+  previousHighestWick: number | null;
+  previousHighestWickCandle: number | null;
+}
+
+/**
+ * Same walk as passesUpexFilter, but reports which candle/rule failed.
+ * Null when the session passes or cannot be evaluated.
+ */
+export function explainUpexFailure(
+  candles: OHLC[],
+  bc: number,
+  startTime: number,
+  now: number,
+  ceiling?: number,
+  r2?: number,
+): UpexFailureInfo | null {
+  if (!Number.isFinite(bc)) return null;
+  if (ceiling !== undefined && !Number.isFinite(ceiling)) return null;
+
+  const completed = candles
+    .filter(
+      (candle) =>
+        Number.isFinite(candle.openTime) &&
+        candle.openTime >= startTime &&
+        candle.openTime + CANDLE_INTERVAL_MS <= now &&
+        Number.isFinite(candle.open) &&
+        Number.isFinite(candle.close) &&
+        Number.isFinite(candle.low),
+    )
+    .sort((a, b) => a.openTime - b.openTime);
+  if (completed.length === 0) return null;
+
+  let refFloorLow: number | null = null;
+  let refCeilingHigh: number | null = null;
+  let seenBodyInR2 = false;
+  const useR2 = ceiling !== undefined && r2 !== undefined && Number.isFinite(r2);
+  const numberOf = (c: OHLC) => Math.floor((c.openTime - startTime) / CANDLE_INTERVAL_MS) + 1;
+
+  for (let i = 0; i < completed.length; i++) {
+    const candle = completed[i];
+    const bodyLow = Math.min(candle.open, candle.close);
+    const bodyHigh = Math.max(candle.open, candle.close);
+
+    const bodyInBc = bodyLow <= bc && bodyHigh >= bc;
+    if (bodyInBc) {
+      if (refFloorLow === null || candle.low < refFloorLow) {
+        refFloorLow = candle.low;
+      }
+    }
+    if (bodyHigh < (refFloorLow ?? bc)) {
+      return {
+        rule: "floor",
+        openTime: new Date(candle.openTime).toISOString(),
+        candleNumber: numberOf(candle),
+        open: candle.open,
+        close: candle.close,
+        bc,
+        ceiling,
+        previousLowestWick: refFloorLow,
+        previousHighestWick: refCeilingHigh,
+        previousHighestWickCandle: null,
+      };
+    }
+
+    if (ceiling !== undefined) {
+      const bodyInCeiling = bodyLow <= ceiling && bodyHigh >= ceiling;
+      if (bodyInCeiling) {
+        if (refCeilingHigh === null || candle.high > refCeilingHigh) {
+          refCeilingHigh = candle.high;
+        }
+      }
+      if (bodyLow > (refCeilingHigh ?? ceiling)) {
+        const wickCandle =
+          refCeilingHigh === null
+            ? null
+            : completed.find(
+                (c) => c.openTime < candle.openTime && c.high === refCeilingHigh,
+              ) ?? null;
+        return {
+          rule: "freshHighAboveCeiling",
+          openTime: new Date(candle.openTime).toISOString(),
+          candleNumber: numberOf(candle),
+          open: candle.open,
+          close: candle.close,
+          bc,
+          ceiling,
+          previousLowestWick: refFloorLow,
+          previousHighestWick: refCeilingHigh,
+          previousHighestWickCandle: wickCandle ? numberOf(wickCandle) : null,
+        };
+      }
+    }
+
+    if (useR2 && r2 !== undefined) {
+      const bodyInR2 = candle.open >= r2 || candle.close >= r2;
+      const isNewHigh =
+        refCeilingHigh === null ||
+        (Number.isFinite(candle.high) && candle.high > refCeilingHigh);
+      if (bodyInR2 && (isNewHigh || !seenBodyInR2)) {
+        return {
+          rule: "bodyInR2",
+          openTime: new Date(candle.openTime).toISOString(),
+          candleNumber: numberOf(candle),
+          open: candle.open,
+          close: candle.close,
+          bc,
+          ceiling,
+          previousLowestWick: refFloorLow,
+          previousHighestWick: refCeilingHigh,
+          previousHighestWickCandle: null,
+        };
+      }
+      if (bodyInR2) seenBodyInR2 = true;
+    }
+  }
+
+  return null;
+}
+
+/** Human-readable CON-A / MOM-A failure note (mirrors getPD15MBelowTCFailureNote style). */
+export function formatUpexFailureNote(
+  failure: UpexFailureInfo,
+  ceilingName = "PH/R1",
+): { label: string; detail: string } {
+  const ist = new Date(Date.parse(failure.openTime) + 19_800_000).toISOString().slice(11, 16);
+  const hhmm = `#${failure.candleNumber} (${ist} IST)`;
+  const body = `${failure.open}→${failure.close}`;
+  switch (failure.rule) {
+    case "freshHighAboveCeiling":
+      return {
+        label: `fresh high > ${ceilingName} · candle #${failure.candleNumber}`,
+        detail:
+          `${hhmm} body ${body}, body bottom ${Math.min(failure.open, failure.close)}` +
+          ` > earlier high ${failure.previousHighestWick ?? "—"}` +
+          (failure.previousHighestWickCandle ? ` (candle #${failure.previousHighestWickCandle})` : "") +
+          ` · ${ceilingName} ${failure.ceiling ?? "—"}`,
+      };
+    case "bodyInR2":
+      return {
+        label: `body ≥ R2 · candle #${failure.candleNumber}`,
+        detail: `candle ${hhmm} body ${body} reached R2 (first body at/above R2, or a new high) — this is MOMENTUM-A, not CONSOLIDATE-A.`,
+      };
+    case "floor":
+      return {
+        label: `broke below BC wick · candle #${failure.candleNumber}`,
+        detail: `candle ${hhmm} body ${body} went below the low-wick reference ${failure.previousLowestWick ?? "—"} set after the first body through BC ${failure.bc}.`,
+      };
+  }
+}
+
+/** Fetch previous-session 15m candles for one symbol (public for Pattern Stats / debug). */
+export async function fetchPreviousSessionCandles(
+  candidate: Pick<UpexCandidate, "symbol" | "source">,
+  sessionEndMs: number,
+): Promise<OHLC[] | null> {
+  const endTime = upexSessionStartUtcMs(sessionEndMs);
+  const startTime = previousUpexSessionStartUtcMs(sessionEndMs);
+  return fetchUpexCandles(candidate, startTime, endTime);
+}
+
 /**
  * What made passesPD15MBelowTCFilter fail: which rule, which candle, and the
  * wick references that candle was judged against.
