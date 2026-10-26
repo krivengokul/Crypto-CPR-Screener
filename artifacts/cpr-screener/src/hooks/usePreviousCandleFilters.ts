@@ -2,13 +2,12 @@
  * usePreviousCandleFilters — CON-A / MOM-A / CON-B / MOM-B prep + exclusive buckets.
  * Wraps the four usePreviousCandleFilterPrep pipelines and candleBucket helpers.
  */
-import { useEffect, useMemo, type Dispatch, type SetStateAction } from "react";
+import { useCallback, useEffect, type Dispatch, type SetStateAction } from "react";
 import type { CPRResult } from "@/lib/cpr";
 import type { CPRResultWithSource } from "@/pages/ScreenerUtils";
 import {
   findInsideR1S1Symbols,
   findPD15MBelowTCSymbols,
-  getPD15MBelowTCFailureNote,
   findPD15MMomentumBelowSymbols,
   findPreviousConsolidateASymbols,
   findPreviousUpexSymbols,
@@ -287,91 +286,56 @@ export function usePreviousCandleFilters(opts: {
   const previousInsideR1S1Ready = insideR1S1Prep.ready;
   const previousInsideR1S1Message = insideR1S1Prep.message;
 
-  // Annotate scan rows with raw 15m flags
+  // Annotate scan rows with raw 15m flags only.
+  // IMPORTANT: do NOT depend on allResults/deltaAllResults — live price refresh
+  // replaces those arrays often and would re-map the full universe every tick.
+  // Functional setState reads the latest rows when the included-symbol sets change.
+  // (The Screener no longer shows CON-B failure labels — Backtest only.)
   useEffect(() => {
     const applyFlags = (
-      rows: CPRResult[],
       setRows: Dispatch<SetStateAction<CPRResult[]>>,
       source: "binance" | "delta",
     ) => {
-      if (rows.length === 0) return;
-      let changed = false;
-      const next = rows.map((row) => {
-        const key = `${source}:${row.symbol}`;
-        const a = previousConsolidateAIncludedSymbols.has(key);
-        const ma = previousUpexIncludedSymbols.has(key);
-        const b = previous15MTCIncludedSymbols.has(key);
-        const mb = previous15MMomentumIncludedSymbols.has(key);
-        const ins = previousInsideR1S1IncludedSymbols.has(key);
-
-        // Why CON-B failed (same short label Backtest View cell uses).
-        let failure: CPRResult["PD15MBelowTCFailure"] = undefined;
-        if (!b) {
-          const conBTc = getConsolidateBTc(row.prevCPR, row.ppCPR);
-          const floor = getPrevious15MBFloor(row.prevCPR);
-          const conBTcName =
-            row.ppCPR && conBTc === row.ppCPR.tc && conBTc !== row.prevCPR.tc
-              ? "PPDay TC"
-              : "PDay TC";
-          const now = Date.now();
-          // Prefer MOM-B (TC-only) failure when that also failed — same as backtest.
-          failure =
-            (mb !== true
-              ? getPD15MBelowTCFailureNote(
-                  { symbol: row.symbol, source, bc: conBTc },
-                  now,
-                  conBTcName,
-                )
-              : getPD15MBelowTCFailureNote(
-                  {
-                    symbol: row.symbol,
-                    source,
-                    bc: conBTc,
-                    floor,
-                    s2: row.prevCPR.s2,
-                  },
-                  now,
-                  conBTcName,
-                )) ?? undefined;
-        }
-
-        const failSame =
-          (row.PD15MBelowTCFailure?.label ?? null) === (failure?.label ?? null) &&
-          (row.PD15MBelowTCFailure?.detail ?? null) === (failure?.detail ?? null);
-
-        if (
-          row.PD15MConsolidateAPass === a &&
-          row.PD15MAboveBCPass === ma &&
-          row.PD15MBelowTCPass === b &&
-          row.PD15MMomentumBPass === mb &&
-          row.PD15MInsideR1S1Pass === ins &&
-          failSame
-        ) {
-          return row;
-        }
-        changed = true;
-        return {
-          ...row,
-          PD15MConsolidateAPass: a,
-          PD15MAboveBCPass: ma,
-          PD15MBelowTCPass: b,
-          PD15MMomentumBPass: mb,
-          PD15MInsideR1S1Pass: ins,
-          PD15MBelowTCFailure: failure,
-        };
+      setRows((prev) => {
+        if (prev.length === 0) return prev;
+        let changed = false;
+        const next = prev.map((row) => {
+          const key = `${source}:${row.symbol}`;
+          const a = previousConsolidateAIncludedSymbols.has(key);
+          const ma = previousUpexIncludedSymbols.has(key);
+          const b = previous15MTCIncludedSymbols.has(key);
+          const mb = previous15MMomentumIncludedSymbols.has(key);
+          const ins = previousInsideR1S1IncludedSymbols.has(key);
+          if (
+            row.PD15MConsolidateAPass === a &&
+            row.PD15MAboveBCPass === ma &&
+            row.PD15MBelowTCPass === b &&
+            row.PD15MMomentumBPass === mb &&
+            row.PD15MInsideR1S1Pass === ins
+          ) {
+            return row;
+          }
+          changed = true;
+          return {
+            ...row,
+            PD15MConsolidateAPass: a,
+            PD15MAboveBCPass: ma,
+            PD15MBelowTCPass: b,
+            PD15MMomentumBPass: mb,
+            PD15MInsideR1S1Pass: ins,
+          };
+        });
+        return changed ? next : prev;
       });
-      if (changed) setRows(next);
     };
-    applyFlags(allResults, setAllResults, "binance");
-    applyFlags(deltaAllResults, setDeltaAllResults, "delta");
+    applyFlags(setAllResults, "binance");
+    applyFlags(setDeltaAllResults, "delta");
   }, [
     previousConsolidateAIncludedSymbols,
     previousUpexIncludedSymbols,
     previous15MTCIncludedSymbols,
     previous15MMomentumIncludedSymbols,
     previousInsideR1S1IncludedSymbols,
-    allResults,
-    deltaAllResults,
     setAllResults,
     setDeltaAllResults,
   ]);
@@ -391,20 +355,48 @@ export function usePreviousCandleFilters(opts: {
    *   INSIDE (R1/PH–S1/PL pass, and not CON-A/CON-B) → INSIDE-R1S1
    * INSIDE ignores BC/TC consolidate membership; those win first when true.
    */
-  const candleBucket = (row: CPRResultWithSource): CandleBucket => {
-    const key = `${row.source}:${row.symbol}`;
-    const conA = previousConsolidateAIncludedSymbols.has(key);
-    const momA = previousUpexIncludedSymbols.has(key);
-    const conB = previous15MTCIncludedSymbols.has(key);
-    const momB = previous15MMomentumIncludedSymbols.has(key);
-    const inside = previousInsideR1S1IncludedSymbols.has(key);
-    if (conB) return "consolidate-b";
-    if (momB) return "momentum-b";
-    if (conA) return "consolidate-a";
-    if (momA) return "momentum-a";
-    if (inside) return "inside-r1s1";
-    return null;
-  };
+  // Memoized on the five included-symbol sets so their identities only change
+  // when a set changes. Screener lists these in many useMemo/useCallback dep
+  // arrays; fresh functions every render forced those to recompute on every
+  // live price tick.
+  const candleBucket = useCallback(
+    (row: CPRResultWithSource): CandleBucket => {
+      const key = `${row.source}:${row.symbol}`;
+      if (previous15MTCIncludedSymbols.has(key)) return "consolidate-b";
+      if (previous15MMomentumIncludedSymbols.has(key)) return "momentum-b";
+      if (previousConsolidateAIncludedSymbols.has(key)) return "consolidate-a";
+      if (previousUpexIncludedSymbols.has(key)) return "momentum-a";
+      if (previousInsideR1S1IncludedSymbols.has(key)) return "inside-r1s1";
+      return null;
+    },
+    [
+      previousConsolidateAIncludedSymbols,
+      previousUpexIncludedSymbols,
+      previous15MTCIncludedSymbols,
+      previous15MMomentumIncludedSymbols,
+      previousInsideR1S1IncludedSymbols,
+    ],
+  );
+  const hasConsolidateB = useCallback(
+    (row: CPRResultWithSource) => candleBucket(row) === "consolidate-b",
+    [candleBucket],
+  );
+  const hasMomentumB = useCallback(
+    (row: CPRResultWithSource) => candleBucket(row) === "momentum-b",
+    [candleBucket],
+  );
+  const hasConsolidateA = useCallback(
+    (row: CPRResultWithSource) => candleBucket(row) === "consolidate-a",
+    [candleBucket],
+  );
+  const hasMomentumA = useCallback(
+    (row: CPRResultWithSource) => candleBucket(row) === "momentum-a",
+    [candleBucket],
+  );
+  const hasInsideR1S1 = useCallback(
+    (row: CPRResultWithSource) => candleBucket(row) === "inside-r1s1",
+    [candleBucket],
+  );
 
   return {
     previousConsolidateAIncludedSymbols,
@@ -428,11 +420,11 @@ export function usePreviousCandleFilters(opts: {
     previousInsideR1S1Ready,
     previousInsideR1S1Message,
     candleBucket,
-    hasConsolidateB: (row: CPRResultWithSource) => candleBucket(row) === "consolidate-b",
-    hasMomentumB: (row: CPRResultWithSource) => candleBucket(row) === "momentum-b",
-    hasConsolidateA: (row: CPRResultWithSource) => candleBucket(row) === "consolidate-a",
-    hasMomentumA: (row: CPRResultWithSource) => candleBucket(row) === "momentum-a",
-    hasInsideR1S1: (row: CPRResultWithSource) => candleBucket(row) === "inside-r1s1",
+    hasConsolidateB,
+    hasMomentumB,
+    hasConsolidateA,
+    hasMomentumA,
+    hasInsideR1S1,
     resetConsolidateAMessage,
     resetMomentumAMessage,
     resetConsolidateBMessage,

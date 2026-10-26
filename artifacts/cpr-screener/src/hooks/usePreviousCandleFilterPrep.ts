@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 type Progress = { done: number; total: number } | null;
 
@@ -182,11 +182,14 @@ export function usePreviousCandleFilterPrep<T extends CandleFilterCandidate>(
       });
   }, [canRun, sessionStartMs, label, loadResults, saveResults]);
 
+  // Stable identity: callers list resetMessage in dependency arrays.
+  const resetMessage = useCallback(() => setMessage(""), []);
+
   return {
     includedSymbols,
     progress,
     ready,
     message,
-    resetMessage: () => setMessage(""),
+    resetMessage,
   };
 }

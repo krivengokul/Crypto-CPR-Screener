@@ -1203,19 +1203,6 @@ export default function ScreenerTableRow({
               P-VOLATILE-R1S1
             </div>
           )}
-          {/* CON-B failed: same short line as Backtest View cell (detail in title only). */}
-          {!showConsolidateB &&
-            r.PD15MBelowTCPass !== true &&
-            r.PD15MBelowTCFailure &&
-            (showMomentumB ||
-              (!showConsolidateA && !showMomentumA && !showInsideR1S1)) && (
-              <div
-                className="mt-1 font-mono text-[11px] whitespace-nowrap text-pink-400/70 cursor-help"
-                title={r.PD15MBelowTCFailure.detail}
-              >
-                P-CONSOLIDATE-B ✗ {r.PD15MBelowTCFailure.label}
-              </div>
-            )}
           {/* Live current-session failed-break flags: "2/3" = 3 levels pierced,
               price back inside 2 of them. Support side sky-blue, resistance orange. */}
           {reclaimS && (
