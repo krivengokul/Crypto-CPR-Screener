@@ -585,11 +585,11 @@ export default function Screener({
       const signalCode = patternId || "—";
       const direction = viewDef?.direction;
 
-      if (hasInsideR1S1(row as CPRResult)) pDayText = "P-VOLATILE-R1S1";
-      else if (hasConsolidateB(row as CPRResult)) pDayText = "P-CONSOLIDATE-B";
-      else if (hasMomentumB(row as CPRResult)) pDayText = "P-MOMENTUM-B";
-      else if (hasConsolidateA(row as CPRResult)) pDayText = "P-CONSOLIDATE-A";
-      else if (hasMomentumA(row as CPRResult)) pDayText = "P-MOMENTUM-A";
+      if (hasInsideR1S1(row)) pDayText = "P-VOLATILE-R1S1";
+      else if (hasConsolidateB(row)) pDayText = "P-CONSOLIDATE-B";
+      else if (hasMomentumB(row)) pDayText = "P-MOMENTUM-B";
+      else if (hasConsolidateA(row)) pDayText = "P-CONSOLIDATE-A";
+      else if (hasMomentumA(row)) pDayText = "P-MOMENTUM-A";
       else {
         const conA = row.PD15MConsolidateAPass === true;
         const conB = row.PD15MBelowTCPass === true;
@@ -856,7 +856,7 @@ export default function Screener({
   // whenever scan results or the active tab change.
   useEffect(() => {
     if (!onCounts) return;
-    const rawPool: CPRResultWithSource[] =
+    const rawPool: CPRResult[] =
       activeTab === "delta" ? deltaAllResults
       : activeTab === "coindcx" ? coindcxAllResults
       : activeTab === "combined" ? [...allResults, ...deltaAllResults, ...coindcxAllResults]
@@ -886,7 +886,7 @@ export default function Screener({
   // this screen ("(41)" suffix), computed off the same unfiltered pool used
   // for the left-nav counts so both always agree.
   const touchCounts = useMemo(() => {
-    const rawPool: CPRResultWithSource[] =
+    const rawPool: CPRResult[] =
       activeTab === "delta" ? deltaAllResults
       : activeTab === "coindcx" ? coindcxAllResults
       : activeTab === "combined" ? [...allResults, ...deltaAllResults, ...coindcxAllResults]
@@ -909,7 +909,7 @@ export default function Screener({
   }, [allResults, deltaAllResults, coindcxAllResults, activeTab, hideTradfiWeekend]);
 
   const viewCounts = useMemo(() => {
-    const rawPool: CPRResultWithSource[] =
+    const rawPool: CPRResult[] =
       activeTab === "delta" ? deltaAllResults
       : activeTab === "coindcx" ? coindcxAllResults
       : activeTab === "combined" ? [...allResults, ...deltaAllResults, ...coindcxAllResults]

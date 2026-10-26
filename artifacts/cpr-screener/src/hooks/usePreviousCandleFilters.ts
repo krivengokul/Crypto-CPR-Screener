@@ -4,7 +4,9 @@
  */
 import { useCallback, useEffect, type Dispatch, type SetStateAction } from "react";
 import type { CPRResult } from "@/lib/cpr";
-import type { CPRResultWithSource } from "@/pages/ScreenerUtils";
+// Bucket lookups only read `source` + `symbol`, so accept any row carrying those
+// (a full CPRResultWithSource, or a Legend-focus row with just the two fields).
+type CandleBucketRow = { symbol: string; source: string };
 import {
   findInsideR1S1Symbols,
   findPD15MBelowTCSymbols,
@@ -360,7 +362,7 @@ export function usePreviousCandleFilters(opts: {
   // arrays; fresh functions every render forced those to recompute on every
   // live price tick.
   const candleBucket = useCallback(
-    (row: CPRResultWithSource): CandleBucket => {
+    (row: CandleBucketRow): CandleBucket => {
       const key = `${row.source}:${row.symbol}`;
       if (previous15MTCIncludedSymbols.has(key)) return "consolidate-b";
       if (previous15MMomentumIncludedSymbols.has(key)) return "momentum-b";
@@ -378,23 +380,23 @@ export function usePreviousCandleFilters(opts: {
     ],
   );
   const hasConsolidateB = useCallback(
-    (row: CPRResultWithSource) => candleBucket(row) === "consolidate-b",
+    (row: CandleBucketRow) => candleBucket(row) === "consolidate-b",
     [candleBucket],
   );
   const hasMomentumB = useCallback(
-    (row: CPRResultWithSource) => candleBucket(row) === "momentum-b",
+    (row: CandleBucketRow) => candleBucket(row) === "momentum-b",
     [candleBucket],
   );
   const hasConsolidateA = useCallback(
-    (row: CPRResultWithSource) => candleBucket(row) === "consolidate-a",
+    (row: CandleBucketRow) => candleBucket(row) === "consolidate-a",
     [candleBucket],
   );
   const hasMomentumA = useCallback(
-    (row: CPRResultWithSource) => candleBucket(row) === "momentum-a",
+    (row: CandleBucketRow) => candleBucket(row) === "momentum-a",
     [candleBucket],
   );
   const hasInsideR1S1 = useCallback(
-    (row: CPRResultWithSource) => candleBucket(row) === "inside-r1s1",
+    (row: CandleBucketRow) => candleBucket(row) === "inside-r1s1",
     [candleBucket],
   );
 

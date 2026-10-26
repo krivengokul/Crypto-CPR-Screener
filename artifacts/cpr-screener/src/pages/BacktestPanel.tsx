@@ -916,7 +916,7 @@ function CopyViewControl({
 
       // Key may have been disambiguated (-13 / -ANY) when the same code exists
       // with the opposite 13/13 MATCH — use the cloned View's real key below.
-      const finalKey = result.cloned.key;
+      const finalKey = result.cloned?.key ?? viewKey;
       const adjusted = editBacktestView(
         finalKey,
         finalKey,
@@ -1352,12 +1352,12 @@ function EditViewControl({
     // Migrating on Save would rewrite links before the user runs the gh
     // workflow (or if they cancel), leaving Stats pointing at an unpersisted key.
     setPendingChartRename(
-      activeTarget.key !== res.updated.key
-        ? { from: activeTarget.key, to: res.updated.key }
+      activeTarget.key !== (res.updated?.key ?? viewKey)
+        ? { from: activeTarget.key, to: res.updated?.key ?? viewKey }
         : null,
     );
 
-    const finalKey = res.updated.key;
+    const finalKey = res.updated?.key ?? viewKey;
     const cmd = `gh workflow run editcopy-view.yml --repo krivengokul/Crypto-CPR-Screener -f sourceKey=${q(activeTarget.key)} -f newKey=${q(finalKey)} -f newLabel=${q(trimmedLabel)} -f isEdit=true -f direction=${q(direction)} -f entry=${q(entry)} -f stoploss=${q(stoploss)} -f target=${q(target)} -f attachKey=${q(attachKey)}${trimmedCandleCheck ? ` -f candleCheck=${q(trimmedCandleCheck)}` : ""}${gapBadge ? ` -f gapBadge=${q(gapBadge)}` : ""} -f requireFullMatch=${requireFullMatch ? "true" : "false"} -f levelCheckDefs=${b64}`;
     setCommand(cmd);
     // Deliberately NOT calling onUpdated here, same reasoning as
