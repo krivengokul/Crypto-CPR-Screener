@@ -255,6 +255,101 @@ const CONTROL_LABEL = "block text-[10px] font-mono font-semibold uppercase track
 const CONTROL_BOX =
   "rounded-lg border border-[#22354a] bg-[#151e2c] text-sm text-slate-100 transition hover:border-slate-500 focus:outline-none focus:border-teal-500/60 focus:ring-1 focus:ring-teal-500/40";
 
+
+/**
+ * Custom category menu — replaces native <select>, which on dark UIs often
+ * opens a blank white OS popup (especially Chrome/Edge) where option text is
+ * invisible or the list fails to paint. This menu is fully styled, scrollable,
+ * and closes on outside click / Escape.
+ */
+function CategoryPicker({
+  value,
+  onChange,
+  options,
+}: {
+  value: string;
+  onChange: (next: string) => void;
+  options: CategoryOption[];
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const currentLabel =
+    value === ""
+      ? "All categories"
+      : options.find((o) => o.id === value)?.label ?? value;
+
+  const items: { id: string; label: string }[] = [
+    { id: "", label: "All categories" },
+    ...options.map((o) => ({ id: o.id, label: o.label })),
+  ];
+
+  return (
+    <div className="relative" ref={ref}>
+      <Layers className="pointer-events-none absolute left-2.5 top-1/2 z-10 h-3.5 w-3.5 -translate-y-1/2 text-teal-400" />
+      <button
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        className={`${CONTROL_BOX} flex min-w-[190px] items-center gap-2 py-1.5 pl-8 pr-7 text-left border-teal-500/50`}
+      >
+        <span className="flex-1 truncate text-sm text-slate-100">{currentLabel}</span>
+        <ChevronDown
+          className={`pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+      {open && (
+        <ul
+          role="listbox"
+          className="absolute left-0 top-[calc(100%+4px)] z-50 max-h-72 min-w-full overflow-y-auto rounded-lg border border-[#2a3a52] bg-[#0f1724] py-1 shadow-xl shadow-black/50"
+        >
+          {items.map((item) => {
+            const selected = item.id === value;
+            return (
+              <li key={item.id || "all"}>
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={selected}
+                  onClick={() => {
+                    onChange(item.id);
+                    setOpen(false);
+                  }}
+                  className={`flex w-full items-center px-3 py-1.5 text-left text-sm transition-colors ${
+                    selected
+                      ? "bg-teal-500/20 text-teal-200"
+                      : "text-slate-200 hover:bg-[#1a2436] hover:text-white"
+                  }`}
+                >
+                  {item.label}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+
 /**
  * Calendar-based replacement for the native <input type="date">, ported
  * from BacktestPanel's "Entry Date (UTC)" DateField so Pattern Statistics'
@@ -1870,22 +1965,11 @@ export default function PatternStats() {
 
             <label className="block">
               <span className={CONTROL_LABEL}>Category</span>
-              <div className="relative">
-                <Layers className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-teal-400" />
-                <select
-                  className={`${CONTROL_BOX} min-w-[190px] appearance-none border-teal-500/50 py-1.5 pl-8 pr-7`}
-                  value={categoryFilter}
-                  onChange={(e) => setCategoryFilter(e.target.value)}
-                >
-                  <option value="">All categories</option>
-                  {CATEGORY_FILTER_OPTIONS.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.label}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
-              </div>
+              <CategoryPicker
+                value={categoryFilter}
+                onChange={setCategoryFilter}
+                options={CATEGORY_FILTER_OPTIONS}
+              />
             </label>
 
             {categoryFilter === CHARTS_CATEGORY_KEY ? (
