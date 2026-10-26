@@ -1,6 +1,7 @@
 /**
  * Shows which git commit the current Pages build came from.
  * Document-flow footer (not position:fixed) so it never covers page controls.
+ * Center: product credit · Right: commit / build meta.
  */
 export function BuildFooter() {
   const full = (import.meta.env.VITE_GIT_SHA ?? "").trim();
@@ -40,48 +41,59 @@ export function BuildFooter() {
       }}
     >
       <div
-        className="flex items-center justify-end gap-2 px-3 py-1.5 text-[10px] font-mono leading-none"
+        className="grid grid-cols-3 items-center gap-2 px-3 py-1.5 text-[10px] font-mono leading-none"
         style={{ color: "#6b8299" }}
-        title={
-          full
-            ? `Commit ${full}${builtLabel ? ` · built ${builtLabel}` : ""}`
-            : "Local / unknown build"
-        }
       >
-        <span style={{ color: "#3fb950" }}>●</span>
-        {commitUrl ? (
-          <a
-            href={commitUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="hover:underline"
-            style={{ color: "#8ba3bc" }}
-          >
-            {short}
-          </a>
-        ) : (
-          <span style={{ color: "#8ba3bc" }}>{short}</span>
-        )}
-        {builtLabel && (
-          <>
-            <span style={{ opacity: 0.4 }}>·</span>
-            <span>{builtLabel}</span>
-          </>
-        )}
-        {runUrl && (
-          <>
-            <span style={{ opacity: 0.4 }}>·</span>
+        <div />
+        <div
+          className="justify-self-center text-center font-sans text-[11px] tracking-wide"
+          style={{ color: "#8ba3bc" }}
+        >
+          Binance Futures Screener — by Kriven Gokul
+        </div>
+        <div
+          className="justify-self-end flex items-center gap-2"
+          title={
+            full
+              ? `Commit ${full}${builtLabel ? ` · built ${builtLabel}` : ""}`
+              : "Local / unknown build"
+          }
+        >
+          <span style={{ color: "#3fb950" }}>●</span>
+          {commitUrl ? (
             <a
-              href={runUrl}
+              href={commitUrl}
               target="_blank"
               rel="noreferrer"
               className="hover:underline"
-              style={{ color: "#6b8299" }}
+              style={{ color: "#8ba3bc" }}
             >
-              run
+              {short}
             </a>
-          </>
-        )}
+          ) : (
+            <span style={{ color: "#8ba3bc" }}>{short}</span>
+          )}
+          {builtLabel && (
+            <>
+              <span style={{ opacity: 0.4 }}>·</span>
+              <span>{builtLabel}</span>
+            </>
+          )}
+          {runUrl && (
+            <>
+              <span style={{ opacity: 0.4 }}>·</span>
+              <a
+                href={runUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="hover:underline"
+                style={{ color: "#6b8299" }}
+              >
+                run
+              </a>
+            </>
+          )}
+        </div>
       </div>
     </footer>
   );

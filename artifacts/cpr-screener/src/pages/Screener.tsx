@@ -2490,15 +2490,6 @@ export default function Screener({
           />
         )}
 
-        {/* Footer legend — same idle/scanning hide as the Legend cards above,
-            so it doesn't flash before the first scan resolves. */}
-        {currentStatus === "done" && (
-        <div className="mt-auto pt-8 text-xs text-muted-foreground text-center">
-          Binance: top 500 USDT pairs · Delta Exchange: 195 perpetual futures · CoinDCX: USDT perpetual futures · CPR from completed UTC daily candles
-          <br />
-          Auto-scans once daily at 5:30 AM IST · PH/PL = Previous Day High/Low · Not financial advice · by Kriven Gokul
-        </div>
-        )}
       </div>
     </div>
   );
