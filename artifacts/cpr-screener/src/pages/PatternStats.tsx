@@ -1377,15 +1377,15 @@ function PreviousDaySection() {
               />
             </div>
           </label>
-          <label className="block">
-            <span className={CONTROL_LABEL}>Entry date (UTC)</span>
-            <input
-              type="date"
-              value={entryDate}
-              onChange={(e) => setEntryDate(e.target.value)}
-              className={`${CONTROL_BOX} py-1.5 px-3`}
-            />
-          </label>
+          <DateField
+            label="Entry Date (UTC)"
+            value={entryDate}
+            onChange={(iso) => {
+              // Keep a concrete date for diagnose (default today if cleared).
+              setEntryDate(iso || new Date().toISOString().slice(0, 10));
+            }}
+            max={new Date().toISOString().slice(0, 10)}
+          />
           <div className="flex rounded-md overflow-hidden border border-[#22354a] bg-[#151e2c]">
             {(["binance", "delta"] as const).map((s) => (
               <button
