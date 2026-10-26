@@ -23,8 +23,7 @@ import {
 import { NIFTY_MOCK_CONTRACTS } from "@/lib/nifty";
 import NiftyWorkspace from "@/components/NiftyWorkspace";
 import {
-  findUpexSymbols,
-  getUpexBc,
+
   getReclaimStates,
   type ReclaimDepth,
 } from "@/lib/15MCandleCheck";
@@ -344,18 +343,10 @@ export default function Screener({
   const [prevWidthFilter, setPrevWidthFilter] = useState<WidthCategoryKey | null>(null);
   const [todayWidthFilter, setTodayWidthFilter] = useState<WidthCategoryKey | null>(null);
 
-  const [upexFilter, setUpexFilter] = useState(false);
-  const [upexIncludedSymbols, setUpexIncludedSymbols] = useState<Set<string>>(() => new Set());
+
   const [previousCandleFilter, setPreviousCandleFilter] = useState<
     "all" | "consolidate-a" | "momentum-a" | "consolidate-b" | "momentum-b" | "inside-r1s1"
   >("all");
-  const [upexProgress, setUpexProgress] = useState<{
-    done: number;
-    total: number;
-    filter: "15M-A";
-  } | null>(null);
-  const [upexMessage, setUpexMessage] = useState("");
-  const upexRunRef = useRef(0);
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "ready" | "pass" | "fail">("all");
   /** When ON (default) and today is Sat/Sun, hide Binance TRADFI + COMMOD rows. */
   const [hideTradfiWeekend, setHideTradfiWeekend] = useState(() => readHideTradfiWeekend());
@@ -463,12 +454,7 @@ export default function Screener({
   const reclaimResetRef = useRef<() => void>(() => {});
 
   const onScanOrTabReset = useCallback(() => {
-    upexRunRef.current += 1;
-    setUpexFilter(false);
-    setUpexIncludedSymbols(new Set());
     setPreviousCandleFilter("all");
-    setUpexProgress(null);
-    setUpexMessage("");
     reclaimResetRef.current();
   }, []);
 
@@ -1033,69 +1019,6 @@ export default function Screener({
   const reclaimSCount = getActivePool().filter((row) => !!reclaimStatesFor(row).s?.qualifies).length;
   const reclaimRCount = getActivePool().filter((row) => !!reclaimStatesFor(row).r?.qualifies).length;
 
-  const handleUpexFilter = async () => {
-    if (upexProgress) return;
-    if (upexFilter) {
-      setUpexFilter(false);
-      setUpexIncludedSymbols(new Set());
-      setUpexMessage("");
-      return;
-    }
-
-    const candidates = Array.from(
-      new Map(
-        getActivePool()
-          .filter(
-            (row): row is CPRResultWithSource & { source: "binance" | "delta" } =>
-              row.source !== "coindcx"
-          )
-          .map((row) => [
-            `${row.source}:${row.symbol}`,
-            {
-              symbol: row.symbol,
-              source: row.source,
-              bc: getUpexBc(row.todayCPR.bc, row.prevCPR.bc, row.overlapHigher),
-            },
-          ])
-      ).values()
-    );
-    if (candidates.length === 0) {
-      setUpexMessage(
-        activeTab === "coindcx"
-          ? "15M-A checks Binance and Delta only; CoinDCX results are not filtered."
-          : "Run a Binance or Delta Screener scan before applying 15M-A."
-      );
-      return;
-    }
-
-    const runId = ++upexRunRef.current;
-    setUpexMessage("");
-    setUpexProgress({ done: 0, total: candidates.length, filter: "15M-A" });
-    try {
-      const { included, unavailable } = await findUpexSymbols(
-        candidates,
-        (done, total) => {
-          if (runId === upexRunRef.current) setUpexProgress({ done, total, filter: "15M-A" });
-        }
-      );
-      if (runId !== upexRunRef.current) return;
-      setUpexIncludedSymbols(included);
-      setUpexFilter(true);
-      setUpexMessage(
-        unavailable > 0
-          ? `${unavailable} symbol${unavailable === 1 ? "" : "s"} excluded from 15M-A because completed 15m candle data was unavailable.`
-          : ""
-      );
-    } catch (cause) {
-      if (runId === upexRunRef.current) {
-        setUpexMessage(
-          cause instanceof Error ? `15M-A scan failed: ${cause.message}` : "15M-A scan failed."
-        );
-      }
-    } finally {
-      if (runId === upexRunRef.current) setUpexProgress(null);
-    }
-  };
 
   // Search box matches EITHER the symbol OR the name of any View the row
   // currently satisfies (the same names shown in the table's VIEW column,
@@ -1276,12 +1199,6 @@ export default function Screener({
     })
     .filter(
       (r) =>
-        !upexFilter ||
-        r.source === "coindcx" ||
-        upexIncludedSymbols.has(`${r.source}:${r.symbol}`)
-    )
-    .filter(
-      (r) =>
         previousCandleFilter !== "consolidate-a" ||
         hasConsolidateA(r)
     )
@@ -1445,7 +1362,7 @@ export default function Screener({
   // Helper: is any sub-filter active (to decide the result count label)
   const anySubFilter =
     !!activeGenericSignal ||
-    !!PatternFilter || !!touchFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter || upexFilter || previousCandleFilter !== "all" || reclaimSFilter || reclaimRFilter || statusFilter !== "all" || !!entryLevelFilter;
+    !!PatternFilter || !!touchFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter || previousCandleFilter !== "all" || reclaimSFilter || reclaimRFilter || statusFilter !== "all" || !!entryLevelFilter;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -2266,7 +2183,7 @@ export default function Screener({
                 onClick={() => {
                   if (!previousUpexReady) return;
                   setPreviousCandleFilter((v) => v === "momentum-a" ? "all" : "momentum-a");
-                  setUpexMessage("");
+                  resetMomentumAMessage();
                 }}
                 disabled={!previousUpexReady || currentAllCount === 0 || activeTab === "coindcx"}
                 aria-pressed={previousCandleFilter === "momentum-a"}
@@ -2387,7 +2304,6 @@ export default function Screener({
 
           const activeStatusMessages: { text: string; dismiss: () => void }[] = [];
           if (activeCandleMessage?.text) activeStatusMessages.push(activeCandleMessage);
-          if (upexFilter && upexMessage) activeStatusMessages.push({ text: upexMessage, dismiss: () => setUpexMessage("") });
           if ((reclaimSFilter || reclaimRFilter) && reclaimMessage) activeStatusMessages.push({ text: reclaimMessage, dismiss: () => clearReclaimMessage() });
 
           if (activeStatusMessages.length === 0 || currentStatus !== "done") return null;
@@ -2411,7 +2327,7 @@ export default function Screener({
           );
         })()}
 
-        {/* Single filter row, left → right: Search · 15M-A · All/Active/Ready/Pass/Fail · Binance | NIFTY (right). */}
+        {/* Single filter row, left → right: Search · All/Active/Ready/Pass/Fail · Binance | NIFTY (right). */}
         {canShowCombined && (
           <div className="px-4 py-2 border-b border-[#1b263b] bg-[#0d1422] flex flex-nowrap items-center gap-3 overflow-x-auto shrink-0 mb-3 rounded-lg border">
               <div className="relative shrink-0 w-48 sm:w-56">
@@ -2435,30 +2351,13 @@ export default function Screener({
                   </button>
                 )}
               </div>
-              {/* 15M-A filter */}
-              <div className="flex items-center gap-1 flex-wrap">
-                <button
-                  onClick={() => void handleUpexFilter()}
-                  disabled={!!upexProgress || currentAllCount === 0 || activeTab === "coindcx"}
-                  className={`text-xs px-2.5 py-1 rounded border transition-colors disabled:opacity-50 ${
-                    upexFilter
-                      ? "border-cyan-400 text-cyan-300"
-                      : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
-                  }`}
-                  title="For Binance and Delta, exclude a symbol only when a completed 15-minute candle body is below the reference BC and its lower body edge breaks below earlier session wick lows since 05:30 IST. Overlap Above today uses previous day's BC; all other rows use today's BC. CoinDCX results are not checked or filtered."
-                >
-                  {upexProgress?.filter === "15M-A"
-                    ? `15M-A ${upexProgress.done}/${upexProgress.total}`
-                    : upexFilter
-                      ? `✕ 15M-A (${upexIncludedSymbols.size})`
-                      : "15M-A"}
-                </button>
-              </div>
+              {/* Status Filter + Source switch — pinned right */}
+              <div className="ml-auto flex items-center gap-2 shrink-0">
               {/* Status Filter — Active (price has reached a View's entry line) /
                   Ready (matches a View, still waiting for entry). Same grouped
                   tab control as Signal Desk; clicking the selected button
                   clears it back to "all". */}
-              <div className="flex gap-0.5 p-0.5 rounded-md border border-[#22354a] bg-[#151e2c] shrink-0">
+              <div className="flex gap-0.5 p-0.5 rounded-md border border-[#22354a] bg-[#151e2c]">
                 <button
                   type="button"
                   onClick={() => setStatusFilter("all")}
@@ -2519,8 +2418,8 @@ export default function Screener({
                   Fail
                 </button>
               </div>
-              {/* Source switch — Binance | NIFTY only, pinned right */}
-              <div className="ml-auto flex gap-0.5 p-0.5 rounded-md border border-[#22354a] bg-[#151e2c] shrink-0">
+              {/* Source switch — Binance | NIFTY only */}
+              <div className="flex gap-0.5 p-0.5 rounded-md border border-[#22354a] bg-[#151e2c] shrink-0">
                 {(["binance", "nifty"] as const).map((tab) => (
                   <button
                     key={tab}
@@ -2538,6 +2437,7 @@ export default function Screener({
                   </button>
                 ))}
               </div>
+            </div>
           </div>
         )}
 
