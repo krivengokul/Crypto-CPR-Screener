@@ -26,6 +26,8 @@ import {
   explainPD15MBelowTCFailure,
   explainUpexFailure,
   fetchPreviousSessionCandles,
+  firstBodyThroughLevel,
+  formatQualifyCandle,
   formatUpexFailureNote,
   getConsolidateABc,
   getConsolidateBTc,
@@ -1201,6 +1203,12 @@ function ChartLinksSection({
  * by the category they actually live under.
  */
 
+type PrevDayCheckBlock = {
+  pass: boolean | null;
+  label: string;
+  detail: string;
+};
+
 type PrevDayDiagnosis = {
   symbol: string;
   source: "binance" | "delta";
@@ -1214,8 +1222,10 @@ type PrevDayDiagnosis = {
     tcName: string;
     ceilingName: string;
   };
-  conA: { pass: boolean | null; label: string; detail: string };
-  conB: { pass: boolean | null; label: string; detail: string };
+  conA: PrevDayCheckBlock;
+  conB: PrevDayCheckBlock;
+  momA: PrevDayCheckBlock;
+  momB: PrevDayCheckBlock;
 };
 
 function formatConBNote(
@@ -1298,10 +1308,12 @@ function PreviousDaySection() {
       }
 
       const now = prevEnd; // session end = "now" for historical walk
-      const failB = explainPD15MBelowTCFailure(candles, conBTc, prevStart, now, floor);
-      const failA = explainUpexFailure(candles, conABc, prevStart, now, ceiling, cpr.prevCPR.r2);
+      // CON-* use full rules; MOM-* drop the opposite-side constraint.
+      const failConB = explainPD15MBelowTCFailure(candles, conBTc, prevStart, now, floor);
+      const failConA = explainUpexFailure(candles, conABc, prevStart, now, ceiling, cpr.prevCPR.r2);
+      const failMomB = explainPD15MBelowTCFailure(candles, conBTc, prevStart, now); // no floor
+      const failMomA = explainUpexFailure(candles, conABc, prevStart, now); // no ceiling / R2
 
-      // Also populate pass caches for note helper (optional)
       await Promise.all([
         findPD15MBelowTCPass(
           { symbol: fullSym, source, bc: conBTc, floor },
@@ -1319,20 +1331,49 @@ function PreviousDaySection() {
         tcName,
       );
 
-      const conB = failB
-        ? formatConBNote(failB, tcName)
-        : noteBFromCache
+      const tcTouch = firstBodyThroughLevel(candles, conBTc, prevStart, now);
+      const bcTouch = firstBodyThroughLevel(candles, conABc, prevStart, now);
+
+      const conB = failConB
+        ? formatConBNote(failConB, tcName)
+        : noteBFromCache && noteBFromCache.label !== "PASS"
           ? noteBFromCache
           : {
               label: "PASS",
-              detail: `All previous-session 15m bodies stayed within CONSOLIDATE-B rules (ceiling ${tcName} ${conBTc}, floor PL/S1 ${floor}).`,
+              detail:
+                `All previous-session 15m bodies stayed within CONSOLIDATE-B rules (${tcName} ${conBTc}, floor PL/S1 ${floor}).` +
+                (tcTouch ? ` ${formatQualifyCandle(tcTouch, tcName, conBTc)}` : ""),
             };
 
-      const conA = failA
-        ? formatUpexFailureNote(failA, ceilingName)
+      const conA = failConA
+        ? formatUpexFailureNote(failConA, ceilingName)
         : {
             label: "PASS",
-            detail: `All previous-session 15m bodies stayed within CONSOLIDATE-A rules (BC ${conABc}, ceiling PH/R1 ${ceiling}).`,
+            detail:
+              `All previous-session 15m bodies stayed within CONSOLIDATE-A rules (BC ${conABc}, ceiling ${ceiling}).` +
+              (bcTouch ? ` ${formatQualifyCandle(bcTouch, "BC", conABc)}` : ""),
+          };
+
+      const momB = failMomB
+        ? formatConBNote(failMomB, tcName)
+        : {
+            label: "PASS",
+            detail:
+              `P-MOMENTUM-B: TC walk passed without the PL/S1 floor (${tcName} ${conBTc}).` +
+              (tcTouch
+                ? ` ${formatQualifyCandle(tcTouch, tcName, conBTc)}`
+                : " No completed body spanned TC — rare edge case."),
+          };
+
+      const momA = failMomA
+        ? formatUpexFailureNote(failMomA, "BC")
+        : {
+            label: "PASS",
+            detail:
+              `P-MOMENTUM-A: BC floor walk passed (no PH/R1 ceiling / R2 gate). BC ${conABc}.` +
+              (bcTouch
+                ? ` ${formatQualifyCandle(bcTouch, "BC", conABc)}`
+                : " No completed body spanned BC — rare edge case."),
           };
 
       const prevLabel = new Date(prevStart).toISOString().slice(0, 10);
@@ -1343,8 +1384,10 @@ function PreviousDaySection() {
         entryDate,
         prevSessionLabel: prevLabel,
         levels: { conABc, ceiling, conBTc, floor, tcName, ceilingName },
-        conA: { pass: failA ? false : true, label: conA.label, detail: conA.detail },
-        conB: { pass: failB ? false : true, label: conB.label, detail: conB.detail },
+        conA: { pass: failConA ? false : true, label: conA.label, detail: conA.detail },
+        conB: { pass: failConB ? false : true, label: conB.label, detail: conB.detail },
+        momA: { pass: failMomA ? false : true, label: momA.label, detail: momA.detail },
+        momB: { pass: failMomB ? false : true, label: momB.label, detail: momB.detail },
       });
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -1431,31 +1474,59 @@ function PreviousDaySection() {
             <span className="font-mono text-slate-200">{result.prevSessionLabel}</span>
           </div>
 
-          {(["conB", "conA"] as const).map((key) => {
+          {(
+            [
+              {
+                key: "conB" as const,
+                title: "P-CONSOLIDATE-B",
+                levels: `${result.levels.tcName} ${result.levels.conBTc} · floor ${result.levels.floor}`,
+                tonePass: "border-pink-500/30 bg-pink-500/5",
+                textPass: "text-pink-400",
+              },
+              {
+                key: "momB" as const,
+                title: "P-MOMENTUM-B",
+                levels: `${result.levels.tcName} ${result.levels.conBTc} · no floor`,
+                tonePass: "border-violet-500/30 bg-violet-500/5",
+                textPass: "text-violet-300",
+              },
+              {
+                key: "conA" as const,
+                title: "P-CONSOLIDATE-A",
+                levels: `BC ${result.levels.conABc} · ceiling ${result.levels.ceiling}`,
+                tonePass: "border-emerald-500/30 bg-emerald-500/5",
+                textPass: "text-emerald-400",
+              },
+              {
+                key: "momA" as const,
+                title: "P-MOMENTUM-A",
+                levels: `BC ${result.levels.conABc} · no ceiling`,
+                tonePass: "border-cyan-500/30 bg-cyan-500/5",
+                textPass: "text-cyan-300",
+              },
+            ] as const
+          ).map(({ key, title, levels, tonePass, textPass }) => {
             const block = result[key];
-            const title = key === "conB" ? "P-CONSOLIDATE-B" : "P-CONSOLIDATE-A";
-            const levels =
-              key === "conB"
-                ? `${result.levels.tcName} ${result.levels.conBTc} · floor ${result.levels.floor}`
-                : `BC ${result.levels.conABc} · ceiling ${result.levels.ceiling}`;
             const ok = block.pass === true;
             return (
               <div
                 key={key}
                 className={`rounded-xl border px-4 py-3 ${
-                  ok
-                    ? "border-emerald-500/30 bg-emerald-500/5"
-                    : "border-pink-500/30 bg-pink-500/5"
+                  ok ? tonePass : "border-rose-500/30 bg-rose-500/5"
                 }`}
               >
                 <div className="mb-1 flex flex-wrap items-center gap-2">
-                  <span className={`font-mono text-xs font-bold uppercase tracking-wider ${ok ? "text-emerald-400" : "text-pink-400"}`}>
+                  <span
+                    className={`font-mono text-xs font-bold uppercase tracking-wider ${
+                      ok ? textPass : "text-rose-400"
+                    }`}
+                  >
                     {title} {ok ? "PASS" : "✗"}
                   </span>
                   <span className="text-[10px] text-slate-500">{levels}</span>
                 </div>
                 {!ok && (
-                  <div className="font-mono text-[12px] text-pink-300/90">
+                  <div className="font-mono text-[12px] text-rose-300/90">
                     {title} {block.label}
                   </div>
                 )}

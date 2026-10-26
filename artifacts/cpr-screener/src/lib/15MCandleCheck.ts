@@ -425,6 +425,61 @@ export async function fetchPreviousSessionCandles(
   return fetchUpexCandles(candidate, startTime, endTime);
 }
 
+/** First completed 15m candle whose body spans `level` (open/close straddle). */
+export function firstBodyThroughLevel(
+  candles: OHLC[],
+  level: number,
+  startTime: number,
+  now: number,
+): {
+  candleNumber: number;
+  openTime: string;
+  open: number;
+  close: number;
+  high: number;
+  low: number;
+} | null {
+  if (!Number.isFinite(level)) return null;
+  const completed = candles
+    .filter(
+      (c) =>
+        Number.isFinite(c.openTime) &&
+        c.openTime >= startTime &&
+        c.openTime + CANDLE_INTERVAL_MS <= now &&
+        Number.isFinite(c.open) &&
+        Number.isFinite(c.close),
+    )
+    .sort((a, b) => a.openTime - b.openTime);
+  for (const c of completed) {
+    const bodyLow = Math.min(c.open, c.close);
+    const bodyHigh = Math.max(c.open, c.close);
+    if (bodyLow <= level && bodyHigh >= level) {
+      return {
+        candleNumber: Math.floor((c.openTime - startTime) / CANDLE_INTERVAL_MS) + 1,
+        openTime: new Date(c.openTime).toISOString(),
+        open: c.open,
+        close: c.close,
+        high: c.high,
+        low: c.low,
+      };
+    }
+  }
+  return null;
+}
+
+export function formatQualifyCandle(
+  q: NonNullable<ReturnType<typeof firstBodyThroughLevel>>,
+  levelName: string,
+  level: number,
+): string {
+  const ist = new Date(Date.parse(q.openTime) + 19_800_000).toISOString().slice(11, 16);
+  return (
+    `Qualified on candle #${q.candleNumber} (${ist} IST): body ${q.open}→${q.close} spans ${levelName} ${level}` +
+    ` (high ${q.high}, low ${q.low}).`
+  );
+}
+
+
 /**
  * What made passesPD15MBelowTCFilter fail: which rule, which candle, and the
  * wick references that candle was judged against.
