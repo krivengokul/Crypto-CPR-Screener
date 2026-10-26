@@ -191,32 +191,66 @@ export async function postAlertWebhook(payload: AlertWebhookPayload): Promise<bo
     return false;
   };
 
-  // Background tab: beacon only (do not also fetch — avoids double Telegram).
-  if (pageIsHidden()) {
-    return tryBeacon();
+  const doPost = async (): Promise<boolean> => {
+    // Background tab: beacon only (do not also fetch — avoids double Telegram).
+    if (pageIsHidden()) {
+      return tryBeacon();
+    }
+
+    // Active tab: fetch only. No beacon fallback after OK/ambiguous responses
+    // (fetch + beacon was a common cause of duplicate Telegram messages).
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        cache: "no-store",
+        keepalive: true,
+        headers: { "Content-Type": "application/json" },
+        body,
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        console.warn("[alertWebhook] worker returned", res.status, text);
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.warn("[alertWebhook] post failed", err);
+      // Last resort when fetch cannot run (e.g. page unloading mid-request).
+      return tryBeacon();
+    }
+  };
+
+  // Cross-tab lock when supported so two open screener tabs do not both POST
+  // the same idempotencyKey at the same moment (Worker also dedupes).
+  const locks = typeof navigator !== "undefined" ? (navigator as Navigator & {
+    locks?: { request: (name: string, opts: { ifAvailable: boolean }, cb: (lock: unknown) => Promise<boolean>) => Promise<boolean | undefined> };
+  }).locks : undefined;
+
+  if (locks && payload.idempotencyKey) {
+    try {
+      const result = await locks.request(
+        `cpr-alert-webhook:${payload.idempotencyKey}`,
+        { ifAvailable: true },
+        async (lock) => {
+          if (!lock) {
+            console.info("[alertWebhook] skip — another tab holds the lock", payload.idempotencyKey);
+            return true;
+          }
+          return doPost();
+        },
+      );
+      // ifAvailable + no lock → callback may not run; treat as success (other tab sends).
+      if (result === undefined) {
+        console.info("[alertWebhook] skip — lock not available", payload.idempotencyKey);
+        return true;
+      }
+      return result;
+    } catch {
+      return doPost();
+    }
   }
 
-  // Active tab: fetch only. No beacon fallback after OK/ambiguous responses
-  // (fetch + beacon was a common cause of duplicate Telegram messages).
-  try {
-    const res = await fetch(url, {
-      method: "POST",
-      cache: "no-store",
-      keepalive: true,
-      headers: { "Content-Type": "application/json" },
-      body,
-    });
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      console.warn("[alertWebhook] worker returned", res.status, text);
-      return false;
-    }
-    return true;
-  } catch (err) {
-    console.warn("[alertWebhook] post failed", err);
-    // Last resort when fetch cannot run (e.g. page unloading mid-request).
-    return tryBeacon();
-  }
+  return doPost();
 }
 
 export function buildEntryCrossWebhookPayload(args: {
