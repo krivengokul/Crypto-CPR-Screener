@@ -38,7 +38,7 @@ function showCrossToast(kind: Kind, crosses: Cross[]) {
   const extra = crosses.length - listed.length;
   const word = isR1 ? "Breakout" : "Breakdown";
   const verb = isR1 ? "Above" : "Below";
-  const symbolColor = isR1 ? "text-sky-300" : "text-rose-400";
+  const symbolColor = isR1 ? "text-sky-300" : "text-pink-400";
 
   toast({
     title:
@@ -69,7 +69,7 @@ function showCrossToast(kind: Kind, crosses: Cross[]) {
       </div>
     ),
     duration: 10_000,
-    className: `cursor-pointer ${isR1 ? "border-sky-500/60" : "border-rose-500/60"}`,
+    className: `cursor-pointer ${isR1 ? "border-sky-500/60" : "border-pink-500/60"}`,
     onClick: (e: ReactMouseEvent) => {
       const el = e.target as HTMLElement | null;
       if (el?.closest?.("[toast-close], [data-radix-toast-close], [data-r1-row]")) return;
