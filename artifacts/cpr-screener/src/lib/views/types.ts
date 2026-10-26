@@ -1,0 +1,90 @@
+import type {
+  CPRResult,
+  CPRLevels,
+  SSRRCategory,
+  HHLLCategory,
+  SSLLCategory,
+  RRHHCategory,
+} from "../cpr";
+
+export type LevelCheckKey =
+  | "r4" | "r3" | "r2" | "prevHigh" | "r1" | "tc" | "pivot" | "bc"
+  | "prevLow" | "s1" | "s2" | "s3" | "s4";
+
+export interface LevelCheckCondition {
+  key: LevelCheckKey;
+  subject: "today" | "previous";
+  bandKeys: [LevelCheckKey, LevelCheckKey];
+}
+
+export interface ViewDef {
+  /** Unique key — matches the current pattern-key strings exactly. */
+  key: string;
+  label: string;
+  parentKey?: string;
+  kind: "category" | "pattern" | "view";
+  standalone?: boolean;
+  candleCheck?: string;
+  condition?: (r: CPRResult) => boolean;
+  conditionKey?: string;
+  direction?: "Up" | "Down";
+  getTarget?: (r: CPRResult) => number;
+  targetLabel?: string;
+  getEntry?: (r: CPRResult) => number;
+  entryLabel?: string;
+  getStoploss?: (r: CPRResult) => number;
+  stoplossLabel?: string;
+  showInLeftNav?: boolean;
+  /** Optional navigation bucket when a View is grouped outside its parent tree. */
+  navigationCategoryKey?: string;
+  order?: number;
+  levelCheckDefs?: LevelCheckCondition[];
+  /**
+   * When true, this View only matches / fires when the row's Level Check
+   * scores a full 13/13 against this View's levelCheckDefs. When false,
+   * the 13/13 gate is never applied. When omitted, legacy behavior applies:
+   * Copy/Create Views with a conditionKey redirect still require 13/13.
+   */
+  requireFullMatch?: boolean;
+}
+
+export interface ViewTreeNode {
+  key: string;
+  label: string;
+  kind: "category" | "pattern" | "view";
+  order?: number | undefined;
+  children: ViewTreeNode[];
+  viewDef?: ViewDef;
+}
+
+export type GapBadgeLetter1 = "R" | "S" | "Q";
+export type GapBadgeLetter2 = "H" | "L" | "Q";
+export type GapBadgeLetterAB = "A" | "B" | "Q";
+
+export type SSRRLetter = "A" | "B" | "C" | "E";
+export type HHLLLetter = "A" | "B" | "C" | "E";
+export type RRHHSuffix = "AA" | "OA" | "BB" | "OB" | "C" | "E" | "RA" | "HA";
+export type SSLLSuffix = "AA" | "OA" | "BB" | "OB" | "C" | "E" | "SB" | "LB";
+
+export interface CompoundCombo {
+  ssrr: SSRRLetter;
+  hhll: HHLLLetter;
+  rrhh: RRHHSuffix;
+  ssll: SSLLSuffix;
+  label?: string;
+}
+
+/**
+ * Level labels are always shown as short pivot codes (R1-R4, S1-S4, BC, TC,
+ * PH, PL). Newer views have repeatedly been authored with descriptive text
+ * such as "L4 (today's S4)" or "R1 (today's R1)"; this reduces any such
+ * label to the code inside the parentheses (or the leading code).
+ */
+export function shortLevelLabel(label: string | undefined): string {
+  if (!label) return "";
+  const inner = label.match(/\((?:today's|previous day's)?\s*([A-Za-z0-9]+)\)\s*$/i);
+  const explicit = label.match(/\(today's\s*([A-Za-z0-9]+)\)\s*$/i);
+  if (explicit) return explicit[1];
+  if (inner && /previous day's/i.test(label)) return label.split(/\s+/)[0];
+  return label.replace(/\s*\(.*\)\s*$/, "").trim();
+}

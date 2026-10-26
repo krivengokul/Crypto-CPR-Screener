@@ -1,0 +1,2040 @@
+import { useEffect, useMemo, useRef, useState, type ElementType } from "react";
+import {
+  AlertTriangle,
+  BarChart3,
+  Ban,
+  Calendar as CalendarIcon,
+  Camera,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Database,
+  Eye,
+  Filter,
+  Flame,
+  Layers,
+  Loader2,
+  Play,
+  RefreshCw,
+  Search,
+  Sigma,
+  Snowflake,
+  Target,
+  Crosshair,
+} from "lucide-react";
+import {
+  explainPD15MBelowTCFailure,
+  explainUpexFailure,
+  fetchPreviousSessionCandles,
+  firstBodyThroughLevel,
+  formatQualifyCandle,
+  formatUpexFailureNote,
+  getConsolidateABc,
+  getConsolidateBTc,
+  getPD15MBelowTCFailureNote,
+  getPrevious15MACeiling,
+  getPrevious15MBFloor,
+  previousUpexSessionStartUtcMs,
+  upexSessionStartUtcMs,
+  findPD15MBelowTCPass,
+  findPreviousConsolidateAPass,
+} from "@/lib/15MCandleCheck";
+import { passesPattern, computeInnerLevelPattern, INNER_LEVEL_PATTERN_KEYS, normalizeViewDirection, type ViewDirection } from "./ScreenerUtils";
+import { pivotcategories } from "@/lib/ViewsSidebar";
+import { COINDCX_ENABLED } from "@/lib/featureFlags";
+import { buildViewTree, VIEWS, type ViewTreeNode } from "@/lib/views";
+import {
+  getAllChartLinkRecords,
+  updateChartLinkViewKey,
+  backfillChartLinkViewKeys,
+  type StoredChartLinkRecord,
+} from "@/lib/chartLinks";
+import {
+  runPatternCensus,
+  OUTER_PATTERNS_CATEGORY_KEY,
+  OUTER_PATTERNS_CATEGORY_LABEL,
+  INNER_PATTERNS_CATEGORY_KEY,
+  INNER_PATTERNS_CATEGORY_LABEL,
+  VIEWS_CATEGORY_KEY,
+  VIEWS_CATEGORY_LABEL,
+  NESTED_COMPOUND_CATEGORY_KEYS,
+  BacktestSource,
+  PatternCensusRow,
+  CategoryComboRow,
+  CategoryMatchRow,
+  UnclassifiedPatternMatch,
+  reconstructCPRForDate,
+} from "@/lib/backtest";
+
+// The Category filter's options come straight from ViewsSidebar's own
+// `pivotcategories` — the same list/labels/icons the left-nav sidebar renders —
+// so this dropdown can never drift out of sync with what the sidebar shows.
+// Two of its entries aren't real top-level categories in views.ts's tree,
+// so they're excluded here (selecting either would just show "No patterns
+// found", since no PatternCensusRow's categoryKey ever equals them):
+//   - "equal-cpr": nested under the "touch" category in views.ts, not a
+//     top-level category of its own (ViewsSidebar surfaces it in the nav
+//     as if it were, as a UI-only convenience).
+//   - "copyViews": ViewsSidebar's own flat nav bucket for auto-generated
+//     Copy View / Create View entries — never existed in views.ts at all.
+const NON_CENSUS_CATEGORY_IDS = new Set(["equal-cpr", "copyViews"]);
+
+interface CategoryOption {
+  id: string;
+  label: string;
+  subtitle?: string;
+  icon?: ElementType;
+}
+
+// TOP 15 GAINERS / LOSERS are top-level categories in views.ts (order 0 and 1,
+// i.e. ahead of LEVEL ABOVE) but aren't in ViewsSidebar's `pivotcategories`,
+// so they're added here by hand and placed first, matching views.ts.
+const TOP_MOVER_OPTIONS: CategoryOption[] = [
+  { id: "top15gainers", label: "TOP 15 GAINERS", subtitle: "Highest day-over-day % change, top 15 per date", icon: Flame },
+  { id: "top15losers", label: "TOP 15 LOSERS", subtitle: "Lowest day-over-day % change, bottom 15 per date", icon: Snowflake },
+];
+const TOP_MOVER_IDS = new Set(TOP_MOVER_OPTIONS.map((o) => o.id));
+
+// OUTER PATTERNS — not a category in views.ts or the sidebar: a synthetic
+// panel (see OUTER_PATTERNS_CATEGORY_KEY in backtest.ts) listing the band
+// patterns the Screener's Pattern column shows as second-row badges
+// (L2U4, EU2L4, CU3L3, ...), each counted straight from its CPRResult flag.
+// Placed last, after the sidebar's own categories.
+const OUTER_PATTERNS_OPTION: CategoryOption = {
+  id: OUTER_PATTERNS_CATEGORY_KEY,
+  label: OUTER_PATTERNS_CATEGORY_LABEL,
+  subtitle:
+    "Today-vs-prev band patterns shown as the 2nd badge in the Pattern column (L2U4, EU2L4, CU3L3, …). A row can match several.",
+  icon: Target,
+};
+
+// INNER PATTERNS — the other synthetic panel: the PivotPattern badge in row 2
+// of the Pattern column (C-A-C-AA, A-A-AA-AA, ...), i.e. today's
+// RRSS-HHLL-RRHH-SSLL combo as a single key. Counted with ScreenerUtils'
+// own computeInnerLevelPattern, so it always agrees with the badge.
+const INNER_PATTERNS_OPTION: CategoryOption = {
+  id: INNER_PATTERNS_CATEGORY_KEY,
+  label: INNER_PATTERNS_CATEGORY_LABEL,
+  subtitle:
+    "RRSS-HHLL-RRHH-SSLL combos shown as the 2nd-row PivotPattern badge in the Pattern column (C-A-C-AA, A-A-AA-AA, …). A row matches at most one.",
+  icon: Crosshair,
+};
+
+// VIEWS — a third synthetic panel: EVERY kind:"view" leaf in views.ts's
+// tree, flattened into one flat list regardless of which real category
+// it's nested under (see VIEWS_CATEGORY_KEY in backtest.ts). Each view's
+// own count is the same one it contributes to its real category, so this
+// panel is a different lens on the same data, not new matches — kept out
+// of the summed total below via OVERLAPPING_CATEGORY_IDS, same reasoning
+// as OUTER PATTERNS/TOP 15 GAINERS/LOSERS.
+const VIEWS_OPTION: CategoryOption = {
+  id: VIEWS_CATEGORY_KEY,
+  label: VIEWS_CATEGORY_LABEL,
+  subtitle:
+    "Every named View across every category, in one flat list (8AM:APHS1A-FAU4:4AM, 9AM:pPALPApH-FAU4:2PM, …). Bullish views in green, bearish in rose.",
+  icon: Eye,
+};
+
+const CHARTS_CATEGORY_KEY = "charts";
+const CHARTS_OPTION: CategoryOption = {
+  id: CHARTS_CATEGORY_KEY,
+  label: "Charts",
+  subtitle: "Saved chart links from Firebase, including symbol, date, exchange, and view.",
+  icon: BarChart3,
+};
+
+const PREVIOUS_DAY_CATEGORY_KEY = "previous-day";
+const PREVIOUS_DAY_OPTION: CategoryOption = {
+  id: PREVIOUS_DAY_CATEGORY_KEY,
+  label: "Previous Day",
+  subtitle: "Why P-CONSOLIDATE-A / P-CONSOLIDATE-B failed (or passed) on the previous 15m session for one symbol + date.",
+  icon: Search,
+};
+
+// The three synthetic panels are flat lists with no nesting.
+const FLAT_LIST_IDS = new Set([OUTER_PATTERNS_CATEGORY_KEY, INNER_PATTERNS_CATEGORY_KEY]);
+
+// Handed to runPatternCensus so it can count INNER PATTERNS (backtest.ts
+// can't import ScreenerUtils itself).
+const INNER_PATTERNS_CONFIG = { keys: INNER_LEVEL_PATTERN_KEYS as readonly string[], compute: computeInnerLevelPattern };
+
+const CATEGORY_FILTER_OPTIONS: CategoryOption[] = [
+  ...TOP_MOVER_OPTIONS,
+  ...pivotcategories.filter((c) => !NON_CENSUS_CATEGORY_IDS.has(c.id)),
+  OUTER_PATTERNS_OPTION,
+  INNER_PATTERNS_OPTION,
+  VIEWS_OPTION,
+  CHARTS_OPTION,
+  PREVIOUS_DAY_OPTION,
+];
+
+// Categories whose matches OVERLAP the others (a TOP 15 mover, a row with
+// an outer / inner pattern, or a view — also sits in LEVEL ABOVE / TOUCH /
+// …), so they're left out of the summed "distinct matches" total unless
+// one is selected on its own.
+const OVERLAPPING_CATEGORY_IDS = new Set([...TOP_MOVER_IDS, ...FLAT_LIST_IDS, VIEWS_CATEGORY_KEY]);
+
+// Panel order = dropdown order = sidebar order. Any category key the census
+// returns that isn't listed above sorts after these.
+const CATEGORY_ORDER = new Map(CATEGORY_FILTER_OPTIONS.map((c, i) => [c.id, i] as const));
+const CATEGORY_META = new Map(CATEGORY_FILTER_OPTIONS.map((c) => [c.id, c] as const));
+
+// ---------------------------------------------------------------------
+// Tree shape. runPatternCensus returns a flat list of (category, pattern)
+// rows; the nesting (pattern -> subpattern -> view) lives in views.ts's
+// parentKey tree, the same tree the Backtest dropdown renders. This walks
+// that tree once so each row can be shown in dropdown order, indented by
+// how deep it sits (pattern = level 1, subpattern = level 2, view = 3+).
+// ---------------------------------------------------------------------
+interface TreeMeta {
+  depth: number;
+  kind: "pattern" | "view";
+  index: number; // depth-first position, i.e. dropdown order
+}
+
+function buildTreeMeta(): { scoped: Map<string, TreeMeta>; byKey: Map<string, TreeMeta> } {
+  const scoped = new Map<string, TreeMeta>();
+  // Same info, keyed by the bare pattern key alone (ViewDef.key is unique
+  // across the whole tree — see its doc comment in views.ts). Used as a
+  // fallback for the VIEWS synthetic category's rows, which are re-parented
+  // under VIEWS_CATEGORY_KEY rather than their real category, so `scoped`
+  // (built from each real category's own walk) never has an entry keyed
+  // under VIEWS_CATEGORY_KEY.
+  const byKey = new Map<string, TreeMeta>();
+  let index = 0;
+  for (const cat of buildViewTree()) {
+    const walk = (nodes: ViewTreeNode[], depth: number) => {
+      for (const n of nodes) {
+        if (n.kind === "pattern" || n.kind === "view") {
+          const k = `${cat.key}::${n.key}`;
+          if (!scoped.has(k)) {
+            const m = { depth, kind: n.kind, index: index++ };
+            scoped.set(k, m);
+            if (!byKey.has(n.key)) byKey.set(n.key, m);
+          }
+        }
+        if (n.children && n.children.length > 0) walk(n.children, depth + 1);
+      }
+    };
+    walk(cat.children, 1);
+  }
+  return { scoped, byKey };
+}
+
+function buildTreeSignature(): string {
+  return JSON.stringify(VIEWS.map(({ key, parentKey, kind }) => [key, parentKey, kind]));
+}
+
+// --- Small UTC date helpers (all dates here are UTC ISO strings) ---
+// Same helpers/behaviour as BacktestPanel's DateField, so both panels'
+// calendars look and behave identically.
+function toISO(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+function fromISO(iso: string): Date {
+  return new Date(iso + "T00:00:00.000Z");
+}
+function addDaysUTC(d: Date, n: number): Date {
+  const c = new Date(d);
+  c.setUTCDate(c.getUTCDate() + n);
+  return c;
+}
+function startOfMonthUTC(d: Date): Date {
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1));
+}
+function daysInMonthUTC(d: Date): number {
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
+}
+function formatDisplay(iso: string): string {
+  return fromISO(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+}
+
+// Shared look for every control in the filter bar (matches SignalDesk's
+// search / filter inputs).
+const CONTROL_LABEL = "block text-[10px] font-mono font-semibold uppercase tracking-wider text-slate-400 mb-1";
+const CONTROL_BOX =
+  "rounded-lg border border-[#22354a] bg-[#151e2c] text-sm text-slate-100 transition hover:border-slate-500 focus:outline-none focus:border-teal-500/60 focus:ring-1 focus:ring-teal-500/40";
+
+/**
+ * Calendar-based replacement for the native <input type="date">, ported
+ * from BacktestPanel's "Entry Date (UTC)" DateField so Pattern Statistics'
+ * Start/End date pickers look and behave identically (Yesterday / 7d ago /
+ * 30d ago quick-picks, clamped to min/max, above a month grid).
+ */
+function DateField({
+  label,
+  value,
+  onChange,
+  max,
+  min,
+}: {
+  label: string;
+  value: string;
+  onChange: (iso: string) => void;
+  max?: string;
+  min?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [viewMonth, setViewMonth] = useState(() =>
+    startOfMonthUTC(value ? fromISO(value) : new Date())
+  );
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, []);
+
+  useEffect(() => {
+    if (open) {
+      const base = value ? fromISO(value) : new Date();
+      setViewMonth(startOfMonthUTC(base));
+    }
+  }, [open, value]);
+
+  const today = new Date();
+  const todayISO = toISO(today);
+  const quickPicks = [
+    { label: "Any", iso: "" },
+    { label: "Yesterday", iso: toISO(addDaysUTC(today, -1)) },
+    { label: "7d ago", iso: toISO(addDaysUTC(today, -7)) },
+    { label: "30d ago", iso: toISO(addDaysUTC(today, -30)) },
+  ].filter((q) => q.iso === "" || ((!max || q.iso <= max) && (!min || q.iso >= min)));
+
+  const firstWeekday = startOfMonthUTC(viewMonth).getUTCDay();
+  const totalDays = daysInMonthUTC(viewMonth);
+  const cells: (string | null)[] = [
+    ...Array(firstWeekday).fill(null),
+    ...Array.from({ length: totalDays }, (_, i) => toISO(new Date(Date.UTC(viewMonth.getUTCFullYear(), viewMonth.getUTCMonth(), i + 1)))),
+  ];
+
+  return (
+    <div ref={ref} className="relative">
+      <label className={CONTROL_LABEL}>{label}</label>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className={`${CONTROL_BOX} flex items-center gap-2 px-2.5 py-1.5`}
+      >
+        <CalendarIcon className="h-3.5 w-3.5 text-teal-400" />
+        <span>{value ? formatDisplay(value) : "Any date"}</span>
+      </button>
+
+      {open && (
+        <div className="absolute z-20 mt-1 w-[260px] rounded-lg border border-[#22354a] bg-[#0f1724] p-2 shadow-xl shadow-black/50">
+          {quickPicks.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-1.5 border-b border-[#1e2d3d] pb-2">
+              {quickPicks.map((q) => (
+                <button
+                  key={q.label}
+                  type="button"
+                  onClick={() => {
+                    onChange(q.iso);
+                    setOpen(false);
+                  }}
+                  className={`rounded-full px-2 py-1 text-[11px] ${
+                    value === q.iso
+                      ? "bg-teal-500/20 text-teal-300"
+                      : "bg-[#151e2c] text-slate-400 hover:text-white"
+                  }`}
+                >
+                  {q.label}
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="mb-1.5 flex items-center justify-between px-1">
+            <button
+              type="button"
+              onClick={() => setViewMonth((m) => new Date(Date.UTC(m.getUTCFullYear(), m.getUTCMonth() - 1, 1)))}
+              className="p-1 text-slate-400 hover:text-white"
+              aria-label="Previous month"
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+            </button>
+            <span className="text-xs text-slate-100">
+              {viewMonth.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" })}
+            </span>
+            <button
+              type="button"
+              onClick={() => setViewMonth((m) => new Date(Date.UTC(m.getUTCFullYear(), m.getUTCMonth() + 1, 1)))}
+              className="p-1 text-slate-400 hover:text-white"
+              aria-label="Next month"
+            >
+              <ChevronRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
+          <div className="grid grid-cols-7 gap-0.5 text-center">
+            {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
+              <span key={i} className="py-1 text-[9px] text-slate-500">
+                {d}
+              </span>
+            ))}
+            {cells.map((iso, i) => {
+              if (!iso) return <span key={i} />;
+              const disabled = (!!max && iso > max) || (!!min && iso < min);
+              const isSelected = iso === value;
+              const isToday = iso === todayISO;
+              return (
+                <button
+                  key={iso}
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => {
+                    onChange(iso);
+                    setOpen(false);
+                  }}
+                  className={`mx-auto flex h-6 w-6 items-center justify-center rounded-full text-[11px] ${
+                    isSelected
+                      ? "bg-teal-500 font-medium text-black"
+                      : disabled
+                      ? "cursor-not-allowed text-slate-700"
+                      : isToday
+                      ? "border border-teal-500/50 text-teal-300 hover:bg-[#151e2c]"
+                      : "text-slate-300 hover:bg-[#151e2c]"
+                  }`}
+                >
+                  {Number(iso.slice(-2))}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** One pattern / subpattern / view line in a category card. */
+interface StatRow {
+  patternKey: string;
+  patternLabel: string;
+  count: number;
+  depth: number; // 1 = pattern, 2 = subpattern, 3+ = view (and deeper)
+  kind: "pattern" | "view";
+  order: number; // dropdown (depth-first) order
+  // Only ever set for kind:"view" rows — see PatternCensusRow.direction in
+  // backtest.ts. Passed through normalizeViewDirection (ScreenerUtils.tsx)
+  // before use, same normalization the rest of the app applies.
+  direction?: "Up" | "Down";
+}
+
+/** One category's patterns grouped together, with the category's own total (sum of its patterns' counts). */
+interface CategoryGroup {
+  categoryKey: string;
+  categoryLabel: string;
+  total: number;
+  patterns: StatRow[];
+  // Distinct (symbol, date) rows that passed only this category's own base
+  // condition — comparable directly to the left-nav sidebar's per-category
+  // count. See CategoryMatchRow in backtest.ts for why this differs from
+  // `total` above (which sums every nested pattern/subpattern's count and
+  // so double-counts any symbol matching more than one of them).
+  distinctCount: number;
+  // TEMPORARY DEBUG ADDITION — every distinct raw HHLL/RRHH/SSLL combo
+  // observed among rows that passed this category's base condition,
+  // highest-count-first. See CategoryComboRow in backtest.ts.
+  combos: CategoryComboRow[];
+}
+
+// Left indent per nesting level, in px. Spacing only — no arrows or dots —
+// so a subpattern reads as "inside" its pattern and a view as "inside" its
+// subpattern at a glance.
+const INDENT_PX = 18;
+
+/**
+ * CategoryBox — one category's card, styled to match SignalDesk's signal
+ * boxes: dark rounded-xl card, icon tile + title header with the count at
+ * the end, hover lift, and a colored border (emerald once the category has
+ * matched anything, dashed/muted only when the category itself matched
+ * nothing — the same "candidate for CONFIRMED EMPTY" signal this page was
+ * built to surface). The body lists every pattern in the category in the
+ * same order as the Backtest dropdown, indented by depth, each with its own
+ * live count and a faint bar showing its share of the category's busiest row.
+ */
+/** Text color for a matched row with a direction set — light green for
+    bullish Views, rose for bearish. Falls back to the depth-based styling
+    below when the row has no direction (patterns/subpatterns never do). */
+function directionTextClass(direction: ViewDirection | null): string | null {
+  if (direction === "Up") return "text-green-300";
+  if (direction === "Down") return "text-rose-300";
+  return null;
+}
+
+/**
+ * How many of a Pattern's (or Subpattern's) own matches aren't accounted for
+ * by any of its immediate children in the tree — e.g. Pattern "A-A-AA-AA"
+ * matched 228 rows, but its 8 Subpatterns below it only add up to 196, so
+ * 32 rows matched the Pattern yet don't fall under any of its listed
+ * Subpatterns. Same idea one level down: a Subpattern's count vs. the sum
+ * of the named Views nested under it.
+ *
+ * `patterns` is a single category's rows in dropdown (depth-first) order —
+ * see CategoryGroup.patterns — so a row's immediate children are exactly
+ * the contiguous run of rows right after it whose depth is exactly one
+ * more than its own, stopping at the first row back at (or above) its own
+ * depth. Returns 0 when the row has no children at all in the tree (there's
+ * nothing to compare against) or when its children already add up to its
+ * full count.
+ */
+function missingChildCount(patterns: StatRow[], index: number): number {
+  const row = patterns[index];
+  const childDepth = row.depth + 1;
+  let sum = 0;
+  let hasChildren = false;
+  for (let j = index + 1; j < patterns.length; j++) {
+    const next = patterns[j];
+    if (next.depth <= row.depth) break;
+    if (next.depth === childDepth) {
+      sum += next.count;
+      hasChildren = true;
+    }
+  }
+  return hasChildren ? Math.max(0, row.count - sum) : 0;
+}
+
+/**
+ * Whether a Pattern (depth 1) row has any immediate Subpattern (depth 2)
+ * children listed under it in the tree at all, regardless of their counts.
+ * A Pattern with none defined for it in views.ts can never be "fully
+ * covered" no matter what its own count is — see isFullyCoveredPattern.
+ */
+function hasChildPatterns(patterns: StatRow[], index: number): boolean {
+  const row = patterns[index];
+  const childDepth = row.depth + 1;
+  for (let j = index + 1; j < patterns.length; j++) {
+    const next = patterns[j];
+    if (next.depth <= row.depth) break;
+    if (next.depth === childDepth) return true;
+  }
+  return false;
+}
+
+/**
+ * A top-level Pattern's count badge is shown in green only when its
+ * Subpatterns fully account for it: it has at least one Subpattern listed
+ * under it in the tree, AND their counts add up to its own total (no
+ * unclassified remainder). Otherwise — no Subpatterns defined at all, or
+ * some of its matches aren't covered by any of them — it's shown in red
+ * instead, same red for both cases.
+ */
+function isFullyCoveredPattern(patterns: StatRow[], index: number): boolean {
+  return hasChildPatterns(patterns, index) && missingChildCount(patterns, index) === 0;
+}
+
+/**
+ * Suggested subpattern key for an unclassified row, in the same shape as the
+ * real keys in views.ts: the row's own RRSS-HHLL-RRHH-SSLL compound plus its
+ * outer band flag — "C-C-BB-AA-CL4U3", "B-A-C-C-EU4L4", ... Falls back to
+ * the old `${patternKey}-${flag}` only if the row had no full compound.
+ */
+function suggestedKeyFor(patternKey: string, u: UnclassifiedPatternMatch): string {
+  return `${u.combo ?? patternKey}-${u.flag}`;
+}
+
+function CategoryBox({
+  group,
+  unclassified,
+}: {
+  group: CategoryGroup;
+  unclassified: Record<string, UnclassifiedPatternMatch[]> | null;
+}) {
+  const [expandedMissingKey, setExpandedMissingKey] = useState<string | null>(null);
+  // "Empty" means the category itself matched nothing. It used to key off
+  // `group.total` (the sum of nested pattern counts), so a category like
+  // BELOW LEVEL4 — which does have matching symbols, but none that land in
+  // one of its listed patterns — got the dashed grey "empty" styling.
+  const isEmpty = group.distinctCount === 0 && group.total === 0;
+  const meta = CATEGORY_META.get(group.categoryKey);
+  const Icon = meta?.icon ?? Layers;
+  const maxCount = group.patterns.reduce((m, p) => Math.max(m, p.count), 0);
+  const matchedPatterns = group.patterns.filter((p) => p.count > 0).length;
+  const isViewsList = group.categoryKey === VIEWS_CATEGORY_KEY;
+  // OUTER / INNER PATTERNS are flat lists of short keys with no nesting, so
+  // they're laid out as a grid of compact tiles (in a full-width card)
+  // instead of one very tall column.
+  const isFlat = FLAT_LIST_IDS.has(group.categoryKey);
+
+  return (
+    <article
+      className={[
+        "relative flex flex-col overflow-hidden rounded-xl border bg-[#0f1724] p-4 shadow-lg transition-all hover:-translate-y-0.5",
+        isFlat ? "md:col-span-2 xl:col-span-3" : "",
+        isEmpty
+          ? "border-dashed border-[#2a3a4f] hover:border-slate-500"
+          : "border-emerald-500/40 hover:border-emerald-400/70 hover:shadow-emerald-950/40",
+      ].join(" ")}
+    >
+      {/* Accent line across the top edge */}
+      {!isEmpty && (
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-emerald-400/70 via-teal-400/30 to-transparent" />
+      )}
+
+      <div className="mb-3 flex items-start justify-between gap-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <div
+            className={[
+              "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border",
+              isEmpty
+                ? "border-[#22354a] bg-[#151e2c] text-slate-500"
+                : "border-emerald-500/30 bg-emerald-500/10 text-emerald-400",
+            ].join(" ")}
+          >
+            <Icon className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <h3 className="truncate text-base font-bold tracking-wide text-white">{group.categoryLabel}</h3>
+            <p className="font-mono text-[10px] uppercase tracking-wider text-slate-400">
+              {group.patterns.length} pattern{group.patterns.length === 1 ? "" : "s"}
+              {group.patterns.length > 0 && (
+                <span className="text-slate-500">
+                  {" · "}
+                  {matchedPatterns} matched
+                </span>
+              )}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex shrink-0 flex-col items-end">
+          {/* Headline = distinct (symbol, date) rows that pass the category's
+              own base condition — the same number the left-nav sidebar shows
+              (e.g. "LEVEL ABOVE (169)"). */}
+          <p className={["font-mono text-2xl font-bold leading-none", isEmpty ? "text-slate-500" : "text-white"].join(" ")}>
+            {group.distinctCount}
+          </p>
+          <span className="mt-1 font-mono text-[9px] font-semibold uppercase tracking-wider text-slate-400">matched</span>
+          {/* Sum of every nested pattern's count. A symbol that fits several
+              patterns is counted once per pattern here, so this can exceed
+              the headline; kept as a secondary number for reference. */}
+          {group.total > 0 && group.total !== group.distinctCount && (
+            <p
+              className="mt-1 font-mono text-[11px] text-slate-500"
+              title="Sum of the pattern counts below. A symbol matching several patterns is counted once per pattern."
+            >
+              {group.total} pattern hits
+            </p>
+          )}
+        </div>
+      </div>
+
+      {meta?.subtitle && (
+        <p className="mb-3 line-clamp-2 text-[11px] leading-snug text-slate-500" title={meta.subtitle}>
+          {meta.subtitle}
+        </p>
+      )}
+
+      {group.patterns.length > 0 && isFlat ? (
+        <div className="grid grid-cols-3 gap-1.5 border-t border-[#1e2d3d] pt-3 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
+          {group.patterns.map((p) => (
+            <div
+              key={p.patternKey}
+              className={[
+                "flex items-center justify-between gap-2 rounded-md border px-2 py-1",
+                p.count > 0
+                  ? "border-emerald-500/30 bg-emerald-500/10"
+                  : "border-[#1e2d3d] bg-[#0c131f]",
+              ].join(" ")}
+              title={`${p.patternLabel}: ${p.count}`}
+            >
+              <span
+                className={[
+                  "truncate font-mono text-xs",
+                  p.count > 0 ? "font-semibold text-white" : "text-white",
+                ].join(" ")}
+              >
+                {p.patternLabel}
+              </span>
+              <span
+                className={[
+                  "shrink-0 font-mono text-[10px] font-bold",
+                  p.count > 0 ? "text-emerald-300" : "text-slate-600",
+                ].join(" ")}
+              >
+                {p.count}
+              </span>
+            </div>
+          ))}
+        </div>
+      ) : group.patterns.length > 0 ? (
+        <div className="max-h-[30rem] space-y-px overflow-y-auto border-t border-[#1e2d3d] pt-2 [scrollbar-color:#2a3a4f_transparent] [scrollbar-width:thin]">
+          {group.patterns.map((p, i) => {
+            const pct = maxCount > 0 ? Math.max(p.count > 0 ? 4 : 0, Math.round((p.count / maxCount) * 100)) : 0;
+            const isTop = p.depth === 1;
+            // Compound patterns one level down inside grouped categories
+            // (TOUCH -> OutCPR -> A-B-E-E) get the same missing-subpattern
+            // tracking as top-level patterns, but only when they actually
+            // have Subpatterns listed under them.
+            const isTracked =
+              isTop ||
+              (NESTED_COMPOUND_CATEGORY_KEYS.has(group.categoryKey) &&
+                p.depth === 2 &&
+                hasChildPatterns(group.patterns, i));
+            const dirClass = p.count > 0 ? directionTextClass(normalizeViewDirection(p.direction)) : null;
+            const scopedKey = `${group.categoryKey}::${p.patternKey}`;
+            const unclass = isViewsList ? undefined : unclassified?.[scopedKey];
+            // Use the census's direct unmatched-child count so overlapping
+            // child conditions cannot inflate or understate the remainder.
+            const missing = isTracked && !isViewsList
+              ? unclassified
+                ? unclass?.reduce((sum, item) => sum + item.count, 0) ?? 0
+                : missingChildCount(group.patterns, i)
+              : 0;
+            const hasChildren = isTracked && !isViewsList ? hasChildPatterns(group.patterns, i) : false;
+            const isFullyCovered = !isViewsList && isTracked ? hasChildren && missing === 0 : true;
+            const isUncovered = isTracked && p.count > 0 && !isFullyCovered;
+            const isExpanded = expandedMissingKey === scopedKey;
+            const breakdownTooltip = !hasChildren
+              ? `${p.count} total. No Subpatterns are defined under this pattern yet.`
+              : unclass && unclass.length > 0
+              ? `${p.count} total, only ${p.count - missing} accounted for by subpatterns below.\n\n${missing} unclassified breakdown:\n${unclass.map((u) => `• ${suggestedKeyFor(p.patternKey, u)}: ${u.count}`).join("\n")}\n\nClick to view breakdown & copy suggested keys`
+              : `${p.count} total, only ${p.count - missing} accounted for by its Subpatterns below — ${missing} unclassified`;
+
+            return (
+              <div key={`${i}-${p.patternKey}`}>
+                <div
+                  className="group/row relative flex items-center justify-between gap-3 rounded-md py-1 pr-1.5 hover:bg-[#151e2c]"
+                  style={{ paddingLeft: 6 + (p.depth - 1) * INDENT_PX }}
+                  title={p.patternLabel}
+                >
+                  {/* Share-of-busiest-row bar, drawn behind the text */}
+                  {pct > 0 && (
+                    <div
+                      className="pointer-events-none absolute inset-y-0 left-0 rounded-md bg-emerald-500/[0.07]"
+                      style={{ width: `${pct}%` }}
+                    />
+                  )}
+                  <span
+                    className={[
+                      "relative min-w-0 truncate font-mono text-xs",
+                      p.kind === "view" && dirClass
+                        ? [dirClass, "font-medium"].join(" ")
+                        : p.kind === "view"
+                        ? "text-slate-100"
+                        : ["text-white", isTop ? "font-semibold" : "font-medium"].join(" "),
+                    ].join(" ")}
+                  >
+                    {isViewsList ? (
+                      <span className="flex min-w-0 flex-col gap-0">
+                        <span className="truncate">{p.patternLabel}</span>
+                        <span className="truncate font-mono text-[10px] font-normal text-slate-400">
+                          {p.patternKey}
+                        </span>
+                      </span>
+                    ) : (
+                      p.patternLabel
+                    )}
+                  </span>
+                  <span className="relative flex shrink-0 items-center gap-1">
+                    {isUncovered ? (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setExpandedMissingKey(isExpanded ? null : scopedKey);
+                        }}
+                        className={[
+                          "shrink-0 rounded-full border border-rose-500/30 bg-rose-500/15 px-1.5 py-0.5 font-mono text-[10px] font-bold text-rose-300 transition cursor-pointer hover:bg-rose-500/25",
+                          isExpanded ? "ring-1 ring-rose-400" : "",
+                        ].join(" ")}
+                        title={breakdownTooltip}
+                      >
+                        {p.count}
+                      </button>
+                    ) : (
+                      <span
+                        className={[
+                          "shrink-0 rounded-full border px-1.5 py-0.5 font-mono text-[10px] font-bold",
+                          isViewsList
+                            ? p.count > 0
+                              ? "border-[#223347] bg-[#182333] text-white"
+                              : "border-[#223347] bg-[#182333] text-slate-500"
+                            : p.count > 0
+                            ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-300"
+                            : "border-[#223347] bg-[#182333] text-slate-500",
+                        ].join(" ")}
+                        title={isTracked && !isViewsList ? breakdownTooltip : undefined}
+                      >
+                        {p.count}
+                      </span>
+                    )}
+                  </span>
+                </div>
+                {isExpanded && (
+                  <div className="mx-2 my-1.5 rounded-lg border border-rose-500/30 bg-[#121c2b] p-2.5 shadow-md">
+                    {unclass && unclass.length > 0 ? (
+                      <>
+                        <div className="mb-2 flex items-center justify-between text-[11px] font-semibold text-rose-300">
+                          <span>Missing Subpatterns ({missing} unclassified rows):</span>
+                          <span className="text-[10px] text-slate-400 font-normal">Click a chip to copy key</span>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {unclass.map((u) => {
+                            const suggestedKey = suggestedKeyFor(p.patternKey, u);
+                            return (
+                              <button
+                                key={suggestedKey}
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigator.clipboard.writeText(suggestedKey);
+                                }}
+                                title={`Click to copy "${suggestedKey}"`}
+                                className="group/chip flex items-center gap-1.5 rounded-md border border-[#22354a] bg-[#162234] px-2 py-1 font-mono text-[11px] text-slate-200 transition hover:border-teal-500/60 hover:bg-[#1e2f47]"
+                              >
+                                <span className="font-semibold text-slate-100">{suggestedKey}</span>
+                                <span className="rounded bg-rose-500/20 px-1 py-0.2 text-[10px] font-bold text-rose-300">
+                                  {u.count}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </>
+                    ) : (
+                      <p className="text-[11px] text-slate-400">
+                        {hasChildren
+                          ? "No unclassified breakdown available for this pattern."
+                          : "No Subpatterns are defined under this pattern yet."}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="border-t border-[#1e2d3d] pt-3 text-center text-[11px] text-slate-500">
+          No nested patterns in this category
+        </div>
+      )}
+
+      {/* TEMPORARY DEBUG ADDITION — every raw HHLL/RRHH/SSLL combo actually
+          observed under this category's base condition, so the "of the NxN
+          naive combinations only these are reachable" claims scattered
+          through ScreenerUtils.tsx's BACKTEST_PATTERN_MATCHERS comments can
+          be checked directly against live data. Collapsed by default so it
+          doesn't crowd the card; remove this block (and
+          CategoryGroup.combos / runPatternCensus's combos output) once no
+          longer needed. */}
+      {group.combos.length > 0 && (
+        <details className="group mt-3 border-t border-dashed border-[#2a3a4f] pt-2">
+          <summary className="flex cursor-pointer select-none list-none items-center justify-between font-mono text-[10px] uppercase tracking-wider text-slate-400 hover:text-slate-200">
+            <span>
+              RRSS / HHLL / RRHH / SSLL combos ({group.combos.length})
+            </span>
+            <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" />
+          </summary>
+          <div className="mt-1.5 max-h-48 space-y-0.5 overflow-y-auto [scrollbar-color:#2a3a4f_transparent] [scrollbar-width:thin]">
+            {group.combos.map((c) => (
+              <div key={c.combo} className="flex items-center justify-between gap-3 rounded-md px-1.5 py-0.5 text-xs">
+                <span className="truncate font-mono text-[11px] text-slate-400">{c.combo}</span>
+                <span className="shrink-0 rounded-full border border-[#223347] bg-[#182333] px-1.5 py-0.5 font-mono text-[10px] font-bold text-slate-400">
+                  {c.count}
+                </span>
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
+    </article>
+  );
+}
+
+/** Small stat chip for the header, same look as SignalDesk's quick-stat badges. */
+function StatChip({
+  icon: Icon,
+  label,
+  value,
+  tone = "neutral",
+}: {
+  icon: ElementType;
+  label: string;
+  value: number;
+  tone?: "neutral" | "emerald" | "amber";
+}) {
+  const tones = {
+    neutral: { border: "border-[#1e2d3d]", text: "text-slate-400", value: "text-white", icon: "text-slate-400" },
+    emerald: { border: "border-emerald-500/30", text: "text-emerald-400", value: "text-emerald-400", icon: "text-emerald-400" },
+    amber: { border: "border-amber-500/30", text: "text-amber-400", value: "text-amber-400", icon: "text-amber-400" },
+  }[tone];
+  return (
+    <div className={`flex items-center gap-2 rounded-lg border bg-[#131b26] px-3 py-1.5 ${tones.border}`}>
+      <Icon className={`h-3.5 w-3.5 ${tones.icon}`} />
+      <span className={`text-[11px] font-medium ${tones.text}`}>{label}:</span>
+      <span className={`font-mono text-sm font-bold ${tones.value}`}>{value}</span>
+    </div>
+  );
+}
+
+function parseChartRowKey(rowKey: string) {
+  const legacySeparator = rowKey.lastIndexOf("::");
+  const normalizedKey = legacySeparator >= 0 ? rowKey.slice(legacySeparator + 2) : rowKey;
+  const dateMatch = normalizedKey.match(/-(\d{4}-\d{2}-\d{2})$/);
+  const sourceAndSymbol = dateMatch ? normalizedKey.slice(0, -11) : normalizedKey;
+  const separator = sourceAndSymbol.indexOf("-");
+
+  return {
+    exchange: separator >= 0 ? sourceAndSymbol.slice(0, separator) : "",
+    symbol: separator >= 0 ? sourceAndSymbol.slice(separator + 1) : sourceAndSymbol,
+    date: dateMatch?.[1] ?? "",
+  };
+}
+
+function formatChartSavedAt(savedAt: string): string {
+  if (!savedAt) return "—";
+  const date = new Date(savedAt);
+  return Number.isNaN(date.getTime()) ? savedAt : date.toLocaleString();
+}
+
+function getChartViewName(viewKey: string): string {
+  if (!viewKey) return "—";
+  const view = VIEWS.find((v) => v.key === viewKey);
+  if (view?.label) return view.label;
+  // Category / synthetic keys (Top 15, Charts, etc.)
+  const cat = CATEGORY_META.get(viewKey);
+  if (cat?.label) return cat.label;
+  // Breadcrumb path "parent»child" — show last segment label if known
+  const sep = viewKey.includes("»") ? "»" : viewKey.includes("/") ? "/" : null;
+  if (sep) {
+    const leaf = viewKey.split(sep).pop()?.trim() || "";
+    if (leaf) {
+      const leafView = VIEWS.find((v) => v.key === leaf);
+      if (leafView?.label) return leafView.label;
+      const leafCat = CATEGORY_META.get(leaf);
+      if (leafCat?.label) return leafCat.label;
+    }
+  }
+  return viewKey;
+}
+
+function ChartLinksSection({
+  records,
+  loading,
+  error,
+  onRefresh,
+  exchangeFilter,
+  startDate,
+  endDate,
+  onClearFilters,
+}: {
+  records: StoredChartLinkRecord[] | null;
+  loading: boolean;
+  error: string | null;
+  onRefresh: () => void;
+  exchangeFilter: BacktestSource | "all";
+  startDate: string;
+  endDate: string;
+  onClearFilters?: () => void;
+}) {
+  const [assigningKey, setAssigningKey] = useState<string | null>(null);
+  const [recovering, setRecovering] = useState(false);
+  const [symbolSearch, setSymbolSearch] = useState("");
+  const [viewNameSearch, setViewNameSearch] = useState("");
+  const normalizedSymbolSearch = symbolSearch.trim().toLowerCase();
+  const normalizedViewNameSearch = viewNameSearch.trim().toLowerCase();
+  const filteredRecords = useMemo(
+    () =>
+      (records ?? []).filter((record) => {
+        const details = parseChartRowKey(record.rowKey);
+        const symbol = details.symbol.toLowerCase();
+        const viewName = getChartViewName(record.viewKey).toLowerCase();
+        // Prefer trade date from rowKey; fall back to savedAt (YYYY-MM-DD).
+        // Empty start/end = no date filter (show all).
+        const effectiveDate =
+          details.date ||
+          (record.savedAt && /^\d{4}-\d{2}-\d{2}/.test(record.savedAt)
+            ? record.savedAt.slice(0, 10)
+            : "");
+        const dateMatches =
+          !startDate && !endDate
+            ? true
+            : !effectiveDate
+              ? true // keep undated links visible
+              : (!startDate || effectiveDate >= startDate) &&
+                (!endDate || effectiveDate <= endDate);
+        return (
+          (exchangeFilter === "all" || !details.exchange || details.exchange === exchangeFilter) &&
+          dateMatches &&
+          (!normalizedSymbolSearch || symbol.includes(normalizedSymbolSearch)) &&
+          (!normalizedViewNameSearch || viewName.includes(normalizedViewNameSearch))
+        );
+      }),
+    [records, exchangeFilter, startDate, endDate, normalizedSymbolSearch, normalizedViewNameSearch]
+  );
+
+  return (
+    <section>
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div>
+          <p className="font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-300">
+            Saved chart links{records ? ` (${records.length})` : ""}
+          </p>
+          <p className="mt-1 text-xs text-slate-500">Chart links stored in Firebase for this browser</p>
+          {records && (
+            <p className="mt-1 text-xs text-slate-500">
+              Showing {filteredRecords.length} of {records.length} saved links
+            </p>
+          )}
+        </div>
+                  <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={loading || recovering}
+              onClick={async () => {
+                setRecovering(true);
+                try {
+                  // Allow backfill to run again even if it ran once already
+                  try {
+                    localStorage.removeItem("cpr_chart_links_viewkey_backfill_v1");
+                  } catch {}
+                  await backfillChartLinkViewKeys({ force: true });
+                } finally {
+                  setRecovering(false);
+                  onRefresh();
+                }
+              }}
+              className="flex items-center gap-2 rounded-lg border border-[#22354a] bg-[#151e2c] px-3 py-1.5 text-xs text-slate-200 transition hover:border-teal-500/60 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+              title="Re-scan Firebase for legacy viewKey::rowKey docs and fill missing VIEW NAME fields"
+            >
+              {(recovering || loading) ? (
+                <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3.5 w-3.5" />
+              )}
+              Recover names
+            </button>
+            <button
+              type="button"
+              onClick={onRefresh}
+              disabled={loading}
+              className="flex items-center gap-2 rounded-lg border border-[#22354a] bg-[#151e2c] px-3 py-1.5 text-xs text-slate-200 transition hover:border-teal-500/60 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+              Refresh
+            </button>
+          </div>
+      </div>
+
+      {!!records?.length && (
+        <div className="mb-3 grid gap-2 sm:grid-cols-2">
+          <label className="block">
+            <span className={CONTROL_LABEL}>Symbol</span>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-teal-400" />
+              <input
+                type="search"
+                aria-label="Search chart links by symbol"
+                placeholder="Search symbol"
+                value={symbolSearch}
+                onChange={(event) => setSymbolSearch(event.target.value)}
+                className={`${CONTROL_BOX} w-full py-1.5 pl-8 pr-3`}
+              />
+            </div>
+          </label>
+          <label className="block">
+            <span className={CONTROL_LABEL}>View name</span>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-teal-400" />
+              <input
+                type="search"
+                aria-label="Search chart links by view name"
+                placeholder="Search view name"
+                value={viewNameSearch}
+                onChange={(event) => setViewNameSearch(event.target.value)}
+                className={`${CONTROL_BOX} w-full py-1.5 pl-8 pr-3`}
+              />
+            </div>
+          </label>
+        </div>
+      )}
+
+      {error && (
+        <div className="mb-3 flex items-start gap-2 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="flex min-h-48 items-center justify-center gap-2 rounded-xl border border-[#1e2d3d] bg-[#0c131f] text-sm text-slate-400">
+          <Loader2 className="h-4 w-4 animate-spin text-teal-400" />
+          Loading saved charts…
+        </div>
+      ) : !error && filteredRecords.length > 0 ? (
+        <div className="overflow-x-auto rounded-xl border border-[#22354a] bg-[#0c131f]">
+          <table className="w-full min-w-[760px] border-collapse text-left text-xs">
+            <thead className="border-b border-[#22354a] bg-[#121b28] font-mono uppercase tracking-wider text-slate-400">
+              <tr>
+                <th className="px-3 py-2.5">Symbol</th>
+                <th className="px-3 py-2.5">Date</th>
+                <th className="px-3 py-2.5">Exchange</th>
+                <th className="px-3 py-2.5">View name</th>
+                <th className="px-3 py-2.5">Saved</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#1e2d3d]">
+              {filteredRecords.map((record) => {
+                const details = parseChartRowKey(record.rowKey);
+                const viewName = getChartViewName(record.viewKey);
+                const exchangeName =
+                  details.exchange === "coindcx"
+                    ? "CoinDCX"
+                    : details.exchange === "binance"
+                      ? "Binance"
+                      : details.exchange === "delta"
+                        ? "Delta"
+                        : details.exchange || "—";
+
+                return (
+                  <tr key={record.id} className="transition hover:bg-[#151e2c]/70">
+                    <td className="px-3 py-2.5">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-semibold text-white">{details.symbol || "—"}</span>
+                        <a
+                          href={record.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title={`TradingView Snapshot Attached\n${record.url}${record.savedAt ? `\nSaved: ${new Date(record.savedAt).toLocaleDateString()}` : ""}\nClick to open in new tab`}
+                          className="inline-flex h-4 w-4 shrink-0 cursor-pointer items-center justify-center rounded border border-sky-500/40 bg-sky-500/20 text-sky-400 shadow-sm shadow-sky-950/40 transition-all hover:border-sky-300 hover:bg-sky-500/35 hover:text-sky-200"
+                        >
+                          <Camera className="h-2.5 w-2.5" />
+                        </a>
+                      </div>
+                    </td>
+                    <td className="px-3 py-2.5 text-slate-300">{details.date || "—"}</td>
+                    <td className="px-3 py-2.5 text-slate-300">{exchangeName}</td>
+                    <td className="max-w-[280px] px-3 py-2.5 text-slate-300">
+                      {(() => {
+                        // Known view → show friendly label. Missing/renamed key →
+                        // offer reassignment (Edit View renames the key, so old
+                        // chart links would otherwise keep showing the stale key).
+                        const known =
+                          !!record.viewKey &&
+                          VIEWS.some((v) => v.key === record.viewKey);
+                        if (known) {
+                          return (
+                            <span className="truncate block" title={viewName}>
+                              {viewName}
+                            </span>
+                          );
+                        }
+                        return (
+                          <select
+                            className="w-full max-w-[240px] rounded border border-[#22354a] bg-[#151e2c] px-1.5 py-1 text-[11px] text-slate-200"
+                            defaultValue=""
+                            disabled={assigningKey === record.rowKey}
+                            title={
+                              record.viewKey
+                                ? `Saved under old key "${record.viewKey}" (view was renamed). Pick the current view.`
+                                : "This chart was saved without a view. Pick one to store it."
+                            }
+                            onChange={async (e) => {
+                              const vk = e.target.value;
+                              if (!vk) return;
+                              setAssigningKey(record.rowKey);
+                              const ok = await updateChartLinkViewKey(record.rowKey, vk);
+                              setAssigningKey(null);
+                              if (ok) onRefresh();
+                            }}
+                          >
+                            <option value="">
+                              {record.viewKey
+                                ? `Reassign (was: ${record.viewKey.slice(0, 28)}${record.viewKey.length > 28 ? "…" : ""})…`
+                                : "Assign view…"}
+                            </option>
+                            {VIEWS.filter((v) => v.kind === "view").map((v) => (
+                              <option key={v.key} value={v.key}>
+                                {v.label || v.key}
+                              </option>
+                            ))}
+                          </select>
+                        );
+                      })()}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2.5 text-slate-400">{formatChartSavedAt(record.savedAt)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : !error && records?.length ? (
+        <div className="flex min-h-48 flex-col items-center justify-center rounded-xl border border-dashed border-[#1e2d3d] text-slate-400">
+          <Search className="mb-2 h-8 w-8 text-slate-600" />
+          <p className="text-sm font-medium">No charts match these filters</p>
+          <button
+            type="button"
+            onClick={() => {
+              setSymbolSearch("");
+              setViewNameSearch("");
+              onClearFilters?.();
+            }}
+            className="mt-2 text-xs text-teal-300 hover:text-teal-200"
+          >
+            Clear all filters
+          </button>
+        </div>
+      ) : !error ? (
+        <div className="flex min-h-48 flex-col items-center justify-center rounded-xl border border-dashed border-[#1e2d3d] text-slate-400">
+          <BarChart3 className="mb-2 h-8 w-8 text-slate-600" />
+          <p className="text-sm font-medium">No saved charts found</p>
+          <p className="mt-1 text-xs text-slate-500">Chart links you save from a chart row will appear here.</p>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+/**
+ * Pattern Statistics — a standalone page (not nested inside BacktestPanel)
+ * that answers one question: "of every pattern in the Backtest dropdown, how
+ * many real historical rows actually match it?" Runs runPatternCensus
+ * (backtest.ts) once over the chosen date range/source and groups every
+ * (category, pattern) result into one box per category — SignalDesk-style
+ * cards, category name + total in the header, every pattern's live count
+ * in the body, laid out as the same tree the Backtest dropdown shows — so
+ * empty or near-empty patterns (candidates for the same "CONFIRMED EMPTY"
+ * treatment as RRSSA-COA, RRSSB-EBB, etc.) are obvious at a glance, grouped
+ * by the category they actually live under.
+ */
+
+type PrevDayCheckBlock = {
+  pass: boolean | null;
+  label: string;
+  detail: string;
+};
+
+type PrevDayDiagnosis = {
+  symbol: string;
+  source: "binance" | "delta";
+  entryDate: string;
+  prevSessionLabel: string;
+  levels: {
+    conABc: number;
+    ceiling: number;
+    conBTc: number;
+    floor: number;
+    tcName: string;
+    ceilingName: string;
+  };
+  conA: PrevDayCheckBlock;
+  conB: PrevDayCheckBlock;
+  momA: PrevDayCheckBlock;
+  momB: PrevDayCheckBlock;
+};
+
+function formatConBNote(
+  failure: NonNullable<ReturnType<typeof explainPD15MBelowTCFailure>>,
+  tcName: string,
+): { label: string; detail: string } {
+  const ist = new Date(Date.parse(failure.openTime) + 19_800_000).toISOString().slice(11, 16);
+  const hhmm = `#${failure.candleNumber} (${ist} IST)`;
+  const body = `${failure.open}→${failure.close}`;
+  switch (failure.rule) {
+    case "freshHighAboveTC":
+      return {
+        label: `fresh high > ${tcName} · candle #${failure.candleNumber}`,
+        detail:
+          `#${failure.candleNumber} (${ist} IST) body ${body}, body top ${Math.max(failure.open, failure.close)}` +
+          ` > earlier high ${failure.previousHighestWick ?? "—"}` +
+          (failure.previousHighestWickCandle ? ` (candle #${failure.previousHighestWickCandle})` : "") +
+          ` · ${tcName} ${failure.tc}`,
+      };
+    case "bodyInS2":
+      return {
+        label: `body ≤ S2 · candle #${failure.candleNumber}`,
+        detail: `candle ${hhmm} body ${body} reached S2 — MOMENTUM-B territory, not CONSOLIDATE-B.`,
+      };
+    case "floor":
+      return {
+        label: `broke below floor wick · candle #${failure.candleNumber}`,
+        detail: `candle ${hhmm} body ${body} went below the low-wick reference ${failure.previousLowestWick ?? "—"} under PL/S1 floor ${failure.floor ?? "—"}.`,
+      };
+  }
+}
+
+function PreviousDaySection() {
+  const [symbol, setSymbol] = useState("");
+  const [entryDate, setEntryDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [source, setSource] = useState<"binance" | "delta">("binance");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<PrevDayDiagnosis | null>(null);
+
+  const run = async () => {
+    const sym = symbol.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+    if (!sym) {
+      setError("Enter a symbol (e.g. BTCUSDT).");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    setResult(null);
+    try {
+      const fullSym = sym.endsWith("USDT") ? sym : `${sym}USDT`;
+      const reconstructed = await reconstructCPRForDate(fullSym, source, entryDate);
+      if (!reconstructed) {
+        setError(`Could not reconstruct CPR for ${fullSym} on ${entryDate}.`);
+        return;
+      }
+      const { result: cpr } = reconstructed;
+      const sessionEnd = Date.parse(`${entryDate}T00:00:00.000Z`);
+      const prevStart = previousUpexSessionStartUtcMs(sessionEnd);
+      const prevEnd = upexSessionStartUtcMs(sessionEnd);
+
+      const conABc = getConsolidateABc(cpr.prevCPR, cpr.ppCPR);
+      const ceiling = getPrevious15MACeiling(cpr.prevCPR);
+      const conBTc = getConsolidateBTc(cpr.prevCPR, cpr.ppCPR);
+      const floor = getPrevious15MBFloor(cpr.prevCPR);
+      const tcName =
+        cpr.ppCPR && conBTc === cpr.ppCPR.tc && conBTc !== cpr.prevCPR.tc ? "PPDay TC" : "PDay TC";
+      const ceilingName =
+        cpr.ppCPR && conABc === cpr.ppCPR.bc && conABc !== cpr.prevCPR.bc
+          ? "PPDay BC band / PH-R1"
+          : "PDay PH/R1";
+
+      const candles = await fetchPreviousSessionCandles(
+        { symbol: fullSym, source },
+        sessionEnd,
+      );
+      if (!candles || candles.length === 0) {
+        setError(`No previous-session 15m candles for ${fullSym}.`);
+        return;
+      }
+
+      const now = prevEnd; // session end = "now" for historical walk
+      // CON-* use full rules; MOM-* drop the opposite-side constraint.
+      // Pass S2 like the Screener does: a body reaching S2 demotes CON-B to MOM-B.
+      const failConB = explainPD15MBelowTCFailure(candles, conBTc, prevStart, now, floor, cpr.prevCPR.s2);
+      const failConA = explainUpexFailure(candles, conABc, prevStart, now, ceiling, cpr.prevCPR.r2);
+      const failMomB = explainPD15MBelowTCFailure(candles, conBTc, prevStart, now); // no floor
+      const failMomA = explainUpexFailure(candles, conABc, prevStart, now); // no ceiling / R2
+
+      await Promise.all([
+        findPD15MBelowTCPass(
+          { symbol: fullSym, source, bc: conBTc, floor, s2: cpr.prevCPR.s2 },
+          sessionEnd,
+        ),
+        findPreviousConsolidateAPass(
+          { symbol: fullSym, source, bc: conABc, ceiling, r2: cpr.prevCPR.r2 },
+          sessionEnd,
+        ),
+      ]);
+
+      const noteBFromCache = getPD15MBelowTCFailureNote(
+        { symbol: fullSym, source, bc: conBTc, floor, s2: cpr.prevCPR.s2 },
+        sessionEnd,
+        tcName,
+      );
+
+      const tcTouch = firstBodyThroughLevel(candles, conBTc, prevStart, now);
+      const bcTouch = firstBodyThroughLevel(candles, conABc, prevStart, now);
+
+      const conB = failConB
+        ? formatConBNote(failConB, tcName)
+        : noteBFromCache && noteBFromCache.label !== "PASS"
+          ? noteBFromCache
+          : {
+              label: "PASS",
+              detail:
+                `All previous-session 15m bodies stayed within CONSOLIDATE-B rules (${tcName} ${conBTc}, floor PL/S1 ${floor}).` +
+                (tcTouch ? ` ${formatQualifyCandle(tcTouch, tcName, conBTc)}` : ""),
+            };
+
+      const conA = failConA
+        ? formatUpexFailureNote(failConA, ceilingName)
+        : {
+            label: "PASS",
+            detail:
+              `All previous-session 15m bodies stayed within CONSOLIDATE-A rules (BC ${conABc}, ceiling ${ceiling}).` +
+              (bcTouch ? ` ${formatQualifyCandle(bcTouch, "BC", conABc)}` : ""),
+          };
+
+      const momB = failMomB
+        ? formatConBNote(failMomB, tcName)
+        : {
+            label: "PASS",
+            detail:
+              `P-MOMENTUM-B: TC walk passed without the PL/S1 floor (${tcName} ${conBTc}).` +
+              (tcTouch
+                ? ` ${formatQualifyCandle(tcTouch, tcName, conBTc)}`
+                : " No completed body spanned TC — rare edge case."),
+          };
+
+      const momA = failMomA
+        ? formatUpexFailureNote(failMomA, "BC")
+        : {
+            label: "PASS",
+            detail:
+              `P-MOMENTUM-A: BC floor walk passed (no PH/R1 ceiling / R2 gate). BC ${conABc}.` +
+              (bcTouch
+                ? ` ${formatQualifyCandle(bcTouch, "BC", conABc)}`
+                : " No completed body spanned BC — rare edge case."),
+          };
+
+      const prevLabel = new Date(prevStart).toISOString().slice(0, 10);
+
+      setResult({
+        symbol: fullSym,
+        source,
+        entryDate,
+        prevSessionLabel: prevLabel,
+        levels: { conABc, ceiling, conBTc, floor, tcName, ceilingName },
+        conA: { pass: failConA ? false : true, label: conA.label, detail: conA.detail },
+        conB: { pass: failConB ? false : true, label: conB.label, detail: conB.detail },
+        momA: { pass: failMomA ? false : true, label: momA.label, detail: momA.detail },
+        momB: { pass: failMomB ? false : true, label: momB.label, detail: momB.detail },
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <section className="space-y-4">
+      <div className="rounded-xl border border-[#22354a] bg-[#0c131f] p-4">
+        <h2 className="mb-1 text-sm font-semibold text-teal-300">Previous Day — 15m CON-A / CON-B</h2>
+        <p className="mb-3 text-[11px] text-slate-400">
+          Enter a symbol and entry date (UTC session day). Shows why P-CONSOLIDATE-A and P-CONSOLIDATE-B
+          failed or passed on the <span className="text-slate-200">previous</span> 15m session — same detail
+          that used to appear under the Backtest View cell.
+        </p>
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="block">
+            <span className={CONTROL_LABEL}>Symbol</span>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-teal-400" />
+              <input
+                type="search"
+                value={symbol}
+                onChange={(e) => setSymbol(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && void run()}
+                placeholder="BTCUSDT"
+                className={`${CONTROL_BOX} w-44 py-1.5 pl-8 pr-3`}
+              />
+            </div>
+          </label>
+          <DateField
+            label="Entry Date (UTC)"
+            value={entryDate}
+            onChange={(iso) => {
+              // Keep a concrete date for diagnose (default today if cleared).
+              setEntryDate(iso || new Date().toISOString().slice(0, 10));
+            }}
+            max={new Date().toISOString().slice(0, 10)}
+          />
+          <div className="flex rounded-md overflow-hidden border border-[#22354a] bg-[#151e2c]">
+            {(["binance", "delta"] as const).map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setSource(s)}
+                className={`px-3 py-1.5 text-xs font-semibold capitalize ${
+                  source === s ? "bg-cyan-500/20 text-cyan-400" : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => void run()}
+            disabled={loading}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-teal-500/40 bg-teal-500/15 px-3 py-1.5 text-xs font-semibold text-teal-300 hover:bg-teal-500/25 disabled:opacity-50"
+          >
+            {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+            Diagnose
+          </button>
+        </div>
+      </div>
+
+      {error && (
+        <div className="flex items-start gap-2 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {result && (
+        <div className="space-y-3">
+          <div className="text-xs text-slate-400">
+            <span className="font-mono text-slate-200">{result.symbol}</span>
+            {" · "}
+            {result.source}
+            {" · entry "}
+            <span className="font-mono text-slate-200">{result.entryDate}</span>
+            {" · previous session "}
+            <span className="font-mono text-slate-200">{result.prevSessionLabel}</span>
+          </div>
+
+          {(
+            [
+              {
+                key: "conB" as const,
+                title: "P-CONSOLIDATE-B",
+                levels: `${result.levels.tcName} ${result.levels.conBTc} · floor ${result.levels.floor}`,
+                tonePass: "border-pink-500/30 bg-pink-500/5",
+                textPass: "text-pink-400",
+              },
+              {
+                key: "momB" as const,
+                title: "P-MOMENTUM-B",
+                levels: `${result.levels.tcName} ${result.levels.conBTc} · no floor`,
+                tonePass: "border-violet-500/30 bg-violet-500/5",
+                textPass: "text-violet-300",
+              },
+              {
+                key: "conA" as const,
+                title: "P-CONSOLIDATE-A",
+                levels: `BC ${result.levels.conABc} · ceiling ${result.levels.ceiling}`,
+                tonePass: "border-emerald-500/30 bg-emerald-500/5",
+                textPass: "text-emerald-400",
+              },
+              {
+                key: "momA" as const,
+                title: "P-MOMENTUM-A",
+                levels: `BC ${result.levels.conABc} · no ceiling`,
+                tonePass: "border-cyan-500/30 bg-cyan-500/5",
+                textPass: "text-cyan-300",
+              },
+            ] as const
+          ).map(({ key, title, levels, tonePass, textPass }) => {
+            const block = result[key];
+            const ok = block.pass === true;
+            return (
+              <div
+                key={key}
+                className={`rounded-xl border px-4 py-3 ${
+                  ok ? tonePass : "border-rose-500/30 bg-rose-500/5"
+                }`}
+              >
+                <div className="mb-1 flex flex-wrap items-center gap-2">
+                  <span
+                    className={`font-mono text-xs font-bold uppercase tracking-wider ${
+                      ok ? textPass : "text-rose-400"
+                    }`}
+                  >
+                    {title} {ok ? "PASS" : "✗"}
+                  </span>
+                  <span className="text-[10px] text-slate-500">{levels}</span>
+                </div>
+                {!ok && (
+                  <div className="font-mono text-[12px] text-rose-300/90">
+                    {title} {block.label}
+                  </div>
+                )}
+                <div className="mt-1 text-[11px] leading-relaxed text-slate-300">{block.detail}</div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
+
+export default function PatternStats() {
+  const [source, setSource] = useState<BacktestSource>("binance");
+  const [startDate, setStartDate] = useState<string>(() => {
+    const d = new Date();
+    d.setUTCDate(d.getUTCDate() - 30);
+    return d.toISOString().slice(0, 10);
+  });
+  const [endDate, setEndDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
+
+  const [running, setRunning] = useState(false);
+  const [progress, setProgress] = useState<{ done: number; total: number; symbol: string } | null>(null);
+  const [rows, setRows] = useState<PatternCensusRow[] | null>(null);
+  // TEMPORARY DEBUG ADDITION — see CategoryComboRow in backtest.ts.
+  const [combos, setCombos] = useState<CategoryComboRow[] | null>(null);
+  // Per-category distinct-symbol counts — see CategoryMatchRow in backtest.ts.
+  const [categoryMatches, setCategoryMatches] = useState<CategoryMatchRow[] | null>(null);
+  // Unclassified matches breakdown per top-level pattern
+  const [unclassified, setUnclassified] = useState<Record<string, UnclassifiedPatternMatch[]> | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  // "" = All categories. Options come from ViewsSidebar's own `pivotcategories`
+  // (see CATEGORY_FILTER_OPTIONS above) so this dropdown always matches the
+  // left-nav sidebar's category list/labels exactly, rather than maintaining
+  // a second copy of it here.
+  const [categoryFilter, setCategoryFilter] = useState<string>("");
+  const [chartRecords, setChartRecords] = useState<StoredChartLinkRecord[] | null>(null);
+  const [chartRecordsLoading, setChartRecordsLoading] = useState(false);
+  const [chartRecordsError, setChartRecordsError] = useState<string | null>(null);
+  const [chartReloadKey, setChartReloadKey] = useState(0);
+  const [chartExchangeFilter, setChartExchangeFilter] = useState<BacktestSource | "all">("all");
+  const [chartStartDateFilter, setChartStartDateFilter] = useState("");
+  const [chartEndDateFilter, setChartEndDateFilter] = useState("");
+
+  useEffect(() => {
+    if (categoryFilter !== CHARTS_CATEGORY_KEY) return;
+
+    let cancelled = false;
+    setChartRecordsLoading(true);
+    setChartRecordsError(null);
+    getAllChartLinkRecords()
+      .then((records) => {
+        if (!cancelled) setChartRecords(records);
+      })
+      .catch((e) => {
+        if (!cancelled) {
+          setChartRecordsError(e instanceof Error ? e.message : "Check your connection and Firebase access.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setChartRecordsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [categoryFilter, chartReloadKey]);
+
+  const treeSignature = useMemo(buildTreeSignature, [VIEWS, VIEWS.length]);
+  const [scannedTreeSignature, setScannedTreeSignature] = useState<string | null>(null);
+  const hasStaleResults = rows !== null && scannedTreeSignature !== treeSignature;
+  const treeMeta = useMemo(() => buildTreeMeta(), [treeSignature]);
+  // rows/emptyCount/etc. below narrow to just the selected category when one
+  // is chosen, so the summary chips and boxes reflect the same scope as the
+  // dropdown — "All categories" (categoryFilter === "") keeps everything.
+  const scopedRows = useMemo(
+    () => (categoryFilter ? rows?.filter((r) => r.categoryKey === categoryFilter) ?? null : rows),
+    [rows, categoryFilter]
+  );
+
+  const emptyCount = useMemo(() => scopedRows?.filter((r) => r.count === 0).length ?? 0, [scopedRows]);
+
+  const categories = useMemo<CategoryGroup[]>(() => {
+    if (!rows) return [];
+    // Rows with no entry in views.ts's tree (i.e. OUTER PATTERNS' flat list)
+    // keep the census's own order — highest count first, ties in
+    // OUTER_PATTERN_KEYS priority order — via a running sequence number.
+    let seq = 0;
+    const toStatRow = (categoryKey: string, r: PatternCensusRow): StatRow => {
+      // VIEWS rows are re-parented under VIEWS_CATEGORY_KEY, which never
+      // appears in the scoped map (see buildTreeMeta's doc comment) — fall
+      // back to the bare-key map, which still finds the view's real kind/
+      // order from wherever it actually lives in the tree. Depth is forced
+      // to 1 for this one category only, so the flat cross-category list
+      // doesn't inherit each view's real (and here meaningless) nesting
+      // depth from its actual parent pattern/subpattern.
+      const m = treeMeta.scoped.get(`${categoryKey}::${r.patternKey}`) ?? treeMeta.byKey.get(r.patternKey);
+      return {
+        patternKey: r.patternKey,
+        patternLabel: r.patternLabel,
+        count: r.count,
+        depth: categoryKey === VIEWS_CATEGORY_KEY ? 1 : m?.depth ?? 1,
+        kind: m?.kind ?? "pattern",
+        order: m?.index ?? 1_000_000 + seq++,
+        direction: r.direction,
+      };
+    };
+    const byKey = new Map<string, CategoryGroup>();
+    for (const r of rows) {
+      const existing = byKey.get(r.categoryKey);
+      if (existing) {
+        existing.total += r.count;
+        existing.patterns.push(toStatRow(r.categoryKey, r));
+      } else {
+        byKey.set(r.categoryKey, {
+          categoryKey: r.categoryKey,
+          categoryLabel: r.categoryLabel,
+          total: r.count,
+          patterns: [toStatRow(r.categoryKey, r)],
+          distinctCount: 0,
+          combos: [],
+        });
+      }
+    }
+    // TEMPORARY DEBUG ADDITION — attach each category's HHLL/RRHH/SSLL
+    // combo breakdown. A category can have combos even with zero matched
+    // patterns (or no `patterns` list at all), so this may add new groups
+    // that the `rows` loop above never created.
+    if (combos) {
+      for (const c of combos) {
+        const existing = byKey.get(c.categoryKey);
+        if (existing) {
+          existing.combos.push(c);
+        } else {
+          byKey.set(c.categoryKey, {
+            categoryKey: c.categoryKey,
+            categoryLabel: c.categoryLabel,
+            total: 0,
+            patterns: [],
+            distinctCount: 0,
+            combos: [c],
+          });
+        }
+      }
+    }
+    // Attach each category's distinct-symbol count. A category can have a
+    // distinct count even with zero matched patterns (or no `patterns`
+    // list at all), same reasoning as the combos loop above.
+    if (categoryMatches) {
+      for (const m of categoryMatches) {
+        const existing = byKey.get(m.categoryKey);
+        if (existing) {
+          existing.distinctCount = m.count;
+        } else {
+          byKey.set(m.categoryKey, {
+            categoryKey: m.categoryKey,
+            categoryLabel: m.categoryLabel,
+            total: 0,
+            patterns: [],
+            distinctCount: m.count,
+            combos: [],
+          });
+        }
+      }
+    }
+    const groups = Array.from(byKey.values());
+    for (const g of groups) {
+      // Dropdown (tree) order, NOT highest-count-first — the indentation only
+      // makes sense when every subpattern sits right under its pattern.
+      g.patterns.sort((a, b) => a.order - b.order);
+      g.combos.sort((a, b) => b.count - a.count);
+    }
+    // Same order as the left-nav sidebar (LEVEL ABOVE, ABOVE LEVEL4, LEVEL
+    // BELOW, COMPRESSED, EXPANDED, BELOW LEVEL4, TOUCH). Unknown keys go last.
+    groups.sort(
+      (a, b) =>
+        (CATEGORY_ORDER.get(a.categoryKey) ?? Number.MAX_SAFE_INTEGER) -
+          (CATEGORY_ORDER.get(b.categoryKey) ?? Number.MAX_SAFE_INTEGER) || b.distinctCount - a.distinctCount
+    );
+    return groups;
+  }, [rows, combos, categoryMatches, treeMeta]);
+
+  // Boxes actually rendered — narrowed to the selected category, same
+  // scoping as scopedRows above.
+  const visibleCategories = useMemo(
+    () => (categoryFilter ? categories.filter((g) => g.categoryKey === categoryFilter) : categories),
+    [categories, categoryFilter]
+  );
+
+  // Sum of each visible category's distinct count — the same total you get
+  // by adding up the sidebar's category numbers. (The old figure summed
+  // every pattern row, so a symbol matching several patterns was counted
+  // several times.) TOP 15 GAINERS / LOSERS and OUTER PATTERNS are left out:
+  // their symbols also sit in the other categories, so adding them would
+  // count the same symbol twice. (Selecting one of them on its own still
+  // shows its own total.)
+  const totalMatches = useMemo(
+    () =>
+      visibleCategories.reduce(
+        (sum, g) =>
+          sum + (OVERLAPPING_CATEGORY_IDS.has(g.categoryKey) && !OVERLAPPING_CATEGORY_IDS.has(categoryFilter) ? 0 : g.distinctCount),
+        0
+      ),
+    [visibleCategories, categoryFilter]
+  );
+
+  async function handleRun() {
+    setRunning(true);
+    setError(null);
+    setRows(null);
+    setScannedTreeSignature(null);
+    setCombos(null);
+    setCategoryMatches(null);
+    setUnclassified(null);
+    setProgress(null);
+    const scanTreeSignature = treeSignature;
+    try {
+      const { rows: result, combos: comboResult, categoryMatches: categoryMatchResult, unclassified: unclassResult } = await runPatternCensus(
+        startDate,
+        endDate,
+        source,
+        passesPattern,
+        (done, total, symbol) => setProgress({ done, total, symbol }),
+        INNER_PATTERNS_CONFIG
+      );
+      setRows(result);
+      setCombos(comboResult);
+      setCategoryMatches(categoryMatchResult);
+      setUnclassified(unclassResult);
+      setScannedTreeSignature(scanTreeSignature);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  const progressPct = progress && progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0;
+
+  return (
+    <div className="flex h-full flex-1 flex-col overflow-hidden bg-[#080d15] text-slate-100">
+      {/* Top banner header — same structure as SignalDesk's */}
+      <div className="flex shrink-0 flex-col justify-between gap-4 border-b border-[#1e2d3d] bg-[#0c131f] p-4 md:flex-row md:items-center">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-500/40 bg-emerald-500/20">
+            <BarChart3 className="h-4 w-4 text-emerald-400" />
+          </div>
+          <div>
+            <h1 className="flex items-center gap-2 text-base font-bold tracking-wide text-white">
+              PATTERN STATISTICS
+              <span className="rounded-full border border-emerald-500/30 bg-emerald-500/20 px-2 py-0.5 font-mono text-[10px] uppercase text-emerald-400">
+                Live Match Counts
+              </span>
+            </h1>
+            <p className="text-xs text-slate-400">
+              How many real historical rows match every category, pattern, subpattern and view in the Backtest dropdown
+            </p>
+          </div>
+        </div>
+
+        {categoryFilter !== CHARTS_CATEGORY_KEY && rows && !hasStaleResults && (
+          <div className="flex flex-wrap items-center gap-2">
+            <StatChip icon={Layers} label="Patterns" value={scopedRows?.length ?? 0} />
+            <StatChip icon={Sigma} label="Distinct matches" value={totalMatches} tone="emerald" />
+            <StatChip icon={Ban} label="Empty" value={emptyCount} tone="amber" />
+          </div>
+        )}
+      </div>
+
+      {/* Filter scan bar */}
+      <div className="shrink-0 border-b border-[#1b263b] bg-[#0d1422] px-4 py-3">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div className="flex shrink-0 items-center gap-2 pb-1.5 font-mono text-[11px] font-semibold uppercase tracking-wider text-teal-400">
+            <Filter className="h-3.5 w-3.5" />
+            {categoryFilter === CHARTS_CATEGORY_KEY
+              ? "Saved charts"
+              : categoryFilter === PREVIOUS_DAY_CATEGORY_KEY
+                ? "Previous day 15m"
+                : "Filter scan"}
+          </div>
+
+          <div className="flex flex-wrap items-end gap-3">
+            <label className="block">
+              <span className={CONTROL_LABEL}>EXCHANGE</span>
+              <div className="relative">
+                <Database className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-teal-400" />
+                <select
+                  className={`${CONTROL_BOX} min-w-[120px] appearance-none py-1.5 pl-8 pr-7 disabled:opacity-60`}
+                  value={categoryFilter === CHARTS_CATEGORY_KEY ? chartExchangeFilter : source}
+                  onChange={(e) => {
+                    if (categoryFilter === CHARTS_CATEGORY_KEY) {
+                      setChartExchangeFilter(e.target.value as BacktestSource | "all");
+                    } else {
+                      setSource(e.target.value as BacktestSource);
+                    }
+                  }}
+                  disabled={running}
+                >
+                  {categoryFilter === CHARTS_CATEGORY_KEY && <option value="all">All exchanges</option>}
+                  <option value="binance">Binance</option>
+                  <option value="delta">Delta</option>
+                  <option value="coindcx" disabled={!COINDCX_ENABLED}>
+                    {COINDCX_ENABLED ? "CoinDCX" : "CoinDCX (paused)"}
+                  </option>
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+              </div>
+            </label>
+
+            {categoryFilter === CHARTS_CATEGORY_KEY ? (
+              <>
+                <DateField
+                  label="Start Date (UTC)"
+                  value={chartStartDateFilter}
+                  onChange={setChartStartDateFilter}
+                  max={chartEndDateFilter || undefined}
+                />
+                <DateField
+                  label="End Date (UTC)"
+                  value={chartEndDateFilter}
+                  onChange={setChartEndDateFilter}
+                  min={chartStartDateFilter || undefined}
+                  max={new Date().toISOString().slice(0, 10)}
+                />
+              </>
+            ) : (
+              <>
+                <DateField label="Start Date (UTC)" value={startDate} onChange={setStartDate} max={endDate} />
+                <DateField
+                  label="End Date (UTC)"
+                  value={endDate}
+                  onChange={setEndDate}
+                  min={startDate}
+                  max={new Date().toISOString().slice(0, 10)}
+                />
+              </>
+            )}
+
+            <label className="block">
+              <span className={CONTROL_LABEL}>Category</span>
+              <div className="relative">
+                <Layers className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-teal-400" />
+                <select
+                  className={`${CONTROL_BOX} min-w-[190px] appearance-none border-teal-500/50 py-1.5 pl-8 pr-7`}
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value)}
+                >
+                  <option value="">All categories</option>
+                  {CATEGORY_FILTER_OPTIONS.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+              </div>
+            </label>
+
+            {categoryFilter === CHARTS_CATEGORY_KEY ? (
+              <button
+                type="button"
+                className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-400 to-teal-400 px-4 py-1.5 text-sm font-bold text-[#04140f] shadow-md shadow-emerald-900/40 transition hover:from-emerald-300 hover:to-teal-300 disabled:cursor-not-allowed disabled:opacity-60"
+                onClick={() => setChartReloadKey((key) => key + 1)}
+                disabled={chartRecordsLoading}
+              >
+                {chartRecordsLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4 fill-current" />}
+                {chartRecordsLoading ? "Loading…" : "Run scan"}
+              </button>
+            ) : (
+              <button
+                className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-400 to-teal-400 px-4 py-1.5 text-sm font-bold text-[#04140f] shadow-md shadow-emerald-900/40 transition hover:from-emerald-300 hover:to-teal-300 disabled:cursor-not-allowed disabled:opacity-60"
+                onClick={handleRun}
+                disabled={running}
+              >
+                {running ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4 fill-current" />}
+                {running ? "Running…" : "Run scan"}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {running && (
+          <div className="mt-3">
+            <div className="mb-1 flex items-center justify-between font-mono text-[11px] text-slate-400">
+              <span>{progress ? `Scanning symbols… ${progress.done}/${progress.total}` : "Preparing scan…"}</span>
+              {progress && <span className="text-teal-300">{progressPct}%</span>}
+            </div>
+            <div className="h-1.5 overflow-hidden rounded-full bg-[#151e2c]">
+              <div
+                className={[
+                  "h-full rounded-full bg-gradient-to-r from-emerald-400 to-teal-400 transition-all duration-300",
+                  progress ? "" : "w-1/4 animate-pulse",
+                ].join(" ")}
+                style={progress ? { width: `${progressPct}%` } : undefined}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Results */}
+      <div className="flex-1 overflow-y-auto p-4">
+        {categoryFilter === PREVIOUS_DAY_CATEGORY_KEY ? (
+          <PreviousDaySection />
+        ) : categoryFilter === CHARTS_CATEGORY_KEY ? (
+          <ChartLinksSection
+            records={chartRecords}
+            loading={chartRecordsLoading}
+            error={chartRecordsError}
+            onRefresh={() => setChartReloadKey((key) => key + 1)}
+            exchangeFilter={chartExchangeFilter}
+            startDate={chartStartDateFilter}
+            endDate={chartEndDateFilter}
+            onClearFilters={() => {
+              setChartStartDateFilter("");
+              setChartEndDateFilter("");
+              setChartExchangeFilter("all");
+            }}
+          />
+        ) : (
+          <>
+        {error && (
+          <div className="mb-4 flex items-start gap-2 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {running && (
+          <div className="flex min-h-64 flex-col items-center justify-center rounded-xl border border-emerald-500/20 bg-[#0c131f] px-6 py-10 text-center">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full border border-emerald-500/30 bg-emerald-500/10">
+              <Loader2 className="h-6 w-6 animate-spin text-emerald-400" />
+            </div>
+            <p className="text-base font-semibold text-white">
+              Scanning {source === "binance" ? "Binance" : source === "delta" ? "Delta Exchange" : "CoinDCX"}…
+            </p>
+            <p className="mt-1 text-sm text-slate-400">
+              Checking historical symbols for matching patterns. Results will appear here when the scan completes.
+            </p>
+            <div className="mt-5 w-full max-w-md">
+              <div className="mb-1.5 flex justify-between font-mono text-[11px] text-slate-400">
+                <span>
+                  {progress
+                    ? `Scanning symbols… ${progress.done}/${progress.total}${progress.symbol ? ` · ${progress.symbol}` : ""}`
+                    : "Preparing scan…"}
+                </span>
+                {progress && <span className="text-teal-300">{progressPct}%</span>}
+              </div>
+              <div className="h-1.5 overflow-hidden rounded-full bg-[#151e2c]">
+                <div
+                  className={[
+                    "h-full rounded-full bg-gradient-to-r from-emerald-400 to-teal-400 transition-all duration-300",
+                    progress ? "" : "w-1/4 animate-pulse",
+                  ].join(" ")}
+                  style={progress ? { width: `${progressPct}%` } : undefined}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {hasStaleResults && (
+          <div className="mb-4 flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>Pattern definitions changed since this scan. Run the scan again to refresh the counts and missing-subpattern breakdown.</span>
+          </div>
+        )}
+
+        {!rows && !running && !error && (
+          <div className="flex h-64 flex-col items-center justify-center rounded-xl border border-dashed border-[#1e2d3d] text-slate-400">
+            <BarChart3 className="mb-2 h-10 w-10 text-slate-600" />
+            <p className="text-sm font-medium">Ready to scan</p>
+            <p className="mt-1 text-xs text-slate-500">Pick a source, date range and category, then press Run scan</p>
+          </div>
+        )}
+
+        {rows && !hasStaleResults && (
+          <>
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <span className="font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                Categories ({visibleCategories.length})
+              </span>
+              <p className="hidden text-[11px] italic text-slate-500 sm:block">
+                Same order as the sidebar; patterns are indented like the Backtest dropdown.
+              </p>
+            </div>
+
+            {visibleCategories.length === 0 ? (
+              <div className="flex h-64 flex-col items-center justify-center rounded-xl border border-dashed border-[#1e2d3d] text-slate-400">
+                <Ban className="mb-2 h-10 w-10 text-slate-600" />
+                <p className="text-sm font-medium">No patterns found</p>
+                <p className="mt-1 text-xs text-slate-500">Try a different date range, source, or category</p>
+              </div>
+            ) : (
+              <section className="grid grid-cols-1 gap-3.5 md:grid-cols-2 xl:grid-cols-3">
+                {visibleCategories.map((group) => (
+                  <CategoryBox key={group.categoryKey} group={group} unclassified={unclassified} />
+                ))}
+              </section>
+            )}
+          </>
+        )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}

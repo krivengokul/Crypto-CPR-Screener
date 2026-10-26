@@ -1,0 +1,322 @@
+import React from "react";
+import { fmt } from "@/pages/ScreenerUtils";
+
+// Progress-bar values (price, pivot, S1-4, R1-4) are shown small and dense
+// next to each other, so thousands separators just add visual noise here —
+// strip them while keeping fmt()'s existing decimal-precision logic intact.
+const fmtNoCommas = (val: number) => fmt(val).replace(/,/g, "");
+
+interface SignalProgressBarProps {
+  price: number;
+  pivot: number;
+  s1: number;
+  s2: number;
+  s3?: number;
+  s4: number;
+  r1: number;
+  r2: number;
+  r3?: number;
+  r4: number;
+  /** True for Down/bearish signals. Flips the track colors so the target
+   *  side (below pivot) reads green and the stop side (above pivot) reads
+   *  red — mirroring the Up/bullish default of red-left, green-right. */
+  isDown?: boolean;
+}
+
+export default function SignalProgressBar({
+  price,
+  pivot,
+  s1,
+  s2,
+  s3,
+  s4,
+  r1,
+  r2,
+  r3,
+  r4,
+  isDown = false,
+}: SignalProgressBarProps) {
+  // Up: left (support / stop side) red, right (target side) green
+  // Down: left (target / support side) green, right (stop / resistance) red
+  const leftTrackColor = isDown ? "#065f46" : "#881337";
+  const rightTrackColor = isDown ? "#881337" : "#065f46";
+
+  // Ensure valid min/max boundaries
+  const minVal = s4 || pivot * 0.95;
+  const maxVal = r4 || pivot * 1.05;
+  const range = maxVal - minVal || 1;
+
+  const getPercent = (val: number) => {
+    return Math.max(0, Math.min(100, ((val - minVal) / range) * 100));
+  };
+
+  const pricePct = getPercent(price);
+  const pivotPct = getPercent(pivot);
+  const s1Pct = getPercent(s1);
+  const s2Pct = getPercent(s2);
+  const s3Pct = s3 !== undefined ? getPercent(s3) : null;
+  const r1Pct = getPercent(r1);
+  const r2Pct = getPercent(r2);
+  const r3Pct = r3 !== undefined ? getPercent(r3) : null;
+
+  // Dynamic context below the bar (e.g. "1.42% from S1   0.23% to PIVOT")
+  // Up: left = support context (rose), right = progress to R-target (emerald)
+  // Down: left = progress to S-target (emerald), right = resistance context (rose)
+  let leftText = "";
+  let rightText = "";
+  let leftColor = isDown ? "text-emerald-400" : "text-rose-400";
+  let rightColor = isDown ? "text-rose-400" : "text-emerald-400";
+
+  if (!isDown) {
+    if (price < pivot) {
+      const toPivotPct = Math.abs(((pivot - price) / price) * 100).toFixed(2);
+      rightText = `${toPivotPct}% to PIVOT`;
+      rightColor = "text-emerald-400";
+
+      if (price >= s1) {
+        const diff = Math.abs(((price - s1) / (s1 || 1)) * 100).toFixed(2);
+        leftText = `${diff}% from S1`;
+      } else if (price >= s2) {
+        const diff = Math.abs(((price - s2) / (s2 || 1)) * 100).toFixed(2);
+        leftText = `${diff}% from S2`;
+      } else if (s3 && price >= s3) {
+        const diff = Math.abs(((price - s3) / (s3 || 1)) * 100).toFixed(2);
+        leftText = `${diff}% from S3`;
+      } else {
+        const diff = Math.abs(((price - s4) / (s4 || 1)) * 100).toFixed(2);
+        leftText = `${diff}% from S4`;
+      }
+      leftColor = "text-rose-400";
+    } else {
+      const abovePivotPct = Math.abs(((price - pivot) / (pivot || 1)) * 100).toFixed(2);
+      leftText = `${abovePivotPct}% from PIVOT`;
+      leftColor = "text-rose-400";
+
+      if (price <= r1) {
+        const diff = Math.abs(((r1 - price) / (price || 1)) * 100).toFixed(2);
+        rightText = `${diff}% to R1`;
+      } else if (price <= r2) {
+        const diff = Math.abs(((r2 - price) / (price || 1)) * 100).toFixed(2);
+        rightText = `${diff}% to R2`;
+      } else if (r3 && price <= r3) {
+        const diff = Math.abs(((r3 - price) / (price || 1)) * 100).toFixed(2);
+        rightText = `${diff}% to R3`;
+      } else {
+        const diff = Math.abs(((r4 - price) / (price || 1)) * 100).toFixed(2);
+        rightText = `${diff}% to R4`;
+      }
+      rightColor = "text-emerald-400";
+    }
+  } else {
+    // Down: target is below (S side = green/left), stop is above (R side = red/right)
+    if (price > pivot) {
+      const toPivotPct = Math.abs(((price - pivot) / price) * 100).toFixed(2);
+      leftText = `${toPivotPct}% to PIVOT`;
+      leftColor = "text-emerald-400";
+
+      if (price <= r1) {
+        const diff = Math.abs(((r1 - price) / (price || 1)) * 100).toFixed(2);
+        rightText = `${diff}% from R1`;
+      } else if (price <= r2) {
+        const diff = Math.abs(((r2 - price) / (price || 1)) * 100).toFixed(2);
+        rightText = `${diff}% from R2`;
+      } else if (r3 && price <= r3) {
+        const diff = Math.abs(((r3 - price) / (price || 1)) * 100).toFixed(2);
+        rightText = `${diff}% from R3`;
+      } else {
+        const diff = Math.abs(((r4 - price) / (price || 1)) * 100).toFixed(2);
+        rightText = `${diff}% from R4`;
+      }
+      rightColor = "text-rose-400";
+    } else {
+      const belowPivotPct = Math.abs(((pivot - price) / (pivot || 1)) * 100).toFixed(2);
+      rightText = `${belowPivotPct}% from PIVOT`;
+      rightColor = "text-rose-400";
+
+      if (price >= s1) {
+        const diff = Math.abs(((price - s1) / (price || 1)) * 100).toFixed(2);
+        leftText = `${diff}% to S1`;
+      } else if (price >= s2) {
+        const diff = Math.abs(((price - s2) / (price || 1)) * 100).toFixed(2);
+        leftText = `${diff}% to S2`;
+      } else if (s3 && price >= s3) {
+        const diff = Math.abs(((price - s3) / (price || 1)) * 100).toFixed(2);
+        leftText = `${diff}% to S3`;
+      } else {
+        const diff = Math.abs(((price - s4) / (price || 1)) * 100).toFixed(2);
+        leftText = `${diff}% to S4`;
+      }
+      leftColor = "text-emerald-400";
+    }
+  }
+
+  return (
+    <div className="w-full select-none py-1.5 mb-2.5">
+      {/* Live price callout above bar */}
+      <div className="relative w-full h-5 mb-0.5">
+        <div
+          className="absolute -top-0.5 flex flex-col items-center transition-all duration-300 pointer-events-none"
+          style={{
+            left: `${pricePct}%`,
+            transform: "translateX(-50%)",
+          }}
+        >
+          <span className="font-mono text-[11px] font-bold text-[#f59e0b] tracking-tight whitespace-nowrap drop-shadow-sm">
+            {fmtNoCommas(price)}
+          </span>
+        </div>
+      </div>
+
+      {/* S3 / S1 / R1 / R3 context labels */}
+      <div className="relative w-full h-7 mb-0.5 font-mono text-[9px] text-slate-400">
+        {s3Pct !== null && (
+          <div
+            className="absolute top-0 -translate-x-1/2 text-center"
+            style={{ left: `${s3Pct}%` }}
+          >
+            <div className="text-[8.5px] text-slate-300">{fmtNoCommas(s3 as number)}</div>
+            <div className="font-semibold text-slate-400 text-[9px]">S3</div>
+          </div>
+        )}
+
+        <div
+          className="absolute top-0 -translate-x-1/2 text-center"
+          style={{ left: `${s1Pct}%` }}
+        >
+          <div className="text-[8.5px] text-slate-300">{fmtNoCommas(s1)}</div>
+          <div className="font-semibold text-slate-400 text-[9px]">S1</div>
+        </div>
+
+        <div
+          className="absolute top-0 -translate-x-1/2 text-center"
+          style={{ left: `${r1Pct}%` }}
+        >
+          <div className="text-[8.5px] text-slate-300">{fmtNoCommas(r1)}</div>
+          <div className="font-semibold text-slate-400 text-[9px]">R1</div>
+        </div>
+
+        {r3Pct !== null && (
+          <div
+            className="absolute top-0 -translate-x-1/2 text-center"
+            style={{ left: `${r3Pct}%` }}
+          >
+            <div className="text-[8.5px] text-slate-300">{fmtNoCommas(r3 as number)}</div>
+            <div className="font-semibold text-slate-400 text-[9px]">R3</div>
+          </div>
+        )}
+      </div>
+
+      {/* Progress Track */}
+      <div className="relative w-full h-2 rounded-full overflow-visible flex items-center">
+        {/* Left: S4 → PIVOT — red for Up, green for Down */}
+        <div
+          className="h-full rounded-l-full relative"
+          style={{ width: `${pivotPct}%`, backgroundColor: leftTrackColor }}
+        >
+          <div
+            className="absolute top-0 bottom-0 w-[1px] bg-black/40"
+            style={{ left: `${(s1Pct / (pivotPct || 1)) * 100}%` }}
+          />
+          <div
+            className="absolute top-0 bottom-0 w-[1px] bg-black/40"
+            style={{ left: `${(s2Pct / (pivotPct || 1)) * 100}%` }}
+          />
+          {s3Pct !== null && (
+            <div
+              className="absolute top-0 bottom-0 w-[1px] bg-black/40"
+              style={{ left: `${(s3Pct / (pivotPct || 1)) * 100}%` }}
+            />
+          )}
+        </div>
+
+        {/* Right: PIVOT → R4 — green for Up, red for Down */}
+        <div
+          className="h-full rounded-r-full relative flex-1"
+          style={{ backgroundColor: rightTrackColor }}
+        >
+          <div
+            className="absolute top-0 bottom-0 w-[1px] bg-black/40"
+            style={{
+              left: `${((r1Pct - pivotPct) / (100 - pivotPct || 1)) * 100}%`,
+            }}
+          />
+          <div
+            className="absolute top-0 bottom-0 w-[1px] bg-black/40"
+            style={{
+              left: `${((r2Pct - pivotPct) / (100 - pivotPct || 1)) * 100}%`,
+            }}
+          />
+          {r3Pct !== null && (
+            <div
+              className="absolute top-0 bottom-0 w-[1px] bg-black/40"
+              style={{
+                left: `${((r3Pct - pivotPct) / (100 - pivotPct || 1)) * 100}%`,
+              }}
+            />
+          )}
+        </div>
+
+        {/* Pivot marker */}
+        <div
+          className="absolute top-0 bottom-0 w-[1.5px] bg-slate-200/80 z-10"
+          style={{ left: `${pivotPct}%`, transform: "translateX(-50%)" }}
+        />
+
+        <div className="absolute left-0 top-0 bottom-0 w-[1px] bg-black/50" />
+        <div className="absolute right-0 top-0 bottom-0 w-[1px] bg-black/50" />
+
+        {/* Live Price Needle */}
+        <div
+          className="absolute top-[-3px] bottom-[-3px] w-[2px] bg-[#f97316] z-20 shadow-sm shadow-orange-500 transition-all duration-300"
+          style={{
+            left: `${pricePct}%`,
+            transform: "translateX(-50%)",
+          }}
+        />
+      </div>
+
+      {/* Labels below the bar */}
+      <div className="relative w-full h-8 mt-1 font-mono text-[9px] text-slate-400">
+        <div className="absolute left-0 top-0 text-left">
+          <div className="font-semibold text-slate-400 text-[9px]">S4</div>
+          <div className="text-[8.5px] text-slate-300">{fmtNoCommas(s4)}</div>
+        </div>
+
+        <div
+          className="absolute top-0 -translate-x-1/2 text-center"
+          style={{ left: `${s2Pct}%` }}
+        >
+          <div className="font-semibold text-slate-400 text-[9px]">S2</div>
+          <div className="text-[8.5px] text-slate-300">{fmtNoCommas(s2)}</div>
+        </div>
+
+        <div
+          className="absolute top-0 -translate-x-1/2 text-center"
+          style={{ left: `${pivotPct}%` }}
+        >
+          <div className="font-bold text-slate-300 text-[9px]">PIVOT</div>
+          <div className="text-[8.5px] text-slate-200">{fmtNoCommas(pivot)}</div>
+        </div>
+
+        <div
+          className="absolute top-0 -translate-x-1/2 text-center"
+          style={{ left: `${r2Pct}%` }}
+        >
+          <div className="font-semibold text-slate-400 text-[9px]">R2</div>
+          <div className="text-[8.5px] text-slate-300">{fmtNoCommas(r2)}</div>
+        </div>
+
+        <div className="absolute right-0 top-0 text-right">
+          <div className="font-semibold text-slate-400 text-[9px]">R4</div>
+          <div className="text-[8.5px] text-slate-300">{fmtNoCommas(r4)}</div>
+        </div>
+      </div>
+
+      {/* Bottom context summary */}
+      <div className="flex items-center justify-center gap-3 text-[11px] font-mono mt-0.5">
+        <span className={leftColor}>{leftText}</span>
+        <span className={rightColor}>{rightText}</span>
+      </div>
+    </div>
+  );
+}

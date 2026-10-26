@@ -1,0 +1,1417 @@
+import { Fragment, memo } from "react";
+import { ExternalLink, CheckCircle2, XCircle, Tag, Cloud } from "lucide-react";
+import { hasTouchedEntry } from "@/lib/signalTracker";
+import { sessionReachedTarget } from "@/lib/signalOutcome";
+import type { CPRResult } from "@/lib/cpr";
+import type { ReclaimSideState } from "@/lib/15MCandleCheck";
+import { getView } from "@/lib/views";
+
+/** True when `viewKey` is a descendant (via parentKey) of `ancestorKey`. */
+function isViewUnder(viewKey: string, ancestorKey: string): boolean {
+  const seen = new Set<string>();
+  let cur = getView(viewKey);
+  while (cur?.parentKey && !seen.has(cur.key)) {
+    if (cur.parentKey === ancestorKey) return true;
+    seen.add(cur.key);
+    cur = getView(cur.parentKey);
+  }
+  return false;
+}
+import {
+  type CPRResultWithSource,
+  type ActiveTab,
+  type SortKey,
+  type SortDir,
+  fmt,
+  fmtPct,
+  splitSymbol,
+  getChartUrl,
+  openChartInNewTab,
+  hasKnownChartMapping,
+  passesPattern,
+  distanceFromCPR,
+  pdhPdlStatus,
+  computePrevPattern,
+  computeInnerLevelPattern,
+  computeGapBadge,
+  getViewDirection,
+  getAnyViewDirection,
+  getMatchingSignals,
+  cprDistancePct,
+  levelsInDistanceRange,
+  renderSSRRHHLLBadges,
+  renderSSLLCategoryBadge,
+  renderHHLLCategoryBadge,
+  renderSSRRCategoryBadge,
+  renderRRHHCategoryBadge,
+  renderLevelStatusRow1Badges,
+  renderLevelStatusBadge,
+  renderLevelStatusRestBadges,
+  renderGapColumnBadges,
+  renderPivotSizeCell,
+} from "./ScreenerUtils";
+import { formatTradFiSubtitle } from "@/lib/tradfiDisplay";
+import {
+  getRowCategory,
+  getCategoryLabel,
+  CATEGORY_TEXT_COLORS,
+} from "@/lib/rowCategory";
+import { SRLadderRow, toSRLadderData } from "./SRLadderPanel";
+import { getLadderMatchSummary, type LevelCheckCondition } from "./SRLadderDiff";
+
+/**
+ * PATTERN_BADGE_CLASSES — single source of truth for pattern badge colours.
+ * Keyed by badge label (CL4U3, EU4L4, ...). Used for today's pattern badges
+ * and for the previous-day "p-xxxx" badge so both share the same palette.
+ */
+export const PATTERN_BADGE_CLASSES: Record<string, string> = {
+  // --- Pattern Badges starting with C (Compressed: Cyan #00BCD4 / Sky / Light Cyan for Ultra Compressed) ---
+  // Ultra Compressed (Level 4): light / vivid cyan
+  CL4U4: "bg-cyan-300/10 text-cyan-200 border border-cyan-300/30",
+  CU4L4: "bg-cyan-300/10 text-cyan-200 border border-cyan-300/30",
+  CL4U3: "bg-cyan-400/10 text-cyan-300 border border-cyan-400/20",
+  CU4L3: "bg-cyan-400/10 text-cyan-300 border border-cyan-400/20",
+  CU4L2: "bg-cyan-400/10 text-cyan-300 border border-cyan-400/20",
+  CL4U2: "bg-cyan-300/10 text-cyan-200 border border-cyan-300/20",
+  // Compressed (Level 3): cyan / sky
+  CU3L3: "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20",
+  CL3U3: "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20",
+  CU3L2: "bg-cyan-500/10 text-cyan-300 border border-cyan-500/20",
+  CL3U2: "bg-cyan-500/10 text-cyan-300 border border-cyan-500/20",
+  CU3L1: "bg-sky-400/10 text-sky-300 border border-sky-400/20",
+  CL3U1: "bg-sky-400/10 text-sky-300 border border-sky-400/20",
+  // Compressed (Level 2 & 1): cyan / sky
+  CL2U2: "bg-cyan-600/10 text-cyan-300 border border-cyan-600/20",
+  CU2L2: "bg-cyan-600/10 text-cyan-300 border border-cyan-600/20",
+  CL2U1: "bg-sky-500/10 text-sky-300 border border-sky-500/20",
+  CU2L1: "bg-sky-500/10 text-sky-300 border border-sky-500/20",
+  CU2BC: "bg-sky-500/10 text-sky-300 border border-sky-500/20",
+  CL1U1: "bg-cyan-600/10 text-cyan-400 border border-cyan-600/20",
+  CU1L1: "bg-cyan-600/10 text-cyan-400 border border-cyan-600/20",
+  CL2UT: "bg-sky-500/10 text-sky-400 border border-sky-500/20",
+
+  // --- Pattern Badges starting with E (Expanded: Purple #9C27B0 / Deeper Purple for Highly Expanded) ---
+  // Highly Expanded (Level 4): deep / rich purple
+  EU4L4: "bg-purple-800/15 text-purple-200 border border-purple-800/30",
+  EL4U4: "bg-purple-800/15 text-purple-200 border border-purple-800/30",
+  EU3L4: "bg-purple-700/15 text-purple-300 border border-purple-700/30",
+  EL3U4: "bg-purple-700/15 text-purple-300 border border-purple-700/30",
+  EL2U4: "bg-purple-700/15 text-purple-300 border border-purple-700/30",
+  EU2L4: "bg-purple-700/15 text-purple-300 border border-purple-700/30",
+  EU1L4: "bg-purple-700/15 text-purple-300 border border-purple-700/30",
+  EL1U4: "bg-purple-700/15 text-purple-300 border border-purple-700/30",
+  EUTL4: "bg-purple-800/15 text-purple-200 border border-purple-800/30",
+  ELBU4: "bg-purple-800/15 text-purple-200 border border-purple-800/30",
+  // Expanded (Level 3): purple
+  EU3L3: "bg-purple-600/10 text-purple-300 border border-purple-600/20",
+  EL3U3: "bg-purple-600/10 text-purple-300 border border-purple-600/20",
+  EU2L3: "bg-purple-600/10 text-purple-300 border border-purple-600/20",
+  EL2U3: "bg-purple-600/10 text-purple-300 border border-purple-600/20",
+  EU1L3: "bg-purple-600/10 text-purple-300 border border-purple-600/20",
+  EL1U3: "bg-purple-600/10 text-purple-300 border border-purple-600/20",
+  EUTL3: "bg-purple-600/10 text-purple-300 border border-purple-600/20",
+  ELTU3: "bg-purple-600/10 text-purple-300 border border-purple-600/20",
+  ELPU3: "bg-purple-600/10 text-purple-300 border border-purple-600/20",
+  ELBU3: "bg-purple-600/10 text-purple-300 border border-purple-600/20",
+  EUBL3: "bg-purple-600/10 text-purple-300 border border-purple-600/20",
+  EUPL3: "bg-purple-600/10 text-purple-300 border border-purple-600/20",
+  // Moderate Expanded (Level 2 & 1): purple / violet
+  EU2L2: "bg-purple-500/10 text-purple-400 border border-purple-500/20",
+  EU1L1: "bg-purple-500/10 text-purple-400 border border-purple-500/20",
+  EL1U1: "bg-purple-500/10 text-purple-400 border border-purple-500/20",
+  EL1U2: "bg-purple-500/10 text-purple-400 border border-purple-500/20",
+  EU1L2: "bg-purple-500/10 text-purple-400 border border-purple-500/20",
+  EUTL2: "bg-purple-500/10 text-purple-400 border border-purple-500/20",
+  ELTU2: "bg-purple-500/10 text-purple-400 border border-purple-500/20",
+  ELBU2: "bg-purple-500/10 text-purple-400 border border-purple-500/20",
+  ELPU2: "bg-purple-500/10 text-purple-400 border border-purple-500/20",
+  EUPL2: "bg-purple-500/10 text-purple-400 border border-purple-500/20",
+  EUBL1: "bg-purple-500/10 text-purple-400 border border-purple-500/20",
+  EUPL1: "bg-purple-500/10 text-purple-400 border border-purple-500/20",
+  EUTL1: "bg-purple-500/10 text-purple-400 border border-purple-500/20",
+  EUBL2: "bg-purple-500/10 text-purple-400 border border-purple-500/20",
+  EL1L2: "bg-purple-500/10 text-purple-400 border border-purple-500/20",
+  EL2L1: "bg-purple-500/10 text-purple-400 border border-purple-500/20",
+
+  // --- Other Pattern Badges ---
+  L4U4: "bg-lime-500/10 text-lime-400 border border-lime-500/20",
+  QU4L4: "bg-slate-500/10 text-slate-300 border border-slate-500/20",
+  U4L2: "bg-green-500/10 text-green-400 border border-green-500/20",
+  U3L2: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
+  U4L3: "bg-lime-500/10 text-lime-400 border border-lime-500/20",
+  U4L4: "bg-green-600/10 text-green-300 border border-green-600/20",
+  U1L4: "bg-emerald-600/10 text-emerald-300 border border-emerald-600/20",
+  U3L4: "bg-lime-600/10 text-lime-300 border border-lime-600/20",
+  U2L4: "bg-green-400/10 text-green-300 border border-green-400/20",
+  U3L3: "bg-emerald-400/10 text-emerald-300 border border-emerald-400/20",
+  L4U3: "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20",
+  L3U3: "bg-purple-500/10 text-purple-400 border border-purple-500/20",
+  L4U2: "bg-pink-500/10 text-pink-400 border border-pink-500/20",
+  L3U2: "bg-rose-500/10 text-rose-400 border border-rose-500/20",
+  L3U4: "bg-amber-500/10 text-amber-400 border border-amber-500/20",
+  L2U4: "bg-violet-500/10 text-violet-400 border border-violet-500/20",
+  L1U4: "bg-orange-500/10 text-orange-400 border border-orange-500/20",
+  L2U3: "bg-amber-500/10 text-amber-400 border border-amber-500/20",
+  U2L3: "bg-lime-400/10 text-lime-300 border border-lime-400/20",
+  L3CP: "bg-teal-500/10 text-teal-400 border border-teal-500/20",
+  L2CP: "bg-teal-600/10 text-teal-300 border border-teal-600/20",
+  L3TC: "bg-sky-600/10 text-sky-300 border border-sky-600/20",
+
+  // --- PivotPattern badges starting with E (Expanded: Purple #9C27B0 / Deeper Purple for Highly Expanded) ---
+  "E-A-AA-OB": "bg-purple-500/10 text-purple-300 border border-purple-500/20",
+  "E-A-OA-OB": "bg-purple-600/10 text-purple-300 border border-purple-600/20",
+  "E-A-AA-SB": "bg-purple-400/10 text-purple-300 border border-purple-400/20",
+  "E-A-AA-C": "bg-purple-500/10 text-purple-400 border border-purple-500/20",
+  "E-A-OA-C": "bg-purple-600/10 text-purple-400 border border-purple-600/20",
+  "E-A-AA-E": "bg-purple-700/10 text-purple-300 border border-purple-700/20",
+  "E-A-OA-E": "bg-purple-700/10 text-purple-300 border border-purple-700/20",
+  "E-B-RA-BB": "bg-purple-600/10 text-purple-300 border border-purple-600/20",
+  "E-B-C-BB": "bg-purple-500/10 text-purple-300 border border-purple-500/20",
+  "E-B-E-BB": "bg-purple-700/10 text-purple-300 border border-purple-700/20",
+  "E-B-C-OB": "bg-purple-600/10 text-purple-300 border border-purple-600/20",
+  "E-B-E-OB": "bg-purple-700/10 text-purple-300 border border-purple-700/20",
+  // Highly Expanded (Level E): deeper purple
+  "E-E-AA-BB": "bg-purple-800/15 text-purple-200 border border-purple-800/30",
+  "E-E-OA-BB": "bg-purple-800/15 text-purple-200 border border-purple-800/30",
+  "E-E-AA-OB": "bg-purple-900/20 text-purple-200 border border-purple-900/30",
+  "E-E-OA-OB": "bg-purple-900/20 text-purple-200 border border-purple-900/30",
+
+  // PivotPattern badges, "LevelsAbove" half — "A-E-{RRHH}-{SSLL}"
+  "A-E-AA-C": "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
+  "A-E-OA-C": "bg-teal-500/10 text-teal-400 border border-teal-500/20",
+  "A-E-AA-E": "bg-lime-500/10 text-lime-400 border border-lime-500/20",
+  "A-E-OA-E": "bg-green-600/10 text-green-300 border border-green-600/20",
+  "A-E-AA-LB": "bg-emerald-600/10 text-emerald-300 border border-emerald-600/20",
+  "A-E-OA-LB": "bg-teal-600/10 text-teal-300 border border-teal-600/20",
+
+  // PivotPattern badges, "LevelsAbove" half continued — "A-{Level}-{RRHH}-{SSLL}"
+  "A-A-AA-AA": "bg-green-500/10 text-green-400 border border-green-500/20",
+  "A-A-AA-OA": "bg-lime-600/10 text-lime-300 border border-lime-600/20",
+  "A-A-OA-AA": "bg-green-400/10 text-green-300 border border-green-400/20",
+  "A-A-OA-OA": "bg-emerald-400/10 text-emerald-300 border border-emerald-400/20",
+  "A-B-C-C": "bg-teal-400/10 text-teal-300 border border-teal-400/20",
+  "A-B-C-LB": "bg-lime-400/10 text-lime-300 border border-lime-400/20",
+  "A-B-E-E": "bg-green-700/10 text-green-300 border border-green-700/20",
+  "A-B-E-LB": "bg-emerald-700/10 text-emerald-300 border border-emerald-700/20",
+  "A-B-RA-C": "bg-teal-700/10 text-teal-300 border border-teal-700/20",
+  "A-B-RA-E": "bg-lime-700/10 text-lime-300 border border-lime-700/20",
+  "A-B-RA-LB": "bg-green-300/10 text-green-200 border border-green-300/20",
+  "A-C-C-AA": "bg-emerald-300/10 text-emerald-200 border border-emerald-300/20",
+  "A-C-C-OA": "bg-teal-300/10 text-teal-200 border border-teal-300/20",
+  "A-C-E-AA": "bg-lime-300/10 text-lime-200 border border-lime-300/20",
+  "A-C-E-OA": "bg-green-800/10 text-green-300 border border-green-800/20",
+  "A-C-RA-AA": "bg-emerald-800/10 text-emerald-300 border border-emerald-800/20",
+  "A-C-RA-OA": "bg-teal-800/10 text-teal-300 border border-teal-800/20",
+
+  // --- PivotPattern badges starting with C (Compressed: Cyan #00BCD4 / Light Cyan for Ultra Compressed) ---
+  "C-A-C-AA": "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20",
+  "C-A-HA-AA": "bg-cyan-400/10 text-cyan-300 border border-cyan-400/20",
+  "C-A-E-AA": "bg-sky-500/10 text-sky-400 border border-sky-500/20",
+  "C-A-OA-AA": "bg-cyan-500/10 text-cyan-300 border border-cyan-500/20",
+  "C-A-OB-AA": "bg-sky-600/10 text-sky-300 border border-sky-600/20",
+  "C-A-E-OA": "bg-cyan-600/10 text-cyan-300 border border-cyan-600/20",
+  "C-A-C-OA": "bg-cyan-400/10 text-cyan-300 border border-cyan-400/20",
+  "C-A-OA-OA": "bg-sky-400/10 text-sky-300 border border-sky-400/20",
+  "C-B-BB-LB": "bg-cyan-600/10 text-cyan-300 border border-cyan-600/20",
+  "C-B-OB-LB": "bg-sky-600/10 text-sky-300 border border-sky-600/20",
+  "C-B-BB-C": "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20",
+  "C-B-OB-C": "bg-sky-500/10 text-sky-400 border border-sky-500/20",
+  "C-B-BB-E": "bg-cyan-700/10 text-cyan-300 border border-cyan-700/20",
+  "C-B-OB-E": "bg-sky-700/10 text-sky-300 border border-sky-700/20",
+  // Ultra Compressed (Level C): light / bright cyan
+  "C-C-BB-AA": "bg-cyan-300/10 text-cyan-200 border border-cyan-300/30",
+  "C-C-OB-AA": "bg-cyan-400/10 text-cyan-300 border border-cyan-400/30",
+  "C-C-BB-OA": "bg-sky-300/10 text-sky-200 border border-sky-300/30",
+  "C-C-OB-OA": "bg-cyan-300/10 text-cyan-300 border border-cyan-300/30",
+  "C-C-C-AA": "bg-cyan-400/10 text-cyan-200 border border-cyan-400/30",
+
+  // PivotPattern badges, "LevelsBelow" half — "B-{Level}-{RRHH}-{SSLL}" (All Red family)
+  "B-A-C-C": "bg-red-500/10 text-red-400 border border-red-500/20",
+  "B-A-C-SB": "bg-red-600/10 text-red-300 border border-red-600/20",
+  "B-A-E-E": "bg-red-400/10 text-red-300 border border-red-400/20",
+  "B-A-E-SB": "bg-red-700/10 text-red-300 border border-red-700/20",
+  "B-A-HA-C": "bg-red-300/10 text-red-200 border border-red-300/20",
+  "B-A-HA-E": "bg-red-800/10 text-red-300 border border-red-800/20",
+  "B-A-HA-SB": "bg-red-900/10 text-red-300 border border-red-900/20",
+  "B-B-BB-BB": "bg-red-500/10 text-red-400 border border-red-500/20",
+  "B-B-BB-OB": "bg-red-600/10 text-red-300 border border-red-600/20",
+  "B-B-OB-BB": "bg-red-400/10 text-red-300 border border-red-400/20",
+  "B-B-OB-OB": "bg-red-700/10 text-red-300 border border-red-700/20",
+  "B-C-BB-C": "bg-red-300/10 text-red-200 border border-red-300/20",
+  "B-C-OB-C": "bg-red-800/10 text-red-300 border border-red-800/20",
+  "B-C-BB-E": "bg-red-900/10 text-red-300 border border-red-900/20",
+  "B-C-OB-E": "bg-red-500/10 text-red-400 border border-red-500/20",
+  "B-C-BB-SB": "bg-red-600/10 text-red-300 border border-red-600/20",
+  "B-E-C-BB": "bg-red-400/10 text-red-300 border border-red-400/20",
+  "B-E-C-OB": "bg-red-700/10 text-red-300 border border-red-700/20",
+  "B-E-E-BB": "bg-red-300/10 text-red-200 border border-red-300/20",
+  "B-E-E-OB": "bg-red-800/10 text-red-300 border border-red-800/20",
+  "B-E-OB-BB": "bg-red-900/10 text-red-300 border border-red-900/20",
+  "B-E-OB-OB": "bg-red-500/10 text-red-400 border border-red-500/20",
+  "B-E-HA-BB": "bg-red-600/10 text-red-300 border border-red-600/20",
+};
+
+/**
+ * Fallback badge style for when a PivotPattern label has no entry in
+ * PATTERN_BADGE_CLASSES (a genuine "unknown label" bug case, distinct
+ * from "no pattern matched" — see MISSING_PATTERN_CLASSES below for
+ * that). Kept as the getBadgeClasses default, unchanged.
+ */
+const UNKNOWN_LABEL_CLASSES = "bg-muted text-muted-foreground border border-border";
+
+/**
+ * "No pattern matched" badge style — used by renderPivotPatternBadge /
+ * renderPrevPatternBadge instead of returning null, so a row that legitimately
+ * has no PivotPattern combo (r.expanded/r.compressed/r.LevelsAbove/
+ * r.LevelsBelow all false, or no ppCPR history yet) still shows a
+ * clearly "missing" badge rather than leaving a blank gap next to the
+ * "Levels VIEW" / "PDay S/R" labels. Dashed border + muted slate colour
+ * so it reads as "absence", never mistaken for a real green/red/etc.
+ * pattern family.
+ */
+const MISSING_PATTERN_CLASSES = "bg-slate-500/5 text-slate-500 border border-dashed border-slate-500/30";
+
+export function getBadgeClasses(label: string): string {
+  if (PATTERN_BADGE_CLASSES[label]) {
+    return PATTERN_BADGE_CLASSES[label];
+  }
+  // Dynamic fallback for any pattern/subpattern/pivot-pattern starting with E (Expanded: Purple #9C27B0)
+  if (label.startsWith("E")) {
+    return "bg-purple-500/10 text-purple-400 border border-purple-500/20";
+  }
+  // Dynamic fallback for any pattern/subpattern/pivot-pattern starting with C (Compressed: Cyan #00BCD4)
+  if (label.startsWith("C")) {
+    return "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20";
+  }
+  // Dynamic fallback for any pattern/subpattern/pivot-pattern starting with A (LevelsAbove: Green)
+  if (label.startsWith("A")) {
+    return "bg-green-500/10 text-green-400 border border-green-500/20";
+  }
+  // Dynamic fallback for any pattern/subpattern/pivot-pattern starting with B (LevelsBelow: Red)
+  if (label.startsWith("B")) {
+    return "bg-red-500/10 text-red-400 border border-red-500/20";
+  }
+  return UNKNOWN_LABEL_CLASSES;
+}
+
+/**
+ * Today's pattern badges — every individual boolean flag on a CPRResult
+ * (r.CL4U3, r.L4U4, ...), same badge set/colours used in the Screener's
+ * "Pattern" column. Extracted out of the row JSX so other views (e.g.
+ * BacktestPanel's category/sub-category results table) can render the
+ * exact same badges from any CPRResult-shaped row. Returns null when no
+ * pattern flag is set.
+ */
+export function renderTodayPatternBadges(r: CPRResult) {
+  const hasAny =
+    r.CL4U3 || r.L4U4 || r.EU3L4 || r.EU4L4 || r.EL4U4 || r.QU4L4 || r.U4L2 || r.U3L2 || r.U4L3 || r.U1L4 || r.U4L4 || r.U3L4 || r.U2L4 || r.CU3L2 || r.CU3L3 || r.EL2U4 || r.EL3U4 || r.CU4L2 || r.EU3L3 || r.EL3U3 || r.CU4L4 || r.CU4L3 || r.CL3U3 || r.L4U3 || r.L3U3 || r.L4U2 || r.L3U2 || r.L3U4 || r.L2U4 || r.CL3U2 || r.L1U4 || r.CL2U1 || r.CL4U2 || r.CL1U1 || r.CU1L1 || r.CL2U2 || r.CU2L2 || r.CU2BC || r.CL4U4 || r.EU2L3 || r.EU2L4 || r.EU2L2 || r.EUTL2 || r.EUTL3 || r.EU1L1 || r.EL1U1 || r.EL1U2 || r.CL2UT || r.EL1U3 || r.EL2U3 || r.ELTU2 || r.ELBU2 || r.ELTU3 || r.ELPU2 || r.ELPU3 || r.ELBU3 || r.EUPL2 || r.EUTL4 || r.L2U3 || r.CU2L1 || r.CU3L1 || r.U2L3 || r.EL1U4 || r.ELBU4 || r.U3L3 || r.CL3U1 || r.EU1L2 || r.EU1L3 || r.EU1L4 || r.EUBL1 || r.EUPL1 || r.EUTL1 || r.EUBL2 || r.EUBL3 || r.EUPL3 || r.L3CP || r.L2CP || r.L3TC || r.EL1L2 || r.EL2L1;
+  if (!hasAny) return null;
+  // Colour-coded via the same PATTERN_BADGE_CLASSES palette (getBadgeClasses)
+  // as every other pattern badge — CHANGED from a hardcoded per-key className
+  // list to reading the shared map directly, so this badge set can never
+  // drift out of sync with PATTERN_BADGE_CLASSES again.
+  const todayPatternKeys: (keyof CPRResult)[] = [
+    "CL4U3",
+    "L4U4",
+    "EU3L4",
+    "EU4L4",
+    "EL4U4",
+    "QU4L4",
+    "U4L2",
+    "U3L2",
+    "U4L3",
+    "U1L4",
+    "U4L4",
+    "U3L4",
+    "U2L4",
+    "CU3L2",
+    "CU3L3",
+    "EL2U4",
+    "EL3U4",
+    "CU4L2",
+    "EU3L3",
+    "EL3U3",
+    "CU4L4",
+    "CU4L3",
+    "CL3U3",
+    "L4U3",
+    "L3U3",
+    "L4U2",
+    "L3U2",
+    "L3U4",
+    "L2U4",
+    "CL3U2",
+    "L1U4",
+    "CL2U1",
+    "CL4U2",
+    "CL1U1",
+    "CU1L1",
+    "CL2U2",
+    "CU2L2",
+    "CU2BC",
+    "CL4U4",
+    "EU2L3",
+    "EU2L4",
+    "EU2L2",
+    "EUTL2",
+    "EUTL3",
+    "EU1L1",
+    "EL1U1",
+    "EL1U2",
+    "CL2UT",
+    "EL1U3",
+    "EL2U3",
+    "ELTU2",
+    "ELBU2",
+    "ELTU3",
+    "ELPU2",
+    "ELPU3",
+    "ELBU3",
+    "EUPL2",
+    "EUTL4",
+    "L2U3",
+    "CU2L1",
+    "CU3L1",
+    "U2L3",
+    "EL1U4",
+    "ELBU4",
+    "U3L3",
+    "CL3U1",
+    "EU1L2",
+    "EU1L3",
+    "EU1L4",
+    "EUBL1",
+    "EUPL1",
+    "EUTL1",
+    "EUBL2",
+    "EUBL3",
+    "EUPL3",
+    "L3CP",
+    "L2CP",
+    "L3TC",
+    "EL1L2",
+    "EL2L1",
+  ];
+  return (
+    <div className="flex flex-wrap gap-1">
+      {todayPatternKeys
+        .filter((key) => r[key])
+        .map((key) => (
+          <span
+            key={key}
+            className={`text-[10px] px-1 py-0.5 rounded border font-medium ${getBadgeClasses(key)}`}
+          >
+            {key}
+          </span>
+        ))}
+    </div>
+  );
+}
+
+/**
+ * Previous day's pattern badge (prevCPR vs ppCPR), rendered as "p-xxxx" and
+ * colour-coded with the same palette as today's pattern badges. Extracted
+ * for reuse outside ScreenerTableRow (see renderTodayPatternBadges above).
+ * CHANGED: no longer returns null when there isn't enough history (no
+ * ppCPR) — renders the MISSING_PATTERN_CLASSES placeholder badge instead,
+ * so callers that always want a badge slot filled (e.g. SRLadder's
+ * "PDay S/R" header) don't get a layout gap. Pass showMissing={false} to
+ * restore the old null-when-absent behaviour for callers that don't want
+ * the placeholder (e.g. dense table cells where a blank is preferable to
+ * a dashed placeholder on every row).
+ */
+export function renderPrevPatternBadge(r: CPRResult, showMissing: boolean = true) {
+  const prevSubLabel = computePrevPattern(r.prevCPR, r.ppCPR);
+  if (!prevSubLabel) {
+    if (!showMissing) return null;
+    return (
+      <div className="flex flex-wrap gap-1 mt-1">
+        <span
+          className={`text-[10px] px-1 py-0.5 rounded font-medium ${MISSING_PATTERN_CLASSES}`}
+          title="No previous-day pattern (not enough CPR history)"
+        >
+          p-—
+        </span>
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-wrap gap-1 mt-1">
+      <span
+        className={`text-[10px] px-1 py-0.5 rounded border font-medium ${getBadgeClasses(prevSubLabel)}`}
+        title="Previous day's CPR sub-category (prevCPR vs ppCPR)"
+      >
+        p-{prevSubLabel}
+      </span>
+    </div>
+  );
+}
+
+/**
+ * PivotPattern badge — "E-{Level}-{RRHH}-{SSLL}" ("expanded") or
+ * "C-{Level}-{RRHH}-{SSLL}" ("compressed") (see
+ * ScreenerUtils.computeInnerLevelPattern / INNER_LEVEL_PATTERN_KEYS for the
+ * HHLLCategory x RRHHCategory x SSLLCategory derivation of both sets),
+ * colour-coded via the same PATTERN_BADGE_CLASSES palette as every other
+ * pattern badge. Replaces the previous-day "p-xxxx" badge
+ * (renderPrevPatternBadge above) in the Pattern column's second row.
+ * MERGED from what used to be two separate badges (renderPivotPatternBadge
+ * for E-*, renderCompressedPatternBadge for C-*) into one, since
+ * r.expanded/r.compressed are mutually exclusive so a row can never match
+ * both families. CHANGED: no longer returns null when the row's category
+ * combo doesn't match any INNER_LEVEL_PATTERN_KEYS entry (most commonly because
+ * r.expanded/r.compressed/r.LevelsAbove/r.LevelsBelow are all false) —
+ * renders the MISSING_PATTERN_CLASSES placeholder badge instead, so
+ * callers that always want a badge slot filled (e.g. SRLadder's
+ * "Levels VIEW" header) don't get a layout gap. Pass showMissing={false}
+ * to restore the old null-when-absent behaviour.
+ */
+export function renderPivotPatternBadge(r: CPRResult, showMissing: boolean = true) {
+  const pivotPattern = computeInnerLevelPattern(r);
+  if (!pivotPattern) {
+    if (!showMissing) return null;
+    return (
+      <div className="flex flex-wrap gap-1 mt-1">
+        <span
+          className={`text-[10px] px-1 py-0.5 rounded font-medium ${MISSING_PATTERN_CLASSES}`}
+          title="No PivotPattern match for this row's HHLL x RRHH x SSLL combo"
+        >
+          —
+        </span>
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-wrap gap-1 mt-1">
+      <span
+        className={`text-[10px] px-1 py-0.5 rounded border font-medium ${getBadgeClasses(pivotPattern)}`}
+        title="PivotPattern — HHLL x RRHH x SSLL category combo"
+      >
+        {pivotPattern}
+      </span>
+    </div>
+  );
+}
+
+/**
+ * GAP_BADGE_COLOR — colour keyed by GapBadge's first prefix letter (R/S/Q,
+ * from RRSSGapCategory: RRGap/SSGap/SSRR-Q), mirroring
+ * renderRRSSGapCategoryBadge's own green/red/amber palette so the GapBadge
+ * reads consistently with the category it leads with.
+ */
+const GAP_BADGE_COLOR: Record<"R" | "S" | "Q", string> = {
+  R: "bg-green-500/10 text-green-400 border border-green-500/30",
+  S: "bg-red-500/10 text-red-400 border border-red-500/30",
+  Q: "bg-amber-500/10 text-amber-400 border border-amber-500/30",
+};
+
+/**
+ * GapBadge — composite label combining RRSSGapCategory + PDHPDLGapCategory
+ * + prev/today HLSwitch (Gap-prefixed per hlGapWinner) into one badge, e.g.
+ * "RH-GapAA", "SL-QGapA" (see ScreenerUtils.computeGapBadge for the
+ * derivation). Always renders exactly one badge — computeGapBadge never
+ * returns null, since all four source fields are always present.
+ */
+export function renderGapBadge(r: CPRResult) {
+  const label = computeGapBadge(r);
+  const colorKey = label.charAt(0) as "R" | "S" | "Q";
+  return (
+    <span
+      className={`text-[10px] px-1 py-0.5 rounded font-medium ${GAP_BADGE_COLOR[colorKey]}`}
+      title="GapBadge — RRSSGapCategory x PDHPDLGapCategory x prev/today HLSwitch (Gap-prefixed per hlGapWinner)"
+    >
+      {label}
+    </span>
+  );
+}
+
+/**
+ * renderPivotAndGapBadges — PivotPattern badge + GapBadge together on one
+ * line, for the Pattern column's second row (ScreenerTableRow). Thin
+ * combinator over computeInnerLevelPattern/getBadgeClasses (mirroring
+ * renderPivotPatternBadge(r, showMissing=false)'s null-when-absent
+ * behaviour for the pivot half) and renderGapBadge, so the two sit side by
+ * side without nesting renderPivotPatternBadge's own wrapper div (which
+ * would double up on its "mt-1" margin).
+ *
+ * flex-nowrap (not flex-wrap): the two badges must stay on ONE row. With wrap,
+ * the pair overflowed the ~160px Pattern column and the GapBadge dropped to a
+ * third row, making the whole table row taller. nowrap lets the column grow
+ * to fit the pair instead.
+ */
+export function renderPivotAndGapBadges(r: CPRResult) {
+  const pivotPattern = computeInnerLevelPattern(r);
+  return (
+    <div className="flex flex-nowrap items-center gap-1 mt-1 whitespace-nowrap">
+      {pivotPattern && (
+        <span
+          className={`text-[10px] px-1 py-0.5 rounded border font-medium ${getBadgeClasses(pivotPattern)}`}
+          title="PivotPattern — HHLL x RRHH x SSLL category combo"
+        >
+          {pivotPattern}
+        </span>
+      )}
+      {renderGapBadge(r)}
+    </div>
+  );
+}
+
+/**
+ * "LEVEL" column body — row 1: Above/Below/Inside/Outside/Skip, then
+ * oV-B/oV-A, then Narrow/Wide (merged into a single badge wherever
+ * Above/Below/oV-B/oV-A pairs with Narrow/Wide — see
+ * renderLevelStatusRow1Badges for the full merge table), then the SSRR
+ * category badge, then Equal — all rendered inline on one line; row 2:
+ * SSLL + RRHH category badges, always on their own row underneath row
+ * 1. Extracted out of the row JSX so other views (e.g. BacktestPanel) can
+ * reuse the same LEVEL column. Mirrors ScreenerTableRow's own LEVEL cell,
+ * minus the activePattern-aware tweak to the "Skip" fallback, which only
+ * makes sense inside the Screener's own pattern-filter context.
+ */
+export function renderLevelBadges(r: CPRResult) {
+  const isInsideCPR = !!(r.InsideCPR || (r as any).insideCPR);
+  const isOutsideCPR = !!r.outCPR;
+  const showWide = r.strWideCPR && !isOutsideCPR;
+  const nothingMatched =
+    !r.cprRising &&
+    !r.cprFalling &&
+    !r.narrowCPR &&
+    !r.equalCPR &&
+    !showWide &&
+    !isInsideCPR &&
+    !isOutsideCPR;
+  // SSLL + RRHH now always render on their own row, regardless of
+  // Inside/Outside/narrow state. SSRR now renders entirely on row 1.
+  const ssrrHhllRow = renderSSRRHHLLBadges(r);
+  return (
+    <div className="flex flex-col gap-1 max-w-[228px]">
+      <div className="flex flex-nowrap items-center gap-1">
+        {renderLevelStatusRow1Badges(r, isInsideCPR, isOutsideCPR, showWide, nothingMatched)}
+      </div>
+      {ssrrHhllRow}
+    </div>
+  );
+}
+
+/**
+ * "Pattern" column body for callers outside ScreenerTableRow's own row
+ * (BacktestPanel's two results tables) — mirrors the same restructuring
+ * applied to the Screener's own Pattern column: row 1 is the LEVEL
+ * column's leading status badge (Narow-B/Inside/Wide-A/etc, via
+ * renderLevelStatusBadge) shown inline with today's pattern badge(s); row
+ * 2 is the PivotPattern badge + GapBadge together (renderPivotAndGapBadges),
+ * same as the Screener's own Pattern column. Pairs with
+ * renderLevelColumnRestBadges, which renders what's left of the LEVEL
+ * column once the leading badge is pulled out here. Never returns null —
+ * renderPivotAndGapBadges' GapBadge half is always present.
+ */
+export function renderPatternColumnBadges(r: CPRResult) {
+  const isInsideCPR = !!(r.InsideCPR || (r as any).insideCPR);
+  const isOutsideCPR = !!r.outCPR;
+  const showWide = r.strWideCPR && !isOutsideCPR;
+  const nothingMatched =
+    !r.cprRising &&
+    !r.cprFalling &&
+    !r.narrowCPR &&
+    !r.equalCPR &&
+    !showWide &&
+    !isInsideCPR &&
+    !isOutsideCPR;
+  const statusBadge = renderLevelStatusBadge(r, isInsideCPR, isOutsideCPR, showWide, nothingMatched);
+  const todayBadges = renderTodayPatternBadges(r);
+  // CHANGED: now uses renderPivotAndGapBadges (PivotPattern + GapBadge
+  // together) instead of the bare renderPivotPatternBadge(r, false), so
+  // BacktestPanel's PATTERN column shows the same GapBadge the Screener's
+  // own Pattern column shows. Unlike the old pivotPatternBadge-only version,
+  // this never returns null — computeGapBadge always yields a label, so the
+  // "—" fallback at BacktestPanel's call site (renderPatternColumnBadges(r) ??
+  // <span>—</span>) is now effectively dead, same as the Screener's own cell.
+  return (
+    <div className="flex flex-col gap-1 max-w-[228px]">
+      <div className="flex flex-nowrap items-center gap-1">
+        {statusBadge}
+        {todayBadges}
+      </div>
+      {renderPivotAndGapBadges(r)}
+    </div>
+  );
+}
+
+/**
+ * "LEVEL" column body for callers outside ScreenerTableRow's own row
+ * (BacktestPanel's two results tables) — same as renderLevelBadges, minus
+ * the leading status badge that renderPatternColumnBadges now shows in the
+ * Pattern column instead. Row 1: whatever's left of
+ * renderLevelStatusRow1Badges (oV-B/oV-A when unmerged, SSRR, Equal); row
+ * 2: SSLL + RRHH, unchanged.
+ */
+export function renderLevelColumnRestBadges(r: CPRResult) {
+  const isInsideCPR = !!(r.InsideCPR || (r as any).insideCPR);
+  const isOutsideCPR = !!r.outCPR;
+  const showWide = r.strWideCPR && !isOutsideCPR;
+  const ssrrHhllRow = renderSSRRHHLLBadges(r);
+  return (
+    <div className="flex flex-col gap-1 max-w-[228px]">
+      <div className="flex flex-nowrap items-center gap-1">
+        {renderLevelStatusRestBadges(r, isInsideCPR, showWide)}
+      </div>
+      {ssrrHhllRow}
+    </div>
+  );
+}
+
+/**
+ * Active Views column body — every View (left-nav leaf) this row currently
+ * satisfies, across all categories (see getMatchingSignals).
+ * Displays only the View name with its Tag icon in its direction colour
+ * (emerald Up, rose Down, slate neutral), matching the Legend3 card display
+ * style instead of a badge. Renders nothing (blank cell) when the row matches no View.
+ */
+export function renderMatchingSignals(
+  r: CPRResult,
+  views: ReturnType<typeof getMatchingSignals> = getMatchingSignals(r),
+) {
+  if (views.length === 0) return null;
+  return (
+    <div className="flex flex-col gap-1.5 max-w-[240px]">
+      {views.map((v) => {
+        const view = getView(v.id);
+        const entryFn = view?.getEntry;
+        const targetFn = view?.getTarget;
+        const direction = v.direction || view?.direction;
+        const status: "pass" | "active" | "ready" | null = targetFn &&
+          sessionReachedTarget(direction ?? "", targetFn(r), r.todayHigh, r.todayLow, r.currentPrice)
+          ? "pass"
+          : entryFn
+            ? hasTouchedEntry(direction ?? "", entryFn(r), r.currentPrice)
+              ? "active"
+              : "ready"
+            : null;
+        const isUp = direction === "Up";
+        const isDown = direction === "Down";
+        const dirColor = isUp
+          ? "text-emerald-400"
+          : isDown
+            ? "text-rose-400"
+            : "text-slate-400";
+        return (
+          <div key={v.id} className="flex h-11 flex-col justify-center gap-0.5 overflow-hidden">
+            <div className="flex flex-nowrap items-center gap-1">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <Tag className={`w-3 h-3 shrink-0 ${dirColor}`} aria-hidden />
+                <div className="min-w-0">
+                  <div
+                    className={`text-[11px] font-semibold leading-tight truncate ${dirColor}`}
+                    title={v.label}
+                  >
+                    {v.label}
+                  </div>
+                </div>
+              </div>
+              {status === "pass" && (
+                <span
+                  className="inline-flex shrink-0 items-center gap-1 rounded-md border border-muted-foreground/40 bg-muted-foreground/10 px-1.5 py-1 text-[11px] font-mono text-muted-foreground"
+                  title="Target reached - live price now, or earlier in today's session (session high/low)"
+                >
+                  <CheckCircle2 className="w-3 h-3" />
+                  Pass
+                </span>
+              )}
+              {status === "active" && (
+                <span
+                  className="inline-flex shrink-0 items-center gap-1 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-1.5 py-1 text-[11px] font-mono text-emerald-400"
+                  title="Price has reached the entry line"
+                >
+                  <Cloud className="w-3 h-3" />
+                  Active
+                </span>
+              )}
+            </div>
+            <span className="truncate font-mono text-[10px] leading-3 text-muted-foreground" title={v.id}>
+              {v.id}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+export interface ScreenerTableHeaderProps {
+  canShowCombined: boolean;
+  activeTab: ActiveTab;
+  sortKey: SortKey;
+  sortDir: SortDir;
+  toggleSort: (key: SortKey) => void;
+}
+
+/** Table <thead> for the screener results table. Moved from Screener.tsx as-is. */
+export function ScreenerTableHeader({
+  sortKey,
+  sortDir,
+  toggleSort,
+}: ScreenerTableHeaderProps) {
+  // `reverse` flips the arrow for columns where the natural reading is the
+  // opposite (MATCH, MOVE, Price): asc shows ▼ and desc shows ▲. Sorting itself is
+  // unchanged; only the icon differs. The unsorted ↕ stays the same.
+  const SortIcon = ({ k, reverse = false }: { k: SortKey; reverse?: boolean }) => (
+    <span className="text-[10px] ml-1 text-white">
+      {sortKey === k
+        ? (sortDir === "asc") !== reverse
+          ? "▲"
+          : "▼"
+        : "↕"}
+    </span>
+  );
+
+  return (
+    <thead>
+      <tr className="border-b border-border bg-muted/30">
+        <th
+          className="px-2 py-3 w-16 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
+          onClick={() => toggleSort("symbol")}
+        >
+          Symbol <SortIcon k="symbol" />
+        </th>
+        <th className="px-2 py-3 w-40 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          Pattern
+        </th>
+        <th
+          className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[180px]"
+          title="Every View this row currently satisfies, across all categories, with Active/Ready status"
+        >
+          Active Views
+        </th>
+        <th
+          className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap cursor-pointer hover:text-foreground"
+          onClick={() => toggleSort("ladderCheck")}
+          title="Level Check (matching/13) for each signal in the SIGNAL column, one line per signal, graded with its own levelCheckDefs. Sort by each row's best n/13 — desc surfaces 13/13 first, then 12/13, etc."
+        >
+          <span className="inline-flex items-center whitespace-nowrap">
+            MATCH <SortIcon k="ladderCheck" reverse />
+          </span>
+        </th>
+        <th
+          className="pl-3 pr-2 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
+          onClick={() => toggleSort("priceVsCpr")}
+        >
+          MOVE <SortIcon k="priceVsCpr" reverse />
+        </th>
+        <th
+          className="px-3 py-3 pr-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
+          onClick={() => toggleSort("change24h")}
+        >
+          Price <SortIcon k="change24h" reverse />
+        </th>
+        <th
+          className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[160px] cursor-pointer hover:text-foreground"
+          onClick={() => toggleSort("compressionRatio")}
+        >
+            PIVOT SIZE <SortIcon k="compressionRatio" />
+        </th>
+        <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          PPWAY
+        </th>
+      </tr>
+    </thead>
+  );
+}
+
+
+
+export interface ScreenerTableRowProps {
+  r: CPRResultWithSource;
+  rowKey: string;
+  isExpanded: boolean;
+  toggleExpand: (key: string) => void;
+  canShowCombined: boolean;
+  activeTab: ActiveTab;
+  activePattern?: string;
+  activeSignal?: string;
+  /** Display name of the currently selected signal (the highlighted "SIGNALS:" pill), e.g. "A-A-AA-AA-EU3L4-GapB". Shown as a badge next to "Levels VIEW" in the expanded S/R ladder. Omit to hide it. */
+  viewName?: string;
+  /** The selected signal's own 13 Level Check conditions (its levelCheckDefs), passed straight through to SRLadderRow/SRLadderDiffPanel. Undefined (no signal selected, or no levelCheckDefs) renders "No levelCheckDefs" rather than a checklist — see SRLadderDiff.tsx. */
+  levelCheckConditions?: LevelCheckCondition[];
+  /** True when the Screener's P-CONSOLIDATE-A check passed for this row (held in Screener state, not on the row data). */
+  isConsolidateA?: boolean;
+  /** True when this row is assigned to the exclusive P-CONSOLIDATE-B class (held in Screener state, not on the row data). */
+  isConsolidateB?: boolean;
+  /** True when the Screener's P-MOMENTUM-A check passed for this row and it is not CONSOLIDATE-A (momentum excludes consolidate, as in the filters). */
+  isMomentumA?: boolean;
+  /** True when this row is assigned to the exclusive P-MOMENTUM-B class (after earlier classes are excluded). */
+  isMomentumB?: boolean;
+  /** True when this row is assigned to INSIDE-R1S1 (candles fully inside R1–S1 band, or dual CON-A+CON-B). */
+  isInsideR1S1?: boolean;
+  /** Live RECLAIM-S state (failed breakdown this session) — only passed when it qualifies, else null/undefined. */
+  reclaimS?: ReclaimSideState | null;
+  /** Live RECLAIM-R state (failed breakout this session) — only passed when it qualifies, else null/undefined. */
+  reclaimR?: ReclaimSideState | null;
+  /** Called when the user clicks the row (expand cell) — drives Legend Card 2 like an entry-cross toast. */
+  onRowFocus?: (r: CPRResultWithSource) => void;
+  /** Visual highlight when this row is the legend-focused selection. */
+  isFocused?: boolean;
+}
+
+/**
+ * Hover text for the RECLAIM-S / RECLAIM-R badge: which levels were pierced and
+ * by what rule, the day extreme, where price is now, and how far back it is.
+ */
+function reclaimTooltip(st: ReclaimSideState): string {
+  const isS = st.side === "S";
+  const prefix = isS ? "S" : "R";
+  const verb = isS ? "below" : "above";
+  const back = isS ? "above" : "below";
+  const rule =
+    st.mode === "body" ? "a completed 15m candle body" :
+    st.mode === "close" ? "a completed 15m candle close" :
+    "a 15m wick";
+  const piercedNames = st.levels
+    .map((lvl, i) => `${prefix}${i + 1} ${fmt(lvl)}`)
+    .join(", ");
+  const parts = [
+    `${isS ? "Failed breakdown" : "Failed breakout"}: ${rule} went ${verb} ${piercedNames}`,
+    st.extreme !== undefined ? `${isS ? "day low" : "day high"} ${fmt(st.extreme)}` : null,
+    `price ${fmt(st.price)} is back ${back} ${st.recrossed} of ${st.pierced} pierced level${st.pierced === 1 ? "" : "s"}`,
+    st.retracePct !== undefined
+      ? `${st.retracePct}% of the way back to ${prefix}1`
+      : null,
+  ].filter(Boolean);
+  return parts.join(" · ");
+}
+
+/**
+ * A single table row (plus its expandable ADK S/R ladder row). Mechanical
+ * extraction of the `<Fragment key={rowKey}>...</Fragment>` block from
+ * Screener.tsx's table body — same badges, same columns, same logic. No
+ * behavior changes.
+ */
+function ScreenerTableRow({
+  r,
+  rowKey,
+  isExpanded,
+  toggleExpand,
+  activePattern: rawActivePattern,
+  activeSignal,
+  viewName,
+  levelCheckConditions,
+  isConsolidateA,
+  isConsolidateB,
+  isMomentumA,
+  isMomentumB,
+  isInsideR1S1,
+  reclaimS,
+  reclaimR,
+  onRowFocus,
+  isFocused,
+}: ScreenerTableRowProps) {
+  const activePattern = rawActivePattern ?? activeSignal ?? "";
+  // When supplied, the Screener props are the complete mutually exclusive
+  // classification. Fall back to row flags only for callers without props.
+  // When Screener passes exclusive bucket props, show exactly one badge.
+  // Fallback (no props) uses raw flags with within-side MOM excluding CON.
+  // Exclusive badges (same as Screener candleBucket):
+  // INSIDE = CON-A ∩ CON-B only; pure CON-A / CON-B keep their own badges.
+  const rawConA = r.PD15MConsolidateAPass === true;
+  const rawConB = r.PD15MBelowTCPass === true;
+  const rawMomA = r.PD15MAboveBCPass === true;
+  const rawMomB = r.PD15MMomentumBPass === true;
+  // Prefer exclusive props from Screener (exactly one of these when set).
+  // Fallback: same priority as Screener candleBucket / backtest badges.
+  const exclusiveFromProps =
+    isInsideR1S1 !== undefined ||
+    isConsolidateA !== undefined ||
+    isConsolidateB !== undefined ||
+    isMomentumA !== undefined ||
+    isMomentumB !== undefined;
+
+  let showInsideR1S1 = false;
+  let showConsolidateA = false;
+  let showConsolidateB = false;
+  let showMomentumA = false;
+  let showMomentumB = false;
+
+  if (exclusiveFromProps) {
+    showInsideR1S1 = isInsideR1S1 === true;
+    showConsolidateA = !showInsideR1S1 && isConsolidateA === true;
+    showConsolidateB = !showInsideR1S1 && isConsolidateB === true;
+    showMomentumA = !showInsideR1S1 && isMomentumA === true;
+    showMomentumB = !showInsideR1S1 && isMomentumB === true;
+  } else if (rawConA && rawConB) {
+    showInsideR1S1 = true;
+  } else if (rawConB) {
+    showConsolidateB = true;
+  } else if (rawMomB) {
+    showMomentumB = true;
+  } else if (rawConA) {
+    showConsolidateA = true;
+  } else if (rawMomA) {
+    showMomentumA = true;
+  }
+  // Hoisted so the same up/down call drives both the per-row dot in the
+  // Symbol column AND the new "Levels VIEW" name badge below — one row
+  // shouldn't ever show a green dot next to a red badge.
+  // When no left-nav section is selected (Show All, activePattern === ""),
+  // getViewDirection has no section to scope to and always returns null —
+  // which used to mean the dot never showed in Show All at all. Fall back
+  // to getAnyViewDirection there, which checks every View across every
+  // category instead of just one section.
+  const dir = (activePattern ? getViewDirection(r, activePattern) : null) ?? getAnyViewDirection(r);
+  const sym = splitSymbol(r.symbol, r.source);
+
+  const isInsideCPR = !!(r.InsideCPR || (r as any).insideCPR);
+  const isOutsideCPR = !!r.outCPR;
+  // Outside-CPR rows don't need the "Wide" badge — Outside already implies
+  // the CPR bands separated from prev day's, so width-category noise (Wide)
+  // is redundant there; only show it for non-Outside rows.
+  const showWide = r.strWideCPR && !isOutsideCPR;
+
+  // SSLL/RRHH category badges — LEVEL-column-only second row. SSRR
+  // (CPRResult.SSRRCategory) now renders entirely on row
+  // 1 instead (2nd badge, right after the status badge). Always rendered
+  // on its own row underneath the Above/Below/Inside/Outside row,
+  // regardless of Inside/Outside/narrow state, via the shared
+  // renderSSRRHHLLBadges helper.
+  const ssrrHhllRow = renderSSRRHHLLBadges(r);
+  // Formerly the LEVEL column's content — relocated to render underneath
+  // the "Today S/R" ladder in the expanded row instead. Same badge
+  // components, same colors, just a different home.
+  const levelBadges = (
+    <>
+      <div className="flex flex-nowrap items-center gap-1">
+        {renderLevelStatusRestBadges(r, isInsideCPR, showWide)}
+      </div>
+      {ssrrHhllRow}
+    </>
+  );
+  // Every View this row satisfies (same list the VIEW column renders), each
+  // graded with THAT View's own levelCheckDefs — same per-row approach
+  // BacktestPanel uses (rowViewDefByRow). Computed once here and shared with
+  // the VIEW and Ladder Check cells so their lines stay 1:1 and in order.
+  const matchingSignals = getMatchingSignals(r);
+  const viewLadders = matchingSignals.map((v) => {
+    const defs = getView(v.id)?.levelCheckDefs;
+    return {
+      id: v.id,
+      label: v.label,
+      direction: v.direction,
+      defs,
+      ladder: getLadderMatchSummary(r.prevCPR, r.todayCPR, defs),
+    };
+  });
+  const anyLadderDefined = viewLadders.some((v) => v.ladder.hasConditions);
+  // Inputs: `viewName` / `levelCheckConditions` are the View SELECTED in the
+  // Screener (from Screener.tsx); `viewLadders` are the Views THIS ROW matches.
+  // They're resolved once, here, into a single `primaryView` — the one View
+  // the expanded row's Levels VIEW badge + LEVEL CHECK panel (SRLadderRow
+  // takes exactly one) are about:
+  //   • a View is selected  -> that View (name, direction, defs as passed in;
+  //     if it has no defs the panel says "LevelCheck UnDefined", matching the
+  //     column)
+  //   • none selected       -> the first View in the VIEW column that has
+  //     levelCheckDefs (previously the panel got nothing here and said
+  //     "LevelCheck UnDefined" while the column showed e.g. 13/13)
+  //   • nothing to show     -> undefined
+  const hasSelectedView = !!viewName;
+  const firstDefinedView = viewLadders.find((v) => v.ladder.hasConditions);
+  const primaryView = hasSelectedView
+    ? { name: viewName, direction: dir ?? undefined, defs: levelCheckConditions, key: activeSignal }
+    : firstDefinedView
+    ? { name: firstDefinedView.label, direction: firstDefinedView.direction ?? undefined, defs: firstDefinedView.defs, key: firstDefinedView.id }
+    : undefined;
+  // Key stored with an attached chart link: always a concrete View this row
+  // matches — never a category / pattern id (activeSignal can be one), which
+  // Legend cameras (matched by View key) could not find later.
+  const selectedNode = activeSignal ? getView(activeSignal) : undefined;
+  const chartViewKey =
+    selectedNode?.kind === "view"
+      ? selectedNode.key
+      : (
+          (activeSignal ? viewLadders.find((v) => isViewUnder(v.id, activeSignal)) : undefined) ??
+          firstDefinedView ??
+          viewLadders.find((v) => getView(v.id)?.kind === "view")
+        )?.id ?? "";
+  // SSLLCategory badge (e.g. "SSLL-AA") — shown above the S1 line in the
+  // expanded row's "Levels VIEW" chart, right side.
+  const ssllBadge = renderSSLLCategoryBadge(r);
+  // HHLLCategory badge (e.g. "HHLL-AA") — shown above the S1 line in the
+  // expanded row's "Levels VIEW" chart, left side (before ssllBadge).
+  const hhllBadge = renderHHLLCategoryBadge(r);
+  // SSRRCategory badge (e.g. "RRSS-C") — shown above the R1 line in the
+  // expanded row's "Levels VIEW" chart, left side (paired with rrhhBadge
+  // on the right).
+  const rrssBadge = renderSSRRCategoryBadge(r);
+  // RRHHCategory badge (e.g. "RRHH-AA") — shown above the R1 line in the
+  // expanded row's "Levels VIEW" chart, right side, after rrssBadge.
+  const rrhhBadge = renderRRHHCategoryBadge(r);
+  // Row 1 keeps every LEVEL-status badge inline on one line (Above/Below/
+  // Inside/Outside/Skip, then oV-B/oV-A, then Narrow/Wide, then SSRR, then
+  // Equal) so nothing gets pushed down to a second line.
+  const nothingMatchedMain =
+    !r.cprRising &&
+    !r.cprFalling &&
+    !r.narrowCPR &&
+    !r.equalCPR &&
+    !showWide &&
+    !isInsideCPR &&
+    !isOutsideCPR &&
+    !(passesPattern(r, activePattern) && ["overlapping-lower", "overlapping-higher", "equal-cpr"].includes(activePattern));
+
+  return (
+    <Fragment key={rowKey}>
+      <tr
+        id={`sc-row-${r.source}-${r.symbol.toUpperCase()}`}
+        className={`hover:bg-muted/20 transition-colors ${dir ? "bg-accent/3" : ""} ${
+          isFocused
+            ? "ring-1 ring-inset ring-sky-500/70 bg-sky-500/10"
+            : ""
+        }`}
+      onClick={() => onRowFocus?.(r)}
+      >
+        <td
+          className="px-2 py-3 w-16 font-mono font-semibold text-foreground cursor-pointer select-none"
+          onClick={() => {
+            toggleExpand(rowKey);
+            onRowFocus?.(r);
+          }}
+
+          title="Click to expand ADK S/R ladder / focus legend"
+        >
+          <div className="flex items-start gap-1.5">
+            <span className="text-muted-foreground text-xs mt-0.5">{isExpanded ? "▼" : "▶"}</span>
+            {(() => {
+              if (!dir) return null;
+              const isUp = dir === "Up" || (dir as string) === "up";
+              return (
+                <div
+                  className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${
+                    isUp ? "bg-green-400" : "bg-red-400"
+                  }`}
+                  title={isUp ? "Matches an Up sub-filter" : "Matches a Down sub-filter"}
+                />
+              );
+            })()}
+            <div className="flex flex-col leading-tight min-w-0">
+              <div className="flex items-center gap-1">
+                <span className="truncate">{sym.base}</span>
+                {hasKnownChartMapping(r.symbol, r.source) ? (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openChartInNewTab(getChartUrl(r.symbol, r.source));
+                    }}
+                    className="text-muted-foreground hover:text-primary transition-colors shrink-0"
+                    title="Open on TradingView"
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                  </button>
+                ) : (
+                  <span
+                    className="text-muted-foreground/30 cursor-not-allowed inline-flex shrink-0"
+                    title="Not available on TradingView"
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                  </span>
+                )}
+              </div>
+              {/* Exchange — same line the Signals Journal shows under the
+                  symbol (tiny, mono, uppercase, slate), replacing the old
+                  separate Exchange column. Shown for every tab. */}
+              <span className="mt-0.5 text-[10px] font-mono uppercase tracking-wide leading-none text-slate-400 whitespace-nowrap">
+                {r.source}
+                {r.assetClass && (
+                  <span
+                    className={r.assetClass === "COMMOD" ? "text-amber-400" : "text-sky-400"}
+                    title={r.assetClass === "COMMOD" ? "Commodity perpetual" : "TradFi perpetual (stock/ETF)"}
+                  >
+                    /{r.assetClass}
+                  </span>
+                )}
+              </span>
+              {(() => {
+                const tradfi = formatTradFiSubtitle(r.symbol);
+                if (!tradfi) return null;
+                return (
+                  <span
+                    className="mt-0.5 text-[10px] leading-none text-sky-300/90 truncate"
+                    title={tradfi}
+                  >
+                    {tradfi}
+                  </span>
+                );
+              })()}
+              {(() => {
+                const category = getRowCategory(r);
+                if (!category) return null;
+                return (
+                  <span
+                    className={`mt-0.5 text-[10px] uppercase tracking-wide leading-none whitespace-nowrap ${
+                      CATEGORY_TEXT_COLORS[category] ?? "text-muted-foreground"
+                    }`}
+                    title={`Category: ${getCategoryLabel(category)}`}
+                  >
+                    {getCategoryLabel(category)}
+                  </span>
+                );
+              })()}
+            </div>
+          </div>
+        </td>
+        <td className="px-2 py-3 w-40">
+          <div className="flex flex-col gap-1 max-w-[240px]">
+            <div className="flex flex-nowrap items-center gap-1">
+              {renderLevelStatusBadge(r, isInsideCPR, isOutsideCPR, showWide, nothingMatchedMain)}
+              {renderTodayPatternBadges(r)}
+            </div>
+            {renderPivotAndGapBadges(r)}
+          </div>
+        </td>
+        <td className="px-3 py-3">
+          {renderMatchingSignals(r, matchingSignals)}
+          {showConsolidateA && (
+            <div
+              className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
+              style={{ color: "#03b07c" }}
+            >
+              P-CONSOLIDATE-A
+            </div>
+          )}
+          {showConsolidateB && (
+            <div
+              className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-pink-400"
+              style={{ color: "#f472b6" }}
+            >
+              P-CONSOLIDATE-B
+            </div>
+          )}
+          {showMomentumA && (
+            <div
+              className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-cyan-400"
+            >
+              P-MOMENTUM-A
+            </div>
+          )}
+          {showMomentumB && (
+            <div
+              className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-violet-400"
+            >
+              P-MOMENTUM-B
+            </div>
+          )}
+          {showInsideR1S1 && (
+            <div
+              className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-lime-400"
+            >
+              P-VOLATILE-R1S1
+            </div>
+          )}
+          {/* Live current-session failed-break flags: "2/3" = 3 levels pierced,
+              price back inside 2 of them. Support side sky-blue, resistance orange. */}
+          {reclaimS && (
+            <div
+              className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
+              style={{ color: "#38bdf8" }}
+              title={reclaimTooltip(reclaimS)}
+            >
+              RECLAIM-S {reclaimS.recrossed}/{reclaimS.pierced}
+            </div>
+          )}
+          {reclaimR && (
+            <div
+              className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
+              style={{ color: "#fb923c" }}
+              title={reclaimTooltip(reclaimR)}
+            >
+              RECLAIM-R {reclaimR.recrossed}/{reclaimR.pierced}
+            </div>
+          )}
+        </td>
+        {/* Ladder Check — right after VIEW, before PIVOT SIZE. One line per
+            View in the VIEW column (same order), each graded with that
+            View's own levelCheckDefs:
+            • View has levelCheckDefs                   -> "n/13" (green/amber/red)
+            • View has none, and a View is active in the
+              Screener (hasSelectedView)                -> "LevelCheck UnDefined"
+            • View has none, no View active             -> blank line
+            Row matches no View                         -> blank cell */}
+        <td className="px-3 py-3">
+          {viewLadders.length > 0 && (anyLadderDefined || hasSelectedView) && (
+            <div className="flex flex-col gap-1.5">
+              {viewLadders.map(({ id, label, ladder }) => {
+                // Tick after n/13 only when this View has "13/13 MATCH" ON
+                // and the row is a full match. Full match without the flag
+                // stays green "13/13" with no tick.
+                const requireFull = getView(id)?.requireFullMatch === true;
+                return (
+                <div key={id} className="h-11 flex items-center whitespace-nowrap">
+                  {!ladder.hasConditions ? (
+                    hasSelectedView ? (
+                      <span className="text-xs text-muted-foreground" title={label}>
+                        LevelCheck UnDefined
+                      </span>
+                    ) : null
+                  ) : (
+                    <span
+                      className={`inline-flex items-center gap-1 text-xs font-mono font-medium ${
+                        ladder.fullMatch
+                          ? "text-green-400"
+                          : ladder.matchingCount >= ladder.total - 2
+                          ? "text-amber-400"
+                          : "text-destructive"
+                      }`}
+                      title={
+                        ladder.fullMatch
+                          ? requireFull
+                            ? `${label}: all ${ladder.total} levels matched (13/13 MATCH ON)`
+                            : `${label}: all ${ladder.total} levels matched`
+                          : `${label} — broke through: ${ladder.mismatchLabels.join(", ")}`
+                      }
+                    >
+                      {ladder.matchingCount}/{ladder.total}
+                      {ladder.fullMatch && requireFull ? (
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                      ) : !ladder.fullMatch ? (
+                        <XCircle className="w-3.5 h-3.5" />
+                      ) : null}
+                    </span>
+                  )}
+                </div>
+                );
+              })}
+            </div>
+          )}
+        </td>
+        {(() => {
+          const move = distanceFromCPR(r.currentPrice, r.todayCPR);
+          const pdh = pdhPdlStatus(r);
+          const pdhTitle = `PDH: ${fmt(r.todayCPR.prevHigh)}  |  PDL: ${fmt(r.todayCPR.prevLow)}`;
+          const LABEL_FONT = "font-mono font-semibold text-[10px] uppercase tracking-wide leading-none";
+          const moveInCpr = move.main === "IN-CPR";
+          const moveLine = (
+            <div className={`whitespace-nowrap ${moveInCpr ? `${LABEL_FONT} text-orange-400` : ""}`}>
+              {move.main}
+              {move.sub && <span className="text-[10px] ml-1">{move.sub}</span>}
+            </div>
+          );
+          // Price above TC but hasn't cleared R1: PDH is always above TC, so
+          // the PDH/PDL status goes on row 1 and "+x% >TC" sits on row 2 as a
+          // single line. IN-PDHL is smaller and orange (PPWAY's falling-CPR
+          // colour) in this layout. Every other case keeps the original
+          // order: MOVE % first, PDH/PDL second. (IN-PDHL uses the same font as the
+          // Symbol column's category label — COMPRESSED, TOUCH, etc.)
+          if (move.sub === ">TC") {
+            const inRange = pdh.main === "IN-PDHL";
+            return (
+              <td className={`pl-3 pr-2 py-3 whitespace-nowrap text-xs font-medium ${move.color}`}>
+                <div
+                  className={inRange ? `${LABEL_FONT} text-orange-400` : pdh.color}
+                  title={pdhTitle}
+                >
+                  {pdh.main}
+                  {pdh.sub && <span className="text-[10px] ml-1">{pdh.sub}</span>}
+                </div>
+                <div className="mt-0.5">{moveLine}</div>
+              </td>
+            );
+          }
+          return (
+            <td className={`pl-3 pr-2 py-3 whitespace-nowrap text-xs font-medium ${move.color}`}>
+              {moveLine}
+              <div className={`mt-0.5 ${pdh.main === "IN-PDHL" ? `${LABEL_FONT} text-orange-400` : pdh.color}`} title={pdhTitle}>
+                {pdh.main}
+                {pdh.sub && <span className="text-[10px] ml-1">{pdh.sub}</span>}
+              </div>
+            </td>
+          );
+        })()}
+        <td className="px-3 py-3 pr-3 font-mono whitespace-nowrap">
+          <div className="text-sm font-bold text-foreground">
+            {fmt(r.currentPrice)}
+            <span className="text-muted-foreground">(</span>
+            <span className={r.change24h >= 0 ? "text-green-400" : "text-destructive"}>
+              {fmtPct(r.change24h)}
+            </span>
+            <span className="text-muted-foreground">)</span>
+          </div>
+          <div className="text-xs text-muted-foreground">OPrice: {fmt(r.openPrice)}</div>
+          {r.breakout?.signal ? (
+            <div className="mt-1">
+              <span
+                className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded border border-amber-500/50 bg-amber-500/15 text-amber-300"
+                title={`15m squeeze breakout ${r.breakout.barsAgo === 0 ? "on the latest closed candle" : `${r.breakout.barsAgo} candle(s) ago`} · rel. volume ${r.breakout.relVol.toFixed(1)}x · cleared ${r.breakout.levelsCleared.join("/") || "range high"} · ${(r.breakout.runPct ?? 0) >= 0 ? "+" : ""}${(r.breakout.runPct ?? 0).toFixed(1)}% since`}
+              >
+                BRK {r.breakout.relVol.toFixed(1)}x
+                {r.breakout.levelsCleared.length > 0
+                  ? ` ${r.breakout.levelsCleared.join("·")}`
+                  : " RNG"}
+                {" "}
+                {(r.breakout.barsAgo ?? 0) * 15}m
+              </span>
+            </div>
+          ) : r.breakout?.squeezeNow ? (
+            <div className="mt-1">
+              <span
+                className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded border border-sky-500/40 bg-sky-500/10 text-sky-300"
+                title="15m squeeze: ATR and Bollinger width are near their lows. Watch for a high-volume close through the levels."
+              >
+                SQZ
+              </span>
+            </div>
+          ) : null}
+        </td>
+        <td className="px-3 py-3 font-mono whitespace-nowrap">
+          {renderPivotSizeCell(r.prevCPR, r.todayCPR, r.compressionRatio)}
+        </td>
+        <td className="px-4 py-3 whitespace-nowrap text-xs font-mono font-medium">
+          {(() => {
+            const dist = cprDistancePct(r);
+            if (dist === null) return <span className="text-muted-foreground">—</span>;
+            const levels = levelsInDistanceRange(r);
+            return (
+              <>
+                <div className={r.cprRising ? "text-blue-400" : "text-orange-400"}>
+                  {dist.toFixed(2)}%
+                </div>
+                {levels.length > 0 && (
+                  <div className="text-[10px] text-muted-foreground mt-0.5 whitespace-normal max-w-[72px]">
+                    {levels.map((lvl) => lvl.label).join(", ")}
+                  </div>
+                )}
+              </>
+            );
+          })()}
+        </td>
+      </tr>
+
+      {isExpanded && (
+        <SRLadderRow
+          key={`${rowKey}-sr`}
+          r={toSRLadderData(r)}
+          rowKey={rowKey}
+          colSpan={19}
+          todayPatternBadge={renderTodayPatternBadges(r)}
+          // CHANGED: "PDay S/R" now shows prev day's own "p-xxxx" pattern
+          // (prevCPR vs ppCPR) instead of today's PivotPattern combo —
+          // the PivotPattern badge moved to "Levels VIEW" below, where it
+          // more accurately belongs (it's today-vs-prev, not prev's own).
+          prevPatternBadge={renderPrevPatternBadge(r)}
+          pivotPatternBadge={renderPivotPatternBadge(r)}
+          viewName={primaryView?.name}
+          viewKey={primaryView?.key}
+          chartViewKey={chartViewKey}
+          viewDirection={primaryView?.direction}
+          showLevelCheck
+          levelCheckConditions={primaryView?.defs}
+          innerLevelBadges={levelBadges}
+          gapBadges={renderGapColumnBadges(r)}
+          ssllBadge={ssllBadge}
+          hhllBadge={hhllBadge}
+          rrssBadge={rrssBadge}
+          rrhhBadge={rrhhBadge}
+        />
+      )}
+    </Fragment>
+  );
+}
+
+export default memo(ScreenerTableRow);
