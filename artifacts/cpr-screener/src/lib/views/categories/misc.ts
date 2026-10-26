@@ -3228,7 +3228,7 @@ export const MISC_VIEWS: ViewDef[] = [
         requireFullMatch: true,
       },
     {
-        key: "TC-OVA-A-B-RA-LB-CU4L4-SH-GapAB-R4",
+        key: "R1-OVA-A-B-RA-LB-CU4L4-SH-GapAB-R4",
         label: "AFTERLQ-ENTER",
         parentKey: "OVA-A-B-RA-LB-CU4L4",
         condition: (r) => passesView(r, "OVA-A-B-RA-LB-CU4L4") && matchesGapBadge(r, "SH-GapAB"),
@@ -3237,8 +3237,8 @@ export const MISC_VIEWS: ViewDef[] = [
         direction: "Up",
         targetLabel: "U4 (today's R4)",
         getTarget: (r) => r.todayCPR.r4,
-        entryLabel: "TC (today's TC)",
-        getEntry: (r) => r.todayCPR.tc,
+        entryLabel: "R1 (today's R1)",
+        getEntry: (r) => r.todayCPR.r1,
         stoplossLabel: "S1 (today's S1)",
         getStoploss: (r) => r.todayCPR.s1,
         levelCheckDefs: [
