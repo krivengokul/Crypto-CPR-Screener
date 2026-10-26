@@ -1162,12 +1162,11 @@ function ChartLinksSection({
         </div>
       ) : !error && filteredRecords.length > 0 ? (
         <div className="overflow-x-auto rounded-xl border border-[#22354a] bg-[#0c131f]">
-          <table className="w-full min-w-[760px] border-collapse text-left text-xs">
+          <table className="w-full min-w-[720px] border-collapse text-left text-xs">
             <thead className="border-b border-[#22354a] bg-[#121b28] font-mono uppercase tracking-wider text-slate-400">
               <tr>
                 <th className="px-3 py-2.5">Symbol</th>
                 <th className="px-3 py-2.5">Date</th>
-                <th className="px-3 py-2.5">Exchange</th>
                 <th className="px-3 py-2.5">View name</th>
                 <th className="px-3 py-2.5">Saved</th>
               </tr>
@@ -1176,20 +1175,17 @@ function ChartLinksSection({
               {filteredRecords.map((record) => {
                 const details = parseChartRowKey(record.rowKey);
                 const viewName = getChartViewName(record.viewKey);
-                const exchangeName =
-                  details.exchange === "coindcx"
-                    ? "CoinDCX"
-                    : details.exchange === "binance"
-                      ? "Binance"
-                      : details.exchange === "delta"
-                        ? "Delta"
-                        : details.exchange || "—";
+                const viewCode = (record.viewKey || "").trim();
+                const sourceId = (details.exchange || "binance") as "binance" | "delta" | "coindcx";
+                const liveChartUrl = details.symbol
+                  ? getChartUrl(details.symbol, sourceId === "coindcx" ? "binance" : sourceId)
+                  : "";
 
                 return (
                   <tr key={record.id} className="transition hover:bg-[#151e2c]/70">
                     <td className="px-3 py-2.5">
                       <div className="flex items-center gap-2">
-                        <span className="font-mono font-semibold text-white">{details.symbol || "—"}</span>
+                        {/* Snapshot (attached chart) — before symbol */}
                         <a
                           href={record.url}
                           target="_blank"
@@ -1199,55 +1195,75 @@ function ChartLinksSection({
                         >
                           <Camera className="h-2.5 w-2.5" />
                         </a>
+                        {/* Live TradingView chart */}
+                        {liveChartUrl ? (
+                          <button
+                            type="button"
+                            title="Open live TradingView chart"
+                            onClick={() => openChartInNewTab(liveChartUrl)}
+                            className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded border border-teal-500/40 bg-teal-500/15 text-teal-400 transition-all hover:border-teal-300 hover:bg-teal-500/30 hover:text-teal-200"
+                          >
+                            <ExternalLink className="h-2.5 w-2.5" />
+                          </button>
+                        ) : null}
+                        <span className="font-mono font-semibold text-white">{details.symbol || "—"}</span>
                       </div>
                     </td>
                     <td className="px-3 py-2.5 text-slate-300">{details.date || "—"}</td>
-                    <td className="px-3 py-2.5 text-slate-300">{exchangeName}</td>
-                    <td className="max-w-[280px] px-3 py-2.5 text-slate-300">
+                    <td className="max-w-[320px] px-3 py-2.5 text-slate-300">
                       {(() => {
-                        // Known view → show friendly label. Missing/renamed key →
-                        // offer reassignment (Edit View renames the key, so old
-                        // chart links would otherwise keep showing the stale key).
                         const known =
                           !!record.viewKey &&
                           VIEWS.some((v) => v.key === record.viewKey);
                         if (known) {
                           return (
-                            <span className="truncate block" title={viewName}>
-                              {viewName}
-                            </span>
+                            <div className="min-w-0" title={`${viewName}${viewCode ? ` (${viewCode})` : ""}`}>
+                              <span className="block truncate text-slate-200">{viewName}</span>
+                              {viewCode && viewCode !== viewName ? (
+                                <span className="mt-0.5 block truncate font-mono text-[10px] text-slate-500">
+                                  {viewCode}
+                                </span>
+                              ) : null}
+                            </div>
                           );
                         }
                         return (
-                          <select
-                            className="w-full max-w-[240px] rounded border border-[#22354a] bg-[#151e2c] px-1.5 py-1 text-[11px] text-slate-200"
-                            defaultValue=""
-                            disabled={assigningKey === record.rowKey}
-                            title={
-                              record.viewKey
-                                ? `Saved under old key "${record.viewKey}" (view was renamed). Pick the current view.`
-                                : "This chart was saved without a view. Pick one to store it."
-                            }
-                            onChange={async (e) => {
-                              const vk = e.target.value;
-                              if (!vk) return;
-                              setAssigningKey(record.rowKey);
-                              const ok = await updateChartLinkViewKey(record.rowKey, vk);
-                              setAssigningKey(null);
-                              if (ok) onRefresh();
-                            }}
-                          >
-                            <option value="">
-                              {record.viewKey
-                                ? `Reassign (was: ${record.viewKey.slice(0, 28)}${record.viewKey.length > 28 ? "…" : ""})…`
-                                : "Assign view…"}
-                            </option>
-                            {VIEWS.filter((v) => v.kind === "view").map((v) => (
-                              <option key={v.key} value={v.key}>
-                                {v.label || v.key}
+                          <div className="min-w-0 space-y-1">
+                            {viewCode ? (
+                              <span className="block truncate font-mono text-[10px] text-slate-500" title={viewCode}>
+                                {viewCode}
+                              </span>
+                            ) : null}
+                            <select
+                              className="w-full max-w-[240px] rounded border border-[#22354a] bg-[#151e2c] px-1.5 py-1 text-[11px] text-slate-200"
+                              defaultValue=""
+                              disabled={assigningKey === record.rowKey}
+                              title={
+                                record.viewKey
+                                  ? `Saved under old key "${record.viewKey}" (view was renamed). Pick the current view.`
+                                  : "This chart was saved without a view. Pick one to store it."
+                              }
+                              onChange={async (e) => {
+                                const vk = e.target.value;
+                                if (!vk) return;
+                                setAssigningKey(record.rowKey);
+                                const ok = await updateChartLinkViewKey(record.rowKey, vk);
+                                setAssigningKey(null);
+                                if (ok) onRefresh();
+                              }}
+                            >
+                              <option value="">
+                                {record.viewKey
+                                  ? `Reassign (was: ${record.viewKey.slice(0, 28)}${record.viewKey.length > 28 ? "…" : ""})…`
+                                  : "Assign view…"}
                               </option>
-                            ))}
-                          </select>
+                              {VIEWS.filter((v) => v.kind === "view").map((v) => (
+                                <option key={v.key} value={v.key}>
+                                  {v.label || v.key}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
                         );
                       })()}
                     </td>
