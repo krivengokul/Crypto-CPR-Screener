@@ -883,15 +883,19 @@ function CopyViewControl({
 
     let derived: LevelCheckCondition[];
     try {
-      derived = deriveLevelCheckDefsForSymbol(sourceConditions, prevCPR, todayCPR);
-      const expectedCount =
-        sourceConditions && sourceConditions.length > 0 ? sourceConditions.length : LEVEL_KEYS.length;
+      // Always build Level Check from THIS row's prev/today CPR geometry
+      // (not a remap of the source View's stored defs). That way Copy from a
+      // pattern-row match captures how this symbol actually sits on the ladder.
+      derived = deriveLevelCheckDefsForSymbol(undefined, prevCPR, todayCPR);
+      const expectedCount = LEVEL_KEYS.length;
       if (derived.length < expectedCount) {
         setLevelCheckNote(
-          "Derived " + derived.length + "/" + expectedCount + " Level Check conditions — the rest had no valid bracket for this symbol."
+          "Derived " + derived.length + "/" + expectedCount + " Level Check conditions from this symbol's geometry — the rest had no valid bracket."
         );
       } else {
-        setLevelCheckNote(null);
+        setLevelCheckNote(
+          "Level Check derived from this symbol's ladder geometry (" + derived.length + " conditions)."
+        );
       }
 
       // Clone first so the source View's condition is retained, then apply
@@ -1623,7 +1627,7 @@ function ViewActionsRow({
         sourceLabel={activeTarget.label}
         prevCPR={prevCPR}
         todayCPR={todayCPR}
-        sourceConditions={activeLevelCheckDefs}
+        sourceConditions={undefined}
         initialOpen={true}
         onClose={() => setMode("none")}
         onCopied={(newKey) => {
@@ -3979,14 +3983,23 @@ export default function BacktestPanel() {
                               }}
                             />
                           ) : isPatternOnly && rowViewDefByRow.get(r) && !pendingCreateViewRows.has(`${r.source}-${r.symbol}-${r.entryDate}`) ? (
-                            <EditViewControl
+                            <ViewActionsRow
                               activeTarget={rowViewDefByRow.get(r)!}
                               prevCPR={r.prevCPR}
                               todayCPR={r.todayCPR}
+                              activeLevelCheckDefs={rowViewDefByRow.get(r)?.levelCheckDefs}
+                              isFullMatch={ladderByRow.get(r)?.fullMatch}
+                              onCopied={(newKey) => {
+                                setTreeRevision((rev) => rev + 1);
+                                setSelectedKey(newKey);
+                                const rk = `${r.source}-${r.symbol}-${r.entryDate}`;
+                                if (findChartLink(chartLinks, rk)?.url) {
+                                  void updateChartLinkViewKey(rk, newKey);
+                                }
+                              }}
                               onUpdated={(key) => {
-                                setTreeRevision((r) => r + 1);
+                                setTreeRevision((rev) => rev + 1);
                                 setSelectedKey(key);
-                                // Restamp this row's chart (covers legacy pattern-path lastViewKey too).
                                 const rk = `${r.source}-${r.symbol}-${r.entryDate}`;
                                 if (findChartLink(chartLinks, rk)?.url) {
                                   void updateChartLinkViewKey(rk, key);
