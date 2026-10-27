@@ -1290,8 +1290,14 @@ function ScreenerTableRow({
                 const view = getView(v.id);
                 const entryFn = view?.getEntry;
                 const targetFn = view?.getTarget;
+                const slFn = view?.getStoploss;
                 const direction = v.direction || view?.direction;
-                const status: "pass" | "active" | "ready" | null =
+                const isUp = direction === "Up";
+                const isDown = direction === "Down";
+
+                // Same priority as Screener getRowStatus: Pass → Fail → Active → Ready
+                let status: "pass" | "fail" | "active" | "ready" | null = null;
+                if (
                   targetFn &&
                   sessionReachedTarget(
                     direction ?? "",
@@ -1300,13 +1306,28 @@ function ScreenerTableRow({
                     r.todayLow,
                     r.currentPrice,
                   )
-                    ? "pass"
-                    : entryFn
-                      ? hasTouchedEntry(direction ?? "", entryFn(r), r.currentPrice)
-                        ? "active"
-                        : "ready"
-                      : null;
-                const isDown = direction === "Down";
+                ) {
+                  status = "pass";
+                } else if (slFn) {
+                  const sl = slFn(r);
+                  const hitSlUp =
+                    isUp &&
+                    Number.isFinite(sl) &&
+                    ((typeof r.todayLow === "number" && r.todayLow <= sl) ||
+                      (typeof r.currentPrice === "number" && r.currentPrice <= sl));
+                  const hitSlDown =
+                    isDown &&
+                    Number.isFinite(sl) &&
+                    ((typeof r.todayHigh === "number" && r.todayHigh >= sl) ||
+                      (typeof r.currentPrice === "number" && r.currentPrice >= sl));
+                  if (hitSlUp || hitSlDown) status = "fail";
+                }
+                if (!status && entryFn) {
+                  status = hasTouchedEntry(direction ?? "", entryFn(r), r.currentPrice)
+                    ? "active"
+                    : "ready";
+                }
+
                 return (
                   <div key={v.id} className="h-11 flex items-center whitespace-nowrap">
                     {status === "pass" && (
@@ -1320,6 +1341,20 @@ function ScreenerTableRow({
                       >
                         <CheckCircle2 className="w-3 h-3" />
                         Pass
+                      </span>
+                    )}
+                    {status === "fail" && (
+                      <span
+                        className="inline-flex shrink-0 items-center gap-1 rounded-md border px-1.5 py-1 text-[11px] font-mono"
+                        style={{
+                          color: "#800000",
+                          borderColor: "rgba(128, 0, 0, 0.45)",
+                          backgroundColor: "rgba(128, 0, 0, 0.15)",
+                        }}
+                        title="Stop loss hit — session high/low or live price crossed the View SL"
+                      >
+                        <XCircle className="w-3 h-3" />
+                        Fail
                       </span>
                     )}
                     {status === "active" && (
