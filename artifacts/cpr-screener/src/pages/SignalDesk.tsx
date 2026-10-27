@@ -255,8 +255,8 @@ function exclusivePDayBadge(r: CPRResult | undefined | null): {
   if (conB) {
     return {
       text: "P-CONSOLIDATE-B",
-      className: "font-mono text-xs font-bold uppercase tracking-widest text-pink-400",
-      style: { color: "#f472b6" },
+      className: "font-mono text-xs font-bold uppercase tracking-widest text-[#ff6bb5]",
+      style: { color: "#ff6bb5" },
     };
   }
   if (momB) {
@@ -476,7 +476,7 @@ const SignalDeskCard = memo(
           isUp
             ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
             : isDown
-            ? "bg-pink-500/20 text-pink-400 border border-pink-500/40"
+            ? "bg-pink-400/20 text-[#ff6bb5] border border-pink-400/50"
             : "bg-slate-500/20 text-slate-300 border border-slate-500/40"
         }`}
       >
@@ -675,7 +675,7 @@ const SignalDeskCard = memo(
                 <span>Signal:</span>
                 <strong
                   className={`font-semibold ${
-                    isUp ? "text-emerald-400" : isDown ? "text-pink-400" : "text-slate-200"
+                    isUp ? "text-emerald-400" : isDown ? "text-[#ff6bb5]" : "text-slate-200"
                   }`}
                 >
                   {item.isSaved ? item.patternName : ""}

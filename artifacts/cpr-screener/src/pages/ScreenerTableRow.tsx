@@ -146,7 +146,7 @@ export const PATTERN_BADGE_CLASSES: Record<string, string> = {
   U3L3: "bg-emerald-400/10 text-emerald-300 border border-emerald-400/20",
   L4U3: "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20",
   L3U3: "bg-purple-500/10 text-purple-400 border border-purple-500/20",
-  L4U2: "bg-pink-500/10 text-pink-400 border border-pink-500/20",
+  L4U2: "bg-pink-400/15 text-[#ff6bb5] border border-pink-400/30",
   L3U2: "bg-rose-500/10 text-rose-400 border border-rose-500/20",
   L3U4: "bg-amber-500/10 text-amber-400 border border-amber-500/20",
   L2U4: "bg-violet-500/10 text-violet-400 border border-violet-500/20",
@@ -692,7 +692,7 @@ export function renderMatchingSignals(
         const dirColor = isUp
           ? "text-emerald-400"
           : isDown
-            ? "text-pink-400"
+            ? "text-[#ff6bb5]"
             : "text-slate-400";
         return (
           <div key={v.id} className="flex h-11 flex-col justify-center gap-0.5 overflow-hidden">
@@ -1178,8 +1178,8 @@ function ScreenerTableRow({
           )}
           {showConsolidateB && (
             <div
-              className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-pink-400"
-              style={{ color: "#f472b6" }}
+              className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-[#ff6bb5]"
+              style={{ color: "#ff6bb5" }}
             >
               P-CONSOLIDATE-B
             </div>
@@ -1258,7 +1258,7 @@ function ScreenerTableRow({
                       className={`inline-flex items-center gap-1 text-xs font-mono font-medium ${
                         ladder.fullMatch
                           ? isDownView
-                            ? "text-pink-400"
+                            ? "text-[#ff6bb5]"
                             : "text-green-400"
                           : ladder.matchingCount >= ladder.total - 2
                           ? "text-amber-400"

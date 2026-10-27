@@ -54,7 +54,7 @@ function levelColor(key: LevelKey): string {
   if (key === "prevHigh") return "#38bdf8";
   if (key === "prevLow") return "#38bdf8";
   if (key.startsWith("r")) return "#4ade80";
-  return "#f472b6"; // s1-s4 pink-400
+  return "#ff6bb5"; // s1-s4 bright pink
 }
 
 /**

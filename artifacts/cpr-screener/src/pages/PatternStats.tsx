@@ -1597,15 +1597,15 @@ function PreviousDaySection() {
           {/* Dedicated summary of all candle numbers having body in TC and body in BC */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {/* TC block */}
-            <div className="rounded-xl border border-pink-500/25 bg-[#141220] p-3.5">
+            <div className="rounded-xl border border-pink-400/35 bg-[#141220] p-3.5">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-xs font-bold text-pink-400 tracking-wide">
+                  <span className="font-mono text-xs font-bold text-[#ff6bb5] tracking-wide">
                     CANDLES WITH BODY IN {result.levels.tcName.toUpperCase()}
                   </span>
                   <span className="text-[10px] text-slate-400 font-mono">({result.levels.conBTc})</span>
                 </div>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-pink-500/15 text-pink-300 border border-pink-500/30">
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-pink-400/15 text-[#ff6bb5] border border-pink-400/40">
                   {result.tcCandles.length} {result.tcCandles.length === 1 ? "candle" : "candles"}
                 </span>
               </div>
@@ -1617,10 +1617,10 @@ function PreviousDaySection() {
                     <span
                       key={c.candleNumber}
                       title={`Candle #${c.candleNumber} (${c.ist} IST)\nBody: ${c.open} → ${c.close}\nHigh: ${c.high} · Low: ${c.low}`}
-                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded font-mono text-[11px] bg-pink-500/15 text-pink-200 border border-pink-500/30 hover:bg-pink-500/25 cursor-default transition-colors"
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded font-mono text-[11px] bg-pink-400/15 text-pink-200 border border-pink-400/40 hover:bg-pink-500/25 cursor-default transition-colors"
                     >
                       <span className="font-semibold">#{c.candleNumber}</span>
-                      <span className="text-[10px] text-pink-400/80">({c.ist})</span>
+                      <span className="text-[10px] text-[#ff6bb5]/80">({c.ist})</span>
                     </span>
                   ))}
                 </div>
@@ -1665,8 +1665,8 @@ function PreviousDaySection() {
                 key: "conB" as const,
                 title: "P-CONSOLIDATE-B",
                 levels: `${result.levels.tcName} ${result.levels.conBTc} · floor ${result.levels.floor}`,
-                tonePass: "border-pink-500/30 bg-pink-500/5",
-                textPass: "text-pink-400",
+                tonePass: "border-pink-400/40 bg-pink-400/10",
+                textPass: "text-[#ff6bb5]",
                 levelType: "TC" as const,
               },
               {
@@ -1737,7 +1737,7 @@ function PreviousDaySection() {
                         title={`Candle #${c.candleNumber} (${c.ist} IST)\nBody: ${c.open} → ${c.close}\nHigh: ${c.high} · Low: ${c.low}`}
                         className={`inline-flex items-center px-1.5 py-0.5 rounded font-mono text-[10px] border ${
                           levelType === "TC"
-                            ? "bg-pink-500/10 text-pink-300 border-pink-500/25"
+                            ? "bg-pink-500/10 text-[#ff6bb5] border-pink-400/35"
                             : "bg-emerald-500/10 text-emerald-300 border-emerald-500/25"
                         }`}
                       >

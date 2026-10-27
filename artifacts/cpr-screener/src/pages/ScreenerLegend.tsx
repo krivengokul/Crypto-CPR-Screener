@@ -350,7 +350,7 @@ function SelectedViewTradeCard({ activeSignal, symbol }: { activeSignal: string;
  * P-VOLATILE-R1S1 lime. Keep in sync with SignalDesk.tsx.
  */
 const PDAY_COLORS: Record<string, string> = {
-  "P-CONSOLIDATE-B": "#f472b6",
+  "P-CONSOLIDATE-B": "#ff6bb5",
   "P-MOMENTUM-B": "#a78bfa",
   "P-CONSOLIDATE-A": "#03b07c",
   "P-MOMENTUM-A": "#22d3ee",

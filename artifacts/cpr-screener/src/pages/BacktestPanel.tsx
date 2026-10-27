@@ -334,7 +334,7 @@ function renderCandleCheckBadges(raw: CPRResult) {
       : undefined;
   const conBFailureLine = conBFailure ? (
     <div
-      className="font-mono text-[11px] whitespace-nowrap text-pink-400/70 cursor-help"
+      className="font-mono text-[11px] whitespace-nowrap text-pink-300/80 cursor-help"
       title={conBFailure.detail}
     >
       P-CONSOLIDATE-B ✗ {conBFailure.label}
@@ -364,7 +364,7 @@ function renderCandleCheckBadges(raw: CPRResult) {
       : bucket === "consolidate-a"
         ? "font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
         : bucket === "consolidate-b"
-          ? "font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-pink-400"
+          ? "font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-[#ff6bb5]"
           : bucket === "momentum-a"
             ? "font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-cyan-400"
             : "font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-violet-400";
@@ -373,7 +373,7 @@ function renderCandleCheckBadges(raw: CPRResult) {
     bucket === "consolidate-a"
       ? { color: "#03b07c" }
       : bucket === "consolidate-b"
-        ? { color: "#f472b6" }
+        ? { color: "#ff6bb5" }
         : undefined;
 
   return (
@@ -418,7 +418,7 @@ function renderMatchingViewName(raw: CPRResult, selectedKey: string) {
     match?.direction === "Up"
       ? "text-green-400"
       : match?.direction === "Down"
-        ? "text-pink-400"
+        ? "text-[#ff6bb5]"
         : undefined;
 
   // Ladder Match next to the View name when this row is graded to a View
@@ -433,7 +433,7 @@ function renderMatchingViewName(raw: CPRResult, selectedKey: string) {
         (matchDef.direction as string) === "bearish";
       const matchColor = ladder.fullMatch
         ? isDownView
-          ? "text-pink-400"
+          ? "text-[#ff6bb5]"
           : "text-green-400"
         : ladder.matchingCount >= ladder.total - 2
           ? "text-amber-400"

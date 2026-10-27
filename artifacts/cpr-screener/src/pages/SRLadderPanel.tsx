@@ -294,7 +294,7 @@ export function SRLadder({
     if (key === "PH") return "text-fuchsia-500";
     if (key === "PL") return "text-fuchsia-500";
     if (key.startsWith("R")) return "text-green-400";
-    return "text-pink-400";
+    return "text-[#ff6bb5]";
   };
 
   return (
@@ -377,7 +377,7 @@ function levelLabel(key: (typeof LEVEL_KEYS)[number]): string {
  * previously rendered in the much lighter Tailwind red-400 (#f87171)
  * instead of this one.
  */
-const S_LEVEL_PINK = "#f472b6";
+const S_LEVEL_PINK = "#ff6bb5";
 
 /** Same color coding as SRLadder's rowColor, expressed as hex for SVG stroke/fill. */
 function levelColor(key: (typeof LEVEL_KEYS)[number]): string {
@@ -442,7 +442,7 @@ function ViewNameBadge({ name, direction }: { name: string; direction?: ViewDire
     isUp
       ? "border-green-500/40 bg-green-500/10 text-green-400"
       : isDown
-      ? "border-pink-500/40 bg-pink-500/10 text-pink-400"
+      ? "border-pink-500/40 bg-pink-500/10 text-[#ff6bb5]"
       : "border-slate-500/40 bg-slate-500/10 text-slate-300";
   return (
     <span
@@ -484,7 +484,7 @@ const INNER_LABEL_TEXT_HEX: Record<string, string> = {
   // and silently fell back to the default gray (#e5e7eb). That's why
   // HHLL-C's badge color wasn't showing up on the chart.
   "purple-400": "#c084fc",
-  "pink-400": "#f472b6",
+  "pink-400": "#ff6bb5",
   "amber-400": "#fbbf24",
 };
 

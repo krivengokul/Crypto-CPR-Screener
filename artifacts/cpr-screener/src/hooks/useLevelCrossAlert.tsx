@@ -38,7 +38,7 @@ function showCrossToast(kind: Kind, crosses: Cross[]) {
   const extra = crosses.length - listed.length;
   const word = isR1 ? "Breakout" : "Breakdown";
   const verb = isR1 ? "Above" : "Below";
-  const symbolColor = isR1 ? "text-sky-300" : "text-pink-400";
+  const symbolColor = isR1 ? "text-sky-300" : "text-[#ff6bb5]";
 
   toast({
     title:
