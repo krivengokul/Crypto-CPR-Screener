@@ -2932,7 +2932,7 @@ export default function BacktestPanel() {
          specific View.
         Category and Pattern/Subpattern selections give a symbol list only,
         with an optional date-range sweep; a View gives the full
-        Target/Result/Hit Date backtest, also with an optional date-range
+        Result (entry/next day) backtest, also with an optional date-range
         sweep. This reconstructs the CPR that would have been active on
         that date (same candle logic as the live scanner).
       </p>
@@ -3452,14 +3452,9 @@ export default function BacktestPanel() {
                       </span>
                     </th>
                     {scopedViewsAvailable && (
-                      <>
-                        <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                          Result
-                        </th>
-                        <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                          Hit Date
-                        </th>
-                      </>
+                      <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                        Result
+                      </th>
                     )}
                   </tr>
                 </thead>
@@ -3532,13 +3527,23 @@ export default function BacktestPanel() {
                           {renderPivotSizeCell(r.prevCPR, r.todayCPR, r.compressionRatio)}
                         </td>
                         {scopedViewsAvailable && (
-                          <>
                             <td className="px-3 py-2">
-                              {r.viewOutcome?.result === "pass" && (
-                                <span className="inline-flex items-center gap-1 text-xs font-medium text-green-400">
-                                  <CheckCircle2 className="w-3.5 h-3.5" /> Pass
-                                </span>
-                              )}
+                              <div className="flex flex-col items-start gap-0.5">
+                              {r.viewOutcome?.result === "pass" && (() => {
+                                const dir =
+                                  matchingViewDef(r.raw, viewMatchScopeKey)?.direction ??
+                                  matchingView(r.raw, viewMatchScopeKey)?.direction;
+                                const isDown = dir === "Down" || (dir as string) === "bearish";
+                                return (
+                                  <span
+                                    className={`inline-flex items-center gap-1 text-xs font-medium ${
+                                      isDown ? "text-[#ff6bb5]" : "text-green-400"
+                                    }`}
+                                  >
+                                    <CheckCircle2 className="w-3.5 h-3.5" /> Pass
+                                  </span>
+                                );
+                              })()}
                               {r.viewOutcome?.result === "fail" && (
                                 <span className="inline-flex items-center gap-1 text-xs font-medium text-destructive">
                                   <XCircle className="w-3.5 h-3.5" /> Fail
@@ -3559,21 +3564,15 @@ export default function BacktestPanel() {
                                   <AlertCircle className="w-3.5 h-3.5" /> No target
                                 </span>
                               )}
-                              {r.viewOutcome?.targetLevel !== null &&
-                                r.viewOutcome?.targetLevel !== undefined && (
-                                  <div className="font-mono text-[10px] text-muted-foreground">
-                                    {r.viewOutcome.targetLabel}: {fmt(r.viewOutcome.targetLevel)}
-                                  </div>
+                              {r.viewOutcome?.result === "pass" &&
+                                r.viewOutcome.daysToHit !== null &&
+                                r.viewOutcome.daysToHit !== undefined && (
+                                  <span className="text-[11px] text-muted-foreground/70">
+                                    {r.viewOutcome.daysToHit === 0 ? "(entry day)" : "(next day)"}
+                                  </span>
                                 )}
+                              </div>
                             </td>
-                            <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">
-                              {r.viewOutcome?.hitDate
-                                ? `${formatDisplay(r.viewOutcome.hitDate)} ${
-                                    r.viewOutcome.daysToHit === 0 ? "(entry day)" : "(next day)"
-                                  }`
-                                : ""}
-                            </td>
-                          </>
                         )}
                       </tr>
                       {expandedSymbols.has(`${r.source}-${r.symbol}-${r.entryDate}`) && (
@@ -3581,7 +3580,7 @@ export default function BacktestPanel() {
                           r={toSRLadderData(r.raw, r.closePrice ?? undefined, r.prevClose ?? undefined, r.ppClose ?? undefined)}
                           rowKey={`${r.source}-${r.symbol}-${r.entryDate}`}
                           viewKey={chartLinkViewKey(r.raw, selectedKey, isViewOnly)}
-                          colSpan={scopedViewsAvailable ? 6 : 4}
+                          colSpan={scopedViewsAvailable ? 5 : 4}
                           todayPatternBadge={renderTodayPatternBadges(r.raw)}
                           prevPatternBadge={renderPrevPatternBadge(r.raw)}
                           pivotPatternBadge={renderPivotPatternBadge(r.raw)}
@@ -3661,7 +3660,7 @@ export default function BacktestPanel() {
         </>
       )}
 
-      {/* Pattern backtest results — symbol list + Target/Result/Hit Date.
+      {/* Pattern backtest results — symbol list + Result (entry/next day).
           CHANGED: also shown for isPatternOnly ("-R4" Pattern selections),
           which now grade identically to a View backtest — same columns
           (Symbol/Pattern/View/Ladder Check/Pivot Size/Result/Hit
@@ -3775,9 +3774,6 @@ export default function BacktestPanel() {
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Result
                     </th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Hit Date
-                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -3879,11 +3875,24 @@ export default function BacktestPanel() {
                       </td>
                       <td className="px-3 py-2">
                         <div className="flex flex-col items-start gap-0.5">
-                          {rowResult(r) === "pass" && (
-                            <span className="inline-flex items-center gap-1 text-xs font-medium text-green-400">
-                              <CheckCircle2 className="w-3.5 h-3.5" /> Pass
-                            </span>
-                          )}
+                          {rowResult(r) === "pass" && (() => {
+                            const dir =
+                              (isViewOnly
+                                ? activeTarget?.direction
+                                : matchingViewDef(r.raw, viewMatchScopeKey)?.direction ??
+                                  matchingView(r.raw, viewMatchScopeKey)?.direction) ??
+                              null;
+                            const isDown = dir === "Down" || (dir as string) === "bearish";
+                            return (
+                              <span
+                                className={`inline-flex items-center gap-1 text-xs font-medium ${
+                                  isDown ? "text-[#ff6bb5]" : "text-green-400"
+                                }`}
+                              >
+                                <CheckCircle2 className="w-3.5 h-3.5" /> Pass
+                              </span>
+                            );
+                          })()}
                           {rowResult(r) === "fail" && (
                             <span className="inline-flex items-center gap-1 text-xs font-medium text-destructive">
                               <XCircle className="w-3.5 h-3.5" /> Fail
@@ -3907,29 +3916,17 @@ export default function BacktestPanel() {
                               <AlertCircle className="w-3.5 h-3.5" /> No target
                             </span>
                           )}
-                          <span className="font-mono text-[10px] text-muted-foreground">
-                            {isViewOnly
-                              ? `Target: ${fmt(r.targetLevel)}`
-                              : r.viewOutcome?.targetLevel !== null &&
-                                  r.viewOutcome?.targetLevel !== undefined
-                                ? `${r.viewOutcome.targetLabel}: ${fmt(r.viewOutcome.targetLevel)}`
-                                : null}
-                          </span>
+                          {rowResult(r) === "pass" &&
+                            (() => {
+                              const days = isViewOnly ? r.daysToHit : r.viewOutcome?.daysToHit;
+                              if (days === null || days === undefined) return null;
+                              return (
+                                <span className="text-[11px] text-muted-foreground/70">
+                                  {days === 0 ? "(entry day)" : "(next day)"}
+                                </span>
+                              );
+                            })()}
                         </div>
-                      </td>
-                      <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">
-                        {(isViewOnly ? r.hitDate : r.viewOutcome?.hitDate) ? (
-                          <div className="flex flex-col leading-tight">
-                            <span>{formatDisplay((isViewOnly ? r.hitDate : r.viewOutcome?.hitDate)!)}</span>
-                            <span className="text-[11px] text-muted-foreground/70">
-                              {(isViewOnly ? r.daysToHit : r.viewOutcome?.daysToHit) === 0
-                                ? "(entry day)"
-                                : "(next day)"}
-                            </span>
-                          </div>
-                        ) : (
-                          "—"
-                        )}
                       </td>
                     </tr>
                     {expandedSymbols.has(`${r.source}-${r.symbol}-${r.entryDate}`) && (
@@ -3937,7 +3934,7 @@ export default function BacktestPanel() {
                         r={toSRLadderData(r.raw, r.closePrice ?? undefined, r.prevClose ?? undefined, r.ppClose ?? undefined)}
                         rowKey={`${r.source}-${r.symbol}-${r.entryDate}`}
                         viewKey={chartLinkViewKey(r.raw, selectedKey, isViewOnly)}
-                        colSpan={7}
+                        colSpan={6}
                         todayPatternBadge={renderTodayPatternBadges(r.raw)}
                         prevPatternBadge={renderPrevPatternBadge(r.raw)}
                         pivotPatternBadge={renderPivotPatternBadge(r.raw)}
