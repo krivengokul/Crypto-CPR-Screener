@@ -123,6 +123,7 @@ function shouldSkipDuplicatePost(idempotencyKey: string): boolean {
 
 function formatTelegramText(args: {
   side: "LONG" | "SHORT";
+  direction?: "Up" | "Down" | string;
   symbol: string;
   price: number | string;
   entry: number | string;
@@ -133,29 +134,26 @@ function formatTelegramText(args: {
   viewLabel?: string;
   viewCode?: string;
 }): string {
+  const dir =
+    args.direction === "Up" || args.side === "LONG" ? "⬆️" : "⬇️";
+  const sideIcon = args.side === "LONG" ? "🟢 LONG" : "🔴 SHORT";
+  // ⬆️ SYMBOL  🟢 LONG
   const lines: string[] = [
-    `${args.side}`,
-    args.symbol,
-    // no exchange / "binance" line under symbol
+    `${dir} ${args.symbol}  ${sideIcon}`,
   ];
+  lines.push(`💰 Price: ${args.price}`);
   const entryLvl = (args.entryLevel || "Entry").trim();
-  lines.push(`Entry: ${entryLvl} (${args.entry})`);
-  lines.push(`Price: ${args.price}`);
+  lines.push(`📍 Entry: ${entryLvl} (${args.entry})`);
   if (args.target !== undefined && args.target !== "") {
-    lines.push(`Target: ${args.target}`);
+    lines.push(`🎯 Target: ${args.target}`);
   }
   if (args.stop !== undefined && args.stop !== "") {
-    lines.push(`SL: ${args.stop}`);
+    lines.push(`🛑 Stop: ${args.stop}`);
   }
   if (args.riskReward) {
-    lines.push(`RR: ${args.riskReward}`);
+    lines.push(`⚖️ R:R ${args.riskReward}`);
   }
-  if (args.viewLabel) {
-    lines.push(`View: ${args.viewLabel}`);
-  }
-  if (args.viewCode && args.viewCode !== args.viewLabel) {
-    lines.push(`Code: ${args.viewCode}`);
-  }
+  // View name stays in the in-app toast only — omit from Telegram.
   return lines.join("\n");
 }
 
@@ -303,6 +301,7 @@ export function buildEntryCrossWebhookPayload(args: {
     idempotencyKey,
     telegramText: formatTelegramText({
       side,
+      direction: dir,
       symbol: args.symbol,
       price,
       entry,

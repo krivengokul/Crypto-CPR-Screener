@@ -53,7 +53,11 @@ export default {
       return reply("Worker not configured", 500);
     }
 
-    const text = formatTelegramMessage(payload);
+    // Prefer browser-built telegramText (includes icons) when present.
+    const text =
+      typeof payload.telegramText === "string" && payload.telegramText.trim()
+        ? payload.telegramText.trim()
+        : formatTelegramMessage(payload);
 
     try {
       const tgRes = await fetch(
@@ -101,18 +105,18 @@ function formatTelegramMessage(p) {
     ? new Date(p.timestampISO).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", hour12: true })
     : "";
 
+  // ⬆️ SYMBOL  🟢 LONG
   const lines = [
     `${dir} <b>${symbol}</b>  ${side}`,
-    `<i>${source}</i>`,
   ];
+  if (source) lines.push(`<i>${source}</i>`);
 
   lines.push(`💰 Price: <code>${price}</code>`);
-  // Entry → pin; Target → former Entry bullseye (🎯).
   if (entry)  lines.push(`📍 Entry: <code>${entry}</code>`);
   if (target) lines.push(`🎯 Target: <code>${target}</code>`);
   if (stop)   lines.push(`🛑 Stop: <code>${stop}</code>`);
   if (rr)     lines.push(`⚖️ R:R  ${rr}`);
-  if (timeStr)lines.push(`🕐 ${timeStr} IST`);
+  if (timeStr) lines.push(`🕐 ${timeStr} IST`);
 
   return lines.join("\n");
 }
