@@ -3766,13 +3766,13 @@ export default function BacktestPanel() {
                         </span>
                       </button>
                     </th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Result
+                    </th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[190px]">
                       <span className="inline-flex items-center gap-1">
                         Pivot Size <PivotSizeInfo />
                       </span>
-                    </th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Result
                     </th>
                   </tr>
                 </thead>
@@ -3844,8 +3844,18 @@ export default function BacktestPanel() {
                             (isPatternOnly
                               ? rowViewDefByRow.get(r)?.requireFullMatch
                               : activeTarget?.requireFullMatch) === true;
+                          const ladderDir =
+                            (isViewOnly
+                              ? activeTarget?.direction
+                              : matchingViewDef(r.raw, viewMatchScopeKey)?.direction ??
+                                matchingView(r.raw, viewMatchScopeKey)?.direction ??
+                                rowViewDefByRow.get(r)?.direction) ?? null;
+                          const ladderDown =
+                            ladderDir === "Down" || (ladderDir as string) === "bearish";
                           const color = ladder.fullMatch
-                            ? "text-green-400"
+                            ? ladderDown
+                              ? "text-[#ff6bb5]"
+                              : "text-green-400"
                             : ladder.matchingCount >= ladder.total - 2
                             ? "text-amber-400"
                             : "text-destructive";
@@ -3869,9 +3879,6 @@ export default function BacktestPanel() {
                             </span>
                           );
                         })()}
-                      </td>
-                      <td className="px-3 py-2 font-mono whitespace-nowrap">
-                        {renderPivotSizeCell(r.prevCPR, r.todayCPR, r.compressionRatio)}
                       </td>
                       <td className="px-3 py-2">
                         <div className="flex flex-col items-start gap-0.5">
@@ -3927,6 +3934,9 @@ export default function BacktestPanel() {
                               );
                             })()}
                         </div>
+                      </td>
+                      <td className="px-3 py-2 font-mono whitespace-nowrap">
+                        {renderPivotSizeCell(r.prevCPR, r.todayCPR, r.compressionRatio)}
                       </td>
                     </tr>
                     {expandedSymbols.has(`${r.source}-${r.symbol}-${r.entryDate}`) && (

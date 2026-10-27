@@ -778,7 +778,7 @@ export function ScreenerTableHeader({
           className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap"
           title="Per Active View: Pass (target hit), Active (entry touched), or Ready"
         >
-          RESULT
+          STATUS
         </th>
         <th
           className="pl-3 pr-2 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
