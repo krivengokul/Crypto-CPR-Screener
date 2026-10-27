@@ -1701,8 +1701,8 @@ export const LEVELSBELOW_VIEWS: ViewDef[] = [
         requireFullMatch: true,
       },
     {
-        key: "BC-CB-C-B-BB-C-CL3U3-RH-GapAB-S4",
-        label: "PHEAVY-MICRO-PPBPH",
+        key: "R1-CB-C-B-BB-C-CL3U3-RH-GapAB-S4",
+        label: "TINY8MICRO",
         parentKey: "C-B-BB-C-CL3U3",
         condition: (r) => passesView(r, "C-B-BB-C-CL3U3") && matchesGapBadge(r, "RH-GapAB") && matchesCandleCheck(r, "CB"),
         standalone: true,
@@ -1711,10 +1711,10 @@ export const LEVELSBELOW_VIEWS: ViewDef[] = [
         direction: "Down",
         targetLabel: "L4 (today's S4)",
         getTarget: (r) => r.todayCPR.s4,
-        entryLabel: "BC (today's BC)",
-        getEntry: (r) => r.todayCPR.bc,
-        stoplossLabel: "R1 (today's R1)",
-        getStoploss: (r) => r.todayCPR.r1,
+        entryLabel: "R1 (today's R1)",
+        getEntry: (r) => r.todayCPR.r1,
+        stoplossLabel: "R3 (today's R3)",
+        getStoploss: (r) => r.todayCPR.r3,
         levelCheckDefs: [
       {
         "key": "r4",
@@ -1821,7 +1821,7 @@ export const LEVELSBELOW_VIEWS: ViewDef[] = [
         ]
       }
     ],
-        requireFullMatch: false,
+        requireFullMatch: true,
       },
     {
         key: "PL-MB-B-B-BB-BB-EL2U4-SL-BAGap-S4",
