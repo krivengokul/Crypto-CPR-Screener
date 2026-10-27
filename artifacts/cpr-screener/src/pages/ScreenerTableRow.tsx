@@ -708,7 +708,24 @@ export function renderMatchingSignals(
                   </div>
                 </div>
               </div>
-              {/* Pass / Active / Ready moved to RESULT column */}
+              {status === "pass" && (
+                <span
+                  className="inline-flex shrink-0 items-center gap-1 rounded-md border border-muted-foreground/40 bg-muted-foreground/10 px-1.5 py-1 text-[11px] font-mono text-muted-foreground"
+                  title="Target reached - live price now, or earlier in today's session (session high/low)"
+                >
+                  <CheckCircle2 className="w-3 h-3" />
+                  Pass
+                </span>
+              )}
+              {status === "active" && (
+                <span
+                  className="inline-flex shrink-0 items-center gap-1 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-1.5 py-1 text-[11px] font-mono text-emerald-400"
+                  title="Price has reached the entry line"
+                >
+                  <Cloud className="w-3 h-3" />
+                  Active
+                </span>
+              )}
             </div>
             <span className="truncate font-mono text-[10px] leading-3 text-muted-foreground" title={v.id}>
               {v.id}
@@ -773,12 +790,6 @@ export function ScreenerTableHeader({
           <span className="inline-flex items-center whitespace-nowrap">
             MATCH <SortIcon k="ladderCheck" reverse />
           </span>
-        </th>
-        <th
-          className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap"
-          title="Per Active View: Pass (target hit), Active (entry touched), or Ready"
-        >
-          RESULT
         </th>
         <th
           className="pl-3 pr-2 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
@@ -978,14 +989,11 @@ function ScreenerTableRow({
   // the VIEW and Ladder Check cells so their lines stay 1:1 and in order.
   const matchingSignals = getMatchingSignals(r);
   const viewLadders = matchingSignals.map((v) => {
-    const viewDef = getView(v.id);
-    const defs = viewDef?.levelCheckDefs;
+    const defs = getView(v.id)?.levelCheckDefs;
     return {
       id: v.id,
       label: v.label,
-      // Prefer signal direction; fall back to View registry so Down Views
-      // always get bright-pink 13/13 in MATCH even if the signal list omits it.
-      direction: v.direction || viewDef?.direction,
+      direction: v.direction,
       defs,
       ladder: getLadderMatchSummary(r.prevCPR, r.todayCPR, defs),
     };
@@ -1234,14 +1242,9 @@ function ScreenerTableRow({
               {viewLadders.map(({ id, label, ladder, direction }) => {
                 // Tick after n/13 only when this View has "13/13 MATCH" ON
                 // and the row is a full match. Full match without the flag
-                // stays green "13/13" with no tick; Down Views use bright pink.
-                const viewDef = getView(id);
-                const requireFull = viewDef?.requireFullMatch === true;
-                const isDownView =
-                  direction === "Down" || viewDef?.direction === "Down";
-                const fullMatchClass = isDownView
-                  ? "text-[#ff6bb5]"
-                  : "text-green-400";
+                // stays green "13/13" with no tick (pink when View is Down).
+                const requireFull = getView(id)?.requireFullMatch === true;
+                const isDownView = direction === "Down";
                 return (
                 <div key={id} className="h-11 flex items-center whitespace-nowrap">
                   {!ladder.hasConditions ? (
@@ -1254,7 +1257,9 @@ function ScreenerTableRow({
                     <span
                       className={`inline-flex items-center gap-1 text-xs font-mono font-medium ${
                         ladder.fullMatch
-                          ? fullMatchClass
+                          ? isDownView
+                            ? "text-[#ff6bb5]"
+                            : "text-green-400"
                           : ladder.matchingCount >= ladder.total - 2
                           ? "text-amber-400"
                           : "text-destructive"
@@ -1269,80 +1274,13 @@ function ScreenerTableRow({
                     >
                       {ladder.matchingCount}/{ladder.total}
                       {ladder.fullMatch && requireFull ? (
-                        <CheckCircle2 className={`w-3.5 h-3.5 ${fullMatchClass}`} />
+                        <CheckCircle2 className="w-3.5 h-3.5" />
                       ) : !ladder.fullMatch ? (
                         <XCircle className="w-3.5 h-3.5" />
                       ) : null}
                     </span>
                   )}
                 </div>
-                );
-              })}
-            </div>
-          )}
-        </td>
-        {/* RESULT — after MATCH / Ladder Check, before MOVE & PIVOT SIZE.
-            One line per Active View: Pass / Active / Ready. */}
-        <td className="px-3 py-3">
-          {matchingSignals.length > 0 && (
-            <div className="flex flex-col gap-1.5">
-              {matchingSignals.map((v) => {
-                const view = getView(v.id);
-                const entryFn = view?.getEntry;
-                const targetFn = view?.getTarget;
-                const direction = v.direction || view?.direction;
-                const status: "pass" | "active" | "ready" | null =
-                  targetFn &&
-                  sessionReachedTarget(
-                    direction ?? "",
-                    targetFn(r),
-                    r.todayHigh,
-                    r.todayLow,
-                    r.currentPrice,
-                  )
-                    ? "pass"
-                    : entryFn
-                      ? hasTouchedEntry(direction ?? "", entryFn(r), r.currentPrice)
-                        ? "active"
-                        : "ready"
-                      : null;
-                const isDown = direction === "Down";
-                return (
-                  <div key={v.id} className="h-11 flex items-center whitespace-nowrap">
-                    {status === "pass" && (
-                      <span
-                        className={`inline-flex shrink-0 items-center gap-1 rounded-md border px-1.5 py-1 text-[11px] font-mono ${
-                          isDown
-                            ? "border-[#ff6bb5]/40 bg-[#ff6bb5]/10 text-[#ff6bb5]"
-                            : "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
-                        }`}
-                        title="Target reached — live price now, or earlier in today's session"
-                      >
-                        <CheckCircle2 className="w-3 h-3" />
-                        Pass
-                      </span>
-                    )}
-                    {status === "active" && (
-                      <span
-                        className="inline-flex shrink-0 items-center gap-1 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-1.5 py-1 text-[11px] font-mono text-emerald-400"
-                        title="Price has reached the entry line"
-                      >
-                        <Cloud className="w-3 h-3" />
-                        Active
-                      </span>
-                    )}
-                    {status === "ready" && (
-                      <span
-                        className="inline-flex shrink-0 items-center gap-1 rounded-md border border-sky-500/30 bg-sky-500/10 px-1.5 py-1 text-[11px] font-mono text-sky-300"
-                        title="Entry not yet touched"
-                      >
-                        Ready
-                      </span>
-                    )}
-                    {status === null && (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    )}
-                  </div>
                 );
               })}
             </div>
@@ -1455,7 +1393,7 @@ function ScreenerTableRow({
           key={`${rowKey}-sr`}
           r={toSRLadderData(r)}
           rowKey={rowKey}
-          colSpan={20}
+          colSpan={19}
           todayPatternBadge={renderTodayPatternBadges(r)}
           // CHANGED: "PDay S/R" now shows prev day's own "p-xxxx" pattern
           // (prevCPR vs ppCPR) instead of today's PivotPattern combo —
