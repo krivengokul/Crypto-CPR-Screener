@@ -688,7 +688,7 @@ const SignalDeskCard = memo(
             {item.isSaved && item.patternId && (
               <div className="flex items-center gap-1">
                 <span>Code:</span>
-                <strong className="text-slate-500 font-mono text-[11px]">{item.patternId}</strong>
+                <strong className="text-slate-400 font-mono text-[11px]">{item.patternId}</strong>
               </div>
             )}
             {item.isSaved && item.patternId && (
@@ -1722,7 +1722,7 @@ R:R: ${item.riskReward}`;
               onClick={() => setDirectionFilter("Down")}
               className={`px-3 py-1 rounded text-xs font-semibold transition cursor-pointer ${
                 directionFilter === "Down"
-                  ? "bg-rose-500/20 text-rose-400 border border-rose-500/40"
+                  ? "bg-pink-400/20 text-[#ff6bb5] border border-pink-400/50"
                   : "text-rose-400/70 hover:text-rose-300 border border-transparent"
               }`}
             >
@@ -1778,7 +1778,7 @@ R:R: ${item.riskReward}`;
               onClick={() => setStatusFilter("fail")}
               className={`px-3 py-1 rounded text-xs font-semibold transition cursor-pointer ${
                 statusFilter === "fail"
-                  ? "bg-rose-500/20 text-rose-400 border border-rose-500/40"
+                  ? "bg-pink-400/20 text-[#ff6bb5] border border-pink-400/50"
                   : "text-rose-400/70 hover:text-rose-300 border border-transparent"
               }`}
             >

@@ -26,7 +26,7 @@ export interface ScreenerLegendFocusToast {
   source?: string;
   /** View / pattern id (toast View code). */
   signalCode: string;
-  /** View direction — colors SignalCode green (Up) or rose (Down). */
+  /** View direction — colors View *name* green (Up) or bright pink (Down); viewcode stays grey. */
   direction?: "Up" | "Down" | string;
   /** Exclusive previous-day class, e.g. "P-CONSOLIDATE-B" or "—". */
   pDayText: string;
@@ -239,7 +239,7 @@ function ViewCamerasCard({ viewKey }: { viewKey: string }) {
     view?.direction === "Up"
       ? "text-emerald-400"
       : view?.direction === "Down"
-        ? "text-rose-400"
+        ? "text-[#ff6bb5]"
         : "text-slate-200";
   return (
     <div className="space-y-1.5 min-w-0">
@@ -284,7 +284,7 @@ function SelectedViewTradeCard({ activeSignal, symbol }: { activeSignal: string;
   const dirColor = isUp
     ? "text-emerald-400"
     : isDown
-      ? "text-rose-400"
+      ? "text-[#ff6bb5]"
       : "text-slate-400";
 
   return (
@@ -371,10 +371,11 @@ function FocusToastCard({ focusToast }: { focusToast?: ScreenerLegendFocusToast 
   }
   const isUp = focusToast.direction === "Up";
   const isDown = focusToast.direction === "Down";
-  const codeColor = isUp
+  // View *name* follows direction; View *code* stays neutral (grey) for readability.
+  const nameColor = isUp
     ? "text-emerald-400"
     : isDown
-      ? "text-rose-400"
+      ? "text-[#ff6bb5]"
       : "text-slate-200";
   const viewKey =
     focusToast.signalCode && focusToast.signalCode !== "—"
@@ -385,14 +386,14 @@ function FocusToastCard({ focusToast }: { focusToast?: ScreenerLegendFocusToast 
     <div className="space-y-1 min-w-0">
       {viewName && (
         <div
-          className={`text-xs font-bold leading-tight truncate ${codeColor}`}
+          className={`text-xs font-bold leading-tight truncate ${nameColor}`}
           title={viewName}
         >
           {viewName}
         </div>
       )}
       <div
-        className={`text-[11px] font-semibold font-mono leading-tight ${codeColor} truncate`}
+        className="text-[11px] font-mono leading-tight text-slate-400 truncate"
         title={focusToast.signalCode}
       >
         {focusToast.signalCode || "—"}
