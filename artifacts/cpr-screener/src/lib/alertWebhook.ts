@@ -5,9 +5,9 @@
  *
  * Flow:  Browser  →  Cloudflare Worker  →  Telegram Bot API
  *
- * Telegram copy (worker should prefer `telegramText` if present):
+ * Telegram copy (worker rebuilds from fields so every message has the same icons):
  * - side / action = LONG | SHORT (not BUY / SELL)
- * - no exchange name under the symbol (source left empty for display)
+ * - icons on every line; never viewcode / view name / exchange
  */
 
 const STORAGE_KEY = "cpr_alert_webhook_url_v1";
@@ -121,6 +121,7 @@ function shouldSkipDuplicatePost(idempotencyKey: string): boolean {
   }
 }
 
+/** Shared icon layout for every entry-cross Telegram (no viewcode / view name). */
 function formatTelegramText(args: {
   side: "LONG" | "SHORT";
   direction?: "Up" | "Down" | string;
@@ -131,18 +132,17 @@ function formatTelegramText(args: {
   target?: number | string;
   stop?: number | string;
   riskReward?: string;
-  viewLabel?: string;
-  viewCode?: string;
+  timestampISO?: string;
 }): string {
-  const dir =
-    args.direction === "Up" || args.side === "LONG" ? "⬆️" : "⬇️";
-  const sideIcon = args.side === "LONG" ? "🟢 LONG" : "🔴 SHORT";
-  // ⬆️ SYMBOL  🟢 LONG
-  const lines: string[] = [
-    `${dir} ${args.symbol}  ${sideIcon}`,
-  ];
+  const isLong =
+    args.side === "LONG" ||
+    args.direction === "Up" ||
+    args.direction === "bullish";
+  const dir = isLong ? "⬆️" : "⬇️";
+  const sideIcon = isLong ? "🟢 LONG" : "🔴 SHORT";
+  const lines: string[] = [`${dir} ${args.symbol}  ${sideIcon}`];
   lines.push(`💰 Price: ${args.price}`);
-  const entryLvl = (args.entryLevel || "Entry").trim();
+  const entryLvl = (args.entryLevel || "Entry").trim() || "Entry";
   lines.push(`📍 Entry: ${entryLvl} (${args.entry})`);
   if (args.target !== undefined && args.target !== "") {
     lines.push(`🎯 Target: ${args.target}`);
@@ -153,7 +153,18 @@ function formatTelegramText(args: {
   if (args.riskReward) {
     lines.push(`⚖️ R:R ${args.riskReward}`);
   }
-  // View name stays in the in-app toast only — omit from Telegram.
+  if (args.timestampISO) {
+    try {
+      const timeStr = new Date(args.timestampISO).toLocaleString("en-IN", {
+        timeZone: "Asia/Kolkata",
+        hour12: true,
+      });
+      if (timeStr) lines.push(`🕐 ${timeStr} IST`);
+    } catch {
+      /* ignore */
+    }
+  }
+  // Never include viewLabel / viewCode on Telegram.
   return lines.join("\n");
 }
 
@@ -309,8 +320,7 @@ export function buildEntryCrossWebhookPayload(args: {
       target: args.target,
       stop: args.stop,
       riskReward: args.riskReward,
-      viewLabel: args.viewLabel,
-      viewCode: args.viewCode,
+      timestampISO: new Date(timestamp).toISOString(),
     }),
   };
 }

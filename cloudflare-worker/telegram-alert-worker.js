@@ -53,11 +53,10 @@ export default {
       return reply("Worker not configured", 500);
     }
 
-    // Prefer browser-built telegramText (includes icons) when present.
-    const text =
-      typeof payload.telegramText === "string" && payload.telegramText.trim()
-        ? payload.telegramText.trim()
-        : formatTelegramMessage(payload);
+    // Always format on the Worker so every chat message has the same icon
+    // layout. Do not trust client telegramText (older tabs may omit emojis
+    // or still append viewcode).
+    const text = formatTelegramMessage(payload);
 
     try {
       const tgRes = await fetch(
@@ -91,31 +90,35 @@ export default {
 // ─── Message formatter ────────────────────────────────────────────────────────
 
 function formatTelegramMessage(p) {
-  const side     = p.side === "LONG"  ? "🟢 LONG"  : "🔴 SHORT";
-  const dir      = p.direction === "Up" ? "⬆️" : "⬇️";
-  const symbol   = escHtml(p.symbol ?? "—");
-  const source   = escHtml(p.source ?? "");
-  // View name stays in the in-app toast only — omit from Telegram.
-  const entry    = fmt(p.entry);
-  const target   = fmt(p.target);
-  const stop     = fmt(p.stop);
-  const rr       = p.riskReward ? escHtml(p.riskReward) : null;
-  const price    = fmt(p.price);
-  const timeStr  = p.timestampISO
-    ? new Date(p.timestampISO).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", hour12: true })
+  const isLong =
+    p.side === "LONG" ||
+    p.action === "LONG" ||
+    p.direction === "Up" ||
+    p.direction === "bullish";
+  const side = isLong ? "🟢 LONG" : "🔴 SHORT";
+  const dir = isLong ? "⬆️" : "⬇️";
+  const symbol = escHtml(p.symbol ?? "—");
+  // Never print exchange / viewcode / view label on Telegram.
+  const entry = fmt(p.entry);
+  const target = fmt(p.target);
+  const stop = fmt(p.stop);
+  const rr = p.riskReward ? escHtml(String(p.riskReward)) : null;
+  const price = fmt(p.price);
+  const entryLevel = escHtml((p.entryLevel || "Entry").toString().trim() || "Entry");
+  const timeStr = p.timestampISO
+    ? new Date(p.timestampISO).toLocaleString("en-IN", {
+        timeZone: "Asia/Kolkata",
+        hour12: true,
+      })
     : "";
 
-  // ⬆️ SYMBOL  🟢 LONG
-  const lines = [
-    `${dir} <b>${symbol}</b>  ${side}`,
-  ];
-  if (source) lines.push(`<i>${source}</i>`);
-
-  lines.push(`💰 Price: <code>${price}</code>`);
-  if (entry)  lines.push(`📍 Entry: <code>${entry}</code>`);
+  // Same icon layout as the browser builder — every message, always.
+  const lines = [`${dir} <b>${symbol}</b>  ${side}`];
+  if (price) lines.push(`💰 Price: <code>${price}</code>`);
+  if (entry) lines.push(`📍 Entry: ${entryLevel} (<code>${entry}</code>)`);
   if (target) lines.push(`🎯 Target: <code>${target}</code>`);
-  if (stop)   lines.push(`🛑 Stop: <code>${stop}</code>`);
-  if (rr)     lines.push(`⚖️ R:R  ${rr}`);
+  if (stop) lines.push(`🛑 Stop: <code>${stop}</code>`);
+  if (rr) lines.push(`⚖️ R:R  ${rr}`);
   if (timeStr) lines.push(`🕐 ${timeStr} IST`);
 
   return lines.join("\n");
