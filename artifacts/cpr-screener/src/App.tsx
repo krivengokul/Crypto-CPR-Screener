@@ -293,9 +293,11 @@ function App() {
 
       const dir = candidate.direction === "Up" ? "LONG" : "SHORT";
       const isUp = candidate.direction === "Up";
-      // Border + symbol follow direction: green for Up, rose for Down.
-      const dirBorder = isUp ? "border-emerald-500/60" : "border-rose-500/60";
-      const dirText = isUp ? "text-emerald-400" : "text-rose-400";
+      // Border + symbol: green for Up, bright pink for Down (match app Down palette).
+      const dirBorder = isUp ? "border-emerald-500/60" : "border-[#ff6bb5]/70";
+      const dirText = isUp ? "text-emerald-400" : "text-[#ff6bb5]";
+      const crossLabel = isUp ? "CROSSED ABOVE ENTRY" : "CROSSED BELOW ENTRY";
+      const crossClass = isUp ? "text-lime-400" : "text-[#ff9dce]";
       const px = Number.isFinite(price) ? price.toPrecision(6) : String(price);
       const entry = Number.isFinite(candidate.entry)
         ? candidate.entry.toPrecision(6)
@@ -340,7 +342,7 @@ function App() {
               <span className="text-slate-400">Price:</span>{" "}
               <span className="font-mono text-slate-100">{px}</span>
               {"  "}
-              <span className="text-slate-500">crossed</span>
+              <span className={`font-semibold tracking-wide ${crossClass}`}>{crossLabel}</span>
             </div>
             <div>
               <span className="text-slate-400">Entry:</span>{" "}
