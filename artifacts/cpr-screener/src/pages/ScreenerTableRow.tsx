@@ -97,7 +97,7 @@ export const PATTERN_BADGE_CLASSES: Record<string, string> = {
   EU3L4: "bg-purple-700/15 text-purple-300 border border-purple-700/30",
   EL3U4: "bg-purple-700/15 text-purple-300 border border-purple-700/30",
   EL2U4: "bg-purple-700/15 text-purple-300 border border-purple-700/30",
-  EU2L4: "bg-pink-500/25 text-[#ff4db8] border border-pink-400/50",  // bright pink (2c badge)
+  EU2L4: "bg-[#ff6bb5]/15 text-[#ffb3d9] border-[#ff6bb5]/45 shadow-[0_0_10px_rgba(255,107,181,0.2)]",  // soft magenta glass (2c)
   EU1L4: "bg-purple-700/15 text-purple-300 border border-purple-700/30",
   EL1U4: "bg-purple-700/15 text-purple-300 border border-purple-700/30",
   EUTL4: "bg-purple-800/15 text-purple-200 border border-purple-800/30",
@@ -399,7 +399,11 @@ export function renderTodayPatternBadges(r: CPRResult) {
         .map((key) => (
           <span
             key={key}
-            className={`text-[10px] px-1 py-0.5 rounded border font-medium ${getBadgeClasses(key)}`}
+            className={
+              key === "EU2L4"
+                ? `text-[10px] px-1.5 py-0.5 rounded-md border font-semibold tracking-wide ${getBadgeClasses(key)}`
+                : `text-[10px] px-1 py-0.5 rounded border font-medium ${getBadgeClasses(key)}`
+            }
           >
             {key}
           </span>
@@ -518,11 +522,16 @@ export function renderGapBadge(r: CPRResult) {
   // RH-GapBB: bright pink (overrides R-prefix green) — same 2c emphasis as EU2L4
   const classes =
     label === "RH-GapBB"
-      ? "bg-pink-500/25 text-[#ff4db8] border border-pink-400/50"
+      ? "bg-[#ff6bb5]/15 text-[#ffb3d9] border border-[#ff6bb5]/45 shadow-[0_0_10px_rgba(255,107,181,0.2)]"
       : (GAP_BADGE_COLOR[colorKey] ?? GAP_BADGE_COLOR.Q);
+  const isEmphasis = label === "RH-GapBB";
   return (
     <span
-      className={`text-[10px] px-1 py-0.5 rounded font-medium ${classes}`}
+      className={
+        isEmphasis
+          ? `text-[10px] px-1.5 py-0.5 rounded-md font-semibold tracking-wide ${classes}`
+          : `text-[10px] px-1 py-0.5 rounded font-medium ${classes}`
+      }
       title="GapBadge — RRSSGapCategory x PDHPDLGapCategory x prev/today HLSwitch (Gap-prefixed per hlGapWinner)"
     >
       {label}
