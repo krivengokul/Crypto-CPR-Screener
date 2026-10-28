@@ -60,6 +60,7 @@ type InsideR1S1Candidate = {
 export type PreviousCandleFilterId =
   | "all"
   | "consolidate-a"
+  | "pp-consolidate-a"
   | "momentum-a"
   | "consolidate-b"
   | "momentum-b"

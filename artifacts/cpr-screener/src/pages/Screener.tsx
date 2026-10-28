@@ -262,6 +262,24 @@ function getSignalStatus(
   return hasTouchedEntry(dir, entryFn(r), r.currentPrice) ? "active" : "ready";
 }
 
+/**
+ * getSignalStatus for a partial legend-focus row (symbol + source + a few CPR
+ * fields rather than a full CPRResult). A View's entry/target/stop functions may
+ * read fields such a row lacks, so any throw yields "no status" instead of
+ * breaking the toast / click / search focus.
+ */
+function safeSignalStatus(
+  row: { prevCPR?: CPRResult["prevCPR"]; todayCPR?: CPRResult["todayCPR"] },
+  viewId: string,
+): ReturnType<typeof getSignalStatus> {
+  try {
+    return getSignalStatus(row as unknown as CPRResult, viewId);
+  } catch {
+    return null;
+  }
+}
+
+
 
 /** Prefer Active/Pass matching View on the row; else first Active Views entry. */
 function pickPrimaryMatchingViewId(r: CPRResult, preferred?: string): string {
@@ -386,7 +404,7 @@ export default function Screener({
 
 
   const [previousCandleFilter, setPreviousCandleFilter] = useState<
-    "all" | "consolidate-a" | "momentum-a" | "consolidate-b" | "momentum-b" | "inside-r1s1"
+    "all" | "consolidate-a" | "pp-consolidate-a" | "momentum-a" | "consolidate-b" | "momentum-b" | "inside-r1s1"
   >("all");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "ready" | "pass" | "fail">("all");
   /** When ON (default) and today is Sat/Sun, hide Binance TRADFI + COMMOD rows. */
@@ -580,6 +598,7 @@ export default function Screener({
     previousInsideR1S1Progress,
     previousInsideR1S1Message,
     resetConsolidateAMessage,
+    resetPPConsolidateAMessage,
     resetMomentumAMessage,
     resetConsolidateBMessage,
     resetMomentumBMessage,
@@ -646,7 +665,11 @@ export default function Screener({
         direction,
         pDayText,
         matchText,
-        status: patternId ? getSignalStatus(row, patternId) : null,
+        // Status needs the full CPR levels; bare legend rows (symbol+source only) get none.
+        status:
+          patternId && row.prevCPR && row.todayCPR
+            ? safeSignalStatus(row, patternId)
+            : null,
       });
       if (row.source && row.symbol) {
         setFocusedRowKey(`${row.source}-${row.symbol}-${utcTodayISO()}`);
@@ -1043,6 +1066,9 @@ export default function Screener({
   const previousConsolidateAIncludedCount = getActivePool().filter(
     (row) => row.source !== "coindcx" && hasConsolidateA(row),
   ).length;
+  const previousPPConsolidateAIncludedCount = getActivePool().filter(
+    (row) => row.source !== "coindcx" && hasPPConsolidateA(row),
+  ).length;
   const previousUpexIncludedCount = getActivePool().filter(
     (row) => row.source !== "coindcx" && hasMomentumA(row),
   ).length;
@@ -1249,6 +1275,11 @@ export default function Screener({
       (r) =>
         previousCandleFilter !== "consolidate-a" ||
         hasConsolidateA(r)
+    )
+    .filter(
+      (r) =>
+        previousCandleFilter !== "pp-consolidate-a" ||
+        hasPPConsolidateA(r)
     )
     .filter(
       (r) =>
@@ -2229,6 +2260,33 @@ export default function Screener({
               </button>
               <button
                 onClick={() => {
+                  if (!previousPPConsolidateAReady) return;
+                  setPreviousCandleFilter((v) =>
+                    v === "pp-consolidate-a" ? "all" : "pp-consolidate-a",
+                  );
+                  resetPPConsolidateAMessage();
+                }}
+                disabled={
+                  !previousPPConsolidateAReady ||
+                  currentAllCount === 0 ||
+                  activeTab === "coindcx"
+                }
+                aria-pressed={previousCandleFilter === "pp-consolidate-a"}
+                className={`text-xs px-2.5 py-1 -ml-px border transition-colors disabled:opacity-50 ${
+                  previousCandleFilter === "pp-consolidate-a"
+                    ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
+                    : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
+                }`}
+                title="Same CONSOLIDATE-A rules on the day-before-previous session (PPDay), using ppCPR levels. Independent of P-CONSOLIDATE-A — a row can pass both. Binance/Delta only; CoinDCX excluded while active."
+              >
+                {previousPPConsolidateAProgress
+                  ? `PP-CONSOLIDATE-A ${previousPPConsolidateAProgress.done}/${previousPPConsolidateAProgress.total}`
+                  : previousPPConsolidateAReady
+                    ? `PP-CONSOLIDATE-A (${previousPPConsolidateAIncludedCount})`
+                    : "PP-CONSOLIDATE-A…"}
+              </button>
+              <button
+                onClick={() => {
                   if (!previousUpexReady) return;
                   setPreviousCandleFilter((v) => v === "momentum-a" ? "all" : "momentum-a");
                   resetMomentumAMessage();
@@ -2340,6 +2398,8 @@ export default function Screener({
           const activeCandleMessage =
             previousCandleFilter === "consolidate-a"
               ? { text: previousConsolidateAMessage, dismiss: resetConsolidateAMessage }
+              : previousCandleFilter === "pp-consolidate-a"
+              ? { text: previousPPConsolidateAMessage, dismiss: resetPPConsolidateAMessage }
               : previousCandleFilter === "momentum-a"
               ? { text: upexMessageFromPrep, dismiss: resetMomentumAMessage }
               : previousCandleFilter === "consolidate-b"
