@@ -32,6 +32,8 @@ export interface ScreenerLegendFocusToast {
   pDayText: string;
   /** Level-check score, e.g. "11/13" or "—". */
   matchText: string;
+  /** Per-symbol trade status for the focused View (same as STATUS column). */
+  status?: "pass" | "fail" | "active" | "ready" | null;
 }
 
 export interface ScreenerLegendProps {
@@ -263,7 +265,66 @@ function ViewCamerasCard({ viewKey }: { viewKey: string }) {
  * hardcoded bias/time copy with a compact trade sheet: name, code, direction,
  * entry / target / stoploss level labels from the View registry.
  */
-function SelectedViewTradeCard({ activeSignal, symbol }: { activeSignal: string; symbol?: string }) {
+function StatusBadge({ status, isDown }: { status?: "pass" | "fail" | "active" | "ready" | null; isDown?: boolean }) {
+  if (!status) return null;
+  if (status === "pass") {
+    return (
+      <span
+        className={`inline-flex shrink-0 items-center rounded border px-1 py-0 text-[9px] font-mono font-semibold leading-tight ${
+          isDown
+            ? "border-[#ff6bb5]/40 bg-[#ff6bb5]/10 text-[#ff6bb5]"
+            : "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
+        }`}
+        title="Target reached"
+      >
+        Pass
+      </span>
+    );
+  }
+  if (status === "fail") {
+    return (
+      <span
+        className="inline-flex shrink-0 items-center rounded border px-1 py-0 text-[9px] font-mono font-semibold leading-tight"
+        style={{
+          color: "#f87171",
+          borderColor: "rgba(248, 113, 113, 0.45)",
+          backgroundColor: "rgba(248, 113, 113, 0.15)",
+        }}
+        title="Stop loss hit"
+      >
+        Fail
+      </span>
+    );
+  }
+  if (status === "active") {
+    return (
+      <span
+        className="inline-flex shrink-0 items-center rounded border border-emerald-500/40 bg-emerald-500/10 px-1 py-0 text-[9px] font-mono font-semibold leading-tight text-emerald-400"
+        title="Entry touched"
+      >
+        Active
+      </span>
+    );
+  }
+  return (
+    <span
+      className="inline-flex shrink-0 items-center rounded border border-sky-500/30 bg-sky-500/10 px-1 py-0 text-[9px] font-mono font-semibold leading-tight text-sky-300"
+      title="Entry not yet touched"
+    >
+      Ready
+    </span>
+  );
+}
+
+function SelectedViewTradeCard({
+  activeSignal,
+  symbol,
+  status,
+}: {
+  activeSignal: string;
+  symbol?: string;
+  status?: "pass" | "fail" | "active" | "ready" | null;
+}) {
   const view = activeSignal ? getView(activeSignal) : undefined;
   if (!activeSignal) {
     return (
@@ -293,9 +354,12 @@ function SelectedViewTradeCard({ activeSignal, symbol }: { activeSignal: string;
         {symbol ? null : <Tag className={`w-3 h-3 mt-0.5 shrink-0 ${dirColor}`} aria-hidden />}
         <div className="min-w-0 flex-1">
           {symbol ? (
-            // A row is focused: its symbol takes the top row (View name lives in Card 2).
-            <div className="text-xs font-bold font-mono text-white leading-tight truncate" title={symbol}>
-              {symbol}
+            // A row is focused: symbol + STATUS badge (same meaning as STATUS column).
+            <div className="flex items-center gap-1.5 min-w-0">
+              <div className="text-xs font-bold font-mono text-white leading-tight truncate" title={symbol}>
+                {symbol}
+              </div>
+              <StatusBadge status={status} isDown={isDown} />
             </div>
           ) : (
             <div className={`text-[11px] font-semibold leading-tight truncate ${dirColor}`} title={name}>
@@ -446,6 +510,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
         <SelectedViewTradeCard
           activeSignal={shownView}
           symbol={focusToast?.symbol}
+          status={focusToast?.status}
         />
       </div>
     </div>

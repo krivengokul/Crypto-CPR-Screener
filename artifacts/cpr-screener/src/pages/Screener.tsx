@@ -221,6 +221,47 @@ function getRowStatus(r: CPRResult): {
   return { active, ready, pass, fail };
 }
 
+/** Status for one View on a row — same priority as STATUS column: Pass → Fail → Active → Ready. */
+function getSignalStatus(
+  r: CPRResult,
+  viewId: string,
+): "pass" | "fail" | "active" | "ready" | null {
+  const view = getView(viewId);
+  if (!view?.getEntry) return null;
+  const dir = view.direction ?? "";
+  const entryFn = view.getEntry;
+  const targetFn = view.getTarget;
+  const slFn = view.getStoploss;
+  if (
+    targetFn &&
+    sessionReachedTarget(dir, targetFn(r), r.todayHigh, r.todayLow, r.currentPrice)
+  ) {
+    return "pass";
+  }
+  if (slFn) {
+    const sl = slFn(r);
+    const isUp = dir === "Up";
+    const isDown = dir === "Down";
+    if (
+      isUp &&
+      Number.isFinite(sl) &&
+      ((typeof r.todayLow === "number" && r.todayLow <= sl) ||
+        (typeof r.currentPrice === "number" && r.currentPrice <= sl))
+    ) {
+      return "fail";
+    }
+    if (
+      isDown &&
+      Number.isFinite(sl) &&
+      ((typeof r.todayHigh === "number" && r.todayHigh >= sl) ||
+        (typeof r.currentPrice === "number" && r.currentPrice >= sl))
+    ) {
+      return "fail";
+    }
+  }
+  return hasTouchedEntry(dir, entryFn(r), r.currentPrice) ? "active" : "ready";
+}
+
 
 /** Prefer Active/Pass matching View on the row; else first Active Views entry. */
 function pickPrimaryMatchingViewId(r: CPRResult, preferred?: string): string {
@@ -601,6 +642,7 @@ export default function Screener({
         direction,
         pDayText,
         matchText,
+        status: patternId ? getSignalStatus(row, patternId) : null,
       });
       if (row.source && row.symbol) {
         setFocusedRowKey(`${row.source}-${row.symbol}-${utcTodayISO()}`);
@@ -636,6 +678,7 @@ export default function Screener({
         direction: viewDef?.direction,
         pDayText: "—",
         matchText: "—",
+        status: null,
       });
     }
     // Do not depend on allResults*: live price ticks would re-run this every poll.
