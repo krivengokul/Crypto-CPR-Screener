@@ -488,12 +488,12 @@ const SignalDeskCard = memo(
         <span
           className={
             isActiveStatus
-              ? `shrink-0 flex items-center justify-center self-center w-7 h-7 rounded-lg border ${
+              ? `shrink-0 flex items-center justify-center self-start w-7 h-7 rounded-lg border ${
                   isUp
                     ? "bg-emerald-500/20 border-emerald-500/40"
                     : "bg-[#ff6bb5]/15 border-[#ff6bb5]/45"
                 }`
-              : "shrink-0 flex items-center justify-center self-center w-5"
+              : "shrink-0 flex items-center justify-center self-start w-5"
           }
           title={isUp ? "Up" : "Down"}
           aria-label={isUp ? "Up" : "Down"}
@@ -589,7 +589,7 @@ const SignalDeskCard = memo(
                   </span>
                 )}
               </div>
-              <div className="flex flex-col items-end justify-start leading-none gap-0">
+              <div className="flex flex-col items-start justify-start leading-none gap-0">
                 <span className="text-xs sm:text-sm font-bold text-white font-mono tabular-nums leading-none">
                   {fmt(item.currentPrice).replace(/,/g, "")}
                 </span>
@@ -1789,8 +1789,8 @@ R/R: ${item.riskReward}`;
               onClick={() => setStatusFilter("saved")}
               className={`px-3 py-1 rounded text-xs font-semibold transition cursor-pointer ${
                 statusFilter === "saved"
-                  ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
-                  : "text-emerald-400/70 hover:text-emerald-300 border border-transparent"
+                  ? "bg-lime-500/20 text-lime-400 border border-lime-500/40"
+                  : "text-lime-400/70 hover:text-lime-300 border border-transparent"
               }`}
             >
               Active
@@ -1799,8 +1799,8 @@ R/R: ${item.riskReward}`;
               onClick={() => setStatusFilter("ready")}
               className={`px-3 py-1 rounded text-xs font-semibold transition cursor-pointer ${
                 statusFilter === "ready"
-                  ? "bg-amber-500/20 text-amber-400 border border-amber-500/40"
-                  : "text-amber-400/70 hover:text-amber-300 border border-transparent"
+                  ? "bg-sky-500/20 text-sky-300 border border-sky-500/40"
+                  : "text-sky-300/70 hover:text-sky-200 border border-transparent"
               }`}
             >
               Ready
