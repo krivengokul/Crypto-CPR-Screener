@@ -1347,9 +1347,9 @@ function ScreenerTableRow({
                       <span
                         className="inline-flex shrink-0 items-center gap-1 rounded-md border px-1.5 py-1 text-[11px] font-mono"
                         style={{
-                          color: "#800000",
-                          borderColor: "rgba(128, 0, 0, 0.45)",
-                          backgroundColor: "rgba(128, 0, 0, 0.15)",
+                          color: "#f87171",
+                          borderColor: "rgba(248, 113, 113, 0.45)",
+                          backgroundColor: "rgba(248, 113, 113, 0.15)",
                         }}
                         title="Stop loss hit — session high/low or live price crossed the View SL"
                       >
