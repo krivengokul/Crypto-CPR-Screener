@@ -115,9 +115,29 @@ function formatTelegramMessage(p) {
   // Same icon layout as the browser builder — every message, always.
   const lines = [`${dir} <b>${symbol}</b>  ${side}`];
   if (price) lines.push(`💰 Price: <code>${price}</code>`);
-  if (entry) lines.push(`📍 Entry: ${entryLevel} (<code>${entry}</code>)`);
-  if (target) lines.push(`🎯 Target: <code>${target}</code>`);
-  if (stop) lines.push(`🛑 Stop: <code>${stop}</code>`);
+  if (entry) {
+    lines.push(
+      entryLevel && entryLevel !== "Entry"
+        ? `📍 Entry: <code>${entry}</code> (${entryLevel})`
+        : `📍 Entry: <code>${entry}</code>`
+    );
+  }
+  if (target) {
+    const tLvl = escHtml((p.targetLevel || "").toString().trim());
+    lines.push(
+      tLvl
+        ? `🎯 Target: <code>${target}</code> (${tLvl})`
+        : `🎯 Target: <code>${target}</code>`
+    );
+  }
+  if (stop) {
+    const sLvl = escHtml((p.stopLevel || "").toString().trim());
+    lines.push(
+      sLvl
+        ? `🚪 Exit: <code>${stop}</code> (${sLvl})`
+        : `🚪 Exit: <code>${stop}</code>`
+    );
+  }
   if (rr) lines.push(`⚖️ R/R: ${rr}`);
   if (timeStr) lines.push(`🕐 ${timeStr} IST`);
 

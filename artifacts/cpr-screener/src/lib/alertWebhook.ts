@@ -39,7 +39,9 @@ export interface AlertWebhookPayload {
   entry: number | string;
   entryLevel?: string;
   target?: number | string;
+  targetLevel?: string;
   stop?: number | string;
+  stopLevel?: string;
   riskReward?: string;
   viewLabel?: string;
   viewCode?: string;
@@ -130,7 +132,9 @@ function formatTelegramText(args: {
   entry: number | string;
   entryLevel?: string;
   target?: number | string;
+  targetLevel?: string;
   stop?: number | string;
+  stopLevel?: string;
   riskReward?: string;
   timestampISO?: string;
 }): string {
@@ -142,13 +146,27 @@ function formatTelegramText(args: {
   const sideIcon = isLong ? "🟢 BUY" : "🔴 SELL";
   const lines: string[] = [`${dir} ${args.symbol}  ${sideIcon}`];
   lines.push(`💰 Price: ${args.price}`);
-  const entryLvl = (args.entryLevel || "Entry").trim() || "Entry";
-  lines.push(`📍 Entry: ${entryLvl} (${args.entry})`);
+  const entryLvl = (args.entryLevel || "").trim();
+  lines.push(
+    entryLvl
+      ? `📍 Entry: ${args.entry} (${entryLvl})`
+      : `📍 Entry: ${args.entry}`,
+  );
   if (args.target !== undefined && args.target !== "") {
-    lines.push(`🎯 Target: ${args.target}`);
+    const tLvl = (args.targetLevel || "").trim();
+    lines.push(
+      tLvl
+        ? `🎯 Target: ${args.target} (${tLvl})`
+        : `🎯 Target: ${args.target}`,
+    );
   }
   if (args.stop !== undefined && args.stop !== "") {
-    lines.push(`🛑 Stop: ${args.stop}`);
+    const sLvl = (args.stopLevel || "").trim();
+    lines.push(
+      sLvl
+        ? `🚪 Exit: ${args.stop} (${sLvl})`
+        : `🚪 Exit: ${args.stop}`,
+    );
   }
   if (args.riskReward) {
     lines.push(`⚖️ R/R: ${args.riskReward}`);
@@ -270,7 +288,9 @@ export function buildEntryCrossWebhookPayload(args: {
   entry: number;
   entryLevel?: string;
   target?: number;
+  targetLevel?: string;
   stop?: number;
+  stopLevel?: string;
   riskReward?: string;
   viewLabel?: string;
   viewCode?: string;
@@ -303,7 +323,9 @@ export function buildEntryCrossWebhookPayload(args: {
     entry,
     entryLevel: args.entryLevel,
     target: args.target,
+    targetLevel: args.targetLevel,
     stop: args.stop,
+    stopLevel: args.stopLevel,
     riskReward: args.riskReward,
     viewLabel: args.viewLabel,
     viewCode: args.viewCode,
@@ -318,7 +340,9 @@ export function buildEntryCrossWebhookPayload(args: {
       entry,
       entryLevel: args.entryLevel,
       target: args.target,
+      targetLevel: args.targetLevel,
       stop: args.stop,
+      stopLevel: args.stopLevel,
       riskReward: args.riskReward,
       timestampISO: new Date(timestamp).toISOString(),
     }),
