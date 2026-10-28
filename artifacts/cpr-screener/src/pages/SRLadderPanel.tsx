@@ -1,9 +1,17 @@
-import { useState, useEffect, isValidElement, type ReactNode } from "react";
+import { useState, useEffect, useMemo, isValidElement, type ReactNode } from "react";
 import { Link2, Loader2 } from "lucide-react";
 import { getPC, type CPRLevels, type CPRResult } from "@/lib/cpr";
-import { fmt } from "./ScreenerUtils";
+import { fmt, openChartInNewTab } from "./ScreenerUtils";
 import { SRLadderDiffPanel, type LevelCheckCondition } from "./SRLadderDiff";
-import { getChartLink, setChartLink, removeChartLink, type StoredChartLink } from "@/lib/chartLinks";
+import {
+  getChartLink,
+  setChartLink,
+  removeChartLink,
+  findChartLink,
+  getAllChartLinks,
+  useChartLinks,
+  type StoredChartLink,
+} from "@/lib/chartLinks";
 
 /**
  * Small inline control for attaching a TradingView snapshot link to a
@@ -18,22 +26,49 @@ import { getChartLink, setChartLink, removeChartLink, type StoredChartLink } fro
  * synchronously on first render.
  */
 function ChartLinkControl({ viewKey, rowKey }: { viewKey: string; rowKey: string }) {
+  const links = useChartLinks();
+  const fromCache = useMemo(
+    () => findChartLink(links, rowKey, viewKey),
+    [links, rowKey, viewKey],
+  );
+
+  // Seed from localStorage immediately — no spinner when the link is already cached.
   const [open, setOpen] = useState(false);
   const [url, setUrl] = useState("");
   const [error, setError] = useState("");
-  const [saved, setSaved] = useState<StoredChartLink | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [saved, setSaved] = useState<StoredChartLink | null>(() =>
+    findChartLink(getAllChartLinks(), rowKey, viewKey),
+  );
+  const [loading, setLoading] = useState(
+    () => !findChartLink(getAllChartLinks(), rowKey, viewKey),
+  );
   const [saving, setSaving] = useState(false);
+
+  // Stay in sync when cache updates (save from this control or elsewhere).
+  useEffect(() => {
+    if (fromCache) setSaved(fromCache);
+  }, [fromCache]);
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    getChartLink(viewKey, rowKey).then((link) => {
-      if (!cancelled) {
+    const cached = findChartLink(getAllChartLinks(), rowKey, viewKey);
+    if (cached) {
+      setSaved(cached);
+      setLoading(false);
+    } else {
+      // Only show the spinner when we have nothing local to show yet.
+      setLoading(true);
+    }
+    // Background Firestore refresh — does not block the Attach / Chart UI.
+    getChartLink(viewKey, rowKey)
+      .then((link) => {
+        if (cancelled) return;
         setSaved(link);
         setLoading(false);
-      }
-    });
+      })
+      .catch(() => {
+        if (!cancelled) setLoading(false);
+      });
     return () => {
       cancelled = true;
     };
@@ -52,15 +87,22 @@ function ChartLinkControl({ viewKey, rowKey }: { viewKey: string; rowKey: string
       return;
     }
     setSaving(true);
+    setError("");
     const ok = await setChartLink(viewKey, rowKey, trimmed);
-    setSaving(false);
     if (!ok) {
+      setSaving(false);
       setError("Couldn't save — check your connection and try again.");
       return;
     }
-    const fresh = await getChartLink(viewKey, rowKey);
-    setSaved(fresh);
+    // setChartLink already wrote localStorage — close edit mode immediately.
+    // Do not wait on a second getChartLink (Firestore) or the form stays open.
+    setSaved({
+      url: trimmed,
+      savedAt: new Date().toISOString(),
+      lastViewKey: viewKey || "",
+    });
     setOpen(false);
+    setSaving(false);
   }
 
   async function clear() {
@@ -71,7 +113,8 @@ function ChartLinkControl({ viewKey, rowKey }: { viewKey: string; rowKey: string
     setOpen(false);
   }
 
-  if (loading) {
+  // Only when nothing is cached yet and Firestore is still resolving.
+  if (loading && !saved) {
     return (
       <div className="inline-flex w-fit items-center gap-1 rounded-md border border-border px-2 py-1 text-[11px] text-muted-foreground">
         <Loader2 className="w-3 h-3 animate-spin" />
@@ -82,24 +125,17 @@ function ChartLinkControl({ viewKey, rowKey }: { viewKey: string; rowKey: string
 
   if (!open) {
     if (saved) {
-      // Borderless joined pill — same visual grouping as the Date Mode
-      // segmented toggle (BacktestPanel's "Single Date"/"Date Range"
-      // control), just without its border: overflow-hidden rounds both
-      // outer corners while the two segments butt up against each other
-      // with no divider. Colors are unchanged from before (blue for the
-      // link, muted for the edit action, now labeled "Edit Chart").
       return (
         <div className="flex w-fit items-center overflow-hidden rounded-md">
-          <a
-            href={saved.url}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            type="button"
+            onClick={() => openChartInNewTab(saved.url)}
             className="inline-flex items-center gap-1 bg-blue-500/10 px-2 py-1 text-[11px] font-medium text-blue-300 hover:bg-blue-500/20"
             title={saved.url}
           >
             <Link2 className="w-3 h-3" />
             Chart
-          </a>
+          </button>
           <button
             type="button"
             onClick={openForm}
@@ -156,7 +192,7 @@ function ChartLinkControl({ viewKey, rowKey }: { viewKey: string; rowKey: string
         </button>
         <button
           type="button"
-          onClick={confirm}
+          onClick={() => void confirm()}
           disabled={saving}
           className="rounded-md bg-blue-500/20 px-2 py-1 text-[11px] font-medium text-blue-300 hover:bg-blue-500/30 disabled:opacity-50"
         >
