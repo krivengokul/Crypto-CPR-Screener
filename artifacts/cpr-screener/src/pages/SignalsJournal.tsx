@@ -14,11 +14,8 @@ import {
 } from "@/lib/paperTrading";
 import { fmt, getChartUrl, openChartInNewTab, hasKnownChartMapping } from "@/pages/ScreenerUtils";
 import { fetchBinanceFuturesPrices } from "@/lib/binance";
-import { fetchCoinDCXLastPrices } from "@/lib/coinDCX";
-import { fetchDeltaPerps } from "@/lib/delta";
 import { VIEWS } from "@/lib/views";
 import { livePriceCrossedBoundary } from "@/lib/signalOutcome";
-import { COINDCX_ENABLED } from "@/lib/featureFlags";
 
 import {
   CheckCircle2,
@@ -264,10 +261,12 @@ export default function SignalsJournal() {
   const [livePrices, setLivePrices] = useState<Record<string, number>>({});
   const [evalProgress, setEvalProgress] = useState<{ done: number; total: number } | null>(null);
   const [filterStatus, setFilterStatus] = useState<"ALL" | "ACTIVE" | "PASS" | "FAIL">("ALL");
-  // Default to Binance — mirrors the Live Screener, Backtest panel, and
-  // Signals desk, which all default to Binance rather than showing every
-  // exchange's rows at once.
-  const [sourceFilter, setSourceFilter] = useState<"all" | "binance" | "delta" | "coindcx">("all");
+  // The Journal is intentionally Binance-only. Other exchange records remain stored,
+  // but are excluded from the table, stats, exports, and Journal actions.
+  const binanceSignals = useMemo(
+    () => signals.filter((signal) => signal.source === "binance"),
+    [signals],
+  );
   const [searchTerm, setSearchTerm] = useState("");
 
   const loadSignals = async (showRefreshIndicator = false) => {
@@ -306,7 +305,7 @@ export default function SignalsJournal() {
     return () => window.removeEventListener(SIGNALS_JOURNAL_UPDATED_EVENT, refreshJournal);
   }, []);
 
-  const activeKeys = useMemo(() => activePriceKeys(signals), [signals]);
+  const activeKeys = useMemo(() => activePriceKeys(binanceSignals), [binanceSignals]);
 
   useEffect(() => {
     if (!activeKeys) {
@@ -314,20 +313,11 @@ export default function SignalsJournal() {
       return;
     }
 
-    // Symbols to poll, grouped by exchange (keys are source:NORMALISEDSYMBOL).
-    const bySource: Record<"binance" | "delta" | "coindcx", string[]> = {
-      binance: [],
-      delta: [],
-      coindcx: [],
-    };
-    activeKeys.split("|").forEach((key) => {
-      const sep = key.indexOf(":");
-      const source = key.slice(0, sep);
-      const symbol = key.slice(sep + 1);
-      if (symbol && (source === "binance" || source === "delta" || source === "coindcx")) {
-        bySource[source].push(symbol);
-      }
-    });
+    // Only Binance signals are included in activeKeys.
+    const binanceSymbols = activeKeys
+      .split("|")
+      .map((key) => key.slice(key.indexOf(":") + 1))
+      .filter(Boolean);
 
     let cancelled = false;
     let running = false;
@@ -342,38 +332,11 @@ export default function SignalsJournal() {
         const next: Record<string, number> = {};
         const tasks: Promise<void>[] = [];
 
-        if (bySource.binance.length > 0) {
+        if (binanceSymbols.length > 0) {
           tasks.push(
-            fetchBinanceFuturesPrices(bySource.binance).then((prices) => {
+            fetchBinanceFuturesPrices(binanceSymbols).then((prices) => {
               prices.forEach((price, symbol) => {
                 next[priceKey("binance", symbol)] = price;
-              });
-            })
-          );
-        }
-
-        if (bySource.delta.length > 0) {
-          const want = new Set(bySource.delta);
-          tasks.push(
-            fetchDeltaPerps().then((rows) => {
-              rows.forEach((row) => {
-                const key = priceKey("delta", row.symbol);
-                if (!want.has(key.slice("delta:".length))) return;
-                const price = Number(row.close);
-                if (Number.isFinite(price) && price > 0) next[key] = price;
-              });
-            })
-          );
-        }
-
-        if (bySource.coindcx.length > 0) {
-          const want = new Set(bySource.coindcx);
-          tasks.push(
-            fetchCoinDCXLastPrices().then((prices) => {
-              prices.forEach((price, symbol) => {
-                const key = priceKey("coindcx", symbol);
-                if (!want.has(key.slice("coindcx:".length))) return;
-                if (Number.isFinite(price) && price > 0) next[key] = price;
               });
             })
           );
@@ -405,13 +368,13 @@ export default function SignalsJournal() {
   }, [activeKeys]);
 
   const handleClearAll = async () => {
-    if (signals.length === 0) return;
-    const confirm = window.confirm("Are you sure you want to clear all saved signals in your journal?");
+    if (binanceSignals.length === 0) return;
+    const confirm = window.confirm("Are you sure you want to clear all Binance signals from your journal?");
     if (!confirm) return;
     setLoading(true);
     setError(null);
     try {
-      await clearAllSignalsFromCloud(signals.map((s) => s.id));
+      await clearAllSignalsFromCloud(binanceSignals.map((s) => s.id));
       await loadSignals();
     } catch (error) {
       setError(error instanceof Error ? error.message : "Cloud delete failed. Your saved signals were not deleted.");
@@ -423,7 +386,7 @@ export default function SignalsJournal() {
 
   // High-speed parallel evaluation with live progress and immediate state updates
   const handleEvaluateAll = async () => {
-    const activeSignals = signals.filter((s) => s.status === "ACTIVE");
+    const activeSignals = binanceSignals.filter((s) => s.status === "ACTIVE");
     if (activeSignals.length === 0) return;
 
     setEvaluating(true);
@@ -474,7 +437,7 @@ export default function SignalsJournal() {
   const evaluateInFlight = useRef(false);
   useEffect(() => {
     if (evaluating || evaluateInFlight.current) return;
-    const crossed = signals.filter(
+    const crossed = binanceSignals.filter(
       (s) =>
         s.status === "ACTIVE" &&
         !autoCheckedRef.current.has(s.id) &&
@@ -487,7 +450,7 @@ export default function SignalsJournal() {
       evaluateInFlight.current = false;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [signals, livePrices, evaluating]);
+  }, [binanceSignals, livePrices, evaluating]);
 
   // Stable identity so memoised rows are not re-rendered by unrelated state.
   // loadSignals only touches state setters + imports, so no stale closure.
@@ -504,7 +467,7 @@ export default function SignalsJournal() {
   }, []);
 
   const handleExportCSV = () => {
-    if (signals.length === 0) return;
+    if (binanceSignals.length === 0) return;
     const headers = [
       "ID",
       "Date",
@@ -520,7 +483,7 @@ export default function SignalsJournal() {
       "Gross Return (%)",
       "Outcome Notes",
     ];
-    const rows = signals.map((s) => [
+    const rows = binanceSignals.map((s) => [
       s.id,
       s.dateStr,
       s.symbol,
@@ -539,16 +502,15 @@ export default function SignalsJournal() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `pivot_signals_journal_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute("download", `binance_signals_journal_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
   const filtered = useMemo(() => {
-    return signals.filter((s) => {
+    return binanceSignals.filter((s) => {
       if (filterStatus !== "ALL" && s.status !== filterStatus) return false;
-      if (sourceFilter !== "all" && s.source !== sourceFilter) return false;
       if (searchTerm) {
         const q = searchTerm.toLowerCase();
         return (
@@ -559,17 +521,9 @@ export default function SignalsJournal() {
       }
       return true;
     });
-  }, [signals, filterStatus, sourceFilter, searchTerm]);
+  }, [binanceSignals, filterStatus, searchTerm]);
 
-  const stats = useMemo(() => {
-    // Scoped to sourceFilter (binance/delta/all) so the summary strip
-    // matches whichever tab is selected — same pool the table below uses,
-    // minus filterStatus/searchTerm since stats itself is a status
-    // breakdown across all four buckets, not just the currently filtered one.
-    const scoped =
-      sourceFilter === "all" ? signals : signals.filter((s) => s.source === sourceFilter);
-    return summarizePaperTrades(scoped);
-  }, [signals, sourceFilter]);
+  const stats = useMemo(() => summarizePaperTrades(binanceSignals), [binanceSignals]);
 
   return (
     <div className="flex-1 flex flex-col h-full bg-[#080d15] text-slate-100 overflow-hidden select-none">
@@ -582,7 +536,7 @@ export default function SignalsJournal() {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-base font-bold text-white tracking-wide">
-                SIGNAL JOURNAL &amp; PAPER-TRADE TRACKER
+                BINANCE SIGNAL JOURNAL &amp; PAPER-TRADE TRACKER
               </h1>
               <span className="text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full">
                 SIMULATION ONLY
@@ -614,7 +568,7 @@ export default function SignalsJournal() {
 
           <button
             onClick={handleEvaluateAll}
-            disabled={evaluating || signals.length === 0}
+            disabled={evaluating || binanceSignals.length === 0}
             className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-semibold flex items-center gap-1.5 shadow transition cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${evaluating ? "animate-spin" : ""}`} />
@@ -627,17 +581,17 @@ export default function SignalsJournal() {
 
           <button
             onClick={handleClearAll}
-            disabled={loading || signals.length === 0}
+            disabled={loading || binanceSignals.length === 0}
             className="px-2.5 py-1.5 rounded-lg bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/40 disabled:opacity-50 text-rose-300 text-xs font-medium flex items-center gap-1.5 transition cursor-pointer"
-            title="Clear all saved signals"
+            title="Clear all Binance signals"
           >
             <Trash2 className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Clear All</span>
+            <span className="hidden sm:inline">Clear Binance</span>
           </button>
 
           <button
             onClick={handleExportCSV}
-            disabled={signals.length === 0}
+            disabled={binanceSignals.length === 0}
             className="px-3 py-1.5 rounded-lg bg-[#162130] hover:bg-[#1e2f47] border border-[#22354a] disabled:opacity-50 text-slate-200 text-xs font-medium flex items-center gap-1.5 transition cursor-pointer"
           >
             <Download className="w-3.5 h-3.5 text-slate-400" />
@@ -708,7 +662,7 @@ export default function SignalsJournal() {
           <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Search saved signals..."
+            placeholder="Search Binance signals..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full bg-[#151e2c] border border-[#22354a] rounded-md pl-8 pr-3 py-1 text-xs text-white placeholder:text-slate-500 focus:outline-none"
@@ -732,37 +686,6 @@ export default function SignalsJournal() {
               </button>
             ))}
           </div>
-
-          {/* Exchange tab group — sits right after the status tabs. Selected
-              tab gets a border (inside the group only). Binance indigo,
-              Delta cyan, CoinDCX green. */}
-          <div className="flex gap-0.5 p-0.5 rounded-md border border-[#22354a] bg-[#151e2c]">
-            {(["all", "binance", "delta", "coindcx"] as const).map((src) => (
-              <button
-                key={src}
-                onClick={() => setSourceFilter(src)}
-                disabled={src === "coindcx" && !COINDCX_ENABLED}
-                title={src === "coindcx" && !COINDCX_ENABLED ? "CoinDCX is paused" : undefined}
-                className={`px-3 py-1 rounded text-xs font-semibold capitalize transition border ${
-                  src === "coindcx" && !COINDCX_ENABLED
-                    ? "opacity-30 cursor-not-allowed text-slate-500 border-transparent"
-                    : "cursor-pointer"
-                } ${
-                  sourceFilter === src
-                    ? src === "delta"
-                      ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/50"
-                      : src === "binance"
-                      ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/50"
-                      : src === "coindcx"
-                      ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/50"
-                      : "bg-amber-500/20 text-amber-400 border-amber-500/50"
-                    : "text-slate-400 hover:text-slate-200 border-transparent"
-                }`}
-              >
-                {src === "coindcx" ? "CoinDCX" : src}
-              </button>
-            ))}
-          </div>
         </div>
       </div>
 
@@ -771,14 +694,14 @@ export default function SignalsJournal() {
         {loading ? (
           <div className="h-48 flex flex-col items-center justify-center text-slate-400 gap-2">
             <RefreshCw className="w-6 h-6 animate-spin text-blue-500" />
-            <span className="text-xs">Loading signals journal...</span>
+            <span className="text-xs">Loading Binance signals journal...</span>
           </div>
         ) : filtered.length === 0 ? (
           <div className="h-64 flex flex-col items-center justify-center border border-dashed border-[#1e2d3d] rounded-xl text-slate-400 text-center p-6">
             <AlertCircle className="w-8 h-8 text-slate-500 mb-2" />
-            <p className="text-sm font-semibold text-slate-300">No saved signals in journal</p>
+            <p className="text-sm font-semibold text-slate-300">No Binance signals in journal</p>
             <p className="text-xs text-slate-500 mt-1 max-w-sm">
-              All live market signals generated from the <strong>Signals</strong> desk are automatically saved to this journal!
+              Binance market signals generated from the <strong>Signals</strong> desk are automatically saved to this journal!
             </p>
           </div>
         ) : (
