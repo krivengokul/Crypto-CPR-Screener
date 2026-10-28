@@ -60,6 +60,7 @@ import {
 // resolve View keys with this module; it must agree with resolveCreateViewKey.
 import { resolveViewKey as resolveViewKeyForWorkflow } from "../../../../.github/scripts/shared/resolveViewKey.mjs";
 import type { LevelCheckCondition } from "./views/types.ts";
+import { escapeTelegramHtml } from "./telegramHtml.ts";
 import { VIEWS } from "./views/registry.ts";
 
 function trade(overrides: Partial<PaperTradeRecord> = {}): PaperTradeRecord {
@@ -1682,4 +1683,15 @@ test("workflow resolveViewKey: opposite MATCH with -13 taken goes to -13-LC2", (
   ];
   const r = resolveViewKeyForWorkflow(P, { requireFullMatch: true, levelCheckDefs: LC_B, views });
   assert.deepEqual(r, { key: `${P}-13-LC2`, conflict: false });
+});
+
+test("escapeTelegramHtml escapes &, < and > so Telegram HTML mode never rejects a message", () => {
+  assert.equal(escapeTelegramHtml("A&B <R1> 1:2.5"), "A&amp;B &lt;R1&gt; 1:2.5");
+  // Plain values are untouched.
+  assert.equal(escapeTelegramHtml("BTCUSDT"), "BTCUSDT");
+  assert.equal(escapeTelegramHtml(67123.45), "67123.45");
+  // Already-escaped input is escaped again (we only ever pass raw values).
+  assert.equal(escapeTelegramHtml("&amp;"), "&amp;amp;");
+  assert.equal(escapeTelegramHtml(undefined), "");
+  assert.equal(escapeTelegramHtml(null), "");
 });

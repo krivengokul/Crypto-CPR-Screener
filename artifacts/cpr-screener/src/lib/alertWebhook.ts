@@ -11,6 +11,7 @@
  */
 
 import { getView, shortLevelLabel } from "@/lib/views";
+import { escapeTelegramHtml as esc } from "@/lib/telegramHtml";
 
 const STORAGE_KEY = "cpr_alert_webhook_url_v1";
 /** Cross-tab / double-post guard for the same signal within a short window. */
@@ -154,12 +155,12 @@ function formatTelegramText(args: {
     args.direction === "bullish";
   const dir = isLong ? "⬆️" : "⬇️";
   const sideIcon = isLong ? "🟢 BUY" : "🔴 SELL";
-  const lines: string[] = [`${dir} ${args.symbol}  ${sideIcon}`];
-  lines.push(`💰 Price: ${args.price}`);
+  const lines: string[] = [`${dir} ${esc(args.symbol)}  ${sideIcon}`];
+  lines.push(`💰 Price: ${esc(args.price)}`);
 
   const withLevel = (value: number | string, level?: string) => {
     const lvl = (level || "").trim();
-    return lvl ? `${value} (${lvl})` : String(value);
+    return lvl ? `${esc(value)} (${esc(lvl)})` : esc(value);
   };
 
   const entryLvl = (args.entryLevel || "").trim();
@@ -172,7 +173,7 @@ function formatTelegramText(args: {
     lines.push(`🚪 Exit: ${withLevel(args.stop, args.stopLevel)}`);
   }
   if (args.riskReward) {
-    lines.push(`⚖️ R/R: ${args.riskReward}`);
+    lines.push(`⚖️ R/R: ${esc(args.riskReward)}`);
   }
   if (args.timestampISO) {
     try {
@@ -188,7 +189,7 @@ function formatTelegramText(args: {
         hour12: true,
       });
       if (timeStr) {
-        lines.push(`<i>🕐 ${timeStr} IST</i>`);
+        lines.push(`<i>🕐 ${esc(timeStr)} IST</i>`);
       }
     } catch {
       /* ignore */
