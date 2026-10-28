@@ -1359,7 +1359,7 @@ function ScreenerTableRow({
                     )}
                     {status === "active" && (
                       <span
-                        className="inline-flex shrink-0 items-center gap-1 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-1.5 py-1 text-[11px] font-mono text-emerald-400"
+                        className="inline-flex shrink-0 items-center gap-1 rounded-md border border-lime-500/40 bg-lime-500/10 px-1.5 py-1 text-[11px] font-mono text-lime-400"
                         title="Price has reached the entry line"
                       >
                         <Cloud className="w-3 h-3" />
