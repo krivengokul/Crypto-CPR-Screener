@@ -6,7 +6,7 @@
  * Flow:  Browser  →  Cloudflare Worker  →  Telegram Bot API
  *
  * Telegram copy (worker rebuilds from fields so every message has the same icons):
- * - side / action = LONG | SHORT (not BUY / SELL)
+ * - payload side / action stay LONG | SHORT; the Telegram text shows BUY / SELL
  * - icons on every line; never viewcode / view name / exchange
  */
 
@@ -31,7 +31,7 @@ export interface AlertWebhookPayload {
   /** Original exchange id (binance | delta | …). Prefer not to print on Telegram. */
   exchange?: string;
   direction: "Up" | "Down" | string;
-  /** LONG or SHORT — use this (not BUY/SELL). */
+  /** LONG or SHORT (Telegram text displays BUY / SELL). */
   side: "LONG" | "SHORT";
   /** Same as side — some workers map `action`. */
   action: "LONG" | "SHORT";
@@ -139,7 +139,7 @@ function formatTelegramText(args: {
     args.direction === "Up" ||
     args.direction === "bullish";
   const dir = isLong ? "⬆️" : "⬇️";
-  const sideIcon = isLong ? "🟢 LONG" : "🔴 SHORT";
+  const sideIcon = isLong ? "🟢 BUY" : "🔴 SELL";
   const lines: string[] = [`${dir} ${args.symbol}  ${sideIcon}`];
   lines.push(`💰 Price: ${args.price}`);
   const entryLvl = (args.entryLevel || "Entry").trim() || "Entry";
@@ -151,7 +151,7 @@ function formatTelegramText(args: {
     lines.push(`🛑 Stop: ${args.stop}`);
   }
   if (args.riskReward) {
-    lines.push(`⚖️ R:R ${args.riskReward}`);
+    lines.push(`⚖️ R/R: ${args.riskReward}`);
   }
   if (args.timestampISO) {
     try {

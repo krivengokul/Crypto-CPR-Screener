@@ -235,7 +235,7 @@ function App() {
           currentPrice: r.currentPrice,
           target: levels.targetPrice,
           sl: levels.stopPrice,
-          rr: `1 : ${levels.rrRatio}`,
+          rr: `1:${levels.rrRatio}`,
           cprStatus: `${levels.patternLabel} (Target ${levels.targetLevel})`,
           timestamp: 0,
           dateStr: "",

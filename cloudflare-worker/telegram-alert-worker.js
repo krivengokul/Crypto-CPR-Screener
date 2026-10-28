@@ -95,7 +95,7 @@ function formatTelegramMessage(p) {
     p.action === "LONG" ||
     p.direction === "Up" ||
     p.direction === "bullish";
-  const side = isLong ? "🟢 LONG" : "🔴 SHORT";
+  const side = isLong ? "🟢 BUY" : "🔴 SELL";
   const dir = isLong ? "⬆️" : "⬇️";
   const symbol = escHtml(p.symbol ?? "—");
   // Never print exchange / viewcode / view label on Telegram.
@@ -118,7 +118,7 @@ function formatTelegramMessage(p) {
   if (entry) lines.push(`📍 Entry: ${entryLevel} (<code>${entry}</code>)`);
   if (target) lines.push(`🎯 Target: <code>${target}</code>`);
   if (stop) lines.push(`🛑 Stop: <code>${stop}</code>`);
-  if (rr) lines.push(`⚖️ R:R  ${rr}`);
+  if (rr) lines.push(`⚖️ R/R: ${rr}`);
   if (timeStr) lines.push(`🕐 ${timeStr} IST`);
 
   return lines.join("\n");
