@@ -36,8 +36,8 @@ import {
   Search,
   Copy,
   Check,
-  ArrowUpRight,
-  ArrowDownLeft,
+  ArrowUp,
+  ArrowDown,
   ShieldAlert,
   Target,
   Cloud,
@@ -469,21 +469,28 @@ const SignalDeskCard = memo(
     const isUp = item.direction === "Up" || (item.direction as string) === "LONG";
     const isDown = item.direction === "Down" || (item.direction as string) === "SHORT";
 
-    // Direction badge — only for symbols with a real signal
-    const directionBadge = item.isSaved && (
-      <span
-        className={`text-xs font-bold px-2 py-0.5 rounded-md flex items-center gap-1 font-mono shrink-0 ${
-          isUp
-            ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
-            : isDown
-            ? "bg-pink-400/20 text-[#ff6bb5] border border-pink-400/50"
-            : "bg-slate-500/20 text-slate-300 border border-slate-500/40"
-        }`}
-      >
-        {isUp ? <ArrowUpRight className="w-3.5 h-3.5" /> : isDown ? <ArrowDownLeft className="w-3.5 h-3.5" /> : null}
-        {isUp ? "Up" : isDown ? "Down" : item.direction}
-      </span>
-    );
+    // Direction cue — animated vertical arrow only (no Up/Down text), left of
+    // symbol + status stack. Green floats up; bright pink floats down.
+    const directionArrow =
+      item.isSaved && (isUp || isDown) ? (
+        <span
+          className="shrink-0 flex items-center justify-center self-center w-5"
+          title={isUp ? "Up" : "Down"}
+          aria-label={isUp ? "Up" : "Down"}
+          style={{
+            color: isUp ? "#34d399" : "#ff6bb5",
+            animation: isUp
+              ? "sd-dir-up 1.15s ease-in-out infinite"
+              : "sd-dir-down 1.15s ease-in-out infinite",
+          }}
+        >
+          {isUp ? (
+            <ArrowUp className="w-4 h-4" strokeWidth={2.75} />
+          ) : (
+            <ArrowDown className="w-4 h-4" strokeWidth={2.75} />
+          )}
+        </span>
+      ) : null;
 
     // Same compact STATUS badges as Screener (under symbol). Journal PASS/FAIL
     // win over live Active/Ready when recorded today.
@@ -543,8 +550,9 @@ const SignalDeskCard = memo(
             Right: direction/status badges → timestamp → MATCH (right-aligned) */}
         <div>
           <div className="flex items-start justify-between gap-3 mb-3">
-            {/* 2x2 grid keeps the 24h change directly under the price (same left edge)
-                and the source directly under the symbol. */}
+            <div className="flex items-start gap-1.5 min-w-0 flex-1">
+            {directionArrow}
+            {/* 2x2 grid: symbol+status | price+change — direction arrow sits to the left */}
             <div className="grid grid-cols-[auto_auto] items-center justify-start gap-x-2 gap-y-0.5 min-w-0">
               <div className="flex items-center gap-1 min-w-0">
                 <span className="text-base sm:text-lg font-extrabold text-white font-mono tracking-tight leading-none truncate">
@@ -605,9 +613,9 @@ const SignalDeskCard = memo(
                 {fmtPct(item.change24h ?? 0)}
               </span>
             </div>
+            </div>
 
             <div className="flex flex-col items-end text-right gap-1 shrink-0 min-w-0">
-              {item.isSaved && directionBadge}
               {item.isSaved && typeof item.matchCount === "number" && typeof item.matchTotal === "number" && (
                 <span
                   className={`inline-flex items-center gap-1 font-mono text-[11px] leading-none ${
