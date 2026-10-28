@@ -97,7 +97,7 @@ export const PATTERN_BADGE_CLASSES: Record<string, string> = {
   EU3L4: "bg-purple-700/15 text-purple-300 border border-purple-700/30",
   EL3U4: "bg-purple-700/15 text-purple-300 border border-purple-700/30",
   EL2U4: "bg-purple-700/15 text-purple-300 border border-purple-700/30",
-  EU2L4: "bg-purple-700/15 text-purple-300 border border-purple-700/30",
+  EU2L4: "bg-pink-500/25 text-[#ff4db8] border border-pink-400/50",  // bright pink (2c badge)
   EU1L4: "bg-purple-700/15 text-purple-300 border border-purple-700/30",
   EL1U4: "bg-purple-700/15 text-purple-300 border border-purple-700/30",
   EUTL4: "bg-purple-800/15 text-purple-200 border border-purple-800/30",
@@ -515,9 +515,14 @@ const GAP_BADGE_COLOR: Record<"R" | "S" | "Q", string> = {
 export function renderGapBadge(r: CPRResult) {
   const label = computeGapBadge(r);
   const colorKey = label.charAt(0) as "R" | "S" | "Q";
+  // RH-GapBB: bright pink (overrides R-prefix green) — same 2c emphasis as EU2L4
+  const classes =
+    label === "RH-GapBB"
+      ? "bg-pink-500/25 text-[#ff4db8] border border-pink-400/50"
+      : (GAP_BADGE_COLOR[colorKey] ?? GAP_BADGE_COLOR.Q);
   return (
     <span
-      className={`text-[10px] px-1 py-0.5 rounded font-medium ${GAP_BADGE_COLOR[colorKey]}`}
+      className={`text-[10px] px-1 py-0.5 rounded font-medium ${classes}`}
       title="GapBadge — RRSSGapCategory x PDHPDLGapCategory x prev/today HLSwitch (Gap-prefixed per hlGapWinner)"
     >
       {label}
