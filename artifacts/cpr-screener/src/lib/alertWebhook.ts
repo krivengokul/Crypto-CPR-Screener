@@ -153,9 +153,10 @@ function formatTelegramText(args: {
     args.side === "LONG" ||
     args.direction === "Up" ||
     args.direction === "bullish";
-  const dir = isLong ? "⬆️" : "⬇️";
-  const sideIcon = isLong ? "🟢 BUY" : "🔴 SELL";
-  const lines: string[] = [`${dir} ${esc(args.symbol)}  ${sideIcon}`];
+  // No direction icon before symbol. Solid triangle (not round 🟢/🔴) before BUY/SELL.
+  const sideTag = isLong ? "▲ BUY" : "▼ SELL";
+  // Bold symbol (Worker must use parse_mode = HTML).
+  const lines: string[] = [`<b>${esc(args.symbol)}</b>  ${sideTag}`];
   lines.push(`💰 Price: ${esc(args.price)}`);
 
   const withLevel = (value: number | string, level?: string) => {
@@ -163,21 +164,23 @@ function formatTelegramText(args: {
     return lvl ? `${esc(value)} (${esc(lvl)})` : esc(value);
   };
 
+  // Green lollipop for Entry (replaces 📍).
   const entryLvl = (args.entryLevel || "").trim();
-  lines.push(`📍 Entry: ${withLevel(args.entry, entryLvl)}`);
+  lines.push(`🍭 Entry: ${withLevel(args.entry, entryLvl)}`);
 
   if (args.target !== undefined && args.target !== "") {
     lines.push(`🎯 Target: ${withLevel(args.target, args.targetLevel)}`);
   }
+  // Red firecracker for Exit (replaces 🚪).
   if (args.stop !== undefined && args.stop !== "") {
-    lines.push(`🚪 Exit: ${withLevel(args.stop, args.stopLevel)}`);
+    lines.push(`🧨 Exit: ${withLevel(args.stop, args.stopLevel)}`);
   }
   if (args.riskReward) {
     lines.push(`⚖️ R/R: ${esc(args.riskReward)}`);
   }
   if (args.timestampISO) {
     try {
-      // Compact IST clock; HTML <i> = italic (Telegram has no real "small" tag).
+      // Italic only — no clock icon. Telegram has no true small-font tag.
       const timeStr = new Date(args.timestampISO).toLocaleString("en-IN", {
         timeZone: "Asia/Kolkata",
         day: "2-digit",
@@ -189,7 +192,7 @@ function formatTelegramText(args: {
         hour12: true,
       });
       if (timeStr) {
-        lines.push(`<i>🕐 ${esc(timeStr)} IST</i>`);
+        lines.push(`<i>${esc(timeStr)} IST</i>`);
       }
     } catch {
       /* ignore */
