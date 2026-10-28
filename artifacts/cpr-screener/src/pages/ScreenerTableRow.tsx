@@ -1,5 +1,5 @@
 import { Fragment, memo } from "react";
-import { ExternalLink, CheckCircle2, XCircle, Tag, Cloud } from "lucide-react";
+import { ExternalLink, CheckCircle2, XCircle, Tag } from "lucide-react";
 import { hasTouchedEntry } from "@/lib/signalTracker";
 import { sessionReachedTarget } from "@/lib/signalOutcome";
 import type { CPRResult } from "@/lib/cpr";
@@ -775,12 +775,6 @@ export function ScreenerTableHeader({
           </span>
         </th>
         <th
-          className="px-3 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap"
-          title="Per Active View: Pass (target hit), Active (entry touched), or Ready"
-        >
-          STATUS
-        </th>
-        <th
           className="pl-3 pr-2 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground"
           onClick={() => toggleSort("priceVsCpr")}
         >
@@ -1106,20 +1100,100 @@ function ScreenerTableRow({
                   </span>
                 )}
               </div>
-              {/* Exchange — same line the Signals Journal shows under the
-                  symbol (tiny, mono, uppercase, slate), replacing the old
-                  separate Exchange column. Shown for every tab. */}
-              <span className="mt-0.5 text-[10px] font-mono uppercase tracking-wide leading-none text-slate-400 whitespace-nowrap">
-                {r.source}
-                {r.assetClass && (
+              {/* STATUS badge (same compact style as Legend Card 3) under symbol — exchange label removed. */}
+              {(() => {
+                const preferred =
+                  (activeSignal && matchingSignals.find((m) => m.id === activeSignal)) ||
+                  matchingSignals.find((m) => getView(m.id)?.getEntry) ||
+                  matchingSignals[0];
+                if (!preferred) return null;
+                const view = getView(preferred.id);
+                const entryFn = view?.getEntry;
+                const targetFn = view?.getTarget;
+                const slFn = view?.getStoploss;
+                const direction = preferred.direction || view?.direction;
+                const isUp = direction === "Up";
+                const isDown = direction === "Down";
+                let status: "pass" | "fail" | "active" | "ready" | null = null;
+                if (
+                  targetFn &&
+                  sessionReachedTarget(
+                    direction ?? "",
+                    targetFn(r),
+                    r.todayHigh,
+                    r.todayLow,
+                    r.currentPrice,
+                  )
+                ) {
+                  status = "pass";
+                } else if (slFn) {
+                  const sl = slFn(r);
+                  const hitSlUp =
+                    isUp &&
+                    Number.isFinite(sl) &&
+                    ((typeof r.todayLow === "number" && r.todayLow <= sl) ||
+                      (typeof r.currentPrice === "number" && r.currentPrice <= sl));
+                  const hitSlDown =
+                    isDown &&
+                    Number.isFinite(sl) &&
+                    ((typeof r.todayHigh === "number" && r.todayHigh >= sl) ||
+                      (typeof r.currentPrice === "number" && r.currentPrice >= sl));
+                  if (hitSlUp || hitSlDown) status = "fail";
+                }
+                if (!status && entryFn) {
+                  status = hasTouchedEntry(direction ?? "", entryFn(r), r.currentPrice)
+                    ? "active"
+                    : "ready";
+                }
+                if (!status) return null;
+                if (status === "pass") {
+                  return (
+                    <span
+                      className={`mt-0.5 inline-flex w-fit shrink-0 items-center rounded border px-1 py-0 text-[9px] font-mono font-semibold leading-tight ${
+                        isDown
+                          ? "border-[#ff6bb5]/40 bg-[#ff6bb5]/10 text-[#ff6bb5]"
+                          : "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
+                      }`}
+                      title="Target reached"
+                    >
+                      Pass
+                    </span>
+                  );
+                }
+                if (status === "fail") {
+                  return (
+                    <span
+                      className="mt-0.5 inline-flex w-fit shrink-0 items-center rounded border px-1 py-0 text-[9px] font-mono font-semibold leading-tight"
+                      style={{
+                        color: "#f87171",
+                        borderColor: "rgba(248, 113, 113, 0.45)",
+                        backgroundColor: "rgba(248, 113, 113, 0.15)",
+                      }}
+                      title="Stop loss hit"
+                    >
+                      Fail
+                    </span>
+                  );
+                }
+                if (status === "active") {
+                  return (
+                    <span
+                      className="mt-0.5 inline-flex w-fit shrink-0 items-center rounded border border-lime-500/40 bg-lime-500/10 px-1 py-0 text-[9px] font-mono font-semibold leading-tight text-lime-400"
+                      title="Entry touched"
+                    >
+                      Active
+                    </span>
+                  );
+                }
+                return (
                   <span
-                    className={r.assetClass === "COMMOD" ? "text-amber-400" : "text-sky-400"}
-                    title={r.assetClass === "COMMOD" ? "Commodity perpetual" : "TradFi perpetual (stock/ETF)"}
+                    className="mt-0.5 inline-flex w-fit shrink-0 items-center rounded border border-sky-500/30 bg-sky-500/10 px-1 py-0 text-[9px] font-mono font-semibold leading-tight text-sky-300"
+                    title="Entry not yet touched"
                   >
-                    /{r.assetClass}
+                    Ready
                   </span>
-                )}
-              </span>
+                );
+              })()}
               {(() => {
                 const tradfi = formatTradFiSubtitle(r.symbol);
                 if (!tradfi) return null;
@@ -1281,108 +1355,6 @@ function ScreenerTableRow({
             </div>
           )}
         </td>
-        {/* RESULT — after MATCH / Ladder Check, before MOVE & PIVOT SIZE.
-            One line per Active View: Pass / Active / Ready. */}
-        <td className="px-3 py-3">
-          {matchingSignals.length > 0 && (
-            <div className="flex flex-col gap-1.5">
-              {matchingSignals.map((v) => {
-                const view = getView(v.id);
-                const entryFn = view?.getEntry;
-                const targetFn = view?.getTarget;
-                const slFn = view?.getStoploss;
-                const direction = v.direction || view?.direction;
-                const isUp = direction === "Up";
-                const isDown = direction === "Down";
-
-                // Same priority as Screener getRowStatus: Pass → Fail → Active → Ready
-                let status: "pass" | "fail" | "active" | "ready" | null = null;
-                if (
-                  targetFn &&
-                  sessionReachedTarget(
-                    direction ?? "",
-                    targetFn(r),
-                    r.todayHigh,
-                    r.todayLow,
-                    r.currentPrice,
-                  )
-                ) {
-                  status = "pass";
-                } else if (slFn) {
-                  const sl = slFn(r);
-                  const hitSlUp =
-                    isUp &&
-                    Number.isFinite(sl) &&
-                    ((typeof r.todayLow === "number" && r.todayLow <= sl) ||
-                      (typeof r.currentPrice === "number" && r.currentPrice <= sl));
-                  const hitSlDown =
-                    isDown &&
-                    Number.isFinite(sl) &&
-                    ((typeof r.todayHigh === "number" && r.todayHigh >= sl) ||
-                      (typeof r.currentPrice === "number" && r.currentPrice >= sl));
-                  if (hitSlUp || hitSlDown) status = "fail";
-                }
-                if (!status && entryFn) {
-                  status = hasTouchedEntry(direction ?? "", entryFn(r), r.currentPrice)
-                    ? "active"
-                    : "ready";
-                }
-
-                return (
-                  <div key={v.id} className="h-11 flex items-center whitespace-nowrap">
-                    {status === "pass" && (
-                      <span
-                        className={`inline-flex shrink-0 items-center gap-1 rounded-md border px-1.5 py-1 text-[11px] font-mono ${
-                          isDown
-                            ? "border-[#ff6bb5]/40 bg-[#ff6bb5]/10 text-[#ff6bb5]"
-                            : "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
-                        }`}
-                        title="Target reached — live price now, or earlier in today's session"
-                      >
-                        <CheckCircle2 className="w-3 h-3" />
-                        Pass
-                      </span>
-                    )}
-                    {status === "fail" && (
-                      <span
-                        className="inline-flex shrink-0 items-center gap-1 rounded-md border px-1.5 py-1 text-[11px] font-mono"
-                        style={{
-                          color: "#f87171",
-                          borderColor: "rgba(248, 113, 113, 0.45)",
-                          backgroundColor: "rgba(248, 113, 113, 0.15)",
-                        }}
-                        title="Stop loss hit — session high/low or live price crossed the View SL"
-                      >
-                        <XCircle className="w-3 h-3" />
-                        Fail
-                      </span>
-                    )}
-                    {status === "active" && (
-                      <span
-                        className="inline-flex shrink-0 items-center gap-1 rounded-md border border-lime-500/40 bg-lime-500/10 px-1.5 py-1 text-[11px] font-mono text-lime-400"
-                        title="Price has reached the entry line"
-                      >
-                        <Cloud className="w-3 h-3" />
-                        Active
-                      </span>
-                    )}
-                    {status === "ready" && (
-                      <span
-                        className="inline-flex shrink-0 items-center gap-1 rounded-md border border-sky-500/30 bg-sky-500/10 px-1.5 py-1 text-[11px] font-mono text-sky-300"
-                        title="Entry not yet touched"
-                      >
-                        Ready
-                      </span>
-                    )}
-                    {status === null && (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </td>
         {(() => {
           const move = distanceFromCPR(r.currentPrice, r.todayCPR);
           const pdh = pdhPdlStatus(r);
@@ -1490,7 +1462,7 @@ function ScreenerTableRow({
           key={`${rowKey}-sr`}
           r={toSRLadderData(r)}
           rowKey={rowKey}
-          colSpan={20}
+          colSpan={19}
           todayPatternBadge={renderTodayPatternBadges(r)}
           // CHANGED: "PDay S/R" now shows prev day's own "p-xxxx" pattern
           // (prevCPR vs ppCPR) instead of today's PivotPattern combo —
