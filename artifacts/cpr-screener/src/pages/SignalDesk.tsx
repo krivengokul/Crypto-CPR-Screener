@@ -410,8 +410,8 @@ export function buildPills(pool: CPRResultWithSource[]) {
           id: sub.id,
           label: sub.label || sub.id,
           direction,
-          activeColor: sub.activeColor ?? (isBullish ? "#22c55e" : isBearish ? "#fb64b6" : undefined),
-          activeText: sub.activeText ?? (isBullish ? "#4ade80" : isBearish ? "#fb64b6" : undefined),
+          activeColor: sub.activeColor ?? (isBullish ? "#22c55e" : isBearish ? "#ff6bb5" : undefined),
+          activeText: sub.activeText ?? (isBullish ? "#4ade80" : isBearish ? "#ff6bb5" : undefined),
           activeBg: sub.activeBg ?? (isBullish ? "rgba(34, 197, 94, 0.14)" : isBearish ? "rgba(251, 100, 182, 0.14)" : undefined),
         });
       }
@@ -1597,7 +1597,7 @@ R:R: ${item.riskReward}`;
             {displayViewPills.map((pill) => {
               const isSelected = selectedSignalId === pill.id;
               const isBullish = pill.direction === "Up" || pill.activeColor === "#22c55e";
-              const isBearish = pill.direction === "Down" || pill.activeColor === "#fb7185";
+              const isBearish = pill.direction === "Down" || pill.activeColor === "#ff6bb5";
 
               // Colors matching Screener / ViewsSidebar without border when highlighted:
               const activeBg =
@@ -1605,20 +1605,20 @@ R:R: ${item.riskReward}`;
                 (isBullish
                   ? "rgba(34, 197, 94, 0.14)"
                   : isBearish
-                    ? "rgba(251, 113, 133, 0.14)"
+                    ? "rgba(255, 107, 181, 0.18)"
                     : "rgba(255, 255, 255, 0.08)");
               const activeText =
                 pill.activeText ||
-                (isBullish ? "#4ade80" : isBearish ? "#fda4af" : "#e2e8f0");
+                (isBullish ? "#4ade80" : isBearish ? "#ff9dce" : "#e2e8f0");
               const activeCountBg = isBullish
                 ? "rgba(34, 197, 94, 0.25)"
                 : isBearish
-                  ? "rgba(251, 113, 133, 0.25)"
+                  ? "rgba(255, 107, 181, 0.28)"
                   : "rgba(255, 255, 255, 0.15)";
               const activeCountText = isBullish
                 ? "#86efac"
                 : isBearish
-                  ? "#fecdd3"
+                  ? "#ffc2e2"
                   : "#ffffff";
 
               return (

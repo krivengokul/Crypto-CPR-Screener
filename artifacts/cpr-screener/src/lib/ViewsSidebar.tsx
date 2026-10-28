@@ -94,7 +94,7 @@ function buildSidebarViews(): Record<string, SidebarView[]> {
       ...(isBullish
         ? { activeColor: "#22c55e", activeText: "#4ade80", activeBg: "rgba(34, 197, 94, 0.14)" }
         : isBearish
-          ? { activeColor: "#fb7185", activeText: "#fda4af", activeBg: "rgba(251, 113, 133, 0.14)" }
+          ? { activeColor: "#ff6bb5", activeText: "#ff9dce", activeBg: "rgba(255, 107, 181, 0.18)" }
           : {}),
     });
   }
@@ -293,14 +293,14 @@ export default function ViewsSidebar({
   const ACTIVE_BLUE = "#3b82f6";
   const ACTIVE_TEXT = "#60a5fa";
   /**
-   * Selected View highlight — rose (P-CONSOLIDATE-B rose-400 family) for Down
-   * direction views; green for Up. No chip border; soft fill.
+   * Selected View highlight — bright pink for Down views; green for Up.
+   * Soft fill + left accent (no hard red box).
    */
-  const SELECT_RED = "#fb7185";
-  const SELECT_RED_TEXT = "#fda4af";
-  const SELECT_RED_BG = "rgba(251, 113, 133, 0.14)";
-  const SELECT_RED_BG_SOFT = "rgba(251, 113, 133, 0.08)";
-  const SELECT_RED_ICON_BG = "rgba(251, 113, 133, 0.20)";
+  const SELECT_RED = "#ff6bb5";
+  const SELECT_RED_TEXT = "#ff9dce";
+  const SELECT_RED_BG = "rgba(255, 107, 181, 0.18)";
+  const SELECT_RED_BG_SOFT = "rgba(255, 107, 181, 0.10)";
+  const SELECT_RED_ICON_BG = "rgba(255, 107, 181, 0.24)";
   const MUTED_TEXT = "#8ba3bc";
   const DIM_TEXT = "#4b6a8a";
   const SUB_TEXT = "#5a7a96";
