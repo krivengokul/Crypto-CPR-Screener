@@ -485,32 +485,52 @@ const SignalDeskCard = memo(
       </span>
     );
 
-    // Running/Ready status badge (timestamp on its own row below badges)
-    const statusBadge = item.isSaved && (
-      item.journalStatus === "PASS" ? (
-        <div
-          className="flex items-center gap-1 text-[11px] text-emerald-400 font-mono shrink-0"
+    // Same compact STATUS badges as Screener (under symbol). Journal PASS/FAIL
+    // win over live Active/Ready when recorded today.
+    const tradeStatus: "pass" | "fail" | "active" | "ready" | null = !item.isSaved
+      ? null
+      : item.journalStatus === "PASS"
+        ? "pass"
+        : item.journalStatus === "FAIL"
+          ? "fail"
+          : item.isTriggered
+            ? "active"
+            : "ready";
+
+    const statusUnderSymbol =
+      tradeStatus === "pass" ? (
+        <span
+          className={`inline-flex w-fit shrink-0 items-center rounded border px-1.5 py-0.5 text-[10px] font-mono font-semibold leading-tight ${
+            isDown
+              ? "border-[#ff6bb5]/40 bg-[#ff6bb5]/10 text-[#ff6bb5]"
+              : "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
+          }`}
           title="Target hit — outcome recorded in the Journal"
         >
-          <span>PASS</span>
-        </div>
-      ) : item.journalStatus === "FAIL" ? (
-        <div
-          className="flex items-center gap-1 text-[11px] text-rose-400 font-mono shrink-0"
+          Pass
+        </span>
+      ) : tradeStatus === "fail" ? (
+        <span
+          className="inline-flex w-fit shrink-0 items-center rounded border px-1.5 py-0.5 text-[10px] font-mono font-semibold leading-tight text-red-400 border-red-400/40 bg-red-500/10"
           title="Stop hit — outcome recorded in the Journal"
         >
-          <span>FAIL</span>
-        </div>
-      ) : item.isTriggered ? (
-        <div
-          className="flex items-center gap-1 text-[11px] text-lime-400 font-mono shrink-0"
+          Fail
+        </span>
+      ) : tradeStatus === "active" ? (
+        <span
+          className="inline-flex w-fit shrink-0 items-center rounded border border-lime-500/40 bg-lime-500/10 px-1.5 py-0.5 text-[10px] font-mono font-semibold leading-tight text-lime-400"
           title="Price has reached the entry line"
         >
-          <Cloud className="w-3.5 h-3.5 text-lime-400" />
-          <span>Active</span>
-        </div>
-      ) : null
-    );
+          Active
+        </span>
+      ) : tradeStatus === "ready" ? (
+        <span
+          className="inline-flex w-fit shrink-0 items-center rounded border border-sky-500/30 bg-sky-500/10 px-1.5 py-0.5 text-[10px] font-mono font-semibold leading-tight text-sky-300"
+          title="Entry not yet touched"
+        >
+          Ready
+        </span>
+      ) : null;
 
     return (
       <div
@@ -554,18 +574,29 @@ const SignalDeskCard = memo(
               <span className="text-xs sm:text-sm font-bold text-white font-mono leading-none tabular-nums">
                 {fmt(item.currentPrice).replace(/,/g, "")}
               </span>
-              <span className="text-[11px] font-semibold text-slate-400 font-mono uppercase tracking-wider leading-none">
-                {item.source}
+              <div className="flex flex-col items-start gap-0.5 min-w-0">
+                {statusUnderSymbol}
+                {item.isSaved && item.isTriggered && item.triggeredAt && (
+                  <span
+                    className="text-[10px] font-mono text-slate-400 leading-none"
+                    title="Time entry was crossed"
+                  >
+                    @ {item.triggeredAt}
+                  </span>
+                )}
                 {(() => {
                   const tradfi = formatTradFiSubtitle(item.symbol);
                   if (!tradfi) return null;
                   return (
-                    <span className="block mt-0.5 normal-case tracking-normal text-sky-300/90 font-sans font-medium truncate" title={tradfi}>
+                    <span
+                      className="text-[10px] leading-none text-sky-300/90 font-sans font-medium truncate max-w-[9rem]"
+                      title={tradfi}
+                    >
                       {tradfi}
                     </span>
                   );
                 })()}
-              </span>
+              </div>
               <span
                 className={`text-xs font-mono font-bold leading-none ${
                   (item.change24h ?? 0) >= 0 ? "text-emerald-400" : "text-rose-400"
@@ -576,17 +607,7 @@ const SignalDeskCard = memo(
             </div>
 
             <div className="flex flex-col items-end text-right gap-1 shrink-0 min-w-0">
-              {item.isSaved && (
-                <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                  {directionBadge}
-                  {statusBadge}
-                </div>
-              )}
-              {item.isSaved && item.isTriggered && item.triggeredAt && (
-                <span className="text-[10px] font-mono text-slate-400 leading-none">
-                  @ {item.triggeredAt}
-                </span>
-              )}
+              {item.isSaved && directionBadge}
               {item.isSaved && typeof item.matchCount === "number" && typeof item.matchTotal === "number" && (
                 <span
                   className={`inline-flex items-center gap-1 font-mono text-[11px] leading-none ${
