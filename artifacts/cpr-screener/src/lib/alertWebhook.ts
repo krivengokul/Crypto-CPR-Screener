@@ -131,10 +131,32 @@ function shouldSkipDuplicatePost(idempotencyKey: string): boolean {
 }
 
 /**
- * SINGLE source of Telegram body text for entry-cross alerts.
+ * SINGLE source of truth for Telegram entry-cross message body.
+ *
+ * Layout (Image 2 + commit 006f036 carriers):
+ *   <b>SYMBOL</b>  🟩▲ BUY   (or 🟥▼ SELL)
+ *   💰 Price: …
+ *   🍭 Entry: … (R1)
+ *   🎯 Target: … (R4)
+ *   🧨 Exit: … (S1)
+ *   ⚖️ R/R: …
+ *   <i>28 Oct 2026, 3:01:21 pm IST</i>
+ *
  * Cloudflare Worker must send `telegramText` as-is (parse_mode = HTML)
  * and must NOT rebuild the message from individual fields.
  */
+function formatPrice(v: number | string): string {
+  if (v === undefined || v === null || v === "") return "";
+  const n = typeof v === "number" ? v : Number(v);
+  if (!Number.isFinite(n)) return String(v);
+  // Avoid float junk (102.24333333333334) while keeping precision for small alts.
+  if (Math.abs(n) >= 1) {
+    const decimals = Math.abs(n) >= 100 ? 2 : 6;
+    return n.toFixed(decimals).replace(/\.0+$/, "").replace(/(\.[0-9]*?)0+$/, "$1").replace(/\.$/, "");
+  }
+  return n.toFixed(6).replace(/\.0+$/, "").replace(/(\.[0-9]*?)0+$/, "$1").replace(/\.$/, "") || String(n);
+}
+
 function formatTelegramText(args: {
   side: "LONG" | "SHORT";
   direction?: "Up" | "Down" | string;
@@ -153,26 +175,26 @@ function formatTelegramText(args: {
     args.side === "LONG" ||
     args.direction === "Up" ||
     args.direction === "bullish";
-  // No icon before symbol. Solid ▲/▼ with green/red carrier
-  // (Telegram HTML cannot color text; 🟩/🟥 provide the green up / red down cue).
+  // Commit 006f036: solid ▲/▼ with green/red square carriers (Telegram HTML
+  // cannot color text; 🟩/🟥 provide the green-up / red-down cue).
   const sideTag = isLong ? "🟩▲ BUY" : "🟥▼ SELL";
-  // Bold symbol (Worker must use parse_mode = HTML).
+  // Image 2: no arrow before symbol — bold symbol then side tag.
   const lines: string[] = [`<b>${esc(args.symbol)}</b>  ${sideTag}`];
-  lines.push(`💰 Price: ${esc(args.price)}`);
+  lines.push(`💰 Price: ${esc(formatPrice(args.price))}`);
 
   const withLevel = (value: number | string, level?: string) => {
     const lvl = (level || "").trim();
-    return lvl ? `${esc(value)} (${esc(lvl)})` : esc(value);
+    const num = formatPrice(value);
+    return lvl ? `${esc(num)} (${esc(lvl)})` : esc(num);
   };
 
-  // Green lollipop for Entry (replaces 📍).
+  // Image 2 icons: 🍭 Entry, 🎯 Target, 🧨 Exit
   const entryLvl = (args.entryLevel || "").trim();
   lines.push(`🍭 Entry: ${withLevel(args.entry, entryLvl)}`);
 
   if (args.target !== undefined && args.target !== "") {
     lines.push(`🎯 Target: ${withLevel(args.target, args.targetLevel)}`);
   }
-  // Red firecracker for Exit (replaces 🚪).
   if (args.stop !== undefined && args.stop !== "") {
     lines.push(`🧨 Exit: ${withLevel(args.stop, args.stopLevel)}`);
   }
@@ -181,7 +203,6 @@ function formatTelegramText(args: {
   }
   if (args.timestampISO) {
     try {
-      // Italic only — no clock icon. Telegram has no true small-font tag.
       const timeStr = new Date(args.timestampISO).toLocaleString("en-IN", {
         timeZone: "Asia/Kolkata",
         day: "2-digit",

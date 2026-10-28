@@ -1,34 +1,31 @@
 /**
  * CPR Screener — Telegram Alert Worker
  * =====================================
- * Deploy this script to Cloudflare Workers (free tier: 100k req/day).
+ * SINGLE SOURCE OF TRUTH for message text lives in the browser:
+ *   artifacts/cpr-screener/src/lib/alertWebhook.ts → formatTelegramText()
+ *
+ * This Worker only:
+ *   1) receives the JSON payload
+ *   2) reads payload.telegramText
+ *   3) sends it to Telegram with parse_mode = HTML
+ *
+ * It does NOT rebuild or re-icon the message. Redeploy this file on Cloudflare
+ * whenever you change Worker CORS / secrets — not when you change icons.
  *
  * SETUP
  * -----
- * 1. Go to https://dash.cloudflare.com → Workers & Pages → Create Worker
- * 2. Paste this file and click Deploy.
- * 3. Add two secrets via Settings → Variables → Secrets:
- *      BOT_TOKEN  — your Telegram bot token  (from @BotFather)
- *      CHAT_ID    — your Telegram chat/channel id (use @userinfobot to find it)
- * 4. Copy the Worker URL (e.g. https://cpr-alert.YOUR-NAME.workers.dev)
- * 5. Paste that URL into the CPR Screener → Hook field in the sidebar.
- *
- * The screener POSTs JSON to this Worker on every entry-cross alert.
- * The Worker formats a Telegram message and sends it — your bot token
- * never leaves Cloudflare.
+ * 1. Cloudflare Dashboard → Workers & Pages → your worker → Edit code
+ * 2. Paste this file → Deploy
+ * 3. Secrets: BOT_TOKEN, CHAT_ID
+ * 4. Paste Worker URL into Screener → Hook field
  */
 
-// "*" = any site may call this Worker. Set it to your app's origin, e.g.
-// "https://krivengokul.github.io", to lock it down. Either way the Worker echoes
-// the caller's Origin (never a bare "*") when the request is credentialed —
-// navigator.sendBeacon always is, and browsers reject "*" for those requests.
 const ALLOWED_ORIGIN = "*";
 
 export default {
   async fetch(request, env) {
     const reply = (body, status) => corsResponse(body, status, request);
 
-    // Handle CORS preflight
     if (request.method === "OPTIONS") {
       return reply(null, 204);
     }
@@ -37,7 +34,6 @@ export default {
       return reply("Method Not Allowed", 405);
     }
 
-    // Parse incoming JSON payload from the screener
     let payload;
     try {
       payload = await request.json();
@@ -46,17 +42,20 @@ export default {
     }
 
     const botToken = env.BOT_TOKEN;
-    const chatId   = env.CHAT_ID;
+    const chatId = env.CHAT_ID;
 
     if (!botToken || !chatId) {
       console.error("Missing BOT_TOKEN or CHAT_ID secrets");
       return reply("Worker not configured", 500);
     }
 
-    // Always format on the Worker so every chat message has the same icon
-    // layout. Do not trust client telegramText (older tabs may omit emojis
-    // or still append viewcode).
-    const text = formatTelegramMessage(payload);
+    // ── Single source of truth: browser-built telegramText only ──
+    const text =
+      typeof payload.telegramText === "string" ? payload.telegramText.trim() : "";
+    if (!text) {
+      console.error("Missing payload.telegramText — refusing to invent a second format");
+      return reply("Missing telegramText", 400);
+    }
 
     try {
       const tgRes = await fetch(
@@ -87,90 +86,15 @@ export default {
   },
 };
 
-// ─── Message formatter ────────────────────────────────────────────────────────
-
-function formatTelegramMessage(p) {
-  const isLong =
-    p.side === "LONG" ||
-    p.action === "LONG" ||
-    p.direction === "Up" ||
-    p.direction === "bullish";
-  const side = isLong ? "🟢 BUY" : "🔴 SELL";
-  const dir = isLong ? "⬆️" : "⬇️";
-  const symbol = escHtml(p.symbol ?? "—");
-  // Never print exchange / viewcode / view label on Telegram.
-  const entry = fmt(p.entry);
-  const target = fmt(p.target);
-  const stop = fmt(p.stop);
-  const rr = p.riskReward ? escHtml(String(p.riskReward)) : null;
-  const price = fmt(p.price);
-  const entryLevel = escHtml((p.entryLevel || "Entry").toString().trim() || "Entry");
-  const timeStr = p.timestampISO
-    ? new Date(p.timestampISO).toLocaleString("en-IN", {
-        timeZone: "Asia/Kolkata",
-        hour12: true,
-      })
-    : "";
-
-  // Same icon layout as the browser builder — every message, always.
-  const lines = [`${dir} <b>${symbol}</b>  ${side}`];
-  if (price) lines.push(`💰 Price: <code>${price}</code>`);
-  if (entry) {
-    lines.push(
-      entryLevel && entryLevel !== "Entry"
-        ? `📍 Entry: <code>${entry}</code> (${entryLevel})`
-        : `📍 Entry: <code>${entry}</code>`
-    );
-  }
-  if (target) {
-    const tLvl = escHtml((p.targetLevel || "").toString().trim());
-    lines.push(
-      tLvl
-        ? `🎯 Target: <code>${target}</code> (${tLvl})`
-        : `🎯 Target: <code>${target}</code>`
-    );
-  }
-  if (stop) {
-    const sLvl = escHtml((p.stopLevel || "").toString().trim());
-    lines.push(
-      sLvl
-        ? `🚪 Exit: <code>${stop}</code> (${sLvl})`
-        : `🚪 Exit: <code>${stop}</code>`
-    );
-  }
-  if (rr) lines.push(`⚖️ R/R: ${rr}`);
-  if (timeStr) lines.push(`🕐 ${timeStr} IST`);
-
-  return lines.join("\n");
-}
-
-function fmt(v) {
-  if (v === undefined || v === null || v === "") return null;
-  const n = Number(v);
-  if (!Number.isFinite(n)) return String(v);
-  return n < 1 ? n.toFixed(6) : n.toFixed(2);
-}
-
-function escHtml(str) {
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
-
-// ─── CORS helper ─────────────────────────────────────────────────────────────
-
 function corsResponse(body, status, request) {
   const origin = request?.headers.get("Origin") || "";
   const headers = {
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
-    "Vary": "Origin",
+    Vary: "Origin",
     "Content-Type": "text/plain",
   };
   if (origin && (ALLOWED_ORIGIN === "*" || origin === ALLOWED_ORIGIN)) {
-    // Credentialed requests (sendBeacon) need the exact origin, not "*",
-    // plus Allow-Credentials. Harmless for plain fetch.
     headers["Access-Control-Allow-Origin"] = origin;
     headers["Access-Control-Allow-Credentials"] = "true";
   } else {
