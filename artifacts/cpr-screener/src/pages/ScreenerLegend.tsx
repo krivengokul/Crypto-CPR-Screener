@@ -299,7 +299,7 @@ function StatusBadge({ status, isDown }: { status?: "pass" | "fail" | "active" |
   if (status === "active") {
     return (
       <span
-        className="inline-flex shrink-0 items-center rounded border border-lime-500/40 bg-lime-500/10 px-1 py-0 text-[9px] font-mono font-semibold leading-tight text-lime-400"
+        className="inline-flex shrink-0 items-center rounded border border-lime-500/40 bg-lime-500/10 px-1 py-0 text-[9px] font-mono font-semibold leading-tight text-lime-400 animate-pulse"
         title="Entry touched"
       >
         Active

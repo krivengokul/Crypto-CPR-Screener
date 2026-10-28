@@ -1178,7 +1178,7 @@ function ScreenerTableRow({
                 if (status === "active") {
                   return (
                     <span
-                      className="mt-0.5 inline-flex w-fit shrink-0 items-center rounded border border-lime-500/40 bg-lime-500/10 px-1 py-0 text-[9px] font-mono font-semibold leading-tight text-lime-400"
+                      className="mt-0.5 inline-flex w-fit shrink-0 items-center rounded border border-lime-500/40 bg-lime-500/10 px-1 py-0 text-[9px] font-mono font-semibold leading-tight text-lime-400 animate-pulse"
                       title="Entry touched"
                     >
                       Active
