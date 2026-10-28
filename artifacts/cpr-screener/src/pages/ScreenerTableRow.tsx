@@ -822,6 +822,8 @@ export interface ScreenerTableRowProps {
   levelCheckConditions?: LevelCheckCondition[];
   /** True when the Screener's P-CONSOLIDATE-A check passed for this row (held in Screener state, not on the row data). */
   isConsolidateA?: boolean;
+  /** True when PP-CONSOLIDATE-A (day-before-previous session) passed for this row. */
+  isPPConsolidateA?: boolean;
   /** True when this row is assigned to the exclusive P-CONSOLIDATE-B class (held in Screener state, not on the row data). */
   isConsolidateB?: boolean;
   /** True when the Screener's P-MOMENTUM-A check passed for this row and it is not CONSOLIDATE-A (momentum excludes consolidate, as in the filters). */
@@ -883,6 +885,7 @@ function ScreenerTableRow({
   viewName,
   levelCheckConditions,
   isConsolidateA,
+  isPPConsolidateA,
   isConsolidateB,
   isMomentumA,
   isMomentumB,
@@ -900,6 +903,7 @@ function ScreenerTableRow({
   // Exclusive badges (same as Screener candleBucket):
   // INSIDE = CON-A ∩ CON-B only; pure CON-A / CON-B keep their own badges.
   const rawConA = r.PD15MConsolidateAPass === true;
+  const rawPPConA = r.PD15MPPConsolidateAPass === true;
   const rawConB = r.PD15MBelowTCPass === true;
   const rawMomA = r.PD15MAboveBCPass === true;
   const rawMomB = r.PD15MMomentumBPass === true;
@@ -921,6 +925,8 @@ function ScreenerTableRow({
   if (exclusiveFromProps) {
     showInsideR1S1 = isInsideR1S1 === true;
     showConsolidateA = !showInsideR1S1 && isConsolidateA === true;
+    // PP-CON-A is independent — shown whenever it passed (alongside P-CON-A).
+
     showConsolidateB = !showInsideR1S1 && isConsolidateB === true;
     showMomentumA = !showInsideR1S1 && isMomentumA === true;
     showMomentumB = !showInsideR1S1 && isMomentumB === true;
@@ -1245,6 +1251,15 @@ function ScreenerTableRow({
               style={{ color: "#03b07c" }}
             >
               P-CONSOLIDATE-A
+            </div>
+          )}
+          {(isPPConsolidateA === true || rawPPConA) && (
+            <div
+              className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
+              style={{ color: "#2dd4bf" }}
+              title="CONSOLIDATE-A rules on the day-before-previous session (PPDay)"
+            >
+              PP-CONSOLIDATE-A
             </div>
           )}
           {showConsolidateB && (

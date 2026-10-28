@@ -303,6 +303,8 @@ export interface CPRResult {
   PD15MBelowTCPassNote?: { label: string; detail: string };
   /** Previous-session CONSOLIDATE-A result; populated by the backtest's P-category scans. */
   PD15MConsolidateAPass?: boolean;
+  /** PP-CONSOLIDATE-A: CON-A rules applied to the day-before-previous session (ppCPR levels). */
+  PD15MPPConsolidateAPass?: boolean;
   /** Previous-session MOMENTUM-B result (CONSOLIDATE-B's TC check without the PL/S1 floor); populated by the backtest's P-category scans. */
   PD15MMomentumBPass?: boolean;
   /** Previous-session INSIDE max(R1,PH)–min(S1,PL); independent of CON-A/CON-B. */

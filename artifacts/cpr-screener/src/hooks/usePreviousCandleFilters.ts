@@ -11,6 +11,7 @@ import {
   findInsideR1S1Symbols,
   findPD15MBelowTCSymbols,
   findPD15MMomentumBelowSymbols,
+  findPPConsolidateASymbols,
   findPreviousConsolidateASymbols,
   findPreviousUpexSymbols,
   getConsolidateABc,
@@ -22,11 +23,14 @@ import {
   loadPD15MTCBelowResults,
   loadPreviousConsolidateAResults,
   loadPreviousInsideR1S1Results,
+  loadPreviousPPConsolidateAResults,
   loadPreviousUpexResults,
   previous15MMomentumCandidateCacheKey,
   previous15MTCCandidateCacheKey,
   previousConsolidateACandidateCacheKey,
   previousInsideR1S1CandidateCacheKey,
+  previousPPConsolidateACandidateCacheKey,
+  previousPreviousUpexSessionStartUtcMs,
   previousUpexCandidateCacheKey,
   previousUpexSessionStartUtcMs,
   pruneLegacy15MResultCaches,
@@ -34,6 +38,7 @@ import {
   savePD15MMomentumBelowResults,
   savePreviousConsolidateAResults,
   savePreviousInsideR1S1Results,
+  savePreviousPPConsolidateAResults,
   savePreviousUpexResults,
 } from "@/lib/15MCandleCheck";
 import { usePreviousCandleFilterPrep } from "@/hooks/usePreviousCandleFilterPrep";
@@ -90,6 +95,7 @@ export function usePreviousCandleFilters(opts: {
   }, []);
 
   const previousUpexSessionStart = previousUpexSessionStartUtcMs();
+  const previousPreviousUpexSessionStart = previousPreviousUpexSessionStartUtcMs();
   const candlePrepCanRun =
     status !== "scanning" &&
     deltaStatus !== "scanning" &&
@@ -131,6 +137,46 @@ export function usePreviousCandleFilters(opts: {
   scanMissing: (missing, onProgress, sessionEndMs) =>
     findPreviousConsolidateASymbols(missing, onProgress, sessionEndMs),
 });
+
+
+  // PP-CONSOLIDATE-A: same rules as CON-A on the day-before-previous session.
+  // Levels from ppCPR (the CPR that applied on PPDay). Requires ppCPR on the row.
+  const ppConsolidateAPrep = usePreviousCandleFilterPrep({
+    label: "PP-CONSOLIDATE-A",
+    canRun: candlePrepCanRun,
+    sessionStartMs: previousPreviousUpexSessionStart,
+    buildCandidates: () => {
+      const candidates = new Map<string, {
+        symbol: string; source: "binance" | "delta"; bc: number; ceiling: number; r2: number;
+      }>();
+      const add = (row: CPRResult, source: "binance" | "delta") => {
+        const pp = row.ppCPR;
+        if (!pp || !Number.isFinite(pp.bc) || !Number.isFinite(pp.tc)) return;
+        if (!Number.isFinite(pp.r1) || !Number.isFinite(pp.prevHigh) || !Number.isFinite(pp.r2)) return;
+        candidates.set(`${source}:${row.symbol}`, {
+          symbol: row.symbol,
+          source,
+          // No PPP-day CPR available → BC is PPDay's own BC (no overlap rewrite).
+          bc: getConsolidateABc(pp, null),
+          ceiling: getPrevious15MACeiling(pp),
+          r2: pp.r2,
+        });
+      };
+      if (status === "done") {
+        for (const row of allResults) add(row, "binance");
+      }
+      if (deltaStatus === "done") {
+        for (const row of deltaAllResults) add(row, "delta");
+      }
+      return Array.from(candidates.values());
+    },
+    cacheKey: previousPPConsolidateACandidateCacheKey,
+    loadResults: loadPreviousPPConsolidateAResults,
+    saveResults: savePreviousPPConsolidateAResults,
+    scanMissing: (missing, onProgress, sessionEndMs) =>
+      // sessionEndMs = PPDay start + 1d = PDay start → finds PP session window
+      findPPConsolidateASymbols(missing, onProgress, sessionEndMs),
+  });
 
   const momentumAPrep = usePreviousCandleFilterPrep({
   label: "MOMENTUM-A",
@@ -242,6 +288,11 @@ export function usePreviousCandleFilters(opts: {
   const previousConsolidateAProgress = consolidateAPrep.progress;
   const previousConsolidateAReady = consolidateAPrep.ready;
   const previousConsolidateAMessage = consolidateAPrep.message;
+
+  const previousPPConsolidateAIncludedSymbols = ppConsolidateAPrep.includedSymbols;
+  const previousPPConsolidateAProgress = ppConsolidateAPrep.progress;
+  const previousPPConsolidateAReady = ppConsolidateAPrep.ready;
+  const previousPPConsolidateAMessage = ppConsolidateAPrep.message;
   const previousUpexIncludedSymbols = momentumAPrep.includedSymbols;
   const previousUpexProgress = momentumAPrep.progress;
   const previousUpexReady = momentumAPrep.ready;
@@ -305,12 +356,14 @@ export function usePreviousCandleFilters(opts: {
         const next = prev.map((row) => {
           const key = `${source}:${row.symbol}`;
           const a = previousConsolidateAIncludedSymbols.has(key);
+          const ppa = previousPPConsolidateAIncludedSymbols.has(key);
           const ma = previousUpexIncludedSymbols.has(key);
           const b = previous15MTCIncludedSymbols.has(key);
           const mb = previous15MMomentumIncludedSymbols.has(key);
           const ins = previousInsideR1S1IncludedSymbols.has(key);
           if (
             row.PD15MConsolidateAPass === a &&
+            row.PD15MPPConsolidateAPass === ppa &&
             row.PD15MAboveBCPass === ma &&
             row.PD15MBelowTCPass === b &&
             row.PD15MMomentumBPass === mb &&
@@ -322,6 +375,7 @@ export function usePreviousCandleFilters(opts: {
           return {
             ...row,
             PD15MConsolidateAPass: a,
+            PD15MPPConsolidateAPass: ppa,
             PD15MAboveBCPass: ma,
             PD15MBelowTCPass: b,
             PD15MMomentumBPass: mb,
@@ -335,6 +389,7 @@ export function usePreviousCandleFilters(opts: {
     applyFlags(setDeltaAllResults, "delta");
   }, [
     previousConsolidateAIncludedSymbols,
+    previousPPConsolidateAIncludedSymbols,
     previousUpexIncludedSymbols,
     previous15MTCIncludedSymbols,
     previous15MMomentumIncludedSymbols,
@@ -392,6 +447,12 @@ export function usePreviousCandleFilters(opts: {
     (row: CandleBucketRow) => candleBucket(row) === "consolidate-a",
     [candleBucket],
   );
+  /** PP-CONSOLIDATE-A is independent of exclusive P-buckets — check the included set. */
+  const hasPPConsolidateA = useCallback(
+    (row: CandleBucketRow) =>
+      previousPPConsolidateAIncludedSymbols.has(`${row.source}:${row.symbol}`),
+    [previousPPConsolidateAIncludedSymbols],
+  );
   const hasMomentumA = useCallback(
     (row: CandleBucketRow) => candleBucket(row) === "momentum-a",
     [candleBucket],
@@ -406,6 +467,10 @@ export function usePreviousCandleFilters(opts: {
     previousConsolidateAProgress,
     previousConsolidateAReady,
     previousConsolidateAMessage,
+    previousPPConsolidateAIncludedSymbols,
+    previousPPConsolidateAProgress,
+    previousPPConsolidateAReady,
+    previousPPConsolidateAMessage,
     previousUpexIncludedSymbols,
     previousUpexProgress,
     previousUpexReady,
@@ -426,9 +491,11 @@ export function usePreviousCandleFilters(opts: {
     hasConsolidateB,
     hasMomentumB,
     hasConsolidateA,
+    hasPPConsolidateA,
     hasMomentumA,
     hasInsideR1S1,
     resetConsolidateAMessage,
+    resetPPConsolidateAMessage: ppConsolidateAPrep.resetMessage,
     resetMomentumAMessage,
     resetConsolidateBMessage,
     resetMomentumBMessage,

@@ -554,6 +554,9 @@ export default function Screener({
     previousConsolidateAProgress,
     previousConsolidateAReady,
     previousConsolidateAMessage,
+    previousPPConsolidateAProgress,
+    previousPPConsolidateAReady,
+    previousPPConsolidateAMessage,
     previousUpexIncludedSymbols,
     previousUpexProgress,
     previousUpexReady,
@@ -570,6 +573,7 @@ export default function Screener({
     hasConsolidateB,
     hasMomentumB,
     hasConsolidateA,
+    hasPPConsolidateA,
     hasMomentumA,
     hasInsideR1S1,
     previousInsideR1S1Ready,
@@ -718,6 +722,7 @@ export default function Screener({
   const hasInRangeR = hasInsideR1S1;
   const previousCandleClassificationReady =
     previousConsolidateAReady &&
+    previousPPConsolidateAReady &&
     previousUpexReady &&
     previous15MTCReady &&
     previous15MMomentumReady &&
@@ -2512,6 +2517,7 @@ export default function Screener({
                         viewName={activeSignalName}
                         levelCheckConditions={activeSignalLevelCheckDefs}
                         isConsolidateA={hasConsolidateA(r)}
+                        isPPConsolidateA={hasPPConsolidateA(r)}
                         isMomentumA={hasMomentumA(r)}
                         isConsolidateB={hasConsolidateB(r)}
                         isMomentumB={hasMomentumB(r)}
