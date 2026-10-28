@@ -88,6 +88,22 @@ import { isExpandedPatternPair, type CPRLevels, type CPRResult } from "@/lib/cpr
 import { COINDCX_ENABLED } from "@/lib/featureFlags";
 
 // --- Small UTC date helpers (all dates in this panel are UTC ISO strings) ---
+
+/** Duplicate-key alert: show View code and human View name when available. */
+function formatDuplicateViewAlert(viewKey: string): string {
+  const key = (viewKey || "").trim();
+  const label = getView(key)?.label?.trim();
+  const who =
+    label && label !== key
+      ? `"${key}" (${label})`
+      : `"${key}"`;
+  return (
+    who +
+    " already exists with the same 13/13 MATCH — change Entry, Pattern, Gap Badge, Target, or toggle 13/13 MATCH."
+  );
+}
+
+
 function toISO(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
@@ -917,7 +933,7 @@ function CopyViewControl({
       if (!result.ok) {
         setError(
           result.reason === "duplicate-key"
-            ? '"' + viewKey + '" already exists with the same 13/13 MATCH — change Entry, Pattern, Gap Badge, Target, or toggle 13/13 MATCH.'
+            ? formatDuplicateViewAlert(viewKey)
             : result.reason === "source-not-found"
             ? "Couldn't find the source View."
             : "Couldn't copy this View."
@@ -1102,7 +1118,7 @@ function CopyViewControl({
       />
       {viewKey === sourceKey && (
         <span className="text-[10px] text-amber-400">
-          This View code already exists with the same 13/13 MATCH. Change Entry, Pattern/Subpattern, Gap Badge, Target, or 13/13 MATCH before copying.
+          {formatDuplicateViewAlert(viewKey)}
         </span>
       )}
       {error && <span className="text-[10px] text-destructive">{error}</span>}
@@ -1332,7 +1348,7 @@ function EditViewControl({
     if (!res.ok) {
       setError(
         res.reason === "duplicate-key"
-          ? `"${viewKey}" already exists with the same 13/13 MATCH — change Entry, Gap Badge, Target, or toggle 13/13 MATCH.`
+          ? formatDuplicateViewAlert(viewKey)
           : res.reason === "invalid-target"
           ? `"${target}" isn't a valid target for ${direction === "Up" ? "an Up" : "a Down"} View.`
           : res.reason === "invalid-gap-badge"
@@ -1861,7 +1877,7 @@ function CreateViewControl({
     if (!result.ok) {
       setError(
         result.reason === "duplicate-key"
-          ? `"${viewKey}" already exists with the same 13/13 MATCH — change Entry, Gap Badge, Target, or toggle 13/13 MATCH.`
+          ? formatDuplicateViewAlert(viewKey)
           : result.reason === "invalid-target"
           ? `"${target}" isn't a valid target for ${direction === "Up" ? "an Up" : "a Down"} View.`
           : result.reason === "invalid-gap-badge"
