@@ -153,8 +153,9 @@ function formatTelegramText(args: {
     args.side === "LONG" ||
     args.direction === "Up" ||
     args.direction === "bullish";
-  // No direction icon before symbol. Solid triangle (not round 🟢/🔴) before BUY/SELL.
-  const sideTag = isLong ? "▲ BUY" : "▼ SELL";
+  // No icon before symbol. Solid ▲/▼ with green/red carrier
+  // (Telegram HTML cannot color text; 🟩/🟥 provide the green up / red down cue).
+  const sideTag = isLong ? "🟩▲ BUY" : "🟥▼ SELL";
   // Bold symbol (Worker must use parse_mode = HTML).
   const lines: string[] = [`<b>${esc(args.symbol)}</b>  ${sideTag}`];
   lines.push(`💰 Price: ${esc(args.price)}`);
