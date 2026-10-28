@@ -515,7 +515,7 @@ export default function SignalsJournal() {
       "Entry",
       "Target",
       "StopLoss",
-      "R:R",
+      "R/R",
       "Status",
       "Gross Return (%)",
       "Outcome Notes",
@@ -790,7 +790,7 @@ export default function SignalsJournal() {
                   <th className="py-2.5 px-3">Signal</th>
                   <th className="py-2.5 px-3">Live Price</th>
                   <th className="py-2.5 px-3 whitespace-nowrap">SL-Entry-TP</th>
-                  <th className="py-2.5 px-3">R:R</th>
+                  <th className="py-2.5 px-3">R/R</th>
                   <th className="py-2.5 px-3" title="Gross price return from entry to recorded TP/SL exit; excludes fees and slippage.">Paper Return</th>
                   <th className="py-2.5 px-3 text-center">Status</th>
                   <th className="py-2.5 px-3">Outcome / Notes</th>

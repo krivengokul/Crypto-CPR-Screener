@@ -703,7 +703,7 @@ const SignalDeskCard = memo(
                 </strong>
               </div>
               <span className="font-mono text-slate-300">
-                R:R <strong className="text-white">{item.riskReward}</strong>
+                R/R: <strong className="text-white">{item.riskReward}</strong>
               </span>
             </div>
             {item.isSaved && item.patternId && (
@@ -1184,7 +1184,7 @@ export default function SignalDesk({
           pDayText: pDayBadge?.text,
           pDayClassName: pDayBadge?.className,
           pDayStyle: pDayBadge?.style,
-          riskReward: `1 : ${rrRatio}`,
+          riskReward: `1:${rrRatio}`,
           cprStatus: isEligible
             ? `${patternLabel} (Target ${targetLevel})`
             : direction === "Up" ? "Above CPR Pivot" : "Below CPR Pivot",
@@ -1324,7 +1324,7 @@ export default function SignalDesk({
         pDayText: pDay?.text,
         pDayClassName: pDay?.className,
         pDayStyle: pDay?.style,
-        riskReward: `1 : ${rrRatio}`,
+        riskReward: `1:${rrRatio}`,
         cprStatus: isActiveSignalSymbol ? `${patternLabel} (Target ${targetLevel})` : "General CPR Setup",
         pivot,
         r1,
@@ -1458,7 +1458,7 @@ Source: ${item.source.toUpperCase()}
 Entry / Trigger: ${fmt(item.triggerPrice)}
 Target Level: ${fmt(item.targetPrice)}
 Stop Level: ${fmt(item.stopPrice)}
-R:R: ${item.riskReward}`;
+R/R: ${item.riskReward}`;
     navigator.clipboard.writeText(text);
     setCopiedId(item.id);
     setTimeout(() => setCopiedId(null), 2000);
