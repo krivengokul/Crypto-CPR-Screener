@@ -2417,8 +2417,8 @@ export default function Screener({
                   onClick={() => setStatusFilter(statusFilter === "active" ? "all" : "active")}
                   className={`px-3 py-1 rounded text-xs font-semibold transition cursor-pointer ${
                     statusFilter === "active"
-                      ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
-                      : "text-emerald-400/70 hover:text-emerald-300 border border-transparent"
+                      ? "bg-lime-500/20 text-lime-400 border border-lime-500/40"
+                      : "text-lime-400/70 hover:text-lime-300 border border-transparent"
                   }`}
                   title="Rows with a View whose entry line price has already reached"
                 >
@@ -2429,8 +2429,8 @@ export default function Screener({
                   onClick={() => setStatusFilter(statusFilter === "ready" ? "all" : "ready")}
                   className={`px-3 py-1 rounded text-xs font-semibold transition cursor-pointer ${
                     statusFilter === "ready"
-                      ? "bg-amber-500/20 text-amber-400 border border-amber-500/40"
-                      : "text-amber-400/70 hover:text-amber-300 border border-transparent"
+                      ? "bg-sky-500/20 text-sky-300 border border-sky-500/40"
+                      : "text-sky-300/70 hover:text-sky-200 border border-transparent"
                   }`}
                   title="Rows matching a View, still waiting for entry"
                 >
@@ -2441,8 +2441,8 @@ export default function Screener({
                   onClick={() => setStatusFilter(statusFilter === "pass" ? "all" : "pass")}
                   className={`px-3 py-1 rounded text-xs font-semibold transition cursor-pointer ${
                     statusFilter === "pass"
-                      ? "bg-teal-500/20 text-teal-300 border border-teal-500/40"
-                      : "text-teal-400/70 hover:text-teal-300 border border-transparent"
+                      ? "bg-green-500/20 text-green-400 border border-green-500/40"
+                      : "text-green-400/70 hover:text-green-300 border border-transparent"
                   }`}
                   title="Rows where a matching View has already hit target this session"
                 >
@@ -2453,8 +2453,8 @@ export default function Screener({
                   onClick={() => setStatusFilter(statusFilter === "fail" ? "all" : "fail")}
                   className={`px-3 py-1 rounded text-xs font-semibold transition cursor-pointer ${
                     statusFilter === "fail"
-                      ? "bg-rose-500/20 text-rose-400 border border-rose-500/40"
-                      : "text-rose-400/70 hover:text-rose-300 border border-transparent"
+                      ? "bg-pink-400/20 text-[#ff6bb5] border border-pink-400/50"
+                      : "text-[#ff6bb5]/70 hover:text-[#ff9dce] border border-transparent"
                   }`}
                   title="Rows where a matching View has already hit stoploss this session"
                 >
