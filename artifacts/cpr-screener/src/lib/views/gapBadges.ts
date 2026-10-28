@@ -116,10 +116,24 @@ export const TARGET_OPTIONS = [
   "S4",
 ];
 
+/**
+ * Strip trailing disambiguation suffixes (-13, -ANY, -LC\d+) from a View key
+ * to get the underlying composed structural key (e.g. entry-candleCheck-pattern-gap-target).
+ */
+export function stripDisambiguationSuffixes(key: string): string {
+  let prev = (key || "").trim();
+  while (true) {
+    const next = prev.replace(/-(?:13|ANY|LC\d+)$/, "");
+    if (next === prev) break;
+    prev = next;
+  }
+  return prev;
+}
+
 export function parseComposedViewKey(
   key: string
 ): { patternKey: string; entry?: string; target?: string; gapBadge?: string; candleCheck?: string } {
-  let rest = key;
+  let rest = stripDisambiguationSuffixes(key);
 
   let entry: string | undefined;
   for (const opt of ENTRY_OPTIONS) {

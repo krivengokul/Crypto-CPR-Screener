@@ -47,7 +47,16 @@ import {
   ALL_CANDLE_CHECKS,
   CANDLE_CHECK_OPTIONS,
 } from "./views/candleChecks.ts";
-import { parseComposedViewKey } from "./views/gapBadges.ts";
+import {
+  parseComposedViewKey,
+  stripDisambiguationSuffixes,
+} from "./views/gapBadges.ts";
+import {
+  resolveCreateViewKey,
+  areLevelCheckDefsEqual,
+} from "./views/createViewKey.ts";
+import type { LevelCheckCondition } from "./views/types.ts";
+import { VIEWS } from "./views/registry.ts";
 
 function trade(overrides: Partial<PaperTradeRecord> = {}): PaperTradeRecord {
   return {
@@ -1369,4 +1378,130 @@ test("CONSOLIDATE-B passes when candles before reference candle stay within refe
 
   // If no candle ever has body in TC, candles 1-6 fail
   assert.equal(passesPD15MBelowTCFilter([c1, c2, c3, c4, c5, c6], tc, start, now, floor), false);
+});
+
+test("stripDisambiguationSuffixes removes trailing -13, -ANY, and -LC suffixes", () => {
+  assert.equal(stripDisambiguationSuffixes("R1-MA-A-A-AA-AA-U3L4-RH-GapBB-R4"), "R1-MA-A-A-AA-AA-U3L4-RH-GapBB-R4");
+  assert.equal(stripDisambiguationSuffixes("R1-MA-A-A-AA-AA-U3L4-RH-GapBB-R4-13"), "R1-MA-A-A-AA-AA-U3L4-RH-GapBB-R4");
+  assert.equal(stripDisambiguationSuffixes("R1-MA-A-A-AA-AA-U3L4-RH-GapBB-R4-ANY"), "R1-MA-A-A-AA-AA-U3L4-RH-GapBB-R4");
+  assert.equal(stripDisambiguationSuffixes("R1-MA-A-A-AA-AA-U3L4-RH-GapBB-R4-LC2"), "R1-MA-A-A-AA-AA-U3L4-RH-GapBB-R4");
+  assert.equal(stripDisambiguationSuffixes("R1-MA-A-A-AA-AA-U3L4-RH-GapBB-R4-13-LC2"), "R1-MA-A-A-AA-AA-U3L4-RH-GapBB-R4");
+  assert.equal(stripDisambiguationSuffixes("R1-MA-A-A-AA-AA-U3L4-RH-GapBB-R4-ANY-LC3"), "R1-MA-A-A-AA-AA-U3L4-RH-GapBB-R4");
+});
+
+test("parseComposedViewKey parses disambiguated keys with suffixes", () => {
+  const p1 = parseComposedViewKey("R1-MA-A-A-AA-AA-U3L4-RH-GapBB-R4-LC2");
+  assert.equal(p1.entry, "R1");
+  assert.equal(p1.candleCheck, "MA");
+  assert.equal(p1.gapBadge, "RH-GapBB");
+  assert.equal(p1.target, "R4");
+  assert.equal(p1.patternKey, "A-A-AA-AA-U3L4");
+
+  const p2 = parseComposedViewKey("TC-CB-A-A-AA-AA-S1-13-LC3");
+  assert.equal(p2.entry, "TC");
+  assert.equal(p2.candleCheck, "CB");
+  assert.equal(p2.target, "S1");
+  assert.equal(p2.patternKey, "A-A-AA-AA");
+});
+
+test("areLevelCheckDefsEqual compares Level Check condition sets correctly", () => {
+  const cond1: LevelCheckCondition = { key: "r1", subject: "today", bandKeys: ["r1", "r2"] };
+  const cond2: LevelCheckCondition = { key: "s1", subject: "previous", bandKeys: ["s1", "s2"] };
+  const cond1RevBands: LevelCheckCondition = { key: "r1", subject: "today", bandKeys: ["r2", "r1"] };
+
+  // Empty or undefined are equal
+  assert.equal(areLevelCheckDefsEqual(undefined, undefined), true);
+  assert.equal(areLevelCheckDefsEqual([], []), true);
+  assert.equal(areLevelCheckDefsEqual(undefined, []), true);
+
+  // Different counts
+  assert.equal(areLevelCheckDefsEqual([cond1], []), false);
+
+  // Same conditions in same order
+  assert.equal(areLevelCheckDefsEqual([cond1, cond2], [cond1, cond2]), true);
+
+  // Same conditions in different order
+  assert.equal(areLevelCheckDefsEqual([cond1, cond2], [cond2, cond1]), true);
+
+  // Band keys order-independent [r1, r2] vs [r2, r1]
+  assert.equal(areLevelCheckDefsEqual([cond1], [cond1RevBands]), true);
+
+  // Different band keys
+  const condDiffBand: LevelCheckCondition = { key: "r1", subject: "today", bandKeys: ["r2", "r3"] };
+  assert.equal(areLevelCheckDefsEqual([cond1], [condDiffBand]), false);
+});
+
+test("resolveCreateViewKey allows same code with different levelCheckDefs via -LC suffix", () => {
+  const testKey = "TEST-SAMECODE-VIEW-R4";
+  const condA: LevelCheckCondition[] = [{ key: "r1", subject: "today", bandKeys: ["r1", "r2"] }];
+  const condB: LevelCheckCondition[] = [{ key: "r1", subject: "today", bandKeys: ["r2", "r3"] }];
+  const condC: LevelCheckCondition[] = [{ key: "r1", subject: "today", bandKeys: ["r3", "r4"] }];
+
+  // Clean up any test entries from previous runs if any
+  const removeTestViews = () => {
+    let i = VIEWS.findIndex((v) => v.key.startsWith(testKey));
+    while (i !== -1) {
+      VIEWS.splice(i, 1);
+      i = VIEWS.findIndex((v) => v.key.startsWith(testKey));
+    }
+  };
+
+  removeTestViews();
+
+  try {
+    // 1. First view with condA, requireFullMatch: true -> gets base key
+    const res1 = resolveCreateViewKey(testKey, true, undefined, condA);
+    assert.equal(res1.conflict, false);
+    assert.equal(res1.key, testKey);
+
+    // Register View 1
+    VIEWS.push({
+      key: res1.key,
+      label: "Test 1",
+      kind: "view",
+      requireFullMatch: true,
+      levelCheckDefs: condA,
+    } as any);
+
+    // 2. Duplicate attempt with identical condA and same requireFullMatch -> conflict!
+    const resDup = resolveCreateViewKey(testKey, true, undefined, condA);
+    assert.equal(resDup.conflict, true);
+    assert.equal(resDup.key, testKey);
+
+    // 3. Different Level Check conditions (condB) with same code + same 13/13 MATCH
+    // -> MUST BE ALLOWED and disambiguated with -LC2!
+    const res2 = resolveCreateViewKey(testKey, true, undefined, condB);
+    assert.equal(res2.conflict, false);
+    assert.equal(res2.key, `${testKey}-LC2`);
+
+    // Register View 2
+    VIEWS.push({
+      key: res2.key,
+      label: "Test 2",
+      kind: "view",
+      requireFullMatch: true,
+      levelCheckDefs: condB,
+    } as any);
+
+    // 4. Duplicate of View 2 (condB) -> conflict on -LC2!
+    const resDup2 = resolveCreateViewKey(testKey, true, undefined, condB);
+    assert.equal(resDup2.conflict, true);
+    assert.equal(resDup2.key, `${testKey}-LC2`);
+
+    // 5. Third view with condC -> disambiguates to -LC3!
+    const res3 = resolveCreateViewKey(testKey, true, undefined, condC);
+    assert.equal(res3.conflict, false);
+    assert.equal(res3.key, `${testKey}-LC3`);
+
+    // 6. View with opposite MATCH (requireFullMatch: false) with condA -> gets -ANY
+    const resAny = resolveCreateViewKey(testKey, false, undefined, condA);
+    assert.equal(resAny.conflict, false);
+    assert.equal(resAny.key, `${testKey}-ANY`);
+
+    // 7. Editing View 2 (ignoreKey = TEST-SAMECODE-VIEW-R4-LC2) -> no conflict with itself
+    const resEdit = resolveCreateViewKey(`${testKey}-LC2`, true, `${testKey}-LC2`, condB);
+    assert.equal(resEdit.conflict, false);
+  } finally {
+    removeTestViews();
+  }
 });

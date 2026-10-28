@@ -99,7 +99,7 @@ function formatDuplicateViewAlert(viewKey: string): string {
       : `"${key}"`;
   return (
     who +
-    " already exists with the same 13/13 MATCH — change Entry, Pattern, Gap Badge, Target, or toggle 13/13 MATCH."
+    " already exists with the same 13/13 MATCH and Level Check conditions — change Entry, Pattern, Gap Badge, Target, Level Check conditions, or toggle 13/13 MATCH."
   );
 }
 
@@ -942,8 +942,8 @@ function CopyViewControl({
       }
       invalidateAttachPointOptionsCache();
 
-      // Key may have been disambiguated (-13 / -ANY) when the same code exists
-      // with the opposite 13/13 MATCH — use the cloned View's real key below.
+      // Key may have been disambiguated (-13 / -ANY / -LC\d+) when the same code exists
+      // with opposite 13/13 MATCH or different Level Check conditions.
       const finalKey = result.cloned?.key ?? viewKey;
       const adjusted = editBacktestView(
         finalKey,
@@ -1916,10 +1916,11 @@ function CreateViewControl({
     jsonBytes.forEach((b) => (binary += String.fromCharCode(b)));
     const b64 = btoa(binary);
 
+    const finalKey = result.created?.key ?? viewKey;
     setCommand(
-      `gh workflow run create-view.yml --repo krivengokul/Crypto-CPR-Screener -f patternKey=${q(effectivePattern.key)} -f newKey=${q(result.created?.key ?? viewKey)} -f newLabel=${q(trimmedLabel)} -f direction=${q(direction)} -f entry=${q(entry)} -f stoploss=${q(stoploss)} -f target=${q(target)} -f attachKey=${q(attachKey)}${trimmedCandleCheck ? ` -f candleCheck=${q(trimmedCandleCheck)}` : ""}${trimmedGapBadge ? ` -f gapBadge=${q(trimmedGapBadge)}` : ""} -f requireFullMatch=${requireFullMatch ? "true" : "false"} -f levelCheckDefs=${b64}`
+      `gh workflow run create-view.yml --repo krivengokul/Crypto-CPR-Screener -f patternKey=${q(effectivePattern.key)} -f newKey=${q(finalKey)} -f newLabel=${q(trimmedLabel)} -f direction=${q(direction)} -f entry=${q(entry)} -f stoploss=${q(stoploss)} -f target=${q(target)} -f attachKey=${q(attachKey)}${trimmedCandleCheck ? ` -f candleCheck=${q(trimmedCandleCheck)}` : ""}${trimmedGapBadge ? ` -f gapBadge=${q(trimmedGapBadge)}` : ""} -f requireFullMatch=${requireFullMatch ? "true" : "false"} -f levelCheckDefs=${b64}`
     );
-    setCreatedKey(viewKey);
+    setCreatedKey(finalKey);
   }
 
   async function copyCommand() {

@@ -306,20 +306,56 @@ function othersWithKey(key) {
   });
 }
 
-const colliding = othersWithKey(newKey);
-const sameMatchCollision = colliding.some((el) => readRequireFullMatch(el) === wantFullMatch);
-if (sameMatchCollision) {
-  throw new Error(
-    `"${newKey}" already exists with the same 13/13 MATCH — change Entry, Gap Badge, Target, or 13/13 MATCH.`,
-  );
+function areLevelCheckDefsEqual(a, b) {
+  const listA = a || [];
+  const listB = b || [];
+  if (listA.length === 0 && listB.length === 0) return true;
+  if (listA.length !== listB.length) return false;
+  const sig = (c) => `${c.key}:${c.subject}:${[String(c.bandKeys?.[0] || ""), String(c.bandKeys?.[1] || "")].sort().join("-")}`;
+  const setA = listA.map(sig).sort();
+  const setB = listB.map(sig).sort();
+  return setA.every((s, i) => s === setB[i]);
 }
-// Same code, opposite MATCH → disambiguate (-13 / -ANY). Keys must stay unique.
-if (colliding.length > 0) {
-  const alt = wantFullMatch ? `${newKey}-13` : `${newKey}-ANY`;
-  if (othersWithKey(alt).length > 0) {
-    throw new Error(`"${alt}" already exists — pick a different key.`);
+
+function parseLevelCheckDefsFromObj(obj) {
+  const text = getInitializerText(obj, "levelCheckDefs");
+  if (!text || text === "undefined" || text === "null") return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
   }
-  newKey = alt;
+}
+
+let colliding = othersWithKey(newKey);
+if (colliding.length > 0) {
+  const exactDuplicate = colliding.find((el) => {
+    if (readRequireFullMatch(el) !== wantFullMatch) return false;
+    const existingDefs = parseLevelCheckDefsFromObj(el);
+    return areLevelCheckDefsEqual(existingDefs, levelCheckDefs);
+  });
+  if (exactDuplicate) {
+    throw new Error(
+      `"${newKey}" already exists with the same 13/13 MATCH and Level Check conditions — change Entry, Gap Badge, Target, or Level Check conditions.`,
+    );
+  }
+
+  // Same code with opposite MATCH → disambiguate (-13 / -ANY).
+  if (colliding.some((el) => readRequireFullMatch(el) !== wantFullMatch)) {
+    const alt = wantFullMatch ? `${newKey}-13` : `${newKey}-ANY`;
+    if (othersWithKey(alt).length === 0) {
+      newKey = alt;
+    }
+  }
+
+  // If newKey is still taken by another view (different levelCheckDefs), disambiguate with -LC2, -LC3...
+  if (othersWithKey(newKey).length > 0) {
+    let idx = 2;
+    while (othersWithKey(`${newKey}-LC${idx}`).length > 0) {
+      idx++;
+    }
+    newKey = `${newKey}-LC${idx}`;
+  }
 }
 
 const effectiveAttachKey =

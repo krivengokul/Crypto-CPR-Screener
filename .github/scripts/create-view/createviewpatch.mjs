@@ -259,23 +259,57 @@ function readRequireFullMatch(obj) {
   }
 }
 
-const wantFullMatch = String(process.env.REQUIRE_FULL_MATCH || "").toLowerCase() === "true";
-const keyTakenSameMatch = allViewObjs.some((el) => {
-  if (getStringPropertyValue(el, "key") !== newKey) return false;
-  return readRequireFullMatch(el) === wantFullMatch;
-});
-if (keyTakenSameMatch) {
-  throw new Error(
-    `"${newKey}" already exists with the same 13/13 MATCH — change Entry, Gap Badge, Target, or 13/13 MATCH.`,
-  );
+function areLevelCheckDefsEqual(a, b) {
+  const listA = a || [];
+  const listB = b || [];
+  if (listA.length === 0 && listB.length === 0) return true;
+  if (listA.length !== listB.length) return false;
+  const sig = (c) => `${c.key}:${c.subject}:${[String(c.bandKeys?.[0] || ""), String(c.bandKeys?.[1] || "")].sort().join("-")}`;
+  const setA = listA.map(sig).sort();
+  const setB = listB.map(sig).sort();
+  return setA.every((s, i) => s === setB[i]);
 }
-// Same code, opposite MATCH → disambiguate key (must stay unique in registry)
-if (allViewObjs.some((el) => getStringPropertyValue(el, "key") === newKey)) {
-  const alt = wantFullMatch ? `${newKey}-13` : `${newKey}-ANY`;
-  if (allViewObjs.some((el) => getStringPropertyValue(el, "key") === alt)) {
-    throw new Error(`"${alt}" already exists — pick a different key.`);
+
+function parseLevelCheckDefsFromObj(obj) {
+  const text = getInitializerText(obj, "levelCheckDefs");
+  if (!text || text === "undefined" || text === "null") return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
   }
-  newKey = alt;
+}
+
+const wantFullMatch = String(process.env.REQUIRE_FULL_MATCH || "").toLowerCase() === "true";
+let colliding = allViewObjs.filter((el) => getStringPropertyValue(el, "key") === newKey);
+if (colliding.length > 0) {
+  const exactDuplicate = colliding.find((el) => {
+    if (readRequireFullMatch(el) !== wantFullMatch) return false;
+    const existingDefs = parseLevelCheckDefsFromObj(el);
+    return areLevelCheckDefsEqual(existingDefs, levelCheckDefs);
+  });
+  if (exactDuplicate) {
+    throw new Error(
+      `"${newKey}" already exists with the same 13/13 MATCH and Level Check conditions — change Entry, Gap Badge, Target, or Level Check conditions.`,
+    );
+  }
+
+  // Same code with opposite MATCH → disambiguate (-13 / -ANY).
+  if (colliding.some((el) => readRequireFullMatch(el) !== wantFullMatch)) {
+    const alt = wantFullMatch ? `${newKey}-13` : `${newKey}-ANY`;
+    if (!allViewObjs.some((el) => getStringPropertyValue(el, "key") === alt)) {
+      newKey = alt;
+    }
+  }
+
+  // If newKey is still taken by another view (different levelCheckDefs), disambiguate with -LC2, -LC3...
+  if (allViewObjs.some((el) => getStringPropertyValue(el, "key") === newKey)) {
+    let idx = 2;
+    while (allViewObjs.some((el) => getStringPropertyValue(el, "key") === `${newKey}-LC${idx}`)) {
+      idx++;
+    }
+    newKey = `${newKey}-LC${idx}`;
+  }
 }
 
 const targetDef = direction === "Up" ? BULLISH_TARGETS[target] : BEARISH_TARGETS[target];
