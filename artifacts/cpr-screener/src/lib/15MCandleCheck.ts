@@ -124,6 +124,7 @@ export function pruneLegacy15MResultCaches(): number {
     PREVIOUS_15M_TC_B_CACHE_KEY,
     PREVIOUS_15M_MOMENTUM_B_CACHE_KEY,
     PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY,
+    PREVIOUS_15M_PP_CONSOLIDATE_A_CACHE_KEY,
     PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY,
   ];
   const prefixes = currentKeys.map((key) => key.replace(/\d+$/, ""));
