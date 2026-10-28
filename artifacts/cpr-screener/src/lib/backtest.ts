@@ -18,6 +18,7 @@ import {
   isRequireFullMatchOn,
   areLevelCheckDefsEqual,
   resolveCreateViewKey,
+  resolveEditViewKey,
 } from "./views";
 import { gradeTargetHit } from "./backtestOutcome";
 import {
@@ -382,6 +383,7 @@ export {
   isRequireFullMatchOn,
   areLevelCheckDefsEqual,
   resolveCreateViewKey,
+  resolveEditViewKey,
 };
 
 export function copyBacktestView(
@@ -577,13 +579,11 @@ export function editBacktestView(
 ): { ok: boolean; reason?: string; updated?: ViewDef } {
   const idx = VIEWS.findIndex((v) => v.key === oldKey);
   if (idx === -1) return { ok: false, reason: "pattern-not-found" };
-  if (newKey !== oldKey) {
-    const resolved = resolveCreateViewKey(newKey, requireFullMatch, oldKey, levelCheckDefs);
-    if (resolved.conflict) {
-      return { ok: false, reason: "duplicate-key" };
-    }
-    newKey = resolved.key;
+  const resolved = resolveEditViewKey(oldKey, newKey, requireFullMatch, levelCheckDefs);
+  if (resolved.conflict) {
+    return { ok: false, reason: "duplicate-key" };
   }
+  newKey = resolved.key;
 
   const isUp = direction === "Up" || (direction as string) === "bullish";
   const targetDefs = isUp ? BULLISH_TARGETS : BEARISH_TARGETS;

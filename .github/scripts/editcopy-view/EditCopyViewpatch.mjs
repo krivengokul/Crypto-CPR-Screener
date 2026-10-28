@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync, existsSync, statSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { Project, SyntaxKind } from "ts-morph";
+import { resolveViewKey } from "../shared/resolveViewKey.mjs";
 
 function escapeForDoubleQuotedString(s) {
   return s.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
@@ -297,26 +298,6 @@ function readRequireFullMatch(obj) {
 
 const wantFullMatch = String(process.env.REQUIRE_FULL_MATCH || "").toLowerCase() === "true";
 
-/** Other ViewDefs with this key (on Edit, ignore the source object being rewritten). */
-function othersWithKey(key) {
-  return allViewObjs.filter((el) => {
-    if (getStringPropertyValue(el, "key") !== key) return false;
-    if (isEdit && el === sourceObj) return false;
-    return true;
-  });
-}
-
-function areLevelCheckDefsEqual(a, b) {
-  const listA = a || [];
-  const listB = b || [];
-  if (listA.length === 0 && listB.length === 0) return true;
-  if (listA.length !== listB.length) return false;
-  const sig = (c) => `${c.key}:${c.subject}:${[String(c.bandKeys?.[0] || ""), String(c.bandKeys?.[1] || "")].sort().join("-")}`;
-  const setA = listA.map(sig).sort();
-  const setB = listB.map(sig).sort();
-  return setA.every((s, i) => s === setB[i]);
-}
-
 function parseLevelCheckDefsFromObj(obj) {
   const text = getInitializerText(obj, "levelCheckDefs");
   if (!text || text === "undefined" || text === "null") return null;
@@ -327,35 +308,31 @@ function parseLevelCheckDefsFromObj(obj) {
   }
 }
 
-let colliding = othersWithKey(newKey);
-if (colliding.length > 0) {
-  const exactDuplicate = colliding.find((el) => {
-    if (readRequireFullMatch(el) !== wantFullMatch) return false;
-    const existingDefs = parseLevelCheckDefsFromObj(el);
-    return areLevelCheckDefsEqual(existingDefs, levelCheckDefs);
-  });
-  if (exactDuplicate) {
-    throw new Error(
-      `"${newKey}" already exists with the same 13/13 MATCH and Level Check conditions — change Entry, Gap Badge, Target, or Level Check conditions.`,
-    );
-  }
+// Same resolver as the app's resolveCreateViewKey (see
+// ../shared/resolveViewKey.mjs). On Edit the View being rewritten is left out
+// so it can't collide with itself; on Copy the source stays in the list.
+const existingViews = allViewObjs
+  .filter((el) => !(isEdit && el === sourceObj))
+  .map((el) => ({
+    key: getStringPropertyValue(el, "key"),
+    requireFullMatch: readRequireFullMatch(el),
+    levelCheckDefs: parseLevelCheckDefsFromObj(el),
+  }));
 
-  // Same code with opposite MATCH → disambiguate (-13 / -ANY).
-  if (colliding.some((el) => readRequireFullMatch(el) !== wantFullMatch)) {
-    const alt = wantFullMatch ? `${newKey}-13` : `${newKey}-ANY`;
-    if (othersWithKey(alt).length === 0) {
-      newKey = alt;
-    }
-  }
-
-  // If newKey is still taken by another view (different levelCheckDefs), disambiguate with -LC2, -LC3...
-  if (othersWithKey(newKey).length > 0) {
-    let idx = 2;
-    while (othersWithKey(`${newKey}-LC${idx}`).length > 0) {
-      idx++;
-    }
-    newKey = `${newKey}-LC${idx}`;
-  }
+const resolvedKey = resolveViewKey(newKey, {
+  requireFullMatch: wantFullMatch,
+  levelCheckDefs,
+  views: existingViews,
+});
+if (resolvedKey.conflict) {
+  throw new Error(
+    `"${resolvedKey.key}" already exists with the same 13/13 MATCH and Level Check conditions — change Entry, Gap Badge, Target, or Level Check conditions.`,
+  );
+}
+// Edit that keeps its key only needs the duplicate check above; don't renumber
+// it (e.g. X-LC3 -> X-LC2). Anything else adopts the resolved key.
+if (!(isEdit && newKey === sourceKey)) {
+  newKey = resolvedKey.key;
 }
 
 const effectiveAttachKey =

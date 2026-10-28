@@ -53,8 +53,12 @@ import {
 } from "./views/gapBadges.ts";
 import {
   resolveCreateViewKey,
+  resolveEditViewKey,
   areLevelCheckDefsEqual,
 } from "./views/createViewKey.ts";
+// The GitHub workflow scripts (createviewpatch.mjs / EditCopyViewpatch.mjs)
+// resolve View keys with this module; it must agree with resolveCreateViewKey.
+import { resolveViewKey as resolveViewKeyForWorkflow } from "../../../../.github/scripts/shared/resolveViewKey.mjs";
 import type { LevelCheckCondition } from "./views/types.ts";
 import { VIEWS } from "./views/registry.ts";
 
@@ -1504,4 +1508,178 @@ test("resolveCreateViewKey allows same code with different levelCheckDefs via -L
   } finally {
     removeTestViews();
   }
+});
+
+// ---------------------------------------------------------------------------
+// Edit View: duplicate check must run even when the key is unchanged
+// ---------------------------------------------------------------------------
+
+function withTestViews<T>(prefix: string, defs: Array<{ key: string; fm: boolean; lc?: LevelCheckCondition[] }>, fn: () => T): T {
+  const remove = () => {
+    let i = VIEWS.findIndex((v) => v.key.startsWith(prefix));
+    while (i !== -1) {
+      VIEWS.splice(i, 1);
+      i = VIEWS.findIndex((v) => v.key.startsWith(prefix));
+    }
+  };
+  remove();
+  try {
+    for (const d of defs) {
+      VIEWS.push({ key: d.key, label: d.key, kind: "view", requireFullMatch: d.fm, levelCheckDefs: d.lc } as any);
+    }
+    return fn();
+  } finally {
+    remove();
+  }
+}
+
+const LC_A: LevelCheckCondition[] = [{ key: "r1", subject: "today", bandKeys: ["r1", "r2"] }];
+const LC_B: LevelCheckCondition[] = [{ key: "r1", subject: "today", bandKeys: ["r2", "r3"] }];
+const LC_C: LevelCheckCondition[] = [{ key: "r1", subject: "today", bandKeys: ["r3", "r4"] }];
+
+test("resolveEditViewKey: unchanged key that now duplicates a sibling is a conflict", () => {
+  const P = "TEST-EDITKEY-R4";
+  withTestViews(
+    P,
+    [
+      { key: P, fm: true, lc: LC_A },
+      { key: `${P}-LC2`, fm: true, lc: LC_B },
+    ],
+    () => {
+      // Re-saving -LC2 unchanged: fine, key stays.
+      const same = resolveEditViewKey(`${P}-LC2`, `${P}-LC2`, true, LC_B);
+      assert.deepEqual(same, { key: `${P}-LC2`, conflict: false });
+
+      // Edit re-derived its Level Check conditions and they now equal the base
+      // View's (same MATCH): must be rejected even though the key did not move.
+      const dup = resolveEditViewKey(`${P}-LC2`, `${P}-LC2`, true, LC_A);
+      assert.equal(dup.conflict, true);
+      assert.equal(dup.key, P);
+
+      // Same conditions but different 13/13 MATCH is not a duplicate.
+      const otherMatch = resolveEditViewKey(`${P}-LC2`, `${P}-LC2`, false, LC_A);
+      assert.deepEqual(otherMatch, { key: `${P}-LC2`, conflict: false });
+    },
+  );
+});
+
+test("resolveEditViewKey: a View that keeps its key is never renumbered", () => {
+  const P = "TEST-EDITKEY-NORENUM-R4";
+  // -LC2 was deleted, leaving a gap; editing -LC3 must not become -LC2.
+  withTestViews(
+    P,
+    [
+      { key: P, fm: true, lc: LC_A },
+      { key: `${P}-LC3`, fm: true, lc: LC_C },
+    ],
+    () => {
+      const r = resolveEditViewKey(`${P}-LC3`, `${P}-LC3`, true, LC_C);
+      assert.deepEqual(r, { key: `${P}-LC3`, conflict: false });
+    },
+  );
+});
+
+test("resolveEditViewKey: a changed key is disambiguated like create/copy", () => {
+  const P = "TEST-EDITKEY-RENAME-R4";
+  withTestViews(
+    P,
+    [
+      { key: P, fm: true, lc: LC_A },
+      { key: `${P}-LC2`, fm: true, lc: LC_B },
+      { key: `${P}-OTHER`, fm: true, lc: LC_C },
+    ],
+    () => {
+      // Editing -OTHER's key to the occupied base code with new conditions -> -LC3.
+      const r = resolveEditViewKey(`${P}-OTHER`, P, true, LC_C);
+      assert.deepEqual(r, { key: `${P}-LC3`, conflict: false });
+      // ...and into an exact duplicate of -LC2 -> conflict reported on -LC2.
+      const d = resolveEditViewKey(`${P}-OTHER`, P, true, LC_B);
+      assert.equal(d.conflict, true);
+      assert.equal(d.key, `${P}-LC2`);
+    },
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Workflow scripts must resolve to the same key as the app
+// ---------------------------------------------------------------------------
+
+test("workflow resolveViewKey matches resolveCreateViewKey across scenarios", () => {
+  const P = "TEST-PARITY-R4";
+  type D = { key: string; fm: boolean; lc?: LevelCheckCondition[] };
+  const sets: Record<string, D[]> = {
+    empty: [],
+    base: [{ key: P, fm: true, lc: LC_A }],
+    baseAndLc2: [
+      { key: P, fm: true, lc: LC_A },
+      { key: `${P}-LC2`, fm: true, lc: LC_B },
+    ],
+    // Opposite-MATCH sibling already taken at -13.
+    oppositeTaken: [
+      { key: P, fm: false, lc: LC_A },
+      { key: `${P}-13`, fm: true, lc: LC_A },
+    ],
+    mixed: [
+      { key: P, fm: true, lc: LC_A },
+      { key: `${P}-ANY`, fm: false, lc: LC_A },
+      { key: `${P}-LC2`, fm: true, lc: LC_B },
+      { key: `${P}-ANY-LC2`, fm: false, lc: LC_B },
+    ],
+    // Base removed; only suffixed siblings remain.
+    orphanLc2: [{ key: `${P}-LC2`, fm: true, lc: LC_B }],
+  };
+  const queries = [P, `${P}-LC2`, `${P}-13`, `${P}-ANY`];
+  const defsOptions: Array<LevelCheckCondition[] | undefined> = [undefined, LC_A, LC_B, LC_C];
+  let compared = 0;
+
+  for (const [setName, defs] of Object.entries(sets)) {
+    withTestViews(P, defs, () => {
+      const scriptViews = defs.map((d) => ({ key: d.key, requireFullMatch: d.fm, levelCheckDefs: d.lc }));
+      const ignoreOptions: Array<string | undefined> = [undefined, ...defs.map((d) => d.key)];
+      for (const q of queries) {
+        for (const fm of [true, false]) {
+          for (const lc of defsOptions) {
+            for (const ignore of ignoreOptions) {
+              const app = resolveCreateViewKey(q, fm, ignore, lc);
+              const wf = resolveViewKeyForWorkflow(q, {
+                requireFullMatch: fm,
+                levelCheckDefs: lc,
+                ignoreKey: ignore,
+                views: scriptViews,
+              });
+              assert.deepEqual(
+                wf,
+                app,
+                `set=${setName} q=${q} fm=${fm} lc=${JSON.stringify(lc)} ignore=${ignore}`,
+              );
+              compared++;
+            }
+          }
+        }
+      }
+    });
+  }
+  assert.ok(compared > 500);
+});
+
+test("workflow resolveViewKey: duplicate living at -LC2 is caught (family-wide check)", () => {
+  const P = "TEST-WF-FAMILY-R4";
+  const views = [
+    { key: P, requireFullMatch: true, levelCheckDefs: LC_A },
+    { key: `${P}-LC2`, requireFullMatch: true, levelCheckDefs: LC_B },
+  ];
+  // Asking for the base code with LC_B: base has different conditions, but
+  // -LC2 already holds exactly this View. Used to create a second copy at -LC3.
+  const r = resolveViewKeyForWorkflow(P, { requireFullMatch: true, levelCheckDefs: LC_B, views });
+  assert.deepEqual(r, { key: `${P}-LC2`, conflict: true });
+});
+
+test("workflow resolveViewKey: opposite MATCH with -13 taken goes to -13-LC2", () => {
+  const P = "TEST-WF-OPPOSITE-R4";
+  const views = [
+    { key: P, requireFullMatch: false, levelCheckDefs: LC_A },
+    { key: `${P}-13`, requireFullMatch: true, levelCheckDefs: LC_A },
+  ];
+  const r = resolveViewKeyForWorkflow(P, { requireFullMatch: true, levelCheckDefs: LC_B, views });
+  assert.deepEqual(r, { key: `${P}-13-LC2`, conflict: false });
 });

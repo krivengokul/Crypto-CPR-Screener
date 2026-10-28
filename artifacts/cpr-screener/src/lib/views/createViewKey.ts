@@ -97,3 +97,27 @@ export function resolveCreateViewKey(
     index++;
   }
 }
+
+/**
+ * Key decision for editing an existing View (editBacktestView).
+ *
+ * The duplicate check ALWAYS runs, even when the key is unchanged: Edit
+ * re-derives Level Check conditions (and can flip 13/13 MATCH) on every save,
+ * so a View can become an exact duplicate of a sibling (e.g. `X` vs `X-LC2`)
+ * without its key moving. `oldKey` is ignored so a View can't collide with
+ * itself.
+ *
+ * A View that keeps its key is never renumbered (`X-LC3` must not silently
+ * become `X-LC2` because `X-LC2` was deleted — stored chart links etc. are
+ * keyed by it). Only a View whose key changed adopts the resolved key.
+ */
+export function resolveEditViewKey(
+  oldKey: string,
+  newKey: string,
+  requireFullMatch?: boolean,
+  levelCheckDefs?: LevelCheckCondition[],
+): { key: string; conflict: boolean } {
+  const resolved = resolveCreateViewKey(newKey, requireFullMatch, oldKey, levelCheckDefs);
+  if (resolved.conflict) return resolved;
+  return { key: newKey !== oldKey ? resolved.key : oldKey, conflict: false };
+}
