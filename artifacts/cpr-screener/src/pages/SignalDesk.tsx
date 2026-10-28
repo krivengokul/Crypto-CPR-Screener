@@ -469,31 +469,7 @@ const SignalDeskCard = memo(
     const isUp = item.direction === "Up" || (item.direction as string) === "LONG";
     const isDown = item.direction === "Down" || (item.direction as string) === "SHORT";
 
-    // Direction cue — animated vertical arrow only (no Up/Down text), left of
-    // symbol + status stack. Green floats up; bright pink floats down.
-    const directionArrow =
-      item.isSaved && (isUp || isDown) ? (
-        <span
-          className="shrink-0 flex items-center justify-center self-center w-5"
-          title={isUp ? "Up" : "Down"}
-          aria-label={isUp ? "Up" : "Down"}
-          style={{
-            color: isUp ? "#34d399" : "#ff6bb5",
-            animation: isUp
-              ? "sd-dir-up 1.15s ease-in-out infinite"
-              : "sd-dir-down 1.15s ease-in-out infinite",
-          }}
-        >
-          {isUp ? (
-            <ArrowUp className="w-4 h-4" strokeWidth={2.75} />
-          ) : (
-            <ArrowDown className="w-4 h-4" strokeWidth={2.75} />
-          )}
-        </span>
-      ) : null;
-
-    // Same compact STATUS badges as Screener (under symbol). Journal PASS/FAIL
-    // win over live Active/Ready when recorded today.
+    // Same STATUS as Screener under symbol. Journal PASS/FAIL win over Active/Ready.
     const tradeStatus: "pass" | "fail" | "active" | "ready" | null = !item.isSaved
       ? null
       : item.journalStatus === "PASS"
@@ -504,10 +480,44 @@ const SignalDeskCard = memo(
             ? "active"
             : "ready";
 
+    // Direction arrow left of symbol+status. Animate + bordered tile only when Active
+    // (same style family as SIGNAL DESK header Radio tile).
+    const isActiveStatus = tradeStatus === "active";
+    const directionArrow =
+      item.isSaved && (isUp || isDown) ? (
+        <span
+          className={
+            isActiveStatus
+              ? `shrink-0 flex items-center justify-center self-center w-7 h-7 rounded-lg border ${
+                  isUp
+                    ? "bg-emerald-500/20 border-emerald-500/40"
+                    : "bg-[#ff6bb5]/15 border-[#ff6bb5]/45"
+                }`
+              : "shrink-0 flex items-center justify-center self-center w-5"
+          }
+          title={isUp ? "Up" : "Down"}
+          aria-label={isUp ? "Up" : "Down"}
+          style={{
+            color: isUp ? "#34d399" : "#ff6bb5",
+            animation: isActiveStatus
+              ? isUp
+                ? "sd-dir-up 1.15s ease-in-out infinite"
+                : "sd-dir-down 1.15s ease-in-out infinite"
+              : undefined,
+          }}
+        >
+          {isUp ? (
+            <ArrowUp className={isActiveStatus ? "w-4 h-4" : "w-3.5 h-3.5"} strokeWidth={2.75} />
+          ) : (
+            <ArrowDown className={isActiveStatus ? "w-4 h-4" : "w-3.5 h-3.5"} strokeWidth={2.75} />
+          )}
+        </span>
+      ) : null;
+
     const statusUnderSymbol =
       tradeStatus === "pass" ? (
         <span
-          className={`inline-flex w-fit shrink-0 items-center rounded border px-1.5 py-0.5 text-[10px] font-mono font-semibold leading-tight ${
+          className={`inline-flex w-fit shrink-0 items-center rounded-md border px-2 py-1 text-[11px] font-mono font-semibold leading-tight ${
             isDown
               ? "border-[#ff6bb5]/40 bg-[#ff6bb5]/10 text-[#ff6bb5]"
               : "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
@@ -518,21 +528,21 @@ const SignalDeskCard = memo(
         </span>
       ) : tradeStatus === "fail" ? (
         <span
-          className="inline-flex w-fit shrink-0 items-center rounded border px-1.5 py-0.5 text-[10px] font-mono font-semibold leading-tight text-red-400 border-red-400/40 bg-red-500/10"
+          className="inline-flex w-fit shrink-0 items-center rounded-md border px-2 py-1 text-[11px] font-mono font-semibold leading-tight text-red-400 border-red-400/40 bg-red-500/10"
           title="Stop hit — outcome recorded in the Journal"
         >
           Fail
         </span>
       ) : tradeStatus === "active" ? (
         <span
-          className="inline-flex w-fit shrink-0 items-center rounded border border-lime-500/40 bg-lime-500/10 px-1.5 py-0.5 text-[10px] font-mono font-semibold leading-tight text-lime-400"
+          className="inline-flex w-fit shrink-0 items-center rounded-md border border-lime-500/40 bg-lime-500/10 px-2 py-1 text-[11px] font-mono font-semibold leading-tight text-lime-400"
           title="Price has reached the entry line"
         >
           Active
         </span>
       ) : tradeStatus === "ready" ? (
         <span
-          className="inline-flex w-fit shrink-0 items-center rounded border border-sky-500/30 bg-sky-500/10 px-1.5 py-0.5 text-[10px] font-mono font-semibold leading-tight text-sky-300"
+          className="inline-flex w-fit shrink-0 items-center rounded-md border border-sky-500/30 bg-sky-500/10 px-2 py-1 text-[11px] font-mono font-semibold leading-tight text-sky-300"
           title="Entry not yet touched"
         >
           Ready
@@ -553,7 +563,7 @@ const SignalDeskCard = memo(
             <div className="flex items-start gap-1.5 min-w-0 flex-1">
             {directionArrow}
             {/* 2x2 grid: symbol+status | price+change — direction arrow sits to the left */}
-            <div className="grid grid-cols-[auto_auto] items-center justify-start gap-x-2 gap-y-0.5 min-w-0">
+            <div className="grid grid-cols-[auto_auto] items-start justify-start gap-x-2 gap-y-0.5 min-w-0">
               <div className="flex items-center gap-1 min-w-0">
                 <span className="text-base sm:text-lg font-extrabold text-white font-mono tracking-tight leading-none truncate">
                   {item.symbol}
@@ -579,9 +589,18 @@ const SignalDeskCard = memo(
                   </span>
                 )}
               </div>
-              <span className="text-xs sm:text-sm font-bold text-white font-mono leading-none tabular-nums">
-                {fmt(item.currentPrice).replace(/,/g, "")}
-              </span>
+              <div className="flex flex-col items-end justify-start leading-none gap-0">
+                <span className="text-xs sm:text-sm font-bold text-white font-mono tabular-nums leading-none">
+                  {fmt(item.currentPrice).replace(/,/g, "")}
+                </span>
+                <span
+                  className={`text-[11px] font-mono font-bold leading-none mt-0 ${
+                    (item.change24h ?? 0) >= 0 ? "text-emerald-400" : "text-rose-400"
+                  }`}
+                >
+                  {fmtPct(item.change24h ?? 0)}
+                </span>
+              </div>
               <div className="flex flex-col items-start gap-0.5 min-w-0">
                 {statusUnderSymbol}
                 {item.isSaved && item.isTriggered && item.triggeredAt && (
@@ -605,13 +624,6 @@ const SignalDeskCard = memo(
                   );
                 })()}
               </div>
-              <span
-                className={`text-xs font-mono font-bold leading-none ${
-                  (item.change24h ?? 0) >= 0 ? "text-emerald-400" : "text-rose-400"
-                }`}
-              >
-                {fmtPct(item.change24h ?? 0)}
-              </span>
             </div>
             </div>
 
