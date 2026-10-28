@@ -2453,8 +2453,8 @@ export default function Screener({
                   onClick={() => setStatusFilter(statusFilter === "fail" ? "all" : "fail")}
                   className={`px-3 py-1 rounded text-xs font-semibold transition cursor-pointer ${
                     statusFilter === "fail"
-                      ? "bg-pink-400/20 text-[#ff6bb5] border border-pink-400/50"
-                      : "text-[#ff6bb5]/70 hover:text-[#ff9dce] border border-transparent"
+                      ? "bg-red-500/20 text-red-400 border border-red-500/40"
+                      : "text-red-400/70 hover:text-red-300 border border-transparent"
                   }`}
                   title="Rows where a matching View has already hit stoploss this session"
                 >

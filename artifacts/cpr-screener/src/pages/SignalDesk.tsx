@@ -760,7 +760,7 @@ const SignalDeskCard = memo(
                     item.journalStatus === "PASS"
                       ? "text-emerald-400"
                       : item.journalStatus === "FAIL"
-                      ? "text-rose-400"
+                      ? "text-red-400"
                       : "text-lime-400"
                   }`}
                 >
@@ -1597,9 +1597,9 @@ R/R: ${item.riskReward}`;
               Pass: <strong className="text-emerald-400 font-mono font-bold">{stats.pass}</strong>
             </span>
           </div>
-          <div className="shrink-0 bg-[#131b26] border border-rose-500/30 rounded-lg px-3 py-1.5 flex items-center gap-2 text-xs">
+          <div className="shrink-0 bg-[#131b26] border border-red-500/30 rounded-lg px-3 py-1.5 flex items-center gap-2 text-xs">
             <span className="font-medium text-slate-300">
-              Fail: <strong className="text-rose-400 font-mono font-bold">{stats.fail}</strong>
+              Fail: <strong className="text-red-400 font-mono font-bold">{stats.fail}</strong>
             </span>
           </div>
 
@@ -1819,8 +1819,8 @@ R/R: ${item.riskReward}`;
               onClick={() => setStatusFilter("fail")}
               className={`px-3 py-1 rounded text-xs font-semibold transition cursor-pointer ${
                 statusFilter === "fail"
-                  ? "bg-pink-400/20 text-[#ff6bb5] border border-pink-400/50"
-                  : "text-rose-400/70 hover:text-rose-300 border border-transparent"
+                  ? "bg-red-500/20 text-red-400 border border-red-500/40"
+                  : "text-red-400/70 hover:text-red-300 border border-transparent"
               }`}
             >
               Fail

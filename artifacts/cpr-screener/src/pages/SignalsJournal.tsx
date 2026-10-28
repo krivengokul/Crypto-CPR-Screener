@@ -216,7 +216,7 @@ const JournalRow = memo(function JournalRow({
             isPass
               ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 shadow-[0_0_8px_rgba(16,185,129,0.3)]"
               : isFail
-              ? "bg-rose-500/20 text-rose-400 border border-rose-500/50"
+              ? "bg-red-500/20 text-red-400 border border-red-500/50"
               : isActive
               ? "bg-amber-500/20 text-amber-400 border border-amber-500/40"
               : "bg-slate-700/40 text-slate-400 border border-slate-600"
@@ -660,11 +660,11 @@ export default function SignalsJournal() {
           <div className="text-lg font-black text-emerald-400 font-mono">{stats.pass}</div>
         </div>
 
-        <div className="bg-[#121a28] border border-rose-500/30 p-2.5 rounded-lg">
-          <div className="text-[10px] uppercase font-mono text-rose-400 flex items-center gap-1">
+        <div className="bg-[#121a28] border border-red-500/30 p-2.5 rounded-lg">
+          <div className="text-[10px] uppercase font-mono text-red-400 flex items-center gap-1">
             <XCircle className="w-3 h-3" /> Stopped Out (Fail)
           </div>
-          <div className="text-lg font-black text-rose-400 font-mono">{stats.fail}</div>
+          <div className="text-lg font-black text-red-400 font-mono">{stats.fail}</div>
         </div>
 
         <div className="bg-[#121a28] border border-amber-500/30 p-2.5 rounded-lg">
