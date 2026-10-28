@@ -10,6 +10,8 @@
  * - icons on every line; never viewcode / view name / exchange
  */
 
+import { getView, shortLevelLabel } from "@/lib/views";
+
 const STORAGE_KEY = "cpr_alert_webhook_url_v1";
 /** Cross-tab / double-post guard for the same signal within a short window. */
 const RECENT_POST_KEY = "cpr_alert_webhook_recent_v1";
@@ -54,6 +56,10 @@ export interface AlertWebhookPayload {
    * so BUY/SELL and exchange labels are not re-derived incorrectly.
    */
   telegramText: string;
+  /** Worker must send this as Telegram parse_mode (HTML). */
+  telegramParseMode: "HTML";
+  /** Prefer telegramText only — do not rebuild message on the Worker. */
+  useTelegramTextOnly: true;
 }
 
 export function getAlertWebhookUrl(): string {
@@ -123,7 +129,11 @@ function shouldSkipDuplicatePost(idempotencyKey: string): boolean {
   }
 }
 
-/** Shared icon layout for every entry-cross Telegram (no viewcode / view name). */
+/**
+ * SINGLE source of Telegram body text for entry-cross alerts.
+ * Cloudflare Worker must send `telegramText` as-is (parse_mode = HTML)
+ * and must NOT rebuild the message from individual fields.
+ */
 function formatTelegramText(args: {
   side: "LONG" | "SHORT";
   direction?: "Up" | "Down" | string;
@@ -146,44 +156,73 @@ function formatTelegramText(args: {
   const sideIcon = isLong ? "🟢 BUY" : "🔴 SELL";
   const lines: string[] = [`${dir} ${args.symbol}  ${sideIcon}`];
   lines.push(`💰 Price: ${args.price}`);
+
+  const withLevel = (value: number | string, level?: string) => {
+    const lvl = (level || "").trim();
+    return lvl ? `${value} (${lvl})` : String(value);
+  };
+
   const entryLvl = (args.entryLevel || "").trim();
-  lines.push(
-    entryLvl
-      ? `📍 Entry: ${args.entry} (${entryLvl})`
-      : `📍 Entry: ${args.entry}`,
-  );
+  lines.push(`📍 Entry: ${withLevel(args.entry, entryLvl)}`);
+
   if (args.target !== undefined && args.target !== "") {
-    const tLvl = (args.targetLevel || "").trim();
-    lines.push(
-      tLvl
-        ? `🎯 Target: ${args.target} (${tLvl})`
-        : `🎯 Target: ${args.target}`,
-    );
+    lines.push(`🎯 Target: ${withLevel(args.target, args.targetLevel)}`);
   }
   if (args.stop !== undefined && args.stop !== "") {
-    const sLvl = (args.stopLevel || "").trim();
-    lines.push(
-      sLvl
-        ? `🚪 Exit: ${args.stop} (${sLvl})`
-        : `🚪 Exit: ${args.stop}`,
-    );
+    lines.push(`🚪 Exit: ${withLevel(args.stop, args.stopLevel)}`);
   }
   if (args.riskReward) {
     lines.push(`⚖️ R/R: ${args.riskReward}`);
   }
   if (args.timestampISO) {
     try {
+      // Compact IST clock; HTML <i> = italic (Telegram has no real "small" tag).
       const timeStr = new Date(args.timestampISO).toLocaleString("en-IN", {
         timeZone: "Asia/Kolkata",
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        second: "2-digit",
         hour12: true,
       });
-      if (timeStr) lines.push(`🕐 ${timeStr} IST`);
+      if (timeStr) {
+        lines.push(`<i>🕐 ${timeStr} IST</i>`);
+      }
     } catch {
       /* ignore */
     }
   }
-  // Never include viewLabel / viewCode on Telegram.
+  // Never include viewLabel / viewCode / exchange on Telegram.
   return lines.join("\n");
+}
+
+/** Fill missing Entry/Target/Exit level labels from the View def when possible. */
+function resolveLevelLabels(args: {
+  entryLevel?: string;
+  targetLevel?: string;
+  stopLevel?: string;
+  viewCode?: string;
+}): { entryLevel?: string; targetLevel?: string; stopLevel?: string } {
+  let entryLevel = (args.entryLevel || "").trim() || undefined;
+  let targetLevel = (args.targetLevel || "").trim() || undefined;
+  let stopLevel = (args.stopLevel || "").trim() || undefined;
+  if (entryLevel && targetLevel && stopLevel) {
+    return { entryLevel, targetLevel, stopLevel };
+  }
+  try {
+    const code = (args.viewCode || "").trim();
+    if (!code) return { entryLevel, targetLevel, stopLevel };
+    const view = getView(code);
+    if (!view) return { entryLevel, targetLevel, stopLevel };
+    if (!entryLevel && view.entryLabel) entryLevel = shortLevelLabel(view.entryLabel) || view.entryLabel;
+    if (!targetLevel && view.targetLabel) targetLevel = shortLevelLabel(view.targetLabel) || view.targetLabel;
+    if (!stopLevel && view.stoplossLabel) stopLevel = shortLevelLabel(view.stoplossLabel) || view.stoplossLabel;
+  } catch {
+    /* views unavailable */
+  }
+  return { entryLevel, targetLevel, stopLevel };
 }
 
 /**
@@ -310,6 +349,30 @@ export function buildEntryCrossWebhookPayload(args: {
     utcDayISO(timestamp),
   ].join("|");
 
+  const levels = resolveLevelLabels({
+    entryLevel: args.entryLevel,
+    targetLevel: args.targetLevel,
+    stopLevel: args.stopLevel,
+    viewCode: args.viewCode,
+  });
+  const timestampISO = new Date(timestamp).toISOString();
+
+  // ONE message body — Worker must forward telegramText only (no second template).
+  const telegramText = formatTelegramText({
+    side,
+    direction: dir,
+    symbol: args.symbol,
+    price,
+    entry,
+    entryLevel: levels.entryLevel,
+    target: args.target,
+    targetLevel: levels.targetLevel,
+    stop: args.stop,
+    stopLevel: levels.stopLevel,
+    riskReward: args.riskReward,
+    timestampISO,
+  });
+
   return {
     event: "entry_crossed",
     symbol: args.symbol,
@@ -321,30 +384,19 @@ export function buildEntryCrossWebhookPayload(args: {
     action: side,
     price,
     entry,
-    entryLevel: args.entryLevel,
+    entryLevel: levels.entryLevel,
     target: args.target,
-    targetLevel: args.targetLevel,
+    targetLevel: levels.targetLevel,
     stop: args.stop,
-    stopLevel: args.stopLevel,
+    stopLevel: levels.stopLevel,
     riskReward: args.riskReward,
     viewLabel: args.viewLabel,
     viewCode: args.viewCode,
     timestamp,
-    timestampISO: new Date(timestamp).toISOString(),
+    timestampISO,
     idempotencyKey,
-    telegramText: formatTelegramText({
-      side,
-      direction: dir,
-      symbol: args.symbol,
-      price,
-      entry,
-      entryLevel: args.entryLevel,
-      target: args.target,
-      targetLevel: args.targetLevel,
-      stop: args.stop,
-      stopLevel: args.stopLevel,
-      riskReward: args.riskReward,
-      timestampISO: new Date(timestamp).toISOString(),
-    }),
+    telegramText,
+    telegramParseMode: "HTML",
+    useTelegramTextOnly: true,
   };
 }

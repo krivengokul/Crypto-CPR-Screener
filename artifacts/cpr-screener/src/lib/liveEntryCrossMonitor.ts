@@ -16,7 +16,10 @@ export type EntryCrossCandidate = {
     entry: number;
     currentPrice: number;
     target: number;
+    targetLevel?: string;
     sl: number;
+    stopLevel?: string;
+    entryLevel?: string;
     rr: string;
     cprStatus: string;
     timestamp: number;
