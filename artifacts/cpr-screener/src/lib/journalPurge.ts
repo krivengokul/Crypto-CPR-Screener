@@ -14,3 +14,11 @@ export function pickLegacyExchangeSignalIds(
 
 /** localStorage flag: set after the cleanup succeeded in this browser. */
 export const LEGACY_EXCHANGE_PURGE_FLAG = "cpr_journal_legacy_exchange_purged_v1";
+
+/**
+ * The Journal only stores Binance signals. Writers (auto-save, manual save)
+ * check this so Delta / CoinDCX signals are never added to the Journal again.
+ */
+export function isJournalSource(source: string | undefined): boolean {
+  return source === "binance";
+}

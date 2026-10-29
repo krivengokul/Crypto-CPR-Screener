@@ -61,7 +61,7 @@ import {
 import { resolveViewKey as resolveViewKeyForWorkflow } from "../../../../.github/scripts/shared/resolveViewKey.mjs";
 import type { LevelCheckCondition } from "./views/types.ts";
 import { escapeTelegramHtml } from "./telegramHtml.ts";
-import { pickLegacyExchangeSignalIds } from "./journalPurge.ts";
+import { pickLegacyExchangeSignalIds, isJournalSource } from "./journalPurge.ts";
 import { VIEWS } from "./views/registry.ts";
 
 function trade(overrides: Partial<PaperTradeRecord> = {}): PaperTradeRecord {
@@ -1709,4 +1709,12 @@ test("pickLegacyExchangeSignalIds selects only Delta and CoinDCX records", () =>
   assert.deepEqual(pickLegacyExchangeSignalIds(rows), ["b", "c", "f"]);
   assert.deepEqual(pickLegacyExchangeSignalIds([]), []);
   assert.deepEqual(pickLegacyExchangeSignalIds([{ id: "x", source: "binance" }]), []);
+});
+
+test("isJournalSource only accepts binance", () => {
+  assert.equal(isJournalSource("binance"), true);
+  assert.equal(isJournalSource("delta"), false);
+  assert.equal(isJournalSource("coindcx"), false);
+  assert.equal(isJournalSource(undefined), false);
+  assert.equal(isJournalSource(""), false);
 });

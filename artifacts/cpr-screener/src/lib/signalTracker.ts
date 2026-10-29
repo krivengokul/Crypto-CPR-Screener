@@ -15,7 +15,7 @@ import {
 } from "firebase/firestore";
 import { getDb, ensureSignedIn } from "@/lib/firebase";
 import { evaluateSignalCandles, type SignalOutcomeCandle } from "./signalOutcome";
-import { pickLegacyExchangeSignalIds } from "./journalPurge";
+import { pickLegacyExchangeSignalIds, isJournalSource } from "./journalPurge";
 
 export interface LoggedSignal {
   id: string;
@@ -162,6 +162,8 @@ export async function saveSignalToCloud(
   customId?: string
 ): Promise<string> {
   const signalId = customId || `${signal.symbol}-${signal.direction}-${Date.now()}`;
+  // The Journal is Binance-only: Delta / CoinDCX signals are not saved.
+  if (!isJournalSource(signal.source)) return signalId;
   const fullSignal: LoggedSignal = {
     ...signal,
     id: signalId,
@@ -231,8 +233,11 @@ async function performAutoSave(
   // hasTouchedEntry before marking anything "submitted" (see its doc
   // comment), but re-check here too so this function is safe on its own
   // for any future caller that doesn't.
-  signals = signals.filter((sig) =>
-    hasTouchedEntry(sig.direction, sig.entry, sig.currentPrice)
+  signals = signals.filter(
+    (sig) =>
+      // The Journal is Binance-only: Delta / CoinDCX signals are not saved.
+      isJournalSource(sig.source) &&
+      hasTouchedEntry(sig.direction, sig.entry, sig.currentPrice)
   );
   if (signals.length === 0) return 0;
 
