@@ -27,7 +27,7 @@ import { formatTradFiSubtitle } from "@/lib/tradfiDisplay";
 import { getView, shortLevelLabel } from "@/lib/views";
 import { getRowCategory, getCategoryLabel } from "@/lib/rowCategory";
 import SignalProgressBar from "@/lib/SignalProgressBar";
-import { COINDCX_ENABLED } from "@/lib/featureFlags";
+import { isDeskSource } from "@/lib/deskSources";
 import { getLadderMatchSummary } from "./SRLadderDiff";
 import {
   Radio,
@@ -1371,7 +1371,9 @@ export default function SignalDesk({
       });
     }
 
-    return list;
+    // Signal Desk is Binance / NIFTY only: Delta / CoinDCX never become cards,
+    // so they can't be shown, counted, or have their Journal rows synced.
+    return list.filter((item) => isDeskSource(item.source));
   }, [symbols, results, viewPills, activeSignalSymbols, resultsBySymbol, selectedSignalId, activeSignal, activeSignalLabel, getTriggeredAt, getJournalMatch]);
 
   // Persist live Pass/Fail onto Journal so Desk / Journal stay aligned without
@@ -1503,6 +1505,11 @@ R/R: ${item.riskReward}`;
   focusConsumedRef.current = onFocusSymbolConsumed;
   useEffect(() => {
     if (!focusSymbol) return;
+    // A Delta / CoinDCX toast has no card here; don't flip the shared source.
+    if (!isDeskSource(focusSymbol.source)) {
+      focusConsumedRef.current?.();
+      return;
+    }
     setSearchTerm("");
     setDirectionFilter("all");
     setStatusFilter("all");

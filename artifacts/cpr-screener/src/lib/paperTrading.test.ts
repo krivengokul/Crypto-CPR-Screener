@@ -62,6 +62,7 @@ import { resolveViewKey as resolveViewKeyForWorkflow } from "../../../../.github
 import type { LevelCheckCondition } from "./views/types.ts";
 import { escapeTelegramHtml } from "./telegramHtml.ts";
 import { pickLegacyExchangeSignalIds, isJournalSource } from "./journalPurge.ts";
+import { isDeskSource } from "./deskSources.ts";
 import { VIEWS } from "./views/registry.ts";
 
 function trade(overrides: Partial<PaperTradeRecord> = {}): PaperTradeRecord {
@@ -1717,4 +1718,12 @@ test("isJournalSource only accepts binance", () => {
   assert.equal(isJournalSource("coindcx"), false);
   assert.equal(isJournalSource(undefined), false);
   assert.equal(isJournalSource(""), false);
+});
+
+test("isDeskSource only accepts binance and nifty", () => {
+  assert.equal(isDeskSource("binance"), true);
+  assert.equal(isDeskSource("nifty"), true);
+  assert.equal(isDeskSource("delta"), false);
+  assert.equal(isDeskSource("coindcx"), false);
+  assert.equal(isDeskSource(undefined), false);
 });
