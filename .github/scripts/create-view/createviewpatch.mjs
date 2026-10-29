@@ -22,6 +22,13 @@ function getStringPropertyValue(obj, name) {
   return initializer.getLiteralText();
 }
 
+/** Raw initializer source text for any property (used for levelCheckDefs JSON arrays). */
+function getInitializerText(obj, name) {
+  const prop = getObjectProperty(obj, name);
+  if (!prop) return undefined;
+  return prop.getInitializer()?.getText();
+}
+
 function getScreenerNavCategoryIds(sourceText) {
   const project = new Project({ useInMemoryFileSystem: true });
   const sourceFile = project.createSourceFile("ViewsSidebar.tsx", sourceText);
