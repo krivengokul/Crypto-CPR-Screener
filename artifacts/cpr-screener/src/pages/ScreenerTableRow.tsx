@@ -1309,10 +1309,10 @@ function ScreenerTableRow({
           {showInsideR1S1 && (
             <div
               className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
-              style={{ color: "#ff637e" }}
+              style={{ color: "#a3e635" }}
               title="Previous-session 15m was inside R1/PH–S1/PL band but not CON-A/CON-B (volatile)"
             >
-              P-VOLATILE-R1S1 ✗
+              P-VOLATILE-R1S1
             </div>
           )}
           {/* Live current-session failed-break flags: "2/3" = 3 levels pierced,
@@ -1444,7 +1444,7 @@ function ScreenerTableRow({
           <div className="text-sm font-bold text-foreground">
             {fmt(r.currentPrice)}
             <span className="text-muted-foreground">(</span>
-            <span className={r.change24h >= 0 ? "text-green-400" : "text-destructive"}>
+            <span className={r.change24h >= 0 ? "text-green-400" : "text-[#ff6bb5]"}>
               {fmtPct(r.change24h)}
             </span>
             <span className="text-muted-foreground">)</span>

@@ -280,8 +280,9 @@ function exclusivePDayBadge(r: CPRResult | undefined | null): {
   }
   if (inside) {
     return {
-      text: "P-VOLATILE-R1S1 ✗",
-      className: "font-mono text-xs font-bold uppercase tracking-widest text-[#ff637e]",
+      text: "P-VOLATILE-R1S1",
+      className: "font-mono text-xs font-bold uppercase tracking-widest",
+      style: { color: "#a3e635" },
     };
   }
   return null;

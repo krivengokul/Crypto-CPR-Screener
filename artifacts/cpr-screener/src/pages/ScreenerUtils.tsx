@@ -82,7 +82,7 @@ export function pdhPdlStatus(r: CPRResult): { main: string; sub: string; color: 
   }
   if (price < pdl) {
     const pct = ((pdl - price) / pdl) * 100;
-    return { main: `−${pct.toFixed(2)}%`, sub: "< PDL", color: "text-destructive" };
+    return { main: `−${pct.toFixed(2)}%`, sub: "< PDL", color: "text-[#ff6bb5]" };
   }
   // RENAMED: "IN-PDH/PDL" -> "IN-PDHL", moved from `sub` into `main` so it
   // renders with the same font-size/weight/brightness as distanceFromCPR's
@@ -1810,7 +1810,7 @@ export function distanceFromCPR(
       price < s1 ? { label: "S1", level: s1 } :
       { label: "BC", level: bc };
     const pct = ((rung.level - price) / rung.level) * 100;
-    return { main: `−${pct.toFixed(2)}%`, sub: `<${rung.label}`, color: "text-destructive" };
+    return { main: `−${pct.toFixed(2)}%`, sub: `<${rung.label}`, color: "text-[#ff6bb5]" };
   }
   return { main: "IN-CPR", sub: "", color: "text-yellow-400" };
 }
