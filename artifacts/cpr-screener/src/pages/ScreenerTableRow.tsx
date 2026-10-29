@@ -1306,15 +1306,20 @@ function ScreenerTableRow({
               P-MOMENTUM-B
             </div>
           )}
-          {showInsideR1S1 && (
+                    {showInsideR1S1 && (
             <div
               className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
-              style={{ color: "#a3e635" }}
-              title="Previous-session 15m was inside R1/PH–S1/PL band but not CON-A/CON-B (volatile)"
+              style={{ color: r.touchCategory ? "#a3e635" : "#ff637e" }}
+              title={
+                r.touchCategory
+                  ? "TOUCH + previous-session 15m inside R1/PH–S1/PL band (not CON-A/CON-B)"
+                  : "Previous-session 15m was inside R1/PH–S1/PL band but not CON-A/CON-B (volatile)"
+              }
             >
-              P-VOLATILE-R1S1
+              {r.touchCategory ? "P-VOLATILE-R1S1" : "P-VOLATILE-R1S1 ✗"}
             </div>
           )}
+
           {/* Live current-session failed-break flags: "2/3" = 3 levels pierced,
               price back inside 2 of them. Support side sky-blue, resistance orange. */}
           {reclaimS && (

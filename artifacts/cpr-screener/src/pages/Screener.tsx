@@ -630,6 +630,7 @@ export default function Screener({
         PD15MBelowTCPass?: boolean;
         PD15MAboveBCPass?: boolean;
         PD15MMomentumBPass?: boolean;
+        touchCategory?: boolean;
       },
       preferredPatternId?: string,
     ) => {
@@ -640,8 +641,9 @@ export default function Screener({
       const signalCode = patternId || "—";
       const direction = viewDef?.direction;
 
-      if (hasInsideR1S1(row)) pDayText = "P-VOLATILE-R1S1";
-      else if (hasConsolidateB(row)) pDayText = "P-CONSOLIDATE-B";
+      if (hasInsideR1S1(row)) {
+        pDayText = row.touchCategory ? "P-VOLATILE-R1S1" : "P-VOLATILE-R1S1 ✗";
+      } else if (hasConsolidateB(row)) pDayText = "P-CONSOLIDATE-B";
       else if (hasMomentumB(row)) pDayText = "P-MOMENTUM-B";
       else if (hasConsolidateA(row)) pDayText = "P-CONSOLIDATE-A";
       else if (hasMomentumA(row)) pDayText = "P-MOMENTUM-A";
@@ -650,8 +652,9 @@ export default function Screener({
         const conB = row.PD15MBelowTCPass === true;
         const momA = row.PD15MAboveBCPass === true;
         const momB = row.PD15MMomentumBPass === true;
-        if (conA && conB) pDayText = "P-VOLATILE-R1S1";
-        else if (conB) pDayText = "P-CONSOLIDATE-B";
+        if (conA && conB) {
+          pDayText = row.touchCategory ? "P-VOLATILE-R1S1" : "P-VOLATILE-R1S1 ✗";
+        } else if (conB) pDayText = "P-CONSOLIDATE-B";
         else if (momB) pDayText = "P-MOMENTUM-B";
         else if (conA) pDayText = "P-CONSOLIDATE-A";
         else if (momA) pDayText = "P-MOMENTUM-A";

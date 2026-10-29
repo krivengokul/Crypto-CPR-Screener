@@ -30,6 +30,11 @@ export interface ScreenerLegendFocusToast {
   direction?: "Up" | "Down" | string;
   /** Exclusive previous-day class, e.g. "P-CONSOLIDATE-B" or "—". */
   pDayText: string;
+  /**
+   * Optional previous-of-previous flags, shown on the line under PDay.
+   * e.g. "PP-CONSOLIDATE-A", "PP-CONSOLIDATE-B", or both joined with " + ".
+   */
+  ppDayText?: string;
   /** Level-check score, e.g. "11/13" or "—". */
   matchText: string;
   /** Per-symbol trade status for the focused View (same as STATUS column). */
@@ -419,6 +424,13 @@ const PDAY_COLORS: Record<string, string> = {
   "P-CONSOLIDATE-A": "#03b07c",
   "P-MOMENTUM-A": "#22d3ee",
   "P-VOLATILE-R1S1": "#a3e635",
+  "P-VOLATILE-R1S1 ✗": "#ff637e",
+};
+
+/** PP-day badge colors (match table row badges). */
+const PPDAY_COLORS: Record<string, string> = {
+  "PP-CONSOLIDATE-A": "#2dd4bf",
+  "PP-CONSOLIDATE-B": "#f472b6",
 };
 
 /**
@@ -471,6 +483,17 @@ function FocusToastCard({ focusToast }: { focusToast?: ScreenerLegendFocusToast 
           {focusToast.pDayText}
         </span>
       </div>
+      {focusToast.ppDayText ? (
+        <div className="text-xs font-semibold font-mono leading-tight flex flex-wrap items-center gap-x-1">
+          <span className="text-muted-foreground">PPDay:</span>
+          {focusToast.ppDayText.split(" + ").map((part, i) => (
+            <span key={part}>
+              {i > 0 ? <span className="text-slate-500"> + </span> : null}
+              <span style={{ color: PPDAY_COLORS[part] ?? "#94a3b8" }}>{part}</span>
+            </span>
+          ))}
+        </div>
+      ) : null}
       <div className="text-xs font-semibold font-mono leading-tight">
         <span className="text-muted-foreground">MATCH:</span>
         <span className="text-sky-300">{focusToast.matchText}</span>
