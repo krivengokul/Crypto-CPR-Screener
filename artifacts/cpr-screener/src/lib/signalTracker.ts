@@ -15,6 +15,7 @@ import {
 } from "firebase/firestore";
 import { getDb, ensureSignedIn } from "@/lib/firebase";
 import { evaluateSignalCandles, type SignalOutcomeCandle } from "./signalOutcome";
+import { pickLegacyExchangeSignalIds } from "./journalPurge";
 
 export interface LoggedSignal {
   id: string;
@@ -458,6 +459,20 @@ export async function clearAllSignalsFromCloud(signalIds: string[]): Promise<voi
     }
     await batch.commit();
   }
+}
+
+/**
+ * One-time cleanup for the Binance-only Journal: permanently deletes this
+ * user's saved Delta and CoinDCX records (Firestore + local cache). Returns how
+ * many were deleted. Throws if the Firestore delete fails, so the caller can
+ * leave its "done" flag unset and retry next time.
+ */
+export async function purgeLegacyExchangeSignals(): Promise<number> {
+  const all = await fetchSavedSignalsFromCloud();
+  const ids = pickLegacyExchangeSignalIds(all);
+  if (ids.length === 0) return 0;
+  await clearAllSignalsFromCloud(ids);
+  return ids.length;
 }
 
 export async function updateSignalOutcomeInCloud(

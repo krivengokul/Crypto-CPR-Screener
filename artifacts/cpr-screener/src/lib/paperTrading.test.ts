@@ -61,6 +61,7 @@ import {
 import { resolveViewKey as resolveViewKeyForWorkflow } from "../../../../.github/scripts/shared/resolveViewKey.mjs";
 import type { LevelCheckCondition } from "./views/types.ts";
 import { escapeTelegramHtml } from "./telegramHtml.ts";
+import { pickLegacyExchangeSignalIds } from "./journalPurge.ts";
 import { VIEWS } from "./views/registry.ts";
 
 function trade(overrides: Partial<PaperTradeRecord> = {}): PaperTradeRecord {
@@ -1694,4 +1695,18 @@ test("escapeTelegramHtml escapes &, < and > so Telegram HTML mode never rejects 
   assert.equal(escapeTelegramHtml("&amp;"), "&amp;amp;");
   assert.equal(escapeTelegramHtml(undefined), "");
   assert.equal(escapeTelegramHtml(null), "");
+});
+
+test("pickLegacyExchangeSignalIds selects only Delta and CoinDCX records", () => {
+  const rows = [
+    { id: "a", source: "binance" },
+    { id: "b", source: "delta" },
+    { id: "c", source: "coindcx" },
+    { id: "d" }, // missing source: never deleted
+    { id: "e", source: "something-else" }, // unknown source: never deleted
+    { id: "f", source: "delta" },
+  ];
+  assert.deepEqual(pickLegacyExchangeSignalIds(rows), ["b", "c", "f"]);
+  assert.deepEqual(pickLegacyExchangeSignalIds([]), []);
+  assert.deepEqual(pickLegacyExchangeSignalIds([{ id: "x", source: "binance" }]), []);
 });

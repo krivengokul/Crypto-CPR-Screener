@@ -6,8 +6,10 @@ import {
   evaluateSignalOutcome,
   updateSignalOutcomeInCloud,
   clearAllSignalsFromCloud,
+  purgeLegacyExchangeSignals,
   SIGNALS_JOURNAL_UPDATED_EVENT,
 } from "@/lib/signalTracker";
+import { LEGACY_EXCHANGE_PURGE_FLAG } from "@/lib/journalPurge";
 import {
   calculateGrossReturnPct,
   summarizePaperTrades,
@@ -284,7 +286,20 @@ export default function SignalsJournal() {
   };
 
   useEffect(() => {
-    loadSignals();
+    void (async () => {
+      await loadSignals();
+      // One-time cleanup: the Journal is Binance-only, so permanently delete
+      // this browser's older Delta / CoinDCX records. The flag is only set
+      // after a successful delete, so a failed/offline run retries next time.
+      try {
+        if (localStorage.getItem(LEGACY_EXCHANGE_PURGE_FLAG)) return;
+        await purgeLegacyExchangeSignals();
+        localStorage.setItem(LEGACY_EXCHANGE_PURGE_FLAG, new Date().toISOString());
+        await loadSignals();
+      } catch {
+        /* retry on next visit */
+      }
+    })();
   }, []);
 
   useEffect(() => {
