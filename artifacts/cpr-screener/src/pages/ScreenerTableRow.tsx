@@ -833,6 +833,8 @@ export interface ScreenerTableRowProps {
   isConsolidateA?: boolean;
   /** True when PP-CONSOLIDATE-A (day-before-previous session) passed for this row. */
   isPPConsolidateA?: boolean;
+  /** True when PP-CONSOLIDATE-B (day-before-previous session) passed for this row. */
+  isPPConsolidateB?: boolean;
   /** True when this row is assigned to the exclusive P-CONSOLIDATE-B class (held in Screener state, not on the row data). */
   isConsolidateB?: boolean;
   /** True when the Screener's P-MOMENTUM-A check passed for this row and it is not CONSOLIDATE-A (momentum excludes consolidate, as in the filters). */
@@ -895,6 +897,7 @@ function ScreenerTableRow({
   levelCheckConditions,
   isConsolidateA,
   isPPConsolidateA,
+  isPPConsolidateB,
   isConsolidateB,
   isMomentumA,
   isMomentumB,
@@ -913,6 +916,7 @@ function ScreenerTableRow({
   // INSIDE = CON-A ∩ CON-B only; pure CON-A / CON-B keep their own badges.
   const rawConA = r.PD15MConsolidateAPass === true;
   const rawPPConA = r.PD15MPPConsolidateAPass === true;
+  const rawPPConB = r.PD15MPPConsolidateBPass === true;
   const rawConB = r.PD15MBelowTCPass === true;
   const rawMomA = r.PD15MAboveBCPass === true;
   const rawMomB = r.PD15MMomentumBPass === true;
@@ -1269,6 +1273,15 @@ function ScreenerTableRow({
               title="CONSOLIDATE-A rules on the day-before-previous session (PPDay)"
             >
               PP-CONSOLIDATE-A
+            </div>
+          )}
+          {(isPPConsolidateB === true || rawPPConB) && (
+            <div
+              className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
+              style={{ color: "#f472b6" }}
+              title="CONSOLIDATE-B rules on the day-before-previous session (PPDay)"
+            >
+              PP-CONSOLIDATE-B
             </div>
           )}
           {showConsolidateB && (

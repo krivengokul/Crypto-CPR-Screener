@@ -13,6 +13,7 @@ const PREVIOUS_15M_TC_B_CACHE_KEY = "cpr_previous_15m_tc_b_results_v9";
 const PREVIOUS_15M_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_momentum_b_results_v3";
 const PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_consolidate_a_results_v9";
 const PREVIOUS_15M_PP_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_pp_consolidate_a_results_v1";
+const PREVIOUS_15M_PP_CONSOLIDATE_B_CACHE_KEY = "cpr_previous_15m_pp_consolidate_b_results_v1";
 const PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_inside_r1s1_results_v3";
 
 export interface UpexCandidate {
@@ -125,6 +126,7 @@ export function pruneLegacy15MResultCaches(): number {
     PREVIOUS_15M_MOMENTUM_B_CACHE_KEY,
     PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY,
     PREVIOUS_15M_PP_CONSOLIDATE_A_CACHE_KEY,
+    PREVIOUS_15M_PP_CONSOLIDATE_B_CACHE_KEY,
     PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY,
   ];
   const prefixes = currentKeys.map((key) => key.replace(/\d+$/, ""));
@@ -1232,6 +1234,73 @@ export function savePreviousPPConsolidateAResults(
   });
   safeSetItem(PREVIOUS_15M_PP_CONSOLIDATE_A_CACHE_KEY, payload);
 }
+
+/**
+ * PP-CONSOLIDATE-B: same CONSOLIDATE-B body rules on the day-before-previous
+ * session (PPDay). Pass `now` = end of that session (typically previous session
+ * start) so the walk uses [PPDay start, PDay start).
+ *
+ * Reuses passesPD15MBelowTCFilter via findPD15MBelowTCSymbols with an adjusted
+ * `now` so the session window is one day earlier.
+ */
+export function findPPConsolidateBSymbols(
+  candidates: UpexCandidate[],
+  onProgress?: (done: number, total: number) => void,
+  now = Date.now()
+): Promise<PreviousUpexScanResults> {
+  return findPD15MBelowTCSymbols(candidates, onProgress, now);
+}
+
+export function previousPPConsolidateBCandidateCacheKey(
+  sessionStart: number,
+  candidate: UpexCandidate,
+): string {
+  return previous15MTCCandidateCacheKey(sessionStart, candidate);
+}
+
+export function loadPreviousPPConsolidateBResults(
+  sessionStart: number,
+): Map<string, boolean | null> {
+  try {
+    const raw = localStorage.getItem(PREVIOUS_15M_PP_CONSOLIDATE_B_CACHE_KEY);
+    if (!raw) return new Map();
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      !("sessionStart" in parsed) ||
+      (parsed as { sessionStart: unknown }).sessionStart !== sessionStart ||
+      !("results" in parsed) ||
+      !(parsed as { results: unknown }).results ||
+      typeof (parsed as { results: unknown }).results !== "object"
+    ) {
+      return new Map();
+    }
+    const results = new Map<string, boolean | null>();
+    for (const [key, value] of Object.entries(
+      (parsed as { results: Record<string, unknown> }).results,
+    )) {
+      if (typeof value === "boolean") results.set(key, value);
+    }
+    return results;
+  } catch {
+    return new Map();
+  }
+}
+
+export function savePreviousPPConsolidateBResults(
+  sessionStart: number,
+  results: Map<string, boolean | null>,
+): void {
+  const payload = JSON.stringify({
+    sessionStart,
+    results: Object.fromEntries(
+      [...results].filter((entry): entry is [string, boolean] => typeof entry[1] === "boolean"),
+    ),
+  });
+  safeSetItem(PREVIOUS_15M_PP_CONSOLIDATE_B_CACHE_KEY, payload);
+}
+
 
 
 export function findPreviousUpexSymbols(
