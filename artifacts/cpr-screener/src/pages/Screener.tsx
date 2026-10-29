@@ -2187,11 +2187,75 @@ export default function Screener({
           {/* Previous-session 15m candle filters, moved out of the Price panel.
               Same buttons, state and behavior; only the container changed. */}
           {showCandleList && (
-          <div className="flex items-center gap-1 flex-wrap">
-            <span className="text-[10px] text-cyan-400/90 uppercase tracking-wider mr-1 font-semibold">
-              Previous session candle:
-            </span>
-            <div className="inline-flex items-stretch mr-1" role="group" aria-label="Previous session candle filters">
+          <div className="flex flex-col gap-1.5 w-full">
+            {/* ── Previous day (PDay) session 15m candles ───────────────── */}
+            <div className="flex items-center gap-1 flex-wrap">
+              <span className="text-[10px] text-cyan-400/90 uppercase tracking-wider mr-1 font-semibold shrink-0">
+                Previous day session candles:
+              </span>
+              <div className="inline-flex items-stretch flex-wrap" role="group" aria-label="Previous day session candle filters">
+              <button
+                onClick={() => {
+                  if (!previousConsolidateAReady) return;
+                  setPreviousCandleFilter((v) => v === "consolidate-a" ? "all" : "consolidate-a");
+                  resetConsolidateAMessage();
+                }}
+                disabled={!previousConsolidateAReady || currentAllCount === 0 || activeTab === "coindcx"}
+                aria-pressed={previousCandleFilter === "consolidate-a"}
+                className={`text-xs px-2.5 py-1 rounded-l border transition-colors disabled:opacity-50 ${
+                  previousCandleFilter === "consolidate-a"
+                    ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
+                    : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
+                }`}
+                title="CONSOLIDATE-A: previous-session 15m bodies relative to BC / max(R1,PH). Binance and Delta only; CoinDCX excluded while active."
+              >
+                {previousConsolidateAProgress
+                  ? `P-CONSOLIDATE-A ${previousConsolidateAProgress.done}/${previousConsolidateAProgress.total}`
+                  : previousConsolidateAReady
+                    ? `P-CONSOLIDATE-A (${previousConsolidateAIncludedCount})`
+                    : "P-CONSOLIDATE-A…"}
+              </button>
+              <button
+                onClick={() => {
+                  if (!previousUpexReady) return;
+                  setPreviousCandleFilter((v) => v === "momentum-a" ? "all" : "momentum-a");
+                  resetMomentumAMessage();
+                }}
+                disabled={!previousUpexReady || currentAllCount === 0 || activeTab === "coindcx"}
+                aria-pressed={previousCandleFilter === "momentum-a"}
+                className={`text-xs px-2.5 py-1 -ml-px border transition-colors disabled:opacity-50 ${
+                  previousCandleFilter === "momentum-a"
+                    ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
+                    : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
+                }`}
+                title="For Binance and Delta, exclude a symbol only when a previous-session 15-minute candle body is below previous day's BC and its lower body edge breaks below earlier session wick lows. The first fresh-low break is forgiven if the immediate next candle makes a lower wick, which becomes the reference. Prepared once after exchange scan data loads; toggling reuses the cached result."
+              >
+                {previousUpexProgress
+                  ? `P-MOMENTUM-A ${previousUpexProgress.done}/${previousUpexProgress.total}`
+                  : previousUpexReady
+                    ? `P-MOMENTUM-A (${previousUpexIncludedCount})`
+                    : "P-MOMENTUM-A…"}
+              </button>
+              <button
+                onClick={() => {
+                  if (!previous15MTCReady) return;
+                  setPreviousCandleFilter((v) => v === "consolidate-b" ? "all" : "consolidate-b");
+                }}
+                disabled={!previous15MTCReady || currentAllCount === 0 || activeTab === "coindcx"}
+                aria-pressed={previousCandleFilter === "consolidate-b"}
+                className={`text-xs px-2.5 py-1 -ml-px border transition-colors disabled:opacity-50 ${
+                  previousCandleFilter === "consolidate-b"
+                    ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
+                    : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
+                }`}
+                title="CONSOLIDATE-B: previous-session 15m bodies relative to TC / min(S1,PL). Binance and Delta only; CoinDCX excluded while active."
+              >
+                {previous15MTCProgress
+                  ? `P-CONSOLIDATE-B ${previous15MTCProgress.done}/${previous15MTCProgress.total}`
+                  : previous15MTCReady
+                    ? `P-CONSOLIDATE-B (${previous15MTCIncludedCount})`
+                    : "P-CONSOLIDATE-B…"}
+              </button>
               <button
                 onClick={() => {
                   if (!previous15MMomentumReady) return;
@@ -2199,7 +2263,7 @@ export default function Screener({
                 }}
                 disabled={!previous15MMomentumReady || currentAllCount === 0 || activeTab === "coindcx"}
                 aria-pressed={previousCandleFilter === "momentum-b"}
-                className={`text-xs px-2.5 py-1 rounded-l border transition-colors disabled:opacity-50 ${
+                className={`text-xs px-2.5 py-1 -ml-px border transition-colors disabled:opacity-50 ${
                   previousCandleFilter === "momentum-b"
                     ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
                     : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
@@ -2214,32 +2278,12 @@ export default function Screener({
               </button>
               <button
                 onClick={() => {
-                  if (!previous15MTCReady) return;
-                  setPreviousCandleFilter((v) => v === "consolidate-b" ? "all" : "consolidate-b");
-                }}
-                disabled={!previous15MTCReady || currentAllCount === 0 || activeTab === "coindcx"}
-                aria-pressed={previousCandleFilter === "consolidate-b"}
-                className={`text-xs px-2.5 py-1 -ml-px border transition-colors disabled:opacity-50 ${
-                  previousCandleFilter === "consolidate-b"
-                    ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
-                    : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
-                }`}
-                title="Include Binance and Delta symbols unless a completed previous-session 15-minute candle (a) has its whole body above previous day's TC while making a new high versus earlier candles, or (b) has its whole body below the lower of previous day's PL and S1. Unevaluated sources such as CoinDCX are excluded while active."
-              >
-                {previous15MTCProgress
-                  ? `P-CONSOLIDATE-B ${previous15MTCProgress.done}/${previous15MTCProgress.total}`
-                  : previous15MTCReady
-                    ? `P-CONSOLIDATE-B (${previous15MTCIncludedCount})`
-                    : "P-CONSOLIDATE-B…"}
-              </button>
-              <button
-                onClick={() => {
                   if (!previousInsideR1S1Ready) return;
                   setPreviousCandleFilter((v) => v === "inside-r1s1" ? "all" : "inside-r1s1");
                 }}
                 disabled={!previousInsideR1S1Ready || currentAllCount === 0 || activeTab === "coindcx"}
                 aria-pressed={previousCandleFilter === "inside-r1s1"}
-                className={`text-xs px-2.5 py-1 -ml-px border transition-colors disabled:opacity-50 ${
+                className={`text-xs px-2.5 py-1 rounded-r -ml-px border transition-colors disabled:opacity-50 ${
                   previousCandleFilter === "inside-r1s1"
                     ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
                     : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
@@ -2252,26 +2296,15 @@ export default function Screener({
                     ? `P-VOLATILE-R1S1 ✗ (${previousInsideR1S1IncludedCount})`
                     : "P-VOLATILE-R1S1 ✗…"}
               </button>
-              <button
-                onClick={() => {
-                  if (!previousConsolidateAReady) return;
-                  setPreviousCandleFilter((v) => v === "consolidate-a" ? "all" : "consolidate-a");
-                }}
-                disabled={!previousConsolidateAReady || currentAllCount === 0 || activeTab === "coindcx"}
-                aria-pressed={previousCandleFilter === "consolidate-a"}
-                className={`text-xs px-2.5 py-1 -ml-px border transition-colors disabled:opacity-50 ${
-                  previousCandleFilter === "consolidate-a"
-                    ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
-                    : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
-                }`}
-                title="Include Binance and Delta symbols unless a completed previous-session 15-minute candle (a) has its whole body below previous day's BC while making a new low versus earlier candles, or (b) has its whole body above the higher of previous day's PH and R1. For the first fresh low, an immediate next candle with a lower wick becomes the reference instead. Unevaluated sources such as CoinDCX are excluded while active."
-              >
-                {previousConsolidateAProgress
-                  ? `P-CONSOLIDATE-A ${previousConsolidateAProgress.done}/${previousConsolidateAProgress.total}`
-                  : previousConsolidateAReady
-                    ? `P-CONSOLIDATE-A (${previousConsolidateAIncludedCount})`
-                    : "P-CONSOLIDATE-A…"}
-              </button>
+              </div>
+            </div>
+
+            {/* ── Previous-of-previous day (PPDay) session 15m candles ─── */}
+            <div className="flex items-center gap-1 flex-wrap">
+              <span className="text-[10px] text-cyan-400/90 uppercase tracking-wider mr-1 font-semibold shrink-0">
+                Prevprev day session candles:
+              </span>
+              <div className="inline-flex items-stretch" role="group" aria-label="Previous-of-previous day session candle filters">
               <button
                 onClick={() => {
                   if (!previousPPConsolidateAReady) return;
@@ -2286,7 +2319,7 @@ export default function Screener({
                   activeTab === "coindcx"
                 }
                 aria-pressed={previousCandleFilter === "pp-consolidate-a"}
-                className={`text-xs px-2.5 py-1 -ml-px border transition-colors disabled:opacity-50 ${
+                className={`text-xs px-2.5 py-1 rounded-l border transition-colors disabled:opacity-50 ${
                   previousCandleFilter === "pp-consolidate-a"
                     ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
                     : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
@@ -2313,7 +2346,7 @@ export default function Screener({
                   activeTab === "coindcx"
                 }
                 aria-pressed={previousCandleFilter === "pp-consolidate-b"}
-                className={`text-xs px-2.5 py-1 -ml-px border transition-colors disabled:opacity-50 ${
+                className={`text-xs px-2.5 py-1 rounded-r -ml-px border transition-colors disabled:opacity-50 ${
                   previousCandleFilter === "pp-consolidate-b"
                     ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
                     : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
@@ -2326,28 +2359,9 @@ export default function Screener({
                     ? `PP-CONSOLIDATE-B (${previousPPConsolidateBIncludedCount})`
                     : "PP-CONSOLIDATE-B…"}
               </button>
-              <button
-                onClick={() => {
-                  if (!previousUpexReady) return;
-                  setPreviousCandleFilter((v) => v === "momentum-a" ? "all" : "momentum-a");
-                  resetMomentumAMessage();
-                }}
-                disabled={!previousUpexReady || currentAllCount === 0 || activeTab === "coindcx"}
-                aria-pressed={previousCandleFilter === "momentum-a"}
-                className={`text-xs px-2.5 py-1 rounded-r -ml-px border transition-colors disabled:opacity-50 ${
-                  previousCandleFilter === "momentum-a"
-                    ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
-                    : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
-                }`}
-                title="For Binance and Delta, exclude a symbol only when a previous-session 15-minute candle body is below previous day's BC and its lower body edge breaks below earlier session wick lows. The first fresh-low break is forgiven if the immediate next candle makes a lower wick, which becomes the reference. Prepared once after exchange scan data loads; toggling reuses the cached result."
-              >
-                {previousUpexProgress
-                  ? `P-MOMENTUM-A ${previousUpexProgress.done}/${previousUpexProgress.total}`
-                  : previousUpexReady
-                    ? `P-MOMENTUM-A (${previousUpexIncludedCount})`
-                    : "P-MOMENTUM-A…"}
-              </button>
+              </div>
             </div>
+
             {/* Live current-session failed-break flags. Independent of the
                 previous-session groups above (they combine with them), but
                 S and R exclude each other. Badge text "RECLAIM-S 2/3" =
