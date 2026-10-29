@@ -2190,7 +2190,7 @@ export default function Screener({
           <div className="flex flex-col gap-1.5 w-full">
             {/* ── Previous day (PDay) session 15m candles ───────────────── */}
             <div className="flex items-center gap-1 flex-wrap">
-              <span className="text-[10px] text-cyan-400/90 uppercase tracking-wider mr-1 font-semibold shrink-0">
+              <span className="text-[10px] text-cyan-400/90 uppercase tracking-wider mr-1 font-semibold shrink-0 whitespace-nowrap">
                 Previous day session candles:
               </span>
               <div className="inline-flex items-stretch flex-wrap" role="group" aria-label="Previous day session candle filters">
@@ -2301,10 +2301,10 @@ export default function Screener({
 
             {/* ── Previous-of-previous day (PPDay) session 15m candles ─── */}
             <div className="flex items-center gap-1 flex-wrap">
-              <span className="text-[10px] text-cyan-400/90 uppercase tracking-wider mr-1 font-semibold shrink-0">
+              <span className="text-[10px] text-cyan-400/90 uppercase tracking-wider mr-1 font-semibold shrink-0 whitespace-nowrap">
                 Prevprev day session candles:
               </span>
-              <div className="inline-flex items-stretch" role="group" aria-label="Previous-of-previous day session candle filters">
+              <div className="inline-flex items-stretch shrink-0" role="group" aria-label="Previous-of-previous day session candle filters">
               <button
                 onClick={() => {
                   if (!previousPPConsolidateAReady) return;
@@ -2366,13 +2366,11 @@ export default function Screener({
                 previous-session groups above (they combine with them), but
                 S and R exclude each other. Badge text "RECLAIM-S 2/3" =
                 3 support levels pierced, price back above 2 of them. */}
-            {/* Forces the Live session group onto its own line below the
-                Momentum filters (the parent row is flex-wrap). */}
-            <div className="basis-full h-0" aria-hidden="true" />
-            <span className="text-[10px] text-cyan-400/90 uppercase tracking-wider mr-1 font-semibold">
-              Live session:
-            </span>
-            <div className="inline-flex items-stretch mr-1" role="group" aria-label="Reclaim filters">
+            <div className="flex items-center gap-1 flex-wrap">
+              <span className="text-[10px] text-cyan-400/90 uppercase tracking-wider mr-1 font-semibold shrink-0">
+                Live session:
+              </span>
+              <div className="inline-flex items-stretch" role="group" aria-label="Reclaim filters">
               <button
                 onClick={() => {
                   if (!reclaimReady) return;
@@ -2415,6 +2413,7 @@ export default function Screener({
                     ? `RECLAIM-R (${reclaimRCount})`
                     : "RECLAIM-R…"}
               </button>
+              </div>
             </div>
           </div>
           )}
