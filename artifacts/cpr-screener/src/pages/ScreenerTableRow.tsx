@@ -1323,24 +1323,36 @@ function ScreenerTableRow({
               P-CONSOLIDATE-A
             </div>
           )}
-          {(isPPConsolidateA === true || rawPPConA) && (
-            <div
-              className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
-              style={{ color: "#2dd4bf" }}
-              title="CONSOLIDATE-A rules on the day-before-previous session (PPDay)"
-            >
-              PP-CONSOLIDATE-A
-            </div>
-          )}
-          {(isPPConsolidateB === true || rawPPConB) && (
-            <div
-              className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
-              style={{ color: "#f472b6" }}
-              title="CONSOLIDATE-B rules on the day-before-previous session (PPDay)"
-            >
-              PP-CONSOLIDATE-B
-            </div>
-          )}
+          {/* PP exclusive: B wins over A when both raw flags pass (same as P CON-B > CON-A). */}
+          {(() => {
+            const showPPB = isPPConsolidateB === true || (isPPConsolidateB === undefined && rawPPConB);
+            const showPPA =
+              !showPPB &&
+              (isPPConsolidateA === true || (isPPConsolidateA === undefined && rawPPConA));
+            if (showPPB) {
+              return (
+                <div
+                  className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
+                  style={{ color: "#f472b6" }}
+                  title="CONSOLIDATE-B rules on the day-before-previous session (PPDay); exclusive over PP-CONSOLIDATE-A"
+                >
+                  PP-CONSOLIDATE-B
+                </div>
+              );
+            }
+            if (showPPA) {
+              return (
+                <div
+                  className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
+                  style={{ color: "#2dd4bf" }}
+                  title="CONSOLIDATE-A rules on the day-before-previous session (PPDay); only when PP-B did not pass"
+                >
+                  PP-CONSOLIDATE-A
+                </div>
+              );
+            }
+            return null;
+          })()}
           {showConsolidateB && (
             <div
               className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-[#ff6bb5]"

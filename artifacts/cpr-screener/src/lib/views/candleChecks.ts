@@ -75,7 +75,8 @@ export function matchesCandleCheck(r: CPRResult, code: string): boolean {
     case "INSIDE":
       return inside && !conA && !conB;
     case "PPCA":
-      return ppA;
+      // Exclusive: A only when B did not pass (same as CA vs CB).
+      return ppA && !ppB;
     case "PPCB":
       return ppB;
     default:
@@ -120,9 +121,9 @@ export function candleCheckFromRow(r: CPRResult): string {
   else if (conA) p = "CA";
   else if (momA) p = "MA";
   else if (inside) p = "VR";
-  // Independent PP flags; if both pass, prefer PPCA (single PP slot in UI).
+  // Exclusive PP (B > A), same priority as P CON-B > CON-A.
   let pp = "";
-  if (r.PD15MPPConsolidateAPass === true) pp = "PPCA";
-  else if (r.PD15MPPConsolidateBPass === true) pp = "PPCB";
+  if (r.PD15MPPConsolidateBPass === true) pp = "PPCB";
+  else if (r.PD15MPPConsolidateAPass === true) pp = "PPCA";
   return joinCandleCheck(pp, p);
 }

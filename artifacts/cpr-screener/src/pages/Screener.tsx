@@ -659,11 +659,12 @@ export default function Screener({
         else if (conA) pDayText = "P-CONSOLIDATE-A";
         else if (momA) pDayText = "P-MOMENTUM-A";
       }
-      // PP-day flags (independent of exclusive P-bucket) — line under PDay.
-      const ppParts: string[] = [];
-      if (hasPPConsolidateA(row)) ppParts.push("PP-CONSOLIDATE-A");
-      if (hasPPConsolidateB(row)) ppParts.push("PP-CONSOLIDATE-B");
-      const ppDayText = ppParts.length > 0 ? ppParts.join(" + ") : undefined;
+      // PP exclusive (B > A), independent of P-bucket — single label under PDay.
+      const ppDayText = hasPPConsolidateB(row)
+        ? "PP-CONSOLIDATE-B"
+        : hasPPConsolidateA(row)
+          ? "PP-CONSOLIDATE-A"
+          : undefined;
 
       const defs = viewDef?.levelCheckDefs;
       if (row.prevCPR && row.todayCPR) {

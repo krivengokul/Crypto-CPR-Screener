@@ -362,27 +362,27 @@ function renderCandleCheckBadges(raw: CPRResult) {
   ) : null;
 
   if (!bucket) {
-    const ppOnlyA = raw.PD15MPPConsolidateAPass === true;
-    const ppOnlyB = raw.PD15MPPConsolidateBPass === true;
-    if (!conBFailureLine && !ppOnlyA && !ppOnlyB) return null;
+    const rawPPB = raw.PD15MPPConsolidateBPass === true;
+    const rawPPA = raw.PD15MPPConsolidateAPass === true && !rawPPB;
+    if (!conBFailureLine && !rawPPA && !rawPPB) return null;
     return (
       <div className="mt-1 flex flex-col gap-0.5">
-        {ppOnlyA && (
-          <div
-            className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
-            style={{ color: "#2dd4bf" }}
-            title="CONSOLIDATE-A rules on the day-before-previous session (PPDay)"
-          >
-            PP-CONSOLIDATE-A
-          </div>
-        )}
-        {ppOnlyB && (
+        {rawPPB && (
           <div
             className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
             style={{ color: "#f472b6" }}
-            title="CONSOLIDATE-B rules on the day-before-previous session (PPDay)"
+            title="CONSOLIDATE-B rules on PPDay (exclusive over PP-CONSOLIDATE-A)"
           >
             PP-CONSOLIDATE-B
+          </div>
+        )}
+        {rawPPA && (
+          <div
+            className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
+            style={{ color: "#2dd4bf" }}
+            title="CONSOLIDATE-A rules on PPDay (only when PP-B did not pass)"
+          >
+            PP-CONSOLIDATE-A
           </div>
         )}
         {conBFailureLine}
@@ -424,8 +424,9 @@ function renderCandleCheckBadges(raw: CPRResult) {
           ? { color: "#ff6bb5" }
           : undefined;
 
-  const ppA = raw.PD15MPPConsolidateAPass === true;
+  // PP exclusive: B wins over A (same priority as P CON-B > CON-A).
   const ppB = raw.PD15MPPConsolidateBPass === true;
+  const ppA = raw.PD15MPPConsolidateAPass === true && !ppB;
 
   return (
     <div className="mt-1 flex flex-col gap-0.5">
@@ -442,22 +443,22 @@ function renderCandleCheckBadges(raw: CPRResult) {
       >
         {label}
       </div>
-      {ppA && (
-        <div
-          className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
-          style={{ color: "#2dd4bf" }}
-          title="CONSOLIDATE-A rules on the day-before-previous session (PPDay)"
-        >
-          PP-CONSOLIDATE-A
-        </div>
-      )}
       {ppB && (
         <div
           className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
           style={{ color: "#f472b6" }}
-          title="CONSOLIDATE-B rules on the day-before-previous session (PPDay)"
+          title="CONSOLIDATE-B rules on PPDay (exclusive over PP-CONSOLIDATE-A)"
         >
           PP-CONSOLIDATE-B
+        </div>
+      )}
+      {ppA && (
+        <div
+          className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
+          style={{ color: "#2dd4bf" }}
+          title="CONSOLIDATE-A rules on PPDay (only when PP-B did not pass)"
+        >
+          PP-CONSOLIDATE-A
         </div>
       )}
       {conBFailureLine}

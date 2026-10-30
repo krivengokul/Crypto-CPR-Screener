@@ -499,17 +499,25 @@ export function usePreviousCandleFilters(opts: {
     (row: CandleBucketRow) => candleBucket(row) === "consolidate-a",
     [candleBucket],
   );
-  /** PP-CONSOLIDATE-A is independent of exclusive P-buckets — check the included set. */
-  const hasPPConsolidateA = useCallback(
-    (row: CandleBucketRow) =>
-      previousPPConsolidateAIncludedSymbols.has(`${row.source}:${row.symbol}`),
-    [previousPPConsolidateAIncludedSymbols],
-  );
-  /** PP-CONSOLIDATE-B is independent of exclusive P-buckets — check the included set. */
+  /**
+   * PP exclusive membership (same priority as P CON-B > CON-A):
+   *   PP-B if in B set; PP-A only if in A set and not in B set.
+   * Independent of exclusive P-buckets.
+   */
   const hasPPConsolidateB = useCallback(
     (row: CandleBucketRow) =>
       previousPPConsolidateBIncludedSymbols.has(`${row.source}:${row.symbol}`),
     [previousPPConsolidateBIncludedSymbols],
+  );
+  const hasPPConsolidateA = useCallback(
+    (row: CandleBucketRow) => {
+      const key = `${row.source}:${row.symbol}`;
+      return (
+        previousPPConsolidateAIncludedSymbols.has(key) &&
+        !previousPPConsolidateBIncludedSymbols.has(key)
+      );
+    },
+    [previousPPConsolidateAIncludedSymbols, previousPPConsolidateBIncludedSymbols],
   );
   const hasMomentumA = useCallback(
     (row: CandleBucketRow) => candleBucket(row) === "momentum-a",
