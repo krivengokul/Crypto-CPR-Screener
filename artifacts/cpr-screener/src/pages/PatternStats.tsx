@@ -1594,6 +1594,113 @@ function PreviousDaySection() {
             <span className="font-mono text-slate-200">{result.prevSessionLabel}</span>
           </div>
 
+          {/* Exclusive P-bucket: raw PASS can still hide the label (same as Screener). */}
+          {(() => {
+            // `pass` can be null (check not evaluated) — treat as not passed.
+            const conB = result.conB.pass === true;
+            const momB = result.momB.pass === true;
+            const conA = result.conA.pass === true;
+            const momA = result.momA.pass === true;
+            // Same priority as candleBucket / matchesCandleCheck:
+            //   CON-B > MOM-B > CON-A > MOM-A
+            const displayed = conB
+              ? "P-CONSOLIDATE-B"
+              : momB
+                ? "P-MOMENTUM-B"
+                : conA
+                  ? "P-CONSOLIDATE-A"
+                  : momA
+                    ? "P-MOMENTUM-A"
+                    : null;
+            const rows: { name: string; pass: boolean; shown: boolean; reason: string }[] = [
+              {
+                name: "P-CONSOLIDATE-B",
+                pass: conB,
+                shown: displayed === "P-CONSOLIDATE-B",
+                reason: conB
+                  ? "Highest priority. Raw CON-B pass → this is the only P- label shown."
+                  : "Raw CON-B failed — not a candidate for the exclusive badge.",
+              },
+              {
+                name: "P-MOMENTUM-B",
+                pass: momB,
+                shown: displayed === "P-MOMENTUM-B",
+                reason: !momB
+                  ? "Raw MOM-B failed — not a candidate."
+                  : conB
+                    ? "Raw MOM-B passed, but CON-B also passed. Precedence: CON-B > MOM-B, so MOM-B label is suppressed."
+                    : "CON-B failed and MOM-B passed → exclusive label is P-MOMENTUM-B.",
+              },
+              {
+                name: "P-CONSOLIDATE-A",
+                pass: conA,
+                shown: displayed === "P-CONSOLIDATE-A",
+                reason: !conA
+                  ? "Raw CON-A failed — not a candidate."
+                  : conB
+                    ? "Raw CON-A passed, but CON-B also passed. Precedence: CON-B > CON-A, so CON-A label is suppressed."
+                    : momB
+                      ? "Raw CON-A passed, but MOM-B also passed (and CON-B failed). Precedence: MOM-B > CON-A, so CON-A label is suppressed."
+                      : "CON-B and MOM-B failed; CON-A passed → exclusive label is P-CONSOLIDATE-A.",
+              },
+              {
+                name: "P-MOMENTUM-A",
+                pass: momA,
+                shown: displayed === "P-MOMENTUM-A",
+                reason: !momA
+                  ? "Raw MOM-A failed — not a candidate."
+                  : conB
+                    ? "Raw MOM-A passed, but CON-B also passed. Precedence: CON-B > MOM-A, so MOM-A label is suppressed."
+                    : momB
+                      ? "Raw MOM-A passed, but MOM-B also passed. Precedence: MOM-B > MOM-A, so MOM-A label is suppressed."
+                      : conA
+                        ? "Raw MOM-A passed, but CON-A also passed. Precedence: CON-A > MOM-A, so MOM-A label is suppressed."
+                        : "Higher buckets failed; MOM-A passed → exclusive label is P-MOMENTUM-A.",
+              },
+            ];
+            return (
+              <div className="rounded-xl border border-cyan-500/30 bg-cyan-500/5 px-4 py-3 space-y-2.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-cyan-400">
+                    Screener / Backtest displayed label
+                  </span>
+                  {displayed ? (
+                    <span className="font-mono text-xs font-bold text-cyan-200">{displayed}</span>
+                  ) : (
+                    <span className="text-[11px] text-slate-500">none (no exclusive P-bucket)</span>
+                  )}
+                </div>
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  Priority (first match wins):{" "}
+                  <span className="font-mono text-slate-300">
+                    P-CONSOLIDATE-B → P-MOMENTUM-B → P-CONSOLIDATE-A → P-MOMENTUM-A
+                  </span>
+                  . A raw PASS below does not always mean that label is shown.
+                </p>
+                <ul className="space-y-1.5">
+                  {rows.map((row) => (
+                    <li
+                      key={row.name}
+                      className="text-[11px] leading-snug flex flex-col sm:flex-row sm:gap-2"
+                    >
+                      <span className="font-mono font-semibold shrink-0 min-w-[9.5rem]">
+                        <span className={row.pass ? "text-emerald-400" : "text-rose-400"}>
+                          {row.name}
+                        </span>
+                        <span className="text-slate-500 font-normal">
+                          {" "}
+                          {row.pass ? "PASS" : "FAIL"}
+                          {row.shown ? " · shown" : " · hidden"}
+                        </span>
+                      </span>
+                      <span className="text-slate-400">{row.reason}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })()}
+
           {/* Dedicated summary of all candle numbers having body in TC and body in BC */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {/* TC block */}
