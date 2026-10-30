@@ -363,9 +363,12 @@ function renderCandleCheckBadges(raw: CPRResult) {
     ) : null;
   }
 
+  const isTouchVolatile = bucket === "inside-r1s1" && raw.touchCategory === true;
   const label =
     bucket === "inside-r1s1"
-      ? "P-VOLATILE-R1S1 ✗"
+      ? isTouchVolatile
+        ? "P-VOLATILE-R1S1"
+        : "P-VOLATILE-R1S1 ✗"
       : bucket === "consolidate-a"
         ? "P-CONSOLIDATE-A"
         : bucket === "consolidate-b"
@@ -376,7 +379,7 @@ function renderCandleCheckBadges(raw: CPRResult) {
 
   const className =
     bucket === "inside-r1s1"
-      ? "font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-[#ff637e]"
+      ? "font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
       : bucket === "consolidate-a"
         ? "font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
         : bucket === "consolidate-b"
@@ -386,11 +389,13 @@ function renderCandleCheckBadges(raw: CPRResult) {
             : "font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-violet-400";
 
   const style =
-    bucket === "consolidate-a"
-      ? { color: "#03b07c" }
-      : bucket === "consolidate-b"
-        ? { color: "#ff6bb5" }
-        : undefined;
+    bucket === "inside-r1s1"
+      ? { color: isTouchVolatile ? "#a3e635" : "#ff637e" }
+      : bucket === "consolidate-a"
+        ? { color: "#03b07c" }
+        : bucket === "consolidate-b"
+          ? { color: "#ff6bb5" }
+          : undefined;
 
   return (
     <div className="mt-1 flex flex-col gap-0.5">
@@ -399,7 +404,9 @@ function renderCandleCheckBadges(raw: CPRResult) {
         style={style}
         title={
           bucket === "inside-r1s1"
-            ? "Previous-session 15m was inside R1/PH–S1/PL band but not CON-A/CON-B (volatile)"
+            ? isTouchVolatile
+              ? "TOUCH + previous-session 15m inside R1/PH–S1/PL band (not CON-A/CON-B)"
+              : "Previous-session 15m was inside R1/PH–S1/PL band but not CON-A/CON-B (volatile)"
             : undefined
         }
       >

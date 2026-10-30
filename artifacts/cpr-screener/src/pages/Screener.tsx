@@ -659,6 +659,12 @@ export default function Screener({
         else if (conA) pDayText = "P-CONSOLIDATE-A";
         else if (momA) pDayText = "P-MOMENTUM-A";
       }
+      // PP-day flags (independent of exclusive P-bucket) — line under PDay.
+      const ppParts: string[] = [];
+      if (hasPPConsolidateA(row)) ppParts.push("PP-CONSOLIDATE-A");
+      if (hasPPConsolidateB(row)) ppParts.push("PP-CONSOLIDATE-B");
+      const ppDayText = ppParts.length > 0 ? ppParts.join(" + ") : undefined;
+
       const defs = viewDef?.levelCheckDefs;
       if (row.prevCPR && row.todayCPR) {
         const ladder = getLadderMatchSummary(row.prevCPR, row.todayCPR, defs as any);
@@ -672,6 +678,7 @@ export default function Screener({
         signalCode,
         direction,
         pDayText,
+        ppDayText,
         matchText,
         // Status needs the full CPR levels; bare legend rows (symbol+source only) get none.
         status:
@@ -685,7 +692,7 @@ export default function Screener({
     },
     // has* and activeSignal are stable enough for legend; intentionally broad
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [activeSignal, hasInsideR1S1, hasConsolidateA, hasConsolidateB, hasMomentumA, hasMomentumB],
+    [activeSignal, hasInsideR1S1, hasConsolidateA, hasConsolidateB, hasMomentumA, hasMomentumB, hasPPConsolidateA, hasPPConsolidateB],
   );
 
   // Entry-cross toast → Legend Card 2
