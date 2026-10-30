@@ -2754,11 +2754,12 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
     ],
       },
     {
-        key: "TC-BPS4-B-B-BB-BB-EL1U3-SL-BAGap-R4",
-        label: "FallenThenRockettoR4",
+        key: "TC-MB-BPS4-B-B-BB-BB-EL1U3-SL-BAGap-R4",
+        label: "TAREVERSAL2R4",
         parentKey: "BPS4-B-B-BB-BB-EL1U3",
-        condition: (r) => passesView(r, "BPS4-B-B-BB-BB-EL1U3") && matchesGapBadge(r, "SL-BAGap"),
+        condition: (r) => passesView(r, "BPS4-B-B-BB-BB-EL1U3") && matchesGapBadge(r, "SL-BAGap") && matchesCandleCheck(r, "MB"),
         standalone: true,
+        candleCheck: "MB",
         kind: "view",
         direction: "Up",
         targetLabel: "U4 (today's R4)",
@@ -2873,6 +2874,7 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
         ]
       }
     ],
+        requireFullMatch: true,
       },
     {
         key: "PH-A-A-AA-AA-EU1L3-RH-AAGap-R4",
