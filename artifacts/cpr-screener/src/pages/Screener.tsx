@@ -385,7 +385,7 @@ export default function Screener({
   // NEW: PDH/PDL filter — independent of activeSignal, mutually exclusive (like pivot/width filters).
   const [pdhPdlFilter, setPdhPdlFilter] = useState<"above" | "below" | "abovepu4" | "belowpl4" | "pdhgtu1" | "pdlltl1" | "s1r1in" | null>(null);
   const [PatternFilter, setPatternFilter] = useState<string | null>(null);
-  const [breakoutMode, setBreakoutMode] = useState<"off" | "brk" | "sqz">("off");
+  const [breakoutMode, setBreakoutMode] = useState<"off" | "brk">("off");
   const [showPatternList, setShowPatternList] = useState(false);
   const [showTouchList, setShowTouchList] = useState(false);
   const [touchFilter, setTouchFilter] = useState<string | null>(null);
@@ -1136,8 +1136,7 @@ export default function Screener({
     .filter(matchesSearch)
     .filter((r) => {
       if (breakoutMode === "off") return true;
-      if (breakoutMode === "brk") return !!r.breakout?.signal;
-      return !!r.breakout?.squeezeNow && !r.breakout?.signal;
+      return !!r.breakout?.signal;
     })
     // NEW: CL2U1 / CL4U3 are independent booleans in cpr.ts (not
     // actually gated behind srLower), so a row can satisfy one of them
@@ -1660,25 +1659,21 @@ export default function Screener({
               <button
                 type="button"
                 onClick={() =>
-                  setBreakoutMode((m) => (m === "off" ? "brk" : m === "brk" ? "sqz" : "off"))
+                  setBreakoutMode((m) => (m === "off" ? "brk" : "off"))
                 }
                 className={`flex items-center gap-0.5 text-xs font-bold uppercase tracking-wide px-2 py-1 rounded border transition-colors shrink-0 ${
                   breakoutMode === "off"
                     ? "border-border text-muted-foreground hover:text-foreground"
                     : "border-amber-500/60 bg-amber-500/15 text-amber-300"
                 }`}
-                title="15m breakout filter: click to cycle Off → BRK (fresh squeeze breakouts, high rel. volume) → SQZ (coiling now)"
+                title="15m momentum breakout filter: coins that just closed a bullish 15m candle through PDH/TC/R1–R4 (or the 3h range high) on 4x+ volume; refreshed every minute"
               >
-                {breakoutMode === "off" ? "Breakout" : breakoutMode === "brk" ? "BRK" : "SQZ"}
+                {breakoutMode === "off" ? "Breakout" : "BRK"}
                 {breakoutMode !== "off" && (
                   <span className="font-mono">
                     {" "}
                     {
-                      getActivePool().filter((r) =>
-                        breakoutMode === "brk"
-                          ? !!r.breakout?.signal
-                          : !!r.breakout?.squeezeNow && !r.breakout?.signal
-                      ).length
+                      getActivePool().filter((r) => !!r.breakout?.signal).length
                     }
                   </span>
                 )}

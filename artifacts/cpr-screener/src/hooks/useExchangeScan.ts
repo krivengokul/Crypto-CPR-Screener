@@ -28,6 +28,14 @@ import {
 import { passesPattern } from "@/pages/ScreenerUtils";
 import type { ActiveTab } from "@/pages/ScreenerUtils";
 import { useBinanceLiveRefresh, useDeltaLiveRefresh, useCoinDCXLiveRefresh } from "@/hooks/useLivePriceRefresh";
+import { useBreakoutLiveRefresh } from "@/hooks/useBreakoutLiveRefresh";
+import { fetchIntradayKlines } from "@/lib/binance";
+import { fetchDeltaIntradayCandles } from "@/lib/delta";
+
+// Stable module-level fetchers for the live BRK refresh: ~45 candles (11h) incl. the forming one.
+const fetchBinanceBreakoutCandles = (symbol: string) => fetchIntradayKlines(symbol, 45, true);
+const fetchDeltaBreakoutCandles = (symbol: string) =>
+  fetchDeltaIntradayCandles(symbol, true, 12 * 3600);
 
 export type ScanStatus = "idle" | "scanning" | "done" | "error";
 
@@ -263,6 +271,8 @@ export function useExchangeScan(opts: {
   useBinanceLiveRefresh(status, allResultsRef, setAllResults, setFiltered);
   useDeltaLiveRefresh(deltaStatus, deltaAllResultsRef, setDeltaAllResults, setDeltaFiltered);
   useCoinDCXLiveRefresh(coindcxStatus, coindcxAllResultsRef, setCoinDCXAllResults, setCoinDCXFiltered);
+  useBreakoutLiveRefresh(status, allResultsRef, setAllResults, setFiltered, fetchBinanceBreakoutCandles, "binance-brk");
+  useBreakoutLiveRefresh(deltaStatus, deltaAllResultsRef, setDeltaAllResults, setDeltaFiltered, fetchDeltaBreakoutCandles, "delta-brk");
 
   useEffect(() => {
     const id = setInterval(() => {

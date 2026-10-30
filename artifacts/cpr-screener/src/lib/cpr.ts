@@ -311,7 +311,7 @@ export interface CPRResult {
   PD15MMomentumBPass?: boolean;
   /** Previous-session INSIDE max(R1,PH)–min(S1,PL); independent of CON-A/CON-B. */
   PD15MInsideR1S1Pass?: boolean;
-  /** 15m squeeze + volume-breakout analysis; attached by binance.ts / delta.ts at scan time. */
+  /** 15m momentum-breakout (volume spike through a level) analysis; attached by binance.ts / delta.ts at scan time. */
   breakout?: BreakoutResult;
   /** Binance only: "COMMOD" = commodity perp (CL/BZ/XAU/XAG), "TRADFI" = other TradFi
    *  perp (stocks/ETFs). Unset for ordinary crypto perps. Set in binance.ts. */

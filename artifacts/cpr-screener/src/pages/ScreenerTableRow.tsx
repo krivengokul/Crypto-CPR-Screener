@@ -1528,7 +1528,7 @@ function ScreenerTableRow({
             <div className="mt-1">
               <span
                 className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded border border-amber-500/50 bg-amber-500/15 text-amber-300"
-                title={`15m squeeze breakout ${r.breakout.barsAgo === 0 ? "on the latest closed candle" : `${r.breakout.barsAgo} candle(s) ago`} · rel. volume ${r.breakout.relVol.toFixed(1)}x · cleared ${r.breakout.levelsCleared.join("/") || "range high"} · ${(r.breakout.runPct ?? 0) >= 0 ? "+" : ""}${(r.breakout.runPct ?? 0).toFixed(1)}% since`}
+                title={`15m momentum breakout ${r.breakout.barsAgo === 0 ? "on the latest (possibly still forming) candle" : `${r.breakout.barsAgo} candle(s) ago`} · rel. volume ${r.breakout.relVol.toFixed(1)}x · cleared ${r.breakout.levelsCleared.join("/") || "range high"} · ${(r.breakout.runPct ?? 0) >= 0 ? "+" : ""}${(r.breakout.runPct ?? 0).toFixed(1)}% since`}
               >
                 BRK {r.breakout.relVol.toFixed(1)}x
                 {r.breakout.levelsCleared.length > 0
@@ -1536,15 +1536,6 @@ function ScreenerTableRow({
                   : " RNG"}
                 {" "}
                 {(r.breakout.barsAgo ?? 0) * 15}m
-              </span>
-            </div>
-          ) : r.breakout?.squeezeNow ? (
-            <div className="mt-1">
-              <span
-                className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded border border-sky-500/40 bg-sky-500/10 text-sky-300"
-                title="15m squeeze: ATR and Bollinger width are near their lows. Watch for a high-volume close through the levels."
-              >
-                SQZ
               </span>
             </div>
           ) : null}

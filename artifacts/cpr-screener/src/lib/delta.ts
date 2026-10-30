@@ -251,13 +251,18 @@ async function fetchDeltaCandles(symbol: string): Promise<OHLC[] | null> {
 }
 
 /**
- * Closed 15m candles (~4 days) for the squeeze/breakout detector. Optional
- * data: null on any failure; never blocks the CPR scan. Drops the forming candle.
+ * 15m candles (~4 days by default) for the momentum-breakout detector.
+ * Optional data: null on any failure; never blocks the CPR scan. Drops the
+ * forming candle unless `includeForming` (live breakout refresh).
  */
-async function fetchDeltaIntradayCandles(symbol: string): Promise<OHLC[] | null> {
+export async function fetchDeltaIntradayCandles(
+  symbol: string,
+  includeForming = false,
+  spanSec = 4 * 86400
+): Promise<OHLC[] | null> {
   try {
     const now = Math.floor(Date.now() / 1000);
-    const start = now - 4 * 86400;
+    const start = now - spanSec;
     const res = await fetch(
       `${BASE}/history/candles?symbol=${symbol}&resolution=15m&start=${start}&end=${now}`,
       { cache: "no-store" }
@@ -283,7 +288,7 @@ async function fetchDeltaIntradayCandles(symbol: string): Promise<OHLC[] | null>
         close: Number(k.close),
         volume: Number(k.volume),
       }))
-      .filter((c) => c.openTime + 15 * 60 * 1000 <= nowMs);
+      .filter((c) => includeForming || c.openTime + 15 * 60 * 1000 <= nowMs);
   } catch {
     return null;
   }

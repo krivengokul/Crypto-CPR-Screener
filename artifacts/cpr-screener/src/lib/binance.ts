@@ -476,23 +476,30 @@ export async function fetchDailyKlines(
 }
 
 /**
- * Closed 15m futures candles for the squeeze/breakout detector (breakout.ts).
+ * 15m futures candles for the momentum-breakout detector (breakout.ts).
  * Optional data: returns null on any failure (the symbol just gets no
- * breakout badge) and never logs/blocks the CPR scan. The still-forming last
- * candle is dropped so relative volume isn't understated.
+ * breakout badge) and never logs/blocks the CPR scan. By default the
+ * still-forming last candle is dropped so relative volume isn't understated;
+ * the live breakout refresh passes `includeForming` to catch a spike as it
+ * happens.
  */
 const FIFTEEN_MIN_MS = 15 * 60 * 1000;
-async function fetchIntradayKlines(symbol: string, limit = 300): Promise<OHLC[] | null> {
+export async function fetchIntradayKlines(
+  symbol: string,
+  limit = 300,
+  includeForming = false
+): Promise<OHLC[] | null> {
   const res = await fetchWithRetry(
     `${FBASE}/klines?symbol=${symbol}&interval=15m&limit=${limit}`,
-    { attempts: 3 }
+    { attempts: includeForming ? 1 : 3 }
   );
   if (!res?.ok) return null;
   try {
     const data: KlineRaw[] = await res.json();
     if (!Array.isArray(data)) return null;
     const now = Date.now();
-    return data.map(parseKline).filter((c) => c.openTime + FIFTEEN_MIN_MS <= now);
+    const parsed = data.map(parseKline);
+    return includeForming ? parsed : parsed.filter((c) => c.openTime + FIFTEEN_MIN_MS <= now);
   } catch {
     return null;
   }
