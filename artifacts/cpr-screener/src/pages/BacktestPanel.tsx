@@ -51,6 +51,7 @@ import {
   PP_CANDLE_CHECK_OPTIONS,
   splitCandleCheck,
   joinCandleCheck,
+  candleCheckFromRow,
   matchesCandleCheck,
   parseComposedViewKey,
   ENTRY_OPTIONS,
@@ -1804,6 +1805,7 @@ function CreateViewControl({
   prevCPR,
   todayCPR,
   existingGapBadge,
+  existingCandleCheck,
   onCreated,
   onCommandGenerated,
 }: {
@@ -1817,6 +1819,9 @@ function CreateViewControl({
   // Used to preselect the Gap Badge dropdown below, the same way attachKey
   // preselects to patternKey.
   existingGapBadge?: string;
+  // From the row's P- / PP- 15m flags (candleCheckFromRow) so PP/P dropdowns
+  // open preselected to what this symbol already is — same idea as Gap.
+  existingCandleCheck?: string;
   onCreated: (newKey: string) => void;
   // Fired the instant confirm() pushes the new ViewDef into the live
   // VIEWS array — i.e. as soon as the command below becomes visible —
@@ -1858,7 +1863,9 @@ function CreateViewControl({
   // original conditionKey-redirect behavior. Preselected to the row's own
   // existingGapBadge (same idea as attachKey defaulting to patternKey);
   // falls back to "" (Any Gap Badge) if that's somehow not a known badge.
-  const [candleCheck, setCandleCheck] = useState("");
+  const [candleCheck, setCandleCheck] = useState(
+    () => (existingCandleCheck && existingCandleCheck.trim() !== "" ? existingCandleCheck : "")
+  );
   const [gapBadge, setGapBadge] = useState(
     existingGapBadge && ALL_GAP_BADGES.includes(existingGapBadge) ? existingGapBadge : ""
   );
@@ -1931,7 +1938,7 @@ function CreateViewControl({
     setEntry("TC");
     setStoploss("S1");
     setTarget("R4");
-    setCandleCheck("");
+    setCandleCheck(existingCandleCheck && existingCandleCheck.trim() !== "" ? existingCandleCheck : "");
     setGapBadge(existingGapBadge && ALL_GAP_BADGES.includes(existingGapBadge) ? existingGapBadge : "");
     setNewLabel(patternLabel);
     setLabelEdited(false);
@@ -3765,6 +3772,7 @@ export default function BacktestPanel() {
                                     prevCPR={r.prevCPR}
                                     todayCPR={r.todayCPR}
                                     existingGapBadge={computeGapBadge(r.raw)}
+                                  existingCandleCheck={candleCheckFromRow(r.raw)}
                                     onCreated={(newKey) => {
                                       setTreeRevision((r) => r + 1);
                                       setSelectedKey(newKey);
@@ -4168,6 +4176,7 @@ export default function BacktestPanel() {
                                   prevCPR={r.prevCPR}
                                   todayCPR={r.todayCPR}
                                   existingGapBadge={computeGapBadge(r.raw)}
+                                  existingCandleCheck={candleCheckFromRow(r.raw)}
                                   onCommandGenerated={() => {
                                     setPendingCreateViewRows((prev) => {
                                       if (prev.has(rowKey)) return prev;

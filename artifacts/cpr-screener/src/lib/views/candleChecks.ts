@@ -101,3 +101,28 @@ export function candleCheckToCategoryKey(code: string): string | undefined {
       return undefined;
   }
 }
+
+/**
+ * Derive the Create-View candleCheck string from a live/backtest row's
+ * 15m flags — same exclusive P-bucket priority as matchesCandleCheck /
+ * Screener, plus independent PP-CONSOLIDATE-A/B when those flags pass.
+ * Used to preselect the PP / P dropdowns (like existingGapBadge for Gap).
+ */
+export function candleCheckFromRow(r: CPRResult): string {
+  const conA = r.PD15MConsolidateAPass === true;
+  const conB = r.PD15MBelowTCPass === true;
+  const momA = r.PD15MAboveBCPass === true;
+  const momB = r.PD15MMomentumBPass === true;
+  const inside = r.PD15MInsideR1S1Pass === true;
+  let p = "";
+  if (conB) p = "CB";
+  else if (momB) p = "MB";
+  else if (conA) p = "CA";
+  else if (momA) p = "MA";
+  else if (inside) p = "VR";
+  // Independent PP flags; if both pass, prefer PPCA (single PP slot in UI).
+  let pp = "";
+  if (r.PD15MPPConsolidateAPass === true) pp = "PPCA";
+  else if (r.PD15MPPConsolidateBPass === true) pp = "PPCB";
+  return joinCandleCheck(pp, p);
+}
