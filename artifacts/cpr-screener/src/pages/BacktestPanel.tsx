@@ -358,9 +358,32 @@ function renderCandleCheckBadges(raw: CPRResult) {
   ) : null;
 
   if (!bucket) {
-    return conBFailureLine ? (
-      <div className="mt-1 flex flex-col gap-0.5">{conBFailureLine}</div>
-    ) : null;
+    const ppOnlyA = raw.PD15MPPConsolidateAPass === true;
+    const ppOnlyB = raw.PD15MPPConsolidateBPass === true;
+    if (!conBFailureLine && !ppOnlyA && !ppOnlyB) return null;
+    return (
+      <div className="mt-1 flex flex-col gap-0.5">
+        {ppOnlyA && (
+          <div
+            className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
+            style={{ color: "#2dd4bf" }}
+            title="CONSOLIDATE-A rules on the day-before-previous session (PPDay)"
+          >
+            PP-CONSOLIDATE-A
+          </div>
+        )}
+        {ppOnlyB && (
+          <div
+            className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
+            style={{ color: "#f472b6" }}
+            title="CONSOLIDATE-B rules on the day-before-previous session (PPDay)"
+          >
+            PP-CONSOLIDATE-B
+          </div>
+        )}
+        {conBFailureLine}
+      </div>
+    );
   }
 
   const isTouchVolatile = bucket === "inside-r1s1" && raw.touchCategory === true;
@@ -397,6 +420,9 @@ function renderCandleCheckBadges(raw: CPRResult) {
           ? { color: "#ff6bb5" }
           : undefined;
 
+  const ppA = raw.PD15MPPConsolidateAPass === true;
+  const ppB = raw.PD15MPPConsolidateBPass === true;
+
   return (
     <div className="mt-1 flex flex-col gap-0.5">
       <div
@@ -412,6 +438,24 @@ function renderCandleCheckBadges(raw: CPRResult) {
       >
         {label}
       </div>
+      {ppA && (
+        <div
+          className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
+          style={{ color: "#2dd4bf" }}
+          title="CONSOLIDATE-A rules on the day-before-previous session (PPDay)"
+        >
+          PP-CONSOLIDATE-A
+        </div>
+      )}
+      {ppB && (
+        <div
+          className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
+          style={{ color: "#f472b6" }}
+          title="CONSOLIDATE-B rules on the day-before-previous session (PPDay)"
+        >
+          PP-CONSOLIDATE-B
+        </div>
+      )}
       {conBFailureLine}
     </div>
   );
