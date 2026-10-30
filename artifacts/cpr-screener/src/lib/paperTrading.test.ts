@@ -1201,9 +1201,11 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     cpr_previous_15m_tc_b_results_v7: "x",
     cpr_previous_15m_tc_b_results_v8: "x",
     cpr_previous_15m_tc_b_results_v9: "x",
-    cpr_previous_15m_tc_b_results_v10: "keep",
+    cpr_previous_15m_tc_b_results_v10: "x",
+    cpr_previous_15m_tc_b_results_v11: "keep",
     cpr_previous_15m_b_results_v1: "x",
-    cpr_previous_15m_b_results_v3: "keep",
+    cpr_previous_15m_b_results_v3: "x",
+    cpr_previous_15m_b_results_v4: "keep",
     cpr_previous_upex_results_v1: "x",
     cpr_previous_upex_results_v2: "x",
     cpr_previous_upex_results_v3: "x",
@@ -1236,12 +1238,12 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     }),
   });
   try {
-    assert.equal(pruneLegacy15MResultCaches(), 27);
+    assert.equal(pruneLegacy15MResultCaches(), 29);
     assert.deepEqual(Object.keys(store).sort(), [
-      "cpr_previous_15m_b_results_v3",
+      "cpr_previous_15m_b_results_v4",
       "cpr_previous_15m_consolidate_a_results_v10",
       "cpr_previous_15m_momentum_b_results_v4",
-      "cpr_previous_15m_tc_b_results_v10",
+      "cpr_previous_15m_tc_b_results_v11",
       "cpr_previous_upex_results_v8",
       "cpr_symbols_2026-10-09",
     ]);

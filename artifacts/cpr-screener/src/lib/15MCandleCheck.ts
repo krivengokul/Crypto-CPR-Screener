@@ -8,12 +8,12 @@ const CANDLE_INTERVAL_MS = 15 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_CONCURRENT_REQUESTS = 8;
 const PREVIOUS_UPEX_CACHE_KEY = "cpr_previous_upex_results_v8";
-const PREVIOUS_15M_B_CACHE_KEY = "cpr_previous_15m_b_results_v3";
-const PREVIOUS_15M_TC_B_CACHE_KEY = "cpr_previous_15m_tc_b_results_v10";
+const PREVIOUS_15M_B_CACHE_KEY = "cpr_previous_15m_b_results_v4";
+const PREVIOUS_15M_TC_B_CACHE_KEY = "cpr_previous_15m_tc_b_results_v11";
 const PREVIOUS_15M_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_momentum_b_results_v4";
 const PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_consolidate_a_results_v10";
 const PREVIOUS_15M_PP_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_pp_consolidate_a_results_v2";
-const PREVIOUS_15M_PP_CONSOLIDATE_B_CACHE_KEY = "cpr_previous_15m_pp_consolidate_b_results_v2";
+const PREVIOUS_15M_PP_CONSOLIDATE_B_CACHE_KEY = "cpr_previous_15m_pp_consolidate_b_results_v3";
 const PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_inside_r1s1_results_v3";
 
 export interface UpexCandidate {
@@ -573,12 +573,11 @@ interface PD15MBelowTCFailure {
  *   replace an earlier one when its high is higher). Only then are full-body-above-TC
  *   candles tested (bodyLow > refCeilingHigh fails). If no TC-spanning candle exists
  *   but bodies fully above TC existed, the session fails on the first such candle.
- * - Floor rule (lower of PL / S1, CONSOLIDATE-B ONLY):
- *   A candle whose body spans the floor sets / updates the floor reference with
- *   its lower wick. A candle whose body is wholly below this reference (or below
- *   the floor if no reference has been established yet) fails the session.
- *   Candle 1 with a full body below floor fails immediately.
- *   MOMENTUM-B has no floor rule.
+ * - Floor rule (lower of PL / S1, CONSOLIDATE-B ONLY): full-session (mirrors CON-A BC).
+ *   refFloorLow = minimum low-wick among ALL body-in-floor candles. Only then are
+ *   full-body-below-floor candles tested (bodyHigh < refFloorLow fails). If no
+ *   floor-spanning candle exists but bodies fully below the floor existed, the
+ *   session fails on the first such candle. MOMENTUM-B has no floor rule.
  */
 function findPD15MBelowTCFailure(
   completed: OHLC[],
@@ -586,7 +585,6 @@ function findPD15MBelowTCFailure(
   floor: number | undefined,
   s2?: number,
 ): PD15MBelowTCFailure | null {
-  let refFloorLow: number | null = null;
   let seenBodyInS2 = false;
   const useS2 = s2 !== undefined && Number.isFinite(s2);
 
@@ -604,7 +602,22 @@ function findPD15MBelowTCFailure(
     }
   }
 
+  // Full-session PL/S1 floor reference (CON-B only): min low among ALL body-in-floor.
+  let refFloorLow: number | null = null;
+  if (floor !== undefined) {
+    for (const candle of completed) {
+      const bodyLow = Math.min(candle.open, candle.close);
+      const bodyHigh = Math.max(candle.open, candle.close);
+      if (bodyLow <= floor && bodyHigh >= floor) {
+        if (refFloorLow === null || (Number.isFinite(candle.low) && candle.low < refFloorLow)) {
+          refFloorLow = candle.low;
+        }
+      }
+    }
+  }
+
   let firstBodyAboveTc: OHLC | null = null;
+  let firstBodyBelowFloor: OHLC | null = null;
 
   for (let i = 0; i < completed.length; i++) {
     const candle = completed[i];
@@ -625,15 +638,10 @@ function findPD15MBelowTCFailure(
       }
     }
 
-    // Floor check (PL / S1) - Only applicable to CON-B (when floor is supplied)
-    if (floor !== undefined) {
-      const bodyInFloor = bodyLow <= floor && bodyHigh >= floor;
-      if (bodyInFloor) {
-        if (refFloorLow === null || (Number.isFinite(candle.low) && candle.low < refFloorLow)) {
-          refFloorLow = candle.low;
-        }
-      }
-      if (bodyHigh < (refFloorLow ?? floor)) {
+    // Floor check (PL/S1) - CONSOLIDATE-B only, against final session refFloorLow
+    if (floor !== undefined && bodyHigh < floor) {
+      if (!firstBodyBelowFloor) firstBodyBelowFloor = candle;
+      if (refFloorLow !== null && bodyHigh < refFloorLow) {
         return {
           rule: "floor",
           candle,
@@ -674,6 +682,17 @@ function findPD15MBelowTCFailure(
     };
   }
 
+  // Bodies fully below floor but no floor-spanning reference in the whole session
+  if (floor !== undefined && refFloorLow === null && firstBodyBelowFloor) {
+    return {
+      rule: "floor",
+      candle: firstBodyBelowFloor,
+      previousHighestWick: refCeilingHigh,
+      previousLowestWick: null,
+      refCeilingCandle,
+    };
+  }
+
   return null;
 }
 
@@ -697,12 +716,10 @@ function completedBelowTCCandles(
 }
 
 /**
- * CONSOLIDATE-B mirrors CONSOLIDATE-A's two sides. Above TC, a whole candle
- * body must also sit entirely at/above every earlier wick (body low >= highest
- * earlier high) to fail. Below the
- * lower PL/S1 floor, the first body that enters below sets a low-wick
- * reference; the immediate next candle can lower that reference, and a later
- * body below it fails. Without a floor (MOMENTUM-B), only the TC rule applies.
+ * CONSOLIDATE-B mirrors CONSOLIDATE-A's two sides. Above TC: full-session max
+ * high among body-in-TC candles. Below PL/S1: full-session min low among
+ * body-in-floor candles (same principle as CON-A BC). Without a floor
+ * (MOMENTUM-B), only the TC rule applies.
  */
 export function passesPD15MBelowTCFilter(
   candles: OHLC[],
