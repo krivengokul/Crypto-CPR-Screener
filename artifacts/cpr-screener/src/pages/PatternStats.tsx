@@ -1324,7 +1324,7 @@ type PrevDayCheckBlock = {
 
 type PrevDayDiagnosis = {
   symbol: string;
-  source: "binance" | "delta";
+  source: "binance";
   entryDate: string;
   prevSessionLabel: string;
   levels: {
@@ -1341,6 +1341,18 @@ type PrevDayDiagnosis = {
   conB: PrevDayCheckBlock;
   momA: PrevDayCheckBlock;
   momB: PrevDayCheckBlock;
+  /** PP-day (day-before-previous) CON-A/B — exclusive B > A for display. */
+  ppSessionLabel: string | null;
+  ppLevels: {
+    conABc: number;
+    ceiling: number;
+    conBTc: number;
+    floor: number;
+  } | null;
+  ppTcCandles: CandleBodyLevelMatch[];
+  ppBcCandles: CandleBodyLevelMatch[];
+  ppConA: PrevDayCheckBlock | null;
+  ppConB: PrevDayCheckBlock | null;
 };
 
 function formatConBNote(
@@ -1376,7 +1388,7 @@ function formatConBNote(
 function PreviousDaySection() {
   const [symbol, setSymbol] = useState("");
   const [entryDate, setEntryDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [source, setSource] = useState<"binance" | "delta">("binance");
+  const source = "binance" as const;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<PrevDayDiagnosis | null>(null);
@@ -1496,6 +1508,79 @@ function PreviousDaySection() {
 
       const prevLabel = new Date(prevStart).toISOString().slice(0, 10);
 
+      // ── PP-day (day-before-previous): same CON-A/B rules on ppCPR levels ──
+      let ppSessionLabel: string | null = null;
+      let ppLevels: PrevDayDiagnosis["ppLevels"] = null;
+      let ppTcCandles: CandleBodyLevelMatch[] = [];
+      let ppBcCandles: CandleBodyLevelMatch[] = [];
+      let ppConA: PrevDayCheckBlock | null = null;
+      let ppConB: PrevDayCheckBlock | null = null;
+
+      const pp = cpr.ppCPR;
+      if (
+        pp &&
+        Number.isFinite(pp.bc) &&
+        Number.isFinite(pp.tc) &&
+        Number.isFinite(pp.r1) &&
+        Number.isFinite(pp.r2) &&
+        Number.isFinite(pp.s1) &&
+        Number.isFinite(pp.s2) &&
+        Number.isFinite(pp.prevHigh) &&
+        Number.isFinite(pp.prevLow)
+      ) {
+        const ppSessionEnd = prevStart; // PDay start → previous window is PPDay
+        const ppStart = previousUpexSessionStartUtcMs(ppSessionEnd);
+        const ppEnd = upexSessionStartUtcMs(ppSessionEnd);
+        const ppCandles = await fetchPreviousSessionCandles(
+          { symbol: fullSym, source },
+          ppSessionEnd,
+        );
+        if (ppCandles && ppCandles.length > 0) {
+          const ppABc = getConsolidateABc(pp, null);
+          const ppCeiling = getPrevious15MACeiling(pp);
+          const ppBTc = getConsolidateBTc(pp, null);
+          const ppFloor = getPrevious15MBFloor(pp);
+          const ppFailConB = explainPD15MBelowTCFailure(
+            ppCandles, ppBTc, ppStart, ppEnd, ppFloor, pp.s2,
+          );
+          const ppFailConA = explainUpexFailure(
+            ppCandles, ppABc, ppStart, ppEnd, ppCeiling, pp.r2,
+          );
+          ppTcCandles = allBodiesThroughLevel(ppCandles, ppBTc, ppStart, ppEnd);
+          ppBcCandles = allBodiesThroughLevel(ppCandles, ppABc, ppStart, ppEnd);
+          const ppTcTouch = ppTcCandles[0] ?? null;
+          const ppBcTouch = ppBcCandles[0] ?? null;
+          const ppConBNote = ppFailConB
+            ? formatConBNote(ppFailConB, "PPDay TC")
+            : {
+                label: "PASS",
+                detail:
+                  `All PP-day 15m bodies stayed within CONSOLIDATE-B rules (PPDay TC ${ppBTc}, floor PL/S1 ${ppFloor}).` +
+                  (ppTcTouch ? ` ${formatQualifyCandle(ppTcTouch, "PPDay TC", ppBTc)}` : ""),
+              };
+          const ppConANote = ppFailConA
+            ? formatUpexFailureNote(ppFailConA, "PPDay PH/R1")
+            : {
+                label: "PASS",
+                detail:
+                  `All PP-day 15m bodies stayed within CONSOLIDATE-A rules (BC ${ppABc}, ceiling ${ppCeiling}).` +
+                  (ppBcTouch ? ` ${formatQualifyCandle(ppBcTouch, "BC", ppABc)}` : ""),
+              };
+          ppSessionLabel = new Date(ppStart).toISOString().slice(0, 10);
+          ppLevels = { conABc: ppABc, ceiling: ppCeiling, conBTc: ppBTc, floor: ppFloor };
+          ppConA = {
+            pass: !ppFailConA,
+            label: ppConANote.label,
+            detail: ppConANote.detail,
+          };
+          ppConB = {
+            pass: !ppFailConB,
+            label: ppConBNote.label,
+            detail: ppConBNote.detail,
+          };
+        }
+      }
+
       setResult({
         symbol: fullSym,
         source,
@@ -1508,6 +1593,12 @@ function PreviousDaySection() {
         conB: { pass: failConB ? false : true, label: conB.label, detail: conB.detail },
         momA: { pass: failMomA ? false : true, label: momA.label, detail: momA.detail },
         momB: { pass: failMomB ? false : true, label: momB.label, detail: momB.detail },
+        ppSessionLabel,
+        ppLevels,
+        ppTcCandles,
+        ppBcCandles,
+        ppConA,
+        ppConB,
       });
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -1549,20 +1640,6 @@ function PreviousDaySection() {
             }}
             max={new Date().toISOString().slice(0, 10)}
           />
-          <div className="flex rounded-md overflow-hidden border border-[#22354a] bg-[#151e2c]">
-            {(["binance", "delta"] as const).map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => setSource(s)}
-                className={`px-3 py-1.5 text-xs font-semibold capitalize ${
-                  source === s ? "bg-cyan-500/20 text-cyan-400" : "text-slate-400 hover:text-slate-200"
-                }`}
-              >
-                {s}
-              </button>
-            ))}
-          </div>
           <button
             type="button"
             onClick={() => void run()}
@@ -1592,6 +1669,12 @@ function PreviousDaySection() {
             <span className="font-mono text-slate-200">{result.entryDate}</span>
             {" · previous session "}
             <span className="font-mono text-slate-200">{result.prevSessionLabel}</span>
+            {result.ppSessionLabel ? (
+              <>
+                {" · PP session "}
+                <span className="font-mono text-slate-200">{result.ppSessionLabel}</span>
+              </>
+            ) : null}
           </div>
 
           {/* Exclusive P-bucket: raw PASS can still hide the label (same as Screener). */}
@@ -1861,6 +1944,178 @@ function PreviousDaySection() {
               </div>
             );
           })}
+
+          {/* ── PP-day CON-A / CON-B (exclusive B > A) ───────────────── */}
+          {result.ppConA && result.ppConB && result.ppLevels ? (
+            <div className="space-y-3 pt-2 border-t border-[#22354a]">
+              <div className="text-[11px] text-slate-400">
+                <span className="font-semibold uppercase tracking-wider text-teal-400/90">
+                  Prevprev day — 15m PP-CON-A / PP-CON-B
+                </span>
+                {" · session "}
+                <span className="font-mono text-slate-200">{result.ppSessionLabel}</span>
+                {" · levels from ppCPR"}
+              </div>
+              {(() => {
+                const ppB = result.ppConB!.pass;
+                const ppA = result.ppConA!.pass;
+                const displayed = ppB ? "PP-CONSOLIDATE-B" : ppA ? "PP-CONSOLIDATE-A" : null;
+                return (
+                  <div className="rounded-xl border border-teal-500/30 bg-teal-500/5 px-4 py-3 space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-teal-400">
+                        Displayed PP label
+                      </span>
+                      {displayed ? (
+                        <span className="font-mono text-xs font-bold text-teal-200">{displayed}</span>
+                      ) : (
+                        <span className="text-[11px] text-slate-500">none</span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-slate-400">
+                      Priority:{" "}
+                      <span className="font-mono text-slate-300">PP-CONSOLIDATE-B → PP-CONSOLIDATE-A</span>
+                      {" "}(same exclusive rule as P CON-B &gt; CON-A).
+                    </p>
+                    <ul className="space-y-1 text-[11px] text-slate-400">
+                      <li>
+                        <span className={`font-mono font-semibold ${ppB ? "text-emerald-400" : "text-rose-400"}`}>
+                          PP-CONSOLIDATE-B
+                        </span>
+                        {ppB ? " PASS" : " FAIL"}
+                        {displayed === "PP-CONSOLIDATE-B" ? " · shown" : " · hidden"}
+                        {" — "}
+                        {ppB
+                          ? "Highest PP priority; raw pass → this is the only PP label shown."
+                          : "Raw PP-B failed — not a candidate."}
+                      </li>
+                      <li>
+                        <span className={`font-mono font-semibold ${ppA ? "text-emerald-400" : "text-rose-400"}`}>
+                          PP-CONSOLIDATE-A
+                        </span>
+                        {ppA ? " PASS" : " FAIL"}
+                        {displayed === "PP-CONSOLIDATE-A" ? " · shown" : " · hidden"}
+                        {" — "}
+                        {!ppA
+                          ? "Raw PP-A failed — not a candidate."
+                          : ppB
+                            ? "Raw PP-A passed, but PP-B also passed → suppressed."
+                            : "PP-B failed; PP-A passed → exclusive label."}
+                      </li>
+                    </ul>
+                  </div>
+                );
+              })()}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="rounded-xl border border-pink-400/35 bg-[#141220] p-3.5">
+                  <div className="mb-2 font-mono text-xs font-bold text-[#ff6bb5]">
+                    PP BODY IN TC ({result.ppLevels.conBTc})
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {result.ppTcCandles.length === 0 ? (
+                      <span className="text-[11px] text-slate-500 italic">none</span>
+                    ) : (
+                      result.ppTcCandles.map((c) => (
+                        <span
+                          key={c.candleNumber}
+                          className="inline-flex px-2 py-0.5 rounded font-mono text-[11px] bg-pink-400/15 text-pink-200 border border-pink-400/40"
+                        >
+                          #{c.candleNumber} ({c.ist})
+                        </span>
+                      ))
+                    )}
+                  </div>
+                </div>
+                <div className="rounded-xl border border-emerald-500/25 bg-[#0e1c1e] p-3.5">
+                  <div className="mb-2 font-mono text-xs font-bold text-emerald-400">
+                    PP BODY IN BC ({result.ppLevels.conABc})
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {result.ppBcCandles.length === 0 ? (
+                      <span className="text-[11px] text-slate-500 italic">none</span>
+                    ) : (
+                      result.ppBcCandles.map((c) => (
+                        <span
+                          key={c.candleNumber}
+                          className="inline-flex px-2 py-0.5 rounded font-mono text-[11px] bg-emerald-500/15 text-emerald-200 border border-emerald-500/30"
+                        >
+                          #{c.candleNumber} ({c.ist})
+                        </span>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+              {(
+                [
+                  {
+                    key: "ppConB" as const,
+                    title: "PP-CONSOLIDATE-B",
+                    levels: `PPDay TC ${result.ppLevels.conBTc} · floor ${result.ppLevels.floor}`,
+                    tonePass: "border-pink-400/40 bg-pink-400/10",
+                    textPass: "text-[#ff6bb5]",
+                    block: result.ppConB,
+                    matches: result.ppTcCandles,
+                    levelLabel: "TC",
+                    levelVal: result.ppLevels.conBTc,
+                  },
+                  {
+                    key: "ppConA" as const,
+                    title: "PP-CONSOLIDATE-A",
+                    levels: `BC ${result.ppLevels.conABc} · ceiling ${result.ppLevels.ceiling}`,
+                    tonePass: "border-emerald-500/30 bg-emerald-500/5",
+                    textPass: "text-emerald-400",
+                    block: result.ppConA,
+                    matches: result.ppBcCandles,
+                    levelLabel: "BC",
+                    levelVal: result.ppLevels.conABc,
+                  },
+                ] as const
+              ).map(({ key, title, levels, tonePass, textPass, block, matches, levelLabel, levelVal }) => {
+                const ok = block.pass;
+                return (
+                  <div
+                    key={key}
+                    className={`rounded-xl border px-4 py-3 ${ok ? tonePass : "border-rose-500/30 bg-rose-500/5"}`}
+                  >
+                    <div className="mb-1 flex flex-wrap items-center gap-2">
+                      <span className={`font-mono text-xs font-bold uppercase tracking-wider ${ok ? textPass : "text-rose-400"}`}>
+                        {title} {ok ? "PASS" : "✗"}
+                      </span>
+                      <span className="text-[10px] text-slate-500">{levels}</span>
+                    </div>
+                    {!ok && (
+                      <div className="font-mono text-[12px] text-rose-300/90">
+                        {title} {block.label}
+                      </div>
+                    )}
+                    <div className="mt-1 text-[11px] leading-relaxed text-slate-300">{block.detail}</div>
+                    <div className="mt-2.5 pt-2 border-t border-slate-700/40 flex flex-wrap items-center gap-1.5 text-[11px]">
+                      <span className="text-slate-400 font-mono text-[10px] uppercase">
+                        Body in {levelLabel} ({levelVal}):
+                      </span>
+                      {matches.length === 0 ? (
+                        <span className="text-slate-500 italic text-[10px]">none</span>
+                      ) : (
+                        matches.map((c) => (
+                          <span
+                            key={c.candleNumber}
+                            className="inline-flex items-center px-1.5 py-0.5 rounded font-mono text-[10px] border bg-slate-500/10 text-slate-300 border-slate-500/25"
+                          >
+                            #{c.candleNumber}
+                          </span>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : result.ppSessionLabel === null ? (
+            <div className="text-[11px] text-slate-500 italic pt-2 border-t border-[#22354a]">
+              PP-day section skipped — ppCPR levels unavailable for this entry date.
+            </div>
+          ) : null}
         </div>
       )}
     </section>
