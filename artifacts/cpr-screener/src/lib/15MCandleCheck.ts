@@ -7,12 +7,12 @@ const DELTA_BASE = "https://api.india.delta.exchange/v2";
 const CANDLE_INTERVAL_MS = 15 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_CONCURRENT_REQUESTS = 8;
-const PREVIOUS_UPEX_CACHE_KEY = "cpr_previous_upex_results_v8";
+const PREVIOUS_UPEX_CACHE_KEY = "cpr_previous_upex_results_v9";
 const PREVIOUS_15M_B_CACHE_KEY = "cpr_previous_15m_b_results_v4";
 const PREVIOUS_15M_TC_B_CACHE_KEY = "cpr_previous_15m_tc_b_results_v11";
 const PREVIOUS_15M_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_momentum_b_results_v4";
-const PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_consolidate_a_results_v10";
-const PREVIOUS_15M_PP_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_pp_consolidate_a_results_v2";
+const PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_consolidate_a_results_v11";
+const PREVIOUS_15M_PP_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_pp_consolidate_a_results_v3";
 const PREVIOUS_15M_PP_CONSOLIDATE_B_CACHE_KEY = "cpr_previous_15m_pp_consolidate_b_results_v3";
 const PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_inside_r1s1_results_v3";
 
@@ -182,11 +182,12 @@ export function previousPreviousUpexSessionStartUtcMs(now = Date.now()): number 
  *    final reference is known are full-body-below-BC candles tested (bodyHigh < refFloorLow
  *    fails). If no BC-spanning candle exists but there were full-body-below-BC candles, the
  *    session fails on the first such candle.
- *  - Ceiling rule (CONSOLIDATE-A only, when `ceiling` is supplied): a candle whose body
- *    spans the ceiling (higher of PH / R1) sets / updates the ceiling reference with its
- *    higher wick. A candle whose body is wholly above the reference (or above ceiling if
- *    no reference has been established yet) fails the session. Candle 1 with a full body
- *    above ceiling fails immediately. MOMENTUM-A has no ceiling check.
+ *  - Ceiling rule (CONSOLIDATE-A only, when `ceiling` is supplied): full-session (mirrors
+ *    CON-B TC). refCeilingHigh = maximum high-wick among ALL body-in-ceiling candles
+ *    (max PH/R1). Only then are full-body-above-ceiling candles tested (bodyLow >
+ *    refCeilingHigh fails). If no ceiling-spanning candle exists but bodies fully above
+ *    the ceiling existed, the session fails on the first such candle. MOMENTUM-A has no
+ *    ceiling check.
  *  - R2 body rule (CONSOLIDATE-A only, when `r2` is supplied): fail when a
  *    first-crossing or new-high candle has open/close at or above R2. That
  *    session is MOMENTUM-A, not CONSOLIDATE-A.
@@ -217,7 +218,7 @@ export function passesUpexFilter(
     ceiling !== undefined && r2 !== undefined && Number.isFinite(r2);
 
   // Full-session floor reference: min low among ALL body-in-BC candles (later #20
-  // can replace earlier #3 when its wick is lower). Ceiling / R2 stay sequential.
+  // can replace earlier #3 when its wick is lower). Ceiling is also full-session; R2 uses final ceiling ref.
   let refFloorLow: number | null = null;
   for (const candle of completed) {
     const bodyLow = Math.min(candle.open, candle.close);
@@ -229,9 +230,23 @@ export function passesUpexFilter(
     }
   }
 
+  // Full-session PH/R1 ceiling reference (CON-A only): max high among ALL body-in-ceiling.
   let refCeilingHigh: number | null = null;
+  if (ceiling !== undefined) {
+    for (const candle of completed) {
+      const bodyLow = Math.min(candle.open, candle.close);
+      const bodyHigh = Math.max(candle.open, candle.close);
+      if (bodyLow <= ceiling && bodyHigh >= ceiling) {
+        if (refCeilingHigh === null || (Number.isFinite(candle.high) && candle.high > refCeilingHigh)) {
+          refCeilingHigh = candle.high;
+        }
+      }
+    }
+  }
+
   let seenBodyInR2 = false;
   let sawBodyBelowBc = false;
+  let sawBodyAboveCeiling = false;
 
   for (let i = 0; i < completed.length; i++) {
     const candle = completed[i];
@@ -246,20 +261,16 @@ export function passesUpexFilter(
       }
     }
 
-    // Ceiling rule (R1 / PH) - applies only to CONSOLIDATE-A (sequential)
-    if (ceiling !== undefined) {
-      const bodyInCeiling = bodyLow <= ceiling && bodyHigh >= ceiling;
-      if (bodyInCeiling) {
-        if (refCeilingHigh === null || (Number.isFinite(candle.high) && candle.high > refCeilingHigh)) {
-          refCeilingHigh = candle.high;
-        }
-      }
-      if (bodyLow > (refCeilingHigh ?? ceiling)) {
+    // Ceiling rule (R1 / PH) against final session refCeilingHigh — CONSOLIDATE-A only
+    if (ceiling !== undefined && bodyLow > ceiling) {
+      sawBodyAboveCeiling = true;
+      if (refCeilingHigh !== null && bodyLow > refCeilingHigh) {
         return false;
       }
     }
 
     // CON-A → MOM-A: first body at/above R2, or new-high candle with body at/above R2
+    // isNewHigh uses the final session ceiling ref when available.
     if (useR2) {
       const bodyInR2 = candle.open >= (r2 as number) || candle.close >= (r2 as number);
       const isNewHigh =
@@ -274,6 +285,11 @@ export function passesUpexFilter(
 
   // No BC-spanning candle in the whole session, but bodies fully below BC existed.
   if (refFloorLow === null && sawBodyBelowBc) {
+    return false;
+  }
+
+  // No ceiling-spanning candle, but bodies fully above the ceiling level existed.
+  if (ceiling !== undefined && refCeilingHigh === null && sawBodyAboveCeiling) {
     return false;
   }
 
@@ -339,9 +355,25 @@ export function explainUpexFailure(
     }
   }
 
+  // Full-session PH/R1 ceiling (same as passesUpexFilter).
   let refCeilingHigh: number | null = null;
+  let refCeilingCandle: OHLC | null = null;
+  if (ceiling !== undefined) {
+    for (const candle of completed) {
+      const bodyLow = Math.min(candle.open, candle.close);
+      const bodyHigh = Math.max(candle.open, candle.close);
+      if (bodyLow <= ceiling && bodyHigh >= ceiling) {
+        if (refCeilingHigh === null || candle.high > refCeilingHigh) {
+          refCeilingHigh = candle.high;
+          refCeilingCandle = candle;
+        }
+      }
+    }
+  }
+
   let seenBodyInR2 = false;
   let firstBodyBelowBc: OHLC | null = null;
+  let firstBodyAboveCeiling: OHLC | null = null;
 
   for (let i = 0; i < completed.length; i++) {
     const candle = completed[i];
@@ -366,20 +398,9 @@ export function explainUpexFailure(
       }
     }
 
-    if (ceiling !== undefined) {
-      const bodyInCeiling = bodyLow <= ceiling && bodyHigh >= ceiling;
-      if (bodyInCeiling) {
-        if (refCeilingHigh === null || candle.high > refCeilingHigh) {
-          refCeilingHigh = candle.high;
-        }
-      }
-      if (bodyLow > (refCeilingHigh ?? ceiling)) {
-        const wickCandle =
-          refCeilingHigh === null
-            ? null
-            : completed.find(
-                (c) => c.openTime < candle.openTime && c.high === refCeilingHigh,
-              ) ?? null;
+    if (ceiling !== undefined && bodyLow > ceiling) {
+      if (!firstBodyAboveCeiling) firstBodyAboveCeiling = candle;
+      if (refCeilingHigh !== null && bodyLow > refCeilingHigh) {
         return {
           rule: "freshHighAboveCeiling",
           openTime: new Date(candle.openTime).toISOString(),
@@ -390,7 +411,7 @@ export function explainUpexFailure(
           ceiling,
           previousLowestWick: refFloorLow,
           previousHighestWick: refCeilingHigh,
-          previousHighestWickCandle: wickCandle ? numberOf(wickCandle) : null,
+          previousHighestWickCandle: refCeilingCandle ? numberOf(refCeilingCandle) : null,
         };
       }
     }
@@ -431,6 +452,23 @@ export function explainUpexFailure(
       ceiling,
       previousLowestWick: null,
       previousHighestWick: refCeilingHigh,
+      previousHighestWickCandle: null,
+    };
+  }
+
+  // No ceiling-spanning candle, but bodies fully above the ceiling level existed.
+  if (ceiling !== undefined && refCeilingHigh === null && firstBodyAboveCeiling) {
+    const first = firstBodyAboveCeiling;
+    return {
+      rule: "freshHighAboveCeiling",
+      openTime: new Date(first.openTime).toISOString(),
+      candleNumber: numberOf(first),
+      open: first.open,
+      close: first.close,
+      bc,
+      ceiling,
+      previousLowestWick: refFloorLow,
+      previousHighestWick: null,
       previousHighestWickCandle: null,
     };
   }
