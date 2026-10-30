@@ -1786,11 +1786,12 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
         requireFullMatch: true,
       },
     {
-        key: "S1-BPS4-B-B-BB-BB-ELBU3-SL-BAGap-S4",
-        label: "P-MicroTiny-PPL4Fall",
+        key: "S1-PPCA+MB-BPS4-B-B-BB-BB-ELBU3-SL-BAGap-S4",
+        label: "Micro999Tiny-PPL4Fall",
         parentKey: "BPS4-B-B-BB-BB-ELBU3",
-        condition: (r) => passesView(r, "BPS4-B-B-BB-BB-ELBU3") && matchesGapBadge(r, "SL-BAGap"),
+        condition: (r) => passesView(r, "BPS4-B-B-BB-BB-ELBU3") && matchesGapBadge(r, "SL-BAGap") && matchesCandleCheck(r, "PPCA+MB"),
         standalone: true,
+        candleCheck: "PPCA+MB",
         kind: "view",
         direction: "Down",
         targetLabel: "L4 (today's S4)",
@@ -1905,6 +1906,7 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
         ]
       }
     ],
+        requireFullMatch: true,
       },
     {
         key: "BC-A-E-AA-LB-EUTL2-RH-ABGap-S1",
