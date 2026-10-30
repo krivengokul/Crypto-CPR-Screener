@@ -48,6 +48,9 @@ import {
   computeGapBadge,
   ALL_CANDLE_CHECKS,
   CANDLE_CHECK_OPTIONS,
+  PP_CANDLE_CHECK_OPTIONS,
+  splitCandleCheck,
+  joinCandleCheck,
   matchesCandleCheck,
   parseComposedViewKey,
   ENTRY_OPTIONS,
@@ -1116,18 +1119,47 @@ function CopyViewControl({
       </div>
             <div className="flex gap-1.5">
         <select
-          value={candleCheck}
-          onChange={(e) => setCandleCheck(e.target.value)}
+          value={splitCandleCheck(candleCheck).pp}
+          onChange={(e) =>
+            setCandleCheck(joinCandleCheck(e.target.value, splitCandleCheck(candleCheck).p))
+          }
           disabled={!!command}
-          title="Optional 15m CONSOLIDATE/MOMENTUM filter (CA/MA/CB/MB)."
+          title="Optional previous-of-previous day 15m CONSOLIDATE filter (PP-CONSOLIDATE-A/B)."
           className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
         >
-          {CANDLE_CHECK_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
+          {PP_CANDLE_CHECK_OPTIONS.map((opt) => (
+            <option key={opt.value || "none"} value={opt.value}>
               {opt.label}
             </option>
           ))}
         </select>
+        <select
+          value={splitCandleCheck(candleCheck).p}
+          onChange={(e) =>
+            setCandleCheck(joinCandleCheck(splitCandleCheck(candleCheck).pp, e.target.value))
+          }
+          disabled={!!command}
+          title="Optional previous-day 15m CONSOLIDATE/MOMENTUM filter (CA/MA/CB/MB/VR)."
+          className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+        >
+          {CANDLE_CHECK_OPTIONS.map((opt) => (
+            <option key={opt.value || "none"} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+<input
+        value={label}
+        onChange={(e) => setLabel(e.target.value)}
+        placeholder="View name"
+        disabled={!!command}
+        title="User-friendly display name for this copied View."
+        className="w-full bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+      />
+      <AttachPointSelect value={attachKey} onChange={setAttachKey} disabled={!!command} />
+      <div className="flex gap-1.5">
         <select
           value={stoploss}
           onChange={(e) => setStoploss(e.target.value)}
@@ -1141,26 +1173,17 @@ function CopyViewControl({
             </option>
           ))}
         </select>
-      </div>
-<input
-        value={label}
-        onChange={(e) => setLabel(e.target.value)}
-        placeholder="View name"
-        disabled={!!command}
-        title="User-friendly display name for this copied View."
-        className="w-full bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
-      />
-      <AttachPointSelect value={attachKey} onChange={setAttachKey} disabled={!!command} />
-      <select
+        <select
         value={gapBadge}
         onChange={(e) => setGapBadge(e.target.value)}
         disabled={!!command}
         title="Optionally require this exact composite Gap Badge in the copied View."
-        className="w-full bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+        className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
       >
         <option value="">Any Gap Badge</option>
         {ALL_GAP_BADGES.map((badge) => <option key={badge} value={badge}>{badge}</option>)}
       </select>
+      </div>
       <input
         value={viewKey}
         readOnly
@@ -1531,18 +1554,47 @@ function EditViewControl({
       </div>
             <div className="flex gap-1.5">
         <select
-          value={candleCheck}
-          onChange={(e) => setCandleCheck(e.target.value)}
+          value={splitCandleCheck(candleCheck).pp}
+          onChange={(e) =>
+            setCandleCheck(joinCandleCheck(e.target.value, splitCandleCheck(candleCheck).p))
+          }
           disabled={!!command}
-          title="Optional 15m CONSOLIDATE/MOMENTUM filter (CA/MA/CB/MB)."
+          title="Optional previous-of-previous day 15m CONSOLIDATE filter (PP-CONSOLIDATE-A/B)."
           className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
         >
-          {CANDLE_CHECK_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
+          {PP_CANDLE_CHECK_OPTIONS.map((opt) => (
+            <option key={opt.value || "none"} value={opt.value}>
               {opt.label}
             </option>
           ))}
         </select>
+        <select
+          value={splitCandleCheck(candleCheck).p}
+          onChange={(e) =>
+            setCandleCheck(joinCandleCheck(splitCandleCheck(candleCheck).pp, e.target.value))
+          }
+          disabled={!!command}
+          title="Optional previous-day 15m CONSOLIDATE/MOMENTUM filter (CA/MA/CB/MB/VR)."
+          className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+        >
+          {CANDLE_CHECK_OPTIONS.map((opt) => (
+            <option key={opt.value || "none"} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+<input
+        value={label}
+        onChange={(e) => setLabel(e.target.value)}
+        placeholder="View name"
+        disabled={!!command}
+        title="User-friendly display name for this View — shown in the dropdown tree, editable."
+        className="w-full bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+      />
+      <AttachPointSelect value={attachKey} onChange={setAttachKey} disabled={!!command} />
+      <div className="flex gap-1.5">
         <select
           value={stoploss}
           onChange={(e) => setStoploss(e.target.value)}
@@ -1556,22 +1608,12 @@ function EditViewControl({
             </option>
           ))}
         </select>
-      </div>
-<input
-        value={label}
-        onChange={(e) => setLabel(e.target.value)}
-        placeholder="View name"
-        disabled={!!command}
-        title="User-friendly display name for this View — shown in the dropdown tree, editable."
-        className="w-full bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
-      />
-      <AttachPointSelect value={attachKey} onChange={setAttachKey} disabled={!!command} />
-      <select
+        <select
         value={gapBadge}
         onChange={(e) => setGapBadge(e.target.value)}
         disabled={!!command}
         title="Optionally also require this exact composite Gap Badge."
-        className="w-full bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+        className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
       >
         <option value="">Any Gap Badge</option>
         {ALL_GAP_BADGES.map((badge) => (
@@ -1580,6 +1622,7 @@ function EditViewControl({
           </option>
         ))}
       </select>
+      </div>
       <input
         value={viewKey}
         readOnly
@@ -2053,32 +2096,37 @@ function CreateViewControl({
       </div>
       <div className="flex gap-1.5">
         <select
-          value={candleCheck}
-          onChange={(e) => setCandleCheck(e.target.value)}
+          value={splitCandleCheck(candleCheck).pp}
+          onChange={(e) =>
+            setCandleCheck(joinCandleCheck(e.target.value, splitCandleCheck(candleCheck).p))
+          }
           disabled={!!command}
-          title="Optional 15m CONSOLIDATE/MOMENTUM filter (CA/MA/CB/MB)."
+          title="Optional previous-of-previous day 15m CONSOLIDATE filter (PP-CONSOLIDATE-A/B)."
           className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
         >
-          {CANDLE_CHECK_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
+          {PP_CANDLE_CHECK_OPTIONS.map((opt) => (
+            <option key={opt.value || "none"} value={opt.value}>
               {opt.label}
             </option>
           ))}
         </select>
         <select
-          value={stoploss}
-          onChange={(e) => setStoploss(e.target.value)}
+          value={splitCandleCheck(candleCheck).p}
+          onChange={(e) =>
+            setCandleCheck(joinCandleCheck(splitCandleCheck(candleCheck).pp, e.target.value))
+          }
           disabled={!!command}
-          title="Which rung this View's stoploss reads off today's CPR — sets getStoploss."
+          title="Optional previous-day 15m CONSOLIDATE/MOMENTUM filter (CA/MA/CB/MB/VR)."
           className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
         >
-          {STOPLOSS_OPTIONS.map((opt) => (
-            <option key={opt} value={opt}>
-              Stoploss {opt}
+          {CANDLE_CHECK_OPTIONS.map((opt) => (
+            <option key={opt.value || "none"} value={opt.value}>
+              {opt.label}
             </option>
           ))}
         </select>
       </div>
+
       <input
         value={newLabel}
         onChange={(e) => {
@@ -2096,12 +2144,26 @@ function CreateViewControl({
         disabled={!!command}
         ready={optionsReady}
       />
-      <select
+      <div className="flex gap-1.5">
+        <select
+          value={stoploss}
+          onChange={(e) => setStoploss(e.target.value)}
+          disabled={!!command}
+          title="Which rung this View's stoploss reads off today's CPR."
+          className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+        >
+          {STOPLOSS_OPTIONS.map((opt) => (
+            <option key={opt} value={opt}>
+              Stoploss {opt}
+            </option>
+          ))}
+        </select>
+        <select
         value={gapBadge}
         onChange={(e) => setGapBadge(e.target.value)}
         disabled={!!command || !optionsReady}
         title="Optionally also require this exact composite Gap Badge (RRSSGapCategory + PDHPDLGapCategory + HL-switch), on top of the Pattern's own condition — same label shown in the Pattern column's Gap Badge (e.g. RH-GapAB, SL-GapBB)."
-        className="w-full bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
+        className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
       >
         <option value="">Any Gap Badge</option>
         {optionsReady &&
@@ -2111,6 +2173,7 @@ function CreateViewControl({
             </option>
           ))}
       </select>
+      </div>
       <input
         value={viewKey}
         readOnly
