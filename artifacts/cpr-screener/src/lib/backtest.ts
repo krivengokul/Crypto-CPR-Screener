@@ -600,7 +600,7 @@ export function editBacktestView(
   }
 
   const trimmedCandleCheck = candleCheck?.trim();
-  if (trimmedCandleCheck && !ALL_CANDLE_CHECKS.includes(trimmedCandleCheck)) {
+  if (trimmedCandleCheck && !isValidCandleCheckCode(trimmedCandleCheck)) {
     return { ok: false, reason: "invalid-candle-check" };
   }
 
@@ -709,7 +709,7 @@ export function createBacktestView(
   }
 
   const trimmedCandleCheck = candleCheck?.trim();
-  if (trimmedCandleCheck && !ALL_CANDLE_CHECKS.includes(trimmedCandleCheck)) {
+  if (trimmedCandleCheck && !isValidCandleCheckCode(trimmedCandleCheck)) {
     return { ok: false, reason: "invalid-candle-check" };
   }
 
@@ -1768,6 +1768,12 @@ export async function evaluateBacktestViewOutcome(
  * CategoryScanRow with no target/result/hitDate fields, since a category
  * has no single defined target to grade against.
  */
+/** True for a single candle-check code or a "+"-joined combo (e.g. "PPCA+CA"). */
+function isValidCandleCheckCode(code: string): boolean {
+  const parts = code.split("+").map((c) => c.trim()).filter(Boolean);
+  return parts.length > 0 && parts.every((c) => ALL_CANDLE_CHECKS.includes(c));
+}
+
 /**
  * Backtest categories that mirror the Screener's previous-session 15m filter
  * buttons (P-CONSOLIDATE-A/B, P-MOMENTUM-A/B). Their conditions read flags

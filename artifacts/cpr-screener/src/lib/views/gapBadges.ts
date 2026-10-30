@@ -145,11 +145,18 @@ export function parseComposedViewKey(
   }
 
   let candleCheck: string | undefined;
-  for (const code of ALL_CANDLE_CHECKS) {
-    if (rest === code || rest.startsWith(`${code}-`)) {
-      candleCheck = code;
-      rest = rest === code ? "" : rest.slice(code.length + 1);
-      break;
+  // Combined PP + P segment first (e.g. "PPCA+CA"), as produced by joinCandleCheck.
+  const combined = /^(PPC[AB]\+(?:CA|MA|VR|CB|MB))(?=-|$)/.exec(rest);
+  if (combined) {
+    candleCheck = combined[1];
+    rest = rest === candleCheck ? "" : rest.slice(candleCheck.length + 1);
+  } else {
+    for (const code of ALL_CANDLE_CHECKS) {
+      if (rest === code || rest.startsWith(`${code}-`)) {
+        candleCheck = code;
+        rest = rest === code ? "" : rest.slice(code.length + 1);
+        break;
+      }
     }
   }
 

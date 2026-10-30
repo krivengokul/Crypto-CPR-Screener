@@ -1727,3 +1727,23 @@ test("isDeskSource only accepts binance and nifty", () => {
   assert.equal(isDeskSource("coindcx"), false);
   assert.equal(isDeskSource(undefined), false);
 });
+
+test("parseComposedViewKey and matchesCandleCheck handle PP candle codes (single and combined)", () => {
+  const pp = parseComposedViewKey("TC-PPCA-C-B-BB-LB-CL3U2-R4");
+  assert.equal(pp.candleCheck, "PPCA");
+  assert.equal(pp.patternKey, "C-B-BB-LB-CL3U2");
+  assert.equal(pp.target, "R4");
+
+  const both = parseComposedViewKey("TC-PPCB+CA-C-B-BB-LB-CL3U2-RH-GapAB-R4");
+  assert.equal(both.entry, "TC");
+  assert.equal(both.candleCheck, "PPCB+CA");
+  assert.equal(both.patternKey, "C-B-BB-LB-CL3U2");
+  assert.equal(both.gapBadge, "RH-GapAB");
+  assert.equal(both.target, "R4");
+
+  const r = { PD15MConsolidateAPass: true, PD15MPPConsolidateAPass: true } as unknown as Parameters<typeof matchesCandleCheck>[0];
+  assert.equal(matchesCandleCheck(r, "PPCA"), true);
+  assert.equal(matchesCandleCheck(r, "PPCB"), false);
+  assert.equal(matchesCandleCheck(r, "PPCA+CA"), true);
+  assert.equal(matchesCandleCheck(r, "PPCB+CA"), false);
+});
