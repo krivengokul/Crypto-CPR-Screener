@@ -687,42 +687,99 @@ export function renderMatchingSignals(
 ) {
   if (views.length === 0) return null;
   return (
-    <div className="flex flex-col gap-1.5 max-w-[240px]">
+    <div className="flex flex-col gap-1.5 max-w-[280px]">
       {views.map((v) => {
         const view = getView(v.id);
         const entryFn = view?.getEntry;
         const targetFn = view?.getTarget;
+        const slFn = view?.getStoploss;
         const direction = v.direction || view?.direction;
-        const status: "pass" | "active" | "ready" | null = targetFn &&
-          sessionReachedTarget(direction ?? "", targetFn(r), r.todayHigh, r.todayLow, r.currentPrice)
-          ? "pass"
-          : entryFn
-            ? hasTouchedEntry(direction ?? "", entryFn(r), r.currentPrice)
-              ? "active"
-              : "ready"
-            : null;
         const isUp = direction === "Up";
         const isDown = direction === "Down";
+        // Same status rules as the badge under the symbol cell / Signal Desk.
+        let status: "pass" | "fail" | "active" | "ready" | null = null;
+        if (
+          targetFn &&
+          sessionReachedTarget(
+            direction ?? "",
+            targetFn(r),
+            r.todayHigh,
+            r.todayLow,
+            r.currentPrice,
+          )
+        ) {
+          status = "pass";
+        } else if (slFn) {
+          const sl = slFn(r);
+          const hitSlUp =
+            isUp &&
+            Number.isFinite(sl) &&
+            ((typeof r.todayLow === "number" && r.todayLow <= sl) ||
+              (typeof r.currentPrice === "number" && r.currentPrice <= sl));
+          const hitSlDown =
+            isDown &&
+            Number.isFinite(sl) &&
+            ((typeof r.todayHigh === "number" && r.todayHigh >= sl) ||
+              (typeof r.currentPrice === "number" && r.currentPrice >= sl));
+          if (hitSlUp || hitSlDown) status = "fail";
+        }
+        if (!status && entryFn) {
+          status = hasTouchedEntry(direction ?? "", entryFn(r), r.currentPrice)
+            ? "active"
+            : "ready";
+        }
         const dirColor = isUp
           ? "text-emerald-400"
           : isDown
             ? "text-[#ff6bb5]"
             : "text-slate-400";
+        const statusBadge =
+          status === "pass" ? (
+            <span
+              className={`inline-flex w-fit shrink-0 items-center rounded border px-1 py-0 text-[9px] font-mono font-semibold leading-tight ${
+                isDown
+                  ? "border-[#ff6bb5]/40 bg-[#ff6bb5]/10 text-[#ff6bb5]"
+                  : "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
+              }`}
+              title="Target hit"
+            >
+              Pass
+            </span>
+          ) : status === "fail" ? (
+            <span
+              className="inline-flex w-fit shrink-0 items-center rounded border border-red-400/40 bg-red-500/10 px-1 py-0 text-[9px] font-mono font-semibold leading-tight text-red-400"
+              title="Stop hit"
+            >
+              Fail
+            </span>
+          ) : status === "active" ? (
+            <span
+              className="inline-flex w-fit shrink-0 items-center rounded border border-lime-500/40 bg-lime-500/10 px-1 py-0 text-[9px] font-mono font-semibold leading-tight text-lime-400 animate-pulse"
+              title="Entry touched"
+            >
+              Active
+            </span>
+          ) : status === "ready" ? (
+            <span
+              className="inline-flex w-fit shrink-0 items-center rounded border border-sky-500/30 bg-sky-500/10 px-1 py-0 text-[9px] font-mono font-semibold leading-tight text-sky-300"
+              title="Entry not yet touched"
+            >
+              Ready
+            </span>
+          ) : null;
         return (
           <div key={v.id} className="flex h-11 flex-col justify-center gap-0.5 overflow-hidden">
-            <div className="flex flex-nowrap items-center gap-1">
+            <div className="flex flex-nowrap items-center gap-1 min-w-0">
               <div className="flex items-center gap-1.5 min-w-0">
                 <Tag className={`w-3 h-3 shrink-0 ${dirColor}`} aria-hidden />
-                <div className="min-w-0">
-                  <div
-                    className={`text-[11px] font-semibold leading-tight truncate ${dirColor}`}
-                    title={v.label}
-                  >
-                    {v.label}
-                  </div>
+                <div
+                  className={`text-[11px] font-semibold leading-tight truncate ${dirColor}`}
+                  title={v.label}
+                >
+                  {v.label}
                 </div>
               </div>
-              {/* Pass / Active / Ready moved to RESULT column */}
+              {statusBadge}
             </div>
             <span className="truncate font-mono text-[10px] leading-3 text-muted-foreground" title={v.id}>
               {v.id}
