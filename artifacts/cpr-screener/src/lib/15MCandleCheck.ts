@@ -7,12 +7,12 @@ const DELTA_BASE = "https://api.india.delta.exchange/v2";
 const CANDLE_INTERVAL_MS = 15 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_CONCURRENT_REQUESTS = 8;
-const PREVIOUS_UPEX_CACHE_KEY = "cpr_previous_upex_results_v9";
+const PREVIOUS_UPEX_CACHE_KEY = "cpr_previous_upex_results_v13";
 const PREVIOUS_15M_B_CACHE_KEY = "cpr_previous_15m_b_results_v4";
 const PREVIOUS_15M_TC_B_CACHE_KEY = "cpr_previous_15m_tc_b_results_v11";
 const PREVIOUS_15M_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_momentum_b_results_v4";
-const PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_consolidate_a_results_v11";
-const PREVIOUS_15M_PP_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_pp_consolidate_a_results_v3";
+const PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_consolidate_a_results_v15";
+const PREVIOUS_15M_PP_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_pp_consolidate_a_results_v7";
 const PREVIOUS_15M_PP_CONSOLIDATE_B_CACHE_KEY = "cpr_previous_15m_pp_consolidate_b_results_v3";
 const PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_inside_r1s1_results_v3";
 
@@ -30,8 +30,8 @@ export interface UpexCandidate {
   /** Upper bound used by CONSOLIDATE-A: the higher of previous CPR Prev High (PH) and R1. */
   ceiling?: number;
   /**
-   * R2 of the previous session — CON-A fails (→ MOM-A) when a first-crossing
-   * or new-high 15m candle has open/close at or above this level.
+   * R2 of the previous session — CON-A fails (→ MOM-A) when any 15m candle
+   * has open/close at or above this level (simple demotion; no new-high test).
    */
   r2?: number;
   /**
@@ -188,10 +188,12 @@ export function previousPreviousUpexSessionStartUtcMs(now = Date.now()): number 
  *    refCeilingHigh fails). If no ceiling-spanning candle exists but bodies fully above
  *    the ceiling existed, the session fails on the first such candle. MOMENTUM-A has no
  *    ceiling check.
- *  - R2 body rule (CONSOLIDATE-A only, when `r2` is supplied): fail when a
- *    first-crossing or new-high candle has open/close at or above R2. That
- *    session is MOMENTUM-A, not CONSOLIDATE-A.
+ *  - R2 body rule (CONSOLIDATE-A only, when `r2` is supplied): simple demotion —
+ *    any 15m candle whose open or close is at/above R2 fails CON-A (MOMENTUM-A).
+ *    No "new high" test; first fail is final.
  */
+
+
 export function passesUpexFilter(
   candles: OHLC[],
   bc: number,
@@ -218,7 +220,7 @@ export function passesUpexFilter(
     ceiling !== undefined && r2 !== undefined && Number.isFinite(r2);
 
   // Full-session floor reference: min low among ALL body-in-BC candles (later #20
-  // can replace earlier #3 when its wick is lower). Ceiling is also full-session; R2 uses final ceiling ref.
+  // can replace earlier #3 when its wick is lower). Ceiling is also full-session.
   let refFloorLow: number | null = null;
   for (const candle of completed) {
     const bodyLow = Math.min(candle.open, candle.close);
@@ -244,7 +246,6 @@ export function passesUpexFilter(
     }
   }
 
-  let seenBodyInR2 = false;
   let sawBodyBelowBc = false;
   let sawBodyAboveCeiling = false;
 
@@ -269,17 +270,11 @@ export function passesUpexFilter(
       }
     }
 
-    // CON-A → MOM-A: first body at/above R2, or new-high candle with body at/above R2
-    // isNewHigh uses the final session ceiling ref when available.
+    // Simple R2 demotion: any body open/close at/above R2 fails CON-A (final).
     if (useR2) {
-      const bodyInR2 = candle.open >= (r2 as number) || candle.close >= (r2 as number);
-      const isNewHigh =
-        refCeilingHigh === null ||
-        (Number.isFinite(candle.high) && candle.high > refCeilingHigh);
-      if (bodyInR2 && (isNewHigh || !seenBodyInR2)) {
+      if (candle.open >= (r2 as number) || candle.close >= (r2 as number)) {
         return false;
       }
-      if (bodyInR2) seenBodyInR2 = true;
     }
   }
 
@@ -371,7 +366,6 @@ export function explainUpexFailure(
     }
   }
 
-  let seenBodyInR2 = false;
   let firstBodyBelowBc: OHLC | null = null;
   let firstBodyAboveCeiling: OHLC | null = null;
 
@@ -417,11 +411,7 @@ export function explainUpexFailure(
     }
 
     if (useR2 && r2 !== undefined) {
-      const bodyInR2 = candle.open >= r2 || candle.close >= r2;
-      const isNewHigh =
-        refCeilingHigh === null ||
-        (Number.isFinite(candle.high) && candle.high > refCeilingHigh);
-      if (bodyInR2 && (isNewHigh || !seenBodyInR2)) {
+      if (candle.open >= r2 || candle.close >= r2) {
         return {
           rule: "bodyInR2",
           openTime: new Date(candle.openTime).toISOString(),
@@ -435,7 +425,6 @@ export function explainUpexFailure(
           previousHighestWickCandle: null,
         };
       }
-      if (bodyInR2) seenBodyInR2 = true;
     }
   }
 
@@ -497,7 +486,7 @@ export function formatUpexFailureNote(
     case "bodyInR2":
       return {
         label: `body ≥ R2 · candle #${failure.candleNumber}`,
-        detail: `candle ${hhmm} body ${body} reached R2 (first body at/above R2, or a new high) — this is MOMENTUM-A, not CONSOLIDATE-A.`,
+        detail: `candle ${hhmm} body ${body} reached R2 (open or close ≥ R2) — this is MOMENTUM-A, not CONSOLIDATE-A.`,
       };
     case "floor":
       return {
