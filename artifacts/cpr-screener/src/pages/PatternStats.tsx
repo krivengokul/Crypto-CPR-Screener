@@ -1406,7 +1406,10 @@ function PreviousDaySection() {
       const fullSym = sym.endsWith("USDT") ? sym : `${sym}USDT`;
       const reconstructed = await reconstructCPRForDate(fullSym, source, entryDate);
       if (!reconstructed) {
-        setError(`Could not reconstruct CPR for ${fullSym} on ${entryDate}.`);
+        setError(
+          `Could not reconstruct CPR for ${fullSym} on ${entryDate}. ` +
+            `Need at least 2 completed daily candles before that UTC date (check symbol / Binance access).`,
+        );
         return;
       }
       const { result: cpr } = reconstructed;

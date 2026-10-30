@@ -1532,6 +1532,9 @@ export async function reconstructCPRForDate(
   source: BacktestSource,
   entryDateISO: string
 ): Promise<{ result: CPRResult; window: Map<string, OHLC> } | null> {
+  // Expand HISTORY_LIMIT so entry dates older than ~1 week still have D-1/D-2/D-3
+  // daily candles in the fetch window (default limit is only 10 days).
+  ensureHistoryCoverage(entryDateISO);
   const window = await getHistory(symbol, source);
   if (!window) return null;
 
