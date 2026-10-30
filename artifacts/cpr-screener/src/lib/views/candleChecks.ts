@@ -17,8 +17,8 @@ export const CANDLE_CHECK_OPTIONS: Array<{ value: CandleCheckCode | ""; label: s
 /** PP-day independent options (Create/Edit/Copy View PP dropdown). */
 export const PP_CANDLE_CHECK_OPTIONS: Array<{ value: "PPCA" | "PPCB" | ""; label: string }> = [
   { value: "", label: "None" },
-  { value: "PPCA", label: "PP-CONSOLIDATE-A" },
-  { value: "PPCB", label: "PP-CONSOLIDATE-B" },
+  { value: "PPCA", label: "PP-CON-A" },
+  { value: "PPCB", label: "PP-CON-B" },
 ];
 
 /** Split stored candleCheck ("PPCA+CA" or single code) into PP + P parts. */

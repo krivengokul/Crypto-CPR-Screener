@@ -1086,7 +1086,7 @@ function CopyViewControl({
           onChange={(e) => {
             const next = e.target.value as "Up" | "Down";
             setDirection(next);
-            setEntry(next === "Up" ? "TC" : "BC");
+            setEntry(next === "Up" ? "R1" : "S1");
             setStoploss(next === "Up" ? "S1" : "R1");
             setTarget(next === "Up" ? "R4" : "S4");
           }}
@@ -1517,7 +1517,7 @@ function EditViewControl({
           onChange={(e) => {
             const next = e.target.value as "Up" | "Down";
             setDirection(next);
-            setEntry(next === "Up" ? "TC" : "BC");
+            setEntry(next === "Up" ? "R1" : "S1");
             setStoploss(next === "Up" ? "S1" : "R1");
             setTarget(next === "Up" ? "R4" : "S4");
           }}
@@ -1854,7 +1854,7 @@ function CreateViewControl({
   // TC/BC for Up/Down, same as the original hardcoded behavior, but any
   // rung on the ladder can be picked).
   const [direction, setDirection] = useState<"Up" | "Down">("Up");
-  const [entry, setEntry] = useState("TC");
+  const [entry, setEntry] = useState("R1");
   const [stoploss, setStoploss] = useState("S1");
   const [target, setTarget] = useState("R4");
   // Optional composite Gap Badge label (e.g. "RH-GapAB", "SL-GapBB" —
@@ -1917,10 +1917,7 @@ function CreateViewControl({
       .join("-");
   }, [entry, candleCheck, effectivePattern.key, gapBadge, target]);
 
-  useEffect(() => {
-    if (!open || command) return;
-    if (!labelEdited) setNewLabel(effectivePattern.label);
-  }, [open, command, labelEdited, effectivePattern.label]);
+  // View name stays blank until the user types — do not auto-fill from pattern.
 
   useEffect(() => {
     if (!open) {
@@ -1935,12 +1932,12 @@ function CreateViewControl({
   function openForm() {
     setAttachKey(patternKey);
     setDirection("Up");
-    setEntry("TC");
+    setEntry("R1");
     setStoploss("S1");
     setTarget("R4");
     setCandleCheck(existingCandleCheck && existingCandleCheck.trim() !== "" ? existingCandleCheck : "");
     setGapBadge(existingGapBadge && ALL_GAP_BADGES.includes(existingGapBadge) ? existingGapBadge : "");
-    setNewLabel(patternLabel);
+    setNewLabel("");
     setLabelEdited(false);
     setError("");
     setCommand(null);
@@ -2065,7 +2062,7 @@ function CreateViewControl({
           onChange={(e) => {
             const next = e.target.value as "Up" | "Down";
             setDirection(next);
-            setEntry(next === "Up" ? "TC" : "BC");
+            setEntry(next === "Up" ? "R1" : "S1");
             setStoploss(next === "Up" ? "S1" : "R1");
             setTarget(next === "Up" ? "R4" : "S4");
           }}
