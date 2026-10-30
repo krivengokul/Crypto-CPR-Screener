@@ -9,11 +9,11 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_CONCURRENT_REQUESTS = 8;
 const PREVIOUS_UPEX_CACHE_KEY = "cpr_previous_upex_results_v13";
 const PREVIOUS_15M_B_CACHE_KEY = "cpr_previous_15m_b_results_v4";
-const PREVIOUS_15M_TC_B_CACHE_KEY = "cpr_previous_15m_tc_b_results_v11";
-const PREVIOUS_15M_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_momentum_b_results_v4";
+const PREVIOUS_15M_TC_B_CACHE_KEY = "cpr_previous_15m_tc_b_results_v12";
+const PREVIOUS_15M_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_momentum_b_results_v5";
 const PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_consolidate_a_results_v15";
 const PREVIOUS_15M_PP_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_pp_consolidate_a_results_v7";
-const PREVIOUS_15M_PP_CONSOLIDATE_B_CACHE_KEY = "cpr_previous_15m_pp_consolidate_b_results_v3";
+const PREVIOUS_15M_PP_CONSOLIDATE_B_CACHE_KEY = "cpr_previous_15m_pp_consolidate_b_results_v4";
 const PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_inside_r1s1_results_v3";
 
 export interface UpexCandidate {
@@ -35,8 +35,8 @@ export interface UpexCandidate {
    */
   r2?: number;
   /**
-   * S2 of the previous session — CON-B fails (→ MOM-B) when a first-crossing
-   * or new-low 15m candle has open/close at or below this level.
+   * S2 of the previous session — CON-B fails (→ MOM-B) when any 15m candle
+   * has open/close at or below this level (simple demotion; no new-low test).
    */
   s2?: number;
 }
@@ -612,7 +612,6 @@ function findPD15MBelowTCFailure(
   floor: number | undefined,
   s2?: number,
 ): PD15MBelowTCFailure | null {
-  let seenBodyInS2 = false;
   const useS2 = s2 !== undefined && Number.isFinite(s2);
 
   // Full-session TC ceiling reference: max high among ALL body-in-TC candles.
@@ -679,13 +678,9 @@ function findPD15MBelowTCFailure(
       }
     }
 
-    // CON-B → MOM-B: first body at/below S2, or new-low candle with body at/below S2
+    // Simple S2 demotion: any body open/close at/below S2 fails CON-B (final).
     if (useS2) {
-      const bodyInS2 = candle.open <= (s2 as number) || candle.close <= (s2 as number);
-      const isNewLow =
-        refFloorLow === null ||
-        (Number.isFinite(candle.low) && candle.low < refFloorLow);
-      if (bodyInS2 && (isNewLow || !seenBodyInS2)) {
+      if (candle.open <= (s2 as number) || candle.close <= (s2 as number)) {
         return {
           rule: "bodyInS2",
           candle,
@@ -694,7 +689,6 @@ function findPD15MBelowTCFailure(
           refCeilingCandle,
         };
       }
-      if (bodyInS2) seenBodyInS2 = true;
     }
   }
 
@@ -1822,7 +1816,7 @@ export function getPD15MBelowTCFailureNote(
     case "bodyInS2":
       return {
         label: `body ≤ S2 · candle #${failure.candleNumber}`,
-        detail: `candle ${hhmm} body ${body} reached S2 (first body at/below S2, or a new low) — this is MOMENTUM-B, not CONSOLIDATE-B.`,
+        detail: `candle ${hhmm} body ${body} reached S2 (open or close ≤ S2) — this is MOMENTUM-B, not CONSOLIDATE-B.`,
       };
     case "floor":
       return {
