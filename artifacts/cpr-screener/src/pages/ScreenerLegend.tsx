@@ -433,18 +433,22 @@ const PPDAY_COLORS: Record<string, string> = {
   "PP-CONSOLIDATE-B": "#f472b6",
 };
 
+/** True when Card 2 has nothing useful to show (hide the whole panel). */
+function isEmptyFocusToast(ft?: ScreenerLegendFocusToast | null): boolean {
+  if (!ft) return true;
+  const noCode = !ft.signalCode || ft.signalCode === "—";
+  const noPDay = !ft.pDayText || ft.pDayText === "—";
+  const noMatch = !ft.matchText || ft.matchText === "—";
+  const noPp = !ft.ppDayText;
+  return noCode && noPDay && noMatch && noPp;
+}
+
 /**
  * Card 2 (middle) — only the toast-focused row's PDay + MATCH.
  * All previous pattern-description copy was removed by design.
+ * Caller should not render this card when isEmptyFocusToast(focusToast).
  */
-function FocusToastCard({ focusToast }: { focusToast?: ScreenerLegendFocusToast | null }) {
-  if (!focusToast) {
-    return (
-      <div className="text-[11px] text-muted-foreground">
-        Waiting for entry-cross toast…
-      </div>
-    );
-  }
+function FocusToastCard({ focusToast }: { focusToast: ScreenerLegendFocusToast }) {
   const isUp = focusToast.direction === "Up";
   const isDown = focusToast.direction === "Down";
   // View *name* follows direction; View *code* stays neutral (grey) for readability.
@@ -516,17 +520,25 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
     focusToast?.signalCode && focusToast.signalCode !== "—" ? focusToast.signalCode : "";
   const shownView = focusedViewCode || props.activeSignal;
 
+  const showFocusCard = !isEmptyFocusToast(focusToast);
+
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3">
+    <div
+      className={`grid grid-cols-1 gap-2 mb-3 ${
+        showFocusCard ? "sm:grid-cols-3" : "sm:grid-cols-2"
+      }`}
+    >
       {/* Card 1: View name (row 1) + chart-link cameras (row 2 onward) */}
       <div className="rounded-lg border border-border bg-card p-3">
         <ViewCamerasCard viewKey={shownView} />
       </div>
 
-      {/* Card 2: toast-focused row — PDay + MATCH only */}
-      <div className="rounded-lg border border-border bg-card p-3">
-        <FocusToastCard focusToast={focusToast} />
-      </div>
+      {/* Card 2: toast-focused row — only when a real focus/toast has data */}
+      {showFocusCard && focusToast ? (
+        <div className="rounded-lg border border-border bg-card p-3">
+          <FocusToastCard focusToast={focusToast} />
+        </div>
+      ) : null}
 
       {/* Card 3: selected View — name, code, direction, entry / target / stop */}
       <div className="rounded-lg border border-border bg-card p-3">

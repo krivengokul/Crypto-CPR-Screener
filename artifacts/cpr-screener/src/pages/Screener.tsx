@@ -1596,10 +1596,11 @@ export default function Screener({
           </div>
         </div>
 
-        {/* Legend — hidden while idle/scanning. Shown when a left-nav
-            View is selected (!showAll), or when Card 2 has focus from toast,
-            row click, or symbol search (so focus works in Show All mode). */}
-        {currentStatus === "done" && (!showAll || !!legendToastFocus) && (
+        {/* Legend — hidden while idle/scanning, and when nothing is selected
+            and Card 2 has no focus (Show All with no toast/row/search).
+            Card 2 still self-hides when focusToast is empty placeholders. */}
+        {currentStatus === "done" &&
+          (!!activeSignal || !!legendToastFocus) && (
         <ScreenerLegend
           activeSignal={activeSignal}
           focusToast={legendToastFocus}
