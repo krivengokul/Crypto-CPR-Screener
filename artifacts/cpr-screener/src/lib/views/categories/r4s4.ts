@@ -1663,18 +1663,19 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
     ],
       },
     {
-        key: "S1-BPS4-B-B-BB-BB-ELPU3-SL-AAGap-S4",
-        label: "BL4-pMicroTiny-ToPPL4Fall",
+        key: "S1-PPCB+MB-BPS4-B-B-BB-BB-ELPU3-SL-AAGap-S4",
+        label: "MICRO904TINY-BIGFALL",
         parentKey: "BPS4-B-B-BB-BB-ELPU3",
-        condition: (r) => passesView(r, "BPS4-B-B-BB-BB-ELPU3") && matchesGapBadge(r, "SL-AAGap"),
+        condition: (r) => passesView(r, "BPS4-B-B-BB-BB-ELPU3") && matchesGapBadge(r, "SL-AAGap") && matchesCandleCheck(r, "PPCB+MB"),
         standalone: true,
+        candleCheck: "PPCB+MB",
         kind: "view",
         direction: "Down",
-        targetLabel: "S4",
+        targetLabel: "L4 (today's S4)",
         getTarget: (r) => r.todayCPR.s4,
-        entryLabel: "S1",
+        entryLabel: "S1 (today's S1)",
         getEntry: (r) => r.todayCPR.s1,
-        stoplossLabel: "R1",
+        stoplossLabel: "R1 (today's R1)",
         getStoploss: (r) => r.todayCPR.r1,
         levelCheckDefs: [
       {
@@ -1782,6 +1783,7 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
         ]
       }
     ],
+        requireFullMatch: true,
       },
     {
         key: "S1-BPS4-B-B-BB-BB-ELBU3-SL-BAGap-S4",
