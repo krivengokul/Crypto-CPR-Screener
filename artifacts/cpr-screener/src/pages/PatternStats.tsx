@@ -8,7 +8,6 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Database,
   Eye,
   Filter,
   Flame,
@@ -44,7 +43,6 @@ import {
 } from "@/lib/15MCandleCheck";
 import { passesPattern, computeInnerLevelPattern, INNER_LEVEL_PATTERN_KEYS, normalizeViewDirection, getChartUrl, openChartInNewTab, type ViewDirection } from "./ScreenerUtils";
 import { pivotcategories } from "@/lib/ViewsSidebar";
-import { COINDCX_ENABLED } from "@/lib/featureFlags";
 import { buildViewTree, VIEWS, type ViewTreeNode } from "@/lib/views";
 import {
   getAllChartLinkRecords,
@@ -2127,7 +2125,7 @@ function PreviousDaySection() {
 
 
 export default function PatternStats() {
-  const [source, setSource] = useState<BacktestSource>("binance");
+  const source: BacktestSource = "binance";
   const [startDate, setStartDate] = useState<string>(() => {
     const d = new Date();
     d.setUTCDate(d.getUTCDate() - 30);
@@ -2154,7 +2152,6 @@ export default function PatternStats() {
   const [chartRecordsLoading, setChartRecordsLoading] = useState(false);
   const [chartRecordsError, setChartRecordsError] = useState<string | null>(null);
   const [chartReloadKey, setChartReloadKey] = useState(0);
-  const [chartExchangeFilter, setChartExchangeFilter] = useState<BacktestSource | "all">("all");
   const [chartStartDateFilter, setChartStartDateFilter] = useState("");
   const [chartEndDateFilter, setChartEndDateFilter] = useState("");
 
@@ -2396,33 +2393,6 @@ export default function PatternStats() {
           </div>
 
           <div className="flex flex-wrap items-end gap-3">
-            <label className="block">
-              <span className={CONTROL_LABEL}>EXCHANGE</span>
-              <div className="relative">
-                <Database className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-teal-400" />
-                <select
-                  className={`${CONTROL_BOX} min-w-[120px] appearance-none py-1.5 pl-8 pr-7 disabled:opacity-60`}
-                  value={categoryFilter === CHARTS_CATEGORY_KEY ? chartExchangeFilter : source}
-                  onChange={(e) => {
-                    if (categoryFilter === CHARTS_CATEGORY_KEY) {
-                      setChartExchangeFilter(e.target.value as BacktestSource | "all");
-                    } else {
-                      setSource(e.target.value as BacktestSource);
-                    }
-                  }}
-                  disabled={running}
-                >
-                  {categoryFilter === CHARTS_CATEGORY_KEY && <option value="all">All exchanges</option>}
-                  <option value="binance">Binance</option>
-                  <option value="delta">Delta</option>
-                  <option value="coindcx" disabled={!COINDCX_ENABLED}>
-                    {COINDCX_ENABLED ? "CoinDCX" : "CoinDCX (paused)"}
-                  </option>
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
-              </div>
-            </label>
-
             {categoryFilter === CHARTS_CATEGORY_KEY ? (
               <>
                 <DateField
@@ -2513,13 +2483,12 @@ export default function PatternStats() {
             loading={chartRecordsLoading}
             error={chartRecordsError}
             onRefresh={() => setChartReloadKey((key) => key + 1)}
-            exchangeFilter={chartExchangeFilter}
+            exchangeFilter="all"
             startDate={chartStartDateFilter}
             endDate={chartEndDateFilter}
             onClearFilters={() => {
               setChartStartDateFilter("");
               setChartEndDateFilter("");
-              setChartExchangeFilter("all");
             }}
           />
         ) : (
@@ -2537,7 +2506,7 @@ export default function PatternStats() {
               <Loader2 className="h-6 w-6 animate-spin text-emerald-400" />
             </div>
             <p className="text-base font-semibold text-white">
-              Scanning {source === "binance" ? "Binance" : source === "delta" ? "Delta Exchange" : "CoinDCX"}…
+              Scanning Binance…
             </p>
             <p className="mt-1 text-sm text-slate-400">
               Checking historical symbols for matching patterns. Results will appear here when the scan completes.
