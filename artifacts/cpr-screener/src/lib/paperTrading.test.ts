@@ -1766,7 +1766,7 @@ test("parseComposedViewKey and matchesCandleCheck handle PP candle codes (single
 test("PP-MOM-A / PP-MOM-B: dropdown, exclusivity vs PP-CON, combined codes and row priority", () => {
   assert.deepEqual(
     PP_CANDLE_CHECK_OPTIONS.map((o) => o.value),
-    ["", "PPCA", "PPMA", "PPCB", "PPMB"],
+    ["", "PPCA", "PPMA", "PPCB", "PPMB", "PPVR"],
   );
   const row = (f: Record<string, boolean>) => f as unknown as Parameters<typeof matchesCandleCheck>[0];
 
@@ -1788,4 +1788,13 @@ test("PP-MOM-A / PP-MOM-B: dropdown, exclusivity vs PP-CON, combined codes and r
   assert.equal(candleCheckFromRow(row({ PD15MPPMomentumBPass: true, PD15MPPConsolidateAPass: true })), "PPMB");
   assert.equal(candleCheckFromRow(row({ PD15MPPConsolidateAPass: true, PD15MPPMomentumAPass: true })), "PPCA");
   assert.equal(candleCheckFromRow(row({ PD15MPPMomentumAPass: true })), "PPMA");
+
+  // PPVR: PP inside R1/PH-S1/PL, exclusive of PP-CON-A/B; lowest PP priority.
+  assert.equal(matchesCandleCheck(row({ PD15MPPInsideR1S1Pass: true }), "PPVR"), true);
+  assert.equal(matchesCandleCheck(row({ PD15MPPInsideR1S1Pass: true, PD15MPPConsolidateAPass: true }), "PPVR"), false);
+  assert.equal(matchesCandleCheck(row({ PD15MPPInsideR1S1Pass: true, PD15MPPConsolidateBPass: true }), "PPVR"), false);
+  assert.equal(matchesCandleCheck(row({ PD15MPPInsideR1S1Pass: true, PD15MConsolidateAPass: true }), "PPVR+CA"), true);
+  assert.deepEqual(splitCandleCheck("PPVR+CB"), { pp: "PPVR", p: "CB" });
+  assert.equal(candleCheckFromRow(row({ PD15MPPInsideR1S1Pass: true })), "PPVR");
+  assert.equal(candleCheckFromRow(row({ PD15MPPInsideR1S1Pass: true, PD15MPPMomentumAPass: true })), "PPMA");
 });

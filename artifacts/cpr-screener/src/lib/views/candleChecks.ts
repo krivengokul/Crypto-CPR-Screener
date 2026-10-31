@@ -1,6 +1,6 @@
 import type { CPRResult } from "../cpr.ts";
 
-export const ALL_CANDLE_CHECK_CODES = ["CA", "MA", "VR", "CB", "MB", "PPCA", "PPCB", "PPMA", "PPMB"] as const;
+export const ALL_CANDLE_CHECK_CODES = ["CA", "MA", "VR", "CB", "MB", "PPCA", "PPCB", "PPMA", "PPMB", "PPVR"] as const;
 export type CandleCheckCode = (typeof ALL_CANDLE_CHECK_CODES)[number];
 export const ALL_CANDLE_CHECKS: readonly string[] = ALL_CANDLE_CHECK_CODES;
 
@@ -15,26 +15,27 @@ export const CANDLE_CHECK_OPTIONS: Array<{ value: CandleCheckCode | ""; label: s
 ];
 
 /** PP-day independent options (Create/Edit/Copy View PP dropdown). */
-export const PP_CANDLE_CHECK_OPTIONS: Array<{ value: "PPCA" | "PPCB" | "PPMA" | "PPMB" | ""; label: string }> = [
+export const PP_CANDLE_CHECK_OPTIONS: Array<{ value: "PPCA" | "PPCB" | "PPMA" | "PPMB" | "PPVR" | ""; label: string }> = [
   { value: "", label: "None" },
   { value: "PPCA", label: "PP-CON-A" },
   { value: "PPMA", label: "PP-MOM-A" },
   { value: "PPCB", label: "PP-CON-B" },
   { value: "PPMB", label: "PP-MOM-B" },
+  { value: "PPVR", label: "PP-VOLATILE-R1S1" },
 ];
 
 /** Split stored candleCheck ("PPCA+CA" or single code) into PP + P parts. */
 export function splitCandleCheck(code: string | undefined | null): {
-  pp: "" | "PPCA" | "PPCB" | "PPMA" | "PPMB";
+  pp: "" | "PPCA" | "PPCB" | "PPMA" | "PPMB" | "PPVR";
   p: string;
 } {
   const raw = (code ?? "").trim();
   if (!raw) return { pp: "", p: "" };
   const parts = raw.split("+").map((s) => s.trim()).filter(Boolean);
-  let pp: "" | "PPCA" | "PPCB" | "PPMA" | "PPMB" = "";
+  let pp: "" | "PPCA" | "PPCB" | "PPMA" | "PPMB" | "PPVR" = "";
   const pParts: string[] = [];
   for (const part of parts) {
-    if (part === "PPCA" || part === "PPCB" || part === "PPMA" || part === "PPMB") pp = part;
+    if (part === "PPCA" || part === "PPCB" || part === "PPMA" || part === "PPMB" || part === "PPVR") pp = part;
     else pParts.push(part);
   }
   return { pp, p: pParts[0] ?? "" };
@@ -65,6 +66,7 @@ export function matchesCandleCheck(r: CPRResult, code: string): boolean {
   const ppB = r.PD15MPPConsolidateBPass === true;
   const ppMomA = r.PD15MPPMomentumAPass === true;
   const ppMomB = r.PD15MPPMomentumBPass === true;
+  const ppInside = r.PD15MPPInsideR1S1Pass === true;
   switch (raw) {
     case "CB":
       return conB;
@@ -88,6 +90,9 @@ export function matchesCandleCheck(r: CPRResult, code: string): boolean {
     case "PPMA":
       // Mirror MA: momentum exclusive of both PP-CON sides.
       return ppMomA && !ppA && !ppB;
+    case "PPVR":
+      // Mirror VR: inside R1/PH–S1/PL on PPDay, exclusive of PP-CON-A/B.
+      return ppInside && !ppA && !ppB;
     default:
       return true;
   }
@@ -136,5 +141,6 @@ export function candleCheckFromRow(r: CPRResult): string {
   else if (r.PD15MPPMomentumBPass === true) pp = "PPMB";
   else if (r.PD15MPPConsolidateAPass === true) pp = "PPCA";
   else if (r.PD15MPPMomentumAPass === true) pp = "PPMA";
+  else if (r.PD15MPPInsideR1S1Pass === true) pp = "PPVR";
   return joinCandleCheck(pp, p);
 }

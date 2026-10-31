@@ -344,7 +344,7 @@ function candleBucketFromFlags(
 }
 
 
-/** PP-day exclusive badge priority: CON-B > MOM-B > CON-A > MOM-A. */
+/** PP-day exclusive badge priority: CON-B > MOM-B > CON-A > MOM-A > VOLATILE. */
 function ppDayBadgeFromFlags(raw: CPRResult): {
   label: string;
   color: string;
@@ -354,6 +354,7 @@ function ppDayBadgeFromFlags(raw: CPRResult): {
   const ppMomB = raw.PD15MPPMomentumBPass === true;
   const ppA = raw.PD15MPPConsolidateAPass === true;
   const ppMomA = raw.PD15MPPMomentumAPass === true;
+  const ppInside = raw.PD15MPPInsideR1S1Pass === true;
   if (ppB) {
     return {
       label: "PP-CONSOLIDATE-B",
@@ -364,7 +365,7 @@ function ppDayBadgeFromFlags(raw: CPRResult): {
   if (ppMomB) {
     return {
       label: "PP-MOMENTUM-B",
-      color: "#a78bfa", // violet-400-ish
+      color: "#a78bfa",
       title: "MOMENTUM-B rules on PPDay (TC only); exclusive of PP-CONSOLIDATE-B",
     };
   }
@@ -378,8 +379,18 @@ function ppDayBadgeFromFlags(raw: CPRResult): {
   if (ppMomA) {
     return {
       label: "PP-MOMENTUM-A",
-      color: "#22d3ee", // cyan-400
+      color: "#22d3ee",
       title: "MOMENTUM-A rules on PPDay (BC only); exclusive of PP-CONSOLIDATE-A/B",
+    };
+  }
+  if (ppInside) {
+    const isTouch = raw.ppTouchCategory === true;
+    return {
+      label: isTouch ? "PP-VOLATILE-R1S1" : "PP-VOLATILE-R1S1 ✗",
+      color: isTouch ? "#a3e635" : "#ff637e",
+      title: isTouch
+        ? "PPDay 15m inside R1/PH–S1/PL and (prev, pp) CPR is TOUCH category"
+        : "PPDay 15m inside R1/PH–S1/PL but (prev, pp) CPR is not TOUCH",
     };
   }
   return null;
@@ -1147,7 +1158,7 @@ function CopyViewControl({
             setCandleCheck(joinCandleCheck(e.target.value, splitCandleCheck(candleCheck).p))
           }
           disabled={!!command}
-          title="Optional previous-of-previous day 15m filter (PP-CON-A/B, PP-MOM-A/B)."
+          title="Optional previous-of-previous day 15m filter (PP-CON/MOM/VOLATILE)."
           className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
         >
           {PP_CANDLE_CHECK_OPTIONS.map((opt) => (
@@ -1582,7 +1593,7 @@ function EditViewControl({
             setCandleCheck(joinCandleCheck(e.target.value, splitCandleCheck(candleCheck).p))
           }
           disabled={!!command}
-          title="Optional previous-of-previous day 15m filter (PP-CON-A/B, PP-MOM-A/B)."
+          title="Optional previous-of-previous day 15m filter (PP-CON/MOM/VOLATILE)."
           className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
         >
           {PP_CANDLE_CHECK_OPTIONS.map((opt) => (
@@ -2127,7 +2138,7 @@ function CreateViewControl({
             setCandleCheck(joinCandleCheck(e.target.value, splitCandleCheck(candleCheck).p))
           }
           disabled={!!command}
-          title="Optional previous-of-previous day 15m filter (PP-CON-A/B, PP-MOM-A/B)."
+          title="Optional previous-of-previous day 15m filter (PP-CON/MOM/VOLATILE)."
           className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
         >
           {PP_CANDLE_CHECK_OPTIONS.map((opt) => (

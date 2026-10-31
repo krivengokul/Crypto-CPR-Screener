@@ -1796,7 +1796,8 @@ export const P_FILTER_CATEGORY_KEYS: ReadonlySet<string> = new Set([
  *   PD15MConsolidateAPass, PD15MAboveBCPass,
  *   PD15MBelowTCPass,      PD15MMomentumBPass,
  *   PD15MPPConsolidateAPass, PD15MPPConsolidateBPass,
- *   PD15MPPMomentumAPass, PD15MPPMomentumBPass (when ppCPR exists)
+ *   PD15MPPMomentumAPass, PD15MPPMomentumBPass,
+ *   PD15MPPInsideR1S1Pass (when ppCPR exists)
  *
  * Used for every category / view / pattern backtest row so the View column
  * can show P-CONSOLIDATE-A/B, P-MOMENTUM-A/B, and PP-CONSOLIDATE / PP-MOMENTUM
@@ -1849,6 +1850,7 @@ async function populateAllPFilterFlags(
     ppConsolidateB,
     ppMomentumA,
     ppMomentumB,
+    ppInsideR1S1,
   ] = await Promise.all([
     findPreviousConsolidateAPass(
       {
@@ -1924,6 +1926,19 @@ async function populateAllPFilterFlags(
           ppNow,
         )
       : Promise.resolve(false),
+    // PP-VOLATILE-R1S1: inside max(R1,PH)–min(S1,PL) on PPDay.
+    ppHasLevels
+      ? findInsideR1S1Pass(
+          {
+            symbol,
+            source,
+            bc: getPrevious15MBFloor(pp),
+            floor: getPrevious15MBFloor(pp),
+            ceiling: getPrevious15MACeiling(pp),
+          },
+          ppNow,
+        )
+      : Promise.resolve(false),
   ]);
 
   result.PD15MConsolidateAPass = consolidateA === true;
@@ -1935,6 +1950,7 @@ async function populateAllPFilterFlags(
   result.PD15MPPConsolidateBPass = ppConsolidateB === true;
   result.PD15MPPMomentumAPass = ppMomentumA === true;
   result.PD15MPPMomentumBPass = ppMomentumB === true;
+  result.PD15MPPInsideR1S1Pass = ppInsideR1S1 === true;
 
   // Why CON-B didn't pass. If MOM-B (TC rule only) also failed, that's the
   // blocking reason; otherwise CON-B failed on the floor / S2 rule.

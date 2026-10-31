@@ -311,6 +311,14 @@ export interface CPRResult {
   PD15MPPMomentumAPass?: boolean;
   /** PP-MOMENTUM-B: MOM-B (TC only) on the day-before-previous session (ppCPR levels). */
   PD15MPPMomentumBPass?: boolean;
+  /** PP-VOLATILE-R1S1: INSIDE max(R1,PH)–min(S1,PL) on the day-before-previous session. */
+  PD15MPPInsideR1S1Pass?: boolean;
+  /**
+   * True when the (prevCPR, ppCPR) pair is a TOUCH-category relationship
+   * (same rules as touchCategory for (today, prev)). Used to color PP-VOLATILE-R1S1
+   * lime (touch) vs red with ✗ (non-touch).
+   */
+  ppTouchCategory?: boolean;
   /** Previous-session MOMENTUM-B result (CONSOLIDATE-B's TC check without the PL/S1 floor); populated by the backtest's P-category scans. */
   PD15MMomentumBPass?: boolean;
   /** Previous-session INSIDE max(R1,PH)–min(S1,PL); independent of CON-A/CON-B. */
@@ -1460,6 +1468,31 @@ export function analyzeCPR(
     !flags.R1AbovePR4 &&
     !flags.S1BelowPS4 &&
     (equalCPR || flags.InsideCPR || outCPR || overlapHigher || overlapLower);
+
+  // TOUCH relationship for the (prev, pp) pair — colors PP-VOLATILE-R1S1.
+  let ppTouchCategory = false;
+  if (ppCPR) {
+    const ppFlags = classifyCPRPair(prevCPR, ppCPR);
+    const ppEqual =
+      eqTol(ppCPR.tc, prevCPR.tc) &&
+      eqTol(ppCPR.pivot, prevCPR.pivot) &&
+      eqTol(ppCPR.bc, prevCPR.bc);
+    const ppOut = prevCPR.tc > ppCPR.tc && prevCPR.bc < ppCPR.bc;
+    const ppOverlapHigher =
+      !ppEqual &&
+      prevCPR.bc >= ppCPR.bc &&
+      prevCPR.bc <= ppCPR.tc &&
+      prevCPR.tc > ppCPR.tc;
+    const ppOverlapLower =
+      !ppEqual &&
+      prevCPR.tc <= ppCPR.tc &&
+      prevCPR.tc >= ppCPR.bc &&
+      prevCPR.bc < ppCPR.bc;
+    ppTouchCategory =
+      !ppFlags.R1AbovePR4 &&
+      !ppFlags.S1BelowPS4 &&
+      (ppEqual || ppFlags.InsideCPR || ppOut || ppOverlapHigher || ppOverlapLower);
+  }
   const compressed = !touchCategory && flags.compressed;
   const expanded = !touchCategory && flags.expanded;
   const LevelsBelow = !touchCategory && flags.LevelsBelow;
@@ -1766,6 +1799,7 @@ export function analyzeCPR(
     LevelsBelow,
     LevelsAbove,
     touchCategory,
+    ppTouchCategory,
     passes: cprRising && cprNarrowing,
     currentPrice,
     prevClose: prevCandle.close,
