@@ -2494,7 +2494,7 @@ export const MISC_VIEWS: ViewDef[] = [
       },
     {
         key: "PH-CB-OVB-C-B-BB-LB-CL4U4-SH-GapAB-R3",
-        label: "CONB-UPMOVE",
+        label: "MED88MEDI",
         parentKey: "OVB-C-B-BB-LB-CL4U4",
         condition: (r) => passesView(r, "OVB-C-B-BB-LB-CL4U4") && matchesGapBadge(r, "SH-GapAB") && matchesCandleCheck(r, "CB"),
         standalone: true,
@@ -2613,7 +2613,7 @@ export const MISC_VIEWS: ViewDef[] = [
         ]
       }
     ],
-        requireFullMatch: false,
+        requireFullMatch: true,
       },
     {
         key: "S2-OVA-C-C-BB-AA-CU3L2-RL-BAGap-R1",
