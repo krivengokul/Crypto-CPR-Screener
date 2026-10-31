@@ -896,6 +896,8 @@ export interface ScreenerTableRowProps {
   isPPMomentumA?: boolean;
   /** True when PP-MOMENTUM-B passed and not exclusive PP-CONSOLIDATE-B. */
   isPPMomentumB?: boolean;
+  /** True when PP-VOLATILE-R1S1 (exclusive of PP-CON/MOM). */
+  isPPVolatileR1S1?: boolean;
   /** True when this row is assigned to the exclusive P-CONSOLIDATE-B class (held in Screener state, not on the row data). */
   isConsolidateB?: boolean;
   /** True when the Screener's P-MOMENTUM-A check passed for this row and it is not CONSOLIDATE-A (momentum excludes consolidate, as in the filters). */
@@ -961,6 +963,7 @@ function ScreenerTableRow({
   isPPConsolidateB,
   isPPMomentumA,
   isPPMomentumB,
+  isPPVolatileR1S1,
   isConsolidateB,
   isMomentumA,
   isMomentumB,
@@ -1338,6 +1341,12 @@ function ScreenerTableRow({
               !showPPMomB &&
               (isPPConsolidateA === true || (isPPConsolidateA === undefined && rawPPConA));
             const showPPMomA = !showPPB && !showPPMomB && !showPPA && isPPMomentumA === true;
+            const showPPVol =
+              !showPPB &&
+              !showPPMomB &&
+              !showPPA &&
+              !showPPMomA &&
+              isPPVolatileR1S1 === true;
             if (showPPB) {
               return (
                 <div
@@ -1377,6 +1386,22 @@ function ScreenerTableRow({
                   title="MOMENTUM-A rules on PPDay (BC only); exclusive of PP-CONSOLIDATE-A"
                 >
                   PP-MOMENTUM-A
+                </div>
+              );
+            }
+            if (showPPVol) {
+              const isTouch = r.ppTouchCategory === true;
+              return (
+                <div
+                  className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
+                  style={{ color: isTouch ? "#a3e635" : "#ff637e" }}
+                  title={
+                    isTouch
+                      ? "PPDay 15m inside R1/PH–S1/PL and (prev, pp) is TOUCH"
+                      : "PPDay 15m inside R1/PH–S1/PL but (prev, pp) is not TOUCH"
+                  }
+                >
+                  {isTouch ? "PP-VOLATILE-R1S1" : "PP-VOLATILE-R1S1 ✗"}
                 </div>
               );
             }

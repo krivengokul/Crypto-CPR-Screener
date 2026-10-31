@@ -16,6 +16,7 @@ const PREVIOUS_15M_PP_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_pp_consolidate
 const PREVIOUS_15M_PP_CONSOLIDATE_B_CACHE_KEY = "cpr_previous_15m_pp_consolidate_b_results_v4";
 const PREVIOUS_15M_PP_MOMENTUM_A_CACHE_KEY = "cpr_previous_15m_pp_momentum_a_results_v1";
 const PREVIOUS_15M_PP_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_pp_momentum_b_results_v1";
+const PREVIOUS_15M_PP_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_pp_inside_r1s1_results_v1";
 const PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_inside_r1s1_results_v3";
 
 export interface UpexCandidate {
@@ -132,6 +133,7 @@ export function pruneLegacy15MResultCaches(): number {
     PREVIOUS_15M_PP_MOMENTUM_B_CACHE_KEY,
     PREVIOUS_15M_PP_MOMENTUM_A_CACHE_KEY,
     PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY,
+    PREVIOUS_15M_PP_INSIDE_R1S1_CACHE_KEY,
   ];
   const prefixes = currentKeys.map((key) => key.replace(/\d+$/, ""));
   let removed = 0;
@@ -1387,6 +1389,70 @@ export function savePreviousPPMomentumBResults(
     ),
   });
   safeSetItem(PREVIOUS_15M_PP_MOMENTUM_B_CACHE_KEY, payload);
+}
+
+
+
+/**
+ * PP-VOLATILE-R1S1: INSIDE max(R1,PH)–min(S1,PL) on PPDay.
+ * Pass `now` = end of that session (PDay start).
+ */
+export function findPPInsideR1S1Symbols(
+  candidates: UpexCandidate[],
+  onProgress?: (done: number, total: number) => void,
+  now = Date.now()
+): Promise<PreviousUpexScanResults> {
+  return findInsideR1S1Symbols(candidates, onProgress, now);
+}
+
+export function previousPPInsideR1S1CandidateCacheKey(
+  sessionStart: number,
+  candidate: UpexCandidate,
+): string {
+  return previousInsideR1S1CandidateCacheKey(sessionStart, candidate);
+}
+
+export function loadPreviousPPInsideR1S1Results(
+  sessionStart: number,
+): Map<string, boolean | null> {
+  try {
+    const raw = localStorage.getItem(PREVIOUS_15M_PP_INSIDE_R1S1_CACHE_KEY);
+    if (!raw) return new Map();
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      !("sessionStart" in parsed) ||
+      (parsed as { sessionStart: unknown }).sessionStart !== sessionStart ||
+      !("results" in parsed) ||
+      !(parsed as { results: unknown }).results ||
+      typeof (parsed as { results: unknown }).results !== "object"
+    ) {
+      return new Map();
+    }
+    const results = new Map<string, boolean | null>();
+    for (const [key, value] of Object.entries(
+      (parsed as { results: Record<string, unknown> }).results,
+    )) {
+      if (typeof value === "boolean") results.set(key, value);
+    }
+    return results;
+  } catch {
+    return new Map();
+  }
+}
+
+export function savePreviousPPInsideR1S1Results(
+  sessionStart: number,
+  results: Map<string, boolean | null>,
+): void {
+  const payload = JSON.stringify({
+    sessionStart,
+    results: Object.fromEntries(
+      [...results].filter((entry): entry is [string, boolean] => typeof entry[1] === "boolean"),
+    ),
+  });
+  safeSetItem(PREVIOUS_15M_PP_INSIDE_R1S1_CACHE_KEY, payload);
 }
 
 
