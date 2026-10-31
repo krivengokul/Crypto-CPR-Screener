@@ -40,6 +40,7 @@ import {
   upexSessionStartUtcMs,
   findPD15MBelowTCPass,
   findPreviousConsolidateAPass,
+  passesInsideR1S1Filter,
 } from "@/lib/15MCandleCheck";
 import { passesPattern, computeInnerLevelPattern, INNER_LEVEL_PATTERN_KEYS, normalizeViewDirection, getChartUrl, openChartInNewTab, type ViewDirection } from "./ScreenerUtils";
 import { pivotcategories } from "@/lib/ViewsSidebar";
