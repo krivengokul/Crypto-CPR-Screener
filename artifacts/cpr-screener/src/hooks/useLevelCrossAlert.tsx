@@ -47,19 +47,20 @@ function saveFired(keys: Set<string>) {
   }
 }
 
-/** One batched toast — no price/level numbers; PP label only. */
+/** One batched toast — no header, no price/level; body only + PP label. */
 function showCrossToast(kind: Kind, crosses: Cross[]) {
   const isR1 = kind === "R1";
   const listed = crosses.slice(0, MAX_LISTED);
   const extra = crosses.length - listed.length;
-  const verb = isR1 ? "crossed R1" : "crossed S1";
-  const symbolColor = isR1 ? "text-sky-300" : "text-[#ff6bb5]";
+  // Capital C: "Crossed R1" / "Crossed S1"
+  const verb = isR1 ? "Crossed R1" : "Crossed S1";
+  const symbolColor = isR1 ? "text-emerald-400" : "text-[#ff6bb5]";
+  const borderClass = isR1
+    ? "cursor-default border border-emerald-500/70 shadow-[0_0_0_1px_rgba(16,185,129,0.35)]"
+    : "cursor-default border border-pink-500/50";
 
   toast({
-    title:
-      crosses.length === 1
-        ? `${kind} cross (PP)`
-        : `${kind} cross — ${crosses.length} symbols (PP)`,
+    // No "R1 cross (PP)" header — description is the full message.
     description: (
       <div className="space-y-0.5 text-[13px] leading-snug">
         {listed.map((c) => (
@@ -86,7 +87,7 @@ function showCrossToast(kind: Kind, crosses: Cross[]) {
       </div>
     ),
     duration: 10_000,
-    className: "cursor-default",
+    className: borderClass,
     onClick: (e: ReactMouseEvent) => {
       const el = e.target as HTMLElement | null;
       if (el?.closest?.("[toast-close], [data-radix-toast-close], [data-r1-row]")) return;
