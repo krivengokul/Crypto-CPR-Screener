@@ -520,7 +520,7 @@ test("CONSOLIDATE-B floor mirrors the P-CONSOLIDATE-A wick reference rule", () =
       [
         { ...candle(start, 91, 89), low: 80 },
         { ...candle(start + m, 90.5, 89.5), low: 75 },
-        candle(start + 2 * m, 73, 74),
+        { ...candle(start + 2 * m, 73, 74), high: 74.5 },
       ],
       tc, start, now, floor,
     ),
@@ -663,7 +663,7 @@ test("passesUpexFilter with ceiling fails when a candle body is above ceiling", 
   // Later body (126/128) is above the reference high of 125 -> fails.
   assert.equal(
     passesUpexFilter(
-      [{ ...makeCandle(start, 108, 112), high: 125 }, makeCandle(start + m, 126, 128)],
+      [{ ...makeCandle(start, 108, 112), high: 125 }, { ...makeCandle(start + m, 126, 128), low: 125.5 }],
       bc, start, now, ceiling,
     ),
     false
@@ -1150,8 +1150,8 @@ test("BABY trending day setup: CON-B and MOM-B fail when price trends above TC r
   const c4 = c(3, 0.013240, 0.013500, 0.013220, 0.013290);
   // Candle 5: body entirely above TC, body low 0.013320 <= ref high 0.013500 -> cannot be ref, passes
   const c5 = c(4, 0.013320, 0.013480, 0.013300, 0.013450);
-  // Candle 6: body entirely above ref high 0.013500 -> CON-B and MOM-B fail!
-  const c6 = c(5, 0.013520, 0.013700, 0.013480, 0.013650);
+  // Candle 6: whole candle (low 0.013510) above ref high 0.013500 -> CON-B and MOM-B fail!
+  const c6 = c(5, 0.013520, 0.013700, 0.013510, 0.013650);
 
   // Candles 1-5 pass
   assert.equal(passesPD15MBelowTCFilter([c1, c2, c3, c4, c5], tc, start, now, floor), true);
@@ -1207,11 +1207,13 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     cpr_previous_15m_tc_b_results_v10: "x",
     cpr_previous_15m_tc_b_results_v11: "x",
     cpr_previous_15m_tc_b_results_v12: "x",
-    cpr_previous_15m_tc_b_results_v13: "keep",
+    cpr_previous_15m_tc_b_results_v13: "x",
+    cpr_previous_15m_tc_b_results_v14: "keep",
     cpr_previous_15m_b_results_v1: "x",
     cpr_previous_15m_b_results_v3: "x",
     cpr_previous_15m_b_results_v4: "x",
-    cpr_previous_15m_b_results_v5: "keep",
+    cpr_previous_15m_b_results_v5: "x",
+    cpr_previous_15m_b_results_v6: "keep",
     cpr_previous_upex_results_v1: "x",
     cpr_previous_upex_results_v2: "x",
     cpr_previous_upex_results_v3: "x",
@@ -1222,7 +1224,8 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     cpr_previous_upex_results_v8: "x",
     cpr_previous_upex_results_v9: "x",
     cpr_previous_upex_results_v13: "x",
-    cpr_previous_upex_results_v14: "keep",
+    cpr_previous_upex_results_v14: "x",
+    cpr_previous_upex_results_v15: "keep",
     cpr_previous_15m_consolidate_a_results_v1: "x",
     cpr_previous_15m_consolidate_a_results_v2: "x",
     cpr_previous_15m_consolidate_a_results_v3: "x",
@@ -1235,13 +1238,15 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     cpr_previous_15m_consolidate_a_results_v10: "x",
     cpr_previous_15m_consolidate_a_results_v11: "x",
     cpr_previous_15m_consolidate_a_results_v15: "x",
-    cpr_previous_15m_consolidate_a_results_v16: "keep",
+    cpr_previous_15m_consolidate_a_results_v16: "x",
+    cpr_previous_15m_consolidate_a_results_v17: "keep",
     cpr_previous_15m_momentum_b_results_v1: "x",
     cpr_previous_15m_momentum_b_results_v2: "x",
     cpr_previous_15m_momentum_b_results_v3: "x",
     cpr_previous_15m_momentum_b_results_v4: "x",
     cpr_previous_15m_momentum_b_results_v5: "x",
-    cpr_previous_15m_momentum_b_results_v6: "keep",
+    cpr_previous_15m_momentum_b_results_v6: "x",
+    cpr_previous_15m_momentum_b_results_v7: "keep",
     "cpr_symbols_2026-10-09": "unrelated",
   };
   Object.defineProperty(globalThis, "localStorage", {
@@ -1252,13 +1257,13 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     }),
   });
   try {
-    assert.equal(pruneLegacy15MResultCaches(), 40);
+    assert.equal(pruneLegacy15MResultCaches(), 45);
     assert.deepEqual(Object.keys(store).sort(), [
-      "cpr_previous_15m_b_results_v5",
-      "cpr_previous_15m_consolidate_a_results_v16",
-      "cpr_previous_15m_momentum_b_results_v6",
-      "cpr_previous_15m_tc_b_results_v13",
-      "cpr_previous_upex_results_v14",
+      "cpr_previous_15m_b_results_v6",
+      "cpr_previous_15m_consolidate_a_results_v17",
+      "cpr_previous_15m_momentum_b_results_v7",
+      "cpr_previous_15m_tc_b_results_v14",
+      "cpr_previous_upex_results_v15",
       "cpr_symbols_2026-10-09",
     ]);
     // Running again is a no-op.
@@ -1289,6 +1294,27 @@ test("reference candles use wick range: a wick-only touch of BC / TC / floor set
   // CON-B floor = 90. Body 88-89 is fully below the floor, but the wick (high 90.3) touches it.
   assert.equal(passesPD15MBelowTCFilter([c(89, 88, 87, 90.3)], 100, start, now, 90), true);
   assert.equal(passesPD15MBelowTCFilter([c(89, 88, 87, 89.5)], 100, start, now, 90), false);
+});
+
+test("fail rules use the whole candle: only a candle entirely beyond the level AND the reference wick fails", () => {
+  const now = Date.parse("2026-10-03T00:00:00.000Z");
+  const start = Date.parse("2026-10-02T00:00:00.000Z");
+  const m = 15 * 60_000;
+  const c = (i: number, open: number, close: number, low: number, high: number): OHLC => ({
+    openTime: start + i * m, open, high, low, close, volume: 1,
+  });
+  // BC floor = 100, reference candle spans BC with low 98.
+  const ref = c(0, 99.5, 100.5, 98, 101);
+  // Body below the reference low, but the wick (high 98.4) is above it -> passes.
+  assert.equal(passesUpexFilter([ref, c(1, 97, 97.5, 96, 98.4)], 100, start, now), true);
+  // Whole candle (high 97.9) below the reference low 98 -> fails.
+  assert.equal(passesUpexFilter([ref, c(1, 97, 97.5, 96, 97.9)], 100, start, now), false);
+  // TC = 100, reference candle spans TC with high 102.
+  const tcRef = c(0, 99.5, 100.5, 99, 102);
+  // Body above the reference high, but the wick (low 101.5) dips below it -> passes.
+  assert.equal(passesPD15MBelowTCFilter([tcRef, c(1, 103, 104, 101.5, 104.5)], 100, start, now), true);
+  // Whole candle (low 102.1) above the reference high 102 -> fails.
+  assert.equal(passesPD15MBelowTCFilter([tcRef, c(1, 103, 104, 102.1, 104.5)], 100, start, now), false);
 });
 
 test("parseComposedViewKey parses candleCheck segment between entry and pattern", () => {

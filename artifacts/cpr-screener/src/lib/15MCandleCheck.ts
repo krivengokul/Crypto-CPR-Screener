@@ -7,13 +7,13 @@ const DELTA_BASE = "https://api.india.delta.exchange/v2";
 const CANDLE_INTERVAL_MS = 15 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_CONCURRENT_REQUESTS = 8;
-const PREVIOUS_UPEX_CACHE_KEY = "cpr_previous_upex_results_v14";
-const PREVIOUS_15M_B_CACHE_KEY = "cpr_previous_15m_b_results_v5";
-const PREVIOUS_15M_TC_B_CACHE_KEY = "cpr_previous_15m_tc_b_results_v13";
-const PREVIOUS_15M_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_momentum_b_results_v6";
-const PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_consolidate_a_results_v16";
-const PREVIOUS_15M_PP_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_pp_consolidate_a_results_v8";
-const PREVIOUS_15M_PP_CONSOLIDATE_B_CACHE_KEY = "cpr_previous_15m_pp_consolidate_b_results_v5";
+const PREVIOUS_UPEX_CACHE_KEY = "cpr_previous_upex_results_v15";
+const PREVIOUS_15M_B_CACHE_KEY = "cpr_previous_15m_b_results_v6";
+const PREVIOUS_15M_TC_B_CACHE_KEY = "cpr_previous_15m_tc_b_results_v14";
+const PREVIOUS_15M_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_momentum_b_results_v7";
+const PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_consolidate_a_results_v17";
+const PREVIOUS_15M_PP_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_pp_consolidate_a_results_v9";
+const PREVIOUS_15M_PP_CONSOLIDATE_B_CACHE_KEY = "cpr_previous_15m_pp_consolidate_b_results_v6";
 const PREVIOUS_15M_PP_MOMENTUM_A_CACHE_KEY = "cpr_previous_15m_pp_momentum_a_results_v1";
 const PREVIOUS_15M_PP_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_pp_momentum_b_results_v1";
 const PREVIOUS_15M_PP_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_pp_inside_r1s1_results_v1";
@@ -185,13 +185,13 @@ export function previousPreviousUpexSessionStartUtcMs(now = Date.now()): number 
  *  - Floor rule (BC, MOMENTUM-A and CONSOLIDATE-A): full-session Reference Candle Principle.
  *    refFloorLow = minimum low-wick among ALL wick-spanning-BC candles in the session (so a later
  *    BC body such as #20 can replace an earlier #3 when its low is lower). Only after that
- *    final reference is known are full-body-below-BC candles tested (bodyHigh < refFloorLow
- *    fails). If no BC-spanning candle exists but there were full-body-below-BC candles, the
+ *    final reference is known are full-candle-below-BC candles tested (high < refFloorLow
+ *    fails). If no BC-spanning candle exists but there were full-candle-below-BC candles, the
  *    session fails on the first such candle.
  *  - Ceiling rule (CONSOLIDATE-A only, when `ceiling` is supplied): full-session (mirrors
  *    CON-B TC). refCeilingHigh = maximum high-wick among ALL wick-spanning-ceiling candles
- *    (candle.low ≤ max(PH,R1) ≤ candle.high). Only then are full-body-above-ceiling candles
- *    tested (bodyLow > refCeilingHigh fails). If no ceiling-spanning candle exists but bodies fully above
+ *    (candle.low ≤ max(PH,R1) ≤ candle.high). Only then are full-candle-above-ceiling candles
+ *    tested (low > refCeilingHigh fails). If no ceiling-spanning candle exists but bodies fully above
  *    the ceiling existed, the session fails on the first such candle. MOMENTUM-A has no
  *    ceiling check.
  *  - R2 body rule (CONSOLIDATE-A only, when `r2` is supplied): simple demotion —
@@ -258,26 +258,24 @@ export function passesUpexFilter(
     }
   }
 
-  let sawBodyBelowBc = false;
-  let sawBodyAboveCeiling = false;
+  let sawCandleBelowBc = false;
+  let sawCandleAboveCeiling = false;
 
   for (let i = 0; i < completed.length; i++) {
     const candle = completed[i];
-    const bodyLow = Math.min(candle.open, candle.close);
-    const bodyHigh = Math.max(candle.open, candle.close);
 
-    // Floor rule against final session refFloorLow
-    if (bodyHigh < bc) {
-      sawBodyBelowBc = true;
-      if (refFloorLow !== null && bodyHigh < refFloorLow) {
+    // Floor rule: entire candle below BC (high < BC) vs final refFloorLow
+    if (Number.isFinite(candle.high) && candle.high < bc) {
+      sawCandleBelowBc = true;
+      if (refFloorLow !== null && candle.high < refFloorLow) {
         return false;
       }
     }
 
-    // Ceiling rule (R1 / PH) against final session refCeilingHigh — CONSOLIDATE-A only
-    if (ceiling !== undefined && bodyLow > ceiling) {
-      sawBodyAboveCeiling = true;
-      if (refCeilingHigh !== null && bodyLow > refCeilingHigh) {
+    // Ceiling rule (R1 / PH): entire candle above ceiling (low > ceiling) vs final ref
+    if (ceiling !== undefined && Number.isFinite(candle.low) && candle.low > ceiling) {
+      sawCandleAboveCeiling = true;
+      if (refCeilingHigh !== null && candle.low > refCeilingHigh) {
         return false;
       }
     }
@@ -290,13 +288,13 @@ export function passesUpexFilter(
     }
   }
 
-  // No BC-spanning candle in the whole session, but bodies fully below BC existed.
-  if (refFloorLow === null && sawBodyBelowBc) {
+  // No BC-spanning candle, but candles fully below BC existed.
+  if (refFloorLow === null && sawCandleBelowBc) {
     return false;
   }
 
-  // No ceiling-spanning candle, but bodies fully above the ceiling level existed.
-  if (ceiling !== undefined && refCeilingHigh === null && sawBodyAboveCeiling) {
+  // No ceiling-spanning candle, but candles fully above the ceiling existed.
+  if (ceiling !== undefined && refCeilingHigh === null && sawCandleAboveCeiling) {
     return false;
   }
 
@@ -392,9 +390,9 @@ export function explainUpexFailure(
     const bodyLow = Math.min(candle.open, candle.close);
     const bodyHigh = Math.max(candle.open, candle.close);
 
-    if (bodyHigh < bc) {
+    if (Number.isFinite(candle.high) && candle.high < bc) {
       if (!firstBodyBelowBc) firstBodyBelowBc = candle;
-      if (refFloorLow !== null && bodyHigh < refFloorLow) {
+      if (refFloorLow !== null && candle.high < refFloorLow) {
         return {
           rule: "floor",
           openTime: new Date(candle.openTime).toISOString(),
@@ -410,9 +408,9 @@ export function explainUpexFailure(
       }
     }
 
-    if (ceiling !== undefined && bodyLow > ceiling) {
+    if (ceiling !== undefined && Number.isFinite(candle.low) && candle.low > ceiling) {
       if (!firstBodyAboveCeiling) firstBodyAboveCeiling = candle;
-      if (refCeilingHigh !== null && bodyLow > refCeilingHigh) {
+      if (refCeilingHigh !== null && candle.low > refCeilingHigh) {
         return {
           rule: "freshHighAboveCeiling",
           openTime: new Date(candle.openTime).toISOString(),
@@ -446,7 +444,7 @@ export function explainUpexFailure(
     }
   }
 
-  // No BC-spanning candle in the whole session, but bodies fully below BC existed.
+  // No BC-spanning candle in the whole session, but candles fully below BC existed.
   if (refFloorLow === null && firstBodyBelowBc) {
     const first = firstBodyBelowBc;
     return {
@@ -463,7 +461,7 @@ export function explainUpexFailure(
     };
   }
 
-  // No ceiling-spanning candle, but bodies fully above the ceiling level existed.
+  // No ceiling-spanning candle, but candles fully above the ceiling level existed.
   if (ceiling !== undefined && refCeilingHigh === null && firstBodyAboveCeiling) {
     const first = firstBodyAboveCeiling;
     return {
@@ -509,7 +507,7 @@ export function formatUpexFailureNote(
     case "floor":
       return {
         label: `broke below BC wick · candle #${failure.candleNumber}`,
-        detail: `candle ${hhmm} body ${body} went below the low-wick reference ${failure.previousLowestWick ?? "—"} set after the first body through BC ${failure.bc}.`,
+        detail: `candle ${hhmm} body ${body} high went under the low-wick reference ${failure.previousLowestWick ?? "—"} set after the first body through BC ${failure.bc}.`,
       };
   }
 }
@@ -616,12 +614,12 @@ interface PD15MBelowTCFailure {
  * - Ceiling rule (TC, CONSOLIDATE-B and MOMENTUM-B): full-session.
  *   refCeilingHigh = maximum high-wick among ALL wick-spanning-TC candles (later TC wick can
  *   replace an earlier one when its high is higher). Only then are full-body-above-TC
- *   candles tested (bodyLow > refCeilingHigh fails). If no TC-spanning candle exists
- *   but bodies fully above TC existed, the session fails on the first such candle.
+ *   candles tested (low > refCeilingHigh fails). If no TC-spanning candle exists
+ *   but candles fully above TC existed, the session fails on the first such candle.
  * - Floor rule (lower of PL / S1, CONSOLIDATE-B ONLY): full-session (mirrors CON-A BC).
  *   refFloorLow = minimum low-wick among ALL wick-spanning-floor candles
  *   (candle.low ≤ floor ≤ candle.high). Only then are
- *   full-body-below-floor candles tested (bodyHigh < refFloorLow fails). If no
+ *   full-candle-below-floor candles tested (high < refFloorLow fails). If no
  *   floor-spanning candle exists but bodies fully below the floor existed, the
  *   session fails on the first such candle. MOMENTUM-B has no floor rule.
  */
@@ -675,10 +673,10 @@ function findPD15MBelowTCFailure(
     const bodyLow = Math.min(candle.open, candle.close);
     const bodyHigh = Math.max(candle.open, candle.close);
 
-    // Ceiling check (TC) against final session refCeilingHigh
-    if (bodyLow > tc) {
+    // Ceiling check (TC): entire candle above TC (low > TC) vs final refCeilingHigh
+    if (Number.isFinite(candle.low) && candle.low > tc) {
       if (!firstBodyAboveTc) firstBodyAboveTc = candle;
-      if (refCeilingHigh !== null && bodyLow > refCeilingHigh) {
+      if (refCeilingHigh !== null && candle.low > refCeilingHigh) {
         return {
           rule: "freshHighAboveTC",
           candle,
@@ -689,10 +687,10 @@ function findPD15MBelowTCFailure(
       }
     }
 
-    // Floor check (PL/S1) - CONSOLIDATE-B only, against final session refFloorLow
-    if (floor !== undefined && bodyHigh < floor) {
+    // Floor check (PL/S1): entire candle below floor (high < floor) vs final refFloorLow
+    if (floor !== undefined && Number.isFinite(candle.high) && candle.high < floor) {
       if (!firstBodyBelowFloor) firstBodyBelowFloor = candle;
-      if (refFloorLow !== null && bodyHigh < refFloorLow) {
+      if (refFloorLow !== null && candle.high < refFloorLow) {
         return {
           rule: "floor",
           candle,
@@ -880,7 +878,7 @@ export function explainPD15MBelowTCPass(
       if (refCeilingHigh === null || (Number.isFinite(c.high) && c.high > refCeilingHigh)) {
         refCeilingHigh = c.high;
       }
-    } else if (bodyLow > tc) {
+    } else if (Number.isFinite(c.low) && c.low > tc) {
       pendingExcused.push(c);
     }
 
@@ -2033,8 +2031,8 @@ export function getPD15MBelowTCFailureNote(
       };
     case "floor":
       return {
-        label: `broke below floor wick · candle #${failure.candleNumber}`,
-        detail: `candle ${hhmm} body ${body} went below the low-wick reference ${failure.previousLowestWick ?? "—"} set after the first body under the PL/S1 floor ${failure.floor ?? "—"}.`,
+        label: `high below floor wick · candle #${failure.candleNumber}`,
+        detail: `candle ${hhmm} body ${body} high went under the low-wick reference ${failure.previousLowestWick ?? "—"} set after the first body under the PL/S1 floor ${failure.floor ?? "—"}.`,
       };
   }
 }
