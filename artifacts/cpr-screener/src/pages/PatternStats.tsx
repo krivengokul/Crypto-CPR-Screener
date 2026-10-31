@@ -41,6 +41,7 @@ import {
   findPD15MBelowTCPass,
   findPreviousConsolidateAPass,
   passesInsideR1S1Filter,
+  cprRelation,
 } from "@/lib/15MCandleCheck";
 import { passesPattern, computeInnerLevelPattern, INNER_LEVEL_PATTERN_KEYS, normalizeViewDirection, getChartUrl, openChartInNewTab, type ViewDirection } from "./ScreenerUtils";
 import { pivotcategories } from "@/lib/ViewsSidebar";
@@ -1321,6 +1322,45 @@ type PrevDayCheckBlock = {
   detail: string;
 };
 
+const CPR_RELATION_LABEL = {
+  inside: "INCPR (inside)",
+  "overlap-above": "Overlap-Above",
+  "overlap-below": "Overlap-Below",
+  none: "no INCPR/overlap",
+} as const;
+
+/**
+ * Plain-words explanation of which day's BC/TC a CON/MOM check used, driven by
+ * the same cprRelation() the filters use. `cur` is the checked day's CPR,
+ * `base` the day before it.
+ */
+function describeLevelSource(
+  curName: string,
+  baseName: string,
+  cur: { tc: number; bc: number },
+  base: { tc: number; bc: number } | null | undefined,
+): { note: string; bcName: string; tcName: string } {
+  const rel = cprRelation(cur, base);
+  if (!base || !Number.isFinite(base.bc) || !Number.isFinite(base.tc)) {
+    return {
+      note: `${curName} CPR vs ${baseName}: ${baseName} CPR unavailable → using ${curName}'s own BC ${cur.bc} / TC ${cur.tc}.`,
+      bcName: `${curName} BC`,
+      tcName: `${curName} TC`,
+    };
+  }
+  const bcFromBase = rel === "inside" || rel === "overlap-above";
+  const tcFromBase = rel === "inside" || rel === "overlap-below";
+  const bcName = `${bcFromBase ? baseName : curName} BC`;
+  const tcName = `${tcFromBase ? baseName : curName} TC`;
+  return {
+    note:
+      `${curName} CPR vs ${baseName}: ${CPR_RELATION_LABEL[rel]} → ` +
+      `${bcName} ${bcFromBase ? base.bc : cur.bc}, ${tcName} ${tcFromBase ? base.tc : cur.tc}.`,
+    bcName,
+    tcName,
+  };
+}
+
 type PrevDayDiagnosis = {
   symbol: string;
   source: "binance";
@@ -1333,6 +1373,8 @@ type PrevDayDiagnosis = {
     floor: number;
     tcName: string;
     ceilingName: string;
+    /** Why BC/TC come from PDay or PPDay (INCPR / overlap rewrite). */
+    note: string;
   };
   tcCandles: CandleBodyLevelMatch[];
   bcCandles: CandleBodyLevelMatch[];
@@ -1348,6 +1390,10 @@ type PrevDayDiagnosis = {
     ceiling: number;
     conBTc: number;
     floor: number;
+    /** Source day of BC/TC: PPDay, or PPPDay after the INCPR/overlap rewrite. */
+    note: string;
+    tcName: string;
+    bcName: string;
   } | null;
   ppTcCandles: CandleBodyLevelMatch[];
   ppBcCandles: CandleBodyLevelMatch[];
@@ -1401,8 +1447,8 @@ function PreviousDaySection() {
       const ceiling = getPrevious15MACeiling(cpr.prevCPR);
       const conBTc = getConsolidateBTc(cpr.prevCPR, cpr.ppCPR);
       const floor = getPrevious15MBFloor(cpr.prevCPR);
-      const tcName =
-        cpr.ppCPR && conBTc === cpr.ppCPR.tc && conBTc !== cpr.prevCPR.tc ? "PPDay TC" : "PDay TC";
+      const pSource = describeLevelSource("PDay", "PPDay", cpr.prevCPR, cpr.ppCPR);
+      const tcName = pSource.tcName;
       const ceilingName =
         cpr.ppCPR && conABc === cpr.ppCPR.bc && conABc !== cpr.prevCPR.bc
           ? "PPDay BC band / PH-R1"
@@ -1613,7 +1659,16 @@ function PreviousDaySection() {
                     detail: "PP-VOLATILE-R1S1: no usable completed PP-day 15m candles.",
                   };
           ppSessionLabel = new Date(ppStart).toISOString().slice(0, 10);
-          ppLevels = { conABc: ppABc, ceiling: ppCeiling, conBTc: ppBTc, floor: ppFloor };
+          const ppSource = describeLevelSource("PPDay", "PPPDay", pp, cpr.pppCPR ?? null);
+          ppLevels = {
+            conABc: ppABc,
+            ceiling: ppCeiling,
+            conBTc: ppBTc,
+            floor: ppFloor,
+            note: ppSource.note,
+            tcName: ppSource.tcName,
+            bcName: ppSource.bcName,
+          };
           ppConA = {
             pass: !ppFailConA,
             label: ppConANote.label,
@@ -1643,7 +1698,7 @@ function PreviousDaySection() {
         source,
         entryDate,
         prevSessionLabel: prevLabel,
-        levels: { conABc, ceiling, conBTc, floor, tcName, ceilingName },
+        levels: { conABc, ceiling, conBTc, floor, tcName, ceilingName, note: pSource.note },
         tcCandles: tcMatches,
         bcCandles: bcMatches,
         conA: { pass: failConA ? false : true, label: conA.label, detail: conA.detail },
@@ -1738,6 +1793,7 @@ function PreviousDaySection() {
               </>
             ) : null}
           </div>
+          <div className="text-[11px] text-slate-400 font-mono">{result.levels.note}</div>
 
           {/* Exclusive P-bucket: raw PASS can still hide the label (same as Screener). */}
           {(() => {
@@ -2039,6 +2095,7 @@ function PreviousDaySection() {
                 <span className="font-mono text-slate-200">{result.ppSessionLabel}</span>
                 {" · levels from ppCPR"}
               </div>
+              <div className="text-[11px] text-slate-400 font-mono">{result.ppLevels.note}</div>
               {(() => {
                 const ppB = result.ppConB?.pass === true;
                 const ppMomB = result.ppMomB?.pass === true;
@@ -2144,7 +2201,7 @@ function PreviousDaySection() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="rounded-xl border border-pink-400/35 bg-[#141220] p-3.5">
                   <div className="mb-2 font-mono text-xs font-bold text-[#ff6bb5]">
-                    PP CANDLES TOUCHING TC ({result.ppLevels.conBTc})
+                    PP CANDLES TOUCHING {result.ppLevels.tcName.toUpperCase()} ({result.ppLevels.conBTc})
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {result.ppTcCandles.length === 0 ? (
@@ -2163,7 +2220,7 @@ function PreviousDaySection() {
                 </div>
                 <div className="rounded-xl border border-emerald-500/25 bg-[#0e1c1e] p-3.5">
                   <div className="mb-2 font-mono text-xs font-bold text-emerald-400">
-                    PP CANDLES TOUCHING BC ({result.ppLevels.conABc})
+                    PP CANDLES TOUCHING {result.ppLevels.bcName.toUpperCase()} ({result.ppLevels.conABc})
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {result.ppBcCandles.length === 0 ? (
@@ -2186,7 +2243,7 @@ function PreviousDaySection() {
                   {
                     key: "ppConB" as const,
                     title: "PP-CONSOLIDATE-B",
-                    levels: `PPDay TC ${result.ppLevels.conBTc} · floor ${result.ppLevels.floor}`,
+                    levels: `${result.ppLevels.tcName} ${result.ppLevels.conBTc} · floor ${result.ppLevels.floor}`,
                     tonePass: "border-pink-400/40 bg-pink-400/10",
                     textPass: "text-[#ff6bb5]",
                     block: result.ppConB,
@@ -2197,7 +2254,7 @@ function PreviousDaySection() {
                   {
                     key: "ppConA" as const,
                     title: "PP-CONSOLIDATE-A",
-                    levels: `BC ${result.ppLevels.conABc} · ceiling ${result.ppLevels.ceiling}`,
+                    levels: `${result.ppLevels.bcName} ${result.ppLevels.conABc} · ceiling ${result.ppLevels.ceiling}`,
                     tonePass: "border-emerald-500/30 bg-emerald-500/5",
                     textPass: "text-emerald-400",
                     block: result.ppConA,
@@ -2208,7 +2265,7 @@ function PreviousDaySection() {
                   {
                     key: "ppMomB" as const,
                     title: "PP-MOMENTUM-B",
-                    levels: `PPDay TC ${result.ppLevels.conBTc} · no floor`,
+                    levels: `${result.ppLevels.tcName} ${result.ppLevels.conBTc} · no floor`,
                     tonePass: "border-violet-500/30 bg-violet-500/5",
                     textPass: "text-violet-300",
                     block: result.ppMomB,
@@ -2219,7 +2276,7 @@ function PreviousDaySection() {
                   {
                     key: "ppMomA" as const,
                     title: "PP-MOMENTUM-A",
-                    levels: `BC ${result.ppLevels.conABc} · no ceiling`,
+                    levels: `${result.ppLevels.bcName} ${result.ppLevels.conABc} · no ceiling`,
                     tonePass: "border-cyan-500/30 bg-cyan-500/5",
                     textPass: "text-cyan-300",
                     block: result.ppMomA,

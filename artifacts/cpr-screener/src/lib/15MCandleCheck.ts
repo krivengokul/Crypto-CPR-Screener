@@ -68,6 +68,28 @@ export function getPrevious15MACeiling(prevLevels: {
   return Math.max(prevLevels.prevHigh, prevLevels.r1);
 }
 
+export type CprRelation = "inside" | "overlap-above" | "overlap-below" | "none";
+
+/**
+ * How `cur`'s CPR sits versus the day before it (`base`). Single source of
+ * truth for the INCPR/overlap rewrite: getConsolidateABc / getConsolidateBTc
+ * and the Pattern Statistics diagnosis all read it so they cannot drift.
+ * Returns "none" when `base` is missing or not finite.
+ */
+export function cprRelation(
+  cur: { tc: number; bc: number },
+  base?: { tc: number; bc: number } | null
+): CprRelation {
+  if (!base || !Number.isFinite(base.bc) || !Number.isFinite(base.tc)) return "none";
+  const inside =
+    (cur.tc <= base.tc && cur.bc > base.bc) ||
+    (cur.tc < base.tc && cur.bc >= base.bc);
+  if (inside) return "inside";
+  if (cur.bc >= base.bc && cur.bc <= base.tc && cur.tc > base.tc) return "overlap-above";
+  if (cur.tc <= base.tc && cur.tc >= base.bc && cur.bc < base.bc) return "overlap-below";
+  return "none";
+}
+
 /**
  * Bottom (BC) level for the P-CONSOLIDATE-A check. Normally the previous
  * session's own BC (PDay BC). When PDay's CPR was Overlap-Above or Inside
@@ -80,15 +102,8 @@ export function getConsolidateABc(
   prevCPR: { tc: number; bc: number },
   ppCPR?: { tc: number; bc: number } | null
 ): number {
-  if (!ppCPR || !Number.isFinite(ppCPR.bc) || !Number.isFinite(ppCPR.tc)) {
-    return prevCPR.bc;
-  }
-  const overlapAbove =
-    prevCPR.bc >= ppCPR.bc && prevCPR.bc <= ppCPR.tc && prevCPR.tc > ppCPR.tc;
-  const inside =
-    (prevCPR.tc <= ppCPR.tc && prevCPR.bc > ppCPR.bc) ||
-    (prevCPR.tc < ppCPR.tc && prevCPR.bc >= ppCPR.bc);
-  return overlapAbove || inside ? ppCPR.bc : prevCPR.bc;
+  const rel = cprRelation(prevCPR, ppCPR);
+  return ppCPR && (rel === "inside" || rel === "overlap-above") ? ppCPR.bc : prevCPR.bc;
 }
 
 /**
@@ -102,15 +117,8 @@ export function getConsolidateBTc(
   prevCPR: { tc: number; bc: number },
   ppCPR?: { tc: number; bc: number } | null
 ): number {
-  if (!ppCPR || !Number.isFinite(ppCPR.bc) || !Number.isFinite(ppCPR.tc)) {
-    return prevCPR.tc;
-  }
-  const overlapBelow =
-    prevCPR.tc <= ppCPR.tc && prevCPR.tc >= ppCPR.bc && prevCPR.bc < ppCPR.bc;
-  const inside =
-    (prevCPR.tc <= ppCPR.tc && prevCPR.bc > ppCPR.bc) ||
-    (prevCPR.tc < ppCPR.tc && prevCPR.bc >= ppCPR.bc);
-  return overlapBelow || inside ? ppCPR.tc : prevCPR.tc;
+  const rel = cprRelation(prevCPR, ppCPR);
+  return ppCPR && (rel === "inside" || rel === "overlap-below") ? ppCPR.tc : prevCPR.tc;
 }
 
 /**
