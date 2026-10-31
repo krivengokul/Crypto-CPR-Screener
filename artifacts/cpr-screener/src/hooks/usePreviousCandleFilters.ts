@@ -491,6 +491,8 @@ export function usePreviousCandleFilters(opts: {
           const a = previousConsolidateAIncludedSymbols.has(key);
           const ppa = previousPPConsolidateAIncludedSymbols.has(key);
           const ppb = previousPPConsolidateBIncludedSymbols.has(key);
+          const ppma = previousPPMomentumAIncludedSymbols.has(key);
+          const ppmb = previousPPMomentumBIncludedSymbols.has(key);
           const ma = previousUpexIncludedSymbols.has(key);
           const b = previous15MTCIncludedSymbols.has(key);
           const mb = previous15MMomentumIncludedSymbols.has(key);
@@ -499,6 +501,8 @@ export function usePreviousCandleFilters(opts: {
             row.PD15MConsolidateAPass === a &&
             row.PD15MPPConsolidateAPass === ppa &&
             row.PD15MPPConsolidateBPass === ppb &&
+            row.PD15MPPMomentumAPass === ppma &&
+            row.PD15MPPMomentumBPass === ppmb &&
             row.PD15MAboveBCPass === ma &&
             row.PD15MBelowTCPass === b &&
             row.PD15MMomentumBPass === mb &&
@@ -512,6 +516,8 @@ export function usePreviousCandleFilters(opts: {
             PD15MConsolidateAPass: a,
             PD15MPPConsolidateAPass: ppa,
             PD15MPPConsolidateBPass: ppb,
+            PD15MPPMomentumAPass: ppma,
+            PD15MPPMomentumBPass: ppmb,
             PD15MAboveBCPass: ma,
             PD15MBelowTCPass: b,
             PD15MMomentumBPass: mb,
@@ -527,6 +533,8 @@ export function usePreviousCandleFilters(opts: {
     previousConsolidateAIncludedSymbols,
     previousPPConsolidateAIncludedSymbols,
     previousPPConsolidateBIncludedSymbols,
+    previousPPMomentumAIncludedSymbols,
+    previousPPMomentumBIncludedSymbols,
     previousUpexIncludedSymbols,
     previous15MTCIncludedSymbols,
     previous15MMomentumIncludedSymbols,
@@ -620,10 +628,15 @@ export function usePreviousCandleFilters(opts: {
       const key = `${row.source}:${row.symbol}`;
       return (
         previousPPMomentumAIncludedSymbols.has(key) &&
-        !previousPPConsolidateAIncludedSymbols.has(key)
+        !previousPPConsolidateAIncludedSymbols.has(key) &&
+        !previousPPConsolidateBIncludedSymbols.has(key)
       );
     },
-    [previousPPMomentumAIncludedSymbols, previousPPConsolidateAIncludedSymbols],
+    [
+      previousPPMomentumAIncludedSymbols,
+      previousPPConsolidateAIncludedSymbols,
+      previousPPConsolidateBIncludedSymbols,
+    ],
   );
   const hasMomentumA = useCallback(
     (row: CandleBucketRow) => candleBucket(row) === "momentum-a",

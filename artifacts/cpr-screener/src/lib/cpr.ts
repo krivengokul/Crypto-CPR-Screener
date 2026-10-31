@@ -307,6 +307,10 @@ export interface CPRResult {
   PD15MPPConsolidateAPass?: boolean;
   /** PP-CONSOLIDATE-B: CON-B rules applied to the day-before-previous session (ppCPR levels). */
   PD15MPPConsolidateBPass?: boolean;
+  /** PP-MOMENTUM-A: MOM-A (BC only) on the day-before-previous session (ppCPR levels). */
+  PD15MPPMomentumAPass?: boolean;
+  /** PP-MOMENTUM-B: MOM-B (TC only) on the day-before-previous session (ppCPR levels). */
+  PD15MPPMomentumBPass?: boolean;
   /** Previous-session MOMENTUM-B result (CONSOLIDATE-B's TC check without the PL/S1 floor); populated by the backtest's P-category scans. */
   PD15MMomentumBPass?: boolean;
   /** Previous-session INSIDE max(R1,PH)–min(S1,PL); independent of CON-A/CON-B. */

@@ -1,6 +1,6 @@
 import type { CPRResult } from "../cpr.ts";
 
-export const ALL_CANDLE_CHECK_CODES = ["CA", "MA", "VR", "CB", "MB", "PPCA", "PPCB"] as const;
+export const ALL_CANDLE_CHECK_CODES = ["CA", "MA", "VR", "CB", "MB", "PPCA", "PPCB", "PPMA", "PPMB"] as const;
 export type CandleCheckCode = (typeof ALL_CANDLE_CHECK_CODES)[number];
 export const ALL_CANDLE_CHECKS: readonly string[] = ALL_CANDLE_CHECK_CODES;
 
@@ -15,24 +15,26 @@ export const CANDLE_CHECK_OPTIONS: Array<{ value: CandleCheckCode | ""; label: s
 ];
 
 /** PP-day independent options (Create/Edit/Copy View PP dropdown). */
-export const PP_CANDLE_CHECK_OPTIONS: Array<{ value: "PPCA" | "PPCB" | ""; label: string }> = [
+export const PP_CANDLE_CHECK_OPTIONS: Array<{ value: "PPCA" | "PPCB" | "PPMA" | "PPMB" | ""; label: string }> = [
   { value: "", label: "None" },
   { value: "PPCA", label: "PP-CON-A" },
+  { value: "PPMA", label: "PP-MOM-A" },
   { value: "PPCB", label: "PP-CON-B" },
+  { value: "PPMB", label: "PP-MOM-B" },
 ];
 
 /** Split stored candleCheck ("PPCA+CA" or single code) into PP + P parts. */
 export function splitCandleCheck(code: string | undefined | null): {
-  pp: "" | "PPCA" | "PPCB";
+  pp: "" | "PPCA" | "PPCB" | "PPMA" | "PPMB";
   p: string;
 } {
   const raw = (code ?? "").trim();
   if (!raw) return { pp: "", p: "" };
   const parts = raw.split("+").map((s) => s.trim()).filter(Boolean);
-  let pp: "" | "PPCA" | "PPCB" = "";
+  let pp: "" | "PPCA" | "PPCB" | "PPMA" | "PPMB" = "";
   const pParts: string[] = [];
   for (const part of parts) {
-    if (part === "PPCA" || part === "PPCB") pp = part;
+    if (part === "PPCA" || part === "PPCB" || part === "PPMA" || part === "PPMB") pp = part;
     else pParts.push(part);
   }
   return { pp, p: pParts[0] ?? "" };
@@ -45,7 +47,7 @@ export function joinCandleCheck(pp: string, p: string): string {
 
 /**
  * Exclusive buckets aligned with Screener `candleBucket` priority for P-codes.
- * PPCA / PPCB are independent of P-buckets (AND when combined via "+").
+ * PPCA / PPCB / PPMA / PPMB are independent of P-buckets (AND when combined via "+").
  */
 export function matchesCandleCheck(r: CPRResult, code: string): boolean {
   const raw = (code ?? "").trim();
@@ -61,6 +63,8 @@ export function matchesCandleCheck(r: CPRResult, code: string): boolean {
   const inside = r.PD15MInsideR1S1Pass === true;
   const ppA = r.PD15MPPConsolidateAPass === true;
   const ppB = r.PD15MPPConsolidateBPass === true;
+  const ppMomA = r.PD15MPPMomentumAPass === true;
+  const ppMomB = r.PD15MPPMomentumBPass === true;
   switch (raw) {
     case "CB":
       return conB;
@@ -74,11 +78,16 @@ export function matchesCandleCheck(r: CPRResult, code: string): boolean {
     case "IR":
     case "INSIDE":
       return inside && !conA && !conB;
+    case "PPCB":
+      return ppB;
+    case "PPMB":
+      return ppMomB && !ppB;
     case "PPCA":
       // Exclusive: A only when B did not pass (same as CA vs CB).
       return ppA && !ppB;
-    case "PPCB":
-      return ppB;
+    case "PPMA":
+      // Mirror MA: momentum exclusive of both PP-CON sides.
+      return ppMomA && !ppA && !ppB;
     default:
       return true;
   }
@@ -106,7 +115,7 @@ export function candleCheckToCategoryKey(code: string): string | undefined {
 /**
  * Derive the Create-View candleCheck string from a live/backtest row's
  * 15m flags — same exclusive P-bucket priority as matchesCandleCheck /
- * Screener, plus independent PP-CONSOLIDATE-A/B when those flags pass.
+ * Screener, plus independent PP-CON / PP-MOM when those flags pass.
  * Used to preselect the PP / P dropdowns (like existingGapBadge for Gap).
  */
 export function candleCheckFromRow(r: CPRResult): string {
@@ -121,9 +130,11 @@ export function candleCheckFromRow(r: CPRResult): string {
   else if (conA) p = "CA";
   else if (momA) p = "MA";
   else if (inside) p = "VR";
-  // Exclusive PP (B > A), same priority as P CON-B > CON-A.
+  // Exclusive PP: CON-B > MOM-B > CON-A > MOM-A (mirrors P-day priority).
   let pp = "";
   if (r.PD15MPPConsolidateBPass === true) pp = "PPCB";
+  else if (r.PD15MPPMomentumBPass === true) pp = "PPMB";
   else if (r.PD15MPPConsolidateAPass === true) pp = "PPCA";
+  else if (r.PD15MPPMomentumAPass === true) pp = "PPMA";
   return joinCandleCheck(pp, p);
 }

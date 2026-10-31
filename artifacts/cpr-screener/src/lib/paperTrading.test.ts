@@ -46,6 +46,9 @@ import {
   matchesCandleCheck,
   ALL_CANDLE_CHECKS,
   CANDLE_CHECK_OPTIONS,
+  PP_CANDLE_CHECK_OPTIONS,
+  candleCheckFromRow,
+  splitCandleCheck,
 } from "./views/candleChecks.ts";
 import {
   parseComposedViewKey,
@@ -1758,4 +1761,31 @@ test("parseComposedViewKey and matchesCandleCheck handle PP candle codes (single
   assert.equal(matchesCandleCheck(r, "PPCB"), false);
   assert.equal(matchesCandleCheck(r, "PPCA+CA"), true);
   assert.equal(matchesCandleCheck(r, "PPCB+CA"), false);
+});
+
+test("PP-MOM-A / PP-MOM-B: dropdown, exclusivity vs PP-CON, combined codes and row priority", () => {
+  assert.deepEqual(
+    PP_CANDLE_CHECK_OPTIONS.map((o) => o.value),
+    ["", "PPCA", "PPMA", "PPCB", "PPMB"],
+  );
+  const row = (f: Record<string, boolean>) => f as unknown as Parameters<typeof matchesCandleCheck>[0];
+
+  // PPMB: PP-MOM-B passed and PP-CON-B did not.
+  assert.equal(matchesCandleCheck(row({ PD15MPPMomentumBPass: true }), "PPMB"), true);
+  assert.equal(matchesCandleCheck(row({ PD15MPPMomentumBPass: true, PD15MPPConsolidateBPass: true }), "PPMB"), false);
+  // PPMA: PP-MOM-A passed and neither PP-CON side did.
+  assert.equal(matchesCandleCheck(row({ PD15MPPMomentumAPass: true }), "PPMA"), true);
+  assert.equal(matchesCandleCheck(row({ PD15MPPMomentumAPass: true, PD15MPPConsolidateAPass: true }), "PPMA"), false);
+  assert.equal(matchesCandleCheck(row({ PD15MPPMomentumAPass: true, PD15MPPConsolidateBPass: true }), "PPMA"), false);
+  // Combined PP + P segments must all pass.
+  assert.equal(matchesCandleCheck(row({ PD15MPPMomentumBPass: true, PD15MConsolidateAPass: true }), "PPMB+CA"), true);
+  assert.equal(matchesCandleCheck(row({ PD15MPPMomentumBPass: true }), "PPMB+CA"), false);
+  assert.deepEqual(splitCandleCheck("PPMA+MB"), { pp: "PPMA", p: "MB" });
+  assert.ok(ALL_CANDLE_CHECKS.includes("PPMA") && ALL_CANDLE_CHECKS.includes("PPMB"));
+
+  // candleCheckFromRow priority: PPCB > PPMB > PPCA > PPMA.
+  assert.equal(candleCheckFromRow(row({ PD15MPPConsolidateBPass: true, PD15MPPMomentumBPass: true })), "PPCB");
+  assert.equal(candleCheckFromRow(row({ PD15MPPMomentumBPass: true, PD15MPPConsolidateAPass: true })), "PPMB");
+  assert.equal(candleCheckFromRow(row({ PD15MPPConsolidateAPass: true, PD15MPPMomentumAPass: true })), "PPCA");
+  assert.equal(candleCheckFromRow(row({ PD15MPPMomentumAPass: true })), "PPMA");
 });
