@@ -1340,6 +1340,7 @@ type PrevDayDiagnosis = {
   conB: PrevDayCheckBlock;
   momA: PrevDayCheckBlock;
   momB: PrevDayCheckBlock;
+  insideR1S1: PrevDayCheckBlock;
   /** PP-day (day-before-previous) CON-A/B — exclusive B > A for display. */
   ppSessionLabel: string | null;
   ppLevels: {
@@ -1352,6 +1353,9 @@ type PrevDayDiagnosis = {
   ppBcCandles: CandleBodyLevelMatch[];
   ppConA: PrevDayCheckBlock | null;
   ppConB: PrevDayCheckBlock | null;
+  ppMomA: PrevDayCheckBlock | null;
+  ppMomB: PrevDayCheckBlock | null;
+  ppVolatile: PrevDayCheckBlock | null;
 };
 
 function formatConBNote(
@@ -2250,10 +2254,10 @@ function PreviousDaySection() {
                     </div>
                     {!ok && (
                       <div className="font-mono text-[12px] text-rose-300/90">
-                        {title} {block.label}
+                        {title} {block!.label}
                       </div>
                     )}
-                    <div className="mt-1 text-[11px] leading-relaxed text-slate-300">{block.detail}</div>
+                    <div className="mt-1 text-[11px] leading-relaxed text-slate-300">{block!.detail}</div>
                     <div className="mt-2.5 pt-2 border-t border-slate-700/40 flex flex-wrap items-center gap-1.5 text-[11px]">
                       <span className="text-slate-400 font-mono text-[10px] uppercase">
                         Candles touching {levelLabel} ({levelVal}):
