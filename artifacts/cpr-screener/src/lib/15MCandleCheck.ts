@@ -16,8 +16,8 @@ const PREVIOUS_15M_PP_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_pp_consolidate
 const PREVIOUS_15M_PP_CONSOLIDATE_B_CACHE_KEY = "cpr_previous_15m_pp_consolidate_b_results_v6";
 const PREVIOUS_15M_PP_MOMENTUM_A_CACHE_KEY = "cpr_previous_15m_pp_momentum_a_results_v1";
 const PREVIOUS_15M_PP_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_pp_momentum_b_results_v1";
-const PREVIOUS_15M_PP_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_pp_inside_r1s1_results_v1";
-const PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_inside_r1s1_results_v3";
+const PREVIOUS_15M_PP_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_pp_inside_r1s1_results_v2";
+const PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_inside_r1s1_results_v4";
 
 export interface UpexCandidate {
   symbol: string;
@@ -1802,16 +1802,18 @@ export function savePD15MMomentumBelowResults(
 }
 
 /**
- * INSIDE-R1S1 — previous session stays inside max(R1, PH) … min(S1, PL).
+ * INSIDE-R1S1 / P-VOLATILE-R1S1 / PP-VOLATILE-R1S1 — previous session stays
+ * inside max(R1, PH) … min(S1, PL).
  *
- * Independent of CON-A / CON-B (those use BC/TC). Bodies only; wicks ignored.
+ * Independent of CON-A / CON-B (those use BC/TC). Uses the full candle range
+ * (high/low), same whole-candle idea as CON floor/ceiling fails:
  *
  *   Fail when any completed 15m candle has:
- *     • any part of its body above `ceiling` (max of R1, PH), OR
- *     • any part of its body below `floor` (min of S1, PL).
+ *     • high > ceiling (max of R1, PH), OR
+ *     • low < floor (min of S1, PL).
  *
- * This matches the visual “between R1/PH and S1/PL” band. When CON/MOM all
- * fail but this band holds, exclusive bucketing assigns INSIDE-R1S1.
+ * Wick beyond the band fails; body-only inside with wick outside no longer passes.
+ * When CON/MOM all fail but this band holds, exclusive bucketing assigns INSIDE-R1S1.
  *
  * Returns null when there are no usable completed candles.
  */
@@ -1832,16 +1834,16 @@ export function passesInsideR1S1Filter(
         candle.openTime >= startTime &&
         candle.openTime + CANDLE_INTERVAL_MS <= now &&
         Number.isFinite(candle.open) &&
-        Number.isFinite(candle.close),
+        Number.isFinite(candle.close) &&
+        Number.isFinite(candle.low) &&
+        Number.isFinite(candle.high),
     )
     .sort((a, b) => a.openTime - b.openTime);
   if (completed.length === 0) return null;
 
   for (const candle of completed) {
-    const bodyHigh = Math.max(candle.open, candle.close);
-    const bodyLow = Math.min(candle.open, candle.close);
-    // Any body touch beyond the band fails (not full-body-only / wick-ref).
-    if (bodyHigh > ceiling || bodyLow < floor) {
+    // Whole candle must stay inside the band (wick range, not body only).
+    if (candle.high > ceiling || candle.low < floor) {
       return false;
     }
   }

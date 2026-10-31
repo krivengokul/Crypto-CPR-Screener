@@ -42,6 +42,7 @@ import {
   allCandlesThroughLevel,
   explainPD15MBelowTCFailure,
   explainUpexFailure,
+  passesInsideR1S1Filter,
   formatPD15MBelowTCFailureNote,
   formatUpexFailureNote,
   savePreviousUpexResults,
@@ -1909,4 +1910,39 @@ test("PP-MOM-A / PP-MOM-B: dropdown, exclusivity vs PP-CON, combined codes and r
   assert.deepEqual(splitCandleCheck("PPVR+CB"), { pp: "PPVR", p: "CB" });
   assert.equal(candleCheckFromRow(row({ PD15MPPInsideR1S1Pass: true })), "PPVR");
   assert.equal(candleCheckFromRow(row({ PD15MPPInsideR1S1Pass: true, PD15MPPMomentumAPass: true })), "PPMA");
+});
+
+test("passesInsideR1S1Filter uses the whole candle (wick), not the body", () => {
+  const MIN15 = 15 * 60 * 1000;
+  const start = Date.UTC(2026, 9, 28);
+  const now = start + 24 * 60 * MIN15 / 15; // end of a 24h session
+  const floor = 90;
+  const ceiling = 110;
+  const mk = (i: number, open: number, high: number, low: number, close: number) => ({
+    open, high, low, close, volume: 1, openTime: start + i * MIN15,
+  });
+
+  // All candles (wicks included) inside the band -> pass.
+  assert.equal(
+    passesInsideR1S1Filter([mk(0, 100, 105, 95, 102), mk(1, 102, 109, 91, 100)], floor, ceiling, start, now),
+    true,
+  );
+  // Body inside but upper wick pokes through the ceiling -> fail.
+  assert.equal(
+    passesInsideR1S1Filter([mk(0, 100, 111, 95, 102)], floor, ceiling, start, now),
+    false,
+  );
+  // Body inside but lower wick pokes through the floor -> fail.
+  assert.equal(
+    passesInsideR1S1Filter([mk(0, 100, 105, 89, 102)], floor, ceiling, start, now),
+    false,
+  );
+  // Wick exactly on the boundary is still inside.
+  assert.equal(
+    passesInsideR1S1Filter([mk(0, 100, 110, 90, 102)], floor, ceiling, start, now),
+    true,
+  );
+  // No usable completed candles / bad band -> null.
+  assert.equal(passesInsideR1S1Filter([], floor, ceiling, start, now), null);
+  assert.equal(passesInsideR1S1Filter([mk(0, 100, 105, 95, 102)], 120, 110, start, now), null);
 });
