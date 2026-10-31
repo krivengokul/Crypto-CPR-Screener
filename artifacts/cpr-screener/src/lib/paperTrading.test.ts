@@ -250,7 +250,7 @@ test("15M-A uses the 05:30 IST day boundary and ignores candles outside complete
   });
 
   assert.equal(
-    passesUpexFilter([candle(start + 15 * 60_000, 99, 99.5)], 100, start, now),
+    passesUpexFilter([{ ...candle(start + 15 * 60_000, 99, 99.5), high: 99.7 }], 100, start, now),
     false
   );
   assert.equal(
@@ -319,7 +319,7 @@ test("PD15M>BC checks the previous IST session and passes candles that are not f
   });
 
   assert.equal(
-    passesUpexFilter([candle(start, 99, 99.5)], 100, start, end),
+    passesUpexFilter([{ ...candle(start, 99, 99.5), high: 99.7 }], 100, start, end),
     false
   );
   assert.equal(
@@ -497,7 +497,7 @@ test("CONSOLIDATE-B floor mirrors the P-CONSOLIDATE-A wick reference rule", () =
   const floor = 90;
 
   // First body completely below floor fails immediately (gap on Candle 1).
-  assert.equal(passesPD15MBelowTCFilter([candle(start, 89, 88)], tc, start, now, floor), false);
+  assert.equal(passesPD15MBelowTCFilter([{ ...candle(start, 89, 88), high: 89.5 }], tc, start, now, floor), false);
   // A body ending exactly at the floor does not establish a lower reference.
   assert.equal(passesPD15MBelowTCFilter([candle(start, 91, 90)], tc, start, now, floor), true);
   assert.equal(passesPD15MBelowTCFilter([candle(start, 90, 90)], tc, start, now, floor), true);
@@ -527,7 +527,7 @@ test("CONSOLIDATE-B floor mirrors the P-CONSOLIDATE-A wick reference rule", () =
     false,
   );
   // The fresh-high-above-TC rule also applies alongside the floor rule.
-  assert.equal(passesPD15MBelowTCFilter([candle(start, 101, 102)], tc, start, now, floor), false);
+  assert.equal(passesPD15MBelowTCFilter([{ ...candle(start, 101, 102), low: 100.5 }], tc, start, now, floor), false);
   // Without a floor only the TC rule applies.
   assert.equal(passesPD15MBelowTCFilter([candle(start, 89, 88)], tc, start, now), true);
   // A non-finite floor can't be evaluated.
@@ -543,9 +543,9 @@ test("MOMENTUM-B is CONSOLIDATE-B without the PL/S1 floor check", async () => {
   const previousSession = sessionStart - 24 * 60 * 60 * 1000;
   globalThis.fetch = async () =>
     new Response(
-      // open 89, high 90, low 87, close 88: body wholly below a floor of 90,
-      // well under TC 100, so no fresh high above TC.
-      JSON.stringify([[previousSession, "89", "90", "87", "88", "1"]]),
+      // open 89, high 89.5, low 87, close 88: candle wholly below a floor of 90
+      // (wick does not reach it), well under TC 100, so no fresh high above TC.
+      JSON.stringify([[previousSession, "89", "89.5", "87", "88", "1"]]),
       { status: 200, headers: { "Content-Type": "application/json" } },
     );
 
@@ -900,7 +900,7 @@ test("PD15M>BC and P-15M-B share a previous-session candle request", async () =>
   globalThis.fetch = async () => {
     fetchCount++;
     return new Response(
-      JSON.stringify([[start, "99", "100", "97", "98", "1"]]),
+      JSON.stringify([[start, "99", "99.5", "97", "98", "1"]]),
       { status: 200, headers: { "Content-Type": "application/json" } },
     );
   };
@@ -928,7 +928,7 @@ test("previous-session API failures are not cached and can be retried", async ()
     fetchCount++;
     if (fetchCount === 1) return new Response("unavailable", { status: 400 });
     return new Response(
-      JSON.stringify([[start, "99", "100", "97", "98", "1"]]),
+      JSON.stringify([[start, "99", "99.5", "97", "98", "1"]]),
       { status: 200, headers: { "Content-Type": "application/json" } },
     );
   };
@@ -1206,10 +1206,12 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     cpr_previous_15m_tc_b_results_v9: "x",
     cpr_previous_15m_tc_b_results_v10: "x",
     cpr_previous_15m_tc_b_results_v11: "x",
-    cpr_previous_15m_tc_b_results_v12: "keep",
+    cpr_previous_15m_tc_b_results_v12: "x",
+    cpr_previous_15m_tc_b_results_v13: "keep",
     cpr_previous_15m_b_results_v1: "x",
     cpr_previous_15m_b_results_v3: "x",
-    cpr_previous_15m_b_results_v4: "keep",
+    cpr_previous_15m_b_results_v4: "x",
+    cpr_previous_15m_b_results_v5: "keep",
     cpr_previous_upex_results_v1: "x",
     cpr_previous_upex_results_v2: "x",
     cpr_previous_upex_results_v3: "x",
@@ -1219,7 +1221,8 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     cpr_previous_upex_results_v7: "x",
     cpr_previous_upex_results_v8: "x",
     cpr_previous_upex_results_v9: "x",
-    cpr_previous_upex_results_v13: "keep",
+    cpr_previous_upex_results_v13: "x",
+    cpr_previous_upex_results_v14: "keep",
     cpr_previous_15m_consolidate_a_results_v1: "x",
     cpr_previous_15m_consolidate_a_results_v2: "x",
     cpr_previous_15m_consolidate_a_results_v3: "x",
@@ -1231,12 +1234,14 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     cpr_previous_15m_consolidate_a_results_v9: "x",
     cpr_previous_15m_consolidate_a_results_v10: "x",
     cpr_previous_15m_consolidate_a_results_v11: "x",
-    cpr_previous_15m_consolidate_a_results_v15: "keep",
+    cpr_previous_15m_consolidate_a_results_v15: "x",
+    cpr_previous_15m_consolidate_a_results_v16: "keep",
     cpr_previous_15m_momentum_b_results_v1: "x",
     cpr_previous_15m_momentum_b_results_v2: "x",
     cpr_previous_15m_momentum_b_results_v3: "x",
     cpr_previous_15m_momentum_b_results_v4: "x",
-    cpr_previous_15m_momentum_b_results_v5: "keep",
+    cpr_previous_15m_momentum_b_results_v5: "x",
+    cpr_previous_15m_momentum_b_results_v6: "keep",
     "cpr_symbols_2026-10-09": "unrelated",
   };
   Object.defineProperty(globalThis, "localStorage", {
@@ -1247,13 +1252,13 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     }),
   });
   try {
-    assert.equal(pruneLegacy15MResultCaches(), 35);
+    assert.equal(pruneLegacy15MResultCaches(), 40);
     assert.deepEqual(Object.keys(store).sort(), [
-      "cpr_previous_15m_b_results_v4",
-      "cpr_previous_15m_consolidate_a_results_v15",
-      "cpr_previous_15m_momentum_b_results_v5",
-      "cpr_previous_15m_tc_b_results_v12",
-      "cpr_previous_upex_results_v13",
+      "cpr_previous_15m_b_results_v5",
+      "cpr_previous_15m_consolidate_a_results_v16",
+      "cpr_previous_15m_momentum_b_results_v6",
+      "cpr_previous_15m_tc_b_results_v13",
+      "cpr_previous_upex_results_v14",
       "cpr_symbols_2026-10-09",
     ]);
     // Running again is a no-op.
@@ -1265,6 +1270,25 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
       Reflect.deleteProperty(globalThis, "localStorage");
     }
   }
+});
+
+test("reference candles use wick range: a wick-only touch of BC / TC / floor sets the reference", () => {
+  const now = Date.parse("2026-10-03T00:00:00.000Z");
+  const start = Date.parse("2026-10-02T00:00:00.000Z");
+  const c = (open: number, close: number, low: number, high: number): OHLC => ({
+    openTime: start, open, high, low, close, volume: 1,
+  });
+  // BC = 100. Body 99-99.5 is fully below BC, but the wick (high 100.2) touches it.
+  assert.equal(passesUpexFilter([c(99, 99.5, 98, 100.2)], 100, start, now), true);
+  // Wick stops short of BC (high 99.7): no reference, body fully below -> fails.
+  assert.equal(passesUpexFilter([c(99, 99.5, 98, 99.7)], 100, start, now), false);
+  // TC = 100. Body 101-102 is fully above TC, but the wick (low 99.8) touches it.
+  assert.equal(passesPD15MBelowTCFilter([c(101, 102, 99.8, 103)], 100, start, now), true);
+  // Wick stops short of TC (low 100.5): fresh high above TC -> fails.
+  assert.equal(passesPD15MBelowTCFilter([c(101, 102, 100.5, 103)], 100, start, now), false);
+  // CON-B floor = 90. Body 88-89 is fully below the floor, but the wick (high 90.3) touches it.
+  assert.equal(passesPD15MBelowTCFilter([c(89, 88, 87, 90.3)], 100, start, now, 90), true);
+  assert.equal(passesPD15MBelowTCFilter([c(89, 88, 87, 89.5)], 100, start, now, 90), false);
 });
 
 test("parseComposedViewKey parses candleCheck segment between entry and pattern", () => {
