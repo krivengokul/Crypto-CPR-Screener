@@ -564,7 +564,7 @@ export default function Screener({
   });
 
   // Distinct sound + toast when a scanned coin crosses above R1 / below S1 (no Telegram).
-  useLevelCrossAlert(allResults, deltaAllResults, coindcxAllResults);
+  // useLevelCrossAlert moved below (needs hasPP* from candle prep).
 
   // ── Previous-session 15m P-filters ────────────────────────────────────
   const {
@@ -630,6 +630,16 @@ export default function Screener({
     deltaAllResults,
     setAllResults,
     setDeltaAllResults,
+  });
+
+  // R1/S1 cross toasts — only when row has an exclusive PP- badge (same priority as UI).
+  useLevelCrossAlert(allResults, deltaAllResults, coindcxAllResults, (row) => {
+    if (hasPPConsolidateB(row)) return "PP-CONSOLIDATE-B";
+    if (hasPPMomentumB(row)) return "PP-MOMENTUM-B";
+    if (hasPPConsolidateA(row)) return "PP-CONSOLIDATE-A";
+    if (hasPPMomentumA(row)) return "PP-MOMENTUM-A";
+    if (hasPPVolatileR1S1(row)) return "PP-VOLATILE-R1S1";
+    return null;
   });
 
   // Legend Card 2 — shared builder for toast focus, row click, and search.

@@ -8,8 +8,22 @@ const FIRED_KEY = "cpr-r1-cross-fired";
 const MAX_LISTED = 4;
 
 type Source = "binance" | "delta" | "coindcx";
-type Cross = { symbol: string; source: Source; price: number; level: number };
+type Cross = {
+  symbol: string;
+  source: Source;
+  /** Exclusive PP label already on the row, e.g. "PP-MOMENTUM-A". */
+  ppLabel: string;
+};
 type Kind = "R1" | "S1";
+
+/** Row handed to the PP resolver — the hook always attaches its exchange `source`. */
+export type LevelCrossRow = CPRResult & { source: string };
+
+/**
+ * Resolve exclusive PP badge text for level-cross toasts.
+ * Same priority as Screener: PP-CON-B > PP-MOM-B > PP-CON-A > PP-MOM-A > PP-VOLATILE-R1S1.
+ */
+export type GetPPLabel = (row: LevelCrossRow) => string | null;
 
 const utcDay = () => new Date().toISOString().slice(0, 10);
 
@@ -28,23 +42,24 @@ function loadFired(): Set<string> {
 function saveFired(keys: Set<string>) {
   try {
     sessionStorage.setItem(FIRED_KEY, JSON.stringify({ day: utcDay(), keys: [...keys] }));
-  } catch { /* in-memory only */ }
+  } catch {
+    /* in-memory only */
+  }
 }
 
-/** One batched toast for this tick's crosses of a level (R1 breakout / S1 breakdown). */
+/** One batched toast — no price/level numbers; PP label only. */
 function showCrossToast(kind: Kind, crosses: Cross[]) {
   const isR1 = kind === "R1";
   const listed = crosses.slice(0, MAX_LISTED);
   const extra = crosses.length - listed.length;
-  const word = isR1 ? "Breakout" : "Breakdown";
-  const verb = isR1 ? "Above" : "Below";
+  const verb = isR1 ? "crossed R1" : "crossed S1";
   const symbolColor = isR1 ? "text-sky-300" : "text-[#ff6bb5]";
 
   toast({
     title:
       crosses.length === 1
-        ? `${kind} ${word} — Price ${verb} ${kind}`
-        : `${kind} ${word} — ${crosses.length} coins ${verb} ${kind}`,
+        ? `${kind} cross (PP)`
+        : `${kind} cross — ${crosses.length} symbols (PP)`,
     description: (
       <div className="space-y-0.5 text-[13px] leading-snug">
         {listed.map((c) => (
@@ -59,87 +74,96 @@ function showCrossToast(kind: Kind, crosses: Cross[]) {
             }}
           >
             <span className={`font-semibold ${symbolColor}`}>{c.symbol}</span>
-            <span className="font-mono text-white">({c.price.toPrecision(6)})</span>
-            {" "}
-            <span className="text-slate-400">{verb} {kind}</span>
-            <span className="font-mono text-slate-100">({c.level.toPrecision(6)})</span>
+            <span className="text-slate-300"> {verb} </span>
+            <span className="font-mono text-[11px] font-semibold text-fuchsia-300">
+              ({c.ppLabel})
+            </span>
           </div>
         ))}
-        {extra > 0 && <div className="text-slate-400">+{extra} more</div>}
+        {extra > 0 && (
+          <div className="text-slate-400 text-[12px]">+{extra} more</div>
+        )}
       </div>
     ),
     duration: 10_000,
-    className: `cursor-pointer ${isR1 ? "border-sky-500/60" : "border-pink-500/60"}`,
+    className: "cursor-default",
     onClick: (e: ReactMouseEvent) => {
       const el = e.target as HTMLElement | null;
       if (el?.closest?.("[toast-close], [data-radix-toast-close], [data-r1-row]")) return;
-      // Coin rows open their own chart; a bare click only opens the chart
-      // when the toast lists a single coin.
-      if (listed.length === 1) openChartInNewTab(getChartUrl(listed[0].symbol, listed[0].source));
+      const first = crosses[0];
+      if (first) openChartInNewTab(getChartUrl(first.symbol, first.source));
     },
   });
 }
 
 /**
- * Screener-only alerts (no Telegram, no Journal):
- *  - price crosses from below to at/above today's R1  → "R1 Breakout" toast + rising chime
- *  - price crosses from above to at/below today's S1  → "S1 Breakdown" toast + falling chime
- * Each fires once per symbol per UTC day per level; the first price seen for a
- * symbol is only a baseline.
+ * R1 / S1 cross toasts — only for symbols that currently carry an exclusive PP- badge.
+ * No price/level values in the message; format: "SYMBOL crossed R1 (PP-MOMENTUM-A)".
+ *
+ * @param getPPLabel return e.g. "PP-CONSOLIDATE-B" or null to skip the symbol.
  */
 export function useLevelCrossAlert(
-  binanceResults: CPRResult[],
-  deltaResults: CPRResult[],
-  coindcxResults: CPRResult[],
+  binanceResults: CPRResult[] | null | undefined,
+  deltaResults: CPRResult[] | null | undefined,
+  coindcxResults: CPRResult[] | null | undefined,
+  getPPLabel?: GetPPLabel,
 ) {
-  const lastSeen = useRef(new Map<string, { price: number; r1: number; s1: number }>());
   const fired = useRef<Set<string>>(loadFired());
-  const firedDay = useRef(utcDay());
+  const lastPrice = useRef<Map<string, number>>(new Map());
+  // Keep latest resolver without re-subscribing the effect on every render.
+  const getPPLabelRef = useRef<GetPPLabel | undefined>(getPPLabel);
+  getPPLabelRef.current = getPPLabel;
 
   useEffect(() => {
-    const today = utcDay();
-    if (today !== firedDay.current) {
-      firedDay.current = today;
-      fired.current.clear();
-      saveFired(fired.current);
-    }
+    const pools: { rows: CPRResult[]; source: Source }[] = [];
+    if (binanceResults?.length) pools.push({ rows: binanceResults, source: "binance" });
+    if (deltaResults?.length) pools.push({ rows: deltaResults, source: "delta" });
+    if (coindcxResults?.length) pools.push({ rows: coindcxResults, source: "coindcx" });
+    if (pools.length === 0) return;
+
+    const resolvePP = getPPLabelRef.current;
+    // Without a PP resolver, skip all toasts (PP-only policy).
+    if (!resolvePP) return;
 
     const r1Crosses: Cross[] = [];
     const s1Crosses: Cross[] = [];
-    const scan = (rows: CPRResult[], source: Source) => {
+
+    for (const { rows, source } of pools) {
       for (const r of rows) {
+        const price = r.currentPrice;
         const r1 = r.todayCPR?.r1;
         const s1 = r.todayCPR?.s1;
-        const price = r.currentPrice;
-        if (!Number.isFinite(price) || !(price > 0)) continue;
-        const hasR1 = Number.isFinite(r1) && r1 > 0;
-        const hasS1 = Number.isFinite(s1) && s1 > 0;
-        if (!hasR1 && !hasS1) continue;
-        const key = `${source}:${r.symbol.toUpperCase()}`;
-        const prev = lastSeen.current.get(key);
-        lastSeen.current.set(key, { price, r1: hasR1 ? r1 : 0, s1: hasS1 ? s1 : 0 });
-        if (!prev) continue;
+        if (!Number.isFinite(price) || !Number.isFinite(r1) || !Number.isFinite(s1)) continue;
 
-        // R1 key stays the bare symbol key (compatible with earlier sessions).
-        if (hasR1 && prev.r1 === r1 && !fired.current.has(key) && prev.price < r1 && price >= r1) {
-          fired.current.add(key);
-          r1Crosses.push({ symbol: r.symbol, source, price, level: r1 });
+        const key = `${source}:${r.symbol}`;
+        const prev = lastPrice.current.get(key);
+        lastPrice.current.set(key, price);
+
+        // Need a prior tick to detect a cross.
+        if (prev === undefined || !Number.isFinite(prev)) continue;
+
+        const ppLabel = resolvePP({ ...r, source });
+        if (!ppLabel) continue;
+
+        const fireKeyR1 = `${key}:R1:${utcDay()}`;
+        const fireKeyS1 = `${key}:S1:${utcDay()}`;
+
+        // R1 breakout: was below, now at/above.
+        if (prev < r1! && price >= r1! && !fired.current.has(fireKeyR1)) {
+          fired.current.add(fireKeyR1);
+          r1Crosses.push({ symbol: r.symbol, source, ppLabel });
         }
-        const s1Key = `${key}:S1`;
-        if (hasS1 && prev.s1 === s1 && !fired.current.has(s1Key) && prev.price > s1 && price <= s1) {
-          fired.current.add(s1Key);
-          s1Crosses.push({ symbol: r.symbol, source, price, level: s1 });
+        // S1 breakdown: was above, now at/below.
+        if (prev > s1! && price <= s1! && !fired.current.has(fireKeyS1)) {
+          fired.current.add(fireKeyS1);
+          s1Crosses.push({ symbol: r.symbol, source, ppLabel });
         }
       }
-    };
-    scan(binanceResults, "binance");
-    scan(deltaResults, "delta");
-    scan(coindcxResults, "coindcx");
+    }
 
     if (r1Crosses.length === 0 && s1Crosses.length === 0) return;
     saveFired(fired.current);
 
-    // The toast system shows one toast at a time, so each level gets one batched toast.
     if (r1Crosses.length > 0) {
       playR1CrossAlert();
       showCrossToast("R1", r1Crosses);
