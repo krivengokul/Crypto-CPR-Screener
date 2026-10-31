@@ -331,6 +331,8 @@ export interface CPRResult {
   todayCPR: CPRLevels;
   prevCPR: CPRLevels;
   ppCPR?: CPRLevels;
+  /** Day-before-PP CPR (D-4) — enables INCPR/overlap BC/TC rewrite for PP- checks. */
+  pppCPR?: CPRLevels;
   compressionRatio: number;
   cprRising: boolean;
   PL12CL23: boolean;
@@ -1413,10 +1415,16 @@ export function analyzeCPR(
 
   const ppCandle = candles.length >= 3 ? candles[candles.length - 3] : null;
   const ppCPR = ppCandle && isValidCandle(ppCandle) ? calcCPR(ppCandle) : undefined;
+  // Day before PP (D-4): used so PP- CON/MOM can apply the same INCPR /
+  // overlap BC-TC rewrite as P- checks (getConsolidateABc(pp, ppp)).
+  const pppCandle = candles.length >= 4 ? candles[candles.length - 4] : null;
+  const pppCPR = pppCandle && isValidCandle(pppCandle) ? calcCPR(pppCandle) : undefined;
   // ppClose mirrors ppCPR's own guard (ppCandle present + valid) so the two
   // stay in lockstep — the PDay-1 S/R ladder's "Price" row and its levels
   // either both exist or both don't.
-  const ppCPRField = ppCPR ? { ppCPR, ppClose: ppCandle!.close } : {};
+  const ppCPRField = ppCPR
+    ? { ppCPR, ppClose: ppCandle!.close, ...(pppCPR ? { pppCPR } : {}) }
+    : {};
 
   // Single source of truth for the (today, prev) band classification. Every
   // pivot-band flag on CPRResult comes from here via spread; ScreenerUtils

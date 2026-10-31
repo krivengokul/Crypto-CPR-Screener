@@ -177,8 +177,8 @@ export function usePreviousCandleFilters(opts: {
         candidates.set(`${source}:${row.symbol}`, {
           symbol: row.symbol,
           source,
-          // No PPP-day CPR available → BC is PPDay's own BC (no overlap rewrite).
-          bc: getConsolidateABc(pp, null),
+          // INCPR/overlap rewrite vs day-before-PP when pppCPR is present.
+          bc: getConsolidateABc(pp, row.pppCPR ?? null),
           ceiling: getPrevious15MACeiling(pp),
           r2: pp.r2,
         });
@@ -217,8 +217,8 @@ export function usePreviousCandleFilters(opts: {
           symbol: row.symbol,
           source,
           // CON-B stores TC in candidate.bc (same convention as consolidateBPrep).
-          // No PPP-day CPR → TC is PPDay's own TC (no overlap rewrite).
-          bc: getConsolidateBTc(pp, null),
+          // INCPR/overlap rewrite vs day-before-PP when pppCPR is present.
+          bc: getConsolidateBTc(pp, row.pppCPR ?? null),
           floor: getPrevious15MBFloor(pp),
           s2: pp.s2,
         });
@@ -253,7 +253,7 @@ export function usePreviousCandleFilters(opts: {
         candidates.set(`${source}:${row.symbol}`, {
           symbol: row.symbol,
           source,
-          bc: getConsolidateABc(pp, null),
+          bc: getConsolidateABc(pp, row.pppCPR ?? null),
         });
       };
       if (status === "done") {
@@ -286,7 +286,7 @@ export function usePreviousCandleFilters(opts: {
         candidates.set(`${source}:${row.symbol}`, {
           symbol: row.symbol,
           source,
-          bc: getConsolidateBTc(pp, null),
+          bc: getConsolidateBTc(pp, row.pppCPR ?? null),
         });
       };
       if (status === "done") {

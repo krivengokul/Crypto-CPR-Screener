@@ -609,6 +609,7 @@ export async function runScreener(
     let todayCandle: OHLC;
     let liveCandle: OHLC | null = null;
     let ppCandle: OHLC | null = null;
+    let pppCandle: OHLC | null = null;
 
     if (lastKlineIsLive) {
       if (klines.length < 3) {
@@ -619,11 +620,13 @@ export async function runScreener(
       todayCandle = klines[klines.length - 2]; // yesterday (completed) → today's CPR
       liveCandle  = lastKline;                  // today's forming candle (not used for CPR)
       if (klines.length >= 4) ppCandle = klines[klines.length - 4];
+      if (klines.length >= 5) pppCandle = klines[klines.length - 5];
     } else {
       prevCandle  = klines[klines.length - 2];
       todayCandle = klines[klines.length - 1];
       liveCandle  = null;
       if (klines.length >= 3) ppCandle = klines[klines.length - 3];
+      if (klines.length >= 4) pppCandle = klines[klines.length - 4];
     }
 
     // REVERTED (was dropping ~40 legit symbols per scan for no benefit —
@@ -631,9 +634,11 @@ export async function runScreener(
     // candle continuity; OPrice was identical before and after the fix).
     // Left as a non-blocking diagnostic: still logs if a real gap shows up,
     // but no longer excludes the symbol from the scan.
-    const candleChain: OHLC[] = ppCandle
-      ? [ppCandle, prevCandle, todayCandle]
-      : [prevCandle, todayCandle];
+    const candleChain: OHLC[] = pppCandle && ppCandle
+      ? [pppCandle, ppCandle, prevCandle, todayCandle]
+      : ppCandle
+        ? [ppCandle, prevCandle, todayCandle]
+        : [prevCandle, todayCandle];
     if (!candlesAreContiguous(candleChain)) {
       console.warn(
         `[binance] ${t.symbol} — daily candles are not contiguous ` +
@@ -647,9 +652,11 @@ export async function runScreener(
     const openPriceUsed = liveCandle ? liveCandle.open : todayCandle.open;
     const changeFromDayOpen = ((currentPrice - openPriceUsed) / openPriceUsed) * 100;
 
-    const candlesForAnalysis: OHLC[] = ppCandle
-      ? [ppCandle, prevCandle, todayCandle]
-      : [prevCandle, todayCandle];
+    const candlesForAnalysis: OHLC[] = pppCandle && ppCandle
+      ? [pppCandle, ppCandle, prevCandle, todayCandle]
+      : ppCandle
+        ? [ppCandle, prevCandle, todayCandle]
+        : [prevCandle, todayCandle];
 
     const result = analyzeCPR(
       t.symbol,

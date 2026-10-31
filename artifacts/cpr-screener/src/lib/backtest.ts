@@ -1555,8 +1555,14 @@ export async function reconstructCPRForDate(
   const todayCandle = completed[completed.length - 1]; // D-1 → today's CPR
   const prevCandle = completed[completed.length - 2]; // D-2 → prev CPR
   const ppCandle = completed.length >= 3 ? completed[completed.length - 3] : null;
+  const pppCandle = completed.length >= 4 ? completed[completed.length - 4] : null;
 
-  const candlesForAnalysis: OHLC[] = ppCandle ? [ppCandle, prevCandle, todayCandle] : [prevCandle, todayCandle];
+  const candlesForAnalysis: OHLC[] =
+    pppCandle && ppCandle
+      ? [pppCandle, ppCandle, prevCandle, todayCandle]
+      : ppCandle
+        ? [ppCandle, prevCandle, todayCandle]
+        : [prevCandle, todayCandle];
 
   // currentPrice/change24h/quoteVolume aren't read by passesPattern for
   // any of the target/category patterns used here, so placeholder values
@@ -1893,7 +1899,7 @@ async function populateAllPFilterFlags(
           {
             symbol,
             source,
-            bc: getConsolidateABc(pp, null),
+            bc: getConsolidateABc(pp, result.pppCPR ?? null),
             ceiling: getPrevious15MACeiling(pp),
             r2: pp.r2,
           },
@@ -1905,7 +1911,7 @@ async function populateAllPFilterFlags(
           {
             symbol,
             source,
-            bc: getConsolidateBTc(pp, null),
+            bc: getConsolidateBTc(pp, result.pppCPR ?? null),
             floor: getPrevious15MBFloor(pp),
             s2: pp.s2,
           },
@@ -1915,14 +1921,14 @@ async function populateAllPFilterFlags(
     // PP-MOMENTUM-A: BC floor only on PPDay (no PH/R1 ceiling).
     ppHasLevels
       ? findPreviousUpexPass(
-          { symbol, source, bc: getConsolidateABc(pp, null) },
+          { symbol, source, bc: getConsolidateABc(pp, result.pppCPR ?? null) },
           ppNow,
         )
       : Promise.resolve(false),
     // PP-MOMENTUM-B: TC ceiling only on PPDay (no PL/S1 floor / S2).
     ppHasLevels
       ? findPD15MBelowTCPass(
-          { symbol, source, bc: getConsolidateBTc(pp, null) },
+          { symbol, source, bc: getConsolidateBTc(pp, result.pppCPR ?? null) },
           ppNow,
         )
       : Promise.resolve(false),

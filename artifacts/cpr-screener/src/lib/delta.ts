@@ -336,6 +336,7 @@ export async function runDeltaScreener(
     let liveHigh: number | null = null;
     let liveLow: number | null = null;
     let ppCandle: OHLC | null = null;
+    let pppCandle: OHLC | null = null;
 
     if (lastCandleIsLive) {
       if (candles.length < 3) return null;
@@ -345,12 +346,14 @@ export async function runDeltaScreener(
       liveHigh = lastCandle.high;
       liveLow = lastCandle.low;
       if (candles.length >= 4) ppCandle = candles[candles.length - 4];
+      if (candles.length >= 5) pppCandle = candles[candles.length - 5];
     } else {
       if (candles.length < 2) return null;
       prevCandle = candles[candles.length - 2];
       todayCandle = candles[candles.length - 1];
       todayLiveOpen = todayCandle.open;
       if (candles.length >= 3) ppCandle = candles[candles.length - 3];
+      if (candles.length >= 4) pppCandle = candles[candles.length - 4];
     }
 
     if (todayLiveOpen !== null) {
@@ -363,9 +366,11 @@ export async function runDeltaScreener(
         ? ((currentPrice - todayLiveOpen) / todayLiveOpen) * 100
         : parseFloat(t.ltp_change_24h);
 
-    const candlesForAnalysis: OHLC[] = ppCandle
-      ? [ppCandle, prevCandle, todayCandle]
-      : [prevCandle, todayCandle];
+    const candlesForAnalysis: OHLC[] = pppCandle && ppCandle
+      ? [pppCandle, ppCandle, prevCandle, todayCandle]
+      : ppCandle
+        ? [ppCandle, prevCandle, todayCandle]
+        : [prevCandle, todayCandle];
 
     const cprResult = analyzeCPR(
       t.symbol,

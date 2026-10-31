@@ -1539,9 +1539,9 @@ function PreviousDaySection() {
           ppSessionEnd,
         );
         if (ppCandles && ppCandles.length > 0) {
-          const ppABc = getConsolidateABc(pp, null);
+          const ppABc = getConsolidateABc(pp, cpr.pppCPR ?? null);
           const ppCeiling = getPrevious15MACeiling(pp);
-          const ppBTc = getConsolidateBTc(pp, null);
+          const ppBTc = getConsolidateBTc(pp, cpr.pppCPR ?? null);
           const ppFloor = getPrevious15MBFloor(pp);
           const ppFailConB = explainPD15MBelowTCFailure(
             ppCandles, ppBTc, ppStart, ppEnd, ppFloor, pp.s2,
