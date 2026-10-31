@@ -2256,7 +2256,7 @@ export default function Screener({
                     ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
                     : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
                 }`}
-                title="CONSOLIDATE-A: previous-session 15m bodies relative to BC / max(R1,PH). Binance and Delta only; CoinDCX excluded while active."
+                title="CONSOLIDATE-A: previous-session 15m candles (wick range) relative to BC / max(R1,PH). Binance and Delta only; CoinDCX excluded while active."
               >
                 {previousConsolidateAProgress
                   ? `P-CONSOLIDATE-A ${previousConsolidateAProgress.done}/${previousConsolidateAProgress.total}`
@@ -2297,7 +2297,7 @@ export default function Screener({
                     ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
                     : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
                 }`}
-                title="CONSOLIDATE-B: previous-session 15m bodies relative to TC / min(S1,PL). Binance and Delta only; CoinDCX excluded while active."
+                title="CONSOLIDATE-B: previous-session 15m candles (wick range) relative to TC / min(S1,PL). Binance and Delta only; CoinDCX excluded while active."
               >
                 {previous15MTCProgress
                   ? `P-CONSOLIDATE-B ${previous15MTCProgress.done}/${previous15MTCProgress.total}`

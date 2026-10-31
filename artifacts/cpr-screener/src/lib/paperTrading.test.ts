@@ -39,6 +39,11 @@ import {
   previousUpexCandidateCacheKey,
   previousUpexSessionStartUtcMs,
   allBodiesThroughLevel,
+  allCandlesThroughLevel,
+  explainPD15MBelowTCFailure,
+  explainUpexFailure,
+  formatPD15MBelowTCFailureNote,
+  formatUpexFailureNote,
   savePreviousUpexResults,
   upexSessionStartUtcMs,
 } from "./15MCandleCheck.ts";
@@ -1315,6 +1320,63 @@ test("fail rules use the whole candle: only a candle entirely beyond the level A
   assert.equal(passesPD15MBelowTCFilter([tcRef, c(1, 103, 104, 101.5, 104.5)], 100, start, now), true);
   // Whole candle (low 102.1) above the reference high 102 -> fails.
   assert.equal(passesPD15MBelowTCFilter([tcRef, c(1, 103, 104, 102.1, 104.5)], 100, start, now), false);
+});
+
+test("diagnose wording describes the whole-candle rule and carries the candle's high/low", () => {
+  const now = Date.parse("2026-10-03T00:00:00.000Z");
+  const start = Date.parse("2026-10-02T00:00:00.000Z");
+  const m = 15 * 60_000;
+  const c = (i: number, open: number, close: number, low: number, high: number): OHLC => ({
+    openTime: start + i * m, open, high, low, close, volume: 1,
+  });
+
+  // CON-B / MOM-B ceiling: reference candle spans TC 100 with high 102; a later candle sits wholly above it.
+  const tcFail = explainPD15MBelowTCFailure(
+    [c(0, 99.5, 100.5, 99, 102), c(1, 103, 104, 102.1, 104.5)], 100, start, now,
+  );
+  assert.ok(tcFail && tcFail.rule === "freshHighAboveTC");
+  assert.equal(tcFail.low, 102.1);
+  assert.equal(tcFail.high, 104.5);
+  const tcNote = formatPD15MBelowTCFailureNote(tcFail, "TC");
+  assert.match(tcNote.detail, /sits entirely above TC 100/);
+  assert.match(tcNote.detail, /low 102\.1 > earlier high 102/);
+  assert.doesNotMatch(tcNote.detail, /body top/);
+
+  // CON-B floor: reference candle touches floor 90 with low 85; a later candle sits wholly below it.
+  const floorFail = explainPD15MBelowTCFailure(
+    [c(0, 90.5, 91, 85, 92), c(1, 82, 83, 80, 84)], 120, start, now, 90,
+  );
+  assert.ok(floorFail && floorFail.rule === "floor");
+  const floorNote = formatPD15MBelowTCFailureNote(floorFail, "TC");
+  assert.match(floorNote.detail, /sits entirely below the PL\/S1 floor 90/);
+  assert.match(floorNote.detail, /high 84 < low-wick reference 85/);
+
+  // No candle ever touches the level: say so instead of quoting a missing reference.
+  const noRef = explainPD15MBelowTCFailure([c(0, 103, 104, 102.1, 104.5)], 100, start, now);
+  assert.ok(noRef);
+  assert.match(formatPD15MBelowTCFailureNote(noRef, "TC").detail, /no candle touched TC/);
+
+  // CON-A: candle wholly above the ceiling with a high-wick reference.
+  const upexFail = explainUpexFailure(
+    [c(0, 99.5, 100.5, 98, 101), c(1, 111, 112, 110.5, 113), c(2, 108, 109, 107.5, 110.2)],
+    100, start, now, 110,
+  );
+  assert.ok(upexFail && upexFail.rule === "freshHighAboveCeiling");
+  assert.equal(upexFail.low, 110.5);
+  assert.match(formatUpexFailureNote(upexFail, "PH/R1").detail, /entirely above PH\/R1 110/);
+});
+
+test("allCandlesThroughLevel lists wick-range touches; allBodiesThroughLevel stays body-only", () => {
+  const now = Date.parse("2026-10-03T00:00:00.000Z");
+  const start = Date.parse("2026-10-02T00:00:00.000Z");
+  const m = 15 * 60_000;
+  const c = (i: number, open: number, close: number, low: number, high: number): OHLC => ({
+    openTime: start + i * m, open, high, low, close, volume: 1,
+  });
+  // Level 100. #1 body below but wick touches; #2 clear miss; #3 body spans.
+  const candles = [c(0, 99, 99.5, 98, 100.2), c(1, 97, 97.5, 96, 98), c(2, 99.5, 100.5, 99, 101)];
+  assert.deepEqual(allCandlesThroughLevel(candles, 100, start, now).map((x) => x.candleNumber), [1, 3]);
+  assert.deepEqual(allBodiesThroughLevel(candles, 100, start, now).map((x) => x.candleNumber), [3]);
 });
 
 test("parseComposedViewKey parses candleCheck segment between entry and pattern", () => {

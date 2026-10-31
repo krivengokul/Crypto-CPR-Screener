@@ -310,6 +310,9 @@ export interface UpexFailureInfo {
   candleNumber: number;
   open: number;
   close: number;
+  /** The failing candle's own wick range (fail rules compare these, not the body). */
+  high: number;
+  low: number;
   bc: number;
   ceiling?: number;
   previousLowestWick: number | null;
@@ -399,6 +402,8 @@ export function explainUpexFailure(
           candleNumber: numberOf(candle),
           open: candle.open,
           close: candle.close,
+          high: candle.high,
+          low: candle.low,
           bc,
           ceiling,
           previousLowestWick: refFloorLow,
@@ -417,6 +422,8 @@ export function explainUpexFailure(
           candleNumber: numberOf(candle),
           open: candle.open,
           close: candle.close,
+          high: candle.high,
+          low: candle.low,
           bc,
           ceiling,
           previousLowestWick: refFloorLow,
@@ -434,6 +441,8 @@ export function explainUpexFailure(
           candleNumber: numberOf(candle),
           open: candle.open,
           close: candle.close,
+          high: candle.high,
+          low: candle.low,
           bc,
           ceiling,
           previousLowestWick: refFloorLow,
@@ -453,6 +462,8 @@ export function explainUpexFailure(
       candleNumber: numberOf(first),
       open: first.open,
       close: first.close,
+      high: first.high,
+      low: first.low,
       bc,
       ceiling,
       previousLowestWick: null,
@@ -470,6 +481,8 @@ export function explainUpexFailure(
       candleNumber: numberOf(first),
       open: first.open,
       close: first.close,
+      high: first.high,
+      low: first.low,
       bc,
       ceiling,
       previousLowestWick: refFloorLow,
@@ -494,10 +507,12 @@ export function formatUpexFailureNote(
       return {
         label: `fresh high > ${ceilingName} · candle #${failure.candleNumber}`,
         detail:
-          `${hhmm} body ${body}, body bottom ${Math.min(failure.open, failure.close)}` +
-          ` > earlier high ${failure.previousHighestWick ?? "—"}` +
-          (failure.previousHighestWickCandle ? ` (candle #${failure.previousHighestWickCandle})` : "") +
-          ` · ${ceilingName} ${failure.ceiling ?? "—"}`,
+          `${hhmm} candle ${failure.low}–${failure.high} (body ${body}) sits entirely above ${ceilingName} ${failure.ceiling ?? "—"}: ` +
+          (failure.previousHighestWick === null
+            ? `no candle touched ${ceilingName}, so there is no high-wick reference.`
+            : `low ${failure.low} > earlier high ${failure.previousHighestWick}` +
+              (failure.previousHighestWickCandle ? ` (candle #${failure.previousHighestWickCandle})` : "") +
+              ".")
       };
     case "bodyInR2":
       return {
@@ -507,7 +522,11 @@ export function formatUpexFailureNote(
     case "floor":
       return {
         label: `broke below BC wick · candle #${failure.candleNumber}`,
-        detail: `candle ${hhmm} body ${body} high went under the low-wick reference ${failure.previousLowestWick ?? "—"} set after the first body through BC ${failure.bc}.`,
+        detail:
+          `candle ${hhmm} ${failure.low}–${failure.high} (body ${body}) sits entirely below BC ${failure.bc}: ` +
+          (failure.previousLowestWick === null
+            ? `no candle touched BC, so there is no low-wick reference.`
+            : `high ${failure.high} < low-wick reference ${failure.previousLowestWick} (lowest low among candles touching BC).`),
       };
   }
 }
@@ -581,6 +600,45 @@ export function firstBodyThroughLevel(
   return matches.length > 0 ? matches[0] : null;
 }
 
+/**
+ * Every completed candle whose full range touches `level` (low ≤ level ≤ high) —
+ * a wick-only touch counts. These are the candles that set the 15m reference
+ * wicks (BC / TC / PH-R1 / PL-S1); see allBodiesThroughLevel for the stricter
+ * body-only variant.
+ */
+export function allCandlesThroughLevel(
+  candles: OHLC[],
+  level: number,
+  startTime: number,
+  now: number,
+): CandleBodyLevelMatch[] {
+  const completed = candles
+    .filter(
+      (c) =>
+        Number.isFinite(c.openTime) &&
+        c.openTime >= startTime &&
+        c.openTime + CANDLE_INTERVAL_MS <= now &&
+        Number.isFinite(c.low) &&
+        Number.isFinite(c.high),
+    )
+    .sort((a, b) => a.openTime - b.openTime);
+  const matches: CandleBodyLevelMatch[] = [];
+  for (const c of completed) {
+    if (c.low <= level && c.high >= level) {
+      matches.push({
+        candleNumber: Math.floor((c.openTime - startTime) / CANDLE_INTERVAL_MS) + 1,
+        openTime: new Date(c.openTime).toISOString(),
+        ist: new Date(c.openTime + 19_800_000).toISOString().slice(11, 16),
+        open: c.open,
+        close: c.close,
+        high: c.high,
+        low: c.low,
+      });
+    }
+  }
+  return matches;
+}
+
 export function formatQualifyCandle(
   q: CandleBodyLevelMatch,
   levelName: string,
@@ -588,8 +646,8 @@ export function formatQualifyCandle(
 ): string {
   const ist = q.ist || new Date(Date.parse(q.openTime) + 19_800_000).toISOString().slice(11, 16);
   return (
-    `Qualified on candle #${q.candleNumber} (${ist} IST): body ${q.open}→${q.close} spans ${levelName} ${level}` +
-    ` (high ${q.high}, low ${q.low}).`
+    `Reference candle #${q.candleNumber} (${ist} IST): range ${q.low}–${q.high} touches ${levelName} ${level}` +
+    ` (body ${q.open}→${q.close}).`
   );
 }
 
@@ -799,6 +857,9 @@ export function explainPD15MBelowTCFailure(
   openTime: string;
   open: number;
   close: number;
+  /** The failing candle's own wick range (fail rules compare these, not the body). */
+  high: number;
+  low: number;
   tc: number;
   floor?: number;
   previousHighestWick: number | null;
@@ -828,6 +889,8 @@ export function explainPD15MBelowTCFailure(
     candleNumber: Math.floor((failure.candle.openTime - startTime) / CANDLE_INTERVAL_MS) + 1,
     open: failure.candle.open,
     close: failure.candle.close,
+    high: failure.candle.high,
+    low: failure.candle.low,
     tc,
     floor,
     previousHighestWick: failure.previousHighestWick,
@@ -1976,14 +2039,14 @@ export function getPD15MBelowTCPassNote(
   const parts: string[] = [`${info.candles} candles`];
   parts.push(
     info.excusedAboveTc.length === 0
-      ? `no body fully above ${tcName} ${info.tc}`
-      : `bodies above ${tcName} ${info.tc} only at #${info.excusedAboveTc.join(", #")} (stayed within TC reference wick high)`,
+      ? `no candle fully above ${tcName} ${info.tc}`
+      : `candles fully above ${tcName} ${info.tc} only at #${info.excusedAboveTc.join(", #")} (low stayed at or under the ${tcName} reference wick high)`,
   );
   if (info.floor !== undefined) {
     parts.push(
       info.floorRefCandle === null
-        ? `no body below floor ${info.floor}`
-        : `first body below floor ${info.floor} at #${info.floorRefCandle}, wick ref ${info.floorRef}, never broken`,
+        ? `no candle fully below floor ${info.floor}`
+        : `floor ${info.floor} touched at #${info.floorRefCandle}, low-wick reference ${info.floorRef}, never broken`,
     );
   }
   if (info.highestHigh !== null && info.lowestLow !== null) {
@@ -2011,18 +2074,33 @@ export function getPD15MBelowTCFailureNote(
   if (failure === "noCandles") {
     return { label: "no 15m data", detail: "Previous-session 15m candles were unavailable, so the check could not run." };
   }
+  return formatPD15MBelowTCFailureNote(failure, tcName);
+}
+
+/**
+ * Human-readable CON-B / MOM-B failure note from an explainPD15MBelowTCFailure
+ * result. Shared by the Backtest View cell and Pattern Statistics so both say
+ * the same thing. Fail rules compare the candle's whole wick range, not its body.
+ */
+export function formatPD15MBelowTCFailureNote(
+  failure: NonNullable<ReturnType<typeof explainPD15MBelowTCFailure>>,
+  tcName = "TC",
+): { label: string; detail: string } {
   const ist = new Date(Date.parse(failure.openTime) + 19_800_000).toISOString().slice(11, 16);
   const hhmm = `#${failure.candleNumber} (${ist} IST)`;
   const body = `${failure.open}→${failure.close}`;
+  const range = `${failure.low}–${failure.high}`;
   switch (failure.rule) {
     case "freshHighAboveTC":
       return {
         label: `fresh high > ${tcName} · candle #${failure.candleNumber}`,
         detail:
-          `#${failure.candleNumber} (${ist} IST) body ${body}, body top ${Math.max(failure.open, failure.close)}` +
-          ` > earlier high ${failure.previousHighestWick ?? "—"}` +
-          (failure.previousHighestWickCandle ? ` (candle #${failure.previousHighestWickCandle})` : "") +
-          ` · ${tcName} ${failure.tc}`,
+          `${hhmm} candle ${range} (body ${body}) sits entirely above ${tcName} ${failure.tc}: ` +
+          (failure.previousHighestWick === null
+            ? `no candle touched ${tcName}, so there is no high-wick reference.`
+            : `low ${failure.low} > earlier high ${failure.previousHighestWick}` +
+              (failure.previousHighestWickCandle ? ` (candle #${failure.previousHighestWickCandle})` : "") +
+              "."),
       };
     case "bodyInS2":
       return {
@@ -2032,7 +2110,11 @@ export function getPD15MBelowTCFailureNote(
     case "floor":
       return {
         label: `high below floor wick · candle #${failure.candleNumber}`,
-        detail: `candle ${hhmm} body ${body} high went under the low-wick reference ${failure.previousLowestWick ?? "—"} set after the first body under the PL/S1 floor ${failure.floor ?? "—"}.`,
+        detail:
+          `candle ${hhmm} ${range} (body ${body}) sits entirely below the PL/S1 floor ${failure.floor ?? "—"}: ` +
+          (failure.previousLowestWick === null
+            ? `no candle touched the floor, so there is no low-wick reference.`
+            : `high ${failure.high} < low-wick reference ${failure.previousLowestWick} (lowest low among candles touching the floor).`),
       };
   }
 }

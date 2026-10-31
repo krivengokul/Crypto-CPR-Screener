@@ -26,9 +26,9 @@ import {
   explainPD15MBelowTCFailure,
   explainUpexFailure,
   fetchPreviousSessionCandles,
-  firstBodyThroughLevel,
-  allBodiesThroughLevel,
+  allCandlesThroughLevel,
   type CandleBodyLevelMatch,
+  formatPD15MBelowTCFailureNote,
   formatQualifyCandle,
   formatUpexFailureNote,
   getConsolidateABc,
@@ -1357,30 +1357,7 @@ function formatConBNote(
   failure: NonNullable<ReturnType<typeof explainPD15MBelowTCFailure>>,
   tcName: string,
 ): { label: string; detail: string } {
-  const ist = new Date(Date.parse(failure.openTime) + 19_800_000).toISOString().slice(11, 16);
-  const hhmm = `#${failure.candleNumber} (${ist} IST)`;
-  const body = `${failure.open}→${failure.close}`;
-  switch (failure.rule) {
-    case "freshHighAboveTC":
-      return {
-        label: `fresh high > ${tcName} · candle #${failure.candleNumber}`,
-        detail:
-          `#${failure.candleNumber} (${ist} IST) body ${body}, body top ${Math.max(failure.open, failure.close)}` +
-          ` > earlier high ${failure.previousHighestWick ?? "—"}` +
-          (failure.previousHighestWickCandle ? ` (candle #${failure.previousHighestWickCandle})` : "") +
-          ` · ${tcName} ${failure.tc}`,
-      };
-    case "bodyInS2":
-      return {
-        label: `body ≤ S2 · candle #${failure.candleNumber}`,
-        detail: `candle ${hhmm} body ${body} reached S2 — MOMENTUM-B territory, not CONSOLIDATE-B.`,
-      };
-    case "floor":
-      return {
-        label: `broke below floor wick · candle #${failure.candleNumber}`,
-        detail: `candle ${hhmm} body ${body} went below the low-wick reference ${failure.previousLowestWick ?? "—"} under PL/S1 floor ${failure.floor ?? "—"}.`,
-      };
-  }
+  return formatPD15MBelowTCFailureNote(failure, tcName);
 }
 
 function PreviousDaySection() {
@@ -1460,8 +1437,8 @@ function PreviousDaySection() {
         tcName,
       );
 
-      const tcMatches = allBodiesThroughLevel(candles, conBTc, prevStart, now);
-      const bcMatches = allBodiesThroughLevel(candles, conABc, prevStart, now);
+      const tcMatches = allCandlesThroughLevel(candles, conBTc, prevStart, now);
+      const bcMatches = allCandlesThroughLevel(candles, conABc, prevStart, now);
       const tcTouch = tcMatches[0] ?? null;
       const bcTouch = bcMatches[0] ?? null;
 
@@ -1472,7 +1449,7 @@ function PreviousDaySection() {
           : {
               label: "PASS",
               detail:
-                `All previous-session 15m bodies stayed within CONSOLIDATE-B rules (${tcName} ${conBTc}, floor PL/S1 ${floor}).` +
+                `All previous-session 15m candles stayed within CONSOLIDATE-B rules (${tcName} ${conBTc}, floor PL/S1 ${floor}).` +
                 (tcTouch ? ` ${formatQualifyCandle(tcTouch, tcName, conBTc)}` : ""),
             };
 
@@ -1481,7 +1458,7 @@ function PreviousDaySection() {
         : {
             label: "PASS",
             detail:
-              `All previous-session 15m bodies stayed within CONSOLIDATE-A rules (BC ${conABc}, ceiling ${ceiling}).` +
+              `All previous-session 15m candles stayed within CONSOLIDATE-A rules (BC ${conABc}, ceiling ${ceiling}).` +
               (bcTouch ? ` ${formatQualifyCandle(bcTouch, "BC", conABc)}` : ""),
           };
 
@@ -1547,8 +1524,8 @@ function PreviousDaySection() {
           const ppFailConA = explainUpexFailure(
             ppCandles, ppABc, ppStart, ppEnd, ppCeiling, pp.r2,
           );
-          ppTcCandles = allBodiesThroughLevel(ppCandles, ppBTc, ppStart, ppEnd);
-          ppBcCandles = allBodiesThroughLevel(ppCandles, ppABc, ppStart, ppEnd);
+          ppTcCandles = allCandlesThroughLevel(ppCandles, ppBTc, ppStart, ppEnd);
+          ppBcCandles = allCandlesThroughLevel(ppCandles, ppABc, ppStart, ppEnd);
           const ppTcTouch = ppTcCandles[0] ?? null;
           const ppBcTouch = ppBcCandles[0] ?? null;
           const ppConBNote = ppFailConB
@@ -1556,7 +1533,7 @@ function PreviousDaySection() {
             : {
                 label: "PASS",
                 detail:
-                  `All PP-day 15m bodies stayed within CONSOLIDATE-B rules (PPDay TC ${ppBTc}, floor PL/S1 ${ppFloor}).` +
+                  `All PP-day 15m candles stayed within CONSOLIDATE-B rules (PPDay TC ${ppBTc}, floor PL/S1 ${ppFloor}).` +
                   (ppTcTouch ? ` ${formatQualifyCandle(ppTcTouch, "PPDay TC", ppBTc)}` : ""),
               };
           const ppConANote = ppFailConA
@@ -1564,7 +1541,7 @@ function PreviousDaySection() {
             : {
                 label: "PASS",
                 detail:
-                  `All PP-day 15m bodies stayed within CONSOLIDATE-A rules (BC ${ppABc}, ceiling ${ppCeiling}).` +
+                  `All PP-day 15m candles stayed within CONSOLIDATE-A rules (BC ${ppABc}, ceiling ${ppCeiling}).` +
                   (ppBcTouch ? ` ${formatQualifyCandle(ppBcTouch, "BC", ppABc)}` : ""),
               };
           ppSessionLabel = new Date(ppStart).toISOString().slice(0, 10);
@@ -1785,14 +1762,14 @@ function PreviousDaySection() {
             );
           })()}
 
-          {/* Dedicated summary of all candle numbers having body in TC and body in BC */}
+          {/* Dedicated summary of all candle numbers whose range touches TC and BC (wick touch counts) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {/* TC block */}
             <div className="rounded-xl border border-pink-400/35 bg-[#141220] p-3.5">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <span className="font-mono text-xs font-bold text-[#ff6bb5] tracking-wide">
-                    CANDLES WITH BODY IN {result.levels.tcName.toUpperCase()}
+                    CANDLES TOUCHING {result.levels.tcName.toUpperCase()}
                   </span>
                   <span className="text-[10px] text-slate-400 font-mono">({result.levels.conBTc})</span>
                 </div>
@@ -1823,7 +1800,7 @@ function PreviousDaySection() {
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <span className="font-mono text-xs font-bold text-emerald-400 tracking-wide">
-                    CANDLES WITH BODY IN BC
+                    CANDLES TOUCHING BC
                   </span>
                   <span className="text-[10px] text-slate-400 font-mono">({result.levels.conABc})</span>
                 </div>
@@ -1917,7 +1894,7 @@ function PreviousDaySection() {
 
                 <div className="mt-2.5 pt-2 border-t border-slate-700/40 flex flex-wrap items-center gap-1.5 text-[11px]">
                   <span className="text-slate-400 font-mono text-[10px] uppercase">
-                    Body in {levelLabel} ({levelVal}):
+                    Candles touching {levelLabel} ({levelVal}):
                   </span>
                   {candleMatches.length === 0 ? (
                     <span className="text-slate-500 italic text-[10px]">none</span>
@@ -2010,7 +1987,7 @@ function PreviousDaySection() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="rounded-xl border border-pink-400/35 bg-[#141220] p-3.5">
                   <div className="mb-2 font-mono text-xs font-bold text-[#ff6bb5]">
-                    PP BODY IN TC ({result.ppLevels.conBTc})
+                    PP CANDLES TOUCHING TC ({result.ppLevels.conBTc})
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {result.ppTcCandles.length === 0 ? (
@@ -2029,7 +2006,7 @@ function PreviousDaySection() {
                 </div>
                 <div className="rounded-xl border border-emerald-500/25 bg-[#0e1c1e] p-3.5">
                   <div className="mb-2 font-mono text-xs font-bold text-emerald-400">
-                    PP BODY IN BC ({result.ppLevels.conABc})
+                    PP CANDLES TOUCHING BC ({result.ppLevels.conABc})
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {result.ppBcCandles.length === 0 ? (
@@ -2093,7 +2070,7 @@ function PreviousDaySection() {
                     <div className="mt-1 text-[11px] leading-relaxed text-slate-300">{block.detail}</div>
                     <div className="mt-2.5 pt-2 border-t border-slate-700/40 flex flex-wrap items-center gap-1.5 text-[11px]">
                       <span className="text-slate-400 font-mono text-[10px] uppercase">
-                        Body in {levelLabel} ({levelVal}):
+                        Candles touching {levelLabel} ({levelVal}):
                       </span>
                       {matches.length === 0 ? (
                         <span className="text-slate-500 italic text-[10px]">none</span>
