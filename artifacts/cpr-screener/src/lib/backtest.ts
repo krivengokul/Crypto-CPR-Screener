@@ -1795,13 +1795,14 @@ export const P_FILTER_CATEGORY_KEYS: ReadonlySet<string> = new Set([
  * Fill ALL previous-session 15m P-filter flags on `result`:
  *   PD15MConsolidateAPass, PD15MAboveBCPass,
  *   PD15MBelowTCPass,      PD15MMomentumBPass,
- *   PD15MPPConsolidateAPass, PD15MPPConsolidateBPass (when ppCPR exists)
+ *   PD15MPPConsolidateAPass, PD15MPPConsolidateBPass,
+ *   PD15MPPMomentumAPass, PD15MPPMomentumBPass (when ppCPR exists)
  *
  * Used for every category / view / pattern backtest row so the View column
- * can show P-CONSOLIDATE-A/B, P-MOMENTUM-A/B, and PP-CONSOLIDATE-A/B the same
- * way as the live Screener. PP checks run in the same Promise.all as P-day
- * checks (no extra sequential wait). Returns false when the source has no
- * 15m path (CoinDCX).
+ * can show P-CONSOLIDATE-A/B, P-MOMENTUM-A/B, and PP-CONSOLIDATE / PP-MOMENTUM
+ * the same way as the live Screener. PP checks run in the same Promise.all as
+ * P-day checks (no extra sequential wait). Returns false when the source has
+ * no 15m path (CoinDCX).
  * Unavailable candles count as "not passing" (flag = false).
  */
 async function populateAllPFilterFlags(
@@ -1838,8 +1839,17 @@ async function populateAllPFilterFlags(
     Number.isFinite(pp.prevHigh) &&
     Number.isFinite(pp.prevLow);
 
-  const [consolidateA, momentumA, consolidateB, momentumB, insideR1S1, ppConsolidateA, ppConsolidateB] =
-    await Promise.all([
+  const [
+    consolidateA,
+    momentumA,
+    consolidateB,
+    momentumB,
+    insideR1S1,
+    ppConsolidateA,
+    ppConsolidateB,
+    ppMomentumA,
+    ppMomentumB,
+  ] = await Promise.all([
     findPreviousConsolidateAPass(
       {
         symbol,
@@ -1900,6 +1910,20 @@ async function populateAllPFilterFlags(
           ppNow,
         )
       : Promise.resolve(false),
+    // PP-MOMENTUM-A: BC floor only on PPDay (no PH/R1 ceiling).
+    ppHasLevels
+      ? findPreviousUpexPass(
+          { symbol, source, bc: getConsolidateABc(pp, null) },
+          ppNow,
+        )
+      : Promise.resolve(false),
+    // PP-MOMENTUM-B: TC ceiling only on PPDay (no PL/S1 floor / S2).
+    ppHasLevels
+      ? findPD15MBelowTCPass(
+          { symbol, source, bc: getConsolidateBTc(pp, null) },
+          ppNow,
+        )
+      : Promise.resolve(false),
   ]);
 
   result.PD15MConsolidateAPass = consolidateA === true;
@@ -1909,6 +1933,8 @@ async function populateAllPFilterFlags(
   result.PD15MInsideR1S1Pass = insideR1S1 === true;
   result.PD15MPPConsolidateAPass = ppConsolidateA === true;
   result.PD15MPPConsolidateBPass = ppConsolidateB === true;
+  result.PD15MPPMomentumAPass = ppMomentumA === true;
+  result.PD15MPPMomentumBPass = ppMomentumB === true;
 
   // Why CON-B didn't pass. If MOM-B (TC rule only) also failed, that's the
   // blocking reason; otherwise CON-B failed on the floor / S2 rule.

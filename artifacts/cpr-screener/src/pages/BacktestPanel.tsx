@@ -343,6 +343,48 @@ function candleBucketFromFlags(
   return null;
 }
 
+
+/** PP-day exclusive badge priority: CON-B > MOM-B > CON-A > MOM-A. */
+function ppDayBadgeFromFlags(raw: CPRResult): {
+  label: string;
+  color: string;
+  title: string;
+} | null {
+  const ppB = raw.PD15MPPConsolidateBPass === true;
+  const ppMomB = raw.PD15MPPMomentumBPass === true;
+  const ppA = raw.PD15MPPConsolidateAPass === true;
+  const ppMomA = raw.PD15MPPMomentumAPass === true;
+  if (ppB) {
+    return {
+      label: "PP-CONSOLIDATE-B",
+      color: "#f472b6",
+      title: "CONSOLIDATE-B rules on PPDay (exclusive over PP-MOM-B / PP-CON-A / PP-MOM-A)",
+    };
+  }
+  if (ppMomB) {
+    return {
+      label: "PP-MOMENTUM-B",
+      color: "#a78bfa", // violet-400-ish
+      title: "MOMENTUM-B rules on PPDay (TC only); exclusive of PP-CONSOLIDATE-B",
+    };
+  }
+  if (ppA) {
+    return {
+      label: "PP-CONSOLIDATE-A",
+      color: "#2dd4bf",
+      title: "CONSOLIDATE-A rules on PPDay (only when PP-B / PP-MOM-B did not take priority)",
+    };
+  }
+  if (ppMomA) {
+    return {
+      label: "PP-MOMENTUM-A",
+      color: "#22d3ee", // cyan-400
+      title: "MOMENTUM-A rules on PPDay (BC only); exclusive of PP-CONSOLIDATE-A/B",
+    };
+  }
+  return null;
+}
+
 function renderCandleCheckBadges(raw: CPRResult) {
   const bucket = candleBucketFromFlags(raw);
 
@@ -362,27 +404,17 @@ function renderCandleCheckBadges(raw: CPRResult) {
   ) : null;
 
   if (!bucket) {
-    const rawPPB = raw.PD15MPPConsolidateBPass === true;
-    const rawPPA = raw.PD15MPPConsolidateAPass === true && !rawPPB;
-    if (!conBFailureLine && !rawPPA && !rawPPB) return null;
+    const ppBadge = ppDayBadgeFromFlags(raw);
+    if (!conBFailureLine && !ppBadge) return null;
     return (
       <div className="mt-1 flex flex-col gap-0.5">
-        {rawPPB && (
+        {ppBadge && (
           <div
             className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
-            style={{ color: "#f472b6" }}
-            title="CONSOLIDATE-B rules on PPDay (exclusive over PP-CONSOLIDATE-A)"
+            style={{ color: ppBadge.color }}
+            title={ppBadge.title}
           >
-            PP-CONSOLIDATE-B
-          </div>
-        )}
-        {rawPPA && (
-          <div
-            className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
-            style={{ color: "#2dd4bf" }}
-            title="CONSOLIDATE-A rules on PPDay (only when PP-B did not pass)"
-          >
-            PP-CONSOLIDATE-A
+            {ppBadge.label}
           </div>
         )}
         {conBFailureLine}
@@ -424,9 +456,7 @@ function renderCandleCheckBadges(raw: CPRResult) {
           ? { color: "#ff6bb5" }
           : undefined;
 
-  // PP exclusive: B wins over A (same priority as P CON-B > CON-A).
-  const ppB = raw.PD15MPPConsolidateBPass === true;
-  const ppA = raw.PD15MPPConsolidateAPass === true && !ppB;
+  const ppBadge = ppDayBadgeFromFlags(raw);
 
   return (
     <div className="mt-1 flex flex-col gap-0.5">
@@ -443,22 +473,13 @@ function renderCandleCheckBadges(raw: CPRResult) {
       >
         {label}
       </div>
-      {ppB && (
+      {ppBadge && (
         <div
           className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
-          style={{ color: "#f472b6" }}
-          title="CONSOLIDATE-B rules on PPDay (exclusive over PP-CONSOLIDATE-A)"
+          style={{ color: ppBadge.color }}
+          title={ppBadge.title}
         >
-          PP-CONSOLIDATE-B
-        </div>
-      )}
-      {ppA && (
-        <div
-          className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
-          style={{ color: "#2dd4bf" }}
-          title="CONSOLIDATE-A rules on PPDay (only when PP-B did not pass)"
-        >
-          PP-CONSOLIDATE-A
+          {ppBadge.label}
         </div>
       )}
       {conBFailureLine}
@@ -1126,7 +1147,7 @@ function CopyViewControl({
             setCandleCheck(joinCandleCheck(e.target.value, splitCandleCheck(candleCheck).p))
           }
           disabled={!!command}
-          title="Optional previous-of-previous day 15m CONSOLIDATE filter (PP-CONSOLIDATE-A/B)."
+          title="Optional previous-of-previous day 15m filter (PP-CON-A/B, PP-MOM-A/B)."
           className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
         >
           {PP_CANDLE_CHECK_OPTIONS.map((opt) => (
@@ -1561,7 +1582,7 @@ function EditViewControl({
             setCandleCheck(joinCandleCheck(e.target.value, splitCandleCheck(candleCheck).p))
           }
           disabled={!!command}
-          title="Optional previous-of-previous day 15m CONSOLIDATE filter (PP-CONSOLIDATE-A/B)."
+          title="Optional previous-of-previous day 15m filter (PP-CON-A/B, PP-MOM-A/B)."
           className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
         >
           {PP_CANDLE_CHECK_OPTIONS.map((opt) => (
@@ -2106,7 +2127,7 @@ function CreateViewControl({
             setCandleCheck(joinCandleCheck(e.target.value, splitCandleCheck(candleCheck).p))
           }
           disabled={!!command}
-          title="Optional previous-of-previous day 15m CONSOLIDATE filter (PP-CONSOLIDATE-A/B)."
+          title="Optional previous-of-previous day 15m filter (PP-CON-A/B, PP-MOM-A/B)."
           className="flex-1 min-w-0 bg-background border border-cyan-500/40 rounded-md px-2 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500 disabled:opacity-50"
         >
           {PP_CANDLE_CHECK_OPTIONS.map((opt) => (
