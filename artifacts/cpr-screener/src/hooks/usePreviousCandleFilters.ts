@@ -13,6 +13,8 @@ import {
   findPD15MMomentumBelowSymbols,
   findPPConsolidateASymbols,
   findPPConsolidateBSymbols,
+  findPPMomentumASymbols,
+  findPPMomentumBSymbols,
   findPreviousConsolidateASymbols,
   findPreviousUpexSymbols,
   getConsolidateABc,
@@ -43,6 +45,12 @@ import {
   savePreviousInsideR1S1Results,
   savePreviousPPConsolidateAResults,
   savePreviousPPConsolidateBResults,
+  previousPPMomentumBCandidateCacheKey,
+  savePreviousPPMomentumBResults,
+  loadPreviousPPMomentumBResults,
+  previousPPMomentumACandidateCacheKey,
+  savePreviousPPMomentumAResults,
+  loadPreviousPPMomentumAResults,
   savePreviousUpexResults,
 } from "@/lib/15MCandleCheck";
 import { usePreviousCandleFilterPrep } from "@/hooks/usePreviousCandleFilterPrep";
@@ -65,6 +73,9 @@ export type PreviousCandleFilterId =
   | "all"
   | "consolidate-a"
   | "pp-consolidate-a"
+  | "pp-consolidate-b"
+  | "pp-momentum-a"
+  | "pp-momentum-b"
   | "momentum-a"
   | "consolidate-b"
   | "momentum-b"
@@ -222,6 +233,72 @@ export function usePreviousCandleFilters(opts: {
       findPPConsolidateBSymbols(missing, onProgress, sessionEndMs),
   });
 
+  // PP-MOMENTUM-A: MOM-A (BC only) on day-before-previous session. Levels from ppCPR.
+  const ppMomentumAPrep = usePreviousCandleFilterPrep({
+    label: "PP-MOMENTUM-A",
+    canRun: candlePrepCanRun,
+    sessionStartMs: previousPreviousUpexSessionStart,
+    buildCandidates: () => {
+      const candidates = new Map<string, {
+        symbol: string; source: "binance" | "delta"; bc: number;
+      }>();
+      const add = (row: CPRResult, source: "binance" | "delta") => {
+        const pp = row.ppCPR;
+        if (!pp || !Number.isFinite(pp.bc) || !Number.isFinite(pp.tc)) return;
+        candidates.set(`${source}:${row.symbol}`, {
+          symbol: row.symbol,
+          source,
+          bc: getConsolidateABc(pp, null),
+        });
+      };
+      if (status === "done") {
+        for (const row of allResults) add(row, "binance");
+      }
+      if (deltaStatus === "done") {
+        for (const row of deltaAllResults) add(row, "delta");
+      }
+      return Array.from(candidates.values());
+    },
+    cacheKey: previousPPMomentumACandidateCacheKey,
+    loadResults: loadPreviousPPMomentumAResults,
+    saveResults: savePreviousPPMomentumAResults,
+    scanMissing: (missing, onProgress, sessionEndMs) =>
+      findPPMomentumASymbols(missing, onProgress, sessionEndMs),
+  });
+
+  // PP-MOMENTUM-B: MOM-B (TC only) on day-before-previous session. Levels from ppCPR.
+  const ppMomentumBPrep = usePreviousCandleFilterPrep({
+    label: "PP-MOMENTUM-B",
+    canRun: candlePrepCanRun,
+    sessionStartMs: previousPreviousUpexSessionStart,
+    buildCandidates: () => {
+      const candidates = new Map<string, {
+        symbol: string; source: "binance" | "delta"; bc: number;
+      }>();
+      const add = (row: CPRResult, source: "binance" | "delta") => {
+        const pp = row.ppCPR;
+        if (!pp || !Number.isFinite(pp.bc) || !Number.isFinite(pp.tc)) return;
+        candidates.set(`${source}:${row.symbol}`, {
+          symbol: row.symbol,
+          source,
+          bc: getConsolidateBTc(pp, null),
+        });
+      };
+      if (status === "done") {
+        for (const row of allResults) add(row, "binance");
+      }
+      if (deltaStatus === "done") {
+        for (const row of deltaAllResults) add(row, "delta");
+      }
+      return Array.from(candidates.values());
+    },
+    cacheKey: previousPPMomentumBCandidateCacheKey,
+    loadResults: loadPreviousPPMomentumBResults,
+    saveResults: savePreviousPPMomentumBResults,
+    scanMissing: (missing, onProgress, sessionEndMs) =>
+      findPPMomentumBSymbols(missing, onProgress, sessionEndMs),
+  });
+
   const momentumAPrep = usePreviousCandleFilterPrep({
   label: "MOMENTUM-A",
   canRun: candlePrepCanRun,
@@ -341,6 +418,14 @@ export function usePreviousCandleFilters(opts: {
   const previousPPConsolidateBProgress = ppConsolidateBPrep.progress;
   const previousPPConsolidateBReady = ppConsolidateBPrep.ready;
   const previousPPConsolidateBMessage = ppConsolidateBPrep.message;
+  const previousPPMomentumAIncludedSymbols = ppMomentumAPrep.includedSymbols;
+  const previousPPMomentumAProgress = ppMomentumAPrep.progress;
+  const previousPPMomentumAReady = ppMomentumAPrep.ready;
+  const previousPPMomentumAMessage = ppMomentumAPrep.message;
+  const previousPPMomentumBIncludedSymbols = ppMomentumBPrep.includedSymbols;
+  const previousPPMomentumBProgress = ppMomentumBPrep.progress;
+  const previousPPMomentumBReady = ppMomentumBPrep.ready;
+  const previousPPMomentumBMessage = ppMomentumBPrep.message;
   const previousUpexIncludedSymbols = momentumAPrep.includedSymbols;
   const previousUpexProgress = momentumAPrep.progress;
   const previousUpexReady = momentumAPrep.ready;
@@ -519,6 +604,27 @@ export function usePreviousCandleFilters(opts: {
     },
     [previousPPConsolidateAIncludedSymbols, previousPPConsolidateBIncludedSymbols],
   );
+
+  const hasPPMomentumB = useCallback(
+    (row: CandleBucketRow) => {
+      const key = `${row.source}:${row.symbol}`;
+      return (
+        previousPPMomentumBIncludedSymbols.has(key) &&
+        !previousPPConsolidateBIncludedSymbols.has(key)
+      );
+    },
+    [previousPPMomentumBIncludedSymbols, previousPPConsolidateBIncludedSymbols],
+  );
+  const hasPPMomentumA = useCallback(
+    (row: CandleBucketRow) => {
+      const key = `${row.source}:${row.symbol}`;
+      return (
+        previousPPMomentumAIncludedSymbols.has(key) &&
+        !previousPPConsolidateAIncludedSymbols.has(key)
+      );
+    },
+    [previousPPMomentumAIncludedSymbols, previousPPConsolidateAIncludedSymbols],
+  );
   const hasMomentumA = useCallback(
     (row: CandleBucketRow) => candleBucket(row) === "momentum-a",
     [candleBucket],
@@ -541,6 +647,14 @@ export function usePreviousCandleFilters(opts: {
     previousPPConsolidateBProgress,
     previousPPConsolidateBReady,
     previousPPConsolidateBMessage,
+    previousPPMomentumAIncludedSymbols,
+    previousPPMomentumAProgress,
+    previousPPMomentumAReady,
+    previousPPMomentumAMessage,
+    previousPPMomentumBIncludedSymbols,
+    previousPPMomentumBProgress,
+    previousPPMomentumBReady,
+    previousPPMomentumBMessage,
     previousUpexIncludedSymbols,
     previousUpexProgress,
     previousUpexReady,
@@ -563,11 +677,15 @@ export function usePreviousCandleFilters(opts: {
     hasConsolidateA,
     hasPPConsolidateA,
     hasPPConsolidateB,
+    hasPPMomentumA,
+    hasPPMomentumB,
     hasMomentumA,
     hasInsideR1S1,
     resetConsolidateAMessage,
     resetPPConsolidateAMessage: ppConsolidateAPrep.resetMessage,
     resetPPConsolidateBMessage: ppConsolidateBPrep.resetMessage,
+    resetPPMomentumAMessage: ppMomentumAPrep.resetMessage,
+    resetPPMomentumBMessage: ppMomentumBPrep.resetMessage,
     resetMomentumAMessage,
     resetConsolidateBMessage,
     resetMomentumBMessage,

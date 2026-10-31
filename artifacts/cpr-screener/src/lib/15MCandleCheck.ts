@@ -14,6 +14,8 @@ const PREVIOUS_15M_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_momentum_b_results_v
 const PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_consolidate_a_results_v15";
 const PREVIOUS_15M_PP_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_pp_consolidate_a_results_v7";
 const PREVIOUS_15M_PP_CONSOLIDATE_B_CACHE_KEY = "cpr_previous_15m_pp_consolidate_b_results_v4";
+const PREVIOUS_15M_PP_MOMENTUM_A_CACHE_KEY = "cpr_previous_15m_pp_momentum_a_results_v1";
+const PREVIOUS_15M_PP_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_pp_momentum_b_results_v1";
 const PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_inside_r1s1_results_v3";
 
 export interface UpexCandidate {
@@ -127,6 +129,8 @@ export function pruneLegacy15MResultCaches(): number {
     PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY,
     PREVIOUS_15M_PP_CONSOLIDATE_A_CACHE_KEY,
     PREVIOUS_15M_PP_CONSOLIDATE_B_CACHE_KEY,
+    PREVIOUS_15M_PP_MOMENTUM_B_CACHE_KEY,
+    PREVIOUS_15M_PP_MOMENTUM_A_CACHE_KEY,
     PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY,
   ];
   const prefixes = currentKeys.map((key) => key.replace(/\d+$/, ""));
@@ -1261,6 +1265,130 @@ export function findPPConsolidateBSymbols(
 ): Promise<PreviousUpexScanResults> {
   return findPD15MBelowTCSymbols(candidates, onProgress, now);
 }
+
+/**
+ * PP-MOMENTUM-A: same MOMENTUM-A rules (BC floor only, no PH/R1 ceiling) on PPDay.
+ * Pass `now` = end of that session (PDay start) so the walk uses [PPDay, PDay).
+ */
+export function findPPMomentumASymbols(
+  candidates: UpexCandidate[],
+  onProgress?: (done: number, total: number) => void,
+  now = Date.now()
+): Promise<PreviousUpexScanResults> {
+  return findPreviousUpexSymbols(candidates, onProgress, now);
+}
+
+export function previousPPMomentumACandidateCacheKey(
+  sessionStart: number,
+  candidate: UpexCandidate,
+): string {
+  return previousUpexCandidateCacheKey(sessionStart, candidate);
+}
+
+export function loadPreviousPPMomentumAResults(
+  sessionStart: number,
+): Map<string, boolean | null> {
+  try {
+    const raw = localStorage.getItem(PREVIOUS_15M_PP_MOMENTUM_A_CACHE_KEY);
+    if (!raw) return new Map();
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      !("sessionStart" in parsed) ||
+      (parsed as { sessionStart: unknown }).sessionStart !== sessionStart ||
+      !("results" in parsed) ||
+      !(parsed as { results: unknown }).results ||
+      typeof (parsed as { results: unknown }).results !== "object"
+    ) {
+      return new Map();
+    }
+    const results = new Map<string, boolean | null>();
+    for (const [key, value] of Object.entries(
+      (parsed as { results: Record<string, unknown> }).results,
+    )) {
+      if (typeof value === "boolean") results.set(key, value);
+    }
+    return results;
+  } catch {
+    return new Map();
+  }
+}
+
+export function savePreviousPPMomentumAResults(
+  sessionStart: number,
+  results: Map<string, boolean | null>,
+): void {
+  const payload = JSON.stringify({
+    sessionStart,
+    results: Object.fromEntries(
+      [...results].filter((entry): entry is [string, boolean] => typeof entry[1] === "boolean"),
+    ),
+  });
+  safeSetItem(PREVIOUS_15M_PP_MOMENTUM_A_CACHE_KEY, payload);
+}
+
+/**
+ * PP-MOMENTUM-B: same MOMENTUM-B rules (TC ceiling only, no PL/S1 floor) on PPDay.
+ */
+export function findPPMomentumBSymbols(
+  candidates: UpexCandidate[],
+  onProgress?: (done: number, total: number) => void,
+  now = Date.now()
+): Promise<PreviousUpexScanResults> {
+  return findPD15MMomentumBelowSymbols(candidates, onProgress, now);
+}
+
+export function previousPPMomentumBCandidateCacheKey(
+  sessionStart: number,
+  candidate: UpexCandidate,
+): string {
+  return previous15MMomentumCandidateCacheKey(sessionStart, candidate);
+}
+
+export function loadPreviousPPMomentumBResults(
+  sessionStart: number,
+): Map<string, boolean | null> {
+  try {
+    const raw = localStorage.getItem(PREVIOUS_15M_PP_MOMENTUM_B_CACHE_KEY);
+    if (!raw) return new Map();
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      !("sessionStart" in parsed) ||
+      (parsed as { sessionStart: unknown }).sessionStart !== sessionStart ||
+      !("results" in parsed) ||
+      !(parsed as { results: unknown }).results ||
+      typeof (parsed as { results: unknown }).results !== "object"
+    ) {
+      return new Map();
+    }
+    const results = new Map<string, boolean | null>();
+    for (const [key, value] of Object.entries(
+      (parsed as { results: Record<string, unknown> }).results,
+    )) {
+      if (typeof value === "boolean") results.set(key, value);
+    }
+    return results;
+  } catch {
+    return new Map();
+  }
+}
+
+export function savePreviousPPMomentumBResults(
+  sessionStart: number,
+  results: Map<string, boolean | null>,
+): void {
+  const payload = JSON.stringify({
+    sessionStart,
+    results: Object.fromEntries(
+      [...results].filter((entry): entry is [string, boolean] => typeof entry[1] === "boolean"),
+    ),
+  });
+  safeSetItem(PREVIOUS_15M_PP_MOMENTUM_B_CACHE_KEY, payload);
+}
+
 
 export function previousPPConsolidateBCandidateCacheKey(
   sessionStart: number,

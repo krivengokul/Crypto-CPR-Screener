@@ -404,7 +404,7 @@ export default function Screener({
 
 
   const [previousCandleFilter, setPreviousCandleFilter] = useState<
-    "all" | "consolidate-a" | "pp-consolidate-a" | "pp-consolidate-b" | "momentum-a" | "consolidate-b" | "momentum-b" | "inside-r1s1"
+    "all" | "consolidate-a" | "pp-consolidate-a" | "pp-consolidate-b" | "pp-momentum-a" | "pp-momentum-b" | "momentum-a" | "consolidate-b" | "momentum-b" | "inside-r1s1"
   >("all");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "ready" | "pass" | "fail">("all");
   /** When ON (default) and today is Sat/Sun, hide Binance TRADFI + COMMOD rows. */
@@ -578,6 +578,12 @@ export default function Screener({
     previousPPConsolidateBProgress,
     previousPPConsolidateBReady,
     previousPPConsolidateBMessage,
+    previousPPMomentumAProgress,
+    previousPPMomentumAReady,
+    previousPPMomentumAMessage,
+    previousPPMomentumBProgress,
+    previousPPMomentumBReady,
+    previousPPMomentumBMessage,
     previousUpexIncludedSymbols,
     previousUpexProgress,
     previousUpexReady,
@@ -596,6 +602,8 @@ export default function Screener({
     hasConsolidateA,
     hasPPConsolidateA,
     hasPPConsolidateB,
+    hasPPMomentumA,
+    hasPPMomentumB,
     hasMomentumA,
     hasInsideR1S1,
     previousInsideR1S1Ready,
@@ -604,6 +612,8 @@ export default function Screener({
     resetConsolidateAMessage,
     resetPPConsolidateAMessage,
     resetPPConsolidateBMessage,
+    resetPPMomentumAMessage,
+    resetPPMomentumBMessage,
     resetMomentumAMessage,
     resetConsolidateBMessage,
     resetMomentumBMessage,
@@ -693,7 +703,7 @@ export default function Screener({
     },
     // has* and activeSignal are stable enough for legend; intentionally broad
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [activeSignal, hasInsideR1S1, hasConsolidateA, hasConsolidateB, hasMomentumA, hasMomentumB, hasPPConsolidateA, hasPPConsolidateB],
+    [activeSignal, hasInsideR1S1, hasConsolidateA, hasConsolidateB, hasMomentumA, hasMomentumB, hasPPConsolidateA, hasPPConsolidateB, hasPPMomentumA, hasPPMomentumB],
   );
 
   // Entry-cross toast → Legend Card 2
@@ -763,6 +773,8 @@ export default function Screener({
     previousConsolidateAReady &&
     previousPPConsolidateAReady &&
     previousPPConsolidateBReady &&
+    previousPPMomentumAReady &&
+    previousPPMomentumBReady &&
     previousUpexReady &&
     previous15MTCReady &&
     previous15MMomentumReady &&
@@ -1083,6 +1095,12 @@ export default function Screener({
   const previousConsolidateAIncludedCount = getActivePool().filter(
     (row) => row.source !== "coindcx" && hasConsolidateA(row),
   ).length;
+  const previousPPMomentumAIncludedCount = getActivePool().filter(
+    (row) => row.source !== "coindcx" && hasPPMomentumA(row),
+  ).length;
+  const previousPPMomentumBIncludedCount = getActivePool().filter(
+    (row) => row.source !== "coindcx" && hasPPMomentumB(row),
+  ).length;
   const previousPPConsolidateAIncludedCount = getActivePool().filter(
     (row) => row.source !== "coindcx" && hasPPConsolidateA(row),
   ).length;
@@ -1304,6 +1322,16 @@ export default function Screener({
       (r) =>
         previousCandleFilter !== "pp-consolidate-b" ||
         hasPPConsolidateB(r)
+    )
+    .filter(
+      (r) =>
+        previousCandleFilter !== "pp-momentum-a" ||
+        hasPPMomentumA(r)
+    )
+    .filter(
+      (r) =>
+        previousCandleFilter !== "pp-momentum-b" ||
+        hasPPMomentumB(r)
     )
     .filter(
       (r) =>
@@ -2353,7 +2381,7 @@ export default function Screener({
                   activeTab === "coindcx"
                 }
                 aria-pressed={previousCandleFilter === "pp-consolidate-b"}
-                className={`text-xs px-2.5 py-1 rounded-r -ml-px border transition-colors disabled:opacity-50 ${
+                className={`text-xs px-2.5 py-1 -ml-px border transition-colors disabled:opacity-50 ${
                   previousCandleFilter === "pp-consolidate-b"
                     ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
                     : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
@@ -2365,6 +2393,60 @@ export default function Screener({
                   : previousPPConsolidateBReady
                     ? `PP-CONSOLIDATE-B (${previousPPConsolidateBIncludedCount})`
                     : "PP-CONSOLIDATE-B…"}
+              </button>
+              <button
+                onClick={() => {
+                  if (!previousPPMomentumAReady) return;
+                  setPreviousCandleFilter((v) =>
+                    v === "pp-momentum-a" ? "all" : "pp-momentum-a",
+                  );
+                  resetPPMomentumAMessage();
+                }}
+                disabled={
+                  !previousPPMomentumAReady ||
+                  currentAllCount === 0 ||
+                  activeTab === "coindcx"
+                }
+                aria-pressed={previousCandleFilter === "pp-momentum-a"}
+                className={`text-xs px-2.5 py-1 -ml-px border transition-colors disabled:opacity-50 ${
+                  previousCandleFilter === "pp-momentum-a"
+                    ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
+                    : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
+                }`}
+                title="Same MOMENTUM-A rules (BC floor only) on the day-before-previous session (PPDay). Exclusive of PP-CONSOLIDATE-A. Binance/Delta only."
+              >
+                {previousPPMomentumAProgress
+                  ? `PP-MOMENTUM-A ${previousPPMomentumAProgress.done}/${previousPPMomentumAProgress.total}`
+                  : previousPPMomentumAReady
+                    ? `PP-MOMENTUM-A (${previousPPMomentumAIncludedCount})`
+                    : "PP-MOMENTUM-A…"}
+              </button>
+              <button
+                onClick={() => {
+                  if (!previousPPMomentumBReady) return;
+                  setPreviousCandleFilter((v) =>
+                    v === "pp-momentum-b" ? "all" : "pp-momentum-b",
+                  );
+                  resetPPMomentumBMessage();
+                }}
+                disabled={
+                  !previousPPMomentumBReady ||
+                  currentAllCount === 0 ||
+                  activeTab === "coindcx"
+                }
+                aria-pressed={previousCandleFilter === "pp-momentum-b"}
+                className={`text-xs px-2.5 py-1 rounded-r -ml-px border transition-colors disabled:opacity-50 ${
+                  previousCandleFilter === "pp-momentum-b"
+                    ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
+                    : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
+                }`}
+                title="Same MOMENTUM-B rules (TC ceiling only) on the day-before-previous session (PPDay). Exclusive of PP-CONSOLIDATE-B. Binance/Delta only."
+              >
+                {previousPPMomentumBProgress
+                  ? `PP-MOMENTUM-B ${previousPPMomentumBProgress.done}/${previousPPMomentumBProgress.total}`
+                  : previousPPMomentumBReady
+                    ? `PP-MOMENTUM-B (${previousPPMomentumBIncludedCount})`
+                    : "PP-MOMENTUM-B…"}
               </button>
               </div>
             </div>
@@ -2642,6 +2724,8 @@ export default function Screener({
                         isConsolidateA={hasConsolidateA(r)}
                         isPPConsolidateA={hasPPConsolidateA(r)}
                         isPPConsolidateB={hasPPConsolidateB(r)}
+                        isPPMomentumA={hasPPMomentumA(r)}
+                        isPPMomentumB={hasPPMomentumB(r)}
                         isMomentumA={hasMomentumA(r)}
                         isConsolidateB={hasConsolidateB(r)}
                         isMomentumB={hasMomentumB(r)}

@@ -892,6 +892,10 @@ export interface ScreenerTableRowProps {
   isPPConsolidateA?: boolean;
   /** True when PP-CONSOLIDATE-B (day-before-previous session) passed for this row. */
   isPPConsolidateB?: boolean;
+  /** True when PP-MOMENTUM-A passed and not exclusive PP-CONSOLIDATE-A. */
+  isPPMomentumA?: boolean;
+  /** True when PP-MOMENTUM-B passed and not exclusive PP-CONSOLIDATE-B. */
+  isPPMomentumB?: boolean;
   /** True when this row is assigned to the exclusive P-CONSOLIDATE-B class (held in Screener state, not on the row data). */
   isConsolidateB?: boolean;
   /** True when the Screener's P-MOMENTUM-A check passed for this row and it is not CONSOLIDATE-A (momentum excludes consolidate, as in the filters). */
@@ -955,6 +959,8 @@ function ScreenerTableRow({
   isConsolidateA,
   isPPConsolidateA,
   isPPConsolidateB,
+  isPPMomentumA,
+  isPPMomentumB,
   isConsolidateB,
   isMomentumA,
   isMomentumB,
@@ -1326,17 +1332,30 @@ function ScreenerTableRow({
           {/* PP exclusive: B wins over A when both raw flags pass (same as P CON-B > CON-A). */}
           {(() => {
             const showPPB = isPPConsolidateB === true || (isPPConsolidateB === undefined && rawPPConB);
+            const showPPMomB = !showPPB && isPPMomentumB === true;
             const showPPA =
               !showPPB &&
+              !showPPMomB &&
               (isPPConsolidateA === true || (isPPConsolidateA === undefined && rawPPConA));
+            const showPPMomA = !showPPB && !showPPMomB && !showPPA && isPPMomentumA === true;
             if (showPPB) {
               return (
                 <div
                   className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
                   style={{ color: "#f472b6" }}
-                  title="CONSOLIDATE-B rules on the day-before-previous session (PPDay); exclusive over PP-CONSOLIDATE-A"
+                  title="CONSOLIDATE-B rules on the day-before-previous session (PPDay); exclusive over PP-CONSOLIDATE-A / PP-MOMENTUM-B"
                 >
                   PP-CONSOLIDATE-B
+                </div>
+              );
+            }
+            if (showPPMomB) {
+              return (
+                <div
+                  className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-violet-400"
+                  title="MOMENTUM-B rules on PPDay (TC only); exclusive of PP-CONSOLIDATE-B"
+                >
+                  PP-MOMENTUM-B
                 </div>
               );
             }
@@ -1345,9 +1364,19 @@ function ScreenerTableRow({
                 <div
                   className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
                   style={{ color: "#2dd4bf" }}
-                  title="CONSOLIDATE-A rules on the day-before-previous session (PPDay); only when PP-B did not pass"
+                  title="CONSOLIDATE-A rules on the day-before-previous session (PPDay); only when PP-B / PP-MOM-B did not take priority"
                 >
                   PP-CONSOLIDATE-A
+                </div>
+              );
+            }
+            if (showPPMomA) {
+              return (
+                <div
+                  className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-cyan-400"
+                  title="MOMENTUM-A rules on PPDay (BC only); exclusive of PP-CONSOLIDATE-A"
+                >
+                  PP-MOMENTUM-A
                 </div>
               );
             }
