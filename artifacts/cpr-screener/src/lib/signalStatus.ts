@@ -30,12 +30,16 @@ export type SignalStatusInput = {
 /**
  * Resolve Ready / Active / Pass / Fail.
  *
- * Priority:
- * 1. Journal terminal outcome (PASS / FAIL / EXPIRED→fail-like for UI)
- * 2. Live/session target → pass
- * 3. Live/session stop → fail
+ * Priority (terminal outcomes never demote back to Active):
+ * 1. Journal PASS / FAIL / EXPIRED
+ * 2. Live or session extreme hit target → pass (latched for the session)
+ * 3. Live or session extreme hit stop → fail (only if not already pass)
  * 4. Entry touched → active
  * 5. Else ready
+ *
+ * Target/stop use session high/low when available so a wick through the level
+ * still counts after price retraces. Entry is NOT required before pass: once
+ * today's high/low tags the target, status is Pass for that setup.
  */
 export function resolveSignalStatus(input: SignalStatusInput): SignalLifecycleStatus {
   const {
@@ -49,25 +53,25 @@ export function resolveSignalStatus(input: SignalStatusInput): SignalLifecycleSt
     journalStatus,
   } = input;
 
+  // 1. Journal terminal — never reopen as Active the same day.
   if (journalStatus === "PASS") return "pass";
   if (journalStatus === "FAIL") return "fail";
-  // EXPIRED is terminal; treat like fail for filters/badges (closed, not active).
   if (journalStatus === "EXPIRED") return "fail";
+
+  // 2. Target tagged (session high/low or live) → Pass for the session.
+  if (
+    sessionReachedTarget(direction, target, sessionHigh, sessionLow, livePrice) ||
+    livePriceReachedTarget(direction, target, livePrice)
+  ) {
+    return "pass";
+  }
 
   const entryTouched =
     journalStatus === "ACTIVE" ||
     (Number.isFinite(entry) && hasTouchedEntry(direction, entry, livePrice));
 
-  // Target / stop only matter once the trade is "in play".
-  // (entryTouched is already true for an ACTIVE journal row.)
+  // 3. Stop hit only after entry is in play (or journal already ACTIVE).
   if (entryTouched) {
-    if (
-      sessionReachedTarget(direction, target, sessionHigh, sessionLow, livePrice) ||
-      livePriceReachedTarget(direction, target, livePrice)
-    ) {
-      return "pass";
-    }
-
     const isUp = direction === "Up" || direction === "LONG";
     const isDown = direction === "Down" || direction === "SHORT";
     if (isUp) {
@@ -92,6 +96,7 @@ export function resolveSignalStatus(input: SignalStatusInput): SignalLifecycleSt
     }
   }
 
+  // 4 / 5
   if (entryTouched) return "active";
   return "ready";
 }

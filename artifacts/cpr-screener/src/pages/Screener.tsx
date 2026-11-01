@@ -221,6 +221,14 @@ function getRowStatus(r: CPRResult): {
     if (hasTouchedEntry(dir, entryFn(r), r.currentPrice)) active = true;
     else ready = true;
   }
+  // Session outcome is exclusive: Pass/Fail never also show as Active/Ready.
+  if (pass) {
+    active = false;
+    ready = false;
+  } else if (fail) {
+    active = false;
+    ready = false;
+  }
   return { active, ready, pass, fail };
 }
 
