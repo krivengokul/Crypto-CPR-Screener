@@ -41,6 +41,8 @@ import {
   findPD15MBelowTCPass,
   findPreviousConsolidateAPass,
   passesInsideR1S1Filter,
+  pickExclusiveConsolidateSide,
+  countConsolidateZoneCandles,
   explainInsideR1S1Failure,
   formatInsideR1S1FailureNote,
   cprRelation,
@@ -1385,7 +1387,9 @@ type PrevDayDiagnosis = {
   momA: PrevDayCheckBlock;
   momB: PrevDayCheckBlock;
   insideR1S1: PrevDayCheckBlock;
-  /** PP-day (day-before-previous) CON-A/B — exclusive B > A for display. */
+  /** Body-midpoint counts in CON-A vs CON-B zones (exclusive label when both pass). */
+  zoneCounts: { zoneA: number; zoneB: number };
+  /** PP-day (day-before-previous) CON-A/B — exclusive by zone majority when both pass. */
   ppSessionLabel: string | null;
   ppLevels: {
     conABc: number;
@@ -1492,6 +1496,15 @@ function PreviousDaySection() {
 
       const tcMatches = allCandlesThroughLevel(candles, conBTc, prevStart, now);
       const bcMatches = allCandlesThroughLevel(candles, conABc, prevStart, now);
+      const zoneCounts = countConsolidateZoneCandles(
+        candles,
+        conABc,
+        ceiling,
+        conBTc,
+        floor,
+        prevStart,
+        now,
+      );
       const tcTouch = tcMatches[0] ?? null;
       const bcTouch = bcMatches[0] ?? null;
 
@@ -1748,6 +1761,7 @@ function PreviousDaySection() {
         momA: { pass: failMomA ? false : true, label: momA.label, detail: momA.detail },
         momB: { pass: failMomB ? false : true, label: momB.label, detail: momB.detail },
         insideR1S1,
+        zoneCounts,
         ppSessionLabel,
         ppLevels,
         ppTcCandles,
@@ -1845,27 +1859,39 @@ function PreviousDaySection() {
             const conA = result.conA.pass === true;
             const momA = result.momA.pass === true;
             const vol = result.insideR1S1.pass === true;
-            // Same priority as candleBucket / matchesCandleCheck:
-            //   CON-B > MOM-B > CON-A > MOM-A > P-VOLATILE-R1S1
-            const displayed = conB
-              ? "P-CONSOLIDATE-B"
-              : momB
-                ? "P-MOMENTUM-B"
-                : conA
+            // Zone majority when both CON-A and CON-B pass; else single-side / MOM / VOL.
+            const conSide = pickExclusiveConsolidateSide(
+              conA,
+              conB,
+              result.zoneCounts?.zoneA ?? 0,
+              result.zoneCounts?.zoneB ?? 0,
+            );
+            const displayed =
+              conSide === "B"
+                ? "P-CONSOLIDATE-B"
+                : conSide === "A"
                   ? "P-CONSOLIDATE-A"
-                  : momA
-                    ? "P-MOMENTUM-A"
-                    : vol
-                      ? "P-VOLATILE-R1S1"
-                      : null;
+                  : momB
+                    ? "P-MOMENTUM-B"
+                    : momA
+                      ? "P-MOMENTUM-A"
+                      : vol
+                        ? "P-VOLATILE-R1S1"
+                        : null;
             const rows: { name: string; pass: boolean; shown: boolean; reason: string }[] = [
               {
                 name: "P-CONSOLIDATE-B",
                 pass: conB,
                 shown: displayed === "P-CONSOLIDATE-B",
-                reason: conB
-                  ? "Highest priority. Raw CON-B pass → this is the only P- label shown."
-                  : "Raw CON-B failed — not a candidate for the exclusive badge.",
+                reason: displayed === "P-CONSOLIDATE-B"
+                  ? conA
+                    ? `Both CON-A and CON-B passed; zone B midpoints (${result.zoneCounts?.zoneB ?? 0}) > zone A (${result.zoneCounts?.zoneA ?? 0}) → exclusive CON-B.`
+                    : "Raw CON-B pass and CON-A failed → exclusive CON-B."
+                  : conB && conA
+                    ? `Both passed; zone A midpoints (${result.zoneCounts?.zoneA ?? 0}) >= zone B (${result.zoneCounts?.zoneB ?? 0}) → exclusive CON-A (not CON-B).`
+                    : conB
+                      ? "Raw CON-B passed but a higher exclusive rule chose another label."
+                      : "Raw CON-B failed — not a candidate for the exclusive badge.",
               },
               {
                 name: "P-MOMENTUM-B",
@@ -1883,11 +1909,15 @@ function PreviousDaySection() {
                 shown: displayed === "P-CONSOLIDATE-A",
                 reason: !conA
                   ? "Raw CON-A failed — not a candidate."
-                  : conB
-                    ? "Raw CON-A passed, but CON-B also passed. Precedence: CON-B > CON-A, so CON-A label is suppressed."
-                    : momB
-                      ? "Raw CON-A passed, but MOM-B also passed (and CON-B failed). Precedence: MOM-B > CON-A, so CON-A label is suppressed."
-                      : "CON-B and MOM-B failed; CON-A passed → exclusive label is P-CONSOLIDATE-A.",
+                  : displayed === "P-CONSOLIDATE-A"
+                    ? conB
+                      ? `Both CON-A and CON-B passed; zone A midpoints (${result.zoneCounts?.zoneA ?? 0}) >= zone B (${result.zoneCounts?.zoneB ?? 0}) → exclusive CON-A.`
+                      : "CON-A passed → exclusive label is P-CONSOLIDATE-A."
+                    : conB
+                      ? `Both passed; more midpoints in CON-B zone (${result.zoneCounts?.zoneB ?? 0}) than CON-A (${result.zoneCounts?.zoneA ?? 0}) → exclusive CON-B.`
+                      : momB
+                        ? "Raw CON-A passed, but MOM-B also passed. Precedence: MOM-B > CON-A when neither CON exclusive wins."
+                        : "CON-A passed but another exclusive label was selected.",
               },
               {
                 name: "P-MOMENTUM-A",
@@ -1929,7 +1959,7 @@ function PreviousDaySection() {
                 <p className="text-[11px] text-slate-400 leading-relaxed">
                   Priority (first match wins):{" "}
                   <span className="font-mono text-slate-300">
-                    P-CONSOLIDATE-B → P-MOMENTUM-B → P-CONSOLIDATE-A → P-MOMENTUM-A → P-VOLATILE-R1S1
+                    Both CON-A+CON-B → zone majority (tie→A); else CON-B | CON-A → MOM-B → MOM-A → P-VOLATILE-R1S1
                   </span>
                   . A raw PASS below does not always mean that label is shown.
                 </p>

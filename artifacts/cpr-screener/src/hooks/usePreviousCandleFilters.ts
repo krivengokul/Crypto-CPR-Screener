@@ -603,23 +603,24 @@ export function usePreviousCandleFilters(opts: {
 
   /**
    * Exclusive P-filter bucket:
-   *   CON-B → P-CONSOLIDATE-B
+   *   Both CON-A + CON-B → P-CONSOLIDATE-A (zone majority without live
+   *     candle counts defaults to A; PatternStats uses zone counts)
+   *   CON-B only → P-CONSOLIDATE-B
    *   MOM-B → P-MOMENTUM-B
-   *   CON-A → P-CONSOLIDATE-A
+   *   CON-A only → P-CONSOLIDATE-A
    *   MOM-A → P-MOMENTUM-A
-   *   INSIDE (R1/PH–S1/PL pass, and not CON-A/CON-B) → INSIDE-R1S1
-   * INSIDE ignores BC/TC consolidate membership; those win first when true.
+   *   INSIDE (not CON-A/CON-B) → INSIDE-R1S1
    */
-  // Memoized on the five included-symbol sets so their identities only change
-  // when a set changes. Screener lists these in many useMemo/useCallback dep
-  // arrays; fresh functions every render forced those to recompute on every
-  // live price tick.
   const candleBucket = useCallback(
     (row: CandleBucketRow): CandleBucket => {
       const key = `${row.source}:${row.symbol}`;
-      if (previous15MTCIncludedSymbols.has(key)) return "consolidate-b";
+      const inB = previous15MTCIncludedSymbols.has(key);
+      const inA = previousConsolidateAIncludedSymbols.has(key);
+      // Both pass → exclusive A (not B). Matches pickExclusiveConsolidateSide tie → A.
+      if (inA && inB) return "consolidate-a";
+      if (inB) return "consolidate-b";
       if (previous15MMomentumIncludedSymbols.has(key)) return "momentum-b";
-      if (previousConsolidateAIncludedSymbols.has(key)) return "consolidate-a";
+      if (inA) return "consolidate-a";
       if (previousUpexIncludedSymbols.has(key)) return "momentum-a";
       if (previousInsideR1S1IncludedSymbols.has(key)) return "inside-r1s1";
       return null;
@@ -650,19 +651,23 @@ export function usePreviousCandleFilters(opts: {
    * Independent of exclusive P-buckets.
    */
   const hasPPConsolidateB = useCallback(
-    (row: CandleBucketRow) =>
-      previousPPConsolidateBIncludedSymbols.has(`${row.source}:${row.symbol}`),
-    [previousPPConsolidateBIncludedSymbols],
+    (row: CandleBucketRow) => {
+      const key = `${row.source}:${row.symbol}`;
+      // Exclusive B only when A did not also pass.
+      return (
+        previousPPConsolidateBIncludedSymbols.has(key) &&
+        !previousPPConsolidateAIncludedSymbols.has(key)
+      );
+    },
+    [previousPPConsolidateBIncludedSymbols, previousPPConsolidateAIncludedSymbols],
   );
   const hasPPConsolidateA = useCallback(
     (row: CandleBucketRow) => {
       const key = `${row.source}:${row.symbol}`;
-      return (
-        previousPPConsolidateAIncludedSymbols.has(key) &&
-        !previousPPConsolidateBIncludedSymbols.has(key)
-      );
+      // A wins when both PP-CON sides pass.
+      return previousPPConsolidateAIncludedSymbols.has(key);
     },
-    [previousPPConsolidateAIncludedSymbols, previousPPConsolidateBIncludedSymbols],
+    [previousPPConsolidateAIncludedSymbols],
   );
 
   const hasPPMomentumB = useCallback(
@@ -670,10 +675,15 @@ export function usePreviousCandleFilters(opts: {
       const key = `${row.source}:${row.symbol}`;
       return (
         previousPPMomentumBIncludedSymbols.has(key) &&
-        !previousPPConsolidateBIncludedSymbols.has(key)
+        !previousPPConsolidateBIncludedSymbols.has(key) &&
+        !previousPPConsolidateAIncludedSymbols.has(key)
       );
     },
-    [previousPPMomentumBIncludedSymbols, previousPPConsolidateBIncludedSymbols],
+    [
+      previousPPMomentumBIncludedSymbols,
+      previousPPConsolidateBIncludedSymbols,
+      previousPPConsolidateAIncludedSymbols,
+    ],
   );
   const hasPPVolatileR1S1 = useCallback(
     (row: CandleBucketRow) => {

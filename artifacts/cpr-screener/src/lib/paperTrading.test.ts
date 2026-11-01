@@ -54,6 +54,8 @@ import {
   formatUpexFailureNote,
   savePreviousUpexResults,
   upexSessionStartUtcMs,
+  countConsolidateZoneCandles,
+  pickExclusiveConsolidateSide,
 } from "./15MCandleCheck.ts";
 import {
   matchesCandleCheck,
@@ -2057,4 +2059,28 @@ test("sessionR4OrS4Hit: PASS when high/price reaches R4 or low/price reaches S4,
   assert.equal(sessionR4OrS4Hit({ currentPrice: 150, todayCPR: {} }), null);
   assert.equal(sessionR4OrS4Hit({ currentPrice: NaN, todayHigh: NaN, todayLow: NaN, todayCPR: cpr }), null);
   assert.equal(sessionR4OrS4Hit({ todayCPR: { r4: NaN, s4: NaN }, currentPrice: 999 }), null);
+});
+
+test("CON-A vs CON-B exclusive side follows zone candle majority when both pass", () => {
+  const MIN15 = 15 * 60 * 1000;
+  const start = Date.UTC(2026, 9, 31);
+  const now = start + 24 * 4 * MIN15;
+  // BC 100, ceiling max(R1,PH) 120, TC 102, floor min(S1,PL) 80.
+  const mk = (i: number, open: number, close: number) => ({
+    open, close, high: Math.max(open, close) + 1, low: Math.min(open, close) - 1,
+    volume: 1, openTime: start + i * MIN15,
+  });
+  // Midpoints: 110, 112 (zone A only), 90 (zone B only), 101 (both: inside CPR).
+  const candles = [mk(0, 109, 111), mk(1, 111, 113), mk(2, 89, 91), mk(3, 100, 102)];
+  const z = countConsolidateZoneCandles(candles, 100, 120, 102, 80, start, now);
+  assert.deepEqual(z, { zoneA: 3, zoneB: 2 });
+  assert.equal(pickExclusiveConsolidateSide(true, true, z.zoneA, z.zoneB), "A");
+  assert.equal(pickExclusiveConsolidateSide(true, true, 1, 4), "B");
+  assert.equal(pickExclusiveConsolidateSide(true, true, 2, 2), "A"); // tie -> A
+  assert.equal(pickExclusiveConsolidateSide(false, true, 5, 0), "B"); // only B passes
+  assert.equal(pickExclusiveConsolidateSide(true, false, 0, 5), "A"); // only A passes
+  assert.equal(pickExclusiveConsolidateSide(false, false, 3, 3), null);
+  // Still-forming candle and non-finite levels are ignored.
+  assert.deepEqual(countConsolidateZoneCandles([mk(95, 110, 110)], 100, 120, 102, 80, start, start + 95 * MIN15 + 1), { zoneA: 0, zoneB: 0 });
+  assert.deepEqual(countConsolidateZoneCandles(candles, NaN, 120, 102, 80, start, now), { zoneA: 0, zoneB: 0 });
 });

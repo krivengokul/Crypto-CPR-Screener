@@ -76,6 +76,71 @@ export type CprRelation = "inside" | "overlap-above" | "overlap-below" | "none";
  * and the Pattern Statistics diagnosis all read it so they cannot drift.
  * Returns "none" when `base` is missing or not finite.
  */
+
+/**
+ * Count completed 15m candles whose body midpoint sits in the CON-A vs CON-B
+ * narrative zones (exclusive label when both filters pass):
+ *   CON-A zone: [BC, max(R1,PH)]
+ *   CON-B zone: [min(S1,PL), TC]
+ * A candle can count in both when zones overlap (inside CPR).
+ */
+export function countConsolidateZoneCandles(
+  candles: OHLC[],
+  bc: number,
+  ceiling: number,
+  tc: number,
+  floor: number,
+  startTime: number,
+  now: number,
+): { zoneA: number; zoneB: number } {
+  let zoneA = 0;
+  let zoneB = 0;
+  if (
+    !Number.isFinite(bc) ||
+    !Number.isFinite(ceiling) ||
+    !Number.isFinite(tc) ||
+    !Number.isFinite(floor)
+  ) {
+    return { zoneA: 0, zoneB: 0 };
+  }
+  const completed = candles
+    .filter(
+      (c) =>
+        Number.isFinite(c.openTime) &&
+        c.openTime >= startTime &&
+        c.openTime + CANDLE_INTERVAL_MS <= now &&
+        Number.isFinite(c.open) &&
+        Number.isFinite(c.close),
+    )
+    .sort((a, b) => a.openTime - b.openTime);
+  for (const c of completed) {
+    const mid = (c.open + c.close) / 2;
+    if (mid >= bc && mid <= ceiling) zoneA += 1;
+    if (mid >= floor && mid <= tc) zoneB += 1;
+  }
+  return { zoneA, zoneB };
+}
+
+/**
+ * Exclusive CON side when one or both session filters pass.
+ * Both pass → more body midpoints in that zone; tie → CON-A.
+ */
+export function pickExclusiveConsolidateSide(
+  conAPass: boolean,
+  conBPass: boolean,
+  zoneA = 0,
+  zoneB = 0,
+): "A" | "B" | null {
+  if (conAPass && conBPass) {
+    if (zoneB > zoneA) return "B";
+    return "A";
+  }
+  if (conBPass) return "B";
+  if (conAPass) return "A";
+  return null;
+}
+
+
 export function cprRelation(
   cur: { tc: number; bc: number },
   base?: { tc: number; bc: number } | null

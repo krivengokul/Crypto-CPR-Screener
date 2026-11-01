@@ -47,7 +47,7 @@ export function joinCandleCheck(pp: string, p: string): string {
 }
 
 /**
- * Exclusive buckets aligned with Screener `candleBucket` priority for P-codes.
+ * Exclusive buckets aligned with Screener `candleBucket`. When both CON-A and CON-B pass, CON-A is the exclusive P label (zone majority; tie → A).
  * PPCA / PPCB / PPMA / PPMB are independent of P-buckets (AND when combined via "+").
  */
 export function matchesCandleCheck(r: CPRResult, code: string): boolean {
@@ -69,11 +69,13 @@ export function matchesCandleCheck(r: CPRResult, code: string): boolean {
   const ppInside = r.PD15MPPInsideR1S1Pass === true;
   switch (raw) {
     case "CB":
-      return conB;
+      // Exclusive B only when A did not also pass (zone tie-break prefers A).
+      return conB && !conA;
     case "MB":
-      return momB && !conB;
+      return momB && !conB && !conA;
     case "CA":
-      return conA && !conB;
+      // A wins exclusive label when both CON-A and CON-B pass (zone majority / tie → A).
+      return conA;
     case "MA":
       return momA && !conA && !conB;
     case "VR":
@@ -81,12 +83,12 @@ export function matchesCandleCheck(r: CPRResult, code: string): boolean {
     case "INSIDE":
       return inside && !conA && !conB;
     case "PPCB":
-      return ppB;
+      return ppB && !ppA;
     case "PPMB":
-      return ppMomB && !ppB;
+      return ppMomB && !ppB && !ppA;
     case "PPCA":
-      // Exclusive: A only when B did not pass (same as CA vs CB).
-      return ppA && !ppB;
+      // PP-A wins when both PP-CON sides pass (mirrors CA).
+      return ppA;
     case "PPMA":
       // Mirror MA: momentum exclusive of both PP-CON sides.
       return ppMomA && !ppA && !ppB;
@@ -129,17 +131,22 @@ export function candleCheckFromRow(r: CPRResult): string {
   const momA = r.PD15MAboveBCPass === true;
   const momB = r.PD15MMomentumBPass === true;
   const inside = r.PD15MInsideR1S1Pass === true;
+  // When both CON-A and CON-B pass, exclusive label is CON-A (zone majority
+  // without candle data defaults to A; PatternStats uses live zone counts).
   let p = "";
-  if (conB) p = "CB";
+  if (conA && conB) p = "CA";
+  else if (conB) p = "CB";
   else if (momB) p = "MB";
   else if (conA) p = "CA";
   else if (momA) p = "MA";
   else if (inside) p = "VR";
-  // Exclusive PP: CON-B > MOM-B > CON-A > MOM-A (mirrors P-day priority).
+  const ppA = r.PD15MPPConsolidateAPass === true;
+  const ppB = r.PD15MPPConsolidateBPass === true;
   let pp = "";
-  if (r.PD15MPPConsolidateBPass === true) pp = "PPCB";
+  if (ppA && ppB) pp = "PPCA";
+  else if (ppB) pp = "PPCB";
   else if (r.PD15MPPMomentumBPass === true) pp = "PPMB";
-  else if (r.PD15MPPConsolidateAPass === true) pp = "PPCA";
+  else if (ppA) pp = "PPCA";
   else if (r.PD15MPPMomentumAPass === true) pp = "PPMA";
   else if (r.PD15MPPInsideR1S1Pass === true) pp = "PPVR";
   return joinCandleCheck(pp, p);
