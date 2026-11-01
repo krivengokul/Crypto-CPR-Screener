@@ -41,6 +41,8 @@ import {
   findPD15MBelowTCPass,
   findPreviousConsolidateAPass,
   passesInsideR1S1Filter,
+  explainInsideR1S1Failure,
+  formatInsideR1S1FailureNote,
   cprRelation,
 } from "@/lib/15MCandleCheck";
 import { passesPattern, computeInnerLevelPattern, INNER_LEVEL_PATTERN_KEYS, normalizeViewDirection, getChartUrl, openChartInNewTab, type ViewDirection } from "./ScreenerUtils";
@@ -1537,18 +1539,34 @@ function PreviousDaySection() {
 
       // P-VOLATILE-R1S1: all completed 15m wicks stay inside max(R1,PH)–min(S1,PL).
       const insideRaw = passesInsideR1S1Filter(candles, floor, ceiling, prevStart, now);
+      const insideFail =
+        insideRaw === false
+          ? explainInsideR1S1Failure(candles, floor, ceiling, prevStart, now)
+          : null;
       const insideR1S1: PrevDayCheckBlock =
         insideRaw === true
           ? {
               pass: true,
               label: "PASS",
-              detail: `P-VOLATILE-R1S1: every completed 15m candle stayed inside the band floor ${floor} – ceiling ${ceiling} (min S1/PL – max R1/PH).`,
+              detail: `P-VOLATILE-R1S1: every completed 15m candle stayed inside min(S1,PL) ${floor} – max(R1,PH) ${ceiling}.`,
             }
           : insideRaw === false
             ? {
                 pass: false,
                 label: "FAIL",
-                detail: `P-VOLATILE-R1S1: at least one completed 15m candle wicked outside floor ${floor} – ceiling ${ceiling}.`,
+                detail: insideFail
+                  ? formatInsideR1S1FailureNote(insideFail)
+                  : `P-VOLATILE-R1S1: at least one completed 15m candle wicked outside min(S1,PL) ${floor} – max(R1,PH) ${ceiling}.`,
+                failCandleNumber: insideFail?.candleNumber ?? null,
+                failSide: insideFail
+                  ? insideFail.brokeCeiling && insideFail.brokeFloor
+                    ? "both"
+                    : insideFail.brokeCeiling
+                      ? "ceiling"
+                      : "floor"
+                  : null,
+                failHigh: insideFail?.high ?? null,
+                failLow: insideFail?.low ?? null,
               }
             : {
                 pass: false,
@@ -1648,11 +1666,35 @@ function PreviousDaySection() {
                   detail: `PP-VOLATILE-R1S1: every PP-day 15m candle stayed inside floor ${ppFloor} – ceiling ${ppCeiling}.`,
                 }
               : ppInsideRaw === false
-                ? {
-                    pass: false,
-                    label: "FAIL",
-                    detail: `PP-VOLATILE-R1S1: at least one PP-day candle wicked outside floor ${ppFloor} – ceiling ${ppCeiling}.`,
-                  }
+                ? (() => {
+                    const ppFail = explainInsideR1S1Failure(
+                      ppCandles,
+                      ppFloor,
+                      ppCeiling,
+                      ppStart,
+                      ppEnd,
+                    );
+                    return {
+                      pass: false as const,
+                      label: "FAIL",
+                      detail: ppFail
+                        ? formatInsideR1S1FailureNote(ppFail).replace(
+                            "P-VOLATILE-R1S1",
+                            "PP-VOLATILE-R1S1",
+                          )
+                        : `PP-VOLATILE-R1S1 FAIL outside min(S1,PL) ${ppFloor} – max(R1,PH) ${ppCeiling}.`,
+                      failCandleNumber: ppFail?.candleNumber ?? null,
+                      failSide: ppFail
+                        ? ppFail.brokeCeiling && ppFail.brokeFloor
+                          ? ("both" as const)
+                          : ppFail.brokeCeiling
+                            ? ("ceiling" as const)
+                            : ("floor" as const)
+                        : null,
+                      failHigh: ppFail?.high ?? null,
+                      failLow: ppFail?.low ?? null,
+                    };
+                  })()
                 : {
                     pass: false,
                     label: "NO DATA",
@@ -2017,16 +2059,21 @@ function PreviousDaySection() {
               {
                 key: "insideR1S1" as const,
                 title: "P-VOLATILE-R1S1",
-                levels: `floor ${result.levels.floor} · ceiling ${result.levels.ceiling}`,
+                levels: `min(S1,PL) ${result.levels.floor} · max(R1,PH) ${result.levels.ceiling}`,
                 tonePass: "border-violet-500/30 bg-violet-500/5",
                 textPass: "text-violet-300",
-                levelType: "BC" as const,
+                levelType: "BAND" as const,
               },
             ] as const
           ).map(({ key, title, levels, tonePass, textPass, levelType }) => {
             const block = result[key];
             const ok = block.pass === true;
-            const candleMatches = levelType === "TC" ? result.tcCandles : result.bcCandles;
+            const isBand = levelType === "BAND";
+            const candleMatches = isBand
+              ? []
+              : levelType === "TC"
+                ? result.tcCandles
+                : result.bcCandles;
             const levelLabel = levelType === "TC" ? result.levels.tcName : "BC";
             const levelVal = levelType === "TC" ? result.levels.conBTc : result.levels.conABc;
             return (
@@ -2053,6 +2100,34 @@ function PreviousDaySection() {
                 )}
                 <div className="mt-1 text-[11px] leading-relaxed text-slate-300">{block.detail}</div>
 
+                {isBand ? (
+                  !ok && block.failCandleNumber != null ? (
+                    <div className="mt-2.5 pt-2 border-t border-slate-700/40 flex flex-wrap items-center gap-1.5 text-[11px]">
+                      <span className="text-slate-400 font-mono text-[10px] uppercase">
+                        Failed candle
+                      </span>
+                      <span
+                        className="inline-flex items-center px-1.5 py-0.5 rounded font-mono text-[10px] border bg-rose-500/15 text-rose-300 border-rose-400/40"
+                        title={
+                          block.failSide === "ceiling"
+                            ? `High ${block.failHigh} > max(R1,PH)`
+                            : block.failSide === "floor"
+                              ? `Low ${block.failLow} < min(S1,PL)`
+                              : `Broke both sides of the band`
+                        }
+                      >
+                        #{block.failCandleNumber}
+                        {block.failSide === "ceiling"
+                          ? " · above max(R1,PH)"
+                          : block.failSide === "floor"
+                            ? " · below min(S1,PL)"
+                            : block.failSide === "both"
+                              ? " · above R1/PH & below S1/PL"
+                              : ""}
+                      </span>
+                    </div>
+                  ) : null
+                ) : (
                 <div className="mt-2.5 pt-2 border-t border-slate-700/40 flex flex-wrap items-center gap-1.5 text-[11px]">
                   <span className="text-slate-400 font-mono text-[10px] uppercase">
                     Candles touching {levelLabel} ({levelVal}):
@@ -2080,6 +2155,8 @@ function PreviousDaySection() {
                     </span>
                   )}
                 </div>
+                )}
+
               </div>
             );
           })}

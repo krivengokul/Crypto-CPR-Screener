@@ -1859,6 +1859,77 @@ export function passesInsideR1S1Filter(
   return true;
 }
 
+/** Why INSIDE / P-VOLATILE failed — first 15m candle that wicked outside the band. */
+export type InsideR1S1Failure = {
+  candleNumber: number;
+  openTime: number;
+  high: number;
+  low: number;
+  /** Crossed above max(R1, PH) */
+  brokeCeiling: boolean;
+  /** Crossed below min(S1, PL) */
+  brokeFloor: boolean;
+  floor: number;
+  ceiling: number;
+};
+
+export function explainInsideR1S1Failure(
+  candles: OHLC[],
+  floor: number,
+  ceiling: number,
+  startTime: number,
+  now: number,
+): InsideR1S1Failure | null {
+  if (!Number.isFinite(floor) || !Number.isFinite(ceiling) || floor > ceiling) return null;
+  const completed = candles
+    .filter(
+      (candle) =>
+        Number.isFinite(candle.openTime) &&
+        candle.openTime >= startTime &&
+        candle.openTime + CANDLE_INTERVAL_MS <= now &&
+        Number.isFinite(candle.open) &&
+        Number.isFinite(candle.close) &&
+        Number.isFinite(candle.low) &&
+        Number.isFinite(candle.high),
+    )
+    .sort((a, b) => a.openTime - b.openTime);
+  if (completed.length === 0) return null;
+
+  for (let i = 0; i < completed.length; i++) {
+    const candle = completed[i];
+    const brokeCeiling = candle.high > ceiling;
+    const brokeFloor = candle.low < floor;
+    if (brokeCeiling || brokeFloor) {
+      return {
+        candleNumber: Math.floor((candle.openTime - startTime) / CANDLE_INTERVAL_MS) + 1,
+        openTime: candle.openTime,
+        high: candle.high,
+        low: candle.low,
+        brokeCeiling,
+        brokeFloor,
+        floor,
+        ceiling,
+      };
+    }
+  }
+  return null;
+}
+
+export function formatInsideR1S1FailureNote(f: InsideR1S1Failure): string {
+  const parts: string[] = [];
+  if (f.brokeCeiling) {
+    parts.push(`high ${f.high} > ceiling max(R1,PH) ${f.ceiling}`);
+  }
+  if (f.brokeFloor) {
+    parts.push(`low ${f.low} < floor min(S1,PL) ${f.floor}`);
+  }
+  return (
+    `P-VOLATILE-R1S1 FAIL: candle #${f.candleNumber} wicked outside the band — ` +
+    parts.join("; ") +
+    `.`
+  );
+}
+
 /**
  * Batch scan for INSIDE-R1S1. Candidates must carry floor + ceiling
  * (getPrevious15MBFloor / getPrevious15MACeiling). `candidate.bc` is unused
