@@ -300,7 +300,14 @@ function exclusivePDayBadge(r: CPRResult | undefined | null): {
     };
   }
 
-  return null;
+  // No exclusive P bucket (CON/MOM/INSIDE) — residual label, only for rows whose
+  // 15m flags were computed (CoinDCX rows never get them, so they show nothing).
+  if (r.PD15MInsideR1S1Pass === undefined) return null;
+  return {
+    text: "P-VOLATILE ✗",
+    className: "font-mono text-xs font-bold uppercase tracking-widest",
+    style: { color: "#ff637e" },
+  };
 }
 
 
@@ -358,7 +365,13 @@ function exclusivePPDayBadge(r: CPRResult | undefined | null): {
     };
   }
 
-  return null;
+  // No exclusive PP bucket — residual label (same guard: unscanned rows show nothing).
+  if (r.PD15MPPInsideR1S1Pass === undefined) return null;
+  return {
+    text: "PP-VOLATILE ✗",
+    className: "font-mono text-xs font-bold uppercase tracking-widest",
+    style: { color: "#ff637e" },
+  };
 }
 
 function getCategoryForViewId(id: string): string {

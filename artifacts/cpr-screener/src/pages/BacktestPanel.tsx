@@ -399,7 +399,11 @@ function ppDayBadgeFromFlags(raw: CPRResult): {
         : "PPDay 15m inside R1/PH–S1/PL but (prev, pp) CPR is not TOUCH",
     };
   }
-  return null;
+  return {
+    label: "PP-VOLATILE ✗",
+    color: "#ff637e",
+    title: "No exclusive PP-CON / PP-MOM / PP-VOLATILE-R1S1 bucket for this row",
+  };
 }
 
 function renderCandleCheckBadges(raw: CPRResult) {
@@ -422,9 +426,15 @@ function renderCandleCheckBadges(raw: CPRResult) {
 
   if (!bucket) {
     const ppBadge = ppDayBadgeFromFlags(raw);
-    if (!conBFailureLine && !ppBadge) return null;
     return (
       <div className="mt-1 flex flex-col gap-0.5">
+        <div
+          className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
+          style={{ color: "#ff637e" }}
+          title="No exclusive P-CON / P-MOM / P-VOLATILE-R1S1 bucket for this row"
+        >
+          P-VOLATILE ✗
+        </div>
         {ppBadge && (
           <div
             className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"

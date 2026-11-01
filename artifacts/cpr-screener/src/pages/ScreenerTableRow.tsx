@@ -1454,7 +1454,17 @@ function ScreenerTableRow({
                 </div>
               );
             }
-            return null;
+            // Residual only for rows whose 15m flags were computed (CoinDCX rows never get them).
+            if (r.PD15MPPInsideR1S1Pass === undefined) return null;
+            return (
+              <div
+                className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
+                style={{ color: "#ff637e" }}
+                title="No exclusive PP-CON / PP-MOM / PP-VOLATILE-R1S1 bucket"
+              >
+                PP-VOLATILE ✗
+              </div>
+            );
           })()}
           {showConsolidateB && (
             <div
@@ -1491,6 +1501,20 @@ function ScreenerTableRow({
               {r.touchCategory ? "P-VOLATILE-R1S1" : "P-VOLATILE-R1S1 ✗"}
             </div>
           )}
+          {r.PD15MInsideR1S1Pass !== undefined &&
+            !showInsideR1S1 &&
+            !showConsolidateA &&
+            !showConsolidateB &&
+            !showMomentumA &&
+            !showMomentumB && (
+              <div
+                className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
+                style={{ color: "#ff637e" }}
+                title="No exclusive P-CON / P-MOM / P-VOLATILE-R1S1 bucket"
+              >
+                P-VOLATILE ✗
+              </div>
+            )}
 
           {/* Live current-session failed-break flags: "2/3" = 3 levels pierced,
               price back inside 2 of them. Support side sky-blue, resistance orange. */}
