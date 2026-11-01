@@ -99,6 +99,45 @@ export function livePriceCrossedBoundary(
 }
 
 /**
+ * Session R4 / S4 extreme reached — independent of Views.
+ * PASS when today's high (or last price) is at/above R4, or low (or last price) at/below S4.
+ */
+export function sessionReachedR4OrS4(r: {
+  currentPrice?: number;
+  todayHigh?: number;
+  todayLow?: number;
+  todayCPR?: { r4?: number; s4?: number } | null;
+}): boolean {
+  return sessionR4OrS4Hit(r) !== null;
+}
+
+/** Which extreme was hit (both possible). */
+export function sessionR4OrS4Hit(r: {
+  currentPrice?: number;
+  todayHigh?: number;
+  todayLow?: number;
+  todayCPR?: { r4?: number; s4?: number } | null;
+}): "R4" | "S4" | "R4+S4" | null {
+  const r4 = r.todayCPR?.r4;
+  const s4 = r.todayCPR?.s4;
+  const hi = r.todayHigh;
+  const lo = r.todayLow;
+  const px = r.currentPrice;
+  const hitR4 =
+    Number.isFinite(r4) &&
+    ((Number.isFinite(hi) && (hi as number) >= (r4 as number)) ||
+      (Number.isFinite(px) && (px as number) >= (r4 as number)));
+  const hitS4 =
+    Number.isFinite(s4) &&
+    ((Number.isFinite(lo) && (lo as number) <= (s4 as number)) ||
+      (Number.isFinite(px) && (px as number) <= (s4 as number)));
+  if (hitR4 && hitS4) return "R4+S4";
+  if (hitR4) return "R4";
+  if (hitS4) return "S4";
+  return null;
+}
+
+/**
  * Has the target been reached at any point this session? True if the live
  * price is at/through the target OR today's session high (Up) / low (Down)
  * got there. Without the session extreme, a coin that hit the target and then
@@ -107,6 +146,7 @@ export function livePriceCrossedBoundary(
  * cached before they were stored) this behaves exactly like
  * livePriceReachedTarget.
  */
+
 export function sessionReachedTarget(
   direction: string,
   target: number,

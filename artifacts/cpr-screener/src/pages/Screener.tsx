@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo, Fragment, type Dispa
 import { pivotcategories, Views, VIEW_LABEL_BY_ID } from "@/lib/ViewsSidebar";
 import { getView, VIEWS } from "@/lib/views";
 import { hasTouchedEntry } from "@/lib/signalTracker";
-import { sessionReachedTarget } from "@/lib/signalOutcome";
+import { sessionReachedTarget, sessionReachedR4OrS4 } from "@/lib/signalOutcome";
 import {
   TrendingUp,
   RefreshCw,
@@ -178,6 +178,9 @@ function getRowStatus(r: CPRResult): {
   let ready = false;
   let pass = false;
   let fail = false;
+  // R4 / S4 session extreme — PASS even with no matching View.
+  if (sessionReachedR4OrS4(r)) pass = true;
+
   for (const v of getMatchingSignals(r)) {
     const view = getView(v.id);
     const entryFn = view?.getEntry;

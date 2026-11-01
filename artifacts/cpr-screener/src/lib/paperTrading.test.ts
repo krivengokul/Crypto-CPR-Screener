@@ -9,6 +9,8 @@ import { gradeTargetHit } from "./backtestOutcome.ts";
 import type { OHLC } from "./cpr.ts";
 import { analyzeCPR, getCompoundPatternForCprPair } from "./cpr.ts";
 import {
+  sessionR4OrS4Hit,
+  sessionReachedR4OrS4,
   evaluateSignalCandles,
   livePriceCrossedBoundary,
   livePriceReachedTarget,
@@ -1945,4 +1947,28 @@ test("passesInsideR1S1Filter uses the whole candle (wick), not the body", () => 
   // No usable completed candles / bad band -> null.
   assert.equal(passesInsideR1S1Filter([], floor, ceiling, start, now), null);
   assert.equal(passesInsideR1S1Filter([mk(0, 100, 105, 95, 102)], 120, 110, start, now), null);
+});
+
+test("sessionR4OrS4Hit: PASS when high/price reaches R4 or low/price reaches S4, no View needed", () => {
+  const cpr = { r4: 120, s4: 80 };
+  // Neither reached.
+  assert.equal(sessionR4OrS4Hit({ currentPrice: 100, todayHigh: 110, todayLow: 90, todayCPR: cpr }), null);
+  assert.equal(sessionReachedR4OrS4({ currentPrice: 100, todayHigh: 110, todayLow: 90, todayCPR: cpr }), false);
+  // R4 via session high (price has since retraced).
+  assert.equal(sessionR4OrS4Hit({ currentPrice: 100, todayHigh: 120, todayLow: 95, todayCPR: cpr }), "R4");
+  // R4 via current price alone (no session high stored).
+  assert.equal(sessionR4OrS4Hit({ currentPrice: 121, todayCPR: cpr }), "R4");
+  // S4 via session low, and via price alone.
+  assert.equal(sessionR4OrS4Hit({ currentPrice: 100, todayHigh: 105, todayLow: 79.5, todayCPR: cpr }), "S4");
+  assert.equal(sessionR4OrS4Hit({ currentPrice: 80, todayCPR: cpr }), "S4");
+  // Both extremes in one session.
+  assert.equal(sessionR4OrS4Hit({ currentPrice: 100, todayHigh: 125, todayLow: 75, todayCPR: cpr }), "R4+S4");
+  assert.equal(sessionReachedR4OrS4({ currentPrice: 100, todayHigh: 125, todayLow: 75, todayCPR: cpr }), true);
+  // Exactly at the level counts (>= / <=).
+  assert.equal(sessionR4OrS4Hit({ currentPrice: 120, todayCPR: cpr }), "R4");
+  // Missing / non-finite data never passes.
+  assert.equal(sessionR4OrS4Hit({ currentPrice: 150, todayCPR: null }), null);
+  assert.equal(sessionR4OrS4Hit({ currentPrice: 150, todayCPR: {} }), null);
+  assert.equal(sessionR4OrS4Hit({ currentPrice: NaN, todayHigh: NaN, todayLow: NaN, todayCPR: cpr }), null);
+  assert.equal(sessionR4OrS4Hit({ todayCPR: { r4: NaN, s4: NaN }, currentPrice: 999 }), null);
 });

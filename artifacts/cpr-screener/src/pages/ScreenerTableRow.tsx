@@ -1,7 +1,7 @@
 import { Fragment, memo } from "react";
 import { ExternalLink, CheckCircle2, XCircle, Tag } from "lucide-react";
 import { hasTouchedEntry } from "@/lib/signalTracker";
-import { sessionReachedTarget } from "@/lib/signalOutcome";
+import { sessionReachedTarget, sessionR4OrS4Hit } from "@/lib/signalOutcome";
 import type { CPRResult } from "@/lib/cpr";
 import type { ReclaimSideState } from "@/lib/15MCandleCheck";
 import { getView } from "@/lib/views";
@@ -1190,8 +1190,19 @@ function ScreenerTableRow({
                   </span>
                 )}
               </div>
-              {/* STATUS badge (same compact style as Legend Card 3) under symbol — exchange label removed. */}
+              {/* STATUS badge under symbol. R4/S4 session extreme = PASS even with no View. */}
               {(() => {
+                const r4s4 = sessionR4OrS4Hit(r);
+                if (r4s4) {
+                  return (
+                    <span
+                      className="mt-0.5 inline-flex w-fit shrink-0 items-center rounded border border-emerald-500/50 bg-emerald-500/15 px-1 py-0 text-[9px] font-mono font-semibold leading-tight text-emerald-400"
+                      title={`Session reached ${r4s4} (today high/low or last price)`}
+                    >
+                      PASS · {r4s4}
+                    </span>
+                  );
+                }
                 const preferred =
                   (activeSignal && matchingSignals.find((m) => m.id === activeSignal)) ||
                   matchingSignals.find((m) => getView(m.id)?.getEntry) ||

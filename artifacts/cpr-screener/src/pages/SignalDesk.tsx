@@ -18,6 +18,7 @@ import {
   persistLiveJournalOutcome,
   type LoggedSignal,
 } from "@/lib/signalTracker";
+import { sessionR4OrS4Hit } from "@/lib/signalOutcome";
 import {
   resolveSignalStatus,
   type SignalLifecycleStatus,
@@ -758,10 +759,9 @@ const SignalDeskCard = memo(
                 </strong>
               </div>
             )}
-            {item.isSaved &&
-              (item.journalStatus === "PASS" ||
-                item.journalStatus === "FAIL" ||
-                item.isTriggered) && (
+            {(item.journalStatus === "PASS" ||
+              item.journalStatus === "FAIL" ||
+              (item.isSaved && item.isTriggered)) && (
               <div className="flex items-center gap-1">
                 <span>Status:</span>
                 <strong
@@ -1154,7 +1154,7 @@ export default function SignalDesk({
           ? hasTouchedEntry(levels.direction, levels.price, sym.currentPrice)
           : false;
         const rowForSession = resultsBySymbol.get(sym.symbol) ?? matchedRow;
-        const journalStatus = levels
+        let journalStatus = levels
           ? resolveCardStatus(
               rawJournalStatus,
               levels.direction,
@@ -1166,6 +1166,17 @@ export default function SignalDesk({
               rowForSession?.todayLow,
             )
           : rawJournalStatus;
+        // R4 / S4 session extreme → PASS (any symbol / View).
+        if (
+          sessionR4OrS4Hit(
+            rowForSession ?? {
+              currentPrice: sym.currentPrice,
+              todayCPR: { r4: sym.r4, s4: sym.s4 },
+            },
+          )
+        ) {
+          journalStatus = "PASS";
+        }
         // Active/Pass/Fail = not pure Ready
         const isTriggered =
           priceTouched ||
@@ -1302,7 +1313,7 @@ export default function SignalDesk({
       const priceTouched = levels
         ? hasTouchedEntry(levels.direction, levels.price, r.currentPrice)
         : false;
-      const journalStatus = levels
+      let journalStatus = levels
         ? resolveCardStatus(
             rawJournalStatus,
             levels.direction,
@@ -1314,6 +1325,9 @@ export default function SignalDesk({
             r.todayLow,
           )
         : rawJournalStatus;
+      if (sessionR4OrS4Hit(r)) {
+        journalStatus = "PASS";
+      }
       const isTriggered =
         priceTouched ||
         journalStatus === "ACTIVE" ||
