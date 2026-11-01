@@ -1136,7 +1136,8 @@ function ScreenerTableRow({
     <Fragment key={rowKey}>
       <tr
         id={`sc-row-${r.source}-${r.symbol.toUpperCase()}`}
-        className={`hover:bg-muted/20 transition-colors ${dir ? "bg-accent/3" : ""} ${
+        data-screener-row
+      className={`hover:bg-muted/20 transition-colors ${dir ? "bg-accent/3" : ""} ${
           isFocused
             ? "ring-1 ring-inset ring-sky-500/70 bg-sky-500/10"
             : ""

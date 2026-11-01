@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { getView, shortLevelLabel } from "@/lib/views";
+import { VIEW_LABEL_BY_ID } from "@/lib/ViewsSidebar";
 import { buildBacktestOptions } from "@/lib/backtest";
 import {
   chartLinkRecordsFromLocalCache,
@@ -241,7 +242,7 @@ function ViewCamerasCard({ viewKey }: { viewKey: string }) {
     return <div className="text-[11px] text-muted-foreground">Select a category or View</div>;
   }
   const view = getView(viewKey);
-  const name = view?.label || viewKey;
+  const name = view?.label || VIEW_LABEL_BY_ID[viewKey] || viewKey;
   const nameColor =
     view?.direction === "Up"
       ? "text-emerald-400"
@@ -331,7 +332,8 @@ function SelectedViewTradeCard({
   status?: "pass" | "fail" | "active" | "ready" | null;
 }) {
   const view = activeSignal ? getView(activeSignal) : undefined;
-  if (!activeSignal) {
+  // Symbol row focus works even with no matching View / empty left-nav signal.
+  if (!activeSignal && !symbol) {
     return (
       <div className="text-[11px] text-muted-foreground">
         Select a View in the left nav to see entry, target, and stoploss.
@@ -339,8 +341,8 @@ function SelectedViewTradeCard({
     );
   }
 
-  const name = view?.label || activeSignal;
-  const code = view?.key || activeSignal;
+  const name = view?.label || activeSignal || "—";
+  const code = view?.key || activeSignal || "—";
   const direction = view?.direction;
   const entryLvl = shortLevelLabel(view?.entryLabel) || view?.entryLabel || "—";
   const targetLvl = shortLevelLabel(view?.targetLabel) || view?.targetLabel || "—";
@@ -364,7 +366,7 @@ function SelectedViewTradeCard({
               <div className="text-xs font-bold font-mono text-white leading-tight truncate" title={symbol}>
                 {symbol}
               </div>
-              <StatusBadge status={status} isDown={isDown} />
+              <StatusBadge status={status ?? "ready"} isDown={isDown} />
             </div>
           ) : (
             <div className={`text-[11px] font-semibold leading-tight truncate ${dirColor}`} title={name}>
@@ -404,11 +406,15 @@ function SelectedViewTradeCard({
           <strong className="font-mono text-rose-400">{stopLvl}</strong>
         </span>
       </div>
-      {!view?.getEntry && !view?.getTarget && (
+      {symbol && !view ? (
+        <div className="text-[10px] text-muted-foreground">
+          No matching View — category / levels from left nav when available.
+        </div>
+      ) : !view?.getEntry && !view?.getTarget && activeSignal ? (
         <div className="text-[10px] text-muted-foreground">
           This View has no entry/target defined in the registry.
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -436,6 +442,8 @@ const PPDAY_COLORS: Record<string, string> = {
 /** True when Card 2 has nothing useful to show (hide the whole panel). */
 function isEmptyFocusToast(ft?: ScreenerLegendFocusToast | null): boolean {
   if (!ft) return true;
+  // Row selection is enough (Card 2/3) even when the symbol matches no View.
+  if (ft.symbol && ft.symbol.trim()) return false;
   const noCode = !ft.signalCode || ft.signalCode === "—";
   const noPDay = !ft.pDayText || ft.pDayText === "—";
   const noMatch = !ft.matchText || ft.matchText === "—";
@@ -524,6 +532,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
 
   return (
     <div
+      data-screener-legend
       className={`grid grid-cols-1 gap-2 mb-3 ${
         showFocusCard ? "sm:grid-cols-3" : "sm:grid-cols-2"
       }`}

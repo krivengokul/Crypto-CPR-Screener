@@ -431,6 +431,23 @@ export default function Screener({
   /** Row key highlighted after click / search / toast focus. */
   const [focusedRowKey, setFocusedRowKey] = useState<string | null>(null);
 
+  // Click outside a result row (and outside the legend) clears row selection + Card 2/3 focus.
+  useEffect(() => {
+    if (!focusedRowKey && !legendToastFocus) return;
+    const onPointerDown = (e: PointerEvent) => {
+      const el = e.target as Element | null;
+      if (!el || typeof el.closest !== "function") return;
+      if (el.closest("[data-screener-row]")) return;
+      if (el.closest("[data-screener-legend]")) return;
+      if (el.closest("input, textarea, select, button, a, [role='dialog']")) return;
+      setFocusedRowKey(null);
+      setLegendToastFocus(null);
+    };
+    document.addEventListener("pointerdown", onPointerDown, true);
+    return () => document.removeEventListener("pointerdown", onPointerDown, true);
+  }, [focusedRowKey, legendToastFocus]);
+
+
 
   const toggleExpand = useCallback((key: string) => {
     setExpandedSymbols((prev) => {
@@ -931,11 +948,16 @@ export default function Screener({
   const handleRowFocus = useCallback(
     (row: CPRResultWithSource) => {
       // Legend-only focus: don't switch the left-nav View or leave Show All.
+      // Prefer a matching View; otherwise still focus the symbol with category context
+      // so Card 1 (category) + Card 3 (symbol + status) fill even with no View match.
       const viewId = pickPrimaryMatchingViewId(
         row,
         activeSectionKey || activeSignal || "",
       );
-      applyLegendFocus(row, viewId || activeSectionKey || activeSignal || "");
+      applyLegendFocus(
+        row,
+        viewId || activeSectionKey || activeSignal || "",
+      );
     },
     [activeSectionKey, activeSignal, applyLegendFocus],
   );
