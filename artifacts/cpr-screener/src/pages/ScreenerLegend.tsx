@@ -40,6 +40,11 @@ export interface ScreenerLegendFocusToast {
   matchText: string;
   /** Per-symbol trade status for the focused View (same as STATUS column). */
   status?: "pass" | "fail" | "active" | "ready" | null;
+  /**
+   * Session R4/S4 extreme (same as Screener symbol cell). When set, Card 3
+   * shows PASS · R4 / PASS · S4 instead of a generic Pass/Ready badge.
+   */
+  sessionExtreme?: "R4" | "S4" | "R4+S4" | null;
 }
 
 export interface ScreenerLegendProps {
@@ -271,7 +276,53 @@ function ViewCamerasCard({ viewKey }: { viewKey: string }) {
  * hardcoded bias/time copy with a compact trade sheet: name, code, direction,
  * entry / target / stoploss level labels from the View registry.
  */
-function StatusBadge({ status, isDown }: { status?: "pass" | "fail" | "active" | "ready" | null; isDown?: boolean }) {
+function SessionExtremeBadge({ extreme }: { extreme: "R4" | "S4" | "R4+S4" }) {
+  if (extreme === "R4+S4") {
+    return (
+      <span className="inline-flex w-fit items-center gap-0.5">
+        <span
+          className="inline-flex shrink-0 items-center rounded border border-emerald-500/50 bg-emerald-500/15 px-1 py-0 text-[9px] font-mono font-semibold leading-tight text-emerald-400"
+          title="Session reached R4"
+        >
+          PASS · R4
+        </span>
+        <span
+          className="inline-flex shrink-0 items-center rounded border border-[#ff6bb5]/50 bg-[#ff6bb5]/15 px-1 py-0 text-[9px] font-mono font-semibold leading-tight text-[#ff6bb5]"
+          title="Session reached S4"
+        >
+          PASS · S4
+        </span>
+      </span>
+    );
+  }
+  const isS4 = extreme === "S4";
+  return (
+    <span
+      className={`inline-flex shrink-0 items-center rounded border px-1 py-0 text-[9px] font-mono font-semibold leading-tight ${
+        isS4
+          ? "border-[#ff6bb5]/50 bg-[#ff6bb5]/15 text-[#ff6bb5]"
+          : "border-emerald-500/50 bg-emerald-500/15 text-emerald-400"
+      }`}
+      title={`Session reached ${extreme}`}
+    >
+      PASS · {extreme}
+    </span>
+  );
+}
+
+function StatusBadge({
+  status,
+  isDown,
+  sessionExtreme,
+}: {
+  status?: "pass" | "fail" | "active" | "ready" | null;
+  isDown?: boolean;
+  sessionExtreme?: "R4" | "S4" | "R4+S4" | null;
+}) {
+  // Same priority as Screener symbol cell: R4/S4 extreme wins over View status.
+  if (sessionExtreme) {
+    return <SessionExtremeBadge extreme={sessionExtreme} />;
+  }
   if (!status) return null;
   if (status === "pass") {
     return (
@@ -326,10 +377,12 @@ function SelectedViewTradeCard({
   activeSignal,
   symbol,
   status,
+  sessionExtreme,
 }: {
   activeSignal: string;
   symbol?: string;
   status?: "pass" | "fail" | "active" | "ready" | null;
+  sessionExtreme?: "R4" | "S4" | "R4+S4" | null;
 }) {
   const view = activeSignal ? getView(activeSignal) : undefined;
   // Symbol row focus works even with no matching View / empty left-nav signal.
@@ -366,7 +419,11 @@ function SelectedViewTradeCard({
               <div className="text-xs font-bold font-mono text-white leading-tight truncate" title={symbol}>
                 {symbol}
               </div>
-              <StatusBadge status={status ?? "ready"} isDown={isDown} />
+              <StatusBadge
+                status={sessionExtreme ? "pass" : (status ?? "ready")}
+                isDown={isDown}
+                sessionExtreme={sessionExtreme}
+              />
             </div>
           ) : (
             <div className={`text-[11px] font-semibold leading-tight truncate ${dirColor}`} title={name}>
@@ -555,6 +612,7 @@ export default function ScreenerLegend(props: ScreenerLegendProps) {
           activeSignal={shownView}
           symbol={focusToast?.symbol}
           status={focusToast?.status}
+          sessionExtreme={focusToast?.sessionExtreme}
         />
       </div>
     </div>

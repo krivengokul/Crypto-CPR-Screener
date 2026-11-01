@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo, Fragment, type Dispa
 import { pivotcategories, Views, VIEW_LABEL_BY_ID } from "@/lib/ViewsSidebar";
 import { getView, VIEWS } from "@/lib/views";
 import { hasTouchedEntry } from "@/lib/signalTracker";
-import { sessionReachedTarget, sessionReachedR4OrS4 } from "@/lib/signalOutcome";
+import { sessionReachedTarget, sessionReachedR4OrS4, sessionR4OrS4Hit } from "@/lib/signalOutcome";
 import {
   TrendingUp,
   RefreshCw,
@@ -726,6 +726,15 @@ export default function Screener({
           matchText = `${ladder.matchingCount}/${ladder.total}`;
         }
       }
+      // Same as Screener symbol cell: R4/S4 session extreme wins over View status.
+      const sessionExtreme =
+        row.todayCPR || row.currentPrice !== undefined
+          ? sessionR4OrS4Hit(row as CPRResult)
+          : null;
+      const viewStatus =
+        patternId && row.prevCPR && row.todayCPR
+          ? safeSignalStatus(row, patternId)
+          : null;
       setLegendToastFocus({
         symbol: row.symbol,
         source: row.source,
@@ -734,11 +743,8 @@ export default function Screener({
         pDayText,
         ppDayText,
         matchText,
-        // Status needs the full CPR levels; bare legend rows (symbol+source only) get none.
-        status:
-          patternId && row.prevCPR && row.todayCPR
-            ? safeSignalStatus(row, patternId)
-            : null,
+        status: sessionExtreme ? "pass" : viewStatus,
+        sessionExtreme: sessionExtreme ?? null,
       });
       if (row.source && row.symbol) {
         setFocusedRowKey(`${row.source}-${row.symbol}-${utcTodayISO()}`);
@@ -775,6 +781,7 @@ export default function Screener({
         pDayText: "—",
         matchText: "—",
         status: null,
+        sessionExtreme: null,
       });
     }
     // Do not depend on allResults*: live price ticks would re-run this every poll.

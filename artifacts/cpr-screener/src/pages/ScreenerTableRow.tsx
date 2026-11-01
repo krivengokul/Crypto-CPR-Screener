@@ -1195,9 +1195,34 @@ function ScreenerTableRow({
               {(() => {
                 const r4s4 = sessionR4OrS4Hit(r);
                 if (r4s4) {
+                  // PASS · R4 stays emerald; PASS · S4 uses bright pink (Down extreme).
+                  const badgeClass =
+                    r4s4 === "S4"
+                      ? "border-[#ff6bb5]/50 bg-[#ff6bb5]/15 text-[#ff6bb5]"
+                      : r4s4 === "R4"
+                        ? "border-emerald-500/50 bg-emerald-500/15 text-emerald-400"
+                        : "border-[#ff6bb5]/40 bg-[#ff6bb5]/10 text-[#ff6bb5]"; // R4+S4: pink frame
+                  if (r4s4 === "R4+S4") {
+                    return (
+                      <span className="mt-0.5 inline-flex w-fit items-center gap-0.5">
+                        <span
+                          className="inline-flex shrink-0 items-center rounded border border-emerald-500/50 bg-emerald-500/15 px-1 py-0 text-[9px] font-mono font-semibold leading-tight text-emerald-400"
+                          title="Session reached R4 (today high/low or last price)"
+                        >
+                          PASS · R4
+                        </span>
+                        <span
+                          className="inline-flex shrink-0 items-center rounded border border-[#ff6bb5]/50 bg-[#ff6bb5]/15 px-1 py-0 text-[9px] font-mono font-semibold leading-tight text-[#ff6bb5]"
+                          title="Session reached S4 (today high/low or last price)"
+                        >
+                          PASS · S4
+                        </span>
+                      </span>
+                    );
+                  }
                   return (
                     <span
-                      className="mt-0.5 inline-flex w-fit shrink-0 items-center rounded border border-emerald-500/50 bg-emerald-500/15 px-1 py-0 text-[9px] font-mono font-semibold leading-tight text-emerald-400"
+                      className={`mt-0.5 inline-flex w-fit shrink-0 items-center rounded border px-1 py-0 text-[9px] font-mono font-semibold leading-tight ${badgeClass}`}
                       title={`Session reached ${r4s4} (today high/low or last price)`}
                     >
                       PASS · {r4s4}
