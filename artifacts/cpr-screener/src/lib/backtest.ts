@@ -23,11 +23,12 @@ import {
 import { gradeTargetHit } from "./backtestOutcome";
 import {
   findPD15MBelowTCPass,
-  findPreviousConsolidateAPass,
+  findPreviousConsolidateAPassWithZone,
   findInsideR1S1Pass,
   findPreviousUpexPass,
   getPrevious15MACeiling,
   getConsolidateABc,
+  pickExclusiveConsolidateSide,
   getConsolidateBTc,
   getPD15MBelowTCFailureNote,
   getPD15MBelowTCPassNote,
@@ -1846,6 +1847,10 @@ async function populateAllPFilterFlags(
     Number.isFinite(pp.prevHigh) &&
     Number.isFinite(pp.prevLow);
 
+  // Zone midpoint counts come back with the CON-A passes (in memory, per call).
+  let pZone: { zoneA: number; zoneB: number } | null = null;
+  let ppZone: { zoneA: number; zoneB: number } | null = null;
+
   const [
     consolidateA,
     momentumA,
@@ -1858,16 +1863,21 @@ async function populateAllPFilterFlags(
     ppMomentumB,
     ppInsideR1S1,
   ] = await Promise.all([
-    findPreviousConsolidateAPass(
+    findPreviousConsolidateAPassWithZone(
       {
         symbol,
         source,
         bc: getConsolidateABc(prevCPR, result.ppCPR),
         ceiling,
         r2: prevCPR.r2,
+        floor,
+        tc: getConsolidateBTc(prevCPR, result.ppCPR),
       },
       sessionStart,
-    ),
+    ).then((res) => {
+      pZone = res.zone;
+      return res.pass;
+    }),
     findPreviousUpexPass(
       // MOMENTUM-A uses the same BC as CON-A: PDay BC, or PPDay BC when PDay
       // was Overlap-Above / Inside vs PPDay (see getConsolidateABc).
@@ -1895,16 +1905,21 @@ async function populateAllPFilterFlags(
       sessionStart,
     ),
     ppHasLevels
-      ? findPreviousConsolidateAPass(
+      ? findPreviousConsolidateAPassWithZone(
           {
             symbol,
             source,
             bc: getConsolidateABc(pp, result.pppCPR ?? null),
             ceiling: getPrevious15MACeiling(pp),
             r2: pp.r2,
+            floor: getPrevious15MBFloor(pp),
+            tc: getConsolidateBTc(pp, result.pppCPR ?? null),
           },
           ppNow,
-        )
+        ).then((res) => {
+          ppZone = res.zone;
+          return res.pass;
+        })
       : Promise.resolve(false),
     ppHasLevels
       ? findPD15MBelowTCPass(
@@ -1957,6 +1972,24 @@ async function populateAllPFilterFlags(
   result.PD15MPPMomentumAPass = ppMomentumA === true;
   result.PD15MPPMomentumBPass = ppMomentumB === true;
   result.PD15MPPInsideR1S1Pass = ppInsideR1S1 === true;
+
+  // Zone-majority exclusive side (zone counts returned by the CON-A passes above).
+  {
+    const pz = pZone as { zoneA: number; zoneB: number } | null;
+    const ppz = ppZone as { zoneA: number; zoneB: number } | null;
+    result.PD15MConsolidateExclusive = pickExclusiveConsolidateSide(
+      consolidateA === true,
+      consolidateB === true,
+      pz?.zoneA ?? 0,
+      pz?.zoneB ?? 0,
+    );
+    result.PD15MPPConsolidateExclusive = pickExclusiveConsolidateSide(
+      ppConsolidateA === true,
+      ppConsolidateB === true,
+      ppz?.zoneA ?? 0,
+      ppz?.zoneB ?? 0,
+    );
+  }
 
   // Why CON-B didn't pass. If MOM-B (TC rule only) also failed, that's the
   // blocking reason; otherwise CON-B failed on the floor / S2 rule.

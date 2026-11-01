@@ -256,34 +256,36 @@ function exclusivePDayBadge(r: CPRResult | undefined | null): {
   const momA = r.PD15MAboveBCPass === true;
   const momB = r.PD15MMomentumBPass === true;
   const inside = r.PD15MInsideR1S1Pass === true;
-  if (conB) {
+  // Zone-majority stamp when both CON-A and CON-B pass (same as Screener candleBucket).
+  const exclusiveConB = conB && (!conA || r.PD15MConsolidateExclusive === "B");
+  const exclusiveConA = conA && (!conB || r.PD15MConsolidateExclusive !== "B");
+  if (exclusiveConB) {
     return {
       text: "P-CONSOLIDATE-B",
       className: "font-mono text-xs font-bold uppercase tracking-widest text-[#ff6bb5]",
       style: { color: "#ff6bb5" },
     };
   }
-  if (momB) {
+  if (momB && !conA && !conB) {
     return {
       text: "P-MOMENTUM-B",
       className: "font-mono text-xs font-bold uppercase tracking-widest text-violet-400",
     };
   }
-  if (conA) {
+  if (exclusiveConA) {
     return {
       text: "P-CONSOLIDATE-A",
       className: "font-mono text-xs font-bold uppercase tracking-widest",
       style: { color: "#03b07c" },
     };
   }
-  if (momA) {
+  if (momA && !conA && !conB) {
     return {
       text: "P-MOMENTUM-A",
       className: "font-mono text-xs font-bold uppercase tracking-widest text-cyan-400",
     };
   }
-  if (inside) {
-    // TOUCH category: lime, no ✗. All other categories: coral with ✗.
+  if (inside && !conA && !conB) {
     if (r.touchCategory) {
       return {
         text: "P-VOLATILE-R1S1",
@@ -297,6 +299,7 @@ function exclusivePDayBadge(r: CPRResult | undefined | null): {
       style: { color: "#ff637e" },
     };
   }
+
   return null;
 }
 
@@ -307,44 +310,54 @@ function exclusivePPDayBadge(r: CPRResult | undefined | null): {
   style?: CSSProperties;
 } | null {
   if (!r) return null;
-  // Same exclusive order as Screener: B > MOM-B > A > MOM-A > VOLATILE
   const conB = r.PD15MPPConsolidateBPass === true;
   const momB = r.PD15MPPMomentumBPass === true;
   const conA = r.PD15MPPConsolidateAPass === true;
   const momA = r.PD15MPPMomentumAPass === true;
   const inside = r.PD15MPPInsideR1S1Pass === true;
-  if (conB) {
+  const exclusiveConB = conB && (!conA || r.PD15MPPConsolidateExclusive === "B");
+  const exclusiveConA = conA && (!conB || r.PD15MPPConsolidateExclusive !== "B");
+  if (exclusiveConB) {
     return {
       text: "PP-CONSOLIDATE-B",
       className: "font-mono text-xs font-bold uppercase tracking-widest",
       style: { color: "#f472b6" },
     };
   }
-  if (momB) {
+  if (momB && !conA && !conB) {
     return {
       text: "PP-MOMENTUM-B",
       className: "font-mono text-xs font-bold uppercase tracking-widest text-violet-400",
     };
   }
-  if (conA) {
+  if (exclusiveConA) {
     return {
       text: "PP-CONSOLIDATE-A",
       className: "font-mono text-xs font-bold uppercase tracking-widest",
       style: { color: "#f472b6" },
     };
   }
-  if (momA) {
+  if (momA && !conA && !conB) {
     return {
       text: "PP-MOMENTUM-A",
       className: "font-mono text-xs font-bold uppercase tracking-widest text-cyan-400",
     };
   }
-  if (inside) {
+  if (inside && !conA && !conB) {
+    if (r.ppTouchCategory) {
+      return {
+        text: "PP-VOLATILE-R1S1",
+        className: "font-mono text-xs font-bold uppercase tracking-widest",
+        style: { color: "#a3e635" },
+      };
+    }
     return {
-      text: "PP-VOLATILE-R1S1",
-      className: "font-mono text-xs font-bold uppercase tracking-widest text-fuchsia-300",
+      text: "PP-VOLATILE-R1S1 ✗",
+      className: "font-mono text-xs font-bold uppercase tracking-widest",
+      style: { color: "#ff637e" },
     };
   }
+
   return null;
 }
 

@@ -335,6 +335,10 @@ function candleBucketFromFlags(
   const momA = raw.PD15MAboveBCPass === true;
   const momB = raw.PD15MMomentumBPass === true;
   const inside = raw.PD15MInsideR1S1Pass === true;
+  // Zone-majority stamp when both pass (same as Screener); missing stamp → A.
+  if (conA && conB) {
+    return raw.PD15MConsolidateExclusive === "B" ? "consolidate-b" : "consolidate-a";
+  }
   if (conB) return "consolidate-b";
   if (momB) return "momentum-b";
   if (conA) return "consolidate-a";
@@ -344,7 +348,7 @@ function candleBucketFromFlags(
 }
 
 
-/** PP-day exclusive badge priority: CON-B > MOM-B > CON-A > MOM-A > VOLATILE. */
+/** PP-day exclusive badge: zone stamp when both CON sides pass (same as Screener). */
 function ppDayBadgeFromFlags(raw: CPRResult): {
   label: string;
   color: string;
@@ -355,28 +359,30 @@ function ppDayBadgeFromFlags(raw: CPRResult): {
   const ppA = raw.PD15MPPConsolidateAPass === true;
   const ppMomA = raw.PD15MPPMomentumAPass === true;
   const ppInside = raw.PD15MPPInsideR1S1Pass === true;
-  if (ppB) {
+  const exclusiveB = ppB && (!ppA || raw.PD15MPPConsolidateExclusive === "B");
+  const exclusiveA = ppA && (!ppB || raw.PD15MPPConsolidateExclusive !== "B");
+  if (exclusiveB) {
     return {
       label: "PP-CONSOLIDATE-B",
       color: "#f472b6",
-      title: "CONSOLIDATE-B rules on PPDay (exclusive over PP-MOM-B / PP-CON-A / PP-MOM-A)",
+      title: "CONSOLIDATE-B rules on PPDay (zone exclusive when both CON sides pass)",
     };
   }
-  if (ppMomB) {
+  if (ppMomB && !ppA && !ppB) {
     return {
       label: "PP-MOMENTUM-B",
       color: "#a78bfa",
       title: "MOMENTUM-B rules on PPDay (TC only); exclusive of PP-CONSOLIDATE-B",
     };
   }
-  if (ppA) {
+  if (exclusiveA) {
     return {
       label: "PP-CONSOLIDATE-A",
       color: "#2dd4bf",
-      title: "CONSOLIDATE-A rules on PPDay (only when PP-B / PP-MOM-B did not take priority)",
+      title: "CONSOLIDATE-A rules on PPDay (zone exclusive when both CON sides pass)",
     };
   }
-  if (ppMomA) {
+  if (ppMomA && !ppA && !ppB) {
     return {
       label: "PP-MOMENTUM-A",
       color: "#22d3ee",

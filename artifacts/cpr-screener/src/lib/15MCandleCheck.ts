@@ -1296,14 +1296,21 @@ async function findSymbolsForSession(
     floor?: number,
     expansionLevel?: number,
   ) => boolean | null = passesUpexFilter,
-  zoneCache: "p" | "pp" | "none" = "none",
+  /**
+   * "p" / "pp": persist zone scores to the live localStorage zone cache.
+   * "memory": compute and return them in `zones` only (backtest: many sessions
+   * run concurrently, so they must never touch the single-session live cache).
+   */
+  zoneCache: "p" | "pp" | "memory" | "none" = "none",
 ): Promise<{
   included: Set<string>;
   unavailable: number;
   outcomes: Map<string, boolean | null>;
+  zones: Map<string, ConsolidateZoneScore>;
 }> {
   const included = new Set<string>();
   const outcomes = new Map<string, boolean | null>();
+  const zones = new Map<string, ConsolidateZoneScore>();
   let unavailable = 0;
 
   for (let offset = 0; offset < candidates.length; offset += MAX_CONCURRENT_REQUESTS) {
@@ -1359,9 +1366,12 @@ async function findSymbolsForSession(
       outcomes.set(symbolKey, passes);
       if (passes === true) included.add(symbolKey);
       else if (passes === null) unavailable++;
-      if (zone) zoneBatch.set(symbolKey, zone);
+      if (zone) {
+        zoneBatch.set(symbolKey, zone);
+        zones.set(symbolKey, zone);
+      }
     }
-    if (zoneCache !== "none") {
+    if (zoneCache === "p" || zoneCache === "pp") {
       mergeAndSaveZoneScores(
         zoneCache === "pp"
           ? PREVIOUS_15M_PP_CONSOLIDATE_ZONE_CACHE_KEY
@@ -1373,7 +1383,7 @@ async function findSymbolsForSession(
     onProgress?.(Math.min(offset + batch.length, candidates.length), candidates.length);
   }
 
-  return { included, unavailable, outcomes };
+  return { included, unavailable, outcomes, zones };
 }
 
 export interface PreviousUpexScanResults {
@@ -2532,12 +2542,14 @@ export function findPreviousUpexPass(
  */
 export function findPreviousConsolidateAPass(
   candidate: UpexCandidate,
-  now: number
+  now: number,
+  /** Write zone midpoint scores into P or PP zone cache (default P-day). */
+  zoneCache: "p" | "pp" | "none" = "p",
 ): Promise<boolean | null> {
   const endTime = upexSessionStartUtcMs(now);
   const startTime = previousUpexSessionStartUtcMs(now);
   const key =
-    `${startTime}:${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.ceiling}:${candidate.r2}`;
+    `${startTime}:${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.ceiling}:${candidate.r2}:${zoneCache}`;
   const cached = previousConsolidateAPassCache.get(key);
   if (cached) return cached;
 
@@ -2547,6 +2559,7 @@ export function findPreviousConsolidateAPass(
     endTime,
     undefined,
     passesUpexFilter,
+    zoneCache,
   ).then(
     ({ included, unavailable }) => {
       if (unavailable > 0) {
@@ -2565,6 +2578,60 @@ export function findPreviousConsolidateAPass(
     }
   );
   previousConsolidateAPassCache.set(key, request);
+  return request;
+}
+
+export interface ConsolidateAPassWithZone {
+  pass: boolean | null;
+  /** Body-midpoint zone counts for the session, or null when floor/tc were not supplied. */
+  zone: ConsolidateZoneScore | null;
+}
+
+const previousConsolidateAZonePassCache = new Map<string, Promise<ConsolidateAPassWithZone>>();
+
+/**
+ * CON-A pass + zone midpoint counts for one symbol/session, entirely in memory
+ * (no localStorage). Used by the backtest: it evaluates many sessions in
+ * parallel, so it can neither share the live single-session zone cache nor
+ * read scores back from it. `candidate` must carry floor + tc for a zone.
+ */
+export function findPreviousConsolidateAPassWithZone(
+  candidate: UpexCandidate,
+  now: number,
+): Promise<ConsolidateAPassWithZone> {
+  const endTime = upexSessionStartUtcMs(now);
+  const startTime = previousUpexSessionStartUtcMs(now);
+  const symbolKey = `${candidate.source}:${candidate.symbol}`;
+  const key =
+    `${startTime}:${symbolKey}:${candidate.bc}:${candidate.ceiling}:${candidate.r2}:${candidate.floor}:${candidate.tc}`;
+  const cached = previousConsolidateAZonePassCache.get(key);
+  if (cached) return cached;
+
+  const request = findSymbolsForSession(
+    [candidate],
+    startTime,
+    endTime,
+    undefined,
+    passesUpexFilter,
+    "memory",
+  ).then(
+    ({ included, unavailable, zones }): ConsolidateAPassWithZone => {
+      if (unavailable > 0) {
+        previousConsolidateAZonePassCache.delete(key);
+        return { pass: null, zone: null };
+      }
+      if (previousConsolidateAZonePassCache.size > MAX_PREVIOUS_UPEX_CACHE_ENTRIES) {
+        const oldestKey = previousConsolidateAZonePassCache.keys().next().value;
+        if (oldestKey) previousConsolidateAZonePassCache.delete(oldestKey);
+      }
+      return { pass: included.has(symbolKey), zone: zones.get(symbolKey) ?? null };
+    },
+    (error: unknown) => {
+      previousConsolidateAZonePassCache.delete(key);
+      throw error;
+    },
+  );
+  previousConsolidateAZonePassCache.set(key, request);
   return request;
 }
 

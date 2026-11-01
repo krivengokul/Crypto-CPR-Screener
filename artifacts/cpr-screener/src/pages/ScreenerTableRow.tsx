@@ -1010,7 +1010,9 @@ function ScreenerTableRow({
     showMomentumA = !showInsideR1S1 && isMomentumA === true;
     showMomentumB = !showInsideR1S1 && isMomentumB === true;
   } else if (rawConA && rawConB) {
-    showInsideR1S1 = true;
+    // Zone-majority stamp (same as candleBucket); missing → A.
+    if (r.PD15MConsolidateExclusive === "B") showConsolidateB = true;
+    else showConsolidateA = true;
   } else if (rawConB) {
     showConsolidateB = true;
   } else if (rawMomB) {
@@ -1019,6 +1021,8 @@ function ScreenerTableRow({
     showConsolidateA = true;
   } else if (rawMomA) {
     showMomentumA = true;
+  } else if (r.PD15MInsideR1S1Pass === true) {
+    showInsideR1S1 = true;
   }
   // Hoisted so the same up/down call drives both the per-row dot in the
   // Symbol column AND the new "Levels VIEW" name badge below — one row
@@ -1371,12 +1375,20 @@ function ScreenerTableRow({
           )}
           {/* PP exclusive: B wins over A when both raw flags pass (same as P CON-B > CON-A). */}
           {(() => {
-            const showPPB = isPPConsolidateB === true || (isPPConsolidateB === undefined && rawPPConB);
-            const showPPMomB = !showPPB && isPPMomentumB === true;
-            const showPPA =
-              !showPPB &&
-              !showPPMomB &&
-              (isPPConsolidateA === true || (isPPConsolidateA === undefined && rawPPConA));
+            // PP exclusive: props from Screener when set; else zone stamp on dual raw pass.
+            let showPPB = false;
+            let showPPA = false;
+            if (isPPConsolidateB !== undefined || isPPConsolidateA !== undefined) {
+              showPPB = isPPConsolidateB === true;
+              showPPA = !showPPB && isPPConsolidateA === true;
+            } else if (rawPPConA && rawPPConB) {
+              showPPB = r.PD15MPPConsolidateExclusive === "B";
+              showPPA = !showPPB;
+            } else {
+              showPPB = rawPPConB;
+              showPPA = !showPPB && rawPPConA;
+            }
+            const showPPMomB = !showPPB && !showPPA && isPPMomentumB === true;
             const showPPMomA = !showPPB && !showPPMomB && !showPPA && isPPMomentumA === true;
             const showPPVol =
               !showPPB &&
