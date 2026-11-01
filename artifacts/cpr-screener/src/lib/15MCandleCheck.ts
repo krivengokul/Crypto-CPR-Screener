@@ -16,8 +16,8 @@ const PREVIOUS_15M_PP_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_pp_consolidate
 const PREVIOUS_15M_PP_CONSOLIDATE_B_CACHE_KEY = "cpr_previous_15m_pp_consolidate_b_results_v6";
 const PREVIOUS_15M_PP_MOMENTUM_A_CACHE_KEY = "cpr_previous_15m_pp_momentum_a_results_v1";
 const PREVIOUS_15M_PP_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_pp_momentum_b_results_v1";
-const PREVIOUS_15M_PP_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_pp_inside_r1s1_results_v2";
-const PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_inside_r1s1_results_v4";
+const PREVIOUS_15M_PP_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_pp_inside_r1s1_results_v3";
+const PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_inside_r1s1_results_v5";
 
 export interface UpexCandidate {
   symbol: string;
@@ -1811,20 +1811,43 @@ export function savePD15MMomentumBelowResults(
 
 /**
  * INSIDE-R1S1 / P-VOLATILE-R1S1 / PP-VOLATILE-R1S1 — previous session stays
- * inside max(R1, PH) … min(S1, PL).
+ * inside max(R1, PH) … min(S1, PL) using the **same reference-candle logic as CON**.
  *
- * Independent of CON-A / CON-B (those use BC/TC). Uses the full candle range
- * (high/low), same whole-candle idea as CON floor/ceiling fails:
+ * Levels (fixed for the session):
+ *   floor   = min(S1, PL)   — wick-span on this line sets the floor reference
+ *   ceiling = max(R1, PH)   — wick-span on this line sets the ceiling reference
  *
- *   Fail when any completed 15m candle has:
- *     • high > ceiling (max of R1, PH), OR
- *     • low < floor (min of S1, PL).
+ * 1. Full-session refs:
+ *    - refFloorLow    = min low  among candles with low ≤ floor ≤ high
+ *    - refCeilingHigh = max high among candles with low ≤ ceiling ≤ high
+ * 2. Fail (whole candle beyond the *reference wick*, same as CON):
+ *    - high < floor  AND high < refFloorLow   (or no floor ref but candle fully below floor)
+ *    - low  > ceiling AND low  > refCeilingHigh (or no ceiling ref but candle fully above ceiling)
  *
- * Wick beyond the band fails; body-only inside with wick outside no longer passes.
- * When CON/MOM all fail but this band holds, exclusive bucketing assigns INSIDE-R1S1.
+ * A soft wick through the level that still leaves high ≥ refFloorLow (or low ≤ refCeilingHigh)
+ * does **not** fail — that is the CON reference relaxation.
  *
  * Returns null when there are no usable completed candles.
  */
+function completedInsideSessionCandles(
+  candles: OHLC[],
+  startTime: number,
+  now: number,
+): OHLC[] {
+  return candles
+    .filter(
+      (candle) =>
+        Number.isFinite(candle.openTime) &&
+        candle.openTime >= startTime &&
+        candle.openTime + CANDLE_INTERVAL_MS <= now &&
+        Number.isFinite(candle.open) &&
+        Number.isFinite(candle.close) &&
+        Number.isFinite(candle.low) &&
+        Number.isFinite(candle.high),
+    )
+    .sort((a, b) => a.openTime - b.openTime);
+}
+
 export function passesInsideR1S1Filter(
   candles: OHLC[],
   floor: number,
@@ -1835,42 +1858,62 @@ export function passesInsideR1S1Filter(
   if (!Number.isFinite(floor) || !Number.isFinite(ceiling)) return null;
   if (floor > ceiling) return null;
 
-  const completed = candles
-    .filter(
-      (candle) =>
-        Number.isFinite(candle.openTime) &&
-        candle.openTime >= startTime &&
-        candle.openTime + CANDLE_INTERVAL_MS <= now &&
-        Number.isFinite(candle.open) &&
-        Number.isFinite(candle.close) &&
-        Number.isFinite(candle.low) &&
-        Number.isFinite(candle.high),
-    )
-    .sort((a, b) => a.openTime - b.openTime);
+  const completed = completedInsideSessionCandles(candles, startTime, now);
   if (completed.length === 0) return null;
 
+  // Full-session floor ref: min low among wick-spanning floor (min S1/PL).
+  let refFloorLow: number | null = null;
   for (const candle of completed) {
-    // Whole candle must stay inside the band (wick range, not body only).
-    if (candle.high > ceiling || candle.low < floor) {
-      return false;
+    if (candle.low <= floor && candle.high >= floor) {
+      if (refFloorLow === null || candle.low < refFloorLow) refFloorLow = candle.low;
     }
   }
+
+  // Full-session ceiling ref: max high among wick-spanning ceiling (max R1/PH).
+  let refCeilingHigh: number | null = null;
+  for (const candle of completed) {
+    if (candle.low <= ceiling && candle.high >= ceiling) {
+      if (refCeilingHigh === null || candle.high > refCeilingHigh) {
+        refCeilingHigh = candle.high;
+      }
+    }
+  }
+
+  let sawBelowFloor = false;
+  let sawAboveCeiling = false;
+
+  for (const candle of completed) {
+    // Fully below floor line → test against session floor reference.
+    if (candle.high < floor) {
+      sawBelowFloor = true;
+      if (refFloorLow !== null && candle.high < refFloorLow) return false;
+    }
+    // Fully above ceiling line → test against session ceiling reference.
+    if (candle.low > ceiling) {
+      sawAboveCeiling = true;
+      if (refCeilingHigh !== null && candle.low > refCeilingHigh) return false;
+    }
+  }
+
+  // No spanning ref but candles fully outside the level → fail (same as CON).
+  if (refFloorLow === null && sawBelowFloor) return false;
+  if (refCeilingHigh === null && sawAboveCeiling) return false;
 
   return true;
 }
 
-/** Why INSIDE / P-VOLATILE failed — first 15m candle that wicked outside the band. */
+/** Why INSIDE / P-VOLATILE failed under CON-style reference rules. */
 export type InsideR1S1Failure = {
   candleNumber: number;
   openTime: number;
   high: number;
   low: number;
-  /** Crossed above max(R1, PH) */
   brokeCeiling: boolean;
-  /** Crossed below min(S1, PL) */
   brokeFloor: boolean;
   floor: number;
   ceiling: number;
+  refFloorLow: number | null;
+  refCeilingHigh: number | null;
 };
 
 export function explainInsideR1S1Failure(
@@ -1881,52 +1924,100 @@ export function explainInsideR1S1Failure(
   now: number,
 ): InsideR1S1Failure | null {
   if (!Number.isFinite(floor) || !Number.isFinite(ceiling) || floor > ceiling) return null;
-  const completed = candles
-    .filter(
-      (candle) =>
-        Number.isFinite(candle.openTime) &&
-        candle.openTime >= startTime &&
-        candle.openTime + CANDLE_INTERVAL_MS <= now &&
-        Number.isFinite(candle.open) &&
-        Number.isFinite(candle.close) &&
-        Number.isFinite(candle.low) &&
-        Number.isFinite(candle.high),
-    )
-    .sort((a, b) => a.openTime - b.openTime);
+  const completed = completedInsideSessionCandles(candles, startTime, now);
   if (completed.length === 0) return null;
 
-  for (let i = 0; i < completed.length; i++) {
-    const candle = completed[i];
-    const brokeCeiling = candle.high > ceiling;
-    const brokeFloor = candle.low < floor;
-    if (brokeCeiling || brokeFloor) {
-      return {
-        candleNumber: Math.floor((candle.openTime - startTime) / CANDLE_INTERVAL_MS) + 1,
-        openTime: candle.openTime,
-        high: candle.high,
-        low: candle.low,
-        brokeCeiling,
-        brokeFloor,
-        floor,
-        ceiling,
-      };
+  let refFloorLow: number | null = null;
+  for (const candle of completed) {
+    if (candle.low <= floor && candle.high >= floor) {
+      if (refFloorLow === null || candle.low < refFloorLow) refFloorLow = candle.low;
     }
   }
+  let refCeilingHigh: number | null = null;
+  for (const candle of completed) {
+    if (candle.low <= ceiling && candle.high >= ceiling) {
+      if (refCeilingHigh === null || candle.high > refCeilingHigh) {
+        refCeilingHigh = candle.high;
+      }
+    }
+  }
+
+  let firstBelow: OHLC | null = null;
+  let firstAbove: OHLC | null = null;
+
+  for (const candle of completed) {
+    if (candle.high < floor) {
+      if (!firstBelow) firstBelow = candle;
+      if (
+        (refFloorLow !== null && candle.high < refFloorLow) ||
+        refFloorLow === null
+      ) {
+        return {
+          candleNumber: Math.floor((candle.openTime - startTime) / CANDLE_INTERVAL_MS) + 1,
+          openTime: candle.openTime,
+          high: candle.high,
+          low: candle.low,
+          brokeCeiling: false,
+          brokeFloor: true,
+          floor,
+          ceiling,
+          refFloorLow,
+          refCeilingHigh,
+        };
+      }
+    }
+    if (candle.low > ceiling) {
+      if (!firstAbove) firstAbove = candle;
+      if (
+        (refCeilingHigh !== null && candle.low > refCeilingHigh) ||
+        refCeilingHigh === null
+      ) {
+        return {
+          candleNumber: Math.floor((candle.openTime - startTime) / CANDLE_INTERVAL_MS) + 1,
+          openTime: candle.openTime,
+          high: candle.high,
+          low: candle.low,
+          brokeCeiling: true,
+          brokeFloor: false,
+          floor,
+          ceiling,
+          refFloorLow,
+          refCeilingHigh,
+        };
+      }
+    }
+  }
+
+  // passesInside would have returned true; no failure to explain.
   return null;
 }
 
 export function formatInsideR1S1FailureNote(f: InsideR1S1Failure): string {
   const parts: string[] = [];
-  if (f.brokeCeiling) {
-    parts.push(`high ${f.high} > ceiling max(R1,PH) ${f.ceiling}`);
-  }
   if (f.brokeFloor) {
-    parts.push(`low ${f.low} < floor min(S1,PL) ${f.floor}`);
+    if (f.refFloorLow === null) {
+      parts.push(
+        `high ${f.high} fully below floor min(S1,PL) ${f.floor} (no floor reference candle in session)`,
+      );
+    } else {
+      parts.push(
+        `high ${f.high} below floor min(S1,PL) ${f.floor} under low-wick reference ${f.refFloorLow}`,
+      );
+    }
+  }
+  if (f.brokeCeiling) {
+    if (f.refCeilingHigh === null) {
+      parts.push(
+        `low ${f.low} fully above ceiling max(R1,PH) ${f.ceiling} (no ceiling reference candle in session)`,
+      );
+    } else {
+      parts.push(
+        `low ${f.low} above ceiling max(R1,PH) ${f.ceiling} over high-wick reference ${f.refCeilingHigh}`,
+      );
+    }
   }
   return (
-    `P-VOLATILE-R1S1 FAIL: candle #${f.candleNumber} wicked outside the band — ` +
-    parts.join("; ") +
-    `.`
+    `P-VOLATILE-R1S1 FAIL: candle #${f.candleNumber} — ` + parts.join("; ") + `.`
   );
 }
 
