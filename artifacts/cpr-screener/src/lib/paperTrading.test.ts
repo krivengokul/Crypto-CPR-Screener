@@ -1254,7 +1254,8 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     cpr_previous_15m_consolidate_a_results_v11: "x",
     cpr_previous_15m_consolidate_a_results_v15: "x",
     cpr_previous_15m_consolidate_a_results_v16: "x",
-    cpr_previous_15m_consolidate_a_results_v17: "keep",
+    cpr_previous_15m_consolidate_a_results_v17: "x",
+    cpr_previous_15m_consolidate_a_results_v18: "keep",
     cpr_previous_15m_momentum_b_results_v1: "x",
     cpr_previous_15m_momentum_b_results_v2: "x",
     cpr_previous_15m_momentum_b_results_v3: "x",
@@ -1272,10 +1273,10 @@ test("pruneLegacy15MResultCaches removes only superseded cache versions", () => 
     }),
   });
   try {
-    assert.equal(pruneLegacy15MResultCaches(), 45);
+    assert.equal(pruneLegacy15MResultCaches(), 46);
     assert.deepEqual(Object.keys(store).sort(), [
       "cpr_previous_15m_b_results_v6",
-      "cpr_previous_15m_consolidate_a_results_v17",
+      "cpr_previous_15m_consolidate_a_results_v18",
       "cpr_previous_15m_momentum_b_results_v7",
       "cpr_previous_15m_tc_b_results_v14",
       "cpr_previous_upex_results_v15",
@@ -2083,4 +2084,45 @@ test("CON-A vs CON-B exclusive side follows zone candle majority when both pass"
   // Still-forming candle and non-finite levels are ignored.
   assert.deepEqual(countConsolidateZoneCandles([mk(95, 110, 110)], 100, 120, 102, 80, start, start + 95 * MIN15 + 1), { zoneA: 0, zoneB: 0 });
   assert.deepEqual(countConsolidateZoneCandles(candles, NaN, 120, 102, 80, start, now), { zoneA: 0, zoneB: 0 });
+});
+
+test("exclusive CON side stamped on the row drives matchesCandleCheck and candleCheckFromRow (P and PP)", () => {
+  const row = (f: Record<string, unknown>) => f as unknown as Parameters<typeof matchesCandleCheck>[0];
+
+  // P: both CON-A and CON-B pass.
+  const bothB = row({ PD15MConsolidateAPass: true, PD15MBelowTCPass: true, PD15MConsolidateExclusive: "B" });
+  assert.equal(matchesCandleCheck(bothB, "CB"), true);
+  assert.equal(matchesCandleCheck(bothB, "CA"), false);
+  assert.equal(candleCheckFromRow(bothB), "CB");
+  const bothA = row({ PD15MConsolidateAPass: true, PD15MBelowTCPass: true, PD15MConsolidateExclusive: "A" });
+  assert.equal(matchesCandleCheck(bothA, "CA"), true);
+  assert.equal(matchesCandleCheck(bothA, "CB"), false);
+  // Missing exclusive field (old cache / backtest row) falls back to CON-A.
+  const bothMissing = row({ PD15MConsolidateAPass: true, PD15MBelowTCPass: true });
+  assert.equal(matchesCandleCheck(bothMissing, "CA"), true);
+  assert.equal(matchesCandleCheck(bothMissing, "CB"), false);
+  assert.equal(candleCheckFromRow(bothMissing), "CA");
+  // Only one side passing ignores the stamp.
+  assert.equal(matchesCandleCheck(row({ PD15MBelowTCPass: true }), "CB"), true);
+  assert.equal(matchesCandleCheck(row({ PD15MConsolidateAPass: true }), "CA"), true);
+
+  // PP: same behaviour (matchesCandleCheck must agree with candleCheckFromRow).
+  const ppBothB = row({ PD15MPPConsolidateAPass: true, PD15MPPConsolidateBPass: true, PD15MPPConsolidateExclusive: "B" });
+  assert.equal(matchesCandleCheck(ppBothB, "PPCB"), true);
+  assert.equal(matchesCandleCheck(ppBothB, "PPCA"), false);
+  assert.equal(candleCheckFromRow(ppBothB), "PPCB");
+  const ppBothA = row({ PD15MPPConsolidateAPass: true, PD15MPPConsolidateBPass: true, PD15MPPConsolidateExclusive: "A" });
+  assert.equal(matchesCandleCheck(ppBothA, "PPCA"), true);
+  assert.equal(matchesCandleCheck(ppBothA, "PPCB"), false);
+  assert.equal(candleCheckFromRow(ppBothA), "PPCA");
+  assert.equal(matchesCandleCheck(row({ PD15MPPConsolidateBPass: true }), "PPCB"), true);
+  assert.equal(matchesCandleCheck(row({ PD15MPPConsolidateAPass: true }), "PPCA"), true);
+  // Combined PP + P segments honour each side's own stamp.
+  assert.equal(
+    matchesCandleCheck(
+      row({ ...ppBothB, ...bothB }),
+      "PPCB+CB",
+    ),
+    true,
+  );
 });

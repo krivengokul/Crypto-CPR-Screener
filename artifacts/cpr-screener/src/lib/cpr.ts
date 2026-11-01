@@ -303,6 +303,13 @@ export interface CPRResult {
   PD15MBelowTCPassNote?: { label: string; detail: string };
   /** Previous-session CONSOLIDATE-A result; populated by the backtest's P-category scans. */
   PD15MConsolidateAPass?: boolean;
+  /**
+   * Exclusive CON side when both CON-A and CON-B pass, from zone midpoint
+   * counts at 15m scan time. "A" | "B"; null/undefined when only one side (or neither) passed.
+   */
+  PD15MConsolidateExclusive?: "A" | "B" | null;
+  /** Same for PP-day CON-A/B dual pass. */
+  PD15MPPConsolidateExclusive?: "A" | "B" | null;
   /** PP-CONSOLIDATE-A: CON-A rules applied to the day-before-previous session (ppCPR levels). */
   PD15MPPConsolidateAPass?: boolean;
   /** PP-CONSOLIDATE-B: CON-B rules applied to the day-before-previous session (ppCPR levels). */

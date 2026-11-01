@@ -6,7 +6,12 @@ import { useCallback, useEffect, type Dispatch, type SetStateAction } from "reac
 import type { CPRResult } from "@/lib/cpr";
 // Bucket lookups only read `source` + `symbol`, so accept any row carrying those
 // (a full CPRResultWithSource, or a Legend-focus row with just the two fields).
-type CandleBucketRow = { symbol: string; source: string };
+type CandleBucketRow = {
+  symbol: string;
+  source: string;
+  PD15MConsolidateExclusive?: "A" | "B" | null;
+  PD15MPPConsolidateExclusive?: "A" | "B" | null;
+};
 import {
   findInsideR1S1Symbols,
   findPD15MBelowTCSymbols,
@@ -22,6 +27,9 @@ import {
   findPreviousConsolidateASymbols,
   findPreviousUpexSymbols,
   getConsolidateABc,
+  loadConsolidateZoneScores,
+  loadPPConsolidateZoneScores,
+  pickExclusiveConsolidateSide,
   getConsolidateBTc,
   getPrevious15MACeiling,
   getPrevious15MBFloor,
@@ -137,6 +145,8 @@ export function usePreviousCandleFilters(opts: {
           bc: getConsolidateABc(row.prevCPR, row.ppCPR),
           ceiling: getPrevious15MACeiling(row.prevCPR),
           r2: row.prevCPR.r2,
+          floor: getPrevious15MBFloor(row.prevCPR),
+          tc: getConsolidateBTc(row.prevCPR, row.ppCPR),
         });
       }
     }
@@ -147,6 +157,8 @@ export function usePreviousCandleFilters(opts: {
           bc: getConsolidateABc(row.prevCPR, row.ppCPR),
           ceiling: getPrevious15MACeiling(row.prevCPR),
           r2: row.prevCPR.r2,
+          floor: getPrevious15MBFloor(row.prevCPR),
+          tc: getConsolidateBTc(row.prevCPR, row.ppCPR),
         });
       }
     }
@@ -181,6 +193,8 @@ export function usePreviousCandleFilters(opts: {
           bc: getConsolidateABc(pp, row.pppCPR ?? null),
           ceiling: getPrevious15MACeiling(pp),
           r2: pp.r2,
+          floor: getPrevious15MBFloor(pp),
+          tc: getConsolidateBTc(pp, row.pppCPR ?? null),
         });
       };
       if (status === "done") {
@@ -527,6 +541,8 @@ export function usePreviousCandleFilters(opts: {
   // Functional setState reads the latest rows when the included-symbol sets change.
   // (The Screener no longer shows CON-B failure labels — Backtest only.)
   useEffect(() => {
+    const zoneScoresP = loadConsolidateZoneScores(previousUpexSessionStart);
+    const zoneScoresPP = loadPPConsolidateZoneScores(previousPreviousUpexSessionStart);
     const applyFlags = (
       setRows: Dispatch<SetStateAction<CPRResult[]>>,
       source: "binance" | "delta",
@@ -546,6 +562,20 @@ export function usePreviousCandleFilters(opts: {
           const b = previous15MTCIncludedSymbols.has(key);
           const mb = previous15MMomentumIncludedSymbols.has(key);
           const ins = previousInsideR1S1IncludedSymbols.has(key);
+          const z = zoneScoresP.get(key);
+          const zp = zoneScoresPP.get(key);
+          const exclusive = pickExclusiveConsolidateSide(
+            a,
+            b,
+            z?.zoneA ?? 0,
+            z?.zoneB ?? 0,
+          );
+          const ppExclusive = pickExclusiveConsolidateSide(
+            ppa,
+            ppb,
+            zp?.zoneA ?? 0,
+            zp?.zoneB ?? 0,
+          );
           if (
             row.PD15MConsolidateAPass === a &&
             row.PD15MPPConsolidateAPass === ppa &&
@@ -556,7 +586,9 @@ export function usePreviousCandleFilters(opts: {
             row.PD15MAboveBCPass === ma &&
             row.PD15MBelowTCPass === b &&
             row.PD15MMomentumBPass === mb &&
-            row.PD15MInsideR1S1Pass === ins
+            row.PD15MInsideR1S1Pass === ins &&
+            row.PD15MConsolidateExclusive === exclusive &&
+            row.PD15MPPConsolidateExclusive === ppExclusive
           ) {
             return row;
           }
@@ -573,6 +605,8 @@ export function usePreviousCandleFilters(opts: {
             PD15MBelowTCPass: b,
             PD15MMomentumBPass: mb,
             PD15MInsideR1S1Pass: ins,
+            PD15MConsolidateExclusive: exclusive,
+            PD15MPPConsolidateExclusive: ppExclusive,
           };
         });
         return changed ? next : prev;
@@ -616,8 +650,12 @@ export function usePreviousCandleFilters(opts: {
       const key = `${row.source}:${row.symbol}`;
       const inB = previous15MTCIncludedSymbols.has(key);
       const inA = previousConsolidateAIncludedSymbols.has(key);
-      // Both pass → exclusive A (not B). Matches pickExclusiveConsolidateSide tie → A.
-      if (inA && inB) return "consolidate-a";
+      // Both pass → zone majority exclusive (stamped on row at applyFlags).
+      if (inA && inB) {
+        const side = row.PD15MConsolidateExclusive;
+        if (side === "B") return "consolidate-b";
+        return "consolidate-a"; // A, null, or missing → A
+      }
       if (inB) return "consolidate-b";
       if (previous15MMomentumIncludedSymbols.has(key)) return "momentum-b";
       if (inA) return "consolidate-a";

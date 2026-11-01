@@ -69,13 +69,15 @@ export function matchesCandleCheck(r: CPRResult, code: string): boolean {
   const ppInside = r.PD15MPPInsideR1S1Pass === true;
   switch (raw) {
     case "CB":
-      // Exclusive B only when A did not also pass (zone tie-break prefers A).
-      return conB && !conA;
+      if (!conB) return false;
+      if (!conA) return true;
+      return r.PD15MConsolidateExclusive === "B";
     case "MB":
       return momB && !conB && !conA;
     case "CA":
-      // A wins exclusive label when both CON-A and CON-B pass (zone majority / tie → A).
-      return conA;
+      if (!conA) return false;
+      if (!conB) return true;
+      return r.PD15MConsolidateExclusive !== "B";
     case "MA":
       return momA && !conA && !conB;
     case "VR":
@@ -83,12 +85,16 @@ export function matchesCandleCheck(r: CPRResult, code: string): boolean {
     case "INSIDE":
       return inside && !conA && !conB;
     case "PPCB":
-      return ppB && !ppA;
+      if (!ppB) return false;
+      if (!ppA) return true;
+      return r.PD15MPPConsolidateExclusive === "B";
     case "PPMB":
       return ppMomB && !ppB && !ppA;
     case "PPCA":
-      // PP-A wins when both PP-CON sides pass (mirrors CA).
-      return ppA;
+      // Both PP-CON sides pass → zone-majority exclusive side (mirrors CA; missing/tie → A).
+      if (!ppA) return false;
+      if (!ppB) return true;
+      return r.PD15MPPConsolidateExclusive !== "B";
     case "PPMA":
       // Mirror MA: momentum exclusive of both PP-CON sides.
       return ppMomA && !ppA && !ppB;
@@ -131,11 +137,11 @@ export function candleCheckFromRow(r: CPRResult): string {
   const momA = r.PD15MAboveBCPass === true;
   const momB = r.PD15MMomentumBPass === true;
   const inside = r.PD15MInsideR1S1Pass === true;
-  // When both CON-A and CON-B pass, exclusive label is CON-A (zone majority
-  // without candle data defaults to A; PatternStats uses live zone counts).
+  // Both CON-A+CON-B → exclusive side from scan-time zone midpoint counts.
   let p = "";
-  if (conA && conB) p = "CA";
-  else if (conB) p = "CB";
+  if (conA && conB) {
+    p = r.PD15MConsolidateExclusive === "B" ? "CB" : "CA";
+  } else if (conB) p = "CB";
   else if (momB) p = "MB";
   else if (conA) p = "CA";
   else if (momA) p = "MA";
@@ -143,8 +149,9 @@ export function candleCheckFromRow(r: CPRResult): string {
   const ppA = r.PD15MPPConsolidateAPass === true;
   const ppB = r.PD15MPPConsolidateBPass === true;
   let pp = "";
-  if (ppA && ppB) pp = "PPCA";
-  else if (ppB) pp = "PPCB";
+  if (ppA && ppB) {
+    pp = r.PD15MPPConsolidateExclusive === "B" ? "PPCB" : "PPCA";
+  } else if (ppB) pp = "PPCB";
   else if (r.PD15MPPMomentumBPass === true) pp = "PPMB";
   else if (ppA) pp = "PPCA";
   else if (r.PD15MPPMomentumAPass === true) pp = "PPMA";

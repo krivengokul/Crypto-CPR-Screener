@@ -11,13 +11,15 @@ const PREVIOUS_UPEX_CACHE_KEY = "cpr_previous_upex_results_v15";
 const PREVIOUS_15M_B_CACHE_KEY = "cpr_previous_15m_b_results_v6";
 const PREVIOUS_15M_TC_B_CACHE_KEY = "cpr_previous_15m_tc_b_results_v14";
 const PREVIOUS_15M_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_momentum_b_results_v7";
-const PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_consolidate_a_results_v17";
-const PREVIOUS_15M_PP_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_pp_consolidate_a_results_v9";
+const PREVIOUS_15M_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_consolidate_a_results_v18";
+const PREVIOUS_15M_PP_CONSOLIDATE_A_CACHE_KEY = "cpr_previous_15m_pp_consolidate_a_results_v10";
 const PREVIOUS_15M_PP_CONSOLIDATE_B_CACHE_KEY = "cpr_previous_15m_pp_consolidate_b_results_v6";
 const PREVIOUS_15M_PP_MOMENTUM_A_CACHE_KEY = "cpr_previous_15m_pp_momentum_a_results_v1";
 const PREVIOUS_15M_PP_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_pp_momentum_b_results_v1";
 const PREVIOUS_15M_PP_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_pp_inside_r1s1_results_v3";
 const PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_inside_r1s1_results_v5";
+const PREVIOUS_15M_CONSOLIDATE_ZONE_CACHE_KEY = "cpr_previous_15m_consolidate_zone_scores_v1";
+const PREVIOUS_15M_PP_CONSOLIDATE_ZONE_CACHE_KEY = "cpr_previous_15m_pp_consolidate_zone_scores_v1";
 
 export interface UpexCandidate {
   symbol: string;
@@ -42,6 +44,8 @@ export interface UpexCandidate {
    * has open/close at or below this level (simple demotion; no new-low test).
    */
   s2?: number;
+  /** TC for zone midpoint counts (CON-A candidates set this alongside BC/ceiling/floor). */
+  tc?: number;
 }
 
 /**
@@ -84,6 +88,83 @@ export type CprRelation = "inside" | "overlap-above" | "overlap-below" | "none";
  *   CON-B zone: [min(S1,PL), TC]
  * A candle can count in both when zones overlap (inside CPR).
  */
+
+export type ConsolidateZoneScore = { zoneA: number; zoneB: number };
+
+function loadZoneScoreMap(cacheKey: string, sessionStart: number): Map<string, ConsolidateZoneScore> {
+  try {
+    const raw = localStorage.getItem(cacheKey);
+    if (!raw) return new Map();
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      !("sessionStart" in parsed) ||
+      (parsed as { sessionStart: unknown }).sessionStart !== sessionStart ||
+      !("results" in parsed) ||
+      typeof (parsed as { results: unknown }).results !== "object" ||
+      !(parsed as { results: unknown }).results
+    ) {
+      return new Map();
+    }
+    const out = new Map<string, ConsolidateZoneScore>();
+    for (const [key, value] of Object.entries(
+      (parsed as { results: Record<string, unknown> }).results,
+    )) {
+      if (
+        value &&
+        typeof value === "object" &&
+        typeof (value as ConsolidateZoneScore).zoneA === "number" &&
+        typeof (value as ConsolidateZoneScore).zoneB === "number"
+      ) {
+        out.set(key, {
+          zoneA: (value as ConsolidateZoneScore).zoneA,
+          zoneB: (value as ConsolidateZoneScore).zoneB,
+        });
+      }
+    }
+    return out;
+  } catch {
+    return new Map();
+  }
+}
+
+function saveZoneScoreMap(
+  cacheKey: string,
+  sessionStart: number,
+  results: Map<string, ConsolidateZoneScore>,
+): void {
+  safeSetItem(
+    cacheKey,
+    JSON.stringify({ sessionStart, results: Object.fromEntries(results) }),
+  );
+}
+
+function mergeAndSaveZoneScores(
+  cacheKey: string,
+  sessionStart: number,
+  batch: Map<string, ConsolidateZoneScore>,
+): void {
+  if (batch.size === 0) return;
+  const merged = loadZoneScoreMap(cacheKey, sessionStart);
+  for (const [k, v] of batch) merged.set(k, v);
+  saveZoneScoreMap(cacheKey, sessionStart, merged);
+}
+
+/** P-day zone midpoint scores (written during CON-A 15m scan). */
+export function loadConsolidateZoneScores(
+  sessionStart: number,
+): Map<string, ConsolidateZoneScore> {
+  return loadZoneScoreMap(PREVIOUS_15M_CONSOLIDATE_ZONE_CACHE_KEY, sessionStart);
+}
+
+/** PP-day zone midpoint scores. */
+export function loadPPConsolidateZoneScores(
+  sessionStart: number,
+): Map<string, ConsolidateZoneScore> {
+  return loadZoneScoreMap(PREVIOUS_15M_PP_CONSOLIDATE_ZONE_CACHE_KEY, sessionStart);
+}
+
 export function countConsolidateZoneCandles(
   candles: OHLC[],
   bc: number,
@@ -1215,6 +1296,7 @@ async function findSymbolsForSession(
     floor?: number,
     expansionLevel?: number,
   ) => boolean | null = passesUpexFilter,
+  zoneCache: "p" | "pp" | "none" = "none",
 ): Promise<{
   included: Set<string>;
   unavailable: number;
@@ -1226,29 +1308,67 @@ async function findSymbolsForSession(
 
   for (let offset = 0; offset < candidates.length; offset += MAX_CONCURRENT_REQUESTS) {
     const batch = candidates.slice(offset, offset + MAX_CONCURRENT_REQUESTS);
+    const zoneBatch = new Map<string, ConsolidateZoneScore>();
     const results = await Promise.all(
       batch.map(async (candidate) => {
         const candles = await fetchUpexCandles(candidate, startTime, endTime);
-        if (!candles) return { candidate, passes: null };
-        return {
-          candidate,
-          passes: evaluate(
-            candles,
-            candidate.bc,
-            startTime,
-            endTime,
-            candidate.ceiling !== undefined ? candidate.ceiling : candidate.floor,
-            candidate.ceiling !== undefined ? candidate.r2 : candidate.s2,
-          ),
-        };
+        if (!candles) {
+          return { candidate, passes: null as boolean | null, zone: null as ConsolidateZoneScore | null };
+        }
+        const passes = evaluate(
+          candles,
+          candidate.bc,
+          startTime,
+          endTime,
+          candidate.ceiling !== undefined ? candidate.ceiling : candidate.floor,
+          candidate.ceiling !== undefined ? candidate.r2 : candidate.s2,
+        );
+        let zone: ConsolidateZoneScore | null = null;
+        if (zoneCache !== "none") {
+          const zoneBc = candidate.ceiling !== undefined ? candidate.bc : undefined;
+          const zoneCeiling = candidate.ceiling;
+          const zoneTc = candidate.tc;
+          const zoneFloor = candidate.floor;
+          if (
+            zoneBc !== undefined &&
+            zoneCeiling !== undefined &&
+            zoneTc !== undefined &&
+            zoneFloor !== undefined &&
+            Number.isFinite(zoneBc) &&
+            Number.isFinite(zoneCeiling) &&
+            Number.isFinite(zoneTc) &&
+            Number.isFinite(zoneFloor)
+          ) {
+            zone = countConsolidateZoneCandles(
+              candles,
+              zoneBc,
+              zoneCeiling,
+              zoneTc,
+              zoneFloor,
+              startTime,
+              endTime,
+            );
+          }
+        }
+        return { candidate, passes, zone };
       })
     );
 
-    for (const { candidate, passes } of results) {
+    for (const { candidate, passes, zone } of results) {
       const symbolKey = `${candidate.source}:${candidate.symbol}`;
       outcomes.set(symbolKey, passes);
       if (passes === true) included.add(symbolKey);
       else if (passes === null) unavailable++;
+      if (zone) zoneBatch.set(symbolKey, zone);
+    }
+    if (zoneCache !== "none") {
+      mergeAndSaveZoneScores(
+        zoneCache === "pp"
+          ? PREVIOUS_15M_PP_CONSOLIDATE_ZONE_CACHE_KEY
+          : PREVIOUS_15M_CONSOLIDATE_ZONE_CACHE_KEY,
+        startTime,
+        zoneBatch,
+      );
     }
     onProgress?.(Math.min(offset + batch.length, candidates.length), candidates.length);
   }
@@ -1283,6 +1403,7 @@ export function findPreviousConsolidateASymbols(
     endTime,
     onProgress,
     passesUpexFilter,
+    "p",
   );
 }
 
@@ -1350,9 +1471,16 @@ export function findPPConsolidateASymbols(
   onProgress?: (done: number, total: number) => void,
   now = Date.now()
 ): Promise<PreviousUpexScanResults> {
-  // previousUpexSessionStartUtcMs(now) / upexSessionStartUtcMs(now) when
-  // `now` is the PDay session start → window [PPDay, PDay).
-  return findPreviousConsolidateASymbols(candidates, onProgress, now);
+  const endTime = upexSessionStartUtcMs(now);
+  const startTime = previousUpexSessionStartUtcMs(now);
+  return findSymbolsForSession(
+    candidates,
+    startTime,
+    endTime,
+    onProgress,
+    passesUpexFilter,
+    "pp",
+  );
 }
 
 export function previousPPConsolidateACandidateCacheKey(
