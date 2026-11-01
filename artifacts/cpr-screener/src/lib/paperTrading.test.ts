@@ -6,6 +6,11 @@ import {
   type PaperTradeRecord,
 } from "./paperTrading.ts";
 import { gradeTargetHit } from "./backtestOutcome.ts";
+import {
+  fetchDayExtremes,
+  parseDayCandle,
+  pickDayCandleLookups,
+} from "./sessionExtremes.ts";
 import type { OHLC } from "./cpr.ts";
 import { analyzeCPR, getCompoundPatternForCprPair } from "./cpr.ts";
 import {
@@ -1380,6 +1385,80 @@ test("allCandlesThroughLevel lists wick-range touches; allBodiesThroughLevel sta
   const candles = [c(0, 99, 99.5, 98, 100.2), c(1, 97, 97.5, 96, 98), c(2, 99.5, 100.5, 99, 101)];
   assert.deepEqual(allCandlesThroughLevel(candles, 100, start, now).map((x) => x.candleNumber), [1, 3]);
   assert.deepEqual(allBodiesThroughLevel(candles, 100, start, now).map((x) => x.candleNumber), [3]);
+});
+
+test("sessionExtremes: parseDayCandle only accepts a candle that opened during the current UTC day", () => {
+  const now = Date.parse("2026-10-20T10:30:00.000Z");
+  const dayStart = Date.parse("2026-10-20T00:00:00.000Z");
+  const kline = (openTime: number, high: string, low: string) =>
+    [openTime, "100", high, low, "101", "1", openTime + 86_399_999, "1", 1, "1", "1", "0"];
+  assert.deepEqual(parseDayCandle([kline(dayStart, "104", "99")], now), { openTime: dayStart, high: 104, low: 99 });
+  // Yesterday's candle (quiet symbol right after midnight) must never be used as today's.
+  assert.equal(parseDayCandle([kline(dayStart - 86_400_000, "111", "95")], now), null);
+  // Takes the last candle in the response.
+  assert.equal(parseDayCandle([kline(dayStart - 86_400_000, "111", "95"), kline(dayStart, "104", "99")], now)?.high, 104);
+  // Malformed / impossible values.
+  assert.equal(parseDayCandle([], now), null);
+  assert.equal(parseDayCandle(null, now), null);
+  assert.equal(parseDayCandle([kline(dayStart, "98", "99")], now), null); // low > high
+  assert.equal(parseDayCandle([kline(dayStart, "abc", "99")], now), null);
+  assert.equal(parseDayCandle([kline(now + 60_000, "104", "99")], now), null); // opens in the future
+});
+
+test("sessionExtremes: only symbols whose rolling 24h extreme is beyond today's tracked range get a lookup", () => {
+  const rows = [
+    { symbol: "SPIKEUSDT", currentPrice: 102, todayHigh: 104, todayLow: 99 },   // rolling high 111 > 104
+    { symbol: "QUIETUSDT", currentPrice: 50, todayHigh: 52, todayLow: 49 },      // rolling within today's range
+    { symbol: "DIPUSDT", currentPrice: 20, todayHigh: 21, todayLow: 19.5 },      // rolling low 18 < 19.5
+    { symbol: "NODATAUSDT", currentPrice: 7 },                                   // no todayHigh/Low yet
+  ];
+  const rollingHigh = new Map([["SPIKEUSDT", 111], ["QUIETUSDT", 52], ["DIPUSDT", 21], ["NODATAUSDT", 7]]);
+  const rollingLow = new Map([["SPIKEUSDT", 99], ["QUIETUSDT", 49], ["DIPUSDT", 18], ["NODATAUSDT", 7]]);
+  const picked = pickDayCandleLookups(rows, rollingHigh, rollingLow, new Map(), new Map());
+  assert.deepEqual([...picked].sort(), ["DIPUSDT", "SPIKEUSDT"]);
+  // A live price above today's tracked high counts too (tick moved past it).
+  assert.deepEqual(
+    pickDayCandleLookups([rows[1]], new Map([["QUIETUSDT", 55]]), new Map(), new Map([["QUIETUSDT", 53]]), new Map()),
+    ["QUIETUSDT"],
+  );
+  // Never-checked first, then least recently checked; cap respected.
+  const many = ["A", "B", "C", "D"].map((x) => ({ symbol: `${x}USDT`, currentPrice: 10, todayHigh: 10, todayLow: 10 }));
+  const hi = new Map(many.map((r) => [r.symbol, 12]));
+  const last = new Map([["AUSDT", 300], ["BUSDT", 100], ["CUSDT", 200]]); // D never checked
+  assert.deepEqual(pickDayCandleLookups(many, hi, new Map(), new Map(), last, 3), ["DUSDT", "BUSDT", "CUSDT"]);
+});
+
+test("sessionExtremes: yesterday's spike (rolling high) does not become today's high; a real wick today does", async () => {
+  const now = Date.parse("2026-10-20T10:30:00.000Z");
+  const dayStart = Date.parse("2026-10-20T00:00:00.000Z");
+  const kline = (high: string, low: string) => [[dayStart, "100", high, low, "102", "1", dayStart + 86_399_999, "1", 1, "1", "1", "0"]];
+  const urls: string[] = [];
+  const fetchJson = async (url: string) => {
+    urls.push(url);
+    if (url.includes("symbol=STEEMUSDT")) return kline("111", "99");      // today really printed 111
+    if (url.includes("symbol=SPIKEUSDT")) return kline("104", "99");      // 24h ticker said 111, but that was yesterday
+    if (url.includes("symbol=SPOTONLYUSDT")) return kline("5.5", "5.1");
+    if (url.includes("symbol=BROKENUSDT")) throw new Error("network");
+    return null;
+  };
+  const lastLookup = new Map<string, number>();
+  const { dayHigh, dayLow } = await fetchDayExtremes({
+    symbols: ["STEEMUSDT", "SPIKEUSDT", "SPOTONLYUSDT", "BROKENUSDT", "EMPTYUSDT"],
+    spotSymbols: new Set(["SPOTONLYUSDT"]),
+    nowMs: now,
+    fetchJson,
+    lastLookup,
+  });
+  assert.equal(dayHigh.get("STEEMUSDT"), 111);
+  assert.equal(dayHigh.get("SPIKEUSDT"), 104); // NOT the 111 from the rolling 24h ticker
+  assert.equal(dayLow.get("SPIKEUSDT"), 99);
+  assert.equal(dayHigh.get("SPOTONLYUSDT"), 5.5);
+  assert.equal(dayHigh.has("BROKENUSDT"), false); // a failed lookup yields no extremes and never throws
+  assert.equal(dayHigh.has("EMPTYUSDT"), false);
+  assert.equal(lastLookup.size, 5); // every attempt is recorded for round-robin fairness
+  assert.ok(urls.find((u) => u.includes("SPOTONLYUSDT"))?.startsWith("https://api.binance.com/api/v3/klines"));
+  assert.ok(urls.find((u) => u.includes("STEEMUSDT"))?.startsWith("https://fapi.binance.com/fapi/v1/klines"));
+  assert.ok(urls.every((u) => u.includes("interval=1d") && u.includes("limit=1")));
 });
 
 test("parseComposedViewKey parses candleCheck segment between entry and pattern", () => {

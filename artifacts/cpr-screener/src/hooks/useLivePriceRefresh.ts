@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import type { CPRResult } from "@/lib/cpr";
 import { fetchCoinDCXLastPrices } from "@/lib/coinDCX";
+import { fetchDayExtremes, pickDayCandleLookups } from "@/lib/sessionExtremes";
 
 // Missed-tick warning: ~3 × poll interval with no match → log once.
 const MAX_MISSED_TICKS = 3;
@@ -19,18 +20,29 @@ const LIVE_PRICE_POLL_MS = 40_000;
  */
 function trackSessionExtremes(
   r: CPRResult,
-  price: number
+  price: number,
+  exchangeHigh?: number,
+  exchangeLow?: number,
 ): { todayHigh: number; todayLow: number } {
-  return {
-    todayHigh:
-      r.todayHigh !== undefined && Number.isFinite(r.todayHigh)
-        ? Math.max(r.todayHigh, price)
-        : price,
-    todayLow:
-      r.todayLow !== undefined && Number.isFinite(r.todayLow) && r.todayLow > 0
-        ? Math.min(r.todayLow, price)
-        : price,
-  };
+  // Widen with last price AND today's UTC-day high/low from the daily candle.
+  // Last-price-only misses wicks that already retraced between polls — that
+  // left STEEM etc. stuck on Active after tagging R4. (Never pass the rolling
+  // 24hr ticker high/low here: it includes yesterday — see sessionExtremes.ts.)
+  let high =
+    r.todayHigh !== undefined && Number.isFinite(r.todayHigh)
+      ? Math.max(r.todayHigh, price)
+      : price;
+  let low =
+    r.todayLow !== undefined && Number.isFinite(r.todayLow) && r.todayLow > 0
+      ? Math.min(r.todayLow, price)
+      : price;
+  if (exchangeHigh !== undefined && Number.isFinite(exchangeHigh) && exchangeHigh > 0) {
+    high = Math.max(high, exchangeHigh);
+  }
+  if (exchangeLow !== undefined && Number.isFinite(exchangeLow) && exchangeLow > 0) {
+    low = Math.min(low, exchangeLow);
+  }
+  return { todayHigh: high, todayLow: low };
 }
 
 /**
@@ -44,14 +56,30 @@ function applyPrices(
     missedTicks?: Map<string, number>;
     logPrefix?: string;
     fallbackChange?: (r: CPRResult, price: number) => number;
+    /** Optional TODAY (UTC-day) high/low, e.g. from the Binance daily candle. */
+    highMap?: Map<string, number>;
+    lowMap?: Map<string, number>;
   } = {}
 ): CPRResult[] {
-  const { missedTicks, logPrefix = "live-refresh", fallbackChange } = opts;
+  const { missedTicks, logPrefix = "live-refresh", fallbackChange, highMap, lowMap } = opts;
   let changed = false;
 
   const next = prev.map((r) => {
     const price = priceMap.get(r.symbol);
+    const exHigh = highMap?.get(r.symbol);
+    const exLow = lowMap?.get(r.symbol);
     if (price === undefined || !(price > 0)) {
+      // Still widen extremes if we only got high/low this tick.
+      if (
+        (exHigh !== undefined && Number.isFinite(exHigh)) ||
+        (exLow !== undefined && Number.isFinite(exLow))
+      ) {
+        const extremes = trackSessionExtremes(r, r.currentPrice, exHigh, exLow);
+        if (extremes.todayHigh !== r.todayHigh || extremes.todayLow !== r.todayLow) {
+          changed = true;
+          return { ...r, ...extremes };
+        }
+      }
       if (missedTicks) {
         const misses = (missedTicks.get(r.symbol) ?? 0) + 1;
         missedTicks.set(r.symbol, misses);
@@ -77,8 +105,12 @@ function applyPrices(
       );
     }
 
-    // Skip object allocation when price (and thus extremes) are unchanged.
-    if (price === r.currentPrice) return r;
+    const extremes = trackSessionExtremes(r, price, exHigh, exLow);
+    const extremesChanged =
+      extremes.todayHigh !== r.todayHigh || extremes.todayLow !== r.todayLow;
+
+    // Skip allocation when price and extremes are unchanged.
+    if (price === r.currentPrice && !extremesChanged) return r;
 
     changed = true;
     const change24h =
@@ -92,7 +124,7 @@ function applyPrices(
       ...r,
       currentPrice: price,
       change24h,
-      ...trackSessionExtremes(r, price),
+      ...extremes,
     };
   });
 
@@ -114,8 +146,12 @@ async function safeFetchJson<T>(url: string, timeoutMs = 6000): Promise<T | null
 
 /**
  * Binance live prices while status === "done".
- * Uses lightweight /fapi/v1/ticker/price (not the heavy 24hr book).
- * Spot is only used as fallback for symbols missing from futures.
+ * One futures /ticker/24hr call gives last prices for every symbol. Its
+ * highPrice/lowPrice are a ROLLING 24h window (includes yesterday), so they
+ * are only a trigger: for symbols where the rolling extreme is beyond the
+ * tracked todayHigh/todayLow we read the current UTC daily candle
+ * (/klines?interval=1d&limit=1) and widen with THAT. Spot is only a price
+ * fallback for symbols missing from futures.
  */
 export function useBinanceLiveRefresh(
   status: "idle" | "scanning" | "done" | "error",
@@ -124,6 +160,8 @@ export function useBinanceLiveRefresh(
   setFiltered: React.Dispatch<React.SetStateAction<CPRResult[]>>
 ) {
   const missedTicksRef = useRef<Map<string, number>>(new Map());
+  /** symbol → last time (ms) its daily candle was looked up (fair round-robin). */
+  const dayLookupAtRef = useRef<Map<string, number>>(new Map());
 
   useEffect(() => {
     if (status !== "done") return;
@@ -142,21 +180,44 @@ export function useBinanceLiveRefresh(
 
         const wanted = new Set(results.map((r) => r.symbol));
 
-        // Primary: futures last price only (much smaller than ticker/24hr).
-        type PriceRow = { symbol: string; price: string };
+        // Futures 24hr ticker: last price for every symbol, plus the ROLLING
+        // 24h high/low used only to decide which symbols need a daily-candle
+        // lookup (see below).
+        type Ticker24 = {
+          symbol: string;
+          lastPrice?: string;
+          highPrice?: string;
+          lowPrice?: string;
+          price?: string;
+        };
         const futuresRows =
-          (await safeFetchJson<PriceRow[]>("https://fapi.binance.com/fapi/v1/ticker/price")) ?? [];
+          (await safeFetchJson<Ticker24[]>("https://fapi.binance.com/fapi/v1/ticker/24hr")) ?? [];
 
         const priceMap = new Map<string, number>();
-        for (const t of futuresRows) {
-          if (!wanted.has(t.symbol)) continue;
-          const p = parseFloat(t.price);
-          if (Number.isFinite(p) && p > 0) priceMap.set(t.symbol, p);
+        const rollingHigh = new Map<string, number>();
+        const rollingLow = new Map<string, number>();
+        const spotSymbols = new Set<string>();
+        for (const row of futuresRows) {
+          if (!wanted.has(row.symbol)) continue;
+          const p = parseFloat(row.lastPrice ?? row.price ?? "");
+          if (Number.isFinite(p) && p > 0) priceMap.set(row.symbol, p);
+          const hi = parseFloat(row.highPrice ?? "");
+          if (Number.isFinite(hi) && hi > 0) rollingHigh.set(row.symbol, hi);
+          const lo = parseFloat(row.lowPrice ?? "");
+          if (Number.isFinite(lo) && lo > 0) rollingLow.set(row.symbol, lo);
         }
 
-        // Optional spot fallback only for symbols still missing.
+        // Optional spot fallback only for symbols still missing last price.
         if (priceMap.size < wanted.size) {
-          type MiniTicker = { symbol: string; lastPrice?: string; c?: string };
+          type MiniTicker = {
+            symbol: string;
+            lastPrice?: string;
+            c?: string;
+            highPrice?: string;
+            h?: string;
+            lowPrice?: string;
+            l?: string;
+          };
           const spot =
             (await safeFetchJson<MiniTicker[]>(
               "https://api.binance.com/api/v3/ticker/24hr?type=MINI"
@@ -165,19 +226,54 @@ export function useBinanceLiveRefresh(
               "https://data-api.binance.vision/api/v3/ticker/24hr?type=MINI"
             )) ??
             [];
-          for (const t of spot) {
-            if (!wanted.has(t.symbol) || priceMap.has(t.symbol)) continue;
-            const p = parseFloat(t.lastPrice ?? t.c ?? "");
-            if (Number.isFinite(p) && p > 0) priceMap.set(t.symbol, p);
+          for (const row of spot) {
+            if (!wanted.has(row.symbol)) continue;
+            if (!priceMap.has(row.symbol)) {
+              const p = parseFloat(row.lastPrice ?? row.c ?? "");
+              if (Number.isFinite(p) && p > 0) {
+                priceMap.set(row.symbol, p);
+                spotSymbols.add(row.symbol);
+              }
+            }
+            if (spotSymbols.has(row.symbol)) {
+              const hi = parseFloat(row.highPrice ?? row.h ?? "");
+              if (Number.isFinite(hi) && hi > 0) rollingHigh.set(row.symbol, hi);
+              const lo = parseFloat(row.lowPrice ?? row.l ?? "");
+              if (Number.isFinite(lo) && lo > 0) rollingLow.set(row.symbol, lo);
+            }
           }
         }
 
-        if (priceMap.size === 0) return;
+        // Rolling 24h extremes are NOT today's session extremes. Where they
+        // are beyond what we track, read today's UTC daily candle instead and
+        // widen with that, so only a wick that really printed today latches
+        // Pass / stop.
+        const nowMs = Date.now();
+        const lookups = pickDayCandleLookups(
+          results,
+          rollingHigh,
+          rollingLow,
+          priceMap,
+          dayLookupAtRef.current,
+        );
+        const { dayHigh: highMap, dayLow: lowMap } = lookups.length
+          ? await fetchDayExtremes({
+              symbols: lookups,
+              spotSymbols,
+              nowMs,
+              fetchJson: (url) => safeFetchJson<unknown>(url),
+              lastLookup: dayLookupAtRef.current,
+            })
+          : { dayHigh: new Map<string, number>(), dayLow: new Map<string, number>() };
+
+        if (priceMap.size === 0 && highMap.size === 0 && lowMap.size === 0) return;
 
         const apply = (prev: CPRResult[]) =>
           applyPrices(prev, priceMap, {
             missedTicks: missedTicksRef.current,
             logPrefix: "binance-live-refresh",
+            highMap,
+            lowMap,
           });
 
         if (cancelled) return;
