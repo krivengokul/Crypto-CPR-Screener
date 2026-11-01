@@ -671,9 +671,22 @@ export async function runScreener(
     // Session extremes come from today's forming daily candle (liveCandle),
     // NOT analyzeCPR's todayCandle, which is yesterday's completed candle
     // whenever a live candle exists.
-    if (result && liveCandle) {
-      result.todayHigh = Math.max(liveCandle.high, currentPrice);
-      result.todayLow = Math.min(liveCandle.low, currentPrice);
+    // Session extremes: prefer live (forming) daily candle; fall back to
+    // todayCandle so todayHigh is never left undefined (Pass needs it after
+    // a retrace from R4/S4).
+    if (result) {
+      const hiSrc = liveCandle?.high ?? todayCandle.high;
+      const loSrc = liveCandle?.low ?? todayCandle.low;
+      if (Number.isFinite(hiSrc)) {
+        result.todayHigh = Math.max(hiSrc as number, currentPrice);
+      } else {
+        result.todayHigh = currentPrice;
+      }
+      if (Number.isFinite(loSrc) && (loSrc as number) > 0) {
+        result.todayLow = Math.min(loSrc as number, currentPrice);
+      } else {
+        result.todayLow = currentPrice;
+      }
     }
     if (result && intraday) {
       try {
