@@ -1993,7 +1993,7 @@ test("PP-MOM-A / PP-MOM-B: dropdown, exclusivity vs PP-CON, combined codes and r
   assert.equal(candleCheckFromRow(row({ PD15MPPInsideR1S1Pass: true, PD15MPPMomentumAPass: true })), "PPMA");
 });
 
-test("passesInsideR1S1Filter uses the whole candle (wick), not the body", () => {
+test("passesInsideR1S1Filter: wick through the band sets a reference, fails only when fully beyond it", () => {
   const MIN15 = 15 * 60 * 1000;
   const start = Date.UTC(2026, 9, 28);
   const now = start + 24 * 60 * MIN15 / 15; // end of a 24h session
@@ -2008,14 +2008,21 @@ test("passesInsideR1S1Filter uses the whole candle (wick), not the body", () => 
     passesInsideR1S1Filter([mk(0, 100, 105, 95, 102), mk(1, 102, 109, 91, 100)], floor, ceiling, start, now),
     true,
   );
-  // Body inside but upper wick pokes through the ceiling -> fail.
+  // A wick that pokes through the ceiling / floor spans the line: it is a reference candle, not a fail.
+  assert.equal(passesInsideR1S1Filter([mk(0, 100, 111, 95, 102)], floor, ceiling, start, now), true);
+  assert.equal(passesInsideR1S1Filter([mk(0, 100, 105, 89, 102)], floor, ceiling, start, now), true);
+  // Fully above the ceiling (low > ceiling) with no ceiling reference candle -> fail.
+  assert.equal(passesInsideR1S1Filter([mk(0, 112, 115, 111, 113)], floor, ceiling, start, now), false);
+  // Fully below the floor (high < floor) with no floor reference candle -> fail.
+  assert.equal(passesInsideR1S1Filter([mk(0, 86, 88, 84, 85)], floor, ceiling, start, now), false);
+  // Reference wick high 115: a later candle fully above the ceiling but still under that wick passes...
   assert.equal(
-    passesInsideR1S1Filter([mk(0, 100, 111, 95, 102)], floor, ceiling, start, now),
-    false,
+    passesInsideR1S1Filter([mk(0, 100, 115, 95, 102), mk(1, 112, 114, 111, 113)], floor, ceiling, start, now),
+    true,
   );
-  // Body inside but lower wick pokes through the floor -> fail.
+  // ...but one whose low is above the reference wick fails.
   assert.equal(
-    passesInsideR1S1Filter([mk(0, 100, 105, 89, 102)], floor, ceiling, start, now),
+    passesInsideR1S1Filter([mk(0, 100, 115, 95, 102), mk(1, 118, 120, 116, 119)], floor, ceiling, start, now),
     false,
   );
   // Wick exactly on the boundary is still inside.
