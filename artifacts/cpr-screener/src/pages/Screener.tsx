@@ -1929,7 +1929,7 @@ export default function Screener({
           {!showAll && (
           <div className="flex items-center gap-2 flex-wrap">
             {!showAll && (
-            <span className="text-[10px] text-pink-300/90 uppercase tracking-wider mr-0.5 font-semibold">SIGNALS:</span>
+            <span className="text-[10px] text-sky-400/90 uppercase tracking-wider mr-0.5 font-semibold">SIGNALS:</span>
             )}
 
             {/* Generic View buttons are derived from the registry-backed
@@ -1985,7 +1985,7 @@ export default function Screener({
               are mutually exclusive within their own group. */}
           {showTouchList && (
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[10px] text-pink-300/90 uppercase tracking-wider mr-0.5 font-semibold">TOUCH:</span>
+              <span className="text-[10px] text-sky-400/90 uppercase tracking-wider mr-0.5 font-semibold">TOUCH:</span>
               {(
                 [
                   { id: "insidecpr", label: "INCPR", count: touchCounts.insidecpr },
