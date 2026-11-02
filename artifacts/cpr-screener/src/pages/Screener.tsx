@@ -1805,10 +1805,10 @@ export default function Screener({
                     ? "bg-foreground/15 text-foreground"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
-                title={showTouchList ? "Hide touch patterns" : "Show touch patterns"}
+                title={showTouchList ? "Hide CPR filters" : "Show CPR filters"}
               >
                 <span className="leading-none">{showTouchList ? "−" : "+"}</span>
-                Touch
+                CPR
               </button>
               <button
                 type="button"
@@ -1985,7 +1985,7 @@ export default function Screener({
               are mutually exclusive within their own group. */}
           {showTouchList && (
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[10px] text-sky-400/90 uppercase tracking-wider mr-0.5 font-semibold">TOUCH:</span>
+              <span className="text-[10px] text-sky-400/90 uppercase tracking-wider mr-0.5 font-semibold">CPR:</span>
               {(
                 [
                   { id: "insidecpr", label: "INCPR", count: touchCounts.insidecpr },
