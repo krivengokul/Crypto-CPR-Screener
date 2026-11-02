@@ -464,7 +464,7 @@ export function findHistoricalChartLinks(args: {
     if (!rec.url) continue;
     const vk = (rec.viewKey || rec.lastViewKey || "").trim();
     // Match View key/label, or a Backtest pattern path whose segments hit an alias
-    // (e.g. levelsbelow::B-B-BB-BB::B-B-BB-BB-EL3U4 for TinyMini-Upmove).
+    // (e.g. levelsbelow::B-B-BB-BB::B-B-BB-BB-EL3U4 for a concrete View).
     if (!vk || !chartStoredKeyMatchesAliases(vk, aliasSet)) continue;
 
     const parsed = parseChartRowKey(rec.rowKey || "");
