@@ -1382,8 +1382,9 @@ function ScreenerTableRow({
               showPPB = isPPConsolidateB === true;
               showPPA = !showPPB && isPPConsolidateA === true;
             } else if (rawPPConA && rawPPConB) {
-              showPPB = r.PD15MPPConsolidateExclusive === "B";
-              showPPA = !showPPB;
+              // Both raw pass: exclusive stamp (B when zoneB > zoneA). Missing → B (diagnose order).
+              showPPB = r.PD15MPPConsolidateExclusive !== "A";
+              showPPA = r.PD15MPPConsolidateExclusive === "A";
             } else {
               showPPB = rawPPConB;
               showPPA = !showPPB && rawPPConA;

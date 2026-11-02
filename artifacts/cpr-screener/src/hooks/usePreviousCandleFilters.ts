@@ -684,28 +684,41 @@ export function usePreviousCandleFilters(opts: {
     [candleBucket],
   );
   /**
-   * PP exclusive membership (same priority as P CON-B > CON-A):
-   *   PP-B if in B set; PP-A only if in A set and not in B set.
-   * Independent of exclusive P-buckets.
+   * PP exclusive membership — same priority as Pattern Stats / diagnose:
+   *   PP-CONSOLIDATE-B → PP-MOMENTUM-B → PP-CONSOLIDATE-A → …
+   * When both PP-CON-A and PP-CON-B raw-pass, use PD15MPPConsolidateExclusive
+   * (zone majority from pickExclusiveConsolidateSide). Independent of P-buckets.
    */
   const hasPPConsolidateB = useCallback(
     (row: CandleBucketRow) => {
       const key = `${row.source}:${row.symbol}`;
-      // Exclusive B only when A did not also pass.
-      return (
-        previousPPConsolidateBIncludedSymbols.has(key) &&
-        !previousPPConsolidateAIncludedSymbols.has(key)
-      );
+      const inB = previousPPConsolidateBIncludedSymbols.has(key);
+      const inA = previousPPConsolidateAIncludedSymbols.has(key);
+      if (!inB) return false;
+      if (!inA) return true;
+      // Both raw pass → exclusive stamp. Missing stamp: prefer B (diagnose order).
+      const side = (row as { PD15MPPConsolidateExclusive?: "A" | "B" | null })
+        .PD15MPPConsolidateExclusive;
+      return side !== "A";
     },
     [previousPPConsolidateBIncludedSymbols, previousPPConsolidateAIncludedSymbols],
   );
   const hasPPConsolidateA = useCallback(
     (row: CandleBucketRow) => {
       const key = `${row.source}:${row.symbol}`;
-      // A wins when both PP-CON sides pass.
-      return previousPPConsolidateAIncludedSymbols.has(key);
+      const inB = previousPPConsolidateBIncludedSymbols.has(key);
+      const inA = previousPPConsolidateAIncludedSymbols.has(key);
+      if (!inA) return false;
+      if (!inB) return true;
+      // Both raw pass → A only when exclusive stamp is A.
+      const side = (row as { PD15MPPConsolidateExclusive?: "A" | "B" | null })
+        .PD15MPPConsolidateExclusive;
+      return side === "A";
     },
-    [previousPPConsolidateAIncludedSymbols],
+    [
+      previousPPConsolidateAIncludedSymbols,
+      previousPPConsolidateBIncludedSymbols,
+    ],
   );
 
   const hasPPMomentumB = useCallback(
