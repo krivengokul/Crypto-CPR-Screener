@@ -137,6 +137,7 @@ export function usePreviousCandleFilters(opts: {
   buildCandidates: () => {
     const candidates = new Map<string, {
       symbol: string; source: "binance" | "delta"; bc: number; ceiling: number; r2: number;
+      floor: number; tc: number;
     }>();
     if (status === "done") {
       for (const row of allResults) {
@@ -181,6 +182,7 @@ export function usePreviousCandleFilters(opts: {
     buildCandidates: () => {
       const candidates = new Map<string, {
         symbol: string; source: "binance" | "delta"; bc: number; ceiling: number; r2: number;
+      floor: number; tc: number;
       }>();
       const add = (row: CPRResult, source: "binance" | "delta") => {
         const pp = row.ppCPR;

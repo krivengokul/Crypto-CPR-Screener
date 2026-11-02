@@ -684,6 +684,10 @@ export default function Screener({
         PD15MAboveBCPass?: boolean;
         PD15MMomentumBPass?: boolean;
         touchCategory?: boolean;
+        // Session data for the R4/S4 session-extreme badge (full scan rows carry these).
+        currentPrice?: number;
+        todayHigh?: number;
+        todayLow?: number;
       },
       preferredPatternId?: string,
     ) => {
@@ -729,7 +733,7 @@ export default function Screener({
       // Same as Screener symbol cell: R4/S4 session extreme wins over View status.
       const sessionExtreme =
         row.todayCPR || row.currentPrice !== undefined
-          ? sessionR4OrS4Hit(row as CPRResult)
+          ? sessionR4OrS4Hit(row)
           : null;
       const viewStatus =
         patternId && row.prevCPR && row.todayCPR

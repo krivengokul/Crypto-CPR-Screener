@@ -1324,6 +1324,14 @@ type PrevDayCheckBlock = {
   pass: boolean | null;
   label: string;
   detail: string;
+  /**
+   * Band checks only (INSIDE-R1S1 / PP-VOLATILE-R1S1), set when the check failed:
+   * the first candle that broke out of the band and which side(s) it broke.
+   */
+  failCandleNumber?: number | null;
+  failSide?: "ceiling" | "floor" | "both" | null;
+  failHigh?: number | null;
+  failLow?: number | null;
 };
 
 const CPR_RELATION_LABEL = {
