@@ -1046,6 +1046,11 @@ export default function Screener({
       OVA: pool.filter((r) => r.touchCategory && !!r.overlapHigher).length,
       overlapLower: pool.filter((r) => r.touchCategory && !!r.overlapLower).length,
       equalCPR: pool.filter((r) => r.touchCategory && !!r.equalCPR).length,
+      // Narrow/Wide × Levels Above/Below — same predicates as the filters.
+      narrowA: pool.filter((r) => !!r.narrowCPR && !!r.LevelsAbove).length,
+      wideA: pool.filter((r) => !!r.strWideCPR && !!r.LevelsAbove).length,
+      narrowB: pool.filter((r) => !!r.narrowCPR && !!r.LevelsBelow).length,
+      wideB: pool.filter((r) => !!r.strWideCPR && !!r.LevelsBelow).length,
       // Counts for the three extra filters that live in the TOUCH row. They
       // use the same predicates as the filters themselves, over the full pool.
       s1r1in: pool.filter(matchesS1R1In).length,
@@ -1235,6 +1240,11 @@ export default function Screener({
       if (touchFilter === "OVA") return !!r.overlapHigher;
       if (touchFilter === "overlapLower") return !!r.overlapLower;
       if (touchFilter === "equal-cpr") return !!r.equalCPR;
+      // Narrow/Wide × Levels Above (A) / Levels Below (B)
+      if (touchFilter === "narrow-a") return !!r.narrowCPR && !!r.LevelsAbove;
+      if (touchFilter === "wide-a") return !!r.strWideCPR && !!r.LevelsAbove;
+      if (touchFilter === "narrow-b") return !!r.narrowCPR && !!r.LevelsBelow;
+      if (touchFilter === "wide-b") return !!r.strWideCPR && !!r.LevelsBelow;
       return true;
     })
     .filter((r) => {
@@ -1983,6 +1993,10 @@ export default function Screener({
                   { id: "OVA", label: "Overlap Above", count: touchCounts.OVA },
                   { id: "overlapLower", label: "Overlap Below", count: touchCounts.overlapLower },
                   { id: "equal-cpr", label: "Equal CPR", count: touchCounts.equalCPR },
+                  { id: "narrow-a", label: "Narrow-A", count: touchCounts.narrowA },
+                  { id: "wide-a", label: "Wide-A", count: touchCounts.wideA },
+                  { id: "narrow-b", label: "Narrow-B", count: touchCounts.narrowB },
+                  { id: "wide-b", label: "Wide-B", count: touchCounts.wideB },
                 ]
               ).map(({ id, label, count }) => {
                 const isActive = touchFilter === id;
