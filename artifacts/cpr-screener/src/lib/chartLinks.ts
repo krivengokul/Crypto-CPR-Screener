@@ -762,6 +762,104 @@ export async function renameChartLinkViewKeys(
   return updated;
 }
 
+/**
+ * Copy View: attach every chart link tagged with `from` under the new View key `to`
+ * as well, without removing them from the source View.
+ *
+ * Primary docs keep lastViewKey = source. A legacy-style composite doc
+ * `${to}::${rowKey}` is written (local + Firestore) so Legend / Stats for the
+ * new View find the same URLs via viewKey matching.
+ */
+export async function copyChartLinkViewKeys(
+  fromViewKey: string,
+  toViewKey: string,
+): Promise<number> {
+  const from = (fromViewKey || "").trim();
+  const to = (toViewKey || "").trim();
+  if (!from || !to || from === to) return 0;
+
+  let copied = 0;
+  const seenRow = new Set<string>();
+
+  const stampLocal = (rowKey: string, url: string, savedAt: string) => {
+    if (!rowKey || !url || seenRow.has(rowKey)) return;
+    seenRow.add(rowKey);
+    const compositeId = `${to}::${rowKey}`;
+    saveToLocalCache(compositeId, {
+      url,
+      savedAt: savedAt || new Date().toISOString(),
+      lastViewKey: to,
+    });
+    copied += 1;
+  };
+
+  // 1) Local cache — any entry whose lastViewKey is the source View
+  const local = getLocalCache();
+  for (const [key, link] of Object.entries(local)) {
+    if (!link?.url) continue;
+    const legacySep = key.lastIndexOf("::");
+    const legacyViewKey = legacySep >= 0 ? key.slice(0, legacySep) : "";
+    const rowKey =
+      legacySep >= 0 ? key.slice(legacySep + 2) : key;
+    const lastViewKey =
+      (typeof link.lastViewKey === "string" && link.lastViewKey) || legacyViewKey || "";
+    if (lastViewKey !== from) continue;
+    stampLocal(rowKey, link.url, link.savedAt || "");
+  }
+
+  // 2) Firestore — same for this uid; write composite docs under the new key
+  try {
+    const uid = await ensureSignedIn();
+    const db = getDb();
+    const snapshot = await getDocs(
+      query(collection(db, CHART_LINKS_COLLECTION), where("uid", "==", uid)),
+    );
+    for (const chartDoc of snapshot.docs) {
+      const data = chartDoc.data();
+      const legacySep = chartDoc.id.lastIndexOf("::");
+      const legacyViewKey = legacySep >= 0 ? chartDoc.id.slice(0, legacySep) : "";
+      const lastViewKey =
+        (typeof data.lastViewKey === "string" && data.lastViewKey) || legacyViewKey || "";
+      if (lastViewKey !== from) continue;
+
+      const rowKey =
+        (typeof data.rowKey === "string" && data.rowKey) ||
+        (legacySep >= 0 ? chartDoc.id.slice(legacySep + 2) : chartDoc.id);
+      const url = typeof data.url === "string" ? data.url : "";
+      if (!url || !rowKey) continue;
+      const savedAt =
+        typeof data.savedAt === "string" && data.savedAt
+          ? data.savedAt
+          : new Date().toISOString();
+
+      // Local composite (idempotent via seenRow)
+      stampLocal(rowKey, url, savedAt);
+
+      try {
+        await setDoc(
+          doc(db, CHART_LINKS_COLLECTION, `${to}::${rowKey}`),
+          {
+            url,
+            savedAt,
+            uid,
+            rowKey,
+            lastViewKey: to,
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true },
+        );
+      } catch {
+        // non-blocking per doc
+      }
+    }
+  } catch {
+    // offline — local copies still help this browser
+  }
+
+  if (copied > 0) notifyChartLinksChanged();
+  return copied;
+}
+
 /** Set or fix the view key on an existing chart link (primary rowKey doc + local cache). */
 export async function updateChartLinkViewKey(rowKey: string, viewKey: string): Promise<boolean> {
   const key = (rowKey || "").trim();

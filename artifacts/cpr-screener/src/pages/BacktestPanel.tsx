@@ -87,7 +87,7 @@ import {
 } from "./ScreenerTableRow";
 import { SRLadderRow, toSRLadderData, type ViewDirection } from "./SRLadderPanel";
 import { getLadderMatchSummary, LEVEL_KEYS, type LevelCheckCondition, type LevelKey } from "./SRLadderDiff";
-import { useChartLinks, findChartLink, preloadChartLinks, renameChartLinkViewKeys, updateChartLinkViewKey, type StoredChartLink } from "@/lib/chartLinks";
+import { useChartLinks, findChartLink, preloadChartLinks, renameChartLinkViewKeys, copyChartLinkViewKeys, updateChartLinkViewKey, type StoredChartLink } from "@/lib/chartLinks";
 import { isExpandedPatternPair, type CPRLevels, type CPRResult } from "@/lib/cpr";
 import { COINDCX_ENABLED } from "@/lib/featureFlags";
 
@@ -1280,6 +1280,11 @@ function CopyViewControl({
           <button
             type="button"
             onClick={() => {
+              // Copy all chart attachments tagged with the source View onto the new key
+              // (source keeps them; new View also matches them in Legend / Stats).
+              if (command && createdKey) {
+                void copyChartLinkViewKeys(sourceKey, createdKey);
+              }
               setOpen(false);
               onClose?.();
               if (createdKey) onCopied(createdKey);
