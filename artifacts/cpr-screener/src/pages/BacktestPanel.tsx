@@ -3667,7 +3667,7 @@ export default function BacktestPanel() {
                         ? "text-muted-foreground"
                         : chg >= 0
                         ? "text-green-400"
-                        : "text-destructive";
+                        : "text-[#ff6bb5]";
                     return (
                       <Fragment key={`${r.source}-${r.symbol}-${r.entryDate}`}>
                       <tr className="hover:bg-muted/20">
@@ -3998,7 +3998,7 @@ export default function BacktestPanel() {
                                   ? "text-muted-foreground"
                                   : chg >= 0
                                   ? "text-green-400"
-                                  : "text-destructive";
+                                  : "text-[#ff6bb5]";
                               return (
                                 <span className={`font-mono text-sm font-medium leading-none ${chgColor}`}>
                                   {chg !== null && chg !== undefined
