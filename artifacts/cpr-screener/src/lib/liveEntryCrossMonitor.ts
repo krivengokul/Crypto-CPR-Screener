@@ -85,7 +85,13 @@ export class LiveEntryCrossMonitor {
   private binanceRequestId = 1;
   private stopped = false;
 
-  constructor(private readonly onCross: (candidate: EntryCrossCandidate, price: number, timestamp: number) => void) {}
+  private readonly onCross: (candidate: EntryCrossCandidate, price: number, timestamp: number) => void;
+
+  // Explicit field (not a parameter property) so Node's type-stripping test
+  // runner can load this file.
+  constructor(onCross: (candidate: EntryCrossCandidate, price: number, timestamp: number) => void) {
+    this.onCross = onCross;
+  }
 
   update(candidates: EntryCrossCandidate[]) {
     const today = utcDay();
