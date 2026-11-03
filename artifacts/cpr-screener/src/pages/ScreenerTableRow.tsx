@@ -1611,13 +1611,37 @@ function ScreenerTableRow({
               {move.sub && <span className="text-[10px] ml-1">{move.sub}</span>}
             </div>
           );
-          // Price above TC but hasn't cleared R1: PDH is always above TC, so
-          // the PDH/PDL status goes on row 1 and "+x% >TC" sits on row 2 as a
-          // single line. IN-PDHL is smaller and orange (PPWAY's falling-CPR
-          // colour) in this layout. Every other case keeps the original
-          // order: MOVE % first, PDH/PDL second. (IN-PDHL uses the same font as the
-          // Symbol column's category label — COMPRESSED, TOUCH, etc.)
-          if (move.sub === ">TC") {
+          // Above R1/R2/R3/R4: MOVE only + BRK badge (no >PDH line).
+          // Below S1/S2/S3/S4: MOVE only (no <PDL line).
+          // >PDH / <PDL / IN-PDHL only when price has not cleared R1 (up) or S1 (down).
+          const aboveR1 =
+            move.sub === ">R1" ||
+            move.sub === ">R2" ||
+            move.sub === ">R3" ||
+            move.sub === ">R4";
+          const belowS1 =
+            move.sub === "<S1" ||
+            move.sub === "<S2" ||
+            move.sub === "<S3" ||
+            move.sub === "<S4";
+          const showPdhRow = !aboveR1 && !belowS1;
+          const brkBadge = r.breakout?.signal ? (
+            <div className="mt-0.5">
+              <span
+                className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded border border-amber-500/50 bg-amber-500/15 text-amber-300"
+                title={`15m momentum breakout ${r.breakout.barsAgo === 0 ? "on the latest (possibly still forming) candle" : `${r.breakout.barsAgo} candle(s) ago`} · rel. volume ${r.breakout.relVol.toFixed(1)}x · cleared ${r.breakout.levelsCleared.join("/") || "range high"} · ${(r.breakout.runPct ?? 0) >= 0 ? "+" : ""}${(r.breakout.runPct ?? 0).toFixed(1)}% since`}
+              >
+                BRK {r.breakout.relVol.toFixed(1)}x
+                {r.breakout.levelsCleared.length > 0
+                  ? ` ${r.breakout.levelsCleared.join("·")}`
+                  : " RNG"}
+                {" "}
+                {(r.breakout.barsAgo ?? 0) * 15}m
+              </span>
+            </div>
+          ) : null;
+          // Price above TC but hasn't cleared R1: PDH on row 1, MOVE on row 2.
+          if (move.sub === ">TC" && showPdhRow) {
             const inRange = pdh.main === "IN-PDHL";
             return (
               <td className={`pl-3 pr-2 py-3 whitespace-nowrap text-xs font-medium ${move.color}`}>
@@ -1629,16 +1653,20 @@ function ScreenerTableRow({
                   {pdh.sub && <span className="text-[10px] ml-1">{pdh.sub}</span>}
                 </div>
                 <div className="mt-0.5">{moveLine}</div>
+                {brkBadge}
               </td>
             );
           }
           return (
             <td className={`pl-3 pr-2 py-3 whitespace-nowrap text-xs font-medium ${move.color}`}>
               {moveLine}
-              <div className={`mt-0.5 ${pdh.main === "IN-PDHL" ? `${LABEL_FONT} text-orange-400` : pdh.color}`} title={pdhTitle}>
-                {pdh.main}
-                {pdh.sub && <span className="text-[10px] ml-1">{pdh.sub}</span>}
-              </div>
+              {showPdhRow && (
+                <div className={`mt-0.5 ${pdh.main === "IN-PDHL" ? `${LABEL_FONT} text-orange-400` : pdh.color}`} title={pdhTitle}>
+                  {pdh.main}
+                  {pdh.sub && <span className="text-[10px] ml-1">{pdh.sub}</span>}
+                </div>
+              )}
+              {brkBadge}
             </td>
           );
         })()}
@@ -1652,21 +1680,6 @@ function ScreenerTableRow({
             <span className="text-muted-foreground">)</span>
           </div>
           <div className="text-xs text-muted-foreground">OPrice: {fmt(r.openPrice)}</div>
-          {r.breakout?.signal ? (
-            <div className="mt-1">
-              <span
-                className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded border border-amber-500/50 bg-amber-500/15 text-amber-300"
-                title={`15m momentum breakout ${r.breakout.barsAgo === 0 ? "on the latest (possibly still forming) candle" : `${r.breakout.barsAgo} candle(s) ago`} · rel. volume ${r.breakout.relVol.toFixed(1)}x · cleared ${r.breakout.levelsCleared.join("/") || "range high"} · ${(r.breakout.runPct ?? 0) >= 0 ? "+" : ""}${(r.breakout.runPct ?? 0).toFixed(1)}% since`}
-              >
-                BRK {r.breakout.relVol.toFixed(1)}x
-                {r.breakout.levelsCleared.length > 0
-                  ? ` ${r.breakout.levelsCleared.join("·")}`
-                  : " RNG"}
-                {" "}
-                {(r.breakout.barsAgo ?? 0) * 15}m
-              </span>
-            </div>
-          ) : null}
         </td>
         <td className="px-3 py-3 font-mono whitespace-nowrap">
           {renderPivotSizeCell(r.prevCPR, r.todayCPR, r.compressionRatio)}
