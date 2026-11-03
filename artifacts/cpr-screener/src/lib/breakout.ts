@@ -1,59 +1,50 @@
 import type { OHLC, CPRLevels } from "./cpr";
 
 /**
- * Intraday (15m) momentum-breakout detection ("BRK").
+ * Intraday (15m) momentum-breakout ("BRK") and breakdown ("BRKDN") detection.
  *
- * A "signal" means: within the last `freshBars` candles there was a bullish
- * candle that (a) closed through at least one of today's pivot levels (or
- * above the recent range high) and (b) printed relative volume >= relVolMin
- * versus the prior `volLookback` candles. There is NO squeeze / compression
- * requirement: a coin that is already trending and then explodes on volume
- * qualifies. Signals that have already run more than `maxRunPct` since the
- * breakout candle, or whose price fell back below the breakout candle's open,
- * are dropped (late / failed).
+ * BRK: bullish candle closes up through PDH / TC / R1–R4 (or range high) on volume.
+ * BRKDN: bearish candle closes down through PDL / BC / S1–S4 (or range low) on volume.
  *
- * Pure functions, no network. Candles are oldest -> newest. The scan passes
- * CLOSED candles only; the live refresh also passes the still-forming last
- * candle so a spike is flagged as it happens (its volume so far already has
- * to clear relVolMin, which is a stricter test than a finished candle).
+ * Pure functions, no network. Candles are oldest → newest.
  */
 
 export interface BreakoutConfig {
-  volLookback: number;      // candles used for average volume
-  relVolMin: number;        // breakout candle volume >= this x average
-  rangeWindow: number;      // candles before the breakout candle that define the range high
-  freshBars: number;        // how many recent candles may hold the breakout
-  maxRunPct: number;        // ignore if price already ran this % past the breakout close
+  volLookback: number;
+  relVolMin: number;
+  rangeWindow: number;
+  freshBars: number;
+  maxRunPct: number;
 }
 
 export const DEFAULT_BREAKOUT_CFG: BreakoutConfig = {
   volLookback: 20,
   relVolMin: 4,
-  rangeWindow: 12,       // 3h
-  freshBars: 8,          // 2h
+  rangeWindow: 12, // 3h
+  freshBars: 8, // 2h
   maxRunPct: 30,
 };
 
 export interface BreakoutResult {
-  /** Fresh, not-yet-exhausted momentum breakout on the 15m chart. */
+  /** Fresh, not-yet-exhausted momentum signal on the 15m chart. */
   signal: boolean;
-  /** Candles since the breakout candle (0 = latest candle). null if no signal. */
+  /** Candles since the signal candle (0 = latest). null if no signal. */
   barsAgo: number | null;
-  /** Epoch ms of the breakout candle's open. null if no signal. */
+  /** Epoch ms of the signal candle open, or null. */
   breakoutTime: number | null;
-  /** Breakout candle volume / average of the prior volLookback candles (latest candle if no signal). */
+  /** Relative volume of the signal candle vs prior lookback average. */
   relVol: number;
-  /** Pivot levels the breakout candle closed through, e.g. ["R1","R2"]. */
+  /** Pivot levels the candle closed through, e.g. ["R1","R2"] or ["S1","S2"]. */
   levelsCleared: string[];
-  /** Breakout candle closed above the range-window high. */
+  /** Closed beyond the recent range high (up) or range low (down). */
   rangeBreak: boolean;
-  /** % move from the breakout candle's close to the latest close. null if no signal. */
+  /** % move from signal close to latest close. null if no signal. */
   runPct: number | null;
 }
 
 const mean = (a: number[]) => (a.length ? a.reduce((s, x) => s + x, 0) / a.length : NaN);
 
-/** Pivot levels the breakout is tested against, taken from today's CPR set. */
+/** Upside levels for BRK. */
 export function levelsFromCPR(c: CPRLevels): Record<string, number> {
   const raw: Record<string, number> = {
     PDH: c.prevHigh,
@@ -68,10 +59,25 @@ export function levelsFromCPR(c: CPRLevels): Record<string, number> {
   return out;
 }
 
+/** Downside levels for BRKDN. */
+export function levelsFromCPRDown(c: CPRLevels): Record<string, number> {
+  const raw: Record<string, number> = {
+    PDL: c.prevLow,
+    BC: c.bc,
+    S1: c.s1,
+    S2: c.s2,
+    S3: c.s3,
+    S4: c.s4,
+  };
+  const out: Record<string, number> = {};
+  for (const [k, v] of Object.entries(raw)) if (Number.isFinite(v) && v > 0) out[k] = v;
+  return out;
+}
+
 export function analyzeBreakout(
   candles: OHLC[],
   levels: Record<string, number>,
-  cfg: BreakoutConfig = DEFAULT_BREAKOUT_CFG
+  cfg: BreakoutConfig = DEFAULT_BREAKOUT_CFG,
 ): BreakoutResult | null {
   const n = candles.length;
   const minI = Math.max(cfg.volLookback, cfg.rangeWindow);
@@ -83,7 +89,6 @@ export function analyzeBreakout(
     return avg > 0 ? candles[i].volume / avg : 0;
   };
 
-  // Most recent qualifying breakout candle within the fresh window.
   for (let i = n - 1; i >= Math.max(minI, n - 1 - cfg.freshBars); i--) {
     const c = candles[i];
     if (!(c.close > c.open)) continue; // bullish only
@@ -100,8 +105,70 @@ export function analyzeBreakout(
     if (!levelsCleared.length && !rangeBreak) continue;
 
     const runPct = (last.close / c.close - 1) * 100;
-    if (runPct > cfg.maxRunPct) continue; // already extended
-    if (last.close < c.open) continue;    // breakout failed
+    if (runPct > cfg.maxRunPct) continue;
+    if (last.close < c.open) continue;
+
+    return {
+      signal: true,
+      barsAgo: n - 1 - i,
+      breakoutTime: c.openTime,
+      relVol,
+      levelsCleared,
+      rangeBreak,
+      runPct,
+    };
+  }
+
+  return {
+    signal: false,
+    barsAgo: null,
+    breakoutTime: null,
+    relVol: relVolAt(n - 1),
+    levelsCleared: [],
+    rangeBreak: false,
+    runPct: null,
+  };
+}
+
+/**
+ * Mirrored breakdown detector: bearish 15m candle closes down through
+ * PDL / BC / S1–S4 (or the recent range low) on elevated volume.
+ */
+export function analyzeBreakdown(
+  candles: OHLC[],
+  levels: Record<string, number>,
+  cfg: BreakoutConfig = DEFAULT_BREAKOUT_CFG,
+): BreakoutResult | null {
+  const n = candles.length;
+  const minI = Math.max(cfg.volLookback, cfg.rangeWindow);
+  if (n <= minI + 1) return null;
+
+  const last = candles[n - 1];
+  const relVolAt = (i: number) => {
+    const avg = mean(candles.slice(i - cfg.volLookback, i).map((k) => k.volume));
+    return avg > 0 ? candles[i].volume / avg : 0;
+  };
+
+  for (let i = n - 1; i >= Math.max(minI, n - 1 - cfg.freshBars); i--) {
+    const c = candles[i];
+    if (!(c.close < c.open)) continue; // bearish only
+    const relVol = relVolAt(i);
+    if (relVol < cfg.relVolMin) continue;
+
+    const prevClose = candles[i - 1].close;
+    // Closing down through levels (prev was at/above, close below).
+    const levelsCleared = Object.entries(levels)
+      .filter(([, lvl]) => prevClose >= lvl && c.close < lvl)
+      .sort((a, b) => b[1] - a[1]) // higher levels first (S1 before S4 when going down)
+      .map(([name]) => name);
+    const rangeLow = Math.min(...candles.slice(i - cfg.rangeWindow, i).map((k) => k.low));
+    const rangeBreak = c.close < rangeLow;
+    if (!levelsCleared.length && !rangeBreak) continue;
+
+    // runPct negative when price continued lower after the breakdown candle.
+    const runPct = (last.close / c.close - 1) * 100;
+    if (runPct < -cfg.maxRunPct) continue; // already extended too far down
+    if (last.close > c.open) continue; // breakdown failed (reclaimed)
 
     return {
       signal: true,

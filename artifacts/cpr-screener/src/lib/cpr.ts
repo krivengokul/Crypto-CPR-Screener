@@ -332,6 +332,8 @@ export interface CPRResult {
   PD15MInsideR1S1Pass?: boolean;
   /** 15m momentum-breakout (volume spike through a level) analysis; attached by binance.ts / delta.ts at scan time. */
   breakout?: BreakoutResult;
+  /** 15m momentum-breakdown (volume spike down through PDL/BC/S1–S4); separate from breakout. */
+  breakdown?: BreakoutResult;
   /** Binance only: "COMMOD" = commodity perp (CL/BZ/XAU/XAG), "TRADFI" = other TradFi
    *  perp (stocks/ETFs). Unset for ordinary crypto perps. Set in binance.ts. */
   assetClass?: "COMMOD" | "TRADFI";

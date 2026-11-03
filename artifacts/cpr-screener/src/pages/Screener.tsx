@@ -1222,7 +1222,7 @@ export default function Screener({
     .filter(matchesSearch)
     .filter((r) => {
       if (breakoutMode === "off") return true;
-      return !!r.breakout?.signal;
+      return !!r.breakout?.signal || !!r.breakdown?.signal;
     })
     // NEW: CL2U1 / CL4U3 are independent booleans in cpr.ts (not
     // actually gated behind srLower), so a row can satisfy one of them
@@ -1772,14 +1772,14 @@ export default function Screener({
                     ? "border-border text-muted-foreground hover:text-foreground"
                     : "border-amber-500/60 bg-amber-500/15 text-amber-300"
                 }`}
-                title="15m momentum breakout filter: coins that just closed a bullish 15m candle through PDH/TC/R1–R4 (or the 3h range high) on 4x+ volume; refreshed every minute"
+                title="15m BRK / BRKDN filter: bullish volume close through PDH/TC/R1–R4 (or range high), or bearish volume close through PDL/BC/S1–S4 (or range low); refreshed every minute"
               >
-                {breakoutMode === "off" ? "Breakout" : "BRK"}
+                {breakoutMode === "off" ? "Breakout" : "BRK/DN"}
                 {breakoutMode !== "off" && (
                   <span className="font-mono">
                     {" "}
                     {
-                      getActivePool().filter((r) => !!r.breakout?.signal).length
+                      getActivePool().filter((r) => !!r.breakout?.signal || !!r.breakdown?.signal).length
                     }
                   </span>
                 )}

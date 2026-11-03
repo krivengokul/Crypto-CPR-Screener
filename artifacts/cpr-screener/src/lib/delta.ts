@@ -1,5 +1,5 @@
 import { OHLC, CPRResult, analyzeCPR } from "./cpr";
-import { analyzeBreakout, levelsFromCPR } from "./breakout";
+import { analyzeBreakout, analyzeBreakdown, levelsFromCPR, levelsFromCPRDown } from "./breakout";
 import { safeSetItem } from "./safeStorage";
 import { shouldExcludeSymbol } from "./symbolFilters";
 
@@ -388,6 +388,8 @@ export async function runDeltaScreener(
       try {
         cprResult.breakout =
           analyzeBreakout(intraday, levelsFromCPR(cprResult.todayCPR)) ?? undefined;
+        cprResult.breakdown =
+          analyzeBreakdown(intraday, levelsFromCPRDown(cprResult.todayCPR)) ?? undefined;
       } catch (e) {
         console.warn(`[delta] breakout analysis failed for ${t.symbol}`, e);
       }

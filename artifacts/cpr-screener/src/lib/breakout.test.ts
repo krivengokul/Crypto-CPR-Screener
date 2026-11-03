@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { analyzeBreakout } from "./breakout.ts";
+import { analyzeBreakout, analyzeBreakdown } from "./breakout.ts";
 
 const T0 = 1_700_000_000_000;
 const candle = (i: number, open: number, close: number, volume: number) => ({
@@ -56,4 +56,20 @@ test("breakout that already ran more than 30% is dropped; failed breakout is dro
 
 test("too few candles returns null", () => {
   assert.equal(analyzeBreakout([candle(0, 1, 2, 1)], { R1: 1 }), null);
+});
+
+test("volume spike down through a level flags BRKDN", () => {
+  const c = chop();
+  c.push(candle(40, 100, 96, 600)); // 6x volume, closes through 98
+  const r = analyzeBreakdown(c, { S1: 98 });
+  assert.equal(r?.signal, true);
+  assert.equal(r?.barsAgo, 0);
+  assert.deepEqual(r?.levelsCleared, ["S1"]);
+  assert.ok((r?.relVol ?? 0) >= 4);
+});
+
+test("breakdown that reclaims above the candle open is dropped", () => {
+  const c = chop();
+  c.push(candle(40, 100, 96, 600), candle(41, 96, 101, 200));
+  assert.equal(analyzeBreakdown(c, { S1: 98 })?.signal, false);
 });

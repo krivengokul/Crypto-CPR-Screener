@@ -1625,6 +1625,9 @@ function ScreenerTableRow({
             move.sub === "<S3" ||
             move.sub === "<S4";
           const showPdhRow = !aboveR1 && !belowS1;
+          // Beyond PDH / PDL: show only that line — no secondary >TC / <BC line.
+          const beyondPdh = pdh.sub === "> PDH";
+          const beyondPdl = pdh.sub === "< PDL";
           const brkBadge = r.breakout?.signal ? (
             <div className="mt-0.5">
               <span
@@ -1640,7 +1643,45 @@ function ScreenerTableRow({
               </span>
             </div>
           ) : null;
-          // Price above TC but hasn't cleared R1: PDH on row 1, MOVE on row 2.
+          const brkDnBadge = r.breakdown?.signal ? (
+            <div className="mt-0.5">
+              <span
+                className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded border border-pink-500/50 bg-pink-500/15 text-[#ff6bb5]"
+                title={`15m momentum breakdown ${r.breakdown.barsAgo === 0 ? "on the latest (possibly still forming) candle" : `${r.breakdown.barsAgo} candle(s) ago`} · rel. volume ${r.breakdown.relVol.toFixed(1)}x · cleared ${r.breakdown.levelsCleared.join("/") || "range low"} · ${(r.breakdown.runPct ?? 0) >= 0 ? "+" : ""}${(r.breakdown.runPct ?? 0).toFixed(1)}% since`}
+              >
+                BRKDN {r.breakdown.relVol.toFixed(1)}x
+                {r.breakdown.levelsCleared.length > 0
+                  ? ` ${r.breakdown.levelsCleared.join("·")}`
+                  : " RNG"}
+                {" "}
+                {(r.breakdown.barsAgo ?? 0) * 15}m
+              </span>
+            </div>
+          ) : null;
+          // Beyond PDH: only PDH % (no >TC). Beyond PDL: only PDL % (no <BC).
+          if (beyondPdh && showPdhRow) {
+            return (
+              <td className={`pl-3 pr-2 py-3 whitespace-nowrap text-xs font-medium ${pdh.color}`}>
+                <div title={pdhTitle}>
+                  {pdh.main}
+                  {pdh.sub && <span className="text-[10px] ml-1">{pdh.sub}</span>}
+                </div>
+                {brkBadge}
+              </td>
+            );
+          }
+          if (beyondPdl && showPdhRow) {
+            return (
+              <td className={`pl-3 pr-2 py-3 whitespace-nowrap text-xs font-medium ${pdh.color}`}>
+                <div title={pdhTitle}>
+                  {pdh.main}
+                  {pdh.sub && <span className="text-[10px] ml-1">{pdh.sub}</span>}
+                </div>
+                {brkDnBadge}
+              </td>
+            );
+          }
+          // Price above TC but still IN-PDHL (hasn't cleared PDH): IN-PDHL + >TC.
           if (move.sub === ">TC" && showPdhRow) {
             const inRange = pdh.main === "IN-PDHL";
             return (
@@ -1667,6 +1708,7 @@ function ScreenerTableRow({
                 </div>
               )}
               {brkBadge}
+              {brkDnBadge}
             </td>
           );
         })()}
