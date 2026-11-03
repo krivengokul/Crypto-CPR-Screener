@@ -1216,7 +1216,7 @@ export const LEVELSBELOW_VIEWS: ViewDef[] = [
       },
     {
         key: "S1-CB-B-B-BB-BB-CL4U2-RH-GapAB-S4",
-        label: "PMedMini-DowntoS4",
+        label: "MEDI20MINI-2S4",
         parentKey: "B-B-BB-BB-CL4U2",
         condition: (r) => passesView(r, "B-B-BB-BB-CL4U2") && matchesGapBadge(r, "RH-GapAB") && matchesCandleCheck(r, "CB"),
         standalone: true,
@@ -1335,6 +1335,7 @@ export const LEVELSBELOW_VIEWS: ViewDef[] = [
         ]
       }
     ],
+        requireFullMatch: true,
       },
     {
         key: "PL-MB-B-B-BB-BB-EL2U4-SL-AAGap-S4",
