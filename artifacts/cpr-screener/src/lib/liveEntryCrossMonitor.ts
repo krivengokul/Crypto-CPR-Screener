@@ -95,9 +95,25 @@ export class LiveEntryCrossMonitor {
       saveFiredToday(this.fired);
     }
     const next = new Map(candidates.map((candidate) => [candidate.key, candidate]));
+    let firedChanged = false;
     for (const candidate of candidates) {
       if (!this.candidates.has(candidate.key)) {
         this.previousPrice.set(candidate.key, candidate.initialPrice);
+        // Already past entry (or target) when first seen — do not alert later
+        // as if the cross just happened (common after long idle / tab sleep).
+        if (this.alreadyPastEntry(candidate, candidate.initialPrice)) {
+          if (!this.fired.has(candidate.key)) {
+            this.fired.add(candidate.key);
+            firedChanged = true;
+          }
+        }
+      } else {
+        // Refresh candidate fields; if live price is already past target, arm off.
+        const px = candidate.initialPrice;
+        if (this.alreadyPastTarget(candidate, px) && !this.fired.has(candidate.key)) {
+          this.fired.add(candidate.key);
+          firedChanged = true;
+        }
       }
     }
     for (const key of this.candidates.keys()) {
@@ -106,8 +122,24 @@ export class LiveEntryCrossMonitor {
       }
     }
     this.candidates = next;
+    if (firedChanged) saveFiredToday(this.fired);
     this.syncBinance();
     this.syncDelta();
+  }
+
+  /** Price already on the active side of entry (Up: ≥ entry, Down: ≤ entry). */
+  private alreadyPastEntry(candidate: EntryCrossCandidate, price: number): boolean {
+    if (!Number.isFinite(price) || !Number.isFinite(candidate.entry)) return false;
+    return candidate.direction === "Up"
+      ? price >= candidate.entry
+      : price <= candidate.entry;
+  }
+
+  /** Price already at/through target — setup is done for alerting purposes. */
+  private alreadyPastTarget(candidate: EntryCrossCandidate, price: number): boolean {
+    const target = candidate.payload?.target;
+    if (!Number.isFinite(price) || !Number.isFinite(target)) return false;
+    return candidate.direction === "Up" ? price >= target! : price <= target!;
   }
 
   stop() {
@@ -129,10 +161,23 @@ export class LiveEntryCrossMonitor {
     const previous = this.previousPrice.get(key);
     this.previousPrice.set(key, price);
     if (this.fired.has(key) || previous === undefined) return;
+
+    // Target already reached on this print — mark done, never entry-toast.
+    if (this.alreadyPastTarget(candidate, price)) {
+      this.fired.add(key);
+      saveFiredToday(this.fired);
+      return;
+    }
+
     const crossed = candidate.direction === "Up"
       ? previous < candidate.entry && price >= candidate.entry
       : previous > candidate.entry && price <= candidate.entry;
     if (!crossed) return;
+
+    // Cross detected only after a real in-session step through entry.
+    // If previous was already past entry, this is not a fresh arming cross.
+    if (this.alreadyPastEntry(candidate, previous)) return;
+
     this.fired.add(key);
     saveFiredToday(this.fired);
     this.onCross(candidate, price, timestamp);
@@ -168,9 +213,21 @@ export class LiveEntryCrossMonitor {
     socket.onopen = () => {
       if (socket !== this.binanceSocket) return;
       this.binanceSubscribed.clear();
+      // Seed only keys that have no prior tick. Resetting every reconnect to
+      // initialPrice made idle→wake look like a brand-new entry cross.
       for (const candidate of this.candidates.values()) {
-        if (candidate.source === "binance") this.previousPrice.set(candidate.key, candidate.initialPrice);
+        if (candidate.source !== "binance") continue;
+        if (!this.previousPrice.has(candidate.key)) {
+          this.previousPrice.set(candidate.key, candidate.initialPrice);
+        }
+        if (
+          this.alreadyPastEntry(candidate, candidate.initialPrice) ||
+          this.alreadyPastTarget(candidate, candidate.initialPrice)
+        ) {
+          this.fired.add(candidate.key);
+        }
       }
+      saveFiredToday(this.fired);
       this.syncBinance();
     };
     socket.onmessage = (message) => {
@@ -244,8 +301,18 @@ export class LiveEntryCrossMonitor {
       if (socket !== this.deltaSocket) return;
       this.deltaSubscribed.clear();
       for (const candidate of this.candidates.values()) {
-        if (candidate.source === "delta") this.previousPrice.set(candidate.key, candidate.initialPrice);
+        if (candidate.source !== "delta") continue;
+        if (!this.previousPrice.has(candidate.key)) {
+          this.previousPrice.set(candidate.key, candidate.initialPrice);
+        }
+        if (
+          this.alreadyPastEntry(candidate, candidate.initialPrice) ||
+          this.alreadyPastTarget(candidate, candidate.initialPrice)
+        ) {
+          this.fired.add(candidate.key);
+        }
       }
+      saveFiredToday(this.fired);
       this.syncDelta();
       this.deltaPing = setInterval(() => {
         if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: "ping" }));

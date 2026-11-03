@@ -291,6 +291,23 @@ function App() {
       )) {
         return;
       }
+      // Stale wake / late print: target already reached — no entry toast.
+      const tgt = candidate.payload.target;
+      if (
+        Number.isFinite(price) &&
+        Number.isFinite(tgt) &&
+        (candidate.direction === "Up" ? price >= tgt : price <= tgt)
+      ) {
+        return;
+      }
+      if (
+        Number.isFinite(price) &&
+        Number.isFinite(candidate.entry) &&
+        (candidate.direction === "Up" ? price < candidate.entry : price > candidate.entry)
+      ) {
+        // Price print is not actually on the active side of entry.
+        return;
+      }
 
       playEntryCrossAlert();
 
