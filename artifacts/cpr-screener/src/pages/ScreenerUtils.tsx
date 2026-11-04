@@ -1455,35 +1455,17 @@ export function renderLevelStatusRow1Badges(
         </span>
       )}
       {renderHHLLCategoryBadge(r)}
-      {r.overlapLower && !ovLowerConsumed && (
-        <span className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-medium">oV-B</span>
-      )}
-      {r.overlapHigher && !ovHigherConsumed && (
-        <span className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20 font-medium">oV-A</span>
-      )}
-      {narrowMerge === "AoV" && (
-        <span className={`${smallBadge} bg-green-500/10 text-green-400 border border-green-500/20`}>Ovlap-Nrow-A</span>
-      )}
       {narrowMerge === "A" && (
         <span className={`${smallBadge} bg-green-500/10 text-green-400 border border-green-500/20`}>Narow-A</span>
       )}
       {narrowMerge === "B" && (
         <span className={`${smallBadge} bg-pink-500/10 text-[#ff6bb5] border border-pink-500/20`}>Narow-B</span>
       )}
-      {narrowMerge === "BoV" && (
-        <span className={`${smallBadge} bg-pink-500/10 text-[#ff6bb5] border border-pink-500/20`}>Ovlap-Nrow-B</span>
-      )}
-      {wideMerge === "AoV" && (
-        <span className={`${smallBadge} bg-lime-400/10 text-lime-300 border border-lime-400/20`}>Ovlap-Wide-A</span>
-      )}
       {wideMerge === "A" && (
         <span className={`${smallBadge} bg-green-500/10 text-green-400 border border-green-500/20`}>Wide-A</span>
       )}
       {wideMerge === "B" && (
         <span className={`${smallBadge} bg-pink-500/10 text-[#ff6bb5] border border-pink-500/20`}>Wide-B</span>
-      )}
-      {wideMerge === "BoV" && (
-        <span className={`${smallBadge} bg-pink-500/10 text-[#ff6bb5] border border-pink-500/20`}>Ovlap-Wide-B</span>
       )}
       {isNarrow && !narrowConsumed && (
         <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>Narrow</span>
@@ -1536,15 +1518,12 @@ export function renderLevelStatusBadge(
 
   const smallBadge = "text-[10px] px-1 py-0.5 rounded font-medium whitespace-nowrap shrink-0";
 
-  if (narrowMerge === "AoV") return <span className={`${smallBadge} bg-green-500/10 text-green-400 border border-green-500/20`}>Ovlap-Nrow-A</span>;
+  // Overlap (AoV/BoV) → SYMBOL as TOUCH/Wide-OVA etc. Pure Narrow/Wide-A/B stay here.
   if (narrowMerge === "A") return <span className={`${smallBadge} bg-green-500/10 text-green-400 border border-green-500/20`}>Narow-A</span>;
   if (narrowMerge === "B") return <span className={`${smallBadge} bg-pink-500/10 text-[#ff6bb5] border border-pink-500/20`}>Narow-B</span>;
-  if (narrowMerge === "BoV") return <span className={`${smallBadge} bg-pink-500/10 text-[#ff6bb5] border border-pink-500/20`}>Ovlap-Nrow-B</span>;
-  if (wideMerge === "AoV") return <span className={`${smallBadge} bg-lime-400/10 text-lime-300 border border-lime-400/20`}>Ovlap-Wide-A</span>;
   if (wideMerge === "A") return <span className={`${smallBadge} bg-green-500/10 text-green-400 border border-green-500/20`}>Wide-A</span>;
   if (wideMerge === "B") return <span className={`${smallBadge} bg-pink-500/10 text-[#ff6bb5] border border-pink-500/20`}>Wide-B</span>;
-  if (wideMerge === "BoV") return <span className={`${smallBadge} bg-pink-500/10 text-[#ff6bb5] border border-pink-500/20`}>Ovlap-Wide-B</span>;
-  // INCPR / OUTCPR shown under SYMBOL as TOUCH/INCPR or TOUCH/OUTCPR — not Pattern badges.
+  // INCPR / OUTCPR / Overlap shown under SYMBOL — not Pattern badges.
   if (isInsideCPR) return null;
   if (isOutsideCPR) return null;
   if (r.cprRising && !aboveConsumed) return <span className={`${smallBadge} bg-blue-500/10 text-blue-400 border border-blue-500/20`}>Above</span>;
@@ -1598,12 +1577,6 @@ export function renderLevelStatusRestBadges(
         </span>
       )}
       {renderHHLLCategoryBadge(r)}
-      {r.overlapLower && !ovLowerConsumed && (
-        <span className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-medium">oV-B</span>
-      )}
-      {r.overlapHigher && !ovHigherConsumed && (
-        <span className="text-[10px] whitespace-nowrap px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20 font-medium">oV-A</span>
-      )}
       {r.equalCPR && (
         <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">Equal</span>
       )}

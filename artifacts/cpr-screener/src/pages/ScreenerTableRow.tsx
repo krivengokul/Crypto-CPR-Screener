@@ -1347,33 +1347,46 @@ function ScreenerTableRow({
                 const category = getRowCategory(r);
                 const isInCpr = !!(r.InsideCPR || (r as { insideCPR?: boolean }).insideCPR);
                 const isOutCpr = !!r.outCPR;
+                const isNarrow = !!(r.narrowCPR && !isInCpr);
+                const isWide = !!(r.strWideCPR && !isOutCpr);
                 const touchish = category === "touch" || r.touchCategory || !category;
                 const touchColor = CATEGORY_TEXT_COLORS.touch ?? "text-lime-300";
-                // INCPR / OUTCPR under symbol as TOUCH/… (not Pattern badges).
-                // INCPR = yellow; OUTCPR = orange; TOUCH = existing lime; / = grey.
+                const touchSlash = (title: string, label: string, labelClass: string) => (
+                  <span
+                    className="mt-0.5 text-[10px] uppercase tracking-wide leading-none whitespace-nowrap"
+                    title={title}
+                  >
+                    <span className={touchColor}>TOUCH</span>
+                    <span className="text-muted-foreground">/</span>
+                    <span className={labelClass}>{label}</span>
+                  </span>
+                );
+                // Priority: INCPR → OUTCPR → Overlap Above → Overlap Below → plain category
                 if (isInCpr && touchish) {
-                  return (
-                    <span
-                      className="mt-0.5 text-[10px] uppercase tracking-wide leading-none whitespace-nowrap"
-                      title="Inside CPR — TOUCH / INCPR"
-                    >
-                      <span className={touchColor}>TOUCH</span>
-                      <span className="text-muted-foreground">/</span>
-                      <span className="text-yellow-400">INCPR</span>
-                    </span>
-                  );
+                  return touchSlash("Inside CPR — TOUCH / INCPR", "INCPR", "text-yellow-400");
                 }
                 if (isOutCpr && touchish) {
-                  return (
-                    <span
-                      className="mt-0.5 text-[10px] uppercase tracking-wide leading-none whitespace-nowrap"
-                      title="Outside CPR — TOUCH / OUTCPR"
-                    >
-                      <span className={touchColor}>TOUCH</span>
-                      <span className="text-muted-foreground">/</span>
-                      <span className="text-orange-400">OUTCPR</span>
-                    </span>
-                  );
+                  return touchSlash("Outside CPR — TOUCH / OUTCPR", "OUTCPR", "text-orange-400");
+                }
+                // Overlap Above: Wide-OVA pink, Narrow-OVA green
+                if (r.overlapHigher && touchish) {
+                  if (isWide) {
+                    return touchSlash("Overlap Above (Wide) — TOUCH / Wide-OVA", "WIDE-OVA", "text-[#ff6bb5]");
+                  }
+                  if (isNarrow) {
+                    return touchSlash("Overlap Above (Narrow) — TOUCH / Narrow-OVA", "NARROW-OVA", "text-green-400");
+                  }
+                  return touchSlash("Overlap Above — TOUCH / OVA", "OVA", "text-[#ff6bb5]");
+                }
+                // Overlap Below: Wide-OVB green, Narrow-OVB pink
+                if (r.overlapLower && touchish) {
+                  if (isWide) {
+                    return touchSlash("Overlap Below (Wide) — TOUCH / Wide-OVB", "WIDE-OVB", "text-green-400");
+                  }
+                  if (isNarrow) {
+                    return touchSlash("Overlap Below (Narrow) — TOUCH / Narrow-OVB", "NARROW-OVB", "text-[#ff6bb5]");
+                  }
+                  return touchSlash("Overlap Below — TOUCH / OVB", "OVB", "text-green-400");
                 }
                 if (!category) return null;
                 return (
