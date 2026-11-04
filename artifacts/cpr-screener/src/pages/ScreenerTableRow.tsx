@@ -1345,6 +1345,22 @@ function ScreenerTableRow({
               })()}
               {(() => {
                 const category = getRowCategory(r);
+                const isInCpr = !!(r.InsideCPR || (r as { insideCPR?: boolean }).insideCPR);
+                // INCPR: show under symbol as TOUCH/INCPR (TOUCH existing color, / grey, INCPR orange).
+                // Pattern column no longer shows an INCPR badge.
+                if (isInCpr && (category === "touch" || r.touchCategory || !category)) {
+                  const touchColor = CATEGORY_TEXT_COLORS.touch ?? "text-lime-300";
+                  return (
+                    <span
+                      className="mt-0.5 text-[10px] uppercase tracking-wide leading-none whitespace-nowrap"
+                      title="Inside CPR — TOUCH / INCPR"
+                    >
+                      <span className={touchColor}>TOUCH</span>
+                      <span className="text-muted-foreground">/</span>
+                      <span className="text-orange-400">INCPR</span>
+                    </span>
+                  );
+                }
                 if (!category) return null;
                 return (
                   <span
