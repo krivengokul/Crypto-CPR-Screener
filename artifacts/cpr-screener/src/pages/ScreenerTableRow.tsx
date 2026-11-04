@@ -10,7 +10,7 @@ import { getView } from "@/lib/views";
 /** Pass / Fail / Active / Ready under MOVE (R4/S4 session extreme or preferred View). */
 function renderRowStatusBadge(
   r: CPRResult,
-  matchingSignals: { id: string; direction?: string }[],
+  matchingSignals: { id: string; direction?: string | null }[],
   activeSignal?: string | null,
 ) {
   const r4s4 = sessionR4OrS4Hit(r);
@@ -57,7 +57,7 @@ function renderRowStatusBadge(
   const entryFn = view?.getEntry;
   const targetFn = view?.getTarget;
   const slFn = view?.getStoploss;
-  const direction = preferred.direction || view?.direction;
+  const direction = preferred.direction || view?.direction || undefined;
   const isUp = direction === "Up";
   const isDown = direction === "Down";
   let status: "pass" | "fail" | "active" | "ready" | null = null;
