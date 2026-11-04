@@ -6,6 +6,141 @@ import type { CPRResult } from "@/lib/cpr";
 import type { ReclaimSideState } from "@/lib/15MCandleCheck";
 import { getView } from "@/lib/views";
 
+
+/** Pass / Fail / Active / Ready under MOVE (R4/S4 session extreme or preferred View). */
+function renderRowStatusBadge(
+  r: CPRResult,
+  matchingSignals: { id: string; direction?: string }[],
+  activeSignal?: string | null,
+) {
+  const r4s4 = sessionR4OrS4Hit(r);
+  if (r4s4) {
+    const badgeClass =
+      r4s4 === "S4"
+        ? "border-[#ff6bb5]/50 bg-[#ff6bb5]/15 text-[#ff6bb5]"
+        : r4s4 === "R4"
+          ? "border-emerald-500/50 bg-emerald-500/15 text-emerald-400"
+          : "border-[#ff6bb5]/40 bg-[#ff6bb5]/10 text-[#ff6bb5]";
+    if (r4s4 === "R4+S4") {
+      return (
+        <span className="mt-0.5 inline-flex w-fit items-center gap-0.5">
+          <span
+            className="inline-flex shrink-0 items-center rounded border border-emerald-500/50 bg-emerald-500/15 px-1 py-0 text-[9px] font-mono font-semibold leading-tight text-emerald-400"
+            title="Session reached R4 (today high/low or last price)"
+          >
+            PASS · R4
+          </span>
+          <span
+            className="inline-flex shrink-0 items-center rounded border border-[#ff6bb5]/50 bg-[#ff6bb5]/15 px-1 py-0 text-[9px] font-mono font-semibold leading-tight text-[#ff6bb5]"
+            title="Session reached S4 (today high/low or last price)"
+          >
+            PASS · S4
+          </span>
+        </span>
+      );
+    }
+    return (
+      <span
+        className={`mt-0.5 inline-flex w-fit shrink-0 items-center rounded border px-1 py-0 text-[9px] font-mono font-semibold leading-tight ${badgeClass}`}
+        title={`Session reached ${r4s4} (today high/low or last price)`}
+      >
+        PASS · {r4s4}
+      </span>
+    );
+  }
+  const preferred =
+    (activeSignal && matchingSignals.find((m) => m.id === activeSignal)) ||
+    matchingSignals.find((m) => getView(m.id)?.getEntry) ||
+    matchingSignals[0];
+  if (!preferred) return null;
+  const view = getView(preferred.id);
+  const entryFn = view?.getEntry;
+  const targetFn = view?.getTarget;
+  const slFn = view?.getStoploss;
+  const direction = preferred.direction || view?.direction;
+  const isUp = direction === "Up";
+  const isDown = direction === "Down";
+  let status: "pass" | "fail" | "active" | "ready" | null = null;
+  if (
+    targetFn &&
+    sessionReachedTarget(
+      direction ?? "",
+      targetFn(r),
+      r.todayHigh,
+      r.todayLow,
+      r.currentPrice,
+    )
+  ) {
+    status = "pass";
+  } else if (slFn) {
+    const sl = slFn(r);
+    const hitSlUp =
+      isUp &&
+      Number.isFinite(sl) &&
+      ((typeof r.todayLow === "number" && r.todayLow <= sl) ||
+        (typeof r.currentPrice === "number" && r.currentPrice <= sl));
+    const hitSlDown =
+      isDown &&
+      Number.isFinite(sl) &&
+      ((typeof r.todayHigh === "number" && r.todayHigh >= sl) ||
+        (typeof r.currentPrice === "number" && r.currentPrice >= sl));
+    if (hitSlUp || hitSlDown) status = "fail";
+  }
+  if (!status && entryFn) {
+    status = hasTouchedEntry(direction ?? "", entryFn(r), r.currentPrice)
+      ? "active"
+      : "ready";
+  }
+  if (!status) return null;
+  if (status === "pass") {
+    return (
+      <span
+        className={`mt-0.5 inline-flex w-fit shrink-0 items-center rounded border px-1 py-0 text-[9px] font-mono font-semibold leading-tight ${
+          isDown
+            ? "border-[#ff6bb5]/40 bg-[#ff6bb5]/10 text-[#ff6bb5]"
+            : "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
+        }`}
+        title="Target reached"
+      >
+        Pass
+      </span>
+    );
+  }
+  if (status === "fail") {
+    return (
+      <span
+        className="mt-0.5 inline-flex w-fit shrink-0 items-center rounded border px-1 py-0 text-[9px] font-mono font-semibold leading-tight"
+        style={{
+          color: "#f87171",
+          borderColor: "rgba(248, 113, 113, 0.45)",
+          backgroundColor: "rgba(248, 113, 113, 0.15)",
+        }}
+        title="Stop loss hit"
+      >
+        Fail
+      </span>
+    );
+  }
+  if (status === "active") {
+    return (
+      <span
+        className="mt-0.5 inline-flex w-fit shrink-0 items-center rounded border border-lime-500/40 bg-lime-500/10 px-1 py-0 text-[9px] font-mono font-semibold leading-tight text-lime-400 animate-pulse"
+        title="Entry touched"
+      >
+        Active
+      </span>
+    );
+  }
+  return (
+    <span
+      className="mt-0.5 inline-flex w-fit shrink-0 items-center rounded border border-sky-500/30 bg-sky-500/10 px-1 py-0 text-[9px] font-mono font-semibold leading-tight text-sky-300"
+      title="Entry not yet touched"
+    >
+      Ready
+    </span>
+  );
+}
+
 /** True when `viewKey` is a descendant (via parentKey) of `ancestorKey`. */
 function isViewUnder(viewKey: string, ancestorKey: string): boolean {
   const seen = new Set<string>();
@@ -1195,136 +1330,7 @@ function ScreenerTableRow({
                   </span>
                 )}
               </div>
-              {/* STATUS badge under symbol. R4/S4 session extreme = PASS even with no View. */}
-              {(() => {
-                const r4s4 = sessionR4OrS4Hit(r);
-                if (r4s4) {
-                  // PASS · R4 stays emerald; PASS · S4 uses bright pink (Down extreme).
-                  const badgeClass =
-                    r4s4 === "S4"
-                      ? "border-[#ff6bb5]/50 bg-[#ff6bb5]/15 text-[#ff6bb5]"
-                      : r4s4 === "R4"
-                        ? "border-emerald-500/50 bg-emerald-500/15 text-emerald-400"
-                        : "border-[#ff6bb5]/40 bg-[#ff6bb5]/10 text-[#ff6bb5]"; // R4+S4: pink frame
-                  if (r4s4 === "R4+S4") {
-                    return (
-                      <span className="mt-0.5 inline-flex w-fit items-center gap-0.5">
-                        <span
-                          className="inline-flex shrink-0 items-center rounded border border-emerald-500/50 bg-emerald-500/15 px-1 py-0 text-[9px] font-mono font-semibold leading-tight text-emerald-400"
-                          title="Session reached R4 (today high/low or last price)"
-                        >
-                          PASS · R4
-                        </span>
-                        <span
-                          className="inline-flex shrink-0 items-center rounded border border-[#ff6bb5]/50 bg-[#ff6bb5]/15 px-1 py-0 text-[9px] font-mono font-semibold leading-tight text-[#ff6bb5]"
-                          title="Session reached S4 (today high/low or last price)"
-                        >
-                          PASS · S4
-                        </span>
-                      </span>
-                    );
-                  }
-                  return (
-                    <span
-                      className={`mt-0.5 inline-flex w-fit shrink-0 items-center rounded border px-1 py-0 text-[9px] font-mono font-semibold leading-tight ${badgeClass}`}
-                      title={`Session reached ${r4s4} (today high/low or last price)`}
-                    >
-                      PASS · {r4s4}
-                    </span>
-                  );
-                }
-                const preferred =
-                  (activeSignal && matchingSignals.find((m) => m.id === activeSignal)) ||
-                  matchingSignals.find((m) => getView(m.id)?.getEntry) ||
-                  matchingSignals[0];
-                if (!preferred) return null;
-                const view = getView(preferred.id);
-                const entryFn = view?.getEntry;
-                const targetFn = view?.getTarget;
-                const slFn = view?.getStoploss;
-                const direction = preferred.direction || view?.direction;
-                const isUp = direction === "Up";
-                const isDown = direction === "Down";
-                let status: "pass" | "fail" | "active" | "ready" | null = null;
-                if (
-                  targetFn &&
-                  sessionReachedTarget(
-                    direction ?? "",
-                    targetFn(r),
-                    r.todayHigh,
-                    r.todayLow,
-                    r.currentPrice,
-                  )
-                ) {
-                  status = "pass";
-                } else if (slFn) {
-                  const sl = slFn(r);
-                  const hitSlUp =
-                    isUp &&
-                    Number.isFinite(sl) &&
-                    ((typeof r.todayLow === "number" && r.todayLow <= sl) ||
-                      (typeof r.currentPrice === "number" && r.currentPrice <= sl));
-                  const hitSlDown =
-                    isDown &&
-                    Number.isFinite(sl) &&
-                    ((typeof r.todayHigh === "number" && r.todayHigh >= sl) ||
-                      (typeof r.currentPrice === "number" && r.currentPrice >= sl));
-                  if (hitSlUp || hitSlDown) status = "fail";
-                }
-                if (!status && entryFn) {
-                  status = hasTouchedEntry(direction ?? "", entryFn(r), r.currentPrice)
-                    ? "active"
-                    : "ready";
-                }
-                if (!status) return null;
-                if (status === "pass") {
-                  return (
-                    <span
-                      className={`mt-0.5 inline-flex w-fit shrink-0 items-center rounded border px-1 py-0 text-[9px] font-mono font-semibold leading-tight ${
-                        isDown
-                          ? "border-[#ff6bb5]/40 bg-[#ff6bb5]/10 text-[#ff6bb5]"
-                          : "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
-                      }`}
-                      title="Target reached"
-                    >
-                      Pass
-                    </span>
-                  );
-                }
-                if (status === "fail") {
-                  return (
-                    <span
-                      className="mt-0.5 inline-flex w-fit shrink-0 items-center rounded border px-1 py-0 text-[9px] font-mono font-semibold leading-tight"
-                      style={{
-                        color: "#f87171",
-                        borderColor: "rgba(248, 113, 113, 0.45)",
-                        backgroundColor: "rgba(248, 113, 113, 0.15)",
-                      }}
-                      title="Stop loss hit"
-                    >
-                      Fail
-                    </span>
-                  );
-                }
-                if (status === "active") {
-                  return (
-                    <span
-                      className="mt-0.5 inline-flex w-fit shrink-0 items-center rounded border border-lime-500/40 bg-lime-500/10 px-1 py-0 text-[9px] font-mono font-semibold leading-tight text-lime-400 animate-pulse"
-                      title="Entry touched"
-                    >
-                      Active
-                    </span>
-                  );
-                }
-                return (
-                  <span
-                    className="mt-0.5 inline-flex w-fit shrink-0 items-center rounded border border-sky-500/30 bg-sky-500/10 px-1 py-0 text-[9px] font-mono font-semibold leading-tight text-sky-300"
-                    title="Entry not yet touched"
-                  >
-                    Ready
-                  </span>
-                );
-              })()}
+
               {(() => {
                 const tradfi = formatTradFiSubtitle(r.symbol);
                 if (!tradfi) return null;
@@ -1602,6 +1608,7 @@ function ScreenerTableRow({
         {(() => {
           const move = distanceFromCPR(r.currentPrice, r.todayCPR);
           const pdh = pdhPdlStatus(r);
+          const statusBadge = renderRowStatusBadge(r, matchingSignals, activeSignal);
           const pdhTitle = `PDH: ${fmt(r.todayCPR.prevHigh)}  |  PDL: ${fmt(r.todayCPR.prevLow)}`;
           const LABEL_FONT = "font-mono font-semibold text-[10px] uppercase tracking-wide leading-none";
           const moveInCpr = move.main === "IN-CPR";
@@ -1667,6 +1674,7 @@ function ScreenerTableRow({
                   {pdh.sub && <span className="text-[10px] ml-1">{pdh.sub}</span>}
                 </div>
                 {brkBadge}
+                {statusBadge}
               </td>
             );
           }
@@ -1678,6 +1686,7 @@ function ScreenerTableRow({
                   {pdh.sub && <span className="text-[10px] ml-1">{pdh.sub}</span>}
                 </div>
                 {brkDnBadge}
+                {statusBadge}
               </td>
             );
           }
@@ -1695,6 +1704,7 @@ function ScreenerTableRow({
                 </div>
                 <div className="mt-0.5">{moveLine}</div>
                 {brkBadge}
+                {statusBadge}
               </td>
             );
           }
@@ -1709,19 +1719,20 @@ function ScreenerTableRow({
               )}
               {brkBadge}
               {brkDnBadge}
+              {statusBadge}
             </td>
           );
         })()}
         <td className="px-3 py-3 pr-3 font-mono whitespace-nowrap">
-          <div className="text-sm font-bold text-foreground">
+          <div className="text-xs font-semibold text-foreground leading-tight">
             {fmt(r.currentPrice)}
             <span className="text-muted-foreground">(</span>
-            <span className={r.change24h >= 0 ? "text-green-400" : "text-[#ff6bb5]"}>
+            <span className={`text-[11px] ${r.change24h >= 0 ? "text-green-400" : "text-[#ff6bb5]"}`}>
               {fmtPct(r.change24h)}
             </span>
             <span className="text-muted-foreground">)</span>
           </div>
-          <div className="text-xs text-muted-foreground">OPrice: {fmt(r.openPrice)}</div>
+          <div className="text-[10px] text-muted-foreground">OPrice: {fmt(r.openPrice)}</div>
         </td>
         <td className="px-3 py-3 font-mono whitespace-nowrap">
           {renderPivotSizeCell(r.prevCPR, r.todayCPR, r.compressionRatio)}
