@@ -2126,3 +2126,15 @@ test("exclusive CON side stamped on the row drives matchesCandleCheck and candle
     true,
   );
 });
+
+test("sessionR4OrS4Hit: rejects garbage session extremes (0 low, inverted range) so no false S4 PASS", () => {
+  const cpr = { r4: 120, s4: 80 };
+  // todayLow = 0 (missing data) must not count as touching S4
+  assert.equal(sessionR4OrS4Hit({ currentPrice: 100, todayHigh: 105, todayLow: 0, todayCPR: cpr }), null);
+  // stale low far below price while price sits above (low > price*1.02 is invalid; here low<=px but inverted vs high)
+  assert.equal(sessionR4OrS4Hit({ currentPrice: 100, todayHigh: 70, todayLow: 75, todayCPR: cpr }), null);
+  // valid low at/below S4 still passes
+  assert.equal(sessionR4OrS4Hit({ currentPrice: 100, todayHigh: 105, todayLow: 79, todayCPR: cpr }), "S4");
+  // price at/below S4 passes even with no session extremes
+  assert.equal(sessionR4OrS4Hit({ currentPrice: 79, todayCPR: cpr }), "S4");
+});

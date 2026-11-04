@@ -123,14 +123,32 @@ export function sessionR4OrS4Hit(r: {
   const hi = r.todayHigh;
   const lo = r.todayLow;
   const px = r.currentPrice;
+
+  // Reject garbage extremes (0, inverted range, or non-positive).
+  // Stale/wrong todayLow (e.g. prior session low) was causing false PASS · S4
+  // while price sat above PDH / R1 (seen on XMR etc.).
+  const validHi =
+    Number.isFinite(hi) && (hi as number) > 0 &&
+    (!Number.isFinite(px) || (hi as number) >= (px as number) * 0.5);
+  const validLo =
+    Number.isFinite(lo) && (lo as number) > 0 &&
+    (!Number.isFinite(hi) || (lo as number) <= (hi as number)) &&
+    (!Number.isFinite(px) || (lo as number) <= (px as number) * 1.02);
+
   const hitR4 =
     Number.isFinite(r4) &&
-    ((Number.isFinite(hi) && (hi as number) >= (r4 as number)) ||
-      (Number.isFinite(px) && (px as number) >= (r4 as number)));
+    ((validHi && (hi as number) >= (r4 as number)) ||
+      (Number.isFinite(px) && (px as number) > 0 && (px as number) >= (r4 as number)));
+
+  // S4 from valid session low, or last price actually at/below S4.
+  // (Recovery above TC after tagging S4 still counts — session extreme sticks.)
   const hitS4 =
     Number.isFinite(s4) &&
-    ((Number.isFinite(lo) && (lo as number) <= (s4 as number)) ||
-      (Number.isFinite(px) && (px as number) <= (s4 as number)));
+    ((validLo && (lo as number) <= (s4 as number)) ||
+      (Number.isFinite(px) &&
+        (px as number) > 0 &&
+        (px as number) <= (s4 as number)));
+
   if (hitR4 && hitS4) return "R4+S4";
   if (hitR4) return "R4";
   if (hitS4) return "S4";
