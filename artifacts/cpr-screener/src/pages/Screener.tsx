@@ -1046,11 +1046,12 @@ export default function Screener({
       OVA: pool.filter((r) => r.touchCategory && !!r.overlapHigher).length,
       overlapLower: pool.filter((r) => r.touchCategory && !!r.overlapLower).length,
       equalCPR: pool.filter((r) => r.touchCategory && !!r.equalCPR).length,
-      // Narrow/Wide × Levels Above/Below — same predicates as the filters.
-      narrowA: pool.filter((r) => !!r.narrowCPR && !!r.LevelsAbove).length,
-      wideA: pool.filter((r) => !!r.strWideCPR && !!r.LevelsAbove).length,
-      narrowB: pool.filter((r) => !!r.narrowCPR && !!r.LevelsBelow).length,
-      wideB: pool.filter((r) => !!r.strWideCPR && !!r.LevelsBelow).length,
+      // Narrow/Wide × CPR Above/Below — same rules as Narow-A / Wide-A row badges
+      // (narrowCPR/strWideCPR + cprRising/cprFalling; exclude Inside/Outside where badges do).
+      narrowA: pool.filter((r) => !!r.narrowCPR && !r.InsideCPR && !!r.cprRising).length,
+      wideA: pool.filter((r) => !!r.strWideCPR && !r.outCPR && !!r.cprRising).length,
+      narrowB: pool.filter((r) => !!r.narrowCPR && !r.InsideCPR && !!r.cprFalling).length,
+      wideB: pool.filter((r) => !!r.strWideCPR && !r.outCPR && !!r.cprFalling).length,
       // Counts for the three extra filters that live in the TOUCH row. They
       // use the same predicates as the filters themselves, over the full pool.
       s1r1in: pool.filter(matchesS1R1In).length,
@@ -1240,11 +1241,11 @@ export default function Screener({
       if (touchFilter === "OVA") return !!r.overlapHigher;
       if (touchFilter === "overlapLower") return !!r.overlapLower;
       if (touchFilter === "equal-cpr") return !!r.equalCPR;
-      // Narrow/Wide × Levels Above (A) / Levels Below (B)
-      if (touchFilter === "narrow-a") return !!r.narrowCPR && !!r.LevelsAbove;
-      if (touchFilter === "wide-a") return !!r.strWideCPR && !!r.LevelsAbove;
-      if (touchFilter === "narrow-b") return !!r.narrowCPR && !!r.LevelsBelow;
-      if (touchFilter === "wide-b") return !!r.strWideCPR && !!r.LevelsBelow;
+      // Match Screener row badges: Narow-A / Wide-A / Narow-B / Wide-B
+      if (touchFilter === "narrow-a") return !!r.narrowCPR && !r.InsideCPR && !!r.cprRising;
+      if (touchFilter === "wide-a") return !!r.strWideCPR && !r.outCPR && !!r.cprRising;
+      if (touchFilter === "narrow-b") return !!r.narrowCPR && !r.InsideCPR && !!r.cprFalling;
+      if (touchFilter === "wide-b") return !!r.strWideCPR && !r.outCPR && !!r.cprFalling;
       return true;
     })
     .filter((r) => {
@@ -1984,6 +1985,7 @@ export default function Screener({
               AND independent of showAll. These always render, regardless of Show All state, and
               are mutually exclusive within their own group. */}
           {showTouchList && (
+            <>
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-[10px] text-sky-400/90 uppercase tracking-wider mr-0.5 font-semibold">CPR:</span>
               {(
@@ -1993,10 +1995,6 @@ export default function Screener({
                   { id: "OVA", label: "Overlap Above", count: touchCounts.OVA },
                   { id: "overlapLower", label: "Overlap Below", count: touchCounts.overlapLower },
                   { id: "equal-cpr", label: "Equal CPR", count: touchCounts.equalCPR },
-                  { id: "narrow-a", label: "Narrow-A", count: touchCounts.narrowA },
-                  { id: "wide-a", label: "Wide-A", count: touchCounts.wideA },
-                  { id: "narrow-b", label: "Narrow-B", count: touchCounts.narrowB },
-                  { id: "wide-b", label: "Wide-B", count: touchCounts.wideB },
                 ]
               ).map(({ id, label, count }) => {
                 const isActive = touchFilter === id;
@@ -2016,10 +2014,7 @@ export default function Screener({
                   </button>
                 );
               })}
-              {/* Moved here from the search/source bar: S1-R1 IN, PDHL-A and
-                  PDHL-B. Still driven by pdhPdlFilter (same state, same
-                  mutual-exclusivity with >PDH/<PDL/>PU4/<PL4), only the
-                  location and pill styling changed to match the Touch row. */}
+              {/* S1-R1 IN, PDHL-A, PDHL-B — same pdhPdlFilter state as before. */}
               {(
                 [
                   { id: "s1r1in", label: "S1-R1 IN", count: touchCounts.s1r1in, title: "TOUCH category only: today's S1/R1 inside previous day's CPR, or previous day's S1/R1 inside today's CPR" },
@@ -2045,6 +2040,36 @@ export default function Screener({
                 );
               })}
             </div>
+            {/* Second CPR line: Narrow/Wide × Above/Below — matches row badges Narow-A / Wide-A / … */}
+            <div className="flex items-center gap-1.5 flex-wrap mt-1">
+              <span className="text-[10px] text-sky-400/90 uppercase tracking-wider mr-0.5 font-semibold opacity-0 select-none">CPR:</span>
+              {(
+                [
+                  { id: "narrow-a", label: "Narrow-A", count: touchCounts.narrowA, title: "Today CPR narrower than prev + CPR Above (same as Narow-A badge)" },
+                  { id: "wide-a", label: "Wide-A", count: touchCounts.wideA, title: "Today CPR wider than prev + CPR Above (same as Wide-A badge)" },
+                  { id: "narrow-b", label: "Narrow-B", count: touchCounts.narrowB, title: "Today CPR narrower than prev + CPR Below (same as Narow-B badge)" },
+                  { id: "wide-b", label: "Wide-B", count: touchCounts.wideB, title: "Today CPR wider than prev + CPR Below (same as Wide-B badge)" },
+                ] as const
+              ).map(({ id, label, count, title }) => {
+                const isActive = touchFilter === id;
+                return (
+                  <button
+                    key={id}
+                    onClick={() => setTouchFilter((v) => (v === id ? null : id))}
+                    className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                      isActive
+                        ? "bg-foreground/15 text-foreground border-foreground/30"
+                        : "border-border text-muted-foreground hover:text-foreground"
+                    }`}
+                    title={title}
+                  >
+                    {isActive ? `✕ ${label}` : label}
+                    <span className="text-[11px] font-mono text-muted-foreground ml-1">({count})</span>
+                  </button>
+                );
+              })}
+            </div>
+            </>
           )}
           <div className="flex items-center gap-1.5 flex-wrap">
               {showPatternList && (
