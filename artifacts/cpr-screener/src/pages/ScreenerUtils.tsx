@@ -1445,9 +1445,6 @@ export function renderLevelStatusRow1Badges(
       {r.cprFalling && !belowConsumed && (
         <span className={`${smallBadge} bg-orange-500/10 text-orange-400 border border-orange-500/20`}>Below</span>
       )}
-      {isOutsideCPR && (
-        <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>OutCPR</span>
-      )}
       {nothingMatched && <span className={`${smallBadge} bg-muted text-muted-foreground`}>Skip</span>}
       {r.SSRRCategory !== "none" && (
         <span
@@ -1547,9 +1544,9 @@ export function renderLevelStatusBadge(
   if (wideMerge === "A") return <span className={`${smallBadge} bg-green-500/10 text-green-400 border border-green-500/20`}>Wide-A</span>;
   if (wideMerge === "B") return <span className={`${smallBadge} bg-pink-500/10 text-[#ff6bb5] border border-pink-500/20`}>Wide-B</span>;
   if (wideMerge === "BoV") return <span className={`${smallBadge} bg-pink-500/10 text-[#ff6bb5] border border-pink-500/20`}>Ovlap-Wide-B</span>;
-  // INCPR is shown under SYMBOL as TOUCH/INCPR — not as a Pattern-column badge.
+  // INCPR / OUTCPR shown under SYMBOL as TOUCH/INCPR or TOUCH/OUTCPR — not Pattern badges.
   if (isInsideCPR) return null;
-  if (isOutsideCPR) return <span className={`${smallBadge} bg-chart-3/10 text-chart-3 border border-chart-3/20`}>OutCPR</span>;
+  if (isOutsideCPR) return null;
   if (r.cprRising && !aboveConsumed) return <span className={`${smallBadge} bg-blue-500/10 text-blue-400 border border-blue-500/20`}>Above</span>;
   if (r.cprFalling && !belowConsumed) return <span className={`${smallBadge} bg-orange-500/10 text-orange-400 border border-orange-500/20`}>Below</span>;
   if (nothingMatched) return <span className={`${smallBadge} bg-muted text-muted-foreground`}>Skip</span>;
