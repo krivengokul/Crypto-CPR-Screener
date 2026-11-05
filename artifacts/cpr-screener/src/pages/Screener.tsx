@@ -401,6 +401,7 @@ export default function Screener({
   const [breakoutMode, setBreakoutMode] = useState<"off" | "brk">("off");
   const [showPatternList, setShowPatternList] = useState(false);
   const [showTouchList, setShowTouchList] = useState(false);
+  const [showClassList, setShowClassList] = useState(false);
   const [touchFilter, setTouchFilter] = useState<string | null>(null);
   const [showSizeList, setShowSizeList] = useState(false);
   const [showPriceList, setShowPriceList] = useState(false);
@@ -1745,7 +1746,7 @@ export default function Screener({
           className={`flex flex-wrap items-center gap-2 ${
             currentStatus === "done" &&
             showAll &&
-            (showTouchList || showPatternList || showSizeList || showPriceList || showCandleList || showEntryLevelList)
+            (showTouchList || showClassList || showPatternList || showSizeList || showPriceList || showCandleList || showEntryLevelList)
               ? "mb-2"
               : "mb-4"
           }`}
@@ -1784,37 +1785,24 @@ export default function Screener({
                 <span className="leading-none">{showAll ? "−" : "+"}</span>
                 Show All
               </button>
-              <span className="text-[10px] text-sky-400/90 uppercase tracking-wider font-semibold shrink-0 ml-1">CLASS:</span>
-              {(
-                [
-                  { id: "CRYPTO" as const, label: "CRYPTO" },
-                  { id: "COMMOD" as const, label: "COMMODITY" },
-                  { id: "TRADFI" as const, label: "TRADFI" },
-                ]
-              ).map(({ id, label }) => {
-                const isActive = classFilter === id;
-                return (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => setClassFilter((v) => (v === id ? null : id))}
-                    className={`flex items-center gap-0.5 text-xs font-bold uppercase tracking-wide px-2 py-1 rounded border transition-colors shrink-0 ${
-                      isActive
-                        ? "bg-foreground/15 text-foreground border-foreground/30"
-                        : "border-border text-muted-foreground hover:text-foreground"
-                    }`}
-                    title={
-                      id === "CRYPTO"
-                        ? "Show only crypto (exclude TRADFI & COMMODITY)"
-                        : id === "COMMOD"
-                          ? "Show only commodity perps (XAU, XAG, oil, …)"
-                          : "Show only TradFi stock/index perps"
-                    }
-                  >
-                    {isActive ? `✕ ${label}` : label}
-                  </button>
-                );
-              })}
+              <button
+                type="button"
+                onClick={() => setShowClassList((v) => !v)}
+                className={`flex items-center gap-0.5 text-xs font-bold uppercase tracking-wide px-2 py-1 rounded border border-border transition-colors shrink-0 ${
+                  showClassList || classFilter
+                    ? "bg-foreground/15 text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                title={showClassList ? "Hide asset class filters" : "Show asset class filters (CRYPTO / COMMODITY / TRADFI)"}
+              >
+                <span className="leading-none">{showClassList ? "−" : "+"}</span>
+                CLASS
+                {classFilter ? (
+                  <span className="font-mono normal-case text-[10px] text-muted-foreground ml-0.5">
+                    · {classFilter === "COMMOD" ? "COMMODITY" : classFilter}
+                  </span>
+                ) : null}
+              </button>
               <button
                 type="button"
                 onClick={() =>
@@ -1975,7 +1963,7 @@ export default function Screener({
             rendered once a scan was done, leaving an empty gap above the
             search bar whenever Show All was on and no panel was expanded. */}
         {currentStatus === "done" &&
-          (!showAll || showTouchList || showPatternList || showSizeList || showEntryLevelList || showPriceList || showCandleList) && (
+          (!showAll || showTouchList || showClassList || showPatternList || showSizeList || showEntryLevelList || showPriceList || showCandleList) && (
           <div className="flex flex-col gap-2 mb-3">
           {/* Signals row is empty while Show All is on — don't render it, or
               its zero-height box still adds a flex gap above the panels. */}
@@ -2036,6 +2024,35 @@ export default function Screener({
           {/* Pattern filter buttons — own line, independent of activeSignal
               AND independent of showAll. These always render, regardless of Show All state, and
               are mutually exclusive within their own group. */}
+          {showClassList && (
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[10px] text-sky-400/90 uppercase tracking-wider mr-0.5 font-semibold w-14 shrink-0">CLASS:</span>
+              {(
+                [
+                  { id: "CRYPTO" as const, label: "CRYPTO", title: "Show only crypto (exclude TRADFI & COMMODITY)" },
+                  { id: "COMMOD" as const, label: "COMMODITY", title: "Show only commodity perps (XAU, XAG, oil, …)" },
+                  { id: "TRADFI" as const, label: "TRADFI", title: "Show only TradFi stock/index perps" },
+                ]
+              ).map(({ id, label, title }) => {
+                const isActive = classFilter === id;
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setClassFilter((v) => (v === id ? null : id))}
+                    className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                      isActive
+                        ? "bg-foreground/15 text-foreground border-foreground/30"
+                        : "border-border text-muted-foreground hover:text-foreground"
+                    }`}
+                    title={title}
+                  >
+                    {isActive ? `✕ ${label}` : label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
           {showTouchList && (
             <div className="flex flex-col gap-1.5">
               {/* Row 1 — CPR width × Above/Below */}
