@@ -200,8 +200,12 @@ export interface StrongBarResult {
   side: "up" | "down";
   /** body / avgBody of prior lookback bars */
   bodyMult: number;
+  /** range / avgRange of prior lookback bars */
+  rangeMult: number;
   /** body / range of the signal bar */
   bodyFrac: number;
+  /** "body" = fat body rule; "range" = wick/spike range rule */
+  via: "body" | "range";
   /** Candles since signal (0 = latest closed). */
   barsAgo: number;
 }
@@ -210,6 +214,8 @@ export interface StrongBarConfig {
   lookback: number;
   bodyMultMin: number;
   minBodyFrac: number;
+  /** High–low vs prior average range (catches wick spikes like MAGMA/FOGO). */
+  rangeMultMin: number;
   /** Only flag bars within this many closed candles of the end. */
   freshBars: number;
 }
@@ -218,13 +224,15 @@ export const DEFAULT_STRONG_BAR_CFG: StrongBarConfig = {
   lookback: 20,
   bodyMultMin: 2.5,
   minBodyFrac: 0.55,
+  rangeMultMin: 2.5,
   freshBars: 4,
 };
 
 /**
- * Detect an unusually large body on a recent closed 15m candle.
- * Candles oldest → newest. Callers must pass CLOSED candles only (the scan
- * fetchers already drop the still-forming bar).
+ * Detect an unusually large 15m bar (closed candles only).
+ * Passes if either:
+ *   - fat body: body ≥ bodyMultMin × avg body AND body ≥ minBodyFrac of range
+ *   - range spike: range ≥ rangeMultMin × avg range (wick-dominated spikes)
  */
 export function analyzeStrongBar(
   candles: OHLC[],
@@ -233,7 +241,6 @@ export function analyzeStrongBar(
   if (!candles || candles.length < cfg.lookback + 2) return null;
   const closed = candles;
 
-  // Scan recent closed bars for the strongest outlier (prefer most recent)
   const from = Math.max(cfg.lookback, closed.length - cfg.freshBars);
   let best: StrongBarResult | null = null;
 
@@ -241,31 +248,49 @@ export function analyzeStrongBar(
     const c = closed[i];
     const body = Math.abs(c.close - c.open);
     const range = c.high - c.low;
-    if (!(range > 0) || !(body > 0)) continue;
+    if (!(range > 0)) continue;
 
     const prior = closed.slice(i - cfg.lookback, i);
     const avgBody =
       prior.reduce((s, x) => s + Math.abs(x.close - x.open), 0) / prior.length;
-    if (!(avgBody > 0)) continue;
+    const avgRange =
+      prior.reduce((s, x) => s + Math.max(0, x.high - x.low), 0) / prior.length;
+    if (!(avgBody > 0) || !(avgRange > 0)) continue;
 
     const bodyMult = body / avgBody;
+    const rangeMult = range / avgRange;
     const bodyFrac = body / range;
-    if (bodyMult < cfg.bodyMultMin || bodyFrac < cfg.minBodyFrac) continue;
 
-    const side: "up" | "down" = c.close >= c.open ? "up" : "down";
+    const fatBody =
+      bodyMult >= cfg.bodyMultMin && bodyFrac >= cfg.minBodyFrac;
+    const rangeSpike = rangeMult >= cfg.rangeMultMin;
+    if (!fatBody && !rangeSpike) continue;
+
+    // Direction: body bias when fat body; otherwise which wick dominates the range
+    let side: "up" | "down";
+    if (fatBody) {
+      side = c.close >= c.open ? "up" : "down";
+    } else {
+      const mid = (c.open + c.close) / 2;
+      side = c.high - mid >= mid - c.low ? "up" : "down";
+    }
+
     const barsAgo = closed.length - 1 - i;
     const candidate: StrongBarResult = {
       signal: true,
       side,
       bodyMult,
+      rangeMult,
       bodyFrac,
+      via: fatBody ? "body" : "range",
       barsAgo,
     };
-    // Prefer more recent; if same age, prefer larger bodyMult
+    const score = (x: StrongBarResult) =>
+      Math.max(x.bodyMult, x.rangeMult);
     if (
       !best ||
       candidate.barsAgo < best.barsAgo ||
-      (candidate.barsAgo === best.barsAgo && candidate.bodyMult > best.bodyMult)
+      (candidate.barsAgo === best.barsAgo && score(candidate) > score(best))
     ) {
       best = candidate;
     }

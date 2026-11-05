@@ -96,13 +96,35 @@ test("strong bar: outlier green body flags BIG up, outlier red flags BIG down", 
   assert.equal(d?.side, "down");
 });
 
-test("strong bar: normal bodies, mostly-wick bars, stale bars and short series are ignored", () => {
+test("strong bar: wick-dominated range spike flags via range, direction from the dominant wick", () => {
+  // Tiny body, but high-low is ~15x the calm average range → range-spike rule.
+  const up = calm();
+  up.push({ openTime: T0 + 25 * 15 * 60 * 1000, open: 100, close: 102, high: 110, low: 99.5, volume: 100 });
+  const u = analyzeStrongBar(up);
+  assert.equal(u?.signal, true);
+  assert.equal(u?.via, "range");
+  assert.equal(u?.side, "up"); // upper wick dominates
+  assert.ok((u?.rangeMult ?? 0) >= 2.5);
+
+  const down = calm();
+  down.push({ openTime: T0 + 25 * 15 * 60 * 1000, open: 100, close: 99, high: 100.3, low: 90, volume: 100 });
+  const d = analyzeStrongBar(down);
+  assert.equal(d?.via, "range");
+  assert.equal(d?.side, "down"); // lower wick dominates
+
+  // A fat-body bar reports via "body".
+  const fat = calm();
+  fat.push(candle(25, 100, 104, 100));
+  assert.equal(analyzeStrongBar(fat)?.via, "body");
+});
+
+test("strong bar: normal bars, stale bars and short series are ignored", () => {
   assert.equal(analyzeStrongBar(calm()), null);
 
-  const wick = calm();
-  // Big range but tiny body: body/range < 0.55 → not a strong bar.
-  wick.push({ openTime: T0 + 25 * 15 * 60 * 1000, open: 100, close: 102, high: 110, low: 95, volume: 100 });
-  assert.equal(analyzeStrongBar(wick), null);
+  // Range only 2x the average (< 2.5x) and a weak body → not a strong bar.
+  const mild = calm();
+  mild.push({ openTime: T0 + 25 * 15 * 60 * 1000, open: 100, close: 100.4, high: 101, low: 99, volume: 100 });
+  assert.equal(analyzeStrongBar(mild), null);
 
   const stale = calm();
   stale.push(candle(25, 100, 104, 100));
