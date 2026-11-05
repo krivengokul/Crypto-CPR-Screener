@@ -555,9 +555,7 @@ function renderMatchingViewName(raw: CPRResult, selectedKey: string) {
         ? isDownView
           ? "text-[#ff6bb5]"
           : "text-green-400"
-        : ladder.matchingCount >= ladder.total - 2
-          ? "text-amber-400"
-          : "text-destructive";
+        : "text-orange-400";
       matchBadge = (
         <span
           className={`inline-flex items-center gap-0.5 font-mono text-xs font-medium ${matchColor}`}
@@ -572,8 +570,6 @@ function renderMatchingViewName(raw: CPRResult, selectedKey: string) {
           {ladder.matchingCount}/{ladder.total}
           {ladder.fullMatch && requireFull ? (
             <CheckCircle2 className="w-3 h-3" />
-          ) : !ladder.fullMatch ? (
-            <XCircle className="w-3 h-3" />
           ) : null}
         </span>
       );
@@ -4057,9 +4053,7 @@ export default function BacktestPanel() {
                             ? ladderDown
                               ? "text-[#ff6bb5]"
                               : "text-green-400"
-                            : ladder.matchingCount >= ladder.total - 2
-                            ? "text-amber-400"
-                            : "text-destructive";
+                            : "text-orange-400";
                           return (
                             <span
                               className={`inline-flex items-center gap-1 text-xs font-mono font-medium ${color}`}
@@ -4074,8 +4068,6 @@ export default function BacktestPanel() {
                               {ladder.matchingCount}/{ladder.total}
                               {ladder.fullMatch && requireFull ? (
                                 <CheckCircle2 className="w-3.5 h-3.5" />
-                              ) : !ladder.fullMatch ? (
-                                <XCircle className="w-3.5 h-3.5" />
                               ) : null}
                             </span>
                           );

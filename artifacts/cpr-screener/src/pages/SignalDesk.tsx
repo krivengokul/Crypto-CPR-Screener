@@ -46,7 +46,6 @@ import {
   X,
   ExternalLink,
   CheckCircle2,
-  XCircle,
 } from "lucide-react";
 
 // Lightweight projection of a matching row that Screener hands up via
@@ -720,9 +719,7 @@ const SignalDeskCard = memo(
                   className={`inline-flex items-center gap-1 font-mono text-[11px] leading-none ${
                     item.matchFull
                       ? "text-green-400"
-                      : item.matchCount >= item.matchTotal - 2
-                      ? "text-amber-400"
-                      : "text-rose-400"
+                      : "text-orange-400"
                   }`}
                   title={
                     item.matchFull
@@ -735,8 +732,6 @@ const SignalDeskCard = memo(
                   MATCH {item.matchCount}/{item.matchTotal}
                   {item.matchFull && item.requireFullMatch ? (
                     <CheckCircle2 className="w-3.5 h-3.5" />
-                  ) : !item.matchFull ? (
-                    <XCircle className="w-3.5 h-3.5" />
                   ) : null}
                 </span>
               )}

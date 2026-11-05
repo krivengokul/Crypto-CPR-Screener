@@ -1,5 +1,5 @@
 import { Fragment, memo } from "react";
-import { ExternalLink, CheckCircle2, XCircle, Tag } from "lucide-react";
+import { ExternalLink, CheckCircle2, Tag } from "lucide-react";
 import { hasTouchedEntry } from "@/lib/signalTracker";
 import { sessionReachedTarget, sessionR4OrS4Hit } from "@/lib/signalOutcome";
 import type { CPRResult } from "@/lib/cpr";
@@ -1686,9 +1686,7 @@ function ScreenerTableRow({
                       className={`inline-flex items-center gap-1 text-xs font-mono font-medium ${
                         ladder.fullMatch
                           ? fullMatchClass
-                          : ladder.matchingCount >= ladder.total - 2
-                          ? "text-amber-400"
-                          : "text-[#ff6bb5]"
+                          : "text-orange-400"
                       }`}
                       title={
                         ladder.fullMatch
@@ -1701,8 +1699,6 @@ function ScreenerTableRow({
                       {ladder.matchingCount}/{ladder.total}
                       {ladder.fullMatch && requireFull ? (
                         <CheckCircle2 className={`w-3.5 h-3.5 ${fullMatchClass}`} />
-                      ) : !ladder.fullMatch ? (
-                        <XCircle className="w-3.5 h-3.5" />
                       ) : null}
                     </span>
                   )}
