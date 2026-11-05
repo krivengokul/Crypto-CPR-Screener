@@ -1,6 +1,6 @@
 import { safeSetItem } from "./safeStorage";
 import { OHLC, CPRResult, analyzeCPR } from "./cpr";
-import { analyzeBreakout, analyzeBreakdown, levelsFromCPR, levelsFromCPRDown } from "./breakout";
+import { analyzeBreakout, analyzeBreakdown, analyzeStrongBar, levelsFromCPR, levelsFromCPRDown } from "./breakout";
 import { shouldExcludeSymbol } from "./symbolFilters";
 import { fetchDeltaBaseTickers } from "./delta";
 
@@ -692,6 +692,7 @@ export async function runScreener(
       try {
         result.breakout = analyzeBreakout(intraday, levelsFromCPR(result.todayCPR)) ?? undefined;
         result.breakdown = analyzeBreakdown(intraday, levelsFromCPRDown(result.todayCPR)) ?? undefined;
+        result.strongBar = analyzeStrongBar(intraday) ?? undefined;
       } catch (e) {
         console.warn(`[binance] breakout analysis failed for ${t.symbol}`, e);
       }

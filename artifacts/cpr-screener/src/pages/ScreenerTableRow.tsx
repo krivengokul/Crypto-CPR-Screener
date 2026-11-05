@@ -778,7 +778,7 @@ export function renderPatternColumnBadges(r: CPRResult) {
   return (
     <div className="flex flex-col gap-1 max-w-[228px]">
       <div className="flex flex-nowrap items-center gap-1">
-        {statusBadge}
+                {statusBadge}
         {todayBadges}
       </div>
       {renderPivotAndGapBadges(r)}
@@ -914,7 +914,7 @@ export function renderMatchingSignals(
                   {v.label}
                 </div>
               </div>
-              {statusBadge}
+                {statusBadge}
             </div>
             <span className="truncate font-mono text-[10px] leading-3 text-muted-foreground" title={v.id}>
               {v.id}
@@ -1707,6 +1707,23 @@ function ScreenerTableRow({
                 {(r.breakdown.barsAgo ?? 0) * 15}m
               </span>
             </div>
+) : null;
+
+          const strongBarBadge = r.strongBar?.signal ? (
+            <div className="mt-0.5">
+              <span
+                className={
+                  r.strongBar.side === "up"
+                    ? "inline-block text-[10px] font-bold px-1.5 py-0.5 rounded border border-lime-500/50 bg-lime-500/15 text-lime-300"
+                    : "inline-block text-[10px] font-bold px-1.5 py-0.5 rounded border border-pink-500/50 bg-pink-500/15 text-[#ff6bb5]"
+                }
+                title={`15m strong bar ${r.strongBar.side === "up" ? "up" : "down"} · body ${r.strongBar.bodyMult.toFixed(1)}× avg · body ${Math.round(r.strongBar.bodyFrac * 100)}% of range · ${r.strongBar.barsAgo === 0 ? "latest closed" : `${r.strongBar.barsAgo} bar(s) ago`}`}
+              >
+                {r.strongBar.side === "up" ? "BIG↑" : "BIG↓"}
+                {" "}
+                {r.strongBar.bodyMult.toFixed(1)}x
+              </span>
+            </div>
           ) : null;
           // Beyond PDH: only PDH % (no >TC). Beyond PDL: only PDL % (no <BC).
           if (beyondPdh && showPdhRow) {
@@ -1717,6 +1734,7 @@ function ScreenerTableRow({
                   {pdh.sub && <span className="text-[10px] ml-1">{pdh.sub}</span>}
                 </div>
                 {brkBadge}
+                {strongBarBadge}
                 {statusBadge}
               </td>
             );
@@ -1729,6 +1747,7 @@ function ScreenerTableRow({
                   {pdh.sub && <span className="text-[10px] ml-1">{pdh.sub}</span>}
                 </div>
                 {brkDnBadge}
+                {strongBarBadge}
                 {statusBadge}
               </td>
             );
@@ -1747,6 +1766,7 @@ function ScreenerTableRow({
                 </div>
                 <div className="mt-0.5">{moveLine}</div>
                 {brkBadge}
+                {strongBarBadge}
                 {statusBadge}
               </td>
             );
@@ -1762,7 +1782,8 @@ function ScreenerTableRow({
               )}
               {brkBadge}
               {brkDnBadge}
-              {statusBadge}
+              {strongBarBadge}
+                {statusBadge}
             </td>
           );
         })()}

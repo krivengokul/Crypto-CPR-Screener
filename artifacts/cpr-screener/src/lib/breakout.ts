@@ -191,3 +191,84 @@ export function analyzeBreakdown(
     runPct: null,
   };
 }
+
+
+/** Strong single 15m bar (outlier body vs recent average) — not parabolic. */
+export interface StrongBarResult {
+  signal: boolean;
+  /** green = BIG↑, red = BIG↓ */
+  side: "up" | "down";
+  /** body / avgBody of prior lookback bars */
+  bodyMult: number;
+  /** body / range of the signal bar */
+  bodyFrac: number;
+  /** Candles since signal (0 = latest closed). */
+  barsAgo: number;
+}
+
+export interface StrongBarConfig {
+  lookback: number;
+  bodyMultMin: number;
+  minBodyFrac: number;
+  /** Only flag bars within this many closed candles of the end. */
+  freshBars: number;
+}
+
+export const DEFAULT_STRONG_BAR_CFG: StrongBarConfig = {
+  lookback: 20,
+  bodyMultMin: 2.5,
+  minBodyFrac: 0.55,
+  freshBars: 4,
+};
+
+/**
+ * Detect an unusually large body on a recent closed 15m candle.
+ * Candles oldest → newest. Callers must pass CLOSED candles only (the scan
+ * fetchers already drop the still-forming bar).
+ */
+export function analyzeStrongBar(
+  candles: OHLC[],
+  cfg: StrongBarConfig = DEFAULT_STRONG_BAR_CFG,
+): StrongBarResult | null {
+  if (!candles || candles.length < cfg.lookback + 2) return null;
+  const closed = candles;
+
+  // Scan recent closed bars for the strongest outlier (prefer most recent)
+  const from = Math.max(cfg.lookback, closed.length - cfg.freshBars);
+  let best: StrongBarResult | null = null;
+
+  for (let i = from; i < closed.length; i++) {
+    const c = closed[i];
+    const body = Math.abs(c.close - c.open);
+    const range = c.high - c.low;
+    if (!(range > 0) || !(body > 0)) continue;
+
+    const prior = closed.slice(i - cfg.lookback, i);
+    const avgBody =
+      prior.reduce((s, x) => s + Math.abs(x.close - x.open), 0) / prior.length;
+    if (!(avgBody > 0)) continue;
+
+    const bodyMult = body / avgBody;
+    const bodyFrac = body / range;
+    if (bodyMult < cfg.bodyMultMin || bodyFrac < cfg.minBodyFrac) continue;
+
+    const side: "up" | "down" = c.close >= c.open ? "up" : "down";
+    const barsAgo = closed.length - 1 - i;
+    const candidate: StrongBarResult = {
+      signal: true,
+      side,
+      bodyMult,
+      bodyFrac,
+      barsAgo,
+    };
+    // Prefer more recent; if same age, prefer larger bodyMult
+    if (
+      !best ||
+      candidate.barsAgo < best.barsAgo ||
+      (candidate.barsAgo === best.barsAgo && candidate.bodyMult > best.bodyMult)
+    ) {
+      best = candidate;
+    }
+  }
+  return best;
+}

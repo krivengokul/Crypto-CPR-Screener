@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { analyzeBreakout, analyzeBreakdown } from "./breakout.ts";
+import { analyzeBreakout, analyzeBreakdown, analyzeStrongBar } from "./breakout.ts";
 
 const T0 = 1_700_000_000_000;
 const candle = (i: number, open: number, close: number, volume: number) => ({
@@ -72,4 +72,42 @@ test("breakdown that reclaims above the candle open is dropped", () => {
   const c = chop();
   c.push(candle(40, 100, 96, 600), candle(41, 96, 101, 200));
   assert.equal(analyzeBreakdown(c, { S1: 98 })?.signal, false);
+});
+
+/** 25 small-bodied candles (body ~1, wicks small), then the caller appends. */
+function calm(): ReturnType<typeof candle>[] {
+  const out = [];
+  for (let i = 0; i < 25; i++) out.push(candle(i, 100, i % 2 ? 100.8 : 99.2, 100));
+  return out;
+}
+
+test("strong bar: outlier green body flags BIG up, outlier red flags BIG down", () => {
+  const up = calm();
+  up.push(candle(25, 100, 104, 100)); // body 4 vs avg ~0.8
+  const u = analyzeStrongBar(up);
+  assert.equal(u?.signal, true);
+  assert.equal(u?.side, "up");
+  assert.equal(u?.barsAgo, 0);
+  assert.ok((u?.bodyMult ?? 0) >= 2.5);
+
+  const down = calm();
+  down.push(candle(25, 100, 96, 100));
+  const d = analyzeStrongBar(down);
+  assert.equal(d?.side, "down");
+});
+
+test("strong bar: normal bodies, mostly-wick bars, stale bars and short series are ignored", () => {
+  assert.equal(analyzeStrongBar(calm()), null);
+
+  const wick = calm();
+  // Big range but tiny body: body/range < 0.55 → not a strong bar.
+  wick.push({ openTime: T0 + 25 * 15 * 60 * 1000, open: 100, close: 102, high: 110, low: 95, volume: 100 });
+  assert.equal(analyzeStrongBar(wick), null);
+
+  const stale = calm();
+  stale.push(candle(25, 100, 104, 100));
+  for (let i = 26; i < 31; i++) stale.push(candle(i, 100, i % 2 ? 100.8 : 99.2, 100)); // 5 bars later > freshBars 4
+  assert.equal(analyzeStrongBar(stale), null);
+
+  assert.equal(analyzeStrongBar([candle(0, 1, 2, 1)]), null);
 });

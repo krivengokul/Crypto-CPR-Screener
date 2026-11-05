@@ -1,4 +1,4 @@
-import type { BreakoutResult } from "./breakout";
+import type { BreakoutResult, StrongBarResult } from "./breakout";
 
 export interface OHLC {
   open: number;
@@ -334,6 +334,8 @@ export interface CPRResult {
   breakout?: BreakoutResult;
   /** 15m momentum-breakdown (volume spike down through PDL/BC/S1–S4); separate from breakout. */
   breakdown?: BreakoutResult;
+  /** 15m outlier body bar (BIG↑ / BIG↓); attached at scan time with breakout. */
+  strongBar?: StrongBarResult;
   /** Binance only: "COMMOD" = commodity perp (CL/BZ/XAU/XAG), "TRADFI" = other TradFi
    *  perp (stocks/ETFs). Unset for ordinary crypto perps. Set in binance.ts. */
   assetClass?: "COMMOD" | "TRADFI";
