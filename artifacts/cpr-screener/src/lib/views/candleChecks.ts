@@ -146,6 +146,11 @@ export function candleCheckFromRow(r: CPRResult): string {
   else if (conA) p = "CA";
   else if (momA) p = "MA";
   else if (inside) p = "VR";
+  else {
+    // Same residual as BacktestPanel badge "P-VOLATILE ✗" when no exclusive
+    // P-CON / P-MOM / INSIDE pass — still preselect P-VOLATILE-R1S1 in Create View.
+    p = "VR";
+  }
   const ppA = r.PD15MPPConsolidateAPass === true;
   const ppB = r.PD15MPPConsolidateBPass === true;
   let pp = "";

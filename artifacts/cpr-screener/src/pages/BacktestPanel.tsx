@@ -1923,6 +1923,17 @@ function CreateViewControl({
   const [gapBadge, setGapBadge] = useState(
     existingGapBadge && ALL_GAP_BADGES.includes(existingGapBadge) ? existingGapBadge : ""
   );
+  // Re-bind PP/P dropdowns from the row each time the panel opens (state only
+  // initializes once; without this, a second open could keep a stale "None").
+  useEffect(() => {
+    if (!open) return;
+    setCandleCheck(
+      existingCandleCheck && existingCandleCheck.trim() !== "" ? existingCandleCheck : "",
+    );
+    setGapBadge(
+      existingGapBadge && ALL_GAP_BADGES.includes(existingGapBadge) ? existingGapBadge : "",
+    );
+  }, [open, existingCandleCheck, existingGapBadge]);
   const [requireFullMatch, setRequireFullMatch] = useState(false);
   // Whether the person has typed into the View name box yet — until they
   // do, it tracks effectivePattern below so switching the attach point
