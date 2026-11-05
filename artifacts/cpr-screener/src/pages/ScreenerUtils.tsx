@@ -852,7 +852,7 @@ export function getOuterLevelPatternInfo(r: CPRResult): PatternInfo {
   if (r.srHigher) {
     return { label: "Higher", classes: "bg-green-500/10 text-green-400 border-green-500/20" };
   }
-  return { label: "Lower", classes: "bg-destructive/10 text-destructive border-destructive/20" };
+  return { label: "Lower", classes: "bg-[#ff6bb5]/10 text-[#ff6bb5] border-[#ff6bb5]/20" };
 }
 
 /**
@@ -1088,7 +1088,7 @@ export { computePrevPattern };
 const HL_SWITCH_BADGE: Record<HLSwitch, { className: string }> = {
   "HL-A": { className: "bg-green-500/10 text-green-400 border-green-500/30" },
   "HL-Q": { className: "bg-amber-500/10 text-amber-400 border-amber-500/30" },
-  "HL-B": { className: "bg-red-500/10 text-red-400 border-red-500/30" },
+  "HL-B": { className: "bg-[#ff6bb5]/10 text-[#ff6bb5] border-[#ff6bb5]/30" },
 };
 
 export function renderPrevPdhPdlBadge(r: CPRResult): React.JSX.Element | null {
@@ -1162,7 +1162,7 @@ const SSRR_BADGE: Record<Exclude<SSRRCategory, "none">, { label: string; classNa
   },
   "RRSS-B": {
     label: "RRSS-B",
-    className: "bg-red-500/10 text-red-400 border-red-500/30",
+    className: "bg-[#ff6bb5]/10 text-[#ff6bb5] border-[#ff6bb5]/30",
     title: "Today's R1 <= Prev R1 and Today's S1 < Prev S1",
   },
   "RRSS-C": {
@@ -1220,12 +1220,12 @@ const SSLL_BADGE: Record<Exclude<SSLLCategory, "none">, { label: string; classNa
   },
   "SSLL-BB": {
     label: "SSLL-BB",
-    className: "bg-red-500/10 text-red-400 border-red-500/30",
+    className: "bg-[#ff6bb5]/10 text-[#ff6bb5] border-[#ff6bb5]/30",
     title: "Today's whole S1/PDL band sits strictly below prev's whole band (full separation, no overlap)",
   },
   "SSLL-OB": {
     label: "SSLL-OB",
-    className: "bg-red-500/10 text-red-400 border-red-500/30",
+    className: "bg-[#ff6bb5]/10 text-[#ff6bb5] border-[#ff6bb5]/30",
     title: "Today's S1/PDL band shifted down (band top and bottom both fell vs prev), but today's band overlaps prev's band",
   },
   "SSLL-C": {
@@ -1297,12 +1297,12 @@ const RRHH_BADGE: Record<Exclude<RRHHCategory, "none">, { label: string; classNa
   },
   "RRHH-BB": {
     label: "RRHH-BB",
-    className: "bg-red-500/10 text-red-400 border-red-500/30",
+    className: "bg-[#ff6bb5]/10 text-[#ff6bb5] border-[#ff6bb5]/30",
     title: "Today's whole R1/PDH band sits strictly below prev's whole band (full separation, no overlap)",
   },
   "RRHH-OB": {
     label: "RRHH-OB",
-    className: "bg-red-500/10 text-red-400 border-red-500/30",
+    className: "bg-[#ff6bb5]/10 text-[#ff6bb5] border-[#ff6bb5]/30",
     title: "Today's R1/PDH band shifted down (band top and bottom both fell vs prev), but today's band overlaps prev's band",
   },
   "RRHH-C": {
@@ -1597,7 +1597,7 @@ export function renderPDHPDLGapCategoryBadge(r: CPRResult) {
   const cat = r.PDHPDLGapCategory;
   const styles: Record<PDHPDLGapCategory, string> = {
     HHGap: "bg-green-500/10 text-green-400 border-green-500/30",
-    LLGap: "bg-red-500/10 text-red-400 border-red-500/30",
+    LLGap: "bg-[#ff6bb5]/10 text-[#ff6bb5] border-[#ff6bb5]/30",
     "HHLL-Q": "bg-yellow-500/10 text-yellow-400 border-yellow-500/30",
   };
   const titles: Record<PDHPDLGapCategory, string> = {
@@ -1627,7 +1627,7 @@ export function renderRRSSGapCategoryBadge(r: CPRResult) {
   const cat = r.RRSSGapCategory;
   const styles: Record<RRSSGapCategory, string> = {
     RRGap: "bg-green-500/10 text-green-400 border-green-500/30",
-    SSGap: "bg-red-500/10 text-red-400 border-red-500/30",
+    SSGap: "bg-[#ff6bb5]/10 text-[#ff6bb5] border-[#ff6bb5]/30",
     "SSRR-Q": "bg-yellow-500/10 text-yellow-400 border-yellow-500/30",
   };
   const titles: Record<RRSSGapCategory, string> = {
@@ -1659,7 +1659,7 @@ const HHLL_CATEGORY_BADGE: Record<Exclude<HHLLCategory, "none">, { label: string
   },
   "HHLL-B": {
     label: "HHLL-B",
-    className: "bg-red-500/10 text-red-400 border-red-500/30",
+    className: "bg-[#ff6bb5]/10 text-[#ff6bb5] border-[#ff6bb5]/30",
     title: "Today's PDH <= Prev PDH and Today's PDL < Prev PDL (Below)",
   },
   "HHLL-C": {

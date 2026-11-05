@@ -23,7 +23,7 @@ function renderRowStatusBadge(
           : "border-[#ff6bb5]/40 bg-[#ff6bb5]/10 text-[#ff6bb5]";
     if (r4s4 === "R4+S4") {
       return (
-        <span className="mt-0.5 inline-flex w-fit items-center gap-0.5">
+        <span className="inline-flex w-fit items-center gap-0.5">
           <span
             className="inline-flex shrink-0 items-center rounded border border-emerald-500/50 bg-emerald-500/15 px-1 py-0 text-[9px] font-mono font-semibold leading-tight text-emerald-400"
             title="Session reached R4 (today high/low or last price)"
@@ -41,7 +41,7 @@ function renderRowStatusBadge(
     }
     return (
       <span
-        className={`mt-0.5 inline-flex w-fit shrink-0 items-center rounded border px-1 py-0 text-[9px] font-mono font-semibold leading-tight ${badgeClass}`}
+        className={`inline-flex w-fit shrink-0 items-center rounded border px-1 py-0 text-[9px] font-mono font-semibold leading-tight ${badgeClass}`}
         title={`Session reached ${r4s4} (today high/low or last price)`}
       >
         PASS · {r4s4}
@@ -95,7 +95,7 @@ function renderRowStatusBadge(
   if (status === "pass") {
     return (
       <span
-        className={`mt-0.5 inline-flex w-fit shrink-0 items-center rounded border px-1 py-0 text-[9px] font-mono font-semibold leading-tight ${
+        className={`inline-flex w-fit shrink-0 items-center rounded border px-1 py-0 text-[9px] font-mono font-semibold leading-tight ${
           isDown
             ? "border-[#ff6bb5]/40 bg-[#ff6bb5]/10 text-[#ff6bb5]"
             : "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
@@ -109,7 +109,7 @@ function renderRowStatusBadge(
   if (status === "fail") {
     return (
       <span
-        className="mt-0.5 inline-flex w-fit shrink-0 items-center rounded border px-1 py-0 text-[9px] font-mono font-semibold leading-tight"
+        className="inline-flex w-fit shrink-0 items-center rounded border px-1 py-0 text-[9px] font-mono font-semibold leading-tight"
         style={{
           color: "#f87171",
           borderColor: "rgba(248, 113, 113, 0.45)",
@@ -282,7 +282,7 @@ export const PATTERN_BADGE_CLASSES: Record<string, string> = {
   L4U3: "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20",
   L3U3: "bg-purple-500/10 text-purple-400 border border-purple-500/20",
   L4U2: "bg-pink-400/15 text-[#ff6bb5] border border-pink-400/30",
-  L3U2: "bg-rose-500/10 text-rose-400 border border-rose-500/20",
+  L3U2: "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/20",
   L3U4: "bg-amber-500/10 text-amber-400 border border-amber-500/20",
   L2U4: "bg-violet-500/10 text-violet-400 border border-violet-500/20",
   L1U4: "bg-orange-500/10 text-orange-400 border border-orange-500/20",
@@ -361,29 +361,29 @@ export const PATTERN_BADGE_CLASSES: Record<string, string> = {
   "C-C-C-AA": "bg-cyan-400/10 text-cyan-200 border border-cyan-400/30",
 
   // PivotPattern badges, "LevelsBelow" half — "B-{Level}-{RRHH}-{SSLL}" (All Red family)
-  "B-A-C-C": "bg-red-500/10 text-red-400 border border-red-500/20",
-  "B-A-C-SB": "bg-red-600/10 text-red-300 border border-red-600/20",
-  "B-A-E-E": "bg-red-400/10 text-red-300 border border-red-400/20",
-  "B-A-E-SB": "bg-red-700/10 text-red-300 border border-red-700/20",
-  "B-A-HA-C": "bg-red-300/10 text-red-200 border border-red-300/20",
-  "B-A-HA-E": "bg-red-800/10 text-red-300 border border-red-800/20",
-  "B-A-HA-SB": "bg-red-900/10 text-red-300 border border-red-900/20",
-  "B-B-BB-BB": "bg-red-500/10 text-red-400 border border-red-500/20",
-  "B-B-BB-OB": "bg-red-600/10 text-red-300 border border-red-600/20",
-  "B-B-OB-BB": "bg-red-400/10 text-red-300 border border-red-400/20",
-  "B-B-OB-OB": "bg-red-700/10 text-red-300 border border-red-700/20",
-  "B-C-BB-C": "bg-red-300/10 text-red-200 border border-red-300/20",
-  "B-C-OB-C": "bg-red-800/10 text-red-300 border border-red-800/20",
-  "B-C-BB-E": "bg-red-900/10 text-red-300 border border-red-900/20",
-  "B-C-OB-E": "bg-red-500/10 text-red-400 border border-red-500/20",
-  "B-C-BB-SB": "bg-red-600/10 text-red-300 border border-red-600/20",
-  "B-E-C-BB": "bg-red-400/10 text-red-300 border border-red-400/20",
-  "B-E-C-OB": "bg-red-700/10 text-red-300 border border-red-700/20",
-  "B-E-E-BB": "bg-red-300/10 text-red-200 border border-red-300/20",
-  "B-E-E-OB": "bg-red-800/10 text-red-300 border border-red-800/20",
-  "B-E-OB-BB": "bg-red-900/10 text-red-300 border border-red-900/20",
-  "B-E-OB-OB": "bg-red-500/10 text-red-400 border border-red-500/20",
-  "B-E-HA-BB": "bg-red-600/10 text-red-300 border border-red-600/20",
+  "B-A-C-C": "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/20",
+  "B-A-C-SB": "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/20",
+  "B-A-E-E": "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/20",
+  "B-A-E-SB": "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/20",
+  "B-A-HA-C": "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/20",
+  "B-A-HA-E": "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/20",
+  "B-A-HA-SB": "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/20",
+  "B-B-BB-BB": "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/20",
+  "B-B-BB-OB": "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/20",
+  "B-B-OB-BB": "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/20",
+  "B-B-OB-OB": "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/20",
+  "B-C-BB-C": "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/20",
+  "B-C-OB-C": "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/20",
+  "B-C-BB-E": "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/20",
+  "B-C-OB-E": "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/20",
+  "B-C-BB-SB": "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/20",
+  "B-E-C-BB": "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/20",
+  "B-E-C-OB": "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/20",
+  "B-E-E-BB": "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/20",
+  "B-E-E-OB": "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/20",
+  "B-E-OB-BB": "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/20",
+  "B-E-OB-OB": "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/20",
+  "B-E-HA-BB": "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/20",
 };
 
 /**
@@ -424,7 +424,7 @@ export function getBadgeClasses(label: string): string {
   }
   // Dynamic fallback for any pattern/subpattern/pivot-pattern starting with B (LevelsBelow: Red)
   if (label.startsWith("B")) {
-    return "bg-red-500/10 text-red-400 border border-red-500/20";
+    return "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/20";
   }
   return UNKNOWN_LABEL_CLASSES;
 }
@@ -708,7 +708,7 @@ export function renderPivotPatternBadge(r: CPRResult, showMissing: boolean = tru
  */
 const GAP_BADGE_COLOR: Record<"R" | "S" | "Q", string> = {
   R: "bg-green-500/10 text-green-400 border border-green-500/30",
-  S: "bg-red-500/10 text-red-400 border border-red-500/30",
+  S: "bg-[#ff6bb5]/10 text-[#ff6bb5] border border-[#ff6bb5]/30",
   Q: "bg-amber-500/10 text-amber-400 border border-amber-500/30",
 };
 
@@ -944,7 +944,7 @@ export function renderMatchingSignals(
             </span>
           ) : status === "fail" ? (
             <span
-              className="inline-flex w-fit shrink-0 items-center rounded border border-red-400/40 bg-red-500/10 px-1 py-0 text-[9px] font-mono font-semibold leading-tight text-red-400"
+              className="inline-flex w-fit shrink-0 items-center rounded border border-[#ff6bb5]/40 bg-[#ff6bb5]/10 px-1 py-0 text-[9px] font-mono font-semibold leading-tight text-[#ff6bb5]"
               title="Stop hit"
             >
               Fail
@@ -1362,7 +1362,7 @@ function ScreenerTableRow({
               return (
                 <div
                   className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${
-                    isUp ? "bg-green-400" : "bg-red-400"
+                    isUp ? "bg-green-400" : "bg-[#ff6bb5]"
                   }`}
                   title={isUp ? "Matches an Up sub-filter" : "Matches a Down sub-filter"}
                 />
@@ -1688,7 +1688,7 @@ function ScreenerTableRow({
                           ? fullMatchClass
                           : ladder.matchingCount >= ladder.total - 2
                           ? "text-amber-400"
-                          : "text-destructive"
+                          : "text-[#ff6bb5]"
                       }`}
                       title={
                         ladder.fullMatch
@@ -1789,24 +1789,21 @@ function ScreenerTableRow({
               {(r.strongBar.via === "range" ? r.strongBar.rangeMult : r.strongBar.bodyMult).toFixed(1)}x
             </span>
           ) : null;
-          const firstBadgeRow =
-            strongBarBadge || statusBadge ? (
-              <div className="mt-0.5 flex flex-wrap items-center gap-1">
-                {strongBarBadge}
+          const statusBigRow =
+            statusBadge || strongBarBadge ? (
+              <div className="flex flex-wrap items-center gap-1">
                 {statusBadge}
+                {strongBarBadge}
               </div>
             ) : null;
           // Beyond PDH: only PDH % (no >TC). Beyond PDL: only PDL % (no <BC).
           if (beyondPdh && showPdhRow) {
             return (
               <td className={`pl-3 pr-2 py-3 whitespace-nowrap text-xs font-medium ${pdh.color}`}>
-                <div className="flex flex-wrap items-center gap-1" title={pdhTitle}>
-                  <span>
-                    {pdh.main}
-                    {pdh.sub && <span className="text-[10px] ml-1">{pdh.sub}</span>}
-                  </span>
-                  {strongBarBadge}
-                  {statusBadge}
+                {statusBigRow}
+                <div className={statusBigRow ? "mt-0.5" : undefined} title={pdhTitle}>
+                  {pdh.main}
+                  {pdh.sub && <span className="text-[10px] ml-1">{pdh.sub}</span>}
                 </div>
                 {brkBadge}
               </td>
@@ -1815,13 +1812,10 @@ function ScreenerTableRow({
           if (beyondPdl && showPdhRow) {
             return (
               <td className={`pl-3 pr-2 py-3 whitespace-nowrap text-xs font-medium ${pdh.color}`}>
-                <div className="flex flex-wrap items-center gap-1" title={pdhTitle}>
-                  <span>
-                    {pdh.main}
-                    {pdh.sub && <span className="text-[10px] ml-1">{pdh.sub}</span>}
-                  </span>
-                  {strongBarBadge}
-                  {statusBadge}
+                {statusBigRow}
+                <div className={statusBigRow ? "mt-0.5" : undefined} title={pdhTitle}>
+                  {pdh.main}
+                  {pdh.sub && <span className="text-[10px] ml-1">{pdh.sub}</span>}
                 </div>
                 {brkDnBadge}
               </td>
@@ -1839,22 +1833,16 @@ function ScreenerTableRow({
                   {pdh.main}
                   {pdh.sub && <span className="text-[10px] ml-1">{pdh.sub}</span>}
                 </div>
-                <div className="mt-0.5 flex flex-wrap items-center gap-1">
-                  {moveLine}
-                  {strongBarBadge}
-                  {statusBadge}
-                </div>
+                {statusBigRow}
+                <div className="mt-0.5">{moveLine}</div>
                 {brkBadge}
               </td>
             );
           }
           return (
             <td className={`pl-3 pr-2 py-3 whitespace-nowrap text-xs font-medium ${move.color}`}>
-              <div className="flex flex-wrap items-center gap-1">
-                {moveLine}
-                {strongBarBadge}
-                {statusBadge}
-              </div>
+              {statusBigRow}
+              <div className={statusBigRow ? "mt-0.5" : undefined}>{moveLine}</div>
               {showPdhRow && (
                 <div className={`mt-0.5 ${pdh.main === "IN-PDHL" ? `${LABEL_FONT} text-orange-400` : pdh.color}`} title={pdhTitle}>
                   {pdh.main}
