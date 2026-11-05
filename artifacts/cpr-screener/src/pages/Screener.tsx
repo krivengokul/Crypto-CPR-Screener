@@ -399,6 +399,7 @@ export default function Screener({
   const [pdhPdlFilter, setPdhPdlFilter] = useState<"above" | "below" | "abovepu4" | "belowpl4" | "pdhgtu1" | "pdlltl1" | "s1r1in" | null>(null);
   const [PatternFilter, setPatternFilter] = useState<string | null>(null);
   const [breakoutMode, setBreakoutMode] = useState<"off" | "brk">("off");
+  const [strongBarFilter, setStrongBarFilter] = useState<"off" | "up" | "down">("off");
   const [showPatternList, setShowPatternList] = useState(false);
   const [showTouchList, setShowTouchList] = useState(false);
   const [showClassList, setShowClassList] = useState(false);
@@ -1202,6 +1203,8 @@ export default function Screener({
       : getReclaimStates(row, reclaimDepths.get(`${row.source}:${row.symbol}`));
   const reclaimSCount = getActivePool().filter((row) => !!reclaimStatesFor(row).s?.qualifies).length;
   const reclaimRCount = getActivePool().filter((row) => !!reclaimStatesFor(row).r?.qualifies).length;
+  const strongBarUpCount = getActivePool().filter((row) => !!(row.strongBar?.signal && row.strongBar.side === "up")).length;
+  const strongBarDownCount = getActivePool().filter((row) => !!(row.strongBar?.signal && row.strongBar.side === "down")).length;
 
 
   // Search box matches EITHER the symbol OR the name of any View the row
@@ -1457,6 +1460,11 @@ export default function Screener({
     // the previous-session Consolidate/Momentum filters, so they combine).
     .filter((r) => !reclaimSFilter || !!reclaimStatesFor(r).s?.qualifies)
     .filter((r) => !reclaimRFilter || !!reclaimStatesFor(r).r?.qualifies)
+    .filter((r) => {
+      if (strongBarFilter === "off") return true;
+      if (!r.strongBar?.signal) return false;
+      return r.strongBar.side === strongBarFilter;
+    })
     // Active / Ready status filter (see getRowStatus).
     .filter((r) => {
       if (statusFilter === "all") return true;
@@ -1593,7 +1601,7 @@ export default function Screener({
   // Helper: is any sub-filter active (to decide the result count label)
   const anySubFilter =
     !!activeGenericSignal ||
-    !!PatternFilter || !!touchFilter || !!classFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter || previousCandleFilter !== "all" || reclaimSFilter || reclaimRFilter || statusFilter !== "all" || !!entryLevelFilter;
+    !!PatternFilter || !!touchFilter || !!classFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter || previousCandleFilter !== "all" || reclaimSFilter || reclaimRFilter || strongBarFilter !== "off" || statusFilter !== "all" || !!entryLevelFilter;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -1768,6 +1776,7 @@ export default function Screener({
                 onClick={() => {
                   setShowAll(true);
                   setClassFilter(null);
+                  setStrongBarFilter("off");
                   // NEW: also clear the generic Views (sub-pattern) selection —
                   // covers inside-cpr and every other GENERIC_VIEW_CATEGORIES
                   // category, so "Show All" fully resets state everywhere.
@@ -2709,6 +2718,38 @@ export default function Screener({
                   : reclaimReady
                     ? `RECLAIM-R (${reclaimRCount})`
                     : "RECLAIM-R…"}
+              </button>
+              </div>
+              <div className="inline-flex items-stretch ml-1" role="group" aria-label="Strong bar filters">
+              <button
+                type="button"
+                onClick={() =>
+                  setStrongBarFilter((v) => (v === "up" ? "off" : "up"))
+                }
+                disabled={currentAllCount === 0}
+                className={`text-xs px-2.5 py-1 rounded-l border transition-colors disabled:opacity-50 ${
+                  strongBarFilter === "up"
+                    ? "relative z-10 bg-lime-500/20 text-lime-300 border-lime-500/40 font-bold"
+                    : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
+                }`}
+                title="15m strong bar up (BIG↑): body ≥ 2.5× recent average and ≥ 55% of bar range, last few closed candles"
+              >
+                BIG↑ ({strongBarUpCount})
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setStrongBarFilter((v) => (v === "down" ? "off" : "down"))
+                }
+                disabled={currentAllCount === 0}
+                className={`text-xs px-2.5 py-1 rounded-r -ml-px border transition-colors disabled:opacity-50 ${
+                  strongBarFilter === "down"
+                    ? "relative z-10 bg-pink-500/20 text-[#ff6bb5] border-pink-500/40 font-bold"
+                    : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
+                }`}
+                title="15m strong bar down (BIG↓): body ≥ 2.5× recent average and ≥ 55% of bar range, last few closed candles"
+              >
+                BIG↓ ({strongBarDownCount})
               </button>
               </div>
             </div>
