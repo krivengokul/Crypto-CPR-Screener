@@ -437,112 +437,180 @@ export function getBadgeClasses(label: string): string {
  * exact same badges from any CPRResult-shaped row. Returns null when no
  * pattern flag is set.
  */
+export const TODAY_OUTER_PATTERN_KEYS: (keyof CPRResult)[] = [
+  "CL4U3",
+  "L4U4",
+  "EU3L4",
+  "EU4L4",
+  "EL4U4",
+  "QU4L4",
+  "U4L2",
+  "U3L2",
+  "U4L3",
+  "U1L4",
+  "U4L4",
+  "U3L4",
+  "U2L4",
+  "CU3L2",
+  "CU3L3",
+  "EL2U4",
+  "EL3U4",
+  "CU4L2",
+  "EU3L3",
+  "EL3U3",
+  "CU4L4",
+  "CU4L3",
+  "CL3U3",
+  "L4U3",
+  "L3U3",
+  "L4U2",
+  "L3U2",
+  "L3U4",
+  "L2U4",
+  "CL3U2",
+  "L1U4",
+  "CL2U1",
+  "CL4U2",
+  "CL1U1",
+  "CU1L1",
+  "CL2U2",
+  "CU2L2",
+  "CU2BC",
+  "CL4U4",
+  "EU2L3",
+  "EU2L4",
+  "EU2L2",
+  "EUTL2",
+  "EUTL3",
+  "EU1L1",
+  "EL1U1",
+  "EL1U2",
+  "CL2UT",
+  "EL1U3",
+  "EL2U3",
+  "ELTU2",
+  "ELBU2",
+  "ELTU3",
+  "ELPU2",
+  "ELPU3",
+  "ELBU3",
+  "EUPL2",
+  "EUTL4",
+  "L2U3",
+  "CU2L1",
+  "CU3L1",
+  "U2L3",
+  "EL1U4",
+  "ELBU4",
+  "U3L3",
+  "CL3U1",
+  "EU1L2",
+  "EU1L3",
+  "EU1L4",
+  "EUBL1",
+  "EUPL1",
+  "EUTL1",
+  "EUBL2",
+  "EUBL3",
+  "EUPL3",
+  "L3CP",
+  "L2CP",
+  "L3TC",
+  "EL1L2",
+  "EL2L1",
+];
+
+/**
+ * Returns active outer pattern keys as a joined string, e.g. "EU1L4" or "EU3L4".
+ */
+export function computeOuterLevelPattern(r: CPRResult): string | null {
+  const matched = TODAY_OUTER_PATTERN_KEYS.filter((k) => !!r[k]);
+  if (matched.length === 0) return null;
+  return matched.join("/");
+}
+
+/**
+ * Merges inner pattern (e.g. "A-A-AA-AA") and outer level pattern (e.g. "EU1L4")
+ * into a single unified pattern code, e.g. "A-A-AA-AA-EU1L4".
+ */
+export function getCombinedPatternCode(r: CPRResult): {
+  combined: string | null;
+  inner: string | null;
+  outer: string | null;
+} {
+  const inner = computeInnerLevelPattern(r);
+  const outer = computeOuterLevelPattern(r);
+  if (inner && outer) {
+    return { combined: `${inner}-${outer}`, inner, outer };
+  }
+  if (inner) {
+    return { combined: inner, inner, outer: null };
+  }
+  if (outer) {
+    return { combined: outer, inner: null, outer };
+  }
+  return { combined: null, inner: null, outer: null };
+}
+
+/**
+ * Renders the combined pattern code (inner + outer, e.g. "A-A-AA-AA-EU1L4")
+ * as a clean text label in the first row of the Pattern column.
+ */
+export function renderCombinedPatternLabel(r: CPRResult) {
+  const { combined, inner, outer } = getCombinedPatternCode(r);
+  if (!combined) {
+    return <span className="text-muted-foreground/60 text-xs">—</span>;
+  }
+  const colorClass =
+    combined.startsWith("A-")
+      ? "text-emerald-400"
+      : combined.startsWith("E-") || combined.startsWith("EU") || combined.startsWith("EL")
+      ? "text-purple-300"
+      : combined.startsWith("C-") || combined.startsWith("CU") || combined.startsWith("CL")
+      ? "text-cyan-300"
+      : combined.startsWith("B-")
+      ? "text-rose-400"
+      : combined.startsWith("U")
+      ? "text-lime-300"
+      : combined.startsWith("L")
+      ? "text-indigo-300"
+      : "text-sky-300";
+
+  return (
+    <span
+      className={`font-mono text-[11px] font-bold tracking-tight whitespace-nowrap select-all ${colorClass}`}
+      title={`Combined Pattern: ${combined}${inner ? ` (Inner: ${inner})` : ""}${outer ? ` (Outer: ${outer})` : ""}`}
+    >
+      {combined}
+    </span>
+  );
+}
+
+/**
+ * Today's pattern badges — every individual boolean flag on a CPRResult
+ * (r.CL4U3, r.L4U4, ...), same badge set/colours used in the Screener's
+ * "Pattern" column. Extracted out of the row JSX so other views (e.g.
+ * BacktestPanel's category/sub-category results table) can render the
+ * exact same badges from any CPRResult-shaped row. Returns null when no
+ * pattern flag is set.
+ */
 export function renderTodayPatternBadges(r: CPRResult) {
-  const hasAny =
-    r.CL4U3 || r.L4U4 || r.EU3L4 || r.EU4L4 || r.EL4U4 || r.QU4L4 || r.U4L2 || r.U3L2 || r.U4L3 || r.U1L4 || r.U4L4 || r.U3L4 || r.U2L4 || r.CU3L2 || r.CU3L3 || r.EL2U4 || r.EL3U4 || r.CU4L2 || r.EU3L3 || r.EL3U3 || r.CU4L4 || r.CU4L3 || r.CL3U3 || r.L4U3 || r.L3U3 || r.L4U2 || r.L3U2 || r.L3U4 || r.L2U4 || r.CL3U2 || r.L1U4 || r.CL2U1 || r.CL4U2 || r.CL1U1 || r.CU1L1 || r.CL2U2 || r.CU2L2 || r.CU2BC || r.CL4U4 || r.EU2L3 || r.EU2L4 || r.EU2L2 || r.EUTL2 || r.EUTL3 || r.EU1L1 || r.EL1U1 || r.EL1U2 || r.CL2UT || r.EL1U3 || r.EL2U3 || r.ELTU2 || r.ELBU2 || r.ELTU3 || r.ELPU2 || r.ELPU3 || r.ELBU3 || r.EUPL2 || r.EUTL4 || r.L2U3 || r.CU2L1 || r.CU3L1 || r.U2L3 || r.EL1U4 || r.ELBU4 || r.U3L3 || r.CL3U1 || r.EU1L2 || r.EU1L3 || r.EU1L4 || r.EUBL1 || r.EUPL1 || r.EUTL1 || r.EUBL2 || r.EUBL3 || r.EUPL3 || r.L3CP || r.L2CP || r.L3TC || r.EL1L2 || r.EL2L1;
-  if (!hasAny) return null;
-  // Colour-coded via the same PATTERN_BADGE_CLASSES palette (getBadgeClasses)
-  // as every other pattern badge — CHANGED from a hardcoded per-key className
-  // list to reading the shared map directly, so this badge set can never
-  // drift out of sync with PATTERN_BADGE_CLASSES again.
-  const todayPatternKeys: (keyof CPRResult)[] = [
-    "CL4U3",
-    "L4U4",
-    "EU3L4",
-    "EU4L4",
-    "EL4U4",
-    "QU4L4",
-    "U4L2",
-    "U3L2",
-    "U4L3",
-    "U1L4",
-    "U4L4",
-    "U3L4",
-    "U2L4",
-    "CU3L2",
-    "CU3L3",
-    "EL2U4",
-    "EL3U4",
-    "CU4L2",
-    "EU3L3",
-    "EL3U3",
-    "CU4L4",
-    "CU4L3",
-    "CL3U3",
-    "L4U3",
-    "L3U3",
-    "L4U2",
-    "L3U2",
-    "L3U4",
-    "L2U4",
-    "CL3U2",
-    "L1U4",
-    "CL2U1",
-    "CL4U2",
-    "CL1U1",
-    "CU1L1",
-    "CL2U2",
-    "CU2L2",
-    "CU2BC",
-    "CL4U4",
-    "EU2L3",
-    "EU2L4",
-    "EU2L2",
-    "EUTL2",
-    "EUTL3",
-    "EU1L1",
-    "EL1U1",
-    "EL1U2",
-    "CL2UT",
-    "EL1U3",
-    "EL2U3",
-    "ELTU2",
-    "ELBU2",
-    "ELTU3",
-    "ELPU2",
-    "ELPU3",
-    "ELBU3",
-    "EUPL2",
-    "EUTL4",
-    "L2U3",
-    "CU2L1",
-    "CU3L1",
-    "U2L3",
-    "EL1U4",
-    "ELBU4",
-    "U3L3",
-    "CL3U1",
-    "EU1L2",
-    "EU1L3",
-    "EU1L4",
-    "EUBL1",
-    "EUPL1",
-    "EUTL1",
-    "EUBL2",
-    "EUBL3",
-    "EUPL3",
-    "L3CP",
-    "L2CP",
-    "L3TC",
-    "EL1L2",
-    "EL2L1",
-  ];
+  const activeKeys = TODAY_OUTER_PATTERN_KEYS.filter((key) => !!r[key]);
+  if (activeKeys.length === 0) return null;
   return (
     <div className="flex flex-wrap gap-1">
-      {todayPatternKeys
-        .filter((key) => r[key])
-        .map((key) => (
-          <span
-            key={key}
-            className={
-              key === "EU2L4"
-                ? `text-[10px] px-1.5 py-0.5 rounded-md border font-semibold tracking-wide ${getBadgeClasses(key)}`
-                : `text-[10px] px-1 py-0.5 rounded border font-medium ${getBadgeClasses(key)}`
-            }
-          >
-            {key}
-          </span>
-        ))}
+      {activeKeys.map((key) => (
+        <span
+          key={key}
+          className={
+            key === "EU2L4"
+              ? `text-[10px] px-1.5 py-0.5 rounded-md border font-semibold tracking-wide ${getBadgeClasses(key)}`
+              : `text-[10px] px-1 py-0.5 rounded border font-medium ${getBadgeClasses(key)}`
+          }
+        >
+          {key}
+        </span>
+      ))}
     </div>
   );
 }
@@ -767,21 +835,15 @@ export function renderPatternColumnBadges(r: CPRResult) {
     !isInsideCPR &&
     !isOutsideCPR;
   const statusBadge = renderLevelStatusBadge(r, isInsideCPR, isOutsideCPR, showWide, nothingMatched);
-  const todayBadges = renderTodayPatternBadges(r);
-  // CHANGED: now uses renderPivotAndGapBadges (PivotPattern + GapBadge
-  // together) instead of the bare renderPivotPatternBadge(r, false), so
-  // BacktestPanel's PATTERN column shows the same GapBadge the Screener's
-  // own Pattern column shows. Unlike the old pivotPatternBadge-only version,
-  // this never returns null — computeGapBadge always yields a label, so the
-  // "—" fallback at BacktestPanel's call site (renderPatternColumnBadges(r) ??
-  // <span>—</span>) is now effectively dead, same as the Screener's own cell.
   return (
     <div className="flex flex-col gap-1 max-w-[228px]">
-      <div className="flex flex-nowrap items-center gap-1">
-                {statusBadge}
-        {todayBadges}
+      <div className="flex flex-nowrap items-center gap-1 whitespace-nowrap">
+        {renderCombinedPatternLabel(r)}
       </div>
-      {renderPivotAndGapBadges(r)}
+      <div className="flex flex-nowrap items-center gap-1 whitespace-nowrap">
+        {statusBadge}
+        {renderGapBadge(r)}
+      </div>
     </div>
   );
 }
@@ -1405,11 +1467,13 @@ function ScreenerTableRow({
         </td>
         <td className="px-2 py-3 w-40">
           <div className="flex flex-col gap-1 max-w-[240px]">
-            <div className="flex flex-nowrap items-center gap-1">
-              {renderLevelStatusBadge(r, isInsideCPR, isOutsideCPR, showWide, nothingMatchedMain)}
-              {renderTodayPatternBadges(r)}
+            <div className="flex flex-nowrap items-center gap-1 whitespace-nowrap">
+              {renderCombinedPatternLabel(r)}
             </div>
-            {renderPivotAndGapBadges(r)}
+            <div className="flex flex-nowrap items-center gap-1 whitespace-nowrap">
+              {renderLevelStatusBadge(r, isInsideCPR, isOutsideCPR, showWide, nothingMatchedMain)}
+              {renderGapBadge(r)}
+            </div>
           </div>
         </td>
         <td className="px-3 py-3">
