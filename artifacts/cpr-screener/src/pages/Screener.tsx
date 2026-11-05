@@ -392,6 +392,8 @@ export default function Screener({
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [search, setSearch] = useState("");
   const [showAll, setShowAll] = useState(true);
+  /** Asset class chip: null = all, else CRYPTO | COMMOD | TRADFI. */
+  const [classFilter, setClassFilter] = useState<"CRYPTO" | "COMMOD" | "TRADFI" | null>(null);
   const [activeGenericSignal, setActiveGenericSignal] = useState<string | null>(null);
   // NEW: PDH/PDL filter — independent of activeSignal, mutually exclusive (like pivot/width filters).
   const [pdhPdlFilter, setPdhPdlFilter] = useState<"above" | "below" | "abovepu4" | "belowpl4" | "pdhgtu1" | "pdlltl1" | "s1r1in" | null>(null);
@@ -1220,6 +1222,14 @@ export default function Screener({
     .filter(
       (r) => !shouldHideTradfiCommodRow(r.assetClass, hideTradfiWeekend),
     )
+    .filter((r) => {
+      if (!classFilter) return true;
+      const ac = r.assetClass;
+      if (classFilter === "COMMOD") return ac === "COMMOD";
+      if (classFilter === "TRADFI") return ac === "TRADFI";
+      // CRYPTO = everything that is not stamped COMMOD/TRADFI
+      return ac !== "COMMOD" && ac !== "TRADFI";
+    })
     .filter(matchesSearch)
     .filter((r) => {
       if (breakoutMode === "off") return true;
@@ -1582,7 +1592,7 @@ export default function Screener({
   // Helper: is any sub-filter active (to decide the result count label)
   const anySubFilter =
     !!activeGenericSignal ||
-    !!PatternFilter || !!touchFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter || previousCandleFilter !== "all" || reclaimSFilter || reclaimRFilter || statusFilter !== "all" || !!entryLevelFilter;
+    !!PatternFilter || !!touchFilter || !!classFilter || !!prevWidthFilter || !!todayWidthFilter || !!pdhPdlFilter || previousCandleFilter !== "all" || reclaimSFilter || reclaimRFilter || statusFilter !== "all" || !!entryLevelFilter;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -1756,6 +1766,7 @@ export default function Screener({
               <button
                 onClick={() => {
                   setShowAll(true);
+                  setClassFilter(null);
                   // NEW: also clear the generic Views (sub-pattern) selection —
                   // covers inside-cpr and every other GENERIC_VIEW_CATEGORIES
                   // category, so "Show All" fully resets state everywhere.
@@ -1773,6 +1784,37 @@ export default function Screener({
                 <span className="leading-none">{showAll ? "−" : "+"}</span>
                 Show All
               </button>
+              <span className="text-[10px] text-sky-400/90 uppercase tracking-wider font-semibold shrink-0 ml-1">CLASS:</span>
+              {(
+                [
+                  { id: "CRYPTO" as const, label: "CRYPTO" },
+                  { id: "COMMOD" as const, label: "COMMODITY" },
+                  { id: "TRADFI" as const, label: "TRADFI" },
+                ]
+              ).map(({ id, label }) => {
+                const isActive = classFilter === id;
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setClassFilter((v) => (v === id ? null : id))}
+                    className={`flex items-center gap-0.5 text-xs font-bold uppercase tracking-wide px-2 py-1 rounded border transition-colors shrink-0 ${
+                      isActive
+                        ? "bg-foreground/15 text-foreground border-foreground/30"
+                        : "border-border text-muted-foreground hover:text-foreground"
+                    }`}
+                    title={
+                      id === "CRYPTO"
+                        ? "Show only crypto (exclude TRADFI & COMMODITY)"
+                        : id === "COMMOD"
+                          ? "Show only commodity perps (XAU, XAG, oil, …)"
+                          : "Show only TradFi stock/index perps"
+                    }
+                  >
+                    {isActive ? `✕ ${label}` : label}
+                  </button>
+                );
+              })}
               <button
                 type="button"
                 onClick={() =>
