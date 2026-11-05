@@ -1235,13 +1235,23 @@ export default function Screener({
     // the filter buttons actually work independent of the primary badge.
     .filter((r) => {
       if (!touchFilter) return true;
-      if (!r.touchCategory) return false;
-      if (touchFilter === "insidecpr") return !!(r.InsideCPR || (r as any).insideCPR);
-      if (touchFilter === "outcpr") return !!r.outCPR;
-      if (touchFilter === "OVA") return !!r.overlapHigher;
-      if (touchFilter === "overlapLower") return !!r.overlapLower;
-      if (touchFilter === "equal-cpr") return !!r.equalCPR;
-      // Match Screener row badges: Narow-A / Wide-A / Narow-B / Wide-B
+      // Classic TOUCH chips only apply inside the TOUCH category.
+      if (
+        touchFilter === "insidecpr" ||
+        touchFilter === "outcpr" ||
+        touchFilter === "OVA" ||
+        touchFilter === "overlapLower" ||
+        touchFilter === "equal-cpr"
+      ) {
+        if (!r.touchCategory) return false;
+        if (touchFilter === "insidecpr") return !!(r.InsideCPR || (r as any).insideCPR);
+        if (touchFilter === "outcpr") return !!r.outCPR;
+        if (touchFilter === "OVA") return !!r.overlapHigher;
+        if (touchFilter === "overlapLower") return !!r.overlapLower;
+        if (touchFilter === "equal-cpr") return !!r.equalCPR;
+        return true;
+      }
+      // Narrow/Wide chips match row badges (not limited to TOUCH category).
       if (touchFilter === "narrow-a") return !!r.narrowCPR && !r.InsideCPR && !!r.cprRising;
       if (touchFilter === "wide-a") return !!r.strWideCPR && !r.outCPR && !!r.cprRising;
       if (touchFilter === "narrow-b") return !!r.narrowCPR && !r.InsideCPR && !!r.cprFalling;
@@ -1985,91 +1995,95 @@ export default function Screener({
               AND independent of showAll. These always render, regardless of Show All state, and
               are mutually exclusive within their own group. */}
           {showTouchList && (
-            <>
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[10px] text-sky-400/90 uppercase tracking-wider mr-0.5 font-semibold">CPR:</span>
-              {(
-                [
-                  { id: "insidecpr", label: "INCPR", count: touchCounts.insidecpr },
-                  { id: "outcpr", label: "OutCPR", count: touchCounts.outcpr },
-                  { id: "OVA", label: "Overlap Above", count: touchCounts.OVA },
-                  { id: "overlapLower", label: "Overlap Below", count: touchCounts.overlapLower },
-                  { id: "equal-cpr", label: "Equal CPR", count: touchCounts.equalCPR },
-                ]
-              ).map(({ id, label, count }) => {
-                const isActive = touchFilter === id;
-                return (
-                  <button
-                    key={id}
-                    onClick={() => setTouchFilter((v) => (v === id ? null : id))}
-                    className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                      isActive
-                        ? "bg-foreground/15 text-foreground border-foreground/30"
-                        : "border-border text-muted-foreground hover:text-foreground"
-                    }`}
-                    title={`Show only rows matching ${label}`}
-                  >
-                    {isActive ? `✕ ${label}` : label}
-                    <span className="text-[11px] font-mono text-muted-foreground ml-1">({count})</span>
-                  </button>
-                );
-              })}
-              {/* S1-R1 IN, PDHL-A, PDHL-B — same pdhPdlFilter state as before. */}
-              {(
-                [
-                  { id: "s1r1in", label: "S1-R1 IN", count: touchCounts.s1r1in, title: "TOUCH category only: today's S1/R1 inside previous day's CPR, or previous day's S1/R1 inside today's CPR" },
-                  { id: "pdhgtu1", label: "PDHL-A", count: touchCounts.pdhgtu1, title: "Show only rows where today's Previous Day High (PDH) is above today's R1 (U1)" },
-                  { id: "pdlltl1", label: "PDHL-B", count: touchCounts.pdlltl1, title: "Show only rows where today's Previous Day Low (PDL) is below today's S1 (L1)" },
-                ] as const
-              ).map(({ id, label, count, title }) => {
-                const isActive = pdhPdlFilter === id;
-                return (
-                  <button
-                    key={id}
-                    onClick={() => setPdhPdlFilter((v) => (v === id ? null : id))}
-                    className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                      isActive
-                        ? "bg-foreground/15 text-foreground border-foreground/30"
-                        : "border-border text-muted-foreground hover:text-foreground"
-                    }`}
-                    title={title}
-                  >
-                    {isActive ? `✕ ${label}` : label}
-                    <span className="text-[11px] font-mono text-muted-foreground ml-1">({count})</span>
-                  </button>
-                );
-              })}
+            <div className="flex flex-col gap-1.5">
+              {/* Row 1 — CPR width × Above/Below */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[10px] text-sky-400/90 uppercase tracking-wider mr-0.5 font-semibold w-14 shrink-0">CPR:</span>
+                {(
+                  [
+                    { id: "narrow-a", label: "Narrow-A", count: touchCounts.narrowA, title: "Today CPR narrower than prev + CPR Above (Narow-A badge)" },
+                    { id: "wide-a", label: "Wide-A", count: touchCounts.wideA, title: "Today CPR wider than prev + CPR Above (Wide-A badge)" },
+                    { id: "narrow-b", label: "Narrow-B", count: touchCounts.narrowB, title: "Today CPR narrower than prev + CPR Below (Narow-B badge)" },
+                    { id: "wide-b", label: "Wide-B", count: touchCounts.wideB, title: "Today CPR wider than prev + CPR Below (Wide-B badge)" },
+                  ] as const
+                ).map(({ id, label, count, title }) => {
+                  const isActive = touchFilter === id;
+                  return (
+                    <button
+                      key={id}
+                      onClick={() => setTouchFilter((v) => (v === id ? null : id))}
+                      className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                        isActive
+                          ? "bg-foreground/15 text-foreground border-foreground/30"
+                          : "border-border text-muted-foreground hover:text-foreground"
+                      }`}
+                      title={title}
+                    >
+                      {isActive ? `✕ ${label}` : label}
+                      <span className="text-[11px] font-mono text-muted-foreground ml-1">({count})</span>
+                    </button>
+                  );
+                })}
+              </div>
+              {/* Row 2 — classic TOUCH category */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[10px] text-sky-400/90 uppercase tracking-wider mr-0.5 font-semibold w-14 shrink-0">TOUCH:</span>
+                {(
+                  [
+                    { id: "insidecpr", label: "INCPR", count: touchCounts.insidecpr },
+                    { id: "outcpr", label: "OutCPR", count: touchCounts.outcpr },
+                    { id: "OVA", label: "Overlap Above", count: touchCounts.OVA },
+                    { id: "overlapLower", label: "Overlap Below", count: touchCounts.overlapLower },
+                    { id: "equal-cpr", label: "Equal CPR", count: touchCounts.equalCPR },
+                  ]
+                ).map(({ id, label, count }) => {
+                  const isActive = touchFilter === id;
+                  return (
+                    <button
+                      key={id}
+                      onClick={() => setTouchFilter((v) => (v === id ? null : id))}
+                      className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                        isActive
+                          ? "bg-foreground/15 text-foreground border-foreground/30"
+                          : "border-border text-muted-foreground hover:text-foreground"
+                      }`}
+                      title={`Show only TOUCH rows matching ${label}`}
+                    >
+                      {isActive ? `✕ ${label}` : label}
+                      <span className="text-[11px] font-mono text-muted-foreground ml-1">({count})</span>
+                    </button>
+                  );
+                })}
+              </div>
+              {/* Row 3 — PDH / PDL */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[10px] text-sky-400/90 uppercase tracking-wider mr-0.5 font-semibold w-14 shrink-0">PDH/PDL:</span>
+                {(
+                  [
+                    { id: "s1r1in", label: "S1-R1 IN", count: touchCounts.s1r1in, title: "TOUCH category only: today's S1/R1 inside previous day's CPR, or previous day's S1/R1 inside today's CPR" },
+                    { id: "pdhgtu1", label: "PDHL-A", count: touchCounts.pdhgtu1, title: "Show only rows where today's Previous Day High (PDH) is above today's R1 (U1)" },
+                    { id: "pdlltl1", label: "PDHL-B", count: touchCounts.pdlltl1, title: "Show only rows where today's Previous Day Low (PDL) is below today's S1 (L1)" },
+                  ] as const
+                ).map(({ id, label, count, title }) => {
+                  const isActive = pdhPdlFilter === id;
+                  return (
+                    <button
+                      key={id}
+                      onClick={() => setPdhPdlFilter((v) => (v === id ? null : id))}
+                      className={`text-xs px-2.5 py-1 rounded border transition-colors ${
+                        isActive
+                          ? "bg-foreground/15 text-foreground border-foreground/30"
+                          : "border-border text-muted-foreground hover:text-foreground"
+                      }`}
+                      title={title}
+                    >
+                      {isActive ? `✕ ${label}` : label}
+                      <span className="text-[11px] font-mono text-muted-foreground ml-1">({count})</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-            {/* Second CPR line: Narrow/Wide × Above/Below — matches row badges Narow-A / Wide-A / … */}
-            <div className="flex items-center gap-1.5 flex-wrap mt-1">
-              <span className="text-[10px] text-sky-400/90 uppercase tracking-wider mr-0.5 font-semibold opacity-0 select-none">CPR:</span>
-              {(
-                [
-                  { id: "narrow-a", label: "Narrow-A", count: touchCounts.narrowA, title: "Today CPR narrower than prev + CPR Above (same as Narow-A badge)" },
-                  { id: "wide-a", label: "Wide-A", count: touchCounts.wideA, title: "Today CPR wider than prev + CPR Above (same as Wide-A badge)" },
-                  { id: "narrow-b", label: "Narrow-B", count: touchCounts.narrowB, title: "Today CPR narrower than prev + CPR Below (same as Narow-B badge)" },
-                  { id: "wide-b", label: "Wide-B", count: touchCounts.wideB, title: "Today CPR wider than prev + CPR Below (same as Wide-B badge)" },
-                ] as const
-              ).map(({ id, label, count, title }) => {
-                const isActive = touchFilter === id;
-                return (
-                  <button
-                    key={id}
-                    onClick={() => setTouchFilter((v) => (v === id ? null : id))}
-                    className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                      isActive
-                        ? "bg-foreground/15 text-foreground border-foreground/30"
-                        : "border-border text-muted-foreground hover:text-foreground"
-                    }`}
-                    title={title}
-                  >
-                    {isActive ? `✕ ${label}` : label}
-                    <span className="text-[11px] font-mono text-muted-foreground ml-1">({count})</span>
-                  </button>
-                );
-              })}
-            </div>
-            </>
           )}
           <div className="flex items-center gap-1.5 flex-wrap">
               {showPatternList && (
