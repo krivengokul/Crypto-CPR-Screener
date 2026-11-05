@@ -2001,11 +2001,14 @@ test("PP-MOM-A / PP-MOM-B: dropdown, exclusivity vs PP-CON, combined codes and r
   assert.deepEqual(splitCandleCheck("PPMA+MB"), { pp: "PPMA", p: "MB" });
   assert.ok(ALL_CANDLE_CHECKS.includes("PPMA") && ALL_CANDLE_CHECKS.includes("PPMB"));
 
-  // candleCheckFromRow priority: PPCB > PPMB > PPCA > PPMA. With no P-day flag set, P falls back to VR (P-VOLATILE-R1S1) like the BacktestPanel badge.
-  assert.equal(candleCheckFromRow(row({ PD15MPPConsolidateBPass: true, PD15MPPMomentumBPass: true })), "PPCB+VR");
-  assert.equal(candleCheckFromRow(row({ PD15MPPMomentumBPass: true, PD15MPPConsolidateAPass: true })), "PPMB+VR");
-  assert.equal(candleCheckFromRow(row({ PD15MPPConsolidateAPass: true, PD15MPPMomentumAPass: true })), "PPCA+VR");
-  assert.equal(candleCheckFromRow(row({ PD15MPPMomentumAPass: true })), "PPMA+VR");
+  // candleCheckFromRow priority: PPCB > PPMB > PPCA > PPMA. With no P-day flag set, P stays empty: a residual "P-VOLATILE ✗" badge means no exclusive P-pass, and binding VR would require INSIDE, so the new view would never match the row it was created from.
+  assert.equal(candleCheckFromRow(row({ PD15MPPConsolidateBPass: true, PD15MPPMomentumBPass: true })), "PPCB");
+  assert.equal(candleCheckFromRow(row({ PD15MPPMomentumBPass: true, PD15MPPConsolidateAPass: true })), "PPMB");
+  assert.equal(candleCheckFromRow(row({ PD15MPPConsolidateAPass: true, PD15MPPMomentumAPass: true })), "PPCA");
+  assert.equal(candleCheckFromRow(row({ PD15MPPMomentumAPass: true })), "PPMA");
+  // A genuine P-day INSIDE pass still binds VR (alone and with a PP code).
+  assert.equal(candleCheckFromRow(row({ PD15MInsideR1S1Pass: true })), "VR");
+  assert.equal(candleCheckFromRow(row({ PD15MInsideR1S1Pass: true, PD15MPPConsolidateBPass: true })), "PPCB+VR");
 
   // PPVR: PP inside R1/PH-S1/PL, exclusive of PP-CON-A/B; lowest PP priority.
   assert.equal(matchesCandleCheck(row({ PD15MPPInsideR1S1Pass: true }), "PPVR"), true);
@@ -2013,8 +2016,8 @@ test("PP-MOM-A / PP-MOM-B: dropdown, exclusivity vs PP-CON, combined codes and r
   assert.equal(matchesCandleCheck(row({ PD15MPPInsideR1S1Pass: true, PD15MPPConsolidateBPass: true }), "PPVR"), false);
   assert.equal(matchesCandleCheck(row({ PD15MPPInsideR1S1Pass: true, PD15MConsolidateAPass: true }), "PPVR+CA"), true);
   assert.deepEqual(splitCandleCheck("PPVR+CB"), { pp: "PPVR", p: "CB" });
-  assert.equal(candleCheckFromRow(row({ PD15MPPInsideR1S1Pass: true })), "PPVR+VR");
-  assert.equal(candleCheckFromRow(row({ PD15MPPInsideR1S1Pass: true, PD15MPPMomentumAPass: true })), "PPMA+VR");
+  assert.equal(candleCheckFromRow(row({ PD15MPPInsideR1S1Pass: true })), "PPVR");
+  assert.equal(candleCheckFromRow(row({ PD15MPPInsideR1S1Pass: true, PD15MPPMomentumAPass: true })), "PPMA");
 });
 
 test("passesInsideR1S1Filter: wick through the band sets a reference, fails only when fully beyond it", () => {
@@ -2131,11 +2134,11 @@ test("exclusive CON side stamped on the row drives matchesCandleCheck and candle
   const ppBothB = row({ PD15MPPConsolidateAPass: true, PD15MPPConsolidateBPass: true, PD15MPPConsolidateExclusive: "B" });
   assert.equal(matchesCandleCheck(ppBothB, "PPCB"), true);
   assert.equal(matchesCandleCheck(ppBothB, "PPCA"), false);
-  assert.equal(candleCheckFromRow(ppBothB), "PPCB+VR");
+  assert.equal(candleCheckFromRow(ppBothB), "PPCB");
   const ppBothA = row({ PD15MPPConsolidateAPass: true, PD15MPPConsolidateBPass: true, PD15MPPConsolidateExclusive: "A" });
   assert.equal(matchesCandleCheck(ppBothA, "PPCA"), true);
   assert.equal(matchesCandleCheck(ppBothA, "PPCB"), false);
-  assert.equal(candleCheckFromRow(ppBothA), "PPCA+VR");
+  assert.equal(candleCheckFromRow(ppBothA), "PPCA");
   assert.equal(matchesCandleCheck(row({ PD15MPPConsolidateBPass: true }), "PPCB"), true);
   assert.equal(matchesCandleCheck(row({ PD15MPPConsolidateAPass: true }), "PPCA"), true);
   // Combined PP + P segments honour each side's own stamp.
