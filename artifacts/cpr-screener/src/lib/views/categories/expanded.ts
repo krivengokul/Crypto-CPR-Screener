@@ -906,7 +906,7 @@ export const EXPANDED_VIEWS: ViewDef[] = [
       },
     {
         key: "R1-PPCB-A-E-AA-E-EU2L3-RH-ABGap-S1",
-        label: "S303L-TAREVL-R1TOS1",
+        label: "S303L-TAREV-R1TOS1",
         parentKey: "A-E-AA-E-EU2L3",
         condition: (r) => passesView(r, "A-E-AA-E-EU2L3") && matchesGapBadge(r, "RH-ABGap") && matchesCandleCheck(r, "PPCB"),
         standalone: true,
