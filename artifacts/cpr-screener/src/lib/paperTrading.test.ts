@@ -6,6 +6,7 @@ import {
   type PaperTradeRecord,
 } from "./paperTrading.ts";
 import { gradeTargetHit } from "./backtestOutcome.ts";
+import { shouldHideTradfiCommodRow } from "./weekendMarketFilter.ts";
 import {
   fetchDayExtremes,
   parseDayCandle,
@@ -1462,6 +1463,26 @@ test("sessionExtremes: yesterday's spike (rolling high) does not become today's 
   assert.ok(urls.find((u) => u.includes("SPOTONLYUSDT"))?.startsWith("https://api.binance.com/api/v3/klines"));
   assert.ok(urls.find((u) => u.includes("STEEMUSDT"))?.startsWith("https://fapi.binance.com/fapi/v1/klines"));
   assert.ok(urls.every((u) => u.includes("interval=1d") && u.includes("limit=1")));
+});
+
+test("Week toggle: ON hides TRADFI/COMMOD on weekends only; OFF always hides them; crypto is never hidden", () => {
+  // Local-time constructors so getDay() matches regardless of the machine's timezone.
+  const wednesday = new Date(2026, 9, 21, 12, 0, 0);
+  const saturday = new Date(2026, 9, 24, 12, 0, 0);
+  const sunday = new Date(2026, 9, 25, 12, 0, 0);
+  for (const cls of ["TRADFI", "COMMOD"]) {
+    // Week · on (hideOnWeekend = true)
+    assert.equal(shouldHideTradfiCommodRow(cls, true, wednesday), false);
+    assert.equal(shouldHideTradfiCommodRow(cls, true, saturday), true);
+    assert.equal(shouldHideTradfiCommodRow(cls, true, sunday), true);
+    // Week · off (hideOnWeekend = false): always hidden, any day
+    assert.equal(shouldHideTradfiCommodRow(cls, false, wednesday), true);
+    assert.equal(shouldHideTradfiCommodRow(cls, false, saturday), true);
+  }
+  for (const cls of ["CRYPTO", undefined, null, ""]) {
+    assert.equal(shouldHideTradfiCommodRow(cls as string | undefined, true, saturday), false);
+    assert.equal(shouldHideTradfiCommodRow(cls as string | undefined, false, wednesday), false);
+  }
 });
 
 test("parseComposedViewKey parses candleCheck segment between entry and pattern", () => {

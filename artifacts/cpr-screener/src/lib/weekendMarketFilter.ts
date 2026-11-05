@@ -1,12 +1,14 @@
 /**
- * Weekend filter for Binance TRADFI / COMMOD perps.
+ * Weekend / TradFi filter for Binance TRADFI / COMMOD perps.
  *
- * Traditional markets (stocks, ETFs, many commodities) are closed Sat–Sun.
- * Tokenized TRADFI/COMMOD symbols still list 24/7 on crypto exchanges, but
- * the underlying is holiday — so the Screener / Signal Desk can hide them
- * on weekends when this filter is ON.
+ * Toggle states (persisted in localStorage):
+ *   Week · on  (hideOnWeekend = true, default)
+ *     — Hide TRADFI/COMMOD only on Sat/Sun (underlying markets closed).
+ *     — Weekdays: show them.
+ *   Week · off (hideOnWeekend = false)
+ *     — Always hide TRADFI/COMMOD (any day).
  *
- * Default: ON (hide on Sat/Sun). Persisted in localStorage.
+ * Default: ON (weekend-only hide).
  */
 
 export type TradfiAssetClass = "COMMOD" | "TRADFI";
@@ -26,7 +28,7 @@ export function isTradfiOrCommod(assetClass?: string | null): boolean {
   return assetClass === "COMMOD" || assetClass === "TRADFI";
 }
 
-/** Default true = hide TRADFI/COMMOD on weekends. */
+/** Default true = Week ON (hide TRADFI/COMMOD on weekends only). */
 export function readHideTradfiWeekend(): boolean {
   if (typeof localStorage === "undefined") return true;
   try {
@@ -58,12 +60,19 @@ export function writeHideTradfiWeekend(on: boolean): void {
 
 /**
  * True when this row should be excluded from live Screener / Signal Desk /
- * toast pools: filter is ON, today is weekend, and row is TRADFI or COMMOD.
+ * toast pools.
+ *
+ *   hideOnWeekend === true  (Week · on):  hide TRADFI/COMMOD on Sat/Sun only
+ *   hideOnWeekend === false (Week · off): always hide TRADFI/COMMOD
  */
 export function shouldHideTradfiCommodRow(
   assetClass: string | undefined | null,
   hideOnWeekend: boolean,
   now: Date = new Date(),
 ): boolean {
-  return hideOnWeekend && isWeekend(now) && isTradfiOrCommod(assetClass);
+  if (!isTradfiOrCommod(assetClass)) return false;
+  // Week · off → always hide COM/TRADFI
+  if (!hideOnWeekend) return true;
+  // Week · on → hide only on the weekend
+  return isWeekend(now);
 }

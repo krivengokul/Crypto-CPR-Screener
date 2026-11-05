@@ -382,13 +382,13 @@ export default function ViewsSidebar({
             title={
               hideTradfiWeekend
                 ? weekendNow
-                  ? "Week ON: TRADFI & COMMOD hidden (weekend). Click to show."
-                  : "Week ON: TRADFI & COMMOD will hide on Sat/Sun. Click to turn OFF."
-                : "Week OFF: TRADFI & COMMOD always shown. Click to hide them on weekends."
+                  ? "Week ON: TRADFI & COMMOD hidden (weekend). Click for always-hide."
+                  : "Week ON: TRADFI & COMMOD shown on weekdays; hidden Sat/Sun. Click for always-hide."
+                : "Week OFF: TRADFI & COMMOD always hidden. Click for weekend-only hide."
             }
             aria-pressed={hideTradfiWeekend}
           >
-            Week{hideTradfiWeekend ? (weekendNow ? " · hide" : " · on") : ""}
+            Week{hideTradfiWeekend ? (weekendNow ? " · hide" : " · on") : " · off"}
           </button>
           <div style={{ flex: 1, minWidth: 0 }} aria-hidden />
           <button
