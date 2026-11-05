@@ -3858,5 +3858,128 @@ export const R1ABOVEPR4_S1BELOWPS4_VIEWS: ViewDef[] = [
       }
     ],
         requireFullMatch: true,
+      },
+    {
+        key: "BC-PPCA+MA-A-A-AA-AA-EU1L4-RH-BBGap-S4",
+        label: "TA-REVERSALDOWN",
+        parentKey: "A-A-AA-AA-EU1L4",
+        condition: (r) => passesView(r, "A-A-AA-AA-EU1L4") && matchesGapBadge(r, "RH-BBGap") && matchesCandleCheck(r, "PPCA+MA"),
+        standalone: true,
+        candleCheck: "PPCA+MA",
+        kind: "view",
+        direction: "Down",
+        targetLabel: "L4 (today's S4)",
+        getTarget: (r) => r.todayCPR.s4,
+        entryLabel: "BC (today's BC)",
+        getEntry: (r) => r.todayCPR.bc,
+        stoplossLabel: "R1 (today's R1)",
+        getStoploss: (r) => r.todayCPR.r1,
+        levelCheckDefs: [
+      {
+        "key": "r4",
+        "subject": "previous",
+        "bandKeys": [
+          "r1",
+          "prevHigh"
+        ]
+      },
+      {
+        "key": "r3",
+        "subject": "previous",
+        "bandKeys": [
+          "prevHigh",
+          "tc"
+        ]
+      },
+      {
+        "key": "r2",
+        "subject": "previous",
+        "bandKeys": [
+          "pivot",
+          "bc"
+        ]
+      },
+      {
+        "key": "prevHigh",
+        "subject": "previous",
+        "bandKeys": [
+          "s1",
+          "prevLow"
+        ]
+      },
+      {
+        "key": "r1",
+        "subject": "previous",
+        "bandKeys": [
+          "bc",
+          "s1"
+        ]
+      },
+      {
+        "key": "tc",
+        "subject": "previous",
+        "bandKeys": [
+          "prevLow",
+          "s2"
+        ]
+      },
+      {
+        "key": "pivot",
+        "subject": "previous",
+        "bandKeys": [
+          "prevLow",
+          "s2"
+        ]
+      },
+      {
+        "key": "bc",
+        "subject": "previous",
+        "bandKeys": [
+          "prevLow",
+          "s2"
+        ]
+      },
+      {
+        "key": "prevLow",
+        "subject": "previous",
+        "bandKeys": [
+          "s2",
+          "s3"
+        ]
+      },
+      {
+        "key": "s1",
+        "subject": "previous",
+        "bandKeys": [
+          "prevLow",
+          "s2"
+        ]
+      },
+      {
+        "key": "s2",
+        "subject": "previous",
+        "bandKeys": [
+          "s2",
+          "s3"
+        ]
+      },
+      {
+        "key": "s3",
+        "subject": "previous",
+        "bandKeys": [
+          "s3",
+          "s4"
+        ]
+      },
+      {
+        "key": "s4",
+        "subject": "previous",
+        "bandKeys": [
+          "s3",
+          "s4"
+        ]
+      }
+    ],
+        requireFullMatch: true,
       }
 ];
