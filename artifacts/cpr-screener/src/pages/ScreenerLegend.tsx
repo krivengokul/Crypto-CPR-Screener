@@ -149,6 +149,8 @@ function HistoricalChartCameras({
   // ~1 trading month of snapshots (was 3 — older View attachments never appeared)
   limit = 40,
   emptyText,
+  /** When true (default for Card 1), include today's UTC attachments. */
+  includeToday = true,
 }: {
   viewKey?: string;
   symbol?: string;
@@ -156,6 +158,7 @@ function HistoricalChartCameras({
   limit?: number;
   /** Shown instead of nothing when the View has no saved chart links. */
   emptyText?: string;
+  includeToday?: boolean;
 }) {
   // Seed from local cache immediately (Backtest saves here); refresh from Firestore.
   const [records, setRecords] = useState<StoredChartLinkRecord[]>(() =>
@@ -186,10 +189,10 @@ function HistoricalChartCameras({
         viewKeys: aliases,
         symbol,
         source,
-        excludeToday: true,
+        excludeToday: !includeToday,
         limit,
       }),
-    [records, viewKey, aliases, symbol, source, limit],
+    [records, viewKey, aliases, symbol, source, limit, includeToday],
   );
 
   if (!viewKey) return null;

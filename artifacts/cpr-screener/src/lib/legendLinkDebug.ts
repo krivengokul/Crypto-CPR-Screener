@@ -60,7 +60,7 @@ export async function legendLinksFor(
     records,
     viewKey,
     viewKeys: aliases,
-    excludeToday: true,
+    excludeToday: false, // the Legend now includes today's View attachments
     limit: 100000,
   });
   const matchedIds = new Set(matchedAll.map((m) => `${m.id}|${m.url}`));
@@ -81,7 +81,6 @@ export async function legendLinksFor(
 
   const shown: LegendLinkRow[] = [];
   const hidden: LegendLinkRow[] = [];
-  const today = new Date().toISOString().slice(0, 10);
   const aliasSet = new Set(aliases.map((a) => a.trim()).filter(Boolean));
   const keyMatches = (stored: string) =>
     !!stored && (aliasSet.has(stored) || stored.split("::").some((seg) => seg && aliasSet.has(seg)));
@@ -97,10 +96,8 @@ export async function legendLinksFor(
       continue;
     }
     const stored = (rec.viewKey || rec.lastViewKey || "").trim();
-    const date = parseChartRowKey(rec.rowKey || "").entryDate;
     if (!rec.url) hidden.push(rowOf(rec, "HIDDEN", "no URL"));
     else if (!keyMatches(stored)) hidden.push(rowOf(rec, "HIDDEN", describeStoredKey(stored)));
-    else if (date && date === today) hidden.push(rowOf(rec, "HIDDEN", "entry date is today (Legend excludes today)"));
     else hidden.push(rowOf(rec, "HIDDEN", "duplicate of another link (same URL, date and symbol)"));
   }
 
