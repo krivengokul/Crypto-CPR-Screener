@@ -1773,46 +1773,57 @@ function ScreenerTableRow({
             </div>
 ) : null;
 
+          // Same size as PASS / Fail / Ready (text-[9px] mono). First badge row:
+          // BIG↑/BIG↓ then status. BRK/BRKDN stay on the following line.
           const strongBarBadge = r.strongBar?.signal ? (
-            <div className="mt-0.5">
-              <span
-                className={
-                  r.strongBar.side === "up"
-                    ? "inline-block text-[10px] font-bold px-1.5 py-0.5 rounded border border-lime-500/50 bg-lime-500/15 text-lime-300"
-                    : "inline-block text-[10px] font-bold px-1.5 py-0.5 rounded border border-pink-500/50 bg-pink-500/15 text-[#ff6bb5]"
-                }
-                title={`15m strong bar ${r.strongBar.side === "up" ? "up" : "down"} · ${r.strongBar.via === "range" ? "range spike" : "fat body"} · body ${r.strongBar.bodyMult.toFixed(1)}× · range ${(r.strongBar.rangeMult ?? 0).toFixed(1)}× avg · body ${Math.round(r.strongBar.bodyFrac * 100)}% of range · ${r.strongBar.barsAgo === 0 ? "latest closed" : `${r.strongBar.barsAgo} bar(s) ago`}`}
-              >
-                {r.strongBar.side === "up" ? "BIG↑" : "BIG↓"}
-                {" "}
-                {(r.strongBar.via === "range" ? r.strongBar.rangeMult : r.strongBar.bodyMult).toFixed(1)}x
-              </span>
-            </div>
+            <span
+              className={
+                r.strongBar.side === "up"
+                  ? "inline-flex shrink-0 items-center rounded border border-lime-500/50 bg-lime-500/15 px-1 py-0 text-[9px] font-mono font-semibold leading-tight text-lime-300"
+                  : "inline-flex shrink-0 items-center rounded border border-pink-500/50 bg-pink-500/15 px-1 py-0 text-[9px] font-mono font-semibold leading-tight text-[#ff6bb5]"
+              }
+              title={`15m strong bar ${r.strongBar.side === "up" ? "up" : "down"} · ${r.strongBar.via === "range" ? "range spike" : "fat body"} · body ${r.strongBar.bodyMult.toFixed(1)}× · range ${(r.strongBar.rangeMult ?? 0).toFixed(1)}× avg · body ${Math.round(r.strongBar.bodyFrac * 100)}% of range · ${r.strongBar.barsAgo === 0 ? "latest closed" : `${r.strongBar.barsAgo} bar(s) ago`}`}
+            >
+              {r.strongBar.side === "up" ? "BIG↑" : "BIG↓"}
+              {" "}
+              {(r.strongBar.via === "range" ? r.strongBar.rangeMult : r.strongBar.bodyMult).toFixed(1)}x
+            </span>
           ) : null;
+          const firstBadgeRow =
+            strongBarBadge || statusBadge ? (
+              <div className="mt-0.5 flex flex-wrap items-center gap-1">
+                {strongBarBadge}
+                {statusBadge}
+              </div>
+            ) : null;
           // Beyond PDH: only PDH % (no >TC). Beyond PDL: only PDL % (no <BC).
           if (beyondPdh && showPdhRow) {
             return (
               <td className={`pl-3 pr-2 py-3 whitespace-nowrap text-xs font-medium ${pdh.color}`}>
-                <div title={pdhTitle}>
-                  {pdh.main}
-                  {pdh.sub && <span className="text-[10px] ml-1">{pdh.sub}</span>}
+                <div className="flex flex-wrap items-center gap-1" title={pdhTitle}>
+                  <span>
+                    {pdh.main}
+                    {pdh.sub && <span className="text-[10px] ml-1">{pdh.sub}</span>}
+                  </span>
+                  {strongBarBadge}
+                  {statusBadge}
                 </div>
                 {brkBadge}
-                {strongBarBadge}
-                {statusBadge}
               </td>
             );
           }
           if (beyondPdl && showPdhRow) {
             return (
               <td className={`pl-3 pr-2 py-3 whitespace-nowrap text-xs font-medium ${pdh.color}`}>
-                <div title={pdhTitle}>
-                  {pdh.main}
-                  {pdh.sub && <span className="text-[10px] ml-1">{pdh.sub}</span>}
+                <div className="flex flex-wrap items-center gap-1" title={pdhTitle}>
+                  <span>
+                    {pdh.main}
+                    {pdh.sub && <span className="text-[10px] ml-1">{pdh.sub}</span>}
+                  </span>
+                  {strongBarBadge}
+                  {statusBadge}
                 </div>
                 {brkDnBadge}
-                {strongBarBadge}
-                {statusBadge}
               </td>
             );
           }
@@ -1828,16 +1839,22 @@ function ScreenerTableRow({
                   {pdh.main}
                   {pdh.sub && <span className="text-[10px] ml-1">{pdh.sub}</span>}
                 </div>
-                <div className="mt-0.5">{moveLine}</div>
+                <div className="mt-0.5 flex flex-wrap items-center gap-1">
+                  {moveLine}
+                  {strongBarBadge}
+                  {statusBadge}
+                </div>
                 {brkBadge}
-                {strongBarBadge}
-                {statusBadge}
               </td>
             );
           }
           return (
             <td className={`pl-3 pr-2 py-3 whitespace-nowrap text-xs font-medium ${move.color}`}>
-              {moveLine}
+              <div className="flex flex-wrap items-center gap-1">
+                {moveLine}
+                {strongBarBadge}
+                {statusBadge}
+              </div>
               {showPdhRow && (
                 <div className={`mt-0.5 ${pdh.main === "IN-PDHL" ? `${LABEL_FONT} text-orange-400` : pdh.color}`} title={pdhTitle}>
                   {pdh.main}
@@ -1846,8 +1863,6 @@ function ScreenerTableRow({
               )}
               {brkBadge}
               {brkDnBadge}
-              {strongBarBadge}
-                {statusBadge}
             </td>
           );
         })()}
