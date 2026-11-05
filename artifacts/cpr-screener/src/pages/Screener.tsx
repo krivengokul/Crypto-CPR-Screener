@@ -2293,6 +2293,7 @@ export default function Screener({
               (The previous-session candle filters now live in the Candle panel.) */}
           {showPriceList && (
           <div className="flex items-center gap-1 flex-wrap">
+            <span className="text-[10px] text-sky-400/90 uppercase tracking-wider mr-0.5 font-semibold">PRICE:</span>
             <button
               onClick={() => setPdhPdlFilter((v) => (v === "above" ? null : "above"))}
               className={`text-xs px-2.5 py-1 rounded border transition-colors ${
