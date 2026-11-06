@@ -497,6 +497,10 @@ const PDAY_COLORS: Record<string, string> = {
 const PPDAY_COLORS: Record<string, string> = {
   "PP-CONSOLIDATE-A": "#2dd4bf",
   "PP-CONSOLIDATE-B": "#f472b6",
+  "PP-MOMENTUM-A": "#22d3ee",
+  "PP-MOMENTUM-B": "#a78bfa",
+  "PP-VOLATILE-R1S1": "#a3e635",
+  "PP-VOLATILE-R1S1 ✗": "#ff637e",
 };
 
 /** True when Card 2 has nothing useful to show (hide the whole panel). */

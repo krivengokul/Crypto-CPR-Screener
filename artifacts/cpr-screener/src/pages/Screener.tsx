@@ -688,6 +688,8 @@ export default function Screener({
         PD15MAboveBCPass?: boolean;
         PD15MMomentumBPass?: boolean;
         touchCategory?: boolean;
+        ppTouchCategory?: boolean;
+        ppCPR?: CPRResult["ppCPR"];
         // Session data for the R4/S4 session-extreme badge (full scan rows carry these).
         currentPrice?: number;
         todayHigh?: number;
@@ -731,11 +733,24 @@ export default function Screener({
         else if (momA) pDayText = "P-MOMENTUM-A";
       }
       // PP exclusive (B > A), independent of P-bucket — single label under PDay.
+      // Same priority as the table row: PP-CON-B > PP-MOM-B > PP-CON-A > PP-MOM-A > PP-VOLATILE.
+      const ppVolLime =
+        row.ppTouchCategory === true ||
+        (Number.isFinite(row.ppCPR?.widthPct) &&
+          getWidthCategory(row.ppCPR!.widthPct).key === "micro");
       const ppDayText = hasPPConsolidateB(row)
         ? "PP-CONSOLIDATE-B"
-        : hasPPConsolidateA(row)
-          ? "PP-CONSOLIDATE-A"
-          : undefined;
+        : hasPPMomentumB(row)
+          ? "PP-MOMENTUM-B"
+          : hasPPConsolidateA(row)
+            ? "PP-CONSOLIDATE-A"
+            : hasPPMomentumA(row)
+              ? "PP-MOMENTUM-A"
+              : hasPPVolatileR1S1(row)
+                ? ppVolLime
+                  ? "PP-VOLATILE-R1S1"
+                  : "PP-VOLATILE-R1S1 ✗"
+                : undefined;
 
       const defs = viewDef?.levelCheckDefs;
       if (row.prevCPR && row.todayCPR) {
