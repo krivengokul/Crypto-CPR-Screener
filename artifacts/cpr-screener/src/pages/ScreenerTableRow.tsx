@@ -7,7 +7,7 @@ import type { ReclaimSideState } from "@/lib/15MCandleCheck";
 import { getView } from "@/lib/views";
 
 
-/** Pass / Fail / Active / Ready under MOVE (R4/S4 session extreme or preferred View). */
+/** Pass / Fail / Active / Ready for MATCH column (above n/13; R4/S4 session extreme or preferred View). */
 function renderRowStatusBadge(
   r: CPRResult,
   matchingSignals: { id: string; direction?: string | null }[],
@@ -1276,6 +1276,7 @@ function ScreenerTableRow({
     };
   });
   const anyLadderDefined = viewLadders.some((v) => v.ladder.hasConditions);
+  const rowStatusBadge = renderRowStatusBadge(r, matchingSignals, activeSignal);
   // Inputs: `viewName` / `levelCheckConditions` are the View SELECTED in the
   // Screener (from Screener.tsx); `viewLadders` are the Views THIS ROW matches.
   // They're resolved once, here, into a single `primaryView` — the one View
@@ -1643,9 +1644,13 @@ function ScreenerTableRow({
             • View has none, no View active             -> blank line
             Row matches no View                         -> blank cell */}
         <td className="px-3 py-3">
-          {viewLadders.length > 0 && (anyLadderDefined || hasSelectedView) && (
+          {(rowStatusBadge || (viewLadders.length > 0 && (anyLadderDefined || hasSelectedView))) && (
             <div className="flex flex-col gap-1.5">
-              {viewLadders.map(({ id, label, ladder, direction }) => {
+              {rowStatusBadge ? (
+                <div className="flex items-center">{rowStatusBadge}</div>
+              ) : null}
+              {viewLadders.length > 0 && (anyLadderDefined || hasSelectedView) ? (
+              viewLadders.map(({ id, label, ladder, direction }) => {
                 // Tick after n/13 only when this View has "13/13 MATCH" ON
                 // and the row is a full match. Full match without the flag
                 // stays green "13/13" with no tick; Down Views use bright pink.
@@ -1687,14 +1692,14 @@ function ScreenerTableRow({
                   )}
                 </div>
                 );
-              })}
+              })
+              ) : null}
             </div>
           )}
         </td>
         {(() => {
           const move = distanceFromCPR(r.currentPrice, r.todayCPR);
           const pdh = pdhPdlStatus(r);
-          const statusBadge = renderRowStatusBadge(r, matchingSignals, activeSignal);
           const pdhTitle = `PDH: ${fmt(r.todayCPR.prevHigh)}  |  PDL: ${fmt(r.todayCPR.prevLow)}`;
           const LABEL_FONT = "font-mono font-semibold text-[10px] uppercase tracking-wide leading-none";
           const moveInCpr = move.main === "IN-CPR";
@@ -1768,10 +1773,9 @@ function ScreenerTableRow({
               {(r.strongBar.via === "range" ? r.strongBar.rangeMult : r.strongBar.bodyMult).toFixed(1)}x
             </span>
           ) : null;
-          const statusBigRow =
-            statusBadge || strongBarBadge ? (
+          // Active/Ready/Pass/Fail moved to MATCH (above n/13). MOVE keeps BIG↑/↓ only.
+          const statusBigRow = strongBarBadge ? (
               <div className="flex flex-wrap items-center gap-1">
-                {statusBadge}
                 {strongBarBadge}
               </div>
             ) : null;
