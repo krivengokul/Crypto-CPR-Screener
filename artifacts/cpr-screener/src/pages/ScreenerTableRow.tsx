@@ -1568,17 +1568,9 @@ function ScreenerTableRow({
                 </div>
               );
             }
-            // Residual only for rows whose 15m flags were computed (CoinDCX rows never get them).
-            if (r.PD15MPPInsideR1S1Pass === undefined) return null;
-            return (
-              <div
-                className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
-                style={{ color: "#ff637e" }}
-                title="No exclusive PP-CON / PP-MOM / PP-VOLATILE-R1S1 bucket"
-              >
-                PP-VOLATILE ✗
-              </div>
-            );
+            // While PP filters are still fetching (or row never evaluated), stay empty —
+            // do not paint a residual "PP-VOLATILE ✗" for unknown / no-bucket rows.
+            return null;
           })()}
           {showConsolidateB && (
             <div
@@ -1615,20 +1607,11 @@ function ScreenerTableRow({
               {r.touchCategory ? "P-VOLATILE-R1S1" : "P-VOLATILE-R1S1 ✗"}
             </div>
           )}
-          {r.PD15MInsideR1S1Pass !== undefined &&
-            !showInsideR1S1 &&
-            !showConsolidateA &&
-            !showConsolidateB &&
-            !showMomentumA &&
-            !showMomentumB && (
-              <div
-                className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
-                style={{ color: "#ff637e" }}
-                title="No exclusive P-CON / P-MOM / P-VOLATILE-R1S1 bucket"
-              >
-                P-VOLATILE ✗
-              </div>
-            )}
+          {/* Residual P-VOLATILE ✗ removed: while P-day 15m filters are still
+              loading, exclusive props are all false and InsideR1S1Pass may
+              already be stamped false → every row flashed "P-VOLATILE ✗".
+              Only show a label when an exclusive bucket actually matched
+              (showInsideR1S1 / CON / MOM above). */}
 
           {/* Live current-session failed-break flags: "2/3" = 3 levels pierced,
               price back inside 2 of them. Support side sky-blue, resistance orange. */}
