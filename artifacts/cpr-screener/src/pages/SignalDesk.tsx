@@ -9,6 +9,7 @@ import {
   openChartInNewTab,
   hasKnownChartMapping,
   renderPivotSizeCell,
+  getWidthCategory,
 } from "./ScreenerUtils";
 import type { CPRResult } from "@/lib/cpr";
 import {
@@ -345,7 +346,11 @@ function exclusivePPDayBadge(r: CPRResult | undefined | null): {
     };
   }
   if (inside && !conA && !conB) {
-    if (r.ppTouchCategory) {
+    // Lime + no ✗ when TOUCH or the PP-day CPR is Micro (width <= 0.10%).
+    const ppIsMicro =
+      Number.isFinite(r.ppCPR?.widthPct) &&
+      getWidthCategory(r.ppCPR!.widthPct).key === "micro";
+    if (r.ppTouchCategory || ppIsMicro) {
       return {
         text: "PP-VOLATILE-R1S1",
         className: "font-mono text-xs font-bold uppercase tracking-widest",

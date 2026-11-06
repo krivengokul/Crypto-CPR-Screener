@@ -1555,15 +1555,21 @@ function ScreenerTableRow({
               );
             }
             if (showPPVol) {
-              const isTouch = r.ppTouchCategory === true;
+              // Lime + no ✗ when TOUCH or the PP-day CPR is Micro (width <= 0.10%).
+              const ppIsMicro =
+                Number.isFinite(r.ppCPR?.widthPct) &&
+                getWidthCategory(r.ppCPR!.widthPct).key === "micro";
+              const isTouch = r.ppTouchCategory === true || ppIsMicro;
               return (
                 <div
                   className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
                   style={{ color: isTouch ? "#a3e635" : "#ff637e" }}
                   title={
-                    isTouch
+                    r.ppTouchCategory === true
                       ? "PPDay 15m inside R1/PH–S1/PL and (prev, pp) is TOUCH"
-                      : "PPDay 15m inside R1/PH–S1/PL but (prev, pp) is not TOUCH"
+                      : ppIsMicro
+                        ? "Micro PP-day CPR + PPDay 15m inside R1/PH–S1/PL (shown lime without ✗)"
+                        : "PPDay 15m inside R1/PH–S1/PL but (prev, pp) is not TOUCH"
                   }
                 >
                   {isTouch ? "PP-VOLATILE-R1S1" : "PP-VOLATILE-R1S1 ✗"}

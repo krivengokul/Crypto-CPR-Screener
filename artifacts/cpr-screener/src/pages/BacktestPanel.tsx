@@ -390,13 +390,19 @@ function ppDayBadgeFromFlags(raw: CPRResult): {
     };
   }
   if (ppInside) {
-    const isTouch = raw.ppTouchCategory === true;
+    // Micro PP-day CPR (width <= 0.10%) also counts as lime, like TOUCH.
+    const ppIsMicro =
+      Number.isFinite(raw.ppCPR?.widthPct) &&
+      getWidthCategory(raw.ppCPR!.widthPct).key === "micro";
+    const isTouch = raw.ppTouchCategory === true || ppIsMicro;
     return {
       label: isTouch ? "PP-VOLATILE-R1S1" : "PP-VOLATILE-R1S1 ✗",
       color: isTouch ? "#a3e635" : "#ff637e",
-      title: isTouch
+      title: raw.ppTouchCategory === true
         ? "PPDay 15m inside R1/PH–S1/PL and (prev, pp) CPR is TOUCH category"
-        : "PPDay 15m inside R1/PH–S1/PL but (prev, pp) CPR is not TOUCH",
+        : ppIsMicro
+          ? "Micro PP-day CPR + PPDay 15m inside R1/PH–S1/PL (shown lime without ✗)"
+          : "PPDay 15m inside R1/PH–S1/PL but (prev, pp) CPR is not TOUCH",
     };
   }
   // No exclusive PP bucket: show nothing (no residual "PP-VOLATILE ✗").
