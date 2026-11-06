@@ -441,7 +441,13 @@ function renderCandleCheckBadges(raw: CPRResult) {
     );
   }
 
-  const isTouchVolatile = bucket === "inside-r1s1" && raw.touchCategory === true;
+  // pMicro previous-day CPR (width <= 0.10%) also counts as lime, like TOUCH.
+  const prevIsPMicro =
+    Number.isFinite(raw.prevCPR?.widthPct) &&
+    getWidthCategory(raw.prevCPR.widthPct).key === "micro";
+  const isTouchVolatile =
+    bucket === "inside-r1s1" &&
+    (raw.touchCategory === true || prevIsPMicro);
   const label =
     bucket === "inside-r1s1"
       ? isTouchVolatile

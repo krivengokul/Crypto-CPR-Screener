@@ -703,7 +703,12 @@ export default function Screener({
       const direction = viewDef?.direction;
 
       if (hasInsideR1S1(row)) {
-        pDayText = row.touchCategory ? "P-VOLATILE-R1S1" : "P-VOLATILE-R1S1 ✗";
+        const prevMicro =
+          row.prevCPR &&
+          Number.isFinite(row.prevCPR.widthPct) &&
+          getWidthCategory(row.prevCPR.widthPct).key === "micro";
+        pDayText =
+          row.touchCategory || prevMicro ? "P-VOLATILE-R1S1" : "P-VOLATILE-R1S1 ✗";
       } else if (hasConsolidateB(row)) pDayText = "P-CONSOLIDATE-B";
       else if (hasMomentumB(row)) pDayText = "P-MOMENTUM-B";
       else if (hasConsolidateA(row)) pDayText = "P-CONSOLIDATE-A";
@@ -714,7 +719,12 @@ export default function Screener({
         const momA = row.PD15MAboveBCPass === true;
         const momB = row.PD15MMomentumBPass === true;
         if (conA && conB) {
-          pDayText = row.touchCategory ? "P-VOLATILE-R1S1" : "P-VOLATILE-R1S1 ✗";
+          const prevMicro =
+            row.prevCPR &&
+            Number.isFinite(row.prevCPR.widthPct) &&
+            getWidthCategory(row.prevCPR.widthPct).key === "micro";
+          pDayText =
+            row.touchCategory || prevMicro ? "P-VOLATILE-R1S1" : "P-VOLATILE-R1S1 ✗";
         } else if (conB) pDayText = "P-CONSOLIDATE-B";
         else if (momB) pDayText = "P-MOMENTUM-B";
         else if (conA) pDayText = "P-CONSOLIDATE-A";

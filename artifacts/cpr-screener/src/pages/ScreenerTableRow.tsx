@@ -184,6 +184,7 @@ import {
   renderLevelStatusRestBadges,
   renderGapColumnBadges,
   renderPivotSizeCell,
+  getWidthCategory,
 } from "./ScreenerUtils";
 import { formatTradFiSubtitle } from "@/lib/tradfiDisplay";
 import {
@@ -1595,19 +1596,28 @@ function ScreenerTableRow({
               P-MOMENTUM-B
             </div>
           )}
-                    {showInsideR1S1 && (
+                    {showInsideR1S1 && (() => {
+            // Lime + no ✗ when TOUCH or previous-day CPR is pMicro (width ≤ 0.10%).
+            const prevIsPMicro =
+              Number.isFinite(r.prevCPR?.widthPct) &&
+              getWidthCategory(r.prevCPR.widthPct).key === "micro";
+            const limeVol = r.touchCategory === true || prevIsPMicro;
+            return (
             <div
               className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
-              style={{ color: r.touchCategory ? "#a3e635" : "#ff637e" }}
+              style={{ color: limeVol ? "#a3e635" : "#ff637e" }}
               title={
                 r.touchCategory
                   ? "TOUCH + previous-session 15m inside R1/PH–S1/PL band (not CON-A/CON-B)"
-                  : "Previous-session 15m was inside R1/PH–S1/PL band but not CON-A/CON-B (volatile)"
+                  : prevIsPMicro
+                    ? "pMicro previous-day CPR + previous-session 15m inside R1/PH–S1/PL (shown lime without ✗)"
+                    : "Previous-session 15m was inside R1/PH–S1/PL band but not CON-A/CON-B (volatile)"
               }
             >
-              {r.touchCategory ? "P-VOLATILE-R1S1" : "P-VOLATILE-R1S1 ✗"}
+              {limeVol ? "P-VOLATILE-R1S1" : "P-VOLATILE-R1S1 ✗"}
             </div>
-          )}
+            );
+          })()}
           {/* Residual P-VOLATILE ✗ removed: while P-day 15m filters are still
               loading, exclusive props are all false and InsideR1S1Pass may
               already be stamped false → every row flashed "P-VOLATILE ✗".
