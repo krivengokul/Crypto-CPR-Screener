@@ -2011,7 +2011,11 @@ export default function Screener({
                 navigation map, so new registered Views work automatically. */}
             {GENERIC_VIEW_CATEGORIES.has(activeSectionKey) &&
               !showAll &&
-              (Views[activeSectionKey] ?? []).map((sub) => {
+              (Views[activeSectionKey] ?? [])
+                // Only chips that currently match ≥1 row in the scan pool.
+                // Zero-count Views clutter SIGNALS and are not useful here.
+                .filter((sub) => (viewCounts[sub.id] ?? 0) > 0)
+                .map((sub) => {
                 const isActive = activeGenericSignal
                   ? activeGenericSignal === sub.id
                   : activeSignal === sub.id; // left-nav navigated straight to this leaf
