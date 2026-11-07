@@ -452,18 +452,20 @@ function renderCandleCheckBadges(raw: CPRResult) {
   ) : null;
 
   if (!bucket) {
-    // No exclusive P bucket: no residual "P-VOLATILE ✗" label, only PP / CON-B notes if any.
+    // No exclusive P bucket: only PP (+ CON-B failure note if any).
     const ppBadge = ppDayBadgeFromFlags(raw);
     if (!ppBadge && !conBFailureLine) return null;
     return (
       <div className="mt-1 flex flex-col gap-0.5">
         {ppBadge && (
-          <div
-            className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
-            style={{ color: ppBadge.color }}
-            title={ppBadge.title}
-          >
-            {ppBadge.label}
+          <div className="flex flex-row flex-wrap items-center gap-x-2 gap-y-0.5">
+            <span
+              className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
+              style={{ color: ppBadge.color }}
+              title={ppBadge.title}
+            >
+              {ppBadge.label}
+            </span>
           </div>
         )}
         {conBFailureLine}
@@ -523,36 +525,38 @@ function renderCandleCheckBadges(raw: CPRResult) {
 
   return (
     <div className="mt-1 flex flex-col gap-0.5">
-      <div
-        className={className}
-        style={style}
-        title={
-          bucket === "inside-r1s1"
-            ? isTouchVolatile
-              ? "TOUCH + previous-session 15m inside R1/PH–S1/PL band (not CON-A/CON-B)"
-              : "Previous-session 15m was inside R1/PH–S1/PL band but not CON-A/CON-B (volatile)"
-            : bucket === "vol-a"
+      <div className="flex flex-row flex-wrap items-center gap-x-2 gap-y-0.5">
+        {ppBadge && (
+          <span
+            className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
+            style={{ color: ppBadge.color }}
+            title={ppBadge.title}
+          >
+            {ppBadge.label}
+          </span>
+        )}
+        <span
+          className={className}
+          style={style}
+          title={
+            bucket === "inside-r1s1"
               ? isTouchVolatile
-                ? "TOUCH + previous-session 15m above S1/PL floor (no ceiling check)"
-                : "Previous-session 15m above S1/PL floor (no ceiling check)"
-              : bucket === "vol-b"
+                ? "TOUCH + previous-session 15m inside R1/PH–S1/PL band (not CON-A/CON-B)"
+                : "Previous-session 15m was inside R1/PH–S1/PL band but not CON-A/CON-B (volatile)"
+              : bucket === "vol-a"
                 ? isTouchVolatile
-                  ? "TOUCH + previous-session 15m below R1/PH ceiling (no floor check)"
-                  : "Previous-session 15m below R1/PH ceiling (no floor check)"
-                : undefined
-        }
-      >
-        {label}
-      </div>
-      {ppBadge && (
-        <div
-          className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
-          style={{ color: ppBadge.color }}
-          title={ppBadge.title}
+                  ? "TOUCH + previous-session 15m above S1/PL floor (no ceiling check)"
+                  : "Previous-session 15m above S1/PL floor (no ceiling check)"
+                : bucket === "vol-b"
+                  ? isTouchVolatile
+                    ? "TOUCH + previous-session 15m below R1/PH ceiling (no floor check)"
+                    : "Previous-session 15m below R1/PH ceiling (no floor check)"
+                  : undefined
+          }
         >
-          {ppBadge.label}
-        </div>
-      )}
+          {label}
+        </span>
+      </div>
       {conBFailureLine}
     </div>
   );

@@ -1530,17 +1530,8 @@ function ScreenerTableRow({
         </td>
         <td className="px-3 py-3">
           {renderMatchingSignals(r, matchingSignals)}
-          {showConsolidateA && (
-            <div
-              className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
-              style={{ color: "#03b07c" }}
-            >
-              P-CON-A
-            </div>
-          )}
-          {/* PP exclusive stack — same order as Pattern Stats / exclusivePPDayBadge */}
           {(() => {
-            const badge = exclusivePPDayBadge(r, {
+            const ppBadge = exclusivePPDayBadge(r, {
               isPPConsolidateA,
               isPPConsolidateB,
               isPPMomentumA,
@@ -1549,100 +1540,98 @@ function ScreenerTableRow({
               isPPVolA,
               isPPVolB,
             });
-            if (!badge) return null;
+            // Exclusive P label (at most one)
+            let pNode: ReactNode = null;
+            if (showConsolidateA) {
+              pNode = (
+                <span
+                  className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
+                  style={{ color: "#03b07c" }}
+                >
+                  P-CON-A
+                </span>
+              );
+            } else if (showConsolidateB) {
+              pNode = (
+                <span
+                  className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
+                  style={{ color: "#ff6bb5" }}
+                >
+                  P-CON-B
+                </span>
+              );
+            } else if (showMomentumA) {
+              pNode = (
+                <span className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-cyan-400">
+                  P-MOM-A
+                </span>
+              );
+            } else if (showMomentumB) {
+              pNode = (
+                <span className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-violet-400">
+                  P-MOM-B
+                </span>
+              );
+            } else if (showInsideR1S1) {
+              const prevIsPMicro =
+                Number.isFinite(r.prevCPR?.widthPct) &&
+                getWidthCategory(r.prevCPR.widthPct).key === "micro";
+              const limeVol = r.touchCategory === true || prevIsPMicro;
+              pNode = (
+                <span
+                  className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
+                  style={{ color: limeVol ? "#a3e635" : "#ff637e" }}
+                  title={
+                    r.touchCategory
+                      ? "TOUCH + previous-session 15m inside R1/PH–S1/PL band (not CON-A/CON-B)"
+                      : prevIsPMicro
+                        ? "pMicro previous-day CPR + previous-session 15m inside R1/PH–S1/PL (lime without ✗)"
+                        : "Previous-session 15m inside R1/PH–S1/PL band but not CON-A/CON-B (volatile)"
+                  }
+                >
+                  {limeVol ? "P-VOL-C" : "P-VOL-C ✗"}
+                </span>
+              );
+            } else if (showVolA) {
+              const prevIsPMicro =
+                Number.isFinite(r.prevCPR?.widthPct) &&
+                getWidthCategory(r.prevCPR.widthPct).key === "micro";
+              const limeVol = r.touchCategory === true || prevIsPMicro;
+              pNode = (
+                <span
+                  className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
+                  style={{ color: limeVol ? "#a3e635" : "#ff637e" }}
+                >
+                  {limeVol ? "P-VOL-A" : "P-VOL-A ✗"}
+                </span>
+              );
+            } else if (showVolB) {
+              const prevIsPMicro =
+                Number.isFinite(r.prevCPR?.widthPct) &&
+                getWidthCategory(r.prevCPR.widthPct).key === "micro";
+              const limeVol = r.touchCategory === true || prevIsPMicro;
+              pNode = (
+                <span
+                  className="font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
+                  style={{ color: limeVol ? "#a3e635" : "#ff637e" }}
+                >
+                  {limeVol ? "P-VOL-B" : "P-VOL-B ✗"}
+                </span>
+              );
+            }
+            if (!ppBadge && !pNode) return null;
             return (
-              <div
-                className={`mt-1 ${badge.className}`}
-                style={badge.style}
-                title={`Exclusive PP label (Pattern Stats order): ${badge.text}`}
-              >
-                {badge.text}
-              </div>
-            );
-          })()}
-{showConsolidateB && (
-            <div
-              className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-[#ff6bb5]"
-              style={{ color: "#ff6bb5" }}
-            >
-              P-CON-B
-            </div>
-          )}
-          {showMomentumA && (
-            <div
-              className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-cyan-400"
-            >
-              P-MOM-A
-            </div>
-          )}
-          {showMomentumB && (
-            <div
-              className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-violet-400"
-            >
-              P-MOM-B
-            </div>
-          )}
-                    {showInsideR1S1 && (() => {
-            // Lime + no ✗ when TOUCH or previous-day CPR is pMicro (width ≤ 0.10%).
-            const prevIsPMicro =
-              Number.isFinite(r.prevCPR?.widthPct) &&
-              getWidthCategory(r.prevCPR.widthPct).key === "micro";
-            const limeVol = r.touchCategory === true || prevIsPMicro;
-            return (
-            <div
-              className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
-              style={{ color: limeVol ? "#a3e635" : "#ff637e" }}
-              title={
-                r.touchCategory
-                  ? "TOUCH + previous-session 15m inside R1/PH–S1/PL band (not CON-A/CON-B)"
-                  : prevIsPMicro
-                    ? "pMicro previous-day CPR + previous-session 15m inside R1/PH–S1/PL (shown lime without ✗)"
-                    : "Previous-session 15m was inside R1/PH–S1/PL band but not CON-A/CON-B (volatile)"
-              }
-            >
-              {limeVol ? "P-VOL-C" : "P-VOL-C ✗"}
-            </div>
-            );
-          })()}
-          {showVolA && (() => {
-            const prevIsPMicro =
-              Number.isFinite(r.prevCPR?.widthPct) &&
-              getWidthCategory(r.prevCPR.widthPct).key === "micro";
-            const limeVol = r.touchCategory === true || prevIsPMicro;
-            return (
-              <div
-                className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
-                style={{ color: limeVol ? "#a3e635" : "#ff637e" }}
-                title={
-                  r.touchCategory
-                    ? "TOUCH + previous-session 15m above S1/PL floor (no ceiling check)"
-                    : prevIsPMicro
-                      ? "pMicro previous-day CPR + previous-session 15m above S1/PL floor (shown lime without ✗)"
-                      : "Previous-session 15m above S1/PL floor (no ceiling check)"
-                }
-              >
-                {limeVol ? "P-VOL-A" : "P-VOL-A ✗"}
-              </div>
-            );
-          })()}
-          {showVolB && (() => {
-            const prevIsPMicro =
-              Number.isFinite(r.prevCPR?.widthPct) &&
-              getWidthCategory(r.prevCPR.widthPct).key === "micro";
-            const limeVol = r.touchCategory === true || prevIsPMicro;
-            return (
-              <div
-                className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
-                style={{ color: limeVol ? "#a3e635" : "#ff637e" }}
-                title={
-                  r.touchCategory
-                    ? "TOUCH + previous-session 15m below R1/PH ceiling (no floor check)"
-                    : prevIsPMicro
-                      ? "pMicro previous-day CPR + previous-session 15m below R1/PH ceiling (shown lime without ✗)"
-                      : "Previous-session 15m below R1/PH ceiling (no floor check)"
-                }
-              >
-                {limeVol ? "P-VOL-B" : "P-VOL-B ✗"}
+              <div className="mt-1 flex flex-row flex-wrap items-center gap-x-2 gap-y-0.5">
+                {ppBadge && (
+                  <span
+                    className={ppBadge.className}
+                    style={ppBadge.style}
+                    title={`Exclusive PP label: ${ppBadge.text}`}
+                  >
+                    {ppBadge.text}
+                  </span>
+                )}
+                {pNode}
               </div>
             );
           })()}
