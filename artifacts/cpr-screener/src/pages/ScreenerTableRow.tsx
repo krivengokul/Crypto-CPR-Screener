@@ -1763,36 +1763,59 @@ function ScreenerTableRow({
           // Beyond PDH / PDL: show only that line — no secondary >TC / <BC line.
           const beyondPdh = pdh.sub === "> PDH";
           const beyondPdl = pdh.sub === "< PDL";
-          const brkBadge = r.breakout?.signal ? (
+          // BRK / BRKDN: segmented pill — solid colored tag (dark text) + dark body with
+          // white volume, accent-colored level(s), muted age — so the pieces read apart
+          // instead of one flat tinted block.
+          const renderBrkPill = (
+            tag: "BRK" | "BRKDN",
+            accent: string,
+            d: NonNullable<typeof r.breakout>,
+            title: string,
+            fallbackLevel: string,
+          ) => (
             <div className="mt-0.5">
               <span
-                className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded border border-amber-500/50 bg-amber-500/15 text-amber-300"
-                title={`15m momentum breakout ${r.breakout.barsAgo === 0 ? "on the latest (possibly still forming) candle" : `${r.breakout.barsAgo} candle(s) ago`} · rel. volume ${r.breakout.relVol.toFixed(1)}x · cleared ${r.breakout.levelsCleared.join("/") || "range high"} · ${(r.breakout.runPct ?? 0) >= 0 ? "+" : ""}${(r.breakout.runPct ?? 0).toFixed(1)}% since`}
+                className="inline-flex items-stretch overflow-hidden rounded-md border text-[10px] font-bold leading-none whitespace-nowrap shadow-sm"
+                style={{ borderColor: accent }}
+                title={title}
               >
-                BRK {r.breakout.relVol.toFixed(1)}x
-                {r.breakout.levelsCleared.length > 0
-                  ? ` ${r.breakout.levelsCleared.join("·")}`
-                  : " RNG"}
-                {" "}
-                {(r.breakout.barsAgo ?? 0) * 15}m
+                <span
+                  className="px-1.5 py-[3px] font-extrabold tracking-wider text-slate-950"
+                  style={{ backgroundColor: accent }}
+                >
+                  {tag}
+                </span>
+                <span className="px-1.5 py-[3px] bg-slate-900 text-white">{d.relVol.toFixed(1)}x</span>
+                <span
+                  className="px-1.5 py-[3px] bg-slate-900 border-l border-white/10"
+                  style={{ color: accent }}
+                >
+                  {d.levelsCleared.length > 0 ? d.levelsCleared.join("·") : fallbackLevel}
+                </span>
+                <span className="px-1.5 py-[3px] bg-slate-800 text-slate-300 font-medium border-l border-white/10">
+                  {(d.barsAgo ?? 0) === 0 ? "now" : `${(d.barsAgo ?? 0) * 15}m`}
+                </span>
               </span>
             </div>
-          ) : null;
-          const brkDnBadge = r.breakdown?.signal ? (
-            <div className="mt-0.5">
-              <span
-                className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded border border-pink-500/50 bg-pink-500/15 text-[#ff6bb5]"
-                title={`15m momentum breakdown ${r.breakdown.barsAgo === 0 ? "on the latest (possibly still forming) candle" : `${r.breakdown.barsAgo} candle(s) ago`} · rel. volume ${r.breakdown.relVol.toFixed(1)}x · cleared ${r.breakdown.levelsCleared.join("/") || "range low"} · ${(r.breakdown.runPct ?? 0) >= 0 ? "+" : ""}${(r.breakdown.runPct ?? 0).toFixed(1)}% since`}
-              >
-                BRKDN {r.breakdown.relVol.toFixed(1)}x
-                {r.breakdown.levelsCleared.length > 0
-                  ? ` ${r.breakdown.levelsCleared.join("·")}`
-                  : " RNG"}
-                {" "}
-                {(r.breakdown.barsAgo ?? 0) * 15}m
-              </span>
-            </div>
-) : null;
+          );
+          const brkBadge = r.breakout?.signal
+            ? renderBrkPill(
+                "BRK",
+                "#fbbf24",
+                r.breakout,
+                `15m momentum breakout ${r.breakout.barsAgo === 0 ? "on the latest (possibly still forming) candle" : `${r.breakout.barsAgo} candle(s) ago`} · rel. volume ${r.breakout.relVol.toFixed(1)}x · cleared ${r.breakout.levelsCleared.join("/") || "range high"} · ${(r.breakout.runPct ?? 0) >= 0 ? "+" : ""}${(r.breakout.runPct ?? 0).toFixed(1)}% since`,
+                "RNG",
+              )
+            : null;
+          const brkDnBadge = r.breakdown?.signal
+            ? renderBrkPill(
+                "BRKDN",
+                "#ff6bb5",
+                r.breakdown,
+                `15m momentum breakdown ${r.breakdown.barsAgo === 0 ? "on the latest (possibly still forming) candle" : `${r.breakdown.barsAgo} candle(s) ago`} · rel. volume ${r.breakdown.relVol.toFixed(1)}x · cleared ${r.breakdown.levelsCleared.join("/") || "range low"} · ${(r.breakdown.runPct ?? 0) >= 0 ? "+" : ""}${(r.breakdown.runPct ?? 0).toFixed(1)}% since`,
+                "RNG",
+              )
+            : null;
 
           // Same size as PASS / Fail / Ready (text-[9px] mono). First badge row:
           // BIG↑/BIG↓ then status. BRK/BRKDN stay on the following line.
