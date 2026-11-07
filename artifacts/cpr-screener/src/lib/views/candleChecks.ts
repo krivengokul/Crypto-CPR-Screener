@@ -8,12 +8,12 @@ export const ALL_CANDLE_CHECKS: readonly string[] = ALL_CANDLE_CHECK_CODES;
 export const CANDLE_CHECK_OPTIONS: Array<{ value: CandleCheckCode | ""; label: string }> = [
   { value: "", label: "None" },
   { value: "CA", label: "P-CON-A" },
-  { value: "MA", label: "P-MOMENTUM-A" },
-  { value: "VR", label: "P-VOL-R1S1" },
+  { value: "MA", label: "P-MOM-A" },
+  { value: "VR", label: "P-VOL-C" },
   { value: "VA", label: "P-VOL-A" },
   { value: "VB", label: "P-VOL-B" },
   { value: "CB", label: "P-CON-B" },
-  { value: "MB", label: "P-MOMENTUM-B" },
+  { value: "MB", label: "P-MOM-B" },
 ];
 
 /** PP-day independent options (Create/Edit/Copy View PP dropdown). */
@@ -23,7 +23,7 @@ export const PP_CANDLE_CHECK_OPTIONS: Array<{ value: "PPCA" | "PPCB" | "PPMA" | 
   { value: "PPMA", label: "PP-MOM-A" },
   { value: "PPCB", label: "PP-CON-B" },
   { value: "PPMB", label: "PP-MOM-B" },
-  { value: "PPVR", label: "PP-VOL-R1S1" },
+  { value: "PPVR", label: "PP-VOL-C" },
   { value: "PPVA", label: "PP-VOL-A" },
   { value: "PPVB", label: "PP-VOL-B" },
 ];

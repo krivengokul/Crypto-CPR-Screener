@@ -1547,7 +1547,7 @@ function PreviousDaySection() {
         : {
             label: "PASS",
             detail:
-              `P-MOMENTUM-B: TC walk passed without the PL/S1 floor (${tcName} ${conBTc}).` +
+              `P-MOM-B: TC walk passed without the PL/S1 floor (${tcName} ${conBTc}).` +
               (tcTouch
                 ? ` ${formatQualifyCandle(tcTouch, tcName, conBTc)}`
                 : " No completed body spanned TC — rare edge case."),
@@ -1558,7 +1558,7 @@ function PreviousDaySection() {
         : {
             label: "PASS",
             detail:
-              `P-MOMENTUM-A: BC floor walk passed (no PH/R1 ceiling / R2 gate). BC ${conABc}.` +
+              `P-MOM-A: BC floor walk passed (no PH/R1 ceiling / R2 gate). BC ${conABc}.` +
               (bcTouch
                 ? ` ${formatQualifyCandle(bcTouch, "BC", conABc)}`
                 : " No completed body spanned BC — rare edge case."),
@@ -1575,7 +1575,7 @@ function PreviousDaySection() {
           ? {
               pass: true,
               label: "PASS",
-              detail: `P-VOLATILE-R1S1: every completed 15m candle stayed inside min(S1,PL) ${floor} – max(R1,PH) ${ceiling}.`,
+              detail: `P-VOL-C: every completed 15m candle stayed inside min(S1,PL) ${floor} – max(R1,PH) ${ceiling}.`,
             }
           : insideRaw === false
             ? {
@@ -1583,7 +1583,7 @@ function PreviousDaySection() {
                 label: "FAIL",
                 detail: insideFail
                   ? formatInsideR1S1FailureNote(insideFail)
-                  : `P-VOLATILE-R1S1: at least one completed 15m candle wicked outside min(S1,PL) ${floor} – max(R1,PH) ${ceiling}.`,
+                  : `P-VOL-C: at least one completed 15m candle wicked outside min(S1,PL) ${floor} – max(R1,PH) ${ceiling}.`,
                 failCandleNumber: insideFail?.candleNumber ?? null,
                 failSide: insideFail
                   ? insideFail.brokeCeiling && insideFail.brokeFloor
@@ -1598,7 +1598,7 @@ function PreviousDaySection() {
             : {
                 pass: false,
                 label: "NO DATA",
-                detail: "P-VOLATILE-R1S1: no usable completed 15m candles for the previous session band check.",
+                detail: "P-VOL-C: no usable completed 15m candles for the previous session band check.",
               };
 
       const volARaw = passesVolAFilter(candles, floor, prevStart, now);
@@ -1719,20 +1719,20 @@ function PreviousDaySection() {
             ? formatConBNote(ppFailMomB, "PPDay TC")
             : {
                 label: "PASS",
-                detail: `PP-MOMENTUM-B: TC walk passed without PL/S1 floor (PPDay TC ${ppBTc}).`,
+                detail: `PP-MOM-B: TC walk passed without PL/S1 floor (PPDay TC ${ppBTc}).`,
               };
           const ppMomANote = ppFailMomA
             ? formatUpexFailureNote(ppFailMomA, "BC")
             : {
                 label: "PASS",
-                detail: `PP-MOMENTUM-A: BC floor walk passed without PH/R1 ceiling (BC ${ppABc}).`,
+                detail: `PP-MOM-A: BC floor walk passed without PH/R1 ceiling (BC ${ppABc}).`,
               };
           const ppVolBlock: PrevDayCheckBlock =
             ppInsideRaw === true
               ? {
                   pass: true,
                   label: "PASS",
-                  detail: `PP-VOLATILE-R1S1: every PP-day 15m candle stayed inside floor ${ppFloor} – ceiling ${ppCeiling}.`,
+                  detail: `PP-VOL-C: every PP-day 15m candle stayed inside floor ${ppFloor} – ceiling ${ppCeiling}.`,
                 }
               : ppInsideRaw === false
                 ? (() => {
@@ -1748,10 +1748,10 @@ function PreviousDaySection() {
                       label: "FAIL",
                       detail: ppFail
                         ? formatInsideR1S1FailureNote(ppFail).replace(
-                            "P-VOLATILE-R1S1",
-                            "PP-VOLATILE-R1S1",
+                            "P-VOL-C",
+                            "PP-VOL-C",
                           )
-                        : `PP-VOLATILE-R1S1 FAIL outside min(S1,PL) ${ppFloor} – max(R1,PH) ${ppCeiling}.`,
+                        : `PP-VOL-C FAIL outside min(S1,PL) ${ppFloor} – max(R1,PH) ${ppCeiling}.`,
                       failCandleNumber: ppFail?.candleNumber ?? null,
                       failSide: ppFail
                         ? ppFail.brokeCeiling && ppFail.brokeFloor
@@ -1767,7 +1767,7 @@ function PreviousDaySection() {
                 : {
                     pass: false,
                     label: "NO DATA",
-                    detail: "PP-VOLATILE-R1S1: no usable completed PP-day 15m candles.",
+                    detail: "PP-VOL-C: no usable completed PP-day 15m candles.",
                   };
           ppSessionLabel = new Date(ppStart).toISOString().slice(0, 10);
           const ppSource = describeLevelSource("PPDay", "PPPDay", pp, cpr.pppCPR ?? null);
@@ -1873,7 +1873,7 @@ function PreviousDaySection() {
         <h2 className="mb-1 text-sm font-semibold text-teal-300">Previous Day — 15m full P- / PP- exclusive stack</h2>
         <p className="mb-3 text-[11px] text-slate-400">
           Enter a symbol and entry date (UTC session day). Diagnoses the full exclusive stack
-          (P-CON-B → P-MOM-B → P-CON-A → P-MOM-A → P-VOLATILE-R1S1 and the matching PP- stack)
+          (P-CON-B → P-MOM-B → P-CON-A → P-MOM-A → P-VOL-C and the matching PP- stack)
           on the <span className="text-slate-200">previous</span> 15m session — same priority as Screener.
           that used to appear under the Backtest View cell.
         </p>
@@ -1962,11 +1962,11 @@ function PreviousDaySection() {
                 : conSide === "A"
                   ? "P-CON-A"
                   : momB
-                    ? "P-MOMENTUM-B"
+                    ? "P-MOM-B"
                     : momA
-                      ? "P-MOMENTUM-A"
+                      ? "P-MOM-A"
                       : vol
-                        ? "P-VOL-R1S1"
+                        ? "P-VOL-C"
                         : volA
                           ? "P-VOL-A"
                           : volB
@@ -1988,14 +1988,14 @@ function PreviousDaySection() {
                       : "Raw CON-B failed — not a candidate for the exclusive badge.",
               },
               {
-                name: "P-MOMENTUM-B",
+                name: "P-MOM-B",
                 pass: momB,
-                shown: displayed === "P-MOMENTUM-B",
+                shown: displayed === "P-MOM-B",
                 reason: !momB
                   ? "Raw MOM-B failed — not a candidate."
                   : conB
                     ? "Raw MOM-B passed, but CON-B also passed. Precedence: CON-B > MOM-B, so MOM-B label is suppressed."
-                    : "CON-B failed and MOM-B passed → exclusive label is P-MOMENTUM-B.",
+                    : "CON-B failed and MOM-B passed → exclusive label is P-MOM-B.",
               },
               {
                 name: "P-CON-A",
@@ -2014,9 +2014,9 @@ function PreviousDaySection() {
                         : "CON-A passed but another exclusive label was selected.",
               },
               {
-                name: "P-MOMENTUM-A",
+                name: "P-MOM-A",
                 pass: momA,
-                shown: displayed === "P-MOMENTUM-A",
+                shown: displayed === "P-MOM-A",
                 reason: !momA
                   ? "Raw MOM-A failed — not a candidate."
                   : conB
@@ -2025,17 +2025,17 @@ function PreviousDaySection() {
                       ? "Raw MOM-A passed, but MOM-B also passed. Precedence: MOM-B > MOM-A, so MOM-A label is suppressed."
                       : conA
                         ? "Raw MOM-A passed, but CON-A also passed. Precedence: CON-A > MOM-A, so MOM-A label is suppressed."
-                        : "Higher buckets failed; MOM-A passed → exclusive label is P-MOMENTUM-A.",
+                        : "Higher buckets failed; MOM-A passed → exclusive label is P-MOM-A.",
               },
               {
-                name: "P-VOL-R1S1",
+                name: "P-VOL-C",
                 pass: vol,
-                shown: displayed === "P-VOL-R1S1",
+                shown: displayed === "P-VOL-C",
                 reason: !vol
                   ? "Raw INSIDE-R1S1 / P-VOL failed — not a candidate."
                   : conB || momB || conA || momA
                     ? "Raw P-VOL passed, but a higher P-bucket also passed → suppressed."
-                    : "Higher P-buckets failed; P-VOL-R1S1 passed → exclusive label.",
+                    : "Higher P-buckets failed; P-VOL-C passed → exclusive label.",
               },
               {
                 name: "P-VOL-A",
@@ -2044,7 +2044,7 @@ function PreviousDaySection() {
                 reason: !volA
                   ? "Raw VOL-A (s1/PL floor check) failed — not a candidate."
                   : vol
-                    ? "Both floor and ceiling passed → P-VOLATILE-R1S1 took precedence."
+                    ? "Both floor and ceiling passed → P-VOL-C took precedence."
                     : conB || momB || conA || momA
                       ? "Raw VOL-A passed, but a higher P-bucket also passed → suppressed."
                       : "Higher P-buckets failed; P-VOL-A passed (s1/PL floor check with no upper limit) → exclusive label.",
@@ -2056,7 +2056,7 @@ function PreviousDaySection() {
                 reason: !volB
                   ? "Raw VOL-B (R1/PH ceiling check) failed — not a candidate."
                   : vol
-                    ? "Both floor and ceiling passed → P-VOLATILE-R1S1 took precedence."
+                    ? "Both floor and ceiling passed → P-VOL-C took precedence."
                     : conB || momB || conA || momA
                       ? "Raw VOL-B passed, but a higher P-bucket also passed → suppressed."
                       : "Higher P-buckets failed; P-VOL-B passed (R1/PH ceiling check with no lower limit) → exclusive label.",
@@ -2077,7 +2077,7 @@ function PreviousDaySection() {
                 <p className="text-[11px] text-slate-400 leading-relaxed">
                   Priority (first match wins):{" "}
                   <span className="font-mono text-slate-300">
-                    Both CON-A+CON-B → zone majority (tie→A); else CON-B | CON-A → MOM-B → MOM-A → P-VOLATILE-R1S1 → P-VOL-A / P-VOL-B
+                    Both CON-A+CON-B → zone majority (tie→A); else CON-B | CON-A → MOM-B → MOM-A → P-VOL-C → P-VOL-A / P-VOL-B
                   </span>
                   . A raw PASS below does not always mean that label is shown.
                 </p>
@@ -2182,7 +2182,7 @@ function PreviousDaySection() {
               },
               {
                 key: "momB" as const,
-                title: "P-MOMENTUM-B",
+                title: "P-MOM-B",
                 levels: `${result.levels.tcName} ${result.levels.conBTc} · no floor`,
                 tonePass: "border-violet-500/30 bg-violet-500/5",
                 textPass: "text-violet-300",
@@ -2190,7 +2190,7 @@ function PreviousDaySection() {
               },
               {
                 key: "conA" as const,
-                title: "P-CONSOLIDATE-A",
+                title: "P-CON-A",
                 levels: `BC ${result.levels.conABc} · ceiling ${result.levels.ceiling}`,
                 tonePass: "border-emerald-500/30 bg-emerald-500/5",
                 textPass: "text-emerald-400",
@@ -2198,7 +2198,7 @@ function PreviousDaySection() {
               },
               {
                 key: "momA" as const,
-                title: "P-MOMENTUM-A",
+                title: "P-MOM-A",
                 levels: `BC ${result.levels.conABc} · no ceiling`,
                 tonePass: "border-cyan-500/30 bg-cyan-500/5",
                 textPass: "text-cyan-300",
@@ -2206,7 +2206,7 @@ function PreviousDaySection() {
               },
               {
                 key: "insideR1S1" as const,
-                title: "P-VOLATILE-R1S1",
+                title: "P-VOL-C",
                 levels: `min(S1,PL) ${result.levels.floor} · max(R1,PH) ${result.levels.ceiling}`,
                 tonePass: "border-violet-500/30 bg-violet-500/5",
                 textPass: "text-violet-300",
@@ -2332,13 +2332,13 @@ function PreviousDaySection() {
                 const displayed = ppB
                   ? "PP-CON-B"
                   : ppMomB
-                    ? "PP-MOMENTUM-B"
+                    ? "PP-MOM-B"
                     : ppA
                       ? "PP-CON-A"
                       : ppMomA
-                        ? "PP-MOMENTUM-A"
+                        ? "PP-MOM-A"
                         : ppVol
-                          ? "PP-VOL-R1S1"
+                          ? "PP-VOL-C"
                           : ppVolA
                             ? "PP-VOL-A"
                             : ppVolB
@@ -2354,14 +2354,14 @@ function PreviousDaySection() {
                       : "Raw PP-CON-B failed — not a candidate.",
                   },
                   {
-                    name: "PP-MOMENTUM-B",
+                    name: "PP-MOM-B",
                     pass: ppMomB,
-                    shown: displayed === "PP-MOMENTUM-B",
+                    shown: displayed === "PP-MOM-B",
                     reason: !ppMomB
                       ? "Raw PP-MOM-B failed — not a candidate."
                       : ppB
                         ? "Suppressed: PP-CON-B also passed."
-                        : "Exclusive PP label is PP-MOMENTUM-B.",
+                        : "Exclusive PP label is PP-MOM-B.",
                   },
                   {
                     name: "PP-CON-A",
@@ -2374,24 +2374,24 @@ function PreviousDaySection() {
                         : "Exclusive PP label is PP-CON-A.",
                   },
                   {
-                    name: "PP-MOMENTUM-A",
+                    name: "PP-MOM-A",
                     pass: ppMomA,
-                    shown: displayed === "PP-MOMENTUM-A",
+                    shown: displayed === "PP-MOM-A",
                     reason: !ppMomA
                       ? "Raw PP-MOM-A failed — not a candidate."
                       : ppB || ppMomB || ppA
                         ? "Suppressed by higher PP bucket."
-                        : "Exclusive PP label is PP-MOMENTUM-A.",
+                        : "Exclusive PP label is PP-MOM-A.",
                   },
                   {
-                    name: "PP-VOL-R1S1",
+                    name: "PP-VOL-C",
                     pass: ppVol,
-                    shown: displayed === "PP-VOL-R1S1",
+                    shown: displayed === "PP-VOL-C",
                     reason: !ppVol
                       ? "Raw PP-VOL failed — not a candidate."
                       : ppB || ppMomB || ppA || ppMomA
                         ? "Suppressed by higher PP bucket."
-                        : "Exclusive PP label is PP-VOL-R1S1.",
+                        : "Exclusive PP label is PP-VOL-C.",
                   },
                   {
                     name: "PP-VOL-A",
@@ -2400,7 +2400,7 @@ function PreviousDaySection() {
                     reason: !ppVolA
                       ? "Raw PP-VOL-A (s1/PL floor check) failed — not a candidate."
                       : ppVol
-                        ? "Both floor and ceiling passed → PP-VOL-R1S1 took precedence."
+                        ? "Both floor and ceiling passed → PP-VOL-C took precedence."
                         : ppB || ppMomB || ppA || ppMomA
                           ? "Suppressed by higher PP bucket."
                           : "Exclusive PP label is PP-VOL-A.",
@@ -2412,7 +2412,7 @@ function PreviousDaySection() {
                     reason: !ppVolB
                       ? "Raw PP-VOL-B (R1/PH ceiling check) failed — not a candidate."
                       : ppVol
-                        ? "Both floor and ceiling passed → PP-VOL-R1S1 took precedence."
+                        ? "Both floor and ceiling passed → PP-VOL-C took precedence."
                         : ppVolA
                           ? "PP-VOL-A passed → took precedence over PP-VOL-B."
                           : ppB || ppMomB || ppA || ppMomA
@@ -2435,7 +2435,7 @@ function PreviousDaySection() {
                     <p className="text-[11px] text-slate-400">
                       Priority:{" "}
                       <span className="font-mono text-slate-300">
-                        PP-CON-B → PP-MOMENTUM-B → PP-CON-A → PP-MOMENTUM-A → PP-VOL-R1S1 → PP-VOL-A → PP-VOL-B
+                        PP-CON-B → PP-MOM-B → PP-CON-A → PP-MOM-A → PP-VOL-C → PP-VOL-A → PP-VOL-B
                       </span>
                       {" "}(same exclusive order as Screener).
                     </p>
@@ -2521,7 +2521,7 @@ function PreviousDaySection() {
                   },
                   {
                     key: "ppMomB" as const,
-                    title: "PP-MOMENTUM-B",
+                    title: "PP-MOM-B",
                     levels: `${result.ppLevels.tcName} ${result.ppLevels.conBTc} · no floor`,
                     tonePass: "border-violet-500/30 bg-violet-500/5",
                     textPass: "text-violet-300",
@@ -2532,7 +2532,7 @@ function PreviousDaySection() {
                   },
                   {
                     key: "ppMomA" as const,
-                    title: "PP-MOMENTUM-A",
+                    title: "PP-MOM-A",
                     levels: `${result.ppLevels.bcName} ${result.ppLevels.conABc} · no ceiling`,
                     tonePass: "border-cyan-500/30 bg-cyan-500/5",
                     textPass: "text-cyan-300",
@@ -2543,7 +2543,7 @@ function PreviousDaySection() {
                   },
                   {
                     key: "ppVolatile" as const,
-                    title: "PP-VOLATILE-R1S1",
+                    title: "PP-VOL-C",
                     levels: `floor ${result.ppLevels.floor} · ceiling ${result.ppLevels.ceiling}`,
                     tonePass: "border-fuchsia-500/30 bg-fuchsia-500/5",
                     textPass: "text-fuchsia-300",

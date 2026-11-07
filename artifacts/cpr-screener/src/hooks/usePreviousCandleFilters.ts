@@ -290,9 +290,9 @@ export function usePreviousCandleFilters(opts: {
       findPPConsolidateBSymbols(missing, onProgress, sessionEndMs),
   });
 
-  // PP-MOMENTUM-A: MOM-A (BC only) on day-before-previous session. Levels from ppCPR.
+  // PP-MOM-A: MOM-A (BC only) on day-before-previous session. Levels from ppCPR.
   const ppMomentumAPrep = usePreviousCandleFilterPrep({
-    label: "PP-MOMENTUM-A",
+    label: "PP-MOM-A",
     canRun: candlePrepCanRun,
     sessionStartMs: previousPreviousUpexSessionStart,
     buildCandidates: () => {
@@ -323,9 +323,9 @@ export function usePreviousCandleFilters(opts: {
       findPPMomentumASymbols(missing, onProgress, sessionEndMs),
   });
 
-  // PP-MOMENTUM-B: MOM-B (TC only) on day-before-previous session. Levels from ppCPR.
+  // PP-MOM-B: MOM-B (TC only) on day-before-previous session. Levels from ppCPR.
   const ppMomentumBPrep = usePreviousCandleFilterPrep({
-    label: "PP-MOMENTUM-B",
+    label: "PP-MOM-B",
     canRun: candlePrepCanRun,
     sessionStartMs: previousPreviousUpexSessionStart,
     buildCandidates: () => {
@@ -356,9 +356,9 @@ export function usePreviousCandleFilters(opts: {
       findPPMomentumBSymbols(missing, onProgress, sessionEndMs),
   });
 
-  // PP-VOL-R1S1: INSIDE on day-before-previous session. Levels from ppCPR.
+  // PP-VOL-C: INSIDE on day-before-previous session. Levels from ppCPR.
   const ppInsideR1S1Prep = usePreviousCandleFilterPrep({
-    label: "PP-VOL-R1S1",
+    label: "PP-VOL-C",
     canRun: candlePrepCanRun,
     sessionStartMs: previousPreviousUpexSessionStart,
     buildCandidates: () => {
@@ -396,7 +396,7 @@ export function usePreviousCandleFilters(opts: {
   });
 
   const momentumAPrep = usePreviousCandleFilterPrep({
-  label: "MOMENTUM-A",
+  label: "P-MOM-A",
   canRun: candlePrepCanRun,
   sessionStartMs: previousUpexSessionStart,
   buildCandidates: () => {
@@ -465,7 +465,7 @@ export function usePreviousCandleFilters(opts: {
 });
 
   const momentumBPrep = usePreviousCandleFilterPrep({
-  label: "MOMENTUM-B",
+  label: "P-MOM-B",
   canRun: candlePrepCanRun,
   sessionStartMs: previousUpexSessionStart,
   buildCandidates: () => {
@@ -541,7 +541,7 @@ export function usePreviousCandleFilters(opts: {
 
   // INSIDE-R1S1: max(R1,PH)–min(S1,PL) body/wick mode — independent of CON-A/CON-B
   const insideR1S1Prep = usePreviousCandleFilterPrep<InsideR1S1Candidate>({
-    label: "P-VOL-R1S1",
+    label: "P-VOL-C",
     canRun: candlePrepCanRun,
     sessionStartMs: previousUpexSessionStart,
     buildCandidates: () => {

@@ -372,7 +372,7 @@ function ppDayBadgeFromFlags(raw: CPRResult): {
   }
   if (ppMomB && !ppA && !ppB) {
     return {
-      label: "PP-MOMENTUM-B",
+      label: "PP-MOM-B",
       color: "#a78bfa",
       title: "MOMENTUM-B rules on PPDay (TC only); exclusive of PP-CON-B",
     };
@@ -386,7 +386,7 @@ function ppDayBadgeFromFlags(raw: CPRResult): {
   }
   if (ppMomA && !ppA && !ppB) {
     return {
-      label: "PP-MOMENTUM-A",
+      label: "PP-MOM-A",
       color: "#22d3ee",
       title: "MOMENTUM-A rules on PPDay (BC only); exclusive of PP-CON-A/B",
     };
@@ -398,7 +398,7 @@ function ppDayBadgeFromFlags(raw: CPRResult): {
       getWidthCategory(raw.ppCPR!.widthPct).key === "micro";
     const isTouch = raw.ppTouchCategory === true || ppIsMicro;
     return {
-      label: isTouch ? "PP-VOL-R1S1" : "PP-VOL-R1S1 ✗",
+      label: isTouch ? "PP-VOL-C" : "PP-VOL-C ✗",
       color: isTouch ? "#a3e635" : "#ff637e",
       title: raw.ppTouchCategory === true
         ? "PPDay 15m inside R1/PH–S1/PL and (prev, pp) CPR is TOUCH category"
@@ -481,8 +481,8 @@ function renderCandleCheckBadges(raw: CPRResult) {
   const label =
     bucket === "inside-r1s1"
       ? isTouchVolatile
-        ? "P-VOL-R1S1"
-        : "P-VOL-R1S1 ✗"
+        ? "P-VOL-C"
+        : "P-VOL-C ✗"
       : bucket === "vol-a"
         ? isTouchVolatile
           ? "P-VOL-A"
@@ -496,8 +496,8 @@ function renderCandleCheckBadges(raw: CPRResult) {
         : bucket === "consolidate-b"
           ? "P-CON-B"
           : bucket === "momentum-a"
-            ? "P-MOMENTUM-A"
-            : "P-MOMENTUM-B";
+            ? "P-MOM-A"
+            : "P-MOM-B";
 
   const className =
     bucket === "inside-r1s1" || bucket === "vol-a" || bucket === "vol-b"

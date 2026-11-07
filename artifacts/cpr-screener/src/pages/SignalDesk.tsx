@@ -268,7 +268,7 @@ function exclusivePDayBadge(r: CPRResult | undefined | null): {
   }
   if (momB && !conA && !conB) {
     return {
-      text: "P-MOMENTUM-B",
+      text: "P-MOM-B",
       className: "font-mono text-xs font-bold uppercase tracking-widest text-violet-400",
     };
   }
@@ -281,20 +281,20 @@ function exclusivePDayBadge(r: CPRResult | undefined | null): {
   }
   if (momA && !conA && !conB) {
     return {
-      text: "P-MOMENTUM-A",
+      text: "P-MOM-A",
       className: "font-mono text-xs font-bold uppercase tracking-widest text-cyan-400",
     };
   }
   if (inside && !conA && !conB) {
     if (r.touchCategory) {
       return {
-        text: "P-VOL-R1S1",
+        text: "P-VOL-C",
         className: "font-mono text-xs font-bold uppercase tracking-widest",
         style: { color: "#a3e635" },
       };
     }
     return {
-      text: "P-VOL-R1S1 ✗",
+      text: "P-VOL-C ✗",
       className: "font-mono text-xs font-bold uppercase tracking-widest",
       style: { color: "#ff637e" },
     };
@@ -356,7 +356,7 @@ function exclusivePPDayBadge(r: CPRResult | undefined | null): {
   }
   if (momB && !conA && !conB) {
     return {
-      text: "PP-MOMENTUM-B",
+      text: "PP-MOM-B",
       className: "font-mono text-xs font-bold uppercase tracking-widest text-violet-400",
     };
   }
@@ -369,7 +369,7 @@ function exclusivePPDayBadge(r: CPRResult | undefined | null): {
   }
   if (momA && !conA && !conB) {
     return {
-      text: "PP-MOMENTUM-A",
+      text: "PP-MOM-A",
       className: "font-mono text-xs font-bold uppercase tracking-widest text-cyan-400",
     };
   }
@@ -380,13 +380,13 @@ function exclusivePPDayBadge(r: CPRResult | undefined | null): {
       getWidthCategory(r.ppCPR!.widthPct).key === "micro";
     if (r.ppTouchCategory || ppIsMicro) {
       return {
-        text: "PP-VOL-R1S1",
+        text: "PP-VOL-C",
         className: "font-mono text-xs font-bold uppercase tracking-widest",
         style: { color: "#a3e635" },
       };
     }
     return {
-      text: "PP-VOL-R1S1 ✗",
+      text: "PP-VOL-C ✗",
       className: "font-mono text-xs font-bold uppercase tracking-widest",
       style: { color: "#ff637e" },
     };

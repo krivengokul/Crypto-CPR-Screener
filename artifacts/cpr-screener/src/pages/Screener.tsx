@@ -690,10 +690,10 @@ export default function Screener({
   // R1/S1 cross toasts — only when row has an exclusive PP- badge (same priority as UI).
   useLevelCrossAlert(allResults, deltaAllResults, coindcxAllResults, (row) => {
     if (hasPPConsolidateB(row)) return "PP-CON-B";
-    if (hasPPMomentumB(row)) return "PP-MOMENTUM-B";
+    if (hasPPMomentumB(row)) return "PP-MOM-B";
     if (hasPPConsolidateA(row)) return "PP-CON-A";
-    if (hasPPMomentumA(row)) return "PP-MOMENTUM-A";
-    if (hasPPVolatileR1S1(row)) return "PP-VOL-R1S1";
+    if (hasPPMomentumA(row)) return "PP-MOM-A";
+    if (hasPPVolatileR1S1(row)) return "PP-VOL-C";
     if (hasPPVolA(row)) return "PP-VOL-A";
     if (hasPPVolB(row)) return "PP-VOL-B";
     return null;
@@ -740,11 +740,11 @@ export default function Screener({
           Number.isFinite(row.prevCPR.widthPct) &&
           getWidthCategory(row.prevCPR.widthPct).key === "micro";
         pDayText =
-          row.touchCategory || prevMicro ? "P-VOL-R1S1" : "P-VOL-R1S1 ✗";
+          row.touchCategory || prevMicro ? "P-VOL-C" : "P-VOL-C ✗";
       } else if (hasConsolidateB(row)) pDayText = "P-CON-B";
-      else if (hasMomentumB(row)) pDayText = "P-MOMENTUM-B";
+      else if (hasMomentumB(row)) pDayText = "P-MOM-B";
       else if (hasConsolidateA(row)) pDayText = "P-CON-A";
-      else if (hasMomentumA(row)) pDayText = "P-MOMENTUM-A";
+      else if (hasMomentumA(row)) pDayText = "P-MOM-A";
       else if (hasVolA(row)) {
         const prevMicro =
           row.prevCPR &&
@@ -770,18 +770,18 @@ export default function Screener({
             Number.isFinite(row.prevCPR.widthPct) &&
             getWidthCategory(row.prevCPR.widthPct).key === "micro";
           pDayText =
-            row.touchCategory || prevMicro ? "P-VOL-R1S1" : "P-VOL-R1S1 ✗";
+            row.touchCategory || prevMicro ? "P-VOL-C" : "P-VOL-C ✗";
         } else if (conB) pDayText = "P-CON-B";
-        else if (momB) pDayText = "P-MOMENTUM-B";
+        else if (momB) pDayText = "P-MOM-B";
         else if (conA) pDayText = "P-CON-A";
-        else if (momA) pDayText = "P-MOMENTUM-A";
+        else if (momA) pDayText = "P-MOM-A";
         else if (row.PD15MInsideR1S1Pass === true) {
           const prevMicro =
             row.prevCPR &&
             Number.isFinite(row.prevCPR.widthPct) &&
             getWidthCategory(row.prevCPR.widthPct).key === "micro";
           pDayText =
-            row.touchCategory || prevMicro ? "P-VOL-R1S1" : "P-VOL-R1S1 ✗";
+            row.touchCategory || prevMicro ? "P-VOL-C" : "P-VOL-C ✗";
         } else if (row.PD15MVolAPass === true) {
           const prevMicro =
             row.prevCPR &&
@@ -799,7 +799,7 @@ export default function Screener({
         }
       }
       // PP exclusive (B > A), independent of P-bucket — single label under PDay.
-      // Same priority as the table row: PP-CON-B > PP-MOM-B > PP-CON-A > PP-MOM-A > PP-VOL-R1S1 > PP-VOL-A > PP-VOL-B.
+      // Same priority as the table row: PP-CON-B > PP-MOM-B > PP-CON-A > PP-MOM-A > PP-VOL-C > PP-VOL-A > PP-VOL-B.
       const ppVolLime =
         row.ppTouchCategory === true ||
         (Number.isFinite(row.ppCPR?.widthPct) &&
@@ -807,15 +807,15 @@ export default function Screener({
       const ppDayText = hasPPConsolidateB(row)
         ? "PP-CON-B"
         : hasPPMomentumB(row)
-          ? "PP-MOMENTUM-B"
+          ? "PP-MOM-B"
           : hasPPConsolidateA(row)
             ? "PP-CON-A"
             : hasPPMomentumA(row)
-              ? "PP-MOMENTUM-A"
+              ? "PP-MOM-A"
               : hasPPVolatileR1S1(row)
                 ? ppVolLime
-                  ? "PP-VOL-R1S1"
-                  : "PP-VOL-R1S1 ✗"
+                  ? "PP-VOL-C"
+                  : "PP-VOL-C ✗"
                 : hasPPVolA(row)
                   ? ppVolLime
                     ? "PP-VOL-A"
@@ -1259,10 +1259,10 @@ export default function Screener({
 
   // Five mutually exclusive previous-session buckets. Assignment order:
   //   1. Both CON-A AND CON-B raw pass → INSIDE-R1S1  (intersection only)
-  //   2. CON-B alone → P-CONSOLIDATE-B
-  //   3. MOM-B (and not CON-B) → P-MOMENTUM-B
-  //   4. CON-A alone → P-CONSOLIDATE-A
-  //   5. MOM-A (and not CON-A) → P-MOMENTUM-A
+  //   2. CON-B alone → P-CON-B
+  //   3. MOM-B (and not CON-B) → P-MOM-B
+  //   4. CON-A alone → P-CON-A
+  //   5. MOM-A (and not CON-A) → P-MOM-A
   // INSIDE-R1S1 is ONLY the intersection of CON-A ∩ CON-B — no separate
   // range scan and no leftover / pure-inside assignment.
   const previousConsolidateAIncludedCount = getActivePool().filter(
@@ -2663,10 +2663,10 @@ export default function Screener({
                 title="For Binance and Delta, exclude a symbol only when a previous-session 15-minute candle body is below previous day's BC and its lower body edge breaks below earlier session wick lows. The first fresh-low break is forgiven if the immediate next candle makes a lower wick, which becomes the reference. Prepared once after exchange scan data loads; toggling reuses the cached result."
               >
                 {previousUpexProgress
-                  ? `P-MOMENTUM-A ${previousUpexProgress.done}/${previousUpexProgress.total}`
+                  ? `P-MOM-A ${previousUpexProgress.done}/${previousUpexProgress.total}`
                   : previousUpexReady
-                    ? `P-MOMENTUM-A (${previousUpexIncludedCount})`
-                    : "P-MOMENTUM-A…"}
+                    ? `P-MOM-A (${previousUpexIncludedCount})`
+                    : "P-MOM-A…"}
               </button>
               <button
                 onClick={() => {
@@ -2703,10 +2703,10 @@ export default function Screener({
                 title="Same as CON-B but without the PL/S1 check: include Binance and Delta symbols unless a completed previous-session 15-minute candle has its whole body above previous day's TC while making a new high versus earlier candles. Unevaluated sources such as CoinDCX are excluded while active."
               >
                 {previous15MMomentumProgress
-                  ? `P-MOMENTUM-B ${previous15MMomentumProgress.done}/${previous15MMomentumProgress.total}`
+                  ? `P-MOM-B ${previous15MMomentumProgress.done}/${previous15MMomentumProgress.total}`
                   : previous15MMomentumReady
-                    ? `P-MOMENTUM-B (${previous15MMomentumIncludedCount})`
-                    : "P-MOMENTUM-B…"}
+                    ? `P-MOM-B (${previous15MMomentumIncludedCount})`
+                    : "P-MOM-B…"}
               </button>
               <button
                 onClick={() => {
@@ -2720,13 +2720,13 @@ export default function Screener({
                     ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
                     : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
                 }`}
-                title="P-VOL-R1S1: previous-session 15m bodies stay inside max(R1, PH) … min(S1, PL) (wicks ignored). Only shown when the symbol is not CON-A, CON-B, MOM-A or MOM-B — mutually exclusive with the other four candle filters."
+                title="P-VOL-C: previous-session 15m bodies stay inside max(R1, PH) … min(S1, PL) (wicks ignored). Only shown when the symbol is not CON-A, CON-B, MOM-A or MOM-B — mutually exclusive with the other four candle filters."
               >
                 {previousInsideR1S1Progress
-                  ? `P-VOL-R1S1 ${previousInsideR1S1Progress.done}/${previousInsideR1S1Progress.total}`
+                  ? `P-VOL-C ${previousInsideR1S1Progress.done}/${previousInsideR1S1Progress.total}`
                   : previousInsideR1S1Ready
-                    ? `P-VOL-R1S1 (${previousInsideR1S1IncludedCount})`
-                    : "P-VOL-R1S1…"}
+                    ? `P-VOL-C (${previousInsideR1S1IncludedCount})`
+                    : "P-VOL-C…"}
               </button>
               <button
                 onClick={() => {
@@ -2853,10 +2853,10 @@ export default function Screener({
                 title="Same MOMENTUM-A rules (BC floor only) on the day-before-previous session (PPDay). Exclusive of PP-CON-A. Binance/Delta only."
               >
                 {previousPPMomentumAProgress
-                  ? `PP-MOMENTUM-A ${previousPPMomentumAProgress.done}/${previousPPMomentumAProgress.total}`
+                  ? `PP-MOM-A ${previousPPMomentumAProgress.done}/${previousPPMomentumAProgress.total}`
                   : previousPPMomentumAReady
-                    ? `PP-MOMENTUM-A (${previousPPMomentumAIncludedCount})`
-                    : "PP-MOMENTUM-A…"}
+                    ? `PP-MOM-A (${previousPPMomentumAIncludedCount})`
+                    : "PP-MOM-A…"}
               </button>
               <button
                 onClick={() => {
@@ -2880,10 +2880,10 @@ export default function Screener({
                 title="Same MOMENTUM-B rules (TC ceiling only) on the day-before-previous session (PPDay). Exclusive of PP-CON-B. Binance/Delta only."
               >
                 {previousPPMomentumBProgress
-                  ? `PP-MOMENTUM-B ${previousPPMomentumBProgress.done}/${previousPPMomentumBProgress.total}`
+                  ? `PP-MOM-B ${previousPPMomentumBProgress.done}/${previousPPMomentumBProgress.total}`
                   : previousPPMomentumBReady
-                    ? `PP-MOMENTUM-B (${previousPPMomentumBIncludedCount})`
-                    : "PP-MOMENTUM-B…"}
+                    ? `PP-MOM-B (${previousPPMomentumBIncludedCount})`
+                    : "PP-MOM-B…"}
               </button>
               <button
                 onClick={() => {
@@ -2904,13 +2904,13 @@ export default function Screener({
                     ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
                     : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
                 }`}
-                title="INSIDE R1/PH–S1/PL on PPDay (ppCPR). Lime when (prev, pp) is TOUCH; red ✗ otherwise. Exclusive of PP-CON/MOM. Binance/Delta only."
+                title="PP-VOL-C: INSIDE R1/PH–S1/PL on PPDay (ppCPR). Lime when (prev, pp) is TOUCH; red ✗ otherwise. Exclusive of PP-CON/MOM. Binance/Delta only."
               >
                 {previousPPInsideR1S1Progress
-                  ? `PP-VOL-R1S1 ${previousPPInsideR1S1Progress.done}/${previousPPInsideR1S1Progress.total}`
+                  ? `PP-VOL-C ${previousPPInsideR1S1Progress.done}/${previousPPInsideR1S1Progress.total}`
                   : previousPPInsideR1S1Ready
-                    ? `PP-VOL-R1S1 (${previousPPVolatileR1S1IncludedCount})`
-                    : "PP-VOL-R1S1…"}
+                    ? `PP-VOL-C (${previousPPVolatileR1S1IncludedCount})`
+                    : "PP-VOL-C…"}
               </button>
               <button
                 onClick={() => {
@@ -2931,7 +2931,7 @@ export default function Screener({
                     ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
                     : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
                 }`}
-                title="PP-VOL-A: PPDay 15m stays above floor min(S1, PL) with no ceiling check. Exclusive of PP-CON/MOM and PP-VOL-R1S1. Binance/Delta only."
+                title="PP-VOL-A: PPDay 15m stays above floor min(S1, PL) with no ceiling check. Exclusive of PP-CON/MOM and PP-VOL-C. Binance/Delta only."
               >
                 {previousPPVolAProgress
                   ? `PP-VOL-A ${previousPPVolAProgress.done}/${previousPPVolAProgress.total}`
@@ -2958,7 +2958,7 @@ export default function Screener({
                     ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
                     : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
                 }`}
-                title="PP-VOL-B: PPDay 15m stays below ceiling max(R1, PH) with no floor check. Exclusive of PP-CON/MOM, PP-VOL-R1S1 and PP-VOL-A. Binance/Delta only."
+                title="PP-VOL-B: PPDay 15m stays below ceiling max(R1, PH) with no floor check. Exclusive of PP-CON/MOM, PP-VOL-C and PP-VOL-A. Binance/Delta only."
               >
                 {previousPPVolBProgress
                   ? `PP-VOL-B ${previousPPVolBProgress.done}/${previousPPVolBProgress.total}`

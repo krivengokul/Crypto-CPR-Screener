@@ -486,9 +486,13 @@ function SelectedViewTradeCard({
  */
 const PDAY_COLORS: Record<string, string> = {
   "P-CON-B": "#ff6bb5",
+  "P-MOM-B": "#a78bfa",
   "P-MOMENTUM-B": "#a78bfa",
   "P-CON-A": "#03b07c",
+  "P-MOM-A": "#22d3ee",
   "P-MOMENTUM-A": "#22d3ee",
+  "P-VOL-C": "#a3e635",
+  "P-VOL-C ✗": "#ff637e",
   "P-VOL-R1S1": "#a3e635",
   "P-VOL-R1S1 ✗": "#ff637e",
   "P-VOL-A": "#a3e635",
@@ -501,8 +505,12 @@ const PDAY_COLORS: Record<string, string> = {
 const PPDAY_COLORS: Record<string, string> = {
   "PP-CON-A": "#2dd4bf",
   "PP-CON-B": "#f472b6",
+  "PP-MOM-A": "#22d3ee",
   "PP-MOMENTUM-A": "#22d3ee",
+  "PP-MOM-B": "#a78bfa",
   "PP-MOMENTUM-B": "#a78bfa",
+  "PP-VOL-C": "#a3e635",
+  "PP-VOL-C ✗": "#ff637e",
   "PP-VOL-R1S1": "#a3e635",
   "PP-VOL-R1S1 ✗": "#ff637e",
   "PP-VOL-A": "#a3e635",

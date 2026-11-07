@@ -2054,6 +2054,14 @@ test("PP-MOM-A / PP-MOM-B: dropdown, exclusivity vs PP-CON, combined codes and r
     PP_CANDLE_CHECK_OPTIONS.map((o) => o.value),
     ["", "PPCA", "PPMA", "PPCB", "PPMB", "PPVR", "PPVA", "PPVB"],
   );
+  assert.deepEqual(
+    PP_CANDLE_CHECK_OPTIONS.map((o) => o.label),
+    ["None", "PP-CON-A", "PP-MOM-A", "PP-CON-B", "PP-MOM-B", "PP-VOL-C", "PP-VOL-A", "PP-VOL-B"],
+  );
+  assert.deepEqual(
+    CANDLE_CHECK_OPTIONS.map((o) => o.label),
+    ["None", "P-CON-A", "P-MOM-A", "P-VOL-C", "P-VOL-A", "P-VOL-B", "P-CON-B", "P-MOM-B"],
+  );
   const row = (f: Record<string, boolean>) => f as unknown as Parameters<typeof matchesCandleCheck>[0];
 
   // PPMB: PP-MOM-B passed and PP-CON-B did not.

@@ -1589,7 +1589,7 @@ function ScreenerTableRow({
                   className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-violet-400"
                   title="MOMENTUM-B rules on PPDay (TC only); exclusive of PP-CON-B"
                 >
-                  PP-MOMENTUM-B
+                  PP-MOM-B
                 </div>
               );
             }
@@ -1610,7 +1610,7 @@ function ScreenerTableRow({
                   className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-cyan-400"
                   title="MOMENTUM-A rules on PPDay (BC only); exclusive of PP-CON-A"
                 >
-                  PP-MOMENTUM-A
+                  PP-MOM-A
                 </div>
               );
             }
@@ -1632,7 +1632,7 @@ function ScreenerTableRow({
                         : "PPDay 15m inside R1/PH–S1/PL but (prev, pp) is not TOUCH"
                   }
                 >
-                  {isTouch ? "PP-VOL-R1S1" : "PP-VOL-R1S1 ✗"}
+                  {isTouch ? "PP-VOL-C" : "PP-VOL-C ✗"}
                 </div>
               );
             }
@@ -1694,14 +1694,14 @@ function ScreenerTableRow({
             <div
               className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-cyan-400"
             >
-              P-MOMENTUM-A
+              P-MOM-A
             </div>
           )}
           {showMomentumB && (
             <div
               className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-violet-400"
             >
-              P-MOMENTUM-B
+              P-MOM-B
             </div>
           )}
                     {showInsideR1S1 && (() => {
@@ -1722,7 +1722,7 @@ function ScreenerTableRow({
                     : "Previous-session 15m was inside R1/PH–S1/PL band but not CON-A/CON-B (volatile)"
               }
             >
-              {limeVol ? "P-VOL-R1S1" : "P-VOL-R1S1 ✗"}
+              {limeVol ? "P-VOL-C" : "P-VOL-C ✗"}
             </div>
             );
           })()}

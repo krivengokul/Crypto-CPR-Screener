@@ -11,7 +11,7 @@ type Source = "binance" | "delta" | "coindcx";
 type Cross = {
   symbol: string;
   source: Source;
-  /** Exclusive PP label already on the row, e.g. "PP-MOMENTUM-A". */
+  /** Exclusive PP label already on the row, e.g. "PP-MOM-A". */
   ppLabel: string;
 };
 type Kind = "R1" | "S1";
@@ -21,7 +21,7 @@ export type LevelCrossRow = CPRResult & { source: string };
 
 /**
  * Resolve exclusive PP badge text for level-cross toasts.
- * Same priority as Screener: PP-CON-B > PP-MOM-B > PP-CON-A > PP-MOM-A > PP-VOLATILE-R1S1.
+ * Same priority as Screener: PP-CON-B > PP-MOM-B > PP-CON-A > PP-MOM-A > PP-VOL-C > PP-VOL-A > PP-VOL-B.
  */
 export type GetPPLabel = (row: LevelCrossRow) => string | null;
 
@@ -99,9 +99,9 @@ function showCrossToast(kind: Kind, crosses: Cross[]) {
 
 /**
  * R1 / S1 cross toasts — only for symbols that currently carry an exclusive PP- badge.
- * No price/level values in the message; format: "SYMBOL crossed R1 (PP-MOMENTUM-A)".
+ * No price/level values in the message; format: "SYMBOL crossed R1 (PP-MOM-A)".
  *
- * @param getPPLabel return e.g. "PP-CONSOLIDATE-B" or null to skip the symbol.
+ * @param getPPLabel return e.g. "PP-CON-B" or null to skip the symbol.
  */
 export function useLevelCrossAlert(
   binanceResults: CPRResult[] | null | undefined,

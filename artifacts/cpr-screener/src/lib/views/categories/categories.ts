@@ -13,7 +13,7 @@ import type { ViewDef } from "../types";
 export const CATEGORY_VIEWS: ViewDef[] = [
   {
     key: "CON-A",
-    label: "P-CONSOLIDATE-A",
+    label: "P-CON-A",
     kind: "category",
     // CON-A alone
     condition: (r) =>
@@ -22,7 +22,7 @@ export const CATEGORY_VIEWS: ViewDef[] = [
   },
   {
     key: "MOM-A",
-    label: "P-MOMENTUM-A",
+    label: "P-MOM-A",
     kind: "category",
     condition: (r) =>
       r.PD15MAboveBCPass === true && r.PD15MConsolidateAPass !== true,
@@ -30,9 +30,9 @@ export const CATEGORY_VIEWS: ViewDef[] = [
   },
   {
     // Internal key stays "INSIDE-R1S1" (saved selections / flags); the
-    // displayed name is P-VOLATILE-R1S1. Listed right after P-MOMENTUM-A.
+    // displayed name is P-VOL-C. Listed right after P-MOM-A.
     key: "INSIDE-R1S1",
-    label: "P-VOLATILE-R1S1",
+    label: "P-VOL-C",
     kind: "category",
     // Same exclusive bucket as the Screener: none of the other four P-filters.
     condition: (r) =>
@@ -45,7 +45,7 @@ export const CATEGORY_VIEWS: ViewDef[] = [
   },
   {
     key: "CON-B",
-    label: "P-CONSOLIDATE-B",
+    label: "P-CON-B",
     kind: "category",
     // CON-B alone
     condition: (r) =>
@@ -54,7 +54,7 @@ export const CATEGORY_VIEWS: ViewDef[] = [
   },
   {
     key: "MOM-B",
-    label: "P-MOMENTUM-B",
+    label: "P-MOM-B",
     kind: "category",
     condition: (r) =>
       r.PD15MMomentumBPass === true && r.PD15MBelowTCPass !== true,
