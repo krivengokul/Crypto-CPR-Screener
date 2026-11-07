@@ -1816,20 +1816,39 @@ function ScreenerTableRow({
 
           // Same size as PASS / Fail / Ready (text-[9px] mono). First badge row:
           // BIG↑/BIG↓ then status. BRK/BRKDN stay on the following line.
-          const strongBarBadge = r.strongBar?.signal ? (
-            <span
-              className={
-                r.strongBar.side === "up"
-                  ? "inline-flex shrink-0 items-center rounded border border-lime-500/50 bg-lime-500/15 px-1 py-0 text-[9px] font-mono font-semibold leading-tight text-lime-300"
-                  : "inline-flex shrink-0 items-center rounded border border-pink-500/50 bg-pink-500/15 px-1 py-0 text-[9px] font-mono font-semibold leading-tight text-[#ff6bb5]"
-              }
-              title={`15m strong bar ${r.strongBar.side === "up" ? "up" : "down"} · ${r.strongBar.via === "range" ? "range spike" : "fat body"} · body ${r.strongBar.bodyMult.toFixed(1)}× · range ${(r.strongBar.rangeMult ?? 0).toFixed(1)}× avg · body ${Math.round(r.strongBar.bodyFrac * 100)}% of range · ${r.strongBar.barsAgo === 0 ? "latest closed" : `${r.strongBar.barsAgo} bar(s) ago`}`}
-            >
-              {r.strongBar.side === "up" ? "BIG↑" : "BIG↓"}
-              {" "}
-              {(r.strongBar.via === "range" ? r.strongBar.rangeMult : r.strongBar.bodyMult).toFixed(1)}x
-            </span>
-          ) : null;
+          // BIG↑ / BIG↓: same segmented pill as BRK/BRKDN (solid tag, white multiple,
+          // accent rule, muted age) in lime (up) / pink (down).
+          const strongBarBadge = r.strongBar?.signal
+            ? (() => {
+                const sb = r.strongBar;
+                const accent = sb.side === "up" ? "#a3e635" : "#ff6bb5";
+                const mult = (sb.via === "range" ? sb.rangeMult : sb.bodyMult) ?? 0;
+                return (
+                  <span
+                    className="inline-flex shrink-0 items-stretch overflow-hidden rounded border font-mono text-[9px] font-semibold leading-tight whitespace-nowrap"
+                    style={{ borderColor: accent }}
+                    title={`15m strong bar ${sb.side === "up" ? "up" : "down"} · ${sb.via === "range" ? "range spike" : "fat body"} · body ${sb.bodyMult.toFixed(1)}× · range ${(sb.rangeMult ?? 0).toFixed(1)}× avg · body ${Math.round(sb.bodyFrac * 100)}% of range · ${sb.barsAgo === 0 ? "latest closed" : `${sb.barsAgo} bar(s) ago`}`}
+                  >
+                    <span
+                      className="px-1 py-0 font-bold tracking-wide text-slate-950"
+                      style={{ backgroundColor: accent }}
+                    >
+                      {sb.side === "up" ? "BIG↑" : "BIG↓"}
+                    </span>
+                    <span className="px-1 py-0 bg-slate-900 text-white">{mult.toFixed(1)}x</span>
+                    <span
+                      className="px-1 py-0 bg-slate-900 border-l border-white/10"
+                      style={{ color: accent }}
+                    >
+                      {sb.via === "range" ? "RNG" : "BODY"}
+                    </span>
+                    <span className="px-1 py-0 bg-slate-800 text-slate-300 font-medium border-l border-white/10">
+                      {sb.barsAgo === 0 ? "now" : `${sb.barsAgo * 15}m`}
+                    </span>
+                  </span>
+                );
+              })()
+            : null;
           // Active/Ready/Pass/Fail moved to MATCH (above n/13). MOVE keeps BIG↑/↓ only.
           // First row: BIG↑/↓ pill first, then the move text beside it.
           const firstRow = (text: ReactNode, title?: string) => (
