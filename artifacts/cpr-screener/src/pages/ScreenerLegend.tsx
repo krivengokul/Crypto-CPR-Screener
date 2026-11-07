@@ -491,6 +491,10 @@ const PDAY_COLORS: Record<string, string> = {
   "P-MOMENTUM-A": "#22d3ee",
   "P-VOLATILE-R1S1": "#a3e635",
   "P-VOLATILE-R1S1 ✗": "#ff637e",
+  "P-VOL-A": "#a3e635",
+  "P-VOL-A ✗": "#ff637e",
+  "P-VOL-B": "#a3e635",
+  "P-VOL-B ✗": "#ff637e",
 };
 
 /** PP-day badge colors (match table row badges). */

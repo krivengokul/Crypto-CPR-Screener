@@ -25,6 +25,8 @@ import {
   findPD15MBelowTCPass,
   findPreviousConsolidateAPassWithZone,
   findInsideR1S1Pass,
+  findVolAPass,
+  findVolBPass,
   findPreviousUpexPass,
   getPrevious15MACeiling,
   getConsolidateABc,
@@ -1857,6 +1859,8 @@ async function populateAllPFilterFlags(
     consolidateB,
     momentumB,
     insideR1S1,
+    volA,
+    volB,
     ppConsolidateA,
     ppConsolidateB,
     ppMomentumA,
@@ -1902,6 +1906,14 @@ async function populateAllPFilterFlags(
     ),
     findInsideR1S1Pass(
       { symbol, source, bc: floor, floor, ceiling },
+      sessionStart,
+    ),
+    findVolAPass(
+      { symbol, source, bc: floor, floor },
+      sessionStart,
+    ),
+    findVolBPass(
+      { symbol, source, bc: ceiling, ceiling },
       sessionStart,
     ),
     ppHasLevels
@@ -1967,6 +1979,8 @@ async function populateAllPFilterFlags(
   result.PD15MBelowTCPass = consolidateB === true;
   result.PD15MMomentumBPass = momentumB === true;
   result.PD15MInsideR1S1Pass = insideR1S1 === true;
+  result.PD15MVolAPass = volA === true;
+  result.PD15MVolBPass = volB === true;
   result.PD15MPPConsolidateAPass = ppConsolidateA === true;
   result.PD15MPPConsolidateBPass = ppConsolidateB === true;
   result.PD15MPPMomentumAPass = ppMomentumA === true;

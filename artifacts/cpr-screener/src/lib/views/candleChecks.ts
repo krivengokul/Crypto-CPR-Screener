@@ -1,6 +1,6 @@
 import type { CPRResult } from "../cpr.ts";
 
-export const ALL_CANDLE_CHECK_CODES = ["CA", "MA", "VR", "CB", "MB", "PPCA", "PPCB", "PPMA", "PPMB", "PPVR"] as const;
+export const ALL_CANDLE_CHECK_CODES = ["CA", "MA", "VR", "CB", "MB", "PPCA", "PPCB", "PPMA", "PPMB", "PPVR", "VA", "VB"] as const;
 export type CandleCheckCode = (typeof ALL_CANDLE_CHECK_CODES)[number];
 export const ALL_CANDLE_CHECKS: readonly string[] = ALL_CANDLE_CHECK_CODES;
 
@@ -10,6 +10,8 @@ export const CANDLE_CHECK_OPTIONS: Array<{ value: CandleCheckCode | ""; label: s
   { value: "CA", label: "P-CONSOLIDATE-A" },
   { value: "MA", label: "P-MOMENTUM-A" },
   { value: "VR", label: "P-VOLATILE-R1S1" },
+  { value: "VA", label: "P-VOL-A" },
+  { value: "VB", label: "P-VOL-B" },
   { value: "CB", label: "P-CONSOLIDATE-B" },
   { value: "MB", label: "P-MOMENTUM-B" },
 ];
@@ -62,6 +64,8 @@ export function matchesCandleCheck(r: CPRResult, code: string): boolean {
   const momA = r.PD15MAboveBCPass === true;
   const momB = r.PD15MMomentumBPass === true;
   const inside = r.PD15MInsideR1S1Pass === true;
+  const volA = r.PD15MVolAPass === true;
+  const volB = r.PD15MVolBPass === true;
   const ppA = r.PD15MPPConsolidateAPass === true;
   const ppB = r.PD15MPPConsolidateBPass === true;
   const ppMomA = r.PD15MPPMomentumAPass === true;
@@ -84,6 +88,10 @@ export function matchesCandleCheck(r: CPRResult, code: string): boolean {
     case "IR":
     case "INSIDE":
       return inside && !conA && !conB;
+    case "VA":
+      return volA && !conA && !conB && !momA && !momB && !inside;
+    case "VB":
+      return volB && !conA && !conB && !momA && !momB && !inside;
     case "PPCB":
       if (!ppB) return false;
       if (!ppA) return true;
@@ -146,6 +154,8 @@ export function candleCheckFromRow(r: CPRResult): string {
   else if (conA) p = "CA";
   else if (momA) p = "MA";
   else if (inside) p = "VR";
+  else if (r.PD15MVolAPass === true) p = "VA";
+  else if (r.PD15MVolBPass === true) p = "VB";
   // Do NOT bind residual "P-VOLATILE ✗" as VR — that badge means
   // no exclusive P-pass, so Create View must leave P as None or the
   // new view will require INSIDE and never match this row.

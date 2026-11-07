@@ -18,6 +18,8 @@ const PREVIOUS_15M_PP_MOMENTUM_A_CACHE_KEY = "cpr_previous_15m_pp_momentum_a_res
 const PREVIOUS_15M_PP_MOMENTUM_B_CACHE_KEY = "cpr_previous_15m_pp_momentum_b_results_v1";
 const PREVIOUS_15M_PP_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_pp_inside_r1s1_results_v3";
 const PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_inside_r1s1_results_v5";
+const PREVIOUS_15M_VOL_A_CACHE_KEY = "cpr_previous_15m_vol_a_results_v1";
+const PREVIOUS_15M_VOL_B_CACHE_KEY = "cpr_previous_15m_vol_b_results_v1";
 const PREVIOUS_15M_CONSOLIDATE_ZONE_CACHE_KEY = "cpr_previous_15m_consolidate_zone_scores_v1";
 const PREVIOUS_15M_PP_CONSOLIDATE_ZONE_CACHE_KEY = "cpr_previous_15m_pp_consolidate_zone_scores_v1";
 
@@ -288,6 +290,8 @@ export function pruneLegacy15MResultCaches(): number {
     PREVIOUS_15M_PP_MOMENTUM_A_CACHE_KEY,
     PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY,
     PREVIOUS_15M_PP_INSIDE_R1S1_CACHE_KEY,
+    PREVIOUS_15M_VOL_A_CACHE_KEY,
+    PREVIOUS_15M_VOL_B_CACHE_KEY,
   ];
   const prefixes = currentKeys.map((key) => key.replace(/\d+$/, ""));
   let removed = 0;
@@ -2051,15 +2055,17 @@ function completedInsideSessionCandles(
     .sort((a, b) => a.openTime - b.openTime);
 }
 
-export function passesInsideR1S1Filter(
+/**
+ * VOL-A: s1/PL to no ceiling check (P-VOLATILE-R1S1 with no upper limit).
+ * Tests candle bodies/wicks against floor = min(S1, PL) using the same reference logic as CON/INSIDE.
+ */
+export function passesVolAFilter(
   candles: OHLC[],
   floor: number,
-  ceiling: number,
   startTime: number,
   now: number,
 ): boolean | null {
-  if (!Number.isFinite(floor) || !Number.isFinite(ceiling)) return null;
-  if (floor > ceiling) return null;
+  if (!Number.isFinite(floor)) return null;
 
   const completed = completedInsideSessionCandles(candles, startTime, now);
   if (completed.length === 0) return null;
@@ -2072,6 +2078,34 @@ export function passesInsideR1S1Filter(
     }
   }
 
+  let sawBelowFloor = false;
+  for (const candle of completed) {
+    // Fully below floor line → test against session floor reference.
+    if (candle.high < floor) {
+      sawBelowFloor = true;
+      if (refFloorLow !== null && candle.high < refFloorLow) return false;
+    }
+  }
+
+  if (refFloorLow === null && sawBelowFloor) return false;
+  return true;
+}
+
+/**
+ * VOL-B: R1/PH to no floor check (P-VOLATILE-R1S1 with no lower limit).
+ * Tests candle bodies/wicks against ceiling = max(R1, PH) using the same reference logic as CON/INSIDE.
+ */
+export function passesVolBFilter(
+  candles: OHLC[],
+  ceiling: number,
+  startTime: number,
+  now: number,
+): boolean | null {
+  if (!Number.isFinite(ceiling)) return null;
+
+  const completed = completedInsideSessionCandles(candles, startTime, now);
+  if (completed.length === 0) return null;
+
   // Full-session ceiling ref: max high among wick-spanning ceiling (max R1/PH).
   let refCeilingHigh: number | null = null;
   for (const candle of completed) {
@@ -2082,15 +2116,8 @@ export function passesInsideR1S1Filter(
     }
   }
 
-  let sawBelowFloor = false;
   let sawAboveCeiling = false;
-
   for (const candle of completed) {
-    // Fully below floor line → test against session floor reference.
-    if (candle.high < floor) {
-      sawBelowFloor = true;
-      if (refFloorLow !== null && candle.high < refFloorLow) return false;
-    }
     // Fully above ceiling line → test against session ceiling reference.
     if (candle.low > ceiling) {
       sawAboveCeiling = true;
@@ -2098,11 +2125,24 @@ export function passesInsideR1S1Filter(
     }
   }
 
-  // No spanning ref but candles fully outside the level → fail (same as CON).
-  if (refFloorLow === null && sawBelowFloor) return false;
   if (refCeilingHigh === null && sawAboveCeiling) return false;
-
   return true;
+}
+
+export function passesInsideR1S1Filter(
+  candles: OHLC[],
+  floor: number,
+  ceiling: number,
+  startTime: number,
+  now: number,
+): boolean | null {
+  if (!Number.isFinite(floor) || !Number.isFinite(ceiling)) return null;
+  if (floor > ceiling) return null;
+
+  const a = passesVolAFilter(candles, floor, startTime, now);
+  const b = passesVolBFilter(candles, ceiling, startTime, now);
+  if (a === null || b === null) return null;
+  return a && b;
 }
 
 /** Why INSIDE / P-VOLATILE failed under CON-style reference rules. */
@@ -2327,6 +2367,204 @@ export function savePreviousInsideR1S1Results(
     ),
   });
   safeSetItem(PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY, payload);
+}
+
+export function previousVolACandidateCacheKey(
+  sessionStart: number,
+  candidate: UpexCandidate,
+): string {
+  return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.floor}`;
+}
+
+export function loadPreviousVolAResults(
+  sessionStart: number,
+): Map<string, boolean | null> {
+  try {
+    const raw = localStorage.getItem(PREVIOUS_15M_VOL_A_CACHE_KEY);
+    if (!raw) return new Map();
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      !("sessionStart" in parsed) ||
+      (parsed as { sessionStart: number }).sessionStart !== sessionStart ||
+      !("results" in parsed) ||
+      !(parsed as { results: unknown }).results ||
+      typeof (parsed as { results: unknown }).results !== "object"
+    ) {
+      return new Map();
+    }
+    const results = new Map<string, boolean | null>();
+    for (const [key, value] of Object.entries(
+      (parsed as { results: Record<string, unknown> }).results,
+    )) {
+      if (typeof value === "boolean") results.set(key, value);
+    }
+    return results;
+  } catch {
+    return new Map();
+  }
+}
+
+export function savePreviousVolAResults(
+  sessionStart: number,
+  results: Map<string, boolean | null>,
+): void {
+  const payload = JSON.stringify({
+    sessionStart,
+    results: Object.fromEntries(
+      [...results].filter((entry): entry is [string, boolean] => typeof entry[1] === "boolean"),
+    ),
+  });
+  safeSetItem(PREVIOUS_15M_VOL_A_CACHE_KEY, payload);
+}
+
+export function findVolASymbols(
+  candidates: UpexCandidate[],
+  onProgress?: (done: number, total: number) => void,
+  now = Date.now(),
+): Promise<PreviousUpexScanResults> {
+  const endTime = upexSessionStartUtcMs(now);
+  const startTime = previousUpexSessionStartUtcMs(now);
+  return findVolAForSession(candidates, startTime, endTime, onProgress);
+}
+
+async function findVolAForSession(
+  candidates: UpexCandidate[],
+  startTime: number,
+  endTime: number,
+  onProgress?: (done: number, total: number) => void,
+): Promise<PreviousUpexScanResults> {
+  const included = new Set<string>();
+  const outcomes = new Map<string, boolean | null>();
+  let unavailable = 0;
+
+  for (let offset = 0; offset < candidates.length; offset += MAX_CONCURRENT_REQUESTS) {
+    const batch = candidates.slice(offset, offset + MAX_CONCURRENT_REQUESTS);
+    const results = await Promise.all(
+      batch.map(async (candidate) => {
+        const floor = candidate.floor;
+        if (floor === undefined) {
+          return { candidate, passes: null as boolean | null };
+        }
+        const candles = await fetchUpexCandles(candidate, startTime, endTime);
+        if (!candles) return { candidate, passes: null as boolean | null };
+        return {
+          candidate,
+          passes: passesVolAFilter(candles, floor, startTime, endTime),
+        };
+      }),
+    );
+
+    for (const { candidate, passes } of results) {
+      const symbolKey = `${candidate.source}:${candidate.symbol}`;
+      outcomes.set(symbolKey, passes);
+      if (passes === true) included.add(symbolKey);
+      else if (passes === null) unavailable++;
+    }
+    onProgress?.(Math.min(offset + batch.length, candidates.length), candidates.length);
+  }
+
+  return { included, unavailable, outcomes };
+}
+
+export function previousVolBCandidateCacheKey(
+  sessionStart: number,
+  candidate: UpexCandidate,
+): string {
+  return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.ceiling}`;
+}
+
+export function loadPreviousVolBResults(
+  sessionStart: number,
+): Map<string, boolean | null> {
+  try {
+    const raw = localStorage.getItem(PREVIOUS_15M_VOL_B_CACHE_KEY);
+    if (!raw) return new Map();
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      !("sessionStart" in parsed) ||
+      (parsed as { sessionStart: number }).sessionStart !== sessionStart ||
+      !("results" in parsed) ||
+      !(parsed as { results: unknown }).results ||
+      typeof (parsed as { results: unknown }).results !== "object"
+    ) {
+      return new Map();
+    }
+    const results = new Map<string, boolean | null>();
+    for (const [key, value] of Object.entries(
+      (parsed as { results: Record<string, unknown> }).results,
+    )) {
+      if (typeof value === "boolean") results.set(key, value);
+    }
+    return results;
+  } catch {
+    return new Map();
+  }
+}
+
+export function savePreviousVolBResults(
+  sessionStart: number,
+  results: Map<string, boolean | null>,
+): void {
+  const payload = JSON.stringify({
+    sessionStart,
+    results: Object.fromEntries(
+      [...results].filter((entry): entry is [string, boolean] => typeof entry[1] === "boolean"),
+    ),
+  });
+  safeSetItem(PREVIOUS_15M_VOL_B_CACHE_KEY, payload);
+}
+
+export function findVolBSymbols(
+  candidates: UpexCandidate[],
+  onProgress?: (done: number, total: number) => void,
+  now = Date.now(),
+): Promise<PreviousUpexScanResults> {
+  const endTime = upexSessionStartUtcMs(now);
+  const startTime = previousUpexSessionStartUtcMs(now);
+  return findVolBForSession(candidates, startTime, endTime, onProgress);
+}
+
+async function findVolBForSession(
+  candidates: UpexCandidate[],
+  startTime: number,
+  endTime: number,
+  onProgress?: (done: number, total: number) => void,
+): Promise<PreviousUpexScanResults> {
+  const included = new Set<string>();
+  const outcomes = new Map<string, boolean | null>();
+  let unavailable = 0;
+
+  for (let offset = 0; offset < candidates.length; offset += MAX_CONCURRENT_REQUESTS) {
+    const batch = candidates.slice(offset, offset + MAX_CONCURRENT_REQUESTS);
+    const results = await Promise.all(
+      batch.map(async (candidate) => {
+        const ceiling = candidate.ceiling;
+        if (ceiling === undefined) {
+          return { candidate, passes: null as boolean | null };
+        }
+        const candles = await fetchUpexCandles(candidate, startTime, endTime);
+        if (!candles) return { candidate, passes: null as boolean | null };
+        return {
+          candidate,
+          passes: passesVolBFilter(candles, ceiling, startTime, endTime),
+        };
+      }),
+    );
+
+    for (const { candidate, passes } of results) {
+      const symbolKey = `${candidate.source}:${candidate.symbol}`;
+      outcomes.set(symbolKey, passes);
+      if (passes === true) included.add(symbolKey);
+      else if (passes === null) unavailable++;
+    }
+    onProgress?.(Math.min(offset + batch.length, candidates.length), candidates.length);
+  }
+
+  return { included, unavailable, outcomes };
 }
 
 
@@ -2676,6 +2914,82 @@ export function findInsideR1S1Pass(
     },
   );
   previousInsideR1S1PassCache.set(key, request);
+  return request;
+}
+
+const previousVolAPassCache = new Map<string, Promise<boolean | null>>();
+
+export function findVolAPass(
+  candidate: UpexCandidate,
+  now: number,
+): Promise<boolean | null> {
+  const endTime = upexSessionStartUtcMs(now);
+  const startTime = previousUpexSessionStartUtcMs(now);
+  const floor = candidate.floor;
+  const key = `${startTime}:${candidate.source}:${candidate.symbol}:${floor}`;
+  const cached = previousVolAPassCache.get(key);
+  if (cached) return cached;
+
+  const request = findVolAForSession(
+    [candidate],
+    startTime,
+    endTime,
+  ).then(
+    ({ included, unavailable }) => {
+      if (unavailable > 0) {
+        previousVolAPassCache.delete(key);
+        return null;
+      }
+      if (previousVolAPassCache.size > MAX_PREVIOUS_UPEX_CACHE_ENTRIES) {
+        const oldestKey = previousVolAPassCache.keys().next().value;
+        if (oldestKey) previousVolAPassCache.delete(oldestKey);
+      }
+      return included.has(`${candidate.source}:${candidate.symbol}`);
+    },
+    (error: unknown) => {
+      previousVolAPassCache.delete(key);
+      throw error;
+    },
+  );
+  previousVolAPassCache.set(key, request);
+  return request;
+}
+
+const previousVolBPassCache = new Map<string, Promise<boolean | null>>();
+
+export function findVolBPass(
+  candidate: UpexCandidate,
+  now: number,
+): Promise<boolean | null> {
+  const endTime = upexSessionStartUtcMs(now);
+  const startTime = previousUpexSessionStartUtcMs(now);
+  const ceiling = candidate.ceiling;
+  const key = `${startTime}:${candidate.source}:${candidate.symbol}:${ceiling}`;
+  const cached = previousVolBPassCache.get(key);
+  if (cached) return cached;
+
+  const request = findVolBForSession(
+    [candidate],
+    startTime,
+    endTime,
+  ).then(
+    ({ included, unavailable }) => {
+      if (unavailable > 0) {
+        previousVolBPassCache.delete(key);
+        return null;
+      }
+      if (previousVolBPassCache.size > MAX_PREVIOUS_UPEX_CACHE_ENTRIES) {
+        const oldestKey = previousVolBPassCache.keys().next().value;
+        if (oldestKey) previousVolBPassCache.delete(oldestKey);
+      }
+      return included.has(`${candidate.source}:${candidate.symbol}`);
+    },
+    (error: unknown) => {
+      previousVolBPassCache.delete(key);
+      throw error;
+    },
+  );
+  previousVolBPassCache.set(key, request);
   return request;
 }
 

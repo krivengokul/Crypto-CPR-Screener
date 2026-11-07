@@ -14,6 +14,14 @@ type CandleBucketRow = {
 };
 import {
   findInsideR1S1Symbols,
+  findVolASymbols,
+  findVolBSymbols,
+  previousVolACandidateCacheKey,
+  loadPreviousVolAResults,
+  savePreviousVolAResults,
+  previousVolBCandidateCacheKey,
+  loadPreviousVolBResults,
+  savePreviousVolBResults,
   findPD15MBelowTCSymbols,
   findPD15MMomentumBelowSymbols,
   findPPConsolidateASymbols,
@@ -81,6 +89,20 @@ type InsideR1S1Candidate = {
   ceiling: number;
 };
 
+type VolACandidate = {
+  symbol: string;
+  source: "binance" | "delta";
+  bc: number;
+  floor: number;
+};
+
+type VolBCandidate = {
+  symbol: string;
+  source: "binance" | "delta";
+  bc: number;
+  ceiling: number;
+};
+
 export type PreviousCandleFilterId =
   | "all"
   | "consolidate-a"
@@ -92,7 +114,9 @@ export type PreviousCandleFilterId =
   | "momentum-a"
   | "consolidate-b"
   | "momentum-b"
-  | "inside-r1s1";
+  | "inside-r1s1"
+  | "vol-a"
+  | "vol-b";
 
 export type CandleBucket =
   | "consolidate-a"
@@ -100,6 +124,8 @@ export type CandleBucket =
   | "consolidate-b"
   | "momentum-b"
   | "inside-r1s1"
+  | "vol-a"
+  | "vol-b"
   | null;
 
 export function usePreviousCandleFilters(opts: {
@@ -537,6 +563,70 @@ export function usePreviousCandleFilters(opts: {
   const previousInsideR1S1Ready = insideR1S1Prep.ready;
   const previousInsideR1S1Message = insideR1S1Prep.message;
 
+  // VOL-A: s1/PL to no ceiling check (P-VOLATILE-R1S1 with no upper limit)
+  const volAPrep = usePreviousCandleFilterPrep<VolACandidate>({
+    label: "P-VOL-A",
+    canRun: candlePrepCanRun,
+    sessionStartMs: previousUpexSessionStart,
+    buildCandidates: () => {
+      const candidates = new Map<string, VolACandidate>();
+      const push = (row: CPRResult, source: "binance" | "delta") => {
+        const floor = getPrevious15MBFloor(row.prevCPR);
+        candidates.set(`${source}:${row.symbol}`, {
+          symbol: row.symbol,
+          source,
+          bc: floor,
+          floor,
+        });
+      };
+      if (status === "done") for (const row of allResults) push(row, "binance");
+      if (deltaStatus === "done") for (const row of deltaAllResults) push(row, "delta");
+      return Array.from(candidates.values());
+    },
+    cacheKey: previousVolACandidateCacheKey,
+    loadResults: loadPreviousVolAResults,
+    saveResults: savePreviousVolAResults,
+    scanMissing: (missing, onProgress, sessionEndMs) =>
+      findVolASymbols(missing, onProgress, sessionEndMs),
+  });
+
+  const previousVolAIncludedSymbols = volAPrep.includedSymbols;
+  const previousVolAProgress = volAPrep.progress;
+  const previousVolAReady = volAPrep.ready;
+  const previousVolAMessage = volAPrep.message;
+
+  // VOL-B: R1/PH to no floor check (P-VOLATILE-R1S1 with no lower limit)
+  const volBPrep = usePreviousCandleFilterPrep<VolBCandidate>({
+    label: "P-VOL-B",
+    canRun: candlePrepCanRun,
+    sessionStartMs: previousUpexSessionStart,
+    buildCandidates: () => {
+      const candidates = new Map<string, VolBCandidate>();
+      const push = (row: CPRResult, source: "binance" | "delta") => {
+        const ceiling = getPrevious15MACeiling(row.prevCPR);
+        candidates.set(`${source}:${row.symbol}`, {
+          symbol: row.symbol,
+          source,
+          bc: ceiling,
+          ceiling,
+        });
+      };
+      if (status === "done") for (const row of allResults) push(row, "binance");
+      if (deltaStatus === "done") for (const row of deltaAllResults) push(row, "delta");
+      return Array.from(candidates.values());
+    },
+    cacheKey: previousVolBCandidateCacheKey,
+    loadResults: loadPreviousVolBResults,
+    saveResults: savePreviousVolBResults,
+    scanMissing: (missing, onProgress, sessionEndMs) =>
+      findVolBSymbols(missing, onProgress, sessionEndMs),
+  });
+
+  const previousVolBIncludedSymbols = volBPrep.includedSymbols;
+  const previousVolBProgress = volBPrep.progress;
+  const previousVolBReady = volBPrep.ready;
+  const previousVolBMessage = volBPrep.message;
+
   // Annotate scan rows with raw 15m flags only.
   // IMPORTANT: do NOT depend on allResults/deltaAllResults — live price refresh
   // replaces those arrays often and would re-map the full universe every tick.
@@ -564,6 +654,8 @@ export function usePreviousCandleFilters(opts: {
           const b = previous15MTCIncludedSymbols.has(key);
           const mb = previous15MMomentumIncludedSymbols.has(key);
           const ins = previousInsideR1S1IncludedSymbols.has(key);
+          const va = previousVolAIncludedSymbols.has(key);
+          const vb = previousVolBIncludedSymbols.has(key);
           const z = zoneScoresP.get(key);
           const zp = zoneScoresPP.get(key);
           const exclusive = pickExclusiveConsolidateSide(
@@ -589,6 +681,8 @@ export function usePreviousCandleFilters(opts: {
             row.PD15MBelowTCPass === b &&
             row.PD15MMomentumBPass === mb &&
             row.PD15MInsideR1S1Pass === ins &&
+            row.PD15MVolAPass === va &&
+            row.PD15MVolBPass === vb &&
             row.PD15MConsolidateExclusive === exclusive &&
             row.PD15MPPConsolidateExclusive === ppExclusive
           ) {
@@ -607,6 +701,8 @@ export function usePreviousCandleFilters(opts: {
             PD15MBelowTCPass: b,
             PD15MMomentumBPass: mb,
             PD15MInsideR1S1Pass: ins,
+            PD15MVolAPass: va,
+            PD15MVolBPass: vb,
             PD15MConsolidateExclusive: exclusive,
             PD15MPPConsolidateExclusive: ppExclusive,
           };
@@ -627,6 +723,8 @@ export function usePreviousCandleFilters(opts: {
     previous15MTCIncludedSymbols,
     previous15MMomentumIncludedSymbols,
     previousInsideR1S1IncludedSymbols,
+    previousVolAIncludedSymbols,
+    previousVolBIncludedSymbols,
     setAllResults,
     setDeltaAllResults,
   ]);
@@ -646,6 +744,8 @@ export function usePreviousCandleFilters(opts: {
    *   CON-A only → P-CONSOLIDATE-A
    *   MOM-A → P-MOMENTUM-A
    *   INSIDE (not CON-A/CON-B) → INSIDE-R1S1
+   *   VOL-A (s1/PL to no ceiling check) → P-VOL-A
+   *   VOL-B (R1/PH to no floor check) → P-VOL-B
    */
   const candleBucket = useCallback(
     (row: CandleBucketRow): CandleBucket => {
@@ -663,6 +763,8 @@ export function usePreviousCandleFilters(opts: {
       if (inA) return "consolidate-a";
       if (previousUpexIncludedSymbols.has(key)) return "momentum-a";
       if (previousInsideR1S1IncludedSymbols.has(key)) return "inside-r1s1";
+      if (previousVolAIncludedSymbols.has(key)) return "vol-a";
+      if (previousVolBIncludedSymbols.has(key)) return "vol-b";
       return null;
     },
     [
@@ -671,6 +773,8 @@ export function usePreviousCandleFilters(opts: {
       previous15MTCIncludedSymbols,
       previous15MMomentumIncludedSymbols,
       previousInsideR1S1IncludedSymbols,
+      previousVolAIncludedSymbols,
+      previousVolBIncludedSymbols,
     ],
   );
   const hasConsolidateB = useCallback(
@@ -780,6 +884,14 @@ export function usePreviousCandleFilters(opts: {
     (row: CandleBucketRow) => candleBucket(row) === "inside-r1s1",
     [candleBucket],
   );
+  const hasVolA = useCallback(
+    (row: CandleBucketRow) => candleBucket(row) === "vol-a",
+    [candleBucket],
+  );
+  const hasVolB = useCallback(
+    (row: CandleBucketRow) => candleBucket(row) === "vol-b",
+    [candleBucket],
+  );
 
   return {
     previousConsolidateAIncludedSymbols,
@@ -822,6 +934,14 @@ export function usePreviousCandleFilters(opts: {
     previousInsideR1S1Progress,
     previousInsideR1S1Ready,
     previousInsideR1S1Message,
+    previousVolAIncludedSymbols,
+    previousVolAProgress,
+    previousVolAReady,
+    previousVolAMessage,
+    previousVolBIncludedSymbols,
+    previousVolBProgress,
+    previousVolBReady,
+    previousVolBMessage,
     candleBucket,
     hasConsolidateB,
     hasMomentumB,
@@ -833,6 +953,8 @@ export function usePreviousCandleFilters(opts: {
     hasPPVolatileR1S1,
     hasMomentumA,
     hasInsideR1S1,
+    hasVolA,
+    hasVolB,
     resetConsolidateAMessage,
     resetPPConsolidateAMessage: ppConsolidateAPrep.resetMessage,
     resetPPConsolidateBMessage: ppConsolidateBPrep.resetMessage,
@@ -843,5 +965,7 @@ export function usePreviousCandleFilters(opts: {
     resetConsolidateBMessage,
     resetMomentumBMessage,
     resetInsideR1S1Message,
+    resetVolAMessage: volAPrep.resetMessage,
+    resetVolBMessage: volBPrep.resetMessage,
   };
 }

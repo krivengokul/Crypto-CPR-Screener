@@ -41,6 +41,8 @@ import {
   findPD15MBelowTCPass,
   findPreviousConsolidateAPass,
   passesInsideR1S1Filter,
+  passesVolAFilter,
+  passesVolBFilter,
   pickExclusiveConsolidateSide,
   countConsolidateZoneCandles,
   explainInsideR1S1Failure,
@@ -1395,6 +1397,8 @@ type PrevDayDiagnosis = {
   momA: PrevDayCheckBlock;
   momB: PrevDayCheckBlock;
   insideR1S1: PrevDayCheckBlock;
+  volA: PrevDayCheckBlock;
+  volB: PrevDayCheckBlock;
   /** Body-midpoint counts in CON-A vs CON-B zones (exclusive label when both pass). */
   zoneCounts: { zoneA: number; zoneB: number };
   /** PP-day (day-before-previous) CON-A/B — exclusive by zone majority when both pass. */
@@ -1595,6 +1599,46 @@ function PreviousDaySection() {
                 detail: "P-VOLATILE-R1S1: no usable completed 15m candles for the previous session band check.",
               };
 
+      const volARaw = passesVolAFilter(candles, floor, prevStart, now);
+      const volA: PrevDayCheckBlock =
+        volARaw === true
+          ? {
+              pass: true,
+              label: "PASS",
+              detail: `P-VOL-A: every completed 15m candle stayed above min(S1,PL) ${floor} (no ceiling check).`,
+            }
+          : volARaw === false
+            ? {
+                pass: false,
+                label: "FAIL",
+                detail: `P-VOL-A: at least one completed 15m candle wicked below min(S1,PL) ${floor}.`,
+              }
+            : {
+                pass: false,
+                label: "NO DATA",
+                detail: "P-VOL-A: no usable completed 15m candles.",
+              };
+
+      const volBRaw = passesVolBFilter(candles, ceiling, prevStart, now);
+      const volB: PrevDayCheckBlock =
+        volBRaw === true
+          ? {
+              pass: true,
+              label: "PASS",
+              detail: `P-VOL-B: every completed 15m candle stayed below max(R1,PH) ${ceiling} (no floor check).`,
+            }
+          : volBRaw === false
+            ? {
+                pass: false,
+                label: "FAIL",
+                detail: `P-VOL-B: at least one completed 15m candle wicked above max(R1,PH) ${ceiling}.`,
+              }
+            : {
+                pass: false,
+                label: "NO DATA",
+                detail: "P-VOL-B: no usable completed 15m candles.",
+              };
+
       const prevLabel = new Date(prevStart).toISOString().slice(0, 10);
 
       // ── PP-day full exclusive stack (same priority as Screener) ──
@@ -1769,6 +1813,8 @@ function PreviousDaySection() {
         momA: { pass: failMomA ? false : true, label: momA.label, detail: momA.detail },
         momB: { pass: failMomB ? false : true, label: momB.label, detail: momB.detail },
         insideR1S1,
+        volA,
+        volB,
         zoneCounts,
         ppSessionLabel,
         ppLevels,
@@ -1867,6 +1913,8 @@ function PreviousDaySection() {
             const conA = result.conA.pass === true;
             const momA = result.momA.pass === true;
             const vol = result.insideR1S1.pass === true;
+            const volA = result.volA.pass === true;
+            const volB = result.volB.pass === true;
             // Zone majority when both CON-A and CON-B pass; else single-side / MOM / VOL.
             const conSide = pickExclusiveConsolidateSide(
               conA,
@@ -1885,7 +1933,11 @@ function PreviousDaySection() {
                       ? "P-MOMENTUM-A"
                       : vol
                         ? "P-VOLATILE-R1S1"
-                        : null;
+                        : volA
+                          ? "P-VOL-A"
+                          : volB
+                            ? "P-VOL-B"
+                            : null;
             const rows: { name: string; pass: boolean; shown: boolean; reason: string }[] = [
               {
                 name: "P-CONSOLIDATE-B",
@@ -1951,6 +2003,30 @@ function PreviousDaySection() {
                     ? "Raw P-VOLATILE passed, but a higher P-bucket also passed → suppressed."
                     : "Higher P-buckets failed; P-VOLATILE-R1S1 passed → exclusive label.",
               },
+              {
+                name: "P-VOL-A",
+                pass: volA,
+                shown: displayed === "P-VOL-A",
+                reason: !volA
+                  ? "Raw VOL-A (s1/PL floor check) failed — not a candidate."
+                  : vol
+                    ? "Both floor and ceiling passed → P-VOLATILE-R1S1 took precedence."
+                    : conB || momB || conA || momA
+                      ? "Raw VOL-A passed, but a higher P-bucket also passed → suppressed."
+                      : "Higher P-buckets failed; P-VOL-A passed (s1/PL floor check with no upper limit) → exclusive label.",
+              },
+              {
+                name: "P-VOL-B",
+                pass: volB,
+                shown: displayed === "P-VOL-B",
+                reason: !volB
+                  ? "Raw VOL-B (R1/PH ceiling check) failed — not a candidate."
+                  : vol
+                    ? "Both floor and ceiling passed → P-VOLATILE-R1S1 took precedence."
+                    : conB || momB || conA || momA
+                      ? "Raw VOL-B passed, but a higher P-bucket also passed → suppressed."
+                      : "Higher P-buckets failed; P-VOL-B passed (R1/PH ceiling check with no lower limit) → exclusive label.",
+              },
             ];
             return (
               <div className="rounded-xl border border-cyan-500/30 bg-cyan-500/5 px-4 py-3 space-y-2.5">
@@ -1967,7 +2043,7 @@ function PreviousDaySection() {
                 <p className="text-[11px] text-slate-400 leading-relaxed">
                   Priority (first match wins):{" "}
                   <span className="font-mono text-slate-300">
-                    Both CON-A+CON-B → zone majority (tie→A); else CON-B | CON-A → MOM-B → MOM-A → P-VOLATILE-R1S1
+                    Both CON-A+CON-B → zone majority (tie→A); else CON-B | CON-A → MOM-B → MOM-A → P-VOLATILE-R1S1 → P-VOL-A / P-VOL-B
                   </span>
                   . A raw PASS below does not always mean that label is shown.
                 </p>

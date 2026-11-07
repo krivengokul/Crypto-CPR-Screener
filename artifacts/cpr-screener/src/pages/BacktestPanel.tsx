@@ -329,7 +329,7 @@ async function addApplicableViewOutcomes<T extends Pick<CategoryScanRow, "symbol
  */
 function candleBucketFromFlags(
   raw: CPRResult,
-): "inside-r1s1" | "consolidate-b" | "momentum-b" | "consolidate-a" | "momentum-a" | null {
+): "inside-r1s1" | "consolidate-b" | "momentum-b" | "consolidate-a" | "momentum-a" | "vol-a" | "vol-b" | null {
   const conA = raw.PD15MConsolidateAPass === true;
   const conB = raw.PD15MBelowTCPass === true;
   const momA = raw.PD15MAboveBCPass === true;
@@ -344,6 +344,8 @@ function candleBucketFromFlags(
   if (conA) return "consolidate-a";
   if (momA) return "momentum-a";
   if (inside) return "inside-r1s1";
+  if (raw.PD15MVolAPass === true) return "vol-a";
+  if (raw.PD15MVolBPass === true) return "vol-b";
   return null;
 }
 
@@ -452,13 +454,21 @@ function renderCandleCheckBadges(raw: CPRResult) {
     Number.isFinite(raw.prevCPR?.widthPct) &&
     getWidthCategory(raw.prevCPR.widthPct).key === "micro";
   const isTouchVolatile =
-    bucket === "inside-r1s1" &&
+    (bucket === "inside-r1s1" || bucket === "vol-a" || bucket === "vol-b") &&
     (raw.touchCategory === true || prevIsPMicro);
   const label =
     bucket === "inside-r1s1"
       ? isTouchVolatile
         ? "P-VOLATILE-R1S1"
         : "P-VOLATILE-R1S1 ✗"
+      : bucket === "vol-a"
+        ? isTouchVolatile
+          ? "P-VOL-A"
+          : "P-VOL-A ✗"
+        : bucket === "vol-b"
+          ? isTouchVolatile
+            ? "P-VOL-B"
+            : "P-VOL-B ✗"
       : bucket === "consolidate-a"
         ? "P-CONSOLIDATE-A"
         : bucket === "consolidate-b"
@@ -468,7 +478,7 @@ function renderCandleCheckBadges(raw: CPRResult) {
             : "P-MOMENTUM-B";
 
   const className =
-    bucket === "inside-r1s1"
+    bucket === "inside-r1s1" || bucket === "vol-a" || bucket === "vol-b"
       ? "font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
       : bucket === "consolidate-a"
         ? "font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
@@ -479,7 +489,7 @@ function renderCandleCheckBadges(raw: CPRResult) {
             : "font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-violet-400";
 
   const style =
-    bucket === "inside-r1s1"
+    bucket === "inside-r1s1" || bucket === "vol-a" || bucket === "vol-b"
       ? { color: isTouchVolatile ? "#a3e635" : "#ff637e" }
       : bucket === "consolidate-a"
         ? { color: "#03b07c" }
@@ -499,7 +509,15 @@ function renderCandleCheckBadges(raw: CPRResult) {
             ? isTouchVolatile
               ? "TOUCH + previous-session 15m inside R1/PH–S1/PL band (not CON-A/CON-B)"
               : "Previous-session 15m was inside R1/PH–S1/PL band but not CON-A/CON-B (volatile)"
-            : undefined
+            : bucket === "vol-a"
+              ? isTouchVolatile
+                ? "TOUCH + previous-session 15m above S1/PL floor (no ceiling check)"
+                : "Previous-session 15m above S1/PL floor (no ceiling check)"
+              : bucket === "vol-b"
+                ? isTouchVolatile
+                  ? "TOUCH + previous-session 15m below R1/PH ceiling (no floor check)"
+                  : "Previous-session 15m below R1/PH ceiling (no floor check)"
+                : undefined
         }
       >
         {label}

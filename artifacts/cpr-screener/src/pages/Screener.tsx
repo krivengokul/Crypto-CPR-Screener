@@ -422,7 +422,7 @@ export default function Screener({
 
 
   const [previousCandleFilter, setPreviousCandleFilter] = useState<
-    "all" | "consolidate-a" | "pp-consolidate-a" | "pp-consolidate-b" | "pp-momentum-a" | "pp-momentum-b" | "pp-volatile-r1s1" | "momentum-a" | "consolidate-b" | "momentum-b" | "inside-r1s1"
+    "all" | "consolidate-a" | "pp-consolidate-a" | "pp-consolidate-b" | "pp-momentum-a" | "pp-momentum-b" | "pp-volatile-r1s1" | "momentum-a" | "consolidate-b" | "momentum-b" | "inside-r1s1" | "vol-a" | "vol-b"
   >("all");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "ready" | "pass" | "fail">("all");
   /** When ON (default) and today is Sat/Sun, hide Binance TRADFI + COMMOD rows. */
@@ -645,9 +645,17 @@ export default function Screener({
     hasPPVolatileR1S1,
     hasMomentumA,
     hasInsideR1S1,
+    hasVolA,
+    hasVolB,
     previousInsideR1S1Ready,
     previousInsideR1S1Progress,
     previousInsideR1S1Message,
+    previousVolAReady,
+    previousVolAProgress,
+    previousVolAMessage,
+    previousVolBReady,
+    previousVolBProgress,
+    previousVolBMessage,
     resetConsolidateAMessage,
     resetPPConsolidateAMessage,
     resetPPConsolidateBMessage,
@@ -658,6 +666,8 @@ export default function Screener({
     resetConsolidateBMessage,
     resetMomentumBMessage,
     resetInsideR1S1Message,
+    resetVolAMessage,
+    resetVolBMessage,
   } = usePreviousCandleFilters({
     status,
     deltaStatus,
@@ -690,6 +700,9 @@ export default function Screener({
         PD15MBelowTCPass?: boolean;
         PD15MAboveBCPass?: boolean;
         PD15MMomentumBPass?: boolean;
+        PD15MInsideR1S1Pass?: boolean;
+        PD15MVolAPass?: boolean;
+        PD15MVolBPass?: boolean;
         touchCategory?: boolean;
         ppTouchCategory?: boolean;
         ppCPR?: CPRResult["ppCPR"];
@@ -718,7 +731,21 @@ export default function Screener({
       else if (hasMomentumB(row)) pDayText = "P-MOMENTUM-B";
       else if (hasConsolidateA(row)) pDayText = "P-CONSOLIDATE-A";
       else if (hasMomentumA(row)) pDayText = "P-MOMENTUM-A";
-      else {
+      else if (hasVolA(row)) {
+        const prevMicro =
+          row.prevCPR &&
+          Number.isFinite(row.prevCPR.widthPct) &&
+          getWidthCategory(row.prevCPR.widthPct).key === "micro";
+        pDayText =
+          row.touchCategory || prevMicro ? "P-VOL-A" : "P-VOL-A ✗";
+      } else if (hasVolB(row)) {
+        const prevMicro =
+          row.prevCPR &&
+          Number.isFinite(row.prevCPR.widthPct) &&
+          getWidthCategory(row.prevCPR.widthPct).key === "micro";
+        pDayText =
+          row.touchCategory || prevMicro ? "P-VOL-B" : "P-VOL-B ✗";
+      } else {
         const conA = row.PD15MConsolidateAPass === true;
         const conB = row.PD15MBelowTCPass === true;
         const momA = row.PD15MAboveBCPass === true;
@@ -734,6 +761,28 @@ export default function Screener({
         else if (momB) pDayText = "P-MOMENTUM-B";
         else if (conA) pDayText = "P-CONSOLIDATE-A";
         else if (momA) pDayText = "P-MOMENTUM-A";
+        else if (row.PD15MInsideR1S1Pass === true) {
+          const prevMicro =
+            row.prevCPR &&
+            Number.isFinite(row.prevCPR.widthPct) &&
+            getWidthCategory(row.prevCPR.widthPct).key === "micro";
+          pDayText =
+            row.touchCategory || prevMicro ? "P-VOLATILE-R1S1" : "P-VOLATILE-R1S1 ✗";
+        } else if (row.PD15MVolAPass === true) {
+          const prevMicro =
+            row.prevCPR &&
+            Number.isFinite(row.prevCPR.widthPct) &&
+            getWidthCategory(row.prevCPR.widthPct).key === "micro";
+          pDayText =
+            row.touchCategory || prevMicro ? "P-VOL-A" : "P-VOL-A ✗";
+        } else if (row.PD15MVolBPass === true) {
+          const prevMicro =
+            row.prevCPR &&
+            Number.isFinite(row.prevCPR.widthPct) &&
+            getWidthCategory(row.prevCPR.widthPct).key === "micro";
+          pDayText =
+            row.touchCategory || prevMicro ? "P-VOL-B" : "P-VOL-B ✗";
+        }
       }
       // PP exclusive (B > A), independent of P-bucket — single label under PDay.
       // Same priority as the table row: PP-CON-B > PP-MOM-B > PP-CON-A > PP-MOM-A > PP-VOLATILE.
@@ -865,7 +914,9 @@ export default function Screener({
     previousUpexReady &&
     previous15MTCReady &&
     previous15MMomentumReady &&
-    previousInsideR1S1Ready;
+    previousInsideR1S1Ready &&
+    previousVolAReady &&
+    previousVolBReady;
 
   // ── RECLAIM-S / RECLAIM-R ─────────────────────────────────────────────
   const {
@@ -1220,6 +1271,12 @@ export default function Screener({
   const previousInsideR1S1IncludedCount = getActivePool().filter(
     (row) => row.source !== "coindcx" && hasInsideR1S1(row),
   ).length;
+  const previousVolAIncludedCount = getActivePool().filter(
+    (row) => row.source !== "coindcx" && hasVolA(row),
+  ).length;
+  const previousVolBIncludedCount = getActivePool().filter(
+    (row) => row.source !== "coindcx" && hasVolB(row),
+  ).length;
   const previousInRangeRIncludedCount = previousInsideR1S1IncludedCount;
 
   // RECLAIM-S / RECLAIM-R — live state for a row (pierced depth from the
@@ -1483,6 +1540,16 @@ export default function Screener({
       (r) =>
         previousCandleFilter !== "inside-r1s1" ||
         hasInRangeR(r)
+    )
+    .filter(
+      (r) =>
+        previousCandleFilter !== "vol-a" ||
+        hasVolA(r)
+    )
+    .filter(
+      (r) =>
+        previousCandleFilter !== "vol-b" ||
+        hasVolB(r)
     )
     // RECLAIM-S / RECLAIM-R — live failed breakdown / breakout (independent of
     // the previous-session Consolidate/Momentum filters, so they combine).
@@ -2608,7 +2675,7 @@ export default function Screener({
                 }}
                 disabled={!previousInsideR1S1Ready || currentAllCount === 0 || activeTab === "coindcx"}
                 aria-pressed={previousCandleFilter === "inside-r1s1"}
-                className={`text-xs px-2.5 py-1 rounded-r -ml-px border transition-colors disabled:opacity-50 ${
+                className={`text-xs px-2.5 py-1 -ml-px border transition-colors disabled:opacity-50 ${
                   previousCandleFilter === "inside-r1s1"
                     ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
                     : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
@@ -2620,6 +2687,46 @@ export default function Screener({
                   : previousInsideR1S1Ready
                     ? `P-VOLATILE-R1S1 (${previousInsideR1S1IncludedCount})`
                     : "P-VOLATILE-R1S1…"}
+              </button>
+              <button
+                onClick={() => {
+                  if (!previousVolAReady) return;
+                  setPreviousCandleFilter((v) => v === "vol-a" ? "all" : "vol-a");
+                }}
+                disabled={!previousVolAReady || currentAllCount === 0 || activeTab === "coindcx"}
+                aria-pressed={previousCandleFilter === "vol-a"}
+                className={`text-xs px-2.5 py-1 -ml-px border transition-colors disabled:opacity-50 ${
+                  previousCandleFilter === "vol-a"
+                    ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
+                    : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
+                }`}
+                title="P-VOL-A: previous-session 15m stays above floor min(S1, PL) with no ceiling check (P-VOLATILE-R1S1 with no upper limit). Shown when symbol doesn't fall under CON-B, MOM-B, CON-A, MOM-A, or P-VOLATILE-R1S1."
+              >
+                {previousVolAProgress
+                  ? `P-VOL-A ${previousVolAProgress.done}/${previousVolAProgress.total}`
+                  : previousVolAReady
+                    ? `P-VOL-A (${previousVolAIncludedCount})`
+                    : "P-VOL-A…"}
+              </button>
+              <button
+                onClick={() => {
+                  if (!previousVolBReady) return;
+                  setPreviousCandleFilter((v) => v === "vol-b" ? "all" : "vol-b");
+                }}
+                disabled={!previousVolBReady || currentAllCount === 0 || activeTab === "coindcx"}
+                aria-pressed={previousCandleFilter === "vol-b"}
+                className={`text-xs px-2.5 py-1 rounded-r -ml-px border transition-colors disabled:opacity-50 ${
+                  previousCandleFilter === "vol-b"
+                    ? "relative z-10 bg-foreground/15 text-foreground border-[#22354a] font-bold"
+                    : "border-[#22354a] text-slate-400 hover:text-white bg-[#151e2c]"
+                }`}
+                title="P-VOL-B: previous-session 15m stays below ceiling max(R1, PH) with no floor check (P-VOLATILE-R1S1 with no lower limit). Shown when symbol doesn't fall under CON-B, MOM-B, CON-A, MOM-A, or P-VOLATILE-R1S1."
+              >
+                {previousVolBProgress
+                  ? `P-VOL-B ${previousVolBProgress.done}/${previousVolBProgress.total}`
+                  : previousVolBReady
+                    ? `P-VOL-B (${previousVolBIncludedCount})`
+                    : "P-VOL-B…"}
               </button>
               </div>
             </div>
@@ -2902,6 +3009,10 @@ export default function Screener({
               ? { text: previous15MMomentumMessage, dismiss: resetMomentumBMessage }
               : previousCandleFilter === "inside-r1s1"
               ? { text: previousInsideR1S1Message, dismiss: resetInsideR1S1Message }
+              : previousCandleFilter === "vol-a"
+              ? { text: previousVolAMessage, dismiss: resetVolAMessage }
+              : previousCandleFilter === "vol-b"
+              ? { text: previousVolBMessage, dismiss: resetVolBMessage }
               : null;
 
           const activeStatusMessages: { text: string; dismiss: () => void }[] = [];
@@ -3080,6 +3191,8 @@ export default function Screener({
                         isConsolidateB={hasConsolidateB(r)}
                         isMomentumB={hasMomentumB(r)}
                         isInsideR1S1={hasInsideR1S1(r)}
+                        isVolA={hasVolA(r)}
+                        isVolB={hasVolB(r)}
                         reclaimS={reclaim.s?.qualifies ? reclaim.s : null}
                         reclaimR={reclaim.r?.qualifies ? reclaim.r : null}
                         onRowFocus={handleRowFocus}

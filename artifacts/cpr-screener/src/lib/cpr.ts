@@ -330,6 +330,10 @@ export interface CPRResult {
   PD15MMomentumBPass?: boolean;
   /** Previous-session INSIDE max(R1,PH)–min(S1,PL); independent of CON-A/CON-B. */
   PD15MInsideR1S1Pass?: boolean;
+  /** Prepared previous-session VOL-A (s1/PL floor check, no ceiling check). */
+  PD15MVolAPass?: boolean;
+  /** Prepared previous-session VOL-B (R1/PH ceiling check, no floor check). */
+  PD15MVolBPass?: boolean;
   /** 15m momentum-breakout (volume spike through a level) analysis; attached by binance.ts / delta.ts at scan time. */
   breakout?: BreakoutResult;
   /** 15m momentum-breakdown (volume spike down through PDL/BC/S1–S4); separate from breakout. */

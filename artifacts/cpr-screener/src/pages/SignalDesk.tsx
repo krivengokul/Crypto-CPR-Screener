@@ -299,6 +299,34 @@ function exclusivePDayBadge(r: CPRResult | undefined | null): {
       style: { color: "#ff637e" },
     };
   }
+  if (r.PD15MVolAPass === true && !conA && !conB && !momA && !momB && !inside) {
+    if (r.touchCategory) {
+      return {
+        text: "P-VOL-A",
+        className: "font-mono text-xs font-bold uppercase tracking-widest",
+        style: { color: "#a3e635" },
+      };
+    }
+    return {
+      text: "P-VOL-A ✗",
+      className: "font-mono text-xs font-bold uppercase tracking-widest",
+      style: { color: "#ff637e" },
+    };
+  }
+  if (r.PD15MVolBPass === true && !conA && !conB && !momA && !momB && !inside) {
+    if (r.touchCategory) {
+      return {
+        text: "P-VOL-B",
+        className: "font-mono text-xs font-bold uppercase tracking-widest",
+        style: { color: "#a3e635" },
+      };
+    }
+    return {
+      text: "P-VOL-B ✗",
+      className: "font-mono text-xs font-bold uppercase tracking-widest",
+      style: { color: "#ff637e" },
+    };
+  }
 
   // No exclusive P bucket (CON/MOM/INSIDE): show nothing. A residual "P-VOLATILE ✗"
   // flashed on every row while 15m filters were still loading.

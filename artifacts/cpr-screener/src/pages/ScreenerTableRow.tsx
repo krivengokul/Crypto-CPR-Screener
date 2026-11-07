@@ -1125,6 +1125,10 @@ export interface ScreenerTableRowProps {
   isMomentumB?: boolean;
   /** True when this row is assigned to INSIDE-R1S1 (candles fully inside R1–S1 band, or dual CON-A+CON-B). */
   isInsideR1S1?: boolean;
+  /** True when this row is assigned to VOL-A (floor check only, no ceiling check). */
+  isVolA?: boolean;
+  /** True when this row is assigned to VOL-B (ceiling check only, no floor check). */
+  isVolB?: boolean;
   /** Live RECLAIM-S state (failed breakdown this session) — only passed when it qualifies, else null/undefined. */
   reclaimS?: ReclaimSideState | null;
   /** Live RECLAIM-R state (failed breakout this session) — only passed when it qualifies, else null/undefined. */
@@ -1187,6 +1191,8 @@ function ScreenerTableRow({
   isMomentumA,
   isMomentumB,
   isInsideR1S1,
+  isVolA,
+  isVolB,
   reclaimS,
   reclaimR,
   onRowFocus,
@@ -1212,13 +1218,17 @@ function ScreenerTableRow({
     isConsolidateA !== undefined ||
     isConsolidateB !== undefined ||
     isMomentumA !== undefined ||
-    isMomentumB !== undefined;
+    isMomentumB !== undefined ||
+    isVolA !== undefined ||
+    isVolB !== undefined;
 
   let showInsideR1S1 = false;
   let showConsolidateA = false;
   let showConsolidateB = false;
   let showMomentumA = false;
   let showMomentumB = false;
+  let showVolA = false;
+  let showVolB = false;
 
   if (exclusiveFromProps) {
     showInsideR1S1 = isInsideR1S1 === true;
@@ -1228,6 +1238,14 @@ function ScreenerTableRow({
     showConsolidateB = !showInsideR1S1 && isConsolidateB === true;
     showMomentumA = !showInsideR1S1 && isMomentumA === true;
     showMomentumB = !showInsideR1S1 && isMomentumB === true;
+    const hasAnyHigher =
+      showInsideR1S1 ||
+      showConsolidateA ||
+      showConsolidateB ||
+      showMomentumA ||
+      showMomentumB;
+    showVolA = !hasAnyHigher && isVolA === true;
+    showVolB = !hasAnyHigher && !showVolA && isVolB === true;
   } else if (rawConA && rawConB) {
     // Zone-majority stamp (same as candleBucket); missing → A.
     if (r.PD15MConsolidateExclusive === "B") showConsolidateB = true;
@@ -1242,6 +1260,10 @@ function ScreenerTableRow({
     showMomentumA = true;
   } else if (r.PD15MInsideR1S1Pass === true) {
     showInsideR1S1 = true;
+  } else if (r.PD15MVolAPass === true) {
+    showVolA = true;
+  } else if (r.PD15MVolBPass === true) {
+    showVolB = true;
   }
   // Hoisted so the same up/down call drives both the per-row dot in the
   // Symbol column AND the new "Levels VIEW" name badge below — one row
@@ -1643,6 +1665,48 @@ function ScreenerTableRow({
             >
               {limeVol ? "P-VOLATILE-R1S1" : "P-VOLATILE-R1S1 ✗"}
             </div>
+            );
+          })()}
+          {showVolA && (() => {
+            const prevIsPMicro =
+              Number.isFinite(r.prevCPR?.widthPct) &&
+              getWidthCategory(r.prevCPR.widthPct).key === "micro";
+            const limeVol = r.touchCategory === true || prevIsPMicro;
+            return (
+              <div
+                className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
+                style={{ color: limeVol ? "#a3e635" : "#ff637e" }}
+                title={
+                  r.touchCategory
+                    ? "TOUCH + previous-session 15m above S1/PL floor (no ceiling check)"
+                    : prevIsPMicro
+                      ? "pMicro previous-day CPR + previous-session 15m above S1/PL floor (shown lime without ✗)"
+                      : "Previous-session 15m above S1/PL floor (no ceiling check)"
+                }
+              >
+                {limeVol ? "P-VOL-A" : "P-VOL-A ✗"}
+              </div>
+            );
+          })()}
+          {showVolB && (() => {
+            const prevIsPMicro =
+              Number.isFinite(r.prevCPR?.widthPct) &&
+              getWidthCategory(r.prevCPR.widthPct).key === "micro";
+            const limeVol = r.touchCategory === true || prevIsPMicro;
+            return (
+              <div
+                className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
+                style={{ color: limeVol ? "#a3e635" : "#ff637e" }}
+                title={
+                  r.touchCategory
+                    ? "TOUCH + previous-session 15m below R1/PH ceiling (no floor check)"
+                    : prevIsPMicro
+                      ? "pMicro previous-day CPR + previous-session 15m below R1/PH ceiling (shown lime without ✗)"
+                      : "Previous-session 15m below R1/PH ceiling (no floor check)"
+                }
+              >
+                {limeVol ? "P-VOL-B" : "P-VOL-B ✗"}
+              </div>
             );
           })()}
           {/* Residual P-VOLATILE ✗ removed: while P-day 15m filters are still
