@@ -430,7 +430,7 @@ export const MISC_VIEWS: ViewDef[] = [
         ]
       }
     ],
-        requireFullMatch: false,
+        requireFullMatch: true,
       },
     {
         key: "S1-INCPR-C-C-BB-AA-CL3U3-RL-GapBB-S4",
