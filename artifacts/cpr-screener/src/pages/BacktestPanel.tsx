@@ -89,6 +89,7 @@ import { SRLadderRow, toSRLadderData, type ViewDirection } from "./SRLadderPanel
 import { getLadderMatchSummary, LEVEL_KEYS, type LevelCheckCondition, type LevelKey } from "./SRLadderDiff";
 import { useChartLinks, findChartLink, preloadChartLinks, renameChartLinkViewKeys, copyChartLinkViewKeys, updateChartLinkViewKey, type StoredChartLink } from "@/lib/chartLinks";
 import { isExpandedPatternPair, type CPRLevels, type CPRResult } from "@/lib/cpr";
+import { getRowCategory, getCategoryLabel, CATEGORY_TEXT_COLORS } from "@/lib/rowCategory";
 import { COINDCX_ENABLED } from "@/lib/featureFlags";
 
 // --- Small UTC date helpers (all dates in this panel are UTC ISO strings) ---
@@ -3773,6 +3774,20 @@ export default function BacktestPanel() {
                                   ? `${chg >= 0 ? "+" : ""}${chg.toFixed(2)}%`
                                   : "—"}
                               </span>
+                              {(() => {
+                                const category = getRowCategory(r.raw);
+                                if (!category) return null;
+                                return (
+                                  <span
+                                    className={`text-[10px] uppercase tracking-wide leading-none whitespace-nowrap ${
+                                      CATEGORY_TEXT_COLORS[category] ?? "text-muted-foreground"
+                                    }`}
+                                    title={`Category: ${getCategoryLabel(category)}`}
+                                  >
+                                    {getCategoryLabel(category)}
+                                  </span>
+                                );
+                              })()}
                               <span className="font-mono text-[11px] text-muted-foreground whitespace-nowrap leading-none">
                                 {formatDisplay(r.entryDate)}
                               </span>
@@ -4081,6 +4096,20 @@ export default function BacktestPanel() {
                                   {chg !== null && chg !== undefined
                                     ? `${chg >= 0 ? "+" : ""}${chg.toFixed(2)}%`
                                     : "—"}
+                                </span>
+                              );
+                            })()}
+                            {(() => {
+                              const category = getRowCategory(r.raw);
+                              if (!category) return null;
+                              return (
+                                <span
+                                  className={`text-[10px] uppercase tracking-wide leading-none whitespace-nowrap ${
+                                    CATEGORY_TEXT_COLORS[category] ?? "text-muted-foreground"
+                                  }`}
+                                  title={`Category: ${getCategoryLabel(category)}`}
+                                >
+                                  {getCategoryLabel(category)}
                                 </span>
                               );
                             })()}
