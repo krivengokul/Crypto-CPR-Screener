@@ -20,6 +20,8 @@ const PREVIOUS_15M_PP_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_pp_inside_r1s1_r
 const PREVIOUS_15M_INSIDE_R1S1_CACHE_KEY = "cpr_previous_15m_inside_r1s1_results_v5";
 const PREVIOUS_15M_VOL_A_CACHE_KEY = "cpr_previous_15m_vol_a_results_v1";
 const PREVIOUS_15M_VOL_B_CACHE_KEY = "cpr_previous_15m_vol_b_results_v1";
+const PREVIOUS_15M_PP_VOL_A_CACHE_KEY = "cpr_previous_15m_pp_vol_a_results_v1";
+const PREVIOUS_15M_PP_VOL_B_CACHE_KEY = "cpr_previous_15m_pp_vol_b_results_v1";
 const PREVIOUS_15M_CONSOLIDATE_ZONE_CACHE_KEY = "cpr_previous_15m_consolidate_zone_scores_v1";
 const PREVIOUS_15M_PP_CONSOLIDATE_ZONE_CACHE_KEY = "cpr_previous_15m_pp_consolidate_zone_scores_v1";
 
@@ -292,6 +294,8 @@ export function pruneLegacy15MResultCaches(): number {
     PREVIOUS_15M_PP_INSIDE_R1S1_CACHE_KEY,
     PREVIOUS_15M_VOL_A_CACHE_KEY,
     PREVIOUS_15M_VOL_B_CACHE_KEY,
+    PREVIOUS_15M_PP_VOL_A_CACHE_KEY,
+    PREVIOUS_15M_PP_VOL_B_CACHE_KEY,
   ];
   const prefixes = currentKeys.map((key) => key.replace(/\d+$/, ""));
   let removed = 0;
@@ -2567,6 +2571,121 @@ async function findVolBForSession(
   return { included, unavailable, outcomes };
 }
 
+export function previousPPVolACandidateCacheKey(
+  sessionStart: number,
+  candidate: UpexCandidate,
+): string {
+  return previousVolACandidateCacheKey(sessionStart, candidate);
+}
+
+export function loadPreviousPPVolAResults(
+  sessionStart: number,
+): Map<string, boolean | null> {
+  try {
+    const raw = localStorage.getItem(PREVIOUS_15M_PP_VOL_A_CACHE_KEY);
+    if (!raw) return new Map();
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      !("sessionStart" in parsed) ||
+      (parsed as { sessionStart: number }).sessionStart !== sessionStart ||
+      !("results" in parsed) ||
+      !(parsed as { results: unknown }).results ||
+      typeof (parsed as { results: unknown }).results !== "object"
+    ) {
+      return new Map();
+    }
+    const results = new Map<string, boolean | null>();
+    for (const [key, value] of Object.entries(
+      (parsed as { results: Record<string, unknown> }).results,
+    )) {
+      if (typeof value === "boolean") results.set(key, value);
+    }
+    return results;
+  } catch {
+    return new Map();
+  }
+}
+
+export function savePreviousPPVolAResults(
+  sessionStart: number,
+  results: Map<string, boolean | null>,
+): void {
+  const payload = JSON.stringify({
+    sessionStart,
+    results: Object.fromEntries(
+      [...results].filter((entry): entry is [string, boolean] => typeof entry[1] === "boolean"),
+    ),
+  });
+  safeSetItem(PREVIOUS_15M_PP_VOL_A_CACHE_KEY, payload);
+}
+
+export function findPPVolASymbols(
+  candidates: UpexCandidate[],
+  onProgress?: (done: number, total: number) => void,
+  now = Date.now(),
+): Promise<PreviousUpexScanResults> {
+  return findVolASymbols(candidates, onProgress, now);
+}
+
+export function previousPPVolBCandidateCacheKey(
+  sessionStart: number,
+  candidate: UpexCandidate,
+): string {
+  return previousVolBCandidateCacheKey(sessionStart, candidate);
+}
+
+export function loadPreviousPPVolBResults(
+  sessionStart: number,
+): Map<string, boolean | null> {
+  try {
+    const raw = localStorage.getItem(PREVIOUS_15M_PP_VOL_B_CACHE_KEY);
+    if (!raw) return new Map();
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      !("sessionStart" in parsed) ||
+      (parsed as { sessionStart: number }).sessionStart !== sessionStart ||
+      !("results" in parsed) ||
+      !(parsed as { results: unknown }).results ||
+      typeof (parsed as { results: unknown }).results !== "object"
+    ) {
+      return new Map();
+    }
+    const results = new Map<string, boolean | null>();
+    for (const [key, value] of Object.entries(
+      (parsed as { results: Record<string, unknown> }).results,
+    )) {
+      if (typeof value === "boolean") results.set(key, value);
+    }
+    return results;
+  } catch {
+    return new Map();
+  }
+}
+
+export function savePreviousPPVolBResults(
+  sessionStart: number,
+  results: Map<string, boolean | null>,
+): void {
+  const payload = JSON.stringify({
+    sessionStart,
+    results: Object.fromEntries(
+      [...results].filter((entry): entry is [string, boolean] => typeof entry[1] === "boolean"),
+    ),
+  });
+  safeSetItem(PREVIOUS_15M_PP_VOL_B_CACHE_KEY, payload);
+}
+
+export function findPPVolBSymbols(
+  candidates: UpexCandidate[],
+  onProgress?: (done: number, total: number) => void,
+  now = Date.now(),
+): Promise<PreviousUpexScanResults> {
+  return findVolBSymbols(candidates, onProgress, now);
+}
 
 export function previous15MBCandidateCacheKey(
   sessionStart: number,

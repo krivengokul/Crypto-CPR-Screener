@@ -320,6 +320,10 @@ export interface CPRResult {
   PD15MPPMomentumBPass?: boolean;
   /** PP-VOLATILE-R1S1: INSIDE max(R1,PH)–min(S1,PL) on the day-before-previous session. */
   PD15MPPInsideR1S1Pass?: boolean;
+  /** Prepared day-before-previous session VOL-A (s1/PL floor check, no ceiling check). */
+  PD15MPPVolAPass?: boolean;
+  /** Prepared day-before-previous session VOL-B (R1/PH ceiling check, no floor check). */
+  PD15MPPVolBPass?: boolean;
   /**
    * True when the (prevCPR, ppCPR) pair is a TOUCH-category relationship
    * (same rules as touchCategory for (today, prev)). Used to color PP-VOLATILE-R1S1

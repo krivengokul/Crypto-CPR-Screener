@@ -365,30 +365,30 @@ function ppDayBadgeFromFlags(raw: CPRResult): {
   const exclusiveA = ppA && (!ppB || raw.PD15MPPConsolidateExclusive !== "B");
   if (exclusiveB) {
     return {
-      label: "PP-CONSOLIDATE-B",
+      label: "PP-CON-B",
       color: "#f472b6",
-      title: "CONSOLIDATE-B rules on PPDay (zone exclusive when both CON sides pass)",
+      title: "CON-B rules on PPDay (zone exclusive when both CON sides pass)",
     };
   }
   if (ppMomB && !ppA && !ppB) {
     return {
       label: "PP-MOMENTUM-B",
       color: "#a78bfa",
-      title: "MOMENTUM-B rules on PPDay (TC only); exclusive of PP-CONSOLIDATE-B",
+      title: "MOMENTUM-B rules on PPDay (TC only); exclusive of PP-CON-B",
     };
   }
   if (exclusiveA) {
     return {
-      label: "PP-CONSOLIDATE-A",
+      label: "PP-CON-A",
       color: "#2dd4bf",
-      title: "CONSOLIDATE-A rules on PPDay (zone exclusive when both CON sides pass)",
+      title: "CON-A rules on PPDay (zone exclusive when both CON sides pass)",
     };
   }
   if (ppMomA && !ppA && !ppB) {
     return {
       label: "PP-MOMENTUM-A",
       color: "#22d3ee",
-      title: "MOMENTUM-A rules on PPDay (BC only); exclusive of PP-CONSOLIDATE-A/B",
+      title: "MOMENTUM-A rules on PPDay (BC only); exclusive of PP-CON-A/B",
     };
   }
   if (ppInside) {
@@ -398,13 +398,35 @@ function ppDayBadgeFromFlags(raw: CPRResult): {
       getWidthCategory(raw.ppCPR!.widthPct).key === "micro";
     const isTouch = raw.ppTouchCategory === true || ppIsMicro;
     return {
-      label: isTouch ? "PP-VOLATILE-R1S1" : "PP-VOLATILE-R1S1 ✗",
+      label: isTouch ? "PP-VOL-R1S1" : "PP-VOL-R1S1 ✗",
       color: isTouch ? "#a3e635" : "#ff637e",
       title: raw.ppTouchCategory === true
         ? "PPDay 15m inside R1/PH–S1/PL and (prev, pp) CPR is TOUCH category"
         : ppIsMicro
           ? "Micro PP-day CPR + PPDay 15m inside R1/PH–S1/PL (shown lime without ✗)"
           : "PPDay 15m inside R1/PH–S1/PL but (prev, pp) CPR is not TOUCH",
+    };
+  }
+  if (raw.PD15MPPVolAPass === true && !ppA && !ppB && !ppMomA && !ppMomB && !ppInside) {
+    const ppIsMicro =
+      Number.isFinite(raw.ppCPR?.widthPct) &&
+      getWidthCategory(raw.ppCPR!.widthPct).key === "micro";
+    const isTouch = raw.ppTouchCategory === true || ppIsMicro;
+    return {
+      label: isTouch ? "PP-VOL-A" : "PP-VOL-A ✗",
+      color: isTouch ? "#a3e635" : "#ff637e",
+      title: "PPDay 15m stays above floor min(S1, PL) with no ceiling check",
+    };
+  }
+  if (raw.PD15MPPVolBPass === true && !ppA && !ppB && !ppMomA && !ppMomB && !ppInside && raw.PD15MPPVolAPass !== true) {
+    const ppIsMicro =
+      Number.isFinite(raw.ppCPR?.widthPct) &&
+      getWidthCategory(raw.ppCPR!.widthPct).key === "micro";
+    const isTouch = raw.ppTouchCategory === true || ppIsMicro;
+    return {
+      label: isTouch ? "PP-VOL-B" : "PP-VOL-B ✗",
+      color: isTouch ? "#a3e635" : "#ff637e",
+      title: "PPDay 15m stays below ceiling max(R1, PH) with no floor check",
     };
   }
   // No exclusive PP bucket: show nothing (no residual "PP-VOLATILE ✗").
@@ -459,8 +481,8 @@ function renderCandleCheckBadges(raw: CPRResult) {
   const label =
     bucket === "inside-r1s1"
       ? isTouchVolatile
-        ? "P-VOLATILE-R1S1"
-        : "P-VOLATILE-R1S1 ✗"
+        ? "P-VOL-R1S1"
+        : "P-VOL-R1S1 ✗"
       : bucket === "vol-a"
         ? isTouchVolatile
           ? "P-VOL-A"
@@ -470,9 +492,9 @@ function renderCandleCheckBadges(raw: CPRResult) {
             ? "P-VOL-B"
             : "P-VOL-B ✗"
       : bucket === "consolidate-a"
-        ? "P-CONSOLIDATE-A"
+        ? "P-CON-A"
         : bucket === "consolidate-b"
-          ? "P-CONSOLIDATE-B"
+          ? "P-CON-B"
           : bucket === "momentum-a"
             ? "P-MOMENTUM-A"
             : "P-MOMENTUM-B";

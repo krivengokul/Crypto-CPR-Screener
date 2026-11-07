@@ -1129,6 +1129,10 @@ export interface ScreenerTableRowProps {
   isVolA?: boolean;
   /** True when this row is assigned to VOL-B (ceiling check only, no floor check). */
   isVolB?: boolean;
+  /** True when this row is assigned to PP-VOL-A (PPDay floor check only, no ceiling check). */
+  isPPVolA?: boolean;
+  /** True when this row is assigned to PP-VOL-B (PPDay ceiling check only, no floor check). */
+  isPPVolB?: boolean;
   /** Live RECLAIM-S state (failed breakdown this session) — only passed when it qualifies, else null/undefined. */
   reclaimS?: ReclaimSideState | null;
   /** Live RECLAIM-R state (failed breakout this session) — only passed when it qualifies, else null/undefined. */
@@ -1193,6 +1197,8 @@ function ScreenerTableRow({
   isInsideR1S1,
   isVolA,
   isVolB,
+  isPPVolA,
+  isPPVolB,
   reclaimS,
   reclaimR,
   onRowFocus,
@@ -1528,7 +1534,7 @@ function ScreenerTableRow({
               className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
               style={{ color: "#03b07c" }}
             >
-              P-CONSOLIDATE-A
+              P-CON-A
             </div>
           )}
           {/* PP exclusive: B wins over A when both raw flags pass (same as P CON-B > CON-A). */}
@@ -1555,14 +1561,25 @@ function ScreenerTableRow({
               !showPPA &&
               !showPPMomA &&
               isPPVolatileR1S1 === true;
+            const hasHigherPP = showPPB || showPPA || showPPMomB || showPPMomA || showPPVol;
+            let showPPVolA = false;
+            let showPPVolB = false;
+            if (isPPVolA !== undefined || isPPVolB !== undefined) {
+              showPPVolA = !hasHigherPP && isPPVolA === true;
+              showPPVolB = !hasHigherPP && !showPPVolA && isPPVolB === true;
+            } else if (r.PD15MPPVolAPass === true && !hasHigherPP) {
+              showPPVolA = true;
+            } else if (r.PD15MPPVolBPass === true && !hasHigherPP && !showPPVolA) {
+              showPPVolB = true;
+            }
             if (showPPB) {
               return (
                 <div
                   className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
                   style={{ color: "#f472b6" }}
-                  title="CONSOLIDATE-B rules on the day-before-previous session (PPDay); exclusive over PP-CONSOLIDATE-A / PP-MOMENTUM-B"
+                  title="CON-B rules on the day-before-previous session (PPDay); exclusive over PP-CON-A / PP-MOMENTUM-B"
                 >
-                  PP-CONSOLIDATE-B
+                  PP-CON-B
                 </div>
               );
             }
@@ -1570,7 +1587,7 @@ function ScreenerTableRow({
               return (
                 <div
                   className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-violet-400"
-                  title="MOMENTUM-B rules on PPDay (TC only); exclusive of PP-CONSOLIDATE-B"
+                  title="MOMENTUM-B rules on PPDay (TC only); exclusive of PP-CON-B"
                 >
                   PP-MOMENTUM-B
                 </div>
@@ -1581,9 +1598,9 @@ function ScreenerTableRow({
                 <div
                   className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
                   style={{ color: "#2dd4bf" }}
-                  title="CONSOLIDATE-A rules on the day-before-previous session (PPDay); only when PP-B / PP-MOM-B did not take priority"
+                  title="CON-A rules on the day-before-previous session (PPDay); only when PP-B / PP-MOM-B did not take priority"
                 >
-                  PP-CONSOLIDATE-A
+                  PP-CON-A
                 </div>
               );
             }
@@ -1591,7 +1608,7 @@ function ScreenerTableRow({
               return (
                 <div
                   className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-cyan-400"
-                  title="MOMENTUM-A rules on PPDay (BC only); exclusive of PP-CONSOLIDATE-A"
+                  title="MOMENTUM-A rules on PPDay (BC only); exclusive of PP-CON-A"
                 >
                   PP-MOMENTUM-A
                 </div>
@@ -1615,7 +1632,49 @@ function ScreenerTableRow({
                         : "PPDay 15m inside R1/PH–S1/PL but (prev, pp) is not TOUCH"
                   }
                 >
-                  {isTouch ? "PP-VOLATILE-R1S1" : "PP-VOLATILE-R1S1 ✗"}
+                  {isTouch ? "PP-VOL-R1S1" : "PP-VOL-R1S1 ✗"}
+                </div>
+              );
+            }
+            if (showPPVolA) {
+              const ppIsMicro =
+                Number.isFinite(r.ppCPR?.widthPct) &&
+                getWidthCategory(r.ppCPR!.widthPct).key === "micro";
+              const isTouch = r.ppTouchCategory === true || ppIsMicro;
+              return (
+                <div
+                  className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
+                  style={{ color: isTouch ? "#a3e635" : "#ff637e" }}
+                  title={
+                    r.ppTouchCategory === true
+                      ? "PPDay 15m above S1/PL floor (no ceiling check) and (prev, pp) is TOUCH"
+                      : ppIsMicro
+                        ? "Micro PP-day CPR + PPDay 15m above S1/PL floor (shown lime without ✗)"
+                        : "PPDay 15m above S1/PL floor (no ceiling check)"
+                  }
+                >
+                  {isTouch ? "PP-VOL-A" : "PP-VOL-A ✗"}
+                </div>
+              );
+            }
+            if (showPPVolB) {
+              const ppIsMicro =
+                Number.isFinite(r.ppCPR?.widthPct) &&
+                getWidthCategory(r.ppCPR!.widthPct).key === "micro";
+              const isTouch = r.ppTouchCategory === true || ppIsMicro;
+              return (
+                <div
+                  className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap"
+                  style={{ color: isTouch ? "#a3e635" : "#ff637e" }}
+                  title={
+                    r.ppTouchCategory === true
+                      ? "PPDay 15m below R1/PH ceiling (no floor check) and (prev, pp) is TOUCH"
+                      : ppIsMicro
+                        ? "Micro PP-day CPR + PPDay 15m below R1/PH ceiling (shown lime without ✗)"
+                        : "PPDay 15m below R1/PH ceiling (no floor check)"
+                  }
+                >
+                  {isTouch ? "PP-VOL-B" : "PP-VOL-B ✗"}
                 </div>
               );
             }
@@ -1628,7 +1687,7 @@ function ScreenerTableRow({
               className="mt-1 font-mono text-xs font-bold uppercase tracking-widest whitespace-nowrap text-[#ff6bb5]"
               style={{ color: "#ff6bb5" }}
             >
-              P-CONSOLIDATE-B
+              P-CON-B
             </div>
           )}
           {showMomentumA && (
@@ -1663,7 +1722,7 @@ function ScreenerTableRow({
                     : "Previous-session 15m was inside R1/PH–S1/PL band but not CON-A/CON-B (volatile)"
               }
             >
-              {limeVol ? "P-VOLATILE-R1S1" : "P-VOLATILE-R1S1 ✗"}
+              {limeVol ? "P-VOL-R1S1" : "P-VOL-R1S1 ✗"}
             </div>
             );
           })()}

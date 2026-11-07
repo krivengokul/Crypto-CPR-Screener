@@ -2052,7 +2052,7 @@ test("parseComposedViewKey and matchesCandleCheck handle PP candle codes (single
 test("PP-MOM-A / PP-MOM-B: dropdown, exclusivity vs PP-CON, combined codes and row priority", () => {
   assert.deepEqual(
     PP_CANDLE_CHECK_OPTIONS.map((o) => o.value),
-    ["", "PPCA", "PPMA", "PPCB", "PPMB", "PPVR"],
+    ["", "PPCA", "PPMA", "PPCB", "PPMB", "PPVR", "PPVA", "PPVB"],
   );
   const row = (f: Record<string, boolean>) => f as unknown as Parameters<typeof matchesCandleCheck>[0];
 
@@ -2086,6 +2086,16 @@ test("PP-MOM-A / PP-MOM-B: dropdown, exclusivity vs PP-CON, combined codes and r
   assert.deepEqual(splitCandleCheck("PPVR+CB"), { pp: "PPVR", p: "CB" });
   assert.equal(candleCheckFromRow(row({ PD15MPPInsideR1S1Pass: true })), "PPVR");
   assert.equal(candleCheckFromRow(row({ PD15MPPInsideR1S1Pass: true, PD15MPPMomentumAPass: true })), "PPMA");
+
+  // PPVA / PPVB: PP floor/ceiling check, exclusive of PP-CON, PP-MOM, PP-VR.
+  assert.equal(matchesCandleCheck(row({ PD15MPPVolAPass: true }), "PPVA"), true);
+  assert.equal(matchesCandleCheck(row({ PD15MPPVolAPass: true, PD15MPPConsolidateAPass: true }), "PPVA"), false);
+  assert.equal(matchesCandleCheck(row({ PD15MPPVolBPass: true }), "PPVB"), true);
+  assert.equal(matchesCandleCheck(row({ PD15MPPVolBPass: true, PD15MPPVolAPass: true }), "PPVB"), false);
+  assert.equal(candleCheckFromRow(row({ PD15MPPVolAPass: true })), "PPVA");
+  assert.equal(candleCheckFromRow(row({ PD15MPPVolBPass: true })), "PPVB");
+  assert.equal(candleCheckFromRow(row({ PD15MPPVolBPass: true, PD15MPPVolAPass: true })), "PPVA");
+  assert.equal(candleCheckFromRow(row({ PD15MPPVolAPass: true, PD15MPPInsideR1S1Pass: true })), "PPVR");
 });
 
 test("passesInsideR1S1Filter: wick through the band sets a reference, fails only when fully beyond it", () => {

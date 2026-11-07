@@ -261,7 +261,7 @@ function exclusivePDayBadge(r: CPRResult | undefined | null): {
   const exclusiveConA = conA && (!conB || r.PD15MConsolidateExclusive !== "B");
   if (exclusiveConB) {
     return {
-      text: "P-CONSOLIDATE-B",
+      text: "P-CON-B",
       className: "font-mono text-xs font-bold uppercase tracking-widest text-[#ff6bb5]",
       style: { color: "#ff6bb5" },
     };
@@ -274,7 +274,7 @@ function exclusivePDayBadge(r: CPRResult | undefined | null): {
   }
   if (exclusiveConA) {
     return {
-      text: "P-CONSOLIDATE-A",
+      text: "P-CON-A",
       className: "font-mono text-xs font-bold uppercase tracking-widest",
       style: { color: "#03b07c" },
     };
@@ -288,13 +288,13 @@ function exclusivePDayBadge(r: CPRResult | undefined | null): {
   if (inside && !conA && !conB) {
     if (r.touchCategory) {
       return {
-        text: "P-VOLATILE-R1S1",
+        text: "P-VOL-R1S1",
         className: "font-mono text-xs font-bold uppercase tracking-widest",
         style: { color: "#a3e635" },
       };
     }
     return {
-      text: "P-VOLATILE-R1S1 ✗",
+      text: "P-VOL-R1S1 ✗",
       className: "font-mono text-xs font-bold uppercase tracking-widest",
       style: { color: "#ff637e" },
     };
@@ -349,7 +349,7 @@ function exclusivePPDayBadge(r: CPRResult | undefined | null): {
   const exclusiveConA = conA && (!conB || r.PD15MPPConsolidateExclusive !== "B");
   if (exclusiveConB) {
     return {
-      text: "PP-CONSOLIDATE-B",
+      text: "PP-CON-B",
       className: "font-mono text-xs font-bold uppercase tracking-widest",
       style: { color: "#f472b6" },
     };
@@ -362,9 +362,9 @@ function exclusivePPDayBadge(r: CPRResult | undefined | null): {
   }
   if (exclusiveConA) {
     return {
-      text: "PP-CONSOLIDATE-A",
+      text: "PP-CON-A",
       className: "font-mono text-xs font-bold uppercase tracking-widest",
-      style: { color: "#f472b6" },
+      style: { color: "#2dd4bf" },
     };
   }
   if (momA && !conA && !conB) {
@@ -380,13 +380,47 @@ function exclusivePPDayBadge(r: CPRResult | undefined | null): {
       getWidthCategory(r.ppCPR!.widthPct).key === "micro";
     if (r.ppTouchCategory || ppIsMicro) {
       return {
-        text: "PP-VOLATILE-R1S1",
+        text: "PP-VOL-R1S1",
         className: "font-mono text-xs font-bold uppercase tracking-widest",
         style: { color: "#a3e635" },
       };
     }
     return {
-      text: "PP-VOLATILE-R1S1 ✗",
+      text: "PP-VOL-R1S1 ✗",
+      className: "font-mono text-xs font-bold uppercase tracking-widest",
+      style: { color: "#ff637e" },
+    };
+  }
+  if (r.PD15MPPVolAPass === true && !conA && !conB && !momA && !momB && !inside) {
+    const ppIsMicro =
+      Number.isFinite(r.ppCPR?.widthPct) &&
+      getWidthCategory(r.ppCPR!.widthPct).key === "micro";
+    if (r.ppTouchCategory || ppIsMicro) {
+      return {
+        text: "PP-VOL-A",
+        className: "font-mono text-xs font-bold uppercase tracking-widest",
+        style: { color: "#a3e635" },
+      };
+    }
+    return {
+      text: "PP-VOL-A ✗",
+      className: "font-mono text-xs font-bold uppercase tracking-widest",
+      style: { color: "#ff637e" },
+    };
+  }
+  if (r.PD15MPPVolBPass === true && !conA && !conB && !momA && !momB && !inside && r.PD15MPPVolAPass !== true) {
+    const ppIsMicro =
+      Number.isFinite(r.ppCPR?.widthPct) &&
+      getWidthCategory(r.ppCPR!.widthPct).key === "micro";
+    if (r.ppTouchCategory || ppIsMicro) {
+      return {
+        text: "PP-VOL-B",
+        className: "font-mono text-xs font-bold uppercase tracking-widest",
+        style: { color: "#a3e635" },
+      };
+    }
+    return {
+      text: "PP-VOL-B ✗",
       className: "font-mono text-xs font-bold uppercase tracking-widest",
       style: { color: "#ff637e" },
     };

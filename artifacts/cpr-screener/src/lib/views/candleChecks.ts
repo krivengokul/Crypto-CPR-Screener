@@ -1,43 +1,45 @@
 import type { CPRResult } from "../cpr.ts";
 
-export const ALL_CANDLE_CHECK_CODES = ["CA", "MA", "VR", "CB", "MB", "PPCA", "PPCB", "PPMA", "PPMB", "PPVR", "VA", "VB"] as const;
+export const ALL_CANDLE_CHECK_CODES = ["CA", "MA", "VR", "CB", "MB", "PPCA", "PPCB", "PPMA", "PPMB", "PPVR", "PPVA", "PPVB", "VA", "VB"] as const;
 export type CandleCheckCode = (typeof ALL_CANDLE_CHECK_CODES)[number];
 export const ALL_CANDLE_CHECKS: readonly string[] = ALL_CANDLE_CHECK_CODES;
 
 /** P-day exclusive candle options (Create/Edit/Copy View P dropdown). */
 export const CANDLE_CHECK_OPTIONS: Array<{ value: CandleCheckCode | ""; label: string }> = [
   { value: "", label: "None" },
-  { value: "CA", label: "P-CONSOLIDATE-A" },
+  { value: "CA", label: "P-CON-A" },
   { value: "MA", label: "P-MOMENTUM-A" },
-  { value: "VR", label: "P-VOLATILE-R1S1" },
+  { value: "VR", label: "P-VOL-R1S1" },
   { value: "VA", label: "P-VOL-A" },
   { value: "VB", label: "P-VOL-B" },
-  { value: "CB", label: "P-CONSOLIDATE-B" },
+  { value: "CB", label: "P-CON-B" },
   { value: "MB", label: "P-MOMENTUM-B" },
 ];
 
 /** PP-day independent options (Create/Edit/Copy View PP dropdown). */
-export const PP_CANDLE_CHECK_OPTIONS: Array<{ value: "PPCA" | "PPCB" | "PPMA" | "PPMB" | "PPVR" | ""; label: string }> = [
+export const PP_CANDLE_CHECK_OPTIONS: Array<{ value: "PPCA" | "PPCB" | "PPMA" | "PPMB" | "PPVR" | "PPVA" | "PPVB" | ""; label: string }> = [
   { value: "", label: "None" },
   { value: "PPCA", label: "PP-CON-A" },
   { value: "PPMA", label: "PP-MOM-A" },
   { value: "PPCB", label: "PP-CON-B" },
   { value: "PPMB", label: "PP-MOM-B" },
-  { value: "PPVR", label: "PP-VOLATILE-R1S1" },
+  { value: "PPVR", label: "PP-VOL-R1S1" },
+  { value: "PPVA", label: "PP-VOL-A" },
+  { value: "PPVB", label: "PP-VOL-B" },
 ];
 
 /** Split stored candleCheck ("PPCA+CA" or single code) into PP + P parts. */
 export function splitCandleCheck(code: string | undefined | null): {
-  pp: "" | "PPCA" | "PPCB" | "PPMA" | "PPMB" | "PPVR";
+  pp: "" | "PPCA" | "PPCB" | "PPMA" | "PPMB" | "PPVR" | "PPVA" | "PPVB";
   p: string;
 } {
   const raw = (code ?? "").trim();
   if (!raw) return { pp: "", p: "" };
   const parts = raw.split("+").map((s) => s.trim()).filter(Boolean);
-  let pp: "" | "PPCA" | "PPCB" | "PPMA" | "PPMB" | "PPVR" = "";
+  let pp: "" | "PPCA" | "PPCB" | "PPMA" | "PPMB" | "PPVR" | "PPVA" | "PPVB" = "";
   const pParts: string[] = [];
   for (const part of parts) {
-    if (part === "PPCA" || part === "PPCB" || part === "PPMA" || part === "PPMB" || part === "PPVR") pp = part;
+    if (part === "PPCA" || part === "PPCB" || part === "PPMA" || part === "PPMB" || part === "PPVR" || part === "PPVA" || part === "PPVB") pp = part;
     else pParts.push(part);
   }
   return { pp, p: pParts[0] ?? "" };
@@ -71,6 +73,8 @@ export function matchesCandleCheck(r: CPRResult, code: string): boolean {
   const ppMomA = r.PD15MPPMomentumAPass === true;
   const ppMomB = r.PD15MPPMomentumBPass === true;
   const ppInside = r.PD15MPPInsideR1S1Pass === true;
+  const ppVolA = r.PD15MPPVolAPass === true;
+  const ppVolB = r.PD15MPPVolBPass === true;
   switch (raw) {
     case "CB":
       if (!conB) return false;
@@ -109,6 +113,10 @@ export function matchesCandleCheck(r: CPRResult, code: string): boolean {
     case "PPVR":
       // Mirror VR: inside R1/PH–S1/PL on PPDay, exclusive of PP-CON-A/B.
       return ppInside && !ppA && !ppB;
+    case "PPVA":
+      return ppVolA && !ppA && !ppB && !ppMomA && !ppMomB && !ppInside;
+    case "PPVB":
+      return ppVolB && !ppA && !ppB && !ppMomA && !ppMomB && !ppInside && !ppVolA;
     default:
       return true;
   }
@@ -169,5 +177,7 @@ export function candleCheckFromRow(r: CPRResult): string {
   else if (ppA) pp = "PPCA";
   else if (r.PD15MPPMomentumAPass === true) pp = "PPMA";
   else if (r.PD15MPPInsideR1S1Pass === true) pp = "PPVR";
+  else if (r.PD15MPPVolAPass === true) pp = "PPVA";
+  else if (r.PD15MPPVolBPass === true) pp = "PPVB";
   return joinCandleCheck(pp, p);
 }

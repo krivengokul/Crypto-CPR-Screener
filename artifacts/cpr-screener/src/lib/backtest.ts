@@ -1866,6 +1866,8 @@ async function populateAllPFilterFlags(
     ppMomentumA,
     ppMomentumB,
     ppInsideR1S1,
+    ppVolA,
+    ppVolB,
   ] = await Promise.all([
     findPreviousConsolidateAPassWithZone(
       {
@@ -1972,6 +1974,30 @@ async function populateAllPFilterFlags(
           ppNow,
         )
       : Promise.resolve(false),
+    // PP-VOL-A: S1/PL floor check only on PPDay (no ceiling).
+    ppHasLevels
+      ? findVolAPass(
+          {
+            symbol,
+            source,
+            bc: getPrevious15MBFloor(pp),
+            floor: getPrevious15MBFloor(pp),
+          },
+          ppNow,
+        )
+      : Promise.resolve(false),
+    // PP-VOL-B: R1/PH ceiling check only on PPDay (no floor).
+    ppHasLevels
+      ? findVolBPass(
+          {
+            symbol,
+            source,
+            bc: getPrevious15MACeiling(pp),
+            ceiling: getPrevious15MACeiling(pp),
+          },
+          ppNow,
+        )
+      : Promise.resolve(false),
   ]);
 
   result.PD15MConsolidateAPass = consolidateA === true;
@@ -1986,6 +2012,8 @@ async function populateAllPFilterFlags(
   result.PD15MPPMomentumAPass = ppMomentumA === true;
   result.PD15MPPMomentumBPass = ppMomentumB === true;
   result.PD15MPPInsideR1S1Pass = ppInsideR1S1 === true;
+  result.PD15MPPVolAPass = ppVolA === true;
+  result.PD15MPPVolBPass = ppVolB === true;
 
   // Zone-majority exclusive side (zone counts returned by the CON-A passes above).
   {
