@@ -1775,24 +1775,24 @@ function ScreenerTableRow({
           ) => (
             <div className="mt-0.5">
               <span
-                className="inline-flex items-stretch overflow-hidden rounded-md border text-[10px] font-bold leading-none whitespace-nowrap shadow-sm"
+                className="inline-flex shrink-0 items-stretch overflow-hidden rounded border font-mono text-[9px] font-semibold leading-tight whitespace-nowrap"
                 style={{ borderColor: accent }}
                 title={title}
               >
                 <span
-                  className="px-1.5 py-[3px] font-extrabold tracking-wider text-slate-950"
+                  className="px-1 py-0 font-bold tracking-wide text-slate-950"
                   style={{ backgroundColor: accent }}
                 >
                   {tag}
                 </span>
-                <span className="px-1.5 py-[3px] bg-slate-900 text-white">{d.relVol.toFixed(1)}x</span>
+                <span className="px-1 py-0 bg-slate-900 text-white">{d.relVol.toFixed(1)}x</span>
                 <span
-                  className="px-1.5 py-[3px] bg-slate-900 border-l border-white/10"
+                  className="px-1 py-0 bg-slate-900 border-l border-white/10"
                   style={{ color: accent }}
                 >
                   {d.levelsCleared.length > 0 ? d.levelsCleared.join("·") : fallbackLevel}
                 </span>
-                <span className="px-1.5 py-[3px] bg-slate-800 text-slate-300 font-medium border-l border-white/10">
+                <span className="px-1 py-0 bg-slate-800 text-slate-300 font-medium border-l border-white/10">
                   {(d.barsAgo ?? 0) === 0 ? "now" : `${(d.barsAgo ?? 0) * 15}m`}
                 </span>
               </span>
