@@ -1400,7 +1400,7 @@ type PrevDayDiagnosis = {
   volA: PrevDayCheckBlock;
   volB: PrevDayCheckBlock;
   /** Body-midpoint counts in CON-A vs CON-B zones (exclusive label when both pass). */
-  zoneCounts: { zoneA: number; zoneB: number };
+  zoneCounts: { zoneA: number; zoneB: number; above?: number; below?: number };
   /** PP-day (day-before-previous) CON-A/B — exclusive by zone majority when both pass. */
   ppSessionLabel: string | null;
   ppLevels: {
@@ -1518,6 +1518,7 @@ function PreviousDaySection() {
         floor,
         prevStart,
         now,
+        cpr.prevCPR.pivot,
       );
       const tcTouch = tcMatches[0] ?? null;
       const bcTouch = bcMatches[0] ?? null;
@@ -1955,7 +1956,13 @@ function PreviousDaySection() {
               conB,
               result.zoneCounts?.zoneA ?? 0,
               result.zoneCounts?.zoneB ?? 0,
+              result.zoneCounts?.above,
+              result.zoneCounts?.below,
             );
+            const pivotSplit =
+              typeof result.zoneCounts?.above === "number" && typeof result.zoneCounts?.below === "number"
+                ? `${result.zoneCounts.below} candles below pivot vs ${result.zoneCounts.above} above`
+                : null;
             const displayed =
               conSide === "B"
                 ? "P-CON-B"
@@ -1979,10 +1986,10 @@ function PreviousDaySection() {
                 shown: displayed === "P-CON-B",
                 reason: displayed === "P-CON-B"
                   ? conA
-                    ? `Both CON-A and CON-B passed; zone B midpoints (${result.zoneCounts?.zoneB ?? 0}) > zone A (${result.zoneCounts?.zoneA ?? 0}) → exclusive CON-B.`
+                    ? `Both CON-A and CON-B passed; ${pivotSplit ?? `zone B midpoints (${result.zoneCounts?.zoneB ?? 0}) > zone A (${result.zoneCounts?.zoneA ?? 0})`} → exclusive CON-B.`
                     : "Raw CON-B pass and CON-A failed → exclusive CON-B."
                   : conB && conA
-                    ? `Both passed; zone A midpoints (${result.zoneCounts?.zoneA ?? 0}) >= zone B (${result.zoneCounts?.zoneB ?? 0}) → exclusive CON-A (not CON-B).`
+                    ? `Both passed; ${pivotSplit ?? `zone A midpoints (${result.zoneCounts?.zoneA ?? 0}) >= zone B (${result.zoneCounts?.zoneB ?? 0})`} → exclusive CON-A (not CON-B).`
                     : conB
                       ? "Raw CON-B passed but a higher exclusive rule chose another label."
                       : "Raw CON-B failed — not a candidate for the exclusive badge.",
@@ -2005,10 +2012,10 @@ function PreviousDaySection() {
                   ? "Raw CON-A failed — not a candidate."
                   : displayed === "P-CON-A"
                     ? conB
-                      ? `Both CON-A and CON-B passed; zone A midpoints (${result.zoneCounts?.zoneA ?? 0}) >= zone B (${result.zoneCounts?.zoneB ?? 0}) → exclusive CON-A.`
+                      ? `Both CON-A and CON-B passed; ${pivotSplit ?? `zone A midpoints (${result.zoneCounts?.zoneA ?? 0}) >= zone B (${result.zoneCounts?.zoneB ?? 0})`} → exclusive CON-A.`
                       : "CON-A passed → exclusive label is P-CON-A."
                     : conB
-                      ? `Both passed; more midpoints in CON-B zone (${result.zoneCounts?.zoneB ?? 0}) than CON-A (${result.zoneCounts?.zoneA ?? 0}) → exclusive CON-B.`
+                      ? `Both passed; ${pivotSplit ?? `more midpoints in CON-B zone (${result.zoneCounts?.zoneB ?? 0}) than CON-A (${result.zoneCounts?.zoneA ?? 0})`} → exclusive CON-B.`
                       : momB
                         ? "Raw CON-A passed, but MOM-B also passed. Precedence: MOM-B > CON-A when neither CON exclusive wins."
                         : "CON-A passed but another exclusive label was selected.",

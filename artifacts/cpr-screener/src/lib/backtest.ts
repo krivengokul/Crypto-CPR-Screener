@@ -1850,8 +1850,8 @@ async function populateAllPFilterFlags(
     Number.isFinite(pp.prevLow);
 
   // Zone midpoint counts come back with the CON-A passes (in memory, per call).
-  let pZone: { zoneA: number; zoneB: number } | null = null;
-  let ppZone: { zoneA: number; zoneB: number } | null = null;
+  let pZone: { zoneA: number; zoneB: number; above?: number; below?: number } | null = null;
+  let ppZone: { zoneA: number; zoneB: number; above?: number; below?: number } | null = null;
 
   const [
     consolidateA,
@@ -1878,6 +1878,7 @@ async function populateAllPFilterFlags(
         r2: prevCPR.r2,
         floor,
         tc: getConsolidateBTc(prevCPR, result.ppCPR),
+        pivot: prevCPR.pivot,
       },
       sessionStart,
     ).then((res) => {
@@ -1928,6 +1929,7 @@ async function populateAllPFilterFlags(
             r2: pp.r2,
             floor: getPrevious15MBFloor(pp),
             tc: getConsolidateBTc(pp, result.pppCPR ?? null),
+            pivot: pp.pivot,
           },
           ppNow,
         ).then((res) => {
@@ -2017,19 +2019,23 @@ async function populateAllPFilterFlags(
 
   // Zone-majority exclusive side (zone counts returned by the CON-A passes above).
   {
-    const pz = pZone as { zoneA: number; zoneB: number } | null;
-    const ppz = ppZone as { zoneA: number; zoneB: number } | null;
+    const pz = pZone as { zoneA: number; zoneB: number; above?: number; below?: number } | null;
+    const ppz = ppZone as { zoneA: number; zoneB: number; above?: number; below?: number } | null;
     result.PD15MConsolidateExclusive = pickExclusiveConsolidateSide(
       consolidateA === true,
       consolidateB === true,
       pz?.zoneA ?? 0,
       pz?.zoneB ?? 0,
+      pz?.above,
+      pz?.below,
     );
     result.PD15MPPConsolidateExclusive = pickExclusiveConsolidateSide(
       ppConsolidateA === true,
       ppConsolidateB === true,
       ppz?.zoneA ?? 0,
       ppz?.zoneB ?? 0,
+      ppz?.above,
+      ppz?.below,
     );
   }
 

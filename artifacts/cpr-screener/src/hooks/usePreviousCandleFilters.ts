@@ -173,7 +173,7 @@ export function usePreviousCandleFilters(opts: {
   buildCandidates: () => {
     const candidates = new Map<string, {
       symbol: string; source: "binance" | "delta"; bc: number; ceiling: number; r2: number;
-      floor: number; tc: number;
+      floor: number; tc: number; pivot: number;
     }>();
     if (status === "done") {
       for (const row of allResults) {
@@ -184,6 +184,7 @@ export function usePreviousCandleFilters(opts: {
           r2: row.prevCPR.r2,
           floor: getPrevious15MBFloor(row.prevCPR),
           tc: getConsolidateBTc(row.prevCPR, row.ppCPR),
+          pivot: row.prevCPR.pivot,
         });
       }
     }
@@ -196,6 +197,7 @@ export function usePreviousCandleFilters(opts: {
           r2: row.prevCPR.r2,
           floor: getPrevious15MBFloor(row.prevCPR),
           tc: getConsolidateBTc(row.prevCPR, row.ppCPR),
+          pivot: row.prevCPR.pivot,
         });
       }
     }
@@ -218,7 +220,7 @@ export function usePreviousCandleFilters(opts: {
     buildCandidates: () => {
       const candidates = new Map<string, {
         symbol: string; source: "binance" | "delta"; bc: number; ceiling: number; r2: number;
-      floor: number; tc: number;
+      floor: number; tc: number; pivot: number;
       }>();
       const add = (row: CPRResult, source: "binance" | "delta") => {
         const pp = row.ppCPR;
@@ -233,6 +235,7 @@ export function usePreviousCandleFilters(opts: {
           r2: pp.r2,
           floor: getPrevious15MBFloor(pp),
           tc: getConsolidateBTc(pp, row.pppCPR ?? null),
+          pivot: pp.pivot,
         });
       };
       if (status === "done") {
@@ -747,12 +750,16 @@ export function usePreviousCandleFilters(opts: {
             b,
             z?.zoneA ?? 0,
             z?.zoneB ?? 0,
+            z?.above,
+            z?.below,
           );
           const ppExclusive = pickExclusiveConsolidateSide(
             ppa,
             ppb,
             zp?.zoneA ?? 0,
             zp?.zoneB ?? 0,
+            zp?.above,
+            zp?.below,
           );
           if (
             row.PD15MConsolidateAPass === a &&

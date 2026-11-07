@@ -2248,3 +2248,34 @@ test("sessionR4OrS4Hit: rejects garbage session extremes (0 low, inverted range)
   // price at/below S4 passes even with no session extremes
   assert.equal(sessionR4OrS4Hit({ currentPrice: 79, todayCPR: cpr }), "S4");
 });
+
+test("pickExclusiveConsolidateSide: both pass → candles below pivot pick CON-B, above pick CON-A", () => {
+  // Zone counts tied (all candles inside the CPR count in both zones): old rule always said A.
+  assert.equal(pickExclusiveConsolidateSide(true, true, 96, 96), "A");
+  assert.equal(pickExclusiveConsolidateSide(true, true, 96, 96, 30, 66), "B"); // more below pivot
+  assert.equal(pickExclusiveConsolidateSide(true, true, 96, 96, 66, 30), "A"); // more above pivot
+  // Equal above/below → fall back to zone counts, then A.
+  assert.equal(pickExclusiveConsolidateSide(true, true, 40, 60, 48, 48), "B");
+  assert.equal(pickExclusiveConsolidateSide(true, true, 60, 60, 48, 48), "A");
+  // Pivot counts only matter when both pass.
+  assert.equal(pickExclusiveConsolidateSide(true, false, 0, 0, 0, 96), "A");
+  assert.equal(pickExclusiveConsolidateSide(false, true, 0, 0, 96, 0), "B");
+});
+
+test("countConsolidateZoneCandles: counts body midpoints above / below the pivot when supplied", () => {
+  const start = 1_000_000;
+  const step = 15 * 60 * 1000;
+  const mk = (i: number, o: number, c: number) => ({
+    openTime: start + i * step, open: o, high: Math.max(o, c), low: Math.min(o, c), close: c, volume: 1,
+  });
+  // CPR 98–102 around pivot 100. Mids: 101 (above), 99 (below), 100 (on pivot), 99.5 (below).
+  const candles = [mk(0, 101, 101), mk(1, 99, 99), mk(2, 100, 100), mk(3, 99, 100)];
+  const now = start + 10 * step;
+  const z = countConsolidateZoneCandles(candles as never, 98, 110, 102, 90, start, now, 100);
+  assert.equal(z.above, 1);
+  assert.equal(z.below, 2);
+  assert.equal(z.zoneA, 4);
+  assert.equal(z.zoneB, 4);
+  // No pivot → no above/below keys (unchanged shape).
+  assert.deepEqual(countConsolidateZoneCandles(candles as never, 98, 110, 102, 90, start, now), { zoneA: 4, zoneB: 4 });
+});

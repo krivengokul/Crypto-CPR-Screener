@@ -50,6 +50,8 @@ export interface UpexCandidate {
   s2?: number;
   /** TC for zone midpoint counts (CON-A candidates set this alongside BC/ceiling/floor). */
   tc?: number;
+  /** Pivot of the session's CPR — body midpoints above/below it pick CON-A vs CON-B when both pass. */
+  pivot?: number;
 }
 
 /**
@@ -93,7 +95,13 @@ export type CprRelation = "inside" | "overlap-above" | "overlap-below" | "none";
  * A candle can count in both when zones overlap (inside CPR).
  */
 
-export type ConsolidateZoneScore = { zoneA: number; zoneB: number };
+export type ConsolidateZoneScore = {
+  zoneA: number;
+  zoneB: number;
+  /** Completed 15m candles with body midpoint above / below the pivot (set when a pivot was supplied). */
+  above?: number;
+  below?: number;
+};
 
 function loadZoneScoreMap(cacheKey: string, sessionStart: number): Map<string, ConsolidateZoneScore> {
   try {
@@ -121,9 +129,13 @@ function loadZoneScoreMap(cacheKey: string, sessionStart: number): Map<string, C
         typeof (value as ConsolidateZoneScore).zoneA === "number" &&
         typeof (value as ConsolidateZoneScore).zoneB === "number"
       ) {
+        const v = value as ConsolidateZoneScore;
         out.set(key, {
-          zoneA: (value as ConsolidateZoneScore).zoneA,
-          zoneB: (value as ConsolidateZoneScore).zoneB,
+          zoneA: v.zoneA,
+          zoneB: v.zoneB,
+          ...(typeof v.above === "number" && typeof v.below === "number"
+            ? { above: v.above, below: v.below }
+            : {}),
         });
       }
     }
@@ -177,9 +189,13 @@ export function countConsolidateZoneCandles(
   floor: number,
   startTime: number,
   now: number,
-): { zoneA: number; zoneB: number } {
+  pivot?: number,
+): ConsolidateZoneScore {
   let zoneA = 0;
   let zoneB = 0;
+  let above = 0;
+  let below = 0;
+  const hasPivot = pivot !== undefined && Number.isFinite(pivot);
   if (
     !Number.isFinite(bc) ||
     !Number.isFinite(ceiling) ||
@@ -202,21 +218,36 @@ export function countConsolidateZoneCandles(
     const mid = (c.open + c.close) / 2;
     if (mid >= bc && mid <= ceiling) zoneA += 1;
     if (mid >= floor && mid <= tc) zoneB += 1;
+    if (hasPivot) {
+      if (mid > (pivot as number)) above += 1;
+      else if (mid < (pivot as number)) below += 1;
+    }
   }
-  return { zoneA, zoneB };
+  return hasPivot ? { zoneA, zoneB, above, below } : { zoneA, zoneB };
 }
 
 /**
  * Exclusive CON side when one or both session filters pass.
- * Both pass → more body midpoints in that zone; tie → CON-A.
+ * Both pass → compare completed 15m candles (body midpoint) above vs below the
+ * pivot: more below → CON-B, more above → CON-A. Equal or unavailable → fall
+ * back to zone midpoint counts (more in the CON-B zone → B), then CON-A.
  */
 export function pickExclusiveConsolidateSide(
   conAPass: boolean,
   conBPass: boolean,
   zoneA = 0,
   zoneB = 0,
+  above?: number,
+  below?: number,
 ): "A" | "B" | null {
   if (conAPass && conBPass) {
+    if (
+      typeof above === "number" &&
+      typeof below === "number" &&
+      above !== below
+    ) {
+      return below > above ? "B" : "A";
+    }
     if (zoneB > zoneA) return "B";
     return "A";
   }
@@ -1362,6 +1393,7 @@ async function findSymbolsForSession(
               zoneFloor,
               startTime,
               endTime,
+              candidate.pivot,
             );
           }
         }
@@ -1429,7 +1461,8 @@ export function previousConsolidateACandidateCacheKey(
   sessionStart: number,
   candidate: UpexCandidate,
 ): string {
-  return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.ceiling}:${candidate.r2}`;
+  // pivot included so results cached before the pivot split re-scan once and gain above/below counts.
+  return `${sessionStart}|${candidate.source}:${candidate.symbol}:${candidate.bc}:${candidate.ceiling}:${candidate.r2}:${candidate.pivot ?? ""}`;
 }
 
 export function loadPreviousConsolidateAResults(
@@ -2960,7 +2993,7 @@ export function findPreviousConsolidateAPassWithZone(
   const startTime = previousUpexSessionStartUtcMs(now);
   const symbolKey = `${candidate.source}:${candidate.symbol}`;
   const key =
-    `${startTime}:${symbolKey}:${candidate.bc}:${candidate.ceiling}:${candidate.r2}:${candidate.floor}:${candidate.tc}`;
+    `${startTime}:${symbolKey}:${candidate.bc}:${candidate.ceiling}:${candidate.r2}:${candidate.floor}:${candidate.tc}:${candidate.pivot ?? ""}`;
   const cached = previousConsolidateAZonePassCache.get(key);
   if (cached) return cached;
 
