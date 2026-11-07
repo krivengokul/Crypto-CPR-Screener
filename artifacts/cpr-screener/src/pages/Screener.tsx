@@ -6,6 +6,7 @@ import { sessionReachedTarget, sessionReachedR4OrS4, sessionR4OrS4Hit } from "@/
 import {
   TrendingUp,
   RefreshCw,
+  Download,
   Search,
   ExternalLink,
   Bell,
@@ -1768,10 +1769,71 @@ export default function Screener({
         />
         )}
 
-        {/* Controls — Scan Binance only (ScreenerToolbar) */}
+        {/* Controls — Scan Binance + Journal-style Refresh / Export CSV */}
           <ScreenerToolbar
             status={status}
             onScanBinance={() => { void doScan(); }}
+            onRefresh={() => { void doScan(); }}
+            exportDisabled={displayed.length === 0}
+            onExportCSV={() => {
+              if (displayed.length === 0) return;
+              const esc = (v: unknown) => {
+                const s = v == null ? "" : String(v);
+                return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+              };
+              const headers = [
+                "Symbol",
+                "Source",
+                "Price",
+                "Change24h%",
+                "OpenPrice",
+                "QuoteVolume",
+                "CompressionRatio",
+                "CPR_Rising",
+                "CPR_Falling",
+                "InsideCPR",
+                "OutCPR",
+                "OverlapHigher",
+                "OverlapLower",
+                "TouchCategory",
+                "LevelsAbove",
+                "LevelsBelow",
+                "AssetClass",
+                "TodayHigh",
+                "TodayLow",
+              ];
+              const rows = displayed.map((r) => [
+                r.symbol,
+                r.source,
+                r.currentPrice,
+                r.change24h,
+                r.openPrice,
+                r.quoteVolume,
+                r.compressionRatio,
+                r.cprRising ? "1" : "0",
+                r.cprFalling ? "1" : "0",
+                r.InsideCPR || (r as { insideCPR?: boolean }).insideCPR ? "1" : "0",
+                r.outCPR ? "1" : "0",
+                r.overlapHigher ? "1" : "0",
+                r.overlapLower ? "1" : "0",
+                r.touchCategory ? "1" : "0",
+                r.LevelsAbove ? "1" : "0",
+                r.LevelsBelow ? "1" : "0",
+                r.assetClass ?? "",
+                r.todayHigh ?? "",
+                r.todayLow ?? "",
+              ].map(esc));
+              const csv = [headers.join(","), ...rows.map((row) => row.join(","))].join("\n");
+              const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = `cpr_screener_${new Date().toISOString().slice(0, 10)}.csv`;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+              URL.revokeObjectURL(url);
+            }}
           />
 
           {/* Results count / Show All / panel toggles (scan buttons live in ScreenerToolbar) */}
