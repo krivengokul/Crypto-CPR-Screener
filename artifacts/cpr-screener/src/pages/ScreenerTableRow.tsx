@@ -1,7 +1,15 @@
 import { Fragment, memo } from "react";
 import { ExternalLink, CheckCircle2, Tag } from "lucide-react";
 import { hasTouchedEntry } from "@/lib/signalTracker";
-import { sessionReachedTarget, sessionR4OrS4Hit } from "@/lib/signalOutcome";
+import {
+  sessionReachedTarget,
+  sessionR4OrS4Hit,
+  hasStickySessionPass,
+  markStickySessionPass,
+  latchSessionR4OrS4,
+  effectiveSessionHigh,
+  effectiveSessionLow,
+} from "@/lib/signalOutcome";
 import type { CPRResult } from "@/lib/cpr";
 import type { ReclaimSideState } from "@/lib/15MCandleCheck";
 import { getView } from "@/lib/views";
@@ -13,7 +21,8 @@ function renderRowStatusBadge(
   matchingSignals: { id: string; direction?: string | null }[],
   activeSignal?: string | null,
 ) {
-  const r4s4 = sessionR4OrS4Hit(r);
+  // Latched per symbol for the UTC day so a tag survives a rescan gap.
+  const r4s4 = latchSessionR4OrS4(r.symbol, sessionR4OrS4Hit(r));
   if (r4s4) {
     const badgeClass =
       r4s4 === "S4"
@@ -61,17 +70,24 @@ function renderRowStatusBadge(
   const isUp = direction === "Up";
   const isDown = direction === "Down";
   let status: "pass" | "fail" | "active" | "ready" | null = null;
-  if (
+  const viewIdForSticky = preferred?.id ?? null;
+  const sessHi = effectiveSessionHigh(r.todayHigh, r.currentPrice);
+  const sessLo = effectiveSessionLow(r.todayLow, r.currentPrice);
+  // Sticky Pass for this exact symbol + View this UTC day — never fall back to Active/Ready.
+  if (hasStickySessionPass(r.symbol, viewIdForSticky)) {
+    status = "pass";
+  } else if (
     targetFn &&
     sessionReachedTarget(
       direction ?? "",
       targetFn(r),
-      r.todayHigh,
-      r.todayLow,
+      sessHi,
+      sessLo,
       r.currentPrice,
     )
   ) {
     status = "pass";
+    markStickySessionPass(r.symbol, viewIdForSticky);
   } else if (slFn) {
     const sl = slFn(r);
     const hitSlUp =
@@ -896,17 +912,22 @@ export function renderMatchingSignals(
         const isDown = direction === "Down";
         // Same status rules as the badge under the symbol cell / Signal Desk.
         let status: "pass" | "fail" | "active" | "ready" | null = null;
-        if (
+        const sessHi = effectiveSessionHigh(r.todayHigh, r.currentPrice);
+        const sessLo = effectiveSessionLow(r.todayLow, r.currentPrice);
+        if (hasStickySessionPass(r.symbol, v.id)) {
+          status = "pass";
+        } else if (
           targetFn &&
           sessionReachedTarget(
             direction ?? "",
             targetFn(r),
-            r.todayHigh,
-            r.todayLow,
+            sessHi,
+            sessLo,
             r.currentPrice,
           )
         ) {
           status = "pass";
+          markStickySessionPass(r.symbol, v.id);
         } else if (slFn) {
           const sl = slFn(r);
           const hitSlUp =

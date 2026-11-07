@@ -20,6 +20,11 @@ import {
   evaluateSignalCandles,
   livePriceCrossedBoundary,
   livePriceReachedTarget,
+  effectiveSessionHigh,
+  effectiveSessionLow,
+  hasStickySessionPass,
+  latchSessionR4OrS4,
+  markStickySessionPass,
 } from "./signalOutcome.ts";
 import { fromCoinDCXPair, toCoinDCXPair } from "./coinDCXPair.ts";
 import {
@@ -1483,6 +1488,69 @@ test("Week toggle: ON hides TRADFI/COMMOD on weekends only; OFF always hides the
     assert.equal(shouldHideTradfiCommodRow(cls as string | undefined, true, saturday), false);
     assert.equal(shouldHideTradfiCommodRow(cls as string | undefined, false, wednesday), false);
   }
+});
+
+function withFakeLocalStorage(fn: () => void) {
+  const store = new Map<string, string>();
+  const original = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    value: {
+      getItem: (k: string) => (store.has(k) ? store.get(k)! : null),
+      setItem: (k: string, v: string) => void store.set(k, v),
+      removeItem: (k: string) => void store.delete(k),
+    },
+  });
+  try {
+    fn();
+  } finally {
+    if (original) Object.defineProperty(globalThis, "localStorage", original);
+    else Reflect.deleteProperty(globalThis, "localStorage");
+  }
+}
+
+test("sticky session Pass is scoped to the exact symbol + View (no leak to other Views or symbols)", () => {
+  withFakeLocalStorage(() => {
+    assert.equal(hasStickySessionPass("STEEMUSDT", "VIEW_A"), false);
+    markStickySessionPass("STEEMUSDT", "VIEW_A");
+    assert.equal(hasStickySessionPass("STEEMUSDT", "VIEW_A"), true);
+    assert.equal(hasStickySessionPass("STEEMUSDT", "VIEW_B"), false); // same symbol, other View
+    assert.equal(hasStickySessionPass("BTCUSDT", "VIEW_A"), false);   // other symbol, same View
+    // Without a View id there is nothing to scope to: never writes or reads a shared key.
+    markStickySessionPass("STEEMUSDT", null);
+    markStickySessionPass("STEEMUSDT", undefined);
+    assert.equal(hasStickySessionPass("STEEMUSDT", null), false);
+    assert.equal(hasStickySessionPass("STEEMUSDT", "VIEW_B"), false);
+  });
+});
+
+test("latchSessionR4OrS4 keeps a tagged R4 / S4 for the day and merges both, independent of Views", () => {
+  withFakeLocalStorage(() => {
+    assert.equal(latchSessionR4OrS4("XMRUSDT", null), null);
+    assert.equal(latchSessionR4OrS4("XMRUSDT", "S4"), "S4");
+    // Extreme later missing from the stored high/low (rescan gap): still shown.
+    assert.equal(latchSessionR4OrS4("XMRUSDT", null), "S4");
+    // Later the other side tags too.
+    assert.equal(latchSessionR4OrS4("XMRUSDT", "R4"), "R4+S4");
+    assert.equal(latchSessionR4OrS4("XMRUSDT", null), "R4+S4");
+    // Other symbols are unaffected, and it never marks any View Pass.
+    assert.equal(latchSessionR4OrS4("BTCUSDT", null), null);
+    assert.equal(hasStickySessionPass("XMRUSDT", "ANY_VIEW"), false);
+  });
+});
+
+test("effective session extremes never sit on the wrong side of the last price; R4/S4 hit uses them", () => {
+  assert.equal(effectiveSessionHigh(104, 111), 111);
+  assert.equal(effectiveSessionHigh(104, 102), 104);
+  assert.equal(effectiveSessionHigh(undefined, 102), 102);
+  assert.equal(effectiveSessionHigh(undefined, undefined), undefined);
+  assert.equal(effectiveSessionLow(99, 95), 95);
+  assert.equal(effectiveSessionLow(99, 101), 99);
+  assert.equal(effectiveSessionLow(0, 0), undefined);
+  // Stored high lags the last price (missed tick): R4 still registers from the price.
+  const cpr = { r4: 110, s4: 80 };
+  assert.equal(sessionR4OrS4Hit({ currentPrice: 111, todayHigh: 104, todayLow: 99, todayCPR: cpr }), "R4");
+  assert.equal(sessionR4OrS4Hit({ currentPrice: 100, todayHigh: 104, todayLow: 99, todayCPR: cpr }), null);
 });
 
 test("parseComposedViewKey parses candleCheck segment between entry and pattern", () => {
