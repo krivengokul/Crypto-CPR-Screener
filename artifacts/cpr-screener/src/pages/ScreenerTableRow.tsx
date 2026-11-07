@@ -1,4 +1,4 @@
-import { Fragment, memo } from "react";
+import { Fragment, memo, type ReactNode } from "react";
 import { ExternalLink, CheckCircle2, Tag } from "lucide-react";
 import { hasTouchedEntry } from "@/lib/signalTracker";
 import {
@@ -1742,8 +1742,8 @@ function ScreenerTableRow({
           const moveInCpr = move.main === "IN-CPR";
           const moveLine = (
             <div className={`whitespace-nowrap ${moveInCpr ? `${LABEL_FONT} text-orange-400` : ""}`}>
-              {move.main}
-              {move.sub && <span className="text-[10px] ml-1">{move.sub}</span>}
+              {moveInCpr ? move.main : <span className="text-[11px]">{move.main}</span>}
+              {move.sub && <span className="text-[9px] ml-1">{move.sub}</span>}
             </div>
           );
           // Above R1/R2/R3/R4: MOVE only + BRK badge (no >PDH line).
@@ -1834,20 +1834,24 @@ function ScreenerTableRow({
             </span>
           ) : null;
           // Active/Ready/Pass/Fail moved to MATCH (above n/13). MOVE keeps BIG↑/↓ only.
-          const statusBigRow = strongBarBadge ? (
-              <div className="flex flex-wrap items-center gap-1">
-                {strongBarBadge}
-              </div>
-            ) : null;
+          // First row: BIG↑/↓ pill first, then the move text beside it.
+          const firstRow = (text: ReactNode, title?: string) => (
+            <div className="flex items-center gap-1 whitespace-nowrap" title={title}>
+              {strongBarBadge}
+              {text}
+            </div>
+          );
+          const pdhText = (
+            <div>
+              <span className="text-[11px]">{pdh.main}</span>
+              {pdh.sub && <span className="text-[9px] ml-1">{pdh.sub}</span>}
+            </div>
+          );
           // Beyond PDH: only PDH % (no >TC). Beyond PDL: only PDL % (no <BC).
           if (beyondPdh && showPdhRow) {
             return (
               <td className={`pl-3 pr-2 py-3 whitespace-nowrap text-xs font-medium ${pdh.color}`}>
-                {statusBigRow}
-                <div className={statusBigRow ? "mt-0.5" : undefined} title={pdhTitle}>
-                  {pdh.main}
-                  {pdh.sub && <span className="text-[10px] ml-1">{pdh.sub}</span>}
-                </div>
+                {firstRow(pdhText, pdhTitle)}
                 {brkBadge}
               </td>
             );
@@ -1855,11 +1859,7 @@ function ScreenerTableRow({
           if (beyondPdl && showPdhRow) {
             return (
               <td className={`pl-3 pr-2 py-3 whitespace-nowrap text-xs font-medium ${pdh.color}`}>
-                {statusBigRow}
-                <div className={statusBigRow ? "mt-0.5" : undefined} title={pdhTitle}>
-                  {pdh.main}
-                  {pdh.sub && <span className="text-[10px] ml-1">{pdh.sub}</span>}
-                </div>
+                {firstRow(pdhText, pdhTitle)}
                 {brkDnBadge}
               </td>
             );
@@ -1869,23 +1869,21 @@ function ScreenerTableRow({
             const inRange = pdh.main === "IN-PDHL";
             return (
               <td className={`pl-3 pr-2 py-3 whitespace-nowrap text-xs font-medium ${move.color}`}>
+                {firstRow(moveLine)}
                 <div
-                  className={inRange ? `${LABEL_FONT} text-orange-400` : pdh.color}
+                  className={`mt-0.5 ${inRange ? `${LABEL_FONT} text-orange-400` : pdh.color}`}
                   title={pdhTitle}
                 >
                   {pdh.main}
                   {pdh.sub && <span className="text-[10px] ml-1">{pdh.sub}</span>}
                 </div>
-                {statusBigRow}
-                <div className="mt-0.5">{moveLine}</div>
                 {brkBadge}
               </td>
             );
           }
           return (
             <td className={`pl-3 pr-2 py-3 whitespace-nowrap text-xs font-medium ${move.color}`}>
-              {statusBigRow}
-              <div className={statusBigRow ? "mt-0.5" : undefined}>{moveLine}</div>
+              {firstRow(moveLine)}
               {showPdhRow && (
                 <div className={`mt-0.5 ${pdh.main === "IN-PDHL" ? `${LABEL_FONT} text-orange-400` : pdh.color}`} title={pdhTitle}>
                   {pdh.main}
