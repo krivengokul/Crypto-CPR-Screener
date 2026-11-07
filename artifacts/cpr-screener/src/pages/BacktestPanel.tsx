@@ -977,6 +977,8 @@ function CopyViewControl({
   todayCPR,
   sourceConditions,
   initialOpen = false,
+  rowCandleCheck,
+  rowGapBadge,
   onClose,
   onCopied,
 }: {
@@ -986,6 +988,9 @@ function CopyViewControl({
   todayCPR: CPRLevels;
   sourceConditions?: LevelCheckCondition[];
   initialOpen?: boolean;
+  /** Selected symbol's PP+P candle check; wins over the source View's when non-empty. */
+  rowCandleCheck?: string;
+  rowGapBadge?: string;
   onClose?: () => void;
   onCopied: (newKey: string) => void;
 }) {
@@ -997,8 +1002,8 @@ function CopyViewControl({
   })();
   const parsedKey = parseComposedViewKey(sourceKey);
   const initialTarget = targetFromLabel(sourceView?.targetLabel, initialDirection);
-  const initialGapBadge = parsedKey.gapBadge ?? "";
-  const initialCandleCheck = sourceView?.candleCheck ?? parsedKey.candleCheck ?? "";
+  const initialGapBadge = rowGapBadge?.trim() || (parsedKey.gapBadge ?? "");
+  const initialCandleCheck = rowCandleCheck?.trim() || (sourceView?.candleCheck ?? parsedKey.candleCheck ?? "");
 
   const [open, setOpen] = useState(initialOpen);
   const [direction, setDirection] = useState<"Up" | "Down">(initialDirection);
@@ -1353,6 +1358,8 @@ function EditViewControl({
   prevCPR,
   todayCPR,
   initialOpen = false,
+  rowCandleCheck,
+  rowGapBadge,
   onClose,
   onUpdated,
   onSaved,
@@ -1361,6 +1368,9 @@ function EditViewControl({
   prevCPR: CPRLevels;
   todayCPR: CPRLevels;
   initialOpen?: boolean;
+  /** Selected symbol's PP+P candle check; wins over the View's stored one when non-empty. */
+  rowCandleCheck?: string;
+  rowGapBadge?: string;
   onClose?: () => void;
   onUpdated?: (newKey: string) => void;
   onSaved?: (oldKey: string, updated: ViewDef) => void;
@@ -1410,8 +1420,8 @@ function EditViewControl({
   // patternKey used to; unlike patternKey, there's no closure-free way to
   // recover it, so a miss here just starts the dropdown at "Any Gap
   // Badge" rather than corrupting anything.
-  const [candleCheck, setCandleCheck] = useState(() => activeTarget.candleCheck ?? parsedKey.candleCheck ?? "");
-  const [gapBadge, setGapBadge] = useState(() => parsedKey.gapBadge ?? "");
+  const [candleCheck, setCandleCheck] = useState(() => rowCandleCheck?.trim() || (activeTarget.candleCheck ?? parsedKey.candleCheck ?? ""));
+  const [gapBadge, setGapBadge] = useState(() => rowGapBadge?.trim() || (parsedKey.gapBadge ?? ""));
   // 13/13 MATCH: when ticked, View only fires for rows with a full Level Check match.
   const [requireFullMatch, setRequireFullMatch] = useState(() => activeTarget.requireFullMatch === true);
   const [error, setError] = useState("");
@@ -1460,8 +1470,8 @@ function EditViewControl({
     });
     setLabel(activeTarget.label);
     setAttachKey(activeTarget.parentKey ?? findContainingNodeKey(activeTarget.key) ?? activeTarget.key);
-    setCandleCheck(activeTarget.candleCheck ?? parsedKey.candleCheck ?? "");
-    setGapBadge(parsedKey.gapBadge ?? "");
+    setCandleCheck(rowCandleCheck?.trim() || (activeTarget.candleCheck ?? parsedKey.candleCheck ?? ""));
+    setGapBadge(rowGapBadge?.trim() || (parsedKey.gapBadge ?? ""));
     setRequireFullMatch(activeTarget.requireFullMatch === true);
     setError("");
     setCommand(null);
@@ -1809,6 +1819,8 @@ function ViewActionsRow({
   todayCPR,
   activeLevelCheckDefs,
   isFullMatch,
+  rowCandleCheck,
+  rowGapBadge,
   onCopied,
   onUpdated,
   onSaved,
@@ -1818,6 +1830,10 @@ function ViewActionsRow({
   todayCPR: CPRLevels;
   activeLevelCheckDefs?: LevelCheckCondition[];
   isFullMatch?: boolean;
+  /** PP+P candle check of the SELECTED symbol's row (candleCheckFromRow) — prefills Edit/Copy dropdowns like Create View. */
+  rowCandleCheck?: string;
+  /** Gap Badge of the selected symbol's row (computeGapBadge). */
+  rowGapBadge?: string;
   onCopied: (newKey: string) => void;
   onUpdated?: (newKey: string) => void;
   onSaved?: (oldKey: string, updated: ViewDef) => void;
@@ -1831,6 +1847,8 @@ function ViewActionsRow({
         prevCPR={prevCPR}
         todayCPR={todayCPR}
         initialOpen={true}
+        rowCandleCheck={rowCandleCheck}
+        rowGapBadge={rowGapBadge}
         onClose={() => setMode("none")}
         onUpdated={onUpdated}
         onSaved={onSaved}
@@ -1847,6 +1865,8 @@ function ViewActionsRow({
         todayCPR={todayCPR}
         sourceConditions={undefined}
         initialOpen={true}
+        rowCandleCheck={rowCandleCheck}
+        rowGapBadge={rowGapBadge}
         onClose={() => setMode("none")}
         onCopied={(newKey) => {
           setMode("none");
@@ -3838,6 +3858,8 @@ export default function BacktestPanel() {
                             isViewOnly && activeTarget ? (
                               <ViewActionsRow
                                 activeTarget={activeTarget}
+                                rowCandleCheck={candleCheckFromRow(r.raw)}
+                                rowGapBadge={computeGapBadge(r.raw)}
                                 prevCPR={r.prevCPR}
                                 todayCPR={r.todayCPR}
                                 activeLevelCheckDefs={activeLevelCheckDefs}
@@ -4212,6 +4234,8 @@ export default function BacktestPanel() {
                           isViewOnly && activeTarget ? (
                             <ViewActionsRow
                               activeTarget={activeTarget}
+                              rowCandleCheck={candleCheckFromRow(r.raw)}
+                              rowGapBadge={computeGapBadge(r.raw)}
                               prevCPR={r.prevCPR}
                               todayCPR={r.todayCPR}
                               activeLevelCheckDefs={activeLevelCheckDefs}
@@ -4242,6 +4266,8 @@ export default function BacktestPanel() {
                           ) : isPatternOnly && rowViewDefByRow.get(r) && !pendingCreateViewRows.has(`${r.source}-${r.symbol}-${r.entryDate}`) ? (
                             <ViewActionsRow
                               activeTarget={rowViewDefByRow.get(r)!}
+                              rowCandleCheck={candleCheckFromRow(r.raw)}
+                              rowGapBadge={computeGapBadge(r.raw)}
                               prevCPR={r.prevCPR}
                               todayCPR={r.todayCPR}
                               activeLevelCheckDefs={rowViewDefByRow.get(r)?.levelCheckDefs}
