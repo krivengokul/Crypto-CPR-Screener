@@ -1,6 +1,6 @@
 /**
  * ScreenerToolbar — Scan Binance row + right-end Refresh / Export CSV (Journal-style).
- * Presentational: scan/export logic stays in Screener.
+ * Refresh = live prices only (not a full rescan). Export = displayed rows CSV.
  */
 import type { ReactNode } from "react";
 import { Download, RefreshCw } from "lucide-react";
@@ -9,10 +9,11 @@ import type { ScanStatus } from "@/hooks/useExchangeScan";
 export type ScreenerToolbarProps = {
   status: ScanStatus;
   onScanBinance: () => void;
-  /** Re-run scan (same as Scan when idle). */
+  /** Live price tick only — does not re-run CPR scan. */
   onRefresh?: () => void;
+  /** Spinner on Refresh while prices are fetching. */
+  priceRefreshing?: boolean;
   onExportCSV?: () => void;
-  /** Disable Export when no rows. */
   exportDisabled?: boolean;
   children?: ReactNode;
 };
@@ -21,12 +22,12 @@ export function ScreenerToolbar({
   status,
   onScanBinance,
   onRefresh,
+  priceRefreshing = false,
   onExportCSV,
   exportDisabled = true,
   children,
 }: ScreenerToolbarProps) {
   const busy = status === "scanning";
-  const refresh = onRefresh ?? onScanBinance;
 
   return (
     <div className="space-y-3 mb-3">
@@ -42,16 +43,15 @@ export function ScreenerToolbar({
           {busy ? "Scanning Binance…" : "Scan Binance"}
         </button>
 
-        {/* Right end — Journal-style Refresh + Export CSV */}
         <div className="flex items-center gap-2 ml-auto shrink-0">
           <button
             type="button"
-            onClick={refresh}
-            disabled={busy}
+            onClick={onRefresh}
+            disabled={busy || priceRefreshing || !onRefresh}
             className="px-3 py-1.5 rounded-lg bg-[#162130] hover:bg-[#1e2f47] border border-[#22354a] disabled:opacity-50 text-slate-200 text-xs font-medium flex items-center gap-1.5 transition cursor-pointer"
-            title="Refresh / re-scan Binance"
+            title="Update live prices only (does not re-scan CPR)"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${busy ? "animate-spin" : ""}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${priceRefreshing ? "animate-spin" : ""}`} />
             <span>Refresh</span>
           </button>
           <button

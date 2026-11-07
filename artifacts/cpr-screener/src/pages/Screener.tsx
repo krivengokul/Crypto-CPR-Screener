@@ -75,6 +75,7 @@ import { usePreviousCandleFilters } from "@/hooks/usePreviousCandleFilters";
 import { useReclaimFilters } from "@/hooks/useReclaimFilters";
 import { ScreenerResultsTable } from "@/components/ScreenerResultsTable";
 import { ScreenerToolbar } from "@/components/ScreenerToolbar";
+import { CPR_LIVE_PRICE_REFRESH_EVENT } from "@/hooks/useLivePriceRefresh";
 
 /**
  * ViewCount — "(n)" badge shown at the end of every Views filter button,
@@ -392,6 +393,7 @@ export default function Screener({
   const [sortKey, setSortKey] = useState<SortKey>("compressionRatio");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [search, setSearch] = useState("");
+  const [priceRefreshing, setPriceRefreshing] = useState(false);
   const [showAll, setShowAll] = useState(true);
   /** Asset class chip: null = all, else CRYPTO | COMMOD | TRADFI. */
   const [classFilter, setClassFilter] = useState<"CRYPTO" | "COMMOD" | "TRADFI" | null>(null);
@@ -1773,7 +1775,14 @@ export default function Screener({
           <ScreenerToolbar
             status={status}
             onScanBinance={() => { void doScan(); }}
-            onRefresh={() => { void doScan(); }}
+            priceRefreshing={priceRefreshing}
+            onRefresh={() => {
+              if (priceRefreshing) return;
+              setPriceRefreshing(true);
+              window.dispatchEvent(new Event(CPR_LIVE_PRICE_REFRESH_EVENT));
+              // Live hooks run async; clear spinner after a short window.
+              window.setTimeout(() => setPriceRefreshing(false), 2500);
+            }}
             exportDisabled={displayed.length === 0}
             onExportCSV={() => {
               if (displayed.length === 0) return;

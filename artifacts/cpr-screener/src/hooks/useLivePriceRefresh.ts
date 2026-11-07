@@ -11,6 +11,9 @@ const MAX_MISSED_TICKS = 3;
 const SANITY_JUMP_RATIO = 0.5;
 
 /** Poll cadence for live prices while a scan is "done". */
+/** Manual Refresh button (Screener toolbar) — live prices only, not a full rescan. */
+export const CPR_LIVE_PRICE_REFRESH_EVENT = "cpr-live-price-refresh";
+
 const LIVE_PRICE_POLL_MS = 40_000;
 
 /**
@@ -295,10 +298,16 @@ export function useBinanceLiveRefresh(
     };
     document.addEventListener("visibilitychange", onVisibility);
 
+    const onDemand = () => {
+      void refresh();
+    };
+    window.addEventListener(CPR_LIVE_PRICE_REFRESH_EVENT, onDemand);
+
     return () => {
       cancelled = true;
       window.clearInterval(id);
       document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener(CPR_LIVE_PRICE_REFRESH_EVENT, onDemand);
     };
   }, [status, allResultsRef, setAllResults, setFiltered]);
 }
@@ -386,11 +395,16 @@ export function useDeltaLiveRefresh(
       if (document.visibilityState === "visible") void refresh();
     };
     document.addEventListener("visibilitychange", onVisibility);
+    const onDemand = () => {
+      void refresh();
+    };
+    window.addEventListener(CPR_LIVE_PRICE_REFRESH_EVENT, onDemand);
 
     return () => {
       cancelled = true;
       window.clearInterval(id);
       document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener(CPR_LIVE_PRICE_REFRESH_EVENT, onDemand);
     };
   }, [deltaStatus, deltaAllResultsRef, setDeltaAllResults, setDeltaFiltered]);
 }
@@ -449,11 +463,16 @@ export function useCoinDCXLiveRefresh(
       if (document.visibilityState === "visible") void refresh();
     };
     document.addEventListener("visibilitychange", onVisibility);
+    const onDemand = () => {
+      void refresh();
+    };
+    window.addEventListener(CPR_LIVE_PRICE_REFRESH_EVENT, onDemand);
 
     return () => {
       cancelled = true;
       window.clearInterval(id);
       document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener(CPR_LIVE_PRICE_REFRESH_EVENT, onDemand);
     };
   }, [status, coindcxAllResultsRef, setCoinDCXAllResults, setCoinDCXFiltered]);
 }
